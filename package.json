@@ -1,0 +1,48 @@
+{
+  "name": "holita",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "npm@11.19.0",
+  "engines": {
+    "node": ">=24.15",
+    "npm": ">=11"
+  },
+  "workspaces": [
+    "apps/*"
+  ],
+  "overrides": {
+    "@ant-design/pro-layout": {
+      "path-to-regexp": "8.4.2"
+    },
+    "mysql2": "3.24.4"
+  },
+  "scripts": {
+    "dev": "concurrently --kill-others --names api,admin --prefix-colors blue,magenta \"npm:dev:api\" \"npm:dev:admin\"",
+    "dev:api": "npm run dev --workspace @holita/core-api",
+    "dev:admin": "npm run dev --workspace @holita/admin",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "eslint .",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:up": "docker compose up -d --wait postgres",
+    "db:stop": "docker compose stop postgres",
+    "db:generate": "npm run db:generate --workspace @holita/core-api",
+    "db:migrate": "npm run db:migrate --workspace @holita/core-api --",
+    "db:migrate:deploy": "npm run db:migrate:deploy --workspace @holita/core-api",
+    "db:seed": "npm run db:seed --workspace @holita/core-api"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "concurrently": "10.0.5",
+    "eslint": "10.10.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-react-refresh": "0.5.7",
+    "globals": "17.12.0",
+    "prettier": "3.9.6",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.70.0"
+  }
+}

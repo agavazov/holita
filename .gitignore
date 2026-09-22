@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+
+.env
+.env.*
+!.env.example
+
+apps/core-api/src/generated/prisma/
+
+.idea/
+.DS_Store
+
+.tmp/
+.volumes/

@@ -1,0 +1,6 @@
+.tmp/
+.volumes/
+node_modules/
+dist/
+coverage/
+apps/core-api/src/generated/prisma/
