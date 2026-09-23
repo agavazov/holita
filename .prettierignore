@@ -3,4 +3,7 @@
 node_modules/
 dist/
 coverage/
-apps/core-api/src/generated/prisma/
+test-results/
+playwright-report/
+apps/*/src/generated/
+.nx/

@@ -1,0 +1,53 @@
+extend schema @link(url: "https://specs.apollo.dev/federation/v2.3", import: ["@key"])
+
+scalar DateTime
+
+type Store @key(fields: "id", resolvable: false) {
+  id: ID!
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+}
+
+type Product @key(fields: "id") {
+  id: ID!
+  storeId: ID!
+  name: String!
+  sku: String!
+  status: ProductStatus!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  store: Store!
+}
+
+type ProductPage {
+  items: [Product!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+
+input CreateProductInput {
+  name: String!
+  sku: String!
+  status: ProductStatus! = DRAFT
+}
+
+input UpdateProductInput {
+  name: String
+  sku: String
+  status: ProductStatus
+}
+
+type Query {
+  products(offset: Int! = 0, limit: Int! = 20): ProductPage!
+  product(id: ID!): Product!
+}
+
+type Mutation {
+  createProduct(input: CreateProductInput!): Product!
+  updateProduct(id: ID!, input: UpdateProductInput!): Product!
+  deleteProduct(id: ID!): Product!
+}

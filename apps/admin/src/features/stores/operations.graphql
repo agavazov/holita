@@ -1,0 +1,6 @@
+query ListStores {
+  stores {
+    id
+    name
+  }
+}

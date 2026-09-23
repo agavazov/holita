@@ -1,0 +1,49 @@
+fragment ProductDetails on Product {
+  id
+  storeId
+  name
+  sku
+  status
+  createdAt
+  updatedAt
+}
+
+query ListProducts($offset: Int! = 0, $limit: Int! = 20) {
+  products(offset: $offset, limit: $limit) {
+    items {
+      ...ProductDetails
+    }
+    total
+    offset
+    limit
+  }
+}
+
+query GetProduct($id: ID!) {
+  product(id: $id) {
+    ...ProductDetails
+    store {
+      id
+      name
+    }
+  }
+}
+
+mutation CreateProduct($input: CreateProductInput!) {
+  createProduct(input: $input) {
+    ...ProductDetails
+  }
+}
+
+mutation UpdateProduct($id: ID!, $input: UpdateProductInput!) {
+  updateProduct(id: $id, input: $input) {
+    ...ProductDetails
+  }
+}
+
+mutation DeleteProduct($id: ID!) {
+  deleteProduct(id: $id) {
+    id
+    storeId
+  }
+}

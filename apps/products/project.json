@@ -1,0 +1,61 @@
+{
+  "name": "products",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/products/src",
+  "implicitDependencies": ["core"],
+  "tags": ["type:app", "scope:products"],
+  "targets": {
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npm run test --",
+        "cwd": "apps/products",
+        "forwardAllArgs": true
+      },
+      "dependsOn": ["db-generate", "graphql-generate"]
+    },
+    "lint": {
+      "dependsOn": ["db-generate", "graphql-generate"]
+    },
+    "typecheck": {
+      "dependsOn": ["db-generate", "graphql-generate"]
+    },
+    "build": {
+      "dependsOn": ["db-generate", "graphql-generate"]
+    },
+    "db-generate": {
+      "executor": "nx:run-commands",
+      "inputs": ["default"],
+      "cache": true,
+      "outputs": ["{projectRoot}/src/generated/prisma"],
+      "options": {
+        "command": "npm run db:generate",
+        "cwd": "apps/products"
+      }
+    },
+    "test-db": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["db-generate", "graphql-generate"],
+      "cache": false,
+      "options": {
+        "command": "npm run test:db --",
+        "cwd": "apps/products",
+        "forwardAllArgs": true
+      }
+    },
+    "graphql-generate": {
+      "executor": "nx:run-commands",
+      "inputs": ["default"],
+      "cache": true,
+      "outputs": ["{projectRoot}/src/generated/graphql"],
+      "options": {
+        "command": "npm run graphql:generate",
+        "cwd": "apps/products"
+      }
+    }
+  },
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*", "sharedGlobals", "databaseTooling", "graphqlContracts"]
+  }
+}

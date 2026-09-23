@@ -1,0 +1,99 @@
+name: PR affected
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: affected-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  CI: 'true'
+  NX_BASE: ${{ github.event.pull_request.base.sha }}
+  NX_HEAD: ${{ github.event.pull_request.head.sha }}
+
+jobs:
+  affected:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify PR history
+        run: |
+          if [[ "$(git rev-parse --is-shallow-repository)" != false ]]; then
+            echo '::error::Affected checks require full history; keep checkout fetch-depth: 0.'
+            exit 1
+          fi
+          for ref in "$NX_BASE" "$NX_HEAD"; do
+            if [[ ! "$ref" =~ ^[0-9a-f]{40}$ ]] || ! git cat-file -e "$ref^{commit}"; then
+              echo '::error::PR base/head commit is unavailable. Restore the event history and rerun; no empty or full-suite fallback is allowed.'
+              exit 1
+            fi
+          done
+          if [[ "$(git rev-parse HEAD)" != "$NX_HEAD" ]]; then
+            echo '::error::The checkout does not match the PR head.'
+            exit 1
+          fi
+          if ! git merge-base "$NX_BASE" "$NX_HEAD" >/dev/null; then
+            echo '::error::PR base/head have no common history. Select a PR with a known common base.'
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install locked dependencies
+        run: |
+          npm install --global "$(node --print 'require("./package.json").packageManager')"
+          npm ci
+
+      - name: Identify affected applications
+        id: selection
+        run: |
+          projects="$(npm exec -- nx show projects --affected --json | jq -c .)"
+          printf 'projects=%s\n' "$projects" >> "$GITHUB_OUTPUT"
+          printf 'Compared PR base %s and head %s.\n\n' "$NX_BASE" "$NX_HEAD" >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$projects" == '[]' ]]; then
+            echo 'No affected applications. Format, root-tool and offline schema checks still run; application tests are not selected or claimed as coverage.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            printf 'Affected applications: %s. Unit/DB targets run; Chromium smoke runs when admin is affected.\n' "$projects" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - run: npm run format:check
+      - run: npm run schema:check
+      - run: npm run check:affected -- --base="$NX_BASE" --head="$NX_HEAD"
+
+      - name: Prepare PostgreSQL
+        if: steps.selection.outputs.projects != '[]'
+        run: |
+          npm run db:up
+          npm run db:setup
+          npm run db:test:setup
+
+      - run: npm run test:affected -- --base="$NX_BASE" --head="$NX_HEAD"
+
+      - name: Install Chromium
+        if: contains(fromJSON(steps.selection.outputs.projects || '[]'), 'admin')
+        run: npm exec -- playwright install --with-deps chromium
+
+      - name: Check affected browser behavior
+        if: contains(fromJSON(steps.selection.outputs.projects || '[]'), 'admin')
+        run: npm run test:smoke
+
+      - name: Stop PostgreSQL
+        if: always() && steps.selection.outputs.projects != '' && steps.selection.outputs.projects != '[]'
+        run: docker compose down

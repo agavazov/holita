@@ -1,5 +1,6 @@
 import eslint from '@eslint/js';
 import eslintConfigPrettier from 'eslint-config-prettier';
+import nx from '@nx/eslint-plugin';
 import reactHooks from 'eslint-plugin-react-hooks';
 import { reactRefresh } from 'eslint-plugin-react-refresh';
 import globals from 'globals';
@@ -13,12 +14,16 @@ export default tseslint.config(
       '**/node_modules/**',
       '**/dist/**',
       '**/coverage/**',
-      'apps/core-api/src/generated/prisma/**',
+      'test-results/**',
+      'playwright-report/**',
+      'apps/*/src/generated/**',
+      '.nx/**',
     ],
   },
   eslint.configs.recommended,
   {
-    files: ['**/*.{ts,tsx}'],
+    files: ['**/*.{ts,tsx,mts}'],
+    plugins: { '@nx': nx },
     extends: [...tseslint.configs.strictTypeChecked],
     languageOptions: {
       parserOptions: {
@@ -27,6 +32,13 @@ export default tseslint.config(
       },
     },
     rules: {
+      '@nx/enforce-module-boundaries': [
+        'error',
+        {
+          banTransitiveDependencies: true,
+          depConstraints: [{ sourceTag: 'type:app', notDependOnLibsWithTags: ['type:app'] }],
+        },
+      ],
       '@typescript-eslint/consistent-type-imports': ['error', { fixStyle: 'inline-type-imports' }],
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-floating-promises': 'error',
@@ -38,13 +50,12 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/core-api/**/*.ts'],
+    files: ['apps/{core,gateway,products}/**/*.ts'],
     languageOptions: {
       globals: globals.node,
     },
     rules: {
-      // NestJS modules are intentionally metadata-only decorated classes.
-      '@typescript-eslint/no-extraneous-class': 'off',
+      '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
     },
   },
   {

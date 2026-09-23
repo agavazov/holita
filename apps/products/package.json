@@ -1,0 +1,52 @@
+{
+  "name": "@holita/products",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nest build",
+    "dev": "nest start --watch",
+    "start": "nest start",
+    "start:prod": "node dist/main.js",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "lint": "eslint .",
+    "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand",
+    "predev": "npm run db:generate && npm run graphql:generate",
+    "prestart": "npm run db:generate && npm run graphql:generate",
+    "db:generate": "prisma generate",
+    "db:validate": "prisma validate",
+    "db:migrate": "prisma migrate deploy",
+    "predb:seed": "npm run db:generate",
+    "db:seed": "prisma db seed",
+    "test:db": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.db.config.mjs --runInBand",
+    "graphql:generate": "tsx ../../tools/graphql/generate.mts products"
+  },
+  "dependencies": {
+    "@nestjs/common": "12.0.4",
+    "@nestjs/core": "12.0.4",
+    "@nestjs/platform-express": "12.0.4",
+    "dotenv": "17.4.2",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
+    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/client": "7.10.0",
+    "pg": "8.23.0",
+    "@nestjs/graphql": "14.0.1",
+    "@nestjs/apollo": "14.0.1",
+    "@apollo/server": "5.5.1",
+    "@as-integrations/express5": "1.1.2",
+    "@apollo/subgraph": "2.14.4",
+    "graphql": "16.14.2",
+    "class-validator": "0.15.1",
+    "class-transformer": "0.5.1",
+    "@graphql-typed-document-node/core": "3.2.0"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "12.0.0",
+    "@nestjs/testing": "12.0.4",
+    "@types/node": "24.13.4",
+    "@types/pg": "8.23.1",
+    "prisma": "7.10.0",
+    "tsx": "4.23.13"
+  }
+}

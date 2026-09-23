@@ -1,4 +1,4 @@
-# Holita contributor instructions
+# holita contributor instructions
 
 @AGENTS.md
 

@@ -11,38 +11,92 @@
     "apps/*"
   ],
   "overrides": {
-    "@ant-design/pro-layout": {
-      "path-to-regexp": "8.4.2"
+    "mysql2": "3.24.4",
+    "nx": {
+      "smol-toml": "1.9.0"
     },
-    "mysql2": "3.24.4"
+    "@prisma/config": {
+      "deepmerge-ts": "8.0.2"
+    },
+    "@apollo/federation-internals": {
+      "uuid": "11.1.1"
+    },
+    "gaxios": {
+      "uuid": "11.1.1"
+    },
+    "@apollo/query-graphs": {
+      "uuid": "11.1.1"
+    }
   },
   "scripts": {
-    "dev": "concurrently --kill-others --names api,admin --prefix-colors blue,magenta \"npm:dev:api\" \"npm:dev:admin\"",
-    "dev:api": "npm run dev --workspace @holita/core-api",
+    "dev": "concurrently --kill-others --names gateway,core,products,admin --prefix-colors blue,green,yellow,magenta \"npm:dev:gateway\" \"npm:dev:core\" \"npm:dev:products\" \"npm:dev:admin\"",
+    "dev:gateway": "npm run dev --workspace @holita/gateway",
+    "dev:core": "npm run dev --workspace @holita/core",
+    "dev:products": "npm run dev --workspace @holita/products",
     "dev:admin": "npm run dev --workspace @holita/admin",
-    "build": "npm run build --workspaces --if-present",
+    "build": "nx run-many -t build",
     "lint": "eslint .",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck:tools && nx run-many -t typecheck",
+    "test:core": "nx run core:test --output-style=static",
+    "test:products": "nx run products:test --output-style=static",
+    "test:gateway": "nx run gateway:test --output-style=static",
+    "test:admin": "nx run admin:test --output-style=static",
+    "test:affected": "npm run test:schema && nx affected -t test,test-db --output-style=static",
+    "test:full": "npm run test:schema && nx run-many -t test,test-db --output-style=static && npm run test:smoke",
+    "check:affected": "npm run lint:tools && npm run typecheck:tools && nx affected -t lint,typecheck,build",
+    "lint:tools": "eslint tools *.mjs",
+    "projects": "nx show projects",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:up": "docker compose up -d --wait postgres",
-    "db:stop": "docker compose stop postgres",
-    "db:generate": "npm run db:generate --workspace @holita/core-api",
-    "db:migrate": "npm run db:migrate --workspace @holita/core-api --",
-    "db:migrate:deploy": "npm run db:migrate:deploy --workspace @holita/core-api",
-    "db:seed": "npm run db:seed --workspace @holita/core-api"
+    "db:down": "docker compose down",
+    "db:setup": "tsx tools/database/setup.mts",
+    "db:test:setup": "tsx tools/database/setup.mts --test",
+    "db:generate": "nx run-many -t db-generate --projects=core,products",
+    "db:validate": "npm run db:validate --workspace @holita/core && npm run db:validate --workspace @holita/products",
+    "db:migrate": "npm run db:migrate --workspace @holita/core && npm run db:migrate --workspace @holita/products",
+    "db:seed": "npm run db:seed --workspace @holita/core && npm run db:seed --workspace @holita/products",
+    "test:core:db": "nx run core:test-db --output-style=static",
+    "test:products:db": "nx run products:test-db --output-style=static",
+    "prelint": "npm run db:generate && npm run codegen",
+    "typecheck:tools": "tsc --project tools/tsconfig.json",
+    "codegen": "nx run-many -t graphql-generate",
+    "schema:compose": "npm run graphql:generate --workspace @holita/gateway",
+    "schema:check": "tsx tools/graphql/generate.mts check",
+    "test:schema": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.schema.config.mjs --runInBand",
+    "test:gateway:db": "nx run gateway:test-db --output-style=static",
+    "test:smoke": "nx run admin:test-smoke --output-style=static"
   },
   "devDependencies": {
+    "@apollo/composition": "2.14.4",
+    "@apollo/subgraph": "2.14.4",
     "@eslint/js": "10.0.1",
+    "@graphql-codegen/core": "6.2.0",
+    "@graphql-codegen/typed-document-node": "7.1.0",
+    "@graphql-codegen/typescript": "6.1.0",
+    "@graphql-codegen/typescript-operations": "6.1.7",
+    "@graphql-typed-document-node/core": "3.2.0",
+    "@jest/globals": "30.5.2",
+    "@nx/eslint-plugin": "23.2.1",
+    "@playwright/test": "1.63.0",
+    "@types/node": "24.13.4",
+    "@types/pg": "8.23.1",
     "concurrently": "10.0.5",
+    "dotenv": "17.4.2",
     "eslint": "10.10.0",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-react-hooks": "7.1.1",
     "eslint-plugin-react-refresh": "0.5.7",
     "globals": "17.12.0",
+    "graphql": "16.14.2",
+    "jest": "30.5.2",
+    "nx": "23.2.1",
+    "pg": "8.23.0",
     "prettier": "3.9.6",
+    "ts-jest": "29.4.12",
+    "tsx": "4.23.13",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.70.0"
+    "typescript-eslint": "8.70.0",
+    "vite": "8.3.0"
   }
 }
