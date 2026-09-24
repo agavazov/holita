@@ -3,12 +3,17 @@
 ## Prerequisites and installation
 
 Use the repository on the Ubuntu/WSL filesystem with Node.js 24.15+ and npm 11; the pinned
-package manager is npm 11.19.0. With nvm available:
+package manager is npm 11.19.0. From the root of your cloned holita repository, with nvm
+available:
 
 ```bash
-cd /var/workspace/services/ecomm
 nvm use
 npm ci
+npm run db:up
+npm run db:setup
+npm run db:migrate
+npm run db:seed
+npm run dev
 ```
 
 If Node 24 is not installed, run `nvm install` first. nvm is loaded by the shell; a bare
@@ -24,6 +29,11 @@ nvm for that shell. Native Windows execution is not part of the verified setup.
 | npm run dev:gateway                               | Nest gateway watcher                                                                                |
 | npm run dev:core                                  | Nest core watcher                                                                                   |
 | npm run dev:products                              | Nest products watcher                                                                               |
+| npm run db:up                                     | Start PostgreSQL in Compose and wait until it is ready                                              |
+| npm run db:down                                   | Stop the Compose services without removing their volumes                                            |
+| npm run db:setup                                  | Create the development databases and service roles when missing                                     |
+| npm run db:migrate                                | Apply pending core and products database migrations                                                 |
+| npm run db:seed                                   | Insert missing core and products development fixtures                                               |
 | npm run projects                                  | List Nx application names                                                                           |
 | npm run lint                                      | Lint source and root tooling, including application boundaries                                      |
 | npm run typecheck                                 | Typecheck all four applications through Nx                                                          |
