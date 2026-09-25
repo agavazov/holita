@@ -31,6 +31,12 @@ test('Products CRUD works through the real gateway for both stores', async ({
   await page.goto(app.url);
   await page.getByRole('button', { name: 'holita Sofia', exact: true }).click();
   await expect(page.getByRole('link', { name: 'Sofia notebook', exact: true })).toBeVisible();
+  const search = page.getByRole('searchbox', { name: 'Search products' });
+  await search.fill('note-001');
+  await expect(page.getByRole('link', { name: 'Sofia notebook', exact: true })).toBeVisible();
+  await expect(page.getByText('Sofia pen')).toHaveCount(0);
+  await search.clear();
+  await expect(page.getByText('Sofia pen')).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('products-list.png'), fullPage: true });
   await page.getByRole('button', { name: 'Create product', exact: true }).click();
   await fillProduct(page, 'Smoke Sofia product', 'SMOKE-001');

@@ -1,4 +1,4 @@
-import type { CreateParams, DataProvider, UpdateParams } from '@refinedev/core';
+import type { CreateParams, CrudFilters, DataProvider, UpdateParams } from '@refinedev/core';
 import createGraphQLProvider from '@refinedev/graphql';
 import { Client, fetchExchange, type OperationResult } from '@urql/core';
 
@@ -55,6 +55,12 @@ function requireData<T>(response: OperationResult<T>): T {
   return response.data;
 }
 
+function productSearch(filters?: CrudFilters) {
+  const filter = filters?.find((candidate) => 'field' in candidate && candidate.field === 'search');
+  if (!filter || !('value' in filter) || typeof filter.value !== 'string') return undefined;
+  return filter.value.trim() || undefined;
+}
+
 export function createDataProvider(url: string): DataProvider {
   async function request<T>(
     resource: string,
@@ -73,9 +79,10 @@ export function createDataProvider(url: string): DataProvider {
     });
     const provider = createGraphQLProvider(client, {
       getList: {
-        buildVariables: ({ pagination }): ListProductsQueryVariables => ({
+        buildVariables: ({ pagination, filters }): ListProductsQueryVariables => ({
           offset: ((pagination?.currentPage ?? 1) - 1) * (pagination?.pageSize ?? 20),
           limit: pagination?.pageSize ?? 20,
+          search: productSearch(filters),
         }),
         dataMapper: (response: OperationResult<ListStoresQuery | ListProductsQuery>) => {
           const data = requireData(response);

@@ -66,6 +66,23 @@ describe('Products service validation', () => {
     expect(requireStore).not.toHaveBeenCalled();
   });
 
+  it('normalizes optional search before repository access', async () => {
+    await service.list(context, { offset: 2, limit: 10, search: '  Note-1  ' });
+    expect(repository.list).toHaveBeenLastCalledWith(context.storeId, 2, 10, 'Note-1');
+    await service.list(context, { search: '   ' });
+    expect(repository.list).toHaveBeenLastCalledWith(context.storeId, 0, 20, undefined);
+    await service.list(context, {});
+    expect(repository.list).toHaveBeenLastCalledWith(context.storeId, 0, 20, undefined);
+    expect(requireStore).not.toHaveBeenCalled();
+  });
+
+  it('rejects NUL search before repository access', () => {
+    expect(() => service.list(context, { search: 'bad\u0000search' })).toThrow(
+      BadRequestException,
+    );
+    expect(repository.list).not.toHaveBeenCalled();
+  });
+
   it('accepts Unicode character limits consistently with the form and PostgreSQL', async () => {
     const input = { name: '😀'.repeat(200), sku: '🛍'.repeat(100) };
     await service.create(context, input);
