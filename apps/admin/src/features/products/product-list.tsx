@@ -1,6 +1,6 @@
 import { useDelete, useList } from '@refinedev/core';
-import { Alert, Button, Card, Empty, Modal, Space, Table, Tag, Typography } from 'antd';
-import { useRef, useState } from 'react';
+import { Alert, Button, Card, Empty, Input, Modal, Space, Table, Tag, Typography } from 'antd';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 
 import { productsResource, type DataError } from '../../data/data-provider.js';
@@ -14,10 +14,29 @@ export function ProductList({ storeId, onDeleted }: { storeId: string; onDeleted
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [search, setSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
   const [selected, setSelected] = useState<ProductDetailsFragment>();
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setPage(1);
+      setAppliedSearch(search.trim());
+    }, 300);
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [search]);
+  const filters = useMemo(
+    () =>
+      appliedSearch
+        ? [{ field: 'search', operator: 'contains' as const, value: appliedSearch }]
+        : [],
+    [appliedSearch],
+  );
   const products = useList<ProductDetailsFragment, DataError>({
     resource,
     pagination: { currentPage: page, pageSize, mode: 'server' },
+    filters,
     errorNotification: false,
   });
   const deletion = useDelete<DeleteProductMutation['deleteProduct'], DataError>();
@@ -61,6 +80,16 @@ export function ProductList({ storeId, onDeleted }: { storeId: string; onDeleted
         </Button>
       }
     >
+      <Input.Search
+        allowClear
+        aria-label="Search products"
+        placeholder="Search by name or SKU"
+        value={search}
+        onChange={(event) => {
+          setSearch(event.target.value);
+        }}
+        style={{ marginBottom: 16, maxWidth: 400 }}
+      />
       {products.query.isError && (
         <Alert
           className="form-error"

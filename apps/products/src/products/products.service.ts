@@ -37,6 +37,14 @@ function trimmed(value: unknown, label: string, max: number): string {
   return text;
 }
 
+function optionalSearch(value: unknown): string | undefined {
+  const search = typeof value === 'string' ? value.trim() : '';
+  if (!search) return undefined;
+  if (search.includes('\u0000'))
+    throw new BadRequestException('Search contains an unsupported character');
+  return search;
+}
+
 function status(value: unknown): ProductStatus {
   if (value !== 'DRAFT' && value !== 'ACTIVE')
     throw new BadRequestException('Status must be DRAFT or ACTIVE');
@@ -70,7 +78,7 @@ export class ProductsService {
       throw new BadRequestException('Offset must be an integer from 0 to 2147483647');
     if (!Number.isInteger(limit) || limit < 1 || limit > 100)
       throw new BadRequestException('Limit must be an integer from 1 to 100');
-    return this.products.list(storeId, offset, limit);
+    return this.products.list(storeId, offset, limit, optionalSearch(args.search));
   }
 
   async find(context: RequestContext, id: string): Promise<ProductResult> {

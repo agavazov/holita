@@ -42,7 +42,7 @@ input UpdateProductInput {
 }
 
 type Query {
-  products(offset: Int! = 0, limit: Int! = 20): ProductPage!
+  products(offset: Int! = 0, limit: Int! = 20, search: String): ProductPage!
   product(id: ID!): Product!
 }
 

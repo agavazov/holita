@@ -14,7 +14,7 @@ const update =
   'mutation($id:ID!,$input:UpdateProductInput!){updateProduct(id:$id,input:$input){id name storeId sku status}}';
 const remove = 'mutation($id:ID!){deleteProduct(id:$id){id storeId}}';
 const list =
-  'query($offset:Int! = 0,$limit:Int! = 20){products(offset:$offset,limit:$limit){items{id name storeId} total offset limit}}';
+  'query($offset:Int! = 0,$limit:Int! = 20,$search:String){products(offset:$offset,limit:$limit,search:$search){items{id name storeId} total offset limit}}';
 
 describe('Products GraphQL with PostgreSQL', () => {
   let database: Awaited<ReturnType<typeof createTestDatabase>>;
@@ -189,6 +189,58 @@ describe('Products GraphQL with PostgreSQL', () => {
       expect(await query(list, variables, storeId)).toMatchObject({
         errors: [{ extensions: { code: 'BAD_USER_INPUT' } }],
       });
+  });
+
+  it('searches name or SKU case-insensitively within the active store with matching totals', async () => {
+    const storeId = randomUUID();
+    const foreignStoreId = randomUUID();
+    const createdAt = new Date('2026-02-01T00:00:00Z');
+    const matchingBoth = await database.client.product.create({
+      data: {
+        id: randomUUID(),
+        storeId,
+        name: 'Travel Notebook',
+        sku: 'NOTE-TRAVEL',
+        createdAt,
+      },
+    });
+    const matchingSku = await database.client.product.create({
+      data: { id: randomUUID(), storeId, name: 'Pen set', sku: 'BLUE-NOTE-2', createdAt },
+    });
+    await database.client.product.create({
+      data: { storeId, name: 'Desk lamp', sku: 'LAMP-1', createdAt },
+    });
+    await database.client.product.create({
+      data: { storeId: foreignStoreId, name: 'Foreign notebook', sku: 'NOTE-FOREIGN' },
+    });
+
+    const expectedIds = [matchingBoth.id, matchingSku.id].sort().reverse();
+    expect(await query(list, { search: '  nOtE  ', limit: 1 }, storeId)).toEqual({
+      data: {
+        products: {
+          items: [
+            {
+              id: expectedIds[0],
+              name: expectedIds[0] === matchingBoth.id ? matchingBoth.name : matchingSku.name,
+              storeId,
+            },
+          ],
+          total: 2,
+          offset: 0,
+          limit: 1,
+        },
+      },
+    });
+    expect(await query(list, { search: 'travel' }, storeId)).toMatchObject({
+      data: { products: { items: [{ id: matchingBoth.id }], total: 1 } },
+    });
+    expect(await query(list, { search: '   ' }, storeId)).toMatchObject({
+      data: { products: { total: 3 } },
+    });
+    expect(await query(list, { search: 'note' }, foreignStoreId)).toMatchObject({
+      data: { products: { items: [{ name: 'Foreign notebook' }], total: 1 } },
+    });
+    expect(requireStore).not.toHaveBeenCalled();
   });
 
   it('rejects blank, long, null and empty updates, invalid UUIDs and writable store IDs', async () => {

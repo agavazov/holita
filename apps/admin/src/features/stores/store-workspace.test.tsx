@@ -80,6 +80,60 @@ describe('store-scoped Products UI', () => {
     });
   });
 
+  it('debounces search, resets pagination and discards searched results on store switch', async () => {
+    const delayedSearch = deferredResponse();
+    const transport = mockGraphQL((call) => {
+      if (call.operation !== 'ListProducts') return defaultResult(call);
+      if (call.storeId === storeA && call.variables.search === 'note') return delayedSearch.promise;
+      const row =
+        call.storeId === storeB
+          ? product(storeB, 'Plovdiv notebook')
+          : product(storeA, call.variables.offset === 20 ? 'Second page product' : 'First page product');
+      return result({
+        products: {
+          items: [row],
+          total: call.storeId === storeA ? 21 : 1,
+          offset: call.variables.offset,
+          limit: 20,
+        },
+      });
+    });
+    const user = mount(`/stores/${storeA}/products`);
+    expect(await screen.findByText('First page product')).toBeInTheDocument();
+    await user.click(screen.getByTitle('Next Page'));
+    expect(await screen.findByText('Second page product')).toBeInTheDocument();
+    await user.type(screen.getByRole('searchbox', { name: 'Search products' }), 'note');
+    await waitFor(() => {
+      expect(transport.calls.at(-1)).toMatchObject({
+        storeId: storeA,
+        variables: { offset: 0, limit: 20, search: 'note' },
+      });
+    });
+
+    await switchStore(user, 'Plovdiv Store');
+    expect(await screen.findByText('Plovdiv notebook')).toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: 'Search products' })).toHaveValue('');
+    expect(transport.calls.at(-1)).toMatchObject({
+      storeId: storeB,
+      variables: { offset: 0, limit: 20 },
+    });
+    await act(async () => {
+      delayedSearch.resolve(
+        result({
+          products: {
+            items: [product(storeA, 'Sofia searched result')],
+            total: 1,
+            offset: 0,
+            limit: 20,
+          },
+        }),
+      );
+      await delayedSearch.promise;
+    });
+    expect(screen.queryByText('Sofia searched result')).not.toBeInTheDocument();
+    expect(screen.getByText('Plovdiv notebook')).toBeInTheDocument();
+  });
+
   it('keeps a delayed list and cached data out of the newly selected store', async () => {
     const delayed = deferredResponse();
     let delayNext = true;

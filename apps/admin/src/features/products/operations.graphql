@@ -8,8 +8,8 @@ fragment ProductDetails on Product {
   updatedAt
 }
 
-query ListProducts($offset: Int! = 0, $limit: Int! = 20) {
-  products(offset: $offset, limit: $limit) {
+query ListProducts($offset: Int! = 0, $limit: Int! = 20, $search: String) {
+  products(offset: $offset, limit: $limit, search: $search) {
     items {
       ...ProductDetails
     }
