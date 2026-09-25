@@ -40,7 +40,7 @@ describe('Refine GraphQL mapping', () => {
     expect(transport.calls[1]?.requestId).toMatch(/^[0-9a-f-]{36}$/);
   });
 
-  it('maps the product search filter without changing pagination', async () => {
+  it('maps product search and status filters without changing pagination', async () => {
     const transport = mockGraphQL(() =>
       result({ products: { items: [], total: 0, offset: 10, limit: 10 } }),
     );
@@ -48,14 +48,20 @@ describe('Refine GraphQL mapping', () => {
     await provider.getList({
       resource: productsResource(storeA),
       pagination: { currentPage: 2, pageSize: 10 },
-      filters: [{ field: 'search', operator: 'contains', value: '  notebook  ' }],
+      filters: [
+        { field: 'search', operator: 'contains', value: '  notebook  ' },
+        { field: 'status', operator: 'eq', value: 'ACTIVE' },
+      ],
     });
     await provider.getList({
       resource: productsResource(storeA),
-      filters: [{ field: 'search', operator: 'contains', value: '   ' }],
+      filters: [
+        { field: 'search', operator: 'contains', value: '   ' },
+        { field: 'status', operator: 'eq', value: 'ALL' },
+      ],
     });
     expect(transport.calls.map((call) => call.variables)).toEqual([
-      { offset: 10, limit: 10, search: 'notebook' },
+      { offset: 10, limit: 10, search: 'notebook', status: 'ACTIVE' },
       { offset: 0, limit: 20 },
     ]);
   });

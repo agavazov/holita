@@ -88,7 +88,10 @@ describe('store-scoped Products UI', () => {
       const row =
         call.storeId === storeB
           ? product(storeB, 'Plovdiv notebook')
-          : product(storeA, call.variables.offset === 20 ? 'Second page product' : 'First page product');
+          : product(
+              storeA,
+              call.variables.offset === 20 ? 'Second page product' : 'First page product',
+            );
       return result({
         products: {
           items: [row],
@@ -102,17 +105,30 @@ describe('store-scoped Products UI', () => {
     expect(await screen.findByText('First page product')).toBeInTheDocument();
     await user.click(screen.getByTitle('Next Page'));
     expect(await screen.findByText('Second page product')).toBeInTheDocument();
+    await user.click(screen.getByRole('combobox', { name: 'Filter products by status' }));
+    await user.click(
+      await screen.findByText('Draft', { selector: '.ant-select-item-option-content' }),
+    );
+    await waitFor(() => {
+      expect(transport.calls.at(-1)).toMatchObject({
+        storeId: storeA,
+        variables: { offset: 0, limit: 20, status: 'DRAFT' },
+      });
+    });
     await user.type(screen.getByRole('searchbox', { name: 'Search products' }), 'note');
     await waitFor(() => {
       expect(transport.calls.at(-1)).toMatchObject({
         storeId: storeA,
-        variables: { offset: 0, limit: 20, search: 'note' },
+        variables: { offset: 0, limit: 20, search: 'note', status: 'DRAFT' },
       });
     });
 
     await switchStore(user, 'Plovdiv Store');
     expect(await screen.findByText('Plovdiv notebook')).toBeInTheDocument();
     expect(screen.getByRole('searchbox', { name: 'Search products' })).toHaveValue('');
+    expect(
+      screen.getByText('All statuses', { selector: '.ant-select-selection-item' }),
+    ).toBeInTheDocument();
     expect(transport.calls.at(-1)).toMatchObject({
       storeId: storeB,
       variables: { offset: 0, limit: 20 },

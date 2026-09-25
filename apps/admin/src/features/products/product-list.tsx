@@ -1,5 +1,17 @@
 import { useDelete, useList } from '@refinedev/core';
-import { Alert, Button, Card, Empty, Input, Modal, Space, Table, Tag, Typography } from 'antd';
+import {
+  Alert,
+  Button,
+  Card,
+  Empty,
+  Input,
+  Modal,
+  Select,
+  Space,
+  Table,
+  Tag,
+  Typography,
+} from 'antd';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 
@@ -7,6 +19,7 @@ import { productsResource, type DataError } from '../../data/data-provider.js';
 import type {
   DeleteProductMutation,
   ProductDetailsFragment,
+  ProductStatus,
 } from '../../generated/graphql/operations.js';
 
 export function ProductList({ storeId, onDeleted }: { storeId: string; onDeleted: () => void }) {
@@ -16,6 +29,7 @@ export function ProductList({ storeId, onDeleted }: { storeId: string; onDeleted
   const [pageSize, setPageSize] = useState(20);
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
+  const [status, setStatus] = useState<ProductStatus>();
   const [selected, setSelected] = useState<ProductDetailsFragment>();
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -27,11 +41,13 @@ export function ProductList({ storeId, onDeleted }: { storeId: string; onDeleted
     };
   }, [search]);
   const filters = useMemo(
-    () =>
-      appliedSearch
+    () => [
+      ...(appliedSearch
         ? [{ field: 'search', operator: 'contains' as const, value: appliedSearch }]
-        : [],
-    [appliedSearch],
+        : []),
+      ...(status ? [{ field: 'status', operator: 'eq' as const, value: status }] : []),
+    ],
+    [appliedSearch, status],
   );
   const products = useList<ProductDetailsFragment, DataError>({
     resource,
@@ -80,16 +96,32 @@ export function ProductList({ storeId, onDeleted }: { storeId: string; onDeleted
         </Button>
       }
     >
-      <Input.Search
-        allowClear
-        aria-label="Search products"
-        placeholder="Search by name or SKU"
-        value={search}
-        onChange={(event) => {
-          setSearch(event.target.value);
-        }}
-        style={{ marginBottom: 16, maxWidth: 400 }}
-      />
+      <Space wrap style={{ marginBottom: 16 }}>
+        <Input.Search
+          allowClear
+          aria-label="Search products"
+          placeholder="Search by name or SKU"
+          value={search}
+          onChange={(event) => {
+            setSearch(event.target.value);
+          }}
+          style={{ width: 400 }}
+        />
+        <Select
+          aria-label="Filter products by status"
+          value={status ?? 'ALL'}
+          options={[
+            { label: 'All statuses', value: 'ALL' },
+            { label: 'Draft', value: 'DRAFT' },
+            { label: 'Active', value: 'ACTIVE' },
+          ]}
+          onChange={(value: 'ALL' | ProductStatus) => {
+            setPage(1);
+            setStatus(value === 'ALL' ? undefined : value);
+          }}
+          style={{ width: 150 }}
+        />
+      </Space>
       {products.query.isError && (
         <Alert
           className="form-error"

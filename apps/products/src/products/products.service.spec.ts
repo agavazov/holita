@@ -67,19 +67,29 @@ describe('Products service validation', () => {
   });
 
   it('normalizes optional search before repository access', async () => {
-    await service.list(context, { offset: 2, limit: 10, search: '  Note-1  ' });
-    expect(repository.list).toHaveBeenLastCalledWith(context.storeId, 2, 10, 'Note-1');
-    await service.list(context, { search: '   ' });
-    expect(repository.list).toHaveBeenLastCalledWith(context.storeId, 0, 20, undefined);
+    await service.list(context, {
+      offset: 2,
+      limit: 10,
+      search: '  Note-1  ',
+      status: 'ACTIVE',
+    });
+    expect(repository.list).toHaveBeenLastCalledWith(context.storeId, 2, 10, 'Note-1', 'ACTIVE');
+    await service.list(context, { search: '   ', status: null });
+    expect(repository.list).toHaveBeenLastCalledWith(context.storeId, 0, 20, undefined, undefined);
     await service.list(context, {});
-    expect(repository.list).toHaveBeenLastCalledWith(context.storeId, 0, 20, undefined);
+    expect(repository.list).toHaveBeenLastCalledWith(context.storeId, 0, 20, undefined, undefined);
     expect(requireStore).not.toHaveBeenCalled();
   });
 
+  it('rejects invalid status before repository access', () => {
+    expect(() => {
+      Reflect.apply(service.list.bind(service), undefined, [context, { status: 'ARCHIVED' }]);
+    }).toThrow(BadRequestException);
+    expect(repository.list).not.toHaveBeenCalled();
+  });
+
   it('rejects NUL search before repository access', () => {
-    expect(() => service.list(context, { search: 'bad\u0000search' })).toThrow(
-      BadRequestException,
-    );
+    expect(() => service.list(context, { search: 'bad\u0000search' })).toThrow(BadRequestException);
     expect(repository.list).not.toHaveBeenCalled();
   });
 

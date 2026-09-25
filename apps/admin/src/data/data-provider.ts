@@ -19,6 +19,7 @@ import {
   type ListProductsQuery,
   type ListProductsQueryVariables,
   type ListStoresQuery,
+  type ProductStatus,
   type UpdateProductInput,
   type UpdateProductMutation,
   type UpdateProductMutationVariables,
@@ -61,6 +62,13 @@ function productSearch(filters?: CrudFilters) {
   return filter.value.trim() || undefined;
 }
 
+function productStatus(filters?: CrudFilters): ProductStatus | undefined {
+  const filter = filters?.find((candidate) => 'field' in candidate && candidate.field === 'status');
+  if (!filter || !('value' in filter)) return undefined;
+  const value: unknown = filter.value;
+  return value === 'DRAFT' || value === 'ACTIVE' ? value : undefined;
+}
+
 export function createDataProvider(url: string): DataProvider {
   async function request<T>(
     resource: string,
@@ -83,6 +91,7 @@ export function createDataProvider(url: string): DataProvider {
           offset: ((pagination?.currentPage ?? 1) - 1) * (pagination?.pageSize ?? 20),
           limit: pagination?.pageSize ?? 20,
           search: productSearch(filters),
+          status: productStatus(filters),
         }),
         dataMapper: (response: OperationResult<ListStoresQuery | ListProductsQuery>) => {
           const data = requireData(response);

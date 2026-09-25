@@ -14,7 +14,7 @@ const update =
   'mutation($id:ID!,$input:UpdateProductInput!){updateProduct(id:$id,input:$input){id name storeId sku status}}';
 const remove = 'mutation($id:ID!){deleteProduct(id:$id){id storeId}}';
 const list =
-  'query($offset:Int! = 0,$limit:Int! = 20,$search:String){products(offset:$offset,limit:$limit,search:$search){items{id name storeId} total offset limit}}';
+  'query($offset:Int! = 0,$limit:Int! = 20,$search:String,$status:ProductStatus){products(offset:$offset,limit:$limit,search:$search,status:$status){items{id name storeId} total offset limit}}';
 
 describe('Products GraphQL with PostgreSQL', () => {
   let database: Awaited<ReturnType<typeof createTestDatabase>>;
@@ -239,6 +239,69 @@ describe('Products GraphQL with PostgreSQL', () => {
     });
     expect(await query(list, { search: 'note' }, foreignStoreId)).toMatchObject({
       data: { products: { items: [{ name: 'Foreign notebook' }], total: 1 } },
+    });
+    expect(requireStore).not.toHaveBeenCalled();
+  });
+
+  it('filters status with search, pagination, matching totals and store isolation', async () => {
+    const storeId = randomUUID();
+    const foreignStoreId = randomUUID();
+    const createdAt = new Date('2026-02-02T00:00:00Z');
+    const activeMatches = await Promise.all(
+      ['ACTIVE-1', 'ACTIVE-2'].map((sku) =>
+        database.client.product.create({
+          data: { storeId, name: `Notebook ${sku}`, sku, status: 'ACTIVE', createdAt },
+        }),
+      ),
+    );
+    await database.client.product.create({
+      data: { storeId, name: 'Notebook draft', sku: 'DRAFT-1', status: 'DRAFT', createdAt },
+    });
+    await database.client.product.create({
+      data: { storeId, name: 'Active lamp', sku: 'LAMP-1', status: 'ACTIVE', createdAt },
+    });
+    await database.client.product.create({
+      data: {
+        storeId: foreignStoreId,
+        name: 'Foreign notebook',
+        sku: 'ACTIVE-FOREIGN',
+        status: 'ACTIVE',
+      },
+    });
+
+    const expectedIds = activeMatches
+      .map(({ id }) => id)
+      .sort()
+      .reverse();
+    expect(
+      await query(list, { search: '  notebook ', status: 'ACTIVE', limit: 1 }, storeId),
+    ).toEqual({
+      data: {
+        products: {
+          items: [
+            {
+              id: expectedIds[0],
+              name: activeMatches.find(({ id }) => id === expectedIds[0])?.name,
+              storeId,
+            },
+          ],
+          total: 2,
+          offset: 0,
+          limit: 1,
+        },
+      },
+    });
+    expect(await query(list, { search: '   ', status: 'DRAFT' }, storeId)).toMatchObject({
+      data: { products: { items: [{ name: 'Notebook draft' }], total: 1 } },
+    });
+    expect(await query(list, { status: null }, storeId)).toMatchObject({
+      data: { products: { total: 4 } },
+    });
+    expect(await query(list, { status: 'ACTIVE' }, foreignStoreId)).toMatchObject({
+      data: { products: { items: [{ name: 'Foreign notebook' }], total: 1 } },
+    });
+    expect(await query(list, { status: 'ARCHIVED' }, storeId)).toMatchObject({
+      errors: [{ extensions: { code: 'BAD_USER_INPUT' } }],
     });
     expect(requireStore).not.toHaveBeenCalled();
   });

@@ -1,15 +1,26 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service.js';
 import type { Prisma } from '../generated/prisma/client.js';
-import type { CreateProductInput, UpdateProductInput } from '../generated/graphql/types.js';
+import type {
+  CreateProductInput,
+  ProductStatus,
+  UpdateProductInput,
+} from '../generated/graphql/types.js';
 
 @Injectable()
 export class ProductsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(storeId: string, offset: number, limit: number, search?: string) {
+  async list(
+    storeId: string,
+    offset: number,
+    limit: number,
+    search?: string,
+    status?: ProductStatus,
+  ) {
     const where: Prisma.ProductWhereInput = {
       storeId,
+      ...(status ? { status } : {}),
       ...(search
         ? {
             OR: [

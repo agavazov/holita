@@ -51,6 +51,10 @@ function status(value: unknown): ProductStatus {
   return value;
 }
 
+function optionalStatus(value: unknown): ProductStatus | undefined {
+  return value == null ? undefined : status(value);
+}
+
 function persistenceError(error: unknown): never {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === 'P2002')
@@ -78,7 +82,13 @@ export class ProductsService {
       throw new BadRequestException('Offset must be an integer from 0 to 2147483647');
     if (!Number.isInteger(limit) || limit < 1 || limit > 100)
       throw new BadRequestException('Limit must be an integer from 1 to 100');
-    return this.products.list(storeId, offset, limit, optionalSearch(args.search));
+    return this.products.list(
+      storeId,
+      offset,
+      limit,
+      optionalSearch(args.search),
+      optionalStatus(args.status),
+    );
   }
 
   async find(context: RequestContext, id: string): Promise<ProductResult> {

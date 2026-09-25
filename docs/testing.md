@@ -52,8 +52,8 @@ Use Vitest's long --testNamePattern option through Nx; its short -t conflicts wi
 own target option and does not reach the test runner.
 Provider tests execute the actual official GraphQL provider with generated documents and
 controlled HTTP responses. Store-workspace tests render the actual application, router,
-Refine hooks/cache and Ant Design controls. They cover selection, pagination, retry/empty
-states, unavailable stores, cached switches, delayed reads and pending create/update/delete.
+Refine hooks/cache and Ant Design controls. They cover selection, pagination, search/status
+filters, retry/empty states, unavailable stores, cached switches, delayed reads and pending create/update/delete.
 They also verify that navigation between editors within one store isolates mutation state.
 The HTTP boundary is controlled; these are not proof of real backend persistence.
 Vitest inlines the Refine GraphQL/router ESM packages so their imports are resolved by Vite
