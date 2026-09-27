@@ -1,0 +1,51 @@
+type ReferenceUploadHeader {
+  name: String!
+  value: String!
+}
+type ReferenceUploadIntent {
+  uploadId: ID!
+  fileKey: String!
+  uploadUrl: String!
+  method: String!
+  headers: [ReferenceUploadHeader!]!
+  expiresAt: DateTime!
+}
+input CreateReferenceUploadInput {
+  originalName: String!
+  contentType: String!
+  byteSize: Int!
+}
+type ReferenceEventMedia {
+  id: ID!
+  eventId: ID!
+  originalName: String!
+  contentType: String!
+  byteSize: Int!
+  altText: String
+  position: Int!
+  isCover: Boolean!
+  readUrl: String!
+  readUrlExpiresAt: DateTime!
+  createdAt: DateTime!
+}
+input UpdateReferenceEventMediaInput {
+  altText: String
+}
+extend type Query {
+  referenceEventMedia(eventId: ID!): [ReferenceEventMedia!]!
+}
+extend type Mutation {
+  createReferenceUploadIntent(
+    eventId: ID!
+    input: CreateReferenceUploadInput!
+  ): ReferenceUploadIntent!
+  finalizeReferenceUpload(uploadId: ID!): ReferenceEventMedia!
+  updateReferenceEventMedia(
+    eventId: ID!
+    id: ID!
+    input: UpdateReferenceEventMediaInput!
+  ): ReferenceEventMedia!
+  deleteReferenceEventMedia(eventId: ID!, id: ID!): ID!
+  setReferenceEventCover(eventId: ID!, id: ID!): [ReferenceEventMedia!]!
+  reorderReferenceEventMedia(eventId: ID!, ids: [ID!]!): [ReferenceEventMedia!]!
+}

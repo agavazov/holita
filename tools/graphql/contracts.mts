@@ -16,18 +16,45 @@ export const subgraphs = [
     url: 'http://127.0.0.1:11083/graphql',
     path: 'apps/products/src/products/products.graphql',
   },
+  {
+    name: 'reference',
+    url: 'http://127.0.0.1:11086/graphql',
+    path: 'apps/reference/src/venues/venues.graphql',
+    additionalPaths: [
+      'apps/reference/src/events/events.graphql',
+      'apps/reference/src/speakers/speakers.graphql',
+      'apps/reference/src/tags/tags.graphql',
+      'apps/reference/src/sessions/sessions.graphql',
+      'apps/reference/src/media/media.graphql',
+    ],
+  },
 ];
 export const operationPaths = [
   'apps/admin/src/features/stores/operations.graphql',
   'apps/admin/src/features/products/operations.graphql',
   'apps/products/src/core/operations.graphql',
+  'apps/reference/src/core/operations.graphql',
+  'apps/admin/src/features/reference/speakers/operations.graphql',
+  'apps/admin/src/features/reference/tags/operations.graphql',
+  'apps/admin/src/features/reference/events/operations.graphql',
+  'apps/admin/src/features/reference/venues/operations.graphql',
+  'apps/admin/src/features/reference/sessions/operations.graphql',
+  'apps/admin/src/features/reference/media/operations.graphql',
 ];
 
 export async function readContracts() {
   return Promise.all(
     subgraphs.map(async (subgraph) => ({
       ...subgraph,
-      typeDefs: parse(await readFile(new URL(`../../${subgraph.path}`, import.meta.url), 'utf8')),
+      typeDefs: parse(
+        (
+          await Promise.all(
+            [subgraph.path, ...(subgraph.additionalPaths ?? [])].map((path) =>
+              readFile(new URL(`../../${path}`, import.meta.url), 'utf8'),
+            ),
+          )
+        ).join('\n'),
+      ),
     })),
   );
 }

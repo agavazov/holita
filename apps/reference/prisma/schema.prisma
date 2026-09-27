@@ -1,0 +1,231 @@
+generator client {
+  provider = "prisma-client"
+  output = "../src/generated/prisma"
+  moduleFormat = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Venue {
+  id String @id @default(uuid()) @db.Uuid
+  storeId String @db.Uuid
+  name String @db.VarChar(200)
+  description String? @db.VarChar(2000)
+  city String @db.VarChar(120)
+  countryCode String @db.VarChar(2)
+  address String? @db.VarChar(300)
+  capacity Int?
+  active Boolean @default(true)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  events Event[]
+  @@unique([storeId, id])
+  @@index([storeId, createdAt, id])
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum EventFormat {
+  IN_PERSON
+  ONLINE
+  HYBRID
+}
+
+model Event {
+  id String @id @default(uuid()) @db.Uuid
+  storeId String @db.Uuid
+  title String @db.VarChar(200)
+  code String @db.VarChar(100)
+  status EventStatus @default(DRAFT)
+  format EventFormat
+  capacity Int?
+  budget Decimal? @db.Decimal(12, 2)
+  featured Boolean @default(false)
+  startsAt DateTime @db.Timestamptz(3)
+  endsAt DateTime @db.Timestamptz(3)
+  registrationOpensOn DateTime? @db.Date
+  registrationClosesOn DateTime? @db.Date
+  venueId String? @db.Uuid
+  venue Venue? @relation(fields: [storeId, venueId], references: [storeId, id], onDelete: Restrict, onUpdate: Restrict)
+  meetingUrl String? @db.VarChar(2000)
+  descriptionHtml String?
+  summary String? @db.VarChar(500)
+  tags EventTag[]
+  sessions Session[]
+  history EventHistory[]
+  media EventMedia[] @relation("EventGallery")
+  uploadIntents UploadIntent[]
+  coverMediaId String? @db.Uuid
+  coverMedia EventMedia? @relation("EventCover", fields: [storeId, id, coverMediaId], references: [storeId, eventId, id], onDelete: NoAction, onUpdate: NoAction)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  deletedAt DateTime? @db.Timestamptz(3)
+
+  @@unique([storeId, id])
+  @@unique([storeId, code])
+  @@index([storeId, deletedAt, startsAt, id])
+  @@index([storeId, venueId])
+}
+
+model Speaker {
+  id String @id @default(uuid()) @db.Uuid
+  storeId String @db.Uuid
+  name String @db.VarChar(200)
+  email String? @db.VarChar(254)
+  shortBio String? @db.VarChar(2000)
+  sessions SessionSpeaker[]
+  active Boolean @default(true)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@unique([storeId, id])
+  @@index([storeId, createdAt, id])
+}
+
+model Tag {
+  id String @id @default(uuid()) @db.Uuid
+  storeId String @db.Uuid
+  name String @db.VarChar(100)
+  color String @db.VarChar(7)
+  active Boolean @default(true)
+  events EventTag[]
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@unique([storeId, id])
+  @@unique([storeId, name])
+  @@index([storeId, createdAt, id])
+}
+
+model EventTag {
+  storeId String @db.Uuid
+  eventId String @db.Uuid
+  tagId String @db.Uuid
+  event Event @relation(fields: [storeId, eventId], references: [storeId, id], onDelete: Cascade, onUpdate: Restrict)
+  tag Tag @relation(fields: [storeId, tagId], references: [storeId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([storeId, eventId, tagId])
+  @@index([storeId, tagId])
+}
+
+model Session {
+  id String @id @default(uuid()) @db.Uuid
+  storeId String @db.Uuid
+  eventId String @db.Uuid
+  event Event @relation(fields: [storeId, eventId], references: [storeId, id], onDelete: Cascade, onUpdate: Restrict)
+  title String @db.VarChar(200)
+  summary String? @db.VarChar(2000)
+  startsAt DateTime @db.Timestamptz(3)
+  endsAt DateTime @db.Timestamptz(3)
+  room String? @db.VarChar(120)
+  position Int
+  speakers SessionSpeaker[]
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@unique([storeId, id])
+  @@index([storeId, eventId, position, id])
+}
+
+model SessionSpeaker {
+  storeId String @db.Uuid
+  sessionId String @db.Uuid
+  speakerId String @db.Uuid
+  session Session @relation(fields: [storeId, sessionId], references: [storeId, id], onDelete: Cascade, onUpdate: Restrict)
+  speaker Speaker @relation(fields: [storeId, speakerId], references: [storeId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([storeId, sessionId, speakerId])
+  @@index([storeId, speakerId])
+}
+
+
+enum UploadState {
+  PENDING
+  UPLOADING
+  UPLOADED
+  FINALIZED
+  DELETING
+}
+
+model UploadIntent {
+  id String @id @default(uuid()) @db.Uuid
+  storeId String @db.Uuid
+  eventId String @db.Uuid
+  event Event @relation(fields: [storeId, eventId], references: [storeId, id], onDelete: Restrict, onUpdate: Restrict)
+  fileKey String @unique @db.Uuid
+  originalName String @db.VarChar(255)
+  contentType String @db.VarChar(100)
+  byteSize Int
+  tokenHash String @db.VarChar(64)
+  expiresAt DateTime @db.Timestamptz(3)
+  finalizeExpiresAt DateTime @db.Timestamptz(3)
+  state UploadState @default(PENDING)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  media EventMedia?
+
+  @@unique([storeId, eventId, id])
+  @@index([state, expiresAt])
+  @@index([state, finalizeExpiresAt])
+  @@index([storeId, eventId, state])
+}
+
+model EventMedia {
+  id String @id @default(uuid()) @db.Uuid
+  storeId String @db.Uuid
+  eventId String @db.Uuid
+  event Event @relation("EventGallery", fields: [storeId, eventId], references: [storeId, id], onDelete: Restrict, onUpdate: Restrict)
+  covers Event[] @relation("EventCover")
+  uploadId String @unique @db.Uuid
+  upload UploadIntent @relation(fields: [storeId, eventId, uploadId], references: [storeId, eventId, id], onDelete: Restrict, onUpdate: Restrict)
+  fileKey String @unique @db.Uuid
+  originalName String @db.VarChar(255)
+  contentType String @db.VarChar(100)
+  byteSize Int
+  altText String? @db.VarChar(300)
+  position Int
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([storeId, eventId, id])
+  @@unique([storeId, eventId, uploadId])
+  @@index([storeId, eventId, position, id])
+}
+
+
+enum EventHistoryOperation {
+  CREATED
+  UPDATED
+  TRASHED
+  RESTORED
+  SESSION_CREATED
+  SESSION_UPDATED
+  SESSION_DELETED
+  SESSIONS_REORDERED
+  MEDIA_ADDED
+  MEDIA_UPDATED
+  MEDIA_REMOVED
+  MEDIA_REORDERED
+  COVER_CHANGED
+}
+
+model EventHistory {
+  id String @id @default(uuid()) @db.Uuid
+  storeId String @db.Uuid
+  eventId String @db.Uuid
+  event Event @relation(fields: [storeId, eventId], references: [storeId, id], onDelete: Restrict, onUpdate: Restrict)
+  operation EventHistoryOperation
+  subject String? @db.VarChar(255)
+  actor String @default("Anonymous") @db.VarChar(20)
+  changes Json
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([storeId, eventId, createdAt, id])
+}

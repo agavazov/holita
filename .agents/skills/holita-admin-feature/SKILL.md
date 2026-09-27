@@ -25,8 +25,8 @@ do not create a design system, separate fixture screen or generic CRUD framework
 
 Capture the resource in mutation arguments. Keep UI callbacks on the individual mutate
 call so unmounting suppresses old navigation/notifications; Refine still invalidates the
-original resource. Keep synchronous submission guards. A store switch discards unsaved
-forms but does not cancel a submitted server write.
+original resource. Keep synchronous submission guards. Reference editors use the data-router blocker to confirm discarding dirty forms; Products
+keeps its existing behavior. A store switch does not cancel a submitted server write.
 
 Start with `npm run test:admin -- product-form.test.tsx` for form changes,
 `data-provider.test.ts` for mapping, and `store-workspace.test.tsx` for lifecycle changes.
@@ -34,3 +34,13 @@ The latter uses real Refine hooks/cache with controlled GraphQL transport delays
 For browser behavior use `npm run test:smoke -- products.smoke.spec.mts` with the test DB
 prerequisites in [testing](../../../docs/testing.md). Do not run test:full automatically.
 Update the existing behavior documentation and verify the affected build/typecheck.
+
+Reference Venues applies the same lifecycle in its own service and admin feature. Follow
+`apps/reference/src/venues` and `apps/admin/src/features/reference/venues` when extending
+Reference. Use test:reference/test:reference:db with venues.service.spec.ts/venues.db.spec.ts,
+and test:admin/test:smoke with the relevant Venue/Reference file. Keep the Reference
+availability guard and prefixed public contracts.
+
+Use the [Reference implementation index](../../../docs/reference.md) for richer Event,
+Session, gallery, lifecycle and responsive-navigation examples. Select only the patterns
+needed by the feature; the index links each implementation to its focused checks.

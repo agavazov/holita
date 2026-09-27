@@ -16,3 +16,5 @@ apps/*/src/generated/
 
 .tmp/
 .volumes/
+
+.media/

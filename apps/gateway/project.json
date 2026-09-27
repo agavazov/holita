@@ -3,7 +3,7 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
   "sourceRoot": "apps/gateway/src",
-  "implicitDependencies": ["core", "products"],
+  "implicitDependencies": ["core", "products", "reference"],
   "tags": ["type:app", "scope:gateway"],
   "targets": {
     "test": {
@@ -39,7 +39,7 @@
       "cache": false,
       "dependsOn": [
         {
-          "projects": ["core", "products", "gateway"],
+          "projects": ["core", "products", "gateway", "reference"],
           "target": "build"
         }
       ],

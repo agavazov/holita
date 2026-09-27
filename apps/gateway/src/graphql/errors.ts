@@ -49,6 +49,24 @@ export const graphqlDiagnostics: ApolloServerPlugin<RequestContext> = {
   },
 };
 
+function fieldErrors(value: unknown): { path: string; message: string }[] {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 30).flatMap((entry: unknown) => {
+    if (
+      typeof entry !== 'object' ||
+      entry === null ||
+      !('path' in entry) ||
+      !('message' in entry) ||
+      typeof entry.path !== 'string' ||
+      typeof entry.message !== 'string' ||
+      !/^[a-zA-Z][a-zA-Z0-9]*$/.test(entry.path) ||
+      entry.message.length > 300
+    )
+      return [];
+    return [{ path: entry.path, message: entry.message }];
+  });
+}
+
 export function formatGraphqlError(
   formatted: GraphQLFormattedError,
   error: unknown,
@@ -62,7 +80,16 @@ export function formatGraphqlError(
   }
   const code = formatted.extensions?.['code'];
   if (typeof code === 'string' && publicCodes.has(code))
-    return { ...formatted, extensions: { code, ...trace } };
+    return {
+      ...formatted,
+      extensions: {
+        code,
+        ...trace,
+        ...(code === 'BAD_USER_INPUT'
+          ? { fieldErrors: fieldErrors(formatted.extensions?.['fieldErrors']) }
+          : {}),
+      },
+    };
   return {
     ...formatted,
     message: 'Internal server error',

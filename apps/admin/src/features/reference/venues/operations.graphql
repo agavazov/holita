@@ -1,0 +1,50 @@
+fragment ReferenceVenueDetails on ReferenceVenue {
+  id
+  storeId
+  name
+  description
+  city
+  countryCode
+  address
+  capacity
+  active
+  createdAt
+  updatedAt
+}
+
+query ListReferenceVenues(
+  $offset: Int!
+  $limit: Int!
+  $search: String
+  $active: Boolean
+  $ids: [ID!]
+) {
+  referenceVenues(offset: $offset, limit: $limit, search: $search, active: $active, ids: $ids) {
+    items {
+      ...ReferenceVenueDetails
+    }
+    total
+    offset
+    limit
+  }
+}
+query GetReferenceVenue($id: ID!) {
+  referenceVenue(id: $id) {
+    ...ReferenceVenueDetails
+  }
+}
+mutation CreateReferenceVenue($input: CreateReferenceVenueInput!) {
+  createReferenceVenue(input: $input) {
+    ...ReferenceVenueDetails
+  }
+}
+mutation UpdateReferenceVenue($id: ID!, $input: UpdateReferenceVenueInput!) {
+  updateReferenceVenue(id: $id, input: $input) {
+    ...ReferenceVenueDetails
+  }
+}
+mutation DeleteReferenceVenue($id: ID!) {
+  deleteReferenceVenue(id: $id) {
+    ...ReferenceVenueDetails
+  }
+}

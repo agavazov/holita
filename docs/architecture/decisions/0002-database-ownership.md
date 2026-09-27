@@ -1,6 +1,6 @@
 # Separate database ownership and isolated test schemas
 
-Core and products require independent persistence without sharing application models or
+Core, products and reference require independent persistence without sharing application models or
 coupling every product operation to core. One PostgreSQL instance keeps local setup small;
 separate databases, login roles, Prisma schemas, clients and migrations enforce ownership.
 Product.storeId is a UUID reference without a cross-database foreign key. Fixture seeds

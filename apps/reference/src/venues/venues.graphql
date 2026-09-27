@@ -1,0 +1,66 @@
+extend schema @link(url: "https://specs.apollo.dev/federation/v2.3", import: ["@key"])
+
+scalar DateTime
+
+type Store @key(fields: "id", resolvable: false) {
+  id: ID!
+}
+
+type ReferenceVenue @key(fields: "id") {
+  id: ID!
+  storeId: ID!
+  name: String!
+  description: String
+  city: String!
+  countryCode: String!
+  address: String
+  capacity: Int
+  active: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  store: Store!
+}
+
+type ReferenceVenuePage {
+  items: [ReferenceVenue!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+
+input CreateReferenceVenueInput {
+  name: String!
+  description: String
+  city: String!
+  countryCode: String!
+  address: String
+  capacity: Int
+  active: Boolean! = true
+}
+
+input UpdateReferenceVenueInput {
+  name: String
+  description: String
+  city: String
+  countryCode: String
+  address: String
+  capacity: Int
+  active: Boolean
+}
+
+type Query {
+  referenceVenues(
+    offset: Int! = 0
+    limit: Int! = 20
+    search: String
+    active: Boolean
+    ids: [ID!]
+  ): ReferenceVenuePage!
+  referenceVenue(id: ID!): ReferenceVenue!
+}
+
+type Mutation {
+  createReferenceVenue(input: CreateReferenceVenueInput!): ReferenceVenue!
+  updateReferenceVenue(id: ID!, input: UpdateReferenceVenueInput!): ReferenceVenue!
+  deleteReferenceVenue(id: ID!): ReferenceVenue!
+}

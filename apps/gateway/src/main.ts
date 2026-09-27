@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import 'dotenv/config';
 
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 
 import { AppModule } from './app.module.js';
 
@@ -12,7 +13,9 @@ async function bootstrap(): Promise<void> {
     throw new Error('PORT must be an integer between 1 and 65535.');
   }
 
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // Allow the 100 KiB rich-text input plus JSON escaping and the other event fields.
+  app.useBodyParser('json', { limit: '1mb' });
   app.enableCors({
     origin: process.env.ADMIN_ORIGIN ?? 'http://127.0.0.1:11081',
     methods: ['GET', 'POST', 'OPTIONS'],

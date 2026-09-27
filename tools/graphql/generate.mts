@@ -10,7 +10,7 @@ import { composeContracts, readContracts, readOperations, workspaceRoot } from '
 const target = process.argv[2];
 if (
   !target ||
-  !['check', 'core', 'products', 'gateway', 'admin'].includes(target) ||
+  !['check', 'core', 'products', 'reference', 'gateway', 'admin'].includes(target) ||
   process.argv.length !== 3
 ) {
   throw new Error('Use npm run codegen, schema:compose or schema:check');
@@ -67,21 +67,21 @@ if (target === 'gateway') {
     true,
     documents.filter((document) => document.location.startsWith('apps/admin/')),
   );
-} else if (target === 'core' || target === 'products') {
+} else if (target === 'core' || target === 'products' || target === 'reference') {
   const schema = composition.schemas.get(target);
   if (!schema) throw new Error(`Missing ${target} schema`);
   await generateTypes(`apps/${target}/src/generated/graphql/types.ts`, schema, false);
-  if (target === 'products') {
+  if (target === 'products' || target === 'reference') {
     await generateTypes(
-      'apps/products/src/generated/graphql/core-operations.ts',
+      `apps/${target}/src/generated/graphql/core-operations.ts`,
       composition.apiSchema,
       true,
-      documents.filter((document) => document.location.startsWith('apps/products/')),
+      documents.filter((document) => document.location.startsWith(`apps/${target}/`)),
     );
   }
 }
 console.info(
   target === 'check'
-    ? 'Both subgraphs compose; all local operations validate without running services'
+    ? 'All subgraphs compose; all local operations validate without running services'
     : `Generated ${target} GraphQL artifacts from local contracts`,
 );

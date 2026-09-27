@@ -1,0 +1,49 @@
+fragment ReferenceSessionDetails on ReferenceSession {
+  id
+  storeId
+  eventId
+  title
+  summary
+  startsAt
+  endsAt
+  room
+  position
+  speakerIds
+  speakers {
+    id
+    name
+    active
+  }
+  createdAt
+  updatedAt
+}
+query ListReferenceSessions($eventId: ID!) {
+  referenceSessions(eventId: $eventId) {
+    ...ReferenceSessionDetails
+  }
+}
+query GetReferenceSession($eventId: ID!, $id: ID!) {
+  referenceSession(eventId: $eventId, id: $id) {
+    ...ReferenceSessionDetails
+  }
+}
+mutation CreateReferenceSession($eventId: ID!, $input: CreateReferenceSessionInput!) {
+  createReferenceSession(eventId: $eventId, input: $input) {
+    ...ReferenceSessionDetails
+  }
+}
+mutation UpdateReferenceSession($eventId: ID!, $id: ID!, $input: UpdateReferenceSessionInput!) {
+  updateReferenceSession(eventId: $eventId, id: $id, input: $input) {
+    ...ReferenceSessionDetails
+  }
+}
+mutation DeleteReferenceSession($eventId: ID!, $id: ID!) {
+  deleteReferenceSession(eventId: $eventId, id: $id) {
+    ...ReferenceSessionDetails
+  }
+}
+mutation ReorderReferenceSessions($eventId: ID!, $ids: [ID!]!) {
+  reorderReferenceSessions(eventId: $eventId, ids: $ids) {
+    ...ReferenceSessionDetails
+  }
+}

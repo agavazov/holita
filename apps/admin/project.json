@@ -10,7 +10,12 @@
       "executor": "nx:run-commands",
       "cache": false,
       "inputs": ["default", "^default"],
-      "dependsOn": [{ "target": "build", "projects": ["admin", "gateway", "core", "products"] }],
+      "dependsOn": [
+        {
+          "target": "build",
+          "projects": ["admin", "gateway", "core", "products", "reference"]
+        }
+      ],
       "options": {
         "command": "playwright test --config tools/browser/playwright.config.mts",
         "cwd": ".",

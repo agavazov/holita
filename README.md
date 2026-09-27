@@ -1,9 +1,12 @@
 # holita
 
-A strict TypeScript npm-workspaces repository with Nx tasks and four host applications:
-React/Vite admin and NestJS gateway, core, and products services. The admin uses Refine and
-Ant Design for store selection and Products management. The gateway exposes schema-first GraphQL for stores and store-scoped
-Products CRUD, including Product-to-Store federation. Core and products own independent
+holita is a working reference project created as a testbed for future software development
+life cycle (SDLC) automation.
+
+A strict TypeScript npm-workspaces repository with Nx tasks and five host applications:
+React/Vite admin and NestJS gateway, core, products and reference services. The admin uses Refine and
+Ant Design for store selection, Products management and Reference Event Management. The gateway exposes schema-first GraphQL for stores and store-scoped
+Products CRUD, including Product-to-Store federation. Core, products and reference own independent
 PostgreSQL databases, Prisma migrations, clients and repeatable seeds. All backends expose
 `GET /health`.
 
@@ -22,8 +25,8 @@ npm run db:seed
 npm run dev
 ```
 
-Open [the admin](http://127.0.0.1:11081). Gateway, core, and products listen on
-127.0.0.1 ports 11080, 11082, and 11083 respectively. All processes run on the host;
+Open [the admin](http://127.0.0.1:11081). Gateway, core, products and reference listen on
+127.0.0.1 ports 11080, 11082, 11083 and 11086 respectively. All processes run on the host;
 PostgreSQL alone runs in Docker on 127.0.0.1:11084. Ctrl+C stops the Node group;
 `npm run db:down` separately stops PostgreSQL and preserves its volume. Database setup,
 migrations and seeds are explicit commands, never side effects of `dev`.
@@ -31,11 +34,33 @@ migrations and seeds are explicit commands, never side effects of `dev`.
 Fresh seeds provide holita Sofia and holita Plovdiv; migrated installations retain their
 existing store names. Select a store, then list, create, edit or delete products. The store
 switcher stays in the header; URLs preserve the selection across reloads. Switching stores
-returns to that store's product list and discards unsaved forms. A submitted write still
+returns to that store's current resource list; Reference asks before discarding unsaved forms. A submitted write still
 belongs to its initiating store; its late result does not redirect or notify in another store.
 
+Choose **Reference → Events, Venues, Speakers or Tags** to manage the demo domain. Events
+have three form tabs, remote Venue/Tag selectors, exact EUR budgets and Sofia event times.
+Their list supports server filtering/sorting, URL-persisted navigation and per-store column
+preferences. Event titles open an overview with saved details and quick actions. The Sessions
+tab manages the event program, speaker assignments and explicit drag/button ordering with
+Save order and Cancel order. Session times must fit the Event. Active/Trash tabs support
+restore while preserving status, sessions and images. Select the current page's rows for
+confirmed Publish/Archive/Trash/Restore; each batch succeeds or fails as a whole. The History
+tab shows saved changes and before/after excerpts with anonymous attribution.
+**Edit event → Content & media** includes the rich description and, after the first save, an
+image gallery with upload progress, cover, alt text and ordering. Gallery actions save
+separately; the overview displays the saved images. Files use private local storage; no
+AWS setup is needed. See [media setup and limits](docs/development.md#using-reference).
+Reference forms warn about unsaved changes; validation errors open the relevant tab. `REFERENCE_ENABLED=false` disables its backend
+operations; `VITE_REFERENCE_ENABLED=false` hides its navigation and blocks direct admin
+routes after restarting/rebuilding the admin. Both default to true for local use. Source,
+existing data and the static schema remain available when disabled.
+
+Use the [Reference implementation index](docs/reference.md) to find the code and focused tests
+for each pattern. On narrow screens, **Menu** opens navigation and the header tabs wrap
+inside their card.
+
 Use [gateway GraphQL](http://127.0.0.1:11080/graphql) for API operations. `{ stores { id name } }`
-works without a selected store. Product operations require an `x-store-id` UUID header;
+works without a selected store. Product and Reference operations require an `x-store-id` UUID header;
 for the seeded Sofia store use `10000000-0000-4000-8000-000000000001`. Store context scopes
 data; this local foundation has no authentication or authorization.
 
@@ -50,6 +75,7 @@ npm run dev:admin
 npm run dev:gateway
 npm run dev:core
 npm run dev:products
+npm run dev:reference
 ```
 
 ## Check a change

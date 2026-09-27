@@ -1,0 +1,54 @@
+"""
+A child of one Event. All access requires the active store and parent event.
+"""
+type ReferenceSession {
+  id: ID!
+  storeId: ID!
+  eventId: ID!
+  title: String!
+  summary: String
+  startsAt: DateTime!
+  endsAt: DateTime!
+  room: String
+  position: Int!
+  speakerIds: [ID!]!
+  speakers: [ReferenceSpeaker!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+input CreateReferenceSessionInput {
+  title: String!
+  summary: String
+  startsAt: DateTime!
+  endsAt: DateTime!
+  room: String
+  speakerIds: [ID!] = []
+}
+input UpdateReferenceSessionInput {
+  title: String
+  summary: String
+  startsAt: DateTime
+  endsAt: DateTime
+  room: String
+  speakerIds: [ID!]
+}
+extend type Query {
+  """
+  The complete program, limited to 100 sessions, in explicit display order.
+  """
+  referenceSessions(eventId: ID!): [ReferenceSession!]!
+  referenceSession(eventId: ID!, id: ID!): ReferenceSession!
+}
+extend type Mutation {
+  createReferenceSession(eventId: ID!, input: CreateReferenceSessionInput!): ReferenceSession!
+  updateReferenceSession(
+    eventId: ID!
+    id: ID!
+    input: UpdateReferenceSessionInput!
+  ): ReferenceSession!
+  deleteReferenceSession(eventId: ID!, id: ID!): ReferenceSession!
+  """
+  Save the complete permutation of this event's session IDs atomically.
+  """
+  reorderReferenceSessions(eventId: ID!, ids: [ID!]!): [ReferenceSession!]!
+}

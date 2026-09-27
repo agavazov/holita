@@ -1,0 +1,46 @@
+fragment ReferenceSpeakerDetails on ReferenceSpeaker {
+  id
+  storeId
+  name
+  email
+  shortBio
+  active
+  createdAt
+  updatedAt
+}
+query ListReferenceSpeakers(
+  $offset: Int!
+  $limit: Int!
+  $search: String
+  $active: Boolean
+  $ids: [ID!]
+) {
+  referenceSpeakers(offset: $offset, limit: $limit, search: $search, active: $active, ids: $ids) {
+    items {
+      ...ReferenceSpeakerDetails
+    }
+    total
+    offset
+    limit
+  }
+}
+query GetReferenceSpeaker($id: ID!) {
+  referenceSpeaker(id: $id) {
+    ...ReferenceSpeakerDetails
+  }
+}
+mutation CreateReferenceSpeaker($input: CreateReferenceSpeakerInput!) {
+  createReferenceSpeaker(input: $input) {
+    ...ReferenceSpeakerDetails
+  }
+}
+mutation UpdateReferenceSpeaker($id: ID!, $input: UpdateReferenceSpeakerInput!) {
+  updateReferenceSpeaker(id: $id, input: $input) {
+    ...ReferenceSpeakerDetails
+  }
+}
+mutation DeleteReferenceSpeaker($id: ID!) {
+  deleteReferenceSpeaker(id: $id) {
+    ...ReferenceSpeakerDetails
+  }
+}

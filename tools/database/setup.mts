@@ -1,7 +1,7 @@
 import { config } from 'dotenv';
 import pg from 'pg';
 
-for (const path of ['.env', 'apps/core/.env', 'apps/products/.env']) {
+for (const path of ['.env', 'apps/core/.env', 'apps/products/.env', 'apps/reference/.env']) {
   config({ path, quiet: true });
 }
 
@@ -15,7 +15,7 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error('POSTGRES_PORT must be an integer from 1 to 65535');
 }
 
-const databases = ['core', 'products'].map((service) => {
+const databases = ['core', 'products', 'reference'].map((service) => {
   const name = `holita_${service}${suffix}`;
   const key = `${service.toUpperCase()}${suffix.toUpperCase()}_DATABASE_URL`;
   let url: URL;

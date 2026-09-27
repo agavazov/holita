@@ -1,0 +1,45 @@
+fragment ReferenceTagDetails on ReferenceTag {
+  id
+  storeId
+  name
+  color
+  active
+  createdAt
+  updatedAt
+}
+query ListReferenceTags(
+  $offset: Int!
+  $limit: Int!
+  $search: String
+  $active: Boolean
+  $ids: [ID!]
+) {
+  referenceTags(offset: $offset, limit: $limit, search: $search, active: $active, ids: $ids) {
+    items {
+      ...ReferenceTagDetails
+    }
+    total
+    offset
+    limit
+  }
+}
+query GetReferenceTag($id: ID!) {
+  referenceTag(id: $id) {
+    ...ReferenceTagDetails
+  }
+}
+mutation CreateReferenceTag($input: CreateReferenceTagInput!) {
+  createReferenceTag(input: $input) {
+    ...ReferenceTagDetails
+  }
+}
+mutation UpdateReferenceTag($id: ID!, $input: UpdateReferenceTagInput!) {
+  updateReferenceTag(id: $id, input: $input) {
+    ...ReferenceTagDetails
+  }
+}
+mutation DeleteReferenceTag($id: ID!) {
+  deleteReferenceTag(id: $id) {
+    ...ReferenceTagDetails
+  }
+}

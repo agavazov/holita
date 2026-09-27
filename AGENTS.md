@@ -28,7 +28,7 @@
 
 ## Repository
 
-- Use npm workspaces, the existing lockfile, and Nx. The four applications are `apps/admin`, `apps/gateway`, `apps/core`, and `apps/products`.
+- Use npm workspaces, the existing lockfile, and Nx. The five applications are `apps/admin`, `apps/gateway`, `apps/core`, `apps/products`, and `apps/reference`.
 - Do not import another application's implementation, Prisma client, or database model, including through relative paths. ESLint/Nx enforce application boundaries.
 - Expose daily commands through root npm scripts. Do not add another build system, custom process supervisor, or custom test-selection framework. Add shared packages only for demonstrated current reuse.
 - Applications run as Node.js processes on the host. PostgreSQL is the only permitted containerized infrastructure for the foundation. Never reset databases or remove volumes to fix setup.
@@ -75,7 +75,8 @@
 - Follow [ProductForm](apps/admin/src/features/products/product-form.tsx), [the editor](apps/admin/src/features/products/product-editor.tsx) and [the single data provider](apps/admin/src/data/data-provider.ts). Pass the scoped resource at mutation submission; use per-call callbacks for local notifications/navigation so unmounting suppresses obsolete effects.
 - Refine owns the cache; the URQL transport has fetchExchange only. Do not use a mutable global store header or rely on headers alone for query identity. Store subtree keys reset forms/pagination/dialogs on switching.
 - Keep editor mutation state scoped to its route as well as its store. Changing between create/edit or product IDs must unmount the previous editor so late callbacks cannot affect a newly opened form.
-- Products is the prescribed reference feature as it is implemented. Do not add Dev Lab, a second dummy CRUD, or an empty reference framework.
+- Products and Reference Events/Venues/Speakers/Tags are the implemented feature examples. Extend the concrete Reference domain for demonstration features; do not add another demo application or a generic CRUD framework.
+- Use the [Reference implementation index](docs/reference.md) to find the concrete Event, Session, media and lifecycle examples and their focused tests. Copy only the capabilities required by the feature.
 
 ## Architectural changes
 
@@ -89,7 +90,7 @@ Do not make architectural changes solely because they may be useful later.
 
 ## Verification
 
-Follow [docs/testing.md](docs/testing.md). Start with the narrowest relevant project/file/case and expand only when changes or failures justify it. Use the named `test:core`, `test:products`, `test:gateway`, and `test:admin` targets with native runner selectors.
+Follow [docs/testing.md](docs/testing.md). Start with the narrowest relevant project/file/case and expand only when changes or failures justify it. Use the named `test:core`, `test:products`, `test:gateway`, `test:reference`, and `test:admin` targets with native runner selectors.
 
 For tooling changes, run from the repository root, plus relevant focused tests:
 
@@ -104,7 +105,7 @@ npm run build
 - Account for untracked files in the current diff and distinguish it from the broader PR diff. Nx affected selects projects, not proof of runtime-contract coverage.
 - Keep [PR CI](.github/workflows/affected.yml) on real event base/head commits with explicit missing-history failure. Workflow and ignore-rule changes belong in Nx shared inputs. [Full regression CI](.github/workflows/full-regression.yml) must remain workflow_dispatch only; docs-only selection is not application test coverage.
 - Database checks require dedicated test databases; do not reuse cached live-DB results as current evidence.
-- Use test:core:db/test:products:db for persistence changes. Provision with db:up, db:setup and db:test:setup; use the guarded per-run schema helpers under each service's test directory. Never replace them with development connections, resets or shared truncation.
+- Use test:core:db/test:products:db/test:reference:db for persistence changes. Provision with db:up, db:setup and db:test:setup; use the guarded per-run schema helpers under each service's test directory. Never replace them with development connections, resets or shared truncation.
 - Use test:gateway:db -- federation.db.spec.mts for real service-boundary changes. The guarded fixture under tools/graphql owns its processes/schemas; gateway runtime must not acquire database dependencies. Use test:schema for offline contract-tool tests.
 - Use test:admin with the relevant form/provider/store-workspace file, and test:smoke -- products.smoke.spec.mts for browser/store-switch changes. The explicit noncached browser fixture reuses dedicated DB guards and closes its own Vite/backend processes; never substitute development databases.
 - Report actual commands/results and unverified work. Do not declare work complete while a required check fails. Clean up task-started processes and connections.

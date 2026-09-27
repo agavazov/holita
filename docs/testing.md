@@ -60,7 +60,7 @@ Vitest inlines the Refine GraphQL/router ESM packages so their imports are resol
 as in the browser. jsdom supplies no layout engine; setup shims matchMedia and omits the
 unsupported getComputedStyle pseudo-element argument. Real browser checks are separate.
 
-Without a file, `test:core`, `test:products`, `test:gateway` and `test:admin` intentionally
+Without a file, `test:core`, `test:products`, `test:gateway`, `test:reference` and `test:admin` intentionally
 select only that application's current unit/bootstrap suite. Database suites have
 separate named targets; browser tests use test:smoke. No selector must silently fall back to every project, and
 `--passWithNoTests` must not be enabled. A missing file or a case pattern that executes
@@ -77,7 +77,7 @@ npm run test:core:db -- persistence.db.spec.ts
 npm run test:products:db -- persistence.db.spec.ts --testNamePattern="rejects duplicate SKU"
 ```
 
-Normal test targets do not connect to a database. `test:core:db` and `test:products:db`
+Normal test targets do not connect to a database. `test:core:db`, `test:products:db` and `test:reference:db`
 use Jest's separate jest.db.config.mjs and select test/**/*.db.spec.ts. Each run guards
 the local test URL, creates a random schema in its dedicated test database, runs the
 actual checked-in migrations, and passes that schema to its service's Prisma adapter.
@@ -87,7 +87,7 @@ Prisma as evidence of persistence correctness. The permission cases expect both 
 databases to have been provisioned, but do not need development migrations or seeds.
 
 URLs must use the exact service test database and role, a loopback host, a password and
-no URL options. CORE_TEST_DATABASE_URL and PRODUCTS_TEST_DATABASE_URL configure them;
+no URL options. CORE_TEST_DATABASE_URL, PRODUCTS_TEST_DATABASE_URL and REFERENCE_TEST_DATABASE_URL configure them;
 development URL variables cannot redirect DB tests. Credentials differ from development.
 Override the test URLs too if changing the PostgreSQL port. Never point test variables at
 development data. Unit guard tests exercise refusal before any connection is opened.
@@ -113,7 +113,7 @@ only the core-client boundary is replaced. They cover CRUD, trimming/defaults, c
 pagination, missing/malformed context, foreign IDs, entity representations and masked errors.
 Unicode boundary values are persisted and NUL input is rejected without writes.
 
-Gateway's noncached DB target builds the three backends and runs the fixture in
+Gateway's noncached DB target builds the four backends and runs the fixture in
 tools/graphql/federation.db.spec.mts. It migrates/seeds new schemas using dedicated test
 roles, starts actual compiled Node applications on ephemeral ports, and observes HTTP
 headers through forwarding test servers. No business service or Prisma client is mocked.
@@ -128,10 +128,105 @@ whole-graph fixture's URL guards without opening databases.
 
 The Nx `test-db` target has cache:false; any displayed cache hit belongs to generation,
 not the live database test. Native file and --testNamePattern selection works unchanged.
-Both targets are included in test:affected and the manually requested test:full command.
+These targets are included in test:affected and the manually requested test:full command.
 Prepare databases before an affected run that includes them. If a process is forcibly
 killed, a test schema may remain; investigate that specific schema instead of deleting
 all test schemas, which could belong to another active run.
+
+## Reference checks
+
+Reference uses the same dedicated-database guards and per-run schema lifecycle. Provision
+all databases using the commands above; no development database is used by these checks.
+
+```bash
+npm run test:reference -- health.spec.ts
+npm run test:reference -- venues.service.spec.ts events.service.spec.ts description-html.spec.ts test-database-url.unit.spec.ts
+npm run test:reference:db -- persistence.db.spec.ts venues.db.spec.ts events.db.spec.ts lifecycle.db.spec.ts sessions.db.spec.ts media.db.spec.ts
+npm run test:admin -- venue-form.test.tsx reference-workspace.test.tsx event-workspace.test.tsx event-description.test.tsx event-list.test.tsx event-lifecycle.test.tsx event-time.test.ts session-workspace.test.tsx event-gallery.test.tsx data-provider.test.ts
+npm run test:gateway:db -- federation.db.spec.mts
+npm run test:smoke -- reference.smoke.spec.mts events.smoke.spec.mts lifecycle.smoke.spec.mts sessions.smoke.spec.mts rich-text.smoke.spec.mts media.smoke.spec.mts
+npm run test:smoke -- reference-layout.smoke.spec.mts reference-disabled.smoke.spec.mts
+```
+
+Venue unit tests cover validation and no-write decisions; DB tests cover migrated defaults,
+repeatable seeds, concurrent schema isolation, role access boundaries, scoped CRUD,
+nullable updates, pagination and federation representations. Federation tests additionally
+exercise the real core dependency, concurrent headers, disabled operations/entity lookups,
+continued Products availability, health and preservation of data after re-enabling Reference.
+The disabled browser file sets the existing fixture's `referenceEnabled` option to false,
+starting Reference with disabled business operations and serving the admin with hidden
+navigation. It verifies direct-route blocking without Reference requests, GraphQL refusal,
+Products creation and mobile navigation. The layout file exercises wrapped form tabs at
+320 px, keyboard tab selection, dirty-state feedback, drawer navigation with discard/keep
+editing, and the return to desktop navigation. Gallery and History component cases verify
+failure/retry states without incorrectly reporting an empty result.
+Event DB cases exercise exact money/date round trips, nullable/omitted updates, invalid
+schedules, format clearing, scoped/inactive relations, compound foreign-key refusal, retained
+soft-deleted records/codes, bounded remote lookup with literal punctuation and supporting
+CRUD/seed preservation.
+Lifecycle DB cases verify explicit Trash reads, federation exclusion, restored status and
+relations, reserved codes, store boundaries, invalid/mixed batches, 100-ID actions, concurrent
+restores, no-op history, bounded excerpts and pagination. An injected history failure after a
+real batch history insert verifies rollback of both that insert and the entire domain batch. Session
+and Media DB checks assert their saved history; the media restore check verifies preserved
+private bytes and resumed reads. Gateway checks exercise lifecycle/history contracts and the
+disabled flag through real processes. Component checks cover selection reset, confirmation,
+failure/retry, captured-store callbacks, readonly Trash and escaped history. Lifecycle browser
+checks cover bulk status/trash/restore, program preservation, history, reload/mobile layout
+and a delayed bulk response during store navigation.
+Event list cases cover AND/OR filters, scoped relation labels, numeric and nullable sorting,
+ID ties across pages, literal search punctuation and half-open time boundaries. Admin time
+cases cover both occurrences of the repeated autumn hour and picker changes across seasons.
+Supporting-list component checks exercise scoped deletion, failure/retry and refreshed empty
+states for Venues, Speakers and Tags through the real data provider.
+Gateway checks also cover Event/Store federation, fieldErrors forwarding and creation-only
+Core dependence. These use fresh dedicated test schemas and real processes.
+
+Description unit cases cover permitted formatting, malicious HTML/URLs, empty content,
+UTF-8 boundaries before sanitization, escaping expansion and repeat sanitization. Event DB
+cases verify sanitized persistence, omitted/null updates, foreign-store refusal and atomic
+rejection. The federation case exercises the full 100 KiB boundary and field errors through
+both HTTP parsers. Admin tests render untrusted API HTML safely and open Content on a server
+field error. Rich-text browser cases exercise paste, formatting, link validation, save/reload/
+edit/clear, mobile layout, size-error focus, dirty navigation and a pending save across stores.
+
+Session DB cases exercise parent/store ownership, compound foreign keys, omitted/null fields,
+scoped active/inactive speakers, permanent child deletion, soft-deleted parents, complete
+reorder membership and rollback after an intermediate position write fails. Concurrent
+requests verify the 100-session limit and Event date changes racing with child creation.
+Gateway cases cover parent scope, nested Speaker-to-Store federation, schedule field errors,
+reorder conflicts and disabled Session operations. Program component tests cover failed
+order drafts, cancel/refetch, dirty tab navigation, inactive selections and pending saves
+across store/parent navigation. The Session browser case uses a non-Sofia browser timezone
+and verifies CRUD, speakers, drag/move/save/cancel, persistence, parent schedule rejection
+and desktop/mobile layouts through the real gateway.
+
+Media DB cases use an owned temporary storage directory and the guarded dedicated database.
+They exercise real HTTP upload/read streams, decoder validation, generated keys, expiry,
+replay and concurrent claims, idempotent finalization, store/parent ownership, cover/order/alt
+metadata, interrupted writes, expired orphans, failed-deletion retries and preservation under
+soft deletion. Test cleanup removes only its own storage directory after closing its app.
+The federation/browser fixture similarly allocates private per-run media storage and passes
+the ephemeral Reference URL and admin CORS origin. No test uses development media files.
+Federation checks verify direct uploads bypass observed GraphQL transport, refreshed reads
+and the disabled flag across GraphQL and HTTP. Gallery component cases cover failed order
+preservation, dirty navigation, separate field saves and late store-scoped cover mutations.
+The gallery browser cases verify upload, preview, alt text, cover, ordering/cancel, removal,
+reload, mobile layout and upload cancellation on a store switch through the real services.
+
+The browser fixture starts Reference as well as the other backends. Reference browser
+checks cover create/edit/delete, both stores, reload persistence, narrow form layout,
+delayed reads, pending creates during store switches and same-store editor navigation.
+Event browser cases cover all sections, remote relations, format-dependent fields, dirty
+history navigation, pending store-scoped creation and supporting Speaker/Tag forms. The list/overview
+case exercises combined filters, sorting, column preferences, reload, Edit/save/Back, quick
+status updates, store reset and desktop/mobile layout against real gateway responses.
+Component checks cover the hidden direct route, form sections, generated provider mapping,
+exact time conversions, field errors, dirty navigation, selected inactive labels, and late
+list/search responses. List components also cover bookmarked query mapping, per-store column
+preferences, reset behavior, empty/error/retry states and late overview mutations. Calendar
+filter tests cover Sofia days with both 23 and 25 hours. Run the existing Products browser/store-workspace files when changing
+the shared navigation, provider or request lifecycle.
 
 ## Real browser smoke checks
 
@@ -146,9 +241,9 @@ npm run test:smoke -- products.smoke.spec.mts
 npm run test:smoke -- products.smoke.spec.mts --grep="pending mutation"
 ```
 
-The noncached admin:test-smoke target builds all four apps, then invokes Playwright directly.
+The noncached admin:test-smoke target builds all five apps, then invokes Playwright directly.
 It uses one headless Chromium worker with no automatic retries. Each test creates actual
-core/products/gateway processes and fresh migrated/seeded schemas through the guarded
+core/products/reference/gateway processes and fresh migrated/seeded schemas through the guarded
 federation fixture. Vite serves the real admin on an ephemeral port; its gateway URL and
 the gateway CORS origin match that test instance. Development URLs cannot redirect the
 fixture into development databases. Cleanup closes Vite, backend processes and test schemas.
@@ -212,13 +307,13 @@ PR CI requires the known base and fails when history is missing; it never substi
 an empty selection or automatically starts full regression.
 
 Nx uses main as its default base, but explicit comparisons avoid ambiguity. Shared
-configuration/lockfile changes can affect all four applications. Nx's project graph does
+configuration/lockfile changes can affect all five applications. Nx's project graph does
 not establish which tests cover a runtime change; choose behavioral checks from the
 mapping above. Local pure checks may be cached using the configured inputs. Use
 `--skip-nx-cache` when demonstrating the actual runner or testing current runtime behavior.
 Affected testing first runs the small offline schema-tool suite, then Nx selects the
 affected application unit/DB targets. Shared contracts and operation changes affect all
-four applications because all generators validate the complete contract set. Gateway's
+five applications because all generators validate the complete contract set. Gateway's
 whole-graph test builds the real backend dependencies. Application code import boundaries
 remain enforced separately from these task/contract relationships.
 
@@ -254,7 +349,7 @@ The PR sequence is:
 
 Docs-only changes can select no applications. The summary explains that no application
 tests ran; format, root-tool and schema checks still run. This is not evidence of product
-behavior. Shared configuration/workflow/ignore changes intentionally select all four apps;
+behavior. Shared configuration/workflow/ignore changes intentionally select all five apps;
 the PR still uses affected targets and never calls test:full.
 
 When changing CI, validate both YAML/expressions and shell steps using actionlint (with
@@ -271,7 +366,7 @@ npm run projects -- --affected --files=docs/testing.md
 npm run test:affected -- --files=apps/admin/src/features/products/product-form.tsx product-form.test.tsx --skip-nx-cache
 ```
 
-Expected application sets are admin; all four; products/gateway/admin; all four; all four;
+Expected application sets are admin; all five; products/gateway/admin; all five; all five;
 none, respectively. These explicit-file examples inspect the configured graph; actual
 PR execution uses the event SHAs instead. Verify the history step with an available commit
 and missing/invalid references; never treat a refused comparison as passing coverage.

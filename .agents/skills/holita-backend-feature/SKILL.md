@@ -31,3 +31,14 @@ appropriate. Use `test:products:db -- products.db.spec.ts` for real scoping/CRUD
 Read [testing](../../../docs/testing.md) for prerequisites and the current coverage map.
 Mocks prove service decisions, not database or federation isolation. Never run test:full
 automatically. Update the existing requirements/docs with the implemented behavior.
+
+Reference Venues applies the same lifecycle in its own service and admin feature. Follow
+`apps/reference/src/venues` and `apps/admin/src/features/reference/venues` when extending
+Reference. Use test:reference/test:reference:db with venues.service.spec.ts/venues.db.spec.ts,
+and test:admin/test:smoke with the relevant Venue/Reference file. Keep the Reference
+availability guard and prefixed public contracts.
+
+Use the [Reference implementation index](../../../docs/reference.md) for Event relations,
+Session ordering, direct uploads, atomic lifecycle actions and transactional history.
+Keep each feature's concrete service/repository boundaries and select the linked checks
+for the behavior being changed.

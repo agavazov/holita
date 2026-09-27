@@ -12,7 +12,9 @@ describe('local GraphQL contracts', () => {
     const result = composeContracts(await readContracts());
     expect(result.clientSdl).toContain('store: Store!');
     expect(result.clientSdl).not.toContain('_entities');
-    expect(await readOperations(result.apiSchema)).toHaveLength(3);
+    expect(await readOperations(result.apiSchema)).toHaveLength(10);
+    expect(result.clientSdl).toContain('referenceVenues(');
+    expect(result.clientSdl).toContain('reorderReferenceSessions(');
     expect(composeContracts(await readContracts()).supergraphSdl).toBe(result.supergraphSdl);
   });
   it('rejects an operation that no longer matches the API', async () => {

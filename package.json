@@ -29,7 +29,7 @@
     }
   },
   "scripts": {
-    "dev": "concurrently --kill-others --names gateway,core,products,admin --prefix-colors blue,green,yellow,magenta \"npm:dev:gateway\" \"npm:dev:core\" \"npm:dev:products\" \"npm:dev:admin\"",
+    "dev": "concurrently --kill-others --names gateway,core,products,reference,admin --prefix-colors blue,green,yellow,cyan,magenta \"npm:dev:gateway\" \"npm:dev:core\" \"npm:dev:products\" \"npm:dev:reference\" \"npm:dev:admin\"",
     "dev:gateway": "npm run dev --workspace @holita/gateway",
     "dev:core": "npm run dev --workspace @holita/core",
     "dev:products": "npm run dev --workspace @holita/products",
@@ -52,10 +52,10 @@
     "db:down": "docker compose down",
     "db:setup": "tsx tools/database/setup.mts",
     "db:test:setup": "tsx tools/database/setup.mts --test",
-    "db:generate": "nx run-many -t db-generate --projects=core,products",
-    "db:validate": "npm run db:validate --workspace @holita/core && npm run db:validate --workspace @holita/products",
-    "db:migrate": "npm run db:migrate --workspace @holita/core && npm run db:migrate --workspace @holita/products",
-    "db:seed": "npm run db:seed --workspace @holita/core && npm run db:seed --workspace @holita/products",
+    "db:generate": "nx run-many -t db-generate --projects=core,products,reference",
+    "db:validate": "npm run db:validate --workspace @holita/core && npm run db:validate --workspace @holita/products && npm run db:validate --workspace @holita/reference",
+    "db:migrate": "npm run db:migrate --workspace @holita/core && npm run db:migrate --workspace @holita/products && npm run db:migrate --workspace @holita/reference",
+    "db:seed": "npm run db:seed --workspace @holita/core && npm run db:seed --workspace @holita/products && npm run db:seed --workspace @holita/reference",
     "test:core:db": "nx run core:test-db --output-style=static",
     "test:products:db": "nx run products:test-db --output-style=static",
     "prelint": "npm run db:generate && npm run codegen",
@@ -65,7 +65,10 @@
     "schema:check": "tsx tools/graphql/generate.mts check",
     "test:schema": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.schema.config.mjs --runInBand",
     "test:gateway:db": "nx run gateway:test-db --output-style=static",
-    "test:smoke": "nx run admin:test-smoke --output-style=static"
+    "test:smoke": "nx run admin:test-smoke --output-style=static",
+    "dev:reference": "npm run dev --workspace @holita/reference",
+    "test:reference": "nx run reference:test --output-style=static",
+    "test:reference:db": "nx run reference:test-db --output-style=static"
   },
   "devDependencies": {
     "@apollo/composition": "2.14.4",

@@ -1,0 +1,58 @@
+fragment ReferenceEventMediaDetails on ReferenceEventMedia {
+  id
+  eventId
+  originalName
+  contentType
+  byteSize
+  altText
+  position
+  isCover
+  readUrl
+  readUrlExpiresAt
+  createdAt
+}
+query ListReferenceEventMedia($eventId: ID!) {
+  referenceEventMedia(eventId: $eventId) {
+    ...ReferenceEventMediaDetails
+  }
+}
+mutation CreateReferenceUploadIntent($eventId: ID!, $input: CreateReferenceUploadInput!) {
+  createReferenceUploadIntent(eventId: $eventId, input: $input) {
+    uploadId
+    fileKey
+    uploadUrl
+    method
+    headers {
+      name
+      value
+    }
+    expiresAt
+  }
+}
+mutation FinalizeReferenceUpload($uploadId: ID!) {
+  finalizeReferenceUpload(uploadId: $uploadId) {
+    ...ReferenceEventMediaDetails
+  }
+}
+mutation UpdateReferenceEventMedia(
+  $eventId: ID!
+  $id: ID!
+  $input: UpdateReferenceEventMediaInput!
+) {
+  updateReferenceEventMedia(eventId: $eventId, id: $id, input: $input) {
+    ...ReferenceEventMediaDetails
+  }
+}
+mutation DeleteReferenceEventMedia($eventId: ID!, $id: ID!) {
+  deleteReferenceEventMedia(eventId: $eventId, id: $id)
+}
+mutation SetReferenceEventCover($eventId: ID!, $id: ID!) {
+  setReferenceEventCover(eventId: $eventId, id: $id) {
+    ...ReferenceEventMediaDetails
+  }
+}
+mutation ReorderReferenceEventMedia($eventId: ID!, $ids: [ID!]!) {
+  reorderReferenceEventMedia(eventId: $eventId, ids: $ids) {
+    ...ReferenceEventMediaDetails
+  }
+}

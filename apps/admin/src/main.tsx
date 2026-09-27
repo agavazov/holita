@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter } from 'react-router';
+import { createBrowserRouter, RouterProvider } from 'react-router';
 import 'antd/dist/reset.css';
 
 import { App } from './App.js';
@@ -13,8 +13,6 @@ if (rootElement === null) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    <RouterProvider router={createBrowserRouter([{ path: '*', element: <App /> }])} />
   </StrictMode>,
 );

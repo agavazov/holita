@@ -1,0 +1,114 @@
+fragment ReferenceEventListItem on ReferenceEvent {
+  id
+  storeId
+  title
+  code
+  status
+  format
+  capacity
+  budget
+  featured
+  startsAt
+  endsAt
+  registrationOpensOn
+  registrationClosesOn
+  venueId
+  venue {
+    id
+    name
+    city
+    countryCode
+    address
+    active
+  }
+  meetingUrl
+  tagIds
+  tags {
+    id
+    name
+    color
+    active
+  }
+  summary
+  deletedAt
+  createdAt
+  updatedAt
+}
+fragment ReferenceEventDetails on ReferenceEvent {
+  ...ReferenceEventListItem
+  descriptionHtml
+}
+query ListReferenceEvents(
+  $offset: Int!
+  $limit: Int!
+  $filter: ReferenceEventFilter
+  $sort: ReferenceEventSort
+) {
+  referenceEvents(offset: $offset, limit: $limit, filter: $filter, sort: $sort) {
+    items {
+      ...ReferenceEventListItem
+    }
+    total
+    offset
+    limit
+  }
+}
+query GetReferenceEvent($id: ID!, $includeDeleted: Boolean! = false) {
+  referenceEvent(id: $id, includeDeleted: $includeDeleted) {
+    ...ReferenceEventDetails
+  }
+}
+mutation CreateReferenceEvent($input: CreateReferenceEventInput!) {
+  createReferenceEvent(input: $input) {
+    ...ReferenceEventDetails
+  }
+}
+mutation UpdateReferenceEvent($id: ID!, $input: UpdateReferenceEventInput!) {
+  updateReferenceEvent(id: $id, input: $input) {
+    ...ReferenceEventDetails
+  }
+}
+mutation DeleteReferenceEvent($id: ID!) {
+  deleteReferenceEvent(id: $id) {
+    ...ReferenceEventDetails
+  }
+}
+
+mutation SetReferenceEventsStatus($ids: [ID!]!, $status: ReferenceEventStatus!) {
+  setReferenceEventsStatus(ids: $ids, status: $status) {
+    ids
+    count
+  }
+}
+mutation TrashReferenceEvents($ids: [ID!]!) {
+  trashReferenceEvents(ids: $ids) {
+    ids
+    count
+  }
+}
+mutation RestoreReferenceEvents($ids: [ID!]!) {
+  restoreReferenceEvents(ids: $ids) {
+    ids
+    count
+  }
+}
+query ListReferenceEventHistory($eventId: ID!, $offset: Int!, $limit: Int!) {
+  referenceEventHistory(eventId: $eventId, offset: $offset, limit: $limit) {
+    items {
+      id
+      eventId
+      operation
+      subject
+      actor
+      createdAt
+      changes {
+        field
+        before
+        after
+      }
+    }
+    total
+    offset
+    limit
+  }
+}

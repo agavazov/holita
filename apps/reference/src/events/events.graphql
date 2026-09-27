@@ -1,0 +1,178 @@
+enum ReferenceEventStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+enum ReferenceEventFormat {
+  IN_PERSON
+  ONLINE
+  HYBRID
+}
+
+type ReferenceEvent @key(fields: "id") {
+  id: ID!
+  storeId: ID!
+  store: Store!
+  title: String!
+  code: String!
+  status: ReferenceEventStatus!
+  format: ReferenceEventFormat!
+  capacity: Int
+  "Exact EUR decimal, with at most two fractional digits."
+  budget: String
+  featured: Boolean!
+  startsAt: DateTime!
+  endsAt: DateTime!
+  "Calendar date in YYYY-MM-DD format."
+  registrationOpensOn: String
+  registrationClosesOn: String
+  venueId: ID
+  venue: ReferenceVenue
+  meetingUrl: String
+  tagIds: [ID!]!
+  tags: [ReferenceTag!]!
+  summary: String
+  "Sanitized rich HTML, at most 100 KiB UTF-8 before and after sanitization. Null clears it."
+  descriptionHtml: String
+  deletedAt: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+type ReferenceEventPage {
+  items: [ReferenceEvent!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+input CreateReferenceEventInput {
+  title: String!
+  code: String!
+  status: ReferenceEventStatus! = DRAFT
+  format: ReferenceEventFormat!
+  capacity: Int
+  budget: String
+  featured: Boolean! = false
+  startsAt: DateTime!
+  endsAt: DateTime!
+  registrationOpensOn: String
+  registrationClosesOn: String
+  venueId: ID
+  meetingUrl: String
+  tagIds: [ID!]! = []
+  summary: String
+  "Sanitized rich HTML, at most 100 KiB UTF-8 before and after sanitization. Null clears it."
+  descriptionHtml: String
+}
+input UpdateReferenceEventInput {
+  title: String
+  status: ReferenceEventStatus
+  format: ReferenceEventFormat
+  capacity: Int
+  budget: String
+  featured: Boolean
+  startsAt: DateTime
+  endsAt: DateTime
+  registrationOpensOn: String
+  registrationClosesOn: String
+  venueId: ID
+  meetingUrl: String
+  tagIds: [ID!]
+  summary: String
+  "Sanitized rich HTML, at most 100 KiB UTF-8 before and after sanitization. Null clears it."
+  descriptionHtml: String
+}
+enum ReferenceEventSortField {
+  TITLE
+  STARTS_AT
+  STATUS
+  CAPACITY
+  BUDGET
+  CREATED_AT
+}
+enum ReferenceEventSortDirection {
+  ASC
+  DESC
+}
+input ReferenceEventSort {
+  field: ReferenceEventSortField! = STARTS_AT
+  direction: ReferenceEventSortDirection! = ASC
+}
+input ReferenceEventFilter {
+  "False or omitted selects active events; true selects only Trash."
+  trashed: Boolean
+  search: String
+  statuses: [ReferenceEventStatus!]
+  formats: [ReferenceEventFormat!]
+  venueIds: [ID!]
+  tagIds: [ID!]
+  featured: Boolean
+  "Inclusive instant. Admin converts the first calendar date in Europe/Sofia."
+  startsAtFrom: DateTime
+  "Exclusive instant. Admin converts midnight after the final calendar date in Europe/Sofia."
+  startsAtBefore: DateTime
+  capacityMin: Int
+  capacityMax: Int
+}
+extend type Query {
+  referenceEvents(
+    offset: Int! = 0
+    limit: Int! = 20
+    filter: ReferenceEventFilter
+    sort: ReferenceEventSort
+  ): ReferenceEventPage!
+  referenceEvent(id: ID!, includeDeleted: Boolean! = false): ReferenceEvent!
+  referenceEventHistory(
+    eventId: ID!
+    offset: Int! = 0
+    limit: Int! = 20
+  ): ReferenceEventHistoryPage!
+}
+extend type Mutation {
+  createReferenceEvent(input: CreateReferenceEventInput!): ReferenceEvent!
+  updateReferenceEvent(id: ID!, input: UpdateReferenceEventInput!): ReferenceEvent!
+  deleteReferenceEvent(id: ID!): ReferenceEvent!
+  restoreReferenceEvent(id: ID!): ReferenceEvent!
+  setReferenceEventsStatus(ids: [ID!]!, status: ReferenceEventStatus!): ReferenceEventBulkResult!
+  trashReferenceEvents(ids: [ID!]!): ReferenceEventBulkResult!
+  restoreReferenceEvents(ids: [ID!]!): ReferenceEventBulkResult!
+}
+
+type ReferenceEventBulkResult {
+  ids: [ID!]!
+  count: Int!
+}
+enum ReferenceEventHistoryOperation {
+  CREATED
+  UPDATED
+  TRASHED
+  RESTORED
+  SESSION_CREATED
+  SESSION_UPDATED
+  SESSION_DELETED
+  SESSIONS_REORDERED
+  MEDIA_ADDED
+  MEDIA_UPDATED
+  MEDIA_REMOVED
+  MEDIA_REORDERED
+  COVER_CHANGED
+}
+type ReferenceEventChange {
+  field: String!
+  before: String
+  after: String
+}
+type ReferenceEventHistoryEntry {
+  id: ID!
+  eventId: ID!
+  operation: ReferenceEventHistoryOperation!
+  subject: String
+  actor: String!
+  changes: [ReferenceEventChange!]!
+  createdAt: DateTime!
+}
+type ReferenceEventHistoryPage {
+  items: [ReferenceEventHistoryEntry!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}

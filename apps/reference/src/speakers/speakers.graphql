@@ -1,0 +1,44 @@
+type ReferenceSpeaker @key(fields: "id") {
+  id: ID!
+  storeId: ID!
+  store: Store!
+  name: String!
+  email: String
+  shortBio: String
+  active: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+type ReferenceSpeakerPage {
+  items: [ReferenceSpeaker!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+input CreateReferenceSpeakerInput {
+  name: String!
+  email: String
+  shortBio: String
+  active: Boolean! = true
+}
+input UpdateReferenceSpeakerInput {
+  name: String
+  email: String
+  shortBio: String
+  active: Boolean
+}
+extend type Query {
+  referenceSpeakers(
+    offset: Int! = 0
+    limit: Int! = 20
+    search: String
+    active: Boolean
+    ids: [ID!]
+  ): ReferenceSpeakerPage!
+  referenceSpeaker(id: ID!): ReferenceSpeaker!
+}
+extend type Mutation {
+  createReferenceSpeaker(input: CreateReferenceSpeakerInput!): ReferenceSpeaker!
+  updateReferenceSpeaker(id: ID!, input: UpdateReferenceSpeakerInput!): ReferenceSpeaker!
+  deleteReferenceSpeaker(id: ID!): ReferenceSpeaker!
+}

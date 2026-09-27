@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Link, MemoryRouter, useLocation } from 'react-router';
+import { Link, RouterProvider, createMemoryRouter, useLocation } from 'react-router';
 import { describe, expect, it } from 'vitest';
 
 import { App } from '../../App.js';
@@ -27,10 +27,22 @@ function Location() {
 }
 function mount(path = '/') {
   render(
-    <MemoryRouter initialEntries={[path]}>
-      <App dataProvider={createDataProvider('http://127.0.0.1:11080/graphql')} />
-      <Location />
-    </MemoryRouter>,
+    <RouterProvider
+      router={createMemoryRouter(
+        [
+          {
+            path: '*',
+            element: (
+              <>
+                <App dataProvider={createDataProvider('http://127.0.0.1:11080/graphql')} />
+                <Location />
+              </>
+            ),
+          },
+        ],
+        { initialEntries: [path] },
+      )}
+    />,
   );
   return userEvent.setup();
 }

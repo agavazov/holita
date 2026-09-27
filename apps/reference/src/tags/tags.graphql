@@ -1,0 +1,41 @@
+type ReferenceTag @key(fields: "id") {
+  id: ID!
+  storeId: ID!
+  store: Store!
+  name: String!
+  color: String!
+  active: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+type ReferenceTagPage {
+  items: [ReferenceTag!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+input CreateReferenceTagInput {
+  name: String!
+  color: String!
+  active: Boolean! = true
+}
+input UpdateReferenceTagInput {
+  name: String
+  color: String
+  active: Boolean
+}
+extend type Query {
+  referenceTags(
+    offset: Int! = 0
+    limit: Int! = 20
+    search: String
+    active: Boolean
+    ids: [ID!]
+  ): ReferenceTagPage!
+  referenceTag(id: ID!): ReferenceTag!
+}
+extend type Mutation {
+  createReferenceTag(input: CreateReferenceTagInput!): ReferenceTag!
+  updateReferenceTag(id: ID!, input: UpdateReferenceTagInput!): ReferenceTag!
+  deleteReferenceTag(id: ID!): ReferenceTag!
+}
