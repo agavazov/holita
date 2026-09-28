@@ -48,7 +48,7 @@ function mount(path = '/') {
 }
 async function switchStore(user: ReturnType<typeof userEvent.setup>, name: string) {
   await user.click(screen.getByRole('combobox', { name: 'Store' }));
-  await user.click(await screen.findByText(name, { selector: '.ant-select-item-option-content' }));
+  await user.click(await screen.findByRole('option', { name }));
 }
 function defaultResult(call: GraphQLCall) {
   if (call.operation === 'ListStores') return result({ stores });

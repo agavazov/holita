@@ -40,6 +40,13 @@ Read docs/testing.md for Chromium/test-DB prerequisites; the fixture owns its pr
 schemas. Do not add heading assertions or passWithNoTests to make an aggregate green.
 Health/component mocks do not establish actual database or federation isolation.
 
+For shared admin navigation, also select `reference-layout.smoke.spec.mts`; include
+`reference-disabled.smoke.spec.mts` when menu visibility or route availability changes.
+For Aurora shell changes, compare the source and holita at matching viewport sizes,
+including collapsed/expanded navigation, open menus and mobile drawer behavior. Report
+visual review separately from behavioral test results. Capturing the source theme alone
+does not validate the holita integration.
+
 Never invoke `test:full` during implementation unless explicitly requested. Do not invent
 a selector framework; use the native runners behind the named npm scripts.
 

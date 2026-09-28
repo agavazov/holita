@@ -67,7 +67,11 @@
 ## React
 
 - Use Refine abstractions where they fit the task.
-- Use Ant Design controls instead of recreating standard UI primitives.
+- Use MUI and the actual Aurora `vite-ts` components for new or migrated admin UI. The local source is `../themes/aurora/vite-ts`. Preserve Aurora's theme, typography, spacing, icons and interaction patterns with holita branding; do not approximate its appearance by restyling existing Ant Design components.
+- Use Aurora's Sidenav layout with the Stacked sidenav shape. The top bar contains search, language, theme, notification and profile controls; module navigation belongs in the sidenav.
+- Keep the layout independent of feature data access and business logic. Supply application navigation, store selection and display data through explicit component inputs. Example search results, notifications and profile data are permitted for the shell; keep them separate from real CRUD data and do not implement fake authentication.
+- Integrate and visually review the shell before redesigning module CRUD screens. Keep existing CRUD and store switching operational during this stage; begin module redesign only after explicit user acceptance of the shell.
+- Retain Ant Design only where existing screens still require it; do not introduce it into the new shell or newly implemented screens. Remove replaced components and styles after their replacements are verified, and remove the dependency after its last use is migrated. Import only the Aurora components and dependencies required by the current feature, without its demo application or data/authentication providers.
 - Keep components focused without splitting trivial markup into separate files.
 - Keep data access in the Refine data provider and hooks, not scattered through presentation components.
 - Do not add a global state library unless local and Refine state cannot solve a concrete requirement.
@@ -76,6 +80,7 @@
 - Refine owns the cache; the URQL transport has fetchExchange only. Do not use a mutable global store header or rely on headers alone for query identity. Store subtree keys reset forms/pagination/dialogs on switching.
 - Keep editor mutation state scoped to its route as well as its store. Changing between create/edit or product IDs must unmount the previous editor so late callbacks cannot affect a newly opened form.
 - Products and Reference Events/Venues/Speakers/Tags are the implemented feature examples. Extend the concrete Reference domain for demonstration features; do not add another demo application or a generic CRUD framework.
+- Existing Products/Reference examples and skills remain references for contracts, validation and request/store/route lifecycle. Their Ant Design presentation is not the visual reference for migrated screens; the Aurora/MUI requirements above govern those screens. Verify visual fidelity against the selected Aurora layout at matching desktop and mobile viewport sizes.
 - Use the [Reference implementation index](docs/reference.md) to find the concrete Event, Session, media and lifecycle examples and their focused tests. Copy only the capabilities required by the feature.
 
 ## Architectural changes

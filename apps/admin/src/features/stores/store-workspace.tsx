@@ -1,24 +1,10 @@
 import { useList } from '@refinedev/core';
-import {
-  Alert,
-  Button,
-  Card,
-  Empty,
-  Drawer,
-  Grid,
-  Layout,
-  Menu,
-  Select,
-  Skeleton,
-  Space,
-  Typography,
-  notification,
-} from 'antd';
-import { useState } from 'react';
+import { Alert, Button, Card, Empty, Skeleton, Space, Typography, notification } from 'antd';
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router';
 
 import type { DataError } from '../../data/data-provider.js';
 import type { ListStoresQuery } from '../../generated/graphql/operations.js';
+import { AdminLayout } from '../../layout/admin-layout.js';
 import { ProductEditor } from '../products/product-editor.js';
 import { ProductList } from '../products/product-list.js';
 import { ReferenceWorkspace } from '../reference/reference-workspace.js';
@@ -71,9 +57,6 @@ function StoreProducts({ storeId }: { storeId: string }) {
 
 export function StoreWorkspace({ referenceEnabled = true }: { referenceEnabled?: boolean }) {
   const { storeId } = useParams();
-  const screens = Grid.useBreakpoint();
-  const compact = screens.lg === false;
-  const [navigationOpen, setNavigationOpen] = useState(false);
   const { pathname } = useLocation();
   const isReference = pathname.includes('/reference/');
   const referenceSection = pathname.split('/')[4];
@@ -91,162 +74,130 @@ export function StoreWorkspace({ referenceEnabled = true }: { referenceEnabled?:
   });
   const currentStore = stores.result.data.find((store) => store.id === storeId?.toLowerCase());
 
-  const navigation = currentStore ? (
-    <Menu
-      mode="inline"
-      selectedKeys={[section]}
-      items={[
-        { key: 'products', label: 'Products' },
+  return (
+    <AdminLayout
+      stores={stores.result.data}
+      selectedStoreId={currentStore?.id ?? null}
+      storesLoading={stores.query.isFetching}
+      selectedSection={section}
+      navigationGroups={[
+        {
+          key: 'workspace',
+          label: 'Workspace',
+          icon: 'material-symbols:dashboard-customize-outline-rounded',
+          items: [
+            {
+              key: 'products',
+              label: 'Products',
+              icon: 'material-symbols:inventory-2-outline-rounded',
+            },
+          ],
+        },
         ...(referenceEnabled
           ? [
               {
                 key: 'reference',
-                type: 'group' as const,
                 label: 'Reference',
-                children: [
-                  { key: 'reference/events', label: 'Events' },
-                  { key: 'reference/venues', label: 'Venues' },
-                  { key: 'reference/speakers', label: 'Speakers' },
-                  { key: 'reference/tags', label: 'Tags' },
+                icon: 'material-symbols:widgets-outline-rounded' as const,
+                items: [
+                  {
+                    key: 'reference/events',
+                    label: 'Events',
+                    icon: 'material-symbols:calendar-month-outline-rounded' as const,
+                  },
+                  {
+                    key: 'reference/venues',
+                    label: 'Venues',
+                    icon: 'material-symbols:location-on-outline-rounded' as const,
+                  },
+                  {
+                    key: 'reference/speakers',
+                    label: 'Speakers',
+                    icon: 'material-symbols:person-outline-rounded' as const,
+                  },
+                  {
+                    key: 'reference/tags',
+                    label: 'Tags',
+                    icon: 'material-symbols:label-important-outline-rounded' as const,
+                  },
                 ],
               },
             ]
           : []),
       ]}
-      onClick={({ key }) => {
-        setNavigationOpen(false);
-        void navigate(`/stores/${currentStore.id}/${key}`);
+      onStoreChange={(id) => {
+        void navigate(`/stores/${id}/${section}`);
       }}
-    />
-  ) : null;
-
-  return (
-    <Layout className="app-layout">
-      <Layout.Header className="app-header">
-        <Space>
-          {currentStore && compact && (
+      onSectionChange={(nextSection) => {
+        if (currentStore) void navigate(`/stores/${currentStore.id}/${nextSection}`);
+      }}
+    >
+      {stores.query.isPending ? (
+        <Card>
+          <Skeleton active />
+        </Card>
+      ) : stores.query.isError ? (
+        <Alert
+          type="error"
+          showIcon
+          message="Could not load stores."
+          description={stores.query.error.message}
+          action={
             <Button
-              aria-label="Open navigation"
               onClick={() => {
-                setNavigationOpen(true);
+                void stores.query.refetch();
               }}
             >
-              Menu
+              Retry
             </Button>
-          )}
-          <Typography.Text strong className="brand">
-            holita
-          </Typography.Text>
-        </Space>
-        <Space wrap>
-          <label htmlFor="store-switcher">Store</label>
-          <Select
-            id="store-switcher"
-            className="store-switcher"
-            aria-label="Store"
-            placeholder="Select a store"
-            loading={stores.query.isFetching}
-            value={currentStore?.id ?? null}
-            options={stores.result.data.map((store) => ({ value: store.id, label: store.name }))}
-            onChange={(id: string) => {
-              void navigate(`/stores/${id}/${section}`);
-            }}
-          />
-        </Space>
-      </Layout.Header>
-      <Drawer
-        title="Navigation"
-        placement="left"
-        width={260}
-        open={compact && navigationOpen}
-        onClose={() => {
-          setNavigationOpen(false);
-        }}
-      >
-        {compact && navigation}
-      </Drawer>
-      <Layout className="workspace-body">
-        {currentStore && (
-          <Layout.Sider
-            width={184}
-            breakpoint="lg"
-            collapsedWidth={0}
-            trigger={null}
-            className="app-sidebar"
-            theme="light"
-          >
-            {!compact && navigation}
-          </Layout.Sider>
-        )}
-        <Layout.Content className="app-content">
-          {stores.query.isPending ? (
-            <Card>
-              <Skeleton active />
-            </Card>
-          ) : stores.query.isError ? (
-            <Alert
-              type="error"
-              showIcon
-              message="Could not load stores."
-              description={stores.query.error.message}
-              action={
-                <Button
-                  onClick={() => {
-                    void stores.query.refetch();
-                  }}
-                >
-                  Retry
-                </Button>
-              }
-            />
-          ) : currentStore ? (
-            <>
-              {isReference ? (
-                referenceEnabled ? (
-                  <ReferenceWorkspace
-                    key={currentStore.id}
-                    storeId={currentStore.id}
-                    storeName={currentStore.name}
-                  />
-                ) : (
-                  <Alert type="info" showIcon message="Reference is disabled." />
-                )
-              ) : (
-                <>
-                  <Typography.Title level={2}>{currentStore.name}</Typography.Title>
-                  <StoreProducts key={currentStore.id} storeId={currentStore.id} />
-                </>
-              )}
-            </>
+          }
+        />
+      ) : currentStore ? (
+        <>
+          {isReference ? (
+            referenceEnabled ? (
+              <ReferenceWorkspace
+                key={currentStore.id}
+                storeId={currentStore.id}
+                storeName={currentStore.name}
+              />
+            ) : (
+              <Alert type="info" showIcon message="Reference is disabled." />
+            )
           ) : (
-            <Card title={storeId ? 'Store not found' : 'Select a store'}>
-              {stores.result.data.length === 0 ? (
-                <Empty description="No stores available. Ask your workspace administrator to set up a store." />
-              ) : (
-                <>
-                  <Typography.Paragraph>
-                    {storeId
-                      ? 'Choose an available store to continue.'
-                      : 'Choose a store to manage its products.'}
-                  </Typography.Paragraph>
-                  <Space wrap>
-                    {stores.result.data.map((store) => (
-                      <Button
-                        key={store.id}
-                        onClick={() => {
-                          void navigate(`/stores/${store.id}/products`);
-                        }}
-                      >
-                        {store.name}
-                      </Button>
-                    ))}
-                  </Space>
-                </>
-              )}
-            </Card>
+            <>
+              <Typography.Title level={2}>{currentStore.name}</Typography.Title>
+              <StoreProducts key={currentStore.id} storeId={currentStore.id} />
+            </>
           )}
-        </Layout.Content>
-      </Layout>
-    </Layout>
+        </>
+      ) : (
+        <Card title={storeId ? 'Store not found' : 'Select a store'}>
+          {stores.result.data.length === 0 ? (
+            <Empty description="No stores available. Ask your workspace administrator to set up a store." />
+          ) : (
+            <>
+              <Typography.Paragraph>
+                {storeId
+                  ? 'Choose an available store to continue.'
+                  : 'Choose a store to manage its products.'}
+              </Typography.Paragraph>
+              <Space wrap>
+                {stores.result.data.map((store) => (
+                  <Button
+                    key={store.id}
+                    onClick={() => {
+                      void navigate(`/stores/${store.id}/products`);
+                    }}
+                  >
+                    {store.name}
+                  </Button>
+                ))}
+              </Space>
+            </>
+          )}
+        </Card>
+      )}
+    </AdminLayout>
   );
 }

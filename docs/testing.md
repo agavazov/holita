@@ -52,7 +52,7 @@ Use Vitest's long --testNamePattern option through Nx; its short -t conflicts wi
 own target option and does not reach the test runner.
 Provider tests execute the actual official GraphQL provider with generated documents and
 controlled HTTP responses. Store-workspace tests render the actual application, router,
-Refine hooks/cache and Ant Design controls. They cover selection, pagination, retry/empty
+Refine hooks/cache, the Aurora/MUI shell and Ant Design feature controls. They cover selection, pagination, retry/empty
 states, unavailable stores, cached switches, delayed reads and pending create/update/delete.
 They also verify that navigation between editors within one store isolates mutation state.
 The HTTP boundary is controlled; these are not proof of real backend persistence.
@@ -146,6 +146,7 @@ npm run test:admin -- venue-form.test.tsx reference-workspace.test.tsx event-wor
 npm run test:gateway:db -- federation.db.spec.mts
 npm run test:smoke -- reference.smoke.spec.mts events.smoke.spec.mts lifecycle.smoke.spec.mts sessions.smoke.spec.mts rich-text.smoke.spec.mts media.smoke.spec.mts
 npm run test:smoke -- reference-layout.smoke.spec.mts reference-disabled.smoke.spec.mts
+npm run test:smoke -- aurora-shell.smoke.spec.mts
 ```
 
 Venue unit tests cover validation and no-write decisions; DB tests cover migrated defaults,
@@ -160,6 +161,11 @@ Products creation and mobile navigation. The layout file exercises wrapped form 
 320 px, keyboard tab selection, dirty-state feedback, drawer navigation with discard/keep
 editing, and the return to desktop navigation. Gallery and History component cases verify
 failure/retry states without incorrectly reporting an empty result.
+The Aurora shell file exercises presets/colors and preference persistence, preserving
+route filters while opening menus, local notification actions, module search, collapse,
+hover, keyboard focus/Escape and desktop/tablet/mobile transitions. It captures the shell
+and open menus at the reference viewport sizes and rejects external asset requests.
+Screenshots support visual review; assertions check behavior, not full-page pixel identity.
 Event DB cases exercise exact money/date round trips, nullable/omitted updates, invalid
 schedules, format clearing, scoped/inactive relations, compound foreign-key refusal, retained
 soft-deleted records/codes, bounded remote lookup with literal punctuation and supporting

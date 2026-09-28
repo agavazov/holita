@@ -95,7 +95,7 @@ describe('Event list and overview', () => {
     expect(screen.getByRole('columnheader', { name: /Budget/ })).toBeInTheDocument();
     await user.click(screen.getByRole('combobox', { name: 'Store' }));
     await user.click(
-      await screen.findByText('Plovdiv Store', { selector: '.ant-select-item-option-content' }),
+      await screen.findByRole('option', { name: 'Plovdiv Store' }),
     );
     await screen.findByRole('link', { name: 'Plovdiv forum' });
     expect(router.state.location.search).toBe('');

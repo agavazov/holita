@@ -4,8 +4,9 @@ holita is a working reference project created as a testbed for future software d
 life cycle (SDLC) automation.
 
 A strict TypeScript npm-workspaces repository with Nx tasks and five host applications:
-React/Vite admin and NestJS gateway, core, products and reference services. The admin uses Refine and
-Ant Design for store selection, Products management and Reference Event Management. The gateway exposes schema-first GraphQL for stores and store-scoped
+React/Vite admin and NestJS gateway, core, products and reference services. The admin uses
+an Aurora/MUI Sidenav / Stacked shell with Refine and existing Ant Design Products and
+Reference Event Management screens. The gateway exposes schema-first GraphQL for stores and store-scoped
 Products CRUD, including Product-to-Store federation. Core, products and reference own independent
 PostgreSQL databases, Prisma migrations, clients and repeatable seeds. All backends expose
 `GET /health`.
@@ -33,7 +34,7 @@ migrations and seeds are explicit commands, never side effects of `dev`.
 
 Fresh seeds provide holita Sofia and holita Plovdiv; migrated installations retain their
 existing store names. Select a store, then list, create, edit or delete products. The store
-switcher stays in the header; URLs preserve the selection across reloads. Switching stores
+switcher stays available on every screen; URLs preserve the selection across reloads. Switching stores
 returns to that store's current resource list; Reference asks before discarding unsaved forms. A submitted write still
 belongs to its initiating store; its late result does not redirect or notify in another store.
 
@@ -56,8 +57,13 @@ routes after restarting/rebuilding the admin. Both default to true for local use
 existing data and the static schema remain available when disabled.
 
 Use the [Reference implementation index](docs/reference.md) to find the code and focused tests
-for each pattern. On narrow screens, **Menu** opens navigation and the header tabs wrap
-inside their card.
+for each pattern. On narrow screens, **Open navigation** opens the menu and the store
+selector appears below the top bar. Desktop navigation supports collapse and hover expansion.
+The top bar provides local module search, example notifications/profile, a demo language
+selector and Aurora theme/color preferences. Search only finds enabled navigation entries;
+notifications and profile actions are examples, with no account or notification service.
+Appearance preferences persist locally. Existing CRUD screens retain their light Ant Design
+presentation inside the shell, including when the shell uses a dark preset.
 
 Use [gateway GraphQL](http://127.0.0.1:11080/graphql) for API operations. `{ stores { id name } }`
 works without a selected store. Product and Reference operations require an `x-store-id` UUID header;

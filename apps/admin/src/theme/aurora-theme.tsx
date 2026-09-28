@@ -1,0 +1,82 @@
+import { useEffect, useMemo, useState, type PropsWithChildren } from 'react';
+import createCache from '@emotion/cache';
+import { CacheProvider } from '@emotion/react';
+import { CssBaseline, ThemeProvider, useColorScheme, useMediaQuery } from '@mui/material';
+import 'simplebar-react/dist/simplebar.min.css';
+import './fonts.css';
+import { createTheme } from './theme.js';
+import { darkPalettes } from './palettes/index.js';
+import { COLOR_GROUPS } from './primaryColorOverride.js';
+import { AppearanceContext, appearanceStorageKey, readAppearance } from './preferences.js';
+import type { ThemeMode } from './config.js';
+
+// Keep CSS rules in shared stylesheets. Ant Design scans head styles on updates;
+// Emotion's development default creates a separate style element for each rule.
+const styleCache = createCache({ key: 'holita', speedy: true });
+
+function ThemeModeSync({ mode }: { mode: ThemeMode }) {
+  const { setMode } = useColorScheme();
+  useEffect(() => {
+    setMode(mode);
+  }, [mode, setMode]);
+  return null;
+}
+
+export function AuroraTheme({ children }: PropsWithChildren) {
+  const [appearance, setAppearance] = useState(readAppearance);
+  const systemDark = useMediaQuery('(prefers-color-scheme: dark)');
+  const isDark = appearance.mode === 'system' ? systemDark : appearance.mode === 'dark';
+  const theme = useMemo(
+    () => createTheme(appearance.preset, appearance.primaryColor),
+    [appearance.preset, appearance.primaryColor],
+  );
+  useEffect(() => {
+    document.documentElement.setAttribute('data-holita-preset', appearance.preset);
+    try {
+      localStorage.setItem(appearanceStorageKey, JSON.stringify(appearance));
+    } catch {
+      /* Preferences remain usable when browser storage is unavailable. */
+    }
+  }, [appearance]);
+  return (
+    <AppearanceContext
+      value={{
+        appearance,
+        isDark,
+        setPreset: (preset) => {
+          setAppearance({
+            preset,
+            mode: preset in darkPalettes ? 'dark' : 'light',
+            primaryColor: COLOR_GROUPS.find((group) => group.key === preset)?.main ?? null,
+          });
+        },
+        setMode: (mode) => {
+          setAppearance((current) => ({
+            ...current,
+            mode,
+            preset: mode === 'dark' ? 'default-dark' : 'default-light',
+            primaryColor: null,
+          }));
+        },
+        setPrimaryColor: (primaryColor) => {
+          setAppearance((current) => ({ ...current, primaryColor }));
+        },
+      }}
+    >
+      <CacheProvider value={styleCache}>
+        <ThemeProvider
+          theme={theme}
+          defaultMode={appearance.mode}
+          modeStorageKey="holita-mode"
+          colorSchemeStorageKey="holita-color-scheme"
+          disableTransitionOnChange
+          noSsr
+        >
+          <ThemeModeSync mode={appearance.mode} />
+          <CssBaseline enableColorScheme />
+          {children}
+        </ThemeProvider>
+      </CacheProvider>
+    </AppearanceContext>
+  );
+}

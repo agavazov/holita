@@ -6,7 +6,7 @@ const storeB = '10000000-0000-4000-8000-000000000002';
 
 async function switchStore(page: Page, name: string) {
   await page.getByRole('combobox', { name: 'Store', exact: true }).press('ArrowDown');
-  await page.getByTitle(name, { exact: true }).click();
+  await page.getByRole('option', { name, exact: true }).click();
 }
 async function fillVenue(page: Page, name: string) {
   await page.getByLabel('Name', { exact: true }).fill(name);

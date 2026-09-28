@@ -1,0 +1,19 @@
+{
+  "application": "holita",
+  "layout": "Sidenav / Stacked",
+  "captureTest": "tools/browser/aurora-shell.smoke.spec.mts",
+  "desktopViewport": {
+    "width": 1440,
+    "height": 1000
+  },
+  "tabletViewport": {
+    "width": 1024,
+    "height": 900
+  },
+  "mobileViewport": {
+    "width": 390,
+    "height": 844
+  },
+  "content": "Existing Ant Design CRUD with dedicated test database fixtures",
+  "reference": "../aurora-reference"
+}

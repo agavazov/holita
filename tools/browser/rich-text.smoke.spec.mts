@@ -143,8 +143,7 @@ test('oversized rich text stays editable and an in-flight save stays in its orig
     await expect(page.getByRole('button', { name: 'Bold', exact: true })).toBeDisabled();
     await page.getByRole('combobox', { name: 'Store', exact: true }).press('ArrowDown');
     await page
-      .locator('.ant-select-item-option-content')
-      .filter({ hasText: 'holita Plovdiv' })
+      .getByRole('option', { name: 'holita Plovdiv', exact: true })
       .click();
     await expect(page).toHaveURL(/000000000002\/reference\/events$/);
     // React Router updates the URL before committing the new store subtree.

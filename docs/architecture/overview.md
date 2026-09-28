@@ -7,7 +7,7 @@ packages or cross-application code imports.
 
 | Application | Framework                       | Current entry points                                                                 |
 | ----------- | ------------------------------- | ------------------------------------------------------------------------------------ |
-| admin       | React, Vite, Refine, Ant Design | Stores, Products and Reference Events/Venues/Speakers/Tags at http://127.0.0.1:11081 |
+| admin       | React, Vite, Refine, Aurora/MUI, Ant Design | Stores, Products and Reference Events/Venues/Speakers/Tags at http://127.0.0.1:11081 |
 | gateway     | NestJS, Apollo Gateway          | /graphql and /health on 127.0.0.1:11080                                              |
 | core        | NestJS, Federation 2            | /graphql (stores) and /health on 127.0.0.1:11082                                     |
 | products    | NestJS, Federation 2            | /graphql (products) and /health on 127.0.0.1:11083                                   |
@@ -17,7 +17,7 @@ Core owns store listing/lookup; products owns Products CRUD; reference owns Even
 repositories access their own PrismaService, whose client connects lazily and disconnects
 on shutdown. Health endpoints stay independent of databases and downstream availability.
 Admin uses one Refine GraphQL data provider with generated named operation documents,
-store-scoped resources and standard Ant Design controls.
+store-scoped resources, an Aurora/MUI shell and existing Ant Design feature controls.
 
 ```mermaid
 flowchart LR
@@ -167,6 +167,40 @@ The URL is the active store source: `/` lists stores, `/stores/:storeId/products
 products, `/create` adds a product and `/:productId/edit` edits one. Unavailable stores
 show a selection message and do not trigger product requests. Store administration is absent.
 
+[StoreWorkspace](../../apps/admin/src/features/stores/store-workspace.tsx) owns store
+discovery, URL-derived selection, resource navigation and Reference availability. It passes
+plain store/navigation choices, selected values, callbacks and page content to
+[AdminLayout](../../apps/admin/src/layout/admin-layout.tsx). AdminLayout owns the header,
+store selector, sidebar and responsive drawer state. Its Aurora/MUI presentation has no
+Refine, GraphQL or router dependency; navigation callbacks retain the existing router and
+unsaved-change blockers.
+
+The shell adapts Aurora 2.4.0's MainLayout, StackedSidenav, mobile SidenavDrawerContent,
+NavItem, AppBar and search/language/theme/notification/profile components into
+[`layout/`](../../apps/admin/src/layout/). It retains the original 300 px expanded drawer,
+72 px rail, 64/82 px toolbar, breakpoint behavior, transitions, typography and menu styling.
+The real store selector is a holita addition. Selected palettes, component overrides,
+shadows and CSS variables live in [`theme/`](../../apps/admin/src/theme/). The sibling
+Aurora source directory is not a runtime dependency. Unused layouts, demo routes/auth,
+widget styles, complete demo datasets and settings-panel dependencies are excluded.
+
+The theme menu exposes Aurora presets and primary colors without rewriting route queries.
+Local search filters enabled navigation entries; notification read/remove state, language
+selection and the example profile are presentation data. They have no API or authentication
+provider. Appearance and desktop collapse preferences use holita-prefixed localStorage keys.
+Required icons, avatars and the Plus Jakarta Sans font are served locally; menu use does
+not fetch external assets. Example avatars live in `apps/admin/public/temp/avatar`,
+separate from permanent assets. The font's OFL license accompanies the font file.
+
+Existing Ant Design pages remain under ConfigProvider/AntApp and the light `legacy-content`
+surface. Ant Design popup z-index starts at 1400 so legacy dialogs remain above the MUI
+shell. Page forms, tables, data providers and notification lifetimes are unchanged.
+Shell styling has replaced the old header/sidebar CSS; feature CSS remains with its owner.
+Emotion uses a shared CSSOM cache (`speedy: true`) in development and production. Grouping
+rules in stylesheets avoids thousands of individual development style elements, which
+Ant Design's style insertion would otherwise repeatedly scan. Components and styles are
+the same in browser and jsdom tests; no layout or data behavior is mocked for this purpose.
+
 [The data provider](../../apps/admin/src/data/data-provider.ts) adapts the official Refine
 GraphQL provider's variables and response mappers to our generated documents. Components
 use Refine useList/useOne/useCreate/useUpdate/useDelete. They do not fetch directly.
@@ -192,7 +226,8 @@ complete on the server after navigation; changing stores does not cancel or reta
 [ProductForm](../../apps/admin/src/features/products/product-form.tsx) is shared by create
 and edit, with matching trimmed name/SKU limits, Draft/Active status, pending controls and
 server errors. Products and Reference use the same provider and store lifecycle.
-Notifications use Ant Design's store-scoped hook directly. Refine's automatic notifications
+CRUD notifications use Ant Design's store-scoped hook directly, separately from the shell's
+example bell panel. Refine's automatic notifications
 are disabled on these hooks; no unused global notification adapter is registered.
 See [the admin skill](../../.agents/skills/holita-admin-feature/SKILL.md).
 

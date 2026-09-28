@@ -10,7 +10,8 @@ async function choose(page: Page, label: string | RegExp, text: string) {
   await page
     .getByRole('combobox', { name: label, exact: typeof label === 'string' })
     .press('ArrowDown');
-  await page.locator('.ant-select-item-option-content').getByText(text, { exact: true }).click();
+  if (label === 'Store') await page.getByRole('option', { name: text, exact: true }).click();
+  else await page.locator('.ant-select-item-option-content').getByText(text, { exact: true }).click();
 }
 async function onlineEvent(page: Page, title: string, code: string) {
   await page.getByLabel('Title', { exact: true }).fill(title);

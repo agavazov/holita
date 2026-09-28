@@ -109,8 +109,7 @@ test('switching stores cancels an upload before finalization and suppresses late
     await captured;
     await page.getByRole('combobox', { name: 'Store', exact: true }).press('ArrowDown');
     await page
-      .locator('.ant-select-item-option-content')
-      .filter({ hasText: 'holita Plovdiv' })
+      .getByRole('option', { name: 'holita Plovdiv', exact: true })
       .click();
     await expect(page.getByRole('button', { name: 'Create event', exact: true })).toBeVisible();
     await expect(page).toHaveURL(/000000000002\/reference\/events$/);

@@ -201,10 +201,30 @@ Seeds insert three Venues, three Tags, two Speakers and two Events across Sofia 
 Plovdiv without updating existing records. The Events are Sofia Creative Forum and
 Plovdiv Culture Exchange. Run migrations and seeds before opening the new resources.
 
+## Admin appearance and navigation
+
+The admin uses Aurora's Sidenav / Stacked shell. Desktop navigation collapses to a 72 px
+rail and expands on hover or keyboard focus; Escape closes temporary expansion. At tablet
+widths expansion overlays content, and mobile uses a temporary drawer. The real store
+selector stays in the top bar on desktop and below it on mobile.
+
+The theme button selects Aurora presets, primary colors and light/dark/system mode.
+Preferences persist in `holita.appearance`, `holita-mode`, `holita-color-scheme-*` and
+`holita.sidenavCollapsed` localStorage keys. Clear those keys to restore defaults.
+Legacy CRUD pages keep their existing light presentation. Search finds enabled modules
+locally; language, profile and notifications are examples, not live services.
+
+Shell code and selected theme overrides are in `apps/admin/src/layout` and
+`apps/admin/src/theme`. MUI, Emotion, Iconify and SimpleBar are installed through the
+existing workspace lockfile. The selected icon data is bundled; font and avatar assets
+are under `apps/admin/public`; temporary example avatars are grouped in `public/temp/avatar`.
+No sibling theme server, new environment variables or
+external font/icon service is needed. Start the admin with the normal dev commands.
+
 ## Using Products
 
 Open http://127.0.0.1:11081 and select a store. Seeded stores are holita Sofia and holita Plovdiv.
-The header switcher stays available on list/create/edit screens. Store-scoped URLs can be
+The store switcher stays available on list/create/edit screens. Store-scoped URLs can be
 bookmarked or reloaded. Switching returns to the new store's list, resets pagination and
 discards unsaved changes. A submitted operation retains its original store and may finish
 after switching; return to that store to see the result.

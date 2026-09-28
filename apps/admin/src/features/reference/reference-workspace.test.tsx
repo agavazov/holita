@@ -117,7 +117,7 @@ describe('Reference workspace', () => {
     });
     await user.click(screen.getByRole('combobox', { name: 'Store' }));
     await user.click(
-      await screen.findByText('Plovdiv Store', { selector: '.ant-select-item-option-content' }),
+      await screen.findByRole('option', { name: 'Plovdiv Store' }),
     );
     expect(await screen.findByRole('link', { name: 'Plovdiv hall' })).toBeInTheDocument();
     await act(async () => {
