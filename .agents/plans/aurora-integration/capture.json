@@ -14,6 +14,10 @@
     "width": 390,
     "height": 844
   },
+  "searchTransitionViewports": [
+    { "width": 900, "height": 900 },
+    { "width": 899, "height": 900 }
+  ],
   "content": "Existing Ant Design CRUD with dedicated test database fixtures",
   "reference": "../aurora-reference"
 }

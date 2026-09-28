@@ -43,11 +43,12 @@ test('Aurora menus preserve list queries, apply preferences and use local exampl
   await expect(page.locator('html')).toHaveAttribute('data-holita-color-scheme', 'dark');
   await page.keyboard.press('Escape');
   await expect(theme).toBeFocused();
+  await expect(themes).toHaveCount(0);
   await expect(page).toHaveURL(queryUrl);
-  await page.screenshot({ path: testInfo.outputPath('desktop-dark.png'), animations: 'disabled' });
   await page.reload();
   await expect(page.getByRole('link', { name: 'Sofia Creative Forum', exact: true })).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('data-holita-color-scheme', 'dark');
+  await page.screenshot({ path: testInfo.outputPath('desktop-dark.png'), animations: 'disabled' });
   await theme.click();
   await themes.getByRole('menuitemradio', { name: 'Luxury', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-holita-preset', 'luxury');
@@ -63,6 +64,14 @@ test('Aurora menus preserve list queries, apply preferences and use local exampl
   await page.screenshot({ path: testInfo.outputPath('language.png'), animations: 'disabled' });
   await page.getByRole('menuitemradio', { name: /French/ }).click();
   await page.getByRole('button', { name: 'Profile', exact: true }).click();
+  await expect(page.getByRole('menu', { name: 'Profile', exact: true }).locator('..')).toHaveCSS(
+    'transform',
+    'none',
+  );
+  await expect(page.getByRole('menuitem', { name: 'Preferences', exact: true })).toHaveCSS(
+    'color',
+    'rgb(27, 33, 36)',
+  );
   await page.screenshot({ path: testInfo.outputPath('profile.png'), animations: 'disabled' });
   await page.getByRole('menuitemcheckbox', { name: 'Dark mode' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-holita-color-scheme', 'dark');
@@ -76,13 +85,17 @@ test('Aurora menus preserve list queries, apply preferences and use local exampl
   await page.screenshot({ path: testInfo.outputPath('notifications.png'), animations: 'disabled' });
   await notifications.getByRole('button', { name: 'Mark all as read', exact: true }).click();
   await expect(notifications.getByRole('button', { name: /^Mark unread:/ })).toHaveCount(5);
+  await expect(notifications).toBeFocused();
   await notifications
     .getByRole('button', { name: /^Actions for/ })
     .first()
     .click();
   await page.getByRole('menuitem', { name: 'Remove notification', exact: true }).click();
   await expect(notifications.getByRole('button', { name: /^Mark unread:/ })).toHaveCount(4);
+  await expect(notifications).toBeFocused();
   await page.keyboard.press('Escape');
+  await expect(notifications).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Notifications', exact: true })).toBeFocused();
   await expect(page).toHaveURL(queryUrl);
 
   await page.getByRole('textbox', { name: 'Search', exact: true }).focus();
@@ -173,4 +186,131 @@ test('Aurora Stacked navigation supports collapse, hover, keyboard and responsiv
   ).toBe(true);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await expect(drawer).toHaveCSS('width', '300px');
+});
+
+test('open search follows the current trigger across the mobile breakpoint', async ({
+  page,
+  app,
+}, testInfo) => {
+  const invalidAnchors: string[] = [];
+  page.on('console', (message) => {
+    if (message.text().includes('anchorEl')) invalidAnchors.push(message.text());
+  });
+  await page.setViewportSize({ width: 899, height: 900 });
+  await page.goto(`${app.url}/stores/${store}/reference/events`);
+  await expect(page.getByRole('link', { name: 'Sofia Creative Forum', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  const search = page.getByRole('dialog', { name: 'Search workspace', exact: true });
+  const input = search.getByRole('textbox', { name: 'Search workspace', exact: true });
+  await input.fill('Venues');
+
+  await page.setViewportSize({ width: 900, height: 900 });
+  await expect(input).toHaveValue('Venues');
+  await expect(input).toBeFocused();
+  const trigger = page.locator('input[aria-label="Search"]');
+  await expect
+    .poll(async () => {
+      const panel = await search.boundingBox();
+      const field = await page.locator('.MuiTextField-root').filter({ has: trigger }).boundingBox();
+      return panel !== null && field !== null && Math.abs(panel.x - field.x) < 1;
+    })
+    .toBe(true);
+  await page.screenshot({
+    path: testInfo.outputPath('search-resize-900.png'),
+    animations: 'disabled',
+  });
+  await page.keyboard.press('Escape');
+  await expect(search).toBeHidden();
+  await expect(trigger).toBeFocused();
+
+  await trigger.press('Enter');
+  await input.fill('Tags');
+  await page.setViewportSize({ width: 899, height: 900 });
+  await expect(input).toHaveValue('Tags');
+  await expect(input).toBeFocused();
+  await page.screenshot({
+    path: testInfo.outputPath('search-resize-899.png'),
+    animations: 'disabled',
+  });
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Search', exact: true })).toBeFocused();
+  expect(invalidAnchors).toEqual([]);
+
+  const navigation = page.getByRole('dialog', { name: 'Navigation', exact: true });
+  await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
+  await expect(navigation).toBeVisible();
+  await page.setViewportSize({ width: 900, height: 900 });
+  await expect(navigation).toBeHidden();
+  await expect(page.locator('body')).not.toHaveCSS('overflow', 'hidden');
+  const drawer = page
+    .getByRole('navigation', { name: 'Workspace navigation' })
+    .locator('.MuiDrawer-paper');
+  await expect(drawer).toHaveCSS('width', '72px');
+  await page.setViewportSize({ width: 1199, height: 900 });
+  await expect(drawer).toHaveCSS('width', '72px');
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await expect(drawer).toHaveCSS('width', '300px');
+  await page.getByRole('button', { name: 'Collapse navigation', exact: true }).click();
+  await page.setViewportSize({ width: 1199, height: 900 });
+  await page.getByRole('button', { name: 'Expand navigation', exact: true }).click();
+  await expect(drawer).toHaveCSS('width', '300px');
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await expect(drawer).toHaveCSS('width', '72px');
+});
+
+test('shell examples preserve an Event draft and respect search and store navigation blockers', async ({
+  page,
+  app,
+}) => {
+  await page.goto(`${app.url}/stores/${store}/reference/events/${event}/edit`);
+  const title = page.getByLabel('Title', { exact: true });
+  await expect(title).toHaveValue('Sofia Creative Forum');
+  await title.fill('Unsaved shell review');
+  const editorUrl = page.url();
+  const profile = page.getByRole('button', { name: 'Profile', exact: true });
+  await profile.click();
+  await page.getByRole('menuitem', { name: 'Preferences', exact: true }).click();
+  await page
+    .getByRole('dialog', { name: 'Preferences', exact: true })
+    .getByRole('button', { name: 'Close', exact: true })
+    .click();
+  await expect(profile).toBeFocused();
+  await page.getByRole('button', { name: 'Language', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: /French/ }).click();
+  await page.getByRole('button', { name: 'Theme', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: 'Dark', exact: true }).click();
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Notifications', exact: true }).click();
+  await page.getByRole('button', { name: 'Mark all as read', exact: true }).click();
+  await page.keyboard.press('Escape');
+  await expect(page).toHaveURL(editorUrl);
+  await expect(title).toHaveValue('Unsaved shell review');
+  await expect(page.getByRole('status')).toHaveText('Unsaved changes');
+
+  const trigger = page.getByRole('textbox', { name: 'Search', exact: true });
+  await trigger.click();
+  const search = page.getByRole('dialog', { name: 'Search workspace', exact: true });
+  await search.getByRole('button', { name: /^Venues Workspace/ }).click();
+  await page.getByRole('button', { name: 'Keep editing', exact: true }).click();
+  await expect(page).toHaveURL(editorUrl);
+  await expect(title).toHaveValue('Unsaved shell review');
+
+  const storeSelector = page.getByRole('combobox', { name: 'Store', exact: true });
+  await storeSelector.click();
+  await page.getByRole('option', { name: 'holita Plovdiv', exact: true }).click();
+  await page.getByRole('button', { name: 'Keep editing', exact: true }).click();
+  await expect(storeSelector).toHaveText('holita Sofia');
+  await expect(title).toHaveValue('Unsaved shell review');
+  await storeSelector.click();
+  await page.getByRole('option', { name: 'holita Plovdiv', exact: true }).click();
+  await page.getByRole('button', { name: 'Discard changes', exact: true }).click();
+  await expect(page).toHaveURL(
+    `${app.url}/stores/10000000-0000-4000-8000-000000000002/reference/events`,
+  );
+  await expect(
+    page.getByRole('link', { name: 'Plovdiv Culture Exchange', exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Sofia Creative Forum', exact: true })).toHaveCount(
+    0,
+  );
 });

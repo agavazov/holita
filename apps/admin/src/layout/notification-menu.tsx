@@ -1,5 +1,5 @@
 // Aurora NotificationMenu/NotificationList presentation with local read/remove actions.
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Avatar,
   Badge,
@@ -79,6 +79,18 @@ export default function NotificationMenu() {
   const [notifications, setNotifications] = useState(() => [...exampleNotifications]);
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const unread = notifications.some((notification) => !notification.read);
+  const panel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const activeElement = document.activeElement;
+    if (
+      anchor &&
+      (activeElement === document.body ||
+        (activeElement instanceof HTMLButtonElement && activeElement.disabled))
+    ) {
+      // Read/remove actions can disable or remove the focused control.
+      panel.current?.focus();
+    }
+  }, [anchor, notifications]);
   const toggleRead = (id: string) => {
     setNotifications((current) =>
       current.map((notification) =>
@@ -127,7 +139,14 @@ export default function NotificationMenu() {
         }}
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        slotProps={{ paper: { role: 'dialog', 'aria-label': 'Example notifications' } }}
+        slotProps={{
+          paper: {
+            ref: panel,
+            tabIndex: -1,
+            role: 'dialog',
+            'aria-label': 'Example notifications',
+          },
+        }}
         sx={{
           [`& .${paperClasses.root}`]: {
             width: 400,

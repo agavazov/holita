@@ -165,6 +165,8 @@ The Aurora shell file exercises presets/colors and preference persistence, prese
 route filters while opening menus, local notification actions, module search, collapse,
 hover, keyboard focus/Escape and desktop/tablet/mobile transitions. It captures the shell
 and open menus at the reference viewport sizes and rejects external asset requests.
+It also checks open-search positioning, text and focus across 899/900 px, drawer transitions
+at 1199/1200 px, and unsaved Event input while using example menus, search and store switching.
 Screenshots support visual review; assertions check behavior, not full-page pixel identity.
 Event DB cases exercise exact money/date round trips, nullable/omitted updates, invalid
 schedules, format clearing, scoped/inactive relations, compound foreign-key refusal, retained

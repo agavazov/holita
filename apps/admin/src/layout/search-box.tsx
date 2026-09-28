@@ -1,5 +1,5 @@
 // Aurora SearchBox, SearchPopover/Dialog and result rows, using local navigation examples.
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Box,
   Breadcrumbs,
@@ -19,6 +19,7 @@ import {
   Popover,
   Stack,
   Typography,
+  type PopoverActions,
   dialogClasses,
   inputBaseClasses,
 } from '@mui/material';
@@ -39,20 +40,42 @@ export default function SearchBox({
   groups: readonly NavigationGroup[];
   onNavigate: (section: string) => void;
 }) {
-  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [recent, setRecent] = useState<string[]>([]);
   const searchInput = useRef<HTMLInputElement>(null);
+  const desktopTrigger = useRef<HTMLDivElement>(null);
+  const mobileTrigger = useRef<HTMLButtonElement>(null);
+  const popover = useRef<PopoverActions>(null);
+  useEffect(() => {
+    if (!isOpen || mobile || !desktopTrigger.current) return;
+    // The top bar animates its width after changing navigation breakpoints.
+    const observer = new ResizeObserver(() => popover.current?.updatePosition());
+    observer.observe(desktopTrigger.current.parentElement ?? desktopTrigger.current);
+    return () => {
+      observer.disconnect();
+    };
+  }, [isOpen, mobile]);
   const entries = groups.flatMap((group) => flatten(group.items));
   const filtered = entries.filter((entry) =>
     entry.label.toLowerCase().includes(query.trim().toLowerCase()),
   );
   const close = () => {
-    setAnchor(null);
+    setIsOpen(false);
   };
-  const open = (element: HTMLElement) => {
+  const open = () => {
     setQuery('');
-    setAnchor(element);
+    setIsOpen(true);
+  };
+  const restoreFocus = () => {
+    // A breakpoint change removes the trigger remembered by MUI's focus trap.
+    if (
+      document.activeElement === document.body ||
+      searchInput.current?.closest('[role="dialog"]')?.contains(document.activeElement)
+    ) {
+      if (mobile) mobileTrigger.current?.focus();
+      else desktopTrigger.current?.querySelector<HTMLInputElement>('input')?.focus();
+    }
   };
   const select = (entry: NavigationItem) => {
     close();
@@ -269,25 +292,25 @@ export default function SearchBox({
     <>
       {mobile ? (
         <Button
+          ref={mobileTrigger}
           className="search-box-button"
           color="neutral"
           shape="circle"
           variant="soft"
           aria-label="Search"
-          onClick={(event) => {
-            open(event.currentTarget);
-          }}
+          onClick={open}
         >
           <IconifyIcon icon="material-symbols:search-rounded" sx={{ fontSize: 20 }} />
         </Button>
       ) : (
         <StyledTextField
+          ref={desktopTrigger}
           placeholder="Search"
           focused={false}
           onKeyDown={(event) => {
             if (event.key === 'Enter' || event.key === 'ArrowDown' || event.key === ' ') {
               event.preventDefault();
-              open(event.currentTarget);
+              open();
             }
           }}
           slotProps={{
@@ -301,9 +324,7 @@ export default function SearchBox({
                   <IconifyIcon icon="material-symbols:search-rounded" />
                 </InputAdornment>
               ),
-              onClick: (event) => {
-                open(event.currentTarget);
-              },
+              onClick: open,
               sx: { borderRadius: 5, border: 1, borderStyle: 'solid', borderColor: 'transparent' },
             },
           }}
@@ -312,12 +333,12 @@ export default function SearchBox({
       )}
       {mobile ? (
         <Dialog
-          open={Boolean(anchor)}
+          open={isOpen}
           onClose={close}
           maxWidth="sm"
           slotProps={{
             paper: { 'aria-label': 'Search workspace' },
-            transition: { onEntered: () => searchInput.current?.focus() },
+            transition: { onEntered: () => searchInput.current?.focus(), onExited: restoreFocus },
           }}
           sx={{
             [`& .${dialogClasses.paper}`]: {
@@ -333,8 +354,9 @@ export default function SearchBox({
         </Dialog>
       ) : (
         <Popover
-          open={Boolean(anchor)}
-          anchorEl={anchor}
+          action={popover}
+          open={isOpen}
+          anchorEl={() => desktopTrigger.current}
           onClose={close}
           anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
           marginThreshold={0}
@@ -342,7 +364,7 @@ export default function SearchBox({
           transitionDuration={150}
           slots={{ transition: Fade }}
           slotProps={{
-            transition: { onEntered: () => searchInput.current?.focus() },
+            transition: { onEntered: () => searchInput.current?.focus(), onExited: restoreFocus },
             paper: {
               role: 'dialog',
               'aria-label': 'Search workspace',

@@ -213,6 +213,11 @@ Preferences persist in `holita.appearance`, `holita-mode`, `holita-color-scheme-
 `holita.sidenavCollapsed` localStorage keys. Clear those keys to restore defaults.
 Legacy CRUD pages keep their existing light presentation. Search finds enabled modules
 locally; language, profile and notifications are examples, not live services.
+An open search preserves its text when switching between the mobile dialog and desktop
+popover. Closing it restores focus to the current search control. Search navigation uses
+the same unsaved-change confirmation as the sidenav and store selector.
+Notification read/remove actions keep keyboard focus inside the panel when their control
+becomes disabled or disappears, so Escape can close it and return to the notification button.
 
 Shell code and selected theme overrides are in `apps/admin/src/layout` and
 `apps/admin/src/theme`. MUI, Emotion, Iconify and SimpleBar are installed through the

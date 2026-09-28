@@ -7,7 +7,8 @@ user acceptance of the completed shell with the existing CRUD still working.
 
 ## Current checkpoint
 
-Phases 1, 2 and 3 are complete. Phase 4 user review is next; module redesign has not started.
+Phases 1, 2 and 3 are complete. Phase 4 technical integration review is complete;
+user visual acceptance is pending and module redesign has not started.
 
 - [AdminLayout](../../apps/admin/src/layout/admin-layout.tsx) uses the original Aurora
   Sidenav / Stacked presentation and local search/language/theme/notification/profile menus.
@@ -22,7 +23,7 @@ Phases 1, 2 and 3 are complete. Phase 4 user review is next; module redesign has
   light content surface; existing providers, feature CSS and CRUD behavior remain protected.
 - Temporary example avatars are grouped under `apps/admin/public/temp/avatar`; local demo
   data references `/temp/avatar/` so the shell still serves them in development and builds.
-- Root lint/typecheck/build passed, along with 13 selected component and 13 browser cases.
+- Phase 3 baseline: root lint/typecheck/build passed, with 13 selected component and 13 browser cases.
   Search focus/labels and the default primary-color checkmark were corrected during review.
   The shared Emotion CSSOM cache resolved slow Ant Design head scans without test mocks,
   timeout changes or removed assertions. Original and integrated shell captures were reviewed
@@ -30,8 +31,82 @@ Phases 1, 2 and 3 are complete. Phase 4 user review is next; module redesign has
 - The lockfile adds 42 package entries, with no existing package version changes or removals.
   Build still reports a large main chunk: about 2.78 MB minified / 834 KB gzip. Both UI
   libraries remain while legacy CRUD is present; the warning is not suppressed.
-- Next: phase 4 integration review and user acceptance. Module redesign remains a separate
-  phase after acceptance; the user's approval has not been inferred from passing tests.
+- Phase 4 verified 8 store workspace component cases and 15 distinct browser cases.
+  Search positioning/focus and notification action focus were corrected without dependencies.
+- Next: user visual acceptance at `http://127.0.0.1:11081`. Phase 5 starts with Products
+  only after acceptance; the user's approval has not been inferred from passing tests.
+
+## Phase 4 integration review
+
+- Search now anchors to the current desktop control and tracks the top bar's width
+  transition with a scoped `ResizeObserver`. Switching between mobile and desktop keeps
+  the search text; closing returns keyboard focus to the current trigger.
+- Notification read/remove actions restore focus inside the panel when their control is
+  disabled or removed. Escape closes the panel and returns to the bell button.
+- Two additional browser cases cover 899/900 and 1199/1200 px boundaries, open overlays,
+  preserved Event drafts, search navigation confirmation, and cancelled/confirmed store
+  switching. Existing menu assertions now verify focus after notification actions.
+- Profile capture waits for the opening transition to finish. The missing text in the
+  earlier capture was a capture-timing issue; the rendered colors and profile component
+  required no change.
+- Application changes are limited to search and notifications. No dependencies, CRUD
+  presentation, GraphQL contracts or persistence behavior are changed in this phase.
+- The existing development servers remain on their standard ports. PostgreSQL was
+  started through `db:up`; setup preserved existing data and passwords. Browser tests
+  continue to own their separate test schemas and processes.
+- The live development preview loaded the actual Products and Reference Events lists
+  with store selection and no page errors. Gateway, core, products and Reference health
+  endpoints returned 200. This read-only preview check is separate from isolated CRUD tests.
+
+### Validation evidence
+
+Commands ran from the repository root:
+
+```bash
+npm run db:up
+npm run db:setup
+npm run db:test:setup
+npm exec -- eslint apps/admin/src/layout/search-box.tsx apps/admin/src/layout/notification-menu.tsx tools/browser/aurora-shell.smoke.spec.mts
+npm exec -- nx run admin:typecheck --output-style=static
+npm run typecheck:tools
+npm run test:admin -- store-workspace.test.tsx --skip-nx-cache
+npm run test:smoke -- aurora-shell.smoke.spec.mts
+npm run test:smoke -- aurora-shell.smoke.spec.mts --grep="Aurora Stacked"
+npm run test:smoke -- aurora-shell.smoke.spec.mts --grep="Aurora menus"
+npm run test:smoke -- products.smoke.spec.mts reference-layout.smoke.spec.mts reference-disabled.smoke.spec.mts
+npm run test:smoke -- reference.smoke.spec.mts events.smoke.spec.mts --grep="Venue CRUD|Event create/edit|Speaker and Tag|pending Event create|Event filters"
+```
+
+- Store workspace: **8 passed**, including unavailable stores, delayed reads and pending
+  mutations across store/editor changes. Focused lint and admin/tools typechecks passed.
+- Shell: **4 distinct cases passed**. The final full shell run passed 3 cases and timed out
+  in the long navigation case while taking a mobile screenshot. That case passed unchanged
+  when run separately (33.7 seconds); no timeout, retry setting or assertion was weakened.
+  The menu case also passed after stabilizing captures around menu/theme transitions.
+- Products, compact navigation and disabled Reference: **6 passed**. Reference selection:
+  **5 passed**, covering Venue CRUD, Event create/edit, Speaker/Tag CRUD, pending Event
+  creation across stores, and preserved Event filters/history/reload.
+- Browser target prerequisites include a fresh admin TypeScript/Vite build; it passed.
+  Existing backend build/generation cache hits are not counted as new backend validation.
+  Main bundle remains about 2.78 MB minified / 835 KB gzip. The existing large-chunk and
+  Ant Design/React compatibility warnings remain visible.
+- Initial review failures reproduced invalid/stale search positioning and lost focus after
+  notification actions. The final cases exercise these failures with stronger assertions.
+  Repeated executions are not counted as additional distinct cases.
+- Matching original/integrated desktop, hover, tablet, mobile drawer, profile, notification,
+  theme and dark captures were reviewed separately from test assertions. The open-search
+  transition captures at 899/900 px supplement the existing reference sizes.
+- Edited code/capture metadata passed focused Prettier checking. Documentation links and
+  `git diff --check` passed. Browser fixtures closed their processes and test schemas;
+  existing development servers remain available for user review. No full regression ran.
+
+### User acceptance boundary
+
+Review the sidenav and its collapse/hover behavior, top controls, store selector, mobile
+drawer and overall spacing in the live admin. Existing Ant Design CRUD remains intentional
+inside the Aurora shell, including its light content surface in dark mode. Search/language/
+profile/notification examples remain separate from business data and authentication.
+After explicit acceptance, phase 5 migrates Products first, then the Reference modules.
 
 ## Phase 3 validation evidence
 
@@ -82,6 +157,8 @@ holita navigation labels and local example data are intentional application adap
 | Mobile | [Mobile](aurora-integration/mobile.png) |
 | Mobile drawer | [Drawer](aurora-integration/mobile-drawer.png) |
 | Dark shell with legacy content | [Dark](aurora-integration/desktop-dark.png) |
+| Open search after switching to desktop | [900 px](aurora-integration/search-resize-900.png) |
+| Open search after switching to mobile | [899 px](aurora-integration/search-resize-899.png) |
 
 [Capture settings](aurora-integration/capture.json) identify the reproducing browser test.
 The test servers and databases are temporary; captures remain available after cleanup.
