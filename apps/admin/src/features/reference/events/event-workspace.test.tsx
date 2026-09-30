@@ -52,7 +52,7 @@ describe('Event editor lifecycle', () => {
     await user.click(screen.getByLabelText('Title'));
     await user.paste(' Edited forum ');
     await user.click(screen.getByRole('tab', { name: 'Schedule & location' }));
-    expect(screen.getByLabelText('Starts at')).toHaveValue('2026-11-01 12:00');
+    expect(screen.getByLabelText('Starts at')).toHaveValue('2026-11-01T12:00');
     expect(screen.getByLabelText(/^Registration closes/)).toHaveValue('2026-11-01');
     await user.click(screen.getByRole('button', { name: 'Save event' }));
     await waitFor(() => {
@@ -111,12 +111,10 @@ describe('Event editor lifecycle', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     await user.click(await screen.findByRole('button', { name: 'Keep editing' }));
-    await user.click(screen.getByRole('tab', { name: 'General' }));
+    await user.click(await screen.findByRole('tab', { name: 'General' }));
     expect(screen.getByLabelText('Title')).toHaveValue('Preserved input');
     await user.click(screen.getByRole('combobox', { name: 'Store' }));
-    await user.click(
-      await screen.findByRole('option', { name: 'Plovdiv Store' }),
-    );
+    await user.click(await screen.findByRole('option', { name: 'Plovdiv Store' }));
     expect(await screen.findByText('Discard unsaved changes?')).toBeInTheDocument();
     expect(router.state.location.pathname).toContain(storeA);
     await user.click(screen.getByRole('button', { name: 'Discard changes' }));
@@ -160,18 +158,18 @@ describe('Event editor lifecycle', () => {
     await user.click(screen.getByRole('tab', { name: 'Schedule & location' }));
     expect(
       await screen.findByText('Old topic (inactive)', {
-        selector: '.ant-select-selection-item-content',
+        selector: '.MuiChip-label',
       }),
     ).toBeInTheDocument();
     const removeInactive = screen
-      .getByText('Old topic (inactive)', { selector: '.ant-select-selection-item-content' })
-      .closest('.ant-select-selection-item')
-      ?.querySelector('.ant-select-selection-item-remove');
+      .getByText('Old topic (inactive)', { selector: '.MuiChip-label' })
+      .closest('.MuiChip-root')
+      ?.querySelector('.MuiChip-deleteIcon');
     if (!removeInactive) throw new Error('Existing inactive tags must remain removable.');
     await user.click(removeInactive);
     expect(
       screen.queryByText('Old topic (inactive)', {
-        selector: '.ant-select-selection-item-content',
+        selector: '.MuiChip-label',
       }),
     ).not.toBeInTheDocument();
     await user.type(screen.getByRole('combobox', { name: /^Tags/ }), 'old');
@@ -180,9 +178,7 @@ describe('Event editor lifecycle', () => {
     });
     await user.clear(screen.getByRole('combobox', { name: /^Tags/ }));
     await user.type(screen.getByRole('combobox', { name: /^Tags/ }), 'new');
-    expect(
-      await screen.findByText('New result', { selector: '.ant-select-item-option-content' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('option', { name: 'New result' })).toBeInTheDocument();
     await act(async () => {
       delayed.resolve(
         result({

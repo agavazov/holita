@@ -1,4 +1,13 @@
-import { Alert, Button, Modal, Space, Typography } from 'antd';
+import {
+  Alert,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Stack,
+  Typography,
+} from '@mui/material';
 import { useRef, useState } from 'react';
 import type { EventAction } from '../../../data/events-provider.js';
 import { useEventActions } from './use-event-actions.js';
@@ -49,8 +58,22 @@ export function EventBulkActions({
   if (!ids.length && !confirmation) return null;
   return (
     <>
-      <Space wrap className="event-bulk-actions" aria-label="Selected event actions">
-        <Typography.Text strong>{ids.length} selected on this page</Typography.Text>
+      <Stack
+        direction="row"
+        sx={{
+          mb: 2,
+          p: 1.5,
+          bgcolor: 'background.elevation1',
+          borderRadius: 2,
+          gap: 1,
+          alignItems: 'center',
+          flexWrap: 'wrap',
+        }}
+        aria-label="Selected event actions"
+      >
+        <Typography variant="body2" sx={{ flexGrow: 1 }}>
+          {ids.length} selected on this page
+        </Typography>
         {trashed ? (
           <Button
             disabled={pending}
@@ -79,7 +102,8 @@ export function EventBulkActions({
               Archive selected
             </Button>
             <Button
-              danger
+              color="error"
+              variant="soft"
               disabled={pending}
               onClick={() => {
                 confirm('Move to trash', { action: 'trash', ids });
@@ -89,30 +113,49 @@ export function EventBulkActions({
             </Button>
           </>
         )}
-      </Space>
-      <Modal
-        title={`${confirmation?.label ?? 'Update'} selected events?`}
+      </Stack>
+      <Dialog
         open={Boolean(confirmation)}
-        onOk={submit}
-        okText={confirmation?.label}
-        okButtonProps={{ danger: confirmation?.values.action === 'trash' }}
-        confirmLoading={pending}
-        cancelButtonProps={{ disabled: pending }}
-        closable={!pending}
-        maskClosable={!pending}
-        onCancel={() => {
-          if (!pending) setConfirmation(undefined);
+        fullWidth
+        maxWidth="xs"
+        aria-labelledby="event-bulk-title"
+        onClose={() => {
+          if (!submitting.current) setConfirmation(undefined);
         }}
       >
-        <Typography.Paragraph>
-          This applies to {confirmation?.values.ids.length} selected{' '}
-          {confirmation?.values.ids.length === 1 ? 'event' : 'events'}. All selected events must be
-          eligible; otherwise none will change.
-        </Typography.Paragraph>
-        {actions.mutation.isError && (
-          <Alert type="error" showIcon message={actions.mutation.error.message} />
-        )}
-      </Modal>
+        <DialogTitle id="event-bulk-title">
+          {confirmation?.label ?? 'Update'} selected events?
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            This applies to {confirmation?.values.ids.length} selected{' '}
+            {confirmation?.values.ids.length === 1 ? 'event' : 'events'}. All selected events must
+            be eligible; otherwise none will change.
+          </Typography>
+          {actions.mutation.isError && (
+            <Alert severity="error">{actions.mutation.error.message}</Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            color="neutral"
+            disabled={pending}
+            onClick={() => {
+              setConfirmation(undefined);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color={confirmation?.values.action === 'trash' ? 'error' : 'primary'}
+            loading={pending}
+            onClick={submit}
+          >
+            {confirmation?.label}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

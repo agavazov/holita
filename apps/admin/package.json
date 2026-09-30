@@ -14,12 +14,12 @@
     "predev": "npm run graphql:generate"
   },
   "dependencies": {
-    "@emotion/cache": "11.14.0",
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",
     "@graphql-typed-document-node/core": "3.2.0",
     "@iconify/react": "6.0.2",
     "@mui/material": "9.4.0",
+    "@mui/x-data-grid": "9.14.0",
     "@refinedev/core": "5.0.12",
     "@refinedev/graphql": "8.0.1",
     "@refinedev/react-router": "2.0.4",
@@ -29,7 +29,6 @@
     "@tiptap/react": "3.31.3",
     "@tiptap/starter-kit": "3.31.3",
     "@urql/core": "5.2.0",
-    "antd": "5.29.3",
     "dayjs": "1.11.23",
     "dompurify": "3.4.16",
     "graphql": "16.14.2",

@@ -10,9 +10,7 @@ async function switchStore(page: Page, name: string) {
 }
 async function fillVenue(page: Page, name: string) {
   await page.getByLabel('Name', { exact: true }).fill(name);
-  await page.getByRole('tab', { name: 'Location', exact: true }).click();
   await page.getByLabel('City', { exact: true }).fill('Sofia');
-  await page.getByRole('tab', { name: 'General', exact: true }).click();
 }
 function operation(request: Request, name: string) {
   const body: unknown = request.postDataJSON();
@@ -43,9 +41,9 @@ test('Venue CRUD works through the real gateway and persists across reloads', as
   await page.getByRole('link', { name: 'Smoke Sofia venue', exact: true }).click();
   await page.getByLabel('Name', { exact: true }).fill('Smoke Sofia edited');
   await page.getByRole('switch', { name: /^Active/ }).click();
-  await page.getByRole('tab', { name: 'Location', exact: true }).click();
   await page.getByLabel(/^Address/).fill('12 Example Street');
   await page.getByRole('button', { name: 'Save venue' }).click();
+  await expect(page.getByRole('link', { name: 'Smoke Sofia edited', exact: true })).toBeVisible();
   await page.reload();
   await expect(page.getByRole('row').filter({ hasText: 'Smoke Sofia edited' })).toContainText(
     'Inactive',
@@ -56,10 +54,12 @@ test('Venue CRUD works through the real gateway and persists across reloads', as
   await page.getByRole('button', { name: 'Create venue', exact: true }).click();
   await fillVenue(page, 'Smoke Plovdiv venue');
   await page.getByRole('button', { name: 'Save venue' }).click();
-  await page.getByRole('button', { name: 'Delete Smoke Plovdiv venue', exact: true }).click();
+  await page.getByRole('button', { name: 'Actions for Smoke Plovdiv venue', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(page.getByRole('link', { name: 'Smoke Plovdiv venue', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Delete Smoke Plovdiv venue', exact: true }).click();
+  await page.getByRole('button', { name: 'Actions for Smoke Plovdiv venue', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
   await page.getByRole('button', { name: 'Delete venue', exact: true }).click();
   await expect(page.getByRole('link', { name: 'Smoke Plovdiv venue', exact: true })).toHaveCount(0);
   await switchStore(page, 'holita Sofia');
@@ -72,11 +72,17 @@ test('Venue CRUD works through the real gateway and persists across reloads', as
       () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
     ),
   ).toBe(true);
-  await page.getByRole('tab', { name: 'Location', exact: true }).click();
   await expect(page.getByLabel(/^Address/)).toHaveValue('12 Example Street');
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-  await page.getByRole('button', { name: 'Delete Smoke Sofia edited', exact: true }).click();
+  await page.getByRole('grid', { name: 'Venues' }).hover();
+  await page.mouse.wheel(1000, 0);
+  await page.getByRole('button', { name: 'Actions for Smoke Sofia edited', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
   await page.getByRole('button', { name: 'Delete venue', exact: true }).click();
+  await expect(page.getByText('Venue deleted.', { exact: true })).toBeVisible();
+  await page.getByRole('grid', { name: 'Venues' }).hover();
+  await page.mouse.wheel(-1000, 0);
+  await expect(page.getByRole('link', { name: 'The Glasshouse', exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Smoke Sofia edited', exact: true })).toHaveCount(0);
   expect(errors).toEqual([]);
 });

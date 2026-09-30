@@ -215,8 +215,16 @@ export function AdminLayout(props: AdminLayoutProps) {
             <StoreSelector {...props} />
           </Box>
         )}
-        <Box sx={{ flex: 1, display: 'flex', bgcolor: 'background.default' }}>
-          <Box className="legacy-content">{children}</Box>
+        <Box
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            bgcolor: 'background.default',
+          }}
+        >
+          {children}
         </Box>
         <Divider />
         <Stack

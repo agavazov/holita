@@ -1,7 +1,8 @@
 import { useCreate, useOne, useUpdate } from '@refinedev/core';
-import { Alert, Breadcrumb, Button, Card, Skeleton, Tabs, Tag, Typography } from 'antd';
-import { useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Alert, Box, Button, Skeleton, Stack } from '@mui/material';
+import { PageHeader } from '../../../components/page-header.js';
+import { useRef } from 'react';
+import { useNavigate, useParams } from 'react-router';
 
 import { venuesResource, type DataError } from '../../../data/data-provider.js';
 import type {
@@ -9,8 +10,8 @@ import type {
   GetReferenceVenueQuery,
   ReferenceVenueDetailsFragment,
 } from '../../../generated/graphql/operations.js';
-import { useUnsavedChanges } from '../use-unsaved-changes.js';
 import { VenueForm } from './venue-form.js';
+import { useUnsavedChanges } from '../use-unsaved-changes.js';
 
 type VenueEditorProps = { storeId: string; onSaved: () => void };
 
@@ -19,7 +20,6 @@ export function VenueEditor({ storeId, onSaved }: VenueEditorProps) {
   const navigate = useNavigate();
   const resource = venuesResource(storeId);
   const submitting = useRef(false);
-  const [tab, setTab] = useState('general');
   const listPath = `/${resource}`;
   const venue = useOne<GetReferenceVenueQuery['referenceVenue'], DataError>({
     resource,
@@ -58,86 +58,73 @@ export function VenueEditor({ storeId, onSaved }: VenueEditorProps) {
     else create.mutate({ resource, values }, callbacks);
   }
 
+  const header = (
+    <PageHeader
+      embedded
+      title={venueId ? 'Edit venue' : 'Create venue'}
+      breadcrumbs={[
+        { label: 'Home', to: '/' },
+        { label: 'Reference' },
+        { label: 'Venues', to: listPath },
+        { label: venueId ? 'Edit venue' : 'Create venue' },
+      ]}
+    />
+  );
+
   return (
-    <>
+    <Stack sx={{ flex: 1, minWidth: 0 }}>
       {changes.dialog}
-      <Breadcrumb
-        className="page-breadcrumb"
-        items={[
-          { title: 'Reference' },
-          { title: <Link to={listPath}>Venues</Link> },
-          { title: venueId ? 'Edit venue' : 'Create venue' },
-        ]}
-      />
-      <Card
-        className="page-header"
-        title={venueId ? 'Edit venue' : 'Create venue'}
-        extra={
-          venue.result && (
-            <Tag color={venue.result.active ? 'green' : 'default'}>
-              {venue.result.active ? 'Active' : 'Inactive'}
-            </Tag>
-          )
-        }
-      >
-        <Typography.Text type="secondary">
-          {venue.result
-            ? `${venue.result.name} · ${venue.result.city} · ${venue.result.countryCode}`
-            : 'Add a place for your events.'}
-        </Typography.Text>
-        <Tabs
-          items={[
-            { key: 'general', label: 'General' },
-            { key: 'location', label: 'Location' },
-          ]}
-          activeKey={tab}
-          onChange={setTab}
+      {venueId && (venue.query.isPending || venue.query.isError) && (
+        <Box sx={{ p: { xs: 3, md: 5 } }}>{header}</Box>
+      )}
+      {venueId && venue.query.isPending ? (
+        <Box sx={{ p: 5 }}>
+          <Skeleton height={60} />
+          <Skeleton height={200} />
+        </Box>
+      ) : venueId && venue.query.isError ? (
+        <Alert
+          severity="error"
+          sx={{ m: 3 }}
+          action={
+            <Button
+              onClick={() => {
+                void venue.query.refetch();
+              }}
+            >
+              Retry
+            </Button>
+          }
+        >
+          {venue.query.error.message}
+        </Alert>
+      ) : (
+        <VenueForm
+          header={header}
+          initialValues={venueId ? venue.result : undefined}
+          pending={pending}
+          error={create.mutation.error ?? update.mutation.error}
+          onChange={() => {
+            changes.changed();
+            create.mutation.reset();
+            update.mutation.reset();
+          }}
+          onSubmit={save}
+          onCancel={() => {
+            void navigate(listPath);
+          }}
         />
-      </Card>
-      <Card className="venue-editor">
-        {venueId && venue.query.isPending ? (
-          <Skeleton active paragraph={{ rows: 5 }} />
-        ) : venueId && venue.query.isError ? (
-          <Alert
-            type="error"
-            showIcon
-            message={venue.query.error.message}
-            action={
-              <Button
-                onClick={() => {
-                  void venue.query.refetch();
-                }}
-              >
-                Retry
-              </Button>
-            }
-          />
-        ) : (
-          <VenueForm
-            key={venueId ?? 'create'}
-            initialValues={venueId ? venue.result : undefined}
-            tab={tab}
-            onTabChange={setTab}
-            onChange={changes.changed}
-            pending={pending}
-            error={create.mutation.error ?? update.mutation.error}
-            onSubmit={save}
-            onCancel={() => {
-              void navigate(listPath);
-            }}
-          />
-        )}
-        {venueId && venue.query.isError && (
-          <Button
-            className="back-button"
-            onClick={() => {
-              void navigate(listPath);
-            }}
-          >
-            Back to venues
-          </Button>
-        )}
-      </Card>
-    </>
+      )}
+      {venueId && venue.query.isError && (
+        <Button
+          sx={{ m: 3, alignSelf: 'flex-start' }}
+          onClick={() => {
+            void navigate(listPath);
+          }}
+        >
+          Back to venues
+        </Button>
+      )}
+    </Stack>
   );
 }

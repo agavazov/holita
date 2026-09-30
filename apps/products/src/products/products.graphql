@@ -11,6 +11,23 @@ enum ProductStatus {
   ACTIVE
 }
 
+enum ProductSortField {
+  CREATED_AT
+  NAME
+  SKU
+  STATUS
+}
+
+enum ProductSortDirection {
+  ASC
+  DESC
+}
+
+input ProductSort {
+  field: ProductSortField! = CREATED_AT
+  direction: ProductSortDirection! = DESC
+}
+
 type Product @key(fields: "id") {
   id: ID!
   storeId: ID!
@@ -42,7 +59,14 @@ input UpdateProductInput {
 }
 
 type Query {
-  products(offset: Int! = 0, limit: Int! = 20): ProductPage!
+  products(
+    offset: Int! = 0
+    limit: Int! = 20
+    search: String
+    sku: String
+    status: ProductStatus
+    sort: ProductSort
+  ): ProductPage!
   product(id: ID!): Product!
 }
 

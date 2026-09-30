@@ -31,6 +31,42 @@ import {
 const url = 'http://127.0.0.1:11080/graphql';
 
 describe('Refine GraphQL mapping', () => {
+  it.each([
+    ['name', 'NAME'],
+    ['sku', 'SKU'],
+    ['status', 'STATUS'],
+  ])(
+    'maps Product %s sorting with filters, pagination and captured store context',
+    async (field, apiField) => {
+      const transport = mockGraphQL(() =>
+        result({ products: { items: [], total: 0, offset: 10, limit: 10 } }),
+      );
+      const provider = createDataProvider(url);
+      for (const order of ['asc', 'desc'] as const) {
+        await provider.getList({
+          resource: productsResource(storeA),
+          pagination: { currentPage: 2, pageSize: 10 },
+          sorters: [{ field, order }],
+          filters: [
+            { field: 'search', operator: 'contains', value: 'Note' },
+            { field: 'sku', operator: 'contains', value: 'SKU_%' },
+            { field: 'status', operator: 'eq', value: 'ACTIVE' },
+          ],
+        });
+        expect(transport.calls.at(-1)).toMatchObject({
+          storeId: storeA,
+          variables: {
+            offset: 10,
+            limit: 10,
+            search: 'Note',
+            sku: 'SKU_%',
+            status: 'ACTIVE',
+            sort: { field: apiField, direction: order === 'asc' ? 'ASC' : 'DESC' },
+          },
+        });
+      }
+    },
+  );
   it('maps Venue CRUD and pagination through the same scoped provider', async () => {
     const row = venue();
     const transport = mockGraphQL((call) => {
@@ -77,6 +113,78 @@ describe('Refine GraphQL mapping', () => {
     );
     expect(transport.calls).toHaveLength(5);
   });
+
+  it('maps Venue filters and sortable columns while retaining scoped lookup IDs', async () => {
+    const row = venue();
+    const transport = mockGraphQL(() => result({ referenceVenues: { items: [row], total: 1 } }));
+    const provider = createDataProvider(url);
+    for (const [field, apiField] of Object.entries({
+      name: 'NAME',
+      city: 'CITY',
+      countryCode: 'COUNTRY_CODE',
+      capacity: 'CAPACITY',
+      active: 'ACTIVE',
+    })) {
+      for (const order of ['asc', 'desc'] as const) {
+        await provider.getList({
+          resource: venuesResource(storeA),
+          pagination: { currentPage: 2, pageSize: 10 },
+          filters: [
+            { field: 'search', operator: 'contains', value: 'Hall' },
+            { field: 'active', operator: 'eq', value: false },
+            { field: 'ids', operator: 'in', value: [row.id] },
+          ],
+          sorters: [{ field, order }],
+        });
+        expect(transport.calls.at(-1)).toMatchObject({
+          storeId: storeA,
+          variables: {
+            offset: 10,
+            limit: 10,
+            search: 'Hall',
+            active: false,
+            ids: [row.id],
+            sort: { field: apiField, direction: order.toUpperCase() },
+          },
+        });
+      }
+    }
+  });
+  it.each(['Speaker', 'Tag'])(
+    'maps %s sorting with combined scoped lookup filters',
+    async (entity) => {
+      const row = venue();
+      const transport = mockGraphQL(() =>
+        result({ [`reference${entity}s`]: { items: [row], total: 1 } }),
+      );
+      const provider = createDataProvider(url);
+      for (const field of ['name', 'active', entity === 'Speaker' ? 'email' : 'color']) {
+        for (const order of ['asc', 'desc'] as const) {
+          await provider.getList({
+            resource: `stores/${storeA}/reference/${entity.toLowerCase()}s`,
+            pagination: { currentPage: 2, pageSize: 10 },
+            filters: [
+              { field: 'search', operator: 'contains', value: 'Lookup' },
+              { field: 'active', operator: 'eq', value: false },
+              { field: 'ids', operator: 'in', value: [row.id] },
+            ],
+            sorters: [{ field, order }],
+          });
+          expect(transport.calls.at(-1)).toMatchObject({
+            storeId: storeA,
+            variables: {
+              offset: 10,
+              limit: 10,
+              search: 'Lookup',
+              active: false,
+              ids: [row.id],
+              sort: { field: field.toUpperCase(), direction: order.toUpperCase() },
+            },
+          });
+        }
+      }
+    },
+  );
   it('lists stores without context and maps bounded product pagination', async () => {
     const transport = mockGraphQL((call) =>
       call.operation === 'ListStores'

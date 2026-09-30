@@ -16,18 +16,12 @@ test('rich text survives paste, formatting, save, reload and edit, and clears ex
   const editor = page.getByRole('textbox', { name: 'Description', exact: true });
   await editor.fill('Welcome to the forum');
   await page.getByRole('combobox', { name: 'Text style' }).press('ArrowDown');
-  await page
-    .locator('.ant-select-item-option-content')
-    .getByText('Heading 2', { exact: true })
-    .click();
+  await page.getByRole('option', { name: 'Heading 2', exact: true }).click();
   await expect(editor.locator('h2')).toHaveText('Welcome to the forum');
   await editor.press('Control+End');
   await editor.press('Enter');
   await page.getByRole('combobox', { name: 'Text style' }).press('ArrowDown');
-  await page
-    .locator('.ant-select-item-option-content')
-    .getByText('Paragraph', { exact: true })
-    .click();
+  await page.getByRole('option', { name: 'Paragraph', exact: true }).click();
   await editor.evaluate((element) => {
     const clipboardData = new DataTransfer();
     clipboardData.setData(
@@ -47,7 +41,7 @@ test('rich text survives paste, formatting, save, reload and edit, and clears ex
   await page.getByLabel('Web address').fill('javascript:alert(1)');
   await page.getByRole('button', { name: 'Apply link', exact: true }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
-  await expect(page.getByRole('alert').filter({ hasText: 'Use an absolute' })).toBeVisible();
+  await expect(page.getByLabel('Web address')).toHaveAttribute('aria-invalid', 'true');
   await page.getByLabel('Web address').fill('https://example.com/program');
   await page.getByRole('button', { name: 'Apply link', exact: true }).click();
   await expect(editor.getByRole('link')).toHaveAttribute('href', 'https://example.com/program');
@@ -142,9 +136,7 @@ test('oversized rich text stays editable and an in-flight save stays in its orig
     await expect(editor).toHaveAttribute('contenteditable', 'false');
     await expect(page.getByRole('button', { name: 'Bold', exact: true })).toBeDisabled();
     await page.getByRole('combobox', { name: 'Store', exact: true }).press('ArrowDown');
-    await page
-      .getByRole('option', { name: 'holita Plovdiv', exact: true })
-      .click();
+    await page.getByRole('option', { name: 'holita Plovdiv', exact: true }).click();
     await expect(page).toHaveURL(/000000000002\/reference\/events$/);
     // React Router updates the URL before committing the new store subtree.
     await expect(page.getByRole('button', { name: 'Create event', exact: true })).toBeVisible();

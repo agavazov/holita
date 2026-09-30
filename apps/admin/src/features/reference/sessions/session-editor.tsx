@@ -1,7 +1,8 @@
 import { useCreate, useOne, useUpdate } from '@refinedev/core';
-import { Alert, Breadcrumb, Button, Card, Skeleton, Typography } from 'antd';
+import { Alert, Button, Paper, Skeleton, Typography } from '@mui/material';
+import { PageHeader } from '../../../components/page-header.js';
 import { useRef } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { eventsResource, sessionsResource, type DataError } from '../../../data/data-provider.js';
 import type {
   CreateReferenceSessionInput,
@@ -68,62 +69,84 @@ export function SessionEditor({
     if (sessionId) update.mutate({ resource, id: sessionId, values }, callbacks);
     else create.mutate({ resource, values }, callbacks);
   }
+  const header = (
+    <>
+      <PageHeader
+        embedded
+        title={sessionId ? 'Edit session' : 'Add session'}
+        breadcrumbs={[
+          { label: 'Home', to: '/' },
+          { label: 'Reference' },
+          { label: 'Events', to: list },
+          { label: event.result?.title ?? 'Event', to: back },
+          { label: sessionId ? 'Edit session' : 'Add session' },
+        ]}
+      />
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
+        {event.result?.title ?? 'Event program'} · Sessions have their own save action.
+      </Typography>
+      {(pending || changes.dirty) && (
+        <Typography role="status" variant="body2" sx={{ mb: 2 }}>
+          {pending ? 'Saving…' : 'Unsaved changes'}
+        </Typography>
+      )}
+    </>
+  );
   return (
     <>
       {changes.dialog}
-      <Breadcrumb
-        className="page-breadcrumb"
-        items={[
-          { title: 'Reference' },
-          { title: <Link to={list}>Events</Link> },
-          { title: <Link to={back}>{event.result?.title ?? 'Event'}</Link> },
-          { title: sessionId ? 'Edit session' : 'Add session' },
-        ]}
-      />
-      <Card className="page-header" title={sessionId ? 'Edit session' : 'Add session'}>
-        <Typography.Text type="secondary">
-          {event.result?.title ?? 'Event program'} · Sessions have their own save action.
-        </Typography.Text>
-      </Card>
-      <Card className="event-editor">
-        {failure ? (
-          <Alert
-            type="error"
-            showIcon
-            message={failure.message}
-            action={
+      {failure || !event.result || (sessionId && !session.result) ? (
+        <Paper sx={{ p: { xs: 3, md: 5 }, flex: 1 }}>
+          {header}
+          {failure ? (
+            <>
+              <Alert
+                severity="error"
+                action={
+                  <Button
+                    onClick={() => {
+                      void event.query.refetch();
+                      if (sessionId) void session.query.refetch();
+                    }}
+                  >
+                    Retry
+                  </Button>
+                }
+              >
+                {failure.message}
+              </Alert>
               <Button
+                sx={{ mt: 2 }}
                 onClick={() => {
-                  void event.query.refetch();
-                  if (sessionId) void session.query.refetch();
+                  void navigate(back);
                 }}
               >
-                Retry
+                Back to sessions
               </Button>
-            }
-          />
-        ) : !event.result || (sessionId && !session.result) ? (
-          <Skeleton active />
-        ) : (
-          <SessionForm
-            storeId={storeId}
-            event={event.result}
-            initialValues={sessionId ? session.result : undefined}
-            pending={pending}
-            error={create.mutation.error ?? update.mutation.error}
-            onSubmit={save}
-            onCancel={() => {
-              void navigate(back);
-            }}
-            onChange={changes.changed}
-          />
-        )}
-        {failure && (
-          <Link to={back}>
-            <Button className="back-button">Back to sessions</Button>
-          </Link>
-        )}
-      </Card>
+            </>
+          ) : (
+            <Skeleton variant="rounded" height={300} />
+          )}
+        </Paper>
+      ) : (
+        <SessionForm
+          header={header}
+          storeId={storeId}
+          event={event.result}
+          initialValues={sessionId ? session.result : undefined}
+          pending={pending}
+          error={create.mutation.error ?? update.mutation.error}
+          onSubmit={save}
+          onCancel={() => {
+            void navigate(back);
+          }}
+          onChange={() => {
+            changes.changed();
+            create.mutation.reset();
+            update.mutation.reset();
+          }}
+        />
+      )}
     </>
   );
 }

@@ -1,7 +1,6 @@
 import { Refine, type DataProvider } from '@refinedev/core';
 import routerProvider from '@refinedev/react-router';
 import { QueryClient } from '@tanstack/react-query';
-import { App as AntApp, ConfigProvider } from 'antd';
 import { useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router';
 
@@ -62,24 +61,7 @@ export function App({
 }) {
   return (
     <AuroraTheme>
-      <ConfigProvider
-        theme={{
-          token: {
-            colorPrimary: '#315ed0',
-            colorTextHeading: '#17243a',
-            colorTextSecondary: '#637086',
-            colorTextDescription: '#637086',
-            colorBgLayout: '#f5f7fb',
-            colorBorderSecondary: '#e6ebf2',
-            borderRadius: 8,
-            zIndexPopupBase: 1400,
-          },
-        }}
-      >
-        <AntApp>
-          <Admin dataProvider={dataProvider} referenceEnabled={referenceEnabled} />
-        </AntApp>
-      </ConfigProvider>
+      <Admin dataProvider={dataProvider} referenceEnabled={referenceEnabled} />
     </AuroraTheme>
   );
 }

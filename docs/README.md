@@ -4,7 +4,7 @@
 - [Architecture](architecture/overview.md): application boundaries and current execution.
 - [Development](development.md): installation, commands, ports and troubleshooting.
 - [Testing](testing.md): focused selection, PR affected CI and manually triggered full regression.
-- [Reference implementation index](reference.md): working examples from forms and store scoping to uploads, lifecycle and disabled mode.
+- [CRUD and Reference implementation index](reference.md): Products Aurora components and state boundaries, plus domain examples for relations, uploads, lifecycle and disabled mode.
 - [Workspace decision](architecture/decisions/0001-npm-workspaces-and-nx.md): why Nx complements npm.
 - [Database ownership](architecture/decisions/0002-database-ownership.md): separate databases and isolated test schemas.
 - [Schema-first federation](architecture/decisions/0003-schema-first-federation.md): local contracts, generation and service communication.

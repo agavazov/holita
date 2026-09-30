@@ -1,7 +1,7 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../../../App.js';
 import { createDataProvider } from '../../../data/data-provider.js';
 import {
@@ -52,11 +52,35 @@ beforeEach(() => {
   localStorage.clear();
 });
 describe('Event list and overview', () => {
+  it('discards a pending search when browser history changes another filter', async () => {
+    const transport = mockGraphQL(respond);
+    const { router } = mount('?status=PUBLISHED');
+    const search = await screen.findByRole('searchbox', { name: 'Search events' });
+    await act(() => router.navigate('?status=DRAFT'));
+    vi.useFakeTimers();
+    try {
+      fireEvent.change(search, { target: { value: 'unsent search' } });
+      await act(() => router.navigate(-1));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(350);
+      });
+      expect(search).toHaveValue('');
+      expect(router.state.location.search).toBe('?status=PUBLISHED');
+      expect(
+        transport.calls.filter((call) => call.operation === 'ListReferenceEvents').at(-1)
+          ?.variables,
+      ).toMatchObject({ filter: { statuses: ['PUBLISHED'] } });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('restores a bookmarked query, keeps it through Show/edit/save/back and isolates column preferences by store', async () => {
     const transport = mockGraphQL(respond);
     const search =
       '?q=forum&status=DRAFT&featured=false&from=2026-11-01&to=2026-11-01&min=20&max=100&sort=budget&order=desc&page=2&size=10';
     const { user, router } = mount(search);
+    await screen.findByRole('grid', { name: 'Events' });
     await screen.findByRole('link', { name: 'Sofia forum' });
     expect(
       transport.calls.find((call) => call.operation === 'ListReferenceEvents')?.variables,
@@ -76,9 +100,10 @@ describe('Event list and overview', () => {
     });
     await user.click(screen.getByRole('button', { name: 'Columns' }));
     await user.click(await screen.findByRole('checkbox', { name: 'Budget' }));
-    expect(screen.getByRole('columnheader', { name: /Budget/ })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Columns' }));
-    await user.click(screen.getByRole('link', { name: 'Sofia forum' }));
+    await user.keyboard('{Escape}');
+    expect(await screen.findByRole('columnheader', { name: /Budget/ })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Actions for Sofia forum' }));
+    await user.click(screen.getByRole('menuitem', { name: 'View' }));
     expect(await screen.findByRole('tab', { name: 'Overview' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Edit event' }));
     await screen.findByLabelText('Title');
@@ -94,9 +119,7 @@ describe('Event list and overview', () => {
     });
     expect(screen.getByRole('columnheader', { name: /Budget/ })).toBeInTheDocument();
     await user.click(screen.getByRole('combobox', { name: 'Store' }));
-    await user.click(
-      await screen.findByRole('option', { name: 'Plovdiv Store' }),
-    );
+    await user.click(await screen.findByRole('option', { name: 'Plovdiv Store' }));
     await screen.findByRole('link', { name: 'Plovdiv forum' });
     expect(router.state.location.search).toBe('');
     expect(screen.queryByRole('columnheader', { name: /Budget/ })).not.toBeInTheDocument();
@@ -107,38 +130,41 @@ describe('Event list and overview', () => {
     ).toEqual({ offset: 0, limit: 20, filter: {}, sort: { field: 'STARTS_AT', direction: 'ASC' } });
   });
 
-  it('keeps advanced filter input while a quick filter changes the URL, and clears it on reset', async () => {
+  it('applies filters on change, shares text between both searches and clears a pending draft on reset', async () => {
     const transport = mockGraphQL(respond);
-    const { user } = mount();
-    await user.click(await screen.findByRole('button', { name: 'More filters' }));
-    const format = screen.getByRole('combobox', { name: 'Format' });
-    await user.click(format);
-    await user.click(
-      await screen.findByText('In person', { selector: '.ant-select-item-option-content' }),
-    );
-    await user.type(screen.getByRole('searchbox', { name: 'Search events' }), 'forum{Enter}');
+    const { user, router } = mount();
+    await user.click(await screen.findByRole('button', { name: 'Filter events' }));
+    await user.click(screen.getByRole('combobox', { name: 'Format' }));
+    await user.click(await screen.findByRole('option', { name: 'In person' }));
     await waitFor(() => {
-      expect(
-        transport.calls.filter((call) => call.operation === 'ListReferenceEvents').at(-1)
-          ?.variables,
-      ).toMatchObject({ filter: { search: 'forum' } });
+      expect(router.state.location.search).toBe('?format=IN_PERSON');
     });
-    expect(format).toBeInTheDocument();
-    expect(
-      screen.getByText('In person', { selector: '.ant-select-selection-item-content' }),
-    ).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Apply filters' }));
+    await user.type(screen.getByRole('searchbox', { name: 'Search title or code' }), 'forum');
     await waitFor(() => {
       expect(
         transport.calls.filter((call) => call.operation === 'ListReferenceEvents').at(-1)
           ?.variables,
       ).toMatchObject({ filter: { search: 'forum', formats: ['IN_PERSON'] } });
     });
+    await user.click(screen.getByRole('button', { name: 'Close filters' }));
+    expect(await screen.findByRole('searchbox', { name: 'Search events' })).toHaveValue('forum');
+    await user.type(screen.getByRole('searchbox', { name: 'Search events' }), ' pending');
     await user.click(screen.getByRole('button', { name: 'Reset filters' }));
-    await user.click(screen.getByRole('button', { name: 'More filters' }));
-    expect(
-      screen.queryByText('In person', { selector: '.ant-select-selection-item-content' }),
-    ).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(router.state.location.search).toBe('');
+    });
+    await user.click(screen.getByRole('button', { name: 'Filter events' }));
+    expect(screen.getByRole('searchbox', { name: 'Search title or code' })).toHaveValue('');
+    expect(screen.queryByText('In person')).not.toBeInTheDocument();
+    await user.type(screen.getByRole('spinbutton', { name: 'Minimum capacity' }), '100');
+    await user.type(screen.getByRole('spinbutton', { name: 'Maximum capacity' }), '5');
+    expect(screen.getByText('Maximum must be at least the minimum.')).toBeInTheDocument();
+    expect(new URLSearchParams(router.state.location.search).get('max')).toBeNull();
+    await user.clear(screen.getByRole('spinbutton', { name: 'Maximum capacity' }));
+    await user.type(screen.getByRole('spinbutton', { name: 'Maximum capacity' }), '200');
+    await waitFor(() => {
+      expect(new URLSearchParams(router.state.location.search).get('max')).toBe('200');
+    });
   });
 
   it('keeps a newer search visible after an older response arrives and restores search with browser history', async () => {
@@ -196,7 +222,7 @@ describe('Event list and overview', () => {
     failed = false;
     await user.click(screen.getByRole('button', { name: 'Retry' }));
     await screen.findByText('No events match these filters.');
-    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+    await user.click(screen.getByRole('button', { name: 'Reset filters' }));
     expect(await screen.findByText('No events in this store yet.')).toBeInTheDocument();
   });
 
@@ -206,7 +232,8 @@ describe('Event list and overview', () => {
       call.operation === 'DeleteReferenceEvent' ? delayed.promise : respond(call),
     );
     const { user, router } = mount();
-    await user.click(await screen.findByRole('link', { name: 'Sofia forum' }));
+    await user.click(await screen.findByRole('button', { name: 'Actions for Sofia forum' }));
+    await user.click(screen.getByRole('menuitem', { name: 'View' }));
     await user.click(await screen.findByRole('button', { name: 'Move to trash' }));
     await user.click(
       within(screen.getByRole('dialog')).getByRole('button', { name: 'Move to trash' }),

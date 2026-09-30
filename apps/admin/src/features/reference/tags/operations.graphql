@@ -13,8 +13,16 @@ query ListReferenceTags(
   $search: String
   $active: Boolean
   $ids: [ID!]
+  $sort: ReferenceTagSort
 ) {
-  referenceTags(offset: $offset, limit: $limit, search: $search, active: $active, ids: $ids) {
+  referenceTags(
+    offset: $offset
+    limit: $limit
+    search: $search
+    active: $active
+    ids: $ids
+    sort: $sort
+  ) {
     items {
       ...ReferenceTagDetails
     }

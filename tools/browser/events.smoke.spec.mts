@@ -10,8 +10,17 @@ async function choose(page: Page, label: string | RegExp, text: string) {
   await page
     .getByRole('combobox', { name: label, exact: typeof label === 'string' })
     .press('ArrowDown');
-  if (label === 'Store') await page.getByRole('option', { name: text, exact: true }).click();
-  else await page.locator('.ant-select-item-option-content').getByText(text, { exact: true }).click();
+  await page.getByRole('option', { name: text, exact: true }).click();
+}
+async function openEventMenu(page: Page, title: string) {
+  // The Community grid virtualizes columns; reach the trailing actions on narrow viewports.
+  await page
+    .getByRole('grid', { name: 'Events' })
+    .locator('.MuiDataGrid-virtualScroller')
+    .evaluate((element) => {
+      element.scrollLeft = element.scrollWidth;
+    });
+  await page.getByRole('button', { name: `Actions for ${title}`, exact: true }).click();
 }
 async function onlineEvent(page: Page, title: string, code: string) {
   await page.getByLabel('Title', { exact: true }).fill(title);
@@ -19,8 +28,8 @@ async function onlineEvent(page: Page, title: string, code: string) {
   await choose(page, 'Format', 'Online');
   await page.getByRole('tab', { name: 'Schedule & location' }).click();
   for (const [label, value] of [
-    ['Starts at', '2026-11-12 10:00'],
-    ['Ends at', '2026-11-12 17:00'],
+    ['Starts at', '2026-11-12T10:00'],
+    ['Ends at', '2026-11-12T17:00'],
   ] as const) {
     await page.getByLabel(label, { exact: true }).fill(value);
     await page.getByLabel(label, { exact: true }).press('Tab');
@@ -52,7 +61,7 @@ test('Event create/edit persists all sections and remote relations, with dirty n
   await page.getByLabel(/^Registration closes/).press('Tab');
   await page.getByRole('tab', { name: 'General', exact: true }).click();
   await choose(page, 'Format', 'Hybrid');
-  await page.getByRole('spinbutton', { name: /^Budget/ }).fill('12345.67');
+  await page.getByRole('textbox', { name: /^Budget/ }).fill('12345.67');
   await page.getByRole('spinbutton', { name: /^Capacity/ }).fill('180');
   await page.getByRole('switch', { name: /^Featured/ }).click();
   await page.getByRole('tab', { name: 'Schedule & location' }).click();
@@ -64,15 +73,13 @@ test('Event create/edit persists all sections and remote relations, with dirty n
   await expect(page).toHaveURL(/reference\/events\/[0-9a-f-]+\/edit$/);
   await page.getByRole('tab', { name: 'General', exact: true }).click();
   await expect(page.getByLabel('Code', { exact: true })).toHaveAttribute('readonly');
-  await expect(page.getByRole('spinbutton', { name: /^Budget/ })).toHaveValue('12345.67');
+  await expect(page.getByRole('textbox', { name: /^Budget/ })).toHaveValue('12345.67');
   await page.getByRole('tab', { name: 'Schedule & location' }).click();
-  await expect(page.getByLabel('Starts at', { exact: true })).toHaveValue('2026-11-12 10:00');
-  await expect(
-    page.locator('.ant-select-selection-item').filter({ hasText: 'The Glasshouse' }),
-  ).toBeVisible();
-  await expect(
-    page.locator('.ant-select-selection-item').filter({ hasText: 'Workshop' }),
-  ).toBeVisible();
+  await expect(page.getByLabel('Starts at', { exact: true })).toHaveValue('2026-11-12T10:00');
+  await expect(page.getByRole('combobox', { name: 'Venue', exact: true })).toHaveValue(
+    'The Glasshouse',
+  );
+  await expect(page.locator('.MuiChip-root').filter({ hasText: 'Workshop' })).toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath('event-schedule.png'),
     fullPage: true,
@@ -111,11 +118,19 @@ test('Event create/edit persists all sections and remote relations, with dirty n
   await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Unsaved browser draft');
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await page.getByRole('button', { name: 'Discard changes' }).click();
-  await page.getByRole('button', { name: 'Move Browser forum to trash', exact: true }).click();
+  await openEventMenu(page, 'Browser forum');
+  await page.getByRole('menuitem', { name: 'Move to trash', exact: true }).click();
   await page
     .getByRole('dialog')
     .getByRole('button', { name: 'Move to trash', exact: true })
     .click();
+  await expect(page.getByText('Event moved to trash.', { exact: true })).toBeVisible();
+  await page
+    .getByRole('grid', { name: 'Events' })
+    .locator('.MuiDataGrid-virtualScroller')
+    .evaluate((element) => {
+      element.scrollLeft = 0;
+    });
   await expect(page.getByRole('link', { name: 'Browser forum', exact: true })).toHaveCount(0);
   expect(errors).toEqual([]);
 });
@@ -137,23 +152,29 @@ test('Speaker and Tag forms create, edit, validate and delete through the gatewa
   await expect(page.getByRole('row').filter({ hasText: 'Browser speaker' })).toContainText(
     'Inactive',
   );
-  await page.getByRole('button', { name: 'Delete Browser speaker', exact: true }).click();
+  await page.getByRole('button', { name: 'Actions for Browser speaker', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
   await page.getByRole('button', { name: 'Delete speaker', exact: true }).click();
   await expect(page.getByRole('link', { name: 'Browser speaker', exact: true })).toHaveCount(0);
   await page.getByRole('menuitem', { name: 'Tags', exact: true }).click();
   await page.getByRole('button', { name: 'Create tag', exact: true }).click();
   await page.getByLabel('Name', { exact: true }).fill('Community');
   await page.getByRole('button', { name: 'Save tag', exact: true }).click();
-  await expect(page.locator('.ant-form-item-explain-error')).toHaveText(
-    'Name is already used in this store.',
-  );
+  await expect(
+    page.getByText('Name is already used in this store.', { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Community');
+  await expect(page.getByLabel('Name', { exact: true })).toBeFocused();
   await page.getByLabel('Name', { exact: true }).fill('Browser tag');
+  await page.getByLabel('Color', { exact: true }).fill('#ABCDEF');
   await page.getByRole('button', { name: 'Save tag', exact: true }).click();
   await page.getByRole('link', { name: 'Browser tag', exact: true }).click();
+  await expect(page.getByLabel('Color', { exact: true })).toHaveValue('#abcdef');
   await page.getByRole('switch', { name: /^Active/ }).click();
   await page.getByRole('button', { name: 'Save tag', exact: true }).click();
   await expect(page.getByRole('row').filter({ hasText: 'Browser tag' })).toContainText('Inactive');
-  await page.getByRole('button', { name: 'Delete Browser tag', exact: true }).click();
+  await page.getByRole('button', { name: 'Actions for Browser tag', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
   await page.getByRole('button', { name: 'Delete tag', exact: true }).click();
   await expect(page.getByRole('link', { name: 'Browser tag', exact: true })).toHaveCount(0);
 });
@@ -220,27 +241,35 @@ test('Event filters, columns and overview preserve the list address through edit
   await page.goto(list);
   await page.getByRole('searchbox', { name: 'Search events' }).fill('SOFIA-FORUM');
   await page.getByRole('searchbox', { name: 'Search events' }).press('Enter');
-  await choose(page, 'Filter status', 'Draft');
+  await page.getByRole('button', { name: 'Filter events', exact: true }).click();
+  await expect(page.getByRole('searchbox', { name: 'Search title or code' })).toHaveValue(
+    'SOFIA-FORUM',
+  );
+  await choose(page, 'Status', 'Draft');
   await expect(page).toHaveURL(/status=DRAFT/);
-  await page.getByRole('button', { name: 'More filters', exact: true }).click();
   await choose(page, 'Format', 'In person');
   await choose(page, 'Venue', 'The Glasshouse');
   await choose(page, 'Featured', 'Not featured');
   await page.getByRole('spinbutton', { name: 'Minimum capacity' }).fill('100');
   await page.getByRole('spinbutton', { name: 'Maximum capacity' }).fill('200');
-  await page.getByPlaceholder('Start date', { exact: true }).fill('2026-11-12');
-  await page.getByPlaceholder('Start date', { exact: true }).press('Tab');
-  await page.getByPlaceholder('End date', { exact: true }).fill('2026-11-12');
-  await page.getByPlaceholder('End date', { exact: true }).press('Tab');
-  await page.getByRole('button', { name: 'Apply filters', exact: true }).click();
+  await page.getByLabel('From date', { exact: true }).fill('2026-11-12');
+  await page.getByLabel('From date', { exact: true }).press('Tab');
+  await page.getByLabel('To date', { exact: true }).fill('2026-11-12');
+  await page.getByLabel('To date', { exact: true }).press('Tab');
+  await page.getByRole('button', { name: 'Close filters', exact: true }).click();
   await expect(page.getByRole('link', { name: 'Sofia Creative Forum', exact: true })).toBeVisible();
-  await choose(page, 'Sort events by', 'Budget');
-  await expect(page).toHaveURL(/sort=budget/);
-  await page.getByRole('button', { name: 'Ascending', exact: true }).click();
   await page.getByRole('button', { name: 'Columns', exact: true }).click();
   await page.getByRole('checkbox', { name: 'Budget', exact: true }).check();
   await page.getByRole('checkbox', { name: 'Capacity', exact: true }).check();
-  await page.getByRole('button', { name: 'Columns', exact: true }).click();
+  await page.keyboard.press('Escape');
+  await page.getByRole('columnheader', { name: /Budget/ }).click();
+  await expect(page).toHaveURL(/sort=budget/);
+  await expect(page.getByRole('columnheader', { name: /Budget/ })).toHaveAttribute(
+    'aria-sort',
+    'ascending',
+  );
+  await page.getByRole('columnheader', { name: /Budget/ }).click();
+  await expect(page).toHaveURL(/order=desc/);
   const address = page.url();
   expect(new URL(address).searchParams.get('sort')).toBe('budget');
   expect(new URL(address).searchParams.get('order')).toBe('desc');
@@ -253,7 +282,8 @@ test('Event filters, columns and overview preserve the list address through edit
     fullPage: true,
     animations: 'disabled',
   });
-  await page.getByRole('link', { name: 'Sofia Creative Forum', exact: true }).click();
+  await openEventMenu(page, 'Sofia Creative Forum');
+  await page.getByRole('menuitem', { name: 'View', exact: true }).click();
   await expect(page.getByRole('tab', { name: 'Overview', exact: true })).toBeVisible();
   await expect(page.getByText('The Glasshouse', { exact: true }).last()).toBeVisible();
   await expect(page.getByText('12,500.00 EUR', { exact: true })).toBeVisible();
@@ -295,9 +325,16 @@ test('Event filters, columns and overview preserve the list address through edit
   ).toBe(true);
   await page.getByRole('button', { name: 'Reset filters', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Reset filters', exact: true })).toHaveCount(0);
+  await page
+    .getByRole('grid', { name: 'Events' })
+    .locator('.MuiDataGrid-virtualScroller')
+    .evaluate((element) => {
+      element.scrollLeft = element.scrollWidth;
+    });
   await expect(page.getByRole('columnheader', { name: /Budget/ })).toBeVisible();
   await page.setViewportSize({ width: 1280, height: 800 });
-  await page.getByRole('link', { name: 'Sofia Creative Forum', exact: true }).click();
+  await openEventMenu(page, 'Sofia Creative Forum');
+  await page.getByRole('menuitem', { name: 'View', exact: true }).click();
   await page.getByRole('button', { name: 'Publish', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Archive', exact: true })).toBeEnabled();
   await expect(page.getByRole('button', { name: 'Archive', exact: true })).toHaveAttribute(

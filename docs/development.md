@@ -80,17 +80,37 @@ Choose a store, then **Reference → Events, Venues, Speakers or Tags**. Each re
 paginated list and create/edit form using real persisted data. Page headers contain the
 record context and applicable tabs. Supporting forms return to their list after saving;
 creating an Event opens its edit URL, and later Event saves return to its overview. Click an
-Event title to open the overview; the row Edit link opens its form directly.
+Event row/title to edit; **View** in its three-dot menu opens the overview. Trash rows open the
+read-only overview.
 
-On narrow screens, **Menu** in the top bar opens navigation. Header tabs wrap inside their
-card and retain keyboard navigation. The Event editor shows Unsaved changes or Saving…
-beside its status. Lists, History and Gallery distinguish loading, failed requests and empty
+Venues, Speakers and Tags use the Aurora list with shared quick/panel name search and
+Active/Inactive filters. All sort by Name and Status; Venues also sort by City, Country and
+Capacity, Speakers by Email (empty last), and Tags by Color. Text waits 300 ms; other filters
+apply immediately. Filter/sort/page state survives reload and browser history. Resetting
+filters preserves sorting and page size. Click a row or its Edit action to open the editor.
+Checkboxes select records on the current page; confirmed Delete selected reports each failed
+record and retries only those failures. Venues and Tags referenced by events, and Speakers
+assigned to sessions, cannot be deleted, including when the event is in Trash.
+
+The Venue form shows details and location together. The desktop aside holds Active, Capacity,
+Summary and Save/Cancel; on mobile it follows the fields. Optional description, address and
+capacity can be cleared. Server errors focus the affected field, and unsaved changes require
+confirmation before leaving. Speakers use the same composition for Name, Email and Short
+biography; optional email and biography can be cleared. Tags use Name and a six-digit HEX
+Color, with a native color picker and live preview. Duplicate tag names show a field error
+and retain the draft. Both forms put Active, Summary and Save/Cancel in the responsive aside.
+Save/Cancel return to the base resource list; browser Back restores a previous list URL.
+
+On narrow screens, **Open navigation** in the top bar opens navigation. Event form tabs scroll
+horizontally and retain keyboard navigation. The Event editor shows Unsaved changes or Saving…
+above its sections. Lists, History and Gallery distinguish loading, failed requests and empty
 results; failed requests offer Retry or Refresh previews. See the
 [implementation index](reference.md) for the corresponding code and focused checks.
 
 Events use General, Schedule & location and Content & media tabs. The code is unique in the store
-and read-only after creation. Budget uses an exact EUR decimal string. Event times are
-entered in Europe/Sofia; registration uses calendar dates. In person needs a Venue, Online
+and read-only after creation. The sticky desktop aside holds Status, Featured, Capacity, Budget,
+Summary and Save/Cancel; on mobile it follows the fields. Budget uses an exact EUR decimal string. Event times are
+entered with native date/time inputs in Europe/Sofia; registration uses calendar dates. In person needs a Venue, Online
 needs a meeting URL, and Hybrid needs both. Venue and Tag selectors search remotely and
 page through matches; existing inactive selections remain labeled. Save validates all
 sections, preserves failed input and opens the section containing the first field error.
@@ -140,7 +160,8 @@ and asks for confirmation. Removing the cover selects the first remaining image.
 Drag cards or use their arrow buttons, then **Save order**. **Cancel order** reloads the saved
 order; failed saves keep the draft. Finish/cancel gallery work before **Save event**. The
 existing unsaved-changes warning also covers gallery ordering. The overview shows the saved
-gallery with full-size previews. **Refresh previews** renews expired links, including after a
+gallery with full-size previews. Open an image, then use **Previous image**, **Next image** or
+the arrow keys; Escape closes the preview. **Refresh previews** renews expired links, including after a
 Reference restart. A failed or cancelled upload can be retried with Add image; pending slots
 expire after ten minutes, or one hour when upload finished without finalization.
 
@@ -153,8 +174,10 @@ service is required. Source code, Git, Nx and formatting exclude `.media/`. Stor
 runs automatically at startup and every minute; it retries failed removals using persisted
 keys. There is no separate worker to start. See the [upload contract](architecture/overview.md#event-media-and-direct-uploads).
 
-Open an Event and choose **Sessions** in its header card. **Add session** opens a form
-with title, summary, Sofia start/end times, room and a remote Speaker selector. Save returns
+Open an Event and choose **Sessions**. **Add session** opens an Aurora form
+with title, summary, Sofia start/end times, room and a remote Speaker selector. Its event/summary
+panel is sticky on desktop and follows the fields on mobile. Click a session title/row to edit,
+or use its three-dot Edit/Delete menu. Save returns
 to this Event's program. Each session must fit within the Event; overlaps are allowed.
 Changing the Event dates cannot exclude existing sessions. The overview lists unique
 speakers assigned to its sessions, including labeled inactive speakers.
@@ -166,16 +189,17 @@ arrange the refreshed program again. Add/edit/delete are unavailable while an or
 is open. There are at most 100 sessions per Event. Session deletion is permanent after
 confirmation. Moving an Event to trash preserves its sessions and blocks their access.
 
-Use title/code search and Status above the Event table. **More filters** exposes format,
-Venue, Tag, featured, start-date and capacity ranges; **Apply filters** submits this group.
-Dates include the complete selected calendar days in Europe/Sofia. Choose sorting from the
-selector or a sortable column header. Search, filters, sorting and pagination survive reload
+Use title/code search above the Event table or the same field in **Filter**. The drawer also
+contains Status, Format, Venue, Tag, Featured, start-date and capacity ranges. Text waits 300 ms;
+other filters apply on change and combine with the text search. Invalid ranges show a message
+and keep the last applied query until corrected. Dates include the complete selected calendar
+days in Europe/Sofia. Sort with the column headers; **Columns** exposes additional sortable fields. Search, filters, sorting and pagination survive reload
 and travel through overview/edit/back links. Switching stores resets them. **Columns** saves
 its selection separately for each store in this browser; Reset filters preserves columns,
 sort and page size, while Reset columns restores the default view.
 
 The Event overview presents saved details and offers Edit, Publish/Archive and confirmed
-Move to trash. Overview, Sessions and History tabs are inside the header card. All displayed times identify Sofia;
+Move to trash. Overview, Sessions and History tabs follow the page header. All displayed times identify Sofia;
 registration remains a calendar-date range.
 
 Local defaults enable Reference. Set `REFERENCE_ENABLED=false` in the Reference environment
@@ -211,7 +235,8 @@ selector stays in the top bar on desktop and below it on mobile.
 The theme button selects Aurora presets, primary colors and light/dark/system mode.
 Preferences persist in `holita.appearance`, `holita-mode`, `holita-color-scheme-*` and
 `holita.sidenavCollapsed` localStorage keys. Clear those keys to restore defaults.
-Legacy CRUD pages keep their existing light presentation. Search finds enabled modules
+Products and all Reference screens, including Sessions, Gallery, speaker summaries and History,
+and store discovery/unavailable states follow the selected Aurora preset. Search finds enabled modules
 locally; language, profile and notifications are examples, not live services.
 An open search preserves its text when switching between the mobile dialog and desktop
 popover. Closing it restores focus to the current search control. Search navigation uses
@@ -220,11 +245,16 @@ Notification read/remove actions keep keyboard focus inside the panel when their
 becomes disabled or disappears, so Escape can close it and return to the notification button.
 
 Shell code and selected theme overrides are in `apps/admin/src/layout` and
-`apps/admin/src/theme`. MUI, Emotion, Iconify and SimpleBar are installed through the
+`apps/admin/src/theme`. MUI, MUI X Data Grid Community, Emotion, Iconify and SimpleBar are installed through the
 existing workspace lockfile. The selected icon data is bundled; font and avatar assets
-are under `apps/admin/public`; temporary example avatars are grouped in `public/temp/avatar`.
+are under `apps/admin/public`; temporary example avatars are grouped in `public/images/tmp/avatar`.
 No sibling theme server, new environment variables or
 external font/icon service is needed. Start the admin with the normal dev commands.
+
+At the root page, choose a store to open its Products list. A failed store request shows the
+gateway error and **Retry**; an empty successful response explains that a store must be set up.
+An unavailable store URL offers the available stores. These states do not issue feature requests.
+The interface uses MUI throughout; Ant Design and its compatibility providers/styles are absent.
 
 ## Using Products
 
@@ -235,9 +265,28 @@ discards unsaved changes. A submitted operation retains its original store and m
 after switching; return to that store to see the result.
 Navigation between create/edit routes within the same store also starts a separate editor;
 an earlier submitted write cannot redirect or overwrite the newly opened form.
+Save/Cancel return to the base Products list. Browser Back restores a previous list URL.
+Products does not prompt before discarding unsaved changes.
 
-The list uses server pagination (20 rows by default; choices 10, 20, 50, 100). Create/edit
-share one form: name 1..200 and SKU 1..100 trimmed Unicode code points, case-sensitive SKU uniqueness
+The Aurora list uses server pagination (20 rows by default; choices 10, 20, 50, 100).
+Search matches name or SKU. The quick search and the search field in **Filter** share the
+same value; editing either updates both. Search, status and the SKU substring filter combine.
+Status changes apply immediately, and text changes apply after a 300 ms pause. Filters and
+page settings persist in the URL and survive reload. Click **Name**, **SKU** or **Status**
+to cycle through ascending, descending and the default newest-first order. Sorting applies
+to all matching products before pagination and survives reload/browser history through
+`sort` and `order` URL parameters. Changing it returns to page one. **Clear filters** preserves
+sorting and page size while clearing search in both places, status and SKU together. On wide
+screens, the filter panel sits to the left of the table; smaller screens use a temporary drawer.
+
+Click a name or record cell to edit. The three-dot menu offers **Edit** and **Delete**.
+Checkboxes select rows on the current page; changing page, filters or sorting clears that selection.
+**Delete selected** confirms the selected count, then deletes those records sequentially.
+Partial failures list the remaining records; retry submits only those records. Navigating
+away stops unsent deletes while the current request retains its original store.
+
+Create/edit use Aurora's form layout, with a sticky right panel for status, summary and
+Save/Cancel on desktop; that panel follows the fields on mobile. Both share one form: name 1..200 and SKU 1..100 trimmed Unicode code points, case-sensitive SKU uniqueness
 within a store, Draft default and Active option. Save disables the form while pending;
 delete requires confirmation. Read failures offer Retry, and write failures preserve the
 form for correction. There is no authentication, store administration or Dev Lab.

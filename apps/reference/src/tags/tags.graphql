@@ -24,6 +24,23 @@ input UpdateReferenceTagInput {
   color: String
   active: Boolean
 }
+enum ReferenceTagSortField {
+  NAME
+  COLOR
+  ACTIVE
+  CREATED_AT
+}
+
+enum ReferenceTagSortDirection {
+  ASC
+  DESC
+}
+
+input ReferenceTagSort {
+  field: ReferenceTagSortField! = CREATED_AT
+  direction: ReferenceTagSortDirection! = DESC
+}
+
 extend type Query {
   referenceTags(
     offset: Int! = 0
@@ -31,6 +48,7 @@ extend type Query {
     search: String
     active: Boolean
     ids: [ID!]
+    sort: ReferenceTagSort
   ): ReferenceTagPage!
   referenceTag(id: ID!): ReferenceTag!
 }

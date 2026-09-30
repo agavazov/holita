@@ -1,19 +1,23 @@
 import { useDelete, useList, useUpdate } from '@refinedev/core';
 import {
   Alert,
+  Box,
   Button,
-  Card,
-  Empty,
-  Image,
-  Input,
-  Modal,
-  Progress,
+  ButtonBase,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  LinearProgress,
+  Paper,
   Skeleton,
-  Space,
-  Tag,
+  Stack,
+  TextField,
   Typography,
-  Upload,
-} from 'antd';
+} from '@mui/material';
+import IconifyIcon from '../../../layout/primitives/iconify-icon.js';
+
 import { useEffect, useRef, useState } from 'react';
 import { mediaResource, type DataError } from '../../../data/data-provider.js';
 import type {
@@ -59,6 +63,8 @@ export function EventGallery({
   const [deleting, setDeleting] = useState<ReferenceEventMediaDetailsFragment | null>(null);
   const [reloading, setReloading] = useState(false);
   const [notice, setNotice] = useState('');
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [previewId, setPreviewId] = useState<string | null>(null);
   const submitting = useRef(false);
   const mounted = useRef(true);
   useEffect(() => {
@@ -181,18 +187,32 @@ export function EventGallery({
       },
     );
   }
+  const preview = rows.find((row) => row.id === previewId);
+  const previewIndex = rows.findIndex((row) => row.id === previewId);
+  function nextPreview(direction: number) {
+    const next = rows[previewIndex + direction];
+    if (next) setPreviewId(next.id);
+  }
   return (
-    <section className="event-gallery" aria-label="Event gallery">
-      <div className="gallery-heading">
-        <div>
-          <Typography.Title level={4}>Gallery</Typography.Title>
-          <Typography.Paragraph type="secondary">
+    <Stack component="section" aria-label="Event gallery" sx={{ gap: 3, minWidth: 0 }}>
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        sx={{ gap: 2, justifyContent: 'space-between', alignItems: 'flex-start' }}
+      >
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="h6" component="h2" sx={{ mb: 1 }}>
+            Gallery
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
             {editable
               ? 'Up to 10 still JPEG, PNG or WebP images · 5 MiB and 20 megapixels each. Changes here are saved separately from the event.'
               : 'Images from this event.'}
-          </Typography.Paragraph>
-        </div>
+          </Typography>
+        </Box>
         <Button
+          variant="soft"
+          color="neutral"
+          sx={{ flexShrink: 0 }}
           disabled={locked}
           onClick={() => {
             void gallery.query.refetch();
@@ -200,31 +220,58 @@ export function EventGallery({
         >
           Refresh previews
         </Button>
-      </div>
-      {gallery.query.isError && (
-        <Alert type="error" showIcon message={gallery.query.error.message} />
-      )}
-      {error && <Alert className="form-error" type="error" showIcon message={error} />}
+      </Stack>
+      {gallery.query.isError && <Alert severity="error">{gallery.query.error.message}</Alert>}
+      {error && <Alert severity="error">{error}</Alert>}
       {editable && (
-        <div className="gallery-toolbar">
-          <Upload
-            accept="image/jpeg,image/png,image/webp"
-            showUploadList={false}
-            disabled={locked || Boolean(draft) || rows.length >= 10}
-            beforeUpload={(file) => {
-              void upload.upload(file);
-              return false;
+        <Paper background={1} sx={{ p: 3, borderRadius: 6, outline: 0 }}>
+          <Stack
+            sx={{
+              gap: 2,
+              alignItems: 'center',
+              p: 2,
+              border: '1px dashed',
+              borderColor: 'divider',
+              borderRadius: 2,
+              bgcolor: 'background.elevation2',
             }}
           >
-            <Button disabled={locked || Boolean(draft) || rows.length >= 10}>Add image</Button>
-          </Upload>
-          {gallery.query.isSuccess && (
-            <Typography.Text type="secondary">{rows.length} / 10 images</Typography.Text>
-          )}
+            <IconifyIcon
+              icon="material-symbols:image-outline-rounded"
+              sx={{ fontSize: 28, color: 'text.secondary' }}
+            />
+            <input
+              ref={fileInput}
+              type="file"
+              aria-label="Choose gallery image"
+              accept="image/jpeg,image/png,image/webp"
+              hidden
+              disabled={locked || Boolean(draft) || rows.length >= 10}
+              onChange={(e) => {
+                const file = e.currentTarget.files?.[0];
+                e.currentTarget.value = '';
+                if (file && !locked && !draft && rows.length < 10) void upload.upload(file);
+              }}
+            />
+            <Button
+              variant="soft"
+              disabled={locked || Boolean(draft) || rows.length >= 10}
+              onClick={() => {
+                fileInput.current?.click();
+              }}
+            >
+              Add image
+            </Button>
+            {gallery.query.isSuccess && (
+              <Typography variant="caption" color="text.secondary">
+                {rows.length} / 10 images
+              </Typography>
+            )}
+          </Stack>
           {draft && (
-            <Space wrap>
+            <Stack direction="row" sx={{ mt: 2, gap: 1, flexWrap: 'wrap' }}>
               <Button
-                type="primary"
+                variant="contained"
                 disabled={locked}
                 onClick={() => {
                   mutate({ action: 'reorder', ids: draft });
@@ -233,6 +280,8 @@ export function EventGallery({
                 Save order
               </Button>
               <Button
+                variant="soft"
+                color="neutral"
                 disabled={locked}
                 onClick={() => {
                   void cancelOrder();
@@ -240,178 +289,324 @@ export function EventGallery({
               >
                 Cancel order
               </Button>
-            </Space>
+            </Stack>
           )}
-        </div>
+        </Paper>
       )}
       {upload.state && (
-        <div className="gallery-upload" role="status">
-          <Typography.Text>
+        <Stack role="status" sx={{ gap: 1 }}>
+          <Typography variant="body2">
             {upload.state.finishing ? 'Finishing' : 'Uploading'} {upload.state.name}
-          </Typography.Text>
-          <Progress percent={upload.state.percent} status="active" />
-          <Button disabled={upload.state.finishing} onClick={upload.cancel}>
+          </Typography>
+          <LinearProgress
+            variant="determinate"
+            value={upload.state.percent}
+            aria-label="Image upload progress"
+          />
+          <Button
+            disabled={upload.state.finishing}
+            onClick={upload.cancel}
+            sx={{ alignSelf: 'flex-start' }}
+          >
             Cancel upload
           </Button>
-        </div>
+        </Stack>
       )}
       {gallery.query.isPending ? (
-        <Skeleton active />
+        <Skeleton variant="rounded" height={180} />
       ) : gallery.query.isError ? (
-        <Typography.Paragraph type="secondary">
+        <Typography variant="body2" color="text.secondary">
           Gallery unavailable. Use Refresh previews to try again.
-        </Typography.Paragraph>
+        </Typography>
       ) : !rows.length ? (
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No images yet" />
+        <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
+          No images yet
+        </Typography>
       ) : (
-        <Image.PreviewGroup>
-          <div className="gallery-grid">
-            {rows.map((row, index) => (
-              <Card
-                key={row.id}
-                size="small"
-                className="gallery-image-card"
-                aria-label={`Image ${row.originalName}`}
-                draggable={editable && !locked}
-                onDragStart={(event) => {
-                  event.dataTransfer.setData('text/plain', row.id);
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 225px), 1fr))',
+            gap: 2,
+          }}
+        >
+          {rows.map((row, index) => (
+            <Paper
+              key={row.id}
+              component="article"
+              aria-label={`Image ${row.originalName}`}
+              background={1}
+              sx={{ p: 2, borderRadius: 4, outline: 0, minWidth: 0 }}
+              draggable={editable && !locked}
+              onDragStart={(e) => {
+                e.dataTransfer.setData('text/plain', row.id);
+              }}
+              onDragOver={(e) => {
+                if (editable && !locked) e.preventDefault();
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (editable) move(e.dataTransfer.getData('text/plain'), row.id);
+              }}
+            >
+              <ButtonBase
+                aria-label={`Preview ${row.originalName}`}
+                onClick={() => {
+                  setPreviewId(row.id);
                 }}
-                onDragOver={(event) => {
-                  if (editable && !locked) event.preventDefault();
-                }}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  if (editable) move(event.dataTransfer.getData('text/plain'), row.id);
-                }}
+                sx={{ width: '100%', borderRadius: 2, overflow: 'hidden' }}
               >
-                <Image
+                <Box
+                  component="img"
                   src={row.readUrl}
                   alt={row.altText ?? row.originalName}
-                  width="100%"
-                  height={160}
+                  draggable={false}
+                  sx={{ width: '100%', height: 160, objectFit: 'cover' }}
                 />
-                <div className="gallery-image-title">
-                  <Typography.Text ellipsis title={row.originalName}>
-                    {row.originalName}
-                  </Typography.Text>
-                  {row.isCover && <Tag color="blue">Cover</Tag>}
-                </div>
-                <Typography.Paragraph type="secondary" ellipsis={{ rows: 2 }}>
-                  {row.altText ?? 'No alt text'}
-                </Typography.Paragraph>
-                {editable && (
-                  <Space wrap size={4}>
-                    <Button
-                      size="small"
-                      disabled={locked || Boolean(draft) || row.isCover}
-                      onClick={() => {
-                        mutate({ action: 'cover', id: row.id });
-                      }}
-                    >
-                      Set cover
-                    </Button>
-                    <Button
-                      size="small"
-                      disabled={locked || Boolean(draft)}
-                      onClick={() => {
-                        update.mutation.reset();
-                        setEditing(row);
-                        setAltText(row.altText ?? '');
-                      }}
-                    >
-                      Alt text
-                    </Button>
-                    <Button
-                      size="small"
-                      aria-label={`Move ${row.originalName} earlier`}
-                      disabled={locked || index === 0}
-                      onClick={() => {
-                        const previous = rows[index - 1];
-                        if (previous) move(row.id, previous.id);
-                      }}
-                    >
-                      ↑
-                    </Button>
-                    <Button
-                      size="small"
-                      aria-label={`Move ${row.originalName} later`}
-                      disabled={locked || index === rows.length - 1}
-                      onClick={() => {
-                        const next = rows[index + 1];
-                        if (next) move(row.id, next.id);
-                      }}
-                    >
-                      ↓
-                    </Button>
-                    <Button
-                      size="small"
-                      danger
-                      disabled={locked || Boolean(draft)}
-                      onClick={() => {
-                        deletion.mutation.reset();
-                        setDeleting(row);
-                      }}
-                    >
-                      Remove
-                    </Button>
-                  </Space>
-                )}
-              </Card>
-            ))}
-          </div>
-        </Image.PreviewGroup>
+              </ButtonBase>
+              <Stack direction="row" sx={{ gap: 1, my: 1, alignItems: 'center' }}>
+                <Typography variant="subtitle2" noWrap title={row.originalName} sx={{ flex: 1 }}>
+                  {row.originalName}
+                </Typography>
+                {row.isCover && <Chip size="small" color="primary" label="Cover" />}
+              </Stack>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mb: 2, overflowWrap: 'anywhere' }}
+              >
+                {row.altText ?? 'No alt text'}
+              </Typography>
+              {editable && (
+                <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+                  <Button
+                    size="small"
+                    variant="soft"
+                    disabled={locked || Boolean(draft) || row.isCover}
+                    onClick={() => {
+                      mutate({ action: 'cover', id: row.id });
+                    }}
+                  >
+                    Set cover
+                  </Button>
+                  <Button
+                    size="small"
+                    color="neutral"
+                    disabled={locked || Boolean(draft)}
+                    onClick={() => {
+                      update.mutation.reset();
+                      setEditing(row);
+                      setAltText(row.altText ?? '');
+                    }}
+                  >
+                    Alt text
+                  </Button>
+                  <Button
+                    size="small"
+                    shape="square"
+                    color="neutral"
+                    aria-label={`Move ${row.originalName} earlier`}
+                    disabled={locked || index === 0}
+                    onClick={() => {
+                      const previous = rows[index - 1];
+                      if (previous) move(row.id, previous.id);
+                    }}
+                  >
+                    ↑
+                  </Button>
+                  <Button
+                    size="small"
+                    shape="square"
+                    color="neutral"
+                    aria-label={`Move ${row.originalName} later`}
+                    disabled={locked || index === rows.length - 1}
+                    onClick={() => {
+                      const next = rows[index + 1];
+                      if (next) move(row.id, next.id);
+                    }}
+                  >
+                    ↓
+                  </Button>
+                  <Button
+                    size="small"
+                    color="error"
+                    disabled={locked || Boolean(draft)}
+                    onClick={() => {
+                      deletion.mutation.reset();
+                      setDeleting(row);
+                    }}
+                  >
+                    Remove
+                  </Button>
+                </Stack>
+              )}
+            </Paper>
+          ))}
+        </Box>
       )}
-      <div role="status">{notice}</div>
-      <Modal
-        title="Image alt text"
+      <Typography
+        role="status"
+        variant="body2"
+        color="text.secondary"
+        sx={{ '&:empty': { display: 'none' } }}
+      >
+        {notice}
+      </Typography>
+      <Dialog
+        open={Boolean(preview)}
+        onClose={() => {
+          setPreviewId(null);
+        }}
+        aria-labelledby="gallery-preview-title"
+        fullWidth
+        maxWidth="lg"
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            nextPreview(-1);
+          }
+          if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            nextPreview(1);
+          }
+        }}
+      >
+        <DialogTitle id="gallery-preview-title" sx={{ overflowWrap: 'anywhere' }}>
+          {preview?.originalName}
+        </DialogTitle>
+        <DialogContent>
+          {preview && (
+            <Box
+              component="img"
+              src={preview.readUrl}
+              alt={preview.altText ?? preview.originalName}
+              sx={{ display: 'block', width: '100%', maxHeight: '70vh', objectFit: 'contain' }}
+            />
+          )}
+        </DialogContent>
+        <DialogActions sx={{ flexWrap: 'wrap' }}>
+          <Button
+            color="neutral"
+            disabled={previewIndex <= 0}
+            onClick={() => {
+              nextPreview(-1);
+            }}
+          >
+            Previous image
+          </Button>
+          <Button
+            color="neutral"
+            disabled={previewIndex >= rows.length - 1}
+            onClick={() => {
+              nextPreview(1);
+            }}
+          >
+            Next image
+          </Button>
+          <Button
+            onClick={() => {
+              setPreviewId(null);
+            }}
+          >
+            Close preview
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog
         open={Boolean(editing)}
-        onOk={saveAlt}
-        okText="Save alt text"
-        confirmLoading={update.mutation.isPending}
-        onCancel={() => {
+        onClose={() => {
           if (!locked) setEditing(null);
         }}
-        cancelButtonProps={{ disabled: locked }}
-        closable={!locked}
-        maskClosable={!locked}
+        aria-labelledby="gallery-alt-title"
+        fullWidth
+        maxWidth="sm"
       >
-        <Typography.Paragraph>
-          Describe the image for people using assistive technology.
-        </Typography.Paragraph>
-        <Input.TextArea
-          aria-label="Alt text"
-          value={altText}
-          onChange={(event) => {
-            setAltText(event.target.value);
-          }}
-          maxLength={300}
-          showCount
-          rows={3}
-          disabled={locked}
-        />
-        {update.mutation.isError && <Alert type="error" message={update.mutation.error.message} />}
-      </Modal>
-      <Modal
-        title="Remove image?"
+        <DialogTitle id="gallery-alt-title">Image alt text</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            Describe the image for people using assistive technology.
+          </Typography>
+          <TextField
+            label="Alt text"
+            value={altText}
+            onChange={(e) => {
+              setAltText(e.target.value);
+            }}
+            slotProps={{ htmlInput: { maxLength: 300 } }}
+            multiline
+            minRows={3}
+            fullWidth
+            disabled={locked}
+            autoFocus
+            helperText={`${String(altText.length)} / 300`}
+          />
+          {update.mutation.isError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {update.mutation.error.message}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            color="neutral"
+            disabled={locked}
+            onClick={() => {
+              setEditing(null);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            disabled={disabled}
+            loading={update.mutation.isPending}
+            onClick={saveAlt}
+          >
+            Save alt text
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog
         open={Boolean(deleting)}
-        onOk={remove}
-        okText="Remove image"
-        okButtonProps={{ danger: true }}
-        confirmLoading={deletion.mutation.isPending}
-        onCancel={() => {
+        onClose={() => {
           if (!locked) setDeleting(null);
         }}
-        cancelButtonProps={{ disabled: locked }}
-        closable={!locked}
-        maskClosable={!locked}
+        aria-labelledby="gallery-delete-title"
+        fullWidth
+        maxWidth="xs"
       >
-        <Typography.Paragraph>
-          {deleting?.originalName} will be removed from this gallery. This cannot be undone.
-        </Typography.Paragraph>
-        {deletion.mutation.isError && (
-          <Alert type="error" message={deletion.mutation.error.message} />
-        )}
-      </Modal>
-    </section>
+        <DialogTitle id="gallery-delete-title">Remove image?</DialogTitle>
+        <DialogContent>
+          <Typography>
+            {deleting?.originalName} will be removed from this gallery. This cannot be undone.
+          </Typography>
+          {deletion.mutation.isError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {deletion.mutation.error.message}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            color="neutral"
+            disabled={locked}
+            onClick={() => {
+              setDeleting(null);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            disabled={disabled}
+            loading={deletion.mutation.isPending}
+            onClick={remove}
+          >
+            Remove image
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Stack>
   );
 }

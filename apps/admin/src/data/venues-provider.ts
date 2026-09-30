@@ -20,15 +20,29 @@ import {
   type GetReferenceVenueQueryVariables,
   type ListReferenceVenuesQuery,
   type ListReferenceVenuesQueryVariables,
+  type ReferenceVenueSortField,
 } from '../generated/graphql/operations.js';
+
+const venueSortFields: Record<string, ReferenceVenueSortField> = {
+  name: 'NAME',
+  city: 'CITY',
+  countryCode: 'COUNTRY_CODE',
+  capacity: 'CAPACITY',
+  active: 'ACTIVE',
+};
 
 export const venuesOptions: GraphQLDataProviderOptions = {
   getList: {
-    buildVariables: ({ pagination, filters }): ListReferenceVenuesQueryVariables => ({
-      offset: ((pagination?.currentPage ?? 1) - 1) * (pagination?.pageSize ?? 20),
-      limit: pagination?.pageSize ?? 20,
-      ...lookupFilters(filters),
-    }),
+    buildVariables: ({ pagination, filters, sorters }): ListReferenceVenuesQueryVariables => {
+      const sorter = sorters?.[0];
+      const field = sorter && venueSortFields[sorter.field];
+      return {
+        offset: ((pagination?.currentPage ?? 1) - 1) * (pagination?.pageSize ?? 20),
+        limit: pagination?.pageSize ?? 20,
+        ...lookupFilters(filters),
+        ...(field ? { sort: { field, direction: sorter.order === 'asc' ? 'ASC' : 'DESC' } } : {}),
+      };
+    },
     dataMapper: (response: OperationResult<ListReferenceVenuesQuery>) =>
       requireData(response).referenceVenues.items,
     getTotalCount: (response: OperationResult<ListReferenceVenuesQuery>) =>

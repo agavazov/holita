@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useState, type PropsWithChildren } from 'react';
-import createCache from '@emotion/cache';
-import { CacheProvider } from '@emotion/react';
 import { CssBaseline, ThemeProvider, useColorScheme, useMediaQuery } from '@mui/material';
 import 'simplebar-react/dist/simplebar.min.css';
 import './fonts.css';
@@ -9,10 +7,6 @@ import { darkPalettes } from './palettes/index.js';
 import { COLOR_GROUPS } from './primaryColorOverride.js';
 import { AppearanceContext, appearanceStorageKey, readAppearance } from './preferences.js';
 import type { ThemeMode } from './config.js';
-
-// Keep CSS rules in shared stylesheets. Ant Design scans head styles on updates;
-// Emotion's development default creates a separate style element for each rule.
-const styleCache = createCache({ key: 'holita', speedy: true });
 
 function ThemeModeSync({ mode }: { mode: ThemeMode }) {
   const { setMode } = useColorScheme();
@@ -63,20 +57,18 @@ export function AuroraTheme({ children }: PropsWithChildren) {
         },
       }}
     >
-      <CacheProvider value={styleCache}>
-        <ThemeProvider
-          theme={theme}
-          defaultMode={appearance.mode}
-          modeStorageKey="holita-mode"
-          colorSchemeStorageKey="holita-color-scheme"
-          disableTransitionOnChange
-          noSsr
-        >
-          <ThemeModeSync mode={appearance.mode} />
-          <CssBaseline enableColorScheme />
-          {children}
-        </ThemeProvider>
-      </CacheProvider>
+      <ThemeProvider
+        theme={theme}
+        defaultMode={appearance.mode}
+        modeStorageKey="holita-mode"
+        colorSchemeStorageKey="holita-color-scheme"
+        disableTransitionOnChange
+        noSsr
+      >
+        <ThemeModeSync mode={appearance.mode} />
+        <CssBaseline enableColorScheme />
+        {children}
+      </ThemeProvider>
     </AppearanceContext>
   );
 }

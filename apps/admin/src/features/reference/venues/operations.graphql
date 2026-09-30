@@ -18,8 +18,16 @@ query ListReferenceVenues(
   $search: String
   $active: Boolean
   $ids: [ID!]
+  $sort: ReferenceVenueSort
 ) {
-  referenceVenues(offset: $offset, limit: $limit, search: $search, active: $active, ids: $ids) {
+  referenceVenues(
+    offset: $offset
+    limit: $limit
+    search: $search
+    active: $active
+    ids: $ids
+    sort: $sort
+  ) {
     items {
       ...ReferenceVenueDetails
     }

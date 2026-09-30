@@ -3,7 +3,7 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
 
-// jsdom has no layout engine; Ant Design subscribes to these browser APIs.
+// jsdom has no layout engine; MUI subscribes to media query changes.
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: (query: string) => ({
@@ -17,9 +17,6 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: vi.fn(),
   }),
 });
-const getComputedStyle = window.getComputedStyle.bind(window);
-window.getComputedStyle = (element) => getComputedStyle(element);
-
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();

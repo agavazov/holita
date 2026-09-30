@@ -16,14 +16,21 @@ for data access, validation and lifecycle behavior:
   to Refine. Its stores/<UUID>/products resource scopes requests, cache and invalidation.
   Preserve the immutable per-request headers and fetch-only transport; do not add a cache.
 - [Product list](../../../apps/admin/src/features/products/product-list.tsx) uses useList
-  and useDelete with server pagination and a pending-aware confirmation.
+  with server pagination, URL filters/sorting and page-local batch deletion. Products and
+  LookupList share [useRecordDeletion](../../../apps/admin/src/features/use-record-deletion.ts);
+  its per-call callbacks stop the unsent remainder on unmount and preserve failed rows for retry.
+  `changeListQuery` commits the current text drafts with filter/sort changes and cancels their
+  pending debounce; keep programmatic resets from scheduling a new search. Restore drafts on
+  every navigation, including Back/Forward when only a different filter changed.
 - [Editor](../../../apps/admin/src/features/products/product-editor.tsx) uses useOne,
   useCreate/useUpdate and the shared [ProductForm](../../../apps/admin/src/features/products/product-form.tsx).
 
 Keep data access in the provider/hooks and use generated input/result types. Change named
-operations beside the feature, then run codegen/schema:check. Follow the Aurora/MUI and
-transitional UI rules in AGENTS.md. Existing Ant Design markup is a behavioral reference;
-use the original Aurora source for migrated presentation. Do not create a design system,
+operations beside the feature, then run codegen/schema:check. Follow the Aurora/MUI rules
+in AGENTS.md and use the original Aurora source for presentation. The
+[Products reference](../../../docs/reference.md#products-the-aurora-crud-reference) identifies
+shared presentation components and feature-owned state, fields and deletion rules. Read it
+before adapting Products to another module. Do not create a design system,
 separate fixture screen or generic CRUD framework.
 
 For layout work, trace the selected Aurora components through their theme overrides,
@@ -39,10 +46,13 @@ original resource. Keep synchronous submission guards. Reference editors use the
 keeps its existing behavior. A store switch does not cancel a submitted server write.
 
 Start with `npm run test:admin -- product-form.test.tsx` for form changes,
-`data-provider.test.ts` for mapping, and `store-workspace.test.tsx` for lifecycle changes.
+`product-list.test.tsx` for filter/query transitions, `data-provider.test.ts` for mapping,
+and `store-workspace.test.tsx` for lifecycle changes.
 The latter uses real Refine hooks/cache with controlled GraphQL transport delays.
 For browser behavior use `npm run test:smoke -- products.smoke.spec.mts` with the test DB
-prerequisites in [testing](../../../docs/testing.md). Shared navigation changes also use
+prerequisites in [testing](../../../docs/testing.md). Use `products-aurora.smoke.spec.mts`
+for automatic filters, sorting/history, selection, batch deletion and responsive list/form captures.
+Shared navigation changes also use
 `reference-layout.smoke.spec.mts`; include `reference-disabled.smoke.spec.mts` when changing
 Reference menu visibility or route availability. Compare the shell against the selected
 Aurora layout in a browser; component tests do not establish visual fidelity.

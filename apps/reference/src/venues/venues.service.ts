@@ -39,7 +39,20 @@ export class VenuesService {
   ): Promise<Omit<ReferenceVenuePage, 'items'> & { items: VenueResult[] }> {
     const storeId = uuid(context.storeId, 'x-store-id');
     const { offset, limit } = pagination(args);
-    return this.venues.list(storeId, offset, limit, lookup(args));
+    const field: unknown = args.sort?.field ?? 'CREATED_AT';
+    const direction: unknown = args.sort?.direction ?? 'DESC';
+    if (
+      field !== 'NAME' &&
+      field !== 'CITY' &&
+      field !== 'COUNTRY_CODE' &&
+      field !== 'CAPACITY' &&
+      field !== 'ACTIVE' &&
+      field !== 'CREATED_AT'
+    )
+      invalid('sort.field', 'Choose a supported venue sort field.');
+    if (direction !== 'ASC' && direction !== 'DESC')
+      invalid('sort.direction', 'Choose ASC or DESC.');
+    return this.venues.list(storeId, offset, limit, lookup(args), { field, direction });
   }
   async find(context: RequestContext, id: string): Promise<VenueResult> {
     const row = await this.venues.find(uuid(context.storeId, 'x-store-id'), uuid(id, 'id'));

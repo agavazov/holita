@@ -1,12 +1,23 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service.js';
-import type { CreateReferenceVenueInput } from '../generated/graphql/types.js';
+import type {
+  CreateReferenceVenueInput,
+  ReferenceVenueSort,
+  ReferenceVenueSortField,
+} from '../generated/graphql/types.js';
+import type { Prisma } from '../generated/prisma/client.js';
 import type { lookup } from '../validation.js';
 
 @Injectable()
 export class VenuesRepository {
   constructor(private readonly prisma: PrismaService) {}
-  async list(storeId: string, offset: number, limit: number, filter?: ReturnType<typeof lookup>) {
+  async list(
+    storeId: string,
+    offset: number,
+    limit: number,
+    filter?: ReturnType<typeof lookup>,
+    sort: Required<ReferenceVenueSort> = { field: 'CREATED_AT', direction: 'DESC' },
+  ) {
     const where = {
       storeId,
       ...(filter?.search
@@ -20,13 +31,23 @@ export class VenuesRepository {
       ...(filter?.active !== undefined ? { active: filter.active } : {}),
       ...(filter?.ids ? { id: { in: filter.ids } } : {}),
     };
+    const direction = sort.direction === 'ASC' ? 'asc' : 'desc';
+    const ordering: Record<ReferenceVenueSortField, Prisma.VenueOrderByWithRelationInput> = {
+      NAME: { name: direction },
+      CITY: { city: direction },
+      COUNTRY_CODE: { countryCode: direction },
+      CAPACITY: { capacity: { sort: direction, nulls: 'last' } },
+      // Sort by the displayed labels: Active before Inactive in ascending order.
+      ACTIVE: { active: direction === 'asc' ? 'desc' : 'asc' },
+      CREATED_AT: { createdAt: direction },
+    };
     const [items, total] = await this.prisma.client.$transaction(
       [
         this.prisma.client.venue.findMany({
           where,
           skip: offset,
           take: limit,
-          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          orderBy: [ordering[sort.field], { id: 'desc' }],
         }),
         this.prisma.client.venue.count({ where }),
       ],

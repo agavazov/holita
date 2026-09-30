@@ -1,5 +1,5 @@
 import { useList } from '@refinedev/core';
-import { Alert, Button, Card, Skeleton, Space, Tag, Typography } from 'antd';
+import { Alert, Button, Chip, Paper, Skeleton, Stack, Typography } from '@mui/material';
 import { sessionsResource, type DataError } from '../../../data/data-provider.js';
 import type { ReferenceSessionDetailsFragment } from '../../../generated/graphql/operations.js';
 
@@ -17,14 +17,20 @@ export function EventSpeakers({ storeId, eventId }: { storeId: string; eventId: 
     ).values(),
   ].sort((a, b) => a.name.localeCompare(b.name));
   return (
-    <Card title="Speakers" className="event-overview-card">
+    <Paper
+      component="section"
+      aria-label="Event speakers"
+      background={1}
+      sx={{ p: 3, borderRadius: 4, outline: 0 }}
+    >
+      <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
+        Speakers
+      </Typography>
       {sessions.query.isPending ? (
-        <Skeleton active paragraph={{ rows: 1 }} />
+        <Skeleton variant="rounded" height={60} />
       ) : sessions.query.error ? (
         <Alert
-          type="error"
-          showIcon
-          message={sessions.query.error.message}
+          severity="error"
           action={
             <Button
               onClick={() => {
@@ -34,21 +40,25 @@ export function EventSpeakers({ storeId, eventId }: { storeId: string; eventId: 
               Retry
             </Button>
           }
-        />
+        >
+          {sessions.query.error.message}
+        </Alert>
       ) : speakers.length ? (
-        <Space wrap>
+        <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap' }}>
           {speakers.map((speaker) => (
-            <Tag key={speaker.id} color={speaker.active ? 'blue' : 'default'}>
-              {speaker.name}
-              {speaker.active ? '' : ' (inactive)'}
-            </Tag>
+            <Chip
+              key={speaker.id}
+              size="small"
+              color={speaker.active ? 'primary' : 'neutral'}
+              label={`${speaker.name}${speaker.active ? '' : ' (inactive)'}`}
+            />
           ))}
-        </Space>
+        </Stack>
       ) : (
-        <Typography.Text type="secondary">
+        <Typography variant="body2" color="text.secondary">
           Assign speakers to sessions to include them here.
-        </Typography.Text>
+        </Typography>
       )}
-    </Card>
+    </Paper>
   );
 }

@@ -287,6 +287,64 @@ describe('Reference through the actual federation boundary', () => {
       expect.objectContaining({ requestId: 'reference-integration', storeId: sofia }),
     );
   });
+
+  it('sorts Venue pages through the gateway with combined store-scoped filters', async () => {
+    for (const name of ['Gateway Sort C', 'Gateway Sort A', 'Gateway Sort B']) {
+      expect(
+        await query(createVenue, {
+          input: { name, city: 'Sofia', countryCode: 'BG', active: true },
+        }),
+      ).toHaveProperty('data.createReferenceVenue.id');
+    }
+    expect(
+      await query(createVenue, {
+        input: { name: 'Gateway Sort D', city: 'Sofia', countryCode: 'BG', active: false },
+      }),
+    ).toHaveProperty('data.createReferenceVenue.id');
+    fixture.coreRequests.length = 0;
+    const source =
+      'query($sort:ReferenceVenueSort,$offset:Int!){referenceVenues(search:"Gateway Sort",active:true,sort:$sort,offset:$offset,limit:1){items{name storeId}total}}';
+    for (const [direction, offset, name] of [
+      ['ASC', 1, 'Gateway Sort B'],
+      ['DESC', 0, 'Gateway Sort C'],
+    ] as const) {
+      expect(await query(source, { sort: { field: 'NAME', direction }, offset })).toEqual({
+        data: { referenceVenues: { items: [{ name, storeId: sofia }], total: 3 } },
+      });
+    }
+    expect(
+      await query(source, { sort: { field: 'NAME', direction: 'ASC' }, offset: 0 }, plovdiv),
+    ).toEqual({ data: { referenceVenues: { items: [], total: 0 } } });
+    expect(fixture.coreRequests).toHaveLength(0);
+  });
+  it.each(['Speaker', 'Tag'])(
+    'sorts %s pages through the gateway with store-scoped filters',
+    async (entity) => {
+      for (const name of ['Gateway Sort Charlie', 'Gateway Sort Alpha', 'Gateway Sort Bravo']) {
+        expect(
+          await query(
+            `mutation($input:CreateReference${entity}Input!){createReference${entity}(input:$input){id}}`,
+            {
+              input: {
+                name,
+                active: false,
+                ...(entity === 'Tag' ? { color: '#315ed0' } : { email: 'person@example.com' }),
+              },
+            },
+          ),
+        ).toHaveProperty(`data.createReference${entity}.id`);
+      }
+      const field = `reference${entity}s`;
+      const source = `query($sort:Reference${entity}Sort){${field}(search:"Gateway Sort",active:false,sort:$sort,offset:1,limit:1){items{name storeId}total}}`;
+      const sort = { field: 'NAME', direction: 'ASC' };
+      expect(await query(source, { sort })).toEqual({
+        data: { [field]: { items: [{ name: 'Gateway Sort Bravo', storeId: sofia }], total: 3 } },
+      });
+      expect(await query(source, { sort }, plovdiv)).toEqual({
+        data: { [field]: { items: [], total: 0 } },
+      });
+    },
+  );
   it('checks store existence once per Reference request and refuses unknown stores', async () => {
     fixture.coreRequests.length = 0;
     const input = { name: 'Batch venue', city: 'Sofia', countryCode: 'BG' };
@@ -663,6 +721,51 @@ describe('actual gateway, subgraphs and PostgreSQL', () => {
     });
     expect(await query(product, { id }, sofia)).toMatchObject({
       errors: [{ extensions: { code: 'NOT_FOUND' } }],
+    });
+    expect(fixture.coreRequests).toHaveLength(0);
+  });
+
+  it('forwards Product search, filters and sorting with scoped totals through the gateway', async () => {
+    const sku = `FILTER_${randomUUID()}`;
+    await query(create, { input: { name: 'Search reference', sku, status: 'ACTIVE' } }, sofia);
+    await query(
+      create,
+      { input: { name: 'Another reference', sku: `${sku}_2`, status: 'ACTIVE' } },
+      sofia,
+    );
+    await query(
+      create,
+      { input: { name: 'Foreign search reference', sku, status: 'DRAFT' } },
+      plovdiv,
+    );
+    fixture.coreRequests.length = 0;
+    const filtered =
+      'query($search:String,$sku:String,$status:ProductStatus,$sort:ProductSort,$offset:Int!=0,$limit:Int!=20){products(search:$search,sku:$sku,status:$status,sort:$sort,offset:$offset,limit:$limit){items{storeId sku status}total}}';
+    for (const [direction, selectedSku] of [
+      ['ASC', sku],
+      ['DESC', `${sku}_2`],
+    ]) {
+      expect(
+        await query(
+          filtered,
+          {
+            search: 'REFERENCE',
+            sku,
+            status: 'ACTIVE',
+            sort: { field: 'NAME', direction },
+            offset: 1,
+            limit: 1,
+          },
+          sofia,
+        ),
+      ).toEqual({
+        data: {
+          products: { items: [{ storeId: sofia, sku: selectedSku, status: 'ACTIVE' }], total: 2 },
+        },
+      });
+    }
+    expect(await query(filtered, { sku, status: 'ACTIVE' }, plovdiv)).toEqual({
+      data: { products: { items: [], total: 0 } },
     });
     expect(fixture.coreRequests).toHaveLength(0);
   });

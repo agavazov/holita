@@ -20,15 +20,27 @@ import {
   type GetReferenceSpeakerQueryVariables,
   type ListReferenceSpeakersQuery,
   type ListReferenceSpeakersQueryVariables,
+  type ReferenceSpeakerSortField,
 } from '../generated/graphql/operations.js';
+
+const speakerSortFields: Record<string, ReferenceSpeakerSortField> = {
+  name: 'NAME',
+  email: 'EMAIL',
+  active: 'ACTIVE',
+};
 
 export const speakersOptions: GraphQLDataProviderOptions = {
   getList: {
-    buildVariables: ({ pagination, filters }): ListReferenceSpeakersQueryVariables => ({
-      offset: ((pagination?.currentPage ?? 1) - 1) * (pagination?.pageSize ?? 20),
-      limit: pagination?.pageSize ?? 20,
-      ...lookupFilters(filters),
-    }),
+    buildVariables: ({ pagination, filters, sorters }): ListReferenceSpeakersQueryVariables => {
+      const sorter = sorters?.[0];
+      const field = sorter && speakerSortFields[sorter.field];
+      return {
+        offset: ((pagination?.currentPage ?? 1) - 1) * (pagination?.pageSize ?? 20),
+        limit: pagination?.pageSize ?? 20,
+        ...lookupFilters(filters),
+        ...(field ? { sort: { field, direction: sorter.order === 'asc' ? 'ASC' : 'DESC' } } : {}),
+      };
+    },
     dataMapper: (response: OperationResult<ListReferenceSpeakersQuery>) =>
       requireData(response).referenceSpeakers.items,
     getTotalCount: (response: OperationResult<ListReferenceSpeakersQuery>) =>

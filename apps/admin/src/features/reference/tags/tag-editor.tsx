@@ -1,7 +1,8 @@
 import { useCreate, useOne, useUpdate } from '@refinedev/core';
-import { Alert, Breadcrumb, Button, Card, Skeleton, Tag, Typography } from 'antd';
+import { Alert, Box, Button, Skeleton, Stack } from '@mui/material';
+import { PageHeader } from '../../../components/page-header.js';
 import { useRef } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 
 import { tagsResource, type DataError } from '../../../data/data-provider.js';
 import type {
@@ -9,8 +10,8 @@ import type {
   GetReferenceTagQuery,
   ReferenceTagDetailsFragment,
 } from '../../../generated/graphql/operations.js';
-import { useUnsavedChanges } from '../use-unsaved-changes.js';
 import { TagForm } from './tag-form.js';
+import { useUnsavedChanges } from '../use-unsaved-changes.js';
 
 type TagEditorProps = { storeId: string; onSaved: () => void };
 
@@ -57,74 +58,73 @@ export function TagEditor({ storeId, onSaved }: TagEditorProps) {
     else create.mutate({ resource, values }, callbacks);
   }
 
+  const header = (
+    <PageHeader
+      embedded
+      title={tagId ? 'Edit tag' : 'Create tag'}
+      breadcrumbs={[
+        { label: 'Home', to: '/' },
+        { label: 'Reference' },
+        { label: 'Tags', to: listPath },
+        { label: tagId ? 'Edit tag' : 'Create tag' },
+      ]}
+    />
+  );
+
   return (
-    <>
+    <Stack sx={{ flex: 1, minWidth: 0 }}>
       {changes.dialog}
-      <Breadcrumb
-        className="page-breadcrumb"
-        items={[
-          { title: 'Reference' },
-          { title: <Link to={listPath}>Tags</Link> },
-          { title: tagId ? 'Edit tag' : 'Create tag' },
-        ]}
-      />
-      <Card
-        className="page-header"
-        title={tagId ? 'Edit tag' : 'Create tag'}
-        extra={
-          tag.result && (
-            <Tag color={tag.result.active ? 'green' : 'default'}>
-              {tag.result.active ? 'Active' : 'Inactive'}
-            </Tag>
-          )
-        }
-      >
-        <Typography.Text type="secondary">
-          {tag.result ? tag.result.name : 'Organize events with a clear, consistent label.'}
-        </Typography.Text>
-      </Card>
-      <Card className="tag-editor">
-        {tagId && tag.query.isPending ? (
-          <Skeleton active paragraph={{ rows: 5 }} />
-        ) : tagId && tag.query.isError ? (
-          <Alert
-            type="error"
-            showIcon
-            message={tag.query.error.message}
-            action={
-              <Button
-                onClick={() => {
-                  void tag.query.refetch();
-                }}
-              >
-                Retry
-              </Button>
-            }
-          />
-        ) : (
-          <TagForm
-            key={tagId ?? 'create'}
-            initialValues={tagId ? tag.result : undefined}
-            onChange={changes.changed}
-            pending={pending}
-            error={create.mutation.error ?? update.mutation.error}
-            onSubmit={save}
-            onCancel={() => {
-              void navigate(listPath);
-            }}
-          />
-        )}
-        {tagId && tag.query.isError && (
-          <Button
-            className="back-button"
-            onClick={() => {
-              void navigate(listPath);
-            }}
-          >
-            Back to tags
-          </Button>
-        )}
-      </Card>
-    </>
+      {tagId && (tag.query.isPending || tag.query.isError) && (
+        <Box sx={{ p: { xs: 3, md: 5 } }}>{header}</Box>
+      )}
+      {tagId && tag.query.isPending ? (
+        <Box sx={{ p: 5 }}>
+          <Skeleton height={60} />
+          <Skeleton height={200} />
+        </Box>
+      ) : tagId && tag.query.isError ? (
+        <Alert
+          severity="error"
+          sx={{ m: 3 }}
+          action={
+            <Button
+              onClick={() => {
+                void tag.query.refetch();
+              }}
+            >
+              Retry
+            </Button>
+          }
+        >
+          {tag.query.error.message}
+        </Alert>
+      ) : (
+        <TagForm
+          header={header}
+          initialValues={tagId ? tag.result : undefined}
+          pending={pending}
+          error={create.mutation.error ?? update.mutation.error}
+          onChange={() => {
+            changes.changed();
+            create.mutation.reset();
+            update.mutation.reset();
+          }}
+          onSubmit={save}
+          onCancel={() => {
+            void navigate(listPath);
+          }}
+        />
+      )}
+      {tagId && tag.query.isError && (
+        <Button
+          sx={{ m: 3, alignSelf: 'flex-start' }}
+          onClick={() => {
+            void navigate(listPath);
+          }}
+        >
+          Back to tags
+        </Button>
+      )}
+    </Stack>
   );
 }

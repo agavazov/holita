@@ -1,5 +1,15 @@
+import {
+  Alert,
+  AlertTitle,
+  Button,
+  Paper,
+  Skeleton,
+  Snackbar,
+  Stack,
+  Typography,
+} from '@mui/material';
+import { useState } from 'react';
 import { useList } from '@refinedev/core';
-import { Alert, Button, Card, Empty, Skeleton, Space, Typography, notification } from 'antd';
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router';
 
 import type { DataError } from '../../data/data-provider.js';
@@ -8,21 +18,37 @@ import { AdminLayout } from '../../layout/admin-layout.js';
 import { ProductEditor } from '../products/product-editor.js';
 import { ProductList } from '../products/product-list.js';
 import { ReferenceWorkspace } from '../reference/reference-workspace.js';
+import { PageHeader } from '../../components/page-header.js';
 
 function StoreProducts({ storeId }: { storeId: string }) {
-  const [api, holder] = notification.useNotification();
+  const [notice, setNotice] = useState('');
   const { pathname } = useLocation();
   return (
     <>
-      {holder}
+      <Snackbar
+        open={Boolean(notice)}
+        autoHideDuration={6000}
+        onClose={(_, reason) => {
+          if (reason !== 'clickaway') setNotice('');
+        }}
+      >
+        <Alert
+          severity="success"
+          onClose={() => {
+            setNotice('');
+          }}
+        >
+          {notice}
+        </Alert>
+      </Snackbar>
       <Routes key={pathname}>
         <Route
           index
           element={
             <ProductList
               storeId={storeId}
-              onDeleted={() => {
-                api.success({ message: 'Product deleted.' });
+              onDeleted={(count) => {
+                setNotice(count === 1 ? 'Product deleted.' : `${String(count)} products deleted.`);
               }}
             />
           }
@@ -33,7 +59,7 @@ function StoreProducts({ storeId }: { storeId: string }) {
             <ProductEditor
               storeId={storeId}
               onSaved={() => {
-                api.success({ message: 'Product saved.' });
+                setNotice('Product saved.');
               }}
             />
           }
@@ -44,7 +70,7 @@ function StoreProducts({ storeId }: { storeId: string }) {
             <ProductEditor
               storeId={storeId}
               onSaved={() => {
-                api.success({ message: 'Product saved.' });
+                setNotice('Product saved.');
               }}
             />
           }
@@ -133,25 +159,33 @@ export function StoreWorkspace({ referenceEnabled = true }: { referenceEnabled?:
       }}
     >
       {stores.query.isPending ? (
-        <Card>
-          <Skeleton active />
-        </Card>
+        <Paper sx={{ p: { xs: 3, md: 5 }, flex: 1 }}>
+          <Typography role="status" sx={{ mb: 3 }}>
+            Loading stores…
+          </Typography>
+          <Skeleton variant="rounded" height={160} />
+        </Paper>
       ) : stores.query.isError ? (
-        <Alert
-          type="error"
-          showIcon
-          message="Could not load stores."
-          description={stores.query.error.message}
-          action={
-            <Button
-              onClick={() => {
-                void stores.query.refetch();
-              }}
-            >
-              Retry
-            </Button>
-          }
-        />
+        <Paper sx={{ p: { xs: 3, md: 5 }, flex: 1 }}>
+          <Alert
+            severity="error"
+            sx={{ overflowWrap: 'anywhere' }}
+            action={
+              <Button
+                color="inherit"
+                sx={{ whiteSpace: 'nowrap' }}
+                onClick={() => {
+                  void stores.query.refetch();
+                }}
+              >
+                Retry
+              </Button>
+            }
+          >
+            <AlertTitle>Could not load stores.</AlertTitle>
+            {stores.query.error.message}
+          </Alert>
+        </Paper>
       ) : currentStore ? (
         <>
           {isReference ? (
@@ -162,30 +196,42 @@ export function StoreWorkspace({ referenceEnabled = true }: { referenceEnabled?:
                 storeName={currentStore.name}
               />
             ) : (
-              <Alert type="info" showIcon message="Reference is disabled." />
+              <Paper sx={{ p: { xs: 3, md: 5 }, flex: 1 }}>
+                <Alert severity="info">Reference is disabled.</Alert>
+              </Paper>
             )
           ) : (
-            <>
-              <Typography.Title level={2}>{currentStore.name}</Typography.Title>
-              <StoreProducts key={currentStore.id} storeId={currentStore.id} />
-            </>
+            <StoreProducts key={currentStore.id} storeId={currentStore.id} />
           )}
         </>
       ) : (
-        <Card title={storeId ? 'Store not found' : 'Select a store'}>
+        <Paper sx={{ p: { xs: 3, md: 5 }, flex: 1 }}>
+          <PageHeader
+            embedded
+            title={storeId ? 'Store not found' : 'Select a store'}
+            breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Stores' }]}
+          />
           {stores.result.data.length === 0 ? (
-            <Empty description="No stores available. Ask your workspace administrator to set up a store." />
+            <Typography color="text.secondary">
+              No stores available. Ask your workspace administrator to set up a store.
+            </Typography>
           ) : (
             <>
-              <Typography.Paragraph>
+              <Typography color="text.secondary" sx={{ mb: 3 }}>
                 {storeId
                   ? 'Choose an available store to continue.'
                   : 'Choose a store to manage its products.'}
-              </Typography.Paragraph>
-              <Space wrap>
+              </Typography>
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                sx={{ gap: 2, flexWrap: 'wrap', alignItems: { sm: 'flex-start' } }}
+              >
                 {stores.result.data.map((store) => (
                   <Button
                     key={store.id}
+                    variant="soft"
+                    color="neutral"
+                    sx={{ minWidth: 184, overflowWrap: 'anywhere' }}
                     onClick={() => {
                       void navigate(`/stores/${store.id}/products`);
                     }}
@@ -193,10 +239,10 @@ export function StoreWorkspace({ referenceEnabled = true }: { referenceEnabled?:
                     {store.name}
                   </Button>
                 ))}
-              </Space>
+              </Stack>
             </>
           )}
-        </Card>
+        </Paper>
       )}
     </AdminLayout>
   );

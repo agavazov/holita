@@ -1,22 +1,35 @@
 import { useDelete, useList } from '@refinedev/core';
 import {
   Alert,
-  Breadcrumb,
+  Box,
   Button,
-  Card,
   Checkbox,
-  Empty,
-  Input,
-  Modal,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControlLabel,
+  InputAdornment,
+  Paper,
   Popover,
-  Select,
-  Space,
-  Table,
+  Stack,
+  Tab,
   Tabs,
   Typography,
-} from 'antd';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router';
+} from '@mui/material';
+import {
+  DataGrid,
+  GRID_CHECKBOX_SELECTION_COL_DEF,
+  type GridColDef,
+  type GridCellParams,
+  type GridSortModel,
+} from '@mui/x-data-grid';
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router';
+import { PageHeader } from '../../../components/page-header.js';
+import { RecordActions } from '../../../components/record-actions.js';
+import IconifyIcon from '../../../layout/primitives/iconify-icon.js';
+import StyledTextField from '../../../layout/primitives/styled-text-field.js';
 import { eventsResource, type DataError } from '../../../data/data-provider.js';
 import type {
   DeleteReferenceEventMutation,
@@ -35,7 +48,6 @@ import {
   eventLink,
   eventListFilters,
   eventListSearch,
-  eventStatuses,
   isEventSortField,
   readEventList,
   type EventListState,
@@ -52,20 +64,13 @@ export function EventList({
 }) {
   const resource = eventsResource(storeId);
   const navigate = useNavigate();
-  const { search } = useLocation();
+  const { search, key: locationKey } = useLocation();
   const state = useMemo(() => readEventList(search), [search]);
   const latestState = useRef(state);
   useEffect(() => {
     latestState.current = state;
   }, [state]);
   const filters = eventListFilters(state);
-  const advancedCount = filters.filter(
-    (filter) =>
-      'field' in filter &&
-      filter.field !== 'search' &&
-      filter.field !== 'statuses' &&
-      filter.field !== 'trashed',
-  ).length;
   const filterCount = filters.filter(
     (filter) => 'field' in filter && filter.field !== 'trashed',
   ).length;
@@ -76,7 +81,43 @@ export function EventList({
   if (selection.search !== search) setSelection({ search, ids: [] });
   const [notice, setNotice] = useState('');
   const actions = useEventActions();
-  const [more, setMore] = useState(advancedCount > 0);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterReset, setFilterReset] = useState(0);
+  const [columnAnchor, setColumnAnchor] = useState<HTMLElement | null>(null);
+  const [text, setText] = useState(state.search);
+  const [lastLocation, setLastLocation] = useState(locationKey);
+  if (lastLocation !== locationKey) {
+    setLastLocation(locationKey);
+    setText(state.search);
+  }
+  const textEdited = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  function change(patch: Partial<EventListState>) {
+    textEdited.current = false;
+    clearTimeout(timer.current);
+    // Merge consecutive controls before their router update has rendered.
+    const next = { ...latestState.current, search: text.trim(), page: 1, ...patch };
+    latestState.current = next;
+    void navigate(`/${resource}${eventListSearch(next)}`);
+  }
+  const applyText = useEffectEvent(() => {
+    if (textEdited.current) change({});
+  });
+  useEffect(() => {
+    if (!textEdited.current || text === state.search) return;
+    timer.current = setTimeout(applyText, 300);
+    return () => {
+      clearTimeout(timer.current);
+    };
+  }, [text, state.search]);
+  function changeSearch(value: string) {
+    textEdited.current = true;
+    setText(value);
+  }
+  const sortModel = useMemo<GridSortModel>(
+    () => [{ field: state.sort, sort: state.order }],
+    [state.sort, state.order],
+  );
   const columnsKey = `holita:${resource}:columns`;
   const [visible, setVisible] = useState(() => readEventColumns(columnsKey));
   const [selected, setSelected] = useState<ReferenceEventListItemFragment>();
@@ -93,14 +134,9 @@ export function EventList({
       : [];
   const deletion = useDelete<DeleteReferenceEventMutation['deleteReferenceEvent'], DataError>();
   const submitting = useRef(false);
-  function change(patch: Partial<EventListState>) {
-    // Consecutive controls must retain URL changes still awaiting a router render.
-    const next = { ...latestState.current, page: 1, ...patch };
-    latestState.current = next;
-    void navigate(`/${resource}${eventListSearch(next)}`);
-  }
   function clearFilters() {
-    setMore(false);
+    setText('');
+    setFilterReset((value) => value + 1);
     change({
       ...readEventList(''),
       sort: state.sort,
@@ -109,7 +145,6 @@ export function EventList({
       trashed: state.trashed,
     });
   }
-  // Deletions or a bookmarked page can put the page beyond the current result set.
   const lastPage = Math.max(1, Math.ceil((events.result.total ?? 0) / state.size));
   useEffect(() => {
     if (events.query.isSuccess && !events.query.isFetching && state.page > lastPage)
@@ -131,17 +166,17 @@ export function EventList({
     try {
       localStorage.setItem(columnsKey, JSON.stringify(values));
     } catch {
-      /* Keep this view usable even when browser storage is blocked. */
+      /* Keep the view usable when browser storage is blocked. */
     }
   }
-  function restore(event: ReferenceEventListItemFragment) {
+  function restore(row: ReferenceEventListItemFragment) {
     if (submitting.current) return;
     submitting.current = true;
     actions.mutate(
       {
         url: resource,
         method: 'post',
-        values: { action: 'restore', ids: [event.id] },
+        values: { action: 'restore', ids: [row.id] },
         successNotification: false,
         errorNotification: false,
       },
@@ -178,314 +213,339 @@ export function EventList({
       },
     );
   }
+  const [knownTotal, setKnownTotal] = useState(-1);
+  if (
+    events.query.isSuccess &&
+    events.result.total !== undefined &&
+    events.result.total !== knownTotal
+  )
+    setKnownTotal(events.result.total);
+  const pending = deletion.mutation.isPending || actions.mutation.isPending;
+  const columns: GridColDef<ReferenceEventListItemFragment>[] = [
+    { ...GRID_CHECKBOX_SELECTION_COL_DEF, width: 64 },
+    ...eventColumns(resource, search),
+    {
+      field: 'action',
+      headerName: '',
+      width: 64,
+      sortable: false,
+      align: 'right',
+      renderCell: ({ row, tabIndex }) => (
+        <RecordActions
+          name={row.title}
+          tabIndex={tabIndex}
+          disabled={pending}
+          onView={() => {
+            void navigate(eventLink(resource, row.id, search));
+          }}
+          editLabel={row.deletedAt ? 'Restore' : 'Edit'}
+          onEdit={() => {
+            if (row.deletedAt) restore(row);
+            else void navigate(eventLink(resource, `${row.id}/edit`, search));
+          }}
+          {...(!row.deletedAt
+            ? {
+                onDelete: () => {
+                  deletion.mutation.reset();
+                  setSelected(row);
+                },
+              }
+            : {})}
+          deleteLabel="Move to trash"
+        />
+      ),
+    },
+  ];
   return (
-    <>
-      <Breadcrumb
-        className="page-breadcrumb"
-        items={[{ title: 'Reference' }, { title: 'Events' }]}
+    <Stack direction="row" sx={{ flex: 1, minWidth: 0 }}>
+      <EventFilters
+        key={filterReset}
+        storeId={storeId}
+        state={state}
+        search={text}
+        open={filterOpen}
+        onClose={() => {
+          setFilterOpen(false);
+        }}
+        onSearchChange={changeSearch}
+        onChange={change}
+        onClear={clearFilters}
       />
-      <Card
-        className="page-header"
-        title="Events"
-        extra={
-          <Link to={eventLink(resource, 'create', search)}>
-            <Button type="primary">Create event</Button>
-          </Link>
-        }
-      >
-        <Typography.Text type="secondary">
-          {storeName} ·{' '}
-          {events.query.isPending
-            ? 'Loading events…'
-            : events.query.isError
-              ? 'Events unavailable'
-              : `${String(events.result.total ?? 0)} ${filterCount ? 'matching ' : ''}${events.result.total === 1 ? 'event' : 'events'}${state.trashed ? ' in trash' : ''}`}
-        </Typography.Text>
-        <Tabs
-          activeKey={state.trashed ? 'trash' : 'active'}
-          items={[
-            { key: 'active', label: 'Active' },
-            { key: 'trash', label: 'Trash' },
-          ]}
-          onChange={(view) => {
-            change({ trashed: view === 'trash' });
-          }}
-        />
-      </Card>
-      {notice && (
-        <Alert
-          className="form-error"
-          type="success"
-          role="status"
-          showIcon
-          message={notice}
-          onClose={() => {
-            setNotice('');
-          }}
-          closable
-        />
-      )}
-      {actions.mutation.isError && (
-        <Alert
-          className="form-error"
-          type="error"
-          showIcon
-          message={actions.mutation.error.message}
-        />
-      )}
-      <Card>
-        <div className="event-list-toolbar">
-          <Input.Search
-            type="search"
-            key={state.search}
-            aria-label="Search events"
-            placeholder="Search title or code"
-            defaultValue={state.search}
-            maxLength={200}
-            allowClear
-            onSearch={(value) => {
-              change({ search: value });
-            }}
-            className="event-search"
-          />
-          <Select
-            mode="multiple"
-            aria-label="Filter status"
-            placeholder="All statuses"
-            allowClear
-            value={state.statuses}
-            options={eventStatuses}
-            className="event-status-filter"
-            onChange={(statuses: EventListState['statuses']) => {
-              change({ statuses });
-            }}
-          />
-          <Button
-            aria-expanded={more}
-            onClick={() => {
-              setMore(!more);
-            }}
-          >
-            More filters{advancedCount ? ` (${String(advancedCount)})` : ''}
-          </Button>
-          <Popover
-            trigger="click"
-            placement="bottomRight"
-            title="Visible columns"
-            content={
-              <div className="event-column-options">
-                <Checkbox.Group
-                  options={eventColumnChoices}
-                  value={visible}
-                  onChange={saveColumns}
-                />
-                <Button
-                  type="link"
-                  onClick={() => {
-                    saveColumns(defaultEventColumns);
-                  }}
-                >
-                  Reset columns
-                </Button>
-              </div>
-            }
-          >
-            <Button>Columns</Button>
-          </Popover>
-          {filterCount > 0 && <Button onClick={clearFilters}>Reset filters</Button>}
-        </div>
-        {more && (
-          <EventFilters
-            key={JSON.stringify([
-              state.formats,
-              state.venueIds,
-              state.tagIds,
-              state.featured,
-              state.from,
-              state.to,
-              state.capacityMin,
-              state.capacityMax,
-            ])}
-            storeId={storeId}
-            state={state}
-            onApply={change}
-          />
-        )}
-        <div className="event-list-sort">
-          <Space wrap>
-            <Typography.Text type="secondary">Sort by</Typography.Text>
-            <Select
-              aria-label="Sort events by"
-              value={state.sort}
-              options={[
-                { value: 'startsAt', label: 'Start' },
-                { value: 'title', label: 'Title' },
-                { value: 'status', label: 'Status' },
-                { value: 'capacity', label: 'Capacity' },
-                { value: 'budget', label: 'Budget' },
-                { value: 'createdAt', label: 'Created' },
-              ]}
-              onChange={(sort: EventListState['sort']) => {
-                change({ sort });
-              }}
-            />
+      <Stack sx={{ flex: 1, minWidth: 0 }}>
+        <PageHeader
+          title="Events"
+          breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Reference' }, { label: 'Events' }]}
+          action={
             <Button
+              variant="contained"
+              startIcon={<IconifyIcon icon="material-symbols:add-rounded" />}
               onClick={() => {
-                change({ order: state.order === 'asc' ? 'desc' : 'asc' });
+                void navigate(eventLink(resource, 'create', search));
               }}
             >
-              {state.order === 'asc' ? 'Ascending' : 'Descending'}
+              Create event
             </Button>
-          </Space>
-          <Typography.Text type="secondary">All times in Europe/Sofia</Typography.Text>
-        </div>
-        {events.query.isError && (
-          <Alert
-            className="form-error"
-            type="error"
-            showIcon
-            message={events.query.error.message}
-            action={
-              <Button
-                onClick={() => {
-                  void events.query.refetch();
-                }}
-              >
-                Retry
-              </Button>
-            }
-          />
-        )}
-        <EventBulkActions
-          key={`${resource}${search}`}
-          resource={resource}
-          ids={selectedIds}
-          trashed={state.trashed}
-          onComplete={(message) => {
-            setSelection({ search, ids: [] });
-            setNotice(message);
-          }}
+          }
         />
-        <Table<ReferenceEventListItemFragment>
-          rowKey="id"
-          rowSelection={{
-            selectedRowKeys: selectedIds,
-            onChange: (keys) => {
-              setSelection({ search, ids: keys.map(String) });
-            },
-            getCheckboxProps: () => ({ disabled: events.query.isFetching }),
-            columnWidth: 64,
-          }}
-          loading={events.query.isFetching}
-          dataSource={events.query.isError ? [] : events.result.data}
-          scroll={{ x: 850 + Math.max(0, visible.length - 3) * 150 }}
-          locale={{
-            emptyText: events.query.isPending ? (
-              'Loading events…'
-            ) : events.query.isError ? (
-              'Events unavailable'
-            ) : (
-              <Empty
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                description={
-                  filterCount
+        <Paper sx={{ p: { xs: 3, md: 5 }, flex: 1, minWidth: 0 }}>
+          <Stack
+            direction={{ md: 'row' }}
+            sx={{ gap: 2, mb: 3, justifyContent: 'space-between', alignItems: { md: 'center' } }}
+          >
+            <Stack direction="row" sx={{ gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+              <StyledTextField
+                type="search"
+                placeholder="Search title or code"
+                value={text}
+                onChange={(event) => {
+                  changeSearch(event.target.value);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') change({});
+                }}
+                slotProps={{
+                  htmlInput: { 'aria-label': 'Search events', maxLength: 200 },
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <IconifyIcon icon="material-symbols:search-rounded" />
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+                sx={{ width: { xs: '100%', sm: 255 } }}
+              />
+              <Button
+                variant="soft"
+                color="neutral"
+                aria-label="Filter events"
+                aria-expanded={filterOpen}
+                onClick={() => {
+                  setFilterOpen(!filterOpen);
+                }}
+                sx={{ gap: 0.5 }}
+              >
+                <IconifyIcon icon="material-symbols:filter-alt-outline" sx={{ fontSize: 20 }} />
+                Filter{filterCount ? ` (${String(filterCount)})` : ''}
+              </Button>
+              <Button
+                variant="soft"
+                color="neutral"
+                onClick={(event) => {
+                  setColumnAnchor(event.currentTarget);
+                }}
+                aria-haspopup="dialog"
+                aria-expanded={Boolean(columnAnchor)}
+              >
+                Columns
+              </Button>
+              {filterCount > 0 && (
+                <Button color="neutral" onClick={clearFilters}>
+                  Reset filters
+                </Button>
+              )}
+            </Stack>
+            <Tabs
+              value={state.trashed ? 'trash' : 'active'}
+              aria-label="Event view"
+              onChange={(_, value: string) => {
+                change({ trashed: value === 'trash' });
+              }}
+            >
+              <Tab value="active" label="Active" />
+              <Tab value="trash" label="Trash" />
+            </Tabs>
+          </Stack>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            {storeName} · All times in Europe/Sofia
+          </Typography>
+          {notice && (
+            <Alert
+              severity="success"
+              role="status"
+              sx={{ mb: 2 }}
+              onClose={() => {
+                setNotice('');
+              }}
+            >
+              {notice}
+            </Alert>
+          )}
+          {actions.mutation.isError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {actions.mutation.error.message}
+            </Alert>
+          )}
+          {events.query.isError && (
+            <Alert
+              severity="error"
+              sx={{ mb: 2 }}
+              action={
+                <Button
+                  onClick={() => {
+                    void events.query.refetch();
+                  }}
+                >
+                  Retry
+                </Button>
+              }
+            >
+              {events.query.error.message}
+            </Alert>
+          )}
+          <EventBulkActions
+            key={`${resource}${search}`}
+            resource={resource}
+            ids={selectedIds}
+            trashed={state.trashed}
+            onComplete={(message) => {
+              setSelection({ search, ids: [] });
+              setNotice(message);
+            }}
+          />
+          <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            <DataGrid<ReferenceEventListItemFragment>
+              aria-label="Events"
+              rows={events.query.isError ? [] : events.result.data}
+              columns={columns}
+              rowHeight={64}
+              columnVisibilityModel={Object.fromEntries(
+                eventColumnChoices.map(({ value }) => [value, visible.includes(value)]),
+              )}
+              checkboxSelection
+              disableRowSelectionExcludeModel
+              disableColumnFilter
+              disableColumnSorting={pending}
+              rowSelectionModel={{ type: 'include', ids: new Set(selectedIds) }}
+              onRowSelectionModelChange={(model) => {
+                setSelection({ search, ids: [...model.ids].map(String) });
+              }}
+              isRowSelectable={() => !pending}
+              loading={events.query.isFetching}
+              paginationMode="server"
+              filterMode="server"
+              sortingMode="server"
+              sortModel={sortModel}
+              onSortModelChange={(model) => {
+                const item = model[0];
+                change({
+                  sort: item?.sort && isEventSortField(item.field) ? item.field : 'startsAt',
+                  order: item?.sort === 'desc' ? 'desc' : 'asc',
+                });
+              }}
+              rowCount={knownTotal}
+              paginationModel={{ page: state.page - 1, pageSize: state.size }}
+              pageSizeOptions={[10, 20, 50, 100]}
+              onPaginationModelChange={(model) => {
+                change({
+                  page: model.pageSize === state.size ? model.page + 1 : 1,
+                  size: model.pageSize,
+                });
+              }}
+              localeText={{
+                noRowsLabel: events.query.isError
+                  ? 'Events unavailable'
+                  : filterCount
                     ? 'No events match these filters.'
                     : state.trashed
                       ? 'Trash is empty.'
-                      : 'No events in this store yet.'
-                }
-              >
-                {filterCount ? (
-                  <Button onClick={clearFilters}>Clear filters</Button>
-                ) : !state.trashed ? (
-                  <Link to={eventLink(resource, 'create', search)}>
-                    <Button type="primary">Create your first event</Button>
-                  </Link>
-                ) : null}
-              </Empty>
-            ),
-          }}
-          pagination={{
-            current: state.page,
-            pageSize: state.size,
-            total: events.result.total ?? 0,
-            showSizeChanger: true,
-            pageSizeOptions: [10, 20, 50, 100],
-            showTotal: (total) => `${String(total)} ${total === 1 ? 'event' : 'events'}`,
-          }}
-          onChange={(pagination, _, sorter, extra) => {
-            if (extra.action === 'paginate')
-              change({
-                page: pagination.pageSize === state.size ? (pagination.current ?? 1) : 1,
-                size: pagination.pageSize ?? 20,
-              });
-            if (extra.action === 'sort' && !Array.isArray(sorter)) {
-              const field = String(sorter.columnKey);
-              change({
-                sort: sorter.order && isEventSortField(field) ? field : 'startsAt',
-                order: sorter.order === 'descend' ? 'desc' : 'asc',
-              });
-            }
-          }}
-          columns={[
-            ...eventColumns({ resource, search, state, visible }),
-            {
-              title: 'Actions',
-              key: 'actions',
-              width: 210,
-              render: (_: unknown, event) =>
-                event.deletedAt ? (
-                  <Button
-                    type="link"
-                    disabled={actions.mutation.isPending}
-                    onClick={() => {
-                      restore(event);
-                    }}
-                    aria-label={`Restore ${event.title}`}
-                  >
-                    Restore
-                  </Button>
-                ) : (
-                  <Space>
-                    <Link to={eventLink(resource, `${event.id}/edit`, search)}>Edit</Link>
-                    <Button
-                      type="link"
-                      danger
-                      onClick={() => {
-                        deletion.mutation.reset();
-                        setSelected(event);
-                      }}
-                      aria-label={`Move ${event.title} to trash`}
-                    >
-                      Move to trash
-                    </Button>
-                  </Space>
-                ),
-            },
-          ]}
-        />
-        <Modal
-          title="Move event to trash?"
-          open={Boolean(selected)}
-          onCancel={() => {
-            if (!deletion.mutation.isPending) setSelected(undefined);
-          }}
-          onOk={remove}
-          okText="Move to trash"
-          okButtonProps={{ danger: true }}
-          confirmLoading={deletion.mutation.isPending}
-          cancelButtonProps={{ disabled: deletion.mutation.isPending }}
-          closable={!deletion.mutation.isPending}
-          maskClosable={!deletion.mutation.isPending}
-        >
-          <Typography.Paragraph>
+                      : 'No events in this store yet.',
+              }}
+              onCellClick={(
+                { field, row }: GridCellParams<ReferenceEventListItemFragment>,
+                event,
+              ) => {
+                if (
+                  field === '__check__' ||
+                  field === 'action' ||
+                  (event.target instanceof Element && event.target.closest('a, button, input'))
+                )
+                  return;
+                void navigate(
+                  eventLink(resource, `${row.id}${row.deletedAt ? '' : '/edit'}`, search),
+                );
+              }}
+              sx={{ '& .MuiDataGrid-row': { cursor: 'pointer' } }}
+            />
+          </Box>
+        </Paper>
+      </Stack>
+      <Popover
+        open={Boolean(columnAnchor)}
+        anchorEl={columnAnchor}
+        onClose={() => {
+          setColumnAnchor(null);
+        }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Stack role="dialog" aria-label="Visible columns" sx={{ p: 2 }}>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            Visible columns
+          </Typography>
+          {eventColumnChoices.map(({ value, label }) => (
+            <FormControlLabel
+              key={value}
+              label={label}
+              control={
+                <Checkbox
+                  checked={visible.includes(value)}
+                  onChange={(_, checked) => {
+                    saveColumns(
+                      checked ? [...visible, value] : visible.filter((field) => field !== value),
+                    );
+                  }}
+                />
+              }
+            />
+          ))}
+          <Button
+            onClick={() => {
+              saveColumns(defaultEventColumns);
+            }}
+          >
+            Reset columns
+          </Button>
+        </Stack>
+      </Popover>
+      <Dialog
+        open={Boolean(selected)}
+        onClose={() => {
+          if (!submitting.current) setSelected(undefined);
+        }}
+        fullWidth
+        maxWidth="xs"
+        aria-labelledby="event-trash-title"
+      >
+        <DialogTitle id="event-trash-title">Move event to trash?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2 }}>
             {selected?.title} will be removed from the active list.
-          </Typography.Paragraph>
+          </Typography>
           {deletion.mutation.isError && (
-            <Alert type="error" message={deletion.mutation.error.message} showIcon />
+            <Alert severity="error">{deletion.mutation.error.message}</Alert>
           )}
-        </Modal>
-      </Card>
-    </>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            color="neutral"
+            disabled={pending}
+            onClick={() => {
+              setSelected(undefined);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            loading={deletion.mutation.isPending}
+            onClick={remove}
+          >
+            Move to trash
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Stack>
   );
 }

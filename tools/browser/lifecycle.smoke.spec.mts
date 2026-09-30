@@ -52,10 +52,7 @@ test('bulk actions, Trash and history survive reload and preserve the event prog
   await expect(row()).toContainText('Published');
   await page.getByRole('link', { name: 'Sofia Creative Forum', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Edit event', exact: true })).toHaveCount(0);
-  await expect(page.getByRole('tab', { name: 'Sessions', exact: true })).toHaveAttribute(
-    'aria-disabled',
-    'true',
-  );
+  await expect(page.getByRole('tab', { name: 'Sessions', exact: true })).toBeDisabled();
   await page.getByRole('tab', { name: 'History', exact: true }).click();
   await expect(page.getByText('Moved to trash', { exact: true })).toBeVisible();
   const historyRow = page.getByRole('row').filter({ hasText: 'Event updated' });
@@ -86,12 +83,13 @@ test('bulk actions, Trash and history survive reload and preserve the event prog
   await page.getByRole('dialog').getByRole('button', { name: 'Archive', exact: true }).click();
   await expect(row()).toContainText('Archived');
   await row().getByRole('checkbox').check();
-  await page.getByRole('button', { name: 'Ascending', exact: true }).click();
+  await page.getByRole('columnheader', { name: /Start \(Sofia\)/ }).click();
   await expect(page.getByRole('button', { name: 'Publish selected', exact: true })).toHaveCount(0);
   await page.goBack();
   await expect(page.getByRole('button', { name: 'Publish selected', exact: true })).toHaveCount(0);
   // Restore is available directly from the Trash list as well.
-  await row().getByRole('button', { name: 'Move Sofia Creative Forum to trash' }).click();
+  await row().getByRole('button', { name: 'Actions for Sofia Creative Forum' }).click();
+  await page.getByRole('menuitem', { name: 'Move to trash', exact: true }).click();
   await page
     .getByRole('dialog')
     .getByRole('button', { name: 'Move to trash', exact: true })

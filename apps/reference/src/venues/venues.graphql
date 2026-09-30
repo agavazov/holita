@@ -48,6 +48,25 @@ input UpdateReferenceVenueInput {
   active: Boolean
 }
 
+enum ReferenceVenueSortField {
+  NAME
+  CITY
+  COUNTRY_CODE
+  CAPACITY
+  ACTIVE
+  CREATED_AT
+}
+
+enum ReferenceVenueSortDirection {
+  ASC
+  DESC
+}
+
+input ReferenceVenueSort {
+  field: ReferenceVenueSortField! = CREATED_AT
+  direction: ReferenceVenueSortDirection! = DESC
+}
+
 type Query {
   referenceVenues(
     offset: Int! = 0
@@ -55,6 +74,7 @@ type Query {
     search: String
     active: Boolean
     ids: [ID!]
+    sort: ReferenceVenueSort
   ): ReferenceVenuePage!
   referenceVenue(id: ID!): ReferenceVenue!
 }

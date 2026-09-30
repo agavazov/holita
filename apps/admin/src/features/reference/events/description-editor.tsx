@@ -1,7 +1,18 @@
 import { useEffect, useImperativeHandle, useState, type Ref } from 'react';
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { Button, Form, Input, Modal, Select, Space, Typography } from 'antd';
+import {
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  MenuItem,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
 import {
   descriptionBytes,
   descriptionMaxBytes,
@@ -13,13 +24,21 @@ type Props = {
   value?: string | null;
   onChange?: (value: string | null) => void;
   disabled?: boolean;
+  error?: boolean;
   id?: string;
   'aria-describedby'?: string;
   ref?: Ref<{ focus: () => void }>;
 };
 
-export function DescriptionEditor({ value, onChange, disabled = false, id, ref, ...aria }: Props) {
-  const { status } = Form.Item.useStatus();
+export function DescriptionEditor({
+  value,
+  onChange,
+  disabled = false,
+  error = false,
+  id,
+  ref,
+  ...aria
+}: Props) {
   const [linkOpen, setLinkOpen] = useState(false);
   const [link, setLink] = useState('');
   const [linkError, setLinkError] = useState(false);
@@ -52,7 +71,7 @@ export function DescriptionEditor({ value, onChange, disabled = false, id, ref, 
         'aria-label': 'Description',
         'aria-multiline': 'true',
         'aria-describedby': aria['aria-describedby'] ?? '',
-        'aria-invalid': String(status === 'error'),
+        'aria-invalid': String(error),
         class: 'event-rich-content',
       },
       transformPastedHTML: safeDescriptionHtml,
@@ -135,19 +154,40 @@ export function DescriptionEditor({ value, onChange, disabled = false, id, ref, 
     },
   ];
   return (
-    <div className={`description-editor${status === 'error' ? ' description-editor-error' : ''}`}>
-      <Space wrap className="description-toolbar" role="group" aria-label="Description formatting">
-        <Select
-          aria-label="Text style"
+    <Box
+      sx={{
+        border: 1,
+        borderColor: error ? 'error.main' : 'divider',
+        borderRadius: 2,
+        overflow: 'hidden',
+        bgcolor: 'background.paper',
+        '&:focus-within': { borderColor: error ? 'error.main' : 'primary.main' },
+        '& .tiptap': { minHeight: 260, p: { xs: 2, md: 3 }, outline: 'none' },
+        '& .tiptap[contenteditable="false"]': { color: 'text.disabled' },
+      }}
+    >
+      <Stack
+        direction="row"
+        sx={{
+          flexWrap: 'wrap',
+          gap: 0.5,
+          p: 1,
+          bgcolor: 'background.elevation1',
+          borderBottom: 1,
+          borderColor: 'divider',
+        }}
+        role="group"
+        aria-label="Description formatting"
+      >
+        <TextField
+          select
+          size="small"
           value={state.block}
           disabled={disabled}
-          className="description-block-select"
-          options={[
-            { value: 'paragraph', label: 'Paragraph' },
-            { value: 'h2', label: 'Heading 2' },
-            { value: 'h3', label: 'Heading 3' },
-          ]}
-          onChange={(block) => {
+          sx={{ minWidth: 130 }}
+          slotProps={{ select: { inputProps: { 'aria-label': 'Text style' } } }}
+          onChange={(event) => {
+            const block = event.target.value;
             if (block === 'paragraph') editor.chain().focus().setParagraph().run();
             else
               editor
@@ -156,14 +196,18 @@ export function DescriptionEditor({ value, onChange, disabled = false, id, ref, 
                 .setHeading({ level: block === 'h2' ? 2 : 3 })
                 .run();
           }}
-        />
+        >
+          <MenuItem value="paragraph">Paragraph</MenuItem>
+          <MenuItem value="h2">Heading 2</MenuItem>
+          <MenuItem value="h3">Heading 3</MenuItem>
+        </TextField>
         {actions.map((action) => (
           <Button
             key={action.label}
             aria-label={action.label}
             title={action.label}
             aria-pressed={action.active}
-            type={action.active ? 'primary' : 'text'}
+            variant={action.active ? 'soft' : 'text'}
             disabled={disabled}
             onMouseDown={(event) => {
               event.preventDefault();
@@ -176,7 +220,7 @@ export function DescriptionEditor({ value, onChange, disabled = false, id, ref, 
           </Button>
         ))}
         <Button
-          type={state.link ? 'primary' : 'text'}
+          variant={state.link ? 'soft' : 'text'}
           disabled={disabled || (!state.selection && !state.link)}
           onClick={() => {
             const href: unknown = editor.getAttributes('link').href;
@@ -188,7 +232,7 @@ export function DescriptionEditor({ value, onChange, disabled = false, id, ref, 
           Link
         </Button>
         <Button
-          type="text"
+          variant="text"
           disabled={disabled || !state.link}
           onClick={() => {
             editor.chain().focus().extendMarkRange('link').unsetLink().run();
@@ -197,7 +241,7 @@ export function DescriptionEditor({ value, onChange, disabled = false, id, ref, 
           Remove link
         </Button>
         <Button
-          type="text"
+          variant="text"
           disabled={disabled || !state.undo}
           onClick={() => {
             editor.chain().focus().undo().run();
@@ -206,7 +250,7 @@ export function DescriptionEditor({ value, onChange, disabled = false, id, ref, 
           Undo
         </Button>
         <Button
-          type="text"
+          variant="text"
           disabled={disabled || !state.redo}
           onClick={() => {
             editor.chain().focus().redo().run();
@@ -214,47 +258,77 @@ export function DescriptionEditor({ value, onChange, disabled = false, id, ref, 
         >
           Redo
         </Button>
-      </Space>
+      </Stack>
       <EditorContent editor={editor} />
-      <div className="description-footer">
-        <Typography.Text type="secondary">Select text to add a link.</Typography.Text>
-        <Typography.Text type={bytes > descriptionMaxBytes ? 'danger' : 'secondary'}>
-          {(bytes / 1024).toFixed(1)} / 100 KiB
-        </Typography.Text>
-      </div>
-      <Modal
-        title="Edit link"
-        open={linkOpen}
-        okText="Apply link"
-        onOk={applyLink}
-        okButtonProps={{ disabled }}
-        onCancel={() => {
-          setLinkOpen(false);
+      <Stack
+        direction="row"
+        sx={{
+          px: 2,
+          py: 1,
+          borderTop: 1,
+          borderColor: 'divider',
+          justifyContent: 'space-between',
+          gap: 1,
+          flexWrap: 'wrap',
         }}
       >
-        <label htmlFor="description-link">Web address</label>
-        <Input
-          id="description-link"
-          value={link}
-          placeholder="https://example.com"
-          disabled={disabled}
-          status={linkError ? 'error' : ''}
-          onChange={(event) => {
-            setLink(event.target.value);
-            setLinkError(false);
-          }}
-          onPressEnter={(event) => {
-            event.preventDefault();
-            applyLink();
-          }}
-        />
-        <Typography.Paragraph
-          type={linkError ? 'danger' : 'secondary'}
-          role={linkError ? 'alert' : undefined}
+        <Typography variant="caption" color="text.secondary">
+          Select text to add a link.
+        </Typography>
+        <Typography
+          variant="caption"
+          color={bytes > descriptionMaxBytes ? 'error' : 'text.secondary'}
         >
-          Use an absolute http or https URL without embedded credentials.
-        </Typography.Paragraph>
-      </Modal>
-    </div>
+          {(bytes / 1024).toFixed(1)} / 100 KiB
+        </Typography>
+      </Stack>
+      <Dialog
+        open={linkOpen}
+        onClose={() => {
+          setLinkOpen(false);
+        }}
+        aria-labelledby="description-link-title"
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle id="description-link-title">Edit link</DialogTitle>
+        <DialogContent>
+          <TextField
+            id="description-link"
+            label="Web address"
+            fullWidth
+            autoFocus
+            value={link}
+            placeholder="https://example.com"
+            disabled={disabled}
+            error={linkError}
+            helperText="Use an absolute http or https URL without embedded credentials."
+            onChange={(event) => {
+              setLink(event.target.value);
+              setLinkError(false);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                applyLink();
+              }
+            }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            color="neutral"
+            onClick={() => {
+              setLinkOpen(false);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button variant="contained" disabled={disabled} onClick={applyLink}>
+            Apply link
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 }

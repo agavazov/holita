@@ -1,6 +1,15 @@
 import { useList } from '@refinedev/core';
-import { Alert, Button, Pagination, Select, Space, Spin } from 'antd';
-import { useEffect, useState } from 'react';
+import {
+  Alert,
+  Autocomplete,
+  Button,
+  Pagination,
+  Paper,
+  Stack,
+  TextField,
+  type PaperProps,
+} from '@mui/material';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { DataError } from '../../data/data-provider.js';
 
 type LookupRow = { id: string; name: string; active: boolean };
@@ -10,16 +19,35 @@ type Props = {
   onChange?: (value: string | string[] | undefined) => void;
   multiple?: boolean;
   id?: string;
+  label?: string;
+  name?: string;
+  error?: boolean;
+  helperText?: ReactNode;
   disabled?: boolean;
   activeOnly?: boolean;
 };
+// A stable paper component keeps focus and the open popup when a remote page changes.
+const PopupExtras = createContext<ReactNode>(null);
+function RelationPaper({ children, ...props }: PaperProps) {
+  const extras = useContext(PopupExtras);
+  return (
+    <Paper {...props}>
+      {children}
+      {extras}
+    </Paper>
+  );
+}
 export function RelationSelect({
   resource,
   value,
   onChange,
-  multiple,
+  multiple = false,
   id,
-  disabled,
+  label,
+  name,
+  error,
+  helperText,
+  disabled = false,
   activeOnly = true,
 }: Props) {
   const [search, setSearch] = useState('');
@@ -54,40 +82,24 @@ export function RelationSelect({
   const options = new Map(
     [...choices.result.data, ...(selectedIds.length ? selected.result.data : [])].map((row) => [
       row.id,
-      {
-        value: row.id,
-        label: row.active ? row.name : `${row.name} (inactive)`,
-        disabled: activeOnly && !row.active && !selectedIds.includes(row.id),
-      },
+      row,
     ]),
   );
   const failure = choices.query.error ?? (selectedIds.length ? selected.query.error : null);
   return (
-    <Select<string | string[]>
-      {...(id ? { id } : {})}
-      className="full-width"
-      disabled={disabled ?? false}
-      value={value ?? null}
-      onChange={(next) => onChange?.(next)}
-      {...(multiple ? { mode: 'multiple' } : {})}
-      showSearch
-      filterOption={false}
-      searchValue={search}
-      onSearch={setSearch}
-      allowClear
-      placeholder="Search by name"
-      options={[...options.values()]}
-      loading={choices.query.isFetching}
-      notFoundContent={choices.query.isFetching ? <Spin size="small" /> : 'No matching records'}
-      popupRender={(menu) => (
-        <>
+    <PopupExtras.Provider
+      value={
+        <Stack
+          sx={{ p: 1 }}
+          onMouseDown={(event) => {
+            event.preventDefault();
+          }}
+        >
           {failure && (
             <Alert
-              type="error"
-              message={failure.message}
+              severity="error"
               action={
                 <Button
-                  size="small"
                   onClick={() => {
                     void choices.query.refetch();
                     if (selectedIds.length) void selected.query.refetch();
@@ -96,27 +108,59 @@ export function RelationSelect({
                   Retry
                 </Button>
               }
+            >
+              {failure.message}
+            </Alert>
+          )}
+          {(choices.result.total ?? 0) > 20 && (
+            <Pagination
+              size="small"
+              count={Math.ceil((choices.result.total ?? 0) / 20)}
+              page={page}
+              onChange={(_, next) => {
+                setPage(next);
+              }}
             />
           )}
-          {menu}
-          <Space
-            className="relation-pagination"
-            onMouseDown={(event) => {
-              event.preventDefault();
-            }}
-          >
-            <Pagination
-              simple
-              size="small"
-              current={page}
-              pageSize={20}
-              total={choices.result.total ?? 0}
-              onChange={setPage}
-              showSizeChanger={false}
-            />
-          </Space>
-        </>
-      )}
-    />
+        </Stack>
+      }
+    >
+      <Autocomplete
+        {...(id ? { id } : {})}
+        fullWidth
+        disabled={disabled}
+        multiple={multiple}
+        value={multiple ? selectedIds : (selectedIds[0] ?? null)}
+        options={[...options.keys()]}
+        getOptionLabel={(key) => {
+          const row = options.get(key);
+          return row ? `${row.name}${row.active ? '' : ' (inactive)'}` : 'Loading…';
+        }}
+        getOptionDisabled={(key) =>
+          activeOnly && options.get(key)?.active === false && !selectedIds.includes(key)
+        }
+        filterOptions={(rows) => rows}
+        onChange={(_, next) => {
+          onChange?.(next ?? undefined);
+        }}
+        onInputChange={(_, next, reason) => {
+          if (reason === 'input' || reason === 'clear') setSearch(next);
+          else if (reason === 'selectOption') setSearch('');
+        }}
+        loading={choices.query.isFetching}
+        noOptionsText={failure ? 'Could not load records' : 'No matching records'}
+        slots={{ paper: RelationPaper }}
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            name={name}
+            label={label}
+            placeholder="Search by name"
+            error={error}
+            helperText={helperText}
+          />
+        )}
+      />
+    </PopupExtras.Provider>
   );
 }

@@ -11,6 +11,8 @@ import type {
   CreateProductInput,
   Product,
   ProductPage,
+  ProductSortDirection,
+  ProductSortField,
   ProductStatus,
   QueryProductsArgs,
   UpdateProductInput,
@@ -43,6 +45,18 @@ function status(value: unknown): ProductStatus {
   return value;
 }
 
+function sortField(value: unknown): ProductSortField {
+  if (value !== 'CREATED_AT' && value !== 'NAME' && value !== 'SKU' && value !== 'STATUS')
+    throw new BadRequestException('Sort field must be CREATED_AT, NAME, SKU or STATUS');
+  return value;
+}
+
+function sortDirection(value: unknown): ProductSortDirection {
+  if (value !== 'ASC' && value !== 'DESC')
+    throw new BadRequestException('Sort direction must be ASC or DESC');
+  return value;
+}
+
 function persistenceError(error: unknown): never {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === 'P2002')
@@ -70,7 +84,20 @@ export class ProductsService {
       throw new BadRequestException('Offset must be an integer from 0 to 2147483647');
     if (!Number.isInteger(limit) || limit < 1 || limit > 100)
       throw new BadRequestException('Limit must be an integer from 1 to 100');
-    return this.products.list(storeId, offset, limit);
+    return this.products.list(
+      storeId,
+      offset,
+      limit,
+      {
+        ...(args.search?.trim() ? { search: trimmed(args.search, 'Search', 200) } : {}),
+        ...(args.sku?.trim() ? { sku: trimmed(args.sku, 'SKU filter', 100) } : {}),
+        ...(args.status != null ? { status: status(args.status) } : {}),
+      },
+      {
+        field: sortField(args.sort?.field ?? 'CREATED_AT'),
+        direction: sortDirection(args.sort?.direction ?? 'DESC'),
+      },
+    );
   }
 
   async find(context: RequestContext, id: string): Promise<ProductResult> {

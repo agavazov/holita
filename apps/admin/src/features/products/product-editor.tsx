@@ -1,5 +1,6 @@
 import { useCreate, useOne, useUpdate } from '@refinedev/core';
-import { Alert, Button, Card, Skeleton } from 'antd';
+import { Alert, Box, Button, Skeleton, Stack } from '@mui/material';
+import { PageHeader } from '../../components/page-header.js';
 import { useRef } from 'react';
 import { useNavigate, useParams } from 'react-router';
 
@@ -53,15 +54,32 @@ export function ProductEditor({ storeId, onSaved }: ProductEditorProps) {
     else create.mutate({ resource, values }, callbacks);
   }
 
+  const header = (
+    <PageHeader
+      embedded
+      title={productId ? 'Edit product' : 'Create product'}
+      breadcrumbs={[
+        { label: 'Home', to: '/' },
+        { label: 'Products', to: listPath },
+        { label: productId ? 'Edit product' : 'Create product' },
+      ]}
+    />
+  );
+
   return (
-    <Card title={productId ? 'Edit product' : 'Create product'} className="product-editor">
+    <Stack sx={{ flex: 1, minWidth: 0 }}>
+      {productId && (product.query.isPending || product.query.isError) && (
+        <Box sx={{ p: { xs: 3, md: 5 } }}>{header}</Box>
+      )}
       {productId && product.query.isPending ? (
-        <Skeleton active paragraph={{ rows: 5 }} />
+        <Box sx={{ p: 5 }}>
+          <Skeleton height={60} />
+          <Skeleton height={200} />
+        </Box>
       ) : productId && product.query.isError ? (
         <Alert
-          type="error"
-          showIcon
-          message={product.query.error.message}
+          severity="error"
+          sx={{ m: 3 }}
           action={
             <Button
               onClick={() => {
@@ -71,10 +89,12 @@ export function ProductEditor({ storeId, onSaved }: ProductEditorProps) {
               Retry
             </Button>
           }
-        />
+        >
+          {product.query.error.message}
+        </Alert>
       ) : (
         <ProductForm
-          key={productId ?? 'create'}
+          header={header}
           initialValues={productId ? product.result : undefined}
           pending={pending}
           error={create.mutation.error ?? update.mutation.error}
@@ -86,7 +106,7 @@ export function ProductEditor({ storeId, onSaved }: ProductEditorProps) {
       )}
       {productId && product.query.isError && (
         <Button
-          className="back-button"
+          sx={{ m: 3, alignSelf: 'flex-start' }}
           onClick={() => {
             void navigate(listPath);
           }}
@@ -94,6 +114,6 @@ export function ProductEditor({ storeId, onSaved }: ProductEditorProps) {
           Back to products
         </Button>
       )}
-    </Card>
+    </Stack>
   );
 }

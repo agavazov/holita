@@ -9,7 +9,7 @@ export default defineConfig({
     environment: 'jsdom',
     // Nx already runs projects concurrently; run DOM-heavy files one at a time.
     fileParallelism: false,
-    // Multi-step Ant Design/Refine workflows share CPU with backend and DB tests.
+    // Multi-step Refine workflows share CPU with backend and DB tests.
     testTimeout: 30_000,
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],

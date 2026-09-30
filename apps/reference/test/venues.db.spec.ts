@@ -167,4 +167,154 @@ describe('Venue GraphQL with PostgreSQL', () => {
       data: { referenceVenues: { items: [], total: 0 } },
     });
   });
+  it('sorts filtered venues before pagination with stable ties, nulls last and store isolation', async () => {
+    const storeId = randomUUID();
+    const ids: [string, string, string, string] = [
+      randomUUID(),
+      randomUUID(),
+      randomUUID(),
+      randomUUID(),
+    ];
+    const [low, middle, high, top] = ids.sort();
+    await database.client.venue.createMany({
+      data: [
+        {
+          id: low,
+          storeId,
+          name: 'Order Alpha',
+          city: 'Sofia',
+          countryCode: 'BG',
+          capacity: 100,
+          active: true,
+          createdAt: new Date('2026-01-01'),
+        },
+        {
+          id: middle,
+          storeId,
+          name: 'Order Beta',
+          city: 'Athens',
+          countryCode: 'GR',
+          capacity: 25,
+          active: false,
+          createdAt: new Date('2026-01-01'),
+        },
+        {
+          id: high,
+          storeId,
+          name: 'Order Alpha',
+          city: 'Sofia',
+          countryCode: 'BG',
+          capacity: 100,
+          active: true,
+          createdAt: new Date('2026-01-02'),
+        },
+        {
+          id: top,
+          storeId,
+          name: 'Order Gamma',
+          city: 'Varna',
+          countryCode: 'BG',
+          capacity: null,
+          active: false,
+          createdAt: new Date('2026-01-03'),
+        },
+        { storeId, name: 'Other', city: 'Sofia', countryCode: 'BG' },
+        { storeId: randomUUID(), name: 'Order Foreign', city: 'Sofia', countryCode: 'BG' },
+      ],
+    });
+    const sorted =
+      'query($sort:ReferenceVenueSort,$active:Boolean,$offset:Int!=0,$limit:Int!=20){referenceVenues(search:"order",active:$active,sort:$sort,offset:$offset,limit:$limit){items{id}total}}';
+    for (const { field, asc, desc } of [
+      { field: 'NAME', asc: [high, low, middle, top], desc: [top, middle, high, low] },
+      { field: 'CITY', asc: [middle, high, low, top], desc: [top, high, low, middle] },
+      { field: 'COUNTRY_CODE', asc: [top, high, low, middle], desc: [middle, top, high, low] },
+      { field: 'CAPACITY', asc: [middle, high, low, top], desc: [high, low, middle, top] },
+      { field: 'ACTIVE', asc: [high, low, top, middle], desc: [top, middle, high, low] },
+      { field: 'CREATED_AT', asc: [middle, low, high, top], desc: [top, high, middle, low] },
+    ]) {
+      for (const [direction, expected] of [
+        ['ASC', asc],
+        ['DESC', desc],
+      ] as const) {
+        expect(await query(sorted, { sort: { field, direction } }, storeId)).toEqual({
+          data: { referenceVenues: { items: expected.map((id) => ({ id })), total: 4 } },
+        });
+        expect(
+          await query(sorted, { sort: { field, direction }, offset: 1, limit: 2 }, storeId),
+        ).toEqual({
+          data: {
+            referenceVenues: { items: expected.slice(1, 3).map((id) => ({ id })), total: 4 },
+          },
+        });
+      }
+    }
+    expect(
+      await query(
+        sorted,
+        { sort: { field: 'NAME', direction: 'ASC' }, active: true, offset: 1, limit: 1 },
+        storeId,
+      ),
+    ).toEqual({
+      data: { referenceVenues: { items: [{ id: low }], total: 2 } },
+    });
+    expect(
+      await query(sorted, { sort: { field: 'NAME', direction: 'ASC' }, active: false }, storeId),
+    ).toEqual({
+      data: { referenceVenues: { items: [{ id: middle }, { id: top }], total: 2 } },
+    });
+    expect(requireStore).not.toHaveBeenCalled();
+  });
+
+  it('treats lookup punctuation literally and rejects unsupported sorting', async () => {
+    const storeId = randomUUID();
+    const row = await database.client.venue.create({
+      data: { storeId, name: 'Hall 100%_edition', city: 'Sofia', countryCode: 'BG' },
+    });
+    await database.client.venue.create({
+      data: { storeId, name: 'Hall normal', city: 'Sofia', countryCode: 'BG' },
+    });
+    const source =
+      'query($search:String,$sort:ReferenceVenueSort){referenceVenues(search:$search,sort:$sort){items{id}total}}';
+    expect(await query(source, { search: '%_' }, storeId)).toEqual({
+      data: { referenceVenues: { items: [{ id: row.id }], total: 1 } },
+    });
+    for (const sort of [
+      { field: 'STORE_ID' },
+      { field: 'NAME', direction: 'SIDEWAYS' },
+      { field: null },
+    ]) {
+      expect(await query(source, { sort }, storeId)).toMatchObject({
+        errors: [{ extensions: { code: 'BAD_USER_INPUT' } }],
+      });
+    }
+    expect(requireStore).not.toHaveBeenCalled();
+  });
+
+  it('refuses to delete a venue referenced by an event', async () => {
+    const storeId = randomUUID();
+    const row = await database.client.venue.create({
+      data: { storeId, name: 'Used venue', city: 'Sofia', countryCode: 'BG' },
+    });
+    await database.client.event.create({
+      data: {
+        storeId,
+        venueId: row.id,
+        title: 'Existing event',
+        code: 'USED',
+        format: 'IN_PERSON',
+        startsAt: new Date('2026-10-01T09:00:00Z'),
+        endsAt: new Date('2026-10-01T10:00:00Z'),
+      },
+    });
+    expect(await query(remove, { id: row.id }, storeId)).toMatchObject({
+      errors: [
+        {
+          message: 'Venue is still referenced by another record.',
+          extensions: { code: 'CONFLICT' },
+        },
+      ],
+    });
+    expect(await database.client.venue.findUnique({ where: { id: row.id, storeId } })).toEqual(row);
+    expect(requireStore).not.toHaveBeenCalled();
+  });
 });

@@ -5,8 +5,8 @@ life cycle (SDLC) automation.
 
 A strict TypeScript npm-workspaces repository with Nx tasks and five host applications:
 React/Vite admin and NestJS gateway, core, products and reference services. The admin uses
-an Aurora/MUI Sidenav / Stacked shell with Refine and existing Ant Design Products and
-Reference Event Management screens. The gateway exposes schema-first GraphQL for stores and store-scoped
+an Aurora/MUI Sidenav / Stacked shell and Products/Venues/Speakers/Tags/Events screens with Refine.
+Sessions, Gallery, History and store-selection states use the same Aurora theme. The gateway exposes schema-first GraphQL for stores and store-scoped
 Products CRUD, including Product-to-Store federation. Core, products and reference own independent
 PostgreSQL databases, Prisma migrations, clients and repeatable seeds. All backends expose
 `GET /health`.
@@ -41,7 +41,7 @@ belongs to its initiating store; its late result does not redirect or notify in 
 Choose **Reference → Events, Venues, Speakers or Tags** to manage the demo domain. Events
 have three form tabs, remote Venue/Tag selectors, exact EUR budgets and Sofia event times.
 Their list supports server filtering/sorting, URL-persisted navigation and per-store column
-preferences. Event titles open an overview with saved details and quick actions. The Sessions
+preferences. Event rows open the editor; **View** in the row menu opens saved details and quick actions. The Sessions
 tab manages the event program, speaker assignments and explicit drag/button ordering with
 Save order and Cancel order. Session times must fit the Event. Active/Trash tabs support
 restore while preserving status, sessions and images. Select the current page's rows for
@@ -62,8 +62,12 @@ selector appears below the top bar. Desktop navigation supports collapse and hov
 The top bar provides local module search, example notifications/profile, a demo language
 selector and Aurora theme/color preferences. Search only finds enabled navigation entries;
 notifications and profile actions are examples, with no account or notification service.
-Appearance preferences persist locally. Existing CRUD screens retain their light Ant Design
-presentation inside the shell, including when the shell uses a dark preset.
+Appearance preferences persist locally. Products, Venues, Speakers and Tags follow the selected Aurora preset
+and provide search, automatic filters, server sorting, page-local batch deletion and responsive
+forms with a status/summary panel. Referenced venues, speakers and tags remain protected from deletion.
+Events use the same Aurora components for their list, editor and overview, with automatic filters
+and a sticky settings/summary aside. Session editors reuse that composition; ordered sessions,
+Gallery previews/actions and expandable History follow the same light/dark Aurora preset.
 
 Use [gateway GraphQL](http://127.0.0.1:11080/graphql) for API operations. `{ stores { id name } }`
 works without a selected store. Product and Reference operations require an `x-store-id` UUID header;

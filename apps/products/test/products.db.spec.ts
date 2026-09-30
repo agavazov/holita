@@ -191,6 +191,111 @@ describe('Products GraphQL with PostgreSQL', () => {
       });
   });
 
+  it('combines literal search, SKU and status before counting and paginating within the store', async () => {
+    const storeId = randomUUID();
+    const foreign = randomUUID();
+    await database.client.product.createMany({
+      data: [
+        { storeId, name: 'Notebook 100%_edition', sku: 'BOOK_A', status: 'ACTIVE' },
+        { storeId, name: 'Notebook second', sku: 'BOOK_B', status: 'ACTIVE' },
+        { storeId, name: 'Notebook draft', sku: 'BOOK_C', status: 'DRAFT' },
+        { storeId: foreign, name: 'Notebook 100%_edition', sku: 'BOOK_A', status: 'ACTIVE' },
+      ],
+    });
+    const filtered =
+      'query($search:String,$sku:String,$status:ProductStatus,$offset:Int!=0,$limit:Int!=20){products(search:$search,sku:$sku,status:$status,offset:$offset,limit:$limit){items{name sku status storeId} total}}';
+    expect(
+      await query(
+        filtered,
+        { search: ' nOtEbOoK ', status: 'ACTIVE', limit: 1, offset: 1 },
+        storeId,
+      ),
+    ).toMatchObject({ data: { products: { total: 2, items: [{ storeId, status: 'ACTIVE' }] } } });
+    expect(
+      await query(filtered, { search: '%_', sku: 'book_a', status: 'ACTIVE' }, storeId),
+    ).toEqual({
+      data: {
+        products: {
+          total: 1,
+          items: [{ storeId, name: 'Notebook 100%_edition', sku: 'BOOK_A', status: 'ACTIVE' }],
+        },
+      },
+    });
+    expect(await query(filtered, { search: 'book_b' }, storeId)).toMatchObject({
+      data: { products: { total: 1, items: [{ sku: 'BOOK_B' }] } },
+    });
+    expect(await query(filtered, { sku: 'BOOK_A', status: 'DRAFT' }, storeId)).toEqual({
+      data: { products: { total: 0, items: [] } },
+    });
+    expect(await query(filtered, { search: 'x'.repeat(201) }, storeId)).toMatchObject({
+      errors: [{ extensions: { code: 'BAD_USER_INPUT' } }],
+    });
+    expect(requireStore).not.toHaveBeenCalled();
+  });
+
+  it('sorts all filtered results before pagination with stable ties and store isolation', async () => {
+    const storeId = randomUUID();
+    const productIds: [string, string, string] = [randomUUID(), randomUUID(), randomUUID()];
+    const [low, middle, high] = productIds.sort();
+    await database.client.product.createMany({
+      data: [
+        { id: low, storeId, name: 'Sorting Alpha', sku: 'SORT_C', status: 'DRAFT' },
+        { id: middle, storeId, name: 'Sorting Beta', sku: 'SORT_A', status: 'ACTIVE' },
+        { id: high, storeId, name: 'Sorting Alpha', sku: 'SORT_B', status: 'ACTIVE' },
+        { storeId, name: 'Unrelated', sku: 'OTHER', status: 'ACTIVE' },
+        { storeId: randomUUID(), name: 'Sorting Alpha', sku: 'SORT_A', status: 'ACTIVE' },
+      ],
+    });
+    const sorted =
+      'query($sort:ProductSort,$offset:Int!=0,$limit:Int!=20,$status:ProductStatus){products(search:"sorting",sku:"SORT_",status:$status,sort:$sort,offset:$offset,limit:$limit){items{id}total}}';
+    const cases = [
+      { field: 'NAME', direction: 'ASC', ids: [high, low, middle] },
+      { field: 'NAME', direction: 'DESC', ids: [middle, high, low] },
+      { field: 'SKU', direction: 'ASC', ids: [middle, high, low] },
+      { field: 'SKU', direction: 'DESC', ids: [low, high, middle] },
+      { field: 'STATUS', direction: 'ASC', ids: [high, middle, low] },
+      { field: 'STATUS', direction: 'DESC', ids: [low, high, middle] },
+    ];
+    for (const { field, direction, ids } of cases) {
+      const sort = { field, direction };
+      expect(await query(sorted, { sort }, storeId)).toEqual({
+        data: { products: { items: ids.map((id) => ({ id })), total: 3 } },
+      });
+      expect(await query(sorted, { sort, offset: 1, limit: 1 }, storeId)).toEqual({
+        data: { products: { items: [{ id: ids[1] }], total: 3 } },
+      });
+    }
+    expect(
+      await query(
+        sorted,
+        {
+          sort: { field: 'NAME', direction: 'ASC' },
+          status: 'ACTIVE',
+          offset: 1,
+          limit: 1,
+        },
+        storeId,
+      ),
+    ).toEqual({
+      data: { products: { items: [{ id: middle }], total: 2 } },
+    });
+    expect(requireStore).not.toHaveBeenCalled();
+  });
+
+  it('rejects unsupported sort fields and directions at the GraphQL boundary', async () => {
+    const source = 'query($sort:ProductSort){products(sort:$sort){total}}';
+    for (const sort of [
+      { field: 'STORE_ID', direction: 'ASC' },
+      { field: 'NAME', direction: 'SIDEWAYS' },
+      { field: null, direction: 'ASC' },
+    ]) {
+      expect(await query(source, { sort }, randomUUID())).toMatchObject({
+        errors: [{ extensions: { code: 'BAD_USER_INPUT' } }],
+      });
+    }
+    expect(requireStore).not.toHaveBeenCalled();
+  });
+
   it('rejects blank, long, null and empty updates, invalid UUIDs and writable store IDs', async () => {
     const storeId = randomUUID();
     for (const input of [

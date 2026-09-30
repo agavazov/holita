@@ -25,10 +25,34 @@ import {
 } from '../generated/graphql/operations.js';
 export const productsOptions: GraphQLDataProviderOptions = {
   getList: {
-    buildVariables: ({ pagination }): ListProductsQueryVariables => ({
-      offset: ((pagination?.currentPage ?? 1) - 1) * (pagination?.pageSize ?? 20),
-      limit: pagination?.pageSize ?? 20,
-    }),
+    buildVariables: ({ pagination, filters, sorters }): ListProductsQueryVariables => {
+      const variables: ListProductsQueryVariables = {
+        offset: ((pagination?.currentPage ?? 1) - 1) * (pagination?.pageSize ?? 20),
+        limit: pagination?.pageSize ?? 20,
+      };
+      for (const filter of filters ?? []) {
+        if (!('field' in filter)) continue;
+        const value: unknown = filter.value;
+        if (filter.field === 'search' && typeof value === 'string' && value)
+          variables.search = value;
+        if (filter.field === 'sku' && typeof value === 'string' && value) variables.sku = value;
+        if (filter.field === 'status' && (value === 'ACTIVE' || value === 'DRAFT'))
+          variables.status = value;
+      }
+      const sorter = sorters?.[0];
+      if (sorter) {
+        const field =
+          sorter.field === 'name'
+            ? 'NAME'
+            : sorter.field === 'sku'
+              ? 'SKU'
+              : sorter.field === 'status'
+                ? 'STATUS'
+                : undefined;
+        if (field) variables.sort = { field, direction: sorter.order === 'asc' ? 'ASC' : 'DESC' };
+      }
+      return variables;
+    },
     dataMapper: (response: OperationResult<ListStoresQuery | ListProductsQuery>) => {
       const data = requireData(response);
       return 'stores' in data ? data.stores : data.products.items;

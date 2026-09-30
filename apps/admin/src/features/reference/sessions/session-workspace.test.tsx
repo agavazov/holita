@@ -59,6 +59,43 @@ beforeEach(() => {
 });
 
 describe('Session editor and program lifecycle', () => {
+  it.each([
+    { startsAt: '2026-10-25T00:30:00.000Z', endsAt: '2026-10-25T01:30:00.000Z' },
+    { startsAt: '2026-10-25T00:30:10.123Z', endsAt: '2026-10-25T00:30:40.456Z' },
+  ])(
+    'preserves exact instants when both Sofia inputs display the same minute: $startsAt',
+    async (times) => {
+      const transport = mockGraphQL((call) => {
+        if (call.operation === 'GetReferenceEvent')
+          return result({
+            referenceEvent: {
+              ...event(),
+              startsAt: '2026-10-24T21:00:00.000Z',
+              endsAt: '2026-10-25T08:00:00.000Z',
+            },
+          });
+        if (call.operation === 'GetReferenceSession')
+          return result({ referenceSession: { ...session(), ...times } });
+        if (call.operation === 'UpdateReferenceSession')
+          return result({ updateReferenceSession: { ...session(), ...times } });
+        return respond(call);
+      });
+      const { user } = mount(`${root}/sessions/${session().id}/edit`);
+      expect(await screen.findByLabelText('Starts at')).toHaveValue('2026-10-25T03:30');
+      expect(screen.getByLabelText('Ends at')).toHaveValue('2026-10-25T03:30');
+      await user.clear(screen.getByLabelText('Room'));
+      await user.click(screen.getByRole('button', { name: 'Save session' }));
+      await waitFor(() => {
+        expect(
+          transport.calls.find((call) => call.operation === 'UpdateReferenceSession'),
+        ).toMatchObject({
+          storeId: storeA,
+          variables: { eventId: event().id, input: { ...times, room: null } },
+        });
+      });
+      await screen.findByRole('button', { name: 'Add session' });
+    },
+  );
   it('keeps failed order drafts, confirms navigation and reloads server order on cancel before saving explicitly', async () => {
     let fail = true;
     let rows = [session(), session('Workshop', 1)];
@@ -90,7 +127,7 @@ describe('Session editor and program lifecycle', () => {
     await user.click(screen.getByRole('tab', { name: 'Overview' }));
     await screen.findByText('Discard unsaved changes?');
     await user.click(screen.getByRole('button', { name: 'Keep editing' }));
-    await user.click(screen.getByRole('button', { name: 'Save order' }));
+    await user.click(await screen.findByRole('button', { name: 'Save order' }));
     await screen.findByText(
       'The session list changed. Cancel the draft to reload it, then arrange it again.',
     );
@@ -144,8 +181,8 @@ describe('Session editor and program lifecycle', () => {
       return respond(call);
     });
     const { user } = mount(`${root}/sessions/${session().id}/edit`);
-    expect(await screen.findByLabelText('Starts at')).toHaveValue('2026-11-01 12:00');
-    await screen.findByText('Alex (inactive)', { selector: '.ant-select-selection-item-content' });
+    expect(await screen.findByLabelText('Starts at')).toHaveValue('2026-11-01T12:00');
+    await screen.findByText('Alex (inactive)', { selector: '.MuiChip-label' });
     await user.clear(screen.getByLabelText('Title'));
     await user.click(screen.getByLabelText('Title'));
     await user.paste('Edited opening');

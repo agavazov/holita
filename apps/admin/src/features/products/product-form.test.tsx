@@ -1,9 +1,12 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render as rtlRender, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { DataError } from '../../data/data-provider.js';
+import { AuroraTheme } from '../../theme/aurora-theme.js';
 import { ProductForm } from './product-form.js';
+
+const render = (ui: React.ReactNode) => rtlRender(ui, { wrapper: AuroraTheme });
 
 describe('ProductForm', () => {
   it('requires name and SKU, trims input and defaults to Draft', async () => {
@@ -46,8 +49,7 @@ describe('ProductForm', () => {
     expect(save).not.toHaveBeenCalled();
   });
 
-  it('shares edit values, displays the server error and blocks pending submission', async () => {
-    const user = userEvent.setup();
+  it('shares edit values, displays the server error and blocks pending submission', () => {
     const save = vi.fn();
     const { rerender } = render(
       <ProductForm
@@ -64,7 +66,11 @@ describe('ProductForm', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('request-123');
     rerender(<ProductForm pending error={null} onSubmit={save} onCancel={vi.fn()} />);
     expect(screen.getByLabelText('Name')).toBeDisabled();
-    await user.click(screen.getByRole('button', { name: 'Save product' }));
+    const button = screen.getByRole('button', { name: 'Save product' });
+    expect(button).toBeDisabled();
+    const form = button.closest('form');
+    if (!form) throw new Error('Expected a product form.');
+    fireEvent.submit(form);
     expect(save).not.toHaveBeenCalled();
   });
 

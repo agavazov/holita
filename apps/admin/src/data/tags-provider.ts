@@ -20,15 +20,27 @@ import {
   type GetReferenceTagQueryVariables,
   type ListReferenceTagsQuery,
   type ListReferenceTagsQueryVariables,
+  type ReferenceTagSortField,
 } from '../generated/graphql/operations.js';
+
+const tagSortFields: Record<string, ReferenceTagSortField> = {
+  name: 'NAME',
+  color: 'COLOR',
+  active: 'ACTIVE',
+};
 
 export const tagsOptions: GraphQLDataProviderOptions = {
   getList: {
-    buildVariables: ({ pagination, filters }): ListReferenceTagsQueryVariables => ({
-      offset: ((pagination?.currentPage ?? 1) - 1) * (pagination?.pageSize ?? 20),
-      limit: pagination?.pageSize ?? 20,
-      ...lookupFilters(filters),
-    }),
+    buildVariables: ({ pagination, filters, sorters }): ListReferenceTagsQueryVariables => {
+      const sorter = sorters?.[0];
+      const field = sorter && tagSortFields[sorter.field];
+      return {
+        offset: ((pagination?.currentPage ?? 1) - 1) * (pagination?.pageSize ?? 20),
+        limit: pagination?.pageSize ?? 20,
+        ...lookupFilters(filters),
+        ...(field ? { sort: { field, direction: sorter.order === 'asc' ? 'ASC' : 'DESC' } } : {}),
+      };
+    },
     dataMapper: (response: OperationResult<ListReferenceTagsQuery>) =>
       requireData(response).referenceTags.items,
     getTotalCount: (response: OperationResult<ListReferenceTagsQuery>) =>

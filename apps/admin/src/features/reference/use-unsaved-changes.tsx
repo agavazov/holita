@@ -1,8 +1,16 @@
-import { useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { useBeforeUnload, useBlocker } from 'react-router';
-import { Modal } from 'antd';
+import {
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+} from '@mui/material';
 
 export function useUnsavedChanges(pending: boolean, additionalDirty = false) {
+  const id = useId();
   const [dirty, setDirty] = useState(false);
   const saved = useRef(false);
   const blocker = useBlocker(
@@ -29,17 +37,24 @@ export function useUnsavedChanges(pending: boolean, additionalDirty = false) {
       setDirty(false);
     },
     dialog: (
-      <Modal
-        title="Discard unsaved changes?"
+      <Dialog
+        aria-labelledby={id}
         open={blocker.state === 'blocked'}
-        okText="Discard changes"
-        cancelText="Keep editing"
-        okButtonProps={{ danger: true }}
-        onOk={() => blocker.proceed?.()}
-        onCancel={() => blocker.reset?.()}
+        onClose={() => blocker.reset?.()}
       >
-        Your changes have not been saved. Leave this form?
-      </Modal>
+        <DialogTitle id={id}>Discard unsaved changes?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>Your changes have not been saved. Leave this form?</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button color="neutral" autoFocus onClick={() => blocker.reset?.()}>
+            Keep editing
+          </Button>
+          <Button variant="contained" color="error" onClick={() => blocker.proceed?.()}>
+            Discard changes
+          </Button>
+        </DialogActions>
+      </Dialog>
     ),
   };
 }

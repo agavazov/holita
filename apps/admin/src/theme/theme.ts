@@ -1,3 +1,9 @@
+import { TableContainer, TableRow, TableHead, TableCell } from './components/Table.js';
+import type {} from '@mui/x-data-grid/themeAugmentation';
+import DataGrid from './components/DataGrid.js';
+import Autocomplete from './components/Autocomplete.js';
+import Checkbox from './components/Checkbox.js';
+import { Tab, Tabs } from './components/Tab.js';
 import { createTheme as muiCreateTheme } from '@mui/material/styles';
 import type {} from '@mui/material/themeCssVarsAugmentation';
 import './types.js';
@@ -68,6 +74,15 @@ export function createTheme(preset: ThemePreset, primaryColor: string | null) {
     unstable_sxConfig: sxConfig,
     mixins,
     components: {
+      MuiTableContainer: TableContainer,
+      MuiTableRow: TableRow,
+      MuiTableHead: TableHead,
+      MuiTableCell: TableCell,
+      MuiDataGrid: DataGrid,
+      MuiAutocomplete: Autocomplete,
+      MuiCheckbox: Checkbox,
+      MuiTab: Tab,
+      MuiTabs: Tabs,
       MuiAppBar: AppBar,
       MuiPaper: Paper,
       MuiDivider: Divider,

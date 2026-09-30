@@ -39,20 +39,25 @@ test('gallery saves independently, preserves text drafts, previews, orders, chan
   await first.getByRole('button', { name: 'Move first.png later' }).click();
   await expect(page.getByRole('button', { name: 'Save event', exact: true })).toBeDisabled();
   await gallery.getByRole('button', { name: 'Cancel order', exact: true }).click();
-  await expect(gallery.locator('.gallery-image-card').first()).toHaveAttribute(
+  await expect(gallery.getByRole('article').first()).toHaveAttribute(
     'aria-label',
     'Image first.png',
   );
   await first.getByRole('button', { name: 'Move first.png later' }).click();
   await gallery.getByRole('button', { name: 'Save order', exact: true }).click();
   await expect(gallery.getByRole('button', { name: 'Save order', exact: true })).toHaveCount(0);
-  await expect(gallery.locator('.gallery-image-card').first()).toHaveAttribute(
+  await expect(gallery.getByRole('article').first()).toHaveAttribute(
     'aria-label',
     'Image second.png',
   );
   await expect(second.getByRole('img', { name: 'A blue conference hall' })).toBeVisible();
-  await second.locator('.ant-image').click();
-  await expect(page.locator('.ant-image-preview-img')).toBeVisible();
+  await second.getByRole('button', { name: 'Preview second.png' }).click();
+  const preview = page.getByRole('dialog', { name: 'second.png', exact: true });
+  await expect(preview.getByRole('img', { name: 'A blue conference hall' })).toBeVisible();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('dialog', { name: 'first.png', exact: true })).toBeVisible();
+  await page.keyboard.press('ArrowLeft');
+  await expect(preview).toBeVisible();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Save event', exact: true }).click();
   await expect(page).toHaveURL(`${app.url}${path}`);
@@ -60,8 +65,8 @@ test('gallery saves independently, preserves text drafts, previews, orders, chan
     'A description kept while editing the gallery.',
   );
   await page.reload();
-  await expect(gallery.locator('.gallery-image-card')).toHaveCount(2);
-  await expect(gallery.locator('.gallery-image-card').first()).toHaveAttribute(
+  await expect(gallery.getByRole('article')).toHaveCount(2);
+  await expect(gallery.getByRole('article').first()).toHaveAttribute(
     'aria-label',
     'Image second.png',
   );
@@ -108,9 +113,7 @@ test('switching stores cancels an upload before finalization and suppresses late
       .setInputFiles({ name: 'cancelled.png', mimeType: 'image/png', buffer });
     await captured;
     await page.getByRole('combobox', { name: 'Store', exact: true }).press('ArrowDown');
-    await page
-      .getByRole('option', { name: 'holita Plovdiv', exact: true })
-      .click();
+    await page.getByRole('option', { name: 'holita Plovdiv', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Create event', exact: true })).toBeVisible();
     await expect(page).toHaveURL(/000000000002\/reference\/events$/);
     release?.();

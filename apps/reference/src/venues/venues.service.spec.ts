@@ -95,4 +95,27 @@ describe('Venue validation', () => {
     expect(() => service.list(context, { limit: 101 })).toThrow(BadRequestException);
     expect(repository.list).not.toHaveBeenCalled();
   });
+  it('passes normalized filters and explicit sorting without calling core', async () => {
+    await service.list(context, {
+      search: ' Hall ',
+      active: false,
+      sort: { field: 'CAPACITY', direction: 'ASC' },
+    });
+    expect(repository.list).toHaveBeenLastCalledWith(
+      context.storeId,
+      0,
+      20,
+      { search: 'Hall', active: false, ids: undefined },
+      { field: 'CAPACITY', direction: 'ASC' },
+    );
+    await service.list(context, {});
+    expect(repository.list).toHaveBeenLastCalledWith(
+      context.storeId,
+      0,
+      20,
+      { search: null, active: undefined, ids: undefined },
+      { field: 'CREATED_AT', direction: 'DESC' },
+    );
+    expect(requireStore).not.toHaveBeenCalled();
+  });
 });

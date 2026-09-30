@@ -66,6 +66,44 @@ describe('Products service validation', () => {
     expect(requireStore).not.toHaveBeenCalled();
   });
 
+  it('validates and trims list filters without checking core', () => {
+    void service.list(context, { search: '  Note  ', sku: '  SKU_%  ', status: 'ACTIVE' });
+    expect(repository.list).toHaveBeenCalledWith(
+      context.storeId,
+      0,
+      20,
+      { search: 'Note', sku: 'SKU_%', status: 'ACTIVE' },
+      { field: 'CREATED_AT', direction: 'DESC' },
+    );
+    repository.list.mockClear();
+    for (const args of [
+      { search: 'x'.repeat(201) },
+      { sku: 'x'.repeat(101) },
+      { search: 'bad\u0000value' },
+    ]) {
+      expect(() => service.list(context, args)).toThrow(BadRequestException);
+    }
+    expect(repository.list).not.toHaveBeenCalled();
+    expect(requireStore).not.toHaveBeenCalled();
+  });
+
+  it('passes explicit sorting alongside filters and pagination without checking core', () => {
+    void service.list(context, {
+      search: ' Notebook ',
+      offset: 10,
+      limit: 10,
+      sort: { field: 'NAME', direction: 'ASC' },
+    });
+    expect(repository.list).toHaveBeenCalledWith(
+      context.storeId,
+      10,
+      10,
+      { search: 'Notebook' },
+      { field: 'NAME', direction: 'ASC' },
+    );
+    expect(requireStore).not.toHaveBeenCalled();
+  });
+
   it('accepts Unicode character limits consistently with the form and PostgreSQL', async () => {
     const input = { name: '😀'.repeat(200), sku: '🛍'.repeat(100) };
     await service.create(context, input);

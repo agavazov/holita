@@ -20,23 +20,20 @@ test('Sessions persist CRUD, speakers and explicit drag order through the gatewa
     await page.getByRole('button', { name: 'Add session', exact: true }).click();
     await page.getByLabel('Title', { exact: true }).fill(title);
     await page.getByLabel(/^Summary/).fill(`A practical session: ${title}.`);
-    await expect(page.getByLabel('Starts at', { exact: true })).toHaveValue('2026-11-12 10:00');
-    await page.getByLabel('Ends at', { exact: true }).fill('2026-11-12 11:00');
+    await expect(page.getByLabel('Starts at', { exact: true })).toHaveValue('2026-11-12T10:00');
+    await page.getByLabel('Ends at', { exact: true }).fill('2026-11-12T11:00');
     await page.getByLabel('Ends at', { exact: true }).press('Tab');
     await page.getByLabel(/^Room/).fill('Main hall');
     await page.getByRole('combobox', { name: /^Speakers/ }).press('ArrowDown');
     await page.getByRole('combobox', { name: /^Speakers/ }).fill('Alex');
-    await page
-      .locator('.ant-select-item-option-content')
-      .getByText('Alex Marin', { exact: true })
-      .click();
+    await page.getByRole('option', { name: 'Alex Marin', exact: true }).click();
     await page.getByLabel('Title', { exact: true }).click();
     if (title === 'Opening keynote') {
-      await page.getByLabel('Ends at', { exact: true }).fill('2026-11-12 20:00');
+      await page.getByLabel('Ends at', { exact: true }).fill('2026-11-12T20:00');
       await page.getByLabel('Ends at', { exact: true }).press('Tab');
       await page.getByRole('button', { name: 'Save session', exact: true }).click();
       await expect(page.getByText('Choose a time within the event.')).toBeVisible();
-      await page.getByLabel('Ends at', { exact: true }).fill('2026-11-12 11:00');
+      await page.getByLabel('Ends at', { exact: true }).fill('2026-11-12T11:00');
       await page.getByLabel('Ends at', { exact: true }).press('Tab');
     }
     await page.getByRole('button', { name: 'Save session', exact: true }).click();
@@ -77,7 +74,8 @@ test('Sessions persist CRUD, speakers and explicit drag order through the gatewa
       () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
     ),
   ).toBe(true);
-  await page.getByRole('button', { name: 'Edit Afternoon workshop', exact: true }).click();
+  await page.getByRole('button', { name: 'Actions for Afternoon workshop', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Edit', exact: true }).click();
   await page.getByLabel('Title', { exact: true }).fill('Hands-on workshop');
   await page.screenshot({
     path: testInfo.outputPath('session-editor-mobile.png'),
@@ -95,16 +93,17 @@ test('Sessions persist CRUD, speakers and explicit drag order through the gatewa
   await expect(page.getByText('Alex Marin', { exact: true })).toHaveCount(1);
   await page.getByRole('button', { name: 'Edit event', exact: true }).click();
   await page.getByRole('tab', { name: 'Schedule & location', exact: true }).click();
-  await page.getByLabel('Ends at', { exact: true }).fill('2026-11-12 10:30');
+  await page.getByLabel('Ends at', { exact: true }).fill('2026-11-12T10:30');
   await page.getByLabel('Ends at', { exact: true }).press('Tab');
   await page.getByRole('button', { name: 'Save event', exact: true }).click();
-  await expect(page.locator('.ant-form-item-explain-error')).toContainText(
+  await expect(page.locator('.MuiFormHelperText-root.Mui-error')).toContainText(
     'End must include all existing sessions.',
   );
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await page.getByRole('button', { name: 'Discard changes', exact: true }).click();
   await page.goto(url);
-  await page.getByRole('button', { name: 'Delete Hands-on workshop', exact: true }).click();
+  await page.getByRole('button', { name: 'Actions for Hands-on workshop', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
   await page.getByRole('button', { name: 'Delete session', exact: true }).click();
   await expect(page.getByRole('listitem', { name: 'Hands-on workshop', exact: true })).toHaveCount(
     0,

@@ -4,7 +4,7 @@ import { test } from './fixture.mjs';
 const storeId = '10000000-0000-4000-8000-000000000001';
 const eventId = '60000000-0000-4000-8000-000000000001';
 
-test('compact navigation and wrapped tabs keep Event editing and dirty navigation usable', async ({
+test('compact navigation and scrollable tabs keep Event editing and dirty navigation usable', async ({
   page,
   app,
 }, testInfo) => {
@@ -15,7 +15,6 @@ test('compact navigation and wrapped tabs keep Event editing and dirty navigatio
   await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Sofia Creative Forum');
   for (const name of ['General', 'Schedule & location', 'Content & media']) {
     const tab = page.getByRole('tab', { name, exact: true });
-    await expect(tab).toBeInViewport();
     await tab.click();
     await expect(tab).toHaveAttribute('aria-selected', 'true');
   }
@@ -61,7 +60,8 @@ test('compact navigation and wrapped tabs keep Event editing and dirty navigatio
   await page.setViewportSize({ width: 1280, height: 900 });
   await expect(page.getByRole('button', { name: 'Open navigation' })).toHaveCount(0);
   await page.getByRole('menuitem', { name: 'Events', exact: true }).click();
-  await page.getByRole('link', { name: 'Sofia Creative Forum', exact: true }).click();
+  await page.getByRole('button', { name: 'Actions for Sofia Creative Forum', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'View', exact: true }).click();
   await page.getByRole('tab', { name: 'History', exact: true }).click();
   await expect(page.getByText('No changes recorded yet.', { exact: true })).toBeVisible();
   await page.screenshot({

@@ -31,7 +31,7 @@ rules remain in [AGENTS.md](../../../AGENTS.md).
 5. Report exact commands, selected files/cases, results and unverified contracts. Clean up
    listeners/connections started by the checks.
 
-For admin, select product-form.test.tsx, data-provider.test.ts or store-workspace.test.tsx
+For admin, select product-list.test.tsx, product-form.test.tsx, data-provider.test.ts or store-workspace.test.tsx
 through test:admin. The workspace file uses actual Refine hooks/cache with controlled HTTP
 responses and supports `--testNamePattern="captures a pending create"`. Use this long option
 through Nx because Nx reserves -t for targets. Real browser behavior uses

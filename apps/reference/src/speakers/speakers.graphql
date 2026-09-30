@@ -27,6 +27,23 @@ input UpdateReferenceSpeakerInput {
   shortBio: String
   active: Boolean
 }
+enum ReferenceSpeakerSortField {
+  NAME
+  EMAIL
+  ACTIVE
+  CREATED_AT
+}
+
+enum ReferenceSpeakerSortDirection {
+  ASC
+  DESC
+}
+
+input ReferenceSpeakerSort {
+  field: ReferenceSpeakerSortField! = CREATED_AT
+  direction: ReferenceSpeakerSortDirection! = DESC
+}
+
 extend type Query {
   referenceSpeakers(
     offset: Int! = 0
@@ -34,6 +51,7 @@ extend type Query {
     search: String
     active: Boolean
     ids: [ID!]
+    sort: ReferenceSpeakerSort
   ): ReferenceSpeakerPage!
   referenceSpeaker(id: ID!): ReferenceSpeaker!
 }

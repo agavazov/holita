@@ -14,8 +14,16 @@ query ListReferenceSpeakers(
   $search: String
   $active: Boolean
   $ids: [ID!]
+  $sort: ReferenceSpeakerSort
 ) {
-  referenceSpeakers(offset: $offset, limit: $limit, search: $search, active: $active, ids: $ids) {
+  referenceSpeakers(
+    offset: $offset
+    limit: $limit
+    search: $search
+    active: $active
+    ids: $ids
+    sort: $sort
+  ) {
     items {
       ...ReferenceSpeakerDetails
     }

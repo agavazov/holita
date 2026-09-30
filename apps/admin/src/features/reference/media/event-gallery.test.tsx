@@ -105,7 +105,7 @@ describe('Independent gallery editing', () => {
       }),
     );
     await user.click(await screen.findByRole('button', { name: 'Keep editing' }));
-    await user.click(gallery.getByRole('button', { name: 'Cancel order' }));
+    await user.click(await gallery.findByRole('button', { name: 'Cancel order' }));
     await waitFor(() =>
       expect(gallery.getAllByLabelText(/^Image [01]\.png$/)[0]).toHaveAttribute(
         'aria-label',
@@ -118,7 +118,7 @@ describe('Independent gallery editing', () => {
     await user.type(screen.getByRole('textbox', { name: 'Alt text' }), 'Hall');
     await user.click(screen.getByRole('button', { name: 'Save alt text' }));
     await screen.findByText('Alt text saved.');
-    await user.click(screen.getByRole('tab', { name: 'General' }));
+    await user.click(await screen.findByRole('tab', { name: 'General' }));
     expect(screen.getByLabelText('Title')).toHaveValue('Unsaved title');
     expect(
       transport.calls.filter((call) => call.operation === 'UpdateReferenceEvent'),
@@ -155,9 +155,7 @@ describe('Independent gallery editing', () => {
       );
     });
     await user.click(screen.getByRole('combobox', { name: 'Store' }));
-    await user.click(
-      await screen.findByRole('option', { name: 'Plovdiv Store' }),
-    );
+    await user.click(await screen.findByRole('option', { name: 'Plovdiv Store' }));
     await screen.findByRole('link', { name: 'Plovdiv event' });
     await act(async () => {
       delayed.resolve(result({ setReferenceEventCover: [{ ...image(1), isCover: true }] }));

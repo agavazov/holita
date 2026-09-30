@@ -1,24 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import { dayjs, eventTime, eventInstant } from './event-time.js';
+import { eventTime, eventInputInstant } from './event-time.js';
 import { eventListFilters, readEventList } from './event-list-state.js';
 describe('Europe/Sofia event time', () => {
   it('converts wall-clock values using the date-specific winter and summer offsets', () => {
-    expect(eventInstant(dayjs('2026-07-01 12:30'))).toBe('2026-07-01T09:30:00.000Z');
-    expect(eventInstant(dayjs('2026-12-01 12:30'))).toBe('2026-12-01T10:30:00.000Z');
+    expect(eventInputInstant('2026-07-01T12:30')).toBe('2026-07-01T09:30:00.000Z');
+    expect(eventInputInstant('2026-12-01T12:30')).toBe('2026-12-01T10:30:00.000Z');
     expect(eventTime('2026-12-01T10:30:00Z').format('YYYY-MM-DD HH:mm')).toBe('2026-12-01 12:30');
   });
   it('rejects a nonexistent time during the spring clock change', () => {
-    expect(() => eventInstant(dayjs.utc('2026-03-29 03:30'))).toThrow('does not exist');
+    expect(() => eventInputInstant('2026-03-29T03:30')).toThrow('does not exist');
   });
   it('preserves both stored instants in the repeated autumn hour when saving an edit', () => {
     for (const instant of ['2026-10-25T00:30:00.000Z', '2026-10-25T01:30:00.000Z']) {
       expect(eventTime(instant).format('YYYY-MM-DD HH:mm')).toBe('2026-10-25 03:30');
-      expect(eventInstant(eventTime(instant))).toBe(instant);
+      expect(eventInputInstant('2026-10-25T03:30', instant)).toBe(instant);
     }
   });
-  it('recalculates a picker offset when moving a winter date into summer', () => {
-    const value = eventTime('2026-12-01T10:30:00Z').month(6);
-    expect(eventInstant(value)).toBe('2026-07-01T09:30:00.000Z');
+  it('recalculates the offset when moving a winter date into summer', () => {
+    expect(eventInputInstant('2026-07-01T12:30', '2026-12-01T10:30:00Z')).toBe(
+      '2026-07-01T09:30:00.000Z',
+    );
   });
   it('filters complete calendar days across spring and autumn clock changes in Sofia', () => {
     for (const [date, from, before] of [

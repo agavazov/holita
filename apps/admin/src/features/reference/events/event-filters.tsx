@@ -1,135 +1,194 @@
-import { Button, DatePicker, Form, InputNumber, Select, Space } from 'antd';
+import { Autocomplete, Button, MenuItem, TextField, Typography } from '@mui/material';
+import { useState } from 'react';
+import { FilterDrawer } from '../../../components/filter-drawer.js';
 import { tagsResource, venuesResource } from '../../../data/data-provider.js';
 import { RelationSelect } from '../relation-select.js';
-import { dayjs } from './event-time.js';
-import type { Dayjs } from 'dayjs';
-import { eventFormats, type EventListState } from './event-list-state.js';
+import { eventFormats, eventStatuses, type EventListState } from './event-list-state.js';
 
-type Fields = Partial<Pick<EventListState, 'formats' | 'venueIds' | 'tagIds'>> & {
-  featured?: boolean;
-  dates?: [Dayjs | null, Dayjs | null];
-  capacityMin?: number | null;
-  capacityMax?: number | null;
-};
+type RangeFields = { from: string; to: string; capacityMin: string; capacityMax: string };
+function ranges(state: EventListState): RangeFields {
+  return {
+    from: state.from,
+    to: state.to,
+    capacityMin: state.capacityMin?.toString() ?? '',
+    capacityMax: state.capacityMax?.toString() ?? '',
+  };
+}
+function rangeErrors(value: RangeFields) {
+  const integer = (text: string) =>
+    text !== '' &&
+    (!Number.isInteger(Number(text)) || Number(text) < 1 || Number(text) > 2147483647)
+      ? 'Use a positive whole number.'
+      : '';
+  return {
+    from: '',
+    to:
+      value.from && value.to && value.to < value.from
+        ? 'End date must be on or after the start.'
+        : '',
+    capacityMin: integer(value.capacityMin),
+    capacityMax:
+      integer(value.capacityMax) ||
+      (value.capacityMin &&
+      value.capacityMax &&
+      Number(value.capacityMax) < Number(value.capacityMin)
+        ? 'Maximum must be at least the minimum.'
+        : ''),
+  };
+}
 export function EventFilters({
   storeId,
   state,
-  onApply,
+  search,
+  open,
+  onClose,
+  onSearchChange,
+  onChange,
+  onClear,
 }: {
   storeId: string;
   state: EventListState;
-  onApply: (patch: Partial<EventListState>) => void;
+  search: string;
+  open: boolean;
+  onClose: () => void;
+  onSearchChange: (value: string) => void;
+  onChange: (patch: Partial<EventListState>) => void;
+  onClear: () => void;
 }) {
-  const [form] = Form.useForm<Fields>();
+  const [draft, setDraft] = useState(() => ranges(state));
+  const rangeKey = JSON.stringify(ranges(state));
+  const [lastRange, setLastRange] = useState(rangeKey);
+  if (rangeKey !== lastRange) {
+    setLastRange(rangeKey);
+    setDraft(ranges(state));
+  }
+  const errors = rangeErrors(draft);
+  function changeRange(field: keyof RangeFields, value: string) {
+    const next = { ...draft, [field]: value };
+    setDraft(next);
+    if (Object.values(rangeErrors(next)).some(Boolean)) return;
+    onChange({
+      from: next.from,
+      to: next.to,
+      capacityMin: next.capacityMin ? Number(next.capacityMin) : undefined,
+      capacityMax: next.capacityMax ? Number(next.capacityMax) : undefined,
+    });
+  }
   return (
-    <Form<Fields>
-      form={form}
-      layout="vertical"
-      className="event-filters"
-      initialValues={{
-        formats: state.formats,
-        venueIds: state.venueIds,
-        tagIds: state.tagIds,
-        featured: state.featured,
-        capacityMin: state.capacityMin,
-        capacityMax: state.capacityMax,
-        dates: [state.from ? dayjs(state.from) : null, state.to ? dayjs(state.to) : null],
-      }}
-      onFinish={(values) => {
-        onApply({
-          formats: values.formats ?? [],
-          venueIds: values.venueIds ?? [],
-          tagIds: values.tagIds ?? [],
-          featured: values.featured,
-          capacityMin: values.capacityMin ?? undefined,
-          capacityMax: values.capacityMax ?? undefined,
-          from: values.dates?.[0]?.format('YYYY-MM-DD') ?? '',
-          to: values.dates?.[1]?.format('YYYY-MM-DD') ?? '',
-        });
-      }}
-    >
-      <div className="event-filter-grid">
-        <Form.Item name="formats" label="Format">
-          <Select mode="multiple" allowClear options={eventFormats} placeholder="All formats" />
-        </Form.Item>
-        <Form.Item name="venueIds" label="Venue">
-          <RelationSelect resource={venuesResource(storeId)} multiple activeOnly={false} />
-        </Form.Item>
-        <Form.Item name="tagIds" label="Tag">
-          <RelationSelect resource={tagsResource(storeId)} multiple activeOnly={false} />
-        </Form.Item>
-        <Form.Item name="featured" label="Featured">
-          <Select
-            allowClear
-            placeholder="All events"
-            options={[
-              { value: true, label: 'Featured' },
-              { value: false, label: 'Not featured' },
-            ]}
-          />
-        </Form.Item>
-        <Form.Item name="dates" label="Start date (Sofia)">
-          <DatePicker.RangePicker
-            className="full-width"
-            format="YYYY-MM-DD"
-            allowEmpty={[true, true]}
-          />
-        </Form.Item>
-        <div>
-          <div className="event-filter-label">Capacity</div>
-          <Space align="start">
-            <Form.Item
-              name="capacityMin"
-              rules={[
-                {
-                  type: 'integer',
-                  min: 1,
-                  max: 2147483647,
-                  message: 'Use a positive whole number.',
-                },
-              ]}
-            >
-              <InputNumber
-                aria-label="Minimum capacity"
-                placeholder="Minimum"
-                min={1}
-                max={2147483647}
-              />
-            </Form.Item>
-            <span>–</span>
-            <Form.Item
-              name="capacityMax"
-              dependencies={['capacityMin']}
-              rules={[
-                {
-                  type: 'integer',
-                  min: 1,
-                  max: 2147483647,
-                  message: 'Use a positive whole number.',
-                },
-                {
-                  validator: (_, value: number | null | undefined) =>
-                    value != null &&
-                    form.getFieldValue('capacityMin') != null &&
-                    value < form.getFieldValue('capacityMin')
-                      ? Promise.reject(new Error('Maximum must be at least the minimum.'))
-                      : Promise.resolve(),
-                },
-              ]}
-            >
-              <InputNumber
-                aria-label="Maximum capacity"
-                placeholder="Maximum"
-                min={1}
-                max={2147483647}
-              />
-            </Form.Item>
-          </Space>
-        </div>
-      </div>
-      <Button htmlType="submit" type="primary">
-        Apply filters
+    <FilterDrawer label="Event filters" open={open} onClose={onClose}>
+      <TextField
+        label="Search title or code"
+        type="search"
+        value={search}
+        onChange={(event) => {
+          onSearchChange(event.target.value);
+        }}
+        slotProps={{ htmlInput: { maxLength: 200 } }}
+        helperText="The same search as the list toolbar. All filters combine."
+      />
+      <Autocomplete
+        multiple
+        options={eventStatuses}
+        value={eventStatuses.filter(({ value }) => state.statuses.includes(value))}
+        getOptionLabel={(option) => option.label}
+        onChange={(_, next) => {
+          onChange({ statuses: next.map(({ value }) => value) });
+        }}
+        renderInput={(params) => (
+          <TextField {...params} label="Status" placeholder="All statuses" />
+        )}
+      />
+      <Autocomplete
+        multiple
+        options={eventFormats}
+        value={eventFormats.filter(({ value }) => state.formats.includes(value))}
+        getOptionLabel={(option) => option.label}
+        onChange={(_, next) => {
+          onChange({ formats: next.map(({ value }) => value) });
+        }}
+        renderInput={(params) => <TextField {...params} label="Format" placeholder="All formats" />}
+      />
+      <RelationSelect
+        label="Venue"
+        resource={venuesResource(storeId)}
+        multiple
+        activeOnly={false}
+        value={state.venueIds}
+        onChange={(value) => {
+          onChange({ venueIds: Array.isArray(value) ? value : [] });
+        }}
+      />
+      <RelationSelect
+        label="Tag"
+        resource={tagsResource(storeId)}
+        multiple
+        activeOnly={false}
+        value={state.tagIds}
+        onChange={(value) => {
+          onChange({ tagIds: Array.isArray(value) ? value : [] });
+        }}
+      />
+      <TextField
+        select
+        label="Featured"
+        value={state.featured === undefined ? 'all' : String(state.featured)}
+        onChange={(event) => {
+          onChange({
+            featured: event.target.value === 'all' ? undefined : event.target.value === 'true',
+          });
+        }}
+      >
+        <MenuItem value="all">All events</MenuItem>
+        <MenuItem value="true">Featured</MenuItem>
+        <MenuItem value="false">Not featured</MenuItem>
+      </TextField>
+      <Typography variant="subtitle2">Start date (Europe/Sofia)</Typography>
+      <TextField
+        label="From date"
+        type="date"
+        value={draft.from}
+        onChange={(event) => {
+          changeRange('from', event.target.value);
+        }}
+        slotProps={{ inputLabel: { shrink: true } }}
+      />
+      <TextField
+        label="To date"
+        type="date"
+        value={draft.to}
+        onChange={(event) => {
+          changeRange('to', event.target.value);
+        }}
+        error={Boolean(errors.to)}
+        helperText={errors.to}
+        slotProps={{ inputLabel: { shrink: true } }}
+      />
+      <Typography variant="subtitle2">Capacity</Typography>
+      <TextField
+        label="Minimum capacity"
+        type="number"
+        value={draft.capacityMin}
+        onChange={(event) => {
+          changeRange('capacityMin', event.target.value);
+        }}
+        error={Boolean(errors.capacityMin)}
+        helperText={errors.capacityMin}
+        slotProps={{ htmlInput: { min: 1, max: 2147483647, step: 1 } }}
+      />
+      <TextField
+        label="Maximum capacity"
+        type="number"
+        value={draft.capacityMax}
+        onChange={(event) => {
+          changeRange('capacityMax', event.target.value);
+        }}
+        error={Boolean(errors.capacityMax)}
+        helperText={errors.capacityMax}
+        slotProps={{ htmlInput: { min: 1, max: 2147483647, step: 1 } }}
+      />
+      <Button color="neutral" variant="soft" onClick={onClear}>
+        Reset filters
       </Button>
-    </Form>
+    </FilterDrawer>
   );
 }

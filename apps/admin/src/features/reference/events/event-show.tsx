@@ -1,21 +1,25 @@
 import { useDelete, useOne } from '@refinedev/core';
 import {
   Alert,
-  Breadcrumb,
+  Box,
   Button,
-  Card,
-  Col,
-  Descriptions,
-  Modal,
-  Row,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  Link,
+  Paper,
   Skeleton,
-  Space,
+  Stack,
+  Tab,
   Tabs,
-  Tag,
   Typography,
-} from 'antd';
+} from '@mui/material';
+import { PageHeader } from '../../../components/page-header.js';
 import { useRef, useState } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router';
+import { useLocation, useNavigate, useParams } from 'react-router';
 import { eventsResource, type DataError } from '../../../data/data-provider.js';
 import type { ReferenceEventDetailsFragment } from '../../../generated/graphql/operations.js';
 import { eventFormats, eventLink, eventListReturn, eventStatuses } from './event-list-state.js';
@@ -109,292 +113,364 @@ export function EventShow({
       },
     );
   }
-  return (
-    <>
-      <Breadcrumb
-        className="page-breadcrumb"
-        items={[
-          { title: 'Reference' },
-          { title: <Link to={listPath}>Events</Link> },
-          { title: row?.title ?? 'Event' },
-        ]}
-      />
-      {event.query.isPending ? (
-        <Card>
-          <Skeleton active paragraph={{ rows: 6 }} />
-        </Card>
-      ) : event.query.isError || !row ? (
-        <Card>
-          <Alert
-            type="error"
-            showIcon
-            message={event.query.error?.message ?? 'Event unavailable'}
-            action={
-              <Button
-                onClick={() => {
-                  void event.query.refetch();
-                }}
-              >
-                Retry
-              </Button>
-            }
-          />
-          <Link to={listPath}>
-            <Button className="back-button">Back to events</Button>
-          </Link>
-        </Card>
-      ) : (
-        <>
-          <Card
-            className="page-header"
-            title={
-              <Space wrap>
-                <span>{row.title}</span>
-                <Tag color={row.status === 'PUBLISHED' ? 'green' : 'default'}>
-                  {eventStatuses.find(({ value }) => value === row.status)?.label}
-                </Tag>
-                {row.deletedAt && <Tag color="orange">In trash</Tag>}
-                {row.featured && <Tag color="blue">Featured</Tag>}
-              </Space>
-            }
-            extra={
-              row.deletedAt ? (
-                <Button type="primary" loading={pending} onClick={changeEvent}>
-                  Restore event
-                </Button>
-              ) : (
-                <Space wrap>
-                  <Link to={eventLink(resource, `${row.id}/edit`, listSearch)}>
-                    <Button type="primary">Edit event</Button>
-                  </Link>
+  const breadcrumbs = [
+    { label: 'Home', to: '/' },
+    { label: 'Reference' },
+    { label: 'Events', to: listPath },
+    { label: row?.title ?? 'Event' },
+  ];
+  if (event.query.isPending || event.query.isError || !row)
+    return (
+      <Stack sx={{ flex: 1 }}>
+        <PageHeader title="Event" breadcrumbs={breadcrumbs} />
+        <Paper sx={{ p: { xs: 3, md: 5 } }}>
+          {event.query.isPending ? (
+            <Skeleton variant="rounded" height={300} />
+          ) : (
+            <>
+              <Alert
+                severity="error"
+                action={
                   <Button
-                    onClick={changeEvent}
-                    loading={actions.mutation.isPending}
-                    disabled={pending}
-                    aria-label={row.status === 'PUBLISHED' ? 'Archive' : 'Publish'}
-                    aria-busy={pending}
-                  >
-                    {row.status === 'PUBLISHED' ? 'Archive' : 'Publish'}
-                  </Button>
-                  <Button
-                    danger
-                    disabled={pending}
                     onClick={() => {
-                      deletion.mutation.reset();
-                      setConfirm(true);
+                      void event.query.refetch();
                     }}
                   >
-                    Move to trash
+                    Retry
                   </Button>
-                </Space>
-              )
-            }
-          >
-            <Space wrap split={<span aria-hidden="true">·</span>} className="event-show-meta">
-              <Typography.Text type="secondary">{row.code}</Typography.Text>
-              <Typography.Text type="secondary">
-                {eventTime(row.startsAt).format('DD MMM YYYY, HH:mm')} (Sofia)
-              </Typography.Text>
-              <Typography.Text type="secondary">{row.venue?.name ?? 'Online'}</Typography.Text>
-              <Typography.Text type="secondary">
-                {eventFormats.find(({ value }) => value === row.format)?.label}
-              </Typography.Text>
-            </Space>
-            <Tabs
-              activeKey={tab}
-              items={[
-                { key: 'overview', label: 'Overview' },
-                { key: 'sessions', label: 'Sessions', disabled: Boolean(row.deletedAt) },
-                { key: 'history', label: 'History' },
-              ]}
-              onChange={(next) => {
-                const query = new URLSearchParams(search);
-                if (next === 'overview') query.delete('tab');
-                else query.set('tab', next);
-                void navigate({ search: query.toString() ? `?${query.toString()}` : '' });
-              }}
-            />
-          </Card>
+                }
+              >
+                {event.query.error?.message ?? 'Event unavailable'}
+              </Alert>
+              <Button
+                onClick={() => {
+                  void navigate(listPath);
+                }}
+                sx={{ mt: 2 }}
+              >
+                Back to events
+              </Button>
+            </>
+          )}
+        </Paper>
+      </Stack>
+    );
+  return (
+    <Stack sx={{ flex: 1, minWidth: 0 }}>
+      <PageHeader
+        title={row.title}
+        breadcrumbs={breadcrumbs}
+        action={
+          row.deletedAt ? (
+            <Button variant="contained" loading={pending} onClick={changeEvent}>
+              Restore event
+            </Button>
+          ) : (
+            <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap' }}>
+              <Button
+                variant="contained"
+                onClick={() => {
+                  void navigate(eventLink(resource, `${row.id}/edit`, listSearch));
+                }}
+              >
+                Edit event
+              </Button>
+              <Button
+                variant="soft"
+                color="neutral"
+                onClick={changeEvent}
+                loading={actions.mutation.isPending}
+                disabled={pending}
+                aria-label={row.status === 'PUBLISHED' ? 'Archive' : 'Publish'}
+                aria-busy={pending}
+              >
+                {row.status === 'PUBLISHED' ? 'Archive' : 'Publish'}
+              </Button>
+              <Button
+                color="error"
+                variant="soft"
+                disabled={pending}
+                onClick={() => {
+                  deletion.mutation.reset();
+                  setConfirm(true);
+                }}
+              >
+                Move to trash
+              </Button>
+            </Stack>
+          )
+        }
+      />
+      <Paper sx={{ px: { xs: 3, md: 5 }, pt: 3 }}>
+        <Stack direction="row" sx={{ gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+          <Chip
+            color={row.status === 'PUBLISHED' ? 'success' : 'neutral'}
+            label={eventStatuses.find(({ value }) => value === row.status)?.label}
+          />
+          {row.deletedAt && <Chip color="warning" label="In trash" />}
+          {row.featured && <Chip color="info" label="Featured" />}
+          <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>
+            {row.code} · {eventTime(row.startsAt).format('DD MMM YYYY, HH:mm')} (Sofia) ·{' '}
+            {row.venue?.name ?? 'Online'}
+          </Typography>
+        </Stack>
+        <Tabs
+          value={tab}
+          aria-label="Event details"
+          onChange={(_, next: string) => {
+            const query = new URLSearchParams(search);
+            if (next === 'overview') query.delete('tab');
+            else query.set('tab', next);
+            void navigate({ search: query.toString() ? `?${query.toString()}` : '' });
+          }}
+        >
+          <Tab value="overview" label="Overview" />
+          <Tab value="sessions" label="Sessions" disabled={Boolean(row.deletedAt)} />
+          <Tab value="history" label="History" />
+        </Tabs>
+      </Paper>
+      <Paper sx={{ p: { xs: 3, md: 5 }, outline: 0 }}>
+        <Stack sx={{ gap: 3 }}>
           {actions.mutation.isError && (
-            <Alert
-              className="form-error"
-              type="error"
-              showIcon
-              message={actions.mutation.error.message}
-            />
+            <Alert severity="error">{actions.mutation.error.message}</Alert>
           )}
           {row.deletedAt && (
-            <Alert
-              className="form-error"
-              type="info"
-              showIcon
-              message="This event is in Trash. Restore it to edit or access its sessions and gallery."
-            />
+            <Alert severity="info">
+              This event is in Trash. Restore it to edit or access its sessions and gallery.
+            </Alert>
           )}
           {tab === 'history' ? (
             <EventHistory storeId={storeId} eventId={row.id} />
           ) : tab === 'sessions' ? (
             <SessionList storeId={storeId} eventId={row.id} search={search} />
           ) : (
-            <Row gutter={[20, 20]}>
-              <Col xs={24} lg={15}>
-                <Card title="About this event" className="event-overview-card">
-                  <Typography.Paragraph
-                    className="event-summary"
-                    {...(row.summary ? {} : { type: 'secondary' })}
+            <Stack
+              direction={{ xs: 'column', lg: 'row' }}
+              sx={{ gap: 3, alignItems: 'flex-start' }}
+            >
+              <Stack sx={{ flex: 1, minWidth: 0, width: '100%', gap: 3 }}>
+                <Paper sx={{ outline: 0 }} component="section" aria-labelledby="event-about">
+                  <Typography
+                    id="event-about"
+                    variant="h6"
+                    component="h2"
+                    sx={{ mb: 3, px: 2, py: 1, borderRadius: 2, bgcolor: 'background.elevation2' }}
+                  >
+                    About this event
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color={row.summary ? 'text.primary' : 'text.secondary'}
+                    sx={{ whiteSpace: 'pre-wrap' }}
                   >
                     {row.summary ?? 'No summary added yet.'}
-                  </Typography.Paragraph>
+                  </Typography>
                   {row.descriptionHtml && (
-                    <div
-                      className="event-rich-content event-description"
+                    <Box
+                      className="event-rich-content"
                       aria-label="Event description"
+                      sx={{ my: 3, pt: 3, borderTop: 1, borderColor: 'divider' }}
                       dangerouslySetInnerHTML={{ __html: safeDescriptionHtml(row.descriptionHtml) }}
                     />
                   )}
-                  <Space wrap>
+                  <Stack
+                    direction="row"
+                    sx={{ gap: 1, flexWrap: 'wrap', mt: row.tags.length ? 3 : 0 }}
+                  >
                     {row.tags.map((tag) => (
-                      <Tag key={tag.id} color={tag.color}>
-                        {tag.name}
-                        {tag.active ? '' : ' (inactive)'}
-                      </Tag>
+                      <Chip
+                        key={tag.id}
+                        label={`${tag.name}${tag.active ? '' : ' (inactive)'}`}
+                        variant="outlined"
+                        icon={
+                          <Box
+                            component="span"
+                            sx={{
+                              bgcolor: tag.color,
+                              width: 10,
+                              height: 10,
+                              borderRadius: '50%',
+                              ml: 1.5,
+                            }}
+                          />
+                        }
+                      />
                     ))}
-                  </Space>
-                </Card>
-                {!row.deletedAt && (
-                  <Card className="event-overview-card">
-                    <EventGallery key={row.id} storeId={storeId} eventId={row.id} />
-                  </Card>
-                )}
-                <Card title="Schedule & location">
-                  <Descriptions
-                    column={1}
-                    items={[
-                      {
-                        key: 'start',
-                        label: 'Starts',
-                        children: `${eventTime(row.startsAt).format('DD MMM YYYY, HH:mm')} · Europe/Sofia`,
-                      },
-                      {
-                        key: 'end',
-                        label: 'Ends',
-                        children: `${eventTime(row.endsAt).format('DD MMM YYYY, HH:mm')} · Europe/Sofia`,
-                      },
-                      {
-                        key: 'registration',
-                        label: 'Registration',
-                        children:
-                          row.registrationOpensOn && row.registrationClosesOn
-                            ? `${row.registrationOpensOn} – ${row.registrationClosesOn}`
-                            : 'Not configured',
-                      },
-                      ...(row.venue
-                        ? [
-                            {
-                              key: 'venue',
-                              label: 'Venue',
-                              children: (
-                                <div>
-                                  <Typography.Text strong>{row.venue.name}</Typography.Text>
-                                  {!row.venue.active && <Tag>Inactive</Tag>}
-                                  <div>
-                                    {[row.venue.address, row.venue.city, row.venue.countryCode]
-                                      .filter(Boolean)
-                                      .join(', ')}
-                                  </div>
-                                </div>
-                              ),
-                            },
-                          ]
-                        : []),
-                      ...(row.meetingUrl
-                        ? [
-                            {
-                              key: 'meeting',
-                              label: 'Meeting link',
-                              children: (
-                                <Typography.Link
-                                  href={row.meetingUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  {row.meetingUrl}
-                                </Typography.Link>
-                              ),
-                            },
-                          ]
-                        : []),
-                    ]}
-                  />
-                </Card>
-              </Col>
-              <Col xs={24} lg={9}>
-                {!row.deletedAt && <EventSpeakers storeId={storeId} eventId={row.id} />}
-                <Card title="Event details">
-                  <Descriptions
-                    column={1}
-                    items={[
-                      { key: 'code', label: 'Code', children: row.code },
-                      {
-                        key: 'format',
-                        label: 'Format',
-                        children: eventFormats.find(({ value }) => value === row.format)?.label,
-                      },
-                      {
-                        key: 'capacity',
-                        label: 'Capacity',
-                        children: row.capacity?.toLocaleString() ?? 'Not set',
-                      },
-                      {
-                        key: 'budget',
-                        label: 'Budget',
-                        children: row.budget
+                  </Stack>
+                </Paper>
+                <Paper sx={{ outline: 0 }} component="section" aria-labelledby="event-schedule">
+                  <Typography
+                    id="event-schedule"
+                    variant="h6"
+                    component="h2"
+                    sx={{ mb: 3, px: 2, py: 1, borderRadius: 2, bgcolor: 'background.elevation2' }}
+                  >
+                    Schedule &amp; location
+                  </Typography>
+                  <Stack component="dl" sx={{ m: 0, gap: 2 }}>
+                    {[
+                      [
+                        'Starts',
+                        `${eventTime(row.startsAt).format('DD MMM YYYY, HH:mm')} · Europe/Sofia`,
+                      ],
+                      [
+                        'Ends',
+                        `${eventTime(row.endsAt).format('DD MMM YYYY, HH:mm')} · Europe/Sofia`,
+                      ],
+                      [
+                        'Registration',
+                        row.registrationOpensOn && row.registrationClosesOn
+                          ? `${row.registrationOpensOn} – ${row.registrationClosesOn}`
+                          : 'Not configured',
+                      ],
+                    ].map(([label, value]) => (
+                      <Box key={label}>
+                        <Typography component="dt" variant="caption" color="text.secondary">
+                          {label}
+                        </Typography>
+                        <Typography component="dd" variant="body2" sx={{ m: 0 }}>
+                          {value}
+                        </Typography>
+                      </Box>
+                    ))}
+                    {row.venue && (
+                      <Box>
+                        <Typography component="dt" variant="caption" color="text.secondary">
+                          Venue
+                        </Typography>
+                        <Box component="dd" sx={{ m: 0 }}>
+                          <Typography variant="subtitle2">
+                            {row.venue.name}
+                            {!row.venue.active && ' (inactive)'}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {[row.venue.address, row.venue.city, row.venue.countryCode]
+                              .filter(Boolean)
+                              .join(', ')}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    )}
+                    {row.meetingUrl && (
+                      <Box>
+                        <Typography component="dt" variant="caption" color="text.secondary">
+                          Meeting link
+                        </Typography>
+                        <Box component="dd" sx={{ m: 0, overflowWrap: 'anywhere' }}>
+                          <Link
+                            href={row.meetingUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            variant="body2"
+                          >
+                            {row.meetingUrl}
+                          </Link>
+                        </Box>
+                      </Box>
+                    )}
+                  </Stack>
+                </Paper>
+                {!row.deletedAt && <EventGallery storeId={storeId} eventId={row.id} />}
+              </Stack>
+              <Stack sx={{ width: { xs: '100%', lg: 340 }, flexShrink: 0, gap: 3 }}>
+                <Paper
+                  background={1}
+                  sx={{ p: { xs: 2, md: 3 }, borderRadius: 4, outline: 0 }}
+                  component="aside"
+                  aria-labelledby="event-record-details"
+                >
+                  <Typography id="event-record-details" variant="h6" component="h2" sx={{ mb: 3 }}>
+                    Event details
+                  </Typography>
+                  <Stack component="dl" divider={<Divider />} sx={{ m: 0, gap: 2 }}>
+                    {[
+                      ['Code', row.code],
+                      ['Format', eventFormats.find(({ value }) => value === row.format)?.label],
+                      ['Capacity', row.capacity?.toLocaleString() ?? 'Not set'],
+                      [
+                        'Budget',
+                        row.budget
                           ? `${Number(row.budget).toLocaleString('en-IE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EUR`
                           : 'Not set',
-                      },
-                      { key: 'featured', label: 'Featured', children: row.featured ? 'Yes' : 'No' },
-                      {
-                        key: 'created',
-                        label: 'Created',
-                        children: `${eventTime(row.createdAt).format('DD MMM YYYY, HH:mm')} (Sofia)`,
-                      },
-                      {
-                        key: 'updated',
-                        label: 'Updated',
-                        children: `${eventTime(row.updatedAt).format('DD MMM YYYY, HH:mm')} (Sofia)`,
-                      },
-                    ]}
-                  />
-                </Card>
-              </Col>
-            </Row>
+                      ],
+                      ['Featured', row.featured ? 'Yes' : 'No'],
+                      [
+                        'Created',
+                        `${eventTime(row.createdAt).format('DD MMM YYYY, HH:mm')} (Sofia)`,
+                      ],
+                      [
+                        'Updated',
+                        `${eventTime(row.updatedAt).format('DD MMM YYYY, HH:mm')} (Sofia)`,
+                      ],
+                    ].map(([label, value]) => (
+                      <Box key={label}>
+                        <Typography component="dt" variant="caption" color="text.secondary">
+                          {label}
+                        </Typography>
+                        <Typography
+                          component="dd"
+                          variant="body2"
+                          sx={{ m: 0, overflowWrap: 'anywhere' }}
+                        >
+                          {value}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Stack>
+                </Paper>
+                {!row.deletedAt && <EventSpeakers storeId={storeId} eventId={row.id} />}
+              </Stack>
+            </Stack>
           )}
-          <Link to={listPath}>
-            <Button className="back-button">Back to events</Button>
-          </Link>
-          <Modal
-            title="Move event to trash?"
-            open={confirm}
-            onCancel={() => {
-              if (!pending) setConfirm(false);
+          <Button
+            onClick={() => {
+              void navigate(listPath);
             }}
-            onOk={remove}
-            okText="Move to trash"
-            okButtonProps={{ danger: true }}
-            confirmLoading={deletion.mutation.isPending}
-            cancelButtonProps={{ disabled: pending }}
-            closable={!pending}
-            maskClosable={!pending}
+            sx={{ alignSelf: 'flex-start' }}
+            color="neutral"
           >
-            <Typography.Paragraph>
-              {row.title} will be removed from the active list.
-            </Typography.Paragraph>
-            {deletion.mutation.isError && (
-              <Alert type="error" showIcon message={deletion.mutation.error.message} />
-            )}
-          </Modal>
-        </>
-      )}
-    </>
+            Back to events
+          </Button>
+        </Stack>
+      </Paper>
+      <Dialog
+        open={confirm}
+        fullWidth
+        maxWidth="xs"
+        aria-labelledby="event-trash-title"
+        onClose={() => {
+          if (!submitting.current) setConfirm(false);
+        }}
+      >
+        <DialogTitle id="event-trash-title">Move event to trash?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            {row.title} will be removed from the active list.
+          </Typography>
+          {deletion.mutation.isError && (
+            <Alert severity="error">{deletion.mutation.error.message}</Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            color="neutral"
+            disabled={pending}
+            onClick={() => {
+              setConfirm(false);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            loading={deletion.mutation.isPending}
+            onClick={remove}
+          >
+            Move to trash
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Stack>
   );
 }

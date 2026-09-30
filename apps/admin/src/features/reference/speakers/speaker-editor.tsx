@@ -1,7 +1,8 @@
 import { useCreate, useOne, useUpdate } from '@refinedev/core';
-import { Alert, Breadcrumb, Button, Card, Skeleton, Tag, Typography } from 'antd';
+import { Alert, Box, Button, Skeleton, Stack } from '@mui/material';
+import { PageHeader } from '../../../components/page-header.js';
 import { useRef } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 
 import { speakersResource, type DataError } from '../../../data/data-provider.js';
 import type {
@@ -9,8 +10,8 @@ import type {
   GetReferenceSpeakerQuery,
   ReferenceSpeakerDetailsFragment,
 } from '../../../generated/graphql/operations.js';
-import { useUnsavedChanges } from '../use-unsaved-changes.js';
 import { SpeakerForm } from './speaker-form.js';
+import { useUnsavedChanges } from '../use-unsaved-changes.js';
 
 type SpeakerEditorProps = { storeId: string; onSaved: () => void };
 
@@ -61,74 +62,73 @@ export function SpeakerEditor({ storeId, onSaved }: SpeakerEditorProps) {
     else create.mutate({ resource, values }, callbacks);
   }
 
+  const header = (
+    <PageHeader
+      embedded
+      title={speakerId ? 'Edit speaker' : 'Create speaker'}
+      breadcrumbs={[
+        { label: 'Home', to: '/' },
+        { label: 'Reference' },
+        { label: 'Speakers', to: listPath },
+        { label: speakerId ? 'Edit speaker' : 'Create speaker' },
+      ]}
+    />
+  );
+
   return (
-    <>
+    <Stack sx={{ flex: 1, minWidth: 0 }}>
       {changes.dialog}
-      <Breadcrumb
-        className="page-breadcrumb"
-        items={[
-          { title: 'Reference' },
-          { title: <Link to={listPath}>Speakers</Link> },
-          { title: speakerId ? 'Edit speaker' : 'Create speaker' },
-        ]}
-      />
-      <Card
-        className="page-header"
-        title={speakerId ? 'Edit speaker' : 'Create speaker'}
-        extra={
-          speaker.result && (
-            <Tag color={speaker.result.active ? 'green' : 'default'}>
-              {speaker.result.active ? 'Active' : 'Inactive'}
-            </Tag>
-          )
-        }
-      >
-        <Typography.Text type="secondary">
-          {speaker.result ? speaker.result.name : 'Add a speaker to your directory.'}
-        </Typography.Text>
-      </Card>
-      <Card className="speaker-editor">
-        {speakerId && speaker.query.isPending ? (
-          <Skeleton active paragraph={{ rows: 5 }} />
-        ) : speakerId && speaker.query.isError ? (
-          <Alert
-            type="error"
-            showIcon
-            message={speaker.query.error.message}
-            action={
-              <Button
-                onClick={() => {
-                  void speaker.query.refetch();
-                }}
-              >
-                Retry
-              </Button>
-            }
-          />
-        ) : (
-          <SpeakerForm
-            key={speakerId ?? 'create'}
-            initialValues={speakerId ? speaker.result : undefined}
-            onChange={changes.changed}
-            pending={pending}
-            error={create.mutation.error ?? update.mutation.error}
-            onSubmit={save}
-            onCancel={() => {
-              void navigate(listPath);
-            }}
-          />
-        )}
-        {speakerId && speaker.query.isError && (
-          <Button
-            className="back-button"
-            onClick={() => {
-              void navigate(listPath);
-            }}
-          >
-            Back to speakers
-          </Button>
-        )}
-      </Card>
-    </>
+      {speakerId && (speaker.query.isPending || speaker.query.isError) && (
+        <Box sx={{ p: { xs: 3, md: 5 } }}>{header}</Box>
+      )}
+      {speakerId && speaker.query.isPending ? (
+        <Box sx={{ p: 5 }}>
+          <Skeleton height={60} />
+          <Skeleton height={200} />
+        </Box>
+      ) : speakerId && speaker.query.isError ? (
+        <Alert
+          severity="error"
+          sx={{ m: 3 }}
+          action={
+            <Button
+              onClick={() => {
+                void speaker.query.refetch();
+              }}
+            >
+              Retry
+            </Button>
+          }
+        >
+          {speaker.query.error.message}
+        </Alert>
+      ) : (
+        <SpeakerForm
+          header={header}
+          initialValues={speakerId ? speaker.result : undefined}
+          pending={pending}
+          error={create.mutation.error ?? update.mutation.error}
+          onChange={() => {
+            changes.changed();
+            create.mutation.reset();
+            update.mutation.reset();
+          }}
+          onSubmit={save}
+          onCancel={() => {
+            void navigate(listPath);
+          }}
+        />
+      )}
+      {speakerId && speaker.query.isError && (
+        <Button
+          sx={{ m: 3, alignSelf: 'flex-start' }}
+          onClick={() => {
+            void navigate(listPath);
+          }}
+        >
+          Back to speakers
+        </Button>
+      )}
+    </Stack>
   );
 }

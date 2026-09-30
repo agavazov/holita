@@ -433,6 +433,93 @@ describe('Event, Speaker and Tag GraphQL with PostgreSQL', () => {
       ),
     ).toHaveProperty('data.deleteReferenceSpeaker.id');
   });
+  it.each(['Speaker', 'Tag'])(
+    'sorts %s lookups before pagination with stable ties and scoped filters',
+    async (entity) => {
+      const storeId = randomUUID();
+      const [low, middle, high] = [randomUUID(), randomUUID(), randomUUID()].sort();
+      if (!low || !middle || !high) throw new Error('Missing fixture IDs');
+      const rows = [
+        { id: low, storeId, name: 'Order Alpha', active: true, createdAt: new Date('2026-01-01') },
+        {
+          id: middle,
+          storeId,
+          name: 'Order Beta',
+          active: false,
+          createdAt: new Date('2026-01-01'),
+        },
+        { id: high, storeId, name: 'Order Gamma', active: true, createdAt: new Date('2026-01-02') },
+        {
+          id: randomUUID(),
+          storeId,
+          name: 'Other',
+          active: true,
+          createdAt: new Date('2026-01-03'),
+        },
+        {
+          id: randomUUID(),
+          storeId: randomUUID(),
+          name: 'Order Foreign',
+          active: true,
+          createdAt: new Date('2026-01-03'),
+        },
+      ];
+      if (entity === 'Speaker') {
+        await database.client.speaker.createMany({
+          data: rows.map((row, index) => ({
+            ...row,
+            email: ['z@example.com', 'a@example.com'][index] ?? null,
+          })),
+        });
+      } else {
+        await database.client.tag.createMany({
+          data: rows.map((row, index) => ({ ...row, color: index === 1 ? '#111111' : '#bbbbbb' })),
+        });
+      }
+      const fieldName = `reference${entity}s`;
+      const source = `query($sort:Reference${entity}Sort,$active:Boolean,$ids:[ID!],$offset:Int!=0,$limit:Int!=20){${fieldName}(search:"order",active:$active,ids:$ids,sort:$sort,offset:$offset,limit:$limit){items{id}total}}`;
+      const orderings = [
+        { field: 'NAME', asc: [low, middle, high], desc: [high, middle, low] },
+        { field: 'ACTIVE', asc: [high, low, middle], desc: [middle, high, low] },
+        { field: 'CREATED_AT', asc: [middle, low, high], desc: [high, middle, low] },
+        entity === 'Speaker'
+          ? { field: 'EMAIL', asc: [middle, low, high], desc: [low, middle, high] }
+          : { field: 'COLOR', asc: [middle, high, low], desc: [high, low, middle] },
+      ];
+      for (const { field, asc, desc } of orderings) {
+        for (const [direction, expected] of [
+          ['ASC', asc],
+          ['DESC', desc],
+        ] as const) {
+          expect(await query(source, { sort: { field, direction } }, storeId)).toEqual({
+            data: { [fieldName]: { items: expected.map((id) => ({ id })), total: 3 } },
+          });
+          expect(
+            await query(source, { sort: { field, direction }, offset: 1, limit: 1 }, storeId),
+          ).toEqual({ data: { [fieldName]: { items: [{ id: expected[1] }], total: 3 } } });
+        }
+      }
+      expect(await query(source, {}, storeId)).toEqual({
+        data: { [fieldName]: { items: [high, middle, low].map((id) => ({ id })), total: 3 } },
+      });
+      expect(
+        await query(source, { sort: { field: 'NAME', direction: 'ASC' }, active: false }, storeId),
+      ).toEqual({ data: { [fieldName]: { items: [{ id: middle }], total: 1 } } });
+      expect(
+        await query(source, { sort: { field: 'NAME', direction: 'ASC' }, ids: [high] }, storeId),
+      ).toEqual({ data: { [fieldName]: { items: [{ id: high }], total: 1 } } });
+      for (const sort of [
+        { field: 'STORE_ID' },
+        { field: 'NAME', direction: 'SIDEWAYS' },
+        { field: null },
+      ]) {
+        expect(await query(source, { sort }, storeId)).toMatchObject({
+          errors: [{ extensions: { code: 'BAD_USER_INPUT' } }],
+        });
+      }
+      expect(requireStore).not.toHaveBeenCalled();
+    },
+  );
   it('inserts missing demonstration fixtures without overwriting edited rows', async () => {
     await seedReference(database.client);
     const speaker = speakerSeeds[0],

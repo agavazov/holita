@@ -43,8 +43,8 @@ function respond(call: GraphQLCall) {
 }
 async function selectRow(user: ReturnType<typeof userEvent.setup>) {
   const link = await screen.findByRole('link', { name: 'Sofia forum' });
-  const row = link.closest('tr');
-  if (!row) throw new Error('Missing event row');
+  const row = link.closest('[role="row"]');
+  if (!(row instanceof HTMLElement)) throw new Error('Missing event row');
   await user.click(within(row).getByRole('checkbox'));
 }
 describe('Event lifecycle', () => {
@@ -194,13 +194,11 @@ describe('Event lifecycle', () => {
     const { user } = mount(`${list}/${event().id}?tab=history`);
     await screen.findByText('Event updated');
     expect(screen.queryByRole('button', { name: 'Edit event' })).not.toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Sessions' })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('tab', { name: 'Sessions' })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: 'Expand row' }));
     expect(screen.getByText('<script>alert(1)</script>')).toBeInTheDocument();
     expect(document.querySelector('script')).toBeNull();
-    await user.click(
-      screen.getByTitle('Next Page').querySelector('button') ?? screen.getByTitle('Next Page'),
-    );
+    await user.click(screen.getByRole('button', { name: 'Next page' }));
     await waitFor(() => {
       expect(
         transport.calls.filter((call) => call.operation === 'ListReferenceEventHistory').at(-1)
@@ -217,9 +215,6 @@ describe('Event lifecycle', () => {
     ).toEqual({ id: event().id, includeDeleted: true });
     await user.click(screen.getByRole('button', { name: 'Restore event' }));
     await screen.findByRole('button', { name: 'Edit event' });
-    expect(screen.getByRole('tab', { name: 'Sessions' })).not.toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
+    expect(screen.getByRole('tab', { name: 'Sessions' })).toBeEnabled();
   });
 });

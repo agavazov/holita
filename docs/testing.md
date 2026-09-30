@@ -9,7 +9,7 @@ dispatcher.
 Admin test files run one at a time because Nx already parallelizes project tasks.
 Text-entry scenarios use normal clipboard events where per-keystroke behavior is not under
 test, reducing DOM work. Admin cases have a bounded 30-second budget for multi-step
-Ant Design/Refine workflows sharing CPU with backend and DB checks. Assertion waits,
+Refine workflows sharing CPU with backend and DB checks. Assertion waits,
 file isolation and failure reporting remain unchanged; tests do not retry on failure.
 Nx test targets use its standard run-commands executor so quoted case names retain their
 argument boundaries. Other application tasks are inferred from their package scripts.
@@ -41,6 +41,7 @@ boundaries. Its results do not substitute for the real DB and federation files b
 
 ```bash
 npm run test:admin -- product-form.test.tsx
+npm run test:admin -- product-list.test.tsx
 npm run test:admin -- data-provider.test.ts
 npm run test:admin -- store-workspace.test.tsx
 npm run test:admin -- store-workspace.test.tsx --testNamePattern="captures a pending create" --skip-nx-cache
@@ -52,13 +53,14 @@ Use Vitest's long --testNamePattern option through Nx; its short -t conflicts wi
 own target option and does not reach the test runner.
 Provider tests execute the actual official GraphQL provider with generated documents and
 controlled HTTP responses. Store-workspace tests render the actual application, router,
-Refine hooks/cache, the Aurora/MUI shell and Ant Design feature controls. They cover selection, pagination, retry/empty
+Refine hooks/cache and Aurora/MUI controls for all store and feature states.
+They cover store loading/error/retry/empty results, selection, pagination, product retry/empty
 states, unavailable stores, cached switches, delayed reads and pending create/update/delete.
 They also verify that navigation between editors within one store isolates mutation state.
 The HTTP boundary is controlled; these are not proof of real backend persistence.
 Vitest inlines the Refine GraphQL/router ESM packages so their imports are resolved by Vite
-as in the browser. jsdom supplies no layout engine; setup shims matchMedia and omits the
-unsupported getComputedStyle pseudo-element argument. Real browser checks are separate.
+as in the browser. jsdom supplies no layout engine; setup shims matchMedia. Real browser
+checks are separate.
 
 Without a file, `test:core`, `test:products`, `test:gateway`, `test:reference` and `test:admin` intentionally
 select only that application's current unit/bootstrap suite. Database suites have
@@ -110,7 +112,8 @@ npm run test:gateway:db -- federation.db.spec.mts
 Stores tests use real Nest GraphQL and PostgreSQL for lookup/list/reference behavior.
 Products tests use the real GraphQL module, service and repository against PostgreSQL;
 only the core-client boundary is replaced. They cover CRUD, trimming/defaults, conflicts,
-pagination, missing/malformed context, foreign IDs, entity representations and masked errors.
+pagination, sorting in both directions with stable ties, invalid sort inputs, missing/malformed
+context, foreign IDs, entity representations and masked errors.
 Unicode boundary values are persisted and NUL input is rejected without writes.
 
 Gateway's noncached DB target builds the four backends and runs the fixture in
@@ -140,24 +143,40 @@ all databases using the commands above; no development database is used by these
 
 ```bash
 npm run test:reference -- health.spec.ts
-npm run test:reference -- venues.service.spec.ts events.service.spec.ts description-html.spec.ts test-database-url.unit.spec.ts
+npm run test:reference -- venues.service.spec.ts speakers.service.spec.ts tags.service.spec.ts events.service.spec.ts description-html.spec.ts test-database-url.unit.spec.ts
 npm run test:reference:db -- persistence.db.spec.ts venues.db.spec.ts events.db.spec.ts lifecycle.db.spec.ts sessions.db.spec.ts media.db.spec.ts
-npm run test:admin -- venue-form.test.tsx reference-workspace.test.tsx event-workspace.test.tsx event-description.test.tsx event-list.test.tsx event-lifecycle.test.tsx event-time.test.ts session-workspace.test.tsx event-gallery.test.tsx data-provider.test.ts
+npm run test:admin -- venue-form.test.tsx venue-list.test.tsx lookup-forms.test.tsx reference-workspace.test.tsx event-workspace.test.tsx event-description.test.tsx event-list.test.tsx event-lifecycle.test.tsx event-time.test.ts session-workspace.test.tsx event-gallery.test.tsx data-provider.test.ts
 npm run test:gateway:db -- federation.db.spec.mts
 npm run test:smoke -- reference.smoke.spec.mts events.smoke.spec.mts lifecycle.smoke.spec.mts sessions.smoke.spec.mts rich-text.smoke.spec.mts media.smoke.spec.mts
 npm run test:smoke -- reference-layout.smoke.spec.mts reference-disabled.smoke.spec.mts
 npm run test:smoke -- aurora-shell.smoke.spec.mts
+npm run test:smoke -- products-aurora.smoke.spec.mts
+npm run test:smoke -- venues-aurora.smoke.spec.mts lookups-aurora.smoke.spec.mts
 ```
 
-Venue unit tests cover validation and no-write decisions; DB tests cover migrated defaults,
+Venue unit tests cover validation, filter/sort mapping and no-write decisions; DB tests cover migrated defaults,
 repeatable seeds, concurrent schema isolation, role access boundaries, scoped CRUD,
-nullable updates, pagination and federation representations. Federation tests additionally
+nullable updates, sorting across pages with stable ties and nulls last, literal search,
+referenced-delete refusal and federation representations. Venue Aurora browser cases cover
+shared quick/panel filters, URL sorting/history, partial batch failures and desktop/mobile
+list/filter/form composition. Review captures under ignored `artifacts/aurora/venues` are
+temporary outputs. Venue form/list component cases cover validation/focus, pending controls,
+filter resets and delayed initial counts; Reference workspace cases cover partial deletion
+retry and stopping the unsent batch on navigation. Speaker/Tag form cases cover optional-field
+normalization, color input, Unicode limits, server-error focus and pending controls; workspace
+cases preserve drafts after a late create across store or editor route changes. Speaker/Tag
+service and Event DB cases cover lookup sorting, stable ties, null email last, combined filters
+and store boundaries. Gateway cases exercise the new sort inputs through real federation.
+`lookups-aurora.smoke.spec.mts` covers list filters/pages, referenced batch failures and
+desktop/mobile editor composition; its temporary captures use `artifacts/aurora/lookups`.
+The supporting-forms case in `events.smoke.spec.mts` covers persisted CRUD and duplicate tags.
+Federation tests additionally
 exercise the real core dependency, concurrent headers, disabled operations/entity lookups,
 continued Products availability, health and preservation of data after re-enabling Reference.
 The disabled browser file sets the existing fixture's `referenceEnabled` option to false,
 starting Reference with disabled business operations and serving the admin with hidden
 navigation. It verifies direct-route blocking without Reference requests, GraphQL refusal,
-Products creation and mobile navigation. The layout file exercises wrapped form tabs at
+Products creation and mobile navigation. The layout file exercises scrollable form tabs at
 320 px, keyboard tab selection, dirty-state feedback, drawer navigation with discard/keep
 editing, and the return to desktop navigation. Gallery and History component cases verify
 failure/retry states without incorrectly reporting an empty result.
@@ -168,6 +187,20 @@ and open menus at the reference viewport sizes and rejects external asset reques
 It also checks open-search positioning, text and focus across 899/900 px, drawer transitions
 at 1199/1200 px, and unsaved Event input while using example menus, search and store switching.
 Screenshots support visual review; assertions check behavior, not full-page pixel identity.
+Products Aurora browser cases verify filtering and sorting across server pages, URL persistence,
+sort direction indicators, default-order restoration, browser history,
+shared quick/panel search and clearing combined filters,
+selection reset, confirmed batch deletion, menus, the sticky form aside and narrow layouts.
+They use the guarded test fixture and save temporary review captures under Git-ignored
+`artifacts/aurora/products`. These are generated outputs, not visual snapshot baselines.
+Delete captures and their metadata after visual acceptance; rerunning the browser cases
+recreates the integration captures when needed.
+Product, lookup and Event list component cases cover discarding pending search on browser
+Back when another filter changed. Product-list cases also cover committing pending text with an immediate status change
+and canceling pending text on Clear filters, plus a bookmarked second page with a delayed
+initial total. Store-workspace cases cover partial batch failures, retrying only
+failed records and abandoning the unsent remainder during navigation. Product DB and
+federation cases verify combined filters, sorting before pagination, scoped counts and literal search punctuation.
 Event DB cases exercise exact money/date round trips, nullable/omitted updates, invalid
 schedules, format clearing, scoped/inactive relations, compound foreign-key refusal, retained
 soft-deleted records/codes, bounded remote lookup with literal punctuation and supporting
@@ -204,8 +237,10 @@ reorder membership and rollback after an intermediate position write fails. Conc
 requests verify the 100-session limit and Event date changes racing with child creation.
 Gateway cases cover parent scope, nested Speaker-to-Store federation, schedule field errors,
 reorder conflicts and disabled Session operations. Program component tests cover failed
-order drafts, cancel/refetch, dirty tab navigation, inactive selections and pending saves
-across store/parent navigation. The Session browser case uses a non-Sofia browser timezone
+order drafts, cancel/refetch, dirty tab navigation, inactive selections, unchanged repeated-hour
+Sofia offsets and pending saves across store/parent navigation. Event form values and Session
+editor cases preserve seconds and milliseconds on unrelated edits, including records shorter
+than one minute. The Session browser case uses a non-Sofia browser timezone
 and verifies CRUD, speakers, drag/move/save/cancel, persistence, parent schedule rejection
 and desktop/mobile layouts through the real gateway.
 
@@ -219,7 +254,8 @@ the ephemeral Reference URL and admin CORS origin. No test uses development medi
 Federation checks verify direct uploads bypass observed GraphQL transport, refreshed reads
 and the disabled flag across GraphQL and HTTP. Gallery component cases cover failed order
 preservation, dirty navigation, separate field saves and late store-scoped cover mutations.
-The gallery browser cases verify upload, preview, alt text, cover, ordering/cancel, removal,
+The gallery browser cases verify native-file upload, dialog preview/keyboard image navigation,
+alt text, cover, ordering/cancel, removal,
 reload, mobile layout and upload cancellation on a store switch through the real services.
 
 The browser fixture starts Reference as well as the other backends. Reference browser
@@ -230,9 +266,11 @@ history navigation, pending store-scoped creation and supporting Speaker/Tag for
 case exercises combined filters, sorting, column preferences, reload, Edit/save/Back, quick
 status updates, store reset and desktop/mobile layout against real gateway responses.
 Component checks cover the hidden direct route, form sections, generated provider mapping,
-exact time conversions, field errors, dirty navigation, selected inactive labels, and late
+exact time conversions (including untouched repeated-hour offsets and invalid DST times),
+nullable form fields, field errors, dirty navigation, selected inactive labels, and late
 list/search responses. List components also cover bookmarked query mapping, per-store column
-preferences, reset behavior, empty/error/retry states and late overview mutations. Calendar
+preferences, shared quick/drawer search, automatic filtering, invalid range drafts, cancelled
+text debounce on reset, empty/error/retry states and late overview mutations. Calendar
 filter tests cover Sofia days with both 23 and 25 hours. Run the existing Products browser/store-workspace files when changing
 the shared navigation, provider or request lifecycle.
 
@@ -260,6 +298,10 @@ The scenarios cover CRUD and same-SKU rules in both stores, a delayed real produ
 response, a pending real creation while switching to another store's unsaved form,
 and browser history navigation between editors in the same store during a pending write.
 Only response delivery is delayed by the latter scenarios; backend requests execute normally.
+The store-discovery browser case aborts the initial store request, retries against the real
+gateway and switches from an unavailable URL to an available store. It also supplies an empty
+store response at the HTTP boundary to verify that distinct state. Discovery captures include
+the dark mobile layout; controlled failure/empty responses do not prove backend behavior.
 Browser screenshots/traces use ignored test-results/browser. These tests do not verify a
 fresh dependency install or CI execution. Chromium is the configured browser; Firefox and
 WebKit are outside this target. The manually invoked test:full also includes test:smoke.

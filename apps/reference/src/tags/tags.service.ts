@@ -37,7 +37,13 @@ export class TagsService {
   ): Promise<Omit<ReferenceTagPage, 'items'> & { items: TagResult[] }> {
     const storeId = uuid(context.storeId, 'x-store-id');
     const { offset, limit } = pagination(args);
-    return this.tags.list(storeId, offset, limit, lookup(args));
+    const field: unknown = args.sort?.field ?? 'CREATED_AT';
+    const direction: unknown = args.sort?.direction ?? 'DESC';
+    if (field !== 'NAME' && field !== 'COLOR' && field !== 'ACTIVE' && field !== 'CREATED_AT')
+      invalid('sort.field', 'Choose a supported tag sort field.');
+    if (direction !== 'ASC' && direction !== 'DESC')
+      invalid('sort.direction', 'Choose ASC or DESC.');
+    return this.tags.list(storeId, offset, limit, lookup(args), { field, direction });
   }
   async find(context: RequestContext, id: string): Promise<TagResult> {
     const row = await this.tags.find(uuid(context.storeId, 'x-store-id'), uuid(id, 'id'));

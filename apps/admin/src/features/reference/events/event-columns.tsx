@@ -1,7 +1,8 @@
-import { Tag, Typography, type TableColumnsType } from 'antd';
-import { Link } from 'react-router';
+import { Chip, Link, Stack, Typography } from '@mui/material';
+import type { GridColDef } from '@mui/x-data-grid';
+import { Link as RouterLink } from 'react-router';
 import type { ReferenceEventListItemFragment } from '../../../generated/graphql/operations.js';
-import { eventLink, eventFormats, eventStatuses, type EventListState } from './event-list-state.js';
+import { eventLink, eventFormats, eventStatuses } from './event-list-state.js';
 import { eventTime } from './event-time.js';
 
 export const eventColumnChoices = [
@@ -29,113 +30,105 @@ export function readEventColumns(key: string): string[] {
   }
   return defaultEventColumns;
 }
-export function eventColumns({
-  resource,
-  search,
-  state,
-  visible,
-}: {
-  resource: string;
-  search: string;
-  state: EventListState;
-  visible: string[];
-}): TableColumnsType<ReferenceEventListItemFragment> {
-  const sort = (field: string) => ({
-    sorter: true,
-    sortOrder:
-      state.sort === field
-        ? state.order === 'asc'
-          ? ('ascend' as const)
-          : ('descend' as const)
-        : null,
-  });
-  const columns: TableColumnsType<ReferenceEventListItemFragment> = [
+export function eventColumns(
+  resource: string,
+  search: string,
+): GridColDef<ReferenceEventListItemFragment>[] {
+  return [
     {
-      title: 'Event',
-      key: 'title',
-      dataIndex: 'title',
-      width: 270,
-      ...sort('title'),
-      render: (_: unknown, event) => (
-        <div>
-          <Link to={eventLink(resource, event.id, search)}>{event.title}</Link>
-          <div>
-            <Typography.Text type="secondary">{event.code}</Typography.Text>
-          </div>
-        </div>
+      field: 'title',
+      headerName: 'Event',
+      flex: 2,
+      minWidth: 240,
+      renderCell: ({ row, tabIndex }) => (
+        <Stack sx={{ justifyContent: 'center', height: '100%', minWidth: 0 }}>
+          <Link
+            component={RouterLink}
+            to={eventLink(resource, `${row.id}${row.deletedAt ? '' : '/edit'}`, search)}
+            tabIndex={tabIndex}
+            variant="subtitle2"
+            sx={{ color: 'text.primary', fontWeight: 400 }}
+            noWrap
+          >
+            {row.title}
+          </Link>
+          <Typography variant="caption" color="text.secondary" noWrap>
+            {row.code}
+          </Typography>
+        </Stack>
       ),
     },
     {
-      title: 'Start (Sofia)',
-      key: 'startsAt',
-      dataIndex: 'startsAt',
-      width: 190,
-      ...sort('startsAt'),
-      render: (value: string) => eventTime(value).format('DD MMM YYYY, HH:mm'),
+      field: 'startsAt',
+      headerName: 'Start (Sofia)',
+      minWidth: 190,
+      flex: 1,
+      renderCell: ({ row }) => eventTime(row.startsAt).format('DD MMM YYYY, HH:mm'),
     },
     {
-      title: 'Venue',
-      key: 'venue',
-      width: 180,
-      render: (_: unknown, event) =>
-        event.venue?.name ?? (event.format === 'ONLINE' ? 'Online' : '—'),
+      field: 'venue',
+      headerName: 'Venue',
+      minWidth: 180,
+      flex: 1,
+      sortable: false,
+      renderCell: ({ row }) => row.venue?.name ?? (row.format === 'ONLINE' ? 'Online' : '—'),
     },
     {
-      title: 'Status',
-      key: 'status',
-      dataIndex: 'status',
-      ...sort('status'),
-      render: (value: string) => (
-        <Tag color={value === 'PUBLISHED' ? 'green' : 'default'}>
-          {eventStatuses.find((status) => status.value === value)?.label}
-        </Tag>
+      field: 'status',
+      headerName: 'Status',
+      minWidth: 120,
+      flex: 1,
+      renderCell: ({ row }) => (
+        <Chip
+          color={row.status === 'PUBLISHED' ? 'success' : 'neutral'}
+          label={eventStatuses.find(({ value }) => value === row.status)?.label}
+        />
       ),
     },
     {
-      title: 'Format',
-      key: 'format',
-      dataIndex: 'format',
-      render: (value: string) => eventFormats.find((format) => format.value === value)?.label,
+      field: 'format',
+      headerName: 'Format',
+      minWidth: 130,
+      sortable: false,
+      renderCell: ({ row }) => eventFormats.find(({ value }) => value === row.format)?.label,
     },
     {
-      title: 'Capacity',
-      key: 'capacity',
-      dataIndex: 'capacity',
-      ...sort('capacity'),
-      render: (value: number | null) => value?.toLocaleString() ?? '—',
+      field: 'capacity',
+      headerName: 'Capacity',
+      minWidth: 130,
+      renderCell: ({ row }) => row.capacity?.toLocaleString() ?? '—',
     },
     {
-      title: 'Budget (EUR)',
-      key: 'budget',
-      dataIndex: 'budget',
-      ...sort('budget'),
-      render: (value: string | null) =>
-        value
-          ? Number(value).toLocaleString('en-IE', {
+      field: 'budget',
+      headerName: 'Budget (EUR)',
+      minWidth: 160,
+      renderCell: ({ row }) =>
+        row.budget
+          ? Number(row.budget).toLocaleString('en-IE', {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })
           : '—',
     },
     {
-      title: 'Featured',
-      key: 'featured',
-      dataIndex: 'featured',
-      render: (value: boolean) => (value ? 'Yes' : 'No'),
+      field: 'featured',
+      headerName: 'Featured',
+      minWidth: 120,
+      sortable: false,
+      renderCell: ({ row }) => (row.featured ? 'Yes' : 'No'),
     },
     {
-      title: 'Created (Sofia)',
-      key: 'createdAt',
-      dataIndex: 'createdAt',
-      ...sort('createdAt'),
-      render: (value: string) => eventTime(value).format('DD MMM YYYY, HH:mm'),
+      field: 'createdAt',
+      headerName: 'Created (Sofia)',
+      minWidth: 190,
+      renderCell: ({ row }) => eventTime(row.createdAt).format('DD MMM YYYY, HH:mm'),
     },
     {
-      title: 'Updated (Sofia)',
-      key: 'updatedAt',
-      dataIndex: 'updatedAt',
-      render: (value: string) => eventTime(value).format('DD MMM YYYY, HH:mm'),
+      field: 'updatedAt',
+      headerName: 'Updated (Sofia)',
+      minWidth: 190,
+      sortable: false,
+      renderCell: ({ row }) => eventTime(row.updatedAt).format('DD MMM YYYY, HH:mm'),
     },
   ];
-  return columns.filter((column) => column.key === 'title' || visible.includes(String(column.key)));
 }

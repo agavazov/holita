@@ -7,7 +7,7 @@ packages or cross-application code imports.
 
 | Application | Framework                       | Current entry points                                                                 |
 | ----------- | ------------------------------- | ------------------------------------------------------------------------------------ |
-| admin       | React, Vite, Refine, Aurora/MUI, Ant Design | Stores, Products and Reference Events/Venues/Speakers/Tags at http://127.0.0.1:11081 |
+| admin       | React, Vite, Refine, Aurora/MUI | Stores, Products and Reference Events/Venues/Speakers/Tags at http://127.0.0.1:11081 |
 | gateway     | NestJS, Apollo Gateway          | /graphql and /health on 127.0.0.1:11080                                              |
 | core        | NestJS, Federation 2            | /graphql (stores) and /health on 127.0.0.1:11082                                     |
 | products    | NestJS, Federation 2            | /graphql (products) and /health on 127.0.0.1:11083                                   |
@@ -17,7 +17,9 @@ Core owns store listing/lookup; products owns Products CRUD; reference owns Even
 repositories access their own PrismaService, whose client connects lazily and disconnects
 on shutdown. Health endpoints stay independent of databases and downstream availability.
 Admin uses one Refine GraphQL data provider with generated named operation documents,
-store-scoped resources, an Aurora/MUI shell and existing Ant Design feature controls.
+store-scoped resources, an Aurora/MUI shell and Products/Venues/Speakers/Tags/Events screens.
+Session forms, the ordered program, Gallery, speaker summaries and History also use Aurora/MUI.
+Store discovery, loading/error/empty states and unavailable stores use the same Aurora theme.
 
 ```mermaid
 flowchart LR
@@ -121,15 +123,24 @@ Operation validation and Codegen are offline. The gateway loads the static super
 it does not introspect running subgraphs, poll a registry or validate every store.
 See [the schema-first decision](decisions/0003-schema-first-federation.md).
 
-| Operation                | Behavior                                                                                      |
-| ------------------------ | --------------------------------------------------------------------------------------------- |
-| stores                   | List all stores by name, then ID ascending; no selected store required                        |
-| store(id)                | Lookup a UUID; unknown returns null, malformed returns BAD_USER_INPUT                         |
-| products(offset, limit)  | Store-scoped items and total; defaults 0/20, limit 1..100; order createdAt then ID descending |
-| product(id)              | Return the selected store's product or NOT_FOUND                                              |
-| createProduct(input)     | Trim/validate name and SKU, default DRAFT; verify store via core before inserting             |
-| updateProduct(id, input) | Update at least one supplied field; null values are invalid; no core existence call           |
-| deleteProduct(id)        | Delete and return the selected store's product; no core existence call                        |
+| Operation                                          | Behavior                                                                                                |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| stores                                             | List all stores by name, then ID ascending; no selected store required                                  |
+| store(id)                                          | Lookup a UUID; unknown returns null, malformed returns BAD_USER_INPUT                                   |
+| products(offset, limit, search, sku, status, sort) | Store-scoped, filtered items and total; defaults 0/20, limit 1..100; order createdAt then ID descending |
+| product(id)                                        | Return the selected store's product or NOT_FOUND                                                        |
+| createProduct(input)                               | Trim/validate name and SKU, default DRAFT; verify store via core before inserting                       |
+| updateProduct(id, input)                           | Update at least one supplied field; null values are invalid; no core existence call                     |
+| deleteProduct(id)                                  | Delete and return the selected store's product; no core existence call                                  |
+
+Product list search matches name or SKU case-insensitively; the separate SKU filter combines
+with search and Draft/Active status before pagination and counting. Search accepts up to 200
+trimmed Unicode code points and SKU up to 100. Empty filters are omitted. `%`, `_` and `\`
+are literal search characters; filters never remove the compulsory store predicate.
+`ProductSort` accepts CREATED_AT, NAME, SKU or STATUS and ASC/DESC. The default remains
+CREATED_AT/DESC. Sorting precedes pagination; ID descending breaks ties in either direction.
+Status ascending orders Active before Draft, matching the displayed labels rather than the
+PostgreSQL enum declaration order. Name and SKU use the database text ordering.
 
 Name is 1..200 Unicode code points after trimming; SKU is 1..100 and case-sensitive.
 NUL characters are rejected before store validation or persistence. These limits match
@@ -189,17 +200,17 @@ Local search filters enabled navigation entries; notification read/remove state,
 selection and the example profile are presentation data. They have no API or authentication
 provider. Appearance and desktop collapse preferences use holita-prefixed localStorage keys.
 Required icons, avatars and the Plus Jakarta Sans font are served locally; menu use does
-not fetch external assets. Example avatars live in `apps/admin/public/temp/avatar`,
+not fetch external assets. Example avatars live in `apps/admin/public/images/tmp/avatar`,
 separate from permanent assets. The font's OFL license accompanies the font file.
 
-Existing Ant Design pages remain under ConfigProvider/AntApp and the light `legacy-content`
-surface. Ant Design popup z-index starts at 1400 so legacy dialogs remain above the MUI
-shell. Page forms, tables, data providers and notification lifetimes are unchanged.
-Shell styling has replaced the old header/sidebar CSS; feature CSS remains with its owner.
-Emotion uses a shared CSSOM cache (`speedy: true`) in development and production. Grouping
-rules in stylesheets avoids thousands of individual development style elements, which
-Ant Design's style insertion would otherwise repeatedly scan. Components and styles are
-the same in browser and jsdom tests; no layout or data behavior is mocked for this purpose.
+All admin surfaces use Aurora/MUI, including store discovery and disabled Reference notices.
+Store discovery retains separate loading, error/retry, successful empty and unavailable-route
+states; none mounts CRUD before a valid store is selected. The discovery page reuses PageHeader
+and themed store buttons. Products and all Reference workflows follow the selected preset.
+MUI ThemeProvider/CssBaseline and the standard Emotion cache own styling and resets. Ant Design,
+its providers/reset stylesheet and the temporary CSS/cache integration layer are removed.
+The remaining application CSS belongs to rendered rich Event descriptions. Components and
+styles are the same in the browser and jsdom tests.
 
 [The data provider](../../apps/admin/src/data/data-provider.ts) adapts the official Refine
 GraphQL provider's variables and response mappers to our generated documents. Components
@@ -226,10 +237,35 @@ complete on the server after navigation; changing stores does not cancel or reta
 [ProductForm](../../apps/admin/src/features/products/product-form.tsx) is shared by create
 and edit, with matching trimmed name/SKU limits, Draft/Active status, pending controls and
 server errors. Products and Reference use the same provider and store lifecycle.
-CRUD notifications use Ant Design's store-scoped hook directly, separately from the shell's
-example bell panel. Refine's automatic notifications
+Products and Reference notifications use store-scoped MUI Snackbars. Both are separate from the shell's example bell panel. Refine's automatic notifications
 are disabled on these hooks; no unused global notification adapter is registered.
-See [the admin skill](../../.agents/skills/holita-admin-feature/SKILL.md).
+Products reuses Aurora's Invoice PageHeader/PageBreadcrumb, Member DataGrid and filter
+drawer, and Create Event form/aside composition. The Community MUI X Data Grid supplies
+selection, single-column server sorting and bounded server pagination; Aurora overrides preserve its table styling.
+The list has name/SKU search, status tabs and an advanced Search/Status/SKU filter panel.
+Quick search and panel search share the same state; Clear filters resets all three filters. Filters,
+sorting (`sort`/`order`) and pagination live in route queries; changing any of them clears
+page-local row selection. Name, SKU and Status headers cycle ascending/descending/default;
+changing sorting resets pagination and preserves filters. A single list-query update path
+commits text drafts with immediate filter/sort changes and cancels pending text updates.
+Programmatic resets do not schedule a new search. The grid uses an unknown row count until
+the first successful list response and retains the last known total during later requests;
+an initial loading state must not reset a bookmarked page to the first page.
+Text filters debounce for 300 ms, and status changes apply immediately. Row links/cells
+open the editor; the three-dot menu provides Edit and Delete.
+
+Batch deletion uses sequential existing Refine useDelete calls, each carrying the captured
+resource. Confirmation names the selected count; successful deletions stay deleted and
+failed records remain available for retry. This is not an atomic batch API. Navigation
+unmounts the callbacks and stops unsent deletions; the current request may still finish.
+Products' right form panel is sticky on desktop and follows the fields on mobile. It holds
+status, a live name/SKU summary and Save/Cancel controls. No demo fields, authentication,
+new form library or generic CRUD framework is introduced.
+
+The [CRUD reference index](../reference.md#products-the-aurora-crud-reference) maps shared
+header/grid/pagination presentation to feature-owned filters, forms and mutations. The grid
+theme includes keyboard focus styling; unused built-in filter/column-panel customization
+is excluded. See [the admin skill](../../.agents/skills/holita-admin-feature/SKILL.md).
 
 ## Reference Event Management
 
@@ -248,9 +284,17 @@ Search is case-insensitive and treats punctuation such as `%` and `_` literally.
 lookup includes inactive records when active is
 omitted and still applies store scoping. The admin fetches choices in pages of 20 and
 resolves current selections separately; it never preloads an entire relation table.
-Venue, Speaker and Tag pages share the small `LookupList` component for pagination, table
-actions and delete confirmation. Their columns, forms and generated API mappings stay in
-their feature folders.
+Venue, Speaker and Tag pages share the Aurora `LookupList` and `LookupFilters`, bounded to
+these Reference supporting entities. The list owns URL-backed name/status filters, server
+sorting/pagination, page-local selection and sequential deletion with per-record failures.
+Concrete list adapters supply columns, a scoped resource and deletion guidance; forms,
+editors, providers and services stay concrete. Venue sorting accepts Name, City, Country,
+Capacity, Active and CreatedAt; Speaker accepts Name, Email, Active and CreatedAt; Tag accepts
+Name, Color, Active and CreatedAt. Sorting runs before pagination with an ID descending
+tie-breaker; null capacity/email stays last in either direction. Active sorts by the displayed
+Active/Inactive labels. All providers preserve the selected-ID lookups used by relations.
+Products and these three Reference modules share PageHeader, FilterDrawer, RecordActions,
+EditorAside and the grid theme/pagination. Products keeps its own list and data state.
 
 Venue name (200), city (120), and two-letter countryCode are required; countryCode normalizes
 to uppercase. Description (2000), address (300) and positive integer capacity are nullable.
@@ -295,7 +339,7 @@ content becomes null. Sanitized output must also fit 100 KiB so it can be edited
 Creation and update store only the sanitized result, atomically with other Event fields
 and Tag changes; omission preserves it and null clears it.
 
-The admin uses a constrained Tiptap editor inside the ordinary Ant Design form, with no
+The admin uses a constrained Tiptap editor with MUI controls inside the Event form, with no
 separate save or storage format. DOMPurify restricts pasted HTML and HTML rendered in the
 Overview to the same permitted formats, providing a browser boundary in addition to server
 validation. Initial content is sanitized once per editor mount; external replacements and
@@ -430,7 +474,10 @@ schema. Session creation checks the existing scoped parent, without another Core
 
 The Event header has Overview, Sessions (`tab=sessions`) and History tabs. Session forms use
 `/events/:eventId/sessions/create` and `/events/:eventId/sessions/:id/edit` and return to the
-Sessions tab after saving. Their Refine resource includes both store and Event IDs, so
+Sessions tab after saving. The Aurora form uses a sticky desktop event/summary aside and
+native date/time inputs sharing the Event Sofia converter; untouched repeated-hour offsets
+are preserved. The program uses rounded Aurora sections with the shared row menu and native
+drag/move controls. Their Refine resource includes both store and Event IDs, so
 requests, cache and invalidation retain both scopes. The program supports dragging and
 keyboard-accessible move buttons. A draft order stays local until Save order; failed saves
 retain it, and Cancel order reloads the server order. Add/edit/delete are disabled during
@@ -448,16 +495,22 @@ at startup/build time. It is not authorization and cannot override the backend g
 The admin routes are `/stores/:storeId/reference/{events,venues,speakers,tags}`, with
 `/create` and `/:id/edit`; Events also have a `/:id` overview. Each concrete resource captures the store in requests, cache
 keys and mutation invalidation. The Reference subtree is keyed by store and its routes by
-pathname. Page headers contain context and applicable form tabs, with blue primary and red
+pathname. Page headers contain context and applicable form tabs, with themed primary and red
 destructive actions. Event fields are organized into General, Schedule & location, and
-Content; one save validates all tabs and preserves failed input. A server error opens the
+Content & media; one save validates all tabs and preserves failed input. A server error opens the
 matching tab and focuses the first recognized field. Unknown error paths do not change the selected tab.
-Venue retains General/Location tabs; Speaker and Tag use compact forms. Event creation
+The Event aside holds status, featured, capacity, exact budget, summary and save/cancel. Native
+date/time inputs use the existing Sofia conversion and preserve untouched repeated-hour offsets.
+Venue uses visible details/location sections and a sticky desktop aside for status, capacity
+and summary, stacked below the fields on mobile. It displays server field errors and focuses
+the first recognized field without resetting local drafts. Speaker and Tag use the same
+Aurora form composition and responsive status/summary aside with concrete validation.
+Tag color is editable as HEX or through the native color input, with no additional library. Event creation
 opens the saved Event editor; subsequent Event saves return to its overview. Supporting
 saves return to their list.
 
 The admin initializes a React Router data router so Reference editors can use its standard
-navigation blocker. Dirty ordinary fields prompt on Cancel, menu links, store switching and
+navigation blocker with a shared MUI confirmation dialog. Dirty ordinary fields prompt on Cancel, menu links, store switching and
 history navigation. Reload/close uses the browser's native beforeunload warning. Tabs stay
 within the form. Submitted writes do not block navigation and keep their original scope;
 late callbacks cannot replace another mounted editor. Failed saves retain dirty state.
@@ -479,6 +532,10 @@ with 20 as default. Start-date filters represent inclusive calendar days in Euro
 the admin converts these to `startsAtFrom` inclusive and `startsAtBefore` exclusive UTC
 instants, including days shortened/lengthened by daylight saving changes.
 
+The Aurora DataGrid uses server pagination/sorting and the shared responsive FilterDrawer.
+Title/code search shares one 300 ms draft between toolbar and drawer. Other filters apply on
+change; invalid date/capacity ranges remain local until corrected. Active row clicks open Edit;
+View in the three-dot menu opens the overview, as do read-only trash rows.
 Search, filters, Active/Trash view, sort, page and size are URL query parameters. Event links carry the list query
 in `list`, interpreted only within the current store's Event list. Reload and browser history
 restore the view; Show, Edit and Back retain this address. Store switching starts a default list.
