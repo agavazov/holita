@@ -2,6 +2,7 @@ import type {
   CreateReferenceEventInput,
   ReferenceEventDetailsFragment,
 } from '../../../generated/graphql/operations.js';
+import { textError } from '../text-validation.js';
 import { descriptionBytes, descriptionMaxBytes } from './description-html.js';
 import { dayjs, eventInputInstant, eventTime } from './event-time.js';
 
@@ -27,11 +28,7 @@ export function eventDraft(row?: ReferenceEventDetailsFragment) {
 }
 export type EventDraft = ReturnType<typeof eventDraft>;
 export type EventField = keyof EventDraft;
-function textError(value: string, max: number, required = '') {
-  if (!value.trim()) return required;
-  if (value.includes('\u0000')) return 'Remove unsupported characters.';
-  return Array.from(value.trim()).length > max ? `Use at most ${String(max)} characters.` : '';
-}
+
 export function validateEventDraft(values: EventDraft, original?: ReferenceEventDetailsFragment) {
   const errors: Record<EventField, string> = {
     title: textError(values.title, 200, 'Enter a title of up to 200 characters.'),

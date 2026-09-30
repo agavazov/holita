@@ -1,13 +1,5 @@
 import { type CSSProperties } from 'react';
 import type {} from '@mui/material/themeCssVarsAugmentation';
-import { type ThemePreset } from './config.js';
-
-export type PaletteColorKey =
-  'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error' | 'neutral';
-
-export type DeepPartial<T> = {
-  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
-};
 
 declare module '@mui/material/styles' {
   interface Color {
@@ -129,24 +121,7 @@ declare module '@mui/material/styles' {
     shadows: string[];
   }
 
-  interface Theme {
-    holitaPreset?: ThemePreset;
-    holitaCssVarPrefix?: string;
-  }
-
   interface TypographyVariantsOptions {
     fontWeightSemiBold?: CSSProperties['fontWeight'];
   }
 }
-
-export type PaletteThemeOptions = {
-  readonly primary: string;
-  readonly secondary: string;
-  readonly error: string;
-  readonly warning: string;
-  readonly success: string;
-  readonly info: string;
-  readonly neutral: string;
-  readonly paper: string;
-  readonly textPrimary: string;
-};

@@ -14,6 +14,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { EditorAside } from '../../../components/editor-aside.js';
 import type { DataError } from '../../../data/data-provider.js';
 import type { CreateReferenceVenueInput } from '../../../generated/graphql/operations.js';
+import { textError } from '../text-validation.js';
 
 type VenueFormProps = {
   header?: ReactNode;
@@ -24,12 +25,6 @@ type VenueFormProps = {
   onCancel: () => void;
   onChange: () => void;
 };
-
-function textError(value: string, max: number, requiredMessage = '') {
-  if (!value.trim()) return requiredMessage;
-  if (value.includes('\u0000')) return 'Remove unsupported characters.';
-  return Array.from(value.trim()).length > max ? `Use at most ${String(max)} characters.` : '';
-}
 
 export function VenueForm({
   header,
