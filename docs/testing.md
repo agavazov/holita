@@ -196,7 +196,14 @@ They use the guarded test fixture and save temporary review captures under Git-i
 Delete captures and their metadata after visual acceptance; rerunning the browser cases
 recreates the integration captures when needed.
 Product, lookup and Event list component cases cover discarding pending search on browser
-Back when another filter changed. Product-list cases also cover committing pending text with an immediate status change
+Back when another filter changed. Event list cases also restore invalid date/capacity drafts
+on Back/Forward when the destination changes only another filter.
+The focused Event range-draft browser case repeats that navigation with native date and number inputs.
+[Background refresh cases](../apps/admin/src/features/background-refresh.test.tsx) use the real
+Refine cache to verify preserved Product, Reference and Session drafts through failed reads,
+failed retries and recovery, including store discovery and the Session parent Event.
+They also preserve unsaved session ordering across a failed Event overview refresh.
+Product-list cases also cover committing pending text with an immediate status change
 and canceling pending text on Clear filters, plus a bookmarked second page with a delayed
 initial total. Store-workspace cases cover partial batch failures, retrying only
 failed records and abandoning the unsent remainder during navigation. Product DB and
@@ -261,6 +268,10 @@ reload, mobile layout and upload cancellation on a store switch through the real
 The browser fixture starts Reference as well as the other backends. Reference browser
 checks cover create/edit/delete, both stores, reload persistence, narrow form layout,
 delayed reads, pending creates during store switches and same-store editor navigation.
+The delayed-module case verifies that Products does not load the Reference UI, then holds
+its first module request while switching stores and opening a Product draft. Releasing the
+module must preserve the active editor, and subsequent Reference reads use the current store.
+Disabled Reference routes also verify that the Reference workspace module is never requested.
 Event browser cases cover all sections, remote relations, format-dependent fields, dirty
 history navigation, pending store-scoped creation and supporting Speaker/Tag forms. The list/overview
 case exercises combined filters, sorting, column preferences, reload, Edit/save/Back, quick
@@ -297,7 +308,10 @@ fixture into development databases. Cleanup closes Vite, backend processes and t
 The scenarios cover CRUD and same-SKU rules in both stores, a delayed real product
 response, a pending real creation while switching to another store's unsaved form,
 and browser history navigation between editors in the same store during a pending write.
-Only response delivery is delayed by the latter scenarios; backend requests execute normally.
+The background-refresh case fails Product and store reads after a browser reconnect,
+then retries and saves the preserved draft through the real gateway.
+The delayed-response and pending-write scenarios delay only response delivery;
+backend requests execute normally.
 The store-discovery browser case aborts the initial store request, retries against the real
 gateway and switches from an unavailable URL to an available store. It also supplies an empty
 store response at the HTTP boundary to verify that distinct state. Discovery captures include

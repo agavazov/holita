@@ -22,6 +22,40 @@ function operation(request: Request, name: string) {
   );
 }
 
+test('background refresh failures preserve a product draft through retry', async ({
+  page,
+  app,
+}) => {
+  let failingOperation: string | undefined;
+  await page.route(app.gatewayUrl, async (route) => {
+    if (failingOperation && operation(route.request(), failingOperation)) {
+      await route.fulfill({ json: { errors: [{ message: 'Refresh temporarily unavailable.' }] } });
+    } else {
+      await route.continue();
+    }
+  });
+  await page.goto(`${app.url}/stores/${storeA}/products/20000000-0000-4000-8000-000000000001/edit`);
+  const name = page.getByLabel('Name', { exact: true });
+  await expect(name).toHaveValue('Sofia notebook');
+  await name.fill('Preserved notebook draft');
+  for (const query of ['GetProduct', 'ListStores']) {
+    failingOperation = query;
+    await page.evaluate(() => window.dispatchEvent(new Event('offline')));
+    await page.evaluate(() => window.dispatchEvent(new Event('online')));
+    const warning = page.getByRole('alert');
+    await expect(warning).toContainText('Refresh temporarily unavailable.');
+    await expect(name).toHaveValue('Preserved notebook draft');
+    failingOperation = undefined;
+    await warning.getByRole('button', { name: 'Retry' }).click();
+    await expect(warning).toHaveCount(0);
+    await expect(name).toHaveValue('Preserved notebook draft');
+  }
+  await page.getByRole('button', { name: 'Save product' }).click();
+  await expect(
+    page.getByRole('link', { name: 'Preserved notebook draft', exact: true }),
+  ).toBeVisible();
+});
+
 test('store discovery recovers from gateway failure and handles empty and unavailable stores in dark mobile layout', async ({
   page,
   app,

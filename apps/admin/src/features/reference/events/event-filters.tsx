@@ -39,6 +39,7 @@ function rangeErrors(value: RangeFields) {
 export function EventFilters({
   storeId,
   state,
+  locationKey,
   search,
   open,
   onClose,
@@ -48,6 +49,7 @@ export function EventFilters({
 }: {
   storeId: string;
   state: EventListState;
+  locationKey: string;
   search: string;
   open: boolean;
   onClose: () => void;
@@ -56,7 +58,7 @@ export function EventFilters({
   onClear: () => void;
 }) {
   const [draft, setDraft] = useState(() => ranges(state));
-  const rangeKey = JSON.stringify(ranges(state));
+  const rangeKey = JSON.stringify([locationKey, ranges(state)]);
   const [lastRange, setLastRange] = useState(rangeKey);
   if (rangeKey !== lastRange) {
     setLastRange(rangeKey);

@@ -1,6 +1,7 @@
 import { useCreate, useOne, useUpdate } from '@refinedev/core';
 import { Alert, Button, Paper, Skeleton, Typography } from '@mui/material';
 import { PageHeader } from '../../../components/page-header.js';
+import { QueryRefreshWarning } from '../../../components/query-refresh-warning.js';
 import { useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { eventsResource, sessionsResource, type DataError } from '../../../data/data-provider.js';
@@ -95,7 +96,17 @@ export function SessionEditor({
   return (
     <>
       {changes.dialog}
-      {failure || !event.result || (sessionId && !session.result) ? (
+      {failure && event.result && (!sessionId || session.result) && (
+        <QueryRefreshWarning
+          message={failure.message}
+          refreshing={event.query.isFetching || (Boolean(sessionId) && session.query.isFetching)}
+          onRetry={() => {
+            void event.query.refetch();
+            if (sessionId) void session.query.refetch();
+          }}
+        />
+      )}
+      {!event.result || (sessionId && !session.result) ? (
         <Paper sx={{ p: { xs: 3, md: 5 }, flex: 1 }}>
           {header}
           {failure ? (

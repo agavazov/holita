@@ -1,6 +1,7 @@
 import { useCreate, useOne, useUpdate } from '@refinedev/core';
 import { Alert, Box, Button, Skeleton, Stack } from '@mui/material';
 import { PageHeader } from '../../../components/page-header.js';
+import { QueryRefreshWarning } from '../../../components/query-refresh-warning.js';
 import { useRef } from 'react';
 import { useNavigate, useParams } from 'react-router';
 
@@ -74,7 +75,16 @@ export function VenueEditor({ storeId, onSaved }: VenueEditorProps) {
   return (
     <Stack sx={{ flex: 1, minWidth: 0 }}>
       {changes.dialog}
-      {venueId && (venue.query.isPending || venue.query.isError) && (
+      {venueId && venue.query.isRefetchError && (
+        <QueryRefreshWarning
+          message={venue.query.error.message}
+          refreshing={venue.query.isFetching}
+          onRetry={() => {
+            void venue.query.refetch();
+          }}
+        />
+      )}
+      {venueId && (venue.query.isPending || venue.query.isLoadingError) && (
         <Box sx={{ p: { xs: 3, md: 5 } }}>{header}</Box>
       )}
       {venueId && venue.query.isPending ? (
@@ -82,7 +92,7 @@ export function VenueEditor({ storeId, onSaved }: VenueEditorProps) {
           <Skeleton height={60} />
           <Skeleton height={200} />
         </Box>
-      ) : venueId && venue.query.isError ? (
+      ) : venueId && venue.query.isLoadingError ? (
         <Alert
           severity="error"
           sx={{ m: 3 }}
@@ -115,7 +125,7 @@ export function VenueEditor({ storeId, onSaved }: VenueEditorProps) {
           }}
         />
       )}
-      {venueId && venue.query.isError && (
+      {venueId && venue.query.isLoadingError && (
         <Button
           sx={{ m: 3, alignSelf: 'flex-start' }}
           onClick={() => {

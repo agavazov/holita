@@ -22,7 +22,11 @@ for (const [label, routes] of [
 ] as const) {
   test(`disabled Reference blocks ${label} routes and API calls`, async ({ page, app }) => {
     const referenceRequests: string[] = [];
+    const moduleRequests: string[] = [];
     page.on('request', (request) => {
+      if (new URL(request.url()).pathname === '/src/features/reference/reference-workspace.tsx') {
+        moduleRequests.push(request.url());
+      }
       if (request.url() !== app.gatewayUrl || request.method() !== 'POST') return;
       const body: unknown = request.postDataJSON();
       if (
@@ -40,6 +44,7 @@ for (const [label, routes] of [
       await expect(page.getByRole('menuitem', { name: 'Venues', exact: true })).toHaveCount(0);
     }
     expect(referenceRequests).toEqual([]);
+    expect(moduleRequests).toEqual([]);
     const response = await page.request.post(app.gatewayUrl, {
       headers: { 'x-store-id': storeId },
       data: { query: '{ referenceVenues { total } }' },

@@ -1,6 +1,7 @@
 import { useCreate, useOne, useUpdate } from '@refinedev/core';
 import { Alert, Box, Button, Skeleton, Stack } from '@mui/material';
 import { PageHeader } from '../../components/page-header.js';
+import { QueryRefreshWarning } from '../../components/query-refresh-warning.js';
 import { useRef } from 'react';
 import { useNavigate, useParams } from 'react-router';
 
@@ -68,7 +69,16 @@ export function ProductEditor({ storeId, onSaved }: ProductEditorProps) {
 
   return (
     <Stack sx={{ flex: 1, minWidth: 0 }}>
-      {productId && (product.query.isPending || product.query.isError) && (
+      {productId && product.query.isRefetchError && (
+        <QueryRefreshWarning
+          message={product.query.error.message}
+          refreshing={product.query.isFetching}
+          onRetry={() => {
+            void product.query.refetch();
+          }}
+        />
+      )}
+      {productId && (product.query.isPending || product.query.isLoadingError) && (
         <Box sx={{ p: { xs: 3, md: 5 } }}>{header}</Box>
       )}
       {productId && product.query.isPending ? (
@@ -76,7 +86,7 @@ export function ProductEditor({ storeId, onSaved }: ProductEditorProps) {
           <Skeleton height={60} />
           <Skeleton height={200} />
         </Box>
-      ) : productId && product.query.isError ? (
+      ) : productId && product.query.isLoadingError ? (
         <Alert
           severity="error"
           sx={{ m: 3 }}
@@ -104,7 +114,7 @@ export function ProductEditor({ storeId, onSaved }: ProductEditorProps) {
           }}
         />
       )}
-      {productId && product.query.isError && (
+      {productId && product.query.isLoadingError && (
         <Button
           sx={{ m: 3, alignSelf: 'flex-start' }}
           onClick={() => {

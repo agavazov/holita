@@ -18,6 +18,7 @@ import {
   Typography,
 } from '@mui/material';
 import { PageHeader } from '../../../components/page-header.js';
+import { QueryRefreshWarning } from '../../../components/query-refresh-warning.js';
 import { useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import { eventsResource, type DataError } from '../../../data/data-provider.js';
@@ -119,7 +120,7 @@ export function EventShow({
     { label: 'Events', to: listPath },
     { label: row?.title ?? 'Event' },
   ];
-  if (event.query.isPending || event.query.isError || !row)
+  if (!row)
     return (
       <Stack sx={{ flex: 1 }}>
         <PageHeader title="Event" breadcrumbs={breadcrumbs} />
@@ -157,6 +158,15 @@ export function EventShow({
     );
   return (
     <Stack sx={{ flex: 1, minWidth: 0 }}>
+      {event.query.isRefetchError && (
+        <QueryRefreshWarning
+          message={event.query.error.message}
+          refreshing={event.query.isFetching}
+          onRetry={() => {
+            void event.query.refetch();
+          }}
+        />
+      )}
       <PageHeader
         title={row.title}
         breadcrumbs={breadcrumbs}

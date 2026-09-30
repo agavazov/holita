@@ -262,6 +262,7 @@ export function EventList({
         key={filterReset}
         storeId={storeId}
         state={state}
+        locationKey={locationKey}
         search={text}
         open={filterOpen}
         onClose={() => {

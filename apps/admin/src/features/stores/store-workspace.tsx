@@ -8,7 +8,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useList } from '@refinedev/core';
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router';
 
@@ -17,8 +17,13 @@ import type { ListStoresQuery } from '../../generated/graphql/operations.js';
 import { AdminLayout } from '../../layout/admin-layout.js';
 import { ProductEditor } from '../products/product-editor.js';
 import { ProductList } from '../products/product-list.js';
-import { ReferenceWorkspace } from '../reference/reference-workspace.js';
 import { PageHeader } from '../../components/page-header.js';
+import { QueryRefreshWarning } from '../../components/query-refresh-warning.js';
+
+const ReferenceWorkspace = lazy(async () => {
+  const module = await import('../reference/reference-workspace.js');
+  return { default: module.ReferenceWorkspace };
+});
 
 function StoreProducts({ storeId }: { storeId: string }) {
   const [notice, setNotice] = useState('');
@@ -158,6 +163,15 @@ export function StoreWorkspace({ referenceEnabled = true }: { referenceEnabled?:
         if (currentStore) void navigate(`/stores/${currentStore.id}/${nextSection}`);
       }}
     >
+      {stores.query.isRefetchError && (
+        <QueryRefreshWarning
+          message={stores.query.error.message}
+          refreshing={stores.query.isFetching}
+          onRetry={() => {
+            void stores.query.refetch();
+          }}
+        />
+      )}
       {stores.query.isPending ? (
         <Paper sx={{ p: { xs: 3, md: 5 }, flex: 1 }}>
           <Typography role="status" sx={{ mb: 3 }}>
@@ -165,7 +179,7 @@ export function StoreWorkspace({ referenceEnabled = true }: { referenceEnabled?:
           </Typography>
           <Skeleton variant="rounded" height={160} />
         </Paper>
-      ) : stores.query.isError ? (
+      ) : stores.query.isLoadingError ? (
         <Paper sx={{ p: { xs: 3, md: 5 }, flex: 1 }}>
           <Alert
             severity="error"
@@ -190,11 +204,22 @@ export function StoreWorkspace({ referenceEnabled = true }: { referenceEnabled?:
         <>
           {isReference ? (
             referenceEnabled ? (
-              <ReferenceWorkspace
-                key={currentStore.id}
-                storeId={currentStore.id}
-                storeName={currentStore.name}
-              />
+              <Suspense
+                fallback={
+                  <Paper sx={{ p: { xs: 3, md: 5 }, flex: 1 }}>
+                    <Typography role="status" sx={{ mb: 3 }}>
+                      Loading Reference…
+                    </Typography>
+                    <Skeleton variant="rounded" height={300} />
+                  </Paper>
+                }
+              >
+                <ReferenceWorkspace
+                  key={currentStore.id}
+                  storeId={currentStore.id}
+                  storeName={currentStore.name}
+                />
+              </Suspense>
             ) : (
               <Paper sx={{ p: { xs: 3, md: 5 }, flex: 1 }}>
                 <Alert severity="info">Reference is disabled.</Alert>

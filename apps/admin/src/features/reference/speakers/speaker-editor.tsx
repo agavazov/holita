@@ -1,6 +1,7 @@
 import { useCreate, useOne, useUpdate } from '@refinedev/core';
 import { Alert, Box, Button, Skeleton, Stack } from '@mui/material';
 import { PageHeader } from '../../../components/page-header.js';
+import { QueryRefreshWarning } from '../../../components/query-refresh-warning.js';
 import { useRef } from 'react';
 import { useNavigate, useParams } from 'react-router';
 
@@ -78,7 +79,16 @@ export function SpeakerEditor({ storeId, onSaved }: SpeakerEditorProps) {
   return (
     <Stack sx={{ flex: 1, minWidth: 0 }}>
       {changes.dialog}
-      {speakerId && (speaker.query.isPending || speaker.query.isError) && (
+      {speakerId && speaker.query.isRefetchError && (
+        <QueryRefreshWarning
+          message={speaker.query.error.message}
+          refreshing={speaker.query.isFetching}
+          onRetry={() => {
+            void speaker.query.refetch();
+          }}
+        />
+      )}
+      {speakerId && (speaker.query.isPending || speaker.query.isLoadingError) && (
         <Box sx={{ p: { xs: 3, md: 5 } }}>{header}</Box>
       )}
       {speakerId && speaker.query.isPending ? (
@@ -86,7 +96,7 @@ export function SpeakerEditor({ storeId, onSaved }: SpeakerEditorProps) {
           <Skeleton height={60} />
           <Skeleton height={200} />
         </Box>
-      ) : speakerId && speaker.query.isError ? (
+      ) : speakerId && speaker.query.isLoadingError ? (
         <Alert
           severity="error"
           sx={{ m: 3 }}
@@ -119,7 +129,7 @@ export function SpeakerEditor({ storeId, onSaved }: SpeakerEditorProps) {
           }}
         />
       )}
-      {speakerId && speaker.query.isError && (
+      {speakerId && speaker.query.isLoadingError && (
         <Button
           sx={{ m: 3, alignSelf: 'flex-start' }}
           onClick={() => {

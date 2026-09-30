@@ -1,6 +1,7 @@
 import { useCreate, useOne, useUpdate } from '@refinedev/core';
 import { Alert, Box, Button, Skeleton, Stack } from '@mui/material';
 import { PageHeader } from '../../../components/page-header.js';
+import { QueryRefreshWarning } from '../../../components/query-refresh-warning.js';
 import { useRef } from 'react';
 import { useNavigate, useParams } from 'react-router';
 
@@ -74,7 +75,16 @@ export function TagEditor({ storeId, onSaved }: TagEditorProps) {
   return (
     <Stack sx={{ flex: 1, minWidth: 0 }}>
       {changes.dialog}
-      {tagId && (tag.query.isPending || tag.query.isError) && (
+      {tagId && tag.query.isRefetchError && (
+        <QueryRefreshWarning
+          message={tag.query.error.message}
+          refreshing={tag.query.isFetching}
+          onRetry={() => {
+            void tag.query.refetch();
+          }}
+        />
+      )}
+      {tagId && (tag.query.isPending || tag.query.isLoadingError) && (
         <Box sx={{ p: { xs: 3, md: 5 } }}>{header}</Box>
       )}
       {tagId && tag.query.isPending ? (
@@ -82,7 +92,7 @@ export function TagEditor({ storeId, onSaved }: TagEditorProps) {
           <Skeleton height={60} />
           <Skeleton height={200} />
         </Box>
-      ) : tagId && tag.query.isError ? (
+      ) : tagId && tag.query.isLoadingError ? (
         <Alert
           severity="error"
           sx={{ m: 3 }}
@@ -115,7 +125,7 @@ export function TagEditor({ storeId, onSaved }: TagEditorProps) {
           }}
         />
       )}
-      {tagId && tag.query.isError && (
+      {tagId && tag.query.isLoadingError && (
         <Button
           sx={{ m: 3, alignSelf: 'flex-start' }}
           onClick={() => {

@@ -231,6 +231,38 @@ test('a pending Event create retains its original store and cannot redirect a ne
   }
 });
 
+test('Event range drafts follow Back and Forward when another filter changes', async ({
+  page,
+  app,
+}) => {
+  const original = `${app.url}/stores/${storeA}/reference/events?to=2026-11-12&max=200`;
+  await page.goto(original);
+  await page.getByRole('button', { name: 'Filter events', exact: true }).click();
+  await choose(page, 'Featured', 'Featured');
+  await expect(page).toHaveURL(/featured=true/);
+  await expect(page.getByRole('combobox', { name: 'Featured', exact: true })).toHaveText(
+    'Featured',
+  );
+  const featured = page.url();
+  const minimum = page.getByRole('spinbutton', { name: 'Minimum capacity' });
+  const from = page.getByLabel('From date', { exact: true });
+  for (const direction of ['back', 'forward']) {
+    await minimum.fill('300');
+    await from.fill('2026-11-13');
+    await expect(page.getByText('Maximum must be at least the minimum.')).toBeVisible();
+    await expect(page.getByText('End date must be on or after the start.')).toBeVisible();
+    if (direction === 'back') await page.goBack();
+    else await page.goForward();
+    await expect(page).toHaveURL(direction === 'back' ? original : featured);
+    await expect(minimum).toHaveValue('');
+    await expect(from).toHaveValue('');
+    await expect(page.getByRole('spinbutton', { name: 'Maximum capacity' })).toHaveValue('200');
+    await expect(page.getByLabel('To date', { exact: true })).toHaveValue('2026-11-12');
+    await expect(page.getByText('Maximum must be at least the minimum.')).toHaveCount(0);
+    await expect(page.getByText('End date must be on or after the start.')).toHaveCount(0);
+  }
+});
+
 test('Event filters, columns and overview preserve the list address through edit and reload', async ({
   page,
   app,

@@ -52,6 +52,40 @@ beforeEach(() => {
   localStorage.clear();
 });
 describe('Event list and overview', () => {
+  it('restores range drafts on Back and Forward when only another filter changed', async () => {
+    const transport = mockGraphQL(respond);
+    const ranges = '&to=2026-11-01&max=80';
+    const { router } = mount(`?status=PUBLISHED${ranges}`);
+    await screen.findByRole('link', { name: 'Sofia forum' }, { timeout: 10_000 });
+    await act(() => router.navigate(`?status=DRAFT${ranges}`));
+    fireEvent.click(screen.getByRole('button', { name: 'Filter events' }));
+    for (const direction of [-1, 1]) {
+      fireEvent.change(screen.getByRole('spinbutton', { name: 'Minimum capacity' }), {
+        target: { value: '100' },
+      });
+      fireEvent.change(screen.getByLabelText('From date'), {
+        target: { value: '2026-11-02' },
+      });
+      expect(screen.getByText('Maximum must be at least the minimum.')).toBeInTheDocument();
+      expect(screen.getByText('End date must be on or after the start.')).toBeInTheDocument();
+      await act(() => router.navigate(direction));
+      expect(screen.getByRole('spinbutton', { name: 'Minimum capacity' })).toHaveValue(null);
+      expect(screen.getByRole('spinbutton', { name: 'Maximum capacity' })).toHaveValue(80);
+      expect(screen.getByLabelText('From date')).toHaveValue('');
+      expect(screen.getByLabelText('To date')).toHaveValue('2026-11-01');
+      expect(screen.queryByText('Maximum must be at least the minimum.')).not.toBeInTheDocument();
+      expect(screen.queryByText('End date must be on or after the start.')).not.toBeInTheDocument();
+      const status = direction === -1 ? 'PUBLISHED' : 'DRAFT';
+      expect(router.state.location.search).toBe(`?status=${status}${ranges}`);
+      await waitFor(() => {
+        expect(
+          transport.calls.filter((call) => call.operation === 'ListReferenceEvents').at(-1)
+            ?.variables,
+        ).toMatchObject({ filter: { statuses: [status], capacityMax: 80 } });
+      });
+    }
+  });
+
   it('discards a pending search when browser history changes another filter', async () => {
     const transport = mockGraphQL(respond);
     const { router } = mount('?status=PUBLISHED');

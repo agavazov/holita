@@ -22,6 +22,71 @@ function operation(request: Request, name: string) {
   );
 }
 
+test('Reference loads on demand and a delayed module cannot replace a newer store or editor', async ({
+  page,
+  app,
+}) => {
+  const moduleRequests: string[] = [];
+  const venueStores: (string | undefined)[] = [];
+  const modulePath = '/src/features/reference/reference-workspace.tsx';
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === modulePath) moduleRequests.push(request.url());
+    if (request.url() === app.gatewayUrl && operation(request, 'ListReferenceVenues')) {
+      venueStores.push(request.headers()['x-store-id']);
+    }
+  });
+  await page.goto(`${app.url}/stores/${storeA}/products`);
+  await expect(page.getByRole('link', { name: 'Sofia notebook', exact: true })).toBeVisible();
+  expect(moduleRequests).toEqual([]);
+
+  let release: () => void = () => {
+    throw new Error('Delay not initialized.');
+  };
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route(
+    /\/src\/features\/reference\/reference-workspace\.tsx(?:\?|$)/,
+    async (route) => {
+      await held;
+      await route.continue();
+    },
+  );
+  try {
+    await page.getByRole('button', { name: 'Reference navigation', exact: true }).click();
+    const started = page.waitForRequest(
+      (request) => new URL(request.url()).pathname === modulePath,
+    );
+    await page.getByRole('menuitem', { name: 'Venues', exact: true }).click();
+    await started;
+    await expect(page.getByRole('status')).toHaveText('Loading Reference…');
+    await switchStore(page, 'holita Plovdiv');
+    await expect(page).toHaveURL(`${app.url}/stores/${storeB}/reference/venues`);
+    await page.getByRole('button', { name: 'Workspace navigation', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Products', exact: true }).click();
+    await expect(page.getByRole('link', { name: 'Plovdiv notebook', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Create product', exact: true }).click();
+    await page.getByLabel('Name', { exact: true }).fill('Independent product draft');
+
+    const completed = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === modulePath,
+    );
+    release();
+    await completed;
+    await expect(page).toHaveURL(`${app.url}/stores/${storeB}/products/create`);
+    await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Independent product draft');
+    expect(venueStores).toEqual([]);
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await page.getByRole('button', { name: 'Reference navigation', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Venues', exact: true }).click();
+    await expect(page.getByRole('link', { name: 'Riverside Hall', exact: true })).toBeVisible();
+    expect(venueStores.length).toBeGreaterThan(0);
+    expect(venueStores.every((store) => store === storeB)).toBe(true);
+  } finally {
+    release();
+  }
+});
+
 test('Venue CRUD works through the real gateway and persists across reloads', async ({
   page,
   app,

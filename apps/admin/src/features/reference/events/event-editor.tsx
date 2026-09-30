@@ -1,6 +1,7 @@
 import { useCreate, useOne, useUpdate } from '@refinedev/core';
 import { Alert, Button, Paper, Skeleton, Stack, Tab, Tabs, Typography } from '@mui/material';
 import { PageHeader } from '../../../components/page-header.js';
+import { QueryRefreshWarning } from '../../../components/query-refresh-warning.js';
 import { useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 
@@ -117,7 +118,16 @@ export function EventEditor({ storeId, onSaved }: EventEditorProps) {
   return (
     <>
       {changes.dialog}
-      {eventId && (event.query.isPending || event.query.isError) ? (
+      {eventId && event.query.isRefetchError && (
+        <QueryRefreshWarning
+          message={event.query.error.message}
+          refreshing={event.query.isFetching}
+          onRetry={() => {
+            void event.query.refetch();
+          }}
+        />
+      )}
+      {eventId && (event.query.isPending || event.query.isLoadingError) ? (
         <Paper sx={{ p: { xs: 3, md: 5 }, flex: 1 }}>
           {header}
           {event.query.isPending ? (

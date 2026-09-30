@@ -57,6 +57,10 @@ universal batch API, relation picker, upload workflow or dirty-form policy.
 - The workspace keys the Products subtree by store and its route subtree by pathname.
   The editor does not add another form key for the same boundary. Once mounted, the form
   initializes its values once; refreshed query data does not reset that local draft.
+  An initial read failure blocks the editor, but a failed background refresh keeps the
+  loaded form mounted and shows a retry warning. Store discovery follows the same rule:
+  a refresh failure retains the last successful stores and the active feature subtree.
+  Successful discovery still updates which stores are available.
 - Products and LookupList share [useRecordDeletion](../apps/admin/src/features/use-record-deletion.ts)
   for sequential scoped `useDelete` calls. Successful rows stay deleted,
   failures remain for retry, and navigation stops the unsent remainder. Preserve each
@@ -87,8 +91,10 @@ header, DataGrid theme/pagination, filter drawer and row menu. Its
 URL contract, default start ascending, per-store column preferences and list-return links.
 Quick and drawer title/code search share a 300 ms draft; enum, relation, date and capacity
 filters apply on change. Invalid ranges remain editable with a message and do not replace the
-committed query. Reset cancels pending text and clears range drafts. Each filter/sort/page
-change clears page-local selection. Active rows open Edit; View opens the overview; trash rows
+committed query. Reset cancels pending text and clears range drafts. Navigation restores
+range drafts from the URL, including Back/Forward when only another filter changed;
+invalid drafts remain editable until a navigation or reset. Each filter/sort/page change
+clears page-local selection. Active rows open Edit; View opens the overview; trash rows
 open the read-only overview. Events retain their atomic Publish/Archive/Trash/Restore API and
 confirmation. Do not replace it with the supporting entities' sequential hard-delete loop.
 
@@ -100,8 +106,13 @@ map native date/time inputs to the existing Sofia conversion, retain untouched i
 seconds, milliseconds and the repeated autumn hour, and keep money as an exact decimal string. No date-picker or form
 library is required. [The editor](../apps/admin/src/features/reference/events/event-editor.tsx)
 owns Refine mutations, captured store scope, gallery dirty/pending coordination and route callbacks.
-ReferenceWorkspace loads this editor and Tiptap on demand with React lazy/Suspense. Lists and
-other forms do not download the rich editor; existing store/pathname keys still isolate mutations.
+[StoreWorkspace](../apps/admin/src/features/stores/store-workspace.tsx) loads the Reference UI
+with React lazy/Suspense only when an enabled Reference route is opened. Products and disabled
+Reference routes do not download that UI. ReferenceWorkspace separately loads the Event editor
+and Tiptap on demand; lists and other forms do not download the rich editor. Existing
+store/pathname keys still isolate mutations across these loading boundaries.
+Reference editors also preserve their local drafts during failed background reads and retries.
+The Event overview retains its child workflows on refresh failure, including unsaved session order.
 
 [RelationSelect](../apps/admin/src/features/reference/relation-select.tsx) uses MUI Autocomplete with
 the original [Aurora Autocomplete styling](../apps/admin/src/theme/components/Autocomplete.tsx),
@@ -158,6 +169,10 @@ scoped resource, typed detail columns and deletion guidance.
 [LookupFilters](../apps/admin/src/features/reference/lookup-filters.tsx) supplies their shared
 name/status controls. Keep this reuse limited to the three supporting entities; Products
 and Events have their own lists and domain behavior.
+Venue, Speaker, Tag and Event forms share the small
+[text validator](../apps/admin/src/features/reference/text-validation.ts) for required text,
+Unicode character counts and null-character rejection. Field limits, messages and domain
+validation remain in each form.
 Quick and panel name search share a 300 ms draft; Active/Inactive and sorting apply immediately.
 Name, City, Country, Capacity and Status sort on the server before pagination, with an ID
 descending tie-breaker and null capacity last in either direction. The default remains newest first.
