@@ -65,7 +65,6 @@ export function VenueEditor({ storeId, onSaved }: VenueEditorProps) {
       title={venueId ? 'Edit venue' : 'Create venue'}
       breadcrumbs={[
         { label: 'Home', to: '/' },
-        { label: 'Reference' },
         { label: 'Venues', to: listPath },
         { label: venueId ? 'Edit venue' : 'Create venue' },
       ]}

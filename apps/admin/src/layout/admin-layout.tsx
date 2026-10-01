@@ -1,4 +1,4 @@
-// Aurora MainLayout and AppBar, restricted to Sidenav / Stacked.
+// Aurora MainLayout and AppBar, restricted to Sidenav / Default.
 import { useEffect, useState } from 'react';
 import {
   AppBar,
@@ -19,8 +19,8 @@ import { version } from '../../package.json';
 import IconifyIcon from './primitives/iconify-icon.js';
 import Logo from './primitives/logo.js';
 import StyledTextField from './primitives/styled-text-field.js';
-import StackedSidenav from './stacked-sidenav.js';
-import MobileNavigation from './mobile-navigation.js';
+import DefaultSidenav from './default-sidenav.js';
+import SidenavContent from './sidenav-content.js';
 import SearchBox from './search-box.js';
 import LanguageMenu from './language-menu.js';
 import ThemeMenu from './theme-menu.js';
@@ -94,7 +94,7 @@ export function AdminLayout(props: AdminLayoutProps) {
     }
   }, [desktopCollapsed]);
   const collapsed = wide ? desktopCollapsed : !tabletExpanded;
-  const drawerWidth = mobile ? 0 : collapsed ? 72 : 300;
+  const drawerWidth = mobile ? 0 : collapsed ? 136 : 300;
   const groups = selectedStoreId ? navigationGroups : [];
   const toggleCollapsed = () => {
     if (wide) setDesktopCollapsed(!desktopCollapsed);
@@ -115,9 +115,6 @@ export function AdminLayout(props: AdminLayoutProps) {
           borderBottom: 1,
           borderColor: 'divider',
           [`&.${paperClasses.root}`]: { outline: 'none' },
-          transition: theme.transitions.create('width', {
-            duration: theme.transitions.duration.standard,
-          }),
         }}
       >
         <Toolbar variant="appbar" sx={{ px: { xs: 1.5, sm: 3, md: 5 } }}>
@@ -157,7 +154,7 @@ export function AdminLayout(props: AdminLayoutProps) {
           </Stack>
         </Toolbar>
       </AppBar>
-      <StackedSidenav
+      <DefaultSidenav
         groups={groups}
         section={selectedSection}
         collapsed={collapsed}
@@ -179,7 +176,7 @@ export function AdminLayout(props: AdminLayoutProps) {
           [`& .${drawerClasses.paper}`]: { pt: 3, boxSizing: 'border-box', width: 300 },
         }}
       >
-        <MobileNavigation
+        <SidenavContent
           groups={groups}
           section={selectedSection}
           onClose={() => {
@@ -198,7 +195,7 @@ export function AdminLayout(props: AdminLayoutProps) {
           width: { xs: '100%', md: `calc(100% - ${String(drawerWidth)}px)` },
           display: 'flex',
           flexDirection: 'column',
-          ml: { md: '72px', lg: 0 },
+          ml: { md: '136px', lg: 0 },
         }}
       >
         <Toolbar variant="appbar" />

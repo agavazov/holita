@@ -72,7 +72,9 @@ npm run dev --workspace @holita/admin -- --port 12081
 http://127.0.0.1:11080/graphql. This is the admin's GraphQL business endpoint; direct image transfers use URLs returned by Reference. It is a public
 browser configuration value, never a place for credentials. Vite reads it at startup/build.
 Use `VITE_GATEWAY_URL=http://127.0.0.1:12080/graphql npm run dev:admin` for a gateway override,
-and align gateway ADMIN_ORIGIN with the exact browser origin when moving the admin port.
+and align gateway and Reference ADMIN_ORIGIN with the exact browser origin when moving the
+admin port. Without ADMIN_ORIGIN, both services allow http://127.0.0.1:11081 and
+http://localhost:11081. Setting ADMIN_ORIGIN replaces those defaults with one exact origin.
 
 ## Using Reference
 
@@ -169,8 +171,9 @@ Reference stores files privately at `apps/reference/.media` by default. Set
 `REFERENCE_MEDIA_ROOT` to a private persistent absolute directory to move it. Back up that
 directory together with the Reference database. `REFERENCE_PUBLIC_URL` must be the browser-
 reachable http(s) base URL for Reference (default loopback at its PORT); set Reference's
-`ADMIN_ORIGIN` to the exact admin origin for upload CORS. No AWS credentials or object storage
-service is required. Source code, Git, Nx and formatting exclude `.media/`. Storage cleanup
+`ADMIN_ORIGIN` to the exact admin origin for upload CORS when overriding the two local defaults.
+No AWS credentials or object storage service is required. Source code, Git, Nx and formatting
+exclude `.media/`. Storage cleanup
 runs automatically at startup and every minute; it retries failed removals using persisted
 keys. There is no separate worker to start. See the [upload contract](architecture/overview.md#event-media-and-direct-uploads).
 
@@ -227,10 +230,12 @@ Plovdiv Culture Exchange. Run migrations and seeds before opening the new resour
 
 ## Admin appearance and navigation
 
-The admin uses Aurora's Sidenav / Stacked shell. Desktop navigation collapses to a 72 px
-rail and expands on hover or keyboard focus; Escape closes temporary expansion. At tablet
-widths expansion overlays content, and mobile uses a temporary drawer. The real store
-selector stays in the top bar on desktop and below it on mobile.
+The admin uses Aurora's Sidenav / Default shell. All navigation sections appear together.
+The edge control switches desktop navigation between a 300 px menu and a 136 px compact
+menu with icons above their labels. Items remain directly accessible in both modes.
+At tablet widths expansion overlays content; Escape or a click on the backdrop closes it.
+Mobile uses a temporary drawer. The real store selector stays in the top bar on desktop
+and below it on mobile.
 
 The theme button selects Aurora presets, primary colors and light/dark/system mode.
 Preferences persist in `holita.appearance`, `holita-mode`, `holita-color-scheme-*` and
@@ -316,8 +321,11 @@ After changing SDL or a named operation, run `npm run codegen`, then restart the
 group. Asset watching is not dynamic schema composition. Keep PORT overrides aligned with
 CORE_GRAPHQL_URL and PRODUCTS_GRAPHQL_URL in gateway; products also uses CORE_GRAPHQL_URL
 for creation validation. URLs default to core 11082 and products 11083 on loopback.
-Gateway ADMIN_ORIGIN defaults to http://127.0.0.1:11081 for browser CORS; update it if moving
-admin. x-store-id and x-request-id are allowed headers; x-request-id is exposed in responses.
+Gateway and Reference CORS allow http://127.0.0.1:11081 and http://localhost:11081 by default.
+Set ADMIN_ORIGIN in both services to override this with an exact browser origin, including
+its scheme and port. The example environment files leave this override commented out.
+Other origins are not allowed. Gateway permits x-store-id and x-request-id headers and
+exposes x-request-id in responses.
 
 Use the gateway at http://127.0.0.1:11080/graphql. For store discovery, no headers are needed:
 

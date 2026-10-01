@@ -2,7 +2,7 @@ import { spawn, execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { devNull, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { promisify } from 'node:util';
@@ -103,7 +103,14 @@ async function startApplication(service: string, env: NodeJS.ProcessEnv, selecte
   const port = selectedPort ?? (await availablePort());
   const child = spawn(process.execPath, ['dist/main.js'], {
     cwd: join(workspaceRoot, 'apps', service),
-    env: { ...process.env, ...env, PORT: String(port), NODE_ENV: 'test' },
+    // Configuration was loaded by the fixture; do not reread local files in child services.
+    env: {
+      ...process.env,
+      ...env,
+      DOTENV_CONFIG_PATH: devNull,
+      PORT: String(port),
+      NODE_ENV: 'test',
+    },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   let logs = '';
@@ -264,7 +271,7 @@ export async function createFederationFixture(
     const referenceEnv = {
       REFERENCE_MEDIA_ROOT: mediaRoot,
       REFERENCE_PUBLIC_URL: `http://127.0.0.1:${String(referencePort)}`,
-      ADMIN_ORIGIN: options.adminOrigin ?? 'http://127.0.0.1:11081',
+      ADMIN_ORIGIN: options.adminOrigin,
       REFERENCE_DATABASE_URL: referenceDatabase.url,
       CORE_GRAPHQL_URL: coreObserver.url,
       REFERENCE_ENABLED: String(options.referenceEnabled ?? true),
@@ -274,7 +281,7 @@ export async function createFederationFixture(
     const referenceObserver = await observeRequests(reference.url);
     cleanup.push(referenceObserver.close);
     const gateway = await startApplication('gateway', {
-      ADMIN_ORIGIN: options.adminOrigin ?? 'http://127.0.0.1:11081',
+      ADMIN_ORIGIN: options.adminOrigin,
       CORE_GRAPHQL_URL: coreObserver.url,
       PRODUCTS_GRAPHQL_URL: productsObserver.url,
       REFERENCE_GRAPHQL_URL: referenceObserver.url,

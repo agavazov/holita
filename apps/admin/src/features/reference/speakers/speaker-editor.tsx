@@ -69,7 +69,6 @@ export function SpeakerEditor({ storeId, onSaved }: SpeakerEditorProps) {
       title={speakerId ? 'Edit speaker' : 'Create speaker'}
       breadcrumbs={[
         { label: 'Home', to: '/' },
-        { label: 'Reference' },
         { label: 'Speakers', to: listPath },
         { label: speakerId ? 'Edit speaker' : 'Create speaker' },
       ]}

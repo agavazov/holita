@@ -641,23 +641,56 @@ describe('actual gateway, subgraphs and PostgreSQL', () => {
     expect(fixture.coreRequests).toHaveLength(1);
   });
 
-  it('allows the configured admin origin and context headers through browser CORS', async () => {
-    const response = await fetch(fixture.url, {
-      method: 'OPTIONS',
-      headers: {
-        origin: 'http://127.0.0.1:11081',
-        'access-control-request-method': 'POST',
-        'access-control-request-headers': 'content-type,x-store-id,x-request-id',
-      },
-      signal: AbortSignal.timeout(5000),
-    });
-    expect(response.status).toBe(204);
-    expect(response.headers.get('access-control-allow-origin')).toBe('http://127.0.0.1:11081');
-    expect(response.headers.get('access-control-allow-headers')).toContain('x-store-id');
-    expect(response.headers.get('access-control-allow-headers')).toContain('x-request-id');
-    expect(fixture.coreRequests).toHaveLength(0);
-    expect(fixture.productRequests).toHaveLength(0);
-  });
+  it.each(['http://127.0.0.1:11081', 'http://localhost:11081'])(
+    'allows the local admin origin %s through browser CORS',
+    async (origin) => {
+      for (const { url, method, headers } of [
+        {
+          url: fixture.url,
+          method: 'POST',
+          headers: ['content-type', 'x-store-id', 'x-request-id'],
+        },
+        { url: fixture.referenceUrl, method: 'PUT', headers: ['content-type', 'authorization'] },
+      ]) {
+        const response = await fetch(url, {
+          method: 'OPTIONS',
+          headers: {
+            origin,
+            'access-control-request-method': method,
+            'access-control-request-headers': headers.join(','),
+          },
+          signal: AbortSignal.timeout(5000),
+        });
+        expect(response.status).toBe(204);
+        expect(response.headers.get('access-control-allow-origin')).toBe(origin);
+        expect(response.headers.get('access-control-allow-methods')?.split(',')).toContain(method);
+        for (const header of headers) {
+          expect(response.headers.get('access-control-allow-headers')?.split(',')).toContain(
+            header,
+          );
+        }
+      }
+      expect(fixture.coreRequests).toHaveLength(0);
+      expect(fixture.productRequests).toHaveLength(0);
+    },
+  );
+
+  it.each(['http://localhost:11082', 'https://untrusted.example'])(
+    'does not allow browser CORS for %s',
+    async (origin) => {
+      for (const url of [fixture.url, fixture.referenceUrl]) {
+        const response = await fetch(url, {
+          method: 'OPTIONS',
+          headers: { origin, 'access-control-request-method': 'POST' },
+          signal: AbortSignal.timeout(5000),
+        });
+        expect(response.status).toBe(204);
+        expect(response.headers.get('access-control-allow-origin')).toBeNull();
+      }
+      expect(fixture.coreRequests).toHaveLength(0);
+      expect(fixture.productRequests).toHaveLength(0);
+    },
+  );
 
   it('rejects oversized baggage before forwarding to either subgraph', async () => {
     const response = await fetch(fixture.url, {

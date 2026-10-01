@@ -1,19 +1,21 @@
-// Aurora SidenavDrawerContent, restricted to the selected temporary drawer.
+// Aurora SidenavDrawerContent shared by the Default sidenav and mobile drawer.
 import { Box, IconButton, List, ListSubheader, Toolbar } from '@mui/material';
 import IconifyIcon from './primitives/iconify-icon.js';
 import Logo from './primitives/logo.js';
 import SimpleBar from './primitives/simplebar.js';
 import NavItem from './nav-item.js';
 import type { NavigationGroup } from './types.js';
-export default function MobileNavigation({
+export default function SidenavContent({
   groups,
   section,
+  collapsed = false,
   onClose,
   onNavigate,
 }: {
   groups: readonly NavigationGroup[];
   section: string;
-  onClose: () => void;
+  collapsed?: boolean;
+  onClose?: () => void;
   onNavigate: (section: string) => void;
 }) {
   return (
@@ -24,20 +26,25 @@ export default function MobileNavigation({
             height: 1,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            pl: 4,
-            pr: 2,
+            justifyContent: collapsed ? 'center' : 'space-between',
+            pl: collapsed ? 0 : { xs: 4, md: 6 },
+            pr: collapsed ? 0 : { xs: 2, md: 3 },
           }}
         >
-          <Logo />
-          <IconButton aria-label="Close navigation" sx={{ mt: 1 }} onClick={onClose}>
-            <IconifyIcon icon="material-symbols:left-panel-close-outline" fontSize={20} />
-          </IconButton>
+          <Logo showName={!collapsed} />
+          {onClose && (
+            <IconButton aria-label="Close navigation" sx={{ mt: 1 }} onClick={onClose}>
+              <IconifyIcon icon="material-symbols:left-panel-close-outline" fontSize={20} />
+            </IconButton>
+          )}
         </Box>
       </Toolbar>
       <Box sx={{ flex: 1, overflow: 'hidden' }}>
-        <SimpleBar disableHorizontal>
-          <Box sx={{ py: 2, px: 2 }}>
+        <SimpleBar
+          disableHorizontal
+          sx={{ '& .simplebar-vertical .simplebar-scrollbar:before': { bgcolor: 'chGrey.300' } }}
+        >
+          <Box sx={{ py: 2, px: collapsed ? 2 : { xs: 2, md: 4 } }}>
             {groups.map((group, index) => (
               <List
                 key={group.key}
@@ -56,12 +63,12 @@ export default function MobileNavigation({
                     component="div"
                     disableGutters
                     sx={{
-                      textAlign: 'left',
+                      textAlign: collapsed ? 'center' : 'left',
                       color: 'text.disabled',
                       typography: 'overline',
                       fontWeight: 700,
                       py: 1,
-                      pl: 2,
+                      pl: collapsed ? 0 : 2,
                       mb: 0.25,
                       position: 'static',
                       background: 'transparent',
@@ -76,9 +83,9 @@ export default function MobileNavigation({
                     key={item.key}
                     item={item}
                     section={section}
-                    mobile
+                    collapsed={collapsed}
                     onNavigate={(next) => {
-                      onClose();
+                      onClose?.();
                       onNavigate(next);
                     }}
                   />

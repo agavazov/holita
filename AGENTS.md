@@ -69,7 +69,7 @@
 
 - Use Refine abstractions where they fit the task.
 - Use MUI and the actual Aurora `vite-ts` components for new or migrated admin UI. The local source is `../themes/aurora/vite-ts`. Preserve Aurora's theme, typography, spacing, icons and interaction patterns with holita branding; do not approximate its appearance by restyling existing Ant Design components.
-- Use Aurora's Sidenav layout with the Stacked sidenav shape. The top bar contains search, language, theme, notification and profile controls; module navigation belongs in the sidenav.
+- Use Aurora's Sidenav layout with the Default sidenav shape. The top bar contains search, language, theme, notification and profile controls; module navigation belongs in the sidenav.
 - Keep the layout independent of feature data access and business logic. Supply application navigation, store selection and display data through explicit component inputs. Example search results, notifications and profile data are permitted for the shell; keep them separate from real CRUD data and do not implement fake authentication.
 - Integrate and visually review the shell before redesigning module CRUD screens. Keep existing CRUD and store switching operational during this stage; begin module redesign only after explicit user acceptance of the shell.
 - For migrated CRUD, reuse Aurora's Invoice breadcrumb/title/primary-action header, Member list/menu/selection/filter patterns, and Create Event form composition. Include at most three useful secondary header actions. Filters apply on change, with a short debounce for text; record clicks normally open a full-page editor.

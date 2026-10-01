@@ -8,7 +8,6 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
-  IconButton,
   ListItemIcon,
   Menu,
   MenuItem,
@@ -25,7 +24,7 @@ import type { ShellIcon } from './primitives/icons.js';
 import StatusAvatar from './primitives/status-avatar.js';
 import { exampleProfile as user } from './demo-data.js';
 
-export default function ProfileMenu({ sidebar = false }: { sidebar?: boolean }) {
+export default function ProfileMenu() {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [examplePage, setExamplePage] = useState<string | null>(null);
   const { isDark, setMode } = useAppearance();
@@ -52,37 +51,25 @@ export default function ProfileMenu({ sidebar = false }: { sidebar?: boolean }) 
   );
   return (
     <>
-      {sidebar ? (
-        <IconButton
-          aria-label="Profile preferences"
-          aria-haspopup="menu"
-          aria-expanded={Boolean(anchorEl)}
-          onClick={(event) => {
-            setAnchorEl(event.currentTarget);
-          }}
-        >
-          <IconifyIcon icon="material-symbols:settings-outline" />
-        </IconButton>
-      ) : (
-        <Button
-          color="neutral"
-          variant="text"
-          shape="circle"
-          aria-label="Profile"
-          aria-haspopup="menu"
-          aria-expanded={Boolean(anchorEl)}
-          onClick={(event) => {
-            setAnchorEl(event.currentTarget);
-          }}
-          sx={{ height: 44, width: 44 }}
-        >
-          <StatusAvatar
-            alt={user.name}
-            src={user.avatar}
-            sx={{ width: 40, height: 40, border: 2, borderColor: 'background.paper' }}
-          />
-        </Button>
-      )}
+      <Button
+        color="neutral"
+        variant="text"
+        shape="circle"
+        aria-label="Profile"
+        aria-haspopup="menu"
+        aria-expanded={Boolean(anchorEl)}
+        onClick={(event) => {
+          setAnchorEl(event.currentTarget);
+        }}
+        sx={{ height: 44, width: 44 }}
+      >
+        <StatusAvatar
+          alt={user.name}
+          src={user.avatar}
+          sx={{ width: 40, height: 40, border: 2, borderColor: 'background.paper' }}
+        />
+      </Button>
+
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}

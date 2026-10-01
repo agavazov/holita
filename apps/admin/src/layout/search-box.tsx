@@ -2,7 +2,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Box,
-  Breadcrumbs,
   Button,
   Chip,
   Dialog,
@@ -173,27 +172,20 @@ export default function SearchBox({
                         '&:hover': { bgcolor: 'background.menuElevation1' },
                       }}
                     >
-                      <Breadcrumbs
+                      <Link
+                        component="button"
+                        variant="caption"
+                        underline="none"
+                        onClick={() => {
+                          select(entry);
+                        }}
                         sx={{
                           py: 0.5,
-                          typography: 'caption',
-                          color: 'text.secondary',
-                          ml: -0.5,
-                          display: 'inline-block',
                           fontWeight: 'medium',
                         }}
                       >
-                        <Typography variant="caption">Workspace</Typography>
-                        <Link
-                          component="button"
-                          underline="none"
-                          onClick={() => {
-                            select(entry);
-                          }}
-                        >
-                          {entry.label}
-                        </Link>
-                      </Breadcrumbs>
+                        {entry.label}
+                      </Link>
                     </ListItem>
                   )
                 );
@@ -211,7 +203,7 @@ export default function SearchBox({
             Modules
           </Typography>
         </Box>
-        <List sx={{ pt: 0, pb: 2 }}>
+        <List aria-label="Modules" sx={{ pt: 0, pb: 2 }}>
           {filtered.map((entry) => (
             <ListItem disablePadding key={entry.key}>
               <ListItemButton
@@ -232,19 +224,12 @@ export default function SearchBox({
                 </ListItemIcon>
                 <ListItemText
                   primary={entry.label}
-                  secondary={`Workspace / ${entry.label}`}
                   sx={{ my: 0 }}
                   slotProps={{
                     primary: {
                       variant: 'subtitle2',
                       color: 'text.secondary',
                       sx: { mb: 0.25, display: 'flex', lineClamp: 1 },
-                    },
-                    secondary: {
-                      variant: 'caption',
-                      color: 'text.disabled',
-                      component: 'p',
-                      sx: { fontWeight: 'medium' },
                     },
                   }}
                 />

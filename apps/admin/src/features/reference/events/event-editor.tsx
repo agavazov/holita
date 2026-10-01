@@ -79,7 +79,6 @@ export function EventEditor({ storeId, onSaved }: EventEditorProps) {
         title={eventId ? 'Edit event' : 'Create event'}
         breadcrumbs={[
           { label: 'Home', to: '/' },
-          { label: 'Reference' },
           { label: 'Events', to: listPath },
           { label: eventId ? 'Edit event' : 'Create event' },
         ]}

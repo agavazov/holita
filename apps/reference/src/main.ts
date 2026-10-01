@@ -17,7 +17,7 @@ async function bootstrap(): Promise<void> {
   // Allow the 100 KiB rich-text input plus JSON escaping and the other event fields.
   app.useBodyParser('json', { limit: '1mb' });
   app.enableCors({
-    origin: process.env.ADMIN_ORIGIN ?? 'http://127.0.0.1:11081',
+    origin: process.env.ADMIN_ORIGIN ?? ['http://127.0.0.1:11081', 'http://localhost:11081'],
     methods: ['PUT', 'GET', 'OPTIONS'],
     allowedHeaders: ['content-type', 'authorization'],
   });

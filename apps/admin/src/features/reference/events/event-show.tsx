@@ -116,7 +116,6 @@ export function EventShow({
   }
   const breadcrumbs = [
     { label: 'Home', to: '/' },
-    { label: 'Reference' },
     { label: 'Events', to: listPath },
     { label: row?.title ?? 'Event' },
   ];

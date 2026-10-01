@@ -186,10 +186,14 @@ store selector, sidebar and responsive drawer state. Its Aurora/MUI presentation
 Refine, GraphQL or router dependency; navigation callbacks retain the existing router and
 unsaved-change blockers.
 
-The shell adapts Aurora 2.4.0's MainLayout, StackedSidenav, mobile SidenavDrawerContent,
+The shell adapts Aurora 2.4.0's MainLayout, Default Sidenav, shared SidenavDrawerContent,
 NavItem, AppBar and search/language/theme/notification/profile components into
 [`layout/`](../../apps/admin/src/layout/). It retains the original 300 px expanded drawer,
-72 px rail, 64/82 px toolbar, breakpoint behavior, transitions, typography and menu styling.
+136 px compact drawer, 64/82 px toolbar, breakpoint behavior, typography and menu styling.
+All navigation groups remain visible; compact items show their icon above the label. Tablet
+expansion overlays content with a backdrop; Escape or backdrop activation collapses it.
+Desktop and mobile share the same menu content. The collapse indicator uses CSS transitions
+without adding an animation library.
 The real store selector is a holita addition. Selected palettes, component overrides,
 shadows and CSS variables live in [`theme/`](../../apps/admin/src/theme/). The sibling
 Aurora source directory is not a runtime dependency. Unused layouts, demo routes/auth,

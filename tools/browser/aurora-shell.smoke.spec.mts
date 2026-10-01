@@ -106,7 +106,10 @@ test('Aurora menus preserve list queries, apply preferences and use local exampl
   await search.getByRole('textbox', { name: 'Search workspace' }).fill('no-such-module');
   await expect(search.getByText('No matching results.')).toBeVisible();
   await search.getByRole('textbox', { name: 'Search workspace' }).fill('Venues');
-  await search.getByRole('button', { name: /^Venues Workspace/ }).click();
+  await search
+    .getByRole('list', { name: 'Modules' })
+    .getByRole('button', { name: 'Venues', exact: true })
+    .click();
   await expect(page).toHaveURL(`${app.url}/stores/${store}/reference/venues`);
   await expect(page.getByRole('menuitem', { name: 'Venues', exact: true })).toHaveAttribute(
     'aria-current',
@@ -116,7 +119,7 @@ test('Aurora menus preserve list queries, apply preferences and use local exampl
   expect(external).toEqual([]);
 });
 
-test('Aurora Stacked navigation supports collapse, hover, keyboard and responsive drawers', async ({
+test('Aurora Default navigation supports compact items, keyboard and responsive drawers', async ({
   page,
   app,
 }, testInfo) => {
@@ -127,35 +130,53 @@ test('Aurora Stacked navigation supports collapse, hover, keyboard and responsiv
   const drawer = sidenav.locator('.MuiDrawer-paper');
   await expect(drawer).toHaveCSS('width', '300px');
   await page.getByRole('button', { name: 'Collapse navigation', exact: true }).click();
-  await expect(drawer).toHaveCSS('width', '72px');
+  await expect(drawer).toHaveCSS('width', '136px');
   await page.screenshot({
     path: testInfo.outputPath('desktop-collapsed.png'),
     animations: 'disabled',
   });
-  await page.getByRole('button', { name: 'Reference navigation', exact: true }).hover();
-  await expect(drawer).toHaveCSS('width', '300px');
-  await page.screenshot({ path: testInfo.outputPath('desktop-hover.png'), animations: 'disabled' });
-  await page.getByLabel('Title', { exact: true }).hover();
-  await expect(drawer).toHaveCSS('width', '72px');
-  await page.getByRole('button', { name: 'Reference navigation', exact: true }).focus();
-  await expect(drawer).toHaveCSS('width', '300px');
-  await page.keyboard.press('Escape');
-  await expect(drawer).toHaveCSS('width', '72px');
-  await expect(page.getByRole('button', { name: 'Expand navigation', exact: true })).toBeFocused();
+  const venues = sidenav.getByRole('menuitem', { name: 'Venues', exact: true });
+  await expect(sidenav.getByRole('menuitem', { name: 'Products', exact: true })).toBeVisible();
+  await expect(venues).toBeVisible();
+  await venues.hover();
+  await expect(drawer).toHaveCSS('width', '136px');
+  await venues.focus();
+  await expect(venues).toBeFocused();
+  await expect(drawer).toHaveCSS('width', '136px');
+  await venues.press('Enter');
+  await expect(page).toHaveURL(`${app.url}/stores/${store}/reference/venues`);
+  await expect(venues).toHaveAttribute('aria-current', 'page');
+  await expect(drawer).toHaveCSS('width', '136px');
+  await page.goBack();
+  await expect(page.getByLabel('Title', { exact: true })).toBeVisible();
   await page.reload();
   await expect(page.getByLabel('Title', { exact: true })).toBeVisible();
-  await expect(drawer).toHaveCSS('width', '72px');
+  await expect(drawer).toHaveCSS('width', '136px');
   await page.getByRole('button', { name: 'Expand navigation', exact: true }).click();
   await expect(drawer).toHaveCSS('width', '300px');
 
   await page.setViewportSize({ width: 1024, height: 900 });
-  await expect(drawer).toHaveCSS('width', '72px');
+  await expect(drawer).toHaveCSS('width', '136px');
   await page.screenshot({ path: testInfo.outputPath('tablet.png'), animations: 'disabled' });
   await page.getByRole('button', { name: 'Expand navigation', exact: true }).click();
   await expect(drawer).toHaveCSS('width', '300px');
+  await page.screenshot({
+    path: testInfo.outputPath('tablet-expanded.png'),
+    animations: 'disabled',
+  });
+  await page.keyboard.press('Escape');
+  await expect(drawer).toHaveCSS('width', '136px');
+  const expandNavigation = page.getByRole('button', { name: 'Expand navigation', exact: true });
+  await expect(expandNavigation).toBeFocused();
+  await expandNavigation.press('Enter');
+  await expect(drawer).toHaveCSS('width', '300px');
+  await sidenav.locator(':scope > .MuiBackdrop-root').click({ position: { x: 800, y: 450 } });
+  await expect(drawer).toHaveCSS('width', '136px');
+  await expandNavigation.press('Enter');
+  await expect(drawer).toHaveCSS('width', '300px');
   await sidenav.getByRole('menuitem', { name: 'Venues', exact: true }).click();
   await expect(page).toHaveURL(`${app.url}/stores/${store}/reference/venues`);
-  await expect(drawer).toHaveCSS('width', '72px');
+  await expect(drawer).toHaveCSS('width', '136px');
   await page.goBack();
   await expect(page.getByLabel('Title', { exact: true })).toBeVisible();
 
@@ -245,9 +266,9 @@ test('open search follows the current trigger across the mobile breakpoint', asy
   const drawer = page
     .getByRole('navigation', { name: 'Workspace navigation' })
     .locator('.MuiDrawer-paper');
-  await expect(drawer).toHaveCSS('width', '72px');
+  await expect(drawer).toHaveCSS('width', '136px');
   await page.setViewportSize({ width: 1199, height: 900 });
-  await expect(drawer).toHaveCSS('width', '72px');
+  await expect(drawer).toHaveCSS('width', '136px');
   await page.setViewportSize({ width: 1200, height: 900 });
   await expect(drawer).toHaveCSS('width', '300px');
   await page.getByRole('button', { name: 'Collapse navigation', exact: true }).click();
@@ -255,7 +276,7 @@ test('open search follows the current trigger across the mobile breakpoint', asy
   await page.getByRole('button', { name: 'Expand navigation', exact: true }).click();
   await expect(drawer).toHaveCSS('width', '300px');
   await page.setViewportSize({ width: 1200, height: 900 });
-  await expect(drawer).toHaveCSS('width', '72px');
+  await expect(drawer).toHaveCSS('width', '136px');
 });
 
 test('shell examples preserve an Event draft and respect search and store navigation blockers', async ({
@@ -290,7 +311,10 @@ test('shell examples preserve an Event draft and respect search and store naviga
   const trigger = page.getByRole('textbox', { name: 'Search', exact: true });
   await trigger.click();
   const search = page.getByRole('dialog', { name: 'Search workspace', exact: true });
-  await search.getByRole('button', { name: /^Venues Workspace/ }).click();
+  await search
+    .getByRole('list', { name: 'Modules' })
+    .getByRole('button', { name: 'Venues', exact: true })
+    .click();
   await page.getByRole('button', { name: 'Keep editing', exact: true }).click();
   await expect(page).toHaveURL(editorUrl);
   await expect(title).toHaveValue('Unsaved shell review');

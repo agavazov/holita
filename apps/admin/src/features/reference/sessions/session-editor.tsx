@@ -77,7 +77,6 @@ export function SessionEditor({
         title={sessionId ? 'Edit session' : 'Add session'}
         breadcrumbs={[
           { label: 'Home', to: '/' },
-          { label: 'Reference' },
           { label: 'Events', to: list },
           { label: event.result?.title ?? 'Event', to: back },
           { label: sessionId ? 'Edit session' : 'Add session' },

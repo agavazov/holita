@@ -65,7 +65,6 @@ export function TagEditor({ storeId, onSaved }: TagEditorProps) {
       title={tagId ? 'Edit tag' : 'Create tag'}
       breadcrumbs={[
         { label: 'Home', to: '/' },
-        { label: 'Reference' },
         { label: 'Tags', to: listPath },
         { label: tagId ? 'Edit tag' : 'Create tag' },
       ]}

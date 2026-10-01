@@ -273,7 +273,7 @@ export function LookupList<T extends LookupRow>({
       <Stack sx={{ flex: 1, minWidth: 0 }}>
         <PageHeader
           title={title}
-          breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Reference' }, { label: title }]}
+          breadcrumbs={[{ label: 'Home', to: '/' }, { label: title }]}
           action={
             <Button
               variant="contained"

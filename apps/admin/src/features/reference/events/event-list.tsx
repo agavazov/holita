@@ -275,7 +275,7 @@ export function EventList({
       <Stack sx={{ flex: 1, minWidth: 0 }}>
         <PageHeader
           title="Events"
-          breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Reference' }, { label: 'Events' }]}
+          breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Events' }]}
           action={
             <Button
               variant="contained"

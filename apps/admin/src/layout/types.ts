@@ -10,7 +10,6 @@ export type NavigationItem = {
 export type NavigationGroup = {
   key: string;
   label: string;
-  icon: ShellIcon;
   items: readonly NavigationItem[];
 };
 export type AdminLayoutProps = {

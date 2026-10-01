@@ -1,4 +1,4 @@
-// Adapted from Aurora NavItem: retain Stacked/mobile item geometry and inline Collapse.
+// Adapted from Aurora NavItem for Default sidenav items and the mobile drawer.
 import { useState } from 'react';
 import {
   Box,
@@ -17,10 +17,17 @@ type Props = {
   item: NavigationItem;
   section: string;
   onNavigate: (section: string) => void;
-  mobile?: boolean;
+  collapsed?: boolean;
   level?: number;
 };
-export default function NavItem({ item, section, onNavigate, mobile = false, level = 0 }: Props) {
+export default function NavItem({
+  item,
+  section,
+  onNavigate,
+  collapsed = false,
+  level = 0,
+}: Props) {
+  const compact = collapsed && level === 0;
   const activeChild = item.children ? containsSection(item.children, section) : false;
   const [expanded, setExpanded] = useState(activeChild);
   const [lastSection, setLastSection] = useState(section);
@@ -30,7 +37,7 @@ export default function NavItem({ item, section, onNavigate, mobile = false, lev
   }
   return (
     <>
-      <ListItem disablePadding sx={{ mb: mobile ? 0 : 0.25 }}>
+      <ListItem disablePadding>
         <ListItemButton
           component="button"
           role="menuitem"
@@ -42,19 +49,28 @@ export default function NavItem({ item, section, onNavigate, mobile = false, lev
           }}
           selected={item.key === section || (!expanded && activeChild)}
           sx={(theme) => ({
-            p: theme.spacing('3.5px', 2),
+            p: compact ? 1 : theme.spacing('3.5px', 2),
             width: 1,
-            textAlign: 'left',
+            minWidth: compact ? 0 : 180,
+            flexDirection: compact ? 'column' : 'row',
+            justifyContent: 'flex-start',
+            alignItems: 'center',
+            textAlign: compact ? 'center' : 'left',
             '&.Mui-selected': { [`& .${listItemTextClasses.primary}`]: { color: 'primary.main' } },
           })}
         >
-          {mobile && (
-            <ListItemIcon>
-              <IconifyIcon icon={item.icon} sx={{ fontSize: 14 }} />
-            </ListItemIcon>
-          )}
+          <ListItemIcon>
+            <IconifyIcon icon={item.icon} sx={{ fontSize: compact ? 24 : 14 }} />
+          </ListItemIcon>
           <Box
-            sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+            sx={{
+              flex: 1,
+              width: 1,
+              px: compact ? 1 : 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
           >
             <ListItemText
               sx={{
@@ -63,7 +79,8 @@ export default function NavItem({ item, section, onNavigate, mobile = false, lev
                   fontWeight: 'medium',
                   lineHeight: 1.3,
                   color: level === 0 ? 'text.primary' : 'text.secondary',
-                  whiteSpace: 'nowrap',
+                  whiteSpace: compact ? 'normal' : 'nowrap',
+                  ...(compact && { lineClamp: 1, wordBreak: 'break-all' }),
                 },
               }}
             >
@@ -100,7 +117,7 @@ export default function NavItem({ item, section, onNavigate, mobile = false, lev
                 item={child}
                 section={section}
                 onNavigate={onNavigate}
-                mobile={mobile}
+                collapsed={collapsed}
                 level={level + 1}
               />
             ))}

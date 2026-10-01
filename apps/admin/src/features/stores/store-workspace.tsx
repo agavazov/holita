@@ -115,7 +115,6 @@ export function StoreWorkspace({ referenceEnabled = true }: { referenceEnabled?:
         {
           key: 'workspace',
           label: 'Workspace',
-          icon: 'material-symbols:dashboard-customize-outline-rounded',
           items: [
             {
               key: 'products',
@@ -129,7 +128,6 @@ export function StoreWorkspace({ referenceEnabled = true }: { referenceEnabled?:
               {
                 key: 'reference',
                 label: 'Reference',
-                icon: 'material-symbols:widgets-outline-rounded' as const,
                 items: [
                   {
                     key: 'reference/events',

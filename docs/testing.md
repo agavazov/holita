@@ -32,7 +32,10 @@ Each backend health suite starts its actual AppModule on an ephemeral loopback p
 checks HTTP responses without a store header/database, and closes the application.
 Gateway bootstrap also checks that oversized baggage headers receive HTTP 431 before
 GraphQL handling. The real federation file repeats that check against compiled services
-and verifies that neither subgraph receives the rejected request.
+and verifies that neither subgraph receives the rejected request. It also checks gateway and
+Reference CORS for both default local admin origins and rejects other origins and ports.
+The federation fixture leaves ADMIN_ORIGIN unset unless a browser test supplies its exact origin.
+Child services use the fixture's captured environment without rereading local `.env` files.
 These are bootstrap tests, not proof of store isolation or product behavior.
 The Products service file tests validation and no-write decisions with mocked dependency
 boundaries. Its results do not substitute for the real DB and federation files below.
@@ -181,8 +184,9 @@ Products creation and mobile navigation. The layout file exercises scrollable fo
 editing, and the return to desktop navigation. Gallery and History component cases verify
 failure/retry states without incorrectly reporting an empty result.
 The Aurora shell file exercises presets/colors and preference persistence, preserving
-route filters while opening menus, local notification actions, module search, collapse,
-hover, keyboard focus/Escape and desktop/tablet/mobile transitions. It captures the shell
+route filters while opening menus, local notification actions, module search, Default
+sidenav collapse, direct compact-item navigation, keyboard focus/Escape, tablet backdrop
+dismissal and desktop/tablet/mobile transitions. It captures the shell
 and open menus at the reference viewport sizes and rejects external asset requests.
 It also checks open-search positioning, text and focus across 899/900 px, drawer transitions
 at 1199/1200 px, and unsaved Event input while using example menus, search and store switching.
