@@ -4,18 +4,15 @@ import {
   AppBar,
   Box,
   Button,
-  Divider,
   Drawer,
   MenuItem,
   Stack,
   Toolbar,
-  Typography,
   drawerClasses,
   paperClasses,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import { version } from '../../package.json';
 import IconifyIcon from './primitives/iconify-icon.js';
 import Logo from './primitives/logo.js';
 import StyledTextField from './primitives/styled-text-field.js';
@@ -223,36 +220,6 @@ export function AdminLayout(props: AdminLayoutProps) {
         >
           {children}
         </Box>
-        <Divider />
-        <Stack
-          direction={{ sm: 'row' }}
-          sx={{
-            columnGap: 2,
-            rowGap: 0.5,
-            bgcolor: 'background.default',
-            justifyContent: { xs: 'center', sm: 'space-between' },
-            alignItems: 'center',
-            height: ({ mixins }) => mixins.footer,
-            py: 1,
-            px: { xs: 3, md: 5 },
-            textAlign: { xs: 'center', sm: 'left' },
-          }}
-        >
-          <Typography
-            variant="caption"
-            component="p"
-            sx={{ lineHeight: 1.6, fontWeight: 'light', color: 'text.secondary' }}
-          >
-            holita · {new Date().getFullYear()}
-          </Typography>
-          <Typography
-            variant="caption"
-            component="p"
-            sx={{ fontWeight: 'light', color: 'text.secondary' }}
-          >
-            v{version}
-          </Typography>
-        </Stack>
       </Box>
     </Box>
   );

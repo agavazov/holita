@@ -190,6 +190,7 @@ The shell adapts Aurora 2.4.0's MainLayout, Default Sidenav, shared SidenavDrawe
 NavItem, AppBar and search/language/theme/notification/profile components into
 [`layout/`](../../apps/admin/src/layout/). It retains the original 300 px expanded drawer,
 136 px compact drawer, 64/82 px toolbar, breakpoint behavior, typography and menu styling.
+Page content fills the remaining viewport height; the shell has no footer.
 All navigation groups remain visible; compact items show their icon above the label. Tablet
 expansion overlays content with a backdrop; Escape or backdrop activation collapses it.
 Desktop and mobile share the same menu content. The collapse indicator uses CSS transitions
