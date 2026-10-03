@@ -201,6 +201,11 @@ export const icons = {
     height: 36,
     body: '<path fill="#ED2939" d="M36 27a4 4 0 0 1-4 4h-8V5h8a4 4 0 0 1 4 4z"/><path fill="#002495" d="M4 5a4 4 0 0 0-4 4v18a4 4 0 0 0 4 4h8V5z"/><path fill="#EEE" d="M12 5h12v26H12z"/>',
   },
+  'twemoji:flag-bulgaria': {
+    width: 36,
+    height: 36,
+    body: '<path fill="#EEE" d="M4 5h28a4 4 0 0 1 4 4v5H0V9a4 4 0 0 1 4-4"/><path fill="#00966E" d="M0 14h36v8H0z"/><path fill="#D62612" d="M0 22h36v5a4 4 0 0 1-4 4H4a4 4 0 0 1-4-4z"/>',
+  },
   'twemoji:flag-india': {
     width: 36,
     height: 36,

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type PropsWithChildren } from 'react';
 import { CssBaseline, ThemeProvider, useColorScheme, useMediaQuery } from '@mui/material';
+import { useLocation } from 'react-router';
 import 'simplebar-react/dist/simplebar.min.css';
 import './fonts.css';
 import { createTheme } from './theme.js';
@@ -7,6 +8,7 @@ import { darkPalettes } from './palettes/index.js';
 import { COLOR_GROUPS } from './primaryColorOverride.js';
 import { AppearanceContext, appearanceStorageKey, readAppearance } from './preferences.js';
 import type { ThemeMode } from './config.js';
+import { localeFromPathname } from '../localization/locale.js';
 
 function ThemeModeSync({ mode }: { mode: ThemeMode }) {
   const { setMode } = useColorScheme();
@@ -17,12 +19,14 @@ function ThemeModeSync({ mode }: { mode: ThemeMode }) {
 }
 
 export function AuroraTheme({ children }: PropsWithChildren) {
+  const { pathname } = useLocation();
+  const locale = localeFromPathname(pathname) ?? 'bg';
   const [appearance, setAppearance] = useState(readAppearance);
   const systemDark = useMediaQuery('(prefers-color-scheme: dark)');
   const isDark = appearance.mode === 'system' ? systemDark : appearance.mode === 'dark';
   const theme = useMemo(
-    () => createTheme(appearance.preset, appearance.primaryColor),
-    [appearance.preset, appearance.primaryColor],
+    () => createTheme(appearance.preset, appearance.primaryColor, locale),
+    [appearance.preset, appearance.primaryColor, locale],
   );
   useEffect(() => {
     document.documentElement.setAttribute('data-holita-preset', appearance.preset);

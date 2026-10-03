@@ -34,6 +34,8 @@ import StyledTextField from '../../layout/primitives/styled-text-field.js';
 import { LookupFilters } from './lookup-filters.js';
 import { useRecordDeletion } from '../use-record-deletion.js';
 import { RecordActions } from '../../components/record-actions.js';
+import { localizedPath } from '../../localization/locale.js';
+import { useLocalization } from '../../localization/localization-provider.js';
 
 type LookupRow = Pick<ReferenceVenueDetailsFragment, 'id' | 'name' | 'active'>;
 
@@ -55,8 +57,8 @@ export function LookupList<T extends LookupRow>({
   deletionHint: string;
   onDeleted: (count: number) => void;
 }) {
-  const plural = title.toLowerCase();
-  const label = singular.charAt(0).toUpperCase() + singular.slice(1);
+  const { locale, t } = useLocalization();
+  const plural = title.toLocaleLowerCase(locale);
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const { key: locationKey } = useLocation();
@@ -200,13 +202,13 @@ export function LookupList<T extends LookupRow>({
       { ...GRID_CHECKBOX_SELECTION_COL_DEF, width: 64 },
       {
         field: 'name',
-        headerName: 'Name',
+        headerName: t('reference.name'),
         flex: 2,
         minWidth: 210,
         renderCell: ({ row, tabIndex }) => (
           <Link
             component={RouterLink}
-            to={`/${resource}/${row.id}/edit`}
+            to={localizedPath(locale, `/${resource}/${row.id}/edit`)}
             tabIndex={tabIndex}
             variant="subtitle2"
             sx={{ color: 'text.primary', fontWeight: 400 }}
@@ -218,12 +220,12 @@ export function LookupList<T extends LookupRow>({
       ...detailColumns,
       {
         field: 'active',
-        headerName: 'Status',
+        headerName: t('reference.status'),
         flex: 1,
         minWidth: 120,
         renderCell: ({ row }) => (
           <Chip
-            label={row.active ? 'Active' : 'Inactive'}
+            label={t(row.active ? 'reference.active' : 'reference.inactive')}
             color={row.active ? 'success' : 'neutral'}
           />
         ),
@@ -240,7 +242,7 @@ export function LookupList<T extends LookupRow>({
             tabIndex={tabIndex}
             disabled={deleting}
             onEdit={() => {
-              void navigate(`/${resource}/${row.id}/edit`);
+              void navigate(localizedPath(locale, `/${resource}/${row.id}/edit`));
             }}
             onDelete={() => {
               confirmDelete([row]);
@@ -249,7 +251,7 @@ export function LookupList<T extends LookupRow>({
         ),
       },
     ],
-    [resource, detailColumns, deleting, navigate, confirmDelete],
+    [resource, detailColumns, deleting, navigate, confirmDelete, locale, t],
   );
   const rows = records.query.isError ? [] : records.result.data;
   const selectedRows = rows.filter((row) => selection.ids.has(row.id));
@@ -273,16 +275,20 @@ export function LookupList<T extends LookupRow>({
       <Stack sx={{ flex: 1, minWidth: 0 }}>
         <PageHeader
           title={title}
-          breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Reference' }, { label: title }]}
+          breadcrumbs={[
+            { label: t('common.home'), to: localizedPath(locale, '/') },
+            { label: t('shell.reference') },
+            { label: title },
+          ]}
           action={
             <Button
               variant="contained"
               startIcon={<IconifyIcon icon="material-symbols:add-rounded" />}
               onClick={() => {
-                void navigate(`/${resource}/create`);
+                void navigate(localizedPath(locale, `/${resource}/create`));
               }}
             >
-              Create {singular}
+              {t('reference.createRecord', { name: singular })}
             </Button>
           }
         />
@@ -295,14 +301,19 @@ export function LookupList<T extends LookupRow>({
               <StyledTextField
                 id={`${singular}-search`}
                 type="search"
-                placeholder={`Search ${plural}`}
+                placeholder={t('reference.searchRecords', { name: title.toLocaleLowerCase(locale) })}
                 value={search}
                 disabled={deleting}
                 onChange={(event) => {
                   changeSearch(event.target.value);
                 }}
                 slotProps={{
-                  htmlInput: { 'aria-label': `Search ${plural}`, maxLength: 200 },
+                  htmlInput: {
+                    'aria-label': t('reference.searchRecords', {
+                      name: title.toLocaleLowerCase(locale),
+                    }),
+                    maxLength: 200,
+                  },
                   input: {
                     startAdornment: (
                       <InputAdornment position="start">
@@ -316,7 +327,9 @@ export function LookupList<T extends LookupRow>({
               <Button
                 variant="soft"
                 color="neutral"
-                aria-label={`Filter ${plural}`}
+                aria-label={t('reference.filterRecords', {
+                  name: title.toLocaleLowerCase(locale),
+                })}
                 aria-expanded={filterOpen}
                 onClick={() => {
                   setFilterOpen(!filterOpen);
@@ -325,26 +338,32 @@ export function LookupList<T extends LookupRow>({
               >
                 <IconifyIcon icon="material-symbols:filter-alt-outline" sx={{ fontSize: 20 }} />
                 <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                  Filter
+                  {t('common.filter')}
                 </Box>
               </Button>
             </Stack>
             <Tabs
               value={status}
-              aria-label={`${label} status`}
+              aria-label={t('reference.recordStatus', { name: singular })}
               onChange={(_, value: unknown) => {
                 if (typeof value === 'string') setStatus(value);
               }}
             >
-              <Tab label={`All ${plural}`} value="all" disabled={deleting} />
-              <Tab label="Active" value="ACTIVE" disabled={deleting} />
-              <Tab label="Inactive" value="INACTIVE" disabled={deleting} />
+              <Tab
+                label={t('reference.allRecords', { name: title.toLocaleLowerCase(locale) })}
+                value="all"
+                disabled={deleting}
+              />
+              <Tab label={t('reference.active')} value="ACTIVE" disabled={deleting} />
+              <Tab label={t('reference.inactive')} value="INACTIVE" disabled={deleting} />
             </Tabs>
           </Stack>
           {status !== 'all' && (
             <Stack direction="row" sx={{ gap: 1, mb: 2, flexWrap: 'wrap' }}>
               <Chip
-                label={`Status: ${status === 'ACTIVE' ? 'Active' : 'Inactive'}`}
+                label={t('reference.statusValue', {
+                  status: t(status === 'ACTIVE' ? 'reference.active' : 'reference.inactive'),
+                })}
                 disabled={deleting}
                 onDelete={() => {
                   setStatus('all');
@@ -362,11 +381,11 @@ export function LookupList<T extends LookupRow>({
                     void records.query.refetch();
                   }}
                 >
-                  Retry
+                  {t('common.retry')}
                 </Button>
               }
             >
-              {records.query.error.message}
+              {t('common.genericError')}
             </Alert>
           )}
           {selectedRows.length > 0 && (
@@ -382,7 +401,7 @@ export function LookupList<T extends LookupRow>({
               }}
             >
               <Typography variant="body2" sx={{ flex: 1 }}>
-                {selectedRows.length} selected on this page
+                {t('reference.selectedOnPage', { count: selectedRows.length })}
               </Typography>
               <Button
                 color="error"
@@ -392,7 +411,7 @@ export function LookupList<T extends LookupRow>({
                   confirmDelete(selectedRows);
                 }}
               >
-                Delete selected
+                {t('reference.deleteSelected')}
               </Button>
             </Stack>
           )}
@@ -429,10 +448,10 @@ export function LookupList<T extends LookupRow>({
               }}
               localeText={{
                 noRowsLabel: records.query.isError
-                  ? `${title} unavailable`
+                  ? t('reference.recordsUnavailable', { name: title })
                   : hasFilters
-                    ? `No ${plural} match these filters.`
-                    : `No ${plural} in this store yet.`,
+                    ? t('reference.noRecordsMatch', { name: title.toLocaleLowerCase(locale) })
+                    : t('reference.noRecords', { name: title.toLocaleLowerCase(locale) }),
               }}
               onCellClick={(cell, event) => {
                 if (
@@ -441,7 +460,7 @@ export function LookupList<T extends LookupRow>({
                   (event.target instanceof Element && event.target.closest('a, button, input'))
                 )
                   return;
-                void navigate(`/${resource}/${String(cell.id)}/edit`);
+                void navigate(localizedPath(locale, `/${resource}/${String(cell.id)}/edit`));
               }}
               sx={{
                 '& .MuiDataGrid-row': { cursor: 'pointer' },
@@ -460,23 +479,31 @@ export function LookupList<T extends LookupRow>({
       >
         <DialogTitle id={`delete-${plural}-title`}>
           {targets.length === 1
-            ? `Delete ${singular}?`
-            : `Delete ${String(targets.length)} ${plural}?`}
+            ? t('reference.deleteOneTitle', { name: singular })
+            : t('reference.deleteManyTitle', {
+                count: targets.length,
+                name: plural,
+              })}
         </DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2 }}>
-            Delete{' '}
             {targets.length === 1
-              ? targets[0]?.name
-              : `${String(targets.length)} selected ${plural}`}{' '}
-            from this store? This cannot be undone. {deletionHint}
+              ? t('reference.deleteOneMessage', {
+                  name: targets[0]?.name ?? singular,
+                  hint: deletionHint,
+                })
+              : t('reference.deleteManyMessage', {
+                  count: targets.length,
+                  name: plural,
+                  hint: deletionHint,
+                })}
           </Typography>
           {failures.length > 0 && (
             <Alert severity="error">
-              {failures.length} could not be deleted. Retry applies only to these records.
+              {t('reference.deleteFailures', { count: failures.length })}
               {failures.map((failure) => (
                 <Typography key={failure.id} variant="body2">
-                  {failure.name}: {failure.message}
+                  {failure.name}: {t('common.genericError')}
                 </Typography>
               ))}
             </Alert>
@@ -484,10 +511,12 @@ export function LookupList<T extends LookupRow>({
         </DialogContent>
         <DialogActions>
           <Button color="neutral" disabled={deleting} onClick={cancel}>
-            Cancel
+            {t('reference.cancel')}
           </Button>
           <Button variant="contained" color="error" loading={deleting} onClick={remove}>
-            {targets.length === 1 ? `Delete ${singular}` : `Delete ${plural}`}
+            {targets.length === 1
+              ? t('reference.deleteRecord', { name: singular })
+              : t('reference.deleteRecords', { name: plural })}
           </Button>
         </DialogActions>
       </Dialog>

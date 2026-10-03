@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '../../../test/render.js';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { describe, expect, it } from 'vitest';
@@ -52,7 +52,7 @@ function mount() {
         element: <App dataProvider={createDataProvider('http://127.0.0.1:11080/graphql')} />,
       },
     ],
-    { initialEntries: [`/stores/${storeA}/reference/events/${event().id}/edit`] },
+    { initialEntries: [`/en/stores/${storeA}/reference/events/${event().id}/edit`] },
   );
   render(<RouterProvider router={router} />);
   return { router, user: userEvent.setup() };
@@ -70,7 +70,7 @@ describe('Independent gallery editing', () => {
     await user.click(screen.getByRole('tab', { name: 'Content & media' }));
     const gallery = within(screen.getByRole('region', { name: 'Event gallery' }));
     await gallery.findByText('Gallery unavailable. Use Refresh previews to try again.');
-    expect(gallery.getByRole('alert')).toHaveTextContent('Media service unavailable');
+    expect(gallery.getByRole('alert')).toHaveTextContent('Something went wrong. Try again.');
     expect(gallery.queryByText('No images yet')).not.toBeInTheDocument();
     fails = false;
     await user.click(gallery.getByRole('button', { name: 'Refresh previews' }));
@@ -94,7 +94,7 @@ describe('Independent gallery editing', () => {
     await user.click(await gallery.findByRole('button', { name: 'Move 0.png later' }));
     expect(screen.getByRole('button', { name: 'Save event' })).toBeDisabled();
     await user.click(gallery.getByRole('button', { name: 'Save order' }));
-    await gallery.findByText('Gallery changed. Reload its order.');
+    await gallery.findByText('Something went wrong. Try again.');
     expect(gallery.getAllByLabelText(/^Image [01]\.png$/)[0]).toHaveAttribute(
       'aria-label',
       'Image 1.png',
@@ -161,7 +161,7 @@ describe('Independent gallery editing', () => {
       delayed.resolve(result({ setReferenceEventCover: [{ ...image(1), isCover: true }] }));
       await delayed.promise;
     });
-    expect(router.state.location.pathname).toBe(`/stores/${storeB}/reference/events`);
+    expect(router.state.location.pathname).toBe(`/en/stores/${storeB}/reference/events`);
     expect(screen.queryByText('Cover saved.')).not.toBeInTheDocument();
     expect(
       transport.calls.find((call) => call.operation === 'SetReferenceEventCover'),

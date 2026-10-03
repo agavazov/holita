@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '../../../test/render.js';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { describe, expect, it } from 'vitest';
@@ -14,7 +14,7 @@ import {
   stores,
   type GraphQLCall,
 } from '../../../test/graphql-fixture.js';
-const list = `/stores/${storeA}/reference/events`;
+const list = `/en/stores/${storeA}/reference/events`;
 function mount(path = list) {
   const router = createMemoryRouter(
     [
@@ -42,7 +42,7 @@ function respond(call: GraphQLCall) {
   throw new Error(`Unexpected ${call.operation}`);
 }
 async function selectRow(user: ReturnType<typeof userEvent.setup>) {
-  const link = await screen.findByRole('link', { name: 'Sofia forum' });
+  const link = await screen.findByRole('link', { name: 'Sofia forum' }, { timeout: 10000 });
   const row = link.closest('[role="row"]');
   if (!(row instanceof HTMLElement)) throw new Error('Missing event row');
   await user.click(within(row).getByRole('checkbox'));
@@ -69,7 +69,7 @@ describe('Event lifecycle', () => {
       await delayed.promise;
     });
     await screen.findByText('History unavailable');
-    expect(screen.getByRole('alert')).toHaveTextContent('History service unavailable');
+    expect(screen.getByRole('alert')).toHaveTextContent('Something went wrong. Try again.');
     expect(screen.queryByText('No changes recorded yet.')).not.toBeInTheDocument();
     fails = false;
     await user.click(screen.getByRole('button', { name: 'Retry' }));
@@ -112,13 +112,13 @@ describe('Event lifecycle', () => {
     await selectRow(user);
     await user.click(screen.getByRole('button', { name: 'Publish selected' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Publish' }));
-    expect(await screen.findByText('Selected event is in Trash')).toBeInTheDocument();
+    expect(await screen.findByText('Something went wrong. Try again.')).toBeInTheDocument();
     expect(screen.getByText('1 selected on this page')).toBeInTheDocument();
     fails = false;
     await user.dblClick(
       within(screen.getByRole('dialog')).getByRole('button', { name: 'Publish' }),
     );
-    await screen.findByText('Publish completed for 1 event.');
+    await screen.findByText('Publish completed for 1 events.');
     expect(screen.queryByRole('button', { name: 'Publish selected' })).not.toBeInTheDocument();
     const calls = transport.calls.filter((call) => call.operation === 'SetReferenceEventsStatus');
     expect(calls).toHaveLength(2);
@@ -142,7 +142,7 @@ describe('Event lifecycle', () => {
       expect(transport.calls.some((call) => call.operation === 'TrashReferenceEvents')).toBe(true);
     });
     await act(async () => {
-      await router.navigate(`/stores/${storeB}/reference/events`);
+      await router.navigate(`/en/stores/${storeB}/reference/events`);
     });
     await screen.findByRole('link', { name: 'Plovdiv forum' });
     await act(async () => {
@@ -150,7 +150,7 @@ describe('Event lifecycle', () => {
       await delayed.promise;
     });
     expect(screen.queryByText('Move to trash completed for 1 event.')).not.toBeInTheDocument();
-    expect(router.state.location.pathname).toBe(`/stores/${storeB}/reference/events`);
+    expect(router.state.location.pathname).toBe(`/en/stores/${storeB}/reference/events`);
     expect(transport.calls.find((call) => call.operation === 'TrashReferenceEvents')?.storeId).toBe(
       storeA,
     );

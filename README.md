@@ -26,7 +26,10 @@ npm run db:seed
 npm run dev
 ```
 
-Open [the admin](http://127.0.0.1:11081). Gateway, core, products and reference listen on
+Open [the admin](http://127.0.0.1:11081/bg/). Bulgarian is the default language; switch to
+English from the top bar. Every admin URL starts with `/bg/` or `/en/`, and legacy or unsupported
+prefixes redirect to the equivalent Bulgarian URL while preserving the route, query and hash.
+Gateway, core, products and reference listen on
 127.0.0.1 ports 11080, 11082, 11083 and 11086 respectively. All processes run on the host;
 PostgreSQL alone runs in Docker on 127.0.0.1:11084. Ctrl+C stops the Node group;
 `npm run db:down` separately stops PostgreSQL and preserves its volume. Database setup,
@@ -59,8 +62,9 @@ existing data and the static schema remain available when disabled.
 Use the [Reference implementation index](docs/reference.md) to find the code and focused tests
 for each pattern. On narrow screens, **Open navigation** opens the menu and the store
 selector appears below the top bar. Desktop navigation supports collapse and hover expansion.
-The top bar provides local module search, example notifications/profile, a demo language
-selector and Aurora theme/color preferences. Search only finds enabled navigation entries;
+The top bar provides local module search, example notifications/profile, the BG/EN language
+selector and Aurora theme/color preferences. Language changes preserve the active store, screen,
+filters, sorting, pagination, search and hash. Search only finds enabled navigation entries;
 notifications and profile actions are examples, with no account or notification service.
 Appearance preferences persist locally. Products, Venues, Speakers and Tags follow the selected Aurora preset
 and provide search, automatic filters, server sorting, page-local batch deletion and responsive

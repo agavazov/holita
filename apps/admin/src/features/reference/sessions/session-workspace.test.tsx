@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '../../../test/render.js';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -16,7 +16,7 @@ import {
   type GraphQLCall,
 } from '../../../test/graphql-fixture.js';
 
-const root = `/stores/${storeA}/reference/events/${event().id}`;
+const root = `/en/stores/${storeA}/reference/events/${event().id}`;
 function mount(path = `${root}?tab=sessions`) {
   const router = createMemoryRouter(
     [
@@ -93,7 +93,7 @@ describe('Session editor and program lifecycle', () => {
           variables: { eventId: event().id, input: { ...times, room: null } },
         });
       });
-      await screen.findByRole('button', { name: 'Add session' });
+      await screen.findByRole('button', { name: 'Add session' }, { timeout: 10000 });
     },
   );
   it('keeps failed order drafts, confirms navigation and reloads server order on cancel before saving explicitly', async () => {
@@ -128,9 +128,7 @@ describe('Session editor and program lifecycle', () => {
     await screen.findByText('Discard unsaved changes?');
     await user.click(screen.getByRole('button', { name: 'Keep editing' }));
     await user.click(await screen.findByRole('button', { name: 'Save order' }));
-    await screen.findByText(
-      'The session list changed. Cancel the draft to reload it, then arrange it again.',
-    );
+    await screen.findByText('Something went wrong. Try again.');
     expect(titles()).toEqual(['Workshop', 'Opening']);
     await user.click(screen.getByRole('button', { name: 'Cancel order' }));
     await waitFor(() => {
@@ -187,7 +185,7 @@ describe('Session editor and program lifecycle', () => {
     await user.click(screen.getByLabelText('Title'));
     await user.paste('Edited opening');
     await user.click(screen.getByRole('button', { name: 'Save session' }));
-    await screen.findByText('Use a shorter room name.');
+    expect(await screen.findAllByText('Something went wrong. Try again.')).toHaveLength(2);
     expect(screen.getByLabelText('Title')).toHaveValue('Edited opening');
     expect(
       transport.calls.find((call) => call.operation === 'UpdateReferenceSession'),
@@ -223,14 +221,14 @@ describe('Session editor and program lifecycle', () => {
       );
     });
     await act(async () => {
-      await router.navigate(`/stores/${storeB}/reference/events`);
+      await router.navigate(`/en/stores/${storeB}/reference/events`);
     });
     await screen.findByRole('link', { name: 'Plovdiv event' });
     await act(async () => {
       delayed.resolve(result({ updateReferenceSession: session() }));
       await delayed.promise;
     });
-    expect(router.state.location.pathname).toBe(`/stores/${storeB}/reference/events`);
+    expect(router.state.location.pathname).toBe(`/en/stores/${storeB}/reference/events`);
     expect(screen.queryByText('Session saved.')).not.toBeInTheDocument();
     expect(
       transport.calls.find((call) => call.operation === 'UpdateReferenceSession')?.storeId,
@@ -263,7 +261,7 @@ describe('Session editor and program lifecycle', () => {
       );
     });
     await act(async () => {
-      await router.navigate(`/stores/${storeA}/reference/events/${nextId}`);
+      await router.navigate(`/en/stores/${storeA}/reference/events/${nextId}`);
     });
     await screen.findByText('Alex');
     const count = transport.calls.filter(

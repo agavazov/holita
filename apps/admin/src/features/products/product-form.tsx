@@ -4,6 +4,7 @@ import { useId, useRef, useState, type ReactNode } from 'react';
 import { EditorAside } from '../../components/editor-aside.js';
 import type { DataError } from '../../data/data-provider.js';
 import type { CreateProductInput } from '../../generated/graphql/operations.js';
+import { useLocalization } from '../../localization/localization-provider.js';
 
 type ProductFormProps = {
   header?: ReactNode;
@@ -14,13 +15,6 @@ type ProductFormProps = {
   onCancel: () => void;
 };
 
-function fieldError(value: string, label: string, max: number) {
-  if (!value.trim()) return label === 'Name' ? 'Enter a product name.' : 'Enter a SKU.';
-  if (value.includes('\u0000')) return 'Remove unsupported characters.';
-  if (Array.from(value.trim()).length > max) return `Use at most ${String(max)} characters.`;
-  return '';
-}
-
 export function ProductForm({
   header,
   initialValues,
@@ -29,6 +23,7 @@ export function ProductForm({
   onSubmit,
   onCancel,
 }: ProductFormProps) {
+  const { t } = useLocalization();
   const id = useId();
   const [name, setName] = useState(initialValues?.name ?? '');
   const [sku, setSku] = useState(initialValues?.sku ?? '');
@@ -36,8 +31,14 @@ export function ProductForm({
   const [attempted, setAttempted] = useState(false);
   const nameInput = useRef<HTMLInputElement>(null);
   const skuInput = useRef<HTMLInputElement>(null);
-  const nameError = fieldError(name, 'Name', 200);
-  const skuError = fieldError(sku, 'SKU', 100);
+  const fieldError = (value: string, requiredKey: 'products.nameRequired' | 'products.skuRequired', max: number) => {
+    if (!value.trim()) return t(requiredKey);
+    if (value.includes('\u0000')) return t('products.unsupportedCharacters');
+    if (Array.from(value.trim()).length > max) return t('products.maxCharacters', { count: max });
+    return '';
+  };
+  const nameError = fieldError(name, 'products.nameRequired', 200);
+  const skuError = fieldError(sku, 'products.skuRequired', 100);
   return (
     <Stack
       component="form"
@@ -60,25 +61,25 @@ export function ProductForm({
         <Stack sx={{ gap: 3, maxWidth: 520, mx: 'auto' }}>
           <Box>
             <Typography variant="h6" component="h2" sx={{ mb: 1 }}>
-              Product details
+              {t('products.details')}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Give your product a name and a unique SKU.
+              {t('products.detailsHelp')}
             </Typography>
           </Box>
           {error && (
             <Alert severity="error">
-              {error.message}
+              {t('common.genericError')}
               {error.requestId && (
                 <Typography variant="caption" sx={{ display: 'block', overflowWrap: 'anywhere' }}>
-                  Request ID: {error.requestId}
+                  {t('common.requestId')}: {error.requestId}
                 </Typography>
               )}
             </Alert>
           )}
           <TextField
             id={`${id}-name`}
-            label="Name"
+            label={t('products.name')}
             autoFocus
             autoComplete="off"
             fullWidth
@@ -92,12 +93,12 @@ export function ProductForm({
             helperText={
               attempted && nameError
                 ? nameError
-                : 'Use the name you want to see in the product list.'
+                : t('products.nameHelp')
             }
           />
           <TextField
             id={`${id}-sku`}
-            label="SKU"
+            label={t('products.sku')}
             autoComplete="off"
             fullWidth
             disabled={pending}
@@ -108,38 +109,38 @@ export function ProductForm({
             }}
             error={attempted && Boolean(skuError)}
             helperText={
-              attempted && skuError ? skuError : 'Case-sensitive. Must be unique within this store.'
+              attempted && skuError ? skuError : t('products.skuHelp')
             }
           />
         </Stack>
       </Paper>
       <EditorAside
-        label="Product settings"
+        label={t('products.settings')}
         actions={
           <>
             <Button variant="soft" color="neutral" onClick={onCancel} disabled={pending}>
-              Cancel
+              {t('products.cancel')}
             </Button>
             <Button
               variant="contained"
               type="submit"
-              aria-label="Save product"
+              aria-label={t('products.save')}
               aria-busy={pending}
               loading={pending}
               sx={{ flexGrow: 1 }}
             >
-              Save product
+              {t('products.save')}
             </Button>
           </>
         }
       >
         <Stack sx={{ p: { xs: 3, lg: 5 }, gap: 3 }}>
           <Typography variant="h6" component="h2">
-            Status
+            {t('products.status')}
           </Typography>
           <TextField
             id={`${id}-status`}
-            label="Status"
+            label={t('products.status')}
             select
             fullWidth
             value={status}
@@ -149,29 +150,29 @@ export function ProductForm({
                 setStatus(event.target.value);
             }}
           >
-            <MenuItem value="DRAFT">Draft</MenuItem>
-            <MenuItem value="ACTIVE">Active</MenuItem>
+            <MenuItem value="DRAFT">{t('products.draft')}</MenuItem>
+            <MenuItem value="ACTIVE">{t('products.active')}</MenuItem>
           </TextField>
           <Typography variant="body2" color="text.secondary">
             {status === 'ACTIVE'
-              ? 'The product will be marked as active.'
-              : 'The product will be saved as a draft.'}
+              ? t('products.activeHelp')
+              : t('products.draftHelp')}
           </Typography>
         </Stack>
         <Stack sx={{ p: { xs: 3, lg: 5 }, gap: 1 }}>
           <Typography variant="h6" component="h2" sx={{ mb: 1 }}>
-            Summary
+            {t('products.summary')}
           </Typography>
           <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
-            {name.trim() || 'Untitled product'}
+            {name.trim() || t('products.untitled')}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>
-            SKU: {sku.trim() || 'Not set'}
+            {t('products.sku')}: {sku.trim() || t('products.notSet')}
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {initialValues
-              ? 'Save changes to this product in the selected store.'
-              : 'Create a new product in the selected store.'}
+              ? t('products.editSummary')
+              : t('products.createSummary')}
           </Typography>
         </Stack>
       </EditorAside>

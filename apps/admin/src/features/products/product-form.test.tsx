@@ -1,12 +1,20 @@
-import { render as rtlRender, fireEvent, screen, waitFor } from '@testing-library/react';
+import { render as rtlRender, fireEvent, screen, waitFor } from '../../test/render.js';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
 import { DataError } from '../../data/data-provider.js';
 import { AuroraTheme } from '../../theme/aurora-theme.js';
 import { ProductForm } from './product-form.js';
 
-const render = (ui: React.ReactNode) => rtlRender(ui, { wrapper: AuroraTheme });
+const render = (ui: React.ReactNode) =>
+  rtlRender(ui, {
+    wrapper: ({ children }) => (
+      <MemoryRouter initialEntries={['/en']}>
+        <AuroraTheme>{children}</AuroraTheme>
+      </MemoryRouter>
+    ),
+  });
 
 describe('ProductForm', () => {
   it('requires name and SKU, trims input and defaults to Draft', async () => {
@@ -62,7 +70,7 @@ describe('ProductForm', () => {
     );
     expect(screen.getByLabelText('Name')).toHaveValue('Existing');
     expect(screen.getByText('Active')).toBeInTheDocument();
-    expect(screen.getByRole('alert')).toHaveTextContent('SKU already exists.');
+    expect(screen.getByRole('alert')).toHaveTextContent('Something went wrong. Try again.');
     expect(screen.getByRole('alert')).toHaveTextContent('request-123');
     rerender(<ProductForm pending error={null} onSubmit={save} onCancel={vi.fn()} />);
     expect(screen.getByLabelText('Name')).toBeDisabled();

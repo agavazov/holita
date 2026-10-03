@@ -1,6 +1,9 @@
 import { Alert, Paper, Skeleton, Snackbar, Typography } from '@mui/material';
 import { lazy, Suspense, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useParams } from 'react-router';
+import type { TranslationKey } from '../../localization/dictionaries.js';
+import { useLocalization } from '../../localization/localization-provider.js';
+import { localizedPath, semanticRouteKey } from '../../localization/locale.js';
 import { SessionEditor } from './sessions/session-editor.js';
 import { EventShow } from './events/event-show.js';
 import { EventList } from './events/event-list.js';
@@ -29,27 +32,31 @@ function SessionRoute({ storeId, onSaved }: { storeId: string; onSaved: () => vo
   ) : null;
 }
 export function ReferenceWorkspace({ storeId, storeName }: { storeId: string; storeName: string }) {
-  const [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState<{
+    key: TranslationKey;
+    values?: Readonly<Record<string, string | number>>;
+  } | null>(null);
   const { pathname } = useLocation();
+  const { locale, t } = useLocalization();
   return (
     <>
       <Snackbar
-        open={Boolean(notice)}
+        open={notice !== null}
         autoHideDuration={6000}
         onClose={(_, reason) => {
-          if (reason !== 'clickaway') setNotice('');
+          if (reason !== 'clickaway') setNotice(null);
         }}
       >
         <Alert
           severity="success"
           onClose={() => {
-            setNotice('');
+            setNotice(null);
           }}
         >
-          {notice}
+          {notice ? t(notice.key, notice.values) : null}
         </Alert>
       </Snackbar>
-      <Routes key={pathname}>
+      <Routes key={semanticRouteKey(pathname)}>
         {['events/:eventId/sessions/create', 'events/:eventId/sessions/:sessionId/edit'].map(
           (path) => (
             <Route
@@ -59,7 +66,7 @@ export function ReferenceWorkspace({ storeId, storeName }: { storeId: string; st
                 <SessionRoute
                   storeId={storeId}
                   onSaved={() => {
-                    setNotice('Session saved.');
+                    setNotice({ key: 'reference.sessionSaved' });
                   }}
                 />
               }
@@ -73,7 +80,7 @@ export function ReferenceWorkspace({ storeId, storeName }: { storeId: string; st
               storeId={storeId}
               storeName={storeName}
               onDeleted={() => {
-                setNotice('Event moved to trash.');
+                setNotice({ key: 'reference.eventTrashed' });
               }}
             />
           }
@@ -87,7 +94,7 @@ export function ReferenceWorkspace({ storeId, storeName }: { storeId: string; st
                 fallback={
                   <Paper sx={{ p: { xs: 3, md: 5 }, flex: 1 }}>
                     <Typography role="status" sx={{ mb: 3 }}>
-                      Loading event editor…
+                      {t('reference.loadingEventEditor')}
                     </Typography>
                     <Skeleton variant="rounded" height={300} />
                   </Paper>
@@ -96,7 +103,7 @@ export function ReferenceWorkspace({ storeId, storeName }: { storeId: string; st
                 <EventEditor
                   storeId={storeId}
                   onSaved={() => {
-                    setNotice('Event saved.');
+                    setNotice({ key: 'reference.eventSaved' });
                   }}
                 />
               </Suspense>
@@ -109,10 +116,10 @@ export function ReferenceWorkspace({ storeId, storeName }: { storeId: string; st
             <EventShow
               storeId={storeId}
               onChanged={() => {
-                setNotice('Event updated.');
+                setNotice({ key: 'reference.eventUpdated' });
               }}
               onDeleted={() => {
-                setNotice('Event moved to trash.');
+                setNotice({ key: 'reference.eventTrashed' });
               }}
             />
           }
@@ -124,7 +131,11 @@ export function ReferenceWorkspace({ storeId, storeName }: { storeId: string; st
             <VenueList
               storeId={storeId}
               onDeleted={(count) => {
-                setNotice(count === 1 ? 'Venue deleted.' : `${String(count)} venues deleted.`);
+                setNotice(
+                  count === 1
+                    ? { key: 'reference.venueDeletedOne' }
+                    : { key: 'reference.venueDeletedMany', values: { count } },
+                );
               }}
             />
           }
@@ -137,7 +148,7 @@ export function ReferenceWorkspace({ storeId, storeName }: { storeId: string; st
               <VenueEditor
                 storeId={storeId}
                 onSaved={() => {
-                  setNotice('Venue saved.');
+                  setNotice({ key: 'reference.venueSaved' });
                 }}
               />
             }
@@ -150,7 +161,11 @@ export function ReferenceWorkspace({ storeId, storeName }: { storeId: string; st
             <SpeakerList
               storeId={storeId}
               onDeleted={(count) => {
-                setNotice(count === 1 ? 'Speaker deleted.' : `${String(count)} speakers deleted.`);
+                setNotice(
+                  count === 1
+                    ? { key: 'reference.speakerDeletedOne' }
+                    : { key: 'reference.speakerDeletedMany', values: { count } },
+                );
               }}
             />
           }
@@ -163,7 +178,7 @@ export function ReferenceWorkspace({ storeId, storeName }: { storeId: string; st
               <SpeakerEditor
                 storeId={storeId}
                 onSaved={() => {
-                  setNotice('Speaker saved.');
+                  setNotice({ key: 'reference.speakerSaved' });
                 }}
               />
             }
@@ -176,7 +191,11 @@ export function ReferenceWorkspace({ storeId, storeName }: { storeId: string; st
             <TagList
               storeId={storeId}
               onDeleted={(count) => {
-                setNotice(count === 1 ? 'Tag deleted.' : `${String(count)} tags deleted.`);
+                setNotice(
+                  count === 1
+                    ? { key: 'reference.tagDeletedOne' }
+                    : { key: 'reference.tagDeletedMany', values: { count } },
+                );
               }}
             />
           }
@@ -189,14 +208,19 @@ export function ReferenceWorkspace({ storeId, storeName }: { storeId: string; st
               <TagEditor
                 storeId={storeId}
                 onSaved={() => {
-                  setNotice('Tag saved.');
+                  setNotice({ key: 'reference.tagSaved' });
                 }}
               />
             }
           />
         ))}
 
-        <Route path="*" element={<Navigate to={`/stores/${storeId}/reference/events`} replace />} />
+        <Route
+          path="*"
+          element={
+            <Navigate to={localizedPath(locale, `/stores/${storeId}/reference/events`)} replace />
+          }
+        />
       </Routes>
     </>
   );

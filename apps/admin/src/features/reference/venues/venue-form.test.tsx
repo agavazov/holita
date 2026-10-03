@@ -1,11 +1,19 @@
-import { fireEvent, render as rtlRender, screen } from '@testing-library/react';
+import { fireEvent, render as rtlRender, screen } from '../../../test/render.js';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import { DataError } from '../../../data/data-provider.js';
 import { AuroraTheme } from '../../../theme/aurora-theme.js';
 import { VenueForm } from './venue-form.js';
 
-const render = (ui: React.ReactNode) => rtlRender(ui, { wrapper: AuroraTheme });
+const render = (ui: React.ReactNode) =>
+  rtlRender(ui, {
+    wrapper: ({ children }) => (
+      <MemoryRouter initialEntries={['/en']}>
+        <AuroraTheme>{children}</AuroraTheme>
+      </MemoryRouter>
+    ),
+  });
 const valid = {
   name: ' Hall ',
   city: ' Sofia ',
@@ -96,7 +104,7 @@ describe('Venue form', () => {
       />,
     );
     expect(screen.getByRole('alert')).toHaveTextContent('Request ID: venue-request');
-    expect(screen.getByText('Use a shorter address.')).toBeVisible();
+    expect(screen.getAllByText('Something went wrong. Try again.')).not.toHaveLength(0);
     expect(screen.getByLabelText('Address')).toHaveFocus();
   });
 

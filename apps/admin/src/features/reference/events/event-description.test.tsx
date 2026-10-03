@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen } from '../../../test/render.js';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import { App } from '../../../App.js';
@@ -33,11 +33,11 @@ describe('Event rich description', () => {
         },
       ],
       {
-        initialEntries: [`/stores/${storeA}/reference/events/${event().id}`],
+        initialEntries: [`/en/stores/${storeA}/reference/events/${event().id}`],
       },
     );
     render(<RouterProvider router={router} />);
-    const description = await screen.findByLabelText('Event description');
+    const description = await screen.findByLabelText('Description');
     expect(description.querySelector('h2')).toHaveTextContent('Welcome');
     expect(description.querySelector('strong')).toHaveTextContent('Explore');
     expect(description.querySelector('em')).toHaveTextContent('together');

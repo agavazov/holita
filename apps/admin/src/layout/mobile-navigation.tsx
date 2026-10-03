@@ -5,6 +5,7 @@ import Logo from './primitives/logo.js';
 import SimpleBar from './primitives/simplebar.js';
 import NavItem from './nav-item.js';
 import type { NavigationGroup } from './types.js';
+import { useLocalization } from '../localization/localization-provider.js';
 export default function MobileNavigation({
   groups,
   section,
@@ -16,6 +17,8 @@ export default function MobileNavigation({
   onClose: () => void;
   onNavigate: (section: string) => void;
 }) {
+  const { t } = useLocalization();
+
   return (
     <>
       <Toolbar variant="appbar" sx={{ display: 'block', px: { xs: 0 } }}>
@@ -30,7 +33,7 @@ export default function MobileNavigation({
           }}
         >
           <Logo />
-          <IconButton aria-label="Close navigation" sx={{ mt: 1 }} onClick={onClose}>
+          <IconButton aria-label={t('shell.closeNavigation')} sx={{ mt: 1 }} onClick={onClose}>
             <IconifyIcon icon="material-symbols:left-panel-close-outline" fontSize={20} />
           </IconButton>
         </Box>

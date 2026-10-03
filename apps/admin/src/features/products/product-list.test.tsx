@@ -1,5 +1,5 @@
 import { Refine } from '@refinedev/core';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '../../test/render.js';
 import userEvent from '@testing-library/user-event';
 import { flushSync } from 'react-dom';
 import { createMemoryRouter, RouterProvider } from 'react-router';
@@ -19,7 +19,7 @@ function renderList(query: string) {
   const router = createMemoryRouter(
     [
       {
-        path: '/stores/:storeId/products',
+        path: '/en/stores/:storeId/products',
         element: (
           <AuroraTheme>
             <Refine
@@ -32,7 +32,7 @@ function renderList(query: string) {
         ),
       },
     ],
-    { initialEntries: [`/stores/${storeA}/products${query}`] },
+    { initialEntries: [`/en/stores/${storeA}/products${query}`] },
   );
   render(
     <RouterProvider
@@ -63,7 +63,7 @@ it('commits pending text with status and prevents cleared drafts from restoring 
       sort: { field: 'NAME', direction: 'DESC' },
     });
   });
-  await user.click(screen.getByRole('button', { name: 'Filter products' }));
+  await user.click(screen.getByRole('button', { name: 'Product filters' }));
   const panelSearch = screen.getByRole('searchbox', { name: 'Search products' });
   expect(panelSearch).toHaveValue('notebook');
   vi.useFakeTimers();

@@ -24,6 +24,7 @@ import type {
   ReferenceEventMediaDetailsFragment,
   UpdateReferenceEventMediaInput,
 } from '../../../generated/graphql/operations.js';
+import { useLocalization } from '../../../localization/localization-provider.js';
 import { useMediaMutation, useMediaUpload } from './use-media-actions.js';
 
 type Props = {
@@ -42,6 +43,7 @@ export function EventGallery({
   onDirtyChange,
   onPendingChange,
 }: Props) {
+  const { t } = useLocalization();
   const resource = mediaResource(storeId, eventId);
   const gallery = useList<ReferenceEventMediaDetailsFragment, DataError>({
     resource,
@@ -90,10 +92,9 @@ export function EventGallery({
     ? draft.flatMap((id) => gallery.result.data.filter((row) => row.id === id))
     : gallery.result.data;
   const error =
-    action.mutation.error?.message ??
-    update.mutation.error?.message ??
-    deletion.mutation.error?.message ??
-    upload.error;
+    action.mutation.error || update.mutation.error || deletion.mutation.error
+      ? t('common.genericError')
+      : upload.error;
   function move(id: string, target: string) {
     if (locked || id === target) return;
     const next = rows.map((row) => row.id),
@@ -104,7 +105,7 @@ export function EventGallery({
     next.splice(to, 0, id);
     setDraft(next.every((value, index) => value === gallery.result.data[index]?.id) ? null : next);
     action.mutation.reset();
-    setNotice(`Image moved to position ${String(to + 1)}. Save order to keep this change.`);
+    setNotice(t('reference.imageMoved', { position: to + 1 }));
   }
   function mutate(values: { action: 'cover'; id: string } | { action: 'reorder'; ids: string[] }) {
     if (submitting.current || locked) return;
@@ -120,7 +121,9 @@ export function EventGallery({
       {
         onSuccess: () => {
           if (values.action === 'reorder') setDraft(null);
-          setNotice(values.action === 'cover' ? 'Cover saved.' : 'Gallery order saved.');
+          setNotice(
+            t(values.action === 'cover' ? 'reference.coverSaved' : 'reference.galleryOrderSaved'),
+          );
         },
         onSettled: () => {
           submitting.current = false;
@@ -137,7 +140,7 @@ export function EventGallery({
     if (response.isSuccess) {
       setDraft(null);
       action.mutation.reset();
-      setNotice('Saved gallery order restored.');
+      setNotice(t('reference.galleryOrderRestored'));
     }
     setReloading(false);
     submitting.current = false;
@@ -157,7 +160,7 @@ export function EventGallery({
       {
         onSuccess: () => {
           setEditing(null);
-          setNotice('Alt text saved.');
+          setNotice(t('reference.altTextSaved'));
         },
         onSettled: () => {
           submitting.current = false;
@@ -179,7 +182,7 @@ export function EventGallery({
       {
         onSuccess: () => {
           setDeleting(null);
-          setNotice('Image removed.');
+          setNotice(t('reference.imageRemoved'));
         },
         onSettled: () => {
           submitting.current = false;
@@ -194,19 +197,17 @@ export function EventGallery({
     if (next) setPreviewId(next.id);
   }
   return (
-    <Stack component="section" aria-label="Event gallery" sx={{ gap: 3, minWidth: 0 }}>
+    <Stack component="section" aria-label={t('reference.eventGallery')} sx={{ gap: 3, minWidth: 0 }}>
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
         sx={{ gap: 2, justifyContent: 'space-between', alignItems: 'flex-start' }}
       >
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="h6" component="h2" sx={{ mb: 1 }}>
-            Gallery
+            {t('reference.gallery')}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {editable
-              ? 'Up to 10 still JPEG, PNG or WebP images · 5 MiB and 20 megapixels each. Changes here are saved separately from the event.'
-              : 'Images from this event.'}
+            {t(editable ? 'reference.galleryEditableHelp' : 'reference.galleryReadonlyHelp')}
           </Typography>
         </Box>
         <Button
@@ -218,10 +219,10 @@ export function EventGallery({
             void gallery.query.refetch();
           }}
         >
-          Refresh previews
+          {t('reference.refreshPreviews')}
         </Button>
       </Stack>
-      {gallery.query.isError && <Alert severity="error">{gallery.query.error.message}</Alert>}
+      {gallery.query.isError && <Alert severity="error">{t('common.genericError')}</Alert>}
       {error && <Alert severity="error">{error}</Alert>}
       {editable && (
         <Paper background={1} sx={{ p: 3, borderRadius: 6, outline: 0 }}>
@@ -243,7 +244,7 @@ export function EventGallery({
             <input
               ref={fileInput}
               type="file"
-              aria-label="Choose gallery image"
+              aria-label={t('reference.chooseGalleryImage')}
               accept="image/jpeg,image/png,image/webp"
               hidden
               disabled={locked || Boolean(draft) || rows.length >= 10}
@@ -260,11 +261,11 @@ export function EventGallery({
                 fileInput.current?.click();
               }}
             >
-              Add image
+              {t('reference.addImage')}
             </Button>
             {gallery.query.isSuccess && (
               <Typography variant="caption" color="text.secondary">
-                {rows.length} / 10 images
+                {t('reference.imageCount', { count: rows.length })}
               </Typography>
             )}
           </Stack>
@@ -277,7 +278,7 @@ export function EventGallery({
                   mutate({ action: 'reorder', ids: draft });
                 }}
               >
-                Save order
+                {t('reference.saveOrder')}
               </Button>
               <Button
                 variant="soft"
@@ -287,7 +288,7 @@ export function EventGallery({
                   void cancelOrder();
                 }}
               >
-                Cancel order
+                {t('reference.cancelOrder')}
               </Button>
             </Stack>
           )}
@@ -296,19 +297,24 @@ export function EventGallery({
       {upload.state && (
         <Stack role="status" sx={{ gap: 1 }}>
           <Typography variant="body2">
-            {upload.state.finishing ? 'Finishing' : 'Uploading'} {upload.state.name}
+            {t(
+              upload.state.finishing
+                ? 'reference.finishingUpload'
+                : 'reference.uploadingImage',
+              { name: upload.state.name },
+            )}
           </Typography>
           <LinearProgress
             variant="determinate"
             value={upload.state.percent}
-            aria-label="Image upload progress"
+            aria-label={t('reference.imageUploadProgress')}
           />
           <Button
             disabled={upload.state.finishing}
             onClick={upload.cancel}
             sx={{ alignSelf: 'flex-start' }}
           >
-            Cancel upload
+            {t('reference.cancelUpload')}
           </Button>
         </Stack>
       )}
@@ -316,11 +322,11 @@ export function EventGallery({
         <Skeleton variant="rounded" height={180} />
       ) : gallery.query.isError ? (
         <Typography variant="body2" color="text.secondary">
-          Gallery unavailable. Use Refresh previews to try again.
+          {t('reference.galleryUnavailable')}
         </Typography>
       ) : !rows.length ? (
         <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
-          No images yet
+          {t('reference.noImages')}
         </Typography>
       ) : (
         <Box
@@ -334,7 +340,7 @@ export function EventGallery({
             <Paper
               key={row.id}
               component="article"
-              aria-label={`Image ${row.originalName}`}
+              aria-label={t('reference.imageLabel', { name: row.originalName })}
               background={1}
               sx={{ p: 2, borderRadius: 4, outline: 0, minWidth: 0 }}
               draggable={editable && !locked}
@@ -350,7 +356,7 @@ export function EventGallery({
               }}
             >
               <ButtonBase
-                aria-label={`Preview ${row.originalName}`}
+                aria-label={t('reference.previewImage', { name: row.originalName })}
                 onClick={() => {
                   setPreviewId(row.id);
                 }}
@@ -368,14 +374,14 @@ export function EventGallery({
                 <Typography variant="subtitle2" noWrap title={row.originalName} sx={{ flex: 1 }}>
                   {row.originalName}
                 </Typography>
-                {row.isCover && <Chip size="small" color="primary" label="Cover" />}
+                {row.isCover && <Chip size="small" color="primary" label={t('reference.cover')} />}
               </Stack>
               <Typography
                 variant="body2"
                 color="text.secondary"
                 sx={{ mb: 2, overflowWrap: 'anywhere' }}
               >
-                {row.altText ?? 'No alt text'}
+                {row.altText ?? t('reference.noAltText')}
               </Typography>
               {editable && (
                 <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 0.5 }}>
@@ -387,7 +393,7 @@ export function EventGallery({
                       mutate({ action: 'cover', id: row.id });
                     }}
                   >
-                    Set cover
+                    {t('reference.setCover')}
                   </Button>
                   <Button
                     size="small"
@@ -399,13 +405,13 @@ export function EventGallery({
                       setAltText(row.altText ?? '');
                     }}
                   >
-                    Alt text
+                    {t('reference.altText')}
                   </Button>
                   <Button
                     size="small"
                     shape="square"
                     color="neutral"
-                    aria-label={`Move ${row.originalName} earlier`}
+                    aria-label={t('reference.moveImageEarlier', { name: row.originalName })}
                     disabled={locked || index === 0}
                     onClick={() => {
                       const previous = rows[index - 1];
@@ -418,7 +424,7 @@ export function EventGallery({
                     size="small"
                     shape="square"
                     color="neutral"
-                    aria-label={`Move ${row.originalName} later`}
+                    aria-label={t('reference.moveImageLater', { name: row.originalName })}
                     disabled={locked || index === rows.length - 1}
                     onClick={() => {
                       const next = rows[index + 1];
@@ -436,7 +442,7 @@ export function EventGallery({
                       setDeleting(row);
                     }}
                   >
-                    Remove
+                    {t('reference.removeImage')}
                   </Button>
                 </Stack>
               )}
@@ -492,7 +498,7 @@ export function EventGallery({
               nextPreview(-1);
             }}
           >
-            Previous image
+            {t('reference.previousImage')}
           </Button>
           <Button
             color="neutral"
@@ -501,14 +507,14 @@ export function EventGallery({
               nextPreview(1);
             }}
           >
-            Next image
+            {t('reference.nextImage')}
           </Button>
           <Button
             onClick={() => {
               setPreviewId(null);
             }}
           >
-            Close preview
+            {t('reference.closePreview')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -521,13 +527,13 @@ export function EventGallery({
         fullWidth
         maxWidth="sm"
       >
-        <DialogTitle id="gallery-alt-title">Image alt text</DialogTitle>
+        <DialogTitle id="gallery-alt-title">{t('reference.imageAltText')}</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2 }}>
-            Describe the image for people using assistive technology.
+            {t('reference.altTextHelp')}
           </Typography>
           <TextField
-            label="Alt text"
+            label={t('reference.altText')}
             value={altText}
             onChange={(e) => {
               setAltText(e.target.value);
@@ -542,7 +548,7 @@ export function EventGallery({
           />
           {update.mutation.isError && (
             <Alert severity="error" sx={{ mt: 2 }}>
-              {update.mutation.error.message}
+              {t('common.genericError')}
             </Alert>
           )}
         </DialogContent>
@@ -554,7 +560,7 @@ export function EventGallery({
               setEditing(null);
             }}
           >
-            Cancel
+            {t('reference.cancel')}
           </Button>
           <Button
             variant="contained"
@@ -562,7 +568,7 @@ export function EventGallery({
             loading={update.mutation.isPending}
             onClick={saveAlt}
           >
-            Save alt text
+            {t('reference.saveAltText')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -575,14 +581,14 @@ export function EventGallery({
         fullWidth
         maxWidth="xs"
       >
-        <DialogTitle id="gallery-delete-title">Remove image?</DialogTitle>
+        <DialogTitle id="gallery-delete-title">{t('reference.removeImageTitle')}</DialogTitle>
         <DialogContent>
           <Typography>
-            {deleting?.originalName} will be removed from this gallery. This cannot be undone.
+            {deleting && t('reference.removeImageMessage', { name: deleting.originalName })}
           </Typography>
           {deletion.mutation.isError && (
             <Alert severity="error" sx={{ mt: 2 }}>
-              {deletion.mutation.error.message}
+              {t('common.genericError')}
             </Alert>
           )}
         </DialogContent>
@@ -594,7 +600,7 @@ export function EventGallery({
               setDeleting(null);
             }}
           >
-            Cancel
+            {t('reference.cancel')}
           </Button>
           <Button
             color="error"
@@ -603,7 +609,7 @@ export function EventGallery({
             loading={deletion.mutation.isPending}
             onClick={remove}
           >
-            Remove image
+            {t('reference.removeImage')}
           </Button>
         </DialogActions>
       </Dialog>

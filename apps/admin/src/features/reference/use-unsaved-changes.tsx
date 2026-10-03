@@ -8,21 +8,30 @@ import {
   DialogContentText,
   DialogTitle,
 } from '@mui/material';
+import { localeFromPathname } from '../../localization/locale.js';
+import { useLocalization } from '../../localization/localization-provider.js';
 
 export function useUnsavedChanges(pending: boolean, additionalDirty = false) {
   const id = useId();
+  const { t } = useLocalization();
   const [dirty, setDirty] = useState(false);
   const saved = useRef(false);
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      (dirty || additionalDirty) &&
-      !pending &&
-      !saved.current &&
-      (currentLocation.pathname !== nextLocation.pathname ||
-        currentLocation.search !== nextLocation.search),
-  );
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => {
+    const locationChanged =
+      currentLocation.pathname !== nextLocation.pathname ||
+      currentLocation.search !== nextLocation.search ||
+      currentLocation.hash !== nextLocation.hash;
+    const localeChanged =
+      localeFromPathname(currentLocation.pathname) !== localeFromPathname(nextLocation.pathname);
+
+    return (
+      locationChanged &&
+      ((pending && localeChanged) ||
+        (!pending && (dirty || additionalDirty) && !saved.current))
+    );
+  });
   useBeforeUnload((event) => {
-    if ((dirty || additionalDirty) && !pending && !saved.current) {
+    if (pending || ((dirty || additionalDirty) && !saved.current)) {
       event.preventDefault();
     }
   });
@@ -42,17 +51,23 @@ export function useUnsavedChanges(pending: boolean, additionalDirty = false) {
         open={blocker.state === 'blocked'}
         onClose={() => blocker.reset?.()}
       >
-        <DialogTitle id={id}>Discard unsaved changes?</DialogTitle>
+        <DialogTitle id={id}>
+          {t(pending ? 'common.pendingTitle' : 'common.unsavedTitle')}
+        </DialogTitle>
         <DialogContent>
-          <DialogContentText>Your changes have not been saved. Leave this form?</DialogContentText>
+          <DialogContentText>
+            {t(pending ? 'common.pendingMessage' : 'common.unsavedMessage')}
+          </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button color="neutral" autoFocus onClick={() => blocker.reset?.()}>
-            Keep editing
+            {t('common.stay')}
           </Button>
-          <Button variant="contained" color="error" onClick={() => blocker.proceed?.()}>
-            Discard changes
-          </Button>
+          {!pending && (
+            <Button variant="contained" color="error" onClick={() => blocker.proceed?.()}>
+              {t('common.leave')}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     ),

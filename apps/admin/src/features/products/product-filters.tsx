@@ -2,6 +2,7 @@
 import { Button, MenuItem, Typography } from '@mui/material';
 import { FilterDrawer } from '../../components/filter-drawer.js';
 import StyledTextField from '../../layout/primitives/styled-text-field.js';
+import { useLocalization } from '../../localization/localization-provider.js';
 
 type ProductFiltersProps = {
   open: boolean;
@@ -28,11 +29,13 @@ export function ProductFilters({
   onSkuChange,
   onClear,
 }: ProductFiltersProps) {
+  const { t } = useLocalization();
+
   return (
-    <FilterDrawer open={open} onClose={onClose} label="Product filters">
+    <FilterDrawer open={open} onClose={onClose} label={t('products.filters')}>
       <StyledTextField
         id="filter-search"
-        label="Search products"
+        label={t('products.search')}
         type="search"
         fullWidth
         value={search}
@@ -40,12 +43,12 @@ export function ProductFilters({
         onChange={(event) => {
           onSearchChange(event.target.value);
         }}
-        helperText="Search by name or SKU."
+        helperText={t('products.searchHelp')}
         slotProps={{ htmlInput: { maxLength: 200 } }}
       />
       <StyledTextField
         id="filter-status"
-        label="Status"
+        label={t('products.status')}
         select
         fullWidth
         value={status}
@@ -54,13 +57,13 @@ export function ProductFilters({
           onStatusChange(event.target.value);
         }}
       >
-        <MenuItem value="all">All statuses</MenuItem>
-        <MenuItem value="ACTIVE">Active</MenuItem>
-        <MenuItem value="DRAFT">Draft</MenuItem>
+        <MenuItem value="all">{t('products.allStatuses')}</MenuItem>
+        <MenuItem value="ACTIVE">{t('products.active')}</MenuItem>
+        <MenuItem value="DRAFT">{t('products.draft')}</MenuItem>
       </StyledTextField>
       <StyledTextField
         id="filter-sku"
-        label="SKU contains"
+        label={t('products.skuContains')}
         value={sku}
         disabled={disabled}
         onChange={(event) => {
@@ -69,7 +72,7 @@ export function ProductFilters({
         slotProps={{ htmlInput: { maxLength: 100 } }}
       />
       <Typography variant="caption" color="text.secondary">
-        All filters apply together automatically.
+        {t('products.filtersApply')}
       </Typography>
       <Button
         variant="soft"
@@ -77,7 +80,7 @@ export function ProductFilters({
         disabled={disabled || (status === 'all' && !sku && !search)}
         onClick={onClear}
       >
-        Clear filters
+        {t('products.clearFilters')}
       </Button>
     </FilterDrawer>
   );

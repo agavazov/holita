@@ -2,6 +2,7 @@ import type {
   CreateReferenceEventInput,
   ReferenceEventDetailsFragment,
 } from '../../../generated/graphql/operations.js';
+import { dictionaries, type TranslationKey } from '../../../localization/dictionaries.js';
 import { textError } from '../text-validation.js';
 import { descriptionBytes, descriptionMaxBytes } from './description-html.js';
 import { dayjs, eventInputInstant, eventTime } from './event-time.js';
@@ -29,10 +30,17 @@ export function eventDraft(row?: ReferenceEventDetailsFragment) {
 export type EventDraft = ReturnType<typeof eventDraft>;
 export type EventField = keyof EventDraft;
 
-export function validateEventDraft(values: EventDraft, original?: ReferenceEventDetailsFragment) {
+type Translate = (key: TranslationKey) => string;
+const english: Translate = (key) => dictionaries.en[key];
+
+export function validateEventDraft(
+  values: EventDraft,
+  original?: ReferenceEventDetailsFragment,
+  t: Translate = english,
+) {
   const errors: Record<EventField, string> = {
-    title: textError(values.title, 200, 'Enter a title of up to 200 characters.'),
-    code: textError(values.code, 100, 'Enter a code of up to 100 characters.'),
+    title: textError(values.title, 200, t('reference.events.validationTitle')),
+    code: textError(values.code, 100, t('reference.events.validationCode')),
     status: '',
     format: '',
     featured: '',
@@ -42,29 +50,29 @@ export function validateEventDraft(values: EventDraft, original?: ReferenceEvent
       (!Number.isInteger(Number(values.capacity)) ||
         Number(values.capacity) < 1 ||
         Number(values.capacity) > 2147483647)
-        ? 'Enter a positive whole number.'
+        ? t('reference.events.validationCapacity')
         : '',
     budget:
       values.budget && !/^(0|[1-9]\d{0,9})(\.\d{1,2})?$/.test(values.budget)
-        ? 'Use 0–9999999999.99, with at most two decimals.'
+        ? t('reference.events.validationBudget')
         : '',
     startsAt: '',
     endsAt: '',
     registrationOpensOn: '',
     registrationClosesOn: '',
-    venueId: values.format !== 'ONLINE' && !values.venueId ? 'Choose a venue.' : '',
+    venueId: values.format !== 'ONLINE' && !values.venueId ? t('reference.events.validationVenue') : '',
     meetingUrl: '',
     summary: textError(values.summary, 500),
     descriptionHtml:
       descriptionBytes(values.descriptionHtml) > descriptionMaxBytes
-        ? 'Keep the description within 100 KiB.'
+        ? t('reference.events.validationDescription')
         : '',
   };
   for (const field of ['startsAt', 'endsAt'] as const) {
     try {
       eventInputInstant(values[field], original?.[field]);
-    } catch (error) {
-      errors[field] = error instanceof Error ? error.message : 'Choose a valid date and time.';
+    } catch {
+      errors[field] = t('reference.events.validationDateTime');
     }
   }
   if (
@@ -73,23 +81,23 @@ export function validateEventDraft(values: EventDraft, original?: ReferenceEvent
     eventInputInstant(values.endsAt, original?.endsAt) <=
       eventInputInstant(values.startsAt, original?.startsAt)
   )
-    errors.endsAt = 'End must be after start.';
+    errors.endsAt = t('reference.events.validationEndAfterStart');
   for (const field of ['registrationOpensOn', 'registrationClosesOn'] as const) {
     const value = values[field];
     if (
       value &&
       (!/^\d{4}-\d{2}-\d{2}$/.test(value) || dayjs(value).format('YYYY-MM-DD') !== value)
     )
-      errors[field] = 'Choose a valid date.';
+      errors[field] = t('reference.events.validationDate');
   }
   const open = values.registrationOpensOn,
     close = values.registrationClosesOn;
-  if (close && !open) errors.registrationOpensOn = 'Provide both registration dates.';
-  if (open && !close) errors.registrationClosesOn = 'Provide both registration dates.';
+  if (close && !open) errors.registrationOpensOn = t('reference.events.validationRegistrationBoth');
+  if (open && !close) errors.registrationClosesOn = t('reference.events.validationRegistrationBoth');
   else if (close && open && close < open)
-    errors.registrationClosesOn = 'Close on or after opening.';
+    errors.registrationClosesOn = t('reference.events.validationRegistrationOrder');
   else if (close && values.startsAt && close > values.startsAt.slice(0, 10))
-    errors.registrationClosesOn = 'Close by the event start date.';
+    errors.registrationClosesOn = t('reference.events.validationRegistrationStart');
   if (values.format !== 'IN_PERSON') {
     const url = values.meetingUrl.trim();
     try {
@@ -98,8 +106,8 @@ export function validateEventDraft(values: EventDraft, original?: ReferenceEvent
       new URL(url);
     } catch {
       errors.meetingUrl = url
-        ? 'Enter an http or https URL of up to 2000 characters.'
-        : 'Enter a meeting URL.';
+        ? t('reference.events.validationMeetingUrl')
+        : t('reference.events.validationMeetingRequired');
     }
   }
   return errors;

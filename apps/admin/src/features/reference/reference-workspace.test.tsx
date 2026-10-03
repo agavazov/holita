@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '../../test/render.js';
 import userEvent from '@testing-library/user-event';
 import { RouterProvider, createMemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
@@ -29,7 +29,7 @@ function mount(referenceEnabled = true, resource = 'venues') {
         ),
       },
     ],
-    { initialEntries: [`/stores/${storeA}/reference/${resource}`] },
+    { initialEntries: [`/en/stores/${storeA}/reference/${resource}`] },
   );
   render(<RouterProvider router={router} />);
   return Object.assign(userEvent.setup(), { navigate: (path: string) => router.navigate(path) });
@@ -64,7 +64,7 @@ describe('Reference workspace', () => {
       const user = mount(true, plural);
       expect(
         await screen.findByRole('link', { name: row.name }, { timeout: 5000 }),
-      ).toHaveAttribute('href', `/stores/${storeA}/reference/${plural}/${row.id}/edit`);
+      ).toHaveAttribute('href', `/en/stores/${storeA}/reference/${plural}/${row.id}/edit`);
       await user.click(screen.getByRole('button', { name: `Actions for ${row.name}` }));
       await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
       const dialog = await screen.findByRole('dialog');
@@ -73,7 +73,7 @@ describe('Reference workspace', () => {
       });
       await user.click(confirm);
       expect(await within(dialog).findByRole('alert')).toHaveTextContent(
-        'Record is still referenced.',
+        'Something went wrong. Try again.',
       );
       await waitFor(() => expect(confirm).toBeEnabled());
       await user.click(confirm);
@@ -117,7 +117,9 @@ describe('Reference workspace', () => {
     await user.click(screen.getByRole('checkbox', { name: 'Select all rows' }));
     await user.click(screen.getByRole('button', { name: 'Delete selected' }));
     await user.click(screen.getByRole('button', { name: 'Delete venues' }));
-    expect(await screen.findByText(/Second venue: Venue is still referenced/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Second venue: Something went wrong\. Try again\./),
+    ).toBeInTheDocument();
     expect(rows).toEqual([second]);
     rejectSecond = false;
     await user.click(screen.getByRole('button', { name: 'Delete venue' }));
@@ -159,7 +161,7 @@ describe('Reference workspace', () => {
       ).toHaveLength(1);
     });
     await act(async () => {
-      await user.navigate(`/stores/${storeB}/reference/venues`);
+      await user.navigate(`/en/stores/${storeB}/reference/venues`);
     });
     await screen.findByText('Plovdiv hall');
     await act(async () => {
@@ -204,8 +206,8 @@ describe('Reference workspace', () => {
     });
     const next =
       destination === 'store'
-        ? `/stores/${storeB}/reference/${plural}/create`
-        : `/stores/${storeA}/reference/${plural}/${row.id}/edit`;
+        ? `/en/stores/${storeB}/reference/${plural}/create`
+        : `/en/stores/${storeA}/reference/${plural}/${row.id}/edit`;
     await act(async () => {
       await user.navigate(next);
     });

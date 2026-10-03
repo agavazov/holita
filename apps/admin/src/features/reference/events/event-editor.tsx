@@ -1,5 +1,7 @@
 import { useCreate, useOne, useUpdate } from '@refinedev/core';
 import { Alert, Button, Paper, Skeleton, Stack, Tab, Tabs, Typography } from '@mui/material';
+import { useLocalization } from '../../../localization/localization-provider.js';
+import { localizedPath } from '../../../localization/locale.js';
 import { PageHeader } from '../../../components/page-header.js';
 import { QueryRefreshWarning } from '../../../components/query-refresh-warning.js';
 import { useRef, useState } from 'react';
@@ -13,7 +15,7 @@ import type {
   ReferenceEventDetailsFragment,
 } from '../../../generated/graphql/operations.js';
 import { useUnsavedChanges } from '../use-unsaved-changes.js';
-import { eventLink, eventListReturn } from './event-list-state.js';
+import { eventLink, eventListReturn, eventListReturnSearch } from './event-list-state.js';
 import { EventGallery } from '../media/event-gallery.js';
 import { EventForm } from './event-form.js';
 
@@ -21,6 +23,7 @@ type EventEditorProps = { storeId: string; onSaved: () => void };
 
 export function EventEditor({ storeId, onSaved }: EventEditorProps) {
   const { eventId } = useParams();
+  const { locale, t } = useLocalization();
   const navigate = useNavigate();
   const resource = eventsResource(storeId);
   const submitting = useRef(false);
@@ -28,8 +31,8 @@ export function EventEditor({ storeId, onSaved }: EventEditorProps) {
   const [galleryPending, setGalleryPending] = useState(false);
   const [tab, setTab] = useState('general');
   const { search } = useLocation();
-  const listPath = eventListReturn(resource, search);
-  const listSearch = listPath.slice(`/${resource}`.length);
+  const listPath = eventListReturn(locale, resource, search);
+  const listSearch = eventListReturnSearch(search);
   const event = useOne<GetReferenceEventQuery['referenceEvent'], DataError>({
     resource,
     ...(eventId ? { id: eventId } : {}),
@@ -58,7 +61,7 @@ export function EventEditor({ storeId, onSaved }: EventEditorProps) {
         changes.saved();
         onSaved();
         void navigate(
-          eventLink(resource, `${response.data.id}${eventId ? '' : '/edit'}`, listSearch),
+          eventLink(locale, resource, `${response.data.id}${eventId ? '' : '/edit'}`, listSearch),
           { replace: true },
         );
       },
@@ -76,12 +79,14 @@ export function EventEditor({ storeId, onSaved }: EventEditorProps) {
     <>
       <PageHeader
         embedded
-        title={eventId ? 'Edit event' : 'Create event'}
+        title={eventId ? t('reference.events.edit') : t('reference.events.create')}
         breadcrumbs={[
-          { label: 'Home', to: '/' },
-          { label: 'Reference' },
-          { label: 'Events', to: listPath },
-          { label: eventId ? 'Edit event' : 'Create event' },
+          { label: t('common.home'), to: localizedPath(locale, '') },
+          { label: t('shell.reference') },
+          { label: t('reference.events.events'), to: listPath },
+          {
+            label: eventId ? t('reference.events.edit') : t('reference.events.create'),
+          },
         ]}
       />
       <Stack sx={{ gap: 2, mb: 4 }}>
@@ -90,13 +95,13 @@ export function EventEditor({ storeId, onSaved }: EventEditorProps) {
             ? `${event.result.title} · ${event.result.code}`
             : eventId
               ? event.query.isError
-                ? 'Event details unavailable'
-                : 'Loading event details…'
-              : 'Plan a new event in this store.'}
+                ? t('reference.events.detailsUnavailable')
+                : t('reference.events.loadingDetails')
+              : t('reference.events.createHelp')}
         </Typography>
         {(pending || changes.dirty) && (
           <Typography variant="body2" color="text.secondary" role="status">
-            {pending ? 'Saving…' : 'Unsaved changes'}
+            {pending ? t('reference.events.saving') : t('reference.events.unsaved')}
           </Typography>
         )}
         <Tabs
@@ -106,11 +111,11 @@ export function EventEditor({ storeId, onSaved }: EventEditorProps) {
           }}
           variant="scrollable"
           allowScrollButtonsMobile
-          aria-label="Event sections"
+          aria-label={t('reference.events.sections')}
         >
-          <Tab value="general" label="General" />
-          <Tab value="schedule" label="Schedule & location" />
-          <Tab value="content" label="Content & media" />
+          <Tab value="general" label={t('reference.events.general')} />
+          <Tab value="schedule" label={t('reference.events.scheduleLocation')} />
+          <Tab value="content" label={t('reference.events.contentMedia')} />
         </Tabs>
       </Stack>
     </>
@@ -120,7 +125,7 @@ export function EventEditor({ storeId, onSaved }: EventEditorProps) {
       {changes.dialog}
       {eventId && event.query.isRefetchError && (
         <QueryRefreshWarning
-          message={event.query.error.message}
+          message={t('common.genericError')}
           refreshing={event.query.isFetching}
           onRetry={() => {
             void event.query.refetch();
@@ -142,11 +147,11 @@ export function EventEditor({ storeId, onSaved }: EventEditorProps) {
                       void event.query.refetch();
                     }}
                   >
-                    Retry
+                    {t('common.retry')}
                   </Button>
                 }
               >
-                {event.query.error.message}
+                {t('common.genericError')}
               </Alert>
               <Button
                 sx={{ mt: 2 }}
@@ -154,7 +159,7 @@ export function EventEditor({ storeId, onSaved }: EventEditorProps) {
                   void navigate(listPath);
                 }}
               >
-                Back to events
+                {t('reference.events.back')}
               </Button>
             </>
           )}
@@ -184,7 +189,7 @@ export function EventEditor({ storeId, onSaved }: EventEditorProps) {
                 onPendingChange={setGalleryPending}
               />
             ) : (
-              <Alert severity="info">Save the event before adding images.</Alert>
+              <Alert severity="info">{t('reference.events.saveBeforeImages')}</Alert>
             )
           }
           error={create.mutation.error ?? update.mutation.error}
