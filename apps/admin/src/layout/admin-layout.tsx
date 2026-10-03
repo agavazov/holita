@@ -144,6 +144,14 @@ export function AdminLayout(props: AdminLayoutProps) {
           >
             <SearchBox mobile={mobile} groups={groups} onNavigate={navigate} />
             {!mobile && <StoreSelector {...props} />}
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              noWrap
+              sx={{ display: { xs: 'none', md: 'block' }, flexShrink: 0 }}
+            >
+              Factory smoke test
+            </Typography>
             <Stack
               className="action-items"
               direction="row"
@@ -213,6 +221,15 @@ export function AdminLayout(props: AdminLayoutProps) {
             }}
           >
             <StoreSelector {...props} />
+            <Typography
+              variant="caption"
+              component="p"
+              color="text.secondary"
+              noWrap
+              sx={{ mt: 0.75 }}
+            >
+              Factory smoke test
+            </Typography>
           </Box>
         )}
         <Box
