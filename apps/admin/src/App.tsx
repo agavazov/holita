@@ -1,11 +1,13 @@
 import { Refine, type DataProvider } from '@refinedev/core';
 import routerProvider from '@refinedev/react-router';
 import { QueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
-import { Navigate, Route, Routes } from 'react-router';
+import { useEffect, useState } from 'react';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router';
 
 import { createDataProvider } from './data/data-provider.js';
 import { StoreWorkspace } from './features/stores/store-workspace.js';
+import { LocalizationProvider } from './localization/localization-provider.js';
+import { localeFromPathname, normalizeLocalePathname } from './localization/locale.js';
 import { AuroraTheme } from './theme/aurora-theme.js';
 import './app.css';
 
@@ -30,25 +32,46 @@ function Admin({
         },
       }),
   );
+  const location = useLocation();
+  const navigate = useNavigate();
+  const normalizedPathname = normalizeLocalePathname(location.pathname);
+  const locale = localeFromPathname(normalizedPathname) ?? 'bg';
+
+  useEffect(() => {
+    if (location.pathname !== normalizedPathname) {
+      void navigate(
+        { pathname: normalizedPathname, search: location.search, hash: location.hash },
+        { replace: true },
+      );
+    }
+  }, [location.hash, location.pathname, location.search, navigate, normalizedPathname]);
+
+  if (location.pathname !== normalizedPathname) return null;
+
   return (
-    <Refine
-      dataProvider={provider}
-      routerProvider={routerProvider}
-      options={{ disableTelemetry: true, reactQuery: { clientConfig: queryClient } }}
-    >
-      <Routes>
-        <Route path="/" element={<StoreWorkspace referenceEnabled={referenceEnabled} />} />
-        <Route
-          path="/stores/:storeId/products/*"
-          element={<StoreWorkspace referenceEnabled={referenceEnabled} />}
-        />
-        <Route
-          path="/stores/:storeId/reference/*"
-          element={<StoreWorkspace referenceEnabled={referenceEnabled} />}
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Refine>
+    <LocalizationProvider locale={locale}>
+      <Refine
+        dataProvider={provider}
+        routerProvider={routerProvider}
+        options={{ disableTelemetry: true, reactQuery: { clientConfig: queryClient } }}
+      >
+        <Routes>
+          <Route
+            path="/:locale"
+            element={<StoreWorkspace referenceEnabled={referenceEnabled} />}
+          />
+          <Route
+            path="/:locale/stores/:storeId/products/*"
+            element={<StoreWorkspace referenceEnabled={referenceEnabled} />}
+          />
+          <Route
+            path="/:locale/stores/:storeId/reference/*"
+            element={<StoreWorkspace referenceEnabled={referenceEnabled} />}
+          />
+          <Route path="*" element={<Navigate to={`/${locale}`} replace />} />
+        </Routes>
+      </Refine>
+    </LocalizationProvider>
   );
 }
 

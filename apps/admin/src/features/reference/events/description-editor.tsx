@@ -13,6 +13,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { useLocalization } from '../../../localization/localization-provider.js';
 import {
   descriptionBytes,
   descriptionMaxBytes,
@@ -39,6 +40,7 @@ export function DescriptionEditor({
   ref,
   ...aria
 }: Props) {
+  const { t } = useLocalization();
   const [linkOpen, setLinkOpen] = useState(false);
   const [link, setLink] = useState('');
   const [linkError, setLinkError] = useState(false);
@@ -68,7 +70,7 @@ export function DescriptionEditor({
       attributes: {
         id: id ?? 'event-description',
         role: 'textbox',
-        'aria-label': 'Description',
+        'aria-label': t('reference.events.description'),
         'aria-multiline': 'true',
         'aria-describedby': aria['aria-describedby'] ?? '',
         'aria-invalid': String(error),
@@ -129,26 +131,26 @@ export function DescriptionEditor({
   const bytes = descriptionBytes(value);
   const actions = [
     {
-      label: 'Bold',
+      label: t('reference.events.bold'),
       text: <strong>B</strong>,
       active: state.bold,
       run: () => editor.chain().focus().toggleBold().run(),
     },
     {
-      label: 'Italic',
+      label: t('reference.events.italic'),
       text: <em>I</em>,
       active: state.italic,
       run: () => editor.chain().focus().toggleItalic().run(),
     },
     {
-      label: 'Bullet list',
-      text: '• List',
+      label: t('reference.events.bulletList'),
+      text: `• ${t('reference.events.list')}`,
       active: state.bullet,
       run: () => editor.chain().focus().toggleBulletList().run(),
     },
     {
-      label: 'Numbered list',
-      text: '1. List',
+      label: t('reference.events.numberedList'),
+      text: `1. ${t('reference.events.list')}`,
       active: state.ordered,
       run: () => editor.chain().focus().toggleOrderedList().run(),
     },
@@ -177,7 +179,7 @@ export function DescriptionEditor({
           borderColor: 'divider',
         }}
         role="group"
-        aria-label="Description formatting"
+        aria-label={t('reference.events.descriptionFormatting')}
       >
         <TextField
           select
@@ -185,7 +187,9 @@ export function DescriptionEditor({
           value={state.block}
           disabled={disabled}
           sx={{ minWidth: 130 }}
-          slotProps={{ select: { inputProps: { 'aria-label': 'Text style' } } }}
+          slotProps={{
+            select: { inputProps: { 'aria-label': t('reference.events.textStyle') } },
+          }}
           onChange={(event) => {
             const block = event.target.value;
             if (block === 'paragraph') editor.chain().focus().setParagraph().run();
@@ -197,9 +201,9 @@ export function DescriptionEditor({
                 .run();
           }}
         >
-          <MenuItem value="paragraph">Paragraph</MenuItem>
-          <MenuItem value="h2">Heading 2</MenuItem>
-          <MenuItem value="h3">Heading 3</MenuItem>
+          <MenuItem value="paragraph">{t('reference.events.paragraph')}</MenuItem>
+          <MenuItem value="h2">{t('reference.events.heading2')}</MenuItem>
+          <MenuItem value="h3">{t('reference.events.heading3')}</MenuItem>
         </TextField>
         {actions.map((action) => (
           <Button
@@ -229,7 +233,7 @@ export function DescriptionEditor({
             setLinkOpen(true);
           }}
         >
-          Link
+          {t('reference.events.link')}
         </Button>
         <Button
           variant="text"
@@ -238,7 +242,7 @@ export function DescriptionEditor({
             editor.chain().focus().extendMarkRange('link').unsetLink().run();
           }}
         >
-          Remove link
+          {t('reference.events.removeLink')}
         </Button>
         <Button
           variant="text"
@@ -247,7 +251,7 @@ export function DescriptionEditor({
             editor.chain().focus().undo().run();
           }}
         >
-          Undo
+          {t('reference.events.undo')}
         </Button>
         <Button
           variant="text"
@@ -256,7 +260,7 @@ export function DescriptionEditor({
             editor.chain().focus().redo().run();
           }}
         >
-          Redo
+          {t('reference.events.redo')}
         </Button>
       </Stack>
       <EditorContent editor={editor} />
@@ -273,7 +277,7 @@ export function DescriptionEditor({
         }}
       >
         <Typography variant="caption" color="text.secondary">
-          Select text to add a link.
+          {t('reference.events.selectTextForLink')}
         </Typography>
         <Typography
           variant="caption"
@@ -291,18 +295,20 @@ export function DescriptionEditor({
         fullWidth
         maxWidth="xs"
       >
-        <DialogTitle id="description-link-title">Edit link</DialogTitle>
+        <DialogTitle id="description-link-title">
+          {t('reference.events.editLink')}
+        </DialogTitle>
         <DialogContent>
           <TextField
             id="description-link"
-            label="Web address"
+            label={t('reference.events.webAddress')}
             fullWidth
             autoFocus
             value={link}
             placeholder="https://example.com"
             disabled={disabled}
             error={linkError}
-            helperText="Use an absolute http or https URL without embedded credentials."
+            helperText={t('reference.events.linkHelp')}
             onChange={(event) => {
               setLink(event.target.value);
               setLinkError(false);
@@ -322,10 +328,10 @@ export function DescriptionEditor({
               setLinkOpen(false);
             }}
           >
-            Cancel
+            {t('reference.events.cancel')}
           </Button>
           <Button variant="contained" disabled={disabled} onClick={applyLink}>
-            Apply link
+            {t('reference.events.applyLink')}
           </Button>
         </DialogActions>
       </Dialog>

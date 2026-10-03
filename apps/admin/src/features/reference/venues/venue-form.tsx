@@ -15,6 +15,8 @@ import { EditorAside } from '../../../components/editor-aside.js';
 import type { DataError } from '../../../data/data-provider.js';
 import type { CreateReferenceVenueInput } from '../../../generated/graphql/operations.js';
 import { textError } from '../text-validation.js';
+import { useLocalization } from '../../../localization/localization-provider.js';
+import { localizedErrorMessage, localizedFieldError } from '../../../localization/data-error.js';
 
 type VenueFormProps = {
   header?: ReactNode;
@@ -35,6 +37,7 @@ export function VenueForm({
   onCancel,
   onChange,
 }: VenueFormProps) {
+  const { t } = useLocalization();
   const id = useId();
   const form = useRef<HTMLFormElement>(null);
   const [values, setValues] = useState({
@@ -48,26 +51,26 @@ export function VenueForm({
   });
   const [attempted, setAttempted] = useState(false);
   const errors = {
-    name: textError(values.name, 200, 'Enter a venue name.'),
-    description: textError(values.description, 2000),
-    city: textError(values.city, 120, 'Enter a city.'),
+    name: textError(values.name, 200, t, t('reference.venueNameRequired')),
+    description: textError(values.description, 2000, t),
+    city: textError(values.city, 120, t, t('reference.cityRequired')),
     countryCode: /^[a-z]{2}$/i.test(values.countryCode.trim())
       ? ''
-      : 'Use a two-letter country code.',
-    address: textError(values.address, 300),
+      : t('reference.countryCodeInvalid'),
+    address: textError(values.address, 300, t),
     capacity:
       values.capacity !== '' &&
       (!Number.isInteger(Number(values.capacity)) ||
         Number(values.capacity) < 1 ||
         Number(values.capacity) > 2147483647)
-        ? 'Enter a positive whole number.'
+        ? t('reference.capacityInvalid')
         : '',
     active: '',
   };
   function message(field: keyof typeof values) {
     return (
       (attempted && errors[field]) ||
-      error?.fieldErrors.find(({ path }) => path === field)?.message ||
+      localizedFieldError(error?.fieldErrors.find(({ path }) => path === field), t) ||
       ''
     );
   }
@@ -114,10 +117,10 @@ export function VenueForm({
         <Stack sx={{ gap: 4, maxWidth: 520, mx: 'auto' }}>
           {error && (
             <Alert severity="error">
-              {error.message}
+              {localizedErrorMessage(error, t)}
               {error.requestId && (
                 <Typography variant="caption" sx={{ display: 'block', overflowWrap: 'anywhere' }}>
-                  Request ID: {error.requestId}
+                  {t('common.requestId')}: {error.requestId}
                 </Typography>
               )}
             </Alert>
@@ -125,16 +128,16 @@ export function VenueForm({
           <Stack component="section" aria-labelledby={`${id}-details`} sx={{ gap: 3 }}>
             <Box>
               <Typography id={`${id}-details`} variant="h6" component="h2" sx={{ mb: 1 }}>
-                Venue details
+                {t('reference.venueDetails')}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Give your venue a name and a short description.
+                {t('reference.venueDetailsHelp')}
               </Typography>
             </Box>
             <TextField
               id={`${id}-name`}
               name="name"
-              label="Name"
+              label={t('reference.name')}
               autoFocus
               autoComplete="off"
               fullWidth
@@ -144,12 +147,12 @@ export function VenueForm({
                 change('name', event.target.value);
               }}
               error={Boolean(message('name'))}
-              helperText={message('name') || 'Use the name people will recognize.'}
+              helperText={message('name') || t('reference.nameHelp')}
             />
             <TextField
               id={`${id}-description`}
               name="description"
-              label="Description"
+              label={t('reference.description')}
               multiline
               rows={4}
               fullWidth
@@ -159,23 +162,23 @@ export function VenueForm({
                 change('description', event.target.value);
               }}
               error={Boolean(message('description'))}
-              helperText={message('description') || 'Optional. Up to 2,000 characters.'}
+              helperText={message('description') || t('reference.optionalLongText')}
             />
           </Stack>
           <Stack component="section" aria-labelledby={`${id}-location`} sx={{ gap: 3 }}>
             <Box>
               <Typography id={`${id}-location`} variant="h6" component="h2" sx={{ mb: 1 }}>
-                Location
+                {t('reference.location')}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Where people will find this venue.
+                {t('reference.locationHelp')}
               </Typography>
             </Box>
             <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 2 }}>
               <TextField
                 id={`${id}-city`}
                 name="city"
-                label="City"
+                label={t('reference.city')}
                 autoComplete="address-level2"
                 fullWidth
                 disabled={pending}
@@ -189,7 +192,7 @@ export function VenueForm({
               <TextField
                 id={`${id}-countryCode`}
                 name="countryCode"
-                label="Country code"
+                label={t('reference.countryCode')}
                 autoComplete="country"
                 fullWidth
                 disabled={pending}
@@ -198,14 +201,14 @@ export function VenueForm({
                   change('countryCode', event.target.value);
                 }}
                 error={Boolean(message('countryCode'))}
-                helperText={message('countryCode') || 'Two letters, e.g. BG.'}
+                helperText={message('countryCode') || t('reference.countryCodeHelp')}
                 sx={{ maxWidth: { sm: 180 } }}
               />
             </Stack>
             <TextField
               id={`${id}-address`}
               name="address"
-              label="Address"
+              label={t('reference.address')}
               autoComplete="street-address"
               fullWidth
               disabled={pending}
@@ -214,34 +217,34 @@ export function VenueForm({
                 change('address', event.target.value);
               }}
               error={Boolean(message('address'))}
-              helperText={message('address') || 'Optional. Street address and directions.'}
+              helperText={message('address') || t('reference.addressHelp')}
             />
           </Stack>
         </Stack>
       </Paper>
       <EditorAside
-        label="Venue settings"
+        label={t('reference.venueSettings')}
         actions={
           <>
             <Button variant="soft" color="neutral" onClick={onCancel} disabled={pending}>
-              Cancel
+              {t('reference.cancel')}
             </Button>
             <Button
               variant="contained"
               type="submit"
-              aria-label="Save venue"
+              aria-label={t('reference.saveVenue')}
               aria-busy={pending}
               loading={pending}
               sx={{ flexGrow: 1 }}
             >
-              Save venue
+              {t('reference.saveVenue')}
             </Button>
           </>
         }
       >
         <Stack sx={{ p: { xs: 3, lg: 5 }, gap: 2 }}>
           <Typography variant="h6" component="h2">
-            Status
+            {t('reference.status')}
           </Typography>
           <FormControlLabel
             control={
@@ -255,7 +258,7 @@ export function VenueForm({
                 slotProps={{ input: { role: 'switch' } }}
               />
             }
-            label="Active"
+            label={t('reference.active')}
           />
           {message('active') && (
             <Typography variant="caption" color="error">
@@ -264,13 +267,13 @@ export function VenueForm({
           )}
           <Typography variant="body2" color="text.secondary">
             {values.active
-              ? 'Available for selection on new events.'
-              : 'Keep this venue for reference. Existing event links are preserved.'}
+              ? t('reference.venueActiveHelp')
+              : t('reference.venueInactiveHelp')}
           </Typography>
           <TextField
             id={`${id}-capacity`}
             name="capacity"
-            label="Capacity"
+            label={t('reference.capacity')}
             type="number"
             fullWidth
             disabled={pending}
@@ -279,25 +282,25 @@ export function VenueForm({
               change('capacity', event.target.value);
             }}
             error={Boolean(message('capacity'))}
-            helperText={message('capacity') || 'Optional. Maximum number of people.'}
+            helperText={message('capacity') || t('reference.capacityHelp')}
             slotProps={{ htmlInput: { min: 1, max: 2147483647, step: 1 } }}
           />
         </Stack>
         <Stack sx={{ p: { xs: 3, lg: 5 }, gap: 1 }}>
           <Typography variant="h6" component="h2" sx={{ mb: 1 }}>
-            Summary
+            {t('reference.summary')}
           </Typography>
           <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
-            {values.name.trim() || 'Untitled venue'}
+            {values.name.trim() || t('reference.untitledVenue')}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>
-            {values.city.trim() || 'City not set'} ·{' '}
-            {values.countryCode.trim().toUpperCase() || 'Country not set'}
+            {values.city.trim() || t('reference.cityNotSet')} ·{' '}
+            {values.countryCode.trim().toUpperCase() || t('reference.countryNotSet')}
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {initialValues
-              ? 'Save changes to this venue in the selected store.'
-              : 'Create a new venue in the selected store.'}
+              ? t('reference.editVenueSummary')
+              : t('reference.createVenueSummary')}
           </Typography>
         </Stack>
       </EditorAside>

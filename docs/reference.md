@@ -54,8 +54,10 @@ universal batch API, relation picker, upload workflow or dirty-form policy.
 - A synchronous submission guard prevents a second mutation before React updates pending UI.
   Mutation arguments capture the scoped resource. Per-call callbacks stop affecting the UI
   after its route/store unmounts; an already submitted write can still finish on the server.
-- The workspace keys the Products subtree by store and its route subtree by pathname.
-  The editor does not add another form key for the same boundary. Once mounted, the form
+- The workspace keys the Products subtree by store and its route subtree by semantic route
+  identity (feature, create/edit mode and record), excluding the locale segment. A language-only
+  URL change therefore keeps a dirty editor mounted, while store, resource or record changes still
+  establish a new lifecycle boundary. The editor does not add another form key for the same boundary. Once mounted, the form
   initializes its values once; refreshed query data does not reset that local draft.
   An initial read failure blocks the editor, but a failed background refresh keeps the
   loaded form mounted and shows a retry warning. Store discovery follows the same rule:

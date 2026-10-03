@@ -26,6 +26,8 @@ import {
 } from '@mui/x-data-grid';
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
+import { useLocalization } from '../../../localization/localization-provider.js';
+import { localizedPath } from '../../../localization/locale.js';
 import { PageHeader } from '../../../components/page-header.js';
 import { RecordActions } from '../../../components/record-actions.js';
 import IconifyIcon from '../../../layout/primitives/iconify-icon.js';
@@ -63,6 +65,7 @@ export function EventList({
   onDeleted: () => void;
 }) {
   const resource = eventsResource(storeId);
+  const { locale, t } = useLocalization();
   const navigate = useNavigate();
   const { search, key: locationKey } = useLocation();
   const state = useMemo(() => readEventList(search), [search]);
@@ -98,7 +101,7 @@ export function EventList({
     // Merge consecutive controls before their router update has rendered.
     const next = { ...latestState.current, search: text.trim(), page: 1, ...patch };
     latestState.current = next;
-    void navigate(`/${resource}${eventListSearch(next)}`);
+    void navigate(`${localizedPath(locale, resource)}${eventListSearch(next)}`);
   }
   const applyText = useEffectEvent(() => {
     if (textEdited.current) change({});
@@ -149,7 +152,7 @@ export function EventList({
   useEffect(() => {
     if (events.query.isSuccess && !events.query.isFetching && state.page > lastPage)
       void navigate(
-        `/${resource}${eventListSearch({ ...readEventList(search), page: lastPage })}`,
+        `${localizedPath(locale, resource)}${eventListSearch({ ...readEventList(search), page: lastPage })}`,
         { replace: true },
       );
   }, [
@@ -158,6 +161,7 @@ export function EventList({
     state.page,
     lastPage,
     resource,
+    locale,
     search,
     navigate,
   ]);
@@ -182,7 +186,7 @@ export function EventList({
       },
       {
         onSuccess: () => {
-          setNotice('Event restored.');
+          setNotice(t('reference.events.restored'));
           setSelection({ search, ids: [] });
         },
         onSettled: () => {
@@ -223,7 +227,7 @@ export function EventList({
   const pending = deletion.mutation.isPending || actions.mutation.isPending;
   const columns: GridColDef<ReferenceEventListItemFragment>[] = [
     { ...GRID_CHECKBOX_SELECTION_COL_DEF, width: 64 },
-    ...eventColumns(resource, search),
+    ...eventColumns(locale, resource, search, t),
     {
       field: 'action',
       headerName: '',
@@ -236,12 +240,12 @@ export function EventList({
           tabIndex={tabIndex}
           disabled={pending}
           onView={() => {
-            void navigate(eventLink(resource, row.id, search));
+            void navigate(eventLink(locale, resource, row.id, search));
           }}
-          editLabel={row.deletedAt ? 'Restore' : 'Edit'}
+          editLabel={row.deletedAt ? t('reference.events.restore') : t('common.edit')}
           onEdit={() => {
             if (row.deletedAt) restore(row);
-            else void navigate(eventLink(resource, `${row.id}/edit`, search));
+            else void navigate(eventLink(locale, resource, `${row.id}/edit`, search));
           }}
           {...(!row.deletedAt
             ? {
@@ -251,7 +255,7 @@ export function EventList({
                 },
               }
             : {})}
-          deleteLabel="Move to trash"
+          deleteLabel={t('reference.events.moveToTrash')}
         />
       ),
     },
@@ -274,17 +278,21 @@ export function EventList({
       />
       <Stack sx={{ flex: 1, minWidth: 0 }}>
         <PageHeader
-          title="Events"
-          breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Reference' }, { label: 'Events' }]}
+          title={t('reference.events.events')}
+          breadcrumbs={[
+            { label: t('common.home'), to: localizedPath(locale, '') },
+            { label: t('reference.title') },
+            { label: t('reference.events.events') },
+          ]}
           action={
             <Button
               variant="contained"
               startIcon={<IconifyIcon icon="material-symbols:add-rounded" />}
               onClick={() => {
-                void navigate(eventLink(resource, 'create', search));
+                void navigate(eventLink(locale, resource, 'create', search));
               }}
             >
-              Create event
+              {t('reference.events.create')}
             </Button>
           }
         />
@@ -296,7 +304,7 @@ export function EventList({
             <Stack direction="row" sx={{ gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
               <StyledTextField
                 type="search"
-                placeholder="Search title or code"
+                placeholder={t('reference.events.searchTitleCode')}
                 value={text}
                 onChange={(event) => {
                   changeSearch(event.target.value);
@@ -305,7 +313,7 @@ export function EventList({
                   if (event.key === 'Enter') change({});
                 }}
                 slotProps={{
-                  htmlInput: { 'aria-label': 'Search events', maxLength: 200 },
+                  htmlInput: { 'aria-label': t('reference.events.search'), maxLength: 200 },
                   input: {
                     startAdornment: (
                       <InputAdornment position="start">
@@ -319,7 +327,7 @@ export function EventList({
               <Button
                 variant="soft"
                 color="neutral"
-                aria-label="Filter events"
+                aria-label={t('reference.events.filter')}
                 aria-expanded={filterOpen}
                 onClick={() => {
                   setFilterOpen(!filterOpen);
@@ -327,7 +335,8 @@ export function EventList({
                 sx={{ gap: 0.5 }}
               >
                 <IconifyIcon icon="material-symbols:filter-alt-outline" sx={{ fontSize: 20 }} />
-                Filter{filterCount ? ` (${String(filterCount)})` : ''}
+                {t('common.filter')}
+                {filterCount ? ` (${String(filterCount)})` : ''}
               </Button>
               <Button
                 variant="soft"
@@ -338,27 +347,27 @@ export function EventList({
                 aria-haspopup="dialog"
                 aria-expanded={Boolean(columnAnchor)}
               >
-                Columns
+                {t('reference.events.columns')}
               </Button>
               {filterCount > 0 && (
                 <Button color="neutral" onClick={clearFilters}>
-                  Reset filters
+                  {t('reference.events.resetFilters')}
                 </Button>
               )}
             </Stack>
             <Tabs
               value={state.trashed ? 'trash' : 'active'}
-              aria-label="Event view"
+              aria-label={t('reference.events.view')}
               onChange={(_, value: string) => {
                 change({ trashed: value === 'trash' });
               }}
             >
-              <Tab value="active" label="Active" />
-              <Tab value="trash" label="Trash" />
+              <Tab value="active" label={t('common.active')} />
+              <Tab value="trash" label={t('common.trash')} />
             </Tabs>
           </Stack>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            {storeName} · All times in Europe/Sofia
+            {t('reference.events.storeTimezone', { store: storeName })}
           </Typography>
           {notice && (
             <Alert
@@ -374,7 +383,7 @@ export function EventList({
           )}
           {actions.mutation.isError && (
             <Alert severity="error" sx={{ mb: 2 }}>
-              {actions.mutation.error.message}
+              {t('common.genericError')}
             </Alert>
           )}
           {events.query.isError && (
@@ -387,11 +396,11 @@ export function EventList({
                     void events.query.refetch();
                   }}
                 >
-                  Retry
+                  {t('common.retry')}
                 </Button>
               }
             >
-              {events.query.error.message}
+              {t('common.genericError')}
             </Alert>
           )}
           <EventBulkActions
@@ -406,7 +415,7 @@ export function EventList({
           />
           <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
             <DataGrid<ReferenceEventListItemFragment>
-              aria-label="Events"
+              aria-label={t('reference.events.events')}
               rows={events.query.isError ? [] : events.result.data}
               columns={columns}
               rowHeight={64}
@@ -445,12 +454,12 @@ export function EventList({
               }}
               localeText={{
                 noRowsLabel: events.query.isError
-                  ? 'Events unavailable'
+                  ? t('reference.events.unavailable')
                   : filterCount
-                    ? 'No events match these filters.'
+                    ? t('reference.events.noMatch')
                     : state.trashed
-                      ? 'Trash is empty.'
-                      : 'No events in this store yet.',
+                      ? t('reference.events.emptyTrash')
+                      : t('reference.events.empty'),
               }}
               onCellClick={(
                 { field, row }: GridCellParams<ReferenceEventListItemFragment>,
@@ -463,7 +472,7 @@ export function EventList({
                 )
                   return;
                 void navigate(
-                  eventLink(resource, `${row.id}${row.deletedAt ? '' : '/edit'}`, search),
+                  eventLink(locale, resource, `${row.id}${row.deletedAt ? '' : '/edit'}`, search),
                 );
               }}
               sx={{ '& .MuiDataGrid-row': { cursor: 'pointer' } }}
@@ -480,14 +489,14 @@ export function EventList({
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <Stack role="dialog" aria-label="Visible columns" sx={{ p: 2 }}>
+        <Stack role="dialog" aria-label={t('reference.events.visibleColumns')} sx={{ p: 2 }}>
           <Typography variant="subtitle2" sx={{ mb: 1 }}>
-            Visible columns
+            {t('reference.events.visibleColumns')}
           </Typography>
-          {eventColumnChoices.map(({ value, label }) => (
+          {eventColumnChoices.map(({ value, labelKey }) => (
             <FormControlLabel
               key={value}
-              label={label}
+              label={t(labelKey)}
               control={
                 <Checkbox
                   checked={visible.includes(value)}
@@ -505,7 +514,7 @@ export function EventList({
               saveColumns(defaultEventColumns);
             }}
           >
-            Reset columns
+            {t('reference.events.resetColumns')}
           </Button>
         </Stack>
       </Popover>
@@ -518,14 +527,12 @@ export function EventList({
         maxWidth="xs"
         aria-labelledby="event-trash-title"
       >
-        <DialogTitle id="event-trash-title">Move event to trash?</DialogTitle>
+        <DialogTitle id="event-trash-title">{t('reference.events.trashTitle')}</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2 }}>
-            {selected?.title} will be removed from the active list.
+            {t('reference.events.trashMessage', { name: selected?.title ?? '' })}
           </Typography>
-          {deletion.mutation.isError && (
-            <Alert severity="error">{deletion.mutation.error.message}</Alert>
-          )}
+          {deletion.mutation.isError && <Alert severity="error">{t('common.genericError')}</Alert>}
         </DialogContent>
         <DialogActions>
           <Button
@@ -535,7 +542,7 @@ export function EventList({
               setSelected(undefined);
             }}
           >
-            Cancel
+            {t('reference.cancel')}
           </Button>
           <Button
             variant="contained"
@@ -543,7 +550,7 @@ export function EventList({
             loading={deletion.mutation.isPending}
             onClick={remove}
           >
-            Move to trash
+            {t('reference.events.moveToTrash')}
           </Button>
         </DialogActions>
       </Dialog>

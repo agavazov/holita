@@ -1,4 +1,5 @@
 import { Alert, AlertTitle, Button } from '@mui/material';
+import { useLocalization } from '../localization/localization-provider.js';
 
 export function QueryRefreshWarning({
   message,
@@ -9,18 +10,20 @@ export function QueryRefreshWarning({
   refreshing: boolean;
   onRetry: () => void;
 }) {
+  const { t } = useLocalization();
+
   return (
     <Alert
       severity="warning"
       sx={{ m: 3 }}
       action={
         <Button loading={refreshing} onClick={onRetry}>
-          Retry
+          {t('common.retry')}
         </Button>
       }
     >
-      <AlertTitle>Could not refresh data</AlertTitle>
-      {message} Your current work is preserved.
+      <AlertTitle>{t('common.refreshError')}</AlertTitle>
+      {message} {t('common.workPreserved')}
     </Alert>
   );
 }

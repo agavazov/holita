@@ -2,6 +2,7 @@
 import { Alert, Button, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useEffect, useId, useState, type ReactNode } from 'react';
 import { EditorAside } from '../../../components/editor-aside.js';
+import { useLocalization } from '../../../localization/localization-provider.js';
 import { speakersResource, type DataError } from '../../../data/data-provider.js';
 import type {
   CreateReferenceSessionInput,
@@ -32,6 +33,7 @@ export function SessionForm({
   onCancel: () => void;
   onChange: () => void;
 }) {
+  const { t, formatDate } = useLocalization();
   const id = useId();
   const [original] = useState(initialValues ?? { startsAt: event.startsAt, endsAt: '' });
   const [values, setValues] = useState(() => ({
@@ -57,11 +59,11 @@ export function SessionForm({
     ['summary', 2000],
     ['room', 120],
   ] as const) {
-    if (values[field].includes('\u0000')) errors[field] = 'Remove unsupported characters.';
+    if (values[field].includes('\u0000')) errors[field] = t('reference.removeUnsupported');
     else if (Array.from(values[field].trim()).length > max)
-      errors[field] = `Use at most ${String(max)} characters.`;
+      errors[field] = t('reference.maxCharacters', { count: max });
   }
-  if (!values.title.trim()) errors.title = 'Enter a title of up to 200 characters.';
+  if (!values.title.trim()) errors.title = t('reference.titleRequired');
   for (const field of ['startsAt', 'endsAt'] as const) {
     try {
       const time = eventInputInstant(values[field], original[field]);
@@ -69,9 +71,9 @@ export function SessionForm({
         Date.parse(time) < Date.parse(event.startsAt) ||
         Date.parse(time) > Date.parse(event.endsAt)
       )
-        errors[field] = 'Choose a time within the event.';
-    } catch (failure) {
-      errors[field] = failure instanceof Error ? failure.message : 'Choose a valid date and time.';
+        errors[field] = t('reference.timeWithinEvent');
+    } catch {
+      errors[field] = t('reference.validDateTime');
     }
   }
   if (
@@ -80,18 +82,15 @@ export function SessionForm({
     eventInputInstant(values.endsAt, original.endsAt) <=
       eventInputInstant(values.startsAt, original.startsAt)
   )
-    errors.endsAt = 'End must be after start.';
-  if (values.speakerIds.length > 100) errors.speakerIds = 'Choose at most 100 speakers.';
+    errors.endsAt = t('reference.endAfterStart');
+  if (values.speakerIds.length > 100) errors.speakerIds = t('reference.maxSpeakers');
   useEffect(() => {
     const first = error?.fieldErrors.find(({ path }) => Object.hasOwn(values, path));
     if (first) document.getElementById(`${id}-${first.path}`)?.focus();
   }, [error, id, values]);
   function message(field: Field) {
-    return (
-      (attempted && errors[field]) ||
-      error?.fieldErrors.find(({ path }) => path === field)?.message ||
-      ''
-    );
+    if (attempted && errors[field]) return errors[field];
+    return error?.fieldErrors.some(({ path }) => path === field) ? t('common.genericError') : '';
   }
   function input(field: Field) {
     return {
@@ -110,7 +109,7 @@ export function SessionForm({
   return (
     <Stack
       component="form"
-      aria-label="Session form"
+      aria-label={t('reference.sessionForm')}
       noValidate
       direction={{ xs: 'column', md: 'row' }}
       sx={{ flex: 1, minWidth: 0 }}
@@ -138,20 +137,20 @@ export function SessionForm({
         <Stack sx={{ gap: 3, maxWidth: 520, mx: 'auto' }}>
           {error && (
             <Alert severity="error">
-              {error.message}
+              {t('common.genericError')}
               {error.requestId && (
                 <Typography variant="caption" sx={{ display: 'block', overflowWrap: 'anywhere' }}>
-                  Request ID: {error.requestId}
+                  {t('common.requestId')}: {error.requestId}
                 </Typography>
               )}
             </Alert>
           )}
           <Typography variant="h6" component="h2">
-            Session details
+            {t('reference.sessionDetails')}
           </Typography>
           <TextField
             {...input('title')}
-            label="Title"
+            label={t('reference.title')}
             autoFocus
             value={values.title}
             onChange={(e) => {
@@ -160,7 +159,7 @@ export function SessionForm({
           />
           <TextField
             {...input('summary')}
-            label="Summary"
+            label={t('reference.summary')}
             multiline
             minRows={4}
             value={values.summary}
@@ -169,15 +168,15 @@ export function SessionForm({
             }}
           />
           <Typography variant="h6" component="h2">
-            Schedule &amp; speakers
+            {t('reference.sessionSchedule')}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            All times are in Europe/Sofia. Sessions must fit within the event.
+            {t('reference.sessionTimeHelp')}
           </Typography>
           <Stack direction={{ xs: 'column', lg: 'row' }} sx={{ gap: 2 }}>
             <TextField
               {...input('startsAt')}
-              label="Starts at"
+              label={t('reference.startsAt')}
               type="datetime-local"
               slotProps={{ inputLabel: { shrink: true } }}
               value={values.startsAt}
@@ -187,7 +186,7 @@ export function SessionForm({
             />
             <TextField
               {...input('endsAt')}
-              label="Ends at"
+              label={t('reference.endsAt')}
               type="datetime-local"
               slotProps={{ inputLabel: { shrink: true } }}
               value={values.endsAt}
@@ -198,7 +197,7 @@ export function SessionForm({
           </Stack>
           <TextField
             {...input('room')}
-            label="Room"
+            label={t('reference.room')}
             value={values.room}
             onChange={(e) => {
               change('room', e.target.value);
@@ -206,58 +205,57 @@ export function SessionForm({
           />
           <RelationSelect
             {...input('speakerIds')}
-            label="Speakers"
+            label={t('reference.speakers')}
             resource={speakersResource(storeId)}
             multiple
             value={values.speakerIds}
             onChange={(next) => {
               change('speakerIds', Array.isArray(next) ? next : []);
             }}
-            helperText={message('speakerIds') || "Search the store's speaker directory."}
+            helperText={message('speakerIds') || t('reference.speakerSearchHelp')}
           />
         </Stack>
       </Paper>
       <EditorAside
-        label="Session summary"
+        label={t('reference.sessionSummary')}
         actions={
           <>
             <Button variant="soft" color="neutral" onClick={onCancel}>
-              Cancel
+              {t('reference.cancel')}
             </Button>
             <Button
               variant="contained"
               type="submit"
               loading={pending}
-              aria-label="Save session"
+              aria-label={t('reference.saveSession')}
               aria-busy={pending}
               sx={{ flex: 1 }}
             >
-              Save session
+              {t('reference.saveSession')}
             </Button>
           </>
         }
       >
         <Stack sx={{ p: { xs: 3, lg: 5 }, gap: 2 }}>
           <Typography variant="h6" component="h2">
-            Event
+            {t('reference.event')}
           </Typography>
           <Typography sx={{ overflowWrap: 'anywhere' }}>{event.title}</Typography>
           <Typography variant="body2" color="text.secondary">
-            {eventTime(event.startsAt).format('DD MMM YYYY, HH:mm')} –{' '}
-            {eventTime(event.endsAt).format('DD MMM YYYY, HH:mm')} (Sofia)
+            {formatDate(event.startsAt, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Sofia' })} –{' '}
+            {formatDate(event.endsAt, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Sofia' })} (Sofia)
           </Typography>
         </Stack>
         <Stack sx={{ p: { xs: 3, lg: 5 }, gap: 2 }}>
           <Typography variant="h6" component="h2">
-            Summary
+            {t('reference.summary')}
           </Typography>
           <Typography sx={{ overflowWrap: 'anywhere' }}>
-            {values.title || 'Untitled session'}
+            {values.title || t('reference.untitledSession')}
           </Typography>
-          <Typography variant="body2">{values.speakerIds.length} speakers selected</Typography>
+          <Typography variant="body2">{t('reference.speakersSelected', { count: values.speakerIds.length })}</Typography>
           <Typography variant="body2" color="text.secondary">
-            Save this session independently of the event. Arrange its display order in the Sessions
-            tab.
+            {t('reference.sessionSaveHelp')}
           </Typography>
         </Stack>
       </EditorAside>

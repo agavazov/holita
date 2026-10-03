@@ -1,55 +1,59 @@
 // Presentation examples only. No session, authentication or business records are represented.
+import type { TranslationKey } from '../localization/dictionaries.js';
+
 export const exampleProfile = {
-  name: 'Guest',
-  designation: 'Example profile',
+  nameKey: 'shell.guest' as const satisfies TranslationKey,
+  designationKey: 'shell.exampleProfile' as const satisfies TranslationKey,
   avatar: '/images/tmp/avatar/14.webp',
 };
+
 export type ExampleNotification = {
   id: string;
   group: 'today' | 'older';
-  detail: string;
-  time: string;
+  detailKey: TranslationKey;
+  timeKey: TranslationKey;
   avatar: string;
   read: boolean;
 };
+
 export const exampleNotifications: readonly ExampleNotification[] = [
   {
     id: 'welcome',
     group: 'today',
-    detail: 'Welcome to your holita workspace. Everything you need is in the new navigation.',
-    time: '5 minutes ago',
+    detailKey: 'shell.notificationWelcome',
+    timeKey: 'shell.fiveMinutesAgo',
     avatar: '/images/tmp/avatar/14.webp',
     read: false,
   },
   {
     id: 'catalog',
     group: 'today',
-    detail: 'Your example catalog review is ready. Take a look at the latest updates.',
-    time: '20 minutes ago',
+    detailKey: 'shell.notificationCatalog',
+    timeKey: 'shell.twentyMinutesAgo',
     avatar: '/images/tmp/avatar/1.webp',
     read: false,
   },
   {
     id: 'event',
     group: 'today',
-    detail: 'A new event has been added to the example schedule.',
-    time: '1 hour ago',
+    detailKey: 'shell.notificationEvent',
+    timeKey: 'shell.oneHourAgo',
     avatar: '/images/tmp/avatar/2.webp',
     read: false,
   },
   {
     id: 'team',
     group: 'older',
-    detail: 'Your team shared an example workspace update with you.',
-    time: 'Yesterday',
+    detailKey: 'shell.notificationTeam',
+    timeKey: 'shell.yesterday',
     avatar: '/images/tmp/avatar/3.webp',
     read: true,
   },
   {
     id: 'ready',
     group: 'older',
-    detail: 'The workspace is ready to explore. Choose a store to get started.',
-    time: '2 days ago',
+    detailKey: 'shell.notificationReady',
+    timeKey: 'shell.twoDaysAgo',
     avatar: '/images/tmp/avatar/14.webp',
     read: true,
   },

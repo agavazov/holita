@@ -1,20 +1,22 @@
 import type { CrudFilters } from '@refinedev/core';
 import { dayjs, eventTimezone } from './event-time.js';
+import type { TranslationKey } from '../../../localization/dictionaries.js';
+import { localizedPath, type AdminLocale } from '../../../localization/locale.js';
 import type {
   ReferenceEventFormat,
   ReferenceEventStatus,
 } from '../../../generated/graphql/operations.js';
 
 export const eventStatuses = [
-  { value: 'DRAFT', label: 'Draft' },
-  { value: 'PUBLISHED', label: 'Published' },
-  { value: 'ARCHIVED', label: 'Archived' },
-] satisfies { value: ReferenceEventStatus; label: string }[];
+  { value: 'DRAFT', label: 'Draft', labelKey: 'reference.events.statusDraft' },
+  { value: 'PUBLISHED', label: 'Published', labelKey: 'reference.events.statusPublished' },
+  { value: 'ARCHIVED', label: 'Archived', labelKey: 'reference.events.statusArchived' },
+] satisfies { value: ReferenceEventStatus; label: string; labelKey: TranslationKey }[];
 export const eventFormats = [
-  { value: 'IN_PERSON', label: 'In person' },
-  { value: 'ONLINE', label: 'Online' },
-  { value: 'HYBRID', label: 'Hybrid' },
-] satisfies { value: ReferenceEventFormat; label: string }[];
+  { value: 'IN_PERSON', label: 'In person', labelKey: 'reference.events.formatInPerson' },
+  { value: 'ONLINE', label: 'Online', labelKey: 'reference.events.formatOnline' },
+  { value: 'HYBRID', label: 'Hybrid', labelKey: 'reference.events.formatHybrid' },
+] satisfies { value: ReferenceEventFormat; label: string; labelKey: TranslationKey }[];
 export const eventSortFields = [
   'title',
   'startsAt',
@@ -147,9 +149,18 @@ export function eventListFilters(state: EventListState): CrudFilters {
     .map(([field, value]) => ({ field, operator: 'eq', value }));
 }
 // Carry only the original list query. The destination path always comes from the active store.
-export function eventListReturn(resource: string, search: string): string {
-  return `/${resource}${eventListSearch(readEventList(new URLSearchParams(search).get('list') ?? ''))}`;
+export function eventListReturnSearch(search: string): string {
+  return eventListSearch(readEventList(new URLSearchParams(search).get('list') ?? ''));
 }
-export function eventLink(resource: string, suffix: string, listSearch: string): string {
-  return `/${resource}/${suffix}${listSearch ? `?${new URLSearchParams({ list: listSearch }).toString()}` : ''}`;
+export function eventListReturn(locale: AdminLocale, resource: string, search: string): string {
+  return `${localizedPath(locale, resource)}${eventListReturnSearch(search)}`;
+}
+export function eventLink(
+  locale: AdminLocale,
+  resource: string,
+  suffix: string,
+  listSearch: string,
+): string {
+  const path = localizedPath(locale, `${resource}/${suffix}`);
+  return `${path}${listSearch ? `?${new URLSearchParams({ list: listSearch }).toString()}` : ''}`;
 }

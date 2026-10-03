@@ -12,56 +12,61 @@ import {
   TableRow,
   Typography,
 } from '@mui/material';
-import IconifyIcon from '../../../layout/primitives/iconify-icon.js';
 import { Fragment, useState } from 'react';
 import { historyResource, type DataError } from '../../../data/data-provider.js';
 import type {
   ListReferenceEventHistoryQuery,
   ReferenceEventHistoryOperation,
 } from '../../../generated/graphql/operations.js';
-import { eventTime } from './event-time.js';
+import IconifyIcon from '../../../layout/primitives/iconify-icon.js';
+import type { TranslationKey } from '../../../localization/dictionaries.js';
+import { useLocalization } from '../../../localization/localization-provider.js';
 
 type Entry = ListReferenceEventHistoryQuery['referenceEventHistory']['items'][number];
-const operations: Record<ReferenceEventHistoryOperation, string> = {
-  CREATED: 'Event created',
-  UPDATED: 'Event updated',
-  TRASHED: 'Moved to trash',
-  RESTORED: 'Event restored',
-  SESSION_CREATED: 'Session created',
-  SESSION_UPDATED: 'Session updated',
-  SESSION_DELETED: 'Session deleted',
-  SESSIONS_REORDERED: 'Sessions reordered',
-  MEDIA_ADDED: 'Image added',
-  MEDIA_UPDATED: 'Image updated',
-  MEDIA_REMOVED: 'Image removed',
-  MEDIA_REORDERED: 'Images reordered',
-  COVER_CHANGED: 'Cover changed',
+
+const operations: Record<ReferenceEventHistoryOperation, TranslationKey> = {
+  CREATED: 'reference.events.operationCreated',
+  UPDATED: 'reference.events.operationUpdated',
+  TRASHED: 'reference.events.operationTrashed',
+  RESTORED: 'reference.events.operationRestored',
+  SESSION_CREATED: 'reference.events.operationSessionCreated',
+  SESSION_UPDATED: 'reference.events.operationSessionUpdated',
+  SESSION_DELETED: 'reference.events.operationSessionDeleted',
+  SESSIONS_REORDERED: 'reference.events.operationSessionsReordered',
+  MEDIA_ADDED: 'reference.events.operationMediaAdded',
+  MEDIA_UPDATED: 'reference.events.operationMediaUpdated',
+  MEDIA_REMOVED: 'reference.events.operationMediaRemoved',
+  MEDIA_REORDERED: 'reference.events.operationMediaReordered',
+  COVER_CHANGED: 'reference.events.operationCoverChanged',
 };
-const fields: Record<string, string> = {
-  title: 'Title',
-  code: 'Code',
-  status: 'Status',
-  format: 'Format',
-  capacity: 'Capacity',
-  budget: 'Budget (EUR)',
-  featured: 'Featured',
-  startsAt: 'Start (UTC)',
-  endsAt: 'End (UTC)',
-  registrationOpensOn: 'Registration opens',
-  registrationClosesOn: 'Registration closes',
-  venue: 'Venue',
-  tags: 'Tags',
-  meetingUrl: 'Meeting link',
-  summary: 'Summary',
-  descriptionHtml: 'Description (HTML excerpt)',
-  room: 'Room',
-  speakers: 'Speakers',
-  sessionOrder: 'Session order',
-  galleryOrder: 'Image order',
-  cover: 'Cover',
-  altText: 'Alternative text',
+
+const fields: Record<string, TranslationKey> = {
+  title: 'reference.events.fieldTitle',
+  code: 'reference.events.fieldCode',
+  status: 'reference.events.fieldStatus',
+  format: 'reference.events.fieldFormat',
+  capacity: 'reference.events.fieldCapacity',
+  budget: 'reference.events.fieldBudget',
+  featured: 'reference.events.fieldFeatured',
+  startsAt: 'reference.events.fieldStartsAt',
+  endsAt: 'reference.events.fieldEndsAt',
+  registrationOpensOn: 'reference.events.fieldRegistrationOpens',
+  registrationClosesOn: 'reference.events.fieldRegistrationCloses',
+  venue: 'reference.events.fieldVenue',
+  tags: 'reference.events.fieldTags',
+  meetingUrl: 'reference.events.fieldMeetingUrl',
+  summary: 'reference.events.fieldSummary',
+  descriptionHtml: 'reference.events.fieldDescription',
+  room: 'reference.events.fieldRoom',
+  speakers: 'reference.events.fieldSpeakers',
+  sessionOrder: 'reference.events.fieldSessionOrder',
+  galleryOrder: 'reference.events.fieldGalleryOrder',
+  cover: 'reference.events.fieldCover',
+  altText: 'reference.events.fieldAltText',
 };
+
 export function EventHistory({ storeId, eventId }: { storeId: string; eventId: string }) {
+  const { t, formatDate } = useLocalization();
   const [page, setPage] = useState(1);
   const [expanded, setExpanded] = useState<string[]>([]);
   const history = useList<Entry, DataError>({
@@ -70,14 +75,15 @@ export function EventHistory({ storeId, eventId }: { storeId: string; eventId: s
     errorNotification: false,
   });
   const total = history.result.total ?? 0;
+
   return (
-    <Stack component="section" aria-label="Event history" sx={{ gap: 3, minWidth: 0 }}>
+    <Stack component="section" aria-label={t('reference.events.history')} sx={{ gap: 3, minWidth: 0 }}>
       <Box>
         <Typography variant="h6" component="h2" sx={{ mb: 1 }}>
-          Event history
+          {t('reference.events.history')}
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Saved changes, newest first · Europe/Sofia. Long values are shown as excerpts.
+          {t('reference.events.historyHelp')}
         </Typography>
       </Box>
       {history.query.isError && (
@@ -89,15 +95,15 @@ export function EventHistory({ storeId, eventId }: { storeId: string; eventId: s
                 void history.query.refetch();
               }}
             >
-              Retry
+              {t('common.retry')}
             </Button>
           }
         >
-          {history.query.error.message}
+          {t('common.genericError')}
         </Alert>
       )}
       <TableContainer>
-        <Table aria-label="Saved event changes" sx={{ minWidth: 620 }}>
+        <Table aria-label={t('reference.events.savedChanges')} sx={{ minWidth: 620 }}>
           <TableHead>
             <TableRow>
               <TableCell sx={{ width: 56 }}>
@@ -111,12 +117,12 @@ export function EventHistory({ storeId, eventId }: { storeId: string; eventId: s
                     clipPath: 'inset(50%)',
                   }}
                 >
-                  Details
+                  {t('reference.events.details')}
                 </Box>
               </TableCell>
-              <TableCell>Change</TableCell>
-              <TableCell>Actor</TableCell>
-              <TableCell>When (Sofia)</TableCell>
+              <TableCell>{t('reference.events.change')}</TableCell>
+              <TableCell>{t('reference.events.actor')}</TableCell>
+              <TableCell>{t('reference.events.whenSofia')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -124,10 +130,10 @@ export function EventHistory({ storeId, eventId }: { storeId: string; eventId: s
               <TableRow>
                 <TableCell colSpan={4} sx={{ py: 4, textAlign: 'center' }}>
                   {history.query.isPending
-                    ? 'Loading history…'
+                    ? t('reference.events.loadingHistory')
                     : history.query.isError
-                      ? 'History unavailable'
-                      : 'No changes recorded yet.'}
+                      ? t('reference.events.historyUnavailable')
+                      : t('reference.events.noHistory')}
                 </TableCell>
               </TableRow>
             ) : (
@@ -140,7 +146,11 @@ export function EventHistory({ storeId, eventId }: { storeId: string; eventId: s
                           size="small"
                           shape="square"
                           color="neutral"
-                          aria-label={expanded.includes(entry.id) ? 'Collapse row' : 'Expand row'}
+                          aria-label={
+                            expanded.includes(entry.id)
+                              ? t('reference.events.collapseRow')
+                              : t('reference.events.expandRow')
+                          }
                           aria-expanded={expanded.includes(entry.id)}
                           aria-controls={`history-${entry.id}`}
                           onClick={() => {
@@ -163,7 +173,7 @@ export function EventHistory({ storeId, eventId }: { storeId: string; eventId: s
                     </TableCell>
                     <TableCell>
                       <Typography variant="subtitle2" color="text.primary">
-                        {operations[entry.operation]}
+                        {t(operations[entry.operation])}
                       </Typography>
                       {entry.subject && (
                         <Typography
@@ -176,7 +186,11 @@ export function EventHistory({ storeId, eventId }: { storeId: string; eventId: s
                     </TableCell>
                     <TableCell>{entry.actor}</TableCell>
                     <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                      {eventTime(entry.createdAt).format('DD MMM YYYY, HH:mm:ss')}
+                      {formatDate(entry.createdAt, {
+                        dateStyle: 'medium',
+                        timeStyle: 'medium',
+                        timeZone: 'Europe/Sofia',
+                      })}
                     </TableCell>
                   </TableRow>
                   {expanded.includes(entry.id) && (
@@ -190,25 +204,29 @@ export function EventHistory({ storeId, eventId }: { storeId: string; eventId: s
                             overflowWrap: 'anywhere',
                           }}
                         >
-                          {entry.changes.map((change) => (
-                            <Box key={change.field}>
-                              <Typography variant="subtitle2" color="text.primary">
-                                {fields[change.field] ?? change.field}
-                              </Typography>
-                              <Typography variant="body2">
-                                <Box component="span" color="text.secondary">
-                                  Before:{' '}
-                                </Box>
-                                {change.before ?? '—'}
-                              </Typography>
-                              <Typography variant="body2">
-                                <Box component="span" color="text.secondary">
-                                  After:{' '}
-                                </Box>
-                                {change.after ?? '—'}
-                              </Typography>
-                            </Box>
-                          ))}
+                          {entry.changes.map((change) => {
+                            const fieldKey = fields[change.field];
+
+                            return (
+                              <Box key={change.field}>
+                                <Typography variant="subtitle2" color="text.primary">
+                                  {fieldKey ? t(fieldKey) : change.field}
+                                </Typography>
+                                <Typography variant="body2">
+                                  <Box component="span" color="text.secondary">
+                                    {t('reference.events.before')}{' '}
+                                  </Box>
+                                  {change.before ?? '—'}
+                                </Typography>
+                                <Typography variant="body2">
+                                  <Box component="span" color="text.secondary">
+                                    {t('reference.events.after')}{' '}
+                                  </Box>
+                                  {change.after ?? '—'}
+                                </Typography>
+                              </Box>
+                            );
+                          })}
                         </Stack>
                       </TableCell>
                     </TableRow>
@@ -233,29 +251,31 @@ export function EventHistory({ storeId, eventId }: { storeId: string; eventId: s
         }}
       >
         <Typography variant="caption" color="text.secondary" sx={{ mr: 'auto' }}>
-          {history.query.isPending ? 'Loading…' : `Page ${String(page)} · ${String(total)} changes`}
+          {history.query.isPending
+            ? t('common.loading')
+            : t('reference.events.historyPage', { page, count: total })}
         </Typography>
         <Button
           size="small"
-          aria-label="Previous page"
+          aria-label={t('common.previousPage')}
           disabled={page === 1 || history.query.isFetching}
           onClick={() => {
             setExpanded([]);
             setPage(page - 1);
           }}
         >
-          Previous
+          {t('common.previous')}
         </Button>
         <Button
           size="small"
-          aria-label="Next page"
+          aria-label={t('common.nextPage')}
           disabled={page * 20 >= total || history.query.isFetching}
           onClick={() => {
             setExpanded([]);
             setPage(page + 1);
           }}
         >
-          Next
+          {t('common.next')}
         </Button>
       </Stack>
     </Stack>

@@ -5,8 +5,11 @@ import Autocomplete from './components/Autocomplete.js';
 import Checkbox from './components/Checkbox.js';
 import { Tab, Tabs } from './components/Tab.js';
 import { createTheme as muiCreateTheme } from '@mui/material/styles';
+import { bgBG as materialBgBG, enUS as materialEnUS } from '@mui/material/locale';
+import { bgBG as dataGridBgBG, enUS as dataGridEnUS } from '@mui/x-data-grid/locales';
 import type {} from '@mui/material/themeCssVarsAugmentation';
 import './types.js';
+import type { AdminLocale } from '../localization/locale.js';
 import type { ThemePreset } from './config.js';
 import AppBar from './components/AppBar.js';
 import { Avatar } from './components/Avatar.js';
@@ -48,7 +51,14 @@ import shadows, { darkShadows } from './shadows.js';
 import sxConfig from './sxConfig.js';
 import createTypography from './typography.js';
 
-export function createTheme(preset: ThemePreset, primaryColor: string | null) {
+export function createTheme(
+  preset: ThemePreset,
+  primaryColor: string | null,
+  locale: AdminLocale,
+) {
+  const materialLocale = locale === 'bg' ? materialBgBG : materialEnUS;
+  const dataGridLocale = locale === 'bg' ? dataGridBgBG : dataGridEnUS;
+
   return muiCreateTheme({
     cssVariables: { colorSchemeSelector: 'data-holita-color-scheme', cssVarPrefix: 'holita' },
     colorSchemes: {
@@ -122,5 +132,5 @@ export function createTheme(preset: ThemePreset, primaryColor: string | null) {
       MuiPopper: Popper,
       MuiDrawer: Drawer,
     },
-  });
+  }, materialLocale, dataGridLocale);
 }

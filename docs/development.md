@@ -74,6 +74,23 @@ browser configuration value, never a place for credentials. Vite reads it at sta
 Use `VITE_GATEWAY_URL=http://127.0.0.1:12080/graphql npm run dev:admin` for a gateway override,
 and align gateway ADMIN_ORIGIN with the exact browser origin when moving the admin port.
 
+## Admin languages and URLs
+
+The admin supports Bulgarian and English. Bulgarian is the default and the active language is
+always the first URL segment: `/bg/` or `/en/`. Opening an unprefixed path, an unsupported locale
+such as `/xx/stores/...`, or a repeated locale prefix redirects directly to the equivalent `/bg/`
+URL while preserving the remaining path, query string and hash.
+
+The language menu replaces only that first segment, so the selected store, resource, editor,
+filters, sorting, pagination, search and hash remain unchanged. Confirmed language changes keep
+dirty editor drafts mounted. The menu is unavailable while a save or upload is pending; list
+mutations retain their initiating store and resource while completion messages use the language
+active when they are displayed.
+
+The URL locale also controls `html[lang]`, MUI/DataGrid built-in text and `Intl` date and number
+formatting. Stored values, currencies and time zones are unchanged; Event timestamps continue to
+use Europe/Sofia and budgets remain EUR values.
+
 ## Using Reference
 
 Choose a store, then **Reference → Events, Venues, Speakers or Tags**. Each resource has a

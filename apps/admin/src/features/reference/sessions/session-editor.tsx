@@ -13,6 +13,8 @@ import type {
 } from '../../../generated/graphql/operations.js';
 import { useUnsavedChanges } from '../use-unsaved-changes.js';
 import { eventListReturn } from '../events/event-list-state.js';
+import { useLocalization } from '../../../localization/localization-provider.js';
+import { localizedPath } from '../../../localization/locale.js';
 import { SessionForm } from './session-form.js';
 
 export function SessionEditor({
@@ -27,12 +29,13 @@ export function SessionEditor({
   onSaved: () => void;
 }) {
   const navigate = useNavigate();
+  const { locale, t } = useLocalization();
   const { search } = useLocation();
   const resource = sessionsResource(storeId, eventId);
   const query = new URLSearchParams(search);
   query.set('tab', 'sessions');
-  const back = `/${eventsResource(storeId)}/${eventId}?${query.toString()}`;
-  const list = eventListReturn(eventsResource(storeId), search);
+  const back = `${localizedPath(locale, `${eventsResource(storeId)}/${eventId}`)}?${query.toString()}`;
+  const list = eventListReturn(locale, eventsResource(storeId), search);
   const event = useOne<ReferenceEventDetailsFragment, DataError>({
     resource: eventsResource(storeId),
     id: eventId,
@@ -74,21 +77,21 @@ export function SessionEditor({
     <>
       <PageHeader
         embedded
-        title={sessionId ? 'Edit session' : 'Add session'}
+        title={t(sessionId ? 'reference.editSession' : 'reference.addSession')}
         breadcrumbs={[
-          { label: 'Home', to: '/' },
-          { label: 'Reference' },
-          { label: 'Events', to: list },
-          { label: event.result?.title ?? 'Event', to: back },
-          { label: sessionId ? 'Edit session' : 'Add session' },
+          { label: t('common.home'), to: localizedPath(locale, '/') },
+          { label: t('shell.reference') },
+          { label: t('shell.events'), to: list },
+          { label: event.result?.title ?? t('reference.event'), to: back },
+          { label: t(sessionId ? 'reference.editSession' : 'reference.addSession') },
         ]}
       />
       <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-        {event.result?.title ?? 'Event program'} · Sessions have their own save action.
+        {event.result?.title ?? t('reference.eventProgram')} · {t('reference.sessionOwnSave')}
       </Typography>
       {(pending || changes.dirty) && (
         <Typography role="status" variant="body2" sx={{ mb: 2 }}>
-          {pending ? 'Saving…' : 'Unsaved changes'}
+          {t(pending ? 'reference.saving' : 'reference.unsavedChanges')}
         </Typography>
       )}
     </>
@@ -98,7 +101,7 @@ export function SessionEditor({
       {changes.dialog}
       {failure && event.result && (!sessionId || session.result) && (
         <QueryRefreshWarning
-          message={failure.message}
+          message={t('common.genericError')}
           refreshing={event.query.isFetching || (Boolean(sessionId) && session.query.isFetching)}
           onRetry={() => {
             void event.query.refetch();
@@ -120,11 +123,11 @@ export function SessionEditor({
                       if (sessionId) void session.query.refetch();
                     }}
                   >
-                    Retry
+                    {t('common.retry')}
                   </Button>
                 }
               >
-                {failure.message}
+                {t('common.genericError')}
               </Alert>
               <Button
                 sx={{ mt: 2 }}
@@ -132,7 +135,7 @@ export function SessionEditor({
                   void navigate(back);
                 }}
               >
-                Back to sessions
+                {t('reference.backToSessions')}
               </Button>
             </>
           ) : (

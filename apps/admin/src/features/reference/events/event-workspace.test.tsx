@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '../../../test/render.js';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { describe, expect, it } from 'vitest';
@@ -16,7 +16,7 @@ import {
   type GraphQLCall,
 } from '../../../test/graphql-fixture.js';
 
-function mount(path = `/stores/${storeA}/reference/events/${event().id}/edit`) {
+function mount(path = `/en/stores/${storeA}/reference/events/${event().id}/edit`) {
   const router = createMemoryRouter(
     [
       {
@@ -104,7 +104,7 @@ describe('Event editor lifecycle', () => {
     await user.click(screen.getByLabelText('Title'));
     await user.paste('Preserved input');
     await user.click(screen.getByRole('button', { name: 'Save event' }));
-    expect(await screen.findByText('Use a shorter description.')).toBeInTheDocument();
+    expect(await screen.findByText('Check this value and try again.')).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Content & media' })).toHaveAttribute(
       'aria-selected',
       'true',
@@ -119,7 +119,7 @@ describe('Event editor lifecycle', () => {
     expect(router.state.location.pathname).toContain(storeA);
     await user.click(screen.getByRole('button', { name: 'Discard changes' }));
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe(`/stores/${storeB}/reference/events`);
+      expect(router.state.location.pathname).toBe(`/en/stores/${storeB}/reference/events`);
     });
     expect(
       transport.calls.filter((call) => call.operation === 'UpdateReferenceEvent'),

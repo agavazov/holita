@@ -1,7 +1,7 @@
 import { Refine } from '@refinedev/core';
 import routerProvider from '@refinedev/react-router';
 import { QueryClient } from '@tanstack/react-query';
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '../test/render.js';
 import { createMemoryRouter, Outlet, RouterProvider } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import { createDataProvider } from '../data/data-provider.js';
@@ -72,12 +72,12 @@ function mount(path: string) {
           </AuroraTheme>
         ),
         children: ['products', 'reference'].map((section) => ({
-          path: `/stores/:storeId/${section}/*`,
+          path: `/en/stores/:storeId/${section}/*`,
           element: <StoreWorkspace />,
         })),
       },
     ],
-    { initialEntries: [`/stores/${storeA}/${path}`] },
+    { initialEntries: [`/en/stores/${storeA}/${path}`] },
   );
   const view = render(<RouterProvider router={router} />);
   return {
@@ -110,7 +110,7 @@ describe('background refresh', () => {
       const view = mount(path);
       try {
         const error = await screen.findByRole('alert', {}, { timeout: 10_000 });
-        expect(error).toHaveTextContent('Initial read unavailable.');
+        expect(error).toHaveTextContent('Something went wrong. Try again.');
         expect(screen.queryByRole('textbox', { name: label })).not.toBeInTheDocument();
         failing = false;
         fireEvent.click(within(error).getByRole('button', { name: 'Retry' }));
@@ -150,7 +150,7 @@ describe('background refresh', () => {
         failing = true;
         await view.refresh();
         const warning = await screen.findByRole('alert');
-        expect(warning).toHaveTextContent('Refresh temporarily unavailable.');
+        expect(warning).toHaveTextContent('Something went wrong. Try again.');
         expect(screen.getByRole('textbox', { name: label })).toBe(input);
         expect(input).toHaveValue('My unsaved revision');
         // A second failure must preserve the same mounted form too.
@@ -193,7 +193,7 @@ describe('background refresh', () => {
       failing = true;
       await view.refresh();
       expect(await screen.findByRole('alert')).toHaveTextContent(
-        'Refresh temporarily unavailable.',
+        'Something went wrong. Try again.',
       );
       expect(titles()).toEqual(['Workshop', 'Opening']);
       failing = false;

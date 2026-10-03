@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { DataError } from '../../../data/data-provider.js';
 import type { MediaAction, MediaResult } from '../../../data/media-provider.js';
 import { directUpload } from '../../../data/direct-upload.js';
+import { useLocalization } from '../../../localization/localization-provider.js';
 
 export function useMediaMutation() {
   const invalidate = useInvalidate();
@@ -16,6 +17,7 @@ export function useMediaMutation() {
   });
 }
 export function useMediaUpload(resource: string) {
+  const { t } = useLocalization();
   const mutation = useMediaMutation();
   const active = useRef<AbortController | null>(null);
   const [state, setState] = useState<{ name: string; percent: number; finishing: boolean } | null>(
@@ -36,7 +38,7 @@ export function useMediaUpload(resource: string) {
       file.size < 1 ||
       file.size > 5 * 1024 * 1024
     ) {
-      setError('Choose a JPEG, PNG or WebP image of at most 5 MiB.');
+      setError(t('reference.invalidImage'));
       return;
     }
     const controller = new AbortController();
@@ -54,7 +56,7 @@ export function useMediaUpload(resource: string) {
         errorNotification: false,
       });
       controller.signal.throwIfAborted();
-      if (!('intent' in response.data)) throw new Error('No upload target was returned.');
+      if (!('intent' in response.data)) throw new Error(t('reference.noUploadTarget'));
       await directUpload(response.data.intent, file, controller.signal, (percent) => {
         if (!controller.signal.aborted) setState({ name: file.name, percent, finishing: false });
       });
@@ -68,8 +70,13 @@ export function useMediaUpload(resource: string) {
         errorNotification: false,
       });
     } catch (failure) {
-      if (!controller.signal.aborted)
-        setError(failure instanceof Error ? failure.message : 'Upload failed. Please try again.');
+      if (!controller.signal.aborted) {
+        setError(
+          failure instanceof Error && failure.message === t('reference.noUploadTarget')
+            ? failure.message
+            : t('reference.uploadFailed'),
+        );
+      }
     } finally {
       if (active.current === controller) {
         active.current = null;

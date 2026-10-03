@@ -2,7 +2,7 @@ import { useCreate, useOne, useUpdate } from '@refinedev/core';
 import { Alert, Box, Button, Skeleton, Stack } from '@mui/material';
 import { PageHeader } from '../../components/page-header.js';
 import { QueryRefreshWarning } from '../../components/query-refresh-warning.js';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router';
 
 import { productsResource, type DataError } from '../../data/data-provider.js';
@@ -11,6 +11,11 @@ import type {
   GetProductQuery,
   ProductDetailsFragment,
 } from '../../generated/graphql/operations.js';
+import {
+  useLocalization,
+  useLocaleSwitchPending,
+} from '../../localization/localization-provider.js';
+import { localizedPath } from '../../localization/locale.js';
 import { ProductForm } from './product-form.js';
 
 type ProductEditorProps = { storeId: string; onSaved: () => void };
@@ -18,9 +23,14 @@ type ProductEditorProps = { storeId: string; onSaved: () => void };
 export function ProductEditor({ storeId, onSaved }: ProductEditorProps) {
   const { productId } = useParams();
   const navigate = useNavigate();
+  const { locale, t } = useLocalization();
   const resource = productsResource(storeId);
   const submitting = useRef(false);
-  const listPath = `/${resource}`;
+  const localeRef = useRef(locale);
+  useEffect(() => {
+    localeRef.current = locale;
+  }, [locale]);
+  const listPath = localizedPath(locale, `/${resource}`);
   const product = useOne<GetProductQuery['product'], DataError>({
     resource,
     ...(productId ? { id: productId } : {}),
@@ -37,6 +47,7 @@ export function ProductEditor({ storeId, onSaved }: ProductEditorProps) {
     mutationMode: 'pessimistic',
   });
   const pending = create.mutation.isPending || update.mutation.isPending;
+  useLocaleSwitchPending(pending);
 
   function save(values: CreateProductInput) {
     if (submitting.current) return;
@@ -45,7 +56,7 @@ export function ProductEditor({ storeId, onSaved }: ProductEditorProps) {
     const callbacks = {
       onSuccess: () => {
         onSaved();
-        void navigate(listPath);
+        void navigate(localizedPath(localeRef.current, `/${resource}`));
       },
       onSettled: () => {
         submitting.current = false;
@@ -58,11 +69,11 @@ export function ProductEditor({ storeId, onSaved }: ProductEditorProps) {
   const header = (
     <PageHeader
       embedded
-      title={productId ? 'Edit product' : 'Create product'}
+      title={productId ? t('products.edit') : t('products.create')}
       breadcrumbs={[
-        { label: 'Home', to: '/' },
-        { label: 'Products', to: listPath },
-        { label: productId ? 'Edit product' : 'Create product' },
+        { label: t('common.home'), to: localizedPath(locale, '/') },
+        { label: t('shell.products'), to: listPath },
+        { label: productId ? t('products.edit') : t('products.create') },
       ]}
     />
   );
@@ -71,7 +82,7 @@ export function ProductEditor({ storeId, onSaved }: ProductEditorProps) {
     <Stack sx={{ flex: 1, minWidth: 0 }}>
       {productId && product.query.isRefetchError && (
         <QueryRefreshWarning
-          message={product.query.error.message}
+          message={t('common.genericError')}
           refreshing={product.query.isFetching}
           onRetry={() => {
             void product.query.refetch();
@@ -96,11 +107,11 @@ export function ProductEditor({ storeId, onSaved }: ProductEditorProps) {
                 void product.query.refetch();
               }}
             >
-              Retry
+              {t('common.retry')}
             </Button>
           }
         >
-          {product.query.error.message}
+          {t('common.genericError')}
         </Alert>
       ) : (
         <ProductForm
@@ -121,7 +132,7 @@ export function ProductEditor({ storeId, onSaved }: ProductEditorProps) {
             void navigate(listPath);
           }}
         >
-          Back to products
+          {t('products.back')}
         </Button>
       )}
     </Stack>

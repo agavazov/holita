@@ -1,5 +1,5 @@
 import { Refine } from '@refinedev/core';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '../../../test/render.js';
 import userEvent from '@testing-library/user-event';
 import { flushSync } from 'react-dom';
 import { createMemoryRouter, RouterProvider } from 'react-router';
@@ -19,7 +19,7 @@ function renderList(query: string) {
   const router = createMemoryRouter(
     [
       {
-        path: '/stores/:storeId/reference/venues',
+        path: '/en/stores/:storeId/reference/venues',
         element: (
           <AuroraTheme>
             <Refine
@@ -32,7 +32,7 @@ function renderList(query: string) {
         ),
       },
     ],
-    { initialEntries: [`/stores/${storeA}/reference/venues${query}`] },
+    { initialEntries: [`/en/stores/${storeA}/reference/venues${query}`] },
   );
   render(
     <RouterProvider

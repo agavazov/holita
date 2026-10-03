@@ -12,6 +12,9 @@ import { lazy, Suspense, useState } from 'react';
 import { useList } from '@refinedev/core';
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router';
 
+import { useLocalization } from '../../localization/localization-provider.js';
+import { localizedPath, pathWithoutLocale, semanticRouteKey } from '../../localization/locale.js';
+
 import type { DataError } from '../../data/data-provider.js';
 import type { ListStoresQuery } from '../../generated/graphql/operations.js';
 import { AdminLayout } from '../../layout/admin-layout.js';
@@ -28,6 +31,7 @@ const ReferenceWorkspace = lazy(async () => {
 function StoreProducts({ storeId }: { storeId: string }) {
   const [notice, setNotice] = useState('');
   const { pathname } = useLocation();
+  const { locale, t } = useLocalization();
   return (
     <>
       <Snackbar
@@ -46,14 +50,16 @@ function StoreProducts({ storeId }: { storeId: string }) {
           {notice}
         </Alert>
       </Snackbar>
-      <Routes key={pathname}>
+      <Routes key={semanticRouteKey(pathname)}>
         <Route
           index
           element={
             <ProductList
               storeId={storeId}
               onDeleted={(count) => {
-                setNotice(count === 1 ? 'Product deleted.' : `${String(count)} products deleted.`);
+                setNotice(
+                  count === 1 ? t('products.deletedOne') : t('products.deletedMany', { count }),
+                );
               }}
             />
           }
@@ -64,7 +70,7 @@ function StoreProducts({ storeId }: { storeId: string }) {
             <ProductEditor
               storeId={storeId}
               onSaved={() => {
-                setNotice('Product saved.');
+                setNotice(t('products.saved'));
               }}
             />
           }
@@ -75,12 +81,15 @@ function StoreProducts({ storeId }: { storeId: string }) {
             <ProductEditor
               storeId={storeId}
               onSaved={() => {
-                setNotice('Product saved.');
+                setNotice(t('products.saved'));
               }}
             />
           }
         />
-        <Route path="*" element={<Navigate to={`/stores/${storeId}/products`} replace />} />
+        <Route
+          path="*"
+          element={<Navigate to={localizedPath(locale, `/stores/${storeId}/products`)} replace />}
+        />
       </Routes>
     </>
   );
@@ -89,8 +98,10 @@ function StoreProducts({ storeId }: { storeId: string }) {
 export function StoreWorkspace({ referenceEnabled = true }: { referenceEnabled?: boolean }) {
   const { storeId } = useParams();
   const { pathname } = useLocation();
-  const isReference = pathname.includes('/reference/');
-  const referenceSection = pathname.split('/')[4];
+  const { locale, t } = useLocalization();
+  const applicationPath = pathWithoutLocale(pathname);
+  const isReference = applicationPath.includes('/reference/');
+  const referenceSection = applicationPath.split('/')[4];
   const section =
     isReference &&
     referenceEnabled &&
@@ -114,12 +125,12 @@ export function StoreWorkspace({ referenceEnabled = true }: { referenceEnabled?:
       navigationGroups={[
         {
           key: 'workspace',
-          label: 'Workspace',
+          label: t('shell.workspace'),
           icon: 'material-symbols:dashboard-customize-outline-rounded',
           items: [
             {
               key: 'products',
-              label: 'Products',
+              label: t('shell.products'),
               icon: 'material-symbols:inventory-2-outline-rounded',
             },
           ],
@@ -128,27 +139,27 @@ export function StoreWorkspace({ referenceEnabled = true }: { referenceEnabled?:
           ? [
               {
                 key: 'reference',
-                label: 'Reference',
+                label: t('shell.reference'),
                 icon: 'material-symbols:widgets-outline-rounded' as const,
                 items: [
                   {
                     key: 'reference/events',
-                    label: 'Events',
+                    label: t('shell.events'),
                     icon: 'material-symbols:calendar-month-outline-rounded' as const,
                   },
                   {
                     key: 'reference/venues',
-                    label: 'Venues',
+                    label: t('shell.venues'),
                     icon: 'material-symbols:location-on-outline-rounded' as const,
                   },
                   {
                     key: 'reference/speakers',
-                    label: 'Speakers',
+                    label: t('shell.speakers'),
                     icon: 'material-symbols:person-outline-rounded' as const,
                   },
                   {
                     key: 'reference/tags',
-                    label: 'Tags',
+                    label: t('shell.tags'),
                     icon: 'material-symbols:label-important-outline-rounded' as const,
                   },
                 ],
@@ -157,15 +168,17 @@ export function StoreWorkspace({ referenceEnabled = true }: { referenceEnabled?:
           : []),
       ]}
       onStoreChange={(id) => {
-        void navigate(`/stores/${id}/${section}`);
+        void navigate(localizedPath(locale, `/stores/${id}/${section}`));
       }}
       onSectionChange={(nextSection) => {
-        if (currentStore) void navigate(`/stores/${currentStore.id}/${nextSection}`);
+        if (currentStore) {
+          void navigate(localizedPath(locale, `/stores/${currentStore.id}/${nextSection}`));
+        }
       }}
     >
       {stores.query.isRefetchError && (
         <QueryRefreshWarning
-          message={stores.query.error.message}
+          message={t('common.genericError')}
           refreshing={stores.query.isFetching}
           onRetry={() => {
             void stores.query.refetch();
@@ -175,7 +188,7 @@ export function StoreWorkspace({ referenceEnabled = true }: { referenceEnabled?:
       {stores.query.isPending ? (
         <Paper sx={{ p: { xs: 3, md: 5 }, flex: 1 }}>
           <Typography role="status" sx={{ mb: 3 }}>
-            Loading stores…
+            {t('shell.loadingStores')}
           </Typography>
           <Skeleton variant="rounded" height={160} />
         </Paper>
@@ -192,12 +205,12 @@ export function StoreWorkspace({ referenceEnabled = true }: { referenceEnabled?:
                   void stores.query.refetch();
                 }}
               >
-                Retry
+                {t('common.retry')}
               </Button>
             }
           >
-            <AlertTitle>Could not load stores.</AlertTitle>
-            {stores.query.error.message}
+            <AlertTitle>{t('stores.loadError')}</AlertTitle>
+            {t('common.genericError')}
           </Alert>
         </Paper>
       ) : currentStore ? (
@@ -208,7 +221,7 @@ export function StoreWorkspace({ referenceEnabled = true }: { referenceEnabled?:
                 fallback={
                   <Paper sx={{ p: { xs: 3, md: 5 }, flex: 1 }}>
                     <Typography role="status" sx={{ mb: 3 }}>
-                      Loading Reference…
+                      {t('stores.loadingReference')}
                     </Typography>
                     <Skeleton variant="rounded" height={300} />
                   </Paper>
@@ -222,7 +235,7 @@ export function StoreWorkspace({ referenceEnabled = true }: { referenceEnabled?:
               </Suspense>
             ) : (
               <Paper sx={{ p: { xs: 3, md: 5 }, flex: 1 }}>
-                <Alert severity="info">Reference is disabled.</Alert>
+                <Alert severity="info">{t('stores.referenceDisabled')}</Alert>
               </Paper>
             )
           ) : (
@@ -233,19 +246,20 @@ export function StoreWorkspace({ referenceEnabled = true }: { referenceEnabled?:
         <Paper sx={{ p: { xs: 3, md: 5 }, flex: 1 }}>
           <PageHeader
             embedded
-            title={storeId ? 'Store not found' : 'Select a store'}
-            breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Stores' }]}
+            title={storeId ? t('stores.notFound') : t('stores.select')}
+            breadcrumbs={[
+              { label: t('common.home'), to: localizedPath(locale, '/') },
+              { label: t('stores.title') },
+            ]}
           />
           {stores.result.data.length === 0 ? (
             <Typography color="text.secondary">
-              No stores available. Ask your workspace administrator to set up a store.
+              {t('stores.none')}
             </Typography>
           ) : (
             <>
               <Typography color="text.secondary" sx={{ mb: 3 }}>
-                {storeId
-                  ? 'Choose an available store to continue.'
-                  : 'Choose a store to manage its products.'}
+                {storeId ? t('stores.chooseAvailable') : t('stores.chooseProducts')}
               </Typography>
               <Stack
                 direction={{ xs: 'column', sm: 'row' }}
@@ -258,7 +272,7 @@ export function StoreWorkspace({ referenceEnabled = true }: { referenceEnabled?:
                     color="neutral"
                     sx={{ minWidth: 184, overflowWrap: 'anywhere' }}
                     onClick={() => {
-                      void navigate(`/stores/${store.id}/products`);
+                      void navigate(localizedPath(locale, `/stores/${store.id}/products`));
                     }}
                   >
                     {store.name}

@@ -21,6 +21,7 @@ import IconifyIcon from './primitives/iconify-icon.js';
 import SimpleBar from './primitives/simplebar.js';
 import OutlinedBadge from './primitives/outlined-badge.js';
 import { exampleNotifications, type ExampleNotification } from './demo-data.js';
+import { useLocalization } from '../localization/localization-provider.js';
 
 function NotificationActions({
   notification,
@@ -31,6 +32,8 @@ function NotificationActions({
   onRead: () => void;
   onRemove: () => void;
 }) {
+  const { t } = useLocalization();
+  const detail = t(notification.detailKey);
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   return (
     <>
@@ -38,7 +41,7 @@ function NotificationActions({
         shape="square"
         color="neutral"
         variant="text"
-        aria-label={`Actions for ${notification.detail}`}
+        aria-label={t('shell.notificationActions', { detail })}
         onClick={(event) => {
           setAnchor(event.currentTarget);
         }}
@@ -60,7 +63,7 @@ function NotificationActions({
             onRead();
           }}
         >
-          {notification.read ? 'Mark as unread' : 'Mark as read'}
+          {notification.read ? t('shell.markUnread') : t('shell.markRead')}
         </MenuItem>
         <MenuItem
           onClick={() => {
@@ -69,13 +72,14 @@ function NotificationActions({
           }}
           sx={{ color: 'error.main' }}
         >
-          Remove notification
+          {t('shell.removeNotification')}
         </MenuItem>
       </Menu>
     </>
   );
 }
 export default function NotificationMenu() {
+  const { t } = useLocalization();
   const [notifications, setNotifications] = useState(() => [...exampleNotifications]);
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const unread = notifications.some((notification) => !notification.read);
@@ -104,7 +108,7 @@ export default function NotificationMenu() {
         color="neutral"
         variant="soft"
         shape="circle"
-        aria-label="Notifications"
+        aria-label={t('shell.notifications')}
         aria-haspopup="dialog"
         aria-expanded={Boolean(anchor)}
         onClick={(event) => {
@@ -144,7 +148,7 @@ export default function NotificationMenu() {
             ref: panel,
             tabIndex: -1,
             role: 'dialog',
-            'aria-label': 'Example notifications',
+            'aria-label': t('shell.exampleNotifications'),
           },
         }}
         sx={{
@@ -162,7 +166,7 @@ export default function NotificationMenu() {
               variant="caption"
               sx={{ display: 'block', color: 'text.disabled', px: 2, pb: 1 }}
             >
-              Example notifications
+              {t('shell.exampleNotifications')}
             </Typography>
             {(['today', 'older'] as const).map((group) => {
               const items = notifications.filter((notification) => notification.group === group);
@@ -183,7 +187,7 @@ export default function NotificationMenu() {
                           bgcolor: 'transparent',
                         }}
                       >
-                        {group === 'today' ? 'Today' : 'Older'}
+                        {group === 'today' ? t('shell.today') : t('shell.older')}
                       </ListSubheader>
                     }
                   >
@@ -212,7 +216,10 @@ export default function NotificationMenu() {
                           onClick={() => {
                             toggleRead(notification.id);
                           }}
-                          aria-label={`${notification.read ? 'Mark unread' : 'Mark read'}: ${notification.detail}`}
+                          aria-label={t('shell.notificationReadAction', {
+                            action: notification.read ? t('shell.markUnread') : t('shell.markRead'),
+                            detail: t(notification.detailKey),
+                          })}
                           disableRipple
                           sx={{
                             flexDirection: 'column',
@@ -267,7 +274,7 @@ export default function NotificationMenu() {
                                 }}
                               >
                                 <Avatar
-                                  alt="Example team member"
+                                  alt={t('shell.exampleTeamMember')}
                                   src={notification.avatar}
                                   sx={{ height: 40, width: 40 }}
                                 />
@@ -278,10 +285,10 @@ export default function NotificationMenu() {
                                 variant="body2"
                                 sx={{ color: 'text.secondary', lineClamp: 2 }}
                               >
-                                {notification.detail}
+                                {t(notification.detailKey)}
                               </Typography>
                               <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                {notification.time}
+                                {t(notification.timeKey)}
                               </Typography>
                             </Box>
                           </Stack>
@@ -294,7 +301,7 @@ export default function NotificationMenu() {
             })}
             {notifications.length === 0 && (
               <Typography sx={{ p: 3 }} color="text.secondary">
-                No notifications
+                {t('shell.noNotifications')}
               </Typography>
             )}
           </SimpleBar>
@@ -310,7 +317,7 @@ export default function NotificationMenu() {
               );
             }}
           >
-            Mark all as read
+            {t('shell.markAllRead')}
           </Button>
         </Stack>
       </Popover>

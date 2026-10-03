@@ -2,8 +2,10 @@ import { useList } from '@refinedev/core';
 import { Alert, Button, Chip, Paper, Skeleton, Stack, Typography } from '@mui/material';
 import { sessionsResource, type DataError } from '../../../data/data-provider.js';
 import type { ReferenceSessionDetailsFragment } from '../../../generated/graphql/operations.js';
+import { useLocalization } from '../../../localization/localization-provider.js';
 
 export function EventSpeakers({ storeId, eventId }: { storeId: string; eventId: string }) {
+  const { t } = useLocalization();
   const sessions = useList<ReferenceSessionDetailsFragment, DataError>({
     resource: sessionsResource(storeId, eventId),
     pagination: { mode: 'off' },
@@ -19,12 +21,12 @@ export function EventSpeakers({ storeId, eventId }: { storeId: string; eventId: 
   return (
     <Paper
       component="section"
-      aria-label="Event speakers"
+      aria-label={t('reference.eventSpeakers')}
       background={1}
       sx={{ p: 3, borderRadius: 4, outline: 0 }}
     >
       <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
-        Speakers
+        {t('reference.speakers')}
       </Typography>
       {sessions.query.isPending ? (
         <Skeleton variant="rounded" height={60} />
@@ -37,11 +39,11 @@ export function EventSpeakers({ storeId, eventId }: { storeId: string; eventId: 
                 void sessions.query.refetch();
               }}
             >
-              Retry
+              {t('common.retry')}
             </Button>
           }
         >
-          {sessions.query.error.message}
+          {t('common.genericError')}
         </Alert>
       ) : speakers.length ? (
         <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap' }}>
@@ -50,13 +52,13 @@ export function EventSpeakers({ storeId, eventId }: { storeId: string; eventId: 
               key={speaker.id}
               size="small"
               color={speaker.active ? 'primary' : 'neutral'}
-              label={`${speaker.name}${speaker.active ? '' : ' (inactive)'}`}
+              label={`${speaker.name}${speaker.active ? '' : ` (${t('reference.inactive').toLocaleLowerCase()})`}`}
             />
           ))}
         </Stack>
       ) : (
         <Typography variant="body2" color="text.secondary">
-          Assign speakers to sessions to include them here.
+          {t('reference.eventSpeakersEmpty')}
         </Typography>
       )}
     </Paper>
