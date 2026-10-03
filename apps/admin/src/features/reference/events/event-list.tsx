@@ -27,7 +27,9 @@ import {
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { useLocalization } from '../../../localization/localization-provider.js';
+import { localizedErrorMessage } from '../../../localization/data-error.js';
 import { localizedPath } from '../../../localization/locale.js';
+import type { TranslationKey } from '../../../localization/dictionaries.js';
 import { PageHeader } from '../../../components/page-header.js';
 import { RecordActions } from '../../../components/record-actions.js';
 import IconifyIcon from '../../../layout/primitives/iconify-icon.js';
@@ -37,7 +39,10 @@ import type {
   DeleteReferenceEventMutation,
   ReferenceEventListItemFragment,
 } from '../../../generated/graphql/operations.js';
-import { EventBulkActions } from './event-bulk-actions.js';
+import {
+  EventBulkActions,
+  type EventBulkNotice,
+} from './event-bulk-actions.js';
 import { useEventActions } from './use-event-actions.js';
 import { EventFilters } from './event-filters.js';
 import {
@@ -82,7 +87,14 @@ export function EventList({
     ids: [],
   });
   if (selection.search !== search) setSelection({ search, ids: [] });
-  const [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState<
+    | {
+        key: TranslationKey;
+        values?: Readonly<Record<string, string | number>>;
+      }
+    | EventBulkNotice
+    | null
+  >(null);
   const actions = useEventActions();
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterReset, setFilterReset] = useState(0);
@@ -186,7 +198,7 @@ export function EventList({
       },
       {
         onSuccess: () => {
-          setNotice(t('reference.events.restored'));
+          setNotice({ key: 'reference.events.restored' });
           setSelection({ search, ids: [] });
         },
         onSettled: () => {
@@ -281,7 +293,7 @@ export function EventList({
           title={t('reference.events.events')}
           breadcrumbs={[
             { label: t('common.home'), to: localizedPath(locale, '') },
-            { label: t('reference.title') },
+            { label: t('shell.reference') },
             { label: t('reference.events.events') },
           ]}
           action={
@@ -375,15 +387,20 @@ export function EventList({
               role="status"
               sx={{ mb: 2 }}
               onClose={() => {
-                setNotice('');
+                setNotice(null);
               }}
             >
-              {notice}
+              {'actionKey' in notice
+                ? t('reference.events.bulkCompleted', {
+                    action: t(notice.actionKey),
+                    count: notice.count,
+                  })
+                : t(notice.key, notice.values)}
             </Alert>
           )}
           {actions.mutation.isError && (
             <Alert severity="error" sx={{ mb: 2 }}>
-              {t('common.genericError')}
+              {localizedErrorMessage(actions.mutation.error, t)}
             </Alert>
           )}
           {events.query.isError && (
@@ -408,9 +425,9 @@ export function EventList({
             resource={resource}
             ids={selectedIds}
             trashed={state.trashed}
-            onComplete={(message) => {
+            onComplete={(completedNotice) => {
               setSelection({ search, ids: [] });
-              setNotice(message);
+              setNotice(completedNotice);
             }}
           />
           <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
@@ -532,7 +549,9 @@ export function EventList({
           <Typography variant="body2" sx={{ mb: 2 }}>
             {t('reference.events.trashMessage', { name: selected?.title ?? '' })}
           </Typography>
-          {deletion.mutation.isError && <Alert severity="error">{t('common.genericError')}</Alert>}
+          {deletion.mutation.isError && (
+            <Alert severity="error">{localizedErrorMessage(deletion.mutation.error, t)}</Alert>
+          )}
         </DialogContent>
         <DialogActions>
           <Button

@@ -3,6 +3,10 @@ import { Alert, Button, Paper, Stack, TextField, Typography } from '@mui/materia
 import { useEffect, useId, useState, type ReactNode } from 'react';
 import { EditorAside } from '../../../components/editor-aside.js';
 import { useLocalization } from '../../../localization/localization-provider.js';
+import {
+  localizedErrorMessage,
+  localizedFieldError,
+} from '../../../localization/data-error.js';
 import { speakersResource, type DataError } from '../../../data/data-provider.js';
 import type {
   CreateReferenceSessionInput,
@@ -90,7 +94,8 @@ export function SessionForm({
   }, [error, id, values]);
   function message(field: Field) {
     if (attempted && errors[field]) return errors[field];
-    return error?.fieldErrors.some(({ path }) => path === field) ? t('common.genericError') : '';
+    const fieldError = error?.fieldErrors.find(({ path }) => path === field);
+    return fieldError ? localizedFieldError(fieldError, t) : '';
   }
   function input(field: Field) {
     return {
@@ -137,7 +142,7 @@ export function SessionForm({
         <Stack sx={{ gap: 3, maxWidth: 520, mx: 'auto' }}>
           {error && (
             <Alert severity="error">
-              {t('common.genericError')}
+              {localizedErrorMessage(error, t)}
               {error.requestId && (
                 <Typography variant="caption" sx={{ display: 'block', overflowWrap: 'anywhere' }}>
                   {t('common.requestId')}: {error.requestId}

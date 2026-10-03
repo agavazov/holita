@@ -11,12 +11,18 @@ import {
 import { useRef, useState } from 'react';
 import type { EventAction } from '../../../data/events-provider.js';
 import type { TranslationKey } from '../../../localization/dictionaries.js';
+import { localizedErrorMessage } from '../../../localization/data-error.js';
 import { useLocalization } from '../../../localization/localization-provider.js';
 import { useEventActions } from './use-event-actions.js';
 
 type Confirmation = {
   labelKey: TranslationKey;
   values: EventAction;
+};
+
+export type EventBulkNotice = {
+  actionKey: TranslationKey;
+  count: number;
 };
 
 export function EventBulkActions({
@@ -28,7 +34,7 @@ export function EventBulkActions({
   resource: string;
   ids: string[];
   trashed: boolean;
-  onComplete: (message: string) => void;
+  onComplete: (notice: EventBulkNotice) => void;
 }) {
   const { t } = useLocalization();
   const actions = useEventActions();
@@ -55,12 +61,10 @@ export function EventBulkActions({
       {
         onSuccess: () => {
           setConfirmation(undefined);
-          onComplete(
-            t('reference.events.bulkCompleted', {
-              action: t(confirmation.labelKey),
-              count: confirmation.values.ids.length,
-            }),
-          );
+          onComplete({
+            actionKey: confirmation.labelKey,
+            count: confirmation.values.ids.length,
+          });
         },
         onSettled: () => {
           submitting.current = false;
@@ -158,7 +162,9 @@ export function EventBulkActions({
             })}
           </Typography>
           {actions.mutation.isError && (
-            <Alert severity="error">{t('common.genericError')}</Alert>
+            <Alert severity="error">
+              {localizedErrorMessage(actions.mutation.error, t)}
+            </Alert>
           )}
         </DialogContent>
         <DialogActions>

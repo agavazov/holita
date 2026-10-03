@@ -50,7 +50,7 @@ function respond(call: GraphQLCall) {
   throw new Error(`Unexpected ${call.operation}`);
 }
 function titles() {
-  return within(screen.getByRole('list', { name: 'Event sessions' }))
+  return within(screen.getByRole('list', { name: /Event sessions|Сесии на събитието/ }))
     .getAllByRole('listitem')
     .map((item) => item.getAttribute('aria-label'));
 }
@@ -128,18 +128,27 @@ describe('Session editor and program lifecycle', () => {
     await screen.findByText('Discard unsaved changes?');
     await user.click(screen.getByRole('button', { name: 'Keep editing' }));
     await user.click(await screen.findByRole('button', { name: 'Save order' }));
-    await screen.findByText('Something went wrong. Try again.');
+    await screen.findByText('The order changed. Reload and try again.');
+    await user.click(screen.getByRole('button', { name: 'Language' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Български' }));
+    expect(await screen.findByRole('dialog')).toHaveTextContent('Change language?');
+    await user.click(screen.getByRole('button', { name: 'Change language' }));
+    await screen.findByText('Подредбата е променена. Презаредете и опитайте отново.');
+    await screen.findByRole('list', { name: 'Сесии на събитието' });
     expect(titles()).toEqual(['Workshop', 'Opening']);
-    await user.click(screen.getByRole('button', { name: 'Cancel order' }));
+    await user.click(screen.getByRole('button', { name: 'Отмени подредбата' }));
     await waitFor(() => {
       expect(titles()).toEqual(['Opening', 'Workshop']);
     });
-    expect(screen.getByRole('button', { name: 'Save order' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Запази подредбата' })).toBeDisabled();
     fail = false;
-    await user.click(screen.getByRole('button', { name: 'Move Workshop up' }));
-    await user.click(screen.getByRole('button', { name: 'Save order' }));
+    await user.click(screen.getByRole('button', { name: 'Премести Workshop нагоре' }));
+    await user.click(screen.getByRole('button', { name: 'Запази подредбата' }));
+    await screen.findByText('Подредбата на сесиите е запазена.');
+    expect(screen.getByRole('button', { name: 'Запази подредбата' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Език' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'English' }));
     await screen.findByText('Session order saved.');
-    expect(screen.getByRole('button', { name: 'Save order' })).toBeDisabled();
     expect(transport.calls.filter((call) => call.operation === 'ReorderReferenceSessions')).toEqual(
       [
         expect.objectContaining({
@@ -185,7 +194,7 @@ describe('Session editor and program lifecycle', () => {
     await user.click(screen.getByLabelText('Title'));
     await user.paste('Edited opening');
     await user.click(screen.getByRole('button', { name: 'Save session' }));
-    expect(await screen.findAllByText('Something went wrong. Try again.')).toHaveLength(2);
+    expect(await screen.findAllByText('Something went wrong. Try again.')).toHaveLength(1);
     expect(screen.getByLabelText('Title')).toHaveValue('Edited opening');
     expect(
       transport.calls.find((call) => call.operation === 'UpdateReferenceSession'),

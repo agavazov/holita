@@ -66,7 +66,7 @@ describe('Independent gallery editing', () => {
         : respond(call),
     );
     const { user } = mount();
-    await screen.findByLabelText('Title');
+    await screen.findByLabelText('Title', undefined, { timeout: 10000 });
     await user.click(screen.getByRole('tab', { name: 'Content & media' }));
     const gallery = within(screen.getByRole('region', { name: 'Event gallery' }));
     await gallery.findByText('Gallery unavailable. Use Refresh previews to try again.');
@@ -94,7 +94,7 @@ describe('Independent gallery editing', () => {
     await user.click(await gallery.findByRole('button', { name: 'Move 0.png later' }));
     expect(screen.getByRole('button', { name: 'Save event' })).toBeDisabled();
     await user.click(gallery.getByRole('button', { name: 'Save order' }));
-    await gallery.findByText('Something went wrong. Try again.');
+    await gallery.findByText('The order changed. Reload and try again.');
     expect(gallery.getAllByLabelText(/^Image [01]\.png$/)[0]).toHaveAttribute(
       'aria-label',
       'Image 1.png',

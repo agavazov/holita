@@ -21,7 +21,9 @@ import { Link as RouterLink, useNavigate } from 'react-router';
 import { sessionsResource, type DataError } from '../../../data/data-provider.js';
 import type { ReferenceSessionDetailsFragment } from '../../../generated/graphql/operations.js';
 import { useLocalization } from '../../../localization/localization-provider.js';
+import { localizedErrorMessage } from '../../../localization/data-error.js';
 import { localizedPath } from '../../../localization/locale.js';
+import type { TranslationKey } from '../../../localization/dictionaries.js';
 import { useUnsavedChanges } from '../use-unsaved-changes.js';
 import { useSessionOrder } from './use-session-order.js';
 
@@ -45,7 +47,10 @@ export function SessionList({
   const [draft, setDraft] = useState<ReferenceSessionDetailsFragment[] | null>(null);
   const [deleting, setDeleting] = useState<ReferenceSessionDetailsFragment | null>(null);
   const [reloading, setReloading] = useState(false);
-  const [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState<{
+    key: TranslationKey;
+    values?: Readonly<Record<string, string | number>>;
+  } | null>(null);
   const order = useSessionOrder();
   const deletion = useDelete<ReferenceSessionDetailsFragment, DataError>();
   const submitting = useRef(false);
@@ -62,7 +67,10 @@ export function SessionList({
     next.splice(to, 0, row);
     const unchanged = next.every((item, i) => item.id === sessions.result.data[i]?.id);
     setDraft(unchanged ? null : next);
-    setNotice(t('reference.sessionMoved', { title: row.title, position: to + 1 }));
+    setNotice({
+      key: 'reference.sessionMoved',
+      values: { title: row.title, position: to + 1 },
+    });
     order.mutation.reset();
   }
   function save() {
@@ -79,7 +87,7 @@ export function SessionList({
       {
         onSuccess: () => {
           setDraft(null);
-          setNotice(t('reference.sessionOrderSaved'));
+          setNotice({ key: 'reference.sessionOrderSaved' });
         },
         onSettled: () => {
           submitting.current = false;
@@ -95,7 +103,7 @@ export function SessionList({
     if (response.isSuccess) {
       setDraft(null);
       order.mutation.reset();
-      setNotice(t('reference.serverOrderRestored'));
+      setNotice({ key: 'reference.serverOrderRestored' });
     }
     setReloading(false);
     submitting.current = false;
@@ -114,7 +122,7 @@ export function SessionList({
       {
         onSuccess: () => {
           setDeleting(null);
-          setNotice(t('reference.sessionDeleted'));
+          setNotice({ key: 'reference.sessionDeleted' });
         },
         onSettled: () => {
           submitting.current = false;
@@ -193,12 +201,12 @@ export function SessionList({
                   void sessions.query.refetch();
                 }}
               >
-                Retry
+                {t('common.retry')}
               </Button>
             )
           }
         >
-          {t('common.genericError')}
+          {localizedErrorMessage(order.mutation.error ?? sessions.query.error, t)}
         </Alert>
       )}
       <Typography
@@ -208,7 +216,7 @@ export function SessionList({
         color="text.secondary"
         sx={{ '&:empty': { display: 'none' } }}
       >
-        {notice}
+        {notice ? t(notice.key, notice.values) : null}
       </Typography>
       {sessions.query.isPending ? (
         <Skeleton variant="rounded" height={180} />
@@ -374,7 +382,7 @@ export function SessionList({
           <Typography>{t('reference.deleteSessionMessage', { title: deleting?.title ?? '' })}</Typography>
           {deletion.mutation.error && (
             <Alert severity="error" sx={{ mt: 2 }}>
-              {t('common.genericError')}
+              {localizedErrorMessage(deletion.mutation.error, t)}
             </Alert>
           )}
         </DialogContent>

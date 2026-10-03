@@ -25,6 +25,8 @@ import type {
   UpdateReferenceEventMediaInput,
 } from '../../../generated/graphql/operations.js';
 import { useLocalization } from '../../../localization/localization-provider.js';
+import { localizedErrorMessage } from '../../../localization/data-error.js';
+import type { TranslationKey } from '../../../localization/dictionaries.js';
 import { useMediaMutation, useMediaUpload } from './use-media-actions.js';
 
 type Props = {
@@ -64,7 +66,10 @@ export function EventGallery({
   const [altText, setAltText] = useState('');
   const [deleting, setDeleting] = useState<ReferenceEventMediaDetailsFragment | null>(null);
   const [reloading, setReloading] = useState(false);
-  const [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState<{
+    key: TranslationKey;
+    values?: Readonly<Record<string, string | number>>;
+  } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const [previewId, setPreviewId] = useState<string | null>(null);
   const submitting = useRef(false);
@@ -91,10 +96,8 @@ export function EventGallery({
   const rows = draft
     ? draft.flatMap((id) => gallery.result.data.filter((row) => row.id === id))
     : gallery.result.data;
-  const error =
-    action.mutation.error || update.mutation.error || deletion.mutation.error
-      ? t('common.genericError')
-      : upload.error;
+  const mutationError = action.mutation.error || update.mutation.error || deletion.mutation.error;
+  const error = mutationError ? localizedErrorMessage(mutationError, t) : upload.error;
   function move(id: string, target: string) {
     if (locked || id === target) return;
     const next = rows.map((row) => row.id),
@@ -105,7 +108,7 @@ export function EventGallery({
     next.splice(to, 0, id);
     setDraft(next.every((value, index) => value === gallery.result.data[index]?.id) ? null : next);
     action.mutation.reset();
-    setNotice(t('reference.imageMoved', { position: to + 1 }));
+    setNotice({ key: 'reference.imageMoved', values: { position: to + 1 } });
   }
   function mutate(values: { action: 'cover'; id: string } | { action: 'reorder'; ids: string[] }) {
     if (submitting.current || locked) return;
@@ -121,9 +124,9 @@ export function EventGallery({
       {
         onSuccess: () => {
           if (values.action === 'reorder') setDraft(null);
-          setNotice(
-            t(values.action === 'cover' ? 'reference.coverSaved' : 'reference.galleryOrderSaved'),
-          );
+          setNotice({
+            key: values.action === 'cover' ? 'reference.coverSaved' : 'reference.galleryOrderSaved',
+          });
         },
         onSettled: () => {
           submitting.current = false;
@@ -140,7 +143,7 @@ export function EventGallery({
     if (response.isSuccess) {
       setDraft(null);
       action.mutation.reset();
-      setNotice(t('reference.galleryOrderRestored'));
+      setNotice({ key: 'reference.galleryOrderRestored' });
     }
     setReloading(false);
     submitting.current = false;
@@ -160,7 +163,7 @@ export function EventGallery({
       {
         onSuccess: () => {
           setEditing(null);
-          setNotice(t('reference.altTextSaved'));
+          setNotice({ key: 'reference.altTextSaved' });
         },
         onSettled: () => {
           submitting.current = false;
@@ -182,7 +185,7 @@ export function EventGallery({
       {
         onSuccess: () => {
           setDeleting(null);
-          setNotice(t('reference.imageRemoved'));
+          setNotice({ key: 'reference.imageRemoved' });
         },
         onSettled: () => {
           submitting.current = false;
@@ -456,7 +459,7 @@ export function EventGallery({
         color="text.secondary"
         sx={{ '&:empty': { display: 'none' } }}
       >
-        {notice}
+        {notice ? t(notice.key, notice.values) : null}
       </Typography>
       <Dialog
         open={Boolean(preview)}
@@ -548,7 +551,7 @@ export function EventGallery({
           />
           {update.mutation.isError && (
             <Alert severity="error" sx={{ mt: 2 }}>
-              {t('common.genericError')}
+              {localizedErrorMessage(update.mutation.error, t)}
             </Alert>
           )}
         </DialogContent>
@@ -588,7 +591,7 @@ export function EventGallery({
           </Typography>
           {deletion.mutation.isError && (
             <Alert severity="error" sx={{ mt: 2 }}>
-              {t('common.genericError')}
+              {localizedErrorMessage(deletion.mutation.error, t)}
             </Alert>
           )}
         </DialogContent>

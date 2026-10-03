@@ -50,8 +50,11 @@ describe('useUnsavedChanges', () => {
     const draft = screen.getByLabelText('Draft');
     await user.type(draft, 'Чернова');
     await user.click(screen.getByRole('link', { name: 'Bulgarian route' }));
-    expect(await screen.findByRole('dialog')).toHaveTextContent('Discard unsaved changes?');
-    await user.click(screen.getByRole('button', { name: 'Discard changes' }));
+    expect(await screen.findByRole('dialog')).toHaveTextContent('Change language?');
+    expect(screen.getByRole('dialog')).toHaveTextContent(
+      'Your unsaved changes will stay in this editor.',
+    );
+    await user.click(screen.getByRole('button', { name: 'Change language' }));
     expect(screen.getByLabelText('Current route')).toHaveTextContent(
       '/bg/stores/alpha/reference/events/new',
     );

@@ -15,6 +15,7 @@ import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 're
 import { useLocalization } from '../../localization/localization-provider.js';
 import { localizedPath, pathWithoutLocale, semanticRouteKey } from '../../localization/locale.js';
 
+import type { TranslationKey } from '../../localization/dictionaries.js';
 import type { DataError } from '../../data/data-provider.js';
 import type { ListStoresQuery } from '../../generated/graphql/operations.js';
 import { AdminLayout } from '../../layout/admin-layout.js';
@@ -29,25 +30,28 @@ const ReferenceWorkspace = lazy(async () => {
 });
 
 function StoreProducts({ storeId }: { storeId: string }) {
-  const [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState<{
+    key: TranslationKey;
+    values?: Readonly<Record<string, string | number>>;
+  } | null>(null);
   const { pathname } = useLocation();
   const { locale, t } = useLocalization();
   return (
     <>
       <Snackbar
-        open={Boolean(notice)}
+        open={notice !== null}
         autoHideDuration={6000}
         onClose={(_, reason) => {
-          if (reason !== 'clickaway') setNotice('');
+          if (reason !== 'clickaway') setNotice(null);
         }}
       >
         <Alert
           severity="success"
           onClose={() => {
-            setNotice('');
+            setNotice(null);
           }}
         >
-          {notice}
+          {notice ? t(notice.key, notice.values) : null}
         </Alert>
       </Snackbar>
       <Routes key={semanticRouteKey(pathname)}>
@@ -58,7 +62,9 @@ function StoreProducts({ storeId }: { storeId: string }) {
               storeId={storeId}
               onDeleted={(count) => {
                 setNotice(
-                  count === 1 ? t('products.deletedOne') : t('products.deletedMany', { count }),
+                  count === 1
+                    ? { key: 'products.deletedOne' }
+                    : { key: 'products.deletedMany', values: { count } },
                 );
               }}
             />
@@ -70,7 +76,7 @@ function StoreProducts({ storeId }: { storeId: string }) {
             <ProductEditor
               storeId={storeId}
               onSaved={() => {
-                setNotice(t('products.saved'));
+                setNotice({ key: 'products.saved' });
               }}
             />
           }
@@ -81,7 +87,7 @@ function StoreProducts({ storeId }: { storeId: string }) {
             <ProductEditor
               storeId={storeId}
               onSaved={() => {
-                setNotice(t('products.saved'));
+                setNotice({ key: 'products.saved' });
               }}
             />
           }

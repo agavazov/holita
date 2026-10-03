@@ -18,6 +18,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useLocalization } from '../../../localization/localization-provider.js';
+import { localizedErrorMessage } from '../../../localization/data-error.js';
 import { localizedPath } from '../../../localization/locale.js';
 import { PageHeader } from '../../../components/page-header.js';
 import { QueryRefreshWarning } from '../../../components/query-refresh-warning.js';
@@ -118,7 +119,7 @@ export function EventShow({
   }
   const breadcrumbs = [
     { label: t('common.home'), to: localizedPath(locale, '') },
-    { label: t('reference.title') },
+    { label: t('shell.reference') },
     { label: t('reference.events.events'), to: listPath },
     { label: row?.title ?? t('reference.events.event') },
   ];
@@ -244,7 +245,7 @@ export function EventShow({
       <Paper sx={{ p: { xs: 3, md: 5 }, outline: 0 }}>
         <Stack sx={{ gap: 3 }}>
           {actions.mutation.isError && (
-            <Alert severity="error">{t('common.genericError')}</Alert>
+            <Alert severity="error">{localizedErrorMessage(actions.mutation.error, t)}</Alert>
           )}
           {row.deletedAt && (
             <Alert severity="info">
@@ -460,7 +461,7 @@ export function EventShow({
             {t('reference.events.trashMessage', { name: row.title })}
           </Typography>
           {deletion.mutation.isError && (
-            <Alert severity="error">{t('common.genericError')}</Alert>
+            <Alert severity="error">{localizedErrorMessage(deletion.mutation.error, t)}</Alert>
           )}
         </DialogContent>
         <DialogActions>
