@@ -70,7 +70,7 @@ describe('ProductForm', () => {
     );
     expect(screen.getByLabelText('Name')).toHaveValue('Existing');
     expect(screen.getByText('Active')).toBeInTheDocument();
-    expect(screen.getByRole('alert')).toHaveTextContent('Something went wrong. Try again.');
+    expect(screen.getByRole('alert')).toHaveTextContent('A record with this value already exists.');
     expect(screen.getByRole('alert')).toHaveTextContent('request-123');
     rerender(<ProductForm pending error={null} onSubmit={save} onCancel={vi.fn()} />);
     expect(screen.getByLabelText('Name')).toBeDisabled();

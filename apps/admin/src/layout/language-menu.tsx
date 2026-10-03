@@ -8,9 +8,9 @@ import IconifyIcon from './primitives/iconify-icon.js';
 import type { ShellIcon } from './primitives/icons.js';
 
 const languages = [
-  { locale: 'bg', icon: 'twemoji:flag-bulgaria' },
-  { locale: 'en', icon: 'twemoji:flag-united-kingdom' },
-] as const satisfies readonly { locale: AdminLocale; icon: ShellIcon }[];
+  { locale: 'bg', label: 'Български', icon: 'twemoji:flag-bulgaria' },
+  { locale: 'en', label: 'English', icon: 'twemoji:flag-united-kingdom' },
+] as const satisfies readonly { locale: AdminLocale; label: string; icon: ShellIcon }[];
 
 const languageByLocale: Record<AdminLocale, (typeof languages)[number]> = {
   bg: languages[0],
@@ -56,7 +56,9 @@ export default function LanguageMenu({ disabled = false }: { disabled?: boolean 
             role="menuitemradio"
             aria-checked={entry.locale === locale}
             selected={entry.locale === locale}
+            disabled={disabled}
             onClick={() => {
+              if (disabled) return;
               void navigate({
                 pathname: switchPathLocale(location.pathname, entry.locale),
                 search: location.search,
@@ -70,7 +72,7 @@ export default function LanguageMenu({ disabled = false }: { disabled?: boolean 
               <IconifyIcon icon={entry.icon} sx={{ fontSize: 24 }} />
             </ListItemIcon>
             <ListItemText
-              primary={entry.locale === 'bg' ? t('shell.bulgarian') : t('shell.english')}
+              primary={entry.label}
               slotProps={{ primary: { sx: { fontSize: 14 } } }}
             />
           </MenuItem>

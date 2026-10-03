@@ -5,6 +5,7 @@ import { EditorAside } from '../../components/editor-aside.js';
 import type { DataError } from '../../data/data-provider.js';
 import type { CreateProductInput } from '../../generated/graphql/operations.js';
 import { useLocalization } from '../../localization/localization-provider.js';
+import { localizedErrorMessage } from '../../localization/data-error.js';
 
 type ProductFormProps = {
   header?: ReactNode;
@@ -69,7 +70,7 @@ export function ProductForm({
           </Box>
           {error && (
             <Alert severity="error">
-              {t('common.genericError')}
+              {localizedErrorMessage(error, t)}
               {error.requestId && (
                 <Typography variant="caption" sx={{ display: 'block', overflowWrap: 'anywhere' }}>
                   {t('common.requestId')}: {error.requestId}

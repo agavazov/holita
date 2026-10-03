@@ -2,7 +2,7 @@ import { useCreate, useOne, useUpdate } from '@refinedev/core';
 import { Alert, Box, Button, Skeleton, Stack } from '@mui/material';
 import { PageHeader } from '../../components/page-header.js';
 import { QueryRefreshWarning } from '../../components/query-refresh-warning.js';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router';
 
 import { productsResource, type DataError } from '../../data/data-provider.js';
@@ -11,7 +11,10 @@ import type {
   GetProductQuery,
   ProductDetailsFragment,
 } from '../../generated/graphql/operations.js';
-import { useLocalization } from '../../localization/localization-provider.js';
+import {
+  useLocalization,
+  useLocaleSwitchPending,
+} from '../../localization/localization-provider.js';
 import { localizedPath } from '../../localization/locale.js';
 import { ProductForm } from './product-form.js';
 
@@ -23,6 +26,10 @@ export function ProductEditor({ storeId, onSaved }: ProductEditorProps) {
   const { locale, t } = useLocalization();
   const resource = productsResource(storeId);
   const submitting = useRef(false);
+  const localeRef = useRef(locale);
+  useEffect(() => {
+    localeRef.current = locale;
+  }, [locale]);
   const listPath = localizedPath(locale, `/${resource}`);
   const product = useOne<GetProductQuery['product'], DataError>({
     resource,
@@ -40,6 +47,7 @@ export function ProductEditor({ storeId, onSaved }: ProductEditorProps) {
     mutationMode: 'pessimistic',
   });
   const pending = create.mutation.isPending || update.mutation.isPending;
+  useLocaleSwitchPending(pending);
 
   function save(values: CreateProductInput) {
     if (submitting.current) return;
@@ -48,7 +56,7 @@ export function ProductEditor({ storeId, onSaved }: ProductEditorProps) {
     const callbacks = {
       onSuccess: () => {
         onSaved();
-        void navigate(listPath);
+        void navigate(localizedPath(localeRef.current, `/${resource}`));
       },
       onSettled: () => {
         submitting.current = false;

@@ -16,6 +16,7 @@ import type { DataError } from '../../../data/data-provider.js';
 import type { CreateReferenceVenueInput } from '../../../generated/graphql/operations.js';
 import { textError } from '../text-validation.js';
 import { useLocalization } from '../../../localization/localization-provider.js';
+import { localizedErrorMessage, localizedFieldError } from '../../../localization/data-error.js';
 
 type VenueFormProps = {
   header?: ReactNode;
@@ -50,13 +51,13 @@ export function VenueForm({
   });
   const [attempted, setAttempted] = useState(false);
   const errors = {
-    name: textError(values.name, 200, t('reference.venueNameRequired')),
-    description: textError(values.description, 2000),
-    city: textError(values.city, 120, t('reference.cityRequired')),
+    name: textError(values.name, 200, t, t('reference.venueNameRequired')),
+    description: textError(values.description, 2000, t),
+    city: textError(values.city, 120, t, t('reference.cityRequired')),
     countryCode: /^[a-z]{2}$/i.test(values.countryCode.trim())
       ? ''
       : t('reference.countryCodeInvalid'),
-    address: textError(values.address, 300),
+    address: textError(values.address, 300, t),
     capacity:
       values.capacity !== '' &&
       (!Number.isInteger(Number(values.capacity)) ||
@@ -69,7 +70,7 @@ export function VenueForm({
   function message(field: keyof typeof values) {
     return (
       (attempted && errors[field]) ||
-      (error?.fieldErrors.some(({ path }) => path === field) ? t('common.genericError') : '') ||
+      localizedFieldError(error?.fieldErrors.find(({ path }) => path === field), t) ||
       ''
     );
   }
@@ -116,7 +117,7 @@ export function VenueForm({
         <Stack sx={{ gap: 4, maxWidth: 520, mx: 'auto' }}>
           {error && (
             <Alert severity="error">
-              {t('common.genericError')}
+              {localizedErrorMessage(error, t)}
               {error.requestId && (
                 <Typography variant="caption" sx={{ display: 'block', overflowWrap: 'anywhere' }}>
                   {t('common.requestId')}: {error.requestId}

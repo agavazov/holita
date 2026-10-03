@@ -50,7 +50,7 @@ export function EventEditor({ storeId, onSaved }: EventEditorProps) {
   });
   const pending = create.mutation.isPending || update.mutation.isPending;
 
-  const changes = useUnsavedChanges(pending, galleryDirty);
+  const changes = useUnsavedChanges(pending || galleryPending, galleryDirty);
 
   function save(values: CreateReferenceEventInput) {
     if (submitting.current || galleryPending || galleryDirty) return;

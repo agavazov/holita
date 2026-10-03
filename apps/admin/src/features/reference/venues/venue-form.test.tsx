@@ -104,7 +104,7 @@ describe('Venue form', () => {
       />,
     );
     expect(screen.getByRole('alert')).toHaveTextContent('Request ID: venue-request');
-    expect(screen.getAllByText('Something went wrong. Try again.')).not.toHaveLength(0);
+    expect(screen.getAllByText('Check this value and try again.')).toHaveLength(2);
     expect(screen.getByLabelText('Address')).toHaveFocus();
   });
 

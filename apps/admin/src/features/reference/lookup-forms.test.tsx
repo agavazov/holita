@@ -108,7 +108,8 @@ describe('Tag form', () => {
     expect(screen.getByLabelText('Name')).toHaveValue('Taken');
     expect(screen.getByLabelText('Name')).toHaveFocus();
     expect(screen.getByRole('alert')).toHaveTextContent('tag-request');
-    expect(screen.getAllByText('Something went wrong. Try again.')).not.toHaveLength(0);
+    expect(screen.getByRole('alert')).toHaveTextContent('A record with this value already exists.');
+    expect(screen.getByText('Check this value and try again.')).toBeVisible();
   });
 });
 

@@ -24,6 +24,7 @@ import { RelationSelect } from '../relation-select.js';
 import { DescriptionEditor } from './description-editor.js';
 import { eventDraft, eventInput, validateEventDraft, type EventField } from './event-form-state.js';
 import { eventFormats, eventStatuses } from './event-list-state.js';
+import { localizedErrorMessage, localizedFieldError } from '../../../localization/data-error.js';
 
 type Props = {
   storeId: string;
@@ -100,7 +101,7 @@ export function EventForm({
   function message(field: EventField) {
     return (
       (attempted && errors[field]) ||
-      error?.fieldErrors.find(({ path }) => path === field)?.message ||
+      localizedFieldError(error?.fieldErrors.find(({ path }) => path === field), t) ||
       ''
     );
   }
@@ -142,7 +143,7 @@ export function EventForm({
         <Stack sx={{ gap: 4, maxWidth: 520, mx: 'auto' }}>
           {error && (
             <Alert severity="error">
-              {t('common.genericError')}
+              {localizedErrorMessage(error, t)}
               {error.requestId && (
                 <Typography variant="caption" sx={{ display: 'block', overflowWrap: 'anywhere' }}>
                   {t('common.requestId')}: {error.requestId}

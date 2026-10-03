@@ -39,8 +39,8 @@ export function validateEventDraft(
   t: Translate = english,
 ) {
   const errors: Record<EventField, string> = {
-    title: textError(values.title, 200, t('reference.events.validationTitle')),
-    code: textError(values.code, 100, t('reference.events.validationCode')),
+    title: textError(values.title, 200, t, t('reference.events.validationTitle')),
+    code: textError(values.code, 100, t, t('reference.events.validationCode')),
     status: '',
     format: '',
     featured: '',
@@ -62,7 +62,7 @@ export function validateEventDraft(
     registrationClosesOn: '',
     venueId: values.format !== 'ONLINE' && !values.venueId ? t('reference.events.validationVenue') : '',
     meetingUrl: '',
-    summary: textError(values.summary, 500),
+    summary: textError(values.summary, 500, t),
     descriptionHtml:
       descriptionBytes(values.descriptionHtml) > descriptionMaxBytes
         ? t('reference.events.validationDescription')

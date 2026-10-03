@@ -75,7 +75,7 @@ function StoreSelector({
 }
 export function AdminLayout(props: AdminLayoutProps) {
   const { selectedStoreId, selectedSection, onSectionChange, navigationGroups, children } = props;
-  const { t } = useLocalization();
+  const { localeSwitchPending, t } = useLocalization();
   const theme = useTheme();
   const mobile = useMediaQuery(theme.breakpoints.down('md'));
   const wide = useMediaQuery(theme.breakpoints.up('lg'));
@@ -153,7 +153,7 @@ export function AdminLayout(props: AdminLayoutProps) {
               direction="row"
               sx={{ gap: { xs: 0.5, sm: 1 }, alignItems: 'center', ml: 'auto' }}
             >
-              <LanguageMenu />
+              <LanguageMenu disabled={localeSwitchPending} />
               <ThemeMenu />
               <NotificationMenu />
               <ProfileMenu />

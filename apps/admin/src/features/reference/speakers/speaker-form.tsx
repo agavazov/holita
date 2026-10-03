@@ -16,6 +16,7 @@ import type { DataError } from '../../../data/data-provider.js';
 import type { CreateReferenceSpeakerInput } from '../../../generated/graphql/operations.js';
 import { textError } from '../text-validation.js';
 import { useLocalization } from '../../../localization/localization-provider.js';
+import { localizedErrorMessage, localizedFieldError } from '../../../localization/data-error.js';
 
 type SpeakerFormProps = {
   header?: ReactNode;
@@ -47,19 +48,19 @@ export function SpeakerForm({
   });
   const [attempted, setAttempted] = useState(false);
   const errors = {
-    name: textError(values.name, 200, t('reference.speakerNameRequired')),
+    name: textError(values.name, 200, t, t('reference.speakerNameRequired')),
     email:
-      textError(values.email, 254) ||
+      textError(values.email, 254, t) ||
       (values.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())
         ? t('reference.emailInvalid')
         : ''),
-    shortBio: textError(values.shortBio, 2000),
+    shortBio: textError(values.shortBio, 2000, t),
     active: '',
   };
   function message(field: keyof typeof values) {
     return (
       (attempted && errors[field]) ||
-      (error?.fieldErrors.some(({ path }) => path === field) ? t('common.genericError') : '') ||
+      localizedFieldError(error?.fieldErrors.find(({ path }) => path === field), t) ||
       ''
     );
   }
@@ -103,7 +104,7 @@ export function SpeakerForm({
         <Stack sx={{ gap: 4, maxWidth: 520, mx: 'auto' }}>
           {error && (
             <Alert severity="error">
-              {t('common.genericError')}
+              {localizedErrorMessage(error, t)}
               {error.requestId && (
                 <Typography variant="caption" sx={{ display: 'block', overflowWrap: 'anywhere' }}>
                   {t('common.requestId')}: {error.requestId}

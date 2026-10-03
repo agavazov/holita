@@ -9,11 +9,15 @@ import {
   DialogTitle,
 } from '@mui/material';
 import { localeFromPathname } from '../../localization/locale.js';
-import { useLocalization } from '../../localization/localization-provider.js';
+import {
+  useLocalization,
+  useLocaleSwitchPending,
+} from '../../localization/localization-provider.js';
 
 export function useUnsavedChanges(pending: boolean, additionalDirty = false) {
   const id = useId();
   const { t } = useLocalization();
+  useLocaleSwitchPending(pending);
   const [dirty, setDirty] = useState(false);
   const saved = useRef(false);
   const blocker = useBlocker(({ currentLocation, nextLocation }) => {

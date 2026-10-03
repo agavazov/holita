@@ -18,6 +18,7 @@ import type { DataError } from '../../../data/data-provider.js';
 import type { CreateReferenceTagInput } from '../../../generated/graphql/operations.js';
 import { textError } from '../text-validation.js';
 import { useLocalization } from '../../../localization/localization-provider.js';
+import { localizedErrorMessage, localizedFieldError } from '../../../localization/data-error.js';
 
 type TagFormProps = {
   header?: ReactNode;
@@ -48,7 +49,7 @@ export function TagForm({
   });
   const [attempted, setAttempted] = useState(false);
   const errors = {
-    name: textError(values.name, 100, t('reference.tagNameRequired')),
+    name: textError(values.name, 100, t, t('reference.tagNameRequired')),
     color: /^#[0-9a-f]{6}$/i.test(values.color.trim())
       ? ''
       : t('reference.colorInvalid'),
@@ -57,7 +58,7 @@ export function TagForm({
   function message(field: keyof typeof values) {
     return (
       (attempted && errors[field]) ||
-      (error?.fieldErrors.some(({ path }) => path === field) ? t('common.genericError') : '') ||
+      localizedFieldError(error?.fieldErrors.find(({ path }) => path === field), t) ||
       ''
     );
   }
@@ -100,7 +101,7 @@ export function TagForm({
         <Stack sx={{ gap: 4, maxWidth: 520, mx: 'auto' }}>
           {error && (
             <Alert severity="error">
-              {t('common.genericError')}
+              {localizedErrorMessage(error, t)}
               {error.requestId && (
                 <Typography variant="caption" sx={{ display: 'block', overflowWrap: 'anywhere' }}>
                   {t('common.requestId')}: {error.requestId}

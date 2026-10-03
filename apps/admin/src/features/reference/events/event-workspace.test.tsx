@@ -104,7 +104,7 @@ describe('Event editor lifecycle', () => {
     await user.click(screen.getByLabelText('Title'));
     await user.paste('Preserved input');
     await user.click(screen.getByRole('button', { name: 'Save event' }));
-    expect(await screen.findByText('Use a shorter description.')).toBeInTheDocument();
+    expect(await screen.findByText('Check this value and try again.')).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Content & media' })).toHaveAttribute(
       'aria-selected',
       'true',
