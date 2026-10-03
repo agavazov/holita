@@ -16,7 +16,7 @@ import {
   type GraphQLCall,
 } from '../../../test/graphql-fixture.js';
 
-function mount(path = `/stores/${storeA}/reference/events/${event().id}/edit`) {
+async function mount(path = `/stores/${storeA}/reference/events/${event().id}/edit`) {
   const router = createMemoryRouter(
     [
       {
@@ -27,6 +27,8 @@ function mount(path = `/stores/${storeA}/reference/events/${event().id}/edit`) {
     { initialEntries: [path] },
   );
   render(<RouterProvider router={router} />);
+  // A case selected on its own must also wait for cold Reference module loading.
+  await screen.findByLabelText('Title', {}, { timeout: 5000 });
   return { user: userEvent.setup(), router };
 }
 function respond(call: GraphQLCall) {
@@ -46,7 +48,7 @@ function respond(call: GraphQLCall) {
 describe('Event editor lifecycle', () => {
   it('submits all sections, preserves exact decimals and dates, and omits the immutable code', async () => {
     const transport = mockGraphQL(respond);
-    const { user } = mount();
+    const { user } = await mount();
     expect(await screen.findByLabelText('Code')).toHaveAttribute('readonly');
     await user.clear(screen.getByLabelText('Title'));
     await user.click(screen.getByLabelText('Title'));
@@ -98,7 +100,7 @@ describe('Event editor lifecycle', () => {
           })
         : respond(call),
     );
-    const { user, router } = mount();
+    const { user, router } = await mount();
     await screen.findByLabelText('Title');
     await user.clear(screen.getByLabelText('Title'));
     await user.click(screen.getByLabelText('Title'));
@@ -153,7 +155,7 @@ describe('Event editor lifecycle', () => {
         },
       });
     });
-    const { user } = mount();
+    const { user } = await mount();
     await screen.findByLabelText('Title');
     await user.click(screen.getByRole('tab', { name: 'Schedule & location' }));
     expect(

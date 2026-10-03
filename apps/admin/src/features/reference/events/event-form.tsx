@@ -1,3 +1,4 @@
+import { ContentSection } from '../../../components/content-section.js';
 // Aurora CreateEvent composition; Refine mutations and route lifecycle remain in the editor.
 import {
   Alert,
@@ -149,15 +150,10 @@ export function EventForm({
             </Alert>
           )}
           <Box component="section" hidden={tab !== 'general'} aria-label="General">
-            <Stack sx={{ gap: 3 }}>
-              <Box>
-                <Typography variant="h6" component="h2" sx={{ mb: 1 }}>
-                  Event essentials
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Give your event a clear identity and choose how people will attend.
-                </Typography>
-              </Box>
+            <ContentSection
+              title="Event essentials"
+              description="Give your event a clear identity and choose how people will attend."
+            >
               <TextField
                 {...input('title')}
                 label="Title"
@@ -195,18 +191,13 @@ export function EventForm({
                   </MenuItem>
                 ))}
               </TextField>
-            </Stack>
+            </ContentSection>
           </Box>
           <Box component="section" hidden={tab !== 'schedule'} aria-label="Schedule and location">
-            <Stack sx={{ gap: 3 }}>
-              <Box>
-                <Typography variant="h6" component="h2" sx={{ mb: 1 }}>
-                  Schedule &amp; location
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  All event times are in Europe/Sofia. Registration dates are calendar dates.
-                </Typography>
-              </Box>
+            <ContentSection
+              title="Schedule & location"
+              description="All event times are in Europe/Sofia. Registration dates are calendar dates."
+            >
               <Stack direction={{ xs: 'column', lg: 'row' }} sx={{ gap: 2 }}>
                 <TextField
                   {...input('startsAt')}
@@ -283,18 +274,13 @@ export function EventForm({
                   change('tagIds', Array.isArray(value) ? value : []);
                 }}
               />
-            </Stack>
+            </ContentSection>
           </Box>
           <Box component="section" hidden={tab !== 'content'} aria-label="Content">
-            <Stack sx={{ gap: 3 }}>
-              <Box>
-                <Typography variant="h6" component="h2" sx={{ mb: 1 }}>
-                  Event content
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  A short introduction that helps people understand the event.
-                </Typography>
-              </Box>
+            <ContentSection
+              title="Event content"
+              description="A short introduction that helps people understand the event."
+            >
               <TextField
                 {...input('summary')}
                 label="Summary"
@@ -335,7 +321,7 @@ export function EventForm({
                 </FormHelperText>
               </Box>
               {gallery}
-            </Stack>
+            </ContentSection>
           </Box>
         </Stack>
       </Paper>

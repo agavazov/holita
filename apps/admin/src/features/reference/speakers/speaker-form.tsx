@@ -1,7 +1,6 @@
 // Aurora CreateEvent composition with Speaker fields and validation.
 import {
   Alert,
-  Box,
   Button,
   FormControlLabel,
   Paper,
@@ -11,6 +10,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { ContentSection } from '../../../components/content-section.js';
 import { EditorAside } from '../../../components/editor-aside.js';
 import type { DataError } from '../../../data/data-provider.js';
 import type { CreateReferenceSpeakerInput } from '../../../generated/graphql/operations.js';
@@ -109,15 +109,10 @@ export function SpeakerForm({
               )}
             </Alert>
           )}
-          <Stack component="section" aria-labelledby={`${id}-details`} sx={{ gap: 3 }}>
-            <Box>
-              <Typography id={`${id}-details`} variant="h6" component="h2" sx={{ mb: 1 }}>
-                Speaker details
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Keep a reusable directory of people for your event program.
-              </Typography>
-            </Box>
+          <ContentSection
+            title="Speaker details"
+            description="Keep a reusable directory of people for your event program."
+          >
             <TextField
               id={`${id}-name`}
               name="name"
@@ -163,7 +158,7 @@ export function SpeakerForm({
               error={Boolean(message('shortBio'))}
               helperText={message('shortBio') || 'Optional. Up to 2,000 characters.'}
             />
-          </Stack>
+          </ContentSection>
         </Stack>
       </Paper>
       <EditorAside

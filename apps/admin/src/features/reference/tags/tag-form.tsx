@@ -13,6 +13,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { ContentSection } from '../../../components/content-section.js';
 import { EditorAside } from '../../../components/editor-aside.js';
 import type { DataError } from '../../../data/data-provider.js';
 import type { CreateReferenceTagInput } from '../../../generated/graphql/operations.js';
@@ -106,15 +107,10 @@ export function TagForm({
               )}
             </Alert>
           )}
-          <Stack component="section" aria-labelledby={`${id}-details`} sx={{ gap: 3 }}>
-            <Box>
-              <Typography id={`${id}-details`} variant="h6" component="h2" sx={{ mb: 1 }}>
-                Tag details
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Use a short name and a distinct color for each event label.
-              </Typography>
-            </Box>
+          <ContentSection
+            title="Tag details"
+            description="Use a short name and a distinct color for each event label."
+          >
             <TextField
               id={`${id}-name`}
               name="name"
@@ -172,7 +168,7 @@ export function TagForm({
                 },
               }}
             />
-          </Stack>
+          </ContentSection>
         </Stack>
       </Paper>
       <EditorAside

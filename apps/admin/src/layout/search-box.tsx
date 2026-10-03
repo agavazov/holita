@@ -28,9 +28,6 @@ import IconifyIcon from './primitives/iconify-icon.js';
 import StyledTextField from './primitives/styled-text-field.js';
 import type { NavigationGroup, NavigationItem } from './types.js';
 
-function flatten(items: readonly NavigationItem[]): NavigationItem[] {
-  return items.flatMap((item) => (item.children ? flatten(item.children) : [item]));
-}
 export default function SearchBox({
   mobile,
   groups,
@@ -56,7 +53,7 @@ export default function SearchBox({
       observer.disconnect();
     };
   }, [isOpen, mobile]);
-  const entries = groups.flatMap((group) => flatten(group.items));
+  const entries = groups.flatMap((group) => group.items);
   const filtered = entries.filter((entry) =>
     entry.label.toLowerCase().includes(query.trim().toLowerCase()),
   );

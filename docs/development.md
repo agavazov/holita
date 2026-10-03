@@ -12,15 +12,18 @@ npm ci
 ```
 
 If Node 24 is not installed, run `nvm install` first. nvm is loaded by the shell; a bare
-non-interactive WSL process may not have node/npm on PATH. Use a WSL terminal or initialize
-nvm for that shell. Native Windows execution is not part of the verified setup.
+non-interactive WSL process may not have node/npm on PATH. Use a WSL terminal. For the default
+nvm installation, initialize a non-interactive shell with `. "$HOME/.nvm/nvm.sh"` before
+`nvm use`. Native Windows execution is not part of the verified setup.
 
 ## Commands
 
 | Command                                           | Behavior                                                                                            |
 | ------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| npm run dev                                       | Start all five applications with labelled logs; Ctrl+C stops the group                              |
-| npm run dev:admin                                 | Vite development server                                                                             |
+| npm run dev                                       | Start four backends plus Real and Prototype admin; Ctrl+C stops the group                           |
+| npm run dev:admin                                 | Real admin (alias of dev:admin:graphql)                                                             |
+| npm run dev:admin:graphql                         | Real admin using the gateway                                                                        |
+| npm run dev:admin:mock                            | Prototype admin with browser fixtures; no backend needed                                            |
 | npm run dev:gateway                               | Nest gateway watcher                                                                                |
 | npm run dev:core                                  | Nest core watcher                                                                                   |
 | npm run dev:products                              | Nest products watcher                                                                               |
@@ -42,13 +45,14 @@ Node checks and test application processes run on the runner host. CI does not d
 
 ## Ports and environment
 
-| Application | Default         |
-| ----------- | --------------- |
-| gateway     | 127.0.0.1:11080 |
-| admin       | 127.0.0.1:11081 |
-| core        | 127.0.0.1:11082 |
-| products    | 127.0.0.1:11083 |
-| reference   | 127.0.0.1:11086 |
+| Application     | Default         |
+| --------------- | --------------- |
+| gateway         | 127.0.0.1:11080 |
+| admin Real      | 127.0.0.1:11081 |
+| admin Prototype | 127.0.0.1:11087 |
+| core            | 127.0.0.1:11082 |
+| products        | 127.0.0.1:11083 |
+| reference       | 127.0.0.1:11086 |
 
 Backend `.env.example` files document PORT. Copy only the example you need to that
 application's `.env`; defaults work without any environment file. Core/products/reference examples
@@ -73,6 +77,191 @@ http://127.0.0.1:11080/graphql. This is the admin's GraphQL business endpoint; d
 browser configuration value, never a place for credentials. Vite reads it at startup/build.
 Use `VITE_GATEWAY_URL=http://127.0.0.1:12080/graphql npm run dev:admin` for a gateway override,
 and align gateway ADMIN_ORIGIN with the exact browser origin when moving the admin port.
+
+## Admin data modes
+
+The same admin runs as **Real** (`graphql`, port 11081) and **Prototype** (`mock`, port
+11087). The top bar identifies the mode (below it on mobile). `npm run dev` starts both plus the four
+backends; it still requires the explicit database setup for Real. Each admin has its own
+origin and Refine cache. The mode is fixed for that process; navigation never changes it.
+
+After [installation](#prerequisites-and-installation), run Prototype from the repository root
+without PostgreSQL, Docker or any backend. No `.env` file is required:
+
+```bash
+npm run dev:admin:mock
+```
+
+Open http://127.0.0.1:11087. The mode indicator must say **Prototype**; choose **holita Sofia**
+or **holita Plovdiv** to open that store's Tags list. The terminal stays open while the admin
+runs; Ctrl+C stops it. Use the same browser and origin to keep your saved demo data.
+For a visual walkthrough, follow [manual Prototype review](#manual-prototype-review).
+For automated checks, follow [Prototype checks](testing.md#prototype-checks); they start their
+own instance and do not require this development process.
+
+To use another Prototype port:
+
+```bash
+VITE_DATA_SOURCE=mock npm run dev --workspace @holita/admin -- --port 12087
+```
+
+That instance opens at http://127.0.0.1:12087 and has a separate browser dataset.
+
+Run Real alone with a prepared, running gateway:
+
+```bash
+npm run dev:admin:graphql
+```
+
+`dev:admin` remains an alias for Real. These root commands explicitly set `VITE_DATA_SOURCE`,
+so a local `.env` cannot change their mode. Running the admin workspace directly accepts
+`VITE_DATA_SOURCE=mock|graphql` from the environment or its Vite `.env`; omission defaults to
+`graphql` and any other value fails startup. Default admin builds explicitly use `graphql`.
+Each development mode has its own Vite dependency cache under the admin's node_modules.
+Browser test fixtures use disposable per-run caches so they cannot replace dependencies
+served by a running development instance.
+
+For an optional Prototype build, generate the local contracts first, then build with Vite:
+
+```bash
+npm run codegen
+VITE_DATA_SOURCE=mock npm exec --workspace @holita/admin -- vite build
+```
+
+This produces `apps/admin/dist` with disposable demo data and requires a secure context
+(HTTPS or localhost) for the worker. Normal `npm run build` and the admin workspace's
+`build` script explicitly produce Real, even if the caller sets `VITE_DATA_SOURCE=mock`.
+
+Prototype supports **store discovery, Products/Venues/Speakers/Tags CRUD, Events and
+Sessions, Gallery/uploads, Event History and the UI catalog**. Open http://127.0.0.1:11087, choose a store
+to open Tags, then use Workspace or Reference navigation. Unknown sections show an
+unavailable message before feature mounting. Real retains all its implemented modules.
+Prototype ignores `VITE_GATEWAY_URL` and backend Reference disablement. Requests use
+`/__prototype/graphql` on the Prototype origin; MSW starts before rendering, uses generated
+operations and refuses unimplemented operations. Vite serves its worker from the installed
+package, without a copied worker file.
+
+Products and lookup resources have 24 fixtures in Sofia and 8 in Plovdiv, including
+active/draft or inactive records and optional fields with and without values. Events have
+22 active and 2 trashed fixtures in Sofia, 6 active and 2 trashed in Plovdiv, with three
+sessions per event and initial creation/trash History. General, Schedule & location and
+Content & media forms and Gallery use the same screens as Real. The first fixture Event in
+each store has two locally served [Picsum](https://picsum.photos/) placeholders from
+`apps/admin/public/images/tmp`, in WebP format at 1200 × 800 pixels; other and newly
+created Events start empty.
+Save a new Event before adding images.
+
+Lists preserve filter/sort/page behavior. Writes enforce case-sensitive SKU/name/code
+uniqueness within their store; Event codes remain reserved in Trash. Products search names
+and SKUs, lookups search names, and Events search titles and codes. Nullable sorts keep
+nulls last in both directions. Products/lookups break ties by descending ID; Events use
+ascending ID. Nullable updates distinguish omission from explicit null. Email/UUID
+validation uses the backend's validator package. Mock error shapes follow the owning service.
+
+Event/Sessions use editable, store-scoped relations. New assignments require active
+records; existing inactive assignments remain valid. Related labels resolve from current
+lookup records. Venue/Tag deletion is refused while any Event references it, including
+Trash; Speaker deletion is refused while any Session references it. Removing the actual
+links releases those restrictions. Products and Sessions use permanent deletion. Event
+Trash/Restore preserves status, relations, children and History. Bulk Event actions validate
+the complete selection before saving. Session reorder requires the complete current program;
+no-op edits/status/order do not add History. Sessions must fit within Event dates, and Event
+date changes cannot exclude existing sessions. EUR amounts retain two decimal places and
+registration dates use Europe/Sofia. Rich HTML uses the existing browser DOMPurify sanitizer,
+with the supported tags/link rules and 100 KiB UTF-8 limits; DOM serialization may differ
+from the server's sanitize-html output.
+
+Saved Products, Venues, Speakers, Tags, Events, Sessions, media metadata and History share
+`holita.prototype.data` in localStorage, using snapshot version 4. Older snapshots are
+replaced by the complete initial dataset. Reload keeps edits; malformed snapshots,
+including invalid cross-store relationships, restore fixtures. Each mutation and its
+History entries are saved together. **Reset demo data** asks for confirmation, restores
+both stores, clears Refine/form state and returns to store selection. It is unavailable
+while a submitted mutation or Reset is pending; repeated confirmation cannot start another
+Reset. Storage failures are visible, permit retry and leave the prior snapshot intact.
+Appearance and list-column preferences are independent of demo data
+and are not reset.
+
+Uploaded image bytes use the native IndexedDB database `holita.prototype.media`, with an
+`images` object store. Fixture images remain local static assets. Upload intents and unfinished
+bytes stay in memory, with the same 10-minute upload and one-hour finalization deadlines as
+Real; reload discards unfinished uploads. Only finalization persists a Blob, then saves its
+metadata and History together. A failed binary write cannot add metadata; a failed snapshot
+write removes the new Blob or leaves an inaccessible orphan for cleanup. Gallery list/read
+URLs are temporary, origin-local capabilities, checked against the current store and active
+Event. They provide no authentication. Each gallery response renews the ten-minute preview
+lifetime; older links remain valid until their expiry. Cover assignment/removal updates
+the parent Event timestamp, as in Real.
+
+Removing an image saves its removal and History entry before deleting its bytes. Startup prunes bytes
+without metadata, preserving uploads belonging to trashed Events. Reset discards unfinished
+uploads, restores both stores and clears uploaded bytes. Physical cleanup failures leave
+inaccessible bytes and retry on startup; Reset/removal still retain their saved logical result.
+IndexedDB startup/read/write failures are visible. Clearing browser site data clears all demo
+records and uploads. Prototype data is never transferred to Real.
+
+Prototype checks MIME signatures, chunk/animation markers and native browser decoding,
+including the 5 MiB and 20-megapixel limits. Browser decoder tolerance and error diagnostics
+can differ from Real's strict Sharp validation. Prototype does not simulate server disk
+permissions, multipart streaming, bandwidth or cross-tab transactions. Use one editing tab
+per Prototype origin. Cancel and store/route changes abort the existing upload hook before
+finalization; an already submitted finalization keeps its captured scope.
+
+There is a short response delay to exercise loading and pending UI. This does not simulate
+backend outages, transactions, concurrency locks or database text collation.
+
+Demo data is small and disposable. Changing its structure requires a version bump and
+fixture reset, rather than migrations. It belongs to this browser origin; changing the port,
+clearing storage or using another browser starts a separate dataset. Multiple tabs do not
+synchronize Refine caches, and simultaneous writes are not coordinated. Use one tab when
+reviewing a workflow. This browser data is never transferred to Real.
+
+### Manual Prototype review
+
+Use http://127.0.0.1:11087 after starting Prototype. The following steps review the current
+screens and browser persistence; they do not establish Real backend parity.
+
+1. Confirm **Prototype** in the mode indicator, choose **holita Sofia**, then create a Tag
+   with a unique name. Edit it, save and reload; the saved values should remain.
+2. Switch to **holita Plovdiv**. The new Tag should be absent. Return to Sofia; it should
+   still be present. The two stores have independent records.
+3. Open **Prototype → UI catalog** and try all four tabs. Change filters, menus, forms and
+   feedback states. Catalog examples reset when leaving their tab and must not change
+   saved business records.
+4. Open **Reference → Events**, use a row's **View** action, then check **Sessions** and
+   **History**. Edit the Event's **Content & media** tab, upload two small JPEG/PNG/WebP images,
+   change the cover and order and reload. Saved changes and finalized uploads should remain.
+5. Review desktop collapse, light/dark appearance and a narrow viewport. On mobile, use
+   **Open navigation**; the store selector and mode indicator should sit below the top bar.
+   The layout has one navigation column, no footer and no horizontal page overflow.
+6. When the test data can be discarded, choose **Reset demo data**, then **Reset data**.
+   This removes saved changes, unsaved forms and uploads for both stores and returns to
+   store selection. Fixtures return; theme and list-column preferences remain.
+
+## UI catalog
+
+In Prototype, choose a store, then **Prototype → UI catalog**. The route is
+`/stores/<storeId>/ui-catalog`; Real hides the menu and blocks this route without mounting
+the catalog or requesting a CRUD resource. The catalog loads on demand.
+
+Its four tabs show the current Aurora/MUI presentation primitives and shared components:
+
+- **Body & actions:** typography, paragraph and detail content, cards, activity lists,
+  buttons, badges, tooltips, summary tables and expandable sections.
+- **Lists & menus:** a local list with shared pagination, filters and row menus, sorting,
+  page-local selection, example editing and confirmed deletion. Filters apply immediately.
+- **Forms:** text/email/number/color/date inputs, dropdowns, multi-select, checkbox, radio,
+  switch and readonly fields; required-field validation, first-error focus, state previews
+  and the shared desktop/mobile form aside.
+- **States & feedback:** initial loading, empty, error/retry, disabled content, preserved
+  content after refresh failure, alerts, progress, confirmations and notifications.
+
+The selected tab is in `?tab=body|lists|forms|states` and survives reload or browser history.
+Example values, selection and edits belong to the current tab and reset when leaving it,
+reloading, switching stores or resetting demo data. Store switching opens the default Body
+tab. Examples do not issue business GraphQL operations or write browser storage. Their
+filters and validation illustrate presentation; they do not prove a feature's backend rules.
+See the [shared component inventory and usage rules](reference.md#ui-catalog-and-shared-components).
 
 ## Using Reference
 
@@ -133,8 +322,9 @@ for retry. Reset filters preserves the Active/Trash tab.
 Open **History** in the Event header for paginated saved changes: event fields/status,
 Trash/Restore, Sessions and Gallery operations. Expand a row to inspect before/after values.
 Times are Sofia; long values are excerpts and description HTML is shown as plain text.
-Actors are `Anonymous` because authentication is not implemented. History begins with
-recorded writes; existing demo fixtures have no fabricated earlier entries. History and its
+Actors are `Anonymous` because authentication is not implemented. In Real, History begins
+with recorded writes; existing backend seed fixtures have no fabricated earlier entries.
+Prototype fixtures include their creation and Trash entries. History and its
 associated change commit together. Apply the additive EventHistory migration with
 `npm run db:migrate` when updating an existing installation.
 
@@ -151,7 +341,7 @@ submission. Clearing its content clears the saved description. Overview displays
 formatted content below Summary; Event tables do not request rich HTML. Speaker biographies
 and Session summaries remain plain text.
 
-After the first Event save, **Content & media → Gallery** accepts up to 10 still JPEG, PNG
+In both modes, after the first Event save, **Content & media → Gallery** accepts up to 10 still JPEG, PNG
 or WebP images (5 MiB and 20 megapixels each). **Add image** shows progress and permits Cancel
 until finalization begins. Upload, **Set cover**, **Alt text** and **Remove** save immediately,
 independently of Summary/Description and other Event fields. Removing an image is permanent
@@ -227,10 +417,12 @@ Plovdiv Culture Exchange. Run migrations and seeds before opening the new resour
 
 ## Admin appearance and navigation
 
-The admin uses Aurora's Sidenav / Stacked shell. Desktop navigation collapses to a 72 px
-rail and expands on hover or keyboard focus; Escape closes temporary expansion. At tablet
-widths expansion overlays content, and mobile uses a temporary drawer. The real store
-selector stays in the top bar on desktop and below it on mobile.
+The admin uses Aurora's simple single-column Sidenav shell without a footer. All enabled
+module groups appear together in one list. The top-bar button switches desktop navigation
+between 256 px with labels and 72 px with icons and tooltips. At tablet widths, expansion
+overlays content and closes after selection or a backdrop click; mobile uses a temporary
+drawer. The Prototype/Real indicator and store selector stay in the top bar on desktop
+and below it on mobile. There is no separate group rail or sidebar profile panel.
 
 The theme button selects Aurora presets, primary colors and light/dark/system mode.
 Preferences persist in `holita.appearance`, `holita-mode`, `holita-color-scheme-*` and
@@ -494,6 +686,14 @@ this is not a production security acceptance.
 ## Troubleshooting
 
 - Missing executable or dependency: initialize Node/npm and run `npm ci` from the root.
+- Prototype shows Real or cannot discover stores through the gateway: restart with
+  `npm run dev:admin:mock` and open http://127.0.0.1:11087. `dev:admin` starts Real, and
+  changing `.env` while Vite is running does not change that process's data mode.
+- Prototype cannot start its worker or browser storage: use the loopback URL above and
+  enable service workers, localStorage and IndexedDB for that site, then reload. Prototype
+  requires a secure browser context and reports denied storage access on screen.
+- Prototype edits appear missing after changing browser, host or port: browser data belongs
+  to the exact origin. Return to the original browser/origin; Real has a separate dataset.
 - Database connection refused: run `npm run db:up`; check port and service-specific URLs.
 - Missing database/role: run `db:setup` for development or `db:test:setup` for tests.
 - Missing table: run `db:migrate` for development. DB tests deploy into their own schemas.

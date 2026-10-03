@@ -116,7 +116,7 @@ test('Aurora menus preserve list queries, apply preferences and use local exampl
   expect(external).toEqual([]);
 });
 
-test('Aurora Stacked navigation supports collapse, hover, keyboard and responsive drawers', async ({
+test('Aurora single-column navigation supports collapse, keyboard and responsive drawers', async ({
   page,
   app,
 }, testInfo) => {
@@ -125,34 +125,39 @@ test('Aurora Stacked navigation supports collapse, hover, keyboard and responsiv
   await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Sofia Creative Forum');
   const sidenav = page.getByRole('navigation', { name: 'Workspace navigation' });
   const drawer = sidenav.locator('.MuiDrawer-paper');
-  await expect(drawer).toHaveCSS('width', '300px');
+  await expect(drawer).toHaveCSS('width', '256px');
+  await expect(sidenav.getByRole('menuitem', { name: 'Products', exact: true })).toBeVisible();
+  await expect(sidenav.getByRole('menuitem', { name: 'Events', exact: true })).toBeVisible();
+  await expect(page.getByLabel('Data source: Real', { exact: true })).toBeVisible();
+  await expect(page.getByText(/^holita · \d{4}$/)).toHaveCount(0);
+  await expect(page.getByRole('contentinfo')).toHaveCount(0);
   await page.getByRole('button', { name: 'Collapse navigation', exact: true }).click();
   await expect(drawer).toHaveCSS('width', '72px');
   await page.screenshot({
     path: testInfo.outputPath('desktop-collapsed.png'),
     animations: 'disabled',
   });
-  await page.getByRole('button', { name: 'Reference navigation', exact: true }).hover();
-  await expect(drawer).toHaveCSS('width', '300px');
-  await page.screenshot({ path: testInfo.outputPath('desktop-hover.png'), animations: 'disabled' });
-  await page.getByLabel('Title', { exact: true }).hover();
+  const events = sidenav.getByRole('menuitem', { name: 'Events', exact: true });
+  await events.hover();
+  await expect(page.getByRole('tooltip', { name: 'Events', exact: true })).toBeVisible();
   await expect(drawer).toHaveCSS('width', '72px');
-  await page.getByRole('button', { name: 'Reference navigation', exact: true }).focus();
-  await expect(drawer).toHaveCSS('width', '300px');
-  await page.keyboard.press('Escape');
-  await expect(drawer).toHaveCSS('width', '72px');
-  await expect(page.getByRole('button', { name: 'Expand navigation', exact: true })).toBeFocused();
+  await events.focus();
+  await events.press('Enter');
+  await expect(page).toHaveURL(`${app.url}/stores/${store}/reference/events`);
+  await expect(page.getByRole('link', { name: 'Sofia Creative Forum', exact: true })).toBeVisible();
+  await page.goBack();
+  await expect(page.getByLabel('Title', { exact: true })).toBeVisible();
   await page.reload();
   await expect(page.getByLabel('Title', { exact: true })).toBeVisible();
   await expect(drawer).toHaveCSS('width', '72px');
   await page.getByRole('button', { name: 'Expand navigation', exact: true }).click();
-  await expect(drawer).toHaveCSS('width', '300px');
+  await expect(drawer).toHaveCSS('width', '256px');
 
   await page.setViewportSize({ width: 1024, height: 900 });
   await expect(drawer).toHaveCSS('width', '72px');
   await page.screenshot({ path: testInfo.outputPath('tablet.png'), animations: 'disabled' });
   await page.getByRole('button', { name: 'Expand navigation', exact: true }).click();
-  await expect(drawer).toHaveCSS('width', '300px');
+  await expect(drawer).toHaveCSS('width', '256px');
   await sidenav.getByRole('menuitem', { name: 'Venues', exact: true }).click();
   await expect(page).toHaveURL(`${app.url}/stores/${store}/reference/venues`);
   await expect(drawer).toHaveCSS('width', '72px');
@@ -185,7 +190,7 @@ test('Aurora Stacked navigation supports collapse, hover, keyboard and responsiv
     ),
   ).toBe(true);
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await expect(drawer).toHaveCSS('width', '300px');
+  await expect(drawer).toHaveCSS('width', '256px');
 });
 
 test('open search follows the current trigger across the mobile breakpoint', async ({
@@ -249,11 +254,11 @@ test('open search follows the current trigger across the mobile breakpoint', asy
   await page.setViewportSize({ width: 1199, height: 900 });
   await expect(drawer).toHaveCSS('width', '72px');
   await page.setViewportSize({ width: 1200, height: 900 });
-  await expect(drawer).toHaveCSS('width', '300px');
+  await expect(drawer).toHaveCSS('width', '256px');
   await page.getByRole('button', { name: 'Collapse navigation', exact: true }).click();
   await page.setViewportSize({ width: 1199, height: 900 });
   await page.getByRole('button', { name: 'Expand navigation', exact: true }).click();
-  await expect(drawer).toHaveCSS('width', '300px');
+  await expect(drawer).toHaveCSS('width', '256px');
   await page.setViewportSize({ width: 1200, height: 900 });
   await expect(drawer).toHaveCSS('width', '72px');
 });

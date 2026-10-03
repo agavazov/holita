@@ -5,7 +5,7 @@ life cycle (SDLC) automation.
 
 A strict TypeScript npm-workspaces repository with Nx tasks and five host applications:
 React/Vite admin and NestJS gateway, core, products and reference services. The admin uses
-an Aurora/MUI Sidenav / Stacked shell and Products/Venues/Speakers/Tags/Events screens with Refine.
+an Aurora/MUI shell with a single-column sidenav, no footer and Products/Venues/Speakers/Tags/Events screens with Refine.
 Sessions, Gallery, History and store-selection states use the same Aurora theme. The gateway exposes schema-first GraphQL for stores and store-scoped
 Products CRUD, including Product-to-Store federation. Core, products and reference own independent
 PostgreSQL databases, Prisma migrations, clients and repeatable seeds. All backends expose
@@ -19,6 +19,27 @@ From the repository root:
 ```bash
 nvm use
 npm ci
+```
+
+If Node 24 is not installed yet, run `nvm install` before `nvm use`.
+
+### Prototype only
+
+```bash
+npm run dev:admin:mock
+```
+
+Open [Prototype admin](http://127.0.0.1:11087), check the **Prototype** mode indicator and
+choose a store. No Docker, database, backend or copied `.env` file is needed. Ctrl+C stops
+this admin process. `npm run dev:admin` starts Real; use `dev:admin:mock` for Prototype.
+See [the manual review steps](docs/development.md#manual-prototype-review) and
+[Prototype tests](docs/testing.md#prototype-checks).
+
+### Real and Prototype together
+
+Prepare the databases, then start both admins and the backends:
+
+```bash
 npm run db:up
 npm run db:setup
 npm run db:migrate
@@ -26,11 +47,20 @@ npm run db:seed
 npm run dev
 ```
 
-Open [the admin](http://127.0.0.1:11081). Gateway, core, products and reference listen on
+Open [Real admin](http://127.0.0.1:11081) or [Prototype admin](http://127.0.0.1:11087). Gateway, core, products and reference listen on
 127.0.0.1 ports 11080, 11082, 11083 and 11086 respectively. All processes run on the host;
 PostgreSQL alone runs in Docker on 127.0.0.1:11084. Ctrl+C stops the Node group;
 `npm run db:down` separately stops PostgreSQL and preserves its volume. Database setup,
 migrations and seeds are explicit commands, never side effects of `dev`.
+
+Prototype provides store discovery and the same Products, Venues, Speakers, Tags, Events and Sessions
+screens, including Event status actions, Trash/Restore and History, with browser-persisted
+fixtures and confirmed Reset demo data. Gallery uploads, cover, alt text and ordering use
+the same screens, with uploaded files in browser IndexedDB. Its **Prototype → UI catalog**
+menu opens interactive body, list, form and feedback examples after store selection;
+catalog edits are temporary and do not change saved mock records. Real uses the
+gateway; `npm run dev:admin` / `dev:admin:graphql` starts it alone. `npm run dev` starts both
+admin modes alongside the four backends. See [data modes and current limits](docs/development.md#admin-data-modes).
 
 Fresh seeds provide holita Sofia and holita Plovdiv; migrated installations retain their
 existing store names. Select a store, then list, create, edit or delete products. The store
@@ -49,8 +79,9 @@ confirmed Publish/Archive/Trash/Restore; each batch succeeds or fails as a whole
 tab shows saved changes and before/after excerpts with anonymous attribution.
 **Edit event → Content & media** includes the rich description and, after the first save, an
 image gallery with upload progress, cover, alt text and ordering. Gallery actions save
-separately; the overview displays the saved images. Files use private local storage; no
-AWS setup is needed. See [media setup and limits](docs/development.md#using-reference).
+separately; the overview displays the saved images. Real stores files privately in the
+Reference service; Prototype uses browser IndexedDB. No AWS setup is needed.
+See [media setup and limits](docs/development.md#using-reference).
 Reference forms warn about unsaved changes; validation errors open the relevant tab. `REFERENCE_ENABLED=false` disables its backend
 operations; `VITE_REFERENCE_ENABLED=false` hides its navigation and blocks direct admin
 routes after restarting/rebuilding the admin. Both default to true for local use. Source,
@@ -58,7 +89,8 @@ existing data and the static schema remain available when disabled.
 
 Use the [Reference implementation index](docs/reference.md) to find the code and focused tests
 for each pattern. On narrow screens, **Open navigation** opens the menu and the store
-selector appears below the top bar. Desktop navigation supports collapse and hover expansion.
+selector and Prototype/Real indicator appear below the top bar. Desktop navigation shows all
+enabled groups together and supports collapse through the top-bar button.
 The top bar provides local module search, example notifications/profile, a demo language
 selector and Aurora theme/color preferences. Search only finds enabled navigation entries;
 notifications and profile actions are examples, with no account or notification service.
@@ -89,6 +121,21 @@ npm run dev:reference
 ```
 
 ## Check a change
+
+For a quick Prototype check after installation, run from the repository root:
+
+```bash
+npm run test:admin -- prototype.test.ts prototype-controls.test.tsx --skip-nx-cache
+npm exec -- playwright install --with-deps chromium
+npm run test:smoke -- prototype.smoke.spec.mts --grep="Prototype uses the same Tags screens"
+```
+
+Install Chromium once; its Linux system dependencies may require sudo. These selected
+tests need no backend or database and start their own isolated Prototype browser instance.
+See [Prototype checks](docs/testing.md#prototype-checks) for capability-specific files,
+the complete Prototype browser selection and failure diagnostics.
+
+For backend and Real checks, select the relevant commands from:
 
 ```bash
 npm run test:products -- health.spec.ts

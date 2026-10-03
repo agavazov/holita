@@ -5,12 +5,10 @@ export type NavigationItem = {
   key: string;
   label: string;
   icon: ShellIcon;
-  children?: readonly NavigationItem[];
 };
 export type NavigationGroup = {
   key: string;
   label: string;
-  icon: ShellIcon;
   items: readonly NavigationItem[];
 };
 export type AdminLayoutProps = {
@@ -21,11 +19,7 @@ export type AdminLayoutProps = {
   selectedSection: string;
   onStoreChange: (storeId: string) => void;
   onSectionChange: (section: string) => void;
+  modeLabel?: string;
+  controls?: ReactNode;
   children: ReactNode;
 };
-
-export function containsSection(items: readonly NavigationItem[], section: string): boolean {
-  return items.some(
-    (item) => item.key === section || (item.children && containsSection(item.children, section)),
-  );
-}

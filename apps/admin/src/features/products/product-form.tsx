@@ -1,6 +1,7 @@
 // Aurora CreateEvent / EventAside composition, bound to the existing Product inputs.
-import { Alert, Box, Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useId, useRef, useState, type ReactNode } from 'react';
+import { ContentSection } from '../../components/content-section.js';
 import { EditorAside } from '../../components/editor-aside.js';
 import type { DataError } from '../../data/data-provider.js';
 import type { CreateProductInput } from '../../generated/graphql/operations.js';
@@ -57,15 +58,11 @@ export function ProductForm({
     >
       <Paper sx={{ p: { xs: 3, md: 5 }, flex: 1, minWidth: 0 }}>
         {header}
-        <Stack sx={{ gap: 3, maxWidth: 520, mx: 'auto' }}>
-          <Box>
-            <Typography variant="h6" component="h2" sx={{ mb: 1 }}>
-              Product details
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Give your product a name and a unique SKU.
-            </Typography>
-          </Box>
+        <ContentSection
+          title="Product details"
+          description="Give your product a name and a unique SKU."
+          sx={{ maxWidth: 520, mx: 'auto' }}
+        >
           {error && (
             <Alert severity="error">
               {error.message}
@@ -111,7 +108,7 @@ export function ProductForm({
               attempted && skuError ? skuError : 'Case-sensitive. Must be unique within this store.'
             }
           />
-        </Stack>
+        </ContentSection>
       </Paper>
       <EditorAside
         label="Product settings"

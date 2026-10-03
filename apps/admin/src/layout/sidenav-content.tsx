@@ -1,20 +1,22 @@
-// Aurora SidenavDrawerContent, restricted to the selected temporary drawer.
+// Aurora SidenavDrawerContent shared by the permanent and temporary drawers.
 import { Box, IconButton, List, ListSubheader, Toolbar } from '@mui/material';
 import IconifyIcon from './primitives/iconify-icon.js';
 import Logo from './primitives/logo.js';
 import SimpleBar from './primitives/simplebar.js';
 import NavItem from './nav-item.js';
 import type { NavigationGroup } from './types.js';
-export default function MobileNavigation({
+export default function SidenavContent({
   groups,
   section,
   onClose,
   onNavigate,
+  collapsed = false,
 }: {
   groups: readonly NavigationGroup[];
   section: string;
-  onClose: () => void;
+  onClose?: () => void;
   onNavigate: (section: string) => void;
+  collapsed?: boolean;
 }) {
   return (
     <>
@@ -24,20 +26,21 @@ export default function MobileNavigation({
             height: 1,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            pl: 4,
-            pr: 2,
+            justifyContent: collapsed ? 'center' : 'space-between',
+            px: collapsed ? 0 : 4,
           }}
         >
-          <Logo />
-          <IconButton aria-label="Close navigation" sx={{ mt: 1 }} onClick={onClose}>
-            <IconifyIcon icon="material-symbols:left-panel-close-outline" fontSize={20} />
-          </IconButton>
+          <Logo showName={!collapsed} />
+          {onClose && (
+            <IconButton aria-label="Close navigation" sx={{ mt: 1 }} onClick={onClose}>
+              <IconifyIcon icon="material-symbols:left-panel-close-outline" fontSize={20} />
+            </IconButton>
+          )}
         </Box>
       </Toolbar>
       <Box sx={{ flex: 1, overflow: 'hidden' }}>
         <SimpleBar disableHorizontal>
-          <Box sx={{ py: 2, px: 2 }}>
+          <Box sx={{ py: 2, px: collapsed ? 2 : 4 }}>
             {groups.map((group, index) => (
               <List
                 key={group.key}
@@ -52,23 +55,25 @@ export default function MobileNavigation({
                   gap: '2px',
                 }}
                 subheader={
-                  <ListSubheader
-                    component="div"
-                    disableGutters
-                    sx={{
-                      textAlign: 'left',
-                      color: 'text.disabled',
-                      typography: 'overline',
-                      fontWeight: 700,
-                      py: 1,
-                      pl: 2,
-                      mb: 0.25,
-                      position: 'static',
-                      background: 'transparent',
-                    }}
-                  >
-                    {group.label}
-                  </ListSubheader>
+                  !collapsed && (
+                    <ListSubheader
+                      component="div"
+                      disableGutters
+                      sx={{
+                        textAlign: 'left',
+                        color: 'text.disabled',
+                        typography: 'overline',
+                        fontWeight: 700,
+                        py: 1,
+                        pl: 2,
+                        mb: 0.25,
+                        position: 'static',
+                        background: 'transparent',
+                      }}
+                    >
+                      {group.label}
+                    </ListSubheader>
+                  )
                 }
               >
                 {group.items.map((item) => (
@@ -76,11 +81,8 @@ export default function MobileNavigation({
                     key={item.key}
                     item={item}
                     section={section}
-                    mobile
-                    onNavigate={(next) => {
-                      onClose();
-                      onNavigate(next);
-                    }}
+                    collapsed={collapsed}
+                    onNavigate={onNavigate}
                   />
                 ))}
               </List>

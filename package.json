@@ -29,11 +29,11 @@
     }
   },
   "scripts": {
-    "dev": "concurrently --kill-others --names gateway,core,products,reference,admin --prefix-colors blue,green,yellow,cyan,magenta \"npm:dev:gateway\" \"npm:dev:core\" \"npm:dev:products\" \"npm:dev:reference\" \"npm:dev:admin\"",
+    "dev": "concurrently --kill-others --names gateway,core,products,reference,admin-real,admin-prototype --prefix-colors blue,green,yellow,cyan,magenta,white \"npm:dev:gateway\" \"npm:dev:core\" \"npm:dev:products\" \"npm:dev:reference\" \"npm:dev:admin:graphql\" \"npm:dev:admin:mock\"",
     "dev:gateway": "npm run dev --workspace @holita/gateway",
     "dev:core": "npm run dev --workspace @holita/core",
     "dev:products": "npm run dev --workspace @holita/products",
-    "dev:admin": "npm run dev --workspace @holita/admin",
+    "dev:admin": "npm run dev:admin:graphql",
     "build": "nx run-many -t build",
     "lint": "eslint .",
     "typecheck": "npm run typecheck:tools && nx run-many -t typecheck",
@@ -68,7 +68,9 @@
     "test:smoke": "nx run admin:test-smoke --output-style=static",
     "dev:reference": "npm run dev --workspace @holita/reference",
     "test:reference": "nx run reference:test --output-style=static",
-    "test:reference:db": "nx run reference:test-db --output-style=static"
+    "test:reference:db": "nx run reference:test-db --output-style=static",
+    "dev:admin:graphql": "VITE_DATA_SOURCE=graphql npm run dev --workspace @holita/admin",
+    "dev:admin:mock": "VITE_DATA_SOURCE=mock npm run dev --workspace @holita/admin"
   },
   "devDependencies": {
     "@apollo/composition": "2.14.4",

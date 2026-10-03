@@ -68,6 +68,19 @@ function defaultResult(call: GraphQLCall) {
 }
 
 describe('store-scoped Products UI', () => {
+  it('blocks the UI catalog in Real without mounting a CRUD resource and returns to Products', async () => {
+    const transport = mockGraphQL(defaultResult);
+    const user = mount(`/stores/${storeA}/ui-catalog`);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'UI catalog is available in Prototype only.',
+    );
+    expect(screen.queryByRole('menuitem', { name: 'UI catalog' })).not.toBeInTheDocument();
+    expect(transport.calls.map((call) => call.operation)).toEqual(['ListStores']);
+    await user.click(screen.getByRole('button', { name: 'Open products' }));
+    await screen.findByText('Sofia notebook');
+    expect(screen.getByLabelText('Current route')).toHaveTextContent(`/stores/${storeA}/products`);
+  });
+
   it('keeps loading and failed store discovery out of CRUD and recovers on retry', async () => {
     const discovery = deferredResponse();
     let failing = true;

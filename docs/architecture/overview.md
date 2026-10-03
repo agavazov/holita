@@ -5,13 +5,13 @@ local caching and affected selection. Each application has a package.json and a 
 project.json giving Nx its stable name and application tag. There are no shared workspace
 packages or cross-application code imports.
 
-| Application | Framework                       | Current entry points                                                                 |
-| ----------- | ------------------------------- | ------------------------------------------------------------------------------------ |
-| admin       | React, Vite, Refine, Aurora/MUI | Stores, Products and Reference Events/Venues/Speakers/Tags at http://127.0.0.1:11081 |
-| gateway     | NestJS, Apollo Gateway          | /graphql and /health on 127.0.0.1:11080                                              |
-| core        | NestJS, Federation 2            | /graphql (stores) and /health on 127.0.0.1:11082                                     |
-| products    | NestJS, Federation 2            | /graphql (products) and /health on 127.0.0.1:11083                                   |
-| reference   | NestJS, Federation 2            | /graphql (events, venues, speakers, tags) and /health on 127.0.0.1:11086             |
+| Application | Framework                       | Current entry points                                                                                                                                                                              |
+| ----------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| admin       | React, Vite, Refine, Aurora/MUI | Stores, Products and Reference Events/Venues/Speakers/Tags at http://127.0.0.1:11081; Prototype Stores/Products/Venues/Speakers/Tags/Events/Sessions/History/UI catalog at http://127.0.0.1:11087 |
+| gateway     | NestJS, Apollo Gateway          | /graphql and /health on 127.0.0.1:11080                                                                                                                                                           |
+| core        | NestJS, Federation 2            | /graphql (stores) and /health on 127.0.0.1:11082                                                                                                                                                  |
+| products    | NestJS, Federation 2            | /graphql (products) and /health on 127.0.0.1:11083                                                                                                                                                |
+| reference   | NestJS, Federation 2            | /graphql (events, venues, speakers, tags) and /health on 127.0.0.1:11086                                                                                                                          |
 
 Core owns store listing/lookup; products owns Products CRUD; reference owns Event, Venue, Speaker and Tag CRUD. Their concrete feature
 repositories access their own PrismaService, whose client connects lazily and disconnects
@@ -172,6 +172,61 @@ Products is the backend reference: SDL → resolver → service → concrete rep
 It uses no generic CRUD base, duplicated handwritten API DTOs or cross-application model
 imports. See [the backend skill](../../.agents/skills/holita-backend-feature/SKILL.md).
 
+## Admin data sources
+
+[Configuration](../../apps/admin/src/config.ts) selects `mock` or `graphql` once at startup.
+The same Refine provider, generated operations and feature screens serve both modes. Real
+uses the configured gateway. Prototype awaits [MSW startup](../../apps/admin/src/mocks/browser.ts)
+before rendering and uses a local GraphQL endpoint. [Handlers](../../apps/admin/src/mocks/handlers.ts)
+match generated documents for Stores, Products, Venues, Speakers, Tags, Events, Sessions
+Event History and media; unsupported operations return
+GraphQL errors instead of contacting a backend. The normal Real build excludes the worker
+and the dynamically imported mock implementation.
+
+[Prototype state](../../apps/admin/src/mocks/state.ts) validates small, versioned localStorage
+snapshots and persists each successful mutation before returning it. Generated API types
+are shared, while fixtures and mock behavior remain admin-owned. This is a transport
+substitution, without a second data provider or a separate frontend. Concrete
+[Products](../../apps/admin/src/mocks/products.ts), [Venues](../../apps/admin/src/mocks/venues.ts),
+[Speakers](../../apps/admin/src/mocks/speakers.ts), [Tags](../../apps/admin/src/mocks/tags.ts),
+[Events](../../apps/admin/src/mocks/events.ts), [Sessions](../../apps/admin/src/mocks/sessions.ts)
+and [Media](../../apps/admin/src/mocks/media.ts)
+modules own their mock resource behavior; state owns storage/Reset, and shared guards cover
+the repeated validation primitives. All records use generated operation fragments/inputs.
+Validator's email and UUID functions are shared with the backend's existing validation dependency.
+Event/Session relations resolve current lookup labels and drive protected deletion, including
+trashed parents. Mutation and [History](../../apps/admin/src/mocks/event-history.ts) writes share
+one snapshot. Structural and store/parent relationship guards reject invalid saved data.
+Snapshot version 4 replaces obsolete data. Both modes mount the same Gallery and upload hook.
+Prototype implements the seven generated media operations and origin-local HTTP PUT/read
+handlers through MSW. Binary requests retain the intent's store/Event identity.
+
+[Image storage](../../apps/admin/src/mocks/media-storage.ts) uses native IndexedDB for finalized
+Blobs, with no new dependency. Upload intents and staged bytes are ephemeral. Finalization
+persists bytes before synchronously saving metadata and History, re-reading the snapshot after
+the async byte write to preserve intervening edits and reject Reset/Trash races. Metadata is
+authoritative; failed snapshot writes cannot expose staged bytes. Removal/Reset discard logical
+references before byte cleanup. Startup prunes orphan bytes, keeping finalized uploads for
+trashed Events. There is no distributed transaction across localStorage/IndexedDB or cross-tab
+concurrency guarantee. [Fixture images](../../apps/admin/src/mocks/media-fixtures.ts) are Picsum
+placeholders served locally without binary browser persistence. Prototype validates type,
+size, animation markers and browser decoding; it does not establish Sharp or server-storage parity.
+
+[Navigation](../../apps/admin/src/navigation.ts) exposes only the implemented mock sections.
+StoreWorkspace also guards direct Prototype routes before feature mounting. Real's Reference
+flag keeps its existing behavior; Prototype availability does not depend on a running or
+enabled Reference service. Reset restores fixtures, remounts Refine and dirty editors, and
+navigates to store discovery. Separate origins isolate the two modes' caches/browser data.
+See [development](../development.md#admin-data-modes) for persistence and concurrency limits.
+
+The Prototype-only [UI catalog](../../apps/admin/src/features/prototype/ui-catalog/ui-catalog.tsx)
+is loaded lazily through the store workspace. Its section is URL-selected; local example
+state unmounts on tab/store changes. It demonstrates the actual shared presentation components
+and Aurora/MUI overrides without another data provider or business operations. Real hides
+the navigation entry and guards its direct route before mounting. ContentSection is shared
+by the catalog and the concrete Product/Venue/Speaker/Tag/Event/Session forms; fields, validation and mutations stay
+feature-owned. The [inventory](../reference.md#ui-catalog-and-shared-components) maps these boundaries.
+
 ## Admin request and store lifecycle
 
 The URL is the active store source: `/` lists stores, `/stores/:storeId/products` lists
@@ -186,11 +241,15 @@ store selector, sidebar and responsive drawer state. Its Aurora/MUI presentation
 Refine, GraphQL or router dependency; navigation callbacks retain the existing router and
 unsaved-change blockers.
 
-The shell adapts Aurora 2.4.0's MainLayout, StackedSidenav, mobile SidenavDrawerContent,
+The shell adapts Aurora 2.4.0's MainLayout, default Sidenav, shared SidenavDrawerContent,
 NavItem, AppBar and search/language/theme/notification/profile components into
-[`layout/`](../../apps/admin/src/layout/). It retains the original 300 px expanded drawer,
-72 px rail, 64/82 px toolbar, breakpoint behavior, transitions, typography and menu styling.
-The real store selector is a holita addition. Selected palettes, component overrides,
+[`layout/`](../../apps/admin/src/layout/). Enabled module groups share one list, with a
+256 px expanded drawer and a 72 px collapsed icon list controlled from the top bar.
+Navigation inputs contain flat module entries; search uses those same enabled entries.
+The shell has no footer, separate group rail or sidebar profile panel. It retains Aurora's
+64/82 px toolbar, breakpoints, transitions, typography and menu styling. The store selector
+and Prototype/Real indicator are holita additions; both move below the top bar on mobile.
+Selected palettes, component overrides,
 shadows and CSS variables live in [`theme/`](../../apps/admin/src/theme/). The sibling
 Aurora source directory is not a runtime dependency. Unused layouts, demo routes/auth,
 widget styles, complete demo datasets and settings-panel dependencies are excluded.

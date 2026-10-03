@@ -1,26 +1,25 @@
-// Aurora MainLayout and AppBar, restricted to Sidenav / Stacked.
+// Aurora MainLayout and AppBar with a simple single-column sidenav and no footer.
 import { useEffect, useState } from 'react';
 import {
   AppBar,
   Box,
   Button,
-  Divider,
+  Chip,
   Drawer,
+  IconButton,
   MenuItem,
   Stack,
   Toolbar,
-  Typography,
   drawerClasses,
   paperClasses,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import { version } from '../../package.json';
 import IconifyIcon from './primitives/iconify-icon.js';
 import Logo from './primitives/logo.js';
 import StyledTextField from './primitives/styled-text-field.js';
-import StackedSidenav from './stacked-sidenav.js';
-import MobileNavigation from './mobile-navigation.js';
+import Sidenav from './sidenav.js';
+import SidenavContent from './sidenav-content.js';
 import SearchBox from './search-box.js';
 import LanguageMenu from './language-menu.js';
 import ThemeMenu from './theme-menu.js';
@@ -94,7 +93,7 @@ export function AdminLayout(props: AdminLayoutProps) {
     }
   }, [desktopCollapsed]);
   const collapsed = wide ? desktopCollapsed : !tabletExpanded;
-  const drawerWidth = mobile ? 0 : collapsed ? 72 : 300;
+  const drawerWidth = mobile ? 0 : collapsed ? 72 : 256;
   const groups = selectedStoreId ? navigationGroups : [];
   const toggleCollapsed = () => {
     if (wide) setDesktopCollapsed(!desktopCollapsed);
@@ -105,6 +104,14 @@ export function AdminLayout(props: AdminLayoutProps) {
     setTabletExpanded(false);
     onSectionChange(section);
   };
+  const modeIndicator = (
+    <Chip
+      label={props.modeLabel ?? 'Real'}
+      size="small"
+      variant="outlined"
+      aria-label={'Data source: ' + (props.modeLabel ?? 'Real')}
+    />
+  );
   return (
     <Box sx={{ display: 'flex', zIndex: 1, position: 'relative' }}>
       <AppBar
@@ -142,6 +149,24 @@ export function AdminLayout(props: AdminLayoutProps) {
             direction="row"
             sx={{ alignItems: 'center', flex: 1, minWidth: 0, gap: { xs: 0.5, md: 2 } }}
           >
+            {!mobile && (
+              <>
+                <IconButton
+                  aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+                  aria-expanded={!collapsed}
+                  onClick={toggleCollapsed}
+                >
+                  <IconifyIcon
+                    icon={
+                      collapsed
+                        ? 'material-symbols:left-panel-open-outline'
+                        : 'material-symbols:left-panel-close-outline'
+                    }
+                  />
+                </IconButton>
+                {modeIndicator}
+              </>
+            )}
             <SearchBox mobile={mobile} groups={groups} onNavigate={navigate} />
             {!mobile && <StoreSelector {...props} />}
             <Stack
@@ -157,7 +182,7 @@ export function AdminLayout(props: AdminLayoutProps) {
           </Stack>
         </Toolbar>
       </AppBar>
-      <StackedSidenav
+      <Sidenav
         groups={groups}
         section={selectedSection}
         collapsed={collapsed}
@@ -179,7 +204,7 @@ export function AdminLayout(props: AdminLayoutProps) {
           [`& .${drawerClasses.paper}`]: { pt: 3, boxSizing: 'border-box', width: 300 },
         }}
       >
-        <MobileNavigation
+        <SidenavContent
           groups={groups}
           section={selectedSection}
           onClose={() => {
@@ -203,17 +228,23 @@ export function AdminLayout(props: AdminLayoutProps) {
       >
         <Toolbar variant="appbar" />
         {mobile && (
-          <Box
+          <Stack
+            direction="row"
             sx={{
               px: 3,
               py: 1.5,
+              gap: 2,
+              alignItems: 'center',
               borderBottom: 1,
               borderColor: 'divider',
               bgcolor: 'background.default',
             }}
           >
-            <StoreSelector {...props} />
-          </Box>
+            {modeIndicator}
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <StoreSelector {...props} />
+            </Box>
+          </Stack>
         )}
         <Box
           sx={{
@@ -224,38 +255,9 @@ export function AdminLayout(props: AdminLayoutProps) {
             bgcolor: 'background.default',
           }}
         >
+          {props.controls}
           {children}
         </Box>
-        <Divider />
-        <Stack
-          direction={{ sm: 'row' }}
-          sx={{
-            columnGap: 2,
-            rowGap: 0.5,
-            bgcolor: 'background.default',
-            justifyContent: { xs: 'center', sm: 'space-between' },
-            alignItems: 'center',
-            height: ({ mixins }) => mixins.footer,
-            py: 1,
-            px: { xs: 3, md: 5 },
-            textAlign: { xs: 'center', sm: 'left' },
-          }}
-        >
-          <Typography
-            variant="caption"
-            component="p"
-            sx={{ lineHeight: 1.6, fontWeight: 'light', color: 'text.secondary' }}
-          >
-            holita · {new Date().getFullYear()}
-          </Typography>
-          <Typography
-            variant="caption"
-            component="p"
-            sx={{ fontWeight: 'light', color: 'text.secondary' }}
-          >
-            v{version}
-          </Typography>
-        </Stack>
       </Box>
     </Box>
   );

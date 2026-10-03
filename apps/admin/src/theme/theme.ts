@@ -2,6 +2,8 @@ import { TableContainer, TableRow, TableHead, TableCell } from './components/Tab
 import type {} from '@mui/x-data-grid/themeAugmentation';
 import DataGrid from './components/DataGrid.js';
 import Autocomplete from './components/Autocomplete.js';
+import accordion from './components/Accordion.js';
+import { CircularProgress, LinearProgress } from './components/Progress.js';
 import Checkbox from './components/Checkbox.js';
 import { Tab, Tabs } from './components/Tab.js';
 import { createTheme as muiCreateTheme } from '@mui/material/styles';
@@ -80,6 +82,11 @@ export function createTheme(preset: ThemePreset, primaryColor: string | null) {
       MuiTableCell: TableCell,
       MuiDataGrid: DataGrid,
       MuiAutocomplete: Autocomplete,
+      MuiAccordion: accordion.accordion,
+      MuiAccordionSummary: accordion.summary,
+      MuiAccordionDetails: accordion.details,
+      MuiCircularProgress: CircularProgress,
+      MuiLinearProgress: LinearProgress,
       MuiCheckbox: Checkbox,
       MuiTab: Tab,
       MuiTabs: Tabs,

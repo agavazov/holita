@@ -8,7 +8,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { useList } from '@refinedev/core';
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router';
 
@@ -19,10 +19,17 @@ import { ProductEditor } from '../products/product-editor.js';
 import { ProductList } from '../products/product-list.js';
 import { PageHeader } from '../../components/page-header.js';
 import { QueryRefreshWarning } from '../../components/query-refresh-warning.js';
+import type { DataSource } from '../../config.js';
+import { defaultSection, sectionAvailable, workspaceNavigation } from '../../navigation.js';
 
 const ReferenceWorkspace = lazy(async () => {
   const module = await import('../reference/reference-workspace.js');
   return { default: module.ReferenceWorkspace };
+});
+
+const UiCatalog = lazy(async () => {
+  const module = await import('../prototype/ui-catalog/ui-catalog.js');
+  return { default: module.UiCatalog };
 });
 
 function StoreProducts({ storeId }: { storeId: string }) {
@@ -86,17 +93,31 @@ function StoreProducts({ storeId }: { storeId: string }) {
   );
 }
 
-export function StoreWorkspace({ referenceEnabled = true }: { referenceEnabled?: boolean }) {
+export function StoreWorkspace({
+  referenceEnabled = true,
+  dataSource = 'graphql',
+  controls,
+}: {
+  referenceEnabled?: boolean;
+  dataSource?: DataSource;
+  controls?: ReactNode;
+}) {
   const { storeId } = useParams();
   const { pathname } = useLocation();
+  const isCatalog = pathname.split('/')[3] === 'ui-catalog';
   const isReference = pathname.includes('/reference/');
   const referenceSection = pathname.split('/')[4];
-  const section =
-    isReference &&
-    referenceEnabled &&
-    ['events', 'venues', 'speakers', 'tags'].includes(referenceSection ?? '')
-      ? `reference/${referenceSection ?? 'events'}`
-      : 'products';
+  const section = isCatalog
+    ? 'ui-catalog'
+    : isReference &&
+        referenceEnabled &&
+        referenceSection &&
+        (dataSource === 'mock' ||
+          ['events', 'venues', 'speakers', 'tags'].includes(referenceSection))
+      ? `reference/${referenceSection}`
+      : pathname === '/'
+        ? defaultSection(dataSource)
+        : 'products';
   const navigate = useNavigate();
   const stores = useList<ListStoresQuery['stores'][number], DataError>({
     resource: 'stores',
@@ -111,53 +132,13 @@ export function StoreWorkspace({ referenceEnabled = true }: { referenceEnabled?:
       selectedStoreId={currentStore?.id ?? null}
       storesLoading={stores.query.isFetching}
       selectedSection={section}
-      navigationGroups={[
-        {
-          key: 'workspace',
-          label: 'Workspace',
-          icon: 'material-symbols:dashboard-customize-outline-rounded',
-          items: [
-            {
-              key: 'products',
-              label: 'Products',
-              icon: 'material-symbols:inventory-2-outline-rounded',
-            },
-          ],
-        },
-        ...(referenceEnabled
-          ? [
-              {
-                key: 'reference',
-                label: 'Reference',
-                icon: 'material-symbols:widgets-outline-rounded' as const,
-                items: [
-                  {
-                    key: 'reference/events',
-                    label: 'Events',
-                    icon: 'material-symbols:calendar-month-outline-rounded' as const,
-                  },
-                  {
-                    key: 'reference/venues',
-                    label: 'Venues',
-                    icon: 'material-symbols:location-on-outline-rounded' as const,
-                  },
-                  {
-                    key: 'reference/speakers',
-                    label: 'Speakers',
-                    icon: 'material-symbols:person-outline-rounded' as const,
-                  },
-                  {
-                    key: 'reference/tags',
-                    label: 'Tags',
-                    icon: 'material-symbols:label-important-outline-rounded' as const,
-                  },
-                ],
-              },
-            ]
-          : []),
-      ]}
+      modeLabel={dataSource === 'mock' ? 'Prototype' : 'Real'}
+      controls={controls}
+      navigationGroups={workspaceNavigation(dataSource, referenceEnabled)}
       onStoreChange={(id) => {
-        void navigate(`/stores/${id}/${section}`);
+        void navigate(
+          `/stores/${id}/${sectionAvailable(dataSource, section) ? section : defaultSection(dataSource)}`,
+        );
       }}
       onSectionChange={(nextSection) => {
         if (currentStore) void navigate(`/stores/${currentStore.id}/${nextSection}`);
@@ -202,7 +183,34 @@ export function StoreWorkspace({ referenceEnabled = true }: { referenceEnabled?:
         </Paper>
       ) : currentStore ? (
         <>
-          {isReference ? (
+          {!sectionAvailable(dataSource, section) ? (
+            <Paper sx={{ p: { xs: 3, md: 5 }, flex: 1 }}>
+              <Alert severity="info">
+                {dataSource === 'mock'
+                  ? 'This section is not available in Prototype yet.'
+                  : 'UI catalog is available in Prototype only.'}
+              </Alert>
+              <Button
+                sx={{ mt: 2 }}
+                onClick={() => {
+                  void navigate(`/stores/${currentStore.id}/${defaultSection(dataSource)}`);
+                }}
+              >
+                {dataSource === 'mock' ? 'Open tags' : 'Open products'}
+              </Button>
+            </Paper>
+          ) : isCatalog ? (
+            <Suspense
+              fallback={
+                <Paper sx={{ p: { xs: 3, md: 5 }, flex: 1 }}>
+                  <Typography role="status">Loading UI catalog…</Typography>
+                  <Skeleton variant="rounded" height={300} />
+                </Paper>
+              }
+            >
+              <UiCatalog key={currentStore.id} />
+            </Suspense>
+          ) : isReference ? (
             referenceEnabled ? (
               <Suspense
                 fallback={
@@ -245,7 +253,9 @@ export function StoreWorkspace({ referenceEnabled = true }: { referenceEnabled?:
               <Typography color="text.secondary" sx={{ mb: 3 }}>
                 {storeId
                   ? 'Choose an available store to continue.'
-                  : 'Choose a store to manage its products.'}
+                  : dataSource === 'mock'
+                    ? 'Choose a store to explore prototype records.'
+                    : 'Choose a store to manage its products.'}
               </Typography>
               <Stack
                 direction={{ xs: 'column', sm: 'row' }}
@@ -258,7 +268,7 @@ export function StoreWorkspace({ referenceEnabled = true }: { referenceEnabled?:
                     color="neutral"
                     sx={{ minWidth: 184, overflowWrap: 'anywhere' }}
                     onClick={() => {
-                      void navigate(`/stores/${store.id}/products`);
+                      void navigate(`/stores/${store.id}/${defaultSection(dataSource)}`);
                     }}
                   >
                     {store.name}

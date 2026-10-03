@@ -1,7 +1,6 @@
 // Aurora CreateEvent composition with Venue fields and validation.
 import {
   Alert,
-  Box,
   Button,
   FormControlLabel,
   Paper,
@@ -11,6 +10,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { ContentSection } from '../../../components/content-section.js';
 import { EditorAside } from '../../../components/editor-aside.js';
 import type { DataError } from '../../../data/data-provider.js';
 import type { CreateReferenceVenueInput } from '../../../generated/graphql/operations.js';
@@ -122,15 +122,10 @@ export function VenueForm({
               )}
             </Alert>
           )}
-          <Stack component="section" aria-labelledby={`${id}-details`} sx={{ gap: 3 }}>
-            <Box>
-              <Typography id={`${id}-details`} variant="h6" component="h2" sx={{ mb: 1 }}>
-                Venue details
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Give your venue a name and a short description.
-              </Typography>
-            </Box>
+          <ContentSection
+            title="Venue details"
+            description="Give your venue a name and a short description."
+          >
             <TextField
               id={`${id}-name`}
               name="name"
@@ -161,16 +156,8 @@ export function VenueForm({
               error={Boolean(message('description'))}
               helperText={message('description') || 'Optional. Up to 2,000 characters.'}
             />
-          </Stack>
-          <Stack component="section" aria-labelledby={`${id}-location`} sx={{ gap: 3 }}>
-            <Box>
-              <Typography id={`${id}-location`} variant="h6" component="h2" sx={{ mb: 1 }}>
-                Location
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Where people will find this venue.
-              </Typography>
-            </Box>
+          </ContentSection>
+          <ContentSection title="Location" description="Where people will find this venue.">
             <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 2 }}>
               <TextField
                 id={`${id}-city`}
@@ -216,7 +203,7 @@ export function VenueForm({
               error={Boolean(message('address'))}
               helperText={message('address') || 'Optional. Street address and directions.'}
             />
-          </Stack>
+          </ContentSection>
         </Stack>
       </Paper>
       <EditorAside

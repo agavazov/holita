@@ -9,8 +9,10 @@ dispatcher.
 Admin test files run one at a time because Nx already parallelizes project tasks.
 Text-entry scenarios use normal clipboard events where per-keystroke behavior is not under
 test, reducing DOM work. Admin cases have a bounded 30-second budget for multi-step
-Refine workflows sharing CPU with backend and DB checks. Assertion waits,
-file isolation and failure reporting remain unchanged; tests do not retry on failure.
+Refine workflows sharing CPU with backend and DB checks. The Event editor's mount helper
+allows five seconds for cold Reference module loading, including a case selected on its own; subsequent behavior
+assertions retain their normal waits. File isolation and failure reporting remain unchanged;
+tests do not retry on failure.
 Nx test targets use its standard run-commands executor so quoted case names retain their
 argument boundaries. Other application tasks are inferred from their package scripts.
 Root named test commands explicitly use Nx's static output so successful runner summaries
@@ -147,7 +149,7 @@ npm run test:reference -- venues.service.spec.ts speakers.service.spec.ts tags.s
 npm run test:reference:db -- persistence.db.spec.ts venues.db.spec.ts events.db.spec.ts lifecycle.db.spec.ts sessions.db.spec.ts media.db.spec.ts
 npm run test:admin -- venue-form.test.tsx venue-list.test.tsx lookup-forms.test.tsx reference-workspace.test.tsx event-workspace.test.tsx event-description.test.tsx event-list.test.tsx event-lifecycle.test.tsx event-time.test.ts session-workspace.test.tsx event-gallery.test.tsx data-provider.test.ts
 npm run test:gateway:db -- federation.db.spec.mts
-npm run test:smoke -- reference.smoke.spec.mts events.smoke.spec.mts lifecycle.smoke.spec.mts sessions.smoke.spec.mts rich-text.smoke.spec.mts media.smoke.spec.mts
+npm run test:smoke -- reference.smoke.spec.mts tools/browser/events.smoke.spec.mts lifecycle.smoke.spec.mts sessions.smoke.spec.mts rich-text.smoke.spec.mts tools/browser/media.smoke.spec.mts
 npm run test:smoke -- reference-layout.smoke.spec.mts reference-disabled.smoke.spec.mts
 npm run test:smoke -- aurora-shell.smoke.spec.mts
 npm run test:smoke -- products-aurora.smoke.spec.mts
@@ -169,7 +171,7 @@ service and Event DB cases cover lookup sorting, stable ties, null email last, c
 and store boundaries. Gateway cases exercise the new sort inputs through real federation.
 `lookups-aurora.smoke.spec.mts` covers list filters/pages, referenced batch failures and
 desktop/mobile editor composition; its temporary captures use `artifacts/aurora/lookups`.
-The supporting-forms case in `events.smoke.spec.mts` covers persisted CRUD and duplicate tags.
+The supporting-forms case in `tools/browser/events.smoke.spec.mts` covers persisted CRUD and duplicate tags.
 Federation tests additionally
 exercise the real core dependency, concurrent headers, disabled operations/entity lookups,
 continued Products availability, health and preservation of data after re-enabling Reference.
@@ -181,8 +183,9 @@ Products creation and mobile navigation. The layout file exercises scrollable fo
 editing, and the return to desktop navigation. Gallery and History component cases verify
 failure/retry states without incorrectly reporting an empty result.
 The Aurora shell file exercises presets/colors and preference persistence, preserving
-route filters while opening menus, local notification actions, module search, collapse,
-hover, keyboard focus/Escape and desktop/tablet/mobile transitions. It captures the shell
+route filters while opening menus, local notification actions, module search, button-controlled
+collapse, keyboard navigation and desktop/tablet/mobile transitions. It checks that enabled
+groups are visible together, the mode appears in the header and no footer is rendered. It captures the shell
 and open menus at the reference viewport sizes and rejects external asset requests.
 It also checks open-search positioning, text and focus across 899/900 px, drawer transitions
 at 1199/1200 px, and unsaved Event input while using example menus, search and store switching.
@@ -301,7 +304,8 @@ npm run test:smoke -- products.smoke.spec.mts --grep="pending mutation"
 The noncached admin:test-smoke target builds all five apps, then invokes Playwright directly.
 It uses one headless Chromium worker with no automatic retries. Each test creates actual
 core/products/reference/gateway processes and fresh migrated/seeded schemas through the guarded
-federation fixture. Vite serves the real admin on an ephemeral port; its gateway URL and
+federation fixture. The chosen admin port stays reserved while the backend starts, then
+Vite takes it. Vite serves the real admin on an ephemeral port; its gateway URL and
 the gateway CORS origin match that test instance. Development URLs cannot redirect the
 fixture into development databases. Cleanup closes Vite, backend processes and test schemas.
 
@@ -320,27 +324,211 @@ Browser screenshots/traces use ignored test-results/browser. These tests do not 
 fresh dependency install or CI execution. Chromium is the configured browser; Firefox and
 WebKit are outside this target. The manually invoked test:full also includes test:smoke.
 
+## Prototype checks
+
+Run from the repository root after [installing Node and dependencies](development.md#prerequisites-and-installation).
+Prototype unit and browser checks need no Docker, PostgreSQL, test databases or running backend.
+No `.env` file or manually started admin is required. Browser tests start a separate Vite
+instance on an ephemeral port, select `mock` themselves and use a fresh browser context;
+their CRUD and Reset actions do not alter the demo data at your development URL.
+`test:smoke` first builds all five applications offline; the selected Prototype files then
+start only Vite.
+
+### Quick check
+
+```bash
+npm run test:admin -- prototype.test.ts prototype-controls.test.tsx --skip-nx-cache
+npm exec -- playwright install --with-deps chromium
+npm run test:smoke -- prototype.smoke.spec.mts --grep="Prototype uses the same Tags screens"
+```
+
+The first command checks the mock transport, resource rules and Reset controls. Install
+Chromium once for browser checks; Linux system dependencies may require sudo. The last
+command selects one browser workflow: startup, navigation, Tags creation/editing, reload persistence,
+store isolation and confirmed Reset from a dirty editor.
+
+Check the runner's passed-test count and exit status. Unit checks use `--skip-nx-cache` here
+to execute rather than replay a cached result; browser checks are always noncached.
+An all-skipped case selection or zero executed tests is not a successful check.
+
+### Mock contracts and Reset
+
+Select the owning file when changing one mock resource; run the following selection when
+checking all current mock resource contracts and Reset controls:
+
+```bash
+npm run test:admin -- prototype.test.ts prototype-events.test.ts prototype-media.test.ts prototype-controls.test.tsx --skip-nx-cache
+```
+
+The component runner uses MSW's Node transport with the real Refine data provider and
+injected browser storage. It checks CRUD, normalized values, per-store uniqueness and foreign
+IDs, filtered pagination, SKU/name uniqueness, display-label and null-last sorting,
+omitted/null updates, validation errors, refused referenced deletion, failed storage
+writes, Reset, obsolete snapshots and unsupported operations. Lookup checks validate search
+length before Unicode case folding. The Reset controls case verifies repeated confirmation
+before React renders the pending state and retry after a failed Reset. Event/Session cases also cover
+editable store-scoped relations, schedule bounds, exact money, filters/sorts, atomic bulk
+actions, Trash preservation, complete program permutations, session limits, bounded/paged
+History, no-op History suppression, safe rich text and failed mutation/History writes.
+The media file exercises all seven generated operations and HTTP bytes through the same
+provider, capability expiry/reuse/refresh, store/Event isolation, pending slots, first-cover fallback,
+parent timestamps,
+complete order, no-op History, Trash preservation, Reset races, binary/snapshot failures and
+image validation. Its byte store is injected; it does not establish native IndexedDB behavior.
+
+### Browser checks
+
+After installing Chromium, choose the relevant command:
+
+| Area                                                            | Command                                                       |
+| --------------------------------------------------------------- | ------------------------------------------------------------- |
+| Startup, Tags, Reset, unavailable routes and mobile navigation  | `npm run test:smoke -- prototype.smoke.spec.mts`              |
+| Product, Venue and Speaker CRUD; referenced batch deletion      | `npm run test:smoke -- prototype-crud.smoke.spec.mts`         |
+| Delayed reads, pending writes and store switching               | `npm run test:smoke -- prototype-store-switch.smoke.spec.mts` |
+| Events, relations, Sessions, lifecycle and History              | `npm run test:smoke -- prototype-events.smoke.spec.mts`       |
+| Gallery, uploads, IndexedDB, Trash/Restore and image validation | `npm run test:smoke -- prototype-media.smoke.spec.mts`        |
+| UI catalog interactions, state previews and responsive layout   | `npm run test:smoke -- ui-catalog.smoke.spec.mts`             |
+
+To run the complete current Prototype browser selection:
+
+```bash
+npm run test:smoke -- \
+  prototype.smoke.spec.mts prototype-crud.smoke.spec.mts \
+  prototype-store-switch.smoke.spec.mts prototype-events.smoke.spec.mts \
+  prototype-media.smoke.spec.mts ui-catalog.smoke.spec.mts
+```
+
+Select these files for Prototype-only testing. Bare `npm run test:smoke` also selects Real
+files, which require [PostgreSQL and dedicated test databases](#real-browser-smoke-checks).
+Narrow browser cases with `--grep="part of the test name"`; unit cases use
+`--testNamePattern="part of the test name"`, as described [above](#select-the-narrowest-relevant-target).
+
+The Prototype browser fixture starts only Vite on an ephemeral port, with an unreachable
+real gateway URL and the Real Reference flag disabled. No backend or database setup is
+required for this file; Chromium is still required and test:smoke builds the apps offline.
+It checks worker startup before discovery, navigation guards, saved CRUD across reload,
+store isolation, Reset from a dirty form, small-screen navigation and corrupt/blocked storage.
+The CRUD cases allow 20 seconds for the first shell render while Vite prepares cold
+dependencies; subsequent record and mutation assertions retain the normal 10-second budget.
+The multi-step Tags/Reset workflow has a 90-second case budget. It waits up to 20 seconds
+for the actual Tags grid and its loading indicator to settle after navigation, saving and
+reload; the subsequent record assertions still use the normal 10-second budget. Store
+isolation checks run after the destination list loads, so absent rows during loading cannot
+satisfy those assertions.
+The media browser file uses actual IndexedDB, native image decoding and XHR through the
+worker. It checks persisted bytes across reload, local placeholder previews, cover/alt/order,
+text drafts, keyboard previews, permanent removal, mobile overflow, Trash/Restore, Reset in
+both stores, Cancel/store-switch before finalization, JPEG/PNG/WebP decoding, invalid images, a refused byte write and blocked IndexedDB startup.
+Delayed-upload store-switch checks wait for the destination screen to mount before releasing
+the upload response; a URL change alone does not establish that React unmounted the editor.
+Real gallery regression uses `npm run test:smoke -- tools/browser/media.smoke.spec.mts` and
+`npm run test:admin -- event-gallery.test.tsx`. Use the full paths for Real's Event and
+media browser files: Playwright matches file arguments as regular expressions, so the
+shorter names also select their `prototype-` counterparts. The Prototype checks do not
+prove server streaming or Sharp decoder parity.
+The CRUD file exercises shared Product/Venue/Speaker forms and lists, validation focus,
+saved create/edit/delete across reload, the same identifier in separate stores, mobile
+asides and partial referenced Venue deletion without any external requests.
+The store-switch file holds actual worker responses before the application receives them.
+It verifies that a late Product list cannot replace another store's rows, a submitted Product
+write retains its store, double submission is blocked, Reset waits for that write and its
+late completion leaves the new store's draft and notifications untouched.
+The Events file checks all form sections and relations, Sofia inputs in a non-Sofia browser,
+description persistence, program CRUD/save/cancel, schedule validation, bulk status,
+Trash/Restore with children, History, Reset and desktop/mobile layouts. It also verifies
+that Gallery uses the same local transport, no external backend is contacted, and a pending write retains
+its initiating store without affecting a newly opened editor.
+The real-service browser files above continue using their guarded database fixture and
+explicitly select `graphql`. A passing Prototype run does not prove backend behavior or
+complete mock/real parity; run the owning feature's real checks when its behavior changes.
+
+The UI catalog uses the same Vite-only fixture. Its cases exercise local list filters,
+pagination and page selection, row menus, validation, cancelled/confirmed changes, form
+pending/error previews and first-error focus, tab reload/store resets, mobile navigation,
+feedback retry/confirmation and dark-mode layout at 320 px. They reject business operations
+and external asset requests during catalog use and check that saved prototype data stays
+unchanged. StoreWorkspace component cases verify the Real navigation/direct-route guard.
+ContentSection changes also use Product/Venue/Speaker/Tag form cases and the owning real browser checks.
+
+### Failed checks
+
+- A missing Chromium executable or Linux library requires the browser installation command
+  from [Quick check](#quick-check); `npm ci` installs the runner, not its browser/system dependencies.
+- Zero executed tests require correcting the file/case selector. Check the runner summary;
+  do not treat a zero exit code with all cases skipped as validation.
+- A failed browser case reports screenshots and traces under `test-results/browser`.
+  Open its screenshot and use `npm exec -- playwright show-trace` with the reported
+  `trace.zip` path to inspect actions, requests and errors.
+- For manual startup, mode, port or browser-storage problems, use
+  [development troubleshooting](development.md#troubleshooting). Re-run the failed file/case
+  after the cause is fixed. Tests have no automatic retries.
+
+## Reviewing both admin modes
+
+Use the existing focused targets for an admin review. Select the capabilities being reviewed;
+there is no separate aggregate command or automatic full regression.
+
+| Capability                               | Prototype browser selection                                              | Real browser selection                                                                                |
+| ---------------------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| Product CRUD and store/route lifecycle   | `prototype-crud.smoke.spec.mts`, `prototype-store-switch.smoke.spec.mts` | `products.smoke.spec.mts`                                                                             |
+| Venue CRUD and referenced deletion       | `prototype-crud.smoke.spec.mts`                                          | `reference.smoke.spec.mts`, `venues-aurora.smoke.spec.mts`                                            |
+| Speaker/Tag CRUD and lookup lists        | `prototype.smoke.spec.mts`, `prototype-crud.smoke.spec.mts`              | `tools/browser/events.smoke.spec.mts`, `lookups-aurora.smoke.spec.mts`                                |
+| Events, relations, program and lifecycle | `prototype-events.smoke.spec.mts`                                        | `tools/browser/events.smoke.spec.mts`, `sessions.smoke.spec.mts`, `lifecycle.smoke.spec.mts`          |
+| Gallery and uploads                      | `prototype-media.smoke.spec.mts`                                         | `tools/browser/media.smoke.spec.mts`                                                                  |
+| Shell, catalog and route availability    | `prototype.smoke.spec.mts`, `ui-catalog.smoke.spec.mts`                  | `aurora-shell.smoke.spec.mts`, `reference-layout.smoke.spec.mts`, `reference-disabled.smoke.spec.mts` |
+
+Run provider/mock contracts through `test:admin` with `data-provider.test.ts`,
+`prototype.test.ts`, `prototype-events.test.ts` and `prototype-media.test.ts`.
+Use `store-workspace.test.tsx` for request/cache lifecycle and the concrete form files for
+input, error and pending states. For example:
+
+```bash
+npm run test:admin -- data-provider.test.ts prototype.test.ts prototype-events.test.ts prototype-media.test.ts store-workspace.test.tsx --skip-nx-cache
+npm run test:smoke -- prototype-store-switch.smoke.spec.mts products.smoke.spec.mts
+```
+
+The two browser fixtures deliberately use different initial data. Compare user-visible
+behavior and contracts, not fixture names/counts or IDs across modes. Prototype must
+remain on its own origin with no gateway fallback; Real uses the guarded real services.
+Real must hide/block the UI catalog and respect Reference disablement, while Prototype
+keeps its implemented mock modules available. Reset belongs only to Prototype.
+
+Review the generated screenshots separately from test assertions: desktop shell and sticky
+form asides, mobile drawer and stacked form settings, light/dark readability, dialogs and
+horizontal overflow at 320 px. Check both modes' simple single-column navigation and no
+footer. Browser cases also exercise keyboard controls and 899/900 and 1199/1200 px layout
+transitions. These checks do not establish pixel identity, every viewport, or other browser
+engines. Delete temporary Aurora review captures after visual acceptance.
+
+Passing the shared provider and both feature workflows does not establish equality of
+browser/database collation, HTML serialization, browser/Sharp image decoding, cross-tab
+transactions or server concurrency. Those limitations remain in
+[development modes](development.md#admin-data-modes); owning backend/runtime checks are
+required when the underlying API or persistence changes.
+
 ## Current change-to-check mapping
 
-| Change                                            | Applicable check                                                                                                                                    |
-| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Backend bootstrap or health route                 | That service's health.spec.ts, typecheck/build, and startup when main.ts changes                                                                    |
-| Backend PORT or shutdown handling                 | Run the affected service with a valid override and invalid PORT; verify exit and released port                                                      |
-| Admin build or test configuration                 | Admin typecheck/build; verify runner selection; add relevant behavioral tests when interactive code exists                                          |
-| Root TypeScript/Jest/Nx/dependency configuration  | Root lint/typecheck/build and relevant explicit backend files; record that all projects may be affected                                             |
-| Import boundaries                                 | ESLint on the affected source; verify a prohibited cross-application import is rejected                                                             |
-| Prisma schema, client, migration or seed          | Owning service's persistence.db.spec.ts, db:validate, typecheck/build; verify repeat seed behavior                                                  |
-| Test URL guard or cleanup                         | Owning service's test-database-url.unit.spec.ts and persistence.db.spec.ts; simultaneous-schema case                                                |
-| Compose or database provisioning                  | Repeated db:setup/db:test:setup, both persistence DB files, and compare development rows before/after db:down/up                                    |
-| Product service validation                        | products.service.spec.ts first; products.db.spec.ts for transport/persistence behavior                                                              |
-| Product repository/store context/entity reference | products.db.spec.ts; federation.db.spec.mts for gateway and real service boundaries                                                                 |
-| SDL, named operations or generation               | schema:check, test:schema, codegen and affected typecheck/build; federation file for runtime contract changes                                       |
-| Core client or gateway context/communication      | federation.db.spec.mts, especially validation reuse, concurrent headers and stopped core                                                            |
-| Stores resolver/repository                        | stores.db.spec.ts; federation.db.spec.mts when public/federated behavior changes                                                                    |
-| Product form or controls                          | product-form.test.tsx; store-workspace.test.tsx for submission/navigation changes                                                                   |
-| Admin GraphQL mapping or headers                  | data-provider.test.ts; schema:check/codegen for operation edits; products.smoke.spec.mts for real transport                                         |
-| Store routes, query cache or mutation lifecycle   | store-workspace.test.tsx and focused test:smoke delayed-response/pending-mutation cases                                                             |
-| CI workflow, affected selection or ignore rules   | actionlint, Git-history failure checks, explicit Nx changed-file examples below, root lint/typecheck/build and a focused test through test:affected |
+| Change                                            | Applicable check                                                                                                                                                        |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backend bootstrap or health route                 | That service's health.spec.ts, typecheck/build, and startup when main.ts changes                                                                                        |
+| Backend PORT or shutdown handling                 | Run the affected service with a valid override and invalid PORT; verify exit and released port                                                                          |
+| Admin build or test configuration                 | Admin typecheck/build; verify runner selection; add relevant behavioral tests when interactive code exists                                                              |
+| Root TypeScript/Jest/Nx/dependency configuration  | Root lint/typecheck/build and relevant explicit backend files; record that all projects may be affected                                                                 |
+| Import boundaries                                 | ESLint on the affected source; verify a prohibited cross-application import is rejected                                                                                 |
+| Prisma schema, client, migration or seed          | Owning service's persistence.db.spec.ts, db:validate, typecheck/build; verify repeat seed behavior                                                                      |
+| Test URL guard or cleanup                         | Owning service's test-database-url.unit.spec.ts and persistence.db.spec.ts; simultaneous-schema case                                                                    |
+| Compose or database provisioning                  | Repeated db:setup/db:test:setup, both persistence DB files, and compare development rows before/after db:down/up                                                        |
+| Product service validation                        | products.service.spec.ts first; products.db.spec.ts for transport/persistence behavior                                                                                  |
+| Product repository/store context/entity reference | products.db.spec.ts; federation.db.spec.mts for gateway and real service boundaries                                                                                     |
+| SDL, named operations or generation               | schema:check, test:schema, codegen and affected typecheck/build; federation file for runtime contract changes                                                           |
+| Core client or gateway context/communication      | federation.db.spec.mts, especially validation reuse, concurrent headers and stopped core                                                                                |
+| Stores resolver/repository                        | stores.db.spec.ts; federation.db.spec.mts when public/federated behavior changes                                                                                        |
+| Product form or controls                          | product-form.test.tsx; store-workspace.test.tsx for submission/navigation changes                                                                                       |
+| Admin GraphQL mapping or headers                  | data-provider.test.ts; schema:check/codegen for operation edits; products.smoke.spec.mts for real transport                                                             |
+| Prototype transport, fixtures or persistence      | prototype.test.ts / prototype-events.test.ts / prototype-media.test.ts; prototype-controls.test.tsx for Reset; prototype browser files and affected real feature checks |
+| UI catalog and shared presentation                | ui-catalog.smoke.spec.mts; affected form/list tests and real browser checks; store-workspace.test.tsx for navigation/route changes                                      |
+| Store routes, query cache or mutation lifecycle   | store-workspace.test.tsx and focused test:smoke delayed-response/pending-mutation cases                                                                                 |
+| CI workflow, affected selection or ignore rules   | actionlint, Git-history failure checks, explicit Nx changed-file examples below, root lint/typecheck/build and a focused test through test:affected                     |
 
 Do not claim database, schema, gateway federation or store-switch coverage from health
 suites. Keep this mapping aligned with the changed runtime contracts.

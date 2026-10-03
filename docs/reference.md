@@ -5,8 +5,55 @@ with relations, child records and lifecycle operations. Both use the same gatewa
 context, with independent services and databases. See [Products usage](development.md#using-products),
 [Reference usage](development.md#using-reference) and [application boundaries](architecture/overview.md).
 
+Prototype also serves these same Event/Session screens with persisted mock relations,
+program ordering, status actions, Trash/Restore, History and Gallery/uploads. Uploaded
+image bytes persist in IndexedDB; metadata and History share the versioned snapshot. See [mode behavior and limitations](development.md#admin-data-modes), the concrete
+[Event mocks](../apps/admin/src/mocks/events.ts), [Session mocks](../apps/admin/src/mocks/sessions.ts),
+[Media mocks](../apps/admin/src/mocks/media.ts), [Event browser workflow](../tools/browser/prototype-events.smoke.spec.mts)
+and [Gallery browser workflow](../tools/browser/prototype-media.smoke.spec.mts).
+The [mode review mapping](testing.md#reviewing-both-admin-modes) pairs the concrete
+Prototype and Real checks for each implemented capability.
+
 Products and all Reference workflows use Aurora/MUI. Reference adds concrete domain behavior,
 relations and lifecycle examples. Choose only the capabilities needed by the module.
+
+## UI catalog and shared components
+
+The [UI catalog](../apps/admin/src/features/prototype/ui-catalog/ui-catalog.tsx) is available
+through **Prototype → UI catalog** after store selection. Its Body, Lists, Forms and States
+tabs demonstrate the actual Aurora theme and shared components. Local edits illustrate UI
+interactions without business operations or persisted mock data. The list dialog previews
+dialog controls; actual CRUD records continue opening their feature-owned full-page editors.
+See [usage and reset behavior](development.md#ui-catalog).
+
+| Presentation          | Shared implementation                                                                                                                                                                                               | Ownership and use                                                                                                                                                                |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Page header           | [PageHeader](../apps/admin/src/components/page-header.tsx)                                                                                                                                                          | Breadcrumbs, title and supplied actions. The feature owns routes and action availability.                                                                                        |
+| Body/form sections    | [ContentSection](../apps/admin/src/components/content-section.tsx)                                                                                                                                                  | Accessible heading, optional description and Aurora spacing. Used by Product/Venue/Speaker/Tag/Event/Session forms and catalog examples; fields and validation stay in the form. |
+| Form settings/actions | [EditorAside](../apps/admin/src/components/editor-aside.tsx)                                                                                                                                                        | Sticky desktop settings/summary and supplied actions, below fields on mobile. Form values, pending state and submission stay feature-owned.                                      |
+| List filters          | [FilterDrawer](../apps/admin/src/components/filter-drawer.tsx)                                                                                                                                                      | Responsive panel and close control. The feature supplies concrete filters and owns their values, URL and debounce.                                                               |
+| Row menus             | [RecordActions](../apps/admin/src/components/record-actions.tsx)                                                                                                                                                    | View/Edit/Delete or feature-supplied labels/callbacks. Does not decide permissions, deletion rules or perform mutations.                                                         |
+| Grid pagination       | [DataGridPagination](../apps/admin/src/components/data-grid-pagination.tsx)                                                                                                                                         | Aurora pagination presentation. The feature owns page, size, totals and request behavior.                                                                                        |
+| Refresh failures      | [QueryRefreshWarning](../apps/admin/src/components/query-refresh-warning.tsx)                                                                                                                                       | Retry warning that accompanies retained content/drafts. The feature owns fetching and retry.                                                                                     |
+| Inputs and primitives | MUI with [Aurora overrides](../apps/admin/src/theme/theme.ts), [StyledTextField](../apps/admin/src/layout/primitives/styled-text-field.tsx) and [local icons](../apps/admin/src/layout/primitives/iconify-icon.tsx) | Reuse directly. Use theme spacing, typography, semantic palette and existing interaction variants. Avoid wrappers that only rename MUI controls.                                 |
+
+Reuse the shared presentation directly and adapt the existing concrete feature examples
+for domain behavior. New shared components require demonstrated reuse and remain independent
+of Refine, GraphQL, storage and business rules. Keep draft/validation/submission state in the
+owning form/editor and query/selection/filter state in the owning list. Catalog form validation
+and local list sorting are presentation examples, not a universal feature contract.
+
+Choose contained primary actions, neutral soft secondary actions and error styling with
+confirmation for destructive actions. Keep labels/hints/errors attached to fields and focus
+the first invalid input. Preserve loading, empty, initial error, background refresh error,
+disabled and pending distinctions. Review shared presentation in the selected light/dark
+preset and at desktop/mobile sizes. Catalog previews use local state; business screens use
+the existing Refine/provider and captured store lifecycle.
+
+Focused checks: [catalog browser interactions](../tools/browser/ui-catalog.smoke.spec.mts),
+[Product form](../apps/admin/src/features/products/product-form.test.tsx),
+[Speaker/Tag forms](../apps/admin/src/features/reference/lookup-forms.test.tsx) and
+[Real route guard](../apps/admin/src/features/stores/store-workspace.test.tsx).
 
 ## Products: the Aurora CRUD reference
 

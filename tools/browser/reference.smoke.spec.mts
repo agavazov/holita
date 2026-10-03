@@ -53,7 +53,6 @@ test('Reference loads on demand and a delayed module cannot replace a newer stor
     },
   );
   try {
-    await page.getByRole('button', { name: 'Reference navigation', exact: true }).click();
     const started = page.waitForRequest(
       (request) => new URL(request.url()).pathname === modulePath,
     );
@@ -62,7 +61,6 @@ test('Reference loads on demand and a delayed module cannot replace a newer stor
     await expect(page.getByRole('status')).toHaveText('Loading Reference…');
     await switchStore(page, 'holita Plovdiv');
     await expect(page).toHaveURL(`${app.url}/stores/${storeB}/reference/venues`);
-    await page.getByRole('button', { name: 'Workspace navigation', exact: true }).click();
     await page.getByRole('menuitem', { name: 'Products', exact: true }).click();
     await expect(page.getByRole('link', { name: 'Plovdiv notebook', exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Create product', exact: true }).click();
@@ -77,7 +75,6 @@ test('Reference loads on demand and a delayed module cannot replace a newer stor
     await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Independent product draft');
     expect(venueStores).toEqual([]);
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-    await page.getByRole('button', { name: 'Reference navigation', exact: true }).click();
     await page.getByRole('menuitem', { name: 'Venues', exact: true }).click();
     await expect(page.getByRole('link', { name: 'Riverside Hall', exact: true })).toBeVisible();
     expect(venueStores.length).toBeGreaterThan(0);

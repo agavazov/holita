@@ -1,3 +1,4 @@
+import { ContentSection } from '../../../components/content-section.js';
 // Aurora Create Event composition with Session-owned fields and validation.
 import { Alert, Button, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useEffect, useId, useState, type ReactNode } from 'react';
@@ -146,75 +147,73 @@ export function SessionForm({
               )}
             </Alert>
           )}
-          <Typography variant="h6" component="h2">
-            Session details
-          </Typography>
-          <TextField
-            {...input('title')}
-            label="Title"
-            autoFocus
-            value={values.title}
-            onChange={(e) => {
-              change('title', e.target.value);
-            }}
-          />
-          <TextField
-            {...input('summary')}
-            label="Summary"
-            multiline
-            minRows={4}
-            value={values.summary}
-            onChange={(e) => {
-              change('summary', e.target.value);
-            }}
-          />
-          <Typography variant="h6" component="h2">
-            Schedule &amp; speakers
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            All times are in Europe/Sofia. Sessions must fit within the event.
-          </Typography>
-          <Stack direction={{ xs: 'column', lg: 'row' }} sx={{ gap: 2 }}>
+          <ContentSection title="Session details">
             <TextField
-              {...input('startsAt')}
-              label="Starts at"
-              type="datetime-local"
-              slotProps={{ inputLabel: { shrink: true } }}
-              value={values.startsAt}
+              {...input('title')}
+              label="Title"
+              autoFocus
+              value={values.title}
               onChange={(e) => {
-                change('startsAt', e.target.value);
+                change('title', e.target.value);
               }}
             />
             <TextField
-              {...input('endsAt')}
-              label="Ends at"
-              type="datetime-local"
-              slotProps={{ inputLabel: { shrink: true } }}
-              value={values.endsAt}
+              {...input('summary')}
+              label="Summary"
+              multiline
+              minRows={4}
+              value={values.summary}
               onChange={(e) => {
-                change('endsAt', e.target.value);
+                change('summary', e.target.value);
               }}
             />
-          </Stack>
-          <TextField
-            {...input('room')}
-            label="Room"
-            value={values.room}
-            onChange={(e) => {
-              change('room', e.target.value);
-            }}
-          />
-          <RelationSelect
-            {...input('speakerIds')}
-            label="Speakers"
-            resource={speakersResource(storeId)}
-            multiple
-            value={values.speakerIds}
-            onChange={(next) => {
-              change('speakerIds', Array.isArray(next) ? next : []);
-            }}
-            helperText={message('speakerIds') || "Search the store's speaker directory."}
-          />
+          </ContentSection>
+          <ContentSection
+            title="Schedule & speakers"
+            description="All times are in Europe/Sofia. Sessions must fit within the event."
+          >
+            <Stack direction={{ xs: 'column', lg: 'row' }} sx={{ gap: 2 }}>
+              <TextField
+                {...input('startsAt')}
+                label="Starts at"
+                type="datetime-local"
+                slotProps={{ inputLabel: { shrink: true } }}
+                value={values.startsAt}
+                onChange={(e) => {
+                  change('startsAt', e.target.value);
+                }}
+              />
+              <TextField
+                {...input('endsAt')}
+                label="Ends at"
+                type="datetime-local"
+                slotProps={{ inputLabel: { shrink: true } }}
+                value={values.endsAt}
+                onChange={(e) => {
+                  change('endsAt', e.target.value);
+                }}
+              />
+            </Stack>
+            <TextField
+              {...input('room')}
+              label="Room"
+              value={values.room}
+              onChange={(e) => {
+                change('room', e.target.value);
+              }}
+            />
+            <RelationSelect
+              {...input('speakerIds')}
+              label="Speakers"
+              resource={speakersResource(storeId)}
+              multiple
+              value={values.speakerIds}
+              onChange={(next) => {
+                change('speakerIds', Array.isArray(next) ? next : []);
+              }}
+              helperText={message('speakerIds') || "Search the store's speaker directory."}
+            />
+          </ContentSection>
         </Stack>
       </Paper>
       <EditorAside
