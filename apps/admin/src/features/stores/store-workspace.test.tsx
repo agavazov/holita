@@ -299,39 +299,47 @@ describe('store-scoped Products UI', () => {
     });
   });
 
-  it('keeps a delayed save in its store while browser history and feedback use the active locale', async () => {
+  it('uses the active locale after a delayed save returns through same-editor history', async () => {
     const delayed = deferredResponse();
     const transport = mockGraphQL((call) =>
-      call.operation === 'UpdateProduct' ? delayed.promise : defaultResult(call),
+      call.operation === 'CreateProduct' ? delayed.promise : defaultResult(call),
     );
-    const editorPath = `/en/stores/${storeA}/products/${product().id}/edit`;
-    const user = mount(editorPath, `/bg/stores/${storeA}/products`);
-    await screen.findByDisplayValue('Sofia notebook');
+    const user = mount(`/bg/stores/${storeA}/products/create`);
+    await user.type(await screen.findByLabelText('Име'), 'Нова тетрадка');
+    await user.type(screen.getByLabelText('Артикулен номер'), 'NEW-1');
+    await user.click(screen.getByRole('button', { name: 'Език' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'English' }));
+    expect(await screen.findByLabelText('Name')).toHaveValue('Нова тетрадка');
+    expect(screen.getByLabelText('Current route')).toHaveTextContent(
+      `/en/stores/${storeA}/products/create`,
+    );
+
     await user.click(screen.getByRole('button', { name: 'Save product' }));
     await waitFor(() => {
-      expect(transport.calls.some((call) => call.operation === 'UpdateProduct')).toBe(true);
+      expect(transport.calls.some((call) => call.operation === 'CreateProduct')).toBe(true);
     });
+    expect(screen.getByRole('button', { name: 'Language' })).toBeDisabled();
+
     await act(async () => {
       await user.back();
     });
-    expect(await screen.findByRole('dialog')).toHaveTextContent('Please wait');
-    await waitFor(() => {
-      expect(screen.getByLabelText('Current route')).toHaveTextContent(editorPath);
-    });
+    expect(await screen.findByLabelText('Име')).toHaveValue('Нова тетрадка');
+    expect(screen.getByLabelText('Current route')).toHaveTextContent(
+      `/bg/stores/${storeA}/products/create`,
+    );
+    expect(screen.queryByText('Моля, изчакайте')).not.toBeInTheDocument();
+
     await act(async () => {
-      delayed.resolve(result({ updateProduct: product() }));
+      delayed.resolve(result({ createProduct: product(storeA, 'Нова тетрадка') }));
       await delayed.promise;
     });
     expect(screen.getByLabelText('Current route')).toHaveTextContent(
-      `/en/stores/${storeA}/products`,
-    );
-    expect(await screen.findByText('Product saved.')).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'Language' }));
-    await user.click(screen.getByRole('menuitemradio', { name: 'Български' }));
-    expect(await screen.findByText('Продуктът е запазен.')).toBeVisible();
-    expect(screen.getByLabelText('Current route')).toHaveTextContent(
       `/bg/stores/${storeA}/products`,
     );
+    expect(await screen.findByText('Продуктът е запазен.')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Език' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'English' }));
+    expect(await screen.findByText('Product saved.')).toBeVisible();
   });
 
   it('keeps a late failed update from replacing another store form or showing an obsolete error', async () => {

@@ -11,9 +11,11 @@ import type {
   GetProductQuery,
   ProductDetailsFragment,
 } from '../../generated/graphql/operations.js';
-import { useLocalization } from '../../localization/localization-provider.js';
+import {
+  useLocaleSwitchPending,
+  useLocalization,
+} from '../../localization/localization-provider.js';
 import { localizedPath } from '../../localization/locale.js';
-import { useUnsavedChanges } from '../reference/use-unsaved-changes.js';
 import { ProductForm } from './product-form.js';
 
 type ProductEditorProps = { storeId: string; onSaved: () => void };
@@ -45,7 +47,7 @@ export function ProductEditor({ storeId, onSaved }: ProductEditorProps) {
     mutationMode: 'pessimistic',
   });
   const pending = create.mutation.isPending || update.mutation.isPending;
-  const navigation = useUnsavedChanges(pending);
+  useLocaleSwitchPending(pending);
 
   function save(values: CreateProductInput) {
     if (submitting.current) return;
@@ -123,7 +125,6 @@ export function ProductEditor({ storeId, onSaved }: ProductEditorProps) {
           }}
         />
       )}
-      {navigation.dialog}
       {productId && product.query.isLoadingError && (
         <Button
           sx={{ m: 3, alignSelf: 'flex-start' }}

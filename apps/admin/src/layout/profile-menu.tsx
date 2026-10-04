@@ -19,8 +19,9 @@ import {
   listItemIconClasses,
   paperClasses,
 } from '@mui/material';
-import { useAppearance } from '../theme/preferences.js';
+import type { TranslationKey } from '../localization/dictionaries.js';
 import { useLocalization } from '../localization/localization-provider.js';
+import { useAppearance } from '../theme/preferences.js';
 import IconifyIcon from './primitives/iconify-icon.js';
 import type { ShellIcon } from './primitives/icons.js';
 import StatusAvatar from './primitives/status-avatar.js';
@@ -29,27 +30,27 @@ import { exampleProfile as user } from './demo-data.js';
 export default function ProfileMenu({ sidebar = false }: { sidebar?: boolean }) {
   const { t } = useLocalization();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-  const [examplePage, setExamplePage] = useState<string | null>(null);
+  const [examplePage, setExamplePage] = useState<TranslationKey | null>(null);
   const { isDark, setMode } = useAppearance();
   const close = () => {
     setAnchorEl(null);
   };
-  const showExample = (name: string) => {
+  const showExample = (key: TranslationKey) => {
     close();
-    setExamplePage(name);
+    setExamplePage(key);
   };
-  const item = (label: string, icon: ShellIcon) => (
+  const item = (key: TranslationKey, icon: ShellIcon) => (
     <MenuItem
-      key={label}
+      key={key}
       onClick={() => {
-        showExample(label);
+        showExample(key);
       }}
       sx={{ gap: 1 }}
     >
       <ListItemIcon sx={{ [`&.${listItemIconClasses.root}`]: { minWidth: 'unset !important' } }}>
         <IconifyIcon icon={icon} sx={{ color: 'text.secondary' }} />
       </ListItemIcon>
-      {label}
+      {t(key)}
     </MenuItem>
   );
   return (
@@ -115,8 +116,8 @@ export default function ProfileMenu({ sidebar = false }: { sidebar?: boolean }) 
         </Stack>
         <Divider />
         <Box sx={{ py: 1 }}>
-          {item(t('shell.accessibility'), 'material-symbols:accessible-forward-rounded')}
-          {item(t('shell.preferences'), 'material-symbols:settings-outline-rounded')}
+          {item('shell.accessibility', 'material-symbols:accessible-forward-rounded')}
+          {item('shell.preferences', 'material-symbols:settings-outline-rounded')}
           <MenuItem
             role="menuitemcheckbox"
             aria-checked={isDark}
@@ -142,8 +143,8 @@ export default function ProfileMenu({ sidebar = false }: { sidebar?: boolean }) 
         </Box>
         <Divider />
         <Box sx={{ py: 1 }}>
-          {item(t('shell.accountSettings'), 'material-symbols:manage-accounts-outline-rounded')}
-          {item(t('shell.helpCenter'), 'material-symbols:question-mark-rounded')}
+          {item('shell.accountSettings', 'material-symbols:manage-accounts-outline-rounded')}
+          {item('shell.helpCenter', 'material-symbols:question-mark-rounded')}
         </Box>
         <Divider />
         <Typography
@@ -161,7 +162,7 @@ export default function ProfileMenu({ sidebar = false }: { sidebar?: boolean }) 
         }}
         aria-labelledby="example-profile-title"
       >
-        <DialogTitle id="example-profile-title">{examplePage}</DialogTitle>
+        <DialogTitle id="example-profile-title">{examplePage ? t(examplePage) : null}</DialogTitle>
         <DialogContent>{t('shell.exampleProfileMessage')}</DialogContent>
         <DialogActions>
           <Button
