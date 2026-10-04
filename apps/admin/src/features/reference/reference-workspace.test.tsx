@@ -73,7 +73,7 @@ describe('Reference workspace', () => {
       });
       await user.click(confirm);
       expect(await within(dialog).findByRole('alert')).toHaveTextContent(
-        'Something went wrong. Try again.',
+        'This record is still in use and cannot be deleted.',
       );
       await waitFor(() => expect(confirm).toBeEnabled());
       await user.click(confirm);
@@ -118,11 +118,21 @@ describe('Reference workspace', () => {
     await user.click(screen.getByRole('button', { name: 'Delete selected' }));
     await user.click(screen.getByRole('button', { name: 'Delete venues' }));
     expect(
-      await screen.findByText(/Second venue: Something went wrong\. Try again\./),
+      await screen.findByText(
+        /Second venue: This record is still in use and cannot be deleted\./,
+      ),
     ).toBeInTheDocument();
     expect(rows).toEqual([second]);
+    await act(async () => {
+      await user.navigate(`/bg/stores/${storeA}/reference/venues`);
+    });
+    expect(
+      await screen.findByText(
+        /Second venue: Записът все още се използва и не може да бъде изтрит\./,
+      ),
+    ).toBeInTheDocument();
     rejectSecond = false;
-    await user.click(screen.getByRole('button', { name: 'Delete venue' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: /^Изтрий/ }));
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });

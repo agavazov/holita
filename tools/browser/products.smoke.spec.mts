@@ -138,7 +138,7 @@ test('Products CRUD works through the real gateway for both stores', async ({
   await fillProduct(page, 'Duplicate', 'SMOKE-001');
   await page.getByRole('button', { name: 'Save product' }).click();
   await expect(
-    page.getByRole('alert').filter({ hasText: 'Something went wrong. Try again.' }),
+    page.getByRole('alert').filter({ hasText: 'A record with this value already exists.' }),
   ).toBeVisible();
   await switchStore(page, 'holita Plovdiv');
   await expect(page.getByRole('link', { name: 'Plovdiv notebook', exact: true })).toBeVisible();

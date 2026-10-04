@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '../../../test/render.js';
+import { act, fireEvent, render, screen, waitFor, within } from '../../../test/render.js';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { describe, expect, it } from 'vitest';
@@ -76,6 +76,33 @@ describe('Independent gallery editing', () => {
     await user.click(gallery.getByRole('button', { name: 'Refresh previews' }));
     await gallery.findByLabelText('Image 0.png');
     expect(gallery.queryByRole('alert')).not.toBeInTheDocument();
+  });
+  it('retranslates an invalid upload error after the locale changes', async () => {
+    mockGraphQL(respond);
+    const { user } = mount();
+    await screen.findByLabelText('Title', undefined, { timeout: 10000 });
+    await user.click(screen.getByRole('tab', { name: 'Content & media' }));
+    const gallery = within(screen.getByRole('region', { name: 'Event gallery' }));
+    await gallery.findByLabelText('Image 0.png');
+    const fileInput = gallery.getByLabelText('Choose gallery image');
+    expect(fileInput).toBeEnabled();
+    Object.defineProperty(fileInput, 'files', {
+      configurable: true,
+      value: [new File([], 'empty.png', { type: 'image/png' })],
+    });
+    fireEvent.change(fileInput);
+    await gallery.findByText('Choose a JPEG, PNG or WebP image of at most 5 MiB.');
+    await user.click(screen.getByRole('button', { name: 'Language' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Български' }));
+    const localizedGallery = within(
+      await screen.findByRole('region', { name: 'Галерия на събитието' }),
+    );
+    await localizedGallery.findByText(
+      'Изберете изображение във формат JPEG, PNG или WebP с размер до 5 MiB.',
+    );
+    expect(
+      localizedGallery.queryByText('Choose a JPEG, PNG or WebP image of at most 5 MiB.'),
+    ).not.toBeInTheDocument();
   });
   it('keeps a failed order draft, confirms navigation, cancels to server order and saves alt text without submitting the event', async () => {
     const transport = mockGraphQL((call) => {

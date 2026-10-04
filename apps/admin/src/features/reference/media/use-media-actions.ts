@@ -1,9 +1,20 @@
 import { useCustomMutation, useInvalidate } from '@refinedev/core';
 import { useEffect, useRef, useState } from 'react';
-import type { DataError } from '../../../data/data-provider.js';
+import { DataError } from '../../../data/data-error.js';
 import type { MediaAction, MediaResult } from '../../../data/media-provider.js';
 import { directUpload } from '../../../data/direct-upload.js';
-import { useLocalization } from '../../../localization/localization-provider.js';
+import type { TranslationKey } from '../../../localization/dictionaries.js';
+
+type MediaUploadError =
+  | {
+      key: Extract<
+        TranslationKey,
+        'reference.invalidImage' | 'reference.noUploadTarget' | 'reference.uploadFailed'
+      >;
+    }
+  | { cause: DataError };
+
+const missingUploadTarget = new Error('Missing upload target');
 
 export function useMediaMutation() {
   const invalidate = useInvalidate();
@@ -17,13 +28,12 @@ export function useMediaMutation() {
   });
 }
 export function useMediaUpload(resource: string) {
-  const { t } = useLocalization();
   const mutation = useMediaMutation();
   const active = useRef<AbortController | null>(null);
   const [state, setState] = useState<{ name: string; percent: number; finishing: boolean } | null>(
     null,
   );
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<MediaUploadError | null>(null);
   useEffect(
     () => () => {
       active.current?.abort();
@@ -38,7 +48,7 @@ export function useMediaUpload(resource: string) {
       file.size < 1 ||
       file.size > 5 * 1024 * 1024
     ) {
-      setError(t('reference.invalidImage'));
+      setError({ key: 'reference.invalidImage' });
       return;
     }
     const controller = new AbortController();
@@ -56,7 +66,7 @@ export function useMediaUpload(resource: string) {
         errorNotification: false,
       });
       controller.signal.throwIfAborted();
-      if (!('intent' in response.data)) throw new Error(t('reference.noUploadTarget'));
+      if (!('intent' in response.data)) throw missingUploadTarget;
       await directUpload(response.data.intent, file, controller.signal, (percent) => {
         if (!controller.signal.aborted) setState({ name: file.name, percent, finishing: false });
       });
@@ -72,9 +82,11 @@ export function useMediaUpload(resource: string) {
     } catch (failure) {
       if (!controller.signal.aborted) {
         setError(
-          failure instanceof Error && failure.message === t('reference.noUploadTarget')
-            ? failure.message
-            : t('reference.uploadFailed'),
+          failure === missingUploadTarget
+            ? { key: 'reference.noUploadTarget' }
+            : failure instanceof DataError
+              ? { cause: failure }
+              : { key: 'reference.uploadFailed' },
         );
       }
     } finally {

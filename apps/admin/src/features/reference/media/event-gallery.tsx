@@ -97,7 +97,13 @@ export function EventGallery({
     ? draft.flatMap((id) => gallery.result.data.filter((row) => row.id === id))
     : gallery.result.data;
   const mutationError = action.mutation.error || update.mutation.error || deletion.mutation.error;
-  const error = mutationError ? localizedErrorMessage(mutationError, t) : upload.error;
+  const error = mutationError
+    ? localizedErrorMessage(mutationError, t)
+    : upload.error
+      ? 'cause' in upload.error
+        ? localizedErrorMessage(upload.error.cause, t)
+        : t(upload.error.key)
+      : null;
   function move(id: string, target: string) {
     if (locked || id === target) return;
     const next = rows.map((row) => row.id),

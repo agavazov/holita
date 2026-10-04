@@ -34,6 +34,7 @@ import StyledTextField from '../../layout/primitives/styled-text-field.js';
 import { ProductFilters } from './product-filters.js';
 import { useRecordDeletion } from '../use-record-deletion.js';
 import { RecordActions } from '../../components/record-actions.js';
+import { localizedErrorMessage } from '../../localization/data-error.js';
 import { localizedPath } from '../../localization/locale.js';
 import { useLocalization } from '../../localization/localization-provider.js';
 
@@ -489,7 +490,7 @@ export function ProductList({
               {t('products.deleteFailures', { count: failures.length })}
               {failures.map((failure) => (
                 <Typography key={failure.id} variant="body2">
-                  {failure.name}: {t('common.genericError')}
+                  {failure.name}: {localizedErrorMessage(new Error(failure.message), t)}
                 </Typography>
               ))}
             </Alert>
