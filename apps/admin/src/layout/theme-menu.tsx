@@ -21,6 +21,7 @@ import {
 } from '@mui/material';
 import { themePresets, type ThemePreset } from '../theme/config.js';
 import { useAppearance } from '../theme/preferences.js';
+import { useLocalization } from '../localization/localization-provider.js';
 import { allPalettes, THEME_DISPLAY_NAMES } from '../theme/palettes/index.js';
 import { COLOR_GROUPS } from '../theme/primaryColorOverride.js';
 import IconifyIcon from './primitives/iconify-icon.js';
@@ -63,6 +64,7 @@ function ThemeRadio({ checked }: { checked: boolean }) {
   );
 }
 export default function ThemeMenu() {
+  const { t } = useLocalization();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [defaultOpen, setDefaultOpen] = useState(true);
   const { appearance, isDark, setPreset, setMode, setPrimaryColor } = useAppearance();
@@ -139,7 +141,7 @@ export default function ThemeMenu() {
           shape="circle"
           color="neutral"
           variant="soft"
-          aria-label="Theme"
+          aria-label={t('shell.theme')}
           aria-haspopup="menu"
           aria-expanded={Boolean(anchorEl)}
           onClick={(event) => {
@@ -168,7 +170,10 @@ export default function ThemeMenu() {
         disableScrollLock
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-        slotProps={{ paper: { sx: { minWidth: 288 } }, list: { 'aria-label': 'Theme presets' } }}
+        slotProps={{
+          paper: { sx: { minWidth: 288 } },
+          list: { 'aria-label': t('shell.themePresets') },
+        }}
       >
         <Box sx={{ [`& .${listItemButtonClasses.root}`]: { borderRadius: 0 } }}>
           <List dense disablePadding>
@@ -178,7 +183,7 @@ export default function ThemeMenu() {
               secondaryAction={
                 <IconButton
                   edge="end"
-                  aria-label="Show default themes"
+                  aria-label={t('shell.showDefaultThemes')}
                   aria-expanded={defaultOpen}
                   onClick={() => {
                     setDefaultOpen(!defaultOpen);
@@ -205,7 +210,7 @@ export default function ThemeMenu() {
                 <ListItemIcon>
                   <ThemeRadio checked={appearance.preset.startsWith('default-')} />
                 </ListItemIcon>
-                <ListItemText primary="Default" />
+                <ListItemText primary={t('shell.defaultTheme')} />
               </ListItemButton>
             </ListItem>
             <Collapse in={defaultOpen} timeout="auto" unmountOnExit>
@@ -235,7 +240,7 @@ export default function ThemeMenu() {
                     <ListItemIcon>
                       <ThemeRadio checked={appearance.mode === 'system'} />
                     </ListItemIcon>
-                    <ListItemText primary="System" />
+                    <ListItemText primary={t('shell.systemTheme')} />
                   </ListItemButton>
                 </ListItem>
               </List>
@@ -249,14 +254,16 @@ export default function ThemeMenu() {
               variant="subtitle2"
               sx={{ color: 'text.secondary', fontWeight: 600, minWidth: 100 }}
             >
-              Primary Color
+              {t('shell.primaryColor')}
             </Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(9, 1fr)', gap: '5px' }}>
               {COLOR_GROUPS.map((group) => (
                 <Box
                   component="button"
                   key={group.key}
-                  aria-label={`Primary color ${THEME_DISPLAY_NAMES[group.key] ?? group.key}`}
+                  aria-label={t('shell.primaryColorChoice', {
+                    name: THEME_DISPLAY_NAMES[group.key] ?? group.key,
+                  })}
                   aria-pressed={primaryColor === group.main}
                   onClick={() => {
                     setPrimaryColor(group.main);

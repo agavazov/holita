@@ -1,5 +1,5 @@
 // Adapted from Aurora layouts/main-layout/sidenav/StackedSidenav.tsx.
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   Backdrop,
   Box,
@@ -16,6 +16,7 @@ import {
 } from '@mui/material';
 import { cssVarRgba } from '../theme/utils.js';
 import { useAppearance } from '../theme/preferences.js';
+import { useLocalization } from '../localization/localization-provider.js';
 import IconifyIcon from './primitives/iconify-icon.js';
 import Logo from './primitives/logo.js';
 import StatusAvatar from './primitives/status-avatar.js';
@@ -42,11 +43,13 @@ export default function StackedSidenav({
   onToggle,
   onNavigate,
 }: Props) {
+  const { t } = useLocalization();
   const activeGroup = groups.find((group) => containsSection(group.items, section)) ?? groups[0];
   const [selectedKey, setSelectedKey] = useState(activeGroup?.key);
   const [lastSection, setLastSection] = useState(section);
   const [mouseEntered, setMouseEntered] = useState(false);
   const [focusEntered, setFocusEntered] = useState(false);
+  const toggleButtonRef = useRef<HTMLButtonElement>(null);
   if (lastSection !== section) {
     setLastSection(section);
     setSelectedKey(activeGroup?.key);
@@ -64,7 +67,7 @@ export default function StackedSidenav({
   return (
     <Box
       component="nav"
-      aria-label="Workspace navigation"
+      aria-label={t('shell.workspaceNavigation')}
       className="stacked-sidenav"
       sx={{
         width: { md: width },
@@ -95,9 +98,7 @@ export default function StackedSidenav({
             if (event.key === 'Escape' && collapsed) {
               setMouseEntered(false);
               setFocusEntered(false);
-              event.currentTarget
-                .querySelector<HTMLButtonElement>('button[aria-label="Expand navigation"]')
-                ?.focus();
+              toggleButtonRef.current?.focus();
             }
           }}
           onMouseLeave={() => {
@@ -125,7 +126,7 @@ export default function StackedSidenav({
                 <Logo showName={false} />
               </Toolbar>
               <Box sx={{ p: 2, flex: 1 }}>
-                <List aria-label="Navigation groups" sx={{ py: 0 }}>
+                <List aria-label={t('shell.navigationGroups')} sx={{ py: 0 }}>
                   {groups.map((group) => (
                     <ListItem
                       key={group.key}
@@ -151,7 +152,7 @@ export default function StackedSidenav({
                       }}
                     >
                       <IconButton
-                        aria-label={`${group.label} navigation`}
+                        aria-label={t('shell.groupNavigation', { name: group.label })}
                         aria-pressed={selectedMenu?.key === group.key}
                         color="primary"
                         onFocus={() => {
@@ -185,7 +186,10 @@ export default function StackedSidenav({
               </Box>
               <Toolbar sx={{ padding: '0 !important', display: 'flex', justifyContent: 'center' }}>
                 <IconButton
-                  aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+                  ref={toggleButtonRef}
+                  aria-label={
+                    collapsed ? t('shell.expandNavigation') : t('shell.collapseNavigation')
+                  }
                   onClick={() => {
                     setFocusEntered(false);
                     setMouseEntered(false);
@@ -218,7 +222,7 @@ export default function StackedSidenav({
               <Toolbar variant="appbar" sx={{ p: { xs: 2 }, pr: { xs: 1 } }}>
                 <Stack direction="row" sx={{ alignItems: 'center', gap: 1, width: 1 }}>
                   <StatusAvatar
-                    alt={exampleProfile.name}
+                    alt={t(exampleProfile.nameKey)}
                     src={exampleProfile.avatar}
                     sx={{ width: 36, height: 36 }}
                   />
@@ -226,7 +230,7 @@ export default function StackedSidenav({
                     variant="body2"
                     sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}
                   >
-                    {exampleProfile.name}
+                    {t(exampleProfile.nameKey)}
                   </Typography>
                   <Box sx={{ ml: 'auto' }}>
                     <ProfileMenu sidebar />
@@ -237,7 +241,7 @@ export default function StackedSidenav({
                 <List
                   dense
                   role="menu"
-                  aria-label={selectedMenu?.label ?? 'Navigation'}
+                  aria-label={selectedMenu?.label ?? t('common.navigation')}
                   subheader={
                     <ListSubheader
                       component="div"

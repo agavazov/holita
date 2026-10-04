@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '../../../test/render.js';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -15,7 +15,7 @@ import {
   type GraphQLCall,
 } from '../../../test/graphql-fixture.js';
 
-const list = `/stores/${storeA}/reference/events`;
+const list = `/en/stores/${storeA}/reference/events`;
 function mount(search = '') {
   const router = createMemoryRouter(
     [
@@ -251,7 +251,7 @@ describe('Event list and overview', () => {
           : result({ referenceEvents: { items: [], total: 0 } }),
     );
     const { user } = mount('?q=missing');
-    expect(await screen.findByText(/Reference temporarily unavailable/)).toBeInTheDocument();
+    expect(await screen.findByText('Something went wrong. Try again.')).toBeInTheDocument();
     expect(screen.queryByText('No events match these filters.')).not.toBeInTheDocument();
     failed = false;
     await user.click(screen.getByRole('button', { name: 'Retry' }));
@@ -276,14 +276,14 @@ describe('Event list and overview', () => {
       expect(transport.calls.some((call) => call.operation === 'DeleteReferenceEvent')).toBe(true);
     });
     await act(async () => {
-      await router.navigate(`/stores/${storeB}/reference/events`);
+      await router.navigate(`/en/stores/${storeB}/reference/events`);
     });
     await screen.findByRole('link', { name: 'Plovdiv forum' });
     await act(async () => {
       delayed.resolve(result({ deleteReferenceEvent: event() }));
       await delayed.promise;
     });
-    expect(router.state.location.pathname).toBe(`/stores/${storeB}/reference/events`);
+    expect(router.state.location.pathname).toBe(`/en/stores/${storeB}/reference/events`);
     expect(screen.queryByText('Event moved to trash.')).not.toBeInTheDocument();
     expect(transport.calls.find((call) => call.operation === 'DeleteReferenceEvent')?.storeId).toBe(
       storeA,

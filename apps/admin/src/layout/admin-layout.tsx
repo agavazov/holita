@@ -16,6 +16,7 @@ import {
   useTheme,
 } from '@mui/material';
 import { version } from '../../package.json';
+import { useLocalization } from '../localization/localization-provider.js';
 import IconifyIcon from './primitives/iconify-icon.js';
 import Logo from './primitives/logo.js';
 import StyledTextField from './primitives/styled-text-field.js';
@@ -41,11 +42,13 @@ function StoreSelector({
   storesLoading,
   onStoreChange,
 }: Pick<AdminLayoutProps, 'stores' | 'selectedStoreId' | 'storesLoading' | 'onStoreChange'>) {
+  const { t } = useLocalization();
+
   return (
     <StyledTextField
       select
       id="store-switcher"
-      label="Store"
+      label={t('shell.store')}
       size="small"
       value={selectedStoreId ?? ''}
       onChange={(event) => {
@@ -54,13 +57,13 @@ function StoreSelector({
       slotProps={{
         select: {
           displayEmpty: true,
-          inputProps: { 'aria-label': 'Store', 'aria-busy': storesLoading },
+          inputProps: { 'aria-label': t('shell.store'), 'aria-busy': storesLoading },
         },
       }}
       sx={{ width: { xs: '100%', md: 184 }, flexShrink: 0 }}
     >
       <MenuItem value="" disabled>
-        {storesLoading ? 'Loading stores…' : 'Select a store'}
+        {storesLoading ? t('shell.loadingStores') : t('shell.selectStore')}
       </MenuItem>
       {stores.map((store) => (
         <MenuItem value={store.id} key={store.id}>
@@ -72,6 +75,7 @@ function StoreSelector({
 }
 export function AdminLayout(props: AdminLayoutProps) {
   const { selectedStoreId, selectedSection, onSectionChange, navigationGroups, children } = props;
+  const { localeSwitchPending, t } = useLocalization();
   const theme = useTheme();
   const mobile = useMediaQuery(theme.breakpoints.down('md'));
   const wide = useMediaQuery(theme.breakpoints.up('lg'));
@@ -127,7 +131,7 @@ export function AdminLayout(props: AdminLayoutProps) {
                 color="neutral"
                 variant="soft"
                 shape="circle"
-                aria-label="Open navigation"
+                aria-label={t('common.openNavigation')}
                 aria-expanded={mobileOpen}
                 onClick={() => {
                   setMobileOpen(true);
@@ -149,7 +153,7 @@ export function AdminLayout(props: AdminLayoutProps) {
               direction="row"
               sx={{ gap: { xs: 0.5, sm: 1 }, alignItems: 'center', ml: 'auto' }}
             >
-              <LanguageMenu />
+              <LanguageMenu disabled={localeSwitchPending} />
               <ThemeMenu />
               <NotificationMenu />
               <ProfileMenu />
@@ -173,7 +177,7 @@ export function AdminLayout(props: AdminLayoutProps) {
         onClose={() => {
           setMobileOpen(false);
         }}
-        slotProps={{ paper: { role: 'dialog', 'aria-label': 'Navigation' } }}
+        slotProps={{ paper: { role: 'dialog', 'aria-label': t('common.navigation') } }}
         sx={{
           display: { xs: 'block', md: 'none' },
           [`& .${drawerClasses.paper}`]: { pt: 3, boxSizing: 'border-box', width: 300 },

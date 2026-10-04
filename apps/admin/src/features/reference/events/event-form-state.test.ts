@@ -42,7 +42,7 @@ describe('Event form values', () => {
       startsAt: '2026-03-29T03:30',
       endsAt: '2026-03-29T05:00',
     };
-    expect(validateEventDraft(draft).startsAt).toMatch(/clocks change/);
+    expect(validateEventDraft(draft).startsAt).toBe('Choose a valid date and time.');
     expect(validateEventDraft(draft).registrationClosesOn).toBe('Close by the event start date.');
     draft.startsAt = '2026-11-01T15:00';
     draft.endsAt = '2026-11-01T14:00';

@@ -4,6 +4,8 @@ import { PageHeader } from '../../../components/page-header.js';
 import { QueryRefreshWarning } from '../../../components/query-refresh-warning.js';
 import { useRef } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { useLocalization } from '../../../localization/localization-provider.js';
+import { localizedPath } from '../../../localization/locale.js';
 
 import { speakersResource, type DataError } from '../../../data/data-provider.js';
 import type {
@@ -19,9 +21,10 @@ type SpeakerEditorProps = { storeId: string; onSaved: () => void };
 export function SpeakerEditor({ storeId, onSaved }: SpeakerEditorProps) {
   const { speakerId } = useParams();
   const navigate = useNavigate();
+  const { locale, t } = useLocalization();
   const resource = speakersResource(storeId);
   const submitting = useRef(false);
-  const listPath = `/${resource}`;
+  const listPath = localizedPath(locale, `/${resource}`);
   const speaker = useOne<GetReferenceSpeakerQuery['referenceSpeaker'], DataError>({
     resource,
     ...(speakerId ? { id: speakerId } : {}),
@@ -66,12 +69,12 @@ export function SpeakerEditor({ storeId, onSaved }: SpeakerEditorProps) {
   const header = (
     <PageHeader
       embedded
-      title={speakerId ? 'Edit speaker' : 'Create speaker'}
+      title={speakerId ? t('reference.editSpeaker') : t('reference.createSpeaker')}
       breadcrumbs={[
-        { label: 'Home', to: '/' },
-        { label: 'Reference' },
-        { label: 'Speakers', to: listPath },
-        { label: speakerId ? 'Edit speaker' : 'Create speaker' },
+        { label: t('common.home'), to: localizedPath(locale, '/') },
+        { label: t('shell.reference') },
+        { label: t('shell.speakers'), to: listPath },
+        { label: speakerId ? t('reference.editSpeaker') : t('reference.createSpeaker') },
       ]}
     />
   );
@@ -81,7 +84,7 @@ export function SpeakerEditor({ storeId, onSaved }: SpeakerEditorProps) {
       {changes.dialog}
       {speakerId && speaker.query.isRefetchError && (
         <QueryRefreshWarning
-          message={speaker.query.error.message}
+          message={t('common.genericError')}
           refreshing={speaker.query.isFetching}
           onRetry={() => {
             void speaker.query.refetch();
@@ -106,11 +109,11 @@ export function SpeakerEditor({ storeId, onSaved }: SpeakerEditorProps) {
                 void speaker.query.refetch();
               }}
             >
-              Retry
+              {t('common.retry')}
             </Button>
           }
         >
-          {speaker.query.error.message}
+          {t('common.genericError')}
         </Alert>
       ) : (
         <SpeakerForm
@@ -136,7 +139,7 @@ export function SpeakerEditor({ storeId, onSaved }: SpeakerEditorProps) {
             void navigate(listPath);
           }}
         >
-          Back to speakers
+          {t('reference.backToSpeakers')}
         </Button>
       )}
     </Stack>

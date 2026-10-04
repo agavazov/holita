@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { DataError } from '../../data/data-provider.js';
+import { useLocalization } from '../../localization/localization-provider.js';
 
 type LookupRow = { id: string; name: string; active: boolean };
 type Props = {
@@ -50,6 +51,7 @@ export function RelationSelect({
   disabled = false,
   activeOnly = true,
 }: Props) {
+  const { t } = useLocalization();
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -105,11 +107,11 @@ export function RelationSelect({
                     if (selectedIds.length) void selected.query.refetch();
                   }}
                 >
-                  Retry
+                  {t('common.retry')}
                 </Button>
               }
             >
-              {failure.message}
+              {t('common.genericError')}
             </Alert>
           )}
           {(choices.result.total ?? 0) > 20 && (
@@ -134,7 +136,9 @@ export function RelationSelect({
         options={[...options.keys()]}
         getOptionLabel={(key) => {
           const row = options.get(key);
-          return row ? `${row.name}${row.active ? '' : ' (inactive)'}` : 'Loading…';
+          return row
+            ? `${row.name}${row.active ? '' : ` (${t('reference.inactive').toLowerCase()})`}`
+            : t('common.loading');
         }}
         getOptionDisabled={(key) =>
           activeOnly && options.get(key)?.active === false && !selectedIds.includes(key)
@@ -148,14 +152,16 @@ export function RelationSelect({
           else if (reason === 'selectOption') setSearch('');
         }}
         loading={choices.query.isFetching}
-        noOptionsText={failure ? 'Could not load records' : 'No matching records'}
+        noOptionsText={
+          failure ? t('reference.recordsLoadError') : t('reference.noMatchingRecords')
+        }
         slots={{ paper: RelationPaper }}
         renderInput={(params) => (
           <TextField
             {...params}
             name={name}
             label={label}
-            placeholder="Search by name"
+            placeholder={t('reference.searchByNameShort')}
             error={error}
             helperText={helperText}
           />

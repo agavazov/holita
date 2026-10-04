@@ -20,7 +20,10 @@ import { useRef, useState } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router';
 import { sessionsResource, type DataError } from '../../../data/data-provider.js';
 import type { ReferenceSessionDetailsFragment } from '../../../generated/graphql/operations.js';
-import { eventTime } from '../events/event-time.js';
+import { useLocalization } from '../../../localization/localization-provider.js';
+import { localizedErrorMessage } from '../../../localization/data-error.js';
+import { localizedPath } from '../../../localization/locale.js';
+import type { TranslationKey } from '../../../localization/dictionaries.js';
 import { useUnsavedChanges } from '../use-unsaved-changes.js';
 import { useSessionOrder } from './use-session-order.js';
 
@@ -34,6 +37,7 @@ export function SessionList({
   search: string;
 }) {
   const navigate = useNavigate();
+  const { locale, t, formatDate } = useLocalization();
   const resource = sessionsResource(storeId, eventId);
   const sessions = useList<ReferenceSessionDetailsFragment, DataError>({
     resource,
@@ -43,7 +47,10 @@ export function SessionList({
   const [draft, setDraft] = useState<ReferenceSessionDetailsFragment[] | null>(null);
   const [deleting, setDeleting] = useState<ReferenceSessionDetailsFragment | null>(null);
   const [reloading, setReloading] = useState(false);
-  const [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState<{
+    key: TranslationKey;
+    values?: Readonly<Record<string, string | number>>;
+  } | null>(null);
   const order = useSessionOrder();
   const deletion = useDelete<ReferenceSessionDetailsFragment, DataError>();
   const submitting = useRef(false);
@@ -60,7 +67,10 @@ export function SessionList({
     next.splice(to, 0, row);
     const unchanged = next.every((item, i) => item.id === sessions.result.data[i]?.id);
     setDraft(unchanged ? null : next);
-    setNotice(`Moved ${row.title} to position ${String(to + 1)}.`);
+    setNotice({
+      key: 'reference.sessionMoved',
+      values: { title: row.title, position: to + 1 },
+    });
     order.mutation.reset();
   }
   function save() {
@@ -77,7 +87,7 @@ export function SessionList({
       {
         onSuccess: () => {
           setDraft(null);
-          setNotice('Session order saved.');
+          setNotice({ key: 'reference.sessionOrderSaved' });
         },
         onSettled: () => {
           submitting.current = false;
@@ -93,7 +103,7 @@ export function SessionList({
     if (response.isSuccess) {
       setDraft(null);
       order.mutation.reset();
-      setNotice('Server order restored.');
+      setNotice({ key: 'reference.serverOrderRestored' });
     }
     setReloading(false);
     submitting.current = false;
@@ -112,7 +122,7 @@ export function SessionList({
       {
         onSuccess: () => {
           setDeleting(null);
-          setNotice('Session deleted.');
+          setNotice({ key: 'reference.sessionDeleted' });
         },
         onSettled: () => {
           submitting.current = false;
@@ -121,7 +131,7 @@ export function SessionList({
     );
   }
   return (
-    <Stack component="section" aria-label="Event program" sx={{ gap: 3 }}>
+    <Stack component="section" aria-label={t('reference.eventProgram')} sx={{ gap: 3 }}>
       {changes.dialog}
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
@@ -129,7 +139,7 @@ export function SessionList({
       >
         <Stack direction="row" sx={{ gap: 1, alignItems: 'center' }}>
           <Typography variant="h6" component="h2">
-            Sessions
+            {t('reference.sessions')}
           </Typography>
           <Chip size="small" label={`${String(sessions.result.total ?? 0)} / 100`} />
         </Stack>
@@ -138,15 +148,14 @@ export function SessionList({
           startIcon={<span aria-hidden="true">+</span>}
           disabled={pending || Boolean(draft) || rows.length >= 100}
           onClick={() => {
-            void navigate(`/${resource}/create${search}`);
+            void navigate(`${localizedPath(locale, `${resource}/create`)}${search}`);
           }}
         >
-          Add session
+          {t('reference.addSession')}
         </Button>
       </Stack>
       <Typography variant="body2" color="text.secondary">
-        Build the event program. Drag sessions or use the arrows, then save the order. Display order
-        is independent of time.
+        {t('reference.programHelp')}
       </Typography>
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
@@ -154,8 +163,8 @@ export function SessionList({
       >
         <Typography variant="body2" color={draft ? 'warning.main' : 'text.secondary'}>
           {draft
-            ? 'Unsaved order · Save or cancel before editing sessions.'
-            : 'Changes to individual sessions are saved separately.'}
+            ? t('reference.unsavedOrder')
+            : t('reference.sessionSeparateSave')}
         </Typography>
         <Stack direction="row" sx={{ gap: 1, flexShrink: 0 }}>
           <Button
@@ -166,19 +175,19 @@ export function SessionList({
             }}
             disabled={!draft || pending}
             loading={reloading}
-            aria-label="Cancel order"
+            aria-label={t('reference.cancelOrder')}
           >
-            Cancel order
+            {t('reference.cancelOrder')}
           </Button>
           <Button
             variant="contained"
             onClick={save}
             disabled={!draft || pending}
             loading={order.mutation.isPending}
-            aria-label="Save order"
+            aria-label={t('reference.saveOrder')}
             aria-busy={order.mutation.isPending}
           >
-            Save order
+            {t('reference.saveOrder')}
           </Button>
         </Stack>
       </Stack>
@@ -192,12 +201,12 @@ export function SessionList({
                   void sessions.query.refetch();
                 }}
               >
-                Retry
+                {t('common.retry')}
               </Button>
             )
           }
         >
-          {(order.mutation.error ?? sessions.query.error)?.message}
+          {localizedErrorMessage(order.mutation.error ?? sessions.query.error, t)}
         </Alert>
       )}
       <Typography
@@ -207,18 +216,18 @@ export function SessionList({
         color="text.secondary"
         sx={{ '&:empty': { display: 'none' } }}
       >
-        {notice}
+        {notice ? t(notice.key, notice.values) : null}
       </Typography>
       {sessions.query.isPending ? (
         <Skeleton variant="rounded" height={180} />
       ) : !rows.length && !sessions.query.isError ? (
         <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
-          No sessions yet. Add the first session to build this event's program.
+          {t('reference.noSessions')}
         </Typography>
       ) : (
         <Stack
           component="ol"
-          aria-label="Event sessions"
+          aria-label={t('reference.eventSessions')}
           sx={{ listStyle: 'none', p: 0, m: 0, gap: 3 }}
         >
           {rows.map((row, index) => (
@@ -244,7 +253,7 @@ export function SessionList({
                   e.target instanceof HTMLElement &&
                   !e.target.closest('button,a')
                 )
-                  void navigate(`/${resource}/${row.id}/edit${search}`);
+                  void navigate(`${localizedPath(locale, `${resource}/${row.id}/edit`)}${search}`);
               }}
               onDragStart={(e) => {
                 e.dataTransfer.setData('text/plain', row.id);
@@ -277,7 +286,7 @@ export function SessionList({
                   shape="square"
                   size="small"
                   color="neutral"
-                  aria-label={`Move ${row.title} up`}
+                  aria-label={t('reference.moveUp', { title: row.title })}
                   disabled={pending || index === 0}
                   onClick={() => {
                     const target = rows[index - 1];
@@ -290,7 +299,7 @@ export function SessionList({
                   shape="square"
                   size="small"
                   color="neutral"
-                  aria-label={`Move ${row.title} down`}
+                  aria-label={t('reference.moveDown', { title: row.title })}
                   disabled={pending || index === rows.length - 1}
                   onClick={() => {
                     const target = rows[index + 1];
@@ -306,7 +315,7 @@ export function SessionList({
                     component={RouterLink}
                     color="text.primary"
                     underline="hover"
-                    to={`/${resource}/${row.id}/edit${search}`}
+                    to={`${localizedPath(locale, `${resource}/${row.id}/edit`)}${search}`}
                     aria-disabled={pending || Boolean(draft)}
                     onClick={(e) => {
                       if (pending || draft) e.preventDefault();
@@ -317,8 +326,8 @@ export function SessionList({
                 </Typography>
                 <Stack direction="row" sx={{ gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
                   <Typography variant="body2" color="text.secondary">
-                    {eventTime(row.startsAt).format('DD MMM, HH:mm')} –{' '}
-                    {eventTime(row.endsAt).format('DD MMM, HH:mm')} (Sofia)
+                    {formatDate(row.startsAt, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Sofia' })} –{' '}
+                    {formatDate(row.endsAt, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Sofia' })} (Sofia)
                   </Typography>
                   {row.room && <Chip size="small" label={row.room} />}
                 </Stack>
@@ -333,12 +342,12 @@ export function SessionList({
                       <Chip
                         key={speaker.id}
                         size="small"
-                        label={`${speaker.name}${speaker.active ? '' : ' (inactive)'}`}
+                        label={`${speaker.name}${speaker.active ? '' : ` (${t('reference.inactiveSuffix')})`}`}
                       />
                     ))
                   ) : (
                     <Typography variant="body2" color="text.secondary">
-                      No speakers assigned
+                      {t('reference.noSpeakers')}
                     </Typography>
                   )}
                 </Stack>
@@ -348,7 +357,7 @@ export function SessionList({
                 tabIndex={0}
                 disabled={pending || Boolean(draft)}
                 onEdit={() => {
-                  void navigate(`/${resource}/${row.id}/edit${search}`);
+                  void navigate(`${localizedPath(locale, `${resource}/${row.id}/edit`)}${search}`);
                 }}
                 onDelete={() => {
                   deletion.mutation.reset();
@@ -368,12 +377,12 @@ export function SessionList({
         fullWidth
         maxWidth="xs"
       >
-        <DialogTitle id="delete-session-title">Delete session?</DialogTitle>
+        <DialogTitle id="delete-session-title">{t('reference.deleteSessionTitle')}</DialogTitle>
         <DialogContent>
-          <Typography>{deleting?.title} will be permanently removed from this event.</Typography>
+          <Typography>{t('reference.deleteSessionMessage', { title: deleting?.title ?? '' })}</Typography>
           {deletion.mutation.error && (
             <Alert severity="error" sx={{ mt: 2 }}>
-              {deletion.mutation.error.message}
+              {localizedErrorMessage(deletion.mutation.error, t)}
             </Alert>
           )}
         </DialogContent>
@@ -385,7 +394,7 @@ export function SessionList({
               setDeleting(null);
             }}
           >
-            Cancel
+            {t('reference.cancel')}
           </Button>
           <Button
             color="error"
@@ -393,7 +402,7 @@ export function SessionList({
             loading={deletion.mutation.isPending}
             onClick={remove}
           >
-            Delete session
+            {t('reference.deleteSession')}
           </Button>
         </DialogActions>
       </Dialog>

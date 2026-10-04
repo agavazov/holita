@@ -27,6 +27,7 @@ import SimpleBarReact from 'simplebar-react';
 import IconifyIcon from './primitives/iconify-icon.js';
 import StyledTextField from './primitives/styled-text-field.js';
 import type { NavigationGroup, NavigationItem } from './types.js';
+import { useLocalization } from '../localization/localization-provider.js';
 
 function flatten(items: readonly NavigationItem[]): NavigationItem[] {
   return items.flatMap((item) => (item.children ? flatten(item.children) : [item]));
@@ -40,6 +41,7 @@ export default function SearchBox({
   groups: readonly NavigationGroup[];
   onNavigate: (section: string) => void;
 }) {
+  const { t } = useLocalization();
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [recent, setRecent] = useState<string[]>([]);
@@ -88,13 +90,13 @@ export default function SearchBox({
         autoFocus
         inputRef={searchInput}
         fullWidth
-        placeholder="Search"
+        placeholder={t('shell.search')}
         value={query}
         onChange={(event) => {
           setQuery(event.target.value);
         }}
         slotProps={{
-          htmlInput: { 'aria-label': 'Search workspace' },
+          htmlInput: { 'aria-label': t('shell.searchWorkspace') },
           input: {
             startAdornment: (
               <InputAdornment position="start">
@@ -103,7 +105,12 @@ export default function SearchBox({
             ),
             endAdornment: (
               <InputAdornment position="end">
-                <IconButton size="small" edge="end" aria-label="Close search" onClick={close}>
+                <IconButton
+                  size="small"
+                  edge="end"
+                  aria-label={t('shell.closeSearch')}
+                  onClick={close}
+                >
                   <IconifyIcon icon="material-symbols:close-rounded" color="grey.500" />
                 </IconButton>
               </InputAdornment>
@@ -129,7 +136,7 @@ export default function SearchBox({
       <SimpleBarReact style={{ maxHeight: 600, minHeight: 0, width: '100%' }}>
         <Box sx={{ px: 3, py: 1.25 }}>
           <Typography variant="caption" color="text.secondary">
-            Search navigation and local examples
+            {t('shell.searchDescription')}
           </Typography>
         </Box>
         <Divider />
@@ -137,7 +144,7 @@ export default function SearchBox({
           <>
             <Stack direction="row" sx={{ justifyContent: 'space-between', py: 2, px: 3 }}>
               <Typography variant="caption" sx={{ fontWeight: 'medium', color: 'text.disabled' }}>
-                Recent
+                {t('shell.recent')}
               </Typography>
               <Link
                 component="button"
@@ -148,7 +155,7 @@ export default function SearchBox({
                 }}
                 sx={{ fontWeight: 'medium' }}
               >
-                Clear history
+                {t('shell.clearHistory')}
               </Link>
             </Stack>
             <List
@@ -183,7 +190,7 @@ export default function SearchBox({
                           fontWeight: 'medium',
                         }}
                       >
-                        <Typography variant="caption">Workspace</Typography>
+                        <Typography variant="caption">{t('shell.workspace')}</Typography>
                         <Link
                           component="button"
                           underline="none"
@@ -208,7 +215,7 @@ export default function SearchBox({
             component="h6"
             sx={{ fontWeight: 'medium', color: 'text.disabled' }}
           >
-            Modules
+            {t('shell.modules')}
           </Typography>
         </Box>
         <List sx={{ pt: 0, pb: 2 }}>
@@ -232,7 +239,7 @@ export default function SearchBox({
                 </ListItemIcon>
                 <ListItemText
                   primary={entry.label}
-                  secondary={`Workspace / ${entry.label}`}
+                  secondary={`${t('shell.workspace')} / ${entry.label}`}
                   sx={{ my: 0 }}
                   slotProps={{
                     primary: {
@@ -254,7 +261,7 @@ export default function SearchBox({
         </List>
         {filtered.length === 0 && (
           <Typography variant="body2" sx={{ px: 3, pb: 2 }} color="text.secondary">
-            {entries.length ? 'No matching results.' : 'Select a store to search its navigation.'}
+            {entries.length ? t('shell.noSearchResults') : t('shell.selectStoreToSearch')}
           </Typography>
         )}
         <Divider />
@@ -264,7 +271,7 @@ export default function SearchBox({
             component="h6"
             sx={{ fontWeight: 'medium', color: 'text.disabled' }}
           >
-            Popular tags
+            {t('shell.popularTags')}
           </Typography>
         </Box>
         <Stack direction="row" sx={{ px: 3, mb: 2, gap: 1, flexWrap: 'wrap' }}>
@@ -282,7 +289,7 @@ export default function SearchBox({
         </Stack>
         <Box sx={{ px: 3, py: 2 }}>
           <Typography variant="caption" color="text.disabled">
-            Example search · Business records are not searched yet.
+            {t('shell.searchExample')}
           </Typography>
         </Box>
       </SimpleBarReact>
@@ -297,7 +304,7 @@ export default function SearchBox({
           color="neutral"
           shape="circle"
           variant="soft"
-          aria-label="Search"
+          aria-label={t('shell.search')}
           onClick={open}
         >
           <IconifyIcon icon="material-symbols:search-rounded" sx={{ fontSize: 20 }} />
@@ -305,7 +312,7 @@ export default function SearchBox({
       ) : (
         <StyledTextField
           ref={desktopTrigger}
-          placeholder="Search"
+          placeholder={t('shell.search')}
           focused={false}
           onKeyDown={(event) => {
             if (event.key === 'Enter' || event.key === 'ArrowDown' || event.key === ' ') {
@@ -315,7 +322,7 @@ export default function SearchBox({
           }}
           slotProps={{
             htmlInput: {
-              'aria-label': 'Search',
+              'aria-label': t('shell.search'),
               readOnly: true,
             },
             input: {
@@ -337,7 +344,7 @@ export default function SearchBox({
           onClose={close}
           maxWidth="sm"
           slotProps={{
-            paper: { 'aria-label': 'Search workspace' },
+            paper: { 'aria-label': t('shell.searchWorkspace') },
             transition: { onEntered: () => searchInput.current?.focus(), onExited: restoreFocus },
           }}
           sx={{
@@ -367,7 +374,7 @@ export default function SearchBox({
             transition: { onEntered: () => searchInput.current?.focus(), onExited: restoreFocus },
             paper: {
               role: 'dialog',
-              'aria-label': 'Search workspace',
+              'aria-label': t('shell.searchWorkspace'),
               sx: {
                 width: 1,
                 maxWidth: 420,

@@ -2,6 +2,7 @@
 import { Breadcrumbs, Link, Paper, Stack, Typography } from '@mui/material';
 import type { ReactNode } from 'react';
 import { Link as RouterLink } from 'react-router';
+import { useLocalization } from '../localization/localization-provider.js';
 
 export function PageHeader({
   title,
@@ -14,6 +15,8 @@ export function PageHeader({
   action?: ReactNode;
   embedded?: boolean;
 }) {
+  const { t } = useLocalization();
+
   return (
     <Paper sx={embedded ? { outline: 0, mb: 4 } : { px: { xs: 3, md: 5 }, py: 3 }}>
       <Stack
@@ -26,7 +29,7 @@ export function PageHeader({
         }}
       >
         <div style={{ minWidth: 0 }}>
-          <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 1, overflowWrap: 'anywhere' }}>
+          <Breadcrumbs aria-label={t('common.breadcrumb')} sx={{ mb: 1, overflowWrap: 'anywhere' }}>
             {breadcrumbs.map(({ label, to }, index) =>
               to ? (
                 <Link

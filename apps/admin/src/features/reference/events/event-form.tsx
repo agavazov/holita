@@ -15,6 +15,7 @@ import {
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { EditorAside } from '../../../components/editor-aside.js';
 import { tagsResource, venuesResource, type DataError } from '../../../data/data-provider.js';
+import { useLocalization } from '../../../localization/localization-provider.js';
 import type {
   CreateReferenceEventInput,
   ReferenceEventDetailsFragment,
@@ -23,6 +24,7 @@ import { RelationSelect } from '../relation-select.js';
 import { DescriptionEditor } from './description-editor.js';
 import { eventDraft, eventInput, validateEventDraft, type EventField } from './event-form-state.js';
 import { eventFormats, eventStatuses } from './event-list-state.js';
+import { localizedErrorMessage, localizedFieldError } from '../../../localization/data-error.js';
 
 type Props = {
   storeId: string;
@@ -61,13 +63,14 @@ export function EventForm({
   onCancel,
   onChange,
 }: Props) {
+  const { t } = useLocalization();
   const id = useId();
   // The draft and its stored time offsets belong to the same initial record snapshot.
   const [initialValues] = useState(loadedValues);
   const description = useRef<{ focus: () => void }>(null);
   const [values, setValues] = useState(() => eventDraft(initialValues));
   const [attempted, setAttempted] = useState(false);
-  const errors = validateEventDraft(values, initialValues);
+  const errors = validateEventDraft(values, initialValues, t);
   const focusField = useCallback(
     (name: string) => {
       onTabChange(
@@ -98,7 +101,7 @@ export function EventForm({
   function message(field: EventField) {
     return (
       (attempted && errors[field]) ||
-      error?.fieldErrors.find(({ path }) => path === field)?.message ||
+      localizedFieldError(error?.fieldErrors.find(({ path }) => path === field), t) ||
       ''
     );
   }
@@ -119,7 +122,7 @@ export function EventForm({
   return (
     <Stack
       component="form"
-      aria-label="Event form"
+      aria-label={t('reference.events.form')}
       noValidate
       direction={{ xs: 'column', md: 'row' }}
       sx={{ flex: 1, minWidth: 0 }}
@@ -140,27 +143,27 @@ export function EventForm({
         <Stack sx={{ gap: 4, maxWidth: 520, mx: 'auto' }}>
           {error && (
             <Alert severity="error">
-              {error.message}
+              {localizedErrorMessage(error, t)}
               {error.requestId && (
                 <Typography variant="caption" sx={{ display: 'block', overflowWrap: 'anywhere' }}>
-                  Request ID: {error.requestId}
+                  {t('common.requestId')}: {error.requestId}
                 </Typography>
               )}
             </Alert>
           )}
-          <Box component="section" hidden={tab !== 'general'} aria-label="General">
+          <Box component="section" hidden={tab !== 'general'} aria-label={t('reference.events.general')}>
             <Stack sx={{ gap: 3 }}>
               <Box>
                 <Typography variant="h6" component="h2" sx={{ mb: 1 }}>
-                  Event essentials
+                  {t('reference.events.essentials')}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Give your event a clear identity and choose how people will attend.
+                  {t('reference.events.essentialsHelp')}
                 </Typography>
               </Box>
               <TextField
                 {...input('title')}
-                label="Title"
+                label={t('reference.events.fieldTitle')}
                 autoFocus
                 autoComplete="off"
                 value={values.title}
@@ -170,47 +173,47 @@ export function EventForm({
               />
               <TextField
                 {...input('code')}
-                label="Code"
+                label={t('reference.events.fieldCode')}
                 autoComplete="off"
                 value={values.code}
                 onChange={(event) => {
                   change('code', event.target.value);
                 }}
-                helperText={message('code') || 'Unique in this store. Fixed after creation.'}
+                helperText={message('code') || t('reference.events.codeHelp')}
                 slotProps={{ input: { readOnly: Boolean(initialValues) } }}
               />
               <TextField
                 {...input('format')}
                 select
-                label="Format"
+                label={t('reference.events.fieldFormat')}
                 value={values.format}
                 onChange={(event) => {
                   const format = eventFormats.find(({ value }) => value === event.target.value);
                   if (format) change('format', format.value);
                 }}
               >
-                {eventFormats.map(({ value, label }) => (
+                {eventFormats.map(({ value, labelKey }) => (
                   <MenuItem key={value} value={value}>
-                    {label}
+                    {t(labelKey)}
                   </MenuItem>
                 ))}
               </TextField>
             </Stack>
           </Box>
-          <Box component="section" hidden={tab !== 'schedule'} aria-label="Schedule and location">
+          <Box component="section" hidden={tab !== 'schedule'} aria-label={t('reference.events.scheduleLocation')}>
             <Stack sx={{ gap: 3 }}>
               <Box>
                 <Typography variant="h6" component="h2" sx={{ mb: 1 }}>
-                  Schedule &amp; location
+                  {t('reference.events.scheduleLocation')}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  All event times are in Europe/Sofia. Registration dates are calendar dates.
+                  {t('reference.events.scheduleHelp')}
                 </Typography>
               </Box>
               <Stack direction={{ xs: 'column', lg: 'row' }} sx={{ gap: 2 }}>
                 <TextField
                   {...input('startsAt')}
-                  label="Starts at"
+                  label={t('reference.events.startsAt')}
                   type="datetime-local"
                   value={values.startsAt}
                   onChange={(event) => {
@@ -220,7 +223,7 @@ export function EventForm({
                 />
                 <TextField
                   {...input('endsAt')}
-                  label="Ends at"
+                  label={t('reference.events.endsAt')}
                   type="datetime-local"
                   value={values.endsAt}
                   onChange={(event) => {
@@ -232,7 +235,7 @@ export function EventForm({
               <Stack direction={{ xs: 'column', lg: 'row' }} sx={{ gap: 2 }}>
                 <TextField
                   {...input('registrationOpensOn')}
-                  label="Registration opens"
+                  label={t('reference.events.fieldRegistrationOpens')}
                   type="date"
                   value={values.registrationOpensOn}
                   onChange={(event) => {
@@ -242,7 +245,7 @@ export function EventForm({
                 />
                 <TextField
                   {...input('registrationClosesOn')}
-                  label="Registration closes"
+                  label={t('reference.events.fieldRegistrationCloses')}
                   type="date"
                   value={values.registrationClosesOn}
                   onChange={(event) => {
@@ -254,7 +257,7 @@ export function EventForm({
               {values.format !== 'ONLINE' && (
                 <RelationSelect
                   {...input('venueId')}
-                  label="Venue"
+                  label={t('reference.events.fieldVenue')}
                   resource={venuesResource(storeId)}
                   value={values.venueId}
                   onChange={(value) => {
@@ -265,7 +268,7 @@ export function EventForm({
               {values.format !== 'IN_PERSON' && (
                 <TextField
                   {...input('meetingUrl')}
-                  label="Meeting URL"
+                  label={t('reference.events.fieldMeetingUrl')}
                   placeholder="https://"
                   value={values.meetingUrl}
                   onChange={(event) => {
@@ -275,7 +278,7 @@ export function EventForm({
               )}
               <RelationSelect
                 {...input('tagIds')}
-                label="Tags"
+                label={t('reference.events.fieldTags')}
                 resource={tagsResource(storeId)}
                 multiple
                 value={values.tagIds}
@@ -285,26 +288,26 @@ export function EventForm({
               />
             </Stack>
           </Box>
-          <Box component="section" hidden={tab !== 'content'} aria-label="Content">
+          <Box component="section" hidden={tab !== 'content'} aria-label={t('reference.events.contentMedia')}>
             <Stack sx={{ gap: 3 }}>
               <Box>
                 <Typography variant="h6" component="h2" sx={{ mb: 1 }}>
-                  Event content
+                  {t('reference.events.content')}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  A short introduction that helps people understand the event.
+                  {t('reference.events.contentHelp')}
                 </Typography>
               </Box>
               <TextField
                 {...input('summary')}
-                label="Summary"
+                label={t('reference.events.fieldSummary')}
                 multiline
                 rows={5}
                 value={values.summary}
                 onChange={(event) => {
                   change('summary', event.target.value);
                 }}
-                helperText={message('summary') || 'Optional. Up to 500 characters.'}
+                helperText={message('summary') || t('reference.events.summaryHelp')}
               />
               <Box>
                 <Typography
@@ -313,7 +316,7 @@ export function EventForm({
                   variant="subtitle2"
                   sx={{ display: 'block', mb: 1 }}
                 >
-                  Description
+                  {t('reference.events.description')}
                 </Typography>
                 <DescriptionEditor
                   id={`${id}-descriptionHtml`}
@@ -331,7 +334,7 @@ export function EventForm({
                   error={Boolean(message('descriptionHtml'))}
                 >
                   {message('descriptionHtml') ||
-                    'Add headings, emphasis, lists and web links. Formatting is saved with the event.'}
+                    t('reference.events.descriptionHelp')}
                 </FormHelperText>
               </Box>
               {gallery}
@@ -340,48 +343,48 @@ export function EventForm({
         </Stack>
       </Paper>
       <EditorAside
-        label="Event settings"
+        label={t('reference.events.settings')}
         actions={
           <>
             <Button variant="soft" color="neutral" onClick={onCancel} disabled={pending}>
-              Cancel
+              {t('reference.cancel')}
             </Button>
             <Button
               variant="contained"
               type="submit"
               disabled={saveDisabled}
-              aria-label="Save event"
+              aria-label={t('reference.events.save')}
               aria-busy={pending}
               loading={pending}
               sx={{ flexGrow: 1 }}
             >
-              Save event
+              {t('reference.events.save')}
             </Button>
           </>
         }
       >
         <Stack sx={{ p: { xs: 3, lg: 5 }, gap: 2 }}>
           <Typography variant="h6" component="h2">
-            Status
+            {t('reference.events.fieldStatus')}
           </Typography>
           <TextField
             {...input('status')}
             select
-            label="Status"
+            label={t('reference.events.fieldStatus')}
             value={values.status}
             onChange={(event) => {
               const status = eventStatuses.find(({ value }) => value === event.target.value);
               if (status) change('status', status.value);
             }}
           >
-            {eventStatuses.map(({ value, label }) => (
+            {eventStatuses.map(({ value, labelKey }) => (
               <MenuItem key={value} value={value}>
-                {label}
+                {t(labelKey)}
               </MenuItem>
             ))}
           </TextField>
           <FormControlLabel
-            label="Featured"
+            label={t('reference.events.featured')}
             control={
               <Switch
                 name="featured"
@@ -398,54 +401,54 @@ export function EventForm({
         </Stack>
         <Stack sx={{ p: { xs: 3, lg: 5 }, gap: 3 }}>
           <Typography variant="h6" component="h2">
-            Event settings
+            {t('reference.events.settings')}
           </Typography>
           <TextField
             {...input('capacity')}
-            label="Capacity"
+            label={t('reference.events.fieldCapacity')}
             type="number"
             value={values.capacity}
             onChange={(event) => {
               change('capacity', event.target.value);
             }}
-            helperText={message('capacity') || 'Optional. Maximum number of people.'}
+            helperText={message('capacity') || t('reference.events.capacityHelp')}
             slotProps={{ htmlInput: { min: 1, max: 2147483647, step: 1 } }}
           />
           <TextField
             {...input('budget')}
-            label="Budget (EUR)"
+            label={t('reference.events.fieldBudget')}
             value={values.budget}
             onChange={(event) => {
               change('budget', event.target.value);
             }}
-            helperText={message('budget') || 'Optional. Up to two decimal places.'}
+            helperText={message('budget') || t('reference.events.budgetHelp')}
             slotProps={{ htmlInput: { inputMode: 'decimal' } }}
           />
         </Stack>
         <Stack sx={{ p: { xs: 3, lg: 5 }, gap: 1 }}>
           <Typography variant="h6" component="h2" sx={{ mb: 1 }}>
-            Summary
+            {t('reference.events.summaryPanel')}
           </Typography>
           <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
-            {values.title.trim() || 'Untitled event'}
+            {values.title.trim() || t('reference.events.untitled')}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {eventFormats.find(({ value }) => value === values.format)?.label} ·{' '}
-            {eventStatuses.find(({ value }) => value === values.status)?.label}
+            {t(eventFormats.find(({ value }) => value === values.format)?.labelKey ?? 'reference.events.formatInPerson')} ·{' '}
+            {t(eventStatuses.find(({ value }) => value === values.status)?.labelKey ?? 'reference.events.statusDraft')}
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {values.startsAt
-              ? `${values.startsAt.replace('T', ' ')} (Sofia)`
-              : 'Start date not set'}
+              ? t('reference.events.sofiaValue', { value: values.startsAt.replace('T', ' ') })
+              : t('reference.events.startNotSet')}
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {initialValues
-              ? 'Save changes to this event in the selected store.'
-              : 'Create a new event in the selected store.'}
+              ? t('reference.events.saveHelp')
+              : t('reference.events.createStoreHelp')}
           </Typography>
           {saveDisabled && (
             <Alert severity="info">
-              Finish or cancel your gallery changes before saving the event.
+              {t('reference.events.finishGallery')}
             </Alert>
           )}
         </Stack>

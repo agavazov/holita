@@ -10,7 +10,20 @@ import {
 } from '@mui/material';
 import { useRef, useState } from 'react';
 import type { EventAction } from '../../../data/events-provider.js';
+import type { TranslationKey } from '../../../localization/dictionaries.js';
+import { localizedErrorMessage } from '../../../localization/data-error.js';
+import { useLocalization } from '../../../localization/localization-provider.js';
 import { useEventActions } from './use-event-actions.js';
+
+type Confirmation = {
+  labelKey: TranslationKey;
+  values: EventAction;
+};
+
+export type EventBulkNotice = {
+  actionKey: TranslationKey;
+  count: number;
+};
 
 export function EventBulkActions({
   resource,
@@ -21,16 +34,19 @@ export function EventBulkActions({
   resource: string;
   ids: string[];
   trashed: boolean;
-  onComplete: (message: string) => void;
+  onComplete: (notice: EventBulkNotice) => void;
 }) {
+  const { t } = useLocalization();
   const actions = useEventActions();
   const submitting = useRef(false);
-  const [confirmation, setConfirmation] = useState<{ label: string; values: EventAction }>();
+  const [confirmation, setConfirmation] = useState<Confirmation>();
   const pending = actions.mutation.isPending;
-  function confirm(label: string, values: EventAction) {
+
+  function confirm(labelKey: TranslationKey, values: EventAction) {
     actions.mutation.reset();
-    setConfirmation({ label, values });
+    setConfirmation({ labelKey, values });
   }
+
   function submit() {
     if (!confirmation || submitting.current) return;
     submitting.current = true;
@@ -45,9 +61,10 @@ export function EventBulkActions({
       {
         onSuccess: () => {
           setConfirmation(undefined);
-          onComplete(
-            `${confirmation.label} completed for ${String(confirmation.values.ids.length)} ${confirmation.values.ids.length === 1 ? 'event' : 'events'}.`,
-          );
+          onComplete({
+            actionKey: confirmation.labelKey,
+            count: confirmation.values.ids.length,
+          });
         },
         onSettled: () => {
           submitting.current = false;
@@ -55,7 +72,9 @@ export function EventBulkActions({
       },
     );
   }
+
   if (!ids.length && !confirmation) return null;
+
   return (
     <>
       <Stack
@@ -69,47 +88,55 @@ export function EventBulkActions({
           alignItems: 'center',
           flexWrap: 'wrap',
         }}
-        aria-label="Selected event actions"
+        aria-label={t('reference.events.selectedActions')}
       >
         <Typography variant="body2" sx={{ flexGrow: 1 }}>
-          {ids.length} selected on this page
+          {t('reference.events.selected', { count: ids.length })}
         </Typography>
         {trashed ? (
           <Button
             disabled={pending}
             onClick={() => {
-              confirm('Restore', { action: 'restore', ids });
+              confirm('reference.events.restore', { action: 'restore', ids });
             }}
           >
-            Restore selected
+            {t('reference.events.restoreSelected')}
           </Button>
         ) : (
           <>
             <Button
               disabled={pending}
               onClick={() => {
-                confirm('Publish', { action: 'status', status: 'PUBLISHED', ids });
+                confirm('reference.events.publish', {
+                  action: 'status',
+                  status: 'PUBLISHED',
+                  ids,
+                });
               }}
             >
-              Publish selected
+              {t('reference.events.publishSelected')}
             </Button>
             <Button
               disabled={pending}
               onClick={() => {
-                confirm('Archive', { action: 'status', status: 'ARCHIVED', ids });
+                confirm('reference.events.archive', {
+                  action: 'status',
+                  status: 'ARCHIVED',
+                  ids,
+                });
               }}
             >
-              Archive selected
+              {t('reference.events.archiveSelected')}
             </Button>
             <Button
               color="error"
               variant="soft"
               disabled={pending}
               onClick={() => {
-                confirm('Move to trash', { action: 'trash', ids });
+                confirm('reference.events.moveToTrash', { action: 'trash', ids });
               }}
             >
-              Trash selected
+              {t('reference.events.trashSelected')}
             </Button>
           </>
         )}
@@ -124,16 +151,20 @@ export function EventBulkActions({
         }}
       >
         <DialogTitle id="event-bulk-title">
-          {confirmation?.label ?? 'Update'} selected events?
+          {t('reference.events.bulkTitle', {
+            action: confirmation ? t(confirmation.labelKey) : t('reference.events.update'),
+          })}
         </DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2 }}>
-            This applies to {confirmation?.values.ids.length} selected{' '}
-            {confirmation?.values.ids.length === 1 ? 'event' : 'events'}. All selected events must
-            be eligible; otherwise none will change.
+            {t('reference.events.bulkMessage', {
+              count: confirmation?.values.ids.length ?? 0,
+            })}
           </Typography>
           {actions.mutation.isError && (
-            <Alert severity="error">{actions.mutation.error.message}</Alert>
+            <Alert severity="error">
+              {localizedErrorMessage(actions.mutation.error, t)}
+            </Alert>
           )}
         </DialogContent>
         <DialogActions>
@@ -144,7 +175,7 @@ export function EventBulkActions({
               setConfirmation(undefined);
             }}
           >
-            Cancel
+            {t('products.cancel')}
           </Button>
           <Button
             variant="contained"
@@ -152,7 +183,7 @@ export function EventBulkActions({
             loading={pending}
             onClick={submit}
           >
-            {confirmation?.label}
+            {confirmation ? t(confirmation.labelKey) : t('reference.events.update')}
           </Button>
         </DialogActions>
       </Dialog>

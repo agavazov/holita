@@ -34,6 +34,9 @@ import StyledTextField from '../../layout/primitives/styled-text-field.js';
 import { ProductFilters } from './product-filters.js';
 import { useRecordDeletion } from '../use-record-deletion.js';
 import { RecordActions } from '../../components/record-actions.js';
+import { localizedErrorMessage } from '../../localization/data-error.js';
+import { localizedPath } from '../../localization/locale.js';
+import { useLocalization } from '../../localization/localization-provider.js';
 
 const emptySelection = (): GridRowSelectionModel => ({ type: 'include', ids: new Set() });
 type ListQueryChanges = Partial<Record<'search' | 'sku' | 'status' | 'sort' | 'order', string>>;
@@ -46,6 +49,7 @@ export function ProductList({
   onDeleted: (count: number) => void;
 }) {
   const resource = productsResource(storeId);
+  const { locale, t } = useLocalization();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const { key: locationKey } = useLocation();
@@ -193,13 +197,13 @@ export function ProductList({
       { ...GRID_CHECKBOX_SELECTION_COL_DEF, width: 64 },
       {
         field: 'name',
-        headerName: 'Name',
+        headerName: t('products.name'),
         flex: 2,
         minWidth: 210,
         renderCell: ({ row, tabIndex }) => (
           <Link
             component={RouterLink}
-            to={`/${resource}/${row.id}/edit`}
+            to={localizedPath(locale, `/${resource}/${row.id}/edit`)}
             tabIndex={tabIndex}
             variant="subtitle2"
             sx={{ color: 'text.primary', fontWeight: 400 }}
@@ -208,15 +212,15 @@ export function ProductList({
           </Link>
         ),
       },
-      { field: 'sku', headerName: 'SKU', flex: 1.4, minWidth: 155 },
+      { field: 'sku', headerName: t('products.sku'), flex: 1.4, minWidth: 155 },
       {
         field: 'status',
-        headerName: 'Status',
+        headerName: t('products.status'),
         flex: 1,
         minWidth: 120,
         renderCell: ({ row }) => (
           <Chip
-            label={row.status === 'ACTIVE' ? 'Active' : 'Draft'}
+            label={row.status === 'ACTIVE' ? t('products.active') : t('products.draft')}
             color={row.status === 'ACTIVE' ? 'success' : 'neutral'}
           />
         ),
@@ -233,8 +237,11 @@ export function ProductList({
             tabIndex={tabIndex}
             disabled={deleting}
             onEdit={() => {
-              void navigate(`/${resource}/${row.id}/edit`);
+              void navigate(localizedPath(locale, `/${resource}/${row.id}/edit`));
             }}
+            editLabel={t('common.edit')}
+            deleteLabel={t('common.delete')}
+            actionsLabel={t('common.actionsFor', { name: row.name })}
             onDelete={() => {
               confirmDelete([row]);
             }}
@@ -242,7 +249,7 @@ export function ProductList({
         ),
       },
     ],
-    [resource, deleting, navigate, confirmDelete],
+    [resource, deleting, navigate, confirmDelete, locale, t],
   );
   const rows = products.query.isError ? [] : products.result.data;
   const selectedRows = rows.filter((row) => selection.ids.has(row.id));
@@ -265,17 +272,20 @@ export function ProductList({
       />
       <Stack sx={{ flex: 1, minWidth: 0 }}>
         <PageHeader
-          title="Products"
-          breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Products' }]}
+          title={t('products.title')}
+          breadcrumbs={[
+            { label: t('common.home'), to: localizedPath(locale, '/') },
+            { label: t('products.title') },
+          ]}
           action={
             <Button
               variant="contained"
               startIcon={<IconifyIcon icon="material-symbols:add-rounded" />}
               onClick={() => {
-                void navigate(`/${resource}/create`);
+                void navigate(localizedPath(locale, `/${resource}/create`));
               }}
             >
-              Create product
+              {t('products.create')}
             </Button>
           }
         />
@@ -288,14 +298,14 @@ export function ProductList({
               <StyledTextField
                 id="product-search"
                 type="search"
-                placeholder="Search products"
+                placeholder={t('products.search')}
                 value={search}
                 disabled={deleting}
                 onChange={(event) => {
                   changeSearch(event.target.value);
                 }}
                 slotProps={{
-                  htmlInput: { 'aria-label': 'Search products', maxLength: 200 },
+                  htmlInput: { 'aria-label': t('products.search'), maxLength: 200 },
                   input: {
                     startAdornment: (
                       <InputAdornment position="start">
@@ -309,7 +319,7 @@ export function ProductList({
               <Button
                 variant="soft"
                 color="neutral"
-                aria-label="Filter products"
+                aria-label={t('products.filters')}
                 aria-expanded={filterOpen}
                 onClick={() => {
                   setFilterOpen(!filterOpen);
@@ -318,27 +328,29 @@ export function ProductList({
               >
                 <IconifyIcon icon="material-symbols:filter-alt-outline" sx={{ fontSize: 20 }} />
                 <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                  Filter
+                  {t('common.filter')}
                 </Box>
               </Button>
             </Stack>
             <Tabs
               value={status}
-              aria-label="Product status"
+              aria-label={t('products.status')}
               onChange={(_, value: unknown) => {
                 if (typeof value === 'string') setStatus(value);
               }}
             >
-              <Tab label="All products" value="all" disabled={deleting} />
-              <Tab label="Active" value="ACTIVE" disabled={deleting} />
-              <Tab label="Draft" value="DRAFT" disabled={deleting} />
+              <Tab label={t('products.all')} value="all" disabled={deleting} />
+              <Tab label={t('products.active')} value="ACTIVE" disabled={deleting} />
+              <Tab label={t('products.draft')} value="DRAFT" disabled={deleting} />
             </Tabs>
           </Stack>
           {(urlSku || status !== 'all') && (
             <Stack direction="row" sx={{ gap: 1, mb: 2, flexWrap: 'wrap' }}>
               {status !== 'all' && (
                 <Chip
-                  label={`Status: ${status === 'ACTIVE' ? 'Active' : 'Draft'}`}
+                  label={t('products.statusFilter', {
+                    status: status === 'ACTIVE' ? t('products.active') : t('products.draft'),
+                  })}
                   disabled={deleting}
                   onDelete={() => {
                     setStatus('all');
@@ -366,11 +378,11 @@ export function ProductList({
                     void products.query.refetch();
                   }}
                 >
-                  Retry
+                  {t('common.retry')}
                 </Button>
               }
             >
-              {products.query.error.message}
+              {t('common.genericError')}
             </Alert>
           )}
           {selectedRows.length > 0 && (
@@ -386,7 +398,7 @@ export function ProductList({
               }}
             >
               <Typography variant="body2" sx={{ flex: 1 }}>
-                {selectedRows.length} selected on this page
+                {t('products.selected', { count: selectedRows.length })}
               </Typography>
               <Button
                 color="error"
@@ -396,13 +408,13 @@ export function ProductList({
                   confirmDelete(selectedRows);
                 }}
               >
-                Delete selected
+                {t('products.deleteSelected')}
               </Button>
             </Stack>
           )}
           <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
             <DataGrid
-              aria-label="Products"
+              aria-label={t('products.title')}
               rows={rows}
               columns={columns}
               rowHeight={64}
@@ -433,10 +445,10 @@ export function ProductList({
               }}
               localeText={{
                 noRowsLabel: products.query.isError
-                  ? 'Products unavailable'
+                  ? t('products.unavailable')
                   : hasFilters
-                    ? 'No products match these filters.'
-                    : 'No products in this store yet.',
+                    ? t('products.noMatches')
+                    : t('products.empty'),
               }}
               onCellClick={(cell, event) => {
                 if (
@@ -445,7 +457,7 @@ export function ProductList({
                   (event.target instanceof Element && event.target.closest('a, button, input'))
                 )
                   return;
-                void navigate(`/${resource}/${String(cell.id)}/edit`);
+                void navigate(localizedPath(locale, `/${resource}/${String(cell.id)}/edit`));
               }}
               sx={{
                 '& .MuiDataGrid-row': { cursor: 'pointer' },
@@ -463,22 +475,22 @@ export function ProductList({
         maxWidth="xs"
       >
         <DialogTitle id="delete-products-title">
-          {targets.length === 1 ? 'Delete product?' : `Delete ${String(targets.length)} products?`}
+          {targets.length === 1
+            ? t('products.deleteOneTitle')
+            : t('products.deleteManyTitle', { count: targets.length })}
         </DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2 }}>
-            Delete{' '}
             {targets.length === 1
-              ? targets[0]?.name
-              : `${String(targets.length)} selected products`}{' '}
-            from this store? This cannot be undone.
+              ? t('products.deleteOneMessage', { name: targets[0]?.name ?? '' })
+              : t('products.deleteManyMessage', { count: targets.length })}
           </Typography>
           {failures.length > 0 && (
             <Alert severity="error">
-              {failures.length} could not be deleted. Retry applies only to these records.
+              {t('products.deleteFailures', { count: failures.length })}
               {failures.map((failure) => (
                 <Typography key={failure.id} variant="body2">
-                  {failure.name}: {failure.message}
+                  {failure.name}: {localizedErrorMessage(new Error(failure.message), t)}
                 </Typography>
               ))}
             </Alert>
@@ -486,10 +498,10 @@ export function ProductList({
         </DialogContent>
         <DialogActions>
           <Button color="neutral" disabled={deleting} onClick={cancel}>
-            Cancel
+            {t('products.cancel')}
           </Button>
           <Button variant="contained" color="error" loading={deleting} onClick={remove}>
-            {targets.length === 1 ? 'Delete product' : 'Delete products'}
+            {targets.length === 1 ? t('products.deleteOne') : t('products.deleteMany')}
           </Button>
         </DialogActions>
       </Dialog>

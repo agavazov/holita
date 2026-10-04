@@ -1,11 +1,19 @@
-import { fireEvent, render as rtlRender, screen } from '@testing-library/react';
+import { fireEvent, render as rtlRender, screen } from '../../test/render.js';
+import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import { DataError } from '../../data/data-provider.js';
 import { AuroraTheme } from '../../theme/aurora-theme.js';
 import { SpeakerForm } from './speakers/speaker-form.js';
 import { TagForm } from './tags/tag-form.js';
 
-const render = (ui: React.ReactNode) => rtlRender(ui, { wrapper: AuroraTheme });
+const render = (ui: React.ReactNode) =>
+  rtlRender(ui, {
+    wrapper: ({ children }) => (
+      <MemoryRouter initialEntries={['/en']}>
+        <AuroraTheme>{children}</AuroraTheme>
+      </MemoryRouter>
+    ),
+  });
 const props = () => ({
   pending: false,
   error: null,
@@ -100,7 +108,8 @@ describe('Tag form', () => {
     expect(screen.getByLabelText('Name')).toHaveValue('Taken');
     expect(screen.getByLabelText('Name')).toHaveFocus();
     expect(screen.getByRole('alert')).toHaveTextContent('tag-request');
-    expect(screen.getByText('Use another name.')).toBeVisible();
+    expect(screen.getByRole('alert')).toHaveTextContent('A record with this value already exists.');
+    expect(screen.getByText('Check this value and try again.')).toBeVisible();
   });
 });
 

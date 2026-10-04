@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '../../test/render.js';
 import userEvent from '@testing-library/user-event';
 import { flushSync } from 'react-dom';
 import { Link, RouterProvider, createMemoryRouter, useLocation } from 'react-router';
@@ -22,11 +22,11 @@ function Location() {
   return (
     <>
       <output aria-label="Current route">{location.pathname}</output>
-      <Link to={`/stores/${storeA}/products/create`}>Open another editor</Link>
+      <Link to={`/en/stores/${storeA}/products/create`}>Open another editor</Link>
     </>
   );
 }
-function mount(path = '/') {
+function mount(path = '/en/', previousPath?: string) {
   const router = createMemoryRouter(
     [
       {
@@ -39,7 +39,10 @@ function mount(path = '/') {
         ),
       },
     ],
-    { initialEntries: [path] },
+    {
+      initialEntries: previousPath ? [previousPath, path] : [path],
+      initialIndex: previousPath ? 1 : 0,
+    },
   );
   // Match the DOM provider while keeping one router module instance in the Node test runner.
   render(
@@ -50,7 +53,11 @@ function mount(path = '/') {
       }}
     />,
   );
-  return Object.assign(userEvent.setup(), { navigate: (path: string) => router.navigate(path) });
+  return Object.assign(userEvent.setup(), {
+    navigate: (path: string) => router.navigate(path),
+    back: () => router.navigate(-1),
+    forward: () => router.navigate(1),
+  });
 }
 
 async function switchStore(user: ReturnType<typeof userEvent.setup>, name: string) {
@@ -85,7 +92,7 @@ describe('store-scoped Products UI', () => {
       await discovery.promise;
     });
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not load stores.');
-    expect(screen.getByRole('alert')).toHaveTextContent('Stores temporarily unavailable.');
+    expect(screen.getByRole('alert')).toHaveTextContent('Something went wrong. Try again.');
     expect(transport.calls.map((call) => call.operation)).toEqual(['ListStores']);
     failing = false;
     await user.click(screen.getByRole('button', { name: 'Retry' }));
@@ -131,13 +138,15 @@ describe('store-scoped Products UI', () => {
       }
       return defaultResult(call);
     });
-    const user = mount(`/stores/${storeA}/products`);
+    const user = mount(`/en/stores/${storeA}/products`);
     await screen.findByRole('grid', { name: 'Products' });
     await screen.findByText('Second product');
     await user.click(screen.getByRole('checkbox', { name: 'Select all rows' }));
     await user.click(screen.getByRole('button', { name: 'Delete selected' }));
     await user.click(screen.getByRole('button', { name: 'Delete products' }));
-    expect(await screen.findByText(/Second product: Try this record again/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Second product: Something went wrong\. Try again\./),
+    ).toBeInTheDocument();
     expect(rows).toEqual([second]);
     rejectSecond = false;
     await user.click(screen.getByRole('button', { name: 'Delete product' }));
@@ -164,7 +173,7 @@ describe('store-scoped Products UI', () => {
       if (call.operation === 'DeleteProduct') return delayed.promise;
       return defaultResult(call);
     });
-    const user = mount(`/stores/${storeA}/products`);
+    const user = mount(`/en/stores/${storeA}/products`);
     await screen.findByText('Second product');
     await user.click(screen.getByRole('checkbox', { name: 'Select all rows' }));
     await user.click(screen.getByRole('button', { name: 'Delete selected' }));
@@ -173,7 +182,7 @@ describe('store-scoped Products UI', () => {
       expect(transport.calls.filter((call) => call.operation === 'DeleteProduct')).toHaveLength(1);
     });
     await act(async () => {
-      await user.navigate(`/stores/${storeB}/products`);
+      await user.navigate(`/en/stores/${storeB}/products`);
     });
     await screen.findByText('Plovdiv notebook');
     await act(async () => {
@@ -225,7 +234,7 @@ describe('store-scoped Products UI', () => {
       }
       return defaultResult(call);
     });
-    const user = mount(`/stores/${storeA}/products`);
+    const user = mount(`/en/stores/${storeA}/products`);
     await waitFor(() => {
       expect(transport.calls.some((call) => call.storeId === storeA)).toBe(true);
     });
@@ -257,7 +266,7 @@ describe('store-scoped Products UI', () => {
     const transport = mockGraphQL((call) =>
       call.operation === 'CreateProduct' ? delayed.promise : defaultResult(call),
     );
-    const user = mount(`/stores/${storeA}/products/create`);
+    const user = mount(`/en/stores/${storeA}/products/create`);
     await user.click(await screen.findByLabelText('Name'));
     await user.paste('Created in Sofia');
     await user.click(screen.getByLabelText('SKU'));
@@ -280,7 +289,7 @@ describe('store-scoped Products UI', () => {
     });
     expect(screen.getByLabelText('Name')).toHaveValue('Unsaved Plovdiv draft');
     expect(screen.getByLabelText('Current route')).toHaveTextContent(
-      `/stores/${storeB}/products/create`,
+      `/en/stores/${storeB}/products/create`,
     );
     expect(screen.queryByText('Product saved.')).not.toBeInTheDocument();
     expect(transport.calls.filter((call) => call.storeId === storeB)).toHaveLength(requestsBefore);
@@ -290,12 +299,55 @@ describe('store-scoped Products UI', () => {
     });
   });
 
+  it('uses the active locale after a delayed save returns through same-editor history', async () => {
+    const delayed = deferredResponse();
+    const transport = mockGraphQL((call) =>
+      call.operation === 'CreateProduct' ? delayed.promise : defaultResult(call),
+    );
+    const user = mount(`/bg/stores/${storeA}/products/create`);
+    await user.type(await screen.findByLabelText('Име'), 'Нова тетрадка');
+    await user.type(screen.getByLabelText('Артикулен номер'), 'NEW-1');
+    await user.click(screen.getByRole('button', { name: 'Език' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'English' }));
+    expect(await screen.findByLabelText('Name')).toHaveValue('Нова тетрадка');
+    expect(screen.getByLabelText('Current route')).toHaveTextContent(
+      `/en/stores/${storeA}/products/create`,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Save product' }));
+    await waitFor(() => {
+      expect(transport.calls.some((call) => call.operation === 'CreateProduct')).toBe(true);
+    });
+    expect(screen.getByRole('button', { name: 'Language' })).toBeDisabled();
+
+    await act(async () => {
+      await user.back();
+    });
+    expect(await screen.findByLabelText('Име')).toHaveValue('Нова тетрадка');
+    expect(screen.getByLabelText('Current route')).toHaveTextContent(
+      `/bg/stores/${storeA}/products/create`,
+    );
+    expect(screen.queryByText('Моля, изчакайте')).not.toBeInTheDocument();
+
+    await act(async () => {
+      delayed.resolve(result({ createProduct: product(storeA, 'Нова тетрадка') }));
+      await delayed.promise;
+    });
+    expect(screen.getByLabelText('Current route')).toHaveTextContent(
+      `/bg/stores/${storeA}/products`,
+    );
+    expect(await screen.findByText('Продуктът е запазен.')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Език' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'English' }));
+    expect(await screen.findByText('Product saved.')).toBeVisible();
+  });
+
   it('keeps a late failed update from replacing another store form or showing an obsolete error', async () => {
     const delayed = deferredResponse();
     const transport = mockGraphQL((call) =>
       call.operation === 'UpdateProduct' ? delayed.promise : defaultResult(call),
     );
-    const user = mount(`/stores/${storeA}/products/${product().id}/edit`);
+    const user = mount(`/en/stores/${storeA}/products/${product().id}/edit`);
     expect(await screen.findByDisplayValue('Sofia notebook')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Save product' }));
     await waitFor(() => {
@@ -311,7 +363,7 @@ describe('store-scoped Products UI', () => {
     expect(screen.getByLabelText('Name')).toHaveValue('Plovdiv notebook');
     expect(screen.queryByText('Old store conflict.')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Current route')).toHaveTextContent(
-      `/stores/${storeB}/products/${product().id}/edit`,
+      `/en/stores/${storeB}/products/${product().id}/edit`,
     );
   });
 
@@ -320,7 +372,7 @@ describe('store-scoped Products UI', () => {
     const transport = mockGraphQL((call) =>
       call.operation === 'UpdateProduct' ? delayed.promise : defaultResult(call),
     );
-    const user = mount(`/stores/${storeA}/products/${product().id}/edit`);
+    const user = mount(`/en/stores/${storeA}/products/${product().id}/edit`);
     await screen.findByDisplayValue('Sofia notebook');
     await user.click(screen.getByRole('button', { name: 'Save product' }));
     await waitFor(() => {
@@ -337,7 +389,7 @@ describe('store-scoped Products UI', () => {
     });
     expect(screen.getByLabelText('Name')).toHaveValue('Independent draft');
     expect(screen.getByLabelText('Current route')).toHaveTextContent(
-      `/stores/${storeA}/products/create`,
+      `/en/stores/${storeA}/products/create`,
     );
     expect(screen.queryByText('Product saved.')).not.toBeInTheDocument();
   });
@@ -347,7 +399,7 @@ describe('store-scoped Products UI', () => {
     const transport = mockGraphQL((call) =>
       call.operation === 'DeleteProduct' ? delayed.promise : defaultResult(call),
     );
-    const user = mount(`/stores/${storeA}/products`);
+    const user = mount(`/en/stores/${storeA}/products`);
     await screen.findByRole('grid', { name: 'Products' });
     await screen.findByText('Sofia notebook');
     await user.click(await screen.findByRole('button', { name: 'Actions for Sofia notebook' }));
@@ -362,7 +414,7 @@ describe('store-scoped Products UI', () => {
       expect(transport.calls.some((call) => call.operation === 'DeleteProduct')).toBe(true);
     });
     await act(async () => {
-      await user.navigate(`/stores/${storeB}/products`);
+      await user.navigate(`/en/stores/${storeB}/products`);
     });
     await screen.findByText('Plovdiv notebook');
     await act(async () => {
@@ -385,8 +437,8 @@ describe('store-scoped Products UI', () => {
         ? Response.json({ errors: [{ message: 'Products temporarily unavailable.' }] })
         : result({ products: { items: [], total: 0, offset: 0, limit: 20 } });
     });
-    const user = mount(`/stores/${storeA}/products`);
-    expect(await screen.findByText('Products temporarily unavailable.')).toBeInTheDocument();
+    const user = mount(`/en/stores/${storeA}/products`);
+    expect(await screen.findByText('Something went wrong. Try again.')).toBeInTheDocument();
     failing = false;
     await user.click(screen.getByRole('button', { name: 'Retry' }));
     expect(await screen.findByText('No products in this store yet.')).toBeInTheDocument();
@@ -395,12 +447,12 @@ describe('store-scoped Products UI', () => {
 
   it('does not issue product requests for an unavailable route store', async () => {
     const transport = mockGraphQL(defaultResult);
-    const user = mount('/stores/not-a-store/products');
+    const user = mount('/en/stores/not-a-store/products');
     expect(await screen.findByText('Store not found')).toBeInTheDocument();
     expect(transport.calls.map((call) => call.operation)).toEqual(['ListStores']);
     await user.click(screen.getByRole('button', { name: 'Plovdiv Store' }));
     await screen.findByText('Plovdiv notebook');
-    expect(screen.getByLabelText('Current route')).toHaveTextContent(`/stores/${storeB}/products`);
+    expect(screen.getByLabelText('Current route')).toHaveTextContent(`/en/stores/${storeB}/products`);
     expect(transport.calls.at(-1)?.storeId).toBe(storeB);
   });
 });

@@ -1,8 +1,20 @@
 import { useCustomMutation, useInvalidate } from '@refinedev/core';
 import { useEffect, useRef, useState } from 'react';
-import type { DataError } from '../../../data/data-provider.js';
+import { DataError } from '../../../data/data-error.js';
 import type { MediaAction, MediaResult } from '../../../data/media-provider.js';
 import { directUpload } from '../../../data/direct-upload.js';
+import type { TranslationKey } from '../../../localization/dictionaries.js';
+
+type MediaUploadError =
+  | {
+      key: Extract<
+        TranslationKey,
+        'reference.invalidImage' | 'reference.noUploadTarget' | 'reference.uploadFailed'
+      >;
+    }
+  | { cause: DataError };
+
+const missingUploadTarget = new Error('Missing upload target');
 
 export function useMediaMutation() {
   const invalidate = useInvalidate();
@@ -21,7 +33,7 @@ export function useMediaUpload(resource: string) {
   const [state, setState] = useState<{ name: string; percent: number; finishing: boolean } | null>(
     null,
   );
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<MediaUploadError | null>(null);
   useEffect(
     () => () => {
       active.current?.abort();
@@ -36,7 +48,7 @@ export function useMediaUpload(resource: string) {
       file.size < 1 ||
       file.size > 5 * 1024 * 1024
     ) {
-      setError('Choose a JPEG, PNG or WebP image of at most 5 MiB.');
+      setError({ key: 'reference.invalidImage' });
       return;
     }
     const controller = new AbortController();
@@ -54,7 +66,7 @@ export function useMediaUpload(resource: string) {
         errorNotification: false,
       });
       controller.signal.throwIfAborted();
-      if (!('intent' in response.data)) throw new Error('No upload target was returned.');
+      if (!('intent' in response.data)) throw missingUploadTarget;
       await directUpload(response.data.intent, file, controller.signal, (percent) => {
         if (!controller.signal.aborted) setState({ name: file.name, percent, finishing: false });
       });
@@ -68,8 +80,15 @@ export function useMediaUpload(resource: string) {
         errorNotification: false,
       });
     } catch (failure) {
-      if (!controller.signal.aborted)
-        setError(failure instanceof Error ? failure.message : 'Upload failed. Please try again.');
+      if (!controller.signal.aborted) {
+        setError(
+          failure === missingUploadTarget
+            ? { key: 'reference.noUploadTarget' }
+            : failure instanceof DataError
+              ? { cause: failure }
+              : { key: 'reference.uploadFailed' },
+        );
+      }
     } finally {
       if (active.current === controller) {
         active.current = null;

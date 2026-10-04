@@ -34,7 +34,7 @@ test('background refresh failures preserve a product draft through retry', async
       await route.continue();
     }
   });
-  await page.goto(`${app.url}/stores/${storeA}/products/20000000-0000-4000-8000-000000000001/edit`);
+  await page.goto(`${app.url}/en/stores/${storeA}/products/20000000-0000-4000-8000-000000000001/edit`);
   const name = page.getByLabel('Name', { exact: true });
   await expect(name).toHaveValue('Sofia notebook');
   await name.fill('Preserved notebook draft');
@@ -43,7 +43,7 @@ test('background refresh failures preserve a product draft through retry', async
     await page.evaluate(() => window.dispatchEvent(new Event('offline')));
     await page.evaluate(() => window.dispatchEvent(new Event('online')));
     const warning = page.getByRole('alert');
-    await expect(warning).toContainText('Refresh temporarily unavailable.');
+    await expect(warning).toContainText('Something went wrong. Try again.');
     await expect(name).toHaveValue('Preserved notebook draft');
     failingOperation = undefined;
     await warning.getByRole('button', { name: 'Retry' }).click();
@@ -83,8 +83,8 @@ test('store discovery recovers from gateway failure and handles empty and unavai
     }
     await route.continue();
   });
-  await page.goto(app.url);
-  await expect(page.getByRole('alert')).toContainText('Could not reach the gateway.');
+  await page.goto(`${app.url}/en/`);
+  await expect(page.getByRole('alert')).toContainText('Something went wrong. Try again.');
   await expect(page.locator('html')).toHaveAttribute('data-holita-color-scheme', 'dark');
   await page.screenshot({
     path: testInfo.outputPath('stores-error-mobile-dark.png'),
@@ -97,12 +97,12 @@ test('store discovery recovers from gateway failure and handles empty and unavai
   await page.screenshot({ path: testInfo.outputPath('stores-mobile-dark.png'), fullPage: true });
   await page.getByRole('button', { name: 'holita Sofia', exact: true }).click();
   await expect(page.getByRole('link', { name: 'Sofia notebook', exact: true })).toBeVisible();
-  await page.goto(`${app.url}/stores/unavailable/products`);
+  await page.goto(`${app.url}/en/stores/unavailable/products`);
   await expect(page.getByRole('heading', { name: 'Store not found' })).toBeVisible();
   await page.getByRole('button', { name: 'holita Plovdiv', exact: true }).click();
   await expect(page.getByRole('link', { name: 'Plovdiv notebook', exact: true })).toBeVisible();
   state = 'empty';
-  await page.goto(app.url);
+  await page.goto(`${app.url}/en/`);
   await expect(
     page.getByText('No stores available. Ask your workspace administrator to set up a store.'),
   ).toBeVisible();
@@ -117,7 +117,7 @@ test('Products CRUD works through the real gateway for both stores', async ({
 }, testInfo) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  await page.goto(app.url);
+  await page.goto(`${app.url}/en/`);
   await page.getByRole('button', { name: 'holita Sofia', exact: true }).click();
   await expect(page.getByRole('link', { name: 'Sofia notebook', exact: true })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('products-list.png'), fullPage: true });
@@ -137,7 +137,9 @@ test('Products CRUD works through the real gateway for both stores', async ({
   await page.getByRole('button', { name: 'Create product', exact: true }).click();
   await fillProduct(page, 'Duplicate', 'SMOKE-001');
   await page.getByRole('button', { name: 'Save product' }).click();
-  await expect(page.getByRole('alert').filter({ hasText: 'SKU' })).toContainText('already exists');
+  await expect(
+    page.getByRole('alert').filter({ hasText: 'A record with this value already exists.' }),
+  ).toBeVisible();
   await switchStore(page, 'holita Plovdiv');
   await expect(page.getByRole('link', { name: 'Plovdiv notebook', exact: true })).toBeVisible();
   await expect(page.getByText('Smoke Sofia edited')).toHaveCount(0);
@@ -206,7 +208,7 @@ test('a delayed product response cannot replace the newly selected store', async
     } else await route.continue();
   });
   try {
-    await page.goto(`${app.url}/stores/${storeA}/products`);
+    await page.goto(`${app.url}/en/stores/${storeA}/products`);
     await started;
     await switchStore(page, 'holita Plovdiv');
     await expect(page.getByRole('link', { name: 'Plovdiv notebook', exact: true })).toBeVisible();
@@ -253,7 +255,7 @@ test('a pending mutation stays in its initiating store and leaves the new draft 
     } else await route.continue();
   });
   try {
-    await page.goto(`${app.url}/stores/${storeA}/products/create`);
+    await page.goto(`${app.url}/en/stores/${storeA}/products/create`);
     await fillProduct(page, 'Pending Sofia product', 'PENDING-001');
     const save = page.getByRole('button', { name: 'Save product' });
     await save.scrollIntoViewIfNeeded();
@@ -271,7 +273,7 @@ test('a pending mutation stays in its initiating store and leaves the new draft 
     );
     release();
     await completed;
-    await expect(page).toHaveURL(`${app.url}/stores/${storeB}/products/create`);
+    await expect(page).toHaveURL(`${app.url}/en/stores/${storeB}/products/create`);
     await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Unsaved Plovdiv draft');
     await expect(page.getByText('Product saved.')).toHaveCount(0);
     expect(mutationStores).toEqual([storeA]);
@@ -311,7 +313,7 @@ test('history navigation isolates editors in the same store during a pending cre
     } else await route.continue();
   });
   try {
-    await page.goto(`${app.url}/stores/${storeA}/products`);
+    await page.goto(`${app.url}/en/stores/${storeA}/products`);
     await page.getByRole('link', { name: 'Sofia notebook', exact: true }).click();
     await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Sofia notebook');
     const editUrl = page.url();

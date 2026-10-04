@@ -4,6 +4,8 @@ import { PageHeader } from '../../../components/page-header.js';
 import { QueryRefreshWarning } from '../../../components/query-refresh-warning.js';
 import { useRef } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { useLocalization } from '../../../localization/localization-provider.js';
+import { localizedPath } from '../../../localization/locale.js';
 
 import { tagsResource, type DataError } from '../../../data/data-provider.js';
 import type {
@@ -19,9 +21,10 @@ type TagEditorProps = { storeId: string; onSaved: () => void };
 export function TagEditor({ storeId, onSaved }: TagEditorProps) {
   const { tagId } = useParams();
   const navigate = useNavigate();
+  const { locale, t } = useLocalization();
   const resource = tagsResource(storeId);
   const submitting = useRef(false);
-  const listPath = `/${resource}`;
+  const listPath = localizedPath(locale, `/${resource}`);
   const tag = useOne<GetReferenceTagQuery['referenceTag'], DataError>({
     resource,
     ...(tagId ? { id: tagId } : {}),
@@ -62,12 +65,12 @@ export function TagEditor({ storeId, onSaved }: TagEditorProps) {
   const header = (
     <PageHeader
       embedded
-      title={tagId ? 'Edit tag' : 'Create tag'}
+      title={tagId ? t('reference.editTag') : t('reference.createTag')}
       breadcrumbs={[
-        { label: 'Home', to: '/' },
-        { label: 'Reference' },
-        { label: 'Tags', to: listPath },
-        { label: tagId ? 'Edit tag' : 'Create tag' },
+        { label: t('common.home'), to: localizedPath(locale, '/') },
+        { label: t('shell.reference') },
+        { label: t('shell.tags'), to: listPath },
+        { label: tagId ? t('reference.editTag') : t('reference.createTag') },
       ]}
     />
   );
@@ -77,7 +80,7 @@ export function TagEditor({ storeId, onSaved }: TagEditorProps) {
       {changes.dialog}
       {tagId && tag.query.isRefetchError && (
         <QueryRefreshWarning
-          message={tag.query.error.message}
+          message={t('common.genericError')}
           refreshing={tag.query.isFetching}
           onRetry={() => {
             void tag.query.refetch();
@@ -102,11 +105,11 @@ export function TagEditor({ storeId, onSaved }: TagEditorProps) {
                 void tag.query.refetch();
               }}
             >
-              Retry
+              {t('common.retry')}
             </Button>
           }
         >
-          {tag.query.error.message}
+          {t('common.genericError')}
         </Alert>
       ) : (
         <TagForm
@@ -132,7 +135,7 @@ export function TagEditor({ storeId, onSaved }: TagEditorProps) {
             void navigate(listPath);
           }}
         >
-          Back to tags
+          {t('reference.backToTags')}
         </Button>
       )}
     </Stack>

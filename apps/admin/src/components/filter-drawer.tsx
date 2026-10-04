@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import type { ReactNode } from 'react';
 import IconifyIcon from '../layout/primitives/iconify-icon.js';
+import { useLocalization } from '../localization/localization-provider.js';
 
 export function FilterDrawer({
   open,
@@ -23,6 +24,7 @@ export function FilterDrawer({
   label: string;
   children: ReactNode;
 }) {
+  const { t } = useLocalization();
   const theme = useTheme();
   const persistent = useMediaQuery(theme.breakpoints.up('xl'));
   return (
@@ -53,9 +55,14 @@ export function FilterDrawer({
           sx={{ justifyContent: 'space-between', mb: 2, alignItems: 'center' }}
         >
           <Typography variant="h6" component="h2">
-            Filter
+            {t('common.filter')}
           </Typography>
-          <Button shape="circle" color="neutral" aria-label="Close filters" onClick={onClose}>
+          <Button
+            shape="circle"
+            color="neutral"
+            aria-label={t('common.closeFilters')}
+            onClick={onClose}
+          >
             <IconifyIcon icon="material-symbols:close-rounded" sx={{ fontSize: 20 }} />
           </Button>
         </Stack>

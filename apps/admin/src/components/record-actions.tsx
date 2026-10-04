@@ -2,6 +2,7 @@
 import { Button, Menu, MenuItem, listClasses, menuClasses } from '@mui/material';
 import { useId, useState } from 'react';
 import EllipsisHorizontalIcon from './ellipsis-horizontal-icon.js';
+import { useLocalization } from '../localization/localization-provider.js';
 
 export function RecordActions({
   name,
@@ -10,8 +11,9 @@ export function RecordActions({
   onEdit,
   onDelete,
   onView,
-  editLabel = 'Edit',
-  deleteLabel = 'Delete',
+  editLabel,
+  deleteLabel,
+  actionsLabel,
 }: {
   name: string;
   tabIndex: number;
@@ -21,7 +23,9 @@ export function RecordActions({
   onView?: () => void;
   editLabel?: string;
   deleteLabel?: string;
+  actionsLabel?: string;
 }) {
+  const { t } = useLocalization();
   const id = useId();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   return (
@@ -34,7 +38,7 @@ export function RecordActions({
         shape="square"
         color="neutral"
         disabled={disabled}
-        aria-label={`Actions for ${name}`}
+        aria-label={actionsLabel ?? t('common.actionsFor', { name })}
         aria-haspopup="menu"
         aria-expanded={Boolean(anchor)}
         aria-controls={anchor ? `${id}-menu` : undefined}
@@ -67,7 +71,7 @@ export function RecordActions({
               onView();
             }}
           >
-            View
+            {t('common.view')}
           </MenuItem>
         )}
         <MenuItem
@@ -77,7 +81,7 @@ export function RecordActions({
             onEdit();
           }}
         >
-          {editLabel}
+          {editLabel ?? t('common.edit')}
         </MenuItem>
         {onDelete && (
           <MenuItem
@@ -88,7 +92,7 @@ export function RecordActions({
               onDelete();
             }}
           >
-            {deleteLabel}
+            {deleteLabel ?? t('common.delete')}
           </MenuItem>
         )}
       </Menu>

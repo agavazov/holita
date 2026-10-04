@@ -1,6 +1,7 @@
 import { Button, MenuItem, Typography } from '@mui/material';
 import { FilterDrawer } from '../../components/filter-drawer.js';
 import StyledTextField from '../../layout/primitives/styled-text-field.js';
+import { useLocalization } from '../../localization/localization-provider.js';
 
 export function LookupFilters({
   singular,
@@ -25,15 +26,16 @@ export function LookupFilters({
   onStatusChange: (value: string) => void;
   onClear: () => void;
 }) {
+  const { t } = useLocalization();
   return (
     <FilterDrawer
       open={open}
       onClose={onClose}
-      label={`${singular.charAt(0).toUpperCase() + singular.slice(1)} filters`}
+      label={t('reference.lookupFilters', { name: singular })}
     >
       <StyledTextField
         id={`${singular}-filter-search`}
-        label={`Search ${title.toLowerCase()}`}
+        label={t('reference.searchLookup', { name: title.toLowerCase() })}
         type="search"
         fullWidth
         value={search}
@@ -41,12 +43,12 @@ export function LookupFilters({
         onChange={(event) => {
           onSearchChange(event.target.value);
         }}
-        helperText={`Search by ${singular} name.`}
+        helperText={t('reference.searchByName', { name: singular })}
         slotProps={{ htmlInput: { maxLength: 200 } }}
       />
       <StyledTextField
         id={`${singular}-filter-status`}
-        label="Status"
+        label={t('reference.status')}
         select
         fullWidth
         value={status}
@@ -55,12 +57,12 @@ export function LookupFilters({
           onStatusChange(event.target.value);
         }}
       >
-        <MenuItem value="all">All statuses</MenuItem>
-        <MenuItem value="ACTIVE">Active</MenuItem>
-        <MenuItem value="INACTIVE">Inactive</MenuItem>
+        <MenuItem value="all">{t('reference.allStatuses')}</MenuItem>
+        <MenuItem value="ACTIVE">{t('reference.active')}</MenuItem>
+        <MenuItem value="INACTIVE">{t('reference.inactive')}</MenuItem>
       </StyledTextField>
       <Typography variant="caption" color="text.secondary">
-        All filters apply together automatically.
+        {t('reference.filtersApply')}
       </Typography>
       <Button
         variant="soft"
@@ -68,7 +70,7 @@ export function LookupFilters({
         disabled={disabled || (status === 'all' && !search)}
         onClick={onClear}
       >
-        Clear filters
+        {t('reference.clearFilters')}
       </Button>
     </FilterDrawer>
   );

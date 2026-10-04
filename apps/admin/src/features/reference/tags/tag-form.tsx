@@ -17,6 +17,8 @@ import { EditorAside } from '../../../components/editor-aside.js';
 import type { DataError } from '../../../data/data-provider.js';
 import type { CreateReferenceTagInput } from '../../../generated/graphql/operations.js';
 import { textError } from '../text-validation.js';
+import { useLocalization } from '../../../localization/localization-provider.js';
+import { localizedErrorMessage, localizedFieldError } from '../../../localization/data-error.js';
 
 type TagFormProps = {
   header?: ReactNode;
@@ -37,6 +39,7 @@ export function TagForm({
   onCancel,
   onChange,
 }: TagFormProps) {
+  const { t } = useLocalization();
   const id = useId();
   const form = useRef<HTMLFormElement>(null);
   const [values, setValues] = useState({
@@ -46,16 +49,16 @@ export function TagForm({
   });
   const [attempted, setAttempted] = useState(false);
   const errors = {
-    name: textError(values.name, 100, 'Enter a tag name.'),
+    name: textError(values.name, 100, t, t('reference.tagNameRequired')),
     color: /^#[0-9a-f]{6}$/i.test(values.color.trim())
       ? ''
-      : 'Use a six-digit hex color, e.g. #315ed0.',
+      : t('reference.colorInvalid'),
     active: '',
   };
   function message(field: keyof typeof values) {
     return (
       (attempted && errors[field]) ||
-      error?.fieldErrors.find(({ path }) => path === field)?.message ||
+      localizedFieldError(error?.fieldErrors.find(({ path }) => path === field), t) ||
       ''
     );
   }
@@ -98,10 +101,10 @@ export function TagForm({
         <Stack sx={{ gap: 4, maxWidth: 520, mx: 'auto' }}>
           {error && (
             <Alert severity="error">
-              {error.message}
+              {localizedErrorMessage(error, t)}
               {error.requestId && (
                 <Typography variant="caption" sx={{ display: 'block', overflowWrap: 'anywhere' }}>
-                  Request ID: {error.requestId}
+                  {t('common.requestId')}: {error.requestId}
                 </Typography>
               )}
             </Alert>
@@ -109,16 +112,16 @@ export function TagForm({
           <Stack component="section" aria-labelledby={`${id}-details`} sx={{ gap: 3 }}>
             <Box>
               <Typography id={`${id}-details`} variant="h6" component="h2" sx={{ mb: 1 }}>
-                Tag details
+                {t('reference.tagDetails')}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Use a short name and a distinct color for each event label.
+                {t('reference.tagDetailsHelp')}
               </Typography>
             </Box>
             <TextField
               id={`${id}-name`}
               name="name"
-              label="Name"
+              label={t('reference.name')}
               autoFocus
               autoComplete="off"
               fullWidth
@@ -128,12 +131,12 @@ export function TagForm({
                 change('name', event.target.value);
               }}
               error={Boolean(message('name'))}
-              helperText={message('name') || 'Use the name people will recognize.'}
+              helperText={message('name') || t('reference.nameHelp')}
             />
             <TextField
               id={`${id}-color`}
               name="color"
-              label="Color"
+              label={t('reference.color')}
               autoComplete="off"
               fullWidth
               disabled={pending}
@@ -143,7 +146,7 @@ export function TagForm({
               }}
               error={Boolean(message('color'))}
               helperText={
-                message('color') || 'Six-digit hex color. Select the swatch to choose a color.'
+                message('color') || t('reference.colorHelp')
               }
               slotProps={{
                 input: {
@@ -152,7 +155,7 @@ export function TagForm({
                       <Box
                         component="input"
                         type="color"
-                        aria-label="Choose tag color"
+                        aria-label={t('reference.chooseTagColor')}
                         value={errors.color ? '#315ed0' : values.color.trim()}
                         disabled={pending}
                         onChange={(event) => {
@@ -176,28 +179,28 @@ export function TagForm({
         </Stack>
       </Paper>
       <EditorAside
-        label="Tag settings"
+        label={t('reference.tagSettings')}
         actions={
           <>
             <Button variant="soft" color="neutral" onClick={onCancel} disabled={pending}>
-              Cancel
+              {t('reference.cancel')}
             </Button>
             <Button
               variant="contained"
               type="submit"
-              aria-label="Save tag"
+              aria-label={t('reference.saveTag')}
               aria-busy={pending}
               loading={pending}
               sx={{ flexGrow: 1 }}
             >
-              Save tag
+              {t('reference.saveTag')}
             </Button>
           </>
         }
       >
         <Stack sx={{ p: { xs: 3, lg: 5 }, gap: 2 }}>
           <Typography variant="h6" component="h2">
-            Status
+            {t('reference.status')}
           </Typography>
           <FormControlLabel
             control={
@@ -211,7 +214,7 @@ export function TagForm({
                 slotProps={{ input: { role: 'switch' } }}
               />
             }
-            label="Active"
+            label={t('reference.active')}
           />
           {message('active') && (
             <Typography variant="caption" color="error">
@@ -220,16 +223,16 @@ export function TagForm({
           )}
           <Typography variant="body2" color="text.secondary">
             {values.active
-              ? 'Available for assignment to events.'
-              : 'Existing event tags are preserved. This tag cannot be newly assigned.'}
+              ? t('reference.tagActiveHelp')
+              : t('reference.tagInactiveHelp')}
           </Typography>
         </Stack>
         <Stack sx={{ p: { xs: 3, lg: 5 }, gap: 1 }}>
           <Typography variant="h6" component="h2" sx={{ mb: 1 }}>
-            Summary
+            {t('reference.summary')}
           </Typography>
           <Chip
-            label={values.name.trim() || 'Untitled tag'}
+            label={values.name.trim() || t('reference.untitledTag')}
             variant="outlined"
             icon={
               <Box
@@ -246,8 +249,8 @@ export function TagForm({
           />
           <Typography variant="body2" color="text.secondary">
             {initialValues
-              ? 'Save changes to this tag in the selected store.'
-              : 'Create a new tag in the selected store.'}
+              ? t('reference.editTagSummary')
+              : t('reference.createTagSummary')}
           </Typography>
         </Stack>
       </EditorAside>

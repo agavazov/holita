@@ -15,6 +15,8 @@ import { EditorAside } from '../../../components/editor-aside.js';
 import type { DataError } from '../../../data/data-provider.js';
 import type { CreateReferenceSpeakerInput } from '../../../generated/graphql/operations.js';
 import { textError } from '../text-validation.js';
+import { useLocalization } from '../../../localization/localization-provider.js';
+import { localizedErrorMessage, localizedFieldError } from '../../../localization/data-error.js';
 
 type SpeakerFormProps = {
   header?: ReactNode;
@@ -35,6 +37,7 @@ export function SpeakerForm({
   onCancel,
   onChange,
 }: SpeakerFormProps) {
+  const { t } = useLocalization();
   const id = useId();
   const form = useRef<HTMLFormElement>(null);
   const [values, setValues] = useState({
@@ -45,19 +48,19 @@ export function SpeakerForm({
   });
   const [attempted, setAttempted] = useState(false);
   const errors = {
-    name: textError(values.name, 200, 'Enter a speaker name.'),
+    name: textError(values.name, 200, t, t('reference.speakerNameRequired')),
     email:
-      textError(values.email, 254) ||
+      textError(values.email, 254, t) ||
       (values.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())
-        ? 'Enter a valid email address.'
+        ? t('reference.emailInvalid')
         : ''),
-    shortBio: textError(values.shortBio, 2000),
+    shortBio: textError(values.shortBio, 2000, t),
     active: '',
   };
   function message(field: keyof typeof values) {
     return (
       (attempted && errors[field]) ||
-      error?.fieldErrors.find(({ path }) => path === field)?.message ||
+      localizedFieldError(error?.fieldErrors.find(({ path }) => path === field), t) ||
       ''
     );
   }
@@ -101,10 +104,10 @@ export function SpeakerForm({
         <Stack sx={{ gap: 4, maxWidth: 520, mx: 'auto' }}>
           {error && (
             <Alert severity="error">
-              {error.message}
+              {localizedErrorMessage(error, t)}
               {error.requestId && (
                 <Typography variant="caption" sx={{ display: 'block', overflowWrap: 'anywhere' }}>
-                  Request ID: {error.requestId}
+                  {t('common.requestId')}: {error.requestId}
                 </Typography>
               )}
             </Alert>
@@ -112,16 +115,16 @@ export function SpeakerForm({
           <Stack component="section" aria-labelledby={`${id}-details`} sx={{ gap: 3 }}>
             <Box>
               <Typography id={`${id}-details`} variant="h6" component="h2" sx={{ mb: 1 }}>
-                Speaker details
+                {t('reference.speakerDetails')}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Keep a reusable directory of people for your event program.
+                {t('reference.speakerDetailsHelp')}
               </Typography>
             </Box>
             <TextField
               id={`${id}-name`}
               name="name"
-              label="Name"
+              label={t('reference.name')}
               autoFocus
               autoComplete="off"
               fullWidth
@@ -131,12 +134,12 @@ export function SpeakerForm({
                 change('name', event.target.value);
               }}
               error={Boolean(message('name'))}
-              helperText={message('name') || 'Use the name people will recognize.'}
+              helperText={message('name') || t('reference.nameHelp')}
             />
             <TextField
               id={`${id}-email`}
               name="email"
-              label="Email"
+              label={t('reference.email')}
               type="email"
               autoComplete="email"
               fullWidth
@@ -146,12 +149,12 @@ export function SpeakerForm({
                 change('email', event.target.value);
               }}
               error={Boolean(message('email'))}
-              helperText={message('email') || 'Optional. Contact email address.'}
+              helperText={message('email') || t('reference.emailHelp')}
             />
             <TextField
               id={`${id}-shortBio`}
               name="shortBio"
-              label="Short biography"
+              label={t('reference.shortBiography')}
               multiline
               rows={5}
               fullWidth
@@ -161,34 +164,34 @@ export function SpeakerForm({
                 change('shortBio', event.target.value);
               }}
               error={Boolean(message('shortBio'))}
-              helperText={message('shortBio') || 'Optional. Up to 2,000 characters.'}
+              helperText={message('shortBio') || t('reference.optionalLongText')}
             />
           </Stack>
         </Stack>
       </Paper>
       <EditorAside
-        label="Speaker settings"
+        label={t('reference.speakerSettings')}
         actions={
           <>
             <Button variant="soft" color="neutral" onClick={onCancel} disabled={pending}>
-              Cancel
+              {t('reference.cancel')}
             </Button>
             <Button
               variant="contained"
               type="submit"
-              aria-label="Save speaker"
+              aria-label={t('reference.saveSpeaker')}
               aria-busy={pending}
               loading={pending}
               sx={{ flexGrow: 1 }}
             >
-              Save speaker
+              {t('reference.saveSpeaker')}
             </Button>
           </>
         }
       >
         <Stack sx={{ p: { xs: 3, lg: 5 }, gap: 2 }}>
           <Typography variant="h6" component="h2">
-            Status
+            {t('reference.status')}
           </Typography>
           <FormControlLabel
             control={
@@ -202,7 +205,7 @@ export function SpeakerForm({
                 slotProps={{ input: { role: 'switch' } }}
               />
             }
-            label="Active"
+            label={t('reference.active')}
           />
           {message('active') && (
             <Typography variant="caption" color="error">
@@ -211,24 +214,24 @@ export function SpeakerForm({
           )}
           <Typography variant="body2" color="text.secondary">
             {values.active
-              ? 'Available for assignment to sessions.'
-              : 'Existing session assignments are preserved.'}
+              ? t('reference.speakerActiveHelp')
+              : t('reference.speakerInactiveHelp')}
           </Typography>
         </Stack>
         <Stack sx={{ p: { xs: 3, lg: 5 }, gap: 1 }}>
           <Typography variant="h6" component="h2" sx={{ mb: 1 }}>
-            Summary
+            {t('reference.summary')}
           </Typography>
           <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
-            {values.name.trim() || 'Untitled speaker'}
+            {values.name.trim() || t('reference.untitledSpeaker')}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>
-            {values.email.trim() || 'No email address'}
+            {values.email.trim() || t('reference.emailNotSet')}
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {initialValues
-              ? 'Save changes to this speaker in the selected store.'
-              : 'Create a new speaker in the selected store.'}
+              ? t('reference.editSpeakerSummary')
+              : t('reference.createSpeakerSummary')}
           </Typography>
         </Stack>
       </EditorAside>

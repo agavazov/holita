@@ -4,6 +4,8 @@ import { PageHeader } from '../../../components/page-header.js';
 import { QueryRefreshWarning } from '../../../components/query-refresh-warning.js';
 import { useRef } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { useLocalization } from '../../../localization/localization-provider.js';
+import { localizedPath } from '../../../localization/locale.js';
 
 import { venuesResource, type DataError } from '../../../data/data-provider.js';
 import type {
@@ -19,9 +21,10 @@ type VenueEditorProps = { storeId: string; onSaved: () => void };
 export function VenueEditor({ storeId, onSaved }: VenueEditorProps) {
   const { venueId } = useParams();
   const navigate = useNavigate();
+  const { locale, t } = useLocalization();
   const resource = venuesResource(storeId);
   const submitting = useRef(false);
-  const listPath = `/${resource}`;
+  const listPath = localizedPath(locale, `/${resource}`);
   const venue = useOne<GetReferenceVenueQuery['referenceVenue'], DataError>({
     resource,
     ...(venueId ? { id: venueId } : {}),
@@ -62,12 +65,12 @@ export function VenueEditor({ storeId, onSaved }: VenueEditorProps) {
   const header = (
     <PageHeader
       embedded
-      title={venueId ? 'Edit venue' : 'Create venue'}
+      title={venueId ? t('reference.editVenue') : t('reference.createVenue')}
       breadcrumbs={[
-        { label: 'Home', to: '/' },
-        { label: 'Reference' },
-        { label: 'Venues', to: listPath },
-        { label: venueId ? 'Edit venue' : 'Create venue' },
+        { label: t('common.home'), to: localizedPath(locale, '/') },
+        { label: t('shell.reference') },
+        { label: t('shell.venues'), to: listPath },
+        { label: venueId ? t('reference.editVenue') : t('reference.createVenue') },
       ]}
     />
   );
@@ -77,7 +80,7 @@ export function VenueEditor({ storeId, onSaved }: VenueEditorProps) {
       {changes.dialog}
       {venueId && venue.query.isRefetchError && (
         <QueryRefreshWarning
-          message={venue.query.error.message}
+          message={t('common.genericError')}
           refreshing={venue.query.isFetching}
           onRetry={() => {
             void venue.query.refetch();
@@ -102,11 +105,11 @@ export function VenueEditor({ storeId, onSaved }: VenueEditorProps) {
                 void venue.query.refetch();
               }}
             >
-              Retry
+              {t('common.retry')}
             </Button>
           }
         >
-          {venue.query.error.message}
+          {t('common.genericError')}
         </Alert>
       ) : (
         <VenueForm
@@ -132,7 +135,7 @@ export function VenueEditor({ storeId, onSaved }: VenueEditorProps) {
             void navigate(listPath);
           }}
         >
-          Back to venues
+          {t('reference.backToVenues')}
         </Button>
       )}
     </Stack>

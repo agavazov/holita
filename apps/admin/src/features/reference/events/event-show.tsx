@@ -17,20 +17,22 @@ import {
   Tabs,
   Typography,
 } from '@mui/material';
+import { useLocalization } from '../../../localization/localization-provider.js';
+import { localizedErrorMessage } from '../../../localization/data-error.js';
+import { localizedPath } from '../../../localization/locale.js';
 import { PageHeader } from '../../../components/page-header.js';
 import { QueryRefreshWarning } from '../../../components/query-refresh-warning.js';
 import { useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import { eventsResource, type DataError } from '../../../data/data-provider.js';
 import type { ReferenceEventDetailsFragment } from '../../../generated/graphql/operations.js';
-import { eventFormats, eventLink, eventListReturn, eventStatuses } from './event-list-state.js';
+import { eventFormats, eventLink, eventListReturn, eventListReturnSearch, eventStatuses } from './event-list-state.js';
 import { SessionList } from '../sessions/session-list.js';
 import { EventSpeakers } from '../sessions/event-speakers.js';
 import { safeDescriptionHtml } from './description-html.js';
 import { EventGallery } from '../media/event-gallery.js';
 import { EventHistory } from './event-history.js';
 import { useEventActions } from './use-event-actions.js';
-import { eventTime } from './event-time.js';
 
 export function EventShow({
   storeId,
@@ -42,12 +44,13 @@ export function EventShow({
   onDeleted: () => void;
 }) {
   const { eventId } = useParams();
+  const { locale, t, formatDate, formatNumber } = useLocalization();
   const { search } = useLocation();
   const navigate = useNavigate();
   const requestedTab = new URLSearchParams(search).get('tab');
   const resource = eventsResource(storeId);
-  const listPath = eventListReturn(resource, search);
-  const listSearch = listPath.slice(`/${resource}`.length);
+  const listPath = eventListReturn(locale, resource, search);
+  const listSearch = eventListReturnSearch(search);
   const event = useOne<ReferenceEventDetailsFragment, DataError>({
     resource,
     ...(eventId ? { id: eventId } : {}),
@@ -115,15 +118,15 @@ export function EventShow({
     );
   }
   const breadcrumbs = [
-    { label: 'Home', to: '/' },
-    { label: 'Reference' },
-    { label: 'Events', to: listPath },
-    { label: row?.title ?? 'Event' },
+    { label: t('common.home'), to: localizedPath(locale, '') },
+    { label: t('shell.reference') },
+    { label: t('reference.events.events'), to: listPath },
+    { label: row?.title ?? t('reference.events.event') },
   ];
   if (!row)
     return (
       <Stack sx={{ flex: 1 }}>
-        <PageHeader title="Event" breadcrumbs={breadcrumbs} />
+        <PageHeader title={t('reference.events.event')} breadcrumbs={breadcrumbs} />
         <Paper sx={{ p: { xs: 3, md: 5 } }}>
           {event.query.isPending ? (
             <Skeleton variant="rounded" height={300} />
@@ -137,11 +140,11 @@ export function EventShow({
                       void event.query.refetch();
                     }}
                   >
-                    Retry
+                    {t('common.retry')}
                   </Button>
                 }
               >
-                {event.query.error?.message ?? 'Event unavailable'}
+                {t('reference.events.unavailable')}
               </Alert>
               <Button
                 onClick={() => {
@@ -149,7 +152,7 @@ export function EventShow({
                 }}
                 sx={{ mt: 2 }}
               >
-                Back to events
+                {t('reference.events.back')}
               </Button>
             </>
           )}
@@ -160,7 +163,7 @@ export function EventShow({
     <Stack sx={{ flex: 1, minWidth: 0 }}>
       {event.query.isRefetchError && (
         <QueryRefreshWarning
-          message={event.query.error.message}
+          message={t('common.genericError')}
           refreshing={event.query.isFetching}
           onRetry={() => {
             void event.query.refetch();
@@ -173,17 +176,17 @@ export function EventShow({
         action={
           row.deletedAt ? (
             <Button variant="contained" loading={pending} onClick={changeEvent}>
-              Restore event
+              {t('reference.events.restoreEvent')}
             </Button>
           ) : (
             <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap' }}>
               <Button
                 variant="contained"
                 onClick={() => {
-                  void navigate(eventLink(resource, `${row.id}/edit`, listSearch));
+                  void navigate(eventLink(locale, resource, `${row.id}/edit`, listSearch));
                 }}
               >
-                Edit event
+                {t('reference.events.edit')}
               </Button>
               <Button
                 variant="soft"
@@ -191,10 +194,10 @@ export function EventShow({
                 onClick={changeEvent}
                 loading={actions.mutation.isPending}
                 disabled={pending}
-                aria-label={row.status === 'PUBLISHED' ? 'Archive' : 'Publish'}
+                aria-label={row.status === 'PUBLISHED' ? t('reference.events.archive') : t('reference.events.publish')}
                 aria-busy={pending}
               >
-                {row.status === 'PUBLISHED' ? 'Archive' : 'Publish'}
+                {row.status === 'PUBLISHED' ? t('reference.events.archive') : t('reference.events.publish')}
               </Button>
               <Button
                 color="error"
@@ -205,7 +208,7 @@ export function EventShow({
                   setConfirm(true);
                 }}
               >
-                Move to trash
+                {t('reference.events.moveToTrash')}
               </Button>
             </Stack>
           )
@@ -215,18 +218,18 @@ export function EventShow({
         <Stack direction="row" sx={{ gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
           <Chip
             color={row.status === 'PUBLISHED' ? 'success' : 'neutral'}
-            label={eventStatuses.find(({ value }) => value === row.status)?.label}
+            label={t(eventStatuses.find(({ value }) => value === row.status)?.labelKey ?? 'reference.events.event')}
           />
-          {row.deletedAt && <Chip color="warning" label="In trash" />}
-          {row.featured && <Chip color="info" label="Featured" />}
+          {row.deletedAt && <Chip color="warning" label={t('reference.events.inTrash')} />}
+          {row.featured && <Chip color="info" label={t('reference.events.featured')} />}
           <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>
-            {row.code} · {eventTime(row.startsAt).format('DD MMM YYYY, HH:mm')} (Sofia) ·{' '}
-            {row.venue?.name ?? 'Online'}
+            {row.code} · {formatDate(row.startsAt, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Sofia' })} ({t('reference.events.sofia')}) ·{' '}
+            {row.venue?.name ?? t('reference.events.online')}
           </Typography>
         </Stack>
         <Tabs
           value={tab}
-          aria-label="Event details"
+          aria-label={t('reference.events.details')}
           onChange={(_, next: string) => {
             const query = new URLSearchParams(search);
             if (next === 'overview') query.delete('tab');
@@ -234,19 +237,19 @@ export function EventShow({
             void navigate({ search: query.toString() ? `?${query.toString()}` : '' });
           }}
         >
-          <Tab value="overview" label="Overview" />
-          <Tab value="sessions" label="Sessions" disabled={Boolean(row.deletedAt)} />
-          <Tab value="history" label="History" />
+          <Tab value="overview" label={t('reference.events.overview')} />
+          <Tab value="sessions" label={t('reference.sessions')} disabled={Boolean(row.deletedAt)} />
+          <Tab value="history" label={t('reference.events.history')} />
         </Tabs>
       </Paper>
       <Paper sx={{ p: { xs: 3, md: 5 }, outline: 0 }}>
         <Stack sx={{ gap: 3 }}>
           {actions.mutation.isError && (
-            <Alert severity="error">{actions.mutation.error.message}</Alert>
+            <Alert severity="error">{localizedErrorMessage(actions.mutation.error, t)}</Alert>
           )}
           {row.deletedAt && (
             <Alert severity="info">
-              This event is in Trash. Restore it to edit or access its sessions and gallery.
+              {t('reference.events.trashInfo')}
             </Alert>
           )}
           {tab === 'history' ? (
@@ -266,19 +269,19 @@ export function EventShow({
                     component="h2"
                     sx={{ mb: 3, px: 2, py: 1, borderRadius: 2, bgcolor: 'background.elevation2' }}
                   >
-                    About this event
+                    {t('reference.events.about')}
                   </Typography>
                   <Typography
                     variant="body2"
                     color={row.summary ? 'text.primary' : 'text.secondary'}
                     sx={{ whiteSpace: 'pre-wrap' }}
                   >
-                    {row.summary ?? 'No summary added yet.'}
+                    {row.summary ?? t('reference.events.noSummary')}
                   </Typography>
                   {row.descriptionHtml && (
                     <Box
                       className="event-rich-content"
-                      aria-label="Event description"
+                      aria-label={t('reference.events.description')}
                       sx={{ my: 3, pt: 3, borderTop: 1, borderColor: 'divider' }}
                       dangerouslySetInnerHTML={{ __html: safeDescriptionHtml(row.descriptionHtml) }}
                     />
@@ -290,7 +293,7 @@ export function EventShow({
                     {row.tags.map((tag) => (
                       <Chip
                         key={tag.id}
-                        label={`${tag.name}${tag.active ? '' : ' (inactive)'}`}
+                        label={`${tag.name}${tag.active ? '' : ` (${t('reference.inactive')})`}`}
                         variant="outlined"
                         icon={
                           <Box
@@ -315,23 +318,23 @@ export function EventShow({
                     component="h2"
                     sx={{ mb: 3, px: 2, py: 1, borderRadius: 2, bgcolor: 'background.elevation2' }}
                   >
-                    Schedule &amp; location
+                    {t('reference.events.scheduleLocation')}
                   </Typography>
                   <Stack component="dl" sx={{ m: 0, gap: 2 }}>
                     {[
                       [
-                        'Starts',
-                        `${eventTime(row.startsAt).format('DD MMM YYYY, HH:mm')} · Europe/Sofia`,
+                        t('reference.events.starts'),
+                        `${formatDate(row.startsAt, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Sofia' })} · Europe/Sofia`,
                       ],
                       [
-                        'Ends',
-                        `${eventTime(row.endsAt).format('DD MMM YYYY, HH:mm')} · Europe/Sofia`,
+                        t('reference.events.ends'),
+                        `${formatDate(row.endsAt, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Sofia' })} · Europe/Sofia`,
                       ],
                       [
-                        'Registration',
+                        t('reference.events.registration'),
                         row.registrationOpensOn && row.registrationClosesOn
                           ? `${row.registrationOpensOn} – ${row.registrationClosesOn}`
-                          : 'Not configured',
+                          : t('reference.events.notConfigured'),
                       ],
                     ].map(([label, value]) => (
                       <Box key={label}>
@@ -346,12 +349,12 @@ export function EventShow({
                     {row.venue && (
                       <Box>
                         <Typography component="dt" variant="caption" color="text.secondary">
-                          Venue
+                          {t('reference.events.venue')}
                         </Typography>
                         <Box component="dd" sx={{ m: 0 }}>
                           <Typography variant="subtitle2">
                             {row.venue.name}
-                            {!row.venue.active && ' (inactive)'}
+                            {!row.venue.active && ` (${t('reference.inactive')})`}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             {[row.venue.address, row.venue.city, row.venue.countryCode]
@@ -364,7 +367,7 @@ export function EventShow({
                     {row.meetingUrl && (
                       <Box>
                         <Typography component="dt" variant="caption" color="text.secondary">
-                          Meeting link
+                          {t('reference.events.meetingLink')}
                         </Typography>
                         <Box component="dd" sx={{ m: 0, overflowWrap: 'anywhere' }}>
                           <Link
@@ -390,27 +393,27 @@ export function EventShow({
                   aria-labelledby="event-record-details"
                 >
                   <Typography id="event-record-details" variant="h6" component="h2" sx={{ mb: 3 }}>
-                    Event details
+                    {t('reference.events.details')}
                   </Typography>
                   <Stack component="dl" divider={<Divider />} sx={{ m: 0, gap: 2 }}>
                     {[
-                      ['Code', row.code],
-                      ['Format', eventFormats.find(({ value }) => value === row.format)?.label],
-                      ['Capacity', row.capacity?.toLocaleString() ?? 'Not set'],
+                      [t('reference.events.code'), row.code],
+                      [t('reference.events.format'), t(eventFormats.find(({ value }) => value === row.format)?.labelKey ?? 'reference.events.event')],
+                      [t('reference.events.capacity'), row.capacity == null ? t('reference.events.notSet') : formatNumber(row.capacity)],
                       [
-                        'Budget',
+                        t('reference.events.budget'),
                         row.budget
-                          ? `${Number(row.budget).toLocaleString('en-IE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EUR`
-                          : 'Not set',
+                          ? `${formatNumber(Number(row.budget), { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EUR`
+                          : t('reference.events.notSet'),
                       ],
-                      ['Featured', row.featured ? 'Yes' : 'No'],
+                      [t('reference.events.featured'), row.featured ? t('common.yes') : t('common.no')],
                       [
-                        'Created',
-                        `${eventTime(row.createdAt).format('DD MMM YYYY, HH:mm')} (Sofia)`,
+                        t('reference.events.created'),
+                        `${formatDate(row.createdAt, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Sofia' })} (${t('reference.events.sofia')})`,
                       ],
                       [
-                        'Updated',
-                        `${eventTime(row.updatedAt).format('DD MMM YYYY, HH:mm')} (Sofia)`,
+                        t('reference.events.updated'),
+                        `${formatDate(row.updatedAt, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Sofia' })} (${t('reference.events.sofia')})`,
                       ],
                     ].map(([label, value]) => (
                       <Box key={label}>
@@ -439,7 +442,7 @@ export function EventShow({
             sx={{ alignSelf: 'flex-start' }}
             color="neutral"
           >
-            Back to events
+            {t('reference.events.back')}
           </Button>
         </Stack>
       </Paper>
@@ -452,13 +455,13 @@ export function EventShow({
           if (!submitting.current) setConfirm(false);
         }}
       >
-        <DialogTitle id="event-trash-title">Move event to trash?</DialogTitle>
+        <DialogTitle id="event-trash-title">{t('reference.events.trashTitle')}</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2 }}>
-            {row.title} will be removed from the active list.
+            {t('reference.events.trashMessage', { name: row.title })}
           </Typography>
           {deletion.mutation.isError && (
-            <Alert severity="error">{deletion.mutation.error.message}</Alert>
+            <Alert severity="error">{localizedErrorMessage(deletion.mutation.error, t)}</Alert>
           )}
         </DialogContent>
         <DialogActions>
@@ -469,7 +472,7 @@ export function EventShow({
               setConfirm(false);
             }}
           >
-            Cancel
+            {t('reference.cancel')}
           </Button>
           <Button
             variant="contained"
@@ -477,7 +480,7 @@ export function EventShow({
             loading={deletion.mutation.isPending}
             onClick={remove}
           >
-            Move to trash
+            {t('reference.events.moveToTrash')}
           </Button>
         </DialogActions>
       </Dialog>
