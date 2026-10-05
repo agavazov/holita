@@ -52,7 +52,7 @@ test('Event create/edit persists all sections and remote relations, with dirty n
 }, testInfo) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  await page.goto(`${app.url}/stores/${storeA}/reference/events`);
+  await page.goto(`${app.url}/en/stores/${storeA}/reference/events`);
   await page.getByRole('button', { name: 'Create event', exact: true }).click();
   await onlineEvent(page, 'Browser forum', 'BROWSER-FORUM');
   await page.getByLabel(/^Registration opens/).fill('2026-10-01');
@@ -139,7 +139,7 @@ test('Speaker and Tag forms create, edit, validate and delete through the gatewa
   page,
   app,
 }) => {
-  await page.goto(`${app.url}/stores/${storeA}/reference/speakers`);
+  await page.goto(`${app.url}/en/stores/${storeA}/reference/speakers`);
   await page.getByRole('button', { name: 'Create speaker', exact: true }).click();
   await page.getByLabel('Name', { exact: true }).fill('Browser speaker');
   await page.getByLabel(/^Email/).fill('speaker@example.com');
@@ -202,7 +202,7 @@ test('a pending Event create retains its original store and cannot redirect a ne
     } else await route.continue();
   });
   try {
-    await page.goto(`${app.url}/stores/${storeA}/reference/events/create`);
+    await page.goto(`${app.url}/en/stores/${storeA}/reference/events/create`);
     await onlineEvent(page, 'Pending Sofia forum', 'PENDING-FORUM');
     await page.getByRole('button', { name: 'Save event', exact: true }).dblclick();
     await started;
@@ -214,7 +214,7 @@ test('a pending Event create retains its original store and cannot redirect a ne
     );
     release();
     await completed;
-    await expect(page).toHaveURL(`${app.url}/stores/${storeB}/reference/events/create`);
+    await expect(page).toHaveURL(`${app.url}/en/stores/${storeB}/reference/events/create`);
     await expect(page.getByLabel('Title', { exact: true })).toHaveValue(
       'Independent Plovdiv draft',
     );
@@ -235,7 +235,7 @@ test('Event range drafts follow Back and Forward when another filter changes', a
   page,
   app,
 }) => {
-  const original = `${app.url}/stores/${storeA}/reference/events?to=2026-11-12&max=200`;
+  const original = `${app.url}/en/stores/${storeA}/reference/events?to=2026-11-12&max=200`;
   await page.goto(original);
   await page.getByRole('button', { name: 'Filter events', exact: true }).click();
   await choose(page, 'Featured', 'Featured');
@@ -269,7 +269,7 @@ test('Event filters, columns and overview preserve the list address through edit
 }, testInfo) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  const list = `${app.url}/stores/${storeA}/reference/events`;
+  const list = `${app.url}/en/stores/${storeA}/reference/events`;
   await page.goto(list);
   await page.getByRole('searchbox', { name: 'Search events' }).fill('SOFIA-FORUM');
   await page.getByRole('searchbox', { name: 'Search events' }).press('Enter');
@@ -378,7 +378,7 @@ test('Event filters, columns and overview preserve the list address through edit
     'Published',
   );
   await choose(page, 'Store', 'holita Plovdiv');
-  await expect(page).toHaveURL(`${app.url}/stores/${storeB}/reference/events`);
+  await expect(page).toHaveURL(`${app.url}/en/stores/${storeB}/reference/events`);
   await expect(page.getByRole('columnheader', { name: /Budget/ })).toHaveCount(0);
   expect(errors).toEqual([]);
 });

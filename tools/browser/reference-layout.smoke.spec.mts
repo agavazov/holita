@@ -11,7 +11,7 @@ test('compact navigation and scrollable tabs keep Event editing and dirty naviga
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.setViewportSize({ width: 320, height: 800 });
-  await page.goto(`${app.url}/stores/${storeId}/reference/events/${eventId}/edit`);
+  await page.goto(`${app.url}/en/stores/${storeId}/reference/events/${eventId}/edit`);
   await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Sofia Creative Forum');
   for (const name of ['General', 'Schedule & location', 'Content & media']) {
     const tab = page.getByRole('tab', { name, exact: true });
@@ -54,7 +54,7 @@ test('compact navigation and scrollable tabs keep Event editing and dirty naviga
   await page.getByRole('button', { name: 'Open navigation' }).click();
   await navigation.getByRole('menuitem', { name: 'Venues', exact: true }).click();
   await page.getByRole('button', { name: 'Discard changes', exact: true }).click();
-  await expect(page).toHaveURL(`${app.url}/stores/${storeId}/reference/venues`);
+  await expect(page).toHaveURL(`${app.url}/en/stores/${storeId}/reference/venues`);
   await expect(page.getByRole('link', { name: 'The Glasshouse', exact: true })).toBeVisible();
 
   await page.setViewportSize({ width: 1280, height: 900 });

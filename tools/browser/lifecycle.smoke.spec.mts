@@ -29,7 +29,7 @@ test('bulk actions, Trash and history survive reload and preserve the event prog
   });
   const setupBody: unknown = await setup.json();
   expect(setupBody).not.toHaveProperty('errors');
-  const list = `${app.url}/stores/${storeA}/reference/events`;
+  const list = `${app.url}/en/stores/${storeA}/reference/events`;
   await page.goto(list);
   const row = () => page.getByRole('row').filter({ hasText: 'Sofia Creative Forum' });
   await row().getByRole('checkbox').check();
@@ -128,7 +128,7 @@ test('a delayed bulk completion cannot notify or change a newly selected store',
     await route.fulfill({ response });
   });
   try {
-    await page.goto(`${app.url}/stores/${storeA}/reference/events`);
+    await page.goto(`${app.url}/en/stores/${storeA}/reference/events`);
     await page
       .getByRole('row')
       .filter({ hasText: 'Sofia Creative Forum' })
@@ -138,10 +138,10 @@ test('a delayed bulk completion cannot notify or change a newly selected store',
     await page.getByRole('dialog').getByRole('button', { name: 'Publish', exact: true }).dblclick();
     await started;
     await page.evaluate((store) => {
-      window.history.pushState({}, '', `/stores/${store}/reference/events`);
+      window.history.pushState({}, '', `/en/stores/${store}/reference/events`);
       window.dispatchEvent(new PopStateEvent('popstate'));
     }, storeB);
-    await expect(page).toHaveURL(`${app.url}/stores/${storeB}/reference/events`);
+    await expect(page).toHaveURL(`${app.url}/en/stores/${storeB}/reference/events`);
     const completed = page.waitForResponse((response) =>
       operation(response.request(), 'SetReferenceEventsStatus'),
     );

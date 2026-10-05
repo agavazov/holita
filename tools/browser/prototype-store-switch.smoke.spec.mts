@@ -40,18 +40,18 @@ test('a delayed Prototype Product response cannot replace the newly selected sto
     };
   }, storeA);
   try {
-    await page.goto(`${app.url}/stores/${storeA}/products`);
+    await page.goto(`${app.url}/en/stores/${storeA}/products`);
     await expect(page.locator('html')).toHaveAttribute('data-holita-product-held', 'true');
     await page.getByRole('combobox', { name: 'Store', exact: true }).click();
     await page.getByRole('option', { name: 'holita Plovdiv', exact: true }).click();
-    await expect(page).toHaveURL(`${app.url}/stores/${storeB}/products`);
+    await expect(page).toHaveURL(`${app.url}/en/stores/${storeB}/products`);
     await expect(page.getByRole('link', { name: 'Travel journal', exact: true })).toBeVisible();
     await page.evaluate(() => window.dispatchEvent(new Event('holita-release-products')));
     await expect(page.locator('html')).toHaveAttribute('data-holita-product-released', 'true');
     await expect(page.getByRole('link', { name: 'Woven rug', exact: true })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Travel journal', exact: true })).toHaveAttribute(
       'href',
-      `/stores/${storeB}/products/20000000-0000-4000-8000-000000000108/edit`,
+      `/en/stores/${storeB}/products/20000000-0000-4000-8000-000000000108/edit`,
     );
     await page.getByRole('combobox', { name: 'Store', exact: true }).click();
     await page.getByRole('option', { name: 'holita Sofia', exact: true }).click();
@@ -96,7 +96,7 @@ test('a pending Prototype Product write keeps its captured store, blocks Reset a
     };
   });
   try {
-    await page.goto(`${app.url}/stores/${storeA}/products/create`);
+    await page.goto(`${app.url}/en/stores/${storeA}/products/create`);
     await page.getByLabel('Name', { exact: true }).fill('Pending prototype product');
     await page.getByLabel('SKU', { exact: true }).fill('PENDING-PROTOTYPE');
     const save = page.getByRole('button', { name: 'Save product', exact: true });
@@ -113,11 +113,12 @@ test('a pending Prototype Product write keeps its captured store, blocks Reset a
     await page.getByLabel('SKU', { exact: true }).fill('UNSAVED-PROTOTYPE');
     await page.evaluate(() => window.dispatchEvent(new Event('holita-release-product-write')));
     await expect(page.getByRole('button', { name: 'Reset demo data', exact: true })).toBeEnabled();
-    await expect(page).toHaveURL(`${app.url}/stores/${storeB}/products/create`);
+    await expect(page).toHaveURL(`${app.url}/en/stores/${storeB}/products/create`);
     await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Unsaved Plovdiv draft');
     await expect(page.getByText('Product saved.', { exact: true })).toHaveCount(0);
     await expect(page.locator('html')).toHaveAttribute('data-holita-product-writes', '1');
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await page.getByRole('button', { name: 'Discard changes', exact: true }).click();
     await expect(page.getByRole('link', { name: 'Travel journal', exact: true })).toBeVisible();
     await expect(
       page.getByRole('link', { name: 'Pending prototype product', exact: true }),

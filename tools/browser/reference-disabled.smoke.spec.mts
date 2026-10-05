@@ -39,7 +39,7 @@ for (const [label, routes] of [
         referenceRequests.push(body.operationName);
     });
     for (const route of routes) {
-      await page.goto(`${app.url}/stores/${storeId}/reference/${route}`);
+      await page.goto(`${app.url}/en/stores/${storeId}/reference/${route}`);
       await expect(page.getByRole('alert')).toHaveText('Reference is disabled.');
       await expect(page.getByRole('menuitem', { name: 'Venues', exact: true })).toHaveCount(0);
     }
@@ -60,7 +60,7 @@ test('Products creation and mobile navigation work with Reference disabled', asy
   page,
   app,
 }) => {
-  await page.goto(`${app.url}/stores/${storeId}/products`);
+  await page.goto(`${app.url}/en/stores/${storeId}/products`);
   await expect(page.getByRole('link', { name: 'Sofia notebook', exact: true })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Events', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Create product', exact: true }).click();
@@ -71,7 +71,7 @@ test('Products creation and mobile navigation work with Reference disabled', asy
     page.getByRole('link', { name: 'Product without Reference', exact: true }),
   ).toBeVisible();
 
-  await page.goto(`${app.url}/stores/${storeId}/reference/venues`);
+  await page.goto(`${app.url}/en/stores/${storeId}/reference/venues`);
   await expect(page.getByRole('alert')).toHaveText('Reference is disabled.');
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: 'Open navigation' }).click();

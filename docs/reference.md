@@ -8,8 +8,8 @@ context, with independent services and databases. See [Products usage](developme
 Prototype also serves these same Event/Session screens with persisted mock relations,
 program ordering, status actions, Trash/Restore, History and Gallery/uploads. Uploaded
 image bytes persist in IndexedDB; metadata and History share the versioned snapshot. See [mode behavior and limitations](development.md#admin-data-modes), the concrete
-[Event mocks](../apps/admin/src/mocks/events.ts), [Session mocks](../apps/admin/src/mocks/sessions.ts),
-[Media mocks](../apps/admin/src/mocks/media.ts), [Event browser workflow](../tools/browser/prototype-events.smoke.spec.mts)
+[Event mocks](../apps/admin-react/src/mocks/events.ts), [Session mocks](../apps/admin-react/src/mocks/sessions.ts),
+[Media mocks](../apps/admin-react/src/mocks/media.ts), [Event browser workflow](../tools/browser/prototype-events.smoke.spec.mts)
 and [Gallery browser workflow](../tools/browser/prototype-media.smoke.spec.mts).
 The [mode review mapping](testing.md#reviewing-both-admin-modes) pairs the concrete
 Prototype and Real checks for each implemented capability.
@@ -19,7 +19,7 @@ relations and lifecycle examples. Choose only the capabilities needed by the mod
 
 ## UI catalog and shared components
 
-The [UI catalog](../apps/admin/src/features/prototype/ui-catalog/ui-catalog.tsx) is available
+The [UI catalog](../apps/admin-react/src/features/prototype/ui-catalog/ui-catalog.tsx) is available
 through **Prototype → UI catalog** after store selection. Its Body, Lists, Forms and States
 tabs demonstrate the actual Aurora theme and shared components. Local edits illustrate UI
 interactions without business operations or persisted mock data. The list dialog previews
@@ -28,14 +28,14 @@ See [usage and reset behavior](development.md#ui-catalog).
 
 | Presentation          | Shared implementation                                                                                                                                                                                               | Ownership and use                                                                                                                                                                |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Page header           | [PageHeader](../apps/admin/src/components/page-header.tsx)                                                                                                                                                          | Breadcrumbs, title and supplied actions. The feature owns routes and action availability.                                                                                        |
-| Body/form sections    | [ContentSection](../apps/admin/src/components/content-section.tsx)                                                                                                                                                  | Accessible heading, optional description and Aurora spacing. Used by Product/Venue/Speaker/Tag/Event/Session forms and catalog examples; fields and validation stay in the form. |
-| Form settings/actions | [EditorAside](../apps/admin/src/components/editor-aside.tsx)                                                                                                                                                        | Sticky desktop settings/summary and supplied actions, below fields on mobile. Form values, pending state and submission stay feature-owned.                                      |
-| List filters          | [FilterDrawer](../apps/admin/src/components/filter-drawer.tsx)                                                                                                                                                      | Responsive panel and close control. The feature supplies concrete filters and owns their values, URL and debounce.                                                               |
-| Row menus             | [RecordActions](../apps/admin/src/components/record-actions.tsx)                                                                                                                                                    | View/Edit/Delete or feature-supplied labels/callbacks. Does not decide permissions, deletion rules or perform mutations.                                                         |
-| Grid pagination       | [DataGridPagination](../apps/admin/src/components/data-grid-pagination.tsx)                                                                                                                                         | Aurora pagination presentation. The feature owns page, size, totals and request behavior.                                                                                        |
-| Refresh failures      | [QueryRefreshWarning](../apps/admin/src/components/query-refresh-warning.tsx)                                                                                                                                       | Retry warning that accompanies retained content/drafts. The feature owns fetching and retry.                                                                                     |
-| Inputs and primitives | MUI with [Aurora overrides](../apps/admin/src/theme/theme.ts), [StyledTextField](../apps/admin/src/layout/primitives/styled-text-field.tsx) and [local icons](../apps/admin/src/layout/primitives/iconify-icon.tsx) | Reuse directly. Use theme spacing, typography, semantic palette and existing interaction variants. Avoid wrappers that only rename MUI controls.                                 |
+| Page header           | [PageHeader](../apps/admin-react/src/components/page-header.tsx)                                                                                                                                                          | Breadcrumbs, title and supplied actions. The feature owns routes and action availability.                                                                                        |
+| Body/form sections    | [ContentSection](../apps/admin-react/src/components/content-section.tsx)                                                                                                                                                  | Accessible heading, optional description and Aurora spacing. Used by Product/Venue/Speaker/Tag/Event/Session forms and catalog examples; fields and validation stay in the form. |
+| Form settings/actions | [EditorAside](../apps/admin-react/src/components/editor-aside.tsx)                                                                                                                                                        | Sticky desktop settings/summary and supplied actions, below fields on mobile. Form values, pending state and submission stay feature-owned.                                      |
+| List filters          | [FilterDrawer](../apps/admin-react/src/components/filter-drawer.tsx)                                                                                                                                                      | Responsive panel and close control. The feature supplies concrete filters and owns their values, URL and debounce.                                                               |
+| Row menus             | [RecordActions](../apps/admin-react/src/components/record-actions.tsx)                                                                                                                                                    | View/Edit/Delete or feature-supplied labels/callbacks. Does not decide permissions, deletion rules or perform mutations.                                                         |
+| Grid pagination       | [DataGridPagination](../apps/admin-react/src/components/data-grid-pagination.tsx)                                                                                                                                         | Aurora pagination presentation. The feature owns page, size, totals and request behavior.                                                                                        |
+| Refresh failures      | [QueryRefreshWarning](../apps/admin-react/src/components/query-refresh-warning.tsx)                                                                                                                                       | Retry warning that accompanies retained content/drafts. The feature owns fetching and retry.                                                                                     |
+| Inputs and primitives | MUI with [Aurora overrides](../apps/admin-react/src/theme/theme.ts), [StyledTextField](../apps/admin-react/src/layout/primitives/styled-text-field.tsx) and [local icons](../apps/admin-react/src/layout/primitives/iconify-icon.tsx) | Reuse directly. Use theme spacing, typography, semantic palette and existing interaction variants. Avoid wrappers that only rename MUI controls.                                 |
 
 Reuse the shared presentation directly and adapt the existing concrete feature examples
 for domain behavior. New shared components require demonstrated reuse and remain independent
@@ -51,17 +51,17 @@ preset and at desktop/mobile sizes. Catalog previews use local state; business s
 the existing Refine/provider and captured store lifecycle.
 
 Focused checks: [catalog browser interactions](../tools/browser/ui-catalog.smoke.spec.mts),
-[Product form](../apps/admin/src/features/products/product-form.test.tsx),
-[Speaker/Tag forms](../apps/admin/src/features/reference/lookup-forms.test.tsx) and
-[Real route guard](../apps/admin/src/features/stores/store-workspace.test.tsx).
+[Product form](../apps/admin-react/src/features/products/product-form.test.tsx),
+[Speaker/Tag forms](../apps/admin-react/src/features/reference/lookup-forms.test.tsx) and
+[Real route guard](../apps/admin-react/src/features/stores/store-workspace.test.tsx).
 
 ## Products: the Aurora CRUD reference
 
-The working slice is explicit: [list](../apps/admin/src/features/products/product-list.tsx),
-[editor](../apps/admin/src/features/products/product-editor.tsx) and
-[form](../apps/admin/src/features/products/product-form.tsx) →
-[named operations](../apps/admin/src/features/products/operations.graphql) →
-[provider mapping](../apps/admin/src/data/products-provider.ts) →
+The working slice is explicit: [list](../apps/admin-react/src/features/products/product-list.tsx),
+[editor](../apps/admin-react/src/features/products/product-editor.tsx) and
+[form](../apps/admin-react/src/features/products/product-form.tsx) →
+[named operations](../apps/admin-react/src/features/products/operations.graphql) →
+[provider mapping](../apps/admin-react/src/data/products-provider.ts) →
 [SDL](../apps/products/src/products/products.graphql),
 [resolver](../apps/products/src/products/products.resolver.ts),
 [service](../apps/products/src/products/products.service.ts) and
@@ -71,12 +71,12 @@ See [Products usage](development.md#using-products) for the user-visible behavio
 
 | Part                 | Reuse and ownership                                                                                                                                                                                                                                                                                                                                                                                     |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Header               | [PageHeader](../apps/admin/src/components/page-header.tsx) supplies Aurora's breadcrumb/title/action composition. `embedded` fits it inside a form's main panel. The module supplies routes, labels and useful actions.                                                                                                                                                                                 |
-| Table                | MUI X DataGrid uses the shared [Aurora overrides](../apps/admin/src/theme/components/DataGrid.tsx), checkbox/tab styling and [pagination](../apps/admin/src/components/data-grid-pagination.tsx). Keyboard focus styling belongs to the theme. Built-in column menus, filter panels and column management are not configured for this CRUD.                                                             |
+| Header               | [PageHeader](../apps/admin-react/src/components/page-header.tsx) supplies Aurora's breadcrumb/title/action composition. `embedded` fits it inside a form's main panel. The module supplies routes, labels and useful actions.                                                                                                                                                                                 |
+| Table                | MUI X DataGrid uses the shared [Aurora overrides](../apps/admin-react/src/theme/components/DataGrid.tsx), checkbox/tab styling and [pagination](../apps/admin-react/src/components/data-grid-pagination.tsx). Keyboard focus styling belongs to the theme. Built-in column menus, filter panels and column management are not configured for this CRUD.                                                             |
 | List state           | ProductList owns its concrete columns, Refine query, selection and URL state. Quick and advanced search share one draft; SKU has its own draft. `changeListQuery` commits filter/sort changes together, preserving unrelated query parameters and resetting the page. Text waits 300 ms; status and sorting commit immediately, including pending text.                                                 |
-| Filter and row menus | [FilterDrawer](../apps/admin/src/components/filter-drawer.tsx) owns the responsive Aurora panel; [RecordActions](../apps/admin/src/components/record-actions.tsx) owns the shared row menu. Products, Venues, Speakers and Tags use Edit/Delete; Events supplies View, Edit/Restore and Move to trash. Filter controls, values and callbacks stay in each feature; these components do not access data. |
-| Form                 | [EditorAside](../apps/admin/src/components/editor-aside.tsx) supplies the sticky desktop settings/summary panel and its action area for Products, Venues, Speakers, Tags and Events; it follows the fields on mobile. Each form owns its draft, validation and content; its editor owns loading, mutations, errors and navigation.                                                                      |
-| Data and lifecycle   | The [single provider](../apps/admin/src/data/data-provider.ts) and [store workspace](../apps/admin/src/features/stores/store-workspace.tsx) own captured request scope, cache identity and store/route remounts. Share them directly; do not copy transports or global store state.                                                                                                                     |
+| Filter and row menus | [FilterDrawer](../apps/admin-react/src/components/filter-drawer.tsx) owns the responsive Aurora panel; [RecordActions](../apps/admin-react/src/components/record-actions.tsx) owns the shared row menu. Products, Venues, Speakers and Tags use Edit/Delete; Events supplies View, Edit/Restore and Move to trash. Filter controls, values and callbacks stay in each feature; these components do not access data. |
+| Form                 | [EditorAside](../apps/admin-react/src/components/editor-aside.tsx) supplies the sticky desktop settings/summary panel and its action area for Products, Venues, Speakers, Tags and Events; it follows the fields on mobile. Each form owns its draft, validation and content; its editor owns loading, mutations, errors and navigation.                                                                      |
+| Data and lifecycle   | The [single provider](../apps/admin-react/src/data/data-provider.ts) and [store workspace](../apps/admin-react/src/features/stores/store-workspace.tsx) own captured request scope, cache identity and store/route remounts. Share them directly; do not copy transports or global store state.                                                                                                                     |
 
 The feature files are concrete examples, not shared generic list/form controllers. Reuse
 existing presentation components directly; adapt feature-owned fields, API filters/sorts,
@@ -108,7 +108,7 @@ universal batch API, relation picker, upload workflow or dirty-form policy.
   loaded form mounted and shows a retry warning. Store discovery follows the same rule:
   a refresh failure retains the last successful stores and the active feature subtree.
   Successful discovery still updates which stores are available.
-- Products and LookupList share [useRecordDeletion](../apps/admin/src/features/use-record-deletion.ts)
+- Products and LookupList share [useRecordDeletion](../apps/admin-react/src/features/use-record-deletion.ts)
   for sequential scoped `useDelete` calls. Successful rows stay deleted,
   failures remain for retry, and navigation stops the unsent remainder. Preserve each
   module's actual delete constraints; do not replace a domain bulk operation with this loop.
@@ -116,13 +116,16 @@ universal batch API, relation picker, upload workflow or dirty-form policy.
 
 Products currently supports one sort column, page-local selection and the shared Delete
 batch action. Save/Cancel return to the base Products list; browser Back restores a previous
-list URL. Products has no dirty-form confirmation. Reference's existing dirty guards and
-richer Event list return-state behavior remain part of those modules' contracts.
+list URL. Products and Reference share
+[useUnsavedChanges](../apps/admin-react/src/features/use-unsaved-changes.tsx) for dirty-form
+confirmation on language/store changes, Cancel, navigation and history. Successful Save
+clears the guard; submitted writes remain navigable and scoped to the original resource.
+Reference's richer Event list return-state behavior remains part of that module's contract.
 
-Focused checks: [list query transitions](../apps/admin/src/features/products/product-list.test.tsx),
-[form validation](../apps/admin/src/features/products/product-form.test.tsx),
-[provider mapping](../apps/admin/src/data/data-provider.test.ts),
-[store/route and batch lifecycle](../apps/admin/src/features/stores/store-workspace.test.tsx),
+Focused checks: [list query transitions](../apps/admin-react/src/features/products/product-list.test.tsx),
+[form validation](../apps/admin-react/src/features/products/product-form.test.tsx),
+[provider mapping](../apps/admin-react/src/data/data-provider.test.ts),
+[store/route and batch lifecycle](../apps/admin-react/src/features/stores/store-workspace.test.tsx),
 [Aurora list/form browser cases](../tools/browser/products-aurora.smoke.spec.mts) and
 [real CRUD/store-switch cases](../tools/browser/products.smoke.spec.mts).
 The [Products service tests](../apps/products/src/products/products.service.spec.ts),
@@ -132,9 +135,9 @@ Use the [testing guide](testing.md) for exact commands and dedicated database pr
 
 ## Events: Aurora with domain-specific workflows
 
-The [Event list](../apps/admin/src/features/reference/events/event-list.tsx) reuses the shared
+The [Event list](../apps/admin-react/src/features/reference/events/event-list.tsx) reuses the shared
 header, DataGrid theme/pagination, filter drawer and row menu. Its
-[list state](../apps/admin/src/features/reference/events/event-list-state.ts) keeps the existing
+[list state](../apps/admin-react/src/features/reference/events/event-list-state.ts) keeps the existing
 URL contract, default start ascending, per-store column preferences and list-return links.
 Quick and drawer title/code search share a 300 ms draft; enum, relation, date and capacity
 filters apply on change. Invalid ranges remain editable with a message and do not replace the
@@ -145,15 +148,15 @@ clears page-local selection. Active rows open Edit; View opens the overview; tra
 open the read-only overview. Events retain their atomic Publish/Archive/Trash/Restore API and
 confirmation. Do not replace it with the supporting entities' sequential hard-delete loop.
 
-The [form](../apps/admin/src/features/reference/events/event-form.tsx) uses the shared Create Event
+The [form](../apps/admin-react/src/features/reference/events/event-form.tsx) uses the shared Create Event
 aside for Status, Featured, Capacity, Budget, summary and Save/Cancel. General, Schedule &
 location and Content & media retain local drafts across tabs; validation opens and focuses the
-first recognized field. The concrete [form values](../apps/admin/src/features/reference/events/event-form-state.ts)
+first recognized field. The concrete [form values](../apps/admin-react/src/features/reference/events/event-form-state.ts)
 map native date/time inputs to the existing Sofia conversion, retain untouched instants including
 seconds, milliseconds and the repeated autumn hour, and keep money as an exact decimal string. No date-picker or form
-library is required. [The editor](../apps/admin/src/features/reference/events/event-editor.tsx)
+library is required. [The editor](../apps/admin-react/src/features/reference/events/event-editor.tsx)
 owns Refine mutations, captured store scope, gallery dirty/pending coordination and route callbacks.
-[StoreWorkspace](../apps/admin/src/features/stores/store-workspace.tsx) loads the Reference UI
+[StoreWorkspace](../apps/admin-react/src/features/stores/store-workspace.tsx) loads the Reference UI
 with React lazy/Suspense only when an enabled Reference route is opened. Products and disabled
 Reference routes do not download that UI. ReferenceWorkspace separately loads the Event editor
 and Tiptap on demand; lists and other forms do not download the rich editor. Existing
@@ -161,33 +164,33 @@ store/pathname keys still isolate mutations across these loading boundaries.
 Reference editors also preserve their local drafts during failed background reads and retries.
 The Event overview retains its child workflows on refresh failure, including unsaved session order.
 
-[RelationSelect](../apps/admin/src/features/reference/relation-select.tsx) uses MUI Autocomplete with
-the original [Aurora Autocomplete styling](../apps/admin/src/theme/components/Autocomplete.tsx),
+[RelationSelect](../apps/admin-react/src/features/reference/relation-select.tsx) uses MUI Autocomplete with
+the original [Aurora Autocomplete styling](../apps/admin-react/src/theme/components/Autocomplete.tsx),
 Refine remote paging, search, retry and separate ID hydration for inactive existing selections.
 Event and Session forms share it. The Tiptap editor has MUI controls and retains
 its HTML sanitation, byte limit and route-scoped selection/undo history.
-The [overview](../apps/admin/src/features/reference/events/event-show.tsx) uses Aurora typography,
+The [overview](../apps/admin-react/src/features/reference/events/event-show.tsx) uses Aurora typography,
 summary/details sections and tabs. Its child workflows also follow the selected Aurora preset:
 
-- [Session editor](../apps/admin/src/features/reference/sessions/session-editor.tsx) and
-  [form](../apps/admin/src/features/reference/sessions/session-form.tsx) reuse PageHeader and
+- [Session editor](../apps/admin-react/src/features/reference/sessions/session-editor.tsx) and
+  [form](../apps/admin-react/src/features/reference/sessions/session-form.tsx) reuse PageHeader and
   EditorAside. The concrete form validates parent bounds, end-after-start and speaker limits.
   Both Event and Session native date/time inputs use
-  [eventInputInstant](../apps/admin/src/features/reference/events/event-time.ts) to validate Sofia
+  [eventInputInstant](../apps/admin-react/src/features/reference/events/event-time.ts) to validate Sofia
   wall time and preserve exact untouched instants despite minute-precision inputs. Drafts, field-error focus and mutations
   remain scoped to their store, parent Event and editor route.
-- [Session program](../apps/admin/src/features/reference/sessions/session-list.tsx) adapts Aurora's
+- [Session program](../apps/admin-react/src/features/reference/sessions/session-list.tsx) adapts Aurora's
   rounded Create Event sections, with title/row navigation and the shared Edit/Delete menu.
   Native drag and move buttons change a local order; Save order uses the existing complete
   permutation mutation. Cancel reloads the server. Ordering is independent of session times.
-  [Speaker summary](../apps/admin/src/features/reference/sessions/event-speakers.tsx) derives a
+  [Speaker summary](../apps/admin-react/src/features/reference/sessions/event-speakers.tsx) derives a
   unique roster from the same scoped session query and labels inactive speakers.
-- [Gallery](../apps/admin/src/features/reference/media/event-gallery.tsx) uses Aurora Paper/upload
+- [Gallery](../apps/admin-react/src/features/reference/media/event-gallery.tsx) uses Aurora Paper/upload
   presentation, a native file input and MUI progress/dialogs. Upload, cover, alt text and removal
   save independently; ordering stays a draft until saved. Preview supports previous/next images,
   arrow keys and Escape. Existing upload hooks own cancellation and scoped finalization.
-- [History](../apps/admin/src/features/reference/events/event-history.tsx) uses the original
-  [Aurora table overrides](../apps/admin/src/theme/components/Table.tsx) and an expandable MUI
+- [History](../apps/admin-react/src/features/reference/events/event-history.tsx) uses the original
+  [Aurora table overrides](../apps/admin-react/src/theme/components/Table.tsx) and an expandable MUI
   table. It requests 20 entries per page, newest first, and renders excerpts as escaped text.
   Page changes clear expanded rows; loading, failure and empty results remain distinct.
 
@@ -196,28 +199,28 @@ shared Aurora PageHeader and MUI controls. Its loading, error/retry, empty and u
 states remain owned by StoreWorkspace; layout receives plain inputs without feature queries.
 There is no Ant Design runtime dependency or compatibility provider.
 
-Focused checks: [form values](../apps/admin/src/features/reference/events/event-form-state.test.ts),
-[editor lifecycle](../apps/admin/src/features/reference/events/event-workspace.test.tsx),
-[list/overview](../apps/admin/src/features/reference/events/event-list.test.tsx),
-[atomic lifecycle](../apps/admin/src/features/reference/events/event-lifecycle.test.tsx),
+Focused checks: [form values](../apps/admin-react/src/features/reference/events/event-form-state.test.ts),
+[editor lifecycle](../apps/admin-react/src/features/reference/events/event-workspace.test.tsx),
+[list/overview](../apps/admin-react/src/features/reference/events/event-list.test.tsx),
+[atomic lifecycle](../apps/admin-react/src/features/reference/events/event-lifecycle.test.tsx),
 [real Events flow](../tools/browser/events.smoke.spec.mts), [rich text](../tools/browser/rich-text.smoke.spec.mts)
 and [lifecycle browser flow](../tools/browser/lifecycle.smoke.spec.mts).
 
 ## Reference: domain-specific extensions
 
 Venues is the smallest Reference service slice. Its
-[list](../apps/admin/src/features/reference/venues/venue-list.tsx),
-[editor](../apps/admin/src/features/reference/venues/venue-editor.tsx) and
-[form](../apps/admin/src/features/reference/venues/venue-form.tsx) use Aurora/MUI and the shared
+[list](../apps/admin-react/src/features/reference/venues/venue-list.tsx),
+[editor](../apps/admin-react/src/features/reference/venues/venue-editor.tsx) and
+[form](../apps/admin-react/src/features/reference/venues/venue-form.tsx) use Aurora/MUI and the shared
 header, DataGrid theme/pagination, filter drawer, row actions and editor aside.
-The existing [LookupList](../apps/admin/src/features/reference/lookup-list.tsx) now owns the
+The existing [LookupList](../apps/admin-react/src/features/reference/lookup-list.tsx) now owns the
 common list behavior for Venues, Speakers and Tags. Their small list adapters supply the
 scoped resource, typed detail columns and deletion guidance.
-[LookupFilters](../apps/admin/src/features/reference/lookup-filters.tsx) supplies their shared
+[LookupFilters](../apps/admin-react/src/features/reference/lookup-filters.tsx) supplies their shared
 name/status controls. Keep this reuse limited to the three supporting entities; Products
 and Events have their own lists and domain behavior.
 Venue, Speaker, Tag and Event forms share the small
-[text validator](../apps/admin/src/features/reference/text-validation.ts) for required text,
+[text validator](../apps/admin-react/src/features/reference/text-validation.ts) for required text,
 Unicode character counts and null-character rejection. Field limits, messages and domain
 validation remain in each form.
 Quick and panel name search share a 300 ms draft; Active/Inactive and sorting apply immediately.
@@ -226,15 +229,15 @@ descending tie-breaker and null capacity last in either direction. The default r
 URL state, selection reset, unknown initial totals and sequential deletion follow Products.
 Referenced venues cannot be deleted; partial failures retain only failed records for retry.
 The form shows Venue details and Location together, with Active, Capacity and Summary in
-the aside. Save/Cancel return to the base list. Unlike Products, Venue retains dirty-navigation
-confirmation and allowlisted field-error display/focus. Failed saves preserve the draft.
+the aside. Save/Cancel return to the base list. Venue shares dirty-navigation confirmation
+with Products and retains allowlisted field-error display/focus. Failed saves preserve the draft.
 The Reference workspace supplies store-scoped MUI success notices, and its shared dirty-form
 dialog uses MUI; their lifetimes and router/store boundaries are unchanged.
 
-[SpeakerForm](../apps/admin/src/features/reference/speakers/speaker-form.tsx) uses Name, Email
+[SpeakerForm](../apps/admin-react/src/features/reference/speakers/speaker-form.tsx) uses Name, Email
 and Short biography with the same aside and dirty-navigation lifecycle. Email and biography
 normalize blanks to null; inactive status is preserved.
-[TagForm](../apps/admin/src/features/reference/tags/tag-form.tsx) uses a six-digit HEX field and
+[TagForm](../apps/admin-react/src/features/reference/tags/tag-form.tsx) uses a six-digit HEX field and
 native color picker with a preview; it normalizes color to lowercase. A duplicate name keeps
 the draft and focuses Name. Speaker sorting additionally supports Email (null last), and Tag
 sorting supports Color. Referenced Speakers/Tags cannot be deleted; batch failures retain
@@ -242,17 +245,17 @@ only the failed records for retry, with count-aware success notices.
 Their editors, GraphQL operations, provider mappings and backend repositories remain concrete.
 No additional dependency or database migration is needed for this presentation and sorting.
 
-Focused checks: [Venue form](../apps/admin/src/features/reference/venues/venue-form.test.tsx),
-[list state](../apps/admin/src/features/reference/venues/venue-list.test.tsx),
-[Reference workspace](../apps/admin/src/features/reference/reference-workspace.test.tsx),
+Focused checks: [Venue form](../apps/admin-react/src/features/reference/venues/venue-form.test.tsx),
+[list state](../apps/admin-react/src/features/reference/venues/venue-list.test.tsx),
+[Reference workspace](../apps/admin-react/src/features/reference/reference-workspace.test.tsx),
 [Venue DB](../apps/reference/test/venues.db.spec.ts),
 [CRUD/lifecycle browser cases](../tools/browser/reference.smoke.spec.mts) and
 [Aurora Venue browser cases](../tools/browser/venues-aurora.smoke.spec.mts),
-[Speaker/Tag forms](../apps/admin/src/features/reference/lookup-forms.test.tsx),
+[Speaker/Tag forms](../apps/admin-react/src/features/reference/lookup-forms.test.tsx),
 [lookup sorting/constraints](../apps/reference/test/events.db.spec.ts) and
 [Aurora Speaker/Tag browser cases](../tools/browser/lookups-aurora.smoke.spec.mts).
-Its [operations](../apps/admin/src/features/reference/venues/operations.graphql),
-[provider](../apps/admin/src/data/venues-provider.ts),
+Its [operations](../apps/admin-react/src/features/reference/venues/operations.graphql),
+[provider](../apps/admin-react/src/data/venues-provider.ts),
 [SDL](../apps/reference/src/venues/venues.graphql),
 [resolver](../apps/reference/src/venues/venues.resolver.ts),
 [service](../apps/reference/src/venues/venues.service.ts) and
@@ -266,15 +269,15 @@ Reference's [schema](../apps/reference/prisma/schema.prisma),
 
 | Need                                                                      | Implementation                                                                                                                                                                                                                                                                                                         | Behavioral checks                                                                                                                                                                                                                |
 | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Store and route isolation, pending writes, dirty navigation               | [Store workspace](../apps/admin/src/features/stores/store-workspace.tsx), [Reference routes](../apps/admin/src/features/reference/reference-workspace.tsx), [unsaved changes](../apps/admin/src/features/reference/use-unsaved-changes.tsx)                                                                            | [Store lifecycle](../apps/admin/src/features/stores/store-workspace.test.tsx), [mobile navigation](../tools/browser/reference-layout.smoke.spec.mts)                                                                             |
-| Sectioned forms, money, dates, conditional fields and field errors        | [Event form](../apps/admin/src/features/reference/events/event-form.tsx), [editor](../apps/admin/src/features/reference/events/event-editor.tsx), [Sofia time conversion](../apps/admin/src/features/reference/events/event-time.ts), [service validation](../apps/reference/src/events/events.service.ts)             | [Event admin](../apps/admin/src/features/reference/events/event-workspace.test.tsx), [Event persistence](../apps/reference/test/events.db.spec.ts), [time cases](../apps/admin/src/features/reference/events/event-time.test.ts) |
-| Remote single/multiple relations without preloading tables                | [Relation select](../apps/admin/src/features/reference/relation-select.tsx), [Event repository](../apps/reference/src/events/events.repository.ts), [Speaker assignments](../apps/admin/src/features/reference/sessions/event-speakers.tsx)                                                                            | [Event browser flow](../tools/browser/events.smoke.spec.mts), [Session persistence](../apps/reference/test/sessions.db.spec.ts)                                                                                                  |
-| URL filters, pagination, sorting, column preferences and overview actions | [Event list](../apps/admin/src/features/reference/events/event-list.tsx), [list state](../apps/admin/src/features/reference/events/event-list-state.ts), [overview](../apps/admin/src/features/reference/events/event-show.tsx)                                                                                        | [List/overview cases](../apps/admin/src/features/reference/events/event-list.test.tsx), [browser checks](../tools/browser/events.smoke.spec.mts)                                                                                 |
-| Child CRUD and explicit ordering                                          | [Session list](../apps/admin/src/features/reference/sessions/session-list.tsx), [order draft](../apps/admin/src/features/reference/sessions/use-session-order.ts), [Session service](../apps/reference/src/sessions/sessions.service.ts)                                                                               | [Session browser flow](../tools/browser/sessions.smoke.spec.mts)                                                                                                                                                                 |
-| Rich text with a bounded, sanitized HTML contract                         | [Description editor](../apps/admin/src/features/reference/events/description-editor.tsx), [backend sanitizer](../apps/reference/src/events/description-html.ts)                                                                                                                                                        | [Sanitizer tests](../apps/reference/src/events/description-html.spec.ts), [rich text browser flow](../tools/browser/rich-text.smoke.spec.mts)                                                                                    |
-| Gallery, direct upload, preview, alt text and cover                       | [Gallery](../apps/admin/src/features/reference/media/event-gallery.tsx), [upload hooks](../apps/admin/src/features/reference/media/use-media-actions.ts), [HTTP transport](../apps/admin/src/data/direct-upload.ts), [Media service](../apps/reference/src/media/media.service.ts)                                     | [Gallery admin](../apps/admin/src/features/reference/media/event-gallery.test.tsx), [Media persistence](../apps/reference/test/media.db.spec.ts), [browser flow](../tools/browser/media.smoke.spec.mts)                          |
-| Atomic bulk actions, Trash/restore and transactional history              | [Bulk actions](../apps/admin/src/features/reference/events/event-bulk-actions.tsx), [history UI](../apps/admin/src/features/reference/events/event-history.tsx), [Event repository](../apps/reference/src/events/events.repository.ts), [history repository](../apps/reference/src/events/event-history.repository.ts) | [Lifecycle persistence](../apps/reference/test/lifecycle.db.spec.ts), [admin cases](../apps/admin/src/features/reference/events/event-lifecycle.test.tsx), [browser flow](../tools/browser/lifecycle.smoke.spec.mts)             |
-| Disabled mode with retained data and continued Products access            | [Backend guard](../apps/reference/src/reference-enabled.guard.ts), [admin route boundary](../apps/admin/src/features/stores/store-workspace.tsx)                                                                                                                                                                       | [Federation checks](../tools/graphql/federation.db.spec.mts), [disabled browser flow](../tools/browser/reference-disabled.smoke.spec.mts)                                                                                        |
+| Store and route isolation, pending writes, dirty navigation               | [Store workspace](../apps/admin-react/src/features/stores/store-workspace.tsx), [Reference routes](../apps/admin-react/src/features/reference/reference-workspace.tsx), [unsaved changes](../apps/admin-react/src/features/use-unsaved-changes.tsx)                                                                                      | [Store lifecycle](../apps/admin-react/src/features/stores/store-workspace.test.tsx), [mobile navigation](../tools/browser/reference-layout.smoke.spec.mts)                                                                             |
+| Sectioned forms, money, dates, conditional fields and field errors        | [Event form](../apps/admin-react/src/features/reference/events/event-form.tsx), [editor](../apps/admin-react/src/features/reference/events/event-editor.tsx), [Sofia time conversion](../apps/admin-react/src/features/reference/events/event-time.ts), [service validation](../apps/reference/src/events/events.service.ts)             | [Event admin](../apps/admin-react/src/features/reference/events/event-workspace.test.tsx), [Event persistence](../apps/reference/test/events.db.spec.ts), [time cases](../apps/admin-react/src/features/reference/events/event-time.test.ts) |
+| Remote single/multiple relations without preloading tables                | [Relation select](../apps/admin-react/src/features/reference/relation-select.tsx), [Event repository](../apps/reference/src/events/events.repository.ts), [Speaker assignments](../apps/admin-react/src/features/reference/sessions/event-speakers.tsx)                                                                            | [Event browser flow](../tools/browser/events.smoke.spec.mts), [Session persistence](../apps/reference/test/sessions.db.spec.ts)                                                                                                  |
+| URL filters, pagination, sorting, column preferences and overview actions | [Event list](../apps/admin-react/src/features/reference/events/event-list.tsx), [list state](../apps/admin-react/src/features/reference/events/event-list-state.ts), [overview](../apps/admin-react/src/features/reference/events/event-show.tsx)                                                                                        | [List/overview cases](../apps/admin-react/src/features/reference/events/event-list.test.tsx), [browser checks](../tools/browser/events.smoke.spec.mts)                                                                                 |
+| Child CRUD and explicit ordering                                          | [Session list](../apps/admin-react/src/features/reference/sessions/session-list.tsx), [order draft](../apps/admin-react/src/features/reference/sessions/use-session-order.ts), [Session service](../apps/reference/src/sessions/sessions.service.ts)                                                                               | [Session browser flow](../tools/browser/sessions.smoke.spec.mts)                                                                                                                                                                 |
+| Rich text with a bounded, sanitized HTML contract                         | [Description editor](../apps/admin-react/src/features/reference/events/description-editor.tsx), [backend sanitizer](../apps/reference/src/events/description-html.ts)                                                                                                                                                        | [Sanitizer tests](../apps/reference/src/events/description-html.spec.ts), [rich text browser flow](../tools/browser/rich-text.smoke.spec.mts)                                                                                    |
+| Gallery, direct upload, preview, alt text and cover                       | [Gallery](../apps/admin-react/src/features/reference/media/event-gallery.tsx), [upload hooks](../apps/admin-react/src/features/reference/media/use-media-actions.ts), [HTTP transport](../apps/admin-react/src/data/direct-upload.ts), [Media service](../apps/reference/src/media/media.service.ts)                                     | [Gallery admin](../apps/admin-react/src/features/reference/media/event-gallery.test.tsx), [Media persistence](../apps/reference/test/media.db.spec.ts), [browser flow](../tools/browser/media.smoke.spec.mts)                          |
+| Atomic bulk actions, Trash/restore and transactional history              | [Bulk actions](../apps/admin-react/src/features/reference/events/event-bulk-actions.tsx), [history UI](../apps/admin-react/src/features/reference/events/event-history.tsx), [Event repository](../apps/reference/src/events/events.repository.ts), [history repository](../apps/reference/src/events/event-history.repository.ts) | [Lifecycle persistence](../apps/reference/test/lifecycle.db.spec.ts), [admin cases](../apps/admin-react/src/features/reference/events/event-lifecycle.test.tsx), [browser flow](../tools/browser/lifecycle.smoke.spec.mts)             |
+| Disabled mode with retained data and continued Products access            | [Backend guard](../apps/reference/src/reference-enabled.guard.ts), [admin route boundary](../apps/admin-react/src/features/stores/store-workspace.tsx)                                                                                                                                                                       | [Federation checks](../tools/graphql/federation.db.spec.mts), [disabled browser flow](../tools/browser/reference-disabled.smoke.spec.mts)                                                                                        |
 
 ## Boundaries to preserve
 

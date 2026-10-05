@@ -27,7 +27,7 @@ test('Aurora Products sorts across server pages and preserves filters through re
   }
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto(
-    `${app.url}/stores/${storeA}/products?search=Sort+product&sku=SORT_&status=ACTIVE&pageSize=10&page=2`,
+    `${app.url}/en/stores/${storeA}/products?search=Sort+product&sku=SORT_&status=ACTIVE&pageSize=10&page=2`,
   );
   const name = page.getByRole('columnheader', { name: /^Name\b/ });
   const rows = page.getByRole('grid').getByRole('link');
@@ -110,7 +110,7 @@ test('Aurora Products applies server filters, resets selection and deletes selec
     });
   }
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto(`${app.url}/stores/${storeA}/products`);
+  await page.goto(`${app.url}/en/stores/${storeA}/products`);
   await expect(page.getByRole('link', { name: 'Review product 21', exact: true })).toBeVisible();
   await page.getByRole('checkbox', { name: 'Select all rows', exact: true }).check();
   await expect(page.getByText('20 selected on this page')).toBeVisible();
@@ -155,7 +155,7 @@ test('Aurora Products applies server filters, resets selection and deletes selec
   await page.getByRole('button', { name: 'Delete products', exact: true }).click();
   await expect(page.getByText('2 products deleted.')).toBeVisible();
   await expect(page.getByText('No products match these filters.')).toBeVisible();
-  await page.goto(`${app.url}/stores/${storeB}/products`);
+  await page.goto(`${app.url}/en/stores/${storeB}/products`);
   await expect(page.getByRole('link', { name: 'Plovdiv notebook', exact: true })).toBeVisible();
   expect(errors).toEqual([]);
 });
@@ -165,7 +165,7 @@ test('Aurora Products synchronizes quick and panel search and clears combined fi
   app,
 }) => {
   await page.setViewportSize({ width: 1600, height: 1000 });
-  await page.goto(`${app.url}/stores/${storeA}/products`);
+  await page.goto(`${app.url}/en/stores/${storeA}/products`);
   const quickSearch = page.locator('#product-search');
   await expect(page.getByRole('link', { name: 'Sofia notebook', exact: true })).toBeVisible();
   await quickSearch.fill('notebook');
@@ -210,7 +210,7 @@ test('Aurora Products provides responsive lists, menus and the Create Event form
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto(`${app.url}/stores/${storeA}/products`);
+  await page.goto(`${app.url}/en/stores/${storeA}/products`);
   await expect(page.getByRole('link', { name: 'Sofia notebook', exact: true })).toBeVisible();
   await page.evaluate(async () => {
     await document.fonts.ready;
@@ -244,6 +244,7 @@ test('Aurora Products provides responsive lists, menus and the Create Event form
   await page.setViewportSize({ width: 320, height: 800 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await page.getByRole('button', { name: 'Discard changes', exact: true }).click();
   await expect(page.getByRole('link', { name: 'Sofia notebook', exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
   await page.setViewportSize({ width: 390, height: 844 });

@@ -7,7 +7,7 @@ packages or cross-application code imports.
 
 | Application | Framework                       | Current entry points                                                                                                                                                                              |
 | ----------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| admin       | React, Vite, Refine, Aurora/MUI | Stores, Products and Reference Events/Venues/Speakers/Tags at http://127.0.0.1:11081; Prototype Stores/Products/Venues/Speakers/Tags/Events/Sessions/History/UI catalog at http://127.0.0.1:11087 |
+| admin-react | React, Vite, Refine, Aurora/MUI | Stores, Products and Reference Events/Venues/Speakers/Tags at http://127.0.0.1:11081; Prototype Stores/Products/Venues/Speakers/Tags/Events/Sessions/History/UI catalog at http://127.0.0.1:11087 |
 | gateway     | NestJS, Apollo Gateway          | /graphql and /health on 127.0.0.1:11080                                                                                                                                                           |
 | core        | NestJS, Federation 2            | /graphql (stores) and /health on 127.0.0.1:11082                                                                                                                                                  |
 | products    | NestJS, Federation 2            | /graphql (products) and /health on 127.0.0.1:11083                                                                                                                                                |
@@ -50,7 +50,7 @@ ESLint's Nx boundary rule prohibits application-to-application imports. Feature 
 inside its application; shared test configuration is the root jest.preset.mjs, not a
 runtime library. Runtime communication follows GraphQL contracts, not application source
 imports. Shared SDL/operation/tool inputs express their impact on Nx tasks.
-Nx also records admin → gateway, products → core and reference → core and gateway → core/products/reference runtime dependencies for
+Nx also records admin-react → gateway, products → core and reference → core and gateway → core/products/reference runtime dependencies for
 affected selection, without permitting implementation imports across those boundaries.
 Test targets explicitly use nx:run-commands to preserve file/case arguments, including
 names containing spaces, when forwarding to the native npm test scripts.
@@ -80,7 +80,7 @@ depend on a separate background process.
 
 [PR CI](../../.github/workflows/affected.yml) checks the event's base/head with full Git
 history. Root-tool lint/type checks and offline schema checks run independently of project
-selection. Affected applications select unit/DB targets; affected admin also selects its
+selection. Affected applications select unit/DB targets; affected admin-react also selects its
 browser smoke target. A separate [manual workflow](../../.github/workflows/full-regression.yml)
 runs full regression. Both use the root npm commands with host Node processes and the same
 PostgreSQL-only Compose file. See [testing](../testing.md#github-actions) for exact behavior.
@@ -174,52 +174,52 @@ imports. See [the backend skill](../../.agents/skills/holita-backend-feature/SKI
 
 ## Admin data sources
 
-[Configuration](../../apps/admin/src/config.ts) selects `mock` or `graphql` once at startup.
+[Configuration](../../apps/admin-react/src/config.ts) selects `mock` or `graphql` once at startup.
 The same Refine provider, generated operations and feature screens serve both modes. Real
-uses the configured gateway. Prototype awaits [MSW startup](../../apps/admin/src/mocks/browser.ts)
-before rendering and uses a local GraphQL endpoint. [Handlers](../../apps/admin/src/mocks/handlers.ts)
+uses the configured gateway. Prototype awaits [MSW startup](../../apps/admin-react/src/mocks/browser.ts)
+before rendering and uses a local GraphQL endpoint. [Handlers](../../apps/admin-react/src/mocks/handlers.ts)
 match generated documents for Stores, Products, Venues, Speakers, Tags, Events, Sessions
 Event History and media; unsupported operations return
 GraphQL errors instead of contacting a backend. The normal Real build excludes the worker
 and the dynamically imported mock implementation.
 
-[Prototype state](../../apps/admin/src/mocks/state.ts) validates small, versioned localStorage
+[Prototype state](../../apps/admin-react/src/mocks/state.ts) validates small, versioned localStorage
 snapshots and persists each successful mutation before returning it. Generated API types
 are shared, while fixtures and mock behavior remain admin-owned. This is a transport
 substitution, without a second data provider or a separate frontend. Concrete
-[Products](../../apps/admin/src/mocks/products.ts), [Venues](../../apps/admin/src/mocks/venues.ts),
-[Speakers](../../apps/admin/src/mocks/speakers.ts), [Tags](../../apps/admin/src/mocks/tags.ts),
-[Events](../../apps/admin/src/mocks/events.ts), [Sessions](../../apps/admin/src/mocks/sessions.ts)
-and [Media](../../apps/admin/src/mocks/media.ts)
+[Products](../../apps/admin-react/src/mocks/products.ts), [Venues](../../apps/admin-react/src/mocks/venues.ts),
+[Speakers](../../apps/admin-react/src/mocks/speakers.ts), [Tags](../../apps/admin-react/src/mocks/tags.ts),
+[Events](../../apps/admin-react/src/mocks/events.ts), [Sessions](../../apps/admin-react/src/mocks/sessions.ts)
+and [Media](../../apps/admin-react/src/mocks/media.ts)
 modules own their mock resource behavior; state owns storage/Reset, and shared guards cover
 the repeated validation primitives. All records use generated operation fragments/inputs.
 Validator's email and UUID functions are shared with the backend's existing validation dependency.
 Event/Session relations resolve current lookup labels and drive protected deletion, including
-trashed parents. Mutation and [History](../../apps/admin/src/mocks/event-history.ts) writes share
+trashed parents. Mutation and [History](../../apps/admin-react/src/mocks/event-history.ts) writes share
 one snapshot. Structural and store/parent relationship guards reject invalid saved data.
 Snapshot version 4 replaces obsolete data. Both modes mount the same Gallery and upload hook.
 Prototype implements the seven generated media operations and origin-local HTTP PUT/read
 handlers through MSW. Binary requests retain the intent's store/Event identity.
 
-[Image storage](../../apps/admin/src/mocks/media-storage.ts) uses native IndexedDB for finalized
+[Image storage](../../apps/admin-react/src/mocks/media-storage.ts) uses native IndexedDB for finalized
 Blobs, with no new dependency. Upload intents and staged bytes are ephemeral. Finalization
 persists bytes before synchronously saving metadata and History, re-reading the snapshot after
 the async byte write to preserve intervening edits and reject Reset/Trash races. Metadata is
 authoritative; failed snapshot writes cannot expose staged bytes. Removal/Reset discard logical
 references before byte cleanup. Startup prunes orphan bytes, keeping finalized uploads for
 trashed Events. There is no distributed transaction across localStorage/IndexedDB or cross-tab
-concurrency guarantee. [Fixture images](../../apps/admin/src/mocks/media-fixtures.ts) are Picsum
+concurrency guarantee. [Fixture images](../../apps/admin-react/src/mocks/media-fixtures.ts) are Picsum
 placeholders served locally without binary browser persistence. Prototype validates type,
 size, animation markers and browser decoding; it does not establish Sharp or server-storage parity.
 
-[Navigation](../../apps/admin/src/navigation.ts) exposes only the implemented mock sections.
+[Navigation](../../apps/admin-react/src/navigation.ts) exposes only the implemented mock sections.
 StoreWorkspace also guards direct Prototype routes before feature mounting. Real's Reference
 flag keeps its existing behavior; Prototype availability does not depend on a running or
 enabled Reference service. Reset restores fixtures, remounts Refine and dirty editors, and
 navigates to store discovery. Separate origins isolate the two modes' caches/browser data.
 See [development](../development.md#admin-data-modes) for persistence and concurrency limits.
 
-The Prototype-only [UI catalog](../../apps/admin/src/features/prototype/ui-catalog/ui-catalog.tsx)
+The Prototype-only [UI catalog](../../apps/admin-react/src/features/prototype/ui-catalog/ui-catalog.tsx)
 is loaded lazily through the store workspace. Its section is URL-selected; local example
 state unmounts on tab/store changes. It demonstrates the actual shared presentation components
 and Aurora/MUI overrides without another data provider or business operations. Real hides
@@ -227,39 +227,68 @@ the navigation entry and guards its direct route before mounting. ContentSection
 by the catalog and the concrete Product/Venue/Speaker/Tag/Event/Session forms; fields, validation and mutations stay
 feature-owned. The [inventory](../reference.md#ui-catalog-and-shared-components) maps these boundaries.
 
+## Admin translations
+
+[Admin i18n](../../apps/admin-react/src/i18n/i18n.ts) initializes an i18next instance for the
+active `/bg/...` or `/en/...` URL from bundled catalogs. Missing language prefixes redirect
+to `bg`; missing or empty messages fall back to `en`. Catalogs use logical namespaces and
+English defines the TypeScript keys. React's I18nextProvider and
+[Refine's adapter](../../apps/admin-react/src/i18n/use-refine-i18n-provider.ts) share the instance.
+The shell's two-language menu uses Refine's locale callback, which navigates through the router
+and preserves the current path, query and hash. The document's `lang` follows the route.
+Non-React messages reuse a separate i18next instance with fixed-language translators;
+React receives its instance through context without registering a global instance.
+
+Products and Reference editors share the
+[unsaved-changes guard](../../apps/admin-react/src/features/use-unsaved-changes.tsx).
+Language changes remount Refine and feature UI after router blockers permit navigation. The QueryClient stays shared across languages so pending mutations still
+invalidate the captured store resource. Each language subtree owns an immutable GraphQL
+provider with `Accept-Language: bg|en`; requests keep their original header after navigation.
+Prototype Reset replaces the cache and form subtree and returns to discovery in the current
+language. Internal links, redirects and breadcrumbs use
+[localized routing helpers](../../apps/admin-react/src/i18n/routing.ts).
+There is no shared workspace translation package, language preference storage or backend
+translation integration. Products, Reference (including Sessions, Gallery, rich text and History),
+shell/store states, Prototype controls and the UI catalog use typed catalogs in both modes.
+The Aurora theme merges the bundled MUI/Data Grid locale without resetting appearance
+preferences. Shared `Intl` formatter sets use `bg-BG` or `en-GB` for display numbers and
+dates; timestamps stay in Europe/Sofia, budgets in EUR, and API input formats are unchanged.
+Provider-generated network/store errors and local upload errors use the captured language.
+Backend messages, record content and saved History values are displayed as received.
+
 ## Admin request and store lifecycle
 
-The URL is the active store source: `/` lists stores, `/stores/:storeId/products` lists
+The URL is the active store source: `/:language/` lists stores, `/:language/stores/:storeId/products` lists
 products, `/create` adds a product and `/:productId/edit` edits one. Unavailable stores
 show a selection message and do not trigger product requests. Store administration is absent.
 
-[StoreWorkspace](../../apps/admin/src/features/stores/store-workspace.tsx) owns store
+[StoreWorkspace](../../apps/admin-react/src/features/stores/store-workspace.tsx) owns store
 discovery, URL-derived selection, resource navigation and Reference availability. It passes
 plain store/navigation choices, selected values, callbacks and page content to
-[AdminLayout](../../apps/admin/src/layout/admin-layout.tsx). AdminLayout owns the header,
+[AdminLayout](../../apps/admin-react/src/layout/admin-layout.tsx). AdminLayout owns the header,
 store selector, sidebar and responsive drawer state. Its Aurora/MUI presentation has no
 Refine, GraphQL or router dependency; navigation callbacks retain the existing router and
 unsaved-change blockers.
 
 The shell adapts Aurora 2.4.0's MainLayout, default Sidenav, shared SidenavDrawerContent,
 NavItem, AppBar and search/language/theme/notification/profile components into
-[`layout/`](../../apps/admin/src/layout/). Enabled module groups share one list, with a
+[`layout/`](../../apps/admin-react/src/layout/). Enabled module groups share one list, with a
 256 px expanded drawer and a 72 px collapsed icon list controlled from the top bar.
 Navigation inputs contain flat module entries; search uses those same enabled entries.
 The shell has no footer, separate group rail or sidebar profile panel. It retains Aurora's
 64/82 px toolbar, breakpoints, transitions, typography and menu styling. The store selector
 and Prototype/Real indicator are holita additions; both move below the top bar on mobile.
 Selected palettes, component overrides,
-shadows and CSS variables live in [`theme/`](../../apps/admin/src/theme/). The sibling
+shadows and CSS variables live in [`theme/`](../../apps/admin-react/src/theme/). The sibling
 Aurora source directory is not a runtime dependency. Unused layouts, demo routes/auth,
 widget styles, complete demo datasets and settings-panel dependencies are excluded.
 
 The theme menu exposes Aurora presets and primary colors without rewriting route queries.
-Local search filters enabled navigation entries; notification read/remove state, language
-selection and the example profile are presentation data. They have no API or authentication
+Local search filters enabled navigation entries; notification read/remove state and the
+example profile are presentation data. They have no API or authentication
 provider. Appearance and desktop collapse preferences use holita-prefixed localStorage keys.
 Required icons, avatars and the Plus Jakarta Sans font are served locally; menu use does
-not fetch external assets. Example avatars live in `apps/admin/public/images/tmp/avatar`,
+not fetch external assets. Example avatars live in `apps/admin-react/public/images/tmp/avatar`,
 separate from permanent assets. The font's OFL license accompanies the font file.
 
 All admin surfaces use Aurora/MUI, including store discovery and disabled Reference notices.
@@ -271,7 +300,7 @@ its providers/reset stylesheet and the temporary CSS/cache integration layer are
 The remaining application CSS belongs to rendered rich Event descriptions. Components and
 styles are the same in the browser and jsdom tests.
 
-[The data provider](../../apps/admin/src/data/data-provider.ts) adapts the official Refine
+[The data provider](../../apps/admin-react/src/data/data-provider.ts) adapts the official Refine
 GraphQL provider's variables and response mappers to our generated documents. Components
 use Refine useList/useOne/useCreate/useUpdate/useDelete. They do not fetch directly.
 Each request creates a transport with captured x-store-id and a new x-request-id, with a
@@ -284,7 +313,7 @@ the initiating store. Every mutation passes that resource when submitted. Update
 are pessimistic, and synchronous guards prevent duplicate submissions. Query/mutation
 retries are disabled; failed reads offer an explicit Retry button.
 
-[StoreWorkspace](../../apps/admin/src/features/stores/store-workspace.tsx) keys the Products
+[StoreWorkspace](../../apps/admin-react/src/features/stores/store-workspace.tsx) keys the Products
 subtree by store ID. Switching resets pagination, forms, confirmation dialogs and local
 notifications and returns to the selected store's list. The route subtree is also keyed by
 pathname so changing products or moving between create/edit within one store resets editor
@@ -293,7 +322,7 @@ to the mounted editor/list; after unmounting they cannot redirect, notify or rep
 editor's draft. Refine still invalidates the original resource. Pending operations may
 complete on the server after navigation; changing stores does not cancel or retarget writes.
 
-[ProductForm](../../apps/admin/src/features/products/product-form.tsx) is shared by create
+[ProductForm](../../apps/admin-react/src/features/products/product-form.tsx) is shared by create
 and edit, with matching trimmed name/SKU limits, Draft/Active status, pending controls and
 server errors. Products and Reference use the same provider and store lifecycle.
 Products and Reference notifications use store-scoped MUI Snackbars. Both are separate from the shell's example bell panel. Refine's automatic notifications
@@ -551,7 +580,7 @@ Health and static federation composition remain available; disabling retains all
 The matching public `VITE_REFERENCE_ENABLED` controls the admin menu/direct routes
 at startup/build time. It is not authorization and cannot override the backend guard.
 
-The admin routes are `/stores/:storeId/reference/{events,venues,speakers,tags}`, with
+The admin routes are `/:language/stores/:storeId/reference/{events,venues,speakers,tags}`, with
 `/create` and `/:id/edit`; Events also have a `/:id` overview. Each concrete resource captures the store in requests, cache
 keys and mutation invalidation. The Reference subtree is keyed by store and its routes by
 pathname. Page headers contain context and applicable form tabs, with themed primary and red
@@ -573,7 +602,8 @@ navigation blocker with a shared MUI confirmation dialog. Dirty ordinary fields 
 history navigation. Reload/close uses the browser's native beforeunload warning. Tabs stay
 within the form. Submitted writes do not block navigation and keep their original scope;
 late callbacks cannot replace another mounted editor. Failed saves retain dirty state.
-Products retains its existing behavior without a dirty-form prompt.
+Products uses the same shared router blocker for dirty forms, including language/store
+changes, Cancel and browser history. Submitted writes remain navigable.
 
 The Event list accepts explicit `ReferenceEventFilter` and `ReferenceEventSort` inputs.
 Title/code substring search is case-insensitive and treats SQL wildcard characters literally.

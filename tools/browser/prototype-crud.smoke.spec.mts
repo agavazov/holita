@@ -44,7 +44,7 @@ for (const feature of features) {
       if (!request.url().startsWith(app.url)) external.push(request.url());
     });
     page.on('pageerror', (error) => errors.push(error.message));
-    const list = (store: string) => `${app.url}/stores/${store}/${feature.section}`;
+    const list = (store: string) => `${app.url}/en/stores/${store}/${feature.section}`;
     const name = `Prototype ${singular}`;
     await page.goto(list(storeA));
     await expect(page.getByLabel('Data source: Prototype', { exact: true })).toBeVisible({
@@ -124,7 +124,7 @@ test('Prototype Venues preserves referenced rows and reports partial batch delet
   page,
   app,
 }) => {
-  const url = `${app.url}/stores/${storeA}/reference/venues?sort=name&order=asc`;
+  const url = `${app.url}/en/stores/${storeA}/reference/venues?sort=name&order=asc`;
   await page.goto(url);
   for (const name of ['Conference center', 'Business club'])
     await page

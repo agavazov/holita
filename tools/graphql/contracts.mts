@@ -30,16 +30,16 @@ export const subgraphs = [
   },
 ];
 export const operationPaths = [
-  'apps/admin/src/features/stores/operations.graphql',
-  'apps/admin/src/features/products/operations.graphql',
+  'apps/admin-react/src/features/stores/operations.graphql',
+  'apps/admin-react/src/features/products/operations.graphql',
   'apps/products/src/core/operations.graphql',
   'apps/reference/src/core/operations.graphql',
-  'apps/admin/src/features/reference/speakers/operations.graphql',
-  'apps/admin/src/features/reference/tags/operations.graphql',
-  'apps/admin/src/features/reference/events/operations.graphql',
-  'apps/admin/src/features/reference/venues/operations.graphql',
-  'apps/admin/src/features/reference/sessions/operations.graphql',
-  'apps/admin/src/features/reference/media/operations.graphql',
+  'apps/admin-react/src/features/reference/speakers/operations.graphql',
+  'apps/admin-react/src/features/reference/tags/operations.graphql',
+  'apps/admin-react/src/features/reference/events/operations.graphql',
+  'apps/admin-react/src/features/reference/venues/operations.graphql',
+  'apps/admin-react/src/features/reference/sessions/operations.graphql',
+  'apps/admin-react/src/features/reference/media/operations.graphql',
 ];
 
 export async function readContracts() {

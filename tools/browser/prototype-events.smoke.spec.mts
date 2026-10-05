@@ -5,7 +5,7 @@ test.use({ timezoneId: 'America/New_York' });
 const storeA = '10000000-0000-4000-8000-000000000001',
   storeB = '10000000-0000-4000-8000-000000000002';
 const eventId = '60000000-0000-4000-8000-000000000001',
-  list = `/stores/${storeA}/reference/events`,
+  list = `/en/stores/${storeA}/reference/events`,
   event = `${list}/${eventId}`;
 async function choose(page: Page, label: string | RegExp, option: string) {
   await page
@@ -61,7 +61,7 @@ test('a pending Prototype Event write keeps its captured store and leaves a new-
     await page.getByRole('button', { name: 'Save event', exact: true }).click();
     await expect(page.locator('html')).toHaveAttribute('data-holita-pending-store', storeA);
     await page.evaluate((store) => {
-      window.history.pushState({}, '', `/stores/${store}/reference/events/create`);
+      window.history.pushState({}, '', `/en/stores/${store}/reference/events/create`);
       window.dispatchEvent(new PopStateEvent('popstate'));
     }, storeB);
     await expect(page.getByLabel('Title', { exact: true })).toHaveValue('');
@@ -77,14 +77,14 @@ test('a pending Prototype Event write keeps its captured store and leaves a new-
     });
     await page.evaluate(() => window.dispatchEvent(new Event('holita-release-event')));
     await response;
-    await expect(page).toHaveURL(`${app.url}/stores/${storeB}/reference/events/create`);
+    await expect(page).toHaveURL(`${app.url}/en/stores/${storeB}/reference/events/create`);
     await expect(page.getByLabel('Title', { exact: true })).toHaveValue('');
     await expect(page.getByText('Event saved.', { exact: true })).toHaveCount(0);
     await page.goto(`${app.url}${list}`);
     await expect(
       page.getByRole('link', { name: 'Pending prototype forum', exact: true }),
     ).toBeVisible();
-    await page.goto(`${app.url}/stores/${storeB}/reference/events`);
+    await page.goto(`${app.url}/en/stores/${storeB}/reference/events`);
     await expect(
       page.getByRole('link', { name: 'Pending prototype forum', exact: true }),
     ).toHaveCount(0);
@@ -175,7 +175,7 @@ test('Prototype Event forms persist all sections and relations without a backend
   await page.goto(editorUrl);
   await page.getByRole('tab', { name: 'Schedule & location', exact: true }).click();
   await expect(page.getByRole('combobox', { name: 'Venue', exact: true })).toHaveCount(0);
-  await page.goto(`${app.url}/stores/${storeB}/reference/events`);
+  await page.goto(`${app.url}/en/stores/${storeB}/reference/events`);
   await expect(page.getByRole('link', { name: 'Prototype design forum', exact: true })).toHaveCount(
     0,
   );
@@ -321,7 +321,7 @@ test('Prototype bulk status, Trash, restore and History retain the program acros
   ).toBeVisible();
   await page.getByRole('button', { name: 'Reset demo data', exact: true }).click();
   await page.getByRole('button', { name: 'Reset data', exact: true }).click();
-  await expect(page).toHaveURL(`${app.url}/`);
+  await expect(page).toHaveURL(`${app.url}/en/`);
   await page.goto(`${app.url}${event}?tab=history`);
   await expect(page.getByText('Event created', { exact: true })).toBeVisible();
   await expect(page.getByText('Event updated', { exact: true })).toHaveCount(0);

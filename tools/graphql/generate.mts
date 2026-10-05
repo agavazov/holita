@@ -10,7 +10,7 @@ import { composeContracts, readContracts, readOperations, workspaceRoot } from '
 const target = process.argv[2];
 if (
   !target ||
-  !['check', 'core', 'products', 'reference', 'gateway', 'admin'].includes(target) ||
+  !['check', 'core', 'products', 'reference', 'gateway', 'admin-react'].includes(target) ||
   process.argv.length !== 3
 ) {
   throw new Error('Use npm run codegen, schema:compose or schema:check');
@@ -60,12 +60,12 @@ if (target === 'gateway') {
     composition.supergraphSdl + '\n',
   );
   await writeChanged('apps/gateway/src/generated/graphql/schema.graphql', composition.clientSdl);
-} else if (target === 'admin') {
+} else if (target === 'admin-react') {
   await generateTypes(
-    'apps/admin/src/generated/graphql/operations.ts',
+    'apps/admin-react/src/generated/graphql/operations.ts',
     composition.apiSchema,
     true,
-    documents.filter((document) => document.location.startsWith('apps/admin/')),
+    documents.filter((document) => document.location.startsWith('apps/admin-react/')),
   );
 } else if (target === 'core' || target === 'products' || target === 'reference') {
   const schema = composition.schemas.get(target);

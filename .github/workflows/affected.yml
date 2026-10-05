@@ -70,7 +70,7 @@ jobs:
           if [[ "$projects" == '[]' ]]; then
             echo 'No affected applications. Format, root-tool and offline schema checks still run; application tests are not selected or claimed as coverage.' >> "$GITHUB_STEP_SUMMARY"
           else
-            printf 'Affected applications: %s. Unit/DB targets run; Chromium smoke runs when admin is affected.\n' "$projects" >> "$GITHUB_STEP_SUMMARY"
+            printf 'Affected applications: %s. Unit/DB targets run; Chromium smoke runs when admin-react is affected.\n' "$projects" >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - run: npm run format:check
@@ -87,12 +87,12 @@ jobs:
       - run: npm run test:affected -- --base="$NX_BASE" --head="$NX_HEAD"
 
       - name: Install Chromium
-        if: contains(fromJSON(steps.selection.outputs.projects || '[]'), 'admin')
+        if: contains(fromJSON(steps.selection.outputs.projects || '[]'), 'admin-react')
         run: npm exec -- playwright install --with-deps chromium
 
       - name: Check affected browser behavior
-        if: contains(fromJSON(steps.selection.outputs.projects || '[]'), 'admin')
-        run: npm run test:smoke
+        if: contains(fromJSON(steps.selection.outputs.projects || '[]'), 'admin-react')
+        run: npm run test:smoke:admin-react
 
       - name: Stop PostgreSQL
         if: always() && steps.selection.outputs.projects != '' && steps.selection.outputs.projects != '[]'

@@ -11,7 +11,7 @@ test('Sessions persist CRUD, speakers and explicit drag order through the gatewa
 }, testInfo) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  const url = `${app.url}/stores/${storeId}/reference/events/${eventId}?tab=sessions&list=%3Fq%3DSofia`;
+  const url = `${app.url}/en/stores/${storeId}/reference/events/${eventId}?tab=sessions&list=%3Fq%3DSofia`;
   await page.goto(url);
   await expect(
     page.getByText("No sessions yet. Add the first session to build this event's program."),

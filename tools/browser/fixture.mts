@@ -41,8 +41,8 @@ export const test = base.extend<{
         try {
           const admin = await createServer({
             cacheDir,
-            root: join(workspaceRoot, 'apps/admin'),
-            configFile: join(workspaceRoot, 'apps/admin/vite.config.ts'),
+            root: join(workspaceRoot, 'apps/admin-react'),
+            configFile: join(workspaceRoot, 'apps/admin-react/vite.config.ts'),
             envFile: false,
             define: {
               'import.meta.env.VITE_DATA_SOURCE': JSON.stringify('graphql'),

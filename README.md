@@ -4,7 +4,7 @@ holita is a working reference project created as a testbed for future software d
 life cycle (SDLC) automation.
 
 A strict TypeScript npm-workspaces repository with Nx tasks and five host applications:
-React/Vite admin and NestJS gateway, core, products and reference services. The admin uses
+React/Vite admin-react and NestJS gateway, core, products and reference services. The admin uses
 an Aurora/MUI shell with a single-column sidenav, no footer and Products/Venues/Speakers/Tags/Events screens with Refine.
 Sessions, Gallery, History and store-selection states use the same Aurora theme. The gateway exposes schema-first GraphQL for stores and store-scoped
 Products CRUD, including Product-to-Store federation. Core, products and reference own independent
@@ -26,18 +26,18 @@ If Node 24 is not installed yet, run `nvm install` before `nvm use`.
 ### Prototype only
 
 ```bash
-npm run dev:admin:mock
+npm run dev:admin-react:mock
 ```
 
 Open [Prototype admin](http://127.0.0.1:11087), check the **Prototype** mode indicator and
 choose a store. No Docker, database, backend or copied `.env` file is needed. Ctrl+C stops
-this admin process. `npm run dev:admin` starts Real; use `dev:admin:mock` for Prototype.
+this admin process. `npm run dev:admin-react` starts Real; use `dev:admin-react:mock` for Prototype.
 See [the manual review steps](docs/development.md#manual-prototype-review) and
 [Prototype tests](docs/testing.md#prototype-checks).
 
 ### Real and Prototype together
 
-Prepare the databases, then start both admins and the backends:
+Prepare the databases, then start both admin-react modes and the backends:
 
 ```bash
 npm run db:up
@@ -59,13 +59,13 @@ fixtures and confirmed Reset demo data. Gallery uploads, cover, alt text and ord
 the same screens, with uploaded files in browser IndexedDB. Its **Prototype → UI catalog**
 menu opens interactive body, list, form and feedback examples after store selection;
 catalog edits are temporary and do not change saved mock records. Real uses the
-gateway; `npm run dev:admin` / `dev:admin:graphql` starts it alone. `npm run dev` starts both
+gateway; `npm run dev:admin-react` / `dev:admin-react:graphql` starts it alone. `npm run dev` starts both
 admin modes alongside the four backends. See [data modes and current limits](docs/development.md#admin-data-modes).
 
 Fresh seeds provide holita Sofia and holita Plovdiv; migrated installations retain their
 existing store names. Select a store, then list, create, edit or delete products. The store
 switcher stays available on every screen; URLs preserve the selection across reloads. Switching stores
-returns to that store's current resource list; Reference asks before discarding unsaved forms. A submitted write still
+returns to that store's current resource list; Products and Reference ask before discarding unsaved forms. A submitted write still
 belongs to its initiating store; its late result does not redirect or notify in another store.
 
 Choose **Reference → Events, Venues, Speakers or Tags** to manage the demo domain. Events
@@ -91,7 +91,7 @@ Use the [Reference implementation index](docs/reference.md) to find the code and
 for each pattern. On narrow screens, **Open navigation** opens the menu and the store
 selector and Prototype/Real indicator appear below the top bar. Desktop navigation shows all
 enabled groups together and supports collapse through the top-bar button.
-The top bar provides local module search, example notifications/profile, a demo language
+The top bar provides local module search, example notifications/profile, a Bulgarian/English language
 selector and Aurora theme/color preferences. Search only finds enabled navigation entries;
 notifications and profile actions are examples, with no account or notification service.
 Appearance preferences persist locally. Products, Venues, Speakers and Tags follow the selected Aurora preset
@@ -100,6 +100,14 @@ forms with a status/summary panel. Referenced venues, speakers and tags remain p
 Events use the same Aurora components for their list, editor and overview, with automatic filters
 and a sticky settings/summary aside. Session editors reuse that composition; ordered sessions,
 Gallery previews/actions and expandable History follow the same light/dark Aurora preset.
+
+The admin uses `/bg/...` and `/en/...` routes, adding `bg` when the URL has no language.
+The language menu preserves the current path and query, and GraphQL requests send
+`Accept-Language`. React and Refine share bundled catalogs with English fallback. Products,
+Reference, the shell/store states, shared confirmations/actions and Prototype controls/catalog
+use translations in both data modes. MUI/Data Grid text and display dates/numbers follow the
+language; event times remain in Europe/Sofia and budgets in EUR. See
+[admin translations](docs/development.md#admin-translations) for the mechanism and current limits.
 
 Use [gateway GraphQL](http://127.0.0.1:11080/graphql) for API operations. `{ stores { id name } }`
 works without a selected store. Product and Reference operations require an `x-store-id` UUID header;
@@ -113,7 +121,7 @@ the Node group. `npm run schema:check` needs no running services or database.
 Each application also starts independently:
 
 ```bash
-npm run dev:admin
+npm run dev:admin-react
 npm run dev:gateway
 npm run dev:core
 npm run dev:products
@@ -125,9 +133,9 @@ npm run dev:reference
 For a quick Prototype check after installation, run from the repository root:
 
 ```bash
-npm run test:admin -- prototype.test.ts prototype-controls.test.tsx --skip-nx-cache
+npm run test:admin-react -- prototype.test.ts prototype-controls.test.tsx --skip-nx-cache
 npm exec -- playwright install --with-deps chromium
-npm run test:smoke -- prototype.smoke.spec.mts --grep="Prototype uses the same Tags screens"
+npm run test:smoke:admin-react -- prototype.smoke.spec.mts --grep="Prototype uses the same Tags screens"
 ```
 
 Install Chromium once; its Linux system dependencies may require sudo. These selected
@@ -143,8 +151,8 @@ npm run test:products -- products.service.spec.ts
 npm run db:test:setup
 npm run test:products:db -- products.db.spec.ts
 npm run test:gateway:db -- federation.db.spec.mts
-npm run test:admin -- product-form.test.tsx
-npm run test:admin -- store-workspace.test.tsx
+npm run test:admin-react -- product-form.test.tsx
+npm run test:admin-react -- store-workspace.test.tsx
 npm run lint
 npm run typecheck
 npm run build
@@ -153,7 +161,7 @@ npm run build
 Use [the testing guide](docs/testing.md) to choose relevant files/cases. Full regression
 is a separate, explicit command and is not part of normal development.
 The [PR workflow](.github/workflows/affected.yml) checks affected applications against the
-PR's actual base/head, including the browser smoke target when admin is affected.
+PR's actual base/head, including the browser smoke target when admin-react is affected.
 The [full regression workflow](.github/workflows/full-regression.yml) runs only through
 GitHub Actions' manual Run workflow action. See [CI behavior](docs/testing.md#github-actions)
 for selection, prerequisites and missing-history handling.
@@ -162,7 +170,7 @@ data. Default local configuration works without copying environment files.
 
 For the small real-browser check, install Chromium once with
 `npm exec -- playwright install --with-deps chromium`, then run
-`npm run test:smoke -- products.smoke.spec.mts`. PostgreSQL and provisioned test databases
+`npm run test:smoke:admin-react -- products.smoke.spec.mts`. PostgreSQL and provisioned test databases
 are required; the fixture owns its temporary schemas and application processes.
 
 See [docs/README.md](docs/README.md) for configuration, architecture, requirements and

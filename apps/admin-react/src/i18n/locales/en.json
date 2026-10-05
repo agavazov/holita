@@ -1,0 +1,988 @@
+{
+  "common": {
+    "actions": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "retry": "Retry",
+      "back": "Back",
+      "edit": "Edit",
+      "view": "View",
+      "close": "Close",
+      "filter": "Filter",
+      "closeFilters": "Close filters",
+      "clearFilters": "Clear filters",
+      "forRecord": "Actions for {{name}}",
+      "keepEditing": "Keep editing",
+      "discardChanges": "Discard changes",
+      "remove": "Remove",
+      "saveOrder": "Save order",
+      "cancelOrder": "Cancel order",
+      "deleteSelected": "Delete selected",
+      "resetFilters": "Reset filters"
+    },
+    "home": "Home",
+    "breadcrumb": "breadcrumb",
+    "summary": "Summary",
+    "notSet": "Not set",
+    "requestId": "Request ID: {{id}}",
+    "unsaved": {
+      "title": "Discard unsaved changes?",
+      "description": "Your changes have not been saved. Leave this form?",
+      "label": "Unsaved changes"
+    },
+    "refresh": {
+      "title": "Could not refresh data",
+      "preserved": "Your current work is preserved."
+    },
+    "errors": {
+      "startup": "Admin could not start. Reload and try again.",
+      "network": "Could not reach the gateway. Please try again.",
+      "invalidStore": "Select a valid store before accessing records.",
+      "storesReadOnly": "Stores are read-only.",
+      "postRequired": "Use POST for record actions.",
+      "actionsUnavailable": "Record actions are unavailable.",
+      "sessionOrder": "Provide the complete session order.",
+      "orderUnavailable": "Session ordering is unavailable.",
+      "noDetail": "This resource has no detail query.",
+      "noCreate": "This resource does not support direct creation.",
+      "readOnly": "This resource is read-only."
+    },
+    "pagination": {
+      "previous": "Previous",
+      "previousPage": "Previous page",
+      "next": "Next",
+      "nextPage": "Next page",
+      "rows": "Rows",
+      "showing": "Showing",
+      "range": "{{from}}–{{to}} of {{formattedCount}}"
+    },
+    "loading": "Loading…",
+    "saving": "Saving…",
+    "status": {
+      "label": "Status",
+      "active": "Active",
+      "inactive": "Inactive",
+      "draft": "Draft",
+      "all": "All statuses",
+      "chip": "Status: {{status}}"
+    },
+    "selected": "{{count}} selected on this page",
+    "yes": "Yes",
+    "no": "No",
+    "inactiveSuffix": " (inactive)"
+  },
+  "validation": {
+    "text": {
+      "maxLength": "Use at most {{max}} characters.",
+      "unsupportedCharacters": "Remove unsupported characters."
+    },
+    "products": {
+      "nameRequired": "Enter a product name.",
+      "skuRequired": "Enter a SKU."
+    },
+    "reference": {
+      "venueName": "Enter a venue name.",
+      "city": "Enter a city.",
+      "countryCode": "Use a two-letter country code.",
+      "positiveInteger": "Enter a positive whole number.",
+      "speakerName": "Enter a speaker name.",
+      "email": "Enter a valid email address.",
+      "tagName": "Enter a tag name.",
+      "title": "Enter a title of up to 200 characters.",
+      "code": "Enter a code of up to 100 characters.",
+      "budget": "Use 0–9999999999.99, with at most two decimals.",
+      "venue": "Choose a venue.",
+      "description": "Keep the description within 100 KiB.",
+      "dateTime": "Choose a valid date and time.",
+      "missingTime": "This local time does not exist because the clocks change. Choose another time.",
+      "endAfterStart": "End must be after start.",
+      "date": "Choose a valid date.",
+      "registrationDates": "Provide both registration dates.",
+      "registrationOrder": "Close on or after opening.",
+      "registrationEnd": "Close by the event start date.",
+      "url": "Enter an http or https URL of up to 2000 characters.",
+      "meetingUrl": "Enter a meeting URL.",
+      "withinEvent": "Choose a time within the event.",
+      "speakers": "Choose at most 100 speakers.",
+      "rangeInteger": "Use a positive whole number.",
+      "dateRange": "End date must be on or after the start.",
+      "capacityRange": "Maximum must be at least the minimum.",
+      "color": "Use a six-digit hex color, e.g. #315ed0."
+    },
+    "catalog": {
+      "name": "Enter a name.",
+      "quantity": "Enter a whole number of at least 1."
+    }
+  },
+  "shell": {
+    "language": {
+      "label": "Language"
+    },
+    "navigation": {
+      "open": "Open navigation",
+      "expand": "Expand navigation",
+      "collapse": "Collapse navigation",
+      "close": "Close navigation",
+      "label": "Navigation",
+      "workspaceLabel": "Workspace navigation",
+      "workspace": "Workspace",
+      "reference": "Reference",
+      "catalog": "UI catalog"
+    },
+    "modes": {
+      "real": "Real",
+      "source": "Data source: {{mode}}"
+    },
+    "search": {
+      "label": "Search",
+      "workspace": "Search workspace",
+      "close": "Close search",
+      "description": "Search navigation and local examples",
+      "recent": "Recent",
+      "clearHistory": "Clear history",
+      "modules": "Modules",
+      "path": "Workspace / {{module}}",
+      "noMatches": "No matching results.",
+      "selectStore": "Select a store to search its navigation.",
+      "popularTags": "Popular tags",
+      "exampleHint": "Example search · Business records are not searched yet."
+    },
+    "theme": {
+      "label": "Theme",
+      "presets": "Theme presets",
+      "showDefault": "Show default themes",
+      "default": "Default",
+      "system": "System",
+      "primaryColor": "Primary Color",
+      "colorLabel": "Primary color {{name}}",
+      "names": {
+        "default-light": "Light",
+        "default-dark": "Dark",
+        "luxury": "Luxury",
+        "retro": "Retro",
+        "arctic": "Arctic",
+        "nature": "Nature",
+        "ember": "Ember",
+        "dracula": "Dracula",
+        "midnight": "Midnight"
+      }
+    },
+    "profile": {
+      "label": "Profile",
+      "preferencesLabel": "Profile preferences",
+      "guest": "Guest",
+      "example": "Example profile",
+      "accessibility": "Accessibility",
+      "preferences": "Preferences",
+      "darkMode": "Dark mode",
+      "accountSettings": "Account Settings",
+      "helpCenter": "Help Center",
+      "exampleHint": "Example profile · No account connected",
+      "description": "This is an example profile. Account preferences and help are not connected yet."
+    },
+    "notifications": {
+      "label": "Notifications",
+      "example": "Example notifications",
+      "actions": "Actions for {{detail}}",
+      "markUnread": "Mark as unread",
+      "markRead": "Mark as read",
+      "readLabel": "Mark read: {{detail}}",
+      "unreadLabel": "Mark unread: {{detail}}",
+      "remove": "Remove notification",
+      "today": "Today",
+      "older": "Older",
+      "member": "Example team member",
+      "empty": "No notifications",
+      "markAllRead": "Mark all as read",
+      "examples": {
+        "welcome": {
+          "detail": "Welcome to your holita workspace. Everything you need is in the new navigation.",
+          "time": "5 minutes ago"
+        },
+        "catalog": {
+          "detail": "Your example catalog review is ready. Take a look at the latest updates.",
+          "time": "20 minutes ago"
+        },
+        "event": {
+          "detail": "A new event has been added to the example schedule.",
+          "time": "1 hour ago"
+        },
+        "team": {
+          "detail": "Your team shared an example workspace update with you.",
+          "time": "Yesterday"
+        },
+        "ready": {
+          "detail": "The workspace is ready to explore. Choose a store to get started.",
+          "time": "2 days ago"
+        }
+      }
+    }
+  },
+  "stores": {
+    "title": "Stores",
+    "select": "Select a store",
+    "loading": "Loading stores…",
+    "label": "Store",
+    "loadError": "Could not load stores.",
+    "notFound": "Store not found",
+    "empty": "No stores available. Ask your workspace administrator to set up a store.",
+    "chooseAvailable": "Choose an available store to continue.",
+    "choosePrototype": "Choose a store to explore prototype records.",
+    "chooseProducts": "Choose a store to manage its products.",
+    "sections": {
+      "prototypeUnavailable": "This section is not available in Prototype yet.",
+      "catalogOnlyPrototype": "UI catalog is available in Prototype only.",
+      "openTags": "Open tags",
+      "openProducts": "Open products",
+      "loadingCatalog": "Loading UI catalog…",
+      "loadingReference": "Loading Reference…",
+      "referenceDisabled": "Reference is disabled."
+    }
+  },
+  "products": {
+    "title": "Products",
+    "form": {
+      "name": "Name",
+      "sku": "SKU",
+      "details": "Product details",
+      "description": "Give your product a name and a unique SKU.",
+      "nameHint": "Use the name you want to see in the product list.",
+      "skuHint": "Case-sensitive. Must be unique within this store.",
+      "settings": "Product settings",
+      "activeHint": "The product will be marked as active.",
+      "draftHint": "The product will be saved as a draft.",
+      "untitled": "Untitled product",
+      "skuSummary": "SKU: {{sku}}",
+      "editHint": "Save changes to this product in the selected store.",
+      "createHint": "Create a new product in the selected store."
+    },
+    "messages": {
+      "saved": "Product saved.",
+      "deleted_one": "Product deleted.",
+      "deleted_other": "{{count}} products deleted."
+    },
+    "actions": {
+      "create": "Create product",
+      "edit": "Edit product",
+      "save": "Save product",
+      "back": "Back to products",
+      "delete_one": "Delete product",
+      "delete_other": "Delete products",
+      "deleteSelected": "Delete selected"
+    },
+    "status": {
+      "label": "Status",
+      "active": "Active",
+      "draft": "Draft",
+      "all": "All statuses"
+    },
+    "filters": {
+      "title": "Product filters",
+      "search": "Search products",
+      "searchHint": "Search by name or SKU.",
+      "sku": "SKU contains",
+      "autoApply": "All filters apply together automatically.",
+      "open": "Filter products",
+      "status": "Product status",
+      "allProducts": "All products",
+      "statusChip": "Status: {{status}}"
+    },
+    "list": {
+      "selected": "{{count}} selected on this page",
+      "unavailable": "Products unavailable",
+      "noMatches": "No products match these filters.",
+      "empty": "No products in this store yet."
+    },
+    "delete": {
+      "title_one": "Delete product?",
+      "title_other": "Delete {{count}} products?",
+      "description_one": "Delete {{name}} from this store? This cannot be undone.",
+      "description_other": "Delete {{count}} selected products from this store? This cannot be undone.",
+      "failed": "{{count}} could not be deleted. Retry applies only to these records."
+    }
+  },
+  "reference": {
+    "timezone": "Sofia",
+    "events": {
+      "title": "Events",
+      "singular": "Event",
+      "actions": {
+        "create": "Create event",
+        "edit": "Edit event",
+        "save": "Save event",
+        "back": "Back to events",
+        "restore": "Restore",
+        "restoreEvent": "Restore event",
+        "publish": "Publish",
+        "archive": "Archive",
+        "trash": "Move to trash",
+        "update": "Update",
+        "restoreSelected": "Restore selected",
+        "publishSelected": "Publish selected",
+        "archiveSelected": "Archive selected",
+        "trashSelected": "Trash selected"
+      },
+      "tabs": {
+        "general": "General",
+        "schedule": "Schedule & location",
+        "scheduleAria": "Schedule and location",
+        "contentMedia": "Content & media",
+        "content": "Content",
+        "overview": "Overview",
+        "sections": "Event sections"
+      },
+      "form": {
+        "label": "Event form",
+        "essentials": "Event essentials",
+        "essentialsHint": "Give your event a clear identity and choose how people will attend.",
+        "codeHint": "Unique in this store. Fixed after creation.",
+        "scheduleHint": "All event times are in Europe/Sofia. Registration dates are calendar dates.",
+        "content": "Event content",
+        "contentHint": "A short introduction that helps people understand the event.",
+        "summaryHint": "Optional. Up to 500 characters.",
+        "descriptionHint": "Add headings, emphasis, lists and web links. Formatting is saved with the event.",
+        "settings": "Event settings",
+        "budgetHint": "Optional. Up to two decimal places.",
+        "untitled": "Untitled event",
+        "noStart": "Start date not set",
+        "editHint": "Save changes to this event in the selected store.",
+        "createHint": "Create a new event in the selected store.",
+        "finishGallery": "Finish or cancel your gallery changes before saving the event."
+      },
+      "messages": {
+        "unavailable": "Event details unavailable",
+        "loading": "Loading event details…",
+        "new": "Plan a new event in this store.",
+        "saveBeforeImages": "Save the event before adding images.",
+        "unavailableEvent": "Event unavailable",
+        "trashed": "This event is in Trash. Restore it to edit or access its sessions and gallery.",
+        "saved": "Event saved.",
+        "updated": "Event updated.",
+        "movedToTrash": "Event moved to trash.",
+        "loadingEditor": "Loading event editor…",
+        "restored": "Event restored."
+      },
+      "show": {
+        "details": "Event details",
+        "inTrash": "In trash",
+        "about": "About this event",
+        "noSummary": "No summary added yet.",
+        "description": "Event description",
+        "starts": "Starts",
+        "ends": "Ends",
+        "registration": "Registration",
+        "notConfigured": "Not configured"
+      },
+      "delete": {
+        "title": "Move event to trash?",
+        "description": "{{name}} will be removed from the active list."
+      },
+      "bulk": {
+        "label": "Selected event actions",
+        "completed_one": "{{action}} completed for {{count}} event.",
+        "completed_other": "{{action}} completed for {{count}} events.",
+        "title": "{{action}} selected events?",
+        "description_one": "This applies to {{count}} selected event. All selected events must be eligible; otherwise none will change.",
+        "description_other": "This applies to {{count}} selected events. All selected events must be eligible; otherwise none will change."
+      },
+      "status": {
+        "PUBLISHED": "Published",
+        "ARCHIVED": "Archived",
+        "DRAFT": "Draft"
+      },
+      "format": {
+        "IN_PERSON": "In person",
+        "ONLINE": "Online",
+        "HYBRID": "Hybrid"
+      },
+      "filters": {
+        "title": "Event filters",
+        "search": "Search title or code",
+        "searchHint": "The same search as the list toolbar. All filters combine.",
+        "allFormats": "All formats",
+        "allEvents": "All events",
+        "notFeatured": "Not featured",
+        "startDate": "Start date (Europe/Sofia)",
+        "from": "From date",
+        "to": "To date",
+        "minimum": "Minimum capacity",
+        "maximum": "Maximum capacity"
+      },
+      "list": {
+        "search": "Search events",
+        "filter": "Filter events",
+        "columns": "Columns",
+        "view": "Event view",
+        "trash": "Trash",
+        "timezone": "· All times in Europe/Sofia",
+        "unavailable": "Events unavailable",
+        "noMatches": "No events match these filters.",
+        "emptyTrash": "Trash is empty.",
+        "empty": "No events in this store yet.",
+        "visibleColumns": "Visible columns",
+        "resetColumns": "Reset columns"
+      }
+    },
+    "sessions": {
+      "title": "Sessions",
+      "actions": {
+        "add": "Add session",
+        "edit": "Edit session",
+        "save": "Save session",
+        "back": "Back to sessions",
+        "delete": "Delete session",
+        "moveUp": "Move {{name}} up",
+        "moveDown": "Move {{name}} down"
+      },
+      "form": {
+        "label": "Session form",
+        "details": "Session details",
+        "schedule": "Schedule & speakers",
+        "scheduleHint": "All times are in Europe/Sofia. Sessions must fit within the event.",
+        "speakersHint": "Search the store's speaker directory.",
+        "aside": "Session summary",
+        "untitled": "Untitled session",
+        "saveHint": "Save this session independently of the event. Arrange its display order in the Sessions tab.",
+        "selectedSpeakers_one": "{{count}} speaker selected",
+        "selectedSpeakers_other": "{{count}} speakers selected"
+      },
+      "list": {
+        "program": "Event program",
+        "description": "Build the event program. Drag sessions or use the arrows, then save the order. Display order is independent of time.",
+        "unsaved": "Unsaved order · Save or cancel before editing sessions.",
+        "savedSeparately": "Changes to individual sessions are saved separately.",
+        "empty": "No sessions yet. Add the first session to build this event's program.",
+        "label": "Event sessions",
+        "noSpeakers": "No speakers assigned"
+      },
+      "messages": {
+        "orderSaved": "Session order saved.",
+        "orderRestored": "Server order restored.",
+        "deleted": "Session deleted.",
+        "saved": "Session saved.",
+        "moved": "Moved {{name}} to position {{position}}.",
+        "independentSave": "{{name}} · Sessions have their own save action."
+      },
+      "delete": {
+        "title": "Delete session?",
+        "description": "{{name}} will be permanently removed from this event."
+      }
+    },
+    "media": {
+      "title": "Gallery",
+      "label": "Event gallery",
+      "description": "Up to 10 still JPEG, PNG or WebP images · 5 MiB and 20 megapixels each. Changes here are saved separately from the event.",
+      "readonlyDescription": "Images from this event.",
+      "actions": {
+        "refresh": "Refresh previews",
+        "choose": "Choose gallery image",
+        "add": "Add image",
+        "cancelUpload": "Cancel upload",
+        "cover": "Set cover",
+        "altText": "Alt text",
+        "previous": "Previous image",
+        "next": "Next image",
+        "closePreview": "Close preview",
+        "saveAlt": "Save alt text",
+        "remove": "Remove image",
+        "preview": "Preview {{name}}",
+        "moveEarlier": "Move {{name}} earlier",
+        "moveLater": "Move {{name}} later"
+      },
+      "messages": {
+        "coverSaved": "Cover saved.",
+        "orderSaved": "Gallery order saved.",
+        "orderRestored": "Saved gallery order restored.",
+        "altSaved": "Alt text saved.",
+        "removed": "Image removed.",
+        "finishing": "Finishing",
+        "uploading": "Uploading",
+        "unavailable": "Gallery unavailable. Use Refresh previews to try again.",
+        "empty": "No images yet",
+        "noAlt": "No alt text",
+        "moved": "Image moved to position {{position}}. Save order to keep this change."
+      },
+      "progress": "Image upload progress",
+      "cover": "Cover",
+      "alt": {
+        "title": "Image alt text",
+        "description": "Describe the image for people using assistive technology."
+      },
+      "delete": {
+        "title": "Remove image?",
+        "description": "{{name}} will be removed from this gallery. This cannot be undone."
+      },
+      "upload": {
+        "invalid": "Choose a JPEG, PNG or WebP image of at most 5 MiB.",
+        "noTarget": "No upload target was returned.",
+        "failed": "Upload failed. Please try again.",
+        "rejected": "The image could not be uploaded. Check its type and size, then try again.",
+        "connectionLost": "Upload connection lost. Please try again.",
+        "timeout": "Upload timed out. Please try again."
+      },
+      "imageCount_one": "{{count}} / 10 image",
+      "imageCount_other": "{{count}} / 10 images",
+      "imageLabel": "Image {{name}}"
+    },
+    "history": {
+      "title": "History",
+      "label": "Event history",
+      "description": "Saved changes, newest first · Europe/Sofia. Long values are shown as excerpts.",
+      "table": "Saved event changes",
+      "details": "Details",
+      "change": "Change",
+      "actor": "Actor",
+      "when": "When (Sofia)",
+      "loading": "Loading history…",
+      "unavailable": "History unavailable",
+      "empty": "No changes recorded yet.",
+      "collapse": "Collapse row",
+      "expand": "Expand row",
+      "before": "Before:",
+      "after": "After:",
+      "operations": {
+        "CREATED": "Event created",
+        "UPDATED": "Event updated",
+        "TRASHED": "Moved to trash",
+        "RESTORED": "Event restored",
+        "SESSION_CREATED": "Session created",
+        "SESSION_UPDATED": "Session updated",
+        "SESSION_DELETED": "Session deleted",
+        "SESSIONS_REORDERED": "Sessions reordered",
+        "MEDIA_ADDED": "Image added",
+        "MEDIA_UPDATED": "Image updated",
+        "MEDIA_REMOVED": "Image removed",
+        "MEDIA_REORDERED": "Images reordered",
+        "COVER_CHANGED": "Cover changed"
+      },
+      "fields": {
+        "startUtc": "Start (UTC)",
+        "endUtc": "End (UTC)",
+        "meetingLink": "Meeting link",
+        "description": "Description (HTML excerpt)",
+        "sessionOrder": "Session order",
+        "galleryOrder": "Image order",
+        "altText": "Alternative text"
+      },
+      "page": "Page {{page}} · {{total}} changes"
+    },
+    "venues": {
+      "title": "Venues",
+      "actions": {
+        "create": "Create venue",
+        "edit": "Edit venue",
+        "save": "Save venue",
+        "back": "Back to venues",
+        "delete_one": "Delete venue",
+        "delete_other": "Delete venues"
+      },
+      "form": {
+        "details": "Venue details",
+        "description": "Give your venue a name and a short description.",
+        "location": "Location",
+        "locationHint": "Where people will find this venue.",
+        "countryHint": "Two letters, e.g. BG.",
+        "addressHint": "Optional. Street address and directions.",
+        "settings": "Venue settings",
+        "activeHint": "Available for selection on new events.",
+        "inactiveHint": "Keep this venue for reference. Existing event links are preserved.",
+        "untitled": "Untitled venue",
+        "cityNotSet": "City not set",
+        "countryNotSet": "Country not set",
+        "editHint": "Save changes to this venue in the selected store.",
+        "createHint": "Create a new venue in the selected store."
+      },
+      "messages": {
+        "saved": "Venue saved.",
+        "deleted_one": "Venue deleted.",
+        "deleted_other": "{{count}} venues deleted."
+      },
+      "delete": {
+        "hint": "Venues used by events cannot be deleted.",
+        "title_one": "Delete venue?",
+        "title_other": "Delete {{count}} venues?",
+        "description_one": "Delete {{name}} from this store? This cannot be undone.",
+        "description_other": "Delete {{count}} selected venues from this store? This cannot be undone."
+      },
+      "filters": {
+        "title": "Venue filters",
+        "search": "Search venues",
+        "searchHint": "Search by venue name.",
+        "open": "Filter venues",
+        "status": "Venue status",
+        "all": "All venues"
+      },
+      "list": {
+        "unavailable": "Venues unavailable",
+        "noMatches": "No venues match these filters.",
+        "empty": "No venues in this store yet."
+      }
+    },
+    "speakers": {
+      "title": "Speakers",
+      "actions": {
+        "create": "Create speaker",
+        "edit": "Edit speaker",
+        "save": "Save speaker",
+        "back": "Back to speakers",
+        "delete_one": "Delete speaker",
+        "delete_other": "Delete speakers"
+      },
+      "form": {
+        "details": "Speaker details",
+        "description": "Keep a reusable directory of people for your event program.",
+        "emailHint": "Optional. Contact email address.",
+        "settings": "Speaker settings",
+        "untitled": "Untitled speaker",
+        "editHint": "Save changes to this speaker in the selected store.",
+        "createHint": "Create a new speaker in the selected store.",
+        "assignmentHint": "Available for assignment to sessions.",
+        "preservedHint": "Existing session assignments are preserved.",
+        "noEmailAddress": "No email address"
+      },
+      "messages": {
+        "saved": "Speaker saved.",
+        "deleted_one": "Speaker deleted.",
+        "deleted_other": "{{count}} speakers deleted."
+      },
+      "delete": {
+        "hint": "Speakers assigned to sessions cannot be deleted.",
+        "title_one": "Delete speaker?",
+        "title_other": "Delete {{count}} speakers?",
+        "description_one": "Delete {{name}} from this store? This cannot be undone.",
+        "description_other": "Delete {{count}} selected speakers from this store? This cannot be undone."
+      },
+      "event": {
+        "label": "Event speakers",
+        "empty": "Assign speakers to sessions to include them here."
+      },
+      "filters": {
+        "title": "Speaker filters",
+        "search": "Search speakers",
+        "searchHint": "Search by speaker name.",
+        "open": "Filter speakers",
+        "status": "Speaker status",
+        "all": "All speakers"
+      },
+      "list": {
+        "unavailable": "Speakers unavailable",
+        "noMatches": "No speakers match these filters.",
+        "empty": "No speakers in this store yet."
+      }
+    },
+    "tags": {
+      "title": "Tags",
+      "actions": {
+        "create": "Create tag",
+        "edit": "Edit tag",
+        "save": "Save tag",
+        "back": "Back to tags",
+        "delete_one": "Delete tag",
+        "delete_other": "Delete tags"
+      },
+      "form": {
+        "details": "Tag details",
+        "settings": "Tag settings",
+        "untitled": "Untitled tag",
+        "editHint": "Save changes to this tag in the selected store.",
+        "createHint": "Create a new tag in the selected store.",
+        "description": "Use a short name and a distinct color for each event label.",
+        "colorHint": "Six-digit hex color. Select the swatch to choose a color.",
+        "chooseColor": "Choose tag color",
+        "assignmentHint": "Available for assignment to events.",
+        "preservedHint": "Existing event tags are preserved. This tag cannot be newly assigned."
+      },
+      "messages": {
+        "saved": "Tag saved.",
+        "deleted_one": "Tag deleted.",
+        "deleted_other": "{{count}} tags deleted."
+      },
+      "delete": {
+        "hint": "Tags assigned to events cannot be deleted.",
+        "title_one": "Delete tag?",
+        "title_other": "Delete {{count}} tags?",
+        "description_one": "Delete {{name}} from this store? This cannot be undone.",
+        "description_other": "Delete {{count}} selected tags from this store? This cannot be undone."
+      },
+      "filters": {
+        "title": "Tag filters",
+        "search": "Search tags",
+        "searchHint": "Search by tag name.",
+        "open": "Filter tags",
+        "status": "Tag status",
+        "all": "All tags"
+      },
+      "list": {
+        "unavailable": "Tags unavailable",
+        "noMatches": "No tags match these filters.",
+        "empty": "No tags in this store yet."
+      }
+    },
+    "label": "Reference",
+    "fields": {
+      "name": "Name",
+      "description": "Description",
+      "city": "City",
+      "country": "Country",
+      "countryCode": "Country code",
+      "address": "Address",
+      "capacity": "Capacity",
+      "email": "Email",
+      "shortBio": "Short biography",
+      "color": "Color",
+      "title": "Title",
+      "code": "Code",
+      "format": "Format",
+      "featured": "Featured",
+      "startsAt": "Starts at",
+      "endsAt": "Ends at",
+      "registrationOpens": "Registration opens",
+      "registrationCloses": "Registration closes",
+      "venue": "Venue",
+      "tag": "Tag",
+      "meetingUrl": "Meeting URL",
+      "budget": "Budget",
+      "budgetEur": "Budget (EUR)",
+      "created": "Created",
+      "updated": "Updated",
+      "room": "Room",
+      "start": "Start",
+      "startSofia": "Start (Sofia)",
+      "createdSofia": "Created (Sofia)",
+      "updatedSofia": "Updated (Sofia)"
+    },
+    "lookups": {
+      "nameHint": "Use the name people will recognize.",
+      "descriptionHint": "Optional. Up to 2,000 characters.",
+      "capacityHint": "Optional. Maximum number of people.",
+      "autoApply": "All filters apply together automatically.",
+      "failedDelete": "{{count}} could not be deleted. Retry applies only to these records."
+    },
+    "relations": {
+      "failed": "Could not load records",
+      "empty": "No matching records",
+      "search": "Search by name"
+    },
+    "richText": {
+      "bold": "Bold",
+      "italic": "Italic",
+      "bullet": "Bullet list",
+      "bulletText": "• List",
+      "numbered": "Numbered list",
+      "numberedText": "1. List",
+      "formatting": "Description formatting",
+      "style": "Text style",
+      "paragraph": "Paragraph",
+      "h2": "Heading 2",
+      "h3": "Heading 3",
+      "link": "Link",
+      "removeLink": "Remove link",
+      "undo": "Undo",
+      "redo": "Redo",
+      "linkHint": "Select text to add a link.",
+      "editLink": "Edit link",
+      "address": "Web address",
+      "addressHint": "Use an absolute http or https URL without embedded credentials.",
+      "applyLink": "Apply link"
+    }
+  },
+  "prototype": {
+    "mode": "Prototype",
+    "actions": {
+      "reset": "Reset demo data"
+    },
+    "confirmation": {
+      "reset": "Reset demo data?"
+    },
+    "reset": {
+      "failed": "Demo data could not be reset.",
+      "description": "Restore the initial prototype data and return to store selection. Saved changes and unsaved forms and uploaded images will be discarded.",
+      "submit": "Reset data"
+    },
+    "browserHint": "Prototype changes are saved in this browser.",
+    "catalog": {
+      "title": "UI catalog",
+      "tabs": {
+        "body": "Body & actions",
+        "lists": "Lists & menus",
+        "forms": "Forms",
+        "states": "States & feedback",
+        "label": "UI catalog sections"
+      },
+      "interactive": "Interactive examples",
+      "description": "Explore the components used across holita. Examples are local to this page and reset when you leave a section or switch stores.",
+      "body": {
+        "typography": "Typography & body",
+        "typographyHint": "Use theme typography for headings, body copy, hints and metadata.",
+        "heading": "A clear heading",
+        "subtitle": "A subtitle introduces the content below.",
+        "bodyText": "Body text explains what the user can do and provides the context they need to make a decision.",
+        "secondary": "Secondary text supports the main content without competing with it.",
+        "caption": "Caption · Updated a moment ago",
+        "sectionLabel": "Section label",
+        "quote": "Keep related information together and make the next action clear.",
+        "linkNotice": "Text link activated.",
+        "link": "Preview a text link",
+        "cards": "Cards & details",
+        "cardsHint": "Group related content with Paper, ContentSection and theme spacing.",
+        "summary": "Example summary",
+        "cardHint": "Use a card for a short summary or a group of related details.",
+        "visibility": "Visibility",
+        "activity": "Example activity",
+        "created": "Example created",
+        "updated": "Details updated",
+        "review": "Ready for review",
+        "localActivity": "Local activity example",
+        "buttons": "Buttons, badges & tooltips",
+        "buttonsHint": "Use contained for the primary action, soft for secondary actions and error for destructive actions.",
+        "primaryNotice": "Primary action activated.",
+        "primary": "Primary action",
+        "secondaryNotice": "Secondary action activated.",
+        "secondaryAction": "Secondary action",
+        "outlinedNotice": "Outlined action activated.",
+        "outlined": "Outlined",
+        "textNotice": "Text action activated.",
+        "textAction": "Text action",
+        "destructiveNotice": "Destructive action previewed.",
+        "destructive": "Destructive",
+        "pendingAction": "Pending action",
+        "pending": "Pending",
+        "settings": "Example settings",
+        "settingsNotice": "Settings action activated.",
+        "attention": "Needs attention",
+        "unavailable": "Unavailable",
+        "information": "Information",
+        "outlinedBadge": "Outlined badge",
+        "table": "Summary table",
+        "tableHint": "Use a simple MUI table for compact readonly summaries; the list tab demonstrates interactive DataGrid behavior.",
+        "metric": "Metric",
+        "value": "Value",
+        "total": "Total examples",
+        "active": "Active examples",
+        "drafts": "Draft examples",
+        "expandable": "Expandable content",
+        "expandableHint": "Keep optional supporting details in a keyboard-accessible disclosure.",
+        "moreDetails": "More details",
+        "detailsHint": "Use a disclosure for supplementary information. Required fields and errors should remain easy to find.",
+        "unavailableDetails": "Unavailable details"
+      },
+      "states": {
+        "ready": "Ready",
+        "disabled": "Disabled",
+        "saving": "Saving",
+        "saveError": "Save error",
+        "loading": "Loading",
+        "empty": "Empty",
+        "error": "Error"
+      },
+      "forms": {
+        "state": "Form state",
+        "stateHint": "Change the state to preview pending controls and errors. Save validates this example without sending a request.",
+        "controls": "Form controls",
+        "controlsHint": "Labels, hints, errors and required markers stay with their fields. Settings and actions use the shared EditorAside.",
+        "error": "The example could not be saved. Your entered values are preserved; try Save example again.",
+        "saved": "Example saved on this page. No prototype records were changed.",
+        "nameHint": "Required · Up to 100 characters.",
+        "email": "Contact email",
+        "emailHint": "Used here to demonstrate an email field.",
+        "category": "Category",
+        "accessories": "Accessories",
+        "home": "Home",
+        "stationery": "Stationery",
+        "new": "New",
+        "seasonal": "Seasonal",
+        "limited": "Limited",
+        "labels": "Labels",
+        "labelsHint": "Search and select several options.",
+        "quantity": "Quantity",
+        "quantityHint": "Whole numbers · Minimum 1.",
+        "notes": "Notes",
+        "notesHint": "Multiline content with a hint.",
+        "date": "Date",
+        "dateTime": "Date and time",
+        "colorHint": "Native color selection.",
+        "recordId": "Record ID",
+        "readonlyHint": "Readonly values can be selected and copied.",
+        "delivery": "Delivery",
+        "pickup": "Pickup",
+        "shipping": "Shipping",
+        "notify": "Notify the owner",
+        "settingsLabel": "Catalog form settings",
+        "reset": "Reset form",
+        "save": "Save example",
+        "settings": "Settings",
+        "untitled": "Untitled example",
+        "mobileHint": "Actions and settings move below the fields on mobile.",
+        "categorySummary": "Category: {{category}}",
+        "labelsSummary": "Labels: {{count}}"
+      },
+      "lists": {
+        "title": "List, filters & row menus",
+        "description": "Try sorting, pagination, page selection and the shared row menu. Changes affect these examples only.",
+        "search": "Search examples",
+        "filters": "Filters",
+        "new": "New example",
+        "add": "Add example",
+        "label": "Catalog examples",
+        "noMatches": "No examples match these filters.",
+        "filterLabel": "Catalog filters",
+        "filterName": "Filter by name",
+        "status": "Example status",
+        "saved": "Example saved on this page.",
+        "edit": "Edit example",
+        "name": "Example name",
+        "editHint": "This changes the catalog example only.",
+        "details": "Example details",
+        "deleteTitle": "Delete catalog examples?",
+        "deleted": "Examples removed from this page.",
+        "delete": "Delete examples",
+        "codeSummary": "Code: {{code}}",
+        "deleteDescription_one": "{{count}} example will be removed from this page. Stored prototype data is unchanged.",
+        "deleteDescription_other": "{{count}} examples will be removed from this page. Stored prototype data is unchanged."
+      },
+      "feedback": {
+        "title": "Content states",
+        "description": "Initial loading, no records, failed reads and disabled content must remain distinguishable.",
+        "state": "Content state",
+        "available": "Example content is available",
+        "availableHint": "Successful data loads show the content and its applicable actions.",
+        "actionNotice": "Content action activated.",
+        "action": "Example action",
+        "loading": "Loading example…",
+        "empty": "No examples yet",
+        "emptyHint": "Explain the empty result and offer the next useful action.",
+        "create": "Create example",
+        "loadError": "Could not load examples",
+        "loadErrorHint": "This is a simulated read failure. Retry returns to the ready preview.",
+        "unavailable": "Example is unavailable",
+        "unavailableHint": "Explain why the action is unavailable.",
+        "unavailableAction": "Unavailable action",
+        "refresh": "Background refresh",
+        "refreshHint": "Keep existing content and drafts when a refresh fails. Use the shared warning to offer Retry.",
+        "connection": "Example connection interrupted.",
+        "refreshed": "Example refresh completed. Existing content was kept.",
+        "simulateRefresh": "Simulate refresh failure",
+        "alerts": "Alerts & progress",
+        "alertsHint": "Use severity and readable text together. Pending controls prevent duplicate submission.",
+        "info": "Informational message with context.",
+        "success": "Changes saved successfully.",
+        "warning": "Review this detail before continuing.",
+        "error": "The action failed. Entered values are preserved.",
+        "pendingProgress": "Pending progress example",
+        "indeterminate": "Indeterminate progress",
+        "progress": "Progress example",
+        "determinate": "Determinate progress · 60%",
+        "confirmation": "Confirmation & notifications",
+        "confirmationHint": "Confirm destructive actions, offer Cancel and show the outcome after completion.",
+        "openConfirmation": "Open confirmation",
+        "notice": "Example notification shown.",
+        "showNotice": "Show notification",
+        "deleteTitle": "Delete this example?",
+        "confirmationDescription": "This previews a confirmation dialog. No stored record will be deleted.",
+        "confirmed": "Example action confirmed. No records were changed.",
+        "confirm": "Confirm example"
+      }
+    }
+  }
+}

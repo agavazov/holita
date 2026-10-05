@@ -44,7 +44,7 @@ for (const entity of ['Speaker', 'Tag']) {
     );
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(
-      `${app.url}/stores/${storeA}/reference/${plural}?search=Order&status=INACTIVE&pageSize=10&page=2`,
+      `${app.url}/en/stores/${storeA}/reference/${plural}?search=Order&status=INACTIVE&pageSize=10&page=2`,
     );
     const rows = page.getByRole('grid', { name: `${entity}s` }).getByRole('link');
     await expect(rows).toHaveText(['Order 00']);
@@ -125,7 +125,7 @@ for (const entity of ['Speaker', 'Tag']) {
     const errors: string[] = [];
     page.on('pageerror', (error) => errors.push(error.message));
     await page.setViewportSize({ width: 1440, height: 1000 });
-    await page.goto(`${app.url}/stores/${storeA}/reference/${plural}/create`);
+    await page.goto(`${app.url}/en/stores/${storeA}/reference/${plural}/create`);
     await page
       .getByLabel('Name', { exact: true })
       .fill(entity === 'Speaker' ? 'Morgan Ellis' : 'Community workshops');
@@ -171,7 +171,7 @@ for (const entity of ['Speaker', 'Tag']) {
     });
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
     await page.getByRole('button', { name: 'Discard changes', exact: true }).click();
-    await expect(page).toHaveURL(`${app.url}/stores/${storeA}/reference/${plural}`);
+    await expect(page).toHaveURL(`${app.url}/en/stores/${storeA}/reference/${plural}`);
     expect(errors).toEqual([]);
   });
 }

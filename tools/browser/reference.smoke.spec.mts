@@ -35,7 +35,7 @@ test('Reference loads on demand and a delayed module cannot replace a newer stor
       venueStores.push(request.headers()['x-store-id']);
     }
   });
-  await page.goto(`${app.url}/stores/${storeA}/products`);
+  await page.goto(`${app.url}/en/stores/${storeA}/products`);
   await expect(page.getByRole('link', { name: 'Sofia notebook', exact: true })).toBeVisible();
   expect(moduleRequests).toEqual([]);
 
@@ -60,7 +60,7 @@ test('Reference loads on demand and a delayed module cannot replace a newer stor
     await started;
     await expect(page.getByRole('status')).toHaveText('Loading Reference…');
     await switchStore(page, 'holita Plovdiv');
-    await expect(page).toHaveURL(`${app.url}/stores/${storeB}/reference/venues`);
+    await expect(page).toHaveURL(`${app.url}/en/stores/${storeB}/reference/venues`);
     await page.getByRole('menuitem', { name: 'Products', exact: true }).click();
     await expect(page.getByRole('link', { name: 'Plovdiv notebook', exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Create product', exact: true }).click();
@@ -71,7 +71,7 @@ test('Reference loads on demand and a delayed module cannot replace a newer stor
     );
     release();
     await completed;
-    await expect(page).toHaveURL(`${app.url}/stores/${storeB}/products/create`);
+    await expect(page).toHaveURL(`${app.url}/en/stores/${storeB}/products/create`);
     await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Independent product draft');
     expect(venueStores).toEqual([]);
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
@@ -90,7 +90,7 @@ test('Venue CRUD works through the real gateway and persists across reloads', as
 }, testInfo) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  await page.goto(`${app.url}/stores/${storeA}/reference/venues`);
+  await page.goto(`${app.url}/en/stores/${storeA}/reference/venues`);
   await expect(page.getByRole('link', { name: 'The Glasshouse', exact: true })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('venues-list.png'), fullPage: true });
   await page.getByRole('button', { name: 'Create venue', exact: true }).click();
@@ -177,7 +177,7 @@ test('a delayed venue response cannot replace the newly selected store', async (
     } else await route.continue();
   });
   try {
-    await page.goto(`${app.url}/stores/${storeA}/reference/venues`);
+    await page.goto(`${app.url}/en/stores/${storeA}/reference/venues`);
     await started;
     await switchStore(page, 'holita Plovdiv');
     await expect(page.getByRole('link', { name: 'Riverside Hall', exact: true })).toBeVisible();
@@ -224,7 +224,7 @@ test('a pending mutation stays in its initiating store and leaves the new draft 
     } else await route.continue();
   });
   try {
-    await page.goto(`${app.url}/stores/${storeA}/reference/venues/create`);
+    await page.goto(`${app.url}/en/stores/${storeA}/reference/venues/create`);
     await fillVenue(page, 'Pending Sofia venue');
     await page.getByRole('button', { name: 'Save venue' }).dblclick();
     await started;
@@ -237,7 +237,7 @@ test('a pending mutation stays in its initiating store and leaves the new draft 
     );
     release();
     await completed;
-    await expect(page).toHaveURL(`${app.url}/stores/${storeB}/reference/venues/create`);
+    await expect(page).toHaveURL(`${app.url}/en/stores/${storeB}/reference/venues/create`);
     await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Unsaved Plovdiv draft');
     await expect(page.getByText('Venue saved.')).toHaveCount(0);
     expect(mutationStores).toEqual([storeA]);
@@ -278,7 +278,7 @@ test('history navigation isolates editors in the same store during a pending cre
     } else await route.continue();
   });
   try {
-    await page.goto(`${app.url}/stores/${storeA}/reference/venues`);
+    await page.goto(`${app.url}/en/stores/${storeA}/reference/venues`);
     await page.getByRole('link', { name: 'The Glasshouse', exact: true }).click();
     await expect(page.getByLabel('Name', { exact: true })).toHaveValue('The Glasshouse');
     const editUrl = page.url();

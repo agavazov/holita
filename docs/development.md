@@ -20,10 +20,10 @@ nvm installation, initialize a non-interactive shell with `. "$HOME/.nvm/nvm.sh"
 
 | Command                                           | Behavior                                                                                            |
 | ------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| npm run dev                                       | Start four backends plus Real and Prototype admin; Ctrl+C stops the group                           |
-| npm run dev:admin                                 | Real admin (alias of dev:admin:graphql)                                                             |
-| npm run dev:admin:graphql                         | Real admin using the gateway                                                                        |
-| npm run dev:admin:mock                            | Prototype admin with browser fixtures; no backend needed                                            |
+| npm run dev                                       | Start four backends plus both admin-react modes; Ctrl+C stops the group                              |
+| npm run dev:admin-react                           | Real React admin (alias of dev:admin-react:graphql)                                                  |
+| npm run dev:admin-react:graphql                   | Real React admin using the gateway                                                                  |
+| npm run dev:admin-react:mock                      | Prototype React admin with browser fixtures; no backend needed                                      |
 | npm run dev:gateway                               | Nest gateway watcher                                                                                |
 | npm run dev:core                                  | Nest core watcher                                                                                   |
 | npm run dev:products                              | Nest products watcher                                                                               |
@@ -35,9 +35,13 @@ nvm installation, initialize a non-interactive shell with `. "$HOME/.nvm/nvm.sh"
 | npm run format:check                              | Check formatting without rewriting files                                                            |
 | npm run check:affected -- --base=BASE --head=HEAD | Lint/typecheck root tools; lint, typecheck and build affected projects using real commit references |
 
+The compatibility commands `dev:admin`, `dev:admin:graphql`, `dev:admin:mock`, `test:admin`
+and `test:smoke` currently delegate to admin-react. New scripts and documentation use the
+explicit admin-react names to identify the React workspace unambiguously.
+
 Backend builds produce apps/NAME/dist. After building, use
 `npm run start:prod --workspace @holita/core` (or gateway/products/reference) to run the emitted Node
-entry point. Admin uses `npm run preview --workspace @holita/admin` to preview its build.
+entry point. Admin uses `npm run preview --workspace @holita/admin-react` to preview its build.
 
 The [CI workflows](testing.md#github-actions) use the same commands on Ubuntu with Node
 from .nvmrc and npm from package.json's packageManager field. PostgreSQL stays in Compose;
@@ -45,14 +49,14 @@ Node checks and test application processes run on the runner host. CI does not d
 
 ## Ports and environment
 
-| Application     | Default         |
-| --------------- | --------------- |
-| gateway         | 127.0.0.1:11080 |
-| admin Real      | 127.0.0.1:11081 |
-| admin Prototype | 127.0.0.1:11087 |
-| core            | 127.0.0.1:11082 |
-| products        | 127.0.0.1:11083 |
-| reference       | 127.0.0.1:11086 |
+| Application           | Default         |
+| --------------------- | --------------- |
+| gateway               | 127.0.0.1:11080 |
+| admin-react Real      | 127.0.0.1:11081 |
+| admin-react Prototype | 127.0.0.1:11087 |
+| core                  | 127.0.0.1:11082 |
+| products              | 127.0.0.1:11083 |
+| reference             | 127.0.0.1:11086 |
 
 Backend `.env.example` files document PORT. Copy only the example you need to that
 application's `.env`; defaults work without any environment file. Core/products/reference examples
@@ -69,13 +73,13 @@ PORT=12082 npm run dev:core
 For admin, Vite accepts an explicit port:
 
 ```bash
-npm run dev --workspace @holita/admin -- --port 12081
+npm run dev --workspace @holita/admin-react -- --port 12081
 ```
 
-`apps/admin/.env.example` documents VITE_GATEWAY_URL, defaulting to
+`apps/admin-react/.env.example` documents VITE_GATEWAY_URL, defaulting to
 http://127.0.0.1:11080/graphql. This is the admin's GraphQL business endpoint; direct image transfers use URLs returned by Reference. It is a public
 browser configuration value, never a place for credentials. Vite reads it at startup/build.
-Use `VITE_GATEWAY_URL=http://127.0.0.1:12080/graphql npm run dev:admin` for a gateway override,
+Use `VITE_GATEWAY_URL=http://127.0.0.1:12080/graphql npm run dev:admin-react` for a gateway override,
 and align gateway ADMIN_ORIGIN with the exact browser origin when moving the admin port.
 
 ## Admin data modes
@@ -89,7 +93,7 @@ After [installation](#prerequisites-and-installation), run Prototype from the re
 without PostgreSQL, Docker or any backend. No `.env` file is required:
 
 ```bash
-npm run dev:admin:mock
+npm run dev:admin-react:mock
 ```
 
 Open http://127.0.0.1:11087. The mode indicator must say **Prototype**; choose **holita Sofia**
@@ -102,7 +106,7 @@ own instance and do not require this development process.
 To use another Prototype port:
 
 ```bash
-VITE_DATA_SOURCE=mock npm run dev --workspace @holita/admin -- --port 12087
+VITE_DATA_SOURCE=mock npm run dev --workspace @holita/admin-react -- --port 12087
 ```
 
 That instance opens at http://127.0.0.1:12087 and has a separate browser dataset.
@@ -110,10 +114,10 @@ That instance opens at http://127.0.0.1:12087 and has a separate browser dataset
 Run Real alone with a prepared, running gateway:
 
 ```bash
-npm run dev:admin:graphql
+npm run dev:admin-react:graphql
 ```
 
-`dev:admin` remains an alias for Real. These root commands explicitly set `VITE_DATA_SOURCE`,
+`dev:admin-react` remains an alias for Real. These root commands explicitly set `VITE_DATA_SOURCE`,
 so a local `.env` cannot change their mode. Running the admin workspace directly accepts
 `VITE_DATA_SOURCE=mock|graphql` from the environment or its Vite `.env`; omission defaults to
 `graphql` and any other value fails startup. Default admin builds explicitly use `graphql`.
@@ -125,10 +129,10 @@ For an optional Prototype build, generate the local contracts first, then build 
 
 ```bash
 npm run codegen
-VITE_DATA_SOURCE=mock npm exec --workspace @holita/admin -- vite build
+VITE_DATA_SOURCE=mock npm exec --workspace @holita/admin-react -- vite build
 ```
 
-This produces `apps/admin/dist` with disposable demo data and requires a secure context
+This produces `apps/admin-react/dist` with disposable demo data and requires a secure context
 (HTTPS or localhost) for the worker. Normal `npm run build` and the admin workspace's
 `build` script explicitly produce Real, even if the caller sets `VITE_DATA_SOURCE=mock`.
 
@@ -147,7 +151,7 @@ active/draft or inactive records and optional fields with and without values. Ev
 sessions per event and initial creation/trash History. General, Schedule & location and
 Content & media forms and Gallery use the same screens as Real. The first fixture Event in
 each store has two locally served [Picsum](https://picsum.photos/) placeholders from
-`apps/admin/public/images/tmp`, in WebP format at 1200 × 800 pixels; other and newly
+`apps/admin-react/public/images/tmp`, in WebP format at 1200 × 800 pixels; other and newly
 created Events start empty.
 Save a new Event before adding images.
 
@@ -241,7 +245,7 @@ screens and browser persistence; they do not establish Real backend parity.
 ## UI catalog
 
 In Prototype, choose a store, then **Prototype → UI catalog**. The route is
-`/stores/<storeId>/ui-catalog`; Real hides the menu and blocks this route without mounting
+`/<language>/stores/<storeId>/ui-catalog`; Real hides the menu and blocks this route without mounting
 the catalog or requesting a CRUD resource. The catalog loads on demand.
 
 Its four tabs show the current Aurora/MUI presentation primitives and shared components:
@@ -415,6 +419,70 @@ Seeds insert three Venues, three Tags, two Speakers and two Events across Sofia 
 Plovdiv without updating existing records. The Events are Sofia Creative Forum and
 Plovdiv Culture Exchange. Run migrations and seeds before opening the new resources.
 
+## Admin translations
+
+The admin owns an i18next instance for the active URL language, shared by React's I18nextProvider and
+Refine's i18nProvider in both data modes. It initializes synchronously from bundled
+[Bulgarian](../apps/admin-react/src/i18n/locales/bg.json) and
+[English](../apps/admin-react/src/i18n/locales/en.json) JSON catalogs. The default language is
+`bg`; missing or empty translations fall back to `en` without changing the selected
+language. React receives its instance explicitly through I18nextProvider; it does not use a
+global React translation instance. Provider errors, startup guidance and standalone validation
+reuse one separate instance through i18next's fixed-language translators. There is no translation
+server or browser language detection.
+
+Each catalog groups keys into `common`, `validation`, `shell`, `stores`, `products`,
+`reference` and `prototype` namespaces. Reference groups its keys by Events, Sessions,
+Media, History, Venues, Speakers and Tags. English defines the TypeScript key types through
+[i18next's declaration](../apps/admin-react/src/i18n/i18next.d.ts). Use react-i18next's typed
+`useTranslation('products')` and `t('form.name')` for catalog keys; Refine's runtime string
+keys use its supplied default message when the catalog has no translation.
+Messages use i18next parameters such as `{{max}}` and `_one`/`_other` plural entries selected
+by `count`. React escapes rendered text; translations are plain text.
+
+Every admin URL starts with `/bg` or `/en`, for example
+`/bg/stores/<storeId>/products`. An address without a supported language redirects with
+`replace` to its `bg` version, retaining the query and hash; an unknown application path
+returns to discovery in the selected language. The menu shows Български and English and
+changes only the prefix. Reload, Back and Forward use the URL language; there is no cookie,
+localStorage language preference or browser-language detection. The document's `lang`
+attribute follows the route.
+
+Use [localized routing helpers](../apps/admin-react/src/i18n/routing.ts) for internal links and
+navigation. They add the active prefix to absolute paths and preserve relative navigation
+and history steps. Refine's `changeLocale` also navigates through the router, preserving the
+current path, query and hash. Products and Reference share the
+[unsaved-changes guard](../apps/admin-react/src/features/use-unsaved-changes.tsx), which confirms
+Cancel, language/store changes, module navigation and browser history when a form is dirty.
+Confirmed navigation remounts feature UI; pending server writes retain their
+original store and language, and old editor callbacks cannot redirect the new screen.
+
+[The GraphQL data provider](../apps/admin-react/src/data/data-provider.ts) receives the URL language
+and includes `Accept-Language: bg|en` in each request, including store discovery. Providers
+capture this value; they do not mutate a global header. Resource names and the shared Refine
+cache remain store-scoped because record data is not translated. Prototype Reset clears the
+cache and forms and returns to discovery with the current language prefix.
+
+Products and Reference list/editor/form text, filters, enum labels, local validation and
+success/deletion messages use the catalogs in both modes. Reference includes Sessions,
+Gallery/upload controls, rich-text controls and History labels. History subjects and stored
+before/after values are displayed as received. The shell includes translated navigation,
+local search, theme/profile/notification menus and store discovery/selection states. Shared
+actions, breadcrumbs, pagination, refresh warnings and unsaved-change confirmations also
+use translations. Prototype Reset and the UI catalog translate their controls and feedback;
+catalog preview state stays local and creates no business requests.
+Startup failures show guidance in the URL language and preserve the original error as a diagnostic.
+
+The Aurora theme merges MUI and Data Grid's bundled `bgBG` or `enUS` locale settings,
+including Autocomplete and selection controls. Theme preferences persist through language
+changes. [Display formatting](../apps/admin-react/src/i18n/use-format.ts) uses `Intl` with `bg-BG`
+or `en-GB`, reusing one formatter set per supported language; event, session and History
+timestamps remain in `Europe/Sofia`. Budgets keep
+EUR and their exact decimal-string API values. Native date/time and decimal input formats
+remain unchanged. Provider-generated network/store errors and upload transport errors use
+the language captured by their caller. API enum values, record content and backend messages
+are not translated by the frontend.
+
 ## Admin appearance and navigation
 
 The admin uses Aurora's simple single-column Sidenav shell without a footer. All enabled
@@ -429,17 +497,17 @@ Preferences persist in `holita.appearance`, `holita-mode`, `holita-color-scheme-
 `holita.sidenavCollapsed` localStorage keys. Clear those keys to restore defaults.
 Products and all Reference screens, including Sessions, Gallery, speaker summaries and History,
 and store discovery/unavailable states follow the selected Aurora preset. Search finds enabled modules
-locally; language, profile and notifications are examples, not live services.
+locally; profile and notifications remain presentation examples. The language menu uses the URL locale.
 An open search preserves its text when switching between the mobile dialog and desktop
 popover. Closing it restores focus to the current search control. Search navigation uses
 the same unsaved-change confirmation as the sidenav and store selector.
 Notification read/remove actions keep keyboard focus inside the panel when their control
 becomes disabled or disappears, so Escape can close it and return to the notification button.
 
-Shell code and selected theme overrides are in `apps/admin/src/layout` and
-`apps/admin/src/theme`. MUI, MUI X Data Grid Community, Emotion, Iconify and SimpleBar are installed through the
+Shell code and selected theme overrides are in `apps/admin-react/src/layout` and
+`apps/admin-react/src/theme`. MUI, MUI X Data Grid Community, Emotion, Iconify and SimpleBar are installed through the
 existing workspace lockfile. The selected icon data is bundled; font and avatar assets
-are under `apps/admin/public`; temporary example avatars are grouped in `public/images/tmp/avatar`.
+are under `apps/admin-react/public`; temporary example avatars are grouped in `public/images/tmp/avatar`.
 No sibling theme server, new environment variables or
 external font/icon service is needed. Start the admin with the normal dev commands.
 
@@ -452,13 +520,16 @@ The interface uses MUI throughout; Ant Design and its compatibility providers/st
 
 Open http://127.0.0.1:11081 and select a store. Seeded stores are holita Sofia and holita Plovdiv.
 The store switcher stays available on list/create/edit screens. Store-scoped URLs can be
-bookmarked or reloaded. Switching returns to the new store's list, resets pagination and
-discards unsaved changes. A submitted operation retains its original store and may finish
+bookmarked or reloaded. Switching returns to the new store's list and resets pagination
+after confirmation when the current form has unsaved changes. A submitted operation retains its original store and may finish
 after switching; return to that store to see the result.
 Navigation between create/edit routes within the same store also starts a separate editor;
 an earlier submitted write cannot redirect or overwrite the newly opened form.
 Save/Cancel return to the base Products list. Browser Back restores a previous list URL.
-Products does not prompt before discarding unsaved changes.
+Dirty forms require confirmation before Cancel, language/store changes, module navigation
+or browser history. Keep editing preserves the draft and URL; Discard changes allows the
+navigation. Leaving/reloading the page uses the browser's standard warning. Successful
+Save returns directly to the list; submitted writes do not block navigation.
 
 The Aurora list uses server pagination (20 rows by default; choices 10, 20, 50, 100).
 Search matches name or SKU. The quick search and the search field in **Filter** share the
@@ -687,7 +758,7 @@ this is not a production security acceptance.
 
 - Missing executable or dependency: initialize Node/npm and run `npm ci` from the root.
 - Prototype shows Real or cannot discover stores through the gateway: restart with
-  `npm run dev:admin:mock` and open http://127.0.0.1:11087. `dev:admin` starts Real, and
+  `npm run dev:admin-react:mock` and open http://127.0.0.1:11087. `dev:admin-react` starts Real, and
   changing `.env` while Vite is running does not change that process's data mode.
 - Prototype cannot start its worker or browser storage: use the loopback URL above and
   enable service workers, localStorage and IndexedDB for that site, then reload. Prototype

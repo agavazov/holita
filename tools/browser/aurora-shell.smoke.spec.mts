@@ -20,7 +20,7 @@ test('Aurora menus preserve list queries, apply preferences and use local exampl
       external.push(request.url());
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
-  const path = `/stores/${store}/reference/events?q=Forum`;
+  const path = `/en/stores/${store}/reference/events?q=Forum`;
   await page.goto(`${app.url}${path}`);
   await expect(page.getByRole('link', { name: 'Sofia Creative Forum', exact: true })).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
@@ -62,7 +62,11 @@ test('Aurora menus preserve list queries, apply preferences and use local exampl
 
   await page.getByRole('button', { name: 'Language', exact: true }).click();
   await page.screenshot({ path: testInfo.outputPath('language.png'), animations: 'disabled' });
-  await page.getByRole('menuitemradio', { name: /French/ }).click();
+  await page.getByRole('menuitemradio', { name: /Български/ }).click();
+  await expect(page).toHaveURL(queryUrl.replace('/en/', '/bg/'));
+  await page.getByRole('button', { name: 'Език', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: /English/ }).click();
+  await expect(page).toHaveURL(queryUrl);
   await page.getByRole('button', { name: 'Profile', exact: true }).click();
   await expect(page.getByRole('menu', { name: 'Profile', exact: true }).locator('..')).toHaveCSS(
     'transform',
@@ -107,7 +111,7 @@ test('Aurora menus preserve list queries, apply preferences and use local exampl
   await expect(search.getByText('No matching results.')).toBeVisible();
   await search.getByRole('textbox', { name: 'Search workspace' }).fill('Venues');
   await search.getByRole('button', { name: /^Venues Workspace/ }).click();
-  await expect(page).toHaveURL(`${app.url}/stores/${store}/reference/venues`);
+  await expect(page).toHaveURL(`${app.url}/en/stores/${store}/reference/venues`);
   await expect(page.getByRole('menuitem', { name: 'Venues', exact: true })).toHaveAttribute(
     'aria-current',
     'page',
@@ -121,7 +125,7 @@ test('Aurora single-column navigation supports collapse, keyboard and responsive
   app,
 }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto(`${app.url}/stores/${store}/reference/events/${event}/edit`);
+  await page.goto(`${app.url}/en/stores/${store}/reference/events/${event}/edit`);
   await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Sofia Creative Forum');
   const sidenav = page.getByRole('navigation', { name: 'Workspace navigation' });
   const drawer = sidenav.locator('.MuiDrawer-paper');
@@ -143,7 +147,7 @@ test('Aurora single-column navigation supports collapse, keyboard and responsive
   await expect(drawer).toHaveCSS('width', '72px');
   await events.focus();
   await events.press('Enter');
-  await expect(page).toHaveURL(`${app.url}/stores/${store}/reference/events`);
+  await expect(page).toHaveURL(`${app.url}/en/stores/${store}/reference/events`);
   await expect(page.getByRole('link', { name: 'Sofia Creative Forum', exact: true })).toBeVisible();
   await page.goBack();
   await expect(page.getByLabel('Title', { exact: true })).toBeVisible();
@@ -159,7 +163,7 @@ test('Aurora single-column navigation supports collapse, keyboard and responsive
   await page.getByRole('button', { name: 'Expand navigation', exact: true }).click();
   await expect(drawer).toHaveCSS('width', '256px');
   await sidenav.getByRole('menuitem', { name: 'Venues', exact: true }).click();
-  await expect(page).toHaveURL(`${app.url}/stores/${store}/reference/venues`);
+  await expect(page).toHaveURL(`${app.url}/en/stores/${store}/reference/venues`);
   await expect(drawer).toHaveCSS('width', '72px');
   await page.goBack();
   await expect(page.getByLabel('Title', { exact: true })).toBeVisible();
@@ -202,7 +206,7 @@ test('open search follows the current trigger across the mobile breakpoint', asy
     if (message.text().includes('anchorEl')) invalidAnchors.push(message.text());
   });
   await page.setViewportSize({ width: 899, height: 900 });
-  await page.goto(`${app.url}/stores/${store}/reference/events`);
+  await page.goto(`${app.url}/en/stores/${store}/reference/events`);
   await expect(page.getByRole('link', { name: 'Sofia Creative Forum', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   const search = page.getByRole('dialog', { name: 'Search workspace', exact: true });
@@ -267,7 +271,7 @@ test('shell examples preserve an Event draft and respect search and store naviga
   page,
   app,
 }) => {
-  await page.goto(`${app.url}/stores/${store}/reference/events/${event}/edit`);
+  await page.goto(`${app.url}/en/stores/${store}/reference/events/${event}/edit`);
   const title = page.getByLabel('Title', { exact: true });
   await expect(title).toHaveValue('Sofia Creative Forum');
   await title.fill('Unsaved shell review');
@@ -281,7 +285,8 @@ test('shell examples preserve an Event draft and respect search and store naviga
     .click();
   await expect(profile).toBeFocused();
   await page.getByRole('button', { name: 'Language', exact: true }).click();
-  await page.getByRole('menuitemradio', { name: /French/ }).click();
+  await page.getByRole('menuitemradio', { name: /Български/ }).click();
+  await page.getByRole('button', { name: 'Keep editing', exact: true }).click();
   await page.getByRole('button', { name: 'Theme', exact: true }).click();
   await page.getByRole('menuitemradio', { name: 'Dark', exact: true }).click();
   await page.keyboard.press('Escape');
@@ -310,7 +315,7 @@ test('shell examples preserve an Event draft and respect search and store naviga
   await page.getByRole('option', { name: 'holita Plovdiv', exact: true }).click();
   await page.getByRole('button', { name: 'Discard changes', exact: true }).click();
   await expect(page).toHaveURL(
-    `${app.url}/stores/10000000-0000-4000-8000-000000000002/reference/events`,
+    `${app.url}/en/stores/10000000-0000-4000-8000-000000000002/reference/events`,
   );
   await expect(
     page.getByRole('link', { name: 'Plovdiv Culture Exchange', exact: true }),

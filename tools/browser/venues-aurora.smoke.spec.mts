@@ -29,7 +29,7 @@ test('Aurora Venues sorts across server pages and preserves URL filters and hist
   }
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto(
-    `${app.url}/stores/${storeA}/reference/venues?search=Sort+venue&status=ACTIVE&pageSize=10&page=2`,
+    `${app.url}/en/stores/${storeA}/reference/venues?search=Sort+venue&status=ACTIVE&pageSize=10&page=2`,
   );
   const name = page.getByRole('columnheader', { name: /^Name\b/ });
   const rows = page.getByRole('grid', { name: 'Venues' }).getByRole('link');
@@ -75,7 +75,7 @@ test('Aurora Venues shares quick and panel filters and reports referenced batch 
   });
   expect(await response.json()).toHaveProperty('data.createReferenceVenue.id');
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto(`${app.url}/stores/${storeA}/reference/venues`);
+  await page.goto(`${app.url}/en/stores/${storeA}/reference/venues`);
   const quickSearch = page.getByRole('searchbox', { name: 'Search venues' });
   await quickSearch.fill('Glass');
   await expect(page).toHaveURL(/search=Glass/);
@@ -159,7 +159,7 @@ test('Aurora Venue editor keeps a desktop aside, stacks it on mobile and protect
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto(`${app.url}/stores/${storeA}/reference/venues/create`);
+  await page.goto(`${app.url}/en/stores/${storeA}/reference/venues/create`);
   await page.getByLabel('Name', { exact: true }).fill('Aurora review venue');
   await page.getByLabel('City', { exact: true }).fill('Sofia');
   await page.getByLabel('Address', { exact: true }).fill('12 Example Street');
@@ -200,6 +200,6 @@ test('Aurora Venue editor keeps a desktop aside, stacks it on mobile and protect
   });
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await page.getByRole('button', { name: 'Discard changes', exact: true }).click();
-  await expect(page).toHaveURL(`${app.url}/stores/${storeA}/reference/venues`);
+  await expect(page).toHaveURL(`${app.url}/en/stores/${storeA}/reference/venues`);
   expect(errors).toEqual([]);
 });

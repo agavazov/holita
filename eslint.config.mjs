@@ -59,7 +59,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/admin/**/*.{ts,tsx}'],
+    files: ['apps/admin-react/**/*.{ts,tsx}'],
     languageOptions: {
       globals: globals.browser,
     },

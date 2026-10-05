@@ -3,7 +3,7 @@ import { test } from './fixture.mjs';
 
 const store = '10000000-0000-4000-8000-000000000001';
 const event = '60000000-0000-4000-8000-000000000001';
-const path = `/stores/${store}/reference/events/${event}`;
+const path = `/en/stores/${store}/reference/events/${event}`;
 const buffer = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAABgAAAAQCAIAAACDRijCAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAIElEQVQ4jWMwjLtAFcQwapDhaBgZjqajuNEsEkd+OgAAcGAOn5aBl0EAAAAASUVORK5CYII=',
   'base64',

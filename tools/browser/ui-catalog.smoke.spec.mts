@@ -3,13 +3,13 @@ import { test } from './prototype-fixture.mjs';
 
 const storeA = '10000000-0000-4000-8000-000000000001';
 const storeB = '10000000-0000-4000-8000-000000000002';
-const catalog = `/stores/${storeA}/ui-catalog`;
+const catalog = `/en/stores/${storeA}/ui-catalog`;
 
 test('UI catalog reuses interactive list patterns without changing persisted prototype records', async ({
   page,
   app,
 }) => {
-  await page.goto(`${app.url}/stores/${storeA}/reference/tags`);
+  await page.goto(`${app.url}/en/stores/${storeA}/reference/tags`);
   await expect(page.getByRole('link', { name: 'Sport', exact: true })).toBeVisible();
   const savedData = await page.evaluate(() => localStorage.getItem('holita.prototype.data'));
   const operations: string[] = [];
@@ -145,7 +145,7 @@ test('catalog forms validate and preserve inputs across state previews, then res
   });
   await page.getByRole('combobox', { name: 'Store', exact: true }).click();
   await page.getByRole('option', { name: 'holita Plovdiv', exact: true }).click();
-  await expect(page).toHaveURL(`${app.url}/stores/${storeB}/ui-catalog`);
+  await expect(page).toHaveURL(`${app.url}/en/stores/${storeB}/ui-catalog`);
   await expect(page.getByRole('tab', { name: 'Body & actions', exact: true })).toHaveAttribute(
     'aria-selected',
     'true',
@@ -168,7 +168,7 @@ test('catalog states, confirmations and tabs remain usable in dark mode at 320 p
   await page.setViewportSize({ width: 320, height: 800 });
   await page.goto(`${app.url}${catalog}?tab=forms`);
   await expect(page.getByRole('tab', { name: 'Forms', exact: true })).toBeInViewport({ ratio: 1 });
-  await page.goto(`${app.url}/stores/${storeA}/reference/tags`);
+  await page.goto(`${app.url}/en/stores/${storeA}/reference/tags`);
   await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
   await page
     .getByRole('dialog', { name: 'Navigation' })

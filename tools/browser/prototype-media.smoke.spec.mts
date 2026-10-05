@@ -4,7 +4,7 @@ import { test } from './prototype-fixture.mjs';
 const storeA = '10000000-0000-4000-8000-000000000001',
   storeB = '10000000-0000-4000-8000-000000000002';
 const eventId = '60000000-0000-4000-8000-000000000002',
-  path = `/stores/${storeA}/reference/events/${eventId}`;
+  path = `/en/stores/${storeA}/reference/events/${eventId}`;
 const buffer = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAABgAAAAQCAIAAACDRijCAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAIElEQVQ4jWMwjLtAFcQwapDhaBgZjqajuNEsEkd+OgAAcGAOn5aBl0EAAAAASUVORK5CYII=',
   'base64',
@@ -129,7 +129,7 @@ test('Prototype fixture images load locally, Trash/Restore preserves uploads and
   app,
 }) => {
   await page.goto(
-    `${app.url}/stores/${storeA}/reference/events/60000000-0000-4000-8000-000000000001`,
+    `${app.url}/en/stores/${storeA}/reference/events/60000000-0000-4000-8000-000000000001`,
   );
   const gallery = page.getByRole('region', { name: 'Event gallery', exact: true });
   await expect(gallery.getByRole('article')).toHaveCount(2);
@@ -158,7 +158,7 @@ test('Prototype fixture images load locally, Trash/Restore preserves uploads and
   await page.getByRole('button', { name: 'Restore event', exact: true }).click();
   await expect(gallery.getByLabel('Image keep.png', { exact: true })).toBeVisible();
   await page.goto(
-    `${app.url}/stores/${storeB}/reference/events/60000000-0000-4000-8000-000000000102/edit`,
+    `${app.url}/en/stores/${storeB}/reference/events/60000000-0000-4000-8000-000000000102/edit`,
   );
   await page.getByRole('tab', { name: 'Content & media', exact: true }).click();
   await gallery
@@ -168,7 +168,7 @@ test('Prototype fixture images load locally, Trash/Restore preserves uploads and
   expect(await imageCount(page)).toBe(2);
   await page.getByRole('button', { name: 'Reset demo data', exact: true }).click();
   await page.getByRole('button', { name: 'Reset data', exact: true }).click();
-  await expect(page).toHaveURL(`${app.url}/`);
+  await expect(page).toHaveURL(`${app.url}/en/`);
   expect(await imageCount(page)).toBe(0);
   await editor(page, app.url);
   await expect(page.getByText('No images yet', { exact: true })).toBeVisible();
@@ -310,7 +310,7 @@ test('Prototype reports unavailable IndexedDB at startup without contacting a ba
   page.on('request', (request) => {
     if (!request.url().startsWith(app.url)) external.push(request.url());
   });
-  await page.goto(app.url);
+  await page.goto(`${app.url}/en/`);
   await expect(page.getByRole('alert')).toContainText(
     'Prototype images could not be saved or read',
   );

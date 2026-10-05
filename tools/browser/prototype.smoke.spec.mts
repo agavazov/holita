@@ -3,7 +3,7 @@ import { test } from './prototype-fixture.mjs';
 
 const storeA = '10000000-0000-4000-8000-000000000001';
 const storeB = '10000000-0000-4000-8000-000000000002';
-const tagsPath = `/stores/${storeA}/reference/tags`;
+const tagsPath = `/en/stores/${storeA}/reference/tags`;
 
 test('Prototype uses the same Tags screens, persists CRUD, isolates stores and resets dirty editors', async ({
   page,
@@ -21,7 +21,7 @@ test('Prototype uses the same Tags screens, persists CRUD, isolates stores and r
   page.on('request', (request) => {
     if (!request.url().startsWith(app.url)) externalRequests.push(request.url());
   });
-  await page.goto(app.url);
+  await page.goto(`${app.url}/en/`);
   await expect(page.getByLabel('Data source: Prototype', { exact: true })).toBeVisible();
   await expect(page.getByText(/^holita · \d{4}$/)).toHaveCount(0);
   await expect(page.getByRole('contentinfo')).toHaveCount(0);
@@ -46,7 +46,7 @@ test('Prototype uses the same Tags screens, persists CRUD, isolates stores and r
   await page.getByRole('button', { name: 'Save tag', exact: true }).click();
   await waitForTags();
   await expect(page.getByRole('link', { name: 'Prototype edited', exact: true })).toBeVisible();
-  await page.goto(`${app.url}/stores/${storeB}/reference/tags`);
+  await page.goto(`${app.url}/en/stores/${storeB}/reference/tags`);
   await waitForTags();
   await expect(page.getByRole('link', { name: 'Prototype edited', exact: true })).toHaveCount(0);
   await page.goto(`${app.url}${tagsPath}`);
@@ -58,7 +58,7 @@ test('Prototype uses the same Tags screens, persists CRUD, isolates stores and r
   await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Unsaved name');
   await page.getByRole('button', { name: 'Reset demo data', exact: true }).click();
   await page.getByRole('button', { name: 'Reset data', exact: true }).click();
-  await expect(page).toHaveURL(`${app.url}/`);
+  await expect(page).toHaveURL(`${app.url}/en/`);
   await page.getByRole('button', { name: 'holita Sofia', exact: true }).click();
   await waitForTags();
   await expect(page.getByRole('link', { name: 'Prototype edited', exact: true })).toHaveCount(0);
@@ -76,7 +76,7 @@ test('Prototype blocks unmapped screens and keeps navigation usable at 320 px', 
     if (request.url().includes('/__prototype/graphql'))
       operations.push(request.postData() ?? request.url());
   });
-  await page.goto(`${app.url}/stores/${storeA}/reference/unmapped`);
+  await page.goto(`${app.url}/en/stores/${storeA}/reference/unmapped`);
   await expect(
     page.getByText('This section is not available in Prototype yet.', { exact: true }),
   ).toBeVisible();
@@ -108,22 +108,28 @@ test('Prototype blocks unmapped screens and keeps navigation usable at 320 px', 
   });
 });
 
-test('Prototype replaces corrupt saved data and reports unavailable browser storage', async ({
-  page,
-  app,
-}) => {
-  await page.addInitScript(() => {
-    localStorage.setItem('holita.prototype.data', '{bad data');
+for (const [language, message] of [
+  ['en', 'Admin could not start. Reload and try again.'],
+  ['bg', 'Панелът не можа да се стартира. Презареди страницата и опитай отново.'],
+] as const) {
+  test(`Prototype replaces corrupt saved data and reports unavailable browser storage in ${language}`, async ({
+    page,
+    app,
+  }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('holita.prototype.data', '{bad data');
+    });
+    await page.goto(`${app.url}/${language}/stores/${storeA}/reference/tags`);
+    await expect(page.getByRole('link', { name: 'Sport', exact: true })).toBeVisible();
+    await page.addInitScript(() => {
+      Storage.prototype.getItem = () => {
+        throw new Error('Storage blocked');
+      };
+    });
+    await page.reload();
+    const alert = page.getByRole('alert');
+    await expect(alert).toContainText(message);
+    await expect(alert).toContainText('Prototype requires browser storage. Enable it and reload.');
+    await expect(page.locator('html')).toHaveAttribute('lang', language);
   });
-  await page.goto(`${app.url}${tagsPath}`);
-  await expect(page.getByRole('link', { name: 'Sport', exact: true })).toBeVisible();
-  await page.addInitScript(() => {
-    Storage.prototype.getItem = () => {
-      throw new Error('Storage blocked');
-    };
-  });
-  await page.reload();
-  await expect(page.getByRole('alert')).toHaveText(
-    'Prototype requires browser storage. Enable it and reload.',
-  );
-});
+}

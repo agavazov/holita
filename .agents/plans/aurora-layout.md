@@ -23,10 +23,10 @@ three-item tuple, its focused PostgreSQL case passes, and root lint/typecheck/bu
 Typecheck and build were executed without Nx cache. No module migration is included in
 this preparatory step. Its results remain separate from the Venues work below.
 
-- [AdminLayout](../../apps/admin/src/layout/admin-layout.tsx) uses the original Aurora
+- [AdminLayout](../../apps/admin-react/src/layout/admin-layout.tsx) uses the original Aurora
   Sidenav / Stacked presentation and local search/language/theme/notification/profile menus.
   Store and navigation inputs remain plain props; layout has no Refine, GraphQL or router imports.
-- [StoreWorkspace](../../apps/admin/src/features/stores/store-workspace.tsx) retains store
+- [StoreWorkspace](../../apps/admin-react/src/features/stores/store-workspace.tsx) retains store
   discovery, URL navigation, Reference availability, loading/error/empty states and the
   keyed feature subtrees. Product and Reference editors retain their existing lifecycle.
 - Required shell dependencies are installed at the reference versions. Existing React,
@@ -35,7 +35,7 @@ this preparatory step. Its results remain separate from the Venues work below.
 - The old header/sidebar CSS has been replaced. Products, Venues, Speakers, Tags and the
   Events list/editor/overview and child workflows use Aurora/MUI. Store discovery/unavailable
   states also follow the selected Aurora preset.
-- Temporary example avatars are grouped under `apps/admin/public/images/tmp/avatar`; local demo
+- Temporary example avatars are grouped under `apps/admin-react/public/images/tmp/avatar`; local demo
   data references `/images/tmp/avatar/` so the shell still serves them in development and builds.
 - Phase 3 baseline: root lint/typecheck/build passed, with 13 selected component and 13 browser cases.
   Search focus/labels and the default primary-color checkmark were corrected during review.
@@ -86,15 +86,15 @@ production files, dependencies and reuse guidance.
 
 Validation:
 
-- `npm run test:admin -- event-time.test.ts event-form-state.test.ts session-workspace.test.tsx --output-style=stream`:
+- `npm run test:admin-react -- event-time.test.ts event-form-state.test.ts session-workspace.test.tsx --output-style=stream`:
   **15 passed**.
-- `npm run test:admin -- product-list.test.tsx venue-list.test.tsx event-list.test.tsx store-workspace.test.tsx reference-workspace.test.tsx --output-style=stream`:
+- `npm run test:admin-react -- product-list.test.tsx venue-list.test.tsx event-list.test.tsx store-workspace.test.tsx reference-workspace.test.tsx --output-style=stream`:
   **35 passed**, including partial failure/retry and pending mutations during store/route changes.
-- `npm exec -- eslint apps/admin/src`: passed. The smoke prerequisite executed admin
+- `npm exec -- eslint apps/admin-react/src`: passed. The smoke prerequisite executed admin
   `tsc --noEmit --project tsconfig.json && vite build`: passed. Backend builds were cached;
   their application processes and dedicated database schemas are fresh in each browser fixture.
 - Prettier on edited files and `git -c core.safecrlf=false diff --check`: passed.
-- `npm run test:smoke -- products.smoke.spec.mts products-aurora.smoke.spec.mts venues-aurora.smoke.spec.mts lookups-aurora.smoke.spec.mts events.smoke.spec.mts rich-text.smoke.spec.mts sessions.smoke.spec.mts --grep='Aurora Products (sorts|applies|synchronizes)|Aurora Venues (sorts|shares)|Aurora (Speaker|Tag) list|Event (create/edit|filters)|pending Event|rich text|Sessions persist|pending mutation|delayed product|history navigation' --output-style=stream`:
+- `npm run test:smoke:admin-react -- products.smoke.spec.mts products-aurora.smoke.spec.mts venues-aurora.smoke.spec.mts lookups-aurora.smoke.spec.mts events.smoke.spec.mts rich-text.smoke.spec.mts sessions.smoke.spec.mts --grep='Aurora Products (sorts|applies|synchronizes)|Aurora Venues (sorts|shares)|Aurora (Speaker|Tag) list|Event (create/edit|filters)|pending Event|rich text|Sessions persist|pending mutation|delayed product|history navigation' --output-style=stream`:
   **16 passed**, using the real gateway and fresh dedicated test schemas. No `test:full` was run.
 - Inspected generated desktop/mobile lookup and Event editor captures. Deleted the ten
   temporary captures created under `artifacts/aurora/lookups` and `artifacts/aurora/venues`;
@@ -143,16 +143,16 @@ Executed from the repository root:
 npm run db:up
 npm run db:setup
 npm run db:test:setup
-npm run test:admin -- product-list.test.tsx product-form.test.tsx data-provider.test.ts store-workspace.test.tsx --skip-nx-cache
-npm run test:admin -- product-list.test.tsx --skip-nx-cache
-npm run test:admin -- product-list.test.tsx store-workspace.test.tsx --skip-nx-cache
-npm run test:admin -- store-workspace.test.tsx --testNamePattern='requires delete confirmation' --skip-nx-cache
-npm run test:smoke -- products-aurora.smoke.spec.mts products.smoke.spec.mts
-npm run test:smoke -- products-aurora.smoke.spec.mts --grep='sorts across|applies server filters'
-npm run test:smoke -- products-aurora.smoke.spec.mts --grep='applies server filters'
+npm run test:admin-react -- product-list.test.tsx product-form.test.tsx data-provider.test.ts store-workspace.test.tsx --skip-nx-cache
+npm run test:admin-react -- product-list.test.tsx --skip-nx-cache
+npm run test:admin-react -- product-list.test.tsx store-workspace.test.tsx --skip-nx-cache
+npm run test:admin-react -- store-workspace.test.tsx --testNamePattern='requires delete confirmation' --skip-nx-cache
+npm run test:smoke:admin-react -- products-aurora.smoke.spec.mts products.smoke.spec.mts
+npm run test:smoke:admin-react -- products-aurora.smoke.spec.mts --grep='sorts across|applies server filters'
+npm run test:smoke:admin-react -- products-aurora.smoke.spec.mts --grep='applies server filters'
 npm run typecheck:tools
-npm exec -- eslint apps/admin/src/features/products/product-list.tsx apps/admin/src/features/products/product-list.test.tsx apps/admin/src/features/products/product-editor.tsx apps/admin/src/theme/components/DataGrid.tsx apps/admin/src/components/data-grid-pagination.tsx tools/browser/products-aurora.smoke.spec.mts
-npm exec -- eslint apps/admin/src/features/stores/store-workspace.test.tsx
+npm exec -- eslint apps/admin-react/src/features/products/product-list.tsx apps/admin-react/src/features/products/product-list.test.tsx apps/admin-react/src/features/products/product-editor.tsx apps/admin-react/src/theme/components/DataGrid.tsx apps/admin-react/src/components/data-grid-pagination.tsx tools/browser/products-aurora.smoke.spec.mts
+npm exec -- eslint apps/admin-react/src/features/stores/store-workspace.test.tsx
 git diff --check
 ```
 
@@ -199,9 +199,9 @@ in the reference index.
   dirty navigation, store/route isolation and existing referenced-venue deletion refusal.
   Sequential batch deletion reports partial failures and retries only failed records.
 - Reused three focused presentation components between Products and Venues:
-  [FilterDrawer](../../apps/admin/src/components/filter-drawer.tsx),
-  [RecordActions](../../apps/admin/src/components/record-actions.tsx) and
-  [EditorAside](../../apps/admin/src/components/editor-aside.tsx).
+  [FilterDrawer](../../apps/admin-react/src/components/filter-drawer.tsx),
+  [RecordActions](../../apps/admin-react/src/components/record-actions.tsx) and
+  [EditorAside](../../apps/admin-react/src/components/editor-aside.tsx).
   Feature data access and state stay in their modules; there is no generic CRUD controller.
 - Migrated the shared Reference success notice and dirty-form dialog to MUI, retaining
   their existing lifecycle. Existing Event/Speaker/Tag callers continue to use them.
@@ -225,14 +225,14 @@ npm run test:reference:db -- venues.db.spec.ts
 npm run schema:check
 npm run test:schema -- contracts.unit.spec.mts
 npm run test:gateway:db -- federation.db.spec.mts --testNamePattern="sorts Venue pages|federates Venue.store"
-npm run test:admin -- venue-form.test.tsx venue-list.test.tsx reference-workspace.test.tsx data-provider.test.ts product-form.test.tsx product-list.test.tsx event-workspace.test.tsx
-npm run test:admin -- venue-list.test.tsx event-workspace.test.tsx
-npm run test:admin -- event-workspace.test.tsx store-workspace.test.tsx
-npm run test:admin -- store-workspace.test.tsx --testNamePattern="reports partial batch deletion"
-npm run test:smoke -- venues-aurora.smoke.spec.mts reference.smoke.spec.mts reference-layout.smoke.spec.mts reference-disabled.smoke.spec.mts products.smoke.spec.mts products-aurora.smoke.spec.mts
-npm run test:smoke -- products-aurora.smoke.spec.mts reference.smoke.spec.mts reference-disabled.smoke.spec.mts --grep='Aurora Products sorts|Aurora Products applies server filters|Venue CRUD works|disabled Reference' --output-style=stream
-npm run test:smoke -- reference.smoke.spec.mts reference-disabled.smoke.spec.mts venues-aurora.smoke.spec.mts --grep='Venue CRUD works|disabled Reference blocks|Products creation and mobile|shares quick and panel filters|editor keeps' --output-style=stream
-npm run test:smoke -- reference-disabled.smoke.spec.mts --grep='blocks .* routes' --output-style=stream
+npm run test:admin-react -- venue-form.test.tsx venue-list.test.tsx reference-workspace.test.tsx data-provider.test.ts product-form.test.tsx product-list.test.tsx event-workspace.test.tsx
+npm run test:admin-react -- venue-list.test.tsx event-workspace.test.tsx
+npm run test:admin-react -- event-workspace.test.tsx store-workspace.test.tsx
+npm run test:admin-react -- store-workspace.test.tsx --testNamePattern="reports partial batch deletion"
+npm run test:smoke:admin-react -- venues-aurora.smoke.spec.mts reference.smoke.spec.mts reference-layout.smoke.spec.mts reference-disabled.smoke.spec.mts products.smoke.spec.mts products-aurora.smoke.spec.mts
+npm run test:smoke:admin-react -- products-aurora.smoke.spec.mts reference.smoke.spec.mts reference-disabled.smoke.spec.mts --grep='Aurora Products sorts|Aurora Products applies server filters|Venue CRUD works|disabled Reference' --output-style=stream
+npm run test:smoke:admin-react -- reference.smoke.spec.mts reference-disabled.smoke.spec.mts venues-aurora.smoke.spec.mts --grep='Venue CRUD works|disabled Reference blocks|Products creation and mobile|shares quick and panel filters|editor keeps' --output-style=stream
+npm run test:smoke:admin-react -- reference-disabled.smoke.spec.mts --grep='blocks .* routes' --output-style=stream
 npm run typecheck
 npm run lint
 npm run typecheck:tools
@@ -313,12 +313,12 @@ npm run test:schema -- contracts.unit.spec.mts
 npm run test:reference -- speakers.service.spec.ts tags.service.spec.ts --output-style=stream
 npm run test:reference:db -- events.db.spec.ts --testNamePattern='sorts .* lookups|validates supporting fields|treats punctuation' --output-style=stream
 npm run test:gateway:db -- federation.db.spec.mts --testNamePattern='sorts (Speaker|Tag) pages' --output-style=stream
-npm run test:admin -- lookup-forms.test.tsx reference-workspace.test.tsx venue-list.test.tsx data-provider.test.ts --output-style=stream
-npm run test:admin -- reference-workspace.test.tsx store-workspace.test.tsx --output-style=stream
-npm run test:admin -- reference-workspace.test.tsx --testNamePattern='keeps a pending' --output-style=stream
-npm run test:smoke -- lookups-aurora.smoke.spec.mts --output-style=stream
-npm run test:smoke -- lookups-aurora.smoke.spec.mts --grep='list shares' --output-style=stream
-npm run test:smoke -- venues-aurora.smoke.spec.mts events.smoke.spec.mts products.smoke.spec.mts reference-layout.smoke.spec.mts --grep='Aurora Venues|Speaker and Tag|a pending mutation stays|compact navigation' --output-style=stream
+npm run test:admin-react -- lookup-forms.test.tsx reference-workspace.test.tsx venue-list.test.tsx data-provider.test.ts --output-style=stream
+npm run test:admin-react -- reference-workspace.test.tsx store-workspace.test.tsx --output-style=stream
+npm run test:admin-react -- reference-workspace.test.tsx --testNamePattern='keeps a pending' --output-style=stream
+npm run test:smoke:admin-react -- lookups-aurora.smoke.spec.mts --output-style=stream
+npm run test:smoke:admin-react -- lookups-aurora.smoke.spec.mts --grep='list shares' --output-style=stream
+npm run test:smoke:admin-react -- venues-aurora.smoke.spec.mts events.smoke.spec.mts products.smoke.spec.mts reference-layout.smoke.spec.mts --grep='Aurora Venues|Speaker and Tag|a pending mutation stays|compact navigation' --output-style=stream
 npm run lint
 npm run typecheck
 npm run build
@@ -384,12 +384,12 @@ Implemented and verified. The next module step covers the remaining child workfl
 Executed from the repository root:
 
 ```bash
-npm run test:admin -- event-list.test.tsx event-workspace.test.tsx event-lifecycle.test.tsx event-description.test.tsx event-form-state.test.ts event-time.test.ts session-workspace.test.tsx --output-style=stream
-npm run test:admin -- event-workspace.test.tsx event-form-state.test.ts store-workspace.test.tsx --testNamePattern='Event editor lifecycle|Event form values|requires delete confirmation|captures a pending create|reports partial batch deletion' --output-style=stream
-npm run test:smoke -- events.smoke.spec.mts lifecycle.smoke.spec.mts --grep='Event create|pending Event|Event filters|bulk actions|delayed bulk' --output-style=stream
-npm run test:smoke -- events.smoke.spec.mts rich-text.smoke.spec.mts sessions.smoke.spec.mts media.smoke.spec.mts reference-layout.smoke.spec.mts products.smoke.spec.mts --grep='Event create|Event filters|rich text|Sessions persist|gallery saves|switching stores cancels|compact navigation|pending mutation' --output-style=stream
-npm run test:smoke -- events.smoke.spec.mts sessions.smoke.spec.mts --grep='Event create/edit|Event filters|Sessions persist' --output-style=stream
-npm run test:smoke -- events.smoke.spec.mts --grep='Event filters' --output-style=stream
+npm run test:admin-react -- event-list.test.tsx event-workspace.test.tsx event-lifecycle.test.tsx event-description.test.tsx event-form-state.test.ts event-time.test.ts session-workspace.test.tsx --output-style=stream
+npm run test:admin-react -- event-workspace.test.tsx event-form-state.test.ts store-workspace.test.tsx --testNamePattern='Event editor lifecycle|Event form values|requires delete confirmation|captures a pending create|reports partial batch deletion' --output-style=stream
+npm run test:smoke:admin-react -- events.smoke.spec.mts lifecycle.smoke.spec.mts --grep='Event create|pending Event|Event filters|bulk actions|delayed bulk' --output-style=stream
+npm run test:smoke:admin-react -- events.smoke.spec.mts rich-text.smoke.spec.mts sessions.smoke.spec.mts media.smoke.spec.mts reference-layout.smoke.spec.mts products.smoke.spec.mts --grep='Event create|Event filters|rich text|Sessions persist|gallery saves|switching stores cancels|compact navigation|pending mutation' --output-style=stream
+npm run test:smoke:admin-react -- events.smoke.spec.mts sessions.smoke.spec.mts --grep='Event create/edit|Event filters|Sessions persist' --output-style=stream
+npm run test:smoke:admin-react -- events.smoke.spec.mts --grep='Event filters' --output-style=stream
 npm run lint
 npm run typecheck
 npm run build
@@ -459,11 +459,11 @@ Implemented and verified.
 Executed from the repository root (with stream output for the selected tests):
 
 ```bash
-npm run test:admin -- session-workspace.test.tsx event-gallery.test.tsx event-lifecycle.test.tsx event-time.test.ts event-form-state.test.ts event-workspace.test.tsx --output-style=stream
-npm run test:admin -- event-gallery.test.tsx --output-style=stream
-npm run typecheck -- --projects=admin
-npm run test:smoke -- sessions.smoke.spec.mts media.smoke.spec.mts lifecycle.smoke.spec.mts reference-layout.smoke.spec.mts products.smoke.spec.mts --grep='Sessions persist|gallery saves|switching stores cancels|bulk actions|delayed bulk|compact navigation|pending mutation' --output-style=stream
-npm run test:smoke -- lifecycle.smoke.spec.mts --grep='bulk actions' --output-style=stream
+npm run test:admin-react -- session-workspace.test.tsx event-gallery.test.tsx event-lifecycle.test.tsx event-time.test.ts event-form-state.test.ts event-workspace.test.tsx --output-style=stream
+npm run test:admin-react -- event-gallery.test.tsx --output-style=stream
+npm run typecheck -- --projects=admin-react
+npm run test:smoke:admin-react -- sessions.smoke.spec.mts media.smoke.spec.mts lifecycle.smoke.spec.mts reference-layout.smoke.spec.mts products.smoke.spec.mts --grep='Sessions persist|gallery saves|switching stores cancels|bulk actions|delayed bulk|compact navigation|pending mutation' --output-style=stream
+npm run test:smoke:admin-react -- lifecycle.smoke.spec.mts --grep='bulk actions' --output-style=stream
 npm run lint
 npm run typecheck
 npm run build
@@ -520,7 +520,7 @@ Implemented and verified.
 - Removed the direct `antd` and `@emotion/cache` declarations. npm removed 63 lockfile package
   entries, added none and changed no retained versions. Emotion cache remains transitively
   required by MUI; Emotion peers, Tiptap peers, GraphQL/codegen and actual shell dependencies
-  remain. `npm ls --workspace @holita/admin --depth=0` passes. No Ant Design package or import
+  remain. `npm ls --workspace @holita/admin-react --depth=0` passes. No Ant Design package or import
   remains, and the local import audit found no orphaned production source files.
 - Updated the authoritative documentation, agent guide and admin skill to describe one
   Aurora/MUI UI. Historical phase notes remain historical. No API/SDL, migration, database
@@ -539,16 +539,16 @@ Implemented and verified.
 Executed from the repository root:
 
 ```bash
-npm uninstall --workspace @holita/admin antd @emotion/cache --ignore-scripts
-npm ls --workspace @holita/admin --depth=0
-npm run test:admin -- store-workspace.test.tsx reference-workspace.test.tsx --output-style=stream
-npm run test:admin -- store-workspace.test.tsx --testNamePattern='keeps loading' --output-style=stream
+npm uninstall --workspace @holita/admin-react antd @emotion/cache --ignore-scripts
+npm ls --workspace @holita/admin-react --depth=0
+npm run test:admin-react -- store-workspace.test.tsx reference-workspace.test.tsx --output-style=stream
+npm run test:admin-react -- store-workspace.test.tsx --testNamePattern='keeps loading' --output-style=stream
 npm run lint
 npm run typecheck
-npm run test:smoke -- products.smoke.spec.mts aurora-shell.smoke.spec.mts reference-disabled.smoke.spec.mts reference-layout.smoke.spec.mts --output-style=stream
+npm run test:smoke:admin-react -- products.smoke.spec.mts aurora-shell.smoke.spec.mts reference-disabled.smoke.spec.mts reference-layout.smoke.spec.mts --output-style=stream
 npm run build
-npm exec -- eslint apps/admin/src/features/stores/store-workspace.tsx
-npm run test:smoke -- products.smoke.spec.mts --grep='store discovery recovers' --output-style=stream
+npm exec -- eslint apps/admin-react/src/features/stores/store-workspace.tsx
+npm run test:smoke:admin-react -- products.smoke.spec.mts --grep='store discovery recovers' --output-style=stream
 git -c core.safecrlf=false diff --check
 ```
 
@@ -618,11 +618,11 @@ npm run db:up
 npm run db:setup
 npm run db:test:setup
 npm run test:products:db -- products.db.spec.ts
-npm run test:admin -- product-form.test.tsx data-provider.test.ts store-workspace.test.tsx --skip-nx-cache
-npm run test:admin -- store-workspace.test.tsx --skip-nx-cache
+npm run test:admin-react -- product-form.test.tsx data-provider.test.ts store-workspace.test.tsx --skip-nx-cache
+npm run test:admin-react -- store-workspace.test.tsx --skip-nx-cache
 npm run test:gateway:db -- federation.db.spec.mts --testNamePattern="forwards Product search|creates products|enforces store scoping"
-npm run test:smoke -- products-aurora.smoke.spec.mts products.smoke.spec.mts reference-layout.smoke.spec.mts reference-disabled.smoke.spec.mts
-npm run test:smoke -- reference-disabled.smoke.spec.mts
+npm run test:smoke:admin-react -- products-aurora.smoke.spec.mts products.smoke.spec.mts reference-layout.smoke.spec.mts reference-disabled.smoke.spec.mts
+npm run test:smoke:admin-react -- reference-disabled.smoke.spec.mts
 npm run lint
 npm run typecheck
 npm run build
@@ -666,11 +666,11 @@ npm run db:setup
 npm run db:test:setup
 npm run test:products:db -- products.db.spec.ts
 npm run test:gateway:db -- federation.db.spec.mts --testNamePattern="Product search, filters and sorting"
-npm run test:admin -- data-provider.test.ts store-workspace.test.tsx --skip-nx-cache
-DEBUG_PRINT_LIMIT=100000 npm run test:admin -- store-workspace.test.tsx --testNamePattern="partial batch|unsent batch|delete confirmation" --skip-nx-cache
-npm run test:smoke -- products-aurora.smoke.spec.mts products.smoke.spec.mts --grep="sorts across|synchronizes quick|delayed product response"
-npm run test:smoke -- products-aurora.smoke.spec.mts --grep="sorts across"
-npm exec -- eslint apps/products/src/products/products.service.ts apps/products/src/products/products.repository.ts apps/products/src/products/products.service.spec.ts apps/products/test/products.db.spec.ts apps/admin/src/data/products-provider.ts apps/admin/src/data/data-provider.test.ts apps/admin/src/features/products/product-list.tsx tools/graphql/federation.db.spec.mts tools/browser/products-aurora.smoke.spec.mts
+npm run test:admin-react -- data-provider.test.ts store-workspace.test.tsx --skip-nx-cache
+DEBUG_PRINT_LIMIT=100000 npm run test:admin-react -- store-workspace.test.tsx --testNamePattern="partial batch|unsent batch|delete confirmation" --skip-nx-cache
+npm run test:smoke:admin-react -- products-aurora.smoke.spec.mts products.smoke.spec.mts --grep="sorts across|synchronizes quick|delayed product response"
+npm run test:smoke:admin-react -- products-aurora.smoke.spec.mts --grep="sorts across"
+npm exec -- eslint apps/products/src/products/products.service.ts apps/products/src/products/products.repository.ts apps/products/src/products/products.service.spec.ts apps/products/test/products.db.spec.ts apps/admin-react/src/data/products-provider.ts apps/admin-react/src/data/data-provider.test.ts apps/admin-react/src/features/products/product-list.tsx tools/graphql/federation.db.spec.mts tools/browser/products-aurora.smoke.spec.mts
 npm run typecheck:tools
 ```
 
@@ -704,9 +704,9 @@ Clear filters resets search, status and SKU and cancels pending text commits. On
 text edits schedule a debounced update, preventing an old status from returning after reset.
 The original long browser case exceeded its time budget when extended, so the new behavior
 now has a separate focused case without increasing timeouts or dropping existing assertions.
-`npm run test:smoke -- products-aurora.smoke.spec.mts` passed its two existing cases; the
+`npm run test:smoke:admin-react -- products-aurora.smoke.spec.mts` passed its two existing cases; the
 new case exposed the reset race. After the fix,
-`npm run test:smoke -- products-aurora.smoke.spec.mts --grep="synchronizes"` passed **1/1**,
+`npm run test:smoke:admin-react -- products-aurora.smoke.spec.mts --grep="synchronizes"` passed **1/1**,
 including both input directions, combined results, reload and reset. Focused ESLint and
 the target's admin TypeScript/Vite build passed. Desktop/mobile captures were reviewed.
 
@@ -740,15 +740,15 @@ Commands ran from the repository root:
 npm run db:up
 npm run db:setup
 npm run db:test:setup
-npm exec -- eslint apps/admin/src/layout/search-box.tsx apps/admin/src/layout/notification-menu.tsx tools/browser/aurora-shell.smoke.spec.mts
-npm exec -- nx run admin:typecheck --output-style=static
+npm exec -- eslint apps/admin-react/src/layout/search-box.tsx apps/admin-react/src/layout/notification-menu.tsx tools/browser/aurora-shell.smoke.spec.mts
+npm exec -- nx run admin-react:typecheck --output-style=static
 npm run typecheck:tools
-npm run test:admin -- store-workspace.test.tsx --skip-nx-cache
-npm run test:smoke -- aurora-shell.smoke.spec.mts
-npm run test:smoke -- aurora-shell.smoke.spec.mts --grep="Aurora Stacked"
-npm run test:smoke -- aurora-shell.smoke.spec.mts --grep="Aurora menus"
-npm run test:smoke -- products.smoke.spec.mts reference-layout.smoke.spec.mts reference-disabled.smoke.spec.mts
-npm run test:smoke -- reference.smoke.spec.mts events.smoke.spec.mts --grep="Venue CRUD|Event create/edit|Speaker and Tag|pending Event create|Event filters"
+npm run test:admin-react -- store-workspace.test.tsx --skip-nx-cache
+npm run test:smoke:admin-react -- aurora-shell.smoke.spec.mts
+npm run test:smoke:admin-react -- aurora-shell.smoke.spec.mts --grep="Aurora Stacked"
+npm run test:smoke:admin-react -- aurora-shell.smoke.spec.mts --grep="Aurora menus"
+npm run test:smoke:admin-react -- products.smoke.spec.mts reference-layout.smoke.spec.mts reference-disabled.smoke.spec.mts
+npm run test:smoke:admin-react -- reference.smoke.spec.mts events.smoke.spec.mts --grep="Venue CRUD|Event create/edit|Speaker and Tag|pending Event create|Event filters"
 ```
 
 - Store workspace: **8 passed**, including unavailable stores, delayed reads and pending
@@ -793,17 +793,17 @@ npm run db:test:setup
 npm run lint
 npm run typecheck
 npm run build
-npm run test:admin -- store-workspace.test.tsx --skip-nx-cache
-npm run test:admin -- reference-workspace.test.tsx event-workspace.test.tsx event-list.test.tsx event-gallery.test.tsx --testNamePattern="hides navigation|late Venue list|dirty store navigation|restores a bookmarked query|late cover mutation" --skip-nx-cache
-npm run test:smoke -- aurora-shell.smoke.spec.mts products.smoke.spec.mts reference-layout.smoke.spec.mts reference-disabled.smoke.spec.mts
-npm run test:smoke -- reference.smoke.spec.mts events.smoke.spec.mts rich-text.smoke.spec.mts media.smoke.spec.mts --grep="Venue CRUD|pending Event create|Event filters, columns|oversized rich text|switching stores cancels"
+npm run test:admin-react -- store-workspace.test.tsx --skip-nx-cache
+npm run test:admin-react -- reference-workspace.test.tsx event-workspace.test.tsx event-list.test.tsx event-gallery.test.tsx --testNamePattern="hides navigation|late Venue list|dirty store navigation|restores a bookmarked query|late cover mutation" --skip-nx-cache
+npm run test:smoke:admin-react -- aurora-shell.smoke.spec.mts products.smoke.spec.mts reference-layout.smoke.spec.mts reference-disabled.smoke.spec.mts
+npm run test:smoke:admin-react -- reference.smoke.spec.mts events.smoke.spec.mts rich-text.smoke.spec.mts media.smoke.spec.mts --grep="Venue CRUD|pending Event create|Event filters, columns|oversized rich text|switching stores cancels"
 ```
 
 - Store component file: 8 passed. Reference selection: 5 passed, 11 intentionally unselected.
 - Shared shell/Products/navigation browser selection: 8 passed. Additional affected store
   selectors in Reference, Events, rich text and gallery: 5 passed.
 - The final search keyboard-handler adjustment also passed
-  `npm exec -- eslint apps/admin/src/layout/search-box.tsx`; root typecheck/build and both
+  `npm exec -- eslint apps/admin-react/src/layout/search-box.tsx`; root typecheck/build and both
   final browser selections ran after that adjustment.
 - No test timeouts, retries, mocks or assertions were weakened. Tests used the existing
   dedicated database fixture and its process/schema cleanup. No full regression was run.
@@ -897,7 +897,7 @@ Stop the temporary reference server after review and delete captures after visua
 ## Source inventory
 
 Paths in this table are relative to the Aurora `vite-ts/src` directory. Only the selected
-component subtree is a candidate for copying into `apps/admin`; holita must not import the
+component subtree is a candidate for copying into `apps/admin-react`; holita must not import the
 sibling theme directory at runtime. Destination grouping can stay small: `layout/` for the
 shell and its controls, `theme/` for theme definitions, and the existing store feature for
 application orchestration. The selected files now live in those directories; phase 3 excludes unused source branches.
@@ -980,17 +980,17 @@ parts below stay until their explicit module migration. There is only one admin 
 
 | Existing part                                                                                                                                                                    | Action                                                                                 | Removal condition                                                                                                                     |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| [AdminLayout](../../apps/admin/src/layout/admin-layout.tsx): existing header/sidebar/drawer markup, extracted from StoreWorkspace in phase 2                                     | Replaced with Aurora in phase 3.                                                       | New shell navigation, store selector, loading/error/unavailable states and mobile behavior work.                                      |
+| [AdminLayout](../../apps/admin-react/src/layout/admin-layout.tsx): existing header/sidebar/drawer markup, extracted from StoreWorkspace in phase 2                                     | Replaced with Aurora in phase 3.                                                       | New shell navigation, store selector, loading/error/unavailable states and mobile behavior work.                                      |
 | `StoreWorkspace`: store discovery, URL-derived selection, Reference flag and subtree keys                                                                                        | Keep in application orchestration.                                                     | Not a cleanup target. Preserve original store and route mutation isolation.                                                           |
-| [App](../../apps/admin/src/App.tsx): Refine, query client and routes                                                                                                             | Keep.                                                                                  | Not a cleanup target. No second router or cache.                                                                                      |
+| [App](../../apps/admin-react/src/App.tsx): Refine, query client and routes                                                                                                             | Keep.                                                                                  | Not a cleanup target. No second router or cache.                                                                                      |
 | `App`: Ant Design ConfigProvider/AntApp                                                                                                                                          | Temporarily retain where legacy content needs it; scope coexistence.                   | Last dependent legacy component and notification/dialog usage migrated.                                                               |
-| [main.tsx](../../apps/admin/src/main.tsx): Ant Design reset                                                                                                                      | Audit against Aurora CssBaseline.                                                      | Reset can be narrowed/removed only after legacy and new UI remain correct; no blanket deletion at shell installation.                 |
-| [app.css](../../apps/admin/src/app.css): `.app-layout`, `.app-header`, `.brand`, `.store-switcher`, `.app-content`, `.workspace-body`, `.app-sidebar` and associated media rules | Removed the old shell selectors in phase 3; added the explicit legacy content surface. | Corresponding elements are replaced and both desktop/mobile checks pass. Keep page-level content sizing explicit.                     |
+| [main.tsx](../../apps/admin-react/src/main.tsx): Ant Design reset                                                                                                                      | Audit against Aurora CssBaseline.                                                      | Reset can be narrowed/removed only after legacy and new UI remain correct; no blanket deletion at shell installation.                 |
+| [app.css](../../apps/admin-react/src/app.css): `.app-layout`, `.app-header`, `.brand`, `.store-switcher`, `.app-content`, `.workspace-body`, `.app-sidebar` and associated media rules | Removed the old shell selectors in phase 3; added the explicit legacy content surface. | Corresponding elements are replaced and both desktop/mobile checks pass. Keep page-level content sizing explicit.                     |
 | `app.css`: product editor, page headers, form errors, Event filters, Sessions, editor/gallery/history styles                                                                     | Keep until owning module migration.                                                    | Last owning legacy screen is replaced and behavior is verified.                                                                       |
 | Product/Reference lists, editors, forms, relation selectors, field errors and unsaved-change dialogs                                                                             | Keep during shell stage.                                                               | Explicitly migrated module has equivalent working CRUD and focused checks.                                                            |
-| [Data provider](../../apps/admin/src/data/data-provider.ts), feature provider mappings and GraphQL operations                                                                    | Keep the single provider and scoped lifecycle.                                         | Not a cleanup target. Phase 5 adds Product list filters to the existing contract and provider; persistence definitions are unchanged. |
+| [Data provider](../../apps/admin-react/src/data/data-provider.ts), feature provider mappings and GraphQL operations                                                                    | Keep the single provider and scoped lifecycle.                                         | Not a cleanup target. Phase 5 adds Product list filters to the existing contract and provider; persistence definitions are unchanged. |
 | Ant Design package                                                                                                                                                               | Keep temporarily.                                                                      | No remaining production imports and legacy tests have been adapted to the migrated behavior.                                          |
-| `apps/admin/public/images/tmp/avatar`: example profile and notification images                                                                                                   | Keep with the local demo data.                                                         | Real profile/notification assets replace every reference in `layout/demo-data.ts`.                                                    |
+| `apps/admin-react/public/images/tmp/avatar`: example profile and notification images                                                                                                   | Keep with the local demo data.                                                         | Real profile/notification assets replace every reference in `layout/demo-data.ts`.                                                    |
 | Existing behavioral tests                                                                                                                                                        | Preserve coverage and adjust interaction selectors when UI changes.                    | Do not discard store/route/validation cases simply because Ant Design markup is replaced.                                             |
 
 ## Phase boundaries and acceptance
@@ -1016,9 +1016,9 @@ store/editor navigation. Demo menu actions must not reset store, editor drafts o
 
 - Phase 1: review changes and source links, validate edited skills and run `git diff --check`.
   Original-browser capture is visual reference collection, not application test execution.
-- Extraction: `npm run test:admin -- store-workspace.test.tsx` and relevant Reference
+- Extraction: `npm run test:admin-react -- store-workspace.test.tsx` and relevant Reference
   workspace/navigation cases; use the shared-navigation browser checks below.
-- Shared shell integration: `npm run test:smoke -- aurora-shell.smoke.spec.mts products.smoke.spec.mts reference-layout.smoke.spec.mts reference-disabled.smoke.spec.mts`.
+- Shared shell integration: `npm run test:smoke:admin-react -- aurora-shell.smoke.spec.mts products.smoke.spec.mts reference-layout.smoke.spec.mts reference-disabled.smoke.spec.mts`.
   These use the existing guarded dedicated test databases and owned processes described
   in [testing](../../docs/testing.md). Source screenshots are not a substitute.
 - Adding UI packages changes workspace dependency inputs: run root `npm run lint`,

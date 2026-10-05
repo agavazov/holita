@@ -1,0 +1,63 @@
+{
+  "name": "admin-react",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/admin-react/src",
+  "tags": ["type:app", "scope:admin-react"],
+  "implicitDependencies": ["gateway"],
+  "targets": {
+    "test-smoke": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "inputs": ["default", "^default"],
+      "dependsOn": [
+        {
+          "target": "build",
+          "projects": ["admin-react", "gateway", "core", "products", "reference"]
+        }
+      ],
+      "options": {
+        "command": "playwright test --config tools/browser/playwright.config.mts",
+        "cwd": ".",
+        "forwardAllArgs": true
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npm run test --",
+        "cwd": "apps/admin-react",
+        "forwardAllArgs": true
+      },
+      "dependsOn": ["graphql-generate"]
+    },
+    "graphql-generate": {
+      "executor": "nx:run-commands",
+      "inputs": ["default"],
+      "cache": true,
+      "outputs": ["{projectRoot}/src/generated/graphql"],
+      "options": {
+        "command": "npm run graphql:generate",
+        "cwd": "apps/admin-react"
+      }
+    },
+    "lint": {
+      "dependsOn": ["graphql-generate"]
+    },
+    "typecheck": {
+      "dependsOn": ["graphql-generate"]
+    },
+    "build": {
+      "cache": false,
+      "dependsOn": ["graphql-generate"]
+    }
+  },
+  "namedInputs": {
+    "default": [
+      "{projectRoot}/**/*",
+      "sharedGlobals",
+      "graphqlContracts",
+      "{workspaceRoot}/tools/browser/**/*"
+    ]
+  }
+}

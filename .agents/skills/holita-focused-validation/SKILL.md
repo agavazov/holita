@@ -32,10 +32,10 @@ rules remain in [AGENTS.md](../../../AGENTS.md).
    listeners/connections started by the checks.
 
 For admin, select product-list.test.tsx, product-form.test.tsx, data-provider.test.ts or store-workspace.test.tsx
-through test:admin. The workspace file uses actual Refine hooks/cache with controlled HTTP
+through test:admin-react. The workspace file uses actual Refine hooks/cache with controlled HTTP
 responses and supports `--testNamePattern="captures a pending create"`. Use this long option
 through Nx because Nx reserves -t for targets. Real browser behavior uses
-`test:smoke -- products.smoke.spec.mts`, narrowed by Playwright `--grep="pending mutation"`.
+`test:smoke:admin-react -- products.smoke.spec.mts`, narrowed by Playwright `--grep="pending mutation"`.
 Read docs/testing.md for Chromium/test-DB prerequisites; the fixture owns its processes and
 schemas. Do not add heading assertions or passWithNoTests to make an aggregate green.
 Health/component mocks do not establish actual database or federation isolation.
