@@ -16,6 +16,7 @@ apps/*/src/generated/
 .DS_Store
 
 .tmp/
+/.references/
 .volumes/
 
 .media/

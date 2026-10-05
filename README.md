@@ -5,8 +5,8 @@ life cycle (SDLC) automation.
 
 A strict TypeScript npm-workspaces repository with Nx tasks and six host applications:
 Angular admin, React/Vite admin-react and NestJS gateway, core, products and reference services.
-Angular provides a PrimeNG/Sakai shell, store selection and Products read through the real gateway.
-The React admin remains the CRUD and behavior reference. It uses
+Angular provides a PrimeNG/Sakai shell, store selection and Products CRUD through the real gateway.
+The React admin remains the Reference domain and behavior reference. It uses
 an Aurora/MUI shell with a single-column sidenav, no footer and Products/Venues/Speakers/Tags/Events screens with Refine.
 Sessions, Gallery, History and store-selection states use the same Aurora theme. The gateway exposes schema-first GraphQL for stores and store-scoped
 Products CRUD, including Product-to-Store federation. Core, products and reference own independent
@@ -29,14 +29,18 @@ If Node 24 is not installed yet, run `nvm install` before `nvm use`.
 
 Prepare the databases and start the applications with the commands below. Open
 [Angular admin](http://127.0.0.1:11088). It discovers stores through the real gateway and
-reads the selected store's first 20 products with generated GraphQL types and Apollo Angular.
-Bulgarian/English routes preserve the selected store across reloads. Each mounted Products
+reads a server-paginated Products list with search, SKU/status filters and sorting through
+generated GraphQL types and Apollo Angular. Bulgarian/English routes preserve the selected
+store and list query across reloads. Each mounted Products
 workspace owns a separate Apollo client/cache; switching stores discards that workspace.
+Products can be created and edited through typed Reactive Forms with validation, unsaved-change
+confirmation and callbacks scoped to the current editor. Submitted writes settle in their original store.
+Single and page-local batch deletion require confirmation, report partial failures and retain
+failed rows for retry. Navigation stops unsent deletes while the submitted write settles.
 
 `npm run dev:admin` starts Angular alone when the backends are already running.
 The shell supports desktop/mobile navigation, Bulgarian/English and persisted light/dark themes.
-There are no Angular CRUD forms or
-Prototype mode. See [configuration](docs/development.md#angular-admin-foundation) and
+Angular has no Prototype mode. See [configuration](docs/development.md#angular-admin-foundation) and
 [validation](docs/testing.md#angular-admin-checks).
 
 ### React Prototype only

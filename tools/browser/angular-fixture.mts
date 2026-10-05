@@ -6,7 +6,7 @@ import { workspaceRoot } from '../graphql/contracts.mjs';
 import { createFederationFixture } from '../graphql/federation-fixture.mjs';
 
 export async function chooseStore(page: Page, name: string): Promise<void> {
-  const selector = page.getByRole('combobox');
+  const selector = page.getByRole('combobox', { name: /^(Store|Магазин)$/ });
   const panel = page.getByRole('listbox', { includeHidden: true });
   await expect(panel).toHaveCount(0);
   await selector.click();

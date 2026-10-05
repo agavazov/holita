@@ -21,14 +21,43 @@ relations and lifecycle examples. Choose only the capabilities needed by the mod
 
 [Architecture](architecture/overview.md#angular-admin-foundation) describes the separate
 real-only Angular application. [Stores discovery](../apps/admin/src/app/features/stores/store-workspace.ts)
-and [Products read](../apps/admin/src/app/features/products/products-page.ts) use concrete
+and [Products list](../apps/admin/src/app/features/products/products-page.ts) use concrete
 feature services and generated operations against the same gateway. The
 [Sakai shell](../apps/admin/src/app/layout/admin-shell.ts) is presentation-only; its
 [navigation](../apps/admin/src/app/layout/admin-navigation.ts) and PrimeNG selectors use
 explicit inputs. [Shell browser checks](../tools/browser/angular-shell.smoke.spec.mts)
 cover desktop/mobile interaction, keyboard selection, language and themes. There is no Angular
-CRUD or UI catalog. The React examples below remain behavior references, rather than Angular
+UI catalog. The React examples below remain behavior references, rather than Angular
 implementation dependencies.
+
+[List query helpers](../apps/admin/src/app/features/products/product-list-query.ts) and the
+[page](../apps/admin/src/app/features/products/products-page.ts) are the Angular reference for
+server pagination, combined filters, sorting, URL normalization and cancellable text drafts.
+Only same-query refresh failures retain rows. Query changes reuse the workspace client/cache
+and dispose the obsolete read. See the
+[list tests](../apps/admin/src/app/features/products/products-page.spec.ts) and
+[real list browser cases](../tools/browser/angular-products-list.smoke.spec.mts).
+
+[ProductEditor](../apps/admin/src/app/features/products/product-editor.ts) and its
+[validators](../apps/admin/src/app/features/products/product-validation.ts) are the Angular
+create/edit reference: typed Reactive Forms, generated inputs, first-invalid-field focus,
+initial detail retry, dirty navigation and callback retirement. The
+[editor tests](../apps/admin/src/app/features/products/product-editor.spec.ts) cover same-store
+ID/mode changes, store/language changes and late writes; the
+[real browser cases](../tools/browser/angular-product-editor.smoke.spec.mts) exercise Gateway
+persistence, SKU conflicts, guarded navigation and the mobile form.
+
+ProductsPage and ProductsApi are also the single/page-local deletion reference. PrimeNG Table
+checkboxes and ConfirmDialog supply selection and confirmation; the page owns sequential
+submission, partial-result messages, failed-row retry and final server reconciliation.
+Query identity stops unsent operations and prevents late callbacks after list-query changes;
+store/language/route destruction preserves only submitted writes. See the
+[deletion tests](../apps/admin/src/app/features/products/products-deletion.spec.ts) for actual
+Apollo transport and client shutdown assertions, and the
+[real deletion browser cases](../tools/browser/angular-products-delete.smoke.spec.mts) for persistence,
+partial failures, last-page correction, delayed writes and narrow confirmation layout.
+This is the Angular Products CRUD example; do not treat its permanent sequential deletion as
+a generic rule for Reference's related entities or transactional domain actions.
 
 [Products scope tests](../apps/admin/src/app/features/products/products-api.spec.ts) and
 [routing tests](../apps/admin/src/app/features/stores/store-workspace.spec.ts) verify captured

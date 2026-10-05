@@ -11,6 +11,7 @@ import {
 import { filter } from 'rxjs';
 import { ButtonDirective } from 'primeng/button';
 import { Message } from 'primeng/message';
+import { PrimeNG } from 'primeng/config';
 import { Shop } from '@primeicons/angular/shop';
 import { ArrowRight } from '@primeicons/angular/arrow-right';
 import { AdminShell } from '../../layout/admin-shell';
@@ -29,6 +30,7 @@ export class StoreWorkspace {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly api = inject(StoresApi);
+  private readonly primeNG = inject(PrimeNG);
   private readonly params = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
   });
@@ -65,6 +67,18 @@ export class StoreWorkspace {
     effect((onCleanup) => {
       const language = this.language();
       document.documentElement.lang = language;
+      const text = messages[language];
+      this.primeNG.setTranslation({
+        aria: {
+          ...this.primeNG.translation.aria,
+          firstPageLabel: text.firstPageLabel,
+          prevPageLabel: text.prevPageLabel,
+          nextPageLabel: text.nextPageLabel,
+          lastPageLabel: text.lastPageLabel,
+          pageLabel: text.pageLabel,
+          rowsPerPageLabel: text.rowsPerPageLabel,
+        },
+      });
       const query = this.api.watch(language);
       this.query = query;
       const subscription = query.valueChanges.subscribe({

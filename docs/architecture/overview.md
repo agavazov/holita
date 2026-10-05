@@ -7,7 +7,7 @@ packages or cross-application code imports.
 
 | Application | Framework                        | Current entry points                                                                                                                                                                              |
 | ----------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| admin       | Angular, PrimeNG, Apollo Angular | PrimeNG/Sakai shell, real Stores and Products read at http://127.0.0.1:11088                                                                                                                      |
+| admin       | Angular, PrimeNG, Apollo Angular | PrimeNG/Sakai shell, real Stores and Products CRUD at http://127.0.0.1:11088                                                                                                                      |
 | admin-react | React, Vite, Refine, Aurora/MUI  | Stores, Products and Reference Events/Venues/Speakers/Tags at http://127.0.0.1:11081; Prototype Stores/Products/Venues/Speakers/Tags/Events/Sessions/History/UI catalog at http://127.0.0.1:11087 |
 | gateway     | NestJS, Apollo Gateway           | /graphql and /health on 127.0.0.1:11080                                                                                                                                                           |
 | core        | NestJS, Federation 2             | /graphql (stores) and /health on 127.0.0.1:11082                                                                                                                                                  |
@@ -196,16 +196,19 @@ requests capture `Accept-Language` and a new `x-request-id`. The language is not
 as independent global state. There is no authentication or Prototype mode.
 
 [StoreProducts](../../apps/admin/src/app/features/products/store-products.ts) validates the
-selection against discovery and keys the inner Products component by store/language.
+selection against discovery and keys the inner Products component by store/language/Product ID.
 The computed workspace collection includes both store and language, so either route change
 recreates that component even when Angular reuses the route. Stores refresh failures are
 applied only while their initiating discovery query remains current.
-Each mounted [ProductsPage](../../apps/admin/src/app/features/products/products-page.ts) provides
-one ProductsApi with its own Apollo client and InMemoryCache. Transport headers capture
+Each mounted [ProductsPage](../../apps/admin/src/app/features/products/products-page.ts) or
+[ProductEditor](../../apps/admin/src/app/features/products/product-editor.ts) provides
+one ProductsApi with its own Apollo client and InMemoryCache. Client initialization is
+independent of `watch(variables)` so list-query changes reuse that captured client/cache.
+Transport headers capture
 immutable store/language values; Apollo's query deduplication and entity cache are confined
 to that client. Returning to A after B creates a fresh A client and performs a real read.
 Reads unsubscribe on destruction. A client with submitted mutations remains alive until
-they settle, then stops; completion evicts only that captured client's Products list.
+they settle, then stops; completion invalidates only that captured client's Products lists.
 No retained cache registry, global store-header mutation or additional state library exists.
 
 The [shell](../../apps/admin/src/app/layout/admin-shell.ts) receives available stores, the
@@ -230,15 +233,60 @@ Stores and Products composition styles live beside their components. Global styl
 shared base/card/headings and Sakai shell, including the Drawer panel appended to `body`.
 Navigation focus uses Aura's outline tokens; no inset shadow is synthesized from its optional shadow.
 
-PrimeNG Table displays the first 20 Products with the server total, loading and empty states;
+PrimeNG Table uses server sorting and an external PrimeNG Paginator with sizes 10/20/50/100,
+defaulting to 20. Query arguments cover combined search/SKU/status filters and one sort.
+[Product list query helpers](../../apps/admin/src/app/features/products/product-list-query.ts)
+decode/normalize feature-owned URL state and map it to generated operation variables.
+Apollo retains its default argument-based cache identity; no pagination merge policy is added.
+RxJS `switchMap` disposes the obsolete watched read when query variables change. Text drafts
+are writable linked signals derived from the URL and commit after a cancellable 300 ms timer.
+Navigation restores drafts; immediate status/sort changes commit pending text together.
+Programmatic Table sort events are coalesced and compared with the URL to avoid feedback requests.
+Pagination is mounted only with a known response total, preserving bookmarked pages during
+initial loading. Out-of-range pages normalize after a successful network response, rather
+than from an obsolete cached total. Drafts also reset when the requested URL is unchanged.
+PrimeNG's paginator ARIA
+labels follow the route language through its public translation configuration.
+
 PrimeNG Message presents errors and the shell's storage warning. Initial loading also exposes
 a status announcement. Refresh errors preserve loaded rows. GraphQL errors expose the server
 message/request ID; transport failures keep the translated fallback and their own operation's
 request ID, preferring the Gateway's response ID for HTTP errors when available. The transport
 attaches diagnostic metadata to the existing Apollo error without replacing its identity/type.
-HTTP requests have a 10-second deadline. There are no pagination
-controls, CRUD forms, rich text or media workflows. The update operation is exercised through
-the concrete service in controlled-HTTP tests; it has no UI action.
+HTTP requests have a 10-second deadline.
+
+Sibling list/create/edit routes share the store boundary; different route configurations
+recreate create/list views, while the Product ID key recreates an editor on same-route ID
+changes. `CanDeactivate` delegates to the current editor's PrimeNG ConfirmDialog before
+discarding a dirty form. Its scoped ConfirmationService owns that dialog. The shell store
+selector uses a typed FormControl and resynchronizes with the route on navigation completion,
+cancellation or error;
+it does not own navigation or dirty-form policy. `beforeunload` protects unsubmitted edits.
+
+The editor owns a typed FormGroup, feature validators, initial detail loading and submission.
+Reactive Form events feed template presentation; Apollo/router remain streams and local
+loading/error/pending state remains in signals. Detail reads use `network-only` and hydrate
+the form once. Create/update send generated inputs through ProductsApi, keep submitted
+writes alive and evict only their initiating client's list. DestroyRef checks suppress
+obsolete editor callbacks, including same-store route changes. Success returns to the list
+with its URL query/hash and a transient Router navigation-state acknowledgement.
+
+ProductsPage owns single and page-local sequential deletion through its scoped
+ConfirmationService and PrimeNG ConfirmDialog. Cancel has initial focus and restores the
+trigger on dismissal; confirmation focuses the stable page heading. A linked signal resets
+selection on list-query changes, and successful reads prune it to current rows. Targets are
+captured at confirmation. Query identity and DestroyRef checks suppress obsolete callbacks
+and stop unsent deletes after query/store/language/editor navigation; submitted writes retain
+their existing retirement lifecycle. Confirmed deletions remove rows locally, and failures
+retain per-record diagnostics and selection for retry. Results are local to the mounted page,
+including the completed summary after automatic last-page correction.
+
+ProductsApi.delete evicts the deleted entity and all Products list variants from the initiating
+cache with broadcasting disabled. The page performs one final refetch per batch, allowing the
+server to reconcile totals and page availability without a network read after every row.
+Stale or failed refresh snapshots cannot reintroduce confirmed deletions. This loop does not
+provide atomic batch semantics or establish another domain's deletion rules. There is no
+generic form/CRUD framework, global notification state, rich text or media workflow.
 
 Runtime [config.json](../../apps/admin/public/config.json) supplies the public GraphQL URL.
 Development uses `/graphql` and Angular's proxy to the existing loopback gateway. Compiled

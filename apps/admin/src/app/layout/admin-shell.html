@@ -47,10 +47,8 @@
         optionLabel="name"
         optionValue="id"
         [ariaLabel]="text().activeStore"
-        [ngModel]="storeId()"
-        (ngModelChange)="chooseStore($event)"
+        [formControl]="storeControl"
         [placeholder]="text().stores"
-        [disabled]="loading() && stores().length === 0"
         [loading]="loading()"
         appendTo="body"
       />

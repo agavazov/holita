@@ -111,6 +111,9 @@ npm run test:admin -- --include=app/core/config/admin-config.spec.ts --skip-nx-c
 npm run test:admin -- --include=app/layout/appearance.spec.ts --skip-nx-cache
 npm run test:admin -- --include=app/core/graphql/graphql-options.spec.ts --skip-nx-cache
 npm run test:admin -- --include=app/features/products/products-api.spec.ts --skip-nx-cache
+npm run test:admin -- --include=app/features/products/products-page.spec.ts --skip-nx-cache
+npm run test:admin -- --include=app/features/products/product-editor.spec.ts --skip-nx-cache
+npm run test:admin -- --include=app/features/products/products-deletion.spec.ts --skip-nx-cache
 npm run test:admin -- --include=app/features/products/products-api.spec.ts --filter="submitted mutation" --skip-nx-cache
 npm run test:admin -- --include=app/features/stores/store-workspace.spec.ts --skip-nx-cache
 ```
@@ -127,6 +130,29 @@ unavailable/empty store handling. Config tests validate the public
 endpoint and optional license configuration. Appearance tests verify restored preferences
 and usable theme switching when storage is denied. Controlled HTTP is not proof of backend persistence.
 
+The Products page suite uses the actual routes, PrimeNG controls and Apollo transport to
+check bookmarked/unknown totals, URL normalization, GraphQL Int and Unicode limits, correction
+of unavailable pages after the network total arrives, stale cached totals, clearing drafts
+without a URL change, combined filter commits, debounce cancellation,
+restored URL drafts, empty filtered results, obsolete refresh rejection and controlled sorting
+without duplicate requests. Same-query refresh errors remain covered by the API suite.
+
+The editor suite uses actual routes, Reactive Forms, PrimeNG confirmation controls and Apollo
+HTTP requests. It covers defaults, trimming, Unicode/NUL boundaries, first-invalid-field focus,
+initial detail retry, duplicate submit suppression, failed writes preserving fields/request IDs,
+invalid/missing records, same-store ID guards, rejected store/language navigation, selector
+restoration and beforeunload. Pending reads are canceled on editor changes. Late create success/
+failure and update success after mode/ID/store/language changes leave the current editor unchanged.
+Later detail notifications cannot rehydrate dirty fields.
+
+The deletion suite uses actual routes, PrimeNG controls and Apollo HTTP requests. It covers
+canceling confirmation without a mutation, page-local selection/reset/pruning, duplicate-delete
+suppression, sequential partial results, failed-row retry, authoritative last-page correction and
+retaining confirmed deletions after a failed refetch. Delayed success after store/language/query/
+editor navigation and delayed failure after a store change cannot affect the new view or submit
+the remaining targets. Spies observe the real submitted promises and Apollo client stop; retired
+clients stop after settlement, while same-workspace query changes retain their client.
+
 For the compiled application and real gateway:
 
 ```bash
@@ -136,6 +162,9 @@ npm run db:setup
 npm run db:test:setup
 npm run test:smoke:admin -- angular-foundation.smoke.spec.mts
 npm run test:smoke:admin -- angular-shell.smoke.spec.mts
+npm run test:smoke:admin -- angular-products-list.smoke.spec.mts
+npm run test:smoke:admin -- angular-product-editor.smoke.spec.mts
+npm run test:smoke:admin -- angular-products-delete.smoke.spec.mts
 ```
 
 `admin:test-smoke` is noncached and builds Angular plus the four backends. Its
@@ -147,6 +176,12 @@ those schemas, servers and connections. No development data or Prototype transpo
 The foundation browser cases verify discovery, real store-scoped Products, A → B → A,
 route reload, Bulgarian navigation, a delayed real A response after switching to B and a
 new language-scoped request while the old language response is still pending.
+Products list cases create their records through the real Gateway inside the fixture's test
+schemas. They verify combined filters and sorting across server pages, bookmarked page reload,
+Back/Forward with an uncommitted draft, page-size changes, clearing filters while preserving
+sort/size/foreign query/hash, delayed filtered response isolation and Bulgarian controls at
+320px in both themes. Only delivery of the old response is delayed; persistence and reads
+execute through the actual backends.
 The shared store-selection helper waits for the Select panel to detach after closing before
 another selection; it asserts expanded/collapsed state without fixed sleeps or forced clicks.
 Only response delivery is delayed; the backend query executes normally. Traces/screenshots
@@ -159,7 +194,20 @@ review. Tests do not configure
 a license key or suppress PrimeNG's license banner. Compare layout captures with the actual
 Sakai source at matching viewport sizes; screenshots alone do not prove interaction behavior.
 Mutation retirement is covered by
-the controlled-HTTP tests; there is no mutation UI, CRUD/form or upload browser coverage.
+the controlled-HTTP tests and editor browser cases. Editor cases exercise real create/update
+persistence, reload, SKU conflicts, query/hash return, dirty store/language/history guards,
+Escape/focus, malformed IDs and cross-store detail rejection. Delayed real success/conflict
+responses verify callback isolation across store/same-store editor navigation. The Bulgarian
+create workflow runs at 320px in both themes; desktop/mobile editor captures use the same
+ignored output directory. Deletion cases verify single confirmation, keyboard cancellation/focus
+return, page-local select-all, persistence through reload, final-page correction and retained
+query/hash. A record removed through a competing real Gateway mutation creates a genuine
+NOT_FOUND partial failure; a controlled transport abort before submission verifies retrying only
+the failed record. A delayed real delete response proves store isolation and stopping the unsent
+remainder. Bulgarian confirmation runs at 320px with a long product name in both themes;
+the same case checks error-message wrapping after a transport failure and successful failed-row retry.
+desktop partial-result and mobile confirmation captures use the same ignored output directory.
+No test invents a bulk backend API. There is no Angular upload browser coverage.
 These checks use Chromium, without automatic retries, and do not establish GitHub execution.
 
 ## Real PostgreSQL checks
@@ -622,6 +670,7 @@ required when the underlying API or persistence changes.
 | UI catalog and shared presentation                | ui-catalog.smoke.spec.mts; affected form/list tests and real browser checks; store-workspace.test.tsx for navigation/route changes                                                                                                                         |
 | Store routes, query cache or mutation lifecycle   | store-workspace.test.tsx and focused test:smoke:admin-react delayed-response/pending-mutation cases                                                                                                                                                        |
 | Angular data/cache/store routing                  | test:admin with products-api.spec.ts and store-workspace.spec.ts; test:smoke:admin -- angular-foundation.smoke.spec.mts for real reads/routing                                                                                                             |
+| Angular Products deletion                         | test:admin with products-deletion.spec.ts; test:smoke:admin -- angular-products-delete.smoke.spec.mts for real deletes/partial results/query correction and keyboard behavior                                                                              |
 | Angular runtime endpoint/config                   | test:admin with admin-config.spec.ts; Angular build and real browser checks                                                                                                                                                                                |
 | CI workflow, affected selection or ignore rules   | actionlint, Git-history failure checks, explicit Nx changed-file examples below, root lint/typecheck/build and a focused test through test:affected                                                                                                        |
 

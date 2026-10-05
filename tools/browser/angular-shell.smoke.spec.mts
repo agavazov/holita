@@ -51,6 +51,7 @@ test('Sakai desktop navigation, persisted theme and language preserve the real s
   await menu.focus();
   await tabTo(page, storesLink);
   await expectVisibleFocus(storesLink);
+  await expect(page.locator('.p-datatable-mask')).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath('desktop-light.png'), fullPage: true });
   await menu.click();
   await expect(menu).toHaveAttribute('aria-expanded', 'false');
@@ -65,7 +66,8 @@ test('Sakai desktop navigation, persisted theme and language preserve the real s
   await page.reload();
   await expect(page.getByRole('cell', { name: 'Sofia notebook', exact: true })).toBeVisible();
   await expect(page.locator('html')).toHaveClass('app-dark');
-  await finishAnimations(page.locator('p-select'));
+  await finishAnimations(page.locator('.store-selector p-select'));
+  await expect(page.locator('.p-datatable-mask')).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath('desktop-dark.png'), fullPage: true });
   await page.getByRole('link', { name: 'Български', exact: true }).click();
   await expect(page).toHaveURL(`${app.url}/bg/stores/${storeA}/products?review=1#main-content`);
@@ -85,6 +87,7 @@ test('mobile drawer traps focus, closes on Escape, backdrop, navigation and desk
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${app.url}/en/stores/${storeA}/products`);
   await expect(page.getByRole('cell', { name: 'Sofia notebook', exact: true })).toBeVisible();
+  await expect(page.locator('.p-datatable-mask')).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath('mobile-light.png'), fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
@@ -117,7 +120,8 @@ test('mobile drawer traps focus, closes on Escape, backdrop, navigation and desk
   await chooseStore(page, 'holita Plovdiv');
   await expect(page.getByRole('cell', { name: 'Plovdiv notebook', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Use dark theme', exact: true }).click();
-  await finishAnimations(page.locator('p-select'));
+  await finishAnimations(page.locator('.store-selector p-select'));
+  await expect(page.locator('.p-datatable-mask')).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath('mobile-dark.png'), fullPage: true });
   await menu.click();
   await expect(drawer).toBeVisible();

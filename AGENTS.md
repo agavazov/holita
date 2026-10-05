@@ -81,11 +81,15 @@
 - Prefer PrimeNG components and theme tokens. Sakai supplies the shell/layout reference;
   keep global CSS minimal, feature styles local and remove unused demo rules. Do not add
   wrappers without concrete reuse or depend on the deprecated PrimeNG Editor.
+- Use the pinned local Sakai source in `.references/sakai-ng` for layout comparisons;
+  [setup and source paths](docs/development.md#sakai-source-reference) are documented separately.
+  It is ignored reference material, not an npm/Nx application or runtime dependency.
 - Keep the shell independent of business data access, with explicit inputs/outputs and only
   implemented navigation. Preserve Bulgarian/English catalogs, keyboard/mobile behavior and
   light/dark themes, with focused tests and visual review at matching viewport sizes.
-- Angular currently provides Stores/Products reads. Add CRUD forms or another feature only
-  when explicitly requested, after the shell review.
+- Angular provides Stores discovery and Products CRUD with page-local sequential deletion.
+  Preserve partial results, failed-row retry and stopping unsent deletes on navigation; submitted
+  writes retain their captured scope. Add another feature only when explicitly requested.
 
 ## React admin (apps/admin-react)
 

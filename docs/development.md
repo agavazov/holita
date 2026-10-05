@@ -88,7 +88,7 @@ and align gateway ADMIN_ORIGIN with the exact browser origin when moving the adm
 ## Angular admin foundation
 
 After database setup/migration/seed, `npm run dev` starts the complete local group. Open
-http://127.0.0.1:11088, choose a store and read its first 20 Products. Angular uses the real
+http://127.0.0.1:11088, choose a store and open its Products list. Angular uses the real
 Gateway exclusively; it does not use React's `VITE_DATA_SOURCE`, MSW or browser fixtures.
 `apps/admin-react` remains available on its existing ports as a behavior reference.
 
@@ -106,7 +106,53 @@ The PrimeNG/Sakai shell supplies Stores/Products navigation, a store selector, B
 switching and light/dark themes. Desktop navigation can collapse; mobile navigation opens a
 modal Drawer. Theme preference is stored as `holita.admin.theme`; denied browser storage shows
 a status message. Loading/errors/empty data, unavailable stores and manual retry remain available.
-There is no pagination UI, CRUD form or mutation button.
+
+Products uses server pagination (20 rows by default; sizes 10/20/50/100). Search matches name
+or SKU; the separate SKU substring and status filters combine with it. Text applies after
+300 ms; status and sorting apply immediately, including pending text. Name/SKU/Status headers
+toggle ascending/descending; **Reset sorting** restores newest-first. Filter/sort/size changes
+return to page one. **Clear filters** clears search, SKU and status while preserving sorting
+and size. Back/Forward restores URL drafts and cancels pending text. Changing pages also
+discards uncommitted text. The committed query uses `page`, `pageSize`, `search`, `sku`,
+`status`, `sort` and `order`; unrelated query parameters and the fragment are preserved.
+Invalid values normalize with history replacement. A requested page is retained until the
+server supplies a total, then an unavailable page moves to the last available one.
+Changing the query clears obsolete rows and disposes its read; refresh errors preserve rows
+from the same query. Paginator controls and reports use the selected language.
+
+**Create product** opens `/products/new`; product-name links open `/products/:productId/edit`
+under the selected store/language. Typed Reactive Forms edit name, SKU and status, defaulting
+new Products to Draft. Validation trims name/SKU, counts Unicode code points (200/100) and
+rejects NUL. Invalid submission focuses the first invalid text field. Details errors expose
+retry/back navigation without an empty edit form; malformed IDs do not start detail reads.
+SKU conflicts and transport failures preserve entered values and show the request ID.
+Submission disables the form and suppresses duplicate writes; success returns to the list with
+its query/hash preserved, a fresh read and a success message.
+
+A `CanDeactivate` guard confirms unsaved changes before leaving for another store, language,
+create/edit mode or Product ID, including browser history. Rejecting a store change restores
+the selector to the actual route. Dirty, unsubmitted forms also register `beforeunload` for
+browser reload/closing; browser prompt availability and wording follow browser policy.
+Submitted writes can settle after navigation. Their client/store/language stay captured;
+completion cannot navigate, notify or change the next editor. Each editor initializes its
+form once, so later detail notifications cannot overwrite local edits.
+
+Each row provides **Delete**, and the checkboxes select records on the current page only.
+The header checkbox selects that page, not every matching server record. Page/filter/sort/size
+changes clear selection; refreshing prunes it to records still present on the page.
+**Delete selected** confirms the selected count; single deletion names the product. Deletion
+is permanent. Cancel has initial focus; Cancel/Escape restores the initiating button, while
+confirmation moves focus to the Products heading.
+
+Confirmed deletes run sequentially through the existing `deleteProduct` operation. Successful
+deletions stay deleted; failures show the record name and diagnostic request ID, with only
+failed rows retained for retry if they remain on the refreshed page. The summary reports both
+counts. This is not an atomic batch operation. Selection/deletion and manual refresh are
+disabled while it runs. One final read supplies fresh totals and corrects an emptied last page,
+preserving the list URL/query/hash and completed summary. A failed refresh leaves confirmed
+deletions removed and provides Retry. Changing store/language/editor or the list query stops
+unsent deletes; the submitted write still settles against its captured client, without updating
+the new view. Rich text and uploads are not implemented in Angular.
 
 [public/config.json](../apps/admin/public/config.json) is fetched before Angular bootstraps,
 with a 10-second deadline, so PrimeNG and Apollo receive their startup configuration.
@@ -138,6 +184,34 @@ credentials belong neither there nor in frontend source. No deployment is config
 Use [Angular checks](testing.md#angular-admin-checks) to verify real routing, generated
 contracts, per-workspace cache isolation and pending mutations. Store selection scopes data;
 it provides no authorization.
+
+### Sakai source reference
+
+The local Sakai Angular source is `.references/sakai-ng`, outside `apps/` and the npm
+workspaces. Git, Nx, ESLint and Prettier ignore `.references/`. The checkout is a source
+reference for the Angular admin's layout and visual comparisons; the application does
+not import or load files from it, and normal installation/build/test commands do not
+require it. No template dependencies are installed by the workspace.
+
+The reference uses [PrimeTek's official repository](https://github.com/primefaces/sakai-ng)
+at revision `96d71496d685b5c110efd2875abaa2bf89a56ad2`. Its `src/assets` submodule is
+[sakai-assets](https://github.com/cetincakiroglu/sakai-assets) at
+`eaa70ece4cfa9aeb8f60b36dce5a422b6bae8003`. To recreate the checkout from the repository root
+when the destination does not exist:
+
+```bash
+git clone https://github.com/primefaces/sakai-ng.git .references/sakai-ng
+git -C .references/sakai-ng checkout --detach 96d71496d685b5c110efd2875abaa2bf89a56ad2
+git -C .references/sakai-ng submodule update --init --recursive
+```
+
+Use `src/app/layout/component` for the original shell components, `src/app/layout/service`
+for their presentation state, and `src/assets/layout` for layout SCSS. Compare the original
+and holita at matching viewport sizes. The reference uses Angular/PrimeNG 21; holita uses
+Angular/PrimeNG 22, so component APIs must follow the installed versions and current
+official metadata. The upstream template contains demo routes and dependencies that are
+not part of holita. The adapted files and their licenses are recorded in
+[the admin attribution](../apps/admin/THIRD_PARTY_NOTICES.md).
 
 ### Angular agent tools
 

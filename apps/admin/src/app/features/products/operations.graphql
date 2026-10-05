@@ -6,8 +6,22 @@ fragment AdminProduct on Product {
   status
 }
 
-query AdminProducts($offset: Int! = 0, $limit: Int! = 20) {
-  products(offset: $offset, limit: $limit) {
+query AdminProducts(
+  $offset: Int! = 0
+  $limit: Int! = 20
+  $search: String
+  $sku: String
+  $status: ProductStatus
+  $sort: ProductSort
+) {
+  products(
+    offset: $offset
+    limit: $limit
+    search: $search
+    sku: $sku
+    status: $status
+    sort: $sort
+  ) {
     items {
       ...AdminProduct
     }
@@ -17,8 +31,26 @@ query AdminProducts($offset: Int! = 0, $limit: Int! = 20) {
   }
 }
 
+query AdminProduct($id: ID!) {
+  product(id: $id) {
+    ...AdminProduct
+  }
+}
+
+mutation AdminCreateProduct($input: CreateProductInput!) {
+  createProduct(input: $input) {
+    ...AdminProduct
+  }
+}
+
 mutation AdminUpdateProduct($id: ID!, $input: UpdateProductInput!) {
   updateProduct(id: $id, input: $input) {
+    ...AdminProduct
+  }
+}
+
+mutation AdminDeleteProduct($id: ID!) {
+  deleteProduct(id: $id) {
     ...AdminProduct
   }
 }

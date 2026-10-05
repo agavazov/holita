@@ -36,7 +36,13 @@ and `--filter="case name"` for Angular CLI native selection. Store routing uses
 `--include=app/features/stores/store-workspace.spec.ts`. These tests use actual Apollo and
 Angular HTTP testing, including late mutation success/failure and A → B → A. Real reads use
 `test:smoke:admin -- angular-foundation.smoke.spec.mts` against the compiled application and
-dedicated database fixture. They do not prove Angular CRUD forms or upload behavior.
+dedicated database fixture. Editor forms/guards/late callbacks use
+`test:admin -- --include=app/features/products/product-editor.spec.ts`; real create/update
+and SKU conflicts use `test:smoke:admin -- angular-product-editor.smoke.spec.mts`.
+Single/page-local deletion uses `test:admin -- --include=app/features/products/products-deletion.spec.ts`
+for partial results, stopping unsent writes and captured-client shutdown. Real persistence,
+partial failures, retry and last-page correction use
+`test:smoke:admin -- angular-products-delete.smoke.spec.mts`. These checks do not prove upload behavior.
 
 For React admin, select product-list.test.tsx, product-form.test.tsx, data-provider.test.ts or store-workspace.test.tsx
 through test:admin-react. The workspace file uses actual Refine hooks/cache with controlled HTTP

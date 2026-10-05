@@ -1,6 +1,7 @@
 import { provideHttpClient, type HttpRequest } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { ApolloClient } from '@apollo/client/core';
 import { ProductsPage } from './products-page';
 import type { AdminProductFragment } from '../../../generated/graphql/operations';
@@ -58,7 +59,7 @@ describe('Products Apollo scope', () => {
   let http: HttpTestingController;
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
     });
     http = TestBed.inject(HttpTestingController);
   });
@@ -229,7 +230,7 @@ describe('Products Apollo scope', () => {
     read.error(new ProgressEvent('error'));
     await a.whenStable();
     expect(element.querySelector('[role="alert"]')?.textContent).toContain(requestId);
-    expect(element.querySelector('table')).toBeNull();
+    expect(element.querySelector('tbody')?.textContent).not.toContain('No products in this store.');
     const retry = element.querySelector<HTMLButtonElement>('button');
     expect(retry?.textContent).toContain('Retry');
     retry?.click();
@@ -241,7 +242,7 @@ describe('Products Apollo scope', () => {
     await a.whenStable();
     expect(element.querySelector('[role="alert"]')).toBeNull();
     expect(element.querySelector('tbody')?.textContent).toContain('No products in this store.');
-    expect(element.querySelector('th')?.textContent).toBe('Name');
+    expect(element.querySelector('th[psortablecolumn="name"]')?.textContent.trim()).toBe('Name');
     a.destroy();
   });
 });

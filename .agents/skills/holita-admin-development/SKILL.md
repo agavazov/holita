@@ -25,11 +25,16 @@ references and component metadata needed by the change. See
 - [StoreProducts](../../../apps/admin/src/app/features/products/store-products.ts) keys
   the feature boundary by store and language. Angular reuses parameterized routes, so
   removing this boundary would retain the previous workspace's state and client. Its computed
-  collection must depend on both scope values; changing only the tracking expression can retain the page.
+  collection includes store/language/Product ID; changing only the tracking expression can retain the page.
 - [ProductsPage](../../../apps/admin/src/app/features/products/products-page.ts) owns
   presentation/query state and delegates to
   [ProductsApi](../../../apps/admin/src/app/features/products/products-api.ts).
   Keep component → concrete feature service → Apollo; add no repository, facade or generic CRUD layer.
+  Initialize its scoped client once, then watch generated variables for each list query.
+  [Product list helpers](../../../apps/admin/src/app/features/products/product-list-query.ts)
+  own URL decoding and variable mapping. Keep applied state in the URL and text drafts local;
+  cancel debounce on navigation/reset, dispose obsolete reads and retain rows only for same-query refresh.
+  Do not let Table's controlled sort events issue feedback queries or reset bookmarked pages before a total arrives.
 - [graphqlOptions](../../../apps/admin/src/app/core/graphql/graphql-options.ts) captures
   store/language in each client transport. Each mounted Products workspace has its own
   `InMemoryCache`. Headers alone do not isolate cache entries or query deduplication.
@@ -48,13 +53,28 @@ references and component metadata needed by the change. See
    Do not add another global state/cache library.
 4. Use typed Reactive Forms for business editors, with feature-owned validation and explicit
    mapping to generated inputs. The shell's single store selector is not a business editor.
-   No Angular CRUD form or upload workflow is currently implemented.
-5. When adding CRUD or media behavior, consult the concrete React
+   [ProductEditor](../../../apps/admin/src/app/features/products/product-editor.ts) is the concrete
+   create/edit example. Hydrate detail values once, disable controls through the FormGroup during
+   submission and check DestroyRef before success/error/navigation callbacks. Its route guard
+   confirms dirty, unsubmitted forms; submitted writes remain scoped and settle after navigation.
+   New/edit route configurations and the Product ID key reset editor state independently of store.
+5. ProductsPage is the concrete single/page-local deletion example. Capture confirmation targets,
+   check initiating query identity before callbacks and stop unsent deletes on navigation while
+   submitted writes settle. Report partial results, retain failed-row selection for retry and
+   reconcile server totals once per batch. Selection resets on query changes and prunes on reads;
+   successful deletes stay removed if refresh fails. Do not generalize permanent sequential
+   deletion to another domain's transactional or referenced-deletion rules.
+6. When adding CRUD or media behavior, consult the concrete React
    [Products/editor references](../../../docs/reference.md#products-the-aurora-crud-reference)
    and [Reference index](../../../docs/reference.md) for URL filters, dirty forms, route-scoped
    callbacks and upload lifecycle. Preserve behavior without importing React implementation.
+   Angular has no upload workflow yet.
 
 ## Presentation boundary
+
+The pinned [local Sakai reference](../../../docs/development.md#sakai-source-reference) is
+`.references/sakai-ng`. Inspect its original shell components and layout SCSS when comparing
+the design. Keep the reference outside application imports and workspace tasks.
 
 Prefer PrimeNG's documented components and theme tokens before custom presentation code.
 Use its MCP metadata for current APIs; never invent inputs or copy APIs from another PrimeUI
@@ -71,10 +91,16 @@ conditions are sometimes intentional. Format Angular HTML with the repository's 
 Use [holita-focused-validation](../holita-focused-validation/SKILL.md) and native selectors:
 
 - Apollo/cache/retired mutations: `npm run test:admin -- --include=app/features/products/products-api.spec.ts --skip-nx-cache`.
+- List URL/filters/sorting/debounce: `npm run test:admin -- --include=app/features/products/products-page.spec.ts --skip-nx-cache`.
+- Editor validation/guards/late callbacks: `npm run test:admin -- --include=app/features/products/product-editor.spec.ts --skip-nx-cache`.
+- Deletion/partial results/query retirement/client shutdown: `npm run test:admin -- --include=app/features/products/products-deletion.spec.ts --skip-nx-cache`.
 - Store/language routing: `npm run test:admin -- --include=app/features/stores/store-workspace.spec.ts --skip-nx-cache`.
 - Transport diagnostics/deadline: `npm run test:admin -- --include=app/core/graphql/graphql-options.spec.ts --skip-nx-cache`.
 - Real transport and A → B → A: `npm run test:smoke:admin -- angular-foundation.smoke.spec.mts`.
 - Shell/keyboard/theme/mobile: `npm run test:smoke:admin -- angular-shell.smoke.spec.mts`.
+- Real list paging/filter/sort/history: `npm run test:smoke:admin -- angular-products-list.smoke.spec.mts`.
+- Real create/edit/conflicts/dirty navigation: `npm run test:smoke:admin -- angular-product-editor.smoke.spec.mts`.
+- Real deletion/failed-row retry/last-page correction/keyboard: `npm run test:smoke:admin -- angular-products-delete.smoke.spec.mts`.
 
 Run the relevant type/build checks; root tooling changes also require root lint/typecheck/build.
 MCP usage validation does not prove Angular compilation or browser behavior. Keep controlled-HTTP,

@@ -1,0 +1,37 @@
+.product-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(15rem, 20rem);
+  gap: 1.5rem;
+  align-items: start;
+}
+.product-settings {
+  position: sticky;
+  top: 6rem;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+.field small {
+  color: var(--text-color-secondary);
+}
+.editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+p-message {
+  display: block;
+  margin-bottom: 1rem;
+}
+@media (max-width: 991px) {
+  .product-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .product-settings {
+    position: static;
+  }
+}
