@@ -97,3 +97,55 @@ test('a delayed real A response cannot replace B and returning to A fetches agai
     release();
   }
 });
+
+test('a language change starts a new Products request while the old real response is pending', async ({
+  page,
+  app,
+}) => {
+  let release = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let captured = () => {};
+  const capturedResponse = new Promise<void>((resolve) => {
+    captured = resolve;
+  });
+  let delivered = () => {};
+  const deliveredResponse = new Promise<void>((resolve) => {
+    delivered = resolve;
+  });
+  const scopes: string[] = [];
+  await page.route(app.gatewayUrl, async (route) => {
+    const request = route.request();
+    if (operation(request, 'AdminProducts')) {
+      const language = request.headers()['accept-language'];
+      const storeId = request.headers()['x-store-id'];
+      if (!language || !storeId) throw new Error('Missing scoped Products request headers.');
+      scopes.push(`${storeId}/${language}`);
+      if (language === 'en') {
+        const response = await route.fetch();
+        captured();
+        await gate;
+        await route.fulfill({ response });
+        delivered();
+        return;
+      }
+    }
+    await route.continue();
+  });
+  try {
+    await page.goto(`${app.url}/en/stores/${storeA}/products`);
+    await capturedResponse;
+    await page.getByRole('link', { name: 'Български', exact: true }).click();
+    await expect(page).toHaveURL(`${app.url}/bg/stores/${storeA}/products`);
+    await expect(page.getByRole('cell', { name: 'Sofia notebook', exact: true })).toBeVisible();
+    expect(scopes).toEqual([`${storeA}/en`, `${storeA}/bg`]);
+    release();
+    await deliveredResponse;
+    await expect(page.getByRole('heading', { name: 'Продукти', exact: true })).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'Sofia notebook', exact: true })).toBeVisible();
+    await expect(page.getByRole('alert')).toHaveCount(0);
+  } finally {
+    release();
+  }
+});

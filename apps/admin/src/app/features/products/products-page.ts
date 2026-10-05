@@ -1,16 +1,23 @@
 import { Component, computed, DestroyRef, inject, input, signal, type OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import type { AdminProductsQuery, AdminStoresQuery } from '../../../generated/graphql/operations';
+import type {
+  AdminProductFragment,
+  AdminProductsQuery,
+  AdminStoresQuery,
+} from '../../../generated/graphql/operations';
 import { requestError } from '../../core/graphql/request-error';
 import { messages, type Language } from '../../i18n/messages';
 import { ProductsApi } from './products-api';
 import { ButtonDirective } from 'primeng/button';
+import { TableModule } from 'primeng/table';
+import { Message } from 'primeng/message';
 
 @Component({
   selector: 'holita-products-page',
   providers: [ProductsApi],
-  imports: [ButtonDirective],
+  imports: [ButtonDirective, TableModule, Message],
   templateUrl: './products-page.html',
+  styleUrl: './products-page.scss',
 })
 export class ProductsPage implements OnInit {
   readonly store = input.required<AdminStoresQuery['stores'][number]>();
@@ -23,6 +30,7 @@ export class ProductsPage implements OnInit {
   readonly loading = signal(true);
   readonly error = signal<unknown>(null);
   readonly failure = computed(() => requestError(this.error(), this.text().networkError));
+  readonly trackProduct = (_index: number, product: AdminProductFragment) => product.id;
 
   ngOnInit(): void {
     this.query = this.api.watch(this.store().id, this.language());

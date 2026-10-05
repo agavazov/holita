@@ -10,6 +10,7 @@ import {
 } from '@angular/router';
 import { filter } from 'rxjs';
 import { ButtonDirective } from 'primeng/button';
+import { Message } from 'primeng/message';
 import { Shop } from '@primeicons/angular/shop';
 import { ArrowRight } from '@primeicons/angular/arrow-right';
 import { AdminShell } from '../../layout/admin-shell';
@@ -20,8 +21,9 @@ import { StoresApi } from './stores-api';
 
 @Component({
   selector: 'holita-store-workspace',
-  imports: [RouterLink, RouterOutlet, AdminShell, ButtonDirective, Shop, ArrowRight],
+  imports: [RouterLink, RouterOutlet, AdminShell, ButtonDirective, Message, Shop, ArrowRight],
   templateUrl: './store-workspace.html',
+  styleUrl: './store-workspace.scss',
 })
 export class StoreWorkspace {
   private readonly route = inject(ActivatedRoute);
@@ -44,6 +46,11 @@ export class StoreWorkspace {
     this.navigation();
     return !this.route.firstChild;
   });
+  readonly showDiscovery = computed(
+    () =>
+      this.onStoreList() || this.stores() === null || this.stores()?.length === 0 || !!this.error(),
+  );
+  readonly storesAvailable = computed(() => (this.stores()?.length ?? 0) > 0);
   readonly selectedStoreId = computed(() => {
     this.navigation();
     const id = this.route.firstChild?.snapshot.paramMap.get('storeId')?.toLowerCase();
@@ -79,8 +86,9 @@ export class StoreWorkspace {
   }
 
   refresh(): void {
-    void this.query?.refetch().catch((error: unknown) => {
-      this.error.set(error);
+    const query = this.query;
+    void query?.refetch().catch((error: unknown) => {
+      if (this.query === query) this.error.set(error);
     });
   }
 

@@ -2,7 +2,6 @@ import {
   Component,
   computed,
   type ElementRef,
-  HostListener,
   inject,
   input,
   output,
@@ -18,14 +17,16 @@ import { Moon } from '@primeicons/angular/moon';
 import { Sun } from '@primeicons/angular/sun';
 import { Select } from 'primeng/select';
 import { Drawer } from 'primeng/drawer';
+import { Message } from 'primeng/message';
 import { messages, type Language } from '../i18n/messages';
 import { AdminNavigation } from './admin-navigation';
 import { Appearance } from './appearance';
 
 @Component({
   selector: 'holita-admin-shell',
-  imports: [RouterLink, FormsModule, Select, Drawer, Bars, Moon, Sun, AdminNavigation],
+  imports: [RouterLink, FormsModule, Select, Drawer, Message, Bars, Moon, Sun, AdminNavigation],
   templateUrl: './admin-shell.html',
+  host: { '(window:resize)': 'onResize()' },
 })
 export class AdminShell {
   readonly stores = input.required<readonly { id: string; name: string }[]>();
@@ -42,7 +43,6 @@ export class AdminShell {
   readonly mobile = signal(window.innerWidth < 992);
   private readonly navigationToggle =
     viewChild.required<ElementRef<HTMLButtonElement>>('navigationToggle');
-  private readonly drawer = viewChild.required(Drawer);
 
   constructor() {
     inject(Router)
@@ -55,7 +55,6 @@ export class AdminShell {
       });
   }
 
-  @HostListener('window:resize')
   onResize(): void {
     this.mobile.set(window.innerWidth < 992);
     if (!this.mobile()) this.mobileOpen.set(false);
@@ -72,7 +71,7 @@ export class AdminShell {
   }
 
   focusNavigation(): void {
-    this.drawer().container?.querySelector<HTMLButtonElement>('button')?.focus();
+    document.getElementById('mobile-navigation-close')?.focus();
   }
 
   drawerVisibilityChanged(visible: boolean): void {

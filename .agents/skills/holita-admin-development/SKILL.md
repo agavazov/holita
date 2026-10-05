@@ -24,7 +24,8 @@ references and component metadata needed by the change. See
   they do not perform business queries.
 - [StoreProducts](../../../apps/admin/src/app/features/products/store-products.ts) keys
   the feature boundary by store and language. Angular reuses parameterized routes, so
-  removing this boundary would retain the previous workspace's state and client.
+  removing this boundary would retain the previous workspace's state and client. Its computed
+  collection must depend on both scope values; changing only the tracking expression can retain the page.
 - [ProductsPage](../../../apps/admin/src/app/features/products/products-page.ts) owns
   presentation/query state and delegates to
   [ProductsApi](../../../apps/admin/src/app/features/products/products-api.ts).
@@ -43,6 +44,7 @@ references and component metadata needed by the change. See
    captured client; late results cannot update another store or a newly mounted editor.
 3. Keep reactive presentation state in signals and derived state in `computed`. Use RxJS
    for Apollo/router streams and their cancellation; preserve subscription cleanup.
+   Refetch completion must still belong to its initiating query before updating a reused workspace.
    Do not add another global state/cache library.
 4. Use typed Reactive Forms for business editors, with feature-owned validation and explicit
    mapping to generated inputs. The shell's single store selector is not a business editor.
@@ -70,6 +72,7 @@ Use [holita-focused-validation](../holita-focused-validation/SKILL.md) and nativ
 
 - Apollo/cache/retired mutations: `npm run test:admin -- --include=app/features/products/products-api.spec.ts --skip-nx-cache`.
 - Store/language routing: `npm run test:admin -- --include=app/features/stores/store-workspace.spec.ts --skip-nx-cache`.
+- Transport diagnostics/deadline: `npm run test:admin -- --include=app/core/graphql/graphql-options.spec.ts --skip-nx-cache`.
 - Real transport and A → B → A: `npm run test:smoke:admin -- angular-foundation.smoke.spec.mts`.
 - Shell/keyboard/theme/mobile: `npm run test:smoke:admin -- angular-shell.smoke.spec.mts`.
 

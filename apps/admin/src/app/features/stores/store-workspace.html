@@ -6,7 +6,7 @@
   [loading]="loading()"
   (storeSelected)="chooseStore($event)"
 >
-  @if (onStoreList() || stores() === null || stores()?.length === 0 || error()) {
+  @if (showDiscovery()) {
     <section class="card" [attr.aria-label]="text().storesNavigation">
       <div class="page-heading">
         <div>
@@ -30,14 +30,14 @@
         </button>
       </div>
       @if (loading()) {
-        <p class="state-message" role="status">{{ text().loadingStores }}</p>
+        <p role="status">{{ text().loadingStores }}</p>
       }
       @if (error()) {
-        <p class="state-message" role="alert">{{ failure() }}</p>
+        <p-message severity="error">{{ failure() }}</p-message>
       }
       @if (stores(); as availableStores) {
         @if (availableStores.length === 0) {
-          <p class="state-message">{{ text().emptyStores }}</p>
+          <p>{{ text().emptyStores }}</p>
         }
         @if (onStoreList()) {
           <ul class="store-list">
@@ -63,9 +63,7 @@
       }
     </section>
   }
-  @if (stores(); as availableStores) {
-    @if (availableStores.length > 0) {
-      <router-outlet />
-    }
+  @if (storesAvailable()) {
+    <router-outlet />
   }
 </holita-admin-shell>

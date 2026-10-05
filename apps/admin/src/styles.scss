@@ -1,4 +1,5 @@
 @use './styles/sakai/layout';
+@use './styles/sakai/mixins' as *;
 
 * {
   box-sizing: border-box;
@@ -7,59 +8,10 @@ button,
 input {
   font: inherit;
 }
-button.layout-topbar-action {
-  border: 0;
-  background: transparent;
-  padding: 0;
-}
 button,
 a,
 input {
   -webkit-tap-highlight-color: transparent;
-}
-holita-admin-shell {
-  display: block;
-}
-
-.holita-mark {
-  display: grid;
-  place-items: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 0.75rem;
-  background: var(--primary-color);
-  color: var(--primary-contrast-color);
-  font-weight: 800;
-  font-size: 1.65rem;
-}
-.layout-topbar-actions {
-  order: 2;
-}
-.language-switch {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.5rem;
-  color: var(--text-color);
-  font-weight: 600;
-  border-radius: var(--content-border-radius);
-  &:hover {
-    background: var(--surface-hover);
-  }
-}
-.store-selector {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-left: auto;
-  min-width: 0;
-  label {
-    color: var(--text-color-secondary);
-    font-size: 0.875rem;
-  }
-  p-select {
-    width: 16rem;
-    max-width: 100%;
-  }
 }
 .skip-link {
   position: fixed;
@@ -75,8 +27,7 @@ holita-admin-shell {
   }
 }
 a:focus-visible {
-  outline: 2px solid var(--primary-color);
-  outline-offset: 2px;
+  @include focused();
 }
 .card {
   background: var(--surface-card);
@@ -98,104 +49,7 @@ a:focus-visible {
     color: var(--text-color-secondary);
   }
 }
-.state-message {
-  padding: 1rem;
-  margin-bottom: 1rem;
-  border-radius: var(--content-border-radius);
-  background: var(--surface-hover);
-}
-.state-message[role='alert'] {
-  color: var(--p-red-700);
-  background: var(--p-red-50);
-}
-.app-dark .state-message[role='alert'] {
-  color: var(--p-red-200);
-  background: var(--p-red-950);
-}
-.store-list {
-  display: grid;
-  gap: 0.75rem;
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-.store-link {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 1.25rem;
-  border: 1px solid var(--surface-border);
-  border-radius: var(--content-border-radius);
-  color: var(--text-color);
-  font-weight: 600;
-  overflow-wrap: anywhere;
-  &:hover {
-    background: var(--surface-hover);
-    border-color: var(--primary-color);
-  }
-  .store-link-arrow {
-    margin-left: auto;
-    color: var(--text-color-secondary);
-    flex-shrink: 0;
-  }
-}
-.table-scroll {
-  overflow-x: auto;
-}
-.products-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  th,
-  td {
-    padding: 1rem;
-    border-bottom: 1px solid var(--surface-border);
-  }
-  th {
-    background: var(--surface-hover);
-    font-weight: 600;
-  }
-  td {
-    overflow-wrap: anywhere;
-  }
-}
-.products-summary {
-  color: var(--text-color-secondary);
-  margin-bottom: 1rem;
-}
-.holita-navigation-drawer {
-  width: min(20rem, 90vw);
-}
-
 @media (max-width: 991px) {
-  .layout-topbar {
-    height: auto;
-    min-height: 7.75rem;
-    padding: 0.75rem 1rem;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    .layout-topbar-logo-container {
-      width: auto;
-    }
-    .layout-topbar-actions {
-      gap: 0.5rem;
-    }
-  }
-  .store-selector {
-    order: 3;
-    flex-basis: 100%;
-    margin-left: 0;
-    label {
-      flex-shrink: 0;
-    }
-    p-select {
-      width: 100%;
-      min-width: 0;
-    }
-  }
-  .layout-main-container {
-    padding: 9rem 1rem 0;
-  }
   .card {
     padding: 1.25rem;
   }

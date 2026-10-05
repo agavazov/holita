@@ -119,4 +119,49 @@ describe('Angular store routing', () => {
     expect(harness.routeNativeElement?.textContent).toContain('Discovery unavailable');
     expect(harness.routeNativeElement?.textContent).toContain('Plovdiv');
   });
+
+  it('ignores an aborted Stores refresh after changing the workspace language', async () => {
+    const harness = await RouterTestingHarness.create('/en');
+    http.expectOne('/graphql').flush({ data: { stores } });
+    await harness.fixture.whenStable();
+    const refresh = harness.routeNativeElement?.querySelector<HTMLButtonElement>(
+      '[data-testid="refresh-stores"]',
+    );
+    if (!refresh) throw new Error('Missing discovery refresh control.');
+    refresh.click();
+    const oldRefresh = http.expectOne('/graphql');
+    await harness.navigateByUrl('/bg');
+    expect(oldRefresh.cancelled).toBe(true);
+    const discovery = http.expectOne('/graphql');
+    expect(discovery.request.headers.get('Accept-Language')).toBe('bg');
+    await harness.fixture.whenStable();
+    expect(harness.routeNativeElement?.querySelector('[role="alert"]')).toBeNull();
+    expect(harness.routeNativeElement?.textContent).toContain('Plovdiv');
+    discovery.flush({ data: { stores } });
+    await harness.fixture.whenStable();
+    expect(harness.routeNativeElement?.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it('cancels a pending Products read and starts a new scoped client when the language changes', async () => {
+    const harness = await RouterTestingHarness.create(`/en/stores/${storeA}/products`);
+    http.expectOne((request) => operation(request, 'AdminStores')).flush({ data: { stores } });
+    await harness.fixture.whenStable();
+    const oldRead = http.expectOne((request) => operation(request, 'AdminProducts'));
+    expect(oldRead.request.headers.get('Accept-Language')).toBe('en');
+    await harness.navigateByUrl(`/bg/stores/${storeA}/products`);
+    expect(oldRead.cancelled).toBe(true);
+    const newRead = http.expectOne((request) => operation(request, 'AdminProducts'));
+    expect(newRead.request.headers.get('x-store-id')).toBe(storeA);
+    expect(newRead.request.headers.get('Accept-Language')).toBe('bg');
+    expect(newRead.request.headers.get('x-request-id')).not.toBe(
+      oldRead.request.headers.get('x-request-id'),
+    );
+    http.expectOne((request) => operation(request, 'AdminStores')).flush({ data: { stores } });
+    newRead.flush(products(storeA, 'Bulgarian workspace'));
+    await harness.fixture.whenStable();
+    expect(harness.routeNativeElement?.querySelector('tbody')?.textContent).toContain(
+      'Bulgarian workspace',
+    );
+    expect(harness.routeNativeElement?.querySelector('[role="alert"]')).toBeNull();
+  });
 });

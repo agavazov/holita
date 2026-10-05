@@ -197,7 +197,9 @@ as independent global state. There is no authentication or Prototype mode.
 
 [StoreProducts](../../apps/admin/src/app/features/products/store-products.ts) validates the
 selection against discovery and keys the inner Products component by store/language.
-Changing route parameters recreates that component even when Angular reuses the route.
+The computed workspace collection includes both store and language, so either route change
+recreates that component even when Angular reuses the route. Stores refresh failures are
+applied only while their initiating discovery query remains current.
 Each mounted [ProductsPage](../../apps/admin/src/app/features/products/products-page.ts) provides
 one ProductsApi with its own Apollo client and InMemoryCache. Transport headers capture
 immutable store/language values; Apollo's query deduplication and entity cache are confined
@@ -210,6 +212,8 @@ The [shell](../../apps/admin/src/app/layout/admin-shell.ts) receives available s
 selected ID, language and navigation URL through explicit inputs. StoreWorkspace owns routing
 and discovery. The shell owns only desktop collapse/mobile visibility and presentation;
 mobile navigation uses PrimeNG Drawer for focus trapping, Escape and backdrop dismissal.
+Its panel uses a responsive width of `min(20rem, 90vw)` through the public `style` input; initial focus
+targets the close button's explicit pass-through ID, and dismissal returns focus to the toggle.
 Navigation exposes Stores and, for a known selection, Products. The active-store selector
 uses PrimeNG Select. One selector moves below the top bar on mobile. The
 [appearance service](../../apps/admin/src/app/layout/appearance.ts) owns the root dark-mode
@@ -222,9 +226,17 @@ implemented static layout is included. [Attribution](../../apps/admin/THIRD_PART
 records pinned upstream revisions and licenses. No demo application, Tailwind, PrimeFlex,
 Quill or chart dependency is imported.
 
-The shell and simple Products table display loading, initial errors, empty/unavailable states and the first 20
-products with the server total. Refresh errors preserve loaded rows and expose the gateway
-request ID when available. HTTP requests have a 10-second deadline. There are no pagination
+Stores and Products composition styles live beside their components. Global styles own the
+shared base/card/headings and Sakai shell, including the Drawer panel appended to `body`.
+Navigation focus uses Aura's outline tokens; no inset shadow is synthesized from its optional shadow.
+
+PrimeNG Table displays the first 20 Products with the server total, loading and empty states;
+PrimeNG Message presents errors and the shell's storage warning. Initial loading also exposes
+a status announcement. Refresh errors preserve loaded rows. GraphQL errors expose the server
+message/request ID; transport failures keep the translated fallback and their own operation's
+request ID, preferring the Gateway's response ID for HTTP errors when available. The transport
+attaches diagnostic metadata to the existing Apollo error without replacing its identity/type.
+HTTP requests have a 10-second deadline. There are no pagination
 controls, CRUD forms, rich text or media workflows. The update operation is exercised through
 the concrete service in controlled-HTTP tests; it has no UI action.
 

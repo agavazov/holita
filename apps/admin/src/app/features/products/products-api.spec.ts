@@ -1,6 +1,7 @@
 import { provideHttpClient, type HttpRequest } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { TestBed } from '@angular/core/testing';
+import { TestBed, type ComponentFixture } from '@angular/core/testing';
+import { ApolloClient } from '@apollo/client/core';
 import { ProductsPage } from './products-page';
 import type { AdminProductFragment } from '../../../generated/graphql/operations';
 
@@ -47,6 +48,12 @@ function productPage(product: AdminProductFragment) {
   };
 }
 
+function pageElement(fixture: ComponentFixture<ProductsPage>): HTMLElement {
+  const element: unknown = fixture.nativeElement;
+  if (!(element instanceof HTMLElement)) throw new Error('Missing Products page element.');
+  return element;
+}
+
 describe('Products Apollo scope', () => {
   let http: HttpTestingController;
   beforeEach(() => {
@@ -57,22 +64,23 @@ describe('Products Apollo scope', () => {
   });
   afterEach(() => {
     http.verify({ ignoreCancelled: true });
+    vi.restoreAllMocks();
   });
 
-  function mount(storeId: string) {
+  async function mount(storeId: string) {
     const fixture = TestBed.createComponent(ProductsPage);
     fixture.componentRef.setInput('store', {
       id: storeId,
       name: storeId === storeA ? 'Sofia' : 'Plovdiv',
     });
     fixture.componentRef.setInput('language', 'en');
-    fixture.detectChanges();
+    await fixture.whenStable();
     return fixture;
   }
 
   it('separates concurrent identical list queries, entity caches and request headers', async () => {
-    const a = mount(storeA);
-    const b = mount(storeB);
+    const a = await mount(storeA);
+    const b = await mount(storeB);
     const readA = http.expectOne((request) => operation(request, 'AdminProducts', storeA));
     const readB = http.expectOne((request) => operation(request, 'AdminProducts', storeB));
     expect(readA.request.headers.get('x-request-id')).not.toBe(
@@ -90,7 +98,7 @@ describe('Products Apollo scope', () => {
   });
 
   it('keeps a submitted mutation alive after A is destroyed and never invalidates B or a new A', async () => {
-    const a = mount(storeA);
+    const a = await mount(storeA);
     http
       .expectOne((request) => operation(request, 'AdminProducts', storeA))
       .flush(productPage(productA));
@@ -99,12 +107,12 @@ describe('Products Apollo scope', () => {
     const mutation = oldApi.update({ id: productA.id, input: { name: 'Saved in old A' } });
     const write = http.expectOne((request) => operation(request, 'AdminUpdateProduct', storeA));
     a.destroy();
-    const b = mount(storeB);
+    const b = await mount(storeB);
     http
       .expectOne((request) => operation(request, 'AdminProducts', storeB))
       .flush(productPage(productB));
     await b.whenStable();
-    const newA = mount(storeA);
+    const newA = await mount(storeA);
     http
       .expectOne((request) => operation(request, 'AdminProducts', storeA))
       .flush(productPage(productA));
@@ -125,7 +133,8 @@ describe('Products Apollo scope', () => {
   });
 
   it('releases a retired client after a failed mutation without changing the new store', async () => {
-    const a = mount(storeA);
+    const stop = vi.spyOn(ApolloClient.prototype, 'stop');
+    const a = await mount(storeA);
     http
       .expectOne((request) => operation(request, 'AdminProducts', storeA))
       .flush(productPage(productA));
@@ -137,7 +146,8 @@ describe('Products Apollo scope', () => {
     const rejection = expect(mutation).rejects.toThrow('SKU conflict');
     const write = http.expectOne((request) => operation(request, 'AdminUpdateProduct', storeA));
     a.destroy();
-    const b = mount(storeB);
+    expect(stop).not.toHaveBeenCalled();
+    const b = await mount(storeB);
     http
       .expectOne((request) => operation(request, 'AdminProducts', storeB))
       .flush(productPage(productB));
@@ -148,6 +158,7 @@ describe('Products Apollo scope', () => {
       ],
     });
     await rejection;
+    expect(stop).toHaveBeenCalledTimes(1);
     expect(b.componentInstance.error()).toBeNull();
     expect(b.componentInstance.page()?.items[0]?.storeId).toBe(storeB);
     http.expectNone('/graphql');
@@ -155,7 +166,7 @@ describe('Products Apollo scope', () => {
   });
 
   it('retains loaded rows on a GraphQL refresh error and recovers with a new request ID', async () => {
-    const a = mount(storeA);
+    const a = await mount(storeA);
     http
       .expectOne((request) => operation(request, 'AdminProducts', storeA))
       .flush(productPage(productA));
@@ -173,6 +184,8 @@ describe('Products Apollo scope', () => {
     await a.whenStable();
     expect(a.componentInstance.page()?.items[0]?.name).toBe(productA.name);
     expect(a.componentInstance.failure()).toContain('Products unavailable (refresh-id)');
+    expect(pageElement(a).querySelector('[role="alert"]')?.textContent).toContain('refresh-id');
+    expect(pageElement(a).querySelector('tbody')?.textContent).toContain(productA.name);
     a.componentInstance.refresh();
     const retry = http.expectOne('/graphql');
     expect(retry.request.headers.get('x-request-id')).not.toBe(
@@ -181,6 +194,54 @@ describe('Products Apollo scope', () => {
     retry.flush(productPage(productA));
     await a.whenStable();
     expect(a.componentInstance.error()).toBeNull();
+    a.destroy();
+  });
+
+  it('stops a retired client only after both submitted writes settle', async () => {
+    const stop = vi.spyOn(ApolloClient.prototype, 'stop');
+    const a = await mount(storeA);
+    http.expectOne('/graphql').flush(productPage(productA));
+    await a.whenStable();
+    const api = a.componentInstance.api;
+    const first = api.update({ id: productA.id, input: { name: 'First write' } });
+    const firstWrite = http.expectOne('/graphql');
+    const second = api.update({ id: productA.id, input: { name: 'Second write' } });
+    const rejection = expect(second).rejects.toThrow('Second failed');
+    const secondWrite = http.expectOne('/graphql');
+    a.destroy();
+    expect(stop).not.toHaveBeenCalled();
+    expect(firstWrite.cancelled).toBe(false);
+    expect(secondWrite.cancelled).toBe(false);
+    firstWrite.flush({ data: { updateProduct: { ...productA, __typename: 'Product' } } });
+    await first;
+    expect(stop).not.toHaveBeenCalled();
+    secondWrite.flush({ errors: [{ message: 'Second failed' }] });
+    await rejection;
+    expect(stop).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders an initial error and retry followed by the empty Table state', async () => {
+    const a = await mount(storeA);
+    const element = pageElement(a);
+    expect(element.querySelector('[role="status"]')?.textContent).toContain('Loading products');
+    const read = http.expectOne('/graphql');
+    const requestId = read.request.headers.get('x-request-id');
+    read.error(new ProgressEvent('error'));
+    await a.whenStable();
+    expect(element.querySelector('[role="alert"]')?.textContent).toContain(requestId);
+    expect(element.querySelector('table')).toBeNull();
+    const retry = element.querySelector<HTMLButtonElement>('button');
+    expect(retry?.textContent).toContain('Retry');
+    retry?.click();
+    const next = http.expectOne('/graphql');
+    expect(next.request.headers.get('x-request-id')).not.toBe(requestId);
+    next.flush({
+      data: { products: { __typename: 'ProductPage', items: [], total: 0, offset: 0, limit: 20 } },
+    });
+    await a.whenStable();
+    expect(element.querySelector('[role="alert"]')).toBeNull();
+    expect(element.querySelector('tbody')?.textContent).toContain('No products in this store.');
+    expect(element.querySelector('th')?.textContent).toBe('Name');
     a.destroy();
   });
 });

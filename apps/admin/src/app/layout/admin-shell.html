@@ -69,9 +69,12 @@
     [modal]="true"
     [blockScroll]="true"
     appendTo="body"
-    class="holita-navigation-drawer"
+    [style]="{ width: 'min(20rem, 90vw)' }"
     [ariaCloseLabel]="text().closeNavigation"
-    [pt]="{ root: { 'aria-label': text().navigation } }"
+    [pt]="{
+      root: { 'aria-label': text().navigation },
+      pcCloseButton: { root: { id: 'mobile-navigation-close' } },
+    }"
   >
     <div id="mobile-navigation">
       <holita-admin-navigation [language]="language()" [storeId]="storeId()" />
@@ -80,7 +83,9 @@
   <div class="layout-main-container">
     <main id="main-content" class="layout-main" tabindex="-1">
       @if (appearance.persistenceFailed()) {
-        <p class="state-message" role="status">{{ text().themePersistenceError }}</p>
+        <p-message severity="warn" [pt]="{ root: { role: 'status', 'aria-live': 'polite' } }">
+          {{ text().themePersistenceError }}
+        </p-message>
       }
       <ng-content />
     </main>

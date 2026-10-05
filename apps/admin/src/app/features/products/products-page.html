@@ -16,36 +16,39 @@
     </button>
   </div>
   @if (loading()) {
-    <p class="state-message" role="status">{{ text().loadingProducts }}</p>
+    <p role="status">{{ text().loadingProducts }}</p>
   }
   @if (error()) {
-    <p class="state-message" role="alert">{{ failure() }}</p>
+    <p-message severity="error">{{ failure() }}</p-message>
   }
   @if (page(); as products) {
     <p class="products-summary">{{ text().total }}: {{ products.total }}. {{ text().firstPage }}</p>
-    @if (products.items.length === 0) {
-      <p class="state-message">{{ text().emptyProducts }}</p>
-    } @else {
-      <div class="table-scroll">
-        <table class="products-table">
-          <thead>
-            <tr>
-              <th scope="col">{{ text().name }}</th>
-              <th scope="col">{{ text().sku }}</th>
-              <th scope="col">{{ text().status }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (product of products.items; track product.id) {
-              <tr>
-                <td>{{ product.name }}</td>
-                <td>{{ product.sku }}</td>
-                <td>{{ product.status === 'ACTIVE' ? text().active : text().draft }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    }
+    <p-table
+      [value]="products.items"
+      dataKey="id"
+      [rowTrackBy]="trackProduct"
+      [loading]="loading()"
+      [tableStyle]="{ 'min-width': '30rem' }"
+    >
+      <ng-template #header>
+        <tr>
+          <th scope="col">{{ text().name }}</th>
+          <th scope="col">{{ text().sku }}</th>
+          <th scope="col">{{ text().status }}</th>
+        </tr>
+      </ng-template>
+      <ng-template #body let-product>
+        <tr>
+          <td>{{ product.name }}</td>
+          <td>{{ product.sku }}</td>
+          <td>{{ product.status === 'ACTIVE' ? text().active : text().draft }}</td>
+        </tr>
+      </ng-template>
+      <ng-template #emptymessage>
+        <tr>
+          <td colspan="3">{{ text().emptyProducts }}</td>
+        </tr>
+      </ng-template>
+    </p-table>
   }
 </section>
