@@ -1,0 +1,88 @@
+<div class="layout-wrapper layout-static" [class.layout-static-inactive]="desktopCollapsed()">
+  <a class="skip-link" href="#main-content">{{ text().skipNavigation }}</a>
+  <header class="layout-topbar">
+    <div class="layout-topbar-logo-container">
+      <button
+        #navigationToggle
+        type="button"
+        class="layout-menu-button layout-topbar-action"
+        [attr.aria-label]="text().toggleNavigation"
+        [attr.aria-expanded]="mobile() ? mobileOpen() : !desktopCollapsed()"
+        [attr.aria-controls]="mobile() ? 'mobile-navigation' : 'desktop-navigation'"
+        (click)="toggleNavigation()"
+      >
+        <svg data-p-icon="bars" size="20" aria-hidden="true"></svg>
+      </button>
+      <a class="layout-topbar-logo" [routerLink]="['/', language()]" aria-label="holita">
+        <span class="holita-mark" aria-hidden="true">h</span><span>holita</span>
+      </a>
+    </div>
+    <div class="layout-topbar-actions">
+      <a
+        class="language-switch"
+        [routerLink]="languageUrl()"
+        [attr.lang]="language() === 'bg' ? 'en' : 'bg'"
+        [attr.aria-label]="language() === 'bg' ? 'English' : 'Български'"
+      >
+        {{ language() === 'bg' ? 'EN' : 'BG' }}
+      </a>
+      <button
+        type="button"
+        class="layout-topbar-action"
+        [attr.aria-label]="appearance.dark() ? text().lightTheme : text().darkTheme"
+        (click)="appearance.toggle()"
+      >
+        @if (appearance.dark()) {
+          <svg data-p-icon="sun" size="20" aria-hidden="true"></svg>
+        } @else {
+          <svg data-p-icon="moon" size="20" aria-hidden="true"></svg>
+        }
+      </button>
+    </div>
+    <div class="store-selector">
+      <label for="active-store">{{ text().activeStore }}</label>
+      <p-select
+        inputId="active-store"
+        [options]="storeOptions()"
+        optionLabel="name"
+        optionValue="id"
+        [ariaLabel]="text().activeStore"
+        [ngModel]="storeId()"
+        (ngModelChange)="chooseStore($event)"
+        [placeholder]="text().stores"
+        [disabled]="loading() && stores().length === 0"
+        [loading]="loading()"
+        appendTo="body"
+      />
+    </div>
+  </header>
+  @if (!mobile() && !desktopCollapsed()) {
+    <aside class="layout-sidebar" id="desktop-navigation">
+      <holita-admin-navigation [language]="language()" [storeId]="storeId()" />
+    </aside>
+  }
+  <p-drawer
+    [visible]="mobileOpen()"
+    (visibleChange)="drawerVisibilityChanged($event)"
+    (onShow)="focusNavigation()"
+    [header]="text().navigation"
+    [modal]="true"
+    [blockScroll]="true"
+    appendTo="body"
+    class="holita-navigation-drawer"
+    [ariaCloseLabel]="text().closeNavigation"
+    [pt]="{ root: { 'aria-label': text().navigation } }"
+  >
+    <div id="mobile-navigation">
+      <holita-admin-navigation [language]="language()" [storeId]="storeId()" />
+    </div>
+  </p-drawer>
+  <div class="layout-main-container">
+    <main id="main-content" class="layout-main" tabindex="-1">
+      @if (appearance.persistenceFailed()) {
+        <p class="state-message" role="status">{{ text().themePersistenceError }}</p>
+      }
+      <ng-content />
+    </main>
+  </div>
+</div>

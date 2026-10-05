@@ -1,9 +1,21 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, resolve, sep } from 'node:path';
-import { test as base } from '@playwright/test';
+import { expect, test as base, type Page } from '@playwright/test';
 import { workspaceRoot } from '../graphql/contracts.mjs';
 import { createFederationFixture } from '../graphql/federation-fixture.mjs';
+
+export async function chooseStore(page: Page, name: string): Promise<void> {
+  const selector = page.getByRole('combobox');
+  const panel = page.getByRole('listbox', { includeHidden: true });
+  await expect(panel).toHaveCount(0);
+  await selector.click();
+  await expect(selector).toHaveAttribute('aria-expanded', 'true');
+  await page.getByRole('option', { name, exact: true }).click();
+  await expect(selector).toHaveAttribute('aria-expanded', 'false');
+  // Wait for the closing overlay to detach before another store selection can reopen it.
+  await expect(panel).toHaveCount(0);
+}
 
 export const test = base.extend<{ app: { url: string; gatewayUrl: string } }>({
   app: async ({ browserName }, use) => {

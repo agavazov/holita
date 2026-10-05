@@ -4,10 +4,15 @@ import {
   ActivatedRoute,
   Router,
   RouterLink,
-  RouterLinkActive,
+  NavigationEnd,
   RouterOutlet,
   UrlSegment,
 } from '@angular/router';
+import { filter } from 'rxjs';
+import { ButtonDirective } from 'primeng/button';
+import { Shop } from '@primeicons/angular/shop';
+import { ArrowRight } from '@primeicons/angular/arrow-right';
+import { AdminShell } from '../../layout/admin-shell';
 import type { AdminStoresQuery } from '../../../generated/graphql/operations';
 import { requestError } from '../../core/graphql/request-error';
 import { messages, readLanguage, type Language } from '../../i18n/messages';
@@ -15,7 +20,7 @@ import { StoresApi } from './stores-api';
 
 @Component({
   selector: 'holita-store-workspace',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [RouterLink, RouterOutlet, AdminShell, ButtonDirective, Shop, ArrowRight],
   templateUrl: './store-workspace.html',
 })
 export class StoreWorkspace {
@@ -26,12 +31,28 @@ export class StoreWorkspace {
     initialValue: this.route.snapshot.paramMap,
   });
   private query: ReturnType<StoresApi['watch']> | undefined;
+  private readonly navigation = toSignal(
+    this.router.events.pipe(filter((event) => event instanceof NavigationEnd)),
+  );
   readonly language = computed(() => readLanguage(this.params().get('language')));
   readonly text = computed(() => messages[this.language()]);
   readonly stores = signal<AdminStoresQuery['stores'] | null>(null);
   readonly loading = signal(true);
   readonly error = signal<unknown>(null);
   readonly failure = computed(() => requestError(this.error(), this.text().networkError));
+  readonly onStoreList = computed(() => {
+    this.navigation();
+    return !this.route.firstChild;
+  });
+  readonly selectedStoreId = computed(() => {
+    this.navigation();
+    const id = this.route.firstChild?.snapshot.paramMap.get('storeId')?.toLowerCase();
+    return this.stores()?.find((store) => store.id === id)?.id ?? null;
+  });
+  readonly otherLanguageUrl = computed(() => {
+    this.navigation();
+    return this.languageLink(this.language() === 'bg' ? 'en' : 'bg');
+  });
 
   constructor() {
     effect((onCleanup) => {
@@ -61,6 +82,10 @@ export class StoreWorkspace {
     void this.query?.refetch().catch((error: unknown) => {
       this.error.set(error);
     });
+  }
+
+  chooseStore(id: string): void {
+    void this.router.navigate(['/', this.language(), 'stores', id, 'products']);
   }
 
   languageLink(language: Language) {

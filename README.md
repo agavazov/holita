@@ -5,7 +5,7 @@ life cycle (SDLC) automation.
 
 A strict TypeScript npm-workspaces repository with Nx tasks and six host applications:
 Angular admin, React/Vite admin-react and NestJS gateway, core, products and reference services.
-Angular provides a minimal Hello world, store selection and Products read through the real gateway.
+Angular provides a PrimeNG/Sakai shell, store selection and Products read through the real gateway.
 The React admin remains the CRUD and behavior reference. It uses
 an Aurora/MUI shell with a single-column sidenav, no footer and Products/Venues/Speakers/Tags/Events screens with Refine.
 Sessions, Gallery, History and store-selection states use the same Aurora theme. The gateway exposes schema-first GraphQL for stores and store-scoped
@@ -34,7 +34,8 @@ Bulgarian/English routes preserve the selected store across reloads. Each mounte
 workspace owns a separate Apollo client/cache; switching stores discards that workspace.
 
 `npm run dev:admin` starts Angular alone when the backends are already running.
-This foundation has native HTML presentation, no Sakai/PrimeNG shell, CRUD forms or
+The shell supports desktop/mobile navigation, Bulgarian/English and persisted light/dark themes.
+There are no Angular CRUD forms or
 Prototype mode. See [configuration](docs/development.md#angular-admin-foundation) and
 [validation](docs/testing.md#angular-admin-checks).
 

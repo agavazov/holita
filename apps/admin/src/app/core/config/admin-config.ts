@@ -1,6 +1,14 @@
-import { HttpClient } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { inject, Injectable, InjectionToken } from '@angular/core';
+
+export interface AdminRuntimeConfig {
+  graphqlUrl: string;
+  primeUiLicense?: string;
+}
+
+export const ADMIN_RUNTIME_CONFIG = new InjectionToken<AdminRuntimeConfig>('admin runtime config', {
+  providedIn: 'root',
+  factory: () => ({ graphqlUrl: '/graphql' }),
+});
 
 export function readGraphqlUrl(value: unknown): string {
   if (
@@ -21,12 +29,18 @@ export function readGraphqlUrl(value: unknown): string {
   return endpoint;
 }
 
+export function readAdminConfig(value: unknown): AdminRuntimeConfig {
+  const graphqlUrl = readGraphqlUrl(value);
+  if (typeof value === 'object' && value !== null && 'primeUiLicense' in value) {
+    if (typeof value.primeUiLicense !== 'string')
+      throw new Error('primeUiLicense must be a string.');
+    const primeUiLicense = value.primeUiLicense.trim();
+    return { graphqlUrl, ...(primeUiLicense ? { primeUiLicense } : {}) };
+  }
+  return { graphqlUrl };
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminConfig {
-  private readonly http = inject(HttpClient);
-  graphqlUrl = '/graphql';
-
-  async load(): Promise<void> {
-    this.graphqlUrl = readGraphqlUrl(await firstValueFrom(this.http.get<unknown>('/config.json')));
-  }
+  readonly graphqlUrl = inject(ADMIN_RUNTIME_CONFIG).graphqlUrl;
 }

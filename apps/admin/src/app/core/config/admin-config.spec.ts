@@ -1,6 +1,18 @@
-import { readGraphqlUrl } from './admin-config';
+import { readAdminConfig, readGraphqlUrl } from './admin-config';
 
 describe('public Angular configuration', () => {
+  it('accepts an optional public PrimeUI license and leaves an omitted or empty key unset', () => {
+    expect(readAdminConfig({ graphqlUrl: '/graphql' })).toEqual({ graphqlUrl: '/graphql' });
+    expect(readAdminConfig({ graphqlUrl: '/graphql', primeUiLicense: ' ' })).toEqual({
+      graphqlUrl: '/graphql',
+    });
+    expect(readAdminConfig({ graphqlUrl: '/graphql', primeUiLicense: ' configured-key ' })).toEqual(
+      { graphqlUrl: '/graphql', primeUiLicense: 'configured-key' },
+    );
+    expect(() => readAdminConfig({ graphqlUrl: '/graphql', primeUiLicense: 42 })).toThrow(
+      'primeUiLicense must be a string.',
+    );
+  });
   it('accepts a same-origin proxy path and a public HTTP gateway URL', () => {
     expect(readGraphqlUrl({ graphqlUrl: '/graphql' })).toBe('/graphql');
     expect(readGraphqlUrl({ graphqlUrl: 'http://127.0.0.1:11080/graphql' })).toBe(

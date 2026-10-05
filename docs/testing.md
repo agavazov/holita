@@ -108,6 +108,7 @@ syntax does not apply to this target.
 
 ```bash
 npm run test:admin -- --include=app/core/config/admin-config.spec.ts --skip-nx-cache
+npm run test:admin -- --include=app/layout/appearance.spec.ts --skip-nx-cache
 npm run test:admin -- --include=app/features/products/products-api.spec.ts --skip-nx-cache
 npm run test:admin -- --include=app/features/products/products-api.spec.ts --filter="submitted mutation" --skip-nx-cache
 npm run test:admin -- --include=app/features/stores/store-workspace.spec.ts --skip-nx-cache
@@ -118,7 +119,8 @@ HTTP testing controller. Products tests cover separate clients/query deduplicati
 caches, captured headers, late mutation success/failure and refresh recovery. Routing uses
 RouterTestingHarness and the actual lazy routes to prove A → B → A recreation, cancellation
 of an obsolete read and unavailable/empty store handling. Config tests validate the public
-endpoint. Controlled HTTP is not proof of backend persistence.
+endpoint and optional license configuration. Appearance tests verify restored preferences
+and usable theme switching when storage is denied. Controlled HTTP is not proof of backend persistence.
 
 For the compiled application and real gateway:
 
@@ -128,6 +130,7 @@ npm run db:up
 npm run db:setup
 npm run db:test:setup
 npm run test:smoke:admin -- angular-foundation.smoke.spec.mts
+npm run test:smoke:admin -- angular-shell.smoke.spec.mts
 ```
 
 `admin:test-smoke` is noncached and builds Angular plus the four backends. Its
@@ -136,10 +139,18 @@ fallback and a runtime config pointing to its gateway. It reuses the guarded fed
 fixture for dedicated per-run database schemas and real backend processes. Cleanup closes
 those schemas, servers and connections. No development data or Prototype transport is used.
 
-The browser cases verify Hello world, discovery, real store-scoped Products, A → B → A,
+The foundation browser cases verify discovery, real store-scoped Products, A → B → A,
 route reload, Bulgarian navigation and a delayed real A response after switching to B.
+The shared store-selection helper waits for the Select panel to detach after closing before
+another selection; it asserts expanded/collapsed state without fixed sleeps or forced clicks.
 Only response delivery is delayed; the backend query executes normally. Traces/screenshots
-on failure go to ignored `test-results/angular-browser`. Mutation retirement is covered by
+on failure go to ignored `test-results/angular-browser`. Shell cases verify active navigation,
+desktop collapse, theme persistence, language path/query/hash preservation, keyboard store selection,
+mobile focus trapping/dismissal and closing the drawer on navigation/desktop resize. Shell screenshots
+at 1280×800 and 390×844 are also written there for light/dark visual review. Tests do not configure
+a license key or suppress PrimeNG's license banner. Compare layout captures with the actual
+Sakai source at matching viewport sizes; screenshots alone do not prove interaction behavior.
+Mutation retirement is covered by
 the controlled-HTTP tests; there is no mutation UI, CRUD/form or upload browser coverage.
 These checks use Chromium, without automatic retries, and do not establish GitHub execution.
 

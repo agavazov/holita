@@ -1,37 +1,71 @@
-<main>
-  <h1>{{ text().hello }}</h1>
-  <p>{{ text().foundation }}</p>
-  <nav [attr.aria-label]="text().language">
-    <ul>
-      <li><a [routerLink]="languageLink('bg')" lang="bg">Български</a></li>
-      <li><a [routerLink]="languageLink('en')" lang="en">English</a></li>
-    </ul>
-  </nav>
-  <h2>{{ text().stores }}</h2>
-  @if (loading()) {
-  <p role="status">{{ text().loadingStores }}</p>
-  } @if (error()) {
-  <p role="alert">{{ failure() }}</p>
-  }
-  <button type="button" [disabled]="loading()" (click)="refresh()">
-    {{ error() ? text().retry : text().refresh }}
-  </button>
-  @if (stores(); as availableStores) { @if (availableStores.length === 0) {
-  <p>{{ text().emptyStores }}</p>
-  }
-  <nav [attr.aria-label]="text().stores">
-    <ul>
-      @for (store of availableStores; track store.id) {
-      <li>
-        <a
-          [routerLink]="['/', language(), 'stores', store.id, 'products']"
-          routerLinkActive="selected"
-          ariaCurrentWhenActive="page"
-          >{{ store.name }}</a
+<holita-admin-shell
+  [stores]="stores() ?? []"
+  [storeId]="selectedStoreId()"
+  [language]="language()"
+  [languageUrl]="otherLanguageUrl()"
+  [loading]="loading()"
+  (storeSelected)="chooseStore($event)"
+>
+  @if (onStoreList() || stores() === null || stores()?.length === 0 || error()) {
+    <section class="card" [attr.aria-label]="text().storesNavigation">
+      <div class="page-heading">
+        <div>
+          @if (onStoreList()) {
+            <h1>{{ text().storesNavigation }}</h1>
+            <p>{{ text().chooseStoreDescription }}</p>
+          } @else {
+            <h2>{{ text().storesNavigation }}</h2>
+          }
+        </div>
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          data-testid="refresh-stores"
+          [disabled]="loading()"
+          (click)="refresh()"
         >
-      </li>
+          {{ error() ? text().retry : text().refresh }}
+        </button>
+      </div>
+      @if (loading()) {
+        <p class="state-message" role="status">{{ text().loadingStores }}</p>
       }
-    </ul>
-  </nav>
-  @if (availableStores.length > 0) { <router-outlet /> } }
-</main>
+      @if (error()) {
+        <p class="state-message" role="alert">{{ failure() }}</p>
+      }
+      @if (stores(); as availableStores) {
+        @if (availableStores.length === 0) {
+          <p class="state-message">{{ text().emptyStores }}</p>
+        }
+        @if (onStoreList()) {
+          <ul class="store-list">
+            @for (store of availableStores; track store.id) {
+              <li>
+                <a
+                  class="store-link"
+                  [routerLink]="['/', language(), 'stores', store.id, 'products']"
+                >
+                  <svg data-p-icon="shop" size="24" aria-hidden="true"></svg>
+                  <span>{{ store.name }}</span>
+                  <svg
+                    data-p-icon="arrow-right"
+                    size="20"
+                    class="store-link-arrow"
+                    aria-hidden="true"
+                  ></svg>
+                </a>
+              </li>
+            }
+          </ul>
+        }
+      }
+    </section>
+  }
+  @if (stores(); as availableStores) {
+    @if (availableStores.length > 0) {
+      <router-outlet />
+    }
+  }
+</holita-admin-shell>

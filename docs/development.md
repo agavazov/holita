@@ -102,12 +102,25 @@ The CLI generates feature-local GraphQL documents before startup. After editing 
 run `npm run codegen` and `npm run schema:check`. GraphQL types are ignored generated output,
 not handwritten API models. Development defaults to `/bg`; `/en` selects English.
 `/bg/stores/:storeId/products` and its English equivalent retain the selected store on reload.
-Loading/errors/empty data, unavailable stores and manual retry are implemented in native HTML.
-There is no Sakai/PrimeNG layout, pagination UI, CRUD form or mutation button.
+The PrimeNG/Sakai shell supplies Stores/Products navigation, a store selector, Bulgarian/English
+switching and light/dark themes. Desktop navigation can collapse; mobile navigation opens a
+modal Drawer. Theme preference is stored as `holita.admin.theme`; denied browser storage shows
+a status message. Loading/errors/empty data, unavailable stores and manual retry remain available.
+There is no pagination UI, CRUD form or mutation button.
 
-[public/config.json](../apps/admin/public/config.json) is loaded before Apollo initializes.
+[public/config.json](../apps/admin/public/config.json) is fetched before Angular bootstraps,
+with a 10-second deadline, so PrimeNG and Apollo receive their startup configuration.
 Its `graphqlUrl` accepts a root-relative path or an HTTP/HTTPS URL without credentials or a
 fragment. Configuration load/validation errors stop startup with a visible message.
+Optional `primeUiLicense` supplies the browser-visible PrimeUI Community/commercial key to
+PrimeNG's own verifier. An omitted/empty key leaves PrimeNG's standard license warning/banner
+active; no application bypass is used. Keep issued keys out of commits. Supply the field only
+in the local/served configuration, and restore the tracked example before committing:
+
+```json
+{ "graphqlUrl": "/graphql", "primeUiLicense": "your-issued-key" }
+```
+
 The default `/graphql` is proxied to http://127.0.0.1:11080 by
 [proxy.conf.json](../apps/admin/proxy.conf.json). This same-origin proxy lets Angular use the
 existing gateway CORS configuration. A custom gateway port requires a matching proxy target.
@@ -125,6 +138,50 @@ credentials belong neither there nor in frontend source. No deployment is config
 Use [Angular checks](testing.md#angular-admin-checks) to verify real routing, generated
 contracts, per-workspace cache isolation and pending mutations. Store selection scopes data;
 it provides no authorization.
+
+### Angular agent tools
+
+The repository includes the official
+[Angular developer skill](../.agents/skills/angular-developer/SKILL.md) from
+[angular/skills](https://github.com/angular/skills), revision
+`eaf83d2c88fb5fa1449cf717792d32f1463dc1b9`. It is an unchanged upstream snapshot in
+`.agents/skills/angular-developer`; Prettier excludes that directory. Update it deliberately
+from the official source, keeping its referenced files together. Codex discovers repository
+skills automatically; start a new turn, or restart Codex if the new skill does not appear.
+
+[holita-admin-development](../.agents/skills/holita-admin-development/SKILL.md) adds only
+Holita's application boundaries, generated contracts, lifecycle and check selection.
+The React workflow remains in its separate skill.
+
+Install the official [PrimeNG plugin](https://primeng.dev/plugin) in the Codex user environment:
+
+```bash
+codex plugin marketplace add primefaces/primeui-plugins
+codex plugin add primeng@primeui
+codex plugin list --json
+npx --yes @primeui/cli doctor --tool codex --library primeng --json
+```
+
+The plugin bundles seven focused skills and the read-only `@primeng/mcp` server. Its manifest
+selects the PrimeNG 22 package range `>=22.0.0 <23.0.0`. Do not register that server again
+through `codex mcp add` or project configuration. Start a new Codex session after installation
+to load its tools; restart Codex if discovery has not refreshed. The plugin installation is
+user-local, so another contributor must install it separately. No application dependency or
+issued PrimeUI license key is needed to run the documentation server.
+
+Use the plugin's router to select the smallest relevant workflow and current MCP metadata
+before writing component APIs. `doctor` verifies the installed payload, server startup,
+eight-tool contract, documentation retrieval and valid/invalid API handling. Host skill/MCP
+discovery may be reported as unsupported separately from those passing runtime checks;
+verify tool availability in the new session. These checks do not replace application tests.
+
+The root Prettier configuration selects the Angular parser for `apps/admin/src/**/*.html`,
+including suffixless component templates. To format or check only these templates:
+
+```bash
+npm exec -- prettier --write 'apps/admin/src/**/*.html'
+npm exec -- prettier --check 'apps/admin/src/**/*.html'
+```
 
 ## Admin data modes
 

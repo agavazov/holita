@@ -4,10 +4,12 @@ import type { AdminProductsQuery, AdminStoresQuery } from '../../../generated/gr
 import { requestError } from '../../core/graphql/request-error';
 import { messages, type Language } from '../../i18n/messages';
 import { ProductsApi } from './products-api';
+import { ButtonDirective } from 'primeng/button';
 
 @Component({
   selector: 'holita-products-page',
   providers: [ProductsApi],
+  imports: [ButtonDirective],
   templateUrl: './products-page.html',
 })
 export class ProductsPage implements OnInit {

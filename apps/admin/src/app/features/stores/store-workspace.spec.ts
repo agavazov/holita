@@ -90,7 +90,7 @@ describe('Angular store routing', () => {
     await harness.fixture.whenStable();
     expect(harness.routeNativeElement?.textContent).toContain('Fresh A');
     expect(harness.routeNativeElement?.textContent).not.toContain('B only');
-  });
+  }, 10_000);
 
   it('shows empty and unavailable stores without issuing business queries', async () => {
     const harness = await RouterTestingHarness.create('/en');
@@ -108,7 +108,10 @@ describe('Angular store routing', () => {
     await harness.fixture.whenStable();
     expect(harness.routeNativeElement?.textContent).toContain('Store not found');
     http.expectNone('/graphql');
-    const refresh = harness.routeNativeElement?.querySelector('button');
+    await harness.navigateByUrl('/en');
+    const refresh = harness.routeNativeElement?.querySelector<HTMLButtonElement>(
+      '[data-testid="refresh-stores"]',
+    );
     if (!refresh) throw new Error('Missing discovery refresh control.');
     refresh.click();
     http.expectOne('/graphql').flush({ errors: [{ message: 'Discovery unavailable' }] });

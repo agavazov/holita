@@ -22,7 +22,11 @@ relations and lifecycle examples. Choose only the capabilities needed by the mod
 [Architecture](architecture/overview.md#angular-admin-foundation) describes the separate
 real-only Angular application. [Stores discovery](../apps/admin/src/app/features/stores/store-workspace.ts)
 and [Products read](../apps/admin/src/app/features/products/products-page.ts) use concrete
-feature services and generated operations against the same gateway. There is no Angular
+feature services and generated operations against the same gateway. The
+[Sakai shell](../apps/admin/src/app/layout/admin-shell.ts) is presentation-only; its
+[navigation](../apps/admin/src/app/layout/admin-navigation.ts) and PrimeNG selectors use
+explicit inputs. [Shell browser checks](../tools/browser/angular-shell.smoke.spec.mts)
+cover desktop/mobile interaction, keyboard selection, language and themes. There is no Angular
 CRUD or UI catalog. The React examples below remain behavior references, rather than Angular
 implementation dependencies.
 

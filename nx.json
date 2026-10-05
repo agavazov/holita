@@ -16,6 +16,7 @@
       "{workspaceRoot}/.gitignore",
       "{workspaceRoot}/.nxignore",
       "{workspaceRoot}/.prettierignore",
+      "{workspaceRoot}/prettier.config.mjs",
       "{workspaceRoot}/.github/workflows/**/*",
       {
         "runtime": "node --version"

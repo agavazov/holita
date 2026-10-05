@@ -5,14 +5,14 @@ local caching and affected selection. Each application has a package.json and a 
 project.json giving Nx its stable name and application tag. There are no shared workspace
 packages or cross-application code imports.
 
-| Application | Framework                       | Current entry points                                                                                                                                                                              |
-| ----------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| admin       | Angular, Apollo Angular         | Hello world, real Stores and Products read at http://127.0.0.1:11088                                                                                                                              |
-| admin-react | React, Vite, Refine, Aurora/MUI | Stores, Products and Reference Events/Venues/Speakers/Tags at http://127.0.0.1:11081; Prototype Stores/Products/Venues/Speakers/Tags/Events/Sessions/History/UI catalog at http://127.0.0.1:11087 |
-| gateway     | NestJS, Apollo Gateway          | /graphql and /health on 127.0.0.1:11080                                                                                                                                                           |
-| core        | NestJS, Federation 2            | /graphql (stores) and /health on 127.0.0.1:11082                                                                                                                                                  |
-| products    | NestJS, Federation 2            | /graphql (products) and /health on 127.0.0.1:11083                                                                                                                                                |
-| reference   | NestJS, Federation 2            | /graphql (events, venues, speakers, tags) and /health on 127.0.0.1:11086                                                                                                                          |
+| Application | Framework                        | Current entry points                                                                                                                                                                              |
+| ----------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| admin       | Angular, PrimeNG, Apollo Angular | PrimeNG/Sakai shell, real Stores and Products read at http://127.0.0.1:11088                                                                                                                      |
+| admin-react | React, Vite, Refine, Aurora/MUI  | Stores, Products and Reference Events/Venues/Speakers/Tags at http://127.0.0.1:11081; Prototype Stores/Products/Venues/Speakers/Tags/Events/Sessions/History/UI catalog at http://127.0.0.1:11087 |
+| gateway     | NestJS, Apollo Gateway           | /graphql and /health on 127.0.0.1:11080                                                                                                                                                           |
+| core        | NestJS, Federation 2             | /graphql (stores) and /health on 127.0.0.1:11082                                                                                                                                                  |
+| products    | NestJS, Federation 2             | /graphql (products) and /health on 127.0.0.1:11083                                                                                                                                                |
+| reference   | NestJS, Federation 2             | /graphql (events, venues, speakers, tags) and /health on 127.0.0.1:11086                                                                                                                          |
 
 Core owns store listing/lookup; products owns Products CRUD; reference owns Event, Venue, Speaker and Tag CRUD. Their concrete feature
 repositories access their own PrismaService, whose client connects lazily and disconnects
@@ -178,7 +178,8 @@ imports. See [the backend skill](../../.agents/skills/holita-backend-feature/SKI
 
 [Angular admin](../../apps/admin/src/app/app.config.ts) uses standalone components and lazy
 routes with Angular's native CLI builder. The root npm/Nx targets own generation, checking,
-building and tests. It has no component library or admin template. `admin-react` remains
+building and tests. PrimeNG 22, Aura and the adapted Sakai static layout provide its shell.
+`admin-react` remains
 available as the implemented CRUD, dirty-form, media and request-lifecycle reference.
 
 The flow is component → concrete feature service → Apollo Angular/HttpLink → existing gateway.
@@ -205,7 +206,23 @@ Reads unsubscribe on destruction. A client with submitted mutations remains aliv
 they settle, then stops; completion evicts only that captured client's Products list.
 No retained cache registry, global store-header mutation or additional state library exists.
 
-Native HTML displays loading, initial errors, empty/unavailable states and the first 20
+The [shell](../../apps/admin/src/app/layout/admin-shell.ts) receives available stores, the
+selected ID, language and navigation URL through explicit inputs. StoreWorkspace owns routing
+and discovery. The shell owns only desktop collapse/mobile visibility and presentation;
+mobile navigation uses PrimeNG Drawer for focus trapping, Escape and backdrop dismissal.
+Navigation exposes Stores and, for a known selection, Products. The active-store selector
+uses PrimeNG Select. One selector moves below the top bar on mobile. The
+[appearance service](../../apps/admin/src/app/layout/appearance.ts) owns the root dark-mode
+class and `holita.admin.theme` preference; denied storage leaves the toggle usable and shows
+a status message. There is no palette/configuration framework or placeholder profile data.
+
+[Sakai SCSS](../../apps/admin/src/styles/sakai/layout.scss) retains the source layout geometry
+and Aura tokens, adapted to PrimeNG 22's 16px root and a local system font stack. Only the
+implemented static layout is included. [Attribution](../../apps/admin/THIRD_PARTY_NOTICES.md)
+records pinned upstream revisions and licenses. No demo application, Tailwind, PrimeFlex,
+Quill or chart dependency is imported.
+
+The shell and simple Products table display loading, initial errors, empty/unavailable states and the first 20
 products with the server total. Refresh errors preserve loaded rows and expose the gateway
 request ID when available. HTTP requests have a 10-second deadline. There are no pagination
 controls, CRUD forms, rich text or media workflows. The update operation is exercised through

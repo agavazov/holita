@@ -1,0 +1,18 @@
+@media (min-width: 992px) {
+  .layout-static {
+    .layout-main-container {
+      margin-left: 22rem;
+    }
+    &.layout-static-inactive {
+      .layout-main-container {
+        margin-left: 0;
+      }
+    }
+  }
+}
+
+@media (max-width: 991px) {
+  .layout-main-container {
+    margin-left: 0;
+  }
+}

@@ -10,3 +10,6 @@ apps/*/src/generated/
 .angular/
 
 .media/
+
+# Preserve the installed upstream Angular skill without reformatting its sources.
+.agents/skills/angular-developer/

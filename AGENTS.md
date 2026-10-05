@@ -67,22 +67,25 @@
 
 ## Angular admin (apps/admin)
 
-- Use standalone Angular components, standard routing and signals/RxJS for local query state.
-  Keep the flow Component → concrete feature service → Apollo. Do not add generic CRUD,
-  repositories, use-case layers or facades without a demonstrated current need.
-- Use the existing real gateway and generated TypedDocumentNode operations near their features.
-  Do not import React providers, add a Prototype layer or duplicate GraphQL API models.
-- Keep store discovery separate from store-scoped Products clients. Each mounted store workspace
-  owns its client/cache and captures the store/language in its transport. Never mutate a global
-  current-store header or rely on headers alone for cache/query identity.
-- Recreate the feature boundary when store/language route parameters change. Dispose its reads;
-  retain a retired client only until already submitted mutations settle. Invalidate only the
-  captured client's cache. Keep local callbacks and form state within their initiating route.
-- Prove A → B → A, delayed reads and mutations settling after navigation with focused tests.
-  Preserve admin-react as the behavior reference for CRUD, dirty forms and upload lifecycle.
-- The current Angular UI is a minimal real Stores/Products read foundation. Do not add Sakai,
-  CRUD forms or another feature until that scope is explicitly requested. Rich text must not
-  depend on the deprecated PrimeNG Editor.
+- Follow [holita-admin-development](.agents/skills/holita-admin-development/SKILL.md) for this
+  application and the official [angular-developer](.agents/skills/angular-developer/SKILL.md)
+  for framework conventions. Use the official PrimeNG plugin/MCP for current component APIs;
+  [installation](docs/development.md#angular-agent-tools) is documented separately.
+- Keep standalone Angular and Component → concrete feature service → Apollo, using the real
+  Gateway and generated TypedDocumentNodes. Do not add generic CRUD, facades, repositories,
+  duplicate API models or a Prototype layer. Business editors use typed Reactive Forms.
+- Each store/language workspace owns its client/cache and immutable transport scope. Recreate
+  the feature boundary on navigation, dispose reads and let submitted writes settle against
+  their captured client. Late results, invalidation and callbacks must not affect another workspace.
+  Prove A → B → A and delayed reads/writes; keep admin-react as the behavior reference.
+- Prefer PrimeNG components and theme tokens. Sakai supplies the shell/layout reference;
+  keep global CSS minimal, feature styles local and remove unused demo rules. Do not add
+  wrappers without concrete reuse or depend on the deprecated PrimeNG Editor.
+- Keep the shell independent of business data access, with explicit inputs/outputs and only
+  implemented navigation. Preserve Bulgarian/English catalogs, keyboard/mobile behavior and
+  light/dark themes, with focused tests and visual review at matching viewport sizes.
+- Angular currently provides Stores/Products reads. Add CRUD forms or another feature only
+  when explicitly requested, after the shell review.
 
 ## React admin (apps/admin-react)
 

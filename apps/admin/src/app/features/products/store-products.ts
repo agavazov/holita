@@ -11,7 +11,7 @@ import { ProductsPage } from './products-page';
     @for (store of activeStores(); track workspace.language() + '/' + store.id) {
       <holita-products-page [store]="store" [language]="workspace.language()" />
     } @empty {
-      <p role="alert">{{ workspace.text().unavailableStore }}</p>
+      <p class="card state-message" role="alert">{{ workspace.text().unavailableStore }}</p>
     }
   `,
 })

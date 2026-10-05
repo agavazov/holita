@@ -10,7 +10,9 @@
 - [Schema-first federation](architecture/decisions/0003-schema-first-federation.md): local contracts, generation and service communication.
 - [Contributor rules](../AGENTS.md): mandatory coding and verification instructions.
 - [Backend reference skill](../.agents/skills/holita-backend-feature/SKILL.md): extend the actual Products API and persistence.
-- [Angular foundation](architecture/overview.md#angular-admin-foundation): real Stores/Products, per-workspace Apollo and [focused checks](testing.md#angular-admin-checks).
+- [Angular foundation](architecture/overview.md#angular-admin-foundation): PrimeNG/Sakai shell, real Stores/Products, per-workspace Apollo and [focused checks](testing.md#angular-admin-checks).
+- [Angular admin skill](../.agents/skills/holita-admin-development/SKILL.md): Holita contracts,
+  store/route lifecycle and validation, using the [official agent tools](development.md#angular-agent-tools).
 - [Admin reference skill](../.agents/skills/holita-admin-feature/SKILL.md): extend the actual Products UI and store lifecycle.
 - [Focused validation skill](../.agents/skills/holita-focused-validation/SKILL.md): choose and report the relevant checks.
 
