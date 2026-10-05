@@ -3,12 +3,12 @@
 ## Select the narrowest relevant target
 
 Backend tests use Jest/ts-jest in ESM mode; Node's experimental VM modules flag is supplied
-by the application script. Admin uses Vitest with jsdom, Testing Library matchers and
-cleanup. Test commands are non-watch. There is no root `test` script or custom selector
+by the application script. React admin uses Vitest with jsdom, Testing Library matchers and
+cleanup. Angular admin uses Angular CLI's native unit-test builder with Vitest/jsdom. Test commands are non-watch. There is no root `test` script or custom selector
 dispatcher.
-Admin test files run one at a time because Nx already parallelizes project tasks.
+React admin test files run one at a time because Nx already parallelizes project tasks.
 Text-entry scenarios use normal clipboard events where per-keystroke behavior is not under
-test, reducing DOM work. Admin cases have a bounded 30-second budget for multi-step
+test, reducing DOM work. React admin cases have a bounded 30-second budget for multi-step
 Refine workflows sharing CPU with backend and DB checks. The Event editor's mount helper
 allows five seconds for cold Reference module loading, including a case selected on its own; subsequent behavior
 assertions retain their normal waits. File isolation and failure reporting remain unchanged;
@@ -94,11 +94,54 @@ The Bulgarian bulk-action case checks confirmation, status changes and singular/
 in Prototype. `prototype.smoke.spec.mts` checks startup guidance in both languages after
 browser storage is blocked, retaining the original diagnostic and document language.
 
-Without a file, `test:core`, `test:products`, `test:gateway`, `test:reference` and `test:admin-react` intentionally
+Without a file, `test:core`, `test:products`, `test:gateway`, `test:reference`, `test:admin` and `test:admin-react` intentionally
 select only that application's current unit/bootstrap suite. Database suites have
-separate named targets; browser tests use test:smoke:admin-react. No selector must silently fall back to every project, and
+separate named targets; browser tests use test:smoke:admin or test:smoke:admin-react. No selector must silently fall back to every project, and
 `--passWithNoTests` must not be enabled. A missing file or a case pattern that executes
 zero tests is not successful validation, even if a runner exits zero for skipped cases.
+
+## Angular admin checks
+
+Use Angular CLI's native `--include` path relative to `apps/admin/src`, and `--filter` for
+case selection. Angular files use `.spec.ts`; React's positional file and `--testNamePattern`
+syntax does not apply to this target.
+
+```bash
+npm run test:admin -- --include=app/core/config/admin-config.spec.ts --skip-nx-cache
+npm run test:admin -- --include=app/features/products/products-api.spec.ts --skip-nx-cache
+npm run test:admin -- --include=app/features/products/products-api.spec.ts --filter="submitted mutation" --skip-nx-cache
+npm run test:admin -- --include=app/features/stores/store-workspace.spec.ts --skip-nx-cache
+```
+
+These execute generated documents through real Apollo Angular/HttpLink with Angular's
+HTTP testing controller. Products tests cover separate clients/query deduplication/entity
+caches, captured headers, late mutation success/failure and refresh recovery. Routing uses
+RouterTestingHarness and the actual lazy routes to prove A → B → A recreation, cancellation
+of an obsolete read and unavailable/empty store handling. Config tests validate the public
+endpoint. Controlled HTTP is not proof of backend persistence.
+
+For the compiled application and real gateway:
+
+```bash
+npm exec -- playwright install --with-deps chromium
+npm run db:up
+npm run db:setup
+npm run db:test:setup
+npm run test:smoke:admin -- angular-foundation.smoke.spec.mts
+```
+
+`admin:test-smoke` is noncached and builds Angular plus the four backends. Its
+[fixture](../tools/browser/angular-fixture.mts) serves `apps/admin/dist/browser` with SPA
+fallback and a runtime config pointing to its gateway. It reuses the guarded federation
+fixture for dedicated per-run database schemas and real backend processes. Cleanup closes
+those schemas, servers and connections. No development data or Prototype transport is used.
+
+The browser cases verify Hello world, discovery, real store-scoped Products, A → B → A,
+route reload, Bulgarian navigation and a delayed real A response after switching to B.
+Only response delivery is delayed; the backend query executes normally. Traces/screenshots
+on failure go to ignored `test-results/angular-browser`. Mutation retirement is covered by
+the controlled-HTTP tests; there is no mutation UI, CRUD/form or upload browser coverage.
+These checks use Chromium, without automatic retries, and do not establish GitHub execution.
 
 ## Real PostgreSQL checks
 
@@ -331,7 +374,7 @@ npm run test:smoke:admin-react -- products.smoke.spec.mts
 npm run test:smoke:admin-react -- products.smoke.spec.mts --grep="pending mutation"
 ```
 
-The noncached admin-react:test-smoke target builds all five apps, then invokes Playwright directly.
+The noncached admin-react:test-smoke target builds admin-react and the four backends, then invokes Playwright directly.
 It uses one headless Chromium worker with no automatic retries. Each test creates actual
 core/products/reference/gateway processes and fresh migrated/seeded schemas through the guarded
 federation fixture. The chosen admin port stays reserved while the backend starts, then
@@ -361,7 +404,7 @@ Prototype unit and browser checks need no Docker, PostgreSQL, test databases or 
 No `.env` file or manually started admin is required. Browser tests start a separate Vite
 instance on an ephemeral port, select `mock` themselves and use a fresh browser context;
 their CRUD and Reset actions do not alter the demo data at your development URL.
-`test:smoke:admin-react` first builds all five applications offline; the selected Prototype files then
+`test:smoke:admin-react` first builds admin-react and the four backends offline; the selected Prototype files then
 start only Vite.
 
 ### Quick check
@@ -410,8 +453,8 @@ image validation. Its byte store is injected; it does not establish native Index
 
 After installing Chromium, choose the relevant command:
 
-| Area                                                            | Command                                                       |
-| --------------------------------------------------------------- | ------------------------------------------------------------- |
+| Area                                                            | Command                                                                   |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | Startup, Tags, Reset, unavailable routes and mobile navigation  | `npm run test:smoke:admin-react -- prototype.smoke.spec.mts`              |
 | Product, Venue and Speaker CRUD; referenced batch deletion      | `npm run test:smoke:admin-react -- prototype-crud.smoke.spec.mts`         |
 | Delayed reads, pending writes and store switching               | `npm run test:smoke:admin-react -- prototype-store-switch.smoke.spec.mts` |
@@ -558,7 +601,9 @@ required when the underlying API or persistence changes.
 | Admin translation catalogs or Refine i18n adapter | i18n.test.ts and refine-i18n.test.tsx; products-i18n.test.tsx for translated Products/dirty forms; locale-routing.test.tsx and i18n.smoke.spec.mts for URL/header changes; store-workspace.test.tsx and prototype-controls.test.tsx for provider placement |
 | Prototype transport, fixtures or persistence      | prototype.test.ts / prototype-events.test.ts / prototype-media.test.ts; prototype-controls.test.tsx for Reset; prototype browser files and affected real feature checks                                                                                    |
 | UI catalog and shared presentation                | ui-catalog.smoke.spec.mts; affected form/list tests and real browser checks; store-workspace.test.tsx for navigation/route changes                                                                                                                         |
-| Store routes, query cache or mutation lifecycle   | store-workspace.test.tsx and focused test:smoke:admin-react delayed-response/pending-mutation cases                                                                                                                                                                    |
+| Store routes, query cache or mutation lifecycle   | store-workspace.test.tsx and focused test:smoke:admin-react delayed-response/pending-mutation cases                                                                                                                                                        |
+| Angular data/cache/store routing                  | test:admin with products-api.spec.ts and store-workspace.spec.ts; test:smoke:admin -- angular-foundation.smoke.spec.mts for real reads/routing                                                                                                             |
+| Angular runtime endpoint/config                   | test:admin with admin-config.spec.ts; Angular build and real browser checks                                                                                                                                                                                |
 | CI workflow, affected selection or ignore rules   | actionlint, Git-history failure checks, explicit Nx changed-file examples below, root lint/typecheck/build and a focused test through test:affected                                                                                                        |
 
 Do not claim database, schema, gateway federation or store-switch coverage from health
@@ -590,13 +635,13 @@ PR CI requires the known base and fails when history is missing; it never substi
 an empty selection or automatically starts full regression.
 
 Nx uses main as its default base, but explicit comparisons avoid ambiguity. Shared
-configuration/lockfile changes can affect all five applications. Nx's project graph does
+configuration/lockfile changes can affect all six applications. Nx's project graph does
 not establish which tests cover a runtime change; choose behavioral checks from the
 mapping above. Local pure checks may be cached using the configured inputs. Use
 `--skip-nx-cache` when demonstrating the actual runner or testing current runtime behavior.
 Affected testing first runs the small offline schema-tool suite, then Nx selects the
 affected application unit/DB targets. Shared contracts and operation changes affect all
-five applications because all generators validate the complete contract set. Gateway's
+six applications because all generators validate the complete contract set. Gateway's
 whole-graph test builds the real backend dependencies. Application code import boundaries
 remain enforced separately from these task/contract relationships.
 
@@ -625,14 +670,15 @@ The PR sequence is:
    roles/databases using db:setup and db:test:setup. Permission tests need both sets; CI
    does not migrate or seed the development databases. Fixtures migrate/seed their own schemas.
 4. Run test:affected: offline schema-tool tests followed by affected unit/DB targets.
-5. If admin-react is affected, install Chromium with its Linux dependencies and run test:smoke:admin-react.
-   Backend runtime dependencies can select admin-react even without a frontend source change.
+5. If either admin is affected, install Chromium with its Linux dependencies. Run
+   test:smoke:admin for affected Angular and test:smoke:admin-react for affected React.
+   Backend runtime dependencies can select both admins without a frontend source change.
 6. Stop Compose even after a failed check, without deleting volumes. Test fixtures own their
    application processes and per-run schemas; failures stay visible in the job log.
 
 Docs-only changes can select no applications. The summary explains that no application
 tests ran; format, root-tool and schema checks still run. This is not evidence of product
-behavior. Shared configuration/workflow/ignore changes intentionally select all five apps;
+behavior. Shared configuration/workflow/ignore changes intentionally select all six apps;
 the PR still uses affected targets and never calls test:full.
 
 When changing CI, validate both YAML/expressions and shell steps using actionlint (with
@@ -640,17 +686,19 @@ ShellCheck available), and check real input impact without executing broad test 
 
 ```bash
 actionlint .github/workflows/affected.yml .github/workflows/full-regression.yml
+npm run projects -- --affected --files=apps/admin/src/app/features/products/products-api.ts
 npm run projects -- --affected --files=apps/admin-react/src/features/products/product-form.tsx
 npm run projects -- --affected --files=apps/products/src/products/products.graphql
 npm run projects -- --affected --files=apps/products/prisma/migrations/20260922000000_init/migration.sql
 npm run projects -- --affected --files=compose.yaml
 npm run projects -- --affected --files=.github/workflows/affected.yml
 npm run projects -- --affected --files=docs/testing.md
+npm run test:affected -- --files=apps/admin/src/app/features/products/products-api.ts --include=app/features/products/products-api.spec.ts --skip-nx-cache
 npm run test:affected -- --files=apps/admin-react/src/features/products/product-form.tsx product-form.test.tsx --skip-nx-cache
 ```
 
-Expected application sets are admin-react; all five; products/gateway/admin-react; all five; all five;
-none, respectively. These explicit-file examples inspect the configured graph; actual
+Expected application sets are admin; admin-react; all six; products/gateway/admin/admin-react;
+all six; all six; none, respectively. These explicit-file examples inspect the configured graph; actual
 PR execution uses the event SHAs instead. Verify the history step with an available commit
 and missing/invalid references; never treat a refused comparison as passing coverage.
 actionlint is an external contributor tool, not an application dependency. A local syntax
@@ -659,7 +707,7 @@ or shell check does not prove that checkout, npm ci or browser installation work
 ## Full regression
 
 `npm run test:full` explicitly runs schema tests, the configured test/test-db project targets
-and the Chromium smoke target. It is
+and both Chromium smoke targets. It is
 reserved for a user/reviewer request and must never be invoked automatically during
 implementation. It requires test databases and Chromium.
 [Full regression (manual)](../.github/workflows/full-regression.yml) has workflow_dispatch

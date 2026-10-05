@@ -1,0 +1,24 @@
+fragment AdminProduct on Product {
+  id
+  storeId
+  name
+  sku
+  status
+}
+
+query AdminProducts($offset: Int! = 0, $limit: Int! = 20) {
+  products(offset: $offset, limit: $limit) {
+    items {
+      ...AdminProduct
+    }
+    total
+    offset
+    limit
+  }
+}
+
+mutation AdminUpdateProduct($id: ID!, $input: UpdateProductInput!) {
+  updateProduct(id: $id, input: $input) {
+    ...AdminProduct
+  }
+}

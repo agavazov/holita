@@ -1,0 +1,23 @@
+{
+  "hello": "Hello world — holita",
+  "foundation": "Angular + GraphQL foundation",
+  "stores": "Choose a store",
+  "loadingStores": "Loading stores…",
+  "emptyStores": "No stores available.",
+  "unavailableStore": "Store not found. Choose an available store.",
+  "products": "Products",
+  "loadingProducts": "Loading products…",
+  "emptyProducts": "No products in this store.",
+  "name": "Name",
+  "sku": "SKU",
+  "status": "Status",
+  "draft": "Draft",
+  "active": "Active",
+  "total": "Total",
+  "firstPage": "Showing the first 20 products.",
+  "retry": "Retry",
+  "refresh": "Refresh",
+  "networkError": "Could not reach the gateway.",
+  "configurationError": "Could not start holita. Check the public configuration and reload.",
+  "language": "Language"
+}

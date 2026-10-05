@@ -1,0 +1,23 @@
+{
+  "hello": "Hello world — holita",
+  "foundation": "Angular + GraphQL основа",
+  "stores": "Избери магазин",
+  "loadingStores": "Зареждане на магазини…",
+  "emptyStores": "Няма налични магазини.",
+  "unavailableStore": "Магазинът не е намерен. Избери наличен магазин.",
+  "products": "Продукти",
+  "loadingProducts": "Зареждане на продукти…",
+  "emptyProducts": "Няма продукти в този магазин.",
+  "name": "Име",
+  "sku": "SKU",
+  "status": "Статус",
+  "draft": "Чернова",
+  "active": "Активен",
+  "total": "Общо",
+  "firstPage": "Показват се първите 20 продукта.",
+  "retry": "Опитай отново",
+  "refresh": "Обнови",
+  "networkError": "Няма връзка с gateway-а.",
+  "configurationError": "holita не може да стартира. Провери публичната конфигурация и презареди.",
+  "language": "Език"
+}

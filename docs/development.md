@@ -20,8 +20,9 @@ nvm installation, initialize a non-interactive shell with `. "$HOME/.nvm/nvm.sh"
 
 | Command                                           | Behavior                                                                                            |
 | ------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| npm run dev                                       | Start four backends plus both admin-react modes; Ctrl+C stops the group                              |
-| npm run dev:admin-react                           | Real React admin (alias of dev:admin-react:graphql)                                                  |
+| npm run dev                                       | Start four backends, Angular and both admin-react modes; Ctrl+C stops the group                     |
+| npm run dev:admin                                 | Angular real Stores/Products foundation on port 11088                                               |
+| npm run dev:admin-react                           | Real React admin (alias of dev:admin-react:graphql)                                                 |
 | npm run dev:admin-react:graphql                   | Real React admin using the gateway                                                                  |
 | npm run dev:admin-react:mock                      | Prototype React admin with browser fixtures; no backend needed                                      |
 | npm run dev:gateway                               | Nest gateway watcher                                                                                |
@@ -30,18 +31,19 @@ nvm installation, initialize a non-interactive shell with `. "$HOME/.nvm/nvm.sh"
 | npm run dev:reference                             | Nest Reference watcher                                                                              |
 | npm run projects                                  | List Nx application names                                                                           |
 | npm run lint                                      | Lint source and root tooling, including application boundaries                                      |
-| npm run typecheck                                 | Typecheck all five applications through Nx                                                          |
-| npm run build                                     | Build all five applications through Nx                                                              |
+| npm run typecheck                                 | Typecheck all six applications through Nx                                                           |
+| npm run build                                     | Build all six applications through Nx                                                               |
 | npm run format:check                              | Check formatting without rewriting files                                                            |
 | npm run check:affected -- --base=BASE --head=HEAD | Lint/typecheck root tools; lint, typecheck and build affected projects using real commit references |
 
-The compatibility commands `dev:admin`, `dev:admin:graphql`, `dev:admin:mock`, `test:admin`
-and `test:smoke` currently delegate to admin-react. New scripts and documentation use the
-explicit admin-react names to identify the React workspace unambiguously.
+`dev:admin` and its `dev:admin:graphql` alias start Angular. `test:admin` selects Angular
+unit tests; `test:smoke:admin` (also `test:smoke`) selects its real-browser foundation checks.
+`dev:admin:mock` remains a compatibility alias for `dev:admin-react:mock`; Angular has no
+mock mode. Use the explicit `admin-react` commands for the React application.
 
 Backend builds produce apps/NAME/dist. After building, use
 `npm run start:prod --workspace @holita/core` (or gateway/products/reference) to run the emitted Node
-entry point. Admin uses `npm run preview --workspace @holita/admin-react` to preview its build.
+entry point. React admin uses `npm run preview --workspace @holita/admin-react` to preview its build.
 
 The [CI workflows](testing.md#github-actions) use the same commands on Ubuntu with Node
 from .nvmrc and npm from package.json's packageManager field. PostgreSQL stays in Compose;
@@ -51,6 +53,7 @@ Node checks and test application processes run on the runner host. CI does not d
 
 | Application           | Default         |
 | --------------------- | --------------- |
+| admin (Angular)       | 127.0.0.1:11088 |
 | gateway               | 127.0.0.1:11080 |
 | admin-react Real      | 127.0.0.1:11081 |
 | admin-react Prototype | 127.0.0.1:11087 |
@@ -70,7 +73,7 @@ To override one backend without creating a file:
 PORT=12082 npm run dev:core
 ```
 
-For admin, Vite accepts an explicit port:
+For React admin, Vite accepts an explicit port:
 
 ```bash
 npm run dev --workspace @holita/admin-react -- --port 12081
@@ -82,10 +85,51 @@ browser configuration value, never a place for credentials. Vite reads it at sta
 Use `VITE_GATEWAY_URL=http://127.0.0.1:12080/graphql npm run dev:admin-react` for a gateway override,
 and align gateway ADMIN_ORIGIN with the exact browser origin when moving the admin port.
 
+## Angular admin foundation
+
+After database setup/migration/seed, `npm run dev` starts the complete local group. Open
+http://127.0.0.1:11088, choose a store and read its first 20 Products. Angular uses the real
+Gateway exclusively; it does not use React's `VITE_DATA_SOURCE`, MSW or browser fixtures.
+`apps/admin-react` remains available on its existing ports as a behavior reference.
+
+To run Angular alone with the backends already running:
+
+```bash
+npm run dev:admin
+```
+
+The CLI generates feature-local GraphQL documents before startup. After editing an operation,
+run `npm run codegen` and `npm run schema:check`. GraphQL types are ignored generated output,
+not handwritten API models. Development defaults to `/bg`; `/en` selects English.
+`/bg/stores/:storeId/products` and its English equivalent retain the selected store on reload.
+Loading/errors/empty data, unavailable stores and manual retry are implemented in native HTML.
+There is no Sakai/PrimeNG layout, pagination UI, CRUD form or mutation button.
+
+[public/config.json](../apps/admin/public/config.json) is loaded before Apollo initializes.
+Its `graphqlUrl` accepts a root-relative path or an HTTP/HTTPS URL without credentials or a
+fragment. Configuration load/validation errors stop startup with a visible message.
+The default `/graphql` is proxied to http://127.0.0.1:11080 by
+[proxy.conf.json](../apps/admin/proxy.conf.json). This same-origin proxy lets Angular use the
+existing gateway CORS configuration. A custom gateway port requires a matching proxy target.
+Use Angular CLI's native options for a custom port/proxy:
+
+```bash
+npm run dev --workspace @holita/admin -- --port 12088 --proxy-config /absolute/path/proxy.conf.json
+```
+
+A production build is `apps/admin/dist/browser`. Serve it with SPA fallback to `index.html`
+and an origin-local `/graphql` reverse proxy, or supply an absolute gateway URL in the public
+config and align `ADMIN_ORIGIN` with the browser origin. This JSON is public configuration;
+credentials belong neither there nor in frontend source. No deployment is configured.
+
+Use [Angular checks](testing.md#angular-admin-checks) to verify real routing, generated
+contracts, per-workspace cache isolation and pending mutations. Store selection scopes data;
+it provides no authorization.
+
 ## Admin data modes
 
-The same admin runs as **Real** (`graphql`, port 11081) and **Prototype** (`mock`, port
-11087). The top bar identifies the mode (below it on mobile). `npm run dev` starts both plus the four
+The React admin runs as **Real** (`graphql`, port 11081) and **Prototype** (`mock`, port
+11087). The top bar identifies the mode (below it on mobile). `npm run dev` starts these two modes plus Angular and the four
 backends; it still requires the explicit database setup for Real. Each admin has its own
 origin and Refine cache. The mode is fixed for that process; navigation never changes it.
 

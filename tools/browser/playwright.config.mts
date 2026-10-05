@@ -3,6 +3,7 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: '.',
   testMatch: '*.smoke.spec.mts',
+  testIgnore: 'angular-*.smoke.spec.mts',
   outputDir: '../../test-results/browser',
   fullyParallel: false,
   workers: 1,

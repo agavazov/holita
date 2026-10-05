@@ -3,7 +3,12 @@ name: holita-admin-feature
 description: Implement or migrate holita admin features using Refine, Aurora/MUI and generated GraphQL contracts while preserving the store-scoped request/cache lifecycle. Use for frontend feature work and store-switch fixes.
 ---
 
-# Admin feature reference
+# React admin feature reference
+
+This procedure applies to `apps/admin-react`. For Angular, follow
+[the foundation](../../../docs/architecture/overview.md#angular-admin-foundation) and its
+[focused checks](../../../docs/testing.md#angular-admin-checks); reuse the behavior rather
+than the React implementation.
 
 Read [AGENTS.md](../../../AGENTS.md) and the relevant
 [requirements](../../../docs/req/foundation.md). Use the actual Products implementation

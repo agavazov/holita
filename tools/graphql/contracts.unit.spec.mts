@@ -12,7 +12,14 @@ describe('local GraphQL contracts', () => {
     const result = composeContracts(await readContracts());
     expect(result.clientSdl).toContain('store: Store!');
     expect(result.clientSdl).not.toContain('_entities');
-    expect(await readOperations(result.apiSchema)).toHaveLength(10);
+    const operations = await readOperations(result.apiSchema);
+    expect(operations).toHaveLength(12);
+    expect(operations.map((operation) => operation.location)).toEqual(
+      expect.arrayContaining([
+        'apps/admin/src/app/features/stores/operations.graphql',
+        'apps/admin/src/app/features/products/operations.graphql',
+      ]),
+    );
     expect(result.clientSdl).toContain('referenceVenues(');
     expect(result.clientSdl).toContain('reorderReferenceSessions(');
     expect(composeContracts(await readContracts()).supergraphSdl).toBe(result.supergraphSdl);

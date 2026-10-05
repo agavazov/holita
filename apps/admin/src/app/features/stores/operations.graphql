@@ -1,0 +1,6 @@
+query AdminStores {
+  stores {
+    id
+    name
+  }
+}

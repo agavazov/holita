@@ -7,6 +7,7 @@ packages or cross-application code imports.
 
 | Application | Framework                       | Current entry points                                                                                                                                                                              |
 | ----------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| admin       | Angular, Apollo Angular         | Hello world, real Stores and Products read at http://127.0.0.1:11088                                                                                                                              |
 | admin-react | React, Vite, Refine, Aurora/MUI | Stores, Products and Reference Events/Venues/Speakers/Tags at http://127.0.0.1:11081; Prototype Stores/Products/Venues/Speakers/Tags/Events/Sessions/History/UI catalog at http://127.0.0.1:11087 |
 | gateway     | NestJS, Apollo Gateway          | /graphql and /health on 127.0.0.1:11080                                                                                                                                                           |
 | core        | NestJS, Federation 2            | /graphql (stores) and /health on 127.0.0.1:11082                                                                                                                                                  |
@@ -16,7 +17,7 @@ packages or cross-application code imports.
 Core owns store listing/lookup; products owns Products CRUD; reference owns Event, Venue, Speaker and Tag CRUD. Their concrete feature
 repositories access their own PrismaService, whose client connects lazily and disconnects
 on shutdown. Health endpoints stay independent of databases and downstream availability.
-Admin uses one Refine GraphQL data provider with generated named operation documents,
+React admin uses one Refine GraphQL data provider with generated named operation documents,
 store-scoped resources, an Aurora/MUI shell and Products/Venues/Speakers/Tags/Events screens.
 Session forms, the ordered program, Gallery, speaker summaries and History also use Aurora/MUI.
 Store discovery, loading/error/empty states and unavailable stores use the same Aurora theme.
@@ -50,7 +51,7 @@ ESLint's Nx boundary rule prohibits application-to-application imports. Feature 
 inside its application; shared test configuration is the root jest.preset.mjs, not a
 runtime library. Runtime communication follows GraphQL contracts, not application source
 imports. Shared SDL/operation/tool inputs express their impact on Nx tasks.
-Nx also records admin-react → gateway, products → core and reference → core and gateway → core/products/reference runtime dependencies for
+Nx also records admin/admin-react → gateway, products → core and reference → core and gateway → core/products/reference runtime dependencies for
 affected selection, without permitting implementation imports across those boundaries.
 Test targets explicitly use nx:run-commands to preserve file/case arguments, including
 names containing spaces, when forwarding to the native npm test scripts.
@@ -70,18 +71,19 @@ Every application also depends on graphql-generate. Generation targets explicitl
 the default named inputs, including root tooling and SDL/operations, and own only their
 application's generated output. Gateway's test-db builds all four backends and runs the
 whole-graph fixture from tools/graphql. It is noncached and uses dedicated test schemas.
-Admin's noncached test-smoke target includes browser tooling inputs and builds all five
-apps. Its Playwright fixture uses actual backends and a Vite test server on ephemeral ports.
+Each admin's noncached test-smoke target includes browser tooling inputs and builds that
+admin plus the four backends. Both Playwright fixtures use real backends on ephemeral ports.
+React uses a Vite test server; Angular serves its compiled production build.
 Dev tasks are continuous and not cached.
-Admin builds are also uncached because Vite embeds the gateway URL from process variables
+React admin builds are also uncached because Vite embeds the gateway URL from process variables
 or ignored local environment files. An old build must not silently retain another endpoint.
 The Nx daemon is disabled; graph calculation runs within commands so local checks do not
 depend on a separate background process.
 
 [PR CI](../../.github/workflows/affected.yml) checks the event's base/head with full Git
 history. Root-tool lint/type checks and offline schema checks run independently of project
-selection. Affected applications select unit/DB targets; affected admin-react also selects its
-browser smoke target. A separate [manual workflow](../../.github/workflows/full-regression.yml)
+selection. Affected applications select unit/DB targets; each affected admin also selects its
+own browser smoke target. A separate [manual workflow](../../.github/workflows/full-regression.yml)
 runs full regression. Both use the root npm commands with host Node processes and the same
 PostgreSQL-only Compose file. See [testing](../testing.md#github-actions) for exact behavior.
 
@@ -172,7 +174,50 @@ Products is the backend reference: SDL → resolver → service → concrete rep
 It uses no generic CRUD base, duplicated handwritten API DTOs or cross-application model
 imports. See [the backend skill](../../.agents/skills/holita-backend-feature/SKILL.md).
 
-## Admin data sources
+## Angular admin foundation
+
+[Angular admin](../../apps/admin/src/app/app.config.ts) uses standalone components and lazy
+routes with Angular's native CLI builder. The root npm/Nx targets own generation, checking,
+building and tests. It has no component library or admin template. `admin-react` remains
+available as the implemented CRUD, dirty-form, media and request-lifecycle reference.
+
+The flow is component → concrete feature service → Apollo Angular/HttpLink → existing gateway.
+[StoresApi](../../apps/admin/src/app/features/stores/stores-api.ts) discovers stores without
+`x-store-id`. [ProductsApi](../../apps/admin/src/app/features/products/products-api.ts)
+uses separately generated [operations](../../apps/admin/src/app/features/products/operations.graphql)
+and the existing Products API; there are no backend contract changes or application imports.
+Codegen validates the complete contract set and writes ignored Angular-local TypedDocumentNodes.
+
+Routes use `/bg` or `/en`, followed by `/stores/:storeId/products` after selection. Bundled
+[Bulgarian](../../apps/admin/src/app/i18n/bg.json) and [English](../../apps/admin/src/app/i18n/en.json)
+catalogs supply frontend messages. Language navigation preserves the path/query/hash;
+requests capture `Accept-Language` and a new `x-request-id`. The language is not persisted
+as independent global state. There is no authentication or Prototype mode.
+
+[StoreProducts](../../apps/admin/src/app/features/products/store-products.ts) validates the
+selection against discovery and keys the inner Products component by store/language.
+Changing route parameters recreates that component even when Angular reuses the route.
+Each mounted [ProductsPage](../../apps/admin/src/app/features/products/products-page.ts) provides
+one ProductsApi with its own Apollo client and InMemoryCache. Transport headers capture
+immutable store/language values; Apollo's query deduplication and entity cache are confined
+to that client. Returning to A after B creates a fresh A client and performs a real read.
+Reads unsubscribe on destruction. A client with submitted mutations remains alive until
+they settle, then stops; completion evicts only that captured client's Products list.
+No retained cache registry, global store-header mutation or additional state library exists.
+
+Native HTML displays loading, initial errors, empty/unavailable states and the first 20
+products with the server total. Refresh errors preserve loaded rows and expose the gateway
+request ID when available. HTTP requests have a 10-second deadline. There are no pagination
+controls, CRUD forms, rich text or media workflows. The update operation is exercised through
+the concrete service in controlled-HTTP tests; it has no UI action.
+
+Runtime [config.json](../../apps/admin/public/config.json) supplies the public GraphQL URL.
+Development uses `/graphql` and Angular's proxy to the existing loopback gateway. Compiled
+builds require that proxy at the serving origin or an absolute gateway URL with matching CORS.
+See [development](../development.md#angular-admin-foundation) and
+[Angular validation](../testing.md#angular-admin-checks).
+
+## React admin data sources
 
 [Configuration](../../apps/admin-react/src/config.ts) selects `mock` or `graphql` once at startup.
 The same Refine provider, generated operations and feature screens serve both modes. Real
@@ -227,7 +272,7 @@ the navigation entry and guards its direct route before mounting. ContentSection
 by the catalog and the concrete Product/Venue/Speaker/Tag/Event/Session forms; fields, validation and mutations stay
 feature-owned. The [inventory](../reference.md#ui-catalog-and-shared-components) maps these boundaries.
 
-## Admin translations
+## React admin translations
 
 [Admin i18n](../../apps/admin-react/src/i18n/i18n.ts) initializes an i18next instance for the
 active `/bg/...` or `/en/...` URL from bundled catalogs. Missing language prefixes redirect
@@ -256,7 +301,7 @@ dates; timestamps stay in Europe/Sofia, budgets in EUR, and API input formats ar
 Provider-generated network/store errors and local upload errors use the captured language.
 Backend messages, record content and saved History values are displayed as received.
 
-## Admin request and store lifecycle
+## React admin request and store lifecycle
 
 The URL is the active store source: `/:language/` lists stores, `/:language/stores/:storeId/products` lists
 products, `/create` adds a product and `/:productId/edit` edits one. Unavailable stores

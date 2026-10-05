@@ -30,6 +30,8 @@ export const subgraphs = [
   },
 ];
 export const operationPaths = [
+  'apps/admin/src/app/features/stores/operations.graphql',
+  'apps/admin/src/app/features/products/operations.graphql',
   'apps/admin-react/src/features/stores/operations.graphql',
   'apps/admin-react/src/features/products/operations.graphql',
   'apps/products/src/core/operations.graphql',

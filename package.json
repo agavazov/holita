@@ -29,12 +29,12 @@
     }
   },
   "scripts": {
-    "dev": "concurrently --kill-others --names gateway,core,products,reference,admin-react-real,admin-react-prototype --prefix-colors blue,green,yellow,cyan,magenta,white \"npm:dev:gateway\" \"npm:dev:core\" \"npm:dev:products\" \"npm:dev:reference\" \"npm:dev:admin-react:graphql\" \"npm:dev:admin-react:mock\"",
+    "dev": "concurrently --kill-others --names gateway,core,products,reference,admin,admin-react-real,admin-react-prototype --prefix-colors blue,green,yellow,cyan,red,magenta,white \"npm:dev:gateway\" \"npm:dev:core\" \"npm:dev:products\" \"npm:dev:reference\" \"npm:dev:admin\" \"npm:dev:admin-react:graphql\" \"npm:dev:admin-react:mock\"",
     "dev:gateway": "npm run dev --workspace @holita/gateway",
     "dev:core": "npm run dev --workspace @holita/core",
     "dev:products": "npm run dev --workspace @holita/products",
-    "dev:admin": "npm run dev:admin-react:graphql",
-    "dev:admin:graphql": "npm run dev:admin-react:graphql",
+    "dev:admin": "npm run dev --workspace @holita/admin",
+    "dev:admin:graphql": "npm run dev:admin",
     "dev:admin:mock": "npm run dev:admin-react:mock",
     "dev:admin-react": "npm run dev:admin-react:graphql",
     "build": "nx run-many -t build",
@@ -43,10 +43,10 @@
     "test:core": "nx run core:test --output-style=static",
     "test:products": "nx run products:test --output-style=static",
     "test:gateway": "nx run gateway:test --output-style=static",
-    "test:admin": "nx run admin-react:test --output-style=static",
+    "test:admin": "nx run admin:test --output-style=static",
     "test:admin-react": "nx run admin-react:test --output-style=static",
     "test:affected": "npm run test:schema && nx affected -t test,test-db --output-style=static",
-    "test:full": "npm run test:schema && nx run-many -t test,test-db --output-style=static && npm run test:smoke:admin-react",
+    "test:full": "npm run test:schema && nx run-many -t test,test-db --output-style=static && npm run test:smoke:admin-react && npm run test:smoke:admin",
     "check:affected": "npm run lint:tools && npm run typecheck:tools && nx affected -t lint,typecheck,build",
     "lint:tools": "eslint tools *.mjs",
     "projects": "nx show projects",
@@ -69,13 +69,14 @@
     "schema:check": "tsx tools/graphql/generate.mts check",
     "test:schema": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.schema.config.mjs --runInBand",
     "test:gateway:db": "nx run gateway:test-db --output-style=static",
-    "test:smoke": "nx run admin-react:test-smoke --output-style=static",
+    "test:smoke": "npm run test:smoke:admin",
     "test:smoke:admin-react": "nx run admin-react:test-smoke --output-style=static",
     "dev:reference": "npm run dev --workspace @holita/reference",
     "test:reference": "nx run reference:test --output-style=static",
     "test:reference:db": "nx run reference:test-db --output-style=static",
     "dev:admin-react:graphql": "VITE_DATA_SOURCE=graphql npm run dev --workspace @holita/admin-react",
-    "dev:admin-react:mock": "VITE_DATA_SOURCE=mock npm run dev --workspace @holita/admin-react"
+    "dev:admin-react:mock": "VITE_DATA_SOURCE=mock npm run dev --workspace @holita/admin-react",
+    "test:smoke:admin": "nx run admin:test-smoke --output-style=static"
   },
   "devDependencies": {
     "@apollo/composition": "2.14.4",
@@ -107,6 +108,7 @@
     "tsx": "4.23.13",
     "typescript": "6.0.3",
     "typescript-eslint": "8.70.0",
-    "vite": "8.3.0"
+    "vite": "8.3.0",
+    "angular-eslint": "22.5.0"
   }
 }

@@ -10,6 +10,7 @@ playwright-report/
 
 apps/*/src/generated/
 .nx/
+.angular/
 
 .idea/
 .DS_Store

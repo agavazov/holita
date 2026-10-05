@@ -1,0 +1,32 @@
+body {
+  margin: 2rem auto;
+  padding: 0 1rem;
+  max-width: 60rem;
+  font-family: system-ui, sans-serif;
+}
+nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  list-style: none;
+  padding: 0;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th,
+td {
+  padding: 0.5rem;
+  border-bottom: 1px solid #ccc;
+  text-align: left;
+}
+button {
+  font: inherit;
+}
+[aria-current='page'] {
+  font-weight: bold;
+}
+[role='alert'] {
+  color: #b00020;
+}

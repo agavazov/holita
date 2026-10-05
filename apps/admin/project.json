@@ -1,0 +1,50 @@
+{
+  "name": "admin",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/admin/src",
+  "tags": ["type:app", "scope:admin"],
+  "implicitDependencies": ["gateway"],
+  "targets": {
+    "graphql-generate": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["default"],
+      "outputs": ["{projectRoot}/src/generated/graphql"],
+      "options": { "command": "npm run graphql:generate", "cwd": "apps/admin" }
+    },
+    "lint": { "dependsOn": ["graphql-generate"] },
+    "typecheck": { "dependsOn": ["graphql-generate"] },
+    "build": { "dependsOn": ["graphql-generate"] },
+    "test": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["graphql-generate"],
+      "options": {
+        "command": "npm run test --",
+        "cwd": "apps/admin",
+        "forwardAllArgs": true
+      }
+    },
+    "test-smoke": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "inputs": ["default", "^default"],
+      "dependsOn": [
+        { "target": "build", "projects": ["admin", "gateway", "core", "products", "reference"] }
+      ],
+      "options": {
+        "command": "playwright test --config tools/browser/angular.config.mts",
+        "cwd": ".",
+        "forwardAllArgs": true
+      }
+    }
+  },
+  "namedInputs": {
+    "default": [
+      "{projectRoot}/**/*",
+      "sharedGlobals",
+      "graphqlContracts",
+      "{workspaceRoot}/tools/browser/**/*"
+    ]
+  }
+}

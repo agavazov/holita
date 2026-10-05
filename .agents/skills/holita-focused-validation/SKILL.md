@@ -31,7 +31,14 @@ rules remain in [AGENTS.md](../../../AGENTS.md).
 5. Report exact commands, selected files/cases, results and unverified contracts. Clean up
    listeners/connections started by the checks.
 
-For admin, select product-list.test.tsx, product-form.test.tsx, data-provider.test.ts or store-workspace.test.tsx
+For Angular admin, use `test:admin -- --include=app/features/products/products-api.spec.ts`
+and `--filter="case name"` for Angular CLI native selection. Store routing uses
+`--include=app/features/stores/store-workspace.spec.ts`. These tests use actual Apollo and
+Angular HTTP testing, including late mutation success/failure and A → B → A. Real reads use
+`test:smoke:admin -- angular-foundation.smoke.spec.mts` against the compiled application and
+dedicated database fixture. They do not prove Angular CRUD forms or upload behavior.
+
+For React admin, select product-list.test.tsx, product-form.test.tsx, data-provider.test.ts or store-workspace.test.tsx
 through test:admin-react. The workspace file uses actual Refine hooks/cache with controlled HTTP
 responses and supports `--testNamePattern="captures a pending create"`. Use this long option
 through Nx because Nx reserves -t for targets. Real browser behavior uses

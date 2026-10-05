@@ -5,6 +5,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import { reactRefresh } from 'eslint-plugin-react-refresh';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
+import angular from 'angular-eslint';
 
 export default tseslint.config(
   {
@@ -18,6 +19,7 @@ export default tseslint.config(
       'playwright-report/**',
       'apps/*/src/generated/**',
       '.nx/**',
+      '**/.angular/**',
     ],
   },
   eslint.configs.recommended,
@@ -57,6 +59,19 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
     },
+  },
+  {
+    files: ['apps/admin/**/*.ts'],
+    languageOptions: { globals: globals.browser },
+    extends: [angular.configs.tsRecommended],
+    processor: angular.processInlineTemplates,
+    rules: {
+      '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
+    },
+  },
+  {
+    files: ['apps/admin/**/*.html'],
+    extends: [angular.configs.templateRecommended, angular.configs.templateAccessibility],
   },
   {
     files: ['apps/admin-react/**/*.{ts,tsx}'],

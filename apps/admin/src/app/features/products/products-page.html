@@ -1,0 +1,35 @@
+<section [attr.aria-label]="text().products">
+  <h2>{{ text().products }} — {{ store().name }}</h2>
+  @if (loading()) {
+  <p role="status">{{ text().loadingProducts }}</p>
+  } @if (error()) {
+  <p role="alert">{{ failure() }}</p>
+  }
+  <button type="button" [disabled]="loading()" (click)="refresh()">
+    {{ error() ? text().retry : text().refresh }}
+  </button>
+  @if (page(); as products) {
+  <p>{{ text().total }}: {{ products.total }}. {{ text().firstPage }}</p>
+  @if (products.items.length === 0) {
+  <p>{{ text().emptyProducts }}</p>
+  } @else {
+  <table>
+    <thead>
+      <tr>
+        <th scope="col">{{ text().name }}</th>
+        <th scope="col">{{ text().sku }}</th>
+        <th scope="col">{{ text().status }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (product of products.items; track product.id) {
+      <tr>
+        <td>{{ product.name }}</td>
+        <td>{{ product.sku }}</td>
+        <td>{{ product.status === 'ACTIVE' ? text().active : text().draft }}</td>
+      </tr>
+      }
+    </tbody>
+  </table>
+  } }
+</section>

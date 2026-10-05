@@ -1,0 +1,37 @@
+<main>
+  <h1>{{ text().hello }}</h1>
+  <p>{{ text().foundation }}</p>
+  <nav [attr.aria-label]="text().language">
+    <ul>
+      <li><a [routerLink]="languageLink('bg')" lang="bg">Български</a></li>
+      <li><a [routerLink]="languageLink('en')" lang="en">English</a></li>
+    </ul>
+  </nav>
+  <h2>{{ text().stores }}</h2>
+  @if (loading()) {
+  <p role="status">{{ text().loadingStores }}</p>
+  } @if (error()) {
+  <p role="alert">{{ failure() }}</p>
+  }
+  <button type="button" [disabled]="loading()" (click)="refresh()">
+    {{ error() ? text().retry : text().refresh }}
+  </button>
+  @if (stores(); as availableStores) { @if (availableStores.length === 0) {
+  <p>{{ text().emptyStores }}</p>
+  }
+  <nav [attr.aria-label]="text().stores">
+    <ul>
+      @for (store of availableStores; track store.id) {
+      <li>
+        <a
+          [routerLink]="['/', language(), 'stores', store.id, 'products']"
+          routerLinkActive="selected"
+          ariaCurrentWhenActive="page"
+          >{{ store.name }}</a
+        >
+      </li>
+      }
+    </ul>
+  </nav>
+  @if (availableStores.length > 0) { <router-outlet /> } }
+</main>

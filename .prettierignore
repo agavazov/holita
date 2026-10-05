@@ -7,5 +7,6 @@ test-results/
 playwright-report/
 apps/*/src/generated/
 .nx/
+.angular/
 
 .media/

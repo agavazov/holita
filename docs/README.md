@@ -10,10 +10,11 @@
 - [Schema-first federation](architecture/decisions/0003-schema-first-federation.md): local contracts, generation and service communication.
 - [Contributor rules](../AGENTS.md): mandatory coding and verification instructions.
 - [Backend reference skill](../.agents/skills/holita-backend-feature/SKILL.md): extend the actual Products API and persistence.
+- [Angular foundation](architecture/overview.md#angular-admin-foundation): real Stores/Products, per-workspace Apollo and [focused checks](testing.md#angular-admin-checks).
 - [Admin reference skill](../.agents/skills/holita-admin-feature/SKILL.md): extend the actual Products UI and store lifecycle.
 - [Focused validation skill](../.agents/skills/holita-focused-validation/SKILL.md): choose and report the relevant checks.
 
-For Prototype work, start with [installation](development.md#prerequisites-and-installation),
+For React Prototype work, start with [installation](development.md#prerequisites-and-installation),
 [starting the admin](development.md#admin-data-modes),
 [manual review](development.md#manual-prototype-review) and
 [automated checks](testing.md#prototype-checks). These paths do not require a backend or database.
