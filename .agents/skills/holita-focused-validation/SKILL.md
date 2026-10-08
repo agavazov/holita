@@ -44,21 +44,50 @@ for partial results, stopping unsent writes and captured-client shutdown. Real p
 partial failures, retry and last-page correction use
 `test:smoke:admin -- angular-products-delete.smoke.spec.mts`. These checks do not prove upload behavior.
 
-For React admin, select product-list.test.tsx, product-form.test.tsx, data-provider.test.ts or store-workspace.test.tsx
-through test:admin-react. The workspace file uses actual Refine hooks/cache with controlled HTTP
-responses and supports `--testNamePattern="captures a pending create"`. Use this long option
-through Nx because Nx reserves -t for targets. Real browser behavior uses
-`test:smoke:admin-react -- products.smoke.spec.mts`, narrowed by Playwright `--grep="pending mutation"`.
-Read docs/testing.md for Chromium/test-DB prerequisites; the fixture owns its processes and
-schemas. Do not add heading assertions or passWithNoTests to make an aggregate green.
-Health/component mocks do not establish actual database or federation isolation.
+For Angular Reference availability, Venues, Speakers, Tags and Events, select
+`test:admin -- --include="app/features/reference/**/*.spec.ts"` (or the owning file).
+The boundary checks disabled routes/unknown stores and section-preserving routing. Concrete
+resource suites cover Apollo scope, list queries, typed validation/null mapping, server-field
+focus, dirty editors and sequential deletion retirement. Use
+`test:smoke:admin -- angular-venues.smoke.spec.mts` for real persistence, nullable sorting,
+referenced failures/retry, delayed reads/writes, disabled Reference and Bulgarian mobile themes.
+Use `test:smoke:admin -- angular-lookups.smoke.spec.mts` for Speaker nullable Email/biography,
+Email null-last sorting, Tag HEX preview/lowercase and duplicate Name focus, referenced rows
+retained through Event Trash, partial retry and scoped dirty/pending navigation.
 
-For shared admin navigation, also select `reference-layout.smoke.spec.mts`; include
-`reference-disabled.smoke.spec.mts` when menu visibility or route availability changes.
-For Aurora shell changes, compare the source and holita at matching viewport sizes,
-including collapsed/expanded navigation, open menus and mobile drawer behavior. Report
-visual review separately from behavioral test results. Capturing the source theme alone
-does not validate the holita integration.
+Use `test:admin -- --include="app/features/reference/events/*.spec.ts"` and
+`--include=app/features/reference/relation-picker.spec.ts` for Event typed inputs, Sofia DST/exact
+instants, decimal strings, HTML boundaries, retired writes and remote read cancellation.
+Use `test:smoke:admin -- angular-events.smoke.spec.mts` for real Event fields/relations,
+remote paging, inactive labels, list URL/columns, rich text, dirty navigation, A → B → A and
+BG desktop/mobile light/dark review. Use `test:smoke:admin -- angular-lifecycle.smoke.spec.mts`
+for atomic status/Trash/Restore rollback/retry, reserved Code/child preservation, read-only
+Trash, paginated plain-text History, delayed bulk actions and lifecycle dialogs/mobile themes.
+Use `test:admin -- --include="app/features/reference/sessions/*.spec.ts"` for typed parent
+bounds/Sofia/nullable inputs, program drafts/reload conflicts, read cancellation, copied IDs,
+retired writes and editor callbacks. Use `test:smoke:admin -- angular-sessions.smoke.spec.mts`
+for real CRUD/Speaker relations, protected Event bounds, complete-set ordering, dirty tabs,
+History, Trash/Restore, delayed parent/editor/store navigation and Sakai desktop/mobile themes.
+Use `test:admin -- --include=app/features/reference/media/media-api.spec.ts` for captured
+Media clients/headers, read retirement, intent/binary cancellation, late finalization,
+complete order IDs and Alt text mapping. Use `test:smoke:admin -- angular-media.smoke.spec.mts`
+for actual persisted bytes, metadata/cover/removal, drag/order conflict/retry, independent
+Event drafts, cancellation, store/Event retirement, preview renewal, Trash/Restore and Sakai
+progress/dialog/mobile themes. Reference CORS configuration uses
+`test:reference -- admin-origins.spec.ts`. These Real checks do not prove Angular Prototype. For mock transport/storage use
+`test:admin -- --include=app/mocks/state.spec.ts`, config/submitted-writes checks and
+`test:smoke:admin -- angular-prototype.smoke.spec.mts`. Its compiled fixture starts no backend
+or database and covers CRUD/reload, scope, rejected requests, storage errors and Reset.
+Rich mock rules use `app/mocks/events.spec.ts` and `app/mocks/media.spec.ts`. Browser checks
+use `angular-prototype-events.smoke.spec.mts` for typed Events/Sessions, atomic lifecycle,
+complete ordering and paged History, and `angular-prototype-media.smoke.spec.mts` for native
+IndexedDB, metadata/cover/order/removal, Trash/Restore, retired finalization/Reset, canceled
+uploads and desktop/mobile Sakai themes. Neither establishes backend persistence.
+
+For Angular shell work, select `angular-shell.smoke.spec.mts` through `test:smoke:admin`
+and compare holita with the pinned [Sakai source](../../../docs/development.md#sakai-source-reference).
+Review light/dark themes, collapsed/expanded navigation, open overlays and matching
+desktop/mobile viewports; report visual review separately from behavioral results.
 
 Never invoke `test:full` during implementation unless explicitly requested. Do not invent
 a selector framework; use the native runners behind the named npm scripts.
@@ -69,3 +98,14 @@ For CI changes, inspect [PR affected](../../../.github/workflows/affected.yml) a
 verification ahead of affected selection, check non-TypeScript input impact, and distinguish
 local workflow validation from an actual GitHub run. Do not dispatch full regression to
 validate a workflow edit unless the user explicitly requests that run.
+
+Angular catalog changes use `test:admin -- --include="app/features/prototype/ui-catalog/*.spec.ts"`
+and `test:smoke:admin -- angular-ui-catalog.smoke.spec.mts`. Prototype cases start no backend;
+the Real rejection case retains the dedicated DB fixture. Preserve no-business-operation and
+persisted-data assertions alongside local typed validation and section/store/language resets.
+
+For a combined Angular presentation/startup review, use
+`test:smoke:admin -- angular-parity.smoke.spec.mts`. It covers both modes/languages/themes,
+991/992px resizing with retained drafts, saved long labels in overview/child editors and localized startup alerts. Real retains dedicated
+database schemas; Prototype startup cases reject external requests. Parent overview recovery
+with a dirty Session order uses `test:admin -- --include=app/features/reference/events/event-overview.spec.ts`.

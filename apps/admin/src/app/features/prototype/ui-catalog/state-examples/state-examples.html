@@ -1,0 +1,130 @@
+@if (notice()) {
+  <p-message severity="success" [pt]="{ root: { role: 'status' } }">{{ notice() }}</p-message>
+}
+<div class="catalog-grid">
+  <section class="catalog-panel catalog-stack">
+    <h2>{{ text().catalogStates }}</h2>
+    <div class="catalog-field">
+      <label for="catalog-state">{{ text().catalogState }}</label
+      ><p-select
+        inputId="catalog-state"
+        [ariaLabel]="text().catalogState"
+        [options]="options()"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="state()"
+        (ngModelChange)="changeState($event)"
+        [fluid]="true"
+        appendTo="body"
+      />
+    </div>
+    <div class="catalog-preview" [attr.aria-busy]="state() === 'loading'">
+      @switch (state()) {
+        @case ('ready') {
+          <h3>{{ text().catalogAvailable }}</h3>
+          <p class="muted">{{ text().catalogAvailableHint }}</p>
+          <button pButton type="button" (click)="notice.set(text().catalogActionNotice)">
+            {{ text().catalogPrimaryAction }}
+          </button>
+        }
+        @case ('loading') {
+          <div class="catalog-stack">
+            <p role="status">{{ text().catalogLoadingText }}</p>
+            <p-skeleton width="60%" /><p-skeleton height="4rem" /><p-progressbar
+              mode="indeterminate"
+              [style]="{ height: '.4rem' }"
+              [ariaLabel]="text().catalogLoading"
+            />
+          </div>
+        }
+        @case ('empty') {
+          <h3>{{ text().catalogEmptyText }}</h3>
+          <button pButton type="button" (click)="state.set('ready')">
+            {{ text().catalogAdd }}
+          </button>
+        }
+        @case ('error') {
+          <p-message severity="error">{{ text().catalogLoadError }}</p-message
+          ><button
+            pButton
+            type="button"
+            severity="secondary"
+            [outlined]="true"
+            (click)="state.set('ready')"
+          >
+            {{ text().retry }}
+          </button>
+        }
+        @case ('disabled') {
+          <p class="muted">{{ text().catalogDisabledHint }}</p>
+          <button pButton type="button" [disabled]="true">{{ text().catalogPrimaryAction }}</button>
+        }
+      }
+    </div>
+  </section>
+  <div class="catalog-stack">
+    <section class="catalog-panel">
+      <h2>{{ text().catalogRetained }}</h2>
+      @if (refreshFailed()) {
+        <p-message severity="warn">{{ text().catalogRefreshError }}</p-message
+        ><button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          (click)="retryRefresh()"
+        >
+          {{ text().catalogRetryRetained }}
+        </button>
+      }
+      <ul>
+        <li>{{ text().catalogLinen }}</li>
+        <li>{{ text().catalogMug }}</li>
+        <li>{{ text().catalogNotebook }}</li>
+      </ul>
+    </section>
+    <section class="catalog-panel">
+      <h2>{{ text().catalogConfirmation }}</h2>
+      <p class="muted">{{ text().catalogConfirmHint }}</p>
+      <button
+        #confirmationButton
+        pButton
+        type="button"
+        severity="secondary"
+        [outlined]="true"
+        (click)="confirming.set(true)"
+      >
+        {{ text().catalogOpenConfirmation }}
+      </button>
+    </section>
+  </div>
+</div>
+<p-dialog
+  [header]="text().catalogConfirmation"
+  [visible]="confirming()"
+  (visibleChange)="confirming.set($event)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [closeAriaLabel]="text().closeConfirmation"
+  [style]="{ width: 'min(30rem, calc(100vw - 2rem))' }"
+  appendTo="body"
+  (onShow)="focusCancel()"
+  (onHide)="restoreFocus()"
+>
+  <p>{{ text().catalogConfirmHint }}</p>
+  <ng-template #footer
+    ><button
+      #cancelButton
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      (click)="confirming.set(false)"
+    >
+      {{ text().cancel }}</button
+    ><button pButton type="button" (click)="confirm()">
+      {{ text().catalogConfirm }}
+    </button></ng-template
+  >
+</p-dialog>

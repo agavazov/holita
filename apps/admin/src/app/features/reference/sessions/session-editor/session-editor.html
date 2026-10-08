@@ -1,0 +1,177 @@
+<section class="card">
+  <div class="page-heading">
+    <div>
+      <a
+        class="content-link"
+        [routerLink]="overviewLink()"
+        [queryParams]="{ tab: 'sessions' }"
+        queryParamsHandling="merge"
+        [preserveFragment]="true"
+        >{{ event()?.title ?? text().sessionProgram }}</a
+      >
+      <h1>{{ sessionId() ? text().sessionEdit : text().sessionAdd }}</h1>
+      <p>{{ text().sessionIndependent }}</p>
+    </div>
+    <a
+      pButton
+      severity="secondary"
+      [outlined]="true"
+      [routerLink]="overviewLink()"
+      [queryParams]="{ tab: 'sessions' }"
+      queryParamsHandling="merge"
+      [preserveFragment]="true"
+      >{{ text().sessionBack }}</a
+    >
+  </div>
+  @if (loading()) {
+    <p role="status">{{ text().sessionLoading }}</p>
+  }
+  @if (invalidId()) {
+    <p-message severity="error">{{ text().sessionInvalidId }}</p-message>
+  }
+  @if (error()) {
+    <p-message severity="error">{{ failure() }}</p-message>
+    @if (retryAvailable()) {
+      <button pButton type="button" [disabled]="loading()" (click)="retry()">
+        {{ text().retry }}
+      </button>
+    }
+  }
+</section>
+@if (ready() && event(); as row) {
+  <form
+    #editorForm
+    class="reference-form"
+    [formGroup]="form"
+    (ngSubmit)="save()"
+    novalidate
+    [attr.aria-busy]="pending()"
+  >
+    <section class="card">
+      <h2>{{ text().sessionDetails }}</h2>
+      <div class="field">
+        <label for="session-title">{{ text().sessionTitle }}</label
+        ><input
+          pInputText
+          type="text"
+          id="session-title"
+          formControlName="title"
+          [fluid]="true"
+          [invalid]="!!fieldError('title')"
+          aria-describedby="session-title-error"
+        />
+        @if (fieldError('title')) {
+          <small role="alert" id="session-title-error">{{ fieldError('title') }}</small>
+        }
+      </div>
+      <div class="field">
+        <label for="session-summary">{{ text().sessionSummary }}</label
+        ><textarea
+          pTextarea
+          id="session-summary"
+          formControlName="summary"
+          rows="5"
+          [fluid]="true"
+          [invalid]="!!fieldError('summary')"
+          aria-describedby="session-summary-error"
+        ></textarea>
+        @if (fieldError('summary')) {
+          <small role="alert" id="session-summary-error">{{ fieldError('summary') }}</small>
+        }
+      </div>
+      <div class="field">
+        <label for="session-room">{{ text().sessionRoom }}</label
+        ><input
+          pInputText
+          type="text"
+          id="session-room"
+          formControlName="room"
+          [fluid]="true"
+          [invalid]="!!fieldError('room')"
+          aria-describedby="session-room-error"
+        />
+        @if (fieldError('room')) {
+          <small role="alert" id="session-room-error">{{ fieldError('room') }}</small>
+        }
+      </div>
+      <h2 class="location-heading">{{ text().sessionSchedule }}</h2>
+      <p class="hint">{{ text().sessionScheduleHint }}</p>
+      <div class="field-grid">
+        <div class="field">
+          <label for="session-startsAt">{{ text().eventStartsAt }}</label
+          ><input
+            pInputText
+            type="datetime-local"
+            id="session-startsAt"
+            formControlName="startsAt"
+            [fluid]="true"
+            [invalid]="!!fieldError('startsAt')"
+            aria-describedby="session-startsAt-error"
+          />
+          @if (fieldError('startsAt')) {
+            <small role="alert" id="session-startsAt-error">{{ fieldError('startsAt') }}</small>
+          }
+        </div>
+        <div class="field">
+          <label for="session-endsAt">{{ text().eventEndsAt }}</label
+          ><input
+            pInputText
+            type="datetime-local"
+            id="session-endsAt"
+            formControlName="endsAt"
+            [fluid]="true"
+            [invalid]="!!fieldError('endsAt')"
+            aria-describedby="session-endsAt-error"
+          />
+          @if (fieldError('endsAt')) {
+            <small role="alert" id="session-endsAt-error">{{ fieldError('endsAt') }}</small>
+          }
+        </div>
+      </div>
+      <div class="field">
+        <label for="session-speakerIds">{{ text().sessionSpeakers }}</label
+        ><holita-relation-picker
+          controlId="session-speakerIds"
+          [label]="text().sessionSpeakers"
+          [language]="language()"
+          [multiple]="true"
+          [load]="speakerLoader"
+          [selectedIds]="selectedSpeakers()"
+          (selectedIdsChange)="selectSpeakers($event)"
+          [disabled]="pending()"
+          [invalid]="!!fieldError('speakerIds')"
+        />
+        @if (fieldError('speakerIds')) {
+          <small role="alert" id="session-speakerIds-error">{{ fieldError('speakerIds') }}</small>
+        }
+        <small>{{ text().sessionSpeakersHint }}</small>
+      </div>
+    </section>
+    <aside class="card reference-settings">
+      <h2>{{ text().sessionProgram }}</h2>
+      <h3>{{ row.title }}</h3>
+      <p>{{ date(row.startsAt) }} – {{ date(row.endsAt) }}</p>
+      <div class="editor-actions">
+        <button pButton type="submit" [disabled]="pending()">
+          {{ pending() ? text().sessionPending : text().sessionSave }}</button
+        ><a
+          pButton
+          severity="secondary"
+          [text]="true"
+          [routerLink]="overviewLink()"
+          [queryParams]="{ tab: 'sessions' }"
+          queryParamsHandling="merge"
+          [preserveFragment]="true"
+          >{{ text().cancel }}</a
+        >
+      </div>
+    </aside>
+  </form>
+}
+<p-confirmdialog
+  [closeAriaLabel]="text().closeConfirmation"
+  [draggable]="false"
+  [style]="{ width: '30rem' }"
+  [breakpoints]="{ '575px': 'calc(100vw - 2rem)' }"
+  [defaultFocus]="'reject'"
+/>

@@ -1,0 +1,54 @@
+.reference-summary {
+  color: var(--text-color-secondary);
+  margin-bottom: 1rem;
+}
+
+.page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+p-message {
+  display: block;
+  margin-bottom: 1rem;
+  overflow-wrap: anywhere;
+}
+
+td {
+  overflow-wrap: anywhere;
+}
+
+.reference-status {
+  white-space: nowrap;
+}
+
+.reference-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.filter-field {
+  display: flex;
+  flex: 1 1 12rem;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.color-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.color-swatch {
+  display: inline-block;
+  flex: 0 0 1rem;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  border: 1px solid var(--surface-border);
+}

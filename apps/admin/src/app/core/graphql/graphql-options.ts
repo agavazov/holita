@@ -3,11 +3,15 @@ import { ServerError } from '@apollo/client/errors';
 import { ErrorLink } from '@apollo/client/link/error';
 import type { HttpLink } from 'apollo-angular/http';
 import type { Language } from '../../i18n/messages';
+import { defer, finalize } from 'rxjs';
+import type { SubmittedWrites } from './submitted-writes';
+import { OperationTypeNode } from 'graphql';
 
 export function graphqlOptions(
   httpLink: HttpLink,
   uri: string,
   scope?: Readonly<{ storeId: string; language: Language }>,
+  writes?: SubmittedWrites,
 ): ApolloClient.Options {
   if (
     scope &&
@@ -27,7 +31,11 @@ export function graphqlOptions(
         ...(storeId ? { 'x-store-id': storeId } : {}),
       },
     });
-    return forward(operation);
+    return defer(() => {
+      const settled =
+        operation.operationType === OperationTypeNode.MUTATION ? writes?.begin() : undefined;
+      return forward(operation).pipe(finalize(() => settled?.()));
+    });
   });
   const errors = new ErrorLink(({ error, operation }) => {
     const requestId: unknown =

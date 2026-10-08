@@ -142,12 +142,12 @@ describe('Reference through the actual federation boundary', () => {
     const preflight = await fetch(target.uploadUrl, {
       method: 'OPTIONS',
       headers: {
-        origin: 'http://127.0.0.1:11081',
+        origin: 'http://127.0.0.1:11088',
         'access-control-request-method': 'PUT',
         'access-control-request-headers': 'authorization,content-type',
       },
     });
-    expect(preflight.headers.get('access-control-allow-origin')).toBe('http://127.0.0.1:11081');
+    expect(preflight.headers.get('access-control-allow-origin')).toBe('http://127.0.0.1:11088');
     expect(
       (
         await fetch(target.uploadUrl, {
@@ -645,14 +645,14 @@ describe('actual gateway, subgraphs and PostgreSQL', () => {
     const response = await fetch(fixture.url, {
       method: 'OPTIONS',
       headers: {
-        origin: 'http://127.0.0.1:11081',
+        origin: 'http://127.0.0.1:11088',
         'access-control-request-method': 'POST',
         'access-control-request-headers': 'content-type,x-store-id,x-request-id',
       },
       signal: AbortSignal.timeout(5000),
     });
     expect(response.status).toBe(204);
-    expect(response.headers.get('access-control-allow-origin')).toBe('http://127.0.0.1:11081');
+    expect(response.headers.get('access-control-allow-origin')).toBe('http://127.0.0.1:11088');
     expect(response.headers.get('access-control-allow-headers')).toContain('x-store-id');
     expect(response.headers.get('access-control-allow-headers')).toContain('x-request-id');
     expect(fixture.coreRequests).toHaveLength(0);

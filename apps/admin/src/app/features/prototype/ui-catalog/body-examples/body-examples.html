@@ -1,0 +1,83 @@
+@if (notice()) {
+  <p-message severity="success" [pt]="{ root: { role: 'status' } }">{{
+    text().catalogActionNotice
+  }}</p-message>
+}
+<div class="catalog-grid">
+  <section class="catalog-panel">
+    <h2>{{ text().catalogTypography }}</h2>
+    @for (size of headingSizes; track size) {
+      <small>H{{ size }}</small>
+      <p [class]="'catalog-sample catalog-h' + size">{{ text().catalogHeading }}</p>
+    }
+    <p>{{ text().catalogBodyText }}</p>
+    <p class="muted">{{ text().catalogSecondaryText }}</p>
+    <small>{{ text().catalogCaption }}</small>
+  </section>
+  <div class="catalog-stack">
+    <section class="catalog-panel">
+      <h2>{{ text().catalogActions }}</h2>
+      <div class="catalog-actions">
+        <button pButton type="button" (click)="notice.set(true)">
+          {{ text().catalogPrimaryAction }}
+        </button>
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          (click)="notice.set(true)"
+        >
+          {{ text().catalogSecondaryAction }}
+        </button>
+        <button pButton type="button" severity="success" (click)="notice.set(true)">
+          {{ text().catalogSuccess }}
+        </button>
+        <button
+          pButton
+          type="button"
+          severity="danger"
+          [outlined]="true"
+          (click)="notice.set(true)"
+        >
+          {{ text().catalogDanger }}
+        </button>
+        <button pButton type="button" [text]="true" (click)="notice.set(true)">
+          {{ text().catalogTextAction }}
+        </button>
+        <button pButton type="button" [disabled]="true">{{ text().catalogDisabled }}</button>
+      </div>
+    </section>
+    <section class="catalog-panel">
+      <h2>{{ text().catalogCards }}</h2>
+      <h3>{{ text().catalogHeading }}</h3>
+      <p>{{ text().catalogCardText }}</p>
+      <div class="catalog-actions">
+        <p-tag [value]="text().active" severity="success" /><p-tag
+          [value]="text().draft"
+          severity="warn"
+        /><p-tag [value]="text().catalogInfo" severity="info" />
+      </div>
+      <dl class="catalog-summary">
+        <dt>{{ text().name }}</dt>
+        <dd>{{ text().catalogHeading }}</dd>
+        <dt>{{ text().status }}</dt>
+        <dd>{{ text().active }}</dd>
+      </dl>
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [text]="true"
+        [attr.aria-expanded]="expanded()"
+        aria-controls="catalog-details"
+        (click)="toggleDetails()"
+      >
+        {{ text().catalogMoreDetails }}
+      </button>
+      @if (expanded()) {
+        <p id="catalog-details">{{ text().catalogDetailsText }}</p>
+      }
+    </section>
+  </div>
+</div>

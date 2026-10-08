@@ -1,0 +1,23 @@
+:host {
+  display: block;
+  grid-column: 1/-1;
+  min-width: 0;
+}
+h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+.speaker-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+.speaker {
+  background: var(--surface-hover);
+  border-radius: var(--content-border-radius);
+  padding: 0.5rem 0.75rem;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}

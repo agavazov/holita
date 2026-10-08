@@ -1,0 +1,41 @@
+<p-dialog
+  [header]="label()"
+  [visible]="true"
+  [modal]="true"
+  [closable]="!pending()"
+  [closeOnEscape]="!pending()"
+  [draggable]="false"
+  [style]="{ width: '30rem' }"
+  [breakpoints]="{ '575px': 'calc(100vw - 2rem)' }"
+  (visibleChange)="cancel()"
+>
+  <p>
+    {{ text().eventActionConfirm }}: <strong>{{ target().ids.length }}</strong
+    >.
+  </p>
+  <p>{{ target().action === 'trash' ? text().eventTrashHint : text().eventAtomicHint }}</p>
+  @if (error()) {
+    <p-message severity="error">{{ failure() }}</p-message>
+  }
+  <ng-template #footer>
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [text]="true"
+      [disabled]="pending()"
+      (click)="cancel()"
+    >
+      {{ text().cancel }}
+    </button>
+    <button
+      pButton
+      type="button"
+      [severity]="target().action === 'trash' ? 'danger' : 'primary'"
+      [disabled]="pending()"
+      (click)="submit()"
+    >
+      {{ pending() ? text().eventActionPending : label() }}
+    </button>
+  </ng-template>
+</p-dialog>

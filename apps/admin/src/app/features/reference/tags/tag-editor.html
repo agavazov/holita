@@ -1,0 +1,134 @@
+<section class="card">
+  <div class="page-heading">
+    <div>
+      <a
+        class="content-link"
+        [routerLink]="listLink()"
+        queryParamsHandling="preserve"
+        [preserveFragment]="true"
+        >{{ text().tags }}</a
+      >
+      <h1>{{ tagId() ? text().editTag : text().createTag }}</h1>
+      <p>{{ store().name }}</p>
+    </div>
+    <a
+      pButton
+      severity="secondary"
+      [outlined]="true"
+      [routerLink]="listLink()"
+      queryParamsHandling="preserve"
+      [preserveFragment]="true"
+      >{{ text().backToTags }}</a
+    >
+  </div>
+  @if (loading()) {
+    <p role="status">{{ text().loadingTag }}</p>
+  }
+  @if (invalidId()) {
+    <p-message severity="error">{{ text().invalidTagId }}</p-message>
+  }
+  @if (error()) {
+    <p-message severity="error">{{ failure() }}</p-message>
+    @if (retryAvailable()) {
+      <button pButton type="button" severity="secondary" [disabled]="loading()" (click)="retry()">
+        {{ text().retry }}
+      </button>
+    }
+  }
+</section>
+@if (ready()) {
+  <form
+    #editorForm
+    [formGroup]="form"
+    (ngSubmit)="save()"
+    class="reference-form"
+    novalidate
+    [attr.aria-busy]="pending()"
+  >
+    <section class="card tag-details" [attr.aria-label]="text().tagDetails">
+      <h2>{{ text().tagDetails }}</h2>
+      <div class="field">
+        <label for="tag-name">{{ text().name }}</label>
+        <input
+          pInputText
+          autocomplete="off"
+          id="tag-name"
+          formControlName="name"
+          [fluid]="true"
+          [invalid]="!!fieldError('name')"
+          [attr.aria-invalid]="!!fieldError('name')"
+          aria-describedby="tag-name-hint tag-name-error"
+        />
+        <small id="tag-name-hint">{{ text().tagNameHint }}</small>
+        <div id="tag-name-error">
+          @if (fieldError('name'); as error) {
+            <p-message severity="error" variant="simple" size="small">{{ error }}</p-message>
+          }
+        </div>
+      </div>
+      <div class="field">
+        <label for="tag-color">{{ text().color }}</label>
+        <input
+          pInputText
+          autocomplete="off"
+          id="tag-color"
+          formControlName="color"
+          [fluid]="true"
+          [invalid]="!!fieldError('color')"
+          [attr.aria-invalid]="!!fieldError('color')"
+          aria-describedby="tag-color-hint tag-color-error"
+        />
+        <small id="tag-color-hint">{{ text().colorHint }}</small>
+        <div id="tag-color-error">
+          @if (fieldError('color'); as error) {
+            <p-message severity="error" variant="simple" size="small">{{ error }}</p-message>
+          }
+        </div>
+      </div>
+      <div class="color-preview" role="group" [attr.aria-label]="text().colorPreview">
+        <span
+          class="color-swatch"
+          aria-hidden="true"
+          [style.backgroundColor]="colorPreview()"
+        ></span>
+        <span>{{ colorPreview() ?? text().invalidColor }}</span>
+      </div>
+    </section>
+    <aside class="card tag-settings" [attr.aria-label]="text().tagSettings">
+      <h2>{{ text().tagSettings }}</h2>
+      <div class="field">
+        <label for="tag-active">{{ text().active }}</label>
+        <p-toggleswitch
+          inputId="tag-active"
+          formControlName="active"
+          [ariaLabel]="text().active"
+          [invalid]="!!fieldError('active')"
+        />
+        @if (fieldError('active'); as error) {
+          <p-message severity="error" variant="simple" size="small">{{ error }}</p-message>
+        }
+      </div>
+      <div class="editor-actions">
+        <button pButton type="submit" [disabled]="pending()">
+          {{ pending() ? text().savingTag : text().saveTag }}
+        </button>
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="pending()"
+          (click)="routerBack()"
+        >
+          {{ text().cancel }}
+        </button>
+      </div>
+    </aside>
+  </form>
+}
+<p-confirmdialog
+  defaultFocus="reject"
+  [closeAriaLabel]="text().closeConfirmation"
+  [draggable]="false"
+  [style]="{ width: 'min(30rem, 90vw)', overflowWrap: 'anywhere' }"
+/>

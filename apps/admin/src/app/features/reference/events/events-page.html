@@ -1,0 +1,456 @@
+<section class="card" [attr.aria-label]="text().events">
+  <div class="page-heading">
+    <div>
+      <h1 #heading tabindex="-1">{{ text().events }}</h1>
+      <p>{{ store().name }}</p>
+    </div>
+    <div class="page-actions">
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="loading()"
+        (click)="refresh()"
+      >
+        {{ error() ? text().retry : text().refresh }}
+      </button>
+      <a pButton [routerLink]="['new']" queryParamsHandling="preserve" [preserveFragment]="true">{{
+        text().createEvent
+      }}</a>
+    </div>
+  </div>
+  <div class="event-view-actions" role="group" [attr.aria-label]="text().events">
+    <button
+      pButton
+      type="button"
+      [outlined]="listQuery().trashed"
+      [attr.aria-pressed]="!listQuery().trashed"
+      (click)="changeView(false)"
+    >
+      {{ text().eventActiveView }}
+    </button>
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="!listQuery().trashed"
+      [attr.aria-pressed]="listQuery().trashed"
+      (click)="changeView(true)"
+    >
+      {{ text().eventTrashView }}
+    </button>
+  </div>
+  <div
+    class="event-filters event-quick-filters"
+    role="group"
+    [attr.aria-label]="text().eventFilters"
+  >
+    <div class="filter-field">
+      <label for="event-search">{{ text().eventSearch }}</label
+      ><input
+        pInputText
+        id="event-search"
+        type="search"
+        [ngModel]="search()"
+        (ngModelChange)="editSearch($event)"
+        [fluid]="true"
+      />
+    </div>
+    <div class="filter-field">
+      <label for="event-filter-status">{{ text().status }}</label
+      ><p-select
+        inputId="event-filter-status"
+        [ariaLabel]="text().status"
+        [multiple]="true"
+        [options]="statusOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="listQuery().statuses"
+        (ngModelChange)="changeStatuses($event)"
+        [fluid]="true"
+        appendTo="body"
+        [placeholder]="text().allStatuses"
+      />
+    </div>
+  </div>
+  <p-accordion
+    [multiple]="true"
+    [value]="advancedFilters()"
+    (valueChange)="changeAdvancedFilters($event)"
+    class="advanced-filters"
+  >
+    <p-accordion-panel value="filters"
+      ><p-accordion-header>{{ text().eventMoreFilters }}</p-accordion-header
+      ><p-accordion-content>
+        <div class="event-filters">
+          <div class="filter-field">
+            <label for="event-filter-format">{{ text().eventFormat }}</label
+            ><p-select
+              inputId="event-filter-format"
+              [ariaLabel]="text().eventFormat"
+              [multiple]="true"
+              [options]="formatOptions()"
+              optionLabel="label"
+              optionValue="value"
+              [ngModel]="listQuery().formats"
+              (ngModelChange)="changeFormats($event)"
+              [fluid]="true"
+              appendTo="body"
+              [placeholder]="text().eventAllFormats"
+            />
+          </div>
+          <div class="filter-field">
+            <label for="event-filter-featured">{{ text().eventFeatured }}</label
+            ><p-select
+              inputId="event-filter-featured"
+              [ariaLabel]="text().eventFeatured"
+              [options]="featuredOptions()"
+              optionLabel="label"
+              optionValue="value"
+              [ngModel]="listQuery().featured"
+              (ngModelChange)="changeFeatured($event)"
+              [fluid]="true"
+              appendTo="body"
+            />
+          </div>
+          <div class="filter-field">
+            <label for="event-filter-venues">{{ text().venues }}</label
+            ><holita-relation-picker
+              controlId="event-filter-venues"
+              [label]="text().venues"
+              [language]="language()"
+              [multiple]="true"
+              [activeOnly]="false"
+              [load]="venueLoader"
+              [selectedIds]="listQuery().venueIds"
+              (selectedIdsChange)="changeVenues($event)"
+            />
+          </div>
+          <div class="filter-field">
+            <label for="event-filter-tags">{{ text().tags }}</label
+            ><holita-relation-picker
+              controlId="event-filter-tags"
+              [label]="text().tags"
+              [language]="language()"
+              [multiple]="true"
+              [activeOnly]="false"
+              [load]="tagLoader"
+              [selectedIds]="listQuery().tagIds"
+              (selectedIdsChange)="changeTags($event)"
+            />
+          </div>
+          <div class="filter-field">
+            <label for="event-filter-from">{{ text().eventFrom }}</label
+            ><input
+              pInputText
+              id="event-filter-from"
+              type="date"
+              [ngModel]="from()"
+              (ngModelChange)="editRange('from', $event)"
+              [fluid]="true"
+            />
+          </div>
+          <div class="filter-field">
+            <label for="event-filter-to">{{ text().eventTo }}</label
+            ><input
+              pInputText
+              id="event-filter-to"
+              type="date"
+              [ngModel]="to()"
+              (ngModelChange)="editRange('to', $event)"
+              [fluid]="true"
+            />
+          </div>
+          <div class="filter-field">
+            <label for="event-filter-min">{{ text().eventMin }}</label
+            ><input
+              pInputText
+              id="event-filter-min"
+              inputmode="numeric"
+              [ngModel]="min()"
+              (ngModelChange)="editRange('min', $event)"
+              [fluid]="true"
+            />
+          </div>
+          <div class="filter-field">
+            <label for="event-filter-max">{{ text().eventMax }}</label
+            ><input
+              pInputText
+              id="event-filter-max"
+              inputmode="numeric"
+              [ngModel]="max()"
+              (ngModelChange)="editRange('max', $event)"
+              [fluid]="true"
+            />
+          </div>
+        </div> </p-accordion-content></p-accordion-panel
+  ></p-accordion>
+  @if (rangeError()) {
+    <p-message severity="warn">{{ text().eventRangeError }}</p-message>
+  }
+  <div class="page-actions list-tools">
+    <div class="event-sort">
+      <p-select
+        [ariaLabel]="text().eventSort"
+        [options]="sortOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="listQuery().sort"
+        (ngModelChange)="changeSort($event)"
+        appendTo="body"
+      /><button
+        pButton
+        type="button"
+        severity="secondary"
+        [outlined]="true"
+        (click)="changeOrder()"
+      >
+        {{ listQuery().order === 'ASC' ? text().eventAscending : text().eventDescending }}
+      </button>
+    </div>
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [attr.aria-expanded]="columnPicker()"
+      aria-controls="event-columns"
+      (click)="columnPicker.set(!columnPicker())"
+    >
+      {{ text().eventColumns }}
+    </button>
+    <button pButton type="button" severity="secondary" [text]="true" (click)="reset()">
+      {{ text().eventReset }}
+    </button>
+  </div>
+  @if (columnPicker()) {
+    <div
+      class="column-options"
+      id="event-columns"
+      role="group"
+      [attr.aria-label]="text().eventColumns"
+    >
+      @for (column of columnOptions; track column) {
+        <label [for]="'event-column-' + column"
+          ><p-checkbox
+            [inputId]="'event-column-' + column"
+            [binary]="true"
+            [ngModel]="columns().includes(column)"
+            (ngModelChange)="changeColumns(column, $event)"
+            [ariaLabel]="columnLabel(column)"
+          />{{ columnLabel(column) }}</label
+        >
+      }
+    </div>
+  }
+  @if (columnError()) {
+    <p-message severity="warn">{{ text().eventColumnError }}</p-message>
+  }
+  @if (loading()) {
+    <p role="status">{{ text().loadingEvents }}</p>
+  }
+  @if (error()) {
+    <p-message severity="error">{{ failure() }}</p-message>
+  }
+  @if (page(); as events) {
+    <p class="reference-summary">{{ text().total }}: {{ events.total }}</p>
+  }
+  @if (actionComplete()) {
+    <p-message severity="success">{{ text().eventActionComplete }}</p-message>
+  }
+  @if (selected().length) {
+    <div class="event-selection-actions" role="group" [attr.aria-label]="text().actions">
+      <span>{{ text().eventSelected }}: {{ selected().length }}</span>
+      @if (listQuery().trashed) {
+        <button
+          pButton
+          type="button"
+          [disabled]="loading() || !!actionTarget()"
+          (click)="requestAction('restore')"
+        >
+          {{ text().eventRestoreSelected }}
+        </button>
+      } @else {
+        <button
+          pButton
+          type="button"
+          [disabled]="loading() || !!actionTarget()"
+          (click)="requestAction('publish')"
+        >
+          {{ text().eventPublishSelected }}
+        </button>
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="loading() || !!actionTarget()"
+          (click)="requestAction('archive')"
+        >
+          {{ text().eventArchiveSelected }}
+        </button>
+        <button
+          pButton
+          type="button"
+          severity="danger"
+          [outlined]="true"
+          [disabled]="loading() || !!actionTarget()"
+          (click)="requestAction('trash')"
+        >
+          {{ text().eventTrashSelected }}
+        </button>
+      }
+    </div>
+  }
+  <p-table
+    [value]="page()?.items ?? []"
+    dataKey="id"
+    [rowTrackBy]="trackEvent"
+    [loading]="loading()"
+    [lazy]="true"
+    [lazyLoadOnInit]="false"
+    [sortField]="sortField()"
+    [sortOrder]="sortOrder()"
+    [resetPageOnSort]="false"
+    (onSort)="sortChanged($event)"
+    [tableStyle]="{ 'min-width': '48rem' }"
+  >
+    <ng-template #header
+      ><tr>
+        <th scope="col">
+          <p-checkbox
+            [binary]="true"
+            [ariaLabel]="text().eventSelectPage"
+            [ngModel]="allSelected()"
+            [indeterminate]="selected().length > 0 && !allSelected()"
+            [disabled]="loading() || !!actionTarget() || !page()?.items.length"
+            (ngModelChange)="selectPage($event)"
+          />
+        </th>
+        <th scope="col" pSortableColumn="title">
+          {{ text().eventTitle }}<p-sort-icon field="title" />
+        </th>
+        @for (column of columns(); track column) {
+          @if (column !== 'code' && column !== 'format') {
+            <th scope="col" [pSortableColumn]="column">
+              {{ columnLabel(column) }}<p-sort-icon [field]="column" />
+            </th>
+          } @else {
+            <th scope="col">{{ columnLabel(column) }}</th>
+          }
+        }
+        <th scope="col">{{ text().actions }}</th>
+      </tr></ng-template
+    >
+    <ng-template #body let-event
+      ><tr>
+        <td>
+          <p-checkbox
+            [binary]="true"
+            [ariaLabel]="text().eventSelect + ' ' + event.title"
+            [ngModel]="selected().includes(event.id)"
+            [disabled]="loading() || !!actionTarget()"
+            (ngModelChange)="selectRow(event.id, $event)"
+          />
+        </td>
+        <td>
+          <a
+            class="content-link"
+            [routerLink]="listQuery().trashed ? [event.id] : [event.id, 'edit']"
+            queryParamsHandling="preserve"
+            [preserveFragment]="true"
+            >{{ event.title }}</a
+          >
+          @if (event.featured) {
+            <span class="featured-label">{{ text().eventFeatured }}</span>
+          }
+        </td>
+        @for (column of columns(); track column) {
+          <td
+            [class.event-status]="column === 'status' || column === 'format' || column === 'code'"
+          >
+            {{ cell(event, column) }}
+          </td>
+        }
+        <td>
+          <div class="event-row-actions">
+            <a
+              pButton
+              severity="secondary"
+              [text]="true"
+              size="small"
+              [rounded]="true"
+              [iconOnly]="true"
+              [routerLink]="[event.id]"
+              queryParamsHandling="preserve"
+              [preserveFragment]="true"
+              [attr.aria-label]="text().eventView + ' ' + event.title"
+              ><svg data-p-icon="eye" size="16" aria-hidden="true"></svg
+            ></a>
+            @if (listQuery().trashed) {
+              <button
+                pButton
+                type="button"
+                severity="secondary"
+                [text]="true"
+                size="small"
+                [rounded]="true"
+                [iconOnly]="true"
+                [disabled]="loading() || !!actionTarget()"
+                [attr.aria-label]="text().eventRestore + ' ' + event.title"
+                (click)="requestAction('restore', [event.id])"
+              >
+                <svg data-p-icon="replay" size="16" aria-hidden="true"></svg>
+              </button>
+            } @else {
+              <button
+                pButton
+                type="button"
+                severity="danger"
+                [text]="true"
+                size="small"
+                [rounded]="true"
+                [iconOnly]="true"
+                [disabled]="loading() || !!actionTarget()"
+                [attr.aria-label]="text().eventTrash + ' ' + event.title"
+                (click)="requestAction('trash', [event.id])"
+              >
+                <svg data-p-icon="trash" size="16" aria-hidden="true"></svg>
+              </button>
+            }
+          </div>
+        </td></tr
+    ></ng-template>
+    <ng-template #emptymessage
+      ><tr>
+        <td [attr.colspan]="columns().length + 3">
+          @if (!loading() && !error()) {
+            {{ text().eventEmpty }}
+          }
+        </td>
+      </tr></ng-template
+    >
+  </p-table>
+  @if (page(); as events) {
+    <p-paginator
+      [first]="(listQuery().page - 1) * listQuery().pageSize"
+      [rows]="listQuery().pageSize"
+      [totalRecords]="events.total"
+      [rowsPerPageOptions]="pageSizes"
+      [pageLinkSize]="3"
+      [showCurrentPageReport]="true"
+      [currentPageReportTemplate]="text().pageReport"
+      [locale]="language()"
+      (onPageChange)="changePage($event)"
+    />
+  }
+</section>
+@if (actionTarget(); as target) {
+  <holita-event-action-dialog
+    [target]="target"
+    [language]="language()"
+    (cancelled)="actionTarget.set(null)"
+    (completed)="actionFinished()"
+  />
+}

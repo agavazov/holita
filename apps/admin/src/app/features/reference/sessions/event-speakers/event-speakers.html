@@ -1,0 +1,26 @@
+<section class="card" [attr.aria-label]="text().sessionSpeakersOverview">
+  <h2>{{ text().sessionSpeakersOverview }}</h2>
+  @if (loading()) {
+    <p role="status">{{ text().sessionLoading }}</p>
+  }
+  @if (error()) {
+    <p-message severity="error">{{ failure() }}</p-message
+    ><button pButton type="button" [disabled]="loading()" (click)="retry()">
+      {{ text().retry }}
+    </button>
+  }
+  <div class="speaker-list">
+    @for (speaker of speakers(); track speaker.id) {
+      <span class="speaker"
+        >{{ speaker.name }}
+        @if (!speaker.active) {
+          ({{ text().inactive }})
+        }
+      </span>
+    } @empty {
+      @if (!loading() && !error()) {
+        <p>{{ text().sessionNoSpeakers }}</p>
+      }
+    }
+  </div>
+</section>

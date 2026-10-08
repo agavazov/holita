@@ -1,0 +1,42 @@
+<section class="card">
+  <div class="page-heading">
+    <div>
+      <h1>{{ workspace.text().catalogTitle }}</h1>
+      <p>{{ workspace.text().catalogDescription }}</p>
+    </div>
+  </div>
+  @for (scope of scopes(); track scope.key) {
+    <p-tabs [value]="section()" (valueChange)="changeSection($event)" [scrollable]="true">
+      <p-tablist>
+        <p-tab value="body">{{ workspace.text().catalogBody }}</p-tab>
+        <p-tab value="lists">{{ workspace.text().catalogLists }}</p-tab>
+        <p-tab value="forms">{{ workspace.text().catalogForms }}</p-tab>
+        <p-tab value="states">{{ workspace.text().catalogStates }}</p-tab>
+      </p-tablist>
+      <p-tabpanels style="padding: 1rem 0 0">
+        <p-tabpanel value="body">
+          @if (section() === 'body') {
+            <holita-body-examples [language]="scope.language" />
+          }
+        </p-tabpanel>
+        <p-tabpanel value="lists">
+          @if (section() === 'lists') {
+            <holita-list-examples [language]="scope.language" />
+          }
+        </p-tabpanel>
+        <p-tabpanel value="forms">
+          @if (section() === 'forms') {
+            <holita-form-examples [language]="scope.language" />
+          }
+        </p-tabpanel>
+        <p-tabpanel value="states">
+          @if (section() === 'states') {
+            <holita-state-examples [language]="scope.language" />
+          }
+        </p-tabpanel>
+      </p-tabpanels>
+    </p-tabs>
+  } @empty {
+    <p-message severity="warn">{{ workspace.text().unavailableStore }}</p-message>
+  }
+</section>

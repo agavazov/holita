@@ -1,0 +1,55 @@
+fragment AdminSpeaker on ReferenceSpeaker {
+  id
+  storeId
+  name
+  email
+  shortBio
+  active
+  createdAt
+  updatedAt
+}
+
+query AdminSpeakers(
+  $offset: Int!
+  $limit: Int!
+  $search: String
+  $active: Boolean
+  $ids: [ID!]
+  $sort: ReferenceSpeakerSort
+) {
+  referenceSpeakers(
+    offset: $offset
+    limit: $limit
+    search: $search
+    active: $active
+    ids: $ids
+    sort: $sort
+  ) {
+    items {
+      ...AdminSpeaker
+    }
+    total
+    offset
+    limit
+  }
+}
+query AdminSpeaker($id: ID!) {
+  referenceSpeaker(id: $id) {
+    ...AdminSpeaker
+  }
+}
+mutation AdminCreateSpeaker($input: CreateReferenceSpeakerInput!) {
+  createReferenceSpeaker(input: $input) {
+    ...AdminSpeaker
+  }
+}
+mutation AdminUpdateSpeaker($id: ID!, $input: UpdateReferenceSpeakerInput!) {
+  updateReferenceSpeaker(id: $id, input: $input) {
+    ...AdminSpeaker
+  }
+}
+mutation AdminDeleteSpeaker($id: ID!) {
+  deleteReferenceSpeaker(id: $id) {
+    ...AdminSpeaker
+  }
+}

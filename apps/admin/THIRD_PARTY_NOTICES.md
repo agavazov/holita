@@ -7,8 +7,9 @@ The layout structure and SCSS under `src/styles/sakai` are adapted from
 `eaa70ece4cfa9aeb8f60b36dce5a422b6bae8003`.
 
 Holita uses the static layout, with a PrimeNG Drawer on mobile, SVG PrimeIcons,
-PrimeNG 22 Aura tokens, a 16px root size and the system font stack. Demo menus,
-configuration panels, footer, preloader and unused layout variants are omitted.
+PrimeNG 22 Aura compatibility tokens, Sakai's 14px root size and locally served Lato.
+The source footer composition carries holita branding. Demo menus, configuration
+panels, preloader and unused layout variants are omitted.
 
 PrimeNG, PrimeUI themes and PrimeIcons retain their own package licenses. The
 Sakai MIT license below does not license those dependencies.
@@ -34,3 +35,22 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+
+## Lato font attribution
+
+The WOFF fonts in `public/fonts/lato` use Lato 2.015 from
+[Google Fonts](https://github.com/google/fonts/tree/7085eb89a950e85db5b166b7a58d414544b4140c/ofl/lato),
+revision `7085eb89a950e85db5b166b7a58d414544b4140c`. They preserve the original font
+tables, including Latin and Cyrillic glyphs, in WOFF containers. Regular, Medium,
+SemiBold, Bold and ExtraBold provide the weights used by the admin.
+
+Copyright (c) 2010-2014 by tyPoland Lukasz Dziedzic, with Reserved Font Name Lato.
+Lato is licensed under the SIL Open Font License 1.1. The complete license is
+included in [public/fonts/lato/OFL.txt](public/fonts/lato/OFL.txt).
+
+## Prototype placeholder photos
+
+The two local Gallery fixture photos under `public/images/prototype` are served without
+remote requests. They originate from [Lorem Picsum photo 1015](https://picsum.photos/id/1015/1200/800.webp)
+and [photo 1035](https://picsum.photos/id/1035/1200/800.webp), retained from the existing holita
+Prototype assets. They are demonstration placeholders; user uploads remain browser-local.

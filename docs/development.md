@@ -20,30 +20,27 @@ nvm installation, initialize a non-interactive shell with `. "$HOME/.nvm/nvm.sh"
 
 | Command                                           | Behavior                                                                                            |
 | ------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| npm run dev                                       | Start four backends, Angular and both admin-react modes; Ctrl+C stops the group                     |
-| npm run dev:admin                                 | Angular real Stores/Products foundation on port 11088                                               |
-| npm run dev:admin-react                           | Real React admin (alias of dev:admin-react:graphql)                                                 |
-| npm run dev:admin-react:graphql                   | Real React admin using the gateway                                                                  |
-| npm run dev:admin-react:mock                      | Prototype React admin with browser fixtures; no backend needed                                      |
+| npm run dev                                       | Start four backends and both Angular modes; Ctrl+C stops the group                                  |
+| npm run dev:admin                                 | Angular real Stores/Products/Venues/Speakers/Tags/Events on port 11088                              |
+| npm run dev:admin:mock                            | Angular Prototype CRUD, Events/Sessions/Gallery/History on port 11089; no backend needed            |
 | npm run dev:gateway                               | Nest gateway watcher                                                                                |
 | npm run dev:core                                  | Nest core watcher                                                                                   |
 | npm run dev:products                              | Nest products watcher                                                                               |
 | npm run dev:reference                             | Nest Reference watcher                                                                              |
 | npm run projects                                  | List Nx application names                                                                           |
 | npm run lint                                      | Lint source and root tooling, including application boundaries                                      |
-| npm run typecheck                                 | Typecheck all six applications through Nx                                                           |
-| npm run build                                     | Build all six applications through Nx                                                               |
+| npm run typecheck                                 | Typecheck all five applications through Nx                                                          |
+| npm run build                                     | Build all five applications through Nx                                                              |
 | npm run format:check                              | Check formatting without rewriting files                                                            |
 | npm run check:affected -- --base=BASE --head=HEAD | Lint/typecheck root tools; lint, typecheck and build affected projects using real commit references |
 
 `dev:admin` and its `dev:admin:graphql` alias start Angular. `test:admin` selects Angular
 unit tests; `test:smoke:admin` (also `test:smoke`) selects its real-browser foundation checks.
-`dev:admin:mock` remains a compatibility alias for `dev:admin-react:mock`; Angular has no
-mock mode. Use the explicit `admin-react` commands for the React application.
+`dev:admin:mock` starts Angular Prototype. Real and Prototype use separate origins and browser data.
 
 Backend builds produce apps/NAME/dist. After building, use
 `npm run start:prod --workspace @holita/core` (or gateway/products/reference) to run the emitted Node
-entry point. React admin uses `npm run preview --workspace @holita/admin-react` to preview its build.
+entry point.
 
 The [CI workflows](testing.md#github-actions) use the same commands on Ubuntu with Node
 from .nvmrc and npm from package.json's packageManager field. PostgreSQL stays in Compose;
@@ -51,15 +48,14 @@ Node checks and test application processes run on the runner host. CI does not d
 
 ## Ports and environment
 
-| Application           | Default         |
-| --------------------- | --------------- |
-| admin (Angular)       | 127.0.0.1:11088 |
-| gateway               | 127.0.0.1:11080 |
-| admin-react Real      | 127.0.0.1:11081 |
-| admin-react Prototype | 127.0.0.1:11087 |
-| core                  | 127.0.0.1:11082 |
-| products              | 127.0.0.1:11083 |
-| reference             | 127.0.0.1:11086 |
+| Application             | Default         |
+| ----------------------- | --------------- |
+| admin (Angular Real)    | 127.0.0.1:11088 |
+| admin Angular Prototype | 127.0.0.1:11089 |
+| gateway                 | 127.0.0.1:11080 |
+| core                    | 127.0.0.1:11082 |
+| products                | 127.0.0.1:11083 |
+| reference               | 127.0.0.1:11086 |
 
 Backend `.env.example` files document PORT. Copy only the example you need to that
 application's `.env`; defaults work without any environment file. Core/products/reference examples
@@ -73,24 +69,15 @@ To override one backend without creating a file:
 PORT=12082 npm run dev:core
 ```
 
-For React admin, Vite accepts an explicit port:
-
-```bash
-npm run dev --workspace @holita/admin-react -- --port 12081
-```
-
-`apps/admin-react/.env.example` documents VITE_GATEWAY_URL, defaulting to
-http://127.0.0.1:11080/graphql. This is the admin's GraphQL business endpoint; direct image transfers use URLs returned by Reference. It is a public
-browser configuration value, never a place for credentials. Vite reads it at startup/build.
-Use `VITE_GATEWAY_URL=http://127.0.0.1:12080/graphql npm run dev:admin-react` for a gateway override,
-and align gateway ADMIN_ORIGIN with the exact browser origin when moving the admin port.
-
 ## Angular admin foundation
 
 After database setup/migration/seed, `npm run dev` starts the complete local group. Open
 http://127.0.0.1:11088, choose a store and open its Products list. Angular uses the real
-Gateway exclusively; it does not use React's `VITE_DATA_SOURCE`, MSW or browser fixtures.
-`apps/admin-react` remains available on its existing ports as a behavior reference.
+Gateway in Real mode. `npm run dev:admin:mock` starts Angular Prototype on port 11089,
+with Angular-owned MSW handlers and browser fixtures. The mode is selected once at startup.
+Sakai is the Angular admin's theme and visual reference, including feature screens.
+Its [pinned local source](#sakai-source-reference) supplies layout, spacing and composition;
+Concrete Angular features supply contracts, validation and scoped request lifecycles.
 
 To run Angular alone with the backends already running:
 
@@ -102,10 +89,16 @@ The CLI generates feature-local GraphQL documents before startup. After editing 
 run `npm run codegen` and `npm run schema:check`. GraphQL types are ignored generated output,
 not handwritten API models. Development defaults to `/bg`; `/en` selects English.
 `/bg/stores/:storeId/products` and its English equivalent retain the selected store on reload.
-The PrimeNG/Sakai shell supplies Stores/Products navigation, a store selector, Bulgarian/English
-switching and light/dark themes. Desktop navigation can collapse; mobile navigation opens a
-modal Drawer. Theme preference is stored as `holita.admin.theme`; denied browser storage shows
+The PrimeNG/Sakai shell supplies Stores/Products/enabled Reference navigation, a store selector, Bulgarian/English
+switching and light/dark themes. Desktop controls group the data mode, store selector, language and theme
+on the right of the top bar. Desktop navigation can collapse; its hidden links are removed
+from keyboard navigation. Mobile navigation opens a
+modal Drawer. Below 992px, the mode indicator and store selector occupy a second 56px header row;
+Sakai's 28px gutters and card padding remain. Keyboard order follows the visible controls,
+and resizing across the breakpoint preserves the selected store and editor drafts.
+Theme preference is stored as `holita.admin.theme`; denied browser storage shows
 a status message. Loading/errors/empty data, unavailable stores and manual retry remain available.
+The main content ends with Sakai's subtle divider and a centered holita footer.
 
 Products uses server pagination (20 rows by default; sizes 10/20/50/100). Search matches name
 or SKU; the separate SKU substring and status filters combine with it. Text applies after
@@ -136,6 +129,9 @@ browser reload/closing; browser prompt availability and wording follow browser p
 Submitted writes can settle after navigation. Their client/store/language stay captured;
 completion cannot navigate, notify or change the next editor. Each editor initializes its
 form once, so later detail notifications cannot overwrite local edits.
+Products, lookup, Event and Session editors preserve rejected-write messages through
+background reads. Editing or a new submission clears the write error. Read failures offer
+**Retry** before and after initial loading; retrying the read preserves the current draft.
 
 Each row provides **Delete**, and the checkboxes select records on the current page only.
 The header checkbox selects that page, not every matching server record. Page/filter/sort/size
@@ -152,12 +148,123 @@ disabled while it runs. One final read supplies fresh totals and corrects an emp
 preserving the list URL/query/hash and completed summary. A failed refresh leaves confirmed
 deletions removed and provides Retry. Changing store/language/editor or the list query stops
 unsent deletes; the submitted write still settles against its captured client, without updating
-the new view. Rich text and uploads are not implemented in Angular.
+the new view. Products use plain text fields; Angular Event descriptions support rich text.
+Products have no image controls. Saved Reference Events provide the [Angular Gallery](#angular-reference-gallery).
+
+### Angular Prototype
+
+```bash
+npm run dev:admin:mock
+```
+
+Open http://127.0.0.1:11089/bg (or `/en`). No backend or database is required.
+The startup configuration selects `graphql` or `mock` once; omission defaults to Real.
+The CLI's `prototype` configuration forces `mock` through a standard environment file
+replacement. Served production builds may select it with public `dataSource: "mock"` in
+`config.json`. The existing config/license loading path remains unchanged. Prototype forces
+`/__prototype/graphql` at its own origin and enables the implemented Reference resources even when
+Real's `referenceEnabled` is false. Changing the URL or store cannot switch transport.
+MSW starts before Angular bootstrap and rejects unsupported, altered or foreign operation
+documents and requests to the real Gateway. Prototype accepts POST with the exact generated
+documents; other HTTP methods are rejected. The 42 generated Angular operations for Stores, Products, Venues, Speakers, Tags, Events,
+Sessions, Gallery and History are supported. Their existing components and concrete Apollo
+services work in both modes. The lazy [UI catalog](#ui-catalog) supplies local Sakai examples in Prototype.
+
+Data is a small versioned localStorage snapshot under `holita.admin.prototype.data`. A new browser/host/port starts independent fixtures. Invalid or obsolete
+snapshots are discarded; snapshot version 2 replaces the earlier basic resource dataset.
+Demo data is disposable and is never imported into Real. Lookup
+uniqueness, literal search, filtering/pagination/sorting, nullable updates and store identity
+follow the same contracts. Active/trashed Events and their Sessions reserve lookup rows for
+deletion. Event validation preserves exact EUR strings, Sofia instants, paired registration
+dates, sanitized descriptions and retained inactive relations. Lifecycle actions validate the
+whole selection before one atomic snapshot write. Session ordering requires the complete
+current ID set. Each mutation and its History entries share the same write; failed writes
+leave both unchanged. Labels resolve from current lookup rows. No cross-tab coordination
+or backend persistence parity is claimed.
+Storage startup/write errors are reported, and rejected writes leave the previous snapshot intact.
+If IndexedDB or the worker cannot start, bootstrap stops with localized storage/worker guidance.
+Startup failures use an alert role and set the document's Bulgarian/English language before
+Angular mounts, so assistive technology can announce the message correctly.
+
+Gallery follows intent → binary → finalize on the same origin. Unfinished files stay in memory;
+finalized Blobs use the native IndexedDB database `holita.admin.prototype.media`, object store
+`images`, separately from metadata/History in localStorage. Files are written before metadata;
+finalization re-reads the snapshot after the asynchronous byte write and rechecks the captured
+Event and upload identity. Reset or Trash during that write cannot add media/History. Logical
+removal precedes physical cleanup; startup and Reset prune orphan bytes. Trash/Restore retain
+files. Local fixture images are served from `public/images/prototype`, without remote requests.
+Only capability headers reach the direct upload. Expired or foreign capabilities and repeated
+binary transfers fail; finalization is idempotent.
+Read links are checked again after asynchronous file reads. Validation checks JPEG/PNG/WebP
+signatures, truncation, animation markers, native decoding, 5 MiB and 20 megapixel limits. It
+has no cross-tab coordination or Sharp decoder parity and does not simulate server disk/CORS
+or the real service's persistence. Browser data never enters Real.
+
+The shell displays the localized mode and browser hint. **Reset demo data** requires confirmation,
+blocks new writes, waits for submitted mutations from active and retired clients, replaces
+fixtures for both stores, then boots discovery in the current locale with fresh clients/forms.
+A failed Reset retains the form and allows retry. Appearance preference remains separate.
+The worker script is generated with MSW and served from the admin's public assets. Use a
+loopback or HTTPS origin with browser storage and service workers enabled. For a custom port,
+use `npm run dev:mock --workspace @holita/admin -- --port 12089`.
+See [Angular checks](testing.md#angular-admin-checks) for backend-free compiled browser tests.
+
+### Angular Reference Venues
+
+For a selected store, **Reference → Venues** opens `/reference/venues`. The list uses server
+pagination and URL parameters `page`, `pageSize`, `search`, `active`, `sort` and `order`.
+Name search applies after 300 ms; activity and sorting also commit pending text. `active=false`
+selects inactive records. Name/city/country/capacity/activity headers toggle ascending/descending;
+**Reset sorting** restores newest-first. Capacity nulls remain last in both directions, with
+descending ID ties. Filter/sort/size changes return to page one; Clear filters preserves size
+and sort. History restores the applied filters; unrelated parameters/hash remain intact.
+
+**Create venue** opens `/reference/venues/new`; names open `/:venueId/edit`. The form contains
+name (required, 200 code points), description (optional, 2000), city (required, 120), two-letter
+Latin country code, address (optional, 300), nullable positive integer capacity (up to 2147483647)
+and activity (defaults to true). Text is trimmed, country code uppercased, NUL rejected and
+optional blank description/address mapped to null; clearing capacity also sends null.
+First-invalid-field focus, allowlisted server field errors and request IDs keep a rejected draft
+usable. Initial detail errors support retry without exposing an empty edit form.
+
+The Sakai editor uses a sticky desktop settings/action aside, following the details on mobile.
+Dirty forms guard store/language/editor/history navigation and beforeunload. Submitted writes
+retain their captured store/language/client and cannot navigate or alter the next editor.
+Switching stores preserves Venues and opens its clean list. Single and page-local sequential
+Delete require confirmation, preserve successes, report referenced-row failures and retain
+failed selection for retry. An emptied last page is corrected from the server total. Navigation
+stops unsent deletes; submitted writes settle against their original scope.
+
+Angular Real uses the existing Reference service; Prototype supplies the same implemented
+workflows locally. Rich text/media are not part of the Venue editor.
+
+### Angular Reference Speakers and Tags
+
+**Reference → Speakers** opens `/reference/speakers`; **Reference → Tags** opens
+`/reference/tags`. Create uses `/new`; clicking a name opens `/:recordId/edit`. Both lists
+reuse the Venue query conventions, page sizes, 300ms name search, activity filter, newest-first
+reset and preserved URL history. Speakers additionally sort by Email, with nulls last in both
+directions; Tags sort by Color. The service breaks ties by descending ID.
+
+Speaker Name is required (200 Unicode code points); Email is optional (254), with address
+validation, and Short biography is optional (2000). Blank Email/biography updates explicitly
+send null. Tag Name is required (100); Color accepts exactly `#` followed by six HEX digits.
+A valid draft has a live swatch/value preview; submission trims and lowercases the color.
+Both editors reject NUL, retain rejected drafts, focus known server field errors and preserve
+false activity. Duplicate Tag names in the same store produce a Name field error.
+
+Sakai list/editor styles are shared presentation files; each resource retains concrete
+operations, API, list state, typed form and validation. Store switching preserves the current
+Reference section and opens its clean list. Dirty forms guard route/store/language/history
+navigation. Submitted writes and late callbacks follow the captured-client lifecycle described
+for Venues. Page-local sequential deletion retains failed selection for retry; Speakers linked
+through Sessions and Tags linked through Events cannot be deleted, including links retained
+while an Event is trashed. The Angular UI reports these errors; Event Venue/Tag relations can be edited in Angular.
 
 [public/config.json](../apps/admin/public/config.json) is fetched before Angular bootstraps,
 with a 10-second deadline, so PrimeNG and Apollo receive their startup configuration.
 Its `graphqlUrl` accepts a root-relative path or an HTTP/HTTPS URL without credentials or a
-fragment. Configuration load/validation errors stop startup with a visible message.
+fragment. Configuration load/validation errors stop startup with a localized alert and matching document language.
 Optional `primeUiLicense` supplies the browser-visible PrimeUI Community/commercial key to
 PrimeNG's own verifier. An omitted/empty key leaves PrimeNG's standard license warning/banner
 active; no application bypass is used. Keep issued keys out of commits. Supply the field only
@@ -185,7 +292,172 @@ Use [Angular checks](testing.md#angular-admin-checks) to verify real routing, ge
 contracts, per-workspace cache isolation and pending mutations. Store selection scopes data;
 it provides no authorization.
 
+### Angular Reference Events
+
+**Reference → Events** opens `/reference/events`; Create uses `/new`, a Title link opens
+`/:recordId/edit`, and View opens `/:recordId`. Saving creation opens its new editor; saving
+an edit opens the overview. These routes preserve list query/hash and Bulgarian/English.
+Store switching returns to that store's clean Events list.
+
+The list stores `search`, `status`, `format`, `venues`, `tags`, `featured`, `from`, `to`, `min`,
+`max`, `sort`, `order`, `page`, `pageSize` and `view=trash` in the URL. Enum/ID selections use comma-separated
+values. Search and Status are visible; **More filters** expands Format, Featured, relations and
+ranges. Search matches Title/Code after 300 ms; other changes apply immediately. Start dates
+include the complete final calendar day in Europe/Sofia, including 23/25-hour DST days.
+Invalid date/capacity range drafts show a warning and retain the previous applied query.
+Back/Forward restores filters. Starts at ascending is the default; Title, Status, Capacity,
+Budget and Created at also sort on the server. Column choices persist per store under
+`holita.events.columns.v1.<storeId>`; Reset restores default columns, filters, sort and paging while preserving Active/Trash.
+Storage failures remain visible without preventing table use.
+
+The typed editor uses Sakai cards, PrimeNG Accordion sections and a sticky desktop settings
+aside, below the form on mobile. Desktop field groups use the available content width to choose
+one or two columns; Accordion sections share the card's horizontal padding. Saved overview
+titles, Tag labels and Session editor breadcrumbs wrap long words within the page. General owns Title (200 code points), immutable Code (100),
+Format, positive nullable Capacity and exact decimal-string Budget EUR (0–9999999999.99,
+up to two decimals). Status and Featured are editable settings. Schedule owns starts/ends,
+paired registration calendar dates, Venue and Meeting URL. In person requires a Venue;
+Online requires an absolute HTTP/HTTPS Meeting URL; Hybrid requires both. Format changes
+clear inapplicable relations/URL on submission. Blank optional values send null; Tags clear
+with an empty ID list, and false Featured remains false.
+
+Minute inputs preserve untouched stored seconds/milliseconds and either repeated autumn
+offset. Changed inputs use date-specific Sofia offsets; nonexistent spring times are rejected.
+End follows Start; registration closes on/after opening and by the Sofia Event start date.
+List/overview date labels use Bulgarian or British English formatting; overview times also
+show the Sofia UTC offset. Registration dates keep their calendar day.
+Relation dialogs search on the server after 250 ms, page by 20 and hydrate selected IDs.
+Existing inactive choices remain labeled; new form assignments require active rows. List
+relation filters may include inactive rows. Remote reads cancel on replacement/closing;
+closing also cancels pending search debounce, so reopening cannot reset a newly selected
+page. Errors offer retry, and paging retains popup search focus.
+
+Content contains Tags, plain Summary (500 code points) and rich Description. Tiptap core and
+StarterKit supply paragraphs, H2/H3, bold/italic, ordered/bullet lists, line breaks, links,
+undo and redo. Angular uses the core editor through a typed ControlValueAccessor. DOMPurify removes unsupported pasted/stored HTML; links require
+absolute HTTP/HTTPS without credentials. The backend independently sanitizes writes.
+The description limit is 100 KiB UTF-8 HTML; empty content clears to null. Submission disables
+both form and rich editor. The overview renders sanitized saved HTML and current relation
+labels. Speaker biographies remain plain text.
+
+Dirty navigation and first-invalid/server-field focus retain rejected drafts and open the
+owning section. Retired clients allow submitted writes to settle, while late results cannot
+navigate or update another store/language/editor.
+
+**Active events / Trash** switches the server list and resets its page. Checkboxes select only
+visible rows, at most 100; page/filter/sort/size/view changes clear the selection. Same-query
+refresh prunes it to rows still present. **Publish selected**, **Archive selected**, **Trash
+selected** and **Restore selected** confirm the count and submit one atomic backend mutation.
+Foreign, missing or ineligible IDs reject the whole action. Failure keeps the dialog, error and
+selection for retry; Cancel/Escape are available again after failure. Submitted actions disable
+duplicate confirmation and cancellation. Query/store/route navigation retires the old dialog
+and completion callbacks, while its write settles against its captured client. Successful
+completion clears selection and refreshes server totals, correcting an emptied last page.
+
+The overview offers confirmed Publish/Archive and Trash for active Events, and Restore for
+Trash. Trash is read-only, retaining status, reserved Code, Sessions, Gallery and lookup links;
+its editor and child reads remain blocked by the backend. Restoration retains that data.
+**History** (`tab=history`) is available for active and trashed Events, with server pages of 20,
+localized operation/field labels and Anonymous actor, Sofia times including the UTC offset,
+and expandable before/after values. Description HTML appears as sanitized plain-text excerpts.
+Seed Events have no invented History. New actions refresh the current overview and History;
+errors expose Retry and request IDs. Back to events removes the History tab parameter while
+preserving the list query/hash. Active Events also provide the [saved Gallery](#angular-reference-gallery).
+
+Optional public startup `referenceEnabled` must be a boolean and defaults to true. Set false
+in the served configuration when Reference is unavailable: its navigation is hidden and
+list/create/edit/overview routes show a localized unavailable message without business requests.
+Products remains operational. The backend's `REFERENCE_ENABLED` is configured separately;
+backend errors use the usual diagnostics/retry path. The frontend flag is not authorization.
+
+### Angular Reference Sessions
+
+Open an active Event overview and select **Sessions** (`tab=sessions`). The complete
+program has at most 100 Sessions. **Add session** opens `/:eventId/sessions/new`; a row's
+**Edit session** opens `/:eventId/sessions/:sessionId/edit`. Links retain the Event list
+query and fragment; save and cancel return to the same Event's Sessions tab. The standalone
+editor saves independently from Event details and confirms discarding dirty unsubmitted input.
+
+Title is required (200 Unicode characters). Optional plain Summary (2,000) and Room (120)
+trim on save and clear explicitly to null. Start defaults to the saved Event start; end is
+required and must follow start. Both use Europe/Sofia, reject invalid dates/spring gaps and
+must lie within the saved Event. Unchanged minute controls preserve stored seconds,
+milliseconds and either repeated autumn offset. Overlaps between Sessions are permitted;
+the server rejects Event date changes that would exclude any existing Session.
+
+The remote **Speakers** dialog searches/pages active records and separately hydrates selected
+IDs. Keep at most 100 distinct assignments. Existing inactive Speakers are labeled and may
+be retained or removed; they cannot become new assignments. The overview displays each
+Speaker once across the current program, with inactive labels and read-error retry.
+
+Drag a row's handle or use its named up/down buttons to create a local ordering draft.
+Changes announce the new position. **Save order** submits the complete ID permutation
+atomically; errors retain the draft. A membership conflict requires **Cancel order**, which
+reads the current server order before clearing the draft. Failed reloads retain it. Add/edit/
+delete and Event actions are disabled while ordering is dirty. Tab, parent/store/language
+navigation and browser unload guard unsaved order; submitted writes settle in their captured
+client without blocking navigation or affecting a new workspace.
+
+Session deletion is permanent and confirmed separately. Errors keep the target available for
+retry; Cancel/Escape returns focus to its trigger and success focuses the program heading.
+Create/edit/delete/order changes update the saved program and initiating Event/History.
+Event Trash disables Sessions and blocks direct child reads/editors; Restore returns the
+retained program. These controls use the real API or the matching Angular Prototype operations.
+
+### Angular Reference Gallery
+
+A saved active Event's editor shows **Content → Event gallery**. The overview's
+Event tab shows the saved images with read-only previews. New Events must be saved first;
+Trash mounts no Gallery or child reads, and Restore returns the retained images.
+
+**Add image** uses the existing GraphQL intent → direct HTTP transfer → GraphQL finalization
+contract. Binary bytes go directly to Reference with the captured upload URL/headers. Progress
+and **Cancel upload** cover the intent/transfer stages; navigation cancels unfinished transfer.
+Once finalization starts it settles against the initiating store/Event even after navigation,
+without notifying or changing a new editor. Failed or cancelled uploads can be retried.
+Cancellation leaves the server reservation to its existing expiry: ten minutes before completed
+transfer, or one hour after transfer without finalization.
+
+The Gallery accepts nonempty JPEG, PNG or WebP still images of at most 5 MiB, valid filenames
+of up to 255 Unicode characters and at most 10 images, including pending reservations. Reference's decoder validates
+actual format, still-image rules and the 20 megapixel limit. Browser validation does not replace
+server validation. Configure Reference's [upload origin allowlist](#reference-media-configuration) when serving
+Angular from another origin.
+
+Upload, **Set cover**, **Alt text** and **Remove** save independently of Event fields, retaining
+unsaved Summary/Description and other text. Alt text is trimmed, limited to 300 Unicode
+characters without NUL, and blank input clears it to null. Removal is permanent and confirmed;
+removing the cover selects the first remaining image. Failed operations preserve their target
+and draft for retry. Cancel/Escape returns focus to the initiating control.
+
+Drag a card's named handle or use its earlier/later buttons to create an ordering draft.
+**Save image order** submits the complete distinct ID set atomically; failure retains the draft.
+**Cancel image order** reloads current server membership before clearing it. Dirty ordering and
+Alt text guard route/store/language navigation and unload. Finish or cancel Gallery work before
+**Save event**. Gallery activity does not submit or rehydrate Event fields.
+
+Open an image for its full preview, then use **Previous image**, **Next image** or the arrow
+keys. Escape closes it and restores focus. Metadata refreshes every eight minutes while mounted;
+**Refresh images** renews broken/expired links, including after Reference restarts. Opening an
+expired preview also refreshes it. See [media storage and capabilities](architecture/overview.md#event-media-and-direct-uploads)
+and [focused checks](testing.md#angular-admin-checks).
+
 ### Sakai source reference
+
+The Angular admin uses Sakai's 14px root scale, PrimeNG 22's
+[`aura-compat` preset](https://primeng.dev/theming/styled#base-font-size) and Lato.
+The compatibility preset preserves control typography and spacing at a 14px root.
+[The preset composition](../apps/admin/src/app/layout/sakai-preset.ts) imports the original
+Aura base and only the component presets used by the admin, including PrimeNG's internal
+dependencies. When introducing another PrimeNG control, include its preset and any component
+dependencies there; keep the original tokens and review both themes at the same viewport sizes.
+Font weights 400, 500, 600, 700 and 800 are served from `apps/admin/public/fonts/lato`, including Cyrillic glyphs;
+no external font CDN is required. Font sources and licenses are recorded in
+[the admin attribution](../apps/admin/THIRD_PARTY_NOTICES.md).
+
+Sakai is the Angular admin's theme and visual reference for shell and feature presentation,
+including spacing, typography, geometry and responsive layout.
+Concrete Angular features supply contracts, validation and request lifecycles.
 
 The local Sakai Angular source is `.references/sakai-ng`, outside `apps/` and the npm
 workspaces. Git, Nx, ESLint and Prettier ignore `.references/`. The checkout is a source
@@ -204,6 +476,22 @@ git clone https://github.com/primefaces/sakai-ng.git .references/sakai-ng
 git -C .references/sakai-ng checkout --detach 96d71496d685b5c110efd2875abaa2bf89a56ad2
 git -C .references/sakai-ng submodule update --init --recursive
 ```
+
+For an optional rendered comparison, install the reference's own locked dependencies
+and run its existing preview script from that checkout:
+
+```bash
+cd .references/sakai-ng
+nvm use
+npm ci --no-audit --no-fund
+npm start -- --host 127.0.0.1 --port 11090
+```
+
+Open `http://127.0.0.1:11090/pages/empty` for the shell,
+`/pages/crud` for the template's CRUD presentation and `/uikit/formlayout` for forms.
+Use another free port if needed. The reference has its own dependencies and cache;
+it does not change holita's lockfile or join the workspace. Stop its preview after
+the comparison. Temporary comparison captures belong in the ignored `.references/review/`.
 
 Use `src/app/layout/component` for the original shell components, `src/app/layout/service`
 for their presentation state, and `src/assets/layout` for layout SCSS. Compare the original
@@ -225,7 +513,6 @@ skills automatically; start a new turn, or restart Codex if the new skill does n
 
 [holita-admin-development](../.agents/skills/holita-admin-development/SKILL.md) adds only
 Holita's application boundaries, generated contracts, lifecycle and check selection.
-The React workflow remains in its separate skill.
 
 Install the official [PrimeNG plugin](https://primeng.dev/plugin) in the Codex user environment:
 
@@ -257,481 +544,72 @@ npm exec -- prettier --write 'apps/admin/src/**/*.html'
 npm exec -- prettier --check 'apps/admin/src/**/*.html'
 ```
 
-## Admin data modes
+## Manual Prototype review
 
-The React admin runs as **Real** (`graphql`, port 11081) and **Prototype** (`mock`, port
-11087). The top bar identifies the mode (below it on mobile). `npm run dev` starts these two modes plus Angular and the four
-backends; it still requires the explicit database setup for Real. Each admin has its own
-origin and Refine cache. The mode is fixed for that process; navigation never changes it.
-
-After [installation](#prerequisites-and-installation), run Prototype from the repository root
-without PostgreSQL, Docker or any backend. No `.env` file is required:
-
-```bash
-npm run dev:admin-react:mock
-```
-
-Open http://127.0.0.1:11087. The mode indicator must say **Prototype**; choose **holita Sofia**
-or **holita Plovdiv** to open that store's Tags list. The terminal stays open while the admin
-runs; Ctrl+C stops it. Use the same browser and origin to keep your saved demo data.
-For a visual walkthrough, follow [manual Prototype review](#manual-prototype-review).
-For automated checks, follow [Prototype checks](testing.md#prototype-checks); they start their
-own instance and do not require this development process.
-
-To use another Prototype port:
-
-```bash
-VITE_DATA_SOURCE=mock npm run dev --workspace @holita/admin-react -- --port 12087
-```
-
-That instance opens at http://127.0.0.1:12087 and has a separate browser dataset.
-
-Run Real alone with a prepared, running gateway:
-
-```bash
-npm run dev:admin-react:graphql
-```
-
-`dev:admin-react` remains an alias for Real. These root commands explicitly set `VITE_DATA_SOURCE`,
-so a local `.env` cannot change their mode. Running the admin workspace directly accepts
-`VITE_DATA_SOURCE=mock|graphql` from the environment or its Vite `.env`; omission defaults to
-`graphql` and any other value fails startup. Default admin builds explicitly use `graphql`.
-Each development mode has its own Vite dependency cache under the admin's node_modules.
-Browser test fixtures use disposable per-run caches so they cannot replace dependencies
-served by a running development instance.
-
-For an optional Prototype build, generate the local contracts first, then build with Vite:
-
-```bash
-npm run codegen
-VITE_DATA_SOURCE=mock npm exec --workspace @holita/admin-react -- vite build
-```
-
-This produces `apps/admin-react/dist` with disposable demo data and requires a secure context
-(HTTPS or localhost) for the worker. Normal `npm run build` and the admin workspace's
-`build` script explicitly produce Real, even if the caller sets `VITE_DATA_SOURCE=mock`.
-
-Prototype supports **store discovery, Products/Venues/Speakers/Tags CRUD, Events and
-Sessions, Gallery/uploads, Event History and the UI catalog**. Open http://127.0.0.1:11087, choose a store
-to open Tags, then use Workspace or Reference navigation. Unknown sections show an
-unavailable message before feature mounting. Real retains all its implemented modules.
-Prototype ignores `VITE_GATEWAY_URL` and backend Reference disablement. Requests use
-`/__prototype/graphql` on the Prototype origin; MSW starts before rendering, uses generated
-operations and refuses unimplemented operations. Vite serves its worker from the installed
-package, without a copied worker file.
-
-Products and lookup resources have 24 fixtures in Sofia and 8 in Plovdiv, including
-active/draft or inactive records and optional fields with and without values. Events have
-22 active and 2 trashed fixtures in Sofia, 6 active and 2 trashed in Plovdiv, with three
-sessions per event and initial creation/trash History. General, Schedule & location and
-Content & media forms and Gallery use the same screens as Real. The first fixture Event in
-each store has two locally served [Picsum](https://picsum.photos/) placeholders from
-`apps/admin-react/public/images/tmp`, in WebP format at 1200 × 800 pixels; other and newly
-created Events start empty.
-Save a new Event before adding images.
-
-Lists preserve filter/sort/page behavior. Writes enforce case-sensitive SKU/name/code
-uniqueness within their store; Event codes remain reserved in Trash. Products search names
-and SKUs, lookups search names, and Events search titles and codes. Nullable sorts keep
-nulls last in both directions. Products/lookups break ties by descending ID; Events use
-ascending ID. Nullable updates distinguish omission from explicit null. Email/UUID
-validation uses the backend's validator package. Mock error shapes follow the owning service.
-
-Event/Sessions use editable, store-scoped relations. New assignments require active
-records; existing inactive assignments remain valid. Related labels resolve from current
-lookup records. Venue/Tag deletion is refused while any Event references it, including
-Trash; Speaker deletion is refused while any Session references it. Removing the actual
-links releases those restrictions. Products and Sessions use permanent deletion. Event
-Trash/Restore preserves status, relations, children and History. Bulk Event actions validate
-the complete selection before saving. Session reorder requires the complete current program;
-no-op edits/status/order do not add History. Sessions must fit within Event dates, and Event
-date changes cannot exclude existing sessions. EUR amounts retain two decimal places and
-registration dates use Europe/Sofia. Rich HTML uses the existing browser DOMPurify sanitizer,
-with the supported tags/link rules and 100 KiB UTF-8 limits; DOM serialization may differ
-from the server's sanitize-html output.
-
-Saved Products, Venues, Speakers, Tags, Events, Sessions, media metadata and History share
-`holita.prototype.data` in localStorage, using snapshot version 4. Older snapshots are
-replaced by the complete initial dataset. Reload keeps edits; malformed snapshots,
-including invalid cross-store relationships, restore fixtures. Each mutation and its
-History entries are saved together. **Reset demo data** asks for confirmation, restores
-both stores, clears Refine/form state and returns to store selection. It is unavailable
-while a submitted mutation or Reset is pending; repeated confirmation cannot start another
-Reset. Storage failures are visible, permit retry and leave the prior snapshot intact.
-Appearance and list-column preferences are independent of demo data
-and are not reset.
-
-Uploaded image bytes use the native IndexedDB database `holita.prototype.media`, with an
-`images` object store. Fixture images remain local static assets. Upload intents and unfinished
-bytes stay in memory, with the same 10-minute upload and one-hour finalization deadlines as
-Real; reload discards unfinished uploads. Only finalization persists a Blob, then saves its
-metadata and History together. A failed binary write cannot add metadata; a failed snapshot
-write removes the new Blob or leaves an inaccessible orphan for cleanup. Gallery list/read
-URLs are temporary, origin-local capabilities, checked against the current store and active
-Event. They provide no authentication. Each gallery response renews the ten-minute preview
-lifetime; older links remain valid until their expiry. Cover assignment/removal updates
-the parent Event timestamp, as in Real.
-
-Removing an image saves its removal and History entry before deleting its bytes. Startup prunes bytes
-without metadata, preserving uploads belonging to trashed Events. Reset discards unfinished
-uploads, restores both stores and clears uploaded bytes. Physical cleanup failures leave
-inaccessible bytes and retry on startup; Reset/removal still retain their saved logical result.
-IndexedDB startup/read/write failures are visible. Clearing browser site data clears all demo
-records and uploads. Prototype data is never transferred to Real.
-
-Prototype checks MIME signatures, chunk/animation markers and native browser decoding,
-including the 5 MiB and 20-megapixel limits. Browser decoder tolerance and error diagnostics
-can differ from Real's strict Sharp validation. Prototype does not simulate server disk
-permissions, multipart streaming, bandwidth or cross-tab transactions. Use one editing tab
-per Prototype origin. Cancel and store/route changes abort the existing upload hook before
-finalization; an already submitted finalization keeps its captured scope.
-
-There is a short response delay to exercise loading and pending UI. This does not simulate
-backend outages, transactions, concurrency locks or database text collation.
-
-Demo data is small and disposable. Changing its structure requires a version bump and
-fixture reset, rather than migrations. It belongs to this browser origin; changing the port,
-clearing storage or using another browser starts a separate dataset. Multiple tabs do not
-synchronize Refine caches, and simultaneous writes are not coordinated. Use one tab when
-reviewing a workflow. This browser data is never transferred to Real.
-
-### Manual Prototype review
-
-Use http://127.0.0.1:11087 after starting Prototype. The following steps review the current
-screens and browser persistence; they do not establish Real backend parity.
-
-1. Confirm **Prototype** in the mode indicator, choose **holita Sofia**, then create a Tag
-   with a unique name. Edit it, save and reload; the saved values should remain.
-2. Switch to **holita Plovdiv**. The new Tag should be absent. Return to Sofia; it should
-   still be present. The two stores have independent records.
-3. Open **Prototype → UI catalog** and try all four tabs. Change filters, menus, forms and
-   feedback states. Catalog examples reset when leaving their tab and must not change
-   saved business records.
-4. Open **Reference → Events**, use a row's **View** action, then check **Sessions** and
-   **History**. Edit the Event's **Content & media** tab, upload two small JPEG/PNG/WebP images,
-   change the cover and order and reload. Saved changes and finalized uploads should remain.
-5. Review desktop collapse, light/dark appearance and a narrow viewport. On mobile, use
-   **Open navigation**; the store selector and mode indicator should sit below the top bar.
-   The layout has one navigation column, no footer and no horizontal page overflow.
-6. When the test data can be discarded, choose **Reset demo data**, then **Reset data**.
-   This removes saved changes, unsaved forms and uploads for both stores and returns to
-   store selection. Fixtures return; theme and list-column preferences remain.
+Run `npm run dev:admin:mock` and open http://127.0.0.1:11089/bg (or `/en`).
+No backend or database is needed. Confirm the Prototype indicator, select each store and
+exercise Products, Venues, Speakers and Tags CRUD. Reload to check browser persistence.
+Create an Event, edit its description, add a Session/Speaker and reorder the program.
+Upload an image, set cover/Alt text, reorder it and confirm that Trash/Restore retains
+children and images. Check History and then confirm Reset demo data, which waits for
+submitted writes and restores fixtures in the current locale. Review the UI catalog's
+local examples separately from saved business records. See [Angular checks](testing.md#angular-admin-checks)
+for automated workflows and the [Prototype limits](#angular-prototype).
 
 ## UI catalog
 
-In Prototype, choose a store, then **Prototype → UI catalog**. The route is
-`/<language>/stores/<storeId>/ui-catalog`; Real hides the menu and blocks this route without mounting
-the catalog or requesting a CRUD resource. The catalog loads on demand.
+In Angular Prototype, choose a store, then **Prototype → UI catalog**. Open
+`/<language>/stores/<storeId>/ui-catalog` on port 11089. Real hides the menu and rejects
+this route before loading the examples or requesting a CRUD resource. The catalog loads
+on demand and mounts only for a discovered store.
 
-Its four tabs show the current Aurora/MUI presentation primitives and shared components:
+Its four tabs use Sakai composition and native PrimeNG components:
 
-- **Body & actions:** typography, paragraph and detail content, cards, activity lists,
-  buttons, badges, tooltips, summary tables and expandable sections.
-- **Lists & menus:** a local list with shared pagination, filters and row menus, sorting,
-  page-local selection, example editing and confirmed deletion. Filters apply immediately.
-- **Forms:** text/email/number/color/date inputs, dropdowns, multi-select, checkbox, radio,
-  switch and readonly fields; required-field validation, first-error focus, state previews
-  and the shared desktop/mobile form aside.
-- **States & feedback:** initial loading, empty, error/retry, disabled content, preserved
-  content after refresh failure, alerts, progress, confirmations and notifications.
+- **Body and actions:** typography, helper text, buttons, status tags, cards and expandable details.
+- **Lists and menus:** twelve local examples with immediate text/status filters, sorting,
+  paging, page-local selection, a row menu, view/create/edit dialogs and confirmed deletion.
+- **Forms:** typed Reactive Forms with text/email/number/color/date/time, single/multiple
+  selection, checkbox, radio, activity switch and readonly fields. Validation focuses the
+  first invalid field. Saving/disabled previews block changes; failed-save previews retain
+  entered values. The summary aside is sticky on desktop and follows the fields on mobile.
+- **States and feedback:** content, loading skeleton/progress, empty, error/retry, disabled
+  actions, retained rows after refresh failure and keyboard-accessible confirmations.
 
 The selected tab is in `?tab=body|lists|forms|states` and survives reload or browser history.
-Example values, selection and edits belong to the current tab and reset when leaving it,
-reloading, switching stores or resetting demo data. Store switching opens the default Body
-tab. Examples do not issue business GraphQL operations or write browser storage. Their
-filters and validation illustrate presentation; they do not prove a feature's backend rules.
-See the [shared component inventory and usage rules](reference.md#ui-catalog-and-shared-components).
+Unknown tab values show Body. Example values, selection and edits belong to the current tab
+and reset when leaving it, reloading, switching stores/languages or resetting demo data.
+Store switching stays in the catalog and opens Body. Examples do not issue business GraphQL
+operations or write browser storage; normal store discovery still runs in the surrounding
+workspace. Their validation illustrates presentation and does not prove a feature's backend rules.
 
-## Using Reference
+## Admin translations
 
-Choose a store, then **Reference → Events, Venues, Speakers or Tags**. Each resource has a
-paginated list and create/edit form using real persisted data. Page headers contain the
-record context and applicable tabs. Supporting forms return to their list after saving;
-creating an Event opens its edit URL, and later Event saves return to its overview. Click an
-Event row/title to edit; **View** in its three-dot menu opens the overview. Trash rows open the
-read-only overview.
+The Angular admin uses `/bg/...` and `/en/...` routes, defaulting to Bulgarian.
+Bundled [messages](../apps/admin/src/app/i18n/messages.ts),
+[Bulgarian](../apps/admin/src/app/i18n/bg.json) and [English](../apps/admin/src/app/i18n/en.json)
+catalogs supply shell, feature, validation, confirmation, startup and Prototype text.
+Language navigation preserves the path/query/hash and uses the editor's dirty-state guard.
+The document language follows the URL. Each Apollo/Media client captures its language;
+requests send `Accept-Language` without changing a global header. Submitted writes retain
+their original store/language and obsolete callbacks cannot affect a newly mounted editor.
+Display formatting uses the selected locale; Event/Session/History times remain Europe/Sofia
+and EUR API amounts remain exact decimal strings. Backend messages, record content and
+saved History values are displayed as received. Prototype Reset preserves the locale/theme.
 
-Venues, Speakers and Tags use the Aurora list with shared quick/panel name search and
-Active/Inactive filters. All sort by Name and Status; Venues also sort by City, Country and
-Capacity, Speakers by Email (empty last), and Tags by Color. Text waits 300 ms; other filters
-apply immediately. Filter/sort/page state survives reload and browser history. Resetting
-filters preserves sorting and page size. Click a row or its Edit action to open the editor.
-Checkboxes select records on the current page; confirmed Delete selected reports each failed
-record and retries only those failures. Venues and Tags referenced by events, and Speakers
-assigned to sessions, cannot be deleted, including when the event is in Trash.
-
-The Venue form shows details and location together. The desktop aside holds Active, Capacity,
-Summary and Save/Cancel; on mobile it follows the fields. Optional description, address and
-capacity can be cleared. Server errors focus the affected field, and unsaved changes require
-confirmation before leaving. Speakers use the same composition for Name, Email and Short
-biography; optional email and biography can be cleared. Tags use Name and a six-digit HEX
-Color, with a native color picker and live preview. Duplicate tag names show a field error
-and retain the draft. Both forms put Active, Summary and Save/Cancel in the responsive aside.
-Save/Cancel return to the base resource list; browser Back restores a previous list URL.
-
-On narrow screens, **Open navigation** in the top bar opens navigation. Event form tabs scroll
-horizontally and retain keyboard navigation. The Event editor shows Unsaved changes or Saving…
-above its sections. Lists, History and Gallery distinguish loading, failed requests and empty
-results; failed requests offer Retry or Refresh previews. See the
-[implementation index](reference.md) for the corresponding code and focused checks.
-
-Events use General, Schedule & location and Content & media tabs. The code is unique in the store
-and read-only after creation. The sticky desktop aside holds Status, Featured, Capacity, Budget,
-Summary and Save/Cancel; on mobile it follows the fields. Budget uses an exact EUR decimal string. Event times are
-entered with native date/time inputs in Europe/Sofia; registration uses calendar dates. In person needs a Venue, Online
-needs a meeting URL, and Hybrid needs both. Venue and Tag selectors search remotely and
-page through matches; existing inactive selections remain labeled. Save validates all
-sections, preserves failed input and opens the section containing the first field error.
-
-Reference editors warn before discarding unsaved input on Cancel, navigation or store
-switching. Switching returns to the same resource's list in the chosen store. Submitted
-writes keep their initial store and entity even after navigation. Reload uses a native
-browser warning for unsaved fields. Supporting deletion requires confirmation and fails
-if referenced. Move to trash hides an Event while retaining its data and reserved code;
-choose the **Trash** header tab to find it. Trash retains the previous status; **Restore**
-returns the Event, its Sessions and Gallery to active use. In Trash, Show is read-only with
-History and Restore; editing and child access require restoration. Import/export is absent.
-
-Select rows on the current Event page to **Publish**, **Archive** or **Trash selected**.
-In Trash, use **Restore selected**. Confirmation applies to those explicit IDs only (at most
-100); a foreign, missing or ineligible event rejects the whole selection. Selection resets
-on pagination, filters, sorting, browser history and store changes. Failure retains selection
-for retry. Reset filters preserves the Active/Trash tab.
-
-Open **History** in the Event header for paginated saved changes: event fields/status,
-Trash/Restore, Sessions and Gallery operations. Expand a row to inspect before/after values.
-Times are Sofia; long values are excerpts and description HTML is shown as plain text.
-Actors are `Anonymous` because authentication is not implemented. In Real, History begins
-with recorded writes; existing backend seed fixtures have no fabricated earlier entries.
-Prototype fixtures include their creation and Trash entries. History and its
-associated change commit together. Apply the additive EventHistory migration with
-`npm run db:migrate` when updating an existing installation.
-
-In **Edit event → Content & media**, Summary stays plain text. Description provides paragraphs,
-Heading 2/3, bold, italic, bullet/numbered lists, line breaks and web links. Select text,
-choose **Link**, and enter an absolute http(s) URL; **Remove link** keeps its text.
-Undo/Redo and standard keyboard shortcuts work within the editor. Pasted content keeps
-supported formatting and removes embeds, images, scripts and styling. There is no HTML
-source mode. The counter measures UTF-8 HTML bytes, including formatting, against 100 KiB.
-
-**Save event** saves the description together with the other sections. Validation opens
-Content & media and focuses the editor; failed saves preserve input. The editor is read-only during
-submission. Clearing its content clears the saved description. Overview displays the saved
-formatted content below Summary; Event tables do not request rich HTML. Speaker biographies
-and Session summaries remain plain text.
-
-In both modes, after the first Event save, **Content & media → Gallery** accepts up to 10 still JPEG, PNG
-or WebP images (5 MiB and 20 megapixels each). **Add image** shows progress and permits Cancel
-until finalization begins. Upload, **Set cover**, **Alt text** and **Remove** save immediately,
-independently of Summary/Description and other Event fields. Removing an image is permanent
-and asks for confirmation. Removing the cover selects the first remaining image.
-
-Drag cards or use their arrow buttons, then **Save order**. **Cancel order** reloads the saved
-order; failed saves keep the draft. Finish/cancel gallery work before **Save event**. The
-existing unsaved-changes warning also covers gallery ordering. The overview shows the saved
-gallery with full-size previews. Open an image, then use **Previous image**, **Next image** or
-the arrow keys; Escape closes the preview. **Refresh previews** renews expired links, including after a
-Reference restart. A failed or cancelled upload can be retried with Add image; pending slots
-expire after ten minutes, or one hour when upload finished without finalization.
+## Reference media configuration
 
 Reference stores files privately at `apps/reference/.media` by default. Set
 `REFERENCE_MEDIA_ROOT` to a private persistent absolute directory to move it. Back up that
 directory together with the Reference database. `REFERENCE_PUBLIC_URL` must be the browser-
 reachable http(s) base URL for Reference (default loopback at its PORT); set Reference's
-`ADMIN_ORIGIN` to the exact admin origin for upload CORS. No AWS credentials or object storage
-service is required. Source code, Git, Nx and formatting exclude `.media/`. Storage cleanup
+`ADMIN_ORIGINS` to a comma-separated list of exact HTTP(S) admin origins for upload CORS.
+It takes precedence over the legacy single `ADMIN_ORIGIN`. With neither configured, Reference
+allows localhost and 127.0.0.1 on port 11088. Existing installations
+that set only `ADMIN_ORIGIN` retain that single-origin behavior; set `ADMIN_ORIGINS` for the admin origins in use. `*`, credentials, paths, queries and trailing slashes are rejected at startup.
+Keep local overrides in Reference's ignored `.env`; the Gateway still uses its own `ADMIN_ORIGIN`.
+No AWS credentials or object storage service is required. Source code, Git, Nx and formatting exclude `.media/`. Storage cleanup
 runs automatically at startup and every minute; it retries failed removals using persisted
 keys. There is no separate worker to start. See the [upload contract](architecture/overview.md#event-media-and-direct-uploads).
-
-Open an Event and choose **Sessions**. **Add session** opens an Aurora form
-with title, summary, Sofia start/end times, room and a remote Speaker selector. Its event/summary
-panel is sticky on desktop and follows the fields on mobile. Click a session title/row to edit,
-or use its three-dot Edit/Delete menu. Save returns
-to this Event's program. Each session must fit within the Event; overlaps are allowed.
-Changing the Event dates cannot exclude existing sessions. The overview lists unique
-speakers assigned to its sessions, including labeled inactive speakers.
-
-Drag sessions or use the up/down buttons to change display order independently of time.
-**Save order** persists it; **Cancel order** reloads the current server order. A failed save
-keeps the draft for retry. If another user changed the program membership, cancel and
-arrange the refreshed program again. Add/edit/delete are unavailable while an order draft
-is open. There are at most 100 sessions per Event. Session deletion is permanent after
-confirmation. Moving an Event to trash preserves its sessions and blocks their access.
-
-Use title/code search above the Event table or the same field in **Filter**. The drawer also
-contains Status, Format, Venue, Tag, Featured, start-date and capacity ranges. Text waits 300 ms;
-other filters apply on change and combine with the text search. Invalid ranges show a message
-and keep the last applied query until corrected. Dates include the complete selected calendar
-days in Europe/Sofia. Sort with the column headers; **Columns** exposes additional sortable fields. Search, filters, sorting and pagination survive reload
-and travel through overview/edit/back links. Switching stores resets them. **Columns** saves
-its selection separately for each store in this browser; Reset filters preserves columns,
-sort and page size, while Reset columns restores the default view.
-
-The Event overview presents saved details and offers Edit, Publish/Archive and confirmed
-Move to trash. Overview, Sessions and History tabs follow the page header. All displayed times identify Sofia;
-registration remains a calendar-date range.
-
-Local defaults enable Reference. Set `REFERENCE_ENABLED=false` in the Reference environment
-and `VITE_REFERENCE_ENABLED=false` in the admin environment to disable it; restart the service
-and restart/rebuild the admin. The backend blocks business operations even if the UI flag
-is stale. Health and the static schema remain; stored records are preserved. Invalid backend
-flag values fail startup. This flag does not provide authentication.
-
-Keep the Reference process running when disabled: its health endpoint and static GraphQL
-schema remain part of the application. Disabling it blocks its GraphQL business operations,
-entity lookups and binary HTTP upload/read endpoints, while Products remains usable.
-Turning the flags back on restores access to the same records and media; no migration or
-reseed is required.
-
-Reference uses loopback port 11086. Gateway `REFERENCE_GRAPHQL_URL` must match a changed
-service port, and Reference `CORE_GRAPHQL_URL` controls creation-time store validation.
-Gateway and Reference accept JSON bodies up to 1 MiB so a 100 KiB description fits with JSON
-escaping and the other form fields; the description's stricter size limit is checked by
-Reference. Oversized HTTP bodies are rejected before GraphQL validation.
-See [Reference's environment example](../apps/reference/.env.example). `db:setup`,
-`db:test:setup`, `db:migrate`, `db:generate`, `db:validate` and `db:seed` include Reference.
-Seeds insert three Venues, three Tags, two Speakers and two Events across Sofia and
-Plovdiv without updating existing records. The Events are Sofia Creative Forum and
-Plovdiv Culture Exchange. Run migrations and seeds before opening the new resources.
-
-## Admin translations
-
-The admin owns an i18next instance for the active URL language, shared by React's I18nextProvider and
-Refine's i18nProvider in both data modes. It initializes synchronously from bundled
-[Bulgarian](../apps/admin-react/src/i18n/locales/bg.json) and
-[English](../apps/admin-react/src/i18n/locales/en.json) JSON catalogs. The default language is
-`bg`; missing or empty translations fall back to `en` without changing the selected
-language. React receives its instance explicitly through I18nextProvider; it does not use a
-global React translation instance. Provider errors, startup guidance and standalone validation
-reuse one separate instance through i18next's fixed-language translators. There is no translation
-server or browser language detection.
-
-Each catalog groups keys into `common`, `validation`, `shell`, `stores`, `products`,
-`reference` and `prototype` namespaces. Reference groups its keys by Events, Sessions,
-Media, History, Venues, Speakers and Tags. English defines the TypeScript key types through
-[i18next's declaration](../apps/admin-react/src/i18n/i18next.d.ts). Use react-i18next's typed
-`useTranslation('products')` and `t('form.name')` for catalog keys; Refine's runtime string
-keys use its supplied default message when the catalog has no translation.
-Messages use i18next parameters such as `{{max}}` and `_one`/`_other` plural entries selected
-by `count`. React escapes rendered text; translations are plain text.
-
-Every admin URL starts with `/bg` or `/en`, for example
-`/bg/stores/<storeId>/products`. An address without a supported language redirects with
-`replace` to its `bg` version, retaining the query and hash; an unknown application path
-returns to discovery in the selected language. The menu shows Български and English and
-changes only the prefix. Reload, Back and Forward use the URL language; there is no cookie,
-localStorage language preference or browser-language detection. The document's `lang`
-attribute follows the route.
-
-Use [localized routing helpers](../apps/admin-react/src/i18n/routing.ts) for internal links and
-navigation. They add the active prefix to absolute paths and preserve relative navigation
-and history steps. Refine's `changeLocale` also navigates through the router, preserving the
-current path, query and hash. Products and Reference share the
-[unsaved-changes guard](../apps/admin-react/src/features/use-unsaved-changes.tsx), which confirms
-Cancel, language/store changes, module navigation and browser history when a form is dirty.
-Confirmed navigation remounts feature UI; pending server writes retain their
-original store and language, and old editor callbacks cannot redirect the new screen.
-
-[The GraphQL data provider](../apps/admin-react/src/data/data-provider.ts) receives the URL language
-and includes `Accept-Language: bg|en` in each request, including store discovery. Providers
-capture this value; they do not mutate a global header. Resource names and the shared Refine
-cache remain store-scoped because record data is not translated. Prototype Reset clears the
-cache and forms and returns to discovery with the current language prefix.
-
-Products and Reference list/editor/form text, filters, enum labels, local validation and
-success/deletion messages use the catalogs in both modes. Reference includes Sessions,
-Gallery/upload controls, rich-text controls and History labels. History subjects and stored
-before/after values are displayed as received. The shell includes translated navigation,
-local search, theme/profile/notification menus and store discovery/selection states. Shared
-actions, breadcrumbs, pagination, refresh warnings and unsaved-change confirmations also
-use translations. Prototype Reset and the UI catalog translate their controls and feedback;
-catalog preview state stays local and creates no business requests.
-Startup failures show guidance in the URL language and preserve the original error as a diagnostic.
-
-The Aurora theme merges MUI and Data Grid's bundled `bgBG` or `enUS` locale settings,
-including Autocomplete and selection controls. Theme preferences persist through language
-changes. [Display formatting](../apps/admin-react/src/i18n/use-format.ts) uses `Intl` with `bg-BG`
-or `en-GB`, reusing one formatter set per supported language; event, session and History
-timestamps remain in `Europe/Sofia`. Budgets keep
-EUR and their exact decimal-string API values. Native date/time and decimal input formats
-remain unchanged. Provider-generated network/store errors and upload transport errors use
-the language captured by their caller. API enum values, record content and backend messages
-are not translated by the frontend.
-
-## Admin appearance and navigation
-
-The admin uses Aurora's simple single-column Sidenav shell without a footer. All enabled
-module groups appear together in one list. The top-bar button switches desktop navigation
-between 256 px with labels and 72 px with icons and tooltips. At tablet widths, expansion
-overlays content and closes after selection or a backdrop click; mobile uses a temporary
-drawer. The Prototype/Real indicator and store selector stay in the top bar on desktop
-and below it on mobile. There is no separate group rail or sidebar profile panel.
-
-The theme button selects Aurora presets, primary colors and light/dark/system mode.
-Preferences persist in `holita.appearance`, `holita-mode`, `holita-color-scheme-*` and
-`holita.sidenavCollapsed` localStorage keys. Clear those keys to restore defaults.
-Products and all Reference screens, including Sessions, Gallery, speaker summaries and History,
-and store discovery/unavailable states follow the selected Aurora preset. Search finds enabled modules
-locally; profile and notifications remain presentation examples. The language menu uses the URL locale.
-An open search preserves its text when switching between the mobile dialog and desktop
-popover. Closing it restores focus to the current search control. Search navigation uses
-the same unsaved-change confirmation as the sidenav and store selector.
-Notification read/remove actions keep keyboard focus inside the panel when their control
-becomes disabled or disappears, so Escape can close it and return to the notification button.
-
-Shell code and selected theme overrides are in `apps/admin-react/src/layout` and
-`apps/admin-react/src/theme`. MUI, MUI X Data Grid Community, Emotion, Iconify and SimpleBar are installed through the
-existing workspace lockfile. The selected icon data is bundled; font and avatar assets
-are under `apps/admin-react/public`; temporary example avatars are grouped in `public/images/tmp/avatar`.
-No sibling theme server, new environment variables or
-external font/icon service is needed. Start the admin with the normal dev commands.
-
-At the root page, choose a store to open its Products list. A failed store request shows the
-gateway error and **Retry**; an empty successful response explains that a store must be set up.
-An unavailable store URL offers the available stores. These states do not issue feature requests.
-The interface uses MUI throughout; Ant Design and its compatibility providers/styles are absent.
-
-## Using Products
-
-Open http://127.0.0.1:11081 and select a store. Seeded stores are holita Sofia and holita Plovdiv.
-The store switcher stays available on list/create/edit screens. Store-scoped URLs can be
-bookmarked or reloaded. Switching returns to the new store's list and resets pagination
-after confirmation when the current form has unsaved changes. A submitted operation retains its original store and may finish
-after switching; return to that store to see the result.
-Navigation between create/edit routes within the same store also starts a separate editor;
-an earlier submitted write cannot redirect or overwrite the newly opened form.
-Save/Cancel return to the base Products list. Browser Back restores a previous list URL.
-Dirty forms require confirmation before Cancel, language/store changes, module navigation
-or browser history. Keep editing preserves the draft and URL; Discard changes allows the
-navigation. Leaving/reloading the page uses the browser's standard warning. Successful
-Save returns directly to the list; submitted writes do not block navigation.
-
-The Aurora list uses server pagination (20 rows by default; choices 10, 20, 50, 100).
-Search matches name or SKU. The quick search and the search field in **Filter** share the
-same value; editing either updates both. Search, status and the SKU substring filter combine.
-Status changes apply immediately, and text changes apply after a 300 ms pause. Filters and
-page settings persist in the URL and survive reload. Click **Name**, **SKU** or **Status**
-to cycle through ascending, descending and the default newest-first order. Sorting applies
-to all matching products before pagination and survives reload/browser history through
-`sort` and `order` URL parameters. Changing it returns to page one. **Clear filters** preserves
-sorting and page size while clearing search in both places, status and SKU together. On wide
-screens, the filter panel sits to the left of the table; smaller screens use a temporary drawer.
-
-Click a name or record cell to edit. The three-dot menu offers **Edit** and **Delete**.
-Checkboxes select rows on the current page; changing page, filters or sorting clears that selection.
-**Delete selected** confirms the selected count, then deletes those records sequentially.
-Partial failures list the remaining records; retry submits only those records. Navigating
-away stops unsent deletes while the current request retains its original store.
-
-Create/edit use Aurora's form layout, with a sticky right panel for status, summary and
-Save/Cancel on desktop; that panel follows the fields on mobile. Both share one form: name 1..200 and SKU 1..100 trimmed Unicode code points, case-sensitive SKU uniqueness
-within a store, Draft default and Active option. Save disables the form while pending;
-delete requires confirmation. Read failures offer Retry, and write failures preserve the
-form for correction. There is no authentication, store administration or Dev Lab.
-
-The backend GET /health response is `{ "status": "ok", "service": "core" }` (with the
-corresponding service name). It requires no store header or database. Business operations
-use /graphql. Health remains independent of PostgreSQL and other services.
 
 ## GraphQL and generation
 
@@ -754,7 +632,7 @@ After changing SDL or a named operation, run `npm run codegen`, then restart the
 group. Asset watching is not dynamic schema composition. Keep PORT overrides aligned with
 CORE_GRAPHQL_URL and PRODUCTS_GRAPHQL_URL in gateway; products also uses CORE_GRAPHQL_URL
 for creation validation. URLs default to core 11082 and products 11083 on loopback.
-Gateway ADMIN_ORIGIN defaults to http://127.0.0.1:11081 for browser CORS; update it if moving
+Gateway ADMIN_ORIGIN defaults to http://127.0.0.1:11088 for browser CORS; update it if moving
 admin. x-store-id and x-request-id are allowed headers; x-request-id is exposed in responses.
 
 Use the gateway at http://127.0.0.1:11080/graphql. For store discovery, no headers are needed:
@@ -901,6 +779,13 @@ the original brief retain their original names.
 
 ## Dependency compatibility and advisory status
 
+Dependency ownership follows the five active workspaces. Refine, MUI/Emotion, URQL,
+the Tiptap React adapter and React lint/testing adapters are absent. Angular retains Tiptap
+core/StarterKit, DOMPurify, dayjs, MSW and Vitest/jsdom; Vite remains a transitive Angular/
+Vitest build dependency. React/react-dom and React types remain transitive dependencies of
+Prisma Studio inside the backend Prisma CLI, rather than an admin application dependency.
+Keep those tool-owned packages when pruning; `npm explain <package>` shows their owners.
+
 The lockfile applies narrowly scoped overrides while the owning dependencies still
 request vulnerable versions:
 
@@ -933,8 +818,8 @@ this is not a production security acceptance.
 
 - Missing executable or dependency: initialize Node/npm and run `npm ci` from the root.
 - Prototype shows Real or cannot discover stores through the gateway: restart with
-  `npm run dev:admin-react:mock` and open http://127.0.0.1:11087. `dev:admin-react` starts Real, and
-  changing `.env` while Vite is running does not change that process's data mode.
+  `npm run dev:admin:mock` and open http://127.0.0.1:11089. `dev:admin` starts Real;
+  restart the process after changing its startup configuration.
 - Prototype cannot start its worker or browser storage: use the loopback URL above and
   enable service workers, localStorage and IndexedDB for that site, then reload. Prototype
   requires a secure browser context and reports denied storage access on screen.
@@ -950,8 +835,7 @@ this is not a production security acceptance.
   selected store. A valid unknown store has an empty product list; creation returns NOT_FOUND.
 - Unexpected existing database owner, role privileges or password: inspect configuration;
   setup intentionally refuses to overwrite credentials/ownership or erase data.
-- Busy port: stop the process you own or explicitly choose another port. Vite strictPort
-  avoids silently moving the admin; Nest reports its listen error.
+- Busy port: stop the process you own or explicitly choose another port. Angular CLI reports the occupied admin port; Nest reports its listen error.
 - Invalid PORT: correct the application .env/process environment and restart the process.
 - No tests found: see [testing](testing.md); this is not a successful check.
 - Missing affected base: use a real local commit or fetch the intended base yourself;

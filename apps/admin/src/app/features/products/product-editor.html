@@ -1,9 +1,13 @@
 <section class="card">
   <div class="page-heading">
     <div>
-      <a [routerLink]="listLink()" queryParamsHandling="preserve" [preserveFragment]="true">{{
-        text().products
-      }}</a>
+      <a
+        class="content-link"
+        [routerLink]="listLink()"
+        queryParamsHandling="preserve"
+        [preserveFragment]="true"
+        >{{ text().products }}</a
+      >
       <h1>{{ productId() ? text().editProduct : text().createProduct }}</h1>
       <p>{{ store().name }}</p>
     </div>
@@ -25,7 +29,7 @@
   }
   @if (error()) {
     <p-message severity="error">{{ failure() }}</p-message>
-    @if (!ready()) {
+    @if (retryAvailable()) {
       <button pButton type="button" severity="secondary" [disabled]="loading()" (click)="retry()">
         {{ text().retry }}
       </button>

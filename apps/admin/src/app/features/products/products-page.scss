@@ -19,6 +19,11 @@ td {
   overflow-wrap: anywhere;
 }
 
+.product-status,
+.product-actions {
+  white-space: nowrap;
+}
+
 .products-filters {
   display: flex;
   flex-wrap: wrap;

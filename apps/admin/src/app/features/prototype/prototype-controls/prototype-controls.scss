@@ -1,0 +1,17 @@
+.prototype-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  color: var(--text-color-secondary);
+  button {
+    flex-shrink: 0;
+  }
+}
+@media (max-width: 575px) {
+  .prototype-controls {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

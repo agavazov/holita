@@ -1,0 +1,107 @@
+<section class="card" [attr.aria-label]="text().eventHistory">
+  <div class="page-heading">
+    <div>
+      <h2>{{ text().eventHistory }}</h2>
+      <p>{{ text().eventHistoryHint }}</p>
+    </div>
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="loading()"
+      (click)="refresh()"
+    >
+      {{ error() ? text().retry : text().refresh }}
+    </button>
+  </div>
+  @if (error()) {
+    <p-message severity="error">{{ failure() }}</p-message>
+  }
+  <p-table
+    [value]="page()?.items ?? []"
+    dataKey="id"
+    [loading]="loading()"
+    [tableStyle]="{ 'min-width': '38rem' }"
+  >
+    <ng-template #header
+      ><tr>
+        <th scope="col">{{ text().eventHistoryDetails }}</th>
+        <th scope="col">{{ text().eventHistoryChange }}</th>
+        <th scope="col">{{ text().eventHistoryActor }}</th>
+        <th scope="col">{{ text().eventHistoryWhen }}</th>
+      </tr></ng-template
+    >
+    <ng-template #body let-entry>
+      <tr>
+        <td>
+          @if (entry.changes.length) {
+            <button
+              pButton
+              type="button"
+              severity="secondary"
+              [text]="true"
+              size="small"
+              [attr.aria-label]="
+                text().eventHistoryDetails + ' ' + operation(entry.operation, language())
+              "
+              [attr.aria-expanded]="expanded().includes(entry.id)"
+              [attr.aria-controls]="'history-' + entry.id"
+              (click)="toggle(entry.id)"
+            >
+              {{
+                expanded().includes(entry.id) ? text().eventHistoryHide : text().eventHistoryShow
+              }}
+            </button>
+          }
+        </td>
+        <td>
+          {{ operation(entry.operation, language()) }}
+          @if (entry.subject) {
+            <small>{{ entry.subject }}</small>
+          }
+        </td>
+        <td>{{ entry.actor === 'Anonymous' ? text().eventAnonymous : entry.actor }}</td>
+        <td>{{ date(entry.createdAt) }}</td>
+      </tr>
+      @if (expanded().includes(entry.id)) {
+        <tr>
+          <td colspan="4">
+            <div class="history-changes" [id]="'history-' + entry.id">
+              @for (change of entry.changes; track change.field) {
+                <article>
+                  <h3>{{ field(change.field, language()) }}</h3>
+                  <dl>
+                    <dt>{{ text().eventHistoryBefore }}</dt>
+                    <dd>{{ value(change.field, change.before, language()) }}</dd>
+                    <dt>{{ text().eventHistoryAfter }}</dt>
+                    <dd>{{ value(change.field, change.after, language()) }}</dd>
+                  </dl>
+                </article>
+              }
+            </div>
+          </td>
+        </tr>
+      }
+    </ng-template>
+    <ng-template #emptymessage
+      ><tr>
+        <td colspan="4">
+          @if (!loading() && !error()) {
+            {{ text().eventHistoryEmpty }}
+          }
+        </td>
+      </tr></ng-template
+    >
+  </p-table>
+  <p-paginator
+    [first]="(pageNumber() - 1) * 20"
+    [rows]="20"
+    [totalRecords]="page()?.total ?? 0"
+    [pageLinkSize]="3"
+    [showCurrentPageReport]="true"
+    [currentPageReportTemplate]="text().pageReport"
+    [locale]="language()"
+    (onPageChange)="changePage($event)"
+  />
+</section>

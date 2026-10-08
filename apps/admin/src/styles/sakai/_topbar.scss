@@ -9,12 +9,12 @@
   width: 100%;
   padding: 0 2rem;
   background-color: var(--surface-card);
-  transition: left var(--layout-section-transition-duration);
   display: flex;
   align-items: center;
 
   .layout-topbar-logo-container {
     width: 20rem;
+    flex-shrink: 0;
     display: flex;
     align-items: center;
   }
@@ -44,6 +44,11 @@
     transition: background-color var(--element-transition-duration);
     cursor: pointer;
 
+    svg {
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+
     &:hover {
       background-color: var(--surface-hover);
     }
@@ -58,9 +63,9 @@
   }
 
   .layout-topbar-actions {
-    order: 2;
-    margin-left: auto;
+    margin-left: 1rem;
     display: flex;
+    flex-shrink: 0;
     gap: 1rem;
   }
 }
@@ -86,15 +91,7 @@ holita-admin-shell {
   font-size: 1.65rem;
 }
 .language-switch {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.5rem;
-  color: var(--text-color);
   font-weight: 600;
-  border-radius: var(--content-border-radius);
-  &:hover {
-    background: var(--surface-hover);
-  }
 }
 .store-selector {
   display: flex;
@@ -103,11 +100,13 @@ holita-admin-shell {
   margin-left: auto;
   min-width: 0;
   label {
+    flex-shrink: 0;
     color: var(--text-color-secondary);
     font-size: 0.875rem;
   }
   p-select {
     width: 16rem;
+    min-width: 0;
     max-width: 100%;
   }
 }

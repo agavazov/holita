@@ -1,0 +1,49 @@
+fragment AdminSessionDetails on ReferenceSession {
+  id
+  storeId
+  eventId
+  title
+  summary
+  startsAt
+  endsAt
+  room
+  position
+  speakerIds
+  speakers {
+    id
+    name
+    active
+  }
+  createdAt
+  updatedAt
+}
+query AdminSessions($eventId: ID!) {
+  referenceSessions(eventId: $eventId) {
+    ...AdminSessionDetails
+  }
+}
+query AdminSession($eventId: ID!, $id: ID!) {
+  referenceSession(eventId: $eventId, id: $id) {
+    ...AdminSessionDetails
+  }
+}
+mutation AdminCreateSession($eventId: ID!, $input: CreateReferenceSessionInput!) {
+  createReferenceSession(eventId: $eventId, input: $input) {
+    ...AdminSessionDetails
+  }
+}
+mutation AdminUpdateSession($eventId: ID!, $id: ID!, $input: UpdateReferenceSessionInput!) {
+  updateReferenceSession(eventId: $eventId, id: $id, input: $input) {
+    ...AdminSessionDetails
+  }
+}
+mutation AdminDeleteSession($eventId: ID!, $id: ID!) {
+  deleteReferenceSession(eventId: $eventId, id: $id) {
+    ...AdminSessionDetails
+  }
+}
+mutation AdminReorderSessions($eventId: ID!, $ids: [ID!]!) {
+  reorderReferenceSessions(eventId: $eventId, ids: $ids) {
+    ...AdminSessionDetails
+  }
+}

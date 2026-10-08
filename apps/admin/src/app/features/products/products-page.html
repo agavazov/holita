@@ -126,10 +126,10 @@
         </th>
         <th scope="col" pSortableColumn="name">{{ text().name }} <p-sort-icon field="name" /></th>
         <th scope="col" pSortableColumn="sku">{{ text().sku }} <p-sort-icon field="sku" /></th>
-        <th scope="col" pSortableColumn="status">
+        <th class="product-status" scope="col" pSortableColumn="status">
           {{ text().status }} <p-sort-icon field="status" />
         </th>
-        <th scope="col">{{ text().actions }}</th>
+        <th class="product-actions" scope="col">{{ text().actions }}</th>
       </tr>
     </ng-template>
     <ng-template #body let-product>
@@ -143,6 +143,7 @@
         </td>
         <td>
           <a
+            class="content-link"
             [routerLink]="[product.id, 'edit']"
             queryParamsHandling="preserve"
             [preserveFragment]="true"
@@ -150,8 +151,10 @@
           >
         </td>
         <td>{{ product.sku }}</td>
-        <td>{{ product.status === 'ACTIVE' ? text().active : text().draft }}</td>
-        <td>
+        <td class="product-status">
+          {{ product.status === 'ACTIVE' ? text().active : text().draft }}
+        </td>
+        <td class="product-actions">
           <button
             pButton
             type="button"

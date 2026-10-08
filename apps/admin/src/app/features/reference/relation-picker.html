@@ -1,0 +1,97 @@
+<div class="relation-control">
+  <button
+    #trigger
+    pButton
+    type="button"
+    severity="secondary"
+    [outlined]="true"
+    [id]="controlId()"
+    [disabled]="disabled()"
+    [attr.aria-label]="label()"
+    [attr.aria-expanded]="open()"
+    [attr.aria-controls]="controlId() + '-popup'"
+    [attr.aria-invalid]="invalid()"
+    (click)="show()"
+  >
+    {{ selectedLabel() || text().eventChoose }}
+  </button>
+  @if (selectedIds().length) {
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [text]="true"
+      [disabled]="disabled()"
+      [attr.aria-label]="text().eventClearRelation + ' ' + label()"
+      (click)="clear()"
+    >
+      {{ text().eventClearRelation }}
+    </button>
+  }
+</div>
+@if (selectedError()) {
+  <p-message severity="error">{{ failure() }}</p-message>
+  <button pButton type="button" severity="secondary" [text]="true" (click)="retry()">
+    {{ text().retry }}
+  </button>
+}
+<p-dialog
+  [header]="label()"
+  [visible]="open()"
+  (visibleChange)="close()"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  appendTo="body"
+  [id]="controlId() + '-popup'"
+  [style]="{ width: 'min(34rem, 94vw)' }"
+  [closeAriaLabel]="text().closeConfirmation"
+  (onShow)="focusSearch()"
+>
+  <div class="lookup-search">
+    <label [for]="controlId() + '-search'">{{ text().eventLookupSearch }}</label>
+    <input
+      #searchElement
+      pInputText
+      type="search"
+      [id]="controlId() + '-search'"
+      [ngModel]="search()"
+      (ngModelChange)="editSearch($event)"
+      [ngModelOptions]="{ standalone: true }"
+      [fluid]="true"
+    />
+  </div>
+  @if (error()) {
+    <p-message severity="error">{{ failure() }}</p-message
+    ><button pButton type="button" [text]="true" (click)="retry()">{{ text().retry }}</button>
+  }
+  @if (loading()) {
+    <p role="status">{{ text().eventLoadingRelations }}</p>
+  }
+  <p-listbox
+    [options]="options()"
+    optionLabel="label"
+    optionValue="id"
+    optionDisabled="disabled"
+    [multiple]="multiple()"
+    [ariaLabel]="label()"
+    [ngModel]="multiple() ? selectedIds() : selectedIds()[0]"
+    (ngModelChange)="select($event)"
+    [ngModelOptions]="{ standalone: true }"
+    [listStyle]="{ maxHeight: '16rem' }"
+    [emptyMessage]="text().eventNoRelations"
+  />
+  <p-paginator
+    [rows]="20"
+    [first]="offset()"
+    [totalRecords]="page().total"
+    [pageLinkSize]="3"
+    (onPageChange)="changePage($event)"
+    [locale]="language()"
+  />
+  <ng-template #footer
+    ><button pButton type="button" severity="secondary" (click)="close()">
+      {{ text().eventDone }}
+    </button></ng-template
+  >
+</p-dialog>

@@ -1,0 +1,220 @@
+<h2>{{ text().catalogExampleList }}</h2>
+@if (notice()) {
+  <p-message severity="success" [pt]="{ root: { role: 'status' } }">{{ notice() }}</p-message>
+}
+<div class="catalog-filters" role="group" [attr.aria-label]="text().catalogSearch">
+  <div class="catalog-field">
+    <label for="catalog-search">{{ text().catalogSearch }}</label
+    ><input
+      #searchInput
+      pInputText
+      id="catalog-search"
+      type="search"
+      [ngModel]="search()"
+      (ngModelChange)="changeSearch($event)"
+      [fluid]="true"
+    />
+  </div>
+  <div class="catalog-field">
+    <label for="catalog-status">{{ text().status }}</label
+    ><p-select
+      inputId="catalog-status"
+      [ariaLabel]="text().status"
+      [options]="statusOptions()"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="status()"
+      (ngModelChange)="changeStatus($event)"
+      [fluid]="true"
+      appendTo="body"
+    />
+  </div>
+  <button pButton type="button" severity="secondary" [outlined]="true" (click)="clearFilters()">
+    {{ text().clearFilters }}
+  </button>
+  <button pButton type="button" (click)="openDialog('create', null, $event)">
+    {{ text().catalogAdd }}
+  </button>
+</div>
+@if (selected().length) {
+  <div class="catalog-actions">
+    <span>{{ selected().length }}</span
+    ><button
+      pButton
+      type="button"
+      severity="danger"
+      [outlined]="true"
+      (click)="openDelete(selected(), $event)"
+    >
+      {{ text().catalogDeleteSelected }}
+    </button>
+  </div>
+}
+<p-table
+  [value]="page()"
+  dataKey="id"
+  [selection]="selected()"
+  (selectionChange)="selectRows($event)"
+  [lazy]="true"
+  [lazyLoadOnInit]="false"
+  [sortField]="sort()?.field"
+  [sortOrder]="sort()?.order ?? 1"
+  (onSort)="sortChanged($event)"
+  [tableStyle]="{ 'min-width': '36rem' }"
+>
+  <ng-template #header
+    ><tr>
+      <th scope="col">
+        <p-table-header-checkbox
+          inputId="catalog-select-page"
+          [ariaLabel]="text().catalogSelectPage"
+        />
+        <label class="catalog-sr-only" for="catalog-select-page">{{
+          text().catalogSelectPage
+        }}</label>
+      </th>
+      <th scope="col" pSortableColumn="name">{{ text().name }}<p-sort-icon field="name" /></th>
+      <th scope="col" pSortableColumn="code">
+        {{ text().catalogCode }}<p-sort-icon field="code" />
+      </th>
+      <th scope="col" pSortableColumn="active">
+        {{ text().status }}<p-sort-icon field="active" />
+      </th>
+      <th scope="col">{{ text().actions }}</th>
+    </tr></ng-template
+  >
+  <ng-template #body let-row
+    ><tr>
+      <td>
+        <p-table-checkbox
+          [value]="row"
+          [ariaLabel]="text().catalogSelectRow.replace('{name}', row.name)"
+        />
+      </td>
+      <td>
+        <button class="catalog-record-link" type="button" (click)="openDialog('view', row, $event)">
+          {{ row.name }}
+        </button>
+      </td>
+      <td>{{ row.code }}</td>
+      <td>
+        <p-tag
+          [value]="row.active ? text().active : text().draft"
+          [severity]="row.active ? 'success' : 'warn'"
+        />
+      </td>
+      <td>
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [text]="true"
+          size="small"
+          [attr.aria-label]="text().catalogRowActions.replace('{name}', row.name)"
+          (click)="openMenu(row, $event)"
+        >
+          {{ text().actions }}
+        </button>
+      </td>
+    </tr></ng-template
+  >
+  <ng-template #emptymessage
+    ><tr>
+      <td colspan="5">{{ text().catalogNoMatches }}</td>
+    </tr></ng-template
+  >
+</p-table>
+<p-paginator
+  [first]="first()"
+  [rows]="pageSize()"
+  [totalRecords]="filtered().length"
+  [rowsPerPageOptions]="[5, 10]"
+  [pageLinkSize]="3"
+  [showCurrentPageReport]="true"
+  [currentPageReportTemplate]="text().pageReport"
+  [locale]="language()"
+  (onPageChange)="changePage($event)"
+/>
+<p-menu [model]="menuItems()" [popup]="true" appendTo="body" [ariaLabel]="text().actions" />
+<p-dialog
+  [header]="dialogTitle()"
+  [visible]="dialog() !== null"
+  (visibleChange)="!$event && dialog.set(null)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [closeAriaLabel]="text().closeConfirmation"
+  [style]="{ width: 'min(30rem, calc(100vw - 2rem))' }"
+  appendTo="body"
+  (onShow)="focusDialog()"
+  (onHide)="restoreFocus()"
+>
+  @if (dialog() === 'create' || dialog() === 'edit') {
+    <form
+      id="catalog-list-form"
+      [formGroup]="form"
+      (ngSubmit)="save()"
+      class="catalog-stack"
+      novalidate
+    >
+      <div class="catalog-field">
+        <label for="catalog-row-name">{{ text().name }}</label
+        ><input
+          #nameInput
+          pInputText
+          id="catalog-row-name"
+          formControlName="name"
+          [fluid]="true"
+          [invalid]="form.controls.name.touched && form.controls.name.invalid"
+          [attr.aria-invalid]="form.controls.name.touched && form.controls.name.invalid"
+          aria-describedby="catalog-row-error"
+        /><small id="catalog-row-error">{{
+          form.controls.name.touched && form.controls.name.invalid
+            ? form.controls.name.hasError('maxlength')
+              ? text().catalogNameTooLong
+              : text().nameRequired
+            : text().catalogNameHint
+        }}</small>
+      </div>
+      <div class="catalog-inline">
+        <p-toggleswitch inputId="catalog-row-active" formControlName="active" /><label
+          for="catalog-row-active"
+          >{{ text().active }}</label
+        >
+      </div>
+    </form>
+  }
+  @if (dialog() === 'view' && current(); as row) {
+    <dl class="catalog-summary">
+      <dt>{{ text().name }}</dt>
+      <dd>{{ row.name }}</dd>
+      <dt>{{ text().catalogCode }}</dt>
+      <dd>{{ row.code }}</dd>
+      <dt>{{ text().status }}</dt>
+      <dd>{{ row.active ? text().active : text().draft }}</dd>
+    </dl>
+  }
+  @if (dialog() === 'delete') {
+    <p>{{ text().catalogDeleteHint.replace('{count}', targets().length.toString()) }}</p>
+  }
+  <ng-template #footer>
+    <button
+      #cancelButton
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      (click)="dialog.set(null)"
+    >
+      {{ text().cancel }}
+    </button>
+    @if (dialog() === 'create' || dialog() === 'edit') {
+      <button pButton type="submit" form="catalog-list-form">{{ text().catalogSave }}</button>
+    }
+    @if (dialog() === 'delete') {
+      <button pButton type="button" severity="danger" (click)="deleteExamples()">
+        {{ text().catalogDeleteConfirm }}
+      </button>
+    }
+  </ng-template>
+</p-dialog>

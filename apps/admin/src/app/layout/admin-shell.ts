@@ -9,6 +9,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import {
@@ -26,6 +27,7 @@ import { Sun } from '@primeicons/angular/sun';
 import { Select } from 'primeng/select';
 import { Drawer } from 'primeng/drawer';
 import { Message } from 'primeng/message';
+import { Tag } from 'primeng/tag';
 import { messages, type Language } from '../i18n/messages';
 import { AdminNavigation } from './admin-navigation';
 import { Appearance } from './appearance';
@@ -34,10 +36,12 @@ import { Appearance } from './appearance';
   selector: 'holita-admin-shell',
   imports: [
     RouterLink,
+    NgTemplateOutlet,
     ReactiveFormsModule,
     Select,
     Drawer,
     Message,
+    Tag,
     Bars,
     Moon,
     Sun,
@@ -54,6 +58,8 @@ export class AdminShell {
   readonly language = input.required<Language>();
   readonly languageUrl = input.required<UrlTree>();
   readonly loading = input(false);
+  readonly referenceEnabled = input(false);
+  readonly dataSource = input<'graphql' | 'mock'>('graphql');
   readonly storeSelected = output<string>();
   readonly text = computed(() => messages[this.language()]);
   readonly appearance = inject(Appearance);
@@ -94,7 +100,7 @@ export class AdminShell {
 
   onResize(): void {
     this.mobile.set(window.innerWidth < 992);
-    if (!this.mobile()) this.mobileOpen.set(false);
+    if (!this.mobile() && this.mobileOpen()) this.drawerVisibilityChanged(false);
   }
 
   toggleNavigation(): void {

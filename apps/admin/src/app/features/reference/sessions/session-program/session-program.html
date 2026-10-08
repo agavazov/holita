@@ -1,0 +1,218 @@
+<section class="card" [attr.aria-label]="text().sessionProgram" [attr.aria-busy]="pending()">
+  <div class="program-heading">
+    <div>
+      <h2 #heading tabindex="-1">
+        {{ text().sessions }} <span class="count">{{ saved().length }} / 100</span>
+      </h2>
+      <p id="program-order-hint">{{ text().sessionOrderHint }}</p>
+    </div>
+    @if (!dirty() && !pending() && !loading() && saved().length < 100) {
+      <a
+        pButton
+        [routerLink]="['sessions', 'new']"
+        [queryParams]="{ tab: 'sessions' }"
+        queryParamsHandling="merge"
+        [preserveFragment]="true"
+        >{{ text().sessionAdd }}</a
+      >
+    } @else {
+      <button pButton type="button" disabled>{{ text().sessionAdd }}</button>
+    }
+  </div>
+  <div class="order-toolbar">
+    <button
+      pButton
+      type="button"
+      [disabled]="!dirty() || pending() || loading()"
+      (click)="saveOrder()"
+    >
+      {{ text().sessionOrderSave }}</button
+    ><button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="!dirty() || pending() || loading()"
+      (click)="cancelOrder()"
+    >
+      {{ text().sessionOrderCancel }}
+    </button>
+  </div>
+  @if (dirty()) {
+    <p-message severity="warn">{{ text().sessionOrderDirty }}</p-message>
+  }
+  @if (saved().length >= 100) {
+    <p-message severity="info">{{ text().sessionLimit }}</p-message>
+  }
+  @if (loading()) {
+    <p role="status">{{ text().sessionLoading }}</p>
+  }
+  @if (pending()) {
+    <p role="status">{{ text().sessionPending }}</p>
+  }
+  @if (error() || (writeError() && !deleting())) {
+    <p-message severity="error">{{ failure() }}</p-message>
+    @if (error()) {
+      <button pButton type="button" [disabled]="loading() || pending()" (click)="retry()">
+        {{ text().retry }}
+      </button>
+    }
+  }
+  <p class="order-notice" role="status" aria-live="polite">{{ notice() }}</p>
+  <ol
+    [attr.aria-label]="text().sessionList"
+    aria-describedby="program-order-hint"
+    class="program-list"
+  >
+    @for (row of rows(); track row.id; let i = $index) {
+      <li
+        [attr.aria-label]="row.title"
+        [class.dragging]="dragging() === row.id"
+        (dragover)="dragOver($event)"
+        (drop)="drop($event, row.id)"
+      >
+        <div class="order-controls">
+          <span class="position">{{ i + 1 }}</span>
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            [text]="true"
+            [iconOnly]="true"
+            [attr.draggable]="!pending() && !loading()"
+            [disabled]="pending() || loading() || !!deleting()"
+            [attr.aria-label]="actionLabel('sessionDrag', row.title)"
+            (dragstart)="dragStart($event, row.id)"
+            (dragend)="dragging.set(null)"
+          >
+            <span aria-hidden="true">↕</span>
+          </button>
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            [outlined]="true"
+            [iconOnly]="true"
+            [disabled]="i === 0 || pending() || loading() || !!deleting()"
+            [attr.aria-label]="actionLabel('sessionMoveUp', row.title)"
+            (click)="moveBy(row.id, -1)"
+          >
+            <span aria-hidden="true">↑</span>
+          </button>
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            [outlined]="true"
+            [iconOnly]="true"
+            [disabled]="i === rows().length - 1 || pending() || loading() || !!deleting()"
+            [attr.aria-label]="actionLabel('sessionMoveDown', row.title)"
+            (click)="moveBy(row.id, 1)"
+          >
+            <span aria-hidden="true">↓</span>
+          </button>
+        </div>
+        <div class="session-content">
+          <h3>{{ row.title }}</h3>
+          <p class="session-time">{{ date(row.startsAt) }} – {{ date(row.endsAt) }}</p>
+          @if (row.room) {
+            <p>{{ text().sessionRoom }}: {{ row.room }}</p>
+          }
+          @if (row.summary) {
+            <p class="summary">{{ row.summary }}</p>
+          }
+          <div class="speakers">
+            @for (speaker of row.speakers; track speaker.id) {
+              <span
+                >{{ speaker.name }}
+                @if (!speaker.active) {
+                  ({{ text().inactive }})
+                }
+              </span>
+            } @empty {
+              <p>{{ text().sessionNoSpeakers }}</p>
+            }
+          </div>
+        </div>
+        <div class="row-actions">
+          @if (!dirty() && !pending() && !loading()) {
+            <a
+              pButton
+              severity="secondary"
+              [outlined]="true"
+              [routerLink]="['sessions', row.id, 'edit']"
+              [queryParams]="{ tab: 'sessions' }"
+              queryParamsHandling="merge"
+              [preserveFragment]="true"
+              [attr.aria-label]="text().sessionEdit + ': ' + row.title"
+              >{{ text().sessionEdit }}</a
+            >
+          } @else {
+            <button pButton type="button" severity="secondary" [outlined]="true" disabled>
+              {{ text().sessionEdit }}
+            </button>
+          }
+          <button
+            pButton
+            type="button"
+            severity="danger"
+            [text]="true"
+            [disabled]="dirty() || pending() || loading()"
+            [attr.aria-label]="text().sessionDelete + ': ' + row.title"
+            (click)="requestDelete(row)"
+          >
+            {{ text().sessionDelete }}
+          </button>
+        </div>
+      </li>
+    } @empty {
+      @if (!loading() && !error()) {
+        <li class="empty">{{ text().sessionEmpty }}</li>
+      }
+    }
+  </ol>
+</section>
+@if (deleting(); as row) {
+  <p-dialog
+    [closeAriaLabel]="text().closeConfirmation"
+    [resizable]="false"
+    [visible]="true"
+    [header]="text().sessionDelete"
+    [modal]="true"
+    [closable]="!pending()"
+    [closeOnEscape]="!pending()"
+    [draggable]="false"
+    [style]="{ width: '30rem' }"
+    [breakpoints]="{ '575px': 'calc(100vw - 2rem)' }"
+    (visibleChange)="cancelDelete()"
+  >
+    <p>
+      <strong>{{ row.title }}</strong>
+    </p>
+    <p>{{ text().sessionDeleteHint }}</p>
+    @if (writeError()) {
+      <p-message severity="error">{{ failure() }}</p-message>
+    }
+    <ng-template #footer
+      ><button
+        pButton
+        type="button"
+        severity="secondary"
+        [text]="true"
+        [disabled]="pending()"
+        (click)="cancelDelete()"
+      >
+        {{ text().cancel }}</button
+      ><button pButton type="button" severity="danger" [disabled]="pending()" (click)="remove()">
+        {{ pending() ? text().sessionPending : text().sessionDelete }}
+      </button></ng-template
+    >
+  </p-dialog>
+}
+<p-confirmdialog
+  [closeAriaLabel]="text().closeConfirmation"
+  [draggable]="false"
+  [style]="{ width: '30rem' }"
+  [breakpoints]="{ '575px': 'calc(100vw - 2rem)' }"
+  [defaultFocus]="'reject'"
+/>

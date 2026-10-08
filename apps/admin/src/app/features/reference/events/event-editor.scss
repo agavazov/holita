@@ -1,0 +1,18 @@
+.event-main {
+  min-width: 0;
+  --p-accordion-header-padding: 1.25rem 0;
+  --p-accordion-content-padding: 0 0 1.25rem;
+}
+@media (min-width: 992px) {
+  .event-main .field-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  }
+}
+.field-hint {
+  color: var(--text-color-secondary);
+  font-size: 0.875rem;
+  margin-block: 1rem;
+}
+.field small[role='alert'] {
+  color: var(--p-message-error-color);
+}

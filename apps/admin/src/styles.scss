@@ -29,18 +29,35 @@ input {
 a:focus-visible {
   @include focused();
 }
+.content-link {
+  color: var(--primary-color);
+  &:hover {
+    text-decoration: underline;
+  }
+}
 .card {
   background: var(--surface-card);
   padding: 2rem;
   border-radius: var(--content-border-radius);
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
+  &:last-child {
+    margin-bottom: 0;
+  }
 }
 .page-heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
+  > div:first-child {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+  &:last-child {
+    margin-bottom: 0;
+  }
   h1 {
     margin: 0 0 0.25rem;
     font-size: 1.75rem;
@@ -50,9 +67,6 @@ a:focus-visible {
   }
 }
 @media (max-width: 991px) {
-  .card {
-    padding: 1.25rem;
-  }
   .page-heading {
     flex-wrap: wrap;
     h1 {

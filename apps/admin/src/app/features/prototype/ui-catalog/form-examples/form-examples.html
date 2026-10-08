@@ -1,0 +1,228 @@
+<div class="catalog-field" style="max-width: 20rem; margin-bottom: 2rem">
+  <label for="catalog-form-state">{{ text().catalogFormState }}</label
+  ><p-select
+    inputId="catalog-form-state"
+    [ariaLabel]="text().catalogFormState"
+    [options]="stateOptions()"
+    optionLabel="label"
+    optionValue="value"
+    [ngModel]="state()"
+    (ngModelChange)="changeState($event)"
+    [fluid]="true"
+    appendTo="body"
+  />
+</div>
+@if (notice()) {
+  <p-message severity="success" [pt]="{ root: { role: 'status' } }">{{
+    text().catalogSaved
+  }}</p-message>
+}
+@if (state() === 'error') {
+  <p-message severity="error">{{ text().catalogFormError }}</p-message>
+}
+@if (state() === 'saving') {
+  <p role="status">{{ text().savingProduct }}</p>
+}
+<form
+  [formGroup]="form"
+  (ngSubmit)="save()"
+  class="catalog-form"
+  novalidate
+  [attr.aria-busy]="state() === 'saving'"
+>
+  <section class="catalog-panel catalog-stack">
+    <h2>{{ text().catalogFormDetails }}</h2>
+    <div class="catalog-field">
+      <label for="catalog-form-name">{{ text().name }}</label
+      ><input
+        #nameInput
+        pInputText
+        id="catalog-form-name"
+        formControlName="name"
+        [fluid]="true"
+        [invalid]="invalid('name')"
+        [attr.aria-invalid]="invalid('name')"
+        aria-describedby="catalog-name-hint"
+      /><small id="catalog-name-hint">{{
+        invalid('name') ? nameError() : text().catalogNameHint
+      }}</small>
+    </div>
+    <div class="catalog-field">
+      <label for="catalog-form-email">{{ text().email }}</label
+      ><input
+        #emailInput
+        pInputText
+        id="catalog-form-email"
+        type="email"
+        formControlName="email"
+        [fluid]="true"
+        [invalid]="invalid('email')"
+        [attr.aria-invalid]="invalid('email')"
+        [attr.aria-describedby]="invalid('email') ? 'catalog-email-error' : null"
+      />
+      @if (invalid('email')) {
+        <small id="catalog-email-error">{{ text().catalogEmailError }}</small>
+      }
+    </div>
+    <div class="catalog-grid">
+      <div class="catalog-field">
+        <label for="catalog-category">{{ text().catalogCategory }}</label
+        ><p-select
+          inputId="catalog-category"
+          [ariaLabel]="text().catalogCategory"
+          formControlName="category"
+          [options]="categoryOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [fluid]="true"
+          appendTo="body"
+        />
+      </div>
+      <div class="catalog-field">
+        <label for="catalog-quantity">{{ text().catalogQuantity }}</label
+        ><input
+          #quantityInput
+          pInputText
+          id="catalog-quantity"
+          type="number"
+          min="1"
+          step="1"
+          formControlName="quantity"
+          [fluid]="true"
+          [invalid]="invalid('quantity')"
+          [attr.aria-invalid]="invalid('quantity')"
+          aria-describedby="catalog-quantity-hint"
+        /><small id="catalog-quantity-hint">{{ text().catalogQuantityHint }}</small>
+      </div>
+    </div>
+    <div class="catalog-field">
+      <label for="catalog-labels">{{ text().catalogLabels }}</label
+      ><p-select
+        inputId="catalog-labels"
+        [ariaLabel]="text().catalogLabels"
+        formControlName="labels"
+        [options]="labelOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [multiple]="true"
+        [checkmark]="true"
+        [placeholder]="text().catalogChooseLabels"
+        [fluid]="true"
+        appendTo="body"
+      />
+    </div>
+    <div class="catalog-field">
+      <label for="catalog-notes">{{ text().catalogNotes }}</label
+      ><textarea
+        pTextarea
+        id="catalog-notes"
+        formControlName="notes"
+        rows="3"
+        [fluid]="true"
+      ></textarea>
+    </div>
+    <div class="catalog-grid">
+      <div class="catalog-field">
+        <label for="catalog-date">{{ text().catalogDate }}</label
+        ><p-datepicker
+          inputId="catalog-date"
+          formControlName="date"
+          dateFormat="dd.mm.yy"
+          [fluid]="true"
+          appendTo="body"
+        />
+      </div>
+      <div class="catalog-field">
+        <label for="catalog-datetime">{{ text().catalogDateTime }}</label
+        ><p-datepicker
+          inputId="catalog-datetime"
+          formControlName="dateTime"
+          dateFormat="dd.mm.yy"
+          [showTime]="true"
+          hourFormat="24"
+          [fluid]="true"
+          appendTo="body"
+        />
+      </div>
+    </div>
+    <div class="catalog-grid">
+      <div class="catalog-field">
+        <label for="catalog-color">{{ text().color }}</label
+        ><input id="catalog-color" type="color" formControlName="color" />
+      </div>
+      <div class="catalog-field">
+        <label for="catalog-record-id">{{ text().catalogRecordId }}</label
+        ><input
+          pInputText
+          id="catalog-record-id"
+          value="EXAMPLE-001"
+          readonly
+          [fluid]="true"
+          aria-describedby="catalog-readonly-hint"
+        /><small id="catalog-readonly-hint">{{ text().catalogReadonlyHint }}</small>
+      </div>
+    </div>
+    <fieldset class="catalog-panel">
+      <legend>{{ text().catalogDelivery }}</legend>
+      <div class="catalog-actions">
+        <div class="catalog-inline">
+          <p-radiobutton inputId="catalog-pickup" formControlName="delivery" value="pickup" /><label
+            for="catalog-pickup"
+            >{{ text().catalogPickup }}</label
+          >
+        </div>
+        <div class="catalog-inline">
+          <p-radiobutton
+            inputId="catalog-shipping"
+            formControlName="delivery"
+            value="shipping"
+          /><label for="catalog-shipping">{{ text().catalogShipping }}</label>
+        </div>
+      </div>
+    </fieldset>
+    <div class="catalog-inline">
+      <p-checkbox inputId="catalog-notify" formControlName="notify" [binary]="true" /><label
+        for="catalog-notify"
+        >{{ text().catalogNotify }}</label
+      >
+    </div>
+  </section>
+  <aside
+    class="catalog-panel catalog-aside catalog-stack"
+    [attr.aria-label]="text().catalogSettings"
+  >
+    <h2>{{ text().catalogSettings }}</h2>
+    <div class="catalog-inline">
+      <p-toggleswitch inputId="catalog-active" formControlName="active" /><label
+        for="catalog-active"
+        >{{ text().active }}</label
+      >
+    </div>
+    <p-tag
+      [value]="summary().active ? text().active : text().draft"
+      [severity]="summary().active ? 'success' : 'warn'"
+    />
+    <dl class="catalog-summary">
+      <dt>{{ text().name }}</dt>
+      <dd>{{ summary().name || '—' }}</dd>
+      <dt>{{ text().catalogQuantity }}</dt>
+      <dd>{{ summary().quantity ?? '—' }}</dd>
+      <dt>{{ text().catalogLabels }}</dt>
+      <dd>{{ summary().labels.length }}</dd>
+    </dl>
+    <div class="catalog-actions">
+      <button pButton type="submit" [disabled]="disabled()" [loading]="state() === 'saving'">
+        {{ text().catalogSave }}</button
+      ><button
+        pButton
+        type="button"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="state() === 'saving'"
+        (click)="reset()"
+      >
+        {{ text().catalogResetForm }}
+      </button>
+    </div>
+  </aside>
+</form>

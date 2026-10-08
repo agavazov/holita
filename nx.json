@@ -31,7 +31,6 @@
       "{workspaceRoot}/apps/core/src/**/*.graphql",
       "{workspaceRoot}/apps/products/src/**/*.graphql",
       "{workspaceRoot}/apps/reference/src/**/*.graphql",
-      "{workspaceRoot}/apps/admin-react/src/**/*.graphql",
       "{workspaceRoot}/apps/admin/src/**/*.graphql",
       "{workspaceRoot}/tools/graphql/**/*",
       "{workspaceRoot}/tools/tsconfig.json",

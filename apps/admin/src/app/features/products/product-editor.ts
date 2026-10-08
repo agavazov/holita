@@ -69,7 +69,10 @@ export class ProductEditor implements OnInit {
   readonly ready = signal(false);
   readonly loading = signal(false);
   readonly pending = signal(false);
-  readonly error = signal<unknown>(null);
+  private readonly readError = signal<unknown>(null);
+  private readonly writeError = signal<unknown>(null);
+  readonly error = computed(() => this.writeError() ?? this.readError());
+  readonly retryAvailable = computed(() => this.readError() !== null && this.writeError() === null);
   readonly invalidId = computed(() => {
     const id = this.productId();
     return (
@@ -85,6 +88,9 @@ export class ProductEditor implements OnInit {
 
   ngOnInit(): void {
     this.api.initialize(this.store().id, this.language());
+    this.form.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      if (!this.pending()) this.writeError.set(null);
+    });
     const id = this.productId();
     if (id === null) this.ready.set(true);
     else if (!this.invalidId()) {
@@ -94,9 +100,9 @@ export class ProductEditor implements OnInit {
       query.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (result) => {
           this.loading.set(result.loading);
-          this.error.set(result.error ?? null);
+          this.readError.set(result.error ?? null);
           // Hydrate once: cache notifications and retry results must never overwrite local edits.
-          if (result.dataState === 'complete' && !this.ready()) {
+          if (result.dataState === 'complete' && !result.error && !this.ready()) {
             const product = result.data.product;
             this.form.reset({ name: product.name, sku: product.sku, status: product.status });
             this.ready.set(true);
@@ -104,7 +110,7 @@ export class ProductEditor implements OnInit {
         },
         error: (error: unknown) => {
           this.loading.set(false);
-          this.error.set(error);
+          this.readError.set(error);
         },
       });
     }
@@ -124,7 +130,7 @@ export class ProductEditor implements OnInit {
 
   retry(): void {
     void this.query?.refetch().catch((error: unknown) => {
-      if (!this.destroyRef.destroyed) this.error.set(error);
+      if (!this.destroyRef.destroyed) this.readError.set(error);
     });
   }
 
@@ -143,7 +149,7 @@ export class ProductEditor implements OnInit {
       status: values.status,
     };
     this.pending.set(true);
-    this.error.set(null);
+    this.writeError.set(null);
     this.form.disable();
     try {
       const id = this.productId();
@@ -157,11 +163,11 @@ export class ProductEditor implements OnInit {
         state: { productSaved: true },
       });
     } catch (error: unknown) {
-      if (!this.destroyRef.destroyed) this.error.set(error);
+      if (!this.destroyRef.destroyed) this.writeError.set(error);
     } finally {
       if (!this.destroyRef.destroyed) {
         this.pending.set(false);
-        this.form.enable();
+        this.form.enable({ emitEvent: false });
       }
     }
   }

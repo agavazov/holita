@@ -5,6 +5,7 @@ import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 
 import { AppModule } from './app.module.js';
+import { referenceAdminOrigins } from './admin-origins.js';
 
 async function bootstrap(): Promise<void> {
   const portValue = process.env['PORT'] ?? '11086';
@@ -13,11 +14,12 @@ async function bootstrap(): Promise<void> {
     throw new Error('PORT must be an integer between 1 and 65535.');
   }
 
+  const origins = referenceAdminOrigins(process.env.ADMIN_ORIGINS, process.env.ADMIN_ORIGIN);
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   // Allow the 100 KiB rich-text input plus JSON escaping and the other event fields.
   app.useBodyParser('json', { limit: '1mb' });
   app.enableCors({
-    origin: process.env.ADMIN_ORIGIN ?? 'http://127.0.0.1:11081',
+    origin: origins,
     methods: ['PUT', 'GET', 'OPTIONS'],
     allowedHeaders: ['content-type', 'authorization'],
   });

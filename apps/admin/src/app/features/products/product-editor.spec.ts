@@ -405,4 +405,65 @@ describe('Product editor forms and route lifecycle', () => {
       http.expectNone('/graphql');
     },
   );
+  it('retains write failures through background reads and offers read recovery without losing the draft', async () => {
+    const harness = await mount('/' + productA + '/edit');
+    http.expectOne((request) => operation(request, 'AdminProduct')).flush(detail());
+    await harness.fixture.whenStable();
+    const current = editor(harness);
+    current.retry();
+    const background = http.expectOne((request) => operation(request, 'AdminProduct'));
+    current.form.controls.name.setValue('Unsubmitted draft');
+    current.form.markAsDirty();
+    const saving = current.save();
+    http
+      .expectOne((request) => operation(request, 'AdminUpdateProduct'))
+      .flush({
+        errors: [
+          {
+            message: 'Write rejected',
+            extensions: {
+              requestId: 'write-rejected',
+              fieldErrors: [{ path: 'name', message: 'Rejected field' }],
+            },
+          },
+        ],
+      });
+    await saving;
+    expect(current.failure()).toContain('write-rejected');
+    background.flush(detail(record(productA, storeA, 'Server update')));
+    await harness.fixture.whenStable();
+    expect(current.failure()).toContain('write-rejected');
+    expect(current.form.controls.name.value).toBe('Unsubmitted draft');
+    expect(current.form.dirty).toBe(true);
+    expect(
+      Array.from(harness.routeNativeElement?.querySelectorAll('button') ?? []).some(
+        (button) => button.textContent.trim() === current.text().retry,
+      ),
+    ).toBe(false);
+    current.form.controls.name.setValue('Corrected draft');
+    await harness.fixture.whenStable();
+    expect(current.error()).toBeNull();
+    current.retry();
+    http
+      .expectOne((request) => operation(request, 'AdminProduct'))
+      .flush({
+        errors: [{ message: 'Read unavailable', extensions: { requestId: 'read-unavailable' } }],
+      });
+    await harness.fixture.whenStable();
+    current.form.controls.name.setValue('Continued draft');
+    await harness.fixture.whenStable();
+    expect(current.failure()).toContain('read-unavailable');
+    const retry = Array.from(harness.routeNativeElement?.querySelectorAll('button') ?? []).find(
+      (button) => button.textContent.trim() === current.text().retry,
+    );
+    if (!retry) throw new Error('Missing read recovery button.');
+    retry.click();
+    http
+      .expectOne((request) => operation(request, 'AdminProduct'))
+      .flush(detail(record(productA, storeA, 'Server update')));
+    await harness.fixture.whenStable();
+    expect(current.error()).toBeNull();
+    expect(current.form.controls.name.value).toBe('Continued draft');
+    expect(current.form.dirty).toBe(true);
+  });
 });

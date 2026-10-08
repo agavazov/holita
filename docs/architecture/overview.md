@@ -5,22 +5,21 @@ local caching and affected selection. Each application has a package.json and a 
 project.json giving Nx its stable name and application tag. There are no shared workspace
 packages or cross-application code imports.
 
-| Application | Framework                        | Current entry points                                                                                                                                                                              |
-| ----------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| admin       | Angular, PrimeNG, Apollo Angular | PrimeNG/Sakai shell, real Stores and Products CRUD at http://127.0.0.1:11088                                                                                                                      |
-| admin-react | React, Vite, Refine, Aurora/MUI  | Stores, Products and Reference Events/Venues/Speakers/Tags at http://127.0.0.1:11081; Prototype Stores/Products/Venues/Speakers/Tags/Events/Sessions/History/UI catalog at http://127.0.0.1:11087 |
-| gateway     | NestJS, Apollo Gateway           | /graphql and /health on 127.0.0.1:11080                                                                                                                                                           |
-| core        | NestJS, Federation 2             | /graphql (stores) and /health on 127.0.0.1:11082                                                                                                                                                  |
-| products    | NestJS, Federation 2             | /graphql (products) and /health on 127.0.0.1:11083                                                                                                                                                |
-| reference   | NestJS, Federation 2             | /graphql (events, venues, speakers, tags) and /health on 127.0.0.1:11086                                                                                                                          |
+| Application | Framework                        | Current entry points                                                                                                                                                                                                                                                                                                     |
+| ----------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| admin       | Angular, PrimeNG, Apollo Angular | PrimeNG/Sakai shell, real Stores, Products and Reference Venues/Speakers/Tags CRUD and Events list/editor/overview, atomic lifecycle actions, History, Event Sessions and Gallery at http://127.0.0.1:11088; the same business workflows in backend-free Prototype with local Sakai UI catalog at http://127.0.0.1:11089 |
+| gateway     | NestJS, Apollo Gateway           | /graphql and /health on 127.0.0.1:11080                                                                                                                                                                                                                                                                                  |
+| core        | NestJS, Federation 2             | /graphql (stores) and /health on 127.0.0.1:11082                                                                                                                                                                                                                                                                         |
+| products    | NestJS, Federation 2             | /graphql (products) and /health on 127.0.0.1:11083                                                                                                                                                                                                                                                                       |
+| reference   | NestJS, Federation 2             | /graphql (events, venues, speakers, tags) and /health on 127.0.0.1:11086                                                                                                                                                                                                                                                 |
 
 Core owns store listing/lookup; products owns Products CRUD; reference owns Event, Venue, Speaker and Tag CRUD. Their concrete feature
 repositories access their own PrismaService, whose client connects lazily and disconnects
 on shutdown. Health endpoints stay independent of databases and downstream availability.
-React admin uses one Refine GraphQL data provider with generated named operation documents,
-store-scoped resources, an Aurora/MUI shell and Products/Venues/Speakers/Tags/Events screens.
-Session forms, the ordered program, Gallery, speaker summaries and History also use Aurora/MUI.
-Store discovery, loading/error/empty states and unavailable stores use the same Aurora theme.
+Sakai defines the Angular admin's theme and visual composition, with holita branding.
+Its ignored [source checkout](../development.md#sakai-source-reference) supplies layout and
+feature presentation comparisons. Angular uses PrimeNG's Aura compatibility preset and
+locally served Lato. Concrete Angular features own validation and scoped lifecycles.
 
 ```mermaid
 flowchart LR
@@ -44,14 +43,13 @@ APOLLO_TELEMETRY_DISABLED setting, including automatic cloud metadata detection.
 
 Root dev scripts use the existing concurrently package to run application scripts with
 labels and group shutdown. Backend entry points validate PORT, bind to 127.0.0.1 and enable
-Nest shutdown hooks. Vite binds to 127.0.0.1 with strictPort so a busy port is not silently
-replaced with another. Application-local .env files can override backend ports.
+Nest shutdown hooks. Angular development servers bind to 127.0.0.1 on separate Real/Prototype ports. Application-local .env files can override backend ports.
 
 ESLint's Nx boundary rule prohibits application-to-application imports. Feature code stays
 inside its application; shared test configuration is the root jest.preset.mjs, not a
 runtime library. Runtime communication follows GraphQL contracts, not application source
 imports. Shared SDL/operation/tool inputs express their impact on Nx tasks.
-Nx also records admin/admin-react → gateway, products → core and reference → core and gateway → core/products/reference runtime dependencies for
+Nx also records admin → gateway, products → core and reference → core and gateway → core/products/reference runtime dependencies for
 affected selection, without permitting implementation imports across those boundaries.
 Test targets explicitly use nx:run-commands to preserve file/case arguments, including
 names containing spaces, when forwarding to the native npm test scripts.
@@ -71,19 +69,17 @@ Every application also depends on graphql-generate. Generation targets explicitl
 the default named inputs, including root tooling and SDL/operations, and own only their
 application's generated output. Gateway's test-db builds all four backends and runs the
 whole-graph fixture from tools/graphql. It is noncached and uses dedicated test schemas.
-Each admin's noncached test-smoke target includes browser tooling inputs and builds that
-admin plus the four backends. Both Playwright fixtures use real backends on ephemeral ports.
-React uses a Vite test server; Angular serves its compiled production build.
+The admin's noncached test-smoke target includes browser tooling inputs and builds the
+admin plus the four backends. Angular serves its compiled production build. Real checks
+start isolated backends on ephemeral ports; Prototype cases start no backend or database.
 Dev tasks are continuous and not cached.
-React admin builds are also uncached because Vite embeds the gateway URL from process variables
-or ignored local environment files. An old build must not silently retain another endpoint.
 The Nx daemon is disabled; graph calculation runs within commands so local checks do not
 depend on a separate background process.
 
 [PR CI](../../.github/workflows/affected.yml) checks the event's base/head with full Git
 history. Root-tool lint/type checks and offline schema checks run independently of project
-selection. Affected applications select unit/DB targets; each affected admin also selects its
-own browser smoke target. A separate [manual workflow](../../.github/workflows/full-regression.yml)
+selection. Affected applications select unit/DB targets; the affected admin also selects its
+browser smoke target. A separate [manual workflow](../../.github/workflows/full-regression.yml)
 runs full regression. Both use the root npm commands with host Node processes and the same
 PostgreSQL-only Compose file. See [testing](../testing.md#github-actions) for exact behavior.
 
@@ -178,22 +174,26 @@ imports. See [the backend skill](../../.agents/skills/holita-backend-feature/SKI
 
 [Angular admin](../../apps/admin/src/app/app.config.ts) uses standalone components and lazy
 routes with Angular's native CLI builder. The root npm/Nx targets own generation, checking,
-building and tests. PrimeNG 22, Aura and the adapted Sakai static layout provide its shell.
-`admin-react` remains
-available as the implemented CRUD, dirty-form, media and request-lifecycle reference.
+building and tests. PrimeNG 22, the Aura compatibility preset and the adapted Sakai static
+layout provide its shell and current Stores/Products/Reference presentation.
+Concrete Angular Products/Reference features supply CRUD, dirty-form, media and request-lifecycle examples.
 
-The flow is component → concrete feature service → Apollo Angular/HttpLink → existing gateway.
+The flow is component → concrete feature service → Apollo Angular/HttpLink → existing gateway
+in Real or the admin-owned MSW endpoint in Prototype.
 [StoresApi](../../apps/admin/src/app/features/stores/stores-api.ts) discovers stores without
 `x-store-id`. [ProductsApi](../../apps/admin/src/app/features/products/products-api.ts)
 uses separately generated [operations](../../apps/admin/src/app/features/products/operations.graphql)
 and the existing Products API; there are no backend contract changes or application imports.
 Codegen validates the complete contract set and writes ignored Angular-local TypedDocumentNodes.
 
-Routes use `/bg` or `/en`, followed by `/stores/:storeId/products` after selection. Bundled
+Routes use `/bg` or `/en`, followed by `/stores/:storeId/products` after selection.
+Venues uses `/stores/:storeId/reference/venues`, `/new` and `/:venueId/edit`. Store switching
+preserves the available Products/Reference section and returns to its unfiltered list. Bundled
 [Bulgarian](../../apps/admin/src/app/i18n/bg.json) and [English](../../apps/admin/src/app/i18n/en.json)
 catalogs supply frontend messages. Language navigation preserves the path/query/hash;
 requests capture `Accept-Language` and a new `x-request-id`. The language is not persisted
-as independent global state. There is no authentication or Prototype mode.
+as independent global state. There is no authentication. Angular also supports startup-only
+Prototype for Stores/Products/Venues/Speakers/Tags/Events/Sessions/Media/History.
 
 [StoreProducts](../../apps/admin/src/app/features/products/store-products.ts) validates the
 selection against discovery and keys the inner Products component by store/language/Product ID.
@@ -215,22 +215,43 @@ The [shell](../../apps/admin/src/app/layout/admin-shell.ts) receives available s
 selected ID, language and navigation URL through explicit inputs. StoreWorkspace owns routing
 and discovery. The shell owns only desktop collapse/mobile visibility and presentation;
 mobile navigation uses PrimeNG Drawer for focus trapping, Escape and backdrop dismissal.
-Its panel uses a responsive width of `min(20rem, 90vw)` through the public `style` input; initial focus
+Scoped Drawer content padding and the navigation's line height retain Sakai's menu density.
+Its panel uses a responsive width of `min(20rem, 90vw)` and a single 1px right border
+through the public `style` input; initial focus
 targets the close button's explicit pass-through ID, and dismissal returns focus to the toggle.
-Navigation exposes Stores and, for a known selection, Products. The active-store selector
-uses PrimeNG Select. One selector moves below the top bar on mobile. The
+Navigation exposes Stores and, for a known selection, Products and enabled Reference Venues/Speakers/Tags/Events.
+Reference availability is passed into the shell explicitly from startup configuration. The active-store selector
+uses PrimeNG Select, alongside the language and theme controls on the right of the desktop
+top bar. Keyboard order follows these controls. The desktop sidebar slides out on collapse
+and becomes inert immediately, removing its links from focus and accessibility navigation.
+Stores remains active independently of query parameters and fragments. Below Sakai's 992px
+breakpoint, the top bar uses two 56px rows: logo/language/theme, then the store selector.
+One shared template mounts one selector in the appropriate DOM position, preserving its
+FormControl and matching keyboard order to the visible rows. Switching the breakpoint
+leaves feature/editor state intact and retires the selector's open overlay.
+Mobile content keeps Sakai's 28px side gutters, card padding and gap below the header. The
 [appearance service](../../apps/admin/src/app/layout/appearance.ts) owns the root dark-mode
 class and `holita.admin.theme` preference; denied storage leaves the toggle usable and shows
 a status message. There is no palette/configuration framework or placeholder profile data.
 
 [Sakai SCSS](../../apps/admin/src/styles/sakai/layout.scss) retains the source layout geometry
-and Aura tokens, adapted to PrimeNG 22's 16px root and a local system font stack. Only the
+and Aura tokens, with Sakai's 14px root and locally served Lato, including Cyrillic.
+PrimeNG 22 uses the Aura compatibility preset for this 14px scale.
+[The preset](../../apps/admin/src/app/layout/sakai-preset.ts) imports Aura's base and
+individual component exports, retaining the original tokens for implemented controls and
+their PrimeNG dependencies without including unused component presets. The main content
+ends with Sakai's centered footer and subtle divider, carrying the holita name.
+The desktop top bar is 56px high and the sidebar is 280px wide; content is capped at
+1504px on viewports at least 1960px wide. Only the
 implemented static layout is included. [Attribution](../../apps/admin/THIRD_PARTY_NOTICES.md)
 records pinned upstream revisions and licenses. No demo application, Tailwind, PrimeFlex,
 Quill or chart dependency is imported.
 
-Stores and Products composition styles live beside their components. Global styles own the
+Stores, Products and Venues composition styles live beside their components. Global styles own the
 shared base/card/headings and Sakai shell, including the Drawer panel appended to `body`.
+Cards use 28px spacing; the editor grid owns its card gap without additional card margins.
+Editor section headings follow Sakai's smaller 17.5px hierarchy, and business links use
+the primary theme color with hover and keyboard focus states in both themes.
 Navigation focus uses Aura's outline tokens; no inset shadow is synthesized from its optional shadow.
 
 PrimeNG Table uses server sorting and an external PrimeNG Paginator with sizes 10/20/50/100,
@@ -266,7 +287,10 @@ it does not own navigation or dirty-form policy. `beforeunload` protects unsubmi
 The editor owns a typed FormGroup, feature validators, initial detail loading and submission.
 Reactive Form events feed template presentation; Apollo/router remain streams and local
 loading/error/pending state remains in signals. Detail reads use `network-only` and hydrate
-the form once. Create/update send generated inputs through ProductsApi, keep submitted
+the form once. Products, lookup, Event and Session editors keep read and write errors
+separate: background reads cannot clear a rejected write or its field diagnostics. Editing
+clears the write error; read failures retain a retry action even after the form has loaded,
+and successful retries preserve the local draft. Create/update send generated inputs through ProductsApi, keep submitted
 writes alive and evict only their initiating client's list. DestroyRef checks suppress
 obsolete editor callbacks, including same-store route changes. Success returns to the list
 with its URL query/hash and a transient Router navigation-state acknowledgement.
@@ -285,197 +309,169 @@ ProductsApi.delete evicts the deleted entity and all Products list variants from
 cache with broadcasting disabled. The page performs one final refetch per batch, allowing the
 server to reconcile totals and page availability without a network read after every row.
 Stale or failed refresh snapshots cannot reintroduce confirmed deletions. This loop does not
-provide atomic batch semantics or establish another domain's deletion rules. There is no
-generic form/CRUD framework, global notification state, rich text or media workflow.
+provide atomic batch semantics or establish another domain's deletion rules. Products owns
+no media workflow; the admin has no generic form/CRUD framework or global notification state.
 
-Runtime [config.json](../../apps/admin/public/config.json) supplies the public GraphQL URL.
+[ReferenceWorkspace](../../apps/admin/src/app/features/reference/reference-workspace.ts) is a
+lazy boundary that checks Reference availability and discovered store identity before mounting
+Venues, Speakers, Tags or Events. Its store/language/resource/editor-mode/record-ID key recreates each
+list/editor scope. Disabled
+Reference renders a localized unavailable message without creating a feature API or issuing
+business requests; Products remains usable. A backend-disabled request exposes its diagnostic
+error through the ordinary Message/retry path.
+
+[VenuesApi](../../apps/admin/src/app/features/reference/venues/venues-api.ts) uses Angular-owned
+[generated operations](../../apps/admin/src/app/features/reference/venues/operations.graphql)
+against the existing Reference service. It captures its own Apollo client/cache and retains
+submitted writes through retirement, with invalidation confined to that client. There are no
+Reference backend changes, shared CRUD framework or cross-application imports.
+
+[VenuesPage](../../apps/admin/src/app/features/reference/venues/venues-page.ts) owns server paging,
+name search, boolean activity, sorting and URL state. Its concrete
+[query helpers](../../apps/admin/src/app/features/reference/venues/venue-list-query.ts) preserve
+false activity and normalize bounded inputs. Name, city, country, capacity and activity are
+sortable; newest-first is the default. Nullable capacity remains last in either direction,
+with descending ID ties enforced by the existing service. Page-local sequential deletion
+preserves partial results and failed-row retry; referenced Venues stay visible with diagnostics.
+Navigation stops unsent deletes while submitted writes retain their scope.
+
+[VenueEditor](../../apps/admin/src/app/features/reference/venues/venue-editor.ts) owns a typed
+Reactive Form for name, description, city, country code, address, nullable capacity and activity.
+It trims text, uppercases the two-letter country code, maps optional blanks to null and applies
+service limits using Unicode code points and positive GraphQL Int capacity. Known server
+field errors appear at their fields and receive focus without discarding the draft. Detail
+hydration happens once; dirty navigation, beforeunload and retired callbacks follow the
+existing Products lifecycle. Sakai cards/grid and native PrimeNG Textarea/ToggleSwitch compose
+the form with a sticky desktop settings aside that follows the main fields on mobile.
+[SpeakersApi](../../apps/admin/src/app/features/reference/speakers/speakers-api.ts) and
+[TagsApi](../../apps/admin/src/app/features/reference/tags/tags-api.ts) use their own generated
+operation files and captured Apollo clients with the same retirement policy. Their concrete
+pages own URL search/activity/paging/sorting and sequential deletion; Email nulls stay last and
+Color sorting is server-owned. Failed referenced rows remain selected for retry, including
+relations retained through trashed Events.
+
+[SpeakerEditor](../../apps/admin/src/app/features/reference/speakers/speaker-editor.ts) maps
+blank optional Email/biography to null and validates Email with the same Validator function
+as Real and Prototype transports. [TagEditor](../../apps/admin/src/app/features/reference/tags/tag-editor.ts)
+validates six-digit HEX colors, shows a valid-color preview and submits lowercase values.
+Both use typed Reactive Forms, owning text limits, server-field focus and dirty navigation.
+Duplicate Tag names remain a server-owned store constraint. Only the shared list/editor SCSS
+is presentation reuse; services, operations, state and domain validators remain concrete.
+
+[SessionsApi](../../apps/admin/src/app/features/reference/sessions/sessions-api.ts) owns
+Angular-generated Session operations and one captured store/language/Event client. Its
+parent ID is immutable for the mounted scope. [SessionEditor](../../apps/admin/src/app/features/reference/sessions/session-editor/session-editor.ts)
+loads the active parent before child reads and hydrates typed fields once; precise Sofia time
+and nullable mapping belong to [Session helpers](../../apps/admin/src/app/features/reference/sessions/session-form.ts).
+Parent and child reads retain separate loading/errors, so a successful retry cannot hide
+the other request's failure. Read notifications preserve rejected write errors and local fields.
+Session mode/ID extend the Reference boundary key. Submitted writes survive retirement;
+reads and editor callbacks do not survive parent/store/language/mode/ID changes.
+
+[SessionProgram](../../apps/admin/src/app/features/reference/sessions/session-program/session-program.ts)
+inherits the overview's SessionsApi, with saved rows and a separate local order draft.
+Native drag and named buttons change that draft; the complete-set mutation saves it atomically.
+Failure retains it, and Cancel refetches membership before discarding it. A scoped ConfirmDialog
+guards dirty navigation, including query/tab changes; pending writes settle against their captured
+client. Permanent deletion has a retryable Dialog. The API emits saved changes within its owning scope, so the overview refreshes Event/History
+even when a pending program write completes after a tab change. Parent destruction retires
+that subscription; a new overview/editor reads its own server state.
+[EventSpeakers](../../apps/admin/src/app/features/reference/sessions/event-speakers/event-speakers.ts)
+uses the current program to show unique names with inactive labels. Trash mounts neither
+program nor Speaker summary, and direct editors require an active parent. No cross-application
+implementation import or generic Session controller is added.
+
+[MediaApi](../../apps/admin/src/app/features/reference/media/media-api.ts) owns a captured
+store/language/Event Apollo client and the generated intent/finalize/metadata/cover/delete/order
+operations. The editor and overview each provide their own instance. Submitted writes keep
+that client until settlement; retired reads and callbacks cannot affect a new workspace.
+Gallery writes preserve the editor form; reopening the overview/History reads the committed state.
+[EventGallery](../../apps/admin/src/app/features/reference/media/event-gallery/event-gallery.ts)
+keeps saved rows, local order and typed Alt text separate from the Event form. Complete-set
+ordering is atomic, failed drafts survive and Cancel reloads server membership. Dirty drafts
+guard navigation; pending Gallery work blocks Event field submission. Trash blocks child reads.
+Read and action errors are separate: successful background refreshes clear transient read
+failures while preserving rejected actions; explicit refresh clears the previous action error.
+
+[Direct upload](../../apps/admin/src/app/features/reference/media/direct-upload.ts) uses a dedicated
+Angular XHR backend, sending only the intent's captured headers and File bytes to Reference.
+It bypasses GraphQL headers and the ordinary JSON request deadline, with its own 120-second
+transfer deadline and progress. Cancellation/navigation aborts unfinished bytes and prevents
+finalization after a late intent; submitted finalization settles in the original scope.
+Sakai cards and native PrimeNG Dialog/ProgressBar provide previews, actions and progress.
+
+Angular [startup](../../apps/admin/src/main.ts) selects the public `dataSource` once (default
+`graphql`), with a CLI environment replacement forcing `mock` for `dev:admin:mock`. It preserves
+the runtime license/config loading path and dynamically starts [MSW](../../apps/admin/src/app/mocks/browser.ts)
+before bootstrap. Prototype uses only the admin origin's `/__prototype/graphql`; its
+[handlers](../../apps/admin/src/app/mocks/handlers.ts) accept the exact generated Angular
+Stores/Products/Venues/Speakers/Tags/Events/Sessions/Media/History documents, including
+Apollo's typename transformation.
+Unknown/altered operations and real Gateway requests fail. Feature UI/services do not branch
+by mode. Navigation and the route boundary expose only the implemented capabilities.
+
+[State](../../apps/admin/src/app/mocks/state.ts) owns a versioned, disposable localStorage
+snapshot and Reset. Concrete resource modules own CRUD, atomic Event actions, complete-set
+Session ordering and History, sharing primitive guards. Current lookup rows supply relation
+labels; persisted Event/Session links protect deletion, including Trash. Mutations and History
+commit together. [Media](../../apps/admin/src/app/mocks/media.ts) owns ephemeral capabilities
+and the intent/binary/finalize lifecycle. [Native IndexedDB](../../apps/admin/src/app/mocks/media-storage.ts)
+stores finalized Blobs before metadata; finalization rechecks Event/Reset state after storage.
+Logical deletion precedes physical cleanup, with orphan pruning at startup/Reset. Trash/Restore
+retain bytes. Prototype also exposes the lazy Sakai UI catalog with section-local examples.
+Feature implementation stays within the Angular application.
+[SubmittedWrites](../../apps/admin/src/app/core/graphql/submitted-writes.ts) tracks mutations
+across captured clients, including retired workspaces. Confirmed Reset pauses new mutations,
+waits for settlement, replaces fixtures, then returns to locale discovery and reloads to
+replace all client/form state. Failure preserves the current form and resumes writes.
+Reset also cancels unfinished upload capabilities and prunes uploaded files.
+
+[UiCatalog](../../apps/admin/src/app/features/prototype/ui-catalog/ui-catalog.ts) is a separate
+Prototype-only lazy route guarded with `canMatch` before component loading. Discovered-store
+and language keys recreate the native PrimeNG Body/Lists/Forms/States examples; URL-backed
+tabs unmount inactive sections. Preview components own local signals and typed Reactive Forms,
+with no Apollo services, mock-state imports or browser persistence. Store switching keeps the
+catalog route and clears its tab query. Real does not mount the route or show its navigation.
+The catalog uses Sakai feature composition without importing its demo application.
+
+Runtime [config.json](../../apps/admin/public/config.json) supplies the public GraphQL URL and
+optional boolean `referenceEnabled` (defaults to true). False hides Reference navigation and
+blocks its direct routes; it does not configure or authorize the backend.
 Development uses `/graphql` and Angular's proxy to the existing loopback gateway. Compiled
 builds require that proxy at the serving origin or an absolute gateway URL with matching CORS.
 See [development](../development.md#angular-admin-foundation) and
 [Angular validation](../testing.md#angular-admin-checks).
 
-## React admin data sources
+[EventsApi](../../apps/admin/src/app/features/reference/events/events-api.ts) consumes explicit
+Angular Event, lifecycle/History and Venue/Tag lookup documents through one captured client. Events list, editor
+and overview each own their mounted scope. URL helpers map concrete filters/ranges/sorts to
+generated variables; page totals remain server-owned. Per-store column choices are presentation
+preferences, separate from Apollo data.
+Event status/Trash/Restore use existing transactional bulk operations with captured explicit
+IDs; there is no sequential mutation loop. The concrete action dialog is shared by list and
+overview. Query changes destroy that dialog, and DestroyRef suppresses obsolete completion
+while EventsApi retains its submitted write and invalidates only its captured client.
+Active/Trash is URL state; the overview permits explicit deleted reads but hides editing in
+Trash. History reads use network-only server paging, switchMap retirement and a local revision
+after successful actions. Native PrimeNG Tabs, Table, Paginator and Dialog follow Sakai;
+expanded values are interpolated text and description excerpts are sanitized before text extraction.
+The shared
+[RelationPicker](../../apps/admin/src/app/features/reference/relation-picker.ts) accepts typed
+load callbacks from its owning feature, owns popup/search/paging presentation and cancels
+obsolete reads. Searches strip NUL and stay within 200 Unicode code points before submission.
+Retrying selected labels while closed does not request the hidden choices page. The picker
+contains no GraphQL or domain mutation implementation.
 
-[Configuration](../../apps/admin-react/src/config.ts) selects `mock` or `graphql` once at startup.
-The same Refine provider, generated operations and feature screens serve both modes. Real
-uses the configured gateway. Prototype awaits [MSW startup](../../apps/admin-react/src/mocks/browser.ts)
-before rendering and uses a local GraphQL endpoint. [Handlers](../../apps/admin-react/src/mocks/handlers.ts)
-match generated documents for Stores, Products, Venues, Speakers, Tags, Events, Sessions
-Event History and media; unsupported operations return
-GraphQL errors instead of contacting a backend. The normal Real build excludes the worker
-and the dynamically imported mock implementation.
-
-[Prototype state](../../apps/admin-react/src/mocks/state.ts) validates small, versioned localStorage
-snapshots and persists each successful mutation before returning it. Generated API types
-are shared, while fixtures and mock behavior remain admin-owned. This is a transport
-substitution, without a second data provider or a separate frontend. Concrete
-[Products](../../apps/admin-react/src/mocks/products.ts), [Venues](../../apps/admin-react/src/mocks/venues.ts),
-[Speakers](../../apps/admin-react/src/mocks/speakers.ts), [Tags](../../apps/admin-react/src/mocks/tags.ts),
-[Events](../../apps/admin-react/src/mocks/events.ts), [Sessions](../../apps/admin-react/src/mocks/sessions.ts)
-and [Media](../../apps/admin-react/src/mocks/media.ts)
-modules own their mock resource behavior; state owns storage/Reset, and shared guards cover
-the repeated validation primitives. All records use generated operation fragments/inputs.
-Validator's email and UUID functions are shared with the backend's existing validation dependency.
-Event/Session relations resolve current lookup labels and drive protected deletion, including
-trashed parents. Mutation and [History](../../apps/admin-react/src/mocks/event-history.ts) writes share
-one snapshot. Structural and store/parent relationship guards reject invalid saved data.
-Snapshot version 4 replaces obsolete data. Both modes mount the same Gallery and upload hook.
-Prototype implements the seven generated media operations and origin-local HTTP PUT/read
-handlers through MSW. Binary requests retain the intent's store/Event identity.
-
-[Image storage](../../apps/admin-react/src/mocks/media-storage.ts) uses native IndexedDB for finalized
-Blobs, with no new dependency. Upload intents and staged bytes are ephemeral. Finalization
-persists bytes before synchronously saving metadata and History, re-reading the snapshot after
-the async byte write to preserve intervening edits and reject Reset/Trash races. Metadata is
-authoritative; failed snapshot writes cannot expose staged bytes. Removal/Reset discard logical
-references before byte cleanup. Startup prunes orphan bytes, keeping finalized uploads for
-trashed Events. There is no distributed transaction across localStorage/IndexedDB or cross-tab
-concurrency guarantee. [Fixture images](../../apps/admin-react/src/mocks/media-fixtures.ts) are Picsum
-placeholders served locally without binary browser persistence. Prototype validates type,
-size, animation markers and browser decoding; it does not establish Sharp or server-storage parity.
-
-[Navigation](../../apps/admin-react/src/navigation.ts) exposes only the implemented mock sections.
-StoreWorkspace also guards direct Prototype routes before feature mounting. Real's Reference
-flag keeps its existing behavior; Prototype availability does not depend on a running or
-enabled Reference service. Reset restores fixtures, remounts Refine and dirty editors, and
-navigates to store discovery. Separate origins isolate the two modes' caches/browser data.
-See [development](../development.md#admin-data-modes) for persistence and concurrency limits.
-
-The Prototype-only [UI catalog](../../apps/admin-react/src/features/prototype/ui-catalog/ui-catalog.tsx)
-is loaded lazily through the store workspace. Its section is URL-selected; local example
-state unmounts on tab/store changes. It demonstrates the actual shared presentation components
-and Aurora/MUI overrides without another data provider or business operations. Real hides
-the navigation entry and guards its direct route before mounting. ContentSection is shared
-by the catalog and the concrete Product/Venue/Speaker/Tag/Event/Session forms; fields, validation and mutations stay
-feature-owned. The [inventory](../reference.md#ui-catalog-and-shared-components) maps these boundaries.
-
-## React admin translations
-
-[Admin i18n](../../apps/admin-react/src/i18n/i18n.ts) initializes an i18next instance for the
-active `/bg/...` or `/en/...` URL from bundled catalogs. Missing language prefixes redirect
-to `bg`; missing or empty messages fall back to `en`. Catalogs use logical namespaces and
-English defines the TypeScript keys. React's I18nextProvider and
-[Refine's adapter](../../apps/admin-react/src/i18n/use-refine-i18n-provider.ts) share the instance.
-The shell's two-language menu uses Refine's locale callback, which navigates through the router
-and preserves the current path, query and hash. The document's `lang` follows the route.
-Non-React messages reuse a separate i18next instance with fixed-language translators;
-React receives its instance through context without registering a global instance.
-
-Products and Reference editors share the
-[unsaved-changes guard](../../apps/admin-react/src/features/use-unsaved-changes.tsx).
-Language changes remount Refine and feature UI after router blockers permit navigation. The QueryClient stays shared across languages so pending mutations still
-invalidate the captured store resource. Each language subtree owns an immutable GraphQL
-provider with `Accept-Language: bg|en`; requests keep their original header after navigation.
-Prototype Reset replaces the cache and form subtree and returns to discovery in the current
-language. Internal links, redirects and breadcrumbs use
-[localized routing helpers](../../apps/admin-react/src/i18n/routing.ts).
-There is no shared workspace translation package, language preference storage or backend
-translation integration. Products, Reference (including Sessions, Gallery, rich text and History),
-shell/store states, Prototype controls and the UI catalog use typed catalogs in both modes.
-The Aurora theme merges the bundled MUI/Data Grid locale without resetting appearance
-preferences. Shared `Intl` formatter sets use `bg-BG` or `en-GB` for display numbers and
-dates; timestamps stay in Europe/Sofia, budgets in EUR, and API input formats are unchanged.
-Provider-generated network/store errors and local upload errors use the captured language.
-Backend messages, record content and saved History values are displayed as received.
-
-## React admin request and store lifecycle
-
-The URL is the active store source: `/:language/` lists stores, `/:language/stores/:storeId/products` lists
-products, `/create` adds a product and `/:productId/edit` edits one. Unavailable stores
-show a selection message and do not trigger product requests. Store administration is absent.
-
-[StoreWorkspace](../../apps/admin-react/src/features/stores/store-workspace.tsx) owns store
-discovery, URL-derived selection, resource navigation and Reference availability. It passes
-plain store/navigation choices, selected values, callbacks and page content to
-[AdminLayout](../../apps/admin-react/src/layout/admin-layout.tsx). AdminLayout owns the header,
-store selector, sidebar and responsive drawer state. Its Aurora/MUI presentation has no
-Refine, GraphQL or router dependency; navigation callbacks retain the existing router and
-unsaved-change blockers.
-
-The shell adapts Aurora 2.4.0's MainLayout, default Sidenav, shared SidenavDrawerContent,
-NavItem, AppBar and search/language/theme/notification/profile components into
-[`layout/`](../../apps/admin-react/src/layout/). Enabled module groups share one list, with a
-256 px expanded drawer and a 72 px collapsed icon list controlled from the top bar.
-Navigation inputs contain flat module entries; search uses those same enabled entries.
-The shell has no footer, separate group rail or sidebar profile panel. It retains Aurora's
-64/82 px toolbar, breakpoints, transitions, typography and menu styling. The store selector
-and Prototype/Real indicator are holita additions; both move below the top bar on mobile.
-Selected palettes, component overrides,
-shadows and CSS variables live in [`theme/`](../../apps/admin-react/src/theme/). The sibling
-Aurora source directory is not a runtime dependency. Unused layouts, demo routes/auth,
-widget styles, complete demo datasets and settings-panel dependencies are excluded.
-
-The theme menu exposes Aurora presets and primary colors without rewriting route queries.
-Local search filters enabled navigation entries; notification read/remove state and the
-example profile are presentation data. They have no API or authentication
-provider. Appearance and desktop collapse preferences use holita-prefixed localStorage keys.
-Required icons, avatars and the Plus Jakarta Sans font are served locally; menu use does
-not fetch external assets. Example avatars live in `apps/admin-react/public/images/tmp/avatar`,
-separate from permanent assets. The font's OFL license accompanies the font file.
-
-All admin surfaces use Aurora/MUI, including store discovery and disabled Reference notices.
-Store discovery retains separate loading, error/retry, successful empty and unavailable-route
-states; none mounts CRUD before a valid store is selected. The discovery page reuses PageHeader
-and themed store buttons. Products and all Reference workflows follow the selected preset.
-MUI ThemeProvider/CssBaseline and the standard Emotion cache own styling and resets. Ant Design,
-its providers/reset stylesheet and the temporary CSS/cache integration layer are removed.
-The remaining application CSS belongs to rendered rich Event descriptions. Components and
-styles are the same in the browser and jsdom tests.
-
-[The data provider](../../apps/admin-react/src/data/data-provider.ts) adapts the official Refine
-GraphQL provider's variables and response mappers to our generated documents. Components
-use Refine useList/useOne/useCreate/useUpdate/useDelete. They do not fetch directly.
-Each request creates a transport with captured x-store-id and a new x-request-id, with a
-10-second timeout. URQL uses only fetchExchange; Refine/TanStack Query owns the only cache.
-GraphQL errors are handled even on HTTP 200; network failures have a concise retry message.
-
-The Refine product resource is `stores/<UUID>/products`, not a shared `products` resource
-with mutable headers. Both query keys and native mutation invalidation therefore include
-the initiating store. Every mutation passes that resource when submitted. Updates/deletes
-are pessimistic, and synchronous guards prevent duplicate submissions. Query/mutation
-retries are disabled; failed reads offer an explicit Retry button.
-
-[StoreWorkspace](../../apps/admin-react/src/features/stores/store-workspace.tsx) keys the Products
-subtree by store ID. Switching resets pagination, forms, confirmation dialogs and local
-notifications and returns to the selected store's list. The route subtree is also keyed by
-pathname so changing products or moving between create/edit within one store resets editor
-mutation state. Per-call mutation callbacks belong
-to the mounted editor/list; after unmounting they cannot redirect, notify or replace a new
-editor's draft. Refine still invalidates the original resource. Pending operations may
-complete on the server after navigation; changing stores does not cancel or retarget writes.
-
-[ProductForm](../../apps/admin-react/src/features/products/product-form.tsx) is shared by create
-and edit, with matching trimmed name/SKU limits, Draft/Active status, pending controls and
-server errors. Products and Reference use the same provider and store lifecycle.
-Products and Reference notifications use store-scoped MUI Snackbars. Both are separate from the shell's example bell panel. Refine's automatic notifications
-are disabled on these hooks; no unused global notification adapter is registered.
-Products reuses Aurora's Invoice PageHeader/PageBreadcrumb, Member DataGrid and filter
-drawer, and Create Event form/aside composition. The Community MUI X Data Grid supplies
-selection, single-column server sorting and bounded server pagination; Aurora overrides preserve its table styling.
-The list has name/SKU search, status tabs and an advanced Search/Status/SKU filter panel.
-Quick search and panel search share the same state; Clear filters resets all three filters. Filters,
-sorting (`sort`/`order`) and pagination live in route queries; changing any of them clears
-page-local row selection. Name, SKU and Status headers cycle ascending/descending/default;
-changing sorting resets pagination and preserves filters. A single list-query update path
-commits text drafts with immediate filter/sort changes and cancels pending text updates.
-Programmatic resets do not schedule a new search. The grid uses an unknown row count until
-the first successful list response and retains the last known total during later requests;
-an initial loading state must not reset a bookmarked page to the first page.
-Text filters debounce for 300 ms, and status changes apply immediately. Row links/cells
-open the editor; the three-dot menu provides Edit and Delete.
-
-Batch deletion uses sequential existing Refine useDelete calls, each carrying the captured
-resource. Confirmation names the selected count; successful deletions stay deleted and
-failed records remain available for retry. This is not an atomic batch API. Navigation
-unmounts the callbacks and stops unsent deletions; the current request may still finish.
-Products' right form panel is sticky on desktop and follows the fields on mobile. It holds
-status, a live name/SKU summary and Save/Cancel controls. No demo fields, authentication,
-new form library or generic CRUD framework is introduced.
-
-The [CRUD reference index](../reference.md#products-the-aurora-crud-reference) maps shared
-header/grid/pagination presentation to feature-owned filters, forms and mutations. The grid
-theme includes keyboard focus styling; unused built-in filter/column-panel customization
-is excluded. See [the admin skill](../../.agents/skills/holita-admin-feature/SKILL.md).
+[EventEditor](../../apps/admin/src/app/features/reference/events/event-editor.ts) owns the typed
+form and its generated create/update mapping. Europe/Sofia conversion preserves untouched
+stored instants; EUR remains a decimal string. Tiptap core/StarterKit implement the description
+ControlValueAccessor; DOMPurify guards paste and overview HTML while the service independently
+sanitizes writes. Angular `@defer` loads the rich editor when an Event form is ready, so Tiptap
+does not load for lookup lists or overviews. Its ControlValueAccessor receives the form's
+current value and disabled state when mounted. Create redirects to its saved editor; update redirects to
+the sanitized overview, preserving list query/hash. Both modes provide lifecycle actions,
+Trash, History, Sessions and Gallery as described above.
+The API has no sequential Event deletion method.
 
 ## Reference Event Management
 
@@ -494,17 +490,11 @@ Search is case-insensitive and treats punctuation such as `%` and `_` literally.
 lookup includes inactive records when active is
 omitted and still applies store scoping. The admin fetches choices in pages of 20 and
 resolves current selections separately; it never preloads an entire relation table.
-Venue, Speaker and Tag pages share the Aurora `LookupList` and `LookupFilters`, bounded to
-these Reference supporting entities. The list owns URL-backed name/status filters, server
-sorting/pagination, page-local selection and sequential deletion with per-record failures.
-Concrete list adapters supply columns, a scoped resource and deletion guidance; forms,
-editors, providers and services stay concrete. Venue sorting accepts Name, City, Country,
+Venue sorting accepts Name, City, Country,
 Capacity, Active and CreatedAt; Speaker accepts Name, Email, Active and CreatedAt; Tag accepts
 Name, Color, Active and CreatedAt. Sorting runs before pagination with an ID descending
 tie-breaker; null capacity/email stays last in either direction. Active sorts by the displayed
-Active/Inactive labels. All providers preserve the selected-ID lookups used by relations.
-Products and these three Reference modules share PageHeader, FilterDrawer, RecordActions,
-EditorAside and the grid theme/pagination. Products keeps its own list and data state.
+Active/Inactive labels. Concrete Angular services preserve the selected-ID lookups used by relations.
 
 Venue name (200), city (120), and two-letter countryCode are required; countryCode normalizes
 to uppercase. Description (2000), address (300) and positive integer capacity are nullable.
@@ -537,7 +527,7 @@ code points and rejects NUL. Update omission
 preserves fields; null clears nullable fields and is invalid for required fields. Empty
 updates fail. Validation errors include bounded, allowlisted field path/message entries
 in extensions.fieldErrors; Reference and gateway strip other exception details. The admin
-retains only these fields and the request ID while using the official Refine provider.
+retains only these fields and the request ID through its concrete Apollo service.
 
 Event `descriptionHtml` is nullable PostgreSQL TEXT and a generated GraphQL String field.
 The service validates 100 KiB of UTF-8 input before sanitization and rejects NUL. It uses
@@ -549,7 +539,7 @@ content becomes null. Sanitized output must also fit 100 KiB so it can be edited
 Creation and update store only the sanitized result, atomically with other Event fields
 and Tag changes; omission preserves it and null clears it.
 
-The admin uses a constrained Tiptap editor with MUI controls inside the Event form, with no
+The admin uses a constrained Tiptap core editor with PrimeNG controls inside the Event form, with no
 separate save or storage format. DOMPurify restricts pasted HTML and HTML rendered in the
 Overview to the same permitted formats, providing a browser boundary in addition to server
 validation. Initial content is sanitized once per editor mount; external replacements and
@@ -649,17 +639,11 @@ Gallery queries derive ten-minute read URLs; URLs are not database fields. Local
 a signature and the current store/media/parent association, then stream with no-store,
 nosniff and a restrictive content policy. The signing key is process-local: restart invalidates
 old previews, and a fresh scoped query renews them. Admin refreshes metadata every eight
-minutes while mounted and offers **Refresh previews**. Reference's feature guard also covers
+minutes while mounted and offers **Refresh images**.
+Reference's exact-origin `ADMIN_ORIGINS` allowlist supports configured admin origins, with legacy
+`ADMIN_ORIGIN` fallback; see [configuration](../development.md#reference-media-configuration). Its feature guard also covers
 both HTTP endpoints. These capabilities do not replace authentication; the existing foundation
 still has no user authorization layer.
-
-The gallery resource identity includes both store and Event. Refine owns metadata caching;
-an upload hook captures that resource, uses an abortable XHR for progress and checks cancellation
-before finalizing. Navigation aborts transport and suppresses obsolete local feedback. A
-finalization already submitted retains its original scope. Gallery mutations save separately
-from ordinary Event fields; reordering remains a draft until Save order, survives failure and
-reloads server order on Cancel order. The Event editor's existing navigation warning includes
-that draft, and Save event waits for gallery work to finish. Overview renders a read-only gallery.
 
 Sessions belong to one Event and store. They have title (200), optional summary (2000),
 optional room (120), UTC start/end, explicit zero-based position and many-to-many
@@ -682,50 +666,10 @@ checks; the Event's soft-delete UPDATE uses that row lock as well. Services deci
 repositories own all scoped Prisma access, and the locking SQL qualifies the configured
 schema. Session creation checks the existing scoped parent, without another Core request.
 
-The Event header has Overview, Sessions (`tab=sessions`) and History tabs. Session forms use
-`/events/:eventId/sessions/create` and `/events/:eventId/sessions/:id/edit` and return to the
-Sessions tab after saving. The Aurora form uses a sticky desktop event/summary aside and
-native date/time inputs sharing the Event Sofia converter; untouched repeated-hour offsets
-are preserved. The program uses rounded Aurora sections with the shared row menu and native
-drag/move controls. Their Refine resource includes both store and Event IDs, so
-requests, cache and invalidation retain both scopes. The program supports dragging and
-keyboard-accessible move buttons. A draft order stays local until Save order; failed saves
-retain it, and Cancel order reloads the server order. Add/edit/delete are disabled during
-an order draft. Dirty navigation and reload use the same editor warning. Reorder uses a
-concrete custom provider operation and a hook that invalidates the captured resource even
-after navigation; success messages remain bound to the mounted program. The overview reads
-this same bounded program to derive speakers; Event listing does not load Sessions.
-
 `REFERENCE_ENABLED` accepts true/false and defaults to true. A resolver guard rejects
 business queries, mutations and entity lookups with SERVICE_UNAVAILABLE when false.
 Health and static federation composition remain available; disabling retains all data.
-The matching public `VITE_REFERENCE_ENABLED` controls the admin menu/direct routes
-at startup/build time. It is not authorization and cannot override the backend guard.
-
-The admin routes are `/:language/stores/:storeId/reference/{events,venues,speakers,tags}`, with
-`/create` and `/:id/edit`; Events also have a `/:id` overview. Each concrete resource captures the store in requests, cache
-keys and mutation invalidation. The Reference subtree is keyed by store and its routes by
-pathname. Page headers contain context and applicable form tabs, with themed primary and red
-destructive actions. Event fields are organized into General, Schedule & location, and
-Content & media; one save validates all tabs and preserves failed input. A server error opens the
-matching tab and focuses the first recognized field. Unknown error paths do not change the selected tab.
-The Event aside holds status, featured, capacity, exact budget, summary and save/cancel. Native
-date/time inputs use the existing Sofia conversion and preserve untouched repeated-hour offsets.
-Venue uses visible details/location sections and a sticky desktop aside for status, capacity
-and summary, stacked below the fields on mobile. It displays server field errors and focuses
-the first recognized field without resetting local drafts. Speaker and Tag use the same
-Aurora form composition and responsive status/summary aside with concrete validation.
-Tag color is editable as HEX or through the native color input, with no additional library. Event creation
-opens the saved Event editor; subsequent Event saves return to its overview. Supporting
-saves return to their list.
-
-The admin initializes a React Router data router so Reference editors can use its standard
-navigation blocker with a shared MUI confirmation dialog. Dirty ordinary fields prompt on Cancel, menu links, store switching and
-history navigation. Reload/close uses the browser's native beforeunload warning. Tabs stay
-within the form. Submitted writes do not block navigation and keep their original scope;
-late callbacks cannot replace another mounted editor. Failed saves retain dirty state.
-Products uses the same shared router blocker for dirty forms, including language/store
-changes, Cancel and browser history. Submitted writes remain navigable.
+The public Angular `referenceEnabled` startup flag controls admin navigation/direct routes. It is not authorization and cannot override the backend guard.
 
 The Event list accepts explicit `ReferenceEventFilter` and `ReferenceEventSort` inputs.
 Title/code substring search is case-insensitive and treats SQL wildcard characters literally.
@@ -742,18 +686,6 @@ The page and matching count share a RepeatableRead transaction. Page sizes are 1
 with 20 as default. Start-date filters represent inclusive calendar days in Europe/Sofia;
 the admin converts these to `startsAtFrom` inclusive and `startsAtBefore` exclusive UTC
 instants, including days shortened/lengthened by daylight saving changes.
-
-The Aurora DataGrid uses server pagination/sorting and the shared responsive FilterDrawer.
-Title/code search shares one 300 ms draft between toolbar and drawer. Other filters apply on
-change; invalid date/capacity ranges remain local until corrected. Active row clicks open Edit;
-View in the three-dot menu opens the overview, as do read-only trash rows.
-Search, filters, Active/Trash view, sort, page and size are URL query parameters. Event links carry the list query
-in `list`, interpreted only within the current store's Event list. Reload and browser history
-restore the view; Show, Edit and Back retain this address. Store switching starts a default list.
-Visible columns are local browser preferences keyed by the store's resource, without account
-identity. Event and Actions remain visible; all other columns can be toggled. Reset filters
-preserves Active/Trash, sorting, page size and columns; Reset columns restores the default columns. Lists
-separate loading, an empty store, no matching rows and retryable failures.
 
 The Event overview displays saved summary, tags, schedule, location, registration and record
 details in cards. Its header contains context and its tabs. Edit opens the existing

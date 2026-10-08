@@ -13,11 +13,17 @@ describe('local GraphQL contracts', () => {
     expect(result.clientSdl).toContain('store: Store!');
     expect(result.clientSdl).not.toContain('_entities');
     const operations = await readOperations(result.apiSchema);
-    expect(operations).toHaveLength(12);
+    expect(operations).toHaveLength(10);
     expect(operations.map((operation) => operation.location)).toEqual(
       expect.arrayContaining([
         'apps/admin/src/app/features/stores/operations.graphql',
         'apps/admin/src/app/features/products/operations.graphql',
+        'apps/admin/src/app/features/reference/venues/operations.graphql',
+        'apps/admin/src/app/features/reference/speakers/operations.graphql',
+        'apps/admin/src/app/features/reference/tags/operations.graphql',
+        'apps/admin/src/app/features/reference/events/operations.graphql',
+        'apps/admin/src/app/features/reference/sessions/operations.graphql',
+        'apps/admin/src/app/features/reference/media/operations.graphql',
       ]),
     );
     expect(result.clientSdl).toContain('referenceVenues(');

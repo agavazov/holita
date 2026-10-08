@@ -17,9 +17,16 @@
         <span class="holita-mark" aria-hidden="true">h</span><span>holita</span>
       </a>
     </div>
+    @if (!mobile()) {
+      <p-tag
+        [value]="dataSource() === 'mock' ? text().prototypeMode : text().realMode"
+        [severity]="dataSource() === 'mock' ? 'warn' : 'success'"
+      />
+      <ng-container [ngTemplateOutlet]="storeSelector" />
+    }
     <div class="layout-topbar-actions">
       <a
-        class="language-switch"
+        class="layout-topbar-action language-switch"
         [routerLink]="languageUrl()"
         [attr.lang]="language() === 'bg' ? 'en' : 'bg'"
         [attr.aria-label]="language() === 'bg' ? 'English' : 'Български'"
@@ -39,7 +46,18 @@
         }
       </button>
     </div>
+    @if (mobile()) {
+      <ng-container [ngTemplateOutlet]="storeSelector" />
+    }
+  </header>
+  <ng-template #storeSelector>
     <div class="store-selector">
+      @if (mobile()) {
+        <p-tag
+          [value]="dataSource() === 'mock' ? text().prototypeMode : text().realMode"
+          [severity]="dataSource() === 'mock' ? 'warn' : 'success'"
+        />
+      }
       <label for="active-store">{{ text().activeStore }}</label>
       <p-select
         inputId="active-store"
@@ -53,10 +71,19 @@
         appendTo="body"
       />
     </div>
-  </header>
-  @if (!mobile() && !desktopCollapsed()) {
-    <aside class="layout-sidebar" id="desktop-navigation">
-      <holita-admin-navigation [language]="language()" [storeId]="storeId()" />
+  </ng-template>
+  @if (!mobile()) {
+    <aside
+      class="layout-sidebar"
+      id="desktop-navigation"
+      [attr.inert]="desktopCollapsed() ? '' : null"
+    >
+      <holita-admin-navigation
+        [language]="language()"
+        [storeId]="storeId()"
+        [referenceEnabled]="referenceEnabled()"
+        [prototype]="dataSource() === 'mock'"
+      />
     </aside>
   }
   <p-drawer
@@ -67,15 +94,21 @@
     [modal]="true"
     [blockScroll]="true"
     appendTo="body"
-    [style]="{ width: 'min(20rem, 90vw)' }"
+    [style]="{ width: 'min(20rem, 90vw)', borderWidth: '0 1px 0 0' }"
+    [dt]="{ content: { padding: '0.5rem 1.5rem' } }"
     [ariaCloseLabel]="text().closeNavigation"
     [pt]="{
       root: { 'aria-label': text().navigation },
       pcCloseButton: { root: { id: 'mobile-navigation-close' } },
     }"
   >
-    <div id="mobile-navigation">
-      <holita-admin-navigation [language]="language()" [storeId]="storeId()" />
+    <div id="mobile-navigation" class="layout-mobile-navigation">
+      <holita-admin-navigation
+        [language]="language()"
+        [storeId]="storeId()"
+        [referenceEnabled]="referenceEnabled()"
+        [prototype]="dataSource() === 'mock'"
+      />
     </div>
   </p-drawer>
   <div class="layout-main-container">
@@ -87,5 +120,6 @@
       }
       <ng-content />
     </main>
+    <footer class="layout-footer">holita</footer>
   </div>
 </div>

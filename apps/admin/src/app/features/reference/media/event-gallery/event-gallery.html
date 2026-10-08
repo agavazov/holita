@@ -1,0 +1,353 @@
+<section
+  [class.card]="!embedded()"
+  [attr.aria-label]="text().mediaGallery"
+  [attr.aria-busy]="pending()"
+>
+  <div class="gallery-heading">
+    <div>
+      <h2 #heading tabindex="-1">
+        {{ text().mediaGallery }} <span class="count">{{ saved().length }} / 10</span>
+      </h2>
+      <p>{{ editable() ? text().mediaDescription : text().mediaReadonly }}</p>
+    </div>
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="locked()"
+      (click)="refresh()"
+    >
+      {{ text().mediaRefresh }}
+    </button>
+  </div>
+  @if (editable()) {
+    <div class="upload-toolbar">
+      <input
+        #fileInput
+        type="file"
+        [attr.aria-label]="text().mediaChoose"
+        accept="image/jpeg,image/png,image/webp"
+        hidden
+        [disabled]="locked() || !!draft() || rows().length >= 10"
+        (change)="chooseFile($event)"
+      />
+      <button
+        pButton
+        type="button"
+        [disabled]="locked() || !!draft() || rows().length >= 10"
+        (click)="choose()"
+      >
+        {{ text().mediaAdd }}
+      </button>
+      @if (draft()) {
+        <button pButton type="button" [disabled]="locked()" (click)="saveOrder()">
+          {{ text().mediaOrderSave }}
+        </button>
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="locked()"
+          (click)="cancelOrder()"
+        >
+          {{ text().mediaOrderCancel }}
+        </button>
+      }
+    </div>
+    @if (draft()) {
+      <p-message severity="warn">{{ text().mediaOrderDirty }}</p-message>
+    }
+  }
+  @if (loading()) {
+    <p role="status">{{ text().mediaLoading }}</p>
+  }
+  @if (error() && !editing() && !deleting()) {
+    <p-message severity="error">{{ failure() }}</p-message>
+  }
+  @if (uploading(); as upload) {
+    <div class="upload-progress" role="status">
+      <p>
+        {{ upload.finishing ? text().mediaFinishing : text().mediaUploading }}: {{ upload.name }}
+      </p>
+      <p-progressbar [value]="upload.percent" [attr.aria-label]="text().mediaProgress" />
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="upload.finishing"
+        (click)="cancelUpload()"
+      >
+        {{ text().mediaCancelUpload }}
+      </button>
+    </div>
+  }
+  <p class="notice" role="status" aria-live="polite">{{ notice() }}</p>
+  <div class="gallery-grid">
+    @for (row of rows(); track row.id; let i = $index) {
+      <article
+        [attr.aria-label]="label(text().mediaImage, row.originalName)"
+        [class.dragging]="dragging() === row.id"
+        (dragover)="dragOver($event)"
+        (drop)="drop($event, row.id)"
+      >
+        <button
+          type="button"
+          class="image-button"
+          [attr.aria-label]="label(text().mediaPreview, row.originalName)"
+          [attr.aria-expanded]="previewId() === row.id"
+          (click)="openPreview(row)"
+        >
+          @if (!broken().includes(row.id)) {
+            <img
+              [src]="row.readUrl"
+              [alt]="row.altText ?? row.originalName"
+              (error)="imageFailed(row.id)"
+            />
+          } @else {
+            <span>{{ text().mediaPreviewFailed }}</span>
+          }
+        </button>
+        <div class="image-details">
+          <h3>{{ row.originalName }}</h3>
+          <p>{{ row.contentType }} · {{ (row.byteSize / 1024).toFixed(1) }} KiB</p>
+          @if (row.isCover) {
+            <span class="cover-label">{{ text().mediaCover }}</span>
+          }
+          @if (row.altText) {
+            <p>{{ row.altText }}</p>
+          }
+          @if (editable()) {
+            <div class="image-order">
+              <span>{{ i + 1 }}</span>
+              <button
+                pButton
+                type="button"
+                severity="secondary"
+                [text]="true"
+                [iconOnly]="true"
+                [attr.draggable]="!locked()"
+                [disabled]="locked()"
+                [attr.aria-label]="label(text().mediaDrag, row.originalName)"
+                (dragstart)="dragStart($event, row.id)"
+                (dragend)="dragging.set(null)"
+              >
+                <span aria-hidden="true">↕</span>
+              </button>
+              <button
+                pButton
+                type="button"
+                severity="secondary"
+                [outlined]="true"
+                [iconOnly]="true"
+                [disabled]="locked() || i === 0"
+                [attr.aria-label]="label(text().mediaEarlier, row.originalName)"
+                (click)="moveBy(row.id, -1)"
+              >
+                <span aria-hidden="true">↑</span>
+              </button>
+              <button
+                pButton
+                type="button"
+                severity="secondary"
+                [outlined]="true"
+                [iconOnly]="true"
+                [disabled]="locked() || i === rows().length - 1"
+                [attr.aria-label]="label(text().mediaLater, row.originalName)"
+                (click)="moveBy(row.id, 1)"
+              >
+                <span aria-hidden="true">↓</span>
+              </button>
+            </div>
+            <div class="image-actions">
+              <button
+                pButton
+                type="button"
+                severity="secondary"
+                [outlined]="true"
+                [disabled]="locked() || !!draft() || row.isCover"
+                (click)="setCover(row)"
+              >
+                {{ text().mediaSetCover }}
+              </button>
+              <button
+                pButton
+                type="button"
+                severity="secondary"
+                [text]="true"
+                [disabled]="locked() || !!draft()"
+                (click)="editAlt(row)"
+              >
+                {{ text().mediaAlt }}
+              </button>
+              <button
+                pButton
+                type="button"
+                severity="danger"
+                [text]="true"
+                [disabled]="locked() || !!draft()"
+                (click)="requestDelete(row)"
+              >
+                {{ text().mediaRemove }}
+              </button>
+            </div>
+          }
+        </div>
+      </article>
+    } @empty {
+      @if (!loading() && !error()) {
+        <p>{{ text().mediaEmpty }}</p>
+      }
+    }
+  </div>
+</section>
+@if (editing(); as row) {
+  <p-dialog
+    [visible]="true"
+    [header]="text().mediaAlt"
+    [modal]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [closable]="!pending()"
+    [closeOnEscape]="!pending()"
+    [closeAriaLabel]="text().closeConfirmation"
+    [style]="{ width: '30rem' }"
+    [breakpoints]="{ '575px': 'calc(100vw - 2rem)' }"
+    (visibleChange)="closeAction()"
+  >
+    <p>{{ row.originalName }}</p>
+    <label for="media-alt">{{ text().mediaAlt }}</label
+    ><input
+      pInputText
+      [invalid]="altInvalid()"
+      #altInput
+      id="media-alt"
+      class="alt-input"
+      [formControl]="altText"
+      [attr.aria-invalid]="altInvalid()"
+      aria-describedby="media-alt-hint"
+      [readOnly]="pending()"
+    />
+    <p id="media-alt-hint">{{ text().mediaAltHint }}</p>
+    @if (altInvalid()) {
+      <p-message severity="error">{{ text().mediaAltInvalid }}</p-message>
+    }
+    @if (error()) {
+      <p-message severity="error">{{ failure() }}</p-message>
+    }
+    <ng-template #footer
+      ><div class="dialog-actions">
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [text]="true"
+          [disabled]="pending()"
+          (click)="closeAction()"
+        >
+          {{ text().cancel }}</button
+        ><button pButton type="button" [disabled]="pending()" (click)="saveAlt()">
+          {{ text().mediaSaveAlt }}
+        </button>
+      </div></ng-template
+    >
+  </p-dialog>
+}
+@if (deleting(); as row) {
+  <p-dialog
+    [visible]="true"
+    [header]="text().mediaDeleteTitle"
+    [modal]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [closable]="!pending()"
+    [closeOnEscape]="!pending()"
+    [closeAriaLabel]="text().closeConfirmation"
+    [style]="{ width: '30rem' }"
+    [breakpoints]="{ '575px': 'calc(100vw - 2rem)' }"
+    (visibleChange)="closeAction()"
+  >
+    <p>
+      <strong>{{ row.originalName }}</strong>
+    </p>
+    <p>{{ text().mediaDeleteHint }}</p>
+    @if (error()) {
+      <p-message severity="error">{{ failure() }}</p-message>
+    }
+    <ng-template #footer
+      ><div class="dialog-actions">
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [text]="true"
+          [disabled]="pending()"
+          (click)="closeAction()"
+        >
+          {{ text().cancel }}</button
+        ><button pButton type="button" severity="danger" [disabled]="pending()" (click)="remove()">
+          {{ text().mediaDeleteTitle }}
+        </button>
+      </div></ng-template
+    >
+  </p-dialog>
+}
+@if (preview(); as row) {
+  <p-dialog
+    [visible]="true"
+    [header]="row.originalName"
+    [modal]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [closeAriaLabel]="text().closeConfirmation"
+    [style]="{ width: '70rem', maxWidth: 'calc(100vw - 2rem)' }"
+    (visibleChange)="closePreview()"
+  >
+    <div class="preview-image">
+      @if (!broken().includes(row.id)) {
+        <img
+          [src]="row.readUrl"
+          [alt]="row.altText ?? row.originalName"
+          (error)="imageFailed(row.id)"
+        />
+      } @else {
+        <p>{{ text().mediaPreviewFailed }}</p>
+      }
+    </div>
+    <ng-template #footer
+      ><div class="dialog-actions">
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="loading()"
+          (click)="refresh()"
+        >
+          {{ text().mediaRefresh }}</button
+        ><button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="previewIndex() === 0"
+          (click)="nextPreview(-1)"
+        >
+          {{ text().mediaPrevious }}</button
+        ><span>{{ previewIndex() + 1 }} / {{ rows().length }}</span
+        ><button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="previewIndex() === rows().length - 1"
+          (click)="nextPreview(1)"
+        >
+          {{ text().mediaNext }}
+        </button>
+      </div></ng-template
+    >
+  </p-dialog>
+}
