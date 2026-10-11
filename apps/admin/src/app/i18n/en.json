@@ -121,5 +121,16 @@
   "signIn": "Sign in",
   "signOut": "Sign out",
   "emptyTenants": "No tenants available.",
-  "chooseStore": "Choose a store"
+  "chooseStore": "Choose a store",
+  "karmaClient": "Karma Client",
+  "karmaTrucks": "Trucks",
+  "loadingKarmaCars": "Loading Karma trucks…",
+  "emptyKarmaCars": "No trucks available in Karma.",
+  "karmaUnavailable": "Karma is unavailable. Try again.",
+  "karmaCarId": "Karma ID",
+  "karmaDeviceId": "Device ID",
+  "karmaProjectId": "Project ID",
+  "karmaCarType": "Type",
+  "karmaCarYear": "Year",
+  "karmaCarColor": "Color"
 }

@@ -46,7 +46,7 @@
 
 ## Repository
 
-- Use npm workspaces, the existing lockfile, and Nx. The four applications are `apps/admin`, `apps/gateway`, `apps/core`, and `apps/fleet`.
+- Use npm workspaces, the existing lockfile, and Nx. The five applications are `apps/admin`, `apps/gateway`, `apps/core`, `apps/fleet`, and `apps/karma-client`.
 - Do not import another application's implementation, Prisma client, or database model, including through relative paths. ESLint/Nx enforce application boundaries.
 - Expose daily commands through root npm scripts. Do not add another build system, custom process supervisor, or custom test-selection framework. Add shared packages only for demonstrated current reuse.
 - Applications run as Node.js processes on the host. PostgreSQL is the only permitted containerized infrastructure for the foundation. Never reset databases or remove volumes to fix setup.
@@ -105,7 +105,7 @@ Do not make architectural changes solely because they may be useful later.
 
 ## Verification
 
-Follow [docs/testing.md](docs/testing.md). Start with the narrowest relevant project/file/case and expand only when changes or failures justify it. Use the named `test:core`, `test:gateway`, `test:fleet`, `test:admin` targets with native runner selectors.
+Follow [docs/testing.md](docs/testing.md). Start with the narrowest relevant project/file/case and expand only when changes or failures justify it. Use the named `test:core`, `test:gateway`, `test:fleet`, `test:karma-client`, `test:admin` targets with native runner selectors.
 
 For tooling changes, run from the repository root, plus relevant focused tests:
 

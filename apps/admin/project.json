@@ -11,11 +11,20 @@
       "cache": true,
       "inputs": ["default"],
       "outputs": ["{projectRoot}/src/generated/graphql"],
-      "options": { "command": "npm run graphql:generate", "cwd": "apps/admin" }
+      "options": {
+        "command": "npm run graphql:generate",
+        "cwd": "apps/admin"
+      }
     },
-    "lint": { "dependsOn": ["graphql-generate"] },
-    "typecheck": { "dependsOn": ["graphql-generate"] },
-    "build": { "dependsOn": ["graphql-generate"] },
+    "lint": {
+      "dependsOn": ["graphql-generate"]
+    },
+    "typecheck": {
+      "dependsOn": ["graphql-generate"]
+    },
+    "build": {
+      "dependsOn": ["graphql-generate"]
+    },
     "test": {
       "executor": "nx:run-commands",
       "dependsOn": ["graphql-generate"],
@@ -29,7 +38,12 @@
       "executor": "nx:run-commands",
       "cache": false,
       "inputs": ["default", "^default"],
-      "dependsOn": [{ "target": "build", "projects": ["admin", "gateway", "core", "fleet"] }],
+      "dependsOn": [
+        {
+          "target": "build",
+          "projects": ["admin", "gateway", "core", "fleet", "karma-client"]
+        }
+      ],
       "options": {
         "command": "playwright test --config tools/browser/angular.config.mts",
         "cwd": ".",

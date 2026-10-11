@@ -1,0 +1,15 @@
+extend schema @link(url: "https://specs.apollo.dev/federation/v2.3", import: [])
+
+type KarmaCar {
+  id: ID!
+  deviceId: String!
+  projectId: ID!
+  carNumber: String!
+  carType: String
+  carYear: String
+  carColor: String
+}
+
+type Query {
+  karmaCars: [KarmaCar!]!
+}

@@ -13,9 +13,10 @@ describe('local GraphQL contracts', () => {
     expect(result.clientSdl).toContain('store: Store!');
     expect(result.clientSdl).not.toContain('_entities');
     const operations = await readOperations(result.apiSchema);
-    expect(operations).toHaveLength(4);
+    expect(operations).toHaveLength(5);
     expect(operations.map((operation) => operation.location)).toEqual(
       expect.arrayContaining([
+        'apps/admin/src/app/features/karma-client/operations.graphql',
         'apps/admin/src/app/features/stores/operations.graphql',
         'apps/admin/src/app/features/fleet/vehicles/operations.graphql',
         'apps/admin/src/app/features/fleet/devices/operations.graphql',
@@ -33,6 +34,7 @@ describe('local GraphQL contracts', () => {
       'fleetDevices',
       'fleetVehicle',
       'fleetVehicles',
+      'karmaCars',
       'store',
       'stores',
       'tenants',

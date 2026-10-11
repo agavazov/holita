@@ -45,12 +45,18 @@ export class StoreWorkspace {
   readonly storesAvailable = computed(() => (this.stores()?.length ?? 0) > 0);
   readonly selectedStoreId = computed(() => {
     this.navigation();
-    const id = this.route.firstChild?.snapshot.paramMap.get('storeId')?.toLowerCase();
+    const id = this.karmaActive()
+      ? this.session.storeId()
+      : this.route.firstChild?.snapshot.paramMap.get('storeId')?.toLowerCase();
     return this.stores()?.find((store) => store.id === id)?.id ?? null;
   });
   readonly otherLanguageUrl = computed(() => {
     this.navigation();
     return this.languageLink(this.language() === 'bg' ? 'en' : 'bg');
+  });
+  readonly karmaActive = computed(() => {
+    this.navigation();
+    return this.route.firstChild?.snapshot.data['feature'] === 'karma-client';
   });
 
   constructor() {
@@ -157,6 +163,10 @@ export class StoreWorkspace {
   }
 
   chooseStore(id: string): void {
+    if (this.karmaActive()) {
+      this.session.selectStore(id);
+      return;
+    }
     const section = this.route.firstChild?.snapshot.url;
     const resource = section?.[2]?.path;
     const fleet =

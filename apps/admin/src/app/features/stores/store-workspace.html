@@ -16,7 +16,7 @@
     (signOut)="logout()"
     (storeSelected)="chooseStore($event)"
   >
-    @if (stores() === null || stores()?.length === 0 || error()) {
+    @if (!karmaActive() && (stores() === null || stores()?.length === 0 || error())) {
       <section class="card">
         @if (loading()) {
           <p role="status">{{ text().loadingStores }}</p>
@@ -37,7 +37,7 @@
         </button>
       </section>
     }
-    @if (storesAvailable()) {
+    @if (karmaActive() || storesAvailable()) {
       <router-outlet />
     }
   </holita-admin-shell>

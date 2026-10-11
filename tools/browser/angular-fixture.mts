@@ -22,6 +22,7 @@ export const test = base.extend<{
     url: string;
     gatewayUrl: string;
     demoSession: { token: string; tenant: { id: string; name: string } };
+    karma: Awaited<ReturnType<typeof createFederationFixture>>['karma'];
   };
   demoSignedIn: boolean;
   fleetEnabled: boolean;
@@ -136,7 +137,7 @@ export const test = base.extend<{
           token: session.token,
           tenant: { id: '01000000-0000-4000-8000-000000000001', name: 'RentalSofia' },
         };
-        await use({ url, gatewayUrl, demoSession });
+        await use({ url, gatewayUrl, demoSession, karma: backend.karma });
       } finally {
         await backend.close();
       }

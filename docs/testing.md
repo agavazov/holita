@@ -52,8 +52,9 @@ npm run test:gateway:db -- federation.db.spec.mts
 npm run test:smoke:admin -- angular-foundation.smoke.spec.mts angular-shell.smoke.spec.mts
 ```
 
-Offline contracts tests compose both subgraphs, validate all four explicit operation files and
-assert the exact public query/mutation inventory. Guard tests reject unsafe local test URLs.
+Offline contracts tests compose all three subgraphs, validate all five explicit operation files and
+assert the exact public query/mutation inventory. Karma Client runs against a local controlled
+Karma HTTP server without live credentials. Guard tests reject unsafe local test URLs.
 Federation fixture owns isolated Core/Fleet test schemas, Core seeds, real backend processes
 and request observers. It proves Store discovery, Vehicle/Device relations and scope, CORS/header
 bounds, availability, request-local Core validation and scoped CRUD while Core is stopped.
@@ -62,7 +63,7 @@ Gateway has no database dependency.
 Angular fixtures serve the compiled production app with their own runtime configuration.
 They own dedicated backend processes/schemas and never load private development licenses.
 Browser fixtures seed Core and obtain real demo sessions; they create their own business records without running Fleet sample seeds. The Isolation tenant/store exists only in these test fixtures.
-Browser targets build the admin and three backends, use Chromium, disable retries and retain
+Browser targets build the admin and four backends, use Chromium, disable retries and retain
 failure screenshots/traces under ignored test-results. Clean up task-started connections/processes.
 
 ## Current change-to-check mapping
@@ -72,6 +73,8 @@ failure screenshots/traces under ignored test-results. Clean up task-started con
 | Vehicle validation/query/persistence    | vehicles.service.spec.ts, vehicles.db.spec.ts                                       |
 | Device IMEI/assignment/persistence      | devices.service.spec.ts, devices.db.spec.ts                                         |
 | Runtime module/health                   | Fleet/Core/Gateway health.spec.ts as affected                                       |
+| Karma account client/access             | karma-client.spec.ts, cars.service.spec.ts, Karma health.spec.ts                    |
+| Karma global list/routing               | karma-workspace.spec.ts, angular-karma.smoke.spec.mts                               |
 | SDL/operations                          | codegen, schema:check, contracts.unit.spec.mts                                      |
 | Cross-service contracts/context         | federation.db.spec.mts                                                              |
 | Store/language/default routing          | store-workspace.spec.ts, fleet-workspace.spec.ts, angular-foundation.smoke.spec.mts |
@@ -107,13 +110,13 @@ PR CI requires the known base and fails when history is missing; it never substi
 an empty selection or automatically starts full regression.
 
 Nx uses main as its default base, but explicit comparisons avoid ambiguity. Shared
-configuration/lockfile changes can affect all four applications. Nx's project graph does
+configuration/lockfile changes can affect all five applications. Nx's project graph does
 not establish which tests cover a runtime change; choose behavioral checks from the
 mapping above. Local pure checks may be cached using the configured inputs. Use
 `--skip-nx-cache` when demonstrating the actual runner or testing current runtime behavior.
 Affected testing first runs the small offline schema-tool suite, then Nx selects the
 affected application unit/DB targets. Shared contracts and operation changes affect all
-four applications because all generators validate the complete contract set. Gateway's
+five applications because all generators validate the complete contract set. Gateway's
 whole-graph test builds the real backend dependencies. Application code import boundaries
 remain enforced separately from these task/contract relationships.
 
@@ -150,7 +153,7 @@ The PR sequence is:
 
 Docs-only changes can select no applications. The summary explains that no application
 tests ran; format, root-tool and schema checks still run. This is not evidence of product
-behavior. Shared configuration/workflow/ignore changes intentionally select all four apps;
+behavior. Shared configuration/workflow/ignore changes intentionally select all five apps;
 the PR still uses affected targets and never calls test:full.
 
 When changing CI, validate both YAML/expressions and shell steps using actionlint (with
@@ -167,8 +170,8 @@ npm run projects -- --affected --files=docs/testing.md
 npm run test:affected -- --files=apps/admin/src/app/features/fleet/vehicles/vehicles-api.ts --include=app/features/fleet/vehicles/vehicles-api.spec.ts --skip-nx-cache
 ```
 
-Expected application sets are admin; all four; fleet/gateway/admin;
-all four; all four; none, respectively. These explicit-file examples inspect the configured graph; actual
+Expected application sets are admin; all five; fleet/gateway/admin;
+all five; all five; none, respectively. These explicit-file examples inspect the configured graph; actual
 PR execution uses the event SHAs instead. Verify the history step with an available commit
 and missing/invalid references; never treat a refused comparison as passing coverage.
 actionlint is an external contributor tool, not an application dependency. A local syntax

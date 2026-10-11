@@ -14,24 +14,25 @@ before `nvm use`. Native Windows execution is outside the verified setup.
 
 ## Commands
 
-| Command              | Behavior                                                              |
-| -------------------- | --------------------------------------------------------------------- |
-| npm run dev          | Wait for PostgreSQL, start Angular and three Nest backends            |
-| npm run kill         | Stop this checkout's application processes and watchers on Ubuntu/WSL |
-| npm run dev:admin    | Angular watcher                                                       |
-| npm run dev:gateway  | Gateway watcher                                                       |
-| npm run dev:core     | Core watcher                                                          |
-| npm run dev:fleet    | Fleet watcher                                                         |
-| npm run projects     | List four Nx applications                                             |
-| npm run lint         | Lint source/tooling and application boundaries                        |
-| npm run typecheck    | Check tools and all applications                                      |
-| npm run build        | Build all applications                                                |
-| npm run format:check | Check formatting                                                      |
-| npm run codegen      | Generate application GraphQL contracts                                |
-| npm run schema:check | Compose SDL and validate operations offline                           |
+| Command                  | Behavior                                                              |
+| ------------------------ | --------------------------------------------------------------------- |
+| npm run dev              | Wait for PostgreSQL, start Angular and four Nest backends             |
+| npm run kill             | Stop this checkout's application processes and watchers on Ubuntu/WSL |
+| npm run dev:admin        | Angular watcher                                                       |
+| npm run dev:gateway      | Gateway watcher                                                       |
+| npm run dev:core         | Core watcher                                                          |
+| npm run dev:fleet        | Fleet watcher                                                         |
+| npm run dev:karma-client | Karma Client watcher                                                  |
+| npm run projects         | List five Nx applications                                             |
+| npm run lint             | Lint source/tooling and application boundaries                        |
+| npm run typecheck        | Check tools and all applications                                      |
+| npm run build            | Build all applications                                                |
+| npm run format:check     | Check formatting                                                      |
+| npm run codegen          | Generate application GraphQL contracts                                |
+| npm run schema:check     | Compose SDL and validate operations offline                           |
 
 Backend output is `apps/NAME/dist`; `npm run start:prod --workspace @holita/core`
-(or gateway/fleet) runs the compiled app. `dev` does not migrate or seed databases.
+(or gateway/fleet/karma-client) runs the compiled app. `dev` does not migrate or seed databases.
 Ctrl+C stops the process group; `db:down` stops PostgreSQL separately and preserves the volume.
 Use `npm run kill` from another terminal when application processes remain running. It stops
 the dev group, individual Angular/Nest watchers and compiled backend processes from this checkout,
@@ -46,6 +47,7 @@ PostgreSQL and processes from other checkouts remain running. Running it again i
 | Gateway       | 11010                 |
 | Core          | 11011                 |
 | Fleet         | 11013                 |
+| Karma Client  | 11014                 |
 | PostgreSQL    | 11084                 |
 
 Visual previews use 11000–11009; the optional Sakai preview uses 11002. Application-local
@@ -53,10 +55,11 @@ Visual previews use 11000–11009; the optional Sakai preview uses 11002. Applic
 Existing process variables take precedence. Backend PORT must be an integer from 1 to 65535.
 Apps and Prisma read their own workspace `.env`; database provisioning reads root/Core/Fleet.
 
-Gateway uses `CORE_GRAPHQL_URL`, `FLEET_GRAPHQL_URL` and `ADMIN_ORIGIN`.
+Gateway uses `CORE_GRAPHQL_URL`, `FLEET_GRAPHQL_URL`, `KARMA_CLIENT_GRAPHQL_URL` and `ADMIN_ORIGIN`.
 Fleet uses `CORE_GRAPHQL_URL`, `FLEET_ENABLED` and `ADMIN_ORIGINS`, a comma-separated
 exact origin allowlist with `ADMIN_ORIGIN` as the single-origin fallback. Defaults allow the
-Angular loopback origin. Database URLs belong only to Core/Fleet. No upload/storage
+Angular loopback origin. Database URLs belong only to Core/Fleet. Karma Client has application-local account settings described in
+[Karma Client configuration](discocan/development.md#karma-client). No upload/storage
 configuration is required.
 
 ## Domain development

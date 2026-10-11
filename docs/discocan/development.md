@@ -37,7 +37,7 @@ Core issues an HMAC-SHA256 token containing Tenant ID and an eight-hour expiry. 
 verify it per request and reject missing/invalid/expired sessions as UNAUTHENTICATED. Gateway
 forwards Authorization; tenantId never comes from a business input or x-tenant-id header.
 
-Core and Fleet use the same DEMO_AUTH_SECRET (at least 32 characters). Their environment
+Core, Fleet and Karma Client use the same DEMO_AUTH_SECRET (at least 32 characters). Their environment
 examples show the local-only default; outside production it is used when no valid secret is set.
 DEMO_AUTH_ENABLED=false disables tenant discovery, demoLogin and demo sessions. In NODE_ENV=production
 demo auth is disabled unless explicitly enabled and a valid secret is configured. The flag is
@@ -111,3 +111,40 @@ query VehiclesWithStores {
 Mutations are create/update/delete FleetVehicle and FleetDevice. Inputs never accept tenantId or storeId. [Architecture](architecture.md#graphql-contracts-and-context) describes
 validation, federation and error semantics. Inspect GraphQL errors even on HTTP 200 and
 preserve the response request ID when reporting failures. Store scope is not authorization.
+
+## Karma Client
+
+The independent Karma Client backend listens on loopback port 11014 and starts with `npm run dev`.
+Use `npm run dev:karma-client` to start it alone. Copy `apps/karma-client/.env.example` to the ignored
+`apps/karma-client/.env`, then set `KARMA_USER` and `KARMA_PASSWORD` for the shared account.
+`KARMA_API_URL` defaults to `https://karma.online/apiv2/`. URLs must have HTTP(S) schemes and
+no embedded credentials, query or fragment. Redirects are rejected. Missing/invalid connection
+configuration leaves health usable and returns a sanitized error for the cars query.
+
+Match Core's `DEMO_AUTH_SECRET` and `DEMO_AUTH_ENABLED` settings; this uses the same development-only
+signed session protocol as Fleet. Gateway's optional `KARMA_CLIENT_GRAPHQL_URL` defaults to
+`http://127.0.0.1:11014/graphql`. Regenerate contracts and restart after SDL changes.
+
+After signing in, open **Karma Client → Trucks** (Bulgarian: **Камиони**) or visit
+`/en/karma-client/cars` or `/bg/karma-client/cars`. Every authenticated Tenant/Store sees all
+cars returned by the configured account. The list has no Store filter and is independent
+of `fleetEnabled`. The table loads on entry and with Refresh, retaining the previous list
+if refresh fails. It has no editing, automatic polling, persistence or Fleet synchronization.
+
+Through Gateway, send the signed session in `Authorization: Bearer <token>` and request:
+
+```graphql
+query {
+  karmaCars {
+    id
+    carNumber
+    deviceId
+    projectId
+    carType
+    carYear
+    carColor
+  }
+}
+```
+
+No Store header is needed. The upstream account password and Karma session remain server-side.

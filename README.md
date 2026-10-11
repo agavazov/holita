@@ -1,9 +1,9 @@
 # holita
 
-holita is a strict TypeScript npm-workspaces repository with Nx tasks and four host
-applications: Angular admin and NestJS gateway, core and fleet services.
+holita is a strict TypeScript npm-workspaces repository with Nx tasks and five host
+applications: Angular admin and NestJS gateway, core, fleet and karma-client services.
 The admin uses Sakai with holita branding, PrimeNG and Bulgarian/English catalogs.
-Its business modules are Vehicles and Devices. Core provides Store discovery; Gateway
+Its modules are Vehicles, Devices and the shared Karma truck listing. Core provides Store discovery; Gateway
 exposes their schema-first federated GraphQL API. PostgreSQL is the only container.
 
 Documentation separates [Discocan fleet telemetry](docs/discocan/README.md) from
@@ -38,22 +38,29 @@ Store; navigation cancels obsolete reads and callbacks.
 Vehicles has required License Plate and optional multiline Notes. Devices has a required
 15-digit IMEI unique within a Store and a mandatory same-tenant/same-store Vehicle, labeled Truck in the
 editor. Multiple Devices can share a Vehicle; assigned Vehicles cannot be deleted.
-Both modules provide search, sorting, paging, typed create/edit forms, dirty-form guards,
+Both Fleet modules provide search, sorting, paging, typed create/edit forms, dirty-form guards,
 confirmed single/page-local sequential deletion and failed-row retry.
+
+Karma Client → Trucks lists all cars from one configured Karma account for every signed-in
+Tenant/Store at `/bg/karma-client/cars` or `/en/karma-client/cars`. Configure the ignored
+`apps/karma-client/.env` using its [environment example](apps/karma-client/.env.example).
+The page has a read-only table and Refresh; it has no persistence or Fleet synchronization.
+Karma is independent of the Store selector and `fleetEnabled`. See
+[Karma configuration](docs/discocan/development.md#karma-client).
 
 The shell supports keyboard/mobile navigation and persisted light/dark themes. The startup
 `fleetEnabled` flag gates both business modules; Store discovery stays available.
 The ignored [Sakai source](docs/development.md#sakai-source-reference) supplies the visual reference.
 
-Gateway, Core and Fleet listen on loopback ports 11010, 11011 and 11013; PostgreSQL uses 11084. `dev` waits for PostgreSQL health before starting the four applications. Ctrl+C stops
+Gateway, Core, Fleet and Karma Client listen on loopback ports 11010, 11011, 11013 and 11014; PostgreSQL uses 11084. `dev` waits for PostgreSQL health before starting the five applications. Ctrl+C stops
 the Node group. `npm run db:down` stops PostgreSQL and preserves its volume. Setup, migrations
 and seeding are explicit commands. The seed inserts RentalSofia, Discordia and Sandbox Stores, two sample Vehicles and one Device without replacing existing records.
 
-Use [Gateway GraphQL](http://127.0.0.1:11010/graphql). `{ tenants { id name } }` is public for demo login. Sign in through `demoLogin` and send its token as `Authorization: Bearer <token>` to discover Stores. Store discovery needs no Store header. Business operations require `x-store-id`, for example the seeded Discordia Store
+Use [Gateway GraphQL](http://127.0.0.1:11010/graphql). `{ tenants { id name } }` is public for demo login. Sign in through `demoLogin` and send its token as `Authorization: Bearer <token>` to discover Stores. Store discovery needs no Store header. Fleet business operations require `x-store-id`, for example the seeded Discordia Store
 `10000000-0000-4000-8000-000000000001`. The demo login has no passwords or tenant membership checks and must be replaced before production. Tenant identity is verified from the signed session; business records are scoped by Tenant and Store. See [demo session configuration and limitations](docs/discocan/development.md#demo-tenant-login).
 Every backend exposes `/health`, independently of database/downstream availability.
 
-To start one application, use `dev:admin`, `dev:gateway`, `dev:core` or `dev:fleet`.
+To start one application, use `dev:admin`, `dev:gateway`, `dev:core`, `dev:fleet` or `dev:karma-client`.
 After SDL/operation changes run `npm run codegen`, `npm run schema:check` and restart the group.
 Generated clients/types are ignored and must not be edited.
 

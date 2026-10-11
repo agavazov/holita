@@ -3,7 +3,7 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
   "sourceRoot": "apps/gateway/src",
-  "implicitDependencies": ["core", "fleet"],
+  "implicitDependencies": ["core", "fleet", "karma-client"],
   "tags": ["type:app", "scope:gateway"],
   "targets": {
     "test": {
@@ -39,7 +39,7 @@
       "cache": false,
       "dependsOn": [
         {
-          "projects": ["core", "gateway", "fleet"],
+          "projects": ["core", "gateway", "fleet", "karma-client"],
           "target": "build"
         }
       ],

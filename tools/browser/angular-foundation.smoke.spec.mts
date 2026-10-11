@@ -49,7 +49,10 @@ test('compiled Angular discovers stores and reads Vehicles through the real gate
   });
   await page.goto(`${app.url}/en`);
   await expect(page).toHaveURL(`${app.url}/en/${storeA}/fleet/vehicles`);
-  await expect(page.locator('aside .layout-menuitem-root-text')).toHaveText('Fleet');
+  await expect(page.locator('aside .layout-menuitem-root-text')).toHaveText([
+    'Fleet',
+    'Karma Client',
+  ]);
   await expect(page.getByRole('link', { name: 'Stores', exact: true })).toHaveCount(0);
   await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toBeVisible();
   await chooseStore(page, 'Sandbox');
@@ -65,7 +68,10 @@ test('compiled Angular discovers stores and reads Vehicles through the real gate
   await expect(page).toHaveURL(`${app.url}/bg/${storeA}/fleet/vehicles`);
   await expect(page.getByRole('heading', { name: 'Автомобили', exact: true })).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('lang', 'bg');
-  await expect(page.locator('aside .layout-menuitem-root-text')).toHaveText('Автопарк');
+  await expect(page.locator('aside .layout-menuitem-root-text')).toHaveText([
+    'Автопарк',
+    'Karma Client',
+  ]);
   await page.getByRole('link', { name: 'Устройства', exact: true }).click();
   await expect(page).toHaveURL(`${app.url}/bg/${storeA}/fleet/devices`);
   await expect(page.getByRole('heading', { name: 'Устройства', exact: true })).toBeVisible();

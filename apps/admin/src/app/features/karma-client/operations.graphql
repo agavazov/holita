@@ -1,0 +1,11 @@
+query AdminKarmaCars {
+  karmaCars {
+    id
+    deviceId
+    projectId
+    carNumber
+    carType
+    carYear
+    carColor
+  }
+}

@@ -2,7 +2,7 @@
 
 | ID      | Implemented requirement                                                                                                                                           |
 | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| FND-001 | holita naming, npm workspaces, existing lockfile and Nx with four host applications: admin, gateway, core and fleet.                                              |
+| FND-001 | holita naming, npm workspaces, existing lockfile and Nx with five host applications: admin, gateway, core, fleet and karma-client.                                |
 | FND-002 | Strict TypeScript, concrete feature services/repositories, no cross-application implementation/model imports and no generic CRUD layer.                           |
 | FND-003 | PostgreSQL-only Compose infrastructure; Core/Fleet own separate development/test databases, roles, Prisma clients and reviewed SQL migrations.                    |
 | FND-005 | Schema-first federation, explicit offline operation/codegen inputs, generated ignored outputs and runtime SDL assets. Gateway uses a static supergraph.           |

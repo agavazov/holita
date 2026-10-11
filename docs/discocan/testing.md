@@ -77,3 +77,24 @@ development tables. Angular tests cover logged-out deep links, Tenant/Store drop
 responses, root-to-Vehicles navigation, remembered Store selection, tenant client/cache retirement,
 delayed submitted writes and fresh A → B → A clients. Browser login checks use the actual dropdown,
 logout/reload and desktop/narrow light/dark views; fixture auto-login is disabled for that suite.
+
+## Karma Client checks
+
+```bash
+npm run test:karma-client -- karma-client.spec.ts cars.service.spec.ts health.spec.ts --skip-nx-cache
+npm run test:admin -- --include=app/features/karma-client/karma-workspace.spec.ts --include=app/features/stores/store-workspace.spec.ts --skip-nx-cache
+npm run test:gateway:db -- federation.db.spec.mts
+npm run test:smoke:admin -- angular-karma.smoke.spec.mts angular-foundation.smoke.spec.mts angular-shell.smoke.spec.mts
+```
+
+The client checks cover response validation, credential absence, bounded transport failures,
+concurrent login sharing, session reuse and one renewal after Karma's HTTP-200 session error.
+HTTP tests verify the signed session protocol and reject anonymous/invalid sessions before
+upstream reads. Angular checks cover independence from Stores/Fleet, no Store header and
+retirement across session/language changes and logout.
+
+Federation and browser fixtures run the compiled Karma Client against a local controlled Karma
+HTTP server. They never use live account credentials; the existing guarded Core/Fleet database
+prerequisites still apply. Federation proves the common list across tenants/Stores, upstream
+renewal and Fleet operation while Karma fails. Browser checks cover routing, Refresh, error/empty
+states, Store switching, reload/language and disabled-Fleet/signed-out behavior.

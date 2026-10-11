@@ -121,5 +121,16 @@
   "signIn": "Вход",
   "signOut": "Изход",
   "emptyTenants": "Няма налични tenants.",
-  "chooseStore": "Изберете магазин"
+  "chooseStore": "Изберете магазин",
+  "karmaClient": "Karma Client",
+  "karmaTrucks": "Камиони",
+  "loadingKarmaCars": "Зареждане на камионите от Karma…",
+  "emptyKarmaCars": "Няма налични камиони в Karma.",
+  "karmaUnavailable": "Karma е недостъпна. Опитайте отново.",
+  "karmaCarId": "Karma ID",
+  "karmaDeviceId": "ID на устройство",
+  "karmaProjectId": "ID на проект",
+  "karmaCarType": "Тип",
+  "karmaCarYear": "Година",
+  "karmaCarColor": "Цвят"
 }

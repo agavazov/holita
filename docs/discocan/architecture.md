@@ -34,7 +34,7 @@ Runtime SDL assets are copied into builds. Named Angular/Core lookup operations 
 inputs in [contracts.mts](../../tools/graphql/contracts.mts). Codegen/composition/validation work
 offline. Gateway loads a generated static supergraph without introspection or registry polling.
 
-Public demo discovery exposes tenants and demoLogin. Authenticated queries are stores, store, fleetVehicles, fleetVehicle, fleetDevices and fleetDevice. Mutations create/update/delete FleetVehicle and FleetDevice.
+Public demo discovery exposes tenants and demoLogin. Core/Fleet authenticated queries are stores, store, fleetVehicles, fleetVehicle, fleetDevices and fleetDevice. Mutations create/update/delete FleetVehicle and FleetDevice.
 All Store/business operations require a signed demo session in Authorization. Business operations additionally require a valid `x-store-id` UUID. Inputs never accept tenantId or storeId.
 Repository predicates, totals, relation lookup and federation reference resolution always include the verified Tenant and active Store.
 Foreign IDs appear as NOT_FOUND. Creation checks Store existence through Core once per
@@ -53,7 +53,7 @@ letters/digits or `._:-`; invalid/missing IDs are replaced with UUIDs. Responses
 ID. Expected Nest exceptions map to BAD_USER_INPUT, NOT_FOUND, CONFLICT or SERVICE_UNAVAILABLE;
 unexpected details remain hidden. Creation's Core timeout is 3 seconds, Gateway's subgraph timeout
 is 5 seconds. No global current Store or cross-request Store validation cache exists.
-Tenant identity comes only from the HMAC-verified, expiring session. Gateway forwards Authorization; both subgraphs independently verify it. Arbitrary tenant headers and entity representations cannot select a Tenant. Demo login deliberately allows anyone to choose any Tenant; it is not production identity or membership authorization.
+Tenant identity comes only from the HMAC-verified, expiring session. Gateway forwards Authorization; Core, Fleet and Karma Client independently verify it. Arbitrary tenant headers and entity representations cannot select a Tenant. Demo login deliberately allows anyone to choose any Tenant; it is not production identity or membership authorization.
 
 `FLEET_ENABLED=false` rejects Fleet business and entity operations while preserving
 schema composition and health. Angular startup availability hides navigation and gates direct routes.
@@ -98,3 +98,31 @@ The trimmed preset contains implemented controls and their PrimeNG dependencies.
 Public startup config selects GraphQL URL, availability and optional user-supplied PrimeUI license.
 
 Demo sessions last eight hours and persist only in the browser tab sessionStorage. Logout navigates through the dirty-editor guard, clears the tab session and destroys discovery/business clients. Expiry retires the current workspace. Submitted writes retain their captured token and may settle after logout. Logout has no server-side token revocation. [Development](development.md#demo-tenant-login) describes configuration and production limitations.
+
+## Karma Client
+
+`apps/karma-client` is a separate NestJS federation subgraph. Gateway forwards the signed
+admin session to its `karmaCars` query. Karma Client verifies that session independently and
+returns cars from one configured Karma account to all authenticated tenants. No `x-store-id`
+is required or used; the list is intentionally global. Fleet isolation remains unchanged.
+
+A concrete Karma client authenticates with `POST /login` and requests the complete `GET /cars`
+list with `karma_sid`. It keeps the upstream session only in process memory and shares pending
+logins across callers. HTTP 401 or the HTTP-200 `{error: "Not logged in"}` response discards only
+the rejected session and retries login/list once. A four-second abort signal bounds the whole
+operation, including login and retry, within Gateway's five-second subgraph timeout.
+Malformed responses, transport errors and other upstream errors become sanitized
+`SERVICE_UNAVAILABLE` errors. Credentials and session IDs are never returned to the admin.
+
+The generated `KarmaCar` GraphQL type exposes ID, Device ID, Project ID, registration number,
+type, year and color. Runtime validation preserves string device identifiers and normalizes
+numeric/text years to nullable strings. There is no database, migration, row cache or mapping
+to Fleet Vehicles/Devices. The health endpoint does not contact Karma.
+
+Angular owns a fresh Apollo client/cache for each mounted session/language view and sends
+no Store header. The route is mounted while authenticated even when Store discovery is empty
+or fails and when Fleet is disabled. Changing the Store on this page updates the remembered
+Store without navigation or reloading Karma. Navigation, language changes, session replacement
+and logout retire obsolete reads. Refresh retains the previous successful rows on failure.
+The read-only table fetches all rows on entry or Refresh, has Bulgarian/English labels and
+uses the existing Sakai/PrimeNG theme.

@@ -9,6 +9,7 @@ export default tseslint.config(
   {
     ignores: [
       '.tmp/**',
+      '.misc/**',
       '.references/**',
       '.volumes/**',
       '**/node_modules/**',
@@ -51,7 +52,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/{core,gateway,fleet}/**/*.ts'],
+    files: ['apps/{core,gateway,fleet,karma-client}/**/*.ts'],
     languageOptions: {
       globals: globals.node,
     },

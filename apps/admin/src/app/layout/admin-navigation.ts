@@ -47,6 +47,26 @@ import { messages, type Language } from '../i18n/messages';
             </ul>
           </li>
         }
+        <li class="layout-root-menuitem">
+          <div class="layout-menuitem-root-text">{{ text().karmaClient }}</div>
+          <ul>
+            <li>
+              <a
+                [routerLink]="['/', language(), 'karma-client', 'cars']"
+                routerLinkActive="active-route"
+                ariaCurrentWhenActive="page"
+              >
+                <svg
+                  data-p-icon="car"
+                  size="20"
+                  class="layout-menuitem-icon"
+                  aria-hidden="true"
+                ></svg>
+                <span class="layout-menuitem-text">{{ text().karmaTrucks }}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
       </ul>
     </nav>
   `,

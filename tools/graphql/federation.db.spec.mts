@@ -57,6 +57,55 @@ describe('Fleet through the actual federation boundary', () => {
     const body: unknown = await response.json();
     return body;
   }
+  it('shares Karma cars across authenticated tenants and Stores, rejects anonymous access and renews the upstream session', async () => {
+    const source = '{karmaCars{id carNumber deviceId projectId carYear}}';
+    const first = await query(source);
+    expect(first).toMatchObject({
+      data: {
+        karmaCars: [
+          {
+            id: '41',
+            carNumber: 'KARMA TEST 41',
+            deviceId: '000123456789012',
+            projectId: '12',
+            carYear: '2020',
+          },
+        ],
+      },
+    });
+    expect(await query(source, {}, sandbox)).toEqual(first);
+    const login = await query(
+      'mutation {demoLogin(tenantId:"01000000-0000-4000-8000-000000000002"){token}}',
+    );
+    const otherToken = record(record(record(login).data).demoLogin).token;
+    if (typeof otherToken !== 'string') throw new Error('Missing other tenant token');
+    expect(await query(source, {}, '', fixture.url, otherToken)).toEqual(first);
+    const reads = fixture.karma.requests.length;
+    expect(await query(source, {}, '', fixture.url, '')).toMatchObject({
+      errors: [{ extensions: { code: 'UNAUTHENTICATED' } }],
+    });
+    expect(fixture.karma.requests).toHaveLength(reads);
+    fixture.karma.expire();
+    expect(await query(source, {}, '')).toEqual(first);
+    expect(
+      fixture.karma.requests.filter((request) => request.path.endsWith('/login')),
+    ).toHaveLength(2);
+  });
+
+  it('keeps Fleet usable while Karma is unavailable and recovers the cars list', async () => {
+    fixture.karma.setFailed(true);
+    try {
+      expect(await query('{karmaCars{id}}')).toMatchObject({
+        errors: [{ extensions: { code: 'SERVICE_UNAVAILABLE' } }],
+      });
+      expect(await query('{fleetVehicles{total}}')).toMatchObject({
+        data: { fleetVehicles: { total: expect.any(Number) } },
+      });
+    } finally {
+      fixture.karma.setFailed(false);
+    }
+    expect(await query('{karmaCars{id}}')).toMatchObject({ data: { karmaCars: [{ id: '41' }] } });
+  });
   it('runs Vehicles CRUD through Gateway with Core store resolution and foreign-ID isolation', async () => {
     const created = await query(
       'mutation($input:CreateFleetVehicleInput!){createFleetVehicle(input:$input){id storeId licensePlate notes store{id name}}}',

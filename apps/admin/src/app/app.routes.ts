@@ -19,6 +19,12 @@ export const routes: Routes = [
       import('./features/stores/store-workspace').then((module) => module.StoreWorkspace),
     children: [
       {
+        path: 'karma-client/cars',
+        data: { feature: 'karma-client' },
+        loadComponent: () =>
+          import('./features/karma-client/karma-workspace').then((module) => module.KarmaWorkspace),
+      },
+      {
         path: ':storeId/fleet/vehicles/new',
         data: { resource: 'vehicles', editor: true },
         canDeactivate: [leaveFleet],

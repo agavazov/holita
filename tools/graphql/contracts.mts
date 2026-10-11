@@ -7,6 +7,11 @@ import { lexicographicSortSchema, parse, printSchema, validate, type GraphQLSche
 export const workspaceRoot = fileURLToPath(new URL('../../', import.meta.url));
 export const subgraphs = [
   {
+    name: 'karma-client',
+    url: 'http://127.0.0.1:11014/graphql',
+    path: 'apps/karma-client/src/cars/cars.graphql',
+  },
+  {
     name: 'core',
     url: 'http://127.0.0.1:11011/graphql',
     path: 'apps/core/src/stores/stores.graphql',
@@ -19,6 +24,7 @@ export const subgraphs = [
   },
 ];
 export const operationPaths = [
+  'apps/admin/src/app/features/karma-client/operations.graphql',
   'apps/admin/src/app/features/stores/operations.graphql',
   'apps/admin/src/app/features/fleet/vehicles/operations.graphql',
   'apps/admin/src/app/features/fleet/devices/operations.graphql',

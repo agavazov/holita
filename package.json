@@ -29,7 +29,7 @@
     }
   },
   "scripts": {
-    "dev": "npm run db:up && concurrently --kill-others --names gateway,core,fleet,admin --prefix-colors blue,green,cyan,red \"npm:dev:gateway\" \"npm:dev:core\" \"npm:dev:fleet\" \"npm:dev:admin\"",
+    "dev": "npm run db:up && concurrently --kill-others --names gateway,core,fleet,karma-client,admin --prefix-colors blue,green,cyan,magenta,red \"npm:dev:gateway\" \"npm:dev:core\" \"npm:dev:fleet\" \"npm:dev:karma-client\" \"npm:dev:admin\"",
     "kill": "tsx tools/development/kill.mts",
     "dev:gateway": "npm run dev --workspace @holita/gateway",
     "dev:core": "npm run dev --workspace @holita/core",
@@ -67,7 +67,9 @@
     "dev:fleet": "npm run dev --workspace @holita/fleet",
     "test:fleet": "nx run fleet:test --output-style=static",
     "test:fleet:db": "nx run fleet:test-db --output-style=static",
-    "test:smoke:admin": "nx run admin:test-smoke --output-style=static"
+    "test:smoke:admin": "nx run admin:test-smoke --output-style=static",
+    "dev:karma-client": "npm run dev --workspace @holita/karma-client",
+    "test:karma-client": "nx run karma-client:test --output-style=static"
   },
   "devDependencies": {
     "@apollo/composition": "2.14.4",

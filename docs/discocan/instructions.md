@@ -50,3 +50,16 @@ and the relevant Fleet documents.
 - Devices require a 15-digit string IMEI unique per Tenant/Store and a mandatory same-tenant/same-store Vehicle,
   labeled Truck in the editor. Multiple Devices may share a Vehicle. Preserve leading zeros,
   composite foreign keys, protected Vehicle deletion and captured-client remote selection.
+
+## Karma Client
+
+- `apps/karma-client` owns the external Karma account connection and its `karmaCars` query.
+  It is an independent host process with no database or Fleet implementation imports.
+- Cars from the configured account are intentionally shared across every authenticated Tenant
+  and Store. Verify the signed session before upstream access; never require or use Store context
+  to filter this list. This exception does not change Fleet Tenant/Store isolation.
+- Keep Karma credentials/session IDs on the server, bound the complete request, renew a rejected
+  upstream session at most once and sanitize external failures. Do not expose arbitrary upstream paths.
+- The admin section has its own `/bg/karma-client/cars` and `/en/karma-client/cars` routes.
+  Keep it usable independently of Fleet availability and Store discovery; retire its captured
+  session/language client on logout, language changes and navigation.

@@ -201,11 +201,15 @@ test('mobile drawer traps focus, closes on Escape, backdrop, navigation and desk
   await expectVisibleFocus(vehiclesLink);
   await page.keyboard.press('Shift+Tab');
   await page.keyboard.press('Shift+Tab');
+  await expect(drawer.getByRole('link', { name: 'Trucks', exact: true })).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
   await expect(drawer.getByRole('link', { name: 'Devices', exact: true })).toBeFocused();
   await page.keyboard.press('Shift+Tab');
   await expect(drawer.getByRole('link', { name: 'Vehicles', exact: true })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(drawer.getByRole('link', { name: 'Devices', exact: true })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(drawer.getByRole('link', { name: 'Trucks', exact: true })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(drawer.getByRole('button', { name: 'Close navigation', exact: true })).toBeFocused();
   await page.keyboard.press('Escape');
@@ -345,7 +349,10 @@ test('store selection works with the keyboard and unknown stores expose no Vehic
   ).toHaveAttribute('aria-current', 'page');
   await page.goto(`${app.url}/en?review=1#main-content`);
   await expect(page.getByRole('heading', { name: 'Vehicles', exact: true })).toBeVisible();
-  await expect(page.locator('aside .layout-menuitem-root-text')).toHaveText('Fleet');
+  await expect(page.locator('aside .layout-menuitem-root-text')).toHaveText([
+    'Fleet',
+    'Karma Client',
+  ]);
   await expect(page.getByRole('link', { name: 'Stores', exact: true })).toHaveCount(0);
   await expect(
     page.locator('aside').getByRole('link', { name: 'Vehicles', exact: true }),

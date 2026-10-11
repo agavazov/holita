@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { promisify } from 'node:util';
 import { config } from 'dotenv';
+import { createKarmaFixture } from './karma-fixture.mjs';
 import pg from 'pg';
 import { workspaceRoot } from './contracts.mjs';
 
@@ -277,14 +278,26 @@ export async function createFederationFixture(
     cleanup.push(() => fleet.stop());
     const fleetObserver = await observeRequests(fleet.url);
     cleanup.push(fleetObserver.close);
+    const karma = await createKarmaFixture();
+    cleanup.push(karma.close);
+    const karmaClient = await startApplication('karma-client', {
+      KARMA_API_URL: karma.url,
+      KARMA_USER: 'fixture-user',
+      KARMA_PASSWORD: 'fixture-password',
+    });
+    cleanup.push(karmaClient.stop);
     const gateway = await startApplication('gateway', {
       ADMIN_ORIGIN: options.adminOrigin ?? 'http://127.0.0.1:11000',
       CORE_GRAPHQL_URL: coreObserver.url,
       FLEET_GRAPHQL_URL: fleetObserver.url,
+      KARMA_CLIENT_GRAPHQL_URL: karmaClient.url,
     });
     cleanup.push(gateway.stop);
     return {
       url: gateway.url,
+      karma,
+      karmaClientUrl: karmaClient.url,
+      stopKarmaClient: karmaClient.stop,
       coreRequests: coreObserver.requests,
       fleetUrl: fleet.url,
       fleetRequests: fleetObserver.requests,
