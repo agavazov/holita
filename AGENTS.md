@@ -2,7 +2,8 @@
 
 ## Product identity
 
-- The product, codebase and all new resources are named `holita`.
+- The repository, current packages and infrastructure resources are named `holita`.
+  Discocan and Ecommerce identify the separate domains documented below.
 - `red.bg` is a temporary domain used to present the service. It is not the product,
   package, namespace or infrastructure name. Preserve it only when it refers to the
   actual domain or a required compatibility reference.
@@ -13,6 +14,23 @@
   tests. Preserve data, credentials and applied migration history. A Compose project
   rename must not silently switch to an empty volume; plan and verify the data
   transition explicitly. The user will rename the repository itself separately.
+
+## Domain boundaries and instruction routing
+
+- This repository supports two distinct domains: Discocan (fleet telemetry) and Ecommerce
+  (online stores). Documentation separation does not rename current holita packages or resources.
+- For telemetry, Vehicles/Devices and the current Fleet admin, read
+  [Discocan documentation](docs/discocan/README.md) and apply
+  [Discocan instructions](docs/discocan/instructions.md).
+- For online stores and Core Store behavior, read [Ecommerce documentation](docs/ecommerce/README.md)
+  and apply [Ecommerce instructions](docs/ecommerce/instructions.md). When a shared Store change
+  affects Fleet, consult both domains.
+- Discocan currently uses Stores as organizational scope; these will later become Branches.
+  Ecommerce retains Stores for online shops. Until the rename is implemented, preserve actual
+  Store/storeId/x-store-id contracts and tenant-scoped access. Documentation boundaries alone
+  do not authorize a code, API, database or infrastructure rename.
+- Keep domain-specific behavior and rules in their own documentation directories. Shared
+  architecture, development tooling and validation remain under `docs/`.
 
 ## General
 
@@ -45,7 +63,7 @@
 - Remove obsolete guidance and fix references when moving or deleting documents. Prefer repository-relative Markdown links so documentation works across machines and agents.
 - Keep screenshots and other image files outside `.agents/`. Sakai comparison captures belong in Git-ignored `.references/review/`. Do not commit temporary captures or make documentation depend on their presence.
 - Verify descriptions against the code. Explain actual limitations and how to run checks; report individual test results in the task response rather than maintaining a test-run journal in documentation. Do not store credentials or private transcripts.
-- Keep mandatory rules here. `CLAUDE.md` imports this guide. Skills provide focused procedures without duplicating the entire guide.
+- Keep shared mandatory rules here and domain-specific rules in the linked domain instructions. `CLAUDE.md` imports this guide and follows the same domain routing. Skills provide focused procedures without duplicating the guides.
 - When the user authorizes a checkpoint in `.tmp/`, update it with progress, exact check results and next steps after meaningful increments. Keep repository-wide searches outside `.tmp/`.
 - Current validation skill: [.agents/skills/holita-focused-validation/SKILL.md](.agents/skills/holita-focused-validation/SKILL.md).
 - Backend reference skill: [.agents/skills/holita-backend-feature/SKILL.md](.agents/skills/holita-backend-feature/SKILL.md).
@@ -56,49 +74,24 @@
 - Organize backend code by feature module.
 - Keep controllers thin: HTTP concerns and delegation only.
 - Put application and business logic in services.
-- Use concrete feature repositories for Prisma operations and compulsory store scoping. Do not add generic repositories/services, CQRS, empty domain layers, or interfaces for every class.
+- Use concrete feature repositories for Prisma operations and compulsory verified Tenant/domain scoping. Do not add generic repositories/services, CQRS, empty domain layers, or interfaces for every class.
 - For GraphQL features, SDL defines the API. Use generated API types and explicit runtime validation rather than duplicate handwritten API models. Prisma owns persistence definitions.
-- Follow the actual [Vehicles resolver/service/repository](apps/fleet/src/vehicles/vehicles.resolver.ts) and its [SDL](apps/fleet/src/vehicles/vehicles.graphql). Use @Parent on a federation reference parameter when combining it with Nest parameter decorators; always resolve Vehicle/Device references through scoped service access.
 - After SDL/operation changes run codegen and schema:check. Keep generator inputs explicit, generated outputs ignored, and runtime SDL assets in builds. Regenerate/restart instead of adding dynamic discovery.
-- Store access must always include the verified Tenant. Vehicle/Device persistence must always include the verified Tenant and active Store. Creation gets store ID from context and checks existence through core. Do not make a store existence network call for every business read/update/delete or move that blanket check into the gateway.
 - The explicit tenant demo login is development-only; never treat it as production authentication. Tenant identity comes from the verified session, never a caller-supplied tenant header/input. Store context is not authorization. Preserve useful diagnostics without logging secrets.
 - Keep Prisma schemas/migrations/clients inside the owning service. Review new migration SQL; never edit applied migrations or replace history with db push. Seeds insert missing fixtures without updating existing rows.
 - Use standard NestJS exceptions and avoid custom exception frameworks.
 
 ## Angular admin (apps/admin)
 
-- Follow [holita-admin-development](.agents/skills/holita-admin-development/SKILL.md) for this
-  application and the official [angular-developer](.agents/skills/angular-developer/SKILL.md)
-  for framework conventions. Use the official PrimeNG plugin/MCP for current component APIs;
-  [installation](docs/development.md#angular-agent-tools) is documented separately.
+- Follow the official [angular-developer](.agents/skills/angular-developer/SKILL.md)
+  for framework conventions and the PrimeNG plugin/MCP for current component APIs.
+  [Agent setup](docs/development.md#angular-agent-tools) is documented separately.
 - Keep standalone Angular and Component → concrete feature service → Apollo with generated
-  TypedDocumentNodes through the actual Gateway. Do not add generic CRUD, facades, repositories, duplicate API models or duplicate
-  business screens. Business editors use typed Reactive Forms.
-- Each session/store/language workspace owns its client/cache and immutable transport scope. Recreate
-  the feature boundary on navigation, dispose reads and let submitted writes settle against
-  their captured client. Late results, invalidation and callbacks must not affect another workspace.
-  Prove A → B → A and delayed reads/writes through the concrete Angular feature tests.
-- Prefer PrimeNG components and theme tokens. Sakai supplies the shell/layout reference;
-  keep global CSS minimal, feature styles local and remove unused demo rules. Do not add
-  wrappers without concrete reuse or depend on the deprecated PrimeNG Editor.
-- Sakai is the Angular admin's theme and owns shell/feature visual design and responsive composition. Consult
-  the Angular Vehicles/Devices implementation index for contracts, validation and scoped lifecycles.
-- Use the pinned local Sakai source in `.references/sakai-ng` for layout comparisons;
-  [setup and source paths](docs/development.md#sakai-source-reference) are documented separately.
-  It is ignored reference material, not an npm/Nx application or runtime dependency.
-- Keep the shell independent of business data access, with explicit inputs/outputs and only
-  implemented navigation. Preserve Bulgarian/English catalogs, keyboard/mobile behavior and
-  light/dark themes, with focused tests and visual review at matching viewport sizes.
-- Angular provides Stores discovery and Fleet Vehicles/Devices CRUD with page-local sequential
-  deletion. Preserve assigned-Vehicle failures, partial results, failed-row retry and stopping
-  unsent deletes on navigation; submitted writes retain their captured scope. Fleet startup
-  availability gates navigation and direct routes without business requests. Standalone login selects
-  Tenant then Store and opens Vehicles. Do not add a Store list landing page; Fleet navigation
-  contains Vehicles/Devices, and the header retains Store switching; switching Stores preserves the active Vehicles/Devices section and resets queries.
-  Add another feature only when explicitly requested.
-- Devices require a 15-digit string IMEI unique per Tenant/Store and a mandatory same-tenant/same-store Vehicle,
-  labeled Truck in the editor. Multiple Devices may share a Vehicle. Preserve leading zeros,
-  composite foreign keys, protected Vehicle deletion and captured-client remote selection.
+  TypedDocumentNodes through Gateway. Business editors use typed Reactive Forms; do not add
+  generic CRUD, facades, repositories, duplicate API models or duplicate business screens.
+- Current Vehicles/Devices presentation, navigation and workspace lifecycle belong to Discocan.
+  Apply [Discocan instructions](docs/discocan/instructions.md#angular-admin-appsadmin) for this admin;
+  do not transfer its Fleet workflows to Ecommerce.
 
 ## Architectural changes
 

@@ -6,6 +6,12 @@ The admin uses Sakai with holita branding, PrimeNG and Bulgarian/English catalog
 Its business modules are Vehicles and Devices. Core provides Store discovery; Gateway
 exposes their schema-first federated GraphQL API. PostgreSQL is the only container.
 
+Documentation separates [Discocan fleet telemetry](docs/discocan/README.md) from
+[Ecommerce online stores](docs/ecommerce/README.md). Fleet and the current Vehicles/Devices
+admin belong to Discocan; the Core Store foundation is documented under Ecommerce.
+Discocan's current Stores will later become Branches, while Ecommerce keeps Stores for online
+shops. Current code, contracts and persistence still use Store terminology.
+
 ## Run locally
 
 Use Ubuntu/WSL with Node.js 24.15+ and npm 11. The pinned package manager is npm 11.19.0.
@@ -44,7 +50,7 @@ the Node group. `npm run db:down` stops PostgreSQL and preserves its volume. Set
 and seeding are explicit commands. The seed inserts RentalSofia, Discordia and Sandbox Stores, two sample Vehicles and one Device without replacing existing records.
 
 Use [Gateway GraphQL](http://127.0.0.1:11010/graphql). `{ tenants { id name } }` is public for demo login. Sign in through `demoLogin` and send its token as `Authorization: Bearer <token>` to discover Stores. Store discovery needs no Store header. Business operations require `x-store-id`, for example the seeded Discordia Store
-`10000000-0000-4000-8000-000000000001`. The demo login has no passwords or tenant membership checks and must be replaced before production. Tenant identity is verified from the signed session; business records are scoped by Tenant and Store. See [demo session configuration and limitations](docs/development.md#demo-tenant-login).
+`10000000-0000-4000-8000-000000000001`. The demo login has no passwords or tenant membership checks and must be replaced before production. Tenant identity is verified from the signed session; business records are scoped by Tenant and Store. See [demo session configuration and limitations](docs/discocan/development.md#demo-tenant-login).
 Every backend exposes `/health`, independently of database/downstream availability.
 
 To start one application, use `dev:admin`, `dev:gateway`, `dev:core` or `dev:fleet`.

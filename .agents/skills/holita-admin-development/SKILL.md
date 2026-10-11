@@ -1,15 +1,19 @@
 ---
 name: holita-admin-development
-description: Review or extend Holita Angular admin using Vehicles/Devices generated contracts, Gateway transport and scoped Apollo lifecycles. Not for backend implementation.
+description: Review or extend the current holita Discocan Angular admin using Vehicles/Devices generated contracts, Gateway transport and scoped Apollo lifecycles. Not for backend implementation.
 ---
 
-# Holita Angular admin development
+# Holita Discocan Angular admin development
 
-Read [AGENTS.md](../../../AGENTS.md), [architecture](../../../docs/architecture/overview.md#angular-admin-foundation)
-and [focused checks](../../../docs/testing.md#angular-admin-checks). Use the official
+Read [AGENTS.md](../../../AGENTS.md), [architecture](../../../docs/discocan/architecture.md#angular-admin-foundation)
+and [focused checks](../../../docs/discocan/testing.md#angular-admin-checks). Use the official
 [angular-developer](../angular-developer/SKILL.md) skill for framework conventions and the
 PrimeNG plugin router for the relevant current workflow. Agent setup is in
 [development](../../../docs/development.md#angular-agent-tools).
+
+Apply [Discocan instructions](../../../docs/discocan/instructions.md). Current telemetry Stores
+will later become Branches; preserve actual Store contracts until that change is implemented.
+This Vehicles/Devices workflow belongs to Discocan; online-store work uses [Ecommerce instructions](../../../docs/ecommerce/instructions.md).
 
 ## Trace the concrete implementation
 

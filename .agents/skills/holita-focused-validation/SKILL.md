@@ -6,6 +6,9 @@ description: Select focused native checks for changes in holita, including curre
 # Focused validation
 
 Read [AGENTS.md](../../../AGENTS.md) and [testing](../../../docs/testing.md).
+Domain check mappings are in [Discocan testing](../../../docs/discocan/testing.md) and
+[Ecommerce Stores](../../../docs/ecommerce/stores.md#validation). Select by changed behavior;
+current telemetry Store scope does not make Fleet tests Ecommerce feature coverage.
 Inspect tracked/untracked changes while excluding `.tmp/` and `.volumes/`. Distinguish local
 changes from the broader PR diff and use real base/head commits.
 

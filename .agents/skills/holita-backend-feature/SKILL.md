@@ -6,7 +6,13 @@ description: Implement holita backend GraphQL features using Vehicles/Devices, g
 # Backend feature reference
 
 Read [AGENTS.md](../../../AGENTS.md), [architecture](../../../docs/architecture/overview.md),
-[requirements](../../../docs/req/foundation.md) and the [implementation index](../../../docs/fleet.md).
+[shared requirements](../../../docs/req/foundation.md) and the Discocan [implementation index](../../../docs/discocan/fleet.md).
+
+For Fleet changes apply [Discocan instructions](../../../docs/discocan/instructions.md) and
+read [Discocan requirements](../../../docs/discocan/requirements.md). For Core Store changes
+apply [Ecommerce instructions](../../../docs/ecommerce/instructions.md); check Discocan consumers
+when the shared Store contract changes. Telemetry Stores will later become Branches, but the
+current API and persistence remain Store-based.
 
 Use actual Fleet [Vehicle SDL](../../../apps/fleet/src/vehicles/vehicles.graphql),
 [resolver](../../../apps/fleet/src/vehicles/vehicles.resolver.ts),
