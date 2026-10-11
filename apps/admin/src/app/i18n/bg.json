@@ -1,6 +1,6 @@
 {
   "activeStore": "Магазин",
-  "workspace": "Работно пространство",
+  "fleet": "Автопарк",
   "navigation": "Навигация",
   "toggleNavigation": "Отвори или затвори навигацията",
   "closeNavigation": "Затвори навигацията",
@@ -35,8 +35,7 @@
   "discardChanges": "Отхвърли промените",
   "closeConfirmation": "Затвори потвърждението",
   "actions": "Действия",
-  "reference": "Справочници",
-  "referenceDisabled": "Справочниците са недостъпни.",
+  "fleetDisabled": "Автопаркът е недостъпен.",
   "selectedItemsMessage": "{0} избрани елемента",
   "emptySelectionMessage": "Няма избран елемент",
   "previousSection": "Предишна секция",

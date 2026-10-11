@@ -1,6 +1,6 @@
 # Local schema-first federation
 
-Core and Reference SDL define the API independently of Prisma persistence.
+Core and Fleet SDL define the API independently of Prisma persistence.
 Local Apollo composition and GraphQL Codegen validate named operations and generate backend
 and Angular types/documents, Gateway supergraph and public schema. This needs no database,
 running service or external registry. Source contracts are tracked; generated output is ignored.
@@ -9,8 +9,8 @@ Each app generates only its own outputs. Shared Nx inputs include explicit SDL/o
 tooling; Nest copies SDL into builds. Regenerate/restart after contract edits without dynamic
 schema discovery or polling.
 
-Gateway forwards request/Store context. Reference checks Core Store existence only during
+Gateway forwards request/Store context. Fleet checks Core Store existence only during
 creation and reuses that promise within its HTTP request. Scoped reads/updates/deletes remain
 independent of Core. Vehicle/Device.store returns a federation reference resolved by Core.
-Reference availability guards include field/entity resolvers, preserving schema composition
+Fleet availability guards include field/entity resolvers, preserving schema composition
 while rejecting disabled business operations.

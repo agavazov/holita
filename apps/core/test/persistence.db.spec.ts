@@ -28,6 +28,13 @@ describe('core PostgreSQL persistence', () => {
 
   it('seeds twice without overwriting edited stores or unrelated rows', async () => {
     expect((await seedStores(database.client)).count).toBe(2);
+    expect(
+      await database.client.store.findMany({
+        where: { id: { in: storeSeeds.map((store) => store.id) } },
+        select: { name: true },
+        orderBy: { name: 'asc' },
+      }),
+    ).toEqual([{ name: 'Discordia' }, { name: 'Sandbox' }]);
     const first = storeSeeds[0];
     if (!first) throw new Error('Missing store seed');
     await database.client.store.update({
@@ -63,7 +70,7 @@ describe('core PostgreSQL persistence', () => {
     expect(await database.client.store.findUnique({ where: { id: first.id } })).toEqual(first);
   });
 
-  it.each(['holita_core', 'holita_reference', 'holita_reference_test'])(
+  it.each(['holita_core', 'holita_fleet', 'holita_fleet_test'])(
     'cannot connect to %s using the core test role',
     async (name) => {
       const url = new URL(getTestDatabaseUrl());

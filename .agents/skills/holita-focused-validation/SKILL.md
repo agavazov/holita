@@ -10,20 +10,20 @@ Inspect tracked/untracked changes while excluding `.tmp/` and `.volumes/`. Disti
 changes from the broader PR diff and use real base/head commits.
 
 Start with one relevant file/case through root native targets. Backend examples:
-`test:reference -- vehicles.service.spec.ts`, `test:reference -- devices.service.spec.ts`,
+`test:fleet -- vehicles.service.spec.ts`, `test:fleet -- devices.service.spec.ts`,
 or the affected backend's health.spec.ts for bootstrap. Use --testNamePattern for Jest and
 --skip-nx-cache for actual execution. Read test counts; zero/all-skipped tests are not success.
 
 SDL/operation changes require codegen, schema:check and test:schema. Persistence changes
-require db:up, db:setup and db:test:setup, then owning test:core:db/test:reference:db targets.
-Use vehicles.db.spec.ts/devices.db.spec.ts for Reference. Dedicated guarded helpers deploy
+require db:up, db:setup and db:test:setup, then owning test:core:db/test:fleet:db targets.
+Use vehicles.db.spec.ts/devices.db.spec.ts for Fleet. Dedicated guarded helpers deploy
 migrations into per-run schemas and drop only their schemas; never substitute development URLs
 or broad reset/truncation. Live DB results must not be cached.
 
-Cross-service behavior uses test:gateway:db -- federation.db.spec.mts with real Core/Reference
+Cross-service behavior uses test:gateway:db -- federation.db.spec.mts with real Core/Fleet
 processes/schemas. Angular uses test:admin with --include paths relative to apps/admin/src and
 --filter for case selection. Select concrete Vehicles/Devices API/query/editor/deletion suites,
-StoreWorkspace/ReferenceWorkspace, RelationPicker, transport/config/appearance as affected.
+StoreWorkspace/FleetWorkspace, RelationPicker, transport/config/appearance as affected.
 Use VITEST_MAX_WORKERS=1 on constrained hosts without reducing case coverage or changing deadlines.
 
 Compiled-app browser checks use test:smoke:admin with angular-vehicles, angular-devices,

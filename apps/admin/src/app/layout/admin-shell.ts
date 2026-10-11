@@ -58,7 +58,7 @@ export class AdminShell {
   readonly language = input.required<Language>();
   readonly languageUrl = input.required<UrlTree>();
   readonly loading = input(false);
-  readonly referenceEnabled = input(false);
+  readonly fleetEnabled = input(false);
   readonly tenantName = input<string | null>(null);
   readonly signOut = output();
   readonly storeSelected = output<string>();

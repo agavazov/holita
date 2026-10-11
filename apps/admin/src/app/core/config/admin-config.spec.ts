@@ -1,32 +1,32 @@
 import { readAdminConfig, readGraphqlUrl } from './admin-config';
 
 describe('public Angular configuration', () => {
-  it('retains the configured Gateway endpoint and Reference availability', () => {
+  it('retains the configured Gateway endpoint and Fleet availability', () => {
     expect(
       readAdminConfig({
         graphqlUrl: 'https://gateway.example/graphql',
-        referenceEnabled: false,
+        fleetEnabled: false,
         primeUiLicense: ' configured-key ',
       }),
     ).toEqual({
       graphqlUrl: 'https://gateway.example/graphql',
-      referenceEnabled: false,
+      fleetEnabled: false,
       primeUiLicense: 'configured-key',
     });
-    expect(() => readAdminConfig({ referenceEnabled: false })).toThrow(
+    expect(() => readAdminConfig({ fleetEnabled: false })).toThrow(
       'config.json requires graphqlUrl.',
     );
   });
-  it('accepts explicit Reference availability and rejects non-boolean flags', () => {
-    for (const referenceEnabled of [true, false]) {
-      expect(readAdminConfig({ graphqlUrl: '/graphql', referenceEnabled })).toEqual({
+  it('accepts explicit Fleet availability and rejects non-boolean flags', () => {
+    for (const fleetEnabled of [true, false]) {
+      expect(readAdminConfig({ graphqlUrl: '/graphql', fleetEnabled })).toEqual({
         graphqlUrl: '/graphql',
-        referenceEnabled,
+        fleetEnabled,
       });
     }
-    for (const referenceEnabled of ['false', null, 0]) {
-      expect(() => readAdminConfig({ graphqlUrl: '/graphql', referenceEnabled })).toThrow(
-        'referenceEnabled must be a boolean.',
+    for (const fleetEnabled of ['false', null, 0]) {
+      expect(() => readAdminConfig({ graphqlUrl: '/graphql', fleetEnabled })).toThrow(
+        'fleetEnabled must be a boolean.',
       );
     }
   });

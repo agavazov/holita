@@ -28,7 +28,7 @@
 
 ## Repository
 
-- Use npm workspaces, the existing lockfile, and Nx. The four applications are `apps/admin`, `apps/gateway`, `apps/core`, and `apps/reference`.
+- Use npm workspaces, the existing lockfile, and Nx. The four applications are `apps/admin`, `apps/gateway`, `apps/core`, and `apps/fleet`.
 - Do not import another application's implementation, Prisma client, or database model, including through relative paths. ESLint/Nx enforce application boundaries.
 - Expose daily commands through root npm scripts. Do not add another build system, custom process supervisor, or custom test-selection framework. Add shared packages only for demonstrated current reuse.
 - Applications run as Node.js processes on the host. PostgreSQL is the only permitted containerized infrastructure for the foundation. Never reset databases or remove volumes to fix setup.
@@ -58,7 +58,7 @@
 - Put application and business logic in services.
 - Use concrete feature repositories for Prisma operations and compulsory store scoping. Do not add generic repositories/services, CQRS, empty domain layers, or interfaces for every class.
 - For GraphQL features, SDL defines the API. Use generated API types and explicit runtime validation rather than duplicate handwritten API models. Prisma owns persistence definitions.
-- Follow the actual [Vehicles resolver/service/repository](apps/reference/src/vehicles/vehicles.resolver.ts) and its [SDL](apps/reference/src/vehicles/vehicles.graphql). Use @Parent on a federation reference parameter when combining it with Nest parameter decorators; always resolve Vehicle/Device references through scoped service access.
+- Follow the actual [Vehicles resolver/service/repository](apps/fleet/src/vehicles/vehicles.resolver.ts) and its [SDL](apps/fleet/src/vehicles/vehicles.graphql). Use @Parent on a federation reference parameter when combining it with Nest parameter decorators; always resolve Vehicle/Device references through scoped service access.
 - After SDL/operation changes run codegen and schema:check. Keep generator inputs explicit, generated outputs ignored, and runtime SDL assets in builds. Regenerate/restart instead of adding dynamic discovery.
 - Store access must always include the verified Tenant. Vehicle/Device persistence must always include the verified Tenant and active Store. Creation gets store ID from context and checks existence through core. Do not make a store existence network call for every business read/update/delete or move that blanket check into the gateway.
 - The explicit tenant demo login is development-only; never treat it as production authentication. Tenant identity comes from the verified session, never a caller-supplied tenant header/input. Store context is not authorization. Preserve useful diagnostics without logging secrets.
@@ -89,11 +89,11 @@
 - Keep the shell independent of business data access, with explicit inputs/outputs and only
   implemented navigation. Preserve Bulgarian/English catalogs, keyboard/mobile behavior and
   light/dark themes, with focused tests and visual review at matching viewport sizes.
-- Angular provides Stores discovery and Reference Vehicles/Devices CRUD with page-local sequential
+- Angular provides Stores discovery and Fleet Vehicles/Devices CRUD with page-local sequential
   deletion. Preserve assigned-Vehicle failures, partial results, failed-row retry and stopping
-  unsent deletes on navigation; submitted writes retain their captured scope. Reference startup
+  unsent deletes on navigation; submitted writes retain their captured scope. Fleet startup
   availability gates navigation and direct routes without business requests. Standalone login selects
-  Tenant then Store and opens Vehicles. Do not add a Store list landing page; Workspace navigation
+  Tenant then Store and opens Vehicles. Do not add a Store list landing page; Fleet navigation
   contains Vehicles/Devices, and the header retains Store switching; switching Stores preserves the active Vehicles/Devices section and resets queries.
   Add another feature only when explicitly requested.
 - Devices require a 15-digit string IMEI unique per Tenant/Store and a mandatory same-tenant/same-store Vehicle,
@@ -112,7 +112,7 @@ Do not make architectural changes solely because they may be useful later.
 
 ## Verification
 
-Follow [docs/testing.md](docs/testing.md). Start with the narrowest relevant project/file/case and expand only when changes or failures justify it. Use the named `test:core`, `test:gateway`, `test:reference`, `test:admin` targets with native runner selectors.
+Follow [docs/testing.md](docs/testing.md). Start with the narrowest relevant project/file/case and expand only when changes or failures justify it. Use the named `test:core`, `test:gateway`, `test:fleet`, `test:admin` targets with native runner selectors.
 
 For tooling changes, run from the repository root, plus relevant focused tests:
 
@@ -127,7 +127,7 @@ npm run build
 - Account for untracked files in the current diff and distinguish it from the broader PR diff. Nx affected selects projects, not proof of runtime-contract coverage.
 - Keep [PR CI](.github/workflows/affected.yml) on real event base/head commits with explicit missing-history failure. Workflow and ignore-rule changes belong in Nx shared inputs. [Full regression CI](.github/workflows/full-regression.yml) must remain workflow_dispatch only; docs-only selection is not application test coverage.
 - Database checks require dedicated test databases; do not reuse cached live-DB results as current evidence.
-- Use test:core:db/test:reference:db for persistence changes. Provision with db:up, db:setup and db:test:setup; use the guarded per-run schema helpers under each service's test directory. Never replace them with development connections, resets or shared truncation.
+- Use test:core:db/test:fleet:db for persistence changes. Provision with db:up, db:setup and db:test:setup; use the guarded per-run schema helpers under each service's test directory. Never replace them with development connections, resets or shared truncation.
 - Use test:gateway:db -- federation.db.spec.mts for real service-boundary changes. The guarded fixture under tools/graphql owns its processes/schemas; gateway runtime must not acquire database dependencies. Use test:schema for offline contract-tool tests.
-- Use test:admin with Angular CLI `--include=app/features/reference/vehicles/vehicles-api.spec.ts` or `--filter="case name"`; use test:smoke:admin -- angular-foundation.smoke.spec.mts for real Angular routing/transport. Its compiled-app fixture owns dedicated schemas and backend processes.
+- Use test:admin with Angular CLI `--include=app/features/fleet/vehicles/vehicles-api.spec.ts` or `--filter="case name"`; use test:smoke:admin -- angular-foundation.smoke.spec.mts for real Angular routing/transport. Its compiled-app fixture owns dedicated schemas and backend processes.
 - Report actual commands/results and unverified work. Do not declare work complete while a required check fails. Clean up task-started processes and connections.

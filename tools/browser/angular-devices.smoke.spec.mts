@@ -5,7 +5,7 @@ import { chooseStore, test } from './angular-fixture.mjs';
 import { workspaceRoot } from '../graphql/contracts.mjs';
 
 const storeA = '10000000-0000-4000-8000-000000000001';
-const path = `/en/stores/${storeA}/reference/devices`;
+const path = `/en/${storeA}/fleet/devices`;
 async function truck(
   request: APIRequestContext,
   gatewayUrl: string,
@@ -15,8 +15,7 @@ async function truck(
   const response = await request.post(gatewayUrl, {
     headers: { authorization: `Bearer ${token}`, 'x-store-id': storeA },
     data: {
-      query:
-        'mutation($input:CreateReferenceVehicleInput!){createReferenceVehicle(input:$input){id}}',
+      query: 'mutation($input:CreateFleetVehicleInput!){createFleetVehicle(input:$input){id}}',
       variables: { input: { licensePlate } },
     },
   });
@@ -25,9 +24,9 @@ async function truck(
   if (typeof body !== 'object' || body === null || !('data' in body))
     throw new Error('Missing truck result');
   const data = body.data;
-  if (typeof data !== 'object' || data === null || !('createReferenceVehicle' in data))
+  if (typeof data !== 'object' || data === null || !('createFleetVehicle' in data))
     throw new Error('Missing truck');
-  const row = data.createReferenceVehicle;
+  const row = data.createFleetVehicle;
   if (typeof row !== 'object' || row === null || !('id' in row) || typeof row.id !== 'string')
     throw new Error('Missing truck ID');
   return row.id;
@@ -72,7 +71,7 @@ test.describe('Devices', () => {
     const deletion = await request.post(app.gatewayUrl, {
       headers: { authorization: `Bearer ${app.demoSession.token}`, 'x-store-id': storeA },
       data: {
-        query: 'mutation($id:ID!){deleteReferenceVehicle(id:$id){id}}',
+        query: 'mutation($id:ID!){deleteFleetVehicle(id:$id){id}}',
         variables: { id: first },
       },
     });
@@ -86,10 +85,10 @@ test.describe('Devices', () => {
     await expect(page.locator('tbody tr').filter({ hasText: '001234567890123' })).toContainText(
       'CB5678AB',
     );
-    await chooseStore(page, 'holita Plovdiv');
-    await expect(page).toHaveURL(/\/reference\/devices$/);
+    await chooseStore(page, 'Sandbox');
+    await expect(page).toHaveURL(/\/fleet\/devices$/);
     await expect(page.getByRole('link', { name: '001234567890123', exact: true })).toHaveCount(0);
-    await chooseStore(page, 'holita Sofia');
+    await chooseStore(page, 'Discordia');
     await page.getByRole('button', { name: 'Delete 001234567890123', exact: true }).click();
     const confirmation = page.getByRole('alertdialog', { name: 'Delete devices', exact: true });
     await expect(confirmation.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused();

@@ -5,19 +5,18 @@ const storeA = '10000000-0000-4000-8000-000000000001';
 
 test.beforeEach(async ({ page, app }) => {
   for (const [storeId, licensePlate] of [
-    ['10000000-0000-4000-8000-000000000001', 'Sofia truck'],
-    ['10000000-0000-4000-8000-000000000002', 'Plovdiv truck'],
+    ['10000000-0000-4000-8000-000000000001', 'Discordia truck'],
+    ['10000000-0000-4000-8000-000000000002', 'Sandbox truck'],
   ] as const) {
     const response = await page.request.post(app.gatewayUrl, {
       headers: { authorization: `Bearer ${app.demoSession.token}`, 'x-store-id': storeId },
       data: {
-        query:
-          'mutation($input:CreateReferenceVehicleInput!){createReferenceVehicle(input:$input){id}}',
+        query: 'mutation($input:CreateFleetVehicleInput!){createFleetVehicle(input:$input){id}}',
         variables: { input: { licensePlate } },
       },
     });
     const body: unknown = await response.json();
-    expect(body).toHaveProperty('data.createReferenceVehicle.id');
+    expect(body).toHaveProperty('data.createFleetVehicle.id');
   }
 });
 
@@ -58,8 +57,8 @@ test('Sakai desktop navigation, persisted theme and language preserve the real s
 }, testInfo) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  await page.goto(`${app.url}/en/stores/${storeA}/reference/vehicles?review=1#main-content`);
-  await expect(page.getByRole('cell', { name: 'Sofia truck', exact: true })).toBeVisible();
+  await page.goto(`${app.url}/en/${storeA}/fleet/vehicles?review=1#main-content`);
+  await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
   await expect(page.locator('html')).toHaveCSS('font-size', '14px');
   await expect(page.locator('.layout-topbar')).toHaveCSS('height', '56px');
@@ -141,22 +140,20 @@ test('Sakai desktop navigation, persisted theme and language preserve the real s
   await tabTo(page, vehiclesLink);
   await expectVisibleFocus(vehiclesLink);
   await page.reload();
-  await expect(page.getByRole('cell', { name: 'Sofia truck', exact: true })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toBeVisible();
   await expect(page.locator('html')).toHaveClass('app-dark');
   await finishAnimations(page.locator('.store-selector p-select'));
   await expect(page.locator('.p-datatable-mask')).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath('desktop-dark.png'), fullPage: true });
   await page.getByRole('link', { name: 'Български', exact: true }).click();
-  await expect(page).toHaveURL(
-    `${app.url}/bg/stores/${storeA}/reference/vehicles?review=1#main-content`,
-  );
+  await expect(page).toHaveURL(`${app.url}/bg/${storeA}/fleet/vehicles?review=1#main-content`);
   await expect(page.locator('html')).toHaveAttribute('lang', 'bg');
   await expect(page.getByRole('combobox', { name: 'Магазин', exact: true })).toContainText(
-    'holita Sofia',
+    'Discordia',
   );
   await page.getByRole('button', { name: 'Включи светла тема', exact: true }).click();
   await expect(page.locator('html')).not.toHaveClass('app-dark');
-  await expect(page.getByRole('cell', { name: 'Sofia truck', exact: true })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toBeVisible();
   await finishAnimations(page.locator('.store-selector p-select'));
   await page.screenshot({ path: testInfo.outputPath('desktop-bg.png'), fullPage: true });
   expect(errors).toEqual([]);
@@ -167,8 +164,8 @@ test('mobile drawer traps focus, closes on Escape, backdrop, navigation and desk
   app,
 }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(`${app.url}/en/stores/${storeA}/reference/vehicles`);
-  await expect(page.getByRole('cell', { name: 'Sofia truck', exact: true })).toBeVisible();
+  await page.goto(`${app.url}/en/${storeA}/fleet/vehicles`);
+  await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toBeVisible();
   await expect(page.locator('.p-datatable-mask')).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath('mobile-light.png'), fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
@@ -226,8 +223,8 @@ test('mobile drawer traps focus, closes on Escape, backdrop, navigation and desk
   await drawer.getByRole('link', { name: 'Vehicles', exact: true }).click();
   await expect(drawer).not.toBeVisible();
   await expect(page.getByRole('heading', { name: 'Vehicles', exact: true })).toBeVisible();
-  await chooseStore(page, 'holita Plovdiv');
-  await expect(page.getByRole('cell', { name: 'Plovdiv truck', exact: true })).toBeVisible();
+  await chooseStore(page, 'Sandbox');
+  await expect(page.getByRole('cell', { name: 'Sandbox truck', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Use dark theme', exact: true }).click();
   await finishAnimations(page.locator('.store-selector p-select'));
   await expect(page.locator('.p-datatable-mask')).toHaveCount(0);
@@ -249,7 +246,7 @@ test('responsive Sakai shell preserves editor drafts and one store selector acro
   page,
   app,
 }, testInfo) => {
-  await page.goto(`${app.url}/en/stores/${storeA}/reference/vehicles/new`);
+  await page.goto(`${app.url}/en/${storeA}/fleet/vehicles/new`);
   const name = page.getByRole('textbox', { name: 'License Plate', exact: true });
   await name.fill('Unsaved responsive draft');
   const select = page.getByRole('combobox', { name: 'Store', exact: true });
@@ -257,7 +254,7 @@ test('responsive Sakai shell preserves editor drafts and one store selector acro
   for (const width of [320, 390, 768, 991]) {
     await page.setViewportSize({ width, height: 844 });
     await expect(select).toHaveCount(1);
-    await expect(select).toContainText('holita Sofia');
+    await expect(select).toContainText('Discordia');
     await expect(name).toHaveValue('Unsaved responsive draft');
     await finishAnimations(page.locator('.layout-main-container'));
     const layout = await page.evaluate(() => {
@@ -280,7 +277,7 @@ test('responsive Sakai shell preserves editor drafts and one store selector acro
   await page.setViewportSize({ width: 992, height: 844 });
   await expect(page.getByRole('listbox', { includeHidden: true })).toHaveCount(0);
   await expect(select).toHaveCount(1);
-  await expect(select).toContainText('holita Sofia');
+  await expect(select).toContainText('Discordia');
   await expect(page.locator('#desktop-navigation')).toBeVisible();
   await expect(name).toHaveValue('Unsaved responsive draft');
   await page.setViewportSize({ width: 991, height: 844 });
@@ -293,8 +290,8 @@ test('responsive Sakai shell preserves editor drafts and one store selector acro
   await expect(page.locator('body')).not.toHaveClass(/p-overflow-hidden/);
   await expect(menu).toBeFocused();
   await expect(name).toHaveValue('Unsaved responsive draft');
-  await expect(select).toContainText('holita Sofia');
-  await expect(page).toHaveURL(`${app.url}/en/stores/${storeA}/reference/vehicles/new`);
+  await expect(select).toContainText('Discordia');
+  await expect(page).toHaveURL(`${app.url}/en/${storeA}/fleet/vehicles/new`);
 });
 
 test('Drawer uses its responsive panel width at 320 px in light and dark themes', async ({
@@ -302,8 +299,8 @@ test('Drawer uses its responsive panel width at 320 px in light and dark themes'
   app,
 }, testInfo) => {
   await page.setViewportSize({ width: 320, height: 800 });
-  await page.goto(`${app.url}/en/stores/${storeA}/reference/vehicles`);
-  await expect(page.getByRole('cell', { name: 'Sofia truck', exact: true })).toBeVisible();
+  await page.goto(`${app.url}/en/${storeA}/fleet/vehicles`);
+  await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toBeVisible();
   const menu = page.getByRole('button', { name: 'Toggle navigation', exact: true });
   const drawer = page.getByRole('complementary', { name: 'Navigation', exact: true });
   for (const theme of ['light', 'dark']) {
@@ -332,7 +329,7 @@ test('store selection works with the keyboard and unknown stores expose no Vehic
   page,
   app,
 }) => {
-  await page.goto(`${app.url}/en/stores/not-a-uuid/reference/vehicles`);
+  await page.goto(`${app.url}/en/not-a-uuid/fleet/vehicles`);
   await expect(page.getByRole('alert')).toContainText('Store not found');
   await expect(
     page.locator('aside').getByRole('link', { name: 'Vehicles', exact: true }),
@@ -340,15 +337,15 @@ test('store selection works with the keyboard and unknown stores expose no Vehic
   const select = page.getByRole('combobox', { name: 'Store', exact: true });
   await select.focus();
   await page.keyboard.press('Space');
-  await page.keyboard.press('End');
+  await page.keyboard.press('Home');
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('cell', { name: 'Sofia truck', exact: true })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toBeVisible();
   await expect(
     page.locator('aside').getByRole('link', { name: 'Vehicles', exact: true }),
   ).toHaveAttribute('aria-current', 'page');
   await page.goto(`${app.url}/en?review=1#main-content`);
   await expect(page.getByRole('heading', { name: 'Vehicles', exact: true })).toBeVisible();
-  await expect(page.locator('aside .layout-menuitem-root-text')).toHaveText('Workspace');
+  await expect(page.locator('aside .layout-menuitem-root-text')).toHaveText('Fleet');
   await expect(page.getByRole('link', { name: 'Stores', exact: true })).toHaveCount(0);
   await expect(
     page.locator('aside').getByRole('link', { name: 'Vehicles', exact: true }),

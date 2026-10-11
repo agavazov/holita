@@ -17,30 +17,34 @@ describe('local GraphQL contracts', () => {
     expect(operations.map((operation) => operation.location)).toEqual(
       expect.arrayContaining([
         'apps/admin/src/app/features/stores/operations.graphql',
-        'apps/admin/src/app/features/reference/vehicles/operations.graphql',
-        'apps/admin/src/app/features/reference/devices/operations.graphql',
-        'apps/reference/src/core/operations.graphql',
+        'apps/admin/src/app/features/fleet/vehicles/operations.graphql',
+        'apps/admin/src/app/features/fleet/devices/operations.graphql',
+        'apps/fleet/src/core/operations.graphql',
       ]),
     );
-    expect(result.clientSdl).toContain('referenceVehicles(');
-    expect(result.clientSdl).toContain('referenceDevices(');
+    expect(result.clientSdl).toContain('fleetVehicles(');
+    expect(result.clientSdl).toContain('fleetDevices(');
+    expect(result.apiSchema.getType('FleetVehicle')).toBeDefined();
+    expect(result.apiSchema.getType('FleetDevice')).toBeDefined();
+    expect(result.apiSchema.getType('ReferenceVehicle')).toBeUndefined();
+    expect(result.apiSchema.getType('ReferenceDevice')).toBeUndefined();
     expect(Object.keys(result.apiSchema.getQueryType()?.getFields() ?? {}).sort()).toEqual([
-      'referenceDevice',
-      'referenceDevices',
-      'referenceVehicle',
-      'referenceVehicles',
+      'fleetDevice',
+      'fleetDevices',
+      'fleetVehicle',
+      'fleetVehicles',
       'store',
       'stores',
       'tenants',
     ]);
     expect(Object.keys(result.apiSchema.getMutationType()?.getFields() ?? {}).sort()).toEqual([
-      'createReferenceDevice',
-      'createReferenceVehicle',
-      'deleteReferenceDevice',
-      'deleteReferenceVehicle',
+      'createFleetDevice',
+      'createFleetVehicle',
+      'deleteFleetDevice',
+      'deleteFleetVehicle',
       'demoLogin',
-      'updateReferenceDevice',
-      'updateReferenceVehicle',
+      'updateFleetDevice',
+      'updateFleetVehicle',
     ]);
     expect(composeContracts(await readContracts()).supergraphSdl).toBe(result.supergraphSdl);
   });

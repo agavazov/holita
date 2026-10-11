@@ -1,5 +1,0 @@
-query StoreForReferenceCreation($id: ID!) {
-  store(id: $id) {
-    id
-  }
-}

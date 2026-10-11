@@ -8,10 +8,10 @@ if (process.platform !== 'linux') {
 }
 
 const root = fileURLToPath(new URL('../../', import.meta.url)).replace(/\/$/, '');
-const appDirectories = ['admin', 'gateway', 'core', 'reference'].map((app) =>
+const appDirectories = ['admin', 'gateway', 'core', 'fleet'].map((app) =>
   resolve(root, 'apps', app),
 );
-const backendEntries = ['gateway', 'core', 'reference'].flatMap((app) => [
+const backendEntries = ['gateway', 'core', 'fleet'].flatMap((app) => [
   resolve(root, 'apps', app, 'dist/main'),
   resolve(root, 'apps', app, 'dist/main.js'),
 ]);
@@ -33,7 +33,7 @@ for (const entry of readdirSync('/proc')) {
       args.includes('--watch');
     const group =
       args.includes(resolve(root, 'node_modules/.bin/concurrently')) &&
-      args.includes('gateway,core,reference,admin');
+      args.includes('gateway,core,fleet,admin');
     const admin =
       directory === appDirectories[0] &&
       (args.some((arg) => arg.startsWith('ng serve')) ||

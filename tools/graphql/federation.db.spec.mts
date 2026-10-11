@@ -2,8 +2,8 @@ import { afterAll, beforeAll, describe, expect, it } from '@jest/globals';
 import { randomUUID } from 'node:crypto';
 import { createFederationFixture } from './federation-fixture.mjs';
 
-const sofia = '10000000-0000-4000-8000-000000000001';
-const plovdiv = '10000000-0000-4000-8000-000000000002';
+const discordia = '10000000-0000-4000-8000-000000000001';
+const sandbox = '10000000-0000-4000-8000-000000000002';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -14,7 +14,7 @@ function record(value: unknown): Record<string, unknown> {
   return value;
 }
 
-describe('Reference through the actual federation boundary', () => {
+describe('Fleet through the actual federation boundary', () => {
   let token: string;
   let fixture: Awaited<ReturnType<typeof createFederationFixture>>;
   let cleanup: (() => Promise<void>) | undefined;
@@ -39,7 +39,7 @@ describe('Reference through the actual federation boundary', () => {
   async function query(
     source: string,
     variables: Record<string, unknown> = {},
-    storeId = sofia,
+    storeId = discordia,
     url = fixture.url,
     sessionToken = token,
   ) {
@@ -49,7 +49,7 @@ describe('Reference through the actual federation boundary', () => {
         'content-type': 'application/json',
         authorization: `Bearer ${sessionToken}`,
         'x-store-id': storeId,
-        'x-request-id': 'reference-integration',
+        'x-request-id': 'fleet-integration',
       },
       body: JSON.stringify({ query: source, variables }),
       signal: AbortSignal.timeout(10000),
@@ -59,110 +59,110 @@ describe('Reference through the actual federation boundary', () => {
   }
   it('runs Vehicles CRUD through Gateway with Core store resolution and foreign-ID isolation', async () => {
     const created = await query(
-      'mutation($input:CreateReferenceVehicleInput!){createReferenceVehicle(input:$input){id storeId licensePlate notes store{id name}}}',
+      'mutation($input:CreateFleetVehicleInput!){createFleetVehicle(input:$input){id storeId licensePlate notes store{id name}}}',
       { input: { licensePlate: ' CA1234AB ', notes: ' First\nSecond ' } },
     );
     expect(created).toMatchObject({
       data: {
-        createReferenceVehicle: {
-          storeId: sofia,
+        createFleetVehicle: {
+          storeId: discordia,
           licensePlate: 'CA1234AB',
           notes: 'First\nSecond',
-          store: { id: sofia, name: 'holita Sofia' },
+          store: { id: discordia, name: 'Discordia' },
         },
       },
     });
-    const id = record(record(record(created).data).createReferenceVehicle).id;
+    const id = record(record(record(created).data).createFleetVehicle).id;
     if (typeof id !== 'string') throw new Error('Missing Vehicle ID');
-    expect(
-      await query('query($id:ID!){referenceVehicle(id:$id){id}}', { id }, plovdiv),
-    ).toMatchObject({ errors: [{ extensions: { code: 'NOT_FOUND' } }] });
+    expect(await query('query($id:ID!){fleetVehicle(id:$id){id}}', { id }, sandbox)).toMatchObject({
+      errors: [{ extensions: { code: 'NOT_FOUND' } }],
+    });
     expect(
       await query(
-        'mutation($id:ID!){updateReferenceVehicle(id:$id,input:{notes:null}){licensePlate notes}}',
+        'mutation($id:ID!){updateFleetVehicle(id:$id,input:{notes:null}){licensePlate notes}}',
         { id },
       ),
-    ).toEqual({ data: { updateReferenceVehicle: { licensePlate: 'CA1234AB', notes: null } } });
-    expect(await query('{referenceVehicles(search:"ca1234"){items{licensePlate}total}}')).toEqual({
-      data: { referenceVehicles: { items: [{ licensePlate: 'CA1234AB' }], total: 1 } },
+    ).toEqual({ data: { updateFleetVehicle: { licensePlate: 'CA1234AB', notes: null } } });
+    expect(await query('{fleetVehicles(search:"ca1234"){items{licensePlate}total}}')).toEqual({
+      data: { fleetVehicles: { items: [{ licensePlate: 'CA1234AB' }], total: 1 } },
     });
     expect(
-      await query('mutation($id:ID!){deleteReferenceVehicle(id:$id){id}}', { id }, plovdiv),
+      await query('mutation($id:ID!){deleteFleetVehicle(id:$id){id}}', { id }, sandbox),
     ).toMatchObject({ errors: [{ extensions: { code: 'NOT_FOUND' } }] });
-    expect(await query('mutation($id:ID!){deleteReferenceVehicle(id:$id){id}}', { id })).toEqual({
-      data: { deleteReferenceVehicle: { id } },
+    expect(await query('mutation($id:ID!){deleteFleetVehicle(id:$id){id}}', { id })).toEqual({
+      data: { deleteFleetVehicle: { id } },
     });
-    expect(await query('{referenceVehicles{total}}')).toEqual({
-      data: { referenceVehicles: { total: 0 } },
+    expect(await query('{fleetVehicles{total}}')).toEqual({
+      data: { fleetVehicles: { total: 0 } },
     });
   });
   it('runs Devices through Gateway with truck relations, Core resolution and scoped IMEI', async () => {
     const createdTruck = await query(
-      'mutation {createReferenceVehicle(input:{licensePlate:"DEVICE-TRUCK"}){id}}',
+      'mutation {createFleetVehicle(input:{licensePlate:"DEVICE-TRUCK"}){id}}',
     );
-    const vehicleId = record(record(record(createdTruck).data).createReferenceVehicle).id;
+    const vehicleId = record(record(record(createdTruck).data).createFleetVehicle).id;
     if (typeof vehicleId !== 'string') throw new Error('Missing truck ID');
     const created = await query(
-      'mutation($input:CreateReferenceDeviceInput!){createReferenceDevice(input:$input){id imei vehicle{licensePlate store{id}} store{id name}}}',
+      'mutation($input:CreateFleetDeviceInput!){createFleetDevice(input:$input){id imei vehicle{licensePlate store{id}} store{id name}}}',
       {
         input: { imei: '001234567890123', vehicleId },
       },
     );
     expect(created).toMatchObject({
       data: {
-        createReferenceDevice: {
+        createFleetDevice: {
           imei: '001234567890123',
-          vehicle: { licensePlate: 'DEVICE-TRUCK', store: { id: sofia } },
-          store: { id: sofia, name: 'holita Sofia' },
+          vehicle: { licensePlate: 'DEVICE-TRUCK', store: { id: discordia } },
+          store: { id: discordia, name: 'Discordia' },
         },
       },
     });
-    const id = record(record(record(created).data).createReferenceDevice).id;
+    const id = record(record(record(created).data).createFleetDevice).id;
     if (typeof id !== 'string') throw new Error('Missing device ID');
-    expect(
-      await query('query($id:ID!){referenceDevice(id:$id){imei}}', { id }, plovdiv),
-    ).toMatchObject({ errors: [{ extensions: { code: 'NOT_FOUND' } }] });
+    expect(await query('query($id:ID!){fleetDevice(id:$id){imei}}', { id }, sandbox)).toMatchObject(
+      { errors: [{ extensions: { code: 'NOT_FOUND' } }] },
+    );
     expect(
       await query(
-        'mutation($input:CreateReferenceDeviceInput!){createReferenceDevice(input:$input){id}}',
+        'mutation($input:CreateFleetDeviceInput!){createFleetDevice(input:$input){id}}',
         { input: { imei: '001234567890124', vehicleId } },
-        plovdiv,
+        sandbox,
       ),
     ).toHaveProperty('errors');
     expect(
-      await query('mutation($id:ID!){deleteReferenceVehicle(id:$id){id}}', { id: vehicleId }),
+      await query('mutation($id:ID!){deleteFleetVehicle(id:$id){id}}', { id: vehicleId }),
     ).toMatchObject({ errors: [{ extensions: { code: 'CONFLICT' } }] });
     expect(
       await query(
-        'mutation($id:ID!){updateReferenceDevice(id:$id,input:{imei:"001234567890125"}){imei}}',
+        'mutation($id:ID!){updateFleetDevice(id:$id,input:{imei:"001234567890125"}){imei}}',
         { id },
       ),
-    ).toEqual({ data: { updateReferenceDevice: { imei: '001234567890125' } } });
-    expect(await query('{referenceDevices(search:"001234"){items{imei}total}}')).toEqual({
-      data: { referenceDevices: { items: [{ imei: '001234567890125' }], total: 1 } },
+    ).toEqual({ data: { updateFleetDevice: { imei: '001234567890125' } } });
+    expect(await query('{fleetDevices(search:"001234"){items{imei}total}}')).toEqual({
+      data: { fleetDevices: { items: [{ imei: '001234567890125' }], total: 1 } },
     });
-    expect(await query('mutation($id:ID!){deleteReferenceDevice(id:$id){id}}', { id })).toEqual({
-      data: { deleteReferenceDevice: { id } },
+    expect(await query('mutation($id:ID!){deleteFleetDevice(id:$id){id}}', { id })).toEqual({
+      data: { deleteFleetDevice: { id } },
     });
     expect(
-      await query('mutation($id:ID!){deleteReferenceVehicle(id:$id){id}}', { id: vehicleId }),
-    ).toEqual({ data: { deleteReferenceVehicle: { id: vehicleId } } });
+      await query('mutation($id:ID!){deleteFleetVehicle(id:$id){id}}', { id: vehicleId }),
+    ).toEqual({ data: { deleteFleetVehicle: { id: vehicleId } } });
   });
   it('discovers stores without selecting a store and rejects missing business scope', async () => {
     expect(await query('{stores{id name}}')).toEqual({
       data: {
         stores: [
-          { id: plovdiv, name: 'holita Plovdiv' },
-          { id: sofia, name: 'holita Sofia' },
+          { id: discordia, name: 'Discordia' },
+          { id: sandbox, name: 'Sandbox' },
         ],
       },
     });
-    expect(await query('{referenceVehicles{total}}', {}, '')).toMatchObject({
+    expect(await query('{fleetVehicles{total}}', {}, '')).toMatchObject({
       errors: [{ extensions: { code: 'BAD_USER_INPUT' } }],
     });
-    expect(await query('{referenceDevices{total}}', {}, 'invalid')).toHaveProperty('errors');
-    expect(await query('{referenceVehicles{total}}', {}, randomUUID())).toEqual({
-      data: { referenceVehicles: { total: 0 } },
+    expect(await query('{fleetDevices{total}}', {}, 'invalid')).toHaveProperty('errors');
+    expect(await query('{fleetVehicles{total}}', {}, randomUUID())).toEqual({
+      data: { fleetVehicles: { total: 0 } },
     });
   });
   it('allows admin CORS and rejects oversized baggage before reaching subgraphs', async () => {
@@ -179,7 +179,7 @@ describe('Reference through the actual federation boundary', () => {
     expect(response.headers.get('access-control-allow-origin')).toBe('http://127.0.0.1:11000');
     expect(response.headers.get('access-control-allow-headers')).toContain('x-store-id');
     fixture.coreRequests.length = 0;
-    fixture.referenceRequests.length = 0;
+    fixture.fleetRequests.length = 0;
     const rejected = await fetch(fixture.url, {
       method: 'POST',
       headers: { 'content-type': 'application/json', baggage: `key=${'x'.repeat(20 * 1024)}` },
@@ -189,96 +189,92 @@ describe('Reference through the actual federation boundary', () => {
     await rejected.text();
     expect(rejected.status).toBe(431);
     expect(fixture.coreRequests).toHaveLength(0);
-    expect(fixture.referenceRequests).toHaveLength(0);
+    expect(fixture.fleetRequests).toHaveLength(0);
   });
-  it('gates Reference operations and entities while keeping health and discovery usable', async () => {
-    const created = await query(
-      'mutation {createReferenceVehicle(input:{licensePlate:"GATED"}){id}}',
-    );
-    const id = record(record(record(created).data).createReferenceVehicle).id;
+  it('gates Fleet operations and entities while keeping health and discovery usable', async () => {
+    const created = await query('mutation {createFleetVehicle(input:{licensePlate:"GATED"}){id}}');
+    const id = record(record(record(created).data).createFleetVehicle).id;
     if (typeof id !== 'string') throw new Error('Missing Vehicle ID');
-    await fixture.setReferenceEnabled(false);
+    await fixture.setFleetEnabled(false);
     try {
-      expect(await query('{referenceVehicles{total}}')).toMatchObject({
+      expect(await query('{fleetVehicles{total}}')).toMatchObject({
         errors: [{ extensions: { code: 'SERVICE_UNAVAILABLE' } }],
       });
       expect(
-        await query('mutation {createReferenceVehicle(input:{licensePlate:"BLOCKED"}){id}}'),
+        await query('mutation {createFleetVehicle(input:{licensePlate:"BLOCKED"}){id}}'),
       ).toHaveProperty('errors');
       expect(
         await query(
-          'query($refs:[_Any!]!){_entities(representations:$refs){...on ReferenceVehicle{id}}}',
-          { refs: [{ __typename: 'ReferenceVehicle', id }] },
-          sofia,
-          fixture.referenceUrl,
+          'query($refs:[_Any!]!){_entities(representations:$refs){...on FleetVehicle{id}}}',
+          { refs: [{ __typename: 'FleetVehicle', id }] },
+          discordia,
+          fixture.fleetUrl,
         ),
       ).toHaveProperty('errors');
       expect(await query('{stores{id}}')).toHaveProperty('data.stores');
-      expect((await fetch(new URL('/health', fixture.referenceUrl))).ok).toBe(true);
+      expect((await fetch(new URL('/health', fixture.fleetUrl))).ok).toBe(true);
     } finally {
-      await fixture.setReferenceEnabled(true);
+      await fixture.setFleetEnabled(true);
     }
-    expect(await query('query($id:ID!){referenceVehicle(id:$id){licensePlate}}', { id })).toEqual({
-      data: { referenceVehicle: { licensePlate: 'GATED' } },
+    expect(await query('query($id:ID!){fleetVehicle(id:$id){licensePlate}}', { id })).toEqual({
+      data: { fleetVehicle: { licensePlate: 'GATED' } },
     });
-    await query('mutation($id:ID!){deleteReferenceVehicle(id:$id){id}}', { id });
+    await query('mutation($id:ID!){deleteFleetVehicle(id:$id){id}}', { id });
   });
   it('checks creation against Core once per request and scopes concurrent transport headers', async () => {
     fixture.coreRequests.length = 0;
     expect(
       await query(
-        'mutation {a:createReferenceVehicle(input:{licensePlate:"A1"}){id} b:createReferenceVehicle(input:{licensePlate:"A2"}){id}}',
+        'mutation {a:createFleetVehicle(input:{licensePlate:"A1"}){id} b:createFleetVehicle(input:{licensePlate:"A2"}){id}}',
       ),
     ).toHaveProperty('data');
     expect(fixture.coreRequests).toHaveLength(1);
     expect(
       await query(
-        'mutation {createReferenceVehicle(input:{licensePlate:"UNKNOWN"}){id}}',
+        'mutation {createFleetVehicle(input:{licensePlate:"UNKNOWN"}){id}}',
         {},
         randomUUID(),
       ),
     ).toMatchObject({
       errors: [{ extensions: { code: 'NOT_FOUND' } }],
     });
-    fixture.referenceRequests.length = 0;
+    fixture.fleetRequests.length = 0;
     await Promise.all([
-      query('{referenceVehicles{total}}', {}, sofia),
-      query('{referenceVehicles{total}}', {}, plovdiv),
+      query('{fleetVehicles{total}}', {}, discordia),
+      query('{fleetVehicles{total}}', {}, sandbox),
     ]);
-    expect(fixture.referenceRequests.map((request) => request.storeId).sort()).toEqual([
-      sofia,
-      plovdiv,
+    expect(fixture.fleetRequests.map((request) => request.storeId).sort()).toEqual([
+      discordia,
+      sandbox,
     ]);
   });
   it('keeps scoped CRUD available without Core and fails creation and federated Store', async () => {
     const created = await query(
-      'mutation {createReferenceVehicle(input:{licensePlate:"OFFLINE"}){id}}',
+      'mutation {createFleetVehicle(input:{licensePlate:"OFFLINE"}){id}}',
     );
-    const id = record(record(record(created).data).createReferenceVehicle).id;
+    const id = record(record(record(created).data).createFleetVehicle).id;
     if (typeof id !== 'string') throw new Error('Missing Vehicle ID');
     await fixture.stopCore();
     try {
-      expect(await query('query($id:ID!){referenceVehicle(id:$id){licensePlate}}', { id })).toEqual(
-        {
-          data: { referenceVehicle: { licensePlate: 'OFFLINE' } },
-        },
-      );
+      expect(await query('query($id:ID!){fleetVehicle(id:$id){licensePlate}}', { id })).toEqual({
+        data: { fleetVehicle: { licensePlate: 'OFFLINE' } },
+      });
       expect(
         await query(
-          'mutation($id:ID!){updateReferenceVehicle(id:$id,input:{notes:"Changed"}){notes}}',
+          'mutation($id:ID!){updateFleetVehicle(id:$id,input:{notes:"Changed"}){notes}}',
           { id },
         ),
       ).toEqual({
-        data: { updateReferenceVehicle: { notes: 'Changed' } },
+        data: { updateFleetVehicle: { notes: 'Changed' } },
       });
       expect(
-        await query('mutation {createReferenceVehicle(input:{licensePlate:"FAIL"}){id}}'),
+        await query('mutation {createFleetVehicle(input:{licensePlate:"FAIL"}){id}}'),
       ).toHaveProperty('errors');
       expect(
-        await query('query($id:ID!){referenceVehicle(id:$id){store{id name}}}', { id }),
+        await query('query($id:ID!){fleetVehicle(id:$id){store{id name}}}', { id }),
       ).toHaveProperty('errors');
-      expect(await query('mutation($id:ID!){deleteReferenceVehicle(id:$id){id}}', { id })).toEqual({
-        data: { deleteReferenceVehicle: { id } },
+      expect(await query('mutation($id:ID!){deleteFleetVehicle(id:$id){id}}', { id })).toEqual({
+        data: { deleteFleetVehicle: { id } },
       });
     } finally {
       await fixture.restartCore();
@@ -300,51 +296,51 @@ describe('Reference through the actual federation boundary', () => {
     );
     const otherToken = record(record(record(login).data).demoLogin).token;
     if (typeof otherToken !== 'string') throw new Error('Missing second tenant session');
-    expect(await query('{stores{id name}}', {}, sofia, fixture.url, otherToken)).toEqual({
+    expect(await query('{stores{id name}}', {}, discordia, fixture.url, otherToken)).toEqual({
       data: { stores: [{ id: '10000000-0000-4000-8000-000000000003', name: 'Isolation store' }] },
     });
     const created = await query(
-      'mutation {createReferenceVehicle(input:{licensePlate:"TENANT-PRIVATE"}){id}}',
+      'mutation {createFleetVehicle(input:{licensePlate:"TENANT-PRIVATE"}){id}}',
     );
-    const id = record(record(record(created).data).createReferenceVehicle).id;
+    const id = record(record(record(created).data).createFleetVehicle).id;
     if (typeof id !== 'string') throw new Error('Missing tenant Vehicle ID');
     for (const source of [
-      'query($id:ID!){referenceVehicle(id:$id){id}}',
-      'mutation($id:ID!){updateReferenceVehicle(id:$id,input:{notes:"Spoofed"}){id}}',
-      'mutation($id:ID!){deleteReferenceVehicle(id:$id){id}}',
+      'query($id:ID!){fleetVehicle(id:$id){id}}',
+      'mutation($id:ID!){updateFleetVehicle(id:$id,input:{notes:"Spoofed"}){id}}',
+      'mutation($id:ID!){deleteFleetVehicle(id:$id){id}}',
     ])
-      expect(await query(source, { id }, sofia, fixture.url, otherToken)).toMatchObject({
+      expect(await query(source, { id }, discordia, fixture.url, otherToken)).toMatchObject({
         errors: [{ extensions: { code: 'NOT_FOUND' } }],
       });
     expect(
       await query(
-        'mutation {createReferenceVehicle(input:{licensePlate:"WRONG-STORE"}){id}}',
+        'mutation {createFleetVehicle(input:{licensePlate:"WRONG-STORE"}){id}}',
         {},
-        sofia,
+        discordia,
         fixture.url,
         otherToken,
       ),
     ).toMatchObject({ errors: [{ extensions: { code: 'NOT_FOUND' } }] });
     const entities =
-      'query($refs:[_Any!]!){_entities(representations:$refs){...on ReferenceVehicle{id}}}';
+      'query($refs:[_Any!]!){_entities(representations:$refs){...on FleetVehicle{id}}}';
     expect(
       await query(
         entities,
         {
           refs: [
             {
-              __typename: 'ReferenceVehicle',
+              __typename: 'FleetVehicle',
               id,
               tenantId: '01000000-0000-4000-8000-000000000002',
             },
           ],
         },
-        sofia,
-        fixture.referenceUrl,
+        discordia,
+        fixture.fleetUrl,
         otherToken,
       ),
     ).toMatchObject({ errors: [{ extensions: { code: 'NOT_FOUND' } }] });
-    for (const target of [fixture.url, fixture.referenceUrl]) {
+    for (const target of [fixture.url, fixture.fleetUrl]) {
       for (const authorization of [
         undefined,
         `Bearer ${token.replace('000000000001', '000000000002')}`,
@@ -353,17 +349,17 @@ describe('Reference through the actual federation boundary', () => {
           method: 'POST',
           headers: {
             'content-type': 'application/json',
-            'x-store-id': sofia,
+            'x-store-id': discordia,
             'x-tenant-id': '01000000-0000-4000-8000-000000000001',
             ...(authorization ? { authorization } : {}),
           },
-          body: JSON.stringify({ query: '{referenceVehicles{total}}' }),
+          body: JSON.stringify({ query: '{fleetVehicles{total}}' }),
         });
         expect(await response.json()).toMatchObject({
           errors: [{ extensions: { code: 'UNAUTHENTICATED' } }],
         });
       }
     }
-    await query('mutation($id:ID!){deleteReferenceVehicle(id:$id){id}}', { id });
+    await query('mutation($id:ID!){deleteFleetVehicle(id:$id){id}}', { id });
   });
 });

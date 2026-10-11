@@ -29,7 +29,7 @@
     }
   },
   "scripts": {
-    "dev": "npm run db:up && concurrently --kill-others --names gateway,core,reference,admin --prefix-colors blue,green,cyan,red \"npm:dev:gateway\" \"npm:dev:core\" \"npm:dev:reference\" \"npm:dev:admin\"",
+    "dev": "npm run db:up && concurrently --kill-others --names gateway,core,fleet,admin --prefix-colors blue,green,cyan,red \"npm:dev:gateway\" \"npm:dev:core\" \"npm:dev:fleet\" \"npm:dev:admin\"",
     "kill": "tsx tools/development/kill.mts",
     "dev:gateway": "npm run dev --workspace @holita/gateway",
     "dev:core": "npm run dev --workspace @holita/core",
@@ -51,10 +51,10 @@
     "db:down": "docker compose down",
     "db:setup": "tsx tools/database/setup.mts",
     "db:test:setup": "tsx tools/database/setup.mts --test",
-    "db:generate": "nx run-many -t db-generate --projects=core,reference",
-    "db:validate": "npm run db:validate --workspace @holita/core && npm run db:validate --workspace @holita/reference",
-    "db:migrate": "npm run db:migrate --workspace @holita/core && npm run db:migrate --workspace @holita/reference",
-    "db:seed": "npm run db:seed --workspace @holita/core && npm run db:seed --workspace @holita/reference",
+    "db:generate": "nx run-many -t db-generate --projects=core,fleet",
+    "db:validate": "npm run db:validate --workspace @holita/core && npm run db:validate --workspace @holita/fleet",
+    "db:migrate": "npm run db:migrate --workspace @holita/core && npm run db:migrate --workspace @holita/fleet",
+    "db:seed": "npm run db:seed --workspace @holita/core && npm run db:seed --workspace @holita/fleet",
     "test:core:db": "nx run core:test-db --output-style=static",
     "prelint": "npm run db:generate && npm run codegen",
     "typecheck:tools": "tsc --project tools/tsconfig.json",
@@ -64,9 +64,9 @@
     "test:schema": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.schema.config.mjs --runInBand",
     "test:gateway:db": "nx run gateway:test-db --output-style=static",
     "test:smoke": "npm run test:smoke:admin",
-    "dev:reference": "npm run dev --workspace @holita/reference",
-    "test:reference": "nx run reference:test --output-style=static",
-    "test:reference:db": "nx run reference:test-db --output-style=static",
+    "dev:fleet": "npm run dev --workspace @holita/fleet",
+    "test:fleet": "nx run fleet:test --output-style=static",
+    "test:fleet:db": "nx run fleet:test-db --output-style=static",
     "test:smoke:admin": "nx run admin:test-smoke --output-style=static"
   },
   "devDependencies": {

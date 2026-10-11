@@ -14,24 +14,24 @@ before `nvm use`. Native Windows execution is outside the verified setup.
 
 ## Commands
 
-| Command               | Behavior                                                              |
-| --------------------- | --------------------------------------------------------------------- |
-| npm run dev           | Wait for PostgreSQL, start Angular and three Nest backends            |
-| npm run kill          | Stop this checkout's application processes and watchers on Ubuntu/WSL |
-| npm run dev:admin     | Angular watcher                                                       |
-| npm run dev:gateway   | Gateway watcher                                                       |
-| npm run dev:core      | Core watcher                                                          |
-| npm run dev:reference | Reference watcher                                                     |
-| npm run projects      | List four Nx applications                                             |
-| npm run lint          | Lint source/tooling and application boundaries                        |
-| npm run typecheck     | Check tools and all applications                                      |
-| npm run build         | Build all applications                                                |
-| npm run format:check  | Check formatting                                                      |
-| npm run codegen       | Generate application GraphQL contracts                                |
-| npm run schema:check  | Compose SDL and validate operations offline                           |
+| Command              | Behavior                                                              |
+| -------------------- | --------------------------------------------------------------------- |
+| npm run dev          | Wait for PostgreSQL, start Angular and three Nest backends            |
+| npm run kill         | Stop this checkout's application processes and watchers on Ubuntu/WSL |
+| npm run dev:admin    | Angular watcher                                                       |
+| npm run dev:gateway  | Gateway watcher                                                       |
+| npm run dev:core     | Core watcher                                                          |
+| npm run dev:fleet    | Fleet watcher                                                         |
+| npm run projects     | List four Nx applications                                             |
+| npm run lint         | Lint source/tooling and application boundaries                        |
+| npm run typecheck    | Check tools and all applications                                      |
+| npm run build        | Build all applications                                                |
+| npm run format:check | Check formatting                                                      |
+| npm run codegen      | Generate application GraphQL contracts                                |
+| npm run schema:check | Compose SDL and validate operations offline                           |
 
 Backend output is `apps/NAME/dist`; `npm run start:prod --workspace @holita/core`
-(or gateway/reference) runs the compiled app. `dev` does not migrate or seed databases.
+(or gateway/fleet) runs the compiled app. `dev` does not migrate or seed databases.
 Ctrl+C stops the process group; `db:down` stops PostgreSQL separately and preserves the volume.
 Use `npm run kill` from another terminal when application processes remain running. It stops
 the dev group, individual Angular/Nest watchers and compiled backend processes from this checkout,
@@ -45,24 +45,24 @@ PostgreSQL and processes from other checkouts remain running. Running it again i
 | Angular admin | 11000                 |
 | Gateway       | 11010                 |
 | Core          | 11011                 |
-| Reference     | 11013                 |
+| Fleet         | 11013                 |
 | PostgreSQL    | 11084                 |
 
 Visual previews use 11000–11009; the optional Sakai preview uses 11002. Application-local
 `.env.example` files describe PORT and service URLs. Defaults work without environment files.
 Existing process variables take precedence. Backend PORT must be an integer from 1 to 65535.
-Apps and Prisma read their own workspace `.env`; database provisioning reads root/Core/Reference.
+Apps and Prisma read their own workspace `.env`; database provisioning reads root/Core/Fleet.
 
-Gateway uses `CORE_GRAPHQL_URL`, `REFERENCE_GRAPHQL_URL` and `ADMIN_ORIGIN`.
-Reference uses `CORE_GRAPHQL_URL`, `REFERENCE_ENABLED` and `ADMIN_ORIGINS`, a comma-separated
+Gateway uses `CORE_GRAPHQL_URL`, `FLEET_GRAPHQL_URL` and `ADMIN_ORIGIN`.
+Fleet uses `CORE_GRAPHQL_URL`, `FLEET_ENABLED` and `ADMIN_ORIGINS`, a comma-separated
 exact origin allowlist with `ADMIN_ORIGIN` as the single-origin fallback. Defaults allow the
-Angular loopback origin. Database URLs belong only to Core/Reference. No upload/storage
+Angular loopback origin. Database URLs belong only to Core/Fleet. No upload/storage
 configuration is required.
 
 ## Angular admin foundation
 
 Prepare databases, migrate and seed, then run `npm run dev` and open
-[Angular admin](http://127.0.0.1:11000). Choose RentalSofia in the Tenant dropdown, then choose a Store in the second dropdown and sign in to open Vehicles. Login has its own Sakai layout without the application header/sidebar. Vehicles and Devices are under Workspace; the header Store selector switches the active Store.
+[Angular admin](http://127.0.0.1:11000). Choose RentalSofia in the Tenant dropdown, then choose a Store in the second dropdown and sign in to open Vehicles. Login has its own Sakai layout without the application header/sidebar. Vehicles and Devices are under Fleet; the header Store selector switches the active Store.
 `dev:admin` runs Angular alone when the backends are available. Development defaults to `/bg`;
 `/en` selects English. Store/language/list query survive reloads. Language switching keeps
 path/query/hash; Store switching preserves Vehicles/Devices and resets the list context.
@@ -72,14 +72,14 @@ collapse; mobile navigation opens a modal Drawer. Below 992px one Store selector
 second 56px header row. Resizing preserves drafts and closes obsolete overlays.
 Themes persist in `holita.admin.theme`; denied storage displays a status message.
 
-`apps/admin/public/config.json` supplies `graphqlUrl`, optional boolean `referenceEnabled`
+`apps/admin/public/config.json` supplies `graphqlUrl`, optional boolean `fleetEnabled`
 and optional `primeUiLicense`. GraphQL may use a root-relative endpoint or an absolute HTTP(S)
 URL without credentials/fragment. The development proxy forwards `/graphql` to Gateway.
 Startup validates configuration before bootstrap and displays a localized error on failure.
 Issued license keys stay private and must not be committed. Browser fixtures use their own config.
-`referenceEnabled` defaults true; false hides business navigation and blocks direct routes,
+`fleetEnabled` defaults true; false hides business navigation and blocks direct routes,
 without business requests. Store discovery stays usable. Backend availability is separately
-controlled by `REFERENCE_ENABLED`; keep the two settings consistent for a disabled installation.
+controlled by `FLEET_ENABLED`; keep the two settings consistent for a disabled installation.
 
 ### Demo tenant login
 
@@ -87,12 +87,12 @@ The standalone login screen is shown before login, including on bookmarked busin
 Selecting a Tenant obtains a candidate demo token and loads only its Stores into the second dropdown.
 Changing Tenant clears the Store selection, cancels its old discovery client and ignores late candidate
 tokens. The candidate session is activated and stored only after selecting a valid Store and submitting
-Sign in; no business requests run before this. Login opens Vehicles for the selected Store. RentalSofia owns all pre-tenant records.
+Sign in; no business requests run before this. Login opens Vehicles for the selected Store. The seed creates the RentalSofia Tenant with Discordia and Sandbox Stores.
 Core issues an HMAC-SHA256 token containing Tenant ID and an eight-hour expiry. Both subgraphs
 verify it per request and reject missing/invalid/expired sessions as UNAUTHENTICATED. Gateway
 forwards Authorization; tenantId never comes from a business input or x-tenant-id header.
 
-Core and Reference use the same DEMO_AUTH_SECRET (at least 32 characters). Their environment
+Core and Fleet use the same DEMO_AUTH_SECRET (at least 32 characters). Their environment
 examples show the local-only default; outside production it is used when no valid secret is set.
 DEMO_AUTH_ENABLED=false disables tenant discovery, demoLogin and demo sessions. In NODE_ENV=production
 demo auth is disabled unless explicitly enabled and a valid secret is configured. The flag is
@@ -114,17 +114,19 @@ cookies or an appropriate identity-provider flow, and add revocation and require
 The database has mandatory tenant columns, scoped repositories and same-tenant composite keys;
 it does not use PostgreSQL RLS. Owning-role/direct SQL access is not tenant-isolated.
 
-### Angular Reference Vehicles
+### Angular Fleet Vehicles
 
-Routes are `/:language/stores/:storeId/reference/vehicles`, `/new` and `/:recordId/edit`.
+Routes are `/:language/:storeId/fleet/vehicles`, `/new` and `/:recordId/edit`.
+Previous `/reference/vehicles` and `/reference/devices` URLs redirect to `/fleet`, retaining
+editor paths, query parameters and fragments. The backend service, subgraph and GraphQL contracts use Fleet names.
 Fields are required License Plate (32 characters) and optional multiline Notes (2000 characters).
 Blank Notes clear to null. License Plate is not unique. Lists offer URL-backed search/sort/paging,
 confirmed single/page-local sequential deletion, partial result feedback and failed-row retry.
 Deleting an assigned Vehicle fails without deleting its Devices.
 
-### Angular Reference Devices
+### Angular Fleet Devices
 
-Routes mirror Vehicles under `/reference/devices`. IMEI is a required string of exactly 15 digits,
+Routes mirror Vehicles under `/fleet/devices`. IMEI is a required string of exactly 15 digits,
 unique within a Tenant/Store; leading zeros are preserved. Truck is a required same-tenant/same-store Vehicle selected
 through a remote search/paging dialog. Several Devices may share a Truck. Create/update validates
 assignment scope, and the database protects it with a composite foreign key.
@@ -243,7 +245,7 @@ writes keep their initiating session/Store/language. Record content/backend mess
 
 ## GraphQL and generation
 
-SDL and named operation paths are explicit in `tools/graphql/contracts.mts`. Runtime Reference
+SDL and named operation paths are explicit in `tools/graphql/contracts.mts`. Runtime Fleet
 loads Vehicle/Device SDL; Gateway loads the generated static supergraph. No database or running
 backend is required for codegen/schema validation. Generated outputs stay ignored.
 
@@ -252,12 +254,12 @@ npm run codegen
 npm run schema:check
 ```
 
-Regenerate and restart after SDL/operation changes. Discover tenants through Gateway with `{ tenants { id name } }`, call `demoLogin(tenantId: "01000000-0000-4000-8000-000000000001") { token tenant { id name } }`, then send the returned token as `Authorization: Bearer <token>` for `{ stores { id name } }` and every business request. Business requests require `x-store-id`; the seeded Sofia Store is
+Regenerate and restart after SDL/operation changes. Discover tenants through Gateway with `{ tenants { id name } }`, call `demoLogin(tenantId: "01000000-0000-4000-8000-000000000001") { token tenant { id name } }`, then send the returned token as `Authorization: Bearer <token>` for `{ stores { id name } }` and every business request. Business requests require `x-store-id`; the seeded Discordia Store is
 `10000000-0000-4000-8000-000000000001`. For example:
 
 ```graphql
 query VehiclesWithStores {
-  referenceVehicles(offset: 0, limit: 20) {
+  fleetVehicles(offset: 0, limit: 20) {
     items {
       id
       licensePlate
@@ -272,7 +274,7 @@ query VehiclesWithStores {
 }
 ```
 
-Mutations are create/update/delete ReferenceVehicle and ReferenceDevice. Inputs never accept tenantId or storeId. [Architecture](architecture/overview.md#graphql-contracts-and-context) describes
+Mutations are create/update/delete FleetVehicle and FleetDevice. Inputs never accept tenantId or storeId. [Architecture](architecture/overview.md#graphql-contracts-and-context) describes
 validation, federation and error semantics. Inspect GraphQL errors even on HTTP 200 and
 preserve the response request ID when reporting failures. Store scope is not authorization.
 
@@ -292,10 +294,10 @@ Provisioning creates/verifies four databases and matching roles, preserves exist
 passwords, checks role privileges/ownership and revokes PUBLIC database access. The loopback
 provisioning role is `holita_admin`; application URLs never use it.
 
-| Service   | Development database/role | Test database/role    | Environment variables                               |
-| --------- | ------------------------- | --------------------- | --------------------------------------------------- |
-| Core      | holita_core               | holita_core_test      | CORE_DATABASE_URL, CORE_TEST_DATABASE_URL           |
-| Reference | holita_reference          | holita_reference_test | REFERENCE_DATABASE_URL, REFERENCE_TEST_DATABASE_URL |
+| Service | Development database/role | Test database/role | Environment variables                       |
+| ------- | ------------------------- | ------------------ | ------------------------------------------- |
+| Core    | holita_core               | holita_core_test   | CORE_DATABASE_URL, CORE_TEST_DATABASE_URL   |
+| Fleet   | holita_fleet              | holita_fleet_test  | FLEET_DATABASE_URL, FLEET_TEST_DATABASE_URL |
 
 Roles cannot connect to another service's databases or the corresponding dev/test database.
 The [root environment example](../.env.example) configures POSTGRES_PORT/POSTGRES_PASSWORD.
@@ -304,14 +306,21 @@ on 127.0.0.1 at that port. Examples do not replace credentials in existing insta
 Compose project `holita` uses `holita_postgres_data` mounted at `/var/lib/postgresql`.
 `db:down` preserves the volume. Do not delete volumes or reset databases to repair setup.
 
-Core/Reference own their schemas, generated Prisma clients and reviewed SQL migrations. Tenant migrations assign existing rows to RentalSofia, preserve IDs/timestamps/relations and reconstruct tables transactionally to place tenantId after id. The Device FK includes Tenant/Store/Vehicle, and IMEI uniqueness includes Tenant/Store. `db:migrate` deploys Core then Reference; `db:generate`
-generates both ignored clients. Later schema changes require new reviewed SQL migrations,
-not edits to applied history or db push. `db:seed` inserts RentalSofia, two stable Stores, two Sofia Vehicles and one Device with a leading-zero IMEI. Existing keys and edits are preserved. Core runs before Reference; the stable reference fixtures belong to the seeded RentalSofia/Sofia Store.
+Core/Fleet own their schemas, generated Prisma clients and reviewed SQL migrations. Each service
+has one initial migration for the complete tenant-scoped schema. Store, Vehicle and Device place
+tenantId immediately after id. The Device FK includes Tenant/Store/Vehicle, and IMEI uniqueness
+includes Tenant/Store. `db:migrate` deploys Core then Fleet; `db:generate` generates both ignored
+clients. Initial migrations require empty databases; a previous migration history needs an
+explicitly authorized database rebuild. `db:migrate` never resets databases. Subsequent schema
+changes require new reviewed SQL migrations, not edits to applied history or db push.
+`db:seed` inserts RentalSofia, Discordia and Sandbox Stores, two Discordia Vehicles and one Device
+with a leading-zero IMEI. Existing keys and edits are preserved. Core runs before Fleet; Fleet
+fixtures belong to RentalSofia's Discordia Store.
 
 ## Troubleshooting
 
 Use `nvm use` when node/npm are unavailable. Check Docker before `db:up`; setup and migration
 are explicit prerequisites. Check application health endpoints and GraphQL errors separately.
 A health response does not prove database readiness. Regenerate contracts and restart the group
-when SDL/operations change. Check the selected Store and Reference startup/backend flags for
+when SDL/operations change. Check the selected Store and Fleet startup/backend flags for
 unavailable business screens. See [testing](testing.md) for guarded fixtures and cleanup.

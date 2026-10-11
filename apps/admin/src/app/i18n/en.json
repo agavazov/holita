@@ -1,6 +1,6 @@
 {
   "activeStore": "Store",
-  "workspace": "Workspace",
+  "fleet": "Fleet",
   "navigation": "Navigation",
   "toggleNavigation": "Toggle navigation",
   "closeNavigation": "Close navigation",
@@ -35,8 +35,7 @@
   "discardChanges": "Discard changes",
   "closeConfirmation": "Close confirmation",
   "actions": "Actions",
-  "reference": "Reference",
-  "referenceDisabled": "Reference is unavailable.",
+  "fleetDisabled": "Fleet is unavailable.",
   "selectedItemsMessage": "{0} items selected",
   "emptySelectionMessage": "No selected item",
   "previousSection": "Previous section",

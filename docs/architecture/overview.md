@@ -8,16 +8,16 @@ Applications never import another application's implementation, Prisma models or
 | admin       | Standalone Angular, Sakai/PrimeNG, Store discovery, Vehicles/Devices CRUD | 11000      |
 | gateway     | Apollo federation, public `/graphql`, `/health`                           | 11010      |
 | core        | Tenant demo login, scoped Store discovery/lookup, owning database         | 11011      |
-| reference   | Tenant/Store-scoped Vehicles/Devices, owning database                     | 11013      |
+| fleet       | Tenant/Store-scoped Vehicles/Devices, owning database                     | 11013      |
 
 ```mermaid
 flowchart LR
   Admin --> Gateway
   Gateway --> Core
-  Gateway --> Reference
+  Gateway --> Fleet
   Core --> CoreDB[(Core database)]
-  Reference --> ReferenceDB[(Reference database)]
-  Reference -->|Store existence on create| Core
+  Fleet --> FleetDB[(Fleet database)]
+  Fleet -->|Store existence on create| Core
 ```
 
 ## Execution and ownership
@@ -27,7 +27,7 @@ using concurrently, with group shutdown. Ports and CORS origins are application-
 Only PostgreSQL runs in Compose. Setup/migration/seed are explicit commands, separate from startup.
 Health endpoints prove application availability without opening database connections.
 
-Nx records admin → gateway, gateway → core/reference and reference → core runtime dependencies.
+Nx records admin → gateway, gateway → core/fleet and fleet → core runtime dependencies.
 ESLint independently prohibits application implementation imports. Shared manifests, lockfile,
 configuration, ignore rules, workflows, Node version, SDL and named operations are task inputs.
 Generation restores ignored outputs before dependent lint/typecheck/build/test commands.
@@ -37,11 +37,11 @@ Gateway DB and admin browser fixtures build the three backends and own their tes
 
 ## Persistence ownership
 
-One PostgreSQL instance contains independent Core/Reference development and test databases,
+One PostgreSQL instance contains independent Core/Fleet development and test databases,
 with distinct owner/login roles. Admin/Gateway have no Prisma client or database credentials.
 Each owning service has its own schema, reviewed SQL migrations and generated client.
 Core owns Tenant (UUID, unique Name up to 200 characters, timestamps) and Store. Store has UUID, mandatory tenantId, Name (200 characters), createdAt and updatedAt. Its Tenant foreign key restricts deletion/update.
-Reference owns Vehicle and Device. New tenant migrations preserve old rows under RentalSofia and reconstruct the tables transactionally so tenantId is physically second after id in Store, Vehicle and Device. Applied migrations remain unchanged.
+Fleet owns Vehicle and Device. Each service has one initial migration for its complete schema. Store, Vehicle and Device have mandatory tenantId physically second after id; Tenant data is inserted by the seed, not by schema migrations.
 
 Vehicle has UUID, tenantId, storeId, required License Plate (32 characters), nullable Notes (2000
 characters) and timestamps. License Plate is not unique. Device has UUID, tenantId, storeId, required
@@ -49,7 +49,7 @@ characters) and timestamps. License Plate is not unique. Device has UUID, tenant
 A unique `(tenantId, storeId, imei)` index and SQL digit CHECK protect persistence. The composite
 `(tenantId, storeId, vehicleId)` foreign key references Vehicle `(tenantId, storeId, id)` with restricted deletion
 and update. Several Devices may share a Vehicle. There is no cross-database Store foreign key.
-Seeds insert RentalSofia, two stable Stores, two sample Vehicles and one Device. Repeated seeds skip existing keys and never overwrite edits. Reference has no cross-database Tenant/Store foreign key; creation verifies the tenant-scoped Store through Core. Mandatory tenant predicates and composite indexes enforce application isolation; PostgreSQL has no row-level-security policy. Direct SQL access by the owning role can access every tenant.
+Seeds insert RentalSofia, the stable Discordia and Sandbox Stores, two Discordia Vehicles and one Device. Repeated seeds skip existing keys and never overwrite edits. Fleet has no cross-database Tenant/Store foreign key; creation verifies the tenant-scoped Store through Core. Mandatory tenant predicates and composite indexes enforce application isolation; PostgreSQL has no row-level-security policy. Direct SQL access by the owning role can access every tenant.
 
 Tests deploy migrations into random schemas in dedicated test databases and drop only their
 own schema. Development connections, broad resets and shared truncation are not test fixtures.
@@ -57,19 +57,19 @@ own schema. Development connections, broad resets and shared truncation are not 
 ## GraphQL contracts and context
 
 [Core SDL](../../apps/core/src/stores/stores.graphql),
-[Vehicle SDL](../../apps/reference/src/vehicles/vehicles.graphql) and
-[Device SDL](../../apps/reference/src/devices/devices.graphql) define the API.
-Vehicle SDL also declares the Reference federation link, DateTime, Store reference and root types.
+[Vehicle SDL](../../apps/fleet/src/vehicles/vehicles.graphql) and
+[Device SDL](../../apps/fleet/src/devices/devices.graphql) define the API.
+Vehicle SDL also declares the Fleet federation link, DateTime, Store reference and root types.
 Backend resolvers use generated types and delegate to concrete services/repositories.
 Runtime SDL assets are copied into builds. Named Angular/Core lookup operations are explicit
 inputs in [contracts.mts](../../tools/graphql/contracts.mts). Codegen/composition/validation work
 offline. Gateway loads a generated static supergraph without introspection or registry polling.
 
-Public demo discovery exposes tenants and demoLogin. Authenticated queries are stores, store, referenceVehicles, referenceVehicle, referenceDevices and referenceDevice. Mutations create/update/delete ReferenceVehicle and ReferenceDevice.
+Public demo discovery exposes tenants and demoLogin. Authenticated queries are stores, store, fleetVehicles, fleetVehicle, fleetDevices and fleetDevice. Mutations create/update/delete FleetVehicle and FleetDevice.
 All Store/business operations require a signed demo session in Authorization. Business operations additionally require a valid `x-store-id` UUID. Inputs never accept tenantId or storeId.
 Repository predicates, totals, relation lookup and federation reference resolution always include the verified Tenant and active Store.
 Foreign IDs appear as NOT_FOUND. Creation checks Store existence through Core once per
-Reference HTTP request; read/update/delete do not make that network call. Requesting a
+Fleet HTTP request; read/update/delete do not make that network call. Requesting a
 federated Store field beyond its known ID (for example `store { name }`) asks Core to resolve
 its persisted Store.
 
@@ -86,7 +86,7 @@ unexpected details remain hidden. Creation's Core timeout is 3 seconds, Gateway'
 is 5 seconds. No global current Store or cross-request Store validation cache exists.
 Tenant identity comes only from the HMAC-verified, expiring session. Gateway forwards Authorization; both subgraphs independently verify it. Arbitrary tenant headers and entity representations cannot select a Tenant. Demo login deliberately allows anyone to choose any Tenant; it is not production identity or membership authorization.
 
-`REFERENCE_ENABLED=false` rejects Reference business and entity operations while preserving
+`FLEET_ENABLED=false` rejects Fleet business and entity operations while preserving
 schema composition and health. Angular startup availability hides navigation and gates direct routes.
 
 ## Angular admin foundation
@@ -97,14 +97,15 @@ Tenant/Store selection. A candidate token loads tenant-scoped Stores through a d
 changing Tenant cancels discovery and ignores late tokens. Submitting a valid Store activates the
 tab session and opens Vehicles. StoreWorkspace owns authenticated discovery and route selection;
 the shell receives explicit inputs and emits Store changes without business data access.
-Routes use `/bg` or `/en`, then `/stores/:storeId/reference/vehicles` or `/devices`, with `/new`
-and `/:recordId/edit`. The language root shows Login while signed out and redirects to the saved
+Routes use `/bg` or `/en`, then `/:storeId/fleet/vehicles` or `/devices`, with `/new`
+and `/:recordId/edit`. Previous `/reference` URLs redirect to `/fleet`, preserving the resource,
+editor path, query parameters and fragment. The language root shows Login while signed out and redirects to the saved
 (or first available) Store's Vehicles while signed in. There is no Store list landing page.
-Workspace navigation contains Vehicles/Devices; the header keeps its Store switcher. Choosing a Store at login opens Vehicles; switching Stores preserves the enabled
+Fleet navigation contains Vehicles/Devices; the header keeps its Store switcher. Choosing a Store at login opens Vehicles; switching Stores preserves the enabled
 current business section and resets list context. Language switching preserves path/query/hash.
-Unknown Stores and disabled Reference never start business requests.
+Unknown Stores and disabled Fleet never start business requests.
 
-ReferenceWorkspace keys child views by session/Store/language/resource/editor/ID. Each mounted page/editor
+FleetWorkspace keys child views by session/Store/language/resource/editor/ID. Each mounted page/editor
 owns an immutable session/Store/language-scoped Apollo client and InMemoryCache. A → B → A creates a fresh A client.
 Reads unsubscribe on retirement; submitted writes settle with their captured client and affect
 only its cache. Obsolete callbacks cannot navigate, notify or mutate a new workspace.
@@ -116,6 +117,7 @@ Typed Reactive Forms provide validation, server-field focus, null clearing, dirt
 and retained failed drafts. Device's remote Vehicle picker searches/pages through the captured
 DevicesApi and hydrates the assigned Vehicle. Multiple Devices can use the same Vehicle.
 
+The browser title is Admin. The header and login show only the logo mark.
 Sakai defines the shell and feature presentation. The ignored [source](../development.md#sakai-source-reference)
 is a visual reference only. PrimeNG Aura compatibility tokens and local Cyrillic-capable Lato use
 Sakai's 14px root. Desktop header/sidebar are 56px/280px; content caps at 1504px on wide screens.

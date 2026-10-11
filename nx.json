@@ -29,7 +29,7 @@
     ],
     "graphqlContracts": [
       "{workspaceRoot}/apps/core/src/**/*.graphql",
-      "{workspaceRoot}/apps/reference/src/**/*.graphql",
+      "{workspaceRoot}/apps/fleet/src/**/*.graphql",
       "{workspaceRoot}/apps/admin/src/**/*.graphql",
       "{workspaceRoot}/tools/graphql/**/*",
       "{workspaceRoot}/tools/tsconfig.json",

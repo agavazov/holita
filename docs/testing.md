@@ -7,11 +7,11 @@ Angular CLI uses Vitest/jsdom; Playwright handles compiled-app browser checks.
 Commands are non-watch. `npm test` is not the validation interface.
 
 ```bash
-npm run test:reference -- vehicles.service.spec.ts --skip-nx-cache
-npm run test:reference -- devices.service.spec.ts --testNamePattern="rejects" --skip-nx-cache
+npm run test:fleet -- vehicles.service.spec.ts --skip-nx-cache
+npm run test:fleet -- devices.service.spec.ts --testNamePattern="rejects" --skip-nx-cache
 npm run test:core -- health.spec.ts --skip-nx-cache
 npm run test:gateway -- health.spec.ts --skip-nx-cache
-npm run test:admin -- --include=app/features/reference/vehicles/vehicles-api.spec.ts --skip-nx-cache
+npm run test:admin -- --include=app/features/fleet/vehicles/vehicles-api.spec.ts --skip-nx-cache
 ```
 
 Without a file, each named target selects its own current unit/bootstrap suite.
@@ -22,12 +22,12 @@ relevant behavioral checks. SDL/operations also require codegen, schema:check an
 
 ## Vehicles checks
 
-`npm run test:reference -- vehicles.service.spec.ts --skip-nx-cache` checks text/null validation,
+`npm run test:fleet -- vehicles.service.spec.ts --skip-nx-cache` checks text/null validation,
 scoped repository calls and creation-only Core checks. `vehicles.db.spec.ts` checks actual scoped
 CRUD, federation references, null clearing, literal search and deterministic sorting/pagination.
 
 ```bash
-npm run test:admin -- --include="app/features/reference/vehicles/*.spec.ts" --include=app/features/reference/reference-workspace.spec.ts --skip-nx-cache
+npm run test:admin -- --include="app/features/fleet/vehicles/*.spec.ts" --include=app/features/fleet/fleet-workspace.spec.ts --skip-nx-cache
 npm run test:smoke:admin -- angular-vehicles.smoke.spec.mts
 ```
 
@@ -38,13 +38,13 @@ reload/scoping and Bulgarian 1280/390/320px light/dark forms/lists. Captures bel
 
 ## Devices checks
 
-`npm run test:reference -- devices.service.spec.ts --skip-nx-cache` checks IMEI/assignment
+`npm run test:fleet -- devices.service.spec.ts --skip-nx-cache` checks IMEI/assignment
 validation, scoped calls and constraint mapping. `devices.db.spec.ts` checks exact digits,
 leading zeros, per-Tenant/Store uniqueness, same-tenant/same-store FK, shared Vehicles, protected Vehicle deletion,
 reassignment, scoped CRUD and list queries.
 
 ```bash
-npm run test:admin -- --include="app/features/reference/devices/*.spec.ts" --include=app/features/reference/relation-picker.spec.ts --include=app/features/reference/reference-workspace.spec.ts --skip-nx-cache
+npm run test:admin -- --include="app/features/fleet/devices/*.spec.ts" --include=app/features/fleet/relation-picker.spec.ts --include=app/features/fleet/fleet-workspace.spec.ts --skip-nx-cache
 npm run test:smoke:admin -- angular-devices.smoke.spec.mts
 ```
 
@@ -60,7 +60,7 @@ Use `VITEST_MAX_WORKERS=1` on CPU-constrained hosts without changing case deadli
 
 ```bash
 npm run test:admin -- --include=app/features/stores/store-workspace.spec.ts --skip-nx-cache
-npm run test:admin -- --include=app/features/reference/reference-workspace.spec.ts --skip-nx-cache
+npm run test:admin -- --include=app/features/fleet/fleet-workspace.spec.ts --skip-nx-cache
 npm run test:admin -- --include=app/core/config/admin-config.spec.ts --skip-nx-cache
 npm run test:admin -- --include=app/core/graphql/graphql-options.spec.ts --skip-nx-cache
 npm run test:admin -- --include=app/layout/appearance.spec.ts --skip-nx-cache
@@ -68,7 +68,7 @@ npm run test:admin -- --include=app/layout/appearance.spec.ts --skip-nx-cache
 
 Store/workspace tests prove independent login layout, sequential Tenant/Store selection, cancellation
 of obsolete candidate tokens and Store discovery, tenant A → B → A, direct/default Vehicles navigation, A → B → A, cancellation on Store/language
-change, unknown Store and disabled Reference behavior. Feature APIs prove retired submitted-write
+change, unknown Store and disabled Fleet behavior. Feature APIs prove retired submitted-write
 success/failure and isolated caches. Real transport uses `angular-foundation.smoke.spec.mts`;
 Sakai focus/theme/resizing/mobile behavior uses `angular-shell.smoke.spec.mts`.
 Behavioral checks and visual review are separate evidence. Compare matching viewport sizes
@@ -83,13 +83,13 @@ npm run db:up
 npm run db:setup
 npm run db:test:setup
 npm run test:core:db -- persistence.db.spec.ts
-npm run test:reference:db -- vehicles.db.spec.ts devices.db.spec.ts
+npm run test:fleet:db -- vehicles.db.spec.ts devices.db.spec.ts
 ```
 
 Guarded helpers reject development/foreign/nonlocal identities and URL options. Each run deploys
 reviewed migrations into its own random schema, closes connections and drops only that schema.
 No broad resets/truncation occur. Core persistence tests cover seed idempotency, schema isolation
-and inability to connect to development/Reference databases. Reference migrations create tenant-scoped Vehicle/Device indexes, a digit CHECK and a same-tenant/same-store restricted FK.
+and inability to connect to development/Fleet databases. Fleet migrations create tenant-scoped Vehicle/Device indexes, a digit CHECK and a same-tenant/same-store restricted FK.
 Database results must run fresh and cannot be treated as valid Nx cache hits.
 
 ## Real federation and browser smoke checks
@@ -102,32 +102,32 @@ npm run test:smoke:admin -- angular-foundation.smoke.spec.mts angular-shell.smok
 
 Offline contracts tests compose both subgraphs, validate all four explicit operation files and
 assert the exact public query/mutation inventory. Guard tests reject unsafe local test URLs.
-Federation fixture owns isolated Core/Reference test schemas, Core seeds, real backend processes
+Federation fixture owns isolated Core/Fleet test schemas, Core seeds, real backend processes
 and request observers. It proves Store discovery, Vehicle/Device relations and scope, CORS/header
 bounds, availability, request-local Core validation and scoped CRUD while Core is stopped.
 Gateway has no database dependency.
 
 Angular fixtures serve the compiled production app with their own runtime configuration.
 They own dedicated backend processes/schemas and never load private development licenses.
-Browser fixtures seed Core and obtain real demo sessions; they create their own business records without running Reference sample seeds. The Isolation tenant/store exists only in these test fixtures.
+Browser fixtures seed Core and obtain real demo sessions; they create their own business records without running Fleet sample seeds. The Isolation tenant/store exists only in these test fixtures.
 Browser targets build the admin and three backends, use Chromium, disable retries and retain
 failure screenshots/traces under ignored test-results. Clean up task-started connections/processes.
 
 ## Current change-to-check mapping
 
-| Change                                  | Focused checks                                                                          |
-| --------------------------------------- | --------------------------------------------------------------------------------------- |
-| Vehicle validation/query/persistence    | vehicles.service.spec.ts, vehicles.db.spec.ts                                           |
-| Device IMEI/assignment/persistence      | devices.service.spec.ts, devices.db.spec.ts                                             |
-| Runtime module/health                   | Reference/Core/Gateway health.spec.ts as affected                                       |
-| SDL/operations                          | codegen, schema:check, contracts.unit.spec.mts                                          |
-| Cross-service contracts/context         | federation.db.spec.mts                                                                  |
-| Store/language/default routing          | store-workspace.spec.ts, reference-workspace.spec.ts, angular-foundation.smoke.spec.mts |
-| Captured feature clients/forms/deletion | concrete vehicles/devices Angular suites                                                |
-| Remote picker cancellation              | relation-picker.spec.ts, device-editor.spec.ts                                          |
-| Shell/theme/mobile/keyboard             | angular-shell.smoke.spec.mts and matching visual review                                 |
-| Real CRUD and narrow views              | angular-vehicles.smoke.spec.mts, angular-devices.smoke.spec.mts                         |
-| Root tooling                            | root lint/typecheck/build and relevant behavior                                         |
+| Change                                  | Focused checks                                                                      |
+| --------------------------------------- | ----------------------------------------------------------------------------------- |
+| Vehicle validation/query/persistence    | vehicles.service.spec.ts, vehicles.db.spec.ts                                       |
+| Device IMEI/assignment/persistence      | devices.service.spec.ts, devices.db.spec.ts                                         |
+| Runtime module/health                   | Fleet/Core/Gateway health.spec.ts as affected                                       |
+| SDL/operations                          | codegen, schema:check, contracts.unit.spec.mts                                      |
+| Cross-service contracts/context         | federation.db.spec.mts                                                              |
+| Store/language/default routing          | store-workspace.spec.ts, fleet-workspace.spec.ts, angular-foundation.smoke.spec.mts |
+| Captured feature clients/forms/deletion | concrete vehicles/devices Angular suites                                            |
+| Remote picker cancellation              | relation-picker.spec.ts, device-editor.spec.ts                                      |
+| Shell/theme/mobile/keyboard             | angular-shell.smoke.spec.mts and matching visual review                             |
+| Real CRUD and narrow views              | angular-vehicles.smoke.spec.mts, angular-devices.smoke.spec.mts                     |
+| Root tooling                            | root lint/typecheck/build and relevant behavior                                     |
 
 ## Local diff versus PR affected selection
 
@@ -206,16 +206,16 @@ ShellCheck available), and check real input impact without executing broad test 
 
 ```bash
 actionlint .github/workflows/affected.yml .github/workflows/full-regression.yml
-npm run projects -- --affected --files=apps/admin/src/app/features/reference/vehicles/vehicles-api.ts
-npm run projects -- --affected --files=apps/reference/src/vehicles/vehicles.graphql
-npm run projects -- --affected --files=apps/reference/prisma/migrations/20261011000000_init/migration.sql
+npm run projects -- --affected --files=apps/admin/src/app/features/fleet/vehicles/vehicles-api.ts
+npm run projects -- --affected --files=apps/fleet/src/vehicles/vehicles.graphql
+npm run projects -- --affected --files=apps/fleet/prisma/migrations/20261011000000_init/migration.sql
 npm run projects -- --affected --files=compose.yaml
 npm run projects -- --affected --files=.github/workflows/affected.yml
 npm run projects -- --affected --files=docs/testing.md
-npm run test:affected -- --files=apps/admin/src/app/features/reference/vehicles/vehicles-api.ts --include=app/features/reference/vehicles/vehicles-api.spec.ts --skip-nx-cache
+npm run test:affected -- --files=apps/admin/src/app/features/fleet/vehicles/vehicles-api.ts --include=app/features/fleet/vehicles/vehicles-api.spec.ts --skip-nx-cache
 ```
 
-Expected application sets are admin; all four; reference/gateway/admin;
+Expected application sets are admin; all four; fleet/gateway/admin;
 all four; all four; none, respectively. These explicit-file examples inspect the configured graph; actual
 PR execution uses the event SHAs instead. Verify the history step with an available commit
 and missing/invalid references; never treat a refused comparison as passing coverage.
@@ -239,8 +239,8 @@ Do not equate a configured workflow with an executed acceptance run.
 
 ```bash
 npm run test:core -- demo-auth.spec.ts --skip-nx-cache
-npm run test:core:db -- persistence.db.spec.ts stores.db.spec.ts tenant-migration.db.spec.ts
-npm run test:reference:db -- vehicles.db.spec.ts devices.db.spec.ts tenant-migration.db.spec.ts seeds.db.spec.ts
+npm run test:core:db -- persistence.db.spec.ts stores.db.spec.ts initial-migration.db.spec.ts
+npm run test:fleet:db -- vehicles.db.spec.ts devices.db.spec.ts initial-migration.db.spec.ts seeds.db.spec.ts
 npm run test:admin -- --include=app/features/stores/tenant-session.spec.ts --include=app/core/auth/demo-session.spec.ts --skip-nx-cache
 npm run test:smoke:admin -- angular-tenants.smoke.spec.mts
 ```
@@ -248,8 +248,8 @@ npm run test:smoke:admin -- angular-tenants.smoke.spec.mts
 Session checks cover signatures, tampering, expiry, production opt-in, unauthenticated reads and
 ignored tenant headers. DB/federation tests exercise scoped discovery/CRUD/entity resolution,
 identical Store IDs and IMEIs across tenants, composite relation rejection and seed idempotency.
-Migration tests replay reviewed SQL in dedicated guarded schemas with legacy records, then check
-backfill, retained IDs/timestamps/relations and physical id/tenantId column order. They never touch
+Initial-migration tests deploy the complete schema in dedicated guarded databases, then check
+mandatory tenant columns, physical id/tenantId column order and the single applied initial migration. They never touch
 development tables. Angular tests cover logged-out deep links, Tenant/Store dropdown gating and retry, obsolete candidate
 responses, root-to-Vehicles navigation, remembered Store selection, tenant client/cache retirement,
 delayed submitted writes and fresh A → B → A clients. Browser login checks use the actual dropdown,

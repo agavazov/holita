@@ -24,7 +24,7 @@ export const test = base.extend<{
     demoSession: { token: string; tenant: { id: string; name: string } };
   };
   demoSignedIn: boolean;
-  referenceEnabled: boolean;
+  fleetEnabled: boolean;
 }>({
   demoSignedIn: [true, { option: true }],
   page: async ({ page, app, demoSignedIn }, use) => {
@@ -38,8 +38,8 @@ export const test = base.extend<{
     }
     await use(page);
   },
-  referenceEnabled: [true, { option: true }],
-  app: async ({ browserName, referenceEnabled }, use) => {
+  fleetEnabled: [true, { option: true }],
+  app: async ({ browserName, fleetEnabled }, use) => {
     if (browserName !== 'chromium') throw new Error('This focused smoke target uses Chromium.');
     const root = join(workspaceRoot, 'apps/admin/dist/browser');
     let gatewayUrl: string | undefined;
@@ -49,7 +49,7 @@ export const test = base.extend<{
         if (pathname === '/config.json') {
           if (!gatewayUrl) throw new Error('The test gateway is not ready.');
           response.writeHead(200, { 'content-type': 'application/json' });
-          response.end(JSON.stringify({ graphqlUrl: gatewayUrl, referenceEnabled }));
+          response.end(JSON.stringify({ graphqlUrl: gatewayUrl, fleetEnabled }));
           return;
         }
         const path =
@@ -103,7 +103,7 @@ export const test = base.extend<{
       const address = server.address();
       if (!address || typeof address === 'string') throw new Error('Missing Angular fixture port.');
       const url = `http://127.0.0.1:${String(address.port)}`;
-      const backend = await createFederationFixture({ adminOrigin: url, referenceEnabled });
+      const backend = await createFederationFixture({ adminOrigin: url, fleetEnabled });
       try {
         gatewayUrl = backend.url;
         const login = await fetch(gatewayUrl, {

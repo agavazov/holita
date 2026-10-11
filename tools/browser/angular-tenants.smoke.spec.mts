@@ -6,7 +6,7 @@ import { workspaceRoot } from '../graphql/contracts.mjs';
 
 test.use({ demoSignedIn: false });
 const storeId = '10000000-0000-4000-8000-000000000001';
-async function signIn(page: Page, name: string, store = 'holita Sofia') {
+async function signIn(page: Page, name: string, store = 'Discordia') {
   await page.getByRole('combobox', { name: 'Tenant', exact: true }).click();
   await page.getByRole('option', { name, exact: true }).click();
   await expect(page.getByTestId('demo-login')).toBeDisabled();
@@ -28,7 +28,7 @@ test('real tenant login gates deep links, survives reload, clears on logout and 
       business.push(request.headers()['authorization'] ?? 'missing');
   });
   await page.goto(
-    `${app.url}/en/stores/10000000-0000-4000-8000-000000000002/reference/devices/new?search=old`,
+    `${app.url}/en/10000000-0000-4000-8000-000000000002/fleet/devices/new?search=old`,
   );
   await expect(page.getByRole('heading', { name: 'Demo sign in', exact: true })).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'Tenant', exact: true })).toBeVisible();
@@ -39,7 +39,7 @@ test('real tenant login gates deep links, survives reload, clears on logout and 
     'true',
   );
   await signIn(page, 'RentalSofia');
-  await expect(page).toHaveURL(`${app.url}/en/stores/${storeId}/reference/vehicles`);
+  await expect(page).toHaveURL(`${app.url}/en/${storeId}/fleet/vehicles`);
   await expect(page.getByRole('heading', { name: 'Vehicles', exact: true })).toBeVisible();
   expect(business.length).toBeGreaterThan(0);
   expect(

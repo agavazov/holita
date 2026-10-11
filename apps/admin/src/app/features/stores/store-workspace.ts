@@ -22,7 +22,7 @@ import { AdminConfig } from '../../core/config/admin-config';
 })
 export class StoreWorkspace {
   readonly session = inject(DemoSession);
-  readonly referenceEnabled = inject(AdminConfig).referenceEnabled;
+  readonly fleetEnabled = inject(AdminConfig).fleetEnabled;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly api = inject(StoresApi);
@@ -109,10 +109,9 @@ export class StoreWorkspace {
         else if (!this.route.firstChild && !this.signingOut) {
           const store = stores.find((store) => store.id === this.session.storeId()) ?? stores[0];
           if (store)
-            void this.router.navigate(
-              ['/', this.language(), 'stores', store.id, 'reference', 'vehicles'],
-              { replaceUrl: true },
-            );
+            void this.router.navigate(['/', this.language(), store.id, 'fleet', 'vehicles'], {
+              replaceUrl: true,
+            });
         }
       }
     });
@@ -125,9 +124,8 @@ export class StoreWorkspace {
     const destination = this.router.createUrlTree([
       '/',
       this.language(),
-      'stores',
       selection.storeId,
-      'reference',
+      'fleet',
       'vehicles',
     ]);
     if (
@@ -160,19 +158,12 @@ export class StoreWorkspace {
 
   chooseStore(id: string): void {
     const section = this.route.firstChild?.snapshot.url;
-    const resource = section?.[3]?.path;
-    const reference =
-      this.referenceEnabled &&
-      section?.[2]?.path === 'reference' &&
+    const resource = section?.[2]?.path;
+    const fleet =
+      this.fleetEnabled &&
+      section?.[1]?.path === 'fleet' &&
       (resource === 'vehicles' || resource === 'devices');
-    void this.router.navigate([
-      '/',
-      this.language(),
-      'stores',
-      id,
-      'reference',
-      reference ? resource : 'vehicles',
-    ]);
+    void this.router.navigate(['/', this.language(), id, 'fleet', fleet ? resource : 'vehicles']);
   }
 
   languageLink(language: Language) {

@@ -4,8 +4,8 @@ export const rentalSofiaId = '01000000-0000-4000-8000-000000000001';
 export const tenantSeeds = [{ id: rentalSofiaId, name: 'RentalSofia' }];
 
 export const storeSeeds = [
-  { id: '10000000-0000-4000-8000-000000000001', tenantId: rentalSofiaId, name: 'holita Sofia' },
-  { id: '10000000-0000-4000-8000-000000000002', tenantId: rentalSofiaId, name: 'holita Plovdiv' },
+  { id: '10000000-0000-4000-8000-000000000001', tenantId: rentalSofiaId, name: 'Discordia' },
+  { id: '10000000-0000-4000-8000-000000000002', tenantId: rentalSofiaId, name: 'Sandbox' },
 ];
 
 export async function seedStores(client: PrismaClient) {

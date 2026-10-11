@@ -5,19 +5,18 @@ const storeA = '10000000-0000-4000-8000-000000000001';
 
 test.beforeEach(async ({ page, app }) => {
   for (const [storeId, licensePlate] of [
-    ['10000000-0000-4000-8000-000000000001', 'Sofia truck'],
-    ['10000000-0000-4000-8000-000000000002', 'Plovdiv truck'],
+    ['10000000-0000-4000-8000-000000000001', 'Discordia truck'],
+    ['10000000-0000-4000-8000-000000000002', 'Sandbox truck'],
   ] as const) {
     const response = await page.request.post(app.gatewayUrl, {
       headers: { authorization: `Bearer ${app.demoSession.token}`, 'x-store-id': storeId },
       data: {
-        query:
-          'mutation($input:CreateReferenceVehicleInput!){createReferenceVehicle(input:$input){id}}',
+        query: 'mutation($input:CreateFleetVehicleInput!){createFleetVehicle(input:$input){id}}',
         variables: { input: { licensePlate } },
       },
     });
     const body: unknown = await response.json();
-    expect(body).toHaveProperty('data.createReferenceVehicle.id');
+    expect(body).toHaveProperty('data.createFleetVehicle.id');
   }
 });
 
@@ -49,23 +48,30 @@ test('compiled Angular discovers stores and reads Vehicles through the real gate
       scopes.push(request.headers()['x-store-id'] ?? 'missing');
   });
   await page.goto(`${app.url}/en`);
-  await expect(page).toHaveURL(`${app.url}/en/stores/${storeA}/reference/vehicles`);
-  await expect(page.locator('aside .layout-menuitem-root-text')).toHaveText('Workspace');
+  await expect(page).toHaveURL(`${app.url}/en/${storeA}/fleet/vehicles`);
+  await expect(page.locator('aside .layout-menuitem-root-text')).toHaveText('Fleet');
   await expect(page.getByRole('link', { name: 'Stores', exact: true })).toHaveCount(0);
-  await expect(page.getByRole('cell', { name: 'Sofia truck', exact: true })).toBeVisible();
-  await chooseStore(page, 'holita Plovdiv');
-  await expect(page.getByRole('cell', { name: 'Plovdiv truck', exact: true })).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'Sofia truck', exact: true })).toHaveCount(0);
-  await chooseStore(page, 'holita Sofia');
-  await expect(page.getByRole('cell', { name: 'Sofia truck', exact: true })).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'Plovdiv truck', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toBeVisible();
+  await chooseStore(page, 'Sandbox');
+  await expect(page.getByRole('cell', { name: 'Sandbox truck', exact: true })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toHaveCount(0);
+  await chooseStore(page, 'Discordia');
+  await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'Sandbox truck', exact: true })).toHaveCount(0);
   expect(scopes).toEqual([storeA, storeB, storeA]);
   await page.reload();
-  await expect(page.getByRole('cell', { name: 'Sofia truck', exact: true })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Български', exact: true }).click();
-  await expect(page).toHaveURL(`${app.url}/bg/stores/${storeA}/reference/vehicles`);
+  await expect(page).toHaveURL(`${app.url}/bg/${storeA}/fleet/vehicles`);
   await expect(page.getByRole('heading', { name: 'Автомобили', exact: true })).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('lang', 'bg');
+  await expect(page.locator('aside .layout-menuitem-root-text')).toHaveText('Автопарк');
+  await page.getByRole('link', { name: 'Устройства', exact: true }).click();
+  await expect(page).toHaveURL(`${app.url}/bg/${storeA}/fleet/devices`);
+  await expect(page.getByRole('heading', { name: 'Устройства', exact: true })).toBeVisible();
+  await chooseStore(page, 'Sandbox');
+  await expect(page).toHaveURL(`${app.url}/bg/${storeB}/fleet/devices`);
+  await expect(page.getByRole('heading', { name: 'Устройства', exact: true })).toBeVisible();
   expect(errors).toEqual([]);
 });
 
@@ -103,16 +109,16 @@ test('a delayed real A response cannot replace B and returning to A fetches agai
     }
   });
   try {
-    await page.goto(`${app.url}/en/stores/${storeA}/reference/vehicles`);
+    await page.goto(`${app.url}/en/${storeA}/fleet/vehicles`);
     await capturedResponse;
-    await chooseStore(page, 'holita Plovdiv');
-    await expect(page.getByRole('cell', { name: 'Plovdiv truck', exact: true })).toBeVisible();
+    await chooseStore(page, 'Sandbox');
+    await expect(page.getByRole('cell', { name: 'Sandbox truck', exact: true })).toBeVisible();
     release();
     await deliveredResponse;
-    await expect(page.getByRole('cell', { name: 'Plovdiv truck', exact: true })).toBeVisible();
-    await expect(page.getByRole('cell', { name: 'Sofia truck', exact: true })).toHaveCount(0);
-    await chooseStore(page, 'holita Sofia');
-    await expect(page.getByRole('cell', { name: 'Sofia truck', exact: true })).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'Sandbox truck', exact: true })).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toHaveCount(0);
+    await chooseStore(page, 'Discordia');
+    await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toBeVisible();
   } finally {
     release();
   }
@@ -154,16 +160,16 @@ test('a language change starts a new Vehicles request while the old real respons
     await route.continue();
   });
   try {
-    await page.goto(`${app.url}/en/stores/${storeA}/reference/vehicles`);
+    await page.goto(`${app.url}/en/${storeA}/fleet/vehicles`);
     await capturedResponse;
     await page.getByRole('link', { name: 'Български', exact: true }).click();
-    await expect(page).toHaveURL(`${app.url}/bg/stores/${storeA}/reference/vehicles`);
-    await expect(page.getByRole('cell', { name: 'Sofia truck', exact: true })).toBeVisible();
+    await expect(page).toHaveURL(`${app.url}/bg/${storeA}/fleet/vehicles`);
+    await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toBeVisible();
     expect(scopes).toEqual([`${storeA}/en`, `${storeA}/bg`]);
     release();
     await deliveredResponse;
     await expect(page.getByRole('heading', { name: 'Автомобили', exact: true })).toBeVisible();
-    await expect(page.getByRole('cell', { name: 'Sofia truck', exact: true })).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toBeVisible();
     await expect(page.getByRole('alert')).toHaveCount(0);
   } finally {
     release();

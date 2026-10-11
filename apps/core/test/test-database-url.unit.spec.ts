@@ -15,7 +15,7 @@ describe('test database URL guard', () => {
     valid + '?schema=public',
     valid + '?options=-csearch_path=public',
     valid.replace(':local@', '@'),
-    valid.replace('11084/holita_core_test', '11084/holita_reference_test'),
+    valid.replace('11084/holita_core_test', '11084/holita_fleet_test'),
   ])('rejects unsafe test configuration %s', (value) => {
     expect(() => getTestDatabaseUrl(value)).toThrow('dedicated local');
   });

@@ -48,7 +48,7 @@ describe('Demo tenant login workspace', () => {
     http.verify({ ignoreCancelled: true });
   });
   it('gates a bookmarked business route until tenant login and resets clients during A → B → A', async () => {
-    const harness = await RouterTestingHarness.create(`/en/stores/${store.id}/reference/vehicles`);
+    const harness = await RouterTestingHarness.create(`/en/${store.id}/fleet/vehicles`);
     const discovery = http.expectOne((r) => operation(r, 'AdminTenants'));
     expect(discovery.request.headers.has('authorization')).toBe(false);
     discovery.flush({ data: { tenants: [tenantA, tenantB] } });
@@ -89,10 +89,10 @@ describe('Demo tenant login workspace', () => {
       .expectOne((r) => operation(r, 'AdminTenants'))
       .flush({ data: { tenants: [tenantA, tenantB] } });
     await login(tenantB, 'token-b');
-    await harness.navigateByUrl(`/en/stores/${store.id}/reference/vehicles`);
+    await harness.navigateByUrl(`/en/${store.id}/fleet/vehicles`);
     const readB = http.expectOne((r) => operation(r, 'AdminVehicles'));
     expect(readB.request.headers.get('authorization')).toBe('Bearer token-b');
-    readB.flush({ data: { referenceVehicles: { items: [], total: 0, offset: 0, limit: 20 } } });
+    readB.flush({ data: { fleetVehicles: { items: [], total: 0, offset: 0, limit: 20 } } });
     await harness.fixture.whenStable();
     await workspace.logout();
     await harness.fixture.whenStable();
@@ -100,10 +100,10 @@ describe('Demo tenant login workspace', () => {
       .expectOne((r) => operation(r, 'AdminTenants'))
       .flush({ data: { tenants: [tenantA, tenantB] } });
     await login(tenantA, 'fresh-token-a');
-    await harness.navigateByUrl(`/en/stores/${store.id}/reference/vehicles`);
+    await harness.navigateByUrl(`/en/${store.id}/fleet/vehicles`);
     const fresh = http.expectOne((r) => operation(r, 'AdminVehicles'));
     expect(fresh.request.headers.get('authorization')).toBe('Bearer fresh-token-a');
-    fresh.flush({ data: { referenceVehicles: { items: [], total: 0, offset: 0, limit: 20 } } });
+    fresh.flush({ data: { fleetVehicles: { items: [], total: 0, offset: 0, limit: 20 } } });
     await harness.fixture.whenStable();
   });
   it('keeps a failed login on the login screen without discovering stores', async () => {
@@ -186,7 +186,7 @@ describe('Demo tenant login workspace', () => {
   });
   it('opens the login-selected Store in Vehicles instead of a bookmarked editor from another Store', async () => {
     const harness = await RouterTestingHarness.create(
-      '/en/stores/10000000-0000-4000-8000-000000000002/reference/devices/new?search=old',
+      '/en/10000000-0000-4000-8000-000000000002/fleet/devices/new?search=old',
     );
     http.expectOne((r) => operation(r, 'AdminTenants')).flush({ data: { tenants: [tenantA] } });
     await harness.fixture.whenStable();
@@ -207,10 +207,10 @@ describe('Demo tenant login workspace', () => {
     await harness.fixture.whenStable();
     http.expectOne((r) => operation(r, 'AdminStores')).flush({ data: { stores: [store] } });
     await harness.fixture.whenStable();
-    expect(TestBed.inject(Router).url).toBe(`/en/stores/${store.id}/reference/vehicles`);
+    expect(TestBed.inject(Router).url).toBe(`/en/${store.id}/fleet/vehicles`);
     const read = http.expectOne((r) => operation(r, 'AdminVehicles'));
     expect(read.request.headers.get('x-store-id')).toBe(store.id);
-    read.flush({ data: { referenceVehicles: { items: [], total: 0, offset: 0, limit: 20 } } });
+    read.flush({ data: { fleetVehicles: { items: [], total: 0, offset: 0, limit: 20 } } });
     http.expectNone((r) => operation(r, 'AdminDevices'));
     expect(session.storeId()).toBe(store.id);
   });

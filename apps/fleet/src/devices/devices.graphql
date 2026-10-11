@@ -1,0 +1,54 @@
+type FleetDevice @key(fields: "id") {
+  id: ID!
+  storeId: ID!
+  store: Store!
+  imei: String!
+  vehicleId: ID!
+  vehicle: FleetVehicle!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+type FleetDevicePage {
+  items: [FleetDevice!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+input CreateFleetDeviceInput {
+  imei: String!
+  vehicleId: ID!
+}
+input UpdateFleetDeviceInput {
+  imei: String
+  vehicleId: ID
+}
+enum FleetDeviceSortField {
+  IMEI
+  CREATED_AT
+}
+
+enum FleetDeviceSortDirection {
+  ASC
+  DESC
+}
+
+input FleetDeviceSort {
+  field: FleetDeviceSortField! = CREATED_AT
+  direction: FleetDeviceSortDirection! = DESC
+}
+
+extend type Query {
+  fleetDevices(
+    offset: Int! = 0
+    limit: Int! = 20
+    search: String
+    ids: [ID!]
+    sort: FleetDeviceSort
+  ): FleetDevicePage!
+  fleetDevice(id: ID!): FleetDevice!
+}
+extend type Mutation {
+  createFleetDevice(input: CreateFleetDeviceInput!): FleetDevice!
+  updateFleetDevice(id: ID!, input: UpdateFleetDeviceInput!): FleetDevice!
+  deleteFleetDevice(id: ID!): FleetDevice!
+}

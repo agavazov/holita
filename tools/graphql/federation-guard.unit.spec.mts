@@ -2,7 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 import { guardedTestUrl } from './federation-fixture.mjs';
 
 describe('whole-graph test database guard', () => {
-  it.each(['core', 'reference'] as const)(
+  it.each(['core', 'fleet'] as const)(
     'limits %s setup and cleanup to its dedicated local test database',
     (service) => {
       const name = `holita_${service}_test`;

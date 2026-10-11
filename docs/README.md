@@ -6,7 +6,7 @@ The Angular admin uses Sakai and provides standalone Tenant/Store demo login, he
 - [Architecture](architecture/overview.md): applications, persistence and request lifecycles.
 - [Development](development.md): installation, configuration, ports and local commands.
 - [Testing](testing.md): focused checks, affected CI and manual regression.
-- [Implementation index](reference.md): concrete Vehicles/Devices backend and Angular examples.
+- [Implementation index](fleet.md): concrete Vehicles/Devices backend and Angular examples.
 - [Workspace decision](architecture/decisions/0001-npm-workspaces-and-nx.md).
 - [Database ownership](architecture/decisions/0002-database-ownership.md).
 - [Schema-first federation](architecture/decisions/0003-schema-first-federation.md).

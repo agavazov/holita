@@ -1,9 +1,9 @@
 import { inject } from '@angular/core';
 import { Router, type Routes, type CanDeactivateFn } from '@angular/router';
-import type { ReferenceWorkspace } from './features/reference/reference-workspace';
+import type { FleetWorkspace } from './features/fleet/fleet-workspace';
 
 // Signed-out routes have no mounted editor; only active editors can guard navigation.
-const leaveReference: CanDeactivateFn<ReferenceWorkspace | null> = (component) =>
+const leaveFleet: CanDeactivateFn<FleetWorkspace | null> = (component) =>
   component?.canLeave() ?? true;
 
 export const routes: Routes = [
@@ -19,59 +19,48 @@ export const routes: Routes = [
       import('./features/stores/store-workspace').then((module) => module.StoreWorkspace),
     children: [
       {
-        path: 'stores/:storeId/reference/vehicles/new',
+        path: ':storeId/fleet/vehicles/new',
         data: { resource: 'vehicles', editor: true },
-        canDeactivate: [leaveReference],
+        canDeactivate: [leaveFleet],
         loadComponent: () =>
-          import('./features/reference/reference-workspace').then(
-            (module) => module.ReferenceWorkspace,
-          ),
+          import('./features/fleet/fleet-workspace').then((module) => module.FleetWorkspace),
       },
       {
-        path: 'stores/:storeId/reference/vehicles/:recordId/edit',
+        path: ':storeId/fleet/vehicles/:recordId/edit',
         data: { resource: 'vehicles', editor: true },
-        canDeactivate: [leaveReference],
+        canDeactivate: [leaveFleet],
         loadComponent: () =>
-          import('./features/reference/reference-workspace').then(
-            (module) => module.ReferenceWorkspace,
-          ),
+          import('./features/fleet/fleet-workspace').then((module) => module.FleetWorkspace),
       },
       {
-        path: 'stores/:storeId/reference/vehicles',
+        path: ':storeId/fleet/vehicles',
         data: { resource: 'vehicles', editor: false },
 
         loadComponent: () =>
-          import('./features/reference/reference-workspace').then(
-            (module) => module.ReferenceWorkspace,
-          ),
+          import('./features/fleet/fleet-workspace').then((module) => module.FleetWorkspace),
       },
       {
-        path: 'stores/:storeId/reference/devices/new',
+        path: ':storeId/fleet/devices/new',
         data: { resource: 'devices', editor: true },
-        canDeactivate: [leaveReference],
+        canDeactivate: [leaveFleet],
         loadComponent: () =>
-          import('./features/reference/reference-workspace').then(
-            (module) => module.ReferenceWorkspace,
-          ),
+          import('./features/fleet/fleet-workspace').then((module) => module.FleetWorkspace),
       },
       {
-        path: 'stores/:storeId/reference/devices/:recordId/edit',
+        path: ':storeId/fleet/devices/:recordId/edit',
         data: { resource: 'devices', editor: true },
-        canDeactivate: [leaveReference],
+        canDeactivate: [leaveFleet],
         loadComponent: () =>
-          import('./features/reference/reference-workspace').then(
-            (module) => module.ReferenceWorkspace,
-          ),
+          import('./features/fleet/fleet-workspace').then((module) => module.FleetWorkspace),
       },
       {
-        path: 'stores/:storeId/reference/devices',
+        path: ':storeId/fleet/devices',
         data: { resource: 'devices', editor: false },
 
         loadComponent: () =>
-          import('./features/reference/reference-workspace').then(
-            (module) => module.ReferenceWorkspace,
-          ),
+          import('./features/fleet/fleet-workspace').then((module) => module.FleetWorkspace),
       },
+      { path: ':storeId/reference', redirectTo: ':storeId/fleet' },
       { path: '**', redirectTo: '' },
     ],
   },

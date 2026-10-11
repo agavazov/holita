@@ -14,8 +14,8 @@ import { graphqlOptions } from '../../core/graphql/graphql-options';
 const storeA = '10000000-0000-4000-8000-000000000001';
 const storeB = '10000000-0000-4000-8000-000000000002';
 const stores = [
-  { id: storeA, name: 'Sofia' },
-  { id: storeB, name: 'Plovdiv' },
+  { id: storeA, name: 'Discordia' },
+  { id: storeB, name: 'Sandbox' },
 ];
 
 function operation(request: HttpRequest<unknown>, name: string): boolean {
@@ -31,14 +31,14 @@ function operation(request: HttpRequest<unknown>, name: string): boolean {
 function vehicles(storeId: string, name: string) {
   return {
     data: {
-      referenceVehicles: {
-        __typename: 'ReferenceVehiclePage',
+      fleetVehicles: {
+        __typename: 'FleetVehiclePage',
         total: 1,
         offset: 0,
         limit: 20,
         items: [
           {
-            __typename: 'ReferenceVehicle',
+            __typename: 'FleetVehicle',
             id: storeId.replace('1000', '2000'),
             storeId,
             licensePlate: name,
@@ -79,19 +79,19 @@ describe('Angular store routing', () => {
     expect(discovery.request.headers.has('x-store-id')).toBe(false);
     discovery.flush({ data: { stores } });
     await harness.fixture.whenStable();
-    expect(TestBed.inject(Router).url).toBe(`/en/stores/${storeA}/reference/vehicles`);
+    expect(TestBed.inject(Router).url).toBe(`/en/${storeA}/fleet/vehicles`);
     expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toBe('Vehicles');
     expect(harness.routeNativeElement?.textContent).not.toContain('Choose a store to view');
     const pendingA = http.expectOne((request) => operation(request, 'AdminVehicles'));
     expect(pendingA.request.headers.get('x-store-id')).toBe(storeA);
-    await harness.navigateByUrl(`/en/stores/${storeB}/reference/vehicles`);
+    await harness.navigateByUrl(`/en/${storeB}/fleet/vehicles`);
     expect(pendingA.cancelled).toBe(true);
     const readB = http.expectOne((request) => operation(request, 'AdminVehicles'));
     expect(readB.request.headers.get('x-store-id')).toBe(storeB);
     readB.flush(vehicles(storeB, 'B only'));
     await harness.fixture.whenStable();
     expect(harness.routeNativeElement?.textContent).toContain('B only');
-    await harness.navigateByUrl(`/en/stores/${storeA}/reference/vehicles`);
+    await harness.navigateByUrl(`/en/${storeA}/fleet/vehicles`);
     const freshA = http.expectOne((request) => operation(request, 'AdminVehicles'));
     expect(freshA.request.headers.get('x-store-id')).toBe(storeA);
     expect(harness.routeNativeElement?.textContent).not.toContain('B only');
@@ -107,12 +107,12 @@ describe('Angular store routing', () => {
     await harness.fixture.whenStable();
     expect(harness.routeNativeElement?.textContent).toContain('No stores available.');
     http.expectNone('/graphql');
-    await harness.navigateByUrl('/en/stores/not-a-uuid/reference/vehicles');
+    await harness.navigateByUrl('/en/not-a-uuid/fleet/vehicles');
     http.expectNone('/graphql');
   });
 
   it('blocks an unknown store and preserves loaded discovery on a refresh failure', async () => {
-    const harness = await RouterTestingHarness.create('/en/stores/not-a-uuid/reference/vehicles');
+    const harness = await RouterTestingHarness.create('/en/not-a-uuid/fleet/vehicles');
     http.expectOne((request) => operation(request, 'AdminStores')).flush({ data: { stores } });
     await harness.fixture.whenStable();
     expect(harness.routeNativeElement?.textContent).toContain('Store not found');
@@ -127,14 +127,14 @@ describe('Angular store routing', () => {
   });
 
   it('ignores an aborted Stores refresh after changing the workspace language', async () => {
-    const harness = await RouterTestingHarness.create('/en/stores/not-a-uuid/reference/vehicles');
+    const harness = await RouterTestingHarness.create('/en/not-a-uuid/fleet/vehicles');
     http.expectOne('/graphql').flush({ data: { stores } });
     await harness.fixture.whenStable();
     const workspace: unknown = harness.routeDebugElement?.componentInstance;
     if (!(workspace instanceof StoreWorkspace)) throw new Error('Missing workspace');
     workspace.refresh();
     const oldRefresh = http.expectOne('/graphql');
-    await harness.navigateByUrl('/bg/stores/not-a-uuid/reference/vehicles');
+    await harness.navigateByUrl('/bg/not-a-uuid/fleet/vehicles');
     expect(oldRefresh.cancelled).toBe(true);
     const discovery = http.expectOne('/graphql');
     expect(discovery.request.headers.get('Accept-Language')).toBe('bg');
@@ -147,12 +147,12 @@ describe('Angular store routing', () => {
   });
 
   it('cancels a pending Vehicles read and starts a new scoped client when the language changes', async () => {
-    const harness = await RouterTestingHarness.create(`/en/stores/${storeA}/reference/vehicles`);
+    const harness = await RouterTestingHarness.create(`/en/${storeA}/fleet/vehicles`);
     http.expectOne((request) => operation(request, 'AdminStores')).flush({ data: { stores } });
     await harness.fixture.whenStable();
     const oldRead = http.expectOne((request) => operation(request, 'AdminVehicles'));
     expect(oldRead.request.headers.get('Accept-Language')).toBe('en');
-    await harness.navigateByUrl(`/bg/stores/${storeA}/reference/vehicles`);
+    await harness.navigateByUrl(`/bg/${storeA}/fleet/vehicles`);
     expect(oldRead.cancelled).toBe(true);
     const newRead = http.expectOne((request) => operation(request, 'AdminVehicles'));
     expect(newRead.request.headers.get('x-store-id')).toBe(storeA);

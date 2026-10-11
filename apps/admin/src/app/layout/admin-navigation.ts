@@ -10,13 +10,13 @@ import { messages, type Language } from '../i18n/messages';
   template: `
     <nav [attr.aria-label]="text().navigation">
       <ul class="layout-menu">
-        @if (referenceEnabled() && storeId(); as id) {
+        @if (fleetEnabled() && storeId(); as id) {
           <li class="layout-root-menuitem">
-            <div class="layout-menuitem-root-text">{{ text().workspace }}</div>
+            <div class="layout-menuitem-root-text">{{ text().fleet }}</div>
             <ul>
               <li>
                 <a
-                  [routerLink]="['/', language(), 'stores', id, 'reference', 'vehicles']"
+                  [routerLink]="['/', language(), id, 'fleet', 'vehicles']"
                   routerLinkActive="active-route"
                   ariaCurrentWhenActive="page"
                 >
@@ -31,7 +31,7 @@ import { messages, type Language } from '../i18n/messages';
               </li>
               <li>
                 <a
-                  [routerLink]="['/', language(), 'stores', id, 'reference', 'devices']"
+                  [routerLink]="['/', language(), id, 'fleet', 'devices']"
                   routerLinkActive="active-route"
                   ariaCurrentWhenActive="page"
                 >
@@ -54,6 +54,6 @@ import { messages, type Language } from '../i18n/messages';
 export class AdminNavigation {
   readonly language = input.required<Language>();
   readonly storeId = input<string | null>(null);
-  readonly referenceEnabled = input(false);
+  readonly fleetEnabled = input(false);
   readonly text = computed(() => messages[this.language()]);
 }

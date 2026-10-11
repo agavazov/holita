@@ -10,7 +10,7 @@ import { workspaceRoot } from './contracts.mjs';
 
 const execute = promisify(execFile);
 
-export function guardedTestUrl(service: 'core' | 'reference', value: string): URL {
+export function guardedTestUrl(service: 'core' | 'fleet', value: string): URL {
   let url: URL;
   try {
     url = new URL(value);
@@ -32,7 +32,7 @@ export function guardedTestUrl(service: 'core' | 'reference', value: string): UR
   return url;
 }
 
-async function prepareDatabase(service: 'core' | 'reference') {
+async function prepareDatabase(service: 'core' | 'fleet') {
   const name = `holita_${service}_test`;
   const url = guardedTestUrl(
     service,
@@ -217,10 +217,10 @@ async function observeRequests(target: string) {
 }
 
 export async function createFederationFixture(
-  options: { adminOrigin?: string; referenceEnabled?: boolean } = {},
+  options: { adminOrigin?: string; fleetEnabled?: boolean } = {},
 ) {
   config({
-    path: [join(workspaceRoot, 'apps/core/.env'), join(workspaceRoot, 'apps/reference/.env')],
+    path: [join(workspaceRoot, 'apps/core/.env'), join(workspaceRoot, 'apps/fleet/.env')],
     quiet: true,
   });
   const cleanup: (() => Promise<void>)[] = [];
@@ -259,41 +259,41 @@ export async function createFederationFixture(
       await tenantConnection.end();
     }
 
-    const referenceDatabase = await prepareDatabase('reference');
-    cleanup.push(referenceDatabase.close);
+    const fleetDatabase = await prepareDatabase('fleet');
+    cleanup.push(fleetDatabase.close);
     let core = await startApplication('core', { CORE_DATABASE_URL: coreDatabase.url });
     cleanup.push(() => core.stop());
     const coreObserver = await observeRequests(core.url);
     cleanup.push(coreObserver.close);
-    const referencePort = await availablePort();
-    const referenceEnv = {
+    const fleetPort = await availablePort();
+    const fleetEnv = {
       ADMIN_ORIGINS: options.adminOrigin ?? 'http://127.0.0.1:11000',
       ADMIN_ORIGIN: options.adminOrigin ?? 'http://127.0.0.1:11000',
-      REFERENCE_DATABASE_URL: referenceDatabase.url,
+      FLEET_DATABASE_URL: fleetDatabase.url,
       CORE_GRAPHQL_URL: coreObserver.url,
-      REFERENCE_ENABLED: String(options.referenceEnabled ?? true),
+      FLEET_ENABLED: String(options.fleetEnabled ?? true),
     };
-    let reference = await startApplication('reference', referenceEnv, referencePort);
-    cleanup.push(() => reference.stop());
-    const referenceObserver = await observeRequests(reference.url);
-    cleanup.push(referenceObserver.close);
+    let fleet = await startApplication('fleet', fleetEnv, fleetPort);
+    cleanup.push(() => fleet.stop());
+    const fleetObserver = await observeRequests(fleet.url);
+    cleanup.push(fleetObserver.close);
     const gateway = await startApplication('gateway', {
       ADMIN_ORIGIN: options.adminOrigin ?? 'http://127.0.0.1:11000',
       CORE_GRAPHQL_URL: coreObserver.url,
-      REFERENCE_GRAPHQL_URL: referenceObserver.url,
+      FLEET_GRAPHQL_URL: fleetObserver.url,
     });
     cleanup.push(gateway.stop);
     return {
       url: gateway.url,
       coreRequests: coreObserver.requests,
-      referenceUrl: reference.url,
-      referenceRequests: referenceObserver.requests,
-      setReferenceEnabled: async (enabled: boolean) => {
-        await reference.stop();
-        reference = await startApplication(
-          'reference',
-          { ...referenceEnv, REFERENCE_ENABLED: String(enabled) },
-          reference.port,
+      fleetUrl: fleet.url,
+      fleetRequests: fleetObserver.requests,
+      setFleetEnabled: async (enabled: boolean) => {
+        await fleet.stop();
+        fleet = await startApplication(
+          'fleet',
+          { ...fleetEnv, FLEET_ENABLED: String(enabled) },
+          fleet.port,
         );
       },
       stopCore: () => core.stop(),

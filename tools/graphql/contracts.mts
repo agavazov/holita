@@ -12,17 +12,17 @@ export const subgraphs = [
     path: 'apps/core/src/stores/stores.graphql',
   },
   {
-    name: 'reference',
+    name: 'fleet',
     url: 'http://127.0.0.1:11013/graphql',
-    path: 'apps/reference/src/vehicles/vehicles.graphql',
-    additionalPaths: ['apps/reference/src/devices/devices.graphql'],
+    path: 'apps/fleet/src/vehicles/vehicles.graphql',
+    additionalPaths: ['apps/fleet/src/devices/devices.graphql'],
   },
 ];
 export const operationPaths = [
   'apps/admin/src/app/features/stores/operations.graphql',
-  'apps/admin/src/app/features/reference/vehicles/operations.graphql',
-  'apps/admin/src/app/features/reference/devices/operations.graphql',
-  'apps/reference/src/core/operations.graphql',
+  'apps/admin/src/app/features/fleet/vehicles/operations.graphql',
+  'apps/admin/src/app/features/fleet/devices/operations.graphql',
+  'apps/fleet/src/core/operations.graphql',
 ];
 
 export async function readContracts() {
