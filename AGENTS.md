@@ -52,7 +52,7 @@
 - Applications run as Node.js processes on the host. PostgreSQL is the only permitted containerized infrastructure for the foundation. Never reset databases or remove volumes to fix setup.
 - Keep configuration at the narrowest sensible scope and avoid duplicating root tooling.
 - Never commit environment files, local database files, build output, coverage, Nx caches, or generated Prisma/GraphQL clients.
-- Do not open, read, list, or search the repository's `.tmp/` directory or its contents unless explicitly instructed by the user. It contains unrelated or unnecessary code and resources, so do not use it as default task context. Exclude `.tmp/` from repository-wide searches and scans.
+- Do not enter, open, read, list, or search the repository's `.tmp/` or `.misc/` directories or their contents unless explicitly instructed by the user. They contain temporary files and reference projects and must not be used as default task context. User authorization applies only to the requested directory/files. Exclude both `.tmp/` and `.misc/` from repository-wide searches and scans.
 
 ## Documentation
 
@@ -64,7 +64,7 @@
 - Keep screenshots and other image files outside `.agents/`. Sakai comparison captures belong in Git-ignored `.references/review/`. Do not commit temporary captures or make documentation depend on their presence.
 - Verify descriptions against the code. Explain actual limitations and how to run checks; report individual test results in the task response rather than maintaining a test-run journal in documentation. Do not store credentials or private transcripts.
 - Keep shared mandatory rules here and domain-specific rules in the linked domain instructions. `CLAUDE.md` imports this guide and follows the same domain routing. Skills provide focused procedures without duplicating the guides.
-- When the user authorizes a checkpoint in `.tmp/`, update it with progress, exact check results and next steps after meaningful increments. Keep repository-wide searches outside `.tmp/`.
+- When the user authorizes a checkpoint in `.tmp/`, update it with progress, exact check results and next steps after meaningful increments. Keep repository-wide searches outside `.tmp/` and `.misc/`.
 - Current validation skill: [.agents/skills/holita-focused-validation/SKILL.md](.agents/skills/holita-focused-validation/SKILL.md).
 - Backend reference skill: [.agents/skills/holita-backend-feature/SKILL.md](.agents/skills/holita-backend-feature/SKILL.md).
 - Angular admin skill: [.agents/skills/holita-admin-development/SKILL.md](.agents/skills/holita-admin-development/SKILL.md).
