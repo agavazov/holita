@@ -1,26 +1,20 @@
 import { readAdminConfig, readGraphqlUrl } from './admin-config';
 
 describe('public Angular configuration', () => {
-  it('chooses Prototype once at startup and forces its own endpoint and basic Reference availability', () => {
+  it('retains the configured Gateway endpoint and Reference availability', () => {
     expect(
       readAdminConfig({
-        dataSource: 'mock',
-        graphqlUrl: 'https://real.example/graphql',
+        graphqlUrl: 'https://gateway.example/graphql',
         referenceEnabled: false,
         primeUiLicense: ' configured-key ',
       }),
     ).toEqual({
-      graphqlUrl: new URL('/__prototype/graphql', window.location.origin).href,
-      dataSource: 'mock',
-      referenceEnabled: true,
+      graphqlUrl: 'https://gateway.example/graphql',
+      referenceEnabled: false,
       primeUiLicense: 'configured-key',
     });
-    expect(readAdminConfig({ graphqlUrl: '/graphql' }, 'mock').dataSource).toBe('mock');
-    expect(readAdminConfig({ graphqlUrl: '/graphql', dataSource: 'graphql' }).graphqlUrl).toBe(
-      '/graphql',
-    );
-    expect(() => readAdminConfig({ graphqlUrl: '/graphql', dataSource: 'invalid' })).toThrow(
-      'dataSource',
+    expect(() => readAdminConfig({ referenceEnabled: false })).toThrow(
+      'config.json requires graphqlUrl.',
     );
   });
   it('accepts explicit Reference availability and rejects non-boolean flags', () => {

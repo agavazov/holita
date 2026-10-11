@@ -139,27 +139,6 @@ import { messages, type Language } from '../i18n/messages';
             </ul>
           </li>
         }
-        @if (prototype() && storeId(); as id) {
-          <li class="layout-root-menuitem">
-            <div class="layout-menuitem-root-text">{{ text().prototypeMode }}</div>
-            <ul>
-              <li>
-                <a
-                  [routerLink]="['/', language(), 'stores', id, 'ui-catalog']"
-                  routerLinkActive="active-route"
-                  ariaCurrentWhenActive="page"
-                  ><svg
-                    data-p-icon="box"
-                    size="20"
-                    class="layout-menuitem-icon"
-                    aria-hidden="true"
-                  ></svg>
-                  <span class="layout-menuitem-text">{{ text().catalogTitle }}</span>
-                </a>
-              </li>
-            </ul>
-          </li>
-        }
       </ul>
     </nav>
   `,
@@ -168,6 +147,5 @@ export class AdminNavigation {
   readonly language = input.required<Language>();
   readonly storeId = input<string | null>(null);
   readonly referenceEnabled = input(false);
-  readonly prototype = input(false);
   readonly text = computed(() => messages[this.language()]);
 }

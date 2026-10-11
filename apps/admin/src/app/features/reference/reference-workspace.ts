@@ -80,7 +80,6 @@ export class ReferenceWorkspace {
   });
 
   canLeave(): boolean | Promise<boolean> {
-    if (this.workspace.resetting()) return true;
     return (
       (
         this.venueEditor() ??

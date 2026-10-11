@@ -18,10 +18,6 @@
       </a>
     </div>
     @if (!mobile()) {
-      <p-tag
-        [value]="dataSource() === 'mock' ? text().prototypeMode : text().realMode"
-        [severity]="dataSource() === 'mock' ? 'warn' : 'success'"
-      />
       <ng-container [ngTemplateOutlet]="storeSelector" />
     }
     <div class="layout-topbar-actions">
@@ -52,12 +48,6 @@
   </header>
   <ng-template #storeSelector>
     <div class="store-selector">
-      @if (mobile()) {
-        <p-tag
-          [value]="dataSource() === 'mock' ? text().prototypeMode : text().realMode"
-          [severity]="dataSource() === 'mock' ? 'warn' : 'success'"
-        />
-      }
       <label for="active-store">{{ text().activeStore }}</label>
       <p-select
         inputId="active-store"
@@ -82,7 +72,6 @@
         [language]="language()"
         [storeId]="storeId()"
         [referenceEnabled]="referenceEnabled()"
-        [prototype]="dataSource() === 'mock'"
       />
     </aside>
   }
@@ -107,7 +96,6 @@
         [language]="language()"
         [storeId]="storeId()"
         [referenceEnabled]="referenceEnabled()"
-        [prototype]="dataSource() === 'mock'"
       />
     </div>
   </p-drawer>

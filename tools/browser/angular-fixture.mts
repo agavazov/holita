@@ -20,11 +20,9 @@ export async function chooseStore(page: Page, name: string): Promise<void> {
 export const test = base.extend<{
   app: { url: string; gatewayUrl: string };
   referenceEnabled: boolean;
-  dataSource: 'graphql' | 'mock';
 }>({
   referenceEnabled: [true, { option: true }],
-  dataSource: ['graphql', { option: true }],
-  app: async ({ browserName, referenceEnabled, dataSource }, use) => {
+  app: async ({ browserName, referenceEnabled }, use) => {
     if (browserName !== 'chromium') throw new Error('This focused smoke target uses Chromium.');
     const root = join(workspaceRoot, 'apps/admin/dist/browser');
     let gatewayUrl: string | undefined;
@@ -34,7 +32,7 @@ export const test = base.extend<{
         if (pathname === '/config.json') {
           if (!gatewayUrl) throw new Error('The test gateway is not ready.');
           response.writeHead(200, { 'content-type': 'application/json' });
-          response.end(JSON.stringify({ graphqlUrl: gatewayUrl, referenceEnabled, dataSource }));
+          response.end(JSON.stringify({ graphqlUrl: gatewayUrl, referenceEnabled }));
           return;
         }
         const path =
@@ -88,11 +86,6 @@ export const test = base.extend<{
       const address = server.address();
       if (!address || typeof address === 'string') throw new Error('Missing Angular fixture port.');
       const url = `http://127.0.0.1:${String(address.port)}`;
-      if (dataSource === 'mock') {
-        gatewayUrl = 'https://unavailable.example/graphql';
-        await use({ url, gatewayUrl });
-        return;
-      }
       const backend = await createFederationFixture({ adminOrigin: url, referenceEnabled });
       try {
         gatewayUrl = backend.url;

@@ -29,13 +29,11 @@
     }
   },
   "scripts": {
-    "dev": "npm run db:up && concurrently --kill-others --names gateway,core,products,reference,admin,admin-prototype --prefix-colors blue,green,yellow,cyan,red,magenta \"npm:dev:gateway\" \"npm:dev:core\" \"npm:dev:products\" \"npm:dev:reference\" \"npm:dev:admin\" \"npm:dev:admin:mock\"",
+    "dev": "npm run db:up && concurrently --kill-others --names gateway,core,products,reference,admin --prefix-colors blue,green,yellow,cyan,red \"npm:dev:gateway\" \"npm:dev:core\" \"npm:dev:products\" \"npm:dev:reference\" \"npm:dev:admin\"",
     "dev:gateway": "npm run dev --workspace @holita/gateway",
     "dev:core": "npm run dev --workspace @holita/core",
     "dev:products": "npm run dev --workspace @holita/products",
     "dev:admin": "npm run dev --workspace @holita/admin",
-    "dev:admin:graphql": "npm run dev:admin",
-    "dev:admin:mock": "npm run dev:mock --workspace @holita/admin",
     "build": "nx run-many -t build",
     "lint": "eslint .",
     "typecheck": "npm run typecheck:tools && nx run-many -t typecheck",

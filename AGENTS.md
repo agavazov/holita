@@ -72,8 +72,7 @@
   for framework conventions. Use the official PrimeNG plugin/MCP for current component APIs;
   [installation](docs/development.md#angular-agent-tools) is documented separately.
 - Keep standalone Angular and Component → concrete feature service → Apollo with generated
-  TypedDocumentNodes. Real uses the actual Gateway; Prototype supplies the implemented mock
-  transport. Do not add generic CRUD, facades, repositories, duplicate API models or mode-specific
+  TypedDocumentNodes through the actual Gateway. Do not add generic CRUD, facades, repositories, duplicate API models or duplicate
   business screens. Business editors use typed Reactive Forms.
 - Each store/language workspace owns its client/cache and immutable transport scope. Recreate
   the feature boundary on navigation, dispose reads and let submitted writes settle against
@@ -90,16 +89,6 @@
 - Keep the shell independent of business data access, with explicit inputs/outputs and only
   implemented navigation. Preserve Bulgarian/English catalogs, keyboard/mobile behavior and
   light/dark themes, with focused tests and visual review at matching viewport sizes.
-- Angular startup selects Real or Prototype once. Prototype supports Stores/Products/Venues/
-  Speakers/Tags/Vehicles/Events/Sessions/Media/History through Angular-owned MSW and the same generated documents, components and
-  concrete Apollo services. Keep its endpoint on its own origin, reject unsupported/altered
-  operations and Gateway fallback, and preserve versioned snapshots/storage failures. Confirmed
-  Reset pauses new writes, drains active/retired submissions and replaces clients/forms in the
-  current locale. Media uses native IndexedDB for finalized Blobs, byte-before-metadata writes,
-  post-await Event/Reset checks and orphan pruning. Mutations and History share one snapshot
-  write; Trash/Restore retain children/files. The lazy Sakai UI catalog is Prototype-only; guard Real before loading,
-  gate discovered stores and reset section-local previews on section/store/language navigation.
-  Catalog examples use native PrimeNG and typed forms, never business operations or persisted fixtures.
 - Angular provides Stores discovery, Products and Reference Venues/Speakers/Tags/Vehicles CRUD with page-local sequential
   deletion. Preserve referenced-Venue failures, partial results, failed-row retry and stopping
   unsent deletes on navigation; submitted writes retain their captured scope. Reference startup

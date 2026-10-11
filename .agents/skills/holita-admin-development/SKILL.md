@@ -1,6 +1,6 @@
 ---
 name: holita-admin-development
-description: Review, maintain or extend Holita's Angular admin in apps/admin using generated GraphQL contracts, Real/Prototype transports and store-scoped Apollo client lifecycles. Use for Angular UI, data access and store/route isolation work; not for backend implementation.
+description: Review, maintain or extend Holita's Angular admin in apps/admin using generated GraphQL contracts, Gateway transport and store-scoped Apollo client lifecycles. Use for Angular UI, data access and store/route isolation work; not for backend implementation.
 ---
 
 # Holita Angular admin development
@@ -33,7 +33,7 @@ references and component metadata needed by the change. See
   Initialize its scoped client once, then watch generated variables for each list query.
   [Product list helpers](../../../apps/admin/src/app/features/products/product-list-query.ts)
   own URL decoding and variable mapping. Keep applied state in the URL and text drafts local;
-  cancel debounce on navigation/reset, dispose obsolete reads and retain rows only for same-query refresh.
+  cancel debounce on navigation, dispose obsolete reads and retain rows only for same-query refresh.
   Do not let Table's controlled sort events issue feedback queries or reset bookmarked pages before a total arrives.
 - [ReferenceWorkspace](../../../apps/admin/src/app/features/reference/reference-workspace.ts)
   gates startup availability/discovered stores and keys Venues/Speakers/Tags/Events by store/language/resource/editor mode/ID.
@@ -122,31 +122,6 @@ Keep Bulgarian/English text in the catalogs and preserve loading, retry, empty a
 states. A failed refresh can coexist with previously loaded rows, so independent template
 conditions are sometimes intentional. Format Angular HTML with the repository's Angular parser.
 
-## Prototype transport
-
-Real and Prototype reuse the same feature components and concrete Apollo services.
-Startup config defaults to `graphql`; Angular's `prototype` CLI configuration forces `mock`.
-Follow [Angular Prototype](../../../docs/development.md#angular-prototype) and the owning
-`apps/admin/src/app/mocks` modules. Keep mode decisions in transport infrastructure.
-Stores/Products/Venues/Speakers/Tags/Vehicles/Events/Sessions/Media/History operations are mocked.
-Keep exact generated document matching, same-origin transport, active/trashed relation checks,
-disposable snapshot validation and visible storage errors. Mutation/History writes are atomic.
-Media stores finalized Blobs in native IndexedDB before metadata, rechecks Event/Reset after
-awaits and prunes orphan bytes at startup/Reset. Preserve ephemeral capabilities and retained
-Trash/Restore files; never claim Sharp or cross-tab parity. Confirmed Reset drains all submitted writes, including
-retired captured clients, before replacing fixtures and all client/form state in the same locale.
-Use `angular-prototype.smoke.spec.mts`, `angular-prototype-events.smoke.spec.mts` and
-`angular-prototype-media.smoke.spec.mts` with the compiled Angular fixture's `mock` option;
-it starts no backend/database. Real browser checks still require their dedicated DB setup.
-
-## Local UI catalog
-
-[UiCatalog](../../../apps/admin/src/app/features/prototype/ui-catalog/ui-catalog.ts) is
-lazy and Prototype-only. Preserve the `canMatch` gate before loading, discovered-store keys,
-URL-selected tabs and section/store/language resets. Body/Lists/Forms/States own local signals
-and typed Reactive Forms using native PrimeNG/Sakai presentation. Do not add business services,
-fixture imports, persistence or another data provider. Catalog feedback describes local examples.
-
 ## Focused verification
 
 Use [holita-focused-validation](../holita-focused-validation/SKILL.md) and native selectors:
@@ -166,7 +141,6 @@ Use [holita-focused-validation](../holita-focused-validation/SKILL.md) and nativ
 - Event atomic status/Trash/Restore, reserved Code/children, read-only Trash, paginated plain-text History and delayed actions: `npm run test:smoke:admin -- angular-lifecycle.smoke.spec.mts`.
 - Sessions real CRUD/bounds/Speakers/order/conflicts/History/retirement/Sakai: `npm run test:smoke:admin -- angular-sessions.smoke.spec.mts`; controlled API/editor/validation: `npm run test:admin -- --include="app/features/reference/sessions/*.spec.ts" --skip-nx-cache`.
 - Gallery captured API/headers/retirement/typed Alt text: `npm run test:admin -- --include=app/features/reference/media/media-api.spec.ts --skip-nx-cache`; real bytes/cancellation/finalization/order/previews/Trash/Sakai: `npm run test:smoke:admin -- angular-media.smoke.spec.mts`.
-- Catalog local previews/routing: `npm run test:admin -- --include="app/features/prototype/ui-catalog/*.spec.ts" --skip-nx-cache`; compiled local interactions/Real rejection/mobile/themes: `npm run test:smoke:admin -- angular-ui-catalog.smoke.spec.mts`.
 - Real deletion/failed-row retry/last-page correction/keyboard: `npm run test:smoke:admin -- angular-products-delete.smoke.spec.mts`.
 
 Run the relevant type/build checks; root tooling changes also require root lint/typecheck/build.

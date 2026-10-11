@@ -45,11 +45,10 @@ creation-only store checks and scoped repository calls. After the database prere
 run `npm run test:reference:db -- vehicles.db.spec.ts` for actual migrations, two-field CRUD,
 nullable Notes, foreign-ID/federation isolation and literal plate search/paging.
 
-`npm run test:admin -- --include="app/features/reference/vehicles/*.spec.ts" --include=app/mocks/vehicles.spec.ts --include=app/features/reference/reference-workspace.spec.ts --skip-nx-cache`
+`npm run test:admin -- --include="app/features/reference/vehicles/*.spec.ts" --include=app/features/reference/reference-workspace.spec.ts --skip-nx-cache`
 checks typed forms, URL mapping, per-client scope, A → B → A, delayed mutations, confirmation
-retirement, partial deletion retry and Prototype persistence/version 2 upgrade/storage failures.
-`npm run test:smoke:admin -- angular-vehicles.smoke.spec.mts` checks the compiled Real and
-Prototype CRUD, Notes clearing/reload, store isolation and Bulgarian 1280/390/320px light/dark
+retirement and partial deletion retry.
+`npm run test:smoke:admin -- angular-vehicles.smoke.spec.mts` checks compiled Angular CRUD, Notes clearing/reload, store isolation and Bulgarian 1280/390/320px light/dark
 forms/lists with long Notes. Captures remain in ignored `.references/review/vehicles`.
 
 ## Angular admin checks
@@ -57,18 +56,6 @@ forms/lists with long Notes. Captures remain in ignored `.references/review/vehi
 Use Angular CLI's native `--include` path relative to `apps/admin/src`, and `--filter` for
 case selection. Files use `.spec.ts`; use `--filter` rather than the backend runner's
 `--testNamePattern` option.
-
-Catalog routing and typed local interactions use
-`npm run test:admin -- --include="app/features/prototype/ui-catalog/*.spec.ts" --skip-nx-cache`.
-`npm run test:smoke:admin -- angular-ui-catalog.smoke.spec.mts` exercises local list menus,
-filters/paging/selection, create/edit/view/confirmed removal, first-invalid-field focus,
-pending/error drafts, A → B → A, language/reload/history resets, retained-data retries,
-dialog keyboard/focus and Bulgarian 1280/390/320px light/dark Sakai composition. Prototype
-cases use the backend-free compiled fixture, allow only surrounding Stores discovery and
-check persisted fixtures remain unchanged. The Real route-rejection case uses the existing
-guarded dedicated-database fixture; it proves the catalog chunk stays unloaded and no CRUD
-operation is submitted. Temporary visual captures live in ignored `.references/review/`.
-These presentation checks do not prove business validation or persistence contracts.
 
 ```bash
 npm run test:admin -- --include=app/core/config/admin-config.spec.ts --skip-nx-cache
@@ -145,43 +132,6 @@ minimum is invalid.
 Sequential deletion cases preserve successes, retry failures, correct the last page and stop
 unsent writes on store/language/query/editor navigation. Controlled HTTP is not backend evidence.
 
-For Angular Prototype, use:
-
-```bash
-VITEST_MAX_WORKERS=1 npm run test:admin -- --include="app/mocks/*.spec.ts" --include=app/core/config/admin-config.spec.ts --include=app/core/graphql/submitted-writes.spec.ts --skip-nx-cache
-npm run test:smoke:admin -- angular-prototype.smoke.spec.mts angular-prototype-events.smoke.spec.mts angular-prototype-media.smoke.spec.mts --skip-nx-cache
-```
-
-The same [compiled fixture](../tools/browser/angular-fixture.mts) selects `mock` before startup,
-serves an unavailable Gateway URL and disabled Real Reference flag, and starts no backend
-processes or database schemas. The Nx target still builds its declared application dependencies;
-those builds do not establish database access. The browser tests exercise the actual Sakai
-screens and Apollo/MSW transport: each basic CRUD/reload, A → B → A, exact Angular document
-matching, unsupported/altered/foreign operations, missing scope and real Gateway refusal.
-They cover storage startup/write/Reset errors, retained drafts/retry, confirmed locale/appearance
-preservation, delayed retired writes and desktop/mobile light/dark screens. State checks cover
-nullable fields, filter/sort/pagination, stable ties, literal search, uniqueness, reserved active/
-trashed Event/Session deletion links, snapshot rejection and failed-write preservation.
-The submitted-writes cases use real Apollo services with controlled HTTP to prove draining
-retired store clients, rejected writes and blocking new submissions. These tests cover local
-Prototype behavior; they do not prove backend persistence.
-
-`events.spec.ts` checks concrete conditional validation, Sofia/exact EUR, current/inactive
-relations, atomic lifecycle rollback, complete Session ordering/limits, History paging and
-shared snapshot failures. `media.spec.ts` checks byte/metadata failures and retry, idempotent
-finalization, concurrent Event changes, Reset/Trash during byte writes, canceled/reset decoding,
-capability scope/expiry/renewal, post-await preview retirement, cover/order/null clearing,
-logical removal and validation boundaries. It uses a controlled image store; the browser
-Gallery suite exercises native IndexedDB and real browser decoding.
-`angular-prototype-events.smoke.spec.mts` covers the actual typed editor/Sessions, reload,
-A → B → A, atomic scope rejection, Trash/Restore, saved program order, paged History and
-retired actions draining through Reset. `angular-prototype-media.smoke.spec.mts` covers direct
-uploads, persisted bytes after reload, independent dirty Event fields, alt/cover/order/removal,
-preview focus, native storage failure, Trash/Restore, retired finalization and canceled upload
-navigation. Its Bulgarian captures review Events, Sessions, Gallery and dialogs at matching
-1280/390/320 px in both themes, under ignored `.references/review/phase-15/`.
-No cross-tab coordination, Sharp decoder parity or service persistence is established.
-
 For the compiled application and real gateway:
 
 ```bash
@@ -207,7 +157,7 @@ npm run test:smoke:admin -- angular-media.smoke.spec.mts
 fallback and a runtime config pointing to its gateway. It reuses the guarded federation
 fixture for dedicated per-run database schemas and real backend processes. Its `referenceEnabled`
 option configures both fixture UI startup and backend availability (defaults to true). Cleanup closes
-those schemas, servers and connections. No development data or Prototype transport is used.
+those schemas, servers and connections. No development data is used.
 
 The foundation browser cases verify discovery, real store-scoped Products, A → B → A,
 route reload, Bulgarian navigation, a delayed real A response after switching to B and a
@@ -259,7 +209,7 @@ operations. Its Gallery/progress/order/
 metadata/delete/preview captures use 1280/390/320px light/dark with overflow/runtime checks.
 Reference's exact origin parsing/legacy fallback is selected with
 `npm run test:reference -- admin-origins.spec.ts`; the real browser fixture explicitly supplies
-its ephemeral origin in `ADMIN_ORIGINS`. These do not establish Angular Prototype.
+its ephemeral origin in `ADMIN_ORIGINS`.
 
 Event unit selection uses `--include="app/features/reference/events/*.spec.ts"` plus
 `--include=app/features/reference/relation-picker.spec.ts` and the Reference boundary suite.
@@ -318,7 +268,7 @@ remainder. Bulgarian confirmation runs at 320px with a long product name in both
 the same case checks error-message wrapping after a transport failure and successful failed-row retry.
 desktop partial-result and mobile confirmation captures use the same ignored output directory.
 No test invents a bulk backend API. Gallery coverage is documented in the Angular Reference
-checks above, including Real uploads and backend-free Prototype IndexedDB.
+checks above, including persisted uploads.
 These checks use Chromium, without automatic retries, and do not establish GitHub execution.
 
 For a combined presentation and startup review, use:
@@ -327,20 +277,13 @@ For a combined presentation and startup review, use:
 npm run test:smoke:admin -- angular-parity.smoke.spec.mts
 ```
 
-It checks populated lists, retained editor drafts and invalid-ID feedback in Real and
-Prototype, Bulgarian/English and light/dark, at 1280, 992, 991, 390 and 320px. Review its
-captures against the pinned Sakai source; overflow/font/padding assertions do not establish
-visual fidelity alone. The Real cases keep the dedicated database fixture; Prototype cases
-start no backend. Startup cases reject configuration or IndexedDB before bootstrap and
-verify a localized alert, matching document language and no Prototype backend requests.
-The long-label case saves valid unbroken Event/Tag labels and checks the overview and Session editor in both themes
-at desktop, 992px and 320px.
-The Prototype Gallery suite also exercises native JPEG/WebP decoding, byte persistence on
-reload and truncated-file rejection without extra rows or History. These checks do not
-establish Sharp decoder parity or cross-tab coordination.
-
-Prototype visual sweeps run one case per viewport with the native 60-second deadline,
-retaining all list/editor/Reset and Event/program/Gallery/dialog captures in both themes.
+It checks populated lists, retained editor drafts and invalid-ID feedback through the Gateway,
+Bulgarian/English and light/dark, at 1280, 992, 991, 390 and 320px. Review its captures
+against the pinned Sakai source; overflow/font/padding assertions do not establish visual
+fidelity alone. Cases use the dedicated database fixture. Startup cases reject configuration
+before bootstrap and verify a localized alert and matching document language.
+The long-label case saves valid unbroken Event/Tag labels and checks the overview and
+Session editor in both themes at desktop, 992px and 320px.
 
 ## Real PostgreSQL checks
 
@@ -442,8 +385,7 @@ Gateway's real federation suite covers concurrent scoped headers, creation-only 
 validation, forwarded field errors, disabled Reference, lifecycle/children/media and direct
 binary transfers bypassing GraphQL. Its fixture owns private media and dedicated schemas.
 Angular's controlled-HTTP suites cover form/query/cache/retired callbacks; the compiled
-browser cases prove the selected Real UI workflows. Neither component mocks nor Prototype
-storage success establishes backend persistence or federation parity.
+browser cases prove the selected Real UI workflows. Component mocks do not establish backend persistence or federation parity.
 
 ## Real browser smoke checks
 
@@ -460,34 +402,9 @@ Playwright with `tools/browser/angular.config.mts`. Native file/`--grep` selecti
 headless Chromium worker, no retries and the configured deadlines. Real cases serve the
 compiled Angular app and start fixture-owned backends on ephemeral ports with fresh
 migrated/seeded test schemas. Cleanup closes only those processes, connections and schemas.
-Prototype cases serve the same compiled app with `dataSource: mock` and start no backend
-or database. Screenshots/traces use ignored `test-results/angular-browser`; Sakai comparison
+Screenshots/traces use ignored `test-results/angular-browser`; Sakai comparison
 captures use `.references/review/`. Chromium is the configured browser; these checks do not
 establish Firefox/WebKit support or execution on GitHub.
-
-## Prototype checks
-
-After installing dependencies and Chromium, use `test:admin` with the owning mock/config/
-submitted-write file and `test:smoke:admin` with the relevant Angular Prototype file.
-No backend/database is needed by these cases. They verify exact generated-operation routing,
-versioned snapshots, storage failures, Reset draining, persisted relations/History and native
-IndexedDB bytes. See [Angular checks](#angular-admin-checks) for selectors and limitations.
-
-## Reviewing both admin modes
-
-| Capability                           | Real browser file                                                                                    | Backend-free Prototype file |
-| ------------------------------------ | ---------------------------------------------------------------------------------------------------- | --------------------------- |
-| Stores/Products/lookups and scope    | angular-foundation, angular-product-editor, angular-products-delete, angular-venues, angular-lookups | angular-prototype           |
-| Events/relations/lifecycle/History   | angular-events, angular-lifecycle                                                                    | angular-prototype-events    |
-| Sessions/order/parent isolation      | angular-sessions                                                                                     | angular-prototype-events    |
-| Gallery/upload/bytes/Reset           | angular-media                                                                                        | angular-prototype-media     |
-| Local UI catalog and Real rejection  | angular-ui-catalog                                                                                   | angular-ui-catalog          |
-| Languages/themes/breakpoints/startup | angular-parity                                                                                       | angular-parity              |
-
-Names above are `tools/browser/<name>.smoke.spec.mts`. Use native file/`--grep` selection.
-Keep Real and Prototype results distinct; controlled delayed responses test retirement,
-while actual requests still use the fixture's dedicated backend. Catalog previews do not
-issue business operations. See [startup and limits](development.md#angular-prototype).
 
 ## Current change-to-check mapping
 
@@ -509,8 +426,6 @@ issue business operations. See [startup and limits](development.md#angular-proto
 | Product form or controls                          | product-editor.spec.ts; angular-product-editor.smoke.spec.mts for submission/navigation and real persistence                                                                                                                                                                  |
 | Admin GraphQL mapping or headers                  | products-api.spec.ts and feature-local API suites; schema:check/codegen for operation edits; angular-foundation.smoke.spec.mts                                                                                                                                                |
 | Admin translation catalogs                        | messages catalogs, admin-config/store-workspace/editor cases and angular-parity.smoke.spec.mts for localized startup/presentation                                                                                                                                             |
-| Prototype transport, fixtures or persistence      | mocks/state.spec.ts, events.spec.ts, media.spec.ts and core config/submitted-writes; angular-prototype*.smoke.spec.mts and affected Real workflows                                                                                                                            |
-| UI catalog and shared presentation                | ui-catalog/*.spec.ts, angular-ui-catalog.smoke.spec.mts; affected feature forms/lists and shell checks                                                                                                                                                                        |
 | Store routes, query cache or mutation lifecycle   | products-api.spec.ts, store-workspace.spec.ts and focused angular-foundation/feature delayed-read/write browser cases                                                                                                                                                         |
 | Angular data/cache/store routing                  | test:admin with products-api.spec.ts and store-workspace.spec.ts; test:smoke:admin -- angular-foundation.smoke.spec.mts for real reads/routing                                                                                                                                |
 | Angular Products deletion                         | test:admin with products-deletion.spec.ts; test:smoke:admin -- angular-products-delete.smoke.spec.mts for real deletes/partial results/query correction and keyboard behavior                                                                                                 |

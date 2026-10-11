@@ -2,7 +2,6 @@ import { inject } from '@angular/core';
 import { Router, type Routes, type CanDeactivateFn } from '@angular/router';
 import type { StoreProducts } from './features/products/store-products';
 import type { ReferenceWorkspace } from './features/reference/reference-workspace';
-import { AdminConfig } from './core/config/admin-config';
 
 const leaveProducts: CanDeactivateFn<StoreProducts> = (component) => component.canLeave();
 const leaveReference: CanDeactivateFn<ReferenceWorkspace> = (component) => component.canLeave();
@@ -19,12 +18,6 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/stores/store-workspace').then((module) => module.StoreWorkspace),
     children: [
-      {
-        path: 'stores/:storeId/ui-catalog',
-        canMatch: [() => inject(AdminConfig).dataSource === 'mock'],
-        loadComponent: () =>
-          import('./features/prototype/ui-catalog/ui-catalog').then((module) => module.UiCatalog),
-      },
       {
         path: 'stores/:storeId/reference/events/:recordId/sessions/new',
         data: { resource: 'events', sessionEditor: true },

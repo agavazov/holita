@@ -20,32 +20,15 @@ import { requestError } from '../../core/graphql/request-error';
 import { messages, readLanguage, type Language } from '../../i18n/messages';
 import { StoresApi } from './stores-api';
 import { AdminConfig } from '../../core/config/admin-config';
-import { PROTOTYPE_RESET } from '../../core/config/prototype-reset';
-import { SubmittedWrites } from '../../core/graphql/submitted-writes';
-import { PrototypeControls } from '../prototype/prototype-controls/prototype-controls';
 
 @Component({
   selector: 'holita-store-workspace',
-  imports: [
-    RouterLink,
-    RouterOutlet,
-    AdminShell,
-    ButtonDirective,
-    Message,
-    Shop,
-    ArrowRight,
-    PrototypeControls,
-  ],
+  imports: [RouterLink, RouterOutlet, AdminShell, ButtonDirective, Message, Shop, ArrowRight],
   templateUrl: './store-workspace.html',
   styleUrl: './store-workspace.scss',
 })
 export class StoreWorkspace {
   readonly referenceEnabled = inject(AdminConfig).referenceEnabled;
-  readonly dataSource = inject(AdminConfig).dataSource;
-  private readonly resetData = inject(PROTOTYPE_RESET);
-  private readonly writes = inject(SubmittedWrites);
-  readonly resetting = signal(false);
-  readonly resetError = signal(false);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly api = inject(StoresApi);
@@ -105,12 +88,12 @@ export class StoreWorkspace {
         nextHour: text.calendarNextHour,
         prevMinute: text.calendarPreviousMinute,
         nextMinute: text.calendarNextMinute,
-        selectionMessage: text.catalogSelectionMessage,
-        emptySelectionMessage: text.catalogEmptySelection,
+        selectionMessage: text.selectedItemsMessage,
+        emptySelectionMessage: text.emptySelectionMessage,
         aria: {
           ...this.primeNG.translation.aria,
-          previous: text.catalogPreviousSection,
-          next: text.catalogNextSection,
+          previous: text.previousSection,
+          next: text.nextSection,
           firstPageLabel: text.firstPageLabel,
           prevPageLabel: text.prevPageLabel,
           nextPageLabel: text.nextPageLabel,
@@ -146,27 +129,9 @@ export class StoreWorkspace {
     });
   }
 
-  async resetPrototype(): Promise<void> {
-    if (!this.resetData || this.resetting()) return;
-    this.resetting.set(true);
-    this.resetError.set(false);
-    try {
-      await this.writes.pauseAndDrain();
-      await this.resetData();
-      await this.router.navigate(['/', this.language()]);
-      // A fresh bootstrap discards all clients, forms and retired workspaces.
-      window.location.assign('/' + this.language());
-    } catch {
-      this.writes.resume();
-      this.resetError.set(true);
-      this.resetting.set(false);
-    }
-  }
-
   chooseStore(id: string): void {
     const section = this.route.firstChild?.snapshot.url;
     const resource = section?.[3]?.path;
-    const catalog = this.dataSource === 'mock' && section?.[2]?.path === 'ui-catalog';
     const reference =
       this.referenceEnabled &&
       section?.[2]?.path === 'reference' &&
@@ -180,7 +145,7 @@ export class StoreWorkspace {
       this.language(),
       'stores',
       id,
-      ...(catalog ? ['ui-catalog'] : reference ? ['reference', resource] : ['products']),
+      ...(reference ? ['reference', resource] : ['products']),
     ]);
   }
 

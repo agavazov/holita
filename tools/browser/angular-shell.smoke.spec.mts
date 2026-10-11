@@ -182,6 +182,8 @@ test('mobile drawer traps focus, closes on Escape, backdrop, navigation and desk
   await page.keyboard.press('Shift+Tab');
   await expect(drawer.getByRole('link', { name: 'Events', exact: true })).toBeFocused();
   await page.keyboard.press('Shift+Tab');
+  await expect(drawer.getByRole('link', { name: 'Vehicles', exact: true })).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
   await expect(drawer.getByRole('link', { name: 'Tags', exact: true })).toBeFocused();
   await page.keyboard.press('Shift+Tab');
   await expect(drawer.getByRole('link', { name: 'Speakers', exact: true })).toBeFocused();
@@ -189,7 +191,7 @@ test('mobile drawer traps focus, closes on Escape, backdrop, navigation and desk
   await expect(drawer.getByRole('link', { name: 'Venues', exact: true })).toBeFocused();
   await page.keyboard.press('Shift+Tab');
   await expect(drawer.getByRole('link', { name: 'Products', exact: true })).toBeFocused();
-  for (const name of ['Venues', 'Speakers', 'Tags', 'Events']) {
+  for (const name of ['Venues', 'Speakers', 'Tags', 'Vehicles', 'Events']) {
     await page.keyboard.press('Tab');
     await expect(drawer.getByRole('link', { name, exact: true })).toBeFocused();
   }

@@ -47,10 +47,3 @@ SemiBold, Bold and ExtraBold provide the weights used by the admin.
 Copyright (c) 2010-2014 by tyPoland Lukasz Dziedzic, with Reserved Font Name Lato.
 Lato is licensed under the SIL Open Font License 1.1. The complete license is
 included in [public/fonts/lato/OFL.txt](public/fonts/lato/OFL.txt).
-
-## Prototype placeholder photos
-
-The two local Gallery fixture photos under `public/images/prototype` are served without
-remote requests. They originate from [Lorem Picsum photo 1015](https://picsum.photos/id/1015/1200/800.webp)
-and [photo 1035](https://picsum.photos/id/1035/1200/800.webp), retained from the existing holita
-Prototype assets. They are demonstration placeholders; user uploads remain browser-local.

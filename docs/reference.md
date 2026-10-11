@@ -2,8 +2,7 @@
 
 The Angular admin uses Sakai with holita branding and native PrimeNG components.
 Products is the concrete CRUD example; Reference adds relations, Events, child Sessions,
-Gallery and atomic lifecycle/History workflows. Real uses the Gateway and Prototype uses
-Angular-owned MSW behind the same generated documents and concrete Apollo services.
+Gallery and atomic lifecycle/History workflows. Angular uses the Gateway through generated documents and concrete Apollo services.
 Use the [pinned Sakai source](development.md#sakai-source-reference) for presentation,
 the feature files below for behavior and [Angular checks](testing.md#angular-admin-checks)
 for focused validation. No cross-application implementation imports are required.
@@ -11,18 +10,13 @@ for focused validation. No cross-application implementation imports are required
 ## Angular foundation
 
 [Architecture](architecture/overview.md#angular-admin-foundation) describes the separate
-Angular application with Real and Prototype modes. [Stores discovery](../apps/admin/src/app/features/stores/store-workspace.ts)
+Angular application. [Stores discovery](../apps/admin/src/app/features/stores/store-workspace.ts)
 and [Products list](../apps/admin/src/app/features/products/products-page.ts) use concrete
 feature services and generated operations against the same gateway. The
 [Sakai shell](../apps/admin/src/app/layout/admin-shell.ts) is presentation-only; its
 [navigation](../apps/admin/src/app/layout/admin-navigation.ts) and PrimeNG selectors use
 explicit inputs. [Shell browser checks](../tools/browser/angular-shell.smoke.spec.mts)
-cover desktop/mobile interaction, keyboard selection, language and themes. The Prototype-only
-[Sakai UI catalog](../apps/admin/src/app/features/prototype/ui-catalog/ui-catalog.ts) demonstrates
-native buttons/cards, local lists/menus/dialogs, typed forms and feedback states.
-[Catalog checks](../tools/browser/angular-ui-catalog.smoke.spec.mts) cover local interactions,
-store/language/section resets, persisted-data separation, Real rejection and responsive themes.
-Sakai defines shell and feature presentation. Components own their domain state and rules.
+cover desktop/mobile interaction, keyboard selection, language and themes. Sakai defines shell and feature presentation. Components own their domain state and rules.
 
 [List query helpers](../apps/admin/src/app/features/products/product-list-query.ts) and the
 [page](../apps/admin/src/app/features/products/products-page.ts) are the Angular reference for
@@ -58,27 +52,6 @@ a generic rule for Reference's related entities or transactional domain actions.
 headers, separate caches, A → B → A and late writes. The
 [compiled Angular browser checks](../tools/browser/angular-foundation.smoke.spec.mts) use real
 backend processes and dedicated databases. See [commands](testing.md#angular-admin-checks).
-
-### Angular Prototype transport
-
-[Startup/configuration](development.md#angular-prototype) selects the mode once. The
-[worker](../apps/admin/src/app/mocks/browser.ts), [exact document handlers](../apps/admin/src/app/mocks/handlers.ts)
-and [snapshot state](../apps/admin/src/app/mocks/state.ts) own Stores/Products/Venues/Speakers/Tags
-and Events/Sessions/Media/History transport and persistence. Concrete resource modules reuse
-the Angular-generated contracts and the same feature screens/Apollo services. Current
-Event/Session links protect lookup deletion, including Trash.
-[Events](../apps/admin/src/app/mocks/events.ts), [Sessions](../apps/admin/src/app/mocks/sessions.ts)
-and [History](../apps/admin/src/app/mocks/event-history.ts) preserve atomic snapshot writes.
-[Media](../apps/admin/src/app/mocks/media.ts) and [IndexedDB](../apps/admin/src/app/mocks/media-storage.ts)
-own capabilities, staged uploads, finalized bytes and orphan cleanup.
-[Submitted write tracking](../apps/admin/src/app/core/graphql/submitted-writes.ts) and the
-[store boundary](../apps/admin/src/app/features/stores/store-workspace.ts) own confirmed Reset,
-retired submission draining, locale discovery and client/form replacement.
-See [state checks](../apps/admin/src/app/mocks/state.spec.ts),
-[write lifecycle checks](../apps/admin/src/app/core/graphql/submitted-writes.spec.ts) and
-[basic browser checks](../tools/browser/angular-prototype.smoke.spec.mts),
-[Events/Sessions/History checks](../tools/browser/angular-prototype-events.smoke.spec.mts) and
-[Gallery/IndexedDB checks](../tools/browser/angular-prototype-media.smoke.spec.mts).
 
 ### Angular Reference Venues
 
@@ -182,7 +155,6 @@ rollback/retry, reserved Code/child preservation, Trash/Restore, History and del
 
 See [usage](development.md#angular-reference-sessions), [unit/browser checks](testing.md#angular-admin-checks)
 and [real browser cases](../tools/browser/angular-sessions.smoke.spec.mts). Sakai owns presentation;
-The same program/editor serves Prototype through Angular-owned operations.
 
 ### Angular Reference Gallery
 
@@ -201,18 +173,7 @@ The same program/editor serves Prototype through Angular-owned operations.
   Trash/Restore and Sakai desktop/mobile light/dark presentation.
 
 See [usage](development.md#angular-reference-gallery), [storage contract](architecture/overview.md#event-media-and-direct-uploads)
-and [validation](testing.md#angular-admin-checks). Angular Prototype exposes the same CRUD and Event/Session/Gallery/History workflows. The lazy Sakai UI catalog supplies local examples in Prototype.
-
-## UI catalog and shared components
-
-Angular's Prototype catalog uses [BodyExamples](../apps/admin/src/app/features/prototype/ui-catalog/body-examples/body-examples.ts),
-[ListExamples](../apps/admin/src/app/features/prototype/ui-catalog/list-examples/list-examples.ts),
-[FormExamples](../apps/admin/src/app/features/prototype/ui-catalog/form-examples/form-examples.ts)
-and [StateExamples](../apps/admin/src/app/features/prototype/ui-catalog/state-examples/state-examples.ts).
-These are section-local presentation examples with native PrimeNG components and Sakai spacing.
-They do not supply shared business validation, wrappers or a data provider. Lists owns its local
-paging/selection/dialogs; Forms owns typed controls, first-error focus and draft-preserving
-state previews. [Usage](development.md#ui-catalog) describes scope and resets.
+and [validation](testing.md#angular-admin-checks).
 
 ## Boundaries to preserve
 
@@ -223,8 +184,7 @@ Reuse those behaviors only where the domain requires them. Keep components → c
 feature service → generated Apollo documents, and retain each workspace/route/parent client.
 Submitted writes settle in their captured scope; obsolete reads and UI callbacks retire.
 
-Shared Reference SCSS supplies presentation. The UI catalog supplies local examples, with
-no business operations or persisted fixtures. Extract another shared component only from
+Shared Reference SCSS supplies presentation. Extract another shared component only from
 concrete reuse. Backend resolvers/services/repositories and persistence remain inside their
 owning service; see [Reference architecture](architecture/overview.md#reference-event-management)
 and [media configuration](development.md#reference-media-configuration).
@@ -236,9 +196,8 @@ store-scoped CRUD module in Reference. License Plate is required (32 code points
 Notes is optional plain text (2000 maximum), with null clearing and multiline display.
 [VehicleEditor](../apps/admin/src/app/features/reference/vehicles/vehicle-editor.ts) uses typed
 Reactive Forms and [VehiclesPage](../apps/admin/src/app/features/reference/vehicles/vehicles-page.ts)
-uses URL-backed search, sorting, paging and confirmed page-local deletion. Both Real and
-Prototype use [generated operations](../apps/admin/src/app/features/reference/vehicles/operations.graphql).
+uses URL-backed search, sorting, paging and confirmed page-local deletion. Angular uses [generated operations](../apps/admin/src/app/features/reference/vehicles/operations.graphql).
 The scoped API/editor/deletion tests exercise retired clients, A → B → A, dirty forms and
 late callbacks. [Database checks](../apps/reference/test/vehicles.db.spec.ts) cover persistence,
 null clearing, context, federation references and literal search. [Browser checks](../tools/browser/angular-vehicles.smoke.spec.mts)
-cover CRUD/reload/scoping in both modes and Bulgarian desktop/mobile light/dark presentation.
+cover CRUD/reload/scoping through the Gateway and Bulgarian desktop/mobile light/dark presentation.

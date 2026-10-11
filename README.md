@@ -8,8 +8,7 @@ Angular admin and NestJS gateway, core, products and reference services.
 Sakai is the theme and visual reference for the Angular admin in `apps/admin`, with holita
 branding and PrimeNG components. Angular provides store selection, Products and Reference Venues/Speakers/Tags/Vehicles CRUD plus Events list/editor/overview, atomic lifecycle actions, History and Event-scoped Sessions through
 the real gateway. The pinned, ignored [Sakai source](docs/development.md#sakai-source-reference)
-supplies the shell and feature presentation reference. Angular Prototype also includes a lazy
-[Sakai UI catalog](docs/development.md#ui-catalog) with local interactive examples.
+supplies the shell and feature presentation reference.
 The gateway exposes schema-first GraphQL for stores and store-scoped
 Products CRUD, including Product-to-Store federation. Core, products and reference own independent
 PostgreSQL databases, Prisma migrations, clients and repeatable seeds. All backends expose
@@ -49,28 +48,20 @@ All three lists preserve URL paging, name/activity filters and sorting; referenc
 protected from deletion, including relations retained through trashed Events.
 
 **Reference → Vehicles** provides License Plate (required) and Notes (optional textarea),
-with search, sorting, paging, creation/editing and confirmed deletion. It works in Real and
-Prototype with store-isolated data and Bulgarian/English labels.
+with search, sorting, paging, creation/editing and confirmed deletion. It uses store-isolated data and Bulgarian/English labels.
 
 **Reference → Events** provides server filters/ranges/sorting, per-store columns, a typed
 General/Schedule/Content editor, remote Venue/Tag selection and saved overview. EUR budgets
 remain exact strings; times use Europe/Sofia. Rich text supports safe formatting/web links
 and a 100 KiB UTF-8 limit. Create opens the saved editor; editing opens the overview.
-Event page-local selections support confirmed atomic Publish/Archive/Trash/Restore. Trash has a read-only overview and retains the reserved Code and children; History is paginated with localized labels and plain-text description excerpts. The Sessions tab provides typed child CRUD, remote Speakers, drag/keyboard ordering with separate Save/Cancel and a unique Speaker summary. Times use Europe/Sofia and stay within the saved Event; rejected order drafts survive until reloaded. The saved editor adds direct image uploads, cover/alt text, confirmed removal and explicit Gallery ordering; the overview provides previews. Gallery writes preserve unsaved Event fields. Angular Prototype supports these same business screens without a backend. Its lazy Sakai UI catalog provides local interactive examples.
+Event page-local selections support confirmed atomic Publish/Archive/Trash/Restore. Trash has a read-only overview and retains the reserved Code and children; History is paginated with localized labels and plain-text description excerpts. The Sessions tab provides typed child CRUD, remote Speakers, drag/keyboard ordering with separate Save/Cancel and a unique Speaker summary. Times use Europe/Sofia and stay within the saved Event; rejected order drafts survive until reloaded. The saved editor adds direct image uploads, cover/alt text, confirmed removal and explicit Gallery ordering; the overview provides previews. Gallery writes preserve unsaved Event fields.
 
 `npm run dev:admin` starts Angular alone when the backends are already running.
 The shell supports desktop/mobile navigation, Bulgarian/English and persisted light/dark themes.
-For backend-free Angular Prototype, run `npm run dev:admin:mock` and open
-[Angular Prototype](http://127.0.0.1:11001). The same Sakai screens provide Stores and
-Products/Venues/Speakers/Tags/Vehicles CRUD, Events, Sessions, Gallery and History. Records are saved
-in localStorage; finalized image files use native IndexedDB. Confirmed **Reset demo data**
-waits for submitted writes and restores fixtures in the current language. The UI catalog
-is available only in Prototype. See [configuration](docs/development.md#angular-admin-foundation) and
-[validation](docs/testing.md#angular-admin-checks).
 
 ### All applications together
 
-Prepare the databases once, then start both Angular modes and the four backends:
+Prepare the databases once, then start Angular and the four backends:
 
 ```bash
 npm run db:up
@@ -80,8 +71,7 @@ npm run db:seed
 npm run dev
 ```
 
-Open [Angular admin](http://127.0.0.1:11000),
-[Angular Prototype](http://127.0.0.1:11001).
+Open [Angular admin](http://127.0.0.1:11000).
 Gateway, core, products and reference listen on
 127.0.0.1 ports 11010, 11011, 11012 and 11013 respectively. All processes run on the host;
 PostgreSQL alone runs in Docker on 127.0.0.1:11084. Each `npm run dev` starts PostgreSQL
@@ -113,20 +103,7 @@ npm run dev:reference
 
 ## Check a change
 
-For a quick Prototype check after installation, run from the repository root:
-
-```bash
-npm run test:admin -- --include=app/mocks/state.spec.ts --skip-nx-cache
-npm exec -- playwright install --with-deps chromium
-npm run test:smoke:admin -- angular-prototype.smoke.spec.mts --grep="CRUD"
-```
-
-Install Chromium once; its Linux system dependencies may require sudo. These selected
-tests need no backend or database and start their own isolated Prototype browser instance.
-See [Prototype checks](docs/testing.md#angular-admin-checks) for capability-specific files,
-the complete Prototype browser selection and failure diagnostics.
-
-For backend and Real checks, select the relevant commands from:
+Select the relevant commands from:
 
 ```bash
 npm run test:products -- health.spec.ts

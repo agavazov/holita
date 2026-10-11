@@ -20,9 +20,8 @@ nvm installation, initialize a non-interactive shell with `. "$HOME/.nvm/nvm.sh"
 
 | Command                                           | Behavior                                                                                            |
 | ------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| npm run dev                                       | Wait for PostgreSQL in Docker, then start four backends and both Angular modes                      |
-| npm run dev:admin                                 | Angular real Stores/Products/Venues/Speakers/Tags/Vehicles/Events on port 11000                     |
-| npm run dev:admin:mock                            | Angular Prototype CRUD, Events/Sessions/Gallery/History on port 11001; no backend needed            |
+| npm run dev                                       | Wait for PostgreSQL in Docker, then start four backends and Angular                                 |
+| npm run dev:admin                                 | Angular Stores/Products/Venues/Speakers/Tags/Vehicles/Events on port 11000                          |
 | npm run dev:gateway                               | Nest gateway watcher                                                                                |
 | npm run dev:core                                  | Nest core watcher                                                                                   |
 | npm run dev:products                              | Nest products watcher                                                                               |
@@ -34,9 +33,8 @@ nvm installation, initialize a non-interactive shell with `. "$HOME/.nvm/nvm.sh"
 | npm run format:check                              | Check formatting without rewriting files                                                            |
 | npm run check:affected -- --base=BASE --head=HEAD | Lint/typecheck root tools; lint, typecheck and build affected projects using real commit references |
 
-`dev:admin` and its `dev:admin:graphql` alias start Angular. `test:admin` selects Angular
+`dev:admin` starts Angular. `test:admin` selects Angular
 unit tests; `test:smoke:admin` (also `test:smoke`) selects its real-browser foundation checks.
-`dev:admin:mock` starts Angular Prototype. Real and Prototype use separate origins and browser data.
 
 `dev` runs `db:up` before starting the application group. Docker must be running; a failed
 PostgreSQL startup prevents the applications from starting. Database setup, migrations and
@@ -53,14 +51,13 @@ Node checks and test application processes run on the runner host. CI does not d
 
 ## Ports and environment
 
-| Application             | Default         |
-| ----------------------- | --------------- |
-| admin (Angular Real)    | 127.0.0.1:11000 |
-| admin Angular Prototype | 127.0.0.1:11001 |
-| gateway                 | 127.0.0.1:11010 |
-| core                    | 127.0.0.1:11011 |
-| products                | 127.0.0.1:11012 |
-| reference               | 127.0.0.1:11013 |
+| Application     | Default         |
+| --------------- | --------------- |
+| admin (Angular) | 127.0.0.1:11000 |
+| gateway         | 127.0.0.1:11010 |
+| core            | 127.0.0.1:11011 |
+| products        | 127.0.0.1:11012 |
+| reference       | 127.0.0.1:11013 |
 
 Ports 11000–11009 are reserved for visual applications and previews; the optional Sakai
 preview uses 11002. Backends start at 11010 in the order gateway, core, products, reference.
@@ -82,8 +79,7 @@ PORT=12011 npm run dev:core
 
 After database setup/migration/seed, `npm run dev` starts the complete local group. Open
 http://127.0.0.1:11000, choose a store and open its Products list. Angular uses the real
-Gateway in Real mode. `npm run dev:admin:mock` starts Angular Prototype on port 11001,
-with Angular-owned MSW handlers and browser fixtures. The mode is selected once at startup.
+Gateway.
 Sakai is the Angular admin's theme and visual reference, including feature screens.
 Its [pinned local source](#sakai-source-reference) supplies layout, spacing and composition;
 Concrete Angular features supply contracts, validation and scoped request lifecycles.
@@ -99,10 +95,10 @@ run `npm run codegen` and `npm run schema:check`. GraphQL types are ignored gene
 not handwritten API models. Development defaults to `/bg`; `/en` selects English.
 `/bg/stores/:storeId/products` and its English equivalent retain the selected store on reload.
 The PrimeNG/Sakai shell supplies Stores/Products/enabled Reference navigation, a store selector, Bulgarian/English
-switching and light/dark themes. Desktop controls group the data mode, store selector, language and theme
+switching and light/dark themes. Desktop controls group the store selector, language and theme
 on the right of the top bar. Desktop navigation can collapse; its hidden links are removed
 from keyboard navigation. Mobile navigation opens a
-modal Drawer. Below 992px, the mode indicator and store selector occupy a second 56px header row;
+modal Drawer. Below 992px, the store selector occupy a second 56px header row;
 Sakai's 28px gutters and card padding remain. Keyboard order follows the visible controls,
 and resizing across the breakpoint preserves the selected store and editor drafts.
 Theme preference is stored as `holita.admin.theme`; denied browser storage shows
@@ -160,64 +156,6 @@ unsent deletes; the submitted write still settles against its captured client, w
 the new view. Products use plain text fields; Angular Event descriptions support rich text.
 Products have no image controls. Saved Reference Events provide the [Angular Gallery](#angular-reference-gallery).
 
-### Angular Prototype
-
-```bash
-npm run dev:admin:mock
-```
-
-Open http://127.0.0.1:11001/bg (or `/en`). No backend or database is required.
-The startup configuration selects `graphql` or `mock` once; omission defaults to Real.
-The CLI's `prototype` configuration forces `mock` through a standard environment file
-replacement. Served production builds may select it with public `dataSource: "mock"` in
-`config.json`. The existing config/license loading path remains unchanged. Prototype forces
-`/__prototype/graphql` at its own origin and enables the implemented Reference resources even when
-Real's `referenceEnabled` is false. Changing the URL or store cannot switch transport.
-MSW starts before Angular bootstrap and rejects unsupported, altered or foreign operation
-documents and requests to the real Gateway. Prototype accepts POST with the exact generated
-documents; other HTTP methods are rejected. The 47 generated Angular operations for Stores, Products, Venues, Speakers, Tags, Vehicles, Events,
-Sessions, Gallery and History are supported. Their existing components and concrete Apollo
-services work in both modes. The lazy [UI catalog](#ui-catalog) supplies local Sakai examples in Prototype.
-
-Data is a small versioned localStorage snapshot under `holita.admin.prototype.data`. A new browser/host/port starts independent fixtures. Invalid or obsolete
-snapshots are discarded; snapshot version 3 adds Vehicles and upgrades valid version 2 data in place.
-Demo data is disposable and is never imported into Real. Lookup
-uniqueness, literal search, filtering/pagination/sorting, nullable updates and store identity
-follow the same contracts. Active/trashed Events and their Sessions reserve lookup rows for
-deletion. Event validation preserves exact EUR strings, Sofia instants, paired registration
-dates, sanitized descriptions and retained inactive relations. Lifecycle actions validate the
-whole selection before one atomic snapshot write. Session ordering requires the complete
-current ID set. Each mutation and its History entries share the same write; failed writes
-leave both unchanged. Labels resolve from current lookup rows. No cross-tab coordination
-or backend persistence parity is claimed.
-Storage startup/write errors are reported, and rejected writes leave the previous snapshot intact.
-If IndexedDB or the worker cannot start, bootstrap stops with localized storage/worker guidance.
-Startup failures use an alert role and set the document's Bulgarian/English language before
-Angular mounts, so assistive technology can announce the message correctly.
-
-Gallery follows intent → binary → finalize on the same origin. Unfinished files stay in memory;
-finalized Blobs use the native IndexedDB database `holita.admin.prototype.media`, object store
-`images`, separately from metadata/History in localStorage. Files are written before metadata;
-finalization re-reads the snapshot after the asynchronous byte write and rechecks the captured
-Event and upload identity. Reset or Trash during that write cannot add media/History. Logical
-removal precedes physical cleanup; startup and Reset prune orphan bytes. Trash/Restore retain
-files. Local fixture images are served from `public/images/prototype`, without remote requests.
-Only capability headers reach the direct upload. Expired or foreign capabilities and repeated
-binary transfers fail; finalization is idempotent.
-Read links are checked again after asynchronous file reads. Validation checks JPEG/PNG/WebP
-signatures, truncation, animation markers, native decoding, 5 MiB and 20 megapixel limits. It
-has no cross-tab coordination or Sharp decoder parity and does not simulate server disk/CORS
-or the real service's persistence. Browser data never enters Real.
-
-The shell displays the localized mode and browser hint. **Reset demo data** requires confirmation,
-blocks new writes, waits for submitted mutations from active and retired clients, replaces
-fixtures for both stores, then boots discovery in the current locale with fresh clients/forms.
-A failed Reset retains the form and allows retry. Appearance preference remains separate.
-The worker script is generated with MSW and served from the admin's public assets. Use a
-loopback or HTTPS origin with browser storage and service workers enabled. For a custom port,
-use `npm run dev:mock --workspace @holita/admin -- --port 12001`.
-See [Angular checks](testing.md#angular-admin-checks) for backend-free compiled browser tests.
-
 ### Angular Reference Venues
 
 For a selected store, **Reference → Venues** opens `/reference/venues`. The list uses server
@@ -244,8 +182,7 @@ Delete require confirmation, preserve successes, report referenced-row failures 
 failed selection for retry. An emptied last page is corrected from the server total. Navigation
 stops unsent deletes; submitted writes settle against their original scope.
 
-Angular Real uses the existing Reference service; Prototype supplies the same implemented
-workflows locally. Rich text/media are not part of the Venue editor.
+Angular uses the existing Reference service through the Gateway. Rich text/media are not part of the Venue editor.
 
 ### Angular Reference Speakers, Tags and Vehicles
 
@@ -256,10 +193,8 @@ up to 2000 code points). Both are trimmed; empty Notes saves as null and can be 
 Plates retain their entered case and support different countries' formats; duplicates are
 allowed. The list has URL-backed plate search, plate sorting, server paging and confirmed
 single/page-local sequential deletion, with partial failures and retry. Notes previews retain
-line breaks and display up to three lines; the editor shows the full text. Real uses the
-Reference database through Gateway; Prototype persists Vehicles with the same operations.
-Version 2 Prototype snapshots upgrade to version 3 with an empty Vehicles collection while
-preserving their existing records and media. Reference availability and discovered-store
+line breaks and display up to three lines; the editor shows the full text. Angular uses the
+Reference database through Gateway. Reference availability and discovered-store
 checks apply to every Vehicles route.
 
 **Reference → Speakers** opens `/reference/speakers`; **Reference → Tags** opens
@@ -424,7 +359,7 @@ Session deletion is permanent and confirmed separately. Errors keep the target a
 retry; Cancel/Escape returns focus to its trigger and success focuses the program heading.
 Create/edit/delete/order changes update the saved program and initiating Event/History.
 Event Trash disables Sessions and blocks direct child reads/editors; Restore returns the
-retained program. These controls use the real API or the matching Angular Prototype operations.
+retained program. These controls use the Reference API through the Gateway.
 
 ### Angular Reference Gallery
 
@@ -566,57 +501,19 @@ npm exec -- prettier --write 'apps/admin/src/**/*.html'
 npm exec -- prettier --check 'apps/admin/src/**/*.html'
 ```
 
-## Manual Prototype review
-
-Run `npm run dev:admin:mock` and open http://127.0.0.1:11001/bg (or `/en`).
-No backend or database is needed. Confirm the Prototype indicator, select each store and
-exercise Products, Venues, Speakers, Tags and Vehicles CRUD. Reload to check browser persistence.
-Create an Event, edit its description, add a Session/Speaker and reorder the program.
-Upload an image, set cover/Alt text, reorder it and confirm that Trash/Restore retains
-children and images. Check History and then confirm Reset demo data, which waits for
-submitted writes and restores fixtures in the current locale. Review the UI catalog's
-local examples separately from saved business records. See [Angular checks](testing.md#angular-admin-checks)
-for automated workflows and the [Prototype limits](#angular-prototype).
-
-## UI catalog
-
-In Angular Prototype, choose a store, then **Prototype → UI catalog**. Open
-`/<language>/stores/<storeId>/ui-catalog` on port 11001. Real hides the menu and rejects
-this route before loading the examples or requesting a CRUD resource. The catalog loads
-on demand and mounts only for a discovered store.
-
-Its four tabs use Sakai composition and native PrimeNG components:
-
-- **Body and actions:** typography, helper text, buttons, status tags, cards and expandable details.
-- **Lists and menus:** twelve local examples with immediate text/status filters, sorting,
-  paging, page-local selection, a row menu, view/create/edit dialogs and confirmed deletion.
-- **Forms:** typed Reactive Forms with text/email/number/color/date/time, single/multiple
-  selection, checkbox, radio, activity switch and readonly fields. Validation focuses the
-  first invalid field. Saving/disabled previews block changes; failed-save previews retain
-  entered values. The summary aside is sticky on desktop and follows the fields on mobile.
-- **States and feedback:** content, loading skeleton/progress, empty, error/retry, disabled
-  actions, retained rows after refresh failure and keyboard-accessible confirmations.
-
-The selected tab is in `?tab=body|lists|forms|states` and survives reload or browser history.
-Unknown tab values show Body. Example values, selection and edits belong to the current tab
-and reset when leaving it, reloading, switching stores/languages or resetting demo data.
-Store switching stays in the catalog and opens Body. Examples do not issue business GraphQL
-operations or write browser storage; normal store discovery still runs in the surrounding
-workspace. Their validation illustrates presentation and does not prove a feature's backend rules.
-
 ## Admin translations
 
 The Angular admin uses `/bg/...` and `/en/...` routes, defaulting to Bulgarian.
 Bundled [messages](../apps/admin/src/app/i18n/messages.ts),
 [Bulgarian](../apps/admin/src/app/i18n/bg.json) and [English](../apps/admin/src/app/i18n/en.json)
-catalogs supply shell, feature, validation, confirmation, startup and Prototype text.
+catalogs supply shell, feature, validation, confirmation, startup text.
 Language navigation preserves the path/query/hash and uses the editor's dirty-state guard.
 The document language follows the URL. Each Apollo/Media client captures its language;
 requests send `Accept-Language` without changing a global header. Submitted writes retain
 their original store/language and obsolete callbacks cannot affect a newly mounted editor.
 Display formatting uses the selected locale; Event/Session/History times remain Europe/Sofia
 and EUR API amounts remain exact decimal strings. Backend messages, record content and
-saved History values are displayed as received. Prototype Reset preserves the locale/theme.
+saved History values are displayed as received.
 
 ## Reference media configuration
 
@@ -803,7 +700,7 @@ the original brief retain their original names.
 
 Dependency ownership follows the five active workspaces. Refine, MUI/Emotion, URQL,
 the Tiptap React adapter and React lint/testing adapters are absent. Angular retains Tiptap
-core/StarterKit, DOMPurify, dayjs, MSW and Vitest/jsdom; Vite remains a transitive Angular/
+core/StarterKit, DOMPurify, dayjs and Vitest/jsdom; Vite remains a transitive Angular/
 Vitest build dependency. React/react-dom and React types remain transitive dependencies of
 Prisma Studio inside the backend Prisma CLI, rather than an admin application dependency.
 Keep those tool-owned packages when pruning; `npm explain <package>` shows their owners.
@@ -839,14 +736,6 @@ this is not a production security acceptance.
 ## Troubleshooting
 
 - Missing executable or dependency: initialize Node/npm and run `npm ci` from the root.
-- Prototype shows Real or cannot discover stores through the gateway: restart with
-  `npm run dev:admin:mock` and open http://127.0.0.1:11001. `dev:admin` starts Real;
-  restart the process after changing its startup configuration.
-- Prototype cannot start its worker or browser storage: use the loopback URL above and
-  enable service workers, localStorage and IndexedDB for that site, then reload. Prototype
-  requires a secure browser context and reports denied storage access on screen.
-- Prototype edits appear missing after changing browser, host or port: browser data belongs
-  to the exact origin. Return to the original browser/origin; Real has a separate dataset.
 - Database connection refused: run `npm run db:up`; check port and service-specific URLs.
 - Missing database/role: run `db:setup` for development or `db:test:setup` for tests.
 - Missing table: run `db:migrate` for development. DB tests deploy into their own schemas.

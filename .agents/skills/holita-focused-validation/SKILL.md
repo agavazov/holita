@@ -74,15 +74,7 @@ complete order IDs and Alt text mapping. Use `test:smoke:admin -- angular-media.
 for actual persisted bytes, metadata/cover/removal, drag/order conflict/retry, independent
 Event drafts, cancellation, store/Event retirement, preview renewal, Trash/Restore and Sakai
 progress/dialog/mobile themes. Reference CORS configuration uses
-`test:reference -- admin-origins.spec.ts`. These Real checks do not prove Angular Prototype. For mock transport/storage use
-`test:admin -- --include=app/mocks/state.spec.ts`, config/submitted-writes checks and
-`test:smoke:admin -- angular-prototype.smoke.spec.mts`. Its compiled fixture starts no backend
-or database and covers CRUD/reload, scope, rejected requests, storage errors and Reset.
-Rich mock rules use `app/mocks/events.spec.ts` and `app/mocks/media.spec.ts`. Browser checks
-use `angular-prototype-events.smoke.spec.mts` for typed Events/Sessions, atomic lifecycle,
-complete ordering and paged History, and `angular-prototype-media.smoke.spec.mts` for native
-IndexedDB, metadata/cover/order/removal, Trash/Restore, retired finalization/Reset, canceled
-uploads and desktop/mobile Sakai themes. Neither establishes backend persistence.
+`test:reference -- admin-origins.spec.ts`.
 
 For Angular shell work, select `angular-shell.smoke.spec.mts` through `test:smoke:admin`
 and compare holita with the pinned [Sakai source](../../../docs/development.md#sakai-source-reference).
@@ -99,13 +91,8 @@ verification ahead of affected selection, check non-TypeScript input impact, and
 local workflow validation from an actual GitHub run. Do not dispatch full regression to
 validate a workflow edit unless the user explicitly requests that run.
 
-Angular catalog changes use `test:admin -- --include="app/features/prototype/ui-catalog/*.spec.ts"`
-and `test:smoke:admin -- angular-ui-catalog.smoke.spec.mts`. Prototype cases start no backend;
-the Real rejection case retains the dedicated DB fixture. Preserve no-business-operation and
-persisted-data assertions alongside local typed validation and section/store/language resets.
-
 For a combined Angular presentation/startup review, use
-`test:smoke:admin -- angular-parity.smoke.spec.mts`. It covers both modes/languages/themes,
-991/992px resizing with retained drafts, saved long labels in overview/child editors and localized startup alerts. Real retains dedicated
-database schemas; Prototype startup cases reject external requests. Parent overview recovery
+`test:smoke:admin -- angular-parity.smoke.spec.mts`. It covers both languages and themes,
+991/992px resizing with retained drafts, saved long labels in overview/child editors and localized startup alerts. Browser cases retain dedicated
+database schemas. Parent overview recovery
 with a dirty Session order uses `test:admin -- --include=app/features/reference/events/event-overview.spec.ts`.

@@ -1,4 +1,3 @@
-import { SubmittedWrites } from '../../../core/graphql/submitted-writes';
 import { inject, Injectable, NgZone, type OnDestroy } from '@angular/core';
 import { ApolloClient } from '@apollo/client/core';
 import { ApolloBase } from 'apollo-angular';
@@ -24,7 +23,6 @@ import {
 @Injectable()
 export class SessionsApi implements OnDestroy {
   private readonly httpLink = inject(HttpLink);
-  private readonly submittedWrites = inject(SubmittedWrites);
   private readonly config = inject(AdminConfig);
   private readonly zone = inject(NgZone);
   private apollo: ApolloBase | undefined;
@@ -41,12 +39,7 @@ export class SessionsApi implements OnDestroy {
       this.zone,
       undefined,
       new ApolloClient(
-        graphqlOptions(
-          this.httpLink,
-          this.config.graphqlUrl,
-          { storeId, language },
-          this.submittedWrites,
-        ),
+        graphqlOptions(this.httpLink, this.config.graphqlUrl, { storeId, language }),
       ),
     );
   }

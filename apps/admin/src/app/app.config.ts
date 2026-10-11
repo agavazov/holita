@@ -12,17 +12,12 @@ import {
   type AdminRuntimeConfig,
 } from './core/config/admin-config';
 import { graphqlOptions } from './core/graphql/graphql-options';
-import { PROTOTYPE_RESET } from './core/config/prototype-reset';
 import { sakaiPreset } from './layout/sakai-preset';
 
-export function appConfig(
-  config: AdminRuntimeConfig,
-  reset: (() => void | Promise<void>) | null = null,
-): ApplicationConfig {
+export function appConfig(config: AdminRuntimeConfig): ApplicationConfig {
   return {
     providers: [
       { provide: ADMIN_RUNTIME_CONFIG, useValue: config },
-      { provide: PROTOTYPE_RESET, useValue: reset },
       provideBrowserGlobalErrorListeners(),
       provideHttpClient(withInterceptors([(request, next) => next(request).pipe(timeout(10_000))])),
       providePrimeNG({

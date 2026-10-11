@@ -48,7 +48,6 @@ export class StoreProducts {
   });
 
   canLeave(): boolean | Promise<boolean> {
-    if (this.workspace.resetting()) return true;
     return this.editor()?.canLeave() ?? true;
   }
 }

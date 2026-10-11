@@ -5,13 +5,13 @@ local caching and affected selection. Each application has a package.json and a 
 project.json giving Nx its stable name and application tag. There are no shared workspace
 packages or cross-application code imports.
 
-| Application | Framework                        | Current entry points                                                                                                                                                                                                                                                                                                              |
-| ----------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| admin       | Angular, PrimeNG, Apollo Angular | PrimeNG/Sakai shell, real Stores, Products and Reference Venues/Speakers/Tags/Vehicles CRUD and Events list/editor/overview, atomic lifecycle actions, History, Event Sessions and Gallery at http://127.0.0.1:11000; the same business workflows in backend-free Prototype with local Sakai UI catalog at http://127.0.0.1:11001 |
-| gateway     | NestJS, Apollo Gateway           | /graphql and /health on 127.0.0.1:11010                                                                                                                                                                                                                                                                                           |
-| core        | NestJS, Federation 2             | /graphql (stores) and /health on 127.0.0.1:11011                                                                                                                                                                                                                                                                                  |
-| products    | NestJS, Federation 2             | /graphql (products) and /health on 127.0.0.1:11012                                                                                                                                                                                                                                                                                |
-| reference   | NestJS, Federation 2             | /graphql (events, venues, speakers, tags, vehicles) and /health on 127.0.0.1:11013                                                                                                                                                                                                                                                |
+| Application | Framework                        | Current entry points                                                                                                                                                                                                 |
+| ----------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| admin       | Angular, PrimeNG, Apollo Angular | PrimeNG/Sakai shell, real Stores, Products and Reference Venues/Speakers/Tags/Vehicles CRUD and Events list/editor/overview, atomic lifecycle actions, History, Event Sessions and Gallery at http://127.0.0.1:11000 |
+| gateway     | NestJS, Apollo Gateway           | /graphql and /health on 127.0.0.1:11010                                                                                                                                                                              |
+| core        | NestJS, Federation 2             | /graphql (stores) and /health on 127.0.0.1:11011                                                                                                                                                                     |
+| products    | NestJS, Federation 2             | /graphql (products) and /health on 127.0.0.1:11012                                                                                                                                                                   |
+| reference   | NestJS, Federation 2             | /graphql (events, venues, speakers, tags, vehicles) and /health on 127.0.0.1:11013                                                                                                                                   |
 
 Core owns store listing/lookup; products owns Products CRUD; reference owns Event, Venue, Speaker and Tag CRUD. Their concrete feature
 repositories access their own PrismaService, whose client connects lazily and disconnects
@@ -43,7 +43,7 @@ APOLLO_TELEMETRY_DISABLED setting, including automatic cloud metadata detection.
 
 Root dev scripts use the existing concurrently package to run application scripts with
 labels and group shutdown. Backend entry points validate PORT, bind to 127.0.0.1 and enable
-Nest shutdown hooks. Angular development servers bind to 127.0.0.1 on separate Real/Prototype ports. Application-local .env files can override backend ports.
+Nest shutdown hooks. The Angular development server binds to 127.0.0.1. Application-local .env files can override backend ports.
 
 ESLint's Nx boundary rule prohibits application-to-application imports. Feature code stays
 inside its application; shared test configuration is the root jest.preset.mjs, not a
@@ -70,8 +70,8 @@ the default named inputs, including root tooling and SDL/operations, and own onl
 application's generated output. Gateway's test-db builds all four backends and runs the
 whole-graph fixture from tools/graphql. It is noncached and uses dedicated test schemas.
 The admin's noncached test-smoke target includes browser tooling inputs and builds the
-admin plus the four backends. Angular serves its compiled production build. Real checks
-start isolated backends on ephemeral ports; Prototype cases start no backend or database.
+admin plus the four backends. Angular serves its compiled production build. Browser checks
+start isolated backends on ephemeral ports.
 Dev tasks are continuous and not cached.
 The Nx daemon is disabled; graph calculation runs within commands so local checks do not
 depend on a separate background process.
@@ -178,8 +178,7 @@ building and tests. PrimeNG 22, the Aura compatibility preset and the adapted Sa
 layout provide its shell and current Stores/Products/Reference presentation.
 Concrete Angular Products/Reference features supply CRUD, dirty-form, media and request-lifecycle examples.
 
-The flow is component → concrete feature service → Apollo Angular/HttpLink → existing gateway
-in Real or the admin-owned MSW endpoint in Prototype.
+The flow is component → concrete feature service → Apollo Angular/HttpLink → existing gateway.
 [StoresApi](../../apps/admin/src/app/features/stores/stores-api.ts) discovers stores without
 `x-store-id`. [ProductsApi](../../apps/admin/src/app/features/products/products-api.ts)
 uses separately generated [operations](../../apps/admin/src/app/features/products/operations.graphql)
@@ -192,8 +191,7 @@ preserves the available Products/Reference section and returns to its unfiltered
 [Bulgarian](../../apps/admin/src/app/i18n/bg.json) and [English](../../apps/admin/src/app/i18n/en.json)
 catalogs supply frontend messages. Language navigation preserves the path/query/hash;
 requests capture `Accept-Language` and a new `x-request-id`. The language is not persisted
-as independent global state. There is no authentication. Angular also supports startup-only
-Prototype for Stores/Products/Venues/Speakers/Tags/Vehicles/Events/Sessions/Media/History.
+as independent global state. There is no authentication.
 
 [StoreProducts](../../apps/admin/src/app/features/products/store-products.ts) validates the
 selection against discovery and keys the inner Products component by store/language/Product ID.
@@ -352,7 +350,7 @@ relations retained through trashed Events.
 
 [SpeakerEditor](../../apps/admin/src/app/features/reference/speakers/speaker-editor.ts) maps
 blank optional Email/biography to null and validates Email with the same Validator function
-as Real and Prototype transports. [TagEditor](../../apps/admin/src/app/features/reference/tags/tag-editor.ts)
+as the Reference service. [TagEditor](../../apps/admin/src/app/features/reference/tags/tag-editor.ts)
 validates six-digit HEX colors, shows a valid-color preview and submits lowercase values.
 Both use typed Reactive Forms, owning text limits, server-field focus and dirty navigation.
 Duplicate Tag names remain a server-owned store constraint. Only the shared list/editor SCSS
@@ -367,8 +365,7 @@ operations use the captured store without a Core request. Runtime SDL and offlin
 include the explicit Vehicles contract. [VehiclesApi](../../apps/admin/src/app/features/reference/vehicles/vehicles-api.ts)
 owns a separate Apollo client/cache for each mounted list/editor. Typed editors retire late
 callbacks; list confirmation and sequential deletion stop unsent writes when the query changes.
-Real and Prototype share the generated operations, components and Bulgarian/English catalogs.
-Prototype version 3 adds Vehicles and upgrades valid version 2 snapshots without discarding data.
+Angular uses generated operations and Bulgarian/English catalogs.
 
 [SessionsApi](../../apps/admin/src/app/features/reference/sessions/sessions-api.ts) owns
 Angular-generated Session operations and one captured store/language/Event client. Its
@@ -412,40 +409,7 @@ transfer deadline and progress. Cancellation/navigation aborts unfinished bytes 
 finalization after a late intent; submitted finalization settles in the original scope.
 Sakai cards and native PrimeNG Dialog/ProgressBar provide previews, actions and progress.
 
-Angular [startup](../../apps/admin/src/main.ts) selects the public `dataSource` once (default
-`graphql`), with a CLI environment replacement forcing `mock` for `dev:admin:mock`. It preserves
-the runtime license/config loading path and dynamically starts [MSW](../../apps/admin/src/app/mocks/browser.ts)
-before bootstrap. Prototype uses only the admin origin's `/__prototype/graphql`; its
-[handlers](../../apps/admin/src/app/mocks/handlers.ts) accept the exact generated Angular
-Stores/Products/Venues/Speakers/Tags/Vehicles/Events/Sessions/Media/History documents, including
-Apollo's typename transformation.
-Unknown/altered operations and real Gateway requests fail. Feature UI/services do not branch
-by mode. Navigation and the route boundary expose only the implemented capabilities.
-
-[State](../../apps/admin/src/app/mocks/state.ts) owns a versioned, disposable localStorage
-snapshot and Reset. Concrete resource modules own CRUD, atomic Event actions, complete-set
-Session ordering and History, sharing primitive guards. Current lookup rows supply relation
-labels; persisted Event/Session links protect deletion, including Trash. Mutations and History
-commit together. [Media](../../apps/admin/src/app/mocks/media.ts) owns ephemeral capabilities
-and the intent/binary/finalize lifecycle. [Native IndexedDB](../../apps/admin/src/app/mocks/media-storage.ts)
-stores finalized Blobs before metadata; finalization rechecks Event/Reset state after storage.
-Logical deletion precedes physical cleanup, with orphan pruning at startup/Reset. Trash/Restore
-retain bytes. Prototype also exposes the lazy Sakai UI catalog with section-local examples.
-Feature implementation stays within the Angular application.
-[SubmittedWrites](../../apps/admin/src/app/core/graphql/submitted-writes.ts) tracks mutations
-across captured clients, including retired workspaces. Confirmed Reset pauses new mutations,
-waits for settlement, replaces fixtures, then returns to locale discovery and reloads to
-replace all client/form state. Failure preserves the current form and resumes writes.
-Reset also cancels unfinished upload capabilities and prunes uploaded files.
-
-[UiCatalog](../../apps/admin/src/app/features/prototype/ui-catalog/ui-catalog.ts) is a separate
-Prototype-only lazy route guarded with `canMatch` before component loading. Discovered-store
-and language keys recreate the native PrimeNG Body/Lists/Forms/States examples; URL-backed
-tabs unmount inactive sections. Preview components own local signals and typed Reactive Forms,
-with no Apollo services, mock-state imports or browser persistence. Store switching keeps the
-catalog route and clears its tab query. Real does not mount the route or show its navigation.
-The catalog uses Sakai feature composition without importing its demo application.
-
+Angular [startup](../../apps/admin/src/main.ts) loads public configuration before bootstrap.
 Runtime [config.json](../../apps/admin/public/config.json) supplies the public GraphQL URL and
 optional boolean `referenceEnabled` (defaults to true). False hides Reference navigation and
 blocks its direct routes; it does not configure or authorize the backend.

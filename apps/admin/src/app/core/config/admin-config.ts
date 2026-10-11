@@ -4,7 +4,6 @@ export interface AdminRuntimeConfig {
   graphqlUrl: string;
   primeUiLicense?: string;
   referenceEnabled?: boolean;
-  dataSource?: 'graphql' | 'mock';
 }
 
 export const ADMIN_RUNTIME_CONFIG = new InjectionToken<AdminRuntimeConfig>('admin runtime config', {
@@ -31,44 +30,26 @@ export function readGraphqlUrl(value: unknown): string {
   return endpoint;
 }
 
-export function readAdminConfig(value: unknown, override?: 'mock'): AdminRuntimeConfig {
-  const configured =
-    typeof value === 'object' && value !== null && 'dataSource' in value
-      ? value.dataSource
-      : undefined;
-  if (configured !== undefined && configured !== 'graphql' && configured !== 'mock')
-    throw new Error('dataSource must be graphql or mock.');
-  const dataSource = override ?? configured;
-  const graphqlUrl =
-    dataSource === 'mock'
-      ? new URL('/__prototype/graphql', window.location.origin).href
-      : readGraphqlUrl(value);
-  const mode: Pick<AdminRuntimeConfig, 'dataSource'> =
-    dataSource === undefined ? {} : { dataSource };
+export function readAdminConfig(value: unknown): AdminRuntimeConfig {
+  const graphqlUrl = readGraphqlUrl(value);
   const reference =
     typeof value === 'object' && value !== null && 'referenceEnabled' in value
       ? value.referenceEnabled
       : undefined;
   if (reference !== undefined && typeof reference !== 'boolean')
     throw new Error('referenceEnabled must be a boolean.');
-  const availability =
-    dataSource === 'mock'
-      ? { referenceEnabled: true }
-      : reference === undefined
-        ? {}
-        : { referenceEnabled: reference };
+  const availability = reference === undefined ? {} : { referenceEnabled: reference };
   if (typeof value === 'object' && value !== null && 'primeUiLicense' in value) {
     if (typeof value.primeUiLicense !== 'string')
       throw new Error('primeUiLicense must be a string.');
     const primeUiLicense = value.primeUiLicense.trim();
-    return { graphqlUrl, ...availability, ...mode, ...(primeUiLicense ? { primeUiLicense } : {}) };
+    return { graphqlUrl, ...availability, ...(primeUiLicense ? { primeUiLicense } : {}) };
   }
-  return { graphqlUrl, ...availability, ...mode };
+  return { graphqlUrl, ...availability };
 }
 
 @Injectable({ providedIn: 'root' })
 export class AdminConfig {
-  readonly dataSource = inject(ADMIN_RUNTIME_CONFIG).dataSource ?? 'graphql';
   readonly graphqlUrl = inject(ADMIN_RUNTIME_CONFIG).graphqlUrl;
   readonly referenceEnabled = inject(ADMIN_RUNTIME_CONFIG).referenceEnabled ?? true;
 }

@@ -5,17 +5,8 @@
   [languageUrl]="otherLanguageUrl()"
   [loading]="loading()"
   [referenceEnabled]="referenceEnabled"
-  [dataSource]="dataSource"
   (storeSelected)="chooseStore($event)"
 >
-  @defer (when dataSource === 'mock') {
-    <holita-prototype-controls
-      [language]="language()"
-      [busy]="resetting()"
-      [failed]="resetError()"
-      (resetConfirmed)="resetPrototype()"
-    />
-  }
   @if (showDiscovery()) {
     <section class="card" [attr.aria-label]="text().storesNavigation">
       <div class="page-heading">
