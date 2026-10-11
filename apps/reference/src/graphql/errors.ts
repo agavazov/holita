@@ -7,6 +7,7 @@ import type { RequestContext } from './request-context.js';
 const logger = new Logger('GraphQL');
 const codes = new Map([
   [400, 'BAD_USER_INPUT'],
+  [401, 'UNAUTHENTICATED'],
   [404, 'NOT_FOUND'],
   [409, 'CONFLICT'],
   [503, 'SERVICE_UNAVAILABLE'],

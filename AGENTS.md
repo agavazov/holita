@@ -60,7 +60,7 @@
 - For GraphQL features, SDL defines the API. Use generated API types and explicit runtime validation rather than duplicate handwritten API models. Prisma owns persistence definitions.
 - Follow the actual [Vehicles resolver/service/repository](apps/reference/src/vehicles/vehicles.resolver.ts) and its [SDL](apps/reference/src/vehicles/vehicles.graphql). Use @Parent on a federation reference parameter when combining it with Nest parameter decorators; always resolve Vehicle/Device references through scoped service access.
 - After SDL/operation changes run codegen and schema:check. Keep generator inputs explicit, generated outputs ignored, and runtime SDL assets in builds. Regenerate/restart instead of adding dynamic discovery.
-- Vehicle/Device persistence must always include the active store. Creation gets store ID from context and checks existence through core. Do not make a store existence network call for every business read/update/delete or move that blanket check into the gateway.
+- Store access must always include the verified Tenant. Vehicle/Device persistence must always include the verified Tenant and active Store. Creation gets store ID from context and checks existence through core. Do not make a store existence network call for every business read/update/delete or move that blanket check into the gateway.
 - The explicit tenant demo login is development-only; never treat it as production authentication. Tenant identity comes from the verified session, never a caller-supplied tenant header/input. Store context is not authorization. Preserve useful diagnostics without logging secrets.
 - Keep Prisma schemas/migrations/clients inside the owning service. Review new migration SQL; never edit applied migrations or replace history with db push. Seeds insert missing fixtures without updating existing rows.
 - Use standard NestJS exceptions and avoid custom exception frameworks.
@@ -74,7 +74,7 @@
 - Keep standalone Angular and Component → concrete feature service → Apollo with generated
   TypedDocumentNodes through the actual Gateway. Do not add generic CRUD, facades, repositories, duplicate API models or duplicate
   business screens. Business editors use typed Reactive Forms.
-- Each store/language workspace owns its client/cache and immutable transport scope. Recreate
+- Each session/store/language workspace owns its client/cache and immutable transport scope. Recreate
   the feature boundary on navigation, dispose reads and let submitted writes settle against
   their captured client. Late results, invalidation and callbacks must not affect another workspace.
   Prove A → B → A and delayed reads/writes through the concrete Angular feature tests.
@@ -92,10 +92,11 @@
 - Angular provides Stores discovery and Reference Vehicles/Devices CRUD with page-local sequential
   deletion. Preserve assigned-Vehicle failures, partial results, failed-row retry and stopping
   unsent deletes on navigation; submitted writes retain their captured scope. Reference startup
-  availability gates navigation and direct routes without business requests. Store selection
-  opens Vehicles; switching Stores preserves the active Vehicles/Devices section and resets queries.
+  availability gates navigation and direct routes without business requests. Standalone login selects
+  Tenant then Store and opens Vehicles. Do not add a Store list landing page; Workspace navigation
+  contains Vehicles/Devices, and the header retains Store switching; switching Stores preserves the active Vehicles/Devices section and resets queries.
   Add another feature only when explicitly requested.
-- Devices require a 15-digit string IMEI unique per Store and a mandatory same-tenant/same-store Vehicle,
+- Devices require a 15-digit string IMEI unique per Tenant/Store and a mandatory same-tenant/same-store Vehicle,
   labeled Truck in the editor. Multiple Devices may share a Vehicle. Preserve leading zeros,
   composite foreign keys, protected Vehicle deletion and captured-client remote selection.
 

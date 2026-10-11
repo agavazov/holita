@@ -1,3 +1,4 @@
+import { DemoSession } from '../../../core/auth/demo-session';
 import { provideHttpClient, type HttpRequest } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { inject } from '@angular/core';
@@ -112,6 +113,10 @@ describe('Vehicle editor forms and route lifecycle', () => {
         provideHttpClientTesting(),
         provideApollo(() => graphqlOptions(inject(HttpLink), '/graphql')),
       ],
+    });
+    TestBed.inject(DemoSession).start({
+      token: 'test-demo-token',
+      tenant: { id: '01000000-0000-4000-8000-000000000001', name: 'RentalSofia' },
     });
     http = TestBed.inject(HttpTestingController);
     router = TestBed.inject(Router);

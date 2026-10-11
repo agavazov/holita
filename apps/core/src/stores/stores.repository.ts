@@ -5,11 +5,14 @@ import { PrismaService } from '../database/prisma.service.js';
 export class StoresRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  list() {
-    return this.prisma.client.store.findMany({ orderBy: [{ name: 'asc' }, { id: 'asc' }] });
+  list(tenantId: string) {
+    return this.prisma.client.store.findMany({
+      where: { tenantId },
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+    });
   }
 
-  find(id: string) {
-    return this.prisma.client.store.findUnique({ where: { id } });
+  find(tenantId: string, id: string) {
+    return this.prisma.client.store.findUnique({ where: { id, tenantId } });
   }
 }

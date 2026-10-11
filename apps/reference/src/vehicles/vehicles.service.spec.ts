@@ -11,7 +11,13 @@ describe('Vehicles validation and scope', () => {
   const create = jest.fn<VehiclesRepository['create']>();
   const update = jest.fn<VehiclesRepository['update']>();
   const requireStore = jest.fn<CoreClient['requireStore']>();
-  const context = { requestId: randomUUID(), storeId: randomUUID(), storeChecks: new Map() };
+  const context = {
+    requestId: randomUUID(),
+    storeId: randomUUID(),
+    tenantId: '01000000-0000-4000-8000-000000000001',
+    authorization: undefined,
+    storeChecks: new Map(),
+  };
   let service: VehiclesService;
   beforeEach(async () => {
     jest.resetAllMocks();
@@ -30,6 +36,7 @@ describe('Vehicles validation and scope', () => {
       sort: { field: 'LICENSE_PLATE', direction: 'ASC' },
     });
     expect(list).toHaveBeenLastCalledWith(
+      context.tenantId,
       context.storeId,
       0,
       20,
@@ -38,6 +45,7 @@ describe('Vehicles validation and scope', () => {
     );
     await service.list(context, {});
     expect(list).toHaveBeenLastCalledWith(
+      context.tenantId,
       context.storeId,
       0,
       20,
@@ -52,14 +60,14 @@ describe('Vehicles validation and scope', () => {
       notes: ' First line\nSecond line ',
     });
     expect(requireStore).toHaveBeenCalledWith(context.storeId, context);
-    expect(create).toHaveBeenCalledWith(context.storeId, {
+    expect(create).toHaveBeenCalledWith(context.tenantId, context.storeId, {
       licensePlate: 'CA1234AB',
       notes: 'First line\nSecond line',
     });
     requireStore.mockClear();
     const id = randomUUID();
     await service.update(context, id, { notes: null });
-    expect(update).toHaveBeenCalledWith(context.storeId, id, { notes: null });
+    expect(update).toHaveBeenCalledWith(context.tenantId, context.storeId, id, { notes: null });
     expect(requireStore).not.toHaveBeenCalled();
   });
   it.each(['', ' ', 'A'.repeat(33), 'A\u0000'])(

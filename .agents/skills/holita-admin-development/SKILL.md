@@ -17,10 +17,13 @@ PrimeNG plugin router for the relevant current workflow. Agent setup is in
   HTTP, Sakai preset and Store discovery Apollo. Public startup config selects Gateway URL,
   availability and optional private user license; validate before bootstrap.
 - [StoreWorkspace](../../../apps/admin/src/app/features/stores/store-workspace.ts) owns
-  discovery and Store/language routing. Choosing a Store opens Vehicles; switching Stores
+  authenticated discovery and session/Store/language routing. [Login](../../../apps/admin/src/app/features/auth/login.ts)
+  owns the standalone login layout and sequential Tenant/Store selection. Candidate tokens/discovery
+  retire on Tenant/language changes; only a submitted Store activates the session and opens Vehicles.
+  There is no Store list landing page; Workspace contains Vehicles/Devices and the header switches Stores; switching Stores
   preserves Vehicles/Devices and resets query context. Unknown Stores issue no business requests.
 - [ReferenceWorkspace](../../../apps/admin/src/app/features/reference/reference-workspace.ts)
-  gates availability and keys children by Store/language/resource/editor/ID. Recreate mounted
+  gates availability and keys children by session/Store/language/resource/editor/ID. Recreate mounted
   views even when Angular reuses parameterized routes. Shell components own presentation only.
 - [VehiclesPage](../../../apps/admin/src/app/features/reference/vehicles/vehicles-page.ts),
   [VehiclesApi](../../../apps/admin/src/app/features/reference/vehicles/vehicles-api.ts) and
@@ -29,11 +32,11 @@ PrimeNG plugin router for the relevant current workflow. Agent setup is in
   server-field focus, assigned-Vehicle errors and page-local sequential deletion.
 - [DevicesApi](../../../apps/admin/src/app/features/reference/devices/devices-api.ts) and
   [DeviceEditor](../../../apps/admin/src/app/features/reference/devices/device-editor.ts)
-  keep 15-digit IMEI strings and mandatory same-store Truck assignment. The existing
+  keep 15-digit IMEI strings and mandatory same-tenant/same-store Truck assignment. The existing
   [RelationPicker](../../../apps/admin/src/app/features/reference/relation-picker.ts) searches,
   pages and hydrates Vehicles through the captured Devices client; preserve read retirement.
 - [graphqlOptions](../../../apps/admin/src/app/core/graphql/graphql-options.ts) captures
-  immutable Store/language transport headers. Every mounted feature owns its Apollo client
+  immutable session/Store/language transport headers. Every mounted feature owns its Apollo client
   and InMemoryCache; headers alone do not isolate deduplication/cache.
 
 ## Preserve contracts and lifecycle
@@ -44,7 +47,7 @@ Business editors use typed Reactive Forms and resource-owned explicit mapping/va
 Dispose obsolete reads, cancel debounce and keep applied search/sort/page state in the URL.
 Retain existing rows only for same-query refresh. Do not reset a bookmarked page before totals arrive.
 
-Submitted writes retain their initiating client/Store/language; retirement lets them settle,
+Submitted writes retain their initiating client/session/Store/language; retirement lets them settle,
 invalidates only that client and suppresses obsolete callbacks. A → B → A creates fresh clients.
 Hydrate editor fields once, retain failed drafts and guard dirty unsubmitted navigation/unload.
 Disable submitted forms and prevent duplicate writes. Retire confirmation callbacks when views

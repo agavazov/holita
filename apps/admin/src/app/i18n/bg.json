@@ -1,6 +1,4 @@
 {
-  "storesNavigation": "Магазини",
-  "chooseStoreDescription": "Изберете магазин, за да видите автомобилите му.",
   "activeStore": "Магазин",
   "workspace": "Работно пространство",
   "navigation": "Навигация",
@@ -116,5 +114,13 @@
   "loadingRelations": "Зареждане на опции…",
   "noRelations": "Няма съвпадащи опции.",
   "done": "Готово",
-  "configurationError": "Неуспешно стартиране на holita. Проверете публичната конфигурация и презаредете."
+  "configurationError": "Неуспешно стартиране на holita. Проверете публичната конфигурация и презаредете.",
+  "demoLogin": "Демонстрационен вход",
+  "demoLoginDescription": "Изберете tenant и магазин, за да продължите.",
+  "tenant": "Tenant",
+  "chooseTenant": "Изберете tenant",
+  "signIn": "Вход",
+  "signOut": "Изход",
+  "emptyTenants": "Няма налични tenants.",
+  "chooseStore": "Изберете магазин"
 }

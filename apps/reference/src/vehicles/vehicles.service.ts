@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { requireTenant } from '../graphql/demo-auth.js';
 import { CoreClient } from '../core/core.client.js';
 import type {
   CreateReferenceVehicleInput,
@@ -29,6 +30,7 @@ export class VehiclesService {
     context: RequestContext,
     args: QueryReferenceVehiclesArgs,
   ): Promise<Omit<ReferenceVehiclePage, 'items'> & { items: VehicleResult[] }> {
+    const tenantId = requireTenant(context);
     const storeId = uuid(context.storeId, 'x-store-id');
     const { offset, limit } = pagination(args);
     const field: unknown = args.sort?.field ?? 'CREATED_AT';
@@ -38,6 +40,7 @@ export class VehiclesService {
     if (direction !== 'ASC' && direction !== 'DESC')
       invalid('sort.direction', 'Choose ASC or DESC.');
     return this.vehicles.list(
+      tenantId,
       storeId,
       offset,
       limit,
@@ -49,7 +52,11 @@ export class VehiclesService {
     );
   }
   async find(context: RequestContext, id: string): Promise<VehicleResult> {
-    const row = await this.vehicles.find(uuid(context.storeId, 'x-store-id'), uuid(id, 'id'));
+    const row = await this.vehicles.find(
+      requireTenant(context),
+      uuid(context.storeId, 'x-store-id'),
+      uuid(id, 'id'),
+    );
     if (!row) throw new NotFoundException('Vehicle not found');
     return row;
   }
@@ -57,6 +64,7 @@ export class VehiclesService {
     context: RequestContext,
     input: CreateReferenceVehicleInput,
   ): Promise<VehicleResult> {
+    const tenantId = requireTenant(context);
     const storeId = uuid(context.storeId, 'x-store-id');
     const data: CreateReferenceVehicleInput = {
       licensePlate: text(input.licensePlate, 'licensePlate', 32),
@@ -64,7 +72,7 @@ export class VehiclesService {
     };
     await this.core.requireStore(storeId, context);
     try {
-      return await this.vehicles.create(storeId, data);
+      return await this.vehicles.create(tenantId, storeId, data);
     } catch (error) {
       persistenceError(error, 'Vehicle');
     }
@@ -74,6 +82,7 @@ export class VehiclesService {
     id: string,
     input: UpdateReferenceVehicleInput,
   ): Promise<VehicleResult> {
+    const tenantId = requireTenant(context);
     const storeId = uuid(context.storeId, 'x-store-id'),
       recordId = uuid(id, 'id');
     const data: Partial<CreateReferenceVehicleInput> = {};
@@ -83,16 +92,17 @@ export class VehiclesService {
     if (!Object.keys(data).length)
       throw new BadRequestException('Provide at least one vehicle field to update');
     try {
-      return await this.vehicles.update(storeId, recordId, data);
+      return await this.vehicles.update(tenantId, storeId, recordId, data);
     } catch (error) {
       persistenceError(error, 'Vehicle');
     }
   }
   async delete(context: RequestContext, id: string): Promise<VehicleResult> {
+    const tenantId = requireTenant(context);
     const storeId = uuid(context.storeId, 'x-store-id'),
       recordId = uuid(id, 'id');
     try {
-      return await this.vehicles.delete(storeId, recordId);
+      return await this.vehicles.delete(tenantId, storeId, recordId);
     } catch (error) {
       persistenceError(error, 'Vehicle');
     }

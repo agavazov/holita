@@ -24,15 +24,20 @@ export class ReferenceWorkspace {
     initialValue: this.route.snapshot.paramMap,
   });
   readonly activeWorkspaces = computed(() => {
+    const sessionToken = this.workspace.session.current()?.token;
     const language = this.workspace.language();
     const id = this.params().get('storeId')?.toLowerCase();
     const store = this.workspace.stores()?.find((store) => store.id === id);
     const editor = this.route.snapshot.data['editor'] === true;
     const resource: unknown = this.route.snapshot.data['resource'];
     const recordId = this.params().get('recordId');
-    return store && this.enabled && (resource === 'vehicles' || resource === 'devices')
+    return sessionToken &&
+      store &&
+      this.enabled &&
+      (resource === 'vehicles' || resource === 'devices')
       ? [
           {
+            sessionToken,
             store,
             language,
             editor,

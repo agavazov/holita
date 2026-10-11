@@ -15,11 +15,23 @@ function record(value: unknown): Record<string, unknown> {
 }
 
 describe('Reference through the actual federation boundary', () => {
+  let token: string;
   let fixture: Awaited<ReturnType<typeof createFederationFixture>>;
   let cleanup: (() => Promise<void>) | undefined;
   beforeAll(async () => {
     fixture = await createFederationFixture();
     cleanup = fixture.close;
+    const response = await fetch(fixture.url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        query: 'mutation {demoLogin(tenantId:"01000000-0000-4000-8000-000000000001"){token}}',
+      }),
+    });
+    const body: unknown = await response.json();
+    const value = record(record(record(body).data).demoLogin).token;
+    if (typeof value !== 'string') throw new Error('Missing demo session token');
+    token = value;
   });
   afterAll(async () => {
     await cleanup?.();
@@ -29,11 +41,13 @@ describe('Reference through the actual federation boundary', () => {
     variables: Record<string, unknown> = {},
     storeId = sofia,
     url = fixture.url,
+    sessionToken = token,
   ) {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
+        authorization: `Bearer ${sessionToken}`,
         'x-store-id': storeId,
         'x-request-id': 'reference-integration',
       },
@@ -269,5 +283,87 @@ describe('Reference through the actual federation boundary', () => {
     } finally {
       await fixture.restartCore();
     }
+  });
+  it('requires verified sessions and isolates tenants through Gateway and direct federation entities', async () => {
+    const publicRequest = await fetch(fixture.url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ query: '{tenants{name}}' }),
+    });
+    expect(await publicRequest.json()).toMatchObject({
+      data: {
+        tenants: expect.arrayContaining([{ name: 'RentalSofia' }, { name: 'Isolation tenant' }]),
+      },
+    });
+    const login = await query(
+      'mutation {demoLogin(tenantId:"01000000-0000-4000-8000-000000000002"){token}}',
+    );
+    const otherToken = record(record(record(login).data).demoLogin).token;
+    if (typeof otherToken !== 'string') throw new Error('Missing second tenant session');
+    expect(await query('{stores{id name}}', {}, sofia, fixture.url, otherToken)).toEqual({
+      data: { stores: [{ id: '10000000-0000-4000-8000-000000000003', name: 'Isolation store' }] },
+    });
+    const created = await query(
+      'mutation {createReferenceVehicle(input:{licensePlate:"TENANT-PRIVATE"}){id}}',
+    );
+    const id = record(record(record(created).data).createReferenceVehicle).id;
+    if (typeof id !== 'string') throw new Error('Missing tenant Vehicle ID');
+    for (const source of [
+      'query($id:ID!){referenceVehicle(id:$id){id}}',
+      'mutation($id:ID!){updateReferenceVehicle(id:$id,input:{notes:"Spoofed"}){id}}',
+      'mutation($id:ID!){deleteReferenceVehicle(id:$id){id}}',
+    ])
+      expect(await query(source, { id }, sofia, fixture.url, otherToken)).toMatchObject({
+        errors: [{ extensions: { code: 'NOT_FOUND' } }],
+      });
+    expect(
+      await query(
+        'mutation {createReferenceVehicle(input:{licensePlate:"WRONG-STORE"}){id}}',
+        {},
+        sofia,
+        fixture.url,
+        otherToken,
+      ),
+    ).toMatchObject({ errors: [{ extensions: { code: 'NOT_FOUND' } }] });
+    const entities =
+      'query($refs:[_Any!]!){_entities(representations:$refs){...on ReferenceVehicle{id}}}';
+    expect(
+      await query(
+        entities,
+        {
+          refs: [
+            {
+              __typename: 'ReferenceVehicle',
+              id,
+              tenantId: '01000000-0000-4000-8000-000000000002',
+            },
+          ],
+        },
+        sofia,
+        fixture.referenceUrl,
+        otherToken,
+      ),
+    ).toMatchObject({ errors: [{ extensions: { code: 'NOT_FOUND' } }] });
+    for (const target of [fixture.url, fixture.referenceUrl]) {
+      for (const authorization of [
+        undefined,
+        `Bearer ${token.replace('000000000001', '000000000002')}`,
+      ]) {
+        const response = await fetch(target, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-store-id': sofia,
+            'x-tenant-id': '01000000-0000-4000-8000-000000000001',
+            ...(authorization ? { authorization } : {}),
+          },
+          body: JSON.stringify({ query: '{referenceVehicles{total}}' }),
+        });
+        expect(await response.json()).toMatchObject({
+          errors: [{ extensions: { code: 'UNAUTHENTICATED' } }],
+        });
+      }
+    }
+    await query('mutation($id:ID!){deleteReferenceVehicle(id:$id){id}}', { id });
   });
 });

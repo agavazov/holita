@@ -3,10 +3,12 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, jest } from '@je
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import { AppModule } from '../src/app.module.js';
+import { issueDemoToken } from '../src/graphql/demo-auth.js';
 import { CoreClient } from '../src/core/core.client.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { createTestDatabase } from './test-database.js';
 
+const tenantId = '01000000-0000-4000-8000-000000000001';
 const create =
   'mutation($input:CreateReferenceDeviceInput!){createReferenceDevice(input:$input){id storeId imei vehicleId vehicle{id licensePlate}}}';
 const read =
@@ -43,11 +45,17 @@ describe('Device GraphQL with PostgreSQL', () => {
       await closeDatabase?.();
     }
   });
-  async function query(source: string, variables: Record<string, unknown>, storeId?: string) {
+  async function query(
+    source: string,
+    variables: Record<string, unknown>,
+    storeId?: string,
+    scopeTenantId = tenantId,
+  ) {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
+        authorization: `Bearer ${issueDemoToken(scopeTenantId)}`,
         ...(storeId ? { 'x-store-id': storeId } : {}),
       },
       body: JSON.stringify({ query: source, variables }),
@@ -57,7 +65,7 @@ describe('Device GraphQL with PostgreSQL', () => {
     return body;
   }
   async function truck(storeId: string, licensePlate = 'CA1234AB') {
-    return database.client.vehicle.create({ data: { storeId, licensePlate } });
+    return database.client.vehicle.create({ data: { tenantId, storeId, licensePlate } });
   }
   it('persists leading zeros, allows multiple devices, reassigns and protects referenced trucks', async () => {
     const storeId = randomUUID();
@@ -122,10 +130,10 @@ describe('Device GraphQL with PostgreSQL', () => {
     const vehicle = await truck(storeId),
       other = await truck(foreign);
     const a = await database.client.device.create({
-      data: { storeId, vehicleId: vehicle.id, imei: '123456789012345' },
+      data: { tenantId, storeId, vehicleId: vehicle.id, imei: '123456789012345' },
     });
     const b = await database.client.device.create({
-      data: { storeId, vehicleId: vehicle.id, imei: '123456789012346' },
+      data: { tenantId, storeId, vehicleId: vehicle.id, imei: '123456789012346' },
     });
     for (const [source, variables] of [
       [create, { input: { imei: a.imei, vehicleId: vehicle.id } }],
@@ -145,7 +153,7 @@ describe('Device GraphQL with PostgreSQL', () => {
     const own = await truck(storeId),
       foreign = await truck(randomUUID());
     const row = await database.client.device.create({
-      data: { storeId, vehicleId: own.id, imei: '123456789012345' },
+      data: { tenantId, storeId, vehicleId: own.id, imei: '123456789012345' },
     });
     expect(
       await query(create, { input: { imei: '123456789012346', vehicleId: foreign.id } }, storeId),
@@ -155,7 +163,7 @@ describe('Device GraphQL with PostgreSQL', () => {
     ).toMatchObject({ errors: [{ extensions: { fieldErrors: [{ path: 'vehicleId' }] } }] });
     await expect(
       database.client.device.create({
-        data: { storeId, vehicleId: foreign.id, imei: '123456789012347' },
+        data: { tenantId, storeId, vehicleId: foreign.id, imei: '123456789012347' },
       }),
     ).rejects.toMatchObject({ code: 'P2003' });
     expect(await database.client.device.findUnique({ where: { id: row.id, storeId } })).toEqual(
@@ -168,7 +176,7 @@ describe('Device GraphQL with PostgreSQL', () => {
       foreign = randomUUID();
     const vehicle = await truck(storeId);
     const row = await database.client.device.create({
-      data: { storeId, vehicleId: vehicle.id, imei: '123456789012345' },
+      data: { tenantId, storeId, vehicleId: vehicle.id, imei: '123456789012345' },
     });
     for (const source of [read, update, remove])
       expect(
@@ -228,7 +236,7 @@ describe('Device GraphQL with PostgreSQL', () => {
       [storeId, own.id, '991234567890125'],
       [foreign, other.id, '001234567890123'],
     ] satisfies [string, string, string][])
-      await database.client.device.create({ data: { storeId: scope, vehicleId, imei } });
+      await database.client.device.create({ data: { tenantId, storeId: scope, vehicleId, imei } });
     const source =
       'query($search:String,$offset:Int!,$ids:[ID!]){referenceDevices(search:$search,offset:$offset,limit:1,ids:$ids,sort:{field:IMEI,direction:ASC}){items{imei vehicle{licensePlate}}total}}';
     expect(await query(source, { search: '001', offset: 1 }, storeId)).toEqual({
@@ -248,5 +256,50 @@ describe('Device GraphQL with PostgreSQL', () => {
     expect(await query(source, { offset: 0, ids: [foreignDevice.id] }, storeId)).toEqual({
       data: { referenceDevices: { items: [], total: 0 } },
     });
+  });
+  it('isolates tenants even when the supplied store ID and IMEI are identical', async () => {
+    const storeId = randomUUID(),
+      otherTenant = randomUUID();
+    const own = await truck(storeId);
+    const foreign = await database.client.vehicle.create({
+      data: { tenantId: otherTenant, storeId, licensePlate: 'OTHER TENANT' },
+    });
+    const device = await database.client.device.create({
+      data: { tenantId, storeId, vehicleId: own.id, imei: '001234567890999' },
+    });
+    await database.client.device.create({
+      data: { tenantId: otherTenant, storeId, vehicleId: foreign.id, imei: device.imei },
+    });
+    expect(await query('{referenceDevices{items{id}total}}', {}, storeId)).toEqual({
+      data: { referenceDevices: { items: [{ id: device.id }], total: 1 } },
+    });
+    for (const source of [read, update, remove])
+      expect(
+        await query(
+          source,
+          { id: device.id, input: { imei: '001234567890998' } },
+          storeId,
+          otherTenant,
+        ),
+      ).toMatchObject({ errors: [{ extensions: { code: 'NOT_FOUND' } }] });
+    expect(
+      await query(create, { input: { imei: '001234567890997', vehicleId: foreign.id } }, storeId),
+    ).toMatchObject({ errors: [{ extensions: { fieldErrors: [{ path: 'vehicleId' }] } }] });
+    await expect(
+      database.client.device.create({
+        data: { tenantId, storeId, vehicleId: foreign.id, imei: '001234567890996' },
+      }),
+    ).rejects.toMatchObject({ code: 'P2003' });
+    expect(await database.client.device.findUnique({ where: { id: device.id } })).toEqual(device);
+    const entities =
+      'query($refs:[_Any!]!){_entities(representations:$refs){...on ReferenceVehicle{id}}}';
+    expect(
+      await query(
+        entities,
+        { refs: [{ __typename: 'ReferenceVehicle', id: own.id, tenantId: otherTenant }] },
+        storeId,
+        otherTenant,
+      ),
+    ).toMatchObject({ errors: [{ extensions: { code: 'NOT_FOUND' } }] });
   });
 });

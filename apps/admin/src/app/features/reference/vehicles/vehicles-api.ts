@@ -3,6 +3,7 @@ import { ApolloClient } from '@apollo/client/core';
 import { ApolloBase } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
 import { firstValueFrom } from 'rxjs';
+import { DemoSession } from '../../../core/auth/demo-session';
 import { AdminConfig } from '../../../core/config/admin-config';
 import { graphqlOptions } from '../../../core/graphql/graphql-options';
 import type { Language } from '../../../i18n/messages';
@@ -21,6 +22,7 @@ import {
 @Injectable()
 export class VehiclesApi implements OnDestroy {
   private readonly httpLink = inject(HttpLink);
+  private readonly session = inject(DemoSession);
   private readonly config = inject(AdminConfig);
   private readonly zone = inject(NgZone);
   private apollo: ApolloBase | undefined;
@@ -31,7 +33,12 @@ export class VehiclesApi implements OnDestroy {
     if (this.apollo || this.destroyed)
       throw new Error('VehiclesApi belongs to one store workspace.');
     const client = new ApolloClient(
-      graphqlOptions(this.httpLink, this.config.graphqlUrl, { storeId, language }),
+      graphqlOptions(
+        this.httpLink,
+        this.config.graphqlUrl,
+        { storeId, language },
+        this.session.capture(),
+      ),
     );
     this.apollo = new ApolloBase(this.zone, undefined, client);
   }

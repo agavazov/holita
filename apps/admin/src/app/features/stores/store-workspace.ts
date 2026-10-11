@@ -1,33 +1,27 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import {
-  ActivatedRoute,
-  Router,
-  RouterLink,
-  NavigationEnd,
-  RouterOutlet,
-  UrlSegment,
-} from '@angular/router';
+import { ActivatedRoute, Router, NavigationEnd, RouterOutlet, UrlSegment } from '@angular/router';
 import { filter } from 'rxjs';
 import { ButtonDirective } from 'primeng/button';
 import { Message } from 'primeng/message';
 import { PrimeNG } from 'primeng/config';
-import { Shop } from '@primeicons/angular/shop';
-import { ArrowRight } from '@primeicons/angular/arrow-right';
 import { AdminShell } from '../../layout/admin-shell';
 import type { AdminStoresQuery } from '../../../generated/graphql/operations';
 import { requestError } from '../../core/graphql/request-error';
 import { messages, readLanguage, type Language } from '../../i18n/messages';
 import { StoresApi } from './stores-api';
+import { DemoSession } from '../../core/auth/demo-session';
+import type { AdminDemoLoginMutation } from '../../../generated/graphql/operations';
+import { Login } from '../auth/login';
 import { AdminConfig } from '../../core/config/admin-config';
 
 @Component({
   selector: 'holita-store-workspace',
-  imports: [RouterLink, RouterOutlet, AdminShell, ButtonDirective, Message, Shop, ArrowRight],
+  imports: [RouterOutlet, AdminShell, ButtonDirective, Message, Login],
   templateUrl: './store-workspace.html',
-  styleUrl: './store-workspace.scss',
 })
 export class StoreWorkspace {
+  readonly session = inject(DemoSession);
   readonly referenceEnabled = inject(AdminConfig).referenceEnabled;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -36,7 +30,9 @@ export class StoreWorkspace {
   private readonly params = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
   });
-  private query: ReturnType<StoresApi['watch']> | undefined;
+  private signingOut = false;
+  private discoveryToken: string | null = null;
+  private query: ReturnType<StoresApi['watch']>['query'] | undefined;
   private readonly navigation = toSignal(
     this.router.events.pipe(filter((event) => event instanceof NavigationEnd)),
   );
@@ -46,14 +42,6 @@ export class StoreWorkspace {
   readonly loading = signal(true);
   readonly error = signal<unknown>(null);
   readonly failure = computed(() => requestError(this.error(), this.text().networkError));
-  readonly onStoreList = computed(() => {
-    this.navigation();
-    return !this.route.firstChild;
-  });
-  readonly showDiscovery = computed(
-    () =>
-      this.onStoreList() || this.stores() === null || this.stores()?.length === 0 || !!this.error(),
-  );
   readonly storesAvailable = computed(() => (this.stores()?.length ?? 0) > 0);
   readonly selectedStoreId = computed(() => {
     this.navigation();
@@ -85,7 +73,15 @@ export class StoreWorkspace {
           rowsPerPageLabel: text.rowsPerPageLabel,
         },
       });
-      const query = this.api.watch(language);
+      const session = this.session.current();
+      if ((session?.token ?? null) !== this.discoveryToken) {
+        this.stores.set(null);
+        this.discoveryToken = session?.token ?? null;
+      }
+      if (!session) return;
+      this.loading.set(true);
+      this.error.set(null);
+      const { query, close } = this.api.watch(language);
       this.query = query;
       const subscription = query.valueChanges.subscribe({
         next: (result) => {
@@ -100,9 +96,59 @@ export class StoreWorkspace {
       });
       onCleanup(() => {
         subscription.unsubscribe();
+        close();
         this.query = undefined;
       });
     });
+    effect(() => {
+      this.navigation();
+      const stores = this.stores();
+      const selected = this.selectedStoreId();
+      if (this.session.current() && stores?.length) {
+        if (selected) this.session.selectStore(selected);
+        else if (!this.route.firstChild && !this.signingOut) {
+          const store = stores.find((store) => store.id === this.session.storeId()) ?? stores[0];
+          if (store)
+            void this.router.navigate(
+              ['/', this.language(), 'stores', store.id, 'reference', 'vehicles'],
+              { replaceUrl: true },
+            );
+        }
+      }
+    });
+  }
+
+  async enter(selection: {
+    session: AdminDemoLoginMutation['demoLogin'];
+    storeId: string;
+  }): Promise<void> {
+    const destination = this.router.createUrlTree([
+      '/',
+      this.language(),
+      'stores',
+      selection.storeId,
+      'reference',
+      'vehicles',
+    ]);
+    if (
+      this.router.url === this.router.serializeUrl(destination) ||
+      (await this.router.navigateByUrl(destination))
+    ) {
+      this.session.start(selection.session, selection.storeId);
+    }
+  }
+
+  async logout(): Promise<void> {
+    // Route navigation runs the dirty-editor guard before retiring the session.
+    this.signingOut = true;
+    try {
+      if (await this.router.navigate(['/', this.language()])) {
+        this.stores.set(null);
+        this.session.logout();
+      }
+    } finally {
+      this.signingOut = false;
+    }
   }
 
   refresh(): void {

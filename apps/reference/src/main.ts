@@ -18,7 +18,13 @@ async function bootstrap(): Promise<void> {
   app.enableCors({
     origin: origins,
     methods: ['POST', 'OPTIONS'],
-    allowedHeaders: ['content-type', 'x-store-id', 'x-request-id', 'accept-language'],
+    allowedHeaders: [
+      'authorization',
+      'content-type',
+      'x-store-id',
+      'x-request-id',
+      'accept-language',
+    ],
     exposedHeaders: ['x-request-id'],
   });
   app.enableShutdownHooks();

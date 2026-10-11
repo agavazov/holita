@@ -13,7 +13,13 @@ describe('Devices validation and scope', () => {
   const update = jest.fn<DevicesRepository['update']>();
   const findVehicle = jest.fn<DevicesRepository['findVehicle']>();
   const requireStore = jest.fn<CoreClient['requireStore']>();
-  const context = { requestId: randomUUID(), storeId: randomUUID(), storeChecks: new Map() };
+  const context = {
+    requestId: randomUUID(),
+    storeId: randomUUID(),
+    tenantId: '01000000-0000-4000-8000-000000000001',
+    authorization: undefined,
+    storeChecks: new Map(),
+  };
   const vehicleId = randomUUID();
   let service: DevicesService;
   beforeEach(async () => {
@@ -28,6 +34,7 @@ describe('Devices validation and scope', () => {
     jest.resetAllMocks();
     findVehicle.mockResolvedValue({
       id: vehicleId,
+      tenantId: context.tenantId,
       storeId: context.storeId,
       licensePlate: 'CA1234AB',
       notes: null,
@@ -38,6 +45,7 @@ describe('Devices validation and scope', () => {
   it('normalizes filters and validates paging without checking Core', async () => {
     await service.list(context, { search: ' 001 ', sort: { field: 'IMEI', direction: 'ASC' } });
     expect(list).toHaveBeenCalledWith(
+      context.tenantId,
       context.storeId,
       0,
       20,
@@ -50,9 +58,12 @@ describe('Devices validation and scope', () => {
   });
   it('preserves leading zeros and checks the same-store vehicle before creation', async () => {
     await service.create(context, { imei: ' 001234567890123 ', vehicleId });
-    expect(findVehicle).toHaveBeenCalledWith(context.storeId, vehicleId);
+    expect(findVehicle).toHaveBeenCalledWith(context.tenantId, context.storeId, vehicleId);
     expect(requireStore).toHaveBeenCalledWith(context.storeId, context);
-    expect(create).toHaveBeenCalledWith(context.storeId, { imei: '001234567890123', vehicleId });
+    expect(create).toHaveBeenCalledWith(context.tenantId, context.storeId, {
+      imei: '001234567890123',
+      vehicleId,
+    });
   });
   it.each([
     '',
@@ -82,7 +93,7 @@ describe('Devices validation and scope', () => {
   it('reassigns without calling Core and rejects clearing or empty updates', async () => {
     const id = randomUUID();
     await service.update(context, id, { vehicleId });
-    expect(update).toHaveBeenCalledWith(context.storeId, id, { vehicleId });
+    expect(update).toHaveBeenCalledWith(context.tenantId, context.storeId, id, { vehicleId });
     await expect(service.update(context, id, { vehicleId: null })).rejects.toThrow(
       BadRequestException,
     );

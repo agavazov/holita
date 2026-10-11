@@ -40,7 +40,7 @@ reload/scoping and Bulgarian 1280/390/320px light/dark forms/lists. Captures bel
 
 `npm run test:reference -- devices.service.spec.ts --skip-nx-cache` checks IMEI/assignment
 validation, scoped calls and constraint mapping. `devices.db.spec.ts` checks exact digits,
-leading zeros, per-Store uniqueness, same-store FK, shared Vehicles, protected Vehicle deletion,
+leading zeros, per-Tenant/Store uniqueness, same-tenant/same-store FK, shared Vehicles, protected Vehicle deletion,
 reassignment, scoped CRUD and list queries.
 
 ```bash
@@ -66,7 +66,8 @@ npm run test:admin -- --include=app/core/graphql/graphql-options.spec.ts --skip-
 npm run test:admin -- --include=app/layout/appearance.spec.ts --skip-nx-cache
 ```
 
-Store/workspace tests prove default Vehicles navigation, A → B → A, cancellation on Store/language
+Store/workspace tests prove independent login layout, sequential Tenant/Store selection, cancellation
+of obsolete candidate tokens and Store discovery, tenant A → B → A, direct/default Vehicles navigation, A → B → A, cancellation on Store/language
 change, unknown Store and disabled Reference behavior. Feature APIs prove retired submitted-write
 success/failure and isolated caches. Real transport uses `angular-foundation.smoke.spec.mts`;
 Sakai focus/theme/resizing/mobile behavior uses `angular-shell.smoke.spec.mts`.
@@ -88,8 +89,7 @@ npm run test:reference:db -- vehicles.db.spec.ts devices.db.spec.ts
 Guarded helpers reject development/foreign/nonlocal identities and URL options. Each run deploys
 reviewed migrations into its own random schema, closes connections and drops only that schema.
 No broad resets/truncation occur. Core persistence tests cover seed idempotency, schema isolation
-and inability to connect to development/Reference databases. Reference's initial migration
-creates only Vehicle/Device, with indexes, digit CHECK and same-store restricted FK.
+and inability to connect to development/Reference databases. Reference migrations create tenant-scoped Vehicle/Device indexes, a digit CHECK and a same-tenant/same-store restricted FK.
 Database results must run fresh and cannot be treated as valid Nx cache hits.
 
 ## Real federation and browser smoke checks
@@ -100,7 +100,7 @@ npm run test:gateway:db -- federation.db.spec.mts
 npm run test:smoke:admin -- angular-foundation.smoke.spec.mts angular-shell.smoke.spec.mts
 ```
 
-Offline contracts tests compose both subgraphs, validate all four explicit operation inputs and
+Offline contracts tests compose both subgraphs, validate all four explicit operation files and
 assert the exact public query/mutation inventory. Guard tests reject unsafe local test URLs.
 Federation fixture owns isolated Core/Reference test schemas, Core seeds, real backend processes
 and request observers. It proves Store discovery, Vehicle/Device relations and scope, CORS/header
@@ -109,7 +109,7 @@ Gateway has no database dependency.
 
 Angular fixtures serve the compiled production app with their own runtime configuration.
 They own dedicated backend processes/schemas and never load private development licenses.
-Tests create their own business records; production seeding adds no sample Vehicles/Devices.
+Browser fixtures seed Core and obtain real demo sessions; they create their own business records without running Reference sample seeds. The Isolation tenant/store exists only in these test fixtures.
 Browser targets build the admin and three backends, use Chromium, disable retries and retain
 failure screenshots/traces under ignored test-results. Clean up task-started connections/processes.
 
@@ -234,3 +234,23 @@ branch. Manual dispatch requires the workflow on the default branch; see
 [GitHub's manual-run guide](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow).
 It installs prerequisites, runs format/schema/lint/typecheck/build and then test:full.
 Do not equate a configured workflow with an executed acceptance run.
+
+## Tenant sessions and migrations
+
+```bash
+npm run test:core -- demo-auth.spec.ts --skip-nx-cache
+npm run test:core:db -- persistence.db.spec.ts stores.db.spec.ts tenant-migration.db.spec.ts
+npm run test:reference:db -- vehicles.db.spec.ts devices.db.spec.ts tenant-migration.db.spec.ts seeds.db.spec.ts
+npm run test:admin -- --include=app/features/stores/tenant-session.spec.ts --include=app/core/auth/demo-session.spec.ts --skip-nx-cache
+npm run test:smoke:admin -- angular-tenants.smoke.spec.mts
+```
+
+Session checks cover signatures, tampering, expiry, production opt-in, unauthenticated reads and
+ignored tenant headers. DB/federation tests exercise scoped discovery/CRUD/entity resolution,
+identical Store IDs and IMEIs across tenants, composite relation rejection and seed idempotency.
+Migration tests replay reviewed SQL in dedicated guarded schemas with legacy records, then check
+backfill, retained IDs/timestamps/relations and physical id/tenantId column order. They never touch
+development tables. Angular tests cover logged-out deep links, Tenant/Store dropdown gating and retry, obsolete candidate
+responses, root-to-Vehicles navigation, remembered Store selection, tenant client/cache retirement,
+delayed submitted writes and fresh A → B → A clients. Browser login checks use the actual dropdown,
+logout/reload and desktop/narrow light/dark views; fixture auto-login is disabled for that suite.

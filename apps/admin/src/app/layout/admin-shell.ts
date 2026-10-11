@@ -23,6 +23,7 @@ import {
 import { filter } from 'rxjs';
 import { Bars } from '@primeicons/angular/bars';
 import { Moon } from '@primeicons/angular/moon';
+import { SignOut } from '@primeicons/angular/sign-out';
 import { Sun } from '@primeicons/angular/sun';
 import { Select } from 'primeng/select';
 import { Drawer } from 'primeng/drawer';
@@ -43,6 +44,7 @@ import { Appearance } from './appearance';
     Bars,
     Moon,
     Sun,
+    SignOut,
     AdminNavigation,
   ],
   templateUrl: './admin-shell.html',
@@ -57,6 +59,8 @@ export class AdminShell {
   readonly languageUrl = input.required<UrlTree>();
   readonly loading = input(false);
   readonly referenceEnabled = input(false);
+  readonly tenantName = input<string | null>(null);
+  readonly signOut = output();
   readonly storeSelected = output<string>();
   readonly text = computed(() => messages[this.language()]);
   readonly appearance = inject(Appearance);

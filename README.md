@@ -20,14 +20,17 @@ npm run db:seed
 npm run dev
 ```
 
+On Ubuntu/WSL, run `npm run kill` in another terminal to stop the applications and their
+watchers. PostgreSQL remains running; `npm run db:down` stops it separately.
+
 If needed, run `nvm install` before `nvm use`. Open [Angular admin](http://127.0.0.1:11000).
-Choose a Store to open Vehicles. Switching Stores preserves the current Vehicles/Devices
+Choose RentalSofia and a Store on the standalone demo login screen to open Vehicles. There is no Store list landing page; the header selector switches Stores after login. Switching Stores preserves the current Vehicles/Devices
 section and resets the list query. Routes and list filters survive reloads and language changes.
 Each mounted workspace owns its Apollo client/cache. Submitted writes settle in their original
 Store; navigation cancels obsolete reads and callbacks.
 
 Vehicles has required License Plate and optional multiline Notes. Devices has a required
-15-digit IMEI unique within a Store and a mandatory same-store Vehicle, labeled Truck in the
+15-digit IMEI unique within a Store and a mandatory same-tenant/same-store Vehicle, labeled Truck in the
 editor. Multiple Devices can share a Vehicle; assigned Vehicles cannot be deleted.
 Both modules provide search, sorting, paging, typed create/edit forms, dirty-form guards,
 confirmed single/page-local sequential deletion and failed-row retry.
@@ -38,11 +41,10 @@ The ignored [Sakai source](docs/development.md#sakai-source-reference) supplies 
 
 Gateway, Core and Reference listen on loopback ports 11010, 11011 and 11013; PostgreSQL uses 11084. `dev` waits for PostgreSQL health before starting the four applications. Ctrl+C stops
 the Node group. `npm run db:down` stops PostgreSQL and preserves its volume. Setup, migrations
-and seeding are explicit commands. The seed inserts missing Stores; Vehicles/Devices start empty.
+and seeding are explicit commands. The seed inserts RentalSofia, two Stores, two sample Vehicles and one Device without replacing existing records.
 
-Use [Gateway GraphQL](http://127.0.0.1:11010/graphql). `{ stores { id name } }` needs no Store
-header. Business operations require `x-store-id`, for example the seeded Sofia Store
-`10000000-0000-4000-8000-000000000001`. This local foundation has no authentication or authorization.
+Use [Gateway GraphQL](http://127.0.0.1:11010/graphql). `{ tenants { id name } }` is public for demo login. Sign in through `demoLogin` and send its token as `Authorization: Bearer <token>` to discover Stores. Store discovery needs no Store header. Business operations require `x-store-id`, for example the seeded Sofia Store
+`10000000-0000-4000-8000-000000000001`. The demo login has no passwords or tenant membership checks and must be replaced before production. Tenant identity is verified from the signed session; business records are scoped by Tenant and Store. See [demo session configuration and limitations](docs/development.md#demo-tenant-login).
 Every backend exposes `/health`, independently of database/downstream availability.
 
 To start one application, use `dev:admin`, `dev:gateway`, `dev:core` or `dev:reference`.

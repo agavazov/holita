@@ -1,3 +1,4 @@
+import { DemoSession } from '../../../core/auth/demo-session';
 import { provideHttpClient, type HttpRequest } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
@@ -62,6 +63,10 @@ describe('Vehicles Apollo scope', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+    });
+    TestBed.inject(DemoSession).start({
+      token: 'test-demo-token',
+      tenant: { id: '01000000-0000-4000-8000-000000000001', name: 'RentalSofia' },
     });
     http = TestBed.inject(HttpTestingController);
   });
@@ -267,5 +272,54 @@ describe('Vehicles Apollo scope', () => {
       'License Plate',
     );
     a.destroy();
+  });
+  it('captures tenant sessions for delayed writes and creates fresh clients for tenant A → B → A at the same store', async () => {
+    const session = TestBed.inject(DemoSession);
+    const a = await mount(storeA);
+    const initial = http.expectOne('/graphql');
+    expect(initial.request.headers.get('authorization')).toBe('Bearer test-demo-token');
+    initial.flush(vehiclePage(vehicleA));
+    await a.whenStable();
+    const pending = a.componentInstance.api.update({
+      id: vehicleA.id,
+      input: { licensePlate: 'Late tenant A' },
+    });
+    const write = http.expectOne('/graphql');
+    a.destroy();
+    session.start({
+      token: 'tenant-b-token',
+      tenant: { id: '01000000-0000-4000-8000-000000000002', name: 'Other tenant' },
+    });
+    const b = await mount(storeA);
+    const readB = http.expectOne('/graphql');
+    expect(readB.request.headers.get('authorization')).toBe('Bearer tenant-b-token');
+    expect(write.request.headers.get('authorization')).toBe('Bearer test-demo-token');
+    const rowB = { ...vehicleA, licensePlate: 'Tenant B row' };
+    readB.flush(vehiclePage(rowB));
+    await b.whenStable();
+    write.flush({
+      data: {
+        updateReferenceVehicle: {
+          ...vehicleA,
+          licensePlate: 'Late tenant A',
+          __typename: 'ReferenceVehicle',
+        },
+      },
+    });
+    await pending;
+    expect(b.componentInstance.page()?.items[0]?.licensePlate).toBe('Tenant B row');
+    http.expectNone('/graphql');
+    b.destroy();
+    session.start({
+      token: 'fresh-tenant-a-token',
+      tenant: { id: '01000000-0000-4000-8000-000000000001', name: 'RentalSofia' },
+    });
+    const freshA = await mount(storeA);
+    const readA = http.expectOne('/graphql');
+    expect(readA.request.headers.get('authorization')).toBe('Bearer fresh-tenant-a-token');
+    expect(freshA.componentInstance.page()).toBeNull();
+    readA.flush(vehiclePage(vehicleA));
+    await freshA.whenStable();
+    freshA.destroy();
   });
 });

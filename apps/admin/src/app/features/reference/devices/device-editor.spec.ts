@@ -1,3 +1,4 @@
+import { DemoSession } from '../../../core/auth/demo-session';
 import { provideHttpClient, type HttpRequest } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
@@ -37,6 +38,10 @@ describe('Device editor validation and captured writes', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+    });
+    TestBed.inject(DemoSession).start({
+      token: 'test-demo-token',
+      tenant: { id: '01000000-0000-4000-8000-000000000001', name: 'RentalSofia' },
     });
     http = TestBed.inject(HttpTestingController);
   });

@@ -1,11 +1,13 @@
+import { DemoSession } from '../../core/auth/demo-session';
 import { provideHttpClient, type HttpRequest } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { provideApollo } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
+import { StoreWorkspace } from './store-workspace';
 import { routes } from '../../app.routes';
 import { graphqlOptions } from '../../core/graphql/graphql-options';
 
@@ -61,6 +63,10 @@ describe('Angular store routing', () => {
         provideApollo(() => graphqlOptions(inject(HttpLink), '/graphql')),
       ],
     });
+    TestBed.inject(DemoSession).start({
+      token: 'test-demo-token',
+      tenant: { id: '01000000-0000-4000-8000-000000000001', name: 'RentalSofia' },
+    });
     http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => {
@@ -73,7 +79,9 @@ describe('Angular store routing', () => {
     expect(discovery.request.headers.has('x-store-id')).toBe(false);
     discovery.flush({ data: { stores } });
     await harness.fixture.whenStable();
-    await harness.navigateByUrl(`/en/stores/${storeA}/reference/vehicles`);
+    expect(TestBed.inject(Router).url).toBe(`/en/stores/${storeA}/reference/vehicles`);
+    expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toBe('Vehicles');
+    expect(harness.routeNativeElement?.textContent).not.toContain('Choose a store to view');
     const pendingA = http.expectOne((request) => operation(request, 'AdminVehicles'));
     expect(pendingA.request.headers.get('x-store-id')).toBe(storeA);
     await harness.navigateByUrl(`/en/stores/${storeB}/reference/vehicles`);
@@ -109,38 +117,33 @@ describe('Angular store routing', () => {
     await harness.fixture.whenStable();
     expect(harness.routeNativeElement?.textContent).toContain('Store not found');
     http.expectNone('/graphql');
-    await harness.navigateByUrl('/en');
-    const refresh = harness.routeNativeElement?.querySelector<HTMLButtonElement>(
-      '[data-testid="refresh-stores"]',
-    );
-    if (!refresh) throw new Error('Missing discovery refresh control.');
-    refresh.click();
+    const workspace: unknown = harness.routeDebugElement?.componentInstance;
+    if (!(workspace instanceof StoreWorkspace)) throw new Error('Missing workspace');
+    workspace.refresh();
     http.expectOne('/graphql').flush({ errors: [{ message: 'Discovery unavailable' }] });
     await harness.fixture.whenStable();
     expect(harness.routeNativeElement?.textContent).toContain('Discovery unavailable');
-    expect(harness.routeNativeElement?.textContent).toContain('Plovdiv');
+    expect(workspace.stores()).toEqual(stores);
   });
 
   it('ignores an aborted Stores refresh after changing the workspace language', async () => {
-    const harness = await RouterTestingHarness.create('/en');
+    const harness = await RouterTestingHarness.create('/en/stores/not-a-uuid/reference/vehicles');
     http.expectOne('/graphql').flush({ data: { stores } });
     await harness.fixture.whenStable();
-    const refresh = harness.routeNativeElement?.querySelector<HTMLButtonElement>(
-      '[data-testid="refresh-stores"]',
-    );
-    if (!refresh) throw new Error('Missing discovery refresh control.');
-    refresh.click();
+    const workspace: unknown = harness.routeDebugElement?.componentInstance;
+    if (!(workspace instanceof StoreWorkspace)) throw new Error('Missing workspace');
+    workspace.refresh();
     const oldRefresh = http.expectOne('/graphql');
-    await harness.navigateByUrl('/bg');
+    await harness.navigateByUrl('/bg/stores/not-a-uuid/reference/vehicles');
     expect(oldRefresh.cancelled).toBe(true);
     const discovery = http.expectOne('/graphql');
     expect(discovery.request.headers.get('Accept-Language')).toBe('bg');
     await harness.fixture.whenStable();
-    expect(harness.routeNativeElement?.querySelector('[role="alert"]')).toBeNull();
-    expect(harness.routeNativeElement?.textContent).toContain('Plovdiv');
+    expect(workspace.error()).toBeNull();
+    expect(workspace.stores()).toEqual(stores);
     discovery.flush({ data: { stores } });
     await harness.fixture.whenStable();
-    expect(harness.routeNativeElement?.querySelector('[role="alert"]')).toBeNull();
+    expect(workspace.error()).toBeNull();
   });
 
   it('cancels a pending Vehicles read and starts a new scoped client when the language changes', async () => {

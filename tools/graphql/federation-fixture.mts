@@ -74,7 +74,7 @@ async function prepareDatabase(service: 'core' | 'reference') {
         timeout: 15000,
       });
     }
-    return { url: url.toString(), close };
+    return { url: url.toString(), schema, close };
   } catch (error) {
     await close();
     throw error;
@@ -177,7 +177,7 @@ async function observeRequests(target: string) {
       body,
     });
     const headers: Record<string, string> = { 'content-type': 'application/json' };
-    for (const key of ['x-request-id', 'x-store-id']) {
+    for (const key of ['x-request-id', 'x-store-id', 'authorization']) {
       const value = req.headers[key];
       if (typeof value === 'string') headers[key] = value;
     }
@@ -239,6 +239,26 @@ export async function createFederationFixture(
   try {
     const coreDatabase = await prepareDatabase('core');
     cleanup.push(coreDatabase.close);
+    const tenantConnection = new pg.Client({ connectionString: coreDatabase.url });
+    await tenantConnection.connect();
+    try {
+      const schema = pg.escapeIdentifier(coreDatabase.schema);
+      await tenantConnection.query(
+        `INSERT INTO ${schema}."Tenant" ("id", "name", "updatedAt") VALUES ($1, $2, CURRENT_TIMESTAMP)`,
+        ['01000000-0000-4000-8000-000000000002', 'Isolation tenant'],
+      );
+      await tenantConnection.query(
+        `INSERT INTO ${schema}."Store" ("id", "tenantId", "name", "updatedAt") VALUES ($1, $2, $3, CURRENT_TIMESTAMP)`,
+        [
+          '10000000-0000-4000-8000-000000000003',
+          '01000000-0000-4000-8000-000000000002',
+          'Isolation store',
+        ],
+      );
+    } finally {
+      await tenantConnection.end();
+    }
+
     const referenceDatabase = await prepareDatabase('reference');
     cleanup.push(referenceDatabase.close);
     let core = await startApplication('core', { CORE_DATABASE_URL: coreDatabase.url });

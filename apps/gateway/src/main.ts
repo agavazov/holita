@@ -16,7 +16,7 @@ async function bootstrap(): Promise<void> {
   app.enableCors({
     origin: process.env.ADMIN_ORIGIN ?? 'http://127.0.0.1:11000',
     methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['content-type', 'x-store-id', 'x-request-id'],
+    allowedHeaders: ['authorization', 'content-type', 'x-store-id', 'x-request-id'],
     exposedHeaders: ['x-request-id'],
   });
   app.enableShutdownHooks();

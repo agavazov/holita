@@ -4,6 +4,7 @@ import { ApolloFederationDriver, type ApolloFederationDriverConfig } from '@nest
 import { GraphQLModule } from '@nestjs/graphql';
 import { formatGraphqlError, graphqlDiagnostics } from './graphql/errors.js';
 import { createRequestContext } from './graphql/request-context.js';
+import { TenantsModule } from './tenants/tenants.module.js';
 import { StoresModule } from './stores/stores.module.js';
 
 import { HealthController } from './health/health.controller.js';
@@ -11,6 +12,7 @@ import { HealthController } from './health/health.controller.js';
 @Module({
   imports: [
     StoresModule,
+    TenantsModule,
     GraphQLModule.forRoot<ApolloFederationDriverConfig>({
       driver: ApolloFederationDriver,
       typeDefs: readFileSync(new URL('./stores/stores.graphql', import.meta.url), 'utf8'),

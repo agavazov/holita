@@ -1,3 +1,4 @@
+import { DemoSession } from '../../../core/auth/demo-session';
 import { provideHttpClient, type HttpRequest } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { inject } from '@angular/core';
@@ -114,6 +115,10 @@ describe('Devices deletion and selection lifecycle', () => {
         provideHttpClientTesting(),
         provideApollo(() => graphqlOptions(inject(HttpLink), '/graphql')),
       ],
+    });
+    TestBed.inject(DemoSession).start({
+      token: 'test-demo-token',
+      tenant: { id: '01000000-0000-4000-8000-000000000001', name: 'RentalSofia' },
     });
     http = TestBed.inject(HttpTestingController);
     router = TestBed.inject(Router);
@@ -310,7 +315,7 @@ describe('Devices deletion and selection lifecycle', () => {
       await router.navigateByUrl(url);
       await harness.fixture.whenStable();
       expect(write.cancelled).toBe(false);
-      expect(stop).not.toHaveBeenCalled();
+      expect(stop).toHaveBeenCalledTimes(destination === 'language' ? 1 : 0);
       if (destination === 'language') {
         (await nextRequest('AdminStores')).flush({ data: { stores } });
         await harness.fixture.whenStable();
@@ -349,7 +354,7 @@ describe('Devices deletion and selection lifecycle', () => {
       expect(harness.routeNativeElement?.textContent).not.toContain('Deleted devices:');
       expect(harness.routeNativeElement?.textContent).not.toContain('Failed devices:');
       if (destination === 'query') expect(stop).not.toHaveBeenCalled();
-      else expect(stop).toHaveBeenCalledTimes(1);
+      else expect(stop).toHaveBeenCalledTimes(destination === 'language' ? 2 : 1);
       http.expectNone('/graphql');
     },
   );

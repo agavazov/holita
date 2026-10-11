@@ -4,3 +4,19 @@ query AdminStores {
     name
   }
 }
+
+query AdminTenants {
+  tenants {
+    id
+    name
+  }
+}
+mutation AdminDemoLogin($tenantId: ID!) {
+  demoLogin(tenantId: $tenantId) {
+    token
+    tenant {
+      id
+      name
+    }
+  }
+}

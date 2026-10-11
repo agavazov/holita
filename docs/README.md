@@ -1,6 +1,6 @@
 # Documentation
 
-The Angular admin uses Sakai and provides Store discovery, Vehicles and Devices.
+The Angular admin uses Sakai and provides standalone Tenant/Store demo login, header Store switching, Vehicles and Devices.
 
 - [Workspace requirements](req/foundation.md): implemented contracts and acceptance criteria.
 - [Architecture](architecture/overview.md): applications, persistence and request lifecycles.

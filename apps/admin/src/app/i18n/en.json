@@ -1,6 +1,4 @@
 {
-  "storesNavigation": "Stores",
-  "chooseStoreDescription": "Choose a store to view its vehicles.",
   "activeStore": "Store",
   "workspace": "Workspace",
   "navigation": "Navigation",
@@ -116,5 +114,13 @@
   "loadingRelations": "Loading choices…",
   "noRelations": "No matching choices.",
   "done": "Done",
-  "configurationError": "Could not start holita. Check the public configuration and reload."
+  "configurationError": "Could not start holita. Check the public configuration and reload.",
+  "demoLogin": "Demo sign in",
+  "demoLoginDescription": "Choose your tenant and store to continue.",
+  "tenant": "Tenant",
+  "chooseTenant": "Choose a tenant",
+  "signIn": "Sign in",
+  "signOut": "Sign out",
+  "emptyTenants": "No tenants available.",
+  "chooseStore": "Choose a store"
 }

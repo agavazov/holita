@@ -9,7 +9,7 @@ test.beforeEach(async ({ page, app }) => {
     ['10000000-0000-4000-8000-000000000002', 'Plovdiv truck'],
   ] as const) {
     const response = await page.request.post(app.gatewayUrl, {
-      headers: { 'x-store-id': storeId },
+      headers: { authorization: `Bearer ${app.demoSession.token}`, 'x-store-id': storeId },
       data: {
         query:
           'mutation($input:CreateReferenceVehicleInput!){createReferenceVehicle(input:$input){id}}',
@@ -49,8 +49,9 @@ test('compiled Angular discovers stores and reads Vehicles through the real gate
       scopes.push(request.headers()['x-store-id'] ?? 'missing');
   });
   await page.goto(`${app.url}/en`);
-  await expect(page.getByRole('heading', { name: 'Stores', exact: true })).toBeVisible();
-  await page.getByRole('link', { name: 'holita Sofia', exact: true }).click();
+  await expect(page).toHaveURL(`${app.url}/en/stores/${storeA}/reference/vehicles`);
+  await expect(page.locator('aside .layout-menuitem-root-text')).toHaveText('Workspace');
+  await expect(page.getByRole('link', { name: 'Stores', exact: true })).toHaveCount(0);
   await expect(page.getByRole('cell', { name: 'Sofia truck', exact: true })).toBeVisible();
   await chooseStore(page, 'holita Plovdiv');
   await expect(page.getByRole('cell', { name: 'Plovdiv truck', exact: true })).toBeVisible();

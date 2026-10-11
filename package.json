@@ -30,6 +30,7 @@
   },
   "scripts": {
     "dev": "npm run db:up && concurrently --kill-others --names gateway,core,reference,admin --prefix-colors blue,green,cyan,red \"npm:dev:gateway\" \"npm:dev:core\" \"npm:dev:reference\" \"npm:dev:admin\"",
+    "kill": "tsx tools/development/kill.mts",
     "dev:gateway": "npm run dev --workspace @holita/gateway",
     "dev:core": "npm run dev --workspace @holita/core",
     "dev:admin": "npm run dev --workspace @holita/admin",

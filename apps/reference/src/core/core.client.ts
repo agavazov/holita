@@ -18,17 +18,22 @@ export class CoreClient {
   requireStore(storeId: string, context: RequestContext): Promise<void> {
     const existing = context.storeChecks.get(storeId);
     if (existing) return existing;
-    const check = this.lookupStore(storeId, context.requestId);
+    const check = this.lookupStore(storeId, context);
     context.storeChecks.set(storeId, check);
     return check;
   }
 
-  private async lookupStore(storeId: string, requestId: string): Promise<void> {
+  private async lookupStore(storeId: string, context: RequestContext): Promise<void> {
+    const { requestId } = context;
     const variables: StoreForReferenceCreationQueryVariables = { id: storeId };
     try {
       const response = await fetch(this.url, {
         method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-request-id': requestId },
+        headers: {
+          'content-type': 'application/json',
+          'x-request-id': requestId,
+          ...(context.authorization ? { authorization: context.authorization } : {}),
+        },
         body: JSON.stringify({ query: print(StoreForReferenceCreationDocument), variables }),
         signal: AbortSignal.timeout(3000),
       });

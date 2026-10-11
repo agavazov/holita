@@ -31,12 +31,14 @@ describe('local GraphQL contracts', () => {
       'referenceVehicles',
       'store',
       'stores',
+      'tenants',
     ]);
     expect(Object.keys(result.apiSchema.getMutationType()?.getFields() ?? {}).sort()).toEqual([
       'createReferenceDevice',
       'createReferenceVehicle',
       'deleteReferenceDevice',
       'deleteReferenceVehicle',
+      'demoLogin',
       'updateReferenceDevice',
       'updateReferenceVehicle',
     ]);

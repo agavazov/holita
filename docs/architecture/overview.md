@@ -7,8 +7,8 @@ Applications never import another application's implementation, Prisma models or
 | ----------- | ------------------------------------------------------------------------- | ---------- |
 | admin       | Standalone Angular, Sakai/PrimeNG, Store discovery, Vehicles/Devices CRUD | 11000      |
 | gateway     | Apollo federation, public `/graphql`, `/health`                           | 11010      |
-| core        | Store discovery/lookup, owning database                                   | 11011      |
-| reference   | Store-scoped Vehicles/Devices, owning database                            | 11013      |
+| core        | Tenant demo login, scoped Store discovery/lookup, owning database         | 11011      |
+| reference   | Tenant/Store-scoped Vehicles/Devices, owning database                     | 11013      |
 
 ```mermaid
 flowchart LR
@@ -40,16 +40,16 @@ Gateway DB and admin browser fixtures build the three backends and own their tes
 One PostgreSQL instance contains independent Core/Reference development and test databases,
 with distinct owner/login roles. Admin/Gateway have no Prisma client or database credentials.
 Each owning service has its own schema, reviewed SQL migrations and generated client.
-Core owns Store: UUID, Name (200 characters), createdAt and updatedAt.
-Reference owns Vehicle and Device in a single initial migration.
+Core owns Tenant (UUID, unique Name up to 200 characters, timestamps) and Store. Store has UUID, mandatory tenantId, Name (200 characters), createdAt and updatedAt. Its Tenant foreign key restricts deletion/update.
+Reference owns Vehicle and Device. New tenant migrations preserve old rows under RentalSofia and reconstruct the tables transactionally so tenantId is physically second after id in Store, Vehicle and Device. Applied migrations remain unchanged.
 
-Vehicle has UUID, storeId, required License Plate (32 characters), nullable Notes (2000
-characters) and timestamps. License Plate is not unique. Device has UUID, storeId, required
+Vehicle has UUID, tenantId, storeId, required License Plate (32 characters), nullable Notes (2000
+characters) and timestamps. License Plate is not unique. Device has UUID, tenantId, storeId, required
 15-digit IMEI, required vehicleId and timestamps. IMEI stays a string, preserving leading zeros.
-A unique `(storeId, imei)` index and SQL digit CHECK protect persistence. The composite
-`(storeId, vehicleId)` foreign key references Vehicle `(storeId, id)` with restricted deletion
+A unique `(tenantId, storeId, imei)` index and SQL digit CHECK protect persistence. The composite
+`(tenantId, storeId, vehicleId)` foreign key references Vehicle `(tenantId, storeId, id)` with restricted deletion
 and update. Several Devices may share a Vehicle. There is no cross-database Store foreign key.
-Seeds insert missing stable Stores only; business records start empty.
+Seeds insert RentalSofia, two stable Stores, two sample Vehicles and one Device. Repeated seeds skip existing keys and never overwrite edits. Reference has no cross-database Tenant/Store foreign key; creation verifies the tenant-scoped Store through Core. Mandatory tenant predicates and composite indexes enforce application isolation; PostgreSQL has no row-level-security policy. Direct SQL access by the owning role can access every tenant.
 
 Tests deploy migrations into random schemas in dedicated test databases and drop only their
 own schema. Development connections, broad resets and shared truncation are not test fixtures.
@@ -65,10 +65,9 @@ Runtime SDL assets are copied into builds. Named Angular/Core lookup operations 
 inputs in [contracts.mts](../../tools/graphql/contracts.mts). Codegen/composition/validation work
 offline. Gateway loads a generated static supergraph without introspection or registry polling.
 
-The public queries are stores, store, referenceVehicles, referenceVehicle, referenceDevices
-and referenceDevice. Mutations create/update/delete ReferenceVehicle and ReferenceDevice.
-All business operations require a valid `x-store-id` UUID. Inputs never accept storeId.
-Repository predicates and federation reference resolution always include the active Store.
+Public demo discovery exposes tenants and demoLogin. Authenticated queries are stores, store, referenceVehicles, referenceVehicle, referenceDevices and referenceDevice. Mutations create/update/delete ReferenceVehicle and ReferenceDevice.
+All Store/business operations require a signed demo session in Authorization. Business operations additionally require a valid `x-store-id` UUID. Inputs never accept tenantId or storeId.
+Repository predicates, totals, relation lookup and federation reference resolution always include the verified Tenant and active Store.
 Foreign IDs appear as NOT_FOUND. Creation checks Store existence through Core once per
 Reference HTTP request; read/update/delete do not make that network call. Requesting a
 federated Store field beyond its known ID (for example `store { name }`) asks Core to resolve
@@ -85,7 +84,7 @@ letters/digits or `._:-`; invalid/missing IDs are replaced with UUIDs. Responses
 ID. Expected Nest exceptions map to BAD_USER_INPUT, NOT_FOUND, CONFLICT or SERVICE_UNAVAILABLE;
 unexpected details remain hidden. Creation's Core timeout is 3 seconds, Gateway's subgraph timeout
 is 5 seconds. No global current Store or cross-request Store validation cache exists.
-Store context scopes trusted local data and does not provide authorization.
+Tenant identity comes only from the HMAC-verified, expiring session. Gateway forwards Authorization; both subgraphs independently verify it. Arbitrary tenant headers and entity representations cannot select a Tenant. Demo login deliberately allows anyone to choose any Tenant; it is not production identity or membership authorization.
 
 `REFERENCE_ENABLED=false` rejects Reference business and entity operations while preserving
 schema composition and health. Angular startup availability hides navigation and gates direct routes.
@@ -93,15 +92,20 @@ schema composition and health. Angular startup availability hides navigation and
 ## Angular admin foundation
 
 The standalone Angular flow is component → concrete feature API → generated TypedDocumentNode
-→ Apollo Angular/HttpLink → Gateway. StoreWorkspace owns discovery and route selection;
+→ Apollo Angular/HttpLink → Gateway. Login owns the standalone Sakai login view and sequential
+Tenant/Store selection. A candidate token loads tenant-scoped Stores through a disposable client;
+changing Tenant cancels discovery and ignores late tokens. Submitting a valid Store activates the
+tab session and opens Vehicles. StoreWorkspace owns authenticated discovery and route selection;
 the shell receives explicit inputs and emits Store changes without business data access.
 Routes use `/bg` or `/en`, then `/stores/:storeId/reference/vehicles` or `/devices`, with `/new`
-and `/:recordId/edit`. Choosing a Store opens Vehicles; switching Stores preserves the enabled
+and `/:recordId/edit`. The language root shows Login while signed out and redirects to the saved
+(or first available) Store's Vehicles while signed in. There is no Store list landing page.
+Workspace navigation contains Vehicles/Devices; the header keeps its Store switcher. Choosing a Store at login opens Vehicles; switching Stores preserves the enabled
 current business section and resets list context. Language switching preserves path/query/hash.
 Unknown Stores and disabled Reference never start business requests.
 
-ReferenceWorkspace keys child views by Store/language/resource/editor/ID. Each mounted page/editor
-owns an immutable scoped Apollo client and InMemoryCache. A → B → A creates a fresh A client.
+ReferenceWorkspace keys child views by session/Store/language/resource/editor/ID. Each mounted page/editor
+owns an immutable session/Store/language-scoped Apollo client and InMemoryCache. A → B → A creates a fresh A client.
 Reads unsubscribe on retirement; submitted writes settle with their captured client and affect
 only its cache. Obsolete callbacks cannot navigate, notify or mutate a new workspace.
 
@@ -121,3 +125,5 @@ are inert. The footer carries holita. Light/dark preference uses `holita.admin.t
 storage leaves the toggle usable and reports its failure. Bulgarian/English catalogs supply UI text.
 The trimmed preset contains implemented controls and their PrimeNG dependencies.
 Public startup config selects GraphQL URL, availability and optional user-supplied PrimeUI license.
+
+Demo sessions last eight hours and persist only in the browser tab sessionStorage. Logout navigates through the dirty-editor guard, clears the tab session and destroys discovery/business clients. Expiry retires the current workspace. Submitted writes retain their captured token and may settle after logout. Logout has no server-side token revocation. [Development](../development.md#demo-tenant-login) describes configuration and production limitations.

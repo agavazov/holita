@@ -3,10 +3,12 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, jest } from '@je
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import { AppModule } from '../src/app.module.js';
+import { issueDemoToken } from '../src/graphql/demo-auth.js';
 import { CoreClient } from '../src/core/core.client.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { createTestDatabase } from './test-database.js';
 
+const tenantId = '01000000-0000-4000-8000-000000000001';
 const create =
   'mutation($input:CreateReferenceVehicleInput!){createReferenceVehicle(input:$input){id storeId licensePlate notes}}';
 const read = 'query($id:ID!){referenceVehicle(id:$id){id storeId licensePlate notes}}';
@@ -47,6 +49,7 @@ describe('Vehicle GraphQL with PostgreSQL', () => {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
+        authorization: `Bearer ${issueDemoToken(tenantId)}`,
         ...(storeId ? { 'x-store-id': storeId } : {}),
       },
       body: JSON.stringify({ query: source, variables }),
@@ -83,7 +86,9 @@ describe('Vehicle GraphQL with PostgreSQL', () => {
   it('hides foreign IDs in CRUD and resolves federation references from the scoped database', async () => {
     const storeId = randomUUID(),
       foreign = randomUUID();
-    const row = await database.client.vehicle.create({ data: { storeId, licensePlate: 'OWNER' } });
+    const row = await database.client.vehicle.create({
+      data: { tenantId, storeId, licensePlate: 'OWNER' },
+    });
     for (const source of [read, update, remove])
       expect(
         await query(source, { id: row.id, input: { licensePlate: 'Wrong' } }, foreign),
@@ -123,10 +128,10 @@ describe('Vehicle GraphQL with PostgreSQL', () => {
     const storeId = randomUUID();
     await database.client.vehicle.createMany({
       data: [
-        { storeId, licensePlate: 'CA100%_AB' },
-        { storeId, licensePlate: 'CA2000AB' },
-        { storeId, licensePlate: 'CA3000AB' },
-        { storeId: randomUUID(), licensePlate: 'CAFOREIGN' },
+        { tenantId, storeId, licensePlate: 'CA100%_AB' },
+        { tenantId, storeId, licensePlate: 'CA2000AB' },
+        { tenantId, storeId, licensePlate: 'CA3000AB' },
+        { tenantId, storeId: randomUUID(), licensePlate: 'CAFOREIGN' },
       ],
     });
     const source =

@@ -6,7 +6,9 @@
 } @else {
   @for (
     scope of activeWorkspaces();
-    track scope.language +
+    track scope.sessionToken +
+      '/' +
+      scope.language +
       '/' +
       scope.store.id +
       '/' +

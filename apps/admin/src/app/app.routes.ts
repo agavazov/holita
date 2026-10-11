@@ -2,7 +2,9 @@ import { inject } from '@angular/core';
 import { Router, type Routes, type CanDeactivateFn } from '@angular/router';
 import type { ReferenceWorkspace } from './features/reference/reference-workspace';
 
-const leaveReference: CanDeactivateFn<ReferenceWorkspace> = (component) => component.canLeave();
+// Signed-out routes have no mounted editor; only active editors can guard navigation.
+const leaveReference: CanDeactivateFn<ReferenceWorkspace | null> = (component) =>
+  component?.canLeave() ?? true;
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'bg' },

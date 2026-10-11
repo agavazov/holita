@@ -11,6 +11,7 @@ datasource db {
 
 model Vehicle {
   id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
   storeId String @db.Uuid
   licensePlate String @db.VarChar(32)
   notes String? @db.VarChar(2000)
@@ -18,21 +19,22 @@ model Vehicle {
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
-  @@unique([storeId, id])
-  @@index([storeId, createdAt, id])
+  @@unique([tenantId, storeId, id])
+  @@index([tenantId, storeId, createdAt, id])
 }
 
 model Device {
   id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
   storeId String @db.Uuid
   imei String @db.VarChar(15)
   vehicleId String @db.Uuid
-  vehicle Vehicle @relation(fields: [storeId, vehicleId], references: [storeId, id], onDelete: Restrict, onUpdate: Restrict)
+  vehicle Vehicle @relation(fields: [tenantId, storeId, vehicleId], references: [tenantId, storeId, id], onDelete: Restrict, onUpdate: Restrict)
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
-  @@unique([storeId, id])
-  @@unique([storeId, imei])
-  @@index([storeId, createdAt, id])
-  @@index([storeId, vehicleId])
+  @@unique([tenantId, storeId, id])
+  @@unique([tenantId, storeId, imei])
+  @@index([tenantId, storeId, createdAt, id])
+  @@index([tenantId, storeId, vehicleId])
 }

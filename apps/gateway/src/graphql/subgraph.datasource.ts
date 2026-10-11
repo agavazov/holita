@@ -8,6 +8,7 @@ export class SubgraphDataSource extends RemoteGraphQLDataSource<RequestContext> 
     const { request, context } = options;
     if (!request.http) return;
     request.http.headers.set('x-request-id', context.requestId);
+    if (context.authorization) request.http.headers.set('authorization', context.authorization);
     if (context.storeId !== undefined) request.http.headers.set('x-store-id', context.storeId);
   }
 

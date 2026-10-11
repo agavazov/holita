@@ -41,6 +41,18 @@
           <svg data-p-icon="moon" size="20" aria-hidden="true"></svg>
         }
       </button>
+      @if (tenantName()) {
+        <button
+          type="button"
+          class="layout-topbar-action"
+          [attr.aria-label]="text().signOut"
+          [title]="tenantName()"
+          data-testid="demo-logout"
+          (click)="signOut.emit()"
+        >
+          <svg data-p-icon="sign-out" size="20" aria-hidden="true"></svg>
+        </button>
+      }
     </div>
     @if (mobile()) {
       <ng-container [ngTemplateOutlet]="storeSelector" />
@@ -108,6 +120,11 @@
       }
       <ng-content />
     </main>
-    <footer class="layout-footer">holita</footer>
+    <footer class="layout-footer">
+      holita
+      @if (tenantName()) {
+        <span> · {{ tenantName() }}</span>
+      }
+    </footer>
   </div>
 </div>

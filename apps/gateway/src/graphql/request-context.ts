@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 
 export interface RequestContext {
   requestId: string;
+  authorization: string | undefined;
   storeId: string | undefined;
 }
 
@@ -20,5 +21,9 @@ export function createRequestContext({
       : randomUUID();
   const header = req.headers['x-store-id'];
   res.setHeader('x-request-id', requestId);
-  return { requestId, storeId: typeof header === 'string' ? header : undefined };
+  return {
+    requestId,
+    authorization: req.headers.authorization,
+    storeId: typeof header === 'string' ? header : undefined,
+  };
 }

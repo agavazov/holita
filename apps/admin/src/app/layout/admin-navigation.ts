@@ -1,45 +1,18 @@
 import { Component, computed, input } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { Shop } from '@primeicons/angular/shop';
 import { Mobile } from '@primeicons/angular/mobile';
 import { Car } from '@primeicons/angular/car';
 import { messages, type Language } from '../i18n/messages';
 
 @Component({
   selector: 'holita-admin-navigation',
-  imports: [RouterLink, RouterLinkActive, Shop, Car, Mobile],
+  imports: [RouterLink, RouterLinkActive, Car, Mobile],
   template: `
     <nav [attr.aria-label]="text().navigation">
       <ul class="layout-menu">
-        <li class="layout-root-menuitem">
-          <div class="layout-menuitem-root-text">{{ text().workspace }}</div>
-          <ul>
-            <li>
-              <a
-                [routerLink]="['/', language()]"
-                routerLinkActive="active-route"
-                [routerLinkActiveOptions]="{
-                  paths: 'exact',
-                  queryParams: 'ignored',
-                  matrixParams: 'ignored',
-                  fragment: 'ignored',
-                }"
-                ariaCurrentWhenActive="page"
-              >
-                <svg
-                  data-p-icon="shop"
-                  size="20"
-                  class="layout-menuitem-icon"
-                  aria-hidden="true"
-                ></svg>
-                <span class="layout-menuitem-text">{{ text().storesNavigation }}</span>
-              </a>
-            </li>
-          </ul>
-        </li>
         @if (referenceEnabled() && storeId(); as id) {
           <li class="layout-root-menuitem">
-            <div class="layout-menuitem-root-text">{{ text().reference }}</div>
+            <div class="layout-menuitem-root-text">{{ text().workspace }}</div>
             <ul>
               <li>
                 <a

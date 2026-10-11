@@ -2,9 +2,12 @@ import { afterAll, beforeAll, describe, expect, it } from '@jest/globals';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import { issueDemoToken } from '../src/graphql/demo-auth.js';
 import { AppModule } from '../src/app.module.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { createTestDatabase } from './test-database.js';
+
+const tenantId = '01000000-0000-4000-8000-000000000001';
 
 describe('Stores GraphQL with PostgreSQL', () => {
   let database: Awaited<ReturnType<typeof createTestDatabase>>;
@@ -31,10 +34,18 @@ describe('Stores GraphQL with PostgreSQL', () => {
     }
   });
 
-  async function query(source: string, variables: Record<string, unknown> = {}) {
+  async function query(
+    source: string,
+    variables: Record<string, unknown> = {},
+    scopeTenantId = tenantId,
+  ) {
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-request-id': 'core-test-request' },
+      headers: {
+        authorization: `Bearer ${issueDemoToken(scopeTenantId)}`,
+        'content-type': 'application/json',
+        'x-request-id': 'core-test-request',
+      },
       body: JSON.stringify({ query: source, variables }),
       signal: AbortSignal.timeout(5000),
     });
@@ -44,8 +55,8 @@ describe('Stores GraphQL with PostgreSQL', () => {
   }
 
   it('lists stores without selected store context in deterministic order', async () => {
-    const z = await database.client.store.create({ data: { name: 'Z store' } });
-    const a = await database.client.store.create({ data: { name: 'A store' } });
+    const z = await database.client.store.create({ data: { tenantId, name: 'Z store' } });
+    const a = await database.client.store.create({ data: { tenantId, name: 'A store' } });
     expect(await query('{ stores { id name } }')).toEqual({
       data: {
         stores: [
@@ -56,7 +67,7 @@ describe('Stores GraphQL with PostgreSQL', () => {
     });
   });
   it('looks up a real store and returns null for an unknown UUID', async () => {
-    const store = await database.client.store.create({ data: { name: 'Lookup' } });
+    const store = await database.client.store.create({ data: { tenantId, name: 'Lookup' } });
     expect(await query('query($id:ID!){store(id:$id){id name}}', { id: store.id })).toEqual({
       data: { store: { id: store.id, name: store.name } },
     });
@@ -65,7 +76,7 @@ describe('Stores GraphQL with PostgreSQL', () => {
     });
   });
   it('validates UUIDs and resolves actual federation references', async () => {
-    const store = await database.client.store.create({ data: { name: 'Federated' } });
+    const store = await database.client.store.create({ data: { tenantId, name: 'Federated' } });
     expect(await query('query($id:ID!){store(id:$id){id}}', { id: 'invalid' })).toMatchObject({
       errors: [{ extensions: { code: 'BAD_USER_INPUT' } }],
     });
@@ -74,5 +85,30 @@ describe('Stores GraphQL with PostgreSQL', () => {
         refs: [{ __typename: 'Store', id: store.id, name: 'Spoofed' }],
       }),
     ).toEqual({ data: { _entities: [{ id: store.id, name: store.name }] } });
+  });
+  it('scopes discovery, direct lookup and federation references to the session tenant', async () => {
+    const otherTenant = await database.client.tenant.create({ data: { name: 'Test tenant' } });
+    const foreign = await database.client.store.create({
+      data: { tenantId: otherTenant.id, name: 'Foreign store' },
+    });
+    expect(await query('{stores{id name}}', {}, otherTenant.id)).toEqual({
+      data: { stores: [{ id: foreign.id, name: foreign.name }] },
+    });
+    expect(await query('query($id:ID!){store(id:$id){id}}', { id: foreign.id })).toEqual({
+      data: { store: null },
+    });
+    expect(
+      await query('query($refs:[_Any!]!){_entities(representations:$refs){...on Store{id}}}', {
+        refs: [{ __typename: 'Store', id: foreign.id, tenantId }],
+      }),
+    ).toEqual({ data: { _entities: [null] } });
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-tenant-id': tenantId },
+      body: JSON.stringify({ query: '{stores{id}}' }),
+    });
+    expect(await response.json()).toMatchObject({
+      errors: [{ extensions: { code: 'UNAUTHENTICATED' } }],
+    });
   });
 });

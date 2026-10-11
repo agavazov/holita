@@ -8,6 +8,7 @@ export function graphqlOptions(
   httpLink: HttpLink,
   uri: string,
   scope?: Readonly<{ storeId: string; language: Language }>,
+  session?: Readonly<{ tenantId: string; token: string }>,
 ): ApolloClient.Options {
   if (
     scope &&
@@ -24,6 +25,7 @@ export function graphqlOptions(
       headers: {
         'x-request-id': requestId,
         'Accept-Language': scopedLanguage ?? (language === 'en' ? 'en' : 'bg'),
+        ...(session ? { authorization: `Bearer ${session.token}` } : {}),
         ...(storeId ? { 'x-store-id': storeId } : {}),
       },
     });

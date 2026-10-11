@@ -1,3 +1,4 @@
+import { DemoSession } from '../../core/auth/demo-session';
 import { provideHttpClient, type HttpRequest } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { inject } from '@angular/core';
@@ -59,6 +60,10 @@ describe.each([
     TestBed.inject(HttpTestingController).verify({ ignoreCancelled: true });
   });
   async function mount(url = path) {
+    TestBed.inject(DemoSession).start({
+      token: 'test-demo-token',
+      tenant: { id: '01000000-0000-4000-8000-000000000001', name: 'RentalSofia' },
+    });
     http = TestBed.inject(HttpTestingController);
     const harness = await RouterTestingHarness.create(url);
     http.expectOne((request) => operation(request, 'AdminStores')).flush({ data: { stores } });
@@ -82,7 +87,8 @@ describe.each([
     }
     await harness.navigateByUrl('/en');
     await harness.fixture.whenStable();
-    expect(harness.routeNativeElement?.querySelector('h1')?.textContent.trim()).toBe('Stores');
+    expect(TestBed.inject(Router).url).toBe(`/en/stores/${storeA}/reference/vehicles`);
+    expect(harness.routeNativeElement?.textContent).toContain('Reference is unavailable.');
     http.expectNone('/graphql');
   }, 15000);
   it('does not issue business requests for unknown stores', async () => {

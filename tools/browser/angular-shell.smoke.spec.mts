@@ -9,7 +9,7 @@ test.beforeEach(async ({ page, app }) => {
     ['10000000-0000-4000-8000-000000000002', 'Plovdiv truck'],
   ] as const) {
     const response = await page.request.post(app.gatewayUrl, {
-      headers: { 'x-store-id': storeId },
+      headers: { authorization: `Bearer ${app.demoSession.token}`, 'x-store-id': storeId },
       data: {
         query:
           'mutation($input:CreateReferenceVehicleInput!){createReferenceVehicle(input:$input){id}}',
@@ -87,7 +87,7 @@ test('Sakai desktop navigation, persisted theme and language preserve the real s
   await expect(
     page.locator('aside').getByRole('link', { name: 'Vehicles', exact: true }),
   ).toHaveAttribute('aria-current', 'page');
-  const storesLink = page.locator('aside').getByRole('link', { name: 'Stores', exact: true });
+  const vehiclesLink = page.locator('aside').getByRole('link', { name: 'Vehicles', exact: true });
   const logo = page.getByRole('link', { name: 'holita', exact: true });
   const select = page.getByRole('combobox', { name: 'Store', exact: true });
   const language = page.getByRole('link', { name: 'Български', exact: true });
@@ -108,8 +108,10 @@ test('Sakai desktop navigation, persisted theme and language preserve the real s
   await expect(theme).toBeFocused();
   await expectVisibleFocus(theme);
   await page.keyboard.press('Tab');
-  await expect(storesLink).toBeFocused();
-  await expectVisibleFocus(storesLink);
+  await expect(page.getByTestId('demo-logout')).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(vehiclesLink).toBeFocused();
+  await expectVisibleFocus(vehiclesLink);
   await expect(page.locator('.p-datatable-mask')).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath('desktop-light.png'), fullPage: true });
   await menu.click();
@@ -118,7 +120,7 @@ test('Sakai desktop navigation, persisted theme and language preserve the real s
   await expect(page.locator('aside')).toBeHidden();
   await theme.focus();
   await page.keyboard.press('Tab');
-  await expect(page.getByRole('button', { name: 'Refresh', exact: true })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Sign out', exact: true })).toBeFocused();
   await expect(page.getByRole('navigation', { name: 'Navigation', exact: true })).toHaveCount(0);
   await finishAnimations(page.locator('.layout-main-container'));
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
@@ -136,8 +138,8 @@ test('Sakai desktop navigation, persisted theme and language preserve the real s
   await expect(page.getByRole('button', { name: 'Use light theme', exact: true })).toBeFocused();
   await expectVisibleFocus(page.getByRole('button', { name: 'Use light theme', exact: true }));
   await menu.focus();
-  await tabTo(page, storesLink);
-  await expectVisibleFocus(storesLink);
+  await tabTo(page, vehiclesLink);
+  await expectVisibleFocus(vehiclesLink);
   await page.reload();
   await expect(page.getByRole('cell', { name: 'Sofia truck', exact: true })).toBeVisible();
   await expect(page.locator('html')).toHaveClass('app-dark');
@@ -188,6 +190,8 @@ test('mobile drawer traps focus, closes on Escape, backdrop, navigation and desk
   await expect(theme).toBeFocused();
   await expectVisibleFocus(theme);
   await page.keyboard.press('Tab');
+  await expect(page.getByTestId('demo-logout')).toBeFocused();
+  await page.keyboard.press('Tab');
   await expect(page.getByRole('combobox', { name: 'Store', exact: true })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { name: 'Refresh', exact: true })).toBeFocused();
@@ -195,9 +199,9 @@ test('mobile drawer traps focus, closes on Escape, backdrop, navigation and desk
   await expect(drawer).toBeVisible();
   await expect(menu).toHaveAttribute('aria-expanded', 'true');
   await expect(drawer.getByRole('button', { name: 'Close navigation', exact: true })).toBeFocused();
-  const storesLink = drawer.getByRole('link', { name: 'Stores', exact: true });
+  const vehiclesLink = drawer.getByRole('link', { name: 'Vehicles', exact: true });
   await page.keyboard.press('Tab');
-  await expectVisibleFocus(storesLink);
+  await expectVisibleFocus(vehiclesLink);
   await page.keyboard.press('Shift+Tab');
   await page.keyboard.press('Shift+Tab');
   await expect(drawer.getByRole('link', { name: 'Devices', exact: true })).toBeFocused();
@@ -215,9 +219,13 @@ test('mobile drawer traps focus, closes on Escape, backdrop, navigation and desk
   await page.locator('.p-drawer-mask').click({ position: { x: 380, y: 400 } });
   await expect(drawer).not.toBeVisible();
   await menu.click();
-  await drawer.getByRole('link', { name: 'Stores', exact: true }).click();
+  await drawer.getByRole('link', { name: 'Devices', exact: true }).click();
   await expect(drawer).not.toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Stores', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Devices', exact: true })).toBeVisible();
+  await menu.click();
+  await drawer.getByRole('link', { name: 'Vehicles', exact: true }).click();
+  await expect(drawer).not.toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Vehicles', exact: true })).toBeVisible();
   await chooseStore(page, 'holita Plovdiv');
   await expect(page.getByRole('cell', { name: 'Plovdiv truck', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Use dark theme', exact: true }).click();
@@ -228,8 +236,8 @@ test('mobile drawer traps focus, closes on Escape, backdrop, navigation and desk
   await expect(drawer).toBeVisible();
   await finishAnimations(drawer);
   await page.keyboard.press('Tab');
-  await expect(storesLink).toBeFocused();
-  await expectVisibleFocus(storesLink);
+  await expect(vehiclesLink).toBeFocused();
+  await expectVisibleFocus(vehiclesLink);
   await page.screenshot({ path: testInfo.outputPath('mobile-menu.png'), fullPage: true });
   await page.setViewportSize({ width: 1280, height: 800 });
   await expect(drawer).not.toBeVisible();
@@ -307,7 +315,7 @@ test('Drawer uses its responsive panel width at 320 px in light and dark themes'
     await finishAnimations(drawer);
     expect(await drawer.evaluate((element) => element.getBoundingClientRect().width)).toBe(280);
     await page.keyboard.press('Tab');
-    await expectVisibleFocus(drawer.getByRole('link', { name: 'Stores', exact: true }));
+    await expectVisibleFocus(drawer.getByRole('link', { name: 'Vehicles', exact: true }));
     await page.screenshot({ path: testInfo.outputPath(`narrow-${theme}.png`), fullPage: true });
     await page.keyboard.press('Escape');
     await expect(drawer).not.toBeVisible();
@@ -339,11 +347,10 @@ test('store selection works with the keyboard and unknown stores expose no Vehic
     page.locator('aside').getByRole('link', { name: 'Vehicles', exact: true }),
   ).toHaveAttribute('aria-current', 'page');
   await page.goto(`${app.url}/en?review=1#main-content`);
-  await expect(page.getByRole('heading', { name: 'Stores', exact: true })).toBeVisible();
-  await expect(
-    page.locator('aside').getByRole('link', { name: 'Stores', exact: true }),
-  ).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('heading', { name: 'Vehicles', exact: true })).toBeVisible();
+  await expect(page.locator('aside .layout-menuitem-root-text')).toHaveText('Workspace');
+  await expect(page.getByRole('link', { name: 'Stores', exact: true })).toHaveCount(0);
   await expect(
     page.locator('aside').getByRole('link', { name: 'Vehicles', exact: true }),
-  ).toHaveCount(0);
+  ).toHaveAttribute('aria-current', 'page');
 });

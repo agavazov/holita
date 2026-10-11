@@ -13,12 +13,12 @@ Use actual Reference [Vehicle SDL](../../../apps/reference/src/vehicles/vehicles
 [service](../../../apps/reference/src/vehicles/vehicles.service.ts) and
 [repository](../../../apps/reference/src/vehicles/vehicles.repository.ts).
 SDL owns API definitions; generated types own resolver signatures; concrete repositories
-require Store scope on every operation. Inputs never own storeId.
+require verified Tenant and Store scope on every operation. Inputs never own tenantId or storeId.
 The [Core client](../../../apps/reference/src/core/core.client.ts) checks existence only during
 creation, using a generated operation and request-local promise cache. Reads/updates/deletes
 remain independent of Core except requested federated Store fields.
 
-[Devices](../../../apps/reference/src/devices/devices.service.ts) adds required same-store
+[Devices](../../../apps/reference/src/devices/devices.service.ts) adds required same-tenant/same-store
 Vehicle assignment, 15-digit string IMEI and per-Store uniqueness. Preserve leading zeros,
 composite foreign keys, shared assignments and protected Vehicle deletion. Resolve federation
 references through scoped service access; use @Parent with Nest parameter decorators.

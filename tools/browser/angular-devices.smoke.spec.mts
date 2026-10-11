@@ -6,9 +6,14 @@ import { workspaceRoot } from '../graphql/contracts.mjs';
 
 const storeA = '10000000-0000-4000-8000-000000000001';
 const path = `/en/stores/${storeA}/reference/devices`;
-async function truck(request: APIRequestContext, gatewayUrl: string, licensePlate: string) {
+async function truck(
+  request: APIRequestContext,
+  gatewayUrl: string,
+  token: string,
+  licensePlate: string,
+) {
   const response = await request.post(gatewayUrl, {
-    headers: { 'x-store-id': storeA },
+    headers: { authorization: `Bearer ${token}`, 'x-store-id': storeA },
     data: {
       query:
         'mutation($input:CreateReferenceVehicleInput!){createReferenceVehicle(input:$input){id}}',
@@ -44,8 +49,8 @@ test.describe('Devices', () => {
     app,
     request,
   }) => {
-    const first = await truck(request, app.gatewayUrl, 'CA1234AB');
-    await truck(request, app.gatewayUrl, 'CB5678AB');
+    const first = await truck(request, app.gatewayUrl, app.demoSession.token, 'CA1234AB');
+    await truck(request, app.gatewayUrl, app.demoSession.token, 'CB5678AB');
     await page.goto(app.url + path + '/new');
     await page.getByRole('button', { name: 'Save device', exact: true }).click();
     await expect(page.getByRole('textbox', { name: 'IMEI', exact: true })).toBeFocused();
@@ -65,7 +70,7 @@ test.describe('Devices', () => {
     await page.getByRole('button', { name: 'Save device', exact: true }).click();
     await expect(page.locator('tbody tr')).toHaveCount(2);
     const deletion = await request.post(app.gatewayUrl, {
-      headers: { 'x-store-id': storeA },
+      headers: { authorization: `Bearer ${app.demoSession.token}`, 'x-store-id': storeA },
       data: {
         query: 'mutation($id:ID!){deleteReferenceVehicle(id:$id){id}}',
         variables: { id: first },
@@ -99,7 +104,7 @@ test.describe('Devices', () => {
     app,
     request,
   }) => {
-    await truck(request, app.gatewayUrl, 'CA1234AB');
+    await truck(request, app.gatewayUrl, app.demoSession.token, 'CA1234AB');
     const captures = join(workspaceRoot, '.references/review/devices');
     await mkdir(captures, { recursive: true });
     await page.goto(app.url + path.replace('/en/', '/bg/') + '/new');

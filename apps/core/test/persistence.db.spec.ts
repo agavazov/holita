@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from '@jest/globals';
 import pg from 'pg';
-import { seedStores, storeSeeds } from '../prisma/seed-data.js';
+import { seedStores, storeSeeds, rentalSofiaId } from '../prisma/seed-data.js';
 import { createTestDatabase } from './test-database.js';
 import { getTestDatabaseUrl } from './test-database-url.js';
 
@@ -17,7 +17,9 @@ describe('core PostgreSQL persistence', () => {
   });
 
   it('applies migrations and persists generated IDs and timestamps', async () => {
-    const store = await database.client.store.create({ data: { name: 'Custom store' } });
+    const store = await database.client.store.create({
+      data: { tenantId: rentalSofiaId, name: 'Custom store' },
+    });
     expect(store.id).toMatch(/^[0-9a-f-]{36}$/);
     expect(store.createdAt).toBeInstanceOf(Date);
     expect(store.updatedAt).toBeInstanceOf(Date);
@@ -30,9 +32,11 @@ describe('core PostgreSQL persistence', () => {
     if (!first) throw new Error('Missing store seed');
     await database.client.store.update({
       where: { id: first.id },
-      data: { name: 'My edited store' },
+      data: { tenantId: rentalSofiaId, name: 'My edited store' },
     });
-    const custom = await database.client.store.create({ data: { name: 'Preserve me' } });
+    const custom = await database.client.store.create({
+      data: { tenantId: rentalSofiaId, name: 'Preserve me' },
+    });
     const before = await database.client.store.count();
     expect((await seedStores(database.client)).count).toBe(0);
     expect(await database.client.store.count()).toBe(before);
@@ -43,11 +47,15 @@ describe('core PostgreSQL persistence', () => {
   });
 
   it('isolates another live test schema and drops only that schema on cleanup', async () => {
-    const first = await database.client.store.create({ data: { name: 'First run' } });
+    const first = await database.client.store.create({
+      data: { tenantId: rentalSofiaId, name: 'First run' },
+    });
     const other = await createTestDatabase();
     try {
       expect(await other.client.store.count()).toBe(0);
-      await other.client.store.create({ data: { id: first.id, name: 'Independent run' } });
+      await other.client.store.create({
+        data: { tenantId: rentalSofiaId, id: first.id, name: 'Independent run' },
+      });
       expect(await database.client.store.findUnique({ where: { id: first.id } })).toEqual(first);
     } finally {
       await other.close();

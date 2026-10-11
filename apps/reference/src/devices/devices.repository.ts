@@ -11,6 +11,7 @@ import type { Prisma } from '../generated/prisma/client.js';
 export class DevicesRepository {
   constructor(private readonly prisma: PrismaService) {}
   async list(
+    tenantId: string,
     storeId: string,
     offset: number,
     limit: number,
@@ -18,6 +19,7 @@ export class DevicesRepository {
     sort: Required<ReferenceDeviceSort> = { field: 'CREATED_AT', direction: 'DESC' },
   ) {
     const where = {
+      tenantId,
       storeId,
       ...(filter?.search
         ? {
@@ -48,19 +50,24 @@ export class DevicesRepository {
     );
     return { items, total, offset, limit };
   }
-  find(storeId: string, id: string) {
-    return this.prisma.client.device.findUnique({ where: { id, storeId } });
+  find(tenantId: string, storeId: string, id: string) {
+    return this.prisma.client.device.findUnique({ where: { id, tenantId, storeId } });
   }
-  findVehicle(storeId: string, id: string) {
-    return this.prisma.client.vehicle.findUnique({ where: { id, storeId } });
+  findVehicle(tenantId: string, storeId: string, id: string) {
+    return this.prisma.client.vehicle.findUnique({ where: { id, tenantId, storeId } });
   }
-  create(storeId: string, input: CreateReferenceDeviceInput) {
-    return this.prisma.client.device.create({ data: { ...input, storeId } });
+  create(tenantId: string, storeId: string, input: CreateReferenceDeviceInput) {
+    return this.prisma.client.device.create({ data: { ...input, tenantId, storeId } });
   }
-  update(storeId: string, id: string, input: Partial<CreateReferenceDeviceInput>) {
-    return this.prisma.client.device.update({ where: { id, storeId }, data: input });
+  update(
+    tenantId: string,
+    storeId: string,
+    id: string,
+    input: Partial<CreateReferenceDeviceInput>,
+  ) {
+    return this.prisma.client.device.update({ where: { id, tenantId, storeId }, data: input });
   }
-  delete(storeId: string, id: string) {
-    return this.prisma.client.device.delete({ where: { id, storeId } });
+  delete(tenantId: string, storeId: string, id: string) {
+    return this.prisma.client.device.delete({ where: { id, tenantId, storeId } });
   }
 }

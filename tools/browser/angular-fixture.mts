@@ -18,9 +18,26 @@ export async function chooseStore(page: Page, name: string): Promise<void> {
 }
 
 export const test = base.extend<{
-  app: { url: string; gatewayUrl: string };
+  app: {
+    url: string;
+    gatewayUrl: string;
+    demoSession: { token: string; tenant: { id: string; name: string } };
+  };
+  demoSignedIn: boolean;
   referenceEnabled: boolean;
 }>({
+  demoSignedIn: [true, { option: true }],
+  page: async ({ page, app, demoSignedIn }, use) => {
+    if (demoSignedIn) {
+      await page.addInitScript((session) => {
+        sessionStorage.setItem(
+          'holita.admin.demo-session',
+          JSON.stringify({ ...session, storeId: '10000000-0000-4000-8000-000000000001' }),
+        );
+      }, app.demoSession);
+    }
+    await use(page);
+  },
   referenceEnabled: [true, { option: true }],
   app: async ({ browserName, referenceEnabled }, use) => {
     if (browserName !== 'chromium') throw new Error('This focused smoke target uses Chromium.');
@@ -89,7 +106,37 @@ export const test = base.extend<{
       const backend = await createFederationFixture({ adminOrigin: url, referenceEnabled });
       try {
         gatewayUrl = backend.url;
-        await use({ url, gatewayUrl });
+        const login = await fetch(gatewayUrl, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            query:
+              'mutation {demoLogin(tenantId:"01000000-0000-4000-8000-000000000001"){token tenant{id name}}}',
+          }),
+        });
+        const body: unknown = await login.json();
+        if (
+          !body ||
+          typeof body !== 'object' ||
+          !('data' in body) ||
+          !body.data ||
+          typeof body.data !== 'object' ||
+          !('demoLogin' in body.data)
+        )
+          throw new Error('Missing demo login result');
+        const session = body.data.demoLogin;
+        if (
+          !session ||
+          typeof session !== 'object' ||
+          !('token' in session) ||
+          typeof session.token !== 'string'
+        )
+          throw new Error('Missing demo token');
+        const demoSession = {
+          token: session.token,
+          tenant: { id: '01000000-0000-4000-8000-000000000001', name: 'RentalSofia' },
+        };
+        await use({ url, gatewayUrl, demoSession });
       } finally {
         await backend.close();
       }
