@@ -59,6 +59,45 @@ describe('Reference through the actual federation boundary', () => {
     const body: unknown = await response.json();
     return body;
   }
+  it('runs Vehicles CRUD through Gateway with Core store resolution and foreign-ID isolation', async () => {
+    const created = await query(
+      'mutation($input:CreateReferenceVehicleInput!){createReferenceVehicle(input:$input){id storeId licensePlate notes store{id name}}}',
+      { input: { licensePlate: ' CA1234AB ', notes: ' First\nSecond ' } },
+    );
+    expect(created).toMatchObject({
+      data: {
+        createReferenceVehicle: {
+          storeId: sofia,
+          licensePlate: 'CA1234AB',
+          notes: 'First\nSecond',
+          store: { id: sofia, name: 'holita Sofia' },
+        },
+      },
+    });
+    const id = record(record(record(created).data).createReferenceVehicle).id;
+    if (typeof id !== 'string') throw new Error('Missing Vehicle ID');
+    expect(
+      await query('query($id:ID!){referenceVehicle(id:$id){id}}', { id }, plovdiv),
+    ).toMatchObject({ errors: [{ extensions: { code: 'NOT_FOUND' } }] });
+    expect(
+      await query(
+        'mutation($id:ID!){updateReferenceVehicle(id:$id,input:{notes:null}){licensePlate notes}}',
+        { id },
+      ),
+    ).toEqual({ data: { updateReferenceVehicle: { licensePlate: 'CA1234AB', notes: null } } });
+    expect(await query('{referenceVehicles(search:"ca1234"){items{licensePlate}total}}')).toEqual({
+      data: { referenceVehicles: { items: [{ licensePlate: 'CA1234AB' }], total: 1 } },
+    });
+    expect(
+      await query('mutation($id:ID!){deleteReferenceVehicle(id:$id){id}}', { id }, plovdiv),
+    ).toMatchObject({ errors: [{ extensions: { code: 'NOT_FOUND' } }] });
+    expect(await query('mutation($id:ID!){deleteReferenceVehicle(id:$id){id}}', { id })).toEqual({
+      data: { deleteReferenceVehicle: { id } },
+    });
+    expect(await query('{referenceVehicles{total}}')).toEqual({
+      data: { referenceVehicles: { total: 0 } },
+    });
+  });
   it('runs scoped lifecycle and history operations through the gateway', async () => {
     const created = await query(
       'mutation($input:CreateReferenceEventInput!){createReferenceEvent(input:$input){id}}',
@@ -426,7 +465,9 @@ describe('Reference through the actual federation boundary', () => {
       ],
     });
     expect(
-      await query('{referenceSpeakers{items{store{id}}}referenceTags{items{store{id}}}}'),
+      await query(
+        '{referenceSpeakers(ids:["50000000-0000-4000-8000-000000000001"]){items{store{id}}}referenceTags{items{store{id}}}}',
+      ),
     ).toMatchObject({
       data: {
         referenceSpeakers: { items: [{ store: { id: sofia } }] },

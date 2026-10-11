@@ -8,6 +8,8 @@ import { VenuesPage } from './venues/venues-page';
 import { VenueEditor } from './venues/venue-editor';
 import { SpeakersPage } from './speakers/speakers-page';
 import { SpeakerEditor } from './speakers/speaker-editor';
+import { VehiclesPage } from './vehicles/vehicles-page';
+import { VehicleEditor } from './vehicles/vehicle-editor';
 import { TagsPage } from './tags/tags-page';
 import { TagEditor } from './tags/tag-editor';
 import { EventsPage } from './events/events-page';
@@ -22,6 +24,8 @@ import { EventOverview } from './events/event-overview';
     VenueEditor,
     SpeakersPage,
     SpeakerEditor,
+    VehiclesPage,
+    VehicleEditor,
     TagsPage,
     TagEditor,
     EventsPage,
@@ -37,6 +41,7 @@ export class ReferenceWorkspace {
   readonly enabled = inject(AdminConfig).referenceEnabled;
   private readonly venueEditor = viewChild(VenueEditor);
   private readonly speakerEditor = viewChild(SpeakerEditor);
+  private readonly vehicleEditor = viewChild(VehicleEditor);
   private readonly tagEditor = viewChild(TagEditor);
   private readonly eventEditor = viewChild(EventEditor);
   private readonly sessionEditor = viewChild(SessionEditor);
@@ -57,6 +62,7 @@ export class ReferenceWorkspace {
       (resource === 'venues' ||
         resource === 'speakers' ||
         resource === 'tags' ||
+        resource === 'vehicles' ||
         resource === 'events')
       ? [
           {
@@ -80,6 +86,7 @@ export class ReferenceWorkspace {
         this.venueEditor() ??
         this.speakerEditor() ??
         this.tagEditor() ??
+        this.vehicleEditor() ??
         this.eventEditor() ??
         this.sessionEditor() ??
         this.eventOverview()

@@ -67,6 +67,17 @@
           <holita-events-page [store]="scope.store" [language]="scope.language" />
         }
       }
+      @case ('vehicles') {
+        @if (scope.editor) {
+          <holita-vehicle-editor
+            [store]="scope.store"
+            [language]="scope.language"
+            [vehicleId]="scope.recordId"
+          />
+        } @else {
+          <holita-vehicles-page [store]="scope.store" [language]="scope.language" />
+        }
+      }
       @case ('tags') {
         @if (scope.editor) {
           <holita-tag-editor

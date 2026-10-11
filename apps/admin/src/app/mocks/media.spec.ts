@@ -400,7 +400,7 @@ describe('Prototype gallery persistence and lifecycle', () => {
   it('replaces obsolete and corrupt media relationships rather than keeping invalid browser data', () => {
     const raw = storage.value;
     if (!raw) throw new Error('Missing snapshot');
-    storage.setItem(prototypeStorageKey, raw.replace('"version":2', '"version":1'));
+    storage.setItem(prototypeStorageKey, raw.replace('"version":3', '"version":1'));
     expect(createPrototypeState(storage).listEvents(storeA, { offset: 0, limit: 100 }).total).toBe(
       22,
     );

@@ -3,6 +3,7 @@ import type {
   AdminVenueFragment,
   AdminSpeakerFragment,
   AdminTagFragment,
+  AdminVehicleFragment,
   AdminEventDetailsFragment,
   AdminSessionDetailsFragment,
   AdminEventHistoryQuery,
@@ -35,6 +36,7 @@ export interface PrototypeSnapshot {
   venues: AdminVenueFragment[];
   speakers: AdminSpeakerFragment[];
   tags: AdminTagFragment[];
+  vehicles: AdminVehicleFragment[];
   events: PrototypeEvent[];
   sessions: PrototypeSession[];
   history: PrototypeHistoryEntry[];

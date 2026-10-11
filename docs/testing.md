@@ -38,6 +38,20 @@ separate named targets; browser tests use test:smoke:admin. No selector must sil
 `--passWithNoTests` must not be enabled. A missing file or a case pattern that executes
 zero tests is not successful validation, even if a runner exits zero for skipped cases.
 
+## Vehicles checks
+
+Use `npm run test:reference -- vehicles.service.spec.ts --skip-nx-cache` for input validation,
+creation-only store checks and scoped repository calls. After the database prerequisites below,
+run `npm run test:reference:db -- vehicles.db.spec.ts` for actual migrations, two-field CRUD,
+nullable Notes, foreign-ID/federation isolation and literal plate search/paging.
+
+`npm run test:admin -- --include="app/features/reference/vehicles/*.spec.ts" --include=app/mocks/vehicles.spec.ts --include=app/features/reference/reference-workspace.spec.ts --skip-nx-cache`
+checks typed forms, URL mapping, per-client scope, A → B → A, delayed mutations, confirmation
+retirement, partial deletion retry and Prototype persistence/version 2 upgrade/storage failures.
+`npm run test:smoke:admin -- angular-vehicles.smoke.spec.mts` checks the compiled Real and
+Prototype CRUD, Notes clearing/reload, store isolation and Bulgarian 1280/390/320px light/dark
+forms/lists with long Notes. Captures remain in ignored `.references/review/vehicles`.
+
 ## Angular admin checks
 
 Use Angular CLI's native `--include` path relative to `apps/admin/src`, and `--filter` for

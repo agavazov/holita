@@ -31,6 +31,7 @@ describe.each([
   ['venues', 'Venue'],
   ['speakers', 'Speaker'],
   ['tags', 'Tag'],
+  ['vehicles', 'Vehicle'],
   ['events', 'Event'],
 ])('Reference %s availability and workspace routing', (resource, entity) => {
   const path = `/en/stores/${storeA}/reference/${resource}`;

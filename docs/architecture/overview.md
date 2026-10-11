@@ -5,13 +5,13 @@ local caching and affected selection. Each application has a package.json and a 
 project.json giving Nx its stable name and application tag. There are no shared workspace
 packages or cross-application code imports.
 
-| Application | Framework                        | Current entry points                                                                                                                                                                                                                                                                                                     |
-| ----------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| admin       | Angular, PrimeNG, Apollo Angular | PrimeNG/Sakai shell, real Stores, Products and Reference Venues/Speakers/Tags CRUD and Events list/editor/overview, atomic lifecycle actions, History, Event Sessions and Gallery at http://127.0.0.1:11088; the same business workflows in backend-free Prototype with local Sakai UI catalog at http://127.0.0.1:11089 |
-| gateway     | NestJS, Apollo Gateway           | /graphql and /health on 127.0.0.1:11080                                                                                                                                                                                                                                                                                  |
-| core        | NestJS, Federation 2             | /graphql (stores) and /health on 127.0.0.1:11082                                                                                                                                                                                                                                                                         |
-| products    | NestJS, Federation 2             | /graphql (products) and /health on 127.0.0.1:11083                                                                                                                                                                                                                                                                       |
-| reference   | NestJS, Federation 2             | /graphql (events, venues, speakers, tags) and /health on 127.0.0.1:11086                                                                                                                                                                                                                                                 |
+| Application | Framework                        | Current entry points                                                                                                                                                                                                                                                                                                              |
+| ----------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| admin       | Angular, PrimeNG, Apollo Angular | PrimeNG/Sakai shell, real Stores, Products and Reference Venues/Speakers/Tags/Vehicles CRUD and Events list/editor/overview, atomic lifecycle actions, History, Event Sessions and Gallery at http://127.0.0.1:11088; the same business workflows in backend-free Prototype with local Sakai UI catalog at http://127.0.0.1:11089 |
+| gateway     | NestJS, Apollo Gateway           | /graphql and /health on 127.0.0.1:11080                                                                                                                                                                                                                                                                                           |
+| core        | NestJS, Federation 2             | /graphql (stores) and /health on 127.0.0.1:11082                                                                                                                                                                                                                                                                                  |
+| products    | NestJS, Federation 2             | /graphql (products) and /health on 127.0.0.1:11083                                                                                                                                                                                                                                                                                |
+| reference   | NestJS, Federation 2             | /graphql (events, venues, speakers, tags, vehicles) and /health on 127.0.0.1:11086                                                                                                                                                                                                                                                |
 
 Core owns store listing/lookup; products owns Products CRUD; reference owns Event, Venue, Speaker and Tag CRUD. Their concrete feature
 repositories access their own PrismaService, whose client connects lazily and disconnects
@@ -193,7 +193,7 @@ preserves the available Products/Reference section and returns to its unfiltered
 catalogs supply frontend messages. Language navigation preserves the path/query/hash;
 requests capture `Accept-Language` and a new `x-request-id`. The language is not persisted
 as independent global state. There is no authentication. Angular also supports startup-only
-Prototype for Stores/Products/Venues/Speakers/Tags/Events/Sessions/Media/History.
+Prototype for Stores/Products/Venues/Speakers/Tags/Vehicles/Events/Sessions/Media/History.
 
 [StoreProducts](../../apps/admin/src/app/features/products/store-products.ts) validates the
 selection against discovery and keys the inner Products component by store/language/Product ID.
@@ -219,7 +219,7 @@ Scoped Drawer content padding and the navigation's line height retain Sakai's me
 Its panel uses a responsive width of `min(20rem, 90vw)` and a single 1px right border
 through the public `style` input; initial focus
 targets the close button's explicit pass-through ID, and dismissal returns focus to the toggle.
-Navigation exposes Stores and, for a known selection, Products and enabled Reference Venues/Speakers/Tags/Events.
+Navigation exposes Stores and, for a known selection, Products and enabled Reference Venues/Speakers/Tags/Vehicles/Events.
 Reference availability is passed into the shell explicitly from startup configuration. The active-store selector
 uses PrimeNG Select, alongside the language and theme controls on the right of the desktop
 top bar. Keyboard order follows these controls. The desktop sidebar slides out on collapse
@@ -314,7 +314,7 @@ no media workflow; the admin has no generic form/CRUD framework or global notifi
 
 [ReferenceWorkspace](../../apps/admin/src/app/features/reference/reference-workspace.ts) is a
 lazy boundary that checks Reference availability and discovered store identity before mounting
-Venues, Speakers, Tags or Events. Its store/language/resource/editor-mode/record-ID key recreates each
+Venues, Speakers, Tags, Vehicles or Events. Its store/language/resource/editor-mode/record-ID key recreates each
 list/editor scope. Disabled
 Reference renders a localized unavailable message without creating a feature API or issuing
 business requests; Products remains usable. A backend-disabled request exposes its diagnostic
@@ -357,6 +357,18 @@ validates six-digit HEX colors, shows a valid-color preview and submits lowercas
 Both use typed Reactive Forms, owning text limits, server-field focus and dirty navigation.
 Duplicate Tag names remain a server-owned store constraint. Only the shared list/editor SCSS
 is presentation reuse; services, operations, state and domain validators remain concrete.
+
+[Vehicles SDL](../../apps/reference/src/vehicles/vehicles.graphql), the concrete
+[service](../../apps/reference/src/vehicles/vehicles.service.ts) and
+[repository](../../apps/reference/src/vehicles/vehicles.repository.ts) own store-scoped Vehicle
+CRUD with required License Plate and nullable plain-text Notes. Vehicle persistence has no
+relations or plate uniqueness constraint. Creation checks Core store existence; all other
+operations use the captured store without a Core request. Runtime SDL and offline composition
+include the explicit Vehicles contract. [VehiclesApi](../../apps/admin/src/app/features/reference/vehicles/vehicles-api.ts)
+owns a separate Apollo client/cache for each mounted list/editor. Typed editors retire late
+callbacks; list confirmation and sequential deletion stop unsent writes when the query changes.
+Real and Prototype share the generated operations, components and Bulgarian/English catalogs.
+Prototype version 3 adds Vehicles and upgrades valid version 2 snapshots without discarding data.
 
 [SessionsApi](../../apps/admin/src/app/features/reference/sessions/sessions-api.ts) owns
 Angular-generated Session operations and one captured store/language/Event client. Its
@@ -405,7 +417,7 @@ Angular [startup](../../apps/admin/src/main.ts) selects the public `dataSource` 
 the runtime license/config loading path and dynamically starts [MSW](../../apps/admin/src/app/mocks/browser.ts)
 before bootstrap. Prototype uses only the admin origin's `/__prototype/graphql`; its
 [handlers](../../apps/admin/src/app/mocks/handlers.ts) accept the exact generated Angular
-Stores/Products/Venues/Speakers/Tags/Events/Sessions/Media/History documents, including
+Stores/Products/Venues/Speakers/Tags/Vehicles/Events/Sessions/Media/History documents, including
 Apollo's typename transformation.
 Unknown/altered operations and real Gateway requests fail. Feature UI/services do not branch
 by mode. Navigation and the route boundary expose only the implemented capabilities.

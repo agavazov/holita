@@ -12,11 +12,12 @@ import {
 import { initialMedia } from './media-fixtures';
 function initialSnapshot(): PrototypeSnapshot {
   return {
-    version: 2,
+    version: 3,
     products: initialProducts(),
     venues: initialVenues(),
     speakers: initialSpeakers(),
     tags: initialTags(),
+    vehicles: [],
     events: initialEvents(),
     sessions: initialSessions(initialEvents()),
     history: initialHistory(initialEvents()),

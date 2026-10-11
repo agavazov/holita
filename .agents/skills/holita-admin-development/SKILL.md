@@ -128,7 +128,7 @@ Real and Prototype reuse the same feature components and concrete Apollo service
 Startup config defaults to `graphql`; Angular's `prototype` CLI configuration forces `mock`.
 Follow [Angular Prototype](../../../docs/development.md#angular-prototype) and the owning
 `apps/admin/src/app/mocks` modules. Keep mode decisions in transport infrastructure.
-Stores/Products/Venues/Speakers/Tags/Events/Sessions/Media/History operations are mocked.
+Stores/Products/Venues/Speakers/Tags/Vehicles/Events/Sessions/Media/History operations are mocked.
 Keep exact generated document matching, same-origin transport, active/trashed relation checks,
 disposable snapshot validation and visible storage errors. Mutation/History writes are atomic.
 Media stores finalized Blobs in native IndexedDB before metadata, rechecks Event/Reset after

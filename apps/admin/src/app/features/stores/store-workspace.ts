@@ -173,6 +173,7 @@ export class StoreWorkspace {
       (resource === 'venues' ||
         resource === 'speakers' ||
         resource === 'tags' ||
+        resource === 'vehicles' ||
         resource === 'events');
     void this.router.navigate([
       '/',

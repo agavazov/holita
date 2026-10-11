@@ -228,3 +228,17 @@ no business operations or persisted fixtures. Extract another shared component o
 concrete reuse. Backend resolvers/services/repositories and persistence remain inside their
 owning service; see [Reference architecture](architecture/overview.md#reference-event-management)
 and [media configuration](development.md#reference-media-configuration).
+
+## Vehicles
+
+[Vehicles](../apps/reference/src/vehicles/vehicles.graphql) is a concrete two-field,
+store-scoped CRUD module in Reference. License Plate is required (32 code points maximum);
+Notes is optional plain text (2000 maximum), with null clearing and multiline display.
+[VehicleEditor](../apps/admin/src/app/features/reference/vehicles/vehicle-editor.ts) uses typed
+Reactive Forms and [VehiclesPage](../apps/admin/src/app/features/reference/vehicles/vehicles-page.ts)
+uses URL-backed search, sorting, paging and confirmed page-local deletion. Both Real and
+Prototype use [generated operations](../apps/admin/src/app/features/reference/vehicles/operations.graphql).
+The scoped API/editor/deletion tests exercise retired clients, A → B → A, dirty forms and
+late callbacks. [Database checks](../apps/reference/test/vehicles.db.spec.ts) cover persistence,
+null clearing, context, federation references and literal search. [Browser checks](../tools/browser/angular-vehicles.smoke.spec.mts)
+cover CRUD/reload/scoping in both modes and Bulgarian desktop/mobile light/dark presentation.

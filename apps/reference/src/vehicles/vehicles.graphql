@@ -1,0 +1,53 @@
+type ReferenceVehicle @key(fields: "id") {
+  id: ID!
+  storeId: ID!
+  store: Store!
+  licensePlate: String!
+  notes: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+type ReferenceVehiclePage {
+  items: [ReferenceVehicle!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+input CreateReferenceVehicleInput {
+  licensePlate: String!
+  notes: String
+}
+input UpdateReferenceVehicleInput {
+  licensePlate: String
+  notes: String
+}
+enum ReferenceVehicleSortField {
+  LICENSE_PLATE
+  CREATED_AT
+}
+
+enum ReferenceVehicleSortDirection {
+  ASC
+  DESC
+}
+
+input ReferenceVehicleSort {
+  field: ReferenceVehicleSortField! = CREATED_AT
+  direction: ReferenceVehicleSortDirection! = DESC
+}
+
+extend type Query {
+  referenceVehicles(
+    offset: Int! = 0
+    limit: Int! = 20
+    search: String
+    ids: [ID!]
+    sort: ReferenceVehicleSort
+  ): ReferenceVehiclePage!
+  referenceVehicle(id: ID!): ReferenceVehicle!
+}
+extend type Mutation {
+  createReferenceVehicle(input: CreateReferenceVehicleInput!): ReferenceVehicle!
+  updateReferenceVehicle(id: ID!, input: UpdateReferenceVehicleInput!): ReferenceVehicle!
+  deleteReferenceVehicle(id: ID!): ReferenceVehicle!
+}

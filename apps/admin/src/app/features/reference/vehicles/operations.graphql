@@ -1,0 +1,45 @@
+fragment AdminVehicle on ReferenceVehicle {
+  id
+  storeId
+  licensePlate
+  notes
+  createdAt
+  updatedAt
+}
+
+query AdminVehicles(
+  $offset: Int!
+  $limit: Int!
+  $search: String
+  $ids: [ID!]
+  $sort: ReferenceVehicleSort
+) {
+  referenceVehicles(offset: $offset, limit: $limit, search: $search, ids: $ids, sort: $sort) {
+    items {
+      ...AdminVehicle
+    }
+    total
+    offset
+    limit
+  }
+}
+query AdminVehicle($id: ID!) {
+  referenceVehicle(id: $id) {
+    ...AdminVehicle
+  }
+}
+mutation AdminCreateVehicle($input: CreateReferenceVehicleInput!) {
+  createReferenceVehicle(input: $input) {
+    ...AdminVehicle
+  }
+}
+mutation AdminUpdateVehicle($id: ID!, $input: UpdateReferenceVehicleInput!) {
+  updateReferenceVehicle(id: $id, input: $input) {
+    ...AdminVehicle
+  }
+}
+mutation AdminDeleteVehicle($id: ID!) {
+  deleteReferenceVehicle(id: $id) {
+    ...AdminVehicle
+  }
+}

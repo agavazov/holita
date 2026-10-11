@@ -21,7 +21,7 @@ nvm installation, initialize a non-interactive shell with `. "$HOME/.nvm/nvm.sh"
 | Command                                           | Behavior                                                                                            |
 | ------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | npm run dev                                       | Wait for PostgreSQL in Docker, then start four backends and both Angular modes                      |
-| npm run dev:admin                                 | Angular real Stores/Products/Venues/Speakers/Tags/Events on port 11088                              |
+| npm run dev:admin                                 | Angular real Stores/Products/Venues/Speakers/Tags/Vehicles/Events on port 11088                     |
 | npm run dev:admin:mock                            | Angular Prototype CRUD, Events/Sessions/Gallery/History on port 11089; no backend needed            |
 | npm run dev:gateway                               | Nest gateway watcher                                                                                |
 | npm run dev:core                                  | Nest core watcher                                                                                   |
@@ -171,12 +171,12 @@ replacement. Served production builds may select it with public `dataSource: "mo
 Real's `referenceEnabled` is false. Changing the URL or store cannot switch transport.
 MSW starts before Angular bootstrap and rejects unsupported, altered or foreign operation
 documents and requests to the real Gateway. Prototype accepts POST with the exact generated
-documents; other HTTP methods are rejected. The 42 generated Angular operations for Stores, Products, Venues, Speakers, Tags, Events,
+documents; other HTTP methods are rejected. The 47 generated Angular operations for Stores, Products, Venues, Speakers, Tags, Vehicles, Events,
 Sessions, Gallery and History are supported. Their existing components and concrete Apollo
 services work in both modes. The lazy [UI catalog](#ui-catalog) supplies local Sakai examples in Prototype.
 
 Data is a small versioned localStorage snapshot under `holita.admin.prototype.data`. A new browser/host/port starts independent fixtures. Invalid or obsolete
-snapshots are discarded; snapshot version 2 replaces the earlier basic resource dataset.
+snapshots are discarded; snapshot version 3 adds Vehicles and upgrades valid version 2 data in place.
 Demo data is disposable and is never imported into Real. Lookup
 uniqueness, literal search, filtering/pagination/sorting, nullable updates and store identity
 follow the same contracts. Active/trashed Events and their Sessions reserve lookup rows for
@@ -243,7 +243,20 @@ stops unsent deletes; submitted writes settle against their original scope.
 Angular Real uses the existing Reference service; Prototype supplies the same implemented
 workflows locally. Rich text/media are not part of the Venue editor.
 
-### Angular Reference Speakers and Tags
+### Angular Reference Speakers, Tags and Vehicles
+
+**Reference → Vehicles** opens `/reference/vehicles`; Create uses `/new` and a License
+Plate link opens `/:recordId/edit`. The editor contains exactly two business fields:
+required License Plate (1–32 Unicode code points) and optional Notes (a plain-text textarea,
+up to 2000 code points). Both are trimmed; empty Notes saves as null and can be cleared.
+Plates retain their entered case and support different countries' formats; duplicates are
+allowed. The list has URL-backed plate search, plate sorting, server paging and confirmed
+single/page-local sequential deletion, with partial failures and retry. Notes previews retain
+line breaks and display up to three lines; the editor shows the full text. Real uses the
+Reference database through Gateway; Prototype persists Vehicles with the same operations.
+Version 2 Prototype snapshots upgrade to version 3 with an empty Vehicles collection while
+preserving their existing records and media. Reference availability and discovered-store
+checks apply to every Vehicles route.
 
 **Reference → Speakers** opens `/reference/speakers`; **Reference → Tags** opens
 `/reference/tags`. Create uses `/new`; clicking a name opens `/:recordId/edit`. Both lists
@@ -553,7 +566,7 @@ npm exec -- prettier --check 'apps/admin/src/**/*.html'
 
 Run `npm run dev:admin:mock` and open http://127.0.0.1:11089/bg (or `/en`).
 No backend or database is needed. Confirm the Prototype indicator, select each store and
-exercise Products, Venues, Speakers and Tags CRUD. Reload to check browser persistence.
+exercise Products, Venues, Speakers, Tags and Vehicles CRUD. Reload to check browser persistence.
 Create an Event, edit its description, add a Session/Speaker and reorder the program.
 Upload an image, set cover/Alt text, reorder it and confirm that Trash/Restore retains
 children and images. Check History and then confirm Reset demo data, which waits for

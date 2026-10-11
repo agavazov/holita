@@ -229,3 +229,15 @@ model EventHistory {
 
   @@index([storeId, eventId, createdAt, id])
 }
+
+model Vehicle {
+  id String @id @default(uuid()) @db.Uuid
+  storeId String @db.Uuid
+  licensePlate String @db.VarChar(32)
+  notes String? @db.VarChar(2000)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@unique([storeId, id])
+  @@index([storeId, createdAt, id])
+}

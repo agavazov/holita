@@ -6,7 +6,7 @@ life cycle (SDLC) automation.
 A strict TypeScript npm-workspaces repository with Nx tasks and five host applications:
 Angular admin and NestJS gateway, core, products and reference services.
 Sakai is the theme and visual reference for the Angular admin in `apps/admin`, with holita
-branding and PrimeNG components. Angular provides store selection, Products and Reference Venues/Speakers/Tags CRUD plus Events list/editor/overview, atomic lifecycle actions, History and Event-scoped Sessions through
+branding and PrimeNG components. Angular provides store selection, Products and Reference Venues/Speakers/Tags/Vehicles CRUD plus Events list/editor/overview, atomic lifecycle actions, History and Event-scoped Sessions through
 the real gateway. The pinned, ignored [Sakai source](docs/development.md#sakai-source-reference)
 supplies the shell and feature presentation reference. Angular Prototype also includes a lazy
 [Sakai UI catalog](docs/development.md#ui-catalog) with local interactive examples.
@@ -47,6 +47,11 @@ Reference when false; Products stays available. **Reference → Speakers and Tag
 editors, nullable email/biography clearing, live HEX color preview and duplicate Tag name errors.
 All three lists preserve URL paging, name/activity filters and sorting; referenced records remain
 protected from deletion, including relations retained through trashed Events.
+
+**Reference → Vehicles** provides License Plate (required) and Notes (optional textarea),
+with search, sorting, paging, creation/editing and confirmed deletion. It works in Real and
+Prototype with store-isolated data and Bulgarian/English labels.
+
 **Reference → Events** provides server filters/ranges/sorting, per-store columns, a typed
 General/Schedule/Content editor, remote Venue/Tag selection and saved overview. EUR budgets
 remain exact strings; times use Europe/Sofia. Rich text supports safe formatting/web links
@@ -57,7 +62,7 @@ Event page-local selections support confirmed atomic Publish/Archive/Trash/Resto
 The shell supports desktop/mobile navigation, Bulgarian/English and persisted light/dark themes.
 For backend-free Angular Prototype, run `npm run dev:admin:mock` and open
 [Angular Prototype](http://127.0.0.1:11089). The same Sakai screens provide Stores and
-Products/Venues/Speakers/Tags CRUD, Events, Sessions, Gallery and History. Records are saved
+Products/Venues/Speakers/Tags/Vehicles CRUD, Events, Sessions, Gallery and History. Records are saved
 in localStorage; finalized image files use native IndexedDB. Confirmed **Reset demo data**
 waits for submitted writes and restores fixtures in the current language. The UI catalog
 is available only in Prototype. See [configuration](docs/development.md#angular-admin-foundation) and

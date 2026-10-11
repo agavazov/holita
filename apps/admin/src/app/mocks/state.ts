@@ -13,6 +13,7 @@ import { createProductState, validProduct } from './products';
 import { createVenueState, validVenue } from './venues';
 import { createSpeakerState, validSpeaker } from './speakers';
 import { createTagState, validTag } from './tags';
+import { createVehicleState, validVehicle } from './vehicles';
 import type { PrototypeSnapshot } from './snapshot';
 import { distinctRecords } from './validation';
 import { createEventState } from './events';
@@ -24,7 +25,7 @@ import { validMedia, validMediaRelations } from './media-validation';
 import type { PrototypeMediaStorage } from './media-storage';
 
 export const prototypeStorageKey = 'holita.admin.prototype.data';
-const version = 2;
+const version = 3;
 type PrototypeStorage = Pick<Storage, 'getItem' | 'setItem'>;
 function fixtures(): PrototypeSnapshot {
   const events = initialEvents();
@@ -34,6 +35,7 @@ function fixtures(): PrototypeSnapshot {
     venues: initialVenues(),
     speakers: initialSpeakers(),
     tags: initialTags(),
+    vehicles: [],
     events,
     sessions: initialSessions(events),
     history: initialHistory(events),
@@ -58,6 +60,9 @@ function validSnapshot(value: unknown): value is PrototypeSnapshot {
     !('tags' in value) ||
     !Array.isArray(value.tags) ||
     !value.tags.every(validTag) ||
+    !('vehicles' in value) ||
+    !Array.isArray(value.vehicles) ||
+    !value.vehicles.every(validVehicle) ||
     !('events' in value) ||
     !Array.isArray(value.events) ||
     !value.events.every(validEvent) ||
@@ -78,6 +83,7 @@ function validSnapshot(value: unknown): value is PrototypeSnapshot {
     venues: value.venues,
     speakers: value.speakers,
     tags: value.tags,
+    vehicles: value.vehicles,
     events: value.events,
     sessions: value.sessions,
     history: value.history,
@@ -99,6 +105,10 @@ function validSnapshot(value: unknown): value is PrototypeSnapshot {
     distinctRecords(
       value.tags,
       value.tags.map((row) => JSON.stringify([row.storeId, row.name])),
+    ) &&
+    distinctRecords(
+      value.vehicles,
+      value.vehicles.map((row) => row.id),
     ) &&
     validEventRelations(snapshot) &&
     validMediaRelations(snapshot)
@@ -128,7 +138,21 @@ export function createPrototypeState(
       try {
         const value: unknown = JSON.parse(raw);
         if (validSnapshot(value)) return value;
-      } catch {
+        // Adding Vehicles preserves existing version 2 demo records and finalized media.
+        if (
+          typeof value === 'object' &&
+          value !== null &&
+          'version' in value &&
+          value.version === 2
+        ) {
+          const upgraded = { ...value, version, vehicles: [] };
+          if (validSnapshot(upgraded)) {
+            write(upgraded);
+            return upgraded;
+          }
+        }
+      } catch (error) {
+        if (error instanceof PrototypeError) throw error;
         // Invalid or obsolete demo data is replaced with the versioned fixtures.
       }
     }
@@ -151,6 +175,7 @@ export function createPrototypeState(
     ...createVenueState({ read, write }),
     ...createSpeakerState({ read, write }),
     ...createTagState({ read, write }),
+    ...createVehicleState({ read, write }),
     ...createEventState({ read, write }),
     ...createSessionState({ read, write }),
     ...media,

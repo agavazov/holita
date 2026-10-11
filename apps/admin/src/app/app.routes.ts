@@ -134,6 +134,33 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'stores/:storeId/reference/vehicles/new',
+        data: { resource: 'vehicles', editor: true },
+        canDeactivate: [leaveReference],
+        loadComponent: () =>
+          import('./features/reference/reference-workspace').then(
+            (module) => module.ReferenceWorkspace,
+          ),
+      },
+      {
+        path: 'stores/:storeId/reference/vehicles/:recordId/edit',
+        data: { resource: 'vehicles', editor: true },
+        canDeactivate: [leaveReference],
+        loadComponent: () =>
+          import('./features/reference/reference-workspace').then(
+            (module) => module.ReferenceWorkspace,
+          ),
+      },
+      {
+        path: 'stores/:storeId/reference/vehicles',
+        data: { resource: 'vehicles', editor: false },
+
+        loadComponent: () =>
+          import('./features/reference/reference-workspace').then(
+            (module) => module.ReferenceWorkspace,
+          ),
+      },
+      {
         path: 'stores/:storeId/reference/tags/new',
         data: { resource: 'tags', editor: true },
         canDeactivate: [leaveReference],

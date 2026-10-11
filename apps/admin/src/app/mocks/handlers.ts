@@ -15,6 +15,11 @@ import {
   AdminCreateVenueDocument,
   AdminUpdateVenueDocument,
   AdminDeleteVenueDocument,
+  AdminVehiclesDocument,
+  AdminVehicleDocument,
+  AdminCreateVehicleDocument,
+  AdminUpdateVehicleDocument,
+  AdminDeleteVehicleDocument,
   AdminSpeakersDocument,
   AdminSpeakerDocument,
   AdminCreateSpeakerDocument,
@@ -61,6 +66,11 @@ const documents: readonly DocumentNode[] = [
   AdminCreateVenueDocument,
   AdminUpdateVenueDocument,
   AdminDeleteVenueDocument,
+  AdminVehiclesDocument,
+  AdminVehicleDocument,
+  AdminCreateVehicleDocument,
+  AdminUpdateVehicleDocument,
+  AdminDeleteVehicleDocument,
   AdminSpeakersDocument,
   AdminSpeakerDocument,
   AdminCreateSpeakerDocument,
@@ -232,6 +242,50 @@ export function createPrototypeHandlers(endpoint: string, state: PrototypeState)
         deleteReferenceVenue: {
           ...state.deleteVenue(request.headers.get('x-store-id'), variables.id),
           __typename: 'ReferenceVenue',
+        },
+      })),
+    ),
+    api.query(AdminVehiclesDocument, ({ request, variables }) =>
+      respond(request, () => {
+        const page = state.listVehicles(request.headers.get('x-store-id'), variables);
+        return {
+          referenceVehicles: {
+            ...page,
+            __typename: 'ReferenceVehiclePage',
+            items: page.items.map((row) => ({ ...row, __typename: 'ReferenceVehicle' })),
+          },
+        };
+      }),
+    ),
+    api.query(AdminVehicleDocument, ({ request, variables }) =>
+      respond(request, () => ({
+        referenceVehicle: {
+          ...state.getVehicle(request.headers.get('x-store-id'), variables.id),
+          __typename: 'ReferenceVehicle',
+        },
+      })),
+    ),
+    api.mutation(AdminCreateVehicleDocument, ({ request, variables }) =>
+      respond(request, () => ({
+        createReferenceVehicle: {
+          ...state.createVehicle(request.headers.get('x-store-id'), variables.input),
+          __typename: 'ReferenceVehicle',
+        },
+      })),
+    ),
+    api.mutation(AdminUpdateVehicleDocument, ({ request, variables }) =>
+      respond(request, () => ({
+        updateReferenceVehicle: {
+          ...state.updateVehicle(request.headers.get('x-store-id'), variables.id, variables.input),
+          __typename: 'ReferenceVehicle',
+        },
+      })),
+    ),
+    api.mutation(AdminDeleteVehicleDocument, ({ request, variables }) =>
+      respond(request, () => ({
+        deleteReferenceVehicle: {
+          ...state.deleteVehicle(request.headers.get('x-store-id'), variables.id),
+          __typename: 'ReferenceVehicle',
         },
       })),
     ),
