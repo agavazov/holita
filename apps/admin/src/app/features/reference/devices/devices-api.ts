@@ -63,7 +63,6 @@ export class DevicesApi implements OnDestroy {
             items: result.data.referenceVehicles.items.map((vehicle) => ({
               id: vehicle.id,
               name: vehicle.licensePlate,
-              active: true,
             })),
             total: result.data.referenceVehicles.total,
           };

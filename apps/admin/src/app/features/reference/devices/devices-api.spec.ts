@@ -11,7 +11,7 @@ const storeB = '10000000-0000-4000-8000-000000000002';
 const deviceA: AdminDeviceFragment = {
   id: '20000000-0000-4000-8000-000000000001',
   storeId: storeA,
-  imei: 'Sofia notebook',
+  imei: '012345678901234',
   vehicleId: '30000000-0000-4000-8000-000000000001',
   vehicle: { id: '30000000-0000-4000-8000-000000000001', licensePlate: 'CA1234AB' },
   createdAt: '2026-01-01T00:00:00.000Z',
@@ -20,7 +20,7 @@ const deviceA: AdminDeviceFragment = {
 const deviceB: AdminDeviceFragment = {
   id: '20000000-0000-4000-8000-000000000002',
   storeId: storeB,
-  imei: 'Plovdiv notebook',
+  imei: '123456789012345',
   vehicleId: '30000000-0000-4000-8000-000000000001',
   vehicle: { id: '30000000-0000-4000-8000-000000000001', licensePlate: 'CA1234AB' },
   createdAt: '2026-01-01T00:00:00.000Z',

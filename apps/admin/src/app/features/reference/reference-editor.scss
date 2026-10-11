@@ -1,6 +1,6 @@
 .reference-form {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(15rem, 20rem);
+  grid-template-columns: minmax(0, 1fr);
   gap: 2rem;
   align-items: start;
   .card {
@@ -12,18 +12,6 @@
     font-weight: 600;
     line-height: 1.4;
   }
-}
-.reference-settings {
-  position: sticky;
-  top: 6rem;
-}
-.reference-form h2.location-heading {
-  margin-top: 2rem;
-}
-.field-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.5rem;
 }
 textarea {
   resize: vertical;
@@ -46,34 +34,4 @@ textarea {
 p-message {
   display: block;
   margin-bottom: 1rem;
-}
-@media (max-width: 991px) {
-  .reference-form {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .reference-settings {
-    position: static;
-  }
-  .field-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-  }
-}
-
-.color-preview {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
-  overflow-wrap: anywhere;
-}
-.color-swatch {
-  display: inline-block;
-  flex: 0 0 1.5rem;
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 50%;
-  border: 1px solid var(--surface-border);
-  background: var(--surface-200);
 }

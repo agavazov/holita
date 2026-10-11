@@ -12,37 +12,16 @@ export const subgraphs = [
     path: 'apps/core/src/stores/stores.graphql',
   },
   {
-    name: 'products',
-    url: 'http://127.0.0.1:11012/graphql',
-    path: 'apps/products/src/products/products.graphql',
-  },
-  {
     name: 'reference',
     url: 'http://127.0.0.1:11013/graphql',
-    path: 'apps/reference/src/venues/venues.graphql',
-    additionalPaths: [
-      'apps/reference/src/events/events.graphql',
-      'apps/reference/src/speakers/speakers.graphql',
-      'apps/reference/src/tags/tags.graphql',
-      'apps/reference/src/vehicles/vehicles.graphql',
-      'apps/reference/src/devices/devices.graphql',
-      'apps/reference/src/sessions/sessions.graphql',
-      'apps/reference/src/media/media.graphql',
-    ],
+    path: 'apps/reference/src/vehicles/vehicles.graphql',
+    additionalPaths: ['apps/reference/src/devices/devices.graphql'],
   },
 ];
 export const operationPaths = [
   'apps/admin/src/app/features/stores/operations.graphql',
-  'apps/admin/src/app/features/products/operations.graphql',
-  'apps/admin/src/app/features/reference/venues/operations.graphql',
-  'apps/admin/src/app/features/reference/speakers/operations.graphql',
-  'apps/admin/src/app/features/reference/tags/operations.graphql',
   'apps/admin/src/app/features/reference/vehicles/operations.graphql',
   'apps/admin/src/app/features/reference/devices/operations.graphql',
-  'apps/admin/src/app/features/reference/events/operations.graphql',
-  'apps/admin/src/app/features/reference/sessions/operations.graphql',
-  'apps/admin/src/app/features/reference/media/operations.graphql',
-  'apps/products/src/core/operations.graphql',
   'apps/reference/src/core/operations.graphql',
 ];
 

@@ -1,3 +1,11 @@
+extend schema @link(url: "https://specs.apollo.dev/federation/v2.3", import: ["@key"])
+
+scalar DateTime
+
+type Store @key(fields: "id", resolvable: false) {
+  id: ID!
+}
+
 type ReferenceVehicle @key(fields: "id") {
   id: ID!
   storeId: ID!
@@ -36,7 +44,7 @@ input ReferenceVehicleSort {
   direction: ReferenceVehicleSortDirection! = DESC
 }
 
-extend type Query {
+type Query {
   referenceVehicles(
     offset: Int! = 0
     limit: Int! = 20
@@ -46,7 +54,7 @@ extend type Query {
   ): ReferenceVehiclePage!
   referenceVehicle(id: ID!): ReferenceVehicle!
 }
-extend type Mutation {
+type Mutation {
   createReferenceVehicle(input: CreateReferenceVehicleInput!): ReferenceVehicle!
   updateReferenceVehicle(id: ID!, input: UpdateReferenceVehicleInput!): ReferenceVehicle!
   deleteReferenceVehicle(id: ID!): ReferenceVehicle!

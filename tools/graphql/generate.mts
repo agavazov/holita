@@ -10,7 +10,7 @@ import { composeContracts, readContracts, readOperations, workspaceRoot } from '
 const target = process.argv[2];
 if (
   !target ||
-  !['check', 'core', 'products', 'reference', 'gateway', 'admin'].includes(target) ||
+  !['check', 'core', 'reference', 'gateway', 'admin'].includes(target) ||
   process.argv.length !== 3
 ) {
   throw new Error('Use npm run codegen, schema:compose or schema:check');
@@ -67,11 +67,11 @@ if (target === 'gateway') {
     true,
     documents.filter((document) => document.location.startsWith(`apps/${target}/`)),
   );
-} else if (target === 'core' || target === 'products' || target === 'reference') {
+} else if (target === 'core' || target === 'reference') {
   const schema = composition.schemas.get(target);
   if (!schema) throw new Error(`Missing ${target} schema`);
   await generateTypes(`apps/${target}/src/generated/graphql/types.ts`, schema, false);
-  if (target === 'products' || target === 'reference') {
+  if (target === 'reference') {
     await generateTypes(
       `apps/${target}/src/generated/graphql/core-operations.ts`,
       composition.apiSchema,

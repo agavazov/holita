@@ -55,7 +55,7 @@ describe('core PostgreSQL persistence', () => {
     expect(await database.client.store.findUnique({ where: { id: first.id } })).toEqual(first);
   });
 
-  it.each(['holita_core', 'holita_products', 'holita_products_test'])(
+  it.each(['holita_core', 'holita_reference', 'holita_reference_test'])(
     'cannot connect to %s using the core test role',
     async (name) => {
       const url = new URL(getTestDatabaseUrl());

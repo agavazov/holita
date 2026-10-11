@@ -7,7 +7,6 @@ import { SubgraphDataSource } from './subgraph.datasource.js';
 function subgraphUrl(name: string, defaultUrl: string | undefined): string {
   const configured = {
     core: process.env.CORE_GRAPHQL_URL,
-    products: process.env.PRODUCTS_GRAPHQL_URL,
     reference: process.env.REFERENCE_GRAPHQL_URL,
   }[name];
   const value = configured ?? defaultUrl;

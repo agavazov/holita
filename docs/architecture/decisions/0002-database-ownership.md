@@ -1,19 +1,15 @@
 # Separate database ownership and isolated test schemas
 
-Core, products and reference require independent persistence without sharing application models or
-coupling every product operation to core. One PostgreSQL instance keeps local setup small;
-separate databases, login roles, Prisma schemas, clients and migrations enforce ownership.
-Product.storeId is a UUID reference without a cross-database foreign key. Fixture seeds
-share only documented stable IDs, not source imports or database access.
+Core and Reference own independent persistence without sharing application models.
+One local PostgreSQL instance contains separate databases, login roles, Prisma schemas,
+clients and SQL migrations. Vehicle/Device storeId is a UUID reference without a cross-database
+foreign key. Device → Vehicle uses a same-store composite foreign key inside Reference.
 
-Development and test databases use different credentials. Tests require the exact local
-test database and role, reject URL options, and deploy the checked-in migrations into a
-random schema for each test run. A run drops only its own schema. This supports overlapping
-runs without reset, truncation or deletion of development data. Live DB targets are never
-cached. Abruptly killed runs can leave a test schema behind; automatic broad cleanup is
-deliberately absent.
+Development and test databases use different credentials. Tests require the dedicated local
+identity, reject URL options and deploy checked-in migrations into a random per-run schema.
+Cleanup drops only that schema; live DB results are not cached. Abruptly killed runs can leave
+schemas behind; broad automatic cleanup is absent.
 
-Provisioning is explicit and repeatable, checks existing ownership/privileges, and leaves
-data and passwords intact. Migrate deploy applies reviewed SQL; seeds skip existing
-primary/unique keys. Compose down preserves the volume. This is a local workflow, with no
-application containers or production infrastructure.
+Provisioning verifies ownership/privileges and preserves data/passwords. Seeds insert missing
+Stores without replacing user edits. Compose down preserves its volume. Applications and
+migration/test processes run on the host, with no application containers.

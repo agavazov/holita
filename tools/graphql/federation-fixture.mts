@@ -1,8 +1,6 @@
 import { spawn, execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { promisify } from 'node:util';
@@ -12,7 +10,7 @@ import { workspaceRoot } from './contracts.mjs';
 
 const execute = promisify(execFile);
 
-export function guardedTestUrl(service: 'core' | 'products' | 'reference', value: string): URL {
+export function guardedTestUrl(service: 'core' | 'reference', value: string): URL {
   let url: URL;
   try {
     url = new URL(value);
@@ -34,7 +32,7 @@ export function guardedTestUrl(service: 'core' | 'products' | 'reference', value
   return url;
 }
 
-async function prepareDatabase(service: 'core' | 'products' | 'reference') {
+async function prepareDatabase(service: 'core' | 'reference') {
   const name = `holita_${service}_test`;
   const url = guardedTestUrl(
     service,
@@ -69,11 +67,13 @@ async function prepareDatabase(service: 'core' | 'products' | 'reference') {
       [join(workspaceRoot, 'node_modules/prisma/build/index.js'), 'migrate', 'deploy'],
       { cwd, env, timeout: 30000 },
     );
-    await execute(process.execPath, ['--import', 'tsx', 'prisma/seed.ts'], {
-      cwd,
-      env,
-      timeout: 15000,
-    });
+    if (service === 'core') {
+      await execute(process.execPath, ['--import', 'tsx', 'prisma/seed.ts'], {
+        cwd,
+        env,
+        timeout: 15000,
+      });
+    }
     return { url: url.toString(), close };
   } catch (error) {
     await close();
@@ -220,11 +220,7 @@ export async function createFederationFixture(
   options: { adminOrigin?: string; referenceEnabled?: boolean } = {},
 ) {
   config({
-    path: [
-      join(workspaceRoot, 'apps/core/.env'),
-      join(workspaceRoot, 'apps/products/.env'),
-      join(workspaceRoot, 'apps/reference/.env'),
-    ],
+    path: [join(workspaceRoot, 'apps/core/.env'), join(workspaceRoot, 'apps/reference/.env')],
     quiet: true,
   });
   const cleanup: (() => Promise<void>)[] = [];
@@ -241,29 +237,16 @@ export async function createFederationFixture(
     if (errors.length) throw new AggregateError(errors, 'Federation fixture cleanup failed');
   }
   try {
-    const mediaRoot = await mkdtemp(join(tmpdir(), 'holita-media-test-'));
-    cleanup.push(() => rm(mediaRoot, { recursive: true, force: true }));
     const coreDatabase = await prepareDatabase('core');
     cleanup.push(coreDatabase.close);
-    const productsDatabase = await prepareDatabase('products');
-    cleanup.push(productsDatabase.close);
     const referenceDatabase = await prepareDatabase('reference');
     cleanup.push(referenceDatabase.close);
     let core = await startApplication('core', { CORE_DATABASE_URL: coreDatabase.url });
     cleanup.push(() => core.stop());
     const coreObserver = await observeRequests(core.url);
     cleanup.push(coreObserver.close);
-    const products = await startApplication('products', {
-      PRODUCTS_DATABASE_URL: productsDatabase.url,
-      CORE_GRAPHQL_URL: coreObserver.url,
-    });
-    cleanup.push(products.stop);
-    const productsObserver = await observeRequests(products.url);
-    cleanup.push(productsObserver.close);
     const referencePort = await availablePort();
     const referenceEnv = {
-      REFERENCE_MEDIA_ROOT: mediaRoot,
-      REFERENCE_PUBLIC_URL: `http://127.0.0.1:${String(referencePort)}`,
       ADMIN_ORIGINS: options.adminOrigin ?? 'http://127.0.0.1:11000',
       ADMIN_ORIGIN: options.adminOrigin ?? 'http://127.0.0.1:11000',
       REFERENCE_DATABASE_URL: referenceDatabase.url,
@@ -277,15 +260,12 @@ export async function createFederationFixture(
     const gateway = await startApplication('gateway', {
       ADMIN_ORIGIN: options.adminOrigin ?? 'http://127.0.0.1:11000',
       CORE_GRAPHQL_URL: coreObserver.url,
-      PRODUCTS_GRAPHQL_URL: productsObserver.url,
       REFERENCE_GRAPHQL_URL: referenceObserver.url,
     });
     cleanup.push(gateway.stop);
     return {
       url: gateway.url,
-      productsUrl: products.url,
       coreRequests: coreObserver.requests,
-      productRequests: productsObserver.requests,
       referenceUrl: reference.url,
       referenceRequests: referenceObserver.requests,
       setReferenceEnabled: async (enabled: boolean) => {

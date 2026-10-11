@@ -19,7 +19,5 @@ apps/*/src/generated/
 /.references/
 .volumes/
 
-.media/
-
 # Temporary Aurora visual-review captures and metadata.
 /artifacts/aurora/

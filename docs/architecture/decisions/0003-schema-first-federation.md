@@ -1,22 +1,16 @@
 # Local schema-first federation
 
-SDL defines the API independently of persistence. Core, products and reference own their contracts;
-Prisma owns their database models. Local Node tooling uses Apollo composition and GraphQL
-Codegen to validate operations and generate backend/client types, typed documents, the
-supergraph and public schema. No running services, database, registry or router binary is
-needed for this work. Source SDL and operations are tracked; generated output is ignored.
+Core and Reference SDL define the API independently of Prisma persistence.
+Local Apollo composition and GraphQL Codegen validate named operations and generate backend
+and Angular types/documents, Gateway supergraph and public schema. This needs no database,
+running service or external registry. Source contracts are tracked; generated output is ignored.
 
-Each app's generation target writes only its own files. Explicit Nx inputs include shared
-contracts/tooling, preventing stale cache restoration after generator or schema changes.
-Nest copies SDL assets into builds. Regenerate and restart after contract edits; there is
-no dynamic discovery or schema polling.
+Each app generates only its own outputs. Shared Nx inputs include explicit SDL/operations and
+tooling; Nest copies SDL into builds. Regenerate/restart after contract edits without dynamic
+schema discovery or polling.
 
-Gateway forwards request/store context. Products validates store existence through core
-only for creation and reuses that result within the products request. Read/update/delete
-remain independent of core for product-only selections. Product.store returns a federation
-reference; core resolves it from its database. This preserves service ownership without
-adding synchronous store checks to every operation, events or a replicated store registry.
-
-Reference follows the same creation-time check and Store federation contract.
-The Reference availability guard also runs on field/reference resolvers; disabling the
-service preserves schema composition while rejecting its business operations.
+Gateway forwards request/Store context. Reference checks Core Store existence only during
+creation and reuses that promise within its HTTP request. Scoped reads/updates/deletes remain
+independent of Core. Vehicle/Device.store returns a federation reference resolved by Core.
+Reference availability guards include field/entity resolvers, preserving schema composition
+while rejecting disabled business operations.

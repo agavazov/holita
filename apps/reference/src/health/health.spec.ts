@@ -2,7 +2,6 @@ import { afterAll, beforeAll, describe, expect, it } from '@jest/globals';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 
-import { MediaCleanup } from '../media/media.cleanup.js';
 import { AppModule } from '../app.module.js';
 
 describe('reference health endpoint', () => {
@@ -10,10 +9,7 @@ describe('reference health endpoint', () => {
   let baseUrl: string;
 
   beforeAll(async () => {
-    const module = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(MediaCleanup)
-      .useValue({})
-      .compile();
+    const module = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = module.createNestApplication();
     await app.listen(0, '127.0.0.1');
     baseUrl = await app.getUrl();

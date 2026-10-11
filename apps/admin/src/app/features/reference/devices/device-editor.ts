@@ -47,7 +47,7 @@ import {
   ],
   providers: [DevicesApi, ConfirmationService],
   templateUrl: './device-editor.html',
-  styleUrls: ['../reference-editor.scss', './device-editor.scss'],
+  styleUrl: '../reference-editor.scss',
   host: { '(window:beforeunload)': 'beforeUnload($event)' },
 })
 export class DeviceEditor implements OnInit {

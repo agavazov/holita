@@ -14,59 +14,9 @@
       '/' +
       scope.editor +
       '/' +
-      scope.recordId +
-      '/' +
-      scope.sessionEditor +
-      '/' +
-      scope.sessionId
+      scope.recordId
   ) {
     @switch (scope.resource) {
-      @case ('venues') {
-        @if (scope.editor) {
-          <holita-venue-editor
-            [store]="scope.store"
-            [language]="scope.language"
-            [venueId]="scope.recordId"
-          />
-        } @else {
-          <holita-venues-page [store]="scope.store" [language]="scope.language" />
-        }
-      }
-      @case ('speakers') {
-        @if (scope.editor) {
-          <holita-speaker-editor
-            [store]="scope.store"
-            [language]="scope.language"
-            [speakerId]="scope.recordId"
-          />
-        } @else {
-          <holita-speakers-page [store]="scope.store" [language]="scope.language" />
-        }
-      }
-      @case ('events') {
-        @if (scope.sessionEditor && scope.recordId) {
-          <holita-session-editor
-            [store]="scope.store"
-            [language]="scope.language"
-            [eventId]="scope.recordId"
-            [sessionId]="scope.sessionId"
-          />
-        } @else if (scope.editor) {
-          <holita-event-editor
-            [store]="scope.store"
-            [language]="scope.language"
-            [eventId]="scope.recordId"
-          />
-        } @else if (scope.overview && scope.recordId) {
-          <holita-event-overview
-            [store]="scope.store"
-            [language]="scope.language"
-            [eventId]="scope.recordId"
-          />
-        } @else {
-          <holita-events-page [store]="scope.store" [language]="scope.language" />
-        }
-      }
       @case ('devices') {
         @if (scope.editor) {
           <holita-device-editor
@@ -87,17 +37,6 @@
           />
         } @else {
           <holita-vehicles-page [store]="scope.store" [language]="scope.language" />
-        }
-      }
-      @case ('tags') {
-        @if (scope.editor) {
-          <holita-tag-editor
-            [store]="scope.store"
-            [language]="scope.language"
-            [tagId]="scope.recordId"
-          />
-        } @else {
-          <holita-tags-page [store]="scope.store" [language]="scope.language" />
         }
       }
     }

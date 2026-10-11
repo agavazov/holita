@@ -4,40 +4,21 @@ import { ApolloFederationDriver, type ApolloFederationDriverConfig } from '@nest
 import { GraphQLISODateTime, GraphQLModule } from '@nestjs/graphql';
 import { formatGraphqlError, graphqlDiagnostics } from './graphql/errors.js';
 import { createRequestContext } from './graphql/request-context.js';
-import { MediaModule } from './media/media.module.js';
-import { SessionsModule } from './sessions/sessions.module.js';
-import { EventsModule } from './events/events.module.js';
-import { SpeakersModule } from './speakers/speakers.module.js';
 import { DevicesModule } from './devices/devices.module.js';
 import { VehiclesModule } from './vehicles/vehicles.module.js';
-import { TagsModule } from './tags/tags.module.js';
-import { VenuesModule } from './venues/venues.module.js';
 
 import { HealthController } from './health/health.controller.js';
 
 @Module({
   imports: [
-    VenuesModule,
-    EventsModule,
-    SessionsModule,
-    MediaModule,
-    SpeakersModule,
-    TagsModule,
     VehiclesModule,
     DevicesModule,
     GraphQLModule.forRoot<ApolloFederationDriverConfig>({
       driver: ApolloFederationDriver,
       fieldResolverEnhancers: ['guards'],
-      typeDefs: [
-        'venues/venues',
-        'events/events',
-        'speakers/speakers',
-        'tags/tags',
-        'vehicles/vehicles',
-        'devices/devices',
-        'sessions/sessions',
-        'media/media',
-      ].map((path) => readFileSync(new URL(`./${path}.graphql`, import.meta.url), 'utf8')),
+      typeDefs: ['vehicles/vehicles', 'devices/devices'].map((path) =>
+        readFileSync(new URL(`./${path}.graphql`, import.meta.url), 'utf8'),
+      ),
       resolvers: { DateTime: GraphQLISODateTime },
       context: createRequestContext,
       path: '/graphql',

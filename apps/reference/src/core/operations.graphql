@@ -1,4 +1,4 @@
-query StoreForVenueCreation($id: ID!) {
+query StoreForReferenceCreation($id: ID!) {
   store(id: $id) {
     id
   }

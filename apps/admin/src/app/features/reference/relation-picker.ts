@@ -34,7 +34,6 @@ import { requestError } from '../../core/graphql/request-error';
 export interface RelationRow {
   id: string;
   name: string;
-  active: boolean;
 }
 export interface RelationPage {
   items: RelationRow[];
@@ -44,7 +43,6 @@ export interface RelationRequest {
   search?: string;
   offset: number;
   ids?: string[];
-  active?: true;
 }
 export type RelationLoader = (request: RelationRequest) => Observable<RelationPage>;
 
@@ -60,8 +58,6 @@ export class RelationPicker implements OnInit {
   readonly controlId = input.required<string>();
   readonly selectedIds = input<string[]>([]);
   readonly selectedIdsChange = output<string[]>();
-  readonly multiple = input(false);
-  readonly activeOnly = input(true);
   readonly disabled = input(false);
   readonly invalid = input(false);
   readonly load = input.required<RelationLoader>();
@@ -76,20 +72,13 @@ export class RelationPicker implements OnInit {
   readonly error = computed(() => this.choicesError() ?? this.selectedError());
   readonly loading = signal(false);
   readonly failure = computed(() => requestError(this.error(), this.text().networkError));
-  readonly options = computed(() =>
-    this.page().items.map((row) => ({
-      ...row,
-      label: row.name + (row.active ? '' : ` (${this.text().inactive})`),
-      disabled: this.activeOnly() && !row.active && !this.selectedIds().includes(row.id),
-    })),
-  );
   readonly selectedLabel = computed(() =>
     this.selectedIds()
       .map((id) => {
         const row =
           this.selectedRows().find((row) => row.id === id) ??
           this.page().items.find((row) => row.id === id);
-        return row ? row.name + (row.active ? '' : ` (${this.text().inactive})`) : id;
+        return row ? row.name : id;
       })
       .join(', '),
   );
@@ -194,7 +183,6 @@ export class RelationPicker implements OnInit {
     this.reads.next({
       offset: this.offset(),
       search,
-      ...(this.activeOnly() ? { active: true } : {}),
     });
   }
   retry(): void {
@@ -210,25 +198,11 @@ export class RelationPicker implements OnInit {
   }
   select(value: unknown): void {
     if (this.disabled()) return;
-    const ids =
-      typeof value === 'string'
-        ? [value]
-        : Array.isArray(value)
-          ? value.filter((id: unknown): id is string => typeof id === 'string')
-          : [];
-    // Keep selections from other remote pages; only this page owns the changed subset.
-    const rows = this.page().items;
-    const next = this.multiple()
-      ? [...this.selectedIds().filter((id) => !rows.some((row) => row.id === id)), ...ids]
-      : ids.slice(0, 1);
-    const allowed = next.filter(
-      (id) =>
-        this.selectedIds().includes(id) ||
-        rows.some((row) => row.id === id && (!this.activeOnly() || row.active)),
-    );
-    if (allowed.length > 100) return;
-    this.selectedIdsChange.emit([...new Set(allowed)]);
-    if (!this.multiple()) this.close();
+    const id = typeof value === 'string' ? value : undefined;
+    const allowed =
+      id && (this.selectedIds().includes(id) || this.page().items.some((row) => row.id === id));
+    this.selectedIdsChange.emit(allowed ? [id] : []);
+    this.close();
   }
   clear(): void {
     if (!this.disabled()) this.selectedIdsChange.emit([]);

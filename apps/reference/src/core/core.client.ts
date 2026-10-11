@@ -1,8 +1,8 @@
 import { Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { print } from 'graphql';
 import {
-  StoreForVenueCreationDocument,
-  type StoreForVenueCreationQueryVariables,
+  StoreForReferenceCreationDocument,
+  type StoreForReferenceCreationQueryVariables,
 } from '../generated/graphql/core-operations.js';
 import type { RequestContext } from '../graphql/request-context.js';
 
@@ -24,12 +24,12 @@ export class CoreClient {
   }
 
   private async lookupStore(storeId: string, requestId: string): Promise<void> {
-    const variables: StoreForVenueCreationQueryVariables = { id: storeId };
+    const variables: StoreForReferenceCreationQueryVariables = { id: storeId };
     try {
       const response = await fetch(this.url, {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-request-id': requestId },
-        body: JSON.stringify({ query: print(StoreForVenueCreationDocument), variables }),
+        body: JSON.stringify({ query: print(StoreForReferenceCreationDocument), variables }),
         signal: AbortSignal.timeout(3000),
       });
       if (!response.ok) throw new Error('Core returned an HTTP error');

@@ -28,7 +28,7 @@
 
 ## Repository
 
-- Use npm workspaces, the existing lockfile, and Nx. The five applications are `apps/admin`, `apps/gateway`, `apps/core`, `apps/products`, and `apps/reference`.
+- Use npm workspaces, the existing lockfile, and Nx. The four applications are `apps/admin`, `apps/gateway`, `apps/core`, and `apps/reference`.
 - Do not import another application's implementation, Prisma client, or database model, including through relative paths. ESLint/Nx enforce application boundaries.
 - Expose daily commands through root npm scripts. Do not add another build system, custom process supervisor, or custom test-selection framework. Add shared packages only for demonstrated current reuse.
 - Applications run as Node.js processes on the host. PostgreSQL is the only permitted containerized infrastructure for the foundation. Never reset databases or remove volumes to fix setup.
@@ -58,10 +58,10 @@
 - Put application and business logic in services.
 - Use concrete feature repositories for Prisma operations and compulsory store scoping. Do not add generic repositories/services, CQRS, empty domain layers, or interfaces for every class.
 - For GraphQL features, SDL defines the API. Use generated API types and explicit runtime validation rather than duplicate handwritten API models. Prisma owns persistence definitions.
-- Follow the actual [Products resolver/service/repository](apps/products/src/products/products.resolver.ts) and its [SDL](apps/products/src/products/products.graphql). Use @Parent on a federation reference parameter when combining it with Nest parameter decorators; always resolve Product references through scoped service access.
+- Follow the actual [Vehicles resolver/service/repository](apps/reference/src/vehicles/vehicles.resolver.ts) and its [SDL](apps/reference/src/vehicles/vehicles.graphql). Use @Parent on a federation reference parameter when combining it with Nest parameter decorators; always resolve Vehicle/Device references through scoped service access.
 - After SDL/operation changes run codegen and schema:check. Keep generator inputs explicit, generated outputs ignored, and runtime SDL assets in builds. Regenerate/restart instead of adding dynamic discovery.
-- Product persistence must always include the active store. Creation gets store ID from context and checks existence through core. Do not make a store existence network call for every product read/update/delete or move that blanket check into the gateway.
-- Do not implement fake authentication or treat store context as authorization. Preserve useful diagnostics without logging secrets.
+- Vehicle/Device persistence must always include the active store. Creation gets store ID from context and checks existence through core. Do not make a store existence network call for every business read/update/delete or move that blanket check into the gateway.
+- The explicit tenant demo login is development-only; never treat it as production authentication. Tenant identity comes from the verified session, never a caller-supplied tenant header/input. Store context is not authorization. Preserve useful diagnostics without logging secrets.
 - Keep Prisma schemas/migrations/clients inside the owning service. Review new migration SQL; never edit applied migrations or replace history with db push. Seeds insert missing fixtures without updating existing rows.
 - Use standard NestJS exceptions and avoid custom exception frameworks.
 
@@ -82,42 +82,22 @@
   keep global CSS minimal, feature styles local and remove unused demo rules. Do not add
   wrappers without concrete reuse or depend on the deprecated PrimeNG Editor.
 - Sakai is the Angular admin's theme and owns shell/feature visual design and responsive composition. Consult
-  the Angular Products/Reference implementation index for contracts, validation and scoped lifecycles.
+  the Angular Vehicles/Devices implementation index for contracts, validation and scoped lifecycles.
 - Use the pinned local Sakai source in `.references/sakai-ng` for layout comparisons;
   [setup and source paths](docs/development.md#sakai-source-reference) are documented separately.
   It is ignored reference material, not an npm/Nx application or runtime dependency.
 - Keep the shell independent of business data access, with explicit inputs/outputs and only
   implemented navigation. Preserve Bulgarian/English catalogs, keyboard/mobile behavior and
   light/dark themes, with focused tests and visual review at matching viewport sizes.
-- Angular provides Stores discovery, Products and Reference Venues/Speakers/Tags/Vehicles CRUD with page-local sequential
-  deletion. Preserve referenced-Venue failures, partial results, failed-row retry and stopping
+- Angular provides Stores discovery and Reference Vehicles/Devices CRUD with page-local sequential
+  deletion. Preserve assigned-Vehicle failures, partial results, failed-row retry and stopping
   unsent deletes on navigation; submitted writes retain their captured scope. Reference startup
-  availability gates navigation and direct routes without business requests. Add another feature
-  only when explicitly requested.
-
-- Events has a concrete scoped API, URL-backed filtered list, typed editor and sanitized overview.
-  Preserve exact string EUR amounts, untouched Sofia instants, paired registration dates, active
-  new assignments and labeled inactive relations. Rich text uses Tiptap core with a typed form
-  control boundary and browser/server sanitization. Event Publish/Archive/Trash/Restore use the
-  backend's atomic mutation for 1–100 explicit page-local IDs, retaining selection on failure
-  and clearing it on query changes. Retire confirmation callbacks when the view changes;
-  submitted writes keep their captured client. Trash is read-only; History uses server paging,
-  localized labels/Sofia times and plain-text HTML excerpts.
-  Do not apply lookup sequential deletion to Events.
-- Sessions are Event-scoped concrete CRUD with typed Reactive Forms, plain Summary, nullable Room,
-  Sofia instants and remote Speakers. Preserve parent bounds, retained inactive assignments and
-  the 100 Session/Speaker limits. Native drag and up/down controls change a local order draft;
-  save the complete ID set atomically, retain failed drafts and reload membership on Cancel.
-  Dirty ordering blocks child editing and guards navigation. Confirm permanent Session deletion;
-  all submitted writes retain their parent/store/client and retire obsolete callbacks. Trash blocks
-  child queries; Restore returns the saved program. Mutations refresh the initiating Event/History.
-
-- Event Gallery uses its own captured MediaApi and intent → binary → finalize contract.
-  Cancel unfinished transfer on navigation; submitted finalization retains its store/Event and
-  retires obsolete feedback. Send only capability headers to the direct upload URL. Preserve
-  decoder validation, cover fallback, Alt text/null clearing, confirmed permanent removal,
-  complete-set ordering drafts/retry/reloading Cancel, preview focus/renewal and Trash/Restore.
-  Gallery writes retain unsaved Event fields; finish/cancel Gallery work before saving them.
+  availability gates navigation and direct routes without business requests. Store selection
+  opens Vehicles; switching Stores preserves the active Vehicles/Devices section and resets queries.
+  Add another feature only when explicitly requested.
+- Devices require a 15-digit string IMEI unique per Store and a mandatory same-tenant/same-store Vehicle,
+  labeled Truck in the editor. Multiple Devices may share a Vehicle. Preserve leading zeros,
+  composite foreign keys, protected Vehicle deletion and captured-client remote selection.
 
 ## Architectural changes
 
@@ -131,7 +111,7 @@ Do not make architectural changes solely because they may be useful later.
 
 ## Verification
 
-Follow [docs/testing.md](docs/testing.md). Start with the narrowest relevant project/file/case and expand only when changes or failures justify it. Use the named `test:core`, `test:products`, `test:gateway`, `test:reference`, `test:admin` targets with native runner selectors.
+Follow [docs/testing.md](docs/testing.md). Start with the narrowest relevant project/file/case and expand only when changes or failures justify it. Use the named `test:core`, `test:gateway`, `test:reference`, `test:admin` targets with native runner selectors.
 
 For tooling changes, run from the repository root, plus relevant focused tests:
 
@@ -146,7 +126,7 @@ npm run build
 - Account for untracked files in the current diff and distinguish it from the broader PR diff. Nx affected selects projects, not proof of runtime-contract coverage.
 - Keep [PR CI](.github/workflows/affected.yml) on real event base/head commits with explicit missing-history failure. Workflow and ignore-rule changes belong in Nx shared inputs. [Full regression CI](.github/workflows/full-regression.yml) must remain workflow_dispatch only; docs-only selection is not application test coverage.
 - Database checks require dedicated test databases; do not reuse cached live-DB results as current evidence.
-- Use test:core:db/test:products:db/test:reference:db for persistence changes. Provision with db:up, db:setup and db:test:setup; use the guarded per-run schema helpers under each service's test directory. Never replace them with development connections, resets or shared truncation.
+- Use test:core:db/test:reference:db for persistence changes. Provision with db:up, db:setup and db:test:setup; use the guarded per-run schema helpers under each service's test directory. Never replace them with development connections, resets or shared truncation.
 - Use test:gateway:db -- federation.db.spec.mts for real service-boundary changes. The guarded fixture under tools/graphql owns its processes/schemas; gateway runtime must not acquire database dependencies. Use test:schema for offline contract-tool tests.
-- Use test:admin with Angular CLI `--include=app/features/products/products-api.spec.ts` or `--filter="case name"`; use test:smoke:admin -- angular-foundation.smoke.spec.mts for real Angular routing/transport. Its compiled-app fixture owns dedicated schemas and backend processes.
+- Use test:admin with Angular CLI `--include=app/features/reference/vehicles/vehicles-api.spec.ts` or `--filter="case name"`; use test:smoke:admin -- angular-foundation.smoke.spec.mts for real Angular routing/transport. Its compiled-app fixture owns dedicated schemas and backend processes.
 - Report actual commands/results and unverified work. Do not declare work complete while a required check fails. Clean up task-started processes and connections.

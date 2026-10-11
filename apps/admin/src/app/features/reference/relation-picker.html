@@ -13,7 +13,7 @@
     [attr.aria-invalid]="invalid()"
     (click)="show()"
   >
-    {{ selectedLabel() || text().eventChoose }}
+    {{ selectedLabel() || text().chooseRelation }}
   </button>
   @if (selectedIds().length) {
     <button
@@ -22,10 +22,10 @@
       severity="secondary"
       [text]="true"
       [disabled]="disabled()"
-      [attr.aria-label]="text().eventClearRelation + ' ' + label()"
+      [attr.aria-label]="text().clearRelation + ' ' + label()"
       (click)="clear()"
     >
-      {{ text().eventClearRelation }}
+      {{ text().clearRelation }}
     </button>
   }
 </div>
@@ -49,7 +49,7 @@
   (onShow)="focusSearch()"
 >
   <div class="lookup-search">
-    <label [for]="controlId() + '-search'">{{ text().eventLookupSearch }}</label>
+    <label [for]="controlId() + '-search'">{{ text().lookupSearch }}</label>
     <input
       #searchElement
       pInputText
@@ -66,20 +66,18 @@
     ><button pButton type="button" [text]="true" (click)="retry()">{{ text().retry }}</button>
   }
   @if (loading()) {
-    <p role="status">{{ text().eventLoadingRelations }}</p>
+    <p role="status">{{ text().loadingRelations }}</p>
   }
   <p-listbox
-    [options]="options()"
-    optionLabel="label"
+    [options]="page().items"
+    optionLabel="name"
     optionValue="id"
-    optionDisabled="disabled"
-    [multiple]="multiple()"
     [ariaLabel]="label()"
-    [ngModel]="multiple() ? selectedIds() : selectedIds()[0]"
+    [ngModel]="selectedIds()[0]"
     (ngModelChange)="select($event)"
     [ngModelOptions]="{ standalone: true }"
     [listStyle]="{ maxHeight: '16rem' }"
-    [emptyMessage]="text().eventNoRelations"
+    [emptyMessage]="text().noRelations"
   />
   <p-paginator
     [rows]="20"
@@ -91,7 +89,7 @@
   />
   <ng-template #footer
     ><button pButton type="button" severity="secondary" (click)="close()">
-      {{ text().eventDone }}
+      {{ text().done }}
     </button></ng-template
   >
 </p-dialog>

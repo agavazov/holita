@@ -4,6 +4,6 @@ import { getDatabaseUrl } from './src/database/connection.js';
 
 export default defineConfig({
   schema: 'prisma/schema.prisma',
-  migrations: { path: 'prisma/migrations', seed: 'tsx prisma/seed.ts' },
+  migrations: { path: 'prisma/migrations' },
   datasource: { url: getDatabaseUrl() },
 });

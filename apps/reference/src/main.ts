@@ -2,7 +2,6 @@ import 'reflect-metadata';
 import 'dotenv/config';
 
 import { NestFactory } from '@nestjs/core';
-import type { NestExpressApplication } from '@nestjs/platform-express';
 
 import { AppModule } from './app.module.js';
 import { referenceAdminOrigins } from './admin-origins.js';
@@ -15,13 +14,12 @@ async function bootstrap(): Promise<void> {
   }
 
   const origins = referenceAdminOrigins(process.env.ADMIN_ORIGINS, process.env.ADMIN_ORIGIN);
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  // Allow the 100 KiB rich-text input plus JSON escaping and the other event fields.
-  app.useBodyParser('json', { limit: '1mb' });
+  const app = await NestFactory.create(AppModule);
   app.enableCors({
     origin: origins,
-    methods: ['PUT', 'GET', 'OPTIONS'],
-    allowedHeaders: ['content-type', 'authorization'],
+    methods: ['POST', 'OPTIONS'],
+    allowedHeaders: ['content-type', 'x-store-id', 'x-request-id', 'accept-language'],
+    exposedHeaders: ['x-request-id'],
   });
   app.enableShutdownHooks();
   await app.listen(port, '127.0.0.1');

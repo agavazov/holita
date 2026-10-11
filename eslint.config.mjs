@@ -51,7 +51,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/{core,gateway,products,reference}/**/*.ts'],
+    files: ['apps/{core,gateway,reference}/**/*.ts'],
     languageOptions: {
       globals: globals.node,
     },

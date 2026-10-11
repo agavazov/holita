@@ -1,150 +1,65 @@
 ---
 name: holita-admin-development
-description: Review, maintain or extend Holita's Angular admin in apps/admin using generated GraphQL contracts, Gateway transport and store-scoped Apollo client lifecycles. Use for Angular UI, data access and store/route isolation work; not for backend implementation.
+description: Review or extend Holita Angular admin using Vehicles/Devices generated contracts, Gateway transport and scoped Apollo lifecycles. Not for backend implementation.
 ---
 
 # Holita Angular admin development
 
-Read [AGENTS.md](../../../AGENTS.md), the
-[implemented foundation](../../../docs/architecture/overview.md#angular-admin-foundation)
-and the relevant [checks](../../../docs/testing.md#angular-admin-checks).
-Use the installed `angular-developer` skill for framework conventions and the PrimeNG
-plugin's `primeng-router` skill to select the relevant official workflow. Read only the
-references and component metadata needed by the change. See
-[tool installation](../../../docs/development.md#angular-agent-tools) if the plugin is missing.
+Read [AGENTS.md](../../../AGENTS.md), [architecture](../../../docs/architecture/overview.md#angular-admin-foundation)
+and [focused checks](../../../docs/testing.md#angular-admin-checks). Use the official
+[angular-developer](../angular-developer/SKILL.md) skill for framework conventions and the
+PrimeNG plugin router for the relevant current workflow. Agent setup is in
+[development](../../../docs/development.md#angular-agent-tools).
 
 ## Trace the concrete implementation
 
-- [app.config.ts](../../../apps/admin/src/app/app.config.ts) configures routing, HTTP,
-  the Aura compatibility preset and the unscoped Stores Apollo client. Runtime endpoint/license configuration is
-  loaded before bootstrap, including optional Reference availability; preserve the real Gateway path and keep issued keys out of Git.
+- [app.config.ts](../../../apps/admin/src/app/app.config.ts) configures standalone routing,
+  HTTP, Sakai preset and Store discovery Apollo. Public startup config selects Gateway URL,
+  availability and optional private user license; validate before bootstrap.
 - [StoreWorkspace](../../../apps/admin/src/app/features/stores/store-workspace.ts) owns
-  discovery and route selection. The URL is the active store/language source. Unknown stores
-  cannot start Products or Reference requests. Shell components receive inputs and emit selection;
-  they do not perform business queries.
-- [StoreProducts](../../../apps/admin/src/app/features/products/store-products.ts) keys
-  the feature boundary by store and language. Angular reuses parameterized routes, so
-  removing this boundary would retain the previous workspace's state and client. Its computed
-  collection includes store/language/Product ID; changing only the tracking expression can retain the page.
-- [ProductsPage](../../../apps/admin/src/app/features/products/products-page.ts) owns
-  presentation/query state and delegates to
-  [ProductsApi](../../../apps/admin/src/app/features/products/products-api.ts).
-  Keep component → concrete feature service → Apollo; add no repository, facade or generic CRUD layer.
-  Initialize its scoped client once, then watch generated variables for each list query.
-  [Product list helpers](../../../apps/admin/src/app/features/products/product-list-query.ts)
-  own URL decoding and variable mapping. Keep applied state in the URL and text drafts local;
-  cancel debounce on navigation, dispose obsolete reads and retain rows only for same-query refresh.
-  Do not let Table's controlled sort events issue feedback queries or reset bookmarked pages before a total arrives.
+  discovery and Store/language routing. Choosing a Store opens Vehicles; switching Stores
+  preserves Vehicles/Devices and resets query context. Unknown Stores issue no business requests.
 - [ReferenceWorkspace](../../../apps/admin/src/app/features/reference/reference-workspace.ts)
-  gates startup availability/discovered stores and keys Venues/Speakers/Tags/Events by store/language/resource/editor mode/ID.
-  Store selection preserves the enabled Reference section and resets its list context.
-  [VenuesPage](../../../apps/admin/src/app/features/reference/venues/venues-page.ts),
-  [VenueEditor](../../../apps/admin/src/app/features/reference/venues/venue-editor.ts) and
-  [VenuesApi](../../../apps/admin/src/app/features/reference/venues/venues-api.ts) are concrete
-  Reference CRUD examples. Preserve false activity, country/capacity validation, nullable field
-  mapping, server-field focus and referenced-row deletion failures without generalizing domain rules.
-- [Speakers](../../../apps/admin/src/app/features/reference/speakers/speaker-editor.ts) and
-  [Tags](../../../apps/admin/src/app/features/reference/tags/tag-editor.ts) have concrete services,
-  lists, operations and validators. Preserve optional Email/biography null clearing, Email null-last
-  sorting, Tag HEX lowercase/live preview and duplicate Name field errors. Referenced deletion
-  remains protected through Event Trash. Shared Reference SCSS contains presentation only.
-- [Events](../../../apps/admin/src/app/features/reference/events/event-editor.ts) owns concrete
-  list/query/form/time/HTML helpers, API and overview. Preserve exact decimal strings and stored
-  Sofia instants, format-specific relations, remote picker retirement and typed rich input.
-  Tiptap core and DOMPurify provide the rich-text boundary.
-  The Event action dialog uses captured-client atomic status/Trash/Restore mutations with
-  explicit page-local IDs; list selection/query state stays in EventsPage. Trash overview is
-  read-only. History owns cancellable server paging/expansion and plain-text description
-  excerpts. The saved editor and overview mount their own Event-scoped Gallery.
-- [SessionsApi](../../../apps/admin/src/app/features/reference/sessions/sessions-api.ts),
-  [editor](../../../apps/admin/src/app/features/reference/sessions/session-editor/session-editor.ts)
-  and [program](../../../apps/admin/src/app/features/reference/sessions/session-program/session-program.ts)
-  own concrete Event-scoped CRUD, typed bounds/Sofia/nullable fields, remote Speakers and
-  native drag/button order drafts. Keep complete-set atomic Save, failed-draft retention,
-  server-reloading Cancel, dirty tab/route guards and captured parent/client retirement.
-  The overview's Speaker summary deduplicates saved assignments; Trash blocks all child reads.
-- [MediaApi](../../../apps/admin/src/app/features/reference/media/media-api.ts),
-  [Gallery](../../../apps/admin/src/app/features/reference/media/event-gallery/event-gallery.ts)
-  and [direct upload](../../../apps/admin/src/app/features/reference/media/direct-upload.ts)
-  provide the concrete three-stage workflow. Trace intent capability and Event/client capture,
-  cancellation before finalize, submitted-write retirement, independent Event drafts,
-  complete-set order/reloading Cancel, typed Alt text, cover/removal and preview renewal.
+  gates availability and keys children by Store/language/resource/editor/ID. Recreate mounted
+  views even when Angular reuses parameterized routes. Shell components own presentation only.
+- [VehiclesPage](../../../apps/admin/src/app/features/reference/vehicles/vehicles-page.ts),
+  [VehiclesApi](../../../apps/admin/src/app/features/reference/vehicles/vehicles-api.ts) and
+  [VehicleEditor](../../../apps/admin/src/app/features/reference/vehicles/vehicle-editor.ts)
+  are concrete list/client/form examples. Preserve nullable multiline Notes, text limits,
+  server-field focus, assigned-Vehicle errors and page-local sequential deletion.
+- [DevicesApi](../../../apps/admin/src/app/features/reference/devices/devices-api.ts) and
+  [DeviceEditor](../../../apps/admin/src/app/features/reference/devices/device-editor.ts)
+  keep 15-digit IMEI strings and mandatory same-store Truck assignment. The existing
+  [RelationPicker](../../../apps/admin/src/app/features/reference/relation-picker.ts) searches,
+  pages and hydrates Vehicles through the captured Devices client; preserve read retirement.
 - [graphqlOptions](../../../apps/admin/src/app/core/graphql/graphql-options.ts) captures
-  store/language in each client transport. Each mounted Products or Reference workspace has its own
-  `InMemoryCache`. Headers alone do not isolate cache entries or query deduplication.
+  immutable Store/language transport headers. Every mounted feature owns its Apollo client
+  and InMemoryCache; headers alone do not isolate deduplication/cache.
 
 ## Preserve contracts and lifecycle
 
-1. Keep named operations beside their feature in `operations.graphql`. Consume the ignored
-   generated TypedDocumentNodes and input/result types. After operation changes run
-   `npm run codegen` and `npm run schema:check`. Do not change backend contracts implicitly.
-2. Capture the initiating client/store at mutation submission. Destroying a workspace
-   disposes reads but lets already submitted writes settle. Invalidation affects only that
-   captured client; late results cannot update another store or a newly mounted editor.
-3. Keep reactive presentation state in signals and derived state in `computed`. Use RxJS
-   for Apollo/router streams and their cancellation; preserve subscription cleanup.
-   Refetch completion must still belong to its initiating query before updating a reused workspace.
-   Do not add another global state/cache library.
-4. Use typed Reactive Forms for business editors, with feature-owned validation and explicit
-   mapping to generated inputs. The shell's single store selector is not a business editor.
-   [ProductEditor](../../../apps/admin/src/app/features/products/product-editor.ts) is the concrete
-   create/edit example. Hydrate detail values once, disable controls through the FormGroup during
-   submission and check DestroyRef before success/error/navigation callbacks. Its route guard
-   confirms dirty, unsubmitted forms; submitted writes remain scoped and settle after navigation.
-   New/edit route configurations and the Product ID key reset editor state independently of store.
-5. ProductsPage is the concrete single/page-local deletion example. Capture confirmation targets,
-   check initiating query identity before callbacks and stop unsent deletes on navigation while
-   submitted writes settle. Report partial results, retain failed-row selection for retry and
-   reconcile server totals once per batch. Selection resets on query changes and prunes on reads;
-   successful deletes stay removed if refresh fails. Do not generalize permanent sequential
-   deletion to another domain's transactional or referenced-deletion rules.
-6. Use the concrete Angular [Products/editor](../../../apps/admin/src/app/features/products/product-editor.ts)
-   and [Reference index](../../../docs/reference.md) for URL filters, typed/dirty forms,
-   route-scoped callbacks and upload lifecycle. Preserve domain-specific deletion and ordering
-   rules. Follow the Gallery for its three-stage upload and metadata workflow.
+Keep named operations beside features and consume ignored generated TypedDocumentNodes/types.
+Run codegen/schema:check after operation changes. No generic CRUD/facades/duplicate API models.
+Business editors use typed Reactive Forms and resource-owned explicit mapping/validation.
+Dispose obsolete reads, cancel debounce and keep applied search/sort/page state in the URL.
+Retain existing rows only for same-query refresh. Do not reset a bookmarked page before totals arrive.
 
-## Presentation boundary
+Submitted writes retain their initiating client/Store/language; retirement lets them settle,
+invalidates only that client and suppresses obsolete callbacks. A → B → A creates fresh clients.
+Hydrate editor fields once, retain failed drafts and guard dirty unsubmitted navigation/unload.
+Disable submitted forms and prevent duplicate writes. Retire confirmation callbacks when views
+change, stop unsent sequential deletes, preserve successes and retain failed rows for retry.
 
-The pinned [local Sakai reference](../../../docs/development.md#sakai-source-reference) is
-`.references/sakai-ng`. Inspect its original shell components and layout SCSS when comparing
-the design. Keep the reference outside application imports and workspace tasks.
-Sakai defines the Angular admin's theme, shell and feature presentation. Concrete Angular features
-supply domain contracts, validation and scoped request lifecycles. Theme configuration,
-local fonts and intentional shell adaptations are described in the linked development guide.
+## Presentation and verification
 
-Prefer PrimeNG's documented components and theme tokens before custom presentation code.
-Use its MCP metadata for current APIs; never invent inputs or copy APIs from another PrimeUI
-library. Keep Sakai as the shell and feature visual reference. Feature styles belong beside their owning
-component; global CSS is for the shell, shared base rules and required overlay layout.
-Remove replaced styles and unused template demo rules. Extract wrappers only after concrete reuse.
+Sakai owns the shell/feature visual composition. Use the [pinned source](../../../docs/development.md#sakai-source-reference)
+for comparisons, PrimeNG documented APIs/tokens for controls, local feature styles and minimal
+global CSS. Keep Bulgarian/English, keyboard/mobile, light/dark and loading/error/empty states.
+Do not import ignored template source or add demo routes/dependencies.
 
-Keep Bulgarian/English text in the catalogs and preserve loading, retry, empty and unavailable
-states. A failed refresh can coexist with previously loaded rows, so independent template
-conditions are sometimes intentional. Format Angular HTML with the repository's Angular parser.
-
-## Focused verification
-
-Use [holita-focused-validation](../holita-focused-validation/SKILL.md) and native selectors:
-
-- Apollo/cache/retired mutations: `npm run test:admin -- --include=app/features/products/products-api.spec.ts --skip-nx-cache`.
-- List URL/filters/sorting/debounce: `npm run test:admin -- --include=app/features/products/products-page.spec.ts --skip-nx-cache`.
-- Editor validation/guards/late callbacks: `npm run test:admin -- --include=app/features/products/product-editor.spec.ts --skip-nx-cache`.
-- Deletion/partial results/query retirement/client shutdown: `npm run test:admin -- --include=app/features/products/products-deletion.spec.ts --skip-nx-cache`.
-- Store/language routing: `npm run test:admin -- --include=app/features/stores/store-workspace.spec.ts --skip-nx-cache`.
-- Transport diagnostics/deadline: `npm run test:admin -- --include=app/core/graphql/graphql-options.spec.ts --skip-nx-cache`.
-- Real transport and A → B → A: `npm run test:smoke:admin -- angular-foundation.smoke.spec.mts`.
-- Shell/keyboard/theme/mobile: `npm run test:smoke:admin -- angular-shell.smoke.spec.mts`.
-- Real list paging/filter/sort/history: `npm run test:smoke:admin -- angular-products-list.smoke.spec.mts`.
-- Real create/edit/conflicts/dirty navigation: `npm run test:smoke:admin -- angular-product-editor.smoke.spec.mts`.
-- Reference boundary, Venues, Speakers and Tags: `npm run test:admin -- --include="app/features/reference/**/*.spec.ts" --skip-nx-cache`; real CRUD/nullable sorting/referenced failures/scoping/disabled/mobile: `npm run test:smoke:admin -- angular-venues.smoke.spec.mts angular-lookups.smoke.spec.mts`.
-- Events fields/ranges/time/HTML/scoping: `npm run test:admin -- --include="app/features/reference/events/*.spec.ts" --include=app/features/reference/relation-picker.spec.ts --skip-nx-cache`; real persistence/relations/rich text/URL/columns/dirty and mobile themes: `npm run test:smoke:admin -- angular-events.smoke.spec.mts`.
-- Event atomic status/Trash/Restore, reserved Code/children, read-only Trash, paginated plain-text History and delayed actions: `npm run test:smoke:admin -- angular-lifecycle.smoke.spec.mts`.
-- Sessions real CRUD/bounds/Speakers/order/conflicts/History/retirement/Sakai: `npm run test:smoke:admin -- angular-sessions.smoke.spec.mts`; controlled API/editor/validation: `npm run test:admin -- --include="app/features/reference/sessions/*.spec.ts" --skip-nx-cache`.
-- Gallery captured API/headers/retirement/typed Alt text: `npm run test:admin -- --include=app/features/reference/media/media-api.spec.ts --skip-nx-cache`; real bytes/cancellation/finalization/order/previews/Trash/Sakai: `npm run test:smoke:admin -- angular-media.smoke.spec.mts`.
-- Real deletion/failed-row retry/last-page correction/keyboard: `npm run test:smoke:admin -- angular-products-delete.smoke.spec.mts`.
-
-Run the relevant type/build checks; root tooling changes also require root lint/typecheck/build.
-MCP usage validation does not prove Angular compilation or browser behavior. Keep controlled-HTTP,
-real Gateway and visual evidence distinct. Update the existing authoritative docs for changed
-behavior, and report actual test counts and remaining limitations. Do not start another feature
-or run full regression without the requested scope.
+Use [focused validation](../holita-focused-validation/SKILL.md). Select concrete Vehicles/Devices
+API/query/editor/deletion suites, StoreWorkspace/ReferenceWorkspace and RelationPicker as affected.
+Real CRUD uses angular-vehicles/angular-devices smoke files; routing/transport uses
+angular-foundation; shell/theme/focus/resizing uses angular-shell. Run required type/build checks;
+metadata validation does not prove compilation/browser behavior. Update authoritative docs and
+report actual results and visual-review limits. Never run full regression without user request.

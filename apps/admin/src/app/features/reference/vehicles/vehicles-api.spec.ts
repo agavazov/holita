@@ -11,7 +11,7 @@ const storeB = '10000000-0000-4000-8000-000000000002';
 const vehicleA: AdminVehicleFragment = {
   id: '20000000-0000-4000-8000-000000000001',
   storeId: storeA,
-  licensePlate: 'Sofia notebook',
+  licensePlate: 'CA1234AB',
   notes: null,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
@@ -19,7 +19,7 @@ const vehicleA: AdminVehicleFragment = {
 const vehicleB: AdminVehicleFragment = {
   id: '20000000-0000-4000-8000-000000000002',
   storeId: storeB,
-  licensePlate: 'Plovdiv notebook',
+  licensePlate: 'PB1234AB',
   notes: null,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',

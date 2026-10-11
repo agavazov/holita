@@ -28,12 +28,8 @@ function operation(request: HttpRequest<unknown>, name: string): boolean {
   );
 }
 describe.each([
-  ['venues', 'Venue'],
-  ['speakers', 'Speaker'],
-  ['tags', 'Tag'],
   ['vehicles', 'Vehicle'],
   ['devices', 'Device'],
-  ['events', 'Event'],
 ])('Reference %s availability and workspace routing', (resource, entity) => {
   const path = `/en/stores/${storeA}/reference/${resource}`;
   const listOperation = `Admin${entity}s`;
@@ -69,16 +65,14 @@ describe.each([
     await harness.fixture.whenStable();
     return harness;
   }
-  it('blocks all Venue routes and navigation when disabled while leaving Products usable', async () => {
+  it('blocks all business routes and navigation when disabled while leaving store discovery usable', async () => {
     TestBed.overrideProvider(ADMIN_RUNTIME_CONFIG, {
       useValue: { graphqlUrl: '/graphql', referenceEnabled: false },
     });
     const harness = await mount();
     for (const suffix of ['', '/new', '/20000000-0000-4000-8000-000000000001/edit']) {
       await harness.navigateByUrl(path + suffix);
-      expect(harness.routeNativeElement?.textContent).toContain(
-        'Reference is unavailable. Products remains available.',
-      );
+      expect(harness.routeNativeElement?.textContent).toContain('Reference is unavailable.');
       expect(
         harness.routeNativeElement?.querySelector(
           `holita-admin-navigation a[href*="reference/${resource}"]`,
@@ -86,18 +80,12 @@ describe.each([
       ).toBeNull();
       http.expectNone('/graphql');
     }
-    await harness.navigateByUrl(`/en/stores/${storeA}/products`);
-    http
-      .expectOne((request) => operation(request, 'AdminProducts'))
-      .flush({
-        data: {
-          products: { __typename: 'ProductPage', items: [], total: 0, offset: 0, limit: 20 },
-        },
-      });
+    await harness.navigateByUrl('/en');
     await harness.fixture.whenStable();
-    expect(harness.routeNativeElement?.querySelector('h1')?.textContent.trim()).toBe('Products');
+    expect(harness.routeNativeElement?.querySelector('h1')?.textContent.trim()).toBe('Stores');
+    http.expectNone('/graphql');
   }, 15000);
-  it('does not issue Venue requests for unknown stores', async () => {
+  it('does not issue business requests for unknown stores', async () => {
     const harness = await mount(`/en/stores/not-a-store/reference/${resource}/new`);
     expect(harness.routeNativeElement?.textContent).toContain('Store not found');
     expect(harness.routeNativeElement?.querySelector('form')).toBeNull();

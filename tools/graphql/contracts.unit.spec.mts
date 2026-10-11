@@ -13,25 +13,33 @@ describe('local GraphQL contracts', () => {
     expect(result.clientSdl).toContain('store: Store!');
     expect(result.clientSdl).not.toContain('_entities');
     const operations = await readOperations(result.apiSchema);
-    expect(operations).toHaveLength(12);
+    expect(operations).toHaveLength(4);
     expect(operations.map((operation) => operation.location)).toEqual(
       expect.arrayContaining([
         'apps/admin/src/app/features/stores/operations.graphql',
-        'apps/admin/src/app/features/products/operations.graphql',
-        'apps/admin/src/app/features/reference/venues/operations.graphql',
-        'apps/admin/src/app/features/reference/speakers/operations.graphql',
-        'apps/admin/src/app/features/reference/tags/operations.graphql',
         'apps/admin/src/app/features/reference/vehicles/operations.graphql',
         'apps/admin/src/app/features/reference/devices/operations.graphql',
-        'apps/admin/src/app/features/reference/events/operations.graphql',
-        'apps/admin/src/app/features/reference/sessions/operations.graphql',
-        'apps/admin/src/app/features/reference/media/operations.graphql',
+        'apps/reference/src/core/operations.graphql',
       ]),
     );
-    expect(result.clientSdl).toContain('referenceVenues(');
     expect(result.clientSdl).toContain('referenceVehicles(');
     expect(result.clientSdl).toContain('referenceDevices(');
-    expect(result.clientSdl).toContain('reorderReferenceSessions(');
+    expect(Object.keys(result.apiSchema.getQueryType()?.getFields() ?? {}).sort()).toEqual([
+      'referenceDevice',
+      'referenceDevices',
+      'referenceVehicle',
+      'referenceVehicles',
+      'store',
+      'stores',
+    ]);
+    expect(Object.keys(result.apiSchema.getMutationType()?.getFields() ?? {}).sort()).toEqual([
+      'createReferenceDevice',
+      'createReferenceVehicle',
+      'deleteReferenceDevice',
+      'deleteReferenceVehicle',
+      'updateReferenceDevice',
+      'updateReferenceVehicle',
+    ]);
     expect(composeContracts(await readContracts()).supergraphSdl).toBe(result.supergraphSdl);
   });
   it('rejects an operation that no longer matches the API', async () => {

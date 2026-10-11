@@ -71,23 +71,6 @@ export class StoreWorkspace {
       document.documentElement.lang = language;
       const text = messages[language];
       this.primeNG.setTranslation({
-        monthNames: text.calendarMonths.split(','),
-        monthNamesShort: text.calendarMonthsShort.split(','),
-        dayNames: text.calendarDays.split(','),
-        dayNamesShort: text.calendarDaysShort.split(','),
-        dayNamesMin: text.calendarDaysMin.split(','),
-        firstDayOfWeek: 1,
-        chooseDate: text.calendarChooseDate,
-        prevMonth: text.calendarPreviousMonth,
-        nextMonth: text.calendarNextMonth,
-        prevYear: text.calendarPreviousYear,
-        nextYear: text.calendarNextYear,
-        chooseMonth: text.calendarChooseMonth,
-        chooseYear: text.calendarChooseYear,
-        prevHour: text.calendarPreviousHour,
-        nextHour: text.calendarNextHour,
-        prevMinute: text.calendarPreviousMinute,
-        nextMinute: text.calendarNextMinute,
         selectionMessage: text.selectedItemsMessage,
         emptySelectionMessage: text.emptySelectionMessage,
         aria: {
@@ -135,18 +118,14 @@ export class StoreWorkspace {
     const reference =
       this.referenceEnabled &&
       section?.[2]?.path === 'reference' &&
-      (resource === 'venues' ||
-        resource === 'speakers' ||
-        resource === 'tags' ||
-        resource === 'vehicles' ||
-        resource === 'devices' ||
-        resource === 'events');
+      (resource === 'vehicles' || resource === 'devices');
     void this.router.navigate([
       '/',
       this.language(),
       'stores',
       id,
-      ...(reference ? ['reference', resource] : ['products']),
+      'reference',
+      reference ? resource : 'vehicles',
     ]);
   }
 

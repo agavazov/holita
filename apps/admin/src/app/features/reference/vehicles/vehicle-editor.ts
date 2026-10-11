@@ -46,7 +46,7 @@ import {
   ],
   providers: [VehiclesApi, ConfirmationService],
   templateUrl: './vehicle-editor.html',
-  styleUrls: ['../reference-editor.scss', './vehicle-editor.scss'],
+  styleUrl: '../reference-editor.scss',
   host: { '(window:beforeunload)': 'beforeUnload($event)' },
 })
 export class VehicleEditor implements OnInit {

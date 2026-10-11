@@ -9,14 +9,13 @@ import {
 const one = '30000000-0000-4000-8000-000000000001';
 const two = '30000000-0000-4000-8000-000000000002';
 const old = '30000000-0000-4000-8000-000000000003';
-async function mount(load: RelationLoader, selectedIds: string[] = [], multiple = false) {
+async function mount(load: RelationLoader, selectedIds: string[] = []) {
   const fixture = TestBed.createComponent(RelationPicker);
   fixture.componentRef.setInput('language', 'en');
-  fixture.componentRef.setInput('label', 'Venue');
-  fixture.componentRef.setInput('controlId', 'test-venue');
+  fixture.componentRef.setInput('label', 'Vehicle');
+  fixture.componentRef.setInput('controlId', 'test-vehicle');
   fixture.componentRef.setInput('load', load);
   fixture.componentRef.setInput('selectedIds', selectedIds);
-  fixture.componentRef.setInput('multiple', multiple);
   await fixture.whenStable();
   return fixture;
 }
@@ -43,41 +42,39 @@ describe('Remote relation presentation', () => {
       vi.useRealTimers();
     }
   });
-  it('hydrates inactive selected rows without allowing new inactive selection', async () => {
+  it('hydrates the selected Vehicle and replaces it with a choice from the current page', async () => {
     const load: RelationLoader = (request) =>
       of({
         items: request.ids
-          ? [{ id: old, name: 'Old venue', active: false }]
+          ? [{ id: old, name: 'Old vehicle' }]
           : [
-              { id: one, name: 'New venue', active: true },
-              { id: two, name: 'Inactive venue', active: false },
+              { id: one, name: 'New vehicle' },
+              { id: two, name: 'Second vehicle' },
             ],
         total: 2,
       });
     const fixture = await mount(load, [old]);
     const picker = fixture.componentInstance;
-    expect(picker.selectedLabel()).toBe('Old venue (Inactive)');
+    expect(picker.selectedLabel()).toBe('Old vehicle');
     picker.show();
     await fixture.whenStable();
-    expect(picker.options().find((row) => row.id === two)?.disabled).toBe(true);
     const emit = vi.spyOn(picker.selectedIdsChange, 'emit');
     picker.select(two);
-    expect(emit).toHaveBeenLastCalledWith([]);
+    expect(emit).toHaveBeenLastCalledWith([two]);
     picker.select(one);
     expect(emit).toHaveBeenLastCalledWith([one]);
     fixture.destroy();
   });
-  it('retains choices on other pages, deduplicates IDs and clears explicitly', async () => {
+  it('replaces a selection from another page and clears explicitly', async () => {
     const fixture = await mount(
-      () => of({ items: [{ id: two, name: 'Page two', active: true }], total: 21 }),
+      () => of({ items: [{ id: two, name: 'Page two' }], total: 21 }),
       [one],
-      true,
     );
     const picker = fixture.componentInstance;
     const emit = vi.spyOn(picker.selectedIdsChange, 'emit');
     picker.show();
-    picker.select([two]);
-    expect(emit).toHaveBeenLastCalledWith([one, two]);
+    picker.select(two);
+    expect(emit).toHaveBeenLastCalledWith([two]);
     picker.clear();
     expect(emit).toHaveBeenLastCalledWith([]);
     fixture.destroy();
@@ -94,18 +91,18 @@ describe('Remote relation presentation', () => {
     const picker = fixture.componentInstance;
     picker.show();
     picker.changePage({ first: 20 });
-    reads[0]?.next({ items: [{ id: one, name: 'Stale', active: true }], total: 100 });
+    reads[0]?.next({ items: [{ id: one, name: 'Stale' }], total: 100 });
     expect(picker.page().items).toEqual([]);
-    reads[1]?.next({ items: [{ id: two, name: 'Current', active: true }], total: 21 });
+    reads[1]?.next({ items: [{ id: two, name: 'Current' }], total: 21 });
     expect(picker.page().items[0]?.name).toBe('Current');
     picker.editSearch('current');
     expect(calls).toHaveLength(2);
     await vi.waitFor(() => {
       expect(calls).toHaveLength(3);
     });
-    expect(calls[2]).toMatchObject({ offset: 0, search: 'current', active: true });
+    expect(calls[2]).toMatchObject({ offset: 0, search: 'current' });
     picker.close();
-    reads[2]?.next({ items: [{ id: one, name: 'Late', active: true }], total: 1 });
+    reads[2]?.next({ items: [{ id: one, name: 'Late' }], total: 1 });
     expect(picker.page().items).toEqual([]);
     fixture.destroy();
   });
@@ -115,7 +112,7 @@ describe('Remote relation presentation', () => {
       () =>
         fail
           ? throwError(() => new Error('Read failed'))
-          : of({ items: [{ id: one, name: 'Recovered', active: true }], total: 1 }),
+          : of({ items: [{ id: one, name: 'Recovered' }], total: 1 }),
       [one],
     );
     const picker = fixture.componentInstance;
@@ -157,7 +154,7 @@ describe('Remote relation presentation', () => {
         calls.push(request);
         return fail
           ? throwError(() => new Error('Selected lookup failed'))
-          : of({ items: [{ id: one, name: 'Recovered', active: true }], total: 1 });
+          : of({ items: [{ id: one, name: 'Recovered' }], total: 1 });
       },
       [one],
     );
