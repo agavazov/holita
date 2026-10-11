@@ -98,6 +98,58 @@ describe('Reference through the actual federation boundary', () => {
       data: { referenceVehicles: { total: 0 } },
     });
   });
+  it('runs Devices through Gateway with truck relations, Core resolution and scoped IMEI', async () => {
+    const createdTruck = await query(
+      'mutation {createReferenceVehicle(input:{licensePlate:"DEVICE-TRUCK"}){id}}',
+    );
+    const vehicleId = record(record(record(createdTruck).data).createReferenceVehicle).id;
+    if (typeof vehicleId !== 'string') throw new Error('Missing truck ID');
+    const created = await query(
+      'mutation($input:CreateReferenceDeviceInput!){createReferenceDevice(input:$input){id imei vehicle{licensePlate store{id}} store{id name}}}',
+      {
+        input: { imei: '001234567890123', vehicleId },
+      },
+    );
+    expect(created).toMatchObject({
+      data: {
+        createReferenceDevice: {
+          imei: '001234567890123',
+          vehicle: { licensePlate: 'DEVICE-TRUCK', store: { id: sofia } },
+          store: { id: sofia, name: 'holita Sofia' },
+        },
+      },
+    });
+    const id = record(record(record(created).data).createReferenceDevice).id;
+    if (typeof id !== 'string') throw new Error('Missing device ID');
+    expect(
+      await query('query($id:ID!){referenceDevice(id:$id){imei}}', { id }, plovdiv),
+    ).toMatchObject({ errors: [{ extensions: { code: 'NOT_FOUND' } }] });
+    expect(
+      await query(
+        'mutation($input:CreateReferenceDeviceInput!){createReferenceDevice(input:$input){id}}',
+        { input: { imei: '001234567890124', vehicleId } },
+        plovdiv,
+      ),
+    ).toHaveProperty('errors');
+    expect(
+      await query('mutation($id:ID!){deleteReferenceVehicle(id:$id){id}}', { id: vehicleId }),
+    ).toMatchObject({ errors: [{ extensions: { code: 'CONFLICT' } }] });
+    expect(
+      await query(
+        'mutation($id:ID!){updateReferenceDevice(id:$id,input:{imei:"001234567890125"}){imei}}',
+        { id },
+      ),
+    ).toEqual({ data: { updateReferenceDevice: { imei: '001234567890125' } } });
+    expect(await query('{referenceDevices(search:"001234"){items{imei}total}}')).toEqual({
+      data: { referenceDevices: { items: [{ imei: '001234567890125' }], total: 1 } },
+    });
+    expect(await query('mutation($id:ID!){deleteReferenceDevice(id:$id){id}}', { id })).toEqual({
+      data: { deleteReferenceDevice: { id } },
+    });
+    expect(
+      await query('mutation($id:ID!){deleteReferenceVehicle(id:$id){id}}', { id: vehicleId }),
+    ).toEqual({ data: { deleteReferenceVehicle: { id: vehicleId } } });
+  });
   it('runs scoped lifecycle and history operations through the gateway', async () => {
     const created = await query(
       'mutation($input:CreateReferenceEventInput!){createReferenceEvent(input:$input){id}}',

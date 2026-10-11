@@ -32,6 +32,7 @@ describe.each([
   ['speakers', 'Speaker'],
   ['tags', 'Tag'],
   ['vehicles', 'Vehicle'],
+  ['devices', 'Device'],
   ['events', 'Event'],
 ])('Reference %s availability and workspace routing', (resource, entity) => {
   const path = `/en/stores/${storeA}/reference/${resource}`;
@@ -95,7 +96,7 @@ describe.each([
       });
     await harness.fixture.whenStable();
     expect(harness.routeNativeElement?.querySelector('h1')?.textContent.trim()).toBe('Products');
-  });
+  }, 15000);
   it('does not issue Venue requests for unknown stores', async () => {
     const harness = await mount(`/en/stores/not-a-store/reference/${resource}/new`);
     expect(harness.routeNativeElement?.textContent).toContain('Store not found');

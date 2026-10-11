@@ -5,13 +5,13 @@ local caching and affected selection. Each application has a package.json and a 
 project.json giving Nx its stable name and application tag. There are no shared workspace
 packages or cross-application code imports.
 
-| Application | Framework                        | Current entry points                                                                                                                                                                                                 |
-| ----------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| admin       | Angular, PrimeNG, Apollo Angular | PrimeNG/Sakai shell, real Stores, Products and Reference Venues/Speakers/Tags/Vehicles CRUD and Events list/editor/overview, atomic lifecycle actions, History, Event Sessions and Gallery at http://127.0.0.1:11000 |
-| gateway     | NestJS, Apollo Gateway           | /graphql and /health on 127.0.0.1:11010                                                                                                                                                                              |
-| core        | NestJS, Federation 2             | /graphql (stores) and /health on 127.0.0.1:11011                                                                                                                                                                     |
-| products    | NestJS, Federation 2             | /graphql (products) and /health on 127.0.0.1:11012                                                                                                                                                                   |
-| reference   | NestJS, Federation 2             | /graphql (events, venues, speakers, tags, vehicles) and /health on 127.0.0.1:11013                                                                                                                                   |
+| Application | Framework                        | Current entry points                                                                                                                                                                                                         |
+| ----------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| admin       | Angular, PrimeNG, Apollo Angular | PrimeNG/Sakai shell, real Stores, Products and Reference Venues/Speakers/Tags/Vehicles/Devices CRUD and Events list/editor/overview, atomic lifecycle actions, History, Event Sessions and Gallery at http://127.0.0.1:11000 |
+| gateway     | NestJS, Apollo Gateway           | /graphql and /health on 127.0.0.1:11010                                                                                                                                                                                      |
+| core        | NestJS, Federation 2             | /graphql (stores) and /health on 127.0.0.1:11011                                                                                                                                                                             |
+| products    | NestJS, Federation 2             | /graphql (products) and /health on 127.0.0.1:11012                                                                                                                                                                           |
+| reference   | NestJS, Federation 2             | /graphql (events, venues, speakers, tags, vehicles, devices) and /health on 127.0.0.1:11013                                                                                                                                  |
 
 Core owns store listing/lookup; products owns Products CRUD; reference owns Event, Venue, Speaker and Tag CRUD. Their concrete feature
 repositories access their own PrismaService, whose client connects lazily and disconnects
@@ -217,7 +217,7 @@ Scoped Drawer content padding and the navigation's line height retain Sakai's me
 Its panel uses a responsive width of `min(20rem, 90vw)` and a single 1px right border
 through the public `style` input; initial focus
 targets the close button's explicit pass-through ID, and dismissal returns focus to the toggle.
-Navigation exposes Stores and, for a known selection, Products and enabled Reference Venues/Speakers/Tags/Vehicles/Events.
+Navigation exposes Stores and, for a known selection, Products and enabled Reference Venues/Speakers/Tags/Vehicles/Devices/Events.
 Reference availability is passed into the shell explicitly from startup configuration. The active-store selector
 uses PrimeNG Select, alongside the language and theme controls on the right of the desktop
 top bar. Keyboard order follows these controls. The desktop sidebar slides out on collapse
@@ -666,3 +666,17 @@ instants, including days shortened/lengthened by daylight saving changes.
 The Event overview displays saved summary, tags, schedule, location, registration and record
 details in cards. Its header contains context and its tabs. Edit opens the existing
 form; Publish/Archive use the scoped status action and Move to trash uses confirmed deletion. These actions retain the same route/store mutation lifecycle as editors.
+
+## Devices and truck assignments
+
+Reference owns Device CRUD in `apps/reference/src/devices`. Each Device has an IMEI stored
+as exactly 15 ASCII digits and a mandatory Vehicle (truck) assignment. IMEI is unique within
+a store and retains leading zeros. Several Devices can share a truck. A composite
+`(storeId, vehicleId)` foreign key enforces same-store assignments and restricts truck deletion
+while Devices refer to it. Reassign or delete those Devices before deleting the truck.
+Creation checks Core store existence; device-only reads, updates and deletion do not call Core.
+
+Angular's Devices list/editor uses generated Gateway operations, URL-backed IMEI search,
+sorting/pagination, typed Reactive Forms and a remote truck picker. Each mounted store/language
+workspace owns its Apollo client; navigation cancels reads and retires callbacks while submitted
+writes settle against their captured client. Reference availability gates all Devices routes.

@@ -1,0 +1,113 @@
+<section class="card">
+  <div class="page-heading">
+    <div>
+      <a
+        class="content-link"
+        [routerLink]="listLink()"
+        queryParamsHandling="preserve"
+        [preserveFragment]="true"
+        >{{ text().devices }}</a
+      >
+      <h1>{{ deviceId() ? text().editDevice : text().createDevice }}</h1>
+      <p>{{ store().name }}</p>
+    </div>
+    <a
+      pButton
+      severity="secondary"
+      [outlined]="true"
+      [routerLink]="listLink()"
+      queryParamsHandling="preserve"
+      [preserveFragment]="true"
+      >{{ text().backToDevices }}</a
+    >
+  </div>
+  @if (loading()) {
+    <p role="status">{{ text().loadingDevice }}</p>
+  }
+  @if (invalidId()) {
+    <p-message severity="error">{{ text().invalidDeviceId }}</p-message>
+  }
+  @if (error()) {
+    <p-message severity="error">{{ failure() }}</p-message>
+    @if (retryAvailable()) {
+      <button pButton type="button" severity="secondary" [disabled]="loading()" (click)="retry()">
+        {{ text().retry }}
+      </button>
+    }
+  }
+</section>
+@if (ready()) {
+  <form
+    #editorForm
+    [formGroup]="form"
+    (ngSubmit)="save()"
+    class="reference-form"
+    novalidate
+    [attr.aria-busy]="pending()"
+  >
+    <section class="card device-details" [attr.aria-label]="text().deviceDetails">
+      <h2>{{ text().deviceDetails }}</h2>
+      <div class="field">
+        <label for="device-imei">{{ text().imei }}</label>
+        <input
+          pInputText
+          autocomplete="off"
+          inputmode="numeric"
+          id="device-imei"
+          formControlName="imei"
+          [fluid]="true"
+          [invalid]="!!fieldError('imei')"
+          [attr.aria-invalid]="!!fieldError('imei')"
+          aria-describedby="device-imei-hint device-imei-error"
+        />
+        <small id="device-imei-hint">{{ text().imeiHint }}</small>
+        <div id="device-imei-error">
+          @if (fieldError('imei'); as error) {
+            <p-message severity="error" variant="simple" size="small">{{ error }}</p-message>
+          }
+        </div>
+      </div>
+      <div class="field">
+        <label for="device-vehicleId">{{ text().deviceVehicle }}</label>
+        <holita-relation-picker
+          [language]="language()"
+          [label]="text().deviceVehicle"
+          controlId="device-vehicleId"
+          [selectedIds]="selectedVehicleIds()"
+          (selectedIdsChange)="selectVehicle($event)"
+          [load]="loadVehicles"
+          [activeOnly]="false"
+          [disabled]="pending()"
+          [invalid]="!!fieldError('vehicleId')"
+        />
+        <small>{{ text().deviceVehicleHint }}</small>
+        <div id="device-vehicleId-error">
+          @if (fieldError('vehicleId'); as error) {
+            <p-message severity="error" variant="simple" size="small">{{ error }}</p-message>
+          }
+        </div>
+      </div>
+      <div class="editor-actions">
+        <button pButton type="submit" [disabled]="pending()">
+          {{ pending() ? text().savingDevice : text().saveDevice }}
+        </button>
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="pending()"
+          (click)="routerBack()"
+        >
+          {{ text().cancel }}
+        </button>
+      </div>
+    </section>
+  </form>
+}
+<p-confirmdialog
+  defaultFocus="reject"
+  [closeAriaLabel]="text().closeConfirmation"
+  [draggable]="false"
+  [style]="{ width: 'min(30rem, 90vw)', overflowWrap: 'anywhere' }"
+/>

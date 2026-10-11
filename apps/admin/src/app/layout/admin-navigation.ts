@@ -3,6 +3,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Shop } from '@primeicons/angular/shop';
 import { Box } from '@primeicons/angular/box';
 import { Users } from '@primeicons/angular/users';
+import { Mobile } from '@primeicons/angular/mobile';
 import { Car } from '@primeicons/angular/car';
 import { Calendar } from '@primeicons/angular/calendar';
 import { Tag } from '@primeicons/angular/tag';
@@ -11,7 +12,7 @@ import { messages, type Language } from '../i18n/messages';
 
 @Component({
   selector: 'holita-admin-navigation',
-  imports: [RouterLink, RouterLinkActive, Shop, Box, MapMarker, Users, Tag, Calendar, Car],
+  imports: [RouterLink, RouterLinkActive, Shop, Box, MapMarker, Users, Tag, Calendar, Car, Mobile],
   template: `
     <nav [attr.aria-label]="text().navigation">
       <ul class="layout-menu">
@@ -120,6 +121,21 @@ import { messages, type Language } from '../i18n/messages';
                     aria-hidden="true"
                   ></svg>
                   <span class="layout-menuitem-text">{{ text().vehicles }}</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  [routerLink]="['/', language(), 'stores', id, 'reference', 'devices']"
+                  routerLinkActive="active-route"
+                  ariaCurrentWhenActive="page"
+                >
+                  <svg
+                    data-p-icon="mobile"
+                    size="20"
+                    class="layout-menuitem-icon"
+                    aria-hidden="true"
+                  ></svg>
+                  <span class="layout-menuitem-text">{{ text().devices }}</span>
                 </a>
               </li>
               <li>

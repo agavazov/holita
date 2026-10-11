@@ -184,6 +184,20 @@ stops unsent deletes; submitted writes settle against their original scope.
 
 Angular uses the existing Reference service through the Gateway. Rich text/media are not part of the Venue editor.
 
+### Angular Reference Devices
+
+**Reference → Devices** opens `/reference/devices` in the current store/language workspace.
+Create at `/new` and edit at `/:recordId/edit`. Enter a required IMEI of exactly 15 digits
+and choose a truck using the search/pagination dialog. Leading zeros are retained; IMEI is
+unique in the current store. Each Device belongs to one truck, which can have multiple Devices.
+An existing Device can be reassigned to another truck in the same store.
+
+The list shows IMEI and truck license plate, with URL-backed IMEI search, sorting and paging.
+Deletion requires confirmation and supports page-local selection, partial failures and retry.
+Trucks with assigned Devices cannot be deleted; first reassign or remove their Devices.
+Disabled Reference and unknown-store gates apply to every Devices route. Unsaved editors
+confirm navigation, obsolete reads retire and submitted writes retain their captured scope.
+
 ### Angular Reference Speakers, Tags and Vehicles
 
 **Reference → Vehicles** opens `/reference/vehicles`; Create uses `/new` and a License

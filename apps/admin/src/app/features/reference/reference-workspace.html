@@ -67,6 +67,17 @@
           <holita-events-page [store]="scope.store" [language]="scope.language" />
         }
       }
+      @case ('devices') {
+        @if (scope.editor) {
+          <holita-device-editor
+            [store]="scope.store"
+            [language]="scope.language"
+            [deviceId]="scope.recordId"
+          />
+        } @else {
+          <holita-devices-page [store]="scope.store" [language]="scope.language" />
+        }
+      }
       @case ('vehicles') {
         @if (scope.editor) {
           <holita-vehicle-editor

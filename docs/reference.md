@@ -201,3 +201,18 @@ The scoped API/editor/deletion tests exercise retired clients, A → B → A, di
 late callbacks. [Database checks](../apps/reference/test/vehicles.db.spec.ts) cover persistence,
 null clearing, context, federation references and literal search. [Browser checks](../tools/browser/angular-vehicles.smoke.spec.mts)
 cover CRUD/reload/scoping through the Gateway and Bulgarian desktop/mobile light/dark presentation.
+
+## Devices
+
+[Devices SDL](../apps/reference/src/devices/devices.graphql), concrete service/repository and
+[Prisma schema](../apps/reference/prisma/schema.prisma) define IMEI and the mandatory truck
+relation. A truck can have several Devices; IMEI is unique per store and exactly 15 digits.
+Composite foreign keys prevent assignments across stores and protect referenced trucks from deletion.
+
+[DevicesPage](../apps/admin/src/app/features/reference/devices/devices-page.ts) supplies URL-backed
+IMEI search, sorting, paging and confirmed page-local sequential deletion with failed-row retry.
+[DeviceEditor](../apps/admin/src/app/features/reference/devices/device-editor.ts) uses typed
+Reactive Forms and a remotely paged truck picker, with dirty navigation protection.
+[DevicesApi](../apps/admin/src/app/features/reference/devices/devices-api.ts) retains submitted
+writes in the originating client and disposes obsolete reads. See [usage](development.md#angular-reference-devices)
+and [focused checks](testing.md#devices-checks).

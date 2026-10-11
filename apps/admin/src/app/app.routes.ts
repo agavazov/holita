@@ -154,6 +154,33 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'stores/:storeId/reference/devices/new',
+        data: { resource: 'devices', editor: true },
+        canDeactivate: [leaveReference],
+        loadComponent: () =>
+          import('./features/reference/reference-workspace').then(
+            (module) => module.ReferenceWorkspace,
+          ),
+      },
+      {
+        path: 'stores/:storeId/reference/devices/:recordId/edit',
+        data: { resource: 'devices', editor: true },
+        canDeactivate: [leaveReference],
+        loadComponent: () =>
+          import('./features/reference/reference-workspace').then(
+            (module) => module.ReferenceWorkspace,
+          ),
+      },
+      {
+        path: 'stores/:storeId/reference/devices',
+        data: { resource: 'devices', editor: false },
+
+        loadComponent: () =>
+          import('./features/reference/reference-workspace').then(
+            (module) => module.ReferenceWorkspace,
+          ),
+      },
+      {
         path: 'stores/:storeId/reference/tags/new',
         data: { resource: 'tags', editor: true },
         canDeactivate: [leaveReference],

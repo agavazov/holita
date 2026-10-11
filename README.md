@@ -6,7 +6,7 @@ life cycle (SDLC) automation.
 A strict TypeScript npm-workspaces repository with Nx tasks and five host applications:
 Angular admin and NestJS gateway, core, products and reference services.
 Sakai is the theme and visual reference for the Angular admin in `apps/admin`, with holita
-branding and PrimeNG components. Angular provides store selection, Products and Reference Venues/Speakers/Tags/Vehicles CRUD plus Events list/editor/overview, atomic lifecycle actions, History and Event-scoped Sessions through
+branding and PrimeNG components. Angular provides store selection, Products and Reference Venues/Speakers/Tags/Vehicles/Devices CRUD plus Events list/editor/overview, atomic lifecycle actions, History and Event-scoped Sessions through
 the real gateway. The pinned, ignored [Sakai source](docs/development.md#sakai-source-reference)
 supplies the shell and feature presentation reference.
 The gateway exposes schema-first GraphQL for stores and store-scoped

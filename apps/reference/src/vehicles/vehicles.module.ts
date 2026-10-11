@@ -8,6 +8,7 @@ import { VehiclesService } from './vehicles.service.js';
 
 @Module({
   imports: [DatabaseModule],
+  exports: [VehiclesService],
   providers: [
     ReferenceEnabledGuard,
     CoreClient,

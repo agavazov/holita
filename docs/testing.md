@@ -38,6 +38,23 @@ separate named targets; browser tests use test:smoke:admin. No selector must sil
 `--passWithNoTests` must not be enabled. A missing file or a case pattern that executes
 zero tests is not successful validation, even if a runner exits zero for skipped cases.
 
+## Devices checks
+
+- `npm run test:reference -- devices.service.spec.ts --skip-nx-cache` checks IMEI validation,
+  mandatory same-store trucks, scoped calls, constraint errors and Core-on-create behavior.
+- After `db:up`, `db:setup` and `db:test:setup`, run
+  `npm run test:reference:db -- devices.db.spec.ts` for migrations, multiple Devices per truck,
+  leading zeros, duplicate IMEI, reassignment, composite foreign keys, protected truck deletion,
+  scoped CRUD/federation references and list pagination/search.
+- `npm run test:gateway:db -- federation.db.spec.mts --testNamePattern=Devices` checks actual
+  Gateway/Core resolution and truck relations across service boundaries.
+- `npm run test:admin -- --include="app/features/reference/devices/*.spec.ts" --include=app/features/reference/reference-workspace.spec.ts --skip-nx-cache`
+  covers typed forms, field focus, client/cache isolation, A → B → A, read cancellation,
+  late writes, route availability and sequential deletion retirement/retry.
+- `npm run test:smoke:admin -- angular-devices.smoke.spec.mts` checks compiled Angular CRUD,
+  duplicate IMEI, multiple assignments, reassignment/reload/scoping and Bulgarian 1280/390/320px
+  light/dark forms/lists. Captures stay in ignored `.references/review/devices`.
+
 ## Vehicles checks
 
 Use `npm run test:reference -- vehicles.service.spec.ts --skip-nx-cache` for input validation,
