@@ -8,17 +8,17 @@ export const workspaceRoot = fileURLToPath(new URL('../../', import.meta.url));
 export const subgraphs = [
   {
     name: 'core',
-    url: 'http://127.0.0.1:11082/graphql',
+    url: 'http://127.0.0.1:11011/graphql',
     path: 'apps/core/src/stores/stores.graphql',
   },
   {
     name: 'products',
-    url: 'http://127.0.0.1:11083/graphql',
+    url: 'http://127.0.0.1:11012/graphql',
     path: 'apps/products/src/products/products.graphql',
   },
   {
     name: 'reference',
-    url: 'http://127.0.0.1:11086/graphql',
+    url: 'http://127.0.0.1:11013/graphql',
     path: 'apps/reference/src/venues/venues.graphql',
     additionalPaths: [
       'apps/reference/src/events/events.graphql',

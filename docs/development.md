@@ -21,8 +21,8 @@ nvm installation, initialize a non-interactive shell with `. "$HOME/.nvm/nvm.sh"
 | Command                                           | Behavior                                                                                            |
 | ------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | npm run dev                                       | Wait for PostgreSQL in Docker, then start four backends and both Angular modes                      |
-| npm run dev:admin                                 | Angular real Stores/Products/Venues/Speakers/Tags/Vehicles/Events on port 11088                     |
-| npm run dev:admin:mock                            | Angular Prototype CRUD, Events/Sessions/Gallery/History on port 11089; no backend needed            |
+| npm run dev:admin                                 | Angular real Stores/Products/Venues/Speakers/Tags/Vehicles/Events on port 11000                     |
+| npm run dev:admin:mock                            | Angular Prototype CRUD, Events/Sessions/Gallery/History on port 11001; no backend needed            |
 | npm run dev:gateway                               | Nest gateway watcher                                                                                |
 | npm run dev:core                                  | Nest core watcher                                                                                   |
 | npm run dev:products                              | Nest products watcher                                                                               |
@@ -55,12 +55,16 @@ Node checks and test application processes run on the runner host. CI does not d
 
 | Application             | Default         |
 | ----------------------- | --------------- |
-| admin (Angular Real)    | 127.0.0.1:11088 |
-| admin Angular Prototype | 127.0.0.1:11089 |
-| gateway                 | 127.0.0.1:11080 |
-| core                    | 127.0.0.1:11082 |
-| products                | 127.0.0.1:11083 |
-| reference               | 127.0.0.1:11086 |
+| admin (Angular Real)    | 127.0.0.1:11000 |
+| admin Angular Prototype | 127.0.0.1:11001 |
+| gateway                 | 127.0.0.1:11010 |
+| core                    | 127.0.0.1:11011 |
+| products                | 127.0.0.1:11012 |
+| reference               | 127.0.0.1:11013 |
+
+Ports 11000–11009 are reserved for visual applications and previews; the optional Sakai
+preview uses 11002. Backends start at 11010 in the order gateway, core, products, reference.
+PostgreSQL remains on 11084.
 
 Backend `.env.example` files document PORT. Copy only the example you need to that
 application's `.env`; defaults work without any environment file. Core/products/reference examples
@@ -71,14 +75,14 @@ PORT must be an integer from 1 to 65535. An existing process environment takes p
 To override one backend without creating a file:
 
 ```bash
-PORT=12082 npm run dev:core
+PORT=12011 npm run dev:core
 ```
 
 ## Angular admin foundation
 
 After database setup/migration/seed, `npm run dev` starts the complete local group. Open
-http://127.0.0.1:11088, choose a store and open its Products list. Angular uses the real
-Gateway in Real mode. `npm run dev:admin:mock` starts Angular Prototype on port 11089,
+http://127.0.0.1:11000, choose a store and open its Products list. Angular uses the real
+Gateway in Real mode. `npm run dev:admin:mock` starts Angular Prototype on port 11001,
 with Angular-owned MSW handlers and browser fixtures. The mode is selected once at startup.
 Sakai is the Angular admin's theme and visual reference, including feature screens.
 Its [pinned local source](#sakai-source-reference) supplies layout, spacing and composition;
@@ -162,7 +166,7 @@ Products have no image controls. Saved Reference Events provide the [Angular Gal
 npm run dev:admin:mock
 ```
 
-Open http://127.0.0.1:11089/bg (or `/en`). No backend or database is required.
+Open http://127.0.0.1:11001/bg (or `/en`). No backend or database is required.
 The startup configuration selects `graphql` or `mock` once; omission defaults to Real.
 The CLI's `prototype` configuration forces `mock` through a standard environment file
 replacement. Served production builds may select it with public `dataSource: "mock"` in
@@ -211,7 +215,7 @@ fixtures for both stores, then boots discovery in the current locale with fresh 
 A failed Reset retains the form and allows retry. Appearance preference remains separate.
 The worker script is generated with MSW and served from the admin's public assets. Use a
 loopback or HTTPS origin with browser storage and service workers enabled. For a custom port,
-use `npm run dev:mock --workspace @holita/admin -- --port 12089`.
+use `npm run dev:mock --workspace @holita/admin -- --port 12001`.
 See [Angular checks](testing.md#angular-admin-checks) for backend-free compiled browser tests.
 
 ### Angular Reference Venues
@@ -292,13 +296,13 @@ in the local/served configuration, and restore the tracked example before commit
 { "graphqlUrl": "/graphql", "primeUiLicense": "your-issued-key" }
 ```
 
-The default `/graphql` is proxied to http://127.0.0.1:11080 by
+The default `/graphql` is proxied to http://127.0.0.1:11010 by
 [proxy.conf.json](../apps/admin/proxy.conf.json). This same-origin proxy lets Angular use the
 existing gateway CORS configuration. A custom gateway port requires a matching proxy target.
 Use Angular CLI's native options for a custom port/proxy:
 
 ```bash
-npm run dev --workspace @holita/admin -- --port 12088 --proxy-config /absolute/path/proxy.conf.json
+npm run dev --workspace @holita/admin -- --port 12000 --proxy-config /absolute/path/proxy.conf.json
 ```
 
 A production build is `apps/admin/dist/browser`. Serve it with SPA fallback to `index.html`
@@ -502,10 +506,10 @@ and run its existing preview script from that checkout:
 cd .references/sakai-ng
 nvm use
 npm ci --no-audit --no-fund
-npm start -- --host 127.0.0.1 --port 11090
+npm start -- --host 127.0.0.1 --port 11002
 ```
 
-Open `http://127.0.0.1:11090/pages/empty` for the shell,
+Open `http://127.0.0.1:11002/pages/empty` for the shell,
 `/pages/crud` for the template's CRUD presentation and `/uikit/formlayout` for forms.
 Use another free port if needed. The reference has its own dependencies and cache;
 it does not change holita's lockfile or join the workspace. Stop its preview after
@@ -564,7 +568,7 @@ npm exec -- prettier --check 'apps/admin/src/**/*.html'
 
 ## Manual Prototype review
 
-Run `npm run dev:admin:mock` and open http://127.0.0.1:11089/bg (or `/en`).
+Run `npm run dev:admin:mock` and open http://127.0.0.1:11001/bg (or `/en`).
 No backend or database is needed. Confirm the Prototype indicator, select each store and
 exercise Products, Venues, Speakers, Tags and Vehicles CRUD. Reload to check browser persistence.
 Create an Event, edit its description, add a Session/Speaker and reorder the program.
@@ -577,7 +581,7 @@ for automated workflows and the [Prototype limits](#angular-prototype).
 ## UI catalog
 
 In Angular Prototype, choose a store, then **Prototype → UI catalog**. Open
-`/<language>/stores/<storeId>/ui-catalog` on port 11089. Real hides the menu and rejects
+`/<language>/stores/<storeId>/ui-catalog` on port 11001. Real hides the menu and rejects
 this route before loading the examples or requesting a CRUD resource. The catalog loads
 on demand and mounts only for a discovered store.
 
@@ -622,7 +626,7 @@ directory together with the Reference database. `REFERENCE_PUBLIC_URL` must be t
 reachable http(s) base URL for Reference (default loopback at its PORT); set Reference's
 `ADMIN_ORIGINS` to a comma-separated list of exact HTTP(S) admin origins for upload CORS.
 It takes precedence over the legacy single `ADMIN_ORIGIN`. With neither configured, Reference
-allows localhost and 127.0.0.1 on port 11088. Existing installations
+allows localhost and 127.0.0.1 on port 11000. Existing installations
 that set only `ADMIN_ORIGIN` retain that single-origin behavior; set `ADMIN_ORIGINS` for the admin origins in use. `*`, credentials, paths, queries and trailing slashes are rejected at startup.
 Keep local overrides in Reference's ignored `.env`; the Gateway still uses its own `ADMIN_ORIGIN`.
 No AWS credentials or object storage service is required. Source code, Git, Nx and formatting exclude `.media/`. Storage cleanup
@@ -649,11 +653,11 @@ Root lint/typecheck/build/test and app dev/start commands generate their prerequ
 After changing SDL or a named operation, run `npm run codegen`, then restart the Node
 group. Asset watching is not dynamic schema composition. Keep PORT overrides aligned with
 CORE_GRAPHQL_URL and PRODUCTS_GRAPHQL_URL in gateway; products also uses CORE_GRAPHQL_URL
-for creation validation. URLs default to core 11082 and products 11083 on loopback.
-Gateway ADMIN_ORIGIN defaults to http://127.0.0.1:11088 for browser CORS; update it if moving
+for creation validation. URLs default to core 11011 and products 11012 on loopback.
+Gateway ADMIN_ORIGIN defaults to http://127.0.0.1:11000 for browser CORS; update it if moving
 admin. x-store-id and x-request-id are allowed headers; x-request-id is exposed in responses.
 
-Use the gateway at http://127.0.0.1:11080/graphql. For store discovery, no headers are needed:
+Use the gateway at http://127.0.0.1:11010/graphql. For store discovery, no headers are needed:
 
 ```graphql
 query ListStores {
@@ -836,7 +840,7 @@ this is not a production security acceptance.
 
 - Missing executable or dependency: initialize Node/npm and run `npm ci` from the root.
 - Prototype shows Real or cannot discover stores through the gateway: restart with
-  `npm run dev:admin:mock` and open http://127.0.0.1:11089. `dev:admin` starts Real;
+  `npm run dev:admin:mock` and open http://127.0.0.1:11001. `dev:admin` starts Real;
   restart the process after changing its startup configuration.
 - Prototype cannot start its worker or browser storage: use the loopback URL above and
   enable service workers, localStorage and IndexedDB for that site, then reload. Prototype

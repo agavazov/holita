@@ -50,8 +50,8 @@ describe('public Angular configuration', () => {
   });
   it('accepts a same-origin proxy path and a public HTTP gateway URL', () => {
     expect(readGraphqlUrl({ graphqlUrl: '/graphql' })).toBe('/graphql');
-    expect(readGraphqlUrl({ graphqlUrl: 'http://127.0.0.1:11080/graphql' })).toBe(
-      'http://127.0.0.1:11080/graphql',
+    expect(readGraphqlUrl({ graphqlUrl: 'http://127.0.0.1:11010/graphql' })).toBe(
+      'http://127.0.0.1:11010/graphql',
     );
   });
 

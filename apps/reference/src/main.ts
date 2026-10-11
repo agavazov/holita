@@ -8,7 +8,7 @@ import { AppModule } from './app.module.js';
 import { referenceAdminOrigins } from './admin-origins.js';
 
 async function bootstrap(): Promise<void> {
-  const portValue = process.env['PORT'] ?? '11086';
+  const portValue = process.env['PORT'] ?? '11013';
   const port = Number(portValue);
   if (!/^\d+$/.test(portValue) || !Number.isInteger(port) || port < 1 || port > 65535) {
     throw new Error('PORT must be an integer between 1 and 65535.');

@@ -2,7 +2,7 @@ export function referenceAdminOrigins(
   value: string | undefined,
   legacy: string | undefined,
 ): string[] {
-  const configured = value ?? legacy ?? 'http://127.0.0.1:11088,http://localhost:11088';
+  const configured = value ?? legacy ?? 'http://127.0.0.1:11000,http://localhost:11000';
   const origins = configured.split(',').map((origin) => origin.trim());
   if (
     !origins.length ||

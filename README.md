@@ -30,7 +30,7 @@ If Node 24 is not installed yet, run `nvm install` before `nvm use`.
 ### Angular admin
 
 Prepare the databases and start the applications with the commands below. Open
-[Angular admin](http://127.0.0.1:11088). It discovers stores through the real gateway and
+[Angular admin](http://127.0.0.1:11000). It discovers stores through the real gateway and
 reads a server-paginated Products list with search, SKU/status filters and sorting through
 generated GraphQL types and Apollo Angular. Bulgarian/English routes preserve the selected
 store and list query across reloads. Each mounted Products or Reference
@@ -61,7 +61,7 @@ Event page-local selections support confirmed atomic Publish/Archive/Trash/Resto
 `npm run dev:admin` starts Angular alone when the backends are already running.
 The shell supports desktop/mobile navigation, Bulgarian/English and persisted light/dark themes.
 For backend-free Angular Prototype, run `npm run dev:admin:mock` and open
-[Angular Prototype](http://127.0.0.1:11089). The same Sakai screens provide Stores and
+[Angular Prototype](http://127.0.0.1:11001). The same Sakai screens provide Stores and
 Products/Venues/Speakers/Tags/Vehicles CRUD, Events, Sessions, Gallery and History. Records are saved
 in localStorage; finalized image files use native IndexedDB. Confirmed **Reset demo data**
 waits for submitted writes and restores fixtures in the current language. The UI catalog
@@ -80,10 +80,10 @@ npm run db:seed
 npm run dev
 ```
 
-Open [Angular admin](http://127.0.0.1:11088),
-[Angular Prototype](http://127.0.0.1:11089).
+Open [Angular admin](http://127.0.0.1:11000),
+[Angular Prototype](http://127.0.0.1:11001).
 Gateway, core, products and reference listen on
-127.0.0.1 ports 11080, 11082, 11083 and 11086 respectively. All processes run on the host;
+127.0.0.1 ports 11010, 11011, 11012 and 11013 respectively. All processes run on the host;
 PostgreSQL alone runs in Docker on 127.0.0.1:11084. Each `npm run dev` starts PostgreSQL
 through `db:up` and waits for it to become healthy before starting the applications.
 Docker must be running. Ctrl+C stops the Node group;
@@ -92,7 +92,7 @@ migrations and seeds are explicit commands, never side effects of `dev`.
 
 ### Gateway and backend services
 
-Use [gateway GraphQL](http://127.0.0.1:11080/graphql) for API operations. `{ stores { id name } }`
+Use [gateway GraphQL](http://127.0.0.1:11010/graphql) for API operations. `{ stores { id name } }`
 works without a selected store. Product and Reference operations require an `x-store-id` UUID header;
 for the seeded Sofia store use `10000000-0000-4000-8000-000000000001`. Store context scopes
 data; this local foundation has no authentication or authorization.

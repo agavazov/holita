@@ -4,14 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "ng serve --host 127.0.0.1 --port 11088 --proxy-config proxy.conf.json",
+    "dev": "ng serve --host 127.0.0.1 --port 11000 --proxy-config proxy.conf.json",
     "predev": "npm run graphql:generate",
     "build": "ng build",
     "typecheck": "ngc --noEmit --project tsconfig.app.json && ngc --noEmit --project tsconfig.spec.json",
     "lint": "eslint .",
     "test": "ng test --watch=false --progress=false",
     "graphql:generate": "tsx ../../tools/graphql/generate.mts admin",
-    "dev:mock": "ng serve --configuration prototype --host 127.0.0.1 --port 11089",
+    "dev:mock": "ng serve --configuration prototype --host 127.0.0.1 --port 11001",
     "predev:mock": "npm run graphql:generate"
   },
   "dependencies": {

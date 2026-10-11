@@ -28,7 +28,7 @@ export class LocalMediaStorage extends MediaStorage {
   constructor() {
     super();
     const url = new URL(
-      process.env.REFERENCE_PUBLIC_URL ?? `http://127.0.0.1:${process.env.PORT ?? '11086'}`,
+      process.env.REFERENCE_PUBLIC_URL ?? `http://127.0.0.1:${process.env.PORT ?? '11013'}`,
     );
     if (
       !['http:', 'https:'].includes(url.protocol) ||

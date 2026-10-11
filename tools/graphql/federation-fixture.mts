@@ -264,8 +264,8 @@ export async function createFederationFixture(
     const referenceEnv = {
       REFERENCE_MEDIA_ROOT: mediaRoot,
       REFERENCE_PUBLIC_URL: `http://127.0.0.1:${String(referencePort)}`,
-      ADMIN_ORIGINS: options.adminOrigin ?? 'http://127.0.0.1:11088',
-      ADMIN_ORIGIN: options.adminOrigin ?? 'http://127.0.0.1:11088',
+      ADMIN_ORIGINS: options.adminOrigin ?? 'http://127.0.0.1:11000',
+      ADMIN_ORIGIN: options.adminOrigin ?? 'http://127.0.0.1:11000',
       REFERENCE_DATABASE_URL: referenceDatabase.url,
       CORE_GRAPHQL_URL: coreObserver.url,
       REFERENCE_ENABLED: String(options.referenceEnabled ?? true),
@@ -275,7 +275,7 @@ export async function createFederationFixture(
     const referenceObserver = await observeRequests(reference.url);
     cleanup.push(referenceObserver.close);
     const gateway = await startApplication('gateway', {
-      ADMIN_ORIGIN: options.adminOrigin ?? 'http://127.0.0.1:11088',
+      ADMIN_ORIGIN: options.adminOrigin ?? 'http://127.0.0.1:11000',
       CORE_GRAPHQL_URL: coreObserver.url,
       PRODUCTS_GRAPHQL_URL: productsObserver.url,
       REFERENCE_GRAPHQL_URL: referenceObserver.url,

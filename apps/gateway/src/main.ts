@@ -7,7 +7,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module.js';
 
 async function bootstrap(): Promise<void> {
-  const portValue = process.env['PORT'] ?? '11080';
+  const portValue = process.env['PORT'] ?? '11010';
   const port = Number(portValue);
   if (!/^\d+$/.test(portValue) || !Number.isInteger(port) || port < 1 || port > 65535) {
     throw new Error('PORT must be an integer between 1 and 65535.');
@@ -17,7 +17,7 @@ async function bootstrap(): Promise<void> {
   // Allow the 100 KiB rich-text input plus JSON escaping and the other event fields.
   app.useBodyParser('json', { limit: '1mb' });
   app.enableCors({
-    origin: process.env.ADMIN_ORIGIN ?? 'http://127.0.0.1:11088',
+    origin: process.env.ADMIN_ORIGIN ?? 'http://127.0.0.1:11000',
     methods: ['GET', 'POST', 'OPTIONS'],
     allowedHeaders: ['content-type', 'x-store-id', 'x-request-id'],
     exposedHeaders: ['x-request-id'],

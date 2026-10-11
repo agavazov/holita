@@ -13,7 +13,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 @Injectable()
 export class CoreClient {
   private readonly logger = new Logger(CoreClient.name);
-  private readonly url = process.env.CORE_GRAPHQL_URL ?? 'http://127.0.0.1:11082/graphql';
+  private readonly url = process.env.CORE_GRAPHQL_URL ?? 'http://127.0.0.1:11011/graphql';
 
   requireStore(storeId: string, context: RequestContext): Promise<void> {
     const existing = context.storeChecks.get(storeId);
