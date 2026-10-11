@@ -65,7 +65,7 @@ is available only in Prototype. See [configuration](docs/development.md#angular-
 
 ### All applications together
 
-Prepare the databases, then start both Angular modes and the four backends:
+Prepare the databases once, then start both Angular modes and the four backends:
 
 ```bash
 npm run db:up
@@ -79,7 +79,9 @@ Open [Angular admin](http://127.0.0.1:11088),
 [Angular Prototype](http://127.0.0.1:11089).
 Gateway, core, products and reference listen on
 127.0.0.1 ports 11080, 11082, 11083 and 11086 respectively. All processes run on the host;
-PostgreSQL alone runs in Docker on 127.0.0.1:11084. Ctrl+C stops the Node group;
+PostgreSQL alone runs in Docker on 127.0.0.1:11084. Each `npm run dev` starts PostgreSQL
+through `db:up` and waits for it to become healthy before starting the applications.
+Docker must be running. Ctrl+C stops the Node group;
 `npm run db:down` separately stops PostgreSQL and preserves its volume. Database setup,
 migrations and seeds are explicit commands, never side effects of `dev`.
 

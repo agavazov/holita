@@ -20,7 +20,7 @@ nvm installation, initialize a non-interactive shell with `. "$HOME/.nvm/nvm.sh"
 
 | Command                                           | Behavior                                                                                            |
 | ------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| npm run dev                                       | Start four backends and both Angular modes; Ctrl+C stops the group                                  |
+| npm run dev                                       | Wait for PostgreSQL in Docker, then start four backends and both Angular modes                      |
 | npm run dev:admin                                 | Angular real Stores/Products/Venues/Speakers/Tags/Events on port 11088                              |
 | npm run dev:admin:mock                            | Angular Prototype CRUD, Events/Sessions/Gallery/History on port 11089; no backend needed            |
 | npm run dev:gateway                               | Nest gateway watcher                                                                                |
@@ -37,6 +37,11 @@ nvm installation, initialize a non-interactive shell with `. "$HOME/.nvm/nvm.sh"
 `dev:admin` and its `dev:admin:graphql` alias start Angular. `test:admin` selects Angular
 unit tests; `test:smoke:admin` (also `test:smoke`) selects its real-browser foundation checks.
 `dev:admin:mock` starts Angular Prototype. Real and Prototype use separate origins and browser data.
+
+`dev` runs `db:up` before starting the application group. Docker must be running; a failed
+PostgreSQL startup prevents the applications from starting. Database setup, migrations and
+seeds remain explicit commands. Ctrl+C stops the Node group; use `npm run db:down` to stop
+PostgreSQL separately while preserving its volume.
 
 Backend builds produce apps/NAME/dist. After building, use
 `npm run start:prod --workspace @holita/core` (or gateway/products/reference) to run the emitted Node
