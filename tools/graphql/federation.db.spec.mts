@@ -57,6 +57,129 @@ describe('Fleet through the actual federation boundary', () => {
     const body: unknown = await response.json();
     return body;
   }
+  it('serves complete Karma users and role descriptions with shared signed access and sanitized failures', async () => {
+    const source =
+      '{karmaUsers{id userName active expireDate roleId firstName lastName timeZoneId email projectId projectIds} karmaRoles{id description}}';
+    const first = record(record(await query(source)).data);
+    expect(first.karmaUsers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: '71',
+          active: 0,
+          expireDate: null,
+          timeZoneId: 0,
+          projectIds: ['12', '0'],
+          firstName: '<b>Fixture name</b>',
+        }),
+      ]),
+    );
+    expect(Array.isArray(first.karmaUsers) && first.karmaUsers.length).toBe(120);
+    expect(first.karmaRoles).toEqual(expect.arrayContaining([{ id: '40', description: 'Viewer' }]));
+    const login = record(
+      record(
+        record(
+          await query(
+            'mutation{demoLogin(tenantId:"01000000-0000-4000-8000-000000000002"){token}}',
+          ),
+        ).data,
+      ).demoLogin,
+    );
+    if (typeof login.token !== 'string') throw new Error('Missing second tenant session');
+    expect(record(record(await query(source, {}, sandbox, fixture.url, login.token)).data)).toEqual(
+      first,
+    );
+    const before = fixture.karma.requests.length;
+    expect(record(await query(source, {}, sandbox, fixture.url, 'invalid')).errors).toBeDefined();
+    expect(fixture.karma.requests).toHaveLength(before);
+    fixture.karma.expire();
+    expect(record(record(await query(source)).data)).toEqual(first);
+    fixture.karma.setFailed(true);
+    try {
+      expect(record(await query(source)).errors).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ message: 'Karma is unavailable; try again later' }),
+        ]),
+      );
+    } finally {
+      fixture.karma.setFailed(false);
+    }
+    fixture.karma.setAccountsEmpty(true);
+    try {
+      expect(await query(source)).toMatchObject({ data: { karmaUsers: [], karmaRoles: [] } });
+    } finally {
+      fixture.karma.setAccountsEmpty(false);
+    }
+  });
+  it('serves Karma trip/event cursor histories and a nullable period profile through signed Gateway access', async () => {
+    const source =
+      'query($trips:KarmaTripsInput!,$events:KarmaEventsInput!,$profile:KarmaDrivingProfileInput!){karmaTrips(input:$trips){cursor nextCursor hasMore items{id stopDate tripDistance}} karmaEvents(input:$events){cursor nextCursor hasMore items{id eventId extra spd}} karmaDrivingProfile(input:$profile){carId deviceId categories{name score weight}}}';
+    const variables = {
+      trips: { carId: '41' },
+      events: { carId: '41' },
+      profile: { carId: '41', fromDate: '2026-01-01T00:00:00', toDate: '2026-01-08T00:00:00' },
+    };
+    const first = record(record(await query(source, variables, '')).data),
+      trips = record(first.karmaTrips),
+      events = record(first.karmaEvents);
+    expect(trips).toMatchObject({
+      hasMore: true,
+      items: expect.arrayContaining([{ id: '4000000120', stopDate: null, tripDistance: 0 }]),
+    });
+    expect(events).toMatchObject({
+      hasMore: true,
+      items: expect.arrayContaining([
+        { id: '3000000600', eventId: '0', extra: '<b>Fixture event text</b>', spd: 0 },
+      ]),
+    });
+    expect(record(first.karmaDrivingProfile).categories).toHaveLength(9);
+    const next = record(
+      record(
+        await query(
+          source,
+          {
+            ...variables,
+            trips: { carId: '41', cursor: trips.nextCursor },
+            events: { carId: '41', cursor: events.nextCursor },
+          },
+          sandbox,
+        ),
+      ).data,
+    );
+    expect(record(next.karmaTrips).items).toEqual(
+      expect.arrayContaining([
+        { id: '4000000070', stopDate: '2026-01-01 01:09:00', tripDistance: 0 },
+      ]),
+    );
+    expect(record(next.karmaEvents).items).toEqual(
+      expect.arrayContaining([
+        { id: '3000000550', eventId: '0', extra: '<b>Fixture event text</b>', spd: 0 },
+      ]),
+    );
+    const login = await query(
+      'mutation {demoLogin(tenantId:"01000000-0000-4000-8000-000000000002"){token}}',
+    );
+    const otherToken = record(record(record(login).data).demoLogin).token;
+    if (typeof otherToken !== 'string') throw new Error('Missing token');
+    expect(record(await query(source, variables, sandbox, fixture.url, otherToken)).data).toEqual(
+      first,
+    );
+    const before = fixture.karma.requests.length;
+    expect(record(await query(source, variables, '', fixture.url, 'invalid')).errors).toBeDefined();
+    expect(fixture.karma.requests).toHaveLength(before);
+    expect(
+      record(await query(source, { ...variables, events: { carId: '../login' } })).errors,
+    ).toBeDefined();
+    fixture.karma.setHistoryEmpty(true);
+    try {
+      expect(record(await query(source, variables)).data).toMatchObject({
+        karmaTrips: { items: [], hasMore: false },
+        karmaEvents: { items: [], hasMore: false },
+        karmaDrivingProfile: null,
+      });
+    } finally {
+      fixture.karma.setHistoryEmpty(false);
+    }
+  });
   it('shares Karma cars across authenticated tenants and Stores, rejects anonymous access and renews the upstream session', async () => {
     const source = '{karmaCars{id carNumber deviceId projectId carYear}}';
     const first = await query(source);
@@ -105,6 +228,166 @@ describe('Fleet through the actual federation boundary', () => {
       fixture.karma.setFailed(false);
     }
     expect(await query('{karmaCars{id}}')).toMatchObject({ data: { karmaCars: [{ id: '41' }] } });
+  });
+
+  it('reads Karma truck details, handles missing/invalid IDs and authenticates before upstream access', async () => {
+    const source = 'query($id:ID!){karmaCar(id:$id){id deviceId subType timeZoneId driverCount}}';
+    expect(await query(source, { id: '41' }, '')).toMatchObject({
+      data: {
+        karmaCar: {
+          id: '41',
+          deviceId: '000123456789012',
+          subType: 'Trailer',
+          timeZoneId: 8,
+          driverCount: 0,
+        },
+      },
+    });
+    const reads = fixture.karma.requests.length;
+    expect(await query(source, { id: '41' }, '', fixture.url, '')).toMatchObject({
+      errors: [{ extensions: { code: 'UNAUTHENTICATED' } }],
+    });
+    expect(await query(source, { id: '../login' }, '')).toMatchObject({
+      errors: [{ extensions: { code: 'BAD_USER_INPUT' } }],
+    });
+    expect(fixture.karma.requests).toHaveLength(reads);
+    expect(await query(source, { id: '999' }, '')).toMatchObject({ data: { karmaCar: null } });
+    fixture.karma.expire();
+    expect(await query(source, { id: '41' }, sandbox)).toMatchObject({
+      data: { karmaCar: { id: '41' } },
+    });
+  });
+  it('reads Karma location and references across tenants/Stores with authorization and session renewal', async () => {
+    const source =
+      '{karmaLocation(carId:"41"){carId deviceId messageId eventId latitude longitude spd extra} karmaProjects{id name} karmaTimeZones{id name} karmaVersion{version}}';
+    for (const store of ['', sandbox])
+      expect(await query(source, {}, store)).toMatchObject({
+        data: {
+          karmaLocation: {
+            carId: '41',
+            deviceId: '000123456789012',
+            messageId: '3000000600',
+            eventId: '0',
+            latitude: 0,
+            longitude: 0,
+            spd: 0,
+            extra: '<b>Fixture plain text</b>',
+          },
+          karmaProjects: [{ id: '12', name: 'Fixture project' }],
+          karmaVersion: { version: '2.26.1.1' },
+        },
+      });
+    const first = await query(source, {}, '');
+    const login = await query(
+      'mutation {demoLogin(tenantId:"01000000-0000-4000-8000-000000000002"){token}}',
+    );
+    const otherToken = record(record(record(login).data).demoLogin).token;
+    if (typeof otherToken !== 'string') throw new Error('Missing other tenant token');
+    expect(await query(source, {}, '', fixture.url, otherToken)).toEqual(first);
+    const reads = fixture.karma.requests.length;
+    for (const session of ['', 'invalid'])
+      expect(await query(source, {}, '', fixture.url, session)).toMatchObject({
+        errors: expect.arrayContaining([
+          expect.objectContaining({
+            extensions: expect.objectContaining({ code: 'UNAUTHENTICATED' }),
+          }),
+        ]),
+      });
+    expect(fixture.karma.requests).toHaveLength(reads);
+    expect(await query('{karmaLocation(carId:"../login"){carId}}', {}, '')).toMatchObject({
+      errors: [{ extensions: { code: 'BAD_USER_INPUT' } }],
+    });
+    expect(fixture.karma.requests).toHaveLength(reads);
+    expect(await query('{karmaLocation(carId:"999"){carId}}', {}, '')).toMatchObject({
+      data: { karmaLocation: null },
+    });
+    fixture.karma.expire();
+    expect(await query('{karmaLocation(carId:"41"){carId}}', {}, '')).toMatchObject({
+      data: { karmaLocation: { carId: '41' } },
+    });
+    fixture.karma.setLocationCoordinates(null, null);
+    try {
+      expect(await query('{karmaLocation(carId:"41"){latitude longitude}}', {}, '')).toMatchObject({
+        data: { karmaLocation: { latitude: null, longitude: null } },
+      });
+    } finally {
+      fixture.karma.setLocationCoordinates(0, 0);
+    }
+  });
+
+  it('pages global Karma eData through Gateway with UTC/parameter filters and authorization', async () => {
+    const source =
+      'query($input:KarmaEdataInput!){karmaEdata(input:$input){hasMore nextCursor items{id carId deviceId spd parameters{id value description}}}}';
+    const first = await query(source, { input: { carId: '41' } }, '');
+    const page = record(record(record(first).data).karmaEdata);
+    expect(page).toMatchObject({
+      hasMore: true,
+      items: expect.arrayContaining([
+        {
+          id: '3000000600',
+          carId: '41',
+          deviceId: '000123456789012',
+          spd: 0,
+          parameters: [
+            { id: '99999', value: 0, description: 'Unlisted fixture parameter' },
+            { id: '1', value: 850, description: 'Engine RPM [rpm]' },
+          ],
+        },
+      ]),
+    });
+    expect(page.items).toHaveLength(50);
+    expect(await query(source, { input: { carId: '41' } }, sandbox)).toEqual(first);
+    const reads = fixture.karma.requests.length;
+    expect(await query(source, { input: { carId: '41' } }, '', fixture.url, '')).toMatchObject({
+      errors: [{ extensions: { code: 'UNAUTHENTICATED' } }],
+    });
+    expect(await query(source, { input: { carId: '41', pageSize: 500 } }, '')).toMatchObject({
+      errors: [{ extensions: { code: 'BAD_USER_INPUT' } }],
+    });
+    expect(fixture.karma.requests).toHaveLength(reads);
+    fixture.karma.expire();
+    expect(
+      await query(source, { input: { carId: '41', cursor: page.nextCursor } }, ''),
+    ).toMatchObject({
+      data: {
+        karmaEdata: {
+          items: expect.arrayContaining([expect.objectContaining({ id: '3000000550' })]),
+        },
+      },
+    });
+    expect(
+      await query(
+        source,
+        {
+          input: {
+            carId: '41',
+            fromDate: '2026-01-01T00:00:00Z',
+            toDate: '2026-01-01T00:00:00Z',
+            parameterIds: ['99999'],
+          },
+        },
+        '',
+      ),
+    ).toEqual({
+      data: {
+        karmaEdata: {
+          hasMore: false,
+          nextCursor: null,
+          items: [
+            {
+              id: '3000000001',
+              carId: '41',
+              deviceId: '000123456789012',
+              spd: 0,
+              parameters: [{ id: '99999', value: 0, description: 'Unlisted fixture parameter' }],
+            },
+          ],
+        },
+      },
+    });
+    expect(await query(source, { input: { carId: '999' } }, '')).toMatchObject({
+      errors: [{ extensions: { code: 'SERVICE_UNAVAILABLE' } }],
+    });
   });
   it('runs Vehicles CRUD through Gateway with Core store resolution and foreign-ID isolation', async () => {
     const created = await query(

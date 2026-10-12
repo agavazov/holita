@@ -10,6 +10,13 @@ export const subgraphs = [
     name: 'karma-client',
     url: 'http://127.0.0.1:11014/graphql',
     path: 'apps/karma-client/src/cars/cars.graphql',
+    additionalPaths: [
+      'apps/karma-client/src/accounts/accounts.graphql',
+      'apps/karma-client/src/edata/edata.graphql',
+      'apps/karma-client/src/history/history.graphql',
+      'apps/karma-client/src/location/location.graphql',
+      'apps/karma-client/src/references/references.graphql',
+    ],
   },
   {
     name: 'core',

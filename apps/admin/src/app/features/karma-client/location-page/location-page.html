@@ -1,0 +1,106 @@
+<section class="card" [attr.aria-label]="text().karmaLocation" [attr.aria-busy]="loading()">
+  <div class="page-heading">
+    <div>
+      <h1>{{ text().karmaLocation }}</h1>
+      <p>{{ car()?.carNumber || text().karmaClient }}</p>
+    </div>
+    <div class="page-actions">
+      <a
+        pButton
+        severity="secondary"
+        [outlined]="true"
+        [routerLink]="['/', language(), 'karma-client', 'cars', carId()]"
+        >{{ text().backToKarmaTruck }}</a
+      >
+      @if (validId()) {
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [disabled]="loading()"
+          (click)="refresh()"
+        >
+          {{ error() ? text().retry : text().refresh }}
+        </button>
+      }
+    </div>
+  </div>
+  @if (loading()) {
+    <p role="status">{{ text().karmaLoadingLocation }}</p>
+  }
+  @if (error()) {
+    <p-message severity="error">{{ text().karmaUnavailable }}</p-message>
+  }
+  @if (!validId() || (carLoaded() && !car() && !error())) {
+    <p-message severity="warn">{{ text().karmaTruckNotFound }}</p-message>
+  }
+  @if (car()) {
+    <p class="hint">{{ text().karmaLocationHint }}</p>
+    @if (loaded() && !location() && !error()) {
+      <p role="status">{{ text().karmaNoLocation }}</p>
+    }
+    @if (location(); as point) {
+      @if (map(); as url) {
+        <a class="content-link" [href]="url" target="_blank" rel="noopener noreferrer">{{
+          text().karmaOpenMap
+        }}</a>
+      } @else {
+        <p role="status">{{ text().karmaNoCoordinates }}</p>
+      }
+      <dl class="details">
+        <div>
+          <dt>{{ text().licensePlate }}</dt>
+          <dd>{{ point.carNumber || '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().karmaCarId }}</dt>
+          <dd>{{ point.carId }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().karmaDeviceId }}</dt>
+          <dd>{{ point.deviceId || '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().karmaMessageId }}</dt>
+          <dd>{{ point.messageId ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().karmaEventId }}</dt>
+          <dd>{{ point.eventId ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().karmaRawEdt }}</dt>
+          <dd>{{ point.edt ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().karmaRawEdtTz }}</dt>
+          <dd>{{ point.edtTz ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ 'pdt' }}</dt>
+          <dd>{{ point.pdt ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().karmaLatitude }}</dt>
+          <dd>{{ point.latitude ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().karmaLongitude }}</dt>
+          <dd>{{ point.longitude ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ 'spd' }}</dt>
+          <dd>{{ point.spd ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ 'odo' }}</dt>
+          <dd>{{ point.odo ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().karmaExtra }}</dt>
+          <dd>{{ point.extra ?? '—' }}</dd>
+        </div>
+      </dl>
+    }
+  }
+</section>

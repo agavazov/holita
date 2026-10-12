@@ -81,20 +81,63 @@ logout/reload and desktop/narrow light/dark views; fixture auto-login is disable
 ## Karma Client checks
 
 ```bash
-npm run test:karma-client -- karma-client.spec.ts cars.service.spec.ts health.spec.ts --skip-nx-cache
-npm run test:admin -- --include=app/features/karma-client/karma-workspace.spec.ts --include=app/features/stores/store-workspace.spec.ts --skip-nx-cache
+npm run test:karma-client -- accounts.spec.ts history.spec.ts location.spec.ts edata.spec.ts edata.service.spec.ts karma-client.spec.ts cars.service.spec.ts health.spec.ts --skip-nx-cache
+npm run test:admin -- --include=app/features/karma-client/karma-phase4.spec.ts --include=app/features/karma-client/karma-phase3.spec.ts --include=app/features/karma-client/karma-phase2.spec.ts --include=app/features/karma-client/edata-page/edata-page.spec.ts --include=app/features/karma-client/karma-workspace.spec.ts --include=app/features/stores/store-workspace.spec.ts --skip-nx-cache
 npm run test:gateway:db -- federation.db.spec.mts
-npm run test:smoke:admin -- angular-karma.smoke.spec.mts angular-foundation.smoke.spec.mts angular-shell.smoke.spec.mts
+npm run test:smoke:admin -- angular-karma-phase4.smoke.spec.mts angular-karma-phase3.smoke.spec.mts angular-karma-phase2.smoke.spec.mts angular-edata.smoke.spec.mts angular-karma.smoke.spec.mts angular-foundation.smoke.spec.mts angular-shell.smoke.spec.mts
 ```
 
 The client checks cover response validation, credential absence, bounded transport failures,
 concurrent login sharing, session reuse and one renewal after Karma's HTTP-200 session error.
+Non-success HTTP bodies are cancelled before parsing; tests include stalled bodies and prevent
+session renewal for unrelated HTTP failures.
+Detail checks cover invalid IDs before upstream access, missing trucks and mismatched responses.
 HTTP tests verify the signed session protocol and reject anonymous/invalid sessions before
 upstream reads. Angular checks cover independence from Stores/Fleet, no Store header and
-retirement across session/language changes and logout.
+retirement across session/language/truck changes and logout, direct details and malformed IDs.
 
 Federation and browser fixtures run the compiled Karma Client against a local controlled Karma
 HTTP server. They never use live account credentials; the existing guarded Core/Fleet database
-prerequisites still apply. Federation proves the common list across tenants/Stores, upstream
+prerequisites still apply. Federation proves the common list/details across tenants/Stores, upstream
 renewal and Fleet operation while Karma fails. Browser checks cover routing, Refresh, error/empty
-states, Store switching, reload/language and disabled-Fleet/signed-out behavior.
+states, Store switching, reload/language and disabled-Fleet/signed-out behavior. Detail browser
+checks cover list links, direct routes, Refresh/retry, retained data and missing/invalid trucks.
+
+The eData suites cover a 500-row upstream cap with complete traversal beyond that cap,
+50-row boundaries without skips/duplicates, current-page snapshots when new messages arrive,
+UTC/parameter encoding, cursor/filter scope, source ordering and response validation.
+Angular checks cover zero/null detail values, URL state, cancellation on filter/truck/language/
+session changes and logout, missing trucks and retained rows on refresh failure.
+The eData browser fixture walks all 600 messages, tests Newer/Latest/reload/back, filters and
+page-size selection, keyboard dialog close/focus restoration and desktop/mobile light/dark
+captures under ignored `.references/review/`.
+
+Location/reference checks cover all verified fields, null/zero values, plain-text escaping,
+malformed/mismatched/duplicate upstream records, signed access to public version, fixed
+field selection and a common abort budget across location existence/login/read/renewal.
+Angular cases cover missing trucks, independent reference failure, label/ID hydration,
+bookmarked reference pages, and retirement across truck/view/language/session/logout.
+The browser suite checks complete-list search/pagination, retained Refresh failures,
+null/invalid/empty location, map link safety, separate menu navigation and BG/EN
+desktop/mobile light/dark captures under ignored `.references/review/`.
+
+History checks cover 600-row traversal, endpoint-bound cursor scopes, source order and
+IDs, inclusive bounds, short-trip-batch lookahead, selected event fields/codes/UTC
+periods, malformed source data, missing cars, nine profile categories and null/zero.
+Transport cases preserve one budget through existence/login/read/lookahead/renewal.
+Angular cases cover direct routes, full dialogs and escaping, seven-day defaults,
+filter/period retirement, truck A → B → A, language/logout and native form submission.
+The compiled browser fixture covers trip/event traversal, reload/back/Latest/Newer,
+size/date/code filters, keyboard dialog focus, retained profile refresh/retry, empty/
+missing states and desktop/mobile light/dark captures. Real Gateway cases verify signed
+shared-account access across tenants/Stores for all three queries. These deterministic
+fixtures do not establish live provider uptime, active-trip semantics or score units.
+
+Account tests cover all eleven user fields, original memberships, null/zero/plain text,
+strict duplicate/shape validation, signed shared access before reads, renewal within the
+four-second bound and sanitized failures. Angular checks cover URL paging/search, retained
+refresh data, navigation/language/session cancellation and logout. Gateway verifies the
+complete account arrays across two Tenants/Stores with controlled renewal, failure and empty
+states. Browser cases cover local paging beyond 50, all-field dialogs/focus, menu navigation,
+reload/language, retained failures and desktop/mobile light/dark captures. Use the native
+`--testNamePattern='Karma users'` Gateway selector for this behavior.

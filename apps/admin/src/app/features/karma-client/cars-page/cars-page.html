@@ -21,6 +21,9 @@
   @if (error()) {
     <p-message severity="error">{{ text().karmaUnavailable }}</p-message>
   }
+  @if (referencesError() && !error()) {
+    <p-message severity="warn">{{ text().karmaReferencesUnavailable }}</p-message>
+  }
   @if (loaded()) {
     <p>{{ text().total }}: {{ cars().length }}</p>
   }
@@ -31,6 +34,7 @@
         <th scope="col">{{ text().karmaCarId }}</th>
         <th scope="col">{{ text().karmaDeviceId }}</th>
         <th scope="col">{{ text().karmaProjectId }}</th>
+        <th scope="col">{{ text().karmaTimeZones }}</th>
         <th scope="col">{{ text().karmaCarType }}</th>
         <th scope="col">{{ text().karmaCarYear }}</th>
         <th scope="col">{{ text().karmaCarColor }}</th>
@@ -38,10 +42,21 @@
     </ng-template>
     <ng-template #body let-car>
       <tr>
-        <td>{{ car.carNumber }}</td>
+        <td>
+          <a
+            class="content-link"
+            [routerLink]="['/', language(), 'karma-client', 'cars', car.id]"
+            >{{ car.carNumber || text().karmaTruckDetails }}</a
+          >
+        </td>
         <td>{{ car.id }}</td>
         <td>{{ car.deviceId }}</td>
-        <td>{{ car.projectId }}</td>
+        <td>
+          {{ projectName(car.projectId) }} <small>({{ car.projectId }})</small>
+        </td>
+        <td>
+          {{ timeZoneName(car.timeZoneId) }} <small>({{ car.timeZoneId ?? '—' }})</small>
+        </td>
         <td>{{ car.carType || '—' }}</td>
         <td>{{ car.carYear || '—' }}</td>
         <td>{{ car.carColor || '—' }}</td>
@@ -49,7 +64,7 @@
     </ng-template>
     <ng-template #emptymessage>
       <tr>
-        <td colspan="7">
+        <td colspan="8">
           @if (!loading() && !error()) {
             {{ text().emptyKarmaCars }}
           }

@@ -8,8 +8,12 @@ type KarmaCar {
   carType: String
   carYear: String
   carColor: String
+  subType: String
+  timeZoneId: Int
+  driverCount: Int
 }
 
 type Query {
   karmaCars: [KarmaCar!]!
+  karmaCar(id: ID!): KarmaCar
 }

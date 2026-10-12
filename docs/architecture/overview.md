@@ -3,13 +3,13 @@
 The repository uses npm workspaces and Nx, with five applications and no shared runtime packages.
 Applications never import another application's implementation, Prisma models or generated client.
 
-| Application  | Responsibility                                                            | Local port |
-| ------------ | ------------------------------------------------------------------------- | ---------- |
-| admin        | Standalone Angular, Sakai/PrimeNG, Store discovery, Vehicles/Devices CRUD | 11000      |
-| gateway      | Apollo federation, public `/graphql`, `/health`                           | 11010      |
-| core         | Tenant demo login, scoped Store discovery/lookup, owning database         | 11011      |
-| fleet        | Tenant/Store-scoped Vehicles/Devices, owning database                     | 11013      |
-| karma-client | Authenticated, shared Karma account truck listing; no database            | 11014      |
+| Application  | Responsibility                                                                                     | Local port |
+| ------------ | -------------------------------------------------------------------------------------------------- | ---------- |
+| admin        | Standalone Angular, Sakai/PrimeNG, Store discovery, Fleet CRUD, Karma truck data and account views | 11000      |
+| gateway      | Apollo federation, public `/graphql`, `/health`                                                    | 11010      |
+| core         | Tenant demo login, scoped Store discovery/lookup, owning database                                  | 11011      |
+| fleet        | Tenant/Store-scoped Vehicles/Devices, owning database                                              | 11013      |
+| karma-client | Authenticated, shared Karma truck data and account views; no database                              | 11014      |
 
 ```mermaid
 flowchart LR
@@ -41,7 +41,7 @@ Gateway DB and admin browser fixtures build the four backends and own their test
 ## Domain documentation
 
 [Discocan architecture](../discocan/architecture.md) describes Fleet persistence, GraphQL
-contracts and the current telemetry admin. [Ecommerce Stores](../ecommerce/stores.md)
+contracts, the shared Karma account client and the current telemetry admin. [Ecommerce Stores](../ecommerce/stores.md)
 describes the Core-owned Store foundation currently reused by Discocan.
 
 The domains share this checkout and its infrastructure today. Their documentation boundaries

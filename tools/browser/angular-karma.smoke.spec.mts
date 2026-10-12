@@ -1,5 +1,94 @@
 import { expect } from '@playwright/test';
+import { join } from 'node:path';
+import { workspaceRoot } from '../graphql/contracts.mjs';
 import { chooseStore, test } from './angular-fixture.mjs';
+
+test('opens truck details from the list, preserves scope through Store/language changes and returns to the list', async ({
+  page,
+  app,
+}) => {
+  const headers: Record<string, string>[] = [];
+  page.on('request', (request) => {
+    if (
+      request.url() === app.gatewayUrl &&
+      request.postData()?.includes('"operationName":"AdminKarmaCar"')
+    )
+      headers.push(request.headers());
+  });
+  await page.goto(`${app.url}/en/karma-client/cars`);
+  await page.getByRole('link', { name: 'KARMA TEST 41', exact: true }).click();
+  await expect(page).toHaveURL(`${app.url}/en/karma-client/cars/41`);
+  await expect(page.getByRole('heading', { name: 'Truck details', exact: true })).toBeVisible();
+  await expect(page.locator('dl')).toContainText('000123456789012');
+  await expect(page.locator('dl')).toContainText('Trailer');
+  for (const viewport of [
+    { name: 'desktop', width: 1280, height: 900 },
+    { name: 'mobile', width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    for (const theme of ['light', 'dark']) {
+      await expect(page.locator('dl')).toBeVisible();
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      ).toBe(true);
+      await page.screenshot({
+        path: join(
+          workspaceRoot,
+          '.references/review',
+          `karma-details-${viewport.name}-${theme}.png`,
+        ),
+        fullPage: true,
+        animations: 'disabled',
+      });
+      await page
+        .getByRole('button', {
+          name: theme === 'light' ? 'Use dark theme' : 'Use light theme',
+          exact: true,
+        })
+        .click();
+    }
+  }
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await chooseStore(page, 'Sandbox');
+  await expect(page).toHaveURL(`${app.url}/en/karma-client/cars/41`);
+  expect(headers).toHaveLength(1);
+  await page.reload();
+  await expect(page.locator('dl')).toContainText('KARMA TEST 41');
+  await page.getByRole('link', { name: 'Български', exact: true }).click();
+  await expect(page).toHaveURL(`${app.url}/bg/karma-client/cars/41`);
+  await expect(
+    page.getByRole('heading', { name: 'Детайли за камиона', exact: true }),
+  ).toBeVisible();
+  expect(
+    headers.every(
+      (value) =>
+        !('x-store-id' in value) && value['authorization'] === `Bearer ${app.demoSession.token}`,
+    ),
+  ).toBe(true);
+  await page.getByRole('link', { name: 'Към камионите', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Камиони', exact: true })).toBeVisible();
+});
+
+test('handles detail refresh failures and missing/invalid trucks', async ({ page, app }) => {
+  await page.goto(`${app.url}/en/karma-client/cars/41`);
+  await expect(page.locator('dl')).toContainText('KARMA TEST 41');
+  app.karma.setFailed(true);
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await expect(
+    page.getByRole('alert').filter({ hasText: 'Karma is unavailable. Try again.' }),
+  ).toBeVisible();
+  await expect(page.locator('dl')).toContainText('KARMA TEST 41');
+  app.karma.setFailed(false);
+  await page.getByRole('button', { name: 'Retry', exact: true }).click();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await page.goto(`${app.url}/en/karma-client/cars/999`);
+  await expect(page.getByRole('alert')).toContainText('Truck not found in Karma.');
+  await expect(page.locator('dl')).toHaveCount(0);
+  const reads = app.karma.requests.length;
+  await page.goto(`${app.url}/en/karma-client/cars/not-an-id`);
+  await expect(page.getByRole('alert')).toContainText('Truck not found in Karma.');
+  expect(app.karma.requests).toHaveLength(reads);
+});
 
 test('lists Karma trucks through Gateway, preserves the route on Store switching and supports reload/language', async ({
   page,
@@ -42,7 +131,9 @@ test('shows empty/error states, preserves rows on refresh failure and recovers',
   await expect(page.getByRole('cell', { name: 'KARMA TEST 41', exact: true })).toBeVisible();
   app.karma.setFailed(true);
   await page.getByRole('button', { name: 'Refresh', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('Karma is unavailable. Try again.');
+  await expect(
+    page.getByRole('alert').filter({ hasText: 'Karma is unavailable. Try again.' }),
+  ).toBeVisible();
   await expect(page.getByRole('cell', { name: 'KARMA TEST 41', exact: true })).toBeVisible();
   app.karma.setFailed(false);
   app.karma.setEmpty(true);

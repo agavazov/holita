@@ -102,27 +102,142 @@ Demo sessions last eight hours and persist only in the browser tab sessionStorag
 ## Karma Client
 
 `apps/karma-client` is a separate NestJS federation subgraph. Gateway forwards the signed
-admin session to its `karmaCars` query. Karma Client verifies that session independently and
-returns cars from one configured Karma account to all authenticated tenants. No `x-store-id`
-is required or used; the list is intentionally global. Fleet isolation remains unchanged.
+admin session to its `karmaCars`, `karmaCar(id: ID!)`, `karmaEdata(input: KarmaEdataInput!)`,
+`karmaLocation(carId: ID!)`, `karmaProjects`, `karmaTimeZones`, `karmaVersion`, `karmaTrips`, `karmaEvents`, `karmaDrivingProfile`, `karmaUsers` and `karmaRoles` queries. Karma Client verifies
+that session independently and returns cars from one configured Karma account to all
+authenticated tenants. No `x-store-id` is required or used; all Karma reads are intentionally global. Fleet isolation remains unchanged.
 
 A concrete Karma client authenticates with `POST /login` and requests the complete `GET /cars`
 list with `karma_sid`. It keeps the upstream session only in process memory and shares pending
 logins across callers. HTTP 401 or the HTTP-200 `{error: "Not logged in"}` response discards only
-the rejected session and retries login/list once. A four-second abort signal bounds the whole
+the rejected session and retries login/read once. A four-second abort signal bounds the whole
 operation, including login and retry, within Gateway's five-second subgraph timeout.
-Malformed responses, transport errors and other upstream errors become sanitized
+Non-success HTTP bodies are cancelled before JSON parsing; only HTTP 401 or a successful
+HTTP response containing the session error triggers renewal. Malformed responses, transport
+errors and other upstream errors become sanitized
 `SERVICE_UNAVAILABLE` errors. Credentials and session IDs are never returned to the admin.
 
 The generated `KarmaCar` GraphQL type exposes ID, Device ID, Project ID, registration number,
-type, year and color. Runtime validation preserves string device identifiers and normalizes
-numeric/text years to nullable strings. There is no database, migration, row cache or mapping
+type/subtype, year, color, timezone ID and assigned-driver count. Runtime validation preserves
+string device identifiers and normalizes numeric/text years to nullable strings. Subtype
+and timezone ID remain nullable; driver count is the length of the returned `driver_ids`
+array, preserving zero and absent values separately. There is no database, migration, row cache or mapping
 to Fleet Vehicles/Devices. The health endpoint does not contact Karma.
 
-Angular owns a fresh Apollo client/cache for each mounted session/language view and sends
+Truck details use `GET /cars/{id}` and require a canonical positive safe-integer ID before
+upstream access. An empty response array or HTTP 404 becomes a nullable `karmaCar`; multiple
+records or a mismatched ID are rejected. Unknown optional SIM/video content is not exposed.
+
+Angular owns a fresh Apollo client/cache for each mounted session/language/truck view and sends
 no Store header. The route is mounted while authenticated even when Store discovery is empty
 or fails and when Fleet is disabled. Changing the Store on this page updates the remembered
 Store without navigation or reloading Karma. Navigation, language changes, session replacement
 and logout retire obsolete reads. Refresh retains the previous successful rows on failure.
-The read-only table fetches all rows on entry or Refresh, has Bulgarian/English labels and
-uses the existing Sakai/PrimeNG theme.
+The read-only table fetches all rows on entry or Refresh. Registration links open a dedicated
+`/cars/:recordId` detail route with the verified car fields, Refresh and a return link.
+Registration links use the shared `content-link` styling, matching the Fleet tables in both themes.
+Missing/invalid IDs show a not-found message; refresh failures retain previous details.
+All Karma views have Bulgarian/English labels and use the existing Sakai/PrimeNG theme.
+
+The concrete eData feature validates car/message/parameter IDs as positive safe integers
+represented by GraphQL IDs. It maps all verified message fields and numeric parameter
+ID/value/description readings, preserving zero, null, leading-zero device identifiers and
+unknown parameter IDs. `spd`, `odo` and `pdt` retain their source names because their units
+or timestamp semantics have not been established. Descriptions are requested with `showdesc=1`.
+
+A page performs one fixed GET `/edata` read, which returns the latest up to 500 matching
+messages in ascending ID order. The service reverses them and selects 25, 50 (default) or 100. `hasMore` is true when the response contains more than the requested page size; no
+total is fabricated. The next cursor sets inclusive `to_id` to the last displayed ID minus
+one, preserving all messages within the upstream batch. Opaque cursors contain the normalized
+truck/filter/page-size scope, current upper bound and initial snapshot ID. The returned
+current-page cursor allows Newer to restore that upper bound even if newer messages arrive.
+Dates are optional paired UTC bounds and apply to `edt`; at most 25 unique parameter IDs
+use the verified bracketed GET syntax. Inputs and response scope/order/bounds are checked;
+malformed data or upstream errors produce sanitized errors.
+
+`/bg/karma-client/cars/:recordId/edata` and its English equivalent load the truck directly,
+then its message page. The table shows UTC event time, message ID and parameter count;
+a modal exposes every message field and a complete parameter table. Applied filters and
+cursor stay in the URL. Browser history stores only previous cursor metadata for Newer,
+including across reload/back; a separately opened cursor URL or language change can reset
+that trail, while Latest remains available. Latest refreshes the current filter's newest
+messages. Navigation/filter changes cancel obsolete reads and clear prior rows; only
+same-page Refresh retains rows on failure. No polling, persistence or writes are added.
+
+Location uses fixed GET `/location` with scalar `car` and bracketed `fields[]` selections
+for `spd`, `odo`, `edt_tz` and `pdt`. The same four-second signal covers car existence,
+login/renewal and location. Missing cars return null before querying their location; an
+empty location array is also null, while a last-message envelope with null coordinates
+remains visible. Business error objects, multiple/mismatched rows and malformed fields
+become sanitized errors. Message/event IDs are strings; event code zero is preserved.
+`extra` is plain text; timestamp/code/metric values retain source names without inferred
+units, timezone conversion or online status. Finite out-of-range coordinates remain
+inspectable but cannot produce a map link.
+
+The separate `/cars/:recordId/location` page loads the truck then its location, exposes
+all 13 verified fields and offers an OpenStreetMap link only for valid coordinate pairs.
+Zero coordinates are valid. Maps open on user action in a new tab; no map SDK or embedded
+map requests are used. Truck details load a last-known summary independently; its failure
+does not hide the truck.
+
+Concrete reference reads validate complete project/time-zone lists, reject duplicate IDs
+and expose original names. `/projects`, `/time-zones` and `/api-info` have separate account
+menu entries under both language-prefixed Karma sections. Project/time-zone search and
+local pagination cover the full returned list, with exact totals and 25/50/100 sizes
+(default 50). Search/page/size stay in the URL across reload, Back and language changes.
+Truck list/details resolve names from a separate reference query and retain original IDs;
+failed lookups have their own warning and cannot block truck reads. Every mounted view
+owns its captured Apollo client/cache, retired on navigation/language/session/logout.
+The upstream version read requires no Karma login; the GraphQL version query still
+requires a verified signed admin session. All views support Refresh/retry with retained
+previous values on same-query failure.
+
+Concrete history SDL and generated operations expose `karmaTrips`, `karmaEvents` and
+nullable `karmaDrivingProfile`. Each validates the signed session first, canonical car
+ID and filters, then verifies car existence before fixed GET reads. One four-second
+signal covers existence, login/renewal, history and any trip lookahead. Missing cars
+produce empty histories or a null profile; business errors remain sanitized errors.
+Trips preserve all 23 verified fields, including nullable stop data and raw numeric
+active flags; events preserve 12 fields with bracketed selection for `spd`, `odo`,
+`edt_tz` and `pdt`. Device strings, code zero, null readings and plain-text extra remain
+intact. Runtime checks reject mismatched identity, duplicate/unordered/unsafe IDs,
+malformed metrics and event date/type/cursor-bound violations.
+
+History pages return the newest 25/50/100 rows (50 default), current and next cursors,
+and `hasMore`, without a total. Trip bounds use `trip_id`; event bounds use `message_id`.
+Inclusive `to_id` advances by the last displayed ID minus one, with an initial upper
+snapshot. Cursors bind endpoint kind, car, normalized dates/codes and size. Events
+read one latest-up-to-500 batch. A short nonempty trip batch performs at most one older
+lookahead within the same operation budget, because the provider's trip batch limit
+is unspecified; verified older rows enable continuation even below the chosen size.
+Terminal empty lookahead disables Older. Trip pages may contain fewer than the selected
+size while still allowing Older. No whole-history traversal occurs inside a request.
+
+The separate truck routes `/cars/:recordId/trips`, `/events` and `/driving-profile`
+are reached from truck details. Trips/events provide optional paired dates, Latest/
+Older/Newer, URL cursor/filter state and full row dialogs with keyboard close and focus
+restoration. Events also accept at most 25 original event codes, including zero, and
+use explicit UTC filtering. Trip/profile periods are source wall-clock values; their
+provider timezone is unspecified and the UI discloses this. Source timestamps are
+shown without implicit browser conversion. Profile starts with a seven-day wall-clock
+range derived from the current UTC clock and supports replacing/expanding it; the
+period aggregate needs no record paginator. Its nine category names, nullable scores
+and weights remain original values, without a combined rating or invented scale.
+
+Every mounted history/profile owns a fresh captured Apollo client/cache. Filter/period
+or cursor changes cancel obsolete reads and clear old rows/details; same-query Refresh
+retains prior successful values on failure. Browser history stores previous cursor
+metadata for Newer, while separately opened cursors can use Latest. Truck/language/
+session/navigation/logout retire clients. There is no automatic decoding, polling,
+map SDK, upstream write or device command in these reads.
+
+The account `accounts` module exposes signed `karmaUsers` and `karmaRoles` fixed GET reads.
+User records preserve all eleven source fields: identity/profile text, numeric active flag,
+nullable expiry text, role/time-zone/project IDs and the complete ordered project-ID array.
+Roles preserve ID and original description; neither response grants permissions or changes
+admin authentication. `/karma-client/users` and `/karma-client/roles` are separate menu routes
+with complete-list local search and URL q/size/first paging (25/50/100, default 50). Users
+have a keyboard-accessible detail dialog showing every source field; null expiry and zero
+remain distinct. Same-scope refresh failures retain rows, and session/language/navigation
+retirement uses the existing captured client lifecycle. These reads keep the global account
+scope and four-second operation bound.

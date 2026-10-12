@@ -4,7 +4,7 @@ The repository has two distinct domains with separate documentation and contribu
 
 | Domain                    | Documentation                         | Current implementation                                               |
 | ------------------------- | ------------------------------------- | -------------------------------------------------------------------- |
-| Discocan: fleet telemetry | [docs/discocan](discocan/README.md)   | Fleet Vehicles/Devices and the telemetry Angular admin               |
+| Discocan: fleet telemetry | [docs/discocan](discocan/README.md)   | Fleet Vehicles/Devices, Karma Client and the Angular admin           |
 | Ecommerce: online stores  | [docs/ecommerce](ecommerce/README.md) | Core Tenant/Store foundation; no storefront, catalog, cart or orders |
 
 Discocan currently reuses Stores as its organizational scope. In that domain, Stores will

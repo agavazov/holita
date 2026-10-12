@@ -65,6 +65,46 @@ import { messages, type Language } from '../i18n/messages';
                 <span class="layout-menuitem-text">{{ text().karmaTrucks }}</span>
               </a>
             </li>
+            <li>
+              <a
+                [routerLink]="['/', language(), 'karma-client', 'users']"
+                routerLinkActive="active-route"
+                ariaCurrentWhenActive="page"
+                ><span class="layout-menuitem-text">{{ text().karmaUsers }}</span></a
+              >
+            </li>
+            <li>
+              <a
+                [routerLink]="['/', language(), 'karma-client', 'roles']"
+                routerLinkActive="active-route"
+                ariaCurrentWhenActive="page"
+                ><span class="layout-menuitem-text">{{ text().karmaRoles }}</span></a
+              >
+            </li>
+            <li>
+              <a
+                [routerLink]="['/', language(), 'karma-client', 'projects']"
+                routerLinkActive="active-route"
+                ariaCurrentWhenActive="page"
+                ><span class="layout-menuitem-text">{{ text().karmaProjects }}</span></a
+              >
+            </li>
+            <li>
+              <a
+                [routerLink]="['/', language(), 'karma-client', 'time-zones']"
+                routerLinkActive="active-route"
+                ariaCurrentWhenActive="page"
+                ><span class="layout-menuitem-text">{{ text().karmaTimeZones }}</span></a
+              >
+            </li>
+            <li>
+              <a
+                [routerLink]="['/', language(), 'karma-client', 'api-info']"
+                routerLinkActive="active-route"
+                ariaCurrentWhenActive="page"
+                ><span class="layout-menuitem-text">{{ text().karmaApiInfo }}</span></a
+              >
+            </li>
           </ul>
         </li>
       </ul>

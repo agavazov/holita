@@ -53,13 +53,43 @@ and the relevant Fleet documents.
 
 ## Karma Client
 
-- `apps/karma-client` owns the external Karma account connection and its `karmaCars` query.
+- `apps/karma-client` owns the external Karma account connection and its `karmaCars`, `karmaCar(id: ID!)`, `karmaEdata(input: KarmaEdataInput!)`, `karmaLocation(carId: ID!)`, `karmaProjects`,
+  `karmaTimeZones`, `karmaVersion`, `karmaTrips`, `karmaEvents`, `karmaDrivingProfile`, `karmaUsers` and `karmaRoles` queries.
   It is an independent host process with no database or Fleet implementation imports.
 - Cars from the configured account are intentionally shared across every authenticated Tenant
   and Store. Verify the signed session before upstream access; never require or use Store context
-  to filter this list. This exception does not change Fleet Tenant/Store isolation.
+  to filter the list, truck details, eData, location or references. This exception does not change Fleet Tenant/Store isolation.
 - Keep Karma credentials/session IDs on the server, bound the complete request, renew a rejected
   upstream session at most once and sanitize external failures. Do not expose arbitrary upstream paths.
 - The admin section has its own `/bg/karma-client/cars` and `/en/karma-client/cars` routes.
   Keep it usable independently of Fleet availability and Store discovery; retire its captured
-  session/language client on logout, language changes and navigation.
+  session/language/truck client on logout, language changes, truck changes and navigation.
+  Truck details use `/cars/:recordId` under the same language-prefixed section.
+  eData uses `/cars/:recordId/edata`, optional paired UTC/parameter filters and 25/50/100
+  cursor pages. Preserve every verified message field, unknown parameter IDs and zero/null
+  values; never infer units or a total count. Retire reads on filter/page changes as well.
+
+- Location uses `/cars/:recordId/location`; preserve all verified fields, null/zero
+  distinctions, raw text/timestamps/codes and the whole-operation bound including car
+  existence. Do not infer online status or units. A map link requires two valid finite
+  coordinates within latitude/longitude bounds; it opens only on user action.
+- Account references use separate `/projects`, `/time-zones`, `/api-info` menus.
+  Complete reference lists support local search/paging and URL state; lookup failures
+  must not hide trucks or their original IDs. Public upstream version still requires
+  a verified admin session through Gateway.
+
+- Trips/events use separate `/cars/:recordId/trips` and `/cars/:recordId/events` pages,
+  default 50 with 25/50/100 cursor sizes, paired optional dates and full row details.
+  Trips use inclusive trip-ID bounds with bounded lookahead for short source batches;
+  events use inclusive message-ID bounds, UTC dates and original code filters. Cursors
+  bind kind/truck/size/filters/snapshot. No totals or event meanings are invented.
+- `/cars/:recordId/driving-profile` exposes nine source category scores/weights for an
+  editable seven-day initial period. Trip/profile date-zone semantics are unspecified;
+  disclose API wall-clock interpretation. Preserve null/zero and source metric values;
+  do not invent an overall rating, units or thresholds. Existence/read/lookahead/login/
+  renewal share the four-second operation budget; retire filter/period reads on change.
+
+- Account users/roles views preserve original relation IDs, ordered project memberships, raw
+  active flag and nullable expiry text. Do not infer Karma role permissions, enable/disable
+  state, expiry timezone or admin authorization from these values. Complete arrays use local
+  URL search/paging; users details escape all text and restore trigger focus on close.

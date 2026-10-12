@@ -1,0 +1,203 @@
+<section class="card" [attr.aria-label]="text().karmaEvents" [attr.aria-busy]="loading()">
+  <div class="page-heading">
+    <div>
+      <h1>{{ text().karmaEvents }}</h1>
+      <p>{{ car()?.carNumber ?? text().karmaClient }} · {{ text().karmaCarId }} {{ carId() }}</p>
+    </div>
+    <div class="page-actions">
+      <a
+        pButton
+        severity="secondary"
+        [outlined]="true"
+        [routerLink]="['/', language(), 'karma-client', 'cars', carId()]"
+        >{{ text().backToKarmaTruck }}</a
+      >
+      @if (validId()) {
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [disabled]="loading() || invalidFilters()"
+          (click)="refresh()"
+        >
+          {{ error() ? text().retry : text().refresh }}
+        </button>
+      }
+    </div>
+  </div>
+  @if (!validId() || (carLoaded() && !car() && !error())) {
+    <p-message severity="warn">{{ text().karmaTruckNotFound }}</p-message>
+  }
+  @if (error()) {
+    <p-message severity="error">{{ text().karmaUnavailable }}</p-message>
+  }
+  @if (validId()) {
+    <form
+      [formGroup]="form"
+      (ngSubmit)="apply()"
+      class="filters"
+      [attr.aria-label]="text().karmaEventsFilters"
+    >
+      <div class="field">
+        <label for="events-size">{{ text().karmaPageSize }}</label>
+        <p-select
+          inputId="events-size"
+          formControlName="size"
+          [options]="pageSizes"
+          [ariaLabel]="text().karmaPageSize"
+        />
+      </div>
+      <div class="field">
+        <label for="events-from">{{ text().karmaFromUtc }}</label>
+        <input
+          pInputText
+          id="events-from"
+          type="datetime-local"
+          [attr.step]="1"
+          formControlName="from"
+        />
+      </div>
+      <div class="field">
+        <label for="events-to">{{ text().karmaToUtc }}</label>
+        <input
+          pInputText
+          id="events-to"
+          type="datetime-local"
+          [attr.step]="1"
+          formControlName="to"
+        />
+      </div>
+      <div class="field">
+        <label for="events-types">{{ text().karmaEventTypes }}</label>
+        <input
+          pInputText
+          id="events-types"
+          formControlName="types"
+          aria-describedby="events-filter-hint"
+          [attr.placeholder]="'0, 33'"
+        />
+      </div>
+      <div class="page-actions">
+        <button pButton type="submit" [disabled]="loading()">{{ text().applyFilters }}</button>
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="loading()"
+          (click)="reset()"
+        >
+          {{ text().clearFilters }}
+        </button>
+      </div>
+      <p id="events-filter-hint" class="filter-hint">{{ text().karmaEventsFilterHint }}</p>
+    </form>
+    @if (invalidFilters() || formError()) {
+      <p-message severity="warn">{{ text().karmaHistoryInvalidFilters }}</p-message>
+    }
+  }
+  @if (loading()) {
+    <p role="status">{{ text().karmaHistoryLoading }}</p>
+  }
+  @if (car() && !invalidFilters()) {
+    <p class="filter-hint">{{ text().karmaEventsOrder }}</p>
+    <p-table [value]="page()?.items ?? []" dataKey="id" [tableStyle]="{ 'min-width': '37rem' }">
+      <ng-template #header
+        ><tr>
+          <th>{{ text().karmaEdtUtc }}</th>
+          <th>{{ text().karmaMessageId }}</th>
+          <th>{{ 'eid' }}</th>
+          <th>{{ text().actions }}</th>
+        </tr></ng-template
+      >
+      <ng-template #body let-row
+        ><tr>
+          <td>{{ row.edt ?? '—' }}</td>
+          <td>{{ row.id ?? '—' }}</td>
+          <td>{{ row.eventId ?? '—' }}</td>
+          <td>
+            <button
+              pButton
+              type="button"
+              severity="secondary"
+              [outlined]="true"
+              (click)="view(row, $event)"
+              [attr.aria-label]="text().view + ' ' + row.id"
+            >
+              {{ text().view }}
+            </button>
+          </td>
+        </tr></ng-template
+      >
+      <ng-template #emptymessage
+        ><tr>
+          <td colspan="4">
+            {{
+              loading()
+                ? text().karmaHistoryLoading
+                : error()
+                  ? text().karmaUnavailable
+                  : text().karmaHistoryEmpty
+            }}
+          </td>
+        </tr></ng-template
+      >
+    </p-table>
+    <div class="pagination" [attr.aria-label]="text().karmaPagination" role="group">
+      <p role="status">{{ text().karmaShownRecords }}: {{ page()?.items?.length ?? 0 }}</p>
+      <div class="page-actions">
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [disabled]="loading()"
+          (click)="latest()"
+        >
+          {{ text().karmaLatest }}
+        </button>
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="loading() || !previous().length"
+          (click)="newer()"
+        >
+          {{ text().karmaNewer }}
+        </button>
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="loading() || error() || !page()?.hasMore"
+          (click)="older()"
+        >
+          {{ text().karmaOlder }}
+        </button>
+      </div>
+    </div>
+  }
+</section>
+<p-dialog
+  [(visible)]="dialogVisible"
+  [header]="text().karmaEventsDetails"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '52rem', maxWidth: 'calc(100vw - 2rem)' }"
+  [closeAriaLabel]="text().close"
+  (onHide)="closeDetails()"
+>
+  @if (selected(); as row) {
+    <p class="filter-hint">{{ text().karmaHistoryRawHint }}</p>
+    <dl class="message-details">
+      @for (field of fields(row); track field.name) {
+        <div>
+          <dt>{{ field.name }}</dt>
+          <dd>{{ field.value ?? '—' }}</dd>
+        </div>
+      }
+    </dl>
+  }
+</p-dialog>

@@ -1,14 +1,16 @@
 # Discocan: fleet telemetry
 
 Discocan is the fleet telemetry domain. The current implementation is Fleet Vehicles/Devices
-in `apps/fleet`, their Angular admin in `apps/admin`, and the shared Karma truck listing through `apps/karma-client`. Telemetry ingestion, tracking and
-measurement processing are not implemented.
+in `apps/fleet` and their Angular admin in `apps/admin`. The shared `apps/karma-client`
+provides read-only truck lists/details, eData, location, trips, events, driving profile
+and account views for projects, time zones, API version, users and roles. Telemetry
+ingestion, tracking and measurement processing are not implemented.
 
 - [Contributor instructions](instructions.md).
 - [Implemented requirements](requirements.md).
 - [Architecture](architecture.md): persistence, federation and Angular request lifecycles.
 - [Development](development.md): telemetry admin, demo login and GraphQL usage.
-- [Testing](testing.md): Fleet and Angular feature checks.
+- [Testing](testing.md): Fleet, Karma Client and Angular feature checks.
 - [Fleet implementation index](fleet.md): concrete Vehicles/Devices source references.
 - [Shared workspace documentation](../README.md).
 

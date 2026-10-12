@@ -1,0 +1,152 @@
+<section class="card" [attr.aria-label]="text().karmaUsers" [attr.aria-busy]="loading()">
+  <div class="page-heading">
+    <div>
+      <h1>{{ text().karmaUsers }}</h1>
+      <p>{{ text().karmaClient }}</p>
+    </div>
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="loading()"
+      (click)="refresh()"
+    >
+      {{ error() ? text().retry : text().refresh }}
+    </button>
+  </div>
+  <form class="search-form" [formGroup]="form" (ngSubmit)="applySearch()">
+    <div class="search-field">
+      <label for="users-page-search">{{ text().karmaReferenceSearch }}</label
+      ><input pInputText id="users-page-search" [formControl]="search" />
+    </div>
+    <button pButton type="submit">{{ text().karmaSearch }}</button>
+  </form>
+  @if (loading()) {
+    <p role="status">{{ text().karmaLoadingReferences }}</p>
+  }
+  @if (error()) {
+    <p-message severity="error">{{ text().karmaUnavailable }}</p-message>
+  }
+  @if (loaded()) {
+    <p role="status">
+      {{ text().total }}: {{ items().length }} · {{ text().karmaMatching }}: {{ filtered().length }}
+    </p>
+  }
+  <p class="hint">{{ text().karmaUsersHint }}</p>
+  <p-table
+    [value]="filtered()"
+    dataKey="id"
+    [paginator]="true"
+    [rows]="query().rows"
+    [first]="first()"
+    [rowsPerPageOptions]="[25, 50, 100]"
+    (onPage)="page($event)"
+    [tableStyle]="{ 'min-width': '60rem' }"
+  >
+    <ng-template #header
+      ><tr>
+        <th scope="col">{{ text().karmaUserId }}</th>
+        <th scope="col">{{ text().karmaUserName }}</th>
+        <th scope="col">{{ text().karmaPersonName }}</th>
+        <th scope="col">{{ text().karmaEmail }}</th>
+        <th scope="col">{{ text().karmaRoleId }}</th>
+        <th scope="col">{{ text().karmaProjectId }}</th>
+        <th scope="col">{{ text().karmaActiveValue }}</th>
+        <th scope="col">{{ text().view }}</th>
+      </tr></ng-template
+    >
+    <ng-template #body let-item
+      ><tr>
+        <td>{{ item.id }}</td>
+        <td>{{ item.userName || '—' }}</td>
+        <td>{{ (item.firstName + ' ' + item.lastName).trim() || '—' }}</td>
+        <td>{{ item.email || '—' }}</td>
+        <td>{{ item.roleId }}</td>
+        <td>{{ item.projectId }}</td>
+        <td>{{ item.active }}</td>
+        <td>
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            [outlined]="true"
+            [attr.aria-label]="text().karmaUserDetails + ' ' + item.id"
+            [attr.aria-expanded]="detail()?.id === item.id"
+            aria-controls="karma-user-detail"
+            (click)="open(item, $event)"
+          >
+            {{ text().view }}
+          </button>
+        </td>
+      </tr></ng-template
+    >
+    <ng-template #emptymessage
+      ><tr>
+        <td colspan="8">
+          @if (!loading() && !error()) {
+            {{ text().karmaNoReferences }}
+          }
+        </td>
+      </tr></ng-template
+    >
+  </p-table>
+</section>
+<p-dialog
+  id="karma-user-detail"
+  [header]="text().karmaUserDetails"
+  [visible]="detail() !== null"
+  (visibleChange)="closeDetail()"
+  (onHide)="restoreFocus()"
+  [modal]="true"
+  [style]="{ width: '48rem', maxWidth: '95vw' }"
+>
+  @if (detail(); as item) {
+    <dl class="details">
+      <div>
+        <dt>{{ text().karmaUserId }} <code>user_id</code></dt>
+        <dd>{{ item.id }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().karmaUserName }} <code>user_name</code></dt>
+        <dd>{{ item.userName || '—' }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().karmaActiveValue }} <code>active</code></dt>
+        <dd>{{ item.active }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().karmaExpireDate }} <code>expire_date</code></dt>
+        <dd>{{ item.expireDate ?? '—' }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().karmaRoleId }} <code>role_id</code></dt>
+        <dd>{{ item.roleId }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().karmaFirstName }} <code>first_name</code></dt>
+        <dd>{{ item.firstName || '—' }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().karmaLastName }} <code>last_name</code></dt>
+        <dd>{{ item.lastName || '—' }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().karmaTimeZoneId }} <code>time_zone</code></dt>
+        <dd>{{ item.timeZoneId }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().karmaEmail }} <code>email</code></dt>
+        <dd>{{ item.email || '—' }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().karmaProjectId }} <code>project_id</code></dt>
+        <dd>{{ item.projectId }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().karmaProjectIds }} <code>project_ids</code></dt>
+        <dd>{{ item.projectIds.length ? item.projectIds.join(', ') : '[]' }}</dd>
+      </div>
+    </dl>
+  }
+</p-dialog>

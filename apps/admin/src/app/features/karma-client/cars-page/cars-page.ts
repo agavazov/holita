@@ -2,14 +2,18 @@ import { Component, computed, effect, inject, input, signal } from '@angular/cor
 import { ButtonDirective } from 'primeng/button';
 import { Message } from 'primeng/message';
 import { TableModule } from 'primeng/table';
-import type { AdminKarmaCarsQuery } from '../../../../generated/graphql/operations';
+import { RouterLink } from '@angular/router';
+import type {
+  AdminKarmaReferencesQuery,
+  AdminKarmaCarsQuery,
+} from '../../../../generated/graphql/operations';
 import { messages, type Language } from '../../../i18n/messages';
-import { KarmaCarsApi } from '../karma-cars-api';
+import { KarmaApi } from '../karma-api';
 
 @Component({
   selector: 'holita-karma-cars-page',
-  imports: [ButtonDirective, Message, TableModule],
-  providers: [KarmaCarsApi],
+  imports: [ButtonDirective, Message, TableModule, RouterLink],
+  providers: [KarmaApi],
   templateUrl: './cars-page.html',
   styleUrl: './cars-page.css',
 })
@@ -20,12 +24,36 @@ export class CarsPage {
   readonly loading = signal(true);
   readonly error = signal(false);
   readonly loaded = signal(false);
-  private readonly api = inject(KarmaCarsApi);
-  private query: ReturnType<KarmaCarsApi['watch']> | undefined;
+  readonly references = signal<AdminKarmaReferencesQuery | null>(null);
+  readonly referencesError = signal(false);
+  private referenceRead: ReturnType<KarmaApi['watchReferences']> | undefined;
+  projectName(id: string): string {
+    return this.references()?.karmaProjects.find((project) => project.id === id)?.name || '—';
+  }
+  timeZoneName(id: number | null | undefined): string {
+    return this.references()?.karmaTimeZones.find((zone) => zone.id === id)?.name || '—';
+  }
+  private readonly api = inject(KarmaApi);
+  private query: ReturnType<KarmaApi['watch']> | undefined;
 
   constructor() {
     effect((onCleanup) => {
       this.api.initialize(this.language());
+      const references = this.api.watchReferences();
+      this.referenceRead = references;
+      const referenceSubscription = references.valueChanges.subscribe({
+        next: (result) => {
+          this.referencesError.set(!!result.error);
+          if (result.dataState === 'complete' && !result.error) this.references.set(result.data);
+        },
+        error: () => {
+          this.referencesError.set(true);
+        },
+      });
+      onCleanup(() => {
+        referenceSubscription.unsubscribe();
+        this.referenceRead = undefined;
+      });
       const query = this.api.watch();
       this.query = query;
       const subscription = query.valueChanges.subscribe({
@@ -52,6 +80,10 @@ export class CarsPage {
   refresh(): void {
     if (this.loading()) return;
     this.error.set(false);
+    const references = this.referenceRead;
+    void references?.refetch().catch(() => {
+      if (this.referenceRead === references) this.referencesError.set(true);
+    });
     const query = this.query;
     void query?.refetch().catch(() => {
       if (this.query === query) {

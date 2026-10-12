@@ -3,7 +3,7 @@
 holita is a strict TypeScript npm-workspaces repository with Nx tasks and five host
 applications: Angular admin and NestJS gateway, core, fleet and karma-client services.
 The admin uses Sakai with holita branding, PrimeNG and Bulgarian/English catalogs.
-Its modules are Vehicles, Devices and the shared Karma truck listing. Core provides Store discovery; Gateway
+Its modules are Vehicles, Devices and the shared Karma truck data and reference views. Core provides Store discovery; Gateway
 exposes their schema-first federated GraphQL API. PostgreSQL is the only container.
 
 Documentation separates [Discocan fleet telemetry](docs/discocan/README.md) from
@@ -41,10 +41,23 @@ editor. Multiple Devices can share a Vehicle; assigned Vehicles cannot be delete
 Both Fleet modules provide search, sorting, paging, typed create/edit forms, dirty-form guards,
 confirmed single/page-local sequential deletion and failed-row retry.
 
+Karma Client → Users/Roles provides read-only account search, local paging and full user
+details. Role descriptions and numeric flags are shown as source values.
 Karma Client → Trucks lists all cars from one configured Karma account for every signed-in
 Tenant/Store at `/bg/karma-client/cars` or `/en/karma-client/cars`. Configure the ignored
 `apps/karma-client/.env` using its [environment example](apps/karma-client/.env.example).
-The page has a read-only table and Refresh; it has no persistence or Fleet synchronization.
+Click a registration number to open read-only truck details; these pages support Refresh. Open eData from truck details for the latest 50 messages,
+25/50/100 pagination, optional UTC/parameter-ID filters and complete message detail.
+Open Location from truck details to inspect the last-known message and coordinates; valid
+coordinates provide a map link in a new tab. Projects, Time zones and API information have
+separate Karma menu entries. Reference lists support search and 25/50/100 pagination
+(default 50); truck list/details show reference names beside their original IDs.
+Trips and Events open separate truck histories with latest-50 pagination, optional date
+filters and complete row details; Events also supports original event-code filters.
+Driving profile shows nine category scores/weights for a default seven-day period, with
+editable bounds. Trip/profile filters use API wall-clock values with an unspecified
+provider timezone; metrics and event codes retain their original values.
+Karma has no persistence or Fleet synchronization.
 Karma is independent of the Store selector and `fleetEnabled`. See
 [Karma configuration](docs/discocan/development.md#karma-client).
 

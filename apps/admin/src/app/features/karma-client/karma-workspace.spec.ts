@@ -33,6 +33,7 @@ const result = {
         carType: null,
         carYear: '2020',
         carColor: '',
+        timeZoneId: 8,
       },
     ],
   },
@@ -60,7 +61,74 @@ describe('authenticated global Karma workspace', () => {
     http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => {
+    for (const read of http.match((request) => operation(request, 'AdminKarmaReferences')))
+      if (!read.cancelled) read.flush({ data: { karmaProjects: [], karmaTimeZones: [] } });
+    for (const read of http.match((request) => operation(request, 'AdminKarmaLocation')))
+      if (!read.cancelled) read.flush({ data: { karmaLocation: null } });
     http.verify({ ignoreCancelled: true });
+  });
+
+  it('loads truck details directly without a Store header or list request', async () => {
+    const harness = await RouterTestingHarness.create('/en/karma-client/cars/41');
+    const read = http.expectOne((request) => operation(request, 'AdminKarmaCar'));
+    expect(read.request.headers.has('x-store-id')).toBe(false);
+    expect(read.request.headers.get('authorization')).toBe('Bearer karma-session-a');
+    expect(read.request.body).toMatchObject({ variables: { id: '41' } });
+    read.flush({
+      data: {
+        karmaCar: {
+          ...result.data.karmaCars[0],
+          subType: 'Trailer',
+          timeZoneId: 8,
+          driverCount: 0,
+        },
+      },
+    });
+    http.expectOne((request) => operation(request, 'AdminStores')).flush({ data: { stores: [] } });
+    http.expectNone((request) => operation(request, 'AdminKarmaCars'));
+    await harness.fixture.whenStable();
+    expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toBe('Truck details');
+    expect(harness.routeNativeElement?.querySelector('dl')?.textContent).toContain(
+      '000123456789012',
+    );
+    expect(harness.routeNativeElement?.querySelector('dl')?.textContent).toContain('Trailer');
+  });
+
+  it('retires detail reads across truck A → B → A, language changes and logout', async () => {
+    const harness = await RouterTestingHarness.create('/en/karma-client/cars/41');
+    http.expectOne((request) => operation(request, 'AdminStores')).flush({ data: { stores: [] } });
+    let pending = http.expectOne((request) => operation(request, 'AdminKarmaCar'));
+    for (const id of ['42', '41']) {
+      await harness.navigateByUrl('/en/karma-client/cars/' + id);
+      expect(pending.cancelled).toBe(true);
+      pending = http.expectOne((request) => operation(request, 'AdminKarmaCar'));
+      expect(pending.request.body).toMatchObject({ variables: { id } });
+    }
+    await harness.navigateByUrl('/bg/karma-client/cars/41');
+    expect(pending.cancelled).toBe(true);
+    pending = http.expectOne((request) => operation(request, 'AdminKarmaCar'));
+    expect(pending.request.headers.get('Accept-Language')).toBe('bg');
+    http.expectOne((request) => operation(request, 'AdminStores')).flush({ data: { stores: [] } });
+    TestBed.inject(DemoSession).logout();
+    await harness.fixture.whenStable();
+    expect(pending.cancelled).toBe(true);
+    http
+      .expectOne((request) => operation(request, 'AdminTenants'))
+      .flush({ data: { tenants: [] } });
+    http.expectNone((request) => operation(request, 'AdminKarmaCar'));
+  });
+
+  it('shows not-found for missing records and skips requests for malformed route IDs', async () => {
+    const harness = await RouterTestingHarness.create('/en/karma-client/cars/999');
+    http.expectOne((request) => operation(request, 'AdminStores')).flush({ data: { stores: [] } });
+    http
+      .expectOne((request) => operation(request, 'AdminKarmaCar'))
+      .flush({ data: { karmaCar: null } });
+    await harness.fixture.whenStable();
+    expect(harness.routeNativeElement?.textContent).toContain('Truck not found in Karma.');
+    await harness.navigateByUrl('/en/karma-client/cars/not-an-id');
+    http.expectNone((request) => operation(request, 'AdminKarmaCar'));
+    expect(harness.routeNativeElement?.textContent).toContain('Truck not found in Karma.');
   });
 
   it('loads without waiting for Store discovery, with Fleet disabled and no Store header', async () => {
