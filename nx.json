@@ -15,7 +15,9 @@
       "{workspaceRoot}/.nvmrc",
       "{workspaceRoot}/.gitignore",
       "{workspaceRoot}/.nxignore",
+      "{workspaceRoot}/.nxignore",
       "{workspaceRoot}/.prettierignore",
+      "{workspaceRoot}/prettier.config.mjs",
       "{workspaceRoot}/.github/workflows/**/*",
       {
         "runtime": "node --version"
@@ -28,8 +30,8 @@
     ],
     "graphqlContracts": [
       "{workspaceRoot}/apps/core/src/**/*.graphql",
-      "{workspaceRoot}/apps/products/src/**/*.graphql",
-      "{workspaceRoot}/apps/reference/src/**/*.graphql",
+      "{workspaceRoot}/apps/fleet/src/**/*.graphql",
+      "{workspaceRoot}/apps/karma-client/src/**/*.graphql",
       "{workspaceRoot}/apps/admin/src/**/*.graphql",
       "{workspaceRoot}/tools/graphql/**/*",
       "{workspaceRoot}/tools/tsconfig.json",

@@ -7,39 +7,35 @@ import { lexicographicSortSchema, parse, printSchema, validate, type GraphQLSche
 export const workspaceRoot = fileURLToPath(new URL('../../', import.meta.url));
 export const subgraphs = [
   {
+    name: 'karma-client',
+    url: 'http://127.0.0.1:11014/graphql',
+    path: 'apps/karma-client/src/cars/cars.graphql',
+    additionalPaths: [
+      'apps/karma-client/src/accounts/accounts.graphql',
+      'apps/karma-client/src/edata/edata.graphql',
+      'apps/karma-client/src/history/history.graphql',
+      'apps/karma-client/src/location/location.graphql',
+      'apps/karma-client/src/references/references.graphql',
+    ],
+  },
+  {
     name: 'core',
-    url: 'http://127.0.0.1:11082/graphql',
+    url: 'http://127.0.0.1:11011/graphql',
     path: 'apps/core/src/stores/stores.graphql',
   },
   {
-    name: 'products',
-    url: 'http://127.0.0.1:11083/graphql',
-    path: 'apps/products/src/products/products.graphql',
-  },
-  {
-    name: 'reference',
-    url: 'http://127.0.0.1:11086/graphql',
-    path: 'apps/reference/src/venues/venues.graphql',
-    additionalPaths: [
-      'apps/reference/src/events/events.graphql',
-      'apps/reference/src/speakers/speakers.graphql',
-      'apps/reference/src/tags/tags.graphql',
-      'apps/reference/src/sessions/sessions.graphql',
-      'apps/reference/src/media/media.graphql',
-    ],
+    name: 'fleet',
+    url: 'http://127.0.0.1:11013/graphql',
+    path: 'apps/fleet/src/vehicles/vehicles.graphql',
+    additionalPaths: ['apps/fleet/src/devices/devices.graphql'],
   },
 ];
 export const operationPaths = [
-  'apps/admin/src/features/stores/operations.graphql',
-  'apps/admin/src/features/products/operations.graphql',
-  'apps/products/src/core/operations.graphql',
-  'apps/reference/src/core/operations.graphql',
-  'apps/admin/src/features/reference/speakers/operations.graphql',
-  'apps/admin/src/features/reference/tags/operations.graphql',
-  'apps/admin/src/features/reference/events/operations.graphql',
-  'apps/admin/src/features/reference/venues/operations.graphql',
-  'apps/admin/src/features/reference/sessions/operations.graphql',
-  'apps/admin/src/features/reference/media/operations.graphql',
+  'apps/admin/src/app/features/karma-client/operations.graphql',
+  'apps/admin/src/app/features/stores/operations.graphql',
+  'apps/admin/src/app/features/fleet/vehicles/operations.graphql',
+  'apps/admin/src/app/features/fleet/devices/operations.graphql',
+  'apps/fleet/src/core/operations.graphql',
 ];
 
 export async function readContracts() {

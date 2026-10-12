@@ -2,7 +2,8 @@
 
 ## Product identity
 
-- The product, codebase and all new resources are named `holita`.
+- The repository, current packages and infrastructure resources are named `holita`.
+  Discocan and Ecommerce identify the separate domains documented below.
 - `red.bg` is a temporary domain used to present the service. It is not the product,
   package, namespace or infrastructure name. Preserve it only when it refers to the
   actual domain or a required compatibility reference.
@@ -14,6 +15,23 @@
   rename must not silently switch to an empty volume; plan and verify the data
   transition explicitly. The user will rename the repository itself separately.
 
+## Domain boundaries and instruction routing
+
+- This repository supports two distinct domains: Discocan (fleet telemetry) and Ecommerce
+  (online stores). Documentation separation does not rename current holita packages or resources.
+- For telemetry, Vehicles/Devices and the current Fleet admin, read
+  [Discocan documentation](docs/discocan/README.md) and apply
+  [Discocan instructions](docs/discocan/instructions.md).
+- For online stores and Core Store behavior, read [Ecommerce documentation](docs/ecommerce/README.md)
+  and apply [Ecommerce instructions](docs/ecommerce/instructions.md). When a shared Store change
+  affects Fleet, consult both domains.
+- Discocan currently uses Stores as organizational scope; these will later become Branches.
+  Ecommerce retains Stores for online shops. Until the rename is implemented, preserve actual
+  Store/storeId/x-store-id contracts and tenant-scoped access. Documentation boundaries alone
+  do not authorize a code, API, database or infrastructure rename.
+- Keep domain-specific behavior and rules in their own documentation directories. Shared
+  architecture, development tooling and validation remain under `docs/`.
+
 ## General
 
 - Follow the existing architecture and standard framework conventions.
@@ -23,18 +41,18 @@
 - Do not add abstractions for hypothetical future requirements.
 - Keep code explicit and readable; avoid clever or generic indirection.
 - Do not use `any`, `@ts-ignore`, `@ts-nocheck`, unsafe casts, or lint suppressions.
-- Keep code, UI, comments, documentation, and agent instructions in English.
+- Keep code identifiers, translation keys, comments, documentation, and agent instructions in English. Admin UI and frontend messages use the supported Bulgarian/English translation catalogs.
 - Inspect Git status before editing and preserve unrelated changes. Do not commit, push, merge, or open a PR unless the user explicitly requests it.
 
 ## Repository
 
-- Use npm workspaces, the existing lockfile, and Nx. The five applications are `apps/admin`, `apps/gateway`, `apps/core`, `apps/products`, and `apps/reference`.
+- Use npm workspaces, the existing lockfile, and Nx. The five applications are `apps/admin`, `apps/gateway`, `apps/core`, `apps/fleet`, and `apps/karma-client`.
 - Do not import another application's implementation, Prisma client, or database model, including through relative paths. ESLint/Nx enforce application boundaries.
 - Expose daily commands through root npm scripts. Do not add another build system, custom process supervisor, or custom test-selection framework. Add shared packages only for demonstrated current reuse.
 - Applications run as Node.js processes on the host. PostgreSQL is the only permitted containerized infrastructure for the foundation. Never reset databases or remove volumes to fix setup.
 - Keep configuration at the narrowest sensible scope and avoid duplicating root tooling.
 - Never commit environment files, local database files, build output, coverage, Nx caches, or generated Prisma/GraphQL clients.
-- Do not read, list, or search the repository's `.tmp/` directory or its contents unless explicitly instructed by the user. Exclude `.tmp/` from repository-wide searches and scans.
+- Do not enter, open, read, list, or search the repository's `.tmp/` or `.misc/` directories or their contents unless explicitly instructed by the user. They contain temporary files and reference projects and must not be used as default task context. User authorization applies only to the requested directory/files. Exclude both `.tmp/` and `.misc/` from repository-wide searches and scans.
 
 ## Documentation
 
@@ -43,48 +61,37 @@
 - Document only what is implemented and how it works. Keep plans, ideas, milestones, progress statuses, session handoffs, dated implementation reports, and proposed functionality out of product documentation. Discuss planning separately unless the user explicitly requests a separate planning artifact.
 - Keep [README.md](README.md) accurate for installation and use, [architecture](docs/architecture/overview.md) for current modules/execution, [development](docs/development.md) for configuration, and [testing](docs/testing.md) for validation.
 - Remove obsolete guidance and fix references when moving or deleting documents. Prefer repository-relative Markdown links so documentation works across machines and agents.
-- Keep screenshots and other image files outside `.agents/`. Aurora review captures and metadata are temporary local files in Git-ignored `artifacts/aurora/`. Delete them after visual acceptance or when requested; do not commit them or make documentation depend on their presence.
+- Keep screenshots and other image files outside `.agents/`. Sakai comparison captures belong in Git-ignored `.references/review/`. Do not commit temporary captures or make documentation depend on their presence.
 - Verify descriptions against the code. Explain actual limitations and how to run checks; report individual test results in the task response rather than maintaining a test-run journal in documentation. Do not store credentials or private transcripts.
-- Keep mandatory rules here. `CLAUDE.md` imports this guide. Skills provide focused procedures without duplicating the entire guide.
-- When the user authorizes a checkpoint in `.tmp/`, update it with progress, exact check results and next steps after meaningful increments. Keep repository-wide searches outside `.tmp/`.
+- Keep shared mandatory rules here and domain-specific rules in the linked domain instructions. `CLAUDE.md` imports this guide and follows the same domain routing. Skills provide focused procedures without duplicating the guides.
+- When the user authorizes a checkpoint in `.tmp/`, update it with progress, exact check results and next steps after meaningful increments. Keep repository-wide searches outside `.tmp/` and `.misc/`.
 - Current validation skill: [.agents/skills/holita-focused-validation/SKILL.md](.agents/skills/holita-focused-validation/SKILL.md).
 - Backend reference skill: [.agents/skills/holita-backend-feature/SKILL.md](.agents/skills/holita-backend-feature/SKILL.md).
-- Admin reference skill: [.agents/skills/holita-admin-feature/SKILL.md](.agents/skills/holita-admin-feature/SKILL.md).
+- Angular admin skill: [.agents/skills/holita-admin-development/SKILL.md](.agents/skills/holita-admin-development/SKILL.md).
 
 ## NestJS
 
 - Organize backend code by feature module.
 - Keep controllers thin: HTTP concerns and delegation only.
 - Put application and business logic in services.
-- Use concrete feature repositories for Prisma operations and compulsory store scoping. Do not add generic repositories/services, CQRS, empty domain layers, or interfaces for every class.
+- Use concrete feature repositories for Prisma operations and compulsory verified Tenant/domain scoping. Do not add generic repositories/services, CQRS, empty domain layers, or interfaces for every class.
 - For GraphQL features, SDL defines the API. Use generated API types and explicit runtime validation rather than duplicate handwritten API models. Prisma owns persistence definitions.
-- Follow the actual [Products resolver/service/repository](apps/products/src/products/products.resolver.ts) and its [SDL](apps/products/src/products/products.graphql). Use @Parent on a federation reference parameter when combining it with Nest parameter decorators; always resolve Product references through scoped service access.
 - After SDL/operation changes run codegen and schema:check. Keep generator inputs explicit, generated outputs ignored, and runtime SDL assets in builds. Regenerate/restart instead of adding dynamic discovery.
-- Product persistence must always include the active store. Creation gets store ID from context and checks existence through core. Do not make a store existence network call for every product read/update/delete or move that blanket check into the gateway.
-- Do not implement fake authentication or treat store context as authorization. Preserve useful diagnostics without logging secrets.
+- The explicit tenant demo login is development-only; never treat it as production authentication. Tenant identity comes from the verified session, never a caller-supplied tenant header/input. Store context is not authorization. Preserve useful diagnostics without logging secrets.
 - Keep Prisma schemas/migrations/clients inside the owning service. Review new migration SQL; never edit applied migrations or replace history with db push. Seeds insert missing fixtures without updating existing rows.
 - Use standard NestJS exceptions and avoid custom exception frameworks.
 
-## React
+## Angular admin (apps/admin)
 
-- Use Refine abstractions where they fit the task.
-- Use MUI and the actual Aurora `vite-ts` components for new or migrated admin UI. The local source is `../themes/aurora/vite-ts`. Preserve Aurora's theme, typography, spacing, icons and interaction patterns with holita branding; do not approximate its appearance by restyling existing Ant Design components.
-- Use Aurora's Sidenav layout with the Default sidenav shape. The top bar contains search, language, theme, notification and profile controls; module navigation belongs in the sidenav.
-- Keep the layout independent of feature data access and business logic. Supply application navigation, store selection and display data through explicit component inputs. Example search results, notifications and profile data are permitted for the shell; keep them separate from real CRUD data and do not implement fake authentication.
-- Integrate and visually review the shell before redesigning module CRUD screens. Keep existing CRUD and store switching operational during this stage; begin module redesign only after explicit user acceptance of the shell.
-- For migrated CRUD, reuse Aurora's Invoice breadcrumb/title/primary-action header, Member list/menu/selection/filter patterns, and Create Event form composition. Include at most three useful secondary header actions. Filters apply on change, with a short debounce for text; record clicks normally open a full-page editor.
-- Use a sticky desktop form aside for status, relevant settings and summary; move it below the main fields on mobile. Batch deletion is the shared initial selection action. Add other batch actions only for an explicitly required module capability. Preserve the owning module's deletion rules and report partial failures accurately.
-- The admin uses Aurora/MUI throughout; Ant Design and its compatibility providers/styles have been removed. Do not reintroduce them. Remove replaced components and styles after verification. Import only the Aurora components and dependencies required by the current feature, without its demo application or data/authentication providers.
-- Keep components focused without splitting trivial markup into separate files.
-- Keep data access in the Refine data provider and hooks, not scattered through presentation components.
-- Do not add a global state library unless local and Refine state cannot solve a concrete requirement.
-- Capture store identity for requests, mutations and cache invalidation. Late results must not affect a newly selected store.
-- Follow [ProductForm](apps/admin/src/features/products/product-form.tsx), [the editor](apps/admin/src/features/products/product-editor.tsx) and [the single data provider](apps/admin/src/data/data-provider.ts). Pass the scoped resource at mutation submission; use per-call callbacks for local notifications/navigation so unmounting suppresses obsolete effects.
-- Refine owns the cache; the URQL transport has fetchExchange only. Do not use a mutable global store header or rely on headers alone for query identity. Store subtree keys reset forms/pagination/dialogs on switching.
-- Keep editor mutation state scoped to its route as well as its store. Changing between create/edit or product IDs must unmount the previous editor so late callbacks cannot affect a newly opened form.
-- Products and Reference Events/Venues/Speakers/Tags are the implemented feature examples. Extend the concrete Reference domain for demonstration features; do not add another demo application or a generic CRUD framework.
-- Existing Products/Reference examples and skills remain references for contracts, validation and request/store/route lifecycle. Products is the base Aurora/MUI CRUD reference; Reference's Aurora workflows add concrete Event, Session, gallery and history capabilities. Store discovery and unavailable states also follow the selected Aurora preset. Use the [Products reference](docs/reference.md#products-the-aurora-crud-reference) to distinguish shared presentation components from feature-owned state and rules. Verify visual fidelity against the selected Aurora layout at matching desktop and mobile viewport sizes.
-- Use the [Reference implementation index](docs/reference.md) to find the concrete Event, Session, media and lifecycle examples and their focused tests. Copy only the capabilities required by the feature.
+- Follow the official [angular-developer](.agents/skills/angular-developer/SKILL.md)
+  for framework conventions and the PrimeNG plugin/MCP for current component APIs.
+  [Agent setup](docs/development.md#angular-agent-tools) is documented separately.
+- Keep standalone Angular and Component → concrete feature service → Apollo with generated
+  TypedDocumentNodes through Gateway. Business editors use typed Reactive Forms; do not add
+  generic CRUD, facades, repositories, duplicate API models or duplicate business screens.
+- Current Vehicles/Devices presentation, navigation and workspace lifecycle belong to Discocan.
+  Apply [Discocan instructions](docs/discocan/instructions.md#angular-admin-appsadmin) for this admin;
+  do not transfer its Fleet workflows to Ecommerce.
 
 ## Architectural changes
 
@@ -98,7 +105,7 @@ Do not make architectural changes solely because they may be useful later.
 
 ## Verification
 
-Follow [docs/testing.md](docs/testing.md). Start with the narrowest relevant project/file/case and expand only when changes or failures justify it. Use the named `test:core`, `test:products`, `test:gateway`, `test:reference`, and `test:admin` targets with native runner selectors.
+Follow [docs/testing.md](docs/testing.md). Start with the narrowest relevant project/file/case and expand only when changes or failures justify it. Use the named `test:core`, `test:gateway`, `test:fleet`, `test:karma-client`, `test:admin` targets with native runner selectors.
 
 For tooling changes, run from the repository root, plus relevant focused tests:
 
@@ -113,7 +120,7 @@ npm run build
 - Account for untracked files in the current diff and distinguish it from the broader PR diff. Nx affected selects projects, not proof of runtime-contract coverage.
 - Keep [PR CI](.github/workflows/affected.yml) on real event base/head commits with explicit missing-history failure. Workflow and ignore-rule changes belong in Nx shared inputs. [Full regression CI](.github/workflows/full-regression.yml) must remain workflow_dispatch only; docs-only selection is not application test coverage.
 - Database checks require dedicated test databases; do not reuse cached live-DB results as current evidence.
-- Use test:core:db/test:products:db/test:reference:db for persistence changes. Provision with db:up, db:setup and db:test:setup; use the guarded per-run schema helpers under each service's test directory. Never replace them with development connections, resets or shared truncation.
+- Use test:core:db/test:fleet:db for persistence changes. Provision with db:up, db:setup and db:test:setup; use the guarded per-run schema helpers under each service's test directory. Never replace them with development connections, resets or shared truncation.
 - Use test:gateway:db -- federation.db.spec.mts for real service-boundary changes. The guarded fixture under tools/graphql owns its processes/schemas; gateway runtime must not acquire database dependencies. Use test:schema for offline contract-tool tests.
-- Use test:admin with the relevant form/provider/store-workspace file, and test:smoke -- products.smoke.spec.mts for browser/store-switch changes. The explicit noncached browser fixture reuses dedicated DB guards and closes its own Vite/backend processes; never substitute development databases.
+- Use test:admin with Angular CLI `--include=app/features/fleet/vehicles/vehicles-api.spec.ts` or `--filter="case name"`; use test:smoke:admin -- angular-foundation.smoke.spec.mts for real Angular routing/transport. Its compiled-app fixture owns dedicated schemas and backend processes.
 - Report actual commands/results and unverified work. Do not declare work complete while a required check fails. Clean up task-started processes and connections.

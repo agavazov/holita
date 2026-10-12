@@ -6,35 +6,10 @@
   "tags": ["type:app", "scope:admin"],
   "implicitDependencies": ["gateway"],
   "targets": {
-    "test-smoke": {
-      "executor": "nx:run-commands",
-      "cache": false,
-      "inputs": ["default", "^default"],
-      "dependsOn": [
-        {
-          "target": "build",
-          "projects": ["admin", "gateway", "core", "products", "reference"]
-        }
-      ],
-      "options": {
-        "command": "playwright test --config tools/browser/playwright.config.mts",
-        "cwd": ".",
-        "forwardAllArgs": true
-      }
-    },
-    "test": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "npm run test --",
-        "cwd": "apps/admin",
-        "forwardAllArgs": true
-      },
-      "dependsOn": ["graphql-generate"]
-    },
     "graphql-generate": {
       "executor": "nx:run-commands",
-      "inputs": ["default"],
       "cache": true,
+      "inputs": ["default"],
       "outputs": ["{projectRoot}/src/generated/graphql"],
       "options": {
         "command": "npm run graphql:generate",
@@ -48,8 +23,32 @@
       "dependsOn": ["graphql-generate"]
     },
     "build": {
-      "cache": false,
       "dependsOn": ["graphql-generate"]
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["graphql-generate"],
+      "options": {
+        "command": "npm run test --",
+        "cwd": "apps/admin",
+        "forwardAllArgs": true
+      }
+    },
+    "test-smoke": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "inputs": ["default", "^default"],
+      "dependsOn": [
+        {
+          "target": "build",
+          "projects": ["admin", "gateway", "core", "fleet", "karma-client"]
+        }
+      ],
+      "options": {
+        "command": "playwright test --config tools/browser/angular.config.mts",
+        "cwd": ".",
+        "forwardAllArgs": true
+      }
     }
   },
   "namedInputs": {

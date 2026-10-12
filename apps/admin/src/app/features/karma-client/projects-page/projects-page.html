@@ -1,0 +1,68 @@
+<section class="card" [attr.aria-label]="text().karmaProjects" [attr.aria-busy]="loading()">
+  <div class="page-heading">
+    <div>
+      <h1>{{ text().karmaProjects }}</h1>
+      <p>{{ text().karmaClient }}</p>
+    </div>
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="loading()"
+      (click)="refresh()"
+    >
+      {{ error() ? text().retry : text().refresh }}
+    </button>
+  </div>
+  <form class="search-form" [formGroup]="form" (ngSubmit)="applySearch()">
+    <div class="search-field">
+      <label for="projects-page-search">{{ text().karmaReferenceSearch }}</label
+      ><input pInputText id="projects-page-search" [formControl]="search" />
+    </div>
+    <button pButton type="submit">{{ text().karmaSearch }}</button>
+  </form>
+  @if (loading()) {
+    <p role="status">{{ text().karmaLoadingReferences }}</p>
+  }
+  @if (error()) {
+    <p-message severity="error">{{ text().karmaUnavailable }}</p-message>
+  }
+  @if (loaded()) {
+    <p role="status">
+      {{ text().total }}: {{ items().length }} · {{ text().karmaMatching }}: {{ filtered().length }}
+    </p>
+  }
+  <p-table
+    [value]="filtered()"
+    dataKey="id"
+    [paginator]="true"
+    [rows]="query().rows"
+    [first]="first()"
+    [rowsPerPageOptions]="[25, 50, 100]"
+    (onPage)="page($event)"
+    [tableStyle]="{ 'min-width': '24rem' }"
+  >
+    <ng-template #header
+      ><tr>
+        <th scope="col">{{ text().karmaProjectId }}</th>
+        <th scope="col">{{ text().karmaReferenceName }}</th>
+      </tr></ng-template
+    >
+    <ng-template #body let-item
+      ><tr>
+        <td>{{ item.id }}</td>
+        <td>{{ item.name || '—' }}</td>
+      </tr></ng-template
+    >
+    <ng-template #emptymessage
+      ><tr>
+        <td colspan="2">
+          @if (!loading() && !error()) {
+            {{ text().karmaNoReferences }}
+          }
+        </td>
+      </tr></ng-template
+    >
+  </p-table>
+</section>

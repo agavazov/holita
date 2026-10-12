@@ -1,0 +1,61 @@
+extend schema @link(url: "https://specs.apollo.dev/federation/v2.3", import: ["@key"])
+
+scalar DateTime
+
+type Store @key(fields: "id", resolvable: false) {
+  id: ID!
+}
+
+type FleetVehicle @key(fields: "id") {
+  id: ID!
+  storeId: ID!
+  store: Store!
+  licensePlate: String!
+  notes: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+type FleetVehiclePage {
+  items: [FleetVehicle!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+input CreateFleetVehicleInput {
+  licensePlate: String!
+  notes: String
+}
+input UpdateFleetVehicleInput {
+  licensePlate: String
+  notes: String
+}
+enum FleetVehicleSortField {
+  LICENSE_PLATE
+  CREATED_AT
+}
+
+enum FleetVehicleSortDirection {
+  ASC
+  DESC
+}
+
+input FleetVehicleSort {
+  field: FleetVehicleSortField! = CREATED_AT
+  direction: FleetVehicleSortDirection! = DESC
+}
+
+type Query {
+  fleetVehicles(
+    offset: Int! = 0
+    limit: Int! = 20
+    search: String
+    ids: [ID!]
+    sort: FleetVehicleSort
+  ): FleetVehiclePage!
+  fleetVehicle(id: ID!): FleetVehicle!
+}
+type Mutation {
+  createFleetVehicle(input: CreateFleetVehicleInput!): FleetVehicle!
+  updateFleetVehicle(id: ID!, input: UpdateFleetVehicleInput!): FleetVehicle!
+  deleteFleetVehicle(id: ID!): FleetVehicle!
+}

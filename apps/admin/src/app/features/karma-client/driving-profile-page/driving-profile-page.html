@@ -1,0 +1,135 @@
+<section class="card" [attr.aria-label]="text().karmaDrivingProfile" [attr.aria-busy]="loading()">
+  <div class="page-heading">
+    <div>
+      <h1>{{ text().karmaDrivingProfile }}</h1>
+      <p>{{ car()?.carNumber ?? text().karmaClient }} · {{ text().karmaCarId }} {{ carId() }}</p>
+    </div>
+    <div class="page-actions">
+      <a
+        pButton
+        severity="secondary"
+        [outlined]="true"
+        [routerLink]="['/', language(), 'karma-client', 'cars', carId()]"
+        >{{ text().backToKarmaTruck }}</a
+      >
+      @if (validId()) {
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [disabled]="loading() || invalidFilters()"
+          (click)="refresh()"
+        >
+          {{ error() ? text().retry : text().refresh }}
+        </button>
+      }
+    </div>
+  </div>
+  @if (!validId() || (carLoaded() && !car() && !error())) {
+    <p-message severity="warn">{{ text().karmaTruckNotFound }}</p-message>
+  }
+  @if (error()) {
+    <p-message severity="error">{{ text().karmaUnavailable }}</p-message>
+  }
+  @if (validId()) {
+    <form
+      [formGroup]="form"
+      (ngSubmit)="apply()"
+      class="filters"
+      [attr.aria-label]="text().karmaProfilePeriod"
+    >
+      <div class="field">
+        <label for="profile-from">{{ text().karmaFromApi }}</label
+        ><input
+          pInputText
+          id="profile-from"
+          type="datetime-local"
+          [attr.step]="1"
+          formControlName="from"
+        />
+      </div>
+      <div class="field">
+        <label for="profile-to">{{ text().karmaToApi }}</label
+        ><input
+          pInputText
+          id="profile-to"
+          type="datetime-local"
+          [attr.step]="1"
+          formControlName="to"
+        />
+      </div>
+      <div class="page-actions">
+        <button pButton type="submit" [disabled]="loading()">{{ text().applyFilters }}</button
+        ><button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="loading()"
+          (click)="reset()"
+        >
+          {{ text().karmaLastSevenDays }}
+        </button>
+      </div>
+      <p class="filter-hint">{{ text().karmaApiTimeHint }}</p>
+    </form>
+    @if (invalidFilters() || formError()) {
+      <p-message severity="warn">{{ text().karmaHistoryInvalidFilters }}</p-message>
+    }
+  }
+  @if (loading()) {
+    <p role="status">{{ text().karmaHistoryLoading }}</p>
+  }
+  @if (car() && !invalidFilters()) {
+    <p class="filter-hint">{{ text().karmaProfileHint }}</p>
+    <p-table
+      [value]="profile()?.categories ?? []"
+      dataKey="name"
+      [tableStyle]="{ width: '100%', 'table-layout': 'fixed' }"
+    >
+      <ng-template #header
+        ><tr>
+          <th style="width: 50%">{{ text().karmaCategory }}</th>
+          <th>score</th>
+          <th>weight</th>
+        </tr></ng-template
+      >
+      <ng-template #body let-category
+        ><tr>
+          <td class="category">{{ category.name }}</td>
+          <td>{{ category.score ?? '—' }}</td>
+          <td>{{ category.weight ?? '—' }}</td>
+        </tr></ng-template
+      >
+      <ng-template #emptymessage
+        ><tr>
+          <td colspan="3">
+            {{
+              loading()
+                ? text().karmaHistoryLoading
+                : error()
+                  ? text().karmaUnavailable
+                  : text().karmaHistoryEmpty
+            }}
+          </td>
+        </tr></ng-template
+      >
+    </p-table>
+    @if (profile(); as result) {
+      <dl class="message-details">
+        <div>
+          <dt>car_id</dt>
+          <dd>{{ result.carId }}</dd>
+        </div>
+        <div>
+          <dt>car_number</dt>
+          <dd>{{ result.carNumber }}</dd>
+        </div>
+        <div>
+          <dt>device_id</dt>
+          <dd>{{ result.deviceId }}</dd>
+        </div>
+      </dl>
+    }
+  }
+</section>

@@ -1,18 +1,17 @@
 import { spawn, execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { devNull, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { promisify } from 'node:util';
 import { config } from 'dotenv';
+import { createKarmaFixture } from './karma-fixture.mjs';
 import pg from 'pg';
 import { workspaceRoot } from './contracts.mjs';
 
 const execute = promisify(execFile);
 
-export function guardedTestUrl(service: 'core' | 'products' | 'reference', value: string): URL {
+export function guardedTestUrl(service: 'core' | 'fleet', value: string): URL {
   let url: URL;
   try {
     url = new URL(value);
@@ -34,7 +33,7 @@ export function guardedTestUrl(service: 'core' | 'products' | 'reference', value
   return url;
 }
 
-async function prepareDatabase(service: 'core' | 'products' | 'reference') {
+async function prepareDatabase(service: 'core' | 'fleet') {
   const name = `holita_${service}_test`;
   const url = guardedTestUrl(
     service,
@@ -69,12 +68,14 @@ async function prepareDatabase(service: 'core' | 'products' | 'reference') {
       [join(workspaceRoot, 'node_modules/prisma/build/index.js'), 'migrate', 'deploy'],
       { cwd, env, timeout: 30000 },
     );
-    await execute(process.execPath, ['--import', 'tsx', 'prisma/seed.ts'], {
-      cwd,
-      env,
-      timeout: 15000,
-    });
-    return { url: url.toString(), close };
+    if (service === 'core') {
+      await execute(process.execPath, ['--import', 'tsx', 'prisma/seed.ts'], {
+        cwd,
+        env,
+        timeout: 15000,
+      });
+    }
+    return { url: url.toString(), schema, close };
   } catch (error) {
     await close();
     throw error;
@@ -103,14 +104,7 @@ async function startApplication(service: string, env: NodeJS.ProcessEnv, selecte
   const port = selectedPort ?? (await availablePort());
   const child = spawn(process.execPath, ['dist/main.js'], {
     cwd: join(workspaceRoot, 'apps', service),
-    // Configuration was loaded by the fixture; do not reread local files in child services.
-    env: {
-      ...process.env,
-      ...env,
-      DOTENV_CONFIG_PATH: devNull,
-      PORT: String(port),
-      NODE_ENV: 'test',
-    },
+    env: { ...process.env, ...env, PORT: String(port), NODE_ENV: 'test' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   let logs = '';
@@ -184,7 +178,7 @@ async function observeRequests(target: string) {
       body,
     });
     const headers: Record<string, string> = { 'content-type': 'application/json' };
-    for (const key of ['x-request-id', 'x-store-id']) {
+    for (const key of ['x-request-id', 'x-store-id', 'authorization']) {
       const value = req.headers[key];
       if (typeof value === 'string') headers[key] = value;
     }
@@ -224,14 +218,10 @@ async function observeRequests(target: string) {
 }
 
 export async function createFederationFixture(
-  options: { adminOrigin?: string; referenceEnabled?: boolean } = {},
+  options: { adminOrigin?: string; fleetEnabled?: boolean } = {},
 ) {
   config({
-    path: [
-      join(workspaceRoot, 'apps/core/.env'),
-      join(workspaceRoot, 'apps/products/.env'),
-      join(workspaceRoot, 'apps/reference/.env'),
-    ],
+    path: [join(workspaceRoot, 'apps/core/.env'), join(workspaceRoot, 'apps/fleet/.env')],
     quiet: true,
   });
   const cleanup: (() => Promise<void>)[] = [];
@@ -248,58 +238,75 @@ export async function createFederationFixture(
     if (errors.length) throw new AggregateError(errors, 'Federation fixture cleanup failed');
   }
   try {
-    const mediaRoot = await mkdtemp(join(tmpdir(), 'holita-media-test-'));
-    cleanup.push(() => rm(mediaRoot, { recursive: true, force: true }));
     const coreDatabase = await prepareDatabase('core');
     cleanup.push(coreDatabase.close);
-    const productsDatabase = await prepareDatabase('products');
-    cleanup.push(productsDatabase.close);
-    const referenceDatabase = await prepareDatabase('reference');
-    cleanup.push(referenceDatabase.close);
+    const tenantConnection = new pg.Client({ connectionString: coreDatabase.url });
+    await tenantConnection.connect();
+    try {
+      const schema = pg.escapeIdentifier(coreDatabase.schema);
+      await tenantConnection.query(
+        `INSERT INTO ${schema}."Tenant" ("id", "name", "updatedAt") VALUES ($1, $2, CURRENT_TIMESTAMP)`,
+        ['01000000-0000-4000-8000-000000000002', 'Isolation tenant'],
+      );
+      await tenantConnection.query(
+        `INSERT INTO ${schema}."Store" ("id", "tenantId", "name", "updatedAt") VALUES ($1, $2, $3, CURRENT_TIMESTAMP)`,
+        [
+          '10000000-0000-4000-8000-000000000003',
+          '01000000-0000-4000-8000-000000000002',
+          'Isolation store',
+        ],
+      );
+    } finally {
+      await tenantConnection.end();
+    }
+
+    const fleetDatabase = await prepareDatabase('fleet');
+    cleanup.push(fleetDatabase.close);
     let core = await startApplication('core', { CORE_DATABASE_URL: coreDatabase.url });
     cleanup.push(() => core.stop());
     const coreObserver = await observeRequests(core.url);
     cleanup.push(coreObserver.close);
-    const products = await startApplication('products', {
-      PRODUCTS_DATABASE_URL: productsDatabase.url,
+    const fleetPort = await availablePort();
+    const fleetEnv = {
+      ADMIN_ORIGINS: options.adminOrigin ?? 'http://127.0.0.1:11000',
+      ADMIN_ORIGIN: options.adminOrigin ?? 'http://127.0.0.1:11000',
+      FLEET_DATABASE_URL: fleetDatabase.url,
       CORE_GRAPHQL_URL: coreObserver.url,
-    });
-    cleanup.push(products.stop);
-    const productsObserver = await observeRequests(products.url);
-    cleanup.push(productsObserver.close);
-    const referencePort = await availablePort();
-    const referenceEnv = {
-      REFERENCE_MEDIA_ROOT: mediaRoot,
-      REFERENCE_PUBLIC_URL: `http://127.0.0.1:${String(referencePort)}`,
-      ADMIN_ORIGIN: options.adminOrigin,
-      REFERENCE_DATABASE_URL: referenceDatabase.url,
-      CORE_GRAPHQL_URL: coreObserver.url,
-      REFERENCE_ENABLED: String(options.referenceEnabled ?? true),
+      FLEET_ENABLED: String(options.fleetEnabled ?? true),
     };
-    let reference = await startApplication('reference', referenceEnv, referencePort);
-    cleanup.push(() => reference.stop());
-    const referenceObserver = await observeRequests(reference.url);
-    cleanup.push(referenceObserver.close);
+    let fleet = await startApplication('fleet', fleetEnv, fleetPort);
+    cleanup.push(() => fleet.stop());
+    const fleetObserver = await observeRequests(fleet.url);
+    cleanup.push(fleetObserver.close);
+    const karma = await createKarmaFixture();
+    cleanup.push(karma.close);
+    const karmaClient = await startApplication('karma-client', {
+      KARMA_API_URL: karma.url,
+      KARMA_USER: 'fixture-user',
+      KARMA_PASSWORD: 'fixture-password',
+    });
+    cleanup.push(karmaClient.stop);
     const gateway = await startApplication('gateway', {
-      ADMIN_ORIGIN: options.adminOrigin,
+      ADMIN_ORIGIN: options.adminOrigin ?? 'http://127.0.0.1:11000',
       CORE_GRAPHQL_URL: coreObserver.url,
-      PRODUCTS_GRAPHQL_URL: productsObserver.url,
-      REFERENCE_GRAPHQL_URL: referenceObserver.url,
+      FLEET_GRAPHQL_URL: fleetObserver.url,
+      KARMA_CLIENT_GRAPHQL_URL: karmaClient.url,
     });
     cleanup.push(gateway.stop);
     return {
       url: gateway.url,
-      productsUrl: products.url,
+      karma,
+      karmaClientUrl: karmaClient.url,
+      stopKarmaClient: karmaClient.stop,
       coreRequests: coreObserver.requests,
-      productRequests: productsObserver.requests,
-      referenceUrl: reference.url,
-      referenceRequests: referenceObserver.requests,
-      setReferenceEnabled: async (enabled: boolean) => {
-        await reference.stop();
-        reference = await startApplication(
-          'reference',
-          { ...referenceEnv, REFERENCE_ENABLED: String(enabled) },
-          reference.port,
+      fleetUrl: fleet.url,
+      fleetRequests: fleetObserver.requests,
+      setFleetEnabled: async (enabled: boolean) => {
+        await fleet.stop();
+        fleet = await startApplication(
+          'fleet',
+          { ...fleetEnv, FLEET_ENABLED: String(enabled) },
+          fleet.port,
         );
       },
       stopCore: () => core.stop(),

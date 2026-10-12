@@ -1,5 +1,0 @@
-query StoreForProductCreation($id: ID!) {
-  store(id: $id) {
-    id
-  }
-}

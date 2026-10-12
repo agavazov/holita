@@ -1,0 +1,19 @@
+type KarmaLocation {
+  carId: ID!
+  deviceId: String!
+  carNumber: String!
+  messageId: ID
+  eventId: ID
+  edt: String
+  edtTz: String
+  pdt: String
+  latitude: Float
+  longitude: Float
+  spd: Float
+  odo: Float
+  extra: String
+}
+
+extend type Query {
+  karmaLocation(carId: ID!): KarmaLocation
+}

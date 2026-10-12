@@ -1,0 +1,87 @@
+type KarmaTrip {
+  id: ID!
+  carId: ID!
+  carNumber: String!
+  deviceId: String!
+  driverId: ID
+  tripActive: Float
+  startMessageId: ID
+  startDate: String
+  startLatitude: Float
+  startLongitude: Float
+  startOdo: Float
+  stopMessageId: ID
+  stopDate: String
+  stopLatitude: Float
+  stopLongitude: Float
+  stopOdo: Float
+  tripDuration: Float
+  tripDistance: Float
+  tripDurationNight: Float
+  tripDistanceNight: Float
+  maxSpeed: Float
+  drivingScore: Float
+  ecoScore: Float
+}
+type KarmaEvent {
+  id: ID!
+  carId: ID!
+  deviceId: String!
+  eventId: ID!
+  edt: String
+  edtTz: String
+  pdt: String
+  latitude: Float
+  longitude: Float
+  spd: Float
+  odo: Float
+  extra: String
+}
+input KarmaTripsInput {
+  carId: ID!
+  pageSize: Int = 50
+  cursor: String
+  fromDate: String
+  toDate: String
+}
+input KarmaEventsInput {
+  carId: ID!
+  pageSize: Int = 50
+  cursor: String
+  fromDate: String
+  toDate: String
+  eventTypes: [ID!]
+}
+type KarmaTripsPage {
+  items: [KarmaTrip!]!
+  cursor: String
+  nextCursor: String
+  hasMore: Boolean!
+}
+type KarmaEventsPage {
+  items: [KarmaEvent!]!
+  cursor: String
+  nextCursor: String
+  hasMore: Boolean!
+}
+input KarmaDrivingProfileInput {
+  carId: ID!
+  fromDate: String!
+  toDate: String!
+}
+type KarmaDrivingCategory {
+  name: String!
+  score: Float
+  weight: Float
+}
+type KarmaDrivingProfile {
+  carId: ID!
+  carNumber: String!
+  deviceId: String!
+  categories: [KarmaDrivingCategory!]!
+}
+extend type Query {
+  karmaTrips(input: KarmaTripsInput!): KarmaTripsPage!
+  karmaEvents(input: KarmaEventsInput!): KarmaEventsPage!
+  karmaDrivingProfile(input: KarmaDrivingProfileInput!): KarmaDrivingProfile
+}

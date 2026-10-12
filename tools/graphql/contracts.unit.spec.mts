@@ -12,9 +12,53 @@ describe('local GraphQL contracts', () => {
     const result = composeContracts(await readContracts());
     expect(result.clientSdl).toContain('store: Store!');
     expect(result.clientSdl).not.toContain('_entities');
-    expect(await readOperations(result.apiSchema)).toHaveLength(10);
-    expect(result.clientSdl).toContain('referenceVenues(');
-    expect(result.clientSdl).toContain('reorderReferenceSessions(');
+    const operations = await readOperations(result.apiSchema);
+    expect(operations).toHaveLength(5);
+    expect(operations.map((operation) => operation.location)).toEqual(
+      expect.arrayContaining([
+        'apps/admin/src/app/features/karma-client/operations.graphql',
+        'apps/admin/src/app/features/stores/operations.graphql',
+        'apps/admin/src/app/features/fleet/vehicles/operations.graphql',
+        'apps/admin/src/app/features/fleet/devices/operations.graphql',
+        'apps/fleet/src/core/operations.graphql',
+      ]),
+    );
+    expect(result.clientSdl).toContain('fleetVehicles(');
+    expect(result.clientSdl).toContain('fleetDevices(');
+    expect(result.apiSchema.getType('FleetVehicle')).toBeDefined();
+    expect(result.apiSchema.getType('FleetDevice')).toBeDefined();
+    expect(result.apiSchema.getType('ReferenceVehicle')).toBeUndefined();
+    expect(result.apiSchema.getType('ReferenceDevice')).toBeUndefined();
+    expect(Object.keys(result.apiSchema.getQueryType()?.getFields() ?? {}).sort()).toEqual([
+      'fleetDevice',
+      'fleetDevices',
+      'fleetVehicle',
+      'fleetVehicles',
+      'karmaCar',
+      'karmaCars',
+      'karmaDrivingProfile',
+      'karmaEdata',
+      'karmaEvents',
+      'karmaLocation',
+      'karmaProjects',
+      'karmaRoles',
+      'karmaTimeZones',
+      'karmaTrips',
+      'karmaUsers',
+      'karmaVersion',
+      'store',
+      'stores',
+      'tenants',
+    ]);
+    expect(Object.keys(result.apiSchema.getMutationType()?.getFields() ?? {}).sort()).toEqual([
+      'createFleetDevice',
+      'createFleetVehicle',
+      'deleteFleetDevice',
+      'deleteFleetVehicle',
+      'demoLogin',
+      'updateFleetDevice',
+      'updateFleetVehicle',
+    ]);
     expect(composeContracts(await readContracts()).supergraphSdl).toBe(result.supergraphSdl);
   });
   it('rejects an operation that no longer matches the API', async () => {

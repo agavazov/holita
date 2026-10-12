@@ -1,0 +1,32 @@
+<section class="card" [attr.aria-label]="text().karmaApiInfo" [attr.aria-busy]="loading()">
+  <div class="page-heading">
+    <div>
+      <h1>{{ text().karmaApiInfo }}</h1>
+      <p>{{ text().karmaClient }}</p>
+    </div>
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="loading()"
+      (click)="refresh()"
+    >
+      {{ error() ? text().retry : text().refresh }}
+    </button>
+  </div>
+  @if (loading()) {
+    <p role="status">{{ text().karmaLoadingReferences }}</p>
+  }
+  @if (error()) {
+    <p-message severity="error">{{ text().karmaUnavailable }}</p-message>
+  }
+  @if (version(); as value) {
+    <dl class="details">
+      <div>
+        <dt>{{ text().karmaApiVersion }}</dt>
+        <dd>{{ value }}</dd>
+      </div>
+    </dl>
+  }
+</section>

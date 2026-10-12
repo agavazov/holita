@@ -1,0 +1,44 @@
+@if (!session.current()) {
+  <holita-login
+    [language]="language()"
+    [languageUrl]="otherLanguageUrl()"
+    (signedIn)="enter($event)"
+  />
+} @else {
+  <holita-admin-shell
+    [stores]="stores() ?? []"
+    [storeId]="selectedStoreId()"
+    [language]="language()"
+    [languageUrl]="otherLanguageUrl()"
+    [loading]="loading()"
+    [fleetEnabled]="fleetEnabled"
+    [tenantName]="session.current()?.tenant?.name ?? null"
+    (signOut)="logout()"
+    (storeSelected)="chooseStore($event)"
+  >
+    @if (!karmaActive() && (stores() === null || stores()?.length === 0 || error())) {
+      <section class="card">
+        @if (loading()) {
+          <p role="status">{{ text().loadingStores }}</p>
+        } @else if (error()) {
+          <p-message severity="error">{{ failure() }}</p-message>
+        } @else {
+          <p>{{ text().emptyStores }}</p>
+        }
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          data-testid="refresh-stores"
+          [disabled]="loading()"
+          (click)="refresh()"
+        >
+          {{ text().retry }}
+        </button>
+      </section>
+    }
+    @if (karmaActive() || storesAvailable()) {
+      <router-outlet />
+    }
+  </holita-admin-shell>
+}

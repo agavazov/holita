@@ -1,4 +1,6 @@
 .tmp/
+/.misc/
+/.references/
 .volumes/
 node_modules/
 dist/
@@ -7,5 +9,7 @@ test-results/
 playwright-report/
 apps/*/src/generated/
 .nx/
+.angular/
 
-.media/
+# Preserve the installed upstream Angular skill without reformatting its sources.
+.agents/skills/angular-developer/

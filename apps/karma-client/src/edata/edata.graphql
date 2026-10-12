@@ -1,0 +1,40 @@
+type KarmaEdataParameter {
+  id: ID!
+  value: Float
+  description: String
+}
+
+type KarmaEdataMessage {
+  id: ID!
+  carId: ID!
+  deviceId: String!
+  carNumber: String!
+  eventTimeUtc: String
+  eventTimeLocal: String
+  pdt: String
+  spd: Float
+  odo: Float
+  latitude: Float
+  longitude: Float
+  parameters: [KarmaEdataParameter!]!
+}
+
+input KarmaEdataInput {
+  carId: ID!
+  pageSize: Int = 50
+  cursor: String
+  fromDate: String
+  toDate: String
+  parameterIds: [ID!]
+}
+
+type KarmaEdataPage {
+  items: [KarmaEdataMessage!]!
+  cursor: String
+  nextCursor: String
+  hasMore: Boolean!
+}
+
+extend type Query {
+  karmaEdata(input: KarmaEdataInput!): KarmaEdataPage!
+}

@@ -1,0 +1,36 @@
+{
+  "name": "@holita/karma-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nest build",
+    "dev": "nest start --watch",
+    "start:prod": "node dist/main.js",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "lint": "eslint .",
+    "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand",
+    "predev": "npm run graphql:generate",
+    "graphql:generate": "tsx ../../tools/graphql/generate.mts karma-client"
+  },
+  "dependencies": {
+    "@apollo/server": "5.5.1",
+    "@apollo/subgraph": "2.14.4",
+    "@as-integrations/express5": "1.1.2",
+    "@nestjs/apollo": "14.0.1",
+    "@nestjs/common": "12.0.4",
+    "@nestjs/core": "12.0.4",
+    "@nestjs/graphql": "14.0.1",
+    "@nestjs/platform-express": "12.0.4",
+    "dotenv": "17.4.2",
+    "graphql": "16.14.2",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "12.0.0",
+    "@nestjs/testing": "12.0.4",
+    "@types/node": "24.13.4",
+    "tsx": "4.23.13"
+  }
+}

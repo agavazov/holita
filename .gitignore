@@ -10,14 +10,14 @@ playwright-report/
 
 apps/*/src/generated/
 .nx/
+.angular/
 
 .idea/
 .DS_Store
 
 .tmp/
+/.references/
 .volumes/
-
-.media/
 
 # Temporary Aurora visual-review captures and metadata.
 /artifacts/aurora/

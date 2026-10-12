@@ -1,0 +1,101 @@
+<div class="login-layout">
+  <div class="login-actions">
+    <a
+      pButton
+      severity="secondary"
+      [text]="true"
+      [routerLink]="languageUrl()"
+      [attr.lang]="language() === 'bg' ? 'en' : 'bg'"
+      [attr.aria-label]="language() === 'bg' ? 'English' : 'Български'"
+    >
+      {{ language() === 'bg' ? 'EN' : 'BG' }}
+    </a>
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [text]="true"
+      [attr.aria-label]="appearance.dark() ? text().lightTheme : text().darkTheme"
+      (click)="appearance.toggle()"
+    >
+      @if (appearance.dark()) {
+        <svg data-p-icon="sun" size="20" aria-hidden="true"></svg>
+      } @else {
+        <svg data-p-icon="moon" size="20" aria-hidden="true"></svg>
+      }
+    </button>
+  </div>
+  <main class="login-container">
+    <div class="login-frame">
+      <section class="login-card" aria-labelledby="login-title">
+        <div class="login-brand">
+          <span class="holita-mark" aria-hidden="true">h</span><span>holita</span>
+        </div>
+        <h1 id="login-title">{{ text().demoLogin }}</h1>
+        <p class="login-description">{{ text().demoLoginDescription }}</p>
+        <form [formGroup]="form" (ngSubmit)="login()">
+          <div class="login-field">
+            <label for="login-tenant">{{ text().tenant }}</label>
+            <p-select
+              inputId="login-tenant"
+              [options]="tenants()"
+              optionLabel="name"
+              optionValue="id"
+              [formControl]="tenantControl"
+              [placeholder]="text().chooseTenant"
+              [ariaLabel]="text().tenant"
+              [loading]="tenantsLoading()"
+              appendTo="body"
+            />
+          </div>
+          <div class="login-field">
+            <label for="login-store">{{ text().activeStore }}</label>
+            <p-select
+              inputId="login-store"
+              [options]="stores()"
+              optionLabel="name"
+              optionValue="id"
+              [formControl]="storeControl"
+              [placeholder]="text().chooseStore"
+              [ariaLabel]="text().activeStore"
+              [loading]="storesLoading()"
+              appendTo="body"
+            />
+          </div>
+          @if (storesLoading()) {
+            <p role="status">{{ text().loadingStores }}</p>
+          }
+          @if (!tenantsLoading() && tenants().length === 0 && !tenantError()) {
+            <p>{{ text().emptyTenants }}</p>
+          }
+          @if (tenantControl.value && !storesLoading() && stores().length === 0 && !storeError()) {
+            <p>{{ text().emptyStores }}</p>
+          }
+          @if (tenantError() || storeError()) {
+            <p-message severity="error">{{ failure() }}</p-message>
+            <button pButton type="button" severity="secondary" (click)="retry()">
+              {{ text().retry }}
+            </button>
+          }
+          <button
+            pButton
+            type="submit"
+            [disabled]="
+              !storeControl.value ||
+              storesLoading() ||
+              tenantsLoading() ||
+              !!storeError() ||
+              submitted()
+            "
+            data-testid="demo-login"
+          >
+            {{ text().signIn }}
+          </button>
+        </form>
+        @if (appearance.persistenceFailed()) {
+          <p-message severity="warn">{{ text().themePersistenceError }}</p-message>
+        }
+      </section>
+    </div>
+  </main>
+</div>

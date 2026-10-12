@@ -2,360 +2,96 @@
 
 ## Select the narrowest relevant target
 
-Backend tests use Jest/ts-jest in ESM mode; Node's experimental VM modules flag is supplied
-by the application script. Admin uses Vitest with jsdom, Testing Library matchers and
-cleanup. Test commands are non-watch. There is no root `test` script or custom selector
-dispatcher.
-Admin test files run one at a time because Nx already parallelizes project tasks.
-Text-entry scenarios use normal clipboard events where per-keystroke behavior is not under
-test, reducing DOM work. Admin cases have a bounded 30-second budget for multi-step
-Refine workflows sharing CPU with backend and DB checks. Assertion waits,
-file isolation and failure reporting remain unchanged; tests do not retry on failure.
-Nx test targets use its standard run-commands executor so quoted case names retain their
-argument boundaries. Other application tasks are inferred from their package scripts.
-Root named test commands explicitly use Nx's static output so successful runner summaries
-and executed counts remain visible, including affected/full/browser commands. This does
-not disable caching; use --skip-nx-cache when fresh execution is required.
-
-From the repository root, select a backend file or a case within it:
+Use named root npm targets with native runner selectors. Jest handles backend tests;
+Angular CLI uses Vitest/jsdom; Playwright handles compiled-app browser checks.
+Commands are non-watch. `npm test` is not the validation interface.
 
 ```bash
-npm run test:products -- health.spec.ts
-npm run test:products -- health.spec.ts --testNamePattern="responds without store context"
-npm run test:core -- health.spec.ts
-npm run test:gateway -- health.spec.ts
-npm run test:products -- products.service.spec.ts
-npm run test:products -- products.service.spec.ts --testNamePattern="rejects invalid input"
+npm run test:fleet -- vehicles.service.spec.ts --skip-nx-cache
+npm run test:fleet -- devices.service.spec.ts --testNamePattern="rejects" --skip-nx-cache
+npm run test:core -- health.spec.ts --skip-nx-cache
+npm run test:gateway -- health.spec.ts --skip-nx-cache
+npm run test:karma-client -- karma-client.spec.ts --skip-nx-cache
+npm run test:admin -- --include=app/features/fleet/vehicles/vehicles-api.spec.ts --skip-nx-cache
 ```
 
-Each backend health suite starts its actual AppModule on an ephemeral loopback port,
-checks HTTP responses without a store header/database, and closes the application.
-Gateway bootstrap also checks that oversized baggage headers receive HTTP 431 before
-GraphQL handling. The real federation file repeats that check against compiled services
-and verifies that neither subgraph receives the rejected request. It also checks gateway and
-Reference CORS for both default local admin origins and rejects other origins and ports.
-The federation fixture leaves ADMIN_ORIGIN unset unless a browser test supplies its exact origin.
-Child services use the fixture's captured environment without rereading local `.env` files.
-These are bootstrap tests, not proof of store isolation or product behavior.
-The Products service file tests validation and no-write decisions with mocked dependency
-boundaries. Its results do not substitute for the real DB and federation files below.
+Without a file, each named target selects its own current unit/bootstrap suite.
+DB targets are separate and noncached. Do not accept zero executed tests, enable
+`--passWithNoTests` or use watch mode. Read actual counts; mocks are not persistence proof.
+Root tooling changes require `npm run lint`, `npm run typecheck` and `npm run build` plus
+relevant behavioral checks. SDL/operations also require codegen, schema:check and test:schema.
 
-`test:admin` selects files matching `src/**/*.test.{ts,tsx}`:
+## Domain checks
 
-```bash
-npm run test:admin -- product-form.test.tsx
-npm run test:admin -- product-list.test.tsx
-npm run test:admin -- data-provider.test.ts
-npm run test:admin -- store-workspace.test.tsx
-npm run test:admin -- store-workspace.test.tsx --testNamePattern="captures a pending create" --skip-nx-cache
-```
-
-ProductForm tests cover validation/defaults/trimming/edit values, Unicode limits, unsupported
-NUL input and pending controls.
-Use Vitest's long --testNamePattern option through Nx; its short -t conflicts with Nx's
-own target option and does not reach the test runner.
-Provider tests execute the actual official GraphQL provider with generated documents and
-controlled HTTP responses. Store-workspace tests render the actual application, router,
-Refine hooks/cache and Aurora/MUI controls for all store and feature states.
-They cover store loading/error/retry/empty results, selection, pagination, product retry/empty
-states, unavailable stores, cached switches, delayed reads and pending create/update/delete.
-They also verify that navigation between editors within one store isolates mutation state.
-The HTTP boundary is controlled; these are not proof of real backend persistence.
-Vitest inlines the Refine GraphQL/router ESM packages so their imports are resolved by Vite
-as in the browser. jsdom supplies no layout engine; setup shims matchMedia. Real browser
-checks are separate.
-
-Without a file, `test:core`, `test:products`, `test:gateway`, `test:reference` and `test:admin` intentionally
-select only that application's current unit/bootstrap suite. Database suites have
-separate named targets; browser tests use test:smoke. No selector must silently fall back to every project, and
-`--passWithNoTests` must not be enabled. A missing file or a case pattern that executes
-zero tests is not successful validation, even if a runner exits zero for skipped cases.
+[Discocan checks](discocan/testing.md) cover Vehicles/Devices, Angular workspaces,
+telemetry login, captured clients and browser behavior. [Ecommerce Store checks](ecommerce/stores.md#validation)
+cover tenant-scoped Store discovery and persistence.
 
 ## Real PostgreSQL checks
 
+Provision development and dedicated test roles first:
+
 ```bash
 npm run db:up
 npm run db:setup
 npm run db:test:setup
-npm run test:core -- test-database-url.unit.spec.ts
 npm run test:core:db -- persistence.db.spec.ts
-npm run test:products:db -- persistence.db.spec.ts --testNamePattern="rejects duplicate SKU"
+npm run test:fleet:db -- vehicles.db.spec.ts devices.db.spec.ts
 ```
 
-Normal test targets do not connect to a database. `test:core:db`, `test:products:db` and `test:reference:db`
-use Jest's separate jest.db.config.mjs and select test/**/*.db.spec.ts. Each run guards
-the local test URL, creates a random schema in its dedicated test database, runs the
-actual checked-in migrations, and passes that schema to its service's Prisma adapter.
-Cleanup disconnects the client and drops only the schema created by that run.
-Tests never use development URLs, a public schema reset, shared truncation, or mocked
-Prisma as evidence of persistence correctness. The permission cases expect both dev/test
-databases to have been provisioned, but do not need development migrations or seeds.
+Guarded helpers reject development/foreign/nonlocal identities and URL options. Each run deploys
+reviewed migrations into its own random schema, closes connections and drops only that schema.
+No broad resets/truncation occur. Core persistence tests cover seed idempotency, schema isolation
+and inability to connect to development/Fleet databases. Fleet migrations create tenant-scoped Vehicle/Device indexes, a digit CHECK and a same-tenant/same-store restricted FK.
+Database results must run fresh and cannot be treated as valid Nx cache hits.
 
-URLs must use the exact service test database and role, a loopback host, a password and
-no URL options. CORE_TEST_DATABASE_URL, PRODUCTS_TEST_DATABASE_URL and REFERENCE_TEST_DATABASE_URL configure them;
-development URL variables cannot redirect DB tests. Credentials differ from development.
-Override the test URLs too if changing the PostgreSQL port. Never point test variables at
-development data. Unit guard tests exercise refusal before any connection is opened.
-
-Persistence files cover migrated columns/defaults, repeatable seeds preserving edits,
-simultaneous schema isolation, role-level database isolation, and product SKU uniqueness
-within/across stores. They do not prove GraphQL/request-level store isolation, store
-existence validation or browser behavior. Prisma requires explicit store filters from
-business repositories; the database is not row-level authorization.
-
-Feature HTTP/DB files are separate focused selections:
+## Real federation and browser smoke checks
 
 ```bash
-npm run test:core:db -- stores.db.spec.ts
-npm run test:products:db -- products.db.spec.ts
-npm run test:products:db -- products.db.spec.ts --testNamePattern="foreign IDs"
+npm run test:schema -- contracts.unit.spec.mts federation-guard.unit.spec.mts
 npm run test:gateway:db -- federation.db.spec.mts
+npm run test:smoke:admin -- angular-foundation.smoke.spec.mts angular-shell.smoke.spec.mts
 ```
 
-Stores tests use real Nest GraphQL and PostgreSQL for lookup/list/reference behavior.
-Products tests use the real GraphQL module, service and repository against PostgreSQL;
-only the core-client boundary is replaced. They cover CRUD, trimming/defaults, conflicts,
-pagination, sorting in both directions with stable ties, invalid sort inputs, missing/malformed
-context, foreign IDs, entity representations and masked errors.
-Unicode boundary values are persisted and NUL input is rejected without writes.
+Offline contracts tests compose the Core, Fleet and Karma Client subgraphs, validate all five explicit operation files and
+assert the exact public query/mutation inventory. Karma Client runs against a local controlled
+Karma HTTP server without live credentials. Guard tests reject unsafe local test URLs.
+Federation fixture owns isolated Core/Fleet test schemas, Core seeds, real backend processes
+and request observers. It proves Store discovery, Vehicle/Device relations and scope, CORS/header
+bounds, availability, request-local Core validation and scoped CRUD while Core is stopped.
+Gateway has no database dependency.
 
-Gateway's noncached DB target builds the four backends and runs the fixture in
-tools/graphql/federation.db.spec.mts. It migrates/seeds new schemas using dedicated test
-roles, starts actual compiled Node applications on ephemeral ports, and observes HTTP
-headers through forwarding test servers. No business service or Prisma client is mocked.
-It verifies both stores, CRUD/scoping, Product-to-Store federation, concurrent contexts,
-creation validation reuse and behavior with the actual core process stopped. Cleanup
-stops only its own processes and drops only its own schemas. This is a focused backend
-integration target, not a browser/UI or full regression test.
-
-`npm run test:schema -- contracts.unit.spec.mts` checks real composition/operations and
-negative changes offline. The separate federation-guard.unit.spec.mts file tests the
-whole-graph fixture's URL guards without opening databases.
-
-The Nx `test-db` target has cache:false; any displayed cache hit belongs to generation,
-not the live database test. Native file and --testNamePattern selection works unchanged.
-These targets are included in test:affected and the manually requested test:full command.
-Prepare databases before an affected run that includes them. If a process is forcibly
-killed, a test schema may remain; investigate that specific schema instead of deleting
-all test schemas, which could belong to another active run.
-
-## Reference checks
-
-Reference uses the same dedicated-database guards and per-run schema lifecycle. Provision
-all databases using the commands above; no development database is used by these checks.
-
-```bash
-npm run test:reference -- health.spec.ts
-npm run test:reference -- venues.service.spec.ts speakers.service.spec.ts tags.service.spec.ts events.service.spec.ts description-html.spec.ts test-database-url.unit.spec.ts
-npm run test:reference:db -- persistence.db.spec.ts venues.db.spec.ts events.db.spec.ts lifecycle.db.spec.ts sessions.db.spec.ts media.db.spec.ts
-npm run test:admin -- venue-form.test.tsx venue-list.test.tsx lookup-forms.test.tsx reference-workspace.test.tsx event-workspace.test.tsx event-description.test.tsx event-list.test.tsx event-lifecycle.test.tsx event-time.test.ts session-workspace.test.tsx event-gallery.test.tsx data-provider.test.ts
-npm run test:gateway:db -- federation.db.spec.mts
-npm run test:smoke -- reference.smoke.spec.mts events.smoke.spec.mts lifecycle.smoke.spec.mts sessions.smoke.spec.mts rich-text.smoke.spec.mts media.smoke.spec.mts
-npm run test:smoke -- reference-layout.smoke.spec.mts reference-disabled.smoke.spec.mts
-npm run test:smoke -- aurora-shell.smoke.spec.mts
-npm run test:smoke -- products-aurora.smoke.spec.mts
-npm run test:smoke -- venues-aurora.smoke.spec.mts lookups-aurora.smoke.spec.mts
-```
-
-Venue unit tests cover validation, filter/sort mapping and no-write decisions; DB tests cover migrated defaults,
-repeatable seeds, concurrent schema isolation, role access boundaries, scoped CRUD,
-nullable updates, sorting across pages with stable ties and nulls last, literal search,
-referenced-delete refusal and federation representations. Venue Aurora browser cases cover
-shared quick/panel filters, URL sorting/history, partial batch failures and desktop/mobile
-list/filter/form composition. Review captures under ignored `artifacts/aurora/venues` are
-temporary outputs. Venue form/list component cases cover validation/focus, pending controls,
-filter resets and delayed initial counts; Reference workspace cases cover partial deletion
-retry and stopping the unsent batch on navigation. Speaker/Tag form cases cover optional-field
-normalization, color input, Unicode limits, server-error focus and pending controls; workspace
-cases preserve drafts after a late create across store or editor route changes. Speaker/Tag
-service and Event DB cases cover lookup sorting, stable ties, null email last, combined filters
-and store boundaries. Gateway cases exercise the new sort inputs through real federation.
-`lookups-aurora.smoke.spec.mts` covers list filters/pages, referenced batch failures and
-desktop/mobile editor composition; its temporary captures use `artifacts/aurora/lookups`.
-The supporting-forms case in `events.smoke.spec.mts` covers persisted CRUD and duplicate tags.
-Federation tests additionally
-exercise the real core dependency, concurrent headers, disabled operations/entity lookups,
-continued Products availability, health and preservation of data after re-enabling Reference.
-The disabled browser file sets the existing fixture's `referenceEnabled` option to false,
-starting Reference with disabled business operations and serving the admin with hidden
-navigation. It verifies direct-route blocking without Reference requests, GraphQL refusal,
-Products creation and mobile navigation. The layout file exercises scrollable form tabs at
-320 px, keyboard tab selection, dirty-state feedback, drawer navigation with discard/keep
-editing, and the return to desktop navigation. Gallery and History component cases verify
-failure/retry states without incorrectly reporting an empty result.
-The Aurora shell file exercises presets/colors and preference persistence, preserving
-route filters while opening menus, local notification actions, module search, Default
-sidenav collapse, direct compact-item navigation, keyboard focus/Escape, tablet backdrop
-dismissal and desktop/tablet/mobile transitions. It captures the shell
-and open menus at the reference viewport sizes and rejects external asset requests.
-It also checks open-search positioning, text and focus across 899/900 px, drawer transitions
-at 1199/1200 px, and unsaved Event input while using example menus, search and store switching.
-Screenshots support visual review; assertions check behavior, not full-page pixel identity.
-Products Aurora browser cases verify filtering and sorting across server pages, URL persistence,
-sort direction indicators, default-order restoration, browser history,
-shared quick/panel search and clearing combined filters,
-selection reset, confirmed batch deletion, menus, the sticky form aside and narrow layouts.
-They use the guarded test fixture and save temporary review captures under Git-ignored
-`artifacts/aurora/products`. These are generated outputs, not visual snapshot baselines.
-Delete captures and their metadata after visual acceptance; rerunning the browser cases
-recreates the integration captures when needed.
-Product, lookup and Event list component cases cover discarding pending search on browser
-Back when another filter changed. Event list cases also restore invalid date/capacity drafts
-on Back/Forward when the destination changes only another filter.
-The focused Event range-draft browser case repeats that navigation with native date and number inputs.
-[Background refresh cases](../apps/admin/src/features/background-refresh.test.tsx) use the real
-Refine cache to verify preserved Product, Reference and Session drafts through failed reads,
-failed retries and recovery, including store discovery and the Session parent Event.
-They also preserve unsaved session ordering across a failed Event overview refresh.
-Product-list cases also cover committing pending text with an immediate status change
-and canceling pending text on Clear filters, plus a bookmarked second page with a delayed
-initial total. Store-workspace cases cover partial batch failures, retrying only
-failed records and abandoning the unsent remainder during navigation. Product DB and
-federation cases verify combined filters, sorting before pagination, scoped counts and literal search punctuation.
-Event DB cases exercise exact money/date round trips, nullable/omitted updates, invalid
-schedules, format clearing, scoped/inactive relations, compound foreign-key refusal, retained
-soft-deleted records/codes, bounded remote lookup with literal punctuation and supporting
-CRUD/seed preservation.
-Lifecycle DB cases verify explicit Trash reads, federation exclusion, restored status and
-relations, reserved codes, store boundaries, invalid/mixed batches, 100-ID actions, concurrent
-restores, no-op history, bounded excerpts and pagination. An injected history failure after a
-real batch history insert verifies rollback of both that insert and the entire domain batch. Session
-and Media DB checks assert their saved history; the media restore check verifies preserved
-private bytes and resumed reads. Gateway checks exercise lifecycle/history contracts and the
-disabled flag through real processes. Component checks cover selection reset, confirmation,
-failure/retry, captured-store callbacks, readonly Trash and escaped history. Lifecycle browser
-checks cover bulk status/trash/restore, program preservation, history, reload/mobile layout
-and a delayed bulk response during store navigation.
-Event list cases cover AND/OR filters, scoped relation labels, numeric and nullable sorting,
-ID ties across pages, literal search punctuation and half-open time boundaries. Admin time
-cases cover both occurrences of the repeated autumn hour and picker changes across seasons.
-Supporting-list component checks exercise scoped deletion, failure/retry and refreshed empty
-states for Venues, Speakers and Tags through the real data provider.
-Gateway checks also cover Event/Store federation, fieldErrors forwarding and creation-only
-Core dependence. These use fresh dedicated test schemas and real processes.
-
-Description unit cases cover permitted formatting, malicious HTML/URLs, empty content,
-UTF-8 boundaries before sanitization, escaping expansion and repeat sanitization. Event DB
-cases verify sanitized persistence, omitted/null updates, foreign-store refusal and atomic
-rejection. The federation case exercises the full 100 KiB boundary and field errors through
-both HTTP parsers. Admin tests render untrusted API HTML safely and open Content on a server
-field error. Rich-text browser cases exercise paste, formatting, link validation, save/reload/
-edit/clear, mobile layout, size-error focus, dirty navigation and a pending save across stores.
-
-Session DB cases exercise parent/store ownership, compound foreign keys, omitted/null fields,
-scoped active/inactive speakers, permanent child deletion, soft-deleted parents, complete
-reorder membership and rollback after an intermediate position write fails. Concurrent
-requests verify the 100-session limit and Event date changes racing with child creation.
-Gateway cases cover parent scope, nested Speaker-to-Store federation, schedule field errors,
-reorder conflicts and disabled Session operations. Program component tests cover failed
-order drafts, cancel/refetch, dirty tab navigation, inactive selections, unchanged repeated-hour
-Sofia offsets and pending saves across store/parent navigation. Event form values and Session
-editor cases preserve seconds and milliseconds on unrelated edits, including records shorter
-than one minute. The Session browser case uses a non-Sofia browser timezone
-and verifies CRUD, speakers, drag/move/save/cancel, persistence, parent schedule rejection
-and desktop/mobile layouts through the real gateway.
-
-Media DB cases use an owned temporary storage directory and the guarded dedicated database.
-They exercise real HTTP upload/read streams, decoder validation, generated keys, expiry,
-replay and concurrent claims, idempotent finalization, store/parent ownership, cover/order/alt
-metadata, interrupted writes, expired orphans, failed-deletion retries and preservation under
-soft deletion. Test cleanup removes only its own storage directory after closing its app.
-The federation/browser fixture similarly allocates private per-run media storage and passes
-the ephemeral Reference URL and admin CORS origin. No test uses development media files.
-Federation checks verify direct uploads bypass observed GraphQL transport, refreshed reads
-and the disabled flag across GraphQL and HTTP. Gallery component cases cover failed order
-preservation, dirty navigation, separate field saves and late store-scoped cover mutations.
-The gallery browser cases verify native-file upload, dialog preview/keyboard image navigation,
-alt text, cover, ordering/cancel, removal,
-reload, mobile layout and upload cancellation on a store switch through the real services.
-
-The browser fixture starts Reference as well as the other backends. Reference browser
-checks cover create/edit/delete, both stores, reload persistence, narrow form layout,
-delayed reads, pending creates during store switches and same-store editor navigation.
-The delayed-module case verifies that Products does not load the Reference UI, then holds
-its first module request while switching stores and opening a Product draft. Releasing the
-module must preserve the active editor, and subsequent Reference reads use the current store.
-Disabled Reference routes also verify that the Reference workspace module is never requested.
-Event browser cases cover all sections, remote relations, format-dependent fields, dirty
-history navigation, pending store-scoped creation and supporting Speaker/Tag forms. The list/overview
-case exercises combined filters, sorting, column preferences, reload, Edit/save/Back, quick
-status updates, store reset and desktop/mobile layout against real gateway responses.
-Component checks cover the hidden direct route, form sections, generated provider mapping,
-exact time conversions (including untouched repeated-hour offsets and invalid DST times),
-nullable form fields, field errors, dirty navigation, selected inactive labels, and late
-list/search responses. List components also cover bookmarked query mapping, per-store column
-preferences, shared quick/drawer search, automatic filtering, invalid range drafts, cancelled
-text debounce on reset, empty/error/retry states and late overview mutations. Calendar
-filter tests cover Sofia days with both 23 and 25 hours. Run the existing Products browser/store-workspace files when changing
-the shared navigation, provider or request lifecycle.
-
-## Real browser smoke checks
-
-Install the browser once (Linux system dependencies may require sudo):
-
-```bash
-npm exec -- playwright install --with-deps chromium
-npm run db:up
-npm run db:setup
-npm run db:test:setup
-npm run test:smoke -- products.smoke.spec.mts
-npm run test:smoke -- products.smoke.spec.mts --grep="pending mutation"
-```
-
-The noncached admin:test-smoke target builds all five apps, then invokes Playwright directly.
-It uses one headless Chromium worker with no automatic retries. Each test creates actual
-core/products/reference/gateway processes and fresh migrated/seeded schemas through the guarded
-federation fixture. Vite serves the real admin on an ephemeral port; its gateway URL and
-the gateway CORS origin match that test instance. Development URLs cannot redirect the
-fixture into development databases. Cleanup closes Vite, backend processes and test schemas.
-
-The scenarios cover CRUD and same-SKU rules in both stores, a delayed real product
-response, a pending real creation while switching to another store's unsaved form,
-and browser history navigation between editors in the same store during a pending write.
-The background-refresh case fails Product and store reads after a browser reconnect,
-then retries and saves the preserved draft through the real gateway.
-The delayed-response and pending-write scenarios delay only response delivery;
-backend requests execute normally.
-The store-discovery browser case aborts the initial store request, retries against the real
-gateway and switches from an unavailable URL to an available store. It also supplies an empty
-store response at the HTTP boundary to verify that distinct state. Discovery captures include
-the dark mobile layout; controlled failure/empty responses do not prove backend behavior.
-Browser screenshots/traces use ignored test-results/browser. These tests do not verify a
-fresh dependency install or CI execution. Chromium is the configured browser; Firefox and
-WebKit are outside this target. The manually invoked test:full also includes test:smoke.
+Angular fixtures serve the compiled production app with their own runtime configuration.
+They own dedicated backend processes/schemas and never load private development licenses.
+Browser fixtures seed Core and obtain real demo sessions; they create their own business records without running Fleet sample seeds. The Isolation tenant/store exists only in these test fixtures.
+Browser targets build the admin and four backends, use Chromium, disable retries and retain
+failure screenshots/traces under ignored test-results. Clean up task-started connections/processes.
 
 ## Current change-to-check mapping
 
-| Change                                            | Applicable check                                                                                                                                    |
-| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Backend bootstrap or health route                 | That service's health.spec.ts, typecheck/build, and startup when main.ts changes                                                                    |
-| Backend PORT or shutdown handling                 | Run the affected service with a valid override and invalid PORT; verify exit and released port                                                      |
-| Admin build or test configuration                 | Admin typecheck/build; verify runner selection; add relevant behavioral tests when interactive code exists                                          |
-| Root TypeScript/Jest/Nx/dependency configuration  | Root lint/typecheck/build and relevant explicit backend files; record that all projects may be affected                                             |
-| Import boundaries                                 | ESLint on the affected source; verify a prohibited cross-application import is rejected                                                             |
-| Prisma schema, client, migration or seed          | Owning service's persistence.db.spec.ts, db:validate, typecheck/build; verify repeat seed behavior                                                  |
-| Test URL guard or cleanup                         | Owning service's test-database-url.unit.spec.ts and persistence.db.spec.ts; simultaneous-schema case                                                |
-| Compose or database provisioning                  | Repeated db:setup/db:test:setup, both persistence DB files, and compare development rows before/after db:down/up                                    |
-| Product service validation                        | products.service.spec.ts first; products.db.spec.ts for transport/persistence behavior                                                              |
-| Product repository/store context/entity reference | products.db.spec.ts; federation.db.spec.mts for gateway and real service boundaries                                                                 |
-| SDL, named operations or generation               | schema:check, test:schema, codegen and affected typecheck/build; federation file for runtime contract changes                                       |
-| Core client or gateway context/communication      | federation.db.spec.mts, especially validation reuse, concurrent headers and stopped core                                                            |
-| Stores resolver/repository                        | stores.db.spec.ts; federation.db.spec.mts when public/federated behavior changes                                                                    |
-| Product form or controls                          | product-form.test.tsx; store-workspace.test.tsx for submission/navigation changes                                                                   |
-| Admin GraphQL mapping or headers                  | data-provider.test.ts; schema:check/codegen for operation edits; products.smoke.spec.mts for real transport                                         |
-| Store routes, query cache or mutation lifecycle   | store-workspace.test.tsx and focused test:smoke delayed-response/pending-mutation cases                                                             |
-| CI workflow, affected selection or ignore rules   | actionlint, Git-history failure checks, explicit Nx changed-file examples below, root lint/typecheck/build and a focused test through test:affected |
-
-Do not claim database, schema, gateway federation or store-switch coverage from health
-suites. Keep this mapping aligned with the changed runtime contracts.
+| Change                                  | Focused checks                                                                                                                                                                                                                                                                           |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Vehicle validation/query/persistence    | vehicles.service.spec.ts, vehicles.db.spec.ts                                                                                                                                                                                                                                            |
+| Device IMEI/assignment/persistence      | devices.service.spec.ts, devices.db.spec.ts                                                                                                                                                                                                                                              |
+| Runtime module/health                   | Fleet/Core/Gateway health.spec.ts as affected                                                                                                                                                                                                                                            |
+| Karma account client/access             | accounts.spec.ts, history.spec.ts, location.spec.ts, edata.spec.ts, edata.service.spec.ts, karma-client.spec.ts, cars.service.spec.ts, Karma health.spec.ts                                                                                                                              |
+| Karma truck/reference reads and routing | karma-phase4.spec.ts, karma-phase3.spec.ts, karma-phase2.spec.ts, karma-workspace.spec.ts, edata-page.spec.ts, angular-karma-phase4.smoke.spec.mts, angular-karma-phase3.smoke.spec.mts, angular-karma-phase2.smoke.spec.mts, angular-karma.smoke.spec.mts, angular-edata.smoke.spec.mts |
+| SDL/operations                          | codegen, schema:check, contracts.unit.spec.mts                                                                                                                                                                                                                                           |
+| Cross-service contracts/context         | federation.db.spec.mts                                                                                                                                                                                                                                                                   |
+| Store/language/default routing          | store-workspace.spec.ts, fleet-workspace.spec.ts, angular-foundation.smoke.spec.mts                                                                                                                                                                                                      |
+| Captured feature clients/forms/deletion | concrete vehicles/devices Angular suites                                                                                                                                                                                                                                                 |
+| Remote picker cancellation              | relation-picker.spec.ts, device-editor.spec.ts                                                                                                                                                                                                                                           |
+| Shell/theme/mobile/keyboard             | angular-shell.smoke.spec.mts and matching visual review                                                                                                                                                                                                                                  |
+| Real CRUD and narrow views              | angular-vehicles.smoke.spec.mts, angular-devices.smoke.spec.mts                                                                                                                                                                                                                          |
+| Root tooling                            | root lint/typecheck/build and relevant behavior                                                                                                                                                                                                                                          |
 
 ## Local diff versus PR affected selection
 
 Inspect both tracked changes and new files; exclude the local task directory:
 
 ```bash
-git diff --name-only HEAD -- . ':!.tmp/**' ':!.volumes/**'
-git ls-files --others --exclude-standard -- . ':!.tmp/**' ':!.volumes/**'
+git diff --name-only HEAD -- . ':!.tmp/**' ':!.misc/**' ':!.volumes/**'
+git ls-files --others --exclude-standard -- . ':!.tmp/**' ':!.misc/**' ':!.volumes/**'
 npm run projects -- --affected --base=HEAD
 ```
 
@@ -410,8 +146,9 @@ The PR sequence is:
    roles/databases using db:setup and db:test:setup. Permission tests need both sets; CI
    does not migrate or seed the development databases. Fixtures migrate/seed their own schemas.
 4. Run test:affected: offline schema-tool tests followed by affected unit/DB targets.
-5. If admin is affected, install Chromium with its Linux dependencies and run test:smoke.
-   Backend runtime dependencies can select admin even without a frontend source change.
+5. If the admin is affected, install Chromium with its Linux dependencies. Run
+   test:smoke:admin for Angular. Backend runtime dependencies can select the admin
+   without a frontend source change.
 6. Stop Compose even after a failed check, without deleting volumes. Test fixtures own their
    application processes and per-run schemas; failures stay visible in the job log.
 
@@ -425,17 +162,17 @@ ShellCheck available), and check real input impact without executing broad test 
 
 ```bash
 actionlint .github/workflows/affected.yml .github/workflows/full-regression.yml
-npm run projects -- --affected --files=apps/admin/src/features/products/product-form.tsx
-npm run projects -- --affected --files=apps/products/src/products/products.graphql
-npm run projects -- --affected --files=apps/products/prisma/migrations/20260922000000_init/migration.sql
+npm run projects -- --affected --files=apps/admin/src/app/features/fleet/vehicles/vehicles-api.ts
+npm run projects -- --affected --files=apps/fleet/src/vehicles/vehicles.graphql
+npm run projects -- --affected --files=apps/fleet/prisma/migrations/20261011000000_init/migration.sql
 npm run projects -- --affected --files=compose.yaml
 npm run projects -- --affected --files=.github/workflows/affected.yml
 npm run projects -- --affected --files=docs/testing.md
-npm run test:affected -- --files=apps/admin/src/features/products/product-form.tsx product-form.test.tsx --skip-nx-cache
+npm run test:affected -- --files=apps/admin/src/app/features/fleet/vehicles/vehicles-api.ts --include=app/features/fleet/vehicles/vehicles-api.spec.ts --skip-nx-cache
 ```
 
-Expected application sets are admin; all five; products/gateway/admin; all five; all five;
-none, respectively. These explicit-file examples inspect the configured graph; actual
+Expected application sets are admin; all five; fleet/gateway/admin;
+all five; all five; none, respectively. These explicit-file examples inspect the configured graph; actual
 PR execution uses the event SHAs instead. Verify the history step with an available commit
 and missing/invalid references; never treat a refused comparison as passing coverage.
 actionlint is an external contributor tool, not an application dependency. A local syntax
@@ -444,7 +181,7 @@ or shell check does not prove that checkout, npm ci or browser installation work
 ## Full regression
 
 `npm run test:full` explicitly runs schema tests, the configured test/test-db project targets
-and the Chromium smoke target. It is
+and the Angular Chromium smoke target. It is
 reserved for a user/reviewer request and must never be invoked automatically during
 implementation. It requires test databases and Chromium.
 [Full regression (manual)](../.github/workflows/full-regression.yml) has workflow_dispatch

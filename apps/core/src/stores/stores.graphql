@@ -5,7 +5,22 @@ type Store @key(fields: "id") {
   name: String!
 }
 
+type Tenant {
+  id: ID!
+  name: String!
+}
+
+type DemoSession {
+  token: String!
+  tenant: Tenant!
+}
+
+type Mutation {
+  demoLogin(tenantId: ID!): DemoSession!
+}
+
 type Query {
+  tenants: [Tenant!]!
   stores: [Store!]!
   store(id: ID!): Store
 }

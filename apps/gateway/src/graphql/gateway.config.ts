@@ -7,8 +7,8 @@ import { SubgraphDataSource } from './subgraph.datasource.js';
 function subgraphUrl(name: string, defaultUrl: string | undefined): string {
   const configured = {
     core: process.env.CORE_GRAPHQL_URL,
-    products: process.env.PRODUCTS_GRAPHQL_URL,
-    reference: process.env.REFERENCE_GRAPHQL_URL,
+    fleet: process.env.FLEET_GRAPHQL_URL,
+    'karma-client': process.env.KARMA_CLIENT_GRAPHQL_URL,
   }[name];
   const value = configured ?? defaultUrl;
   if (!value) throw new Error(`No GraphQL URL configured for ${name}`);

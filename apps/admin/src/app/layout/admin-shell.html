@@ -1,0 +1,130 @@
+<div class="layout-wrapper layout-static" [class.layout-static-inactive]="desktopCollapsed()">
+  <a class="skip-link" href="#main-content">{{ text().skipNavigation }}</a>
+  <header class="layout-topbar">
+    <div class="layout-topbar-logo-container">
+      <button
+        #navigationToggle
+        type="button"
+        class="layout-menu-button layout-topbar-action"
+        [attr.aria-label]="text().toggleNavigation"
+        [attr.aria-expanded]="mobile() ? mobileOpen() : !desktopCollapsed()"
+        [attr.aria-controls]="mobile() ? 'mobile-navigation' : 'desktop-navigation'"
+        (click)="toggleNavigation()"
+      >
+        <svg data-p-icon="bars" size="20" aria-hidden="true"></svg>
+      </button>
+      <a class="layout-topbar-logo" [routerLink]="['/', language()]" aria-label="holita">
+        <span class="holita-mark" aria-hidden="true">h</span><span>holita</span>
+      </a>
+    </div>
+    @if (!mobile()) {
+      <ng-container [ngTemplateOutlet]="storeSelector" />
+    }
+    <div class="layout-topbar-actions">
+      <a
+        class="layout-topbar-action language-switch"
+        [routerLink]="languageUrl()"
+        [attr.lang]="language() === 'bg' ? 'en' : 'bg'"
+        [attr.aria-label]="language() === 'bg' ? 'English' : 'Български'"
+      >
+        {{ language() === 'bg' ? 'EN' : 'BG' }}
+      </a>
+      <button
+        type="button"
+        class="layout-topbar-action"
+        [attr.aria-label]="appearance.dark() ? text().lightTheme : text().darkTheme"
+        (click)="appearance.toggle()"
+      >
+        @if (appearance.dark()) {
+          <svg data-p-icon="sun" size="20" aria-hidden="true"></svg>
+        } @else {
+          <svg data-p-icon="moon" size="20" aria-hidden="true"></svg>
+        }
+      </button>
+      @if (tenantName()) {
+        <button
+          type="button"
+          class="layout-topbar-action"
+          [attr.aria-label]="text().signOut"
+          [title]="tenantName()"
+          data-testid="demo-logout"
+          (click)="signOut.emit()"
+        >
+          <svg data-p-icon="sign-out" size="20" aria-hidden="true"></svg>
+        </button>
+      }
+    </div>
+    @if (mobile()) {
+      <ng-container [ngTemplateOutlet]="storeSelector" />
+    }
+  </header>
+  <ng-template #storeSelector>
+    <div class="store-selector">
+      <label for="active-store">{{ text().activeStore }}</label>
+      <p-select
+        inputId="active-store"
+        [options]="storeOptions()"
+        optionLabel="name"
+        optionValue="id"
+        [ariaLabel]="text().activeStore"
+        [formControl]="storeControl"
+        [placeholder]="text().stores"
+        [loading]="loading()"
+        appendTo="body"
+      />
+    </div>
+  </ng-template>
+  @if (!mobile()) {
+    <aside
+      class="layout-sidebar"
+      id="desktop-navigation"
+      [attr.inert]="desktopCollapsed() ? '' : null"
+    >
+      <holita-admin-navigation
+        [language]="language()"
+        [storeId]="storeId()"
+        [fleetEnabled]="fleetEnabled()"
+      />
+    </aside>
+  }
+  <p-drawer
+    [visible]="mobileOpen()"
+    (visibleChange)="drawerVisibilityChanged($event)"
+    (onShow)="focusNavigation()"
+    [header]="text().navigation"
+    [modal]="true"
+    [blockScroll]="true"
+    appendTo="body"
+    [style]="{ width: 'min(20rem, 90vw)', borderWidth: '0 1px 0 0' }"
+    [dt]="{ content: { padding: '0.5rem 1.5rem' } }"
+    [ariaCloseLabel]="text().closeNavigation"
+    [pt]="{
+      root: { 'aria-label': text().navigation },
+      pcCloseButton: { root: { id: 'mobile-navigation-close' } },
+    }"
+  >
+    <div id="mobile-navigation" class="layout-mobile-navigation">
+      <holita-admin-navigation
+        [language]="language()"
+        [storeId]="storeId()"
+        [fleetEnabled]="fleetEnabled()"
+      />
+    </div>
+  </p-drawer>
+  <div class="layout-main-container">
+    <main id="main-content" class="layout-main" tabindex="-1">
+      @if (appearance.persistenceFailed()) {
+        <p-message severity="warn" [pt]="{ root: { role: 'status', 'aria-live': 'polite' } }">
+          {{ text().themePersistenceError }}
+        </p-message>
+      }
+      <ng-content />
+    </main>
+    <footer class="layout-footer">
+      holita
+      @if (tenantName()) {
+        <span> · {{ tenantName() }}</span>
+      }
+    </footer>
+  </div>
+</div>

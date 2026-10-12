@@ -1,5 +1,0 @@
-query StoreForVenueCreation($id: ID!) {
-  store(id: $id) {
-    id
-  }
-}

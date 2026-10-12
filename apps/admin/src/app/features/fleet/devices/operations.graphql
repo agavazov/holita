@@ -1,0 +1,65 @@
+fragment AdminDevice on FleetDevice {
+  id
+  storeId
+  imei
+  vehicleId
+  vehicle {
+    id
+    licensePlate
+  }
+  createdAt
+  updatedAt
+}
+
+query AdminDevices(
+  $offset: Int!
+  $limit: Int!
+  $search: String
+  $ids: [ID!]
+  $sort: FleetDeviceSort
+) {
+  fleetDevices(offset: $offset, limit: $limit, search: $search, ids: $ids, sort: $sort) {
+    items {
+      ...AdminDevice
+    }
+    total
+    offset
+    limit
+  }
+}
+query AdminDevice($id: ID!) {
+  fleetDevice(id: $id) {
+    ...AdminDevice
+  }
+}
+mutation AdminCreateDevice($input: CreateFleetDeviceInput!) {
+  createFleetDevice(input: $input) {
+    ...AdminDevice
+  }
+}
+mutation AdminUpdateDevice($id: ID!, $input: UpdateFleetDeviceInput!) {
+  updateFleetDevice(id: $id, input: $input) {
+    ...AdminDevice
+  }
+}
+mutation AdminDeleteDevice($id: ID!) {
+  deleteFleetDevice(id: $id) {
+    ...AdminDevice
+  }
+}
+
+query AdminDeviceVehicles($offset: Int!, $limit: Int!, $search: String, $ids: [ID!]) {
+  fleetVehicles(
+    offset: $offset
+    limit: $limit
+    search: $search
+    ids: $ids
+    sort: { field: LICENSE_PLATE, direction: ASC }
+  ) {
+    items {
+      id
+      licensePlate
+    }
+    total
+  }
+}

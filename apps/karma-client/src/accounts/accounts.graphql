@@ -1,0 +1,23 @@
+type KarmaUser {
+  id: ID!
+  userName: String!
+  active: Float!
+  expireDate: String
+  roleId: ID!
+  firstName: String!
+  lastName: String!
+  timeZoneId: Int!
+  email: String!
+  projectId: ID!
+  projectIds: [ID!]!
+}
+
+type KarmaRole {
+  id: ID!
+  description: String!
+}
+
+extend type Query {
+  karmaUsers: [KarmaUser!]!
+  karmaRoles: [KarmaRole!]!
+}

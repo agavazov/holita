@@ -1,0 +1,79 @@
+:host {
+  display: block;
+}
+.login-layout {
+  min-height: 100dvh;
+  background: var(--surface-ground);
+}
+.login-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 1rem;
+}
+.login-container {
+  min-height: calc(100dvh - 5rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 1rem 5rem;
+}
+.login-frame {
+  width: min(100%, 36rem);
+  border-radius: 56px;
+  padding: 0.3rem;
+  background: linear-gradient(180deg, var(--primary-color) 10%, transparent 30%);
+}
+.login-card {
+  background: var(--surface-card);
+  border-radius: 53px;
+  padding: 3.5rem 3rem;
+  overflow-wrap: anywhere;
+}
+.login-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+  font-size: 2rem;
+  font-weight: 700;
+}
+h1 {
+  text-align: center;
+  font-size: 1.75rem;
+}
+.login-description {
+  color: var(--text-color-secondary);
+  line-height: 1.6;
+  margin-bottom: 2rem;
+}
+form,
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+form {
+  gap: 1.5rem;
+}
+label {
+  font-weight: 600;
+}
+p-select {
+  width: 100%;
+}
+p-message {
+  display: block;
+}
+@media (max-width: 575px) {
+  .login-card {
+    padding: 2.5rem 1.5rem;
+  }
+  .login-frame {
+    border-radius: 32px;
+  }
+  .login-card {
+    border-radius: 29px;
+  }
+}

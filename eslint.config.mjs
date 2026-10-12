@@ -1,15 +1,16 @@
 import eslint from '@eslint/js';
 import eslintConfigPrettier from 'eslint-config-prettier';
 import nx from '@nx/eslint-plugin';
-import reactHooks from 'eslint-plugin-react-hooks';
-import { reactRefresh } from 'eslint-plugin-react-refresh';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
+import angular from 'angular-eslint';
 
 export default tseslint.config(
   {
     ignores: [
       '.tmp/**',
+      '.misc/**',
+      '.references/**',
       '.volumes/**',
       '**/node_modules/**',
       '**/dist/**',
@@ -18,11 +19,12 @@ export default tseslint.config(
       'playwright-report/**',
       'apps/*/src/generated/**',
       '.nx/**',
+      '**/.angular/**',
     ],
   },
   eslint.configs.recommended,
   {
-    files: ['**/*.{ts,tsx,mts}'],
+    files: ['**/*.{ts,mts}'],
     plugins: { '@nx': nx },
     extends: [...tseslint.configs.strictTypeChecked],
     languageOptions: {
@@ -50,7 +52,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/{core,gateway,products,reference}/**/*.ts'],
+    files: ['apps/{core,gateway,fleet,karma-client}/**/*.ts'],
     languageOptions: {
       globals: globals.node,
     },
@@ -59,18 +61,17 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/admin/**/*.{ts,tsx}'],
-    languageOptions: {
-      globals: globals.browser,
-    },
-    plugins: {
-      'react-hooks': reactHooks,
-      'react-refresh': reactRefresh.plugin,
-    },
+    files: ['apps/admin/**/*.ts'],
+    languageOptions: { globals: globals.browser },
+    extends: [angular.configs.tsRecommended],
+    processor: angular.processInlineTemplates,
     rules: {
-      ...reactHooks.configs.recommended.rules,
-      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
     },
+  },
+  {
+    files: ['apps/admin/**/*.html'],
+    extends: [angular.configs.templateRecommended, angular.configs.templateAccessibility],
   },
   eslintConfigPrettier,
 );

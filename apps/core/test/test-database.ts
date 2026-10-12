@@ -6,6 +6,7 @@ import { promisify } from 'node:util';
 import pg from 'pg';
 import { createPrismaClient } from '../src/database/client.js';
 import { getTestDatabaseUrl } from './test-database-url.js';
+import { tenantSeeds } from '../prisma/seed-data.js';
 
 const execute = promisify(execFile);
 
@@ -48,7 +49,8 @@ export async function createTestDatabase() {
         timeout: 30000,
       },
     );
-    return { client, close };
+    await client.tenant.createMany({ data: tenantSeeds, skipDuplicates: true });
+    return { client, schema, close };
   } catch (error) {
     await close();
     throw error;

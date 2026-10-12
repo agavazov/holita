@@ -1,20 +1,20 @@
 # holita
 
-holita is a working reference project created as a testbed for future software development
-life cycle (SDLC) automation.
+holita is a strict TypeScript npm-workspaces repository with Nx tasks and five host
+applications: Angular admin and NestJS gateway, core, fleet and karma-client services.
+The admin uses Sakai with holita branding, PrimeNG and Bulgarian/English catalogs.
+Its modules are Vehicles, Devices and the shared Karma truck data and reference views. Core provides Store discovery; Gateway
+exposes their schema-first federated GraphQL API. PostgreSQL is the only container.
 
-A strict TypeScript npm-workspaces repository with Nx tasks and five host applications:
-React/Vite admin and NestJS gateway, core, products and reference services. The admin uses
-an Aurora/MUI Sidenav / Stacked shell and Products/Venues/Speakers/Tags/Events screens with Refine.
-Sessions, Gallery, History and store-selection states use the same Aurora theme. The gateway exposes schema-first GraphQL for stores and store-scoped
-Products CRUD, including Product-to-Store federation. Core, products and reference own independent
-PostgreSQL databases, Prisma migrations, clients and repeatable seeds. All backends expose
-`GET /health`.
+Documentation separates [Discocan fleet telemetry](docs/discocan/README.md) from
+[Ecommerce online stores](docs/ecommerce/README.md). Fleet and the current Vehicles/Devices
+admin belong to Discocan; the Core Store foundation is documented under Ecommerce.
+Discocan's current Stores will later become Branches, while Ecommerce keeps Stores for online
+shops. Current code, contracts and persistence still use Store terminology.
 
 ## Run locally
 
-Use Ubuntu/WSL with Node.js 24.15 or newer and npm 11. The lockfile uses npm 11.19.0.
-From the repository root:
+Use Ubuntu/WSL with Node.js 24.15+ and npm 11. The pinned package manager is npm 11.19.0.
 
 ```bash
 nvm use
@@ -26,97 +26,68 @@ npm run db:seed
 npm run dev
 ```
 
-Open [the admin](http://127.0.0.1:11081). Gateway, core, products and reference listen on
-127.0.0.1 ports 11080, 11082, 11083 and 11086 respectively. All processes run on the host;
-PostgreSQL alone runs in Docker on 127.0.0.1:11084. Ctrl+C stops the Node group;
-`npm run db:down` separately stops PostgreSQL and preserves its volume. Database setup,
-migrations and seeds are explicit commands, never side effects of `dev`.
+On Ubuntu/WSL, run `npm run kill` in another terminal to stop the applications and their
+watchers. PostgreSQL remains running; `npm run db:down` stops it separately.
 
-Fresh seeds provide holita Sofia and holita Plovdiv; migrated installations retain their
-existing store names. Select a store, then list, create, edit or delete products. The store
-switcher stays available on every screen; URLs preserve the selection across reloads. Switching stores
-returns to that store's current resource list; Reference asks before discarding unsaved forms. A submitted write still
-belongs to its initiating store; its late result does not redirect or notify in another store.
+If needed, run `nvm install` before `nvm use`. Open [Angular admin](http://127.0.0.1:11000).
+Choose RentalSofia and a Store on the standalone demo login screen to open Vehicles. There is no Store list landing page; the header selector switches Stores after login. Switching Stores preserves the current Vehicles/Devices
+section and resets the list query. Routes and list filters survive reloads and language changes.
+Each mounted workspace owns its Apollo client/cache. Submitted writes settle in their original
+Store; navigation cancels obsolete reads and callbacks.
 
-Choose **Reference → Events, Venues, Speakers or Tags** to manage the demo domain. Events
-have three form tabs, remote Venue/Tag selectors, exact EUR budgets and Sofia event times.
-Their list supports server filtering/sorting, URL-persisted navigation and per-store column
-preferences. Event rows open the editor; **View** in the row menu opens saved details and quick actions. The Sessions
-tab manages the event program, speaker assignments and explicit drag/button ordering with
-Save order and Cancel order. Session times must fit the Event. Active/Trash tabs support
-restore while preserving status, sessions and images. Select the current page's rows for
-confirmed Publish/Archive/Trash/Restore; each batch succeeds or fails as a whole. The History
-tab shows saved changes and before/after excerpts with anonymous attribution.
-**Edit event → Content & media** includes the rich description and, after the first save, an
-image gallery with upload progress, cover, alt text and ordering. Gallery actions save
-separately; the overview displays the saved images. Files use private local storage; no
-AWS setup is needed. See [media setup and limits](docs/development.md#using-reference).
-Reference forms warn about unsaved changes; validation errors open the relevant tab. `REFERENCE_ENABLED=false` disables its backend
-operations; `VITE_REFERENCE_ENABLED=false` hides its navigation and blocks direct admin
-routes after restarting/rebuilding the admin. Both default to true for local use. Source,
-existing data and the static schema remain available when disabled.
+Vehicles has required License Plate and optional multiline Notes. Devices has a required
+15-digit IMEI unique within a Store and a mandatory same-tenant/same-store Vehicle, labeled Truck in the
+editor. Multiple Devices can share a Vehicle; assigned Vehicles cannot be deleted.
+Both Fleet modules provide search, sorting, paging, typed create/edit forms, dirty-form guards,
+confirmed single/page-local sequential deletion and failed-row retry.
 
-Use the [Reference implementation index](docs/reference.md) to find the code and focused tests
-for each pattern. On narrow screens, **Open navigation** opens the menu and the store
-selector appears below the top bar. Desktop navigation supports collapse and hover expansion.
-The top bar provides local module search, example notifications/profile, a demo language
-selector and Aurora theme/color preferences. Search only finds enabled navigation entries;
-notifications and profile actions are examples, with no account or notification service.
-Appearance preferences persist locally. Products, Venues, Speakers and Tags follow the selected Aurora preset
-and provide search, automatic filters, server sorting, page-local batch deletion and responsive
-forms with a status/summary panel. Referenced venues, speakers and tags remain protected from deletion.
-Events use the same Aurora components for their list, editor and overview, with automatic filters
-and a sticky settings/summary aside. Session editors reuse that composition; ordered sessions,
-Gallery previews/actions and expandable History follow the same light/dark Aurora preset.
+Karma Client → Users/Roles provides read-only account search, local paging and full user
+details. Role descriptions and numeric flags are shown as source values.
+Karma Client → Trucks lists all cars from one configured Karma account for every signed-in
+Tenant/Store at `/bg/karma-client/cars` or `/en/karma-client/cars`. Configure the ignored
+`apps/karma-client/.env` using its [environment example](apps/karma-client/.env.example).
+Click a registration number to open read-only truck details; these pages support Refresh. Open eData from truck details for the latest 50 messages,
+25/50/100 pagination, optional UTC/parameter-ID filters and complete message detail.
+Open Location from truck details to inspect the last-known message and coordinates; valid
+coordinates provide a map link in a new tab. Projects, Time zones and API information have
+separate Karma menu entries. Reference lists support search and 25/50/100 pagination
+(default 50); truck list/details show reference names beside their original IDs.
+Trips and Events open separate truck histories with latest-50 pagination, optional date
+filters and complete row details; Events also supports original event-code filters.
+Driving profile shows nine category scores/weights for a default seven-day period, with
+editable bounds. Trip/profile filters use API wall-clock values with an unspecified
+provider timezone; metrics and event codes retain their original values.
+Karma has no persistence or Fleet synchronization.
+Karma is independent of the Store selector and `fleetEnabled`. See
+[Karma configuration](docs/discocan/development.md#karma-client).
 
-Use [gateway GraphQL](http://127.0.0.1:11080/graphql) for API operations. `{ stores { id name } }`
-works without a selected store. Product and Reference operations require an `x-store-id` UUID header;
-for the seeded Sofia store use `10000000-0000-4000-8000-000000000001`. Store context scopes
-data; this local foundation has no authentication or authorization.
+The shell supports keyboard/mobile navigation and persisted light/dark themes. The startup
+`fleetEnabled` flag gates both business modules; Store discovery stays available.
+The ignored [Sakai source](docs/development.md#sakai-source-reference) supplies the visual reference.
 
-SDL and named operations generate types and the static supergraph locally before dependent
-startup/build commands. After editing SDL or operations, run `npm run codegen` and restart
-the Node group. `npm run schema:check` needs no running services or database.
+Gateway, Core, Fleet and Karma Client listen on loopback ports 11010, 11011, 11013 and 11014; PostgreSQL uses 11084. `dev` waits for PostgreSQL health before starting the five applications. Ctrl+C stops
+the Node group. `npm run db:down` stops PostgreSQL and preserves its volume. Setup, migrations
+and seeding are explicit commands. The seed inserts RentalSofia, Discordia and Sandbox Stores, two sample Vehicles and one Device without replacing existing records.
 
-Each application also starts independently:
+Use [Gateway GraphQL](http://127.0.0.1:11010/graphql). `{ tenants { id name } }` is public for demo login. Sign in through `demoLogin` and send its token as `Authorization: Bearer <token>` to discover Stores. Store discovery needs no Store header. Fleet business operations require `x-store-id`, for example the seeded Discordia Store
+`10000000-0000-4000-8000-000000000001`. The demo login has no passwords or tenant membership checks and must be replaced before production. Tenant identity is verified from the signed session; business records are scoped by Tenant and Store. See [demo session configuration and limitations](docs/discocan/development.md#demo-tenant-login).
+Every backend exposes `/health`, independently of database/downstream availability.
 
-```bash
-npm run dev:admin
-npm run dev:gateway
-npm run dev:core
-npm run dev:products
-npm run dev:reference
-```
+To start one application, use `dev:admin`, `dev:gateway`, `dev:core`, `dev:fleet` or `dev:karma-client`.
+After SDL/operation changes run `npm run codegen`, `npm run schema:check` and restart the group.
+Generated clients/types are ignored and must not be edited.
 
 ## Check a change
 
 ```bash
-npm run test:products -- health.spec.ts
-npm run test:products -- products.service.spec.ts
-npm run db:test:setup
-npm run test:products:db -- products.db.spec.ts
-npm run test:gateway:db -- federation.db.spec.mts
-npm run test:admin -- product-form.test.tsx
-npm run test:admin -- store-workspace.test.tsx
 npm run lint
 npm run typecheck
 npm run build
+npm run schema:check
+npm run test:fleet -- vehicles.service.spec.ts devices.service.spec.ts --skip-nx-cache
+npm run test:admin -- --include="app/features/fleet/vehicles/*.spec.ts" --include="app/features/fleet/devices/*.spec.ts" --skip-nx-cache
 ```
 
-Use [the testing guide](docs/testing.md) to choose relevant files/cases. Full regression
-is a separate, explicit command and is not part of normal development.
-The [PR workflow](.github/workflows/affected.yml) checks affected applications against the
-PR's actual base/head, including the browser smoke target when admin is affected.
-The [full regression workflow](.github/workflows/full-regression.yml) runs only through
-GitHub Actions' manual Run workflow action. See [CI behavior](docs/testing.md#github-actions)
-for selection, prerequisites and missing-history handling.
-Database tests use dedicated credentials and a fresh schema per run, never development
-data. Default local configuration works without copying environment files.
-
-For the small real-browser check, install Chromium once with
-`npm exec -- playwright install --with-deps chromium`, then run
-`npm run test:smoke -- products.smoke.spec.mts`. PostgreSQL and provisioned test databases
-are required; the fixture owns its temporary schemas and application processes.
-
-See [docs/README.md](docs/README.md) for configuration, architecture, requirements and
-contributor guidance.
+Use [focused validation](docs/testing.md) for dedicated database and browser checks, and
+[development](docs/development.md) for configuration. Full regression requires an explicit
+user/reviewer request. Start documentation navigation at [docs/README.md](docs/README.md).

@@ -1,0 +1,19 @@
+type KarmaProject {
+  id: ID!
+  name: String!
+}
+
+type KarmaTimeZone {
+  id: Int!
+  name: String!
+}
+
+type KarmaVersion {
+  version: String!
+}
+
+extend type Query {
+  karmaProjects: [KarmaProject!]!
+  karmaTimeZones: [KarmaTimeZone!]!
+  karmaVersion: KarmaVersion!
+}
