@@ -21,9 +21,6 @@
     "@apollo/federation-internals": {
       "uuid": "11.1.1"
     },
-    "gaxios": {
-      "uuid": "11.1.1"
-    },
     "@apollo/query-graphs": {
       "uuid": "11.1.1"
     }
@@ -32,6 +29,7 @@
     "dev": "npm run db:up && concurrently --kill-others --names gateway,core,fleet,karma-client,admin --prefix-colors blue,green,cyan,magenta,red \"npm:dev:gateway\" \"npm:dev:core\" \"npm:dev:fleet\" \"npm:dev:karma-client\" \"npm:dev:admin\"",
     "kill": "tsx tools/development/kill.mts",
     "dev:gateway": "npm run dev --workspace @holita/gateway",
+    "router:install": "npm run router:install --workspace @holita/gateway",
     "dev:core": "npm run dev --workspace @holita/core",
     "dev:admin": "npm run dev --workspace @holita/admin",
     "build": "nx run-many -t build",
@@ -40,8 +38,8 @@
     "test:core": "nx run core:test --output-style=static",
     "test:gateway": "nx run gateway:test --output-style=static",
     "test:admin": "nx run admin:test --output-style=static",
-    "test:affected": "npm run test:schema && nx affected -t test,test-db --output-style=static",
-    "test:full": "npm run test:schema && nx run-many -t test,test-db --output-style=static && npm run test:smoke:admin",
+    "test:affected": "npm run test:schema && nx affected -t test,test-db,test-router --output-style=static",
+    "test:full": "npm run test:schema && nx run-many -t test,test-db,test-router --output-style=static && npm run test:smoke:admin",
     "check:affected": "npm run lint:tools && npm run typecheck:tools && nx affected -t lint,typecheck,build",
     "lint:tools": "eslint tools *.mjs",
     "projects": "nx show projects",
@@ -63,13 +61,16 @@
     "schema:check": "tsx tools/graphql/generate.mts check",
     "test:schema": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.schema.config.mjs --runInBand",
     "test:gateway:db": "nx run gateway:test-db --output-style=static",
+    "test:gateway:router": "nx run gateway:test-router --output-style=static",
     "test:smoke": "npm run test:smoke:admin",
     "dev:fleet": "npm run dev --workspace @holita/fleet",
     "test:fleet": "nx run fleet:test --output-style=static",
     "test:fleet:db": "nx run fleet:test-db --output-style=static",
     "test:smoke:admin": "nx run admin:test-smoke --output-style=static",
     "dev:karma-client": "npm run dev --workspace @holita/karma-client",
-    "test:karma-client": "nx run karma-client:test --output-style=static"
+    "test:karma-client": "nx run karma-client:test --output-style=static",
+    "router:check": "npm run router:check --workspace @holita/gateway",
+    "benchmark:gateway": "nx run gateway:benchmark --output-style=static"
   },
   "devDependencies": {
     "@apollo/composition": "2.14.4",

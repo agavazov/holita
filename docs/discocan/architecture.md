@@ -94,6 +94,9 @@ Below 992px, one Store selector moves into a second 56px row without resetting e
 The mobile Drawer traps focus and supports Escape/backdrop dismissal; collapsed desktop links
 are inert. The footer carries holita. Light/dark preference uses `holita.admin.theme`; denied
 storage leaves the toggle usable and reports its failure. Bulgarian/English catalogs supply UI text.
+Every sidebar navigation link and truck-data section link pairs its visible label with
+a decorative inline PrimeIcons SVG. Icons inherit the link color, retain the Sakai
+spacing and remain hidden from assistive technology so labels supply accessible names.
 The trimmed preset contains implemented controls and their PrimeNG dependencies.
 Public startup config selects GraphQL URL, availability and optional user-supplied PrimeUI license.
 

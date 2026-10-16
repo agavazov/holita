@@ -100,6 +100,93 @@ export async function availablePort(): Promise<number> {
   return port;
 }
 
+export async function startRouter(options: {
+  adminOrigin: string;
+  subgraphUrls: { core: string; fleet: string; 'karma-client': string };
+}) {
+  const cwd = join(workspaceRoot, 'apps/gateway');
+  const binary = join(cwd, 'router/dist/router');
+  const version = await execute(binary, ['--version']);
+  if (version.stdout.trim() !== '2.18.0')
+    throw new Error('Install Apollo Router 2.18.0 with npm run router:install.');
+  const port = await availablePort();
+  let healthPort = await availablePort();
+  while (healthPort === port) healthPort = await availablePort();
+  const url = `http://127.0.0.1:${String(port)}/graphql`;
+  const healthUrl = `http://127.0.0.1:${String(healthPort)}/health`;
+  const child = spawn(
+    binary,
+    [
+      '--anonymous-telemetry-disabled',
+      '--config',
+      'router/router.yaml',
+      '--supergraph',
+      'src/generated/graphql/supergraph.graphql',
+    ],
+    {
+      cwd,
+      env: {
+        PATH: process.env.PATH,
+        ROUTER_PORT: String(port),
+        ROUTER_HEALTH_PORT: String(healthPort),
+        CORE_GRAPHQL_URL: options.subgraphUrls.core,
+        FLEET_GRAPHQL_URL: options.subgraphUrls.fleet,
+        KARMA_CLIENT_GRAPHQL_URL: options.subgraphUrls['karma-client'],
+        ADMIN_ORIGIN: options.adminOrigin,
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    },
+  );
+  let logs = '';
+  for (const stream of [child.stdout, child.stderr]) {
+    stream.on('data', (chunk: Buffer) => {
+      logs = (logs + chunk.toString()).slice(-12000);
+    });
+  }
+  let finished = false;
+  const exited = new Promise<void>((resolve) => {
+    child.once('exit', () => {
+      finished = true;
+      resolve();
+    });
+    child.once('error', (error) => {
+      logs += error.message;
+      finished = true;
+      resolve();
+    });
+  });
+  async function stop() {
+    if (finished) return;
+    child.kill('SIGTERM');
+    const timer = setTimeout(() => child.kill('SIGKILL'), 5000);
+    try {
+      await exited;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  const deadline = Date.now() + 15000;
+  while (child.exitCode === null && child.signalCode === null && Date.now() < deadline) {
+    try {
+      const response = await fetch(healthUrl, { signal: AbortSignal.timeout(300) });
+      const health: unknown = await response.json();
+      if (
+        response.ok &&
+        typeof health === 'object' &&
+        health !== null &&
+        'status' in health &&
+        health.status === 'UP'
+      )
+        return { url, healthUrl, pid: child.pid, stop, logs: () => logs };
+    } catch {
+      /* Wait for the Router's dedicated health listener. */
+    }
+    await delay(100);
+  }
+  await stop();
+  throw new Error(`Apollo Router did not start:\n${logs}`);
+}
+
 async function startApplication(service: string, env: NodeJS.ProcessEnv, selectedPort?: number) {
   const port = selectedPort ?? (await availablePort());
   const child = spawn(process.execPath, ['dist/main.js'], {
@@ -148,7 +235,19 @@ async function startApplication(service: string, env: NodeJS.ProcessEnv, selecte
         'service' in health &&
         health.service === service
       )
-        return { port, url: `${baseUrl}/graphql`, stop };
+        return {
+          port,
+          pid: child.pid,
+          logs: () => logs,
+          url: `${baseUrl}/graphql`,
+          stop,
+          pause: () => {
+            if (!child.kill('SIGSTOP')) throw new Error(`Could not pause ${service}`);
+          },
+          resume: () => {
+            if (!child.kill('SIGCONT')) throw new Error(`Could not resume ${service}`);
+          },
+        };
     } catch {
       /* The child has not started listening yet. */
     }
@@ -159,6 +258,7 @@ async function startApplication(service: string, env: NodeJS.ProcessEnv, selecte
 }
 
 async function observeRequests(target: string) {
+  let injectedResponse: { status: number; body: string } | undefined;
   const requests: {
     requestId: string | string[] | undefined;
     storeId: string | string[] | undefined;
@@ -177,6 +277,11 @@ async function observeRequests(target: string) {
       storeId: req.headers['x-store-id'],
       body,
     });
+    if (injectedResponse) {
+      res.writeHead(injectedResponse.status, { 'content-type': 'application/json' });
+      res.end(injectedResponse.body);
+      return;
+    }
     const headers: Record<string, string> = { 'content-type': 'application/json' };
     for (const key of ['x-request-id', 'x-store-id', 'authorization']) {
       const value = req.headers[key];
@@ -206,6 +311,9 @@ async function observeRequests(target: string) {
   return {
     url: `http://127.0.0.1:${String(address.port)}/graphql`,
     requests,
+    setResponse: (response: typeof injectedResponse) => {
+      injectedResponse = response;
+    },
     close: () =>
       new Promise<void>((resolve, reject) => {
         server.close((error) => {
@@ -218,7 +326,11 @@ async function observeRequests(target: string) {
 }
 
 export async function createFederationFixture(
-  options: { adminOrigin?: string; fleetEnabled?: boolean } = {},
+  options: {
+    adminOrigin?: string;
+    fleetEnabled?: boolean;
+    observeSubgraphs?: boolean;
+  } = {},
 ) {
   config({
     path: [join(workspaceRoot, 'apps/core/.env'), join(workspaceRoot, 'apps/fleet/.env')],
@@ -266,12 +378,13 @@ export async function createFederationFixture(
     cleanup.push(() => core.stop());
     const coreObserver = await observeRequests(core.url);
     cleanup.push(coreObserver.close);
+    const coreUrl = options.observeSubgraphs === false ? core.url : coreObserver.url;
     const fleetPort = await availablePort();
     const fleetEnv = {
       ADMIN_ORIGINS: options.adminOrigin ?? 'http://127.0.0.1:11000',
       ADMIN_ORIGIN: options.adminOrigin ?? 'http://127.0.0.1:11000',
       FLEET_DATABASE_URL: fleetDatabase.url,
-      CORE_GRAPHQL_URL: coreObserver.url,
+      CORE_GRAPHQL_URL: coreUrl,
       FLEET_ENABLED: String(options.fleetEnabled ?? true),
     };
     let fleet = await startApplication('fleet', fleetEnv, fleetPort);
@@ -286,19 +399,31 @@ export async function createFederationFixture(
       KARMA_PASSWORD: 'fixture-password',
     });
     cleanup.push(karmaClient.stop);
-    const gateway = await startApplication('gateway', {
-      ADMIN_ORIGIN: options.adminOrigin ?? 'http://127.0.0.1:11000',
-      CORE_GRAPHQL_URL: coreObserver.url,
-      FLEET_GRAPHQL_URL: fleetObserver.url,
-      KARMA_CLIENT_GRAPHQL_URL: karmaClient.url,
-    });
+    const subgraphUrls = {
+      core: coreUrl,
+      fleet: options.observeSubgraphs === false ? fleet.url : fleetObserver.url,
+      'karma-client': karmaClient.url,
+    };
+    const adminOrigin = options.adminOrigin ?? 'http://127.0.0.1:11000';
+    const gateway = await startRouter({ adminOrigin, subgraphUrls });
     cleanup.push(gateway.stop);
     return {
       url: gateway.url,
+      pid: gateway.pid,
+      logs: () => ({
+        gateway: gateway.logs(),
+        core: core.logs(),
+        fleet: fleet.logs(),
+        'karma-client': karmaClient.logs(),
+      }),
+      healthUrl: gateway.healthUrl,
       karma,
       karmaClientUrl: karmaClient.url,
       stopKarmaClient: karmaClient.stop,
+      pauseKarmaClient: karmaClient.pause,
+      resumeKarmaClient: karmaClient.resume,
       coreRequests: coreObserver.requests,
+      setCoreResponse: coreObserver.setResponse,
       fleetUrl: fleet.url,
       fleetRequests: fleetObserver.requests,
       setFleetEnabled: async (enabled: boolean) => {

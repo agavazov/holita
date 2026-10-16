@@ -2,6 +2,11 @@ import { Component, computed, effect, inject, input, signal } from '@angular/cor
 import { RouterLink } from '@angular/router';
 import { ButtonDirective } from 'primeng/button';
 import { Message } from 'primeng/message';
+import { Bolt } from '@primeicons/angular/bolt';
+import { ChartLine } from '@primeicons/angular/chart-line';
+import { Database } from '@primeicons/angular/database';
+import { Directions } from '@primeicons/angular/directions';
+import { MapMarker } from '@primeicons/angular/map-marker';
 import type {
   AdminKarmaReferencesQuery,
   AdminKarmaLocationQuery,
@@ -12,7 +17,7 @@ import { locationMap } from '../location-map';
 import { KarmaApi } from '../karma-api';
 
 @Component({
-  imports: [RouterLink, ButtonDirective, Message],
+  imports: [RouterLink, ButtonDirective, Message, Bolt, ChartLine, Database, Directions, MapMarker],
   providers: [KarmaApi],
   selector: 'holita-car-details',
   styleUrl: './car-details.css',

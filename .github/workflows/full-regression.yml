@@ -34,6 +34,11 @@ jobs:
 
       - run: npm run format:check
       - run: npm run schema:check
+      - name: Install and validate Apollo Router
+        run: |
+          npm run router:install
+          npm run router:check
+
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run build

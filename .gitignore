@@ -21,3 +21,4 @@ apps/*/src/generated/
 
 # Temporary Aurora visual-review captures and metadata.
 /artifacts/aurora/
+/.misc/

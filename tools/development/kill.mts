@@ -8,10 +8,11 @@ if (process.platform !== 'linux') {
 }
 
 const root = fileURLToPath(new URL('../../', import.meta.url)).replace(/\/$/, '');
+const routerBinary = resolve(root, 'apps/gateway/router/dist/router');
 const appDirectories = ['admin', 'gateway', 'core', 'fleet', 'karma-client'].map((app) =>
   resolve(root, 'apps', app),
 );
-const backendEntries = ['gateway', 'core', 'fleet', 'karma-client'].flatMap((app) => [
+const backendEntries = ['core', 'fleet', 'karma-client'].flatMap((app) => [
   resolve(root, 'apps', app, 'dist/main'),
   resolve(root, 'apps', app, 'dist/main.js'),
 ]);
@@ -33,15 +34,18 @@ for (const entry of readdirSync('/proc')) {
       args.includes('--watch');
     const group =
       args.includes(resolve(root, 'node_modules/.bin/concurrently')) &&
-      ['gateway,core,fleet,admin', 'gateway,core,fleet,karma-client,admin'].some((name) =>
-        args.includes(name),
-      );
+      args.includes('gateway,core,fleet,karma-client,admin');
     const admin =
       directory === appDirectories[0] &&
       (args.some((arg) => arg.startsWith('ng serve')) ||
         (args.includes(resolve(root, 'node_modules/.bin/ng')) && args.includes('serve')));
     const backend = args.slice(1).some((arg) => backendEntries.includes(resolve(directory, arg)));
-    processes.push({ pid, parent, service: workspace && (watcher || group || admin || backend) });
+    const router = readlinkSync(`/proc/${entry}/exe`) === routerBinary;
+    processes.push({
+      pid,
+      parent,
+      service: workspace && (watcher || group || admin || backend || router),
+    });
   } catch (error) {
     // Processes may exit during discovery; inaccessible processes belong to another user.
     if (

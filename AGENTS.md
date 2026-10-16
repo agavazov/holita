@@ -49,7 +49,7 @@
 - Use npm workspaces, the existing lockfile, and Nx. The five applications are `apps/admin`, `apps/gateway`, `apps/core`, `apps/fleet`, and `apps/karma-client`.
 - Do not import another application's implementation, Prisma client, or database model, including through relative paths. ESLint/Nx enforce application boundaries.
 - Expose daily commands through root npm scripts. Do not add another build system, custom process supervisor, or custom test-selection framework. Add shared packages only for demonstrated current reuse.
-- Applications run as Node.js processes on the host. PostgreSQL is the only permitted containerized infrastructure for the foundation. Never reset databases or remove volumes to fix setup.
+- Applications run on the host. Angular and the subgraphs use Node.js; Gateway runs only the official native Apollo Router in `apps/gateway/router`. The development group and federation/browser fixtures own their native process lifecycle. PostgreSQL is the only permitted containerized infrastructure for the foundation. Never reset databases or remove volumes to fix setup.
 - Keep configuration at the narrowest sensible scope and avoid duplicating root tooling.
 - Never commit environment files, local database files, build output, coverage, Nx caches, or generated Prisma/GraphQL clients.
 - Do not enter, open, read, list, or search the repository's `.tmp/` or `.misc/` directories or their contents unless explicitly instructed by the user. They contain temporary files and reference projects and must not be used as default task context. User authorization applies only to the requested directory/files. Exclude both `.tmp/` and `.misc/` from repository-wide searches and scans.

@@ -1,7 +1,7 @@
 # holita
 
 holita is a strict TypeScript npm-workspaces repository with Nx tasks and five host
-applications: Angular admin and NestJS gateway, core, fleet and karma-client services.
+applications: Angular admin, native Apollo Router gateway and NestJS core, fleet and karma-client services.
 The admin uses Sakai with holita branding, PrimeNG and Bulgarian/English catalogs.
 Its modules are Vehicles, Devices and the shared Karma truck data and reference views. Core provides Store discovery; Gateway
 exposes their schema-first federated GraphQL API. PostgreSQL is the only container.
@@ -19,6 +19,7 @@ Use Ubuntu/WSL with Node.js 24.15+ and npm 11. The pinned package manager is npm
 ```bash
 nvm use
 npm ci
+npm run router:install
 npm run db:up
 npm run db:setup
 npm run db:migrate
@@ -66,14 +67,20 @@ The shell supports keyboard/mobile navigation and persisted light/dark themes. T
 The ignored [Sakai source](docs/development.md#sakai-source-reference) supplies the visual reference.
 
 Gateway, Core, Fleet and Karma Client listen on loopback ports 11010, 11011, 11013 and 11014; PostgreSQL uses 11084. `dev` waits for PostgreSQL health before starting the five applications. Ctrl+C stops
-the Node group. `npm run db:down` stops PostgreSQL and preserves its volume. Setup, migrations
+the native Router and Node application group. `npm run db:down` stops PostgreSQL and preserves its volume. Setup, migrations
 and seeding are explicit commands. The seed inserts RentalSofia, Discordia and Sandbox Stores, two sample Vehicles and one Device without replacing existing records.
 
 Use [Gateway GraphQL](http://127.0.0.1:11010/graphql). `{ tenants { id name } }` is public for demo login. Sign in through `demoLogin` and send its token as `Authorization: Bearer <token>` to discover Stores. Store discovery needs no Store header. Fleet business operations require `x-store-id`, for example the seeded Discordia Store
 `10000000-0000-4000-8000-000000000001`. The demo login has no passwords or tenant membership checks and must be replaced before production. Tenant identity is verified from the signed session; business records are scoped by Tenant and Store. See [demo session configuration and limitations](docs/discocan/development.md#demo-tenant-login).
-Every backend exposes `/health`, independently of database/downstream availability.
+Router exposes `/health` on its separate loopback port 11016; the subgraphs expose `/health`
+on their normal ports. Health is independent of database/downstream availability.
 
 To start one application, use `dev:admin`, `dev:gateway`, `dev:core`, `dev:fleet` or `dev:karma-client`.
+`npm run dev` starts the official Apollo Router on 11010; Angular proxies `/graphql` to it.
+Install the pinned binary once with `npm run router:install` before development, builds or
+Gateway/browser checks. Router reads exported process variables, not `apps/gateway/.env`;
+use `ROUTER_PORT` instead of `PORT`. There is no Node Gateway runtime or runtime selector.
+See [Router configuration](docs/development.md#apollo-router) for health, environment and error behavior.
 After SDL/operation changes run `npm run codegen`, `npm run schema:check` and restart the group.
 Generated clients/types are ignored and must not be edited.
 

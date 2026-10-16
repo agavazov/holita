@@ -44,22 +44,28 @@
     <h2>{{ truck.carNumber || '—' }}</h2>
     <nav class="page-actions" [attr.aria-label]="text().karmaTruckData">
       <a pButton [routerLink]="['/', language(), 'karma-client', 'cars', truck.id, 'edata']">
+        <svg data-p-icon="database" size="18" aria-hidden="true"></svg>
         {{ text().karmaEdata }}
       </a>
-      <a pButton [routerLink]="['/', language(), 'karma-client', 'cars', truck.id, 'location']">{{
-        text().karmaLocation
-      }}</a>
-      <a pButton [routerLink]="['/', language(), 'karma-client', 'cars', truck.id, 'trips']">{{
-        text().karmaTrips
-      }}</a>
-      <a pButton [routerLink]="['/', language(), 'karma-client', 'cars', truck.id, 'events']">{{
-        text().karmaEvents
-      }}</a>
+      <a pButton [routerLink]="['/', language(), 'karma-client', 'cars', truck.id, 'location']">
+        <svg data-p-icon="map-marker" size="18" aria-hidden="true"></svg>
+        {{ text().karmaLocation }}
+      </a>
+      <a pButton [routerLink]="['/', language(), 'karma-client', 'cars', truck.id, 'trips']">
+        <svg data-p-icon="directions" size="18" aria-hidden="true"></svg>
+        {{ text().karmaTrips }}
+      </a>
+      <a pButton [routerLink]="['/', language(), 'karma-client', 'cars', truck.id, 'events']">
+        <svg data-p-icon="bolt" size="18" aria-hidden="true"></svg>
+        {{ text().karmaEvents }}
+      </a>
       <a
         pButton
         [routerLink]="['/', language(), 'karma-client', 'cars', truck.id, 'driving-profile']"
-        >{{ text().karmaDrivingProfile }}</a
       >
+        <svg data-p-icon="chart-line" size="18" aria-hidden="true"></svg>
+        {{ text().karmaDrivingProfile }}
+      </a>
     </nav>
     <dl class="truck-details">
       <div>

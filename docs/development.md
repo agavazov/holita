@@ -7,6 +7,7 @@ Use Ubuntu/WSL, Node.js 24.15+ and npm 11. The pinned package manager is npm 11.
 ```bash
 nvm use
 npm ci
+npm run router:install
 ```
 
 Run `nvm install` first if needed. Non-interactive shells may need to source `$HOME/.nvm/nvm.sh`
@@ -16,10 +17,10 @@ before `nvm use`. Native Windows execution is outside the verified setup.
 
 | Command                  | Behavior                                                              |
 | ------------------------ | --------------------------------------------------------------------- |
-| npm run dev              | Wait for PostgreSQL, start Angular and four Nest backends             |
+| npm run dev              | Wait for PostgreSQL, start Router, Angular and three Nest subgraphs   |
 | npm run kill             | Stop this checkout's application processes and watchers on Ubuntu/WSL |
 | npm run dev:admin        | Angular watcher                                                       |
-| npm run dev:gateway      | Gateway watcher                                                       |
+| npm run dev:gateway      | Native Router after Nx supergraph generation                          |
 | npm run dev:core         | Core watcher                                                          |
 | npm run dev:fleet        | Fleet watcher                                                         |
 | npm run dev:karma-client | Karma Client watcher                                                  |
@@ -32,28 +33,34 @@ before `nvm use`. Native Windows execution is outside the verified setup.
 | npm run schema:check     | Compose SDL and validate operations offline                           |
 
 Backend output is `apps/NAME/dist`; `npm run start:prod --workspace @holita/core`
-(or gateway/fleet/karma-client) runs the compiled app. `dev` does not migrate or seed databases.
+(or fleet/karma-client) runs the compiled app. Gateway `build` generates the supergraph and
+validates the installed native Router configuration. `npm run start:prod --workspace @holita/gateway`
+starts that binary using the generated supergraph; no Node bundle or Rust compilation is involved. `dev` does not migrate or seed databases.
 Ctrl+C stops the process group; `db:down` stops PostgreSQL separately and preserves the volume.
 Use `npm run kill` from another terminal when application processes remain running. It stops
 the dev group, individual Angular/Nest watchers and compiled backend processes from this checkout,
-including their child workers. It sends SIGTERM, then SIGKILL to survivors after two seconds.
+including the native Router, the concurrently group and their child workers. It sends
+SIGTERM, then SIGKILL to survivors after two seconds.
 PostgreSQL and processes from other checkouts remain running. Running it again is harmless.
 
 ## Ports and environment
 
-| Application   | Default loopback port |
-| ------------- | --------------------- |
-| Angular admin | 11000                 |
-| Gateway       | 11010                 |
-| Core          | 11011                 |
-| Fleet         | 11013                 |
-| Karma Client  | 11014                 |
-| PostgreSQL    | 11084                 |
+| Application     | Default loopback port |
+| --------------- | --------------------- |
+| Angular admin   | 11000                 |
+| Gateway GraphQL | 11010                 |
+| Gateway health  | 11016                 |
+| Core            | 11011                 |
+| Fleet           | 11013                 |
+| Karma Client    | 11014                 |
+| PostgreSQL      | 11084                 |
 
 Visual previews use 11000–11009; the optional Sakai preview uses 11002. Application-local
-`.env.example` files describe PORT and service URLs. Defaults work without environment files.
-Existing process variables take precedence. Backend PORT must be an integer from 1 to 65535.
-Apps and Prisma read their own workspace `.env`; database provisioning reads root/Core/Fleet.
+`.env.example` files describe ports and service URLs. Defaults work without environment files.
+Existing process variables take precedence. Subgraph PORT must be an integer from 1 to 65535.
+Node apps and Prisma read their own workspace `.env`; database provisioning reads root/Core/Fleet.
+Router reads exported variables only: migrate any Gateway `.env` overrides into the shell
+environment and use `ROUTER_PORT` instead of `PORT`. The admin proxy reads the same `ROUTER_PORT`.
 
 Gateway uses `CORE_GRAPHQL_URL`, `FLEET_GRAPHQL_URL`, `KARMA_CLIENT_GRAPHQL_URL` and `ADMIN_ORIGIN`.
 Fleet uses `CORE_GRAPHQL_URL`, `FLEET_ENABLED` and `ADMIN_ORIGINS`, a comma-separated
@@ -61,6 +68,97 @@ exact origin allowlist with `ADMIN_ORIGIN` as the single-origin fallback. Defaul
 Angular loopback origin. Database URLs belong only to Core/Fleet. Karma Client has application-local account settings described in
 [Karma Client configuration](discocan/development.md#karma-client). No upload/storage
 configuration is required.
+
+## Apollo Router
+
+The Gateway workspace includes a standalone [Apollo Router 2.18.0](https://github.com/apollographql/router/releases/tag/v2.18.0)
+configuration integrated with npm/Nx for Ubuntu/WSL on x86_64. Install the pinned Linux binary with `curl`, `tar`,
+`sha256sum` and GNU coreutils available, then run it from the repository root:
+
+```bash
+npm run router:install
+npm run router:check
+npm run dev
+```
+
+The installer verifies the release archive's pinned SHA-256 before extraction and keeps
+the binary and upstream license notices in ignored `apps/gateway/router/dist/`.
+It requires no npm dependency, Rust toolchain, container, GraphOS account or API key.
+`dev` waits for PostgreSQL and starts Router, Core, Fleet, Karma Client and Angular
+using concurrently. Angular keeps the public `/graphql` URL and uses `proxy.conf.mjs`,
+targeting `ROUTER_PORT` (11010 by default). Stop any existing development group before starting
+another because the applications share ports.
+Ctrl+C stops the group; `npm run kill` also recognizes the native Router in this checkout.
+Database migration/seeding still use the normal explicit setup commands.
+
+For individual processes, use `dev:gateway` and `dev:admin`. Gateway's npm `dev` and
+`start` scripts run the Nx `gateway:graphql-generate` target, then start Router with
+anonymous telemetry disabled in the original npm process environment. Runtime scripts
+are excluded from Nx target inference: Nx manages generation, builds and checks, while
+Router startup preserves exported shell variables without Nx's dotenv loading or
+unloading. Root and Gateway `.env` files therefore cannot change Router's ports or
+downstream URLs independently of the Angular proxy. Keep Router overrides in the exported
+shell environment for both development and `start:prod`.
+It does not watch configuration/SDL changes; restart Router after changes.
+`router:check` validates YAML with the installed binary. Installation is explicit, including
+in CI; development and tests do not silently download or replace the executable.
+
+The [Router configuration](../apps/gateway/router/router.yaml) reads exported process variables;
+it does not load `apps/gateway/.env`. Defaults are:
+
+| Variable                 | Default                        |
+| ------------------------ | ------------------------------ |
+| ROUTER_PORT              | 11010 (`/graphql` on loopback) |
+| ROUTER_HEALTH_PORT       | 11016 (`/health` on loopback)  |
+| CORE_GRAPHQL_URL         | http://127.0.0.1:11011/graphql |
+| FLEET_GRAPHQL_URL        | http://127.0.0.1:11013/graphql |
+| KARMA_CLIENT_GRAPHQL_URL | http://127.0.0.1:11014/graphql |
+| ADMIN_ORIGIN             | http://127.0.0.1:11000         |
+
+For example, `ROUTER_PORT=11017 npm run dev` changes Router's GraphQL listener and the Angular proxy together; health remains on 11016.
+The configured origin can send GET/POST/OPTIONS with `authorization`, `content-type`,
+`x-store-id` and `x-request-id`. The three context headers are forwarded to all subgraphs.
+Health returns `{"status":"UP"}` from the dedicated health port, independently of downstream health.
+
+The [Rhai compatibility hook](../apps/gateway/router/compatibility.rhai)
+applies after GraphQL parsing/schema validation, at the supergraph boundary:
+
+- A single `x-request-id` matching `[A-Za-z0-9._:-]{1,100}` is preserved; missing, invalid
+  or repeated values are replaced by a UUIDv4. Subgraphs, the response header and public
+  error extensions receive the same request ID.
+- Known public error codes/messages survive. Unexpected errors become `INTERNAL_SERVER_ERROR`
+  with `Internal server error`. Extensions contain only `code`, `requestId` and, for
+  `BAD_USER_INPUT`, sanitized `fieldErrors`. Only the first 30 entries are considered;
+  paths start with an ASCII letter and contain ASCII letters/digits, and messages are
+  at most 300 UTF-16 code units. Invalid variable values use HTTP 400 and `BAD_USER_INPUT`;
+  compiler diagnostic wording and locations remain native to Router.
+- Each subgraph request has a five-second timeout. Transport failures, malformed upstream
+  responses and subgraph timeouts become `SERVICE_UNAVAILABLE` with
+  `A required service is unavailable; try again later`. These execution errors use HTTP 200.
+- Unexpected GraphQL errors log the request ID and a fixed error category, without copying
+  subgraph messages, tokens or arbitrary extensions into the Rhai log.
+
+Early parse/schema-validation failures intentionally use native Router HTTP 400 bodies:
+syntax failures use `PARSING_ERROR`, and schema-validation failures use
+`GRAPHQL_VALIDATION_FAILED`. They do not execute subgraph requests and have no application
+request ID in their body/header. Their diagnostic wording, locations and error count follow
+the pinned Router release. Business input validation remains separate
+and retains the messages, `fieldErrors` and request IDs described above.
+Rhai in the pinned Router cannot modify these early response bodies because they precede
+the supergraph hook; its router-level hook has no response-body access. The official release
+binary is used without a custom Rust build.
+
+The HTTP/1 connection buffer is bounded to 16 KiB, rejecting oversized request headers
+with native HTTP 431 before subgraph execution. CORS preflight succeeds with HTTP 200
+with the configured allowed origin, methods and headers.
+
+The admin transport handles these HTTP 400 responses using its normal fallback message and
+locally generated request ID, even without a response ID. That local ID alone does not
+establish correlation with Router logs for early failures. Native HTTP rejection behavior,
+the default 30-second whole-request timeout and the separate health response are native Router behavior.
+Federation and compiled-admin browser fixtures start Router by default on ephemeral ports.
+There is no JavaScript Gateway fallback or runtime selector. The [Router checks](testing.md#router-contract-check)
+assert the public contract directly over real subgraphs and isolated test databases.
 
 ## Domain development
 

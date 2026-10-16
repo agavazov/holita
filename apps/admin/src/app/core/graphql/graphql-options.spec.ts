@@ -62,6 +62,31 @@ describe('GraphQL transport diagnostics', () => {
     expect(requestError(await failure, fallback)).toBe(`${fallback} (gateway-diagnostic-id)`);
   });
 
+  it.each(['PARSING_ERROR', 'GRAPHQL_VALIDATION_FAILED'])(
+    'retains the client request ID for a native Router HTTP 400 %s without a server ID',
+    async (code) => {
+      const failure = client.query({ query: AdminStoresDocument }).catch((error: unknown) => error);
+      const request = http.expectOne('/graphql');
+      const requestId = request.request.headers.get('x-request-id');
+      if (!requestId) throw new Error('Missing request diagnostics header.');
+      request.flush(
+        {
+          errors: [
+            {
+              message: 'Invalid GraphQL document',
+              locations: [{ line: 1, column: 1 }],
+              extensions: { code },
+            },
+          ],
+        },
+        { status: 400, statusText: 'Bad Request' },
+      );
+      const error = await failure;
+      expect(ServerError.is(error)).toBe(true);
+      expect(requestError(error, fallback)).toBe(`${fallback} (${requestId})`);
+    },
+  );
+
   it('preserves GraphQL diagnostics instead of replacing the server message', async () => {
     const failure = client.query({ query: AdminStoresDocument }).catch((error: unknown) => error);
     http.expectOne('/graphql').flush({

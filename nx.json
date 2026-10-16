@@ -9,6 +9,7 @@
       "{workspaceRoot}/package.json",
       "{workspaceRoot}/package-lock.json",
       "{workspaceRoot}/tsconfig.base.json",
+      "{workspaceRoot}/tools/development/**/*",
       "{workspaceRoot}/eslint.config.mjs",
       "{workspaceRoot}/jest.preset.mjs",
       "{workspaceRoot}/nx.json",

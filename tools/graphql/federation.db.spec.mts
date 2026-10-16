@@ -208,11 +208,14 @@ describe('Fleet through the actual federation boundary', () => {
       errors: [{ extensions: { code: 'UNAUTHENTICATED' } }],
     });
     expect(fixture.karma.requests).toHaveLength(reads);
+    const loginsBeforeExpiry = fixture.karma.requests.filter((request) =>
+      request.path.endsWith('/login'),
+    ).length;
     fixture.karma.expire();
     expect(await query(source, {}, '')).toEqual(first);
     expect(
       fixture.karma.requests.filter((request) => request.path.endsWith('/login')),
-    ).toHaveLength(2);
+    ).toHaveLength(loginsBeforeExpiry + 1);
   });
 
   it('keeps Fleet usable while Karma is unavailable and recovers the cars list', async () => {
@@ -507,7 +510,7 @@ describe('Fleet through the actual federation boundary', () => {
       },
       signal: AbortSignal.timeout(5000),
     });
-    expect(response.status).toBe(204);
+    expect(response.status).toBe(200);
     expect(response.headers.get('access-control-allow-origin')).toBe('http://127.0.0.1:11000');
     expect(response.headers.get('access-control-allow-headers')).toContain('x-store-id');
     fixture.coreRequests.length = 0;

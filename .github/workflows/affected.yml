@@ -75,6 +75,12 @@ jobs:
 
       - run: npm run format:check
       - run: npm run schema:check
+      - name: Install and validate Apollo Router
+        if: contains(fromJSON(steps.selection.outputs.projects || '[]'), 'gateway') || contains(fromJSON(steps.selection.outputs.projects || '[]'), 'admin')
+        run: |
+          npm run router:install
+          npm run router:check
+
       - run: npm run check:affected -- --base="$NX_BASE" --head="$NX_HEAD"
 
       - name: Prepare PostgreSQL
