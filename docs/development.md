@@ -13,6 +13,21 @@ npm run router:install
 Run `nvm install` first if needed. Non-interactive shells may need to source `$HOME/.nvm/nvm.sh`
 before `nvm use`. Native Windows execution is outside the verified setup.
 
+## Local contributor instructions and credentials
+
+Keep machine-specific instructions in the optional, Git-ignored root `AGENTS.local.md`.
+Agents read it alongside [the shared guide](../AGENTS.md); a missing local file does not
+block work. Shared contributor rules remain in `AGENTS.md`.
+
+Saved local credentials belong in the common services-level `.credentials/` directory,
+outside project repositories. Record the machine's exact path and any relevant connection
+references in `AGENTS.local.md`. Read the shared credential inventory and the required
+service README before use. Keep separate service/account/environment folders, descriptive
+value filenames and README files without secrets; use directory mode `0700` and credential
+file mode `0600`. Pass values through process environments, stdin or supported client stores.
+Ignored application `.env` files remain runtime configuration. Never put real credentials
+in environment examples, documentation, agent instructions, command arguments or logs.
+
 ## Commands
 
 | Command                  | Behavior                                                              |
@@ -55,12 +70,32 @@ PostgreSQL and processes from other checkouts remain running. Running it again i
 | Karma Client    | 11014                 |
 | PostgreSQL      | 11084                 |
 
-Visual previews use 11000–11009; the optional Sakai preview uses 11002. Application-local
-`.env.example` files describe ports and service URLs. Defaults work without environment files.
+Visual previews use 11000–11009; the optional Sakai preview uses 11002. The single root
+[`.env.example`](../.env.example) describes all variables, their consumers, safe examples,
+types and sensitivity using [`@env-spec` style annotations](https://varlock.dev/reference/data-types/).
+These comments document configuration; dotenv and Compose do not validate them, and no
+schema validator is installed. Keep this contract in `.env.example` when changing variables.
+Defaults work without environment files; Karma queries require an upstream account.
 Existing process variables take precedence. Subgraph PORT must be an integer from 1 to 65535.
 Node apps and Prisma read their own workspace `.env`; database provisioning reads root/Core/Fleet.
 Router reads exported variables only: migrate any Gateway `.env` overrides into the shell
 environment and use `ROUTER_PORT` instead of `PORT`. The admin proxy reads the same `ROUTER_PORT`.
+
+Copy only the relevant entries from the reference into the consuming process's ignored
+runtime file, preserving existing settings:
+
+| Consumer                 | Runtime configuration                                                                                               |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| Compose and provisioning | Root `.env`: `POSTGRES_PORT`, `POSTGRES_PASSWORD`                                                                   |
+| Core and Prisma          | `apps/core/.env`: Core database URLs and shared demo settings                                                       |
+| Fleet and Prisma         | `apps/fleet/.env`: Fleet database URLs, shared demo settings, `FLEET_ENABLED`, `CORE_GRAPHQL_URL` and admin origins |
+| Karma Client             | `apps/karma-client/.env`: `KARMA_API_URL`, `KARMA_USER`, `KARMA_PASSWORD` and shared demo settings                  |
+| Router and Angular proxy | Export Router variables in the shell that launches npm; proxy reads `ROUTER_PORT`                                   |
+
+An optional `PORT` override belongs only to an individual Node application; omit it to
+keep that application's default. Exporting one `PORT` for the development group gives
+all subgraphs the same listener port. The reference is scoped by consumer, so copy the
+needed entries rather than loading the entire file into a process.
 
 Gateway uses `CORE_GRAPHQL_URL`, `FLEET_GRAPHQL_URL`, `KARMA_CLIENT_GRAPHQL_URL` and `ADMIN_ORIGIN`.
 Fleet uses `CORE_GRAPHQL_URL`, `FLEET_ENABLED` and `ADMIN_ORIGINS`, a comma-separated

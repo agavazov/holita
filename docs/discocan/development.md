@@ -117,8 +117,11 @@ preserve the response request ID when reporting failures. Store scope is not aut
 ### Configuration and access
 
 The independent Karma Client backend listens on loopback port 11014 and starts with `npm run dev`.
-Use `npm run dev:karma-client` to start it alone. Copy `apps/karma-client/.env.example` to the ignored
-`apps/karma-client/.env`, then set `KARMA_USER` and `KARMA_PASSWORD` for the shared account.
+Use `npm run dev:karma-client` to start it alone. Use the Karma Client and shared demo entries
+from the [single root environment reference](../../.env.example) in the ignored
+`apps/karma-client/.env`, or supply them through the process environment. Obtain the shared
+account's `KARMA_USER` and `KARMA_PASSWORD` from the
+[local credential store](../development.md#local-contributor-instructions-and-credentials).
 `KARMA_API_URL` defaults to `https://karma.online/apiv2/`. URLs must have HTTP(S) schemes and
 no embedded credentials, query or fragment. Redirects are rejected. Missing/invalid connection
 configuration leaves health usable and returns sanitized errors for Karma queries.

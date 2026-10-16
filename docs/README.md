@@ -29,3 +29,9 @@ routes and persistence still use Store/storeId/x-store-id.
 Choose the domain before reading or updating its documentation. Shared tooling remains in
 this directory; business behavior belongs in its domain directory. The requested future
 Store-to-Branch terminology is explicitly marked; other product descriptions cover implemented behavior.
+
+## Pending work
+
+The [project backlog](todo/README.md) holds open tasks and plans separately from product
+documentation. Use [instant tasks](todo/_instant-tsks.md) for short entries and a descriptive
+file under `docs/todo/` for larger plans.

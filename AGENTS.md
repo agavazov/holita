@@ -1,5 +1,10 @@
 # holita coding guide
 
+Also read `AGENTS.local.md` at the repository root if it exists. This optional,
+Git-ignored file holds instructions specific to the local checkout, including
+local credential locations. Its absence is normal and must not block work.
+Keep shared rules in this guide and never put credential values in agent instructions.
+
 ## Product identity
 
 - The repository, current packages and infrastructure resources are named `holita`.
@@ -52,13 +57,14 @@
 - Applications run on the host. Angular and the subgraphs use Node.js; Gateway runs only the official native Apollo Router in `apps/gateway/router`. The development group and federation/browser fixtures own their native process lifecycle. PostgreSQL is the only permitted containerized infrastructure for the foundation. Never reset databases or remove volumes to fix setup.
 - Keep configuration at the narrowest sensible scope and avoid duplicating root tooling.
 - Never commit environment files, local database files, build output, coverage, Nx caches, or generated Prisma/GraphQL clients.
-- Do not enter, open, read, list, or search the repository's `.tmp/` or `.misc/` directories or their contents unless explicitly instructed by the user. They contain temporary files and reference projects and must not be used as default task context. User authorization applies only to the requested directory/files. Exclude both `.tmp/` and `.misc/` from repository-wide searches and scans.
+- Keep one environment reference at the root: `.env.example`, with descriptions, consumers, safe examples and `@env-spec` style type/sensitivity annotations. Do not add `.env.schema` or application-local environment examples. These annotations document the contract; current dotenv/Compose loaders do not enforce them. Update this reference and the relevant documentation when environment configuration changes.
+- Do not enter, open, read, list, search or modify the repository's `.tmp/` or `.misc/` directories or their contents unless explicitly instructed by the user in the current task. They contain temporary files and reference projects and must not be used as default task context. User authorization applies only to the requested directory/files. Exclude both `.tmp/` and `.misc/` from repository-wide searches and scans, even if files there are tracked by Git.
 
 ## Documentation
 
 - Start with [docs/README.md](docs/README.md) and read the documentation relevant to the requested task.
 - Maintain documentation as part of the same change that affects behavior, architecture, API contracts, configuration, persistence, permissions, or user workflows. Update the existing authoritative document instead of creating a competing description.
-- Document only what is implemented and how it works. Keep plans, ideas, milestones, progress statuses, session handoffs, dated implementation reports, and proposed functionality out of product documentation. Discuss planning separately unless the user explicitly requests a separate planning artifact.
+- Document only what is implemented and how it works. Keep plans, ideas, milestones, progress statuses, session handoffs, dated implementation reports, and proposed functionality out of product documentation. Keep pending work and plans in the separate [project backlog](docs/todo/README.md).
 - Keep [README.md](README.md) accurate for installation and use, [architecture](docs/architecture/overview.md) for current modules/execution, [development](docs/development.md) for configuration, and [testing](docs/testing.md) for validation.
 - Remove obsolete guidance and fix references when moving or deleting documents. Prefer repository-relative Markdown links so documentation works across machines and agents.
 - Keep screenshots and other image files outside `.agents/`. Sakai comparison captures belong in Git-ignored `.references/review/`. Do not commit temporary captures or make documentation depend on their presence.
@@ -68,6 +74,13 @@
 - Current validation skill: [.agents/skills/holita-focused-validation/SKILL.md](.agents/skills/holita-focused-validation/SKILL.md).
 - Backend reference skill: [.agents/skills/holita-backend-feature/SKILL.md](.agents/skills/holita-backend-feature/SKILL.md).
 - Angular admin skill: [.agents/skills/holita-admin-development/SKILL.md](.agents/skills/holita-admin-development/SKILL.md).
+
+## Project backlog
+
+- Use [docs/todo/](docs/todo/README.md) for pending work and planned tasks only. Do not use it as a completion log or add entries for work already done.
+- Keep short, one-line tasks in `docs/todo/_instant-tsks.md` and larger plans in a descriptive Markdown file under `docs/todo/`. Link to an existing component backlog instead of duplicating its tasks.
+- Write entries in English. Keep proposals and unverified assumptions distinct from implemented behavior.
+- When work is complete, remove its backlog entry and update the authoritative documentation. Report individual check results in the task response. Remove or replace cancelled or superseded entries.
 
 ## NestJS
 

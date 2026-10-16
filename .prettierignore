@@ -2,6 +2,7 @@
 /.misc/
 /.references/
 .volumes/
+/AGENTS.local.md
 node_modules/
 dist/
 coverage/

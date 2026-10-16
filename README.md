@@ -46,7 +46,8 @@ Karma Client → Users/Roles provides read-only account search, local paging and
 details. Role descriptions and numeric flags are shown as source values.
 Karma Client → Trucks lists all cars from one configured Karma account for every signed-in
 Tenant/Store at `/bg/karma-client/cars` or `/en/karma-client/cars`. Configure the ignored
-`apps/karma-client/.env` using its [environment example](apps/karma-client/.env.example).
+`apps/karma-client/.env` using the Karma Client and shared demo entries in the
+[single root environment reference](.env.example).
 Click a registration number to open read-only truck details; these pages support Refresh. Open eData from truck details for the latest 50 messages,
 25/50/100 pagination, optional UTC/parameter-ID filters and complete message detail.
 Open Location from truck details to inspect the last-known message and coordinates; valid
@@ -98,3 +99,6 @@ npm run test:admin -- --include="app/features/fleet/vehicles/*.spec.ts" --includ
 Use [focused validation](docs/testing.md) for dedicated database and browser checks, and
 [development](docs/development.md) for configuration. Full regression requires an explicit
 user/reviewer request. Start documentation navigation at [docs/README.md](docs/README.md).
+Pending work and plans belong in the [project backlog](docs/todo/README.md). Machine-specific
+instructions and credential locations belong in the ignored `AGENTS.local.md`; see
+[local contributor setup](docs/development.md#local-contributor-instructions-and-credentials).
