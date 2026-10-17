@@ -12,6 +12,8 @@ ingestion, tracking and measurement processing are not implemented.
 - [Development](development.md): telemetry admin, demo login and GraphQL usage.
 - [Testing](testing.md): Fleet, Karma Client and Angular feature checks.
 - [Fleet implementation index](fleet.md): concrete Vehicles/Devices source references.
+- [Simple eData catalog](erm-resources/simple-edata-catalog/README.md): offline EXE
+  inspection/extraction, version comparison and shared Fleet reference-data import.
 - [ERM resources](erm-resources/README.md): Karma API v2 source assets, reconstructed
   OpenAPI, endpoint and field reference, current integration coverage and limitations;
   versioned PDF references for eData, Karma and StarLink with extracted images;

@@ -349,8 +349,9 @@ on 127.0.0.1 at that port. Examples do not replace credentials in existing insta
 Compose project `holita` uses `holita_postgres_data` mounted at `/var/lib/postgresql`.
 `db:down` preserves the volume. Do not delete volumes or reset databases to repair setup.
 
-Core/Fleet own their schemas, generated Prisma clients and reviewed SQL migrations. Each service
-has one initial migration for the complete tenant-scoped schema. Store, Vehicle and Device place
+Core/Fleet own their schemas, generated Prisma clients and reviewed SQL migrations. Core
+retains its initial migration; Fleet retains its initial migration and adds the shared
+eData reference catalog through an additive migration. Store, Vehicle and Device place
 tenantId immediately after id. The Device FK includes Tenant/Store/Vehicle, and IMEI uniqueness
 includes Tenant/Store. `db:migrate` deploys Core then Fleet; `db:generate` generates both ignored
 clients. Initial migrations require empty databases; a previous migration history needs an
@@ -359,6 +360,10 @@ changes require new reviewed SQL migrations, not edits to applied history or db 
 `db:seed` inserts RentalSofia, Discordia and Sandbox Stores, two Discordia Vehicles and one Device
 with a leading-zero IMEI. Existing keys and edits are preserved. Core runs before Fleet; Fleet
 fixtures belong to RentalSofia's Discordia Store.
+
+The [Simple eData catalog procedure](discocan/erm-resources/simple-edata-catalog/README.md)
+uses direct commands for EXE inspection, extraction, comparison and local Fleet import.
+It is separate from the sample-data seed and has no npm workflow registration.
 
 ## Troubleshooting
 

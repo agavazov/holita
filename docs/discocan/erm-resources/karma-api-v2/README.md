@@ -7,17 +7,21 @@ to Karma, ingest telemetry into a database or synchronize Fleet Vehicles/Devices
 
 ## Contents
 
-| Document / artifact                                             | Contents                                                                                           |
-| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| [Endpoint catalog](endpoint-catalog.md)                         | Every declared method, path, request field, required/multiple flag and current use                 |
-| [Data models](data-models.md)                                   | 102 field mappings and model notes, GraphQL types, validation, omissions and identity boundaries   |
-| [Observed eData parameters](observed-parameters.md)             | Nine encountered parameter IDs and original descriptions, with evidence and interpretation limits  |
-| [Transport and authentication](transport-and-authentication.md) | Sessions, wire encoding, time semantics, errors, deadlines and cursor mechanics                    |
-| [Holita integration](holita-integration.md)                     | Concrete modules, 12 public queries, routes, frontend lifecycle and test ownership                 |
-| [Limitations](limitations.md)                                   | Current endpoint/field gaps, adapter assumptions and evidence limits                               |
-| [Reconstructed OpenAPI 3.1](openapi.reconstructed.json)         | Machine-readable reference for 20 paths and 32 declared HTTP operations                            |
-| [Original source assets](source/README.md)                      | Downloaded vendor help, checksums and structural response evidence                                 |
-| [Remaining questions and work](../../../todo/karma-api-v2.md)   | Unresolved provider questions and possible implementation work, kept outside product documentation |
+For device changes, see [Configuring eData parameter reporting through Karma](../edata-simple-protocol-v4.04/parameter-reporting.md).
+It documents the manually verified upstream procedure and its limits separately
+from the application's implemented read operations.
+
+| Document / artifact                                             | Contents                                                                                            |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| [Endpoint catalog](endpoint-catalog.md)                         | Every declared method, path, request field, required/multiple flag and current use                  |
+| [Data models](data-models.md)                                   | 102 field mappings and model notes, GraphQL types, validation, omissions and identity boundaries    |
+| [Observed eData parameters](observed-parameters.md)             | Twelve encountered parameter IDs and original descriptions, with evidence and interpretation limits |
+| [Transport and authentication](transport-and-authentication.md) | Sessions, wire encoding, time semantics, errors, deadlines and cursor mechanics                     |
+| [Holita integration](holita-integration.md)                     | Concrete modules, 12 public queries, routes, frontend lifecycle and test ownership                  |
+| [Limitations](limitations.md)                                   | Current endpoint/field gaps, adapter assumptions and evidence limits                                |
+| [Reconstructed OpenAPI 3.1](openapi.reconstructed.json)         | Machine-readable reference for 20 paths and 32 declared HTTP operations                             |
+| [Original source assets](source/README.md)                      | Downloaded vendor help, checksums and structural response evidence                                  |
+| [Remaining questions and work](../../../todo/karma-api-v2.md)   | Unresolved provider questions and possible implementation work, kept outside product documentation  |
 
 ## Sources and confidence
 
@@ -62,6 +66,9 @@ The documentation distinguishes:
   incomplete serialization and validation rules.
 - **Structural observation:** a field/type actually returned by a read. An empty
   array proves no element model; a null-only field proves no non-null model.
+- **Device configuration observation:** a scoped command, device readback and
+  subsequent telemetry establish behavior for the documented installation/profile,
+  not a universal device capability or an implemented holita write operation.
 - **Implemented behavior:** a rule enforced by the linked holita source and its
   deterministic fixtures. It can be narrower than upstream capability.
 - **Unresolved behavior:** an explicit limitation linked to the backlog, rather

@@ -54,8 +54,11 @@ validated as a Fleet IMEI. Users and roles remain external reference data.
 
 `/sensors` can return a message envelope, but sampled `sensors` values were null.
 The presence of 500 message envelopes does not establish 500 actual sensor readings.
-Only an empty driver list was observed. There is no verified driver response model,
-accident report, queue state, configuration read result or command receipt.
+Only an empty driver list was observed. Driver and accident-report models remain
+unverified. Manual eData command submissions, single-ID queue reads and device
+configuration responses have limited observations documented in the
+[configuration reference](../edata-simple-protocol-v4.04/parameter-reporting.md).
+They do not establish complete command/queue schemas or holita write support.
 
 The adapter ignores additional object fields rather than preserving an arbitrary
 raw JSON payload. A single malformed row generally fails the complete read. Driving
@@ -104,8 +107,10 @@ body-size bound. Health does not probe Karma. A valid JSON error can use HTTP 20
 so transport success is distinct from usable business data.
 
 No upstream writes, device queries, commands or queue-driven workflows are
-implemented or exercised as part of the reference. GET `/parameters?query=...`
-is not assumed passive because the help labels it Query Device. Read permission
+implemented in holita. Scoped manual eData configuration requests have been
+verified independently through the upstream API; their procedure and applicability
+are documented separately. GET `/parameters?query=...` remains unverified and is
+not assumed passive because the help labels it Query Device. Read permission
 does not establish command, configuration, create or delete permission.
 
 See the [backlog](../../../todo/karma-api-v2.md) for the questions required to

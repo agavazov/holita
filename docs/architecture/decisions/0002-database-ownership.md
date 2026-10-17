@@ -11,5 +11,9 @@ Cleanup drops only that schema; live DB results are not cached. Abruptly killed 
 schemas behind; broad automatic cleanup is absent.
 
 Provisioning verifies ownership/privileges and preserves data/passwords. Seeds insert missing
-RentalSofia, Discordia/Sandbox Stores and sample Vehicles/Devices without replacing user edits. Core owns Tenant; Fleet carries mandatory tenantId without a cross-database foreign key. Initial migrations create the complete schema with tenantId second after id. Compose down preserves its volume. Applications and
+RentalSofia, Discordia/Sandbox Stores and sample Vehicles/Devices without replacing user edits.
+Core owns Tenant; Fleet carries mandatory tenantId without a cross-database foreign key.
+Initial migrations establish business schemas with tenantId second after id. An additive
+Fleet migration owns shared versioned eData vendor reference data without Tenant/Store
+columns; this does not change business isolation. Compose down preserves its volume. Applications and
 migration/test processes run on the host, with no application containers.

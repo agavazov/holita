@@ -10,7 +10,16 @@ One PostgreSQL instance contains independent Core/Fleet development and test dat
 with distinct owner/login roles. Admin/Gateway have no Prisma client or database credentials.
 Each owning service has its own schema, reviewed SQL migrations and generated client.
 Core owns the [Tenant/Store foundation](../ecommerce/stores.md) currently reused as Discocan organizational scope.
-Fleet owns Vehicle and Device. Each service has one initial migration for its complete schema. Store, Vehicle and Device have mandatory tenantId physically second after id; Tenant data is inserted by the seed, not by schema migrations.
+Fleet owns Vehicle and Device plus the shared versioned Simple eData vendor catalog.
+Core retains its initial migration; Fleet preserves its initial migration and adds
+the catalog through an additive migration. Store, Vehicle and Device have mandatory
+tenantId physically second after id; Tenant data is inserted by the seed, not by schema migrations.
+
+The [Simple eData catalog](erm-resources/simple-edata-catalog/README.md) is common
+manufacturer reference data without Tenant/Store columns. Seven related tables preserve
+version/source identity, parameters, sets, ordered members, categories and profiles.
+Only the local offline CLI imports it; it has no GraphQL endpoint or runtime device
+configuration integration. This scope does not change Vehicle/Device isolation.
 
 Vehicle has UUID, tenantId, storeId, required License Plate (32 characters), nullable Notes (2000
 characters) and timestamps. License Plate is not unique. Device has UUID, tenantId, storeId, required

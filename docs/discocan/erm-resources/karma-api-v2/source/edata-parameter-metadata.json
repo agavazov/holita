@@ -1,7 +1,8 @@
 {
   "kind": "Observed eData parameter metadata, not a complete vendor parameter dictionary",
   "observedAt": "2026-10-16T19:43:04+00:00",
-  "source": "GET /edata with showdesc=1, sampled latest batches; no telemetry values or account/car/device identifiers retained",
+  "updatedAt": "2026-10-17T15:47:21+00:00",
+  "source": "GET /edata with showdesc=1, sampled latest batches and a targeted parameter-reporting check; no telemetry values or account/car/device identifiers retained",
   "limitations": "Descriptions are source text, not proven units, scaling, availability by vehicle model or an exhaustive supported-ID list. Absence from this list does not mean unsupported.",
   "parameters": [
     {
@@ -25,6 +26,12 @@
       "observedValueTypes": ["number"]
     },
     {
+      "parameterId": 153,
+      "descriptions": ["Accelerator Pedal Position 1 (%)"],
+      "observedValueTypes": ["number"],
+      "firstObservedAt": "2026-10-17T15:46:21+00:00"
+    },
+    {
       "parameterId": 188,
       "descriptions": ["Engine Oil Temperature (c)"],
       "observedValueTypes": ["number"]
@@ -33,6 +40,18 @@
       "parameterId": 539,
       "descriptions": ["Engine Coolant Temperature (c)"],
       "observedValueTypes": ["number"]
+    },
+    {
+      "parameterId": 651,
+      "descriptions": ["Engine Percent Load At Current Speed"],
+      "observedValueTypes": ["number"],
+      "firstObservedAt": "2026-10-17T15:46:21+00:00"
+    },
+    {
+      "parameterId": 662,
+      "descriptions": ["Engine Fuel Rate (L/h)"],
+      "observedValueTypes": ["number"],
+      "firstObservedAt": "2026-10-17T15:36:51+00:00"
     },
     {
       "parameterId": 687,

@@ -30,6 +30,10 @@ using concurrently, with group shutdown. Ports and CORS origins are application-
 Only PostgreSQL runs in Compose. Setup/migration/seed are explicit commands, separate from startup.
 Health endpoints prove application availability without opening database connections.
 
+Fleet also owns the [shared Simple eData vendor catalog](../discocan/erm-resources/simple-edata-catalog/README.md).
+Its offline extractor and local import CLI preserve versioned reference data independently
+of Tenant/Store business records; it has no GraphQL or device-command interface.
+
 Gateway contains the official Apollo Router 2.18.0 host binary, integrated into development and tests.
 It consumes the same generated static supergraph and routes directly to Core, Fleet and
 Karma Client on the public GraphQL port, 11010. Its health listener uses port 11016.

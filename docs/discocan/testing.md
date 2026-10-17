@@ -1,5 +1,13 @@
 # Discocan focused checks
 
+## Simple eData reference catalog
+
+See the [catalog checks](erm-resources/simple-edata-catalog/README.md#focused-validation)
+for EXE-only Python fixtures and the focused Fleet `edata-catalog.unit.spec.ts`,
+`edata-catalog.db.spec.ts` and `initial-migration.db.spec.ts` selectors. Real PostgreSQL
+checks cover the full v9.56 catalog, transactional rollback, concurrency, idempotency
+and stored-row verification in dedicated test schemas.
+
 Follow the [shared validation guide](../testing.md) for native targets, database prerequisites,
 guarded fixtures, CI selection and manual full regression. These checks cover the current
 Fleet implementation using Store scope; Branch contracts are not implemented.

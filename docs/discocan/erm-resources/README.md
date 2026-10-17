@@ -13,6 +13,22 @@ Use the [Karma reference](karma-api-v2/README.md) for the API inventory, data mo
 current holita coverage and known limitations. Remaining investigation and proposed
 work live in the [Karma backlog](../../todo/karma-api-v2.md).
 
+## Simple eData Monitor catalog
+
+The [versioned catalog and offline procedure](simple-edata-catalog/README.md) extract
+embedded workbooks and Monitor tables from one EXE, compare versions and import shared
+reference data into Fleet. [v9.56](simple-edata-catalog/v9.56/README.md) retains both
+workbook variants and their conflicts. The workflow uses direct commands and has no
+device communication, GraphQL endpoint or admin integration.
+
+## Configuring eData reporting
+
+The [parameter configuration reference](edata-simple-protocol-v4.04/parameter-reporting.md)
+explains how catalog metadata, device definitions and received measurements relate;
+how to read, add or change reporting parameters through Karma; and how to verify
+or restore a change. It records the verified scope and remaining protocol limits.
+The procedure is a manual upstream capability, not an implemented holita command UI.
+
 ## Hardware profiles
 
 | Hardware reference                                                        | Identification and scope                                                                                                                                                                                                                                                                                      |

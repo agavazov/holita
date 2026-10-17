@@ -43,6 +43,11 @@ Parameter definitions describe the CAN header, start bit, bit count, multiplier,
 
 The response catalog distinguishes periodic parameter reports, rule-triggered reports and ignition-off reports, then histogram reports, diagnostics, VIN, car type, CAN state changes, faults, driver IDs and FMS scanning (pages 17-29). These distinctions should be preserved when interpreting source messages; this document alone does not prove how Karma exposes each report.
 
+The separate [parameter configuration reference](parameter-reporting.md)
+describes reading, adding and changing reporting definitions through Karma,
+preserving other settings, confirming measurements and restoring a change. It supplements
+the source conversion; it is not a command interface implemented in holita.
+
 ## Source qualifications
 
 - The protocol is a device interface. It does not establish a mapping to Karma API v2 parameter IDs or JSON response fields.

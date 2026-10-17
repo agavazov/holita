@@ -11,6 +11,11 @@ and the relevant Fleet documents.
 
 ## Fleet backend
 
+- The [Simple eData vendor catalog](erm-resources/simple-edata-catalog/README.md) is
+  shared manufacturer reference data scoped by catalog version, without Tenant/Store
+  columns. Its local offline importer has no GraphQL or device-command interface.
+  Vehicle/Device business data retains mandatory Tenant/Store isolation.
+
 - Follow the actual [Vehicles resolver/service/repository](../../apps/fleet/src/vehicles/vehicles.resolver.ts) and its [SDL](../../apps/fleet/src/vehicles/vehicles.graphql). Use @Parent on a federation reference parameter when combining it with Nest parameter decorators; always resolve Vehicle/Device references through scoped service access.
 - Store access must always include the verified Tenant. Vehicle/Device persistence must always include the verified Tenant and active Store. Creation gets store ID from context and checks existence through core. Do not make a store existence network call for every business read/update/delete or move that blanket check into the gateway.
 - Store discovery itself belongs to the [Core Store foundation](../ecommerce/stores.md), which

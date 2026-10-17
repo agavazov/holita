@@ -82,6 +82,27 @@ Sources: [SDL](../../../../apps/karma-client/src/location/location.graphql), [ru
 | `odo`          | `odo`         | `Float`      | Nullable finite number with unknown units.                                                       |
 | `extra`        | `extra`       | `String`     | Nullable plain text. No automatic JSON/HTML/device-payload decoding.                             |
 
+### Additional upstream voltage fields
+
+Direct upstream `GET /location` and `GET /events` reads can return numeric `vin`
+and `vbat` when explicitly selected with repeated `fields[]` query parameters.
+These fields were observed on the StarLink Scout vehicle under investigation,
+including messages received while the eData diagnostic ignition state was off.
+Holita's current location/event adapters and GraphQL models do not request or
+expose them.
+
+The field interpretation follows the [flespi ERM parser reference](https://flespi.com/protocols/erm):
+`#VIN#` maps to external power-source voltage in volts, and `#VBAT#` to internal
+battery voltage in volts. This is an ERM protocol mapping consistent with the
+observed values, not a vendor-published Karma field schema. The numeric `vin`
+field here is unrelated to a vehicle identification number.
+
+These are tracker message fields, separate from `/edata` parameter definitions.
+Adding eData parameter `781` is not required to retrieve them. `/location` reads
+the last stored message; compare `message_id` and `edt`/`edt_tz` across records to
+establish freshness. A successful API read does not itself force a new device
+measurement or establish that the device is continuously awake.
+
 ## Trips (`KarmaTrip`)
 
 Sources: [SDL](../../../../apps/karma-client/src/history/history.graphql), [runtime mapping](../../../../apps/karma-client/src/history/history-response.ts).
@@ -210,7 +231,7 @@ Sources: [SDL](../../../../apps/karma-client/src/accounts/accounts.graphql), [ru
 - **Drivers:** public help specifies create/update input fields (project_id, first_name, last_name, phone_number), but only an empty GET response was observed. A Driver response schema cannot be established from request names.
 - **Sensors:** observed envelope fields are car_id, carnumber, device_id, edt, message_id and sensors. The sensors property was null in the sample, so nested reading types, sensor identifiers, units and decoding are unknown.
 - **Configuration parameters:** /parameters is separate from /edata. Its cached/query results, value types, device reply and errors are unknown.
-- **Commands / queues:** command receipt, queue identifiers, per-device delivery states, terminal states and acknowledgments have no verified model.
+- **Commands / queues:** single-device command submissions returned numeric queue-ID arrays. Single-ID queue reads returned objects keyed by the ID, with `state_id` and `state_desc`, including `1` / `transmitted`. These are limited upstream observations, not implemented holita models or a complete delivery/acknowledgment contract. See the [configuration reference](../edata-simple-protocol-v4.04/parameter-reporting.md#command-submission-and-responses).
 - **Black box:** accident report structure, encoding, units, sampling, authorization and discovery are unknown.
 - **Writes:** create/update/delete response shapes and success codes were not inferred from read responses.
 - **Addresses / decode:** requested-address payloads and decoded external-device data have not been observed or integrated.

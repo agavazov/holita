@@ -3,6 +3,12 @@
 Sakai owns Angular presentation. Concrete features own contracts, validation and scoped
 request lifecycles. Use the existing files directly; there is no generic CRUD layer.
 
+The shared [Simple eData vendor catalog](erm-resources/simple-edata-catalog/README.md)
+is implemented by [file validation](../../apps/fleet/src/edata-catalog/catalog-file.ts),
+[transactional persistence](../../apps/fleet/src/edata-catalog/catalog.repository.ts)
+and a [local CLI](../../apps/fleet/src/edata-catalog/cli.ts). Its offline Python extractor
+is [tools/erm-edata/catalog.py](../../tools/erm-edata/catalog.py); it has no API or admin integration.
+
 ## Angular foundation
 
 [StoreWorkspace](../../apps/admin/src/app/features/stores/store-workspace.ts) owns authenticated discovery,

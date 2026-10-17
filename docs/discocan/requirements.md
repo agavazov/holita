@@ -35,3 +35,11 @@ A candidate signed, expiring token discovers only that Tenant's Stores; the UI s
 after submission with a valid Store. Anyone can choose any Tenant; real user identity, tenant
 membership, permissions and session revocation must be implemented before production.
 Vehicle and Device require tenantId physically second after id in PostgreSQL.
+
+## Shared vendor reference data
+
+The [versioned Simple eData catalog](erm-resources/simple-edata-catalog/README.md) is common
+manufacturer metadata without Tenant/Store scope. An offline EXE-only extractor preserves
+all supported workbook variants, Monitor tables, conflicts and provenance. A local CLI
+imports versions transactionally and verifies repeated imports. This has no GraphQL/admin
+or device-command integration and does not change FND-006 business-entity isolation.

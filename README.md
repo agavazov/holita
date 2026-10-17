@@ -12,6 +12,10 @@ admin belong to Discocan; the Core Store foundation is documented under Ecommerc
 Discocan's current Stores will later become Branches, while Ecommerce keeps Stores for online
 shops. Current code, contracts and persistence still use Store terminology.
 
+Fleet also stores the [versioned Simple eData vendor catalog](docs/discocan/erm-resources/simple-edata-catalog/README.md).
+Its EXE inspection, extraction, comparison and local import use direct commands,
+independent of the admin and sample-data seed.
+
 ## Run locally
 
 Use Ubuntu/WSL with Node.js 24.15+ and npm 11. The pinned package manager is npm 11.19.0.

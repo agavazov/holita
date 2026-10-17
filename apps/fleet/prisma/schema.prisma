@@ -38,3 +38,91 @@ model Device {
   @@index([tenantId, storeId, createdAt, id])
   @@index([tenantId, storeId, vehicleId])
 }
+
+// Shared vendor reference data. Device/Vehicle data remains Tenant/Store scoped.
+model EdataCatalog {
+  id String @id @default(uuid()) @db.Uuid
+  sourceSha256 String @db.Char(64)
+  extractorVersion String @db.VarChar(32)
+  schemaVersion Int
+  packageLabel String @db.VarChar(64)
+  contentSha256 String @db.Char(64)
+  metadata Json
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  sources EdataCatalogSource[]
+  sets EdataCatalogSet[]
+  categories EdataCatalogCategory[]
+
+  @@unique([sourceSha256, extractorVersion, schemaVersion])
+}
+
+model EdataCatalogSource {
+  catalogId String @db.Uuid
+  key String
+  kind String @db.VarChar(16)
+  evidence Json
+  catalog EdataCatalog @relation(fields: [catalogId], references: [id], onDelete: Restrict)
+  parameters EdataCatalogParameter[]
+
+  @@id([catalogId, key])
+}
+
+model EdataCatalogParameter {
+  catalogId String @db.Uuid
+  key String
+  sourceKey String
+  parameterId Int
+  category String
+  name String
+  multiply String?
+  offset String?
+  details Json
+  source EdataCatalogSource @relation(fields: [catalogId, sourceKey], references: [catalogId, key], onDelete: Restrict)
+
+  @@id([catalogId, key])
+  @@index([catalogId, parameterId, category])
+}
+
+model EdataCatalogSet {
+  catalogId String @db.Uuid
+  vendorId Int
+  details Json
+  catalog EdataCatalog @relation(fields: [catalogId], references: [id], onDelete: Restrict)
+  members EdataCatalogSetMember[]
+  profiles EdataCatalogProfile[]
+
+  @@id([catalogId, vendorId])
+}
+
+model EdataCatalogSetMember {
+  catalogId String @db.Uuid
+  setId Int
+  position Int
+  parameterId Int
+  set EdataCatalogSet @relation(fields: [catalogId, setId], references: [catalogId, vendorId], onDelete: Restrict)
+
+  @@id([catalogId, setId, position])
+  @@index([catalogId, parameterId])
+}
+
+model EdataCatalogCategory {
+  catalogId String @db.Uuid
+  vendorId Int
+  name String
+  catalog EdataCatalog @relation(fields: [catalogId], references: [id], onDelete: Restrict)
+  profiles EdataCatalogProfile[]
+
+  @@id([catalogId, vendorId])
+}
+
+model EdataCatalogProfile {
+  catalogId String @db.Uuid
+  vendorId Int
+  setId Int
+  categoryId Int
+  name String
+  set EdataCatalogSet @relation(fields: [catalogId, setId], references: [catalogId, vendorId], onDelete: Restrict)
+  category EdataCatalogCategory @relation(fields: [catalogId, categoryId], references: [catalogId, vendorId], onDelete: Restrict)
+
+  @@id([catalogId, vendorId])
+}

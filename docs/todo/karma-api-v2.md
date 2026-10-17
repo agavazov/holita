@@ -5,6 +5,26 @@ requirements or a commitment to enable every provider feature. Current behavior,
 source assets and coverage are documented in the
 [Karma API reference](../discocan/erm-resources/karma-api-v2/README.md).
 
+## Device recovery
+
+- [Restore eData reporting for CB6721TE](erm-edata-recovery-cb6721te.md) after the
+  reported remote configuration changes; attempt verified remote recovery first,
+  then arrange on-site work if necessary.
+
+## eData configuration interface
+
+- [Build an eData parameter configuration interface](erm-edata-configuration-interface.md),
+  using the documented device workflow and the separately maintained catalog.
+  That task owns the user-facing configuration work; provider questions below
+  remain shared investigation items.
+
+## Direct ERM telemetry
+
+- [Build an ERM TCP receiver and test device routing](erm-tcp-receiver-and-test-device-routing.md):
+  receive direct telemetry, redirect one selected test device, verify restoration,
+  and determine whether it can report to both holita and Karma simultaneously.
+  The task distinguishes concurrent delivery from failover and provider forwarding.
+
 ## Provider contract
 
 - **CONTRACT-01:** Obtain the official OpenAPI/response schema or confirm its location,
@@ -56,8 +76,11 @@ source assets and coverage are documented in the
   value types, nullable/missing behavior, precision, availability by device and
   whether descriptions are versioned/localized. Confirm multi-parameter filter
   semantics: selected readings only versus matching complete messages. The
-  [nine observed descriptions](../discocan/erm-resources/karma-api-v2/observed-parameters.md)
-  provide an initial partial reference, not model-specific definitions.
+  [observed descriptions](../discocan/erm-resources/karma-api-v2/observed-parameters.md)
+  provide an initial partial reference, not model-specific definitions. The separate
+  [versioned Simple eData catalog](../discocan/erm-resources/simple-edata-catalog/README.md)
+  preserves the supplied EXE source records and imports vendor metadata into Fleet;
+  it does not establish the Karma API mapping or device support.
 - **EVENT-01:** Obtain the event-code catalog, meaning of zero, `extra` structures,
   `decode` behavior, external-device payload schemas and address-language output.
 - **PROFILE-01:** Define nine category meanings, score/weight ranges, null/zero,
@@ -93,12 +116,13 @@ source assets and coverage are documented in the
 - **PARAM-01:** Document `/parameters` definitions, cached versus device-query reads,
   value encodings, per-device availability, array alignment, partial errors,
   authorization, queue responses and verification of an applied configuration.
-- **COMMAND-01:** Obtain command grammar/catalog, device compatibility, authorization,
-  acknowledgments, queue IDs, delivery/expiry behavior, idempotency and audit needs
-  before proposing a command UI or executing device operations.
-- **QUEUE-01:** Obtain queue response schema, state values, terminal conditions,
-  per-device/bulk mapping, retention and polling guidance. Resolve path syntax
-  before associating queue records with commands/configuration writes.
+- **COMMAND-01:** Extend the [documented eData command evidence](../discocan/erm-resources/edata-simple-protocol-v4.04/parameter-reporting.md)
+  with confirmed hardware/firmware compatibility, write permissions, acknowledgment
+  correlation, delivery/expiry behavior, idempotency and accountability requirements.
+  Do not generalize the verified parameter updates to every device command.
+- **QUEUE-01:** Complete the queue response/state model beyond the observed
+  single-ID reads and `transmitted` state: terminal conditions, expiry/cancellation,
+  per-device/bulk mapping, retention and polling guidance remain unresolved.
 - **ACCIDENT-01:** Obtain accident-ID discovery, report schema/encoding, sampling,
   coordinate axes, time/unit definitions, retention and permissions for
   `/black_box/{id}`. Determine how reports link to events, cars and devices.

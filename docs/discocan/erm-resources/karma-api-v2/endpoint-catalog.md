@@ -212,6 +212,11 @@ Retrieve last known location data for vehicles.
 
 Holita uses GET with one scalar car and fields[]=spd, odo, edt_tz, pdt. It does not expose device/bulk/date/address selectors or POST. The help has no date_type selector here.
 
+For a direct upstream voltage read, use `GET /location` with `car` and repeated
+`fields[]=vin`, `fields[]=vbat`, `fields[]=edt_tz` selectors, plus the usual session
+authentication. These observed tracker fields are not currently exposed by
+holita. See [voltage meanings and freshness limits](data-models.md#additional-upstream-voltage-fields).
+
 | Field       | Location                                | Form type | Required | Multiple | Options / format                      |
 | ----------- | --------------------------------------- | --------- | -------- | -------- | ------------------------------------- |
 | `car`       | query for GET/DELETE; JSON for POST/PUT | number    | no       | yes      | —                                     |
@@ -242,6 +247,10 @@ Holita uses GET for one car, paired optional wall-clock dates and internal to_id
 Retrieve historical event data with filtering options.
 
 Holita uses GET for one car, date_type=utc, fields[] selections, paired dates, event_type[] codes and internal to_id pagination over message_id. from_id, address, decode, bulk/device/project selection and POST are not exposed.
+
+Direct upstream reads also accept `fields[]=vin` and `fields[]=vbat` to inspect
+voltage across historical messages. Availability on a message is device-dependent;
+see [the observed voltage fields](data-models.md#additional-upstream-voltage-fields).
 
 | Field        | Location                                | Form type | Required | Multiple | Options / format                      |
 | ------------ | --------------------------------------- | --------- | -------- | -------- | ------------------------------------- |
@@ -317,7 +326,12 @@ Neither GET nor PUT is implemented. These are device configuration parameters, d
 
 Send command message to one or more devices.
 
-Not implemented. Message grammar, device compatibility, acknowledgments, authorization, queue responses, idempotency and delivery guarantees are unknown. This is not a generic HTTP proxy in holita.
+Not implemented in holita. Manual single-device eData requests used a one-element
+`car_id` array, a command string and `karma_sid`, and returned numeric queue-ID
+arrays. Selected parameter updates were verified by device readback and subsequent
+measurements; see the [configuration procedure and evidence limits](../edata-simple-protocol-v4.04/parameter-reporting.md).
+This does not establish a universal command catalog, permissions, bulk behavior,
+acknowledgment correlation, idempotency or delivery guarantees.
 
 | Field     | Location  | Form type | Required | Multiple | Options / format |
 | --------- | --------- | --------- | -------- | -------- | ---------------- |
@@ -357,7 +371,12 @@ No holita implementation or report sample. Accident ID is a text path value. No 
 
 Get status of queued messages.
 
-No holita implementation or sample. queue_id is a required numeric multi-field despite a single {id} path. The helper can switch this GET-only entry to POST. Path grammar and queue-state values remain unresolved.
+No holita implementation. Direct `GET /queue/{id}` reads for a single numeric ID
+returned an object keyed by that ID with `state_id` and `state_desc`; state `1` /
+`transmitted` was observed. It does not prove an applied device configuration.
+The complete state model, terminal conditions and bulk path grammar remain
+unresolved. The vendor form marks queue_id as multi-value despite a single path
+placeholder and can switch to POST; that does not establish POST support.
 
 | Field      | Location    | Form type | Required | Multiple | Options / format |
 | ---------- | ----------- | --------- | -------- | -------- | ---------------- |
@@ -381,4 +400,10 @@ No endpoint-specific request fields are declared (session handling is separate).
 
 ## Response knowledge
 
-Response fields for implemented reads and observed omissions are listed in [Data models](data-models.md). Unknown write results, driver rows, non-null sensor payloads, accident reports and queue states intentionally remain unconstrained in the reconstructed schema. Consult the [remaining questions](../../../todo/karma-api-v2.md) before treating this reference as a complete upstream contract.
+Response fields for implemented reads and observed omissions are listed in
+[Data models](data-models.md). The limited command/queue observations above have
+not been promoted to complete response schemas. Unknown write results, driver
+rows, non-null sensor payloads, accident reports and queue states intentionally
+remain unconstrained in the reconstructed schema. Consult the
+[remaining questions](../../../todo/karma-api-v2.md) before treating this reference
+as a complete upstream contract.

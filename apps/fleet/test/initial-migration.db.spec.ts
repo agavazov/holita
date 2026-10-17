@@ -4,7 +4,7 @@ import { createTestDatabase } from './test-database.js';
 import { getTestDatabaseUrl } from './test-database-url.js';
 
 describe('fleet initial database migration', () => {
-  it('creates mandatory tenant columns after IDs from one complete initial migration', async () => {
+  it('preserves mandatory business tenant columns and deploys the additive catalog migration', async () => {
     const database = await createTestDatabase();
     const connection = new pg.Client({ connectionString: getTestDatabaseUrl() });
     try {
@@ -20,9 +20,12 @@ describe('fleet initial database migration', () => {
         ]);
       }
       const migrations = await connection.query<{ migration_name: string }>(
-        `SELECT migration_name FROM ${pg.escapeIdentifier(database.schema)}."_prisma_migrations" WHERE finished_at IS NOT NULL`,
+        `SELECT migration_name FROM ${pg.escapeIdentifier(database.schema)}."_prisma_migrations" WHERE finished_at IS NOT NULL ORDER BY migration_name`,
       );
-      expect(migrations.rows).toEqual([{ migration_name: '20261011000000_init' }]);
+      expect(migrations.rows).toEqual([
+        { migration_name: '20261011000000_init' },
+        { migration_name: '20261017000000_edata_catalog' },
+      ]);
     } finally {
       try {
         await connection.end();
