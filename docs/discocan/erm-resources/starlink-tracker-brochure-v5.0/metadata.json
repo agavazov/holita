@@ -1,0 +1,125 @@
+{
+  "schema_version": "1.0",
+  "analysis_date": "2026-10-16",
+  "analysis_timezone": "Europe/Sofia",
+  "analysis_edition": "1.0",
+  "prepared_by": "Codex",
+  "title": "StarLink Tracker - Ultimate, Function Rich Telematics Solution",
+  "source_filename": "StarLink Tracker Brochure v5.0.pdf",
+  "source_path": "source/original.pdf",
+  "source_origin": ".misc/edata/StarLink Tracker Brochure v5.0.pdf",
+  "source_bytes": 819041,
+  "source_sha256": "03e02ff279b7683fbad5d963649d6ea8b2beed329650a864ce9195d5ee4c32f8",
+  "source_version": "5.0 (printed and filename); metadata title includes DRAFT",
+  "version_evidence": "Filename and visible footer on PDF page 1 say 5.0. PDF title: StarLink Tracker Brocure v5.0 - DRAFT.",
+  "document_date_evidence": "Not printed; PDF metadata creation/modification: 2024-09-22",
+  "pdf_metadata": {
+    "format": "PDF 1.5",
+    "title": "StarLink Tracker Brocure v5.0 - DRAFT",
+    "author": "",
+    "subject": "",
+    "keywords": "",
+    "creator": "Adobe Illustrator 28.7 (Windows)",
+    "producer": "Adobe PDF library 17.00",
+    "creationDate": "D:20240922171056+03'00'",
+    "modDate": "D:20240922171056+03'00'",
+    "trapped": "",
+    "encryption": null
+  },
+  "pdf_creation_timestamp": "2024-09-22T17:10:56+03:00",
+  "pdf_modification_timestamp": "2024-09-22T17:10:56+03:00",
+  "page_count": 3,
+  "page_numbering": "One-based physical PDF pages",
+  "conversion_method": "PyMuPDF text and image extraction with soft masks; shaded-cell reconstruction; visual review; visible-page transcription for brochures",
+  "tool_versions": {
+    "pymupdf": "1.28.2"
+  },
+  "qualifications": [
+    "The PDF title includes DRAFT even though the visible brochure footer says 5.0. Publication/final approval status is not established.",
+    "Covered older text remains in the PDF text layer. The Markdown transcription follows the visible rendered version, excluding the covered material.",
+    "Variants and optional add-ons are distinguished from base hardware. Brochure claims do not establish capabilities of a specific installed device or Karma API contract."
+  ],
+  "pages": [
+    {
+      "pdf_page": 1,
+      "content_anchor": "content.md#pdf-page-1",
+      "table_count": 0,
+      "image_ids": [1, 4]
+    },
+    {
+      "pdf_page": 2,
+      "content_anchor": "content.md#pdf-page-2",
+      "table_count": 1,
+      "image_ids": [2, 5]
+    },
+    {
+      "pdf_page": 3,
+      "content_anchor": "content.md#pdf-page-3",
+      "table_count": 2,
+      "image_ids": [3]
+    }
+  ],
+  "images": [
+    {
+      "id": 1,
+      "file": "images/page-001.png",
+      "description": "Full visible cover of StarLink Tracker - Ultimate, Function Rich Telematics Solution: ERM branding, overhead road/car artwork, speedometer photograph, product photograph and the printed brochure version.",
+      "kind": "rendered-visible-page",
+      "occurrences": [
+        {
+          "pdf_page": 1,
+          "bbox_points": [0.0, 0.0, 595.2760009765625, 841.8900146484375]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "file": "images/page-002.png",
+      "description": "Full visible second page, preserving variant badges, column layout and specifications/features while excluding the covered old text layer.",
+      "kind": "rendered-visible-page",
+      "occurrences": [
+        {
+          "pdf_page": 2,
+          "bbox_points": [0.0, 0.0, 595.2760009765625, 841.8900146484375]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "file": "images/page-003.png",
+      "description": "Full visible third page with the specification/environment table and its source units.",
+      "kind": "rendered-visible-page",
+      "occurrences": [
+        {
+          "pdf_page": 3,
+          "bbox_points": [0.0, 0.0, 595.2760009765625, 841.8900146484375]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "file": "images/product.png",
+      "description": "Product photograph: a black Tracker enclosure shown at an angle with its connector end visible.",
+      "kind": "rendered-figure-crop",
+      "occurrences": [
+        {
+          "pdf_page": 1,
+          "bbox_points": [348.0, 250.0, 570.0, 405.0]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "file": "images/variants.png",
+      "description": "Variant badge strip: 4G, SF, iRF, CAN, ID, EC, 22, EA, VO, WF and WG.",
+      "kind": "rendered-figure-crop",
+      "occurrences": [
+        {
+          "pdf_page": 2,
+          "bbox_points": [54.0, 280.0, 542.0, 355.0]
+        }
+      ]
+    }
+  ],
+  "context_captures": []
+}

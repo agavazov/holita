@@ -9,6 +9,7 @@ playwright-report/
 !/.env.example
 
 /AGENTS.local.md
+/.credentials/
 
 apps/*/src/generated/
 .nx/

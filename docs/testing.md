@@ -179,8 +179,8 @@ a fixed-arrival-rate latency SLA, cold-start performance or real Karma network l
 Inspect both tracked changes and new files; exclude the local task directory:
 
 ```bash
-git diff --name-only HEAD -- . ':!.tmp/**' ':!.misc/**' ':!.volumes/**'
-git ls-files --others --exclude-standard -- . ':!.tmp/**' ':!.misc/**' ':!.volumes/**'
+git diff --name-only HEAD -- . ':!.credentials/**' ':!.tmp/**' ':!.misc/**' ':!.volumes/**'
+git ls-files --others --exclude-standard -- . ':!.credentials/**' ':!.tmp/**' ':!.misc/**' ':!.volumes/**'
 npm run projects -- --affected --base=HEAD
 ```
 

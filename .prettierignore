@@ -3,6 +3,7 @@
 /.references/
 .volumes/
 /AGENTS.local.md
+/.credentials/
 node_modules/
 dist/
 coverage/

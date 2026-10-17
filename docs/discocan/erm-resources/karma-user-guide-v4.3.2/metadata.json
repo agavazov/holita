@@ -1,0 +1,1880 @@
+{
+  "schema_version": "1.0",
+  "analysis_date": "2026-10-16",
+  "analysis_timezone": "Europe/Sofia",
+  "analysis_edition": "1.1",
+  "prepared_by": "Codex",
+  "title": "Karma User Guide",
+  "source_filename": "Karma User guide 4.3.2.pdf",
+  "source_path": "source/original.pdf",
+  "source_origin": ".misc/edata/Karma User guide 4.3.2.pdf",
+  "source_bytes": 5149239,
+  "source_sha256": "6e2f79927cfe5a7781172d0a2ccb1000bbd74af4c0f3d6b15a52b0b0a3ea1d84",
+  "source_version": "4.3.2",
+  "version_evidence": "Cover, PDF page 1: Version 4.3.2 | 12/2018.",
+  "document_date_evidence": "December 2018 on cover; November 2018 in page footers",
+  "pdf_metadata": {
+    "format": "PDF 1.7",
+    "title": "",
+    "author": "אדוארדו",
+    "subject": "",
+    "keywords": "",
+    "creator": "Microsoft® Word 2016",
+    "producer": "Microsoft® Word 2016",
+    "creationDate": "D:20181209165306+02'00'",
+    "modDate": "D:20181209165306+02'00'",
+    "trapped": "",
+    "encryption": null
+  },
+  "pdf_creation_timestamp": "2018-12-09T16:53:06+02:00",
+  "pdf_modification_timestamp": "2018-12-09T16:53:06+02:00",
+  "page_count": 39,
+  "page_numbering": "One-based physical PDF pages",
+  "conversion_method": "PyMuPDF text and image extraction with soft masks; shaded-cell reconstruction; visual review; visible-page transcription for brochures",
+  "tool_versions": {
+    "pymupdf": "1.28.2"
+  },
+  "qualifications": [
+    "The cover says December 2018; the internal footers say November 2018. Neither date has been silently substituted for the other.",
+    "The original repeats section numbers 2 and 3. Original headings are retained; PDF page anchors provide unambiguous navigation.",
+    "UI screenshots describe this historical release. They do not prove current NC2 behavior, API field semantics, current feature availability or holita implementation.",
+    "Illustrative trip, fuel and driving charts are examples; their displayed values are not live measurements."
+  ],
+  "pages": [
+    {
+      "pdf_page": 1,
+      "content_anchor": "content.md#pdf-page-1",
+      "table_count": 0,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 2,
+      "content_anchor": "content.md#pdf-page-2",
+      "table_count": 0,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 3,
+      "content_anchor": "content.md#pdf-page-3",
+      "table_count": 0,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 4,
+      "content_anchor": "content.md#pdf-page-4",
+      "table_count": 0,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 5,
+      "content_anchor": "content.md#pdf-page-5",
+      "table_count": 0,
+      "image_ids": [5]
+    },
+    {
+      "pdf_page": 6,
+      "content_anchor": "content.md#pdf-page-6",
+      "table_count": 0,
+      "image_ids": [7, 8, 9, 10, 11, 12, 13, 14, 15]
+    },
+    {
+      "pdf_page": 7,
+      "content_anchor": "content.md#pdf-page-7",
+      "table_count": 0,
+      "image_ids": [16, 17, 18]
+    },
+    {
+      "pdf_page": 8,
+      "content_anchor": "content.md#pdf-page-8",
+      "table_count": 0,
+      "image_ids": [19, 20]
+    },
+    {
+      "pdf_page": 9,
+      "content_anchor": "content.md#pdf-page-9",
+      "table_count": 0,
+      "image_ids": [21, 22, 23]
+    },
+    {
+      "pdf_page": 10,
+      "content_anchor": "content.md#pdf-page-10",
+      "table_count": 0,
+      "image_ids": [24, 25, 26]
+    },
+    {
+      "pdf_page": 11,
+      "content_anchor": "content.md#pdf-page-11",
+      "table_count": 0,
+      "image_ids": [27, 28]
+    },
+    {
+      "pdf_page": 12,
+      "content_anchor": "content.md#pdf-page-12",
+      "table_count": 0,
+      "image_ids": [29, 30]
+    },
+    {
+      "pdf_page": 13,
+      "content_anchor": "content.md#pdf-page-13",
+      "table_count": 0,
+      "image_ids": [31, 32]
+    },
+    {
+      "pdf_page": 14,
+      "content_anchor": "content.md#pdf-page-14",
+      "table_count": 0,
+      "image_ids": [33, 34, 35]
+    },
+    {
+      "pdf_page": 15,
+      "content_anchor": "content.md#pdf-page-15",
+      "table_count": 0,
+      "image_ids": [37, 38, 39, 40]
+    },
+    {
+      "pdf_page": 16,
+      "content_anchor": "content.md#pdf-page-16",
+      "table_count": 0,
+      "image_ids": [39, 41]
+    },
+    {
+      "pdf_page": 17,
+      "content_anchor": "content.md#pdf-page-17",
+      "table_count": 0,
+      "image_ids": [42, 43, 44]
+    },
+    {
+      "pdf_page": 18,
+      "content_anchor": "content.md#pdf-page-18",
+      "table_count": 0,
+      "image_ids": [45]
+    },
+    {
+      "pdf_page": 19,
+      "content_anchor": "content.md#pdf-page-19",
+      "table_count": 0,
+      "image_ids": [46, 47]
+    },
+    {
+      "pdf_page": 20,
+      "content_anchor": "content.md#pdf-page-20",
+      "table_count": 0,
+      "image_ids": [48, 49, 50, 51, 52, 53, 54]
+    },
+    {
+      "pdf_page": 21,
+      "content_anchor": "content.md#pdf-page-21",
+      "table_count": 0,
+      "image_ids": [55, 56]
+    },
+    {
+      "pdf_page": 22,
+      "content_anchor": "content.md#pdf-page-22",
+      "table_count": 0,
+      "image_ids": [57, 58, 59, 60, 61, 62, 63]
+    },
+    {
+      "pdf_page": 23,
+      "content_anchor": "content.md#pdf-page-23",
+      "table_count": 0,
+      "image_ids": [57, 58, 64, 65, 66]
+    },
+    {
+      "pdf_page": 24,
+      "content_anchor": "content.md#pdf-page-24",
+      "table_count": 0,
+      "image_ids": [57, 67, 68, 69, 70]
+    },
+    {
+      "pdf_page": 25,
+      "content_anchor": "content.md#pdf-page-25",
+      "table_count": 0,
+      "image_ids": [71, 72]
+    },
+    {
+      "pdf_page": 26,
+      "content_anchor": "content.md#pdf-page-26",
+      "table_count": 0,
+      "image_ids": [73, 74, 75]
+    },
+    {
+      "pdf_page": 27,
+      "content_anchor": "content.md#pdf-page-27",
+      "table_count": 0,
+      "image_ids": [69, 76, 77]
+    },
+    {
+      "pdf_page": 28,
+      "content_anchor": "content.md#pdf-page-28",
+      "table_count": 0,
+      "image_ids": [78, 79, 80, 81]
+    },
+    {
+      "pdf_page": 29,
+      "content_anchor": "content.md#pdf-page-29",
+      "table_count": 0,
+      "image_ids": [82, 83]
+    },
+    {
+      "pdf_page": 30,
+      "content_anchor": "content.md#pdf-page-30",
+      "table_count": 0,
+      "image_ids": [84, 85]
+    },
+    {
+      "pdf_page": 31,
+      "content_anchor": "content.md#pdf-page-31",
+      "table_count": 0,
+      "image_ids": [83, 86, 87, 88]
+    },
+    {
+      "pdf_page": 32,
+      "content_anchor": "content.md#pdf-page-32",
+      "table_count": 0,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 33,
+      "content_anchor": "content.md#pdf-page-33",
+      "table_count": 0,
+      "image_ids": [89, 90, 91, 92, 93, 94, 95, 96]
+    },
+    {
+      "pdf_page": 34,
+      "content_anchor": "content.md#pdf-page-34",
+      "table_count": 0,
+      "image_ids": [97, 98, 99, 100, 101]
+    },
+    {
+      "pdf_page": 35,
+      "content_anchor": "content.md#pdf-page-35",
+      "table_count": 0,
+      "image_ids": [102, 103, 104]
+    },
+    {
+      "pdf_page": 36,
+      "content_anchor": "content.md#pdf-page-36",
+      "table_count": 0,
+      "image_ids": [105, 106, 107, 108]
+    },
+    {
+      "pdf_page": 37,
+      "content_anchor": "content.md#pdf-page-37",
+      "table_count": 0,
+      "image_ids": [109, 110, 111]
+    },
+    {
+      "pdf_page": 38,
+      "content_anchor": "content.md#pdf-page-38",
+      "table_count": 0,
+      "image_ids": [112, 113, 114, 115]
+    },
+    {
+      "pdf_page": 39,
+      "content_anchor": "content.md#pdf-page-39",
+      "table_count": 0,
+      "image_ids": []
+    }
+  ],
+  "images": [
+    {
+      "id": 5,
+      "file": "images/image-005.png",
+      "description": "Historical Karma login screen with username, password and language controls.",
+      "width": 997,
+      "height": 682,
+      "source_image_sha256": "9e9956cedf054786b45902f2b94ab42ceb7405200dff97c275d07f0f89042303",
+      "occurrences": [
+        {
+          "pdf_page": 5,
+          "bbox_points": [111.18, 124.92, 482.76, 379.02]
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "file": "images/image-007.png",
+      "description": "Karma home screen with question field, left navigation and quick-launch shortcuts; page annotations explain navigation.",
+      "width": 1605,
+      "height": 776,
+      "source_image_sha256": "567b5858e1d10b3573078024a1066d48d16f8d35227a6526381e40c08c4e0dc7",
+      "occurrences": [
+        {
+          "pdf_page": 6,
+          "bbox_points": [34.95, 63.85, 559.42, 318.3]
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "file": "images/image-008.png",
+      "description": "Driver shortcut icon.",
+      "width": 45,
+      "height": 45,
+      "source_image_sha256": "9d2ec6edf4dffeaddfa6a03f3953b7c3df58835e586743aa67cca6494f58fe7d",
+      "occurrences": [
+        {
+          "pdf_page": 6,
+          "bbox_points": [116.21, 370.11, 130.36, 384.26]
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "file": "images/image-009.png",
+      "description": "Vehicles shortcut icon.",
+      "width": 46,
+      "height": 45,
+      "source_image_sha256": "be9f32e517b5e903d4bf3c00eed0a5eaf3e129b78652e1caae92a9687cb0506e",
+      "occurrences": [
+        {
+          "pdf_page": 6,
+          "bbox_points": [183.55, 370.107, 197.9, 384.21]
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "file": "images/image-010.png",
+      "description": "World-map fleet overview with vehicle cards on the left.",
+      "width": 635,
+      "height": 217,
+      "source_image_sha256": "871f96a8ad9011bed057b01402303a3104c329d4ede4b6769a9091014cd24a76",
+      "occurrences": [
+        {
+          "pdf_page": 6,
+          "bbox_points": [59.2, 447.25, 535.63, 610.45]
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "file": "images/image-011.png",
+      "description": "Hide/open search toolbar icon.",
+      "width": 45,
+      "height": 46,
+      "source_image_sha256": "68df76e8454bae6212f6ea236de64c8a587af825b8b7019a0f63292267b63a1f",
+      "occurrences": [
+        {
+          "pdf_page": 6,
+          "bbox_points": [384.5, 117.194, 399.2, 132.26]
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "file": "images/image-012.png",
+      "description": "Vehicle-location quick-launch icon.",
+      "width": 43,
+      "height": 46,
+      "source_image_sha256": "ec5d0abf59cdfa8518ab0e09e92795ca50cfdf31c16a7606b96efe15c72dcb97",
+      "occurrences": [
+        {
+          "pdf_page": 6,
+          "bbox_points": [385.0, 136.8, 399.1, 151.9]
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "file": "images/image-013.png",
+      "description": "Driver-location quick-launch icon.",
+      "width": 43,
+      "height": 46,
+      "source_image_sha256": "8cbb034297aeca80fc45f69d258f581f47c2a54568cd20405c77c4da7232e508",
+      "occurrences": [
+        {
+          "pdf_page": 6,
+          "bbox_points": [385.65, 157.0, 399.75, 172.1]
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "file": "images/image-014.png",
+      "description": "Home-page quick-launch icon.",
+      "width": 45,
+      "height": 46,
+      "source_image_sha256": "f2c21095ae2d1bc59443091875c7b1d9f2c97c9bfccc49f37b5f872d3d5d857f",
+      "occurrences": [
+        {
+          "pdf_page": 6,
+          "bbox_points": [385.55, 176.099, 400.25, 191.18]
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "file": "images/image-015.png",
+      "description": "Refresh quick-launch icon.",
+      "width": 45,
+      "height": 46,
+      "source_image_sha256": "d7180b008d8d3c110bad148c50711a40fd1d5b81fd1e1c49ccf6e51699f04857",
+      "occurrences": [
+        {
+          "pdf_page": 6,
+          "bbox_points": [385.55, 196.249, 400.25, 211.33]
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "file": "images/image-016.png",
+      "description": "Scrollable vehicle-card list with search and colored ignition/connection indicators.",
+      "width": 267,
+      "height": 524,
+      "source_image_sha256": "232659c4f9f349f3ba11e38b861ab0b486247bd4a359cb6594b91394cc35055e",
+      "occurrences": [
+        {
+          "pdf_page": 7,
+          "bbox_points": [229.95, 449.78, 365.45, 715.58]
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "file": "images/image-017.png",
+      "description": "Fleet world map showing vehicle positions and the left vehicle-card list.",
+      "width": 635,
+      "height": 216,
+      "source_image_sha256": "a635a2393cc769f8310a68d425d872fab41f9de878287a829fac83f0dab5f841",
+      "occurrences": [
+        {
+          "pdf_page": 7,
+          "bbox_points": [45.0, 186.61, 521.9, 348.46]
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "file": "images/image-018.png",
+      "description": "Green, gray and red status swatches explaining ignition on, ignition off and no server connection.",
+      "width": 22,
+      "height": 51,
+      "source_image_sha256": "6c4c26ba7eb660f75fdb15e41455b78021888294894b06cb2a5dc2dc8727950d",
+      "occurrences": [
+        {
+          "pdf_page": 7,
+          "bbox_points": [104.75, 294.204, 126.6, 345.43]
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "file": "images/image-019.png",
+      "description": "Zoomed vehicle map with the selected vehicle card, mini-map and dashboard gauge.",
+      "width": 623,
+      "height": 294,
+      "source_image_sha256": "90b23cd11ac42c86856ec56c6b91f9812bcd94c98037f1ecb18fb18b967b52b5",
+      "occurrences": [
+        {
+          "pdf_page": 8,
+          "bbox_points": [64.075, 139.32, 531.265, 360.02]
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "file": "images/image-020.png",
+      "description": "Small expand/open control referenced by the map-information instructions.",
+      "width": 35,
+      "height": 11,
+      "source_image_sha256": "b2e67f76514289724bb705b47713150aa930e0c9fcd71cc5e48efe1bff6b5450",
+      "occurrences": [
+        {
+          "pdf_page": 8,
+          "bbox_points": [431.4, 482.85, 457.65, 491.1]
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "file": "images/image-021.png",
+      "description": "Weather and wind information overlays displaying direction, speed, time and temperature.",
+      "width": 269,
+      "height": 134,
+      "source_image_sha256": "75284050dbdfc298febef514691847365f505cd4c64d1063a03980674e37b47d",
+      "occurrences": [
+        {
+          "pdf_page": 9,
+          "bbox_points": [85.65, 167.4, 224.15, 236.35]
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "file": "images/image-022.png",
+      "description": "Expanded vehicle card with status, summary, driver, vehicle, trip and notification sections.",
+      "width": 221,
+      "height": 372,
+      "source_image_sha256": "f81d2bb667e1705a95df49af3cba1b4350c102f35befbd189a02442204c12e86",
+      "occurrences": [
+        {
+          "pdf_page": 9,
+          "bbox_points": [86.25, 379.32, 196.75, 565.28]
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "file": "images/image-023.png",
+      "description": "Separate detail panes expanded from a vehicle card, including summary, driver, vehicle and way details.",
+      "width": 624,
+      "height": 124,
+      "source_image_sha256": "d40392204e509706d3b79fa97335374da3aa792850459b3d2065fa60940fa371",
+      "occurrences": [
+        {
+          "pdf_page": 9,
+          "bbox_points": [60.95, 581.24, 558.75, 679.99]
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "file": "images/image-024.png",
+      "description": "Vehicle list and expanded card over the map, used to explain summary labels and scrolling.",
+      "width": 585,
+      "height": 545,
+      "source_image_sha256": "d0b0d515204796feed6c15e69479d0788446c2f6d52aee5f0d9fba7ef6de9a90",
+      "occurrences": [
+        {
+          "pdf_page": 10,
+          "bbox_points": [163.18, 500.572, 445.76, 764.072]
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "file": "images/image-025.png",
+      "description": "Annotated trip map with speed, driving behavior, idle-time and event panes.",
+      "width": 624,
+      "height": 449,
+      "source_image_sha256": "b4ca8363cd6e9986aa2e66847873f4609497581ea0c6380bbed8c576a94fe38d",
+      "occurrences": [
+        {
+          "pdf_page": 10,
+          "bbox_points": [69.0, 86.4, 537.0, 422.9]
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "file": "images/image-026.png",
+      "description": "Trip path with start/end markers and a colored route.",
+      "width": 232,
+      "height": 317,
+      "source_image_sha256": "026ed92325234a0591b1514636d32ac2c3bf915eb2ca25e6b2779566ccbeb6bd",
+      "occurrences": [
+        {
+          "pdf_page": 10,
+          "bbox_points": [198.0, 87.6, 372.0, 325.25]
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "file": "images/image-027.png",
+      "description": "Natural-language question field with suggestions on the home page.",
+      "width": 1371,
+      "height": 173,
+      "source_image_sha256": "9bfd223736a05c5b0ff2f1c5917ece9306bd3fe02d730539f77da8dc624dca26",
+      "occurrences": [
+        {
+          "pdf_page": 11,
+          "bbox_points": [49.65, 212.803, 565.95, 278.25]
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "file": "images/image-028.png",
+      "description": "Home screen with the categorized question menu open.",
+      "width": 1472,
+      "height": 720,
+      "source_image_sha256": "7a241f227a27d591bc5b060e48b2b572ba3a04c7dcf67e31c1e738413542c7a6",
+      "occurrences": [
+        {
+          "pdf_page": 11,
+          "bbox_points": [62.975, 401.76, 545.305, 637.0]
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "file": "images/image-029.png",
+      "description": "Expanded question menu showing categories and specific query examples.",
+      "width": 623,
+      "height": 654,
+      "source_image_sha256": "7f6d8cd391cc0bd4611cb7769085850e079823ceeb0535eec79ba18aef44b834",
+      "occurrences": [
+        {
+          "pdf_page": 12,
+          "bbox_points": [85.35, 77.45, 367.75, 372.88]
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "file": "images/image-030.png",
+      "description": "Report-type icon grid organized into vehicle, driver and fleet categories.",
+      "width": 596,
+      "height": 237,
+      "source_image_sha256": "6fa41693a68c2b91e1798576dcd88c8a153f779b8bd876512e28d78240dd9f56",
+      "occurrences": [
+        {
+          "pdf_page": 12,
+          "bbox_points": [82.475, 613.56, 525.755, 789.553]
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "file": "images/image-031.png",
+      "description": "Generated tabular report with vehicles/drivers and report values.",
+      "width": 1349,
+      "height": 588,
+      "source_image_sha256": "2206007f286ca8bf83e02c5bcb13304be97a9b2fb54902ef18cf535521444f32",
+      "occurrences": [
+        {
+          "pdf_page": 13,
+          "bbox_points": [85.65, 484.44, 525.16, 676.07]
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "file": "images/image-032.png",
+      "description": "Report wizard used to choose date period, vehicles/drivers and output view.",
+      "width": 1555,
+      "height": 761,
+      "source_image_sha256": "321ba308b150760ca0177574c42aa6c7c2a68b60d1f83954ab125063f7b24f4b",
+      "occurrences": [
+        {
+          "pdf_page": 13,
+          "bbox_points": [40.3, 202.15, 549.95, 451.65]
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "file": "images/image-033.png",
+      "description": "Expand-row chevron used to display record details.",
+      "width": 24,
+      "height": 16,
+      "source_image_sha256": "cee44e8239678af259c43216e11c89b93c54a5b47fb7b640d109b44b982ccc1c",
+      "occurrences": [
+        {
+          "pdf_page": 14,
+          "bbox_points": [193.27, 307.33, 210.07, 318.53]
+        }
+      ]
+    },
+    {
+      "id": 34,
+      "file": "images/image-034.png",
+      "description": "Report table expanded to display a selected record in more detail.",
+      "width": 1913,
+      "height": 929,
+      "source_image_sha256": "29ae64749a304141cd7ea61d728d9b5942c54cedb21f190dcf94242c94ba2953",
+      "occurrences": [
+        {
+          "pdf_page": 14,
+          "bbox_points": [49.65, 343.56, 558.9, 591.02]
+        }
+      ]
+    },
+    {
+      "id": 35,
+      "file": "images/image-035.png",
+      "description": "Driving Report with bar-chart visualization and a trip summary.",
+      "width": 1829,
+      "height": 765,
+      "source_image_sha256": "19f7a7f0e25bf3b96edeee71f667c4982a7c5b553afe8e409f29ec6d2da31a1d",
+      "occurrences": [
+        {
+          "pdf_page": 14,
+          "bbox_points": [49.8, 63.8, 561.0, 279.8]
+        }
+      ]
+    },
+    {
+      "id": 37,
+      "file": "images/image-037.png",
+      "description": "Trip route displayed on a map with a color legend.",
+      "width": 1913,
+      "height": 939,
+      "source_image_sha256": "571f5dea079dd2379911043f1a41cee75bfa49e7ea85183532d2115d1bbbd0aa",
+      "occurrences": [
+        {
+          "pdf_page": 15,
+          "bbox_points": [49.65, 89.64, 574.0, 346.99]
+        }
+      ]
+    },
+    {
+      "id": 38,
+      "file": "images/image-038.png",
+      "description": "Saved report/question shortcut icons, including envelope markers for emailed reports.",
+      "width": 229,
+      "height": 187,
+      "source_image_sha256": "cc6532ae49e5927bf016ab5d20f5dceb3958949782995c536e79b7e974beba2b",
+      "occurrences": [
+        {
+          "pdf_page": 15,
+          "bbox_points": [85.65, 416.64, 256.55, 556.18]
+        }
+      ]
+    },
+    {
+      "id": 39,
+      "file": "images/image-039.png",
+      "description": "Shortcut edit/delete control shown beside saved shortcuts.",
+      "width": 24,
+      "height": 24,
+      "source_image_sha256": "e1f035b8486eb76089663021ec5ed212f28ed81e01b83d2a7f4405642bc9aa98",
+      "occurrences": [
+        {
+          "pdf_page": 15,
+          "bbox_points": [166.89, 621.24, 184.311, 638.13]
+        },
+        {
+          "pdf_page": 16,
+          "bbox_points": [130.89, 93.25, 148.311, 110.2]
+        }
+      ]
+    },
+    {
+      "id": 40,
+      "file": "images/image-040.png",
+      "description": "Speed legend with colored ranges, night-driving/cruise indicators and an example maximum speed.",
+      "width": 221,
+      "height": 154,
+      "source_image_sha256": "1ed5677ebb7d5f7ec1ed7c5a0f9cee94faf35cccb53d51e4bb114d63fbcdb08d",
+      "occurrences": [
+        {
+          "pdf_page": 15,
+          "bbox_points": [482.4, 175.207, 565.05, 232.8]
+        }
+      ]
+    },
+    {
+      "id": 41,
+      "file": "images/image-041.png",
+      "description": "Driving-behavior event map with a vehicle card, maneuver description and location callout.",
+      "width": 1442,
+      "height": 601,
+      "source_image_sha256": "aa48a97313ac0437575bed4801bd51cb93845e8f4e206161b5d4c79c890d8fda",
+      "occurrences": [
+        {
+          "pdf_page": 16,
+          "bbox_points": [49.65, 363.5, 541.05, 568.1]
+        }
+      ]
+    },
+    {
+      "id": 42,
+      "file": "images/image-042.png",
+      "description": "Driver/vehicle card with Way Details expanded.",
+      "width": 172,
+      "height": 376,
+      "source_image_sha256": "47c517538632c2554605988bdee6efe8f879814ae0057b7570e79914a60370c6",
+      "occurrences": [
+        {
+          "pdf_page": 17,
+          "bbox_points": [121.65, 63.84, 250.2, 343.84]
+        }
+      ]
+    },
+    {
+      "id": 43,
+      "file": "images/image-043.png",
+      "description": "Driver report-category icons, with Behavior highlighted.",
+      "width": 478,
+      "height": 72,
+      "source_image_sha256": "f543b7e35ae88d6a68516614e89982aeb26a07e7c10e1b3ae6b8b0c5d8db13d9",
+      "occurrences": [
+        {
+          "pdf_page": 17,
+          "bbox_points": [127.48, 406.58, 481.39, 459.78]
+        }
+      ]
+    },
+    {
+      "id": 44,
+      "file": "images/image-044.png",
+      "description": "Driving-behavior table linked to a mapped trip and event detail list.",
+      "width": 629,
+      "height": 288,
+      "source_image_sha256": "82aef78022e0ffc795e0caebe4a463027e5157590037bcd15238c624c3143f22",
+      "occurrences": [
+        {
+          "pdf_page": 17,
+          "bbox_points": [68.5, 516.89, 540.41, 732.44]
+        }
+      ]
+    },
+    {
+      "id": 45,
+      "file": "images/image-045.png",
+      "description": "Driving Report combining behavior grades, speed bars and a pie chart of behavior categories; example data only.",
+      "width": 1185,
+      "height": 979,
+      "source_image_sha256": "6959aa8c90f77eb75ed464f5a4580a1eb924ac1315482d30a3eb6e658e85a25d",
+      "occurrences": [
+        {
+          "pdf_page": 18,
+          "bbox_points": [110.23, 171.86, 497.98, 492.32]
+        }
+      ]
+    },
+    {
+      "id": 46,
+      "file": "images/image-046.png",
+      "description": "Fleet dashboard launcher icon.",
+      "width": 53,
+      "height": 52,
+      "source_image_sha256": "ecf27b024649f1efcc15b8ae78cbc936e2d0b6ab35bec2b5dcbbab9091608c99",
+      "occurrences": [
+        {
+          "pdf_page": 19,
+          "bbox_points": [70.95, 114.53, 110.7, 153.53]
+        }
+      ]
+    },
+    {
+      "id": 47,
+      "file": "images/image-047.png",
+      "description": "Dashboard status filter with moving, ignition on/off, idle, asset and disconnected categories.",
+      "width": 213,
+      "height": 377,
+      "source_image_sha256": "8078b6da22b47ab9b63c84dfbcee6b4e01d3f735922d9b9c7ab4e119c02f1438",
+      "occurrences": [
+        {
+          "pdf_page": 19,
+          "bbox_points": [70.95, 249.84, 201.85, 481.48]
+        }
+      ]
+    },
+    {
+      "id": 48,
+      "file": "images/image-048.png",
+      "description": "Table-edge resize handles used by the dashboard instructions.",
+      "width": 10,
+      "height": 63,
+      "source_image_sha256": "995fc425b55064cf4f2efc52d736b5bf5796e02855a3f60b6717e1936f5d669f",
+      "occurrences": [
+        {
+          "pdf_page": 20,
+          "bbox_points": [341.23, 99.12, 346.23, 130.6]
+        }
+      ]
+    },
+    {
+      "id": 49,
+      "file": "images/image-049.png",
+      "description": "Fleet dashboard icon used while creating a sub-fleet.",
+      "width": 53,
+      "height": 60,
+      "source_image_sha256": "22178d8f886d0cd43cb21ddeb3f4c06976c5b68b5f76307f3169eb4ad95d0f17",
+      "occurrences": [
+        {
+          "pdf_page": 20,
+          "bbox_points": [174.91, 184.61, 205.65, 219.41]
+        }
+      ]
+    },
+    {
+      "id": 50,
+      "file": "images/image-050.png",
+      "description": "Switch View button.",
+      "width": 141,
+      "height": 32,
+      "source_image_sha256": "39c55ac8c3841389b6c80501af4451a07d1ef867b4676e504693db0d9ec8880d",
+      "occurrences": [
+        {
+          "pdf_page": 20,
+          "bbox_points": [209.74, 230.76, 295.221, 250.14]
+        }
+      ]
+    },
+    {
+      "id": 51,
+      "file": "images/image-051.png",
+      "description": "Add Shortcut button used in the sub-fleet procedure.",
+      "width": 111,
+      "height": 35,
+      "source_image_sha256": "6bc02c5a9bd608e6b4b38be55434aed7b57d3762829d807f318aefd879475c76",
+      "occurrences": [
+        {
+          "pdf_page": 20,
+          "bbox_points": [115.61, 261.6, 187.602, 284.27]
+        }
+      ]
+    },
+    {
+      "id": 52,
+      "file": "images/image-052.png",
+      "description": "Create button used to save a sub-fleet.",
+      "width": 72,
+      "height": 36,
+      "source_image_sha256": "a49e89b752cdb7d782b308889f3323f4c2bae1e1bc532ad0bed8141f833d5520",
+      "occurrences": [
+        {
+          "pdf_page": 20,
+          "bbox_points": [127.83, 317.28, 176.53, 341.61]
+        }
+      ]
+    },
+    {
+      "id": 53,
+      "file": "images/image-053.png",
+      "description": "Speed chart tooltip with vehicle, time, current speed and maximum speed.",
+      "width": 167,
+      "height": 78,
+      "source_image_sha256": "a527773e5681f58a328cb8cebcfa8c6b38596c1c0ec92254aa70b85e44577df5",
+      "occurrences": [
+        {
+          "pdf_page": 20,
+          "bbox_points": [85.65, 589.96, 176.288, 632.56]
+        }
+      ]
+    },
+    {
+      "id": 54,
+      "file": "images/image-054.png",
+      "description": "Driving-profile tooltip with example ECO and DVP percentages.",
+      "width": 84,
+      "height": 75,
+      "source_image_sha256": "c6f4caae9ca149786b26334af39ee12442a9da3327bba3b0a91d40ab7813bd04",
+      "occurrences": [
+        {
+          "pdf_page": 20,
+          "bbox_points": [85.65, 730.44, 139.2, 778.517]
+        }
+      ]
+    },
+    {
+      "id": 55,
+      "file": "images/image-055.png",
+      "description": "Fuel tooltip with example tank quantity and percentage; these are illustrative values.",
+      "width": 80,
+      "height": 59,
+      "source_image_sha256": "2df115b089e6f937d114e673f451132486f6b7e1f62f037d83275d60b85789f5",
+      "occurrences": [
+        {
+          "pdf_page": 21,
+          "bbox_points": [85.1, 152.64, 145.0, 196.98]
+        }
+      ]
+    },
+    {
+      "id": 56,
+      "file": "images/image-056.png",
+      "description": "Notification edit dialog offering temporary or permanent suppression and save/cancel controls.",
+      "width": 397,
+      "height": 178,
+      "source_image_sha256": "beb5b80d463154938d21aefc09f497c18756e28bbabe4d9502a011e3895a837e",
+      "occurrences": [
+        {
+          "pdf_page": 21,
+          "bbox_points": [85.65, 465.141, 282.6, 553.53]
+        }
+      ]
+    },
+    {
+      "id": 57,
+      "file": "images/image-057.png",
+      "description": "Road navigation icon.",
+      "width": 66,
+      "height": 39,
+      "source_image_sha256": "8509169a5273888171559594fc83d2497e59a1b63b018c98cf5d17621cf919ab",
+      "occurrences": [
+        {
+          "pdf_page": 22,
+          "bbox_points": [183.47, 114.9, 230.441, 142.3]
+        },
+        {
+          "pdf_page": 23,
+          "bbox_points": [183.47, 321.01, 230.441, 348.41]
+        },
+        {
+          "pdf_page": 24,
+          "bbox_points": [184.68, 453.12, 231.651, 480.5]
+        }
+      ]
+    },
+    {
+      "id": 58,
+      "file": "images/image-058.png",
+      "description": "POI toolbar icons.",
+      "width": 78,
+      "height": 45,
+      "source_image_sha256": "0fbefd7479f6b241a22fbd29352517a28ef9a0a7d87dc776389a70ed2910f17c",
+      "occurrences": [
+        {
+          "pdf_page": 22,
+          "bbox_points": [176.13, 175.32, 230.184, 206.43]
+        },
+        {
+          "pdf_page": 23,
+          "bbox_points": [176.13, 381.39, 230.184, 412.54]
+        }
+      ]
+    },
+    {
+      "id": 59,
+      "file": "images/image-059.png",
+      "description": "Color-coded POI list with address/name and fleet-related columns.",
+      "width": 1396,
+      "height": 248,
+      "source_image_sha256": "2cf813e41e882272e88d2f7a72a27fcbee9da3e08794e3ecd8b6472e84b251fc",
+      "occurrences": [
+        {
+          "pdf_page": 22,
+          "bbox_points": [57.3, 239.764, 563.95, 329.76]
+        }
+      ]
+    },
+    {
+      "id": 60,
+      "file": "images/image-060.png",
+      "description": "Filter funnel icon for list columns.",
+      "width": 26,
+      "height": 30,
+      "source_image_sha256": "cba3f2fad25dd32610c78280e10efe95d42fb25c6a97a4b0c0de0e85823dd8d6",
+      "occurrences": [
+        {
+          "pdf_page": 22,
+          "bbox_points": [254.39, 338.76, 273.89, 361.26]
+        }
+      ]
+    },
+    {
+      "id": 61,
+      "file": "images/image-061.png",
+      "description": "POI address filter using a Contains condition.",
+      "width": 675,
+      "height": 241,
+      "source_image_sha256": "bda8415ba9d5bd999b95d9425adeee2c3defd77dd1ab5097548302ab83d2ebad",
+      "occurrences": [
+        {
+          "pdf_page": 22,
+          "bbox_points": [85.65, 386.28, 448.2, 515.7]
+        }
+      ]
+    },
+    {
+      "id": 62,
+      "file": "images/image-062.png",
+      "description": "Add new POI button.",
+      "width": 132,
+      "height": 32,
+      "source_image_sha256": "2b26ace76c251f75b2f658e1272eaf54856a76618bca31b1c7015ccf0dea781a",
+      "occurrences": [
+        {
+          "pdf_page": 22,
+          "bbox_points": [112.54, 524.7, 211.54, 548.7]
+        }
+      ]
+    },
+    {
+      "id": 63,
+      "file": "images/image-063.png",
+      "description": "POI creation form with address, name, description, color and fleet.",
+      "width": 254,
+      "height": 174,
+      "source_image_sha256": "608d1168f2fad6c5321bda17884060bf92369cfc1b14867438899e5ff9ca39ca",
+      "occurrences": [
+        {
+          "pdf_page": 22,
+          "bbox_points": [85.65, 581.68, 273.3, 710.03]
+        }
+      ]
+    },
+    {
+      "id": 64,
+      "file": "images/image-064.png",
+      "description": "Map-side POI control with add and select-all options.",
+      "width": 78,
+      "height": 90,
+      "source_image_sha256": "9d93aed2704712b384e5f6c8fa2e60559f09e724c665ab74c04c692a59f85e80",
+      "occurrences": [
+        {
+          "pdf_page": 23,
+          "bbox_points": [85.65, 86.4, 133.4, 141.13]
+        }
+      ]
+    },
+    {
+      "id": 65,
+      "file": "images/image-065.png",
+      "description": "POI list used to choose a point for map display.",
+      "width": 1434,
+      "height": 318,
+      "source_image_sha256": "c941e01241118e519c5d548aa656dd444ec7e50ddaf406467b1e51a0e331b46e",
+      "occurrences": [
+        {
+          "pdf_page": 23,
+          "bbox_points": [70.75, 445.92, 538.11, 549.32]
+        }
+      ]
+    },
+    {
+      "id": 66,
+      "file": "images/image-066.png",
+      "description": "POI map marker with a details balloon.",
+      "width": 583,
+      "height": 324,
+      "source_image_sha256": "bfb7721abb813494dcb9a869e893f11497469319684689b9163f13c3a0f321b1",
+      "occurrences": [
+        {
+          "pdf_page": 23,
+          "bbox_points": [85.65, 593.676, 457.64, 800.376]
+        }
+      ]
+    },
+    {
+      "id": 67,
+      "file": "images/image-067.png",
+      "description": "Editable POI balloon with name, description, color, fleet, save and delete controls.",
+      "width": 234,
+      "height": 269,
+      "source_image_sha256": "937511cd5796d1fa12b0f3b99726acdfb930b4097368ae329c009aef484c80df",
+      "occurrences": [
+        {
+          "pdf_page": 24,
+          "bbox_points": [85.65, 99.12, 231.64, 266.7]
+        }
+      ]
+    },
+    {
+      "id": 68,
+      "file": "images/image-068.png",
+      "description": "Route Planning toolbar icon.",
+      "width": 83,
+      "height": 55,
+      "source_image_sha256": "8451acb5fdc9f52b34d415bab76e32fc4295116ec36da0abaa325749a8ebdaae",
+      "occurrences": [
+        {
+          "pdf_page": 24,
+          "bbox_points": [235.46, 513.49, 294.046, 552.44]
+        }
+      ]
+    },
+    {
+      "id": 69,
+      "file": "images/image-069.png",
+      "description": "Route-planning list shown before or after a route is created.",
+      "width": 1463,
+      "height": 186,
+      "source_image_sha256": "e20608defbe18e0f9d20fde7fb3f380bda2060e2845cc3535cd6e611008b1caa",
+      "occurrences": [
+        {
+          "pdf_page": 24,
+          "bbox_points": [50.2, 585.48, 519.04, 645.07]
+        },
+        {
+          "pdf_page": 27,
+          "bbox_points": [50.2, 719.796, 521.4, 779.695]
+        }
+      ]
+    },
+    {
+      "id": 70,
+      "file": "images/image-070.png",
+      "description": "Add new route planning button.",
+      "width": 208,
+      "height": 33,
+      "source_image_sha256": "6dcc627ae8484b0dc61160962b91585824ae471342081da6193dd1c0e320e4b6",
+      "occurrences": [
+        {
+          "pdf_page": 24,
+          "bbox_points": [112.54, 654.63, 243.33, 675.38]
+        }
+      ]
+    },
+    {
+      "id": 71,
+      "file": "images/image-071.png",
+      "description": "Route wizard assignment/date stage with vehicle or driver selection.",
+      "width": 1276,
+      "height": 618,
+      "source_image_sha256": "22e9499cc6be1ffeb1e1011f90b3ccf61db857962654ffb12cdee01313a927b5",
+      "occurrences": [
+        {
+          "pdf_page": 25,
+          "bbox_points": [96.85, 63.84, 512.59, 265.55]
+        }
+      ]
+    },
+    {
+      "id": 72,
+      "file": "images/image-072.png",
+      "description": "Route wizard Start Place stage with a list of candidate POIs.",
+      "width": 1222,
+      "height": 598,
+      "source_image_sha256": "eb51832df60eaff8f67968c83ca493375a2ccff2177906afdb86b452efa7aa16",
+      "occurrences": [
+        {
+          "pdf_page": 25,
+          "bbox_points": [122.85, 443.76, 522.1, 639.32]
+        }
+      ]
+    },
+    {
+      "id": 73,
+      "file": "images/image-073.png",
+      "description": "Route POI address filter using Contains.",
+      "width": 483,
+      "height": 173,
+      "source_image_sha256": "fe429b675676e0ba7bf969f8828e1b61848f5789a0ad7b6ba6823ca53d0a08db",
+      "occurrences": [
+        {
+          "pdf_page": 26,
+          "bbox_points": [85.65, 63.84, 401.674, 176.5]
+        }
+      ]
+    },
+    {
+      "id": 74,
+      "file": "images/image-074.png",
+      "description": "Route wizard End Place stage with selectable colored POIs.",
+      "width": 560,
+      "height": 271,
+      "source_image_sha256": "984a113af64cd3d80f50c2f35b1caa092fcd1083580fd5cc5631419be5082da3",
+      "occurrences": [
+        {
+          "pdf_page": 26,
+          "bbox_points": [85.65, 220.8, 503.82, 423.05]
+        }
+      ]
+    },
+    {
+      "id": 75,
+      "file": "images/image-075.png",
+      "description": "Route wizard Places stage for intermediate points between start and end.",
+      "width": 566,
+      "height": 274,
+      "source_image_sha256": "5420e9efb074239382843241706198e3a6e3a5d25236a404b6411ce2f7e64a4c",
+      "occurrences": [
+        {
+          "pdf_page": 26,
+          "bbox_points": [85.65, 453.96, 509.24, 658.55]
+        }
+      ]
+    },
+    {
+      "id": 76,
+      "file": "images/image-076.png",
+      "description": "Advised route map with stop/distance/travel-time information in the side panel.",
+      "width": 592,
+      "height": 284,
+      "source_image_sha256": "d9a410bf661c263e374339a76338c3d8719bf9ef004ee782129aa04bd8e8a586",
+      "occurrences": [
+        {
+          "pdf_page": 27,
+          "bbox_points": [70.913, 63.84, 514.313, 276.45]
+        }
+      ]
+    },
+    {
+      "id": 77,
+      "file": "images/image-077.png",
+      "description": "Route notification dialog for inside/outside duration, radius, message text and notification type.",
+      "width": 292,
+      "height": 350,
+      "source_image_sha256": "fb988e8686839a56b9b55d0f018f6e31944856ba7c0ea3481d84a2f9a7b01b9c",
+      "occurrences": [
+        {
+          "pdf_page": 27,
+          "bbox_points": [85.65, 356.56, 302.3, 616.36]
+        }
+      ]
+    },
+    {
+      "id": 78,
+      "file": "images/image-078.png",
+      "description": "Notification navigation icon.",
+      "width": 28,
+      "height": 28,
+      "source_image_sha256": "ea80638b455aaf6b0f99ab2711a1588e4ce436ddcda15924d751a5d86f33c2c5",
+      "occurrences": [
+        {
+          "pdf_page": 28,
+          "bbox_points": [315.51, 173.64, 336.26, 194.55]
+        }
+      ]
+    },
+    {
+      "id": 79,
+      "file": "images/image-079.png",
+      "description": "Create/Edit notification icon.",
+      "width": 30,
+      "height": 29,
+      "source_image_sha256": "429201d2d77c57ece7c693252dd7a9fcefd40e0871d8d20c171e64e4667530a6",
+      "occurrences": [
+        {
+          "pdf_page": 28,
+          "bbox_points": [215.25, 198.0, 237.064, 219.39]
+        }
+      ]
+    },
+    {
+      "id": 80,
+      "file": "images/image-080.png",
+      "description": "Notifications list with add, edit and delete controls.",
+      "width": 1338,
+      "height": 313,
+      "source_image_sha256": "d1822d65e95f16352aecbb0044ae475ebe066760323e0d34ad46f662802b59ea",
+      "occurrences": [
+        {
+          "pdf_page": 28,
+          "bbox_points": [49.65, 244.38, 531.5, 357.17]
+        }
+      ]
+    },
+    {
+      "id": 81,
+      "file": "images/image-081.png",
+      "description": "Notification wizard for selecting vehicles/drivers and configuring the event query.",
+      "width": 634,
+      "height": 341,
+      "source_image_sha256": "d7067782b495a2acfdb9f72a5330a504365ff2698fc051c45e74ced885ce873e",
+      "occurrences": [
+        {
+          "pdf_page": 28,
+          "bbox_points": [58.8, 466.83, 459.0, 681.83]
+        }
+      ]
+    },
+    {
+      "id": 82,
+      "file": "images/image-082.png",
+      "description": "Quick-launch group showing Fleet, Vehicles and Add new shortcut.",
+      "width": 202,
+      "height": 181,
+      "source_image_sha256": "d058249f93664cd5c630afd3c3fc8bede4a6eade1581de498a83558ce68f8778",
+      "occurrences": [
+        {
+          "pdf_page": 29,
+          "bbox_points": [49.65, 357.24, 200.85, 492.82]
+        }
+      ]
+    },
+    {
+      "id": 83,
+      "file": "images/image-083.png",
+      "description": "Add new shortcut icon.",
+      "width": 30,
+      "height": 28,
+      "source_image_sha256": "67dfa8f0440205a59f1f20133563ee3f3d285a645663eda5589826f1ffda9a90",
+      "occurrences": [
+        {
+          "pdf_page": 29,
+          "bbox_points": [250.06, 744.738, 272.51, 765.788]
+        },
+        {
+          "pdf_page": 31,
+          "bbox_points": [250.06, 90.36, 272.51, 111.37]
+        }
+      ]
+    },
+    {
+      "id": 84,
+      "file": "images/image-084.png",
+      "description": "Shortcut wizard with icon selection and description input.",
+      "width": 1166,
+      "height": 570,
+      "source_image_sha256": "c8d0a4f6a50d459bc5805cea0be654ac52416f946e9e8035fac052c0e8245f25",
+      "occurrences": [
+        {
+          "pdf_page": 30,
+          "bbox_points": [85.65, 79.61, 466.8, 265.95]
+        }
+      ]
+    },
+    {
+      "id": 85,
+      "file": "images/image-085.png",
+      "description": "Question-shortcut wizard with query suggestions.",
+      "width": 1371,
+      "height": 666,
+      "source_image_sha256": "d73ab2f1c2758dc4b30ff4a11fdec22378e469865f5d0c6d8c3e90131b6a1c47",
+      "occurrences": [
+        {
+          "pdf_page": 30,
+          "bbox_points": [67.65, 322.59, 515.85, 540.09]
+        }
+      ]
+    },
+    {
+      "id": 86,
+      "file": "images/image-086.png",
+      "description": "Report-shortcut wizard with icon selection.",
+      "width": 1345,
+      "height": 657,
+      "source_image_sha256": "b20f74c8d43eaf890af01ecb7bd28f8b701f4d2a45312940a427464efb61e0f6",
+      "occurrences": [
+        {
+          "pdf_page": 31,
+          "bbox_points": [85.65, 158.52, 525.0, 373.26]
+        }
+      ]
+    },
+    {
+      "id": 87,
+      "file": "images/image-087.png",
+      "description": "Question input area that can be skipped when creating a report shortcut.",
+      "width": 434,
+      "height": 109,
+      "source_image_sha256": "c70ce7ac03b7eac5caaa47166f0b906dd1f4d2105b534e08c176d4406b1c2848",
+      "occurrences": [
+        {
+          "pdf_page": 31,
+          "bbox_points": [85.65, 424.08, 345.25, 489.25]
+        }
+      ]
+    },
+    {
+      "id": 88,
+      "file": "images/image-088.png",
+      "description": "Report-category selection in the shortcut wizard.",
+      "width": 625,
+      "height": 301,
+      "source_image_sha256": "77d779497bd7ce2a2c119a87e684dd00ff0cce3053995ceacda8645934707e0a",
+      "occurrences": [
+        {
+          "pdf_page": 31,
+          "bbox_points": [70.475, 545.64, 538.475, 770.735]
+        }
+      ]
+    },
+    {
+      "id": 89,
+      "file": "images/image-089.png",
+      "description": "Settings home view used to access drivers, vehicles, assets, fleets and users.",
+      "width": 1317,
+      "height": 639,
+      "source_image_sha256": "12d4f04b1af8392ac9b13b691d76aba6ce770db14db7b14415bac870df05fb2b",
+      "occurrences": [
+        {
+          "pdf_page": 33,
+          "bbox_points": [89.225, 239.17, 519.275, 447.95]
+        }
+      ]
+    },
+    {
+      "id": 90,
+      "file": "images/image-090.png",
+      "description": "Drivers settings icon.",
+      "width": 41,
+      "height": 51,
+      "source_image_sha256": "45754e220e18904f1422ba76677bb7de4aaf2329fa9e6aec701fd89563f8cb58",
+      "occurrences": [
+        {
+          "pdf_page": 33,
+          "bbox_points": [49.65, 478.68, 79.365, 515.28]
+        }
+      ]
+    },
+    {
+      "id": 91,
+      "file": "images/image-091.png",
+      "description": "Vehicles settings icon.",
+      "width": 43,
+      "height": 51,
+      "source_image_sha256": "2c31d4af651a521a06d47bf9c6a15de94913924537723d167f9df728a7b39969",
+      "occurrences": [
+        {
+          "pdf_page": 33,
+          "bbox_points": [49.65, 518.674, 80.35, 555.02]
+        }
+      ]
+    },
+    {
+      "id": 92,
+      "file": "images/image-092.png",
+      "description": "Assets settings icon.",
+      "width": 44,
+      "height": 53,
+      "source_image_sha256": "9defc1a9570d871960a1c507dba57d3a92d89ea4a7ccde2e4bfa0d7ae16c39d7",
+      "occurrences": [
+        {
+          "pdf_page": 33,
+          "bbox_points": [49.65, 558.418, 80.65, 596.43]
+        }
+      ]
+    },
+    {
+      "id": 93,
+      "file": "images/image-093.png",
+      "description": "Fleets settings icon.",
+      "width": 46,
+      "height": 60,
+      "source_image_sha256": "c37d2fa921b439c1c4adaeaeeaaaaf8b5195871d349744230674ac30195d3b15",
+      "occurrences": [
+        {
+          "pdf_page": 33,
+          "bbox_points": [49.65, 599.88, 82.233, 641.81]
+        }
+      ]
+    },
+    {
+      "id": 94,
+      "file": "images/image-094.png",
+      "description": "Users settings icon.",
+      "width": 44,
+      "height": 50,
+      "source_image_sha256": "a77774f6df6f2db75219c06cf2dc78b3b36696ac10c7feed22b292c9ec2a4987",
+      "occurrences": [
+        {
+          "pdf_page": 33,
+          "bbox_points": [49.65, 645.25, 81.2, 680.96]
+        }
+      ]
+    },
+    {
+      "id": 95,
+      "file": "images/image-095.png",
+      "description": "Questions history/settings icon.",
+      "width": 43,
+      "height": 50,
+      "source_image_sha256": "726502eb465c0e60ae0e8d8e93ac153b5710acb993aaf3c7aff479b75131c9b6",
+      "occurrences": [
+        {
+          "pdf_page": 33,
+          "bbox_points": [49.65, 684.645, 81.0, 721.22]
+        }
+      ]
+    },
+    {
+      "id": 96,
+      "file": "images/image-096.png",
+      "description": "Disconnected vehicles icon for vehicles disconnected longer than 48 hours, as described by the guide.",
+      "width": 42,
+      "height": 41,
+      "source_image_sha256": "d142ffa02cd73887bf56829dadba2202d4f4675e7804f1e7d47555b02dbe9db0",
+      "occurrences": [
+        {
+          "pdf_page": 33,
+          "bbox_points": [49.65, 724.68, 79.4, 753.401]
+        }
+      ]
+    },
+    {
+      "id": 97,
+      "file": "images/image-097.png",
+      "description": "Fuel settings icon.",
+      "width": 39,
+      "height": 47,
+      "source_image_sha256": "29d4dc09b1025ed4da95c53045fe44d6f83f4a5aaa2ab7225220eedc1ccba418",
+      "occurrences": [
+        {
+          "pdf_page": 34,
+          "bbox_points": [112.54, 103.97, 141.907, 138.87]
+        }
+      ]
+    },
+    {
+      "id": 98,
+      "file": "images/image-098.png",
+      "description": "Fuel-report wizard with date/vehicle/driver selection.",
+      "width": 1384,
+      "height": 678,
+      "source_image_sha256": "a42b2e82378309fbd8e9d3f56afaab35818d668482109d3595e18e129ea9d488",
+      "occurrences": [
+        {
+          "pdf_page": 34,
+          "bbox_points": [85.65, 171.85, 538.38, 393.6]
+        }
+      ]
+    },
+    {
+      "id": 99,
+      "file": "images/image-099.png",
+      "description": "Fuel details list with no records added in the illustrated example.",
+      "width": 588,
+      "height": 61,
+      "source_image_sha256": "bb7f5d465352fde8d6245f9b252da52f68b0d841f5edb7e9d8a11917fc448180",
+      "occurrences": [
+        {
+          "pdf_page": 34,
+          "bbox_points": [68.2, 487.1, 501.2, 532.25]
+        }
+      ]
+    },
+    {
+      "id": 100,
+      "file": "images/image-100.png",
+      "description": "Add new fuel details button.",
+      "width": 219,
+      "height": 41,
+      "source_image_sha256": "5fb9107d2c8441133775651762d96611bb3c74d12d1121c85ab1766611673ee9",
+      "occurrences": [
+        {
+          "pdf_page": 34,
+          "bbox_points": [109.48, 541.251, 221.38, 562.2]
+        }
+      ]
+    },
+    {
+      "id": 101,
+      "file": "images/image-101.png",
+      "description": "Fuel entry form for date, volume, odometer, location and receipt upload.",
+      "width": 263,
+      "height": 185,
+      "source_image_sha256": "ed5d9a1ffa204cc3eadc56a8af2a696c99ff376eafabc96283f4d0cd67215619",
+      "occurrences": [
+        {
+          "pdf_page": 34,
+          "bbox_points": [85.65, 595.24, 280.1, 732.61]
+        }
+      ]
+    },
+    {
+      "id": 102,
+      "file": "images/image-102.png",
+      "description": "Maintenance settings icon.",
+      "width": 55,
+      "height": 49,
+      "source_image_sha256": "fd8c8c8539df9dbd6f60edd997905287ae8d33e4565c38174ee2bde61934ad09",
+      "occurrences": [
+        {
+          "pdf_page": 35,
+          "bbox_points": [112.54, 126.518, 153.29, 162.79]
+        }
+      ]
+    },
+    {
+      "id": 103,
+      "file": "images/image-103.png",
+      "description": "Add new maintenance details button.",
+      "width": 297,
+      "height": 40,
+      "source_image_sha256": "5375af7700fc2adf53dfe08a1d1ab96adef3cdb209e4c607b90e84650e8a217a",
+      "occurrences": [
+        {
+          "pdf_page": 35,
+          "bbox_points": [244.01, 225.24, 379.89, 243.53]
+        }
+      ]
+    },
+    {
+      "id": 104,
+      "file": "images/image-104.png",
+      "description": "Maintenance form for dates, odometer thresholds, service type, replaced parts, location, comments and receipt.",
+      "width": 246,
+      "height": 290,
+      "source_image_sha256": "68766f3fa9e86c0cf0c375d505cb410c81e842a01b7bec8284f983ab638965ec",
+      "occurrences": [
+        {
+          "pdf_page": 35,
+          "bbox_points": [85.65, 270.41, 269.8, 487.64]
+        }
+      ]
+    },
+    {
+      "id": 105,
+      "file": "images/image-105.png",
+      "description": "Tires settings icon.",
+      "width": 54,
+      "height": 66,
+      "source_image_sha256": "f8ec91914d5b8915519452f5f02f6a0eb8cdd50ffe6ec95474705b697aedb9ac",
+      "occurrences": [
+        {
+          "pdf_page": 36,
+          "bbox_points": [112.54, 103.97, 141.35, 139.22]
+        }
+      ]
+    },
+    {
+      "id": 106,
+      "file": "images/image-106.png",
+      "description": "Vehicle schematic with tire positions and red plus signs, including a spare position.",
+      "width": 300,
+      "height": 290,
+      "source_image_sha256": "21b264e24ff373e0a8f4225edda875f17edc6a52ade2b4291af4a74ae8f2ac8a",
+      "occurrences": [
+        {
+          "pdf_page": 36,
+          "bbox_points": [85.65, 213.96, 309.9, 430.89]
+        }
+      ]
+    },
+    {
+      "id": 107,
+      "file": "images/image-107.png",
+      "description": "Red plus icon used to add a tire at a selected position.",
+      "width": 37,
+      "height": 34,
+      "source_image_sha256": "6292147e38d47541938af035f607a0ebdded929e6594c2d29056f6efd29bcb60",
+      "occurrences": [
+        {
+          "pdf_page": 36,
+          "bbox_points": [234.84, 440.4, 254.001, 457.85]
+        }
+      ]
+    },
+    {
+      "id": 108,
+      "file": "images/image-108.png",
+      "description": "Edit Tire dialog for size, tire/vehicle odometer, replacement threshold, pressure and replacement date.",
+      "width": 311,
+      "height": 295,
+      "source_image_sha256": "7fce27207d86c01d327d59c081c77fc660c836454b99f5c9eda26a2e7b61eb6a",
+      "occurrences": [
+        {
+          "pdf_page": 36,
+          "bbox_points": [347.4, 485.0, 528.62, 656.9]
+        }
+      ]
+    },
+    {
+      "id": 109,
+      "file": "images/image-109.png",
+      "description": "New-vehicle form fragment with a manually entered odometer.",
+      "width": 315,
+      "height": 107,
+      "source_image_sha256": "40942cc1048e58bd2bcef7bc1012e43062d86939b850163ff2601d099283cd04",
+      "occurrences": [
+        {
+          "pdf_page": 37,
+          "bbox_points": [85.65, 161.64, 240.2, 213.99]
+        }
+      ]
+    },
+    {
+      "id": 110,
+      "file": "images/image-110.png",
+      "description": "Vehicle Details odometer editor with Save and Cancel controls.",
+      "width": 533,
+      "height": 205,
+      "source_image_sha256": "aeee35d069ade922d6807d7e22b261636d0651309a01d77b165524d652391953",
+      "occurrences": [
+        {
+          "pdf_page": 37,
+          "bbox_points": [85.65, 326.92, 286.17, 404.07]
+        }
+      ]
+    },
+    {
+      "id": 111,
+      "file": "images/image-111.png",
+      "description": "Dashboard gauge with the odometer area marked as editable.",
+      "width": 340,
+      "height": 143,
+      "source_image_sha256": "ef291602465dcfac99163b0815f245bc595e718d9eac88e2edc90bf179910d56",
+      "occurrences": [
+        {
+          "pdf_page": 37,
+          "bbox_points": [85.65, 502.35, 266.98, 578.5]
+        }
+      ]
+    },
+    {
+      "id": 112,
+      "file": "images/image-112.png",
+      "description": "Wind/temperature overlay illustrating the information available from a double-line control.",
+      "width": 323,
+      "height": 141,
+      "source_image_sha256": "17eb053c5fdbe2b6c3ae048b4bdb40bfbdcbb3c64e7b9240e0c1a3302f031933",
+      "occurrences": [
+        {
+          "pdf_page": 38,
+          "bbox_points": [85.65, 134.76, 300.96, 228.51]
+        }
+      ]
+    },
+    {
+      "id": 113,
+      "file": "images/image-113.png",
+      "description": "Economical-driving tooltip over the vehicle dashboard.",
+      "width": 538,
+      "height": 185,
+      "source_image_sha256": "fe5bc94c692e29ab35824e04d3e39b9462d1afaf7d23b842cfe11282db6a7556",
+      "occurrences": [
+        {
+          "pdf_page": 38,
+          "bbox_points": [301.65, 143.41, 551.62, 229.21]
+        }
+      ]
+    },
+    {
+      "id": 114,
+      "file": "images/image-114.png",
+      "description": "Satellite map view with the map-type control.",
+      "width": 353,
+      "height": 156,
+      "source_image_sha256": "edf89be36e0f772db176329b80c22f3106c08c8370dd73ee9a6f86f8fff7a3b9",
+      "occurrences": [
+        {
+          "pdf_page": 38,
+          "bbox_points": [70.95, 273.99, 336.05, 391.34]
+        }
+      ]
+    },
+    {
+      "id": 115,
+      "file": "images/image-115.png",
+      "description": "Street View illustration used to inspect road conditions behind a reported driving event.",
+      "width": 626,
+      "height": 326,
+      "source_image_sha256": "7ebbadf3bc5e319a89d1b2e73ef4407c8ae8e2c9fb2a976e1f4fee4f7ace63c1",
+      "occurrences": [
+        {
+          "pdf_page": 38,
+          "bbox_points": [70.475, 441.97, 538.475, 686.27]
+        }
+      ]
+    }
+  ],
+  "context_captures": [
+    {
+      "pdf_page": 6,
+      "file": "images/context-page-006.png",
+      "description": "Page illustration context, retaining vector annotations, labels and diagram/table geometry around the extracted images."
+    },
+    {
+      "pdf_page": 7,
+      "file": "images/context-page-007.png",
+      "description": "Page illustration context, retaining vector annotations, labels and diagram/table geometry around the extracted images."
+    },
+    {
+      "pdf_page": 8,
+      "file": "images/context-page-008.png",
+      "description": "Page illustration context, retaining vector annotations, labels and diagram/table geometry around the extracted images."
+    },
+    {
+      "pdf_page": 9,
+      "file": "images/context-page-009.png",
+      "description": "Page illustration context, retaining vector annotations, labels and diagram/table geometry around the extracted images."
+    },
+    {
+      "pdf_page": 10,
+      "file": "images/context-page-010.png",
+      "description": "Page illustration context, retaining vector annotations, labels and diagram/table geometry around the extracted images."
+    },
+    {
+      "pdf_page": 13,
+      "file": "images/context-page-013.png",
+      "description": "Page illustration context, retaining vector annotations, labels and diagram/table geometry around the extracted images."
+    },
+    {
+      "pdf_page": 16,
+      "file": "images/context-page-016.png",
+      "description": "Page illustration context, retaining vector annotations, labels and diagram/table geometry around the extracted images."
+    },
+    {
+      "pdf_page": 18,
+      "file": "images/context-page-018.png",
+      "description": "Page illustration context, retaining vector annotations, labels and diagram/table geometry around the extracted images."
+    },
+    {
+      "pdf_page": 29,
+      "file": "images/context-page-029.png",
+      "description": "Page illustration context, retaining vector annotations, labels and diagram/table geometry around the extracted images."
+    }
+  ],
+  "reference_updated_on": "2026-10-17",
+  "image_selection": "Retain technical illustrations, screenshots, UI controls and explanatory annotations. Omit standalone cover artwork, publisher logos, page decoration and generic note/support markers; preserve the complete original PDF."
+}

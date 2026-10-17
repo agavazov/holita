@@ -4,3 +4,4 @@
 .angular/
 .volumes/
 /AGENTS.local.md
+/.credentials/

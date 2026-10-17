@@ -1,0 +1,513 @@
+{
+  "schema_version": "1.0",
+  "analysis_date": "2026-10-16",
+  "analysis_timezone": "Europe/Sofia",
+  "analysis_edition": "1.1",
+  "prepared_by": "Codex",
+  "title": "Karma User Guide - Appendix for Partners",
+  "source_filename": "Karma Guide - Appendix 1.4.2.pdf",
+  "source_path": "source/original.pdf",
+  "source_origin": ".misc/edata/Karma Guide - Appendix 1.4.2.pdf",
+  "source_bytes": 1641289,
+  "source_sha256": "6c9930959965c99ffc7a7d0f0787219d201aa03255d6dd70f4d6ef9eab47a09b",
+  "source_version": "1.4.2",
+  "version_evidence": "Cover, PDF page 1: Release 1.4.2 | December 2018.",
+  "document_date_evidence": "December 2018",
+  "pdf_metadata": {
+    "format": "PDF 1.5",
+    "title": "Document title",
+    "author": "Eduardo Simon",
+    "subject": "Subject",
+    "keywords": "וורסיה",
+    "creator": "Microsoft® Word 2013",
+    "producer": "Microsoft® Word 2013",
+    "creationDate": "D:20181211100609+02'00'",
+    "modDate": "D:20181211100609+02'00'",
+    "trapped": "",
+    "encryption": null
+  },
+  "pdf_creation_timestamp": "2018-12-11T10:06:09+02:00",
+  "pdf_modification_timestamp": "2018-12-11T10:06:09+02:00",
+  "page_count": 10,
+  "page_numbering": "One-based physical PDF pages",
+  "conversion_method": "PyMuPDF text and image extraction with soft masks; shaded-cell reconstruction; visual review; visible-page transcription for brochures",
+  "tool_versions": {
+    "pymupdf": "1.28.2"
+  },
+  "qualifications": [
+    "This is a historical Karma web-interface guide. Its role matrix is not proof of current API v2 authorization behavior.",
+    "The cover release is December 2018 while its copyright line says 2017. Both are source statements.",
+    "The guide describes a unique 15-digit StarLink ID under the IMEI label. This does not establish the identity semantics of every API v2 device_id field."
+  ],
+  "pages": [
+    {
+      "pdf_page": 1,
+      "content_anchor": "content.md#pdf-page-1",
+      "table_count": 0,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 2,
+      "content_anchor": "content.md#pdf-page-2",
+      "table_count": 0,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 3,
+      "content_anchor": "content.md#pdf-page-3",
+      "table_count": 0,
+      "image_ids": [4, 5, 6, 7, 8]
+    },
+    {
+      "pdf_page": 4,
+      "content_anchor": "content.md#pdf-page-4",
+      "table_count": 1,
+      "image_ids": [9, 10, 11]
+    },
+    {
+      "pdf_page": 5,
+      "content_anchor": "content.md#pdf-page-5",
+      "table_count": 0,
+      "image_ids": [12, 13, 14, 15, 16, 17, 18]
+    },
+    {
+      "pdf_page": 6,
+      "content_anchor": "content.md#pdf-page-6",
+      "table_count": 0,
+      "image_ids": [19, 20, 21]
+    },
+    {
+      "pdf_page": 7,
+      "content_anchor": "content.md#pdf-page-7",
+      "table_count": 0,
+      "image_ids": [22, 23]
+    },
+    {
+      "pdf_page": 8,
+      "content_anchor": "content.md#pdf-page-8",
+      "table_count": 0,
+      "image_ids": [24, 25, 26, 27]
+    },
+    {
+      "pdf_page": 9,
+      "content_anchor": "content.md#pdf-page-9",
+      "table_count": 0,
+      "image_ids": [28, 29, 30]
+    },
+    {
+      "pdf_page": 10,
+      "content_anchor": "content.md#pdf-page-10",
+      "table_count": 0,
+      "image_ids": []
+    }
+  ],
+  "images": [
+    {
+      "id": 4,
+      "file": "images/image-004.png",
+      "description": "Driver icon used beside the Add driver step in the onboarding diagram.",
+      "width": 32,
+      "height": 33,
+      "source_image_sha256": "04c982ae4d749206e08e9f90c9e08832de6421616ccad32b58ecc0a6f7d047a8",
+      "occurrences": [
+        {
+          "pdf_page": 3,
+          "bbox_points": [330.6, 638.28, 354.6, 662.88]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "file": "images/image-005.png",
+      "description": "Vehicle icon used beside the Add vehicle step in the onboarding diagram.",
+      "width": 32,
+      "height": 34,
+      "source_image_sha256": "7d5b10b14f01a2bc64c638b750d52e857e9fac13da57169fe8a94d2a149e48d4",
+      "occurrences": [
+        {
+          "pdf_page": 3,
+          "bbox_points": [329.04, 573.12, 353.04, 598.56]
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "file": "images/image-006.png",
+      "description": "Fleet/edit icon used beside Create a fleet in the onboarding diagram.",
+      "width": 32,
+      "height": 32,
+      "source_image_sha256": "c75d5e11ac496c1b6768be7a57ed155ee45686cb8d88eb6f079e1bb96c80d651",
+      "occurrences": [
+        {
+          "pdf_page": 3,
+          "bbox_points": [328.08, 446.88, 352.08, 470.88]
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "file": "images/image-007.png",
+      "description": "Users/group icon used beside Add user in the onboarding diagram.",
+      "width": 32,
+      "height": 32,
+      "source_image_sha256": "7b652f5d04830e6e0d22f0cfa3f8a8eb7ded8d32648d49df7bc00238f8e444c2",
+      "occurrences": [
+        {
+          "pdf_page": 3,
+          "bbox_points": [329.04, 509.28, 353.28, 533.28]
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "file": "images/image-008.png",
+      "description": "Karma home navigation with Settings selected and the fleet/user/vehicle/driver shortcuts visible.",
+      "width": 363,
+      "height": 250,
+      "source_image_sha256": "2a84f977db447f073ebb605f4acc9c067f2927f6939eb90bee7a241068125009",
+      "occurrences": [
+        {
+          "pdf_page": 3,
+          "bbox_points": [42.6, 191.4, 314.4, 378.6]
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "file": "images/image-009.png",
+      "description": "Fleet/edit icon identifying the Fleets settings action.",
+      "width": 24,
+      "height": 24,
+      "source_image_sha256": "78eaeaf78de598e8138450001b5e32fa5c02419efe2d99b5ac658784b539e9bc",
+      "occurrences": [
+        {
+          "pdf_page": 4,
+          "bbox_points": [209.76, 87.12, 226.8, 104.04]
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "file": "images/image-010.png",
+      "description": "Add new fleet button.",
+      "width": 74,
+      "height": 20,
+      "source_image_sha256": "f88a8d69a8e2843809a67059e267cdffcd8eb48015cdc0a9e5529e7561f8638a",
+      "occurrences": [
+        {
+          "pdf_page": 4,
+          "bbox_points": [195.96, 108.0, 247.2, 121.68]
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "file": "images/image-011.png",
+      "description": "Fleet creation dialog with name, notification template, date/time preferences and unit-conversion choices.",
+      "width": 405,
+      "height": 418,
+      "source_image_sha256": "2cd2d4d17dbcbbb2ad15b7e9bb4ee6bed034c83247cfc1983742e07a46ec4398",
+      "occurrences": [
+        {
+          "pdf_page": 4,
+          "bbox_points": [92.16, 154.44, 327.6, 397.44]
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "file": "images/image-012.png",
+      "description": "Users/group icon identifying user settings.",
+      "width": 28,
+      "height": 27,
+      "source_image_sha256": "9f2fadd76e9a1f353103846eb102a7d4cbe380f5e89d98d90808fd3abcbb6853",
+      "occurrences": [
+        {
+          "pdf_page": 5,
+          "bbox_points": [216.72, 85.2, 236.4, 104.52]
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "file": "images/image-013.png",
+      "description": "Add new user button.",
+      "width": 88,
+      "height": 21,
+      "source_image_sha256": "ec12835401b191136ad73885af51a06b881bc13bab9f575cfd4edb13c7ab65a9",
+      "occurrences": [
+        {
+          "pdf_page": 5,
+          "bbox_points": [202.8, 117.0, 261.96, 131.04]
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "file": "images/image-014.png",
+      "description": "User creation form with identity, login fields, role, command permission, fleet and conversion preferences.",
+      "width": 403,
+      "height": 590,
+      "source_image_sha256": "a868b734ea3a5873a26cffce315a0fa44b9f2681572fec1542e7aef0a7c4fa7a",
+      "occurrences": [
+        {
+          "pdf_page": 5,
+          "bbox_points": [83.28, 170.04, 270.6, 444.24]
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "file": "images/image-015.png",
+      "description": "Arrow/callout overlay connecting user-form fields to explanatory labels.",
+      "width": 276,
+      "height": 54,
+      "source_image_sha256": "bda12173dff68e8ad67cac801e2c5702a5d3024bee4ae3a988e7118e5f0153e6",
+      "occurrences": [
+        {
+          "pdf_page": 5,
+          "bbox_points": [265.68, 198.6, 365.16, 218.28]
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "file": "images/image-016.png",
+      "description": "Arrow/callout overlay connecting user-form fields to explanatory labels.",
+      "width": 381,
+      "height": 76,
+      "source_image_sha256": "f18f4bfa588fb2b1c47fb9e29e5d4b626313e594085dfcbeb906f0f4684ea3be",
+      "occurrences": [
+        {
+          "pdf_page": 5,
+          "bbox_points": [266.4, 224.64, 403.56, 252.0]
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "file": "images/image-017.png",
+      "description": "Arrow/callout overlay connecting user-form fields to explanatory labels.",
+      "width": 229,
+      "height": 31,
+      "source_image_sha256": "b644a75e7debd5393a9f90a9b63aaec336e1f00dd8e2c0b6f8b4426a2810bf7a",
+      "occurrences": [
+        {
+          "pdf_page": 5,
+          "bbox_points": [268.32, 282.6, 351.0, 293.88]
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "file": "images/image-018.png",
+      "description": "Arrow/callout overlay connecting user-form fields to explanatory labels.",
+      "width": 409,
+      "height": 106,
+      "source_image_sha256": "ba61a028f22cb9ca577ded05a9d9e66c0699437078e587f417fd28d3b6f65d02",
+      "occurrences": [
+        {
+          "pdf_page": 5,
+          "bbox_points": [269.04, 344.64, 416.4, 382.92]
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "file": "images/image-019.png",
+      "description": "Add new vehicle button.",
+      "width": 125,
+      "height": 25,
+      "source_image_sha256": "e923334a119b051a3cc20c768999586da618f6137f7eacd77bb95eaeac91907c",
+      "occurrences": [
+        {
+          "pdf_page": 6,
+          "bbox_points": [207.12, 120.72, 286.92, 136.56]
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "file": "images/image-020.png",
+      "description": "Vehicle creation form containing vehicle details, driver assignment, StarLink ID and SIM-related fields.",
+      "width": 452,
+      "height": 1074,
+      "source_image_sha256": "6443966446aad4f0bcf09e9bb060836a20545e80ee22a31f664337b3b7f48328",
+      "occurrences": [
+        {
+          "pdf_page": 6,
+          "bbox_points": [144.72, 186.6, 300.96, 557.76]
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "file": "images/image-021.png",
+      "description": "Example Tracker SF device label showing the location of the IMEI/StarLink identifier. Some identifier digits are obscured in the source.",
+      "width": 422,
+      "height": 290,
+      "source_image_sha256": "969578e1e78ca08be27945840ebc3667a7bffc3cada03a6f72bef3e51f6e58d2",
+      "occurrences": [
+        {
+          "pdf_page": 6,
+          "bbox_points": [348.72, 455.28, 486.72, 550.08]
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "file": "images/image-022.png",
+      "description": "Add new driver button.",
+      "width": 104,
+      "height": 24,
+      "source_image_sha256": "db09005efd3e2519adb06720324161aceea7bc2b543cc88bd4244c8e2b14882d",
+      "occurrences": [
+        {
+          "pdf_page": 7,
+          "bbox_points": [210.24, 112.8, 283.2, 129.6]
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "file": "images/image-023.png",
+      "description": "Driver creation form with unique driver ID, phone/contact fields, comments, code and vehicle assignment.",
+      "width": 269,
+      "height": 382,
+      "source_image_sha256": "9f440d26eb896aa25f6b530d04aeda9cb33c038e4d6dc4103dd357a8d2a9426a",
+      "occurrences": [
+        {
+          "pdf_page": 7,
+          "bbox_points": [114.6, 162.72, 316.44, 448.92]
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "file": "images/image-024.png",
+      "description": "User-setting fragment showing the Allow Sending Commands checkbox and Fleet selection.",
+      "width": 307,
+      "height": 115,
+      "source_image_sha256": "832558dc4399aad80662417648fc3d485a1fe9e73b25d6dbeac695d51357e30c",
+      "occurrences": [
+        {
+          "pdf_page": 8,
+          "bbox_points": [42.6, 167.16, 208.44, 229.32]
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "file": "images/image-025.png",
+      "description": "Vehicle card with its Commands section and Read Log entry.",
+      "width": 213,
+      "height": 262,
+      "source_image_sha256": "cb3c3cd4a53fc4c66f81ead9eeeff646a3222cf5d6ae8c09e5ceeac9d09ce924",
+      "occurrences": [
+        {
+          "pdf_page": 8,
+          "bbox_points": [60.6, 286.2, 180.24, 433.68]
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "file": "images/image-026.png",
+      "description": "Output control expanded to show Set and Reset buttons for the named output Door.",
+      "width": 212,
+      "height": 132,
+      "source_image_sha256": "253828b832345394816f43f0fd70b19ad0db4edadfa2d5534b1c18098a4a7230",
+      "occurrences": [
+        {
+          "pdf_page": 8,
+          "bbox_points": [78.6, 561.0, 209.76, 642.72]
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "file": "images/image-027.png",
+      "description": "Commands panel with named outputs and Read Log, illustrating manual output renaming.",
+      "width": 217,
+      "height": 146,
+      "source_image_sha256": "c98a34a53e23b40fc4dc8ff07bfa92ea052dfa413f82f631b7eecebde5c3441b",
+      "occurrences": [
+        {
+          "pdf_page": 8,
+          "bbox_points": [78.6, 668.04, 211.2, 757.32]
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "file": "images/image-028.png",
+      "description": "Commands log table with type, time, location, receiving time and view controls.",
+      "width": 703,
+      "height": 188,
+      "source_image_sha256": "033725c5e81625d7c9e870a5b3fdffb68cb4ef85949a16bd00cb04ba71f7fb9e",
+      "occurrences": [
+        {
+          "pdf_page": 9,
+          "bbox_points": [42.6, 92.64, 361.92, 178.08]
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "file": "images/image-029.png",
+      "description": "DTC configuration panel for confirmed/current/permanent trouble codes and live events, with colors and units.",
+      "width": 716,
+      "height": 326,
+      "source_image_sha256": "c65a0cf733cf9ff9826776ea77db27f1b1c9719504fd0879f9b4fdb74ad02f7b",
+      "occurrences": [
+        {
+          "pdf_page": 9,
+          "bbox_points": [78.6, 347.28, 469.56, 525.0]
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "file": "images/image-030.png",
+      "description": "Narrow example DTC report header; the source is small and its text should be checked in the PDF at higher zoom.",
+      "width": 1792,
+      "height": 29,
+      "source_image_sha256": "1d20506f992e63c5f5a85bfe729911302db48ac1b14ad23dacc3e6cf83c80e40",
+      "occurrences": [
+        {
+          "pdf_page": 9,
+          "bbox_points": [42.6, 681.84, 523.08, 689.88]
+        }
+      ]
+    }
+  ],
+  "context_captures": [
+    {
+      "pdf_page": 3,
+      "file": "images/context-page-003.png",
+      "description": "Page illustration context, retaining vector annotations, labels and diagram/table geometry around the extracted images."
+    },
+    {
+      "pdf_page": 4,
+      "file": "images/context-page-004.png",
+      "description": "Page illustration context, retaining vector annotations, labels and diagram/table geometry around the extracted images."
+    },
+    {
+      "pdf_page": 5,
+      "file": "images/context-page-005.png",
+      "description": "Page illustration context, retaining vector annotations, labels and diagram/table geometry around the extracted images."
+    },
+    {
+      "pdf_page": 6,
+      "file": "images/context-page-006.png",
+      "description": "Page illustration context, retaining vector annotations, labels and diagram/table geometry around the extracted images."
+    },
+    {
+      "pdf_page": 7,
+      "file": "images/context-page-007.png",
+      "description": "Page illustration context, retaining vector annotations, labels and diagram/table geometry around the extracted images."
+    }
+  ],
+  "reference_updated_on": "2026-10-17",
+  "image_selection": "Retain technical illustrations, screenshots, UI controls and explanatory annotations. Omit standalone cover artwork, publisher logos, page decoration and generic note/support markers; preserve the complete original PDF."
+}

@@ -1,0 +1,69 @@
+{
+  "retrievedAt": "2026-10-16T19:34:42+00:00",
+  "apiBaseUrl": "https://karma.online/apiv2/",
+  "kind": "Unmodified public vendor API help assets; not an official OpenAPI document",
+  "files": [
+    {
+      "file": "index.html.txt",
+      "url": "https://karma.online/apiv2/",
+      "httpStatus": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 3165,
+      "sha256": "fd0c1f611c07a50a8fc890639e5c08a298074ef610b31dfc790e17b7c332097f",
+      "originalFileName": "index.html"
+    },
+    {
+      "file": "endpoints.js.txt",
+      "url": "https://karma.online/apiv2/endpoints.js",
+      "httpStatus": 200,
+      "contentType": "application/javascript",
+      "bytes": 15473,
+      "sha256": "7ad02036d27c95eaeef088f67b86d7a9e503ea9de58fd24728265bdade50fd91",
+      "originalFileName": "endpoints.js"
+    },
+    {
+      "file": "help.js.txt",
+      "url": "https://karma.online/apiv2/help.js",
+      "httpStatus": 200,
+      "contentType": "application/javascript",
+      "bytes": 14586,
+      "sha256": "eb360b1d146baecfbbae5a00d1b4bb52f85159fb15550ec7b6f0e508d73aaf19",
+      "originalFileName": "help.js"
+    },
+    {
+      "file": "help.css.txt",
+      "url": "https://karma.online/apiv2/help.css",
+      "httpStatus": 200,
+      "contentType": "text/css",
+      "bytes": 8227,
+      "sha256": "f1076134b1232f8439bf9deed021e3b543a05e0ba506f2dc960a62a69489ffe7",
+      "originalFileName": "help.css"
+    }
+  ],
+  "openapiDiscovery": [
+    {
+      "url": "https://karma.online/apiv2/openapi.json",
+      "httpStatus": 404
+    },
+    {
+      "url": "https://karma.online/apiv2/swagger.json",
+      "httpStatus": 404
+    },
+    {
+      "url": "https://karma.online/apiv2/openapi.yaml",
+      "httpStatus": 404
+    },
+    {
+      "url": "https://karma.online/apiv2/swagger.yaml",
+      "httpStatus": 404
+    },
+    {
+      "url": "https://karma.online/apiv2/api-docs",
+      "httpStatus": 404
+    },
+    {
+      "url": "https://karma.online/apiv2/docs",
+      "httpStatus": 404
+    }
+  ]
+}

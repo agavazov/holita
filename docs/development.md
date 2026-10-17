@@ -19,10 +19,12 @@ Keep machine-specific instructions in the optional, Git-ignored root `AGENTS.loc
 Agents read it alongside [the shared guide](../AGENTS.md); a missing local file does not
 block work. Shared contributor rules remain in `AGENTS.md`.
 
-Saved local credentials belong in the common services-level `.credentials/` directory,
-outside project repositories. Record the machine's exact path and any relevant connection
-references in `AGENTS.local.md`. Read the shared credential inventory and the required
-service README before use. Keep separate service/account/environment folders, descriptive
+Shared local credentials live in the common services-level `.credentials/` directory,
+outside project repositories. This checkout also uses a private project-local `.credentials/`
+directory, ignored by Git, Nx, ESLint and Prettier and excluded from repository-wide searches
+and scans. Record exact locations and relevant connection references in `AGENTS.local.md`.
+Read the selected store's inventory and the required service/connection README before use.
+Keep separate service/account/environment folders, descriptive
 value filenames and README files without secrets; use directory mode `0700` and credential
 file mode `0600`. Pass values through process environments, stdin or supported client stores.
 Ignored application `.env` files remain runtime configuration. Never put real credentials

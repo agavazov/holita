@@ -1,0 +1,509 @@
+// Karma API v2 - Main Script
+let currentSession = null;
+let lastRequest = null;
+let lastRequestData = null;
+let lastUrl = null;
+let lastMethod = null;
+let selectedEndpointIndex = null;
+
+// Set default URL
+function setDefaultURL() {
+  const urlInput = document.getElementById('url');
+  if (urlInput && !urlInput.value) {
+    urlInput.value = location.href.replace(/\/$/, '');;
+  }
+}
+
+// Session management
+function saveSession(sessionId) {
+  currentSession = sessionId;
+  const sessionInput = document.getElementById('sessionId');
+  if (sessionInput) {
+    sessionInput.value = sessionId;
+  }
+}
+
+function clearSession() {
+  currentSession = null;
+  const sessionInput = document.getElementById('sessionId');
+  if (sessionInput) {
+    sessionInput.value = '';
+  }
+}
+
+// Login function
+async function login() {
+  const username = document.getElementById('login_user').value;
+  const password = document.getElementById('login_pass').value;
+
+  if (!username || !password) {
+    alert('Please enter username and password');
+    return;
+  }
+
+  const url = document.getElementById('url').value + '/login';
+  const data = {
+    user: username,
+    password: password
+  };
+
+  // Use makeRequest to handle curl display and response
+  lastMethod = 'POST';
+  lastUrl = url;
+  lastRequestData = Object.assign({}, data);
+  lastRequest = JSON.stringify(data, null, 2);
+
+  const respDisplay = document.getElementById('resp_data');
+  respDisplay.textContent = 'Loading...';
+
+  // Show request
+  const reqDisplay = document.getElementById('req_data');
+  reqDisplay.innerHTML = '<pre>' + lastRequest + '</pre>';
+
+  // Generate curl
+  generateCurl();
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: lastRequest
+    });
+
+    const result = await response.json();
+
+    if (result.session_id) {
+      saveSession(result.session_id);
+    }
+
+    displayResponse(result);
+
+  } catch (error) {
+    displayError(error);
+  }
+}
+
+// Render endpoints table
+function renderEndpoints() {
+  const tableBody = document.querySelector('#endpoints tbody');
+  if (!tableBody) return;
+
+  tableBody.innerHTML = '';
+
+  // Filter out Login endpoint since we have a login bar
+  const filteredEndpoints = endpoints.filter(function(ep) {
+    return ep.name !== 'Login';
+  });
+
+  filteredEndpoints.forEach(function(endpoint, index) {
+    const row = document.createElement('tr');
+    row.onclick = function() {
+      selectEndpoint(index);
+    };
+
+    const methodDisplay = endpoint.method.replace('/', '-');
+    const methodClass = 'method-' + methodDisplay.toLowerCase();
+
+    const cell1 = document.createElement('td');
+    cell1.innerHTML =
+      '<span class="method-badge ' + methodClass + '">' + endpoint.method + '</span> ' +
+      '<span class="method_text">' + endpoint.path + '</span>';
+
+    const cell2 = document.createElement('td');
+    cell2.textContent = endpoint.description;
+
+    row.appendChild(cell1);
+    row.appendChild(cell2);
+    tableBody.appendChild(row);
+  });
+}
+
+// Select an endpoint
+function selectEndpoint(index) {
+  // Adjust index because we filtered out Login
+  const actualIndex = index;
+  const filteredEndpoints = endpoints.filter(function(ep) {
+    return ep.name !== 'Login';
+  });
+  const endpoint = filteredEndpoints[actualIndex];
+
+  if (!endpoint) return;
+
+  selectedEndpointIndex = actualIndex;
+
+  // Highlight selected row
+  const rows = document.querySelectorAll('#endpoints tbody tr');
+  rows.forEach(function(row, i) {
+    if (i === index) {
+      row.classList.add('selected');
+    } else {
+      row.classList.remove('selected');
+    }
+  });
+
+  // Render form
+  renderForm(endpoint);
+}
+
+// Render form for selected endpoint
+function renderForm(endpoint) {
+  const formContainer = document.getElementById('endpointForm');
+  if (!formContainer) return;
+
+  const methodDisplay = endpoint.method.replace('/', '-');
+  const methodClass = 'method-' + methodDisplay.toLowerCase();
+
+  let html = '';
+  html += '<div class="form-title">';
+  html += endpoint.name;
+  html += ' <span class="method-badge ' + methodClass + '">' + endpoint.method + '</span>';
+  html += '</div>';
+  html += '<p class="form-description">' + endpoint.description + '</p>';
+
+  const displayPath = endpoint.path.replace('{id}', '<span class="path_param">{id}</span>');
+  html += '<p class="form-description"><strong>Endpoint:</strong> ' + displayPath + '</p>';
+
+  html += '<form id="endpointFormElement" onsubmit="return handleSubmit(event)">';
+
+  endpoint.fields.forEach(function(field, fieldIndex) {
+    const requiredClass = field.required ? 'required' : 'optional';
+    const fieldId = 'field_' + fieldIndex;
+
+    html += '<div class="form-group" data-field-index="' + fieldIndex + '">';
+    html += '<label for="' + fieldId + '">' + field.label;
+    if (field.required) html += ' *';
+    html += '</label>';
+
+    if (field.multi) {
+      html += '<div class="multi-field-container">';
+      html += '<div class="multi-field-row">';
+      html += renderFieldInput(field, fieldId, requiredClass, 0);
+      html += '<button type="button" class="field-button add" onclick="addMultiField(this, ' + fieldIndex + ')">+</button>';
+      html += '</div>';
+      html += '</div>';
+    } else {
+      html += renderFieldInput(field, fieldId, requiredClass, -1);
+    }
+
+    if (field.hint) {
+      html += '<span class="field-hint">' + field.hint + '</span>';
+    }
+
+    html += '</div>';
+  });
+
+  html += '<div class="form-actions">';
+  html += '<span class="button" onclick="submitForm()">Submit</span>';
+  html += '</div>';
+
+  html += '</form>';
+
+  formContainer.innerHTML = html;
+}
+
+// Render field input
+function renderFieldInput(field, fieldId, requiredClass, multiIndex) {
+  const actualId = multiIndex >= 0 ? fieldId + '_' + multiIndex : fieldId;
+  let html = '';
+
+  if (field.type === 'select') {
+    html += '<select id="' + actualId + '" name="' + field.name + '" class="' + requiredClass + '">';
+    field.options.forEach(function(opt) {
+      if (typeof opt === 'object') {
+        html += '<option value="' + opt.value + '">' + opt.label + '</option>';
+      } else {
+        html += '<option value="' + opt + '">' + (opt || '(none)') + '</option>';
+      }
+    });
+    html += '</select>';
+  } else if (field.type === 'checkbox') {
+    html += '<input type="checkbox" id="' + actualId + '" name="' + field.name + '">';
+  } else if (field.type === 'datetime') {
+    html += '<input type="datetime-local" id="' + actualId + '" name="' + field.name + '" class="' + requiredClass + '">';
+  } else {
+    html += '<input type="' + field.type + '" id="' + actualId + '" name="' + field.name + '" class="' + requiredClass + '">';
+  }
+
+  return html;
+}
+
+// Add multi-field row
+function addMultiField(button, fieldIndex) {
+  const container = button.closest('.multi-field-container');
+  const rows = container.querySelectorAll('.multi-field-row');
+
+  // Get field info
+  const filteredEndpoints = endpoints.filter(function(ep) {
+    return ep.name !== 'Login';
+  });
+  const endpoint = filteredEndpoints[selectedEndpointIndex];
+  if (!endpoint) return;
+
+  const field = endpoint.fields[fieldIndex];
+  const requiredClass = field.required ? 'required' : 'optional';
+  const fieldId = 'field_' + fieldIndex;
+  const nextIndex = rows.length;
+
+  const newRow = document.createElement('div');
+  newRow.className = 'multi-field-row';
+  newRow.innerHTML =
+    renderFieldInput(field, fieldId, requiredClass, nextIndex) +
+    '<button type="button" class="field-button remove" onclick="removeMultiField(this)">-</button>';
+
+  container.appendChild(newRow);
+}
+
+// Remove multi-field row
+function removeMultiField(button) {
+  const container = button.closest('.multi-field-container');
+  const rows = container.querySelectorAll('.multi-field-row');
+
+  // Keep at least one field
+  if (rows.length > 1) {
+    button.closest('.multi-field-row').remove();
+  }
+}
+
+// Handle form submission
+function handleSubmit(event) {
+  event.preventDefault();
+  submitForm();
+  return false;
+}
+
+// Submit form
+function submitForm() {
+  const filteredEndpoints = endpoints.filter(function(ep) {
+    return ep.name !== 'Login';
+  });
+  const endpoint = filteredEndpoints[selectedEndpointIndex];
+  if (!endpoint) return;
+
+  const form = document.getElementById('endpointFormElement');
+  const data = {};
+  let method = endpoint.method;
+
+  // If method is GET/POST, default to GET
+  if (method === 'GET/POST') {
+    method = 'GET';
+  }
+
+  // Collect form data
+  endpoint.fields.forEach(function(field, fieldIndex) {
+    if (field.type === 'checkbox') {
+      const checkbox = form.querySelector('[name="' + field.name + '"]');
+      if (checkbox && checkbox.checked) {
+        data[field.name] = true;
+      }
+    } else if (field.multi) {
+      const container = form.querySelector('[data-field-index="' + fieldIndex + '"] .multi-field-container');
+      const inputs = container.querySelectorAll('input, select');
+      const values = [];
+      inputs.forEach(function(input) {
+        if (input.value) {
+          let value = input.value;
+          // Convert datetime-local to API format
+          if (field.type === 'datetime' && value) {
+            value = value.replace('T', ' ') + ':00';
+          }
+          values.push(value);
+        }
+      });
+      if (values.length > 0) {
+        data[field.name] = values;
+        // If we have arrays, switch GET to POST
+        if (method === 'GET') {
+          method = 'POST';
+        }
+      }
+    } else {
+      const input = form.querySelector('[name="' + field.name + '"]');
+      if (input && input.value) {
+        let value = input.value;
+        // Convert datetime-local to API format
+        if (field.type === 'datetime' && value) {
+          value = value.replace('T', ' ') + ':00';
+        }
+        data[field.name] = value;
+      }
+    }
+  });
+
+  let url = document.getElementById('url').value + endpoint.path;
+
+  // Handle path parameters
+  endpoint.fields.forEach(function(field) {
+    if (url.includes('{id}') && data[field.name]) {
+      url = url.replace('{id}', data[field.name]);
+      delete data[field.name];
+    }
+  });
+
+  makeRequest(method, url, data, endpoint.name);
+}
+
+// Make API request
+async function makeRequest(method, url, data, endpointName) {
+  lastMethod = method;
+  lastUrl = url;
+  lastRequestData = Object.assign({}, data);
+
+  const respDisplay = document.getElementById('resp_data');
+  respDisplay.textContent = 'Loading...';
+
+  try {
+    const options = {
+      method: method,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    };
+
+    // Add session to data
+    if (currentSession) {
+      data.karma_sid = currentSession;
+    }
+
+    if (method === 'GET' || method === 'DELETE') {
+      const params = new URLSearchParams();
+      for (const key in data) {
+        if (Array.isArray(data[key])) {
+          data[key].forEach(function(v) {
+            params.append(key, v);
+          });
+        } else {
+          params.append(key, data[key]);
+        }
+      }
+      if (params.toString()) {
+        url += '?' + params.toString();
+        lastUrl = url;
+      }
+      lastRequest = null;
+
+      // Show request
+      const reqDisplay = document.getElementById('req_data');
+      reqDisplay.textContent = 'GET/DELETE - No body';
+    } else {
+      lastRequest = JSON.stringify(data, null, 2);
+      options.body = lastRequest;
+
+      // Show request
+      const reqDisplay = document.getElementById('req_data');
+      reqDisplay.innerHTML = '<pre>' + lastRequest + '</pre>';
+    }
+
+    generateCurl();
+
+    const response = await fetch(url, options);
+    const result = await response.json();
+
+    displayResponse(result);
+
+  } catch (error) {
+    displayError(error);
+  }
+}
+
+// Display formatted response
+function displayResponse(data) {
+  const respDisplay = document.getElementById('resp_data');
+  respDisplay.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+}
+
+// Display error
+function displayError(error) {
+  const respDisplay = document.getElementById('resp_data');
+  respDisplay.innerHTML = '<div class="error-message">Error: ' + escapeHtml(error.message) + '</div>';
+}
+
+// Generate curl command
+function generateCurl() {
+  if (!lastUrl) return;
+
+  let curlCmd = '';
+
+  if (lastMethod === 'GET') {
+    curlCmd += '# GET Request:\n';
+    curlCmd += 'curl -X GET "' + lastUrl + '"\n\n';
+
+    // Also show POST version
+    const postUrl = lastUrl.split('?')[0];
+    const postData = {};
+    if (lastUrl.includes('?')) {
+      const params = new URLSearchParams(lastUrl.split('?')[1]);
+      params.forEach(function(value, key) {
+        if (postData[key]) {
+          if (!Array.isArray(postData[key])) {
+            postData[key] = [postData[key]];
+          }
+          postData[key].push(value);
+        } else {
+          postData[key] = value;
+        }
+      });
+    }
+    curlCmd += '# POST Request:\n';
+    curlCmd += 'curl -X POST "' + postUrl + '" \\\n';
+    curlCmd += '  -H "Content-Type: application/json" \\\n';
+    curlCmd += '  -d \'' + JSON.stringify(postData, null, 2) + '\'';
+  } else {
+    curlCmd = 'curl -X ' + lastMethod + ' "' + lastUrl + '"';
+    if (lastRequest) {
+      curlCmd += ' \\\n  -H "Content-Type: application/json"';
+      curlCmd += ' \\\n  -d \'' + lastRequest + '\'';
+    }
+  }
+
+  document.getElementById('curl_data').innerHTML = '<pre>' + curlCmd + '</pre>';
+}
+
+// Copy curl to clipboard
+function copyCurl(btn) {
+  const curlText = document.getElementById('curl_data').textContent;
+  navigator.clipboard.writeText(curlText).then(function() {
+    const originalText = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(function() {
+      btn.textContent = originalText;
+    }, 2000);
+  }).catch(function(err) {
+    alert('Failed to copy: ' + err);
+  });
+}
+
+// Copy response to clipboard
+function copyResponse(btn) {
+  const respText = document.getElementById('resp_data').textContent;
+  navigator.clipboard.writeText(respText).then(function() {
+    const originalText = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(function() {
+      btn.textContent = originalText;
+    }, 2000);
+  }).catch(function(err) {
+    alert('Failed to copy: ' + err);
+  });
+}
+
+// Escape HTML
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// After page load
+function afterLoad() {
+  setDefaultURL();
+  clearSession();
+  renderEndpoints();
+
+  // Set focus to username
+  const userInput = document.getElementById('login_user');
+  if (userInput) {
+    userInput.focus();
+  }
+}

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Karma API v2</title>
+    <link rel="stylesheet" href="help.css" type="text/css" />
+    <script type="text/javascript" src="endpoints.js"></script>
+    <script type="text/javascript" src="help.js"></script>
+  </head>
+
+  <body onload="afterLoad()">
+
+    <div class="main">
+      <h1>Karma API v2</h1>
+
+      <div class="top-bar">
+        <div class="section-inline">
+          <label for="url">API URL:</label>
+          <input id="url" placeholder="API URL"></input>
+        </div>
+
+        <div class="section-inline">
+          <label for="sessionId">Session ID:</label>
+          <input id="sessionId" placeholder="Session Id" readonly></input>
+          <span class="button" onclick="clearSession()">Clear</span>
+        </div>
+
+        <div class="section-inline">
+          <label for="login_user">Login:</label>
+          <input id="login_user" class="required" placeholder="Username"></input>
+          <label for="login_pass">Password:</label>
+          <input id="login_pass" class="required" type="password" onkeypress="if(event.key==='Enter') login()" placeholder="Password"></input>
+          <span class="button" onclick="login()">Log in</span>
+        </div>
+      </div>
+
+      <div class="content-area">
+        <div class="column endpoints-column">
+          <div class="panel">
+            <div class="panel-header">Available Endpoints</div>
+            <table id="endpoints">
+              <thead>
+                <tr><th>Endpoint</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="2">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="column form-column">
+          <div class="panel">
+            <div class="panel-header">Request Form</div>
+            <div id="endpointForm">
+              <p class="placeholder-text">Select an endpoint from the list to begin</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="column results-column">
+          <div class="panel">
+            <div class="panel-header">
+              CURL Command
+              <span class="button button-small" onclick="copyCurl(this)">Copy</span>
+            </div>
+            <span id="curl_data">
+              Waiting for a request...
+            </span>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">Request</div>
+            <span id="req_data">
+              Waiting for a request...
+            </span>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              Response
+              <span class="button button-small" onclick="copyResponse(this)">Copy</span>
+            </div>
+            <span id="resp_data">
+              Waiting for a request...
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="copyright">
+      All rights reserved to ERM Advanced Telematics
+    </div>
+  </body>
+</html>

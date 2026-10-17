@@ -1,0 +1,532 @@
+{
+  "observedAt": "2026-10-16T19:35:08+00:00",
+  "apiVersion": "2.26.1.1",
+  "scope": "Structural observations from one configured account. No raw rows, account identifiers, names, credentials, sessions, coordinates or metric values are retained. Empty arrays and null-only fields do not establish nonempty/non-null schemas.",
+  "operations": [
+    {
+      "operation": "GET /cars",
+      "httpStatus": 200,
+      "type": "array",
+      "fields": {
+        "car_color": {
+          "types": ["string"]
+        },
+        "car_id": {
+          "types": ["integer"]
+        },
+        "car_number": {
+          "types": ["string"]
+        },
+        "car_type": {
+          "types": ["string"]
+        },
+        "car_year": {
+          "types": ["string"]
+        },
+        "device_id": {
+          "types": ["string"]
+        },
+        "driver_ids": {
+          "types": ["array"],
+          "itemTypes": []
+        },
+        "karma_video_data": {
+          "types": ["null"]
+        },
+        "project_id": {
+          "types": ["integer"]
+        },
+        "sim_imsi": {
+          "types": ["null"]
+        },
+        "sim_phone": {
+          "types": ["null"]
+        },
+        "sub_type": {
+          "types": ["string"]
+        },
+        "time_zone": {
+          "types": ["integer"]
+        },
+        "vehicle_type": {
+          "types": ["null"]
+        }
+      }
+    },
+    {
+      "operation": "GET /projects",
+      "httpStatus": 200,
+      "type": "array",
+      "fields": {
+        "name": {
+          "types": ["string"]
+        },
+        "project_id": {
+          "types": ["integer"]
+        }
+      }
+    },
+    {
+      "operation": "GET /time-zones",
+      "httpStatus": 200,
+      "type": "array",
+      "fields": {
+        "zone_id": {
+          "types": ["integer"]
+        },
+        "zone_name": {
+          "types": ["string"]
+        }
+      }
+    },
+    {
+      "operation": "GET /users",
+      "httpStatus": 200,
+      "type": "array",
+      "fields": {
+        "active": {
+          "types": ["integer"]
+        },
+        "email": {
+          "types": ["string"]
+        },
+        "expire_date": {
+          "types": ["null"]
+        },
+        "first_name": {
+          "types": ["string"]
+        },
+        "last_name": {
+          "types": ["string"]
+        },
+        "project_id": {
+          "types": ["integer"]
+        },
+        "project_ids": {
+          "types": ["array"],
+          "itemTypes": ["integer"]
+        },
+        "role_id": {
+          "types": ["integer"]
+        },
+        "time_zone": {
+          "types": ["integer"]
+        },
+        "user_id": {
+          "types": ["integer"]
+        },
+        "user_name": {
+          "types": ["string"]
+        }
+      }
+    },
+    {
+      "operation": "GET /roles",
+      "httpStatus": 200,
+      "type": "array",
+      "fields": {
+        "description": {
+          "types": ["string"]
+        },
+        "role_id": {
+          "types": ["integer"]
+        }
+      }
+    },
+    {
+      "operation": "GET /drivers",
+      "httpStatus": 200,
+      "type": "array",
+      "fields": {}
+    },
+    {
+      "operation": "GET /cars/{id}",
+      "httpStatus": 200,
+      "type": "array",
+      "fields": {
+        "car_color": {
+          "types": ["string"]
+        },
+        "car_id": {
+          "types": ["integer"]
+        },
+        "car_number": {
+          "types": ["string"]
+        },
+        "car_type": {
+          "types": ["string"]
+        },
+        "car_year": {
+          "types": ["string"]
+        },
+        "device_id": {
+          "types": ["string"]
+        },
+        "driver_ids": {
+          "types": ["array"],
+          "itemTypes": []
+        },
+        "karma_video_data": {
+          "types": ["null"]
+        },
+        "project_id": {
+          "types": ["integer"]
+        },
+        "sim_imsi": {
+          "types": ["null"]
+        },
+        "sim_phone": {
+          "types": ["null"]
+        },
+        "sub_type": {
+          "types": ["string"]
+        },
+        "time_zone": {
+          "types": ["integer"]
+        },
+        "vehicle_type": {
+          "types": ["null"]
+        }
+      }
+    },
+    {
+      "operation": "GET /location",
+      "httpStatus": 200,
+      "type": "array",
+      "fields": {
+        "car_id": {
+          "types": ["integer"]
+        },
+        "carnumber": {
+          "types": ["string"]
+        },
+        "device_id": {
+          "types": ["string"]
+        },
+        "edt": {
+          "types": ["string"]
+        },
+        "edt_tz": {
+          "types": ["string"]
+        },
+        "eid": {
+          "types": ["integer"]
+        },
+        "extra": {
+          "types": ["string"]
+        },
+        "latitude": {
+          "types": ["number"]
+        },
+        "longitude": {
+          "types": ["number"]
+        },
+        "message_id": {
+          "types": ["integer"]
+        },
+        "odo": {
+          "types": ["number"]
+        },
+        "pdt": {
+          "types": ["string"]
+        },
+        "spd": {
+          "types": ["integer"]
+        }
+      }
+    },
+    {
+      "operation": "GET /edata",
+      "httpStatus": 200,
+      "type": "array",
+      "fields": {}
+    },
+    {
+      "operation": "GET /events",
+      "httpStatus": 200,
+      "type": "array",
+      "fields": {
+        "car_id": {
+          "types": ["integer"]
+        },
+        "device_id": {
+          "types": ["string"]
+        },
+        "edt": {
+          "types": ["string"]
+        },
+        "edt_tz": {
+          "types": ["string"]
+        },
+        "eid": {
+          "types": ["integer"]
+        },
+        "extra": {
+          "types": ["null", "string"]
+        },
+        "latitude": {
+          "types": ["number"]
+        },
+        "longitude": {
+          "types": ["number"]
+        },
+        "message_id": {
+          "types": ["integer"]
+        },
+        "odo": {
+          "types": ["number"]
+        },
+        "pdt": {
+          "types": ["string"]
+        },
+        "spd": {
+          "types": ["integer", "number"]
+        }
+      }
+    },
+    {
+      "operation": "GET /trips",
+      "httpStatus": 200,
+      "type": "array",
+      "fields": {
+        "car_id": {
+          "types": ["integer"]
+        },
+        "car_number": {
+          "types": ["string"]
+        },
+        "device_id": {
+          "types": ["string"]
+        },
+        "driver_id": {
+          "types": ["null"]
+        },
+        "driving_score": {
+          "types": ["integer"]
+        },
+        "eco_score": {
+          "types": ["integer", "number"]
+        },
+        "max_speed": {
+          "types": ["integer", "number"]
+        },
+        "start_date": {
+          "types": ["string"]
+        },
+        "start_latitude": {
+          "types": ["number"]
+        },
+        "start_longitude": {
+          "types": ["number"]
+        },
+        "start_message_id": {
+          "types": ["integer"]
+        },
+        "start_odo": {
+          "types": ["number"]
+        },
+        "stop_date": {
+          "types": ["string"]
+        },
+        "stop_latitude": {
+          "types": ["number"]
+        },
+        "stop_longitude": {
+          "types": ["number"]
+        },
+        "stop_message_id": {
+          "types": ["integer"]
+        },
+        "stop_odo": {
+          "types": ["number"]
+        },
+        "trip_active": {
+          "types": ["integer"]
+        },
+        "trip_distance": {
+          "types": ["number"]
+        },
+        "trip_distance_night": {
+          "types": ["integer", "number"]
+        },
+        "trip_duration": {
+          "types": ["integer"]
+        },
+        "trip_duration_night": {
+          "types": ["integer"]
+        },
+        "trip_id": {
+          "types": ["integer"]
+        }
+      }
+    },
+    {
+      "operation": "GET /sensors",
+      "httpStatus": 200,
+      "type": "array",
+      "fields": {
+        "car_id": {
+          "types": ["integer"]
+        },
+        "carnumber": {
+          "types": ["string"]
+        },
+        "device_id": {
+          "types": ["string"]
+        },
+        "edt": {
+          "types": ["string"]
+        },
+        "message_id": {
+          "types": ["integer"]
+        },
+        "sensors": {
+          "types": ["null"]
+        }
+      }
+    },
+    {
+      "operation": "GET /driving-profile",
+      "httpStatus": 200,
+      "type": "array",
+      "fields": {
+        "car_id": {
+          "types": ["integer"]
+        },
+        "car_number": {
+          "types": ["string"]
+        },
+        "device_id": {
+          "types": ["string"]
+        },
+        "score": {
+          "types": ["object"],
+          "objectFields": {
+            "accelerations": {
+              "types": ["object"],
+              "objectFields": {
+                "score": {
+                  "types": ["null"]
+                },
+                "weight": {
+                  "types": ["null"]
+                }
+              }
+            },
+            "brakes": {
+              "types": ["object"],
+              "objectFields": {
+                "score": {
+                  "types": ["number"]
+                },
+                "weight": {
+                  "types": ["number"]
+                }
+              }
+            },
+            "bypassing": {
+              "types": ["object"],
+              "objectFields": {
+                "score": {
+                  "types": ["null"]
+                },
+                "weight": {
+                  "types": ["null"]
+                }
+              }
+            },
+            "lane_change": {
+              "types": ["object"],
+              "objectFields": {
+                "score": {
+                  "types": ["null"]
+                },
+                "weight": {
+                  "types": ["null"]
+                }
+              }
+            },
+            "off_road": {
+              "types": ["object"],
+              "objectFields": {
+                "score": {
+                  "types": ["null"]
+                },
+                "weight": {
+                  "types": ["null"]
+                }
+              }
+            },
+            "roundabout": {
+              "types": ["object"],
+              "objectFields": {
+                "score": {
+                  "types": ["null"]
+                },
+                "weight": {
+                  "types": ["null"]
+                }
+              }
+            },
+            "speed": {
+              "types": ["object"],
+              "objectFields": {
+                "score": {
+                  "types": ["integer"]
+                },
+                "weight": {
+                  "types": ["number"]
+                }
+              }
+            },
+            "speed_bumps": {
+              "types": ["object"],
+              "objectFields": {
+                "score": {
+                  "types": ["number"]
+                },
+                "weight": {
+                  "types": ["integer"]
+                }
+              }
+            },
+            "turns": {
+              "types": ["object"],
+              "objectFields": {
+                "score": {
+                  "types": ["integer"]
+                },
+                "weight": {
+                  "types": ["number"]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "additionalEdataStructure": {
+    "messageFields": [
+      "car_id",
+      "carnumber",
+      "device_id",
+      "edt",
+      "edt_tz",
+      "latitude",
+      "longitude",
+      "message_id",
+      "odo",
+      "parameters",
+      "pdt",
+      "spd"
+    ],
+    "parameterFields": ["desc", "id", "value"],
+    "parameterValueTypes": {
+      "id": ["int"],
+      "value": ["int"],
+      "desc": ["str"]
+    },
+    "allNonemptySamplesAscending": true
+  }
+}

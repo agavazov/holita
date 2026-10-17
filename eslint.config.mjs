@@ -10,6 +10,7 @@ export default tseslint.config(
     ignores: [
       '.tmp/**',
       '.misc/**',
+      '.credentials/**',
       '.references/**',
       '.volumes/**',
       '**/node_modules/**',

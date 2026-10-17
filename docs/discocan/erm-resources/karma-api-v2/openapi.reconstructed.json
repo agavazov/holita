@@ -1,0 +1,3303 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Karma API v2 - reconstructed reference",
+    "version": "0.1.0-reconstructed",
+    "description": "Locally reconstructed, NOT an official vendor OpenAPI document. Requests come from the downloaded vendor endpoint/helper scripts. Response models combine structural read observations and fields accepted by the current holita adapter; nullable variants are not a vendor guarantee. Unknown write/driver/black-box/queue response bodies remain unconstrained. See README.md and source/manifest.json."
+  },
+  "servers": [
+    {
+      "url": "https://karma.online/apiv2"
+    }
+  ],
+  "x-provenance": {
+    "kind": "reconstructed",
+    "officialOpenapiDownloaded": false,
+    "vendorSources": [
+      "https://karma.online/apiv2/endpoints.js",
+      "https://karma.online/apiv2/help.js"
+    ],
+    "retrievedAt": "2026-10-16T19:34:42+00:00",
+    "observedApiVersion": "2.26.1.1",
+    "responseEvidence": "source/response-shapes.json",
+    "limitations": "Single-account read samples. Source form metadata is not a normative validation contract. No write operations, device queries or commands were executed."
+  },
+  "tags": [
+    {
+      "name": "System"
+    },
+    {
+      "name": "Cars"
+    },
+    {
+      "name": "Drivers"
+    },
+    {
+      "name": "Projects"
+    },
+    {
+      "name": "Users"
+    },
+    {
+      "name": "Telemetry"
+    },
+    {
+      "name": "Devices"
+    },
+    {
+      "name": "References"
+    }
+  ],
+  "paths": {
+    "/version": {
+      "get": {
+        "tags": ["System"],
+        "summary": "Version",
+        "operationId": "getVersion",
+        "description": "Get API version information (no authentication required). Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "GET",
+        "x-holita-implemented": true,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [],
+        "x-holita-query": "karmaVersion",
+        "responses": {
+          "200": {
+            "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Version"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BusinessError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "HTTP error or other provider response; status catalog and payload are unspecified.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/login": {
+      "post": {
+        "tags": ["System"],
+        "summary": "Login",
+        "operationId": "postLogin",
+        "description": "Authenticate with username and password to receive session ID. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "POST",
+        "x-holita-implemented": true,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": true,
+                "required": ["user", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/LoginResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BusinessError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "HTTP error or other provider response; status catalog and payload are unspecified.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cars": {
+      "get": {
+        "tags": ["Cars"],
+        "summary": "List Cars",
+        "operationId": "getCars",
+        "description": "Retrieve list of all cars with optional filtering. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "GET",
+        "x-holita-implemented": true,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [
+          {
+            "KarmaSessionQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["number", "string"],
+              "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+            },
+            "description": "Project ID",
+            "x-vendor-control-type": "number"
+          },
+          {
+            "name": "car_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["number", "string"],
+              "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+            },
+            "description": "Car ID",
+            "x-vendor-control-type": "number"
+          },
+          {
+            "name": "device_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Device ID",
+            "x-vendor-control-type": "text"
+          }
+        ],
+        "x-holita-query": "karmaCars",
+        "responses": {
+          "200": {
+            "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Car"
+                      }
+                    },
+                    {
+                      "$ref": "#/components/schemas/BusinessError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "HTTP error or other provider response; status catalog and payload are unspecified.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Cars"],
+        "summary": "Create Car",
+        "operationId": "postCars",
+        "description": "Create a new car record in the system. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "POST",
+        "x-holita-implemented": false,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [],
+        "x-authentication": {
+          "required": true,
+          "transport": "json-body",
+          "property": "karma_sid",
+          "note": "security is empty because OpenAPI cannot describe a JSON-body API key as a security scheme; this endpoint is not public."
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "device_id": {
+                    "type": "string"
+                  },
+                  "project_id": {
+                    "type": ["number", "string"],
+                    "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                  },
+                  "time_zone": {
+                    "type": ["number", "string"],
+                    "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                  },
+                  "car_number": {
+                    "type": "string"
+                  },
+                  "car_type": {
+                    "type": "string"
+                  },
+                  "car_year": {
+                    "type": ["number", "string"],
+                    "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                  },
+                  "car_color": {
+                    "type": "string"
+                  },
+                  "karma_sid": {
+                    "type": "string",
+                    "description": "Secret session ID, sent in JSON body by vendor help.js."
+                  }
+                },
+                "additionalProperties": true,
+                "required": ["device_id", "project_id", "time_zone", "car_number", "karma_sid"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "default": {
+            "description": "Provider write response; success status/body and error contract have not been verified. No operation was executed.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cars/{id}": {
+      "get": {
+        "tags": ["Cars"],
+        "summary": "Get Car",
+        "operationId": "getCarsId",
+        "description": "Retrieve detailed information for a specific car. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "GET",
+        "x-holita-implemented": true,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [
+          {
+            "KarmaSessionQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Vendor form field car_id is substituted into {id}.",
+            "x-vendor-field-name": "car_id"
+          }
+        ],
+        "x-holita-query": "karmaCar",
+        "responses": {
+          "200": {
+            "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Car"
+                      }
+                    },
+                    {
+                      "$ref": "#/components/schemas/BusinessError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "HTTP error or other provider response; status catalog and payload are unspecified.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Cars"],
+        "summary": "Update Car",
+        "operationId": "putCarsId",
+        "description": "Update information for an existing car. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "PUT",
+        "x-holita-implemented": false,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Vendor form field car_id is substituted into {id}.",
+            "x-vendor-field-name": "car_id"
+          }
+        ],
+        "x-authentication": {
+          "required": true,
+          "transport": "json-body",
+          "property": "karma_sid",
+          "note": "security is empty because OpenAPI cannot describe a JSON-body API key as a security scheme; this endpoint is not public."
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "car_number": {
+                    "type": "string"
+                  },
+                  "car_type": {
+                    "type": "string"
+                  },
+                  "car_year": {
+                    "type": ["number", "string"],
+                    "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                  },
+                  "car_color": {
+                    "type": "string"
+                  },
+                  "karma_sid": {
+                    "type": "string",
+                    "description": "Secret session ID, sent in JSON body by vendor help.js."
+                  }
+                },
+                "additionalProperties": true,
+                "required": ["karma_sid"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "default": {
+            "description": "Provider write response; success status/body and error contract have not been verified. No operation was executed.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Cars"],
+        "summary": "Delete Car",
+        "operationId": "deleteCarsId",
+        "description": "Remove a car from the system. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "DELETE",
+        "x-holita-implemented": false,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [
+          {
+            "KarmaSessionQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Vendor form field car_id is substituted into {id}.",
+            "x-vendor-field-name": "car_id"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "Provider write response; success status/body and error contract have not been verified. No operation was executed.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/drivers": {
+      "get": {
+        "tags": ["Drivers"],
+        "summary": "List Drivers",
+        "operationId": "getDrivers",
+        "description": "Retrieve list of all drivers with optional filtering. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "GET",
+        "x-holita-implemented": false,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [
+          {
+            "KarmaSessionQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["number", "string"],
+              "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+            },
+            "description": "Project ID",
+            "x-vendor-control-type": "number"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {},
+                      "description": "Only an empty array observed; driver response properties are unknown."
+                    },
+                    {
+                      "$ref": "#/components/schemas/BusinessError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "HTTP error or other provider response; status catalog and payload are unspecified.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Drivers"],
+        "summary": "Create Driver",
+        "operationId": "postDrivers",
+        "description": "Create a new driver record in the system. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "POST",
+        "x-holita-implemented": false,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [],
+        "x-authentication": {
+          "required": true,
+          "transport": "json-body",
+          "property": "karma_sid",
+          "note": "security is empty because OpenAPI cannot describe a JSON-body API key as a security scheme; this endpoint is not public."
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "project_id": {
+                    "type": ["number", "string"],
+                    "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                  },
+                  "first_name": {
+                    "type": "string"
+                  },
+                  "last_name": {
+                    "type": "string"
+                  },
+                  "phone_number": {
+                    "type": "string"
+                  },
+                  "karma_sid": {
+                    "type": "string",
+                    "description": "Secret session ID, sent in JSON body by vendor help.js."
+                  }
+                },
+                "additionalProperties": true,
+                "required": ["project_id", "first_name", "last_name", "karma_sid"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "default": {
+            "description": "Provider write response; success status/body and error contract have not been verified. No operation was executed.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/drivers/{id}": {
+      "put": {
+        "tags": ["Drivers"],
+        "summary": "Update Driver",
+        "operationId": "putDriversId",
+        "description": "Update information for an existing driver. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "PUT",
+        "x-holita-implemented": false,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Vendor form field driver_id is substituted into {id}.",
+            "x-vendor-field-name": "driver_id"
+          }
+        ],
+        "x-authentication": {
+          "required": true,
+          "transport": "json-body",
+          "property": "karma_sid",
+          "note": "security is empty because OpenAPI cannot describe a JSON-body API key as a security scheme; this endpoint is not public."
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "first_name": {
+                    "type": "string"
+                  },
+                  "last_name": {
+                    "type": "string"
+                  },
+                  "phone_number": {
+                    "type": "string"
+                  },
+                  "karma_sid": {
+                    "type": "string",
+                    "description": "Secret session ID, sent in JSON body by vendor help.js."
+                  }
+                },
+                "additionalProperties": true,
+                "required": ["karma_sid"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "default": {
+            "description": "Provider write response; success status/body and error contract have not been verified. No operation was executed.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Drivers"],
+        "summary": "Delete Driver",
+        "operationId": "deleteDriversId",
+        "description": "Remove a driver from the system. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "DELETE",
+        "x-holita-implemented": false,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [
+          {
+            "KarmaSessionQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Vendor form field driver_id is substituted into {id}.",
+            "x-vendor-field-name": "driver_id"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "Provider write response; success status/body and error contract have not been verified. No operation was executed.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects": {
+      "get": {
+        "tags": ["Projects"],
+        "summary": "List Projects",
+        "operationId": "getProjects",
+        "description": "Retrieve list of all projects. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "GET",
+        "x-holita-implemented": true,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [
+          {
+            "KarmaSessionQuery": []
+          }
+        ],
+        "x-holita-query": "karmaProjects",
+        "responses": {
+          "200": {
+            "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Project"
+                      }
+                    },
+                    {
+                      "$ref": "#/components/schemas/BusinessError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "HTTP error or other provider response; status catalog and payload are unspecified.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Projects"],
+        "summary": "Create Project",
+        "operationId": "postProjects",
+        "description": "Create a new project in the system. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "POST",
+        "x-holita-implemented": false,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [],
+        "x-authentication": {
+          "required": true,
+          "transport": "json-body",
+          "property": "karma_sid",
+          "note": "security is empty because OpenAPI cannot describe a JSON-body API key as a security scheme; this endpoint is not public."
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "karma_sid": {
+                    "type": "string",
+                    "description": "Secret session ID, sent in JSON body by vendor help.js."
+                  }
+                },
+                "additionalProperties": true,
+                "required": ["name", "karma_sid"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "default": {
+            "description": "Provider write response; success status/body and error contract have not been verified. No operation was executed.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "List Users",
+        "operationId": "getUsers",
+        "description": "Retrieve list of all users with optional filtering. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "GET",
+        "x-holita-implemented": true,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [
+          {
+            "KarmaSessionQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["number", "string"],
+              "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+            },
+            "description": "Project ID",
+            "x-vendor-control-type": "number"
+          }
+        ],
+        "x-holita-query": "karmaUsers",
+        "responses": {
+          "200": {
+            "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    },
+                    {
+                      "$ref": "#/components/schemas/BusinessError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "HTTP error or other provider response; status catalog and payload are unspecified.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/location": {
+      "get": {
+        "tags": ["Telemetry"],
+        "summary": "Location",
+        "operationId": "getLocation",
+        "description": "Retrieve last known location data for vehicles. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "GET/POST",
+        "x-holita-implemented": true,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [
+          {
+            "KarmaSessionQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "car",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": ["number", "string"],
+                  "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": ["number", "string"],
+                    "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                  }
+                }
+              ],
+              "description": "The vendor form permits multiple cars. Current holita GET transport uses a single scalar car value; repeated values retain the documented multi-value form. Exact bulk wire semantics remain unverified."
+            },
+            "description": "Car ID",
+            "x-vendor-control-type": "number",
+            "style": "form",
+            "explode": true,
+            "x-vendor-multi": true,
+            "x-holita-serialization": "single scalar car query value",
+            "x-evidence": [
+              "source/endpoints.js.txt",
+              "../../../../apps/karma-client/src/cars/karma-client.ts",
+              "../../../../apps/karma-client/src/edata/edata-query.ts",
+              "../../../../apps/karma-client/src/history/history-query.ts"
+            ]
+          },
+          {
+            "name": "device",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+            },
+            "description": "Device ID",
+            "x-vendor-control-type": "text",
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+            },
+            "description": "Field",
+            "x-vendor-control-type": "text",
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "address",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["", "en", "he"]
+            },
+            "description": "Address Language",
+            "x-vendor-control-type": "select"
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+              "description": "Vendor form hint YYYY-MM-DD HH:MM:SS; timezone depends on endpoint/date_type. No RFC3339 offset is implied."
+            },
+            "description": "From Date",
+            "x-vendor-control-type": "datetime"
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+              "description": "Vendor form hint YYYY-MM-DD HH:MM:SS; timezone depends on endpoint/date_type. No RFC3339 offset is implied."
+            },
+            "description": "To Date",
+            "x-vendor-control-type": "datetime"
+          },
+          {
+            "name": "fields[]",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+            },
+            "description": "Bracketed GET alias used by current holita transport.",
+            "x-vendor-control-type": "text",
+            "style": "form",
+            "explode": true,
+            "x-holita-alias-of": "fields"
+          }
+        ],
+        "x-holita-query": "karmaLocation",
+        "responses": {
+          "200": {
+            "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Location"
+                      }
+                    },
+                    {
+                      "$ref": "#/components/schemas/BusinessError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "HTTP error or other provider response; status catalog and payload are unspecified.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Telemetry"],
+        "summary": "Location",
+        "operationId": "postLocation",
+        "description": "Retrieve last known location data for vehicles. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "GET/POST",
+        "x-holita-implemented": false,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [],
+        "x-authentication": {
+          "required": true,
+          "transport": "json-body",
+          "property": "karma_sid",
+          "note": "security is empty because OpenAPI cannot describe a JSON-body API key as a security scheme; this endpoint is not public."
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "car": {
+                    "type": "array",
+                    "items": {
+                      "type": ["number", "string"],
+                      "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                    },
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                  },
+                  "device": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                  },
+                  "fields": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                  },
+                  "address": {
+                    "type": "string",
+                    "enum": ["", "en", "he"]
+                  },
+                  "from_date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+                    "description": "Vendor form hint YYYY-MM-DD HH:MM:SS; timezone depends on endpoint/date_type. No RFC3339 offset is implied."
+                  },
+                  "to_date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+                    "description": "Vendor form hint YYYY-MM-DD HH:MM:SS; timezone depends on endpoint/date_type. No RFC3339 offset is implied."
+                  },
+                  "karma_sid": {
+                    "type": "string",
+                    "description": "Secret session ID, sent in JSON body by vendor help.js."
+                  }
+                },
+                "additionalProperties": true,
+                "required": ["karma_sid"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "default": {
+            "description": "Provider write response; success status/body and error contract have not been verified. No operation was executed.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trips": {
+      "get": {
+        "tags": ["Telemetry"],
+        "summary": "Trips",
+        "operationId": "getTrips",
+        "description": "Retrieve historical trip data with filtering options. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "GET/POST",
+        "x-holita-implemented": true,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [
+          {
+            "KarmaSessionQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "from_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["number", "string"],
+              "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+            },
+            "description": "From ID",
+            "x-vendor-control-type": "number"
+          },
+          {
+            "name": "to_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["number", "string"],
+              "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+            },
+            "description": "To ID",
+            "x-vendor-control-type": "number"
+          },
+          {
+            "name": "car",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": ["number", "string"],
+                  "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": ["number", "string"],
+                    "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                  }
+                }
+              ],
+              "description": "The vendor form permits multiple cars. Current holita GET transport uses a single scalar car value; repeated values retain the documented multi-value form. Exact bulk wire semantics remain unverified."
+            },
+            "description": "Car ID",
+            "x-vendor-control-type": "number",
+            "style": "form",
+            "explode": true,
+            "x-vendor-multi": true,
+            "x-holita-serialization": "single scalar car query value",
+            "x-evidence": [
+              "source/endpoints.js.txt",
+              "../../../../apps/karma-client/src/cars/karma-client.ts",
+              "../../../../apps/karma-client/src/edata/edata-query.ts",
+              "../../../../apps/karma-client/src/history/history-query.ts"
+            ]
+          },
+          {
+            "name": "device",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+            },
+            "description": "Device ID",
+            "x-vendor-control-type": "text",
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": ["number", "string"],
+                "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+              },
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+            },
+            "description": "Project ID",
+            "x-vendor-control-type": "number",
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+              "description": "Vendor form hint YYYY-MM-DD HH:MM:SS; timezone depends on endpoint/date_type. No RFC3339 offset is implied."
+            },
+            "description": "From Date",
+            "x-vendor-control-type": "datetime"
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+              "description": "Vendor form hint YYYY-MM-DD HH:MM:SS; timezone depends on endpoint/date_type. No RFC3339 offset is implied."
+            },
+            "description": "To Date",
+            "x-vendor-control-type": "datetime"
+          }
+        ],
+        "x-holita-query": "karmaTrips",
+        "responses": {
+          "200": {
+            "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Trip"
+                      }
+                    },
+                    {
+                      "$ref": "#/components/schemas/BusinessError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "HTTP error or other provider response; status catalog and payload are unspecified.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Telemetry"],
+        "summary": "Trips",
+        "operationId": "postTrips",
+        "description": "Retrieve historical trip data with filtering options. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "GET/POST",
+        "x-holita-implemented": false,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [],
+        "x-authentication": {
+          "required": true,
+          "transport": "json-body",
+          "property": "karma_sid",
+          "note": "security is empty because OpenAPI cannot describe a JSON-body API key as a security scheme; this endpoint is not public."
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "from_id": {
+                    "type": ["number", "string"],
+                    "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                  },
+                  "to_id": {
+                    "type": ["number", "string"],
+                    "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                  },
+                  "car": {
+                    "type": "array",
+                    "items": {
+                      "type": ["number", "string"],
+                      "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                    },
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                  },
+                  "device": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                  },
+                  "project_id": {
+                    "type": "array",
+                    "items": {
+                      "type": ["number", "string"],
+                      "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                    },
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                  },
+                  "from_date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+                    "description": "Vendor form hint YYYY-MM-DD HH:MM:SS; timezone depends on endpoint/date_type. No RFC3339 offset is implied."
+                  },
+                  "to_date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+                    "description": "Vendor form hint YYYY-MM-DD HH:MM:SS; timezone depends on endpoint/date_type. No RFC3339 offset is implied."
+                  },
+                  "karma_sid": {
+                    "type": "string",
+                    "description": "Secret session ID, sent in JSON body by vendor help.js."
+                  }
+                },
+                "additionalProperties": true,
+                "required": ["karma_sid"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "default": {
+            "description": "Provider write response; success status/body and error contract have not been verified. No operation was executed.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/events": {
+      "get": {
+        "tags": ["Telemetry"],
+        "summary": "Events",
+        "operationId": "getEvents",
+        "description": "Retrieve historical event data with filtering options. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "GET/POST",
+        "x-holita-implemented": true,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [
+          {
+            "KarmaSessionQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "from_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["number", "string"],
+              "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+            },
+            "description": "From ID",
+            "x-vendor-control-type": "number"
+          },
+          {
+            "name": "to_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["number", "string"],
+              "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+            },
+            "description": "To ID",
+            "x-vendor-control-type": "number"
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+            },
+            "description": "Field",
+            "x-vendor-control-type": "text",
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "address",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["", "en", "he"]
+            },
+            "description": "Address Language",
+            "x-vendor-control-type": "select"
+          },
+          {
+            "name": "car",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": ["number", "string"],
+                  "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": ["number", "string"],
+                    "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                  }
+                }
+              ],
+              "description": "The vendor form permits multiple cars. Current holita GET transport uses a single scalar car value; repeated values retain the documented multi-value form. Exact bulk wire semantics remain unverified."
+            },
+            "description": "Car ID",
+            "x-vendor-control-type": "number",
+            "style": "form",
+            "explode": true,
+            "x-vendor-multi": true,
+            "x-holita-serialization": "single scalar car query value",
+            "x-evidence": [
+              "source/endpoints.js.txt",
+              "../../../../apps/karma-client/src/cars/karma-client.ts",
+              "../../../../apps/karma-client/src/edata/edata-query.ts",
+              "../../../../apps/karma-client/src/history/history-query.ts"
+            ]
+          },
+          {
+            "name": "device",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+            },
+            "description": "Device ID",
+            "x-vendor-control-type": "text",
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": ["number", "string"],
+                "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+              },
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+            },
+            "description": "Project ID",
+            "x-vendor-control-type": "number",
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "event_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": ["number", "string"],
+                "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+              },
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+            },
+            "description": "Event Type",
+            "x-vendor-control-type": "number",
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+              "description": "Vendor form hint YYYY-MM-DD HH:MM:SS; timezone depends on endpoint/date_type. No RFC3339 offset is implied."
+            },
+            "description": "From Date",
+            "x-vendor-control-type": "datetime"
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+              "description": "Vendor form hint YYYY-MM-DD HH:MM:SS; timezone depends on endpoint/date_type. No RFC3339 offset is implied."
+            },
+            "description": "To Date",
+            "x-vendor-control-type": "datetime"
+          },
+          {
+            "name": "date_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["", "utc"]
+            },
+            "description": "Date Type",
+            "x-vendor-control-type": "select"
+          },
+          {
+            "name": "decode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["boolean", "string", "integer"],
+              "description": "Vendor helper sends true when checked and omits when unchecked. Holita uses 1 for showdesc."
+            },
+            "description": "Decode External Devices",
+            "x-vendor-control-type": "checkbox"
+          },
+          {
+            "name": "fields[]",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+            },
+            "description": "Bracketed GET alias used by current holita transport.",
+            "x-vendor-control-type": "text",
+            "style": "form",
+            "explode": true,
+            "x-holita-alias-of": "fields"
+          },
+          {
+            "name": "event_type[]",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": ["number", "string"],
+                "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+              },
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+            },
+            "description": "Bracketed GET alias used by current holita transport.",
+            "x-vendor-control-type": "number",
+            "style": "form",
+            "explode": true,
+            "x-holita-alias-of": "event_type"
+          }
+        ],
+        "x-holita-query": "karmaEvents",
+        "responses": {
+          "200": {
+            "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Event"
+                      }
+                    },
+                    {
+                      "$ref": "#/components/schemas/BusinessError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "HTTP error or other provider response; status catalog and payload are unspecified.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Telemetry"],
+        "summary": "Events",
+        "operationId": "postEvents",
+        "description": "Retrieve historical event data with filtering options. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "GET/POST",
+        "x-holita-implemented": false,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [],
+        "x-authentication": {
+          "required": true,
+          "transport": "json-body",
+          "property": "karma_sid",
+          "note": "security is empty because OpenAPI cannot describe a JSON-body API key as a security scheme; this endpoint is not public."
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "from_id": {
+                    "type": ["number", "string"],
+                    "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                  },
+                  "to_id": {
+                    "type": ["number", "string"],
+                    "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                  },
+                  "fields": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                  },
+                  "address": {
+                    "type": "string",
+                    "enum": ["", "en", "he"]
+                  },
+                  "car": {
+                    "type": "array",
+                    "items": {
+                      "type": ["number", "string"],
+                      "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                    },
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                  },
+                  "device": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                  },
+                  "project_id": {
+                    "type": "array",
+                    "items": {
+                      "type": ["number", "string"],
+                      "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                    },
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                  },
+                  "event_type": {
+                    "type": "array",
+                    "items": {
+                      "type": ["number", "string"],
+                      "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                    },
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                  },
+                  "from_date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+                    "description": "Vendor form hint YYYY-MM-DD HH:MM:SS; timezone depends on endpoint/date_type. No RFC3339 offset is implied."
+                  },
+                  "to_date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+                    "description": "Vendor form hint YYYY-MM-DD HH:MM:SS; timezone depends on endpoint/date_type. No RFC3339 offset is implied."
+                  },
+                  "date_type": {
+                    "type": "string",
+                    "enum": ["", "utc"]
+                  },
+                  "decode": {
+                    "type": ["boolean", "string", "integer"],
+                    "description": "Vendor helper sends true when checked and omits when unchecked. Holita uses 1 for showdesc."
+                  },
+                  "karma_sid": {
+                    "type": "string",
+                    "description": "Secret session ID, sent in JSON body by vendor help.js."
+                  }
+                },
+                "additionalProperties": true,
+                "required": ["karma_sid"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "default": {
+            "description": "Provider write response; success status/body and error contract have not been verified. No operation was executed.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sensors": {
+      "get": {
+        "tags": ["Telemetry"],
+        "summary": "Sensors",
+        "operationId": "getSensors",
+        "description": "Retrieve sensor data with filtering options. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "GET/POST",
+        "x-holita-implemented": false,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [
+          {
+            "KarmaSessionQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "from_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["number", "string"],
+              "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+            },
+            "description": "From ID",
+            "x-vendor-control-type": "number"
+          },
+          {
+            "name": "to_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["number", "string"],
+              "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+            },
+            "description": "To ID",
+            "x-vendor-control-type": "number"
+          },
+          {
+            "name": "car",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": ["number", "string"],
+                "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+              },
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+            },
+            "description": "Car ID",
+            "x-vendor-control-type": "number",
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "device",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+            },
+            "description": "Device ID",
+            "x-vendor-control-type": "text",
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": ["number", "string"],
+                "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+              },
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+            },
+            "description": "Project ID",
+            "x-vendor-control-type": "number",
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "event_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": ["number", "string"],
+                "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+              },
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+            },
+            "description": "Event Type",
+            "x-vendor-control-type": "number",
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+              "description": "Vendor form hint YYYY-MM-DD HH:MM:SS; timezone depends on endpoint/date_type. No RFC3339 offset is implied."
+            },
+            "description": "From Date",
+            "x-vendor-control-type": "datetime"
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+              "description": "Vendor form hint YYYY-MM-DD HH:MM:SS; timezone depends on endpoint/date_type. No RFC3339 offset is implied."
+            },
+            "description": "To Date",
+            "x-vendor-control-type": "datetime"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SensorRecord"
+                      }
+                    },
+                    {
+                      "$ref": "#/components/schemas/BusinessError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "HTTP error or other provider response; status catalog and payload are unspecified.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Telemetry"],
+        "summary": "Sensors",
+        "operationId": "postSensors",
+        "description": "Retrieve sensor data with filtering options. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "GET/POST",
+        "x-holita-implemented": false,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [],
+        "x-authentication": {
+          "required": true,
+          "transport": "json-body",
+          "property": "karma_sid",
+          "note": "security is empty because OpenAPI cannot describe a JSON-body API key as a security scheme; this endpoint is not public."
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "from_id": {
+                    "type": ["number", "string"],
+                    "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                  },
+                  "to_id": {
+                    "type": ["number", "string"],
+                    "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                  },
+                  "car": {
+                    "type": "array",
+                    "items": {
+                      "type": ["number", "string"],
+                      "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                    },
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                  },
+                  "device": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                  },
+                  "project_id": {
+                    "type": "array",
+                    "items": {
+                      "type": ["number", "string"],
+                      "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                    },
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                  },
+                  "event_type": {
+                    "type": "array",
+                    "items": {
+                      "type": ["number", "string"],
+                      "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                    },
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                  },
+                  "from_date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+                    "description": "Vendor form hint YYYY-MM-DD HH:MM:SS; timezone depends on endpoint/date_type. No RFC3339 offset is implied."
+                  },
+                  "to_date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+                    "description": "Vendor form hint YYYY-MM-DD HH:MM:SS; timezone depends on endpoint/date_type. No RFC3339 offset is implied."
+                  },
+                  "karma_sid": {
+                    "type": "string",
+                    "description": "Secret session ID, sent in JSON body by vendor help.js."
+                  }
+                },
+                "additionalProperties": true,
+                "required": ["karma_sid"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "default": {
+            "description": "Provider write response; success status/body and error contract have not been verified. No operation was executed.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/driving-profile": {
+      "get": {
+        "tags": ["Telemetry"],
+        "summary": "Driving Profile",
+        "operationId": "getDrivingProfile",
+        "description": "Retrieve driving profile analytics data. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "GET/POST",
+        "x-holita-implemented": true,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [
+          {
+            "KarmaSessionQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "car",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": ["number", "string"],
+                  "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": ["number", "string"],
+                    "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                  }
+                }
+              ],
+              "description": "The vendor form permits multiple cars. Current holita GET transport uses a single scalar car value; repeated values retain the documented multi-value form. Exact bulk wire semantics remain unverified."
+            },
+            "description": "Car ID",
+            "x-vendor-control-type": "number",
+            "style": "form",
+            "explode": true,
+            "x-vendor-multi": true,
+            "x-holita-serialization": "single scalar car query value",
+            "x-evidence": [
+              "source/endpoints.js.txt",
+              "../../../../apps/karma-client/src/cars/karma-client.ts",
+              "../../../../apps/karma-client/src/edata/edata-query.ts",
+              "../../../../apps/karma-client/src/history/history-query.ts"
+            ]
+          },
+          {
+            "name": "device",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+            },
+            "description": "Device ID",
+            "x-vendor-control-type": "text",
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": ["number", "string"],
+                "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+              },
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+            },
+            "description": "Project ID",
+            "x-vendor-control-type": "number",
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+              "description": "Vendor form hint YYYY-MM-DD HH:MM:SS; timezone depends on endpoint/date_type. No RFC3339 offset is implied."
+            },
+            "description": "From Date",
+            "x-vendor-control-type": "datetime"
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+              "description": "Vendor form hint YYYY-MM-DD HH:MM:SS; timezone depends on endpoint/date_type. No RFC3339 offset is implied."
+            },
+            "description": "To Date",
+            "x-vendor-control-type": "datetime"
+          }
+        ],
+        "x-holita-query": "karmaDrivingProfile",
+        "responses": {
+          "200": {
+            "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/DrivingProfile"
+                      }
+                    },
+                    {
+                      "$ref": "#/components/schemas/BusinessError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "HTTP error or other provider response; status catalog and payload are unspecified.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Telemetry"],
+        "summary": "Driving Profile",
+        "operationId": "postDrivingProfile",
+        "description": "Retrieve driving profile analytics data. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "GET/POST",
+        "x-holita-implemented": false,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [],
+        "x-authentication": {
+          "required": true,
+          "transport": "json-body",
+          "property": "karma_sid",
+          "note": "security is empty because OpenAPI cannot describe a JSON-body API key as a security scheme; this endpoint is not public."
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "car": {
+                    "type": "array",
+                    "items": {
+                      "type": ["number", "string"],
+                      "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                    },
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                  },
+                  "device": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                  },
+                  "project_id": {
+                    "type": "array",
+                    "items": {
+                      "type": ["number", "string"],
+                      "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                    },
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                  },
+                  "from_date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+                    "description": "Vendor form hint YYYY-MM-DD HH:MM:SS; timezone depends on endpoint/date_type. No RFC3339 offset is implied."
+                  },
+                  "to_date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+                    "description": "Vendor form hint YYYY-MM-DD HH:MM:SS; timezone depends on endpoint/date_type. No RFC3339 offset is implied."
+                  },
+                  "karma_sid": {
+                    "type": "string",
+                    "description": "Secret session ID, sent in JSON body by vendor help.js."
+                  }
+                },
+                "additionalProperties": true,
+                "required": ["karma_sid"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "default": {
+            "description": "Provider write response; success status/body and error contract have not been verified. No operation was executed.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/parameters": {
+      "get": {
+        "tags": ["Devices"],
+        "summary": "Get Parameters",
+        "operationId": "getParameters",
+        "description": "Retrieve device configuration parameters. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "GET",
+        "x-holita-implemented": false,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [
+          {
+            "KarmaSessionQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "car_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": ["number", "string"],
+                "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+              },
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+            },
+            "description": "Car ID",
+            "x-vendor-control-type": "number",
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "param_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": ["number", "string"],
+                "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+              },
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+            },
+            "description": "Parameter ID",
+            "x-vendor-control-type": "number",
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["boolean", "string", "integer"],
+              "description": "Vendor helper sends true when checked and omits when unchecked. Holita uses 1 for showdesc."
+            },
+            "description": "Query Device",
+            "x-vendor-control-type": "checkbox"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "$ref": "#/components/schemas/BusinessError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "HTTP error or other provider response; status catalog and payload are unspecified.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Devices"],
+        "summary": "Set Parameters",
+        "operationId": "putParameters",
+        "description": "Update device configuration parameters. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "PUT",
+        "x-holita-implemented": false,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [],
+        "x-authentication": {
+          "required": true,
+          "transport": "json-body",
+          "property": "karma_sid",
+          "note": "security is empty because OpenAPI cannot describe a JSON-body API key as a security scheme; this endpoint is not public."
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "car_id": {
+                    "type": "array",
+                    "items": {
+                      "type": ["number", "string"],
+                      "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                    },
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                  },
+                  "param_id": {
+                    "type": "array",
+                    "items": {
+                      "type": ["number", "string"],
+                      "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                    },
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                  },
+                  "value": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                  },
+                  "karma_sid": {
+                    "type": "string",
+                    "description": "Secret session ID, sent in JSON body by vendor help.js."
+                  }
+                },
+                "additionalProperties": true,
+                "required": ["car_id", "param_id", "value", "karma_sid"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "default": {
+            "description": "Provider write response; success status/body and error contract have not been verified. No operation was executed.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/commands": {
+      "post": {
+        "tags": ["Devices"],
+        "summary": "Send Command",
+        "operationId": "postCommands",
+        "description": "Send command message to one or more devices. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "POST",
+        "x-holita-implemented": false,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [],
+        "x-authentication": {
+          "required": true,
+          "transport": "json-body",
+          "property": "karma_sid",
+          "note": "security is empty because OpenAPI cannot describe a JSON-body API key as a security scheme; this endpoint is not public."
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "car_id": {
+                    "type": "array",
+                    "items": {
+                      "type": ["number", "string"],
+                      "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                    },
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                  },
+                  "message": {
+                    "type": "string"
+                  },
+                  "karma_sid": {
+                    "type": "string",
+                    "description": "Secret session ID, sent in JSON body by vendor help.js."
+                  }
+                },
+                "additionalProperties": true,
+                "required": ["car_id", "message", "karma_sid"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "default": {
+            "description": "Provider write response; success status/body and error contract have not been verified. No operation was executed.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/edata": {
+      "get": {
+        "tags": ["Telemetry"],
+        "summary": "eData request",
+        "operationId": "getEdata",
+        "description": "Request the received eData parameters. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "GET",
+        "x-holita-implemented": true,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [
+          {
+            "KarmaSessionQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "from_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["number", "string"],
+              "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+            },
+            "description": "From ID",
+            "x-vendor-control-type": "number"
+          },
+          {
+            "name": "to_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["number", "string"],
+              "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+            },
+            "description": "To ID",
+            "x-vendor-control-type": "number"
+          },
+          {
+            "name": "car",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": ["number", "string"],
+                  "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": ["number", "string"],
+                    "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+                  }
+                }
+              ],
+              "description": "The vendor form permits multiple cars. Current holita GET transport uses a single scalar car value; repeated values retain the documented multi-value form. Exact bulk wire semantics remain unverified."
+            },
+            "description": "Car ID",
+            "x-vendor-control-type": "number",
+            "style": "form",
+            "explode": true,
+            "x-vendor-multi": true,
+            "x-holita-serialization": "single scalar car query value",
+            "x-evidence": [
+              "source/endpoints.js.txt",
+              "../../../../apps/karma-client/src/cars/karma-client.ts",
+              "../../../../apps/karma-client/src/edata/edata-query.ts",
+              "../../../../apps/karma-client/src/history/history-query.ts"
+            ]
+          },
+          {
+            "name": "device",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+            },
+            "description": "Device ID",
+            "x-vendor-control-type": "text",
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": ["number", "string"],
+                "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+              },
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+            },
+            "description": "Project ID",
+            "x-vendor-control-type": "number",
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "parameter_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": ["number", "string"],
+                "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+              },
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+            },
+            "description": "Parameter ID",
+            "x-vendor-control-type": "number",
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "showdesc",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["boolean", "string", "integer"],
+              "description": "Vendor helper sends true when checked and omits when unchecked. Holita uses 1 for showdesc."
+            },
+            "description": "Show description",
+            "x-vendor-control-type": "checkbox"
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+              "description": "Vendor form hint YYYY-MM-DD HH:MM:SS; timezone depends on endpoint/date_type. No RFC3339 offset is implied."
+            },
+            "description": "From Date",
+            "x-vendor-control-type": "datetime"
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+              "description": "Vendor form hint YYYY-MM-DD HH:MM:SS; timezone depends on endpoint/date_type. No RFC3339 offset is implied."
+            },
+            "description": "To Date",
+            "x-vendor-control-type": "datetime"
+          },
+          {
+            "name": "date_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["", "utc"]
+            },
+            "description": "Date Type",
+            "x-vendor-control-type": "select"
+          },
+          {
+            "name": "parameter_id[]",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": ["number", "string"],
+                "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
+              },
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+            },
+            "description": "Bracketed GET alias used by current holita transport.",
+            "x-vendor-control-type": "number",
+            "style": "form",
+            "explode": true,
+            "x-holita-alias-of": "parameter_id"
+          }
+        ],
+        "x-holita-query": "karmaEdata",
+        "responses": {
+          "200": {
+            "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/EdataMessage"
+                      }
+                    },
+                    {
+                      "$ref": "#/components/schemas/BusinessError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "HTTP error or other provider response; status catalog and payload are unspecified.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/black_box/{id}": {
+      "get": {
+        "tags": ["Telemetry"],
+        "summary": "eSafe accident request",
+        "operationId": "getBlackBoxId",
+        "description": "Request a specific accident report. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "GET",
+        "x-holita-implemented": false,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [
+          {
+            "KarmaSessionQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Vendor form field accident_id is substituted into {id}.",
+            "x-vendor-field-name": "accident_id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "$ref": "#/components/schemas/BusinessError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "HTTP error or other provider response; status catalog and payload are unspecified.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/queue/{id}": {
+      "get": {
+        "tags": ["Devices"],
+        "summary": "Get queued messages state",
+        "operationId": "getQueueId",
+        "description": "Get status of queued messages. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "GET",
+        "x-holita-implemented": false,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [
+          {
+            "KarmaSessionQuery": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Vendor form field queue_id is substituted into {id}. Multi-value path serialization is not established.",
+            "x-vendor-field-name": "queue_id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "$ref": "#/components/schemas/BusinessError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "HTTP error or other provider response; status catalog and payload are unspecified.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/time-zones": {
+      "get": {
+        "tags": ["References"],
+        "summary": "Time Zones",
+        "operationId": "getTimeZones",
+        "description": "Retrieve list of available time zones. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "GET",
+        "x-holita-implemented": true,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [
+          {
+            "KarmaSessionQuery": []
+          }
+        ],
+        "x-holita-query": "karmaTimeZones",
+        "responses": {
+          "200": {
+            "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TimeZone"
+                      }
+                    },
+                    {
+                      "$ref": "#/components/schemas/BusinessError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "HTTP error or other provider response; status catalog and payload are unspecified.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/roles": {
+      "get": {
+        "tags": ["References"],
+        "summary": "Roles",
+        "operationId": "getRoles",
+        "description": "Retrieve list of available user roles. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "x-vendor-method": "GET",
+        "x-holita-implemented": true,
+        "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
+        "security": [
+          {
+            "KarmaSessionQuery": []
+          }
+        ],
+        "x-holita-query": "karmaRoles",
+        "responses": {
+          "200": {
+            "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Role"
+                      }
+                    },
+                    {
+                      "$ref": "#/components/schemas/BusinessError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "HTTP error or other provider response; status catalog and payload are unspecified.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "KarmaSessionQuery": {
+        "type": "apiKey",
+        "in": "query",
+        "name": "karma_sid",
+        "description": "Secret session from POST /login. Used by GET/DELETE in vendor helper and by holita fixed GET reads. POST/PUT helper transport uses JSON-body karma_sid instead."
+      }
+    },
+    "schemas": {
+      "BusinessError": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true,
+        "description": "A JSON error envelope can be returned with HTTP 200, including Not logged in. No exhaustive error catalog is available."
+      },
+      "LoginResponse": {
+        "type": "object",
+        "required": ["session_id"],
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "description": "Secret server-held session ID. No example value is retained."
+          }
+        },
+        "additionalProperties": true,
+        "description": "Observed login success shape; expiry and account permission metadata are unspecified."
+      },
+      "Version": {
+        "type": "object",
+        "description": "Public upstream version string. The observed version is metadata, not a compatibility guarantee.",
+        "properties": {
+          "version": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      },
+      "Car": {
+        "type": "object",
+        "description": "Observed car fields with holita-accepted optional null variants. No required list is inferred for the vendor contract.",
+        "properties": {
+          "device_id": {
+            "type": "string"
+          },
+          "car_number": {
+            "type": "string"
+          },
+          "car_type": {
+            "type": ["string", "null"]
+          },
+          "car_color": {
+            "type": ["string", "null"]
+          },
+          "sub_type": {
+            "type": ["string", "null"]
+          },
+          "car_id": {
+            "type": "integer"
+          },
+          "project_id": {
+            "type": "integer"
+          },
+          "car_year": {
+            "type": ["string", "number", "null"],
+            "description": "Text observed; holita also accepts finite numbers and normalizes to a string."
+          },
+          "time_zone": {
+            "type": ["integer", "null"]
+          },
+          "driver_ids": {
+            "type": ["array", "null"],
+            "items": {},
+            "description": "Only empty arrays observed. Holita exposes the length, not driver identities."
+          },
+          "sim_imsi": {
+            "description": "Observed only as null; non-null shape and meaning are not established. Not exposed by holita.",
+            "x-observed-types": ["null"]
+          },
+          "sim_phone": {
+            "description": "Observed only as null; non-null shape and meaning are not established. Not exposed by holita.",
+            "x-observed-types": ["null"]
+          },
+          "karma_video_data": {
+            "description": "Observed only as null; non-null shape and meaning are not established. Not exposed by holita.",
+            "x-observed-types": ["null"]
+          },
+          "vehicle_type": {
+            "description": "Observed only as null; non-null shape and meaning are not established. Not exposed by holita.",
+            "x-observed-types": ["null"]
+          }
+        },
+        "additionalProperties": true
+      },
+      "Project": {
+        "type": "object",
+        "description": "Project reference record.",
+        "properties": {
+          "project_id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      },
+      "TimeZone": {
+        "type": "object",
+        "description": "Vendor numeric time-zone lookup. No offset or DST rule is inferred.",
+        "properties": {
+          "zone_id": {
+            "type": "integer"
+          },
+          "zone_name": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      },
+      "User": {
+        "type": "object",
+        "description": "Observed account user record. Active flag, expiry semantics and permissions are not inferred.",
+        "properties": {
+          "user_name": {
+            "type": "string"
+          },
+          "first_name": {
+            "type": "string"
+          },
+          "last_name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "integer"
+          },
+          "role_id": {
+            "type": "integer"
+          },
+          "time_zone": {
+            "type": "integer"
+          },
+          "project_id": {
+            "type": "integer"
+          },
+          "active": {
+            "type": "number"
+          },
+          "expire_date": {
+            "type": ["string", "null"]
+          },
+          "project_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        },
+        "additionalProperties": true
+      },
+      "Role": {
+        "type": "object",
+        "description": "Role reference with original text, not a permission model.",
+        "properties": {
+          "role_id": {
+            "type": "integer"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      },
+      "Location": {
+        "type": "object",
+        "description": "Last-known message envelope; optional fields depend on selection. Timestamp meanings and metric units are not fully specified.",
+        "properties": {
+          "device_id": {
+            "type": "string"
+          },
+          "carnumber": {
+            "type": "string"
+          },
+          "edt": {
+            "type": ["string", "null"]
+          },
+          "edt_tz": {
+            "type": ["string", "null"]
+          },
+          "pdt": {
+            "type": ["string", "null"]
+          },
+          "extra": {
+            "type": ["string", "null"]
+          },
+          "car_id": {
+            "type": "integer"
+          },
+          "message_id": {
+            "type": ["integer", "null"]
+          },
+          "eid": {
+            "type": ["integer", "null"]
+          },
+          "latitude": {
+            "type": ["number", "null"]
+          },
+          "longitude": {
+            "type": ["number", "null"]
+          },
+          "spd": {
+            "type": ["number", "null"]
+          },
+          "odo": {
+            "type": ["number", "null"]
+          }
+        },
+        "additionalProperties": true
+      },
+      "Event": {
+        "type": "object",
+        "description": "Event message with raw eid code. No event-code dictionary is supplied.",
+        "properties": {
+          "device_id": {
+            "type": "string"
+          },
+          "edt": {
+            "type": ["string", "null"]
+          },
+          "edt_tz": {
+            "type": ["string", "null"]
+          },
+          "pdt": {
+            "type": ["string", "null"]
+          },
+          "extra": {
+            "type": ["string", "null"]
+          },
+          "car_id": {
+            "type": "integer"
+          },
+          "message_id": {
+            "type": "integer"
+          },
+          "eid": {
+            "type": "integer"
+          },
+          "latitude": {
+            "type": ["number", "null"]
+          },
+          "longitude": {
+            "type": ["number", "null"]
+          },
+          "spd": {
+            "type": ["number", "null"]
+          },
+          "odo": {
+            "type": ["number", "null"]
+          }
+        },
+        "additionalProperties": true
+      },
+      "Trip": {
+        "type": "object",
+        "description": "Trip record with nullable stop values accepted by holita. Metric units and active-trip conventions are not established.",
+        "properties": {
+          "trip_id": {
+            "type": "integer"
+          },
+          "car_id": {
+            "type": "integer"
+          },
+          "driver_id": {
+            "type": ["integer", "null"]
+          },
+          "start_message_id": {
+            "type": ["integer", "null"]
+          },
+          "stop_message_id": {
+            "type": ["integer", "null"]
+          },
+          "car_number": {
+            "type": "string"
+          },
+          "device_id": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": ["string", "null"]
+          },
+          "stop_date": {
+            "type": ["string", "null"]
+          },
+          "trip_active": {
+            "type": ["number", "null"]
+          },
+          "start_latitude": {
+            "type": ["number", "null"]
+          },
+          "start_longitude": {
+            "type": ["number", "null"]
+          },
+          "start_odo": {
+            "type": ["number", "null"]
+          },
+          "stop_latitude": {
+            "type": ["number", "null"]
+          },
+          "stop_longitude": {
+            "type": ["number", "null"]
+          },
+          "stop_odo": {
+            "type": ["number", "null"]
+          },
+          "trip_duration": {
+            "type": ["number", "null"]
+          },
+          "trip_distance": {
+            "type": ["number", "null"]
+          },
+          "trip_duration_night": {
+            "type": ["number", "null"]
+          },
+          "trip_distance_night": {
+            "type": ["number", "null"]
+          },
+          "max_speed": {
+            "type": ["number", "null"]
+          },
+          "driving_score": {
+            "type": ["number", "null"]
+          },
+          "eco_score": {
+            "type": ["number", "null"]
+          }
+        },
+        "additionalProperties": true
+      },
+      "EdataParameter": {
+        "type": "object",
+        "description": "Numeric parameter ID/value and optional description. Unknown IDs and zero are preserved; units/scaling are unspecified.",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "value": {
+            "type": ["number", "null"]
+          },
+          "desc": {
+            "type": ["string", "null"]
+          }
+        },
+        "additionalProperties": true,
+        "x-observed-parameter-metadata": "source/edata-parameter-metadata.json"
+      },
+      "EdataMessage": {
+        "type": "object",
+        "description": "eData message envelope with parameter readings.",
+        "properties": {
+          "device_id": {
+            "type": "string"
+          },
+          "carnumber": {
+            "type": "string"
+          },
+          "edt": {
+            "type": ["string", "null"]
+          },
+          "edt_tz": {
+            "type": ["string", "null"]
+          },
+          "pdt": {
+            "type": ["string", "null"]
+          },
+          "car_id": {
+            "type": "integer"
+          },
+          "message_id": {
+            "type": "integer"
+          },
+          "latitude": {
+            "type": ["number", "null"]
+          },
+          "longitude": {
+            "type": ["number", "null"]
+          },
+          "spd": {
+            "type": ["number", "null"]
+          },
+          "odo": {
+            "type": ["number", "null"]
+          },
+          "parameters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EdataParameter"
+            }
+          }
+        },
+        "additionalProperties": true
+      },
+      "SensorRecord": {
+        "type": "object",
+        "description": "Observed sensor envelope only; no sensor reading schema is established and holita does not expose it.",
+        "properties": {
+          "car_id": {
+            "type": "integer"
+          },
+          "carnumber": {
+            "type": "string"
+          },
+          "device_id": {
+            "type": "string"
+          },
+          "edt": {
+            "type": "string"
+          },
+          "message_id": {
+            "type": "integer"
+          },
+          "sensors": {
+            "description": "Only null observed. Non-null payload shape is unknown.",
+            "x-observed-types": ["null"]
+          }
+        },
+        "additionalProperties": true
+      },
+      "DrivingCategory": {
+        "type": "object",
+        "description": "Raw nullable score and weight; units, ranges and aggregation are unknown.",
+        "properties": {
+          "score": {
+            "type": ["number", "null"]
+          },
+          "weight": {
+            "type": ["number", "null"]
+          }
+        },
+        "additionalProperties": true
+      },
+      "DrivingProfile": {
+        "type": "object",
+        "description": "Per-car period aggregate; date-zone semantics are unresolved.",
+        "properties": {
+          "car_id": {
+            "type": "integer"
+          },
+          "car_number": {
+            "type": "string"
+          },
+          "device_id": {
+            "type": "string"
+          },
+          "score": {
+            "type": "object",
+            "description": "Nine source categories accepted by holita. No overall score is calculated.",
+            "properties": {
+              "accelerations": {
+                "$ref": "#/components/schemas/DrivingCategory"
+              },
+              "brakes": {
+                "$ref": "#/components/schemas/DrivingCategory"
+              },
+              "speed_bumps": {
+                "$ref": "#/components/schemas/DrivingCategory"
+              },
+              "bypassing": {
+                "$ref": "#/components/schemas/DrivingCategory"
+              },
+              "roundabout": {
+                "$ref": "#/components/schemas/DrivingCategory"
+              },
+              "lane_change": {
+                "$ref": "#/components/schemas/DrivingCategory"
+              },
+              "turns": {
+                "$ref": "#/components/schemas/DrivingCategory"
+              },
+              "off_road": {
+                "$ref": "#/components/schemas/DrivingCategory"
+              },
+              "speed": {
+                "$ref": "#/components/schemas/DrivingCategory"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}

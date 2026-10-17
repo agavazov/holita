@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0",
+  "title": "ERM StarLink online protocol portal",
+  "portal_url": "https://sweb.erm.co.il/protocol/",
+  "source_type": "User-supplied screenshots",
+  "source_version": null,
+  "analysis_date": "2026-10-16",
+  "analysis_timezone": "Europe/Sofia",
+  "reference_edition": "1.0",
+  "prepared_by": "Codex; visual screenshot transcription and analysis",
+  "access": {
+    "credentials": "Awaited, as reported by the user",
+    "authenticated_review": false,
+    "companion_page_contents_available": false
+  },
+  "scope": [
+    "Home page overview",
+    "All 19 visible General information menu entries",
+    "Message structure page, examples and source discrepancies"
+  ],
+  "images": [
+    {
+      "source_filename": "img.png",
+      "source_origin": ".misc/edata/img.png",
+      "file": "images/home.png",
+      "title": "StarLink online protocol home page",
+      "page_date_visible": "2026-01-07",
+      "capture_date": null,
+      "sha256": "9e40d2c4ef774ebcbc0cd5517aac052b6ae9d058c5639efe12d4f6e9815839e0",
+      "bytes": 259822,
+      "width": 1358,
+      "height": 642,
+      "preservation": "Byte-for-byte copy of the user-supplied screenshot"
+    },
+    {
+      "source_filename": "menu.png",
+      "source_origin": ".misc/edata/menu.png",
+      "file": "images/general-information.png",
+      "title": "General information menu",
+      "page_date_visible": null,
+      "capture_date": null,
+      "sha256": "40a06ae0fd5b1f2fbeb3a500c451146f3127ed590ff6658ee4d1bf11b62022f0",
+      "bytes": 133401,
+      "width": 359,
+      "height": 761,
+      "preservation": "Byte-for-byte copy of the user-supplied screenshot"
+    },
+    {
+      "source_filename": "p1.png",
+      "source_origin": ".misc/edata/p1.png",
+      "file": "images/message-structure.png",
+      "title": "Message structure",
+      "page_date_visible": "2020-05-17",
+      "capture_date": null,
+      "sha256": "f5a8fff97498854f4632cbe55e6f197ed883156c590a317b9a91c730d71a8052",
+      "bytes": 538602,
+      "width": 1164,
+      "height": 1297,
+      "preservation": "Byte-for-byte copy of the user-supplied screenshot"
+    }
+  ],
+  "qualifications": [
+    "Page dates are visible source dates, not screenshot capture dates.",
+    "Home page news version labels do not establish a protocol-wide version.",
+    "Checksum sample arithmetic is an observation, not a verified vendor algorithm.",
+    "Only the portal root URL is known; deep-link URLs are unavailable."
+  ]
+}

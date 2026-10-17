@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.0",
+  "title": "ERM device profile: EG915U-LA / LC86G",
+  "source_filename": "ERM_INTEGRATION_EN.md",
+  "source_title": "ERM Telematics — Fleet Management Platform Integration",
+  "source_origin": ".tmp/ERM_INTEGRATION_EN.md",
+  "source_path": "source/ERM_INTEGRATION_EN.md",
+  "source_type": "User-supplied integration note; not an official device datasheet",
+  "source_version": null,
+  "source_author": null,
+  "source_publication_date": null,
+  "source_bytes": 13894,
+  "source_sha256": "ba4b12662ca448cbd64ef83b5197142831fee9e464663a0fe1007be5f39d6973",
+  "source_preservation": "Byte-for-byte copy; original Markdown formatting retained",
+  "analysis_date": "2026-10-17",
+  "analysis_timezone": "Europe/Sofia",
+  "reference_edition": "1.0",
+  "prepared_by": "Codex; hardware-focused adaptation with component and adapter source checks",
+  "device_identity": {
+    "erm_model": null,
+    "hardware_revision": null,
+    "firmware_version": null,
+    "modem_reported": "Quectel EG915U-LA",
+    "gnss_reported": "Quectel LC86G",
+    "connector_contacts_reported": 8,
+    "battery_reported": "3.7 V / 350 mAh",
+    "evidence": "Component identification and physical observations come from the supplied note; photographs were not included or independently reviewed."
+  },
+  "embedded_images": [],
+  "live_device_validation": false,
+  "external_sources": [
+    {
+      "title": "Quectel EG915U series specification v1.3",
+      "url": "https://www.quectel.com/content/uploads/2024/03/Quectel_EG915U_Series_LTE_Standard_Module_Specification_V1.3-1.pdf?wpId=114167",
+      "checked_on": "2026-10-17",
+      "scope": "LA variant LTE-FDD and GSM bands; not identification of the board"
+    },
+    {
+      "title": "Quectel LC86G",
+      "url": "https://www.quectel.com/product/gnss-lc86g/",
+      "checked_on": "2026-10-17",
+      "scope": "GNSS component family"
+    },
+    {
+      "title": "flespi ERM adapter reference",
+      "url": "https://flespi.com/protocols/erm",
+      "checked_on": "2026-10-17",
+      "scope": "ASCII/TCP, dynamic field layout, voltage mapping and provider command names"
+    },
+    {
+      "title": "flespi ERM changelog",
+      "url": "https://forum.flespi.com/d/57-changelog-erm-protocol",
+      "checked_on": "2026-10-17",
+      "scope": "Provider-specific persistence of dynamic parameter format"
+    }
+  ],
+  "qualifications": [
+    "Exact ERM SKU and firmware remain unknown.",
+    "Component datasheets do not establish complete tracker capabilities.",
+    "CAN, pinout, I/O ratings and OTA compatibility are unverified for this device.",
+    "Software architecture, lifecycle and JSON models in the original are proposals and examples, not implemented holita contracts.",
+    "Source photographs are not embedded or linked in the supplied Markdown.",
+    "Illustrative source timestamps are not publication-date evidence."
+  ]
+}

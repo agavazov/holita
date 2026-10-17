@@ -1,0 +1,229 @@
+{
+  "schema_version": "1.0",
+  "analysis_date": "2026-10-16",
+  "analysis_timezone": "Europe/Sofia",
+  "analysis_edition": "1.1",
+  "prepared_by": "Codex",
+  "title": "eData Simple - CAN Engine Communication Protocol",
+  "source_filename": "eData Simple Protocol v4.04.pdf",
+  "source_path": "source/original.pdf",
+  "source_origin": ".misc/edata/eData Simple Protocol v4.04.pdf",
+  "source_bytes": 2367352,
+  "source_sha256": "030012ac37ef71968174d6dde8c3d43d6b208fdb9e82bd5d9af67ee605f170eb",
+  "source_version": "4.04",
+  "version_evidence": "Cover, PDF page 1: Release 4.04.",
+  "document_date_evidence": "2022 (copyright year; no separate publication date)",
+  "pdf_metadata": {
+    "format": "PDF 1.5",
+    "title": "",
+    "author": "Eitan Kirshenboim",
+    "subject": "eData Simple",
+    "keywords": "",
+    "creator": "Microsoft® Word 2013",
+    "producer": "Microsoft® Word 2013",
+    "creationDate": "D:20220223110811+02'00'",
+    "modDate": "D:20220223110811+02'00'",
+    "trapped": "",
+    "encryption": null
+  },
+  "pdf_creation_timestamp": "2022-02-23T11:08:11+02:00",
+  "pdf_modification_timestamp": "2022-02-23T11:08:11+02:00",
+  "page_count": 30,
+  "page_numbering": "One-based physical PDF pages",
+  "conversion_method": "PyMuPDF text extraction and shaded-cell reconstruction; decorative raster graphics omitted; complete source PDF preserved",
+  "tool_versions": {
+    "pymupdf": "1.28.2"
+  },
+  "qualifications": [
+    "The protocol is a device interface. It does not establish a mapping to Karma API v2 parameter IDs or JSON response fields.",
+    "Physical PDF pages are used throughout this conversion. From PDF page 2 onward, the printed footer is one page lower.",
+    "The source contains apparent editorial inconsistencies, including FMS/J1938 on page 4, the error-reporting entry on page 6, and some command examples/field labels. They are retained rather than silently corrected.",
+    "Colors in hexadecimal examples distinguish fields in the PDF. Markdown preserves the text; consult the source PDF for the color grouping."
+  ],
+  "pages": [
+    {
+      "pdf_page": 1,
+      "content_anchor": "content.md#pdf-page-1",
+      "table_count": 0,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 2,
+      "content_anchor": "content.md#pdf-page-2",
+      "table_count": 0,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 3,
+      "content_anchor": "content.md#pdf-page-3",
+      "table_count": 0,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 4,
+      "content_anchor": "content.md#pdf-page-4",
+      "table_count": 0,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 5,
+      "content_anchor": "content.md#pdf-page-5",
+      "table_count": 1,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 6,
+      "content_anchor": "content.md#pdf-page-6",
+      "table_count": 1,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 7,
+      "content_anchor": "content.md#pdf-page-7",
+      "table_count": 1,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 8,
+      "content_anchor": "content.md#pdf-page-8",
+      "table_count": 1,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 9,
+      "content_anchor": "content.md#pdf-page-9",
+      "table_count": 3,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 10,
+      "content_anchor": "content.md#pdf-page-10",
+      "table_count": 3,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 11,
+      "content_anchor": "content.md#pdf-page-11",
+      "table_count": 4,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 12,
+      "content_anchor": "content.md#pdf-page-12",
+      "table_count": 2,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 13,
+      "content_anchor": "content.md#pdf-page-13",
+      "table_count": 1,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 14,
+      "content_anchor": "content.md#pdf-page-14",
+      "table_count": 1,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 15,
+      "content_anchor": "content.md#pdf-page-15",
+      "table_count": 1,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 16,
+      "content_anchor": "content.md#pdf-page-16",
+      "table_count": 2,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 17,
+      "content_anchor": "content.md#pdf-page-17",
+      "table_count": 3,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 18,
+      "content_anchor": "content.md#pdf-page-18",
+      "table_count": 3,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 19,
+      "content_anchor": "content.md#pdf-page-19",
+      "table_count": 3,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 20,
+      "content_anchor": "content.md#pdf-page-20",
+      "table_count": 2,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 21,
+      "content_anchor": "content.md#pdf-page-21",
+      "table_count": 2,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 22,
+      "content_anchor": "content.md#pdf-page-22",
+      "table_count": 2,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 23,
+      "content_anchor": "content.md#pdf-page-23",
+      "table_count": 2,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 24,
+      "content_anchor": "content.md#pdf-page-24",
+      "table_count": 4,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 25,
+      "content_anchor": "content.md#pdf-page-25",
+      "table_count": 2,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 26,
+      "content_anchor": "content.md#pdf-page-26",
+      "table_count": 2,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 27,
+      "content_anchor": "content.md#pdf-page-27",
+      "table_count": 2,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 28,
+      "content_anchor": "content.md#pdf-page-28",
+      "table_count": 2,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 29,
+      "content_anchor": "content.md#pdf-page-29",
+      "table_count": 3,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 30,
+      "content_anchor": "content.md#pdf-page-30",
+      "table_count": 0,
+      "image_ids": []
+    }
+  ],
+  "images": [],
+  "context_captures": [],
+  "reference_updated_on": "2026-10-17",
+  "image_selection": "Retain technical illustrations, screenshots, UI controls and explanatory annotations. Omit standalone cover artwork, publisher logos, page decoration and generic note/support markers; preserve the complete original PDF."
+}

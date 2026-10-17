@@ -1,0 +1,53 @@
+{
+  "kind": "Observed eData parameter metadata, not a complete vendor parameter dictionary",
+  "observedAt": "2026-10-16T19:43:04+00:00",
+  "source": "GET /edata with showdesc=1, sampled latest batches; no telemetry values or account/car/device identifiers retained",
+  "limitations": "Descriptions are source text, not proven units, scaling, availability by vehicle model or an exhaustive supported-ID list. Absence from this list does not mean unsupported.",
+  "parameters": [
+    {
+      "parameterId": 1,
+      "descriptions": ["Engine Speed (RPM)"],
+      "observedValueTypes": ["number"]
+    },
+    {
+      "parameterId": 2,
+      "descriptions": ["Wheel Based Vehicle Speed (kph)"],
+      "observedValueTypes": ["number"]
+    },
+    {
+      "parameterId": 64,
+      "descriptions": ["Engine Total Hours Of Operation"],
+      "observedValueTypes": ["number"]
+    },
+    {
+      "parameterId": 152,
+      "descriptions": ["High Resolution Total Vehicle Distance (meters)"],
+      "observedValueTypes": ["number"]
+    },
+    {
+      "parameterId": 188,
+      "descriptions": ["Engine Oil Temperature (c)"],
+      "observedValueTypes": ["number"]
+    },
+    {
+      "parameterId": 539,
+      "descriptions": ["Engine Coolant Temperature (c)"],
+      "observedValueTypes": ["number"]
+    },
+    {
+      "parameterId": 687,
+      "descriptions": ["Engine Total Fuel Used - J1939 (L)"],
+      "observedValueTypes": ["number"]
+    },
+    {
+      "parameterId": 785,
+      "descriptions": ["Fuel Level (%)"],
+      "observedValueTypes": ["number"]
+    },
+    {
+      "parameterId": 1657,
+      "descriptions": ["High Resolution Engine Total Fuel Used"],
+      "observedValueTypes": ["number"]
+    }
+  ]
+}

@@ -1,0 +1,126 @@
+{
+  "schema_version": "1.0",
+  "analysis_date": "2026-10-16",
+  "analysis_timezone": "Europe/Sofia",
+  "analysis_edition": "1.0",
+  "prepared_by": "Codex",
+  "title": "StarLINK Scout - Compact Telematics Solution",
+  "source_filename": "StarLINK Scout 4G iRF Brochure v7.0 ENG.pdf",
+  "source_path": "source/original.pdf",
+  "source_origin": ".misc/edata/StarLINK Scout 4G iRF Brochure v7.0 ENG.pdf",
+  "source_bytes": 810172,
+  "source_sha256": "bb70db49fe568adf0d81da8607bace5e5bfda0c8f1b4b488f44ef01c84a3b05c",
+  "source_version": "Unresolved: filename v7.0; printed brochure version 3.01",
+  "version_evidence": "Filename and PDF metadata title say v7.0; visible footer on PDF page 1 says Product brochure version: 3.01.",
+  "document_date_evidence": "Not printed; PDF metadata creation/modification: 2026-07-13",
+  "pdf_metadata": {
+    "format": "PDF 1.5",
+    "title": "StarLINK Scout 4G iRF Brochure v7.0 ENG",
+    "author": "",
+    "subject": "",
+    "keywords": "",
+    "creator": "Adobe Illustrator 30.6 (Windows)",
+    "producer": "Adobe PDF library 18.00",
+    "creationDate": "D:20260713153230+03'00'",
+    "modDate": "D:20260713153230+03'00'",
+    "trapped": "",
+    "encryption": null
+  },
+  "pdf_creation_timestamp": "2026-07-13T15:32:30+03:00",
+  "pdf_modification_timestamp": "2026-07-13T15:32:30+03:00",
+  "page_count": 3,
+  "page_numbering": "One-based physical PDF pages",
+  "conversion_method": "PyMuPDF text and image extraction with soft masks; shaded-cell reconstruction; visual review; visible-page transcription for brochures",
+  "tool_versions": {
+    "pymupdf": "1.28.2"
+  },
+  "qualifications": [
+    "Version conflict: directory name follows the supplied filename for traceability, not a verified release designation.",
+    "The PDF contains hidden/covered text from an older layout, including references to StarLink Tracker. The Markdown transcription follows the rendered visible content only.",
+    "Visible variant text says LTE CAT1/4, while the cellular specification row says CAT-1. Both statements are preserved without resolving hardware compatibility.",
+    "PDF creation date is metadata, not an asserted publication or hardware release date. Optional capabilities are not guarantees for an installed unit."
+  ],
+  "pages": [
+    {
+      "pdf_page": 1,
+      "content_anchor": "content.md#pdf-page-1",
+      "table_count": 0,
+      "image_ids": [1, 4]
+    },
+    {
+      "pdf_page": 2,
+      "content_anchor": "content.md#pdf-page-2",
+      "table_count": 2,
+      "image_ids": [2, 5]
+    },
+    {
+      "pdf_page": 3,
+      "content_anchor": "content.md#pdf-page-3",
+      "table_count": 1,
+      "image_ids": [3]
+    }
+  ],
+  "images": [
+    {
+      "id": 1,
+      "file": "images/page-001.png",
+      "description": "Full visible cover of StarLINK Scout - Compact Telematics Solution: ERM branding, overhead road/car artwork, speedometer photograph, product photograph and the printed brochure version.",
+      "kind": "rendered-visible-page",
+      "occurrences": [
+        {
+          "pdf_page": 1,
+          "bbox_points": [0.0, 0.0, 595.2760009765625, 841.8900146484375]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "file": "images/page-002.png",
+      "description": "Full visible second page, preserving variant badges, column layout and specifications/features while excluding the covered old text layer.",
+      "kind": "rendered-visible-page",
+      "occurrences": [
+        {
+          "pdf_page": 2,
+          "bbox_points": [0.0, 0.0, 595.2760009765625, 841.8900146484375]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "file": "images/page-003.png",
+      "description": "Full visible third page with the specification/environment table and its source units.",
+      "kind": "rendered-visible-page",
+      "occurrences": [
+        {
+          "pdf_page": 3,
+          "bbox_points": [0.0, 0.0, 595.2760009765625, 841.8900146484375]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "file": "images/product.png",
+      "description": "Product photograph: a narrow black Scout enclosure shown upright.",
+      "kind": "rendered-figure-crop",
+      "occurrences": [
+        {
+          "pdf_page": 1,
+          "bbox_points": [390.0, 250.0, 535.0, 470.0]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "file": "images/variants.png",
+      "description": "Variant badge strip: 4G, SF, DS, GO and iRF.",
+      "kind": "rendered-figure-crop",
+      "occurrences": [
+        {
+          "pdf_page": 2,
+          "bbox_points": [53.0, 35.0, 542.0, 119.0]
+        }
+      ]
+    }
+  ],
+  "context_captures": []
+}

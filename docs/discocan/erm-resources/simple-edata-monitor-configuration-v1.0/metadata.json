@@ -1,0 +1,1014 @@
+{
+  "schema_version": "1.0",
+  "analysis_date": "2026-10-16",
+  "analysis_timezone": "Europe/Sofia",
+  "analysis_edition": "1.1",
+  "prepared_by": "Codex",
+  "title": "Simple eData Monitor Configuration Guide",
+  "source_filename": "Simple eData Monitor Configuration Guide.pdf",
+  "source_path": "source/original.pdf",
+  "source_origin": ".misc/edata/Simple eData Monitor Configuration Guide.pdf",
+  "source_bytes": 1546653,
+  "source_sha256": "f9be2590045422e988884b8adbbcd68d3615891b77c59bef38c0de890dbc4f91",
+  "source_version": "1.0",
+  "version_evidence": "Cover, PDF page 1: Release 1.0. Version is absent from the filename.",
+  "document_date_evidence": "Not stated separately; copyright 2017; PDF created 2018-04-05",
+  "pdf_metadata": {
+    "format": "PDF 1.5",
+    "title": "Simple eData Monitor Configuration Guide",
+    "author": "DavidK",
+    "subject": "",
+    "keywords": "",
+    "creator": "Microsoft® Word 2010",
+    "producer": "Microsoft® Word 2010",
+    "creationDate": "D:20180405090827+03'00'",
+    "modDate": "D:20180405090827+03'00'",
+    "trapped": "",
+    "encryption": null
+  },
+  "pdf_creation_timestamp": "2018-04-05T09:08:27+03:00",
+  "pdf_modification_timestamp": "2018-04-05T09:08:27+03:00",
+  "page_count": 28,
+  "page_numbering": "One-based physical PDF pages",
+  "conversion_method": "PyMuPDF text and image extraction with soft masks; shaded-cell reconstruction; visual review; visible-page transcription for brochures",
+  "tool_versions": {
+    "pymupdf": "1.28.2"
+  },
+  "qualifications": [
+    "Guide release 1.0 is distinct from the screenshot application version 7.21 and the sample device label software/hardware versions.",
+    "This PDF supplies guide evidence for Simple eData Monitor; it does not establish that a tool named Simple eData Primitives Monitor is the same product, nor supply its executable or full vehicle-model catalog.",
+    "The TimeOf/Count/Sum section has a potential example inconsistency: the Count description is followed by a $Sum expression on page 14. The source expression is preserved.",
+    "The histogram explanation mixes count/time language. Preserve its stated 100 ms sampling interval and millisecond accumulation wording; do not infer API units from it."
+  ],
+  "pages": [
+    {
+      "pdf_page": 1,
+      "content_anchor": "content.md#pdf-page-1",
+      "table_count": 0,
+      "image_ids": [2]
+    },
+    {
+      "pdf_page": 2,
+      "content_anchor": "content.md#pdf-page-2",
+      "table_count": 0,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 3,
+      "content_anchor": "content.md#pdf-page-3",
+      "table_count": 0,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 4,
+      "content_anchor": "content.md#pdf-page-4",
+      "table_count": 2,
+      "image_ids": [4, 5]
+    },
+    {
+      "pdf_page": 5,
+      "content_anchor": "content.md#pdf-page-5",
+      "table_count": 2,
+      "image_ids": [6]
+    },
+    {
+      "pdf_page": 6,
+      "content_anchor": "content.md#pdf-page-6",
+      "table_count": 0,
+      "image_ids": [7, 8, 9]
+    },
+    {
+      "pdf_page": 7,
+      "content_anchor": "content.md#pdf-page-7",
+      "table_count": 0,
+      "image_ids": [11, 12]
+    },
+    {
+      "pdf_page": 8,
+      "content_anchor": "content.md#pdf-page-8",
+      "table_count": 0,
+      "image_ids": [13, 14]
+    },
+    {
+      "pdf_page": 9,
+      "content_anchor": "content.md#pdf-page-9",
+      "table_count": 0,
+      "image_ids": [15, 16]
+    },
+    {
+      "pdf_page": 10,
+      "content_anchor": "content.md#pdf-page-10",
+      "table_count": 0,
+      "image_ids": [17, 18]
+    },
+    {
+      "pdf_page": 11,
+      "content_anchor": "content.md#pdf-page-11",
+      "table_count": 0,
+      "image_ids": [19]
+    },
+    {
+      "pdf_page": 12,
+      "content_anchor": "content.md#pdf-page-12",
+      "table_count": 0,
+      "image_ids": [20, 21]
+    },
+    {
+      "pdf_page": 13,
+      "content_anchor": "content.md#pdf-page-13",
+      "table_count": 0,
+      "image_ids": [22, 23, 24]
+    },
+    {
+      "pdf_page": 14,
+      "content_anchor": "content.md#pdf-page-14",
+      "table_count": 0,
+      "image_ids": [25, 26, 27, 28, 29]
+    },
+    {
+      "pdf_page": 15,
+      "content_anchor": "content.md#pdf-page-15",
+      "table_count": 0,
+      "image_ids": [30, 31, 32, 33, 34, 35, 36, 37]
+    },
+    {
+      "pdf_page": 16,
+      "content_anchor": "content.md#pdf-page-16",
+      "table_count": 0,
+      "image_ids": [38]
+    },
+    {
+      "pdf_page": 17,
+      "content_anchor": "content.md#pdf-page-17",
+      "table_count": 2,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 18,
+      "content_anchor": "content.md#pdf-page-18",
+      "table_count": 0,
+      "image_ids": [39, 40]
+    },
+    {
+      "pdf_page": 19,
+      "content_anchor": "content.md#pdf-page-19",
+      "table_count": 0,
+      "image_ids": [41, 42, 43]
+    },
+    {
+      "pdf_page": 20,
+      "content_anchor": "content.md#pdf-page-20",
+      "table_count": 0,
+      "image_ids": [43, 44, 45]
+    },
+    {
+      "pdf_page": 21,
+      "content_anchor": "content.md#pdf-page-21",
+      "table_count": 0,
+      "image_ids": [46, 47, 48, 49]
+    },
+    {
+      "pdf_page": 22,
+      "content_anchor": "content.md#pdf-page-22",
+      "table_count": 0,
+      "image_ids": [50, 51]
+    },
+    {
+      "pdf_page": 23,
+      "content_anchor": "content.md#pdf-page-23",
+      "table_count": 0,
+      "image_ids": [52]
+    },
+    {
+      "pdf_page": 24,
+      "content_anchor": "content.md#pdf-page-24",
+      "table_count": 0,
+      "image_ids": [53, 54]
+    },
+    {
+      "pdf_page": 25,
+      "content_anchor": "content.md#pdf-page-25",
+      "table_count": 0,
+      "image_ids": [55]
+    },
+    {
+      "pdf_page": 26,
+      "content_anchor": "content.md#pdf-page-26",
+      "table_count": 0,
+      "image_ids": [56]
+    },
+    {
+      "pdf_page": 27,
+      "content_anchor": "content.md#pdf-page-27",
+      "table_count": 0,
+      "image_ids": []
+    },
+    {
+      "pdf_page": 28,
+      "content_anchor": "content.md#pdf-page-28",
+      "table_count": 0,
+      "image_ids": [57]
+    }
+  ],
+  "images": [
+    {
+      "id": 2,
+      "file": "images/image-002.png",
+      "description": "Sample Simple eDATA device label showing software 4.33 and hardware 1.02; these are not the guide release number.",
+      "width": 628,
+      "height": 224,
+      "source_image_sha256": "6587888423ba6b0d6ae0cc6f023604f0fc390a799e5b0d0542466e5385117532",
+      "occurrences": [
+        {
+          "pdf_page": 1,
+          "bbox_points": [229.5, 468.77, 433.96, 541.82]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "file": "images/image-004.png",
+      "description": "Four-pin connector orientation drawing with the colored wires shown underneath.",
+      "width": 127,
+      "height": 277,
+      "source_image_sha256": "c1c69aceb1c1aaa32e0727b41b67c13403ad99311008a7b6f31f5a4350b6642d",
+      "occurrences": [
+        {
+          "pdf_page": 4,
+          "bbox_points": [369.45, 434.9, 418.95, 542.86]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "file": "images/image-005.png",
+      "description": "Simple eData hardware photograph with arrows identifying the 4-pin and 6-pin connectors.",
+      "width": 814,
+      "height": 597,
+      "source_image_sha256": "c6100ebedf118ce0f5cbb17d98d4ef6ad6df8615096540315f36ccf50976a298",
+      "occurrences": [
+        {
+          "pdf_page": 4,
+          "bbox_points": [93.55, 128.95, 383.85, 341.85]
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "file": "images/image-006.png",
+      "description": "Six-pin connector face diagram: upper row 6, 5, 4 and lower row 3, 2, 1.",
+      "width": 159,
+      "height": 145,
+      "source_image_sha256": "36e7c29caf7f4d86a4d9e521958554eb08d06a9b6cb1fa1be5046e915681397c",
+      "occurrences": [
+        {
+          "pdf_page": 5,
+          "bbox_points": [342.0, 211.75, 442.12, 303.05]
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "file": "images/image-007.png",
+      "description": "Monitor connection controls showing COM3 and GENERIC; the screenshot title says monitor version 7.21.",
+      "width": 231,
+      "height": 97,
+      "source_image_sha256": "f830447fa6f33df1f246d2f7113f756561fec07c6c0ca98c41ed0b9749c9b9a9",
+      "occurrences": [
+        {
+          "pdf_page": 6,
+          "bbox_points": [126.5, 159.74, 299.75, 232.49]
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "file": "images/image-008.png",
+      "description": "Connection confirmation dialog: The device is connected.",
+      "width": 249,
+      "height": 175,
+      "source_image_sha256": "3c89e9ab61f518ebc17da537e22d861852b9d8b73144e9365e07ef217c212944",
+      "occurrences": [
+        {
+          "pdf_page": 6,
+          "bbox_points": [126.5, 355.32, 281.38, 464.12]
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "file": "images/image-009.png",
+      "description": "Help menu with Get Diagnostic from Device selected.",
+      "width": 263,
+      "height": 95,
+      "source_image_sha256": "89dd79e1025523e36e98d0415266f975bf85b33ec760cc07a07a776645a0eef4",
+      "occurrences": [
+        {
+          "pdf_page": 6,
+          "bbox_points": [144.5, 581.69, 341.75, 652.94]
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "file": "images/image-011.png",
+      "description": "Diagnostic dialog showing communication types, CANBus errors and ignition state.",
+      "width": 506,
+      "height": 602,
+      "source_image_sha256": "0d944c6fb06d3b970d271d987792117b62b0b93be6d7773b30da8a81140f6faa",
+      "occurrences": [
+        {
+          "pdf_page": 7,
+          "bbox_points": [144.0, 95.09, 396.55, 395.55]
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "file": "images/image-012.png",
+      "description": "Vertical action toolbar with connect/disconnect, settings, vehicle and reset actions.",
+      "width": 121,
+      "height": 433,
+      "source_image_sha256": "dcd3e8ed6408607b72a22b930e3ad10c9320a294de435d4f3d3a1ac77810774e",
+      "occurrences": [
+        {
+          "pdf_page": 7,
+          "bbox_points": [90.0, 481.56, 165.2, 750.64]
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "file": "images/image-013.png",
+      "description": "Vehicle category/type and interval controls used by Get Vehicle and parameter selection.",
+      "width": 757,
+      "height": 37,
+      "source_image_sha256": "1c1abb8d1eebdde5bf3c925dfc708dafa51c1e7e73d4fa7c92bde3a3750e7a10",
+      "occurrences": [
+        {
+          "pdf_page": 8,
+          "bbox_points": [126.0, 311.76, 509.76, 330.5]
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "file": "images/image-014.png",
+      "description": "File menu with settings/event-log loading, save options and Create Server Commands.",
+      "width": 283,
+      "height": 174,
+      "source_image_sha256": "9cb279dff8d9da537a22655bd13217aef1eebf8b7368f418ec7672c03945bcc4",
+      "occurrences": [
+        {
+          "pdf_page": 8,
+          "bbox_points": [108.0, 421.57, 320.25, 552.07]
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "file": "images/image-015.png",
+      "description": "Parameter interval example showing zero as Not In Use and a positive interval as periodic reporting.",
+      "width": 484,
+      "height": 106,
+      "source_image_sha256": "03d05724fb13470fa88bad42f368022fa1c40b3abeb4a569902f3685e89fb6d9",
+      "occurrences": [
+        {
+          "pdf_page": 9,
+          "bbox_points": [158.9, 444.48, 521.9, 523.97]
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "file": "images/image-016.png",
+      "description": "Error dialog warning that more than the maximum number of parameters were selected.",
+      "width": 477,
+      "height": 175,
+      "source_image_sha256": "28dcd621c407e2af7b7d90c2d0acd9cdeb2ce2c51f0c59a90697649b8bc0494e",
+      "occurrences": [
+        {
+          "pdf_page": 9,
+          "bbox_points": [147.06, 564.76, 426.45, 667.26]
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "file": "images/image-017.png",
+      "description": "Storage progress bar and connected-device status indicator.",
+      "width": 890,
+      "height": 136,
+      "source_image_sha256": "92f0dbc455f0fcdea6f1f19e66e6c746f8d09c6126c5e813b47036288db6f9f8",
+      "occurrences": [
+        {
+          "pdf_page": 10,
+          "bbox_points": [144.0, 64.86, 483.7, 116.76]
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "file": "images/image-018.png",
+      "description": "Parameter list with the Filter field highlighted.",
+      "width": 1117,
+      "height": 85,
+      "source_image_sha256": "903437fb7e4dfdf1c59471a96942ee49985d5cd8c14352b667c9b0e379a03022",
+      "occurrences": [
+        {
+          "pdf_page": 10,
+          "bbox_points": [108.0, 201.77, 521.86, 233.27]
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "file": "images/image-019.png",
+      "description": "Rules editor with parameter list, expression area, operator palette and saved-rules grid.",
+      "width": 1013,
+      "height": 465,
+      "source_image_sha256": "785561f5588f0d1a81224ea313fd3056abc7ba081904dd9cfe1b27aad0a92523",
+      "occurrences": [
+        {
+          "pdf_page": 11,
+          "bbox_points": [72.0, 216.48, 532.5, 412.43]
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "file": "images/image-020.png",
+      "description": "Available parameters panel for building a rule.",
+      "width": 208,
+      "height": 432,
+      "source_image_sha256": "7b12c389d836b5bdb7885f2f42dfd712e17186dcb1c01e3d67b124d8ef3c0efe",
+      "occurrences": [
+        {
+          "pdf_page": 12,
+          "bbox_points": [161.85, 171.12, 266.55, 388.57]
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "file": "images/image-021.png",
+      "description": "Operator/function palette containing arithmetic, relational, logical, TimeOf, Count and Sum controls.",
+      "width": 268,
+      "height": 248,
+      "source_image_sha256": "5b1c1a02904b9afc293c0f56f146610bbc425565435db7d751fb5bd2f13ad39e",
+      "occurrences": [
+        {
+          "pdf_page": 12,
+          "bbox_points": [161.85, 431.04, 311.45, 569.46]
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "file": "images/image-022.png",
+      "description": "Saved rule selected in the rules grid below the editor.",
+      "width": 1359,
+      "height": 757,
+      "source_image_sha256": "836551a664fa1e83d42c422304a017fa8e6b4cd877a2c3792615b431d99b4d28",
+      "occurrences": [
+        {
+          "pdf_page": 13,
+          "bbox_points": [144.0, 187.48, 576.0, 428.13]
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "file": "images/image-023.png",
+      "description": "TimeOf function button.",
+      "width": 74,
+      "height": 32,
+      "source_image_sha256": "979af6d5b40c40700fea63ac6904b7c1989af8f5f6b384498d1103bafe2b728e",
+      "occurrences": [
+        {
+          "pdf_page": 13,
+          "bbox_points": [126.0, 518.09, 181.5, 542.09]
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "file": "images/image-024.png",
+      "description": "TimeOf expression placeholder before selecting a parameter.",
+      "width": 98,
+      "height": 35,
+      "source_image_sha256": "2806e15724c479f388b562c76e50b5a0698864887b95ebe100dba095a1c6d4ee",
+      "occurrences": [
+        {
+          "pdf_page": 13,
+          "bbox_points": [161.85, 589.8, 235.35, 616.02]
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "file": "images/image-025.png",
+      "description": "Fuel Level (%) parameter selected in the TimeOf expression editor.",
+      "width": 410,
+      "height": 231,
+      "source_image_sha256": "8005daca5f654e67d75cdd430ad507fd9a77ac852b2b98c0a4a20abb374ba41e",
+      "occurrences": [
+        {
+          "pdf_page": 14,
+          "bbox_points": [161.85, 90.16, 469.35, 263.41]
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "file": "images/image-026.png",
+      "description": "TimeOf expression testing Fuel Level (%) greater than 50.",
+      "width": 175,
+      "height": 39,
+      "source_image_sha256": "545eb2437ff831c2d98c5cdbf8392cbb42692b86c0a986ce20d5464bae8e7e1d",
+      "occurrences": [
+        {
+          "pdf_page": 14,
+          "bbox_points": [161.85, 307.8, 293.1, 337.03]
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "file": "images/image-027.png",
+      "description": "TimeOf condition with a greater-than-5000 duration threshold; the text describes milliseconds.",
+      "width": 203,
+      "height": 34,
+      "source_image_sha256": "ab5d98169020d937bc408fd089a2ea528eeb50b399baf572aad72306ec5a8424",
+      "occurrences": [
+        {
+          "pdf_page": 14,
+          "bbox_points": [161.85, 393.89, 314.1, 419.39]
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "file": "images/image-028.png",
+      "description": "Count function button.",
+      "width": 72,
+      "height": 33,
+      "source_image_sha256": "d6e777be69a5b3d30944a68f131b90529b6dc9ea713d129b9fb0e7d4d1135a0f",
+      "occurrences": [
+        {
+          "pdf_page": 14,
+          "bbox_points": [126.0, 425.39, 180.0, 450.14]
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "file": "images/image-029.png",
+      "description": "Sum function button.",
+      "width": 74,
+      "height": 35,
+      "source_image_sha256": "e4aae741fe313a2c0212258dc9e324e8e571a5a0351900723bc75b701f148b24",
+      "occurrences": [
+        {
+          "pdf_page": 14,
+          "bbox_points": [126.0, 508.86, 181.5, 535.11]
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "file": "images/image-030.png",
+      "description": "Absolute-difference operator highlighted in the operator palette.",
+      "width": 342,
+      "height": 230,
+      "source_image_sha256": "7377309a9675f0c226ab21f23a2d4de42fc0202544c76b04b1cd725bd4918183",
+      "occurrences": [
+        {
+          "pdf_page": 15,
+          "bbox_points": [126.0, 100.69, 382.5, 273.19]
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "file": "images/image-031.png",
+      "description": "or logical operator button.",
+      "width": 58,
+      "height": 35,
+      "source_image_sha256": "6a09689e6f105274ebf854c395e73e902f1fbf8f10b612672e0ad5bbf1764883",
+      "occurrences": [
+        {
+          "pdf_page": 15,
+          "bbox_points": [146.7, 300.48, 190.15, 326.7]
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "file": "images/image-032.png",
+      "description": "and logical operator button.",
+      "width": 58,
+      "height": 34,
+      "source_image_sha256": "ba13a058858b450561686b61a6ba31308391392af3eb01574aaf488a01c4ace2",
+      "occurrences": [
+        {
+          "pdf_page": 15,
+          "bbox_points": [146.7, 336.96, 190.2, 362.46]
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "file": "images/image-033.png",
+      "description": "mod operator tooltip explaining division remainder.",
+      "width": 484,
+      "height": 238,
+      "source_image_sha256": "6dfb647c4d1d88fb9d4baa7a79941e62a1193f03c3331cf6a3ff8d1dd8806321",
+      "occurrences": [
+        {
+          "pdf_page": 15,
+          "bbox_points": [126.0, 372.72, 483.6, 548.53]
+        }
+      ]
+    },
+    {
+      "id": 34,
+      "file": "images/image-034.png",
+      "description": "mod operator button.",
+      "width": 54,
+      "height": 32,
+      "source_image_sha256": "b5453802fdbf8e30b41e2e6d2a294b0f4a346d9858b7eba01ba290a28ab3443c",
+      "occurrences": [
+        {
+          "pdf_page": 15,
+          "bbox_points": [126.0, 557.7, 166.5, 581.7]
+        }
+      ]
+    },
+    {
+      "id": 35,
+      "file": "images/image-035.png",
+      "description": "CS clear-spaces control.",
+      "width": 58,
+      "height": 35,
+      "source_image_sha256": "9e1d8c7d400d03891d9cc4d73f857f37e0174f84bbb2b3fb950b172c0c397b01",
+      "occurrences": [
+        {
+          "pdf_page": 15,
+          "bbox_points": [126.0, 591.96, 161.96, 613.63]
+        }
+      ]
+    },
+    {
+      "id": 36,
+      "file": "images/image-036.png",
+      "description": "C clear-text control.",
+      "width": 61,
+      "height": 36,
+      "source_image_sha256": "6ed5ade7975c8085ece0d087658b6a5c7ecd870e524c5453fde5b5888578103f",
+      "occurrences": [
+        {
+          "pdf_page": 15,
+          "bbox_points": [126.0, 623.88, 163.278, 645.86]
+        }
+      ]
+    },
+    {
+      "id": 37,
+      "file": "images/image-037.png",
+      "description": "Parentheses control and its Add Parentheses To Equation tooltip.",
+      "width": 273,
+      "height": 72,
+      "source_image_sha256": "8986f5f00db7532754f6f81f1c3f784074b48c307d0d555fae479de8f346bb79",
+      "occurrences": [
+        {
+          "pdf_page": 15,
+          "bbox_points": [129.06, 692.418, 333.81, 746.418]
+        }
+      ]
+    },
+    {
+      "id": 38,
+      "file": "images/image-038.png",
+      "description": "Rule grid with True Event ID, False Event ID and Rule Debounce Time columns.",
+      "width": 865,
+      "height": 94,
+      "source_image_sha256": "16e2155e86433cf1acadb28837d51d2a8385883896f22ff277a130bed5f08bc9",
+      "occurrences": [
+        {
+          "pdf_page": 16,
+          "bbox_points": [72.0, 401.54, 523.3, 450.59]
+        }
+      ]
+    },
+    {
+      "id": 39,
+      "file": "images/image-039.png",
+      "description": "Histogram tab with the Add Histogram action.",
+      "width": 1231,
+      "height": 520,
+      "source_image_sha256": "3d1fc7de4d40a2b475847d395ee594633e5f1ee90f38acae96c883e9a1a5a17a",
+      "occurrences": [
+        {
+          "pdf_page": 18,
+          "bbox_points": [72.0, 169.62, 523.3, 360.27]
+        }
+      ]
+    },
+    {
+      "id": 40,
+      "file": "images/image-040.png",
+      "description": "Histogram settings form after Add Histogram is selected.",
+      "width": 1114,
+      "height": 337,
+      "source_image_sha256": "e211a67cdcc41a41dcd1fc3940efddcd8d87e92cfd484cb647e2c5fed8ffbdb5",
+      "occurrences": [
+        {
+          "pdf_page": 18,
+          "bbox_points": [72.0, 425.88, 523.3, 562.37]
+        }
+      ]
+    },
+    {
+      "id": 41,
+      "file": "images/image-041.png",
+      "description": "Main histogram parameter selector in the settings form.",
+      "width": 547,
+      "height": 284,
+      "source_image_sha256": "cc9093ea4e1798a4388fa9311dd7cc2d53670f72a17080f18df15966fea55140",
+      "occurrences": [
+        {
+          "pdf_page": 19,
+          "bbox_points": [161.85, 118.13, 464.6, 275.32]
+        }
+      ]
+    },
+    {
+      "id": 42,
+      "file": "images/image-042.png",
+      "description": "Add Simple Parameter dialog listing Engine RPM and Fuel Consumption.",
+      "width": 312,
+      "height": 265,
+      "source_image_sha256": "b16c3707c2b7b98416fd7a27b5ae5c34a3523aae5e93a1ad1eef6e564fadd9c7",
+      "occurrences": [
+        {
+          "pdf_page": 19,
+          "bbox_points": [180.0, 316.44, 361.52, 470.46]
+        }
+      ]
+    },
+    {
+      "id": 43,
+      "file": "images/image-043.png",
+      "description": "Green accept/check icon for choosing a parameter.",
+      "width": 16,
+      "height": 15,
+      "source_image_sha256": "1a4cf02f0999f357ce01684ea0454fa07606143b9664acdbdb7a53c939f97347",
+      "occurrences": [
+        {
+          "pdf_page": 19,
+          "bbox_points": [500.72, 477.47, 512.688, 488.72]
+        },
+        {
+          "pdf_page": 20,
+          "bbox_points": [310.65, 549.26, 322.618, 560.51]
+        }
+      ]
+    },
+    {
+      "id": 44,
+      "file": "images/image-044.png",
+      "description": "Related-parameter picker opened from Add Parameter To Histogram.",
+      "width": 497,
+      "height": 338,
+      "source_image_sha256": "321b1d64dca1c3d1e16d56683a0955bee711312a93b2b6d1fb9b4e7903fa6905",
+      "occurrences": [
+        {
+          "pdf_page": 20,
+          "bbox_points": [126.0, 343.56, 419.64, 543.26]
+        }
+      ]
+    },
+    {
+      "id": 45,
+      "file": "images/image-045.png",
+      "description": "Related histogram parameters grid with Remove Parameter controls.",
+      "width": 725,
+      "height": 279,
+      "source_image_sha256": "9baa6d0d85b44ee51de58608d510b8427343cc4b3ec5099f3d627e67b3447115",
+      "occurrences": [
+        {
+          "pdf_page": 20,
+          "bbox_points": [126.0, 628.599, 459.7, 756.999]
+        }
+      ]
+    },
+    {
+      "id": 46,
+      "file": "images/image-046.png",
+      "description": "Error dialog stating the limit of five parameters per histogram.",
+      "width": 350,
+      "height": 164,
+      "source_image_sha256": "b176afa188144ebc5ddabe1e3ac600da7c98eb4eb08ca276d26ada5c8b6b9414",
+      "occurrences": [
+        {
+          "pdf_page": 21,
+          "bbox_points": [126.0, 93.16, 291.72, 170.81]
+        }
+      ]
+    },
+    {
+      "id": 47,
+      "file": "images/image-047.png",
+      "description": "Saved histogram row with its configuration columns.",
+      "width": 821,
+      "height": 71,
+      "source_image_sha256": "22334c28143bc978cf72ed00457a6ce15cbbf4488af1d94f62b4bec08b00249e",
+      "occurrences": [
+        {
+          "pdf_page": 21,
+          "bbox_points": [72.0, 217.78, 524.95, 251.63]
+        }
+      ]
+    },
+    {
+      "id": 48,
+      "file": "images/image-048.png",
+      "description": "Histogram list with a selected entry ready to edit.",
+      "width": 1208,
+      "height": 55,
+      "source_image_sha256": "109c7910830d84ab1504e54d32b5a5d39c862d53667ea158d424ed0591987372",
+      "occurrences": [
+        {
+          "pdf_page": 21,
+          "bbox_points": [72.0, 357.72, 523.3, 378.27]
+        }
+      ]
+    },
+    {
+      "id": 49,
+      "file": "images/image-049.png",
+      "description": "Start Edit Histogram control with tooltip.",
+      "width": 711,
+      "height": 101,
+      "source_image_sha256": "e0e0cce89c3bb3a8b0e09954ab92cf1f0c01413e446869ab07dda113e9b08f36",
+      "occurrences": [
+        {
+          "pdf_page": 21,
+          "bbox_points": [126.0, 409.69, 526.61, 466.59]
+        }
+      ]
+    },
+    {
+      "id": 50,
+      "file": "images/image-050.png",
+      "description": "Parameter Events table with identifiers, names, values, timestamps and report types.",
+      "width": 1341,
+      "height": 151,
+      "source_image_sha256": "634ca584dca367a3976273a875a6b8fe60b5b97fbcafce8ece76d28e04625e6b",
+      "occurrences": [
+        {
+          "pdf_page": 22,
+          "bbox_points": [72.0, 171.26, 523.3, 222.06]
+        }
+      ]
+    },
+    {
+      "id": 51,
+      "file": "images/image-051.png",
+      "description": "Rule Events table with rule/event values and history controls.",
+      "width": 1342,
+      "height": 165,
+      "source_image_sha256": "928d360ff8e4d5bfef97761aacae203e30161a26e7ecdd8af93b8e2eff6ac1d6",
+      "occurrences": [
+        {
+          "pdf_page": 22,
+          "bbox_points": [72.0, 703.706, 523.3, 759.206]
+        }
+      ]
+    },
+    {
+      "id": 52,
+      "file": "images/image-052.png",
+      "description": "Histogram Events screen with separate tables for received histogram reports.",
+      "width": 1050,
+      "height": 522,
+      "source_image_sha256": "582aa5d840e1236d80416ac39e5b07fee1b63253f0055b40661914a8a1c4d477",
+      "occurrences": [
+        {
+          "pdf_page": 23,
+          "bbox_points": [72.0, 536.16, 523.3, 760.48]
+        }
+      ]
+    },
+    {
+      "id": 53,
+      "file": "images/image-053.png",
+      "description": "Blue-bar RPM histogram: RPM ranges on the horizontal axis and accumulated milliseconds on the vertical axis; illustrative data.",
+      "width": 786,
+      "height": 476,
+      "source_image_sha256": "72b9c7c96c6811bac72535ff135d3e2d972abe4509d15c49ecbc2c3869ddf434",
+      "occurrences": [
+        {
+          "pdf_page": 24,
+          "bbox_points": [126.45, 224.58, 366.7, 370.07]
+        }
+      ]
+    },
+    {
+      "id": 54,
+      "file": "images/image-054.png",
+      "description": "Grouped histogram comparing blue RPM bars with red Fuel Consumption bars; illustrates a main parameter plus a related parameter, not a calibrated live measurement.",
+      "width": 1076,
+      "height": 484,
+      "source_image_sha256": "87832a337c1f0819d942d43783590b00d9a4cdbd5c70b569c4c7ca807572ff37",
+      "occurrences": [
+        {
+          "pdf_page": 24,
+          "bbox_points": [144.0, 410.88, 479.03, 561.57]
+        }
+      ]
+    },
+    {
+      "id": 55,
+      "file": "images/image-055.png",
+      "description": "DTC/Fault Codes table with fault ID, description, status and update-time fields.",
+      "width": 1188,
+      "height": 101,
+      "source_image_sha256": "7ec95fe25fd9d3e412f74abbdf43b12af0aa6aa136b522a43582bdeb1ed6dcc2",
+      "occurrences": [
+        {
+          "pdf_page": 25,
+          "bbox_points": [72.0, 126.0, 523.3, 164.35]
+        }
+      ]
+    },
+    {
+      "id": 56,
+      "file": "images/image-056.png",
+      "description": "Removal context menu distinguishing list-only, device-only and combined deletion actions.",
+      "width": 432,
+      "height": 320,
+      "source_image_sha256": "edb48656b216948d16a6de6c33cd2016d323a63f2ae0d47d2a44da956a2ab352",
+      "occurrences": [
+        {
+          "pdf_page": 26,
+          "bbox_points": [144.0, 246.12, 351.4, 399.7]
+        }
+      ]
+    },
+    {
+      "id": 57,
+      "file": "images/image-057.png",
+      "description": "Version Upgrade tab with device/version IDs, file browse control and Burn button.",
+      "width": 577,
+      "height": 177,
+      "source_image_sha256": "d27fd988e3e7f8f4440a21036efd1b764b403d65dfe6a7d98d69491b409a29e4",
+      "occurrences": [
+        {
+          "pdf_page": 28,
+          "bbox_points": [126.0, 165.74, 525.17, 288.19]
+        }
+      ]
+    }
+  ],
+  "context_captures": [
+    {
+      "pdf_page": 4,
+      "file": "images/context-page-004.png",
+      "description": "Page illustration context, retaining vector annotations, labels and diagram/table geometry around the extracted images."
+    },
+    {
+      "pdf_page": 5,
+      "file": "images/context-page-005.png",
+      "description": "Page illustration context, retaining vector annotations, labels and diagram/table geometry around the extracted images."
+    },
+    {
+      "pdf_page": 13,
+      "file": "images/context-page-013.png",
+      "description": "Page illustration context, retaining vector annotations, labels and diagram/table geometry around the extracted images."
+    },
+    {
+      "pdf_page": 14,
+      "file": "images/context-page-014.png",
+      "description": "Page illustration context, retaining vector annotations, labels and diagram/table geometry around the extracted images."
+    },
+    {
+      "pdf_page": 15,
+      "file": "images/context-page-015.png",
+      "description": "Page illustration context, retaining vector annotations, labels and diagram/table geometry around the extracted images."
+    },
+    {
+      "pdf_page": 17,
+      "file": "images/context-page-017.png",
+      "description": "Page illustration context, retaining vector annotations, labels and diagram/table geometry around the extracted images."
+    },
+    {
+      "pdf_page": 24,
+      "file": "images/context-page-024.png",
+      "description": "Page illustration context, retaining vector annotations, labels and diagram/table geometry around the extracted images."
+    }
+  ],
+  "reference_updated_on": "2026-10-17",
+  "image_selection": "Retain technical illustrations, screenshots, UI controls and explanatory annotations. Omit standalone cover artwork, publisher logos, page decoration and generic note/support markers; preserve the complete original PDF."
+}
