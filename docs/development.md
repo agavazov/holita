@@ -37,6 +37,7 @@ in environment examples, documentation, agent instructions, command arguments or
 | npm run dev              | Wait for PostgreSQL, start Router, Angular and three Nest subgraphs   |
 | npm run kill             | Stop this checkout's application processes and watchers on Ubuntu/WSL |
 | npm run dev:admin        | Angular watcher                                                       |
+| npm run storybook:admin  | Admin Storybook with fixture data on port 11003                       |
 | npm run dev:gateway      | Native Router after Nx supergraph generation                          |
 | npm run dev:core         | Core watcher                                                          |
 | npm run dev:fleet        | Fleet watcher                                                         |
@@ -72,7 +73,8 @@ PostgreSQL and processes from other checkouts remain running. Running it again i
 | Karma Client    | 11014                 |
 | PostgreSQL      | 11084                 |
 
-Visual previews use 11000–11009; the optional Sakai preview uses 11002. The single root
+Visual previews use 11000–11009; the optional Sakai preview uses 11002 and the admin Storybook
+uses 11003. The single root
 [`.env.example`](../.env.example) describes all variables, their consumers, safe examples,
 types and sensitivity using [`@env-spec` style annotations](https://varlock.dev/reference/data-types/).
 These comments document configuration; dotenv and Compose do not validate them, and no
@@ -203,6 +205,33 @@ assert the public contract directly over real subgraphs and isolated test databa
 - [Ecommerce Branches](ecommerce/branches.md): Branch discovery contracts and implementation.
 
 ## Angular presentation and agent tools
+
+### Admin Storybook
+
+Storybook renders the admin's real Angular components with deterministic synthetic data and no
+backend. `npm run storybook:admin` serves `http://127.0.0.1:11003`; `npm run build:storybook:admin`
+writes the ignored `apps/admin/storybook-static`. [Visual review](testing.md#storybook-visual-review)
+captures selected stories from that build.
+
+- The framework is `@storybook/angular-vite` on Vite and `@angular/build`, without webpack. It is a
+  preview framework in Storybook 10. Configuration is in `apps/admin/.storybook`; the `storybook`
+  and `build-storybook` targets are in `apps/admin/angular.json`. These builders do not inherit
+  the application build's styles or assets, so `src/styles.scss` and the `public/fonts` asset are
+  repeated there and must stay aligned with the `build` target. Telemetry is disabled in `main.ts`.
+- Stories are `*.stories.ts` files beside the components they render. Story-only support lives in
+  `apps/admin/src/storybook`: `storybookApplicationConfig()` reuses the application's `appConfig`
+  providers with a fixture `HttpBackend` and an in-memory location; fixtures answer generated
+  GraphQL documents by operation name and Branch header; `StoryApp` opens a real route. Feature
+  services, their Apollo clients, error mapping and request headers run unchanged.
+- A story's `parameters.holita` (`StoryFixtures`) selects a signed-out session, an empty fleet,
+  latency, or a forced `network`, `graphql` or `pending` outcome per operation. Before every story,
+  fixtures, the stored session, theme and document language are reset. Toolbar globals switch
+  light/dark and Bulgarian/English. Fixture data is synthetic and contains no real identities.
+- `tsconfig.app.json` excludes stories and `src/storybook`; `npm run typecheck` compiles them through
+  `apps/admin/.storybook/tsconfig.json`, and ESLint rejects Storybook or fixture imports from
+  application code.
+- Storybook does not read `public/config.json` or a PrimeUI license key, so PrimeNG shows its
+  "Invalid PrimeUI License" notice in Storybook and its screenshots.
 
 ### Sakai source reference
 

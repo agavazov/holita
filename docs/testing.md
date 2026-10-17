@@ -73,6 +73,28 @@ Browser fixtures seed Core and obtain real demo sessions; they create their own 
 Browser targets build the admin and three subgraphs, prepare Router, use Chromium, disable retries and retain
 failure screenshots/traces under ignored test-results. Clean up task-started connections/processes.
 
+## Storybook visual review
+
+```bash
+npm run test:visual:admin
+```
+
+The target builds the static [admin Storybook](development.md#admin-storybook) and captures the
+stories listed in [storybook-visual.spec.mts](../tools/browser/storybook-visual.spec.mts) at
+1440×900 and 390×844 with Chromium, `bg-BG`, `Europe/Sofia`, a fixed clock and device scale 1.
+Each capture waits until no fixture request has been in flight for 400 ms.
+
+- Every run writes reviewable candidates to the ignored `test-results/storybook-visual-candidates/`
+  and attaches them to the HTML report in `playwright-report/storybook-visual/`.
+- Approved baselines are per checkout in the ignored `.references/review/storybook-baselines/`.
+  Missing or changed baselines fail the run; Playwright never creates them (`updateSnapshots: 'none'`).
+  A run without baselines reports "A snapshot doesn't exist": candidates exist, nothing is approved.
+- Only after a person approves the candidates, record them from a fresh build:
+  `npx playwright test --config tools/browser/storybook-visual.config.mts --update-snapshots=all`.
+  Never update baselines or loosen comparison to make the check pass.
+- Matching screenshots show that pixels equal the approved state; they do not establish UX quality,
+  accessibility or behavior. Unit and smoke checks keep covering behavior.
+
 ## Router contract check
 
 After [installing Apollo Router](development.md#apollo-router) and provisioning
@@ -158,21 +180,22 @@ a fixed-arrival-rate latency SLA, cold-start performance or real Karma network l
 
 ## Current change-to-check mapping
 
-| Change                                  | Focused checks                                                                                                                                                                                                                                                                           |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Vehicle validation/query/persistence    | vehicles.service.spec.ts, vehicles.db.spec.ts                                                                                                                                                                                                                                            |
-| Device IMEI/assignment/persistence      | devices.service.spec.ts, devices.db.spec.ts                                                                                                                                                                                                                                              |
-| Runtime module/health                   | Fleet/Core health.spec.ts; Gateway router.runtime.spec.mts                                                                                                                                                                                                                               |
-| Karma account client/access             | accounts.spec.ts, history.spec.ts, location.spec.ts, edata.spec.ts, edata.service.spec.ts, cars.spec.ts, cars.service.spec.ts, Karma health.spec.ts                                                                                                                              |
+| Change                                  | Focused checks                                                                                                                                                                                                                                                                         |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Vehicle validation/query/persistence    | vehicles.service.spec.ts, vehicles.db.spec.ts                                                                                                                                                                                                                                          |
+| Device IMEI/assignment/persistence      | devices.service.spec.ts, devices.db.spec.ts                                                                                                                                                                                                                                            |
+| Runtime module/health                   | Fleet/Core health.spec.ts; Gateway router.runtime.spec.mts                                                                                                                                                                                                                             |
+| Karma account client/access             | accounts.spec.ts, history.spec.ts, location.spec.ts, edata.spec.ts, edata.service.spec.ts, cars.spec.ts, cars.service.spec.ts, Karma health.spec.ts                                                                                                                                    |
 | Karma truck/reference reads and routing | accounts.spec.ts, history.spec.ts, location-references.spec.ts, karma-workspace.spec.ts, edata-page.spec.ts, angular-karma-phase4.smoke.spec.mts, angular-karma-phase3.smoke.spec.mts, angular-karma-phase2.smoke.spec.mts, angular-karma.smoke.spec.mts, angular-edata.smoke.spec.mts |
-| SDL/operations                          | codegen, schema:check, contracts.unit.spec.mts                                                                                                                                                                                                                                           |
-| Cross-service contracts/context         | federation.db.spec.mts                                                                                                                                                                                                                                                                   |
+| SDL/operations                          | codegen, schema:check, contracts.unit.spec.mts                                                                                                                                                                                                                                         |
+| Cross-service contracts/context         | federation.db.spec.mts                                                                                                                                                                                                                                                                 |
 | Branch/language/default routing         | branch-context.spec.ts, fleet-workspace.spec.ts, angular-foundation.smoke.spec.mts                                                                                                                                                                                                     |
-| Captured feature clients/forms/deletion | concrete vehicles/devices Angular suites                                                                                                                                                                                                                                                 |
-| Remote picker cancellation              | relation-picker.spec.ts, device-editor.spec.ts                                                                                                                                                                                                                                           |
-| Shell/theme/mobile/keyboard             | angular-shell.smoke.spec.mts and matching visual review                                                                                                                                                                                                                                  |
-| Real CRUD and narrow views              | angular-vehicles.smoke.spec.mts, angular-devices.smoke.spec.mts                                                                                                                                                                                                                          |
-| Root tooling                            | root lint/typecheck/build and relevant behavior                                                                                                                                                                                                                                          |
+| Captured feature clients/forms/deletion | concrete vehicles/devices Angular suites                                                                                                                                                                                                                                               |
+| Remote picker cancellation              | relation-picker.spec.ts, device-editor.spec.ts                                                                                                                                                                                                                                         |
+| Shell/theme/mobile/keyboard             | angular-shell.smoke.spec.mts and matching visual review                                                                                                                                                                                                                                |
+| Real CRUD and narrow views              | angular-vehicles.smoke.spec.mts, angular-devices.smoke.spec.mts                                                                                                                                                                                                                        |
+| Admin stories/fixtures/presentation     | admin typecheck and lint, build:storybook:admin, test:visual:admin with candidate review                                                                                                                                                                                               |
+| Root tooling                            | root lint/typecheck/build and relevant behavior                                                                                                                                                                                                                                        |
 
 ## Local diff versus PR affected selection
 

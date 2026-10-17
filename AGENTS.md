@@ -53,7 +53,7 @@ Keep shared rules in this guide and never put credential values in agent instruc
 
 - Use npm workspaces, the existing lockfile, and Nx. The five applications are `apps/admin`, `apps/gateway`, `apps/core`, `apps/fleet`, and `apps/karma-client`.
 - Do not import another application's implementation, Prisma client, or database model, including through relative paths. ESLint/Nx enforce application boundaries.
-- Expose daily commands through root npm scripts. Do not add another build system, custom process supervisor, or custom test-selection framework. Add shared packages only for demonstrated current reuse.
+- Expose daily commands through root npm scripts. Do not add another build system, custom process supervisor, or custom test-selection framework. The development-only admin Storybook (`@storybook/angular-vite` targets in `apps/admin/angular.json`) is the one documented exception; it never builds application output. Add shared packages only for demonstrated current reuse.
 - Applications run on the host. Angular and the subgraphs use Node.js; Gateway runs only the official native Apollo Router in `apps/gateway/router`. The development group and federation/browser fixtures own their native process lifecycle. PostgreSQL is the only permitted containerized infrastructure for the foundation. Never reset databases or remove volumes to fix setup.
 - Keep configuration at the narrowest sensible scope and avoid duplicating root tooling.
 - Never commit environment files, local database files, build output, coverage, Nx caches, or generated Prisma/GraphQL clients.
@@ -137,4 +137,5 @@ npm run build
 - Use test:core:db/test:fleet:db for persistence changes. Provision with db:up, db:setup and db:test:setup; use the guarded per-run schema helpers under each service's test directory. Never replace them with development connections, resets or shared truncation.
 - Use test:gateway:db -- federation.db.spec.mts for real service-boundary changes. The guarded fixture under tools/graphql owns its processes/schemas; gateway runtime must not acquire database dependencies. Use test:schema for offline contract-tool tests.
 - Use test:admin with Angular CLI `--include=app/features/fleet/vehicles/vehicles-api.spec.ts` or `--filter="case name"`; use test:smoke:admin -- angular-foundation.smoke.spec.mts for real Angular routing/transport. Its compiled-app fixture owns dedicated schemas and backend processes.
+- Admin stories and fixtures stay out of application code (tsconfig exclusion and ESLint enforce it). Use test:visual:admin for presentation changes; its screenshots are candidates until a person approves them. Never update visual baselines without that approval.
 - Report actual commands/results and unverified work. Do not declare work complete while a required check fails. Clean up task-started processes and connections.

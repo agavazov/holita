@@ -3,6 +3,8 @@ dist/
 coverage/
 test-results/
 playwright-report/
+storybook-static/
+debug-storybook.log
 
 .env
 .env.*

@@ -12,6 +12,7 @@ playwright-report/
 apps/*/src/generated/
 .nx/
 .angular/
+storybook-static/
 
 # Preserve the installed upstream Angular skill without reformatting its sources.
 .agents/skills/angular-developer/

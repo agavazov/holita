@@ -70,6 +70,9 @@ Karma is independent of the Branch selector and `fleetEnabled`. See
 The shell supports keyboard/mobile navigation and persisted light/dark themes. The startup
 `fleetEnabled` flag gates both business modules; Branch discovery stays available.
 The ignored [Sakai source](docs/development.md#sakai-source-reference) supplies the visual reference.
+`npm run storybook:admin` opens the [admin Storybook](docs/development.md#admin-storybook) on
+port 11003 with synthetic fixture data and no backend; `npm run test:visual:admin` captures
+[visual review candidates](docs/testing.md#storybook-visual-review).
 
 Gateway, Core, Fleet and Karma Client listen on loopback ports 11010, 11011, 11013 and 11014; PostgreSQL uses 11084. `dev` waits for PostgreSQL health before starting the five applications. Ctrl+C stops
 the native Router and Node application group. `npm run db:down` stops PostgreSQL and preserves its volume. Setup, migrations

@@ -69,6 +69,28 @@
           "options": {
             "tsConfig": "tsconfig.spec.json"
           }
+        },
+        "storybook": {
+          "builder": "@storybook/angular-vite:start-storybook",
+          "options": {
+            "configDir": ".storybook",
+            "tsConfig": ".storybook/tsconfig.json",
+            "host": "127.0.0.1",
+            "port": 11003,
+            "open": false,
+            "styles": ["src/styles.scss"],
+            "assets": [{ "glob": "**/*", "input": "public/fonts", "output": "fonts" }]
+          }
+        },
+        "build-storybook": {
+          "builder": "@storybook/angular-vite:build-storybook",
+          "options": {
+            "configDir": ".storybook",
+            "tsConfig": ".storybook/tsconfig.json",
+            "outputDir": "storybook-static",
+            "styles": ["src/styles.scss"],
+            "assets": [{ "glob": "**/*", "input": "public/fonts", "output": "fonts" }]
+          }
         }
       }
     }
