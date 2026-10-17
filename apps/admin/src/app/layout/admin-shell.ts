@@ -51,17 +51,17 @@ import { Appearance } from './appearance';
   host: { '(window:resize)': 'onResize()' },
 })
 export class AdminShell {
-  readonly stores = input.required<readonly { id: string; name: string }[]>();
-  readonly storeOptions = computed(() => [...this.stores()]);
-  readonly storeId = input<string | null>(null);
-  readonly storeControl = new FormControl<string | null>(null);
+  readonly branches = input.required<readonly { id: string; name: string }[]>();
+  readonly branchOptions = computed(() => [...this.branches()]);
+  readonly branchId = input<string | null>(null);
+  readonly branchControl = new FormControl<string | null>(null);
   readonly language = input.required<Language>();
   readonly languageUrl = input.required<UrlTree>();
   readonly loading = input(false);
   readonly fleetEnabled = input(false);
   readonly tenantName = input<string | null>(null);
   readonly signOut = output();
-  readonly storeSelected = output<string>();
+  readonly branchSelected = output<string>();
   readonly text = computed(() => messages[this.language()]);
   readonly appearance = inject(Appearance);
   readonly desktopCollapsed = signal(false);
@@ -72,15 +72,15 @@ export class AdminShell {
 
   constructor() {
     effect(() => {
-      this.storeControl.setValue(this.storeId(), { emitEvent: false });
+      this.branchControl.setValue(this.branchId(), { emitEvent: false });
     });
     effect(() => {
-      if (this.loading() && this.stores().length === 0)
-        this.storeControl.disable({ emitEvent: false });
-      else this.storeControl.enable({ emitEvent: false });
+      if (this.loading() && this.branches().length === 0)
+        this.branchControl.disable({ emitEvent: false });
+      else this.branchControl.enable({ emitEvent: false });
     });
-    this.storeControl.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
-      this.chooseStore(value);
+    this.branchControl.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
+      this.chooseBranch(value);
     });
     inject(Router)
       .events.pipe(
@@ -94,7 +94,7 @@ export class AdminShell {
       )
       .subscribe((event) => {
         // Resync after Select's event handler has finished; canceled navigation leaves the route unchanged.
-        this.storeControl.setValue(this.storeId(), { emitEvent: false });
+        this.branchControl.setValue(this.branchId(), { emitEvent: false });
         if (event instanceof NavigationEnd) this.mobileOpen.set(false);
       });
   }
@@ -109,9 +109,9 @@ export class AdminShell {
     else this.desktopCollapsed.update((collapsed) => !collapsed);
   }
 
-  chooseStore(value: unknown): void {
-    if (typeof value === 'string' && this.stores().some((store) => store.id === value))
-      this.storeSelected.emit(value);
+  chooseBranch(value: unknown): void {
+    if (typeof value === 'string' && this.branches().some((branch) => branch.id === value))
+      this.branchSelected.emit(value);
   }
 
   focusNavigation(): void {

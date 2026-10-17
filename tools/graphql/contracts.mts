@@ -21,7 +21,7 @@ export const subgraphs = [
   {
     name: 'core',
     url: 'http://127.0.0.1:11011/graphql',
-    path: 'apps/core/src/stores/stores.graphql',
+    path: 'apps/core/src/branches/branches.graphql',
   },
   {
     name: 'fleet',
@@ -32,7 +32,7 @@ export const subgraphs = [
 ];
 export const operationPaths = [
   'apps/admin/src/app/features/karma-client/operations.graphql',
-  'apps/admin/src/app/features/stores/operations.graphql',
+  'apps/admin/src/app/features/branches/operations.graphql',
   'apps/admin/src/app/features/fleet/vehicles/operations.graphql',
   'apps/admin/src/app/features/fleet/devices/operations.graphql',
   'apps/fleet/src/core/operations.graphql',

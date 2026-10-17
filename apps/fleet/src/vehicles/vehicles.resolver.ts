@@ -17,7 +17,7 @@ import type {
   FleetVehicle,
   QueryFleetVehicleArgs,
   QueryFleetVehiclesArgs,
-  Store,
+  Branch,
 } from '../generated/graphql/types.js';
 import type { RequestContext } from '../graphql/request-context.js';
 import { VehiclesService, type VehicleResult } from './vehicles.service.js';
@@ -69,8 +69,8 @@ export class VehiclesResolver {
     return this.vehiclesService.find(context, reference.id);
   }
 
-  @ResolveField('store')
-  store(@Parent() vehicle: VehicleResult): Store {
-    return { __typename: 'Store', id: vehicle.storeId };
+  @ResolveField('branch')
+  branch(@Parent() vehicle: VehicleResult): Branch {
+    return { __typename: 'Branch', id: vehicle.branchId };
   }
 }

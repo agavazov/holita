@@ -5,9 +5,9 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 export interface RequestContext {
   requestId: string;
   tenantId: string | undefined;
+  branchId: string | undefined;
   authorization: string | undefined;
-  storeId: string | undefined;
-  storeChecks: Map<string, Promise<void>>;
+  branchChecks: Map<string, Promise<void>>;
 }
 
 export function createRequestContext({
@@ -22,15 +22,15 @@ export function createRequestContext({
     typeof supplied === 'string' && /^[A-Za-z0-9._:-]{1,100}$/.test(supplied)
       ? supplied
       : randomUUID();
-  const header = req.headers['x-store-id'];
+  const header = req.headers['x-branch-id'];
   const authorization = req.headers.authorization;
   const tenantId = readDemoTenant(authorization);
   res.setHeader('x-request-id', requestId);
   return {
     requestId,
     tenantId,
+    branchId: typeof header === 'string' ? header : undefined,
     authorization,
-    storeId: typeof header === 'string' ? header : undefined,
-    storeChecks: new Map(),
+    branchChecks: new Map(),
   };
 }

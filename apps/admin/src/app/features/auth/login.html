@@ -49,29 +49,31 @@
             />
           </div>
           <div class="login-field">
-            <label for="login-store">{{ text().activeStore }}</label>
+            <label for="login-branch">{{ text().activeBranch }}</label>
             <p-select
-              inputId="login-store"
-              [options]="stores()"
+              inputId="login-branch"
+              [options]="branches()"
               optionLabel="name"
               optionValue="id"
-              [formControl]="storeControl"
-              [placeholder]="text().chooseStore"
-              [ariaLabel]="text().activeStore"
-              [loading]="storesLoading()"
+              [formControl]="branchControl"
+              [placeholder]="text().chooseBranch"
+              [ariaLabel]="text().activeBranch"
+              [loading]="branchesLoading()"
               appendTo="body"
             />
           </div>
-          @if (storesLoading()) {
-            <p role="status">{{ text().loadingStores }}</p>
+          @if (branchesLoading()) {
+            <p role="status">{{ text().loadingBranches }}</p>
           }
           @if (!tenantsLoading() && tenants().length === 0 && !tenantError()) {
             <p>{{ text().emptyTenants }}</p>
           }
-          @if (tenantControl.value && !storesLoading() && stores().length === 0 && !storeError()) {
-            <p>{{ text().emptyStores }}</p>
+          @if (
+            tenantControl.value && !branchesLoading() && branches().length === 0 && !branchError()
+          ) {
+            <p>{{ text().emptyBranches }}</p>
           }
-          @if (tenantError() || storeError()) {
+          @if (tenantError() || branchError()) {
             <p-message severity="error">{{ failure() }}</p-message>
             <button pButton type="button" severity="secondary" (click)="retry()">
               {{ text().retry }}
@@ -81,10 +83,10 @@
             pButton
             type="submit"
             [disabled]="
-              !storeControl.value ||
-              storesLoading() ||
+              !branchControl.value ||
+              branchesLoading() ||
               tenantsLoading() ||
-              !!storeError() ||
+              !!branchError() ||
               submitted()
             "
             data-testid="demo-login"

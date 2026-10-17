@@ -3,13 +3,13 @@
 The repository uses npm workspaces and Nx, with five applications and no shared runtime packages.
 Applications never import another application's implementation, Prisma models or generated client.
 
-| Application  | Responsibility                                                                                     | Local port |
-| ------------ | -------------------------------------------------------------------------------------------------- | ---------- |
-| admin        | Standalone Angular, Sakai/PrimeNG, Store discovery, Fleet CRUD, Karma truck data and account views | 11000      |
-| gateway      | Native Apollo Router federation, `/graphql`; `/health` on 11016                                    | 11010      |
-| core         | Tenant demo login, scoped Store discovery/lookup, owning database                                  | 11011      |
-| fleet        | Tenant/Store-scoped Vehicles/Devices, owning database                                              | 11013      |
-| karma-client | Authenticated, shared Karma truck data and account views; no database                              | 11014      |
+| Application  | Responsibility                                                                                      | Local port |
+| ------------ | --------------------------------------------------------------------------------------------------- | ---------- |
+| admin        | Standalone Angular, Sakai/PrimeNG, Branch discovery, Fleet CRUD, Karma truck data and account views | 11000      |
+| gateway      | Native Apollo Router federation, `/graphql`; `/health` on 11016                                     | 11010      |
+| core         | Tenant demo login, scoped Branch discovery/lookup, owning database                                  | 11011      |
+| fleet        | Tenant/Branch-scoped Vehicles/Devices, owning database                                              | 11013      |
+| karma-client | Authenticated, shared Karma truck data and account views; no database                               | 11014      |
 
 ```mermaid
 flowchart LR
@@ -20,7 +20,7 @@ flowchart LR
   KarmaClient --> KarmaAPI[Karma API]
   Core --> CoreDB[(Core database)]
   Fleet --> FleetDB[(Fleet database)]
-  Fleet -->|Store existence on create| Core
+  Fleet -->|Branch existence on create| Core
 ```
 
 ## Execution and ownership
@@ -32,13 +32,13 @@ Health endpoints prove application availability without opening database connect
 
 Fleet also owns the [shared Simple eData vendor catalog](../discocan/erm-resources/simple-edata-catalog/README.md).
 Its offline extractor and local import CLI preserve versioned reference data independently
-of Tenant/Store business records; it has no GraphQL or device-command interface.
+of Tenant/Branch business records; it has no GraphQL or device-command interface.
 
 Gateway contains the official Apollo Router 2.18.0 host binary, integrated into development and tests.
 It consumes the same generated static supergraph and routes directly to Core, Fleet and
 Karma Client on the public GraphQL port, 11010. Its health listener uses port 11016.
-Authorization, Store scope and business behavior remain in the owning subgraphs.
-Only `authorization`, `x-store-id` and `x-request-id` are propagated from client requests.
+Authorization, Branch scope and business behavior remain in the owning subgraphs.
+Only `authorization`, `x-branch-id` and `x-request-id` are propagated from client requests.
 `dev` starts Router, three subgraphs and Angular through concurrently. Angular's development
 proxy follows `ROUTER_PORT`, defaulting to 11010. `kill` stops the native Router and Node
 application processes. Gateway has no Node implementation, Nest bootstrap or npm runtime
@@ -68,8 +68,8 @@ startup failures and normal teardown stop the child before closing downstream re
 ## Domain documentation
 
 [Discocan architecture](../discocan/architecture.md) describes Fleet persistence, GraphQL
-contracts, the shared Karma account client and the current telemetry admin. [Ecommerce Stores](../ecommerce/stores.md)
-describes the Core-owned Store foundation currently reused by Discocan.
+contracts, the shared Karma account client and the current telemetry admin. [Ecommerce Branches](../ecommerce/branches.md)
+describes the Core-owned Branch foundation currently reused by Discocan.
 
 The domains share this checkout and its infrastructure today. Their documentation boundaries
 do not imply separate deployments, applications or databases beyond the described service boundaries.

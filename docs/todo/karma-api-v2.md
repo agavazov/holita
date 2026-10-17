@@ -50,7 +50,7 @@ source assets and coverage are documented in the
   is available for the current integration.
 - **AUTH-02:** Decide the production identity and authorization model before relying
   on demo login. Define whether the current common-account visibility remains
-  appropriate for all authenticated Tenants, without silently introducing Store
+  appropriate for all authenticated Tenants, without silently introducing Branch
   filtering or changing Fleet isolation.
 - **AUTH-03:** Establish whether Karma projects/users/roles are account-scoped,
   their permission matrix and the relation between `project_id` and `project_ids`,

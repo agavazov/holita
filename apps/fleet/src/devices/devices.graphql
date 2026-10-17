@@ -1,7 +1,7 @@
 type FleetDevice @key(fields: "id") {
   id: ID!
-  storeId: ID!
-  store: Store!
+  branchId: ID!
+  branch: Branch!
   imei: String!
   vehicleId: ID!
   vehicle: FleetVehicle!

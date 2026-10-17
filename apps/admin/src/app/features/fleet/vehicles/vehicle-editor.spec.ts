@@ -11,19 +11,19 @@ import { HttpLink } from 'apollo-angular/http';
 import { routes } from '../../../app.routes';
 import { graphqlOptions } from '../../../core/graphql/graphql-options';
 import { AdminShell } from '../../../layout/admin-shell';
-import { StoreWorkspace } from '../../stores/store-workspace';
+import { BranchWorkspace } from '../../branches/branch-workspace';
 import { FleetWorkspace } from '../fleet-workspace';
 import { VehicleEditor } from './vehicle-editor';
 import type { AdminVehicleFragment } from '../../../../generated/graphql/operations';
 
-const storeA = '10000000-0000-4000-8000-000000000001';
-const storeB = '10000000-0000-4000-8000-000000000002';
+const branchA = '10000000-0000-4000-8000-000000000001';
+const branchB = '10000000-0000-4000-8000-000000000002';
 const vehicleA = '20000000-0000-4000-8000-000000000001';
 const vehicleB = '20000000-0000-4000-8000-000000000002';
-const path = `/en/${storeA}/fleet/vehicles`;
-const stores = [
-  { id: storeA, name: 'Discordia' },
-  { id: storeB, name: 'Sandbox' },
+const path = `/en/${branchA}/fleet/vehicles`;
+const branches = [
+  { id: branchA, name: 'Discordia' },
+  { id: branchB, name: 'Sandbox' },
 ];
 function operation(request: HttpRequest<unknown>, licensePlate: string): boolean {
   const body: unknown = request.body;
@@ -36,12 +36,12 @@ function operation(request: HttpRequest<unknown>, licensePlate: string): boolean
 }
 function record(
   id = vehicleA,
-  storeId = storeA,
+  branchId = branchA,
   licensePlate = 'Initial vehicle',
 ): AdminVehicleFragment {
   return {
     id,
-    storeId,
+    branchId,
     licensePlate,
     notes: 'Initial notes',
     createdAt: '2026-01-01T00:00:00.000Z',
@@ -109,7 +109,7 @@ describe('Vehicle editor forms and route lifecycle', () => {
   let router: Router;
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [StoreWorkspace, FleetWorkspace],
+      imports: [BranchWorkspace, FleetWorkspace],
       providers: [
         provideRouter(routes),
         provideHttpClient(),
@@ -131,7 +131,7 @@ describe('Vehicle editor forms and route lifecycle', () => {
     const harness = await RouterTestingHarness.create(
       path.replace('/en/', `/${language}/`) + suffix,
     );
-    http.expectOne((request) => operation(request, 'AdminStores')).flush({ data: { stores } });
+    http.expectOne((request) => operation(request, 'AdminBranches')).flush({ data: { branches } });
     await harness.fixture.whenStable();
     return harness;
   }
@@ -171,7 +171,7 @@ describe('Vehicle editor forms and route lifecycle', () => {
     const saving = current.save();
     await current.save();
     const write = http.expectOne((request) => operation(request, 'AdminCreateVehicle'));
-    expect(write.request.headers.get('x-store-id')).toBe(storeA);
+    expect(write.request.headers.get('x-branch-id')).toBe(branchA);
     expect(write.request.headers.get('Accept-Language')).toBe('en');
     expect(write.request.body).toMatchObject({
       variables: { input: { licensePlate: 'Created', notes: null } },
@@ -241,7 +241,7 @@ describe('Vehicle editor forms and route lifecycle', () => {
     expect(harness.routeNativeElement?.textContent).toContain('Vehicle not found (missing-id)');
   });
 
-  it('guards same-store ID changes and restores the active selector after rejected store navigation', async () => {
+  it('guards same-branch ID changes and restores the active selector after rejected branch navigation', async () => {
     const harness = await mount(`/${vehicleA}/edit`);
     http.expectOne('/graphql').flush(detail());
     await harness.fixture.whenStable();
@@ -251,12 +251,12 @@ describe('Vehicle editor forms and route lifecycle', () => {
       By.directive(AdminShell),
     ).componentInstance;
     if (!(shell instanceof AdminShell)) throw new Error('Missing shell.');
-    shell.storeControl.setValue(storeB);
+    shell.branchControl.setValue(branchB);
     await decide(false);
     await harness.fixture.whenStable();
     expect(router.url).toBe(path + `/${vehicleA}/edit`);
-    expect(shell.storeControl.value).toBe(storeA);
-    expect(harness.routeNativeElement?.querySelector('#active-store')?.textContent).toContain(
+    expect(shell.branchControl.value).toBe(branchA);
+    expect(harness.routeNativeElement?.querySelector('#active-branch')?.textContent).toContain(
       'Discordia',
     );
     expect(field(harness, 'licensePlate').value).toBe('Dirty edit');
@@ -267,7 +267,7 @@ describe('Vehicle editor forms and route lifecycle', () => {
     await harness.fixture.whenStable();
     expect(editor(harness)).not.toBe(old);
     expect(editor(harness).form.dirty).toBe(false);
-    http.expectOne('/graphql').flush(detail(record(vehicleB, storeA, 'Other vehicle')));
+    http.expectOne('/graphql').flush(detail(record(vehicleB, branchA, 'Other vehicle')));
     await harness.fixture.whenStable();
     expect(field(harness, 'licensePlate').value).toBe('Other vehicle');
   });
@@ -286,7 +286,7 @@ describe('Vehicle editor forms and route lifecycle', () => {
     await harness.fixture.whenStable();
     const discovery = http.expectOne('/graphql');
     expect(discovery.request.headers.get('Accept-Language')).toBe('bg');
-    discovery.flush({ data: { stores } });
+    discovery.flush({ data: { branches } });
     await harness.fixture.whenStable();
     expect(field(harness, 'licensePlate').value).toBe('');
     expect(harness.routeNativeElement?.textContent).toContain('Нов автомобил');
@@ -300,7 +300,7 @@ describe('Vehicle editor forms and route lifecycle', () => {
     await harness.navigateByUrl(path + `/${vehicleB}/edit`);
     expect(read.cancelled).toBe(true);
     expect(editor(harness)).not.toBe(old);
-    http.expectOne('/graphql').flush(detail(record(vehicleB, storeA, 'B')));
+    http.expectOne('/graphql').flush(detail(record(vehicleB, branchA, 'B')));
     await harness.fixture.whenStable();
     expect(field(harness, 'licensePlate').value).toBe('B');
   });
@@ -313,7 +313,7 @@ describe('Vehicle editor forms and route lifecycle', () => {
     current.retry();
     const refresh = http.expectOne('/graphql');
     type(harness, 'licensePlate', 'Draft');
-    refresh.flush(detail(record(vehicleA, storeA, 'Server update')));
+    refresh.flush(detail(record(vehicleA, branchA, 'Server update')));
     await harness.fixture.whenStable();
     expect(field(harness, 'licensePlate').value).toBe('Draft');
     const unload = new Event('beforeunload', { cancelable: true });
@@ -321,7 +321,7 @@ describe('Vehicle editor forms and route lifecycle', () => {
     expect(unload.defaultPrevented).toBe(true);
   });
 
-  it.each(['new', 'id', 'store', 'language'])(
+  it.each(['new', 'id', 'branch', 'language'])(
     'suppresses late successful update callbacks after switching %s',
     async (destination) => {
       const harness = await mount(`/${vehicleA}/edit`);
@@ -336,12 +336,14 @@ describe('Vehicle editor forms and route lifecycle', () => {
           ? path + '/new'
           : destination === 'id'
             ? path + `/${vehicleB}/edit`
-            : destination === 'store'
-              ? `/en/${storeB}/fleet/vehicles/${vehicleA}/edit`
+            : destination === 'branch'
+              ? `/en/${branchB}/fleet/vehicles/${vehicleA}/edit`
               : path.replace('/en/', '/bg/') + `/${vehicleA}/edit`;
       await harness.navigateByUrl(url);
       if (destination === 'language')
-        http.expectOne((request) => operation(request, 'AdminStores')).flush({ data: { stores } });
+        http
+          .expectOne((request) => operation(request, 'AdminBranches'))
+          .flush({ data: { branches } });
       if (destination !== 'new')
         http
           .expectOne((request) => operation(request, 'AdminVehicle'))
@@ -349,7 +351,7 @@ describe('Vehicle editor forms and route lifecycle', () => {
             detail(
               record(
                 destination === 'id' ? vehicleB : vehicleA,
-                destination === 'store' ? storeB : storeA,
+                destination === 'branch' ? branchB : branchA,
                 'Current editor',
               ),
             ),
@@ -357,7 +359,7 @@ describe('Vehicle editor forms and route lifecycle', () => {
       await harness.fixture.whenStable();
       type(harness, 'licensePlate', 'Current draft');
       expect(write.cancelled).toBe(false);
-      expect(write.request.headers.get('x-store-id')).toBe(storeA);
+      expect(write.request.headers.get('x-branch-id')).toBe(branchA);
       expect(write.request.headers.get('Accept-Language')).toBe('en');
       write.flush({
         data: {
@@ -379,7 +381,7 @@ describe('Vehicle editor forms and route lifecycle', () => {
   );
 
   it.each([true, false])(
-    'isolates a late create result (success=%s) from the next same-store editor',
+    'isolates a late create result (success=%s) from the next same-branch editor',
     async (success) => {
       const harness = await mount();
       const old = editor(harness);
@@ -438,7 +440,7 @@ describe('Vehicle editor forms and route lifecycle', () => {
       });
     await saving;
     expect(current.failure()).toContain('write-rejected');
-    background.flush(detail(record(vehicleA, storeA, 'Server update')));
+    background.flush(detail(record(vehicleA, branchA, 'Server update')));
     await harness.fixture.whenStable();
     expect(current.failure()).toContain('write-rejected');
     expect(current.form.controls.licensePlate.value).toBe('Unsubmitted draft');
@@ -468,7 +470,7 @@ describe('Vehicle editor forms and route lifecycle', () => {
     retry.click();
     http
       .expectOne((request) => operation(request, 'AdminVehicle'))
-      .flush(detail(record(vehicleA, storeA, 'Server update')));
+      .flush(detail(record(vehicleA, branchA, 'Server update')));
     await harness.fixture.whenStable();
     expect(current.error()).toBeNull();
     expect(current.form.controls.licensePlate.value).toBe('Continued draft');

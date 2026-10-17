@@ -25,7 +25,7 @@ describe('karma-client health endpoint', () => {
     await app.close();
   });
 
-  it('responds without store context or database access', async () => {
+  it('responds without branch context or database access', async () => {
     const response = await fetch(`${baseUrl}/health`);
     const body: unknown = await response.json();
     expect(response.status).toBe(200);
@@ -60,7 +60,7 @@ describe('karma-client health endpoint', () => {
     expect(readCars).not.toHaveBeenCalled();
   });
 
-  it('accepts the signed session protocol for different tenants without Store context', async () => {
+  it('accepts the signed session protocol for different tenants without Branch context', async () => {
     for (const tenantId of [
       '01000000-0000-4000-8000-000000000001',
       '01000000-0000-4000-8000-000000000002',

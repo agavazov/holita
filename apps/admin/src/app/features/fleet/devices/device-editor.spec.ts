@@ -5,14 +5,14 @@ import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { DeviceEditor } from './device-editor';
 
-const storeA = '10000000-0000-4000-8000-000000000001';
-const storeB = '10000000-0000-4000-8000-000000000002';
+const branchA = '10000000-0000-4000-8000-000000000001';
+const branchB = '10000000-0000-4000-8000-000000000002';
 const deviceId = '20000000-0000-4000-8000-000000000001';
 const truckId = '30000000-0000-4000-8000-000000000001';
 const saved = {
   __typename: 'FleetDevice',
   id: deviceId,
-  storeId: storeA,
+  branchId: branchA,
   imei: '001234567890123',
   vehicleId: truckId,
   vehicle: { id: truckId, licensePlate: 'CA1234AB' },
@@ -48,9 +48,9 @@ describe('Device editor validation and captured writes', () => {
   afterEach(() => {
     http.verify({ ignoreCancelled: true });
   });
-  async function mount(id: string | null = null, storeId = storeA) {
+  async function mount(id: string | null = null, branchId = branchA) {
     const fixture = TestBed.createComponent(DeviceEditor);
-    fixture.componentRef.setInput('store', { id: storeId, name: 'Store' });
+    fixture.componentRef.setInput('branch', { id: branchId, name: 'Branch' });
     fixture.componentRef.setInput('language', 'en');
     fixture.componentRef.setInput('deviceId', id);
     await fixture.whenStable();
@@ -60,7 +60,7 @@ describe('Device editor validation and captured writes', () => {
     fixture.componentInstance.selectVehicle([truckId]);
     await fixture.whenStable();
     const lookup = http.expectOne((request) => operation(request, 'AdminDeviceVehicles'));
-    expect(lookup.request.headers.get('x-store-id')).toBe(storeA);
+    expect(lookup.request.headers.get('x-branch-id')).toBe(branchA);
     lookup.flush({ data: { fleetVehicles: { items: [saved.vehicle], total: 1 } } });
     await fixture.whenStable();
   }
@@ -99,7 +99,7 @@ describe('Device editor validation and captured writes', () => {
         {
           message: 'Duplicate IMEI',
           extensions: {
-            fieldErrors: [{ path: 'imei', message: 'IMEI is already used in this store.' }],
+            fieldErrors: [{ path: 'imei', message: 'IMEI is already used in this branch.' }],
           },
         },
       ],
@@ -108,7 +108,7 @@ describe('Device editor validation and captured writes', () => {
     await fixture.whenStable();
     expect(fixture.componentInstance.form.enabled).toBe(true);
     expect(document.activeElement).toBe(element(fixture).querySelector('#device-imei'));
-    expect(element(fixture).textContent).toContain('IMEI is already used in this store.');
+    expect(element(fixture).textContent).toContain('IMEI is already used in this branch.');
     expect(fixture.componentInstance.form.controls.vehicleId.value).toBe(truckId);
     fixture.destroy();
   });
@@ -151,9 +151,9 @@ describe('Device editor validation and captured writes', () => {
       const completion = old.componentInstance.save();
       const write = http.expectOne((request) => operation(request, 'AdminCreateDevice'));
       old.destroy();
-      const next = await mount(null, storeB);
+      const next = await mount(null, branchB);
       expect(write.cancelled).toBe(false);
-      expect(write.request.headers.get('x-store-id')).toBe(storeA);
+      expect(write.request.headers.get('x-branch-id')).toBe(branchA);
       write.flush(
         success
           ? { data: { createFleetDevice: saved } }

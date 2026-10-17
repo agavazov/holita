@@ -9,7 +9,7 @@ import { HttpLink } from 'apollo-angular/http';
 import { routes } from '../../app.routes';
 import { DemoSession } from '../../core/auth/demo-session';
 import { graphqlOptions } from '../../core/graphql/graphql-options';
-import { StoreWorkspace } from '../stores/store-workspace';
+import { BranchWorkspace } from '../branches/branch-workspace';
 import { ADMIN_RUNTIME_CONFIG } from '../../core/config/admin-config';
 
 function operation(request: HttpRequest<unknown>, name: string): boolean {
@@ -68,10 +68,10 @@ describe('authenticated global Karma workspace', () => {
     http.verify({ ignoreCancelled: true });
   });
 
-  it('loads truck details directly without a Store header or list request', async () => {
+  it('loads truck details directly without a Branch header or list request', async () => {
     const harness = await RouterTestingHarness.create('/en/karma-client/cars/41');
     const read = http.expectOne((request) => operation(request, 'AdminKarmaCar'));
-    expect(read.request.headers.has('x-store-id')).toBe(false);
+    expect(read.request.headers.has('x-branch-id')).toBe(false);
     expect(read.request.headers.get('authorization')).toBe('Bearer karma-session-a');
     expect(read.request.body).toMatchObject({ variables: { id: '41' } });
     read.flush({
@@ -84,7 +84,9 @@ describe('authenticated global Karma workspace', () => {
         },
       },
     });
-    http.expectOne((request) => operation(request, 'AdminStores')).flush({ data: { stores: [] } });
+    http
+      .expectOne((request) => operation(request, 'AdminBranches'))
+      .flush({ data: { branches: [] } });
     http.expectNone((request) => operation(request, 'AdminKarmaCars'));
     await harness.fixture.whenStable();
     expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toBe('Truck details');
@@ -96,7 +98,9 @@ describe('authenticated global Karma workspace', () => {
 
   it('retires detail reads across truck A → B → A, language changes and logout', async () => {
     const harness = await RouterTestingHarness.create('/en/karma-client/cars/41');
-    http.expectOne((request) => operation(request, 'AdminStores')).flush({ data: { stores: [] } });
+    http
+      .expectOne((request) => operation(request, 'AdminBranches'))
+      .flush({ data: { branches: [] } });
     let pending = http.expectOne((request) => operation(request, 'AdminKarmaCar'));
     for (const id of ['42', '41']) {
       await harness.navigateByUrl('/en/karma-client/cars/' + id);
@@ -108,7 +112,9 @@ describe('authenticated global Karma workspace', () => {
     expect(pending.cancelled).toBe(true);
     pending = http.expectOne((request) => operation(request, 'AdminKarmaCar'));
     expect(pending.request.headers.get('Accept-Language')).toBe('bg');
-    http.expectOne((request) => operation(request, 'AdminStores')).flush({ data: { stores: [] } });
+    http
+      .expectOne((request) => operation(request, 'AdminBranches'))
+      .flush({ data: { branches: [] } });
     TestBed.inject(DemoSession).logout();
     await harness.fixture.whenStable();
     expect(pending.cancelled).toBe(true);
@@ -120,7 +126,9 @@ describe('authenticated global Karma workspace', () => {
 
   it('shows not-found for missing records and skips requests for malformed route IDs', async () => {
     const harness = await RouterTestingHarness.create('/en/karma-client/cars/999');
-    http.expectOne((request) => operation(request, 'AdminStores')).flush({ data: { stores: [] } });
+    http
+      .expectOne((request) => operation(request, 'AdminBranches'))
+      .flush({ data: { branches: [] } });
     http
       .expectOne((request) => operation(request, 'AdminKarmaCar'))
       .flush({ data: { karmaCar: null } });
@@ -131,43 +139,45 @@ describe('authenticated global Karma workspace', () => {
     expect(harness.routeNativeElement?.textContent).toContain('Truck not found in Karma.');
   });
 
-  it('loads without waiting for Store discovery, with Fleet disabled and no Store header', async () => {
+  it('loads without waiting for Branch discovery, with Fleet disabled and no Branch header', async () => {
     const harness = await RouterTestingHarness.create('/en/karma-client/cars');
     const read = http.expectOne((request) => operation(request, 'AdminKarmaCars'));
-    expect(read.request.headers.has('x-store-id')).toBe(false);
+    expect(read.request.headers.has('x-branch-id')).toBe(false);
     expect(read.request.headers.get('authorization')).toBe('Bearer karma-session-a');
     read.flush(result);
-    http.expectOne((request) => operation(request, 'AdminStores')).flush({ data: { stores: [] } });
+    http
+      .expectOne((request) => operation(request, 'AdminBranches'))
+      .flush({ data: { branches: [] } });
     await harness.fixture.whenStable();
     expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toBe('Trucks');
     expect(harness.routeNativeElement?.querySelector('tbody')?.textContent).toContain(
       '000123456789012',
     );
-    expect(harness.routeNativeElement?.textContent).not.toContain('No stores available');
+    expect(harness.routeNativeElement?.textContent).not.toContain('No branches available');
   });
 
-  it('keeps the global list accessible when Store discovery fails', async () => {
+  it('keeps the global list accessible when Branch discovery fails', async () => {
     const harness = await RouterTestingHarness.create('/en/karma-client/cars');
     http
-      .expectOne((request) => operation(request, 'AdminStores'))
-      .flush({ errors: [{ message: 'Stores unavailable' }] });
+      .expectOne((request) => operation(request, 'AdminBranches'))
+      .flush({ errors: [{ message: 'Branches unavailable' }] });
     http.expectOne((request) => operation(request, 'AdminKarmaCars')).flush(result);
     await harness.fixture.whenStable();
     expect(harness.routeNativeElement?.textContent).toContain('KARMA TEST 41');
-    expect(harness.routeNativeElement?.textContent).not.toContain('Stores unavailable');
+    expect(harness.routeNativeElement?.textContent).not.toContain('Branches unavailable');
   });
 
-  it('keeps the same route/client on Store switching and retires reads on language changes', async () => {
+  it('keeps the same route/client on Branch switching and retires reads on language changes', async () => {
     const harness = await RouterTestingHarness.create('/en/karma-client/cars');
-    const store = '10000000-0000-4000-8000-000000000001';
+    const branch = '10000000-0000-4000-8000-000000000001';
     http
-      .expectOne((request) => operation(request, 'AdminStores'))
-      .flush({ data: { stores: [{ id: store, name: 'Store A' }] } });
+      .expectOne((request) => operation(request, 'AdminBranches'))
+      .flush({ data: { branches: [{ id: branch, name: 'Branch A' }] } });
     await harness.fixture.whenStable();
     const workspace: unknown = harness.routeDebugElement?.componentInstance;
-    if (!(workspace instanceof StoreWorkspace)) throw new Error('Missing StoreWorkspace');
+    if (!(workspace instanceof BranchWorkspace)) throw new Error('Missing BranchWorkspace');
     const old = http.expectOne((request) => operation(request, 'AdminKarmaCars'));
-    workspace.chooseStore(store);
+    workspace.chooseBranch(branch);
     await harness.fixture.whenStable();
     expect(TestBed.inject(Router).url).toBe('/en/karma-client/cars');
     expect(old.cancelled).toBe(false);
@@ -176,16 +186,20 @@ describe('authenticated global Karma workspace', () => {
     expect(old.cancelled).toBe(true);
     const next = http.expectOne((request) => operation(request, 'AdminKarmaCars'));
     expect(next.request.headers.get('Accept-Language')).toBe('bg');
-    expect(next.request.headers.has('x-store-id')).toBe(false);
+    expect(next.request.headers.has('x-branch-id')).toBe(false);
     next.flush(result);
-    http.expectOne((request) => operation(request, 'AdminStores')).flush({ data: { stores: [] } });
+    http
+      .expectOne((request) => operation(request, 'AdminBranches'))
+      .flush({ data: { branches: [] } });
     await harness.fixture.whenStable();
     expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toBe('Камиони');
   });
 
   it('retires a pending read and creates fresh clients on session A → B → A', async () => {
     const harness = await RouterTestingHarness.create('/en/karma-client/cars');
-    http.expectOne((request) => operation(request, 'AdminStores')).flush({ data: { stores: [] } });
+    http
+      .expectOne((request) => operation(request, 'AdminBranches'))
+      .flush({ data: { branches: [] } });
     const old = http.expectOne((request) => operation(request, 'AdminKarmaCars'));
     const session = TestBed.inject(DemoSession);
     for (const token of ['karma-session-b', 'karma-session-a']) {
@@ -198,8 +212,8 @@ describe('authenticated global Karma workspace', () => {
       const next = http.expectOne((request) => operation(request, 'AdminKarmaCars'));
       expect(next.request.headers.get('authorization')).toBe('Bearer ' + token);
       http
-        .expectOne((request) => operation(request, 'AdminStores'))
-        .flush({ data: { stores: [] } });
+        .expectOne((request) => operation(request, 'AdminBranches'))
+        .flush({ data: { branches: [] } });
       next.flush(result);
       await harness.fixture.whenStable();
     }
@@ -207,7 +221,9 @@ describe('authenticated global Karma workspace', () => {
 
   it('cancels pending reads on logout and issues no Karma requests while signed out', async () => {
     const harness = await RouterTestingHarness.create('/en/karma-client/cars');
-    http.expectOne((request) => operation(request, 'AdminStores')).flush({ data: { stores: [] } });
+    http
+      .expectOne((request) => operation(request, 'AdminBranches'))
+      .flush({ data: { branches: [] } });
     const pending = http.expectOne((request) => operation(request, 'AdminKarmaCars'));
     TestBed.inject(DemoSession).logout();
     await harness.fixture.whenStable();

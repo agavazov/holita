@@ -1,6 +1,6 @@
 fragment AdminVehicle on FleetVehicle {
   id
-  storeId
+  branchId
   licensePlate
   notes
   createdAt

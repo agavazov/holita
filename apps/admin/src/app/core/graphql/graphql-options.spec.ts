@@ -5,7 +5,7 @@ import { ApolloClient } from '@apollo/client/core';
 import { ServerError } from '@apollo/client/errors';
 import { HttpLink } from 'apollo-angular/http';
 import { appConfig } from '../../app.config';
-import { AdminStoresDocument } from '../../../generated/graphql/operations';
+import { AdminBranchesDocument } from '../../../generated/graphql/operations';
 import { graphqlOptions } from './graphql-options';
 import { requestError } from './request-error';
 
@@ -29,14 +29,14 @@ describe('GraphQL transport diagnostics', () => {
 
   it('retains independent request IDs for concurrent network and HTTP failures', async () => {
     const english = client.query({
-      query: AdminStoresDocument,
+      query: AdminBranchesDocument,
       context: { language: 'en', queryDeduplication: false },
     });
     const englishFailure = english.catch((error: unknown) => error);
     const englishRequest = http.expectOne('/graphql');
     const englishId = englishRequest.request.headers.get('x-request-id');
     const bulgarian = client.query({
-      query: AdminStoresDocument,
+      query: AdminBranchesDocument,
       context: { language: 'bg', queryDeduplication: false },
     });
     const bulgarianFailure = bulgarian.catch((error: unknown) => error);
@@ -53,7 +53,7 @@ describe('GraphQL transport diagnostics', () => {
   });
 
   it('uses the Gateway response request ID for an HTTP failure when supplied', async () => {
-    const failure = client.query({ query: AdminStoresDocument }).catch((error: unknown) => error);
+    const failure = client.query({ query: AdminBranchesDocument }).catch((error: unknown) => error);
     http.expectOne('/graphql').flush('Unavailable', {
       status: 503,
       statusText: 'Service Unavailable',
@@ -65,7 +65,9 @@ describe('GraphQL transport diagnostics', () => {
   it.each(['PARSING_ERROR', 'GRAPHQL_VALIDATION_FAILED'])(
     'retains the client request ID for a native Router HTTP 400 %s without a server ID',
     async (code) => {
-      const failure = client.query({ query: AdminStoresDocument }).catch((error: unknown) => error);
+      const failure = client
+        .query({ query: AdminBranchesDocument })
+        .catch((error: unknown) => error);
       const request = http.expectOne('/graphql');
       const requestId = request.request.headers.get('x-request-id');
       if (!requestId) throw new Error('Missing request diagnostics header.');
@@ -88,7 +90,7 @@ describe('GraphQL transport diagnostics', () => {
   );
 
   it('preserves GraphQL diagnostics instead of replacing the server message', async () => {
-    const failure = client.query({ query: AdminStoresDocument }).catch((error: unknown) => error);
+    const failure = client.query({ query: AdminBranchesDocument }).catch((error: unknown) => error);
     http.expectOne('/graphql').flush({
       errors: [{ message: 'Discovery unavailable', extensions: { requestId: 'graphql-id' } }],
     });
@@ -104,7 +106,7 @@ describe('GraphQL transport diagnostics', () => {
     http = TestBed.inject(HttpTestingController);
     client = new ApolloClient(graphqlOptions(TestBed.inject(HttpLink), '/graphql'));
     vi.useFakeTimers();
-    const failure = client.query({ query: AdminStoresDocument }).catch((error: unknown) => error);
+    const failure = client.query({ query: AdminBranchesDocument }).catch((error: unknown) => error);
     const request = http.expectOne('/graphql');
     const requestId = request.request.headers.get('x-request-id');
     if (!requestId) throw new Error('Missing request diagnostics header.');

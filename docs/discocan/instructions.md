@@ -5,21 +5,21 @@ and the relevant Fleet documents.
 
 - Keep fleet telemetry documentation under `docs/discocan/`. Vehicles/Devices and their current
   Angular workspace belong to this domain, independently of Ecommerce workflows.
-- Current telemetry Stores represent organizational branches and will later become Branches.
-  Use actual Store/storeId/x-store-id names for current contracts. Preserve Tenant/Store isolation
-  until an explicitly requested implementation changes those contracts.
+- A Branch represents a vehicle fleet in Discocan. Ecommerce uses the same Core Branch
+  model for an online shop. Use Branch/branchId/x-branch-id consistently and preserve
+  Tenant/Branch isolation.
 
 ## Fleet backend
 
 - The [Simple eData vendor catalog](erm-resources/simple-edata-catalog/README.md) is
-  shared manufacturer reference data scoped by catalog version, without Tenant/Store
+  shared manufacturer reference data scoped by catalog version, without Tenant/Branch
   columns. Its local offline importer has no GraphQL or device-command interface.
-  Vehicle/Device business data retains mandatory Tenant/Store isolation.
+  Vehicle/Device business data retains mandatory Tenant/Branch isolation.
 
 - Follow the actual [Vehicles resolver/service/repository](../../apps/fleet/src/vehicles/vehicles.resolver.ts) and its [SDL](../../apps/fleet/src/vehicles/vehicles.graphql). Use @Parent on a federation reference parameter when combining it with Nest parameter decorators; always resolve Vehicle/Device references through scoped service access.
-- Store access must always include the verified Tenant. Vehicle/Device persistence must always include the verified Tenant and active Store. Creation gets store ID from context and checks existence through core. Do not make a store existence network call for every business read/update/delete or move that blanket check into the gateway.
-- Store discovery itself belongs to the [Core Store foundation](../ecommerce/stores.md), which
-  Discocan currently consumes. Do not turn its future Branch distinction into online-store rules.
+- Branch access must always include the verified Tenant. Vehicle/Device persistence must always include the verified Tenant and active Branch. Creation gets branch ID from context and checks existence through core. Do not make a branch existence network call for every business read/update/delete or move that blanket check into the gateway.
+- Branch discovery belongs to the shared [Core Branch foundation](../ecommerce/branches.md).
+  Keep the domains' business workflows in their own documentation.
 
 ## Angular admin (apps/admin)
 
@@ -30,7 +30,7 @@ and the relevant Fleet documents.
 - Keep standalone Angular and Component → concrete feature service → Apollo with generated
   TypedDocumentNodes through the actual Gateway. Do not add generic CRUD, facades, repositories, duplicate API models or duplicate
   business screens. Business editors use typed Reactive Forms.
-- Each session/store/language workspace owns its client/cache and immutable transport scope. Recreate
+- Each session/branch/language workspace owns its client/cache and immutable transport scope. Recreate
   the feature boundary on navigation, dispose reads and let submitted writes settle against
   their captured client. Late results, invalidation and callbacks must not affect another workspace.
   Prove A → B → A and delayed reads/writes through the concrete Angular feature tests.
@@ -45,14 +45,14 @@ and the relevant Fleet documents.
 - Keep the shell independent of business data access, with explicit inputs/outputs and only
   implemented navigation. Preserve Bulgarian/English catalogs, keyboard/mobile behavior and
   light/dark themes, with focused tests and visual review at matching viewport sizes.
-- Angular provides Stores discovery and Fleet Vehicles/Devices CRUD with page-local sequential
+- Angular provides Branches discovery and Fleet Vehicles/Devices CRUD with page-local sequential
   deletion. Preserve assigned-Vehicle failures, partial results, failed-row retry and stopping
   unsent deletes on navigation; submitted writes retain their captured scope. Fleet startup
   availability gates navigation and direct routes without business requests. Standalone login selects
-  Tenant then Store and opens Vehicles. Do not add a Store list landing page; Fleet navigation
-  contains Vehicles/Devices, and the header retains Store switching; switching Stores preserves the active Vehicles/Devices section and resets queries.
+  Tenant then Branch and opens Vehicles. Do not add a Branch list landing page; Fleet navigation
+  contains Vehicles/Devices, and the header retains Branch switching; switching Branches preserves the active Vehicles/Devices section and resets queries.
   Add another feature only when explicitly requested.
-- Devices require a 15-digit string IMEI unique per Tenant/Store and a mandatory same-tenant/same-store Vehicle,
+- Devices require a 15-digit string IMEI unique per Tenant/Branch and a mandatory same-tenant/same-branch Vehicle,
   labeled Truck in the editor. Multiple Devices may share a Vehicle. Preserve leading zeros,
   composite foreign keys, protected Vehicle deletion and captured-client remote selection.
 
@@ -62,12 +62,12 @@ and the relevant Fleet documents.
   `karmaTimeZones`, `karmaVersion`, `karmaTrips`, `karmaEvents`, `karmaDrivingProfile`, `karmaUsers` and `karmaRoles` queries.
   It is an independent host process with no database or Fleet implementation imports.
 - Cars from the configured account are intentionally shared across every authenticated Tenant
-  and Store. Verify the signed session before upstream access; never require or use Store context
-  to filter the list, truck details, eData, location or references. This exception does not change Fleet Tenant/Store isolation.
+  and Branch. Verify the signed session before upstream access; never require or use Branch context
+  to filter the list, truck details, eData, location or references. This exception does not change Fleet Tenant/Branch isolation.
 - Keep Karma credentials/session IDs on the server, bound the complete request, renew a rejected
   upstream session at most once and sanitize external failures. Do not expose arbitrary upstream paths.
 - The admin section has its own `/bg/karma-client/cars` and `/en/karma-client/cars` routes.
-  Keep it usable independently of Fleet availability and Store discovery; retire its captured
+  Keep it usable independently of Fleet availability and Branch discovery; retire its captured
   session/language/truck client on logout, language changes, truck changes and navigation.
   Truck details use `/cars/:recordId` under the same language-prefixed section.
   eData uses `/cars/:recordId/edata`, optional paired UTC/parameter filters and 25/50/100

@@ -106,7 +106,7 @@ describe('Karma account transport and authorization', () => {
     expect(() => service.roles(context)).toThrow('Sign in');
     expect(upstream).not.toHaveBeenCalled();
   });
-  it('shares a single server-held login and reads fixed account paths without Store filters', async () => {
+  it('shares a single server-held login and reads fixed account paths without Branch filters', async () => {
     upstream
       .mockResolvedValueOnce(Response.json({ session_id: 'fixture-session' }))
       .mockResolvedValueOnce(Response.json([user()]))

@@ -39,7 +39,7 @@ describe('Fleet through the actual federation boundary', () => {
   async function query(
     source: string,
     variables: Record<string, unknown> = {},
-    storeId = discordia,
+    branchId = discordia,
     url = fixture.url,
     sessionToken = token,
   ) {
@@ -48,7 +48,7 @@ describe('Fleet through the actual federation boundary', () => {
       headers: {
         'content-type': 'application/json',
         authorization: `Bearer ${sessionToken}`,
-        'x-store-id': storeId,
+        'x-branch-id': branchId,
         'x-request-id': 'fleet-integration',
       },
       body: JSON.stringify({ query: source, variables }),
@@ -180,7 +180,7 @@ describe('Fleet through the actual federation boundary', () => {
       fixture.karma.setHistoryEmpty(false);
     }
   });
-  it('shares Karma cars across authenticated tenants and Stores, rejects anonymous access and renews the upstream session', async () => {
+  it('shares Karma cars across authenticated tenants and Branches, rejects anonymous access and renews the upstream session', async () => {
     const source = '{karmaCars{id carNumber deviceId projectId carYear}}';
     const first = await query(source);
     expect(first).toMatchObject({
@@ -260,11 +260,11 @@ describe('Fleet through the actual federation boundary', () => {
       data: { karmaCar: { id: '41' } },
     });
   });
-  it('reads Karma location and references across tenants/Stores with authorization and session renewal', async () => {
+  it('reads Karma location and references across tenants/Branches with authorization and session renewal', async () => {
     const source =
       '{karmaLocation(carId:"41"){carId deviceId messageId eventId latitude longitude spd extra} karmaProjects{id name} karmaTimeZones{id name} karmaVersion{version}}';
-    for (const store of ['', sandbox])
-      expect(await query(source, {}, store)).toMatchObject({
+    for (const branch of ['', sandbox])
+      expect(await query(source, {}, branch)).toMatchObject({
         data: {
           karmaLocation: {
             carId: '41',
@@ -392,18 +392,18 @@ describe('Fleet through the actual federation boundary', () => {
       errors: [{ extensions: { code: 'SERVICE_UNAVAILABLE' } }],
     });
   });
-  it('runs Vehicles CRUD through Gateway with Core store resolution and foreign-ID isolation', async () => {
+  it('runs Vehicles CRUD through Gateway with Core branch resolution and foreign-ID isolation', async () => {
     const created = await query(
-      'mutation($input:CreateFleetVehicleInput!){createFleetVehicle(input:$input){id storeId licensePlate notes store{id name}}}',
+      'mutation($input:CreateFleetVehicleInput!){createFleetVehicle(input:$input){id branchId licensePlate notes branch{id name}}}',
       { input: { licensePlate: ' CA1234AB ', notes: ' First\nSecond ' } },
     );
     expect(created).toMatchObject({
       data: {
         createFleetVehicle: {
-          storeId: discordia,
+          branchId: discordia,
           licensePlate: 'CA1234AB',
           notes: 'First\nSecond',
-          store: { id: discordia, name: 'Discordia' },
+          branch: { id: discordia, name: 'Discordia' },
         },
       },
     });
@@ -438,7 +438,7 @@ describe('Fleet through the actual federation boundary', () => {
     const vehicleId = record(record(record(createdTruck).data).createFleetVehicle).id;
     if (typeof vehicleId !== 'string') throw new Error('Missing truck ID');
     const created = await query(
-      'mutation($input:CreateFleetDeviceInput!){createFleetDevice(input:$input){id imei vehicle{licensePlate store{id}} store{id name}}}',
+      'mutation($input:CreateFleetDeviceInput!){createFleetDevice(input:$input){id imei vehicle{licensePlate branch{id}} branch{id name}}}',
       {
         input: { imei: '001234567890123', vehicleId },
       },
@@ -447,8 +447,8 @@ describe('Fleet through the actual federation boundary', () => {
       data: {
         createFleetDevice: {
           imei: '001234567890123',
-          vehicle: { licensePlate: 'DEVICE-TRUCK', store: { id: discordia } },
-          store: { id: discordia, name: 'Discordia' },
+          vehicle: { licensePlate: 'DEVICE-TRUCK', branch: { id: discordia } },
+          branch: { id: discordia, name: 'Discordia' },
         },
       },
     });
@@ -483,10 +483,10 @@ describe('Fleet through the actual federation boundary', () => {
       await query('mutation($id:ID!){deleteFleetVehicle(id:$id){id}}', { id: vehicleId }),
     ).toEqual({ data: { deleteFleetVehicle: { id: vehicleId } } });
   });
-  it('discovers stores without selecting a store and rejects missing business scope', async () => {
-    expect(await query('{stores{id name}}')).toEqual({
+  it('discovers branches without selecting a branch and rejects missing business scope', async () => {
+    expect(await query('{branches{id name}}')).toEqual({
       data: {
-        stores: [
+        branches: [
           { id: discordia, name: 'Discordia' },
           { id: sandbox, name: 'Sandbox' },
         ],
@@ -506,19 +506,19 @@ describe('Fleet through the actual federation boundary', () => {
       headers: {
         origin: 'http://127.0.0.1:11000',
         'access-control-request-method': 'POST',
-        'access-control-request-headers': 'content-type,x-store-id,x-request-id',
+        'access-control-request-headers': 'content-type,x-branch-id,x-request-id',
       },
       signal: AbortSignal.timeout(5000),
     });
     expect(response.status).toBe(200);
     expect(response.headers.get('access-control-allow-origin')).toBe('http://127.0.0.1:11000');
-    expect(response.headers.get('access-control-allow-headers')).toContain('x-store-id');
+    expect(response.headers.get('access-control-allow-headers')).toContain('x-branch-id');
     fixture.coreRequests.length = 0;
     fixture.fleetRequests.length = 0;
     const rejected = await fetch(fixture.url, {
       method: 'POST',
       headers: { 'content-type': 'application/json', baggage: `key=${'x'.repeat(20 * 1024)}` },
-      body: JSON.stringify({ query: '{ stores { id } }' }),
+      body: JSON.stringify({ query: '{ branches { id } }' }),
       signal: AbortSignal.timeout(5000),
     });
     await rejected.text();
@@ -546,7 +546,7 @@ describe('Fleet through the actual federation boundary', () => {
           fixture.fleetUrl,
         ),
       ).toHaveProperty('errors');
-      expect(await query('{stores{id}}')).toHaveProperty('data.stores');
+      expect(await query('{branches{id}}')).toHaveProperty('data.branches');
       expect((await fetch(new URL('/health', fixture.fleetUrl))).ok).toBe(true);
     } finally {
       await fixture.setFleetEnabled(true);
@@ -578,12 +578,12 @@ describe('Fleet through the actual federation boundary', () => {
       query('{fleetVehicles{total}}', {}, discordia),
       query('{fleetVehicles{total}}', {}, sandbox),
     ]);
-    expect(fixture.fleetRequests.map((request) => request.storeId).sort()).toEqual([
+    expect(fixture.fleetRequests.map((request) => request.branchId).sort()).toEqual([
       discordia,
       sandbox,
     ]);
   });
-  it('keeps scoped CRUD available without Core and fails creation and federated Store', async () => {
+  it('keeps scoped CRUD available without Core and fails creation and federated Branch', async () => {
     const created = await query(
       'mutation {createFleetVehicle(input:{licensePlate:"OFFLINE"}){id}}',
     );
@@ -606,7 +606,7 @@ describe('Fleet through the actual federation boundary', () => {
         await query('mutation {createFleetVehicle(input:{licensePlate:"FAIL"}){id}}'),
       ).toHaveProperty('errors');
       expect(
-        await query('query($id:ID!){fleetVehicle(id:$id){store{id name}}}', { id }),
+        await query('query($id:ID!){fleetVehicle(id:$id){branch{id name}}}', { id }),
       ).toHaveProperty('errors');
       expect(await query('mutation($id:ID!){deleteFleetVehicle(id:$id){id}}', { id })).toEqual({
         data: { deleteFleetVehicle: { id } },
@@ -631,8 +631,10 @@ describe('Fleet through the actual federation boundary', () => {
     );
     const otherToken = record(record(record(login).data).demoLogin).token;
     if (typeof otherToken !== 'string') throw new Error('Missing second tenant session');
-    expect(await query('{stores{id name}}', {}, discordia, fixture.url, otherToken)).toEqual({
-      data: { stores: [{ id: '10000000-0000-4000-8000-000000000003', name: 'Isolation store' }] },
+    expect(await query('{branches{id name}}', {}, discordia, fixture.url, otherToken)).toEqual({
+      data: {
+        branches: [{ id: '10000000-0000-4000-8000-000000000003', name: 'Isolation branch' }],
+      },
     });
     const created = await query(
       'mutation {createFleetVehicle(input:{licensePlate:"TENANT-PRIVATE"}){id}}',
@@ -649,7 +651,7 @@ describe('Fleet through the actual federation boundary', () => {
       });
     expect(
       await query(
-        'mutation {createFleetVehicle(input:{licensePlate:"WRONG-STORE"}){id}}',
+        'mutation {createFleetVehicle(input:{licensePlate:"WRONG-BRANCH"}){id}}',
         {},
         discordia,
         fixture.url,
@@ -684,7 +686,7 @@ describe('Fleet through the actual federation boundary', () => {
           method: 'POST',
           headers: {
             'content-type': 'application/json',
-            'x-store-id': discordia,
+            'x-branch-id': discordia,
             'x-tenant-id': '01000000-0000-4000-8000-000000000001',
             ...(authorization ? { authorization } : {}),
           },

@@ -1,8 +1,8 @@
 import { Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { print } from 'graphql';
 import {
-  StoreForFleetCreationDocument,
-  type StoreForFleetCreationQueryVariables,
+  BranchForFleetCreationDocument,
+  type BranchForFleetCreationQueryVariables,
 } from '../generated/graphql/core-operations.js';
 import type { RequestContext } from '../graphql/request-context.js';
 
@@ -15,17 +15,17 @@ export class CoreClient {
   private readonly logger = new Logger(CoreClient.name);
   private readonly url = process.env.CORE_GRAPHQL_URL ?? 'http://127.0.0.1:11011/graphql';
 
-  requireStore(storeId: string, context: RequestContext): Promise<void> {
-    const existing = context.storeChecks.get(storeId);
+  requireBranch(branchId: string, context: RequestContext): Promise<void> {
+    const existing = context.branchChecks.get(branchId);
     if (existing) return existing;
-    const check = this.lookupStore(storeId, context);
-    context.storeChecks.set(storeId, check);
+    const check = this.lookupBranch(branchId, context);
+    context.branchChecks.set(branchId, check);
     return check;
   }
 
-  private async lookupStore(storeId: string, context: RequestContext): Promise<void> {
+  private async lookupBranch(branchId: string, context: RequestContext): Promise<void> {
     const { requestId } = context;
-    const variables: StoreForFleetCreationQueryVariables = { id: storeId };
+    const variables: BranchForFleetCreationQueryVariables = { id: branchId };
     try {
       const response = await fetch(this.url, {
         method: 'POST',
@@ -34,7 +34,7 @@ export class CoreClient {
           'x-request-id': requestId,
           ...(context.authorization ? { authorization: context.authorization } : {}),
         },
-        body: JSON.stringify({ query: print(StoreForFleetCreationDocument), variables }),
+        body: JSON.stringify({ query: print(BranchForFleetCreationDocument), variables }),
         signal: AbortSignal.timeout(3000),
       });
       if (!response.ok) throw new Error('Core returned an HTTP error');
@@ -46,17 +46,17 @@ export class CoreClient {
       ) {
         throw new Error('Core returned an invalid GraphQL response');
       }
-      if (body.data.store === null) throw new NotFoundException('Store not found');
-      if (!isRecord(body.data.store) || body.data.store.id !== storeId)
-        throw new Error('Core returned an invalid store');
+      if (body.data.branch === null) throw new NotFoundException('Branch not found');
+      if (!isRecord(body.data.branch) || body.data.branch.id !== branchId)
+        throw new Error('Core returned an invalid branch');
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
       this.logger.warn({
-        message: 'Core store validation failed',
+        message: 'Core branch validation failed',
         requestId,
         error: error instanceof Error ? error.name : 'UnknownError',
       });
-      throw new ServiceUnavailableException('Store validation is unavailable; try again later');
+      throw new ServiceUnavailableException('Branch validation is unavailable; try again later');
     }
   }
 }

@@ -81,18 +81,20 @@ describe('Phase 2 global reads and view retirement', () => {
   afterEach(() => {
     http.verify({ ignoreCancelled: true });
   });
-  function stores() {
-    http.expectOne((request) => operation(request, 'AdminStores')).flush({ data: { stores: [] } });
+  function branches() {
+    http
+      .expectOne((request) => operation(request, 'AdminBranches'))
+      .flush({ data: { branches: [] } });
   }
   function read(name: string) {
     const pending = http.expectOne((request) => operation(request, name));
-    expect(pending.request.headers.has('x-store-id')).toBe(false);
+    expect(pending.request.headers.has('x-branch-id')).toBe(false);
     return pending;
   }
 
   it('renders all location fields, escaped extra and valid zero coordinates', async () => {
     const harness = await RouterTestingHarness.create('/en/karma-client/cars/41/location');
-    stores();
+    branches();
     read('AdminKarmaCar').flush({ data: { karmaCar: car } });
     await harness.fixture.whenStable();
     const pending = read('AdminKarmaLocation');
@@ -109,7 +111,7 @@ describe('Phase 2 global reads and view retirement', () => {
   });
   it('preserves null coordinates without a map link, rejects malformed routes and handles missing trucks', async () => {
     const harness = await RouterTestingHarness.create('/en/karma-client/cars/41/location');
-    stores();
+    branches();
     read('AdminKarmaCar').flush({ data: { karmaCar: car } });
     await harness.fixture.whenStable();
     read('AdminKarmaLocation').flush({
@@ -127,7 +129,7 @@ describe('Phase 2 global reads and view retirement', () => {
   });
   it('retires location reads on truck, language and session changes and logout', async () => {
     const harness = await RouterTestingHarness.create('/en/karma-client/cars/41/location');
-    stores();
+    branches();
     read('AdminKarmaCar').flush({ data: { karmaCar: car } });
     await harness.fixture.whenStable();
     let pending = read('AdminKarmaLocation');
@@ -138,7 +140,7 @@ describe('Phase 2 global reads and view retirement', () => {
     pending = read('AdminKarmaLocation');
     await harness.navigateByUrl('/bg/karma-client/cars/42/location');
     expect(pending.cancelled).toBe(true);
-    stores();
+    branches();
     read('AdminKarmaCar').flush({ data: { karmaCar: { ...car, id: '42' } } });
     await harness.fixture.whenStable();
     pending = read('AdminKarmaLocation');
@@ -150,7 +152,7 @@ describe('Phase 2 global reads and view retirement', () => {
     });
     await harness.fixture.whenStable();
     expect(pending.cancelled).toBe(true);
-    stores();
+    branches();
     pending = read('AdminKarmaCar');
     expect(pending.request.headers.get('authorization')).toBe('Bearer phase2-b');
     session.logout();
@@ -160,7 +162,7 @@ describe('Phase 2 global reads and view retirement', () => {
   });
   it('keeps truck details on lookup failure and resolves names and IDs after refresh', async () => {
     const harness = await RouterTestingHarness.create('/en/karma-client/cars/41');
-    stores();
+    branches();
     read('AdminKarmaCar').flush({ data: { karmaCar: car } });
     read('AdminKarmaReferences').flush({ errors: [{ message: 'Unavailable' }] });
     await harness.fixture.whenStable();
@@ -188,7 +190,7 @@ describe('Phase 2 global reads and view retirement', () => {
     const harness = await RouterTestingHarness.create(
       '/en/karma-client/time-zones?first=50&size=50&q=zone',
     );
-    stores();
+    branches();
     const pending = read('AdminKarmaTimeZones');
     pending.flush({
       data: {
@@ -209,7 +211,7 @@ describe('Phase 2 global reads and view retirement', () => {
     const version = read('AdminKarmaVersion');
     await harness.navigateByUrl('/bg/karma-client/api-info');
     expect(version.cancelled).toBe(true);
-    stores();
+    branches();
     const bg = read('AdminKarmaVersion');
     expect(bg.request.headers.get('Accept-Language')).toBe('bg');
     bg.flush({ data: { karmaVersion: { __typename: 'KarmaVersion', version: '2.26.1.1' } } });
@@ -218,7 +220,7 @@ describe('Phase 2 global reads and view retirement', () => {
   });
   it('submits reference search without a native form reload and resets the page offset', async () => {
     const harness = await RouterTestingHarness.create('/en/karma-client/projects?first=50');
-    stores();
+    branches();
     read('AdminKarmaProjects').flush(references);
     await harness.fixture.whenStable();
     const input = harness.routeNativeElement?.querySelector('input');
@@ -236,14 +238,14 @@ describe('Phase 2 global reads and view retirement', () => {
 
   it('cancels account reads across session A → B → A and logout', async () => {
     const harness = await RouterTestingHarness.create('/en/karma-client/projects');
-    stores();
+    branches();
     let pending = read('AdminKarmaProjects');
     const session = TestBed.inject(DemoSession);
     for (const token of ['phase2-b', 'phase2-a']) {
       session.start({ token, tenant: { id: '01000000-0000-4000-8000-000000000002', name: 'B' } });
       await harness.fixture.whenStable();
       expect(pending.cancelled).toBe(true);
-      stores();
+      branches();
       pending = read('AdminKarmaProjects');
       expect(pending.request.headers.get('authorization')).toBe('Bearer ' + token);
     }

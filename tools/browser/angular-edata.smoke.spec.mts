@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test';
 import { join } from 'node:path';
 import { workspaceRoot } from '../graphql/contracts.mjs';
-import { chooseStore, test } from './angular-fixture.mjs';
+import { chooseBranch, test } from './angular-fixture.mjs';
 
 test('browses all 600 messages with 50-row pages and restores pages on reload/back/language', async ({
   page,
@@ -40,7 +40,7 @@ test('browses all 600 messages with 50-row pages and restores pages on reload/ba
   await page.goBack();
   await expect(rows.first()).toContainText('3000000100');
   const before = headers.length;
-  await chooseStore(page, 'Sandbox');
+  await chooseBranch(page, 'Sandbox');
   expect(headers).toHaveLength(before);
   await page.getByRole('link', { name: 'Български', exact: true }).click();
   await expect(rows.first()).toContainText('3000000100');
@@ -49,7 +49,7 @@ test('browses all 600 messages with 50-row pages and restores pages on reload/ba
   expect(
     headers.every(
       (value) =>
-        !('x-store-id' in value) && value['authorization'] === `Bearer ${app.demoSession.token}`,
+        !('x-branch-id' in value) && value['authorization'] === `Bearer ${app.demoSession.token}`,
     ),
   ).toBe(true);
 });

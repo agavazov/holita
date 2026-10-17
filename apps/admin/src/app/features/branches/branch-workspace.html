@@ -6,30 +6,30 @@
   />
 } @else {
   <holita-admin-shell
-    [stores]="stores() ?? []"
-    [storeId]="selectedStoreId()"
+    [branches]="branches() ?? []"
+    [branchId]="selectedBranchId()"
     [language]="language()"
     [languageUrl]="otherLanguageUrl()"
     [loading]="loading()"
     [fleetEnabled]="fleetEnabled"
     [tenantName]="session.current()?.tenant?.name ?? null"
     (signOut)="logout()"
-    (storeSelected)="chooseStore($event)"
+    (branchSelected)="chooseBranch($event)"
   >
-    @if (!karmaActive() && (stores() === null || stores()?.length === 0 || error())) {
+    @if (!karmaActive() && (branches() === null || branches()?.length === 0 || error())) {
       <section class="card">
         @if (loading()) {
-          <p role="status">{{ text().loadingStores }}</p>
+          <p role="status">{{ text().loadingBranches }}</p>
         } @else if (error()) {
           <p-message severity="error">{{ failure() }}</p-message>
         } @else {
-          <p>{{ text().emptyStores }}</p>
+          <p>{{ text().emptyBranches }}</p>
         }
         <button
           pButton
           type="button"
           severity="secondary"
-          data-testid="refresh-stores"
+          data-testid="refresh-branches"
           [disabled]="loading()"
           (click)="refresh()"
         >
@@ -37,7 +37,7 @@
         </button>
       </section>
     }
-    @if (karmaActive() || storesAvailable()) {
+    @if (karmaActive() || branchesAvailable()) {
       <router-outlet />
     }
   </holita-admin-shell>

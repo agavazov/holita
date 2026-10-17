@@ -261,7 +261,7 @@ async function observeRequests(target: string) {
   let injectedResponse: { status: number; body: string } | undefined;
   const requests: {
     requestId: string | string[] | undefined;
-    storeId: string | string[] | undefined;
+    branchId: string | string[] | undefined;
     body: string;
   }[] = [];
   async function forward(req: IncomingMessage, res: ServerResponse) {
@@ -274,7 +274,7 @@ async function observeRequests(target: string) {
     const body = Buffer.concat(chunks).toString();
     requests.push({
       requestId: req.headers['x-request-id'],
-      storeId: req.headers['x-store-id'],
+      branchId: req.headers['x-branch-id'],
       body,
     });
     if (injectedResponse) {
@@ -283,7 +283,7 @@ async function observeRequests(target: string) {
       return;
     }
     const headers: Record<string, string> = { 'content-type': 'application/json' };
-    for (const key of ['x-request-id', 'x-store-id', 'authorization']) {
+    for (const key of ['x-request-id', 'x-branch-id', 'authorization']) {
       const value = req.headers[key];
       if (typeof value === 'string') headers[key] = value;
     }
@@ -361,11 +361,11 @@ export async function createFederationFixture(
         ['01000000-0000-4000-8000-000000000002', 'Isolation tenant'],
       );
       await tenantConnection.query(
-        `INSERT INTO ${schema}."Store" ("id", "tenantId", "name", "updatedAt") VALUES ($1, $2, $3, CURRENT_TIMESTAMP)`,
+        `INSERT INTO ${schema}."Branch" ("id", "tenantId", "name", "updatedAt") VALUES ($1, $2, $3, CURRENT_TIMESTAMP)`,
         [
           '10000000-0000-4000-8000-000000000003',
           '01000000-0000-4000-8000-000000000002',
-          'Isolation store',
+          'Isolation branch',
         ],
       );
     } finally {

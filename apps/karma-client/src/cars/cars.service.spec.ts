@@ -12,7 +12,7 @@ describe('shared Karma cars access', () => {
     expect(read).not.toHaveBeenCalled();
   });
 
-  it('reads truck details for different authenticated tenants without Store context', async () => {
+  it('reads truck details for different authenticated tenants without Branch context', async () => {
     const client = new KarmaClient();
     const read = jest.spyOn(client, 'getCar').mockResolvedValue(null);
     const service = new CarsService(client);
@@ -28,7 +28,7 @@ describe('shared Karma cars access', () => {
     );
     expect(read).not.toHaveBeenCalled();
   });
-  it('returns the same account list to different authenticated tenants without Store context', async () => {
+  it('returns the same account list to different authenticated tenants without Branch context', async () => {
     const client = new KarmaClient();
     const read = jest.spyOn(client, 'listCars').mockResolvedValue([]);
     const service = new CarsService(client);

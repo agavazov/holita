@@ -1,9 +1,9 @@
 import { expect } from '@playwright/test';
 import { join } from 'node:path';
 import { workspaceRoot } from '../graphql/contracts.mjs';
-import { chooseStore, test } from './angular-fixture.mjs';
+import { chooseBranch, test } from './angular-fixture.mjs';
 
-test('opens truck details from the list, preserves scope through Store/language changes and returns to the list', async ({
+test('opens truck details from the list, preserves scope through Branch/language changes and returns to the list', async ({
   page,
   app,
 }) => {
@@ -49,7 +49,7 @@ test('opens truck details from the list, preserves scope through Store/language 
     }
   }
   await page.setViewportSize({ width: 1280, height: 900 });
-  await chooseStore(page, 'Sandbox');
+  await chooseBranch(page, 'Sandbox');
   await expect(page).toHaveURL(`${app.url}/en/karma-client/cars/41`);
   expect(headers).toHaveLength(1);
   await page.reload();
@@ -62,7 +62,7 @@ test('opens truck details from the list, preserves scope through Store/language 
   expect(
     headers.every(
       (value) =>
-        !('x-store-id' in value) && value['authorization'] === `Bearer ${app.demoSession.token}`,
+        !('x-branch-id' in value) && value['authorization'] === `Bearer ${app.demoSession.token}`,
     ),
   ).toBe(true);
   await page.getByRole('link', { name: 'Към камионите', exact: true }).click();
@@ -90,7 +90,7 @@ test('handles detail refresh failures and missing/invalid trucks', async ({ page
   expect(app.karma.requests).toHaveLength(reads);
 });
 
-test('lists Karma trucks through Gateway, preserves the route on Store switching and supports reload/language', async ({
+test('lists Karma trucks through Gateway, preserves the route on Branch switching and supports reload/language', async ({
   page,
   app,
 }) => {
@@ -103,7 +103,7 @@ test('lists Karma trucks through Gateway, preserves the route on Store switching
   await expect(page.getByRole('heading', { name: 'Trucks', exact: true })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'KARMA TEST 41', exact: true })).toBeVisible();
   await expect(page.getByRole('cell', { name: '000123456789012', exact: true })).toBeVisible();
-  await chooseStore(page, 'Sandbox');
+  await chooseBranch(page, 'Sandbox');
   await expect(page).toHaveURL(`${app.url}/en/karma-client/cars`);
   expect(headers).toHaveLength(1);
   await page.getByRole('button', { name: 'Refresh', exact: true }).click();
@@ -118,7 +118,7 @@ test('lists Karma trucks through Gateway, preserves the route on Store switching
   expect(
     headers.every(
       (value) =>
-        !('x-store-id' in value) && value['authorization'] === `Bearer ${app.demoSession.token}`,
+        !('x-branch-id' in value) && value['authorization'] === `Bearer ${app.demoSession.token}`,
     ),
   ).toBe(true);
 });

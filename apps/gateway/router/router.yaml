@@ -35,7 +35,7 @@ headers:
         - propagate:
             named: authorization
         - propagate:
-            named: x-store-id
+            named: x-branch-id
         - propagate:
             named: x-request-id
 
@@ -44,5 +44,5 @@ cors:
     - origins:
         - '${env.ADMIN_ORIGIN:-http://127.0.0.1:11000}'
       methods: [GET, POST, OPTIONS]
-      allow_headers: [authorization, content-type, x-store-id, x-request-id]
+      allow_headers: [authorization, content-type, x-branch-id, x-request-id]
       expose_headers: [x-request-id]

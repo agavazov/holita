@@ -58,17 +58,19 @@ describe('Phase 4 complete account views and read retirement', () => {
   afterEach(() => {
     http.verify({ ignoreCancelled: true });
   });
-  function stores() {
-    http.expectOne((request) => operation(request, 'AdminStores')).flush({ data: { stores: [] } });
+  function branches() {
+    http
+      .expectOne((request) => operation(request, 'AdminBranches'))
+      .flush({ data: { branches: [] } });
   }
   function read(name: string) {
     const pending = http.expectOne((request) => operation(request, name));
-    expect(pending.request.headers.has('x-store-id')).toBe(false);
+    expect(pending.request.headers.has('x-branch-id')).toBe(false);
     return pending;
   }
   it('shows eleven escaped source fields and preserves zero, null and original memberships', async () => {
     const harness = await RouterTestingHarness.create('/en/karma-client/users');
-    stores();
+    branches();
     read('AdminKarmaUsers').flush({ data: { karmaUsers: [user] } });
     await harness.fixture.whenStable();
     harness.detectChanges();
@@ -95,7 +97,7 @@ describe('Phase 4 complete account views and read retirement', () => {
   });
   it('restores URL paging, searches all fields and retains rows on failed refresh', async () => {
     const harness = await RouterTestingHarness.create('/en/karma-client/users?size=25&first=50');
-    stores();
+    branches();
     read('AdminKarmaUsers').flush({
       data: {
         karmaUsers: Array.from({ length: 120 }, (_, i) => ({
@@ -127,7 +129,7 @@ describe('Phase 4 complete account views and read retirement', () => {
   });
   it('retires pending account views on navigation and uses fresh clients on language/session changes', async () => {
     const harness = await RouterTestingHarness.create('/en/karma-client/users');
-    stores();
+    branches();
     const retired = read('AdminKarmaUsers');
     await harness.navigateByUrl('/en/karma-client/roles');
     expect(retired.cancelled).toBe(true);
@@ -139,7 +141,7 @@ describe('Phase 4 complete account views and read retirement', () => {
     );
     expect(harness.routeNativeElement?.querySelector('tbody script')).toBeNull();
     await harness.navigateByUrl('/bg/karma-client/roles');
-    stores();
+    branches();
     const bg = read('AdminKarmaRoles');
     expect(bg.request.headers.get('accept-language')).toBe('bg');
     TestBed.inject(DemoSession).start({
@@ -149,7 +151,7 @@ describe('Phase 4 complete account views and read retirement', () => {
     harness.detectChanges();
     await harness.fixture.whenStable();
     expect(bg.cancelled).toBe(true);
-    stores();
+    branches();
     const fresh = read('AdminKarmaRoles');
     expect(fresh.request.headers.get('authorization')).toBe('Bearer phase4-b');
     fresh.flush({ data: { karmaRoles: [] } });
@@ -159,7 +161,7 @@ describe('Phase 4 complete account views and read retirement', () => {
   });
   it('handles empty users and prevents in-flight reads surviving logout', async () => {
     const harness = await RouterTestingHarness.create('/en/karma-client/users');
-    stores();
+    branches();
     read('AdminKarmaUsers').flush({ data: { karmaUsers: [] } });
     await harness.fixture.whenStable();
     harness.detectChanges();

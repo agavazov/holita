@@ -7,11 +7,11 @@ import { ApolloClient } from '@apollo/client/core';
 import { DevicesPage } from './devices-page';
 import type { AdminDeviceFragment } from '../../../../generated/graphql/operations';
 
-const storeA = '10000000-0000-4000-8000-000000000001';
-const storeB = '10000000-0000-4000-8000-000000000002';
+const branchA = '10000000-0000-4000-8000-000000000001';
+const branchB = '10000000-0000-4000-8000-000000000002';
 const deviceA: AdminDeviceFragment = {
   id: '20000000-0000-4000-8000-000000000001',
-  storeId: storeA,
+  branchId: branchA,
   imei: '012345678901234',
   vehicleId: '30000000-0000-4000-8000-000000000001',
   vehicle: { id: '30000000-0000-4000-8000-000000000001', licensePlate: 'CA1234AB' },
@@ -20,7 +20,7 @@ const deviceA: AdminDeviceFragment = {
 };
 const deviceB: AdminDeviceFragment = {
   id: '20000000-0000-4000-8000-000000000002',
-  storeId: storeB,
+  branchId: branchB,
   imei: '123456789012345',
   vehicleId: '30000000-0000-4000-8000-000000000001',
   vehicle: { id: '30000000-0000-4000-8000-000000000001', licensePlate: 'CA1234AB' },
@@ -28,11 +28,11 @@ const deviceB: AdminDeviceFragment = {
   updatedAt: '2026-01-01T00:00:00.000Z',
 };
 
-function operation(request: HttpRequest<unknown>, name: string, storeId: string): boolean {
+function operation(request: HttpRequest<unknown>, name: string, branchId: string): boolean {
   const body: unknown = request.body;
   return (
     request.url === '/graphql' &&
-    request.headers.get('x-store-id') === storeId &&
+    request.headers.get('x-branch-id') === branchId &&
     typeof body === 'object' &&
     body !== null &&
     'operationName' in body &&
@@ -77,11 +77,11 @@ describe('Devices Apollo scope', () => {
     vi.restoreAllMocks();
   });
 
-  async function mount(storeId: string) {
+  async function mount(branchId: string) {
     const fixture = TestBed.createComponent(DevicesPage);
-    fixture.componentRef.setInput('store', {
-      id: storeId,
-      name: storeId === storeA ? 'Discordia' : 'Sandbox',
+    fixture.componentRef.setInput('branch', {
+      id: branchId,
+      name: branchId === branchA ? 'Discordia' : 'Sandbox',
     });
     fixture.componentRef.setInput('language', 'en');
     await fixture.whenStable();
@@ -89,10 +89,10 @@ describe('Devices Apollo scope', () => {
   }
 
   it('separates concurrent identical list queries, entity caches and request headers', async () => {
-    const a = await mount(storeA);
-    const b = await mount(storeB);
-    const readA = http.expectOne((request) => operation(request, 'AdminDevices', storeA));
-    const readB = http.expectOne((request) => operation(request, 'AdminDevices', storeB));
+    const a = await mount(branchA);
+    const b = await mount(branchB);
+    const readA = http.expectOne((request) => operation(request, 'AdminDevices', branchA));
+    const readB = http.expectOne((request) => operation(request, 'AdminDevices', branchB));
     expect(readA.request.headers.get('x-request-id')).not.toBe(
       readB.request.headers.get('x-request-id'),
     );
@@ -101,30 +101,30 @@ describe('Devices Apollo scope', () => {
     readA.flush(devicePage(deviceA));
     await a.whenStable();
     await b.whenStable();
-    expect(a.componentInstance.page()?.items[0]?.storeId).toBe(storeA);
-    expect(b.componentInstance.page()?.items[0]?.storeId).toBe(storeB);
+    expect(a.componentInstance.page()?.items[0]?.branchId).toBe(branchA);
+    expect(b.componentInstance.page()?.items[0]?.branchId).toBe(branchB);
     a.destroy();
     b.destroy();
   });
 
   it('keeps a submitted mutation alive after A is destroyed and never invalidates B or a new A', async () => {
-    const a = await mount(storeA);
+    const a = await mount(branchA);
     http
-      .expectOne((request) => operation(request, 'AdminDevices', storeA))
+      .expectOne((request) => operation(request, 'AdminDevices', branchA))
       .flush(devicePage(deviceA));
     await a.whenStable();
     const oldApi = a.componentInstance.api;
     const mutation = oldApi.update({ id: deviceA.id, input: { imei: 'Saved in old A' } });
-    const write = http.expectOne((request) => operation(request, 'AdminUpdateDevice', storeA));
+    const write = http.expectOne((request) => operation(request, 'AdminUpdateDevice', branchA));
     a.destroy();
-    const b = await mount(storeB);
+    const b = await mount(branchB);
     http
-      .expectOne((request) => operation(request, 'AdminDevices', storeB))
+      .expectOne((request) => operation(request, 'AdminDevices', branchB))
       .flush(devicePage(deviceB));
     await b.whenStable();
-    const newA = await mount(storeA);
+    const newA = await mount(branchA);
     http
-      .expectOne((request) => operation(request, 'AdminDevices', storeA))
+      .expectOne((request) => operation(request, 'AdminDevices', branchA))
       .flush(devicePage(deviceA));
     await newA.whenStable();
     expect(write.cancelled).toBe(false);
@@ -137,7 +137,7 @@ describe('Devices Apollo scope', () => {
         },
       },
     });
-    expect((await mutation).storeId).toBe(storeA);
+    expect((await mutation).branchId).toBe(branchA);
     expect(b.componentInstance.page()?.items[0]?.imei).toBe(deviceB.imei);
     expect(newA.componentInstance.page()?.items[0]?.imei).toBe(deviceA.imei);
     http.expectNone('/graphql');
@@ -148,11 +148,11 @@ describe('Devices Apollo scope', () => {
     newA.destroy();
   });
 
-  it('releases a retired client after a failed mutation without changing the new store', async () => {
+  it('releases a retired client after a failed mutation without changing the new branch', async () => {
     const stop = vi.spyOn(ApolloClient.prototype, 'stop');
-    const a = await mount(storeA);
+    const a = await mount(branchA);
     http
-      .expectOne((request) => operation(request, 'AdminDevices', storeA))
+      .expectOne((request) => operation(request, 'AdminDevices', branchA))
       .flush(devicePage(deviceA));
     await a.whenStable();
     const mutation = a.componentInstance.api.update({
@@ -160,12 +160,12 @@ describe('Devices Apollo scope', () => {
       input: { imei: '' },
     });
     const rejection = expect(mutation).rejects.toThrow('Invalid license plate');
-    const write = http.expectOne((request) => operation(request, 'AdminUpdateDevice', storeA));
+    const write = http.expectOne((request) => operation(request, 'AdminUpdateDevice', branchA));
     a.destroy();
     expect(stop).not.toHaveBeenCalled();
-    const b = await mount(storeB);
+    const b = await mount(branchB);
     http
-      .expectOne((request) => operation(request, 'AdminDevices', storeB))
+      .expectOne((request) => operation(request, 'AdminDevices', branchB))
       .flush(devicePage(deviceB));
     await b.whenStable();
     write.flush({
@@ -179,15 +179,15 @@ describe('Devices Apollo scope', () => {
     await rejection;
     expect(stop).toHaveBeenCalledTimes(1);
     expect(b.componentInstance.error()).toBeNull();
-    expect(b.componentInstance.page()?.items[0]?.storeId).toBe(storeB);
+    expect(b.componentInstance.page()?.items[0]?.branchId).toBe(branchB);
     http.expectNone('/graphql');
     b.destroy();
   });
 
   it('retains loaded rows on a GraphQL refresh error and recovers with a new request ID', async () => {
-    const a = await mount(storeA);
+    const a = await mount(branchA);
     http
-      .expectOne((request) => operation(request, 'AdminDevices', storeA))
+      .expectOne((request) => operation(request, 'AdminDevices', branchA))
       .flush(devicePage(deviceA));
     await a.whenStable();
     a.componentInstance.refresh();
@@ -218,7 +218,7 @@ describe('Devices Apollo scope', () => {
 
   it('stops a retired client only after both submitted writes settle', async () => {
     const stop = vi.spyOn(ApolloClient.prototype, 'stop');
-    const a = await mount(storeA);
+    const a = await mount(branchA);
     http.expectOne('/graphql').flush(devicePage(deviceA));
     await a.whenStable();
     const api = a.componentInstance.api;
@@ -242,7 +242,7 @@ describe('Devices Apollo scope', () => {
   });
 
   it('renders an initial error and retry followed by the empty Table state', async () => {
-    const a = await mount(storeA);
+    const a = await mount(branchA);
     const element = pageElement(a);
     expect(element.querySelector('[role="status"]')?.textContent).toContain('Loading devices');
     const read = http.expectOne('/graphql');
@@ -273,9 +273,9 @@ describe('Devices Apollo scope', () => {
     expect(element.querySelector('th[psortablecolumn="imei"]')?.textContent.trim()).toBe('IMEI');
     a.destroy();
   });
-  it('captures tenant sessions for delayed writes and creates fresh clients for tenant A → B → A at the same store', async () => {
+  it('captures tenant sessions for delayed writes and creates fresh clients for tenant A → B → A at the same branch', async () => {
     const session = TestBed.inject(DemoSession);
-    const a = await mount(storeA);
+    const a = await mount(branchA);
     const initial = http.expectOne('/graphql');
     expect(initial.request.headers.get('authorization')).toBe('Bearer test-demo-token');
     initial.flush(devicePage(deviceA));
@@ -290,7 +290,7 @@ describe('Devices Apollo scope', () => {
       token: 'tenant-b-token',
       tenant: { id: '01000000-0000-4000-8000-000000000002', name: 'Other tenant' },
     });
-    const b = await mount(storeA);
+    const b = await mount(branchA);
     const readB = http.expectOne('/graphql');
     expect(readB.request.headers.get('authorization')).toBe('Bearer tenant-b-token');
     expect(write.request.headers.get('authorization')).toBe('Bearer test-demo-token');
@@ -314,7 +314,7 @@ describe('Devices Apollo scope', () => {
       token: 'fresh-tenant-a-token',
       tenant: { id: '01000000-0000-4000-8000-000000000001', name: 'RentalSofia' },
     });
-    const freshA = await mount(storeA);
+    const freshA = await mount(branchA);
     const readA = http.expectOne('/graphql');
     expect(readA.request.headers.get('authorization')).toBe('Bearer fresh-tenant-a-token');
     expect(freshA.componentInstance.page()).toBeNull();

@@ -19,7 +19,7 @@ import {
   optionalText,
 } from '../validation.js';
 import { VehiclesRepository } from './vehicles.repository.js';
-export type VehicleResult = Omit<FleetVehicle, 'store'>;
+export type VehicleResult = Omit<FleetVehicle, 'branch'>;
 @Injectable()
 export class VehiclesService {
   constructor(
@@ -31,7 +31,7 @@ export class VehiclesService {
     args: QueryFleetVehiclesArgs,
   ): Promise<Omit<FleetVehiclePage, 'items'> & { items: VehicleResult[] }> {
     const tenantId = requireTenant(context);
-    const storeId = uuid(context.storeId, 'x-store-id');
+    const branchId = uuid(context.branchId, 'x-branch-id');
     const { offset, limit } = pagination(args);
     const field: unknown = args.sort?.field ?? 'CREATED_AT';
     const direction: unknown = args.sort?.direction ?? 'DESC';
@@ -41,7 +41,7 @@ export class VehiclesService {
       invalid('sort.direction', 'Choose ASC or DESC.');
     return this.vehicles.list(
       tenantId,
-      storeId,
+      branchId,
       offset,
       limit,
       {
@@ -54,7 +54,7 @@ export class VehiclesService {
   async find(context: RequestContext, id: string): Promise<VehicleResult> {
     const row = await this.vehicles.find(
       requireTenant(context),
-      uuid(context.storeId, 'x-store-id'),
+      uuid(context.branchId, 'x-branch-id'),
       uuid(id, 'id'),
     );
     if (!row) throw new NotFoundException('Vehicle not found');
@@ -62,14 +62,14 @@ export class VehiclesService {
   }
   async create(context: RequestContext, input: CreateFleetVehicleInput): Promise<VehicleResult> {
     const tenantId = requireTenant(context);
-    const storeId = uuid(context.storeId, 'x-store-id');
+    const branchId = uuid(context.branchId, 'x-branch-id');
     const data: CreateFleetVehicleInput = {
       licensePlate: text(input.licensePlate, 'licensePlate', 32),
       notes: optionalText(input.notes, 'notes', 2000),
     };
-    await this.core.requireStore(storeId, context);
+    await this.core.requireBranch(branchId, context);
     try {
-      return await this.vehicles.create(tenantId, storeId, data);
+      return await this.vehicles.create(tenantId, branchId, data);
     } catch (error) {
       persistenceError(error, 'Vehicle');
     }
@@ -80,7 +80,7 @@ export class VehiclesService {
     input: UpdateFleetVehicleInput,
   ): Promise<VehicleResult> {
     const tenantId = requireTenant(context);
-    const storeId = uuid(context.storeId, 'x-store-id'),
+    const branchId = uuid(context.branchId, 'x-branch-id'),
       recordId = uuid(id, 'id');
     const data: Partial<CreateFleetVehicleInput> = {};
     if (input.licensePlate !== undefined)
@@ -89,17 +89,17 @@ export class VehiclesService {
     if (!Object.keys(data).length)
       throw new BadRequestException('Provide at least one vehicle field to update');
     try {
-      return await this.vehicles.update(tenantId, storeId, recordId, data);
+      return await this.vehicles.update(tenantId, branchId, recordId, data);
     } catch (error) {
       persistenceError(error, 'Vehicle');
     }
   }
   async delete(context: RequestContext, id: string): Promise<VehicleResult> {
     const tenantId = requireTenant(context);
-    const storeId = uuid(context.storeId, 'x-store-id'),
+    const branchId = uuid(context.branchId, 'x-branch-id'),
       recordId = uuid(id, 'id');
     try {
-      return await this.vehicles.delete(tenantId, storeId, recordId);
+      return await this.vehicles.delete(tenantId, branchId, recordId);
     } catch (error) {
       persistenceError(error, 'Vehicle');
     }

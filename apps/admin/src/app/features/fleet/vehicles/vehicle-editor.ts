@@ -19,7 +19,7 @@ import { InputText } from 'primeng/inputtext';
 import { Textarea } from 'primeng/textarea';
 import { Message } from 'primeng/message';
 import type {
-  AdminStoresQuery,
+  AdminBranchesQuery,
   AdminVehicleFragment,
   CreateFleetVehicleInput,
 } from '../../../../generated/graphql/operations';
@@ -50,7 +50,7 @@ import {
   host: { '(window:beforeunload)': 'beforeUnload($event)' },
 })
 export class VehicleEditor implements OnInit {
-  readonly store = input.required<AdminStoresQuery['stores'][number]>();
+  readonly branch = input.required<AdminBranchesQuery['branches'][number]>();
   readonly language = input.required<Language>();
   readonly vehicleId = input<string | null>(null);
   readonly text = computed(() => messages[this.language()]);
@@ -81,10 +81,10 @@ export class VehicleEditor implements OnInit {
   });
   readonly failure = computed(() => requestError(this.error(), this.text().networkError));
   readonly serverErrors = computed(() => vehicleFieldErrors(this.writeError()));
-  readonly listLink = computed(() => ['/', this.language(), this.store().id, 'fleet', 'vehicles']);
+  readonly listLink = computed(() => ['/', this.language(), this.branch().id, 'fleet', 'vehicles']);
 
   ngOnInit(): void {
-    this.api.initialize(this.store().id, this.language());
+    this.api.initialize(this.branch().id, this.language());
     this.form.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       if (!this.pending()) this.writeError.set(null);
     });

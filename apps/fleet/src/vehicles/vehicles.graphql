@@ -2,14 +2,14 @@ extend schema @link(url: "https://specs.apollo.dev/federation/v2.3", import: ["@
 
 scalar DateTime
 
-type Store @key(fields: "id", resolvable: false) {
+type Branch @key(fields: "id", resolvable: false) {
   id: ID!
 }
 
 type FleetVehicle @key(fields: "id") {
   id: ID!
-  storeId: ID!
-  store: Store!
+  branchId: ID!
+  branch: Branch!
   licensePlate: String!
   notes: String
   createdAt: DateTime!

@@ -10,13 +10,13 @@ describe('Vehicles validation and scope', () => {
   const list = jest.fn<VehiclesRepository['list']>();
   const create = jest.fn<VehiclesRepository['create']>();
   const update = jest.fn<VehiclesRepository['update']>();
-  const requireStore = jest.fn<CoreClient['requireStore']>();
+  const requireBranch = jest.fn<CoreClient['requireBranch']>();
   const context = {
     requestId: randomUUID(),
-    storeId: randomUUID(),
     tenantId: '01000000-0000-4000-8000-000000000001',
+    branchId: randomUUID(),
     authorization: undefined,
-    storeChecks: new Map(),
+    branchChecks: new Map(),
   };
   let service: VehiclesService;
   beforeEach(async () => {
@@ -25,7 +25,7 @@ describe('Vehicles validation and scope', () => {
       providers: [
         VehiclesService,
         { provide: VehiclesRepository, useValue: { list, create, update } },
-        { provide: CoreClient, useValue: { requireStore } },
+        { provide: CoreClient, useValue: { requireBranch } },
       ],
     }).compile();
     service = module.get(VehiclesService);
@@ -37,7 +37,7 @@ describe('Vehicles validation and scope', () => {
     });
     expect(list).toHaveBeenLastCalledWith(
       context.tenantId,
-      context.storeId,
+      context.branchId,
       0,
       20,
       { search: 'CA', ids: undefined },
@@ -46,36 +46,36 @@ describe('Vehicles validation and scope', () => {
     await service.list(context, {});
     expect(list).toHaveBeenLastCalledWith(
       context.tenantId,
-      context.storeId,
+      context.branchId,
       0,
       20,
       { search: null, ids: undefined },
       { field: 'CREATED_AT', direction: 'DESC' },
     );
-    expect(requireStore).not.toHaveBeenCalled();
+    expect(requireBranch).not.toHaveBeenCalled();
   });
-  it('checks the store only for creation, trims fields and clears notes on update', async () => {
+  it('checks the branch only for creation, trims fields and clears notes on update', async () => {
     await service.create(context, {
       licensePlate: ' CA1234AB ',
       notes: ' First line\nSecond line ',
     });
-    expect(requireStore).toHaveBeenCalledWith(context.storeId, context);
-    expect(create).toHaveBeenCalledWith(context.tenantId, context.storeId, {
+    expect(requireBranch).toHaveBeenCalledWith(context.branchId, context);
+    expect(create).toHaveBeenCalledWith(context.tenantId, context.branchId, {
       licensePlate: 'CA1234AB',
       notes: 'First line\nSecond line',
     });
-    requireStore.mockClear();
+    requireBranch.mockClear();
     const id = randomUUID();
     await service.update(context, id, { notes: null });
-    expect(update).toHaveBeenCalledWith(context.tenantId, context.storeId, id, { notes: null });
-    expect(requireStore).not.toHaveBeenCalled();
+    expect(update).toHaveBeenCalledWith(context.tenantId, context.branchId, id, { notes: null });
+    expect(requireBranch).not.toHaveBeenCalled();
   });
   it.each(['', ' ', 'A'.repeat(33), 'A\u0000'])(
     'rejects invalid plates without core calls or writes: %s',
     async (licensePlate) => {
       await expect(service.create(context, { licensePlate })).rejects.toThrow(BadRequestException);
       expect(create).not.toHaveBeenCalled();
-      expect(requireStore).not.toHaveBeenCalled();
+      expect(requireBranch).not.toHaveBeenCalled();
     },
   );
   it('rejects oversized notes and empty updates', async () => {
@@ -87,7 +87,7 @@ describe('Vehicles validation and scope', () => {
     expect(update).not.toHaveBeenCalled();
   });
   it('rejects invalid context and paging before persistence', () => {
-    expect(() => service.list({ ...context, storeId: 'bad' }, {})).toThrow(BadRequestException);
+    expect(() => service.list({ ...context, branchId: 'bad' }, {})).toThrow(BadRequestException);
     for (const args of [{ offset: -1 }, { limit: 101 }])
       expect(() => service.list(context, args)).toThrow(BadRequestException);
     expect(list).not.toHaveBeenCalled();

@@ -1,7 +1,7 @@
 # Simple eData Monitor versioned catalog
 
-Fleet owns a shared, versioned vendor reference catalog, independent of Tenant/Store.
-Vehicle/Device records retain their existing Tenant/Store isolation. The catalog has
+Fleet owns a shared, versioned vendor reference catalog, independent of Tenant/Branch.
+Vehicle/Device records retain their existing Tenant/Branch isolation. The catalog has
 no GraphQL endpoint or admin screen and does not generate or send device commands.
 [v9.56](v9.56/README.md) is the initial extracted reference.
 

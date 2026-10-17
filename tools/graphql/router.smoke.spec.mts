@@ -76,24 +76,24 @@ describe('Apollo Router with the local supergraph and real subgraphs', () => {
     return value;
   }
 
-  it('serves public tenants and signed Store discovery without a Store header', async () => {
+  it('serves public tenants and signed Branch discovery without a Branch header', async () => {
     const tenants = await query('{tenants{id name}}');
     expect(record(tenants.data).tenants).toEqual(
       expect.arrayContaining([expect.objectContaining({ id: tenant })]),
     );
-    const headers = { authorization: `Bearer ${token}`, 'x-request-id': 'router-stores' };
-    const stores = await query('{stores{id name}}', {}, headers);
-    expect(record(stores.data).stores).toEqual([
+    const headers = { authorization: `Bearer ${token}`, 'x-request-id': 'router-branches' };
+    const branches = await query('{branches{id name}}', {}, headers);
+    expect(record(branches.data).branches).toEqual([
       { id: discordia, name: 'Discordia' },
       { id: sandbox, name: 'Sandbox' },
     ]);
-    expect((await query('{stores{id}}')).errors).toBeDefined();
+    expect((await query('{branches{id}}')).errors).toBeDefined();
   });
 
-  it('resolves Vehicle Store names through Core and forwards scope and request IDs to both subgraphs', async () => {
+  it('resolves Vehicle Branch names through Core and forwards scope and request IDs to both subgraphs', async () => {
     const headers = {
       authorization: `Bearer ${token}`,
-      'x-store-id': discordia,
+      'x-branch-id': discordia,
       'x-request-id': 'router-federation',
     };
     const created = await query(
@@ -106,14 +106,14 @@ describe('Apollo Router with the local supergraph and real subgraphs', () => {
     if (typeof id !== 'string') throw new Error('Missing created Vehicle');
     const coreBefore = fixture.coreRequests.length;
     const fleetBefore = fixture.fleetRequests.length;
-    const source = 'query($id:ID!){fleetVehicle(id:$id){id licensePlate store{id name}}}';
+    const source = 'query($id:ID!){fleetVehicle(id:$id){id licensePlate branch{id name}}}';
     const result = await query(source, { id }, headers);
     expect(result).toEqual({
       data: {
         fleetVehicle: {
           id,
           licensePlate: 'ROUTER TEST',
-          store: { id: discordia, name: 'Discordia' },
+          branch: { id: discordia, name: 'Discordia' },
         },
       },
     });
@@ -123,15 +123,15 @@ describe('Apollo Router with the local supergraph and real subgraphs', () => {
     ]) {
       expect(requests.length).toBeGreaterThan(0);
       for (const request of requests) {
-        expect(request).toMatchObject({ requestId: 'router-federation', storeId: discordia });
+        expect(request).toMatchObject({ requestId: 'router-federation', branchId: discordia });
       }
     }
     expect(
       fixture.coreRequests.slice(coreBefore).some((request) => request.body.includes('_entities')),
     ).toBe(true);
     for (const invalidHeaders of [
-      { ...headers, 'x-store-id': sandbox },
-      { ...headers, 'x-store-id': '' },
+      { ...headers, 'x-branch-id': sandbox },
+      { ...headers, 'x-branch-id': '' },
       { ...headers, authorization: 'Bearer invalid' },
       { ...headers, authorization: `Bearer ${await login(otherTenant)}` },
     ]) {
@@ -141,7 +141,7 @@ describe('Apollo Router with the local supergraph and real subgraphs', () => {
     }
   });
 
-  it('routes Karma reads for signed tenants independently of Store and blocks anonymous upstream access', async () => {
+  it('routes Karma reads for signed tenants independently of Branch and blocks anonymous upstream access', async () => {
     const source = '{karmaCars{id carNumber deviceId}}';
     const first = await query(source, {}, { authorization: `Bearer ${token}` });
     expect(first).toEqual({
@@ -153,7 +153,7 @@ describe('Apollo Router with the local supergraph and real subgraphs', () => {
       await query(
         source,
         {},
-        { authorization: `Bearer ${await login(otherTenant)}`, 'x-store-id': sandbox },
+        { authorization: `Bearer ${await login(otherTenant)}`, 'x-branch-id': sandbox },
       ),
     ).toEqual(first);
     const reads = fixture.karma.requests.length;
@@ -167,14 +167,14 @@ describe('Apollo Router with the local supergraph and real subgraphs', () => {
       headers: {
         origin,
         'access-control-request-method': 'POST',
-        'access-control-request-headers': 'authorization,content-type,x-store-id,x-request-id',
+        'access-control-request-headers': 'authorization,content-type,x-branch-id,x-request-id',
       },
       signal: AbortSignal.timeout(3000),
     });
     expect(response.ok).toBe(true);
     expect(response.headers.get('access-control-allow-origin')).toBe(origin);
     expect(response.headers.get('access-control-allow-headers')?.split(/,\s*/)).toEqual(
-      expect.arrayContaining(['authorization', 'content-type', 'x-store-id', 'x-request-id']),
+      expect.arrayContaining(['authorization', 'content-type', 'x-branch-id', 'x-request-id']),
     );
     const denied = await fetch(url, {
       method: 'OPTIONS',
@@ -193,10 +193,10 @@ describe('Apollo Router with the local supergraph and real subgraphs', () => {
       const coreBefore = fixture.coreRequests.length;
       const fleetBefore = fixture.fleetRequests.length;
       const result = await request(
-        { query: '{stores{id} fleetVehicles{total}}' },
+        { query: '{branches{id} fleetVehicles{total}}' },
         {
           authorization: `Bearer ${token}`,
-          'x-store-id': discordia,
+          'x-branch-id': discordia,
           ...(supplied === undefined ? {} : { 'x-request-id': supplied }),
         },
       );
@@ -218,7 +218,7 @@ describe('Apollo Router with the local supergraph and real subgraphs', () => {
 
   it('keeps generated request IDs separate for concurrent error responses', async () => {
     const results = await Promise.all(
-      Array.from({ length: 8 }, () => request({ query: '{stores{id}}' })),
+      Array.from({ length: 8 }, () => request({ query: '{branches{id}}' })),
     );
     const ids = results.map((result) => result.headers.get('x-request-id'));
     expect(new Set(ids).size).toBe(8);
@@ -233,7 +233,7 @@ describe('Apollo Router with the local supergraph and real subgraphs', () => {
   it('preserves real public business messages, field validation and request IDs', async () => {
     const headers = {
       authorization: `Bearer ${token}`,
-      'x-store-id': discordia,
+      'x-branch-id': discordia,
       'x-request-id': 'router-business-errors',
     };
     const create = 'mutation{createFleetVehicle(input:{licensePlate:"ROUTER CONFLICT"}){id}}';
@@ -252,7 +252,7 @@ describe('Apollo Router with the local supergraph and real subgraphs', () => {
     ).toBeUndefined();
     for (const [source, code, message, selectedHeaders] of [
       [
-        '{stores{id}}',
+        '{branches{id}}',
         'UNAUTHENTICATED',
         'Sign in to a tenant first',
         { 'x-request-id': 'router-business-errors' },

@@ -10,14 +10,14 @@ import {
 describe('local GraphQL contracts', () => {
   it('composes real subgraphs and validates every named application operation offline', async () => {
     const result = composeContracts(await readContracts());
-    expect(result.clientSdl).toContain('store: Store!');
+    expect(result.clientSdl).toContain('branch: Branch!');
     expect(result.clientSdl).not.toContain('_entities');
     const operations = await readOperations(result.apiSchema);
     expect(operations).toHaveLength(5);
     expect(operations.map((operation) => operation.location)).toEqual(
       expect.arrayContaining([
         'apps/admin/src/app/features/karma-client/operations.graphql',
-        'apps/admin/src/app/features/stores/operations.graphql',
+        'apps/admin/src/app/features/branches/operations.graphql',
         'apps/admin/src/app/features/fleet/vehicles/operations.graphql',
         'apps/admin/src/app/features/fleet/devices/operations.graphql',
         'apps/fleet/src/core/operations.graphql',
@@ -30,6 +30,8 @@ describe('local GraphQL contracts', () => {
     expect(result.apiSchema.getType('ReferenceVehicle')).toBeUndefined();
     expect(result.apiSchema.getType('ReferenceDevice')).toBeUndefined();
     expect(Object.keys(result.apiSchema.getQueryType()?.getFields() ?? {}).sort()).toEqual([
+      'branch',
+      'branches',
       'fleetDevice',
       'fleetDevices',
       'fleetVehicle',
@@ -46,8 +48,6 @@ describe('local GraphQL contracts', () => {
       'karmaTrips',
       'karmaUsers',
       'karmaVersion',
-      'store',
-      'stores',
       'tenants',
     ]);
     expect(Object.keys(result.apiSchema.getMutationType()?.getFields() ?? {}).sort()).toEqual([
@@ -64,10 +64,14 @@ describe('local GraphQL contracts', () => {
   it('rejects an operation that no longer matches the API', async () => {
     const { apiSchema } = composeContracts(await readContracts());
     expect(() =>
-      validateOperation(apiSchema, 'query Invalid { stores { removedField } }', 'invalid.graphql'),
+      validateOperation(
+        apiSchema,
+        'query Invalid { branches { removedField } }',
+        'invalid.graphql',
+      ),
     ).toThrow('removedField');
   });
-  it('fails composition when subgraphs disagree about the Store key type', async () => {
+  it('fails composition when subgraphs disagree about the Branch key type', async () => {
     const contracts = await readContracts();
     const incompatible = contracts.map((contract) =>
       contract.name === 'core'

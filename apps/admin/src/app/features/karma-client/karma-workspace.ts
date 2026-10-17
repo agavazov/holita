@@ -1,7 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
-import { StoreWorkspace } from '../stores/store-workspace';
+import { BranchWorkspace } from '../branches/branch-workspace';
 import { UsersPage } from './users-page/users-page';
 import { RolesPage } from './roles-page/roles-page';
 import { CarsPage } from './cars-page/cars-page';
@@ -73,7 +73,7 @@ import { EdataPage } from './edata-page/edata-page';
   `,
 })
 export class KarmaWorkspace {
-  private readonly workspace = inject(StoreWorkspace);
+  private readonly workspace = inject(BranchWorkspace);
   private readonly route = inject(ActivatedRoute);
   private readonly params = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,

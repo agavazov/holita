@@ -1,15 +1,15 @@
 import { expect, type Request } from '@playwright/test';
-import { chooseStore, test } from './angular-fixture.mjs';
+import { chooseBranch, test } from './angular-fixture.mjs';
 
-const storeA = '10000000-0000-4000-8000-000000000001';
+const branchA = '10000000-0000-4000-8000-000000000001';
 
 test.beforeEach(async ({ page, app }) => {
-  for (const [storeId, licensePlate] of [
+  for (const [branchId, licensePlate] of [
     ['10000000-0000-4000-8000-000000000001', 'Discordia truck'],
     ['10000000-0000-4000-8000-000000000002', 'Sandbox truck'],
   ] as const) {
     const response = await page.request.post(app.gatewayUrl, {
-      headers: { authorization: `Bearer ${app.demoSession.token}`, 'x-store-id': storeId },
+      headers: { authorization: `Bearer ${app.demoSession.token}`, 'x-branch-id': branchId },
       data: {
         query: 'mutation($input:CreateFleetVehicleInput!){createFleetVehicle(input:$input){id}}',
         variables: { input: { licensePlate } },
@@ -20,7 +20,7 @@ test.beforeEach(async ({ page, app }) => {
   }
 });
 
-const storeB = '10000000-0000-4000-8000-000000000002';
+const branchB = '10000000-0000-4000-8000-000000000002';
 
 function operation(request: Request, name: string): boolean {
   const body: unknown = request.postDataJSON();
@@ -32,7 +32,7 @@ function operation(request: Request, name: string): boolean {
   );
 }
 
-test('compiled Angular discovers stores and reads Vehicles through the real gateway in A → B → A', async ({
+test('compiled Angular discovers branches and reads Vehicles through the real gateway in A → B → A', async ({
   page,
   app,
 }) => {
@@ -45,27 +45,27 @@ test('compiled Angular discovers stores and reads Vehicles through the real gate
       request.method() === 'POST' &&
       operation(request, 'AdminVehicles')
     )
-      scopes.push(request.headers()['x-store-id'] ?? 'missing');
+      scopes.push(request.headers()['x-branch-id'] ?? 'missing');
   });
   await page.goto(`${app.url}/en`);
-  await expect(page).toHaveURL(`${app.url}/en/${storeA}/fleet/vehicles`);
+  await expect(page).toHaveURL(`${app.url}/en/${branchA}/fleet/vehicles`);
   await expect(page.locator('aside .layout-menuitem-root-text')).toHaveText([
     'Fleet',
     'Karma Client',
   ]);
-  await expect(page.getByRole('link', { name: 'Stores', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Branches', exact: true })).toHaveCount(0);
   await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toBeVisible();
-  await chooseStore(page, 'Sandbox');
+  await chooseBranch(page, 'Sandbox');
   await expect(page.getByRole('cell', { name: 'Sandbox truck', exact: true })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toHaveCount(0);
-  await chooseStore(page, 'Discordia');
+  await chooseBranch(page, 'Discordia');
   await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'Sandbox truck', exact: true })).toHaveCount(0);
-  expect(scopes).toEqual([storeA, storeB, storeA]);
+  expect(scopes).toEqual([branchA, branchB, branchA]);
   await page.reload();
   await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Български', exact: true }).click();
-  await expect(page).toHaveURL(`${app.url}/bg/${storeA}/fleet/vehicles`);
+  await expect(page).toHaveURL(`${app.url}/bg/${branchA}/fleet/vehicles`);
   await expect(page.getByRole('heading', { name: 'Автомобили', exact: true })).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('lang', 'bg');
   await expect(page.locator('aside .layout-menuitem-root-text')).toHaveText([
@@ -73,10 +73,10 @@ test('compiled Angular discovers stores and reads Vehicles through the real gate
     'Karma Client',
   ]);
   await page.getByRole('link', { name: 'Устройства', exact: true }).click();
-  await expect(page).toHaveURL(`${app.url}/bg/${storeA}/fleet/devices`);
+  await expect(page).toHaveURL(`${app.url}/bg/${branchA}/fleet/devices`);
   await expect(page.getByRole('heading', { name: 'Устройства', exact: true })).toBeVisible();
-  await chooseStore(page, 'Sandbox');
-  await expect(page).toHaveURL(`${app.url}/bg/${storeB}/fleet/devices`);
+  await chooseBranch(page, 'Sandbox');
+  await expect(page).toHaveURL(`${app.url}/bg/${branchB}/fleet/devices`);
   await expect(page.getByRole('heading', { name: 'Устройства', exact: true })).toBeVisible();
   expect(errors).toEqual([]);
 });
@@ -102,7 +102,7 @@ test('a delayed real A response cannot replace B and returning to A fetches agai
     if (
       !delayed &&
       operation(route.request(), 'AdminVehicles') &&
-      route.request().headers()['x-store-id'] === storeA
+      route.request().headers()['x-branch-id'] === branchA
     ) {
       delayed = true;
       const response = await route.fetch();
@@ -115,15 +115,15 @@ test('a delayed real A response cannot replace B and returning to A fetches agai
     }
   });
   try {
-    await page.goto(`${app.url}/en/${storeA}/fleet/vehicles`);
+    await page.goto(`${app.url}/en/${branchA}/fleet/vehicles`);
     await capturedResponse;
-    await chooseStore(page, 'Sandbox');
+    await chooseBranch(page, 'Sandbox');
     await expect(page.getByRole('cell', { name: 'Sandbox truck', exact: true })).toBeVisible();
     release();
     await deliveredResponse;
     await expect(page.getByRole('cell', { name: 'Sandbox truck', exact: true })).toBeVisible();
     await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toHaveCount(0);
-    await chooseStore(page, 'Discordia');
+    await chooseBranch(page, 'Discordia');
     await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toBeVisible();
   } finally {
     release();
@@ -151,9 +151,9 @@ test('a language change starts a new Vehicles request while the old real respons
     const request = route.request();
     if (operation(request, 'AdminVehicles')) {
       const language = request.headers()['accept-language'];
-      const storeId = request.headers()['x-store-id'];
-      if (!language || !storeId) throw new Error('Missing scoped Vehicles request headers.');
-      scopes.push(`${storeId}/${language}`);
+      const branchId = request.headers()['x-branch-id'];
+      if (!language || !branchId) throw new Error('Missing scoped Vehicles request headers.');
+      scopes.push(`${branchId}/${language}`);
       if (language === 'en') {
         const response = await route.fetch();
         captured();
@@ -166,12 +166,12 @@ test('a language change starts a new Vehicles request while the old real respons
     await route.continue();
   });
   try {
-    await page.goto(`${app.url}/en/${storeA}/fleet/vehicles`);
+    await page.goto(`${app.url}/en/${branchA}/fleet/vehicles`);
     await capturedResponse;
     await page.getByRole('link', { name: 'Български', exact: true }).click();
-    await expect(page).toHaveURL(`${app.url}/bg/${storeA}/fleet/vehicles`);
+    await expect(page).toHaveURL(`${app.url}/bg/${branchA}/fleet/vehicles`);
     await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toBeVisible();
-    expect(scopes).toEqual([`${storeA}/en`, `${storeA}/bg`]);
+    expect(scopes).toEqual([`${branchA}/en`, `${branchA}/bg`]);
     release();
     await deliveredResponse;
     await expect(page.getByRole('heading', { name: 'Автомобили', exact: true })).toBeVisible();

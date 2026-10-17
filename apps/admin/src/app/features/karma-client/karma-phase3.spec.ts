@@ -110,12 +110,12 @@ describe('Phase 3 histories and period lifecycle', () => {
   });
   function read(name: string) {
     const request = http.expectOne((req) => operation(req, name));
-    expect(request.request.headers.has('x-store-id')).toBe(false);
+    expect(request.request.headers.has('x-branch-id')).toBe(false);
     return request;
   }
   async function open(section: string) {
     const harness = await RouterTestingHarness.create('/en/karma-client/cars/41/' + section);
-    read('AdminStores').flush({ data: { stores: [] } });
+    read('AdminBranches').flush({ data: { branches: [] } });
     read('AdminKarmaCar').flush({ data: { karmaCar: car } });
     await harness.fixture.whenStable();
     return harness;
@@ -193,7 +193,7 @@ describe('Phase 3 histories and period lifecycle', () => {
     const again = read('AdminKarmaTrips');
     await harness.navigateByUrl('/bg/karma-client/cars/41/trips');
     expect(again.cancelled).toBe(true);
-    read('AdminStores').flush({ data: { stores: [] } });
+    read('AdminBranches').flush({ data: { branches: [] } });
     read('AdminKarmaCar').flush({ data: { karmaCar: car } });
     await harness.fixture.whenStable();
     const bg = read('AdminKarmaTrips');

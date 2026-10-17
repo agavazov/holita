@@ -1,11 +1,11 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, type Page, type APIRequestContext } from '@playwright/test';
-import { chooseStore, test } from './angular-fixture.mjs';
+import { chooseBranch, test } from './angular-fixture.mjs';
 import { workspaceRoot } from '../graphql/contracts.mjs';
 
-const storeA = '10000000-0000-4000-8000-000000000001';
-const path = `/en/${storeA}/fleet/devices`;
+const branchA = '10000000-0000-4000-8000-000000000001';
+const path = `/en/${branchA}/fleet/devices`;
 async function truck(
   request: APIRequestContext,
   gatewayUrl: string,
@@ -13,7 +13,7 @@ async function truck(
   licensePlate: string,
 ) {
   const response = await request.post(gatewayUrl, {
-    headers: { authorization: `Bearer ${token}`, 'x-store-id': storeA },
+    headers: { authorization: `Bearer ${token}`, 'x-branch-id': branchA },
     data: {
       query: 'mutation($input:CreateFleetVehicleInput!){createFleetVehicle(input:$input){id}}',
       variables: { input: { licensePlate } },
@@ -62,14 +62,14 @@ test.describe('Devices', () => {
     await chooseTruck(page, 'CA1234AB');
     await page.getByRole('button', { name: 'Save device', exact: true }).click();
     await expect(
-      page.getByText('IMEI is already used in this store.', { exact: true }),
+      page.getByText('IMEI is already used in this branch.', { exact: true }),
     ).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'IMEI', exact: true })).toBeFocused();
     await page.getByRole('textbox', { name: 'IMEI', exact: true }).fill('001234567890124');
     await page.getByRole('button', { name: 'Save device', exact: true }).click();
     await expect(page.locator('tbody tr')).toHaveCount(2);
     const deletion = await request.post(app.gatewayUrl, {
-      headers: { authorization: `Bearer ${app.demoSession.token}`, 'x-store-id': storeA },
+      headers: { authorization: `Bearer ${app.demoSession.token}`, 'x-branch-id': branchA },
       data: {
         query: 'mutation($id:ID!){deleteFleetVehicle(id:$id){id}}',
         variables: { id: first },
@@ -85,10 +85,10 @@ test.describe('Devices', () => {
     await expect(page.locator('tbody tr').filter({ hasText: '001234567890123' })).toContainText(
       'CB5678AB',
     );
-    await chooseStore(page, 'Sandbox');
+    await chooseBranch(page, 'Sandbox');
     await expect(page).toHaveURL(/\/fleet\/devices$/);
     await expect(page.getByRole('link', { name: '001234567890123', exact: true })).toHaveCount(0);
-    await chooseStore(page, 'Discordia');
+    await chooseBranch(page, 'Discordia');
     await page.getByRole('button', { name: 'Delete 001234567890123', exact: true }).click();
     const confirmation = page.getByRole('alertdialog', { name: 'Delete devices', exact: true });
     await expect(confirmation.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused();

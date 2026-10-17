@@ -4,7 +4,7 @@ import type { AdminDemoLoginMutation } from '../../../generated/graphql/operatio
 type Session = AdminDemoLoginMutation['demoLogin'];
 const storageKey = 'holita.admin.demo-session';
 
-function restoredSession(): (Session & { storeId: string | null }) | null {
+function restoredSession(): (Session & { branchId: string | null }) | null {
   try {
     const value: unknown = JSON.parse(sessionStorage.getItem(storageKey) ?? 'null');
     if (
@@ -18,7 +18,9 @@ function restoredSession(): (Session & { storeId: string | null }) | null {
       !('id' in value.tenant) ||
       typeof value.tenant.id !== 'string' ||
       !('name' in value.tenant) ||
-      typeof value.tenant.name !== 'string'
+      typeof value.tenant.name !== 'string' ||
+      !('branchId' in value) ||
+      (value.branchId !== null && typeof value.branchId !== 'string')
     )
       return null;
     const match = /^holita-demo\.([0-9a-f-]{36})\.([0-9]{10})\.[A-Za-z0-9_-]{43}$/.exec(
@@ -30,7 +32,7 @@ function restoredSession(): (Session & { storeId: string | null }) | null {
     return {
       token: value.token,
       tenant: { id: value.tenant.id, name: value.tenant.name },
-      storeId: 'storeId' in value && typeof value.storeId === 'string' ? value.storeId : null,
+      branchId: 'branchId' in value && typeof value.branchId === 'string' ? value.branchId : null,
     };
   } catch {
     return null;
@@ -42,8 +44,8 @@ export class DemoSession {
   private readonly restored = restoredSession();
   private readonly state = signal<Session | null>(this.restored);
   readonly current = this.state.asReadonly();
-  private readonly selectedStore = signal<string | null>(this.restored?.storeId ?? null);
-  readonly storeId = this.selectedStore.asReadonly();
+  private readonly selectedBranch = signal<string | null>(this.restored?.branchId ?? null);
+  readonly branchId = this.selectedBranch.asReadonly();
   private expiryTimer: ReturnType<typeof setTimeout> | undefined;
   constructor() {
     this.scheduleExpiry();
@@ -51,22 +53,22 @@ export class DemoSession {
       clearTimeout(this.expiryTimer);
     });
   }
-  start(session: Session, storeId: string | null = null): void {
-    this.selectedStore.set(storeId);
+  start(session: Session, branchId: string | null = null): void {
+    this.selectedBranch.set(branchId);
     this.state.set(session);
     this.persist();
     this.scheduleExpiry();
   }
-  selectStore(storeId: string): void {
+  selectBranch(branchId: string): void {
     if (!this.current()) return;
-    this.selectedStore.set(storeId);
+    this.selectedBranch.set(branchId);
     this.persist();
   }
   private persist(): void {
     try {
       sessionStorage.setItem(
         storageKey,
-        JSON.stringify({ ...this.current(), storeId: this.storeId() }),
+        JSON.stringify({ ...this.current(), branchId: this.branchId() }),
       );
     } catch {
       /* Memory session still works. */
@@ -74,7 +76,7 @@ export class DemoSession {
   }
   logout(): void {
     this.state.set(null);
-    this.selectedStore.set(null);
+    this.selectedBranch.set(null);
     clearTimeout(this.expiryTimer);
     try {
       sessionStorage.removeItem(storageKey);

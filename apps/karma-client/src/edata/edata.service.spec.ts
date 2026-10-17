@@ -14,7 +14,7 @@ describe('shared authenticated Karma eData access', () => {
     ).toThrow('Sign in');
     expect(read).not.toHaveBeenCalled();
   });
-  it('preserves shared account access across signed tenants without Store context', async () => {
+  it('preserves shared account access across signed tenants without Branch context', async () => {
     const client = new KarmaClient(),
       read = jest
         .spyOn(client, 'getEdata')

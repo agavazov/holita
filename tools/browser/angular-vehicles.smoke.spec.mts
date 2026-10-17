@@ -1,11 +1,11 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect } from '@playwright/test';
-import { chooseStore, test } from './angular-fixture.mjs';
+import { chooseBranch, test } from './angular-fixture.mjs';
 import { workspaceRoot } from '../graphql/contracts.mjs';
 
-const storeA = '10000000-0000-4000-8000-000000000001';
-const path = `/en/${storeA}/fleet/vehicles`;
+const branchA = '10000000-0000-4000-8000-000000000001';
+const path = `/en/${branchA}/fleet/vehicles`;
 test.describe('Vehicles', () => {
   test('creates, edits, clears notes, reloads, isolates A → B → A and confirms deletion', async ({
     page,
@@ -33,10 +33,10 @@ test.describe('Vehicles', () => {
     await page.getByRole('link', { name: 'CA1234AB', exact: true }).click();
     await expect(page.getByRole('textbox', { name: 'Notes', exact: true })).toHaveValue('');
     await page.getByRole('link', { name: 'Back to vehicles', exact: true }).click();
-    await chooseStore(page, 'Sandbox');
+    await chooseBranch(page, 'Sandbox');
     await expect(page).toHaveURL(/\/fleet\/vehicles$/);
     await expect(page.getByRole('link', { name: 'CA1234AB', exact: true })).toHaveCount(0);
-    await chooseStore(page, 'Discordia');
+    await chooseBranch(page, 'Discordia');
     await page.getByRole('button', { name: 'Delete CA1234AB', exact: true }).click();
     const confirmation = page.getByRole('alertdialog', { name: 'Delete vehicles', exact: true });
     await expect(confirmation).toBeVisible();

@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test';
 import { join } from 'node:path';
 import { workspaceRoot } from '../graphql/contracts.mjs';
-import { chooseStore, test } from './angular-fixture.mjs';
+import { chooseBranch, test } from './angular-fixture.mjs';
 
 test('shows reference labels and last-known summary and opens every location field in both themes and viewport sizes', async ({
   page,
@@ -70,7 +70,7 @@ test('shows reference labels and last-known summary and opens every location fie
   }
   await page.setViewportSize({ width: 1280, height: 900 });
   const before = headers.length;
-  await chooseStore(page, 'Sandbox');
+  await chooseBranch(page, 'Sandbox');
   expect(headers).toHaveLength(before);
   await page.reload();
   await expect(map).toBeVisible();
@@ -81,7 +81,7 @@ test('shows reference labels and last-known summary and opens every location fie
   expect(
     headers.every(
       (header) =>
-        !('x-store-id' in header) && header['authorization'] === `Bearer ${app.demoSession.token}`,
+        !('x-branch-id' in header) && header['authorization'] === `Bearer ${app.demoSession.token}`,
     ),
   ).toBe(true);
 });

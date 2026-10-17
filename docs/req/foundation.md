@@ -13,6 +13,6 @@ Product identity for this repository and its current resources is holita; red.bg
 presentation domain. Domain requirements are documented separately:
 
 - [Discocan requirements](../discocan/requirements.md): implemented Fleet and telemetry admin behavior.
-- [Ecommerce Stores](../ecommerce/stores.md): implemented Store foundation.
+- [Ecommerce Branches](../ecommerce/branches.md): implemented Branch foundation.
 
 Health proves application response, not database readiness or downstream service availability.

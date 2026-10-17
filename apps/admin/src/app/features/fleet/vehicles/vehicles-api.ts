@@ -29,14 +29,14 @@ export class VehiclesApi implements OnDestroy {
   private destroyed = false;
   private pendingWrites = 0;
 
-  initialize(storeId: string, language: Language): void {
+  initialize(branchId: string, language: Language): void {
     if (this.apollo || this.destroyed)
-      throw new Error('VehiclesApi belongs to one store workspace.');
+      throw new Error('VehiclesApi belongs to one branch workspace.');
     const client = new ApolloClient(
       graphqlOptions(
         this.httpLink,
         this.config.graphqlUrl,
-        { storeId, language },
+        { branchId, language },
         this.session.capture(),
       ),
     );

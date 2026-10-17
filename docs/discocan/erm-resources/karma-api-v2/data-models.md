@@ -177,10 +177,10 @@ Sources: [SDL](../../../../apps/karma-client/src/history/history.graphql), [runt
 
 Sources: [SDL](../../../../apps/karma-client/src/references/references.graphql), [runtime mapping](../../../../apps/karma-client/src/references/references-response.ts).
 
-| Upstream field | GraphQL field | GraphQL type | Meaning / handling                                                            |
-| -------------- | ------------- | ------------ | ----------------------------------------------------------------------------- |
-| `project_id`   | `id`          | `ID!`        | Positive safe integer as text; duplicate IDs reject the complete list.        |
-| `name`         | `name`        | `String!`    | Required source string; no relation to holita Tenant/Store names is inferred. |
+| Upstream field | GraphQL field | GraphQL type | Meaning / handling                                                             |
+| -------------- | ------------- | ------------ | ------------------------------------------------------------------------------ |
+| `project_id`   | `id`          | `ID!`        | Positive safe integer as text; duplicate IDs reject the complete list.         |
+| `name`         | `name`        | `String!`    | Required source string; no relation to holita Tenant/Branch names is inferred. |
 
 ## Time zones (`KarmaTimeZone`)
 
@@ -238,4 +238,4 @@ Sources: [SDL](../../../../apps/karma-client/src/accounts/accounts.graphql), [ru
 
 ## Relationship boundaries
 
-Karma car_id, project_id, user_id, role_id, driver_id and zone_id belong to the upstream account. Fleet UUIDs, tenantId, storeId and Device.imei belong to holita. There is no persistent identity mapping, automatic synchronization or cross-domain foreign key. Project memberships and role descriptions are reference data; they do not authorize holita access.
+Karma car_id, project_id, user_id, role_id, driver_id and zone_id belong to the upstream account. Fleet UUIDs, tenantId, branchId and Device.imei belong to holita. There is no persistent identity mapping, automatic synchronization or cross-domain foreign key. Project memberships and role descriptions are reference data; they do not authorize holita access.

@@ -6,49 +6,49 @@ import { ButtonDirective } from 'primeng/button';
 import { Message } from 'primeng/message';
 import { PrimeNG } from 'primeng/config';
 import { AdminShell } from '../../layout/admin-shell';
-import type { AdminStoresQuery } from '../../../generated/graphql/operations';
+import type { AdminBranchesQuery } from '../../../generated/graphql/operations';
 import { requestError } from '../../core/graphql/request-error';
 import { messages, readLanguage, type Language } from '../../i18n/messages';
-import { StoresApi } from './stores-api';
+import { BranchesApi } from './branches-api';
 import { DemoSession } from '../../core/auth/demo-session';
 import type { AdminDemoLoginMutation } from '../../../generated/graphql/operations';
 import { Login } from '../auth/login';
 import { AdminConfig } from '../../core/config/admin-config';
 
 @Component({
-  selector: 'holita-store-workspace',
+  selector: 'holita-branch-workspace',
   imports: [RouterOutlet, AdminShell, ButtonDirective, Message, Login],
-  templateUrl: './store-workspace.html',
+  templateUrl: './branch-workspace.html',
 })
-export class StoreWorkspace {
+export class BranchWorkspace {
   readonly session = inject(DemoSession);
   readonly fleetEnabled = inject(AdminConfig).fleetEnabled;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly api = inject(StoresApi);
+  private readonly api = inject(BranchesApi);
   private readonly primeNG = inject(PrimeNG);
   private readonly params = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
   });
   private signingOut = false;
   private discoveryToken: string | null = null;
-  private query: ReturnType<StoresApi['watch']>['query'] | undefined;
+  private query: ReturnType<BranchesApi['watch']>['query'] | undefined;
   private readonly navigation = toSignal(
     this.router.events.pipe(filter((event) => event instanceof NavigationEnd)),
   );
   readonly language = computed(() => readLanguage(this.params().get('language')));
   readonly text = computed(() => messages[this.language()]);
-  readonly stores = signal<AdminStoresQuery['stores'] | null>(null);
+  readonly branches = signal<AdminBranchesQuery['branches'] | null>(null);
   readonly loading = signal(true);
   readonly error = signal<unknown>(null);
   readonly failure = computed(() => requestError(this.error(), this.text().networkError));
-  readonly storesAvailable = computed(() => (this.stores()?.length ?? 0) > 0);
-  readonly selectedStoreId = computed(() => {
+  readonly branchesAvailable = computed(() => (this.branches()?.length ?? 0) > 0);
+  readonly selectedBranchId = computed(() => {
     this.navigation();
     const id = this.karmaActive()
-      ? this.session.storeId()
-      : this.route.firstChild?.snapshot.paramMap.get('storeId')?.toLowerCase();
-    return this.stores()?.find((store) => store.id === id)?.id ?? null;
+      ? this.session.branchId()
+      : this.route.firstChild?.snapshot.paramMap.get('branchId')?.toLowerCase();
+    return this.branches()?.find((branch) => branch.id === id)?.id ?? null;
   });
   readonly otherLanguageUrl = computed(() => {
     this.navigation();
@@ -81,7 +81,7 @@ export class StoreWorkspace {
       });
       const session = this.session.current();
       if ((session?.token ?? null) !== this.discoveryToken) {
-        this.stores.set(null);
+        this.branches.set(null);
         this.discoveryToken = session?.token ?? null;
       }
       if (!session) return;
@@ -93,7 +93,7 @@ export class StoreWorkspace {
         next: (result) => {
           this.loading.set(result.loading);
           this.error.set(result.error ?? null);
-          if (result.dataState === 'complete') this.stores.set(result.data.stores);
+          if (result.dataState === 'complete') this.branches.set(result.data.branches);
         },
         error: (error: unknown) => {
           this.loading.set(false);
@@ -108,14 +108,15 @@ export class StoreWorkspace {
     });
     effect(() => {
       this.navigation();
-      const stores = this.stores();
-      const selected = this.selectedStoreId();
-      if (this.session.current() && stores?.length) {
-        if (selected) this.session.selectStore(selected);
+      const branches = this.branches();
+      const selected = this.selectedBranchId();
+      if (this.session.current() && branches?.length) {
+        if (selected) this.session.selectBranch(selected);
         else if (!this.route.firstChild && !this.signingOut) {
-          const store = stores.find((store) => store.id === this.session.storeId()) ?? stores[0];
-          if (store)
-            void this.router.navigate(['/', this.language(), store.id, 'fleet', 'vehicles'], {
+          const branch =
+            branches.find((branch) => branch.id === this.session.branchId()) ?? branches[0];
+          if (branch)
+            void this.router.navigate(['/', this.language(), branch.id, 'fleet', 'vehicles'], {
               replaceUrl: true,
             });
         }
@@ -125,12 +126,12 @@ export class StoreWorkspace {
 
   async enter(selection: {
     session: AdminDemoLoginMutation['demoLogin'];
-    storeId: string;
+    branchId: string;
   }): Promise<void> {
     const destination = this.router.createUrlTree([
       '/',
       this.language(),
-      selection.storeId,
+      selection.branchId,
       'fleet',
       'vehicles',
     ]);
@@ -138,7 +139,7 @@ export class StoreWorkspace {
       this.router.url === this.router.serializeUrl(destination) ||
       (await this.router.navigateByUrl(destination))
     ) {
-      this.session.start(selection.session, selection.storeId);
+      this.session.start(selection.session, selection.branchId);
     }
   }
 
@@ -147,7 +148,7 @@ export class StoreWorkspace {
     this.signingOut = true;
     try {
       if (await this.router.navigate(['/', this.language()])) {
-        this.stores.set(null);
+        this.branches.set(null);
         this.session.logout();
       }
     } finally {
@@ -162,9 +163,9 @@ export class StoreWorkspace {
     });
   }
 
-  chooseStore(id: string): void {
+  chooseBranch(id: string): void {
     if (this.karmaActive()) {
-      this.session.selectStore(id);
+      this.session.selectBranch(id);
       return;
     }
     const section = this.route.firstChild?.snapshot.url;

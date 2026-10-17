@@ -12,7 +12,7 @@ export class VehiclesRepository {
   constructor(private readonly prisma: PrismaService) {}
   async list(
     tenantId: string,
-    storeId: string,
+    branchId: string,
     offset: number,
     limit: number,
     filter?: { search: string | null; ids: string[] | undefined },
@@ -20,7 +20,7 @@ export class VehiclesRepository {
   ) {
     const where = {
       tenantId,
-      storeId,
+      branchId,
       ...(filter?.search
         ? {
             licensePlate: {
@@ -50,16 +50,16 @@ export class VehiclesRepository {
     );
     return { items, total, offset, limit };
   }
-  find(tenantId: string, storeId: string, id: string) {
-    return this.prisma.client.vehicle.findUnique({ where: { id, tenantId, storeId } });
+  find(tenantId: string, branchId: string, id: string) {
+    return this.prisma.client.vehicle.findUnique({ where: { id, tenantId, branchId } });
   }
-  create(tenantId: string, storeId: string, input: CreateFleetVehicleInput) {
-    return this.prisma.client.vehicle.create({ data: { ...input, tenantId, storeId } });
+  create(tenantId: string, branchId: string, input: CreateFleetVehicleInput) {
+    return this.prisma.client.vehicle.create({ data: { ...input, tenantId, branchId } });
   }
-  update(tenantId: string, storeId: string, id: string, input: Partial<CreateFleetVehicleInput>) {
-    return this.prisma.client.vehicle.update({ where: { id, tenantId, storeId }, data: input });
+  update(tenantId: string, branchId: string, id: string, input: Partial<CreateFleetVehicleInput>) {
+    return this.prisma.client.vehicle.update({ where: { id, tenantId, branchId }, data: input });
   }
-  delete(tenantId: string, storeId: string, id: string) {
-    return this.prisma.client.vehicle.delete({ where: { id, tenantId, storeId } });
+  delete(tenantId: string, branchId: string, id: string) {
+    return this.prisma.client.vehicle.delete({ where: { id, tenantId, branchId } });
   }
 }

@@ -26,8 +26,8 @@ relevant behavioral checks. SDL/operations also require codegen, schema:check an
 ## Domain checks
 
 [Discocan checks](discocan/testing.md) cover Vehicles/Devices, Angular workspaces,
-telemetry login, captured clients and browser behavior. [Ecommerce Store checks](ecommerce/stores.md#validation)
-cover tenant-scoped Store discovery and persistence.
+telemetry login, captured clients and browser behavior. [Ecommerce Branch checks](ecommerce/branches.md#validation)
+cover tenant-scoped Branch discovery and persistence.
 
 ## Real PostgreSQL checks
 
@@ -44,7 +44,7 @@ npm run test:fleet:db -- vehicles.db.spec.ts devices.db.spec.ts
 Guarded helpers reject development/foreign/nonlocal identities and URL options. Each run deploys
 reviewed migrations into its own random schema, closes connections and drops only that schema.
 No broad resets/truncation occur. Core persistence tests cover seed idempotency, schema isolation
-and inability to connect to development/Fleet databases. Fleet migrations create tenant-scoped Vehicle/Device indexes, a digit CHECK and a same-tenant/same-store restricted FK.
+and inability to connect to development/Fleet databases. Fleet migrations create tenant-scoped Vehicle/Device indexes, a digit CHECK and a same-tenant/same-branch restricted FK.
 Database results must run fresh and cannot be treated as valid Nx cache hits.
 
 ## Real federation and browser smoke checks
@@ -61,7 +61,7 @@ Offline contracts tests compose the Core, Fleet and Karma Client subgraphs, vali
 assert the exact public query/mutation inventory. Karma Client runs against a local controlled
 Karma HTTP server without live credentials. Guard tests reject unsafe local test URLs.
 Federation fixture owns isolated Core/Fleet test schemas, Core seeds, real backend processes
-and request observers. It proves Store discovery, Vehicle/Device relations and scope, CORS/header
+and request observers. It proves Branch discovery, Vehicle/Device relations and scope, CORS/header
 bounds, availability, request-local Core validation and scoped CRUD while Core is stopped.
 Gateway has no database dependency. The fixture uses only the pinned Apollo Router binary,
 waits on its dedicated health listener and closes it before subgraphs and test schemas.
@@ -69,7 +69,7 @@ No fixture starts a JavaScript Gateway or selects another runtime.
 
 Angular fixtures serve the compiled production app with their own runtime configuration.
 They own dedicated backend processes/schemas and never load private development licenses.
-Browser fixtures seed Core and obtain real demo sessions; they create their own business records without running Fleet sample seeds. The Isolation tenant/store exists only in these test fixtures.
+Browser fixtures seed Core and obtain real demo sessions; they create their own business records without running Fleet sample seeds. The Isolation tenant/branch exists only in these test fixtures.
 Browser targets build the admin and three subgraphs, prepare Router, use Chromium, disable retries and retain
 failure screenshots/traces under ignored test-results. Clean up task-started connections/processes.
 
@@ -87,8 +87,8 @@ Jest. It uses the same guarded federation fixture with isolated Core/Fleet schem
 real subgraphs and a local Karma HTTP server. Router runs on ephemeral loopback ports
 using the checked-in YAML and generated supergraph, with telemetry disabled and no GraphOS
 credentials. The fixture owns and cleans up all its processes, connections and schemas.
-It checks demo login, Store discovery, Vehicle-to-Store federation, supplied request ID/Store
-headers, Tenant/Store denial, signed Karma reads and configured-origin CORS. Successful
+It checks demo login, Branch discovery, Vehicle-to-Branch federation, supplied request ID/Branch
+headers, Tenant/Branch denial, signed Karma reads and configured-origin CORS. Successful
 responses, public business messages and sanitized error extensions have explicit expected values.
 
 The same suite checks valid/missing/invalid request IDs, concurrent error correlation,
@@ -130,8 +130,8 @@ federation fixture. Router routes to real Core/Fleet processes with isolated sch
 including Fleet's Core validation client. Karma uses the local HTTP fixture, never the live account.
 The benchmark owns its processes/schemas and cleans them up on success, failure or interruption.
 
-Five scenarios cover a gateway-only `__typename` control, signed Store discovery, 20-row
-Vehicle-to-Store federation, 20-row Devices with Vehicle/Store relations and Karma cars.
+Five scenarios cover a gateway-only `__typename` control, signed Branch discovery, 20-row
+Vehicle-to-Branch federation, 20-row Devices with Vehicle/Branch relations and Karma cars.
 Preflight checks the seeded page sizes; every measured response checks data against preflight,
 HTTP status, GraphQL errors and its echoed request ID. The first failing sample stops the run.
 A JSONL trace preserves completed samples and bounded fixture logs on failure/interruption;
@@ -167,7 +167,7 @@ a fixed-arrival-rate latency SLA, cold-start performance or real Karma network l
 | Karma truck/reference reads and routing | karma-phase4.spec.ts, karma-phase3.spec.ts, karma-phase2.spec.ts, karma-workspace.spec.ts, edata-page.spec.ts, angular-karma-phase4.smoke.spec.mts, angular-karma-phase3.smoke.spec.mts, angular-karma-phase2.smoke.spec.mts, angular-karma.smoke.spec.mts, angular-edata.smoke.spec.mts |
 | SDL/operations                          | codegen, schema:check, contracts.unit.spec.mts                                                                                                                                                                                                                                           |
 | Cross-service contracts/context         | federation.db.spec.mts                                                                                                                                                                                                                                                                   |
-| Store/language/default routing          | store-workspace.spec.ts, fleet-workspace.spec.ts, angular-foundation.smoke.spec.mts                                                                                                                                                                                                      |
+| Branch/language/default routing         | branch-workspace.spec.ts, fleet-workspace.spec.ts, angular-foundation.smoke.spec.mts                                                                                                                                                                                                     |
 | Captured feature clients/forms/deletion | concrete vehicles/devices Angular suites                                                                                                                                                                                                                                                 |
 | Remote picker cancellation              | relation-picker.spec.ts, device-editor.spec.ts                                                                                                                                                                                                                                           |
 | Shell/theme/mobile/keyboard             | angular-shell.smoke.spec.mts and matching visual review                                                                                                                                                                                                                                  |

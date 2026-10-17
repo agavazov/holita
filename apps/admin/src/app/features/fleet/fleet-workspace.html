@@ -10,7 +10,7 @@
       '/' +
       scope.language +
       '/' +
-      scope.store.id +
+      scope.branch.id +
       '/' +
       scope.resource +
       '/' +
@@ -22,29 +22,29 @@
       @case ('devices') {
         @if (scope.editor) {
           <holita-device-editor
-            [store]="scope.store"
+            [branch]="scope.branch"
             [language]="scope.language"
             [deviceId]="scope.recordId"
           />
         } @else {
-          <holita-devices-page [store]="scope.store" [language]="scope.language" />
+          <holita-devices-page [branch]="scope.branch" [language]="scope.language" />
         }
       }
       @case ('vehicles') {
         @if (scope.editor) {
           <holita-vehicle-editor
-            [store]="scope.store"
+            [branch]="scope.branch"
             [language]="scope.language"
             [vehicleId]="scope.recordId"
           />
         } @else {
-          <holita-vehicles-page [store]="scope.store" [language]="scope.language" />
+          <holita-vehicles-page [branch]="scope.branch" [language]="scope.language" />
         }
       }
     }
   } @empty {
     <section class="card">
-      <p-message severity="error">{{ workspace.text().unavailableStore }}</p-message>
+      <p-message severity="error">{{ workspace.text().unavailableBranch }}</p-message>
     </section>
   }
 }

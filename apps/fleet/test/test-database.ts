@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import pg from 'pg';
@@ -9,7 +10,11 @@ import { getTestDatabaseUrl } from './test-database-url.js';
 
 const execute = promisify(execFile);
 
-export async function createTestDatabase() {
+export async function createTestDatabase(
+  options: {
+    beforeBranchRename?: (connection: pg.Client) => Promise<void>;
+  } = {},
+) {
   const connectionString = getTestDatabaseUrl();
   const schema = `test_${randomUUID().replaceAll('-', '')}`;
   const connection = new pg.Client({ connectionString, connectionTimeoutMillis: 5000 });
@@ -35,19 +40,33 @@ export async function createTestDatabase() {
     created = true;
     const migrationUrl = new URL(connectionString);
     migrationUrl.searchParams.set('schema', schema);
-    await execute(
-      process.execPath,
-      [
-        fileURLToPath(new URL('../../../node_modules/prisma/build/index.js', import.meta.url)),
-        'migrate',
-        'deploy',
-      ],
-      {
-        cwd: fileURLToPath(new URL('..', import.meta.url)),
-        env: { ...process.env, FLEET_DATABASE_URL: migrationUrl.toString() },
-        timeout: 30000,
-      },
+    const prismaCli = fileURLToPath(
+      new URL('../../../node_modules/prisma/build/index.js', import.meta.url),
     );
+    const migrationOptions = {
+      cwd: fileURLToPath(new URL('..', import.meta.url)),
+      env: { ...process.env, FLEET_DATABASE_URL: migrationUrl.toString() },
+      timeout: 30000,
+    };
+    if (options.beforeBranchRename) {
+      // Build the legacy schema from unchanged SQL, then baseline its original checksums.
+      await connection.query(`SET search_path TO ${pg.escapeIdentifier(schema)}`);
+      for (const migration of ['20261011000000_init', '20261017000000_edata_catalog']) {
+        await connection.query(
+          await readFile(
+            new URL(`../prisma/migrations/${migration}/migration.sql`, import.meta.url),
+            'utf8',
+          ),
+        );
+        await execute(
+          process.execPath,
+          [prismaCli, 'migrate', 'resolve', '--applied', migration],
+          migrationOptions,
+        );
+      }
+      await options.beforeBranchRename(connection);
+    }
+    await execute(process.execPath, [prismaCli, 'migrate', 'deploy'], migrationOptions);
     return { client, schema, close };
   } catch (error) {
     await close();

@@ -1,6 +1,6 @@
 fragment AdminDevice on FleetDevice {
   id
-  storeId
+  branchId
   imei
   vehicleId
   vehicle {

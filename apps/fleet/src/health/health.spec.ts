@@ -19,7 +19,7 @@ describe('fleet health endpoint', () => {
     await app.close();
   });
 
-  it('responds without store context or database access', async () => {
+  it('responds without branch context or database access', async () => {
     const response = await fetch(`${baseUrl}/health`);
     const body: unknown = await response.json();
     expect(response.status).toBe(200);

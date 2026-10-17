@@ -28,7 +28,7 @@ describe('RentalSofia Fleet seeds', () => {
     expect(await database.client.device.findMany()).toMatchObject([
       {
         tenantId: first.tenantId,
-        storeId: first.storeId,
+        branchId: first.branchId,
         vehicleId: first.id,
         imei: '001234567890123',
       },

@@ -16,7 +16,7 @@ export const routes: Routes = [
         inject(Router).createUrlTree(['/bg']),
     ],
     loadComponent: () =>
-      import('./features/stores/store-workspace').then((module) => module.StoreWorkspace),
+      import('./features/branches/branch-workspace').then((module) => module.BranchWorkspace),
     children: [
       {
         path: 'karma-client/cars/:recordId/trips',
@@ -91,48 +91,48 @@ export const routes: Routes = [
           import('./features/karma-client/karma-workspace').then((module) => module.KarmaWorkspace),
       },
       {
-        path: ':storeId/fleet/vehicles/new',
+        path: ':branchId/fleet/vehicles/new',
         data: { resource: 'vehicles', editor: true },
         canDeactivate: [leaveFleet],
         loadComponent: () =>
           import('./features/fleet/fleet-workspace').then((module) => module.FleetWorkspace),
       },
       {
-        path: ':storeId/fleet/vehicles/:recordId/edit',
+        path: ':branchId/fleet/vehicles/:recordId/edit',
         data: { resource: 'vehicles', editor: true },
         canDeactivate: [leaveFleet],
         loadComponent: () =>
           import('./features/fleet/fleet-workspace').then((module) => module.FleetWorkspace),
       },
       {
-        path: ':storeId/fleet/vehicles',
+        path: ':branchId/fleet/vehicles',
         data: { resource: 'vehicles', editor: false },
 
         loadComponent: () =>
           import('./features/fleet/fleet-workspace').then((module) => module.FleetWorkspace),
       },
       {
-        path: ':storeId/fleet/devices/new',
+        path: ':branchId/fleet/devices/new',
         data: { resource: 'devices', editor: true },
         canDeactivate: [leaveFleet],
         loadComponent: () =>
           import('./features/fleet/fleet-workspace').then((module) => module.FleetWorkspace),
       },
       {
-        path: ':storeId/fleet/devices/:recordId/edit',
+        path: ':branchId/fleet/devices/:recordId/edit',
         data: { resource: 'devices', editor: true },
         canDeactivate: [leaveFleet],
         loadComponent: () =>
           import('./features/fleet/fleet-workspace').then((module) => module.FleetWorkspace),
       },
       {
-        path: ':storeId/fleet/devices',
+        path: ':branchId/fleet/devices',
         data: { resource: 'devices', editor: false },
 
         loadComponent: () =>
           import('./features/fleet/fleet-workspace').then((module) => module.FleetWorkspace),
       },
-      { path: ':storeId/reference', redirectTo: ':storeId/fleet' },
+      { path: ':branchId/reference', redirectTo: ':branchId/fleet' },
       { path: '**', redirectTo: '' },
     ],
   },

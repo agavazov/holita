@@ -154,7 +154,7 @@ it does not load `apps/gateway/.env`. Defaults are:
 
 For example, `ROUTER_PORT=11017 npm run dev` changes Router's GraphQL listener and the Angular proxy together; health remains on 11016.
 The configured origin can send GET/POST/OPTIONS with `authorization`, `content-type`,
-`x-store-id` and `x-request-id`. The three context headers are forwarded to all subgraphs.
+`x-branch-id` and `x-request-id`. The three context headers are forwarded to all subgraphs.
 Health returns `{"status":"UP"}` from the dedicated health port, independently of downstream health.
 
 The [Rhai compatibility hook](../apps/gateway/router/compatibility.rhai)
@@ -200,7 +200,7 @@ assert the public contract directly over real subgraphs and isolated test databa
 ## Domain development
 
 - [Discocan development](discocan/development.md): telemetry admin, demo login, Vehicles/Devices and API usage.
-- [Ecommerce Stores](ecommerce/stores.md): Store discovery contracts and implementation.
+- [Ecommerce Branches](ecommerce/branches.md): Branch discovery contracts and implementation.
 
 ## Angular presentation and agent tools
 
@@ -319,7 +319,7 @@ npm run schema:check
 
 Regenerate and restart after SDL/operation changes. Domain API examples are in
 [Discocan development](discocan/development.md#graphql-usage) and
-[Ecommerce Stores](ecommerce/stores.md#graphql-contracts).
+[Ecommerce Branches](ecommerce/branches.md#graphql-contracts).
 
 ## PostgreSQL and Prisma
 
@@ -351,15 +351,15 @@ Compose project `holita` uses `holita_postgres_data` mounted at `/var/lib/postgr
 
 Core/Fleet own their schemas, generated Prisma clients and reviewed SQL migrations. Core
 retains its initial migration; Fleet retains its initial migration and adds the shared
-eData reference catalog through an additive migration. Store, Vehicle and Device place
-tenantId immediately after id. The Device FK includes Tenant/Store/Vehicle, and IMEI uniqueness
-includes Tenant/Store. `db:migrate` deploys Core then Fleet; `db:generate` generates both ignored
+eData reference catalog through an additive migration. Branch, Vehicle and Device place
+tenantId immediately after id. The Device FK includes Tenant/Branch/Vehicle, and IMEI uniqueness
+includes Tenant/Branch. `db:migrate` deploys Core then Fleet; `db:generate` generates both ignored
 clients. Initial migrations require empty databases; a previous migration history needs an
 explicitly authorized database rebuild. `db:migrate` never resets databases. Subsequent schema
 changes require new reviewed SQL migrations, not edits to applied history or db push.
-`db:seed` inserts RentalSofia, Discordia and Sandbox Stores, two Discordia Vehicles and one Device
+`db:seed` inserts RentalSofia, Discordia and Sandbox Branches, two Discordia Vehicles and one Device
 with a leading-zero IMEI. Existing keys and edits are preserved. Core runs before Fleet; Fleet
-fixtures belong to RentalSofia's Discordia Store.
+fixtures belong to RentalSofia's Discordia Branch.
 
 The [Simple eData catalog procedure](discocan/erm-resources/simple-edata-catalog/README.md)
 uses direct commands for EXE inspection, extraction, comparison and local Fleet import.
@@ -370,5 +370,22 @@ It is separate from the sample-data seed and has no npm workflow registration.
 Use `nvm use` when node/npm are unavailable. Check Docker before `db:up`; setup and migration
 are explicit prerequisites. Check application health endpoints and GraphQL errors separately.
 A health response does not prove database readiness. Regenerate contracts and restart the group
-when SDL/operations change. Check the selected Store and Fleet startup/backend flags for
+when SDL/operations change. Check the selected Branch and Fleet startup/backend flags for
 unavailable business screens. See [testing](testing.md) for guarded fixtures and cleanup.
+
+## Branch database and API migration
+
+Core and Fleet each include `20261017010000_rename_store_to_branch`. Core renames
+the existing `Store` table to `Branch`; Fleet renames Vehicle/Device `storeId`
+columns to `branchId`. These migrations preserve row IDs, timestamps, relations,
+column positions and the previously applied migration history. Existing volumes
+and data remain in place. Branch means an online shop in Ecommerce and a vehicle
+fleet in Discocan.
+
+Stop the local application group before applying these coordinated migrations.
+Keep a database backup, run `npm run db:migrate`, regenerate clients/contracts
+with `npm run db:generate` and `npm run codegen`, then restart with `npm run dev`.
+The public API uses `Branch`, `branches`, `branch`, `branchId` and
+`x-branch-id`; the former Store fields and header are unsupported. Fleet URLs
+keep their language/UUID/resource structure. Existing tab sessions with the
+previous stored scope require signing in again.

@@ -9,7 +9,7 @@ import { createTestDatabase } from './test-database.js';
 
 const tenantId = '01000000-0000-4000-8000-000000000001';
 
-describe('Stores GraphQL with PostgreSQL', () => {
+describe('Branches GraphQL with PostgreSQL', () => {
   let database: Awaited<ReturnType<typeof createTestDatabase>>;
   let closeDatabase: (() => Promise<void>) | undefined;
   let app: INestApplication | undefined;
@@ -54,58 +54,61 @@ describe('Stores GraphQL with PostgreSQL', () => {
     return body;
   }
 
-  it('lists stores without selected store context in deterministic order', async () => {
-    const z = await database.client.store.create({ data: { tenantId, name: 'Z store' } });
-    const a = await database.client.store.create({ data: { tenantId, name: 'A store' } });
-    expect(await query('{ stores { id name } }')).toEqual({
+  it('lists branches without selected branch context in deterministic order', async () => {
+    const z = await database.client.branch.create({ data: { tenantId, name: 'Z branch' } });
+    const a = await database.client.branch.create({ data: { tenantId, name: 'A branch' } });
+    expect(await query('{ branches { id name } }')).toEqual({
       data: {
-        stores: [
+        branches: [
           { id: a.id, name: a.name },
           { id: z.id, name: z.name },
         ],
       },
     });
   });
-  it('looks up a real store and returns null for an unknown UUID', async () => {
-    const store = await database.client.store.create({ data: { tenantId, name: 'Lookup' } });
-    expect(await query('query($id:ID!){store(id:$id){id name}}', { id: store.id })).toEqual({
-      data: { store: { id: store.id, name: store.name } },
+  it('looks up a real branch and returns null for an unknown UUID', async () => {
+    const branch = await database.client.branch.create({ data: { tenantId, name: 'Lookup' } });
+    expect(await query('query($id:ID!){branch(id:$id){id name}}', { id: branch.id })).toEqual({
+      data: { branch: { id: branch.id, name: branch.name } },
     });
-    expect(await query('query($id:ID!){store(id:$id){id}}', { id: randomUUID() })).toEqual({
-      data: { store: null },
+    expect(await query('query($id:ID!){branch(id:$id){id}}', { id: randomUUID() })).toEqual({
+      data: { branch: null },
     });
   });
   it('validates UUIDs and resolves actual federation references', async () => {
-    const store = await database.client.store.create({ data: { tenantId, name: 'Federated' } });
-    expect(await query('query($id:ID!){store(id:$id){id}}', { id: 'invalid' })).toMatchObject({
+    const branch = await database.client.branch.create({ data: { tenantId, name: 'Federated' } });
+    expect(await query('query($id:ID!){branch(id:$id){id}}', { id: 'invalid' })).toMatchObject({
       errors: [{ extensions: { code: 'BAD_USER_INPUT' } }],
     });
     expect(
-      await query('query($refs:[_Any!]!){_entities(representations:$refs){...on Store{id name}}}', {
-        refs: [{ __typename: 'Store', id: store.id, name: 'Spoofed' }],
-      }),
-    ).toEqual({ data: { _entities: [{ id: store.id, name: store.name }] } });
+      await query(
+        'query($refs:[_Any!]!){_entities(representations:$refs){...on Branch{id name}}}',
+        {
+          refs: [{ __typename: 'Branch', id: branch.id, name: 'Spoofed' }],
+        },
+      ),
+    ).toEqual({ data: { _entities: [{ id: branch.id, name: branch.name }] } });
   });
   it('scopes discovery, direct lookup and federation references to the session tenant', async () => {
     const otherTenant = await database.client.tenant.create({ data: { name: 'Test tenant' } });
-    const foreign = await database.client.store.create({
-      data: { tenantId: otherTenant.id, name: 'Foreign store' },
+    const foreign = await database.client.branch.create({
+      data: { tenantId: otherTenant.id, name: 'Foreign branch' },
     });
-    expect(await query('{stores{id name}}', {}, otherTenant.id)).toEqual({
-      data: { stores: [{ id: foreign.id, name: foreign.name }] },
+    expect(await query('{branches{id name}}', {}, otherTenant.id)).toEqual({
+      data: { branches: [{ id: foreign.id, name: foreign.name }] },
     });
-    expect(await query('query($id:ID!){store(id:$id){id}}', { id: foreign.id })).toEqual({
-      data: { store: null },
+    expect(await query('query($id:ID!){branch(id:$id){id}}', { id: foreign.id })).toEqual({
+      data: { branch: null },
     });
     expect(
-      await query('query($refs:[_Any!]!){_entities(representations:$refs){...on Store{id}}}', {
-        refs: [{ __typename: 'Store', id: foreign.id, tenantId }],
+      await query('query($refs:[_Any!]!){_entities(representations:$refs){...on Branch{id}}}', {
+        refs: [{ __typename: 'Branch', id: foreign.id, tenantId }],
       }),
     ).toEqual({ data: { _entities: [null] } });
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-tenant-id': tenantId },
-      body: JSON.stringify({ query: '{stores{id}}' }),
+      body: JSON.stringify({ query: '{branches{id}}' }),
     });
     expect(await response.json()).toMatchObject({
       errors: [{ extensions: { code: 'UNAUTHENTICATED' } }],

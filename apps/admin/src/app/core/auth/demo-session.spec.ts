@@ -16,17 +16,17 @@ describe('Tab-local demo session', () => {
     vi.useFakeTimers();
     const expiry = Math.floor(Date.now() / 1000) + 30;
     const token = `holita-demo.${tenant.id}.${String(expiry)}.${'s'.repeat(43)}`;
-    sessionStorage.setItem(storageKey, JSON.stringify({ tenant, token, storeId: 'store-a' }));
+    sessionStorage.setItem(storageKey, JSON.stringify({ tenant, token, branchId: 'branch-a' }));
     const session = TestBed.inject(DemoSession);
-    expect(session.storeId()).toBe('store-a');
-    session.selectStore('store-b');
+    expect(session.branchId()).toBe('branch-a');
+    session.selectBranch('branch-b');
     expect(JSON.parse(sessionStorage.getItem(storageKey) ?? '{}')).toMatchObject({
-      storeId: 'store-b',
+      branchId: 'branch-b',
     });
     expect(session.capture()).toEqual({ tenantId: tenant.id, token });
     await vi.advanceTimersByTimeAsync(30_000);
     expect(session.current()).toBeNull();
-    expect(session.storeId()).toBeNull();
+    expect(session.branchId()).toBeNull();
     expect(sessionStorage.getItem(storageKey)).toBeNull();
     expect(() => session.capture()).toThrow('Sign in');
   });
@@ -37,5 +37,13 @@ describe('Tab-local demo session', () => {
   ])('ignores malformed or expired stored sessions', (value) => {
     sessionStorage.setItem(storageKey, value);
     expect(TestBed.inject(DemoSession).current()).toBeNull();
+  });
+  it('requires a new sign-in for a session with the former Store scope', () => {
+    const expiry = Math.floor(Date.now() / 1000) + 30;
+    const token = `holita-demo.${tenant.id}.${String(expiry)}.${'s'.repeat(43)}`;
+    sessionStorage.setItem(storageKey, JSON.stringify({ tenant, token, storeId: 'old-scope' }));
+    const session = TestBed.inject(DemoSession);
+    expect(session.current()).toBeNull();
+    expect(session.branchId()).toBeNull();
   });
 });

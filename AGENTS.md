@@ -23,17 +23,17 @@ Keep shared rules in this guide and never put credential values in agent instruc
 ## Domain boundaries and instruction routing
 
 - This repository supports two distinct domains: Discocan (fleet telemetry) and Ecommerce
-  (online stores). Documentation separation does not rename current holita packages or resources.
+  (online shops). Documentation separation does not rename current holita packages or resources.
 - For telemetry, Vehicles/Devices and the current Fleet admin, read
   [Discocan documentation](docs/discocan/README.md) and apply
   [Discocan instructions](docs/discocan/instructions.md).
-- For online stores and Core Store behavior, read [Ecommerce documentation](docs/ecommerce/README.md)
-  and apply [Ecommerce instructions](docs/ecommerce/instructions.md). When a shared Store change
+- For online shops and Core Branch behavior, read [Ecommerce documentation](docs/ecommerce/README.md)
+  and apply [Ecommerce instructions](docs/ecommerce/instructions.md). When a shared Branch change
   affects Fleet, consult both domains.
-- Discocan currently uses Stores as organizational scope; these will later become Branches.
-  Ecommerce retains Stores for online shops. Until the rename is implemented, preserve actual
-  Store/storeId/x-store-id contracts and tenant-scoped access. Documentation boundaries alone
-  do not authorize a code, API, database or infrastructure rename.
+- Branch is the shared organizational scope in both domains: an online shop in Ecommerce
+  and a vehicle fleet in Discocan. Use Branch/branchId/x-branch-id consistently and preserve
+  tenant-scoped access. Where tenantId and branchId both exist, keep branchId immediately
+  after tenantId. Domain terminology does not create separate persistence models.
 - Keep domain-specific behavior and rules in their own documentation directories. Shared
   architecture, development tooling and validation remain under `docs/`.
 
@@ -91,7 +91,7 @@ Keep shared rules in this guide and never put credential values in agent instruc
 - Use concrete feature repositories for Prisma operations and compulsory verified Tenant/domain scoping. Do not add generic repositories/services, CQRS, empty domain layers, or interfaces for every class.
 - For GraphQL features, SDL defines the API. Use generated API types and explicit runtime validation rather than duplicate handwritten API models. Prisma owns persistence definitions.
 - After SDL/operation changes run codegen and schema:check. Keep generator inputs explicit, generated outputs ignored, and runtime SDL assets in builds. Regenerate/restart instead of adding dynamic discovery.
-- The explicit tenant demo login is development-only; never treat it as production authentication. Tenant identity comes from the verified session, never a caller-supplied tenant header/input. Store context is not authorization. Preserve useful diagnostics without logging secrets.
+- The explicit tenant demo login is development-only; never treat it as production authentication. Tenant identity comes from the verified session, never a caller-supplied tenant header/input. Branch context is not authorization. Preserve useful diagnostics without logging secrets.
 - Keep Prisma schemas/migrations/clients inside the owning service. Review new migration SQL; never edit applied migrations or replace history with db push. Seeds insert missing fixtures without updating existing rows.
 - Use standard NestJS exceptions and avoid custom exception frameworks.
 

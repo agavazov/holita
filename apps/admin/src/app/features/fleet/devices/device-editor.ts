@@ -19,7 +19,7 @@ import { InputText } from 'primeng/inputtext';
 import { RelationPicker, type RelationLoader } from '../relation-picker';
 import { Message } from 'primeng/message';
 import type {
-  AdminStoresQuery,
+  AdminBranchesQuery,
   AdminDeviceFragment,
   CreateFleetDeviceInput,
 } from '../../../../generated/graphql/operations';
@@ -51,7 +51,7 @@ import {
   host: { '(window:beforeunload)': 'beforeUnload($event)' },
 })
 export class DeviceEditor implements OnInit {
-  readonly store = input.required<AdminStoresQuery['stores'][number]>();
+  readonly branch = input.required<AdminBranchesQuery['branches'][number]>();
   readonly language = input.required<Language>();
   readonly deviceId = input<string | null>(null);
   readonly text = computed(() => messages[this.language()]);
@@ -96,10 +96,10 @@ export class DeviceEditor implements OnInit {
   });
   readonly failure = computed(() => requestError(this.error(), this.text().networkError));
   readonly serverErrors = computed(() => deviceFieldErrors(this.writeError()));
-  readonly listLink = computed(() => ['/', this.language(), this.store().id, 'fleet', 'devices']);
+  readonly listLink = computed(() => ['/', this.language(), this.branch().id, 'fleet', 'devices']);
 
   ngOnInit(): void {
-    this.api.initialize(this.store().id, this.language());
+    this.api.initialize(this.branch().id, this.language());
     this.form.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       if (!this.pending()) this.writeError.set(null);
     });

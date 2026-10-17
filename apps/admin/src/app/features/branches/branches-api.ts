@@ -4,7 +4,7 @@ import { Apollo, ApolloBase } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
 import { firstValueFrom } from 'rxjs';
 import {
-  AdminStoresDocument,
+  AdminBranchesDocument,
   AdminTenantsDocument,
   AdminDemoLoginDocument,
 } from '../../../generated/graphql/operations';
@@ -14,7 +14,7 @@ import { DemoSession } from '../../core/auth/demo-session';
 import type { Language } from '../../i18n/messages';
 
 @Injectable({ providedIn: 'root' })
-export class StoresApi {
+export class BranchesApi {
   private readonly publicClient = inject(Apollo);
   private readonly httpLink = inject(HttpLink);
   private readonly config = inject(AdminConfig);
@@ -43,7 +43,7 @@ export class StoresApi {
       graphqlOptions(this.httpLink, this.config.graphqlUrl, undefined, scope),
     );
     const apollo = new ApolloBase(this.zone, undefined, client);
-    const query = apollo.watchQuery({ query: AdminStoresDocument, context: { language } });
+    const query = apollo.watchQuery({ query: AdminBranchesDocument, context: { language } });
     return {
       query,
       close: () => {

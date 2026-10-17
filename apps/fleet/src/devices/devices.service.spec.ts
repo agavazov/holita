@@ -12,13 +12,13 @@ describe('Devices validation and scope', () => {
   const create = jest.fn<DevicesRepository['create']>();
   const update = jest.fn<DevicesRepository['update']>();
   const findVehicle = jest.fn<DevicesRepository['findVehicle']>();
-  const requireStore = jest.fn<CoreClient['requireStore']>();
+  const requireBranch = jest.fn<CoreClient['requireBranch']>();
   const context = {
     requestId: randomUUID(),
-    storeId: randomUUID(),
     tenantId: '01000000-0000-4000-8000-000000000001',
+    branchId: randomUUID(),
     authorization: undefined,
-    storeChecks: new Map(),
+    branchChecks: new Map(),
   };
   const vehicleId = randomUUID();
   let service: DevicesService;
@@ -27,7 +27,7 @@ describe('Devices validation and scope', () => {
       providers: [
         DevicesService,
         { provide: DevicesRepository, useValue: { list, create, update, findVehicle } },
-        { provide: CoreClient, useValue: { requireStore } },
+        { provide: CoreClient, useValue: { requireBranch } },
       ],
     }).compile();
     service = module.get(DevicesService);
@@ -35,7 +35,7 @@ describe('Devices validation and scope', () => {
     findVehicle.mockResolvedValue({
       id: vehicleId,
       tenantId: context.tenantId,
-      storeId: context.storeId,
+      branchId: context.branchId,
       licensePlate: 'CA1234AB',
       notes: null,
       createdAt: new Date(),
@@ -46,21 +46,21 @@ describe('Devices validation and scope', () => {
     await service.list(context, { search: ' 001 ', sort: { field: 'IMEI', direction: 'ASC' } });
     expect(list).toHaveBeenCalledWith(
       context.tenantId,
-      context.storeId,
+      context.branchId,
       0,
       20,
       { search: '001', ids: undefined },
       { field: 'IMEI', direction: 'ASC' },
     );
     expect(() => service.list(context, { limit: 101 })).toThrow(BadRequestException);
-    expect(() => service.list({ ...context, storeId: 'bad' }, {})).toThrow(BadRequestException);
-    expect(requireStore).not.toHaveBeenCalled();
+    expect(() => service.list({ ...context, branchId: 'bad' }, {})).toThrow(BadRequestException);
+    expect(requireBranch).not.toHaveBeenCalled();
   });
-  it('preserves leading zeros and checks the same-store vehicle before creation', async () => {
+  it('preserves leading zeros and checks the same-branch vehicle before creation', async () => {
     await service.create(context, { imei: ' 001234567890123 ', vehicleId });
-    expect(findVehicle).toHaveBeenCalledWith(context.tenantId, context.storeId, vehicleId);
-    expect(requireStore).toHaveBeenCalledWith(context.storeId, context);
-    expect(create).toHaveBeenCalledWith(context.tenantId, context.storeId, {
+    expect(findVehicle).toHaveBeenCalledWith(context.tenantId, context.branchId, vehicleId);
+    expect(requireBranch).toHaveBeenCalledWith(context.branchId, context);
+    expect(create).toHaveBeenCalledWith(context.tenantId, context.branchId, {
       imei: '001234567890123',
       vehicleId,
     });
@@ -76,7 +76,7 @@ describe('Devices validation and scope', () => {
     await expect(service.create(context, { imei, vehicleId })).rejects.toThrow(BadRequestException);
     expect(findVehicle).not.toHaveBeenCalled();
     expect(create).not.toHaveBeenCalled();
-    expect(requireStore).not.toHaveBeenCalled();
+    expect(requireBranch).not.toHaveBeenCalled();
   });
   it('rejects a missing or foreign vehicle in create and reassignment', async () => {
     findVehicle.mockResolvedValue(null);
@@ -88,18 +88,18 @@ describe('Devices validation and scope', () => {
     );
     expect(create).not.toHaveBeenCalled();
     expect(update).not.toHaveBeenCalled();
-    expect(requireStore).not.toHaveBeenCalled();
+    expect(requireBranch).not.toHaveBeenCalled();
   });
   it('reassigns without calling Core and rejects clearing or empty updates', async () => {
     const id = randomUUID();
     await service.update(context, id, { vehicleId });
-    expect(update).toHaveBeenCalledWith(context.tenantId, context.storeId, id, { vehicleId });
+    expect(update).toHaveBeenCalledWith(context.tenantId, context.branchId, id, { vehicleId });
     await expect(service.update(context, id, { vehicleId: null })).rejects.toThrow(
       BadRequestException,
     );
     await expect(service.update(context, id, { imei: null })).rejects.toThrow(BadRequestException);
     await expect(service.update(context, id, {})).rejects.toThrow(BadRequestException);
-    expect(requireStore).not.toHaveBeenCalled();
+    expect(requireBranch).not.toHaveBeenCalled();
   });
   it.each([
     ['P2002', 'imei'],

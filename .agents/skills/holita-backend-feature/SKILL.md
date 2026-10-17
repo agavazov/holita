@@ -9,23 +9,23 @@ Read [AGENTS.md](../../../AGENTS.md), [architecture](../../../docs/architecture/
 [shared requirements](../../../docs/req/foundation.md) and the Discocan [implementation index](../../../docs/discocan/fleet.md).
 
 For Fleet changes apply [Discocan instructions](../../../docs/discocan/instructions.md) and
-read [Discocan requirements](../../../docs/discocan/requirements.md). For Core Store changes
+read [Discocan requirements](../../../docs/discocan/requirements.md). For Core Branch changes
 apply [Ecommerce instructions](../../../docs/ecommerce/instructions.md); check Discocan consumers
-when the shared Store contract changes. Telemetry Stores will later become Branches, but the
-current API and persistence remain Store-based.
+when the shared Branch contract changes. Branch represents a vehicle fleet in Discocan
+and an online shop in Ecommerce. Keep branchId immediately after tenantId where both exist.
 
 Use actual Fleet [Vehicle SDL](../../../apps/fleet/src/vehicles/vehicles.graphql),
 [resolver](../../../apps/fleet/src/vehicles/vehicles.resolver.ts),
 [service](../../../apps/fleet/src/vehicles/vehicles.service.ts) and
 [repository](../../../apps/fleet/src/vehicles/vehicles.repository.ts).
 SDL owns API definitions; generated types own resolver signatures; concrete repositories
-require verified Tenant and Store scope on every operation. Inputs never own tenantId or storeId.
+require verified Tenant and Branch scope on every operation. Inputs never own tenantId or branchId.
 The [Core client](../../../apps/fleet/src/core/core.client.ts) checks existence only during
 creation, using a generated operation and request-local promise cache. Reads/updates/deletes
-remain independent of Core except requested federated Store fields.
+remain independent of Core except requested federated Branch fields.
 
-[Devices](../../../apps/fleet/src/devices/devices.service.ts) adds required same-tenant/same-store
-Vehicle assignment, 15-digit string IMEI and per-Store uniqueness. Preserve leading zeros,
+[Devices](../../../apps/fleet/src/devices/devices.service.ts) adds required same-tenant/same-branch
+Vehicle assignment, 15-digit string IMEI and per-Branch uniqueness. Preserve leading zeros,
 composite foreign keys, shared assignments and protected Vehicle deletion. Resolve federation
 references through scoped service access; use @Parent with Nest parameter decorators.
 

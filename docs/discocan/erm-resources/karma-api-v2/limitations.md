@@ -95,7 +95,7 @@ reconciled. Nullable finite values are preserved, without deriving units or labe
 ## Access and operations limits
 
 All authenticated holita Tenants intentionally see the same configured account.
-Karma project memberships do not enforce Tenant/Store filtering. The demo session
+Karma project memberships do not enforce Tenant/Branch filtering. The demo session
 is not production user identity, membership authorization or a role-permission
 model. A future change to access scope requires an explicit domain decision;
 the present documentation does not authorize it.

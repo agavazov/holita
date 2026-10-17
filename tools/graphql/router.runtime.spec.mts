@@ -46,7 +46,7 @@ describe('native Gateway without available subgraphs or databases', () => {
     const response = await fetch(router.url, {
       method: 'POST',
       headers: { 'content-type': 'application/json', baggage: `key=${'x'.repeat(20 * 1024)}` },
-      body: JSON.stringify({ query: '{stores{id}}' }),
+      body: JSON.stringify({ query: '{branches{id}}' }),
       signal: AbortSignal.timeout(3000),
     });
     await response.text();

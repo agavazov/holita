@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { join } from 'node:path';
 import { workspaceRoot } from '../graphql/contracts.mjs';
-import { chooseStore, test } from './angular-fixture.mjs';
+import { chooseBranch, test } from './angular-fixture.mjs';
 async function captures(page: Page, section: string) {
   for (const viewport of [
     { name: 'desktop', width: 1280, height: 900 },
@@ -66,7 +66,7 @@ test('pages trips from truck details, restores cursor history and exposes all 23
   await page.goBack();
   await expect(rows.first()).toContainText('4000000020');
   const before = headers.length;
-  await chooseStore(page, 'Sandbox');
+  await chooseBranch(page, 'Sandbox');
   expect(headers).toHaveLength(before);
   await page.getByRole('link', { name: 'Български', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Пътувания', exact: true })).toBeVisible();
@@ -77,7 +77,7 @@ test('pages trips from truck details, restores cursor history and exposes all 23
   expect(
     headers.every(
       (header) =>
-        !('x-store-id' in header) && header['authorization'] === `Bearer ${app.demoSession.token}`,
+        !('x-branch-id' in header) && header['authorization'] === `Bearer ${app.demoSession.token}`,
     ),
   ).toBe(true);
 });

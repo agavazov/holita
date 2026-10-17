@@ -5,13 +5,13 @@ import { test } from './angular-fixture.mjs';
 import { workspaceRoot } from '../graphql/contracts.mjs';
 
 test.use({ demoSignedIn: false });
-const storeId = '10000000-0000-4000-8000-000000000001';
-async function signIn(page: Page, name: string, store = 'Discordia') {
+const branchId = '10000000-0000-4000-8000-000000000001';
+async function signIn(page: Page, name: string, branch = 'Discordia') {
   await page.getByRole('combobox', { name: 'Tenant', exact: true }).click();
   await page.getByRole('option', { name, exact: true }).click();
   await expect(page.getByTestId('demo-login')).toBeDisabled();
-  await page.getByRole('combobox', { name: 'Store', exact: true }).click();
-  await page.getByRole('option', { name: store, exact: true }).click();
+  await page.getByRole('combobox', { name: 'Branch', exact: true }).click();
+  await page.getByRole('option', { name: branch, exact: true }).click();
   await page.getByTestId('demo-login').click();
 }
 test('real tenant login gates deep links, survives reload, clears on logout and isolates discovery', async ({
@@ -23,7 +23,7 @@ test('real tenant login gates deep links, survives reload, clears on logout and 
     if (
       request.method() === 'POST' &&
       request.url() === app.gatewayUrl &&
-      /Admin(Vehicles|Devices|Stores)/.test(request.postData() ?? '')
+      /Admin(Vehicles|Devices|Branches)/.test(request.postData() ?? '')
     )
       business.push(request.headers()['authorization'] ?? 'missing');
   });
@@ -34,12 +34,12 @@ test('real tenant login gates deep links, survives reload, clears on logout and 
   await expect(page.getByRole('combobox', { name: 'Tenant', exact: true })).toBeVisible();
   expect(business).toEqual([]);
   await expect(page.locator('holita-admin-shell')).toHaveCount(0);
-  await expect(page.getByRole('combobox', { name: 'Store', exact: true })).toHaveAttribute(
+  await expect(page.getByRole('combobox', { name: 'Branch', exact: true })).toHaveAttribute(
     'aria-disabled',
     'true',
   );
   await signIn(page, 'RentalSofia');
-  await expect(page).toHaveURL(`${app.url}/en/${storeId}/fleet/vehicles`);
+  await expect(page).toHaveURL(`${app.url}/en/${branchId}/fleet/vehicles`);
   await expect(page.getByRole('heading', { name: 'Vehicles', exact: true })).toBeVisible();
   expect(business.length).toBeGreaterThan(0);
   expect(
@@ -52,11 +52,11 @@ test('real tenant login gates deep links, survives reload, clears on logout and 
   await page.getByTestId('demo-logout').click();
   await expect(page.getByRole('heading', { name: 'Demo sign in', exact: true })).toBeVisible();
   expect(await page.evaluate(() => sessionStorage.getItem('holita.admin.demo-session'))).toBeNull();
-  await signIn(page, 'Isolation tenant', 'Isolation store');
-  await expect(page.getByRole('combobox', { name: 'Store', exact: true })).toContainText(
-    'Isolation store',
+  await signIn(page, 'Isolation tenant', 'Isolation branch');
+  await expect(page.getByRole('combobox', { name: 'Branch', exact: true })).toContainText(
+    'Isolation branch',
   );
-  await expect(page.getByRole('heading', { name: 'Stores', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Branches', exact: true })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Vehicles', exact: true })).toBeVisible();
   expect(business.at(-1)).toContain('Bearer holita-demo.01000000-0000-4000-8000-000000000002.');
 });
@@ -97,14 +97,14 @@ test('tenant login works by keyboard in Bulgarian narrow/light/dark layouts', as
   await page.keyboard.press('Space');
   await page.keyboard.press('End');
   await page.keyboard.press('Enter');
-  const stores = page.getByRole('combobox', { name: 'Магазин', exact: true });
-  await expect(stores).not.toHaveAttribute('aria-disabled', 'true');
-  await stores.focus();
+  const branches = page.getByRole('combobox', { name: 'Клон', exact: true });
+  await expect(branches).not.toHaveAttribute('aria-disabled', 'true');
+  await branches.focus();
   await page.keyboard.press('Space');
   await page.keyboard.press('End');
   await page.keyboard.press('Enter');
   await page.getByTestId('demo-login').click();
   await expect(page.getByRole('heading', { name: 'Автомобили', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Магазини', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Клони', exact: true })).toHaveCount(0);
   await expect(page.locator('aside .layout-menuitem-root-text')).toHaveCount(0);
 });

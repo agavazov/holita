@@ -2,14 +2,14 @@
 
 The repository has two distinct domains with separate documentation and contributor instructions:
 
-| Domain                    | Documentation                         | Current implementation                                               |
-| ------------------------- | ------------------------------------- | -------------------------------------------------------------------- |
-| Discocan: fleet telemetry | [docs/discocan](discocan/README.md)   | Fleet Vehicles/Devices, Karma Client and the Angular admin           |
-| Ecommerce: online stores  | [docs/ecommerce](ecommerce/README.md) | Core Tenant/Store foundation; no storefront, catalog, cart or orders |
+| Domain                    | Documentation                         | Current implementation                                                |
+| ------------------------- | ------------------------------------- | --------------------------------------------------------------------- |
+| Discocan: fleet telemetry | [docs/discocan](discocan/README.md)   | Fleet Vehicles/Devices, Karma Client and the Angular admin            |
+| Ecommerce: online shops   | [docs/ecommerce](ecommerce/README.md) | Core Tenant/Branch foundation; no storefront, catalog, cart or orders |
 
-Discocan currently reuses Stores as its organizational scope. In that domain, Stores will
-later become Branches. Ecommerce retains Stores for online shops. The current code, APIs,
-routes and persistence still use Store/storeId/x-store-id.
+Branch is the shared organizational scope: a vehicle fleet in Discocan and an online shop
+in Ecommerce. Code, APIs, routes and persistence use Branch/branchId/x-branch-id with
+verified Tenant scope.
 
 ## Shared workspace
 
@@ -27,8 +27,8 @@ routes and persistence still use Store/storeId/x-store-id.
 - [Sakai source and Angular agent tools](development.md#sakai-source-reference).
 
 Choose the domain before reading or updating its documentation. Shared tooling remains in
-this directory; business behavior belongs in its domain directory. The requested future
-Store-to-Branch terminology is explicitly marked; other product descriptions cover implemented behavior.
+this directory; business behavior belongs in its domain directory. Product descriptions
+cover implemented behavior.
 
 ## Pending work
 

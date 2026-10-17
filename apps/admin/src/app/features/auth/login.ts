@@ -18,13 +18,13 @@ import { Moon } from '@primeicons/angular/moon';
 import { Sun } from '@primeicons/angular/sun';
 import type {
   AdminDemoLoginMutation,
-  AdminStoresQuery,
+  AdminBranchesQuery,
   AdminTenantsQuery,
 } from '../../../generated/graphql/operations';
 import { requestError } from '../../core/graphql/request-error';
 import { messages, type Language } from '../../i18n/messages';
 import { Appearance } from '../../layout/appearance';
-import { StoresApi } from '../stores/stores-api';
+import { BranchesApi } from '../branches/branches-api';
 
 type Session = AdminDemoLoginMutation['demoLogin'];
 
@@ -37,40 +37,40 @@ type Session = AdminDemoLoginMutation['demoLogin'];
 export class Login {
   readonly language = input.required<Language>();
   readonly languageUrl = input.required<UrlTree>();
-  readonly signedIn = output<{ session: Session; storeId: string }>();
+  readonly signedIn = output<{ session: Session; branchId: string }>();
   readonly text = computed(() => messages[this.language()]);
   readonly appearance = inject(Appearance);
   readonly tenantControl = new FormControl<string | null>(null);
-  readonly storeControl = new FormControl<string | null>({ value: null, disabled: true });
-  readonly form = new FormGroup({ tenant: this.tenantControl, store: this.storeControl });
+  readonly branchControl = new FormControl<string | null>({ value: null, disabled: true });
+  readonly form = new FormGroup({ tenant: this.tenantControl, branch: this.branchControl });
   readonly tenants = signal<AdminTenantsQuery['tenants']>([]);
-  readonly stores = signal<AdminStoresQuery['stores']>([]);
+  readonly branches = signal<AdminBranchesQuery['branches']>([]);
   readonly tenantsLoading = signal(true);
-  readonly storesLoading = signal(false);
+  readonly branchesLoading = signal(false);
   readonly tenantError = signal<unknown>(null);
-  readonly storeError = signal<unknown>(null);
+  readonly branchError = signal<unknown>(null);
   readonly failure = computed(() =>
-    requestError(this.tenantError() ?? this.storeError(), this.text().networkError),
+    requestError(this.tenantError() ?? this.branchError(), this.text().networkError),
   );
   readonly submitted = signal(false);
-  private readonly api = inject(StoresApi);
+  private readonly api = inject(BranchesApi);
   private revision = 0;
   private preparedSession: Session | null = null;
-  private closeStores: (() => void) | undefined;
+  private closeBranches: (() => void) | undefined;
   private closeTenants: (() => void) | undefined;
 
   constructor() {
     this.tenantControl.valueChanges.pipe(takeUntilDestroyed()).subscribe((id) => {
-      void this.loadStores(id, this.language());
+      void this.loadBranches(id, this.language());
     });
     effect((onCleanup) => {
       const language = this.language();
       this.loadTenants(language);
-      void this.loadStores(this.tenantControl.value, language);
+      void this.loadBranches(this.tenantControl.value, language);
       onCleanup(() => {
         this.revision++;
         this.closeTenants?.();
-        this.closeStores?.();
+        this.closeBranches?.();
       });
     });
     inject(DestroyRef).onDestroy(() => {
@@ -99,18 +99,18 @@ export class Login {
     };
   }
 
-  private async loadStores(tenantId: string | null, language: Language): Promise<void> {
+  private async loadBranches(tenantId: string | null, language: Language): Promise<void> {
     const revision = ++this.revision;
-    this.closeStores?.();
-    this.closeStores = undefined;
+    this.closeBranches?.();
+    this.closeBranches = undefined;
     this.preparedSession = null;
-    this.storeControl.reset({ value: null, disabled: true });
-    this.stores.set([]);
-    this.storeError.set(null);
-    this.storesLoading.set(!!tenantId);
+    this.branchControl.reset({ value: null, disabled: true });
+    this.branches.set([]);
+    this.branchError.set(null);
+    this.branchesLoading.set(!!tenantId);
     if (!tenantId) return;
     try {
-      // A candidate token can only discover its tenant's stores; it is not an active UI session.
+      // A candidate token can only discover its tenant's branches; it is not an active UI session.
       const session = await this.api.login(tenantId, language);
       if (revision !== this.revision) return;
       const { query, close } = this.api.watch(language, {
@@ -119,52 +119,52 @@ export class Login {
       });
       const subscription = query.valueChanges.subscribe({
         next: (result) => {
-          this.storesLoading.set(result.loading);
-          this.storeError.set(result.error ?? null);
+          this.branchesLoading.set(result.loading);
+          this.branchError.set(result.error ?? null);
           if (result.dataState === 'complete') {
-            this.stores.set(result.data.stores);
+            this.branches.set(result.data.branches);
             this.preparedSession = session;
-            if (result.data.stores.length) this.storeControl.enable();
+            if (result.data.branches.length) this.branchControl.enable();
           }
         },
         error: (error: unknown) => {
-          this.storesLoading.set(false);
-          this.storeError.set(error);
+          this.branchesLoading.set(false);
+          this.branchError.set(error);
         },
       });
-      this.closeStores = () => {
+      this.closeBranches = () => {
         subscription.unsubscribe();
         close();
       };
     } catch (error) {
       if (revision === this.revision) {
-        this.storesLoading.set(false);
-        this.storeError.set(error);
+        this.branchesLoading.set(false);
+        this.branchError.set(error);
       }
     }
   }
 
   retry(): void {
     if (this.tenantError()) this.loadTenants(this.language());
-    else void this.loadStores(this.tenantControl.value, this.language());
+    else void this.loadBranches(this.tenantControl.value, this.language());
   }
 
   login(): void {
     const session = this.preparedSession;
-    const storeId = this.storeControl.value;
+    const branchId = this.branchControl.value;
     if (
       !session ||
-      !storeId ||
-      this.storesLoading() ||
-      this.storeError() ||
+      !branchId ||
+      this.branchesLoading() ||
+      this.branchError() ||
       this.submitted() ||
       this.tenantControl.value !== session.tenant.id ||
-      !this.stores().some((store) => store.id === storeId)
+      !this.branches().some((branch) => branch.id === branchId)
     )
       return;
     this.submitted.set(true);
     this.tenantControl.disable({ emitEvent: false });
-    this.storeControl.disable({ emitEvent: false });
-    this.signedIn.emit({ session, storeId });
+    this.branchControl.disable({ emitEvent: false });
+    this.signedIn.emit({ session, branchId });
   }
 }

@@ -203,7 +203,7 @@ async function main() {
     );
     const headers = {
       authorization: `Bearer ${string(record(login.demoLogin).token)}`,
-      'x-store-id': '10000000-0000-4000-8000-000000000001',
+      'x-branch-id': '10000000-0000-4000-8000-000000000001',
     };
     for (let index = 0; index < 50; index++) {
       const vehicle = await request(
@@ -235,17 +235,17 @@ async function main() {
     }
     const scenarios: Scenario[] = [
       { name: 'gateway-control', query: '{__typename}' },
-      { name: 'core-stores', query: '{stores{id name}}' },
+      { name: 'core-branches', query: '{branches{id name}}' },
       {
         name: 'fleet-vehicles',
         query:
-          'query($limit:Int!){fleetVehicles(limit:$limit,sort:{field:LICENSE_PLATE,direction:ASC}){items{id licensePlate notes store{id name}} total offset limit}}',
+          'query($limit:Int!){fleetVehicles(limit:$limit,sort:{field:LICENSE_PLATE,direction:ASC}){items{id licensePlate notes branch{id name}} total offset limit}}',
         variables: { limit: 20 },
       },
       {
         name: 'fleet-devices',
         query:
-          'query($limit:Int!){fleetDevices(limit:$limit,sort:{field:IMEI,direction:ASC}){items{id imei vehicle{id licensePlate} store{id name}} total offset limit}}',
+          'query($limit:Int!){fleetDevices(limit:$limit,sort:{field:IMEI,direction:ASC}){items{id imei vehicle{id licensePlate} branch{id name}} total offset limit}}',
         variables: { limit: 20 },
       },
       { name: 'karma-cars', query: '{karmaCars{id carNumber deviceId}}' },

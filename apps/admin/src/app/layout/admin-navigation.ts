@@ -15,7 +15,7 @@ import { messages, type Language } from '../i18n/messages';
   template: `
     <nav [attr.aria-label]="text().navigation">
       <ul class="layout-menu">
-        @if (fleetEnabled() && storeId(); as id) {
+        @if (fleetEnabled() && branchId(); as id) {
           <li class="layout-root-menuitem">
             <div class="layout-menuitem-root-text">{{ text().fleet }}</div>
             <ul>
@@ -153,7 +153,7 @@ import { messages, type Language } from '../i18n/messages';
 })
 export class AdminNavigation {
   readonly language = input.required<Language>();
-  readonly storeId = input<string | null>(null);
+  readonly branchId = input<string | null>(null);
   readonly fleetEnabled = input(false);
   readonly text = computed(() => messages[this.language()]);
 }

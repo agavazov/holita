@@ -24,12 +24,12 @@ ingestion, tracking and measurement processing are not implemented.
 
 ## Terminology
 
-The telemetry domain currently uses Core Stores to scope Vehicles/Devices and select the
-active workspace. These Stores represent organizational branches for Discocan.
-They will later become **Branches** in this domain. Ecommerce will continue to use **Stores**
-for online shops; the two concepts must remain distinct in documentation and instructions.
+Branch is the shared Core-owned organizational scope. In Discocan, a Branch represents
+a vehicle fleet and scopes Vehicles/Devices and the active admin workspace. In Ecommerce,
+the same Branch concept represents an online shop.
 
-The Branch rename has not been implemented. Current GraphQL types, `storeId` fields,
-`x-store-id` headers, routes, UI catalogs and database identifiers remain Store-based.
-Describe current contracts with their actual names. A future rename must preserve tenant
-and branch isolation, existing data, relations and applied migration history.
+GraphQL uses `Branch`, `branches`, `branch` and `branchId`; Fleet requests carry
+`x-branch-id`. Tenant identity comes from the verified session. Vehicle and Device
+columns begin with `id`, `tenantId`, `branchId`. Branch itself has `id` and `tenantId`.
+The admin labels this scope Клон / Branch. Karma account data remains shared across
+authenticated tenants and does not use Branch scope.

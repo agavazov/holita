@@ -18,7 +18,7 @@
       </a>
     </div>
     @if (!mobile()) {
-      <ng-container [ngTemplateOutlet]="storeSelector" />
+      <ng-container [ngTemplateOutlet]="branchSelector" />
     }
     <div class="layout-topbar-actions">
       <a
@@ -55,20 +55,20 @@
       }
     </div>
     @if (mobile()) {
-      <ng-container [ngTemplateOutlet]="storeSelector" />
+      <ng-container [ngTemplateOutlet]="branchSelector" />
     }
   </header>
-  <ng-template #storeSelector>
-    <div class="store-selector">
-      <label for="active-store">{{ text().activeStore }}</label>
+  <ng-template #branchSelector>
+    <div class="branch-selector">
+      <label for="active-branch">{{ text().activeBranch }}</label>
       <p-select
-        inputId="active-store"
-        [options]="storeOptions()"
+        inputId="active-branch"
+        [options]="branchOptions()"
         optionLabel="name"
         optionValue="id"
-        [ariaLabel]="text().activeStore"
-        [formControl]="storeControl"
-        [placeholder]="text().stores"
+        [ariaLabel]="text().activeBranch"
+        [formControl]="branchControl"
+        [placeholder]="text().branches"
         [loading]="loading()"
         appendTo="body"
       />
@@ -82,7 +82,7 @@
     >
       <holita-admin-navigation
         [language]="language()"
-        [storeId]="storeId()"
+        [branchId]="branchId()"
         [fleetEnabled]="fleetEnabled()"
       />
     </aside>
@@ -106,7 +106,7 @@
     <div id="mobile-navigation" class="layout-mobile-navigation">
       <holita-admin-navigation
         [language]="language()"
-        [storeId]="storeId()"
+        [branchId]="branchId()"
         [fleetEnabled]="fleetEnabled()"
       />
     </div>

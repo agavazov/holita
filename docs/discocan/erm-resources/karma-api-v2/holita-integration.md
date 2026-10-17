@@ -35,7 +35,7 @@ in the single root [.env.example](../../../../.env.example), the
 ## Query, upstream and route mapping
 
 Routes below follow `/:language/karma-client`, with `bg` or `en`. Every query is
-authenticated and uses the common account regardless of active Store.
+authenticated and uses the common account regardless of active Branch.
 
 | GraphQL query                                           | Concrete upstream operation                                 | Admin route / behavior                                                        |
 | ------------------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------- |
@@ -83,10 +83,10 @@ section. Concrete view providers own Apollo clients/caches through
 [KarmaEdataApi](../../../../apps/admin/src/app/features/karma-client/karma-edata-api.ts)
 and [KarmaHistoryApi](../../../../apps/admin/src/app/features/karma-client/karma-history-api.ts).
 Their generated TypedDocumentNodes go through Gateway with `network-only` reads.
-They capture the admin session and send no Store context.
+They capture the admin session and send no Branch context.
 
-The section remains accessible when Fleet is disabled or Store discovery fails.
-Changing Store remembers that selection without reloading Karma. Navigation,
+The section remains accessible when Fleet is disabled or Branch discovery fails.
+Changing Branch remembers that selection without reloading Karma. Navigation,
 language changes, truck changes, session replacement and logout retire old reads
 and clients. Filter/period/cursor changes cancel obsolete reads and clear old rows;
 same-query Refresh can retain the last successful result on error. There is no

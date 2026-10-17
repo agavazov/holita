@@ -13,11 +13,11 @@ import { ADMIN_RUNTIME_CONFIG } from '../../core/config/admin-config';
 import { graphqlOptions } from '../../core/graphql/graphql-options';
 import { AdminShell } from '../../layout/admin-shell';
 
-const storeA = '10000000-0000-4000-8000-000000000001';
-const storeB = '10000000-0000-4000-8000-000000000002';
-const stores = [
-  { id: storeA, name: 'Discordia' },
-  { id: storeB, name: 'Sandbox' },
+const branchA = '10000000-0000-4000-8000-000000000001';
+const branchB = '10000000-0000-4000-8000-000000000002';
+const branches = [
+  { id: branchA, name: 'Discordia' },
+  { id: branchB, name: 'Sandbox' },
 ];
 function operation(request: HttpRequest<unknown>, name: string): boolean {
   const body: unknown = request.body;
@@ -32,7 +32,7 @@ describe.each([
   ['vehicles', 'Vehicle'],
   ['devices', 'Device'],
 ])('Fleet %s availability and workspace routing', (resource, entity) => {
-  const path = `/en/${storeA}/fleet/${resource}`;
+  const path = `/en/${branchA}/fleet/${resource}`;
   const listOperation = `Admin${entity}s`;
   const empty = {
     data: {
@@ -66,7 +66,7 @@ describe.each([
     });
     http = TestBed.inject(HttpTestingController);
     const harness = await RouterTestingHarness.create(url);
-    http.expectOne((request) => operation(request, 'AdminStores')).flush({ data: { stores } });
+    http.expectOne((request) => operation(request, 'AdminBranches')).flush({ data: { branches } });
     await harness.fixture.whenStable();
     return harness;
   }
@@ -79,23 +79,23 @@ describe.each([
       const harness = await mount();
       for (const language of ['en', 'bg']) {
         await harness.navigateByUrl(
-          `/${language}/${storeA}/reference/${resource}${suffix}?search=old&page=2#main-content`,
+          `/${language}/${branchA}/reference/${resource}${suffix}?search=old&page=2#main-content`,
         );
         if (language === 'bg') {
           http
-            .expectOne((request) => operation(request, 'AdminStores'))
-            .flush({ data: { stores } });
+            .expectOne((request) => operation(request, 'AdminBranches'))
+            .flush({ data: { branches } });
           await harness.fixture.whenStable();
         }
         expect(TestBed.inject(Router).url).toBe(
-          `/${language}/${storeA}/fleet/${resource}${suffix}?search=old&page=2#main-content`,
+          `/${language}/${branchA}/fleet/${resource}${suffix}?search=old&page=2#main-content`,
         );
         http.expectNone('/graphql');
       }
     },
     15000,
   );
-  it('blocks all business routes and navigation when disabled while leaving store discovery usable', async () => {
+  it('blocks all business routes and navigation when disabled while leaving branch discovery usable', async () => {
     TestBed.overrideProvider(ADMIN_RUNTIME_CONFIG, {
       useValue: { graphqlUrl: '/graphql', fleetEnabled: false },
     });
@@ -112,13 +112,13 @@ describe.each([
     }
     await harness.navigateByUrl('/en');
     await harness.fixture.whenStable();
-    expect(TestBed.inject(Router).url).toBe(`/en/${storeA}/fleet/vehicles`);
+    expect(TestBed.inject(Router).url).toBe(`/en/${branchA}/fleet/vehicles`);
     expect(harness.routeNativeElement?.textContent).toContain('Fleet is unavailable.');
     http.expectNone('/graphql');
   }, 15000);
-  it('does not issue business requests for unknown stores', async () => {
-    const harness = await mount(`/en/not-a-store/fleet/${resource}/new`);
-    expect(harness.routeNativeElement?.textContent).toContain('Store not found');
+  it('does not issue business requests for unknown branches', async () => {
+    const harness = await mount(`/en/not-a-branch/fleet/${resource}/new`);
+    expect(harness.routeNativeElement?.textContent).toContain('Branch not found');
     expect(harness.routeNativeElement?.querySelector('form')).toBeNull();
     http.expectNone('/graphql');
   });
@@ -137,30 +137,30 @@ describe.each([
       By.directive(AdminShell),
     ).componentInstance;
     if (!(shell instanceof AdminShell)) throw new Error('Missing shell.');
-    shell.storeControl.setValue(storeB);
+    shell.branchControl.setValue(branchB);
     await harness.fixture.whenStable();
     expect(oldRead.cancelled).toBe(true);
-    expect(TestBed.inject(Router).url).toBe(path.replace(storeA, storeB));
+    expect(TestBed.inject(Router).url).toBe(path.replace(branchA, branchB));
     const readB = http.expectOne(
       (request) =>
-        operation(request, listOperation) && request.headers.get('x-store-id') === storeB,
+        operation(request, listOperation) && request.headers.get('x-branch-id') === branchB,
     );
-    expect(readB.request.headers.get('x-store-id')).toBe(storeB);
+    expect(readB.request.headers.get('x-branch-id')).toBe(branchB);
     expect(readB.request.body).toMatchObject({ variables: { offset: 0, limit: 20 } });
     readB.flush(empty);
     await harness.fixture.whenStable();
     const retiredReads = http.match(
       (request) =>
-        operation(request, listOperation) && request.headers.get('x-store-id') === storeA,
+        operation(request, listOperation) && request.headers.get('x-branch-id') === branchA,
     );
     expect(retiredReads.every((read) => read.cancelled)).toBe(true);
-    shell.storeControl.setValue(storeA);
+    shell.branchControl.setValue(branchA);
     await harness.fixture.whenStable();
     const freshA = http.expectOne(
       (request) =>
-        operation(request, listOperation) && request.headers.get('x-store-id') === storeA,
+        operation(request, listOperation) && request.headers.get('x-branch-id') === branchA,
     );
-    expect(freshA.request.headers.get('x-store-id')).toBe(storeA);
+    expect(freshA.request.headers.get('x-branch-id')).toBe(branchA);
     freshA.flush(empty);
     await harness.fixture.whenStable();
     expect(TestBed.inject(Router).url).toBe(path);

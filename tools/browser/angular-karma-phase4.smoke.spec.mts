@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { join } from 'node:path';
 import { workspaceRoot } from '../graphql/contracts.mjs';
-import { chooseStore, test } from './angular-fixture.mjs';
+import { chooseBranch, test } from './angular-fixture.mjs';
 async function captures(page: Page, section: string) {
   for (const viewport of [
     { name: 'desktop', width: 1280, height: 900 },
@@ -105,11 +105,11 @@ test('pages all users, exposes eleven escaped fields and navigates account menus
   await expect(page.getByRole('cell', { name: 'Viewer', exact: true })).toBeVisible();
   expect(
     headers.every(
-      (h) => !('x-store-id' in h) && h['authorization'] === `Bearer ${app.demoSession.token}`,
+      (h) => !('x-branch-id' in h) && h['authorization'] === `Bearer ${app.demoSession.token}`,
     ),
   ).toBe(true);
 });
-test('retains account rows on refresh failure, retries empty data and leaves Store changes independent', async ({
+test('retains account rows on refresh failure, retries empty data and leaves Branch changes independent', async ({
   page,
   app,
 }) => {
@@ -117,7 +117,7 @@ test('retains account rows on refresh failure, retries empty data and leaves Sto
   const rows = page.locator('holita-users-page tbody tr');
   await expect(rows).toHaveCount(50);
   const before = app.karma.requests.filter((r) => r.path === '/apiv2/users').length;
-  await chooseStore(page, 'Sandbox');
+  await chooseBranch(page, 'Sandbox');
   expect(app.karma.requests.filter((r) => r.path === '/apiv2/users')).toHaveLength(before);
   app.karma.setFailed(true);
   await page.getByRole('button', { name: 'Refresh', exact: true }).click();

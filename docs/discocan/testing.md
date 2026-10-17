@@ -3,14 +3,14 @@
 ## Simple eData reference catalog
 
 See the [catalog checks](erm-resources/simple-edata-catalog/README.md#focused-validation)
-for EXE-only Python fixtures and the focused Fleet `edata-catalog.unit.spec.ts`,
-`edata-catalog.db.spec.ts` and `initial-migration.db.spec.ts` selectors. Real PostgreSQL
+for EXE-only TypeScript fixtures and the focused Fleet `edata-catalog.unit.spec.ts`,
+`edata-catalog.db.spec.ts` and `initial-migration.db.spec.ts branch-migration.db.spec.ts` selectors. Real PostgreSQL
 checks cover the full v9.56 catalog, transactional rollback, concurrency, idempotency
 and stored-row verification in dedicated test schemas.
 
 Follow the [shared validation guide](../testing.md) for native targets, database prerequisites,
 guarded fixtures, CI selection and manual full regression. These checks cover the current
-Fleet implementation using Store scope; Branch contracts are not implemented.
+Fleet implementation using the shared Core Branch scope.
 
 ## Vehicles checks
 
@@ -32,7 +32,7 @@ reload/scoping and Bulgarian 1280/390/320px light/dark forms/lists. Captures bel
 
 `npm run test:fleet -- devices.service.spec.ts --skip-nx-cache` checks IMEI/assignment
 validation, scoped calls and constraint mapping. `devices.db.spec.ts` checks exact digits,
-leading zeros, per-Tenant/Store uniqueness, same-tenant/same-store FK, shared Vehicles, protected Vehicle deletion,
+leading zeros, per-Tenant/Branch uniqueness, same-tenant/same-branch FK, shared Vehicles, protected Vehicle deletion,
 reassignment, scoped CRUD and list queries.
 
 ```bash
@@ -51,16 +51,16 @@ views. Captures belong in ignored `.references/review/devices`.
 Use `VITEST_MAX_WORKERS=1` on CPU-constrained hosts without changing case deadlines.
 
 ```bash
-npm run test:admin -- --include=app/features/stores/store-workspace.spec.ts --skip-nx-cache
+npm run test:admin -- --include=app/features/branches/branch-workspace.spec.ts --skip-nx-cache
 npm run test:admin -- --include=app/features/fleet/fleet-workspace.spec.ts --skip-nx-cache
 npm run test:admin -- --include=app/core/config/admin-config.spec.ts --skip-nx-cache
 npm run test:admin -- --include=app/core/graphql/graphql-options.spec.ts --skip-nx-cache
 npm run test:admin -- --include=app/layout/appearance.spec.ts --skip-nx-cache
 ```
 
-Store/workspace tests prove independent login layout, sequential Tenant/Store selection, cancellation
-of obsolete candidate tokens and Store discovery, tenant A → B → A, direct/default Vehicles navigation, A → B → A, cancellation on Store/language
-change, unknown Store and disabled Fleet behavior. Feature APIs prove retired submitted-write
+Branch/workspace tests prove independent login layout, sequential Tenant/Branch selection, cancellation
+of obsolete candidate tokens and Branch discovery, tenant A → B → A, direct/default Vehicles navigation, A → B → A, cancellation on Branch/language
+change, unknown Branch and disabled Fleet behavior. Feature APIs prove retired submitted-write
 success/failure and isolated caches. Real transport uses `angular-foundation.smoke.spec.mts`;
 Sakai focus/theme/resizing/mobile behavior uses `angular-shell.smoke.spec.mts`.
 Behavioral checks and visual review are separate evidence. Compare matching viewport sizes
@@ -70,19 +70,19 @@ against the pinned [Sakai source](../development.md#sakai-source-reference).
 
 ```bash
 npm run test:core -- demo-auth.spec.ts --skip-nx-cache
-npm run test:core:db -- persistence.db.spec.ts stores.db.spec.ts initial-migration.db.spec.ts
-npm run test:fleet:db -- vehicles.db.spec.ts devices.db.spec.ts initial-migration.db.spec.ts seeds.db.spec.ts
-npm run test:admin -- --include=app/features/stores/tenant-session.spec.ts --include=app/core/auth/demo-session.spec.ts --skip-nx-cache
+npm run test:core:db -- persistence.db.spec.ts branches.db.spec.ts initial-migration.db.spec.ts branch-migration.db.spec.ts
+npm run test:fleet:db -- vehicles.db.spec.ts devices.db.spec.ts initial-migration.db.spec.ts branch-migration.db.spec.ts seeds.db.spec.ts
+npm run test:admin -- --include=app/features/branches/tenant-session.spec.ts --include=app/core/auth/demo-session.spec.ts --skip-nx-cache
 npm run test:smoke:admin -- angular-tenants.smoke.spec.mts
 ```
 
 Session checks cover signatures, tampering, expiry, production opt-in, unauthenticated reads and
 ignored tenant headers. DB/federation tests exercise scoped discovery/CRUD/entity resolution,
-identical Store IDs and IMEIs across tenants, composite relation rejection and seed idempotency.
+identical Branch IDs and IMEIs across tenants, composite relation rejection and seed idempotency.
 Initial-migration tests deploy the complete schema in dedicated guarded databases, then check
-mandatory tenant columns, physical id/tenantId column order and the single applied initial migration. They never touch
-development tables. Angular tests cover logged-out deep links, Tenant/Store dropdown gating and retry, obsolete candidate
-responses, root-to-Vehicles navigation, remembered Store selection, tenant client/cache retirement,
+mandatory scope columns, physical id/tenantId/branchId order for Vehicle/Device, and the full applied migration history. Upgrade tests preserve existing records and migration checksums through the Branch rename. They never touch
+development tables. Angular tests cover logged-out deep links, Tenant/Branch dropdown gating and retry, obsolete candidate
+responses, root-to-Vehicles navigation, remembered Branch selection, tenant client/cache retirement,
 delayed submitted writes and fresh A → B → A clients. Browser login checks use the actual dropdown,
 logout/reload and desktop/narrow light/dark views; fixture auto-login is disabled for that suite.
 
@@ -90,7 +90,7 @@ logout/reload and desktop/narrow light/dark views; fixture auto-login is disable
 
 ```bash
 npm run test:karma-client -- accounts.spec.ts history.spec.ts location.spec.ts edata.spec.ts edata.service.spec.ts karma-client.spec.ts cars.service.spec.ts health.spec.ts --skip-nx-cache
-npm run test:admin -- --include=app/features/karma-client/karma-phase4.spec.ts --include=app/features/karma-client/karma-phase3.spec.ts --include=app/features/karma-client/karma-phase2.spec.ts --include=app/features/karma-client/edata-page/edata-page.spec.ts --include=app/features/karma-client/karma-workspace.spec.ts --include=app/features/stores/store-workspace.spec.ts --skip-nx-cache
+npm run test:admin -- --include=app/features/karma-client/karma-phase4.spec.ts --include=app/features/karma-client/karma-phase3.spec.ts --include=app/features/karma-client/karma-phase2.spec.ts --include=app/features/karma-client/edata-page/edata-page.spec.ts --include=app/features/karma-client/karma-workspace.spec.ts --include=app/features/branches/branch-workspace.spec.ts --skip-nx-cache
 npm run test:gateway:db -- federation.db.spec.mts
 npm run test:smoke:admin -- angular-karma-phase4.smoke.spec.mts angular-karma-phase3.smoke.spec.mts angular-karma-phase2.smoke.spec.mts angular-edata.smoke.spec.mts angular-karma.smoke.spec.mts angular-foundation.smoke.spec.mts angular-shell.smoke.spec.mts
 ```
@@ -101,14 +101,14 @@ Non-success HTTP bodies are cancelled before parsing; tests include stalled bodi
 session renewal for unrelated HTTP failures.
 Detail checks cover invalid IDs before upstream access, missing trucks and mismatched responses.
 HTTP tests verify the signed session protocol and reject anonymous/invalid sessions before
-upstream reads. Angular checks cover independence from Stores/Fleet, no Store header and
+upstream reads. Angular checks cover independence from Branches/Fleet, no Branch header and
 retirement across session/language/truck changes and logout, direct details and malformed IDs.
 
 Federation and browser fixtures run the compiled Karma Client against a local controlled Karma
 HTTP server. They never use live account credentials; the existing guarded Core/Fleet database
-prerequisites still apply. Federation proves the common list/details across tenants/Stores, upstream
+prerequisites still apply. Federation proves the common list/details across tenants/Branches, upstream
 renewal and Fleet operation while Karma fails. Browser checks cover routing, Refresh, error/empty
-states, Store switching, reload/language and disabled-Fleet/signed-out behavior. Detail browser
+states, Branch switching, reload/language and disabled-Fleet/signed-out behavior. Detail browser
 checks cover list links, direct routes, Refresh/retry, retained data and missing/invalid trucks.
 
 The eData suites cover a 500-row upstream cap with complete traversal beyond that cap,
@@ -138,14 +138,14 @@ filter/period retirement, truck A → B → A, language/logout and native form s
 The compiled browser fixture covers trip/event traversal, reload/back/Latest/Newer,
 size/date/code filters, keyboard dialog focus, retained profile refresh/retry, empty/
 missing states and desktop/mobile light/dark captures. Real Gateway cases verify signed
-shared-account access across tenants/Stores for all three queries. These deterministic
+shared-account access across tenants/Branches for all three queries. These deterministic
 fixtures do not establish live provider uptime, active-trip semantics or score units.
 
 Account tests cover all eleven user fields, original memberships, null/zero/plain text,
 strict duplicate/shape validation, signed shared access before reads, renewal within the
 four-second bound and sanitized failures. Angular checks cover URL paging/search, retained
 refresh data, navigation/language/session cancellation and logout. Gateway verifies the
-complete account arrays across two Tenants/Stores with controlled renewal, failure and empty
+complete account arrays across two Tenants/Branches with controlled renewal, failure and empty
 states. Browser cases cover local paging beyond 50, all-field dialogs/focus, menu navigation,
 reload/language, retained failures and desktop/mobile light/dark captures. Use the native
 `--testNamePattern='Karma users'` Gateway selector for this behavior.

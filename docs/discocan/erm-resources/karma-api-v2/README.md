@@ -89,8 +89,8 @@ are in the [catalog](endpoint-catalog.md) and [limitations](limitations.md).
 
 Every Karma GraphQL query requires holita's verified signed session, including
 the public upstream version. All authenticated Tenants see the same configured
-Karma account; Store selection does not filter it. This is the current intentional
-Karma scope and does not change Fleet Tenant/Store isolation. The demo login is
+Karma account; Branch selection does not filter it. This is the current intentional
+Karma scope and does not change Fleet Tenant/Branch isolation. The demo login is
 not production user identity or membership authorization.
 
 ## Maintaining this reference

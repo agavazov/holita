@@ -3,14 +3,14 @@
 holita is a strict TypeScript npm-workspaces repository with Nx tasks and five host
 applications: Angular admin, native Apollo Router gateway and NestJS core, fleet and karma-client services.
 The admin uses Sakai with holita branding, PrimeNG and Bulgarian/English catalogs.
-Its modules are Vehicles, Devices and the shared Karma truck data and reference views. Core provides Store discovery; Gateway
+Its modules are Vehicles, Devices and the shared Karma truck data and reference views. Core provides Branch discovery; Gateway
 exposes their schema-first federated GraphQL API. PostgreSQL is the only container.
 
 Documentation separates [Discocan fleet telemetry](docs/discocan/README.md) from
-[Ecommerce online stores](docs/ecommerce/README.md). Fleet and the current Vehicles/Devices
-admin belong to Discocan; the Core Store foundation is documented under Ecommerce.
-Discocan's current Stores will later become Branches, while Ecommerce keeps Stores for online
-shops. Current code, contracts and persistence still use Store terminology.
+[Ecommerce online shops](docs/ecommerce/README.md). Fleet and the current Vehicles/Devices
+admin belong to Discocan; the Core Branch foundation is documented under Ecommerce.
+Branch is the shared organizational scope: a vehicle fleet in Discocan and an online shop in
+Ecommerce. Code, contracts, persistence and the admin use Branch terminology.
 
 Fleet also stores the [versioned Simple eData vendor catalog](docs/discocan/erm-resources/simple-edata-catalog/README.md).
 Its EXE inspection, extraction, comparison and local import use direct commands,
@@ -35,13 +35,13 @@ On Ubuntu/WSL, run `npm run kill` in another terminal to stop the applications a
 watchers. PostgreSQL remains running; `npm run db:down` stops it separately.
 
 If needed, run `nvm install` before `nvm use`. Open [Angular admin](http://127.0.0.1:11000).
-Choose RentalSofia and a Store on the standalone demo login screen to open Vehicles. There is no Store list landing page; the header selector switches Stores after login. Switching Stores preserves the current Vehicles/Devices
+Choose RentalSofia and a Branch on the standalone demo login screen to open Vehicles. There is no Branch list landing page; the header selector switches Branches after login. Switching Branches preserves the current Vehicles/Devices
 section and resets the list query. Routes and list filters survive reloads and language changes.
 Each mounted workspace owns its Apollo client/cache. Submitted writes settle in their original
-Store; navigation cancels obsolete reads and callbacks.
+Branch; navigation cancels obsolete reads and callbacks.
 
 Vehicles has required License Plate and optional multiline Notes. Devices has a required
-15-digit IMEI unique within a Store and a mandatory same-tenant/same-store Vehicle, labeled Truck in the
+15-digit IMEI unique within a Branch and a mandatory same-tenant/same-branch Vehicle, labeled Truck in the
 editor. Multiple Devices can share a Vehicle; assigned Vehicles cannot be deleted.
 Both Fleet modules provide search, sorting, paging, typed create/edit forms, dirty-form guards,
 confirmed single/page-local sequential deletion and failed-row retry.
@@ -49,7 +49,7 @@ confirmed single/page-local sequential deletion and failed-row retry.
 Karma Client → Users/Roles provides read-only account search, local paging and full user
 details. Role descriptions and numeric flags are shown as source values.
 Karma Client → Trucks lists all cars from one configured Karma account for every signed-in
-Tenant/Store at `/bg/karma-client/cars` or `/en/karma-client/cars`. Configure the ignored
+Tenant/Branch at `/bg/karma-client/cars` or `/en/karma-client/cars`. Configure the ignored
 `apps/karma-client/.env` using the Karma Client and shared demo entries in the
 [single root environment reference](.env.example).
 Click a registration number to open read-only truck details; these pages support Refresh. Open eData from truck details for the latest 50 messages,
@@ -64,19 +64,19 @@ Driving profile shows nine category scores/weights for a default seven-day perio
 editable bounds. Trip/profile filters use API wall-clock values with an unspecified
 provider timezone; metrics and event codes retain their original values.
 Karma has no persistence or Fleet synchronization.
-Karma is independent of the Store selector and `fleetEnabled`. See
+Karma is independent of the Branch selector and `fleetEnabled`. See
 [Karma configuration](docs/discocan/development.md#karma-client).
 
 The shell supports keyboard/mobile navigation and persisted light/dark themes. The startup
-`fleetEnabled` flag gates both business modules; Store discovery stays available.
+`fleetEnabled` flag gates both business modules; Branch discovery stays available.
 The ignored [Sakai source](docs/development.md#sakai-source-reference) supplies the visual reference.
 
 Gateway, Core, Fleet and Karma Client listen on loopback ports 11010, 11011, 11013 and 11014; PostgreSQL uses 11084. `dev` waits for PostgreSQL health before starting the five applications. Ctrl+C stops
 the native Router and Node application group. `npm run db:down` stops PostgreSQL and preserves its volume. Setup, migrations
-and seeding are explicit commands. The seed inserts RentalSofia, Discordia and Sandbox Stores, two sample Vehicles and one Device without replacing existing records.
+and seeding are explicit commands. The seed inserts RentalSofia, Discordia and Sandbox Branches, two sample Vehicles and one Device without replacing existing records.
 
-Use [Gateway GraphQL](http://127.0.0.1:11010/graphql). `{ tenants { id name } }` is public for demo login. Sign in through `demoLogin` and send its token as `Authorization: Bearer <token>` to discover Stores. Store discovery needs no Store header. Fleet business operations require `x-store-id`, for example the seeded Discordia Store
-`10000000-0000-4000-8000-000000000001`. The demo login has no passwords or tenant membership checks and must be replaced before production. Tenant identity is verified from the signed session; business records are scoped by Tenant and Store. See [demo session configuration and limitations](docs/discocan/development.md#demo-tenant-login).
+Use [Gateway GraphQL](http://127.0.0.1:11010/graphql). `{ tenants { id name } }` is public for demo login. Sign in through `demoLogin` and send its token as `Authorization: Bearer <token>` to discover Branches. Branch discovery needs no Branch header. Fleet business operations require `x-branch-id`, for example the seeded Discordia Branch
+`10000000-0000-4000-8000-000000000001`. The demo login has no passwords or tenant membership checks and must be replaced before production. Tenant identity is verified from the signed session; business records are scoped by Tenant and Branch. See [demo session configuration and limitations](docs/discocan/development.md#demo-tenant-login).
 Router exposes `/health` on its separate loopback port 11016; the subgraphs expose `/health`
 on their normal ports. Health is independent of database/downstream availability.
 

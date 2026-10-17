@@ -88,7 +88,9 @@ describe('Karma eData page', () => {
   });
   async function open(url = '/en/karma-client/cars/41/edata') {
     const harness = await RouterTestingHarness.create(url);
-    http.expectOne((request) => operation(request, 'AdminStores')).flush({ data: { stores: [] } });
+    http
+      .expectOne((request) => operation(request, 'AdminBranches'))
+      .flush({ data: { branches: [] } });
     http
       .expectOne((request) => operation(request, 'AdminKarmaCar'))
       .flush({ data: { karmaCar: car } });
@@ -106,10 +108,10 @@ describe('Karma eData page', () => {
     return http.expectOne((request) => operation(request, 'AdminKarmaEdata'));
   }
 
-  it('loads the latest 50 without dates or Store scope and preserves every field in the dialog', async () => {
+  it('loads the latest 50 without dates or Branch scope and preserves every field in the dialog', async () => {
     const harness = await open();
     const request = read();
-    expect(request.request.headers.has('x-store-id')).toBe(false);
+    expect(request.request.headers.has('x-branch-id')).toBe(false);
     expect(request.request.headers.get('authorization')).toBe('Bearer karma-session-a');
     expect(request.request.body).toMatchObject({
       variables: {
@@ -199,7 +201,9 @@ describe('Karma eData page', () => {
     pending = read();
     await harness.navigateByUrl('/bg/karma-client/cars/42/edata');
     expect(pending.cancelled).toBe(true);
-    http.expectOne((request) => operation(request, 'AdminStores')).flush({ data: { stores: [] } });
+    http
+      .expectOne((request) => operation(request, 'AdminBranches'))
+      .flush({ data: { branches: [] } });
     http
       .expectOne((request) => operation(request, 'AdminKarmaCar'))
       .flush({ data: { karmaCar: { ...car, id: '42' } } });
@@ -212,7 +216,9 @@ describe('Karma eData page', () => {
     });
     await harness.fixture.whenStable();
     expect(pending.cancelled).toBe(true);
-    http.expectOne((request) => operation(request, 'AdminStores')).flush({ data: { stores: [] } });
+    http
+      .expectOne((request) => operation(request, 'AdminBranches'))
+      .flush({ data: { branches: [] } });
     http
       .expectOne((request) => operation(request, 'AdminKarmaCar'))
       .flush({ data: { karmaCar: { ...car, id: '42' } } });
@@ -274,7 +280,9 @@ describe('Karma eData page', () => {
 
   it('skips eData for missing trucks and invalid IDs', async () => {
     const harness = await RouterTestingHarness.create('/en/karma-client/cars/999/edata');
-    http.expectOne((request) => operation(request, 'AdminStores')).flush({ data: { stores: [] } });
+    http
+      .expectOne((request) => operation(request, 'AdminBranches'))
+      .flush({ data: { branches: [] } });
     http
       .expectOne((request) => operation(request, 'AdminKarmaCar'))
       .flush({ data: { karmaCar: null } });

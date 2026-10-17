@@ -7,15 +7,15 @@ import type { Language } from '../../i18n/messages';
 export function graphqlOptions(
   httpLink: HttpLink,
   uri: string,
-  scope?: Readonly<{ storeId: string; language: Language }>,
+  scope?: Readonly<{ branchId: string; language: Language }>,
   session?: Readonly<{ tenantId: string; token: string }>,
 ): ApolloClient.Options {
   if (
     scope &&
-    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(scope.storeId)
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(scope.branchId)
   )
-    throw new Error('A UUID store context is required.');
-  const storeId = scope?.storeId.toLowerCase();
+    throw new Error('A UUID branch context is required.');
+  const branchId = scope?.branchId.toLowerCase();
   const scopedLanguage = scope?.language;
   const link = new ApolloLink((operation, forward) => {
     const language: unknown = operation.getContext()['language'];
@@ -26,7 +26,7 @@ export function graphqlOptions(
         'x-request-id': requestId,
         'Accept-Language': scopedLanguage ?? (language === 'en' ? 'en' : 'bg'),
         ...(session ? { authorization: `Bearer ${session.token}` } : {}),
-        ...(storeId ? { 'x-store-id': storeId } : {}),
+        ...(branchId ? { 'x-branch-id': branchId } : {}),
       },
     });
     return forward(operation);

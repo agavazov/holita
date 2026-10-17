@@ -14,16 +14,16 @@ import { routes } from '../../../app.routes';
 import { graphqlOptions } from '../../../core/graphql/graphql-options';
 import { DevicesPage } from './devices-page';
 
-const storeA = '10000000-0000-4000-8000-000000000001';
-const storeB = '10000000-0000-4000-8000-000000000002';
-const path = `/en/${storeA}/fleet/devices`;
-const stores = [
-  { id: storeA, name: 'Discordia' },
-  { id: storeB, name: 'Sandbox' },
+const branchA = '10000000-0000-4000-8000-000000000001';
+const branchB = '10000000-0000-4000-8000-000000000002';
+const path = `/en/${branchA}/fleet/devices`;
+const branches = [
+  { id: branchA, name: 'Discordia' },
+  { id: branchB, name: 'Sandbox' },
 ];
 const alpha: AdminDeviceFragment = {
   id: '20000000-0000-4000-8000-000000000001',
-  storeId: storeA,
+  branchId: branchA,
   imei: 'Alpha',
   vehicleId: '30000000-0000-4000-8000-000000000001',
   vehicle: { id: '30000000-0000-4000-8000-000000000001', licensePlate: 'CA1234AB' },
@@ -142,7 +142,7 @@ describe('Devices deletion and selection lifecycle', () => {
     limit = 20,
   ) {
     const harness = await RouterTestingHarness.create(path + query);
-    (await nextRequest('AdminStores')).flush({ data: { stores } });
+    (await nextRequest('AdminBranches')).flush({ data: { branches } });
     await harness.fixture.whenStable();
     http
       .expectOne((request) => operation(request, 'AdminDevices'))
@@ -202,7 +202,7 @@ describe('Devices deletion and selection lifecycle', () => {
     await decide(true);
     const first = await nextRequest('AdminDeleteDevice');
     expect(first.request.body).toMatchObject({ variables: { id: alpha.id } });
-    expect(first.request.headers.get('x-store-id')).toBe(storeA);
+    expect(first.request.headers.get('x-branch-id')).toBe(branchA);
     expect(first.request.headers.get('Accept-Language')).toBe('en');
     click(harness, 'Delete selected devices');
     http.expectNone('/graphql');
@@ -293,7 +293,7 @@ describe('Devices deletion and selection lifecycle', () => {
     expect(harness.routeNativeElement?.querySelector('tbody')?.textContent).not.toContain('Alpha');
   });
 
-  it.each(['store', 'language', 'query', 'editor'])(
+  it.each(['branch', 'language', 'query', 'editor'])(
     'stops the unsent batch after %s navigation and retires late success',
     async (destination) => {
       const harness = await mount();
@@ -305,8 +305,8 @@ describe('Devices deletion and selection lifecycle', () => {
       await decide(true);
       const write = await nextRequest('AdminDeleteDevice');
       const url =
-        destination === 'store'
-          ? path.replace(storeA, storeB)
+        destination === 'branch'
+          ? path.replace(branchA, branchB)
           : destination === 'language'
             ? path.replace('/en/', '/bg/')
             : destination === 'query'
@@ -317,7 +317,7 @@ describe('Devices deletion and selection lifecycle', () => {
       expect(write.cancelled).toBe(false);
       expect(stop).toHaveBeenCalledTimes(destination === 'language' ? 1 : 0);
       if (destination === 'language') {
-        (await nextRequest('AdminStores')).flush({ data: { stores } });
+        (await nextRequest('AdminBranches')).flush({ data: { branches } });
         await harness.fixture.whenStable();
       }
       if (destination === 'editor') {
@@ -329,7 +329,7 @@ describe('Devices deletion and selection lifecycle', () => {
           .expectOne((request) => operation(request, 'AdminDeviceVehicles'))
           .flush({ data: { fleetVehicles: { items: [beta.vehicle], total: 1 } } });
       } else {
-        const current = { ...beta, storeId: destination === 'store' ? storeB : storeA };
+        const current = { ...beta, branchId: destination === 'branch' ? branchB : branchA };
         (await nextRequest()).flush(list([current]));
       }
       await harness.fixture.whenStable();
@@ -370,11 +370,11 @@ describe('Devices deletion and selection lifecycle', () => {
     const completion: unknown = submitted.mock.results[0]?.value;
     if (!(completion instanceof Promise)) throw new Error('Missing submitted deletion.');
     const rejection = expect(completion).rejects.toThrow('Device not found');
-    await router.navigateByUrl(path.replace(storeA, storeB));
+    await router.navigateByUrl(path.replace(branchA, branchB));
     await harness.fixture.whenStable();
     http
       .expectOne((request) => operation(request, 'AdminDevices'))
-      .flush(list([{ ...beta, storeId: storeB }]));
+      .flush(list([{ ...beta, branchId: branchB }]));
     await harness.fixture.whenStable();
     write.flush({
       errors: [

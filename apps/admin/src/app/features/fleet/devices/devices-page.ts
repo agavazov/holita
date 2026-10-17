@@ -33,7 +33,7 @@ import {
 import type {
   AdminDeviceFragment,
   AdminDevicesQuery,
-  AdminStoresQuery,
+  AdminBranchesQuery,
 } from '../../../../generated/graphql/operations';
 import { requestError } from '../../../core/graphql/request-error';
 import { messages, type Language } from '../../../i18n/messages';
@@ -71,7 +71,7 @@ import {
   styleUrl: '../fleet-list.scss',
 })
 export class DevicesPage implements OnInit {
-  readonly store = input.required<AdminStoresQuery['stores'][number]>();
+  readonly branch = input.required<AdminBranchesQuery['branches'][number]>();
   readonly language = input.required<Language>();
   readonly text = computed(() => messages[this.language()]);
   readonly api = inject(DevicesApi);
@@ -138,7 +138,7 @@ export class DevicesPage implements OnInit {
   readonly trackDevice = (_index: number, device: AdminDeviceFragment) => device.id;
 
   ngOnInit(): void {
-    this.api.initialize(this.store().id, this.language());
+    this.api.initialize(this.branch().id, this.language());
     this.textEdits
       .pipe(
         switchMap(() => timer(300).pipe(takeUntil(this.cancelEdits))),

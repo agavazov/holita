@@ -7,8 +7,8 @@ description: Select focused native checks for changes in holita, including curre
 
 Read [AGENTS.md](../../../AGENTS.md) and [testing](../../../docs/testing.md).
 Domain check mappings are in [Discocan testing](../../../docs/discocan/testing.md) and
-[Ecommerce Stores](../../../docs/ecommerce/stores.md#validation). Select by changed behavior;
-current telemetry Store scope does not make Fleet tests Ecommerce feature coverage.
+[Ecommerce Branches](../../../docs/ecommerce/branches.md#validation). Select by changed behavior;
+current telemetry Branch scope does not make Fleet tests Ecommerce feature coverage.
 Inspect tracked/untracked changes while excluding `.credentials/`, `.tmp/`, `.misc/` and `.volumes/`. Distinguish local
 changes from the broader PR diff and use real base/head commits.
 
@@ -26,7 +26,7 @@ or broad reset/truncation. Live DB results must not be cached.
 Cross-service behavior uses test:gateway:db -- federation.db.spec.mts with real Core/Fleet
 processes/schemas. Angular uses test:admin with --include paths relative to apps/admin/src and
 --filter for case selection. Select concrete Vehicles/Devices API/query/editor/deletion suites,
-StoreWorkspace/FleetWorkspace, RelationPicker, transport/config/appearance as affected.
+BranchWorkspace/FleetWorkspace, RelationPicker, transport/config/appearance as affected.
 Use VITEST_MAX_WORKERS=1 on constrained hosts without reducing case coverage or changing deadlines.
 
 Compiled-app browser checks use test:smoke:admin with angular-vehicles, angular-devices,

@@ -6,20 +6,20 @@ request lifecycles. Use the existing files directly; there is no generic CRUD la
 The shared [Simple eData vendor catalog](erm-resources/simple-edata-catalog/README.md)
 is implemented by [file validation](../../apps/fleet/src/edata-catalog/catalog-file.ts),
 [transactional persistence](../../apps/fleet/src/edata-catalog/catalog.repository.ts)
-and a [local CLI](../../apps/fleet/src/edata-catalog/cli.ts). Its offline Python extractor
-is [tools/erm-edata/catalog.py](../../tools/erm-edata/catalog.py); it has no API or admin integration.
+and a [local CLI](../../apps/fleet/src/edata-catalog/cli.ts). Its offline TypeScript extractor
+is [tools/erm-edata/catalog.mts](../../tools/erm-edata/catalog.mts); it has no API or admin integration.
 
 ## Angular foundation
 
-[StoreWorkspace](../../apps/admin/src/app/features/stores/store-workspace.ts) owns authenticated discovery,
-session/Store/language routing and the shell. [Login](../../apps/admin/src/app/features/auth/login.ts)
-provides an independent layout and sequential Tenant/Store dropdowns. Candidate discovery is retired
-on Tenant/language changes; only submitting a valid Store activates the session and opens Vehicles.
-The language root redirects signed-in sessions to their saved Store, without a Store list page. Switching Stores preserves
+[BranchWorkspace](../../apps/admin/src/app/features/branches/branch-workspace.ts) owns authenticated discovery,
+session/Branch/language routing and the shell. [Login](../../apps/admin/src/app/features/auth/login.ts)
+provides an independent layout and sequential Tenant/Branch dropdowns. Candidate discovery is retired
+on Tenant/language changes; only submitting a valid Branch activates the session and opens Vehicles.
+The language root redirects signed-in sessions to their saved Branch, without a Branch list page. Switching Branches preserves
 Vehicles/Devices and resets list context. [FleetWorkspace](../../apps/admin/src/app/features/fleet/fleet-workspace.ts)
-checks availability/discovery and keys mounted pages/editors by session/Store/language/resource/mode/ID.
+checks availability/discovery and keys mounted pages/editors by session/Branch/language/resource/mode/ID.
 [GraphQL transport](../../apps/admin/src/app/core/graphql/graphql-options.ts) captures immutable
-session/Store/language headers; each feature API owns its own Apollo client and cache. Retired reads unsubscribe;
+session/Branch/language headers; each feature API owns its own Apollo client and cache. Retired reads unsubscribe;
 submitted writes settle and invalidate only their initiating client.
 
 ## Vehicles
@@ -39,17 +39,17 @@ retirement. Typed editors keep failed drafts, focus errors and guard dirty navig
 - [API](../../apps/admin/src/app/features/fleet/devices/devices-api.ts), [page](../../apps/admin/src/app/features/fleet/devices/devices-page.ts), [editor](../../apps/admin/src/app/features/fleet/devices/device-editor.ts), [validation](../../apps/admin/src/app/features/fleet/devices/device-validation.ts).
 - [Remote picker](../../apps/admin/src/app/features/fleet/relation-picker.ts).
 
-IMEI is exactly 15 digits and unique per Store, retaining leading zeros. Truck is a mandatory
-same-tenant/same-store Vehicle. Multiple Devices can share a Truck; assignment/reassignment is scoped and
+IMEI is exactly 15 digits and unique per Branch, retaining leading zeros. Truck is a mandatory
+same-tenant/same-branch Vehicle. Multiple Devices can share a Truck; assignment/reassignment is scoped and
 protected in persistence. Search/sort/paging, typed forms, null-free mandatory assignments,
 dirty guards and sequential deletion use the captured Devices client. Remote picker reads
 search/page/hydrate Vehicles through that client and retire obsolete results.
 
 ## Boundaries to preserve
 
-Creation checks Store existence through the [Fleet Core client](../../apps/fleet/src/core/core.client.ts)
-once per request. Every repository predicate/federation lookup includes verified Tenant and Store scope. No cross-app
-implementation imports or shared Prisma models exist. Inputs never own tenantId or storeId. Generated
+Creation checks Branch existence through the [Fleet Core client](../../apps/fleet/src/core/core.client.ts)
+once per request. Every repository predicate/federation lookup includes verified Tenant and Branch scope. No cross-app
+implementation imports or shared Prisma models exist. Inputs never own tenantId or branchId. Generated
 TypedDocumentNodes/types come from explicit SDL/operation inputs. Backend availability also
 gates entity resolution; disabled Angular routes issue no business requests.
 

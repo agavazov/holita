@@ -12,7 +12,7 @@ import type { RequestContext } from '../graphql/request-context.js';
 import { uuid, invalid, pagination, ids, persistenceError, optionalText } from '../validation.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { DevicesRepository } from './devices.repository.js';
-export type DeviceResult = Omit<FleetDevice, 'store' | 'vehicle'>;
+export type DeviceResult = Omit<FleetDevice, 'branch' | 'vehicle'>;
 @Injectable()
 export class DevicesService {
   constructor(
@@ -24,7 +24,7 @@ export class DevicesService {
     args: QueryFleetDevicesArgs,
   ): Promise<Omit<FleetDevicePage, 'items'> & { items: DeviceResult[] }> {
     const tenantId = requireTenant(context);
-    const storeId = uuid(context.storeId, 'x-store-id');
+    const branchId = uuid(context.branchId, 'x-branch-id');
     const { offset, limit } = pagination(args);
     const field: unknown = args.sort?.field ?? 'CREATED_AT';
     const direction: unknown = args.sort?.direction ?? 'DESC';
@@ -34,7 +34,7 @@ export class DevicesService {
       invalid('sort.direction', 'Choose ASC or DESC.');
     return this.devices.list(
       tenantId,
-      storeId,
+      branchId,
       offset,
       limit,
       {
@@ -47,7 +47,7 @@ export class DevicesService {
   async find(context: RequestContext, id: string): Promise<DeviceResult> {
     const row = await this.devices.find(
       requireTenant(context),
-      uuid(context.storeId, 'x-store-id'),
+      uuid(context.branchId, 'x-branch-id'),
       uuid(id, 'id'),
     );
     if (!row) throw new NotFoundException('Device not found');
@@ -55,15 +55,15 @@ export class DevicesService {
   }
   async create(context: RequestContext, input: CreateFleetDeviceInput): Promise<DeviceResult> {
     const tenantId = requireTenant(context);
-    const storeId = uuid(context.storeId, 'x-store-id');
+    const branchId = uuid(context.branchId, 'x-branch-id');
     const data: CreateFleetDeviceInput = {
       imei: this.imei(input.imei),
       vehicleId: uuid(input.vehicleId, 'vehicleId'),
     };
-    await this.requireVehicle(tenantId, storeId, data.vehicleId);
-    await this.core.requireStore(storeId, context);
+    await this.requireVehicle(tenantId, branchId, data.vehicleId);
+    await this.core.requireBranch(branchId, context);
     try {
-      return await this.devices.create(tenantId, storeId, data);
+      return await this.devices.create(tenantId, branchId, data);
     } catch (error) {
       this.writeError(error);
     }
@@ -74,18 +74,18 @@ export class DevicesService {
     input: UpdateFleetDeviceInput,
   ): Promise<DeviceResult> {
     const tenantId = requireTenant(context);
-    const storeId = uuid(context.storeId, 'x-store-id'),
+    const branchId = uuid(context.branchId, 'x-branch-id'),
       recordId = uuid(id, 'id');
     const data: Partial<CreateFleetDeviceInput> = {};
     if (input.imei !== undefined) data.imei = this.imei(input.imei);
     if (input.vehicleId !== undefined) {
       data.vehicleId = uuid(input.vehicleId, 'vehicleId');
-      await this.requireVehicle(tenantId, storeId, data.vehicleId);
+      await this.requireVehicle(tenantId, branchId, data.vehicleId);
     }
     if (!Object.keys(data).length)
       throw new BadRequestException('Provide at least one device field to update');
     try {
-      return await this.devices.update(tenantId, storeId, recordId, data);
+      return await this.devices.update(tenantId, branchId, recordId, data);
     } catch (error) {
       this.writeError(error);
     }
@@ -97,25 +97,25 @@ export class DevicesService {
   }
   private async requireVehicle(
     tenantId: string,
-    storeId: string,
+    branchId: string,
     vehicleId: string,
   ): Promise<void> {
-    if (!(await this.devices.findVehicle(tenantId, storeId, vehicleId)))
-      invalid('vehicleId', 'Choose a vehicle in this store.');
+    if (!(await this.devices.findVehicle(tenantId, branchId, vehicleId)))
+      invalid('vehicleId', 'Choose a vehicle in this branch.');
   }
   private writeError(error: unknown): never {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === 'P2002') invalid('imei', 'IMEI is already used in this store.');
-      if (error.code === 'P2003') invalid('vehicleId', 'Choose a vehicle in this store.');
+      if (error.code === 'P2002') invalid('imei', 'IMEI is already used in this branch.');
+      if (error.code === 'P2003') invalid('vehicleId', 'Choose a vehicle in this branch.');
     }
     persistenceError(error, 'Device');
   }
   async delete(context: RequestContext, id: string): Promise<DeviceResult> {
     const tenantId = requireTenant(context);
-    const storeId = uuid(context.storeId, 'x-store-id'),
+    const branchId = uuid(context.branchId, 'x-branch-id'),
       recordId = uuid(id, 'id');
     try {
-      return await this.devices.delete(tenantId, storeId, recordId);
+      return await this.devices.delete(tenantId, branchId, recordId);
     } catch (error) {
       this.writeError(error);
     }

@@ -5,15 +5,15 @@ import { expect, test as base, type Page } from '@playwright/test';
 import { workspaceRoot } from '../graphql/contracts.mjs';
 import { createFederationFixture } from '../graphql/federation-fixture.mjs';
 
-export async function chooseStore(page: Page, name: string): Promise<void> {
-  const selector = page.getByRole('combobox', { name: /^(Store|Магазин)$/ });
+export async function chooseBranch(page: Page, name: string): Promise<void> {
+  const selector = page.getByRole('combobox', { name: /^(Branch|Клон)$/ });
   const panel = page.getByRole('listbox', { includeHidden: true });
   await expect(panel).toHaveCount(0);
   await selector.click();
   await expect(selector).toHaveAttribute('aria-expanded', 'true');
   await page.getByRole('option', { name, exact: true }).click();
   await expect(selector).toHaveAttribute('aria-expanded', 'false');
-  // Wait for the closing overlay to detach before another store selection can reopen it.
+  // Wait for the closing overlay to detach before another branch selection can reopen it.
   await expect(panel).toHaveCount(0);
 }
 
@@ -33,7 +33,7 @@ export const test = base.extend<{
       await page.addInitScript((session) => {
         sessionStorage.setItem(
           'holita.admin.demo-session',
-          JSON.stringify({ ...session, storeId: '10000000-0000-4000-8000-000000000001' }),
+          JSON.stringify({ ...session, branchId: '10000000-0000-4000-8000-000000000001' }),
         );
       }, app.demoSession);
     }
