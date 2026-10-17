@@ -3,7 +3,8 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { Message } from 'primeng/message';
 import { AdminConfig } from '../../core/config/admin-config';
-import { BranchWorkspace } from '../branches/branch-workspace';
+import { AdminWorkspace } from '../../workspace/admin-workspace';
+import { BranchContext } from '../branches/branch-context';
 import { DevicesPage } from './devices/devices-page';
 import { DeviceEditor } from './devices/device-editor';
 import { VehiclesPage } from './vehicles/vehicles-page';
@@ -15,7 +16,8 @@ import { VehicleEditor } from './vehicles/vehicle-editor';
   templateUrl: './fleet-workspace.html',
 })
 export class FleetWorkspace {
-  readonly workspace = inject(BranchWorkspace);
+  readonly workspace = inject(AdminWorkspace);
+  private readonly branches = inject(BranchContext);
   readonly enabled = inject(AdminConfig).fleetEnabled;
   private readonly deviceEditor = viewChild(DeviceEditor);
   private readonly vehicleEditor = viewChild(VehicleEditor);
@@ -27,7 +29,7 @@ export class FleetWorkspace {
     const sessionToken = this.workspace.session.current()?.token;
     const language = this.workspace.language();
     const id = this.params().get('branchId')?.toLowerCase();
-    const branch = this.workspace.branches()?.find((branch) => branch.id === id);
+    const branch = this.branches.branches()?.find((branch) => branch.id === id);
     const editor = this.route.snapshot.data['editor'] === true;
     const resource: unknown = this.route.snapshot.data['resource'];
     const recordId = this.params().get('recordId');

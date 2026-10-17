@@ -3,8 +3,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, jest } from '@je
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import { AppModule } from '../src/app.module.js';
-import { issueDemoToken } from '../src/graphql/demo-auth.js';
-import { CoreClient } from '../src/core/core.client.js';
+import { issueDemoToken } from '../src/auth/demo-auth.js';
+import { CoreClient } from '../src/integrations/core/core.client.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { createTestDatabase } from './test-database.js';
 

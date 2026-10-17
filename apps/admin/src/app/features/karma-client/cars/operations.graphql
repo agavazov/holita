@@ -1,0 +1,27 @@
+query AdminKarmaCars {
+  karmaCars {
+    id
+    deviceId
+    projectId
+    carNumber
+    carType
+    carYear
+    carColor
+    timeZoneId
+  }
+}
+
+query AdminKarmaCar($id: ID!) {
+  karmaCar(id: $id) {
+    id
+    deviceId
+    projectId
+    carNumber
+    carType
+    carYear
+    carColor
+    subType
+    timeZoneId
+    driverCount
+  }
+}

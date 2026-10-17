@@ -4,8 +4,8 @@ import { ApolloFederationDriver, type ApolloFederationDriverConfig } from '@nest
 import { GraphQLISODateTime, GraphQLModule } from '@nestjs/graphql';
 import { formatGraphqlError, graphqlDiagnostics } from './graphql/errors.js';
 import { createRequestContext } from './graphql/request-context.js';
-import { DevicesModule } from './devices/devices.module.js';
-import { VehiclesModule } from './vehicles/vehicles.module.js';
+import { DevicesModule } from './modules/devices/devices.module.js';
+import { VehiclesModule } from './modules/vehicles/vehicles.module.js';
 
 import { HealthController } from './health/health.controller.js';
 
@@ -16,7 +16,7 @@ import { HealthController } from './health/health.controller.js';
     GraphQLModule.forRoot<ApolloFederationDriverConfig>({
       driver: ApolloFederationDriver,
       fieldResolverEnhancers: ['guards'],
-      typeDefs: ['vehicles/vehicles', 'devices/devices'].map((path) =>
+      typeDefs: ['modules/vehicles/vehicles', 'modules/devices/devices'].map((path) =>
         readFileSync(new URL(`./${path}.graphql`, import.meta.url), 'utf8'),
       ),
       resolvers: { DateTime: GraphQLISODateTime },

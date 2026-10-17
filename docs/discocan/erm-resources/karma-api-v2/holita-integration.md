@@ -17,9 +17,11 @@ flowchart LR
 
 The browser talks to Gateway. The native Apollo Router forwards the signed session
 to the independent NestJS Karma Client. Concrete services call `requireTenant`
-before upstream access. `KarmaClient` owns fixed HTTP paths, upstream authentication,
-deadlines and JSON reads; feature mappers validate unknown response data into generated
-GraphQL types. Runtime SDL is explicitly loaded by
+before upstream access. The application-local `KarmaTransportModule` provides one
+`KarmaTransport` for fixed HTTP paths, upstream authentication and JSON reads. Feature
+services own multi-read operation deadlines, query construction, car-existence checks and response
+mapping into generated GraphQL types. History and Location reuse CarsService for their
+actual car lookup; other features use the transport directly. Runtime SDL is explicitly loaded by
 [AppModule](../../../../apps/karma-client/src/app.module.ts).
 
 There is no database, Prisma model, ingestion worker, polling loop, telemetry archive,
@@ -52,21 +54,27 @@ authenticated and uses the common account regardless of active Branch.
 | `karmaUsers`                                            | GET `/users`                                                | `/users`; local search/paging and all-field detail dialog                     |
 | `karmaRoles`                                            | GET `/roles`                                                | `/roles`; local search/paging and original descriptions                       |
 
-Sources: [routes](../../../../apps/admin/src/app/app.routes.ts),
-[operations](../../../../apps/admin/src/app/features/karma-client/operations.graphql),
-[fixed HTTP client](../../../../apps/karma-client/src/cars/karma-client.ts).
+Sources: [routes](../../../../apps/admin/src/app/features/karma-client/karma.routes.ts),
+feature-owned operations for [cars](../../../../apps/admin/src/app/features/karma-client/cars/operations.graphql),
+[eData](../../../../apps/admin/src/app/features/karma-client/edata/operations.graphql),
+[location](../../../../apps/admin/src/app/features/karma-client/location/operations.graphql),
+[history](../../../../apps/admin/src/app/features/karma-client/history/operations.graphql),
+[references](../../../../apps/admin/src/app/features/karma-client/references/operations.graphql)
+and [accounts](../../../../apps/admin/src/app/features/karma-client/accounts/operations.graphql),
+[fixed HTTP client](../../../../apps/karma-client/src/integrations/karma/karma-transport.ts).
 There are no public Karma mutations or arbitrary REST proxy operations.
 
 ## Backend feature boundaries
 
 | Feature                   | Concrete implementation                                                                                                                      | Contract / mapping                                                                                                                                                                                               |
 | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Cars and common transport | [CarsService](../../../../apps/karma-client/src/cars/cars.service.ts), [KarmaClient](../../../../apps/karma-client/src/cars/karma-client.ts) | [cars.graphql](../../../../apps/karma-client/src/cars/cars.graphql), car mapper inside the HTTP client                                                                                                           |
-| eData                     | [EdataService](../../../../apps/karma-client/src/edata/edata.service.ts)                                                                     | [SDL](../../../../apps/karma-client/src/edata/edata.graphql), [query](../../../../apps/karma-client/src/edata/edata-query.ts), [response](../../../../apps/karma-client/src/edata/edata-response.ts)             |
-| Location                  | [LocationService](../../../../apps/karma-client/src/location/location.service.ts)                                                            | [SDL](../../../../apps/karma-client/src/location/location.graphql), [response](../../../../apps/karma-client/src/location/location-response.ts)                                                                  |
-| Trips/events/profile      | [HistoryService](../../../../apps/karma-client/src/history/history.service.ts)                                                               | [SDL](../../../../apps/karma-client/src/history/history.graphql), [query](../../../../apps/karma-client/src/history/history-query.ts), [response](../../../../apps/karma-client/src/history/history-response.ts) |
-| Projects/zones/version    | [ReferencesService](../../../../apps/karma-client/src/references/references.service.ts)                                                      | [SDL](../../../../apps/karma-client/src/references/references.graphql), [response](../../../../apps/karma-client/src/references/references-response.ts)                                                          |
-| Users/roles               | [AccountsService](../../../../apps/karma-client/src/accounts/accounts.service.ts)                                                            | [SDL](../../../../apps/karma-client/src/accounts/accounts.graphql), [response](../../../../apps/karma-client/src/accounts/accounts-response.ts)                                                                  |
+| Transport | [KarmaTransport](../../../../apps/karma-client/src/integrations/karma/karma-transport.ts), [module](../../../../apps/karma-client/src/integrations/karma/karma-transport.module.ts) | Fixed upstream endpoints, shared session, authentication renewal and sanitized HTTP reads |
+| Cars | [CarsService](../../../../apps/karma-client/src/modules/cars/cars.service.ts) | [SDL](../../../../apps/karma-client/src/modules/cars/cars.graphql), [response](../../../../apps/karma-client/src/modules/cars/cars-response.ts) |
+| eData                     | [EdataService](../../../../apps/karma-client/src/modules/edata/edata.service.ts)                                                                     | [SDL](../../../../apps/karma-client/src/modules/edata/edata.graphql), [query](../../../../apps/karma-client/src/modules/edata/edata-query.ts), [response](../../../../apps/karma-client/src/modules/edata/edata-response.ts)             |
+| Location                  | [LocationService](../../../../apps/karma-client/src/modules/location/location.service.ts)                                                            | [SDL](../../../../apps/karma-client/src/modules/location/location.graphql), [response](../../../../apps/karma-client/src/modules/location/location-response.ts)                                                                  |
+| Trips/events/profile      | [HistoryService](../../../../apps/karma-client/src/modules/history/history.service.ts)                                                               | [SDL](../../../../apps/karma-client/src/modules/history/history.graphql), [query](../../../../apps/karma-client/src/modules/history/history-query.ts), [response](../../../../apps/karma-client/src/modules/history/history-response.ts) |
+| Projects/zones/version    | [ReferencesService](../../../../apps/karma-client/src/modules/references/references.service.ts)                                                      | [SDL](../../../../apps/karma-client/src/modules/references/references.graphql), [response](../../../../apps/karma-client/src/modules/references/references-response.ts)                                                          |
+| Users/roles               | [AccountsService](../../../../apps/karma-client/src/modules/accounts/accounts.service.ts)                                                            | [SDL](../../../../apps/karma-client/src/modules/accounts/accounts.graphql), [response](../../../../apps/karma-client/src/modules/accounts/accounts-response.ts)                                                                  |
 
 SDL owns public API types, generated by the existing GraphQL toolchain. The
 reconstructed REST schema is not currently wired into this toolchain. Backend
@@ -80,8 +88,8 @@ subset accepted by holita. See [field mapping](data-models.md) and
 mounts the selected route section using the captured session, language, truck and
 section. Concrete view providers own Apollo clients/caches through
 [KarmaApi](../../../../apps/admin/src/app/features/karma-client/karma-api.ts),
-[KarmaEdataApi](../../../../apps/admin/src/app/features/karma-client/karma-edata-api.ts)
-and [KarmaHistoryApi](../../../../apps/admin/src/app/features/karma-client/karma-history-api.ts).
+[KarmaEdataApi](../../../../apps/admin/src/app/features/karma-client/edata/karma-edata-api.ts)
+and [KarmaHistoryApi](../../../../apps/admin/src/app/features/karma-client/history/karma-history-api.ts).
 Their generated TypedDocumentNodes go through Gateway with `network-only` reads.
 They capture the admin session and send no Branch context.
 
@@ -124,12 +132,12 @@ prerequisites belong to [Discocan testing](../../testing.md#karma-client-checks)
 
 | Layer               | Suites / fixtures                                                                                                                                                        | What they establish                                                                                                                         |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Backend transport   | [karma-client.spec.ts](../../../../apps/karma-client/src/cars/karma-client.spec.ts), [cars.service.spec.ts](../../../../apps/karma-client/src/cars/cars.service.spec.ts) | Fixed reads, canonical IDs, leading zeros, login sharing, renewal, missing details, bounded failures, sanitization and shared signed access |
-| eData               | [edata.spec.ts](../../../../apps/karma-client/src/edata/edata.spec.ts), [edata.service.spec.ts](../../../../apps/karma-client/src/edata/edata.service.spec.ts)           | Traversal beyond fixture batch caps, snapshot cursors, UTC/array encoding, response/filter checks and signed access                         |
-| Location/references | [location.spec.ts](../../../../apps/karma-client/src/location/location.spec.ts)                                                                                          | All mapped fields, null/zero, selected fields, whole-operation signal, reference validation and signed public-version access                |
-| Histories/profile   | [history.spec.ts](../../../../apps/karma-client/src/history/history.spec.ts)                                                                                             | ID-bound paging, short-trip lookahead, event filtering, null/zero and nine categories                                                       |
-| Accounts/health     | [accounts.spec.ts](../../../../apps/karma-client/src/accounts/accounts.spec.ts), [health.spec.ts](../../../../apps/karma-client/src/health/health.spec.ts)               | Eleven user fields, ordered memberships, duplicates, role text, authentication and local health                                             |
-| Angular             | `karma-workspace.spec.ts`, `edata-page.spec.ts`, `karma-phase2.spec.ts`, `karma-phase3.spec.ts`, `karma-phase4.spec.ts` in the Karma feature                             | Captured clients, routes, filters, retained refresh data, escaping, dialogs, reference failure and cancellation                             |
+| Backend transport   | [cars.spec.ts](../../../../apps/karma-client/src/modules/cars/cars.spec.ts), [cars.service.spec.ts](../../../../apps/karma-client/src/modules/cars/cars.service.spec.ts) | Fixed reads, canonical IDs, leading zeros, login sharing, renewal, missing details, bounded failures, sanitization and shared signed access |
+| eData               | [edata.spec.ts](../../../../apps/karma-client/src/modules/edata/edata.spec.ts), [edata.service.spec.ts](../../../../apps/karma-client/src/modules/edata/edata.service.spec.ts)           | Traversal beyond fixture batch caps, snapshot cursors, UTC/array encoding, response/filter checks and signed access                         |
+| Location/references | [location.spec.ts](../../../../apps/karma-client/src/modules/location/location.spec.ts)                                                                                          | All mapped fields, null/zero, selected fields, whole-operation signal, reference validation and signed public-version access                |
+| Histories/profile   | [history.spec.ts](../../../../apps/karma-client/src/modules/history/history.spec.ts)                                                                                             | ID-bound paging, short-trip lookahead, event filtering, null/zero and nine categories                                                       |
+| Accounts/health     | [accounts.spec.ts](../../../../apps/karma-client/src/modules/accounts/accounts.spec.ts), [health.spec.ts](../../../../apps/karma-client/src/health/health.spec.ts)               | Eleven user fields, ordered memberships, duplicates, role text, authentication and local health                                             |
+| Angular             | `karma-workspace.spec.ts`, `edata/edata-page/edata-page.spec.ts`, `location-references.spec.ts`, `history/history.spec.ts`, `accounts/accounts.spec.ts` in the Karma feature | Captured clients, routes, filters, retained refresh data, escaping, dialogs, reference failure and cancellation |
 | Federation          | [federation.db.spec.mts](../../../../tools/graphql/federation.db.spec.mts), [controlled Karma server](../../../../tools/graphql/karma-fixture.mts)                       | Real service boundaries with local controlled upstream and dedicated Core/Fleet schemas                                                     |
 | Browser             | Karma/eData smoke suites listed in the testing guide                                                                                                                     | Compiled-app routing, history/dialog interactions, refresh behavior and scoped navigation                                                   |
 

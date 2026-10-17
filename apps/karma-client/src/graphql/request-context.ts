@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { readDemoTenant } from './demo-auth.js';
+import { readDemoTenant } from '../auth/demo-auth.js';
 
 export interface RequestContext {
   requestId: string;

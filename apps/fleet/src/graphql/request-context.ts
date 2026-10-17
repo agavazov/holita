@@ -1,4 +1,4 @@
-import { readDemoTenant } from './demo-auth.js';
+import { readDemoTenant } from '../auth/demo-auth.js';
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 

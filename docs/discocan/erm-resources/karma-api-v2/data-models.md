@@ -14,7 +14,7 @@ This dictionary describes the current holita adapter, with structural observatio
 
 ## Cars (`KarmaCar`)
 
-Sources: [SDL](../../../../apps/karma-client/src/cars/cars.graphql), [runtime mapping](../../../../apps/karma-client/src/cars/karma-client.ts).
+Sources: [SDL](../../../../apps/karma-client/src/modules/cars/cars.graphql), [runtime mapping](../../../../apps/karma-client/src/modules/cars/cars-response.ts).
 
 | Upstream field     | GraphQL field | GraphQL type | Meaning / handling                                                                                                                    |
 | ------------------ | ------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
@@ -35,7 +35,7 @@ Sources: [SDL](../../../../apps/karma-client/src/cars/cars.graphql), [runtime ma
 
 ## eData message (`KarmaEdataMessage`)
 
-Sources: [SDL](../../../../apps/karma-client/src/edata/edata.graphql), [runtime mapping](../../../../apps/karma-client/src/edata/edata-response.ts).
+Sources: [SDL](../../../../apps/karma-client/src/modules/edata/edata.graphql), [runtime mapping](../../../../apps/karma-client/src/modules/edata/edata-response.ts).
 
 | Upstream field | GraphQL field    | GraphQL type              | Meaning / handling                                                                                        |
 | -------------- | ---------------- | ------------------------- | --------------------------------------------------------------------------------------------------------- |
@@ -54,7 +54,7 @@ Sources: [SDL](../../../../apps/karma-client/src/edata/edata.graphql), [runtime 
 
 ## eData parameter (`KarmaEdataParameter`)
 
-Sources: [SDL](../../../../apps/karma-client/src/edata/edata.graphql), [runtime mapping](../../../../apps/karma-client/src/edata/edata-response.ts).
+Sources: [SDL](../../../../apps/karma-client/src/modules/edata/edata.graphql), [runtime mapping](../../../../apps/karma-client/src/modules/edata/edata-response.ts).
 
 | Upstream field | GraphQL field | GraphQL type | Meaning / handling                                                                                            |
 | -------------- | ------------- | ------------ | ------------------------------------------------------------------------------------------------------------- |
@@ -64,7 +64,7 @@ Sources: [SDL](../../../../apps/karma-client/src/edata/edata.graphql), [runtime 
 
 ## Location (`KarmaLocation`)
 
-Sources: [SDL](../../../../apps/karma-client/src/location/location.graphql), [runtime mapping](../../../../apps/karma-client/src/location/location-response.ts).
+Sources: [SDL](../../../../apps/karma-client/src/modules/location/location.graphql), [runtime mapping](../../../../apps/karma-client/src/modules/location/location-response.ts).
 
 | Upstream field | GraphQL field | GraphQL type | Meaning / handling                                                                               |
 | -------------- | ------------- | ------------ | ------------------------------------------------------------------------------------------------ |
@@ -105,7 +105,7 @@ measurement or establish that the device is continuously awake.
 
 ## Trips (`KarmaTrip`)
 
-Sources: [SDL](../../../../apps/karma-client/src/history/history.graphql), [runtime mapping](../../../../apps/karma-client/src/history/history-response.ts).
+Sources: [SDL](../../../../apps/karma-client/src/modules/history/history.graphql), [runtime mapping](../../../../apps/karma-client/src/modules/history/history-response.ts).
 
 | Upstream field        | GraphQL field       | GraphQL type | Meaning / handling                                                               |
 | --------------------- | ------------------- | ------------ | -------------------------------------------------------------------------------- |
@@ -135,7 +135,7 @@ Sources: [SDL](../../../../apps/karma-client/src/history/history.graphql), [runt
 
 ## Events (`KarmaEvent`)
 
-Sources: [SDL](../../../../apps/karma-client/src/history/history.graphql), [runtime mapping](../../../../apps/karma-client/src/history/history-response.ts).
+Sources: [SDL](../../../../apps/karma-client/src/modules/history/history.graphql), [runtime mapping](../../../../apps/karma-client/src/modules/history/history-response.ts).
 
 | Upstream field | GraphQL field | GraphQL type | Meaning / handling                                                              |
 | -------------- | ------------- | ------------ | ------------------------------------------------------------------------------- |
@@ -154,7 +154,7 @@ Sources: [SDL](../../../../apps/karma-client/src/history/history.graphql), [runt
 
 ## Driving profile (`KarmaDrivingProfile`)
 
-Sources: [SDL](../../../../apps/karma-client/src/history/history.graphql), [runtime mapping](../../../../apps/karma-client/src/history/history-response.ts).
+Sources: [SDL](../../../../apps/karma-client/src/modules/history/history.graphql), [runtime mapping](../../../../apps/karma-client/src/modules/history/history-response.ts).
 
 | Upstream field | GraphQL field | GraphQL type               | Meaning / handling                                                                                        |
 | -------------- | ------------- | -------------------------- | --------------------------------------------------------------------------------------------------------- |
@@ -165,7 +165,7 @@ Sources: [SDL](../../../../apps/karma-client/src/history/history.graphql), [runt
 
 ## Driving category (`KarmaDrivingCategory`)
 
-Sources: [SDL](../../../../apps/karma-client/src/history/history.graphql), [runtime mapping](../../../../apps/karma-client/src/history/history-response.ts).
+Sources: [SDL](../../../../apps/karma-client/src/modules/history/history.graphql), [runtime mapping](../../../../apps/karma-client/src/modules/history/history-response.ts).
 
 | Upstream field            | GraphQL field | GraphQL type | Meaning / handling                                                                                                    |
 | ------------------------- | ------------- | ------------ | --------------------------------------------------------------------------------------------------------------------- |
@@ -175,7 +175,7 @@ Sources: [SDL](../../../../apps/karma-client/src/history/history.graphql), [runt
 
 ## Projects (`KarmaProject`)
 
-Sources: [SDL](../../../../apps/karma-client/src/references/references.graphql), [runtime mapping](../../../../apps/karma-client/src/references/references-response.ts).
+Sources: [SDL](../../../../apps/karma-client/src/modules/references/references.graphql), [runtime mapping](../../../../apps/karma-client/src/modules/references/references-response.ts).
 
 | Upstream field | GraphQL field | GraphQL type | Meaning / handling                                                             |
 | -------------- | ------------- | ------------ | ------------------------------------------------------------------------------ |
@@ -184,7 +184,7 @@ Sources: [SDL](../../../../apps/karma-client/src/references/references.graphql),
 
 ## Time zones (`KarmaTimeZone`)
 
-Sources: [SDL](../../../../apps/karma-client/src/references/references.graphql), [runtime mapping](../../../../apps/karma-client/src/references/references-response.ts).
+Sources: [SDL](../../../../apps/karma-client/src/modules/references/references.graphql), [runtime mapping](../../../../apps/karma-client/src/modules/references/references-response.ts).
 
 | Upstream field | GraphQL field | GraphQL type | Meaning / handling                                                    |
 | -------------- | ------------- | ------------ | --------------------------------------------------------------------- |
@@ -193,7 +193,7 @@ Sources: [SDL](../../../../apps/karma-client/src/references/references.graphql),
 
 ## Version (`KarmaVersion`)
 
-Sources: [SDL](../../../../apps/karma-client/src/references/references.graphql), [runtime mapping](../../../../apps/karma-client/src/references/references-response.ts).
+Sources: [SDL](../../../../apps/karma-client/src/modules/references/references.graphql), [runtime mapping](../../../../apps/karma-client/src/modules/references/references-response.ts).
 
 | Upstream field | GraphQL field | GraphQL type | Meaning / handling                                                       |
 | -------------- | ------------- | ------------ | ------------------------------------------------------------------------ |
@@ -201,7 +201,7 @@ Sources: [SDL](../../../../apps/karma-client/src/references/references.graphql),
 
 ## Users (`KarmaUser`)
 
-Sources: [SDL](../../../../apps/karma-client/src/accounts/accounts.graphql), [runtime mapping](../../../../apps/karma-client/src/accounts/accounts-response.ts).
+Sources: [SDL](../../../../apps/karma-client/src/modules/accounts/accounts.graphql), [runtime mapping](../../../../apps/karma-client/src/modules/accounts/accounts-response.ts).
 
 | Upstream field | GraphQL field | GraphQL type | Meaning / handling                                                                                            |
 | -------------- | ------------- | ------------ | ------------------------------------------------------------------------------------------------------------- |
@@ -219,7 +219,7 @@ Sources: [SDL](../../../../apps/karma-client/src/accounts/accounts.graphql), [ru
 
 ## Roles (`KarmaRole`)
 
-Sources: [SDL](../../../../apps/karma-client/src/accounts/accounts.graphql), [runtime mapping](../../../../apps/karma-client/src/accounts/accounts-response.ts).
+Sources: [SDL](../../../../apps/karma-client/src/modules/accounts/accounts.graphql), [runtime mapping](../../../../apps/karma-client/src/modules/accounts/accounts-response.ts).
 
 | Upstream field | GraphQL field | GraphQL type | Meaning / handling                                                      |
 | -------------- | ------------- | ------------ | ----------------------------------------------------------------------- |

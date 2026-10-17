@@ -4,8 +4,8 @@ import { ApolloFederationDriver, type ApolloFederationDriverConfig } from '@nest
 import { GraphQLModule } from '@nestjs/graphql';
 import { formatGraphqlError, graphqlDiagnostics } from './graphql/errors.js';
 import { createRequestContext } from './graphql/request-context.js';
-import { TenantsModule } from './tenants/tenants.module.js';
-import { BranchesModule } from './branches/branches.module.js';
+import { TenantsModule } from './modules/tenants/tenants.module.js';
+import { BranchesModule } from './modules/branches/branches.module.js';
 
 import { HealthController } from './health/health.controller.js';
 
@@ -15,7 +15,9 @@ import { HealthController } from './health/health.controller.js';
     TenantsModule,
     GraphQLModule.forRoot<ApolloFederationDriverConfig>({
       driver: ApolloFederationDriver,
-      typeDefs: readFileSync(new URL('./branches/branches.graphql', import.meta.url), 'utf8'),
+      typeDefs: ['modules/branches/branches', 'modules/tenants/tenants'].map((path) =>
+        readFileSync(new URL(`./${path}.graphql`, import.meta.url), 'utf8'),
+      ),
       context: createRequestContext,
       path: '/graphql',
       includeStacktraceInErrorResponses: false,

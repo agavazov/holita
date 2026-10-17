@@ -1,0 +1,17 @@
+query AdminKarmaLocation($carId: ID!) {
+  karmaLocation(carId: $carId) {
+    carId
+    deviceId
+    carNumber
+    messageId
+    eventId
+    edt
+    edtTz
+    pdt
+    latitude
+    longitude
+    spd
+    odo
+    extra
+  }
+}

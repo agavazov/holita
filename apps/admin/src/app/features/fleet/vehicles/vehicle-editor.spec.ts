@@ -11,7 +11,7 @@ import { HttpLink } from 'apollo-angular/http';
 import { routes } from '../../../app.routes';
 import { graphqlOptions } from '../../../core/graphql/graphql-options';
 import { AdminShell } from '../../../layout/admin-shell';
-import { BranchWorkspace } from '../../branches/branch-workspace';
+import { AdminWorkspace } from '../../../workspace/admin-workspace';
 import { FleetWorkspace } from '../fleet-workspace';
 import { VehicleEditor } from './vehicle-editor';
 import type { AdminVehicleFragment } from '../../../../generated/graphql/operations';
@@ -109,7 +109,7 @@ describe('Vehicle editor forms and route lifecycle', () => {
   let router: Router;
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [BranchWorkspace, FleetWorkspace],
+      imports: [AdminWorkspace, FleetWorkspace],
       providers: [
         provideRouter(routes),
         provideHttpClient(),

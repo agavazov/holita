@@ -20,8 +20,11 @@ This Vehicles/Devices workflow belongs to Discocan; online-shop work uses [Ecomm
 - [app.config.ts](../../../apps/admin/src/app/app.config.ts) configures standalone routing,
   HTTP, Sakai preset and Branch discovery Apollo. Public startup config selects Gateway URL,
   availability and optional private user license; validate before bootstrap.
-- [BranchWorkspace](../../../apps/admin/src/app/features/branches/branch-workspace.ts) owns
-  authenticated discovery and session/Branch/language routing. [Login](../../../apps/admin/src/app/features/auth/login.ts)
+- [AdminWorkspace](../../../apps/admin/src/app/workspace/admin-workspace.ts) coordinates the common
+  session/language/login and shell. Its component-scoped
+  [BranchContext](../../../apps/admin/src/app/features/branches/branch-context.ts) owns authenticated
+  discovery and Branch selection/routing. Karma consumes the common session/language without
+  depending on BranchContext. [Login](../../../apps/admin/src/app/features/auth/login.ts)
   owns the standalone login layout and sequential Tenant/Branch selection. Candidate tokens/discovery
   retire on Tenant/language changes; only a submitted Branch activates the session and opens Vehicles.
   There is no Branch list landing page; Fleet navigation contains Vehicles/Devices and the header switches Branches; switching Branches
@@ -65,7 +68,7 @@ global CSS. Keep Bulgarian/English, keyboard/mobile, light/dark and loading/erro
 Do not import ignored template source or add demo routes/dependencies.
 
 Use [focused validation](../holita-focused-validation/SKILL.md). Select concrete Vehicles/Devices
-API/query/editor/deletion suites, BranchWorkspace/FleetWorkspace and RelationPicker as affected.
+API/query/editor/deletion suites, AdminWorkspace/BranchContext/FleetWorkspace and RelationPicker as affected.
 Real CRUD uses angular-vehicles/angular-devices smoke files; routing/transport uses
 angular-foundation; shell/theme/focus/resizing uses angular-shell. Run required type/build checks;
 metadata validation does not prove compilation/browser behavior. Update authoritative docs and

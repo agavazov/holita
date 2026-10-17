@@ -51,7 +51,7 @@ views. Captures belong in ignored `.references/review/devices`.
 Use `VITEST_MAX_WORKERS=1` on CPU-constrained hosts without changing case deadlines.
 
 ```bash
-npm run test:admin -- --include=app/features/branches/branch-workspace.spec.ts --skip-nx-cache
+npm run test:admin -- --include=app/features/branches/branch-context.spec.ts --skip-nx-cache
 npm run test:admin -- --include=app/features/fleet/fleet-workspace.spec.ts --skip-nx-cache
 npm run test:admin -- --include=app/core/config/admin-config.spec.ts --skip-nx-cache
 npm run test:admin -- --include=app/core/graphql/graphql-options.spec.ts --skip-nx-cache
@@ -70,9 +70,11 @@ against the pinned [Sakai source](../development.md#sakai-source-reference).
 
 ```bash
 npm run test:core -- demo-auth.spec.ts --skip-nx-cache
+npm run test:core -- database.module.spec.ts --skip-nx-cache
+npm run test:fleet -- core-client.module.spec.ts --skip-nx-cache
 npm run test:core:db -- persistence.db.spec.ts branches.db.spec.ts initial-migration.db.spec.ts branch-migration.db.spec.ts
 npm run test:fleet:db -- vehicles.db.spec.ts devices.db.spec.ts initial-migration.db.spec.ts branch-migration.db.spec.ts seeds.db.spec.ts
-npm run test:admin -- --include=app/features/branches/tenant-session.spec.ts --include=app/core/auth/demo-session.spec.ts --skip-nx-cache
+npm run test:admin -- --include=app/workspace/admin-workspace.spec.ts --include=app/core/auth/demo-session.spec.ts --skip-nx-cache
 npm run test:smoke:admin -- angular-tenants.smoke.spec.mts
 ```
 
@@ -86,17 +88,22 @@ responses, root-to-Vehicles navigation, remembered Branch selection, tenant clie
 delayed submitted writes and fresh A → B → A clients. Browser login checks use the actual dropdown,
 logout/reload and desktop/narrow light/dark views; fixture auto-login is disabled for that suite.
 
+Module ownership checks establish one Core Prisma client with one disconnect on shutdown,
+and one Fleet Core client with separate authorization and Branch-check promises per request.
+
 ## Karma Client checks
 
 ```bash
-npm run test:karma-client -- accounts.spec.ts history.spec.ts location.spec.ts edata.spec.ts edata.service.spec.ts karma-client.spec.ts cars.service.spec.ts health.spec.ts --skip-nx-cache
-npm run test:admin -- --include=app/features/karma-client/karma-phase4.spec.ts --include=app/features/karma-client/karma-phase3.spec.ts --include=app/features/karma-client/karma-phase2.spec.ts --include=app/features/karma-client/edata-page/edata-page.spec.ts --include=app/features/karma-client/karma-workspace.spec.ts --include=app/features/branches/branch-workspace.spec.ts --skip-nx-cache
+npm run test:karma-client -- accounts.spec.ts history.spec.ts location.spec.ts edata.spec.ts edata.service.spec.ts cars.spec.ts cars.service.spec.ts karma-transport.spec.ts health.spec.ts --skip-nx-cache
+npm run test:admin -- --include=app/features/karma-client/accounts/accounts.spec.ts --include=app/features/karma-client/history/history.spec.ts --include=app/features/karma-client/location-references.spec.ts --include=app/features/karma-client/edata/edata-page/edata-page.spec.ts --include=app/features/karma-client/karma-workspace.spec.ts --include=app/features/branches/branch-context.spec.ts --skip-nx-cache
 npm run test:gateway:db -- federation.db.spec.mts
 npm run test:smoke:admin -- angular-karma-phase4.smoke.spec.mts angular-karma-phase3.smoke.spec.mts angular-karma-phase2.smoke.spec.mts angular-edata.smoke.spec.mts angular-karma.smoke.spec.mts angular-foundation.smoke.spec.mts angular-shell.smoke.spec.mts
 ```
 
 The client checks cover response validation, credential absence, bounded transport failures,
 concurrent login sharing, session reuse and one renewal after Karma's HTTP-200 session error.
+The transport module test imports all six feature modules and verifies that concurrent
+feature reads share one upstream login through one application-local transport provider.
 Non-success HTTP bodies are cancelled before parsing; tests include stalled bodies and prevent
 session renewal for unrelated HTTP failures.
 Detail checks cover invalid IDs before upstream access, missing trucks and mismatched responses.

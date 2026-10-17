@@ -16,7 +16,7 @@ and the relevant Fleet documents.
   columns. Its local offline importer has no GraphQL or device-command interface.
   Vehicle/Device business data retains mandatory Tenant/Branch isolation.
 
-- Follow the actual [Vehicles resolver/service/repository](../../apps/fleet/src/vehicles/vehicles.resolver.ts) and its [SDL](../../apps/fleet/src/vehicles/vehicles.graphql). Use @Parent on a federation reference parameter when combining it with Nest parameter decorators; always resolve Vehicle/Device references through scoped service access.
+- Follow the actual [Vehicles resolver/service/repository](../../apps/fleet/src/modules/vehicles/vehicles.resolver.ts) and its [SDL](../../apps/fleet/src/modules/vehicles/vehicles.graphql). Use @Parent on a federation reference parameter when combining it with Nest parameter decorators; always resolve Vehicle/Device references through scoped service access.
 - Branch access must always include the verified Tenant. Vehicle/Device persistence must always include the verified Tenant and active Branch. Creation gets branch ID from context and checks existence through core. Do not make a branch existence network call for every business read/update/delete or move that blanket check into the gateway.
 - Branch discovery belongs to the shared [Core Branch foundation](../ecommerce/branches.md).
   Keep the domains' business workflows in their own documentation.

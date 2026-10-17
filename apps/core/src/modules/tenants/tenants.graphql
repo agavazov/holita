@@ -1,0 +1,17 @@
+type Tenant {
+  id: ID!
+  name: String!
+}
+
+type DemoSession {
+  token: String!
+  tenant: Tenant!
+}
+
+type Mutation {
+  demoLogin(tenantId: ID!): DemoSession!
+}
+
+extend type Query {
+  tenants: [Tenant!]!
+}

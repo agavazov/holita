@@ -14,17 +14,17 @@ apply [Ecommerce instructions](../../../docs/ecommerce/instructions.md); check D
 when the shared Branch contract changes. Branch represents a vehicle fleet in Discocan
 and an online shop in Ecommerce. Keep branchId immediately after tenantId where both exist.
 
-Use actual Fleet [Vehicle SDL](../../../apps/fleet/src/vehicles/vehicles.graphql),
-[resolver](../../../apps/fleet/src/vehicles/vehicles.resolver.ts),
-[service](../../../apps/fleet/src/vehicles/vehicles.service.ts) and
-[repository](../../../apps/fleet/src/vehicles/vehicles.repository.ts).
+Use actual Fleet [Vehicle SDL](../../../apps/fleet/src/modules/vehicles/vehicles.graphql),
+[resolver](../../../apps/fleet/src/modules/vehicles/vehicles.resolver.ts),
+[service](../../../apps/fleet/src/modules/vehicles/vehicles.service.ts) and
+[repository](../../../apps/fleet/src/modules/vehicles/vehicles.repository.ts).
 SDL owns API definitions; generated types own resolver signatures; concrete repositories
 require verified Tenant and Branch scope on every operation. Inputs never own tenantId or branchId.
-The [Core client](../../../apps/fleet/src/core/core.client.ts) checks existence only during
+The [Core client](../../../apps/fleet/src/integrations/core/core.client.ts) checks existence only during
 creation, using a generated operation and request-local promise cache. Reads/updates/deletes
 remain independent of Core except requested federated Branch fields.
 
-[Devices](../../../apps/fleet/src/devices/devices.service.ts) adds required same-tenant/same-branch
+[Devices](../../../apps/fleet/src/modules/devices/devices.service.ts) adds required same-tenant/same-branch
 Vehicle assignment, 15-digit string IMEI and per-Branch uniqueness. Preserve leading zeros,
 composite foreign keys, shared assignments and protected Vehicle deletion. Resolve federation
 references through scoped service access; use @Parent with Nest parameter decorators.

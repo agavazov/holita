@@ -1,0 +1,25 @@
+query AdminKarmaEdata($input: KarmaEdataInput!) {
+  karmaEdata(input: $input) {
+    cursor
+    hasMore
+    nextCursor
+    items {
+      id
+      carId
+      deviceId
+      carNumber
+      eventTimeUtc
+      eventTimeLocal
+      pdt
+      spd
+      odo
+      latitude
+      longitude
+      parameters {
+        id
+        value
+        description
+      }
+    }
+  }
+}

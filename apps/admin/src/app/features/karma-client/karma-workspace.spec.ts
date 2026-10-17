@@ -9,7 +9,7 @@ import { HttpLink } from 'apollo-angular/http';
 import { routes } from '../../app.routes';
 import { DemoSession } from '../../core/auth/demo-session';
 import { graphqlOptions } from '../../core/graphql/graphql-options';
-import { BranchWorkspace } from '../branches/branch-workspace';
+import { AdminWorkspace } from '../../workspace/admin-workspace';
 import { ADMIN_RUNTIME_CONFIG } from '../../core/config/admin-config';
 
 function operation(request: HttpRequest<unknown>, name: string): boolean {
@@ -175,9 +175,9 @@ describe('authenticated global Karma workspace', () => {
       .flush({ data: { branches: [{ id: branch, name: 'Branch A' }] } });
     await harness.fixture.whenStable();
     const workspace: unknown = harness.routeDebugElement?.componentInstance;
-    if (!(workspace instanceof BranchWorkspace)) throw new Error('Missing BranchWorkspace');
+    if (!(workspace instanceof AdminWorkspace)) throw new Error('Missing AdminWorkspace');
     const old = http.expectOne((request) => operation(request, 'AdminKarmaCars'));
-    workspace.chooseBranch(branch);
+    workspace.branches.choose(branch, workspace.language());
     await harness.fixture.whenStable();
     expect(TestBed.inject(Router).url).toBe('/en/karma-client/cars');
     expect(old.cancelled).toBe(false);

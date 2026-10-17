@@ -1,0 +1,47 @@
+@if (!session.current()) {
+  <holita-login
+    [language]="language()"
+    [languageUrl]="otherLanguageUrl()"
+    (signedIn)="branches.enter($event, language())"
+  />
+} @else {
+  <holita-admin-shell
+    [branches]="branches.branches() ?? []"
+    [branchId]="branches.selectedId()"
+    [language]="language()"
+    [languageUrl]="otherLanguageUrl()"
+    [loading]="branches.loading()"
+    [fleetEnabled]="fleetEnabled"
+    [tenantName]="session.current()?.tenant?.name ?? null"
+    (signOut)="logout()"
+    (branchSelected)="branches.choose($event, language())"
+  >
+    @if (
+      branches.required() &&
+      (branches.branches() === null || branches.branches()?.length === 0 || branches.error())
+    ) {
+      <section class="card">
+        @if (branches.loading()) {
+          <p role="status">{{ text().loadingBranches }}</p>
+        } @else if (branches.error()) {
+          <p-message severity="error">{{ branchFailure() }}</p-message>
+        } @else {
+          <p>{{ text().emptyBranches }}</p>
+        }
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          data-testid="refresh-branches"
+          [disabled]="branches.loading()"
+          (click)="branches.refresh()"
+        >
+          {{ text().retry }}
+        </button>
+      </section>
+    }
+    @if (!branches.required() || branches.available()) {
+      <router-outlet />
+    }
+  </holita-admin-shell>
+}

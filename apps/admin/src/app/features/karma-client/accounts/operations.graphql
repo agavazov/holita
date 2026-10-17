@@ -1,0 +1,22 @@
+query AdminKarmaUsers {
+  karmaUsers {
+    id
+    userName
+    active
+    expireDate
+    roleId
+    firstName
+    lastName
+    timeZoneId
+    email
+    projectId
+    projectIds
+  }
+}
+
+query AdminKarmaRoles {
+  karmaRoles {
+    id
+    description
+  }
+}

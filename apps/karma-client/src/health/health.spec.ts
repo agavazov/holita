@@ -3,8 +3,8 @@ import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 
 import { AppModule } from '../app.module.js';
-import { KarmaClient } from '../cars/karma-client.js';
-import { issueDemoToken } from '../graphql/demo-auth.js';
+import { KarmaTransport } from '../integrations/karma/karma-transport.js';
+import { issueDemoToken } from '../auth/demo-auth.js';
 
 describe('karma-client health endpoint', () => {
   let app: INestApplication;
@@ -13,8 +13,8 @@ describe('karma-client health endpoint', () => {
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(KarmaClient)
-      .useValue({ listCars: readCars })
+      .overrideProvider(KarmaTransport)
+      .useValue({ read: readCars })
       .compile();
     app = module.createNestApplication();
     await app.listen(0, '127.0.0.1');

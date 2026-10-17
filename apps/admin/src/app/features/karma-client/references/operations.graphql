@@ -1,0 +1,30 @@
+query AdminKarmaProjects {
+  karmaProjects {
+    id
+    name
+  }
+}
+
+query AdminKarmaTimeZones {
+  karmaTimeZones {
+    id
+    name
+  }
+}
+
+query AdminKarmaVersion {
+  karmaVersion {
+    version
+  }
+}
+
+query AdminKarmaReferences {
+  karmaProjects {
+    id
+    name
+  }
+  karmaTimeZones {
+    id
+    name
+  }
+}

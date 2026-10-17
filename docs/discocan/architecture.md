@@ -35,9 +35,9 @@ own schema. Development connections, broad resets and shared truncation are not 
 
 ## GraphQL contracts and context
 
-[Core SDL](../../apps/core/src/branches/branches.graphql),
-[Vehicle SDL](../../apps/fleet/src/vehicles/vehicles.graphql) and
-[Device SDL](../../apps/fleet/src/devices/devices.graphql) define the API.
+[Core SDL](../../apps/core/src/modules/branches/branches.graphql),
+[Vehicle SDL](../../apps/fleet/src/modules/vehicles/vehicles.graphql) and
+[Device SDL](../../apps/fleet/src/modules/devices/devices.graphql) define the API.
 Vehicle SDL also declares the Fleet federation link, DateTime, Branch reference and root types.
 Backend resolvers use generated types and delegate to concrete services/repositories.
 Runtime SDL assets are copied into builds. Named Angular/Core lookup operations are explicit
@@ -74,8 +74,11 @@ The standalone Angular flow is component → concrete feature API → generated 
 → Apollo Angular/HttpLink → Gateway. Login owns the standalone Sakai login view and sequential
 Tenant/Branch selection. A candidate token loads tenant-scoped Branches through a disposable client;
 changing Tenant cancels discovery and ignores late tokens. Submitting a valid Branch activates the
-tab session and opens Vehicles. BranchWorkspace owns authenticated discovery and route selection;
-the shell receives explicit inputs and emits Branch changes without business data access.
+tab session and opens Vehicles. AdminWorkspace coordinates the common session, language,
+login and shell. Its component-scoped BranchContext owns authenticated discovery and
+Branch route selection; the shell receives explicit inputs and emits Branch changes
+without business data access. KarmaWorkspace consumes only AdminWorkspace session/language,
+while FleetWorkspace also consumes BranchContext. Karma routes declare `requiresBranch: false`.
 Routes use `/bg` or `/en`, then `/:branchId/fleet/vehicles` or `/devices`, with `/new`
 and `/:recordId/edit`. Previous `/reference` URLs redirect to `/fleet`, preserving the resource,
 editor path, query parameters and fragment. The language root shows Login while signed out and redirects to the saved

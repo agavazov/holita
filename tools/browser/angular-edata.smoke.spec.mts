@@ -78,9 +78,9 @@ test('filters UTC dates and IDs, changes page size and shows every message field
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     for (const theme of ['light', 'dark']) {
       await expect(view).toBeVisible();
-      expect(
-        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
-      ).toBe(true);
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+        .toBe(true);
       await page.screenshot({
         path: join(
           workspaceRoot,

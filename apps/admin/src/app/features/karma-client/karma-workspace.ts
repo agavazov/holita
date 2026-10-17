@@ -1,19 +1,19 @@
 import { Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
-import { BranchWorkspace } from '../branches/branch-workspace';
-import { UsersPage } from './users-page/users-page';
-import { RolesPage } from './roles-page/roles-page';
-import { CarsPage } from './cars-page/cars-page';
-import { CarDetails } from './car-details/car-details';
-import { LocationPage } from './location-page/location-page';
-import { ProjectsPage } from './projects-page/projects-page';
-import { TimeZonesPage } from './time-zones-page/time-zones-page';
-import { ApiInfoPage } from './api-info-page/api-info-page';
-import { TripsPage } from './trips-page/trips-page';
-import { EventsPage } from './events-page/events-page';
-import { DrivingProfilePage } from './driving-profile-page/driving-profile-page';
-import { EdataPage } from './edata-page/edata-page';
+import { AdminWorkspace } from '../../workspace/admin-workspace';
+import { UsersPage } from './accounts/users-page/users-page';
+import { RolesPage } from './accounts/roles-page/roles-page';
+import { CarsPage } from './cars/cars-page/cars-page';
+import { CarDetails } from './cars/car-details/car-details';
+import { LocationPage } from './location/location-page/location-page';
+import { ProjectsPage } from './references/projects-page/projects-page';
+import { TimeZonesPage } from './references/time-zones-page/time-zones-page';
+import { ApiInfoPage } from './references/api-info-page/api-info-page';
+import { TripsPage } from './history/trips-page/trips-page';
+import { EventsPage } from './history/events-page/events-page';
+import { DrivingProfilePage } from './history/driving-profile-page/driving-profile-page';
+import { EdataPage } from './edata/edata-page/edata-page';
 
 @Component({
   selector: 'holita-karma-workspace',
@@ -73,7 +73,7 @@ import { EdataPage } from './edata-page/edata-page';
   `,
 })
 export class KarmaWorkspace {
-  private readonly workspace = inject(BranchWorkspace);
+  private readonly workspace = inject(AdminWorkspace);
   private readonly route = inject(ActivatedRoute);
   private readonly params = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,

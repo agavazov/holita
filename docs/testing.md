@@ -11,7 +11,7 @@ npm run test:fleet -- vehicles.service.spec.ts --skip-nx-cache
 npm run test:fleet -- devices.service.spec.ts --testNamePattern="rejects" --skip-nx-cache
 npm run test:core -- health.spec.ts --skip-nx-cache
 npm run test:gateway -- router.runtime.spec.mts
-npm run test:karma-client -- karma-client.spec.ts --skip-nx-cache
+npm run test:karma-client -- cars.spec.ts --skip-nx-cache
 npm run test:admin -- --include=app/features/fleet/vehicles/vehicles-api.spec.ts --skip-nx-cache
 ```
 
@@ -57,7 +57,7 @@ npm run test:gateway:db -- federation.db.spec.mts
 npm run test:smoke:admin -- angular-foundation.smoke.spec.mts angular-shell.smoke.spec.mts
 ```
 
-Offline contracts tests compose the Core, Fleet and Karma Client subgraphs, validate all five explicit operation files and
+Offline contracts tests compose the Core, Fleet and Karma Client subgraphs, validate the explicit feature-owned operation files and
 assert the exact public query/mutation inventory. Karma Client runs against a local controlled
 Karma HTTP server without live credentials. Guard tests reject unsafe local test URLs.
 Federation fixture owns isolated Core/Fleet test schemas, Core seeds, real backend processes
@@ -163,11 +163,11 @@ a fixed-arrival-rate latency SLA, cold-start performance or real Karma network l
 | Vehicle validation/query/persistence    | vehicles.service.spec.ts, vehicles.db.spec.ts                                                                                                                                                                                                                                            |
 | Device IMEI/assignment/persistence      | devices.service.spec.ts, devices.db.spec.ts                                                                                                                                                                                                                                              |
 | Runtime module/health                   | Fleet/Core health.spec.ts; Gateway router.runtime.spec.mts                                                                                                                                                                                                                               |
-| Karma account client/access             | accounts.spec.ts, history.spec.ts, location.spec.ts, edata.spec.ts, edata.service.spec.ts, karma-client.spec.ts, cars.service.spec.ts, Karma health.spec.ts                                                                                                                              |
-| Karma truck/reference reads and routing | karma-phase4.spec.ts, karma-phase3.spec.ts, karma-phase2.spec.ts, karma-workspace.spec.ts, edata-page.spec.ts, angular-karma-phase4.smoke.spec.mts, angular-karma-phase3.smoke.spec.mts, angular-karma-phase2.smoke.spec.mts, angular-karma.smoke.spec.mts, angular-edata.smoke.spec.mts |
+| Karma account client/access             | accounts.spec.ts, history.spec.ts, location.spec.ts, edata.spec.ts, edata.service.spec.ts, cars.spec.ts, cars.service.spec.ts, Karma health.spec.ts                                                                                                                              |
+| Karma truck/reference reads and routing | accounts.spec.ts, history.spec.ts, location-references.spec.ts, karma-workspace.spec.ts, edata-page.spec.ts, angular-karma-phase4.smoke.spec.mts, angular-karma-phase3.smoke.spec.mts, angular-karma-phase2.smoke.spec.mts, angular-karma.smoke.spec.mts, angular-edata.smoke.spec.mts |
 | SDL/operations                          | codegen, schema:check, contracts.unit.spec.mts                                                                                                                                                                                                                                           |
 | Cross-service contracts/context         | federation.db.spec.mts                                                                                                                                                                                                                                                                   |
-| Branch/language/default routing         | branch-workspace.spec.ts, fleet-workspace.spec.ts, angular-foundation.smoke.spec.mts                                                                                                                                                                                                     |
+| Branch/language/default routing         | branch-context.spec.ts, fleet-workspace.spec.ts, angular-foundation.smoke.spec.mts                                                                                                                                                                                                     |
 | Captured feature clients/forms/deletion | concrete vehicles/devices Angular suites                                                                                                                                                                                                                                                 |
 | Remote picker cancellation              | relation-picker.spec.ts, device-editor.spec.ts                                                                                                                                                                                                                                           |
 | Shell/theme/mobile/keyboard             | angular-shell.smoke.spec.mts and matching visual review                                                                                                                                                                                                                                  |
@@ -254,7 +254,7 @@ ShellCheck available), and check real input impact without executing broad test 
 ```bash
 actionlint .github/workflows/affected.yml .github/workflows/full-regression.yml
 npm run projects -- --affected --files=apps/admin/src/app/features/fleet/vehicles/vehicles-api.ts
-npm run projects -- --affected --files=apps/fleet/src/vehicles/vehicles.graphql
+npm run projects -- --affected --files=apps/fleet/src/modules/vehicles/vehicles.graphql
 npm run projects -- --affected --files=apps/fleet/prisma/migrations/20261011000000_init/migration.sql
 npm run projects -- --affected --files=compose.yaml
 npm run projects -- --affected --files=.github/workflows/affected.yml

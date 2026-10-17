@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import { parseCatalog } from '../src/edata-catalog/catalog-file.js';
+import { parseCatalog } from '../src/modules/edata-catalog/catalog-file.js';
 import { catalogDocument, catalogFixture } from './edata-catalog.fixture.js';
 
 describe('eData catalog file validation', () => {

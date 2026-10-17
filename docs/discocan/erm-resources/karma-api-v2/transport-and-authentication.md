@@ -1,9 +1,9 @@
 # Transport, authentication and pagination
 
 Sources: [vendor helper](source/help.js.txt), [vendor fields](source/endpoints.js.txt),
-[KarmaClient](../../../../apps/karma-client/src/cars/karma-client.ts),
-[eData query/encoding](../../../../apps/karma-client/src/edata/edata-query.ts),
-[history query/encoding](../../../../apps/karma-client/src/history/history-query.ts).
+[KarmaTransport](../../../../apps/karma-client/src/integrations/karma/karma-transport.ts),
+[eData query/encoding](../../../../apps/karma-client/src/modules/edata/edata-query.ts),
+[history query/encoding](../../../../apps/karma-client/src/modules/history/history-query.ts).
 
 ## Two independent sessions
 
@@ -22,7 +22,7 @@ defaulting to `https://karma.online/apiv2/`; see the root
 [environment reference](../../../../.env.example). Runtime base-URL validation
 permits HTTP/HTTPS but rejects embedded credentials, query strings and fragments.
 
-One `KarmaClient` instance holds the session and pending-login promise in memory.
+One `KarmaTransport` instance holds the session and pending-login promise in memory.
 Concurrent callers share a pending login; successful reads reuse the session.
 There is no saved session, upstream account selector, per-Tenant credential store,
 proactive refresh timer or provider logout call. A process restart loses the session.

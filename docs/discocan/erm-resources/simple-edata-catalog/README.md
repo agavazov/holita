@@ -94,7 +94,7 @@ Apply the reviewed additive migration and regenerate the client directly:
 ```bash
 (cd apps/fleet && node ../../node_modules/prisma/build/index.js migrate deploy)
 (cd apps/fleet && node ../../node_modules/prisma/build/index.js generate)
-node --import tsx apps/fleet/src/edata-catalog/cli.ts \
+node --import tsx apps/fleet/src/modules/edata-catalog/cli.ts \
   --catalog "$work/catalog/catalog.json" --exe "$exe"
 ```
 
@@ -104,10 +104,10 @@ source references, memberships, unique keys and profile relationships. It prints
 After reviewing inspection, differences and preview, supply that exact digest to write:
 
 ```bash
-node --import tsx apps/fleet/src/edata-catalog/cli.ts \
+node --import tsx apps/fleet/src/modules/edata-catalog/cli.ts \
   --catalog "$work/catalog/catalog.json" --exe "$exe" \
   --write --expect-sha256 '<reviewed contentSha256>'
-node --import tsx apps/fleet/src/edata-catalog/cli.ts \
+node --import tsx apps/fleet/src/modules/edata-catalog/cli.ts \
   --catalog "$work/catalog/catalog.json" --exe "$exe"
 ```
 

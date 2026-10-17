@@ -3,6 +3,33 @@
 The repository uses npm workspaces and Nx, with five applications and no shared runtime packages.
 Applications never import another application's implementation, Prisma models or generated client.
 
+## Source organization
+
+Each NestJS application owns its feature modules under `src/modules/`. A feature keeps
+its resolver, service, SDL, validation and unit tests together; database-backed features
+also own their concrete repository. Application-local `auth/`, `graphql/`, `health/`
+and, where needed, `database/` hold the supporting code. These directories are not shared
+runtime packages. Prisma schemas, migrations and generated output retain their existing
+owning-application locations.
+
+| Application | Feature modules | Integration ownership |
+| --- | --- | --- |
+| Core | Tenants, Branches | Tenant/Branch API; one local DatabaseModule provides Prisma to both features |
+| Fleet | Vehicles, Devices, offline eData catalog | `integrations/core/` owns Branch existence checks; one local DatabaseModule provides Fleet Prisma |
+| Karma Client | Cars, eData, Location, History, References, Accounts | `integrations/karma/` owns external HTTP and the shared upstream account session; no database |
+
+The offline Fleet catalog remains a CLI feature, without a Nest runtime module or public API.
+Core is the Tenant/Branch service, not a common implementation library. Fleet and Karma Client
+have no direct integration or shared business implementation.
+
+Angular keeps business pages, concrete API services, GraphQL operations and tests under
+`features/`. Fleet and Karma Client own separate route arrays composed by `app.routes.ts`
+at the existing route level. `workspace/` owns the common admin session/language/login
+coordination, while Branch discovery and selection remain in `features/branches/`.
+`layout/` owns presentation and `core/` contains only admin-local authentication,
+configuration and GraphQL transport. Feature clients and caches retain their mounted
+view lifetime; neither route grouping nor shared login makes business clients global.
+
 | Application  | Responsibility                                                                                      | Local port |
 | ------------ | --------------------------------------------------------------------------------------------------- | ---------- |
 | admin        | Standalone Angular, Sakai/PrimeNG, Branch discovery, Fleet CRUD, Karma truck data and account views | 11000      |

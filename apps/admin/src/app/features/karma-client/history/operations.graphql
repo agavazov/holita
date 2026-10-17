@@ -1,0 +1,67 @@
+query AdminKarmaTrips($input: KarmaTripsInput!) {
+  karmaTrips(input: $input) {
+    cursor
+    nextCursor
+    hasMore
+    items {
+      id
+      carId
+      carNumber
+      deviceId
+      driverId
+      tripActive
+      startMessageId
+      startDate
+      startLatitude
+      startLongitude
+      startOdo
+      stopMessageId
+      stopDate
+      stopLatitude
+      stopLongitude
+      stopOdo
+      tripDuration
+      tripDistance
+      tripDurationNight
+      tripDistanceNight
+      maxSpeed
+      drivingScore
+      ecoScore
+    }
+  }
+}
+
+query AdminKarmaEvents($input: KarmaEventsInput!) {
+  karmaEvents(input: $input) {
+    cursor
+    nextCursor
+    hasMore
+    items {
+      id
+      carId
+      deviceId
+      eventId
+      edt
+      edtTz
+      pdt
+      latitude
+      longitude
+      spd
+      odo
+      extra
+    }
+  }
+}
+
+query AdminKarmaDrivingProfile($input: KarmaDrivingProfileInput!) {
+  karmaDrivingProfile(input: $input) {
+    carId
+    carNumber
+    deviceId
+    categories {
+      name
+      score
+      weight
+    }
+  }
+}

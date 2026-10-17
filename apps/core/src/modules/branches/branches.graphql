@@ -1,0 +1,11 @@
+extend schema @link(url: "https://specs.apollo.dev/federation/v2.3", import: ["@key"])
+
+type Branch @key(fields: "id") {
+  id: ID!
+  name: String!
+}
+
+type Query {
+  branches: [Branch!]!
+  branch(id: ID!): Branch
+}

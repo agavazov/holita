@@ -19,13 +19,17 @@ Branches without modifying existing rows. Fleet sample records are documented in
 
 ## GraphQL contracts
 
-[Core SDL](../../apps/core/src/branches/branches.graphql) exposes `Branch { id name }`,
+[Core SDL](../../apps/core/src/modules/branches/branches.graphql) exposes `Branch { id name }`,
 `branches` and `branch(id: ID!)` through Gateway federation. Authenticated Branch discovery needs
 no `x-branch-id` header. Every Branch query and federation reference resolves within the verified
 Tenant; a missing or foreign Branch lookup returns null. List order is Name then ID.
 There are no Branch create/update/delete mutations or Branch business editor.
 
 Public `tenants` and `demoLogin(tenantId: ID!)` support the current development-only demo session.
+Their SDL belongs to [Tenants](../../apps/core/src/modules/tenants/tenants.graphql), while
+Branch queries and federation definitions belong to the Branch module. Core loads both
+files explicitly into the same subgraph. Both feature repositories use the Core-local
+[DatabaseModule](../../apps/core/src/database/database.module.ts) and its single Prisma client.
 The token is sent as `Authorization: Bearer <token>` for `{ branches { id name } }` or
 `{ branch(id: "10000000-0000-4000-8000-000000000001") { id name } }`.
 The demo flow allows anyone to select any Tenant; it is not production authentication or
@@ -35,9 +39,9 @@ in [Discocan development](../discocan/development.md#demo-tenant-login).
 ## Implementation references
 
 - [Prisma schema](../../apps/core/prisma/schema.prisma).
-- [Resolver](../../apps/core/src/branches/branches.resolver.ts).
-- [Service](../../apps/core/src/branches/branches.service.ts).
-- [Repository](../../apps/core/src/branches/branches.repository.ts).
+- [Resolver](../../apps/core/src/modules/branches/branches.resolver.ts).
+- [Service](../../apps/core/src/modules/branches/branches.service.ts).
+- [Repository](../../apps/core/src/modules/branches/branches.repository.ts).
 
 The resolver delegates to the concrete service/repository. Branch IDs are validated as UUIDs;
 Tenant identity comes from the verified session, never a caller-supplied tenant header/input.

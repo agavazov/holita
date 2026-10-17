@@ -26,7 +26,7 @@ or broad reset/truncation. Live DB results must not be cached.
 Cross-service behavior uses test:gateway:db -- federation.db.spec.mts with real Core/Fleet
 processes/schemas. Angular uses test:admin with --include paths relative to apps/admin/src and
 --filter for case selection. Select concrete Vehicles/Devices API/query/editor/deletion suites,
-BranchWorkspace/FleetWorkspace, RelationPicker, transport/config/appearance as affected.
+AdminWorkspace/BranchContext/FleetWorkspace, RelationPicker, transport/config/appearance as affected.
 Use VITEST_MAX_WORKERS=1 on constrained hosts without reducing case coverage or changing deadlines.
 
 Compiled-app browser checks use test:smoke:admin with angular-vehicles, angular-devices,

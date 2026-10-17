@@ -13,14 +13,19 @@ describe('local GraphQL contracts', () => {
     expect(result.clientSdl).toContain('branch: Branch!');
     expect(result.clientSdl).not.toContain('_entities');
     const operations = await readOperations(result.apiSchema);
-    expect(operations).toHaveLength(5);
+    expect(operations).toHaveLength(10);
     expect(operations.map((operation) => operation.location)).toEqual(
       expect.arrayContaining([
-        'apps/admin/src/app/features/karma-client/operations.graphql',
+        'apps/admin/src/app/features/karma-client/cars/operations.graphql',
+        'apps/admin/src/app/features/karma-client/edata/operations.graphql',
+        'apps/admin/src/app/features/karma-client/location/operations.graphql',
+        'apps/admin/src/app/features/karma-client/history/operations.graphql',
+        'apps/admin/src/app/features/karma-client/references/operations.graphql',
+        'apps/admin/src/app/features/karma-client/accounts/operations.graphql',
         'apps/admin/src/app/features/branches/operations.graphql',
         'apps/admin/src/app/features/fleet/vehicles/operations.graphql',
         'apps/admin/src/app/features/fleet/devices/operations.graphql',
-        'apps/fleet/src/core/operations.graphql',
+        'apps/fleet/src/integrations/core/operations.graphql',
       ]),
     );
     expect(result.clientSdl).toContain('fleetVehicles(');

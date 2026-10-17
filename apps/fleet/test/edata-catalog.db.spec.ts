@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { afterAll, beforeAll, describe, expect, it } from '@jest/globals';
-import { parseCatalog } from '../src/edata-catalog/catalog-file.js';
-import { importCatalog } from '../src/edata-catalog/catalog.repository.js';
+import { parseCatalog } from '../src/modules/edata-catalog/catalog-file.js';
+import { importCatalog } from '../src/modules/edata-catalog/catalog.repository.js';
 import { catalogFixture } from './edata-catalog.fixture.js';
 import { createTestDatabase } from './test-database.js';
 
