@@ -37,6 +37,37 @@ Work happens on the `feature/admin-design-system` branch.
 5. Proof: apply one central token or pattern change and show its propagation in the visual
    review; build the next requested module from the skill alone.
 
+## Fleet demo scope (proposal, not implemented)
+
+A dispatcher's workspace rather than a CRUD demo. All tables are holita-owned, Tenant/Branch
+scoped with composite foreign keys, and unrelated to the temporary Karma Client.
+
+- Entities: extend Vehicle (fleet number, type, make/model/year, VIN, fuel type and tank,
+  status ACTIVE/IN_WORKSHOP/INACTIVE, group, current driver) and Device (model, options,
+  firmware, SIM); add Driver, VehicleGroup, VehicleStatusSample, Trip, FleetEvent (alerts with
+  an OPEN/ACKNOWLEDGED/RESOLVED state machine) and ServiceTask.
+- Screens: Overview (needs-attention queue and KPIs), Alerts inbox, Vehicles list and detail,
+  Trips with an event timeline, Drivers and scorecard, Maintenance, Devices, Vehicle groups.
+  Every editor and workflow is a child-route drawer over its list.
+- Navigation groups: Monitoring (Overview, Alerts, Trips), Fleet (Vehicles, Drivers, Devices),
+  Service (Maintenance), Settings (Vehicle groups).
+- Demo data: a deterministic, insert-only demo seed kept apart from the existing Fleet seed;
+  telemetry KPIs use a Branch data clock (latest device-reported time) and say "data as of";
+  business dates (document expiry, service due dates) use the current date in Europe/Sofia.
+  Operator-entered odometer readings never move the data clock or the vehicle state.
+- One standard list contract for every Fleet list: offset pagination with totals, typed sort
+  fields with direction, search and typed filters that the repository can express directly.
+  Lists do not sort or filter on derived telemetry values unless a scoped query proves totals,
+  order and paging.
+- Contract slices land together with their resolvers: master data (vehicle/device columns,
+  drivers, groups) first, then activity (samples, trips, events, service, overview).
+  Duplicates are `BAD_USER_INPUT` field errors; `CONFLICT` is reserved for state-machine
+  mismatches and deletions blocked by history.
+- Existing Fleet db specs that assert columns or migration history must be updated with each
+  migration; Overview cards must be able to fail and retry independently.
+- Deferred backlog: fuel entries, geozones, diagnostic fault lifecycle, eData readings and
+  reporting configuration, driver-assignment history, editable thresholds.
+
 ## Open items
 
 - Decide whether `@storybook/addon-vitest` should run stories (play functions, accessibility)
