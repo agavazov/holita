@@ -39,6 +39,9 @@ import {
   uuid,
 } from '../../validation.js';
 import { Prisma } from '../../generated/prisma/client.js';
+import { EventsService } from '../events/events.service.js';
+import { ServiceTasksService } from '../service-tasks/service-tasks.service.js';
+import { TelemetryService } from '../telemetry/telemetry.service.js';
 import {
   type VehicleData,
   type VehicleListCriteria,
@@ -47,6 +50,7 @@ import {
 } from './vehicles.repository.js';
 
 export type VehicleResult = Omit<FleetVehicle, 'branch'>;
+type StoredVehicle = Omit<VehicleResult, 'state' | 'openAlertCount' | 'nextService'>;
 
 const VEHICLE_TYPES = Object.values(FleetVehicleType);
 const FUEL_TYPES = Object.values(FleetFuelType);
@@ -103,7 +107,7 @@ function vehicleChanges(input: UpdateFleetVehicleInput): Partial<VehicleData> {
   return data;
 }
 
-export function toVehicle(row: VehicleRow): VehicleResult {
+function toVehicle(row: VehicleRow): StoredVehicle {
   return {
     id: row.id,
     branchId: row.branchId,
@@ -133,6 +137,9 @@ export class VehiclesService {
   constructor(
     private readonly vehicles: VehiclesRepository,
     private readonly core: CoreClient,
+    private readonly telemetry: TelemetryService,
+    private readonly events: EventsService,
+    private readonly serviceTasks: ServiceTasksService,
   ) {}
 
   async list(
@@ -155,19 +162,21 @@ export class VehiclesService {
       currentDriverIds: idList(filter?.currentDriverIds, 'currentDriverIds'),
       hasDriver: booleanFilter(filter?.hasDriver, 'hasDriver'),
       hasDevice: booleanFilter(filter?.hasDevice, 'hasDevice'),
+      hasOpenAlerts: booleanFilter(filter?.hasOpenAlerts, 'hasOpenAlerts'),
     };
     const sort = {
       field: sortField(args.sort?.field, SORT_FIELDS, 'CREATED_AT'),
       direction: sortDirection(args.sort?.direction, 'DESC'),
     };
     const page = await this.vehicles.list(scope, { offset, limit }, criteria, sort);
-    return { items: page.items.map(toVehicle), total: page.total, offset, limit };
+    return { items: await this.complete(scope, page.items), total: page.total, offset, limit };
   }
 
   async find(context: RequestContext, id: string): Promise<VehicleResult> {
-    const row = await this.vehicles.find(requireScope(context), uuid(id, 'id'));
+    const scope = requireScope(context);
+    const row = await this.vehicles.find(scope, uuid(id, 'id'));
     if (!row) throw new NotFoundException('Vehicle not found');
-    return toVehicle(row);
+    return this.completeOne(scope, row);
   }
 
   async create(context: RequestContext, input: CreateFleetVehicleInput): Promise<VehicleResult> {
@@ -190,11 +199,13 @@ export class VehiclesService {
     await this.checkRelations(scope, data, data);
     await this.checkDuplicates(scope, data, null);
     await this.core.requireBranch(scope.branchId, context);
+    let row: VehicleRow;
     try {
-      return toVehicle(await this.vehicles.create(scope, data));
+      row = await this.vehicles.create(scope, data);
     } catch (error) {
       this.writeError(error);
     }
+    return this.completeOne(scope, row);
   }
 
   async update(
@@ -219,31 +230,68 @@ export class VehiclesService {
       data,
     );
     await this.checkDuplicates(scope, data, recordId);
+    let row: VehicleRow;
     try {
-      return toVehicle(await this.vehicles.update(scope, recordId, data));
+      row = await this.vehicles.update(scope, recordId, data);
     } catch (error) {
       this.writeError(error);
     }
+    return this.completeOne(scope, row);
   }
 
   async deactivate(context: RequestContext, id: string): Promise<VehicleResult> {
     const scope = requireScope(context);
     const recordId = uuid(id, 'id');
+    let row: VehicleRow;
     try {
-      return toVehicle(await this.vehicles.deactivate(scope, recordId));
+      row = await this.vehicles.deactivate(scope, recordId);
     } catch (error) {
       persistenceError(error, 'Vehicle');
     }
+    return this.completeOne(scope, row);
   }
 
+  /** A deletable vehicle has no devices, samples, events or tasks, so its derived values are empty. */
   async delete(context: RequestContext, id: string): Promise<VehicleResult> {
     const scope = requireScope(context);
     const recordId = uuid(id, 'id');
+    let row: VehicleRow;
     try {
-      return toVehicle(await this.vehicles.delete(scope, recordId));
+      row = await this.vehicles.delete(scope, recordId);
     } catch (error) {
       persistenceError(error, 'Vehicle', DELETE_CONFLICT);
     }
+    return this.completeOne(scope, row);
+  }
+
+  /**
+   * Attaches the B2 derived values to a page: one state batch (data clock + facts), one OPEN
+   * alert count query and one next-service urgency query, never a query per row.
+   */
+  private async complete(scope: FleetScope, rows: readonly VehicleRow[]): Promise<VehicleResult[]> {
+    if (!rows.length) return [];
+    const vehicleIds = rows.map((row) => row.id);
+    const [states, openAlerts, nextServices] = await Promise.all([
+      this.telemetry.vehicleStates(scope, vehicleIds),
+      this.events.openAlertCounts(scope, vehicleIds),
+      this.serviceTasks.nextForVehicles(scope, vehicleIds),
+    ]);
+    return rows.map((row) => {
+      const state = states.get(row.id);
+      if (!state) throw new Error('Missing vehicle state');
+      return {
+        ...toVehicle(row),
+        state,
+        openAlertCount: openAlerts.get(row.id) ?? 0,
+        nextService: nextServices.get(row.id) ?? null,
+      };
+    });
+  }
+
+  private async completeOne(scope: FleetScope, row: VehicleRow): Promise<VehicleResult> {
+    const [vehicle] = await this.complete(scope, [row]);
+    if (!vehicle) throw new NotFoundException('Vehicle not found');
+    return vehicle;
   }
 
   /**

@@ -6,6 +6,9 @@ import { FleetClock } from '../../clock/fleet-clock.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import type { CreateFleetDriverInput } from '../../generated/graphql/types.js';
 import { CoreClient } from '../../integrations/core/core.client.js';
+import { EventsService } from '../events/events.service.js';
+import { TelemetryService } from '../telemetry/telemetry.service.js';
+import { TripsService } from '../trips/trips.service.js';
 import { type DriverRow, DriversRepository } from './drivers.repository.js';
 import { documentStatus, driverDocumentStatus, DriversService } from './drivers.service.js';
 
@@ -66,6 +69,11 @@ describe('Drivers validation and scope', () => {
   const update = jest.fn<DriversRepository['update']>();
   const remove = jest.fn<DriversRepository['delete']>();
   const requireBranch = jest.fn<CoreClient['requireBranch']>();
+  const asOf = jest.fn<TelemetryService['asOf']>();
+  const driverTotals = jest.fn<TripsService['driverTotals']>();
+  const driverScore = jest.fn<TripsService['driverScore']>();
+  const maneuverTotalsByDriver = jest.fn<EventsService['maneuverTotalsByDriver']>();
+  const driverManeuvers = jest.fn<EventsService['driverManeuvers']>();
   // 22:30 UTC on 17 October is already 18 October in Europe/Sofia.
   const now = new Date('2026-10-17T22:30:00.000Z');
   const context = {
@@ -112,6 +120,9 @@ describe('Drivers validation and scope', () => {
         },
         { provide: CoreClient, useValue: { requireBranch } },
         { provide: FleetClock, useValue: { now: () => now } },
+        { provide: TelemetryService, useValue: { asOf } },
+        { provide: TripsService, useValue: { driverTotals, driverScore } },
+        { provide: EventsService, useValue: { maneuverTotalsByDriver, driverManeuvers } },
       ],
     }).compile();
     service = module.get(DriversService);
@@ -120,6 +131,110 @@ describe('Drivers validation and scope', () => {
     duplicates.mockResolvedValue({ employeeNumber: false, identificationKey: false });
     create.mockResolvedValue(row());
     update.mockResolvedValue(row());
+    asOf.mockResolvedValue(null);
+    driverTotals.mockResolvedValue(new Map());
+    maneuverTotalsByDriver.mockResolvedValue(new Map());
+    driverManeuvers.mockResolvedValue([]);
+  });
+
+  it('attaches 30-day statistics before the data clock for the whole page', async () => {
+    const clock = new Date('2026-10-18T06:30:00.000Z');
+    const busy = row(),
+      idle = row();
+    list.mockResolvedValue({ items: [busy, idle], total: 2 });
+    asOf.mockResolvedValue(clock);
+    driverTotals.mockResolvedValue(new Map([[busy.id, { distanceKm: 250, tripCount: 4 }]]));
+    maneuverTotalsByDriver.mockResolvedValue(new Map([[busy.id, 5]]));
+    const page = await service.list(context, {});
+    const window = { start: new Date('2026-09-18T06:30:00.000Z'), end: clock };
+    expect(driverTotals).toHaveBeenCalledWith(scope, [busy.id, idle.id], window);
+    expect(maneuverTotalsByDriver).toHaveBeenCalledWith(scope, [busy.id, idle.id], window);
+    expect(page.items).toMatchObject([
+      { distance30dKm: 250, tripCount30d: 4, maneuversPer100Km30d: 2 },
+      { distance30dKm: 0, tripCount30d: 0, maneuversPer100Km30d: null },
+    ]);
+    asOf.mockResolvedValue(null);
+    driverTotals.mockClear();
+    expect((await service.list(context, {})).items).toMatchObject([
+      { distance30dKm: 0, tripCount30d: 0, maneuversPer100Km30d: null },
+      { distance30dKm: 0, tripCount30d: 0, maneuversPer100Km30d: null },
+    ]);
+    expect(driverTotals).not.toHaveBeenCalled();
+  });
+
+  it('builds the scorecard over the requested days and flags low confidence', async () => {
+    const clock = new Date('2026-10-18T06:30:00.000Z');
+    const driver = row();
+    find.mockResolvedValue(driver);
+    asOf.mockResolvedValue(clock);
+    driverScore.mockResolvedValue({
+      tripCount: 6,
+      distanceKm: 400,
+      scoredTripCount: 4,
+      averageDrivingScore: 81.5,
+      averageEcoScore: null,
+    });
+    const maneuvers = [
+      {
+        kind: 'HARSH_BRAKING' as const,
+        intensity1: 3,
+        intensity2: 2,
+        intensity3: 1,
+        intensityUnknown: 0,
+        total: 6,
+      },
+    ];
+    driverManeuvers.mockResolvedValue(maneuvers);
+    const window = { start: new Date('2026-10-11T06:30:00.000Z'), end: clock };
+    expect(await service.scorecard(context, { driverId: driver.id, days: 7 })).toMatchObject({
+      driver: { id: driver.id },
+      asOf: clock,
+      windowStart: window.start,
+      windowEnd: clock,
+      distanceKm: 400,
+      tripCount: 6,
+      scoredTripCount: 4,
+      averageDrivingScore: 81.5,
+      averageEcoScore: null,
+      maneuverCount: 6,
+      maneuversPer100Km: 1.5,
+      maneuvers,
+      lowConfidence: true,
+    });
+    expect(driverScore).toHaveBeenCalledWith(scope, driver.id, window);
+    expect(driverManeuvers).toHaveBeenCalledWith(scope, driver.id, window);
+    driverScore.mockResolvedValue({
+      tripCount: 5,
+      distanceKm: 0,
+      scoredTripCount: 5,
+      averageDrivingScore: null,
+      averageEcoScore: null,
+    });
+    expect(await service.scorecard(context, { driverId: driver.id })).toMatchObject({
+      lowConfidence: false,
+      maneuversPer100Km: null,
+    });
+    asOf.mockResolvedValue(null);
+    driverScore.mockClear();
+    expect(await service.scorecard(context, { driverId: driver.id, days: 30 })).toMatchObject({
+      asOf: null,
+      windowStart: null,
+      windowEnd: null,
+      distanceKm: 0,
+      tripCount: 0,
+      scoredTripCount: 0,
+      averageDrivingScore: null,
+      lowConfidence: true,
+    });
+    expect(driverScore).not.toHaveBeenCalled();
+    for (const days of [0, 94, 1.5])
+      expect(
+        await fieldErrors(service.scorecard(context, { driverId: driver.id, days })),
+      ).toMatchObject([{ path: 'days' }]);
+    find.mockResolvedValue(null);
+    await expect(service.scorecard(context, { driverId: driver.id })).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
   it('maps filters with the Sofia business date and the last-name default sort', async () => {

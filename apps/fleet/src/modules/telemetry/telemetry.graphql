@@ -1,0 +1,91 @@
+enum FleetDataSource {
+  DEMO
+  MANUAL
+}
+enum FleetActivityStatus {
+  MOVING
+  IDLE
+  PARKED
+  ASSET
+  NOT_CONNECTED
+  NO_DEVICE
+}
+enum FleetFuelStatus {
+  NORMAL
+  LOW
+  STALE
+  NO_DATA
+}
+
+"Latest device-reported state of a vehicle, classified against the Branch data clock."
+type FleetVehicleState {
+  activity: FleetActivityStatus!
+  lastReportedAt: DateTime
+  latitude: Float
+  longitude: Float
+  address: String
+  speedKph: Float
+  headingDeg: Int
+  ignition: Boolean
+  fuelLevelPct: Float
+  fuelStatus: FleetFuelStatus!
+  externalVoltage: Float
+  backupBatteryVoltage: Float
+  engineHours: Float
+  coolantTempC: Int
+  "Latest non-null odometer from any source, including MANUAL readings."
+  odometerKm: Float
+  odometerRecordedAt: DateTime
+  odometerSource: FleetDataSource
+}
+
+type FleetStatusSample {
+  id: ID!
+  vehicleId: ID!
+  deviceImei: String
+  source: FleetDataSource!
+  recordedAt: DateTime!
+  receivedAt: DateTime!
+  latitude: Float
+  longitude: Float
+  address: String
+  speedKph: Float
+  headingDeg: Int
+  ignition: Boolean
+  odometerKm: Float
+  fuelLevelPct: Float
+  externalVoltage: Float
+  backupBatteryVoltage: Float
+  engineHours: Float
+  coolantTempC: Int
+}
+
+type FleetStatusSampleSeries {
+  vehicleId: ID!
+  from: DateTime!
+  to: DateTime!
+  "Ascending by recordedAt, then id; at most 2,000 rows (the newest are kept)."
+  items: [FleetStatusSample!]!
+  truncated: Boolean!
+}
+
+type FleetDataClock {
+  asOf: DateTime
+  businessDate: Date!
+  timeZone: String!
+}
+
+input RecordFleetOdometerReadingInput {
+  vehicleId: ID!
+  odometerKm: Float!
+  recordedAt: DateTime!
+}
+
+extend type Query {
+  fleetDataClock: FleetDataClock!
+  fleetVehicleSamples(vehicleId: ID!, from: DateTime!, to: DateTime!): FleetStatusSampleSeries!
+}
+
+extend type Mutation {
+  recordFleetOdometerReading(input: RecordFleetOdometerReadingInput!): FleetStatusSample!
+}

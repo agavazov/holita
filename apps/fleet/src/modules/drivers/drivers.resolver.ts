@@ -6,6 +6,7 @@ import type {
   MutationDeleteFleetDriverArgs,
   MutationUpdateFleetDriverArgs,
   QueryFleetDriverArgs,
+  QueryFleetDriverScorecardArgs,
   QueryFleetDriversArgs,
 } from '../../generated/graphql/types.js';
 import type { RequestContext } from '../../graphql/request-context.js';
@@ -24,6 +25,14 @@ export class DriversResolver {
   @Query('fleetDriver')
   fleetDriver(@Args() args: QueryFleetDriverArgs, @Context() context: RequestContext) {
     return this.driversService.find(context, args.id);
+  }
+
+  @Query('fleetDriverScorecard')
+  fleetDriverScorecard(
+    @Args() args: QueryFleetDriverScorecardArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.driversService.scorecard(context, args);
   }
 
   @Mutation('createFleetDriver')

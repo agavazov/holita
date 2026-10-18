@@ -1,0 +1,149 @@
+enum FleetServiceType {
+  GENERAL_SERVICE
+  OIL_CHANGE
+  ANNUAL_INSPECTION
+  TACHOGRAPH_CALIBRATION
+  BRAKES
+  TIRES
+  REPAIR
+  OTHER
+}
+enum FleetServiceStatus {
+  PLANNED
+  DONE
+  CANCELLED
+}
+enum FleetServiceUrgency {
+  OVERDUE
+  DUE_SOON
+  UNKNOWN_ODOMETER
+  UPCOMING
+}
+
+type FleetServiceTask {
+  id: ID!
+  branchId: ID!
+  vehicleId: ID!
+  vehicle: FleetVehicleRef!
+  serviceType: FleetServiceType!
+  status: FleetServiceStatus!
+  title: String
+  dueOn: Date
+  dueOdometerKm: Int
+  completedOn: Date
+  completedOdometerKm: Int
+  workshop: String
+  replacedParts: String
+  "EUR cents; 0 is a free (warranty) job, null is unknown."
+  costCents: Int
+  notes: String
+  "Null unless PLANNED."
+  urgency: FleetServiceUrgency
+  remainingDays: Int
+  remainingKm: Int
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type FleetServiceTaskPage {
+  items: [FleetServiceTask!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+
+type FleetServiceTaskCompletion {
+  completed: FleetServiceTask!
+  next: FleetServiceTask
+}
+
+"PLANNED tasks of vehicles that are not INACTIVE, counted per task."
+type FleetServiceSummary {
+  businessDate: Date!
+  overdue: Int!
+  dueSoon: Int!
+  unknownOdometer: Int!
+  upcoming: Int!
+  inWorkshopVehicles: Int!
+  completedLast30Days: Int!
+  costLast30DaysCents: Int!
+  costWindowStart: Date!
+  costWindowEnd: Date!
+}
+
+input FleetServiceTaskFilter {
+  statuses: [FleetServiceStatus!]
+  urgencies: [FleetServiceUrgency!]
+  serviceTypes: [FleetServiceType!]
+  vehicleIds: [ID!]
+  completedFrom: Date
+  completedTo: Date
+}
+
+enum FleetServiceTaskSortField {
+  URGENCY
+  DUE_ON
+  COMPLETED_ON
+  CREATED_AT
+}
+input FleetServiceTaskSort {
+  field: FleetServiceTaskSortField! = URGENCY
+  direction: FleetSortDirection! = ASC
+}
+
+input CreateFleetServiceTaskInput {
+  vehicleId: ID!
+  serviceType: FleetServiceType!
+  title: String
+  dueOn: Date
+  dueOdometerKm: Int
+  workshop: String
+  notes: String
+}
+
+"Omitted fields stay unchanged; explicit null clears optional fields."
+input UpdateFleetServiceTaskInput {
+  serviceType: FleetServiceType
+  title: String
+  dueOn: Date
+  dueOdometerKm: Int
+  workshop: String
+  notes: String
+}
+
+"Giving nextDueOn or nextDueOdometerKm schedules the next PLANNED task in the same transaction."
+input CompleteFleetServiceTaskInput {
+  completedOn: Date!
+  completedOdometerKm: Int
+  costCents: Int
+  workshop: String
+  replacedParts: String
+  notes: String
+  nextDueOn: Date
+  nextDueOdometerKm: Int
+  nextTitle: String
+}
+
+extend type Query {
+  fleetServiceTasks(
+    offset: Int! = 0
+    limit: Int! = 20
+    search: String
+    ids: [ID!]
+    filter: FleetServiceTaskFilter
+    sort: FleetServiceTaskSort
+  ): FleetServiceTaskPage!
+  fleetServiceTask(id: ID!): FleetServiceTask!
+  fleetServiceSummary: FleetServiceSummary!
+}
+
+extend type Mutation {
+  createFleetServiceTask(input: CreateFleetServiceTaskInput!): FleetServiceTask!
+  updateFleetServiceTask(id: ID!, input: UpdateFleetServiceTaskInput!): FleetServiceTask!
+  completeFleetServiceTask(
+    id: ID!
+    input: CompleteFleetServiceTaskInput!
+  ): FleetServiceTaskCompletion!
+  cancelFleetServiceTask(id: ID!): FleetServiceTask!
+  deleteFleetServiceTask(id: ID!): FleetServiceTask!
+}

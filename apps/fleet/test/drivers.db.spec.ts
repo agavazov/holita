@@ -352,4 +352,183 @@ describe('Driver GraphQL with PostgreSQL', () => {
       await query(source, { filter: { documentsExpireWithinDays: 366 } }, branchId),
     ).toMatchObject({ errors: [{ extensions: { fieldErrors: [{ path: 'filter' }] } }] });
   });
+
+  it('computes 30-day statistics and scorecards before the data clock', async () => {
+    const branchId = randomUUID();
+    const asOf = new Date('2026-10-17T20:00:00.000Z');
+    const days = (value: number) => new Date(asOf.getTime() + value * 86_400_000);
+    const vehicle = await database.client.vehicle.create({
+      data: { tenantId, branchId, licensePlate: 'CB 1040 AX' },
+    });
+    const [driver, idle] = await Promise.all(
+      ['Мартин', 'Иван'].map((firstName) =>
+        database.client.driver.create({
+          data: { tenantId, branchId, firstName, lastName: 'Колев' },
+        }),
+      ),
+    );
+    if (!driver || !idle) throw new Error('Missing drivers');
+    await database.client.vehicleStatusSample.create({
+      data: {
+        tenantId,
+        branchId,
+        vehicleId: vehicle.id,
+        deviceImei: '990601000000040',
+        source: 'DEMO',
+        recordedAt: asOf,
+        receivedAt: asOf,
+      },
+    });
+    // A later sample of another Branch never moves this Branch's window.
+    const elsewhere = await database.client.vehicle.create({
+      data: { tenantId, branchId: randomUUID(), licensePlate: 'ELSEWHERE' },
+    });
+    await database.client.vehicleStatusSample.create({
+      data: {
+        tenantId,
+        branchId: elsewhere.branchId,
+        vehicleId: elsewhere.id,
+        deviceImei: '990601000000041',
+        source: 'DEMO',
+        recordedAt: days(5),
+        receivedAt: days(5),
+      },
+    });
+    const trip = (
+      startedAt: Date,
+      values: { distanceKm?: number; drivingScore?: number; ecoScore?: number } = {},
+    ) => ({
+      tenantId,
+      branchId,
+      vehicleId: vehicle.id,
+      driverId: driver.id,
+      source: 'DEMO' as const,
+      startedAt,
+      ...values,
+    });
+    await database.client.trip.createMany({
+      data: [
+        trip(days(-1), { distanceKm: 100, drivingScore: 80, ecoScore: 70 }),
+        trip(days(-10), { distanceKm: 50, drivingScore: 50 }),
+        // Shorter than 0.5 km: counted as a scored trip, never in the averages.
+        trip(days(-29), { distanceKm: 0.4, drivingScore: 10, ecoScore: 10 }),
+        trip(days(-2)),
+        trip(days(-30)),
+        trip(days(-31), { distanceKm: 900, drivingScore: 99 }),
+      ],
+    });
+    const maneuver = (
+      occurredAt: Date,
+      kind: 'HARSH_BRAKING' | 'SPEEDING' | 'IGNITION_ON',
+      intensity: number | null,
+    ) => ({
+      tenantId,
+      branchId,
+      vehicleId: vehicle.id,
+      driverId: driver.id,
+      source: 'DEMO' as const,
+      occurredAt,
+      kind,
+      severity: 'INFO' as const,
+      intensity,
+    });
+    await database.client.fleetEvent.createMany({
+      data: [
+        maneuver(days(-1), 'HARSH_BRAKING', 1),
+        maneuver(days(-1), 'HARSH_BRAKING', 1),
+        maneuver(days(-1), 'HARSH_BRAKING', 3),
+        maneuver(days(-10), 'SPEEDING', 2),
+        maneuver(days(-1), 'IGNITION_ON', null),
+        maneuver(days(-31), 'HARSH_BRAKING', 2),
+      ],
+    });
+    expect(
+      await query(
+        '{fleetDrivers(sort:{field:LAST_NAME,direction:ASC}){items{firstName distance30dKm tripCount30d maneuversPer100Km30d}}}',
+        {},
+        branchId,
+      ),
+    ).toEqual({
+      data: {
+        fleetDrivers: {
+          items: [
+            { firstName: 'Иван', distance30dKm: 0, tripCount30d: 0, maneuversPer100Km30d: null },
+            {
+              firstName: 'Мартин',
+              distance30dKm: expect.closeTo(150.4, 10),
+              tripCount30d: 4,
+              maneuversPer100Km30d: expect.closeTo((4 / 150.4) * 100, 10),
+            },
+          ],
+        },
+      },
+    });
+    const scorecard =
+      'query($driverId:ID!,$days:Int!){fleetDriverScorecard(driverId:$driverId,days:$days){driver{id tripCount30d} asOf windowStart windowEnd distanceKm tripCount scoredTripCount averageDrivingScore averageEcoScore maneuverCount maneuversPer100Km lowConfidence maneuvers{kind intensity1 intensity2 intensity3 intensityUnknown total}}}';
+    const month = await query(scorecard, { driverId: driver.id, days: 30 }, branchId);
+    expect(month).toMatchObject({
+      data: {
+        fleetDriverScorecard: {
+          driver: { id: driver.id, tripCount30d: 4 },
+          asOf: asOf.toISOString(),
+          windowStart: days(-30).toISOString(),
+          windowEnd: asOf.toISOString(),
+          distanceKm: expect.closeTo(150.4, 10),
+          tripCount: 4,
+          scoredTripCount: 3,
+          averageDrivingScore: expect.closeTo((80 * 100 + 50 * 50) / 150, 10),
+          averageEcoScore: 70,
+          maneuverCount: 4,
+          maneuversPer100Km: expect.closeTo((4 / 150.4) * 100, 10),
+          lowConfidence: true,
+        },
+      },
+    });
+    expect(JSON.stringify(month)).toContain(
+      '{"kind":"HARSH_BRAKING","intensity1":2,"intensity2":0,"intensity3":1,"intensityUnknown":0,"total":3}',
+    );
+    expect(JSON.stringify(month)).toContain(
+      '{"kind":"SPEEDING","intensity1":0,"intensity2":1,"intensity3":0,"intensityUnknown":0,"total":1}',
+    );
+    expect(await query(scorecard, { driverId: driver.id, days: 7 }, branchId)).toMatchObject({
+      data: {
+        fleetDriverScorecard: {
+          windowStart: days(-7).toISOString(),
+          distanceKm: 100,
+          tripCount: 2,
+          scoredTripCount: 1,
+          averageDrivingScore: 80,
+          averageEcoScore: 70,
+          maneuverCount: 3,
+          maneuversPer100Km: expect.closeTo(3, 10),
+          lowConfidence: true,
+        },
+      },
+    });
+    expect(await query(scorecard, { driverId: idle.id, days: 30 }, branchId)).toMatchObject({
+      data: {
+        fleetDriverScorecard: {
+          tripCount: 0,
+          distanceKm: 0,
+          averageDrivingScore: null,
+          maneuversPer100Km: null,
+          lowConfidence: true,
+        },
+      },
+    });
+    expect(await query(scorecard, { driverId: driver.id, days: 30 }, randomUUID())).toMatchObject({
+      errors: [{ extensions: { code: 'NOT_FOUND' } }],
+    });
+    expect(await query(scorecard, { driverId: driver.id, days: 94 }, branchId)).toMatchObject({
+      errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'days' }] } }],
+    });
+    expect(await query(remove, { id: driver.id }, branchId)).toMatchObject({
+      errors: [
+        {
+          message: 'Driver is assigned or has trip history; set the driver inactive instead.',
+          extensions: { code: 'CONFLICT' },
+        },
+      ],
+    });
+  });
 });

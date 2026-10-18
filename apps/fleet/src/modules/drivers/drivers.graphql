@@ -46,6 +46,11 @@ type FleetDriver {
   vehicles: [FleetVehicleRef!]!
   "Worst status of the licence and tachograph card at the business date (Europe/Sofia)."
   documentStatus: FleetDocumentStatus!
+  "Distance of the driver's trips started in the 30 days up to the Branch data clock." # B2
+  distance30dKm: Float! # B2
+  tripCount30d: Int! # B2
+  "Maneuver events per 100 km in the same window; null without distance or data clock." # B2
+  maneuversPer100Km30d: Float # B2
   createdAt: DateTime!
   updatedAt: DateTime!
 }
@@ -118,6 +123,27 @@ input UpdateFleetDriverInput {
   notes: String
 }
 
+# B2
+"Driver statistics over the `days` before the Branch data clock; windows are (windowStart, windowEnd]."
+type FleetDriverScorecard {
+  driver: FleetDriver!
+  asOf: DateTime
+  windowStart: DateTime
+  windowEnd: DateTime
+  distanceKm: Float!
+  tripCount: Int!
+  "Trips with a driving score."
+  scoredTripCount: Int!
+  "Distance-weighted over scored trips of at least 0.5 km."
+  averageDrivingScore: Float
+  averageEcoScore: Float
+  maneuverCount: Int!
+  maneuversPer100Km: Float
+  maneuvers: [FleetManeuverCount!]!
+  "Fewer than five scored trips."
+  lowConfidence: Boolean!
+}
+
 extend type Query {
   fleetDrivers(
     offset: Int! = 0
@@ -128,6 +154,8 @@ extend type Query {
     sort: FleetDriverSort
   ): FleetDriverPage!
   fleetDriver(id: ID!): FleetDriver!
+  "days: 1–93." # B2
+  fleetDriverScorecard(driverId: ID!, days: Int! = 30): FleetDriverScorecard! # B2
 }
 
 extend type Mutation {

@@ -1,0 +1,75 @@
+type FleetTrip {
+  id: ID!
+  branchId: ID!
+  vehicleId: ID!
+  vehicle: FleetVehicleRef!
+  driverId: ID
+  driver: FleetDriverRef
+  deviceImei: String
+  source: FleetDataSource!
+  startedAt: DateTime!
+  "Null when the trip has not ended or no end was received."
+  endedAt: DateTime
+  durationSeconds: Int
+  startAddress: String
+  endAddress: String
+  startLatitude: Float
+  startLongitude: Float
+  endLatitude: Float
+  endLongitude: Float
+  startOdometerKm: Float
+  endOdometerKm: Float
+  distanceKm: Float
+  idleSeconds: Int
+  maxSpeedKph: Float
+  fuelUsedL: Float
+  "Device-reported demo score 0–100; holita does not calculate it."
+  drivingScore: Float
+  ecoScore: Float
+  maneuverCount: Int!
+  "True when endedAt is null and startedAt is within 24 h before the Branch data clock; false otherwise (also when asOf is null)."
+  inProgress: Boolean!
+  createdAt: DateTime!
+}
+
+type FleetTripPage {
+  items: [FleetTrip!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+  "Sum of non-null distanceKm over the whole filtered set."
+  totalDistanceKm: Float!
+}
+
+input FleetTripFilter {
+  startedFrom: DateTime
+  startedTo: DateTime
+  vehicleIds: [ID!]
+  driverIds: [ID!]
+  hasDriver: Boolean
+  scored: Boolean
+  drivingScoreBelow: Float
+  hasEnd: Boolean
+}
+
+enum FleetTripSortField {
+  STARTED_AT
+  DISTANCE_KM
+  DRIVING_SCORE
+}
+input FleetTripSort {
+  field: FleetTripSortField! = STARTED_AT
+  direction: FleetSortDirection! = DESC
+}
+
+extend type Query {
+  fleetTrips(
+    offset: Int! = 0
+    limit: Int! = 20
+    search: String
+    ids: [ID!]
+    filter: FleetTripFilter
+    sort: FleetTripSort
+  ): FleetTripPage!
+  fleetTrip(id: ID!): FleetTrip!
+}

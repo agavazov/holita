@@ -33,6 +33,10 @@ export const subgraphs = [
       'apps/fleet/src/modules/devices/devices.graphql',
       'apps/fleet/src/modules/drivers/drivers.graphql',
       'apps/fleet/src/modules/vehicle-groups/vehicle-groups.graphql',
+      'apps/fleet/src/modules/telemetry/telemetry.graphql',
+      'apps/fleet/src/modules/trips/trips.graphql',
+      'apps/fleet/src/modules/events/events.graphql',
+      'apps/fleet/src/modules/service-tasks/service-tasks.graphql',
     ],
   },
 ];

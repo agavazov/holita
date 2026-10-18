@@ -465,4 +465,81 @@ describe('Device GraphQL with PostgreSQL', () => {
       ),
     ).toMatchObject({ errors: [{ extensions: { code: 'NOT_FOUND' } }] });
   });
+
+  it('reports lastReportedAt for the current (vehicle, IMEI) pair and keeps history on deletion', async () => {
+    const branchId = randomUUID();
+    const first = await truck(branchId, 'CB 1001 AX'),
+      second = await truck(branchId, 'CB 1002 AX');
+    const imei = '990601000000001';
+    const device = await database.client.device.create({
+      data: { tenantId, branchId, vehicleId: first.id, imei },
+    });
+    const otherTenant = randomUUID();
+    const elsewhere = await database.client.vehicle.create({
+      data: { tenantId: otherTenant, branchId, licensePlate: 'OTHER' },
+    });
+    const sample = (vehicleId: string, deviceImei: string, recordedAt: string) => ({
+      tenantId,
+      branchId,
+      vehicleId,
+      deviceImei,
+      source: 'DEMO' as const,
+      recordedAt: new Date(recordedAt),
+      receivedAt: new Date(recordedAt),
+    });
+    await database.client.vehicleStatusSample.createMany({
+      data: [
+        sample(first.id, imei, '2026-10-18T05:00:00.000Z'),
+        sample(first.id, imei, '2026-10-18T06:00:00.000Z'),
+        // Another device on the same vehicle and the same IMEI elsewhere do not count.
+        sample(first.id, '990601000000002', '2026-10-18T06:30:00.000Z'),
+        {
+          ...sample(elsewhere.id, imei, '2026-10-18T07:00:00.000Z'),
+          tenantId: otherTenant,
+        },
+      ],
+    });
+    const reported = 'query($id:ID!){fleetDevice(id:$id){vehicleId lastReportedAt}}';
+    expect(await query(reported, { id: device.id }, branchId)).toEqual({
+      data: { fleetDevice: { vehicleId: first.id, lastReportedAt: '2026-10-18T06:00:00.000Z' } },
+    });
+    expect(
+      await query(
+        'mutation($id:ID!,$vehicleId:ID!){updateFleetDevice(id:$id,input:{vehicleId:$vehicleId}){vehicleId lastReportedAt}}',
+        { id: device.id, vehicleId: second.id },
+        branchId,
+      ),
+    ).toEqual({ data: { updateFleetDevice: { vehicleId: second.id, lastReportedAt: null } } });
+    await database.client.vehicleStatusSample.create({
+      data: sample(second.id, imei, '2026-10-18T06:45:00.000Z'),
+    });
+    expect(
+      await query(
+        '{fleetDevices(sort:{field:IMEI,direction:ASC}){items{imei lastReportedAt vehicle{licensePlate}}total}}',
+        {},
+        branchId,
+      ),
+    ).toEqual({
+      data: {
+        fleetDevices: {
+          items: [
+            {
+              imei,
+              lastReportedAt: '2026-10-18T06:45:00.000Z',
+              vehicle: { licensePlate: 'CB 1002 AX' },
+            },
+          ],
+          total: 1,
+        },
+      },
+    });
+    expect(await query(remove, { id: device.id }, branchId)).toEqual({
+      data: { deleteFleetDevice: { id: device.id } },
+    });
+    expect(
+      await database.client.vehicleStatusSample.count({
+        where: { tenantId, branchId, deviceImei: imei },
+      }),
+    ).toBe(3);
+  });
 });

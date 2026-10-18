@@ -60,6 +60,7 @@ async function prepareDatabase(service: 'core' | 'fleet') {
     await connection.connect();
     await connection.query(`CREATE SCHEMA ${pg.escapeIdentifier(schema)}`);
     created = true;
+    const databaseUrl = url.toString();
     url.searchParams.set('schema', schema);
     const env = { ...process.env, [`${service.toUpperCase()}_DATABASE_URL`]: url.toString() };
     const cwd = join(workspaceRoot, 'apps', service);
@@ -75,7 +76,7 @@ async function prepareDatabase(service: 'core' | 'fleet') {
         timeout: 15000,
       });
     }
-    return { url: url.toString(), schema, close };
+    return { url: url.toString(), databaseUrl, schema, close };
   } catch (error) {
     await close();
     throw error;
@@ -425,6 +426,10 @@ export async function createFederationFixture(
       coreRequests: coreObserver.requests,
       setCoreResponse: coreObserver.setResponse,
       fleetUrl: fleet.url,
+      // Guarded Fleet test database (without the schema option) and the per-run schema, for
+      // specs that insert telemetry or event rows no API creates.
+      fleetDatabaseUrl: fleetDatabase.databaseUrl,
+      fleetSchema: fleetDatabase.schema,
       fleetRequests: fleetObserver.requests,
       setFleetEnabled: async (enabled: boolean) => {
         await fleet.stop();

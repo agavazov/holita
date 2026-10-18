@@ -49,6 +49,7 @@ export interface VehicleListCriteria {
   currentDriverIds: string[] | undefined;
   hasDriver: boolean | undefined;
   hasDevice: boolean | undefined;
+  hasOpenAlerts: boolean | undefined;
 }
 
 export interface VehicleSort {
@@ -82,6 +83,10 @@ function vehicleWhere(scope: FleetScope, criteria: VehicleListCriteria): Prisma.
     conditions.push({ currentDriverId: criteria.hasDriver ? { not: null } : null });
   if (criteria.hasDevice !== undefined)
     conditions.push({ devices: criteria.hasDevice ? { some: {} } : { none: {} } });
+  if (criteria.hasOpenAlerts !== undefined) {
+    const open = { alertStatus: 'OPEN' } satisfies Prisma.FleetEventWhereInput;
+    conditions.push({ events: criteria.hasOpenAlerts ? { some: open } : { none: open } });
+  }
   return { tenantId: scope.tenantId, branchId: scope.branchId, AND: conditions };
 }
 

@@ -33,6 +33,8 @@ type FleetDevice @key(fields: "id") {
   simIccid: String
   installedAt: DateTime
   notes: String
+  "Latest sample recorded for this device on its current vehicle; null if never." # B2
+  lastReportedAt: DateTime # B2
   createdAt: DateTime!
   updatedAt: DateTime!
 }

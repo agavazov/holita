@@ -7,6 +7,7 @@ import { CoreClient } from '../../integrations/core/core.client.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import type { CreateFleetDeviceInput } from '../../generated/graphql/types.js';
 import type { FleetDeviceModel, FleetDeviceOption } from '../../generated/prisma/enums.js';
+import { reportingPair, TelemetryService } from '../telemetry/telemetry.service.js';
 import { type DeviceRow, DevicesRepository } from './devices.repository.js';
 import { DevicesService } from './devices.service.js';
 
@@ -31,6 +32,7 @@ describe('Devices validation and scope', () => {
   const findVehicle = jest.fn<DevicesRepository['findVehicle']>();
   const imeiTaken = jest.fn<DevicesRepository['imeiTaken']>();
   const requireBranch = jest.fn<CoreClient['requireBranch']>();
+  const lastReported = jest.fn<TelemetryService['lastReported']>();
   const now = new Date('2026-10-18T07:00:00.000Z');
   const context = {
     requestId: randomUUID(),
@@ -78,6 +80,7 @@ describe('Devices validation and scope', () => {
         },
         { provide: CoreClient, useValue: { requireBranch } },
         { provide: FleetClock, useValue: { now: () => now } },
+        { provide: TelemetryService, useValue: { lastReported } },
       ],
     }).compile();
     service = module.get(DevicesService);
@@ -88,6 +91,24 @@ describe('Devices validation and scope', () => {
     create.mockResolvedValue(row());
     update.mockResolvedValue(row());
     find.mockResolvedValue(row());
+    lastReported.mockResolvedValue(new Map());
+  });
+
+  it('attaches lastReportedAt of each current (vehicle, IMEI) pair with one batched call', async () => {
+    const reporting = row({ imei: '001234567890111' }),
+      silent = row({ imei: '001234567890222' });
+    list.mockResolvedValue({ items: [reporting, silent], total: 2 });
+    const reportedAt = new Date('2026-10-18T06:25:00.000Z');
+    lastReported.mockResolvedValue(
+      new Map([[reportingPair(vehicleId, '001234567890111'), reportedAt]]),
+    );
+    const page = await service.list(context, {});
+    expect(lastReported).toHaveBeenCalledTimes(1);
+    expect(lastReported).toHaveBeenCalledWith(scope, [
+      { vehicleId, imei: '001234567890111' },
+      { vehicleId, imei: '001234567890222' },
+    ]);
+    expect(page.items.map((item) => item.lastReportedAt)).toEqual([reportedAt, null]);
   });
 
   it('maps tokens, filters and sorting without checking Core', async () => {

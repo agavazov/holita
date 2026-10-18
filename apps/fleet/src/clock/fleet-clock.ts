@@ -32,3 +32,14 @@ export function businessDate(instant: Date): string {
 export function addDays(date: string, days: number): string {
   return dateToDateOnly(new Date(dateOnlyToDate(date).getTime() + days * 86_400_000));
 }
+
+/** Half-open `(start, end]` statistics window ending at the Branch data clock. */
+export interface DataWindow {
+  readonly start: Date;
+  readonly end: Date;
+}
+
+/** The `days` before the data clock `asOf`; `null` when the Branch has no device data. */
+export function dataWindow(asOf: Date | null, days: number): DataWindow | null {
+  return asOf === null ? null : { start: new Date(asOf.getTime() - days * 86_400_000), end: asOf };
+}

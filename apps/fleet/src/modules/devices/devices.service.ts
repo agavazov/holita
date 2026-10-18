@@ -33,6 +33,7 @@ import {
   uuid,
 } from '../../validation.js';
 import { Prisma } from '../../generated/prisma/client.js';
+import { reportingPair, TelemetryService } from '../telemetry/telemetry.service.js';
 import {
   type DeviceData,
   type DeviceListCriteria,
@@ -41,6 +42,7 @@ import {
 } from './devices.repository.js';
 
 export type DeviceResult = Omit<FleetDevice, 'branch'>;
+type StoredDevice = Omit<DeviceResult, 'lastReportedAt'>;
 
 const DEVICE_MODELS = Object.values(FleetDeviceModel);
 const DEVICE_OPTIONS = Object.values(FleetDeviceOption);
@@ -94,7 +96,7 @@ function checkOptions(model: FleetDeviceModel | null, selected: readonly FleetDe
     );
 }
 
-export function toDevice(row: DeviceRow): DeviceResult {
+function toDevice(row: DeviceRow): StoredDevice {
   return {
     id: row.id,
     branchId: row.branchId,
@@ -119,6 +121,7 @@ export class DevicesService {
     private readonly devices: DevicesRepository,
     private readonly core: CoreClient,
     private readonly clock: FleetClock,
+    private readonly telemetry: TelemetryService,
   ) {}
 
   async list(
@@ -142,13 +145,14 @@ export class DevicesService {
       direction: sortDirection(args.sort?.direction, 'DESC'),
     };
     const page = await this.devices.list(scope, { offset, limit }, criteria, sort);
-    return { items: page.items.map(toDevice), total: page.total, offset, limit };
+    return { items: await this.complete(scope, page.items), total: page.total, offset, limit };
   }
 
   async find(context: RequestContext, id: string): Promise<DeviceResult> {
-    const row = await this.devices.find(requireScope(context), uuid(id, 'id'));
+    const scope = requireScope(context);
+    const row = await this.devices.find(scope, uuid(id, 'id'));
     if (!row) throw new NotFoundException('Device not found');
-    return toDevice(row);
+    return this.completeOne(scope, row);
   }
 
   async create(context: RequestContext, input: CreateFleetDeviceInput): Promise<DeviceResult> {
@@ -168,11 +172,13 @@ export class DevicesService {
     await this.requireVehicle(scope, data.vehicleId);
     await this.requireUniqueImei(scope, data.imei, null);
     await this.core.requireBranch(scope.branchId, context);
+    let row: DeviceRow;
     try {
-      return toDevice(await this.devices.create(scope, data));
+      row = await this.devices.create(scope, data);
     } catch (error) {
       this.writeError(error);
     }
+    return this.completeOne(scope, row);
   }
 
   async update(
@@ -204,21 +210,45 @@ export class DevicesService {
     );
     if (data.vehicleId !== undefined) await this.requireVehicle(scope, data.vehicleId);
     if (data.imei !== undefined) await this.requireUniqueImei(scope, data.imei, recordId);
+    let row: DeviceRow;
     try {
-      return toDevice(await this.devices.update(scope, recordId, data));
+      row = await this.devices.update(scope, recordId, data);
     } catch (error) {
       this.writeError(error);
     }
+    return this.completeOne(scope, row);
   }
 
+  /** Devices with telemetry history can be deleted: samples keep the IMEI as a snapshot. */
   async delete(context: RequestContext, id: string): Promise<DeviceResult> {
     const scope = requireScope(context);
     const recordId = uuid(id, 'id');
+    let row: DeviceRow;
     try {
-      return toDevice(await this.devices.delete(scope, recordId));
+      row = await this.devices.delete(scope, recordId);
     } catch (error) {
       this.writeError(error);
     }
+    return this.completeOne(scope, row);
+  }
+
+  /** Attaches `lastReportedAt` of each device's current (vehicle, IMEI) pair in one query. */
+  private async complete(scope: FleetScope, rows: readonly DeviceRow[]): Promise<DeviceResult[]> {
+    if (!rows.length) return [];
+    const reported = await this.telemetry.lastReported(
+      scope,
+      rows.map((row) => ({ vehicleId: row.vehicleId, imei: row.imei })),
+    );
+    return rows.map((row) => ({
+      ...toDevice(row),
+      lastReportedAt: reported.get(reportingPair(row.vehicleId, row.imei)) ?? null,
+    }));
+  }
+
+  private async completeOne(scope: FleetScope, row: DeviceRow): Promise<DeviceResult> {
+    const [device] = await this.complete(scope, [row]);
+    if (!device) throw new NotFoundException('Device not found');
+    return device;
   }
 
   private firmwareVersion(value: unknown): string | null {

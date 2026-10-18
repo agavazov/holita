@@ -7,6 +7,10 @@ import { createRequestContext } from './graphql/request-context.js';
 import { DateScalar, DateTimeScalar } from './graphql/scalars.js';
 import { DevicesModule } from './modules/devices/devices.module.js';
 import { DriversModule } from './modules/drivers/drivers.module.js';
+import { EventsModule } from './modules/events/events.module.js';
+import { ServiceTasksModule } from './modules/service-tasks/service-tasks.module.js';
+import { TelemetryModule } from './modules/telemetry/telemetry.module.js';
+import { TripsModule } from './modules/trips/trips.module.js';
 import { VehicleGroupsModule } from './modules/vehicle-groups/vehicle-groups.module.js';
 import { VehiclesModule } from './modules/vehicles/vehicles.module.js';
 
@@ -19,6 +23,10 @@ const typeDefPaths = [
   'modules/devices/devices',
   'modules/drivers/drivers',
   'modules/vehicle-groups/vehicle-groups',
+  'modules/telemetry/telemetry',
+  'modules/trips/trips',
+  'modules/events/events',
+  'modules/service-tasks/service-tasks',
 ];
 
 @Module({
@@ -27,6 +35,10 @@ const typeDefPaths = [
     DevicesModule,
     DriversModule,
     VehicleGroupsModule,
+    TelemetryModule,
+    TripsModule,
+    EventsModule,
+    ServiceTasksModule,
     GraphQLModule.forRoot<ApolloFederationDriverConfig>({
       driver: ApolloFederationDriver,
       fieldResolverEnhancers: ['guards'],

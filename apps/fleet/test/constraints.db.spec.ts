@@ -26,7 +26,7 @@ async function rejection(action: Promise<unknown>): Promise<unknown> {
   throw new Error('Expected the database to reject the write');
 }
 
-describe('Fleet master data constraints in PostgreSQL', () => {
+describe('Fleet master data and activity constraints in PostgreSQL', () => {
   let database: Awaited<ReturnType<typeof createTestDatabase>>;
   let closeDatabase: (() => Promise<void>) | undefined;
   let app: INestApplication | undefined;
@@ -305,5 +305,416 @@ describe('Fleet master data constraints in PostgreSQL', () => {
         errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path }] } }],
       });
     jest.restoreAllMocks();
+  });
+
+  describe('activity tables', () => {
+    const occurredAt = new Date('2026-10-18T06:00:00.000Z');
+    const imei = '990601000000001';
+    // Distinct sample times keep the (vehicle, IMEI, time) key unique across cases.
+    let sampleSecond = 0;
+    let tripId: string;
+    beforeAll(async () => {
+      tripId = (
+        await database.client.trip.create({
+          data: {
+            tenantId,
+            branchId,
+            vehicleId,
+            deviceImei: imei,
+            source: 'DEMO',
+            startedAt: occurredAt,
+          },
+        })
+      ).id;
+    });
+    async function deviceSample() {
+      return database.client.vehicleStatusSample.create({
+        data: {
+          tenantId,
+          branchId,
+          vehicleId,
+          deviceImei: imei,
+          source: 'DEMO',
+          recordedAt: new Date(occurredAt.getTime() - ++sampleSecond * 1000),
+          receivedAt: occurredAt,
+          latitude: 42.7,
+          longitude: 23.3,
+          speedKph: 50,
+          ignition: true,
+        },
+      });
+    }
+    async function manualSample() {
+      return database.client.vehicleStatusSample.create({
+        data: {
+          tenantId,
+          branchId,
+          vehicleId,
+          source: 'MANUAL',
+          recordedAt: new Date(occurredAt.getTime() - ++sampleSecond * 1000),
+          receivedAt: occurredAt,
+          odometerKm: 1000,
+        },
+      });
+    }
+    async function trip() {
+      return database.client.trip.create({
+        data: {
+          tenantId,
+          branchId,
+          vehicleId,
+          source: 'DEMO',
+          startedAt: occurredAt,
+          endedAt: new Date(occurredAt.getTime() + 3_600_000),
+          startOdometerKm: 1000,
+          endOdometerKm: 1100,
+          startLatitude: 42.7,
+          startLongitude: 23.3,
+        },
+      });
+    }
+    async function alert() {
+      return database.client.fleetEvent.create({
+        data: {
+          tenantId,
+          branchId,
+          vehicleId,
+          source: 'DEMO',
+          occurredAt,
+          kind: 'SPEEDING',
+          severity: 'WARNING',
+          intensity: 3,
+          alertStatus: 'OPEN',
+        },
+      });
+    }
+    async function planned() {
+      return database.client.serviceTask.create({
+        data: {
+          tenantId,
+          branchId,
+          vehicleId,
+          serviceType: 'OIL_CHANGE',
+          dueOn: new Date('2026-11-01T00:00:00.000Z'),
+        },
+      });
+    }
+
+    it.each([
+      [
+        'VehicleStatusSample_source_check',
+        'UPDATE "VehicleStatusSample" SET "deviceImei" = NULL WHERE id = $1',
+      ],
+      [
+        'VehicleStatusSample_deviceImei_check',
+        `UPDATE "VehicleStatusSample" SET "deviceImei" = '99060100000000A' WHERE id = $1`,
+      ],
+      [
+        'VehicleStatusSample_position_check',
+        'UPDATE "VehicleStatusSample" SET longitude = NULL WHERE id = $1',
+      ],
+      [
+        'VehicleStatusSample_position_check',
+        'UPDATE "VehicleStatusSample" SET latitude = 90.5 WHERE id = $1',
+      ],
+      [
+        'VehicleStatusSample_position_check',
+        'UPDATE "VehicleStatusSample" SET longitude = -180.5 WHERE id = $1',
+      ],
+      [
+        'VehicleStatusSample_measure_check',
+        'UPDATE "VehicleStatusSample" SET "speedKph" = 401 WHERE id = $1',
+      ],
+      [
+        'VehicleStatusSample_measure_check',
+        'UPDATE "VehicleStatusSample" SET "headingDeg" = 360 WHERE id = $1',
+      ],
+      [
+        'VehicleStatusSample_measure_check',
+        `UPDATE "VehicleStatusSample" SET "fuelLevelPct" = 'NaN' WHERE id = $1`,
+      ],
+      [
+        'VehicleStatusSample_measure_check',
+        'UPDATE "VehicleStatusSample" SET "externalVoltage" = 60.1 WHERE id = $1',
+      ],
+      [
+        'VehicleStatusSample_measure_check',
+        'UPDATE "VehicleStatusSample" SET "backupBatteryVoltage" = -0.1 WHERE id = $1',
+      ],
+      [
+        'VehicleStatusSample_measure_check',
+        `UPDATE "VehicleStatusSample" SET "engineHours" = 'Infinity' WHERE id = $1`,
+      ],
+      [
+        'VehicleStatusSample_measure_check',
+        'UPDATE "VehicleStatusSample" SET "coolantTempC" = -61 WHERE id = $1',
+      ],
+      [
+        'VehicleStatusSample_measure_check',
+        'UPDATE "VehicleStatusSample" SET "odometerKm" = 10000000.1 WHERE id = $1',
+      ],
+    ])('%s rejects a device sample: %s', async (constraint, statement) => {
+      const sample = await deviceSample();
+      expect(await sqlError(statement, [sample.id])).toMatchObject({ code: '23514', constraint });
+    });
+
+    it.each([
+      [
+        'VehicleStatusSample_source_check',
+        `UPDATE "VehicleStatusSample" SET "deviceImei" = '990601000000009' WHERE id = $1`,
+      ],
+      [
+        'VehicleStatusSample_manual_check',
+        'UPDATE "VehicleStatusSample" SET "odometerKm" = NULL WHERE id = $1',
+      ],
+      [
+        'VehicleStatusSample_manual_check',
+        'UPDATE "VehicleStatusSample" SET "speedKph" = 0 WHERE id = $1',
+      ],
+      [
+        'VehicleStatusSample_manual_check',
+        'UPDATE "VehicleStatusSample" SET ignition = false WHERE id = $1',
+      ],
+    ])('%s rejects a MANUAL reading: %s', async (constraint, statement) => {
+      const sample = await manualSample();
+      expect(await sqlError(statement, [sample.id])).toMatchObject({ code: '23514', constraint });
+    });
+
+    it.each([
+      ['Trip_source_check', `UPDATE "Trip" SET source = 'MANUAL' WHERE id = $1`],
+      ['Trip_deviceImei_check', `UPDATE "Trip" SET "deviceImei" = '9906010000000' WHERE id = $1`],
+      [
+        'Trip_period_check',
+        `UPDATE "Trip" SET "endedAt" = "startedAt" - interval '1 millisecond' WHERE id = $1`,
+      ],
+      ['Trip_position_check', 'UPDATE "Trip" SET "startLongitude" = NULL WHERE id = $1'],
+      ['Trip_position_check', 'UPDATE "Trip" SET "endLatitude" = 10 WHERE id = $1'],
+      ['Trip_position_check', 'UPDATE "Trip" SET "startLatitude" = -91 WHERE id = $1'],
+      ['Trip_measure_check', 'UPDATE "Trip" SET "endOdometerKm" = 999 WHERE id = $1'],
+      ['Trip_measure_check', 'UPDATE "Trip" SET "distanceKm" = 5000.1 WHERE id = $1'],
+      ['Trip_measure_check', 'UPDATE "Trip" SET "idleSeconds" = 604801 WHERE id = $1'],
+      ['Trip_measure_check', `UPDATE "Trip" SET "maxSpeedKph" = 'NaN' WHERE id = $1`],
+      ['Trip_measure_check', 'UPDATE "Trip" SET "fuelUsedL" = -1 WHERE id = $1'],
+      ['Trip_measure_check', 'UPDATE "Trip" SET "drivingScore" = 100.1 WHERE id = $1'],
+      ['Trip_measure_check', 'UPDATE "Trip" SET "ecoScore" = -0.1 WHERE id = $1'],
+    ])('%s rejects %s', async (constraint, statement) => {
+      const row = await trip();
+      expect(await sqlError(statement, [row.id])).toMatchObject({ code: '23514', constraint });
+    });
+
+    it.each([
+      ['FleetEvent_source_check', `UPDATE "FleetEvent" SET source = 'MANUAL' WHERE id = $1`],
+      [
+        'FleetEvent_deviceImei_check',
+        `UPDATE "FleetEvent" SET "deviceImei" = 'IMEI' WHERE id = $1`,
+      ],
+      ['FleetEvent_position_check', 'UPDATE "FleetEvent" SET latitude = 42.7 WHERE id = $1'],
+      ['FleetEvent_speed_check', 'UPDATE "FleetEvent" SET "speedKph" = -1 WHERE id = $1'],
+      ['FleetEvent_intensity_check', 'UPDATE "FleetEvent" SET intensity = 4 WHERE id = $1'],
+      ['FleetEvent_intensity_check', `UPDATE "FleetEvent" SET kind = 'IDLING' WHERE id = $1`],
+      [
+        'FleetEvent_alert_check',
+        `UPDATE "FleetEvent" SET "acknowledgedAt" = "occurredAt" WHERE id = $1`,
+      ],
+      [
+        'FleetEvent_alert_check',
+        `UPDATE "FleetEvent" SET "alertStatus" = 'ACKNOWLEDGED' WHERE id = $1`,
+      ],
+      [
+        'FleetEvent_alert_check',
+        `UPDATE "FleetEvent" SET "alertStatus" = 'RESOLVED' WHERE id = $1`,
+      ],
+      [
+        'FleetEvent_alert_check',
+        `UPDATE "FleetEvent" SET "alertStatus" = NULL, remark = 'x' WHERE id = $1`,
+      ],
+      [
+        'FleetEvent_alert_check',
+        `UPDATE "FleetEvent" SET "alertStatus" = NULL, "resolvedAt" = "occurredAt" WHERE id = $1`,
+      ],
+      [
+        'FleetEvent_alert_severity_check',
+        `UPDATE "FleetEvent" SET severity = 'INFO' WHERE id = $1`,
+      ],
+      [
+        'FleetEvent_alert_time_check',
+        `UPDATE "FleetEvent" SET "alertStatus" = 'ACKNOWLEDGED', "acknowledgedAt" = "occurredAt" - interval '1 second' WHERE id = $1`,
+      ],
+      [
+        'FleetEvent_alert_time_check',
+        `UPDATE "FleetEvent" SET "alertStatus" = 'RESOLVED', "acknowledgedAt" = "occurredAt" + interval '2 minutes', "resolvedAt" = "occurredAt" + interval '1 minute' WHERE id = $1`,
+      ],
+    ])('%s rejects %s', async (constraint, statement) => {
+      const row = await alert();
+      expect(await sqlError(statement, [row.id])).toMatchObject({ code: '23514', constraint });
+    });
+
+    it.each([
+      ['ServiceTask_status_check', 'UPDATE "ServiceTask" SET "dueOn" = NULL WHERE id = $1'],
+      [
+        'ServiceTask_status_check',
+        `UPDATE "ServiceTask" SET "completedOn" = '2026-10-18' WHERE id = $1`,
+      ],
+      ['ServiceTask_status_check', 'UPDATE "ServiceTask" SET "costCents" = 0 WHERE id = $1'],
+      [
+        'ServiceTask_status_check',
+        `UPDATE "ServiceTask" SET "replacedParts" = 'Filter' WHERE id = $1`,
+      ],
+      ['ServiceTask_status_check', `UPDATE "ServiceTask" SET status = 'DONE' WHERE id = $1`],
+      [
+        'ServiceTask_status_check',
+        `UPDATE "ServiceTask" SET status = 'CANCELLED', "completedOdometerKm" = 1 WHERE id = $1`,
+      ],
+      [
+        'ServiceTask_measure_check',
+        'UPDATE "ServiceTask" SET "dueOdometerKm" = 10000001 WHERE id = $1',
+      ],
+      [
+        'ServiceTask_measure_check',
+        `UPDATE "ServiceTask" SET status = 'DONE', "completedOn" = '2026-10-18', "costCents" = 100000001 WHERE id = $1`,
+      ],
+    ])('%s rejects %s', async (constraint, statement) => {
+      const row = await planned();
+      expect(await sqlError(statement, [row.id])).toMatchObject({ code: '23514', constraint });
+    });
+
+    it('accepts valid MANUAL readings, cleared alerts, completed and cancelled tasks', async () => {
+      const event = await alert();
+      await connection.query(
+        `UPDATE "FleetEvent" SET "alertStatus" = 'RESOLVED', "resolvedAt" = "occurredAt", remark = 'ok' WHERE id = $1`,
+        [event.id],
+      );
+      await connection.query(
+        `UPDATE "FleetEvent" SET "alertStatus" = 'OPEN', "resolvedAt" = NULL WHERE id = $1`,
+        [event.id],
+      );
+      const task = await planned();
+      await connection.query(
+        `UPDATE "ServiceTask" SET status = 'DONE', "completedOn" = '2026-10-18', "costCents" = 0, "replacedParts" = 'Filter' WHERE id = $1`,
+        [task.id],
+      );
+      const cancelled = await planned();
+      await connection.query(`UPDATE "ServiceTask" SET status = 'CANCELLED' WHERE id = $1`, [
+        cancelled.id,
+      ]);
+      await expect(manualSample()).resolves.toMatchObject({ source: 'MANUAL', deviceImei: null });
+    });
+
+    it('rejects activity references from another Branch, Tenant or vehicle with composite keys', async () => {
+      const otherVehicle = await database.client.vehicle.create({
+        data: { tenantId, branchId, licensePlate: 'OTHER' },
+      });
+      const foreignVehicle = await database.client.vehicle.create({
+        data: { tenantId, branchId: otherBranchId, licensePlate: 'FOREIGN' },
+      });
+      const foreignDriver = await database.client.driver.create({
+        data: { tenantId, branchId: otherBranchId, firstName: 'Foreign', lastName: 'Driver' },
+      });
+      const foreignTrip = await database.client.trip.create({
+        data: {
+          tenantId,
+          branchId: otherBranchId,
+          vehicleId: foreignVehicle.id,
+          source: 'DEMO',
+          startedAt: occurredAt,
+        },
+      });
+      const row = await trip();
+      expect(
+        await sqlError('UPDATE "Trip" SET "driverId" = $2 WHERE id = $1', [
+          row.id,
+          foreignDriver.id,
+        ]),
+      ).toMatchObject({ code: '23503', constraint: 'Trip_tenantId_branchId_driverId_fkey' });
+      const event = await alert();
+      expect(
+        await sqlError('UPDATE "FleetEvent" SET "tripId" = $2 WHERE id = $1', [
+          event.id,
+          foreignTrip.id,
+        ]),
+      ).toMatchObject({
+        code: '23503',
+        constraint: 'FleetEvent_tenantId_branchId_vehicleId_tripId_fkey',
+      });
+      // The trip exists in the Branch but belongs to another vehicle.
+      expect(
+        await sqlError('UPDATE "FleetEvent" SET "vehicleId" = $2, "tripId" = $3 WHERE id = $1', [
+          event.id,
+          otherVehicle.id,
+          tripId,
+        ]),
+      ).toMatchObject({
+        code: '23503',
+        constraint: 'FleetEvent_tenantId_branchId_vehicleId_tripId_fkey',
+      });
+      await connection.query('UPDATE "FleetEvent" SET "tripId" = $2 WHERE id = $1', [
+        event.id,
+        tripId,
+      ]);
+      expect(
+        await sqlError('UPDATE "FleetEvent" SET "driverId" = $2 WHERE id = $1', [
+          event.id,
+          foreignDriver.id,
+        ]),
+      ).toMatchObject({ code: '23503', constraint: 'FleetEvent_tenantId_branchId_driverId_fkey' });
+      expect(
+        await rejection(
+          database.client.vehicleStatusSample.create({
+            data: {
+              tenantId: randomUUID(),
+              branchId,
+              vehicleId,
+              source: 'MANUAL',
+              recordedAt: occurredAt,
+              receivedAt: occurredAt,
+              odometerKm: 1,
+            },
+          }),
+        ),
+      ).toMatchObject({ code: 'P2003' });
+      expect(
+        await rejection(
+          database.client.serviceTask.create({
+            data: {
+              tenantId,
+              branchId: otherBranchId,
+              vehicleId,
+              serviceType: 'TIRES',
+              dueOdometerKm: 1,
+            },
+          }),
+        ),
+      ).toMatchObject({ code: 'P2003' });
+      // History blocks deleting the vehicle and the trip.
+      expect(await rejection(database.client.trip.delete({ where: { id: tripId } }))).toMatchObject(
+        { code: 'P2003' },
+      );
+    });
+
+    it('keys device samples by IMEI and time so two devices may report at the same instant', async () => {
+      const recordedAt = new Date('2026-10-01T00:00:00.000Z');
+      const data = {
+        tenantId,
+        branchId,
+        vehicleId,
+        source: 'DEMO' as const,
+        recordedAt,
+        receivedAt: recordedAt,
+      };
+      await database.client.vehicleStatusSample.create({ data: { ...data, deviceImei: imei } });
+      await database.client.vehicleStatusSample.create({
+        data: { ...data, deviceImei: '990601000000002' },
+      });
+      expect(
+        uniqueViolation(
+          await rejection(
+            database.client.vehicleStatusSample.create({ data: { ...data, deviceImei: imei } }),
+          ),
+        ),
+      ).toEqual({
+        index: 'VehicleStatusSample_tenantId_branchId_vehicleId_deviceImei__key',
+        fields: [],
+      });
+    });
   });
 });

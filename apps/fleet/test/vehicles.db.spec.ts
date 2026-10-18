@@ -458,4 +458,212 @@ describe('Vehicle GraphQL with PostgreSQL', () => {
       await query(source, { offset: 0, limit: 20, search: 'a b c d e f' }, branchId),
     ).toMatchObject({ errors: [{ extensions: { fieldErrors: [{ path: 'search' }] } }] });
   });
+
+  it('attaches state, open alerts and the next service to a page and filters open alerts', async () => {
+    const branchId = randomUUID();
+    const asOf = new Date('2026-10-18T06:30:00.000Z');
+    const at = (minutes: number) => new Date(asOf.getTime() + minutes * 60_000);
+    const [moving, idle, silent] = await Promise.all(
+      ['CB 1010 AX', 'CB 1024 AX', 'CB 1037 AX'].map((licensePlate) =>
+        database.client.vehicle.create({ data: { tenantId, branchId, licensePlate } }),
+      ),
+    );
+    if (!moving || !idle || !silent) throw new Error('Missing vehicles');
+    for (const [vehicle, imei] of [
+      [moving, '990601000000010'],
+      [silent, '990601000000037'],
+    ] as const)
+      await database.client.device.create({
+        data: { tenantId, branchId, vehicleId: vehicle.id, imei },
+      });
+    await database.client.vehicleStatusSample.createMany({
+      data: [
+        {
+          tenantId,
+          branchId,
+          vehicleId: moving.id,
+          deviceImei: '990601000000010',
+          source: 'DEMO',
+          recordedAt: at(-3),
+          receivedAt: at(-3),
+          ignition: true,
+          speedKph: 82,
+          fuelLevelPct: 9,
+          odometerKm: 412_345.6,
+          address: 'E79',
+        },
+        {
+          tenantId,
+          branchId,
+          vehicleId: silent.id,
+          deviceImei: '990601000000037',
+          source: 'DEMO',
+          recordedAt: at(-9 * 24 * 60),
+          receivedAt: at(-9 * 24 * 60),
+          ignition: false,
+          fuelLevelPct: 70,
+        },
+        {
+          tenantId,
+          branchId,
+          vehicleId: silent.id,
+          deviceImei: '990601000000099',
+          source: 'DEMO',
+          recordedAt: asOf,
+          receivedAt: asOf,
+          ignition: null,
+        },
+      ],
+    });
+    // The silent vehicle's newest sample comes from an IMEI it no longer has; it still counts.
+    await database.client.device.deleteMany({ where: { branchId, imei: '990601000000037' } });
+    await database.client.fleetEvent.createMany({
+      data: (['OPEN', 'OPEN', 'ACKNOWLEDGED'] as const).map((alertStatus, index) => ({
+        tenantId,
+        branchId,
+        vehicleId: moving.id,
+        source: 'DEMO' as const,
+        occurredAt: at(-30 - index),
+        kind: 'LOW_FUEL' as const,
+        severity: 'WARNING' as const,
+        alertStatus,
+        acknowledgedAt: alertStatus === 'ACKNOWLEDGED' ? at(-10) : null,
+      })),
+    });
+    const overdue = await database.client.serviceTask.create({
+      data: {
+        tenantId,
+        branchId,
+        vehicleId: moving.id,
+        serviceType: 'OIL_CHANGE',
+        dueOn: new Date('2020-01-01T00:00:00.000Z'),
+      },
+    });
+    await database.client.serviceTask.createMany({
+      data: [
+        {
+          tenantId,
+          branchId,
+          vehicleId: moving.id,
+          serviceType: 'TIRES',
+          dueOn: new Date('2099-01-01T00:00:00.000Z'),
+        },
+        {
+          tenantId,
+          branchId,
+          vehicleId: idle.id,
+          serviceType: 'BRAKES',
+          status: 'CANCELLED',
+        },
+      ],
+    });
+    const derived =
+      'id licensePlate deviceCount openAlertCount state{activity lastReportedAt speedKph fuelLevelPct fuelStatus address odometerKm odometerSource} nextService{id serviceType status urgency vehicle{licensePlate}}';
+    const list = `query($filter:FleetVehicleFilter){fleetVehicles(filter:$filter,sort:{field:LICENSE_PLATE,direction:ASC}){items{${derived}}total}}`;
+    expect(await query(list, {}, branchId)).toEqual({
+      data: {
+        fleetVehicles: {
+          items: [
+            {
+              id: moving.id,
+              licensePlate: 'CB 1010 AX',
+              deviceCount: 1,
+              openAlertCount: 2,
+              state: {
+                activity: 'MOVING',
+                lastReportedAt: at(-3).toISOString(),
+                speedKph: 82,
+                fuelLevelPct: 9,
+                fuelStatus: 'LOW',
+                address: 'E79',
+                odometerKm: 412_345.6,
+                odometerSource: 'DEMO',
+              },
+              nextService: {
+                id: overdue.id,
+                serviceType: 'OIL_CHANGE',
+                status: 'PLANNED',
+                urgency: 'OVERDUE',
+                vehicle: { licensePlate: 'CB 1010 AX' },
+              },
+            },
+            {
+              id: idle.id,
+              licensePlate: 'CB 1024 AX',
+              deviceCount: 0,
+              openAlertCount: 0,
+              state: {
+                activity: 'NO_DEVICE',
+                lastReportedAt: null,
+                speedKph: null,
+                fuelLevelPct: null,
+                fuelStatus: 'NO_DATA',
+                address: null,
+                odometerKm: null,
+                odometerSource: null,
+              },
+              nextService: null,
+            },
+            {
+              id: silent.id,
+              licensePlate: 'CB 1037 AX',
+              deviceCount: 0,
+              openAlertCount: 0,
+              state: {
+                activity: 'NO_DEVICE',
+                lastReportedAt: asOf.toISOString(),
+                speedKph: null,
+                fuelLevelPct: null,
+                fuelStatus: 'NO_DATA',
+                address: null,
+                odometerKm: null,
+                odometerSource: null,
+              },
+              nextService: null,
+            },
+          ],
+          total: 3,
+        },
+      },
+    });
+    await database.client.device.create({
+      data: { tenantId, branchId, vehicleId: silent.id, imei: '990601000000037' },
+    });
+    expect(
+      await query(
+        `query($id:ID!){fleetVehicle(id:$id){state{activity fuelStatus} openAlertCount}}`,
+        { id: silent.id },
+        branchId,
+      ),
+    ).toEqual({
+      data: {
+        fleetVehicle: { state: { activity: 'ASSET', fuelStatus: 'NO_DATA' }, openAlertCount: 0 },
+      },
+    });
+    const plates = (body: unknown) => JSON.stringify(body).match(/CB 10\d\d AX/g);
+    expect(plates(await query(list, { filter: { hasOpenAlerts: true } }, branchId))).toEqual([
+      'CB 1010 AX',
+      'CB 1010 AX',
+    ]);
+    expect(
+      plates(
+        await query(
+          `query($filter:FleetVehicleFilter){fleetVehicles(filter:$filter,sort:{field:LICENSE_PLATE,direction:ASC}){items{licensePlate}}}`,
+          { filter: { hasOpenAlerts: false } },
+          branchId,
+        ),
+      ),
+    ).toEqual(['CB 1024 AX', 'CB 1037 AX']);
+    // Vehicles with history cannot be deleted.
+    expect(
+      await query('mutation($id:ID!){deleteFleetVehicle(id:$id){id}}', { id: idle.id }, branchId),
+    ).toMatchObject({
+      errors: [
+        {
+          message: 'Vehicle has devices or history; deactivate it instead.',
+          extensions: { code: 'CONFLICT' },
+        },
+      ],
+    });
+  });
 });

@@ -160,9 +160,93 @@ query ExpiringDriverDocuments {
 }
 ```
 
+Vehicles with open alerts, their latest state against the Branch data clock and the next
+planned service, followed by the alert inbox counts for the same search:
+
+```graphql
+query VehiclesNeedingAttention {
+  fleetDataClock {
+    asOf
+    businessDate
+  }
+  fleetVehicles(filter: { hasOpenAlerts: true }, sort: { field: LICENSE_PLATE, direction: ASC }) {
+    items {
+      licensePlate
+      openAlertCount
+      state {
+        activity
+        lastReportedAt
+        fuelLevelPct
+        fuelStatus
+        odometerKm
+        odometerSource
+      }
+      nextService {
+        serviceType
+        dueOn
+        urgency
+        remainingDays
+        remainingKm
+      }
+    }
+    total
+  }
+  fleetAlertCounts(search: "CB 10") {
+    open
+    openCritical
+    acknowledged
+    resolved
+  }
+}
+```
+
+Alert transitions state the status the operator saw. A second acknowledgement of the same alert
+returns CONFLICT "The alert changed after it was loaded; reload it."; reload and retry:
+
+```graphql
+mutation AcknowledgeAlert($id: ID!) {
+  acknowledgeFleetAlert(id: $id, input: { expectedStatus: OPEN, remark: "Разговор с водача" }) {
+    id
+    alertStatus
+    acknowledgedAt
+    remark
+  }
+}
+```
+
+Completing a service task and scheduling the next one in the same transaction:
+
+```graphql
+mutation CompleteService($id: ID!) {
+  completeFleetServiceTask(
+    id: $id
+    input: {
+      completedOn: "2026-10-18"
+      completedOdometerKm: 412000
+      costCents: 48000
+      nextDueOn: "2027-04-18"
+      nextDueOdometerKm: 442000
+    }
+  ) {
+    completed {
+      status
+      completedOn
+    }
+    next {
+      id
+      dueOn
+      dueOdometerKm
+      urgency
+    }
+  }
+}
+```
+
 Mutations create/update/delete FleetVehicle, FleetDevice, FleetDriver and FleetVehicleGroup;
 `deactivateFleetVehicle(id:)` sets a vehicle `INACTIVE` and clears its driver when devices or
-history block deletion. Inputs never accept tenantId or branchId; `Date` inputs are
+history block deletion. `recordFleetOdometerReading` stores an operator odometer reading;
+status samples, trips and events have no create API. Inputs never accept tenantId or
+branchId; `Date` inputs are
 `YYYY-MM-DD` and `DateTime` inputs need `Z` or an offset. Duplicate values and related IDs
 outside the Branch return BAD_USER_INPUT with `fieldErrors` (for example
 `[{ path: "employeeNumber", message: "Employee number is already used in this branch." }]`).

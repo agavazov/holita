@@ -1,16 +1,25 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { addDays, businessDate, FleetClock } from '../../clock/fleet-clock.js';
-import { DOCUMENT_EXPIRING_DAYS } from '../../fleet-thresholds.js';
+import { addDays, businessDate, dataWindow, FleetClock } from '../../clock/fleet-clock.js';
+import {
+  DOCUMENT_EXPIRING_DAYS,
+  DRIVER_STATS_DAYS,
+  LOW_CONFIDENCE_TRIPS,
+} from '../../fleet-thresholds.js';
 import { CoreClient } from '../../integrations/core/core.client.js';
 import type {
   CreateFleetDriverInput,
   FleetDocumentStatus,
   FleetDriver,
   FleetDriverPage,
+  FleetDriverScorecard,
   FleetDriverSortField,
+  QueryFleetDriverScorecardArgs,
   QueryFleetDriversArgs,
   UpdateFleetDriverInput,
 } from '../../generated/graphql/types.js';
+import { EventsService } from '../events/events.service.js';
+import { TelemetryService } from '../telemetry/telemetry.service.js';
+import { TripsService } from '../trips/trips.service.js';
 import { FleetDriverStatus, FleetLicenseCategory } from '../../generated/prisma/enums.js';
 import { dateOnlyToDate, dateToDateOnly } from '../../graphql/scalars.js';
 import type { RequestContext } from '../../graphql/request-context.js';
@@ -22,6 +31,7 @@ import {
   type FieldError,
   type FleetScope,
   ids,
+  integer,
   integerFilter,
   invalid,
   invalidFields,
@@ -47,6 +57,10 @@ import {
 } from './drivers.repository.js';
 
 export type DriverResult = FleetDriver;
+type StoredDriver = Omit<DriverResult, 'distance30dKm' | 'tripCount30d' | 'maneuversPer100Km30d'>;
+
+/** Longest scorecard period; matches the `fleetManeuverCounts` period limit. */
+const MAX_SCORECARD_DAYS = 93;
 
 const DRIVER_STATUSES = Object.values(FleetDriverStatus);
 const LICENSE_CATEGORIES = Object.values(FleetLicenseCategory);
@@ -96,7 +110,7 @@ export function driverDocumentStatus(
   return statuses.includes('VALID') ? 'VALID' : 'NOT_RECORDED';
 }
 
-function toDriver(row: DriverRow, today: string): DriverResult {
+function toDriver(row: DriverRow, today: string): StoredDriver {
   const licenseExpiresOn =
     row.licenseExpiresOn === null ? null : dateToDateOnly(row.licenseExpiresOn);
   const tachographCardExpiresOn =
@@ -153,12 +167,20 @@ const fieldRules = {
   notes: (value: unknown) => optionalText(value, 'notes', 2000),
 };
 
+/** Maneuvers per 100 km; null without distance. */
+function per100Km(count: number, distanceKm: number): number | null {
+  return distanceKm > 0 ? (count / distanceKm) * 100 : null;
+}
+
 @Injectable()
 export class DriversService {
   constructor(
     private readonly drivers: DriversRepository,
     private readonly core: CoreClient,
     private readonly clock: FleetClock,
+    private readonly telemetry: TelemetryService,
+    private readonly trips: TripsService,
+    private readonly events: EventsService,
   ) {}
 
   async list(context: RequestContext, args: QueryFleetDriversArgs): Promise<FleetDriverPage> {
@@ -193,7 +215,7 @@ export class DriversService {
     };
     const page = await this.drivers.list(scope, { offset, limit }, criteria, sort);
     return {
-      items: page.items.map((row) => toDriver(row, today)),
+      items: await this.complete(scope, page.items, today),
       total: page.total,
       offset,
       limit,
@@ -201,9 +223,48 @@ export class DriversService {
   }
 
   async find(context: RequestContext, id: string): Promise<DriverResult> {
-    const row = await this.drivers.find(requireScope(context), uuid(id, 'id'));
+    const scope = requireScope(context);
+    const row = await this.drivers.find(scope, uuid(id, 'id'));
     if (!row) throw new NotFoundException('Driver not found');
-    return toDriver(row, businessDate(this.clock.now()));
+    return this.completeOne(scope, row);
+  }
+
+  /** Statistics of the `days` before the data clock; empty windows when there is no data. */
+  async scorecard(
+    context: RequestContext,
+    args: QueryFleetDriverScorecardArgs,
+  ): Promise<FleetDriverScorecard> {
+    const scope = requireScope(context);
+    const driverId = uuid(args.driverId, 'driverId');
+    const days = integer(args.days ?? DRIVER_STATS_DAYS, 'days', 1, MAX_SCORECARD_DAYS);
+    const row = await this.drivers.find(scope, driverId);
+    if (!row) throw new NotFoundException('Driver not found');
+    const asOf = await this.telemetry.asOf(scope);
+    const window = dataWindow(asOf, days);
+    const [[driver], score, maneuvers] = await Promise.all([
+      this.withStats(scope, [row], businessDate(this.clock.now()), asOf),
+      window === null ? null : this.trips.driverScore(scope, driverId, window),
+      this.events.driverManeuvers(scope, driverId, window),
+    ]);
+    if (!driver) throw new NotFoundException('Driver not found');
+    const distanceKm = score?.distanceKm ?? 0;
+    const scoredTripCount = score?.scoredTripCount ?? 0;
+    const maneuverCount = maneuvers.reduce((sum, item) => sum + item.total, 0);
+    return {
+      driver,
+      asOf,
+      windowStart: window?.start ?? null,
+      windowEnd: window?.end ?? null,
+      distanceKm,
+      tripCount: score?.tripCount ?? 0,
+      scoredTripCount,
+      averageDrivingScore: score?.averageDrivingScore ?? null,
+      averageEcoScore: score?.averageEcoScore ?? null,
+      maneuverCount,
+      maneuversPer100Km: per100Km(maneuverCount, distanceKm),
+      maneuvers,
+      lowConfidence: scoredTripCount < LOW_CONFIDENCE_TRIPS,
+    };
   }
 
   async create(context: RequestContext, input: CreateFleetDriverInput): Promise<DriverResult> {
@@ -225,11 +286,13 @@ export class DriversService {
     };
     await this.checkDuplicates(scope, data, null);
     await this.core.requireBranch(scope.branchId, context);
+    let row: DriverRow;
     try {
-      return toDriver(await this.drivers.create(scope, data), businessDate(this.clock.now()));
+      row = await this.drivers.create(scope, data);
     } catch (error) {
       this.writeError(error);
     }
+    return this.completeOne(scope, row);
   }
 
   async update(
@@ -271,24 +334,73 @@ export class DriversService {
     if (data.status === 'INACTIVE' && stored.vehicles.length)
       invalid('status', 'Unassign the driver from its vehicles first.');
     await this.checkDuplicates(scope, data, recordId);
+    let row: DriverRow;
     try {
-      return toDriver(
-        await this.drivers.update(scope, recordId, data),
-        businessDate(this.clock.now()),
-      );
+      row = await this.drivers.update(scope, recordId, data);
     } catch (error) {
       this.writeError(error);
     }
+    return this.completeOne(scope, row);
   }
 
+  /** Drivers with trips or events cannot be deleted (composite foreign keys). */
   async delete(context: RequestContext, id: string): Promise<DriverResult> {
     const scope = requireScope(context);
     const recordId = uuid(id, 'id');
+    let row: DriverRow;
     try {
-      return toDriver(await this.drivers.delete(scope, recordId), businessDate(this.clock.now()));
+      row = await this.drivers.delete(scope, recordId);
     } catch (error) {
       persistenceError(error, 'Driver', DELETE_CONFLICT);
     }
+    return this.completeOne(scope, row);
+  }
+
+  private async complete(
+    scope: FleetScope,
+    rows: readonly DriverRow[],
+    today: string,
+  ): Promise<DriverResult[]> {
+    if (!rows.length) return [];
+    return this.withStats(scope, rows, today, await this.telemetry.asOf(scope));
+  }
+
+  private async completeOne(scope: FleetScope, row: DriverRow): Promise<DriverResult> {
+    const [driver] = await this.complete(scope, [row], businessDate(this.clock.now()));
+    if (!driver) throw new NotFoundException('Driver not found');
+    return driver;
+  }
+
+  /**
+   * Attaches the 30-day statistics before the data clock with one trip and one event grouping
+   * for the whole page; without device data every driver has zero distance and trips.
+   */
+  private async withStats(
+    scope: FleetScope,
+    rows: readonly DriverRow[],
+    today: string,
+    asOf: Date | null,
+  ): Promise<DriverResult[]> {
+    const window = dataWindow(asOf, DRIVER_STATS_DAYS);
+    const driverIds = rows.map((row) => row.id);
+    const [totals, maneuvers] =
+      window === null
+        ? [new Map<string, { distanceKm: number; tripCount: number }>(), new Map<string, number>()]
+        : await Promise.all([
+            this.trips.driverTotals(scope, driverIds, window),
+            this.events.maneuverTotalsByDriver(scope, driverIds, window),
+          ]);
+    return rows.map((row) => {
+      const total = totals.get(row.id);
+      const distanceKm = total?.distanceKm ?? 0;
+      return {
+        ...toDriver(row, today),
+        distance30dKm: distanceKm,
+        tripCount30d: total?.tripCount ?? 0,
+        maneuversPer100Km30d:
+          window === null ? null : per100Km(maneuvers.get(row.id) ?? 0, distanceKm),
+      };
+    });
   }
 
   private async checkDuplicates(

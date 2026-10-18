@@ -76,6 +76,46 @@ covers CRUD, unique names, vehicle and ungrouped counts and protected deletion. 
 rows in another Branch and another Tenant with the same Branch UUID and assert that only the
 requested scope is visible and counted.
 
+## Fleet activity checks
+
+```bash
+npm run test:fleet -- sql.spec.ts vehicle-state.spec.ts telemetry.service.spec.ts trips.service.spec.ts events.service.spec.ts service-tasks.service.spec.ts vehicles.service.spec.ts devices.service.spec.ts drivers.service.spec.ts health.spec.ts --skip-nx-cache
+npm run test:fleet:db -- constraints.db.spec.ts telemetry.db.spec.ts trips.db.spec.ts events.db.spec.ts service-tasks.db.spec.ts vehicles.db.spec.ts devices.db.spec.ts drivers.db.spec.ts
+npm run test:gateway:db -- federation.db.spec.mts
+```
+
+Unit specs: `sql.spec.ts` covers `fleetTable` quoting and its closed table list and the raw row
+readers; `vehicle-state.spec.ts` the activity and fuel classification at 48 h, 5 km/h, 12 %,
+6 h, unknown ignition and a missing data clock; `telemetry.service.spec.ts` odometer reading
+bounds and ordering and the sample window; `trips.service.spec.ts` filters, duration,
+score-below and `inProgress` at 24 h, 24 h + 1 ms, an ended trip and no data clock;
+`events.service.spec.ts` the full transition matrix (three mutations × three expected
+statuses) without database access on invalid transitions, remark semantics, alert and maneuver
+counts and measurement units; `service-tasks.service.spec.ts` create/update/complete/cancel/
+delete rules and next-task validation. The vehicles, devices and drivers service specs cover
+the batched derived values (state, open alerts, next service, last report, 30-day statistics
+and the scorecard window).
+
+Database specs: `constraints.db.spec.ts` also proves every activity CHECK, the composite keys
+for foreign-Branch drivers and trips and an event whose trip belongs to another vehicle, and the
+(vehicle, IMEI, time) sample key. `telemetry.db.spec.ts` proves that the data clock ignores
+MANUAL rows and other Branches/Tenants, that a reading changes the odometer but not the clock or
+activity, the reading bounds, the half-open seven-day window and the 2,000-row cap, with raw SQL
+in a random schema. `trips.db.spec.ts` covers every filter, sorts with NULLS LAST and the
+`startedAt` tie-break, paging, `totalDistanceKm` and maneuver counts. `events.db.spec.ts` covers
+filters/search, alert counts equal to the list totals per status for the same search and filter,
+persisted transitions, a stale `expectedStatus`, two parallel acknowledgements (one CONFLICT) and
+informational or foreign events as NOT_FOUND. `service-tasks.db.spec.ts` covers urgency for
+date-only, km-only, both and unknown-odometer tasks at a fixed business date, the raw list's
+order and paging for every sort, filters and search, the summary windows, completion with the
+next task, a forced failure that rolls both writes back, and cancel/delete rules. Vehicles,
+devices and drivers specs add page-level state/open alerts/next service, `hasOpenAlerts`,
+`lastReportedAt` by (vehicle, IMEI) including reassignment, and 30-day statistics with the
+scorecard. The federation case records an odometer reading through Router, inserts a device
+sample and an OPEN alert into the per-run schema (`fleetDatabaseUrl`/`fleetSchema` from the
+fixture), acknowledges it once (the repeat is CONFLICT) and checks that alert counts match the
+actionable list with and without search while Sandbox stays empty.
+
 ## Angular admin checks
 
 `--include` paths are relative to `apps/admin/src`; `--filter` selects case names.
@@ -104,7 +144,7 @@ npm run test:core -- demo-auth.spec.ts --skip-nx-cache
 npm run test:core -- database.module.spec.ts --skip-nx-cache
 npm run test:fleet -- core-client.module.spec.ts --skip-nx-cache
 npm run test:core:db -- persistence.db.spec.ts branches.db.spec.ts initial-migration.db.spec.ts branch-migration.db.spec.ts
-npm run test:fleet:db -- vehicles.db.spec.ts devices.db.spec.ts drivers.db.spec.ts vehicle-groups.db.spec.ts constraints.db.spec.ts initial-migration.db.spec.ts branch-migration.db.spec.ts seeds.db.spec.ts
+npm run test:fleet:db -- vehicles.db.spec.ts devices.db.spec.ts drivers.db.spec.ts vehicle-groups.db.spec.ts telemetry.db.spec.ts trips.db.spec.ts events.db.spec.ts service-tasks.db.spec.ts constraints.db.spec.ts initial-migration.db.spec.ts branch-migration.db.spec.ts seeds.db.spec.ts
 npm run test:admin -- --include=app/workspace/admin-workspace.spec.ts --include=app/core/auth/demo-session.spec.ts --skip-nx-cache
 npm run test:smoke:admin -- angular-tenants.smoke.spec.mts
 ```
@@ -113,7 +153,7 @@ Session checks cover signatures, tampering, expiry, production opt-in, unauthent
 ignored tenant headers. DB/federation tests exercise scoped discovery/CRUD/entity resolution,
 identical Branch IDs and IMEIs across tenants, composite relation rejection and seed idempotency.
 Initial-migration tests deploy the complete schema in dedicated guarded databases, then check
-mandatory scope columns, physical id/tenantId/branchId order for Vehicle, Device, Driver and VehicleGroup, and the full applied migration history. Upgrade tests preserve existing records (which receive the master data defaults) and migration checksums through the Branch rename and master data migrations. They never touch
+mandatory scope columns, physical id/tenantId/branchId order for all eight Fleet business tables, and the full applied migration history. Upgrade tests preserve existing records (which receive the master data defaults) and migration checksums through the Branch rename, master data and activity migrations. They never touch
 development tables. Angular tests cover logged-out deep links, Tenant/Branch dropdown gating and retry, obsolete candidate
 responses, root-to-Vehicles navigation, remembered Branch selection, tenant client/cache retirement,
 delayed submitted writes and fresh A → B → A clients. Browser login checks use the actual dropdown,

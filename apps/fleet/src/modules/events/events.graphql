@@ -1,0 +1,142 @@
+enum FleetEventKind {
+  HARSH_ACCELERATION
+  HARSH_BRAKING
+  SPEED_BUMP
+  OVERTAKING
+  ROUNDABOUT
+  LANE_CHANGE
+  SHARP_TURN
+  OFF_ROAD
+  SPEEDING
+  IGNITION_ON
+  IGNITION_OFF
+  IDLING
+  LOW_FUEL
+  FUEL_DROP
+  POWER_DISCONNECTED
+  LOW_BACKUP_BATTERY
+  CAN_DISCONNECTED
+  DEVICE_OFFLINE
+  DIAGNOSTIC_TROUBLE_CODE
+  CRASH_DETECTED
+}
+enum FleetEventSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+enum FleetAlertStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+}
+enum FleetMeasurementUnit {
+  KPH
+  PERCENT
+  VOLT
+  MINUTE
+}
+
+type FleetEvent {
+  id: ID!
+  branchId: ID!
+  vehicleId: ID!
+  vehicle: FleetVehicleRef!
+  tripId: ID
+  driverId: ID
+  driver: FleetDriverRef
+  deviceImei: String
+  source: FleetDataSource!
+  occurredAt: DateTime!
+  kind: FleetEventKind!
+  severity: FleetEventSeverity!
+  intensity: Int
+  latitude: Float
+  longitude: Float
+  address: String
+  speedKph: Float
+  measuredValue: Float
+  thresholdValue: Float
+  measurementUnit: FleetMeasurementUnit
+  troubleCode: String
+  details: String
+  "Null for informational events; alerts have a status."
+  alertStatus: FleetAlertStatus
+  acknowledgedAt: DateTime
+  resolvedAt: DateTime
+  remark: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type FleetEventPage {
+  items: [FleetEvent!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+
+type FleetAlertCounts {
+  open: Int!
+  openCritical: Int!
+  acknowledged: Int!
+  resolved: Int!
+}
+
+type FleetManeuverCount {
+  kind: FleetEventKind!
+  intensity1: Int!
+  intensity2: Int!
+  intensity3: Int!
+  intensityUnknown: Int!
+  total: Int!
+}
+
+input FleetEventFilter {
+  actionable: Boolean
+  alertStatuses: [FleetAlertStatus!]
+  severities: [FleetEventSeverity!]
+  kinds: [FleetEventKind!]
+  vehicleIds: [ID!]
+  driverIds: [ID!]
+  tripIds: [ID!]
+  occurredFrom: DateTime
+  occurredTo: DateTime
+}
+
+enum FleetEventSortField {
+  OCCURRED_AT
+  SEVERITY
+}
+input FleetEventSort {
+  field: FleetEventSortField! = OCCURRED_AT
+  direction: FleetSortDirection! = DESC
+}
+
+input FleetAlertTransitionInput {
+  expectedStatus: FleetAlertStatus!
+  "Omitted: unchanged. Null or blank: cleared. Up to 1,000 characters."
+  remark: String
+}
+
+extend type Query {
+  fleetEvents(
+    offset: Int! = 0
+    limit: Int! = 20
+    search: String
+    ids: [ID!]
+    filter: FleetEventFilter
+    sort: FleetEventSort
+  ): FleetEventPage!
+  fleetEvent(id: ID!): FleetEvent!
+  "Counts actionable events matching search and filter (same rules as fleetEvents), ignoring filter.actionable and filter.alertStatuses."
+  fleetAlertCounts(search: String, filter: FleetEventFilter): FleetAlertCounts!
+  "Nine maneuver kinds in enum order, zero rows included. Requires tripIds or a period of at most 93 days."
+  fleetManeuverCounts(filter: FleetEventFilter!): [FleetManeuverCount!]!
+}
+
+extend type Mutation {
+  acknowledgeFleetAlert(id: ID!, input: FleetAlertTransitionInput!): FleetEvent!
+  resolveFleetAlert(id: ID!, input: FleetAlertTransitionInput!): FleetEvent!
+  reopenFleetAlert(id: ID!, input: FleetAlertTransitionInput!): FleetEvent!
+}

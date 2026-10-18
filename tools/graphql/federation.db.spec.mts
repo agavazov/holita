@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from '@jest/globals';
 import { randomUUID } from 'node:crypto';
+import pg from 'pg';
 import { createFederationFixture } from './federation-fixture.mjs';
 
 const discordia = '10000000-0000-4000-8000-000000000001';
@@ -843,5 +844,139 @@ describe('Fleet through the actual federation boundary', () => {
     expect(
       await query('mutation($id:ID!){deleteFleetDriver(id:$id){id}}', { id: driverId }),
     ).toEqual({ data: { deleteFleetDriver: { id: driverId } } });
+  });
+  it('records odometer readings and runs the alert workflow through Gateway', async () => {
+    const created = await query(
+      'mutation {createFleetVehicle(input:{licensePlate:"CB 1004 AX"}){id}}',
+    );
+    const vehicleId = record(record(record(created).data).createFleetVehicle).id;
+    if (typeof vehicleId !== 'string') throw new Error('Missing vehicle ID');
+    // A vehicle without an installed device is NO_DEVICE whatever its samples say.
+    expect(
+      await query(
+        'mutation($vehicleId:ID!){createFleetDevice(input:{imei:"990601000000004",vehicleId:$vehicleId}){imei}}',
+        { vehicleId },
+      ),
+    ).toEqual({ data: { createFleetDevice: { imei: '990601000000004' } } });
+    // No API creates device samples or events, so the spec inserts them into the per-run schema.
+    const asOf = new Date(Math.floor(Date.now() / 1000) * 1000 - 10 * 60_000);
+    const alertId = randomUUID();
+    const connection = new pg.Client({ connectionString: fixture.fleetDatabaseUrl });
+    await connection.connect();
+    try {
+      const schema = pg.escapeIdentifier(fixture.fleetSchema);
+      const scope = ['01000000-0000-4000-8000-000000000001', discordia, vehicleId];
+      await connection.query(
+        `INSERT INTO ${schema}."VehicleStatusSample" ("id", "tenantId", "branchId", "vehicleId", "deviceImei", "source", "recordedAt", "receivedAt", "ignition", "speedKph") VALUES ($1, $2, $3, $4, '990601000000004', 'DEMO', $5, $5, false, 0)`,
+        [randomUUID(), ...scope, asOf],
+      );
+      await connection.query(
+        `INSERT INTO ${schema}."FleetEvent" ("id", "tenantId", "branchId", "vehicleId", "source", "occurredAt", "kind", "severity", "troubleCode", "alertStatus", "updatedAt") VALUES ($1, $2, $3, $4, 'DEMO', $5, 'DIAGNOSTIC_TROUBLE_CODE', 'CRITICAL', 'P0299', 'OPEN', $5)`,
+        [alertId, ...scope, new Date(asOf.getTime() - 5 * 60_000)],
+      );
+    } finally {
+      await connection.end();
+    }
+    expect(await query('{fleetDataClock{asOf timeZone}}')).toEqual({
+      data: { fleetDataClock: { asOf: asOf.toISOString(), timeZone: 'Europe/Sofia' } },
+    });
+    const recordedAt = new Date(asOf.getTime() - 30 * 60_000).toISOString();
+    fixture.coreRequests.length = 0;
+    expect(
+      await query(
+        'mutation($input:RecordFleetOdometerReadingInput!){recordFleetOdometerReading(input:$input){source deviceImei recordedAt odometerKm}}',
+        { input: { vehicleId, odometerKm: 120_000.04, recordedAt } },
+      ),
+    ).toEqual({
+      data: {
+        recordFleetOdometerReading: {
+          source: 'MANUAL',
+          deviceImei: null,
+          recordedAt,
+          odometerKm: 120_000,
+        },
+      },
+    });
+    expect(fixture.coreRequests).toHaveLength(1);
+    expect(
+      await query(
+        'mutation($input:RecordFleetOdometerReadingInput!){recordFleetOdometerReading(input:$input){id}}',
+        { input: { vehicleId, odometerKm: 119_999, recordedAt: asOf.toISOString() } },
+      ),
+    ).toMatchObject({
+      errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'odometerKm' }] } }],
+    });
+    expect(
+      await query(
+        'query($id:ID!){fleetVehicle(id:$id){openAlertCount state{activity lastReportedAt odometerKm odometerSource}}}',
+        { id: vehicleId },
+      ),
+    ).toEqual({
+      data: {
+        fleetVehicle: {
+          openAlertCount: 1,
+          state: {
+            activity: 'PARKED',
+            lastReportedAt: asOf.toISOString(),
+            odometerKm: 120_000,
+            odometerSource: 'MANUAL',
+          },
+        },
+      },
+    });
+    const acknowledge =
+      'mutation($id:ID!){acknowledgeFleetAlert(id:$id,input:{expectedStatus:OPEN,remark:"Проверено"}){alertStatus remark vehicle{licensePlate}}}';
+    expect(await query(acknowledge, { id: alertId })).toEqual({
+      data: {
+        acknowledgeFleetAlert: {
+          alertStatus: 'ACKNOWLEDGED',
+          remark: 'Проверено',
+          vehicle: { licensePlate: 'CB 1004 AX' },
+        },
+      },
+    });
+    expect(await query(acknowledge, { id: alertId })).toMatchObject({
+      errors: [{ extensions: { code: 'CONFLICT' } }],
+    });
+    for (const search of [null, 'p0299', 'CB 1004', 'missing']) {
+      const counts = record(
+        record(
+          await query(
+            'query($search:String){fleetAlertCounts(search:$search){open openCritical acknowledged resolved}}',
+            { search },
+          ),
+        ).data,
+      ).fleetAlertCounts;
+      const events = record(
+        record(
+          await query(
+            'query($search:String){fleetEvents(search:$search,filter:{actionable:true}){total}}',
+            { search },
+          ),
+        ).data,
+      ).fleetEvents;
+      const values = record(counts);
+      expect(record(events).total).toBe(
+        Number(values.open) + Number(values.acknowledged) + Number(values.resolved),
+      );
+      expect(values).toEqual(
+        search === 'missing'
+          ? { open: 0, openCritical: 0, acknowledged: 0, resolved: 0 }
+          : { open: 0, openCritical: 0, acknowledged: 1, resolved: 0 },
+      );
+    }
+    expect(
+      await query(
+        '{fleetAlertCounts{open openCritical acknowledged resolved} fleetEvents{total} fleetDataClock{asOf}}',
+        {},
+        sandbox,
+      ),
+    ).toEqual({
+      data: {
+        fleetAlertCounts: { open: 0, openCritical: 0, acknowledged: 0, resolved: 0 },
+        fleetEvents: { total: 0 },
+        fleetDataClock: { asOf: null },
+      },
+    });
   });
 });

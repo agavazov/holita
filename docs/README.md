@@ -2,10 +2,10 @@
 
 The repository has two distinct domains with separate documentation and contributor instructions:
 
-| Domain                    | Documentation                         | Current implementation                                                                  |
-| ------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------- |
-| Discocan: fleet telemetry | [docs/discocan](discocan/README.md)   | Fleet Vehicles, Devices, Drivers and Vehicle groups, Karma Client and the Angular admin |
-| Ecommerce: online shops   | [docs/ecommerce](ecommerce/README.md) | Core Tenant/Branch foundation; no storefront, catalog, cart or orders                   |
+| Domain                    | Documentation                         | Current implementation                                                                            |
+| ------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Discocan: fleet telemetry | [docs/discocan](discocan/README.md)   | Fleet master data, telemetry, trips, alerts and service tasks, Karma Client and the Angular admin |
+| Ecommerce: online shops   | [docs/ecommerce](ecommerce/README.md) | Core Tenant/Branch foundation; no storefront, catalog, cart or orders                             |
 
 Branch is the shared organizational scope: a vehicle fleet in Discocan and an online shop
 in Ecommerce. Code, APIs, routes and persistence use Branch/branchId/x-branch-id with

@@ -42,6 +42,14 @@ describe('local GraphQL contracts', () => {
       'FleetVehicleGroupRef',
       'Date',
       'DateTime',
+      'FleetVehicleState',
+      'FleetDataClock',
+      'FleetTrip',
+      'FleetEvent',
+      'FleetManeuverCount',
+      'FleetServiceTask',
+      'FleetServiceSummary',
+      'FleetDriverScorecard',
     ])
       expect(result.apiSchema.getType(name)).toBeDefined();
     for (const name of ['FleetVehicleSortDirection', 'FleetDeviceSortDirection'])
@@ -49,13 +57,25 @@ describe('local GraphQL contracts', () => {
     expect(Object.keys(result.apiSchema.getQueryType()?.getFields() ?? {}).sort()).toEqual([
       'branch',
       'branches',
+      'fleetAlertCounts',
+      'fleetDataClock',
       'fleetDevice',
       'fleetDevices',
       'fleetDriver',
+      'fleetDriverScorecard',
       'fleetDrivers',
+      'fleetEvent',
+      'fleetEvents',
+      'fleetManeuverCounts',
+      'fleetServiceSummary',
+      'fleetServiceTask',
+      'fleetServiceTasks',
+      'fleetTrip',
+      'fleetTrips',
       'fleetVehicle',
       'fleetVehicleGroup',
       'fleetVehicleGroups',
+      'fleetVehicleSamples',
       'fleetVehicles',
       'karmaCar',
       'karmaCars',
@@ -72,30 +92,45 @@ describe('local GraphQL contracts', () => {
       'tenants',
     ]);
     expect(Object.keys(result.apiSchema.getMutationType()?.getFields() ?? {}).sort()).toEqual([
+      'acknowledgeFleetAlert',
+      'cancelFleetServiceTask',
+      'completeFleetServiceTask',
       'createFleetDevice',
       'createFleetDriver',
+      'createFleetServiceTask',
       'createFleetVehicle',
       'createFleetVehicleGroup',
       'deactivateFleetVehicle',
       'deleteFleetDevice',
       'deleteFleetDriver',
+      'deleteFleetServiceTask',
       'deleteFleetVehicle',
       'deleteFleetVehicleGroup',
       'demoLogin',
+      'recordFleetOdometerReading',
+      'reopenFleetAlert',
+      'resolveFleetAlert',
       'updateFleetDevice',
       'updateFleetDriver',
+      'updateFleetServiceTask',
       'updateFleetVehicle',
       'updateFleetVehicleGroup',
     ]);
-    const fleetVehicles = result.apiSchema.getQueryType()?.getFields()['fleetVehicles'];
-    expect(fleetVehicles?.args.map((argument) => argument.name)).toEqual([
-      'offset',
-      'limit',
-      'search',
-      'ids',
-      'filter',
-      'sort',
-    ]);
+    // Every Fleet list follows the standard list contract.
+    for (const name of [
+      'fleetVehicles',
+      'fleetDevices',
+      'fleetDrivers',
+      'fleetTrips',
+      'fleetEvents',
+      'fleetServiceTasks',
+    ])
+      expect(
+        result.apiSchema
+          .getQueryType()
+          ?.getFields()
+          [name]?.args.map((argument) => argument.name),
+      ).toEqual(['offset', 'limit', 'search', 'ids', 'filter', 'sort']);
     expect(composeContracts(await readContracts()).supergraphSdl).toBe(result.supergraphSdl);
   });
   it('rejects an operation that no longer matches the API', async () => {

@@ -40,6 +40,11 @@ type FleetVehicle @key(fields: "id") {
   currentDriverId: ID
   currentDriver: FleetDriverRef
   deviceCount: Int!
+  state: FleetVehicleState! # B2
+  "Events of the vehicle with alert status OPEN." # B2
+  openAlertCount: Int! # B2
+  "The PLANNED task with the worst urgency; the documented exception to the reference rule." # B2
+  nextService: FleetServiceTask # B2
   createdAt: DateTime!
   updatedAt: DateTime!
 }
@@ -68,6 +73,7 @@ input FleetVehicleFilter {
   currentDriverIds: [ID!]
   hasDriver: Boolean
   hasDevice: Boolean
+  hasOpenAlerts: Boolean # B2
 }
 
 enum FleetVehicleSortField {

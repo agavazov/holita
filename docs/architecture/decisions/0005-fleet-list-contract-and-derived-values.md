@@ -20,13 +20,16 @@ in every resolver that returns the type.
   substring of one search field), `ids`, filter fields (null means no constraint; lists hold
   1–100 unique values), sort. Nullable sort columns sort `NULLS LAST`; `id DESC` is the final
   tie-break. Page and total are read in one `RepeatableRead` transaction. Filters and sort keys
-  use only stored columns or stored relations, never derived values.
+  use only stored columns or stored relations, never derived values; the one exception is the
+  service-task urgency, filtered, sorted, paged and counted in a single scoped raw query whose
+  totals, order and paging are proven by database specs.
 - **Reference types.** A link to another record returns a `…Ref` type with stored identification
   fields only (`FleetVehicleRef`, `FleetDriverRef`, `FleetVehicleGroupRef`). Repositories load
   refs and counts in the same query (`include`/`select`, `_count`); resolvers only delegate,
   resolve federation references and the `branch` stub. A type with derived values is returned
-  only by its own module. A later per-vehicle "next service" value is the single documented
-  exception and must be computed in one batched query per page.
+  only by its own module; its services compute derived values for a whole page with batched
+  queries and attach them before returning. The per-vehicle `nextService` (a full service task)
+  is the single documented exception and is computed in one batched query per page.
 - **Errors.** Validation, duplicates and foreign related IDs are `BAD_USER_INPUT` with
   `fieldErrors` (input field names, or the top-level list argument such as `filter` or `sort`).
   Services pre-check unique values in scope and map a concurrent unique violation from the pg

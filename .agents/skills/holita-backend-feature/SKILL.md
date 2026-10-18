@@ -36,14 +36,22 @@ Every Fleet list follows the [standard list contract](../../../docs/discocan/arc
 validate with the helpers in [validation.ts](../../../apps/fleet/src/validation.ts), build
 `where`/`orderBy` explicitly with [search helpers](../../../apps/fleet/src/database/search.ts),
 load `…Ref` links and counts in the same repository query and keep resolvers delegating.
-Business dates come from an overridable `FleetClock`.
+Business dates come from an overridable `FleetClock`; telemetry values use the Branch data
+clock from [Telemetry](../../../apps/fleet/src/modules/telemetry/telemetry.service.ts).
+Derived values are attached by the owning service for the whole page with batched queries
+(see `VehiclesService.complete` and `DriversService.withStats`). Raw SQL follows the rules in
+[Discocan architecture](../../../docs/discocan/architecture.md#standard-list-contract) with
+[sql.ts](../../../apps/fleet/src/database/sql.ts); the
+[service urgency fragment](../../../apps/fleet/src/modules/service-tasks/service-urgency.sql.ts)
+is the reference for a raw, scoped, paged list.
 
 Keep runtime validation explicit. After SDL/operation changes run codegen/schema:check.
 Review new owning-service migration SQL (generate it with `prisma migrate diff` from `apps/fleet`,
 add hand-written CHECKs) and preserve applied history. Generated output stays ignored.
 Use standard Nest exceptions; do not add generic layers, duplicate API models or cross-app imports.
 
-Start with `test:fleet -- validation.spec.ts` and the module's `*.service.spec.ts`.
+Start with `test:fleet -- validation.spec.ts` and the module's `*.service.spec.ts` (plus
+`sql.spec.ts` and `vehicle-state.spec.ts` for raw SQL or state rules).
 Persistence changes use `test:fleet:db -- <module>.db.spec.ts constraints.db.spec.ts` (plus
 `initial-migration.db.spec.ts branch-migration.db.spec.ts` for migrations) after the
 [database prerequisites](../../../docs/testing.md#real-postgresql-checks). Runtime-boundary changes

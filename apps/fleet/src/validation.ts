@@ -299,6 +299,18 @@ export function integerFilter(
   return value;
 }
 
+export function numberFilter(
+  value: unknown,
+  field: string,
+  min: number,
+  max: number,
+): number | undefined {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max)
+    invalid('filter', `filter.${field}: use a number from ${String(min)} to ${String(max)}.`);
+  return value;
+}
+
 /** Half-open `DateTime` range: `from` inclusive, `to` exclusive, `to` after `from`. */
 export function dateTimeRange(
   from: unknown,

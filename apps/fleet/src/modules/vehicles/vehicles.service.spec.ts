@@ -4,6 +4,10 @@ import { Test } from '@nestjs/testing';
 import { randomUUID } from 'node:crypto';
 import { Prisma } from '../../generated/prisma/client.js';
 import { CoreClient } from '../../integrations/core/core.client.js';
+import { EventsService } from '../events/events.service.js';
+import { ServiceTasksService } from '../service-tasks/service-tasks.service.js';
+import { TelemetryService } from '../telemetry/telemetry.service.js';
+import { classifyVehicleState, NO_FACTS } from '../telemetry/vehicle-state.js';
 import { type VehicleRow, VehiclesRepository } from './vehicles.repository.js';
 import { VehiclesService } from './vehicles.service.js';
 
@@ -31,6 +35,9 @@ describe('Vehicles validation and scope', () => {
   const deactivate = jest.fn<VehiclesRepository['deactivate']>();
   const remove = jest.fn<VehiclesRepository['delete']>();
   const requireBranch = jest.fn<CoreClient['requireBranch']>();
+  const vehicleStates = jest.fn<TelemetryService['vehicleStates']>();
+  const openAlertCounts = jest.fn<EventsService['openAlertCounts']>();
+  const nextForVehicles = jest.fn<ServiceTasksService['nextForVehicles']>();
   const context = {
     requestId: randomUUID(),
     tenantId: '01000000-0000-4000-8000-000000000001',
@@ -88,6 +95,9 @@ describe('Vehicles validation and scope', () => {
           },
         },
         { provide: CoreClient, useValue: { requireBranch } },
+        { provide: TelemetryService, useValue: { vehicleStates } },
+        { provide: EventsService, useValue: { openAlertCounts } },
+        { provide: ServiceTasksService, useValue: { nextForVehicles } },
       ],
     }).compile();
     service = module.get(VehiclesService);
@@ -97,6 +107,73 @@ describe('Vehicles validation and scope', () => {
     findGroup.mockResolvedValue({ id: groupId });
     findDriver.mockResolvedValue({ id: driverId, status: 'ACTIVE' });
     duplicates.mockResolvedValue({ fleetNumber: false, vin: false });
+    vehicleStates.mockImplementation((_scope, ids) =>
+      Promise.resolve(new Map(ids.map((id) => [id, classifyVehicleState(NO_FACTS, null)]))),
+    );
+    openAlertCounts.mockResolvedValue(new Map());
+    nextForVehicles.mockResolvedValue(new Map());
+  });
+
+  it('attaches state, open alerts and the next service to a page with three batched calls', async () => {
+    const first = row(),
+      second = row();
+    list.mockResolvedValue({ items: [first, second], total: 2 });
+    const parked = {
+      ...classifyVehicleState(NO_FACTS, null),
+      activity: 'PARKED' as const,
+      lastReportedAt: new Date('2026-10-18T06:00:00.000Z'),
+    };
+    vehicleStates.mockResolvedValue(
+      new Map([
+        [first.id, parked],
+        [second.id, classifyVehicleState(NO_FACTS, null)],
+      ]),
+    );
+    openAlertCounts.mockResolvedValue(new Map([[second.id, 3]]));
+    const nextService = {
+      id: randomUUID(),
+      branchId: context.branchId,
+      vehicleId: first.id,
+      vehicle: {
+        id: first.id,
+        licensePlate: first.licensePlate,
+        fleetNumber: null,
+        vehicleType: null,
+        status: 'ACTIVE' as const,
+      },
+      serviceType: 'OIL_CHANGE' as const,
+      status: 'PLANNED' as const,
+      dueOn: '2026-10-09',
+      urgency: 'OVERDUE' as const,
+      remainingDays: -9,
+      createdAt: first.createdAt,
+      updatedAt: first.updatedAt,
+    };
+    nextForVehicles.mockResolvedValue(new Map([[first.id, nextService]]));
+    const page = await service.list(context, { filter: { hasOpenAlerts: true } });
+    expect(list).toHaveBeenLastCalledWith(
+      scope,
+      { offset: 0, limit: 20 },
+      expect.objectContaining({ hasOpenAlerts: true }),
+      { field: 'CREATED_AT', direction: 'DESC' },
+    );
+    for (const batch of [vehicleStates, openAlertCounts, nextForVehicles]) {
+      expect(batch).toHaveBeenCalledTimes(1);
+      expect(batch).toHaveBeenCalledWith(scope, [first.id, second.id]);
+    }
+    expect(page.items).toMatchObject([
+      { id: first.id, state: { activity: 'PARKED' }, openAlertCount: 0, nextService },
+      {
+        id: second.id,
+        state: { activity: 'NO_DEVICE', fuelStatus: 'NO_DATA' },
+        openAlertCount: 3,
+        nextService: null,
+      },
+    ]);
+    list.mockResolvedValue({ items: [], total: 0 });
+    vehicleStates.mockClear();
+    await service.list(context, {});
+    expect(vehicleStates).not.toHaveBeenCalled();
   });
 
   it('maps filters, tokens and sorting without checking Core', async () => {
@@ -130,6 +207,7 @@ describe('Vehicles validation and scope', () => {
         currentDriverIds: undefined,
         hasDriver: false,
         hasDevice: true,
+        hasOpenAlerts: undefined,
       },
       { field: 'FLEET_NUMBER', direction: 'ASC' },
     );

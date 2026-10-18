@@ -86,6 +86,65 @@ enum FleetGroupColor {
   C8
 }
 
+// DEMO rows come from devices (or the demo seed); MANUAL rows are operator odometer readings.
+enum FleetDataSource {
+  DEMO
+  MANUAL
+}
+
+// The first nine values are the maneuver kinds used by scores and scorecards.
+enum FleetEventKind {
+  HARSH_ACCELERATION
+  HARSH_BRAKING
+  SPEED_BUMP
+  OVERTAKING
+  ROUNDABOUT
+  LANE_CHANGE
+  SHARP_TURN
+  OFF_ROAD
+  SPEEDING
+  IGNITION_ON
+  IGNITION_OFF
+  IDLING
+  LOW_FUEL
+  FUEL_DROP
+  POWER_DISCONNECTED
+  LOW_BACKUP_BATTERY
+  CAN_DISCONNECTED
+  DEVICE_OFFLINE
+  DIAGNOSTIC_TROUBLE_CODE
+  CRASH_DETECTED
+}
+
+enum FleetEventSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum FleetAlertStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+enum FleetServiceType {
+  GENERAL_SERVICE
+  OIL_CHANGE
+  ANNUAL_INSPECTION
+  TACHOGRAPH_CALIBRATION
+  BRAKES
+  TIRES
+  REPAIR
+  OTHER
+}
+
+enum FleetServiceStatus {
+  PLANNED
+  DONE
+  CANCELLED
+}
+
 // Columns after notes are appended by the fleet_master_data migration (ADD COLUMN).
 // Hand-written CHECKs in that migration: modelYear, vin, fuelTankCapacityL, INACTIVE without driver.
 model Vehicle {
@@ -108,6 +167,10 @@ model Vehicle {
   group VehicleGroup? @relation(fields: [tenantId, branchId, groupId], references: [tenantId, branchId, id], onDelete: Restrict, onUpdate: Restrict)
   currentDriver Driver? @relation(fields: [tenantId, branchId, currentDriverId], references: [tenantId, branchId, id], onDelete: Restrict, onUpdate: Restrict)
   devices Device[]
+  statusSamples VehicleStatusSample[]
+  trips Trip[]
+  events FleetEvent[]
+  serviceTasks ServiceTask[]
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
@@ -164,6 +227,8 @@ model Driver {
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
   vehicles Vehicle[]
+  trips Trip[]
+  events FleetEvent[]
 
   @@unique([tenantId, branchId, id])
   @@unique([tenantId, branchId, employeeNumber])
@@ -186,6 +251,142 @@ model VehicleGroup {
   @@unique([tenantId, branchId, id])
   @@unique([tenantId, branchId, name])
   @@index([tenantId, branchId, createdAt, id])
+}
+
+// Activity rows keep the reporting IMEI as a snapshot (no Device FK), so devices can be replaced
+// or deleted without rewriting history. Hand-written CHECKs in the fleet_activity migration:
+// MANUAL rows are exactly the null-IMEI odometer readings, IMEI format, coordinates, ranges.
+model VehicleStatusSample {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  vehicleId String @db.Uuid
+  deviceImei String? @db.VarChar(15)
+  source FleetDataSource
+  recordedAt DateTime @db.Timestamptz(3)
+  receivedAt DateTime @db.Timestamptz(3)
+  latitude Float?
+  longitude Float?
+  address String? @db.VarChar(256)
+  speedKph Float?
+  headingDeg Int? @db.SmallInt
+  ignition Boolean?
+  odometerKm Float?
+  fuelLevelPct Float?
+  externalVoltage Float?
+  backupBatteryVoltage Float?
+  engineHours Float?
+  coolantTempC Int? @db.SmallInt
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  vehicle Vehicle @relation(fields: [tenantId, branchId, vehicleId], references: [tenantId, branchId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([tenantId, branchId, vehicleId, deviceImei, recordedAt])
+  @@index([tenantId, branchId, vehicleId, recordedAt(sort: Desc)])
+  @@index([tenantId, branchId, recordedAt])
+}
+
+// Hand-written CHECKs: never MANUAL, IMEI format, end not before start, coordinates, ranges.
+model Trip {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  vehicleId String @db.Uuid
+  driverId String? @db.Uuid
+  deviceImei String? @db.VarChar(15)
+  source FleetDataSource
+  startedAt DateTime @db.Timestamptz(3)
+  endedAt DateTime? @db.Timestamptz(3)
+  startAddress String? @db.VarChar(256)
+  endAddress String? @db.VarChar(256)
+  startLatitude Float?
+  startLongitude Float?
+  endLatitude Float?
+  endLongitude Float?
+  startOdometerKm Float?
+  endOdometerKm Float?
+  distanceKm Float?
+  idleSeconds Int?
+  maxSpeedKph Float?
+  fuelUsedL Float?
+  drivingScore Float?
+  ecoScore Float?
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  vehicle Vehicle @relation(fields: [tenantId, branchId, vehicleId], references: [tenantId, branchId, id], onDelete: Restrict, onUpdate: Restrict)
+  driver Driver? @relation(fields: [tenantId, branchId, driverId], references: [tenantId, branchId, id], onDelete: Restrict, onUpdate: Restrict)
+  events FleetEvent[]
+
+  @@unique([tenantId, branchId, vehicleId, id])
+  @@index([tenantId, branchId, startedAt(sort: Desc), id])
+  @@index([tenantId, branchId, vehicleId, startedAt])
+  @@index([tenantId, branchId, driverId, startedAt])
+}
+
+// The trip relation includes vehicleId, so an event's vehicle always equals its trip's vehicle.
+// Hand-written CHECKs: never MANUAL, IMEI format, coordinates, intensity only on maneuvers,
+// the alert state machine with its timestamps, and no alert status on INFO events.
+model FleetEvent {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  vehicleId String @db.Uuid
+  tripId String? @db.Uuid
+  driverId String? @db.Uuid
+  deviceImei String? @db.VarChar(15)
+  source FleetDataSource
+  occurredAt DateTime @db.Timestamptz(3)
+  kind FleetEventKind
+  severity FleetEventSeverity
+  intensity Int? @db.SmallInt
+  latitude Float?
+  longitude Float?
+  address String? @db.VarChar(256)
+  speedKph Float?
+  measuredValue Float?
+  thresholdValue Float?
+  troubleCode String? @db.VarChar(32)
+  details String? @db.VarChar(500)
+  alertStatus FleetAlertStatus?
+  acknowledgedAt DateTime? @db.Timestamptz(3)
+  resolvedAt DateTime? @db.Timestamptz(3)
+  remark String? @db.VarChar(1000)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  vehicle Vehicle @relation(fields: [tenantId, branchId, vehicleId], references: [tenantId, branchId, id], onDelete: Restrict, onUpdate: Restrict)
+  trip Trip? @relation(fields: [tenantId, branchId, vehicleId, tripId], references: [tenantId, branchId, vehicleId, id], onDelete: Restrict, onUpdate: Restrict)
+  driver Driver? @relation(fields: [tenantId, branchId, driverId], references: [tenantId, branchId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([tenantId, branchId, occurredAt(sort: Desc), id])
+  @@index([tenantId, branchId, alertStatus, occurredAt(sort: Desc), id])
+  @@index([tenantId, branchId, vehicleId, occurredAt])
+  @@index([tenantId, branchId, vehicleId, tripId])
+  @@index([tenantId, branchId, driverId, occurredAt])
+}
+
+// Costs are integer EUR cents. Hand-written CHECKs: the PLANNED/DONE/CANCELLED field rules and
+// value ranges.
+model ServiceTask {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  vehicleId String @db.Uuid
+  serviceType FleetServiceType
+  status FleetServiceStatus @default(PLANNED)
+  title String? @db.VarChar(120)
+  dueOn DateTime? @db.Date
+  dueOdometerKm Int?
+  completedOn DateTime? @db.Date
+  completedOdometerKm Int?
+  workshop String? @db.VarChar(128)
+  replacedParts String? @db.VarChar(1000)
+  costCents Int?
+  notes String? @db.VarChar(2000)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  vehicle Vehicle @relation(fields: [tenantId, branchId, vehicleId], references: [tenantId, branchId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([tenantId, branchId, status, dueOn, id])
+  @@index([tenantId, branchId, vehicleId, status])
+  @@index([tenantId, branchId, completedOn])
 }
 
 // Shared vendor reference data. Device/Vehicle data remains Tenant/Branch scoped.

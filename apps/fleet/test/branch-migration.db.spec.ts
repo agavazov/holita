@@ -81,6 +81,7 @@ describe('Fleet Branch upgrade', () => {
       expect(applied.rows.slice(history.length).map((row) => row.migration_name)).toEqual([
         '20261017010000_rename_store_to_branch',
         '20261018100000_fleet_master_data',
+        '20261018110000_fleet_activity',
       ]);
     } finally {
       try {
