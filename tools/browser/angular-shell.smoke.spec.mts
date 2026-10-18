@@ -272,7 +272,10 @@ test('mobile navigation drawer traps focus and closes on Escape, backdrop, navig
   await page.goto(`${app.url}/en/${branchA}/fleet/vehicles`);
   await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toBeVisible();
   const menu = page.getByRole('button', { name: 'Toggle navigation', exact: true });
-  const drawer = page.getByRole('complementary', { name: 'Navigation', exact: true });
+  // The desktop sidebar is also a "Navigation" landmark, so the drawer is matched by its class too.
+  const drawer = page
+    .getByRole('complementary', { name: 'Navigation', exact: true })
+    .and(page.locator('.app-nav-drawer'));
   const close = drawer.getByRole('button', { name: 'Close navigation', exact: true });
   await expect(menu).toHaveAttribute('aria-expanded', 'false');
   await menu.click();

@@ -12,6 +12,9 @@ breakpoints.textContent =
 document.head.append(breakpoints);
 
 function evaluate(query: string): boolean {
+  // jsdom runs no animations and never fires animationend, so motion must be reduced: PrimeNG
+  // otherwise waits forever for an overlay's leave animation (e.g. a closing confirm dialog).
+  if (/\(prefers-reduced-motion:\s*reduce\)/.test(query)) return true;
   const width = window.innerWidth;
   const conditions = [...query.matchAll(/\((min|max)-width:\s*([\d.]+)px\)/g)];
   if (!conditions.length) return false;

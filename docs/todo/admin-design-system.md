@@ -62,16 +62,12 @@ Work is on `feature/admin-design-system` in the worktree
 - Last results: Fleet unit 152/152, Fleet db 125/125, B1 schema 5/5, B1 router 20/20; admin
   lint/typecheck/build pass; admin unit 386/386 (design system), 8/8 (Karma canary), 116/116
   (features); Storybook tests 63/63; shell/foundation/tenants smoke 12/13.
-- Known failures to fix first:
-  - `tools/graphql/federation.db.spec.mts` "records odometer readings and runs the alert workflow
-    through Gateway": `fleetVehicle.state.activity` is `NO_DEVICE` although the spec now creates
-    the vehicle's device first. Check `TelemetryRepository.vehicleFacts` (`hasDevice`).
-  - `tools/browser/angular-shell.smoke.spec.mts` "mobile navigation drawer traps focus and closes
-    on Escape, backdrop, navigation and resize": the drawer stays visible after resizing to desktop.
-- Not run yet for B2: `test:gateway:router`, `test:karma-client`, repo-wide lint/typecheck/build,
-  admin Fleet specs and the Vehicles/Devices smoke. The independent verifier passes for B1, B2
-  and F1 were not run.
-- Next: B3, B4, F2, F3 (G1–G5), F4, F5 and `test:full`, as planned below.
+- Phase 1 (fixes) is done: repo lint/typecheck/build pass; federation 17/17, router 20/20,
+  Karma Client 139/139; shell, Vehicles and Devices smoke pass. The unit-test `matchMedia` stub
+  now reports reduced motion, because jsdom never ends PrimeNG's overlay leave animations.
+- Open: the whole admin unit suite still times out a few specs under load in WSL (each file
+  passes alone, as in the baseline before this work); address it before `test:full`.
+- Next: brand and density choice, B3, B4, F2, F3 (G1–G5), F4, F5 and `test:full`.
 
 ## Fleet demo scope (proposal, not implemented)
 
