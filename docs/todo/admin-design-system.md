@@ -59,10 +59,11 @@ each spec says which of its sections are superseded by those documents.
 
 ## Open tasks
 
-Work through the tasks below in order. Only "Storybook first" is a user decision; the rest follows
-the specs' dependencies (F2's operation registration and gate wait for B3, F4 for B4). Run every
-build, generation, test and server command one at a time; the specs' check lock matters only when
-agents run in parallel. Choose checks with [testing](../testing.md), the
+Work through the tasks below in order. Apart from "Storybook first" and the open decisions in
+[review fixes](admin-design-system-review-fixes.md#decisions-needed-from-the-user) (including the
+merge scope), the order follows the specs' dependencies (F2's operation registration and gate
+wait for B3, F4 for B4). Run every build, generation, test and server command one at a time; the
+specs' check lock matters only when agents run in parallel. Choose checks with [testing](../testing.md), the
 [design-system checks](../admin-design-system.md#changing-the-design-centrally) and the gates of
 the specs. Known Storybook and test behaviour (overlays in `document.body`, seeded samples, cached
 static builds, current smoke failures) is described in [testing](../testing.md) and the
@@ -75,39 +76,24 @@ The user reviews the Storybook (`npm run storybook:admin`, `http://127.0.0.1:110
 [Storybook review](../admin-design-system.md#storybook-review), the stories beside the components
 (`apps/admin/src/app/**/*.stories.ts`) and the example pages in `apps/admin/src/storybook/samples`.
 
-### Keep the PrimeUI key out of build outputs
+### Review fixes
 
-When the Git-ignored `apps/admin/public/config.local.json` exists, the application `build` (the
-`assets` glob `**/*` from `public` in `apps/admin/angular.json`) copies it into
-`apps/admin/dist/browser`, which the compiled-app browser fixtures serve (`main.ts` fetches
-`/config.local.json`), and `build-storybook` copies it into `apps/admin/storybook-static`, because
-`public/` is Vite's public directory. Both outputs are Git-ignored, but neither may carry the key.
-
-- Application: exclude the file from the production build only, for example with
-  `"ignore": ["config.local.json"]` on the `public` asset in the `production` configuration of the
-  `build` target; the development server (`admin:build:development`) keeps serving it.
-- Storybook: stop the static build from copying Vite's public directory, for example with
-  `viteFinal` in `apps/admin/.storybook/main.ts` setting `publicDir: false` for the static build.
-  The `build-storybook` target's `assets` already copy `public/fonts`, and the interactive
-  `storybook` target serves `config.local.json` through its own `assets` entry.
-- Delete `apps/admin/storybook-static` and `apps/admin/dist`, rebuild with `--skip-nx-cache` (Nx
-  does not hash Git-ignored files, so cached outputs keep the previous key state), check that
-  neither output contains `config.local.json`, and clear the local Nx cache entries that hold a
-  copy (`npx nx reset`).
-- Static captures and compiled-app smokes then always show the license notice. Update the PrimeUI
-  license bullet of the [admin Storybook](../development.md#admin-storybook), the key-state bullet
-  of [Storybook visual review](../testing.md#storybook-visual-review), the fixture paragraph of
-  [browser smoke checks](../testing.md#real-federation-and-browser-smoke-checks), the
-  [Theme](../admin-design-system.md#theme) section, the admin license paragraph of
-  [Discocan development](../discocan/development.md) and the `loadStoryLicense()` comment in
-  `apps/admin/src/storybook/story-config.ts`.
-- Finish this before recording visual baselines, so that they show the final key state.
+The verified fixes from the external review of this branch are planned in
+[review fixes](admin-design-system-review-fixes.md): documentation corrections, the PrimeUI key
+out of the build outputs (the Storybook `assets` options are no-ops, so the static build must stop
+copying Vite's public directory and copy only the fonts), editors locked while saving, required
+General settings fields, FilterBuilder focus, serialized odometer readings and driver/vehicle
+writes, and the trip in-progress upper bound. Its last section lists the decisions they need,
+including which tasks must precede a merge.
 
 ### Visual candidates and baselines
 
-After the user approves the look, delete `test-results/storybook-visual-candidates/` and run
-`npm run test:visual:admin` for fresh candidates. The user reviews them; only then record the
-first baselines with the command in [Storybook visual review](../testing.md#storybook-visual-review).
+Keep the PrimeUI key out of the build outputs first
+([R1](admin-design-system-review-fixes.md#r1-primeui-key-out-of-build-outputs)), so that the
+captures show the final key state (the license notice). After the user approves the look, delete
+`test-results/storybook-visual-candidates/` and run `npm run test:visual:admin` for fresh
+candidates. The user reviews them; only then record the first baselines with the command in
+[Storybook visual review](../testing.md#storybook-visual-review).
 The captures are listed in `tools/browser/storybook-visual.spec.mts`.
 
 ### Smoke rewrite for the menu topbar
@@ -181,7 +167,8 @@ hosts are in `apps/admin/src/storybook/samples/pages`.
 - Put the container under `features/fleet/<feature>/` and feed the same view and drawers through
   a concrete API and generated operations. Application code must not import `src/storybook`
   (ESLint enforces it). Decide with the user whether the stories then use GraphQL fixtures for
-  the containers or keep the sample hosts.
+  the containers or keep the sample hosts
+  ([open decision](admin-design-system-review-fixes.md#2-storybook-sample-hosts-or-graphql-fixtures)).
 - Reduce each view's FilterBuilder fields, operators, sortable columns and enum lists to the
   [standard list contract](../discocan/architecture.md#standard-list-contract), or extend the
   backend first. Backend filters are any-of lists, booleans and ranges; there is no `isNoneOf`.
@@ -213,8 +200,8 @@ hosts are in `apps/admin/src/storybook/samples/pages`.
   - Overview: the example has one loading/error state and KPIs (distance today, activity by
     group) that differ from B3's per-card queries.
 - PrimeNG 22 `p-table` reports an intermediate ascending sort on the first render. The components
-  that render `p-table` (the sortable `features/fleet/*-view.ts` views) use `injectSortReady()` and
-  `[lazyLoadOnInit]="false"` ([table conventions](../admin-design-system.md#table-conventions));
+  that render `p-table` (the sortable `features/fleet/*/*-view.ts` views) use `injectSortReady()`
+  and `[lazyLoadOnInit]="false"` ([table conventions](../admin-design-system.md#table-conventions));
   containers do not need it.
 - Turn the example drawers, which use `[closeLink]="null"` with `(closeRequest)`, into child-route
   drawers with `leaveDrawer`, `canLeave()` and `injectDrawerHost`

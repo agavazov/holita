@@ -4,7 +4,9 @@ Pending work for `feature/admin-design-system`. This is the authoritative fronte
 holita admin design system and the Discocan Fleet screens. The backend plan is
 [admin-design-system-backend.md](admin-design-system-backend.md); the frontend consumes exactly its
 SDL (section 6) and its standard list contract (section 3). The decisions and the open tasks in
-order are in [admin-design-system.md](admin-design-system.md).
+order are in [admin-design-system.md](admin-design-system.md); the verified review fixes and their
+open decisions, including the rewording of the fixture items in 0.2, 8.1, 11 F2–F4 and 12, are in
+[admin-design-system-review-fixes.md](admin-design-system-review-fixes.md).
 
 [docs/admin-design-system.md](../admin-design-system.md) is authoritative for the theme, styles,
 shell, patterns and Storybook. Under the user's decision "Storybook first" (2026-10-18),
@@ -3446,8 +3448,9 @@ npm run lint && npm run typecheck && npm run build && npm run format:check
   agents; it removes races on `dist`, generated types and fixtures at the cost of wall-clock time.
 - **PrimeUI key**: the tracked `config.json` no longer holds it (1.1), but the old value stays in
   Git history until the user rotates it. The application and the interactive Storybook read the
-  Git-ignored `config.local.json`; the production build and the static Storybook build currently
-  copy it too ([open task](admin-design-system.md#keep-the-primeui-key-out-of-build-outputs)).
+  Git-ignored `config.local.json`; the production build (its `public` asset glob) and the static
+  Storybook build (Vite's public directory; the Storybook `assets` options are no-ops) still copy
+  it ([R1](admin-design-system-review-fixes.md#r1-primeui-key-out-of-build-outputs)).
 - **Visual approval** is a non-blocking user review (7.7); unapproved candidates do not stop a phase.
   If the user wants approval to block F4, the orchestrator pauses F4 until the user approves.
 - **`test:full` duration** grows by the Storybook run (7.1); the full-regression workflow's
