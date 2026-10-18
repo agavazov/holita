@@ -14,12 +14,12 @@ import { Router, RouterOutlet } from '@angular/router';
 import { componentWrapperDecorator } from '@storybook/angular-vite';
 import { PrimeNG } from 'primeng/config';
 import { appConfig } from '../app/app.config';
+import { readLocalAdminConfig } from '../app/core/config/admin-config';
 import type { Language } from '../app/i18n/messages';
 import { appTheme, brandNames, densityNames, type ThemeChoice } from '../app/theme/theme-choice';
 import { WALL_CLOCK } from '../app/ui/clock';
 import { UI_LANGUAGE } from '../app/ui/ui-language';
 import { primeNgTranslation } from '../app/workspace/primeng-translation';
-import { resetFleetFixtures } from './fleet-fixtures';
 import {
   type FixtureFailure,
   FixtureHttpBackend,
@@ -35,18 +35,15 @@ export interface StoryFixtures {
   readonly signedIn?: boolean;
   /** Fleet availability in the runtime configuration; default true. */
   readonly fleetEnabled?: boolean;
-  /** Content of the default Branch; default `demo`. */
-  readonly dataset?: 'demo' | 'empty' | 'no-telemetry';
   /** The wall clock (`WALL_CLOCK`); default `2026-10-18T07:00:00.000Z`. */
   readonly now?: string;
   readonly scenario?: FixtureScenario;
-  /** Starts the default Branch without vehicles (same as `dataset: 'empty'`). */
-  readonly emptyFleet?: boolean;
 }
 
 export const defaultStoryNow = '2026-10-18T07:00:00.000Z';
 let now = Date.parse(defaultStoryNow);
-const storyLanguage = signal<Language>('bg');
+/** Storybook shows one language; the product's languages live in the application catalogs. */
+const storyLanguage: Language = 'en';
 
 /** The story's fixed wall clock in epoch milliseconds. */
 export function storyNow(): number {
@@ -75,24 +72,44 @@ export function storyThemeChoice(globals: Readonly<Record<string, unknown>>): Th
  * language and the story clock. */
 export function storybookApplicationConfig(
   choice: ThemeChoice = appTheme,
-  options: { readonly fleetEnabled?: boolean } = {},
+  options: { readonly fleetEnabled?: boolean; readonly primeUiLicense?: string } = {},
 ): ApplicationConfig {
   return {
     providers: [
-      ...appConfig({ graphqlUrl: '/graphql', fleetEnabled: options.fleetEnabled ?? true }, choice)
-        .providers,
+      ...appConfig(
+        {
+          graphqlUrl: '/graphql',
+          fleetEnabled: options.fleetEnabled ?? true,
+          ...(options.primeUiLicense ? { primeUiLicense: options.primeUiLicense } : {}),
+        },
+        choice,
+      ).providers,
       { provide: HttpBackend, useClass: FixtureHttpBackend },
-      { provide: UI_LANGUAGE, useValue: storyLanguage.asReadonly() },
+      { provide: UI_LANGUAGE, useValue: signal(storyLanguage).asReadonly() },
       { provide: WALL_CLOCK, useValue: () => storyNow() },
       provideLocationMocks(),
-      // Pattern stories render without AdminWorkspace, which sets these texts in the app; the
-      // story re-bootstraps when the language global changes.
+      // Pattern stories render without AdminWorkspace, which sets these texts in the app.
       provideAppInitializer(() => {
         const primeNG = inject(PrimeNG);
-        primeNG.setTranslation(primeNgTranslation(storyLanguage(), primeNG.translation.aria));
+        primeNG.setTranslation(primeNgTranslation(storyLanguage, primeNG.translation.aria));
       }),
     ],
   };
+}
+
+/**
+ * The developer's PrimeUI key from the Git-ignored `config.local.json`, which only the interactive
+ * Storybook serves (never `build-storybook`). Missing or invalid means no key.
+ */
+export async function loadStoryLicense(): Promise<string | undefined> {
+  try {
+    const response = await fetch('/config.local.json');
+    if (!response.ok || !response.headers.get('content-type')?.includes('application/json'))
+      return undefined;
+    return readLocalAdminConfig(await response.json()).primeUiLicense;
+  } catch {
+    return undefined;
+  }
 }
 
 function readScenario(value: unknown): FixtureScenario {
@@ -111,18 +128,15 @@ function readScenario(value: unknown): FixtureScenario {
 /** Reads `parameters.holita` with runtime checks. */
 export function readStoryFixtures(value: unknown): StoryFixtures {
   if (!isRecord(value)) return {};
-  const dataset = value['dataset'];
   return {
     ...(value['signedIn'] === false ? { signedIn: false } : {}),
     ...(value['fleetEnabled'] === false ? { fleetEnabled: false } : {}),
-    ...(dataset === 'demo' || dataset === 'empty' || dataset === 'no-telemetry' ? { dataset } : {}),
     ...(typeof value['now'] === 'string' ? { now: value['now'] } : {}),
-    ...(value['emptyFleet'] === true ? { emptyFleet: true } : {}),
     scenario: readScenario(value['scenario']),
   };
 }
 
-/** Applies the theme and language globals to the document (and the stored theme preference). */
+/** Applies the theme global and the story language to the document (and the stored theme). */
 export function applyStoryGlobals(globals: Readonly<Record<string, unknown>>): void {
   const dark = globals['theme'] === 'dark';
   try {
@@ -132,18 +146,15 @@ export function applyStoryGlobals(globals: Readonly<Record<string, unknown>>): v
   }
   document.documentElement.classList.toggle('app-dark', dark);
   document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
-  const language: Language = globals['locale'] === 'en' ? 'en' : 'bg';
-  document.documentElement.lang = language;
-  storyLanguage.set(language);
+  document.documentElement.lang = storyLanguage;
 }
 
 /**
  * Resets every piece of browser and fixture state a story depends on, before the application
- * bootstraps: fixture data, forced failures, the clock, the stored session, theme and language.
+ * bootstraps: forced failures, the clock, the stored session and the theme.
  */
 export function prepareStory(fixtures: unknown, globals: Readonly<Record<string, unknown>>): void {
   const options = readStoryFixtures(fixtures);
-  resetFleetFixtures({ empty: options.dataset === 'empty' || options.emptyFleet === true });
   useFixtureScenario(options.scenario);
   const instant = Date.parse(options.now ?? defaultStoryNow);
   now = Number.isNaN(instant) ? Date.parse(defaultStoryNow) : instant;
@@ -158,11 +169,9 @@ export const onFrame = componentWrapperDecorator(
     `<div style="min-block-size: 100dvh; padding: var(--p-app-gutter); background: var(--p-app-frame-background); color: var(--p-text-color)"><div style="display: flex; flex-direction: column; gap: var(--p-app-stack-gap); max-inline-size: var(--p-app-content-max-width); margin-inline: auto">${story}</div></div>`,
 );
 
-/** Story render function that opens a language-prefixed application path in `StoryApp`. */
+/** Story render function that opens an application path in the story language in `StoryApp`. */
 export function routeAt(path: string) {
-  return (_args: unknown, context: { readonly globals: Readonly<Record<string, unknown>> }) => ({
-    props: { url: `/${context.globals['locale'] === 'en' ? 'en' : 'bg'}/${path}` },
-  });
+  return () => ({ props: { url: `/${storyLanguage}/${path}` } });
 }
 
 /** Renders the real application routes at a URL, for screen and flow stories. */

@@ -11,7 +11,7 @@ const days: readonly SeriesPoint[] = Array.from({ length: 14 }, (_, index) => {
     key: day,
     label: `${day}.10`,
     value,
-    valueText: value === null ? 'няма данни' : `${String(value)} км`,
+    valueText: value === null ? 'no data' : `${String(value)} km`,
   };
 });
 
@@ -68,20 +68,20 @@ export const Charts: Story = {
     template: `
       <div class="app-card-grid">
         <section class="app-card">
-          <div class="app-card__header"><h2 class="app-card__title">Пробег по дни</h2></div>
-          <holita-column-series label="Пробег по дни, последни 14 дни" [points]="days" />
+          <div class="app-card__header"><h2 class="app-card__title">Daily mileage</h2></div>
+          <holita-column-series label="Daily mileage, last 14 days" [points]="days" />
         </section>
         <section class="app-card">
-          <div class="app-card__header"><h2 class="app-card__title">Маневри</h2></div>
+          <div class="app-card__header"><h2 class="app-card__title">Maneuvers</h2></div>
           <holita-stacked-bars
-            label="Маневри по превозни средства"
+            label="Maneuvers by vehicle"
             [rows]="maneuvers"
-            [legend]="[{ key: 'braking', label: 'Рязко спиране', tone: 'danger' }, { key: 'acceleration', label: 'Рязко ускорение', tone: 'warn' }, { key: 'turns', label: 'Остри завои', tone: 'c4' }]"
+            [legend]="[{ key: 'braking', label: 'Harsh braking', tone: 'danger' }, { key: 'acceleration', label: 'Harsh acceleration', tone: 'warn' }, { key: 'turns', label: 'Sharp turns', tone: 'c4' }]"
           />
         </section>
         <section class="app-card">
-          <div class="app-card__header"><h2 class="app-card__title">Скорост, 48 ч</h2></div>
-          <holita-sparkline label="Скорост, последни 48 ч" [points]="speed" [from]="0" [to]="48 * hour" unit="км/ч" />
+          <div class="app-card__header"><h2 class="app-card__title">Speed, 48 h</h2></div>
+          <holita-sparkline label="Speed, last 48 h" [points]="speed" [from]="0" [to]="48 * hour" unit="km/h" />
         </section>
       </div>
     `,

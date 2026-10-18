@@ -82,7 +82,10 @@
             "open": false,
             "styles": ["src/styles.scss"],
             "stylePreprocessorOptions": { "includePaths": ["src/styles"] },
-            "assets": [{ "glob": "**/*", "input": "public/fonts", "output": "fonts" }]
+            "assets": [
+              { "glob": "**/*", "input": "public/fonts", "output": "fonts" },
+              { "glob": "config.local.json", "input": "public", "output": "/" }
+            ]
           }
         },
         "build-storybook": {

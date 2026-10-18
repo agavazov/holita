@@ -20,18 +20,18 @@ export const List: Story = {
   render: () => ({
     template: `
       <holita-page-header
-        eyebrow="Автопарк"
-        title="Превозни средства"
+        eyebrow="Fleet"
+        title="Vehicles"
         [count]="46"
-        description="Влекачи, ремаркета и бусове на клон Discordia"
+        description="Tractor units, trailers and vans in the Discordia branch"
       >
-        <span headerMeta class="app-muted" style="font-size: var(--p-app-text-sm)">Данни към 18.10.2026 09:30</span>
-        <button headerActions pButton type="button" severity="secondary" [outlined]="true" aria-label="Обнови">
+        <span headerMeta class="app-muted" style="font-size: var(--p-app-text-sm)">Data as of Oct 18, 2026 09:30</span>
+        <button headerActions pButton type="button" severity="secondary" [outlined]="true" aria-label="Refresh">
           <svg data-p-icon="refresh" aria-hidden="true"></svg>
         </button>
         <a headerActions pButton href="#new">
           <svg data-p-icon="plus" aria-hidden="true"></svg>
-          Ново превозно средство
+          New vehicle
         </a>
       </holita-page-header>
     `,
@@ -44,13 +44,13 @@ export const DetailWithBackLink: Story = {
     template: `
       <holita-page-header
         [backLink]="['/', 'bg']"
-        backLabel="Превозни средства"
-        eyebrow="Т-04 · Влекач · Международни"
+        backLabel="Vehicles"
+        eyebrow="T-04 · Tractor unit · International"
         title="CB 1004 AX"
         description="MAN TGX 18.510 · 2021 · VIN WMA06XZZ1MP123456"
       >
-        <p-tag headerMeta severity="success" value="Активно" />
-        <button headerActions pButton type="button" severity="secondary" [outlined]="true">Редактирай</button>
+        <p-tag headerMeta severity="success" value="Active" />
+        <button headerActions pButton type="button" severity="secondary" [outlined]="true">Edit</button>
       </holita-page-header>
     `,
   }),
@@ -61,12 +61,12 @@ export const LongTitle: Story = {
   render: () => ({
     template: `
       <holita-page-header
-        eyebrow="Шофьори · Международни превози · Дългосрочни договори"
-        title="Александър-Кристиян Петров-Стоянов Георгиев-Димитров Иванов"
+        eyebrow="Drivers · International haulage · Long-term contracts"
+        title="Aleksandar-Kristiyan Petrov-Stoyanov Georgiev-Dimitrov Ivanov"
         [count]="1234"
-        description="Много дълго описание, което се съкращава в един ред, за да не измества действията и съдържанието под заглавието на страницата при тесни екрани."
+        description="A very long description that is truncated to a single line so it does not push the actions and the content below the page title aside on narrow screens."
       >
-        <button headerActions pButton type="button">Действие</button>
+        <button headerActions pButton type="button">Action</button>
       </holita-page-header>
     `,
   }),

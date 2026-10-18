@@ -6,12 +6,12 @@ import { graphqlFixture } from './graphql-fixtures';
 export const fixtureTenant = {
   __typename: 'Tenant',
   id: '10000000-0000-4000-8000-000000000001',
-  name: 'Демо Логистика ООД',
+  name: 'Demo Logistics Ltd',
 } as const;
 
 export const fixtureBranches = [
-  { __typename: 'Branch', id: '20000000-0000-4000-8000-0000000000a1', name: 'Автопарк София' },
-  { __typename: 'Branch', id: '20000000-0000-4000-8000-0000000000a2', name: 'Автопарк Пловдив' },
+  { __typename: 'Branch', id: '20000000-0000-4000-8000-0000000000a1', name: 'Sofia Fleet' },
+  { __typename: 'Branch', id: '20000000-0000-4000-8000-0000000000a2', name: 'Plovdiv Fleet' },
 ] as const;
 
 export const defaultBranchId = fixtureBranches[0].id;

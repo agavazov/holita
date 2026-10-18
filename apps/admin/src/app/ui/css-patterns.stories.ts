@@ -16,16 +16,16 @@ export const Facts: Story = {
   render: () => ({
     template: `
       <section class="app-card">
-        <div class="app-card__header"><h2 class="app-card__title">Данни за превозното средство</h2><p-tag severity="success" value="Активно" /></div>
+        <div class="app-card__header"><h2 class="app-card__title">Vehicle details</h2><p-tag severity="success" value="Active" /></div>
         <dl class="app-facts">
-          <div><dt>Регистрационен номер</dt><dd>CB 1004 AX</dd></div>
-          <div><dt>Пореден номер</dt><dd>Т-04</dd></div>
-          <div><dt>Марка и модел</dt><dd>MAN TGX 18.510 · 2021</dd></div>
+          <div><dt>License plate</dt><dd>CB 1004 AX</dd></div>
+          <div><dt>Fleet number</dt><dd>T-04</dd></div>
+          <div><dt>Make and model</dt><dd>MAN TGX 18.510 · 2021</dd></div>
           <div><dt>VIN</dt><dd class="app-mono">WMA06XZZ1MP123456</dd></div>
-          <div><dt>Пробег</dt><dd class="app-num">412 330 км</dd></div>
-          <div><dt>Резервоар</dt><dd><span class="app-meter app-meter--success" style="--app-meter-value: 64%"></span> 64% от 650 л</dd></div>
-          <div><dt>Шофьор</dt><dd>—</dd></div>
-          <div class="app-facts--wide"><dt>Бележки</dt><dd>Влекач за международни превози; обслужване на всеки 90 000 км.</dd></div>
+          <div><dt>Odometer</dt><dd class="app-num">412,330 km</dd></div>
+          <div><dt>Fuel tank</dt><dd><span class="app-meter app-meter--success" style="--app-meter-value: 64%"></span> 64% of 650 L</dd></div>
+          <div><dt>Driver</dt><dd>—</dd></div>
+          <div class="app-facts--wide"><dt>Notes</dt><dd>Tractor unit for international haulage; serviced every 90,000 km.</dd></div>
         </dl>
       </section>
     `,
@@ -38,18 +38,18 @@ export const TimelineEvents: Story = {
     props: {
       events: [
         {
-          title: 'Рязко спиране',
-          meta: '08:12 · 84 км/ч → 31 км/ч · бул. Цариградско шосе',
+          title: 'Harsh braking',
+          meta: '08:12 · 84 km/h → 31 km/h · Tsarigradsko Shose Blvd.',
           tone: 'danger',
         },
-        { title: 'Превишена скорост', meta: '08:31 · 128 / 90 км/ч', tone: 'warn' },
-        { title: 'Празен ход над 10 мин', meta: '09:05 · 14 мин', tone: 'info' },
-        { title: 'Край на курса', meta: '09:40 · 112,4 км · 1 ч 28 мин', tone: 'neutral' },
+        { title: 'Speeding', meta: '08:31 · 128 / 90 km/h', tone: 'warn' },
+        { title: 'Idling over 10 min', meta: '09:05 · 14 min', tone: 'info' },
+        { title: 'Trip end', meta: '09:40 · 112.4 km · 1 h 28 min', tone: 'neutral' },
       ],
     },
     template: `
       <section class="app-card">
-        <div class="app-card__header"><h2 class="app-card__title">Събития по курса</h2></div>
+        <div class="app-card__header"><h2 class="app-card__title">Trip events</h2></div>
         <p-timeline [value]="events">
           <ng-template #marker let-event>
             <span [class]="'app-dot app-dot--' + event.tone"></span>

@@ -293,9 +293,9 @@ class FoundationBrands {
       <h1>Page title · text.title</h1>
       <h2>Section heading · text.lg</h2>
       <h3>Card heading · text.md</h3>
-      <p>Body text · text.base. Превозните средства в автопарка се обслужват по график.</p>
+      <p>Body text · text.base. Fleet vehicles are serviced on a fixed schedule.</p>
       <p class="meta">Meta and hints · text.sm · muted</p>
-      <p class="kpi app-num">1 248 <small>км</small></p>
+      <p class="kpi app-num">1,248 <small>km</small></p>
       <p class="table">Table cell · text.table · <span class="app-num">0123456789</span></p>
       <p class="app-mono">Mono · VIN WDB9634031L123456</p>
     </section>
@@ -341,7 +341,7 @@ class FoundationTypography {}
     <section>
       <div class="controls">
         <input pInputText aria-label="Text" data-measure="control" value="CB 1001 AX" />
-        <button pButton type="button" data-measure="control">Запази</button>
+        <button pButton type="button" data-measure="control">Save</button>
         <p-select
           data-measure="control"
           [options]="options"
@@ -353,8 +353,8 @@ class FoundationTypography {}
       <p-table [value]="rows">
         <ng-template #header>
           <tr>
-            <th scope="col">Номер</th>
-            <th scope="col">Статус</th>
+            <th scope="col">Plate</th>
+            <th scope="col">Status</th>
           </tr>
         </ng-template>
         <ng-template #body let-row>
@@ -413,11 +413,11 @@ class FoundationTypography {}
   `,
 })
 class FoundationDensity {
-  readonly options = ['Активен', 'В сервиз', 'Неактивен'];
-  value = 'Активен';
+  readonly options = ['Active', 'In service', 'Inactive'];
+  value = 'Active';
   readonly rows = [
-    { plate: 'CB 1001 AX', status: 'Активен' },
-    { plate: 'CB 1002 AX', status: 'В сервиз' },
+    { plate: 'CB 1001 AX', status: 'Active' },
+    { plate: 'CB 1002 AX', status: 'In service' },
   ];
   readonly space = [1, 2, 3, 4, 5, 6, 8, 10];
 }
@@ -518,7 +518,7 @@ class FoundationTones {
       @for (slot of slots; track slot) {
         <div class="category">
           <span class="swatch" [style.background]="'var(--p-app-category-' + slot + ')'"></span>
-          <span><span [class]="'app-dot app-dot--' + slot"></span> Група {{ slot }}</span>
+          <span><span [class]="'app-dot app-dot--' + slot"></span> Group {{ slot }}</span>
         </div>
       }
     </section>

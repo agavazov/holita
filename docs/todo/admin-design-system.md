@@ -67,7 +67,14 @@ Work is on `feature/admin-design-system` in the worktree
   now reports reduced motion, because jsdom never ends PrimeNG's overlay leave animations.
 - Open: the whole admin unit suite still times out a few specs under load in WSL (each file
   passes alone, as in the baseline before this work); address it before `test:full`.
-- Next: brand and density choice, B3, B4, F2, F3 (G1–G5), F4, F5 and `test:full`.
+- Storybook first (user decision, 2026-10-18): finish a complete English-only Storybook before
+  returning to the admin wiring and backend. Example pages are view components fed by story
+  data (no GraphQL). Phases: S1 English-only Storybook, language menu, local PrimeUI key;
+  S2 table, filter builder and drawer modes; S3 example pages; S4 polish and review.
+- Pending for the admin phase: the topbar language control is now a menu, so
+  `angular-shell.smoke.spec.mts` ("theme persists and the language link keeps path, query and
+  fragment") must select the language from the menu.
+- Next after Storybook: B3, B4, F2, F3 (G1–G5), F4, F5 and `test:full`.
 
 ## Fleet demo scope (proposal, not implemented)
 

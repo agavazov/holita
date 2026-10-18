@@ -12,6 +12,7 @@ import { Login } from '../features/auth/login';
 import { BranchContext } from '../features/branches/branch-context';
 import { messages, readLanguage, type Language } from '../i18n/messages';
 import { AdminShell } from '../layout/admin-shell';
+import type { LanguageOption } from '../layout/admin-topbar';
 import { navigationContext } from '../layout/navigation';
 import { UI_LANGUAGE } from '../ui/ui-language';
 import { adminNavigation } from './admin-navigation';
@@ -48,6 +49,11 @@ export class AdminWorkspace {
     this.navigationEnd();
     return this.languageLink(this.language() === 'bg' ? 'en' : 'bg');
   });
+  /** The supported interface languages, each labelled in its own language. */
+  readonly languages: readonly LanguageOption[] = [
+    { code: 'bg', label: 'Български' },
+    { code: 'en', label: 'English' },
+  ];
   readonly navigation = computed(() =>
     adminNavigation(this.language(), this.branches.selectedId(), this.fleetEnabled),
   );
@@ -88,6 +94,10 @@ export class AdminWorkspace {
     } finally {
       resumeDefaultNavigation();
     }
+  }
+
+  changeLanguage(code: string): void {
+    if (code === 'bg' || code === 'en') void this.router.navigateByUrl(this.languageLink(code));
   }
 
   languageLink(language: Language) {

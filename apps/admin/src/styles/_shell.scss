@@ -195,24 +195,13 @@
     }
   }
 
-  // Text button with the target language's own name.
-  .app-language-link {
-    display: inline-flex;
-    align-items: center;
-    block-size: var(--p-app-control-height);
-    padding-inline: var(--p-app-space-2);
-    border-radius: var(--p-app-radius-control);
+  // Interface-language menu: compact, labels in their own language.
+  .app-topbar__language {
+    min-inline-size: 8.5rem;
     font-size: var(--p-app-text-sm);
-    font-weight: 600;
-    color: var(--p-text-muted-color);
-    white-space: nowrap;
-    transition:
-      background-color var(--p-transition-duration),
-      color var(--p-transition-duration);
 
-    &:hover {
-      background: var(--p-content-hover-background);
-      color: var(--p-text-color);
+    @include bp.below(sm) {
+      min-inline-size: 0;
     }
   }
 

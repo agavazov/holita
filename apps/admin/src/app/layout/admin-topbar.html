@@ -37,10 +37,18 @@
   />
 </div>
 <div class="app-topbar__actions">
-  <!-- The target language's own name is both the visible label and the accessible name. -->
-  <a class="app-language-link" [routerLink]="languageUrl()" [attr.lang]="otherLanguage()">{{
-    otherLanguage() === 'en' ? 'English' : 'Български'
-  }}</a>
+  @if (languageOptions().length > 1) {
+    <!-- Each language is labelled in its own language. -->
+    <p-select
+      class="app-topbar__language"
+      [options]="languageOptions()"
+      optionLabel="label"
+      optionValue="code"
+      [ariaLabel]="text().language"
+      [formControl]="languageControl"
+      appendTo="body"
+    />
+  }
   <button
     type="button"
     class="app-icon-button"

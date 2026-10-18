@@ -20,7 +20,6 @@ import {
   NavigationEnd,
   NavigationError,
   Router,
-  type UrlTree,
 } from '@angular/router';
 import { filter } from 'rxjs';
 import { Drawer } from 'primeng/drawer';
@@ -29,7 +28,7 @@ import { messages, type Language } from '../i18n/messages';
 import { Appearance } from '../theme/appearance';
 import { below } from '../ui/media';
 import { AdminSidebar } from './admin-sidebar';
-import { AdminTopbar } from './admin-topbar';
+import { AdminTopbar, type LanguageOption } from './admin-topbar';
 import type { NavGroup, PageContext } from './navigation';
 
 const railStorageKey = 'holita.admin.sidebar';
@@ -69,7 +68,8 @@ export class AdminShell {
   readonly branches = input.required<readonly { id: string; name: string }[]>();
   readonly branchId = input<string | null>(null);
   readonly language = input.required<Language>();
-  readonly languageUrl = input.required<UrlTree>();
+  readonly languages = input<readonly LanguageOption[]>([]);
+  readonly languageChange = output<string>();
   readonly loading = input(false);
   readonly tenantName = input<string | null>(null);
   readonly navigation = input<readonly NavGroup[]>([]);

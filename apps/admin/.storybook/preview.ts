@@ -5,27 +5,33 @@ import { appTheme } from '../src/app/theme/theme-choice';
 import {
   STORY_GLOBALS,
   applyStoryGlobals,
+  loadStoryLicense,
   prepareStory,
   readStoryFixtures,
   storyThemeChoice,
   storybookApplicationConfig,
 } from '../src/storybook/story-config';
 
+/** The local PrimeUI key is read once per Storybook page. */
+let license: Promise<string | undefined> | undefined;
+
 /**
  * Builds the application providers from the toolbar globals. Changing a global changes the module
- * metadata key, so the renderer bootstraps the story again with the new brand, density, theme
- * and language instead of patching a running application.
+ * metadata key, so the renderer bootstraps the story again with the new brand, density and theme
+ * instead of patching a running application.
  */
 const holitaApplication: Decorator = (story, context) => {
   applyStoryGlobals(context.globals);
   const choice = storyThemeChoice(context.globals);
   const fixtures = readStoryFixtures(context.parameters['holita']);
+  const primeUiLicense: unknown = context.loaded['primeUiLicense'];
   const result = applicationConfig(
-    storybookApplicationConfig(choice, { fleetEnabled: fixtures.fleetEnabled ?? true }),
+    storybookApplicationConfig(choice, {
+      fleetEnabled: fixtures.fleetEnabled ?? true,
+      ...(typeof primeUiLicense === 'string' ? { primeUiLicense } : {}),
+    }),
   )(story, context);
-  const key = [choice.brand, choice.density, context.globals['theme'], context.globals['locale']]
-    .map(String)
-    .join('/');
+  const key = [choice.brand, choice.density, context.globals['theme']].map(String).join('/');
   return {
     ...result,
     moduleMetadata: {
@@ -40,6 +46,7 @@ const holitaApplication: Decorator = (story, context) => {
 
 const preview: Preview = {
   decorators: [holitaApplication],
+  loaders: [async () => ({ primeUiLicense: await (license ??= loadStoryLicense()) })],
   globalTypes: {
     theme: {
       description: 'Color scheme',
@@ -49,18 +56,6 @@ const preview: Preview = {
         items: [
           { value: 'light', title: 'Light' },
           { value: 'dark', title: 'Dark' },
-        ],
-        dynamicTitle: true,
-      },
-    },
-    locale: {
-      description: 'Interface language',
-      toolbar: {
-        title: 'Language',
-        icon: 'globe',
-        items: [
-          { value: 'bg', title: 'Български' },
-          { value: 'en', title: 'English' },
         ],
         dynamicTitle: true,
       },
@@ -89,7 +84,6 @@ const preview: Preview = {
   },
   initialGlobals: {
     theme: 'light',
-    locale: 'bg',
     brand: appTheme.brand,
     density: appTheme.density,
   },

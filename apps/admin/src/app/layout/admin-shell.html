@@ -4,7 +4,8 @@
     <holita-admin-topbar
       class="app-topbar__bar"
       [language]="language()"
-      [languageUrl]="languageUrl()"
+      [languages]="languages()"
+      (languageChange)="languageChange.emit($event)"
       [context]="context()"
       [branches]="branches()"
       [branchControl]="branchControl"

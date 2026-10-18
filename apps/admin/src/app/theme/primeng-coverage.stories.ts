@@ -115,21 +115,21 @@ class PrimeNgControls {
   readonly schemes = ['light', 'dark'] as const;
   readonly vehicles = vehicles;
   readonly suggestions = vehicles.slice(0, 5);
-  readonly statuses = ['Активно', 'В сервиз', 'Неактивно'];
+  readonly statuses = ['Active', 'In service', 'Inactive'];
   readonly segments = [
-    { label: '7 дни', value: '7d' },
-    { label: '30 дни', value: '30d' },
-    { label: 'Период', value: 'custom' },
+    { label: '7 days', value: '7d' },
+    { label: '30 days', value: '30d' },
+    { label: 'Custom', value: 'custom' },
   ];
   readonly meter = [
-    { label: 'В движение', value: 24, color: 'var(--p-app-tone-success-solid)' },
-    { label: 'Празен ход', value: 11, color: 'var(--p-app-tone-warn-solid)' },
-    { label: 'Паркирани', value: 41, color: 'var(--p-app-tone-info-solid)' },
+    { label: 'Moving', value: 24, color: 'var(--p-app-tone-success-solid)' },
+    { label: 'Idling', value: 11, color: 'var(--p-app-tone-warn-solid)' },
+    { label: 'Parked', value: 41, color: 'var(--p-app-tone-info-solid)' },
   ];
   readonly rows = vehicles
     .slice(0, 3)
     .map((plate, index) => ({ plate, odometer: 412330 - index * 9000 }));
-  readonly events = [{ title: 'Отворена' }, { title: 'Потвърдена' }, { title: 'Решена' }];
+  readonly events = [{ title: 'Opened' }, { title: 'Acknowledged' }, { title: 'Resolved' }];
   date = new Date(2026, 9, 18);
   vehicle = vehicles[0];
   selected = [vehicles[0], vehicles[2]];
@@ -137,7 +137,7 @@ class PrimeNgControls {
   checked = true;
   toggled = true;
   amount = 650;
-  status = 'Активно';
+  status = 'Active';
 }
 
 /** Non-modal overlay controls: dialog, drawer, popover and tooltip, opened on render. */
@@ -155,34 +155,34 @@ class PrimeNgControls {
         type="button"
         severity="secondary"
         [outlined]="true"
-        pTooltip="Показва се при фокус и посочване"
+        pTooltip="Shown on focus and hover"
         tooltipEvent="focus"
       >
         Tooltip
       </button>
     </div>
-    <p-popover #popover ariaLabel="Обяснение">
-      <p style="max-inline-size: 16rem">Отворени аларми в клона към момента на данните.</p>
+    <p-popover #popover ariaLabel="Explanation">
+      <p style="max-inline-size: 16rem">Open alarms in the branch as of the data timestamp.</p>
     </p-popover>
     <p-dialog
-      header="Детайли (Karma)"
+      header="Details (Karma)"
       [visible]="true"
       [modal]="false"
       [draggable]="false"
       [style]="{ width: '24rem' }"
-      closeAriaLabel="Затвори"
+      closeAriaLabel="Close"
       position="topleft"
     >
-      <p>Диалозите остават само за Karma Client; Fleet редактира в чекмеджета.</p>
+      <p>Dialogs remain for Karma Client only; Fleet edits in drawers.</p>
     </p-dialog>
     <p-drawer
-      header="Навигация"
+      header="Navigation"
       [visible]="true"
       [modal]="false"
       position="right"
-      ariaCloseLabel="Затвори"
+      ariaCloseLabel="Close"
     >
-      <p>Мобилна навигация и чекмеджета на маршрути.</p>
+      <p>Mobile navigation and route drawers.</p>
     </p-drawer>
   `,
   styles: `
@@ -215,15 +215,15 @@ class PrimeNgOverlays {
   template: `<p-confirmdialog [pt]="pt" />`,
 })
 class PrimeNgConfirm {
-  readonly pt = confirmDialogPt('bg');
+  readonly pt = confirmDialogPt('en');
   private readonly confirmation = inject(ConfirmationService);
 
   constructor() {
     afterNextRender(() => {
-      void confirmDestructive(this.confirmation, 'bg', {
-        header: 'Изтриване на превозни средства',
-        message: 'Да изтрием ли 3 избрани превозни средства?',
-        acceptLabel: 'Изтрий',
+      void confirmDestructive(this.confirmation, 'en', {
+        header: 'Delete vehicles',
+        message: 'Delete the 3 selected vehicles?',
+        acceptLabel: 'Delete',
       });
     });
   }
@@ -272,6 +272,6 @@ export const ConfirmDialogStory: Story = {
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     await waitFor(() => expect(body.getByRole('alertdialog')).toBeVisible());
-    await waitFor(() => expect(body.getByRole('button', { name: 'Отказ' })).toHaveFocus());
+    await waitFor(() => expect(body.getByRole('button', { name: 'Cancel' })).toHaveFocus());
   },
 };

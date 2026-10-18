@@ -66,26 +66,25 @@ const viewports = {
 
 type ViewportName = keyof typeof viewports;
 
+/** Storybook is English only, so a capture varies by theme, viewport, brand and density. */
 interface Capture {
   readonly id: string;
   readonly theme: 'light' | 'dark';
-  readonly locale: 'bg' | 'en';
   readonly viewports: readonly ViewportName[];
   /** Brand and density globals; the application's `appTheme` when omitted. */
   readonly brand?: 'cobalt' | 'ember' | 'pine';
   readonly density?: 'compact' | 'comfortable';
 }
 
-/** One story in light and dark Bulgarian at the given viewports. */
+/** One story in light and dark at the given viewports. */
 function bothThemes(id: string, sizes: readonly ViewportName[] = ['desktop']): Capture[] {
   return [
-    { id, theme: 'light', locale: 'bg', viewports: sizes },
-    { id, theme: 'dark', locale: 'bg', viewports: sizes },
+    { id, theme: 'light', viewports: sizes },
+    { id, theme: 'dark', viewports: sizes },
   ];
 }
 
-// The reviewed set. Design system: foundations, the main patterns, PrimeNG coverage and the shell
-// (spec 7.7). Screens: the Vehicles screen that predates the patterns, until it is replaced.
+// The reviewed set: foundations, the main patterns, PrimeNG coverage and the shell.
 const captures: readonly Capture[] = [
   ...[
     'colors',
@@ -121,20 +120,11 @@ const captures: readonly Capture[] = [
   ...bothThemes('design-system-shell--desktop', ['desktop', 'mobile']),
   ...bothThemes('design-system-shell--rail', ['desktop', 'mobile']),
   ...bothThemes('design-system-shell--mobile-navigation-open', ['mobile']),
-  {
-    id: 'screens-fleet-vehicles--default',
-    theme: 'light',
-    locale: 'bg',
-    viewports: ['desktop', 'mobile'],
-  },
-  { id: 'screens-fleet-vehicles--default', theme: 'dark', locale: 'bg', viewports: ['desktop'] },
-  { id: 'screens-fleet-vehicles--default', theme: 'light', locale: 'en', viewports: ['desktop'] },
 ];
 
 function globalsOf(capture: Capture): string {
   return [
     `theme:${capture.theme}`,
-    `locale:${capture.locale}`,
     ...(capture.brand ? [`brand:${capture.brand}`] : []),
     ...(capture.density ? [`density:${capture.density}`] : []),
   ].join(';');
@@ -165,7 +155,6 @@ for (const capture of captures)
       const name = [
         capture.id,
         capture.theme,
-        capture.locale,
         ...(capture.brand ? [capture.brand] : []),
         ...(capture.density ? [capture.density] : []),
         `${viewportName}.png`,

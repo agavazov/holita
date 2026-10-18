@@ -223,8 +223,8 @@ export const DirtyWithConfirm: Story = {
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     await waitFor(() =>
-      expect(body.getByRole('button', { name: 'Продължи редакцията' })).toBeVisible(),
+      expect(body.getByRole('button', { name: 'Keep editing' })).toBeVisible(),
     );
-    await expect(body.getByRole('button', { name: 'Отхвърли промените' })).toBeVisible();
+    await expect(body.getByRole('button', { name: 'Discard changes' })).toBeVisible();
   },
 };

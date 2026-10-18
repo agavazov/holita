@@ -2,46 +2,46 @@
   <section class="scheme" [class.app-dark]="scheme === 'dark'" [attr.aria-label]="scheme">
     <div class="row">
       <span class="label">button · badge · tag · chip · avatar</span>
-      <button pButton type="button">Запази</button>
-      <button pButton type="button" severity="secondary" [outlined]="true">Отказ</button>
-      <button pButton type="button" severity="danger">Изтрий</button>
-      <button pButton type="button" severity="warn">Предупреди</button>
-      <button pButton type="button" severity="success">Потвърди</button>
-      <button pButton type="button" severity="info">Детайли</button>
-      <button pButton type="button" [text]="true">Текст</button>
+      <button pButton type="button">Save</button>
+      <button pButton type="button" severity="secondary" [outlined]="true">Cancel</button>
+      <button pButton type="button" severity="danger">Delete</button>
+      <button pButton type="button" severity="warn">Warn</button>
+      <button pButton type="button" severity="success">Confirm</button>
+      <button pButton type="button" severity="info">Details</button>
+      <button pButton type="button" [text]="true">Text</button>
       <p-badge value="4" severity="danger" />
       <p-badge value="12" />
-      <p-tag value="Активно" severity="success" />
-      <p-tag value="В сервиз" severity="warn" />
-      <p-tag value="Без връзка" severity="danger" />
-      <p-tag value="Паркирано" severity="info" />
-      <p-tag value="Неактивно" severity="secondary" />
-      <p-tag value="Отворена" />
+      <p-tag value="Active" severity="success" />
+      <p-tag value="In service" severity="warn" />
+      <p-tag value="Offline" severity="danger" />
+      <p-tag value="Parked" severity="info" />
+      <p-tag value="Inactive" severity="secondary" />
+      <p-tag value="Open" />
       <p-chip label="GPS" />
-      <p-avatar label="ИП" shape="circle" />
+      <p-avatar label="IP" shape="circle" />
     </div>
     <div class="row">
       <span class="label">inputtext · iconfield · inputnumber · textarea</span>
-      <input pInputText aria-label="Номер" value="CB 1001 AX" />
+      <input pInputText aria-label="License plate" value="CB 1001 AX" />
       <p-iconfield>
         <p-inputicon><svg data-p-icon="search" aria-hidden="true"></svg></p-inputicon>
-        <input pInputText type="search" aria-label="Търсене" placeholder="Търсене" />
+        <input pInputText type="search" aria-label="Search" placeholder="Search" />
       </p-iconfield>
-      <p-inputnumber [(ngModel)]="amount" ariaLabel="Резервоар" suffix=" л" />
-      <textarea pTextarea aria-label="Бележки" rows="2">Бележка</textarea>
+      <p-inputnumber [(ngModel)]="amount" ariaLabel="Fuel tank" suffix=" L" />
+      <textarea pTextarea aria-label="Notes" rows="2">Note</textarea>
     </div>
     <div class="row">
       <span class="label"
         >select (single, multiple) · autocomplete · datepicker · virtualscroller</span
       >
-      <p-select [options]="statuses" [(ngModel)]="status" ariaLabel="Статус" appendTo="body" />
+      <p-select [options]="statuses" [(ngModel)]="status" ariaLabel="Status" appendTo="body" />
       <p-select
         [options]="vehicles"
         [(ngModel)]="vehicle"
         [virtualScroll]="true"
         [virtualScrollItemSize]="34"
         [filter]="true"
-        ariaLabel="Превозно средство"
+        ariaLabel="Vehicle"
         appendTo="body"
       />
       <p-select
@@ -51,24 +51,24 @@
         [pt]="selectMultiplePt"
         [virtualScroll]="true"
         [virtualScrollItemSize]="34"
-        ariaLabel="Превозни средства"
+        ariaLabel="Vehicles"
         appendTo="body"
       />
       <p-autocomplete
         [(ngModel)]="vehicle"
         [suggestions]="suggestions"
         [dropdown]="true"
-        ariaLabel="Търсене на превозно средство"
-        dropdownAriaLabel="Покажи превозните средства"
+        ariaLabel="Search vehicles"
+        dropdownAriaLabel="Show vehicles"
         appendTo="body"
       />
-      <p-datepicker [(ngModel)]="date" [showIcon]="true" ariaLabel="Дата" appendTo="body" />
+      <p-datepicker [(ngModel)]="date" [showIcon]="true" ariaLabel="Date" appendTo="body" />
     </div>
     <div class="row">
       <span class="label">checkbox · toggleswitch · togglebutton · selectbutton</span>
-      <p-checkbox [(ngModel)]="checked" [binary]="true" ariaLabel="С устройство" />
-      <p-toggleswitch [(ngModel)]="toggled" ariaLabel="Следваща задача" />
-      <p-togglebutton [(ngModel)]="toggled" onLabel="Вкл." offLabel="Изкл." />
+      <p-checkbox [(ngModel)]="checked" [binary]="true" ariaLabel="With device" />
+      <p-toggleswitch [(ngModel)]="toggled" ariaLabel="Next task" />
+      <p-togglebutton [(ngModel)]="toggled" onLabel="On" offLabel="Off" />
       <p-selectbutton
         [options]="segments"
         [(ngModel)]="segment"
@@ -79,13 +79,13 @@
     </div>
     <div class="row">
       <span class="label">message · skeleton · metergroup</span>
-      <p-message severity="success">Запазено.</p-message>
-      <p-message severity="warn">Данните са по-стари от 48 часа.</p-message>
-      <p-message severity="error">Няма връзка.</p-message>
-      <p-message severity="info" variant="simple" size="small">Подсказка</p-message>
+      <p-message severity="success">Saved.</p-message>
+      <p-message severity="warn">The data is older than 48 hours.</p-message>
+      <p-message severity="error">No connection.</p-message>
+      <p-message severity="info" variant="simple" size="small">Hint</p-message>
       <p-skeleton width="10rem" height="1rem" />
       <p-metergroup
-        aria-label="Активност на автопарка"
+        aria-label="Fleet activity"
         [value]="meter"
         [style]="{ width: '100%' }"
       />
@@ -95,8 +95,8 @@
       <p-table [value]="rows" [style]="{ width: '100%' }">
         <ng-template #header>
           <tr>
-            <th scope="col">Номер</th>
-            <th scope="col" class="app-num">Пробег</th>
+            <th scope="col">Plate</th>
+            <th scope="col" class="app-num">Odometer</th>
           </tr>
         </ng-template>
         <ng-template #body let-row>
@@ -112,23 +112,23 @@
         [rowsPerPageOptions]="[10, 20, 50]"
         appendTo="body"
       />
-      <p-listbox [options]="statuses" [(ngModel)]="status" ariaLabel="Статуси" />
+      <p-listbox [options]="statuses" [(ngModel)]="status" ariaLabel="Statuses" />
       <p-timeline [value]="events">
         <ng-template #content let-event>{{ event.title }}</ng-template>
       </p-timeline>
       <p-tabs value="overview">
         <p-tablist>
-          <p-tab value="overview">Преглед</p-tab>
-          <p-tab value="trips">Курсове</p-tab>
-          <p-tab value="service">Обслужване</p-tab>
+          <p-tab value="overview">Overview</p-tab>
+          <p-tab value="trips">Trips</p-tab>
+          <p-tab value="service">Service</p-tab>
         </p-tablist>
         <p-tabpanels>
-          <p-tabpanel value="overview">Съдържание</p-tabpanel>
-          <p-tabpanel value="trips">Курсове</p-tabpanel>
-          <p-tabpanel value="service">Обслужване</p-tabpanel>
+          <p-tabpanel value="overview">Content</p-tabpanel>
+          <p-tabpanel value="trips">Trips</p-tabpanel>
+          <p-tabpanel value="service">Service</p-tabpanel>
         </p-tabpanels>
       </p-tabs>
     </div>
   </section>
 }
-<span id="segment-label" class="app-visually-hidden">Период</span>
+<span id="segment-label" class="app-visually-hidden">Period</span>

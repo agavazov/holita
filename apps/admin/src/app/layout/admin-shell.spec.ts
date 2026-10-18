@@ -1,7 +1,7 @@
-import { Component, inject, reflectComponentType, signal } from '@angular/core';
+import { Component, reflectComponentType, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { Router, RouterOutlet, provideRouter } from '@angular/router';
+import { RouterOutlet, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { AdminShell } from './admin-shell';
 import type { NavGroup } from './navigation';
@@ -34,7 +34,7 @@ class PageB {}
       [branches]="branches"
       [branchId]="branchId()"
       language="en"
-      [languageUrl]="languageUrl"
+      [languages]="languages"
       [navigation]="navigation"
       [context]="{ group: 'Fleet', page: 'Page A' }"
       tenantName="RentalSofia"
@@ -48,7 +48,10 @@ class ShellHost {
   readonly branches = branches;
   readonly navigation = navigation;
   readonly branchId = signal<string | null>(branches[0]?.id ?? null);
-  readonly languageUrl = inject(Router).parseUrl('/bg');
+  readonly languages = [
+    { code: 'bg', label: 'Български' },
+    { code: 'en', label: 'English' },
+  ];
   readonly selected: string[] = [];
 }
 
@@ -109,7 +112,7 @@ describe('AdminShell', () => {
       'branches',
       'context',
       'language',
-      'languageUrl',
+      'languages',
       'loading',
       'navigation',
       'tenantName',

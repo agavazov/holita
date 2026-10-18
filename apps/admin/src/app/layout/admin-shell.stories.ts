@@ -21,9 +21,18 @@ const vehicles = `${defaultBranchId}/fleet/vehicles`;
 const appReady = { timeout: 10_000 };
 
 const rows = [
-  { id: '1', plate: 'CB 1001 AX', model: 'MAN TGX 18.510', status: 'Активно', odometer: '412 330' },
-  { id: '2', plate: 'CB 1002 AX', model: 'Volvo FH 500', status: 'Активно', odometer: '388 041' },
-  { id: '3', plate: 'CB 1003 AX', model: 'DAF XF 480', status: 'В сервиз', odometer: '501 920' },
+  { id: '1', plate: 'CB 1001 AX', model: 'MAN TGX 18.510', status: 'Active', odometer: '412,330' },
+  { id: '2', plate: 'CB 1002 AX', model: 'Volvo FH 500', status: 'Active', odometer: '388,041' },
+  { id: '3', plate: 'CB 1003 AX', model: 'DAF XF 480', status: 'In service', odometer: '501,920' },
+];
+
+/** Sample entries only: Storybook stays in English and the menu changes nothing here. */
+const sampleLanguages = [
+  { code: 'en', label: 'English' },
+  { code: 'bg', label: 'Български' },
+  { code: 'de', label: 'Deutsch' },
+  { code: 'es', label: 'Español' },
+  { code: 'fr', label: 'Français' },
 ];
 
 /**
@@ -47,7 +56,7 @@ const rows = [
       [branches]="branches"
       [branchId]="branchId"
       [language]="language()"
-      [languageUrl]="languageUrl()"
+      [languages]="languages"
       [tenantName]="tenant"
       [navigation]="navigation()"
       [context]="context()"
@@ -56,18 +65,18 @@ const rows = [
         [eyebrow]="context()?.group ?? ''"
         [title]="context()?.page ?? ''"
         [count]="46"
-        description="Автопарк София · данни към 18.10.2026 09:58"
+        description="Sofia Fleet · data as of Oct 18, 2026 09:58"
       >
-        <button headerActions pButton type="button">Ново превозно средство</button>
+        <button headerActions pButton type="button">New vehicle</button>
       </holita-page-header>
-      <holita-kpi-strip label="Обобщение">
-        <holita-kpi-tile label="В експлоатация" value="38" secondary="в сервиз: 4" />
-        <holita-kpi-tile label="Пробег, 7 дни" value="18 420" unit="км" />
-        <holita-kpi-tile label="Отворени аларми" value="7" tone="danger" />
-        <holita-kpi-tile label="Ниско гориво" value="3" tone="warn" />
+      <holita-kpi-strip label="Summary">
+        <holita-kpi-tile label="In operation" value="38" secondary="in service: 4" />
+        <holita-kpi-tile label="Distance, 7 days" value="18,420" unit="km" />
+        <holita-kpi-tile label="Open alerts" value="7" tone="danger" />
+        <holita-kpi-tile label="Low fuel" value="3" tone="warn" />
       </holita-kpi-strip>
       <holita-table-panel
-        heading="Превозни средства"
+        heading="Vehicles"
         [total]="46"
         [view]="{ kind: 'rows' }"
         [page]="{ page: 1, pageSize: 20, total: 46 }"
@@ -75,10 +84,10 @@ const rows = [
         <p-table [value]="rows" dataKey="id">
           <ng-template #header>
             <tr>
-              <th scope="col">Номер</th>
-              <th scope="col">Модел</th>
-              <th scope="col">Статус</th>
-              <th scope="col" class="app-num">Пробег, км</th>
+              <th scope="col">Plate</th>
+              <th scope="col">Model</th>
+              <th scope="col">Status</th>
+              <th scope="col" class="app-num">Odometer, km</th>
             </tr>
           </ng-template>
           <ng-template #body let-row>
@@ -87,7 +96,7 @@ const rows = [
               <td>{{ row.model }}</td>
               <td>
                 <p-tag
-                  [severity]="row.status === 'Активно' ? 'success' : 'warn'"
+                  [severity]="row.status === 'Active' ? 'success' : 'warn'"
                   [value]="row.status"
                 />
               </td>
@@ -105,14 +114,12 @@ class ShellPreview {
   readonly branchId = defaultBranchId;
   readonly tenant = fixtureTenant.name;
   readonly rows = rows;
+  readonly languages = sampleLanguages;
   readonly navigation = computed(() => adminNavigation(this.language(), defaultBranchId, true));
   readonly context = computed(() =>
     navigationContext(this.navigation(), `/${this.language()}/${vehicles}`),
   );
   private readonly router = inject(Router);
-  readonly languageUrl = computed(() =>
-    this.router.parseUrl(`/${this.language() === 'bg' ? 'en' : 'bg'}/${vehicles}`),
-  );
 
   constructor() {
     // Only the router state matters (the active navigation item); there is no routed outlet.
@@ -136,8 +143,8 @@ const preview: NonNullable<Story['render']> = () => ({
 /** A routed story of the workspace states (session, Branch discovery, Fleet availability). */
 function routed(path: string): NonNullable<Story['render']> {
   const render = routeAt(path);
-  return (args, context) => ({
-    ...render(args, context),
+  return () => ({
+    ...render(),
     moduleMetadata: { imports: [StoryApp] },
     template: '<holita-story-app [url]="url" />',
   });
@@ -152,7 +159,7 @@ export const Desktop: Story = {
     // The router resolves the lazily loaded route chunks before the item becomes active.
     await waitFor(
       () =>
-        expect(canvas.getByRole('link', { name: /^(Автомобили|Vehicles)$/ })).toHaveAttribute(
+        expect(canvas.getByRole('link', { name: 'Vehicles' })).toHaveAttribute(
           'aria-current',
           'page',
         ),
@@ -178,11 +185,11 @@ export const MobileNavigationOpen: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      canvas.getByRole('button', { name: /^(Toggle navigation|Отвори или затвори навигацията)$/ }),
+      canvas.getByRole('button', { name: 'Toggle navigation' }),
     );
     const body = within(canvasElement.ownerDocument.body);
     await waitFor(() =>
-      expect(body.getByRole('complementary', { name: /^(Navigation|Навигация)$/ })).toBeVisible(),
+      expect(body.getByRole('complementary', { name: 'Navigation' })).toBeVisible(),
     );
   },
 };

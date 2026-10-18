@@ -100,7 +100,7 @@ export const MobileCollapsed: Story = {
   }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const toggle = canvas.getByRole('button', { name: /Филтри \(1\)/ });
+    const toggle = canvas.getByRole('button', { name: /Filters \(1\)/ });
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
     await userEvent.click(toggle);
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
