@@ -267,7 +267,8 @@ function componentTokens(brand: Brand, density: Density) {
 /**
  * Central rules that tokens alone cannot express: small uppercase column titles (also for plain
  * header cells without a sortable title), tabular numbers, the density row height, the tab bar
- * alignment and single-sided timelines.
+ * alignment, single-sided timelines and calendar days outside the month in the muted text colour
+ * (PrimeNG dims them with opacity below AA contrast and without `aria-disabled`).
  */
 const presetCss = `
 .p-datatable-thead > tr > th {
@@ -294,6 +295,10 @@ li.p-autocomplete-option,
 .p-datatable-tbody > tr,
 th.p-datatable-header-cell {
   transition: none;
+}
+.p-datepicker-day.p-disabled {
+  opacity: 1;
+  color: var(--p-text-muted-color);
 }
 `;
 

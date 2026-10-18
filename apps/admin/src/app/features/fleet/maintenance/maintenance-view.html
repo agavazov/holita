@@ -1,0 +1,174 @@
+<holita-page-header
+  [eyebrow]="text().eyebrow"
+  [title]="text().title"
+  [count]="view().kind === 'rows' || view().kind === 'rows-error' ? total() : null"
+  [description]="description()"
+>
+  <button headerActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
+</holita-page-header>
+
+@if (kpis(); as kpis) {
+  <holita-kpi-strip [label]="text().kpis.label">
+    <holita-kpi-tile
+      [label]="text().kpis.overdue"
+      [value]="kpis.overdue | holitaNumber"
+      [tone]="kpis.overdue ? 'danger' : null"
+    />
+    <holita-kpi-tile
+      [label]="text().kpis.dueSoon"
+      [value]="kpis.dueSoon | holitaNumber"
+      [footnote]="text().kpis.dueSoonFootnote"
+      [tone]="kpis.dueSoon ? 'warn' : null"
+    />
+    <holita-kpi-tile [label]="text().kpis.planned" [value]="kpis.planned | holitaNumber" />
+    <holita-kpi-tile [label]="text().kpis.cost" [value]="kpis.costCents | holitaMoney" />
+  </holita-kpi-strip>
+}
+
+<holita-filter-builder
+  [searchLabel]="text().search"
+  [search]="state().search"
+  [fields]="fields()"
+  [conditions]="state().conditions"
+  (searchChange)="changeSearch($event)"
+  (conditionsChange)="changeConditions($event)"
+/>
+
+<holita-table-panel
+  [heading]="text().table.heading"
+  [total]="total()"
+  [view]="view()"
+  [errorText]="text().table.errorText"
+  [emptyTitle]="text().table.emptyTitle"
+  [emptyDescription]="text().table.emptyDescription"
+  [notice]="notice()"
+  [selectedCount]="selection().length"
+  [page]="page()"
+  (pageChange)="changePage($event)"
+  (clearFilters)="clearFilters()"
+  (retry)="retry.emit()"
+  (dismissNotice)="dismissNotice.emit()"
+  (clearSelection)="selectionChange.emit([])"
+>
+  <button emptyActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
+  <button
+    bulkActions
+    pButton
+    type="button"
+    size="small"
+    severity="secondary"
+    [outlined]="true"
+    (click)="bulkAction.emit('complete')"
+  >
+    {{ text().bulk.complete }}
+  </button>
+  <button
+    bulkActions
+    pButton
+    type="button"
+    size="small"
+    severity="danger"
+    [outlined]="true"
+    (click)="bulkAction.emit('delete')"
+  >
+    {{ text().bulk.delete }}
+  </button>
+  <p-table
+    [value]="tableRows()"
+    dataKey="id"
+    [lazy]="true"
+    [lazyLoadOnInit]="false"
+    [selection]="selectedRows()"
+    (selectionChange)="select($event)"
+    [sortField]="sortField()"
+    [sortOrder]="sortOrder()"
+    (onLazyLoad)="sort($event)"
+    [scrollable]="true"
+  >
+    <ng-template #header>
+      <tr>
+        <th scope="col" class="app-col-check">
+          <label class="app-visually-hidden" for="maintenance-select-page">{{
+            text().table.selectPage
+          }}</label>
+          <p-table-header-checkbox inputId="maintenance-select-page" />
+        </th>
+        <th scope="col" pSortableColumn="task">
+          {{ text().table.task }} <p-sort-icon field="task" />
+        </th>
+        <th scope="col" pSortableColumn="vehicle">
+          {{ text().table.vehicle }} <p-sort-icon field="vehicle" />
+        </th>
+        <th scope="col" pSortableColumn="dueOn">
+          {{ text().table.due }} <p-sort-icon field="dueOn" />
+        </th>
+        <th scope="col" pSortableColumn="urgency">
+          {{ text().table.urgency }} <p-sort-icon field="urgency" />
+        </th>
+        <th scope="col" class="app-num" pSortableColumn="cost">
+          {{ text().table.cost }} <p-sort-icon field="cost" />
+        </th>
+        <th scope="col" class="app-col-secondary">{{ text().table.notes }}</th>
+        <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <span class="app-visually-hidden">{{ text().table.actions }}</span>
+        </th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-row>
+      <tr>
+        <td class="app-col-check">
+          <p-table-checkbox [value]="row" [ariaLabel]="label(text().table.selectRow, row)" />
+        </td>
+        <td>
+          <button
+            type="button"
+            class="app-link"
+            [attr.aria-label]="label(text().table.edit, row)"
+            (click)="edit.emit(row.id)"
+          >
+            {{ row.kind }}
+          </button>
+        </td>
+        <td>{{ row.plate }}</td>
+        <td>
+          <span class="app-cell-stack">
+            <span>
+              @if (row.dueOn) {
+                {{ row.dueOn | holitaDate }}
+              }
+              @if (row.dueOn && row.dueKm !== null) {
+                ·
+              }
+              @if (row.dueKm !== null) {
+                {{ row.dueKm | holitaNumber }} km
+              }
+            </span>
+            @if (kmLeftLabel(row); as left) {
+              <span [class.maintenance__over]="row.kmLeft < 0">{{ left }}</span>
+            }
+          </span>
+        </td>
+        <td>
+          <p-tag [severity]="urgencySeverity(row.urgency)" [value]="urgencyLabel(row.urgency)" />
+        </td>
+        <td class="app-num">{{ row.costCents | holitaMoney }}</td>
+        <td class="app-col-secondary">
+          @if (row.notes) {
+            <span class="app-cell-truncate maintenance__notes" [title]="row.notes">{{
+              row.notes
+            }}</span>
+          } @else {
+            <span class="app-muted">—</span>
+          }
+        </td>
+        <td class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <holita-row-actions
+            [actions]="actionsOf(row)"
+            [subject]="row.kind"
+            (action)="rowAction.emit({ action: $event, id: row.id })"
+          />
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</holita-table-panel>
