@@ -1,0 +1,264 @@
+<holita-route-drawer
+  size="lg"
+  [title]="title()"
+  [subtitle]="subtitle()"
+  [saving]="saving()"
+  [dirty]="dirty()"
+  [closeLink]="null"
+  (closeRequest)="requestClose()"
+>
+  @if (!editing() && driver(); as driver) {
+    <p-tag
+      drawerMeta
+      [severity]="statusSeverity(driver.status)"
+      [value]="statusLabel(driver.status)"
+    />
+  }
+
+  @if (!editing() && driver(); as driver) {
+    <section class="app-form-section">
+      <h3>{{ text().contact }}</h3>
+      <dl class="app-facts">
+        <div>
+          <dt>{{ text().phone }}</dt>
+          <dd>{{ driver.phone || '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().email }}</dt>
+          <dd>{{ driver.email || '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().vehicle }}</dt>
+          <dd>{{ driver.vehiclePlate ?? '—' }}</dd>
+        </div>
+      </dl>
+    </section>
+    <section class="app-form-section">
+      <h3>{{ text().documents }}</h3>
+      <dl class="app-facts">
+        <div>
+          <dt>{{ text().license }}</dt>
+          <dd class="app-inline">
+            {{ driver.licenseExpiresOn | holitaDate }}
+            @if (expiry(driver.licenseExpiresOn); as flag) {
+              <p-tag [severity]="flag.severity" [value]="flag.label" />
+            }
+          </dd>
+        </div>
+        <div>
+          <dt>{{ text().tachoCard }}</dt>
+          <dd class="app-inline">
+            {{ driver.tachoCardExpiresOn | holitaDate }}
+            @if (expiry(driver.tachoCardExpiresOn); as flag) {
+              <p-tag [severity]="flag.severity" [value]="flag.label" />
+            }
+          </dd>
+        </div>
+      </dl>
+    </section>
+    <section class="app-form-section">
+      <h3>{{ text().performance }}</h3>
+      <dl class="app-facts">
+        <div>
+          <dt>{{ text().score }}</dt>
+          <dd>
+            @if (driver.score !== null) {
+              <span class="app-meter-cell">
+                <span
+                  [class]="scoreClass(driver.score)"
+                  [style.--app-meter-value]="driver.score + '%'"
+                  aria-hidden="true"
+                ></span>
+                <span>{{ driver.score }}</span>
+              </span>
+            } @else {
+              —
+            }
+          </dd>
+        </div>
+        <div>
+          <dt>{{ text().trips }}</dt>
+          <dd>{{ driver.trips30d | holitaNumber }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().distance }}</dt>
+          <dd>{{ driver.distance30dKm | holitaNumber }} km</dd>
+        </div>
+      </dl>
+    </section>
+    <section class="app-form-section">
+      <h3>{{ text().notes }}</h3>
+      <dl class="app-facts">
+        <div class="app-facts--wide">
+          <dt class="app-visually-hidden">{{ text().notes }}</dt>
+          <dd>{{ driver.notes || text().noNotes }}</dd>
+        </div>
+      </dl>
+    </section>
+  } @else {
+    <form #formElement id="driver-form" [formGroup]="form" (ngSubmit)="submit()">
+      @if (saveError(); as error) {
+        <p-message severity="error" role="alert">{{ error }}</p-message>
+      }
+      <section class="app-form-section">
+        <h3>{{ text().contact }}</h3>
+        <div class="app-form-grid">
+          <holita-form-field
+            class="app-form-grid--wide"
+            [label]="text().name"
+            controlId="driver-name"
+            [required]="true"
+            [error]="errorOf('name')"
+          >
+            <input
+              pInputText
+              id="driver-name"
+              formControlName="name"
+              autocomplete="off"
+              [invalid]="!!errorOf('name')"
+              [attr.aria-invalid]="errorOf('name') ? 'true' : null"
+              [attr.aria-describedby]="describedBy('name')"
+            />
+          </holita-form-field>
+          <holita-form-field
+            [label]="text().employeeNo"
+            controlId="driver-employeeNo"
+            [required]="true"
+            [error]="errorOf('employeeNo')"
+          >
+            <input
+              pInputText
+              id="driver-employeeNo"
+              formControlName="employeeNo"
+              autocomplete="off"
+              [invalid]="!!errorOf('employeeNo')"
+              [attr.aria-invalid]="errorOf('employeeNo') ? 'true' : null"
+              [attr.aria-describedby]="describedBy('employeeNo')"
+            />
+          </holita-form-field>
+          <holita-form-field [label]="text().status" controlId="driver-status">
+            <p-select
+              inputId="driver-status"
+              formControlName="status"
+              [options]="statusOptions()"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+              [ariaLabel]="text().status"
+            />
+          </holita-form-field>
+          <holita-form-field
+            [label]="text().phone"
+            controlId="driver-phone"
+            [error]="errorOf('phone')"
+          >
+            <input
+              pInputText
+              id="driver-phone"
+              type="tel"
+              formControlName="phone"
+              [invalid]="!!errorOf('phone')"
+              [attr.aria-invalid]="errorOf('phone') ? 'true' : null"
+              [attr.aria-describedby]="describedBy('phone')"
+            />
+          </holita-form-field>
+          <holita-form-field
+            [label]="text().email"
+            controlId="driver-email"
+            [error]="errorOf('email')"
+          >
+            <input
+              pInputText
+              id="driver-email"
+              type="email"
+              formControlName="email"
+              [invalid]="!!errorOf('email')"
+              [attr.aria-invalid]="errorOf('email') ? 'true' : null"
+              [attr.aria-describedby]="describedBy('email')"
+            />
+          </holita-form-field>
+        </div>
+      </section>
+
+      <section class="app-form-section">
+        <h3>{{ text().documents }}</h3>
+        <div class="app-form-grid">
+          <holita-form-field
+            [label]="text().license"
+            controlId="driver-licenseExpiresOn"
+            [required]="true"
+            [error]="errorOf('licenseExpiresOn')"
+          >
+            <p-datepicker
+              inputId="driver-licenseExpiresOn"
+              formControlName="licenseExpiresOn"
+              dateFormat="yy-mm-dd"
+              appendTo="body"
+              [fluid]="true"
+              [invalid]="!!errorOf('licenseExpiresOn')"
+              [pt]="datePt().licenseExpiresOn"
+            />
+          </holita-form-field>
+          <holita-form-field
+            [label]="text().tachoCard"
+            controlId="driver-tachoCardExpiresOn"
+            [required]="true"
+            [error]="errorOf('tachoCardExpiresOn')"
+          >
+            <p-datepicker
+              inputId="driver-tachoCardExpiresOn"
+              formControlName="tachoCardExpiresOn"
+              dateFormat="yy-mm-dd"
+              appendTo="body"
+              [fluid]="true"
+              [invalid]="!!errorOf('tachoCardExpiresOn')"
+              [pt]="datePt().tachoCardExpiresOn"
+            />
+          </holita-form-field>
+        </div>
+      </section>
+
+      <section class="app-form-section">
+        <holita-form-field
+          [label]="text().notes"
+          controlId="driver-notes"
+          [error]="errorOf('notes')"
+          [counter]="{ length: notesLength(), max: 2000 }"
+        >
+          <textarea
+            pTextarea
+            id="driver-notes"
+            formControlName="notes"
+            rows="4"
+            [invalid]="!!errorOf('notes')"
+            [attr.aria-invalid]="errorOf('notes') ? 'true' : null"
+            [attr.aria-describedby]="describedBy('notes')"
+          ></textarea>
+        </holita-form-field>
+      </section>
+    </form>
+  }
+
+  <div drawerFooter class="app-drawer-actions">
+    @if (editing()) {
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="saving()"
+        (click)="cancel()"
+      >
+        {{ text().cancel }}
+      </button>
+      <button pButton type="submit" form="driver-form" [loading]="saving()" [disabled]="saving()">
+        {{ driver() ? text().save : text().create }}
+      </button>
+    } @else {
+      <button pButton type="button" severity="secondary" [outlined]="true" (click)="requestClose()">
+        {{ text().close }}
+      </button>
+      <button pButton type="button" (click)="edit()">{{ text().edit }}</button>
+    }
+  </div>
+</holita-route-drawer>

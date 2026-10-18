@@ -127,7 +127,6 @@
             formControlName="year"
             [useGrouping]="false"
             [invalid]="!!errorOf('year')"
-            [ariaDescribedBy]="describedBy('year')"
             [pt]="numberPt().year"
           />
         </holita-form-field>
@@ -140,7 +139,6 @@
             inputId="vehicle-tankL"
             formControlName="tankL"
             [invalid]="!!errorOf('tankL')"
-            [ariaDescribedBy]="describedBy('tankL')"
             [pt]="numberPt().tankL"
           />
         </holita-form-field>

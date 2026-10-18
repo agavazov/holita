@@ -71,6 +71,17 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
     }
   }
 
+  // The record link of a table row that opens its drawer.
+  button.app-link {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-weight: 600;
+    text-align: start;
+    cursor: pointer;
+  }
+
   // Panel surface for cards, KPI strips and table panels.
   .app-card {
     min-inline-size: 0;
@@ -332,6 +343,26 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
   @each $tone in $tones {
     .app-meter--#{$tone} {
       --app-meter-color: var(--p-app-tone-#{$tone}-solid);
+    }
+  }
+
+  // A value with its marker on one line: a dot before a label, a tag after a date.
+  .app-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--p-app-space-2);
+  }
+
+  // Table cell with a short meter and its value (fuel level, score).
+  .app-meter-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--p-app-space-2);
+    min-inline-size: 6.5rem;
+    font-variant-numeric: var(--p-app-font-numeric);
+
+    .app-meter {
+      inline-size: 3.5rem;
     }
   }
 

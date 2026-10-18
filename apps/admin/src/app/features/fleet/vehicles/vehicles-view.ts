@@ -13,6 +13,7 @@ import {
 import { formatDateTime, formatNumber } from '../../../ui/format/format';
 import { interpolate } from '../../../ui/i18n/messages';
 import { KpiStrip } from '../../../ui/kpi/kpi-strip';
+import { listQuery, type ListQuery } from '../../../ui/list/list-query';
 import { KpiTile } from '../../../ui/kpi/kpi-tile';
 import { PageHeader } from '../../../ui/page-header/page-header';
 import { RowActions, type RowAction } from '../../../ui/row-actions/row-actions';
@@ -63,14 +64,6 @@ export interface VehicleKpis {
   readonly notReporting: number;
   readonly openAlerts: number;
   readonly lowFuel: number;
-}
-
-export interface VehicleListState {
-  readonly search: string;
-  readonly conditions: readonly FilterCondition[];
-  readonly sort: { readonly field: string; readonly direction: 'asc' | 'desc' } | null;
-  readonly page: number;
-  readonly pageSize: number;
 }
 
 export interface VehicleOption {
@@ -125,13 +118,13 @@ export class VehiclesView {
   readonly rows = input.required<readonly VehicleRow[]>();
   readonly total = input.required<number>();
   readonly view = input.required<TableView>();
-  readonly state = input.required<VehicleListState>();
+  readonly state = input.required<ListQuery>();
   readonly kpis = input<VehicleKpis | null>(null);
   readonly groups = input<readonly VehicleOption[]>([]);
   readonly selection = input<readonly string[]>([]);
   readonly notice = input<TableNotice | null>(null);
   readonly busy = input(false);
-  readonly stateChange = output<VehicleListState>();
+  readonly stateChange = output<ListQuery>();
   readonly create = output();
   readonly edit = output<string>();
   readonly rowAction = output<{ readonly action: string; readonly id: string }>();
@@ -272,28 +265,24 @@ export class VehiclesView {
   }
 
   protected changeSearch(search: string): void {
-    this.stateChange.emit({ ...this.state(), search, page: 1 });
+    this.stateChange.emit(listQuery.search(this.state(), search));
   }
 
   protected changeConditions(conditions: readonly FilterCondition[]): void {
-    this.stateChange.emit({ ...this.state(), conditions, page: 1 });
+    this.stateChange.emit(listQuery.conditions(this.state(), conditions));
   }
 
   protected changePage(page: { page: number; pageSize: number }): void {
-    this.stateChange.emit({ ...this.state(), ...page });
+    this.stateChange.emit(listQuery.page(this.state(), page));
   }
 
   protected clearFilters(): void {
-    this.stateChange.emit({ ...this.state(), search: '', conditions: [], page: 1 });
+    this.stateChange.emit(listQuery.cleared(this.state()));
   }
 
   protected sort(event: TableLazyLoadEvent): void {
-    const field = typeof event.sortField === 'string' ? event.sortField : null;
-    if (!field) return;
-    const direction = event.sortOrder === 1 ? 'asc' : 'desc';
-    const current = this.state().sort;
-    if (current?.field === field && current.direction === direction) return;
-    this.stateChange.emit({ ...this.state(), sort: { field, direction }, page: 1 });
+    const next = listQuery.sorted(this.state(), event);
+    if (next) this.stateChange.emit(next);
   }
 
   protected select(rows: readonly VehicleRow[] | null): void {

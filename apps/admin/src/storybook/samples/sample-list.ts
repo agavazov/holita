@@ -1,4 +1,6 @@
 import type { FilterCondition } from '../../app/ui/filter-builder/filter-model';
+import { listQuery, type ListQuery } from '../../app/ui/list/list-query';
+import { tableView, type TableView } from '../../app/ui/table-panel/table-view';
 
 // Story-only list engine: quick search, filter conditions, sort and paging over sample rows, so
 // example pages can be clicked through like the real lists (which do this on the backend).
@@ -12,19 +14,6 @@ export interface SampleListDefinition<T> {
   readonly columns: Readonly<Record<string, (row: T) => SampleValue>>;
 }
 
-export interface SampleSort {
-  readonly field: string;
-  readonly direction: 'asc' | 'desc';
-}
-
-export interface SampleListQuery {
-  readonly search: string;
-  readonly conditions: readonly FilterCondition[];
-  readonly sort: SampleSort | null;
-  readonly page: number;
-  readonly pageSize: number;
-}
-
 export interface SampleListResult<T> {
   readonly items: readonly T[];
   readonly total: number;
@@ -32,12 +21,28 @@ export interface SampleListResult<T> {
   readonly page: number;
 }
 
-export const firstPage: Omit<SampleListQuery, 'pageSize'> = {
-  search: '',
-  conditions: [],
-  sort: null,
-  page: 1,
-};
+/** The query a sample list opens with. */
+export function initialQuery(
+  sort: ListQuery['sort'],
+  pageSize = 25,
+  conditions: readonly FilterCondition[] = [],
+): ListQuery {
+  return { search: '', conditions, sort, page: 1, pageSize };
+}
+
+/** The TablePanel view of a sample list in a story scenario. */
+export function sampleTableView(
+  query: ListQuery,
+  rows: number,
+  scenario: { readonly loading: boolean; readonly failed: boolean },
+): TableView {
+  return tableView({
+    loading: scenario.loading,
+    error: scenario.failed ? 'failed' : null,
+    rows: scenario.loading || scenario.failed ? null : rows,
+    filtered: listQuery.filtered(query),
+  });
+}
 
 function text(value: SampleValue): string {
   return value === null ? '' : String(value).toLocaleLowerCase('en');
@@ -98,7 +103,7 @@ function compare(left: SampleValue, right: SampleValue): number {
 export function runSampleList<T>(
   rows: readonly T[],
   definition: SampleListDefinition<T>,
-  query: SampleListQuery,
+  query: ListQuery,
 ): SampleListResult<T> {
   const words = query.search
     .trim()

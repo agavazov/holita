@@ -1,0 +1,104 @@
+{
+  "eyebrow": "Fleet",
+  "title": "Drivers",
+  "description": "{branch} · driving data of the last 30 days",
+  "new": "New driver",
+  "search": "Search name, employee number, phone or notes",
+  "kpis": {
+    "label": "Driver summary",
+    "active": "Active drivers",
+    "onLeave": "on leave: {count}",
+    "documents": "Documents to renew",
+    "documentsFootnote": "expired or within 60 days",
+    "score": "Average score",
+    "scoreFootnote": "trips of the last 30 days",
+    "distance": "Distance, 30 days"
+  },
+  "table": {
+    "heading": "Drivers",
+    "name": "Driver",
+    "status": "Status",
+    "vehicle": "Vehicle",
+    "license": "License valid until",
+    "tachoCard": "Tachograph card",
+    "score": "Score",
+    "trips": "Trips, 30 d",
+    "distance": "Distance, km",
+    "phone": "Phone",
+    "notes": "Notes",
+    "actions": "Actions",
+    "selectPage": "Select all on this page",
+    "selectRow": "Select {name}",
+    "open": "Open {name}",
+    "noVehicle": "No vehicle",
+    "noScore": "Too few trips",
+    "emptyTitle": "No drivers yet",
+    "emptyDescription": "Add the drivers of this branch to assign them to vehicles.",
+    "errorText": "The drivers could not be loaded. (demo-request-3)"
+  },
+  "statuses": {
+    "ACTIVE": "Active",
+    "ON_LEAVE": "On leave",
+    "INACTIVE": "Inactive"
+  },
+  "expiry": {
+    "expired": "Expired",
+    "soon": "Expires in {days} d"
+  },
+  "rowActions": {
+    "view": "Open",
+    "edit": "Edit",
+    "deactivate": "Deactivate",
+    "delete": "Delete"
+  },
+  "bulk": {
+    "deactivate": "Deactivate",
+    "delete": "Delete"
+  },
+  "filters": {
+    "status": "Status",
+    "score": "Score",
+    "license": "License valid until",
+    "tachoCard": "Tachograph card valid until",
+    "hasVehicle": "Has a vehicle",
+    "trips": "Trips, 30 days"
+  },
+  "notices": {
+    "saved": "{name} was saved.",
+    "created": "{name} was added.",
+    "deactivated": "{count} driver(s) deactivated.",
+    "deleted": "{count} driver(s) deleted."
+  },
+  "confirmDelete": {
+    "title": "Delete drivers",
+    "message": "Delete {count} driver(s)? Their trips stay in reports."
+  },
+  "drawer": {
+    "createTitle": "New driver",
+    "editTitle": "Edit {name}",
+    "contact": "Contact",
+    "documents": "Documents",
+    "performance": "Last 30 days",
+    "assignment": "Assignment",
+    "name": "Full name",
+    "employeeNo": "Employee number",
+    "phone": "Phone",
+    "email": "Email",
+    "status": "Status",
+    "license": "Driving license valid until",
+    "tachoCard": "Tachograph card valid until",
+    "vehicle": "Current vehicle",
+    "score": "Driving score",
+    "trips": "Trips",
+    "distance": "Distance",
+    "notes": "Notes",
+    "noNotes": "No notes",
+    "edit": "Edit",
+    "close": "Close",
+    "save": "Save",
+    "create": "Add driver",
+    "cancel": "Cancel",
+    "saveError": "The driver could not be saved. Try again. (demo-request-4)",
+    "duplicateEmployeeNo": "This employee number is already used."
+  }
+}

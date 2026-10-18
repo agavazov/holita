@@ -5,16 +5,6 @@
   min-inline-size: 0;
 }
 
-.vehicles__plate {
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  font-weight: 600;
-  text-align: start;
-  cursor: pointer;
-}
-
 .vehicles__alerts {
   margin-inline-start: var(--p-app-space-1);
   padding: 0 var(--p-app-space-1);
@@ -26,36 +16,9 @@
   white-space: nowrap;
 }
 
-.vehicles__activity,
-.vehicles__group {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--p-app-space-2);
-  white-space: nowrap;
-}
-
-.vehicles__fuel {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--p-app-space-2);
-  min-inline-size: 6.5rem;
-
-  .app-meter {
-    inline-size: 3.5rem;
-  }
-}
-
 .vehicles__fuel--low {
-  --app-meter-color: var(--p-app-tone-danger-color);
-
-  .vehicles__fuel-value {
-    font-weight: 600;
-    color: var(--p-app-tone-danger-color);
-  }
-}
-
-.vehicles__fuel-value {
-  font-variant-numeric: var(--p-app-font-numeric);
+  font-weight: 600;
+  color: var(--p-app-tone-danger-color);
 }
 
 .vehicles__notes {

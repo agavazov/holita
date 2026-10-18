@@ -1,6 +1,5 @@
 import { Component, computed, DestroyRef, inject, linkedSignal, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Router } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import {
@@ -10,15 +9,14 @@ import {
 } from '../../../app/features/fleet/vehicles/vehicle-drawer';
 import {
   type VehicleKpis,
-  type VehicleListState,
   type VehicleRow,
   VehiclesView,
 } from '../../../app/features/fleet/vehicles/vehicles-view';
 import { vehiclesText } from '../../../app/features/fleet/vehicles/i18n/messages';
 import { confirmDestructive, confirmDialogPt } from '../../../app/ui/confirm';
 import { interpolate } from '../../../app/ui/i18n/messages';
+import type { ListQuery } from '../../../app/ui/list/list-query';
 import type { TableNotice } from '../../../app/ui/table-panel/table-panel';
-import { tableView, type TableView } from '../../../app/ui/table-panel/table-view';
 import { UI_LANGUAGE } from '../../../app/ui/ui-language';
 import { fixtureBranches } from '../../session-fixtures';
 import {
@@ -30,14 +28,13 @@ import {
   type SampleVehicle,
   sampleVehicles,
 } from '../fleet-samples';
-import { firstPage, runSampleList, type SampleListDefinition } from '../sample-list';
-
-/** `?scenario=` switches the page into one of the states the stories show. */
-const scenarios = ['default', 'loading', 'empty', 'error', 'save-error'] as const;
-type Scenario = (typeof scenarios)[number];
-
-/** Simulated latency of a save, long enough to see the button's busy state. */
-const saveDelayMs = 700;
+import {
+  initialQuery,
+  runSampleList,
+  type SampleListDefinition,
+  sampleTableView,
+} from '../sample-list';
+import { injectQueryParams, saveDelayMs, scenarioOf } from '../scenario';
 
 const definition: SampleListDefinition<SampleVehicle> = {
   search: (vehicle) => [
@@ -165,12 +162,9 @@ export class VehiclesPage {
   private readonly language = inject(UI_LANGUAGE);
   private readonly router = inject(Router);
   private readonly confirmation = inject(ConfirmationService);
-  private readonly route = inject(ActivatedRoute);
-  private readonly query = toSignal(this.route.queryParamMap, {
-    initialValue: this.route.snapshot.queryParamMap,
-  });
-  private readonly scenario = computed<Scenario>(
-    () => scenarios.find((scenario) => scenario === this.query().get('scenario')) ?? 'default',
+  private readonly query = injectQueryParams();
+  private readonly scenario = computed(() =>
+    scenarioOf(this.query(), ['loading', 'empty', 'error', 'save-error']),
   );
   private readonly text = computed(() => vehiclesText(this.language()));
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
@@ -187,11 +181,7 @@ export class VehiclesPage {
   protected readonly vehicles = linkedSignal<readonly SampleVehicle[]>(() =>
     this.scenario() === 'empty' ? [] : sampleVehicles,
   );
-  protected readonly state = signal<VehicleListState>({
-    ...firstPage,
-    sort: { field: 'plate', direction: 'asc' },
-    pageSize: 25,
-  });
+  protected readonly state = signal<ListQuery>(initialQuery({ field: 'plate', direction: 'asc' }));
   protected readonly selection = signal<readonly string[]>([]);
   protected readonly notice = signal<TableNotice | null>(null);
   protected readonly failed = linkedSignal(() => this.scenario() === 'error');
@@ -217,15 +207,12 @@ export class VehiclesPage {
   protected readonly kpis = computed(() =>
     this.scenario() === 'loading' || this.failed() ? null : kpisOf(this.vehicles()),
   );
-  protected readonly view = computed<TableView>(() => {
-    const state = this.state();
-    return tableView({
+  protected readonly view = computed(() =>
+    sampleTableView(this.state(), this.rows().length, {
       loading: this.scenario() === 'loading',
-      error: this.failed() ? 'failed' : null,
-      rows: this.scenario() === 'loading' || this.failed() ? null : this.rows().length,
-      filtered: state.search.trim() !== '' || state.conditions.length > 0,
-    });
-  });
+      failed: this.failed(),
+    }),
+  );
 
   constructor() {
     inject(DestroyRef).onDestroy(() => {

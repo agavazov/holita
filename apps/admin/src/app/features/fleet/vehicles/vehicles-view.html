@@ -140,7 +140,7 @@
           <span class="app-cell-stack">
             <button
               type="button"
-              class="app-link vehicles__plate"
+              class="app-link"
               [attr.aria-label]="label(text().table.openEditor, row.plate)"
               (click)="edit.emit(row.id)"
             >
@@ -170,7 +170,7 @@
         </td>
         <td>
           <span class="app-cell-stack">
-            <span class="vehicles__activity">
+            <span class="app-inline">
               <span [class]="'app-dot app-dot--' + activityTone(row.activity)"></span>
               {{ activityLabel(row.activity) }}
             </span>
@@ -195,7 +195,7 @@
         </td>
         <td class="app-col-secondary">
           @if (row.group; as group) {
-            <span class="vehicles__group">
+            <span class="app-inline">
               <span [class]="'app-dot app-dot--' + group.slot"></span>{{ group.name }}
             </span>
           } @else {
@@ -205,13 +205,14 @@
         <td class="app-num">{{ row.odometerKm | holitaNumber }}</td>
         <td>
           @if (row.fuelPct !== null) {
-            <span class="vehicles__fuel" [class.vehicles__fuel--low]="fuelLow(row)">
+            <span class="app-meter-cell" [class.vehicles__fuel--low]="fuelLow(row)">
               <span
                 class="app-meter"
+                [class.app-meter--danger]="fuelLow(row)"
                 [style.--app-meter-value]="row.fuelPct + '%'"
                 aria-hidden="true"
               ></span>
-              <span class="vehicles__fuel-value">{{ row.fuelPct }} %</span>
+              <span>{{ row.fuelPct }} %</span>
             </span>
           } @else {
             <span class="app-muted">{{ text().table.noData }}</span>

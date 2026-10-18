@@ -23,6 +23,7 @@ import { Textarea } from 'primeng/textarea';
 import { RouteDrawer } from '../../../ui/drawer/route-drawer';
 import { FormField } from '../../../ui/form-field/form-field';
 import { focusFirstInvalid } from '../../../ui/forms/focus';
+import { innerInputPt } from '../../../ui/forms/inner-input-pt';
 import {
   integerValidator,
   patternValidator,
@@ -194,13 +195,10 @@ export class VehicleDrawer {
     this.events();
     return Array.from(this.form.controls.notes.value).length;
   });
-  /** PrimeNG's number input renders its own <input>; this marks it invalid for focus and AT. */
-  protected readonly numberPt = computed(() => {
-    const invalid = (name: VehicleField) => ({
-      pcInputText: { root: { 'aria-invalid': this.errorOf(name) ? 'true' : undefined } },
-    });
-    return { year: invalid('year'), tankL: invalid('tankL') };
-  });
+  protected readonly numberPt = computed(() => ({
+    year: innerInputPt('vehicle-year', !!this.errorOf('year')),
+    tankL: innerInputPt('vehicle-tankL', !!this.errorOf('tankL')),
+  }));
 
   constructor() {
     effect(() => {

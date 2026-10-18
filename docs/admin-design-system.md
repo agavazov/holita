@@ -211,13 +211,19 @@ CSS patterns (`styles/_patterns.scss`): `.app-card`, `.app-card-grid`, `.app-sta
 `.app-facts` (definition-list grid), `.app-form-section` and `.app-form-grid`
 (`.app-form-grid--wide`), `.app-drawer-actions`, `.app-dot--<tone|slot>`, `.app-num`, `.app-mono`,
 `.app-muted`, `.app-cell-stack`, `.app-cell-truncate` (one line with an ellipsis, full text in
-`title`), `.app-meter`, `.app-col-secondary`, `.app-col-check`, `.app-col-actions`,
-`.app-timeline-event`, `.app-link`, `.app-icon-button`, `.app-logo`, `.app-menu-danger`.
+`title`), `.app-meter` (`.app-meter--<tone>`), `.app-meter-cell` (meter plus value),
+`.app-inline` (a value with its dot or tag on one line), `.app-col-secondary`, `.app-col-check`,
+`.app-col-actions`, `.app-timeline-event`, `.app-link` (`button.app-link` is a row's record link
+that opens its drawer), `.app-icon-button`, `.app-logo`, `.app-menu-danger`.
 
-Helpers: `list/list-state.ts` and `list/url-list-state.ts` (below), `list/sequential.ts`
+Helpers: `list/list-query.ts` (`ListQuery` — search, AND conditions, sort, page — and the
+`listQuery` transitions a FilterBuilder list emits; any change except paging returns to page 1),
+`list/list-state.ts` and `list/url-list-state.ts` (below), `list/sequential.ts`
 (`runSequential` for bulk writes with progress, partial failures and a stop when the page is
 retired), `forms/field-errors.ts` (`errorCode`, `fieldErrors` from GraphQL `extensions`),
-`forms/validators.ts`, `forms/focus.ts` (`focusFirstInvalid`), `remote-options.ts`
+`forms/validators.ts`, `forms/focus.ts` (`focusFirstInvalid`), `forms/inner-input-pt.ts`
+(`innerInputPt` links hint/error and `aria-invalid` on the inner input of `p-inputnumber` and
+`p-datepicker`), `remote-options.ts`
 (`RemoteOptions` for `p-autocomplete`: debounced latest-wins search and hydration by IDs),
 `confirm.ts` (`confirmDestructive`, `confirmDiscard`, `confirmDialogPt`), `format/` (null → "—",
 zero stays zero, `bg-BG`/`en-GB`, Europe/Sofia date-times, calendar dates without zone
@@ -306,13 +312,13 @@ and leaves no stale theme styles. `parameters.holita` (`StoryFixtures`) controls
 Fleet availability, dataset, the story clock (`now`, default `2026-10-18T07:00:00.000Z`) and
 fixture failures (per operation or `<Operation>:<id>`).
 
-| Title                          | Content                                                                                                                                                                                                 |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Design System/Foundations      | Colors (every `--p-app-*` and ramp in both schemes, live contrast table), Brand variants, Typography, Spacing and density (measured), Radii and borders, Status tones, Categorical palette, Breakpoints |
-| Design System/Patterns         | PageHeader, KpiStrip, FilterBuilder, TablePanel (with row actions), Drawer (edit, view, view then edit), FormField, EmptyState, Charts, CSS patterns                                                    |
-| Design System/PrimeNG coverage | Every registered control in both schemes, non-modal overlays and the confirm dialog                                                                                                                     |
-| Design System/Shell            | Desktop, Rail, Mobile with navigation open, Fleet disabled, Unknown Branch, Branch discovery loading/error, theme-persistence warning                                                                   |
-| Examples/Fleet                 | Example pages inside the shell with sample data (no GraphQL); the sidebar switches between them. Vehicles: quick search, filters, sorting, row and bulk actions, direct edit in the drawer, all states  |
+| Title                          | Content                                                                                                                                                                                                                                                                               |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Design System/Foundations      | Colors (every `--p-app-*` and ramp in both schemes, live contrast table), Brand variants, Typography, Spacing and density (measured), Radii and borders, Status tones, Categorical palette, Breakpoints                                                                               |
+| Design System/Patterns         | PageHeader, KpiStrip, FilterBuilder, TablePanel (with row actions), Drawer (edit, view, view then edit), FormField, EmptyState, Charts, CSS patterns                                                                                                                                  |
+| Design System/PrimeNG coverage | Every registered control in both schemes, non-modal overlays and the confirm dialog                                                                                                                                                                                                   |
+| Design System/Shell            | Desktop, Rail, Mobile with navigation open, Fleet disabled, Unknown Branch, Branch discovery loading/error, theme-persistence warning                                                                                                                                                 |
+| Examples/Fleet                 | Example pages inside the shell with sample data (no GraphQL); the sidebar switches between them. Vehicles: quick search, filters, sorting, row and bulk actions, direct edit in the drawer, all states. Drivers: document expiry flags, scores and the mixed drawer (view, then Edit) |
 
 `npm run test:storybook:admin` runs every story in Chromium through `@storybook/addon-vitest`:
 rendering, play functions and axe with `a11y.test: 'error'` (the PrimeUI license notice

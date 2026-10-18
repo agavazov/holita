@@ -1,0 +1,212 @@
+<holita-page-header
+  [eyebrow]="text().eyebrow"
+  [title]="text().title"
+  [count]="view().kind === 'rows' || view().kind === 'rows-error' ? total() : null"
+  [description]="description()"
+>
+  <button headerActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
+</holita-page-header>
+
+@if (kpis(); as kpis) {
+  <holita-kpi-strip [label]="text().kpis.label">
+    <holita-kpi-tile
+      [label]="text().kpis.active"
+      [value]="kpis.active | holitaNumber"
+      [secondary]="onLeave(kpis.onLeave)"
+    />
+    <holita-kpi-tile
+      [label]="text().kpis.documents"
+      [value]="kpis.documents | holitaNumber"
+      [footnote]="text().kpis.documentsFootnote"
+      [tone]="kpis.documents ? 'warn' : null"
+    />
+    <holita-kpi-tile
+      [label]="text().kpis.score"
+      [value]="scoreValue()"
+      [footnote]="text().kpis.scoreFootnote"
+    />
+    <holita-kpi-tile
+      [label]="text().kpis.distance"
+      [value]="kpis.distanceKm | holitaNumber"
+      unit="km"
+    />
+  </holita-kpi-strip>
+}
+
+<holita-filter-builder
+  [searchLabel]="text().search"
+  [search]="state().search"
+  [fields]="fields()"
+  [conditions]="state().conditions"
+  (searchChange)="changeSearch($event)"
+  (conditionsChange)="changeConditions($event)"
+/>
+
+<holita-table-panel
+  [heading]="text().table.heading"
+  [total]="total()"
+  [view]="view()"
+  [errorText]="text().table.errorText"
+  [emptyTitle]="text().table.emptyTitle"
+  [emptyDescription]="text().table.emptyDescription"
+  [notice]="notice()"
+  [selectedCount]="selection().length"
+  [page]="page()"
+  (pageChange)="changePage($event)"
+  (clearFilters)="clearFilters()"
+  (retry)="retry.emit()"
+  (dismissNotice)="dismissNotice.emit()"
+  (clearSelection)="selectionChange.emit([])"
+>
+  <button emptyActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
+  <button
+    bulkActions
+    pButton
+    type="button"
+    size="small"
+    severity="secondary"
+    [outlined]="true"
+    (click)="bulkAction.emit('deactivate')"
+  >
+    {{ text().bulk.deactivate }}
+  </button>
+  <button
+    bulkActions
+    pButton
+    type="button"
+    size="small"
+    severity="danger"
+    [outlined]="true"
+    (click)="bulkAction.emit('delete')"
+  >
+    {{ text().bulk.delete }}
+  </button>
+  <p-table
+    [value]="tableRows()"
+    dataKey="id"
+    [lazy]="true"
+    [selection]="selectedRows()"
+    (selectionChange)="select($event)"
+    [sortField]="sortField()"
+    [sortOrder]="sortOrder()"
+    (onLazyLoad)="sort($event)"
+    [scrollable]="true"
+  >
+    <ng-template #header>
+      <tr>
+        <th scope="col" class="app-col-check">
+          <label class="app-visually-hidden" for="drivers-select-page">{{
+            text().table.selectPage
+          }}</label>
+          <p-table-header-checkbox inputId="drivers-select-page" />
+        </th>
+        <th scope="col" pSortableColumn="name">
+          {{ text().table.name }} <p-sort-icon field="name" />
+        </th>
+        <th scope="col" pSortableColumn="status">
+          {{ text().table.status }} <p-sort-icon field="status" />
+        </th>
+        <th scope="col">{{ text().table.vehicle }}</th>
+        <th scope="col" pSortableColumn="license">
+          {{ text().table.license }} <p-sort-icon field="license" />
+        </th>
+        <th scope="col" pSortableColumn="tachoCard">
+          {{ text().table.tachoCard }} <p-sort-icon field="tachoCard" />
+        </th>
+        <th scope="col" pSortableColumn="score">
+          {{ text().table.score }} <p-sort-icon field="score" />
+        </th>
+        <th scope="col" class="app-num app-col-secondary" pSortableColumn="trips">
+          {{ text().table.trips }} <p-sort-icon field="trips" />
+        </th>
+        <th scope="col" class="app-num app-col-secondary" pSortableColumn="distance">
+          {{ text().table.distance }} <p-sort-icon field="distance" />
+        </th>
+        <th scope="col" class="app-col-secondary">{{ text().table.phone }}</th>
+        <th scope="col" class="app-col-secondary">{{ text().table.notes }}</th>
+        <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <span class="app-visually-hidden">{{ text().table.actions }}</span>
+        </th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-row>
+      <tr>
+        <td class="app-col-check">
+          <p-table-checkbox [value]="row" [ariaLabel]="label(text().table.selectRow, row.name)" />
+        </td>
+        <td>
+          <span class="app-cell-stack">
+            <button
+              type="button"
+              class="app-link"
+              [attr.aria-label]="label(text().table.open, row.name)"
+              (click)="open.emit(row.id)"
+            >
+              {{ row.name }}
+            </button>
+            <span>{{ row.employeeNo }}</span>
+          </span>
+        </td>
+        <td>
+          <p-tag [severity]="statusSeverity(row.status)" [value]="statusLabel(row.status)" />
+        </td>
+        <td>
+          @if (row.vehiclePlate) {
+            {{ row.vehiclePlate }}
+          } @else {
+            <span class="app-muted">{{ text().table.noVehicle }}</span>
+          }
+        </td>
+        <td>
+          <span class="app-inline">
+            {{ row.licenseExpiresOn | holitaDate }}
+            @if (expiry(row.licenseExpiresOn); as flag) {
+              <p-tag [severity]="flag.severity" [value]="flag.label" />
+            }
+          </span>
+        </td>
+        <td>
+          <span class="app-inline">
+            {{ row.tachoCardExpiresOn | holitaDate }}
+            @if (expiry(row.tachoCardExpiresOn); as flag) {
+              <p-tag [severity]="flag.severity" [value]="flag.label" />
+            }
+          </span>
+        </td>
+        <td>
+          @if (row.score !== null) {
+            <span class="app-meter-cell">
+              <span
+                [class]="scoreClass(row.score)"
+                [style.--app-meter-value]="row.score + '%'"
+                aria-hidden="true"
+              ></span>
+              <span>{{ row.score }}</span>
+            </span>
+          } @else {
+            <span class="app-muted">{{ text().table.noScore }}</span>
+          }
+        </td>
+        <td class="app-num app-col-secondary">{{ row.trips30d | holitaNumber }}</td>
+        <td class="app-num app-col-secondary">{{ row.distance30dKm | holitaNumber }}</td>
+        <td class="app-col-secondary">{{ row.phone }}</td>
+        <td class="app-col-secondary">
+          @if (row.notes) {
+            <span class="app-cell-truncate drivers__notes" [title]="row.notes">{{
+              row.notes
+            }}</span>
+          } @else {
+            <span class="app-muted">—</span>
+          }
+        </td>
+        <td class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <holita-row-actions
+            [actions]="actions()"
+            [subject]="row.name"
+            (action)="rowAction.emit({ action: $event, id: row.id })"
+          />
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</holita-table-panel>
