@@ -1,6 +1,7 @@
 # Discocan architecture
 
-Discocan covers fleet telemetry. Its implemented modules are Fleet Vehicles and Devices.
+Discocan covers fleet telemetry. Its implemented Fleet modules are Vehicles, Devices, Drivers
+and Vehicle groups.
 The [shared architecture](../architecture/overview.md) describes applications, execution and tooling.
 The shared Branch concept and its domain meaning are explained in [the domain index](README.md#terminology).
 
@@ -10,11 +11,13 @@ One PostgreSQL instance contains independent Core/Fleet development and test dat
 with distinct owner/login roles. Admin/Gateway have no Prisma client or database credentials.
 Each owning service has its own schema, reviewed SQL migrations and generated client.
 Core owns the [Tenant/Branch foundation](../ecommerce/branches.md) currently reused as Discocan organizational scope.
-Fleet owns Vehicle and Device plus the shared versioned Simple eData vendor catalog.
-Both services preserve their applied migration history and add a Branch rename migration.
-Fleet also retains its additive catalog migration. Branch, Vehicle and Device have mandatory
-tenantId physically second after id; Vehicle/Device branchId is physically third. Tenant data
-is inserted by the seed, not by schema migrations.
+Fleet owns Vehicle, Device, Driver and VehicleGroup plus the shared versioned Simple eData
+vendor catalog. Both services preserve their applied migration history and add a Branch rename
+migration. Fleet also retains its additive catalog migration and the additive
+`20261018100000_fleet_master_data` migration. Branch and every Fleet business table have
+mandatory tenantId physically second after id; Fleet branchId is physically third (new tables
+declare them in that order; the master data columns are appended to Vehicle and Device).
+Tenant data is inserted by the seed, not by schema migrations.
 
 The [Simple eData catalog](erm-resources/simple-edata-catalog/README.md) is common
 manufacturer reference data without Tenant/Branch columns. Seven related tables preserve
@@ -22,12 +25,31 @@ version/source identity, parameters, sets, ordered members, categories and profi
 Only the local offline CLI imports it; it has no GraphQL endpoint or runtime device
 configuration integration. This scope does not change Vehicle/Device isolation.
 
-Vehicle has UUID, tenantId, branchId, required License Plate (32 characters), nullable Notes (2000
-characters) and timestamps. License Plate is not unique. Device has UUID, tenantId, branchId, required
-15-digit IMEI, required vehicleId and timestamps. IMEI stays a string, preserving leading zeros.
-A unique `(tenantId, branchId, imei)` index and SQL digit CHECK protect persistence. The composite
-`(tenantId, branchId, vehicleId)` foreign key references Vehicle `(tenantId, branchId, id)` with restricted deletion
-and update. Several Devices may share a Vehicle. There is no cross-database Branch foreign key.
+Vehicle has UUID, tenantId, branchId, required License Plate (32 characters, not unique),
+nullable Notes (2000), Fleet number (16), type, make/model (64), model year (SMALLINT), VIN (17),
+fuel type, tank capacity (SMALLINT litres), status (default `ACTIVE`), groupId, currentDriverId
+and timestamps. Device has UUID, tenantId, branchId, required 15-digit IMEI, required vehicleId,
+nullable model, an options enum array (default empty), firmware (32), SIM phone (20), ICCID
+(22), installation time, notes and timestamps. IMEI stays a string, preserving leading zeros.
+Driver has names (64), employee number and identification key (32), phone (20), email (254),
+licence number (32), a licence category enum array (default empty), licence and tachograph
+card expiry `DATE` columns, tachograph card number (16), status and notes. VehicleGroup has a
+name (64), description (500) and a colour token enum `C1`–`C8` (a design-system slot).
+
+Enums: `FleetVehicleType`, `FleetFuelType`, `FleetVehicleStatus`, `FleetDeviceModel`,
+`FleetDeviceOption`, `FleetDriverStatus`, `FleetLicenseCategory`, `FleetGroupColor`; GraphQL
+enums use identical names and values. Unique `(tenantId, branchId, …)` indexes cover Device IMEI,
+Vehicle Fleet number and VIN, Driver employee number and identification key and VehicleGroup
+name (NULLs are distinct); `(tenantId, branchId, id)` uniques are the composite foreign-key
+targets. Composite foreign keys `(tenantId, branchId, vehicleId)`, `(tenantId, branchId, groupId)`
+and `(tenantId, branchId, currentDriverId)` restrict deletion and update, so a related record is
+always in the same Tenant/Branch. Indexes on `(tenantId, branchId, createdAt, id)`, Driver
+`(tenantId, branchId, lastName, firstName, id)` and Vehicle group/driver columns serve the
+default list orders and relation filters. A CHECK keeps IMEI at 15 digits; hand-written CHECKs in the master data migration enforce model
+year 1950–2100, the VIN pattern, tank capacity 1–2000, `INACTIVE` vehicles without a driver, the
+SIM/ICCID/phone patterns and non-null enum arrays with at most 13 options and 10 licence
+categories (Prisma generates enum arrays as nullable columns). Several Devices may share a
+Vehicle. There is no cross-database Branch foreign key.
 Seeds insert RentalSofia, the stable Discordia and Sandbox Branches, two Discordia Vehicles and one Device. Repeated seeds skip existing keys and never overwrite edits. Fleet has no cross-database Tenant/Branch foreign key; creation verifies the tenant-scoped Branch through Core. Mandatory tenant predicates and composite indexes enforce application isolation; PostgreSQL has no row-level-security policy. Direct SQL access by the owning role can access every tenant.
 
 Tests deploy migrations into random schemas in dedicated test databases and drop only their
@@ -35,16 +57,33 @@ own schema. Development connections, broad resets and shared truncation are not 
 
 ## GraphQL contracts and context
 
-[Core SDL](../../apps/core/src/modules/branches/branches.graphql),
-[Vehicle SDL](../../apps/fleet/src/modules/vehicles/vehicles.graphql) and
-[Device SDL](../../apps/fleet/src/modules/devices/devices.graphql) define the API.
-Vehicle SDL also declares the Fleet federation link, DateTime, Branch reference and root types.
+[Core SDL](../../apps/core/src/modules/branches/branches.graphql) and the Fleet SDL files define
+the API. Fleet's [common SDL](../../apps/fleet/src/graphql/common.graphql) declares the federation
+link, the `DateTime` and `Date` scalars, the Branch reference and `FleetSortDirection`; then
+[Vehicle](../../apps/fleet/src/modules/vehicles/vehicles.graphql) (base `Query`/`Mutation`),
+[Device](../../apps/fleet/src/modules/devices/devices.graphql),
+[Driver](../../apps/fleet/src/modules/drivers/drivers.graphql) and
+[Vehicle group](../../apps/fleet/src/modules/vehicle-groups/vehicle-groups.graphql) SDL extend it,
+in that order in both `app.module.ts` and [contracts.mts](../../tools/graphql/contracts.mts).
 Backend resolvers use generated types and delegate to concrete services/repositories.
 Runtime SDL assets are copied into builds. Named Angular/Core lookup operations are explicit
-inputs in [contracts.mts](../../tools/graphql/contracts.mts). Codegen/composition/validation work
+inputs in contracts.mts. Codegen/composition/validation work
 offline. Gateway loads a generated static supergraph without introspection or registry polling.
 
-Public demo discovery exposes tenants and demoLogin. Core/Fleet authenticated queries are branches, branch, fleetVehicles, fleetVehicle, fleetDevices and fleetDevice. Mutations create/update/delete FleetVehicle and FleetDevice.
+[Hand-written scalars](../../apps/fleet/src/graphql/scalars.ts) replace Nest's `DateTime`:
+`DateTime` serializes a `Date` as UTC ISO with milliseconds and `Date` serializes a UTC-midnight
+`Date` or a valid `YYYY-MM-DD`. Both accept any string as input (Router cannot validate custom
+scalars) and the services validate it: `DateTime` needs `Z` or `±hh:mm` and years 2000–2100,
+`Date` a real calendar day in 1900–2100. Malformed values are BAD_USER_INPUT with the input field
+as path. Codegen maps server `DateTime` to `string` input / `Date` output and `Date` to `string`;
+the admin uses strings.
+
+Public demo discovery exposes tenants and demoLogin. Core/Fleet authenticated queries are
+branches, branch, fleetVehicles, fleetVehicle, fleetDevices, fleetDevice, fleetDrivers,
+fleetDriver, fleetVehicleGroups and fleetVehicleGroup. Mutations create/update/delete
+FleetVehicle, FleetDevice, FleetDriver and FleetVehicleGroup, plus `deactivateFleetVehicle`.
+Only FleetVehicle and FleetDevice are federation entities (`@key(fields: "id")`) and carry
+`branch: Branch!`.
 All Branch/business operations require a signed demo session in Authorization. Business operations additionally require a valid `x-branch-id` UUID. Inputs never accept tenantId or branchId.
 Repository predicates, totals, relation lookup and federation reference resolution always include the verified Tenant and active Branch.
 Foreign IDs appear as NOT_FOUND. Creation checks Branch existence through Core once per
@@ -52,21 +91,52 @@ Fleet HTTP request; read/update/delete do not make that network call. Requesting
 federated Branch field beyond its known ID (for example `branch { name }`) asks Core to resolve
 its persisted Branch.
 
-Vehicle search matches License Plate; Device search matches IMEI. Queries combine mandatory
-Branch scope with search/explicit ID filters, count before pagination and sort before slicing.
-Default offset/limit are 0/20, limit is 1–100, and default sort is newest first. IDs break ties.
-Search punctuation is literal. Text validation trims, counts Unicode code points and rejects NUL.
-Notes can be cleared to null. Device validation requires a Vehicle from the same Branch.
-
 Gateway forwards Branch context without blanket Branch validation. Request IDs accept 1–100 ASCII
 letters/digits or `._:-`; invalid/missing IDs are replaced with UUIDs. Responses/errors expose the
 ID. Expected Nest exceptions map to BAD_USER_INPUT, NOT_FOUND, CONFLICT or SERVICE_UNAVAILABLE;
-unexpected details remain hidden. Creation's Core timeout is 3 seconds, Gateway's subgraph timeout
+unexpected details remain hidden. BAD_USER_INPUT may carry `fieldErrors` whose paths match
+`^[a-zA-Z][a-zA-Z0-9]*$` with messages of at most 300 characters. Creation's Core timeout is 3 seconds, Gateway's subgraph timeout
 is 5 seconds. No global current Branch or cross-request Branch validation cache exists.
 Tenant identity comes only from the HMAC-verified, expiring session. Gateway forwards Authorization; Core, Fleet and Karma Client independently verify it. Arbitrary tenant headers and entity representations cannot select a Tenant. Demo login deliberately allows anyone to choose any Tenant; it is not production identity or membership authorization.
 
 `FLEET_ENABLED=false` rejects Fleet business and entity operations while preserving
 schema composition and health. Angular startup availability hides navigation and gates direct routes.
+
+### Standard list contract
+
+Every Fleet list is one root query `(offset: Int! = 0, limit: Int! = 20, search: String,
+ids: [ID!], filter: <Entity>Filter, sort: <Entity>Sort)` returning a page with `items`, `total`,
+`offset` and `limit` (Vehicle groups have no filter and add `ungroupedVehicleCount`). Arguments
+are validated in order with the argument name as `fieldErrors` path: verified scope
+(`x-branch-id`), `offset` 0–2,147,483,647 and `limit` 1–100, `search`, `ids` (at most 100 unique
+UUIDs), `filter` and `sort`. Search is trimmed, at most 200 code points without NUL and split
+on Unicode whitespace into at most five tokens; every token must be a case-insensitive literal
+substring (`%`, `_`, `\` escaped, ILIKE) of one search field, so a first and last name match
+together while Cyrillic and Latin look-alike letters stay different. Filter fields left out or
+null apply no constraint; lists hold 1–100 unique values; booleans require (`true`) or exclude
+(`false`). Results sort by the chosen field with NULLS LAST for nullable fields, then secondary
+keys, then `id DESC`. The page and its total are read in one `RepeatableRead` transaction with
+the scope in the same `where`, so search, filters and IDs never reach another Tenant or Branch.
+
+| Query                | Search fields                                                     | Sort fields (default)                                                                                                                | Filter                                                                                                                                                  |
+| -------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fleetVehicles`      | plate, Fleet number, VIN, make, model                             | `LICENSE_PLATE`, `FLEET_NUMBER`, `CREATED_AT`, `UPDATED_AT` (`CREATED_AT DESC`)                                                      | statuses, vehicleTypes, fuelTypes, groupIds, hasGroup, currentDriverIds, hasDriver, hasDevice                                                           |
+| `fleetDevices`       | IMEI, firmware, SIM phone, vehicle plate                          | `IMEI`, `INSTALLED_AT`, `CREATED_AT` (`CREATED_AT DESC`)                                                                             | models, options (all given), vehicleIds                                                                                                                 |
+| `fleetDrivers`       | first name, last name, employee number, identification key, phone | `LAST_NAME` (then first name), `EMPLOYEE_NUMBER`, `LICENSE_EXPIRES_ON`, `TACHOGRAPH_CARD_EXPIRES_ON`, `CREATED_AT` (`LAST_NAME ASC`) | statuses, licenseCategories (any given), documentsExpireWithinDays 0–365 (licence or card on or before business date + N, expired included), hasVehicle |
+| `fleetVehicleGroups` | name, description                                                 | `NAME`, `CREATED_AT` (`NAME ASC`)                                                                                                    | —                                                                                                                                                       |
+
+Links to other records use reference types with stored fields only: `FleetVehicleRef`
+(`id licensePlate fleetNumber vehicleType status`) on `FleetDevice.vehicle` and
+`FleetDriver.vehicles`, `FleetDriverRef` (`id firstName lastName employeeNumber status`) on
+`FleetVehicle.currentDriver` and `FleetVehicleGroupRef` (`id name colorToken`) on
+`FleetVehicle.group`. Repositories load them, `deviceCount` and `vehicleCount` in the page query;
+`documentStatus` is computed by a pure function from the business date. There is no per-row
+field resolver query. Text validation trims, counts Unicode code points and rejects NUL;
+optional fields can be cleared to null. Duplicate unique values are BAD_USER_INPUT with every
+duplicated field in one error: services pre-check them in scope and map a concurrent unique
+violation by the index name the pg adapter reports (`meta.driverAdapterError.cause.constraint`).
+Related IDs outside the Branch are BAD_USER_INPUT on the input field. Deletion blocked by a
+foreign key is CONFLICT with an entity message.
 
 ## Angular admin foundation
 

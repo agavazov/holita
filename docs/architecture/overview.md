@@ -8,15 +8,15 @@ Applications never import another application's implementation, Prisma models or
 Each NestJS application owns its feature modules under `src/modules/`. A feature keeps
 its resolver, service, SDL, validation and unit tests together; database-backed features
 also own their concrete repository. Application-local `auth/`, `graphql/`, `health/`
-and, where needed, `database/` hold the supporting code. These directories are not shared
+and, where needed, `database/` and `clock/` hold the supporting code. These directories are not shared
 runtime packages. Prisma schemas, migrations and generated output retain their existing
 owning-application locations.
 
-| Application | Feature modules | Integration ownership |
-| --- | --- | --- |
-| Core | Tenants, Branches | Tenant/Branch API; one local DatabaseModule provides Prisma to both features |
-| Fleet | Vehicles, Devices, offline eData catalog | `integrations/core/` owns Branch existence checks; one local DatabaseModule provides Fleet Prisma |
-| Karma Client | Cars, eData, Location, History, References, Accounts | `integrations/karma/` owns external HTTP and the shared upstream account session; no database |
+| Application  | Feature modules                                                   | Integration ownership                                                                                                                   |
+| ------------ | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Core         | Tenants, Branches                                                 | Tenant/Branch API; one local DatabaseModule provides Prisma to both features                                                            |
+| Fleet        | Vehicles, Devices, Drivers, Vehicle groups, offline eData catalog | `integrations/core/` owns Branch existence checks; one local DatabaseModule provides Fleet Prisma; `clock/` provides the business clock |
+| Karma Client | Cars, eData, Location, History, References, Accounts              | `integrations/karma/` owns external HTTP and the shared upstream account session; no database                                           |
 
 The offline Fleet catalog remains a CLI feature, without a Nest runtime module or public API.
 Core is the Tenant/Branch service, not a common implementation library. Fleet and Karma Client
@@ -35,7 +35,7 @@ view lifetime; neither route grouping nor shared login makes business clients gl
 | admin        | Standalone Angular, Sakai/PrimeNG, Branch discovery, Fleet CRUD, Karma truck data and account views | 11000      |
 | gateway      | Native Apollo Router federation, `/graphql`; `/health` on 11016                                     | 11010      |
 | core         | Tenant demo login, scoped Branch discovery/lookup, owning database                                  | 11011      |
-| fleet        | Tenant/Branch-scoped Vehicles/Devices, owning database                                              | 11013      |
+| fleet        | Tenant/Branch-scoped Vehicles, Devices, Drivers and Vehicle groups, owning database                 | 11013      |
 | karma-client | Authenticated, shared Karma truck data and account views; no database                               | 11014      |
 
 ```mermaid

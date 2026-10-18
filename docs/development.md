@@ -338,8 +338,12 @@ npm exec -- prettier --check 'apps/admin/src/**/*.html'
 ## GraphQL and generation
 
 SDL and named operation paths are explicit in `tools/graphql/contracts.mts`. Runtime Fleet
-loads Vehicle/Device SDL; Gateway loads the generated static supergraph. No database or running
+loads its common SDL followed by the Vehicle, Device, Driver and Vehicle group SDL in the same
+order; Gateway loads the generated static supergraph. No database or running
 backend is required for codegen/schema validation. Generated outputs stay ignored.
+Codegen maps `ID` to `string`; on the servers `DateTime` is a `string` input (validated by the
+service) and a `Date` output, and the calendar `Date` scalar is a `YYYY-MM-DD` string. Admin
+operations receive both as strings.
 
 ```bash
 npm run codegen
@@ -380,12 +384,22 @@ Compose project `holita` uses `holita_postgres_data` mounted at `/var/lib/postgr
 
 Core/Fleet own their schemas, generated Prisma clients and reviewed SQL migrations. Core
 retains its initial migration; Fleet retains its initial migration and adds the shared
-eData reference catalog through an additive migration. Branch, Vehicle and Device place
-tenantId immediately after id. The Device FK includes Tenant/Branch/Vehicle, and IMEI uniqueness
-includes Tenant/Branch. `db:migrate` deploys Core then Fleet; `db:generate` generates both ignored
+eData reference catalog, the Branch rename and the master data (`20261018100000_fleet_master_data`:
+Vehicle/Device columns, Driver, VehicleGroup) through additive migrations. Branch and every
+Fleet business table place tenantId immediately after id. Fleet foreign keys include
+Tenant/Branch, and natural-key uniqueness includes Tenant/Branch. `db:migrate` deploys Core then Fleet; `db:generate` generates both ignored
 clients. Initial migrations require empty databases; a previous migration history needs an
 explicitly authorized database rebuild. `db:migrate` never resets databases. Subsequent schema
 changes require new reviewed SQL migrations, not edits to applied history or db push.
+
+Produce Fleet migration SQL from `apps/fleet` (the CLI needs its `prisma.config.ts`): copy the
+committed schema outside the repository, edit `prisma/schema.prisma`, run `npm run db:validate`,
+then `npx prisma migrate diff --from-schema "$PREV" --to-schema prisma/schema.prisma --script`.
+Wrap the output in `BEGIN;`/`COMMIT;`, append the hand-written CHECK constraints Prisma cannot
+express and review that it only adds objects. Applying the master data migration to an existing
+database keeps every row: Vehicles receive status `ACTIVE` and Devices an empty option list
+through column defaults. Regenerate clients/contracts (`npm run db:generate`, `npm run codegen`)
+and restart after `npm run db:migrate`.
 `db:seed` inserts RentalSofia, Discordia and Sandbox Branches, two Discordia Vehicles and one Device
 with a leading-zero IMEI. Existing keys and edits are preserved. Core runs before Fleet; Fleet
 fixtures belong to RentalSofia's Discordia Branch.

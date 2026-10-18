@@ -4,12 +4,12 @@ import { createTestDatabase } from './test-database.js';
 import { getTestDatabaseUrl } from './test-database-url.js';
 
 describe('fleet initial database migration', () => {
-  it('preserves tenant and branch column order through catalog and Branch migrations', async () => {
+  it('preserves tenant and branch column order through catalog, Branch and master data migrations', async () => {
     const database = await createTestDatabase();
     const connection = new pg.Client({ connectionString: getTestDatabaseUrl() });
     try {
       await connection.connect();
-      for (const table of ['Vehicle', 'Device']) {
+      for (const table of ['Vehicle', 'Device', 'Driver', 'VehicleGroup']) {
         const columns = await connection.query<{ column_name: string; is_nullable: string }>(
           'SELECT column_name, is_nullable FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 ORDER BY ordinal_position',
           [database.schema, table],
@@ -27,6 +27,7 @@ describe('fleet initial database migration', () => {
         { migration_name: '20261011000000_init' },
         { migration_name: '20261017000000_edata_catalog' },
         { migration_name: '20261017010000_rename_store_to_branch' },
+        { migration_name: '20261018100000_fleet_master_data' },
       ]);
     } finally {
       try {

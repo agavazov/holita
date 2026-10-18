@@ -1,0 +1,77 @@
+"Design-system categorical colour slot, never a colour value."
+enum FleetGroupColor {
+  C1
+  C2
+  C3
+  C4
+  C5
+  C6
+  C7
+  C8
+}
+
+type FleetVehicleGroup {
+  id: ID!
+  branchId: ID!
+  name: String!
+  description: String
+  colorToken: FleetGroupColor!
+  "Vehicles in the group, any status."
+  vehicleCount: Int!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type FleetVehicleGroupRef {
+  id: ID!
+  name: String!
+  colorToken: FleetGroupColor!
+}
+
+type FleetVehicleGroupPage {
+  items: [FleetVehicleGroup!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+  "Vehicles without a group in the Branch, any status; independent of search and ids."
+  ungroupedVehicleCount: Int!
+}
+
+enum FleetVehicleGroupSortField {
+  NAME
+  CREATED_AT
+}
+input FleetVehicleGroupSort {
+  field: FleetVehicleGroupSortField! = NAME
+  direction: FleetSortDirection! = ASC
+}
+
+input CreateFleetVehicleGroupInput {
+  name: String!
+  description: String
+  colorToken: FleetGroupColor
+}
+
+"Omitted fields stay unchanged; explicit null clears optional fields."
+input UpdateFleetVehicleGroupInput {
+  name: String
+  description: String
+  colorToken: FleetGroupColor
+}
+
+extend type Query {
+  fleetVehicleGroups(
+    offset: Int! = 0
+    limit: Int! = 20
+    search: String
+    ids: [ID!]
+    sort: FleetVehicleGroupSort
+  ): FleetVehicleGroupPage!
+  fleetVehicleGroup(id: ID!): FleetVehicleGroup!
+}
+
+extend type Mutation {
+  createFleetVehicleGroup(input: CreateFleetVehicleGroupInput!): FleetVehicleGroup!
+  updateFleetVehicleGroup(id: ID!, input: UpdateFleetVehicleGroupInput!): FleetVehicleGroup!
+  deleteFleetVehicleGroup(id: ID!): FleetVehicleGroup!
+}

@@ -272,7 +272,7 @@ describe('Apollo Router with the local supergraph and real subgraphs', () => {
       [
         `mutation{deleteFleetVehicle(id:"${vehicleId}"){id}}`,
         'CONFLICT',
-        'Vehicle is still referenced by another record.',
+        'Vehicle has devices or history; deactivate it instead.',
         headers,
       ],
     ] satisfies [string, string, string, Record<string, string>][]) {

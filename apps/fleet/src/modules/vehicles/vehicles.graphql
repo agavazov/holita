@@ -1,9 +1,23 @@
-extend schema @link(url: "https://specs.apollo.dev/federation/v2.3", import: ["@key"])
-
-scalar DateTime
-
-type Branch @key(fields: "id", resolvable: false) {
-  id: ID!
+enum FleetVehicleType {
+  TRACTOR
+  RIGID_TRUCK
+  VAN
+  CAR
+  TRAILER
+  OTHER
+}
+enum FleetFuelType {
+  DIESEL
+  PETROL
+  LPG
+  CNG
+  ELECTRIC
+  HYBRID
+}
+enum FleetVehicleStatus {
+  ACTIVE
+  IN_WORKSHOP
+  INACTIVE
 }
 
 type FleetVehicle @key(fields: "id") {
@@ -12,36 +26,93 @@ type FleetVehicle @key(fields: "id") {
   branch: Branch!
   licensePlate: String!
   notes: String
+  fleetNumber: String
+  vehicleType: FleetVehicleType
+  make: String
+  model: String
+  modelYear: Int
+  vin: String
+  fuelType: FleetFuelType
+  fuelTankCapacityL: Int
+  status: FleetVehicleStatus!
+  groupId: ID
+  group: FleetVehicleGroupRef
+  currentDriverId: ID
+  currentDriver: FleetDriverRef
+  deviceCount: Int!
   createdAt: DateTime!
   updatedAt: DateTime!
 }
+
+type FleetVehicleRef {
+  id: ID!
+  licensePlate: String!
+  fleetNumber: String
+  vehicleType: FleetVehicleType
+  status: FleetVehicleStatus!
+}
+
 type FleetVehiclePage {
   items: [FleetVehicle!]!
   total: Int!
   offset: Int!
   limit: Int!
 }
-input CreateFleetVehicleInput {
-  licensePlate: String!
-  notes: String
-}
-input UpdateFleetVehicleInput {
-  licensePlate: String
-  notes: String
-}
-enum FleetVehicleSortField {
-  LICENSE_PLATE
-  CREATED_AT
+
+input FleetVehicleFilter {
+  statuses: [FleetVehicleStatus!]
+  vehicleTypes: [FleetVehicleType!]
+  fuelTypes: [FleetFuelType!]
+  groupIds: [ID!]
+  hasGroup: Boolean
+  currentDriverIds: [ID!]
+  hasDriver: Boolean
+  hasDevice: Boolean
 }
 
-enum FleetVehicleSortDirection {
-  ASC
-  DESC
+enum FleetVehicleSortField {
+  LICENSE_PLATE
+  FLEET_NUMBER
+  CREATED_AT
+  UPDATED_AT
 }
 
 input FleetVehicleSort {
   field: FleetVehicleSortField! = CREATED_AT
-  direction: FleetVehicleSortDirection! = DESC
+  direction: FleetSortDirection! = DESC
+}
+
+input CreateFleetVehicleInput {
+  licensePlate: String!
+  notes: String
+  fleetNumber: String
+  vehicleType: FleetVehicleType
+  make: String
+  model: String
+  modelYear: Int
+  vin: String
+  fuelType: FleetFuelType
+  fuelTankCapacityL: Int
+  status: FleetVehicleStatus
+  groupId: ID
+  currentDriverId: ID
+}
+
+"Omitted fields stay unchanged; explicit null clears optional fields."
+input UpdateFleetVehicleInput {
+  licensePlate: String
+  notes: String
+  fleetNumber: String
+  vehicleType: FleetVehicleType
+  make: String
+  model: String
+  modelYear: Int
+  vin: String
+  fuelType: FleetFuelType
+  fuelTankCapacityL: Int
+  status: FleetVehicleStatus
+  groupId: ID
+  currentDriverId: ID
 }
 
 type Query {
@@ -50,12 +121,16 @@ type Query {
     limit: Int! = 20
     search: String
     ids: [ID!]
+    filter: FleetVehicleFilter
     sort: FleetVehicleSort
   ): FleetVehiclePage!
   fleetVehicle(id: ID!): FleetVehicle!
 }
+
 type Mutation {
   createFleetVehicle(input: CreateFleetVehicleInput!): FleetVehicle!
   updateFleetVehicle(id: ID!, input: UpdateFleetVehicleInput!): FleetVehicle!
+  "Sets status INACTIVE and clears the current driver; idempotent."
+  deactivateFleetVehicle(id: ID!): FleetVehicle!
   deleteFleetVehicle(id: ID!): FleetVehicle!
 }

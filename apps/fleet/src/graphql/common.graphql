@@ -1,0 +1,16 @@
+extend schema @link(url: "https://specs.apollo.dev/federation/v2.3", import: ["@key"])
+
+"ISO-8601 instant with an offset; serialized in UTC with milliseconds."
+scalar DateTime
+
+"Calendar date YYYY-MM-DD without a time zone."
+scalar Date
+
+type Branch @key(fields: "id", resolvable: false) {
+  id: ID!
+}
+
+enum FleetSortDirection {
+  ASC
+  DESC
+}

@@ -17,7 +17,11 @@ and the relevant Fleet documents.
   Vehicle/Device business data retains mandatory Tenant/Branch isolation.
 
 - Follow the actual [Vehicles resolver/service/repository](../../apps/fleet/src/modules/vehicles/vehicles.resolver.ts) and its [SDL](../../apps/fleet/src/modules/vehicles/vehicles.graphql). Use @Parent on a federation reference parameter when combining it with Nest parameter decorators; always resolve Vehicle/Device references through scoped service access.
-- Branch access must always include the verified Tenant. Vehicle/Device persistence must always include the verified Tenant and active Branch. Creation gets branch ID from context and checks existence through core. Do not make a branch existence network call for every business read/update/delete or move that blanket check into the gateway.
+- Branch access must always include the verified Tenant. Fleet persistence must always include the verified Tenant and active Branch, and related Fleet records use composite `(tenantId, branchId, …)` foreign keys. Creation gets branch ID from context and checks existence through core. Do not make a branch existence network call for every business read/update/delete or move that blanket check into the gateway.
+- Every Fleet list follows the [standard list contract](architecture.md#standard-list-contract): `offset`/`limit`/`search`/`ids`/`filter`/`sort` with `FleetSortDirection`, validation through the concrete helpers in `apps/fleet/src/validation.ts` and `apps/fleet/src/database/search.ts`, and repositories that write their own `where`/`orderBy` with generated Prisma types. Filters and sort keys use stored columns or stored relations only.
+- Links to other records return stored `…Ref` types loaded in the same repository query; a type with derived values is returned only by its own module. Do not add per-row `@ResolveField` queries or DataLoaders.
+- Business dates come from `FleetClock` (Europe/Sofia calendar date); specs override `FleetClock` instead of reading the wall clock. Thresholds live in `apps/fleet/src/fleet-thresholds.ts`.
+- Duplicates are BAD_USER_INPUT `fieldErrors` from a scoped pre-check plus `rethrowUniqueViolation` with the generated unique index names; foreign-key-blocked deletions are CONFLICT with an entity message.
 - Branch discovery belongs to the shared [Core Branch foundation](../ecommerce/branches.md).
   Keep the domains' business workflows in their own documentation.
 

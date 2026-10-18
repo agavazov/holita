@@ -27,8 +27,13 @@ export const subgraphs = [
   {
     name: 'fleet',
     url: 'http://127.0.0.1:11013/graphql',
-    path: 'apps/fleet/src/modules/vehicles/vehicles.graphql',
-    additionalPaths: ['apps/fleet/src/modules/devices/devices.graphql'],
+    path: 'apps/fleet/src/graphql/common.graphql',
+    additionalPaths: [
+      'apps/fleet/src/modules/vehicles/vehicles.graphql',
+      'apps/fleet/src/modules/devices/devices.graphql',
+      'apps/fleet/src/modules/drivers/drivers.graphql',
+      'apps/fleet/src/modules/vehicle-groups/vehicle-groups.graphql',
+    ],
   },
 ];
 export const operationPaths = [

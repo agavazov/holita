@@ -1,22 +1,25 @@
 import type { ParamMap } from '@angular/router';
 import type {
   AdminVehiclesQueryVariables,
-  FleetVehicleSortDirection,
+  FleetSortDirection,
   FleetVehicleSortField,
 } from '../../../../generated/graphql/operations';
+
+/** Sort fields this screen offers; the API supports more. */
+type VehicleListSortField = Extract<FleetVehicleSortField, 'LICENSE_PLATE' | 'CREATED_AT'>;
 
 export interface VehicleListQuery {
   page: number;
   pageSize: number;
   search: string;
-  sort: FleetVehicleSortField;
-  order: FleetVehicleSortDirection;
+  sort: VehicleListSortField;
+  order: FleetSortDirection;
 }
 
 export const vehiclePageSizes = [10, 20, 50, 100];
 const sortFields = [{ param: 'licensePlate', field: 'LICENSE_PLATE' }] satisfies {
   param: string;
-  field: FleetVehicleSortField;
+  field: VehicleListSortField;
 }[];
 
 export function readVehicleListQuery(params: ParamMap): VehicleListQuery {

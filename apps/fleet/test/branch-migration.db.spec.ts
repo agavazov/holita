@@ -32,23 +32,32 @@ describe('Fleet Branch upgrade', () => {
     });
     const connection = new pg.Client({ connectionString: getTestDatabaseUrl() });
     try {
-      expect(await database.client.vehicle.findUniqueOrThrow({ where: { id: vehicleId } })).toEqual(
-        {
-          id: vehicleId,
-          tenantId,
-          branchId,
-          licensePlate: 'CA1234AB',
-          notes: 'Existing notes',
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        },
-      );
-      expect(await database.client.device.findUniqueOrThrow({ where: { id: deviceId } })).toEqual({
+      // The master data migration adds columns; existing rows only receive the defaults.
+      expect(
+        await database.client.vehicle.findUniqueOrThrow({ where: { id: vehicleId } }),
+      ).toMatchObject({
+        id: vehicleId,
+        tenantId,
+        branchId,
+        licensePlate: 'CA1234AB',
+        notes: 'Existing notes',
+        status: 'ACTIVE',
+        fleetNumber: null,
+        groupId: null,
+        currentDriverId: null,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+      expect(
+        await database.client.device.findUniqueOrThrow({ where: { id: deviceId } }),
+      ).toMatchObject({
         id: deviceId,
         tenantId,
         branchId,
         imei,
         vehicleId,
+        model: null,
+        options: [],
         createdAt: timestamp,
         updatedAt: timestamp,
       });
@@ -69,7 +78,10 @@ describe('Fleet Branch upgrade', () => {
         `SELECT migration_name, checksum FROM ${pg.escapeIdentifier(database.schema)}."_prisma_migrations" WHERE finished_at IS NOT NULL ORDER BY migration_name`,
       );
       expect(applied.rows.slice(0, history.length)).toEqual(history);
-      expect(applied.rows).toHaveLength(history.length + 1);
+      expect(applied.rows.slice(history.length).map((row) => row.migration_name)).toEqual([
+        '20261017010000_rename_store_to_branch',
+        '20261018100000_fleet_master_data',
+      ]);
     } finally {
       try {
         await connection.end();

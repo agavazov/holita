@@ -8,7 +8,6 @@ import { VehiclesService } from './vehicles.service.js';
 
 @Module({
   imports: [DatabaseModule, CoreClientModule],
-  exports: [VehiclesService],
   providers: [FleetEnabledGuard, VehiclesRepository, VehiclesService, VehiclesResolver],
 })
 export class VehiclesModule {}

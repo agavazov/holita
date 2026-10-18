@@ -1,7 +1,8 @@
 # Discocan: fleet telemetry
 
-Discocan is the fleet telemetry domain. The current implementation is Fleet Vehicles/Devices
-in `apps/fleet` and their Angular admin in `apps/admin`. The shared `apps/karma-client`
+Discocan is the fleet telemetry domain. The current implementation is Fleet master data in
+`apps/fleet` — Vehicles, Devices, Drivers and Vehicle groups on one standard list contract —
+and the Vehicles/Devices Angular admin in `apps/admin`. The shared `apps/karma-client`
 provides read-only truck lists/details, eData, location, trips, events, driving profile
 and account views for projects, time zones, API version, users and roles. Telemetry
 ingestion, tracking and measurement processing are not implemented.
@@ -11,7 +12,8 @@ ingestion, tracking and measurement processing are not implemented.
 - [Architecture](architecture.md): persistence, federation and Angular request lifecycles.
 - [Development](development.md): telemetry admin, demo login and GraphQL usage.
 - [Testing](testing.md): Fleet, Karma Client and Angular feature checks.
-- [Fleet implementation index](fleet.md): concrete Vehicles/Devices source references.
+- [Fleet implementation index](fleet.md): concrete Fleet module source references, list
+  contract, business date and thresholds.
 - [Simple eData catalog](erm-resources/simple-edata-catalog/README.md): offline EXE
   inspection/extraction, version comparison and shared Fleet reference-data import.
 - [ERM resources](erm-resources/README.md): Karma API v2 source assets, reconstructed
@@ -29,7 +31,8 @@ a vehicle fleet and scopes Vehicles/Devices and the active admin workspace. In E
 the same Branch concept represents an online shop.
 
 GraphQL uses `Branch`, `branches`, `branch` and `branchId`; Fleet requests carry
-`x-branch-id`. Tenant identity comes from the verified session. Vehicle and Device
-columns begin with `id`, `tenantId`, `branchId`. Branch itself has `id` and `tenantId`.
+`x-branch-id`. Tenant identity comes from the verified session. Every Fleet business table
+(Vehicle, Device, Driver, VehicleGroup) begins with `id`, `tenantId`, `branchId`. Branch
+itself has `id` and `tenantId`.
 The admin labels this scope Клон / Branch. Karma account data remains shared across
 authenticated tenants and does not use Branch scope.

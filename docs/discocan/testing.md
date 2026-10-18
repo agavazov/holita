@@ -14,9 +14,13 @@ Fleet implementation using the shared Core Branch scope.
 
 ## Vehicles checks
 
-`npm run test:fleet -- vehicles.service.spec.ts --skip-nx-cache` checks text/null validation,
-scoped repository calls and creation-only Core checks. `vehicles.db.spec.ts` checks actual scoped
-CRUD, federation references, null clearing, literal search and deterministic sorting/pagination.
+`npm run test:fleet -- vehicles.service.spec.ts --skip-nx-cache` checks the master data field
+rules, the merged-row INACTIVE/driver rule, duplicate pre-check paths, filter/sort mapping, the
+`sort` path and creation-only Core checks. `vehicles.db.spec.ts` checks actual scoped CRUD,
+federation references, the round trip of every field with group/driver references, duplicate
+Fleet number/VIN paths, group/driver scoping, deactivation, the INACTIVE CHECK, filters, sorts
+with NULLS LAST, multi-token and Cyrillic case-insensitive search, literal `%_\` and
+page/total consistency.
 
 ```bash
 npm run test:admin -- --include="app/features/fleet/vehicles/*.spec.ts" --include=app/features/fleet/fleet-workspace.spec.ts --skip-nx-cache
@@ -31,9 +35,11 @@ reload/scoping and Bulgarian 1280/390/320px light/dark forms/lists. Captures bel
 ## Devices checks
 
 `npm run test:fleet -- devices.service.spec.ts --skip-nx-cache` checks IMEI/assignment
-validation, scoped calls and constraint mapping. `devices.db.spec.ts` checks exact digits,
+validation, the option-for-model matrix, SIM/ICCID/firmware and installation-time rules,
+merged-row validation, scoped calls and constraint mapping. `devices.db.spec.ts` checks exact digits,
 leading zeros, per-Tenant/Branch uniqueness, same-tenant/same-branch FK, shared Vehicles, protected Vehicle deletion,
-reassignment, scoped CRUD and list queries.
+reassignment, scoped CRUD, the new fields, option rules, the `FleetVehicleRef` vehicle and list
+filters/search/sorting.
 
 ```bash
 npm run test:admin -- --include="app/features/fleet/devices/*.spec.ts" --include=app/features/fleet/relation-picker.spec.ts --include=app/features/fleet/fleet-workspace.spec.ts --skip-nx-cache
@@ -44,6 +50,31 @@ Controlled Angular tests cover captured clients, typed forms, remote Vehicle sel
 focus, delayed writes and sequential deletion retirement/retry. Real browser cases check
 persistent assignments/reassignment/uniqueness, scope and Bulgarian desktop/narrow light/dark
 views. Captures belong in ignored `.references/review/devices`.
+
+## Fleet list contract, Drivers and Vehicle groups checks
+
+```bash
+npm run test:fleet -- validation.spec.ts scalars.spec.ts drivers.service.spec.ts vehicle-groups.service.spec.ts --skip-nx-cache
+npm run test:fleet:db -- constraints.db.spec.ts drivers.db.spec.ts vehicle-groups.db.spec.ts
+```
+
+`validation.spec.ts` covers paging bounds, search tokens (five tokens, 200 code points, NUL,
+Unicode whitespace), filter and input enum lists, calendar dates (30 February, leap days),
+date-times with required offsets, half-open `DateTime` and closed `Date` ranges, finite numbers,
+`invalidFields` and `uniqueViolation` for adapter errors with an index, with columns, without a
+cause and for other errors. `scalars.spec.ts` covers `Date`/`DateTime` serialization, string-only
+parsing and UTC-midnight conversion. `drivers.service.spec.ts` covers field rules, document status
+at today, today + 30 and + 31 days at a fixed Sofia business date and INACTIVE-while-assigned;
+`vehicle-groups.service.spec.ts` covers name rules and defaults.
+
+`constraints.db.spec.ts` proves every master data CHECK with direct SQL, composite foreign keys
+rejecting foreign-Branch/Tenant groups and drivers, and that a real P2002 from each natural unique
+index reports its generated index name through the pg adapter and is mapped by the service to its
+field path. `drivers.db.spec.ts` covers CRUD, uniqueness, protection of assigned drivers, the
+documents filter at a fixed `FleetClock` and scoped search/sorting; `vehicle-groups.db.spec.ts`
+covers CRUD, unique names, vehicle and ungrouped counts and protected deletion. List specs seed
+rows in another Branch and another Tenant with the same Branch UUID and assert that only the
+requested scope is visible and counted.
 
 ## Angular admin checks
 
@@ -73,7 +104,7 @@ npm run test:core -- demo-auth.spec.ts --skip-nx-cache
 npm run test:core -- database.module.spec.ts --skip-nx-cache
 npm run test:fleet -- core-client.module.spec.ts --skip-nx-cache
 npm run test:core:db -- persistence.db.spec.ts branches.db.spec.ts initial-migration.db.spec.ts branch-migration.db.spec.ts
-npm run test:fleet:db -- vehicles.db.spec.ts devices.db.spec.ts initial-migration.db.spec.ts branch-migration.db.spec.ts seeds.db.spec.ts
+npm run test:fleet:db -- vehicles.db.spec.ts devices.db.spec.ts drivers.db.spec.ts vehicle-groups.db.spec.ts constraints.db.spec.ts initial-migration.db.spec.ts branch-migration.db.spec.ts seeds.db.spec.ts
 npm run test:admin -- --include=app/workspace/admin-workspace.spec.ts --include=app/core/auth/demo-session.spec.ts --skip-nx-cache
 npm run test:smoke:admin -- angular-tenants.smoke.spec.mts
 ```
@@ -82,7 +113,7 @@ Session checks cover signatures, tampering, expiry, production opt-in, unauthent
 ignored tenant headers. DB/federation tests exercise scoped discovery/CRUD/entity resolution,
 identical Branch IDs and IMEIs across tenants, composite relation rejection and seed idempotency.
 Initial-migration tests deploy the complete schema in dedicated guarded databases, then check
-mandatory scope columns, physical id/tenantId/branchId order for Vehicle/Device, and the full applied migration history. Upgrade tests preserve existing records and migration checksums through the Branch rename. They never touch
+mandatory scope columns, physical id/tenantId/branchId order for Vehicle, Device, Driver and VehicleGroup, and the full applied migration history. Upgrade tests preserve existing records (which receive the master data defaults) and migration checksums through the Branch rename and master data migrations. They never touch
 development tables. Angular tests cover logged-out deep links, Tenant/Branch dropdown gating and retry, obsolete candidate
 responses, root-to-Vehicles navigation, remembered Branch selection, tenant client/cache retirement,
 delayed submitted writes and fresh A → B → A clients. Browser login checks use the actual dropdown,

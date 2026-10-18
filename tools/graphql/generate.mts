@@ -48,7 +48,13 @@ async function generateTypes(
       useTypeImports: true,
       enumsAsTypes: true,
       defaultScalarType: 'unknown',
-      scalars: { ID: 'string', DateTime: client ? 'string' : 'Date' },
+      // Servers read DateTime inputs as strings (validated by the service) and return Dates;
+      // Date is always a YYYY-MM-DD string.
+      scalars: {
+        ID: 'string',
+        DateTime: client ? 'string' : { input: 'string', output: 'Date' },
+        Date: 'string',
+      },
     },
   });
   await writeChanged(path, content);

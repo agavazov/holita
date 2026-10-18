@@ -251,6 +251,175 @@ describe('Device GraphQL with PostgreSQL', () => {
       data: { fleetDevices: { items: [], total: 0 } },
     });
   });
+  it('persists model, options in enum order, SIM data and installation time with the vehicle reference', async () => {
+    const branchId = randomUUID();
+    const vehicle = await database.client.vehicle.create({
+      data: {
+        tenantId,
+        branchId,
+        licensePlate: 'CB 1001 AX',
+        fleetNumber: 'T-01',
+        vehicleType: 'TRACTOR',
+      },
+    });
+    const fields =
+      'imei model options firmwareVersion simPhoneNumber simIccid installedAt notes vehicle{__typename id licensePlate fleetNumber vehicleType status}';
+    expect(
+      await query(
+        `mutation($input:CreateFleetDeviceInput!){createFleetDevice(input:$input){${fields}}}`,
+        {
+          input: {
+            imei: '001234567890123',
+            vehicleId: vehicle.id,
+            model: 'STARLINK_TRACKER',
+            options: ['WIFI', 'CAN', 'CELLULAR_4G'],
+            firmwareVersion: ' 2.26.1 ',
+            simPhoneNumber: '+359888123456',
+            simIccid: '8935901990012345678',
+            installedAt: '2026-10-01T09:15:00+03:00',
+            notes: ' Cab unit ',
+          },
+        },
+        branchId,
+      ),
+    ).toEqual({
+      data: {
+        createFleetDevice: {
+          imei: '001234567890123',
+          model: 'STARLINK_TRACKER',
+          options: ['CELLULAR_4G', 'CAN', 'WIFI'],
+          firmwareVersion: '2.26.1',
+          simPhoneNumber: '+359888123456',
+          simIccid: '8935901990012345678',
+          installedAt: '2026-10-01T06:15:00.000Z',
+          notes: 'Cab unit',
+          vehicle: {
+            __typename: 'FleetVehicleRef',
+            id: vehicle.id,
+            licensePlate: 'CB 1001 AX',
+            fleetNumber: 'T-01',
+            vehicleType: 'TRACTOR',
+            status: 'ACTIVE',
+          },
+        },
+      },
+    });
+    const device = await database.client.device.findFirstOrThrow({ where: { branchId } });
+    const update = `mutation($id:ID!,$input:UpdateFleetDeviceInput!){updateFleetDevice(id:$id,input:$input){model options installedAt}}`;
+    for (const [input, path] of [
+      [{ model: 'STARLINK_SCOUT' }, 'options'],
+      [{ model: null }, 'options'],
+      [{ options: ['TEMPERATURE_DS'] }, 'options'],
+      [{ installedAt: '2999-01-01T00:00:00Z' }, 'installedAt'],
+      [{ installedAt: '2026-10-01T09:15:00' }, 'installedAt'],
+      [{ simIccid: '123' }, 'simIccid'],
+    ] satisfies [Record<string, unknown>, string][])
+      expect(await query(update, { id: device.id, input }, branchId)).toMatchObject({
+        errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path }] } }],
+      });
+    expect(
+      await query(
+        update,
+        { id: device.id, input: { model: 'STARLINK_SCOUT', options: ['TEMPERATURE_DS', 'IRF'] } },
+        branchId,
+      ),
+    ).toEqual({
+      data: {
+        updateFleetDevice: {
+          model: 'STARLINK_SCOUT',
+          options: ['IRF', 'TEMPERATURE_DS'],
+          installedAt: '2026-10-01T06:15:00.000Z',
+        },
+      },
+    });
+    expect(
+      await query(
+        update,
+        { id: device.id, input: { model: null, options: null, installedAt: null } },
+        branchId,
+      ),
+    ).toEqual({ data: { updateFleetDevice: { model: null, options: [], installedAt: null } } });
+  });
+
+  it('filters by model, options and vehicle, searches firmware, SIM and plate, and sorts installation nulls last', async () => {
+    const branchId = randomUUID();
+    const first = await truck(branchId, 'CB 1001 AX'),
+      second = await truck(branchId, 'PB 2002 KM');
+    const [higherId = '', lowerId = ''] = [randomUUID(), randomUUID()].sort().reverse();
+    const rows = [
+      {
+        imei: '100000000000001',
+        vehicleId: first.id,
+        model: 'STARLINK_TRACKER',
+        options: ['CELLULAR_4G', 'CAN', 'WIFI'],
+        firmwareVersion: '2.26.1',
+        installedAt: new Date('2026-05-01T00:00:00Z'),
+      },
+      {
+        imei: '100000000000002',
+        vehicleId: first.id,
+        model: 'STARLINK_SCOUT',
+        options: ['CELLULAR_4G', 'IRF'],
+        simPhoneNumber: '+359888000111',
+        installedAt: new Date('2026-03-01T00:00:00Z'),
+      },
+      { id: higherId, imei: '100000000000003', vehicleId: second.id, model: 'OTHER' },
+      { id: lowerId, imei: '100000000000004', vehicleId: second.id },
+    ] as const;
+    for (const row of rows)
+      await database.client.device.create({
+        data: { tenantId, branchId, ...row, options: 'options' in row ? [...row.options] : [] },
+      });
+    const foreignBranch = randomUUID();
+    await database.client.device.create({
+      data: {
+        tenantId,
+        branchId: foreignBranch,
+        vehicleId: (await truck(foreignBranch, 'CB 1001 AX')).id,
+        imei: '100000000000001',
+        firmwareVersion: '2.26.1',
+      },
+    });
+    const source =
+      'query($search:String,$filter:FleetDeviceFilter,$sort:FleetDeviceSort){fleetDevices(search:$search,filter:$filter,sort:$sort){items{imei}total}}';
+    async function imeis(variables: Record<string, unknown>) {
+      return query(source, variables, branchId);
+    }
+    function page(values: string[]) {
+      return {
+        data: { fleetDevices: { items: values.map((imei) => ({ imei })), total: values.length } },
+      };
+    }
+    expect(await imeis({ sort: { field: 'INSTALLED_AT', direction: 'ASC' } })).toEqual(
+      page(['100000000000002', '100000000000001', '100000000000003', '100000000000004']),
+    );
+    expect(await imeis({ sort: { field: 'INSTALLED_AT', direction: 'DESC' } })).toEqual(
+      page(['100000000000001', '100000000000002', '100000000000003', '100000000000004']),
+    );
+    const byImei = { field: 'IMEI', direction: 'ASC' };
+    expect(await imeis({ filter: { models: ['STARLINK_SCOUT', 'OTHER'] }, sort: byImei })).toEqual(
+      page(['100000000000002', '100000000000003']),
+    );
+    expect(await imeis({ filter: { options: ['CELLULAR_4G', 'CAN'] } })).toEqual(
+      page(['100000000000001']),
+    );
+    expect(await imeis({ filter: { options: ['CELLULAR_4G'] }, sort: byImei })).toEqual(
+      page(['100000000000001', '100000000000002']),
+    );
+    expect(await imeis({ filter: { vehicleIds: [second.id] }, sort: byImei })).toEqual(
+      page(['100000000000003', '100000000000004']),
+    );
+    expect(await imeis({ search: '2.26' })).toEqual(page(['100000000000001']));
+    expect(await imeis({ search: '888000' })).toEqual(page(['100000000000002']));
+    expect(await imeis({ search: 'pb 2002', sort: byImei })).toEqual(
+      page(['100000000000003', '100000000000004']),
+    );
+    expect(await imeis({ search: 'cb 0000000000002' })).toEqual(page(['100000000000002']));
+    expect(await imeis({ filter: { vehicleIds: [] } })).toMatchObject({
+      errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'filter' }] } }],
+    });
+  });
+
   it('isolates tenants even when the supplied branch ID and IMEI are identical', async () => {
     const branchId = randomUUID(),
       otherTenant = randomUUID();

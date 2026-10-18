@@ -34,12 +34,28 @@ describe('local GraphQL contracts', () => {
     expect(result.apiSchema.getType('FleetDevice')).toBeDefined();
     expect(result.apiSchema.getType('ReferenceVehicle')).toBeUndefined();
     expect(result.apiSchema.getType('ReferenceDevice')).toBeUndefined();
+    // Standard Fleet list contract: one shared sort direction and stored reference types.
+    for (const name of [
+      'FleetSortDirection',
+      'FleetVehicleRef',
+      'FleetDriverRef',
+      'FleetVehicleGroupRef',
+      'Date',
+      'DateTime',
+    ])
+      expect(result.apiSchema.getType(name)).toBeDefined();
+    for (const name of ['FleetVehicleSortDirection', 'FleetDeviceSortDirection'])
+      expect(result.apiSchema.getType(name)).toBeUndefined();
     expect(Object.keys(result.apiSchema.getQueryType()?.getFields() ?? {}).sort()).toEqual([
       'branch',
       'branches',
       'fleetDevice',
       'fleetDevices',
+      'fleetDriver',
+      'fleetDrivers',
       'fleetVehicle',
+      'fleetVehicleGroup',
+      'fleetVehicleGroups',
       'fleetVehicles',
       'karmaCar',
       'karmaCars',
@@ -57,12 +73,28 @@ describe('local GraphQL contracts', () => {
     ]);
     expect(Object.keys(result.apiSchema.getMutationType()?.getFields() ?? {}).sort()).toEqual([
       'createFleetDevice',
+      'createFleetDriver',
       'createFleetVehicle',
+      'createFleetVehicleGroup',
+      'deactivateFleetVehicle',
       'deleteFleetDevice',
+      'deleteFleetDriver',
       'deleteFleetVehicle',
+      'deleteFleetVehicleGroup',
       'demoLogin',
       'updateFleetDevice',
+      'updateFleetDriver',
       'updateFleetVehicle',
+      'updateFleetVehicleGroup',
+    ]);
+    const fleetVehicles = result.apiSchema.getQueryType()?.getFields()['fleetVehicles'];
+    expect(fleetVehicles?.args.map((argument) => argument.name)).toEqual([
+      'offset',
+      'limit',
+      'search',
+      'ids',
+      'filter',
+      'sort',
     ]);
     expect(composeContracts(await readContracts()).supergraphSdl).toBe(result.supergraphSdl);
   });

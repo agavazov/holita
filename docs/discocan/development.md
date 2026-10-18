@@ -108,7 +108,65 @@ query VehiclesWithBranches {
 }
 ```
 
-Mutations are create/update/delete FleetVehicle and FleetDevice. Inputs never accept tenantId or branchId. [Architecture](architecture.md#graphql-contracts-and-context) describes
+Every Fleet list takes the same [standard list arguments](architecture.md#standard-list-contract).
+A filtered, sorted page of active or in-workshop tractors without a group, searched by two
+tokens, with stored group/driver references:
+
+```graphql
+query TractorsWithoutGroup {
+  fleetVehicles(
+    search: "CB AX"
+    filter: { statuses: [ACTIVE, IN_WORKSHOP], vehicleTypes: [TRACTOR], hasGroup: false }
+    sort: { field: FLEET_NUMBER, direction: ASC }
+    limit: 50
+  ) {
+    items {
+      id
+      licensePlate
+      fleetNumber
+      status
+      currentDriver {
+        id
+        firstName
+        lastName
+      }
+      deviceCount
+    }
+    total
+  }
+}
+```
+
+Drivers whose licence or tachograph card expires within 30 days of the Europe/Sofia business
+date (expired ones included), with their document status and current vehicles:
+
+```graphql
+query ExpiringDriverDocuments {
+  fleetDrivers(filter: { documentsExpireWithinDays: 30, statuses: [ACTIVE, ON_LEAVE] }) {
+    items {
+      id
+      firstName
+      lastName
+      licenseExpiresOn
+      tachographCardExpiresOn
+      documentStatus
+      vehicles {
+        id
+        licensePlate
+      }
+    }
+    total
+  }
+}
+```
+
+Mutations create/update/delete FleetVehicle, FleetDevice, FleetDriver and FleetVehicleGroup;
+`deactivateFleetVehicle(id:)` sets a vehicle `INACTIVE` and clears its driver when devices or
+history block deletion. Inputs never accept tenantId or branchId; `Date` inputs are
+`YYYY-MM-DD` and `DateTime` inputs need `Z` or an offset. Duplicate values and related IDs
+outside the Branch return BAD_USER_INPUT with `fieldErrors` (for example
+`[{ path: "employeeNumber", message: "Employee number is already used in this branch." }]`).
+[Architecture](architecture.md#graphql-contracts-and-context) describes
 validation, federation and error semantics. Inspect GraphQL errors even on HTTP 200 and
 preserve the response request ID when reporting failures. Branch scope is not authorization.
 

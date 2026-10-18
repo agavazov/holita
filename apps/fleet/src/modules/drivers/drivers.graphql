@@ -1,0 +1,137 @@
+enum FleetDriverStatus {
+  ACTIVE
+  ON_LEAVE
+  INACTIVE
+}
+enum FleetLicenseCategory {
+  B
+  BE
+  C1
+  C1E
+  C
+  CE
+  D1
+  D1E
+  D
+  DE
+}
+enum FleetDocumentStatus {
+  NOT_RECORDED
+  VALID
+  EXPIRING
+  EXPIRED
+}
+enum FleetDriverDocumentType {
+  DRIVING_LICENSE
+  TACHOGRAPH_CARD
+}
+
+type FleetDriver {
+  id: ID!
+  branchId: ID!
+  firstName: String!
+  lastName: String!
+  employeeNumber: String
+  identificationKey: String
+  phone: String
+  email: String
+  licenseNumber: String
+  licenseCategories: [FleetLicenseCategory!]!
+  licenseExpiresOn: Date
+  tachographCardNumber: String
+  tachographCardExpiresOn: Date
+  status: FleetDriverStatus!
+  notes: String
+  "Vehicles whose current driver this is, by licence plate."
+  vehicles: [FleetVehicleRef!]!
+  "Worst status of the licence and tachograph card at the business date (Europe/Sofia)."
+  documentStatus: FleetDocumentStatus!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type FleetDriverRef {
+  id: ID!
+  firstName: String!
+  lastName: String!
+  employeeNumber: String
+  status: FleetDriverStatus!
+}
+
+type FleetDriverPage {
+  items: [FleetDriver!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+
+input FleetDriverFilter {
+  statuses: [FleetDriverStatus!]
+  licenseCategories: [FleetLicenseCategory!]
+  "0–365: licence or tachograph card expires on or before the business date plus this many days (expired included)."
+  documentsExpireWithinDays: Int
+  hasVehicle: Boolean
+}
+
+enum FleetDriverSortField {
+  LAST_NAME
+  EMPLOYEE_NUMBER
+  LICENSE_EXPIRES_ON
+  TACHOGRAPH_CARD_EXPIRES_ON
+  CREATED_AT
+}
+input FleetDriverSort {
+  field: FleetDriverSortField! = LAST_NAME
+  direction: FleetSortDirection! = ASC
+}
+
+input CreateFleetDriverInput {
+  firstName: String!
+  lastName: String!
+  employeeNumber: String
+  identificationKey: String
+  phone: String
+  email: String
+  licenseNumber: String
+  licenseCategories: [FleetLicenseCategory!]
+  licenseExpiresOn: Date
+  tachographCardNumber: String
+  tachographCardExpiresOn: Date
+  status: FleetDriverStatus
+  notes: String
+}
+
+"Omitted fields stay unchanged; explicit null clears optional fields."
+input UpdateFleetDriverInput {
+  firstName: String
+  lastName: String
+  employeeNumber: String
+  identificationKey: String
+  phone: String
+  email: String
+  licenseNumber: String
+  licenseCategories: [FleetLicenseCategory!]
+  licenseExpiresOn: Date
+  tachographCardNumber: String
+  tachographCardExpiresOn: Date
+  status: FleetDriverStatus
+  notes: String
+}
+
+extend type Query {
+  fleetDrivers(
+    offset: Int! = 0
+    limit: Int! = 20
+    search: String
+    ids: [ID!]
+    filter: FleetDriverFilter
+    sort: FleetDriverSort
+  ): FleetDriverPage!
+  fleetDriver(id: ID!): FleetDriver!
+}
+
+extend type Mutation {
+  createFleetDriver(input: CreateFleetDriverInput!): FleetDriver!
+  updateFleetDriver(id: ID!, input: UpdateFleetDriverInput!): FleetDriver!
+  deleteFleetDriver(id: ID!): FleetDriver!
+}

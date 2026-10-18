@@ -1,6 +1,6 @@
 ---
 name: holita-backend-feature
-description: Implement holita backend GraphQL features using Vehicles/Devices, generated contracts, scoped persistence and focused tests. Use for backend work, not frontend-only changes.
+description: Implement holita backend GraphQL features using the Fleet modules, the standard list contract, generated contracts, scoped persistence and focused tests. Use for backend work, not frontend-only changes.
 ---
 
 # Backend feature reference
@@ -28,13 +28,24 @@ remain independent of Core except requested federated Branch fields.
 Vehicle assignment, 15-digit string IMEI and per-Branch uniqueness. Preserve leading zeros,
 composite foreign keys, shared assignments and protected Vehicle deletion. Resolve federation
 references through scoped service access; use @Parent with Nest parameter decorators.
+[Drivers](../../../apps/fleet/src/modules/drivers/drivers.service.ts) and
+[Vehicle groups](../../../apps/fleet/src/modules/vehicle-groups/vehicle-groups.service.ts) show
+non-entity modules with business-date values and `_count` aggregates.
+
+Every Fleet list follows the [standard list contract](../../../docs/discocan/architecture.md#standard-list-contract):
+validate with the helpers in [validation.ts](../../../apps/fleet/src/validation.ts), build
+`where`/`orderBy` explicitly with [search helpers](../../../apps/fleet/src/database/search.ts),
+load `…Ref` links and counts in the same repository query and keep resolvers delegating.
+Business dates come from an overridable `FleetClock`.
 
 Keep runtime validation explicit. After SDL/operation changes run codegen/schema:check.
-Review new owning-service migration SQL and preserve applied history. Generated output stays ignored.
+Review new owning-service migration SQL (generate it with `prisma migrate diff` from `apps/fleet`,
+add hand-written CHECKs) and preserve applied history. Generated output stays ignored.
 Use standard Nest exceptions; do not add generic layers, duplicate API models or cross-app imports.
 
-Start with `test:fleet -- vehicles.service.spec.ts` or `devices.service.spec.ts`.
-Persistence changes use `test:fleet:db -- vehicles.db.spec.ts devices.db.spec.ts` after the
+Start with `test:fleet -- validation.spec.ts` and the module's `*.service.spec.ts`.
+Persistence changes use `test:fleet:db -- <module>.db.spec.ts constraints.db.spec.ts` (plus
+`initial-migration.db.spec.ts branch-migration.db.spec.ts` for migrations) after the
 [database prerequisites](../../../docs/testing.md#real-postgresql-checks). Runtime-boundary changes
 use `test:gateway:db -- federation.db.spec.mts`. Contracts also use `test:schema -- contracts.unit.spec.mts`.
 Mocks do not prove database/federation isolation. Update authoritative docs with implemented

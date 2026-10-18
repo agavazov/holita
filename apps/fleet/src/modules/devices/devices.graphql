@@ -1,40 +1,88 @@
+enum FleetDeviceModel {
+  STARLINK_TRACKER
+  STARLINK_SCOUT
+  OTHER
+}
+enum FleetDeviceOption {
+  CELLULAR_4G
+  SAFETY_SF
+  IRF
+  CAN
+  DRIVER_ID
+  GEOZONES_GO
+  TEMPERATURE_DS
+  ECONNECT
+  WIFI
+  VOICE
+  EXTERNAL_ANTENNA
+  RS232
+  WILIOT
+}
+
 type FleetDevice @key(fields: "id") {
   id: ID!
   branchId: ID!
   branch: Branch!
   imei: String!
   vehicleId: ID!
-  vehicle: FleetVehicle!
+  vehicle: FleetVehicleRef!
+  model: FleetDeviceModel
+  options: [FleetDeviceOption!]!
+  firmwareVersion: String
+  simPhoneNumber: String
+  simIccid: String
+  installedAt: DateTime
+  notes: String
   createdAt: DateTime!
   updatedAt: DateTime!
 }
+
 type FleetDevicePage {
   items: [FleetDevice!]!
   total: Int!
   offset: Int!
   limit: Int!
 }
+
+input FleetDeviceFilter {
+  models: [FleetDeviceModel!]
+  options: [FleetDeviceOption!]
+  vehicleIds: [ID!]
+}
+
+enum FleetDeviceSortField {
+  IMEI
+  INSTALLED_AT
+  CREATED_AT
+}
+input FleetDeviceSort {
+  field: FleetDeviceSortField! = CREATED_AT
+  direction: FleetSortDirection! = DESC
+}
+
 input CreateFleetDeviceInput {
   imei: String!
   vehicleId: ID!
+  model: FleetDeviceModel
+  options: [FleetDeviceOption!]
+  firmwareVersion: String
+  simPhoneNumber: String
+  simIccid: String
+  installedAt: DateTime
+  notes: String
 }
+
+"Omitted fields stay unchanged; explicit null clears optional fields."
 input UpdateFleetDeviceInput {
   imei: String
   vehicleId: ID
-}
-enum FleetDeviceSortField {
-  IMEI
-  CREATED_AT
-}
-
-enum FleetDeviceSortDirection {
-  ASC
-  DESC
-}
-
-input FleetDeviceSort {
-  field: FleetDeviceSortField! = CREATED_AT
-  direction: FleetDeviceSortDirection! = DESC
+  model: FleetDeviceModel
+  options: [FleetDeviceOption!]
+  firmwareVersion: String
+  simPhoneNumber: String
+  simIccid: String
+  installedAt: DateTime
+  notes: String
 }
 
 extend type Query {
@@ -43,10 +91,12 @@ extend type Query {
     limit: Int! = 20
     search: String
     ids: [ID!]
+    filter: FleetDeviceFilter
     sort: FleetDeviceSort
   ): FleetDevicePage!
   fleetDevice(id: ID!): FleetDevice!
 }
+
 extend type Mutation {
   createFleetDevice(input: CreateFleetDeviceInput!): FleetDevice!
   updateFleetDevice(id: ID!, input: UpdateFleetDeviceInput!): FleetDevice!

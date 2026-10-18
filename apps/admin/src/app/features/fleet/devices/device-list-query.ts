@@ -1,22 +1,25 @@
 import type { ParamMap } from '@angular/router';
 import type {
   AdminDevicesQueryVariables,
-  FleetDeviceSortDirection,
   FleetDeviceSortField,
+  FleetSortDirection,
 } from '../../../../generated/graphql/operations';
+
+/** Sort fields this screen offers; the API supports more. */
+type DeviceListSortField = Extract<FleetDeviceSortField, 'IMEI' | 'CREATED_AT'>;
 
 export interface DeviceListQuery {
   page: number;
   pageSize: number;
   search: string;
-  sort: FleetDeviceSortField;
-  order: FleetDeviceSortDirection;
+  sort: DeviceListSortField;
+  order: FleetSortDirection;
 }
 
 export const devicePageSizes = [10, 20, 50, 100];
 const sortFields = [{ param: 'imei', field: 'IMEI' }] satisfies {
   param: string;
-  field: FleetDeviceSortField;
+  field: DeviceListSortField;
 }[];
 
 export function readDeviceListQuery(params: ParamMap): DeviceListQuery {

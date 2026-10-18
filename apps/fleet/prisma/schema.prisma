@@ -9,20 +9,117 @@ datasource db {
   provider = "postgresql"
 }
 
+enum FleetVehicleType {
+  TRACTOR
+  RIGID_TRUCK
+  VAN
+  CAR
+  TRAILER
+  OTHER
+}
+
+enum FleetFuelType {
+  DIESEL
+  PETROL
+  LPG
+  CNG
+  ELECTRIC
+  HYBRID
+}
+
+enum FleetVehicleStatus {
+  ACTIVE
+  IN_WORKSHOP
+  INACTIVE
+}
+
+enum FleetDeviceModel {
+  STARLINK_TRACKER
+  STARLINK_SCOUT
+  OTHER
+}
+
+enum FleetDeviceOption {
+  CELLULAR_4G
+  SAFETY_SF
+  IRF
+  CAN
+  DRIVER_ID
+  GEOZONES_GO
+  TEMPERATURE_DS
+  ECONNECT
+  WIFI
+  VOICE
+  EXTERNAL_ANTENNA
+  RS232
+  WILIOT
+}
+
+enum FleetDriverStatus {
+  ACTIVE
+  ON_LEAVE
+  INACTIVE
+}
+
+enum FleetLicenseCategory {
+  B
+  BE
+  C1
+  C1E
+  C
+  CE
+  D1
+  D1E
+  D
+  DE
+}
+
+// Design-system categorical slot, never a colour value.
+enum FleetGroupColor {
+  C1
+  C2
+  C3
+  C4
+  C5
+  C6
+  C7
+  C8
+}
+
+// Columns after notes are appended by the fleet_master_data migration (ADD COLUMN).
+// Hand-written CHECKs in that migration: modelYear, vin, fuelTankCapacityL, INACTIVE without driver.
 model Vehicle {
   id String @id @default(uuid()) @db.Uuid
   tenantId String @db.Uuid
   branchId String @db.Uuid
   licensePlate String @db.VarChar(32)
   notes String? @db.VarChar(2000)
+  fleetNumber String? @db.VarChar(16)
+  vehicleType FleetVehicleType?
+  make String? @db.VarChar(64)
+  model String? @db.VarChar(64)
+  modelYear Int? @db.SmallInt
+  vin String? @db.VarChar(17)
+  fuelType FleetFuelType?
+  fuelTankCapacityL Int? @db.SmallInt
+  status FleetVehicleStatus @default(ACTIVE)
+  groupId String? @db.Uuid
+  currentDriverId String? @db.Uuid
+  group VehicleGroup? @relation(fields: [tenantId, branchId, groupId], references: [tenantId, branchId, id], onDelete: Restrict, onUpdate: Restrict)
+  currentDriver Driver? @relation(fields: [tenantId, branchId, currentDriverId], references: [tenantId, branchId, id], onDelete: Restrict, onUpdate: Restrict)
   devices Device[]
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
   @@unique([tenantId, branchId, id])
+  @@unique([tenantId, branchId, fleetNumber])
+  @@unique([tenantId, branchId, vin])
   @@index([tenantId, branchId, createdAt, id])
+  @@index([tenantId, branchId, groupId])
+  @@index([tenantId, branchId, currentDriverId])
 }
 
+// Hand-written CHECKs: options NOT NULL with at most 13 values, SIM phone number and ICCID formats.
 model Device {
   id String @id @default(uuid()) @db.Uuid
   tenantId String @db.Uuid
@@ -30,6 +127,13 @@ model Device {
   imei String @db.VarChar(15)
   vehicleId String @db.Uuid
   vehicle Vehicle @relation(fields: [tenantId, branchId, vehicleId], references: [tenantId, branchId, id], onDelete: Restrict, onUpdate: Restrict)
+  model FleetDeviceModel?
+  options FleetDeviceOption[] @default([])
+  firmwareVersion String? @db.VarChar(32)
+  simPhoneNumber String? @db.VarChar(20)
+  simIccid String? @db.VarChar(22)
+  installedAt DateTime? @db.Timestamptz(3)
+  notes String? @db.VarChar(2000)
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
@@ -37,6 +141,51 @@ model Device {
   @@unique([tenantId, branchId, imei])
   @@index([tenantId, branchId, createdAt, id])
   @@index([tenantId, branchId, vehicleId])
+}
+
+// Hand-written CHECKs: licenseCategories NOT NULL with at most 10 values, phone format.
+model Driver {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  firstName String @db.VarChar(64)
+  lastName String @db.VarChar(64)
+  employeeNumber String? @db.VarChar(32)
+  identificationKey String? @db.VarChar(32)
+  phone String? @db.VarChar(20)
+  email String? @db.VarChar(254)
+  licenseNumber String? @db.VarChar(32)
+  licenseCategories FleetLicenseCategory[] @default([])
+  licenseExpiresOn DateTime? @db.Date
+  tachographCardNumber String? @db.VarChar(16)
+  tachographCardExpiresOn DateTime? @db.Date
+  status FleetDriverStatus @default(ACTIVE)
+  notes String? @db.VarChar(2000)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  vehicles Vehicle[]
+
+  @@unique([tenantId, branchId, id])
+  @@unique([tenantId, branchId, employeeNumber])
+  @@unique([tenantId, branchId, identificationKey])
+  @@index([tenantId, branchId, lastName, firstName, id])
+  @@index([tenantId, branchId, createdAt, id])
+}
+
+model VehicleGroup {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  name String @db.VarChar(64)
+  description String? @db.VarChar(500)
+  colorToken FleetGroupColor @default(C1)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  vehicles Vehicle[]
+
+  @@unique([tenantId, branchId, id])
+  @@unique([tenantId, branchId, name])
+  @@index([tenantId, branchId, createdAt, id])
 }
 
 // Shared vendor reference data. Device/Vehicle data remains Tenant/Branch scoped.

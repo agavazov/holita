@@ -25,7 +25,7 @@ relevant behavioral checks. SDL/operations also require codegen, schema:check an
 
 ## Domain checks
 
-[Discocan checks](discocan/testing.md) cover Vehicles/Devices, Angular workspaces,
+[Discocan checks](discocan/testing.md) cover Fleet Vehicles, Devices, Drivers, Vehicle groups and the list contract, Angular workspaces,
 telemetry login, captured clients and browser behavior. [Ecommerce Branch checks](ecommerce/branches.md#validation)
 cover tenant-scoped Branch discovery and persistence.
 
@@ -44,7 +44,7 @@ npm run test:fleet:db -- vehicles.db.spec.ts devices.db.spec.ts
 Guarded helpers reject development/foreign/nonlocal identities and URL options. Each run deploys
 reviewed migrations into its own random schema, closes connections and drops only that schema.
 No broad resets/truncation occur. Core persistence tests cover seed idempotency, schema isolation
-and inability to connect to development/Fleet databases. Fleet migrations create tenant-scoped Vehicle/Device indexes, a digit CHECK and a same-tenant/same-branch restricted FK.
+and inability to connect to development/Fleet databases. Fleet migrations create tenant-scoped Vehicle/Device/Driver/VehicleGroup indexes, the IMEI digit CHECK and master data CHECKs, and same-tenant/same-branch restricted composite FKs; `constraints.db.spec.ts` proves them and the generated unique index names.
 Database results must run fresh and cannot be treated as valid Nx cache hits.
 
 ## Real federation and browser smoke checks
@@ -61,7 +61,9 @@ Offline contracts tests compose the Core, Fleet and Karma Client subgraphs, vali
 assert the exact public query/mutation inventory. Karma Client runs against a local controlled
 Karma HTTP server without live credentials. Guard tests reject unsafe local test URLs.
 Federation fixture owns isolated Core/Fleet test schemas, Core seeds, real backend processes
-and request observers. It proves Branch discovery, Vehicle/Device relations and scope, CORS/header
+and request observers. It proves Branch discovery, Vehicle/Device relations and scope, Driver and
+Vehicle group CRUD with Core creation checks, stored group/driver references, sanitized
+`fieldErrors` for duplicates and malformed dates, protected group deletion, CORS/header
 bounds, availability, request-local Core validation and scoped CRUD while Core is stopped.
 Gateway has no database dependency. The fixture uses only the pinned Apollo Router binary,
 waits on its dedicated health listener and closes it before subgraphs and test schemas.
@@ -184,6 +186,10 @@ a fixed-arrival-rate latency SLA, cold-start performance or real Karma network l
 | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Vehicle validation/query/persistence    | vehicles.service.spec.ts, vehicles.db.spec.ts                                                                                                                                                                                                                                          |
 | Device IMEI/assignment/persistence      | devices.service.spec.ts, devices.db.spec.ts                                                                                                                                                                                                                                            |
+| Driver/Vehicle group rules/persistence  | drivers.service.spec.ts, drivers.db.spec.ts, vehicle-groups.service.spec.ts, vehicle-groups.db.spec.ts                                                                                                                                                                                 |
+| Fleet list contract/validation/scalars  | validation.spec.ts, scalars.spec.ts and the affected module's service and db specs                                                                                                                                                                                                     |
+| Fleet migration/CHECKs/unique mapping   | initial-migration.db.spec.ts, branch-migration.db.spec.ts, constraints.db.spec.ts, seeds.db.spec.ts                                                                                                                                                                                    |
+| Fleet business errors through Router    | router.smoke.spec.mts (`npm run test:gateway:router`), federation.db.spec.mts                                                                                                                                                                                                          |
 | Runtime module/health                   | Fleet/Core health.spec.ts; Gateway router.runtime.spec.mts                                                                                                                                                                                                                             |
 | Karma account client/access             | accounts.spec.ts, history.spec.ts, location.spec.ts, edata.spec.ts, edata.service.spec.ts, cars.spec.ts, cars.service.spec.ts, Karma health.spec.ts                                                                                                                                    |
 | Karma truck/reference reads and routing | accounts.spec.ts, history.spec.ts, location-references.spec.ts, karma-workspace.spec.ts, edata-page.spec.ts, angular-karma-phase4.smoke.spec.mts, angular-karma-phase3.smoke.spec.mts, angular-karma-phase2.smoke.spec.mts, angular-karma.smoke.spec.mts, angular-edata.smoke.spec.mts |

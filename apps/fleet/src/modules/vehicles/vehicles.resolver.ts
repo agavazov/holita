@@ -12,6 +12,7 @@ import {
 } from '@nestjs/graphql';
 import type {
   MutationCreateFleetVehicleArgs,
+  MutationDeactivateFleetVehicleArgs,
   MutationDeleteFleetVehicleArgs,
   MutationUpdateFleetVehicleArgs,
   FleetVehicle,
@@ -51,6 +52,14 @@ export class VehiclesResolver {
     @Context() context: RequestContext,
   ) {
     return this.vehiclesService.update(context, args.id, args.input);
+  }
+
+  @Mutation('deactivateFleetVehicle')
+  deactivateFleetVehicle(
+    @Args() args: MutationDeactivateFleetVehicleArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.vehiclesService.deactivate(context, args.id);
   }
 
   @Mutation('deleteFleetVehicle')

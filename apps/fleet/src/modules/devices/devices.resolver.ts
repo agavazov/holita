@@ -1,4 +1,3 @@
-import { VehiclesService } from '../vehicles/vehicles.service.js';
 import { UseGuards } from '@nestjs/common';
 import { FleetEnabledGuard } from '../../fleet-enabled.guard.js';
 import {
@@ -26,10 +25,7 @@ import { DevicesService, type DeviceResult } from './devices.service.js';
 @Resolver('FleetDevice')
 @UseGuards(FleetEnabledGuard)
 export class DevicesResolver {
-  constructor(
-    private readonly devicesService: DevicesService,
-    private readonly vehiclesService: VehiclesService,
-  ) {}
+  constructor(private readonly devicesService: DevicesService) {}
 
   @Query('fleetDevices')
   fleetDevices(@Args() args: QueryFleetDevicesArgs, @Context() context: RequestContext) {
@@ -71,11 +67,6 @@ export class DevicesResolver {
     @Context() context: RequestContext,
   ) {
     return this.devicesService.find(context, reference.id);
-  }
-
-  @ResolveField('vehicle')
-  vehicle(@Parent() device: DeviceResult, @Context() context: RequestContext) {
-    return this.vehiclesService.find(context, device.vehicleId);
   }
 
   @ResolveField('branch')

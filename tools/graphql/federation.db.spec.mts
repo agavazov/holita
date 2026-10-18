@@ -438,7 +438,7 @@ describe('Fleet through the actual federation boundary', () => {
     const vehicleId = record(record(record(createdTruck).data).createFleetVehicle).id;
     if (typeof vehicleId !== 'string') throw new Error('Missing truck ID');
     const created = await query(
-      'mutation($input:CreateFleetDeviceInput!){createFleetDevice(input:$input){id imei vehicle{licensePlate branch{id}} branch{id name}}}',
+      'mutation($input:CreateFleetDeviceInput!){createFleetDevice(input:$input){id imei vehicle{__typename id licensePlate} branch{id name}}}',
       {
         input: { imei: '001234567890123', vehicleId },
       },
@@ -447,7 +447,7 @@ describe('Fleet through the actual federation boundary', () => {
       data: {
         createFleetDevice: {
           imei: '001234567890123',
-          vehicle: { licensePlate: 'DEVICE-TRUCK', branch: { id: discordia } },
+          vehicle: { __typename: 'FleetVehicleRef', id: vehicleId, licensePlate: 'DEVICE-TRUCK' },
           branch: { id: discordia, name: 'Discordia' },
         },
       },
@@ -698,5 +698,150 @@ describe('Fleet through the actual federation boundary', () => {
       }
     }
     await query('mutation($id:ID!){deleteFleetVehicle(id:$id){id}}', { id });
+  });
+  it('manages drivers and vehicle groups through Gateway with Core creation checks and sanitized field errors', async () => {
+    fixture.coreRequests.length = 0;
+    const driver = await query(
+      'mutation($input:CreateFleetDriverInput!){createFleetDriver(input:$input){id firstName employeeNumber licenseExpiresOn documentStatus vehicles{id}}}',
+      {
+        input: {
+          firstName: 'Георги',
+          lastName: 'Иванов',
+          employeeNumber: 'GW-001',
+          licenseExpiresOn: '2030-01-31',
+        },
+      },
+    );
+    expect(driver).toMatchObject({
+      data: {
+        createFleetDriver: {
+          firstName: 'Георги',
+          employeeNumber: 'GW-001',
+          licenseExpiresOn: '2030-01-31',
+          documentStatus: 'VALID',
+          vehicles: [],
+        },
+      },
+    });
+    const driverId = record(record(record(driver).data).createFleetDriver).id;
+    const group = await query(
+      'mutation($input:CreateFleetVehicleGroupInput!){createFleetVehicleGroup(input:$input){id name colorToken vehicleCount}}',
+      { input: { name: 'Gateway group', colorToken: 'C4' } },
+    );
+    expect(group).toMatchObject({
+      data: {
+        createFleetVehicleGroup: { name: 'Gateway group', colorToken: 'C4', vehicleCount: 0 },
+      },
+    });
+    const groupId = record(record(record(group).data).createFleetVehicleGroup).id;
+    expect(fixture.coreRequests).toHaveLength(2);
+    const vehicle = await query(
+      'mutation($input:CreateFleetVehicleInput!){createFleetVehicle(input:$input){id status group{id name colorToken} currentDriver{id firstName lastName} deviceCount branch{name}}}',
+      {
+        input: {
+          licensePlate: 'CB 1001 AX',
+          fleetNumber: 'GW-01',
+          groupId,
+          currentDriverId: driverId,
+        },
+      },
+    );
+    expect(vehicle).toMatchObject({
+      data: {
+        createFleetVehicle: {
+          status: 'ACTIVE',
+          group: { id: groupId, name: 'Gateway group', colorToken: 'C4' },
+          currentDriver: { id: driverId, firstName: 'Георги', lastName: 'Иванов' },
+          deviceCount: 0,
+          branch: { name: 'Discordia' },
+        },
+      },
+    });
+    const vehicleId = record(record(record(vehicle).data).createFleetVehicle).id;
+    expect(
+      await query('mutation($input:CreateFleetDriverInput!){createFleetDriver(input:$input){id}}', {
+        input: { firstName: 'Second', lastName: 'Driver', employeeNumber: 'GW-001' },
+      }),
+    ).toMatchObject({
+      errors: [
+        {
+          extensions: {
+            code: 'BAD_USER_INPUT',
+            fieldErrors: [
+              {
+                path: 'employeeNumber',
+                message: 'Employee number is already used in this branch.',
+              },
+            ],
+          },
+        },
+      ],
+    });
+    expect(
+      await query('mutation($input:CreateFleetDriverInput!){createFleetDriver(input:$input){id}}', {
+        input: { firstName: 'Second', lastName: 'Driver', licenseExpiresOn: '2026-02-30' },
+      }),
+    ).toMatchObject({
+      errors: [
+        { extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'licenseExpiresOn' }] } },
+      ],
+    });
+    expect(
+      await query(
+        '{fleetDrivers(filter:{hasVehicle:true}){items{id vehicles{id licensePlate}}total} fleetVehicleGroups{items{name vehicleCount}total ungroupedVehicleCount}}',
+      ),
+    ).toMatchObject({
+      data: {
+        fleetDrivers: {
+          items: [{ id: driverId, vehicles: [{ id: vehicleId, licensePlate: 'CB 1001 AX' }] }],
+          total: 1,
+        },
+        fleetVehicleGroups: { items: [{ name: 'Gateway group', vehicleCount: 1 }], total: 1 },
+      },
+    });
+    expect(
+      await query(
+        '{fleetDrivers{total} fleetVehicleGroups{total ungroupedVehicleCount} fleetVehicles(filter:{hasGroup:true}){total}}',
+        {},
+        sandbox,
+      ),
+    ).toEqual({
+      data: {
+        fleetDrivers: { total: 0 },
+        fleetVehicleGroups: { total: 0, ungroupedVehicleCount: 0 },
+        fleetVehicles: { total: 0 },
+      },
+    });
+    for (const source of [
+      'query($id:ID!){fleetDriver(id:$id){id}}',
+      'mutation($id:ID!){deleteFleetDriver(id:$id){id}}',
+    ])
+      expect(await query(source, { id: driverId }, sandbox)).toMatchObject({
+        errors: [{ extensions: { code: 'NOT_FOUND' } }],
+      });
+    expect(
+      await query('mutation($id:ID!){deleteFleetVehicleGroup(id:$id){id}}', { id: groupId }),
+    ).toMatchObject({
+      errors: [
+        {
+          message: 'Vehicle group still contains vehicles; move them first.',
+          extensions: { code: 'CONFLICT' },
+        },
+      ],
+    });
+    expect(
+      await query('mutation($id:ID!){deactivateFleetVehicle(id:$id){status currentDriver{id}}}', {
+        id: vehicleId,
+      }),
+    ).toEqual({ data: { deactivateFleetVehicle: { status: 'INACTIVE', currentDriver: null } } });
+    expect(
+      await query('mutation($id:ID!){deleteFleetVehicle(id:$id){id}}', { id: vehicleId }),
+    ).toEqual({ data: { deleteFleetVehicle: { id: vehicleId } } });
+    expect(
+      await query('mutation($id:ID!){deleteFleetVehicleGroup(id:$id){id}}', { id: groupId }),
+    ).toEqual({ data: { deleteFleetVehicleGroup: { id: groupId } } });
+    expect(
+      await query('mutation($id:ID!){deleteFleetDriver(id:$id){id}}', { id: driverId }),
+    ).toEqual({ data: { deleteFleetDriver: { id: driverId } } });
   });
 });
