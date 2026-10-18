@@ -464,6 +464,65 @@ function buildServiceTasks(): SampleServiceTask[] {
 
 export const sampleServiceTasks: readonly SampleServiceTask[] = buildServiceTasks();
 
+export type DeviceStatus = 'ONLINE' | 'OFFLINE' | 'IN_STOCK';
+
+export interface SampleDevice {
+  readonly id: string;
+  readonly imei: string;
+  readonly model: string;
+  readonly firmware: string;
+  readonly simIccid: string;
+  readonly vehicleId: string | null;
+  readonly status: DeviceStatus;
+  readonly lastSeenAt: string | null;
+  /** GSM signal, 0–5 bars. */
+  readonly signal: number | null;
+  readonly voltage: number | null;
+  readonly installedOn: string | null;
+  readonly notes: string;
+}
+
+const deviceModels = ['Teltonika FMC650', 'Teltonika FMB920', 'Teltonika FMC130', 'Ruptela ECO5'];
+
+function buildDevices(): SampleDevice[] {
+  const random = seeded(53);
+  const tracked = sampleVehicles.filter((vehicle) => vehicle.activity !== 'NO_DEVICE');
+  const installed = tracked.map((vehicle, index): SampleDevice => {
+    const online = vehicle.activity !== 'NOT_CONNECTED';
+    return {
+      id: `dev${String(index + 1).padStart(3, '0')}`,
+      imei: `35${String(8_900_000_000_000 + index * 7_919_331).padStart(13, '0')}`,
+      model: deviceModels[index % deviceModels.length] ?? 'Teltonika FMC650',
+      firmware: index % 5 === 3 ? '03.28.07' : '03.29.02',
+      simIccid: `8935901${String(990_000_000_000 + index * 13_337).padStart(12, '0')}`,
+      vehicleId: vehicle.id,
+      status: online ? 'ONLINE' : 'OFFLINE',
+      lastSeenAt: vehicle.lastReportedAt,
+      signal: online ? 2 + Math.floor(random() * 4) : null,
+      voltage: online ? Math.round((24 + random() * 4) * 10) / 10 : 11.4,
+      installedOn: vehicle.createdAt.slice(0, 10),
+      notes: index % 9 === 4 ? 'CAN adapter fitted; tachograph download enabled.' : '',
+    };
+  });
+  const stock = Array.from({ length: 4 }, (_, index): SampleDevice => ({
+    id: `dev${String(installed.length + index + 1).padStart(3, '0')}`,
+    imei: `35${String(8_960_000_000_000 + index * 4_441).padStart(13, '0')}`,
+    model: deviceModels[(index + 1) % deviceModels.length] ?? 'Teltonika FMB920',
+    firmware: '03.29.02',
+    simIccid: `8935901${String(991_000_000_000 + index * 977).padStart(12, '0')}`,
+    vehicleId: null,
+    status: 'IN_STOCK',
+    lastSeenAt: null,
+    signal: null,
+    voltage: null,
+    installedOn: null,
+    notes: index === 0 ? 'Spare for the Plovdiv workshop.' : '',
+  }));
+  return [...installed, ...stock];
+}
+
+export const sampleDevices: readonly SampleDevice[] = buildDevices();
+
 export function vehicleById(id: string): SampleVehicle | undefined {
   return sampleVehicles.find((vehicle) => vehicle.id === id);
 }

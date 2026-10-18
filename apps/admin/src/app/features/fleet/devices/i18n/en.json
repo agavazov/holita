@@ -1,0 +1,84 @@
+{
+  "eyebrow": "Fleet",
+  "title": "Devices",
+  "description": "{branch} · GPS trackers, their connection and the vehicle they are installed in",
+  "new": "Register device",
+  "search": "Search IMEI, SIM, model or plate",
+  "kpis": {
+    "label": "Device summary",
+    "online": "Online",
+    "offline": "Offline",
+    "offlineFootnote": "no connection for 48 h",
+    "stock": "In stock",
+    "outdated": "Outdated firmware"
+  },
+  "table": {
+    "heading": "Devices",
+    "device": "Device",
+    "status": "Connection",
+    "vehicle": "Vehicle",
+    "lastSeen": "Last seen",
+    "signal": "Signal",
+    "voltage": "Voltage",
+    "firmware": "Firmware",
+    "actions": "Actions",
+    "selectPage": "Select all on this page",
+    "selectRow": "Select {imei}",
+    "edit": "Edit device {imei}",
+    "notInstalled": "Not installed",
+    "never": "Never",
+    "signalBars": "{bars} of 5 bars",
+    "outdated": "Update available",
+    "emptyTitle": "No devices yet",
+    "emptyDescription": "Register the trackers of this branch to see their connection.",
+    "errorText": "The devices could not be loaded. (demo-request-11)"
+  },
+  "statuses": {
+    "ONLINE": "Online",
+    "OFFLINE": "Offline",
+    "IN_STOCK": "In stock"
+  },
+  "rowActions": {
+    "edit": "Edit",
+    "restart": "Restart",
+    "vehicle": "Open vehicle profile"
+  },
+  "bulk": {
+    "restart": "Restart"
+  },
+  "filters": {
+    "status": "Connection",
+    "model": "Model",
+    "firmware": "Firmware",
+    "installed": "Installed in a vehicle"
+  },
+  "notices": {
+    "saved": "Device {imei} was saved.",
+    "created": "Device {imei} was registered.",
+    "restarted": "Restart sent to {count} device(s)."
+  },
+  "drawer": {
+    "createTitle": "Register device",
+    "editTitle": "Device {imei}",
+    "diagnostics": "Diagnostics",
+    "status": "Connection",
+    "lastSeen": "Last seen",
+    "signal": "Signal",
+    "voltage": "External voltage",
+    "firmware": "Firmware",
+    "model": "Model",
+    "installation": "Installation",
+    "imei": "IMEI",
+    "imeiHint": "15 digits from the device label",
+    "sim": "SIM ICCID",
+    "simHint": "19 or 20 digits",
+    "vehicle": "Installed in",
+    "notInstalled": "Not installed (in stock)",
+    "notes": "Notes",
+    "save": "Save",
+    "create": "Register",
+    "cancel": "Cancel",
+    "saveError": "The device could not be saved. Try again. (demo-request-12)",
+    "duplicateImei": "This IMEI is already registered."
+  }
+}
