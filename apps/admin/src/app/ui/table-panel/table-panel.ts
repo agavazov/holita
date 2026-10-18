@@ -90,6 +90,27 @@ export class TablePanel {
     const page = this.page();
     return page ? (page.page - 1) * page.pageSize : 0;
   });
+  /** No footer without rows: an empty or unmatched list has nothing to page through. */
+  protected readonly showFooter = computed(() => {
+    const page = this.page();
+    return !!page && page.total > 0 && this.showTable();
+  });
+  /** Page controls only when the rows do not fit on one page; otherwise only the range. */
+  protected readonly showPager = computed(() => {
+    const page = this.page();
+    return !!page && page.total > page.pageSize;
+  });
+  protected readonly rangeText = computed(() => {
+    const page = this.page();
+    if (!page) return '';
+    const first = Math.min(this.first() + 1, page.total);
+    const last = Math.min(this.first() + page.pageSize, page.total);
+    return interpolate(this.text().table.pageReport, {
+      first: formatNumber(first, this.language()),
+      last: formatNumber(last, this.language()),
+      totalRecords: formatNumber(page.total, this.language()),
+    });
+  });
 
   /** Moves focus to the panel heading (after bulk actions). */
   focusHeading(): void {

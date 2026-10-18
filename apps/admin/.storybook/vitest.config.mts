@@ -20,6 +20,11 @@ export default defineConfig({
     }),
     storybookTest({ configDir }),
   ],
+  // Scan every story up front: a dependency discovered mid-run makes Vite re-optimize and reload,
+  // which loads Angular twice (NG0203) and fails the stories of that run.
+  optimizeDeps: {
+    entries: ['src/**/*.stories.ts', '.storybook/preview.ts'],
+  },
   test: {
     name: 'storybook',
     fileParallelism: false,

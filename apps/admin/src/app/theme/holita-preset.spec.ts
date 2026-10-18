@@ -43,6 +43,7 @@ describe('holita preset', () => {
       'inputnumber',
       'inputtext',
       'listbox',
+      'menu',
       'message',
       'metergroup',
       'paginator',

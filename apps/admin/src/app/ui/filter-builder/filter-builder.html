@@ -1,0 +1,239 @@
+<div class="filter-builder__row">
+  <div class="filter-builder__search">
+    <label class="app-visually-hidden" [for]="id + '-search'">{{ searchLabel() }}</label>
+    <p-iconfield>
+      <p-inputicon>
+        <svg data-p-icon="search" aria-hidden="true"></svg>
+      </p-inputicon>
+      <input
+        pInputText
+        type="search"
+        [id]="id + '-search'"
+        [value]="search()"
+        [placeholder]="searchLabel()"
+        [attr.maxlength]="maxLength"
+        [attr.aria-invalid]="searchError() ? 'true' : null"
+        [attr.aria-describedby]="searchError() ? id + '-search-error' : null"
+        [invalid]="!!searchError()"
+        [fluid]="true"
+        autocomplete="off"
+        (input)="inputSearch($event)"
+      />
+    </p-iconfield>
+    @if (searchError(); as error) {
+      <p-message [id]="id + '-search-error'" severity="error" variant="simple" size="small">{{
+        error
+      }}</p-message>
+    }
+  </div>
+  @if (fields().length) {
+    <button
+      type="button"
+      class="filter-builder__add"
+      pButton
+      severity="secondary"
+      [outlined]="true"
+      aria-haspopup="dialog"
+      [attr.aria-expanded]="open() && !editingId()"
+      (click)="openNew($event)"
+    >
+      <svg data-p-icon="filter" aria-hidden="true"></svg>
+      {{ text().addFilter }}
+    </button>
+  }
+  <div class="filter-builder__actions">
+    <ng-content select="[filterActions]" />
+  </div>
+</div>
+
+@if (chips().length) {
+  <div class="filter-builder__chips">
+    <ul class="filter-builder__chip-list" role="list">
+      @for (chip of chips(); track chip.id) {
+        <li
+          class="filter-builder__chip"
+          [class.filter-builder__chip--editing]="editingId() === chip.id && open()"
+        >
+          <button
+            type="button"
+            class="filter-builder__chip-label"
+            aria-haspopup="dialog"
+            [attr.aria-label]="chipEditLabel(chip.label)"
+            (click)="edit(chip.id, $event)"
+          >
+            {{ chip.label }}
+          </button>
+          <button
+            type="button"
+            class="filter-builder__chip-remove"
+            [attr.aria-label]="chipRemoveLabel(chip.label)"
+            (click)="remove(chip.id)"
+          >
+            <svg data-p-icon="times" aria-hidden="true"></svg>
+          </button>
+        </li>
+      }
+    </ul>
+    <button
+      type="button"
+      pButton
+      size="small"
+      severity="secondary"
+      [text]="true"
+      (click)="clearAll()"
+    >
+      {{ text().clearAll }}
+    </button>
+  </div>
+}
+
+<p-popover
+  appendTo="body"
+  styleClass="filter-builder__popover"
+  [pt]="{ root: { 'aria-label': text().editor } }"
+  (onShow)="open.set(true)"
+  (onHide)="open.set(false)"
+>
+  <form class="filter-builder__editor" [formGroup]="form" (ngSubmit)="apply()">
+    <div class="filter-builder__editor-field">
+      <label [for]="id + '-field'">{{ text().field }}</label>
+      <p-select
+        [inputId]="id + '-field'"
+        formControlName="field"
+        [options]="fieldOptions()"
+        optionLabel="label"
+        optionValue="key"
+        appendTo="body"
+        [fluid]="true"
+      />
+    </div>
+    <div class="filter-builder__editor-field">
+      <label [for]="id + '-operator'">{{ text().operator }}</label>
+      <p-select
+        [inputId]="id + '-operator'"
+        formControlName="operator"
+        [options]="operatorOptions()"
+        optionLabel="label"
+        optionValue="value"
+        appendTo="body"
+        [fluid]="true"
+      />
+    </div>
+    @switch (editorKind()) {
+      @case ('text') {
+        <div class="filter-builder__editor-field">
+          <label [for]="id + '-value'">{{ text().value }}</label>
+          <input pInputText [id]="id + '-value'" formControlName="text" [fluid]="true" />
+        </div>
+      }
+      @case ('enum-one') {
+        <div class="filter-builder__editor-field">
+          <label [for]="id + '-value'">{{ text().value }}</label>
+          <p-select
+            [inputId]="id + '-value'"
+            formControlName="text"
+            [options]="choiceOptions()"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+            [fluid]="true"
+          />
+        </div>
+      }
+      @case ('enum-set') {
+        <div class="filter-builder__editor-field">
+          <label [for]="id + '-value'">{{ text().value }}</label>
+          <p-select
+            [inputId]="id + '-value'"
+            [multiple]="true"
+            [pt]="selectMultiplePt"
+            formControlName="choices"
+            [options]="choiceOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [placeholder]="text().chooseValues"
+            appendTo="body"
+            [fluid]="true"
+          />
+        </div>
+      }
+      @case ('number-one') {
+        <div class="filter-builder__editor-field">
+          <label [for]="id + '-value'">{{ text().value }}</label>
+          <p-inputnumber
+            [inputId]="id + '-value'"
+            formControlName="from"
+            [suffix]="field()?.unit ? ' ' + field()?.unit : ''"
+            [fluid]="true"
+          />
+        </div>
+      }
+      @case ('number-range') {
+        <div class="filter-builder__editor-range">
+          <div class="filter-builder__editor-field">
+            <label [for]="id + '-from'">{{ text().from }}</label>
+            <p-inputnumber
+              [inputId]="id + '-from'"
+              formControlName="from"
+              [suffix]="field()?.unit ? ' ' + field()?.unit : ''"
+              [fluid]="true"
+            />
+          </div>
+          <div class="filter-builder__editor-field">
+            <label [for]="id + '-to'">{{ text().to }}</label>
+            <p-inputnumber
+              [inputId]="id + '-to'"
+              formControlName="to"
+              [suffix]="field()?.unit ? ' ' + field()?.unit : ''"
+              [fluid]="true"
+            />
+          </div>
+        </div>
+      }
+      @case ('date-one') {
+        <div class="filter-builder__editor-field">
+          <label [for]="id + '-value'">{{ text().value }}</label>
+          <p-datepicker
+            [inputId]="id + '-value'"
+            formControlName="fromDate"
+            dateFormat="yy-mm-dd"
+            appendTo="body"
+            [fluid]="true"
+          />
+        </div>
+      }
+      @case ('date-range') {
+        <div class="filter-builder__editor-range">
+          <div class="filter-builder__editor-field">
+            <label [for]="id + '-from'">{{ text().from }}</label>
+            <p-datepicker
+              [inputId]="id + '-from'"
+              formControlName="fromDate"
+              dateFormat="yy-mm-dd"
+              appendTo="body"
+              [fluid]="true"
+            />
+          </div>
+          <div class="filter-builder__editor-field">
+            <label [for]="id + '-to'">{{ text().to }}</label>
+            <p-datepicker
+              [inputId]="id + '-to'"
+              formControlName="toDate"
+              dateFormat="yy-mm-dd"
+              appendTo="body"
+              [fluid]="true"
+            />
+          </div>
+        </div>
+      }
+    }
+    <div class="filter-builder__editor-actions">
+      <button type="button" pButton severity="secondary" [text]="true" (click)="cancel()">
+        {{ common().cancel }}
+      </button>
+      <button type="submit" pButton [disabled]="!canApply()">
+        {{ editingId() ? text().update : text().apply }}
+      </button>
+    </div>
+  </form>
+</p-popover>

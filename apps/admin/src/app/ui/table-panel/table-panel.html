@@ -112,6 +112,33 @@
   <div class="table-panel__table" [hidden]="!showTable()">
     <ng-content />
   </div>
+  @if (showFooter() && page(); as current) {
+    <div class="table-panel__footer">
+      <div class="table-panel__footer-start">
+        <ng-content select="[panelFooter]" />
+      </div>
+      @if (showPager()) {
+        <p-paginator
+          [rows]="current.pageSize"
+          [first]="first()"
+          [totalRecords]="current.total"
+          [rowsPerPageOptions]="pageSizeOptions()"
+          [showCurrentPageReport]="true"
+          [currentPageReportTemplate]="text().table.pageReport"
+          [locale]="locale()"
+          [alwaysShow]="true"
+          appendTo="body"
+          (onPageChange)="changePage($event)"
+        />
+      } @else {
+        <span class="table-panel__range">{{ rangeText() }}</span>
+      }
+    </div>
+  }
+</section>
+<!-- Below the panel, never between rows and footer: selecting rows moves nothing above it. The
+dock sticks to the viewport bottom while a long list is on screen. -->
+<div class="table-panel__bulk-dock">
   @if (selectedCount() > 0) {
     <div class="table-panel__bulk" role="region" [attr.aria-label]="text().table.bulkActions">
       <span class="table-panel__bulk-count">{{ selectionText() }}</span>
@@ -131,25 +158,4 @@
       </button>
     </div>
   }
-  @if (page(); as page) {
-    <div class="table-panel__footer">
-      <div class="table-panel__footer-start">
-        <ng-content select="[panelFooter]" />
-      </div>
-      @if (showTable()) {
-        <p-paginator
-          [rows]="page.pageSize"
-          [first]="first()"
-          [totalRecords]="page.total"
-          [rowsPerPageOptions]="pageSizeOptions()"
-          [showCurrentPageReport]="true"
-          [currentPageReportTemplate]="text().table.pageReport"
-          [locale]="locale()"
-          [alwaysShow]="true"
-          appendTo="body"
-          (onPageChange)="changePage($event)"
-        />
-      }
-    </div>
-  }
-</section>
+</div>

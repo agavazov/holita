@@ -51,17 +51,23 @@ instructions.
 
 ## Build a screen from the patterns
 
-- List: `holita-page-header` (single h1) → optional `holita-kpi-strip` → `holita-filter-bar` →
-  `holita-table-panel` with a projected `p-table` (`[lazy]`, `dataKey="id"`, no `emptymessage`
-  template, selection header cell with a visually hidden `<label for>` + `inputId`). State comes
-  from `UrlListState` with a `ListDefinition`; the view from `tableView(...)`; bulk writes use
-  `runSequential`; destructive actions `confirmDestructive` with a `p-confirmdialog` using
-  `confirmDialogPt`.
-- Editor: a child route with `data: { drawer: true, mode, recordParam }` and
-  `canDeactivate: [leaveDrawer]`; the component renders `holita-route-drawer`, implements
-  `canLeave()` with `confirmLeave(dirty)`, builds a typed Reactive Form in `.app-form-section` /
-  `.app-form-grid` with `holita-form-field`, maps server errors with `errorCode`/`fieldErrors`,
-  focuses the first invalid field and reports saves through `injectDrawerHost()`.
+- List: `holita-page-header` (single h1) → optional `holita-kpi-strip` →
+  `holita-filter-builder` (quick search plus only the columns and conditions the backend
+  supports) → `holita-table-panel` with a projected `p-table` (`[lazy]`, `dataKey="id"`, no
+  `emptymessage` template, selection header cell with a visually hidden `<label for>` + `inputId`,
+  long text in `.app-cell-truncate`, a last `.app-col-actions` column with `holita-row-actions`;
+  never a direct Delete button in a row). State comes from `UrlListState` with a
+  `ListDefinition`; the view from `tableView(...)`; bulk writes use `runSequential`; destructive
+  actions `confirmDestructive` with a `p-confirmdialog` using `confirmDialogPt`.
+- Editor: a right-hand drawer. The default opens the row straight into its form; a read-only
+  record uses a view drawer; a complex record may open as a view whose Edit button switches the
+  same drawer to the form. In the app it is a child route with
+  `data: { drawer: true, mode, recordParam }` and `canDeactivate: [leaveDrawer]`; the component
+  renders `holita-route-drawer` (or `[closeLink]="null"` with `closeRequest` where no route
+  exists), implements `canLeave()` with `confirmLeave(dirty)`, builds a typed Reactive Form in
+  `.app-form-section` / `.app-form-grid` with `holita-form-field`, maps server errors with
+  `errorCode`/`fieldErrors`, focuses the first invalid field and reports saves through
+  `injectDrawerHost()`.
 - Detail: page header with `backLink`, `.app-card` / `.app-card-grid`, `.app-facts`, charts from
   `ui/charts`.
 - Format every value with `ui/format` (null → "—"), statuses with `p-tag` and `toneSeverity`.
@@ -69,8 +75,8 @@ instructions.
 ## Required stories and checks
 
 - Stories beside each new component (`Design System/...`) or screen (`Screens/...`): every list
-  state, drawer state and the error and empty variants, in both languages via the toolbar; play
-  functions for flows. Stories wait (`waitFor`) for routed content before they assert, so axe
+  state, drawer state and the error and empty variants, in English (Storybook has one language);
+  play functions for flows. Stories wait (`waitFor`) for routed content before they assert, so axe
   checks real content.
 - Unit specs for helpers and components (`npm run test:admin -- --include=... --skip-nx-cache`);
   `src/test-setup.ts` provides breakpoints, `matchMedia` and `ResizeObserver` in jsdom.

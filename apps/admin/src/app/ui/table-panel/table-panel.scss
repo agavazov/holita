@@ -121,26 +121,54 @@
   border-end-end-radius: var(--p-app-panel-radius);
 }
 
-.table-panel__bulk {
+// The dock follows the panel, so a selection only adds space below the list. While a long list
+// is on screen the dock sticks to the viewport bottom and the bar floats over the rows.
+.table-panel__bulk-dock {
   position: sticky;
   inset-block-end: var(--p-app-gutter);
   z-index: 3;
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--p-app-space-2) var(--p-app-space-3);
-  inline-size: fit-content;
-  max-inline-size: calc(100% - 2 * var(--p-app-space-4));
-  margin: var(--p-app-space-3) auto;
-  padding: var(--p-app-space-2) var(--p-app-space-2) var(--p-app-space-2) var(--p-app-space-4);
-  border: 1px solid var(--p-app-panel-border-color);
-  border-radius: var(--p-app-radius-frame);
-  background: var(--p-app-frame-background);
-  box-shadow: var(--p-app-shadow-floating);
+  justify-content: center;
+  padding-inline: var(--p-app-space-4);
+  pointer-events: none;
+
+  &:not(:empty) {
+    padding-block-start: var(--p-app-space-3);
+  }
 
   @include bp.below(md) {
     inset-block-end: var(--p-app-gutter-narrow);
   }
+}
+
+.table-panel__bulk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-app-space-2) var(--p-app-space-3);
+  max-inline-size: 100%;
+  padding: var(--p-app-space-2) var(--p-app-space-2) var(--p-app-space-2) var(--p-app-space-4);
+  pointer-events: auto;
+  border: 1px solid var(--p-app-panel-border-color);
+  border-radius: var(--p-app-radius-frame);
+  background: var(--p-app-frame-background);
+  box-shadow: var(--p-app-shadow-floating);
+  animation: table-panel-bulk-in var(--p-transition-duration) ease-out;
+}
+
+@keyframes table-panel-bulk-in {
+  from {
+    opacity: 0;
+    translate: 0 var(--p-app-space-2);
+  }
+}
+
+.table-panel__range {
+  padding-block: var(--p-app-space-2);
+  padding-inline-end: var(--p-app-space-2);
+  font-size: var(--p-app-text-sm);
+  font-variant-numeric: var(--p-app-font-numeric);
+  color: var(--p-text-muted-color);
 }
 
 .table-panel__bulk-count {

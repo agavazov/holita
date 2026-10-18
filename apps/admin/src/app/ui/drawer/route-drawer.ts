@@ -28,10 +28,11 @@ export type RouteDrawerState = 'loading' | 'ready' | 'not-found' | 'invalid-id' 
 let nextId = 0;
 
 /**
- * The drawer of a child route: editing and record views open over their list or detail page.
- * Closing (button, Escape, backdrop) navigates to `closeLink`; the route's `leaveDrawer` guard
- * asks the host component, which calls `confirmLeave(dirty)`, so a canceled navigation keeps
- * the drawer open.
+ * The right-hand drawer for editing and record views over a list or detail page. In a child
+ * route, closing (button, Escape, backdrop) navigates to `closeLink`; the route's `leaveDrawer`
+ * guard asks the host component, which calls `confirmLeave(dirty)`, so a canceled navigation
+ * keeps the drawer open. With `closeLink` set to null the drawer emits `closeRequest` instead and
+ * the host decides (e.g. after `confirmLeave`) whether to remove it.
  */
 @Component({
   selector: 'holita-route-drawer',
@@ -50,8 +51,10 @@ export class RouteDrawer {
   readonly errorText = input<string | null>(null);
   readonly saving = input(false);
   readonly dirty = input(false);
-  readonly closeLink = input<readonly unknown[]>(['..']);
+  /** Where closing navigates; null makes closing an event for the host (`closeRequest`). */
+  readonly closeLink = input<readonly unknown[] | null>(['..']);
   readonly retry = output();
+  readonly closeRequest = output();
 
   protected readonly titleId = `route-drawer-title-${String(nextId++)}`;
   protected readonly text = computed(() => uiMessages[this.language()]);
@@ -81,9 +84,14 @@ export class RouteDrawer {
     });
   }
 
-  /** Navigates to the close link; the route guard decides whether the drawer may leave. */
+  /** Navigates to the close link (the route guard decides) or asks the host to close. */
   close(): void {
-    void this.router.navigate([...this.closeLink()], {
+    const link = this.closeLink();
+    if (link === null) {
+      this.closeRequest.emit();
+      return;
+    }
+    void this.router.navigate([...link], {
       relativeTo: this.route,
       queryParamsHandling: 'preserve',
       preserveFragment: true,

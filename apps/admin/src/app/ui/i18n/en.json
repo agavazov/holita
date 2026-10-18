@@ -63,14 +63,44 @@
     "selected": "{count} selected",
     "bulkActions": "Actions for selected records",
     "clearSelection": "Clear selection",
-    "pageReport": "{first}–{last} of {totalRecords}"
+    "pageReport": "{first}–{last} of {totalRecords}",
+    "rowActions": "Actions for {name}"
   },
   "filters": {
-    "toggle": "Filters",
-    "toggleCount": "Filters ({count})",
-    "applied": "Applied",
+    "addFilter": "Add filter",
+    "editor": "Filter condition",
+    "field": "Column",
+    "operator": "Condition",
+    "value": "Value",
+    "from": "From",
+    "to": "To",
+    "chooseValues": "Choose values",
+    "apply": "Apply",
+    "update": "Update",
+    "yes": "yes",
+    "no": "no",
+    "range": "between {from} and {to}",
     "clearAll": "Clear all",
-    "removeChip": "Remove filter: {name}"
+    "editChip": "Edit filter: {name}",
+    "removeChip": "Remove filter: {name}",
+    "operators": {
+      "contains": "contains",
+      "equals": "is",
+      "notEquals": "is not",
+      "startsWith": "starts with",
+      "isAnyOf": "is any of",
+      "isNoneOf": "is none of",
+      "gt": "greater than",
+      "lt": "less than",
+      "between": "between",
+      "before": "before",
+      "after": "after",
+      "on": "on",
+      "isTrue": "is yes",
+      "isFalse": "is no",
+      "isEmpty": "is empty",
+      "isNotEmpty": "is not empty"
+    }
   },
   "kpi": {
     "explain": "How it is calculated"

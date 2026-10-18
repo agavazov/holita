@@ -195,22 +195,24 @@ Components exist only where structure, state or behaviour repeats; single PrimeN
 directly. Every component is standalone, `OnPush`, uses signal inputs and outputs, the `holita-`
 prefix and texts from `uiMessages[inject(UI_LANGUAGE)()]`.
 
-| Pattern                                                           | Contract                                                                                                                                                                                                                                                                                      |
-| ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `holita-page-header`                                              | `title` (the page's only `<h1 id="page-title" tabindex="-1">`), `eyebrow`, `count`, one-line `description`, `backLink`/`backLabel`; slots `[headerMeta]`, `[headerActions]`; `focusTitle()`                                                                                                   |
-| `holita-kpi-strip` + `holita-kpi-tile`                            | Strip: `label` (group name), `loading`, `error` + `retry`. Tile: `label`, pre-formatted `value` (`null` → "—"), `unit`, `secondary`, `footnote`, `delta` (trend + sentiment), `tone` marker, `explanation` popover, `link` + `queryParams`, `loading`                                         |
-| `holita-filter-bar`                                               | `searchLabel`, `search`, `searchError`, `chips` + `activeCount`; outputs `searchChange`, `removeChip`, `clearAll`; slots `[filterSegments]`, `[filterControls]`, `[filterActions]`; controls collapse behind a toggle below `sm`                                                              |
-| `holita-table-panel` + `tableView()`                              | `heading`, `headingLevel`, `total`, `view` (`loading`, `rows`, `empty`, `no-results`, `error`, `rows-error`), `errorText`, `busy` (2 px refresh bar + `aria-busy`), empty texts and `[emptyActions]`, `notice`, selection count/progress with a floating bulk bar, `page` paginator (1-based) |
-| `holita-route-drawer`                                             | `title`, `subtitle`, `[drawerMeta]`, `size` (`md`/`lg`), `state` (`loading`, `ready`, `not-found`, `invalid-id`, `error`), `saving`, `dirty`, `closeLink`; body slot and sticky `[drawerFooter]`; `confirmLeave(dirty)`; focus capture and return                                             |
-| `holita-form-field`                                               | `label`, `controlId`, `hint`, `error` (`#<id>-error`), `required`, `counter`; the projected control sets `aria-describedby`, `aria-invalid` and `[invalid]`                                                                                                                                   |
-| `holita-empty-state`                                              | `kind` (`empty`, `no-results`, `error`, `not-found`, `disabled`, `no-telemetry`, `done`), `title`, `description`, `compact`, `[emptyActions]`; errors are `role="alert"`, others `role="status"`                                                                                              |
-| `holita-column-series`, `holita-stacked-bars`, `holita-sparkline` | CSS/SVG charts with an accessible name and a visually hidden data table (sparkline: `role="img"` with a spoken summary); `null` values are gaps, zero is a hairline                                                                                                                           |
+| Pattern                                                           | Contract                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `holita-page-header`                                              | `title` (the page's only `<h1 id="page-title" tabindex="-1">`), `eyebrow`, `count`, one-line `description`, `backLink`/`backLabel`; slots `[headerMeta]`, `[headerActions]`; `focusTitle()`                                                                                                                                                                                                                                     |
+| `holita-kpi-strip` + `holita-kpi-tile`                            | Strip: `label` (group name), `loading`, `error` + `retry`. Tile: `label`, pre-formatted `value` (`null` → "—"), `unit`, `secondary`, `footnote`, `delta` (trend + sentiment), `tone` marker, `explanation` popover, `link` + `queryParams`, `loading`                                                                                                                                                                           |
+| `holita-filter-builder` + `filter-model.ts`                       | Always-visible quick search (`searchLabel`, `search`, `searchError`, `searchChange`) plus "Add filter": `fields` (column, type `text`/`enum`/`number`/`date`/`boolean`, the operators the backend supports, options, unit) build `conditions` (`conditionsChange`); conditions are chips that reopen the editor and all apply together (AND); slot `[filterActions]`                                                            |
+| `holita-table-panel` + `tableView()`                              | `heading`, `headingLevel`, `total`, `view` (`loading`, `rows`, `empty`, `no-results`, `error`, `rows-error`), `errorText`, `busy` (2 px refresh bar + `aria-busy`), empty texts and `[emptyActions]`, `notice`, selection count/progress, `page` (1-based). No footer without rows; one page shows only the range; the bulk bar sits below the panel and sticks to the viewport bottom, so selecting never moves rows or footer |
+| `holita-row-actions`                                              | The "⋮" menu of a row: `actions` (`id`, `label`, `danger`, `disabled`), `subject` (accessible name "Actions for …"), output `action`; destructive actions come last after a separator. Lists never show a direct Delete button in a row                                                                                                                                                                                         |
+| `holita-route-drawer`                                             | `title`, `subtitle`, `[drawerMeta]`, `size` (`md`/`lg`), `state` (`loading`, `ready`, `not-found`, `invalid-id`, `error`), `saving`, `dirty`, `closeLink` (null: closing emits `closeRequest`); body slot and sticky `[drawerFooter]`; `confirmLeave(dirty)`; focus capture and return                                                                                                                                          |
+| `holita-form-field`                                               | `label`, `controlId`, `hint`, `error` (`#<id>-error`), `required`, `counter`; the projected control sets `aria-describedby`, `aria-invalid` and `[invalid]`                                                                                                                                                                                                                                                                     |
+| `holita-empty-state`                                              | `kind` (`empty`, `no-results`, `error`, `not-found`, `disabled`, `no-telemetry`, `done`), `title`, `description`, `compact`, `[emptyActions]`; errors are `role="alert"`, others `role="status"`                                                                                                                                                                                                                                |
+| `holita-column-series`, `holita-stacked-bars`, `holita-sparkline` | CSS/SVG charts with an accessible name and a visually hidden data table (sparkline: `role="img"` with a spoken summary); `null` values are gaps, zero is a hairline                                                                                                                                                                                                                                                             |
 
 CSS patterns (`styles/_patterns.scss`): `.app-card`, `.app-card-grid`, `.app-stack`,
 `.app-facts` (definition-list grid), `.app-form-section` and `.app-form-grid`
 (`.app-form-grid--wide`), `.app-drawer-actions`, `.app-dot--<tone|slot>`, `.app-num`, `.app-mono`,
-`.app-muted`, `.app-cell-stack`, `.app-meter`, `.app-col-secondary`, `.app-timeline-event`,
-`.app-link`, `.app-icon-button`, `.app-logo`.
+`.app-muted`, `.app-cell-stack`, `.app-cell-truncate` (one line with an ellipsis, full text in
+`title`), `.app-meter`, `.app-col-secondary`, `.app-col-check`, `.app-col-actions`,
+`.app-timeline-event`, `.app-link`, `.app-icon-button`, `.app-logo`, `.app-menu-danger`.
 
 Helpers: `list/list-state.ts` and `list/url-list-state.ts` (below), `list/sequential.ts`
 (`runSequential` for bulk writes with progress, partial failures and a stop when the page is
@@ -230,13 +232,15 @@ Hosts project a `p-table` into `holita-table-panel` with `[lazy]`, `dataKey="id"
 scrolling inside the panel and no `emptymessage` template (the panel renders every state). A
 selection header cell contains a visually hidden `<label for>` and `p-table-header-checkbox
 [inputId]` (PrimeNG names the header checkbox only after its value changes); row checkboxes use
-`[ariaLabel]`. Secondary columns carry `.app-col-secondary`; numeric columns `.app-num`.
+`[ariaLabel]`. Secondary columns carry `.app-col-secondary`; numeric columns `.app-num`. Long
+free text (notes, descriptions) is one line with `.app-cell-truncate` and the full text in
+`title`. Row actions are a last `.app-col-actions` column with `holita-row-actions`.
 
 ### PrimeNG usage rules
 
 Registered component presets (`registeredComponents`): autocomplete, avatar, badge, button,
 checkbox, chip, confirmdialog, datatable, datepicker, dialog, drawer, iconfield, inputnumber,
-inputtext, listbox (the existing Fleet relation picker), message, metergroup, paginator, popover,
+inputtext, listbox (the existing Fleet relation picker), menu, message, metergroup, paginator, popover,
 select, selectbutton, skeleton, tabs, tag, textarea, timeline, togglebutton, toggleswitch, tooltip
 and virtualscroller. Adding a control means adding its preset there and to the "PrimeNG coverage"
 story. Because stories run axe with violations as failures, and lint rejects deprecated APIs:
@@ -246,7 +250,7 @@ story. Because stories run axe with violations as failures, and lint rejects dep
 - `p-popover` gets `ariaLabel`, `p-drawer` `ariaCloseLabel`, `p-dialog` `closeAriaLabel`,
   `p-autocomplete [dropdown]` `dropdownAriaLabel`, `p-metergroup` an `aria-label`;
 - multiple choice uses `p-select [multiple]="true"` (PrimeNG 22 deprecates `p-multiselect`);
-  applied filters are FilterBar chips;
+  applied filters are FilterBuilder chips;
 - `p-progressbar` is not used (it renders an `aria-level` attribute progress bars may not carry);
   TablePanel draws its own decorative refresh bar;
 - `p-autocomplete [forceSelection]` clears unmatched text only when its overlay is closed at the
@@ -262,12 +266,12 @@ sort (optionally per view), typed filter codecs (`enumList`, `idList`, `boolean`
 `listStateParams` (defaults omitted), `sameListState` and `activeFilterCount` are pure.
 `UrlListState` keeps the state in the query string:
 
-| Parameter          | Rules                                                                                                |
-| ------------------ | ---------------------------------------------------------------------------------------------------- |
-| `search`           | Trimmed, NUL removed, at most 200 code points; more than five words is not applied (FilterBar error) |
-| `sort`, `order`    | Sort parameter from the definition and `asc`/`desc`; absent means the effective default              |
-| `page`, `pageSize` | 1-based page (clamped; corrected to the last page once totals arrive) and an allowed size            |
-| filter fields      | Comma-separated, validated by the codec; unknown values are dropped                                  |
+| Parameter          | Rules                                                                                                    |
+| ------------------ | -------------------------------------------------------------------------------------------------------- |
+| `search`           | Trimmed, NUL removed, at most 200 code points; more than five words is not applied (FilterBuilder error) |
+| `sort`, `order`    | Sort parameter from the definition and `asc`/`desc`; absent means the effective default                  |
+| `page`, `pageSize` | 1-based page (clamped; corrected to the last page once totals arrive) and an allowed size                |
+| filter fields      | Comma-separated, validated by the codec; unknown values are dropped                                      |
 
 Any change except paging returns to page 1; invalid or non-normalised URLs are rewritten with
 `replaceUrl`. Search input is debounced by 300 ms; `p-table` sort events are mapped through the
@@ -290,9 +294,10 @@ element that opened it, or `#page-title`.
 ## Storybook review
 
 The admin Storybook (`npm run storybook:admin`, port 11003) renders the real Angular components
-with `FixtureHttpBackend` GraphQL fixtures ([development](development.md#admin-storybook)).
-Toolbar globals: theme, language, brand and density; viewports `desktop1440`, `tablet768`,
-`mobile375`. A brand or density change re-bootstraps the story with `provideHolitaTheme(choice)`
+with `FixtureHttpBackend` GraphQL fixtures ([development](development.md#admin-storybook)). It is
+English only; the product's languages live in the application catalogs, and the shell story's
+language menu lists sample languages that change nothing. Toolbar globals: theme, brand and
+density; viewports `desktop1440`, `tablet768`, `mobile375`. A brand or density change re-bootstraps the story with `provideHolitaTheme(choice)`
 and leaves no stale theme styles. `parameters.holita` (`StoryFixtures`) controls the session,
 Fleet availability, dataset, the story clock (`now`, default `2026-10-18T07:00:00.000Z`) and
 fixture failures (per operation or `<Operation>:<id>`).
@@ -300,7 +305,7 @@ fixture failures (per operation or `<Operation>:<id>`).
 | Title                          | Content                                                                                                                                                                                                 |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Design System/Foundations      | Colors (every `--p-app-*` and ramp in both schemes, live contrast table), Brand variants, Typography, Spacing and density (measured), Radii and borders, Status tones, Categorical palette, Breakpoints |
-| Design System/Patterns         | PageHeader, KpiStrip, FilterBar, TablePanel, RouteDrawer, FormField, EmptyState, Charts, CSS patterns                                                                                                   |
+| Design System/Patterns         | PageHeader, KpiStrip, FilterBuilder, TablePanel (with row actions), Drawer (edit, view, view then edit), FormField, EmptyState, Charts, CSS patterns                                                    |
 | Design System/PrimeNG coverage | Every registered control in both schemes, non-modal overlays and the confirm dialog                                                                                                                     |
 | Design System/Shell            | Desktop, Rail, Mobile with navigation open, Fleet disabled, Unknown Branch, Branch discovery loading/error, theme-persistence warning                                                                   |
 

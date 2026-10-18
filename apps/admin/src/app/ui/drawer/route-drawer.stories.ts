@@ -1,4 +1,4 @@
-import { afterNextRender, Component, input, viewChild } from '@angular/core';
+import { afterNextRender, Component, input, linkedSignal, viewChild } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { ButtonDirective } from 'primeng/button';
@@ -7,12 +7,18 @@ import { InputText } from 'primeng/inputtext';
 import { Select } from 'primeng/select';
 import { Tag } from 'primeng/tag';
 import { Textarea } from 'primeng/textarea';
-import { Timeline } from 'primeng/timeline';
-import { expect, waitFor, within } from 'storybook/test';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { FormField } from '../form-field/form-field';
 import { RouteDrawer, type RouteDrawerState } from './route-drawer';
 
-/** A drawer editor as feature drawers build it: sections, a field grid and a sticky footer. */
+/**
+ * The three drawer modes:
+ * - `edit`: a row opens straight into its form (the default for simple records);
+ * - `view`: a read-only record (e.g. a trip or a log entry);
+ * - `view-edit`: the record opens read-only and Edit switches the same drawer to its form.
+ */
+type DrawerMode = 'edit' | 'view' | 'view-edit';
+
 @Component({
   selector: 'holita-route-drawer-demo',
   imports: [
@@ -25,66 +31,59 @@ import { RouteDrawer, type RouteDrawerState } from './route-drawer';
     Select,
     Textarea,
     Tag,
-    Timeline,
   ],
   template: `
     <holita-route-drawer
-      [title]="readOnly() ? 'Аларма: критичен DTC код' : 'Редакция на CB 1004 AX'"
-      [subtitle]="readOnly() ? 'CB 1004 AX · 18.10.2026 08:12' : 'Т-04 · Влекач'"
-      [size]="readOnly() ? 'lg' : 'md'"
+      [title]="editing() ? (mode() === 'edit' ? 'Edit CB 1004 AX' : 'Edit vehicle') : 'CB 1004 AX'"
+      subtitle="T-04 · Tractor unit · Scania R 450"
       [state]="state()"
-      errorText="Няма връзка с gateway-а. (fixture-AdminFleetVehicle)"
+      errorText="The gateway is not reachable. (fixture-AdminFleetVehicle)"
       [saving]="saving()"
       [dirty]="dirty()"
-      [closeLink]="['/']"
+      [closeLink]="null"
     >
-      @if (readOnly()) {
-        <p-tag drawerMeta severity="danger" value="Критична" />
-      }
-      @if (readOnly()) {
+      @if (!editing()) {
+        <p-tag drawerMeta severity="success" value="Active" />
         <dl class="app-facts">
           <div>
-            <dt>Превозно средство</dt>
-            <dd>CB 1004 AX · Т-04</dd>
+            <dt>Plate</dt>
+            <dd>CB 1004 AX</dd>
           </div>
           <div>
-            <dt>Шофьор</dt>
-            <dd>Иван Петров</dd>
+            <dt>Fleet number</dt>
+            <dd>T-04</dd>
           </div>
           <div>
-            <dt>Код</dt>
-            <dd class="app-mono">P0420</dd>
+            <dt>VIN</dt>
+            <dd class="app-mono">WMA06XZZ1MP123456</dd>
           </div>
           <div>
-            <dt>Състояние</dt>
-            <dd>Отворена</dd>
+            <dt>Group</dt>
+            <dd>International</dd>
+          </div>
+          <div>
+            <dt>Fuel tank</dt>
+            <dd>650 L</dd>
+          </div>
+          <div>
+            <dt>Current driver</dt>
+            <dd>Ivan Petrov</dd>
           </div>
           <div class="app-facts--wide">
-            <dt>Описание</dt>
-            <dd>Ефективността на катализатора е под прага (банка 1).</dd>
+            <dt>Notes</dt>
+            <dd>Tractor unit for international routes. Next tachograph check in March.</dd>
           </div>
         </dl>
-        <section class="app-form-section">
-          <h3>История</h3>
-          <p-timeline [value]="events">
-            <ng-template #content let-event>
-              <div class="app-timeline-event">
-                <span class="app-timeline-event__title">{{ event.title }}</span>
-                <span class="app-timeline-event__meta">{{ event.meta }}</span>
-              </div>
-            </ng-template>
-          </p-timeline>
-        </section>
       } @else {
         <form [formGroup]="form" (submit)="$event.preventDefault()">
           <section class="app-form-section">
-            <h3>Идентификация</h3>
+            <h3>Identification</h3>
             <div class="app-form-grid">
               <holita-form-field
-                label="Регистрационен номер"
+                label="License plate"
                 controlId="plate"
                 [required]="true"
-                [error]="errors() ? 'Номерът вече се използва в клона.' : null"
+                [error]="errors() ? 'This plate is already used in the branch.' : null"
               >
                 <input
                   pInputText
@@ -96,9 +95,9 @@ import { RouteDrawer, type RouteDrawerState } from './route-drawer';
                 />
               </holita-form-field>
               <holita-form-field
-                label="Пореден номер"
+                label="Fleet number"
                 controlId="fleetNumber"
-                hint="Вътрешен номер в автопарка"
+                hint="Internal number"
               >
                 <input
                   pInputText
@@ -111,8 +110,8 @@ import { RouteDrawer, type RouteDrawerState } from './route-drawer';
                 class="app-form-grid--wide"
                 label="VIN"
                 controlId="vin"
-                hint="17 знака, без I, O и Q"
-                [error]="errors() ? 'Този VIN вече се използва в клона.' : null"
+                hint="17 characters, without I, O and Q"
+                [error]="errors() ? 'This VIN is already used in the branch.' : null"
               >
                 <input
                   pInputText
@@ -127,25 +126,25 @@ import { RouteDrawer, type RouteDrawerState } from './route-drawer';
             </div>
           </section>
           <section class="app-form-section">
-            <h3>Експлоатация</h3>
+            <h3>Operation</h3>
             <div class="app-form-grid">
-              <holita-form-field label="Статус" controlId="status">
+              <holita-form-field label="Status" controlId="status">
                 <p-select
                   inputId="status"
                   formControlName="status"
                   [options]="statuses"
                   appendTo="body"
-                  ariaLabel="Статус"
+                  ariaLabel="Status"
                 />
               </holita-form-field>
-              <holita-form-field label="Резервоар, л" controlId="tank">
+              <holita-form-field label="Fuel tank, L" controlId="tank">
                 <p-inputnumber inputId="tank" formControlName="tank" [min]="0" [max]="1500" />
               </holita-form-field>
               <holita-form-field
                 class="app-form-grid--wide"
-                label="Бележки"
+                label="Notes"
                 controlId="notes"
-                [counter]="{ length: 46, max: 2000 }"
+                [counter]="{ length: 69, max: 2000 }"
               >
                 <textarea
                   pTextarea
@@ -160,24 +159,38 @@ import { RouteDrawer, type RouteDrawerState } from './route-drawer';
         </form>
       }
       <div drawerFooter class="app-drawer-actions">
-        <button pButton type="button" severity="secondary" [outlined]="true" [disabled]="saving()">
-          Отказ
-        </button>
-        @if (!readOnly()) {
-          <button pButton type="button" [loading]="saving()" [disabled]="saving()">Запази</button>
+        @if (editing()) {
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="saving()"
+            (click)="cancel()"
+          >
+            Cancel
+          </button>
+          <button pButton type="button" [loading]="saving()" [disabled]="saving()">Save</button>
+        } @else {
+          <button pButton type="button" severity="secondary" [outlined]="true">Close</button>
+          @if (mode() === 'view-edit') {
+            <button pButton type="button" (click)="editing.set(true)">Edit</button>
+          }
         }
       </div>
     </holita-route-drawer>
   `,
 })
 class RouteDrawerDemo {
+  readonly mode = input<DrawerMode>('edit');
   readonly state = input<RouteDrawerState>('ready');
   readonly saving = input(false);
   readonly dirty = input(false);
   readonly errors = input(false);
-  readonly readOnly = input(false);
   /** Shows the discard confirmation the leave guard opens for a dirty draft. */
   readonly confirmOnOpen = input(false);
+  /** `edit` opens on the form; the other modes open on the read-only record. */
+  readonly editing = linkedSignal(() => this.mode() === 'edit');
   readonly drawer = viewChild.required(RouteDrawer);
 
   constructor() {
@@ -185,23 +198,27 @@ class RouteDrawerDemo {
       if (this.confirmOnOpen()) void this.drawer().confirmLeave(this.dirty());
     });
   }
-  readonly statuses = ['Активно', 'В сервиз', 'Неактивно'];
+
+  cancel(): void {
+    // In view-edit, Cancel returns to the record; a direct editor would close instead.
+    if (this.mode() === 'view-edit') this.editing.set(false);
+  }
+
+  readonly statuses = ['Active', 'In service', 'Inactive'];
   readonly form = new FormGroup({
     plate: new FormControl('CB 1004 AX'),
-    fleetNumber: new FormControl('Т-04'),
+    fleetNumber: new FormControl('T-04'),
     vin: new FormControl('WMA06XZZ1MP123456'),
-    status: new FormControl('Активно'),
+    status: new FormControl('Active'),
     tank: new FormControl<number | null>(650),
-    notes: new FormControl('Влекач за международни превози.'),
+    notes: new FormControl(
+      'Tractor unit for international routes. Next tachograph check in March.',
+    ),
   });
-  readonly events = [
-    { title: 'Отворена', meta: '18.10.2026 08:12 · системно' },
-    { title: 'Потвърдена', meta: '18.10.2026 08:40 · М. Георгиева' },
-  ];
 }
 
 const meta: Meta<RouteDrawerDemo> = {
-  title: 'Design System/Patterns/RouteDrawer',
+  title: 'Design System/Patterns/Drawer',
   component: RouteDrawerDemo,
   tags: ['!autodocs'],
 };
@@ -209,22 +226,36 @@ const meta: Meta<RouteDrawerDemo> = {
 export default meta;
 type Story = StoryObj<RouteDrawerDemo>;
 
+/** The default: a row opens straight into its form. */
+export const Edit: Story = { args: { mode: 'edit' } };
+
+/** A read-only record. */
+export const View: Story = { args: { mode: 'view' } };
+
+/** The mixed case: the record opens read-only and Edit switches the drawer to the form. */
+export const ViewThenEdit: Story = {
+  name: 'View then edit',
+  args: { mode: 'view-edit' },
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await waitFor(() => expect(body.getByRole('button', { name: 'Edit' })).toBeVisible());
+    await userEvent.click(body.getByRole('button', { name: 'Edit' }));
+    await waitFor(() => expect(body.getByRole('textbox', { name: /License plate/ })).toBeVisible());
+  },
+};
+
 export const Loading: Story = { args: { state: 'loading' } };
-export const Ready: Story = { args: { state: 'ready' } };
-export const Saving: Story = { args: { state: 'ready', saving: true } };
+export const Saving: Story = { args: { saving: true } };
 export const NotFound: Story = { name: 'Not found', args: { state: 'not-found' } };
 export const ErrorState: Story = { name: 'Error', args: { state: 'error' } };
 export const ServerFieldErrors: Story = { name: 'Server field errors', args: { errors: true } };
-export const ReadOnly: Story = { name: 'Read-only', args: { readOnly: true } };
 
 export const DirtyWithConfirm: Story = {
   name: 'Dirty with confirm',
   args: { dirty: true, confirmOnOpen: true },
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
-    await waitFor(() =>
-      expect(body.getByRole('button', { name: 'Keep editing' })).toBeVisible(),
-    );
+    await waitFor(() => expect(body.getByRole('button', { name: 'Keep editing' })).toBeVisible());
     await expect(body.getByRole('button', { name: 'Discard changes' })).toBeVisible();
   },
 };

@@ -266,6 +266,21 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
     color: var(--p-text-muted-color);
   }
 
+  // One-line cell text cut with an ellipsis; the host puts the full text in `title`.
+  .app-cell-truncate {
+    display: block;
+    max-inline-size: var(--app-truncate-width, 28rem);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // Destructive entries of popup menus (row actions are appended to the body).
+  .p-menu .app-menu-danger .p-menu-item-content,
+  .p-menu .app-menu-danger .p-menu-item-icon {
+    color: var(--p-app-tone-danger-color);
+  }
+
   // Two-line table cell: primary line plus a muted secondary line.
   .app-cell-stack {
     display: flex;
@@ -312,6 +327,16 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
     @include bp.below(md) {
       display: none;
     }
+  }
+
+  // Narrow fixed columns: the selection checkbox first, the row-actions menu last.
+  .app-col-check {
+    inline-size: 3rem;
+  }
+
+  .app-col-actions {
+    inline-size: 3.25rem;
+    text-align: end;
   }
 
   // Content template for p-timeline events.

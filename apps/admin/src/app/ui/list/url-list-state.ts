@@ -23,7 +23,7 @@ import {
   type SortDirection,
 } from './list-state';
 
-/** Catalog key (`uiMessages`) of the search error FilterBar shows. */
+/** Catalog key (`uiMessages`) of the search error FilterBuilder shows. */
 export type SearchErrorKey = 'searchTooManyWords';
 
 /**

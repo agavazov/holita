@@ -243,7 +243,7 @@ export const Controls: Story = {
     template: '<holita-primeng-controls />',
   }),
   play: async ({ canvasElement }) => {
-    await expect(Object.keys(registeredComponents)).toHaveLength(30);
+    await expect(Object.keys(registeredComponents)).toHaveLength(31);
     await expect(canvasElement.querySelectorAll('.scheme').length).toBe(2);
   },
 };

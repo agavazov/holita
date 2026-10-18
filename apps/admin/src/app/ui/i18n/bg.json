@@ -63,14 +63,44 @@
     "selected": "{count} избрани",
     "bulkActions": "Действия за избраните записи",
     "clearSelection": "Изчисти избора",
-    "pageReport": "{first}–{last} от {totalRecords}"
+    "pageReport": "{first}–{last} от {totalRecords}",
+    "rowActions": "Действия за {name}"
   },
   "filters": {
-    "toggle": "Филтри",
-    "toggleCount": "Филтри ({count})",
-    "applied": "Приложени",
+    "addFilter": "Добави филтър",
+    "editor": "Условие за филтриране",
+    "field": "Колона",
+    "operator": "Условие",
+    "value": "Стойност",
+    "from": "От",
+    "to": "До",
+    "chooseValues": "Избери стойности",
+    "apply": "Приложи",
+    "update": "Обнови",
+    "yes": "да",
+    "no": "не",
+    "range": "между {from} и {to}",
     "clearAll": "Изчисти всички",
-    "removeChip": "Премахни филтъра: {name}"
+    "editChip": "Промени филтъра: {name}",
+    "removeChip": "Премахни филтъра: {name}",
+    "operators": {
+      "contains": "съдържа",
+      "equals": "е",
+      "notEquals": "не е",
+      "startsWith": "започва с",
+      "isAnyOf": "е някое от",
+      "isNoneOf": "не е от",
+      "gt": "по-голямо от",
+      "lt": "по-малко от",
+      "between": "между",
+      "before": "преди",
+      "after": "след",
+      "on": "на",
+      "isTrue": "е да",
+      "isFalse": "е не",
+      "isEmpty": "е празно",
+      "isNotEmpty": "не е празно"
+    }
   },
   "kpi": {
     "explain": "Как се изчислява"

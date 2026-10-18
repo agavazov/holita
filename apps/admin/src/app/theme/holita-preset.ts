@@ -15,6 +15,7 @@ import IconField from '@primeuix/themes/aura/iconfield';
 import InputNumber from '@primeuix/themes/aura/inputnumber';
 import InputText from '@primeuix/themes/aura/inputtext';
 import Listbox from '@primeuix/themes/aura/listbox';
+import Menu from '@primeuix/themes/aura/menu';
 import Message from '@primeuix/themes/aura/message';
 import MeterGroup from '@primeuix/themes/aura/metergroup';
 import Paginator from '@primeuix/themes/aura/paginator';
@@ -65,6 +66,7 @@ export const registeredComponents = {
   inputnumber: InputNumber,
   inputtext: InputText,
   listbox: Listbox,
+  menu: Menu,
   message: Message,
   metergroup: MeterGroup,
   paginator: Paginator,
