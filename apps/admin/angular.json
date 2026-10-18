@@ -26,6 +26,7 @@
               }
             ],
             "styles": ["src/styles.scss"],
+            "stylePreprocessorOptions": { "includePaths": ["src/styles"] },
             "outputPath": "dist"
           },
           "configurations": {
@@ -67,7 +68,8 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "tsConfig": "tsconfig.spec.json"
+            "tsConfig": "tsconfig.spec.json",
+            "setupFiles": ["src/test-setup.ts"]
           }
         },
         "storybook": {
@@ -79,6 +81,7 @@
             "port": 11003,
             "open": false,
             "styles": ["src/styles.scss"],
+            "stylePreprocessorOptions": { "includePaths": ["src/styles"] },
             "assets": [{ "glob": "**/*", "input": "public/fonts", "output": "fonts" }]
           }
         },
@@ -89,6 +92,7 @@
             "tsConfig": ".storybook/tsconfig.json",
             "outputDir": "storybook-static",
             "styles": ["src/styles.scss"],
+            "stylePreprocessorOptions": { "includePaths": ["src/styles"] },
             "assets": [{ "glob": "**/*", "input": "public/fonts", "output": "fonts" }]
           }
         }

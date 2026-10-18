@@ -12,6 +12,7 @@ debug-storybook.log
 
 /AGENTS.local.md
 /.credentials/
+/apps/admin/public/config.local.json
 
 apps/*/src/generated/
 .nx/

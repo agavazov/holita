@@ -48,6 +48,22 @@ export function readAdminConfig(value: unknown): AdminRuntimeConfig {
   return { graphqlUrl, ...availability };
 }
 
+/** The Git-ignored `config.local.json`: a developer's own PrimeUI license key, nothing else. */
+export interface LocalAdminConfig {
+  primeUiLicense?: string;
+}
+
+export function readLocalAdminConfig(value: unknown): LocalAdminConfig {
+  if (typeof value !== 'object' || value === null || Array.isArray(value))
+    throw new Error('config.local.json must be an object.');
+  const unknownKey = Object.keys(value).find((key) => key !== 'primeUiLicense');
+  if (unknownKey) throw new Error(`config.local.json does not support "${unknownKey}".`);
+  if (!('primeUiLicense' in value)) return {};
+  if (typeof value.primeUiLicense !== 'string') throw new Error('primeUiLicense must be a string.');
+  const primeUiLicense = value.primeUiLicense.trim();
+  return primeUiLicense ? { primeUiLicense } : {};
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminConfig {
   readonly graphqlUrl = inject(ADMIN_RUNTIME_CONFIG).graphqlUrl;

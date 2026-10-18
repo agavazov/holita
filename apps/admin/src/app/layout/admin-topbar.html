@@ -1,0 +1,68 @@
+<button
+  #menuButton
+  type="button"
+  class="app-icon-button app-topbar__menu"
+  [attr.aria-label]="text().toggleNavigation"
+  [attr.aria-expanded]="menuExpanded()"
+  [attr.aria-controls]="menuControls()"
+  (click)="menuToggle.emit()"
+>
+  <svg data-p-icon="bars" aria-hidden="true"></svg>
+</button>
+@if (showLogo()) {
+  <a class="app-logo app-topbar__logo" [routerLink]="homeLink()">
+    <span class="app-logo__mark" aria-hidden="true">h</span>
+    <span class="app-logo__word">holita</span>
+  </a>
+}
+<div class="app-topbar__context">
+  @if (context(); as context) {
+    <span class="app-topbar__group">{{ context.group }}</span>
+    <svg data-p-icon="chevron-right" class="app-topbar__separator" aria-hidden="true"></svg>
+    <span class="app-topbar__page">{{ context.page }}</span>
+  }
+</div>
+<div class="app-topbar__branch">
+  <label for="active-branch">{{ text().activeBranch }}</label>
+  <p-select
+    inputId="active-branch"
+    [options]="branchOptions()"
+    optionLabel="name"
+    optionValue="id"
+    [ariaLabel]="text().activeBranch"
+    [formControl]="branchControl()"
+    [placeholder]="text().branches"
+    [loading]="loading()"
+    appendTo="body"
+  />
+</div>
+<div class="app-topbar__actions">
+  <!-- The target language's own name is both the visible label and the accessible name. -->
+  <a class="app-language-link" [routerLink]="languageUrl()" [attr.lang]="otherLanguage()">{{
+    otherLanguage() === 'en' ? 'English' : 'Български'
+  }}</a>
+  <button
+    type="button"
+    class="app-icon-button"
+    [attr.aria-label]="appearance.dark() ? text().lightTheme : text().darkTheme"
+    (click)="appearance.toggle()"
+  >
+    @if (appearance.dark()) {
+      <svg data-p-icon="sun" aria-hidden="true"></svg>
+    } @else {
+      <svg data-p-icon="moon" aria-hidden="true"></svg>
+    }
+  </button>
+  @if (tenantName(); as tenant) {
+    <button
+      type="button"
+      class="app-icon-button"
+      [attr.aria-label]="text().signOut"
+      [title]="tenant"
+      data-testid="demo-logout"
+      (click)="signOut.emit()"
+    >
+      <svg data-p-icon="sign-out" aria-hidden="true"></svg>
+    </button>
+  }
+</div>

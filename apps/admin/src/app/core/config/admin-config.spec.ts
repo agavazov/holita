@@ -1,4 +1,4 @@
-import { readAdminConfig, readGraphqlUrl } from './admin-config';
+import { readAdminConfig, readGraphqlUrl, readLocalAdminConfig } from './admin-config';
 
 describe('public Angular configuration', () => {
   it('retains the configured Gateway endpoint and Fleet availability', () => {
@@ -41,6 +41,21 @@ describe('public Angular configuration', () => {
     expect(() => readAdminConfig({ graphqlUrl: '/graphql', primeUiLicense: 42 })).toThrow(
       'primeUiLicense must be a string.',
     );
+  });
+  it('reads only a trimmed PrimeUI license from the ignored local configuration', () => {
+    expect(readLocalAdminConfig({})).toEqual({});
+    expect(readLocalAdminConfig({ primeUiLicense: ' local-key ' })).toEqual({
+      primeUiLicense: 'local-key',
+    });
+    expect(readLocalAdminConfig({ primeUiLicense: '  ' })).toEqual({});
+    expect(() => readLocalAdminConfig({ primeUiLicense: 42 })).toThrow(
+      'primeUiLicense must be a string.',
+    );
+    expect(() => readLocalAdminConfig({ graphqlUrl: '/graphql' })).toThrow(
+      'config.local.json does not support "graphqlUrl".',
+    );
+    for (const value of [null, 'key', ['key']])
+      expect(() => readLocalAdminConfig(value)).toThrow('config.local.json must be an object.');
   });
   it('accepts a same-origin proxy path and a public HTTP gateway URL', () => {
     expect(readGraphqlUrl({ graphqlUrl: '/graphql' })).toBe('/graphql');

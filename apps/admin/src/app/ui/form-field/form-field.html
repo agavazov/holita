@@ -1,0 +1,25 @@
+<label class="form-field__label" [for]="controlId()">
+  {{ label() }}
+  @if (required()) {
+    <span class="form-field__required" aria-hidden="true">*</span>
+    <span class="app-visually-hidden">{{ text().field.required }}</span>
+  }
+</label>
+<ng-content />
+@if (hint() || counterText()) {
+  <div class="form-field__meta">
+    @if (hint(); as hint) {
+      <small class="form-field__hint" [id]="controlId() + '-hint'">{{ hint }}</small>
+    }
+    @if (counterText(); as counter) {
+      <small class="form-field__counter" [class.form-field__counter--warn]="counterWarn()">{{
+        counter
+      }}</small>
+    }
+  </div>
+}
+<div class="form-field__error" [id]="controlId() + '-error'">
+  @if (error(); as error) {
+    <p-message severity="error" variant="simple" size="small">{{ error }}</p-message>
+  }
+</div>

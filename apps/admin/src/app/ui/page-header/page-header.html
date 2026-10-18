@@ -1,0 +1,26 @@
+@if (backLink(); as link) {
+  <a class="page-header__back" [routerLink]="link">
+    <svg data-p-icon="arrow-left" aria-hidden="true"></svg>
+    {{ backLabel() }}
+  </a>
+}
+<div class="page-header__row">
+  <div class="page-header__heading">
+    @if (eyebrow()) {
+      <p class="page-header__eyebrow">{{ eyebrow() }}</p>
+    }
+    <div class="page-header__title-row">
+      <h1 #heading id="page-title" class="page-header__title" tabindex="-1">{{ title() }}</h1>
+      @if (countText(); as count) {
+        <span class="page-header__count">{{ count }}</span>
+      }
+      <ng-content select="[headerMeta]" />
+    </div>
+    @if (description(); as description) {
+      <p class="page-header__description" [title]="description">{{ description }}</p>
+    }
+  </div>
+  <div class="page-header__actions">
+    <ng-content select="[headerActions]" />
+  </div>
+</div>

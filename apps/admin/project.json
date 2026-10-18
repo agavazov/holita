@@ -45,6 +45,15 @@
       "inputs": ["default"],
       "outputs": ["{projectRoot}/storybook-static"]
     },
+    "test-storybook": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["graphql-generate"],
+      "cache": false,
+      "options": {
+        "command": "npm run test-storybook",
+        "cwd": "apps/admin"
+      }
+    },
     "test-smoke": {
       "executor": "nx:run-commands",
       "cache": false,

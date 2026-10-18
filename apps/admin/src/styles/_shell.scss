@@ -1,0 +1,426 @@
+// Application shell: canvas, sidebar, framed topbar and page (spec 2.2). Geometry comes from the
+// `--p-app-*` tokens; only the breakpoints switch layouts.
+@use 'breakpoints' as bp;
+
+@layer holita {
+  holita-admin-shell,
+  holita-admin-topbar {
+    display: block;
+  }
+
+  holita-admin-sidebar {
+    display: flex;
+    flex: 1 0 auto;
+    flex-direction: column;
+  }
+
+  .app-shell {
+    --app-shell-gap: var(--p-app-frame-gap);
+    --app-shell-sidebar: var(--p-app-sidebar-width);
+
+    display: grid;
+    grid-template-columns: var(--app-shell-sidebar) minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      'sidebar topbar'
+      'sidebar main';
+    min-height: 100dvh;
+    padding-block: var(--app-shell-gap);
+    padding-inline-end: var(--app-shell-gap);
+
+    &.app-shell--rail {
+      --app-shell-sidebar: var(--p-app-sidebar-rail-width);
+    }
+
+    @include bp.below(lg) {
+      --app-shell-gap: 0px;
+
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas:
+        'topbar'
+        'main';
+    }
+  }
+
+  // Topbar: the top of the frame. The outer header masks the canvas gap above it while it sticks,
+  // the inner bar draws the frame's top edge.
+  .app-topbar {
+    grid-area: topbar;
+    position: sticky;
+    inset-block-start: var(--app-shell-gap);
+    z-index: 900;
+    background: var(--p-app-canvas-background);
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset-inline: 0;
+      inset-block-end: 100%;
+      block-size: var(--app-shell-gap);
+      background: var(--p-app-canvas-background);
+    }
+  }
+
+  .app-topbar__bar {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+    grid-template-areas: 'menu logo context branch actions';
+    align-items: center;
+    column-gap: var(--p-app-space-2);
+    min-block-size: var(--p-app-topbar-height);
+    padding-inline: var(--p-app-space-3) var(--p-app-space-4);
+    background: var(--p-app-frame-background);
+    border: 1px solid var(--p-app-frame-border-color);
+    border-start-start-radius: var(--p-app-frame-radius);
+    border-start-end-radius: var(--p-app-frame-radius);
+
+    @include bp.below(lg) {
+      border-width: 0 0 1px;
+      border-radius: 0;
+      padding-inline: var(--p-app-space-2) var(--p-app-space-3);
+    }
+
+    @include bp.below(sm) {
+      grid-template-columns: auto auto minmax(0, 1fr) auto;
+      grid-template-areas:
+        'menu logo context actions'
+        'branch branch branch branch';
+      row-gap: 0;
+      padding-block-end: var(--p-app-space-2);
+    }
+  }
+
+  .app-topbar__menu {
+    grid-area: menu;
+  }
+
+  .app-topbar__logo {
+    grid-area: logo;
+    margin-inline-end: var(--p-app-space-2);
+  }
+
+  .app-topbar__context {
+    grid-area: context;
+    display: flex;
+    align-items: center;
+    gap: var(--p-app-space-2);
+    min-inline-size: 0;
+    padding-inline-start: var(--p-app-space-1);
+    font-size: var(--p-app-text-base);
+    white-space: nowrap;
+
+    .app-topbar__group {
+      color: var(--p-text-muted-color);
+
+      @include bp.below(md) {
+        display: none;
+      }
+    }
+
+    .app-topbar__separator {
+      flex: none;
+      inline-size: 0.75rem;
+      block-size: 0.75rem;
+      color: var(--p-text-muted-color);
+
+      @include bp.below(md) {
+        display: none;
+      }
+    }
+
+    .app-topbar__page {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-weight: 600;
+      color: var(--p-text-color);
+    }
+
+    @include bp.below(sm) {
+      visibility: hidden;
+    }
+  }
+
+  .app-topbar__branch {
+    grid-area: branch;
+    display: flex;
+    align-items: center;
+    gap: var(--p-app-space-2);
+    min-inline-size: 0;
+
+    label {
+      flex: none;
+      font-size: var(--p-app-text-sm);
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--p-text-muted-color);
+    }
+
+    p-select {
+      inline-size: 15rem;
+      max-inline-size: 100%;
+      min-inline-size: 0;
+    }
+
+    @include bp.below(md) {
+      label {
+        position: absolute;
+        inline-size: 1px;
+        block-size: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+    }
+
+    @include bp.below(sm) {
+      p-select {
+        inline-size: 100%;
+      }
+    }
+  }
+
+  .app-topbar__actions {
+    grid-area: actions;
+    display: flex;
+    align-items: center;
+    gap: var(--p-app-space-1);
+    padding-inline-start: var(--p-app-space-2);
+    margin-inline-start: var(--p-app-space-1);
+    border-inline-start: 1px solid var(--p-content-border-color);
+
+    @include bp.below(sm) {
+      border-inline-start: 0;
+      padding-inline-start: 0;
+    }
+  }
+
+  // Text button with the target language's own name.
+  .app-language-link {
+    display: inline-flex;
+    align-items: center;
+    block-size: var(--p-app-control-height);
+    padding-inline: var(--p-app-space-2);
+    border-radius: var(--p-app-radius-control);
+    font-size: var(--p-app-text-sm);
+    font-weight: 600;
+    color: var(--p-text-muted-color);
+    white-space: nowrap;
+    transition:
+      background-color var(--p-transition-duration),
+      color var(--p-transition-duration);
+
+    &:hover {
+      background: var(--p-content-hover-background);
+      color: var(--p-text-color);
+    }
+  }
+
+  // Main: the rest of the frame.
+  .app-main {
+    grid-area: main;
+    min-inline-size: 0;
+    background: var(--p-app-frame-background);
+    border: 1px solid var(--p-app-frame-border-color);
+    border-block-start: 0;
+    border-end-start-radius: var(--p-app-frame-radius);
+    border-end-end-radius: var(--p-app-frame-radius);
+
+    @include bp.below(lg) {
+      border: 0;
+      border-radius: 0;
+    }
+  }
+
+  .app-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--p-app-stack-gap);
+    max-inline-size: var(--p-app-content-max-width);
+    margin-inline: auto;
+    padding: var(--p-app-gutter);
+
+    @include bp.below(md) {
+      padding: var(--p-app-gutter-narrow);
+    }
+  }
+
+  // Sidebar on the canvas.
+  .app-sidebar {
+    grid-area: sidebar;
+    position: sticky;
+    inset-block-start: 0;
+    display: flex;
+    flex-direction: column;
+    block-size: 100dvh;
+    margin-block: calc(-1 * var(--app-shell-gap));
+    overflow: hidden auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+  }
+
+  .app-sidebar__header {
+    display: flex;
+    align-items: center;
+    flex: none;
+    block-size: calc(var(--p-app-topbar-height) + 2 * var(--app-shell-gap, 0px));
+    padding-inline: var(--p-app-space-5) var(--p-app-space-3);
+
+    .app-shell--rail & {
+      justify-content: center;
+      padding-inline: 0;
+    }
+  }
+
+  .app-sidebar__footer {
+    flex: none;
+    margin-block-start: auto;
+    padding: var(--p-app-space-4) var(--p-app-space-5);
+    font-size: var(--p-app-text-sm);
+    color: var(--p-app-canvas-muted-color);
+    overflow-wrap: anywhere;
+
+    .app-shell--rail & {
+      display: none;
+    }
+  }
+
+  // Navigation (sidebar, rail and mobile drawer).
+  .app-nav {
+    display: flex;
+    flex-direction: column;
+    gap: var(--p-app-space-5);
+    padding: var(--p-app-space-2) var(--p-app-space-3) var(--p-app-space-4);
+
+    .app-shell--rail & {
+      gap: var(--p-app-space-3);
+      padding-inline: var(--p-app-space-2);
+    }
+  }
+
+  .app-nav__group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .app-nav__label {
+    display: flex;
+    align-items: center;
+    gap: var(--p-app-space-2);
+    margin: 0 0 var(--p-app-space-1);
+    padding-inline: var(--p-app-space-3);
+    font-size: var(--p-app-text-xs);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    line-height: 1.5;
+    text-transform: uppercase;
+    color: var(--p-app-canvas-muted-color);
+
+    .app-shell--rail & {
+      block-size: 1px;
+      margin: var(--p-app-space-1) var(--p-app-space-2) var(--p-app-space-2);
+      padding: 0;
+      background: var(--p-content-border-color);
+    }
+  }
+
+  .app-nav__note {
+    padding: 0 var(--p-app-space-1);
+    border: 1px solid var(--p-content-border-color);
+    border-radius: var(--p-app-radius-tag);
+    font-size: 0.625rem;
+    letter-spacing: 0.04em;
+  }
+
+  .app-nav__item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--p-app-space-3);
+    min-block-size: 2.25rem;
+    padding: var(--p-app-space-1) var(--p-app-space-3);
+    border: 1px solid transparent;
+    border-radius: var(--p-app-radius-control);
+    font-weight: 500;
+    color: var(--p-app-sidebar-item-color);
+    transition:
+      background-color var(--p-transition-duration),
+      color var(--p-transition-duration);
+
+    &:hover {
+      background: var(--p-app-sidebar-item-hover-background);
+    }
+
+    &:focus-visible {
+      outline-offset: -2px;
+    }
+
+    &.app-nav__item--active {
+      background: var(--p-app-sidebar-item-active-background);
+      border-color: var(--p-content-border-color);
+      color: var(--p-app-sidebar-item-active-color);
+      font-weight: 600;
+
+      &::before {
+        content: '';
+        position: absolute;
+        inset-block: var(--p-app-space-2);
+        inset-inline-start: -1px;
+        inline-size: 3px;
+        border-radius: 0 3px 3px 0;
+        background: var(--p-app-sidebar-item-indicator);
+      }
+
+      .app-nav__icon {
+        color: var(--p-primary-color);
+      }
+    }
+
+    .app-shell--rail & {
+      justify-content: center;
+      padding-inline: 0;
+    }
+  }
+
+  .app-nav__icon {
+    flex: none;
+    inline-size: 1rem;
+    block-size: 1rem;
+    color: var(--p-text-muted-color);
+  }
+
+  .app-nav__text {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+
+  // Mobile navigation drawer: the sidebar inside a p-drawer of the same width.
+  .p-drawer.app-nav-drawer {
+    inline-size: var(--p-app-sidebar-width);
+    max-inline-size: 90vw;
+    background: var(--p-app-canvas-background);
+    border-width: 0;
+    border-inline-end: 1px solid var(--p-content-border-color);
+
+    .p-drawer-header {
+      padding: var(--p-app-space-3) var(--p-app-space-3) var(--p-app-space-2) var(--p-app-space-5);
+    }
+
+    .p-drawer-content {
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+    }
+
+    .app-nav-drawer__content {
+      display: flex;
+      flex: 1 0 auto;
+      flex-direction: column;
+    }
+
+    .app-sidebar__footer {
+      display: block;
+    }
+  }
+}

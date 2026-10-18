@@ -1,0 +1,93 @@
+// Document defaults. Every value comes from the holita preset (`--p-*`, `--p-app-*`).
+@layer holita {
+  html {
+    // The browser default root (16 px) honours the user's font-size setting.
+    font-size: 100%;
+  }
+
+  body {
+    min-height: 100dvh;
+    font-family: var(--p-app-font-family);
+    font-size: var(--p-app-text-base);
+    line-height: 1.5;
+    color: var(--p-text-color);
+    background: var(--p-app-canvas-background);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--p-text-color);
+  }
+
+  h1 {
+    font-size: var(--p-app-text-title);
+    letter-spacing: -0.01em;
+  }
+
+  h2 {
+    font-size: var(--p-app-text-lg);
+  }
+
+  h3 {
+    font-size: var(--p-app-text-md);
+  }
+
+  small {
+    font-size: var(--p-app-text-sm);
+  }
+
+  :where(a, button, summary):focus-visible {
+    outline: var(--p-focus-ring-width) var(--p-focus-ring-style) var(--p-focus-ring-color);
+    outline-offset: var(--p-focus-ring-offset);
+  }
+
+  // Programmatic focus targets (page title, main, drawer title) show no ring.
+  [tabindex='-1']:focus {
+    outline: none;
+  }
+
+  .app-skip-link {
+    position: fixed;
+    inset-block-start: var(--p-app-space-2);
+    inset-inline-start: var(--p-app-space-2);
+    z-index: 1200;
+    padding: var(--p-app-space-2) var(--p-app-space-4);
+    border-radius: var(--p-app-radius-control);
+    background: var(--p-primary-color);
+    color: var(--p-primary-contrast-color);
+    font-weight: 600;
+    transform: translateY(-200%);
+
+    &:focus-visible {
+      transform: none;
+    }
+  }
+
+  .app-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition-duration: 0s !important;
+      animation-duration: 0s !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

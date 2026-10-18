@@ -1,74 +1,98 @@
 import {
+  afterNextRender,
+  ChangeDetectionStrategy,
   Component,
   computed,
   effect,
-  type ElementRef,
   inject,
+  Injector,
   input,
   output,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
-import { NgTemplateOutlet } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { FormControl } from '@angular/forms';
 import {
+  type ActivatedRouteSnapshot,
   NavigationCancel,
   NavigationEnd,
   NavigationError,
   Router,
-  RouterLink,
   type UrlTree,
 } from '@angular/router';
 import { filter } from 'rxjs';
-import { Bars } from '@primeicons/angular/bars';
-import { Moon } from '@primeicons/angular/moon';
-import { SignOut } from '@primeicons/angular/sign-out';
-import { Sun } from '@primeicons/angular/sun';
-import { Select } from 'primeng/select';
 import { Drawer } from 'primeng/drawer';
 import { Message } from 'primeng/message';
 import { messages, type Language } from '../i18n/messages';
-import { AdminNavigation } from './admin-navigation';
-import { Appearance } from './appearance';
+import { Appearance } from '../theme/appearance';
+import { below } from '../ui/media';
+import { AdminSidebar } from './admin-sidebar';
+import { AdminTopbar } from './admin-topbar';
+import type { NavGroup, PageContext } from './navigation';
 
+const railStorageKey = 'holita.admin.sidebar';
+
+function readRail(): boolean {
+  try {
+    return localStorage.getItem(railStorageKey) === 'rail';
+  } catch {
+    return false;
+  }
+}
+
+/** Route config chain without drawer and tab routes: a change means a new page. */
+function pageKey(root: ActivatedRouteSnapshot): string {
+  const parts: string[] = [];
+  let depth = 0;
+  for (let route: ActivatedRouteSnapshot | null = root; route; route = route.firstChild) {
+    const data = route.data;
+    if (route.routeConfig && data['drawer'] !== true && data['tab'] !== true)
+      parts.push(`${String(depth)}:${route.routeConfig.path ?? ''}`);
+    depth++;
+  }
+  return parts.join('/');
+}
+
+/**
+ * The application frame: canvas, sidebar (full, rail or mobile drawer), topbar and main content.
+ * It reads no business data; navigation and the page context come from the workspace.
+ */
 @Component({
   selector: 'holita-admin-shell',
-  imports: [
-    RouterLink,
-    NgTemplateOutlet,
-    ReactiveFormsModule,
-    Select,
-    Drawer,
-    Message,
-    Bars,
-    Moon,
-    Sun,
-    SignOut,
-    AdminNavigation,
-  ],
+  imports: [Drawer, Message, AdminSidebar, AdminTopbar],
   templateUrl: './admin-shell.html',
-  host: { '(window:resize)': 'onResize()' },
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminShell {
   readonly branches = input.required<readonly { id: string; name: string }[]>();
-  readonly branchOptions = computed(() => [...this.branches()]);
   readonly branchId = input<string | null>(null);
-  readonly branchControl = new FormControl<string | null>(null);
   readonly language = input.required<Language>();
   readonly languageUrl = input.required<UrlTree>();
   readonly loading = input(false);
-  readonly fleetEnabled = input(false);
   readonly tenantName = input<string | null>(null);
+  readonly navigation = input<readonly NavGroup[]>([]);
+  readonly context = input<PageContext | null>(null);
   readonly signOut = output();
   readonly branchSelected = output<string>();
-  readonly text = computed(() => messages[this.language()]);
+
+  readonly branchControl = new FormControl<string | null>(null);
   readonly appearance = inject(Appearance);
-  readonly desktopCollapsed = signal(false);
+  readonly mobile = below('lg');
+  readonly rail = signal(readRail());
   readonly mobileOpen = signal(false);
-  readonly mobile = signal(window.innerWidth < 992);
-  private readonly navigationToggle =
-    viewChild.required<ElementRef<HTMLButtonElement>>('navigationToggle');
+  protected readonly text = computed(() => messages[this.language()]);
+  protected readonly homeLink = computed(() => {
+    const branch = this.branchId();
+    return branch ? ['/', this.language(), branch, 'fleet'] : ['/', this.language()];
+  });
+  protected readonly menuExpanded = computed(() =>
+    this.mobile() ? this.mobileOpen() : !this.rail(),
+  );
+  private readonly topbar = viewChild.required(AdminTopbar);
+  private readonly injector = inject(Injector);
+  private readonly router = inject(Router);
 
   constructor() {
     effect(() => {
@@ -79,11 +103,24 @@ export class AdminShell {
         this.branchControl.disable({ emitEvent: false });
       else this.branchControl.enable({ emitEvent: false });
     });
+    // Reaching the desktop layout closes the navigation drawer and returns focus to the menu.
+    effect(() => {
+      if (!this.mobile() && untracked(this.mobileOpen)) {
+        this.mobileOpen.set(false);
+        afterNextRender(
+          () => {
+            this.topbar().focusMenu();
+          },
+          { injector: this.injector },
+        );
+      }
+    });
     this.branchControl.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
       this.chooseBranch(value);
     });
-    inject(Router)
-      .events.pipe(
+    let page = pageKey(this.router.routerState.snapshot.root);
+    this.router.events
+      .pipe(
         filter(
           (event) =>
             event instanceof NavigationEnd ||
@@ -93,25 +130,38 @@ export class AdminShell {
         takeUntilDestroyed(),
       )
       .subscribe((event) => {
-        // Resync after Select's event handler has finished; canceled navigation leaves the route unchanged.
+        // Resync after Select's handler; a canceled navigation leaves the route unchanged.
         this.branchControl.setValue(this.branchId(), { emitEvent: false });
-        if (event instanceof NavigationEnd) this.mobileOpen.set(false);
+        if (!(event instanceof NavigationEnd)) return;
+        this.mobileOpen.set(false);
+        const next = pageKey(this.router.routerState.snapshot.root);
+        if (next !== page && event.id > 1)
+          afterNextRender(
+            () => {
+              this.focusPage();
+            },
+            { injector: this.injector },
+          );
+        page = next;
       });
-  }
-
-  onResize(): void {
-    this.mobile.set(window.innerWidth < 992);
-    if (!this.mobile() && this.mobileOpen()) this.drawerVisibilityChanged(false);
-  }
-
-  toggleNavigation(): void {
-    if (this.mobile()) this.mobileOpen.update((open) => !open);
-    else this.desktopCollapsed.update((collapsed) => !collapsed);
   }
 
   chooseBranch(value: unknown): void {
     if (typeof value === 'string' && this.branches().some((branch) => branch.id === value))
       this.branchSelected.emit(value);
+  }
+
+  toggleNavigation(): void {
+    if (this.mobile()) {
+      this.mobileOpen.update((open) => !open);
+      return;
+    }
+    this.rail.update((rail) => !rail);
+    try {
+      localStorage.setItem(railStorageKey, this.rail() ? 'rail' : 'full');
+    } catch {
+      // Storage failure only loses the preference.
+    }
   }
 
   focusNavigation(): void {
@@ -120,6 +170,13 @@ export class AdminShell {
 
   drawerVisibilityChanged(visible: boolean): void {
     this.mobileOpen.set(visible);
-    if (!visible) this.navigationToggle().nativeElement.focus();
+    if (!visible) this.topbar().focusMenu();
+  }
+
+  /** After a page change: the page title, else the main region (unless the page took focus). */
+  private focusPage(): void {
+    const main = document.getElementById('main-content');
+    if (!main || main.contains(document.activeElement)) return;
+    (document.getElementById('page-title') ?? main).focus();
   }
 }

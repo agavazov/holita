@@ -23,7 +23,7 @@ import type {
 } from '../../../generated/graphql/operations';
 import { requestError } from '../../core/graphql/request-error';
 import { messages, type Language } from '../../i18n/messages';
-import { Appearance } from '../../layout/appearance';
+import { Appearance } from '../../theme/appearance';
 import { BranchesApi } from '../branches/branches-api';
 
 type Session = AdminDemoLoginMutation['demoLogin'];

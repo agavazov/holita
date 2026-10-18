@@ -25,7 +25,7 @@ relevant behavioral checks. SDL/operations also require codegen, schema:check an
 
 ## Domain checks
 
-[Discocan checks](discocan/testing.md) cover Fleet Vehicles, Devices, Drivers, Vehicle groups and the list contract, Angular workspaces,
+[Discocan checks](discocan/testing.md) cover Fleet Vehicles, Devices, Drivers, Vehicle groups, telemetry, trips, alerts, service tasks and the list contract, Angular workspaces,
 telemetry login, captured clients and browser behavior. [Ecommerce Branch checks](ecommerce/branches.md#validation)
 cover tenant-scoped Branch discovery and persistence.
 
@@ -44,7 +44,7 @@ npm run test:fleet:db -- vehicles.db.spec.ts devices.db.spec.ts
 Guarded helpers reject development/foreign/nonlocal identities and URL options. Each run deploys
 reviewed migrations into its own random schema, closes connections and drops only that schema.
 No broad resets/truncation occur. Core persistence tests cover seed idempotency, schema isolation
-and inability to connect to development/Fleet databases. Fleet migrations create tenant-scoped Vehicle/Device/Driver/VehicleGroup indexes, the IMEI digit CHECK and master data CHECKs, and same-tenant/same-branch restricted composite FKs; `constraints.db.spec.ts` proves them and the generated unique index names.
+and inability to connect to development/Fleet databases. Fleet migrations create tenant-scoped indexes for the master data and activity tables, the IMEI digit CHECK, the master data and activity CHECKs, and same-tenant/same-branch restricted composite FKs; `constraints.db.spec.ts` proves them and the generated unique index names. Raw Fleet SQL runs against the per-run schema through schema-qualified table names.
 Database results must run fresh and cannot be treated as valid Nx cache hits.
 
 ## Real federation and browser smoke checks
@@ -188,6 +188,7 @@ a fixed-arrival-rate latency SLA, cold-start performance or real Karma network l
 | Device IMEI/assignment/persistence      | devices.service.spec.ts, devices.db.spec.ts                                                                                                                                                                                                                                            |
 | Driver/Vehicle group rules/persistence  | drivers.service.spec.ts, drivers.db.spec.ts, vehicle-groups.service.spec.ts, vehicle-groups.db.spec.ts                                                                                                                                                                                 |
 | Fleet list contract/validation/scalars  | validation.spec.ts, scalars.spec.ts and the affected module's service and db specs                                                                                                                                                                                                     |
+| Fleet telemetry/trips/alerts/service    | sql.spec.ts, vehicle-state.spec.ts, the telemetry/trips/events/service-tasks service and db specs, vehicles/devices/drivers db specs for derived values, federation.db.spec.mts                                                                                                        |
 | Fleet migration/CHECKs/unique mapping   | initial-migration.db.spec.ts, branch-migration.db.spec.ts, constraints.db.spec.ts, seeds.db.spec.ts                                                                                                                                                                                    |
 | Fleet business errors through Router    | router.smoke.spec.mts (`npm run test:gateway:router`), federation.db.spec.mts                                                                                                                                                                                                          |
 | Runtime module/health                   | Fleet/Core health.spec.ts; Gateway router.runtime.spec.mts                                                                                                                                                                                                                             |

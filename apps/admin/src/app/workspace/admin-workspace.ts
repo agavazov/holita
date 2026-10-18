@@ -12,11 +12,18 @@ import { Login } from '../features/auth/login';
 import { BranchContext } from '../features/branches/branch-context';
 import { messages, readLanguage, type Language } from '../i18n/messages';
 import { AdminShell } from '../layout/admin-shell';
+import { navigationContext } from '../layout/navigation';
+import { UI_LANGUAGE } from '../ui/ui-language';
+import { adminNavigation } from './admin-navigation';
+import { primeNgTranslation } from './primeng-translation';
 
 @Component({
   selector: 'holita-admin-workspace',
   imports: [RouterOutlet, AdminShell, ButtonDirective, Message, Login],
-  providers: [BranchContext],
+  providers: [
+    BranchContext,
+    { provide: UI_LANGUAGE, useFactory: () => inject(AdminWorkspace).language },
+  ],
   templateUrl: './admin-workspace.html',
 })
 export class AdminWorkspace {
@@ -29,7 +36,7 @@ export class AdminWorkspace {
   private readonly params = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
   });
-  private readonly navigation = toSignal(
+  private readonly navigationEnd = toSignal(
     this.router.events.pipe(filter((event) => event instanceof NavigationEnd)),
   );
   readonly language = computed(() => readLanguage(this.params().get('language')));
@@ -38,35 +45,35 @@ export class AdminWorkspace {
     requestError(this.branches.error(), this.text().networkError),
   );
   readonly otherLanguageUrl = computed(() => {
-    this.navigation();
+    this.navigationEnd();
     return this.languageLink(this.language() === 'bg' ? 'en' : 'bg');
+  });
+  readonly navigation = computed(() =>
+    adminNavigation(this.language(), this.branches.selectedId(), this.fleetEnabled),
+  );
+  /** The topbar context: the navigation item whose link is the longest prefix of the path. */
+  readonly context = computed(() => {
+    this.navigationEnd();
+    const primary = this.router.parseUrl(this.router.url).root.children['primary'];
+    const path = `/${(primary?.segments ?? []).map((segment) => segment.path).join('/')}`;
+    return navigationContext(this.navigation(), path);
   });
 
   constructor() {
     effect((onCleanup) => {
       const language = this.language();
       document.documentElement.lang = language;
-      const text = messages[language];
-      this.primeNG.setTranslation({
-        selectionMessage: text.selectedItemsMessage,
-        emptySelectionMessage: text.emptySelectionMessage,
-        aria: {
-          ...this.primeNG.translation.aria,
-          previous: text.previousSection,
-          next: text.nextSection,
-          firstPageLabel: text.firstPageLabel,
-          prevPageLabel: text.prevPageLabel,
-          nextPageLabel: text.nextPageLabel,
-          lastPageLabel: text.lastPageLabel,
-          pageLabel: text.pageLabel,
-          rowsPerPageLabel: text.rowsPerPageLabel,
-        },
-      });
+      this.primeNG.setTranslation(primeNgTranslation(language, this.primeNG.translation.aria));
       const close = this.branches.watch(language);
       if (close) onCleanup(close);
     });
     effect(() => {
       this.branches.synchronizeRoute(this.language());
+    });
+    effect(() => {
+      const text = this.text();
+      const page = this.session.current() ? this.context()?.page : text.signIn;
+      document.title = page ? `${page} · holita` : 'holita';
     });
   }
 

@@ -1,0 +1,32 @@
+<div class="empty-state__icon" aria-hidden="true">
+  @switch (kind()) {
+    @case ('no-results') {
+      <svg data-p-icon="search"></svg>
+    }
+    @case ('error') {
+      <svg data-p-icon="exclamation-triangle"></svg>
+    }
+    @case ('not-found') {
+      <svg data-p-icon="question-circle"></svg>
+    }
+    @case ('disabled') {
+      <svg data-p-icon="ban"></svg>
+    }
+    @case ('no-telemetry') {
+      <svg data-p-icon="wifi"></svg>
+    }
+    @case ('done') {
+      <svg data-p-icon="check-circle"></svg>
+    }
+    @default {
+      <svg data-p-icon="inbox"></svg>
+    }
+  }
+</div>
+<p class="empty-state__title">{{ title() }}</p>
+@if (description()) {
+  <p class="empty-state__description">{{ description() }}</p>
+}
+<div class="empty-state__actions">
+  <ng-content select="[emptyActions]" />
+</div>

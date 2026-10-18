@@ -1,0 +1,84 @@
+// The only place the pre-design-system class names and Sakai variable aliases survive. Karma Client
+// pages (and the old Fleet screens until they are replaced) still read them. New code must use the
+// holita tokens and `app/ui` patterns instead. Remove this file together with Karma.
+@use 'breakpoints' as bp;
+
+@layer holita {
+  :root {
+    --surface-border: var(--p-content-border-color);
+    --surface-card: var(--p-content-background);
+    --text-color: var(--p-text-color);
+    --text-color-secondary: var(--p-text-muted-color);
+    --primary-color: var(--p-primary-color);
+    --content-border-radius: var(--p-app-radius-panel);
+  }
+
+  .card {
+    padding: var(--p-app-space-6);
+    background: var(--p-app-panel-background);
+    border: 1px solid var(--p-app-panel-border-color);
+    border-radius: var(--p-app-panel-radius);
+
+    p {
+      margin: 0 0 var(--p-app-space-4);
+
+      &:last-child {
+        margin-block-end: 0;
+      }
+    }
+
+    h2 {
+      margin-block-end: var(--p-app-space-3);
+    }
+
+    @include bp.below(md) {
+      padding: var(--p-app-space-4);
+    }
+  }
+
+  .page-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--p-app-space-4);
+    margin-block-end: var(--p-app-space-6);
+
+    > div:first-child {
+      min-inline-size: 0;
+      max-inline-size: 100%;
+      overflow-wrap: anywhere;
+    }
+
+    &:last-child {
+      margin-block-end: 0;
+    }
+
+    h1 {
+      margin: 0 0 var(--p-app-space-1);
+    }
+
+    p {
+      color: var(--p-text-muted-color);
+    }
+
+    @include bp.below(md) {
+      flex-wrap: wrap;
+    }
+  }
+
+  .page-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--p-app-space-3);
+  }
+
+  .content-link {
+    color: var(--p-primary-color);
+    font-weight: 500;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}

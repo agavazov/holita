@@ -1,0 +1,88 @@
+@if (showLogo()) {
+  <div class="app-sidebar__header">
+    <a class="app-logo" [routerLink]="homeLink()">
+      <span class="app-logo__mark" aria-hidden="true">h</span>
+      <span class="app-logo__word" [class.app-visually-hidden]="rail()">holita</span>
+    </a>
+  </div>
+}
+<nav class="app-nav" [attr.aria-label]="text().navigation">
+  @for (group of navigation(); track group.id) {
+    <div class="app-nav__group" role="group" [attr.aria-labelledby]="idPrefix() + '-' + group.id">
+      <h2 class="app-nav__label" [id]="idPrefix() + '-' + group.id">
+        <span [class.app-visually-hidden]="rail()">{{ group.label }}</span>
+        @if (group.note && !rail()) {
+          <span class="app-nav__note">{{ group.note }}</span>
+        } @else if (group.note) {
+          <span class="app-visually-hidden">({{ group.note }})</span>
+        }
+      </h2>
+      <ul role="list">
+        @for (item of group.items; track item.id) {
+          <li>
+            <a
+              class="app-nav__item"
+              [routerLink]="item.link"
+              routerLinkActive="app-nav__item--active"
+              ariaCurrentWhenActive="page"
+              [pTooltip]="rail() ? item.label : undefined"
+              tooltipPosition="right"
+              tooltipEvent="both"
+            >
+              @switch (item.icon) {
+                @case ('th-large') {
+                  <svg data-p-icon="th-large" class="app-nav__icon" aria-hidden="true"></svg>
+                }
+                @case ('bell') {
+                  <svg data-p-icon="bell" class="app-nav__icon" aria-hidden="true"></svg>
+                }
+                @case ('directions') {
+                  <svg data-p-icon="directions" class="app-nav__icon" aria-hidden="true"></svg>
+                }
+                @case ('truck') {
+                  <svg data-p-icon="truck" class="app-nav__icon" aria-hidden="true"></svg>
+                }
+                @case ('id-card') {
+                  <svg data-p-icon="id-card" class="app-nav__icon" aria-hidden="true"></svg>
+                }
+                @case ('mobile') {
+                  <svg data-p-icon="mobile" class="app-nav__icon" aria-hidden="true"></svg>
+                }
+                @case ('wrench') {
+                  <svg data-p-icon="wrench" class="app-nav__icon" aria-hidden="true"></svg>
+                }
+                @case ('tags') {
+                  <svg data-p-icon="tags" class="app-nav__icon" aria-hidden="true"></svg>
+                }
+                @case ('car') {
+                  <svg data-p-icon="car" class="app-nav__icon" aria-hidden="true"></svg>
+                }
+                @case ('users') {
+                  <svg data-p-icon="users" class="app-nav__icon" aria-hidden="true"></svg>
+                }
+                @case ('shield') {
+                  <svg data-p-icon="shield" class="app-nav__icon" aria-hidden="true"></svg>
+                }
+                @case ('folder') {
+                  <svg data-p-icon="folder" class="app-nav__icon" aria-hidden="true"></svg>
+                }
+                @case ('clock') {
+                  <svg data-p-icon="clock" class="app-nav__icon" aria-hidden="true"></svg>
+                }
+                @case ('info-circle') {
+                  <svg data-p-icon="info-circle" class="app-nav__icon" aria-hidden="true"></svg>
+                }
+              }
+              <span class="app-nav__text" [class.app-visually-hidden]="rail()">{{
+                item.label
+              }}</span>
+            </a>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+</nav>
+@if (tenantName(); as tenant) {
+  <p class="app-sidebar__footer">holita · {{ tenant }}</p>
+}

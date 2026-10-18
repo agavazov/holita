@@ -1,0 +1,61 @@
+<div class="kpi-tile__head">
+  @if (link(); as link) {
+    <a class="kpi-tile__label kpi-tile__link" [routerLink]="link" [queryParams]="queryParams()">{{
+      label()
+    }}</a>
+  } @else {
+    <span class="kpi-tile__label">{{ label() }}</span>
+  }
+  @if (explanation(); as explanation) {
+    <button
+      type="button"
+      class="app-icon-button kpi-tile__info"
+      [attr.aria-label]="text().kpi.explain + ': ' + label()"
+      (click)="popover.toggle($event)"
+    >
+      <svg data-p-icon="info-circle" aria-hidden="true"></svg>
+    </button>
+    <p-popover #popover [ariaLabel]="label()">
+      <p class="kpi-tile__explanation">{{ explanation }}</p>
+    </p-popover>
+  }
+</div>
+@if (busy()) {
+  <div class="kpi-tile__skeleton">
+    <p-skeleton width="55%" height="1.75rem" />
+    <p-skeleton width="35%" height="0.75rem" />
+  </div>
+} @else {
+  <p class="kpi-tile__value">
+    <span class="app-num">{{ displayValue() }}</span>
+    @if (unit() && value() !== null) {
+      <span class="kpi-tile__unit">{{ unit() }}</span>
+    }
+  </p>
+  @if (secondary() || delta()) {
+    <div class="kpi-tile__meta">
+      @if (delta(); as delta) {
+        <span class="kpi-tile__delta" [attr.data-sentiment]="delta.sentiment">
+          @switch (delta.trend) {
+            @case ('up') {
+              <svg data-p-icon="arrow-up-right" aria-hidden="true"></svg>
+            }
+            @case ('down') {
+              <svg data-p-icon="arrow-down-right" aria-hidden="true"></svg>
+            }
+            @default {
+              <svg data-p-icon="minus" aria-hidden="true"></svg>
+            }
+          }
+          {{ delta.text }}
+        </span>
+      }
+      @if (secondary(); as secondary) {
+        <span class="kpi-tile__secondary">{{ secondary }}</span>
+      }
+    </div>
+  }
+  @if (footnote(); as footnote) {
+    <p class="kpi-tile__footnote">{{ footnote }}</p>
+  }
+}

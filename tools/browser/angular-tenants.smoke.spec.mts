@@ -106,5 +106,6 @@ test('tenant login works by keyboard in Bulgarian narrow/light/dark layouts', as
   await page.getByTestId('demo-login').click();
   await expect(page.getByRole('heading', { name: 'Автомобили', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Клони', exact: true })).toHaveCount(0);
-  await expect(page.locator('aside .layout-menuitem-root-text')).toHaveCount(0);
+  // At 320 px the navigation is a closed drawer, so no group headings are rendered.
+  await expect(page.locator('aside nav').getByRole('heading')).toHaveCount(0);
 });

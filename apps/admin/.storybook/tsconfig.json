@@ -1,7 +1,14 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "types": []
+    "types": ["node"]
   },
-  "include": ["./*.ts", "../src/**/*.stories.ts", "../src/storybook/**/*.ts", "../src/**/*.d.ts"]
+  "include": [
+    "./*.ts",
+    "./*.mts",
+    "../src/**/*.stories.ts",
+    "../src/storybook/**/*.ts",
+    "../src/**/*.d.ts"
+  ],
+  "exclude": ["../src/**/*.spec.ts"]
 }

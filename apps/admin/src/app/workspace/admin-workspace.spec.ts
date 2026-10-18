@@ -10,7 +10,10 @@ import { provideApollo } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
 import { routes } from '../app.routes';
 import { DemoSession } from '../core/auth/demo-session';
+import { PrimeNG } from 'primeng/config';
 import { graphqlOptions } from '../core/graphql/graphql-options';
+import { AdminShell } from '../layout/admin-shell';
+import { UI_LANGUAGE } from '../ui/ui-language';
 import { AdminWorkspace } from './admin-workspace';
 
 const tenantA = { id: '01000000-0000-4000-8000-000000000001', name: 'RentalSofia' };
@@ -105,6 +108,43 @@ describe('Demo tenant login workspace', () => {
     expect(fresh.request.headers.get('authorization')).toBe('Bearer fresh-token-a');
     fresh.flush({ data: { fleetVehicles: { items: [], total: 0, offset: 0, limit: 20 } } });
     await harness.fixture.whenStable();
+  });
+  it('composes the shell navigation, page context, title, UI language and PrimeNG texts', async () => {
+    session.start({ token: 'token-a', tenant: tenantA });
+    const harness = await RouterTestingHarness.create(`/bg/${branch.id}/fleet/devices`);
+    http.expectOne((r) => operation(r, 'AdminBranches')).flush({ data: { branches: [branch] } });
+    await harness.fixture.whenStable();
+    http.match((r) => operation(r, 'AdminDevices'));
+    const shell: unknown = harness.routeDebugElement?.query(
+      By.directive(AdminShell),
+    ).componentInstance;
+    if (!(shell instanceof AdminShell)) throw new Error('Missing shell.');
+    expect(shell.navigation().map((group) => group.id)).toEqual(['fleet', 'karma-client']);
+    expect(shell.navigation()[0]?.items.map((item) => item.link.join('/'))).toEqual([
+      `//bg/${branch.id}/fleet/vehicles`,
+      `//bg/${branch.id}/fleet/devices`,
+    ]);
+    expect(shell.context()).toEqual({ group: 'Автопарк', page: 'Устройства' });
+    expect(document.title).toBe('Устройства · holita');
+    expect(harness.routeDebugElement?.injector.get(UI_LANGUAGE)()).toBe('bg');
+    const primeNG = TestBed.inject(PrimeNG);
+    expect(primeNG.translation.dayNames?.[1]).toBe('понеделник');
+    expect(primeNG.translation.firstDayOfWeek).toBe(1);
+    expect(primeNG.translation.dateFormat).toBe('dd.mm.yy');
+    await harness.navigateByUrl(`/en/karma-client/projects`);
+    http.expectOne((r) => operation(r, 'AdminBranches')).flush({ data: { branches: [branch] } });
+    await harness.fixture.whenStable();
+    http.match(() => true);
+    expect(shell.context()).toEqual({ group: 'Karma Client', page: 'Projects' });
+    expect(document.title).toBe('Projects · holita');
+    expect(primeNG.translation.monthNames?.[0]).toBe('January');
+    expect(harness.routeDebugElement?.injector.get(UI_LANGUAGE)()).toBe('en');
+  });
+  it('titles the login screen', async () => {
+    const harness = await RouterTestingHarness.create('/bg');
+    http.expectOne((r) => operation(r, 'AdminTenants')).flush({ data: { tenants: [tenantA] } });
+    await harness.fixture.whenStable();
+    expect(document.title).toBe('Вход · holita');
   });
   it('keeps a failed login on the login screen without discovering branches', async () => {
     const harness = await RouterTestingHarness.create('/bg');

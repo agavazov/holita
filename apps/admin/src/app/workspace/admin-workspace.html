@@ -11,8 +11,9 @@
     [language]="language()"
     [languageUrl]="otherLanguageUrl()"
     [loading]="branches.loading()"
-    [fleetEnabled]="fleetEnabled"
     [tenantName]="session.current()?.tenant?.name ?? null"
+    [navigation]="navigation()"
+    [context]="context()"
     (signOut)="logout()"
     (branchSelected)="branches.choose($event, language())"
   >
@@ -20,7 +21,7 @@
       branches.required() &&
       (branches.branches() === null || branches.branches()?.length === 0 || branches.error())
     ) {
-      <section class="card">
+      <section class="app-card app-stack">
         @if (branches.loading()) {
           <p role="status">{{ text().loadingBranches }}</p>
         } @else if (branches.error()) {

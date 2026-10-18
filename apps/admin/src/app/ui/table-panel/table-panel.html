@@ -1,0 +1,155 @@
+<section
+  class="table-panel"
+  [attr.aria-labelledby]="id + '-heading'"
+  [attr.aria-busy]="busy() || null"
+>
+  <div class="table-panel__header">
+    @if (headingLevel() === 3) {
+      <h3 #headingElement class="table-panel__heading" [id]="id + '-heading'" tabindex="-1">
+        {{ heading() }}
+        @if (totalText(); as total) {
+          <span class="table-panel__count">{{ total }}</span>
+        }
+      </h3>
+    } @else {
+      <h2 #headingElement class="table-panel__heading" [id]="id + '-heading'" tabindex="-1">
+        {{ heading() }}
+        @if (totalText(); as total) {
+          <span class="table-panel__count">{{ total }}</span>
+        }
+      </h2>
+    }
+    <div class="table-panel__actions">
+      <ng-content select="[panelActions]" />
+    </div>
+  </div>
+  @if (busy() && showTable()) {
+    <!-- Decorative: aria-busy on the panel announces the refresh. -->
+    <span class="table-panel__progress" aria-hidden="true"></span>
+  }
+  @if (notice(); as notice) {
+    <div class="table-panel__notice" role="status">
+      <p-message
+        [severity]="notice.severity"
+        [closable]="true"
+        size="small"
+        (onClose)="dismissNotice.emit()"
+        >{{ notice.text }}</p-message
+      >
+    </div>
+  }
+  @switch (view().kind) {
+    @case ('loading') {
+      <div class="table-panel__skeleton" role="status" [attr.aria-label]="text().loading">
+        @for (row of skeletons(); track row) {
+          <div class="table-panel__skeleton-row">
+            <p-skeleton width="1.25rem" height="1rem" />
+            <p-skeleton width="28%" height="0.875rem" />
+            <p-skeleton width="18%" height="0.875rem" />
+            <p-skeleton width="22%" height="0.875rem" />
+          </div>
+        }
+      </div>
+    }
+    @case ('empty') {
+      <holita-empty-state
+        kind="empty"
+        [title]="emptyTitle() ?? text().table.emptyTitle"
+        [description]="emptyDescription()"
+      >
+        <ng-container ngProjectAs="[emptyActions]">
+          <ng-content select="[emptyActions]" />
+        </ng-container>
+      </holita-empty-state>
+    }
+    @case ('no-results') {
+      <holita-empty-state
+        kind="no-results"
+        [title]="text().table.noResultsTitle"
+        [description]="text().table.noResultsDescription"
+      >
+        <button
+          emptyActions
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          (click)="clearFilters.emit()"
+        >
+          {{ text().table.clearFilters }}
+        </button>
+      </holita-empty-state>
+    }
+    @case ('error') {
+      <holita-empty-state
+        kind="error"
+        [title]="text().table.errorTitle"
+        [description]="errorText()"
+      >
+        <button emptyActions pButton type="button" (click)="retry.emit()">
+          {{ text().retry }}
+        </button>
+      </holita-empty-state>
+    }
+    @case ('rows-error') {
+      <div class="table-panel__inline-error" role="alert">
+        <p-message severity="error" variant="simple" size="small">{{
+          errorText() ?? text().table.refreshFailed
+        }}</p-message>
+        <button
+          pButton
+          type="button"
+          size="small"
+          severity="secondary"
+          [outlined]="true"
+          (click)="retry.emit()"
+        >
+          {{ text().retry }}
+        </button>
+      </div>
+    }
+  }
+  <div class="table-panel__table" [hidden]="!showTable()">
+    <ng-content />
+  </div>
+  @if (selectedCount() > 0) {
+    <div class="table-panel__bulk" role="region" [attr.aria-label]="text().table.bulkActions">
+      <span class="table-panel__bulk-count">{{ selectionText() }}</span>
+      @if (selectionProgress(); as progress) {
+        <span class="table-panel__bulk-progress" role="status">{{ progress }}</span>
+      }
+      <div class="table-panel__bulk-actions">
+        <ng-content select="[bulkActions]" />
+      </div>
+      <button
+        type="button"
+        class="app-icon-button table-panel__bulk-clear"
+        [attr.aria-label]="text().table.clearSelection"
+        (click)="clearSelection.emit()"
+      >
+        <svg data-p-icon="times" aria-hidden="true"></svg>
+      </button>
+    </div>
+  }
+  @if (page(); as page) {
+    <div class="table-panel__footer">
+      <div class="table-panel__footer-start">
+        <ng-content select="[panelFooter]" />
+      </div>
+      @if (showTable()) {
+        <p-paginator
+          [rows]="page.pageSize"
+          [first]="first()"
+          [totalRecords]="page.total"
+          [rowsPerPageOptions]="pageSizeOptions()"
+          [showCurrentPageReport]="true"
+          [currentPageReportTemplate]="text().table.pageReport"
+          [locale]="locale()"
+          [alwaysShow]="true"
+          appendTo="body"
+          (onPageChange)="changePage($event)"
+        />
+      }
+    </div>
+  }
+</section>

@@ -1,0 +1,85 @@
+<div class="filter-bar__row">
+  <div class="filter-bar__segments">
+    <ng-content select="[filterSegments]" />
+  </div>
+  <div class="filter-bar__search">
+    <label class="app-visually-hidden" [for]="id + '-search'">{{ searchLabel() }}</label>
+    <p-iconfield>
+      <p-inputicon>
+        <svg data-p-icon="search" aria-hidden="true"></svg>
+      </p-inputicon>
+      <input
+        pInputText
+        type="search"
+        [id]="id + '-search'"
+        [value]="search()"
+        [placeholder]="searchLabel()"
+        [attr.maxlength]="maxLength"
+        [attr.aria-invalid]="searchError() ? 'true' : null"
+        [attr.aria-describedby]="searchError() ? id + '-search-error' : null"
+        [invalid]="!!searchError()"
+        [fluid]="true"
+        autocomplete="off"
+        (input)="input($event)"
+      />
+    </p-iconfield>
+    @if (searchError(); as error) {
+      <p-message [id]="id + '-search-error'" severity="error" variant="simple" size="small">{{
+        error
+      }}</p-message>
+    }
+  </div>
+  <button
+    type="button"
+    class="filter-bar__toggle"
+    pButton
+    severity="secondary"
+    [outlined]="true"
+    [attr.aria-expanded]="open()"
+    [attr.aria-controls]="id + '-controls'"
+    (click)="open.set(!open())"
+  >
+    <svg data-p-icon="sliders-h" aria-hidden="true"></svg>
+    {{ toggleLabel() }}
+  </button>
+  <div
+    class="filter-bar__controls"
+    [id]="id + '-controls'"
+    [class.filter-bar__controls--open]="open()"
+  >
+    <ng-content select="[filterControls]" />
+  </div>
+  <div class="filter-bar__actions">
+    <ng-content select="[filterActions]" />
+  </div>
+</div>
+@if (chips().length) {
+  <div class="filter-bar__chips">
+    <span class="filter-bar__chips-label">{{ text().applied }}</span>
+    <ul class="filter-bar__chip-list" role="list">
+      @for (chip of chips(); track chip.key) {
+        <li>
+          <button
+            type="button"
+            class="filter-bar__chip"
+            [attr.aria-label]="chipLabel(chip)"
+            (click)="removeChip.emit(chip.key)"
+          >
+            {{ chip.label }}
+            <svg data-p-icon="times" aria-hidden="true"></svg>
+          </button>
+        </li>
+      }
+    </ul>
+    <button
+      type="button"
+      pButton
+      size="small"
+      severity="secondary"
+      [text]="true"
+      (click)="clearAll.emit()"
+    >
+      {{ text().clearAll }}
+    </button>
+  </div>
+}

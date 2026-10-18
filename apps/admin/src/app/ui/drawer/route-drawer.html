@@ -1,0 +1,113 @@
+<p-drawer
+  [visible]="true"
+  position="right"
+  [modal]="true"
+  [blockScroll]="true"
+  appendTo="body"
+  [dismissible]="false"
+  [closeOnEscape]="false"
+  [showCloseIcon]="false"
+  [styleClass]="drawerClass()"
+  [pt]="{ root: { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': titleId } }"
+  (onShow)="shown()"
+>
+  <ng-template #headless>
+    <!-- Escape from any focused control inside bubbles here; the container itself is not a tab stop. -->
+    <div
+      class="route-drawer"
+      tabindex="-1"
+      [attr.aria-busy]="saving() || null"
+      (keydown.escape)="escape($event)"
+    >
+      <div class="route-drawer__header">
+        <div class="route-drawer__heading">
+          <div class="route-drawer__title-row">
+            <h2 #heading class="route-drawer__title" [id]="titleId" tabindex="-1">
+              {{ title() }}
+            </h2>
+            <ng-content select="[drawerMeta]" />
+          </div>
+          @if (subtitle()) {
+            <p class="route-drawer__subtitle">{{ subtitle() }}</p>
+          }
+        </div>
+        <button
+          type="button"
+          class="app-icon-button route-drawer__close"
+          [attr.aria-label]="text().close"
+          (click)="close()"
+        >
+          <svg data-p-icon="times" aria-hidden="true"></svg>
+        </button>
+      </div>
+      <div class="route-drawer__body">
+        @switch (state()) {
+          @case ('loading') {
+            <div class="route-drawer__skeleton" role="status" [attr.aria-label]="text().loading">
+              @for (row of [1, 2, 3, 4]; track row) {
+                <div class="route-drawer__skeleton-field">
+                  <p-skeleton width="30%" height="0.75rem" />
+                  <p-skeleton height="var(--p-app-control-height)" />
+                </div>
+              }
+            </div>
+          }
+          @case ('not-found') {
+            <holita-empty-state
+              kind="not-found"
+              [title]="text().drawer.notFoundTitle"
+              [description]="text().drawer.notFoundDescription"
+            >
+              <button
+                emptyActions
+                pButton
+                type="button"
+                severity="secondary"
+                [outlined]="true"
+                (click)="close()"
+              >
+                {{ text().close }}
+              </button>
+            </holita-empty-state>
+          }
+          @case ('invalid-id') {
+            <holita-empty-state
+              kind="not-found"
+              [title]="text().drawer.invalidIdTitle"
+              [description]="text().drawer.invalidIdDescription"
+            >
+              <button
+                emptyActions
+                pButton
+                type="button"
+                severity="secondary"
+                [outlined]="true"
+                (click)="close()"
+              >
+                {{ text().close }}
+              </button>
+            </holita-empty-state>
+          }
+          @case ('error') {
+            <holita-empty-state
+              kind="error"
+              [title]="text().drawer.errorTitle"
+              [description]="errorText()"
+            >
+              <button emptyActions pButton type="button" (click)="retry.emit()">
+                {{ text().retry }}
+              </button>
+            </holita-empty-state>
+          }
+        }
+        <div class="route-drawer__content" [hidden]="state() !== 'ready'">
+          <ng-content />
+        </div>
+      </div>
+      <div class="route-drawer__footer" [hidden]="state() !== 'ready'">
+        <ng-content select="[drawerFooter]" />
+      </div>
+    </div>
+  </ng-template>
+</p-drawer>
+<p-confirmdialog [pt]="confirmPt()" [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }" />

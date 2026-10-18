@@ -23,19 +23,55 @@ Work happens on the `feature/admin-design-system` branch.
 
 ## Remaining phases
 
-1. Direction: present two or three token and layout variants of a new shell, a Fleet list with
-   filters and a drawer editor in Storybook; the user picks one.
-2. Design system: one holita preset (`definePreset`) for brand, density and layout tokens; a
-   small set of page patterns with measured reuse (page header, list toolbar and filters, state
-   messages, form field, drawer editor); a design-system document and an agent skill with the
-   central-change procedure.
-3. Standard list contract and Fleet demo domain: define the shared GraphQL list conventions,
-   extend Fleet SDL, Prisma models, migrations and synthetic seeds, and add fixtures and stories
-   for every real state. Stop for visual approval of the new screens.
-4. Rollout: replace the current Fleet screens with the approved patterns, update tests,
-   smoke specs and the authoritative documentation, and remove superseded presentation rules.
-5. Proof: apply one central token or pattern change and show its propagation in the visual
-   review; build the next requested module from the skill alone.
+The build plans are the [frontend spec](admin-design-system-frontend.md) (phases in its
+section 11) and the [backend spec](admin-design-system-backend.md) (slices in its section 13).
+Backend slices run in parallel with F0–F3; every build, generation, test and server command runs
+under the shared-worktree check lock described in both specs.
+
+- B1 Master data and the list contract: standard list contract, Vehicle/Device extensions,
+  Drivers and Vehicle groups ([backend 13](admin-design-system-backend.md#b1-master-data-and-the-list-contract)).
+- B2 Activity: samples, trips, events and service tasks
+  ([backend 13](admin-design-system-backend.md#b2-activity)).
+- B3 Overview: KPIs, attention queue and window aggregates
+  ([backend 13](admin-design-system-backend.md#b3-overview)).
+- B4 Demo seed and documentation completion
+  ([backend 13](admin-design-system-backend.md#b4-demo-seed-and-documentation-completion)).
+- F0 Spikes: theme, Storybook switching, CSS layers, breakpoints, route reuse, Storybook tests
+  and autocomplete/tabs questions ([frontend 11](admin-design-system-frontend.md#f0-spikes)).
+- F1 Design system and shell: theme module, global styles, `app/ui` patterns, new shell, login,
+  Storybook tooling, PrimeUI key move, design-system document, skill and ADR
+  ([frontend 11](admin-design-system-frontend.md#f1-design-system-and-shell)).
+- F2 Fleet scaffolding: route tree, keyed outlet, reuse strategy, scoped clients, shared Fleet
+  folder, stubs, fixtures and retirement of the old Fleet screens
+  ([frontend 11](admin-design-system-frontend.md#f2-fleet-scaffolding)).
+- F3 Screens in parallel groups: Vehicles; Drivers and groups; Alerts and trips; Maintenance;
+  Overview and devices ([frontend 11](admin-design-system-frontend.md#f3-screens-g1g5-in-parallel)).
+- F4 Integration: documentation and rules, backlog, retirement check and dataset re-sync
+  ([frontend 11](admin-design-system-frontend.md#f4-integration)).
+- F5 Proof and regression: central-change proof and, on request, full regression
+  ([frontend 11](admin-design-system-frontend.md#f5-proof-and-regression)).
+
+## Handoff status (2026-10-18)
+
+Work is on `feature/admin-design-system` in the worktree
+`/var/workspace/services/holita.worktrees/admin-design-system`; nothing is merged or pushed.
+
+- Done: Storybook tooling and visual review; B1 (master data, standard list contract, drivers,
+  vehicle groups); B2 (samples, trips, events, service tasks); F0–F1 (theme with three brands and
+  two densities, `app/ui` patterns, new shell, login restyle, design-system stories).
+- Last results: Fleet unit 152/152, Fleet db 125/125, B1 schema 5/5, B1 router 20/20; admin
+  lint/typecheck/build pass; admin unit 386/386 (design system), 8/8 (Karma canary), 116/116
+  (features); Storybook tests 63/63; shell/foundation/tenants smoke 12/13.
+- Known failures to fix first:
+  - `tools/graphql/federation.db.spec.mts` "records odometer readings and runs the alert workflow
+    through Gateway": `fleetVehicle.state.activity` is `NO_DEVICE` although the spec now creates
+    the vehicle's device first. Check `TelemetryRepository.vehicleFacts` (`hasDevice`).
+  - `tools/browser/angular-shell.smoke.spec.mts` "mobile navigation drawer traps focus and closes
+    on Escape, backdrop, navigation and resize": the drawer stays visible after resizing to desktop.
+- Not run yet for B2: `test:gateway:router`, `test:karma-client`, repo-wide lint/typecheck/build,
+  admin Fleet specs and the Vehicles/Devices smoke. The independent verifier passes for B1, B2
+  and F1 were not run.
+- Next: B3, B4, F2, F3 (G1–G5), F4, F5 and `test:full`, as planned below.
 
 ## Fleet demo scope (proposal, not implemented)
 

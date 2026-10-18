@@ -1,0 +1,8 @@
+// Emits the breakpoints once as custom properties for `app/ui/media.ts`; used only by styles.scss.
+@use 'breakpoints';
+
+:root {
+  @each $name, $value in breakpoints.$breakpoints {
+    --app-bp-#{$name}: #{$value};
+  }
+}

@@ -1,130 +1,75 @@
-<div class="layout-wrapper layout-static" [class.layout-static-inactive]="desktopCollapsed()">
-  <a class="skip-link" href="#main-content">{{ text().skipNavigation }}</a>
-  <header class="layout-topbar">
-    <div class="layout-topbar-logo-container">
-      <button
-        #navigationToggle
-        type="button"
-        class="layout-menu-button layout-topbar-action"
-        [attr.aria-label]="text().toggleNavigation"
-        [attr.aria-expanded]="mobile() ? mobileOpen() : !desktopCollapsed()"
-        [attr.aria-controls]="mobile() ? 'mobile-navigation' : 'desktop-navigation'"
-        (click)="toggleNavigation()"
-      >
-        <svg data-p-icon="bars" size="20" aria-hidden="true"></svg>
-      </button>
-      <a class="layout-topbar-logo" [routerLink]="['/', language()]" aria-label="holita">
-        <span class="holita-mark" aria-hidden="true">h</span>
-      </a>
-    </div>
-    @if (!mobile()) {
-      <ng-container [ngTemplateOutlet]="branchSelector" />
-    }
-    <div class="layout-topbar-actions">
-      <a
-        class="layout-topbar-action language-switch"
-        [routerLink]="languageUrl()"
-        [attr.lang]="language() === 'bg' ? 'en' : 'bg'"
-        [attr.aria-label]="language() === 'bg' ? 'English' : 'Български'"
-      >
-        {{ language() === 'bg' ? 'EN' : 'BG' }}
-      </a>
-      <button
-        type="button"
-        class="layout-topbar-action"
-        [attr.aria-label]="appearance.dark() ? text().lightTheme : text().darkTheme"
-        (click)="appearance.toggle()"
-      >
-        @if (appearance.dark()) {
-          <svg data-p-icon="sun" size="20" aria-hidden="true"></svg>
-        } @else {
-          <svg data-p-icon="moon" size="20" aria-hidden="true"></svg>
-        }
-      </button>
-      @if (tenantName()) {
-        <button
-          type="button"
-          class="layout-topbar-action"
-          [attr.aria-label]="text().signOut"
-          [title]="tenantName()"
-          data-testid="demo-logout"
-          (click)="signOut.emit()"
-        >
-          <svg data-p-icon="sign-out" size="20" aria-hidden="true"></svg>
-        </button>
-      }
-    </div>
-    @if (mobile()) {
-      <ng-container [ngTemplateOutlet]="branchSelector" />
-    }
+<a class="app-skip-link" href="#main-content">{{ text().skipNavigation }}</a>
+<div class="app-shell" [class.app-shell--rail]="rail() && !mobile()">
+  <header class="app-topbar">
+    <holita-admin-topbar
+      class="app-topbar__bar"
+      [language]="language()"
+      [languageUrl]="languageUrl()"
+      [context]="context()"
+      [branches]="branches()"
+      [branchControl]="branchControl"
+      [loading]="loading()"
+      [tenantName]="tenantName()"
+      [homeLink]="homeLink()"
+      [showLogo]="mobile()"
+      [menuExpanded]="menuExpanded()"
+      [menuControls]="mobile() ? 'mobile-navigation' : 'desktop-navigation'"
+      (menuToggle)="toggleNavigation()"
+      (signOut)="signOut.emit()"
+    />
   </header>
-  <ng-template #branchSelector>
-    <div class="branch-selector">
-      <label for="active-branch">{{ text().activeBranch }}</label>
-      <p-select
-        inputId="active-branch"
-        [options]="branchOptions()"
-        optionLabel="name"
-        optionValue="id"
-        [ariaLabel]="text().activeBranch"
-        [formControl]="branchControl"
-        [placeholder]="text().branches"
-        [loading]="loading()"
-        appendTo="body"
-      />
-    </div>
-  </ng-template>
   @if (!mobile()) {
-    <aside
-      class="layout-sidebar"
-      id="desktop-navigation"
-      [attr.inert]="desktopCollapsed() ? '' : null"
-    >
-      <holita-admin-navigation
+    <aside class="app-sidebar" id="desktop-navigation" [attr.aria-label]="text().navigation">
+      <holita-admin-sidebar
+        [navigation]="navigation()"
         [language]="language()"
-        [branchId]="branchId()"
-        [fleetEnabled]="fleetEnabled()"
+        [homeLink]="homeLink()"
+        [tenantName]="tenantName()"
+        [rail]="rail()"
       />
     </aside>
   }
-  <p-drawer
-    [visible]="mobileOpen()"
-    (visibleChange)="drawerVisibilityChanged($event)"
-    (onShow)="focusNavigation()"
-    [header]="text().navigation"
-    [modal]="true"
-    [blockScroll]="true"
-    appendTo="body"
-    [style]="{ width: 'min(20rem, 90vw)', borderWidth: '0 1px 0 0' }"
-    [dt]="{ content: { padding: '0.5rem 1.5rem' } }"
-    [ariaCloseLabel]="text().closeNavigation"
-    [pt]="{
-      root: { 'aria-label': text().navigation },
-      pcCloseButton: { root: { id: 'mobile-navigation-close' } },
-    }"
-  >
-    <div id="mobile-navigation" class="layout-mobile-navigation">
-      <holita-admin-navigation
-        [language]="language()"
-        [branchId]="branchId()"
-        [fleetEnabled]="fleetEnabled()"
-      />
-    </div>
-  </p-drawer>
-  <div class="layout-main-container">
-    <main id="main-content" class="layout-main" tabindex="-1">
+  <main id="main-content" class="app-main" tabindex="-1">
+    <div class="app-page">
       @if (appearance.persistenceFailed()) {
         <p-message severity="warn" [pt]="{ root: { role: 'status', 'aria-live': 'polite' } }">
           {{ text().themePersistenceError }}
         </p-message>
       }
       <ng-content />
-    </main>
-    <footer class="layout-footer">
-      holita
-      @if (tenantName()) {
-        <span> · {{ tenantName() }}</span>
-      }
-    </footer>
-  </div>
+    </div>
+  </main>
 </div>
+@if (mobile()) {
+  <p-drawer
+    [visible]="mobileOpen()"
+    (visibleChange)="drawerVisibilityChanged($event)"
+    (onShow)="focusNavigation()"
+    [modal]="true"
+    [blockScroll]="true"
+    appendTo="body"
+    styleClass="app-nav-drawer"
+    [ariaCloseLabel]="text().closeNavigation"
+    [pt]="{
+      root: { 'aria-label': text().navigation },
+      pcCloseButton: { root: { id: 'mobile-navigation-close' } },
+    }"
+  >
+    <ng-template #header>
+      <span class="app-logo" aria-hidden="true">
+        <span class="app-logo__mark">h</span>
+        <span class="app-logo__word">holita</span>
+      </span>
+    </ng-template>
+    <div id="mobile-navigation" class="app-nav-drawer__content">
+      <holita-admin-sidebar
+        [navigation]="navigation()"
+        [language]="language()"
+        [homeLink]="homeLink()"
+        [tenantName]="tenantName()"
+        [showLogo]="false"
+        idPrefix="mobile-nav"
+      />
+    </div>
+  </p-drawer>
+}

@@ -1,0 +1,29 @@
+@use 'breakpoints' as bp;
+
+:host {
+  display: block;
+  overflow: hidden;
+  background: var(--p-app-panel-background);
+  border: 1px solid var(--p-app-panel-border-color);
+  border-radius: var(--p-app-panel-radius);
+}
+
+.kpi-strip__error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--p-app-space-2) var(--p-app-space-4);
+  padding: var(--p-app-space-2) var(--p-app-panel-padding);
+  border-block-end: 1px solid var(--p-app-panel-border-color);
+  background: var(--p-app-tone-danger-background);
+}
+
+.kpi-strip__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--p-app-kpi-min-width), 1fr));
+
+  @include bp.below(md) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

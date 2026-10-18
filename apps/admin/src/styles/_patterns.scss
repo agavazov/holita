@@ -1,0 +1,339 @@
+// Domain-neutral CSS patterns (spec 3.1). Components own their structure; these classes are pure
+// presentation shared by every screen.
+@use 'breakpoints' as bp;
+
+$tones: success, info, warn, danger, neutral, accent;
+$categories: c1, c2, c3, c4, c5, c6, c7, c8;
+
+@layer holita {
+  // Brand mark and word, used by the sidebar, the topbar below `lg` and the login page.
+  .app-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--p-app-space-2);
+    border-radius: var(--p-app-radius-control);
+    font-size: 1.0625rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--p-text-color);
+  }
+
+  .app-logo__mark {
+    display: grid;
+    place-items: center;
+    flex: none;
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+    border-radius: var(--p-app-radius-panel);
+    background: var(--p-primary-color);
+    color: var(--p-primary-contrast-color);
+    font-size: 1.125rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  // Square ghost button for icon-only actions (topbar, panels, popover triggers).
+  .app-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    inline-size: var(--p-app-control-height);
+    block-size: var(--p-app-control-height);
+    padding: 0;
+    border: 0;
+    border-radius: var(--p-app-radius-control);
+    background: transparent;
+    color: var(--p-text-muted-color);
+    cursor: pointer;
+    transition:
+      background-color var(--p-transition-duration),
+      color var(--p-transition-duration);
+
+    &:hover {
+      background: var(--p-content-hover-background);
+      color: var(--p-text-color);
+    }
+
+    svg {
+      inline-size: 1rem;
+      block-size: 1rem;
+    }
+  }
+
+  .app-link {
+    color: var(--p-primary-color);
+    font-weight: 500;
+    text-underline-offset: 0.2em;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  // Panel surface for cards, KPI strips and table panels.
+  .app-card {
+    min-inline-size: 0;
+    padding: var(--p-app-panel-padding);
+    background: var(--p-app-panel-background);
+    border: 1px solid var(--p-app-panel-border-color);
+    border-radius: var(--p-app-panel-radius);
+  }
+
+  // Vertical stack of blocks (messages, text, actions) inside a card.
+  .app-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--p-app-space-3);
+  }
+
+  .app-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--p-app-space-3);
+    margin-block-end: var(--p-app-space-3);
+  }
+
+  .app-card__title {
+    font-size: var(--p-app-text-md);
+    font-weight: 600;
+  }
+
+  .app-card-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--p-app-stack-gap);
+
+    @include bp.from(md) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    @include bp.from(xl) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  // Definition-list facts: label above value in an auto-filling grid.
+  .app-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    gap: var(--p-app-space-4) var(--p-app-space-5);
+    margin: 0;
+
+    > div {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-inline-size: 0;
+    }
+
+    dt {
+      font-size: var(--p-app-text-sm);
+      color: var(--p-text-muted-color);
+    }
+
+    dd {
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  .app-facts--wide {
+    grid-column: 1 / -1;
+  }
+
+  // Editor drawers: titled sections with a responsive one/two-column field grid.
+  .app-form-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--p-app-space-4);
+    padding-block: var(--p-app-space-5);
+    border-block-start: 1px solid var(--p-content-border-color);
+
+    &:first-child {
+      padding-block-start: var(--p-app-space-1);
+      border-block-start: 0;
+    }
+
+    > h3 {
+      font-size: var(--p-app-text-base);
+      font-weight: 600;
+    }
+
+    > p {
+      margin-block-start: calc(-1 * var(--p-app-space-3));
+      font-size: var(--p-app-text-sm);
+      color: var(--p-text-muted-color);
+    }
+  }
+
+  .app-form-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--p-app-space-4);
+
+    @include bp.from(sm) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    > .app-form-grid--wide {
+      grid-column: 1 / -1;
+    }
+  }
+
+  // Controls projected into FormField fill its width.
+  holita-form-field
+    > :is(input, textarea, p-select, p-autocomplete, p-inputnumber, p-datepicker, p-multiselect) {
+    inline-size: 100%;
+  }
+
+  // Route drawers (RouteDrawer): token widths, full width on narrow screens.
+  .p-drawer.app-route-drawer {
+    inline-size: var(--p-app-drawer-width-md);
+    max-inline-size: 100vw;
+    // Appended to the body, the drawer misses PrimeNG's positional border widths; only the
+    // inner edge has a border.
+    border-width: 0;
+    border-inline-start: 1px solid var(--p-content-border-color);
+    box-shadow: var(--p-app-shadow-floating);
+
+    &.app-route-drawer--lg {
+      inline-size: var(--p-app-drawer-width-lg);
+    }
+
+    @include bp.below(md) {
+      inline-size: 100vw;
+      border-inline-start: 0;
+    }
+  }
+
+  // Sticky drawer footer actions: primary action last on the right; stacked on phones.
+  .app-drawer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--p-app-space-2);
+
+    @include bp.below(sm) {
+      flex-direction: column-reverse;
+      align-items: stretch;
+    }
+  }
+
+  // Status and category dots; colour never carries meaning alone (a label sits beside it).
+  .app-dot {
+    display: inline-block;
+    flex: none;
+    inline-size: 0.5rem;
+    block-size: 0.5rem;
+    border-radius: 50%;
+    background: currentColor;
+    vertical-align: middle;
+  }
+
+  @each $tone in $tones {
+    .app-dot--#{$tone} {
+      background: var(--p-app-tone-#{$tone}-solid);
+    }
+  }
+
+  @each $slot in $categories {
+    .app-dot--#{$slot} {
+      background: var(--p-app-category-#{$slot});
+    }
+  }
+
+  .app-num {
+    font-variant-numeric: var(--p-app-font-numeric);
+    white-space: nowrap;
+  }
+
+  th.app-num,
+  td.app-num {
+    text-align: end;
+  }
+
+  .app-mono {
+    font-family: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Consolas, monospace;
+    font-size: 0.92em;
+    letter-spacing: 0;
+  }
+
+  .app-muted {
+    color: var(--p-text-muted-color);
+  }
+
+  // Two-line table cell: primary line plus a muted secondary line.
+  .app-cell-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-inline-size: 0;
+
+    > :nth-child(2) {
+      font-size: var(--p-app-text-sm);
+      color: var(--p-text-muted-color);
+    }
+  }
+
+  // Thin horizontal meter; the host sets `--app-meter-value` (0–100%).
+  .app-meter {
+    position: relative;
+    display: block;
+    inline-size: 100%;
+    min-inline-size: 3rem;
+    block-size: 0.375rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--p-content-hover-background);
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset-block: 0;
+      inset-inline-start: 0;
+      inline-size: var(--app-meter-value, 0%);
+      border-radius: inherit;
+      background: var(--app-meter-color, var(--p-primary-color));
+    }
+  }
+
+  @each $tone in $tones {
+    .app-meter--#{$tone} {
+      --app-meter-color: var(--p-app-tone-#{$tone}-solid);
+    }
+  }
+
+  // Secondary table columns disappear on narrow screens.
+  .app-col-secondary {
+    @include bp.below(md) {
+      display: none;
+    }
+  }
+
+  // Content template for p-timeline events.
+  .app-timeline-event {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-block-end: var(--p-app-space-4);
+  }
+
+  .app-timeline-event__title {
+    font-weight: 600;
+  }
+
+  .app-timeline-event__meta {
+    font-size: var(--p-app-text-sm);
+    color: var(--p-text-muted-color);
+  }
+
+  .app-timeline-event__body {
+    margin-block-start: var(--p-app-space-1);
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+  }
+}

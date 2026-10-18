@@ -1,0 +1,90 @@
+{
+  "loading": "Зареждане…",
+  "close": "Затвори",
+  "cancel": "Отказ",
+  "retry": "Опитай отново",
+  "searchTooManyWords": "Търсенето използва най-много пет думи.",
+  "units": {
+    "km": "км",
+    "kmh": "км/ч",
+    "litre": "л",
+    "volt": "V",
+    "percent": "%",
+    "celsius": "°C"
+  },
+  "relative": {
+    "now": "току-що",
+    "past": "преди {value}",
+    "future": "след {value}",
+    "minutes": "{count} мин",
+    "hours": "{count} ч",
+    "days": "{count} дн."
+  },
+  "duration": {
+    "hours": "{hours} ч",
+    "minutes": "{minutes} мин"
+  },
+  "validation": {
+    "required": "Полето е задължително.",
+    "unsupported": "Съдържа неподдържан символ.",
+    "maxLength": "Използвайте най-много {max} знака.",
+    "pattern": "Форматът не е валиден.",
+    "integer": "Въведете цяло число.",
+    "decimal": "Въведете число.",
+    "min": "Въведете поне {min}.",
+    "max": "Въведете най-много {max}.",
+    "step": "Използвайте стъпка {step}.",
+    "date": "Въведете валидна дата.",
+    "dateMin": "Изберете {min} или по-късно.",
+    "dateMax": "Изберете {max} или по-рано.",
+    "requireOneOf": "Попълнете поне едно от тези полета.",
+    "invalid": "Стойността не е валидна."
+  },
+  "discard": {
+    "title": "Незапазени промени",
+    "message": "Да затворим ли редактора и да отхвърлим промените?",
+    "keepEditing": "Продължи редакцията",
+    "discard": "Отхвърли промените"
+  },
+  "drawer": {
+    "notFoundTitle": "Записът не е намерен",
+    "notFoundDescription": "Може да е изтрит или да е от друг клон.",
+    "invalidIdTitle": "Невалиден адрес",
+    "invalidIdDescription": "Връзката не сочи към запис.",
+    "errorTitle": "Записът не може да бъде зареден"
+  },
+  "table": {
+    "emptyTitle": "Все още няма записи",
+    "noResultsTitle": "Няма съвпадащи записи",
+    "noResultsDescription": "Променете търсенето или филтрите.",
+    "clearFilters": "Изчисти филтрите",
+    "errorTitle": "Списъкът не може да бъде зареден",
+    "refreshFailed": "Списъкът не можа да се обнови; показаните редове може да са остарели.",
+    "selected": "{count} избрани",
+    "bulkActions": "Действия за избраните записи",
+    "clearSelection": "Изчисти избора",
+    "pageReport": "{first}–{last} от {totalRecords}"
+  },
+  "filters": {
+    "toggle": "Филтри",
+    "toggleCount": "Филтри ({count})",
+    "applied": "Приложени",
+    "clearAll": "Изчисти всички",
+    "removeChip": "Премахни филтъра: {name}"
+  },
+  "kpi": {
+    "explain": "Как се изчислява"
+  },
+  "field": {
+    "required": "(задължително)",
+    "counter": "{length} / {max}"
+  },
+  "chart": {
+    "period": "Период",
+    "value": "Стойност",
+    "category": "Категория",
+    "total": "Общо",
+    "sparkline": "{label}: {min}–{max}, последно {last}",
+    "sparklineEmpty": "{label}: няма данни"
+  }
+}

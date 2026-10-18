@@ -1,0 +1,79 @@
+@use 'breakpoints' as bp;
+
+.route-drawer {
+  display: flex;
+  flex-direction: column;
+  block-size: 100%;
+  min-block-size: 0;
+}
+
+.route-drawer__header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--p-app-space-3);
+  padding: var(--p-app-space-4) var(--p-app-space-4) var(--p-app-space-3) var(--p-app-space-5);
+  border-block-end: 1px solid var(--p-content-border-color);
+}
+
+.route-drawer__heading {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.route-drawer__title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-app-space-2);
+}
+
+.route-drawer__title {
+  font-size: var(--p-app-text-lg);
+  overflow-wrap: anywhere;
+}
+
+.route-drawer__subtitle {
+  font-size: var(--p-app-text-sm);
+  color: var(--p-text-muted-color);
+  overflow-wrap: anywhere;
+}
+
+.route-drawer__close {
+  margin-block-start: -0.25rem;
+}
+
+.route-drawer__body {
+  flex: 1;
+  min-block-size: 0;
+  overflow-y: auto;
+  padding: var(--p-app-space-4) var(--p-app-space-5) var(--p-app-space-5);
+
+  @include bp.below(sm) {
+    padding-inline: var(--p-app-space-4);
+  }
+}
+
+.route-drawer__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-app-space-5);
+}
+
+.route-drawer__skeleton-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-app-space-2);
+}
+
+.route-drawer__footer {
+  padding: var(--p-app-space-3) var(--p-app-space-5);
+  border-block-start: 1px solid var(--p-content-border-color);
+  background: var(--p-app-panel-header-background);
+
+  @include bp.below(sm) {
+    padding-inline: var(--p-app-space-4);
+  }
+}

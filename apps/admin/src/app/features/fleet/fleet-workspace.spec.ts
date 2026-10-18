@@ -105,7 +105,7 @@ describe.each([
       expect(harness.routeNativeElement?.textContent).toContain('Fleet is unavailable.');
       expect(
         harness.routeNativeElement?.querySelector(
-          `holita-admin-navigation a[href*="fleet/${resource}"]`,
+          `holita-admin-sidebar a[href*="fleet/${resource}"]`,
         ),
       ).toBeNull();
       http.expectNone('/graphql');
@@ -124,12 +124,12 @@ describe.each([
   });
   it('keeps the Fleet section, resets query context and cancels reads during A → B → A', async () => {
     const harness = await mount(path + '?search=old&page=2');
-    expect(
-      harness.routeNativeElement?.querySelector('.layout-menuitem-root-text')?.textContent,
-    ).toContain('Fleet');
+    expect(harness.routeNativeElement?.querySelector('aside nav h2')?.textContent).toContain(
+      'Fleet',
+    );
     expect(
       harness.routeNativeElement
-        ?.querySelector(`holita-admin-navigation a[href$="/fleet/${resource}"]`)
+        ?.querySelector(`holita-admin-sidebar a[href$="/fleet/${resource}"]`)
         ?.getAttribute('href'),
     ).toBe(path);
     const oldRead = http.expectOne((request) => operation(request, listOperation));

@@ -1,0 +1,24 @@
+// The only declaration of the admin breakpoints. This module emits no CSS, so any component
+// stylesheet may `@use 'breakpoints'` without duplicating output. TypeScript reads the values from
+// the `--app-bp-*` custom properties (`_breakpoint-properties.scss`, `app/ui/media.ts`).
+@use 'sass:map';
+
+$breakpoints: (
+  sm: 640px,
+  md: 768px,
+  lg: 1024px,
+  xl: 1280px,
+  xxl: 1536px,
+);
+
+@mixin below($name) {
+  @media (max-width: #{map.get($breakpoints, $name) - 0.02px}) {
+    @content;
+  }
+}
+
+@mixin from($name) {
+  @media (min-width: #{map.get($breakpoints, $name)}) {
+    @content;
+  }
+}

@@ -58,35 +58,99 @@ const test = base.extend<{ storybook: string }>({
 
 const candidates = join(workspaceRoot, 'test-results/storybook-visual-candidates');
 
-const viewports = [
-  { name: 'desktop', width: 1440, height: 900 },
-  { name: 'mobile', width: 390, height: 844 },
-] as const;
+const viewports = {
+  desktop: { width: 1440, height: 900 },
+  tablet: { width: 768, height: 1024 },
+  mobile: { width: 375, height: 812 },
+} as const;
 
-// The reviewed set: every routed screen state worth approving, plus a dark and an English subset.
-const captures = [
-  { id: 'screens-fleet-vehicles--default', theme: 'light', locale: 'bg' },
-  { id: 'screens-fleet-vehicles--default', theme: 'dark', locale: 'bg' },
-  { id: 'screens-fleet-vehicles--default', theme: 'light', locale: 'en' },
-  { id: 'screens-fleet-vehicles--empty', theme: 'light', locale: 'bg' },
-  { id: 'screens-fleet-vehicles--no-results', theme: 'light', locale: 'bg' },
-  { id: 'screens-fleet-vehicles--load-error', theme: 'light', locale: 'bg' },
-  { id: 'screens-fleet-vehicles--create', theme: 'light', locale: 'bg' },
-  { id: 'screens-fleet-vehicles--edit', theme: 'light', locale: 'bg' },
-] as const;
+type ViewportName = keyof typeof viewports;
+
+interface Capture {
+  readonly id: string;
+  readonly theme: 'light' | 'dark';
+  readonly locale: 'bg' | 'en';
+  readonly viewports: readonly ViewportName[];
+  /** Brand and density globals; the application's `appTheme` when omitted. */
+  readonly brand?: 'cobalt' | 'ember' | 'pine';
+  readonly density?: 'compact' | 'comfortable';
+}
+
+/** One story in light and dark Bulgarian at the given viewports. */
+function bothThemes(id: string, sizes: readonly ViewportName[] = ['desktop']): Capture[] {
+  return [
+    { id, theme: 'light', locale: 'bg', viewports: sizes },
+    { id, theme: 'dark', locale: 'bg', viewports: sizes },
+  ];
+}
+
+// The reviewed set. Design system: foundations, the main patterns, PrimeNG coverage and the shell
+// (spec 7.7). Screens: the Vehicles screen that predates the patterns, until it is replaced.
+const captures: readonly Capture[] = [
+  ...[
+    'colors',
+    'brand-variants',
+    'typography',
+    'spacing-and-density',
+    'radii-and-borders',
+    'status-tones',
+    'categorical-palette',
+    'breakpoints',
+  ].flatMap((story) => bothThemes(`design-system-foundations--${story}`)),
+  ...[
+    'tablepanel--rows',
+    'tablepanel--loading',
+    'tablepanel--empty',
+    'tablepanel--rows-error',
+    'tablepanel--selection-with-progress',
+    'routedrawer--ready',
+    'routedrawer--server-field-errors',
+    'routedrawer--read-only',
+    'routedrawer--dirty-with-confirm',
+    'kpistrip--deltas',
+    'kpistrip--error-state',
+    'filterbar--active-chips',
+    'emptystate--all-kinds',
+    'charts--charts',
+    'pageheader--detail-with-back-link',
+    'formfield--variants',
+  ].flatMap((story) => bothThemes(`design-system-patterns-${story}`)),
+  ...['controls', 'overlays', 'confirm-dialog-story'].flatMap((story) =>
+    bothThemes(`design-system-primeng-coverage--${story}`),
+  ),
+  ...bothThemes('design-system-shell--desktop', ['desktop', 'mobile']),
+  ...bothThemes('design-system-shell--rail', ['desktop', 'mobile']),
+  ...bothThemes('design-system-shell--mobile-navigation-open', ['mobile']),
+  {
+    id: 'screens-fleet-vehicles--default',
+    theme: 'light',
+    locale: 'bg',
+    viewports: ['desktop', 'mobile'],
+  },
+  { id: 'screens-fleet-vehicles--default', theme: 'dark', locale: 'bg', viewports: ['desktop'] },
+  { id: 'screens-fleet-vehicles--default', theme: 'light', locale: 'en', viewports: ['desktop'] },
+];
+
+function globalsOf(capture: Capture): string {
+  return [
+    `theme:${capture.theme}`,
+    `locale:${capture.locale}`,
+    ...(capture.brand ? [`brand:${capture.brand}`] : []),
+    ...(capture.density ? [`density:${capture.density}`] : []),
+  ].join(';');
+}
 
 for (const capture of captures)
-  for (const viewport of viewports)
-    test(`${capture.id} ${capture.theme} ${capture.locale} ${viewport.name}`, async ({
-      page,
-      storybook,
-    }) => {
-      await page.clock.setFixedTime(new Date('2026-10-01T09:00:00Z'));
-      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+  for (const viewportName of capture.viewports)
+    test(`${capture.id} ${globalsOf(capture)} ${viewportName}`, async ({ page, storybook }) => {
+      const viewport = viewports[viewportName];
+      await page.clock.setFixedTime(new Date('2026-10-18T07:00:00Z'));
+      await page.setViewportSize(viewport);
       await page.goto(
-        `${storybook}/iframe.html?id=${capture.id}&viewMode=story&globals=theme:${capture.theme};locale:${capture.locale}`,
+        `${storybook}/iframe.html?id=${capture.id}&viewMode=story&globals=${globalsOf(capture)}`,
       );
-      await expect(page.locator('#storybook-root main')).toBeVisible();
+      // Drawer and dialog stories render into the body, so the story root may have no size.
+      await expect(page.locator('#storybook-root > *').first()).toBeAttached();
       // Fixture answers settle when no answered request has been in flight for 400 ms.
       await page.waitForFunction(() => {
         const state = document.documentElement.dataset;
@@ -98,7 +162,14 @@ for (const capture of captures)
       await page.evaluate(async () => {
         await document.fonts.ready;
       });
-      const name = `${capture.id}--${capture.theme}--${capture.locale}--${viewport.name}.png`;
+      const name = [
+        capture.id,
+        capture.theme,
+        capture.locale,
+        ...(capture.brand ? [capture.brand] : []),
+        ...(capture.density ? [capture.density] : []),
+        `${viewportName}.png`,
+      ].join('--');
       // Every run keeps a reviewable candidate, including when no baseline was approved yet.
       const candidate = await page.screenshot({
         fullPage: true,

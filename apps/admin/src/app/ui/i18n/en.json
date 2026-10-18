@@ -1,0 +1,90 @@
+{
+  "loading": "Loading…",
+  "close": "Close",
+  "cancel": "Cancel",
+  "retry": "Retry",
+  "searchTooManyWords": "Search uses at most five words.",
+  "units": {
+    "km": "km",
+    "kmh": "km/h",
+    "litre": "L",
+    "volt": "V",
+    "percent": "%",
+    "celsius": "°C"
+  },
+  "relative": {
+    "now": "just now",
+    "past": "{value} ago",
+    "future": "in {value}",
+    "minutes": "{count} min",
+    "hours": "{count} h",
+    "days": "{count} d"
+  },
+  "duration": {
+    "hours": "{hours} h",
+    "minutes": "{minutes} min"
+  },
+  "validation": {
+    "required": "This field is required.",
+    "unsupported": "Contains an unsupported character.",
+    "maxLength": "Use at most {max} characters.",
+    "pattern": "The format is not valid.",
+    "integer": "Enter a whole number.",
+    "decimal": "Enter a number.",
+    "min": "Enter at least {min}.",
+    "max": "Enter at most {max}.",
+    "step": "Use steps of {step}.",
+    "date": "Enter a valid date.",
+    "dateMin": "Choose {min} or later.",
+    "dateMax": "Choose {max} or earlier.",
+    "requireOneOf": "Fill in at least one of these fields.",
+    "invalid": "The value is not valid."
+  },
+  "discard": {
+    "title": "Unsaved changes",
+    "message": "Close the editor and discard your changes?",
+    "keepEditing": "Keep editing",
+    "discard": "Discard changes"
+  },
+  "drawer": {
+    "notFoundTitle": "Record not found",
+    "notFoundDescription": "It may have been deleted or belong to another branch.",
+    "invalidIdTitle": "Invalid address",
+    "invalidIdDescription": "The link does not identify a record.",
+    "errorTitle": "Could not load the record"
+  },
+  "table": {
+    "emptyTitle": "Nothing here yet",
+    "noResultsTitle": "No matching records",
+    "noResultsDescription": "Change the search or the filters.",
+    "clearFilters": "Clear filters",
+    "errorTitle": "Could not load the list",
+    "refreshFailed": "The list could not be refreshed; the rows shown may be out of date.",
+    "selected": "{count} selected",
+    "bulkActions": "Actions for selected records",
+    "clearSelection": "Clear selection",
+    "pageReport": "{first}–{last} of {totalRecords}"
+  },
+  "filters": {
+    "toggle": "Filters",
+    "toggleCount": "Filters ({count})",
+    "applied": "Applied",
+    "clearAll": "Clear all",
+    "removeChip": "Remove filter: {name}"
+  },
+  "kpi": {
+    "explain": "How it is calculated"
+  },
+  "field": {
+    "required": "(required)",
+    "counter": "{length} / {max}"
+  },
+  "chart": {
+    "period": "Period",
+    "value": "Value",
+    "category": "Category",
+    "total": "Total",
+    "sparkline": "{label}: {min}–{max}, last {last}",
+    "sparklineEmpty": "{label}: no data"
+  }
+}
