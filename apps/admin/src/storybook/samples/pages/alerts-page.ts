@@ -1,11 +1,7 @@
 import { Component, computed, DestroyRef, inject, linkedSignal, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { type AlertAction, AlertDrawer } from '../../../app/features/fleet/alerts/alert-drawer';
-import {
-  type AlertKpis,
-  type AlertRow,
-  AlertsView,
-} from '../../../app/features/fleet/alerts/alerts-view';
+import { type AlertKpis, AlertsView } from '../../../app/features/fleet/alerts/alerts-view';
 import { alertsText } from '../../../app/features/fleet/alerts/i18n/messages';
 import { interpolate } from '../../../app/ui/i18n/messages';
 import type { ListQuery } from '../../../app/ui/list/list-query';
@@ -26,6 +22,7 @@ import {
   type SampleListDefinition,
   sampleTableView,
 } from '../sample-list';
+import { alertRow } from '../rows';
 import { injectQueryParams, saveDelayMs, scenarioOf } from '../scenario';
 
 const dataAsOf = new Date(sampleNow).toISOString();
@@ -53,14 +50,6 @@ const definition: SampleListDefinition<SampleAlert> = {
     status: (alert) => statusRank[alert.status],
   },
 };
-
-function toRow(alert: SampleAlert): AlertRow {
-  return {
-    ...alert,
-    plate: vehicleById(alert.vehicleId)?.plate ?? '—',
-    driverName: driverById(alert.driverId)?.name ?? null,
-  };
-}
 
 function kpisOf(alerts: readonly SampleAlert[]): AlertKpis {
   const open = alerts.filter((alert) => alert.status === 'OPEN');
@@ -149,7 +138,7 @@ export class AlertsPage {
   protected readonly openId = linkedSignal(() => this.query().get('drawer'));
   protected readonly openAlert = computed(() => {
     const alert = this.alerts().find((item) => item.id === this.openId());
-    return alert ? toRow(alert) : null;
+    return alert ? alertRow(alert) : null;
   });
   protected readonly busy = signal<AlertAction | null>(null);
   protected readonly saveError = signal<string | null>(null);
@@ -157,7 +146,7 @@ export class AlertsPage {
   protected readonly result = computed(() =>
     runSampleList(this.alerts(), definition, this.state()),
   );
-  protected readonly rows = computed(() => this.result().items.map(toRow));
+  protected readonly rows = computed(() => this.result().items.map(alertRow));
   protected readonly listState = computed(() => ({ ...this.state(), page: this.result().page }));
   protected readonly kpis = computed(() =>
     this.scenario() === 'loading' || this.failed() ? null : kpisOf(this.alerts()),

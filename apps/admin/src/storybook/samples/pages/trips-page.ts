@@ -1,11 +1,7 @@
 import { Component, computed, linkedSignal, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { TripDrawer } from '../../../app/features/fleet/trips/trip-drawer';
-import {
-  type TripKpis,
-  type TripRow,
-  TripsView,
-} from '../../../app/features/fleet/trips/trips-view';
+import { type TripKpis, TripsView } from '../../../app/features/fleet/trips/trips-view';
 import type { ListQuery } from '../../../app/ui/list/list-query';
 import { fixtureBranches } from '../../session-fixtures';
 import {
@@ -22,6 +18,7 @@ import {
   type SampleListDefinition,
   sampleTableView,
 } from '../sample-list';
+import { tripRow } from '../rows';
 import { injectQueryParams, scenarioOf } from '../scenario';
 
 const definition: SampleListDefinition<SampleTrip> = {
@@ -41,20 +38,6 @@ const definition: SampleListDefinition<SampleTrip> = {
     hasEvents: (trip) => trip.events.length > 0,
   },
 };
-
-function toRow(trip: SampleTrip): TripRow {
-  return {
-    ...trip,
-    plate: vehicleById(trip.vehicleId)?.plate ?? '—',
-    driverName: driverById(trip.driverId)?.name ?? null,
-    events: trip.events.map((event) => ({
-      at: event.at,
-      kind: event.kind,
-      detail: event.detail,
-      tone: event.severity,
-    })),
-  };
-}
 
 function kpisOf(trips: readonly SampleTrip[]): TripKpis {
   const scores = trips.flatMap((trip) => (trip.score === null ? [] : [trip.score]));
@@ -120,11 +103,11 @@ export class TripsPage {
   protected readonly openId = linkedSignal(() => this.query().get('drawer'));
   protected readonly openTrip = computed(() => {
     const trip = this.trips().find((item) => item.id === this.openId());
-    return trip ? toRow(trip) : null;
+    return trip ? tripRow(trip) : null;
   });
 
   protected readonly result = computed(() => runSampleList(this.trips(), definition, this.state()));
-  protected readonly rows = computed(() => this.result().items.map(toRow));
+  protected readonly rows = computed(() => this.result().items.map(tripRow));
   protected readonly listState = computed(() => ({ ...this.state(), page: this.result().page }));
   protected readonly kpis = computed(() =>
     this.scenario() === 'loading' || this.failed() ? null : kpisOf(this.trips()),

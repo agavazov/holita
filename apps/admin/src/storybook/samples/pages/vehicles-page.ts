@@ -7,11 +7,7 @@ import {
   type VehicleField,
   type VehicleForm,
 } from '../../../app/features/fleet/vehicles/vehicle-drawer';
-import {
-  type VehicleKpis,
-  type VehicleRow,
-  VehiclesView,
-} from '../../../app/features/fleet/vehicles/vehicles-view';
+import { type VehicleKpis, VehiclesView } from '../../../app/features/fleet/vehicles/vehicles-view';
 import { vehiclesText } from '../../../app/features/fleet/vehicles/i18n/messages';
 import { confirmDestructive, confirmDialogPt } from '../../../app/ui/confirm';
 import { interpolate } from '../../../app/ui/i18n/messages';
@@ -21,7 +17,6 @@ import { UI_LANGUAGE } from '../../../app/ui/ui-language';
 import { fixtureBranches } from '../../session-fixtures';
 import {
   driverById,
-  groupById,
   sampleDrivers,
   sampleGroups,
   sampleNow,
@@ -34,6 +29,7 @@ import {
   type SampleListDefinition,
   sampleTableView,
 } from '../sample-list';
+import { vehicleForm, vehicleRow } from '../rows';
 import { injectQueryParams, saveDelayMs, scenarioOf } from '../scenario';
 
 const definition: SampleListDefinition<SampleVehicle> = {
@@ -59,47 +55,6 @@ const definition: SampleListDefinition<SampleVehicle> = {
     lastReportedAt: (vehicle) => vehicle.lastReportedAt,
   },
 };
-
-function toRow(vehicle: SampleVehicle): VehicleRow {
-  const group = groupById(vehicle.groupId);
-  return {
-    id: vehicle.id,
-    plate: vehicle.plate,
-    fleetNumber: vehicle.fleetNumber || null,
-    type: vehicle.type,
-    make: vehicle.make,
-    model: vehicle.model,
-    year: vehicle.year,
-    status: vehicle.status,
-    activity: vehicle.activity,
-    lastReportedAt: vehicle.lastReportedAt,
-    location: vehicle.location,
-    driverName: driverById(vehicle.driverId)?.name ?? null,
-    group: group ? { name: group.name, slot: group.slot } : null,
-    odometerKm: vehicle.odometerKm,
-    fuelPct: vehicle.fuelPct,
-    openAlerts: vehicle.openAlerts,
-    notes: vehicle.notes,
-  };
-}
-
-function toForm(vehicle: SampleVehicle): VehicleForm {
-  return {
-    plate: vehicle.plate,
-    fleetNumber: vehicle.fleetNumber,
-    vin: vehicle.vin,
-    type: vehicle.type,
-    make: vehicle.make,
-    model: vehicle.model,
-    year: vehicle.year,
-    fuelType: vehicle.fuelType,
-    tankL: vehicle.tankL,
-    status: vehicle.status,
-    groupId: vehicle.groupId,
-    driverId: vehicle.driverId,
-    notes: vehicle.notes,
-  };
-}
 
 function kpisOf(vehicles: readonly SampleVehicle[]): VehicleKpis {
   const count = (test: (vehicle: SampleVehicle) => boolean) => vehicles.filter(test).length;
@@ -192,7 +147,7 @@ export class VehiclesPage {
       const drawer = this.query().get('drawer');
       if (drawer === 'new') return { id: null, form: null };
       const vehicle = drawer ? this.vehicles().find((item) => item.id === drawer) : undefined;
-      return vehicle ? { id: vehicle.id, form: toForm(vehicle) } : null;
+      return vehicle ? { id: vehicle.id, form: vehicleForm(vehicle) } : null;
     },
   );
   protected readonly saving = signal(false);
@@ -202,7 +157,7 @@ export class VehiclesPage {
   protected readonly result = computed(() =>
     runSampleList(this.vehicles(), definition, this.state()),
   );
-  protected readonly rows = computed(() => this.result().items.map(toRow));
+  protected readonly rows = computed(() => this.result().items.map(vehicleRow));
   protected readonly listState = computed(() => ({ ...this.state(), page: this.result().page }));
   protected readonly kpis = computed(() =>
     this.scenario() === 'loading' || this.failed() ? null : kpisOf(this.vehicles()),
@@ -224,7 +179,7 @@ export class VehiclesPage {
     const vehicle = id ? this.vehicles().find((item) => item.id === id) : undefined;
     this.saveError.set(null);
     this.fieldErrors.set({});
-    this.editor.set({ id: vehicle?.id ?? null, form: vehicle ? toForm(vehicle) : null });
+    this.editor.set({ id: vehicle?.id ?? null, form: vehicle ? vehicleForm(vehicle) : null });
   }
 
   protected closeEditor(): void {

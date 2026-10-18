@@ -1,0 +1,324 @@
+@switch (state()) {
+  @case ('not-found') {
+    <holita-empty-state
+      kind="not-found"
+      [title]="text().notFoundTitle"
+      [description]="text().notFoundDescription"
+    >
+      <a emptyActions pButton [routerLink]="backLink()">{{ text().back }}</a>
+    </holita-empty-state>
+  }
+  @case ('error') {
+    <holita-empty-state kind="error" [title]="text().errorTitle" [description]="text().errorText">
+      <button emptyActions pButton type="button" (click)="retry.emit()">{{ text().retry }}</button>
+    </holita-empty-state>
+  }
+  @case ('loading') {
+    <holita-page-header
+      [eyebrow]="text().eyebrow"
+      title="…"
+      [backLink]="backLink()"
+      [backLabel]="text().back"
+    />
+    <holita-kpi-strip [label]="text().kpis.label" [loading]="true">
+      <holita-kpi-tile [label]="text().kpis.odometer" [loading]="true" />
+      <holita-kpi-tile [label]="text().kpis.fuel" [loading]="true" />
+      <holita-kpi-tile [label]="text().kpis.distance" [loading]="true" />
+      <holita-kpi-tile [label]="text().kpis.openAlerts" [loading]="true" />
+    </holita-kpi-strip>
+  }
+  @case ('ready') {
+    @if (vehicle(); as vehicle) {
+      <holita-page-header
+        [eyebrow]="text().eyebrow"
+        [title]="vehicle.plate"
+        [description]="description()"
+        [backLink]="backLink()"
+        [backLabel]="text().back"
+      >
+        <p-tag
+          headerMeta
+          [severity]="statusSeverity(vehicle.status)"
+          [value]="statusLabel(vehicle.status)"
+        />
+        <button headerActions pButton type="button" (click)="edit.emit()">
+          {{ text().edit }}
+        </button>
+      </holita-page-header>
+
+      <holita-kpi-strip [label]="text().kpis.label">
+        <holita-kpi-tile
+          [label]="text().kpis.odometer"
+          [value]="vehicle.odometerKm | holitaNumber"
+          unit="km"
+        />
+        <holita-kpi-tile
+          [label]="text().kpis.fuel"
+          [value]="vehicle.fuelPct === null ? null : (vehicle.fuelPct | holitaNumber)"
+          [unit]="vehicle.fuelPct === null ? null : '%'"
+          [tone]="vehicle.fuelPct !== null && vehicle.fuelPct < 12 ? 'danger' : null"
+        />
+        <holita-kpi-tile
+          [label]="text().kpis.distance"
+          [value]="distanceTotal() | holitaNumber"
+          unit="km"
+        />
+        <holita-kpi-tile
+          [label]="text().kpis.openAlerts"
+          [value]="openAlerts() | holitaNumber"
+          [tone]="openAlerts() ? 'warn' : null"
+        />
+        <holita-kpi-tile
+          [label]="text().kpis.nextService"
+          [value]="nextService().value"
+          [footnote]="nextService().footnote"
+          [tone]="nextService().tone"
+        />
+      </holita-kpi-strip>
+
+      <p-tabs [value]="tab()" (valueChange)="selectTab($event)">
+        <p-tablist>
+          <p-tab value="overview">{{ text().tabs.overview }}</p-tab>
+          <p-tab value="trips">{{ text().tabs.trips }}</p-tab>
+          <p-tab value="alerts">{{ text().tabs.alerts }}</p-tab>
+          <p-tab value="service">{{ text().tabs.service }}</p-tab>
+        </p-tablist>
+        <p-tabpanels>
+          <p-tabpanel value="overview">
+            <div class="app-card-grid">
+              <section class="app-card">
+                <h2 class="app-card__title app-card__header">{{ text().state }}</h2>
+                <dl class="app-facts">
+                  <div>
+                    <dt>{{ text().activity }}</dt>
+                    <dd>{{ activityLabel(vehicle) }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ text().lastReport }}</dt>
+                    <dd>{{ vehicle.lastReportedAt | holitaRelative: dataAsOf() }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ text().location }}</dt>
+                    <dd>{{ vehicle.location ?? '—' }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ text().speed }}</dt>
+                    <dd>
+                      @if (vehicle.speedKph !== null) {
+                        {{ vehicle.speedKph | holitaNumber }} km/h
+                      } @else {
+                        —
+                      }
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>{{ text().driver }}</dt>
+                    <dd>{{ vehicle.driverName ?? '—' }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ text().group }}</dt>
+                    <dd>
+                      @if (vehicle.group; as group) {
+                        <span class="app-inline">
+                          <span [class]="'app-dot app-dot--' + group.slot"></span>{{ group.name }}
+                        </span>
+                      } @else {
+                        —
+                      }
+                    </dd>
+                  </div>
+                </dl>
+              </section>
+              <section class="app-card">
+                <h2 class="app-card__title app-card__header">{{ text().specification }}</h2>
+                <dl class="app-facts">
+                  <div class="app-facts--wide">
+                    <dt>{{ text().vin }}</dt>
+                    <dd class="app-mono">{{ vehicle.vin }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ text().year }}</dt>
+                    <dd>{{ vehicle.year ?? '—' }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ text().fuelType }}</dt>
+                    <dd>{{ fuelTypeLabel(vehicle) }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ text().tank }}</dt>
+                    <dd>
+                      @if (vehicle.tankL !== null) {
+                        {{ vehicle.tankL | holitaNumber }} L
+                      } @else {
+                        —
+                      }
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>{{ text().added }}</dt>
+                    <dd>{{ vehicle.createdAt | holitaDateTime }}</dd>
+                  </div>
+                </dl>
+              </section>
+              <section class="app-card">
+                <h2 class="app-card__title app-card__header">{{ text().distanceChart }}</h2>
+                <holita-column-series [label]="text().distanceChart" [points]="distance()" />
+              </section>
+              <section class="app-card">
+                <h2 class="app-card__title app-card__header">{{ text().notes }}</h2>
+                <p class="vehicle-profile__notes">{{ vehicle.notes || text().noNotes }}</p>
+              </section>
+            </div>
+          </p-tabpanel>
+
+          <p-tabpanel value="trips">
+            <holita-table-panel
+              [heading]="text().recentTrips"
+              [total]="trips().length"
+              [view]="tripView()"
+              [emptyTitle]="text().noTrips"
+            >
+              <p-table [value]="tripRows()" dataKey="id" [scrollable]="true">
+                <ng-template #header>
+                  <tr>
+                    <th scope="col">{{ tripText().started }}</th>
+                    <th scope="col">{{ tripText().route }}</th>
+                    <th scope="col" class="app-num">{{ tripText().distance }}</th>
+                    <th scope="col" class="app-num">{{ tripText().duration }}</th>
+                    <th scope="col">{{ tripText().score }}</th>
+                    <th scope="col">{{ tripText().events }}</th>
+                  </tr>
+                </ng-template>
+                <ng-template #body let-trip>
+                  <tr>
+                    <td>
+                      <button type="button" class="app-link" (click)="openTrip.emit(trip.id)">
+                        {{ trip.startedAt | holitaDateTime }}
+                      </button>
+                    </td>
+                    <td>{{ tripLabel(trip) }}</td>
+                    <td class="app-num">{{ trip.distanceKm | holitaNumber }}</td>
+                    <td class="app-num">{{ trip.durationMin * 60 | holitaDuration }}</td>
+                    <td>
+                      @if (trip.score !== null) {
+                        <span class="app-meter-cell">
+                          <span
+                            [class]="scoreClass(trip.score)"
+                            [style.--app-meter-value]="trip.score + '%'"
+                            aria-hidden="true"
+                          ></span>
+                          <span>{{ trip.score }}</span>
+                        </span>
+                      } @else {
+                        <span class="app-muted">—</span>
+                      }
+                    </td>
+                    <td>
+                      @if (trip.events.length) {
+                        <p-tag [severity]="eventsSeverity(trip)" [value]="eventsLabel(trip)" />
+                      } @else {
+                        <span class="app-muted">{{ tripText().noEvents }}</span>
+                      }
+                    </td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            </holita-table-panel>
+          </p-tabpanel>
+
+          <p-tabpanel value="alerts">
+            <holita-table-panel
+              [heading]="text().alertsHeading"
+              [total]="alerts().length"
+              [view]="alertView()"
+              [emptyTitle]="text().noAlerts"
+            >
+              <p-table [value]="alertRows()" dataKey="id" [scrollable]="true">
+                <ng-template #header>
+                  <tr>
+                    <th scope="col">{{ alertCatalogTable().severity }}</th>
+                    <th scope="col">{{ alertCatalogTable().alert }}</th>
+                    <th scope="col">{{ alertCatalogTable().status }}</th>
+                    <th scope="col">{{ alertCatalogTable().occurred }}</th>
+                  </tr>
+                </ng-template>
+                <ng-template #body let-alert>
+                  <tr>
+                    <td>
+                      <p-tag
+                        [severity]="severitySeverity(alert.severity)"
+                        [value]="severityLabel(alert.severity)"
+                      />
+                    </td>
+                    <td>
+                      <button type="button" class="app-link" (click)="openAlert.emit(alert.id)">
+                        {{ alert.kind }}
+                      </button>
+                    </td>
+                    <td>
+                      <p-tag
+                        [severity]="alertStatusSeverity(alert.status)"
+                        [value]="alertStatusLabel(alert.status)"
+                      />
+                    </td>
+                    <td>{{ alert.occurredAt | holitaRelative: dataAsOf() }}</td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            </holita-table-panel>
+          </p-tabpanel>
+
+          <p-tabpanel value="service">
+            <holita-table-panel
+              [heading]="text().serviceHeading"
+              [total]="service().length"
+              [view]="serviceView()"
+              [emptyTitle]="text().noServiceTasks"
+            >
+              <p-table [value]="serviceRows()" dataKey="id" [scrollable]="true">
+                <ng-template #header>
+                  <tr>
+                    <th scope="col">{{ serviceTable().task }}</th>
+                    <th scope="col">{{ serviceTable().due }}</th>
+                    <th scope="col">{{ serviceTable().urgency }}</th>
+                    <th scope="col" class="app-num">{{ serviceTable().cost }}</th>
+                  </tr>
+                </ng-template>
+                <ng-template #body let-task>
+                  <tr>
+                    <td>{{ task.kind }}</td>
+                    <td>
+                      <span class="app-cell-stack">
+                        <span>
+                          @if (task.dueOn) {
+                            {{ task.dueOn | holitaDate }}
+                          }
+                          @if (task.dueOn && task.dueKm !== null) {
+                            ·
+                          }
+                          @if (task.dueKm !== null) {
+                            {{ task.dueKm | holitaNumber }} km
+                          }
+                        </span>
+                        @if (kmLeftLabel(task); as left) {
+                          <span>{{ left }}</span>
+                        }
+                      </span>
+                    </td>
+                    <td>
+                      <p-tag
+                        [severity]="urgencySeverity(task.urgency)"
+                        [value]="urgencyLabel(task.urgency)"
+                      />
+                    </td>
+                    <td class="app-num">{{ task.costCents | holitaMoney }}</td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            </holita-table-panel>
+          </p-tabpanel>
+        </p-tabpanels>
+      </p-tabs>
+    }
+  }
+}

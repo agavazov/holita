@@ -50,10 +50,11 @@
   border-radius: 3px 3px 0 0;
 }
 
+// Only every n-th tick has a label, so a label may spread over its empty neighbours (centred).
 .column-series__tick {
-  overflow: hidden;
+  display: flex;
+  justify-content: center;
   font-size: var(--p-app-text-xs);
   color: var(--p-text-muted-color);
-  text-align: center;
   white-space: nowrap;
 }
