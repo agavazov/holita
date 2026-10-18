@@ -88,7 +88,7 @@ export function scoreTone(score: number): StatusTone {
   templateUrl: './drivers-view.html',
   styleUrl: './drivers-view.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'app-page' },
+  host: { class: 'app-view' },
 })
 export class DriversView {
   readonly branchName = input.required<string>();

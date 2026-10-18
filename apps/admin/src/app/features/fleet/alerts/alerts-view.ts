@@ -84,7 +84,7 @@ export const alertStatusTones: Record<AlertStatusCode, StatusTone> = {
   templateUrl: './alerts-view.html',
   styleUrl: './alerts-view.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'app-page' },
+  host: { class: 'app-view' },
 })
 export class AlertsView {
   readonly branchName = input.required<string>();

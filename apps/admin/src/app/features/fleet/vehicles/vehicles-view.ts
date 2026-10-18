@@ -110,7 +110,7 @@ const lowFuelPercent = 12;
   templateUrl: './vehicles-view.html',
   styleUrl: './vehicles-view.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'app-page' },
+  host: { class: 'app-view' },
 })
 export class VehiclesView {
   readonly branchName = input.required<string>();

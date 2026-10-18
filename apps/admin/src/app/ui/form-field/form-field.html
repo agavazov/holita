@@ -1,4 +1,4 @@
-<label class="form-field__label" [for]="controlId()">
+<label class="form-field__label" [id]="controlId() + '-label'" [for]="controlId()">
   {{ label() }}
   @if (required()) {
     <span class="form-field__required" aria-hidden="true">*</span>

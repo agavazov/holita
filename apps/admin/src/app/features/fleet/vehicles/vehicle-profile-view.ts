@@ -96,7 +96,7 @@ function listView(rows: readonly unknown[]): TableView {
   templateUrl: './vehicle-profile-view.html',
   styleUrl: './vehicle-profile-view.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'app-page' },
+  host: { class: 'app-view' },
 })
 export class VehicleProfileView {
   readonly state = input.required<VehicleProfileState>();

@@ -13,7 +13,8 @@ export interface FieldCounter {
 /**
  * Label, hint, error and counter around one projected control. The control sets its own `id`
  * (`controlId`), `[attr.aria-describedby]="'<id>-hint <id>-error'"`, `[attr.aria-invalid]` and
- * `[invalid]`.
+ * `[invalid]`; a group control without one input (select button) uses
+ * `ariaLabelledBy="<id>-label"`.
  */
 @Component({
   selector: 'holita-form-field',

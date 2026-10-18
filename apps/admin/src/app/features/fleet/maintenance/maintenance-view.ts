@@ -64,7 +64,7 @@ export interface MaintenanceOption {
   templateUrl: './maintenance-view.html',
   styleUrl: './maintenance-view.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'app-page' },
+  host: { class: 'app-view' },
 })
 export class MaintenanceView {
   readonly branchName = input.required<string>();

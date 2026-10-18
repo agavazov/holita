@@ -91,8 +91,8 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
     border-radius: var(--p-app-panel-radius);
   }
 
-  // A page view (`host: { class: 'app-page' }`): header, KPIs, filters and panels stacked.
-  .app-page {
+  // A page view (`host: { class: 'app-view' }`): header, KPIs, filters and panels stacked.
+  .app-view {
     display: flex;
     flex-direction: column;
     gap: var(--p-app-stack-gap);
@@ -229,6 +229,51 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
   }
 
   // Sticky drawer footer actions: primary action last on the right; stacked on phones.
+  // Page forms (settings): each card has its title and hint beside the fields on wide screens.
+  .app-settings-section {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--p-app-space-4);
+
+    @include bp.from(lg) {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+      gap: var(--p-app-space-6);
+    }
+
+    > header {
+      display: flex;
+      flex-direction: column;
+      gap: var(--p-app-space-1);
+
+      > h2 {
+        font-size: var(--p-app-text-md);
+        font-weight: 600;
+      }
+
+      > p {
+        font-size: var(--p-app-text-sm);
+        color: var(--p-text-muted-color);
+      }
+    }
+  }
+
+  // Page forms: Discard and Save stick to the bottom of the viewport while there are changes.
+  .app-save-bar {
+    position: sticky;
+    inset-block-end: var(--p-app-space-3);
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--p-app-space-3);
+    padding: var(--p-app-space-3) var(--p-app-space-4);
+    background: var(--p-app-panel-background);
+    border: 1px solid var(--p-app-panel-border-color);
+    border-radius: var(--p-app-panel-radius);
+    box-shadow: var(--p-app-shadow-floating);
+  }
+
   .app-drawer-actions {
     display: flex;
     flex-wrap: wrap;

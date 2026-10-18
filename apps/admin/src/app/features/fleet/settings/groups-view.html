@@ -1,0 +1,62 @@
+<holita-page-header
+  [eyebrow]="eyebrow()"
+  [title]="text().title"
+  [count]="view().kind === 'rows' ? rows().length : null"
+  [description]="text().description"
+>
+  <button headerActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
+</holita-page-header>
+
+<holita-table-panel
+  [heading]="text().heading"
+  [total]="rows().length"
+  [view]="view()"
+  [errorText]="text().errorText"
+  [emptyTitle]="text().emptyTitle"
+  [emptyDescription]="text().emptyDescription"
+  [notice]="notice()"
+  (retry)="retry.emit()"
+  (dismissNotice)="dismissNotice.emit()"
+>
+  <button emptyActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
+  <p-table [value]="tableRows()" dataKey="id" [scrollable]="true">
+    <ng-template #header>
+      <tr>
+        <th scope="col">{{ text().name }}</th>
+        <th scope="col" class="app-num">{{ text().vehicles }}</th>
+        <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <span class="app-visually-hidden">{{ text().actions }}</span>
+        </th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-row>
+      <tr>
+        <td>
+          <span class="app-cell-stack">
+            <span class="app-inline">
+              <span [class]="'app-dot app-dot--' + row.slot"></span>
+              <button
+                type="button"
+                class="app-link"
+                [attr.aria-label]="editLabel(row)"
+                (click)="edit.emit(row.id)"
+              >
+                {{ row.name }}
+              </button>
+            </span>
+            <span>{{ row.description || '—' }}</span>
+          </span>
+        </td>
+        <td class="app-num">{{ row.vehicles | holitaNumber }}</td>
+        <td class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <holita-row-actions
+            [actions]="actionsOf(row)"
+            [subject]="row.name"
+            (action)="act($event, row.id)"
+          />
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</holita-table-panel>
+<p class="app-muted">{{ text().inUse }}</p>

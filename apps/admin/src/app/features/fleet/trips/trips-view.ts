@@ -89,7 +89,7 @@ export function worstTone(events: readonly TripEvent[]): StatusTone {
   ],
   templateUrl: './trips-view.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'app-page' },
+  host: { class: 'app-view' },
 })
 export class TripsView {
   readonly branchName = input.required<string>();

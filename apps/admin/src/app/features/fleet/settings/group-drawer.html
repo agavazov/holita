@@ -1,0 +1,80 @@
+<holita-route-drawer
+  [title]="title()"
+  [saving]="saving()"
+  [dirty]="dirty()"
+  [closeLink]="null"
+  (closeRequest)="requestClose()"
+>
+  <form #formElement id="group-form" [formGroup]="form" (ngSubmit)="submit()">
+    <section class="app-form-section">
+      <holita-form-field
+        [label]="text().name"
+        controlId="group-name"
+        [required]="true"
+        [error]="errorOf('name')"
+      >
+        <input
+          pInputText
+          id="group-name"
+          formControlName="name"
+          [invalid]="!!errorOf('name')"
+          [attr.aria-invalid]="errorOf('name') ? 'true' : null"
+          aria-describedby="group-name-hint group-name-error"
+        />
+      </holita-form-field>
+      <holita-form-field [label]="text().color" controlId="group-slot" [hint]="text().colorHint">
+        <p-select
+          inputId="group-slot"
+          formControlName="slot"
+          [options]="slotOptions()"
+          optionLabel="label"
+          optionValue="value"
+          appendTo="body"
+          [ariaLabel]="text().color"
+        >
+          <ng-template #selectedItem let-option>
+            <span class="app-inline">
+              <span [class]="'app-dot app-dot--' + option.value"></span>{{ option.label }}
+            </span>
+          </ng-template>
+          <ng-template #item let-option>
+            <span class="app-inline">
+              <span [class]="'app-dot app-dot--' + option.value"></span>{{ option.label }}
+            </span>
+          </ng-template>
+        </p-select>
+      </holita-form-field>
+      <holita-form-field
+        [label]="text().descriptionLabel"
+        controlId="group-description"
+        [error]="errorOf('description')"
+      >
+        <textarea
+          pTextarea
+          id="group-description"
+          formControlName="description"
+          rows="3"
+          [invalid]="!!errorOf('description')"
+          [attr.aria-invalid]="errorOf('description') ? 'true' : null"
+          aria-describedby="group-description-hint group-description-error"
+        ></textarea>
+      </holita-form-field>
+    </section>
+  </form>
+
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="requestClose()"
+    >
+      {{ text().cancel }}
+    </button>
+    <button pButton type="submit" form="group-form" [loading]="saving()" [disabled]="saving()">
+      {{ group() ? text().save : text().create }}
+    </button>
+  </div>
+</holita-route-drawer>

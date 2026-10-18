@@ -74,7 +74,7 @@ export const deviceStatusTones: Record<DeviceStatusCode, StatusTone> = {
   ],
   templateUrl: './devices-view.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'app-page' },
+  host: { class: 'app-view' },
 })
 export class DevicesView {
   readonly branchName = input.required<string>();
