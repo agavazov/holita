@@ -1,0 +1,80 @@
+{
+  "eyebrow": "Monitoring",
+  "title": "Alerts",
+  "description": "{branch} · open and acknowledged alerts first",
+  "search": "Search alert, plate, driver or remark",
+  "kpis": {
+    "label": "Alert summary",
+    "critical": "Open critical",
+    "open": "Open",
+    "acknowledged": "Acknowledged",
+    "acknowledgedFootnote": "being handled",
+    "resolved": "Resolved",
+    "resolvedFootnote": "in the last 7 days"
+  },
+  "table": {
+    "heading": "Alerts",
+    "severity": "Severity",
+    "alert": "Alert",
+    "vehicle": "Vehicle",
+    "status": "Status",
+    "occurred": "Occurred",
+    "remark": "Remark",
+    "actions": "Actions",
+    "selectPage": "Select all on this page",
+    "selectRow": "Select {kind} on {plate}",
+    "open": "Open {kind} on {plate}",
+    "noDriver": "No driver",
+    "emptyTitle": "No alerts",
+    "emptyDescription": "Alerts appear when a vehicle reports a rule violation or a fault.",
+    "errorText": "The alerts could not be loaded. (demo-request-6)"
+  },
+  "severities": {
+    "CRITICAL": "Critical",
+    "WARNING": "Warning",
+    "INFO": "Info"
+  },
+  "statuses": {
+    "OPEN": "Open",
+    "ACKNOWLEDGED": "Acknowledged",
+    "RESOLVED": "Resolved"
+  },
+  "rowActions": {
+    "open": "Open",
+    "acknowledge": "Acknowledge",
+    "resolve": "Resolve",
+    "vehicle": "Open vehicle profile"
+  },
+  "bulk": {
+    "acknowledge": "Acknowledge",
+    "resolve": "Resolve"
+  },
+  "filters": {
+    "severity": "Severity",
+    "status": "Status",
+    "vehicle": "Vehicle",
+    "occurredAt": "Occurred"
+  },
+  "notices": {
+    "acknowledged": "{count} alert(s) acknowledged.",
+    "resolved": "{count} alert(s) resolved."
+  },
+  "drawer": {
+    "details": "Details",
+    "handling": "Handling",
+    "severity": "Severity",
+    "status": "Status",
+    "vehicle": "Vehicle",
+    "driver": "Driver",
+    "occurred": "Occurred",
+    "detail": "What happened",
+    "remark": "Remark",
+    "remarkHint": "Required to resolve; visible in the vehicle history.",
+    "remarkRequired": "Add a remark before resolving the alert.",
+    "acknowledge": "Acknowledge",
+    "resolve": "Resolve",
+    "reopen": "Reopen",
+    "close": "Close",
+    "saveError": "The alert could not be updated. Try again. (demo-request-7)"
+  }
+}

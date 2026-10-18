@@ -12,6 +12,8 @@ export interface SampleListDefinition<T> {
   readonly search: (row: T) => readonly (string | null)[];
   /** The value of every filterable or sortable column. */
   readonly columns: Readonly<Record<string, (row: T) => SampleValue>>;
+  /** Sort keys that differ from the filtered value, e.g. the rank of a severity enum. */
+  readonly sortColumns?: Readonly<Record<string, (row: T) => SampleValue>>;
 }
 
 export interface SampleListResult<T> {
@@ -124,7 +126,9 @@ export function runSampleList<T>(
       }),
     );
   const sort = query.sort;
-  const read = sort ? definition.columns[sort.field] : undefined;
+  const read = sort
+    ? (definition.sortColumns?.[sort.field] ?? definition.columns[sort.field])
+    : undefined;
   if (sort && read)
     matching.sort((left, right) => {
       const order = compare(read(left.row), read(right.row));

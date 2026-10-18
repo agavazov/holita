@@ -1,0 +1,173 @@
+<holita-page-header
+  [eyebrow]="text().eyebrow"
+  [title]="text().title"
+  [count]="view().kind === 'rows' || view().kind === 'rows-error' ? total() : null"
+  [description]="description()"
+/>
+
+@if (kpis(); as kpis) {
+  <holita-kpi-strip [label]="text().kpis.label">
+    <holita-kpi-tile
+      [label]="text().kpis.critical"
+      [value]="kpis.critical | holitaNumber"
+      [tone]="kpis.critical ? 'danger' : null"
+    />
+    <holita-kpi-tile
+      [label]="text().kpis.open"
+      [value]="kpis.open | holitaNumber"
+      [tone]="kpis.open ? 'warn' : null"
+    />
+    <holita-kpi-tile
+      [label]="text().kpis.acknowledged"
+      [value]="kpis.acknowledged | holitaNumber"
+      [footnote]="text().kpis.acknowledgedFootnote"
+    />
+    <holita-kpi-tile
+      [label]="text().kpis.resolved"
+      [value]="kpis.resolved | holitaNumber"
+      [footnote]="text().kpis.resolvedFootnote"
+      tone="success"
+    />
+  </holita-kpi-strip>
+}
+
+<holita-filter-builder
+  [searchLabel]="text().search"
+  [search]="state().search"
+  [fields]="fields()"
+  [conditions]="state().conditions"
+  (searchChange)="changeSearch($event)"
+  (conditionsChange)="changeConditions($event)"
+/>
+
+<holita-table-panel
+  [heading]="text().table.heading"
+  [total]="total()"
+  [view]="view()"
+  [errorText]="text().table.errorText"
+  [emptyTitle]="text().table.emptyTitle"
+  [emptyDescription]="text().table.emptyDescription"
+  [notice]="notice()"
+  [selectedCount]="selection().length"
+  [page]="page()"
+  (pageChange)="changePage($event)"
+  (clearFilters)="clearFilters()"
+  (retry)="retry.emit()"
+  (dismissNotice)="dismissNotice.emit()"
+  (clearSelection)="selectionChange.emit([])"
+>
+  <button
+    bulkActions
+    pButton
+    type="button"
+    size="small"
+    severity="secondary"
+    [outlined]="true"
+    (click)="bulkAction.emit('acknowledge')"
+  >
+    {{ text().bulk.acknowledge }}
+  </button>
+  <button
+    bulkActions
+    pButton
+    type="button"
+    size="small"
+    severity="secondary"
+    [outlined]="true"
+    (click)="bulkAction.emit('resolve')"
+  >
+    {{ text().bulk.resolve }}
+  </button>
+  <p-table
+    [value]="tableRows()"
+    dataKey="id"
+    [lazy]="true"
+    [lazyLoadOnInit]="false"
+    [selection]="selectedRows()"
+    (selectionChange)="select($event)"
+    [sortField]="sortField()"
+    [sortOrder]="sortOrder()"
+    (onLazyLoad)="sort($event)"
+    [scrollable]="true"
+  >
+    <ng-template #header>
+      <tr>
+        <th scope="col" class="app-col-check">
+          <label class="app-visually-hidden" for="alerts-select-page">{{
+            text().table.selectPage
+          }}</label>
+          <p-table-header-checkbox inputId="alerts-select-page" />
+        </th>
+        <th scope="col" pSortableColumn="severity">
+          {{ text().table.severity }} <p-sort-icon field="severity" />
+        </th>
+        <th scope="col">{{ text().table.alert }}</th>
+        <th scope="col">{{ text().table.vehicle }}</th>
+        <th scope="col" pSortableColumn="status">
+          {{ text().table.status }} <p-sort-icon field="status" />
+        </th>
+        <th scope="col" pSortableColumn="occurredAt">
+          {{ text().table.occurred }} <p-sort-icon field="occurredAt" />
+        </th>
+        <th scope="col" class="app-col-secondary">{{ text().table.remark }}</th>
+        <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <span class="app-visually-hidden">{{ text().table.actions }}</span>
+        </th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-row>
+      <tr>
+        <td class="app-col-check">
+          <p-table-checkbox [value]="row" [ariaLabel]="label(text().table.selectRow, row)" />
+        </td>
+        <td>
+          <p-tag
+            [severity]="severitySeverity(row.severity)"
+            [value]="severityLabel(row.severity)"
+          />
+        </td>
+        <td>
+          <span class="app-cell-stack">
+            <button
+              type="button"
+              class="app-link"
+              [attr.aria-label]="label(text().table.open, row)"
+              (click)="open.emit(row.id)"
+            >
+              {{ row.kind }}
+            </button>
+            <span class="app-cell-truncate alerts__detail" [title]="row.detail">{{
+              row.detail
+            }}</span>
+          </span>
+        </td>
+        <td>
+          <span class="app-cell-stack">
+            <span>{{ row.plate }}</span>
+            <span>{{ row.driverName ?? text().table.noDriver }}</span>
+          </span>
+        </td>
+        <td>
+          <p-tag [severity]="statusSeverity(row.status)" [value]="statusLabel(row.status)" />
+        </td>
+        <td>{{ row.occurredAt | holitaRelative: dataAsOf() }}</td>
+        <td class="app-col-secondary">
+          @if (row.remark) {
+            <span class="app-cell-truncate alerts__remark" [title]="row.remark">{{
+              row.remark
+            }}</span>
+          } @else {
+            <span class="app-muted">—</span>
+          }
+        </td>
+        <td class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <holita-row-actions
+            [actions]="actionsOf(row)"
+            [subject]="row.kind"
+            (action)="rowAction.emit({ action: $event, id: row.id })"
+          />
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</holita-table-panel>
