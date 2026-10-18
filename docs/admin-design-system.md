@@ -234,7 +234,10 @@ values)` fills `{name}` placeholders.
 
 ### Table conventions
 
-Hosts project a `p-table` into `holita-table-panel` with `[lazy]`, `dataKey="id"`, horizontal
+Hosts project a `p-table` into `holita-table-panel` with `[lazy]`, `[lazyLoadOnInit]="false"`
+(the host loads the first page itself), `[sortField]`/`[sortOrder]` from the `ListQuery` and
+`(onLazyLoad)` mapped through `listQuery.sorted` behind `injectSortReady()` (PrimeNG 22 reports
+an intermediate ascending sort while applying its inputs on the first render), `dataKey="id"`, horizontal
 scrolling inside the panel and no `emptymessage` template (the panel renders every state). A
 selection header cell contains a visually hidden `<label for>` and `p-table-header-checkbox
 [inputId]` (PrimeNG names the header checkbox only after its value changes); row checkboxes use

@@ -1,0 +1,144 @@
+<holita-page-header
+  [eyebrow]="text().eyebrow"
+  [title]="text().title"
+  [count]="view().kind === 'rows' || view().kind === 'rows-error' ? total() : null"
+  [description]="description()"
+/>
+
+@if (kpis(); as kpis) {
+  <holita-kpi-strip [label]="text().kpis.label">
+    <holita-kpi-tile [label]="text().kpis.trips" [value]="kpis.trips | holitaNumber" />
+    <holita-kpi-tile
+      [label]="text().kpis.distance"
+      [value]="kpis.distanceKm | holitaNumber"
+      unit="km"
+    />
+    <holita-kpi-tile
+      [label]="text().kpis.drivingTime"
+      [value]="kpis.drivingMin * 60 | holitaDuration"
+    />
+    <holita-kpi-tile [label]="text().kpis.score" [value]="scoreValue()" />
+    <holita-kpi-tile
+      [label]="text().kpis.events"
+      [value]="kpis.events | holitaNumber"
+      [footnote]="text().kpis.eventsFootnote"
+      [tone]="kpis.events ? 'warn' : null"
+    />
+  </holita-kpi-strip>
+}
+
+<holita-filter-builder
+  [searchLabel]="text().search"
+  [search]="state().search"
+  [fields]="fields()"
+  [conditions]="state().conditions"
+  (searchChange)="changeSearch($event)"
+  (conditionsChange)="changeConditions($event)"
+/>
+
+<holita-table-panel
+  [heading]="text().table.heading"
+  [total]="total()"
+  [view]="view()"
+  [errorText]="text().table.errorText"
+  [emptyTitle]="text().table.emptyTitle"
+  [emptyDescription]="text().table.emptyDescription"
+  [page]="page()"
+  (pageChange)="changePage($event)"
+  (clearFilters)="clearFilters()"
+  (retry)="retry.emit()"
+>
+  <p-table
+    [value]="tableRows()"
+    dataKey="id"
+    [lazy]="true"
+    [lazyLoadOnInit]="false"
+    [sortField]="sortField()"
+    [sortOrder]="sortOrder()"
+    (onLazyLoad)="sort($event)"
+    [scrollable]="true"
+  >
+    <ng-template #header>
+      <tr>
+        <th scope="col" pSortableColumn="startedAt">
+          {{ text().table.started }} <p-sort-icon field="startedAt" />
+        </th>
+        <th scope="col">{{ text().table.vehicle }}</th>
+        <th scope="col">{{ text().table.route }}</th>
+        <th scope="col" class="app-num" pSortableColumn="distance">
+          {{ text().table.distance }} <p-sort-icon field="distance" />
+        </th>
+        <th scope="col" class="app-num" pSortableColumn="duration">
+          {{ text().table.duration }} <p-sort-icon field="duration" />
+        </th>
+        <th scope="col" class="app-num app-col-secondary">{{ text().table.maxSpeed }}</th>
+        <th scope="col" class="app-num app-col-secondary">{{ text().table.fuel }}</th>
+        <th scope="col" pSortableColumn="score">
+          {{ text().table.score }} <p-sort-icon field="score" />
+        </th>
+        <th scope="col">{{ text().table.events }}</th>
+        <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <span class="app-visually-hidden">{{ text().table.actions }}</span>
+        </th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-row>
+      <tr>
+        <td>
+          <button
+            type="button"
+            class="app-link"
+            [attr.aria-label]="openLabel(row)"
+            (click)="open.emit(row.id)"
+          >
+            {{ row.startedAt | holitaDateTime }}
+          </button>
+        </td>
+        <td>
+          <span class="app-cell-stack">
+            <span>{{ row.plate }}</span>
+            <span>{{ row.driverName ?? text().table.noDriver }}</span>
+          </span>
+        </td>
+        <td>
+          <span class="app-cell-stack">
+            <span>{{ row.from }}</span>
+            <span>→ {{ row.to }}</span>
+          </span>
+        </td>
+        <td class="app-num">{{ row.distanceKm | holitaNumber }}</td>
+        <td class="app-num">{{ row.durationMin * 60 | holitaDuration }}</td>
+        <td class="app-num app-col-secondary">{{ row.maxSpeedKph | holitaNumber }} km/h</td>
+        <td class="app-num app-col-secondary">{{ row.fuelUsedL | holitaNumber }}</td>
+        <td>
+          @if (row.score !== null) {
+            <span class="app-meter-cell">
+              <span
+                [class]="scoreClass(row.score)"
+                [style.--app-meter-value]="row.score + '%'"
+                aria-hidden="true"
+              ></span>
+              <span>{{ row.score }}</span>
+            </span>
+          } @else {
+            <span class="app-muted">—</span>
+          }
+        </td>
+        <td>
+          @if (row.events.length) {
+            <p-tag [severity]="eventsSeverity(row)" [value]="eventsLabel(row)" />
+          } @else {
+            <span class="app-muted">{{ text().table.noEvents }}</span>
+          }
+        </td>
+        <td class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <holita-row-actions
+            [actions]="actions()"
+            [subject]="row.plate"
+            (action)="rowAction.emit({ action: $event, id: row.id })"
+          />
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</holita-table-panel>

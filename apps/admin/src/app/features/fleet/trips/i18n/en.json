@@ -1,0 +1,65 @@
+{
+  "eyebrow": "Monitoring",
+  "title": "Trips",
+  "description": "{branch} · trips recorded by the trackers, read-only",
+  "search": "Search plate, driver or place",
+  "kpis": {
+    "label": "Trip summary",
+    "trips": "Trips",
+    "distance": "Distance",
+    "drivingTime": "Driving time",
+    "score": "Average score",
+    "events": "Driving events",
+    "eventsFootnote": "harsh braking, overspeed and more"
+  },
+  "table": {
+    "heading": "Trips",
+    "started": "Started",
+    "vehicle": "Vehicle",
+    "route": "Route",
+    "distance": "Distance, km",
+    "duration": "Duration",
+    "maxSpeed": "Max speed",
+    "fuel": "Fuel, L",
+    "score": "Score",
+    "events": "Events",
+    "actions": "Actions",
+    "open": "Open trip {plate}, {started}",
+    "noDriver": "No driver",
+    "noEvents": "None",
+    "eventCount": "{count} events",
+    "emptyTitle": "No trips yet",
+    "emptyDescription": "Trips appear when the trackers report the first journeys.",
+    "errorText": "The trips could not be loaded. (demo-request-5)"
+  },
+  "rowActions": {
+    "open": "Open trip",
+    "vehicle": "Open vehicle profile"
+  },
+  "filters": {
+    "vehicle": "Vehicle",
+    "driver": "Driver",
+    "startedAt": "Started",
+    "distance": "Distance",
+    "score": "Score",
+    "hasEvents": "Has driving events"
+  },
+  "drawer": {
+    "title": "Trip {plate}",
+    "summary": "Summary",
+    "timeline": "Timeline",
+    "vehicle": "Vehicle",
+    "driver": "Driver",
+    "started": "Started",
+    "ended": "Ended",
+    "duration": "Duration",
+    "distance": "Distance",
+    "maxSpeed": "Max speed",
+    "fuel": "Fuel used",
+    "score": "Score",
+    "departed": "Departed from {place}",
+    "arrived": "Arrived at {place}",
+    "close": "Close",
+    "openVehicle": "Open vehicle"
+  }
+}

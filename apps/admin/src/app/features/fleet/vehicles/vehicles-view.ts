@@ -13,7 +13,7 @@ import {
 import { formatDateTime, formatNumber } from '../../../ui/format/format';
 import { interpolate } from '../../../ui/i18n/messages';
 import { KpiStrip } from '../../../ui/kpi/kpi-strip';
-import { listQuery, type ListQuery } from '../../../ui/list/list-query';
+import { injectSortReady, listQuery, type ListQuery } from '../../../ui/list/list-query';
 import { KpiTile } from '../../../ui/kpi/kpi-tile';
 import { PageHeader } from '../../../ui/page-header/page-header';
 import { RowActions, type RowAction } from '../../../ui/row-actions/row-actions';
@@ -110,6 +110,7 @@ const lowFuelPercent = 12;
   templateUrl: './vehicles-view.html',
   styleUrl: './vehicles-view.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'app-page' },
 })
 export class VehiclesView {
   readonly branchName = input.required<string>();
@@ -134,6 +135,7 @@ export class VehiclesView {
   readonly dismissNotice = output();
 
   private readonly language = inject(UI_LANGUAGE);
+  private readonly sortReady = injectSortReady();
   protected readonly text = computed(() => vehiclesText(this.language()));
   protected readonly description = computed(() =>
     interpolate(this.text().description, {
@@ -281,6 +283,7 @@ export class VehiclesView {
   }
 
   protected sort(event: TableLazyLoadEvent): void {
+    if (!this.sortReady()) return;
     const next = listQuery.sorted(this.state(), event);
     if (next) this.stateChange.emit(next);
   }

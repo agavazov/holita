@@ -1,5 +1,20 @@
+import { afterNextRender } from '@angular/core';
 import type { TableLazyLoadEvent } from 'primeng/table';
 import type { FilterCondition } from '../filter-builder/filter-model';
+
+/**
+ * Whether a list view may take `p-table` sort events yet. PrimeNG 22 applies `sortField` before
+ * `sortOrder` while rendering the first time and reports a sort in between (a descending default
+ * arrives as ascending); nobody can click a header before the first render, so views ignore sort
+ * events until then. Call it in an injection context.
+ */
+export function injectSortReady(): () => boolean {
+  let ready = false;
+  afterNextRender(() => {
+    ready = true;
+  });
+  return () => ready;
+}
 
 /**
  * What a FilterBuilder list asks its backend for: quick search, AND-ed filter conditions, one sort

@@ -10,7 +10,7 @@ import { formatNumber } from '../../../ui/format/format';
 import { interpolate } from '../../../ui/i18n/messages';
 import { KpiStrip } from '../../../ui/kpi/kpi-strip';
 import { KpiTile } from '../../../ui/kpi/kpi-tile';
-import { listQuery, type ListQuery } from '../../../ui/list/list-query';
+import { injectSortReady, listQuery, type ListQuery } from '../../../ui/list/list-query';
 import { PageHeader } from '../../../ui/page-header/page-header';
 import { RowActions, type RowAction } from '../../../ui/row-actions/row-actions';
 import { TablePanel, type TableNotice } from '../../../ui/table-panel/table-panel';
@@ -88,6 +88,7 @@ export function scoreTone(score: number): StatusTone {
   templateUrl: './drivers-view.html',
   styleUrl: './drivers-view.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'app-page' },
 })
 export class DriversView {
   readonly branchName = input.required<string>();
@@ -109,6 +110,7 @@ export class DriversView {
   readonly dismissNotice = output();
 
   private readonly language = inject(UI_LANGUAGE);
+  private readonly sortReady = injectSortReady();
   protected readonly text = computed(() => driversText(this.language()));
   protected readonly description = computed(() =>
     interpolate(this.text().description, { branch: this.branchName() }),
@@ -219,6 +221,7 @@ export class DriversView {
   }
 
   protected sort(event: TableLazyLoadEvent): void {
+    if (!this.sortReady()) return;
     const next = listQuery.sorted(this.state(), event);
     if (next) this.stateChange.emit(next);
   }

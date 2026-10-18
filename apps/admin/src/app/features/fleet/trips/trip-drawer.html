@@ -1,0 +1,93 @@
+<holita-route-drawer
+  [title]="title()"
+  [subtitle]="subtitle()"
+  [closeLink]="null"
+  (closeRequest)="closed.emit()"
+>
+  @let record = trip();
+  <section class="app-form-section">
+    <h3>{{ text().summary }}</h3>
+    <dl class="app-facts">
+      <div>
+        <dt>{{ text().vehicle }}</dt>
+        <dd>{{ record.plate }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().driver }}</dt>
+        <dd>{{ record.driverName ?? '—' }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().started }}</dt>
+        <dd>{{ record.startedAt | holitaDateTime }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().ended }}</dt>
+        <dd>{{ record.endedAt | holitaDateTime }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().duration }}</dt>
+        <dd>{{ record.durationMin * 60 | holitaDuration }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().distance }}</dt>
+        <dd>{{ record.distanceKm | holitaNumber }} km</dd>
+      </div>
+      <div>
+        <dt>{{ text().maxSpeed }}</dt>
+        <dd>{{ record.maxSpeedKph | holitaNumber }} km/h</dd>
+      </div>
+      <div>
+        <dt>{{ text().fuel }}</dt>
+        <dd>
+          @if (record.fuelUsedL !== null) {
+            {{ record.fuelUsedL | holitaNumber }} L
+          } @else {
+            —
+          }
+        </dd>
+      </div>
+      <div>
+        <dt>{{ text().score }}</dt>
+        <dd>
+          @if (record.score !== null) {
+            <span class="app-meter-cell">
+              <span
+                [class]="scoreClass(record.score)"
+                [style.--app-meter-value]="record.score + '%'"
+                aria-hidden="true"
+              ></span>
+              <span>{{ record.score }}</span>
+            </span>
+          } @else {
+            —
+          }
+        </dd>
+      </div>
+    </dl>
+  </section>
+  <section class="app-form-section">
+    <h3>{{ text().timeline }}</h3>
+    <p-timeline [value]="entries()">
+      <ng-template #marker let-entry>
+        <span [class]="dotClass(entry)"></span>
+      </ng-template>
+      <ng-template #content let-entry>
+        <div class="app-timeline-event">
+          <span class="app-timeline-event__title">{{ entry.title }}</span>
+          <span class="app-timeline-event__meta">{{ entry.at | holitaDateTime }}</span>
+          @if (entry.detail) {
+            <span class="app-timeline-event__body">{{ entry.detail }}</span>
+          }
+        </div>
+      </ng-template>
+    </p-timeline>
+  </section>
+  <div drawerFooter class="app-drawer-actions">
+    <button pButton type="button" severity="secondary" [outlined]="true" (click)="closed.emit()">
+      {{ text().close }}
+    </button>
+    <button pButton type="button" (click)="openVehicle.emit(record.vehicleId)">
+      {{ text().openVehicle }}
+    </button>
+  </div>
+</holita-route-drawer>
