@@ -232,9 +232,13 @@ Hosts project a `p-table` into `holita-table-panel` with `[lazy]`, `dataKey="id"
 scrolling inside the panel and no `emptymessage` template (the panel renders every state). A
 selection header cell contains a visually hidden `<label for>` and `p-table-header-checkbox
 [inputId]` (PrimeNG names the header checkbox only after its value changes); row checkboxes use
-`[ariaLabel]`. Secondary columns carry `.app-col-secondary`; numeric columns `.app-num`. Long
-free text (notes, descriptions) is one line with `.app-cell-truncate` and the full text in
-`title`. Row actions are a last `.app-col-actions` column with `holita-row-actions`.
+`[ariaLabel]`. Secondary columns carry `.app-col-secondary`; numeric columns `.app-num`. Header
+and body cells never wrap (a wide table scrolls sideways, and `provideHolitaTheme` makes every
+table's scroll container a tab stop so the keyboard can scroll it); long free text (notes, descriptions) is
+one line with `.app-cell-truncate` and the full text in `title`. Row actions are a last
+`.app-col-actions` column with `holita-row-actions`, frozen to the right (`pFrozenColumn
+alignFrozen="right"` on its `th` and `td`) so the menu stays reachable while scrolling.
+`p-sort-icon` is the sort indicator element.
 
 ### PrimeNG usage rules
 
@@ -308,6 +312,7 @@ fixture failures (per operation or `<Operation>:<id>`).
 | Design System/Patterns         | PageHeader, KpiStrip, FilterBuilder, TablePanel (with row actions), Drawer (edit, view, view then edit), FormField, EmptyState, Charts, CSS patterns                                                    |
 | Design System/PrimeNG coverage | Every registered control in both schemes, non-modal overlays and the confirm dialog                                                                                                                     |
 | Design System/Shell            | Desktop, Rail, Mobile with navigation open, Fleet disabled, Unknown Branch, Branch discovery loading/error, theme-persistence warning                                                                   |
+| Examples/Fleet                 | Example pages inside the shell with sample data (no GraphQL); the sidebar switches between them. Vehicles: quick search, filters, sorting, row and bulk actions, direct edit in the drawer, all states  |
 
 `npm run test:storybook:admin` runs every story in Chromium through `@storybook/addon-vitest`:
 rendering, play functions and axe with `a11y.test: 'error'` (the PrimeUI license notice

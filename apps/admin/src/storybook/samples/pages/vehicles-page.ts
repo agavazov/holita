@@ -1,0 +1,349 @@
+import { Component, computed, DestroyRef, inject, linkedSignal, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router } from '@angular/router';
+import { ConfirmationService } from 'primeng/api';
+import { ConfirmDialog } from 'primeng/confirmdialog';
+import {
+  VehicleDrawer,
+  type VehicleField,
+  type VehicleForm,
+} from '../../../app/features/fleet/vehicles/vehicle-drawer';
+import {
+  type VehicleKpis,
+  type VehicleListState,
+  type VehicleRow,
+  VehiclesView,
+} from '../../../app/features/fleet/vehicles/vehicles-view';
+import { vehiclesText } from '../../../app/features/fleet/vehicles/i18n/messages';
+import { confirmDestructive, confirmDialogPt } from '../../../app/ui/confirm';
+import { interpolate } from '../../../app/ui/i18n/messages';
+import type { TableNotice } from '../../../app/ui/table-panel/table-panel';
+import { tableView, type TableView } from '../../../app/ui/table-panel/table-view';
+import { UI_LANGUAGE } from '../../../app/ui/ui-language';
+import { fixtureBranches } from '../../session-fixtures';
+import {
+  driverById,
+  groupById,
+  sampleDrivers,
+  sampleGroups,
+  sampleNow,
+  type SampleVehicle,
+  sampleVehicles,
+} from '../fleet-samples';
+import { firstPage, runSampleList, type SampleListDefinition } from '../sample-list';
+
+/** `?scenario=` switches the page into one of the states the stories show. */
+const scenarios = ['default', 'loading', 'empty', 'error', 'save-error'] as const;
+type Scenario = (typeof scenarios)[number];
+
+/** Simulated latency of a save, long enough to see the button's busy state. */
+const saveDelayMs = 700;
+
+const definition: SampleListDefinition<SampleVehicle> = {
+  search: (vehicle) => [
+    vehicle.plate,
+    vehicle.fleetNumber,
+    vehicle.make,
+    vehicle.model,
+    driverById(vehicle.driverId)?.name ?? null,
+    vehicle.notes,
+  ],
+  columns: {
+    plate: (vehicle) => vehicle.plate,
+    status: (vehicle) => vehicle.status,
+    activity: (vehicle) => vehicle.activity,
+    group: (vehicle) => vehicle.groupId,
+    type: (vehicle) => vehicle.type,
+    make: (vehicle) => vehicle.make,
+    odometer: (vehicle) => vehicle.odometerKm,
+    year: (vehicle) => vehicle.year,
+    hasDriver: (vehicle) => vehicle.driverId !== null,
+    createdAt: (vehicle) => vehicle.createdAt,
+    lastReportedAt: (vehicle) => vehicle.lastReportedAt,
+  },
+};
+
+function toRow(vehicle: SampleVehicle): VehicleRow {
+  const group = groupById(vehicle.groupId);
+  return {
+    id: vehicle.id,
+    plate: vehicle.plate,
+    fleetNumber: vehicle.fleetNumber || null,
+    type: vehicle.type,
+    make: vehicle.make,
+    model: vehicle.model,
+    year: vehicle.year,
+    status: vehicle.status,
+    activity: vehicle.activity,
+    lastReportedAt: vehicle.lastReportedAt,
+    location: vehicle.location,
+    driverName: driverById(vehicle.driverId)?.name ?? null,
+    group: group ? { name: group.name, slot: group.slot } : null,
+    odometerKm: vehicle.odometerKm,
+    fuelPct: vehicle.fuelPct,
+    openAlerts: vehicle.openAlerts,
+    notes: vehicle.notes,
+  };
+}
+
+function toForm(vehicle: SampleVehicle): VehicleForm {
+  return {
+    plate: vehicle.plate,
+    fleetNumber: vehicle.fleetNumber,
+    vin: vehicle.vin,
+    type: vehicle.type,
+    make: vehicle.make,
+    model: vehicle.model,
+    year: vehicle.year,
+    fuelType: vehicle.fuelType,
+    tankL: vehicle.tankL,
+    status: vehicle.status,
+    groupId: vehicle.groupId,
+    driverId: vehicle.driverId,
+    notes: vehicle.notes,
+  };
+}
+
+function kpisOf(vehicles: readonly SampleVehicle[]): VehicleKpis {
+  const count = (test: (vehicle: SampleVehicle) => boolean) => vehicles.filter(test).length;
+  return {
+    inOperation: count((vehicle) => vehicle.status !== 'INACTIVE'),
+    inWorkshop: count((vehicle) => vehicle.status === 'IN_WORKSHOP'),
+    moving: count((vehicle) => vehicle.activity === 'MOVING'),
+    notReporting: count((vehicle) => vehicle.activity === 'NOT_CONNECTED'),
+    openAlerts: vehicles.reduce((sum, vehicle) => sum + vehicle.openAlerts, 0),
+    lowFuel: count((vehicle) => vehicle.fuelPct !== null && vehicle.fuelPct < 12),
+  };
+}
+
+/**
+ * Story-only host of the Vehicles example: sample rows instead of GraphQL, a simulated save, and
+ * `?scenario=` / `?drawer=<id|new>` for the states the stories open on. The real admin page keeps
+ * the same view and drawer and replaces this class with its Apollo-backed container.
+ */
+@Component({
+  selector: 'holita-example-vehicles-page',
+  imports: [VehiclesView, VehicleDrawer, ConfirmDialog],
+  providers: [ConfirmationService],
+  template: `
+    <holita-vehicles-view
+      [branchName]="branchName"
+      [dataAsOf]="dataAsOf"
+      [rows]="rows()"
+      [total]="result().total"
+      [view]="view()"
+      [state]="listState()"
+      [kpis]="kpis()"
+      [groups]="groups"
+      [selection]="selection()"
+      [notice]="notice()"
+      (stateChange)="state.set($event)"
+      (create)="openEditor(null)"
+      (edit)="openEditor($event)"
+      (rowAction)="rowAction($event.action, $event.id)"
+      (selectionChange)="selection.set($event)"
+      (bulkAction)="bulkAction($event)"
+      (retry)="failed.set(false)"
+      (dismissNotice)="notice.set(null)"
+    />
+    @if (editor(); as editor) {
+      <holita-vehicle-drawer
+        [vehicle]="editor.form"
+        [groups]="groups"
+        [drivers]="drivers"
+        [saving]="saving()"
+        [saveError]="saveError()"
+        [fieldErrors]="fieldErrors()"
+        (save)="save($event)"
+        (closed)="closeEditor()"
+      />
+    }
+    <p-confirmdialog [pt]="confirmPt" [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }" />
+  `,
+})
+export class VehiclesPage {
+  private readonly language = inject(UI_LANGUAGE);
+  private readonly router = inject(Router);
+  private readonly confirmation = inject(ConfirmationService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly query = toSignal(this.route.queryParamMap, {
+    initialValue: this.route.snapshot.queryParamMap,
+  });
+  private readonly scenario = computed<Scenario>(
+    () => scenarios.find((scenario) => scenario === this.query().get('scenario')) ?? 'default',
+  );
+  private readonly text = computed(() => vehiclesText(this.language()));
+  private saveTimer: ReturnType<typeof setTimeout> | undefined;
+  private nextId = 1;
+
+  protected readonly branchName = fixtureBranches[0].name;
+  protected readonly dataAsOf = new Date(sampleNow).toISOString();
+  protected readonly confirmPt = confirmDialogPt(this.language());
+  protected readonly groups = sampleGroups.map((group) => ({ id: group.id, name: group.name }));
+  protected readonly drivers = sampleDrivers
+    .filter((driver) => driver.status !== 'INACTIVE')
+    .map((driver) => ({ id: driver.id, name: driver.name }));
+
+  protected readonly vehicles = linkedSignal<readonly SampleVehicle[]>(() =>
+    this.scenario() === 'empty' ? [] : sampleVehicles,
+  );
+  protected readonly state = signal<VehicleListState>({
+    ...firstPage,
+    sort: { field: 'plate', direction: 'asc' },
+    pageSize: 25,
+  });
+  protected readonly selection = signal<readonly string[]>([]);
+  protected readonly notice = signal<TableNotice | null>(null);
+  protected readonly failed = linkedSignal(() => this.scenario() === 'error');
+  private readonly failNextSave = linkedSignal(() => this.scenario() === 'save-error');
+  /** The open drawer: `id` null creates a vehicle. */
+  protected readonly editor = linkedSignal<{ id: string | null; form: VehicleForm | null } | null>(
+    () => {
+      const drawer = this.query().get('drawer');
+      if (drawer === 'new') return { id: null, form: null };
+      const vehicle = drawer ? this.vehicles().find((item) => item.id === drawer) : undefined;
+      return vehicle ? { id: vehicle.id, form: toForm(vehicle) } : null;
+    },
+  );
+  protected readonly saving = signal(false);
+  protected readonly saveError = signal<string | null>(null);
+  protected readonly fieldErrors = signal<Partial<Record<VehicleField, string>>>({});
+
+  protected readonly result = computed(() =>
+    runSampleList(this.vehicles(), definition, this.state()),
+  );
+  protected readonly rows = computed(() => this.result().items.map(toRow));
+  protected readonly listState = computed(() => ({ ...this.state(), page: this.result().page }));
+  protected readonly kpis = computed(() =>
+    this.scenario() === 'loading' || this.failed() ? null : kpisOf(this.vehicles()),
+  );
+  protected readonly view = computed<TableView>(() => {
+    const state = this.state();
+    return tableView({
+      loading: this.scenario() === 'loading',
+      error: this.failed() ? 'failed' : null,
+      rows: this.scenario() === 'loading' || this.failed() ? null : this.rows().length,
+      filtered: state.search.trim() !== '' || state.conditions.length > 0,
+    });
+  });
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => {
+      clearTimeout(this.saveTimer);
+    });
+  }
+
+  protected openEditor(id: string | null): void {
+    const vehicle = id ? this.vehicles().find((item) => item.id === id) : undefined;
+    this.saveError.set(null);
+    this.fieldErrors.set({});
+    this.editor.set({ id: vehicle?.id ?? null, form: vehicle ? toForm(vehicle) : null });
+  }
+
+  protected closeEditor(): void {
+    this.editor.set(null);
+  }
+
+  protected rowAction(action: string, id: string): void {
+    const vehicle = this.vehicles().find((item) => item.id === id);
+    if (!vehicle) return;
+    switch (action) {
+      case 'edit':
+        this.openEditor(id);
+        return;
+      case 'profile':
+        void this.router.navigate(['/examples/vehicles', id]);
+        return;
+      case 'deactivate':
+        this.deactivate([id]);
+        return;
+      case 'delete':
+        void this.delete([id]);
+        return;
+    }
+  }
+
+  protected bulkAction(action: string): void {
+    const ids = this.selection();
+    if (action === 'deactivate') this.deactivate(ids);
+    if (action === 'delete') void this.delete(ids);
+  }
+
+  protected save(form: VehicleForm): void {
+    const editor = this.editor();
+    if (!editor || this.saving()) return;
+    this.saving.set(true);
+    this.saveError.set(null);
+    this.fieldErrors.set({});
+    this.saveTimer = setTimeout(() => {
+      this.saving.set(false);
+      if (this.failNextSave()) {
+        this.failNextSave.set(false);
+        this.saveError.set(this.text().drawer.saveError);
+        return;
+      }
+      const plate = form.plate.toLocaleUpperCase('en');
+      const duplicate = this.vehicles().some(
+        (item) => item.id !== editor.id && item.plate.toLocaleUpperCase('en') === plate,
+      );
+      if (duplicate) {
+        this.fieldErrors.set({ plate: this.text().drawer.duplicatePlate });
+        return;
+      }
+      this.store(editor.id, form);
+      this.editor.set(null);
+      const template = editor.id ? this.text().notices.saved : this.text().notices.created;
+      this.notice.set({ severity: 'success', text: interpolate(template, { plate: form.plate }) });
+    }, saveDelayMs);
+  }
+
+  private store(id: string | null, form: VehicleForm): void {
+    const fields = { ...form, year: form.year ?? 0 };
+    if (id) {
+      this.vehicles.update((vehicles) =>
+        vehicles.map((item) => (item.id === id ? { ...item, ...fields } : item)),
+      );
+      return;
+    }
+    const created: SampleVehicle = {
+      ...fields,
+      id: `example-vehicle-${String(this.nextId++)}`,
+      odometerKm: 0,
+      activity: 'NO_DEVICE',
+      speedKph: null,
+      fuelPct: null,
+      lastReportedAt: null,
+      location: null,
+      openAlerts: 0,
+      createdAt: new Date(sampleNow).toISOString(),
+    };
+    this.vehicles.update((vehicles) => [created, ...vehicles]);
+  }
+
+  private deactivate(ids: readonly string[]): void {
+    this.vehicles.update((vehicles) =>
+      vehicles.map((item) => (ids.includes(item.id) ? { ...item, status: 'INACTIVE' } : item)),
+    );
+    this.selection.set([]);
+    this.notice.set({
+      severity: 'success',
+      text: interpolate(this.text().notices.deactivated, { count: ids.length }),
+    });
+  }
+
+  private async delete(ids: readonly string[]): Promise<void> {
+    const text = this.text();
+    const confirmed = await confirmDestructive(this.confirmation, this.language(), {
+      header: text.confirmDelete.title,
+      message: interpolate(text.confirmDelete.message, { count: ids.length }),
+      acceptLabel: text.rowActions.delete,
+    });
+    if (!confirmed) return;
+    this.vehicles.update((vehicles) => vehicles.filter((item) => !ids.includes(item.id)));
+    this.selection.update((selection) => selection.filter((id) => !ids.includes(id)));
+    this.notice.set({
+      severity: 'success',
+      text: interpolate(text.notices.deleted, { count: ids.length }),
+    });
+  }
+}

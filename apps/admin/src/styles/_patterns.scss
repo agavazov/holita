@@ -281,6 +281,19 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
     color: var(--p-app-tone-danger-color);
   }
 
+  // Data tables keep every value on one line; a wide table scrolls sideways instead of wrapping.
+  // Long free text uses `.app-cell-truncate`.
+  .p-datatable-thead > tr > th,
+  .p-datatable-tbody > tr > td {
+    white-space: nowrap;
+  }
+
+  // The scroll container is focusable (provideHolitaTheme) so the keyboard can scroll it.
+  .p-datatable-table-container:focus-visible {
+    outline: var(--p-focus-ring-width) var(--p-focus-ring-style) var(--p-focus-ring-color);
+    outline-offset: calc(-1 * var(--p-focus-ring-width));
+  }
+
   // Two-line table cell: primary line plus a muted secondary line.
   .app-cell-stack {
     display: flex;

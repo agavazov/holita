@@ -1,0 +1,227 @@
+<holita-route-drawer
+  size="lg"
+  [title]="title()"
+  [saving]="saving()"
+  [dirty]="dirty()"
+  [closeLink]="null"
+  (closeRequest)="requestClose()"
+>
+  <form #formElement id="vehicle-form" [formGroup]="form" (ngSubmit)="submit()">
+    @if (saveError(); as error) {
+      <p-message severity="error" role="alert">{{ error }}</p-message>
+    }
+    <section class="app-form-section">
+      <h3>{{ text().identification }}</h3>
+      <div class="app-form-grid">
+        <holita-form-field
+          [label]="text().plate"
+          controlId="vehicle-plate"
+          [required]="true"
+          [error]="errorOf('plate')"
+        >
+          <input
+            pInputText
+            id="vehicle-plate"
+            formControlName="plate"
+            autocomplete="off"
+            [invalid]="!!errorOf('plate')"
+            [attr.aria-invalid]="errorOf('plate') ? 'true' : null"
+            [attr.aria-describedby]="describedBy('plate')"
+          />
+        </holita-form-field>
+        <holita-form-field
+          [label]="text().fleetNumber"
+          controlId="vehicle-fleetNumber"
+          [hint]="text().fleetNumberHint"
+          [error]="errorOf('fleetNumber')"
+        >
+          <input
+            pInputText
+            id="vehicle-fleetNumber"
+            formControlName="fleetNumber"
+            autocomplete="off"
+            [invalid]="!!errorOf('fleetNumber')"
+            [attr.aria-invalid]="errorOf('fleetNumber') ? 'true' : null"
+            [attr.aria-describedby]="describedBy('fleetNumber')"
+          />
+        </holita-form-field>
+        <holita-form-field
+          class="app-form-grid--wide"
+          [label]="text().vin"
+          controlId="vehicle-vin"
+          [hint]="text().vinHint"
+          [error]="errorOf('vin')"
+        >
+          <input
+            pInputText
+            id="vehicle-vin"
+            formControlName="vin"
+            class="app-mono"
+            autocomplete="off"
+            [invalid]="!!errorOf('vin')"
+            [attr.aria-invalid]="errorOf('vin') ? 'true' : null"
+            [attr.aria-describedby]="describedBy('vin')"
+          />
+        </holita-form-field>
+      </div>
+    </section>
+
+    <section class="app-form-section">
+      <h3>{{ text().specification }}</h3>
+      <div class="app-form-grid">
+        <holita-form-field [label]="text().type" controlId="vehicle-type">
+          <p-select
+            inputId="vehicle-type"
+            formControlName="type"
+            [options]="typeOptions()"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+            [ariaLabel]="text().type"
+          />
+        </holita-form-field>
+        <holita-form-field [label]="text().fuelType" controlId="vehicle-fuelType">
+          <p-select
+            inputId="vehicle-fuelType"
+            formControlName="fuelType"
+            [options]="fuelOptions()"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+            [ariaLabel]="text().fuelType"
+          />
+        </holita-form-field>
+        <holita-form-field
+          [label]="text().make"
+          controlId="vehicle-make"
+          [required]="true"
+          [error]="errorOf('make')"
+        >
+          <input
+            pInputText
+            id="vehicle-make"
+            formControlName="make"
+            [invalid]="!!errorOf('make')"
+            [attr.aria-invalid]="errorOf('make') ? 'true' : null"
+            [attr.aria-describedby]="describedBy('make')"
+          />
+        </holita-form-field>
+        <holita-form-field
+          [label]="text().model"
+          controlId="vehicle-model"
+          [required]="true"
+          [error]="errorOf('model')"
+        >
+          <input
+            pInputText
+            id="vehicle-model"
+            formControlName="model"
+            [invalid]="!!errorOf('model')"
+            [attr.aria-invalid]="errorOf('model') ? 'true' : null"
+            [attr.aria-describedby]="describedBy('model')"
+          />
+        </holita-form-field>
+        <holita-form-field [label]="text().year" controlId="vehicle-year" [error]="errorOf('year')">
+          <p-inputnumber
+            inputId="vehicle-year"
+            formControlName="year"
+            [useGrouping]="false"
+            [invalid]="!!errorOf('year')"
+            [ariaDescribedBy]="describedBy('year')"
+            [pt]="numberPt().year"
+          />
+        </holita-form-field>
+        <holita-form-field
+          [label]="text().tank"
+          controlId="vehicle-tankL"
+          [error]="errorOf('tankL')"
+        >
+          <p-inputnumber
+            inputId="vehicle-tankL"
+            formControlName="tankL"
+            [invalid]="!!errorOf('tankL')"
+            [ariaDescribedBy]="describedBy('tankL')"
+            [pt]="numberPt().tankL"
+          />
+        </holita-form-field>
+      </div>
+    </section>
+
+    <section class="app-form-section">
+      <h3>{{ text().assignment }}</h3>
+      <div class="app-form-grid">
+        <holita-form-field [label]="text().status" controlId="vehicle-status">
+          <p-select
+            inputId="vehicle-status"
+            formControlName="status"
+            [options]="statusOptions()"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+            [ariaLabel]="text().status"
+          />
+        </holita-form-field>
+        <holita-form-field [label]="text().group" controlId="vehicle-groupId">
+          <p-select
+            inputId="vehicle-groupId"
+            formControlName="groupId"
+            [options]="groupOptions()"
+            optionLabel="name"
+            optionValue="id"
+            appendTo="body"
+            [ariaLabel]="text().group"
+          />
+        </holita-form-field>
+        <holita-form-field
+          class="app-form-grid--wide"
+          [label]="text().driver"
+          controlId="vehicle-driverId"
+        >
+          <p-select
+            inputId="vehicle-driverId"
+            formControlName="driverId"
+            [options]="driverOptions()"
+            optionLabel="name"
+            optionValue="id"
+            [filter]="true"
+            appendTo="body"
+            [ariaLabel]="text().driver"
+          />
+        </holita-form-field>
+        <holita-form-field
+          class="app-form-grid--wide"
+          [label]="text().notes"
+          controlId="vehicle-notes"
+          [error]="errorOf('notes')"
+          [counter]="{ length: notesLength(), max: 2000 }"
+        >
+          <textarea
+            pTextarea
+            id="vehicle-notes"
+            formControlName="notes"
+            rows="4"
+            [invalid]="!!errorOf('notes')"
+            [attr.aria-invalid]="errorOf('notes') ? 'true' : null"
+            [attr.aria-describedby]="describedBy('notes')"
+          ></textarea>
+        </holita-form-field>
+      </div>
+    </section>
+  </form>
+
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="requestClose()"
+    >
+      {{ text().cancel }}
+    </button>
+    <button pButton type="submit" form="vehicle-form" [loading]="saving()" [disabled]="saving()">
+      {{ vehicle() ? text().save : text().create }}
+    </button>
+  </div>
+</holita-route-drawer>

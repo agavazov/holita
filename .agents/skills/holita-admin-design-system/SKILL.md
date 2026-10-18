@@ -55,8 +55,9 @@ instructions.
   `holita-filter-builder` (quick search plus only the columns and conditions the backend
   supports) → `holita-table-panel` with a projected `p-table` (`[lazy]`, `dataKey="id"`, no
   `emptymessage` template, selection header cell with a visually hidden `<label for>` + `inputId`,
-  long text in `.app-cell-truncate`, a last `.app-col-actions` column with `holita-row-actions`;
-  never a direct Delete button in a row). State comes from `UrlListState` with a
+  cells on one line, long text in `.app-cell-truncate`, a last `.app-col-actions` column with
+  `holita-row-actions` frozen right with `pFrozenColumn alignFrozen="right"`; never a direct
+  Delete button in a row). State comes from `UrlListState` with a
   `ListDefinition`; the view from `tableView(...)`; bulk writes use `runSequential`; destructive
   actions `confirmDestructive` with a `p-confirmdialog` using `confirmDialogPt`.
 - Editor: a right-hand drawer. The default opens the row straight into its form; a read-only

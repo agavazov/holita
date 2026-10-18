@@ -1,0 +1,125 @@
+{
+  "eyebrow": "Fleet",
+  "title": "Vehicles",
+  "description": "{branch} · data as of {asOf}",
+  "new": "New vehicle",
+  "search": "Search plate, model, driver or notes",
+  "kpis": {
+    "label": "Fleet summary",
+    "inOperation": "In operation",
+    "inWorkshop": "in service: {count}",
+    "moving": "Moving now",
+    "movingShare": "{share} of active vehicles",
+    "notReporting": "Not reporting",
+    "notReportingFootnote": "no data for 48 h",
+    "openAlerts": "Open alerts",
+    "lowFuel": "Low fuel",
+    "lowFuelFootnote": "below 12 %"
+  },
+  "table": {
+    "heading": "Vehicles",
+    "plate": "Plate",
+    "vehicle": "Vehicle",
+    "status": "Status",
+    "activity": "Activity",
+    "driver": "Driver",
+    "group": "Group",
+    "odometer": "Odometer, km",
+    "fuel": "Fuel",
+    "notes": "Notes",
+    "actions": "Actions",
+    "selectPage": "Select all on this page",
+    "selectRow": "Select {plate}",
+    "openEditor": "Edit {plate}",
+    "noDriver": "No driver",
+    "noGroup": "No group",
+    "noData": "No data",
+    "emptyTitle": "No vehicles yet",
+    "emptyDescription": "Add the first vehicle of this branch.",
+    "alerts": "{count} open alerts",
+    "errorText": "The vehicles could not be loaded. (demo-request-1)"
+  },
+  "statuses": {
+    "ACTIVE": "Active",
+    "IN_WORKSHOP": "In service",
+    "INACTIVE": "Inactive"
+  },
+  "activities": {
+    "MOVING": "Moving",
+    "IDLE": "Idling",
+    "PARKED": "Parked",
+    "NOT_CONNECTED": "Not reporting",
+    "NO_DEVICE": "No tracker"
+  },
+  "types": {
+    "TRACTOR": "Tractor unit",
+    "RIGID_TRUCK": "Rigid truck",
+    "VAN": "Van",
+    "CAR": "Car"
+  },
+  "fuelTypes": {
+    "DIESEL": "Diesel",
+    "PETROL": "Petrol",
+    "ELECTRIC": "Electric",
+    "LPG": "LPG"
+  },
+  "rowActions": {
+    "edit": "Edit",
+    "profile": "Open profile",
+    "deactivate": "Deactivate",
+    "delete": "Delete"
+  },
+  "bulk": {
+    "deactivate": "Deactivate",
+    "delete": "Delete"
+  },
+  "filters": {
+    "status": "Status",
+    "activity": "Activity",
+    "group": "Group",
+    "type": "Type",
+    "make": "Make",
+    "odometer": "Odometer",
+    "year": "Year",
+    "hasDriver": "Has a driver",
+    "createdAt": "Added"
+  },
+  "notices": {
+    "saved": "{plate} was saved.",
+    "created": "{plate} was created.",
+    "deactivated": "{count} vehicle(s) deactivated.",
+    "deleted": "{count} vehicle(s) deleted."
+  },
+  "confirmDelete": {
+    "title": "Delete vehicles",
+    "message": "Delete {count} vehicle(s)? Their history stays in reports."
+  },
+  "drawer": {
+    "createTitle": "New vehicle",
+    "editTitle": "Edit {plate}",
+    "identification": "Identification",
+    "specification": "Specification",
+    "assignment": "Assignment",
+    "plate": "License plate",
+    "fleetNumber": "Fleet number",
+    "fleetNumberHint": "Internal number, e.g. T-04",
+    "vin": "VIN",
+    "vinHint": "17 characters, without I, O and Q",
+    "type": "Type",
+    "make": "Make",
+    "model": "Model",
+    "year": "Year",
+    "fuelType": "Fuel",
+    "tank": "Fuel tank, L",
+    "status": "Status",
+    "group": "Group",
+    "driver": "Driver",
+    "none": "None",
+    "notes": "Notes",
+    "save": "Save",
+    "create": "Create vehicle",
+    "cancel": "Cancel",
+    "saveError": "The vehicle could not be saved. Try again. (demo-request-2)",
+    "duplicatePlate": "This plate is already used in the branch."
+  }
+}
