@@ -67,12 +67,12 @@ describe('TablePanel', () => {
     return fixture;
   }
 
-  it('renders the heading with a grouped count and the loading skeleton', () => {
+  it('renders the heading, the loading skeleton without a count, then the grouped count', () => {
     const fixture = render();
     const root = element(fixture);
     const heading = root.querySelector('h2.table-panel__heading');
     expect(heading?.textContent).toContain('Превозни средства');
-    expect(root.querySelector('.table-panel__count')?.textContent).toBe('1 250');
+    expect(root.querySelector('.table-panel__count')).toBeNull();
     expect(root.querySelectorAll('.table-panel__skeleton-row').length).toBe(8);
     expect(root.querySelector('.table-panel__table')?.hasAttribute('hidden')).toBe(true);
     expect(root.querySelector('.table-panel__actions .refresh')).not.toBeNull();
@@ -81,6 +81,9 @@ describe('TablePanel', () => {
     expect(root.querySelector('h3.table-panel__heading')).not.toBeNull();
     fixture.componentInstance.panel().focusHeading();
     expect(document.activeElement).toBe(root.querySelector('h3.table-panel__heading'));
+    fixture.componentInstance.view.set({ kind: 'rows' });
+    fixture.detectChanges();
+    expect(root.querySelector('.table-panel__count')?.textContent).toMatch(/^1\s250$/);
   });
 
   it('shows every empty and error state with its action', () => {

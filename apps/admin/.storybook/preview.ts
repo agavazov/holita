@@ -89,6 +89,17 @@ const preview: Preview = {
   },
   parameters: {
     layout: 'fullscreen',
+    options: {
+      storySort: {
+        order: [
+          'Start here',
+          'Examples',
+          ['Tour', 'Monitoring', ['Overview', 'Alerts', 'Trips'], 'Fleet', 'Service', 'Settings'],
+          'Design System',
+          ['Foundations', 'Patterns', 'Shell', 'PrimeNG coverage'],
+        ],
+      },
+    },
     viewport: {
       options: {
         desktop1440: {

@@ -69,9 +69,12 @@ export class TablePanel {
   private readonly headingElement = viewChild<ElementRef<HTMLElement>>('headingElement');
   protected readonly text = computed(() => uiMessages[this.language()]);
   protected readonly locale = computed(() => localeOf(this.language()));
+  /** No count while the first answer is loading or failed: it would describe rows not shown. */
   protected readonly totalText = computed(() => {
     const total = this.total();
-    return total === null ? null : formatNumber(total, this.language());
+    const kind = this.view().kind;
+    if (total === null || kind === 'loading' || kind === 'error') return null;
+    return formatNumber(total, this.language());
   });
   protected readonly showTable = computed(
     () => this.view().kind === 'rows' || this.view().kind === 'rows-error',

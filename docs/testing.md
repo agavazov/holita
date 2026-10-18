@@ -82,8 +82,10 @@ npm run test:visual:admin
 ```
 
 The target builds the static [admin Storybook](development.md#admin-storybook) and captures the
-stories listed in [storybook-visual.spec.mts](../tools/browser/storybook-visual.spec.mts) at
-1440×900 and 390×844 with Chromium, `bg-BG`, `Europe/Sofia`, a fixed clock and device scale 1.
+stories listed in [storybook-visual.spec.mts](../tools/browser/storybook-visual.spec.mts) (the
+introduction, the example pages, foundations, patterns, PrimeNG coverage and the shell) in light
+and dark at the viewports each capture names (1440×900, 768×1024, 375×812) with Chromium,
+`bg-BG`, `Europe/Sofia`, a fixed clock and device scale 1.
 Each capture waits until no fixture request has been in flight for 400 ms.
 
 - Every run writes reviewable candidates to the ignored `test-results/storybook-visual-candidates/`

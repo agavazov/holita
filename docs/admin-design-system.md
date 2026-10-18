@@ -310,9 +310,12 @@ element that opened it, or `#page-title`.
 ## Storybook review
 
 The admin Storybook (`npm run storybook:admin`, port 11003) renders the real Angular components
-with `FixtureHttpBackend` GraphQL fixtures ([development](development.md#admin-storybook)). It is
-English only; the product's languages live in the application catalogs, and the shell story's
-language menu lists sample languages that change nothing. Toolbar globals: theme, brand and
+with `FixtureHttpBackend` GraphQL fixtures ([development](development.md#admin-storybook)). It
+opens on "Start here" (what to review and links to every example), then Examples and Design
+System. It is English only; the product's languages live in the application catalogs, and the
+shell's language menu lists sample languages that change nothing. Example pages
+(`src/storybook/samples`) are story-only hosts that feed the `features/fleet/*` views and drawers
+from deterministic sample data; `?scenario=` and `?drawer=` in a story's URL open its states. Toolbar globals: theme, brand and
 density; viewports `desktop1440`, `tablet768`, `mobile375`. A brand or density change re-bootstraps the story with `provideHolitaTheme(choice)`
 and leaves no stale theme styles. `parameters.holita` (`StoryFixtures`) controls the session,
 Fleet availability, dataset, the story clock (`now`, default `2026-10-18T07:00:00.000Z`) and

@@ -74,6 +74,8 @@ interface Capture {
   /** Brand and density globals; the application's `appTheme` when omitted. */
   readonly brand?: 'cobalt' | 'ember' | 'pine';
   readonly density?: 'compact' | 'comfortable';
+  /** Only the viewport: an open drawer is fixed to it, so a full-page capture would cut it. */
+  readonly viewportOnly?: boolean;
 }
 
 /** One story in light and dark at the given viewports. */
@@ -84,8 +86,30 @@ function bothThemes(id: string, sizes: readonly ViewportName[] = ['desktop']): C
   ];
 }
 
-// The reviewed set: foundations, the main patterns, PrimeNG coverage and the shell.
+// The reviewed set: the introduction, the example pages, foundations, the main patterns,
+// PrimeNG coverage and the shell.
 const captures: readonly Capture[] = [
+  { id: 'start-here--introduction', theme: 'light', viewports: ['desktop'] },
+  ...[
+    'examples-monitoring-overview--default',
+    'examples-fleet-vehicles--default',
+    'examples-fleet-vehicle-profile--overview',
+    'examples-service-maintenance--default',
+    'examples-settings--general',
+    'examples-settings--vehicle-groups',
+  ].flatMap((story) => bothThemes(story, ['desktop', 'mobile'])),
+  ...[
+    'examples-monitoring-alerts--open-alert',
+    'examples-monitoring-trips--trip-drawer',
+    'examples-fleet-vehicles--edit',
+    'examples-fleet-drivers--view',
+    'examples-fleet-devices--edit',
+  ].flatMap((story) =>
+    bothThemes(story, ['desktop', 'mobile']).map((capture) => ({ ...capture, viewportOnly: true })),
+  ),
+  ...['examples-fleet-vehicles--loading', 'examples-fleet-vehicles--empty'].flatMap((story) =>
+    bothThemes(story),
+  ),
   ...[
     'colors',
     'brand-variants',
@@ -161,8 +185,9 @@ for (const capture of captures)
         `${viewportName}.png`,
       ].join('--');
       // Every run keeps a reviewable candidate, including when no baseline was approved yet.
+      const fullPage = !capture.viewportOnly;
       const candidate = await page.screenshot({
-        fullPage: true,
+        fullPage,
         animations: 'disabled',
         caret: 'hide',
         scale: 'css',
@@ -170,5 +195,5 @@ for (const capture of captures)
       await mkdir(candidates, { recursive: true });
       await writeFile(join(candidates, name), candidate);
       await test.info().attach('candidate', { body: candidate, contentType: 'image/png' });
-      await expect(page).toHaveScreenshot(name, { fullPage: true });
+      await expect(page).toHaveScreenshot(name, { fullPage });
     });

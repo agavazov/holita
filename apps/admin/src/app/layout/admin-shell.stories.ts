@@ -5,6 +5,7 @@ import { ButtonDirective } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import { expect, spyOn, userEvent, waitFor, within } from 'storybook/test';
+import { sampleLanguages } from '../../storybook/samples/example-app';
 import { defaultBranchId, fixtureBranches, fixtureTenant } from '../../storybook/session-fixtures';
 import { routeAt, StoryApp, type StoryFixtures } from '../../storybook/story-config';
 import { KpiStrip } from '../ui/kpi/kpi-strip';
@@ -24,15 +25,6 @@ const rows = [
   { id: '1', plate: 'CB 1001 AX', model: 'MAN TGX 18.510', status: 'Active', odometer: '412,330' },
   { id: '2', plate: 'CB 1002 AX', model: 'Volvo FH 500', status: 'Active', odometer: '388,041' },
   { id: '3', plate: 'CB 1003 AX', model: 'DAF XF 480', status: 'In service', odometer: '501,920' },
-];
-
-/** Sample entries only: Storybook stays in English and the menu changes nothing here. */
-const sampleLanguages = [
-  { code: 'en', label: 'English' },
-  { code: 'bg', label: 'Български' },
-  { code: 'de', label: 'Deutsch' },
-  { code: 'es', label: 'Español' },
-  { code: 'fr', label: 'Français' },
 ];
 
 /**
@@ -184,9 +176,7 @@ export const MobileNavigationOpen: Story = {
   globals: { viewport: { value: 'mobile375', isRotated: false } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(
-      canvas.getByRole('button', { name: 'Toggle navigation' }),
-    );
+    await userEvent.click(canvas.getByRole('button', { name: 'Toggle navigation' }));
     const body = within(canvasElement.ownerDocument.body);
     await waitFor(() =>
       expect(body.getByRole('complementary', { name: 'Navigation' })).toBeVisible(),
