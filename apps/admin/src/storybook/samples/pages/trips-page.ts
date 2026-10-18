@@ -1,7 +1,12 @@
 import { Component, computed, linkedSignal, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { TripDrawer } from '../../../app/features/fleet/trips/trip-drawer';
-import { type TripKpis, TripsView } from '../../../app/features/fleet/trips/trips-view';
+import {
+  type TripActionId,
+  type TripKpis,
+  TripsView,
+} from '../../../app/features/fleet/trips/trips-view';
+import type { ListActionRequest } from '../../../app/ui/list/list-actions';
 import type { ListQuery } from '../../../app/ui/list/list-query';
 import { fixtureBranches } from '../../session-fixtures';
 import {
@@ -19,7 +24,7 @@ import {
   sampleTableView,
 } from '../sample-list';
 import { tripRow } from '../rows';
-import { injectQueryParams, scenarioOf } from '../scenario';
+import { injectClearDrawer, injectQueryParams, scenarioOf } from '../scenario';
 
 const definition: SampleListDefinition<SampleTrip> = {
   search: (trip) => [
@@ -67,14 +72,13 @@ function kpisOf(trips: readonly SampleTrip[]): TripKpis {
       [vehicles]="vehicles"
       [drivers]="drivers"
       (stateChange)="state.set($event)"
-      (open)="openId.set($event)"
-      (rowAction)="rowAction($event.action, $event.id)"
+      (action)="run($event)"
       (retry)="failed.set(false)"
     />
     @if (openTrip(); as trip) {
       <holita-trip-drawer
         [trip]="trip"
-        (closed)="openId.set(null)"
+        (closed)="closeDrawer()"
         (openVehicle)="openVehicle($event)"
       />
     }
@@ -83,6 +87,7 @@ function kpisOf(trips: readonly SampleTrip[]): TripKpis {
 export class TripsPage {
   private readonly router = inject(Router);
   private readonly query = injectQueryParams();
+  private readonly clearDrawer = injectClearDrawer();
   private readonly scenario = computed(() =>
     scenarioOf(this.query(), ['loading', 'empty', 'error']),
   );
@@ -119,15 +124,27 @@ export class TripsPage {
     }),
   );
 
-  protected rowAction(action: string, id: string): void {
-    if (action === 'open') this.openId.set(id);
-    if (action === 'vehicle') {
-      const trip = this.trips().find((item) => item.id === id);
-      if (trip) this.openVehicle(trip.vehicleId);
+  /** Row actions of the read-only list: each runs on one trip. */
+  protected run({ action, ids }: ListActionRequest<TripActionId>): void {
+    const [id] = ids;
+    switch (action) {
+      case 'open':
+        if (id) this.openId.set(id);
+        return;
+      case 'vehicle': {
+        const trip = this.trips().find((item) => item.id === id);
+        if (trip) this.openVehicle(trip.vehicleId);
+        return;
+      }
     }
   }
 
   protected openVehicle(vehicleId: string): void {
     void this.router.navigate(['/examples/vehicles', vehicleId]);
+  }
+
+  protected closeDrawer(): void {
+    this.openId.set(null);
+    this.clearDrawer();
   }
 }

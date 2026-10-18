@@ -24,6 +24,7 @@
     "selectPage": "Select all on this page",
     "selectRow": "Select {kind} on {plate}",
     "open": "Open {kind} on {plate}",
+    "record": "{kind} on {plate}",
     "noDriver": "No driver",
     "emptyTitle": "No alerts",
     "emptyDescription": "Alerts appear when a vehicle reports a rule violation or a fault.",
@@ -39,15 +40,11 @@
     "ACKNOWLEDGED": "Acknowledged",
     "RESOLVED": "Resolved"
   },
-  "rowActions": {
+  "actions": {
     "open": "Open",
     "acknowledge": "Acknowledge",
     "resolve": "Resolve",
     "vehicle": "Open vehicle profile"
-  },
-  "bulk": {
-    "acknowledge": "Acknowledge",
-    "resolve": "Resolve"
   },
   "filters": {
     "severity": "Severity",
@@ -56,8 +53,8 @@
     "occurredAt": "Occurred"
   },
   "notices": {
-    "acknowledged": "{count} alert(s) acknowledged.",
-    "resolved": "{count} alert(s) resolved."
+    "acknowledged": "Alerts acknowledged: {count}.",
+    "resolved": "Alerts resolved: {count}."
   },
   "drawer": {
     "details": "Details",

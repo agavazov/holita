@@ -63,7 +63,7 @@
 
   .app-topbar__bar {
     display: grid;
-    grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+    grid-template-columns: auto auto minmax(0, 1fr) minmax(0, auto) auto;
     grid-template-areas: 'menu logo context branch actions';
     align-items: center;
     column-gap: var(--p-app-space-2);
@@ -81,12 +81,8 @@
     }
 
     @include bp.below(sm) {
-      grid-template-columns: auto auto minmax(0, 1fr) auto;
-      grid-template-areas:
-        'menu logo context actions'
-        'branch branch branch branch';
-      row-gap: 0;
-      padding-block-end: var(--p-app-space-2);
+      column-gap: var(--p-app-space-1);
+      padding-inline: var(--p-app-space-1) var(--p-app-space-2);
     }
   }
 
@@ -97,73 +93,13 @@
   .app-topbar__logo {
     grid-area: logo;
     margin-inline-end: var(--p-app-space-2);
-  }
 
-  .app-topbar__context {
-    grid-area: context;
-    display: flex;
-    align-items: center;
-    gap: var(--p-app-space-2);
-    min-inline-size: 0;
-    padding-inline-start: var(--p-app-space-1);
-    font-size: var(--p-app-text-base);
-    white-space: nowrap;
-
-    .app-topbar__group {
-      color: var(--p-text-muted-color);
-
-      @include bp.below(md) {
-        display: none;
-      }
-    }
-
-    .app-topbar__separator {
-      flex: none;
-      inline-size: 0.75rem;
-      block-size: 0.75rem;
-      color: var(--p-text-muted-color);
-
-      @include bp.below(md) {
-        display: none;
-      }
-    }
-
-    .app-topbar__page {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      font-weight: 600;
-      color: var(--p-text-color);
-    }
-
+    // Only the mark on phones (the topbar keeps one row down to 320px); the word still names the
+    // link for assistive technology.
     @include bp.below(sm) {
-      visibility: hidden;
-    }
-  }
+      margin-inline-end: 0;
 
-  .app-topbar__branch {
-    grid-area: branch;
-    display: flex;
-    align-items: center;
-    gap: var(--p-app-space-2);
-    min-inline-size: 0;
-
-    label {
-      flex: none;
-      font-size: var(--p-app-text-sm);
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--p-text-muted-color);
-    }
-
-    p-select {
-      inline-size: 15rem;
-      max-inline-size: 100%;
-      min-inline-size: 0;
-    }
-
-    @include bp.below(md) {
-      label {
+      .app-logo__word {
         position: absolute;
         inline-size: 1px;
         block-size: 1px;
@@ -172,12 +108,124 @@
         white-space: nowrap;
       }
     }
+  }
+
+  // Breadcrumb: one line; every crumb is cut with its own ellipsis and keeps its full text in
+  // `title`. The crumbs shrink at the same rate, so the longest gives way most: the group and the
+  // list page (at most 12rem) down to their first letter, the current page or record only down to
+  // 8rem, or 40% of a shorter line so the others keep theirs. (A faster rate for the list page would
+  // cut it to one letter beside a long record already at 1200px.)
+  .app-topbar__context {
+    grid-area: context;
+    min-inline-size: 0;
+    padding-inline-start: var(--p-app-space-1);
 
     @include bp.below(sm) {
-      p-select {
-        inline-size: 100%;
-      }
+      visibility: hidden;
     }
+  }
+
+  .app-breadcrumb {
+    // The list clips its crumbs: inner room for the focus ring (width and offset) of the list-page
+    // link, taken back by the margin so the line does not move.
+    --app-breadcrumb-ring-room: calc(var(--p-focus-ring-width) + var(--p-focus-ring-offset));
+
+    display: flex;
+    align-items: center;
+    gap: var(--p-app-space-2);
+    min-inline-size: 0;
+    margin: calc(-1 * var(--app-breadcrumb-ring-room));
+    padding: var(--app-breadcrumb-ring-room);
+    overflow: hidden;
+    font-size: var(--p-app-text-base);
+    white-space: nowrap;
+    list-style: none;
+
+    > li {
+      display: flex;
+      align-items: center;
+      gap: var(--p-app-space-2);
+    }
+  }
+
+  .app-breadcrumb__group,
+  .app-breadcrumb__ancestor {
+    min-inline-size: 2em;
+    max-inline-size: 12rem;
+  }
+
+  // Its separator (0.75rem) and the gap come before the first letter.
+  .app-breadcrumb__ancestor {
+    min-inline-size: calc(0.75rem + var(--p-app-space-2) + 2em);
+  }
+
+  .app-breadcrumb__current {
+    min-inline-size: min(8rem, 40%);
+  }
+
+  .app-breadcrumb__text {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .app-breadcrumb__group .app-breadcrumb__text {
+    color: var(--p-text-muted-color);
+  }
+
+  .app-breadcrumb__ancestor a {
+    color: var(--p-text-muted-color);
+    text-decoration: none;
+    text-underline-offset: 0.2em;
+
+    &:hover {
+      color: var(--p-text-color);
+      text-decoration: underline;
+    }
+  }
+
+  .app-breadcrumb__current .app-breadcrumb__text {
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+
+  .app-breadcrumb__separator {
+    flex: none;
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+    color: var(--p-text-muted-color);
+  }
+
+  // Narrow screens drop the group label and the separator after it.
+  @include bp.below(md) {
+    .app-breadcrumb__group {
+      display: none;
+    }
+
+    .app-breadcrumb__group + li .app-breadcrumb__separator {
+      display: none;
+    }
+
+    .app-breadcrumb__group + .app-breadcrumb__ancestor {
+      min-inline-size: 2em;
+    }
+  }
+
+  // Branch menu: the name, shortened on small screens.
+  .app-topbar__branch {
+    grid-area: branch;
+    min-inline-size: 0;
+    max-inline-size: 16rem;
+
+    @include bp.below(sm) {
+      max-inline-size: 9rem;
+    }
+  }
+
+  .app-topbar__branch-name {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .app-topbar__actions {
@@ -190,21 +238,60 @@
     border-inline-start: 1px solid var(--p-content-border-color);
 
     @include bp.below(sm) {
+      gap: 0;
       border-inline-start: 0;
       padding-inline-start: 0;
+      margin-inline-start: 0;
     }
   }
 
-  // Interface-language menu: compact, labels in their own language.
-  .app-topbar__language {
-    min-inline-size: 8.5rem;
-    font-size: var(--p-app-text-sm);
+  // Language menu: the name in its own language, the code on phones.
+  .app-topbar__language-code {
+    display: none;
+  }
 
-    @include bp.below(sm) {
-      min-inline-size: 0;
+  @include bp.below(sm) {
+    .app-topbar__language-label {
+      display: none;
+    }
+
+    .app-topbar__language-code {
+      display: inline;
     }
   }
 
+  .app-topbar__bell {
+    position: relative;
+  }
+
+  // The unread count over the bell; the button's name carries it for assistive technology.
+  .app-topbar__badge {
+    position: absolute;
+    inset-block-start: 2px;
+    inset-inline-end: 2px;
+    min-inline-size: 1rem;
+    block-size: 1rem;
+    padding-inline: 3px;
+    border-radius: 999px;
+    background: var(--p-app-tone-danger-solid);
+    color: var(--p-app-frame-background);
+    font-size: 0.625rem;
+    font-weight: 700;
+    line-height: 1rem;
+    text-align: center;
+  }
+
+  .app-topbar__avatar {
+    display: grid;
+    place-items: center;
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+    border-radius: 999px;
+    background: var(--p-primary-color);
+    color: var(--p-primary-contrast-color);
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
   // Main: the rest of the frame.
   .app-main {
     grid-area: main;

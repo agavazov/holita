@@ -9,9 +9,16 @@ import { FormatNumberPipe, FormatRelativePipe } from '../../../ui/format/format.
 import { interpolate } from '../../../ui/i18n/messages';
 import { KpiStrip } from '../../../ui/kpi/kpi-strip';
 import { KpiTile } from '../../../ui/kpi/kpi-tile';
+import {
+  type ListAction,
+  type ListActionRequest,
+  type ListRecord,
+  listRecord,
+  trackById,
+} from '../../../ui/list/list-actions';
 import { injectSortReady, listQuery, type ListQuery } from '../../../ui/list/list-query';
 import { PageHeader } from '../../../ui/page-header/page-header';
-import { RowActions, type RowAction } from '../../../ui/row-actions/row-actions';
+import { RowActions } from '../../../ui/row-actions/row-actions';
 import { TablePanel, type TableNotice } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { toneSeverity } from '../../../ui/tones';
@@ -20,6 +27,7 @@ import { devicesText } from './i18n/messages';
 
 export const deviceStatuses = ['ONLINE', 'OFFLINE', 'IN_STOCK'] as const;
 export type DeviceStatusCode = (typeof deviceStatuses)[number];
+export type DeviceActionId = 'edit' | 'restart' | 'vehicle';
 
 /** The firmware every device should run; older ones are flagged. */
 export const currentFirmware = '03.29.02';
@@ -54,8 +62,9 @@ export const deviceStatusTones: Record<DeviceStatusCode, StatusTone> = {
 };
 
 /**
- * The Devices list page: connection, installation, signal, voltage and firmware of the trackers;
- * a row opens straight into its form. Presentation only: the host owns data and editing.
+ * The Devices list page: connection, installation, signal, voltage and firmware of the trackers,
+ * with row actions and bulk actions; a row opens straight into its form. Presentation only: the
+ * host owns data and editing.
  */
 @Component({
   selector: 'holita-devices-view',
@@ -85,14 +94,13 @@ export class DevicesView {
   readonly state = input.required<ListQuery>();
   readonly kpis = input<DeviceKpis | null>(null);
   readonly models = input<readonly string[]>([]);
-  readonly selection = input<readonly string[]>([]);
+  readonly selection = input<readonly ListRecord<DeviceActionId>[]>([]);
   readonly notice = input<TableNotice | null>(null);
   readonly stateChange = output<ListQuery>();
   readonly create = output();
-  readonly edit = output<string>();
-  readonly rowAction = output<{ readonly action: string; readonly id: string }>();
-  readonly selectionChange = output<readonly string[]>();
-  readonly bulkAction = output<string>();
+  /** Row and bulk actions alike, with the IDs they apply to. */
+  readonly action = output<ListActionRequest<DeviceActionId>>();
+  readonly selectionChange = output<readonly ListRecord<DeviceActionId>[]>();
   readonly retry = output();
   readonly dismissNotice = output();
 
@@ -134,23 +142,34 @@ export class DevicesView {
       },
     ];
   });
-  protected readonly rowActions = computed(() => {
-    const text = this.text().rowActions;
-    return new Map<string, readonly RowAction[]>(
-      this.rows().map((row) => [
-        row.id,
-        [
-          { id: 'edit', label: text.edit },
-          { id: 'restart', label: text.restart, disabled: row.status !== 'ONLINE' },
-          { id: 'vehicle', label: text.vehicle, disabled: row.vehicleId === null },
-        ],
-      ]),
-    );
+  /** The list's actions, once for the row menu and the bulk bar. */
+  protected readonly actions = computed<readonly ListAction<DeviceActionId, DeviceRow>[]>(() => {
+    const text = this.text().actions;
+    return [
+      { id: 'edit', label: text.edit },
+      {
+        id: 'restart',
+        label: text.restart,
+        bulk: true,
+        confirm: text.confirmRestart,
+        appliesTo: (row) => row.status === 'ONLINE',
+      },
+      { id: 'vehicle', label: text.vehicle, appliesTo: (row) => row.vehicleId !== null },
+    ];
   });
+  private readonly records = computed(
+    () => new Map(this.rows().map((row) => [row.id, this.toRecord(row)])),
+  );
+  protected readonly trackById = trackById;
   /** PrimeNG's table takes a mutable array. */
   protected readonly tableRows = computed(() => [...this.rows()]);
-  protected readonly selectedRows = computed(() =>
-    this.rows().filter((row) => this.selection().includes(row.id)),
+  protected readonly selectedRows = computed(() => {
+    const selected = new Set(this.selection().map((record) => record.id));
+    return this.rows().filter((row) => selected.has(row.id));
+  });
+  /** The selected rows as they are now, so the bulk bar and its question use current rules. */
+  protected readonly selectedRecords = computed(() =>
+    this.selectedRows().map((row) => this.recordOf(row)),
   );
   protected readonly page = computed(() => ({
     page: this.state().page,
@@ -176,37 +195,47 @@ export class DevicesView {
     return `app-meter app-meter--${bars >= 3 ? 'success' : bars === 2 ? 'warn' : 'danger'}`;
   }
 
-  protected actionsOf(row: DeviceRow): readonly RowAction[] {
-    return this.rowActions().get(row.id) ?? [];
-  }
-
   protected label(template: string, row: DeviceRow): string {
     return interpolate(template, { imei: row.imei });
   }
 
+  protected recordOf(row: DeviceRow): ListRecord<DeviceActionId> {
+    return this.records().get(row.id) ?? this.toRecord(row);
+  }
+
   protected changeSearch(search: string): void {
-    this.stateChange.emit(listQuery.search(this.state(), search));
+    this.changeQuery(listQuery.search(this.state(), search));
   }
 
   protected changeConditions(conditions: readonly FilterCondition[]): void {
-    this.stateChange.emit(listQuery.conditions(this.state(), conditions));
+    this.changeQuery(listQuery.conditions(this.state(), conditions));
   }
 
   protected changePage(page: { page: number; pageSize: number }): void {
-    this.stateChange.emit(listQuery.page(this.state(), page));
+    this.changeQuery(listQuery.page(this.state(), page));
   }
 
   protected clearFilters(): void {
-    this.stateChange.emit(listQuery.cleared(this.state()));
+    this.changeQuery(listQuery.cleared(this.state()));
   }
 
   protected sort(event: TableLazyLoadEvent): void {
     if (!this.sortReady()) return;
     const next = listQuery.sorted(this.state(), event);
-    if (next) this.stateChange.emit(next);
+    if (next) this.changeQuery(next);
   }
 
   protected select(rows: readonly DeviceRow[] | null): void {
-    this.selectionChange.emit((rows ?? []).map((row) => row.id));
+    this.selectionChange.emit((rows ?? []).map((row) => this.recordOf(row)));
+  }
+
+  /** The selection belongs to the rows on screen, so any new query clears it. */
+  private changeQuery(query: ListQuery): void {
+    this.stateChange.emit(query);
+    if (this.selection().length) this.selectionChange.emit([]);
+  }
+
+  private toRecord(row: DeviceRow): ListRecord<DeviceActionId> {
+    return listRecord(this.actions(), row, row.id, row.imei);
   }
 }

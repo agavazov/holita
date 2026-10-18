@@ -1,21 +1,28 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
   type ElementRef,
   inject,
+  Injector,
   input,
   output,
+  signal,
   viewChild,
 } from '@angular/core';
 import { Times } from '@primeicons/angular/times';
+import { ConfirmationService } from 'primeng/api';
 import { ButtonDirective } from 'primeng/button';
+import { ConfirmDialog } from 'primeng/confirmdialog';
 import { Message } from 'primeng/message';
 import { Paginator, type PaginatorState } from 'primeng/paginator';
 import { Skeleton } from 'primeng/skeleton';
+import { confirmAction, confirmDialogPt } from '../confirm';
 import { EmptyState } from '../empty-state/empty-state';
 import { formatNumber, localeOf } from '../format/format';
 import { interpolate, uiMessages } from '../i18n/messages';
+import type { ListActionBase, ListActionRequest, ListRecord } from '../list/list-actions';
 import { UI_LANGUAGE } from '../ui-language';
 import type { TableView } from './table-view';
 
@@ -30,20 +37,33 @@ export interface TablePage {
   readonly total: number;
 }
 
+/** The records a confirmation names: up to this many, then a count. */
+const namedRecords = 8;
+
+interface PendingConfirm {
+  readonly detail: string | null;
+  readonly named: readonly string[];
+  readonly more: number;
+  readonly skipped: number;
+}
+
 let nextId = 0;
 
 /**
- * A list panel: heading and count, the six list states, refresh bar, notices, floating bulk bar
- * and the paginator of the standard list contract. The host projects its `p-table`.
+ * A list panel: heading and count, the six list states, refresh bar, notices, the paginator of
+ * the standard list contract, and the list's actions. The host projects its `p-table`; row menus
+ * and record links call `run()`, the bulk bar offers the `bulk` actions for the selection, and
+ * both confirm the same way before `action` is emitted with the IDs the action applies to.
  */
 @Component({
   selector: 'holita-table-panel',
-  imports: [ButtonDirective, Message, Paginator, Skeleton, EmptyState, Times],
+  imports: [ButtonDirective, ConfirmDialog, Message, Paginator, Skeleton, EmptyState, Times],
+  providers: [ConfirmationService],
   templateUrl: './table-panel.html',
   styleUrl: './table-panel.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class TablePanel {
+export class TablePanel<A extends string = string> {
   readonly heading = input.required<string>();
   readonly headingLevel = input<2 | 3>(2);
   readonly total = input<number | null>(null);
@@ -53,11 +73,15 @@ export class TablePanel {
   readonly emptyTitle = input<string | null>(null);
   readonly emptyDescription = input<string | null>(null);
   readonly notice = input<TableNotice | null>(null);
-  readonly selectedCount = input(0);
+  /** The list's actions, defined once for row menus and the bulk bar. */
+  readonly actions = input<readonly ListActionBase<A>[]>([]);
+  /** The selected rows of the shown page. */
+  readonly selection = input<readonly ListRecord<A>[]>([]);
   readonly selectionProgress = input<string | null>(null);
   readonly page = input<TablePage | null>(null);
   readonly pageSizes = input<readonly number[]>([10, 20, 50, 100]);
   readonly skeletonRows = input<number | null>(null);
+  readonly action = output<ListActionRequest<A>>();
   readonly retry = output();
   readonly clearFilters = output();
   readonly dismissNotice = output();
@@ -66,9 +90,15 @@ export class TablePanel {
 
   protected readonly id = `table-panel-${String(nextId++)}`;
   private readonly language = inject(UI_LANGUAGE);
+  private readonly confirmation = inject(ConfirmationService);
+  private readonly injector = inject(Injector);
   private readonly headingElement = viewChild<ElementRef<HTMLElement>>('headingElement');
   protected readonly text = computed(() => uiMessages[this.language()]);
   protected readonly locale = computed(() => localeOf(this.language()));
+  protected readonly confirmPt = computed(() =>
+    confirmDialogPt(this.language(), `${this.id}-confirm`),
+  );
+  protected readonly pending = signal<PendingConfirm | null>(null);
   /** No count while the first answer is loading or failed: it would describe rows not shown. */
   protected readonly totalText = computed(() => {
     const total = this.total();
@@ -85,44 +115,134 @@ export class TablePanel {
   });
   protected readonly selectionText = computed(() =>
     interpolate(this.text().table.selected, {
-      count: formatNumber(this.selectedCount(), this.language()),
+      count: formatNumber(this.selection().length, this.language()),
     }),
   );
-  protected readonly pageSizeOptions = computed(() => [...this.pageSizes()]);
+  /** The bulk bar: each bulk action with the number of selected records it applies to. */
+  protected readonly bulkActions = computed(() =>
+    this.actions()
+      .filter((action) => action.bulk)
+      .map((action) => ({
+        action,
+        applicable: this.selection().filter((record) => !record.unavailable.includes(action.id))
+          .length,
+      })),
+  );
+  /** The configured sizes plus the current one, so the dropdown always shows the size in use. */
+  protected readonly pageSizeOptions = computed(() => {
+    const current = this.page()?.pageSize;
+    const sizes = new Set(this.pageSizes());
+    if (current) sizes.add(current);
+    return [...sizes].sort((left, right) => left - right);
+  });
   protected readonly first = computed(() => {
     const page = this.page();
     return page ? (page.page - 1) * page.pageSize : 0;
   });
-  /** No footer without rows: an empty or unmatched list has nothing to page through. */
+  /** The footer and its paginator whenever rows are shown; none for empty or unmatched lists. */
   protected readonly showFooter = computed(() => {
     const page = this.page();
     return !!page && page.total > 0 && this.showTable();
   });
-  /** Page controls only when the rows do not fit on one page; otherwise only the range. */
-  protected readonly showPager = computed(() => {
+  /** Page links and first/last only when the rows do not fit on one page. */
+  protected readonly multiPage = computed(() => {
     const page = this.page();
     return !!page && page.total > page.pageSize;
   });
-  protected readonly rangeText = computed(() => {
-    const page = this.page();
-    if (!page) return '';
-    const first = Math.min(this.first() + 1, page.total);
-    const last = Math.min(this.first() + page.pageSize, page.total);
-    return interpolate(this.text().table.pageReport, {
-      first: formatNumber(first, this.language()),
-      last: formatNumber(last, this.language()),
-      totalRecords: formatNumber(page.total, this.language()),
-    });
-  });
 
-  /** Moves focus to the panel heading (after bulk actions). */
+  /** Moves focus to the panel heading (after rows or the bulk bar went away). */
   focusHeading(): void {
     this.headingElement()?.nativeElement.focus();
+  }
+
+  /**
+   * Runs one of the list's actions on records (a row, or the selection from the bulk bar):
+   * leaves out records it does not apply to, confirms when the action asks, then emits. Focus
+   * returns to `origin` after Cancel and after a confirmed row action; a destructive or bulk
+   * action moves it to the heading, because the row or the bar is about to disappear, and so
+   * does any row action whose change took `origin` out of the list (e.g. under a filter).
+   */
+  async run(
+    actionId: A,
+    records: readonly ListRecord<A>[],
+    origin: EventTarget | null,
+    source: 'row' | 'bulk' = 'row',
+  ): Promise<void> {
+    const action = this.actions().find((candidate) => candidate.id === actionId);
+    if (!action) return;
+    const applicable = records.filter((record) => !record.unavailable.includes(action.id));
+    if (!applicable.length) return;
+    const element = origin instanceof HTMLElement ? origin : null;
+    if (action.confirm) {
+      const accepted = await this.ask(action, applicable, records.length - applicable.length);
+      if (!accepted) {
+        this.afterRender(() => {
+          if (element?.isConnected) element.focus();
+          else this.focusHeading();
+        });
+        return;
+      }
+    }
+    this.action.emit({ action: action.id, ids: applicable.map((record) => record.id) });
+    if (action.danger || source === 'bulk') {
+      this.afterRender(() => {
+        this.focusHeading();
+      });
+      return;
+    }
+    this.afterRender(() => {
+      if (!element) return;
+      if (!element.isConnected) this.focusHeading();
+      // A row the change re-sorted is moved in the DOM, which drops its focus to the body.
+      else if (action.confirm || element.ownerDocument.activeElement === element.ownerDocument.body)
+        element.focus();
+    });
   }
 
   protected changePage(event: PaginatorState): void {
     const rows = event.rows ?? this.page()?.pageSize ?? 20;
     const page = event.page ?? Math.floor((event.first ?? 0) / rows);
     this.pageChange.emit({ page: page + 1, pageSize: rows });
+  }
+
+  private ask(
+    action: ListActionBase<A>,
+    records: readonly ListRecord<A>[],
+    skipped: number,
+  ): Promise<boolean> {
+    const confirm = action.confirm;
+    if (!confirm) return Promise.resolve(true);
+    // One record is named in the question; several are listed below it.
+    const name = records.length === 1 ? records[0]?.label : undefined;
+    this.pending.set({
+      detail: confirm.detail ?? null,
+      named: name === undefined ? records.slice(0, namedRecords).map((record) => record.label) : [],
+      more: name === undefined ? Math.max(records.length - namedRecords, 0) : 0,
+      skipped,
+    });
+    return confirmAction(this.confirmation, this.language(), {
+      header:
+        name === undefined
+          ? interpolate(confirm.many, { count: formatNumber(records.length, this.language()) })
+          : interpolate(confirm.one, { name }),
+      acceptLabel: confirm.accept,
+      danger: action.danger ?? false,
+    });
+  }
+
+  protected moreText(more: number): string {
+    return interpolate(this.text().table.moreRecords, {
+      count: formatNumber(more, this.language()),
+    });
+  }
+
+  protected skippedText(skipped: number): string {
+    return interpolate(this.text().table.skippedRecords, {
+      count: formatNumber(skipped, this.language()),
+    });
+  }
+
+  private afterRender(callback: () => void): void {
+    afterNextRender(callback, { injector: this.injector });
   }
 }

@@ -89,3 +89,14 @@ if (!('ResizeObserver' in globalThis))
     writable: true,
     value: TestResizeObserver,
   });
+
+// jsdom has no scrollIntoView; MenuButton keeps the keyboard-focused option in view. Nothing is
+// laid out in jsdom, so there is nothing to scroll.
+if (!('scrollIntoView' in Element.prototype))
+  Object.defineProperty(Element.prototype, 'scrollIntoView', {
+    configurable: true,
+    writable: true,
+    value: (): void => {
+      /* no layout in jsdom */
+    },
+  });

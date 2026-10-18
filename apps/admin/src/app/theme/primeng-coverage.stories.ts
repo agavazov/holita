@@ -34,7 +34,7 @@ import { ToggleButton } from 'primeng/togglebutton';
 import { ToggleSwitch } from 'primeng/toggleswitch';
 import { Tooltip } from 'primeng/tooltip';
 import { expect, waitFor, within } from 'storybook/test';
-import { confirmDestructive, confirmDialogPt } from '../ui/confirm';
+import { confirmAction, confirmDialogPt } from '../ui/confirm';
 import { selectMultiplePt } from '../ui/select-multiple';
 import { registeredComponents } from './holita-preset';
 
@@ -207,7 +207,7 @@ class PrimeNgOverlays {
   }
 }
 
-/** The modal confirmation every destructive action uses (`confirmDestructive`). */
+/** The modal confirmation of destructive actions (`confirmAction` with `danger`). */
 @Component({
   selector: 'holita-primeng-confirm',
   imports: [ConfirmDialog],
@@ -220,10 +220,11 @@ class PrimeNgConfirm {
 
   constructor() {
     afterNextRender(() => {
-      void confirmDestructive(this.confirmation, 'en', {
-        header: 'Delete vehicles',
-        message: 'Delete the 3 selected vehicles?',
+      void confirmAction(this.confirmation, 'en', {
+        header: 'Delete 3 vehicles?',
+        message: 'Their trips stay in reports.',
         acceptLabel: 'Delete',
+        danger: true,
       });
     });
   }

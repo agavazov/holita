@@ -64,7 +64,12 @@
     "bulkActions": "Действия за избраните записи",
     "clearSelection": "Изчисти избора",
     "pageReport": "{first}–{last} от {totalRecords}",
-    "rowActions": "Действия за {name}"
+    "rowActions": "Действия за {name}",
+    "moreRecords": "и още {count}",
+    "skippedRecords": "Избрани записи, за които действието не важи, остават непроменени: {count}."
+  },
+  "menu": {
+    "current": "текущ избор"
   },
   "filters": {
     "addFilter": "Добави филтър",

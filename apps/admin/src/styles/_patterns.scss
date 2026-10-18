@@ -339,8 +339,19 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
     white-space: nowrap;
   }
 
+  // Popup menus (MenuButton `menuClass`): a capped, scrolling list and a wider panel.
+  .p-menu.app-menu-scroll .p-menu-list {
+    max-block-size: min(24rem, 60vh);
+    overflow-y: auto;
+  }
+
+  .p-menu.app-menu-wide {
+    inline-size: min(24rem, calc(100vw - 2rem));
+  }
+
   // Destructive entries of popup menus (row actions are appended to the body).
   .p-menu .app-menu-danger .p-menu-item-content,
+  .p-menu .app-menu-danger .p-menu-item-link,
   .p-menu .app-menu-danger .p-menu-item-icon {
     color: var(--p-app-tone-danger-color);
   }

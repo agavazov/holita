@@ -1,20 +1,22 @@
 import { Component, computed, DestroyRef, inject, linkedSignal, signal } from '@angular/core';
-import { ConfirmationService } from 'primeng/api';
-import { ConfirmDialog } from 'primeng/confirmdialog';
 import {
   GroupDrawer,
   type GroupField,
   type GroupForm,
 } from '../../../app/features/fleet/settings/group-drawer';
-import { type GroupRow, GroupsView } from '../../../app/features/fleet/settings/groups-view';
+import {
+  type GroupActionId,
+  type GroupRow,
+  GroupsView,
+} from '../../../app/features/fleet/settings/groups-view';
 import { settingsText } from '../../../app/features/fleet/settings/i18n/messages';
-import { confirmDestructive, confirmDialogPt } from '../../../app/ui/confirm';
 import { interpolate } from '../../../app/ui/i18n/messages';
+import type { ListActionRequest } from '../../../app/ui/list/list-actions';
 import type { TableNotice } from '../../../app/ui/table-panel/table-panel';
 import { tableView } from '../../../app/ui/table-panel/table-view';
 import { UI_LANGUAGE } from '../../../app/ui/ui-language';
 import { type SampleGroup, sampleGroups, sampleVehicles } from '../fleet-samples';
-import { injectQueryParams, saveDelayMs, scenarioOf } from '../scenario';
+import { injectClearDrawer, injectQueryParams, saveDelayMs, scenarioOf } from '../scenario';
 
 /**
  * Story-only host of the Vehicle groups example: a short settings list over the sample groups,
@@ -22,16 +24,14 @@ import { injectQueryParams, saveDelayMs, scenarioOf } from '../scenario';
  */
 @Component({
   selector: 'holita-example-groups-page',
-  imports: [GroupsView, GroupDrawer, ConfirmDialog],
-  providers: [ConfirmationService],
+  imports: [GroupsView, GroupDrawer],
   template: `
     <holita-groups-view
       [rows]="rows()"
       [view]="view()"
       [notice]="notice()"
       (create)="openEditor(null)"
-      (edit)="openEditor($event)"
-      (remove)="remove($event)"
+      (action)="run($event)"
       (retry)="failed.set(false)"
       (dismissNotice)="notice.set(null)"
     />
@@ -41,16 +41,15 @@ import { injectQueryParams, saveDelayMs, scenarioOf } from '../scenario';
         [saving]="saving()"
         [fieldErrors]="fieldErrors()"
         (save)="save($event)"
-        (closed)="editor.set(null)"
+        (closed)="closeEditor()"
       />
     }
-    <p-confirmdialog [pt]="confirmPt" [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }" />
   `,
 })
 export class GroupsPage {
   private readonly language = inject(UI_LANGUAGE);
-  private readonly confirmation = inject(ConfirmationService);
   private readonly query = injectQueryParams();
+  private readonly clearDrawer = injectClearDrawer();
   private readonly scenario = computed(() =>
     scenarioOf(this.query(), ['loading', 'empty', 'error']),
   );
@@ -58,7 +57,6 @@ export class GroupsPage {
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
   private nextId = 1;
 
-  protected readonly confirmPt = confirmDialogPt(this.language());
   protected readonly groups = linkedSignal<readonly SampleGroup[]>(() =>
     this.scenario() === 'empty' ? [] : sampleGroups,
   );
@@ -101,6 +99,24 @@ export class GroupsPage {
     this.editor.set({ id: group?.id ?? null, form: group ?? null });
   }
 
+  protected closeEditor(): void {
+    this.editor.set(null);
+    this.clearDrawer();
+  }
+
+  /** Row actions: the view already confirmed them and left out groups they do not apply to. */
+  protected run({ action, ids }: ListActionRequest<GroupActionId>): void {
+    const [id] = ids;
+    switch (action) {
+      case 'edit':
+        if (id) this.openEditor(id);
+        return;
+      case 'delete':
+        this.delete(ids);
+        return;
+    }
+  }
+
   protected save(form: GroupForm): void {
     const editor = this.editor();
     if (!editor || this.saving()) return;
@@ -122,23 +138,17 @@ export class GroupsPage {
       this.groups.update((groups) =>
         editor.id ? groups.map((item) => (item.id === id ? group : item)) : [...groups, group],
       );
-      this.editor.set(null);
+      this.closeEditor();
       const template = editor.id ? this.text().saved : this.text().created;
       this.notice.set({ severity: 'success', text: interpolate(template, { name: form.name }) });
     }, saveDelayMs);
   }
 
-  protected async remove(id: string): Promise<void> {
-    const group = this.groups().find((item) => item.id === id);
-    if (!group) return;
-    const text = this.text();
-    const confirmed = await confirmDestructive(this.confirmation, this.language(), {
-      header: text.confirmDeleteTitle,
-      message: interpolate(text.confirmDeleteMessage, { name: group.name }),
-      acceptLabel: text.deleteAction,
+  private delete(ids: readonly string[]): void {
+    this.groups.update((groups) => groups.filter((item) => !ids.includes(item.id)));
+    this.notice.set({
+      severity: 'success',
+      text: interpolate(this.text().deleted, { count: ids.length }),
     });
-    if (!confirmed) return;
-    this.groups.update((groups) => groups.filter((item) => item.id !== id));
-    this.notice.set({ severity: 'success', text: interpolate(text.deleted, { name: group.name }) });
   }
 }

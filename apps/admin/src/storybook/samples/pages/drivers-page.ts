@@ -1,6 +1,4 @@
 import { Component, computed, DestroyRef, inject, linkedSignal, signal } from '@angular/core';
-import { ConfirmationService } from 'primeng/api';
-import { ConfirmDialog } from 'primeng/confirmdialog';
 import {
   type DriverDetails,
   DriverDrawer,
@@ -10,13 +8,14 @@ import {
 import {
   daysUntil,
   documentWarningDays,
+  type DriverActionId,
   type DriverKpis,
   type DriverRow,
   DriversView,
 } from '../../../app/features/fleet/drivers/drivers-view';
 import { driversText } from '../../../app/features/fleet/drivers/i18n/messages';
-import { confirmDestructive, confirmDialogPt } from '../../../app/ui/confirm';
 import { interpolate } from '../../../app/ui/i18n/messages';
+import type { ListActionRequest, ListRecord } from '../../../app/ui/list/list-actions';
 import type { ListQuery } from '../../../app/ui/list/list-query';
 import type { TableNotice } from '../../../app/ui/table-panel/table-panel';
 import { UI_LANGUAGE } from '../../../app/ui/ui-language';
@@ -28,7 +27,7 @@ import {
   type SampleListDefinition,
   sampleTableView,
 } from '../sample-list';
-import { injectQueryParams, saveDelayMs, scenarioOf } from '../scenario';
+import { injectClearDrawer, injectQueryParams, saveDelayMs, scenarioOf } from '../scenario';
 
 const dataAsOf = new Date(sampleNow).toISOString();
 
@@ -82,8 +81,7 @@ function kpisOf(drivers: readonly SampleDriver[]): DriverKpis {
  */
 @Component({
   selector: 'holita-example-drivers-page',
-  imports: [DriversView, DriverDrawer, ConfirmDialog],
-  providers: [ConfirmationService],
+  imports: [DriversView, DriverDrawer],
   template: `
     <holita-drivers-view
       [branchName]="branchName"
@@ -97,10 +95,8 @@ function kpisOf(drivers: readonly SampleDriver[]): DriverKpis {
       [notice]="notice()"
       (stateChange)="state.set($event)"
       (create)="openDrawer(null, true)"
-      (open)="openDrawer($event, false)"
-      (rowAction)="rowAction($event.action, $event.id)"
+      (action)="run($event)"
       (selectionChange)="selection.set($event)"
-      (bulkAction)="bulkAction($event)"
       (retry)="failed.set(false)"
       (dismissNotice)="notice.set(null)"
     />
@@ -113,16 +109,15 @@ function kpisOf(drivers: readonly SampleDriver[]): DriverKpis {
         [saveError]="saveError()"
         [fieldErrors]="fieldErrors()"
         (save)="save($event)"
-        (closed)="drawer.set(null)"
+        (closed)="closeDrawer()"
       />
     }
-    <p-confirmdialog [pt]="confirmPt" [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }" />
   `,
 })
 export class DriversPage {
   private readonly language = inject(UI_LANGUAGE);
-  private readonly confirmation = inject(ConfirmationService);
   private readonly query = injectQueryParams();
+  private readonly clearDrawer = injectClearDrawer();
   private readonly scenario = computed(() =>
     scenarioOf(this.query(), ['loading', 'empty', 'error', 'save-error']),
   );
@@ -132,13 +127,12 @@ export class DriversPage {
 
   protected readonly branchName = fixtureBranches[0].name;
   protected readonly dataAsOf = dataAsOf;
-  protected readonly confirmPt = confirmDialogPt(this.language());
 
   protected readonly drivers = linkedSignal<readonly SampleDriver[]>(() =>
     this.scenario() === 'empty' ? [] : sampleDrivers,
   );
   protected readonly state = signal<ListQuery>(initialQuery({ field: 'name', direction: 'asc' }));
-  protected readonly selection = signal<readonly string[]>([]);
+  protected readonly selection = signal<readonly ListRecord<DriverActionId>[]>([]);
   protected readonly notice = signal<TableNotice | null>(null);
   protected readonly failed = linkedSignal(() => this.scenario() === 'error');
   private readonly failNextSave = linkedSignal(() => this.scenario() === 'save-error');
@@ -185,27 +179,28 @@ export class DriversPage {
     this.drawer.set({ id, editing });
   }
 
-  protected rowAction(action: string, id: string): void {
-    switch (action) {
-      case 'view':
-        this.openDrawer(id, false);
-        return;
-      case 'edit':
-        this.openDrawer(id, true);
-        return;
-      case 'deactivate':
-        this.deactivate([id]);
-        return;
-      case 'delete':
-        void this.delete([id]);
-        return;
-    }
+  protected closeDrawer(): void {
+    this.drawer.set(null);
+    this.clearDrawer();
   }
 
-  protected bulkAction(action: string): void {
-    const ids = this.selection();
-    if (action === 'deactivate') this.deactivate(ids);
-    if (action === 'delete') void this.delete(ids);
+  /** Row and bulk actions alike: the view already confirmed them and left out other records. */
+  protected run({ action, ids }: ListActionRequest<DriverActionId>): void {
+    const [id] = ids;
+    switch (action) {
+      case 'view':
+        if (id) this.openDrawer(id, false);
+        return;
+      case 'edit':
+        if (id) this.openDrawer(id, true);
+        return;
+      case 'deactivate':
+        this.deactivate(ids);
+        return;
+      case 'delete':
+        this.delete(ids);
+        return;
+    }
   }
 
   protected save(form: DriverForm): void {
@@ -259,26 +254,19 @@ export class DriversPage {
     this.drivers.update((drivers) =>
       drivers.map((item) => (ids.includes(item.id) ? { ...item, status: 'INACTIVE' } : item)),
     );
-    this.selection.set([]);
+    this.selection.update((selection) => selection.filter((record) => !ids.includes(record.id)));
     this.notice.set({
       severity: 'success',
       text: interpolate(this.text().notices.deactivated, { count: ids.length }),
     });
   }
 
-  private async delete(ids: readonly string[]): Promise<void> {
-    const text = this.text();
-    const confirmed = await confirmDestructive(this.confirmation, this.language(), {
-      header: text.confirmDelete.title,
-      message: interpolate(text.confirmDelete.message, { count: ids.length }),
-      acceptLabel: text.rowActions.delete,
-    });
-    if (!confirmed) return;
+  private delete(ids: readonly string[]): void {
     this.drivers.update((drivers) => drivers.filter((item) => !ids.includes(item.id)));
-    this.selection.update((selection) => selection.filter((id) => !ids.includes(id)));
+    this.selection.update((selection) => selection.filter((record) => !ids.includes(record.id)));
     this.notice.set({
       severity: 'success',
-      text: interpolate(text.notices.deleted, { count: ids.length }),
+      text: interpolate(this.text().notices.deleted, { count: ids.length }),
     });
   }
 }

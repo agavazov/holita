@@ -14,15 +14,24 @@ import { formatDateTime, formatNumber } from '../../../ui/format/format';
 import { interpolate } from '../../../ui/i18n/messages';
 import { KpiStrip } from '../../../ui/kpi/kpi-strip';
 import { KpiTile } from '../../../ui/kpi/kpi-tile';
+import {
+  type ListAction,
+  type ListActionRequest,
+  type ListRecord,
+  listRecord,
+  trackById,
+} from '../../../ui/list/list-actions';
 import { injectSortReady, listQuery, type ListQuery } from '../../../ui/list/list-query';
 import { PageHeader } from '../../../ui/page-header/page-header';
-import { RowActions, type RowAction } from '../../../ui/row-actions/row-actions';
+import { RowActions } from '../../../ui/row-actions/row-actions';
 import { TablePanel } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { toneSeverity } from '../../../ui/tones';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
 import { scoreTone } from '../drivers/drivers-view';
 import { tripsText } from './i18n/messages';
+
+export type TripActionId = 'open' | 'vehicle';
 
 export interface TripEvent {
   readonly at: string;
@@ -70,7 +79,8 @@ export function worstTone(events: readonly TripEvent[]): StatusTone {
 
 /**
  * The Trips list page: a read-only list (no selection or bulk actions). A row opens the trip in
- * a view drawer with its timeline. Presentation only: the host owns data and list state.
+ * a view drawer with its timeline, or its vehicle's profile from the row menu. Presentation only:
+ * the host owns data and list state.
  */
 @Component({
   selector: 'holita-trips-view',
@@ -101,8 +111,8 @@ export class TripsView {
   readonly vehicles = input<readonly TripOption[]>([]);
   readonly drivers = input<readonly TripOption[]>([]);
   readonly stateChange = output<ListQuery>();
-  readonly open = output<string>();
-  readonly rowAction = output<{ readonly action: string; readonly id: string }>();
+  /** Row actions, with the ID of the trip. */
+  readonly action = output<ListActionRequest<TripActionId>>();
   readonly retry = output();
 
   private readonly language = inject(UI_LANGUAGE);
@@ -152,10 +162,18 @@ export class TripsView {
       },
     ];
   });
-  protected readonly actions = computed<readonly RowAction[]>(() => [
-    { id: 'open', label: this.text().rowActions.open },
-    { id: 'vehicle', label: this.text().rowActions.vehicle },
-  ]);
+  /** The list's actions for the row menu; a read-only list has no bulk actions. */
+  protected readonly actions = computed<readonly ListAction<TripActionId, TripRow>[]>(() => {
+    const text = this.text().actions;
+    return [
+      { id: 'open', label: text.open },
+      { id: 'vehicle', label: text.vehicle },
+    ];
+  });
+  private readonly records = computed(
+    () => new Map(this.rows().map((row) => [row.id, this.toRecord(row)])),
+  );
+  protected readonly trackById = trackById;
   /** PrimeNG's table takes a mutable array. */
   protected readonly tableRows = computed(() => [...this.rows()]);
   protected readonly page = computed(() => ({
@@ -171,10 +189,7 @@ export class TripsView {
   });
 
   protected openLabel(row: TripRow): string {
-    return interpolate(this.text().table.open, {
-      plate: row.plate,
-      started: formatDateTime(row.startedAt, this.language(), displayTimeZone),
-    });
+    return interpolate(this.text().table.open, { trip: this.recordOf(row).label });
   }
 
   protected eventsSeverity(row: TripRow) {
@@ -187,6 +202,10 @@ export class TripsView {
 
   protected scoreClass(score: number): string {
     return `app-meter app-meter--${scoreTone(score)}`;
+  }
+
+  protected recordOf(row: TripRow): ListRecord<TripActionId> {
+    return this.records().get(row.id) ?? this.toRecord(row);
   }
 
   protected changeSearch(search: string): void {
@@ -209,5 +228,14 @@ export class TripsView {
     if (!this.sortReady()) return;
     const next = listQuery.sorted(this.state(), event);
     if (next) this.stateChange.emit(next);
+  }
+
+  /** A trip is recognised by its vehicle and start, e.g. "CB 1001 AX, 18 Oct 2026, 08:12". */
+  private toRecord(row: TripRow): ListRecord<TripActionId> {
+    const label = interpolate(this.text().table.tripName, {
+      plate: row.plate,
+      started: formatDateTime(row.startedAt, this.language(), displayTimeZone),
+    });
+    return listRecord(this.actions(), row, row.id, label);
   }
 }

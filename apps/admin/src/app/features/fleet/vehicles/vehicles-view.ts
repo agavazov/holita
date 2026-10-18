@@ -13,10 +13,17 @@ import {
 import { formatDateTime, formatNumber } from '../../../ui/format/format';
 import { interpolate } from '../../../ui/i18n/messages';
 import { KpiStrip } from '../../../ui/kpi/kpi-strip';
+import {
+  type ListAction,
+  type ListActionRequest,
+  type ListRecord,
+  listRecord,
+  trackById,
+} from '../../../ui/list/list-actions';
 import { injectSortReady, listQuery, type ListQuery } from '../../../ui/list/list-query';
 import { KpiTile } from '../../../ui/kpi/kpi-tile';
 import { PageHeader } from '../../../ui/page-header/page-header';
-import { RowActions, type RowAction } from '../../../ui/row-actions/row-actions';
+import { RowActions } from '../../../ui/row-actions/row-actions';
 import { TablePanel, type TableNotice } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { toneSeverity } from '../../../ui/tones';
@@ -35,6 +42,7 @@ export const vehicleTypes = ['TRACTOR', 'RIGID_TRUCK', 'VAN', 'CAR'] as const;
 export type VehicleStatusCode = (typeof vehicleStatuses)[number];
 export type VehicleActivityCode = (typeof vehicleActivities)[number];
 export type VehicleTypeCode = (typeof vehicleTypes)[number];
+export type VehicleActionId = 'edit' | 'profile' | 'deactivate' | 'delete';
 
 /** One list row, as the Vehicles list query returns it. */
 export interface VehicleRow {
@@ -122,15 +130,14 @@ export class VehiclesView {
   readonly state = input.required<ListQuery>();
   readonly kpis = input<VehicleKpis | null>(null);
   readonly groups = input<readonly VehicleOption[]>([]);
-  readonly selection = input<readonly string[]>([]);
+  readonly selection = input<readonly ListRecord<VehicleActionId>[]>([]);
   readonly notice = input<TableNotice | null>(null);
   readonly busy = input(false);
   readonly stateChange = output<ListQuery>();
   readonly create = output();
-  readonly edit = output<string>();
-  readonly rowAction = output<{ readonly action: string; readonly id: string }>();
-  readonly selectionChange = output<readonly string[]>();
-  readonly bulkAction = output<string>();
+  /** Row and bulk actions alike, with the IDs they apply to. */
+  readonly action = output<ListActionRequest<VehicleActionId>>();
+  readonly selectionChange = output<readonly ListRecord<VehicleActionId>[]>();
   readonly retry = output();
   readonly dismissNotice = output();
 
@@ -204,16 +211,34 @@ export class VehiclesView {
       },
     ];
   });
-  protected readonly actions = computed<readonly RowAction[]>(() => [
-    { id: 'edit', label: this.text().rowActions.edit },
-    { id: 'profile', label: this.text().rowActions.profile },
-    { id: 'deactivate', label: this.text().rowActions.deactivate },
-    { id: 'delete', label: this.text().rowActions.delete, danger: true },
-  ]);
+  /** The list's actions, once for the row menu and the bulk bar. */
+  protected readonly actions = computed<readonly ListAction<VehicleActionId, VehicleRow>[]>(() => {
+    const text = this.text().actions;
+    return [
+      { id: 'edit', label: text.edit },
+      { id: 'profile', label: text.profile },
+      {
+        id: 'deactivate',
+        label: text.deactivate,
+        bulk: true,
+        appliesTo: (row) => row.status !== 'INACTIVE',
+      },
+      { id: 'delete', label: text.delete, bulk: true, danger: true, confirm: text.confirmDelete },
+    ];
+  });
+  private readonly records = computed(
+    () => new Map(this.rows().map((row) => [row.id, this.toRecord(row)])),
+  );
+  protected readonly trackById = trackById;
   /** PrimeNG's table takes a mutable array. */
   protected readonly tableRows = computed(() => [...this.rows()]);
-  protected readonly selectedRows = computed(() =>
-    this.rows().filter((row) => this.selection().includes(row.id)),
+  protected readonly selectedRows = computed(() => {
+    const selected = new Set(this.selection().map((record) => record.id));
+    return this.rows().filter((row) => selected.has(row.id));
+  });
+  /** The selected rows as they are now, so the bulk bar and its question use current rules. */
+  protected readonly selectedRecords = computed(() =>
+    this.selectedRows().map((row) => this.recordOf(row)),
   );
   protected readonly page = computed(() => ({
     page: this.state().page,
@@ -266,29 +291,43 @@ export class VehiclesView {
     return interpolate(this.text().kpis.inWorkshop, { count });
   }
 
+  protected recordOf(row: VehicleRow): ListRecord<VehicleActionId> {
+    return this.records().get(row.id) ?? this.toRecord(row);
+  }
+
   protected changeSearch(search: string): void {
-    this.stateChange.emit(listQuery.search(this.state(), search));
+    this.changeQuery(listQuery.search(this.state(), search));
   }
 
   protected changeConditions(conditions: readonly FilterCondition[]): void {
-    this.stateChange.emit(listQuery.conditions(this.state(), conditions));
+    this.changeQuery(listQuery.conditions(this.state(), conditions));
   }
 
   protected changePage(page: { page: number; pageSize: number }): void {
-    this.stateChange.emit(listQuery.page(this.state(), page));
+    this.changeQuery(listQuery.page(this.state(), page));
   }
 
   protected clearFilters(): void {
-    this.stateChange.emit(listQuery.cleared(this.state()));
+    this.changeQuery(listQuery.cleared(this.state()));
   }
 
   protected sort(event: TableLazyLoadEvent): void {
     if (!this.sortReady()) return;
     const next = listQuery.sorted(this.state(), event);
-    if (next) this.stateChange.emit(next);
+    if (next) this.changeQuery(next);
   }
 
   protected select(rows: readonly VehicleRow[] | null): void {
-    this.selectionChange.emit((rows ?? []).map((row) => row.id));
+    this.selectionChange.emit((rows ?? []).map((row) => this.recordOf(row)));
+  }
+
+  /** The selection belongs to the rows on screen, so any new query clears it. */
+  private changeQuery(query: ListQuery): void {
+    this.stateChange.emit(query);
+    if (this.selection().length) this.selectionChange.emit([]);
+  }
+
+  private toRecord(row: VehicleRow): ListRecord<VehicleActionId> {
+    return listRecord(this.actions(), row, row.id, row.plate);
   }
 }

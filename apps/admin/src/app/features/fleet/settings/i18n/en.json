@@ -7,19 +7,25 @@
     "heading": "Groups",
     "name": "Group",
     "vehicles": "Vehicles",
-    "actions": "Actions",
+    "actionsColumn": "Actions",
     "edit": "Edit {name}",
-    "editAction": "Edit",
-    "deleteAction": "Delete",
     "emptyTitle": "No groups yet",
     "emptyDescription": "Create groups such as International or City to organise the fleet.",
     "errorText": "The groups could not be loaded. (demo-request-13)",
     "inUse": "Groups with vehicles cannot be deleted; move the vehicles first.",
     "saved": "{name} was saved.",
     "created": "{name} was created.",
-    "deleted": "{name} was deleted.",
-    "confirmDeleteTitle": "Delete group",
-    "confirmDeleteMessage": "Delete the group {name}?",
+    "deleted": "Groups deleted: {count}.",
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "confirmDelete": {
+        "one": "Delete {name}?",
+        "many": "Delete {count} groups?",
+        "detail": "Vehicles are not affected.",
+        "accept": "Delete"
+      }
+    },
     "drawer": {
       "createTitle": "New group",
       "editTitle": "Edit {name}",

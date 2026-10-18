@@ -35,8 +35,8 @@ instructions.
 3. New brand or density: extend the `BrandName`/`DensityName` unions and the records; Storybook
    toolbar items, preset spec and contrast spec iterate them.
 4. Pattern: change the component or CSS pattern once and update its spec and stories.
-5. Review in Storybook (`npm run storybook:admin`, port 11003) with the toolbar: both themes, both
-   languages, the three brands, both densities, desktop and `mobile375`.
+5. Review in Storybook (`npm run storybook:admin`, port 11003) with the toolbar: both themes, the
+   three brands, both densities, desktop and `mobile375`.
 
 ## Add a PrimeNG control
 
@@ -45,7 +45,8 @@ instructions.
 2. Render it in `theme/primeng-coverage.html` in both schemes (overlays in the overlay stories).
 3. Give it an accessible name the way the design-system document lists (`ariaLabel`,
    `ariaCloseLabel`, `closeAriaLabel`, `dropdownAriaLabel`, `aria-label` on `p-metergroup`,
-   `[pt]="confirmDialogPt(language)"` on `p-confirmdialog`). Do not use `p-progressbar` (its
+   `[pt]="confirmDialogPt(language)"` on `p-confirmdialog`, plus the message ID with a `#message`
+   template). Do not use `p-progressbar` (its
    markup fails axe) or the deprecated `p-multiselect` (use `p-select [multiple]="true"`).
 4. Run `npm run test:storybook:admin`.
 
@@ -55,11 +56,17 @@ instructions.
   `holita-filter-builder` (quick search plus only the columns and conditions the backend
   supports) → `holita-table-panel` with a projected `p-table` (`[lazy]`, `dataKey="id"`, no
   `emptymessage` template, selection header cell with a visually hidden `<label for>` + `inputId`,
-  cells on one line, long text in `.app-cell-truncate`, a last `.app-col-actions` column with
-  `holita-row-actions` frozen right with `pFrozenColumn alignFrozen="right"`; never a direct
-  Delete button in a row). State comes from `UrlListState` with a
-  `ListDefinition`; the view from `tableView(...)`; bulk writes use `runSequential`; destructive
-  actions `confirmDestructive` with a `p-confirmdialog` using `confirmDialogPt`.
+  `[rowTrackBy]="trackById"`, cells on one line, long text in `.app-cell-truncate`, a last
+  `.app-col-actions` column with `holita-row-actions` frozen right with `pFrozenColumn
+alignFrozen="right"`; never a direct Delete button in a row). State comes from `UrlListState`
+  with a `ListDefinition`; the view from `tableView(...)`.
+- List actions: define them once as `ListAction<Id, Row>[]` (`bulk` only for quick changes,
+  `danger`, `confirm`, `appliesTo(row)` as the only applicability rule), map rows with
+  `listRecord`, pass `[actions]` and `[selection]` to the panel, and start every action — record
+  link, row menu, bulk bar — through `TablePanel.run`. The panel confirms and filters; the host
+  handles the single `action` output (bulk writes with `runSequential`), clears the selection on
+  every query change and removes only the records an action changed from it. Do not add a host
+  `p-confirmdialog` or check applicability again.
 - Editor: a right-hand drawer. The default opens the row straight into its form; a read-only
   record uses a view drawer; a complex record may open as a view whose Edit button switches the
   same drawer to the form. In the app it is a child route with
@@ -75,7 +82,7 @@ instructions.
 
 ## Required stories and checks
 
-- Stories beside each new component (`Design System/...`) or screen (`Screens/...`): every list
+- Stories beside each new component (`Design System/...`) or screen (`Examples/...`): every list
   state, drawer state and the error and empty variants, in English (Storybook has one language);
   play functions for flows. Stories wait (`waitFor`) for routed content before they assert, so axe
   checks real content.

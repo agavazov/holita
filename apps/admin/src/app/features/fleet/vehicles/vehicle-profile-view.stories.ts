@@ -49,6 +49,25 @@ export const Overview: Story = {
   },
 };
 
+/**
+ * The breadcrumb names the record: Fleet › Vehicles (a link back to the list) › the plate. The
+ * sidebar has a Vehicles link too, so every query stays inside the breadcrumb.
+ */
+export const BreadcrumbBack: Story = {
+  name: 'Breadcrumb back to the list',
+  render: exampleAt(profile),
+  play: async ({ canvasElement }) => {
+    const canvas = await pageReady(canvasElement);
+    const breadcrumb = () => within(canvas.getByRole('navigation', { name: 'Breadcrumb' }));
+    await waitFor(() =>
+      expect(breadcrumb().getByText(plate)).toHaveAttribute('aria-current', 'page'),
+    );
+    await userEvent.click(breadcrumb().getByRole('link', { name: 'Vehicles' }));
+    await waitFor(() => expect(breadcrumb().queryByRole('link')).toBeNull(), appReady);
+    await expect(breadcrumb().getByText('Vehicles')).toHaveAttribute('aria-current', 'page');
+  },
+};
+
 export const TripsTab: Story = {
   name: 'Trips tab',
   render: exampleAt(`${profile}?tab=trips`),

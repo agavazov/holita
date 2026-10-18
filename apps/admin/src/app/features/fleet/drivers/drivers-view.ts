@@ -10,9 +10,16 @@ import { formatNumber } from '../../../ui/format/format';
 import { interpolate } from '../../../ui/i18n/messages';
 import { KpiStrip } from '../../../ui/kpi/kpi-strip';
 import { KpiTile } from '../../../ui/kpi/kpi-tile';
+import {
+  type ListAction,
+  type ListActionRequest,
+  type ListRecord,
+  listRecord,
+  trackById,
+} from '../../../ui/list/list-actions';
 import { injectSortReady, listQuery, type ListQuery } from '../../../ui/list/list-query';
 import { PageHeader } from '../../../ui/page-header/page-header';
-import { RowActions, type RowAction } from '../../../ui/row-actions/row-actions';
+import { RowActions } from '../../../ui/row-actions/row-actions';
 import { TablePanel, type TableNotice } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { toneSeverity } from '../../../ui/tones';
@@ -21,6 +28,7 @@ import { driversText } from './i18n/messages';
 
 export const driverStatuses = ['ACTIVE', 'ON_LEAVE', 'INACTIVE'] as const;
 export type DriverStatusCode = (typeof driverStatuses)[number];
+export type DriverActionId = 'view' | 'edit' | 'deactivate' | 'delete';
 
 /** One list row, as the Drivers list query returns it. */
 export interface DriverRow {
@@ -67,8 +75,8 @@ export function scoreTone(score: number): StatusTone {
 
 /**
  * The Drivers list page: header, KPIs, quick search and filters, and the table with document
- * expiry, score and row actions. A row opens the driver read-only; Edit switches the drawer to
- * the form. Presentation only: the host owns data, list state and editing.
+ * expiry, score, row actions and bulk actions. A row opens the driver read-only; Edit switches
+ * the drawer to the form. Presentation only: the host owns data, list state and editing.
  */
 @Component({
   selector: 'holita-drivers-view',
@@ -98,14 +106,13 @@ export class DriversView {
   readonly view = input.required<TableView>();
   readonly state = input.required<ListQuery>();
   readonly kpis = input<DriverKpis | null>(null);
-  readonly selection = input<readonly string[]>([]);
+  readonly selection = input<readonly ListRecord<DriverActionId>[]>([]);
   readonly notice = input<TableNotice | null>(null);
   readonly stateChange = output<ListQuery>();
   readonly create = output();
-  readonly open = output<string>();
-  readonly rowAction = output<{ readonly action: string; readonly id: string }>();
-  readonly selectionChange = output<readonly string[]>();
-  readonly bulkAction = output<string>();
+  /** Row and bulk actions alike, with the IDs they apply to. */
+  readonly action = output<ListActionRequest<DriverActionId>>();
+  readonly selectionChange = output<readonly ListRecord<DriverActionId>[]>();
   readonly retry = output();
   readonly dismissNotice = output();
 
@@ -152,16 +159,34 @@ export class DriversView {
       { key: 'trips', label: text.filters.trips, type: 'number', operators: ['gt', 'lt'] },
     ];
   });
-  protected readonly actions = computed<readonly RowAction[]>(() => [
-    { id: 'view', label: this.text().rowActions.view },
-    { id: 'edit', label: this.text().rowActions.edit },
-    { id: 'deactivate', label: this.text().rowActions.deactivate },
-    { id: 'delete', label: this.text().rowActions.delete, danger: true },
-  ]);
+  /** The list's actions, once for the row menu and the bulk bar. */
+  protected readonly actions = computed<readonly ListAction<DriverActionId, DriverRow>[]>(() => {
+    const text = this.text().actions;
+    return [
+      { id: 'view', label: text.view },
+      { id: 'edit', label: text.edit },
+      {
+        id: 'deactivate',
+        label: text.deactivate,
+        bulk: true,
+        appliesTo: (row) => row.status !== 'INACTIVE',
+      },
+      { id: 'delete', label: text.delete, bulk: true, danger: true, confirm: text.confirmDelete },
+    ];
+  });
+  private readonly records = computed(
+    () => new Map(this.rows().map((row) => [row.id, this.toRecord(row)])),
+  );
+  protected readonly trackById = trackById;
   /** PrimeNG's table takes a mutable array. */
   protected readonly tableRows = computed(() => [...this.rows()]);
-  protected readonly selectedRows = computed(() =>
-    this.rows().filter((row) => this.selection().includes(row.id)),
+  protected readonly selectedRows = computed(() => {
+    const selected = new Set(this.selection().map((record) => record.id));
+    return this.rows().filter((row) => selected.has(row.id));
+  });
+  /** The selected rows as they are now, so the bulk bar and its question use current rules. */
+  protected readonly selectedRecords = computed(() =>
+    this.selectedRows().map((row) => this.recordOf(row)),
   );
   protected readonly page = computed(() => ({
     page: this.state().page,
@@ -204,29 +229,43 @@ export class DriversView {
     return interpolate(this.text().kpis.onLeave, { count });
   }
 
+  protected recordOf(row: DriverRow): ListRecord<DriverActionId> {
+    return this.records().get(row.id) ?? this.toRecord(row);
+  }
+
   protected changeSearch(search: string): void {
-    this.stateChange.emit(listQuery.search(this.state(), search));
+    this.changeQuery(listQuery.search(this.state(), search));
   }
 
   protected changeConditions(conditions: readonly FilterCondition[]): void {
-    this.stateChange.emit(listQuery.conditions(this.state(), conditions));
+    this.changeQuery(listQuery.conditions(this.state(), conditions));
   }
 
   protected changePage(page: { page: number; pageSize: number }): void {
-    this.stateChange.emit(listQuery.page(this.state(), page));
+    this.changeQuery(listQuery.page(this.state(), page));
   }
 
   protected clearFilters(): void {
-    this.stateChange.emit(listQuery.cleared(this.state()));
+    this.changeQuery(listQuery.cleared(this.state()));
   }
 
   protected sort(event: TableLazyLoadEvent): void {
     if (!this.sortReady()) return;
     const next = listQuery.sorted(this.state(), event);
-    if (next) this.stateChange.emit(next);
+    if (next) this.changeQuery(next);
   }
 
   protected select(rows: readonly DriverRow[] | null): void {
-    this.selectionChange.emit((rows ?? []).map((row) => row.id));
+    this.selectionChange.emit((rows ?? []).map((row) => this.recordOf(row)));
+  }
+
+  /** The selection belongs to the rows on screen, so any new query clears it. */
+  private changeQuery(query: ListQuery): void {
+    this.stateChange.emit(query);
+    if (this.selection().length) this.selectionChange.emit([]);
+  }
+
+  private toRecord(row: DriverRow): ListRecord<DriverActionId> {
+    return listRecord(this.actions(), row, row.id, row.name);
   }
 }

@@ -63,15 +63,17 @@
     "ELECTRIC": "Electric",
     "LPG": "LPG"
   },
-  "rowActions": {
+  "actions": {
     "edit": "Edit",
     "profile": "Open profile",
     "deactivate": "Deactivate",
-    "delete": "Delete"
-  },
-  "bulk": {
-    "deactivate": "Deactivate",
-    "delete": "Delete"
+    "delete": "Delete",
+    "confirmDelete": {
+      "one": "Delete {name}?",
+      "many": "Delete {count} vehicles?",
+      "detail": "Their trips and history stay in reports.",
+      "accept": "Delete"
+    }
   },
   "filters": {
     "status": "Status",
@@ -87,12 +89,8 @@
   "notices": {
     "saved": "{plate} was saved.",
     "created": "{plate} was created.",
-    "deactivated": "{count} vehicle(s) deactivated.",
-    "deleted": "{count} vehicle(s) deleted."
-  },
-  "confirmDelete": {
-    "title": "Delete vehicles",
-    "message": "Delete {count} vehicle(s)? Their history stays in reports."
+    "deactivated": "Vehicles deactivated: {count}.",
+    "deleted": "Vehicles deleted: {count}."
   },
   "profile": {
     "eyebrow": "Vehicle",

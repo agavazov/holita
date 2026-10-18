@@ -137,7 +137,7 @@ describe.each([
       By.directive(AdminShell),
     ).componentInstance;
     if (!(shell instanceof AdminShell)) throw new Error('Missing shell.');
-    shell.branchControl.setValue(branchB);
+    shell.chooseBranch(branchB);
     await harness.fixture.whenStable();
     expect(oldRead.cancelled).toBe(true);
     expect(TestBed.inject(Router).url).toBe(path.replace(branchA, branchB));
@@ -154,7 +154,7 @@ describe.each([
         operation(request, listOperation) && request.headers.get('x-branch-id') === branchA,
     );
     expect(retiredReads.every((read) => read.cancelled)).toBe(true);
-    shell.branchControl.setValue(branchA);
+    shell.chooseBranch(branchA);
     await harness.fixture.whenStable();
     const freshA = http.expectOne(
       (request) =>

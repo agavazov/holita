@@ -97,10 +97,12 @@ describe('AdminSidebar and navigation', () => {
     expect(navigationContext(navigation, `/en/${branch}/fleet/devices/42/edit`)).toEqual({
       group: 'Fleet',
       page: 'Devices',
+      pageLink: ['/', 'en', branch, 'fleet', 'devices'],
     });
     expect(navigationContext(navigation, '/en/karma-client/cars/41/edata')).toEqual({
       group: 'Karma Client',
       page: 'Trucks',
+      pageLink: ['/', 'en', 'karma-client', 'cars'],
     });
     expect(navigationContext(navigation, `/en/${branch}/fleet/vehicles-archive`)).toBeNull();
     expect(navigationContext(navigation, '/en')).toBeNull();

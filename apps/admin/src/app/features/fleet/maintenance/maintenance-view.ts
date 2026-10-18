@@ -13,9 +13,16 @@ import { formatNumber } from '../../../ui/format/format';
 import { interpolate } from '../../../ui/i18n/messages';
 import { KpiStrip } from '../../../ui/kpi/kpi-strip';
 import { KpiTile } from '../../../ui/kpi/kpi-tile';
+import {
+  type ListAction,
+  type ListActionRequest,
+  type ListRecord,
+  listRecord,
+  trackById,
+} from '../../../ui/list/list-actions';
 import { injectSortReady, listQuery, type ListQuery } from '../../../ui/list/list-query';
 import { PageHeader } from '../../../ui/page-header/page-header';
-import { RowActions, type RowAction } from '../../../ui/row-actions/row-actions';
+import { RowActions } from '../../../ui/row-actions/row-actions';
 import { TablePanel, type TableNotice } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { toneSeverity } from '../../../ui/tones';
@@ -39,6 +46,8 @@ export interface MaintenanceOption {
   readonly id: string;
   readonly name: string;
 }
+
+export type MaintenanceActionId = 'edit' | 'complete' | 'vehicle' | 'delete';
 
 /**
  * The Maintenance list page: service tasks due by date and/or odometer with urgency, cost and
@@ -74,14 +83,13 @@ export class MaintenanceView {
   readonly state = input.required<ListQuery>();
   readonly kpis = input<MaintenanceKpis | null>(null);
   readonly vehicles = input<readonly MaintenanceOption[]>([]);
-  readonly selection = input<readonly string[]>([]);
+  readonly selection = input<readonly ListRecord<MaintenanceActionId>[]>([]);
   readonly notice = input<TableNotice | null>(null);
   readonly stateChange = output<ListQuery>();
   readonly create = output();
-  readonly edit = output<string>();
-  readonly rowAction = output<{ readonly action: string; readonly id: string }>();
-  readonly selectionChange = output<readonly string[]>();
-  readonly bulkAction = output<string>();
+  /** Row and bulk actions alike, with the IDs they apply to. */
+  readonly action = output<ListActionRequest<MaintenanceActionId>>();
+  readonly selectionChange = output<readonly ListRecord<MaintenanceActionId>[]>();
   readonly retry = output();
   readonly dismissNotice = output();
 
@@ -123,25 +131,39 @@ export class MaintenanceView {
       },
     ];
   });
-  /** The row menu: Mark as done only for open tasks. */
-  protected readonly rowActions = computed(() => {
-    const text = this.text().rowActions;
-    return new Map<string, readonly RowAction[]>(
-      this.rows().map((row) => [
-        row.id,
-        [
-          { id: 'edit', label: text.edit },
-          { id: 'complete', label: text.complete, disabled: row.urgency === 'DONE' },
-          { id: 'vehicle', label: text.vehicle },
-          { id: 'delete', label: text.delete, danger: true },
-        ],
-      ]),
-    );
-  });
+  /**
+   * The list's actions, once for the row menu and the bulk bar. Mark as done applies only to
+   * open tasks.
+   */
+  protected readonly actions = computed<readonly ListAction<MaintenanceActionId, ServiceTaskRow>[]>(
+    () => {
+      const text = this.text().actions;
+      return [
+        { id: 'edit', label: text.edit },
+        {
+          id: 'complete',
+          label: text.complete,
+          bulk: true,
+          appliesTo: (row) => row.urgency !== 'DONE',
+        },
+        { id: 'vehicle', label: text.vehicle },
+        { id: 'delete', label: text.delete, bulk: true, danger: true, confirm: text.confirmDelete },
+      ];
+    },
+  );
+  private readonly records = computed(
+    () => new Map(this.rows().map((row) => [row.id, this.toRecord(row)])),
+  );
+  protected readonly trackById = trackById;
   /** PrimeNG's table takes a mutable array. */
   protected readonly tableRows = computed(() => [...this.rows()]);
-  protected readonly selectedRows = computed(() =>
-    this.rows().filter((row) => this.selection().includes(row.id)),
+  protected readonly selectedRows = computed(() => {
+    const selected = new Set(this.selection().map((record) => record.id));
+    return this.rows().filter((row) => selected.has(row.id));
+  });
+  /** The selected rows as they are now, so the bulk bar and its question use current rules. */
+  protected readonly selectedRecords = computed(() =>
+    this.selectedRows().map((row) => this.recordOf(row)),
   );
   protected readonly page = computed(() => ({
     page: this.state().page,
@@ -168,37 +190,47 @@ export class MaintenanceView {
     });
   }
 
-  protected actionsOf(row: ServiceTaskRow): readonly RowAction[] {
-    return this.rowActions().get(row.id) ?? [];
-  }
-
   protected label(template: string, row: ServiceTaskRow): string {
     return interpolate(template, { task: row.kind, plate: row.plate });
   }
 
+  protected recordOf(row: ServiceTaskRow): ListRecord<MaintenanceActionId> {
+    return this.records().get(row.id) ?? this.toRecord(row);
+  }
+
   protected changeSearch(search: string): void {
-    this.stateChange.emit(listQuery.search(this.state(), search));
+    this.changeQuery(listQuery.search(this.state(), search));
   }
 
   protected changeConditions(conditions: readonly FilterCondition[]): void {
-    this.stateChange.emit(listQuery.conditions(this.state(), conditions));
+    this.changeQuery(listQuery.conditions(this.state(), conditions));
   }
 
   protected changePage(page: { page: number; pageSize: number }): void {
-    this.stateChange.emit(listQuery.page(this.state(), page));
+    this.changeQuery(listQuery.page(this.state(), page));
   }
 
   protected clearFilters(): void {
-    this.stateChange.emit(listQuery.cleared(this.state()));
+    this.changeQuery(listQuery.cleared(this.state()));
   }
 
   protected sort(event: TableLazyLoadEvent): void {
     if (!this.sortReady()) return;
     const next = listQuery.sorted(this.state(), event);
-    if (next) this.stateChange.emit(next);
+    if (next) this.changeQuery(next);
   }
 
   protected select(rows: readonly ServiceTaskRow[] | null): void {
-    this.selectionChange.emit((rows ?? []).map((row) => row.id));
+    this.selectionChange.emit((rows ?? []).map((row) => this.recordOf(row)));
+  }
+
+  /** The selection belongs to the rows on screen, so any new query clears it. */
+  private changeQuery(query: ListQuery): void {
+    this.stateChange.emit(query);
+    if (this.selection().length) this.selectionChange.emit([]);
+  }
+
+  private toRecord(row: ServiceTaskRow): ListRecord<MaintenanceActionId> {
+    return listRecord(this.actions(), row, row.id, this.label(this.text().table.record, row));
   }
 }

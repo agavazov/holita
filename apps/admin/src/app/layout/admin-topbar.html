@@ -17,60 +17,102 @@
 }
 <div class="app-topbar__context">
   @if (context(); as context) {
-    <span class="app-topbar__group">{{ context.group }}</span>
-    <svg data-p-icon="chevron-right" class="app-topbar__separator" aria-hidden="true"></svg>
-    <span class="app-topbar__page">{{ context.page }}</span>
+    <nav [attr.aria-label]="text().breadcrumb">
+      <ol class="app-breadcrumb">
+        <!-- The navigation group is a label, not a page, so it is never a link. -->
+        <li class="app-breadcrumb__group">
+          <span class="app-breadcrumb__text" [title]="context.group">{{ context.group }}</span>
+        </li>
+        @if (context.record && context.pageLink) {
+          <li class="app-breadcrumb__ancestor">
+            <svg
+              data-p-icon="chevron-right"
+              class="app-breadcrumb__separator"
+              aria-hidden="true"
+            ></svg>
+            <a
+              class="app-breadcrumb__text"
+              [routerLink]="context.pageLink"
+              [title]="context.page"
+              >{{ context.page }}</a
+            >
+          </li>
+          <li class="app-breadcrumb__current">
+            <svg
+              data-p-icon="chevron-right"
+              class="app-breadcrumb__separator"
+              aria-hidden="true"
+            ></svg>
+            <span class="app-breadcrumb__text" aria-current="page" [title]="context.record">{{
+              context.record
+            }}</span>
+          </li>
+        } @else {
+          <li class="app-breadcrumb__current">
+            <svg
+              data-p-icon="chevron-right"
+              class="app-breadcrumb__separator"
+              aria-hidden="true"
+            ></svg>
+            <span class="app-breadcrumb__text" aria-current="page" [title]="context.page">{{
+              context.page
+            }}</span>
+          </li>
+        }
+      </ol>
+    </nav>
   }
 </div>
-<div class="app-topbar__branch">
-  <label for="active-branch">{{ text().activeBranch }}</label>
-  <p-select
-    inputId="active-branch"
-    [options]="branchOptions()"
-    optionLabel="name"
-    optionValue="id"
-    [ariaLabel]="text().activeBranch"
-    [formControl]="branchControl()"
-    [placeholder]="text().branches"
-    [loading]="loading()"
-    appendTo="body"
-  />
-</div>
+<holita-menu-button
+  class="app-topbar__branch"
+  variant="text"
+  menuClass="app-menu-scroll"
+  [options]="branchOptions()"
+  [disabled]="!branches().length"
+  (choose)="chooseBranch($event.id)"
+>
+  <span class="app-visually-hidden">{{ text().branchPrefix }}&#32;</span>
+  <span id="active-branch" class="app-topbar__branch-name">{{ branchLabel() }}</span>
+</holita-menu-button>
 <div class="app-topbar__actions">
   @if (languageOptions().length > 1) {
-    <!-- Each language is labelled in its own language. -->
-    <p-select
-      class="app-topbar__language"
+    <holita-menu-button
+      variant="text"
       [options]="languageOptions()"
-      optionLabel="label"
-      optionValue="code"
-      [ariaLabel]="text().language"
-      [formControl]="languageControl"
-      appendTo="body"
-    />
-  }
-  <button
-    type="button"
-    class="app-icon-button"
-    [attr.aria-label]="appearance.dark() ? text().lightTheme : text().darkTheme"
-    (click)="appearance.toggle()"
-  >
-    @if (appearance.dark()) {
-      <svg data-p-icon="sun" aria-hidden="true"></svg>
-    } @else {
-      <svg data-p-icon="moon" aria-hidden="true"></svg>
-    }
-  </button>
-  @if (tenantName(); as tenant) {
-    <button
-      type="button"
-      class="app-icon-button"
-      [attr.aria-label]="text().signOut"
-      [title]="tenant"
-      data-testid="demo-logout"
-      (click)="signOut.emit()"
+      (choose)="chooseLanguage($event.id)"
     >
-      <svg data-p-icon="sign-out" aria-hidden="true"></svg>
-    </button>
+      <span class="app-visually-hidden">{{ text().languagePrefix }}&#32;</span>
+      <span class="app-topbar__language-label" [attr.lang]="currentLanguage().code">{{
+        currentLanguage().label
+      }}</span>
+      <span class="app-topbar__language-code" [attr.lang]="currentLanguage().code">{{
+        currentLanguage().code.toUpperCase()
+      }}</span>
+    </holita-menu-button>
   }
+  @if (notifications()) {
+    <holita-menu-button
+      buttonClass="app-topbar__bell"
+      menuClass="app-menu-wide app-menu-scroll"
+      [header]="notificationHeader()"
+      [options]="notificationOptions()"
+      (opened)="refreshNow()"
+      (choose)="chooseNotification($event.id)"
+    >
+      <svg data-p-icon="bell" aria-hidden="true"></svg>
+      <span class="app-visually-hidden">{{ bellLabel() }}</span>
+      @if (unreadCount()) {
+        <span class="app-topbar__badge" aria-hidden="true">{{ unreadCount() }}</span>
+      }
+    </holita-menu-button>
+  }
+  <holita-menu-button
+    buttonClass="app-topbar__account"
+    [header]="accountHeader()"
+    [options]="accountOptions()"
+    (choose)="chooseAccount($event.id)"
+  >
+    <span class="app-topbar__avatar" aria-hidden="true">{{ initials() }}</span>
+    <span class="app-visually-hidden">{{ accountLabel() }}</span>
+  </holita-menu-button>
 </div>

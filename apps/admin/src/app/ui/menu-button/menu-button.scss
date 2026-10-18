@@ -1,0 +1,105 @@
+:host {
+  display: inline-flex;
+  min-inline-size: 0;
+}
+
+// A quiet button with the current choice and a chevron (Branch, language): one line, ellipsis.
+.menu-button__text {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-app-space-2);
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  block-size: var(--p-app-control-height);
+  padding-inline: var(--p-app-space-2);
+  border: 0;
+  border-radius: var(--p-app-radius-control);
+  background: transparent;
+  color: var(--p-text-color);
+  font: inherit;
+  font-size: var(--p-app-text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--p-transition-duration);
+
+  &:hover {
+    background: var(--p-content-hover-background);
+  }
+}
+
+.menu-button__trigger {
+  &[aria-expanded='true'] {
+    background: var(--p-content-hover-background);
+    color: var(--p-text-color);
+  }
+
+  &[aria-disabled='true'] {
+    cursor: default;
+    color: var(--p-text-muted-color);
+  }
+}
+
+.menu-button__chevron {
+  flex: none;
+  inline-size: 0.75rem;
+  block-size: 0.75rem;
+  color: var(--p-text-muted-color);
+}
+
+.menu-button__header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-inline-size: 18rem;
+  padding: var(--p-app-space-2) var(--p-app-space-3);
+  border-block-end: 1px solid var(--p-content-border-color);
+}
+
+.menu-button__title,
+.menu-button__detail,
+.menu-button__label,
+.menu-button__description {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-button__title {
+  font-weight: 600;
+}
+
+// The darker muted tone: these lines sit on the focused item's highlight as well.
+.menu-button__detail,
+.menu-button__description,
+.menu-button__note {
+  font-size: var(--p-app-text-sm);
+  color: var(--p-app-canvas-muted-color);
+}
+
+.menu-button__item {
+  display: flex;
+  align-items: center;
+  gap: var(--p-app-space-2);
+  max-inline-size: 22rem;
+}
+
+.menu-button__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.menu-button__note {
+  flex: none;
+  white-space: nowrap;
+}
+
+.menu-button__check {
+  flex: none;
+  inline-size: 0.875rem;
+  block-size: 0.875rem;
+  color: var(--p-primary-color);
+}

@@ -12,6 +12,7 @@ import {
   VehicleProfileView,
 } from '../../../app/features/fleet/vehicles/vehicle-profile-view';
 import type { Language } from '../../../app/i18n/messages';
+import { injectPageRecord } from '../../../app/layout/page-record';
 import type { SeriesPoint } from '../../../app/ui/charts/column-series';
 import { formatNumber } from '../../../app/ui/format/format';
 import { UI_LANGUAGE } from '../../../app/ui/ui-language';
@@ -26,7 +27,7 @@ import {
   sampleVehicles,
 } from '../fleet-samples';
 import { alertRow, serviceTaskRow, tripRow, vehicleForm, vehicleProfile } from '../rows';
-import { injectQueryParams, saveDelayMs, scenarioOf } from '../scenario';
+import { injectClearDrawer, injectQueryParams, saveDelayMs, scenarioOf } from '../scenario';
 
 const day = 86_400_000;
 const dayLabel = new Intl.DateTimeFormat('en-GB', {
@@ -89,7 +90,7 @@ function distanceSeries(vehicle: SampleVehicle, language: Language): readonly Se
         [drivers]="drivers"
         [saving]="saving()"
         (save)="save($event)"
-        (closed)="editing.set(false)"
+        (closed)="closeEditor()"
       />
     }
     @if (openTrip(); as trip) {
@@ -105,6 +106,7 @@ export class VehicleProfilePage {
   private readonly language = inject(UI_LANGUAGE);
   private readonly router = inject(Router);
   private readonly query = injectQueryParams();
+  private readonly clearDrawer = injectClearDrawer();
   private readonly route = inject(ActivatedRoute);
   private readonly params = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
@@ -162,6 +164,8 @@ export class VehicleProfilePage {
     () => this.trips().find((trip) => trip.id === this.openTripId()) ?? null,
   );
   constructor() {
+    // The breadcrumb: Fleet › Vehicles (a link back) › the plate.
+    injectPageRecord(() => this.profile()?.plate ?? null);
     inject(DestroyRef).onDestroy(() => {
       clearTimeout(this.saveTimer);
     });
@@ -169,6 +173,11 @@ export class VehicleProfilePage {
 
   protected openAlert(id: string): void {
     void this.router.navigate(['/examples/alerts'], { queryParams: { drawer: id } });
+  }
+
+  protected closeEditor(): void {
+    this.editing.set(false);
+    this.clearDrawer();
   }
 
   protected save(form: VehicleForm): void {
@@ -182,7 +191,7 @@ export class VehicleProfilePage {
           item.id === id ? { ...item, ...form, year: form.year ?? item.year } : item,
         ),
       );
-      this.editing.set(false);
+      this.closeEditor();
     }, saveDelayMs);
   }
 }

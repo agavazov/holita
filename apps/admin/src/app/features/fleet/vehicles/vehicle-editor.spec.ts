@@ -241,7 +241,7 @@ describe('Vehicle editor forms and route lifecycle', () => {
     expect(harness.routeNativeElement?.textContent).toContain('Vehicle not found (missing-id)');
   });
 
-  it('guards same-branch ID changes and restores the active selector after rejected branch navigation', async () => {
+  it('guards same-branch ID changes and keeps the active Branch after rejected branch navigation', async () => {
     const harness = await mount(`/${vehicleA}/edit`);
     http.expectOne('/graphql').flush(detail());
     await harness.fixture.whenStable();
@@ -251,11 +251,10 @@ describe('Vehicle editor forms and route lifecycle', () => {
       By.directive(AdminShell),
     ).componentInstance;
     if (!(shell instanceof AdminShell)) throw new Error('Missing shell.');
-    shell.branchControl.setValue(branchB);
+    shell.chooseBranch(branchB);
     await decide(false);
     await harness.fixture.whenStable();
     expect(router.url).toBe(path + `/${vehicleA}/edit`);
-    expect(shell.branchControl.value).toBe(branchA);
     expect(harness.routeNativeElement?.querySelector('#active-branch')?.textContent).toContain(
       'Discordia',
     );

@@ -1,9 +1,8 @@
 import { Component, computed, DestroyRef, inject, linkedSignal, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { ConfirmationService } from 'primeng/api';
-import { ConfirmDialog } from 'primeng/confirmdialog';
 import { maintenanceText } from '../../../app/features/fleet/maintenance/i18n/messages';
 import {
+  type MaintenanceActionId,
   type MaintenanceKpis,
   MaintenanceView,
 } from '../../../app/features/fleet/maintenance/maintenance-view';
@@ -12,8 +11,8 @@ import {
   type ServiceTaskForm,
 } from '../../../app/features/fleet/maintenance/service-task-drawer';
 import type { ServiceUrgency } from '../../../app/features/fleet/maintenance/service-task';
-import { confirmDestructive, confirmDialogPt } from '../../../app/ui/confirm';
 import { interpolate } from '../../../app/ui/i18n/messages';
+import type { ListActionRequest, ListRecord } from '../../../app/ui/list/list-actions';
 import type { ListQuery } from '../../../app/ui/list/list-query';
 import type { TableNotice } from '../../../app/ui/table-panel/table-panel';
 import { UI_LANGUAGE } from '../../../app/ui/ui-language';
@@ -32,7 +31,7 @@ import {
   sampleTableView,
 } from '../sample-list';
 import { serviceTaskRow } from '../rows';
-import { injectQueryParams, saveDelayMs, scenarioOf } from '../scenario';
+import { injectClearDrawer, injectQueryParams, saveDelayMs, scenarioOf } from '../scenario';
 
 const day = 86_400_000;
 const today = new Date(sampleNow).toISOString().slice(0, 10);
@@ -93,8 +92,7 @@ function toForm(task: SampleServiceTask): ServiceTaskForm {
  */
 @Component({
   selector: 'holita-example-maintenance-page',
-  imports: [MaintenanceView, ServiceTaskDrawer, ConfirmDialog],
-  providers: [ConfirmationService],
+  imports: [MaintenanceView, ServiceTaskDrawer],
   template: `
     <holita-maintenance-view
       [branchName]="branchName"
@@ -108,10 +106,8 @@ function toForm(task: SampleServiceTask): ServiceTaskForm {
       [notice]="notice()"
       (stateChange)="state.set($event)"
       (create)="openEditor(null)"
-      (edit)="openEditor($event)"
-      (rowAction)="rowAction($event.action, $event.id)"
+      (action)="run($event)"
       (selectionChange)="selection.set($event)"
-      (bulkAction)="bulkAction($event)"
       (retry)="failed.set(false)"
       (dismissNotice)="notice.set(null)"
     />
@@ -122,17 +118,16 @@ function toForm(task: SampleServiceTask): ServiceTaskForm {
         [saving]="saving()"
         [saveError]="saveError()"
         (save)="save($event)"
-        (closed)="editor.set(null)"
+        (closed)="closeEditor()"
       />
     }
-    <p-confirmdialog [pt]="confirmPt" [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }" />
   `,
 })
 export class MaintenancePage {
   private readonly language = inject(UI_LANGUAGE);
   private readonly router = inject(Router);
-  private readonly confirmation = inject(ConfirmationService);
   private readonly query = injectQueryParams();
+  private readonly clearDrawer = injectClearDrawer();
   private readonly scenario = computed(() =>
     scenarioOf(this.query(), ['loading', 'empty', 'error', 'save-error']),
   );
@@ -141,7 +136,6 @@ export class MaintenancePage {
   private nextId = 1;
 
   protected readonly branchName = fixtureBranches[0].name;
-  protected readonly confirmPt = confirmDialogPt(this.language());
   protected readonly vehicles = sampleVehicles.map((vehicle) => ({
     id: vehicle.id,
     name: `${vehicle.plate} · ${vehicle.make} ${vehicle.model}`,
@@ -152,7 +146,7 @@ export class MaintenancePage {
   protected readonly state = signal<ListQuery>(
     initialQuery({ field: 'urgency', direction: 'asc' }),
   );
-  protected readonly selection = signal<readonly string[]>([]);
+  protected readonly selection = signal<readonly ListRecord<MaintenanceActionId>[]>([]);
   protected readonly notice = signal<TableNotice | null>(null);
   protected readonly failed = linkedSignal(() => this.scenario() === 'error');
   private readonly failNextSave = linkedSignal(() => this.scenario() === 'save-error');
@@ -193,13 +187,20 @@ export class MaintenancePage {
     this.editor.set({ id: task?.id ?? null, form: task ? toForm(task) : null });
   }
 
-  protected rowAction(action: string, id: string): void {
+  protected closeEditor(): void {
+    this.editor.set(null);
+    this.clearDrawer();
+  }
+
+  /** Row and bulk actions alike: the view already confirmed them and left out other records. */
+  protected run({ action, ids }: ListActionRequest<MaintenanceActionId>): void {
+    const [id] = ids;
     switch (action) {
       case 'edit':
-        this.openEditor(id);
+        if (id) this.openEditor(id);
         return;
       case 'complete':
-        this.complete([id]);
+        this.complete(ids);
         return;
       case 'vehicle': {
         const task = this.tasks().find((item) => item.id === id);
@@ -207,15 +208,9 @@ export class MaintenancePage {
         return;
       }
       case 'delete':
-        void this.delete([id]);
+        this.delete(ids);
         return;
     }
-  }
-
-  protected bulkAction(action: string): void {
-    const ids = this.selection();
-    if (action === 'complete') this.complete(ids);
-    if (action === 'delete') void this.delete(ids);
   }
 
   protected save(form: ServiceTaskForm): void {
@@ -244,7 +239,7 @@ export class MaintenancePage {
       this.tasks.update((tasks) =>
         editor.id ? tasks.map((item) => (item.id === id ? task : item)) : [task, ...tasks],
       );
-      this.editor.set(null);
+      this.closeEditor();
       const template = editor.id ? this.text().notices.saved : this.text().notices.created;
       this.notice.set({ severity: 'success', text: interpolate(template, { task: form.kind }) });
     }, saveDelayMs);
@@ -256,26 +251,19 @@ export class MaintenancePage {
         ids.includes(item.id) ? { ...item, status: 'DONE', urgency: 'DONE' } : item,
       ),
     );
-    this.selection.set([]);
+    this.selection.update((selection) => selection.filter((record) => !ids.includes(record.id)));
     this.notice.set({
       severity: 'success',
       text: interpolate(this.text().notices.completed, { count: ids.length }),
     });
   }
 
-  private async delete(ids: readonly string[]): Promise<void> {
-    const text = this.text();
-    const confirmed = await confirmDestructive(this.confirmation, this.language(), {
-      header: text.confirmDelete.title,
-      message: interpolate(text.confirmDelete.message, { count: ids.length }),
-      acceptLabel: text.rowActions.delete,
-    });
-    if (!confirmed) return;
+  private delete(ids: readonly string[]): void {
     this.tasks.update((tasks) => tasks.filter((item) => !ids.includes(item.id)));
-    this.selection.update((selection) => selection.filter((id) => !ids.includes(id)));
+    this.selection.update((selection) => selection.filter((record) => !ids.includes(record.id)));
     this.notice.set({
       severity: 'success',
-      text: interpolate(text.notices.deleted, { count: ids.length }),
+      text: interpolate(this.text().notices.deleted, { count: ids.length }),
     });
   }
 }

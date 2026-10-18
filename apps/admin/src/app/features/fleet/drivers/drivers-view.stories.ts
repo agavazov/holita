@@ -1,12 +1,14 @@
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
+import { chooseMenuItem } from '../../../../storybook/interactions';
 import { exampleAt } from '../../../../storybook/samples/example-app';
 import { sampleDrivers } from '../../../../storybook/samples/fleet-samples';
 
 /**
  * The Drivers example inside the shell, with sample data. It shows the mixed drawer: a driver
  * opens read-only (contacts, documents with expiry flags, last 30 days) and Edit switches the
- * same drawer to the form; Cancel or a save returns to the record.
+ * same drawer to the form; Cancel or a save returns to the record. Deactivate and Delete are row
+ * and bulk actions alike.
  */
 const meta: Meta = {
   title: 'Examples/Fleet/Drivers',
@@ -20,6 +22,12 @@ const [driver] = sampleDrivers;
 if (!driver) throw new Error('The sample drivers are empty.');
 const appReady = { timeout: 10_000 };
 
+async function tableReady(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement);
+  await waitFor(() => expect(canvas.getByRole('table')).toBeVisible(), appReady);
+  return canvas;
+}
+
 async function drawerReady(canvasElement: HTMLElement, name: string) {
   const body = within(canvasElement.ownerDocument.body);
   await waitFor(() => expect(body.getByRole('dialog', { name })).toBeVisible(), appReady);
@@ -29,9 +37,50 @@ async function drawerReady(canvasElement: HTMLElement, name: string) {
 export const Default: Story = {
   render: exampleAt('drivers'),
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await waitFor(() => expect(canvas.getByRole('table')).toBeVisible(), appReady);
+    const canvas = await tableReady(canvasElement);
     await expect(canvas.getAllByText('Expired').length).toBeGreaterThan(0);
+  },
+};
+
+/**
+ * Delete from the row menu asks about that driver by name; Cancel returns the focus to the row's
+ * "⋮" button.
+ */
+export const DeleteFromRow: Story = {
+  name: 'Delete from a row',
+  render: exampleAt('drivers'),
+  play: async ({ canvasElement }) => {
+    const canvas = await tableReady(canvasElement);
+    const [trigger] = canvas.getAllByRole('button', { name: /^Actions for / });
+    if (!trigger) throw new Error('No row actions');
+    const name = (trigger.getAttribute('aria-label') ?? '').replace('Actions for ', '');
+    await userEvent.click(trigger);
+    const body = within(canvasElement.ownerDocument.body);
+    await chooseMenuItem(canvasElement.ownerDocument.body, 'Delete');
+    const dialog = await body.findByRole('alertdialog', { name: `Delete ${name}?` });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(trigger).toHaveFocus());
+  },
+};
+
+/** The same Delete from the bulk bar lists the selected drivers; afterwards focus is on the list. */
+export const DeleteSelected: Story = {
+  name: 'Delete selected',
+  render: exampleAt('drivers'),
+  play: async ({ canvasElement }) => {
+    const canvas = await tableReady(canvasElement);
+    const boxes = canvas.getAllByRole('checkbox', { name: /^Select (?!all)/ });
+    for (const box of boxes.slice(0, 3)) await userEvent.click(box);
+    const bar = await canvas.findByRole('region', { name: 'Actions for selected records' });
+    await userEvent.click(within(bar).getByRole('button', { name: 'Delete' }));
+    const body = within(canvasElement.ownerDocument.body);
+    const dialog = await body.findByRole('alertdialog', { name: 'Delete 3 drivers?' });
+    await expect(within(dialog).getAllByRole('listitem')).toHaveLength(3);
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(canvas.getByText('Drivers deleted: 3.')).toBeVisible());
+    await waitFor(() =>
+      expect(canvas.getByRole('heading', { level: 2, name: /^Drivers/ })).toHaveFocus(),
+    );
   },
 };
 

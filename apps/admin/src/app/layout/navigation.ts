@@ -30,10 +30,16 @@ export interface NavGroup {
   readonly items: readonly NavItem[];
 }
 
-/** The page shown in the topbar: navigation group › item. */
+/**
+ * The page shown in the topbar breadcrumb: navigation group › item › record. The group is a
+ * label (navigation groups are not pages); the item links back to its list when a record page
+ * registered its name (`injectPageRecord`).
+ */
 export interface PageContext {
   readonly group: string;
   readonly page: string;
+  readonly pageLink?: readonly string[];
+  readonly record?: string | null;
 }
 
 function linkPath(link: readonly string[]): string {
@@ -53,7 +59,10 @@ export function navigationContext(
         (path === prefix || path.startsWith(`${prefix}/`)) &&
         prefix.length > (match?.length ?? -1)
       )
-        match = { length: prefix.length, context: { group: group.label, page: item.label } };
+        match = {
+          length: prefix.length,
+          context: { group: group.label, page: item.label, pageLink: item.link },
+        };
     }
   return match?.context ?? null;
 }

@@ -1,9 +1,14 @@
 import { Component, computed, DestroyRef, inject, linkedSignal, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { type AlertAction, AlertDrawer } from '../../../app/features/fleet/alerts/alert-drawer';
-import { type AlertKpis, AlertsView } from '../../../app/features/fleet/alerts/alerts-view';
+import {
+  type AlertActionId,
+  type AlertKpis,
+  AlertsView,
+} from '../../../app/features/fleet/alerts/alerts-view';
 import { alertsText } from '../../../app/features/fleet/alerts/i18n/messages';
 import { interpolate } from '../../../app/ui/i18n/messages';
+import type { ListActionRequest, ListRecord } from '../../../app/ui/list/list-actions';
 import type { ListQuery } from '../../../app/ui/list/list-query';
 import type { TableNotice } from '../../../app/ui/table-panel/table-panel';
 import { UI_LANGUAGE } from '../../../app/ui/ui-language';
@@ -23,7 +28,7 @@ import {
   sampleTableView,
 } from '../sample-list';
 import { alertRow } from '../rows';
-import { injectQueryParams, saveDelayMs, scenarioOf } from '../scenario';
+import { injectClearDrawer, injectQueryParams, saveDelayMs, scenarioOf } from '../scenario';
 
 const dataAsOf = new Date(sampleNow).toISOString();
 const weekAgo = new Date(sampleNow - 7 * 86_400_000).toISOString();
@@ -70,6 +75,12 @@ const notResolved = {
   values: ['RESOLVED'],
 } as const;
 
+/** The alert in the drawer; `focusRemark` when the list's Resolve opened it. */
+interface OpenDrawer {
+  readonly id: string;
+  readonly focusRemark: boolean;
+}
+
 /**
  * Story-only host of the Alerts example: sample alerts, simulated workflow updates, and
  * `?scenario=` / `?drawer=<id>` for the states the stories open on.
@@ -90,20 +101,19 @@ const notResolved = {
       [selection]="selection()"
       [notice]="notice()"
       (stateChange)="state.set($event)"
-      (open)="openId.set($event)"
-      (rowAction)="rowAction($event.action, $event.id)"
+      (action)="run($event)"
       (selectionChange)="selection.set($event)"
-      (bulkAction)="bulkAction($event)"
       (retry)="failed.set(false)"
       (dismissNotice)="notice.set(null)"
     />
-    @if (openAlert(); as alert) {
+    @if (openAlert(); as open) {
       <holita-alert-drawer
-        [alert]="alert"
+        [alert]="open.alert"
         [dataAsOf]="dataAsOf"
         [busy]="busy()"
         [saveError]="saveError()"
-        (action)="apply(alert.id, $event.action, $event.remark)"
+        [focusRemark]="open.focusRemark"
+        (action)="apply(open.alert.id, $event.action, $event.remark)"
         (openVehicle)="openVehicle($event)"
         (closed)="closeDrawer()"
       />
@@ -114,6 +124,7 @@ export class AlertsPage {
   private readonly language = inject(UI_LANGUAGE);
   private readonly router = inject(Router);
   private readonly query = injectQueryParams();
+  private readonly clearDrawer = injectClearDrawer();
   private readonly scenario = computed(() =>
     scenarioOf(this.query(), ['loading', 'empty', 'error', 'save-error']),
   );
@@ -129,16 +140,20 @@ export class AlertsPage {
     this.scenario() === 'empty' ? [] : sampleAlerts,
   );
   protected readonly state = signal<ListQuery>(
-    initialQuery({ field: 'occurredAt', direction: 'desc' }, 25, [notResolved]),
+    initialQuery({ field: 'occurredAt', direction: 'desc' }, 20, [notResolved]),
   );
-  protected readonly selection = signal<readonly string[]>([]);
+  protected readonly selection = signal<readonly ListRecord<AlertActionId>[]>([]);
   protected readonly notice = signal<TableNotice | null>(null);
   protected readonly failed = linkedSignal(() => this.scenario() === 'error');
   private readonly failNextSave = linkedSignal(() => this.scenario() === 'save-error');
-  protected readonly openId = linkedSignal(() => this.query().get('drawer'));
+  protected readonly drawer = linkedSignal<OpenDrawer | null>(() => {
+    const id = this.query().get('drawer');
+    return id ? { id, focusRemark: false } : null;
+  });
   protected readonly openAlert = computed(() => {
-    const alert = this.alerts().find((item) => item.id === this.openId());
-    return alert ? alertRow(alert) : null;
+    const drawer = this.drawer();
+    const alert = drawer ? this.alerts().find((item) => item.id === drawer.id) : undefined;
+    return drawer && alert ? { alert: alertRow(alert), focusRemark: drawer.focusRemark } : null;
   });
   protected readonly busy = signal<AlertAction | null>(null);
   protected readonly saveError = signal<string | null>(null);
@@ -164,27 +179,29 @@ export class AlertsPage {
     });
   }
 
-  protected rowAction(action: string, id: string): void {
+  /** Row and bulk actions alike: the view already left out alerts an action does not apply to. */
+  protected run({ action, ids }: ListActionRequest<AlertActionId>): void {
+    const [id] = ids;
     switch (action) {
       case 'open':
-        this.openId.set(id);
+        if (id) this.drawer.set({ id, focusRemark: false });
         return;
       case 'acknowledge':
+        this.update(ids, 'acknowledge', '');
+        this.selection.update((selection) =>
+          selection.filter((record) => !ids.includes(record.id)),
+        );
+        return;
       case 'resolve':
-        this.update([id], action, '');
+        // Resolving needs a remark: the alert opens with the focus on it.
+        if (id) this.drawer.set({ id, focusRemark: true });
         return;
       case 'vehicle': {
-        const alert = this.alerts().find((item) => item.id === id);
+        const alert = id ? this.alerts().find((item) => item.id === id) : undefined;
         if (alert) this.openVehicle(alert.vehicleId);
         return;
       }
     }
-  }
-
-  protected bulkAction(action: string): void {
-    if (action !== 'acknowledge' && action !== 'resolve') return;
-    this.update(this.selection(), action, '');
-    this.selection.set([]);
   }
 
   /** A drawer action: applied after the simulated latency, or failed once in `save-error`. */
@@ -210,24 +227,17 @@ export class AlertsPage {
 
   protected closeDrawer(): void {
     this.saveError.set(null);
-    this.openId.set(null);
+    this.drawer.set(null);
+    this.clearDrawer();
   }
 
+  /** Changes exactly these alerts: the list and the drawer offer only the steps that apply. */
   private update(ids: readonly string[], action: AlertAction, remark: string): void {
     const status =
       action === 'acknowledge' ? 'ACKNOWLEDGED' : action === 'resolve' ? 'RESOLVED' : 'OPEN';
-    const changed = this.alerts().filter(
-      (alert) =>
-        ids.includes(alert.id) &&
-        alert.status !== status &&
-        !(action === 'acknowledge' && alert.status === 'RESOLVED'),
-    );
-    const changedIds = changed.map((alert) => alert.id);
     this.alerts.update((alerts) =>
       alerts.map((alert) =>
-        changedIds.includes(alert.id)
-          ? { ...alert, status, remark: remark || alert.remark }
-          : alert,
+        ids.includes(alert.id) ? { ...alert, status, remark: remark || alert.remark } : alert,
       ),
     );
     if (action === 'reopen') return;
@@ -235,7 +245,7 @@ export class AlertsPage {
       action === 'acknowledge' ? this.text().notices.acknowledged : this.text().notices.resolved;
     this.notice.set({
       severity: 'success',
-      text: interpolate(template, { count: changedIds.length }),
+      text: interpolate(template, { count: ids.length }),
     });
   }
 }

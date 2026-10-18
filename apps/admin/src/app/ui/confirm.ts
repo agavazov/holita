@@ -5,36 +5,50 @@ import { uiMessages } from './i18n/messages';
 
 /**
  * Pass-through for every `<p-confirmdialog>` host template: ConfirmDialog neither names its close
- * icon nor its `p-dialog` host (`role="alertdialog"`), so both are fixed here.
+ * icon nor its `p-dialog` host (`role="alertdialog"`), so both are fixed here. Its dialog element
+ * has no description either: a host with a `#message` template passes the ID of that content as
+ * `describedBy`, so it is announced with the question.
  * Usage: `<p-confirmdialog [pt]="confirmDialogPt(language)" />`.
  */
-export function confirmDialogPt(language: Language): ConfirmDialogPassThrough {
+export function confirmDialogPt(
+  language: Language,
+  describedBy?: string,
+): ConfirmDialogPassThrough {
   return {
     host: { role: 'none' },
+    // `root` reaches the element with `role="alertdialog"` (the inner p-dialog's container).
+    ...(describedBy ? { root: { 'aria-describedby': describedBy } } : {}),
     pcCloseButton: { root: { 'aria-label': uiMessages[language].close } },
   };
 }
 
-/** A destructive action (delete, deactivate) confirmed with focus on Cancel. */
-export function confirmDestructive(
+/**
+ * An action confirmed with focus on Cancel; the accept button has the danger tone for
+ * destructive actions. `message` is rendered as HTML by ConfirmDialog, so it must never contain
+ * record data: hosts that show records use the dialog's `#message` template instead.
+ */
+export function confirmAction(
   confirmation: ConfirmationService,
   language: Language,
   options: {
     readonly header: string;
-    readonly message: string;
+    readonly message?: string;
     readonly acceptLabel: string;
-    readonly trigger?: HTMLElement | null;
+    readonly danger: boolean;
   },
 ): Promise<boolean> {
   const text = uiMessages[language];
   return new Promise((resolve) => {
     confirmation.confirm({
-      ...(options.trigger ? { target: options.trigger } : {}),
       header: options.header,
-      message: options.message,
+      ...(options.message ? { message: options.message } : {}),
       defaultFocus: 'reject',
+      closeOnEscape: true,
       rejectButtonProps: { label: text.cancel, severity: 'secondary', outlined: true },
-      acceptButtonProps: { label: options.acceptLabel, severity: 'danger' },
+      acceptButtonProps: {
+        label: options.acceptLabel,
+        severity: options.danger ? 'danger' : 'primary',
+      },
       accept: () => {
         resolve(true);
       },

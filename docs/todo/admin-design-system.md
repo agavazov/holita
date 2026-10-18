@@ -63,20 +63,26 @@ Work is on `feature/admin-design-system` in the worktree
   lint/typecheck/build pass; admin unit 386/386 (design system), 8/8 (Karma canary), 116/116
   (features); Storybook tests 63/63; shell/foundation/tenants smoke 12/13.
 - Phase 1 (fixes) is done: repo lint/typecheck/build pass; federation 17/17, router 20/20,
-  Karma Client 139/139; shell, Vehicles and Devices smoke pass. The unit-test `matchMedia` stub
+  Karma Client 139/139; shell, Vehicles and Devices smoke passed before the topbar became menus
+  (see the pending smoke update below). The unit-test `matchMedia` stub
   now reports reduced motion, because jsdom never ends PrimeNG's overlay leave animations.
 - Open: the whole admin unit suite still times out a few specs under load in WSL (each file
   passes alone, as in the baseline before this work); address it before `test:full`.
 - Storybook first (user decision, 2026-10-18): finish a complete English-only Storybook before
   returning to the admin wiring and backend. Example pages are view components fed by story
-  data (no GraphQL). S1–S3 are in place (English-only Storybook, filter builder, row actions,
-  drawer modes, the Examples pages); remaining: S4 polish, visual captures and the user review.
+  data (no GraphQL). Remaining: the user's review of the Storybook and the visual baselines after
+  approval.
 - Admin phase for the examples: replace each story host in `src/storybook/samples/pages` with an
   Apollo-backed container that feeds the same `features/fleet/*` view and drawer, mapping
   `ListQuery` to the standard list contract.
-- Pending for the admin phase: the topbar language control is now a menu, so
-  `angular-shell.smoke.spec.mts` ("theme persists and the language link keeps path, query and
-  fragment") must select the language from the menu.
+- Pending for the admin phase: the topbar is one row of menus (Branch, language, notifications,
+  account with the theme switch and Sign out), so the browser smoke tests that use the old
+  controls must open the menu and choose the `menuitem`: `chooseBranch` in
+  `tools/browser/angular-fixture.mts` (Branch `combobox`), the shell smoke (second-row Branch
+  test, keyboard order, theme buttons, "theme persists and the language link keeps path, query
+  and fragment"), the tenants smoke (Branch `combobox`, `demo-logout`), the Karma/eData smoke
+  theme buttons, and the "Български" language link in the foundation, Karma (including phases
+  2–4) and eData smokes. Wire `account` and `notifications` in `AdminWorkspace` once the backend has them.
 - Next after Storybook: B3, B4, F2, F3 (G1–G5), F4, F5 and `test:full`.
 
 ## Fleet demo scope (proposal, not implemented)
@@ -112,9 +118,5 @@ scoped with composite foreign keys, and unrelated to the temporary Karma Client.
 
 ## Open items
 
-- Decide whether `@storybook/addon-vitest` should run stories (play functions, accessibility)
-  in Vitest browser mode.
-- Raise Storybook accessibility checks from `todo` to `error` once the new theme passes contrast;
-  the current emerald primary with white text is below WCAG AA.
-- The tracked `apps/admin/public/config.json` contains a PrimeUI license value; move it to an
-  ignored local configuration and rotate it.
+- Rotate the PrimeUI license key that an earlier commit stored in `apps/admin/public/config.json`;
+  the tracked file no longer holds it.

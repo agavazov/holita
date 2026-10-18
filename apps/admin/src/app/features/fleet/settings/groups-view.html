@@ -8,6 +8,7 @@
 </holita-page-header>
 
 <holita-table-panel
+  #panel
   [heading]="text().heading"
   [total]="rows().length"
   [view]="view()"
@@ -15,17 +16,19 @@
   [emptyTitle]="text().emptyTitle"
   [emptyDescription]="text().emptyDescription"
   [notice]="notice()"
+  [actions]="actions()"
+  (action)="action.emit($event)"
   (retry)="retry.emit()"
   (dismissNotice)="dismissNotice.emit()"
 >
   <button emptyActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
-  <p-table [value]="tableRows()" dataKey="id" [scrollable]="true">
+  <p-table [value]="tableRows()" dataKey="id" [rowTrackBy]="trackById" [scrollable]="true">
     <ng-template #header>
       <tr>
         <th scope="col">{{ text().name }}</th>
         <th scope="col" class="app-num">{{ text().vehicles }}</th>
         <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
-          <span class="app-visually-hidden">{{ text().actions }}</span>
+          <span class="app-visually-hidden">{{ text().actionsColumn }}</span>
         </th>
       </tr>
     </ng-template>
@@ -39,7 +42,7 @@
                 type="button"
                 class="app-link"
                 [attr.aria-label]="editLabel(row)"
-                (click)="edit.emit(row.id)"
+                (click)="panel.run('edit', [recordOf(row)], $event.currentTarget)"
               >
                 {{ row.name }}
               </button>
@@ -50,9 +53,9 @@
         <td class="app-num">{{ row.vehicles | holitaNumber }}</td>
         <td class="app-col-actions" pFrozenColumn alignFrozen="right">
           <holita-row-actions
-            [actions]="actionsOf(row)"
-            [subject]="row.name"
-            (action)="act($event, row.id)"
+            [actions]="actions()"
+            [record]="recordOf(row)"
+            (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
           />
         </td>
       </tr>

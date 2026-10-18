@@ -1,0 +1,61 @@
+<button
+  #trigger
+  type="button"
+  [class]="triggerClasses()"
+  [id]="id"
+  aria-haspopup="menu"
+  [attr.aria-label]="ariaLabel()"
+  [attr.aria-expanded]="popup.visible()"
+  [attr.aria-disabled]="disabled() || null"
+  (click)="toggle($event)"
+>
+  <ng-content />
+  @if (variant() === 'text') {
+    <svg data-p-icon="chevron-down" class="menu-button__chevron" aria-hidden="true"></svg>
+  }
+</button>
+<p-menu
+  #popup
+  [model]="items()"
+  [popup]="true"
+  appendTo="body"
+  [styleClass]="popupClasses()"
+  [ariaLabelledBy]="header() ? id + '-header' : id"
+  (onShow)="shown()"
+>
+  @if (header(); as header) {
+    <ng-template #start>
+      <div class="menu-button__header">
+        <span class="menu-button__title" [id]="id + '-header'">{{ header.title }}</span>
+        @if (header.detail) {
+          <span class="menu-button__detail">{{ header.detail }}</span>
+        }
+      </div>
+    </ng-template>
+  }
+  <ng-template #item let-item>
+    @if (optionOf(item); as option) {
+      <a class="p-menu-item-link menu-button__item" tabindex="-1">
+        @if (option.marker; as marker) {
+          <span [class]="'app-dot app-dot--' + marker.tone" aria-hidden="true"></span>
+          <span class="app-visually-hidden">{{ marker.label }}</span>
+        }
+        <span class="menu-button__body">
+          <span class="menu-button__label" [attr.lang]="option.lang ?? null">{{
+            option.label
+          }}</span>
+          @if (option.description) {
+            <span class="menu-button__description">{{ option.description }}</span>
+          }
+        </span>
+        @if (option.note) {
+          <span class="menu-button__note">{{ option.note }}</span>
+        }
+        @if (option.selected) {
+          <svg data-p-icon="check" class="menu-button__check" aria-hidden="true"></svg>
+          <span class="app-visually-hidden">, {{ current() }}</span>
+        }
+      </a>
+    }
+  </ng-template>
+</p-menu>

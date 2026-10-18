@@ -2,12 +2,3 @@
   display: inline-flex;
   justify-content: flex-end;
 }
-
-.row-actions__trigger {
-  color: var(--p-text-muted-color);
-
-  &[aria-expanded='true'] {
-    background: var(--p-content-hover-background);
-    color: var(--p-text-color);
-  }
-}

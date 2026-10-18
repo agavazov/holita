@@ -45,15 +45,17 @@
     "expired": "Expired",
     "soon": "Expires in {days} d"
   },
-  "rowActions": {
+  "actions": {
     "view": "Open",
     "edit": "Edit",
     "deactivate": "Deactivate",
-    "delete": "Delete"
-  },
-  "bulk": {
-    "deactivate": "Deactivate",
-    "delete": "Delete"
+    "delete": "Delete",
+    "confirmDelete": {
+      "one": "Delete {name}?",
+      "many": "Delete {count} drivers?",
+      "detail": "Their trips stay in reports.",
+      "accept": "Delete"
+    }
   },
   "filters": {
     "status": "Status",
@@ -66,12 +68,8 @@
   "notices": {
     "saved": "{name} was saved.",
     "created": "{name} was added.",
-    "deactivated": "{count} driver(s) deactivated.",
-    "deleted": "{count} driver(s) deleted."
-  },
-  "confirmDelete": {
-    "title": "Delete drivers",
-    "message": "Delete {count} driver(s)? Their trips stay in reports."
+    "deactivated": "Drivers deactivated: {count}.",
+    "deleted": "Drivers deleted: {count}."
   },
   "drawer": {
     "createTitle": "New driver",

@@ -117,36 +117,46 @@
       <div class="table-panel__footer-start">
         <ng-content select="[panelFooter]" />
       </div>
-      @if (showPager()) {
-        <p-paginator
-          [rows]="current.pageSize"
-          [first]="first()"
-          [totalRecords]="current.total"
-          [rowsPerPageOptions]="pageSizeOptions()"
-          [showCurrentPageReport]="true"
-          [currentPageReportTemplate]="text().table.pageReport"
-          [locale]="locale()"
-          [alwaysShow]="true"
-          appendTo="body"
-          (onPageChange)="changePage($event)"
-        />
-      } @else {
-        <span class="table-panel__range">{{ rangeText() }}</span>
-      }
+      <p-paginator
+        [rows]="current.pageSize"
+        [first]="first()"
+        [totalRecords]="current.total"
+        [rowsPerPageOptions]="pageSizeOptions()"
+        [showPageLinks]="multiPage()"
+        [showFirstLastIcon]="multiPage()"
+        [showCurrentPageReport]="true"
+        [currentPageReportTemplate]="text().table.pageReport"
+        [locale]="locale()"
+        [alwaysShow]="true"
+        appendTo="body"
+        (onPageChange)="changePage($event)"
+      />
     </div>
   }
 </section>
 <!-- Below the panel, never between rows and footer: selecting rows moves nothing above it. The
 dock sticks to the viewport bottom while a long list is on screen. -->
 <div class="table-panel__bulk-dock">
-  @if (selectedCount() > 0) {
+  @if (selection().length > 0) {
     <div class="table-panel__bulk" role="region" [attr.aria-label]="text().table.bulkActions">
       <span class="table-panel__bulk-count">{{ selectionText() }}</span>
       @if (selectionProgress(); as progress) {
         <span class="table-panel__bulk-progress" role="status">{{ progress }}</span>
       }
       <div class="table-panel__bulk-actions">
-        <ng-content select="[bulkActions]" />
+        @for (entry of bulkActions(); track entry.action.id) {
+          <button
+            pButton
+            type="button"
+            size="small"
+            [severity]="entry.action.danger ? 'danger' : 'secondary'"
+            [outlined]="true"
+            [disabled]="entry.applicable === 0"
+            (click)="run(entry.action.id, selection(), $event.currentTarget, 'bulk')"
+          >
+            {{ entry.action.label }}
+          </button>
+        }
       </div>
       <button
         type="button"
@@ -159,3 +169,29 @@ dock sticks to the viewport bottom while a long list is on screen. -->
     </div>
   }
 </div>
+<!-- The confirmation of list actions: the question names one record or counts several, which are
+listed below it; the block below the question is the dialog's description. -->
+<p-confirmdialog [pt]="confirmPt()" [style]="{ width: 'min(30rem, calc(100vw - 2rem))' }">
+  <ng-template #message>
+    @if (pending(); as pending) {
+      <div class="table-panel__confirm" [id]="id + '-confirm'">
+        @if (pending.detail) {
+          <p>{{ pending.detail }}</p>
+        }
+        @if (pending.named.length) {
+          <ul class="table-panel__confirm-records">
+            @for (name of pending.named; track $index) {
+              <li>{{ name }}</li>
+            }
+            @if (pending.more) {
+              <li class="table-panel__confirm-more">{{ moreText(pending.more) }}</li>
+            }
+          </ul>
+        }
+        @if (pending.skipped) {
+          <p class="table-panel__confirm-skipped">{{ skippedText(pending.skipped) }}</p>
+        }
+      </div>
+    }
+  </ng-template>
+</p-confirmdialog>

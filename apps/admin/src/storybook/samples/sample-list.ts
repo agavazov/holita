@@ -26,7 +26,8 @@ export interface SampleListResult<T> {
 /** The query a sample list opens with. */
 export function initialQuery(
   sort: ListQuery['sort'],
-  pageSize = 25,
+  /** The standard list contract's default; one of TablePanel's page sizes. */
+  pageSize = 20,
   conditions: readonly FilterCondition[] = [],
 ): ListQuery {
   return { search: '', conditions, sort, page: 1, pageSize };

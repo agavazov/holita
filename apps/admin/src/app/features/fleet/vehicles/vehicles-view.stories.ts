@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
+import { chooseMenuItem } from '../../../../storybook/interactions';
 import { exampleAt } from '../../../../storybook/samples/example-app';
 import { sampleVehicles } from '../../../../storybook/samples/fleet-samples';
 
@@ -78,6 +79,48 @@ export const RowActionsMenu: Story = {
     await userEvent.click(first);
     const body = within(canvasElement.ownerDocument.body);
     await waitFor(() => expect(body.getByRole('menuitem', { name: 'Delete' })).toBeVisible());
+  },
+};
+
+/**
+ * Delete from the row menu asks about that vehicle by name; Cancel returns the focus to the
+ * row's "⋮" button.
+ */
+export const DeleteFromRow: Story = {
+  name: 'Delete from a row',
+  render: exampleAt('vehicles'),
+  play: async ({ canvasElement }) => {
+    const canvas = await tableReady(canvasElement);
+    const [trigger] = canvas.getAllByRole('button', { name: /^Actions for / });
+    if (!trigger) throw new Error('No row actions');
+    const plate = (trigger.getAttribute('aria-label') ?? '').replace('Actions for ', '');
+    await userEvent.click(trigger);
+    const body = within(canvasElement.ownerDocument.body);
+    await chooseMenuItem(canvasElement.ownerDocument.body, 'Delete');
+    const dialog = await body.findByRole('alertdialog', { name: `Delete ${plate}?` });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(trigger).toHaveFocus());
+  },
+};
+
+/** The same Delete from the bulk bar lists the selected vehicles; afterwards focus is on the list. */
+export const DeleteSelected: Story = {
+  name: 'Delete selected',
+  render: exampleAt('vehicles'),
+  play: async ({ canvasElement }) => {
+    const canvas = await tableReady(canvasElement);
+    const boxes = canvas.getAllByRole('checkbox', { name: /^Select (?!all)/ });
+    for (const box of boxes.slice(0, 3)) await userEvent.click(box);
+    const bar = await canvas.findByRole('region', { name: 'Actions for selected records' });
+    await userEvent.click(within(bar).getByRole('button', { name: 'Delete' }));
+    const body = within(canvasElement.ownerDocument.body);
+    const dialog = await body.findByRole('alertdialog', { name: 'Delete 3 vehicles?' });
+    await expect(within(dialog).getAllByRole('listitem')).toHaveLength(3);
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(canvas.getByText('Vehicles deleted: 3.')).toBeVisible());
+    await waitFor(() =>
+      expect(canvas.getByRole('heading', { level: 2, name: /^Vehicles/ })).toHaveFocus(),
+    );
   },
 };
 

@@ -1,16 +1,18 @@
 import { Component, computed, DestroyRef, inject, linkedSignal, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { ConfirmationService } from 'primeng/api';
-import { ConfirmDialog } from 'primeng/confirmdialog';
 import {
   VehicleDrawer,
   type VehicleField,
   type VehicleForm,
 } from '../../../app/features/fleet/vehicles/vehicle-drawer';
-import { type VehicleKpis, VehiclesView } from '../../../app/features/fleet/vehicles/vehicles-view';
+import {
+  type VehicleActionId,
+  type VehicleKpis,
+  VehiclesView,
+} from '../../../app/features/fleet/vehicles/vehicles-view';
 import { vehiclesText } from '../../../app/features/fleet/vehicles/i18n/messages';
-import { confirmDestructive, confirmDialogPt } from '../../../app/ui/confirm';
 import { interpolate } from '../../../app/ui/i18n/messages';
+import type { ListActionRequest, ListRecord } from '../../../app/ui/list/list-actions';
 import type { ListQuery } from '../../../app/ui/list/list-query';
 import type { TableNotice } from '../../../app/ui/table-panel/table-panel';
 import { UI_LANGUAGE } from '../../../app/ui/ui-language';
@@ -30,7 +32,7 @@ import {
   sampleTableView,
 } from '../sample-list';
 import { vehicleForm, vehicleRow } from '../rows';
-import { injectQueryParams, saveDelayMs, scenarioOf } from '../scenario';
+import { injectClearDrawer, injectQueryParams, saveDelayMs, scenarioOf } from '../scenario';
 
 const definition: SampleListDefinition<SampleVehicle> = {
   search: (vehicle) => [
@@ -75,8 +77,7 @@ function kpisOf(vehicles: readonly SampleVehicle[]): VehicleKpis {
  */
 @Component({
   selector: 'holita-example-vehicles-page',
-  imports: [VehiclesView, VehicleDrawer, ConfirmDialog],
-  providers: [ConfirmationService],
+  imports: [VehiclesView, VehicleDrawer],
   template: `
     <holita-vehicles-view
       [branchName]="branchName"
@@ -91,10 +92,8 @@ function kpisOf(vehicles: readonly SampleVehicle[]): VehicleKpis {
       [notice]="notice()"
       (stateChange)="state.set($event)"
       (create)="openEditor(null)"
-      (edit)="openEditor($event)"
-      (rowAction)="rowAction($event.action, $event.id)"
+      (action)="run($event)"
       (selectionChange)="selection.set($event)"
-      (bulkAction)="bulkAction($event)"
       (retry)="failed.set(false)"
       (dismissNotice)="notice.set(null)"
     />
@@ -110,14 +109,13 @@ function kpisOf(vehicles: readonly SampleVehicle[]): VehicleKpis {
         (closed)="closeEditor()"
       />
     }
-    <p-confirmdialog [pt]="confirmPt" [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }" />
   `,
 })
 export class VehiclesPage {
   private readonly language = inject(UI_LANGUAGE);
   private readonly router = inject(Router);
-  private readonly confirmation = inject(ConfirmationService);
   private readonly query = injectQueryParams();
+  private readonly clearDrawer = injectClearDrawer();
   private readonly scenario = computed(() =>
     scenarioOf(this.query(), ['loading', 'empty', 'error', 'save-error']),
   );
@@ -127,7 +125,6 @@ export class VehiclesPage {
 
   protected readonly branchName = fixtureBranches[0].name;
   protected readonly dataAsOf = new Date(sampleNow).toISOString();
-  protected readonly confirmPt = confirmDialogPt(this.language());
   protected readonly groups = sampleGroups.map((group) => ({ id: group.id, name: group.name }));
   protected readonly drivers = sampleDrivers
     .filter((driver) => driver.status !== 'INACTIVE')
@@ -137,7 +134,7 @@ export class VehiclesPage {
     this.scenario() === 'empty' ? [] : sampleVehicles,
   );
   protected readonly state = signal<ListQuery>(initialQuery({ field: 'plate', direction: 'asc' }));
-  protected readonly selection = signal<readonly string[]>([]);
+  protected readonly selection = signal<readonly ListRecord<VehicleActionId>[]>([]);
   protected readonly notice = signal<TableNotice | null>(null);
   protected readonly failed = linkedSignal(() => this.scenario() === 'error');
   private readonly failNextSave = linkedSignal(() => this.scenario() === 'save-error');
@@ -184,31 +181,26 @@ export class VehiclesPage {
 
   protected closeEditor(): void {
     this.editor.set(null);
+    this.clearDrawer();
   }
 
-  protected rowAction(action: string, id: string): void {
-    const vehicle = this.vehicles().find((item) => item.id === id);
-    if (!vehicle) return;
+  /** Row and bulk actions alike: the view already confirmed them and left out other records. */
+  protected run({ action, ids }: ListActionRequest<VehicleActionId>): void {
+    const [id] = ids;
     switch (action) {
       case 'edit':
-        this.openEditor(id);
+        if (id) this.openEditor(id);
         return;
       case 'profile':
-        void this.router.navigate(['/examples/vehicles', id]);
+        if (id) void this.router.navigate(['/examples/vehicles', id]);
         return;
       case 'deactivate':
-        this.deactivate([id]);
+        this.deactivate(ids);
         return;
       case 'delete':
-        void this.delete([id]);
+        this.delete(ids);
         return;
     }
-  }
-
-  protected bulkAction(action: string): void {
-    const ids = this.selection();
-    if (action === 'deactivate') this.deactivate(ids);
-    if (action === 'delete') void this.delete(ids);
   }
 
   protected save(form: VehicleForm): void {
@@ -233,7 +225,7 @@ export class VehiclesPage {
         return;
       }
       this.store(editor.id, form);
-      this.editor.set(null);
+      this.closeEditor();
       const template = editor.id ? this.text().notices.saved : this.text().notices.created;
       this.notice.set({ severity: 'success', text: interpolate(template, { plate: form.plate }) });
     }, saveDelayMs);
@@ -266,26 +258,19 @@ export class VehiclesPage {
     this.vehicles.update((vehicles) =>
       vehicles.map((item) => (ids.includes(item.id) ? { ...item, status: 'INACTIVE' } : item)),
     );
-    this.selection.set([]);
+    this.selection.update((selection) => selection.filter((record) => !ids.includes(record.id)));
     this.notice.set({
       severity: 'success',
       text: interpolate(this.text().notices.deactivated, { count: ids.length }),
     });
   }
 
-  private async delete(ids: readonly string[]): Promise<void> {
-    const text = this.text();
-    const confirmed = await confirmDestructive(this.confirmation, this.language(), {
-      header: text.confirmDelete.title,
-      message: interpolate(text.confirmDelete.message, { count: ids.length }),
-      acceptLabel: text.rowActions.delete,
-    });
-    if (!confirmed) return;
+  private delete(ids: readonly string[]): void {
     this.vehicles.update((vehicles) => vehicles.filter((item) => !ids.includes(item.id)));
-    this.selection.update((selection) => selection.filter((id) => !ids.includes(id)));
+    this.selection.update((selection) => selection.filter((record) => !ids.includes(record.id)));
     this.notice.set({
       severity: 'success',
-      text: interpolate(text.notices.deleted, { count: ids.length }),
+      text: interpolate(this.text().notices.deleted, { count: ids.length }),
     });
   }
 }

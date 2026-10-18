@@ -163,14 +163,6 @@
   }
 }
 
-.table-panel__range {
-  padding-block: var(--p-app-space-2);
-  padding-inline-end: var(--p-app-space-2);
-  font-size: var(--p-app-text-sm);
-  font-variant-numeric: var(--p-app-font-numeric);
-  color: var(--p-text-muted-color);
-}
-
 .table-panel__bulk-count {
   font-weight: 600;
   font-variant-numeric: var(--p-app-font-numeric);
@@ -199,5 +191,42 @@
 
 .table-panel__footer-start {
   font-size: var(--p-app-text-sm);
+  color: var(--p-text-muted-color);
+}
+
+// The confirmation renders in the dialog appended to the body; the template is this component's,
+// so these styles reach it.
+.table-panel__confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-app-space-3);
+  min-inline-size: 0;
+
+  > p {
+    margin: 0;
+  }
+}
+
+.table-panel__confirm-records {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-app-space-1);
+  margin: 0;
+  padding: var(--p-app-space-2) var(--p-app-space-3);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-app-radius-control);
+  list-style: none;
+
+  > li {
+    overflow: hidden;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.table-panel__confirm-more,
+.table-panel__confirm-skipped {
+  font-weight: 400;
   color: var(--p-text-muted-color);
 }

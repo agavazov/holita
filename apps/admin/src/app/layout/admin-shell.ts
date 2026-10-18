@@ -13,7 +13,6 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormControl } from '@angular/forms';
 import {
   type ActivatedRouteSnapshot,
   NavigationCancel,
@@ -28,7 +27,12 @@ import { messages, type Language } from '../i18n/messages';
 import { Appearance } from '../theme/appearance';
 import { below } from '../ui/media';
 import { AdminSidebar } from './admin-sidebar';
-import { AdminTopbar, type LanguageOption } from './admin-topbar';
+import {
+  AdminTopbar,
+  type LanguageOption,
+  type ShellAccount,
+  type ShellNotification,
+} from './admin-topbar';
 import type { NavGroup, PageContext } from './navigation';
 
 const railStorageKey = 'holita.admin.sidebar';
@@ -72,12 +76,17 @@ export class AdminShell {
   readonly languageChange = output<string>();
   readonly loading = input(false);
   readonly tenantName = input<string | null>(null);
+  /** The account menu's name and detail; the tenant name when absent. */
+  readonly account = input<ShellAccount | null>(null);
+  /** The bell's notifications; null hides the bell. */
+  readonly notifications = input<readonly ShellNotification[] | null>(null);
   readonly navigation = input<readonly NavGroup[]>([]);
   readonly context = input<PageContext | null>(null);
   readonly signOut = output();
   readonly branchSelected = output<string>();
+  readonly notificationOpen = output<string>();
+  readonly notificationsRead = output();
 
-  readonly branchControl = new FormControl<string | null>(null);
   readonly appearance = inject(Appearance);
   readonly mobile = below('lg');
   readonly rail = signal(readRail());
@@ -95,14 +104,6 @@ export class AdminShell {
   private readonly router = inject(Router);
 
   constructor() {
-    effect(() => {
-      this.branchControl.setValue(this.branchId(), { emitEvent: false });
-    });
-    effect(() => {
-      if (this.loading() && this.branches().length === 0)
-        this.branchControl.disable({ emitEvent: false });
-      else this.branchControl.enable({ emitEvent: false });
-    });
     // Reaching the desktop layout closes the navigation drawer and returns focus to the menu.
     effect(() => {
       if (!this.mobile() && untracked(this.mobileOpen)) {
@@ -114,9 +115,6 @@ export class AdminShell {
           { injector: this.injector },
         );
       }
-    });
-    this.branchControl.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
-      this.chooseBranch(value);
     });
     let page = pageKey(this.router.routerState.snapshot.root);
     this.router.events
@@ -130,8 +128,6 @@ export class AdminShell {
         takeUntilDestroyed(),
       )
       .subscribe((event) => {
-        // Resync after Select's handler; a canceled navigation leaves the route unchanged.
-        this.branchControl.setValue(this.branchId(), { emitEvent: false });
         if (!(event instanceof NavigationEnd)) return;
         this.mobileOpen.set(false);
         const next = pageKey(this.router.routerState.snapshot.root);
@@ -146,8 +142,13 @@ export class AdminShell {
       });
   }
 
+  /** A known Branch other than the current one; the current one again is not a change. */
   chooseBranch(value: unknown): void {
-    if (typeof value === 'string' && this.branches().some((branch) => branch.id === value))
+    if (
+      typeof value === 'string' &&
+      value !== this.branchId() &&
+      this.branches().some((branch) => branch.id === value)
+    )
       this.branchSelected.emit(value);
   }
 

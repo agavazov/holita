@@ -64,7 +64,12 @@
     "bulkActions": "Actions for selected records",
     "clearSelection": "Clear selection",
     "pageReport": "{first}–{last} of {totalRecords}",
-    "rowActions": "Actions for {name}"
+    "rowActions": "Actions for {name}",
+    "moreRecords": "and {count} more",
+    "skippedRecords": "Selected records it does not apply to are left unchanged: {count}."
+  },
+  "menu": {
+    "current": "current choice"
   },
   "filters": {
     "addFilter": "Add filter",

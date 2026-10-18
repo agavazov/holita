@@ -38,13 +38,16 @@
     "OFFLINE": "Offline",
     "IN_STOCK": "In stock"
   },
-  "rowActions": {
+  "actions": {
     "edit": "Edit",
     "restart": "Restart",
-    "vehicle": "Open vehicle profile"
-  },
-  "bulk": {
-    "restart": "Restart"
+    "vehicle": "Open vehicle profile",
+    "confirmRestart": {
+      "one": "Restart {name}?",
+      "many": "Restart {count} devices?",
+      "detail": "They stop reporting for about a minute.",
+      "accept": "Restart"
+    }
   },
   "filters": {
     "status": "Connection",
@@ -55,7 +58,7 @@
   "notices": {
     "saved": "Device {imei} was saved.",
     "created": "Device {imei} was registered.",
-    "restarted": "Restart sent to {count} device(s)."
+    "restarted": "Restart sent to devices: {count}."
   },
   "drawer": {
     "createTitle": "Register device",

@@ -1,23 +1,31 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import type { ListActionBase, ListRecord } from '../list/list-actions';
 import { UI_LANGUAGE } from '../ui-language';
-import { RowActions, type RowAction } from './row-actions';
+import { type RowChoice, RowActions } from './row-actions';
+
+type Action = 'edit' | 'archive' | 'delete';
 
 @Component({
   imports: [RowActions],
   template: `<holita-row-actions
     [actions]="actions"
-    subject="CB 1001 AX"
-    (action)="chosen.push($event)"
+    [record]="record"
+    (choose)="chosen.push($event)"
   />`,
 })
 class Host {
-  readonly actions: readonly RowAction[] = [
-    { id: 'delete', label: 'Delete', danger: true },
+  readonly actions: readonly ListActionBase<Action>[] = [
+    { id: 'delete', label: 'Delete', danger: true, bulk: true },
     { id: 'edit', label: 'Edit' },
-    { id: 'archive', label: 'Archive', disabled: true },
+    { id: 'archive', label: 'Archive', bulk: true },
   ];
-  readonly chosen: string[] = [];
+  readonly record: ListRecord<Action> = {
+    id: 'v1',
+    label: 'CB 1001 AX',
+    unavailable: ['archive'],
+  };
+  readonly chosen: RowChoice<Action>[] = [];
 }
 
 describe('RowActions', () => {
@@ -27,7 +35,7 @@ describe('RowActions', () => {
     });
   });
 
-  it('names the trigger, lists destructive actions last and emits the chosen action', async () => {
+  it('names the trigger, lists every action with destructive ones last and emits the choice', async () => {
     TestBed.configureTestingModule({
       providers: [{ provide: UI_LANGUAGE, useValue: signal<'en' | 'bg'>('en').asReadonly() }],
     });
@@ -45,13 +53,14 @@ describe('RowActions', () => {
     const items = [...document.body.querySelectorAll('.p-menu [role="menuitem"]')];
     expect(items.map((item) => item.textContent.trim())).toEqual(['Edit', 'Archive', 'Delete']);
     expect(document.body.querySelectorAll('.p-menu [role="separator"]')).toHaveLength(1);
+    // Archive does not apply to this record.
     expect(items[1]?.getAttribute('aria-disabled')).toBe('true');
     expect(items[2]?.closest('.app-menu-danger')).not.toBeNull();
 
-    const link = items[0]?.querySelector('a, .p-menu-item-link');
+    const link = items[0]?.querySelector('.p-menu-item-link');
     if (!(link instanceof HTMLElement)) throw new Error('Missing menu link.');
     link.click();
     await fixture.whenStable();
-    expect(fixture.componentInstance.chosen).toEqual(['edit']);
+    expect(fixture.componentInstance.chosen).toEqual([{ action: 'edit', origin: trigger }]);
   });
 });

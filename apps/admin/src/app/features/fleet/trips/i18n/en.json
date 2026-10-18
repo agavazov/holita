@@ -24,7 +24,8 @@
     "score": "Score",
     "events": "Events",
     "actions": "Actions",
-    "open": "Open trip {plate}, {started}",
+    "tripName": "{plate}, {started}",
+    "open": "Open trip {trip}",
     "noDriver": "No driver",
     "noEvents": "None",
     "eventCount": "{count} events",
@@ -32,7 +33,7 @@
     "emptyDescription": "Trips appear when the trackers report the first journeys.",
     "errorText": "The trips could not be loaded. (demo-request-5)"
   },
-  "rowActions": {
+  "actions": {
     "open": "Open trip",
     "vehicle": "Open vehicle profile"
   },

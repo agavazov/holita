@@ -7,12 +7,14 @@ import {
 } from '../../../app/features/fleet/devices/device-drawer';
 import {
   currentFirmware,
+  type DeviceActionId,
   type DeviceKpis,
   type DeviceRow,
   DevicesView,
 } from '../../../app/features/fleet/devices/devices-view';
 import { devicesText } from '../../../app/features/fleet/devices/i18n/messages';
 import { interpolate } from '../../../app/ui/i18n/messages';
+import type { ListActionRequest, ListRecord } from '../../../app/ui/list/list-actions';
 import type { ListQuery } from '../../../app/ui/list/list-query';
 import type { TableNotice } from '../../../app/ui/table-panel/table-panel';
 import { UI_LANGUAGE } from '../../../app/ui/ui-language';
@@ -30,7 +32,7 @@ import {
   type SampleListDefinition,
   sampleTableView,
 } from '../sample-list';
-import { injectQueryParams, saveDelayMs, scenarioOf } from '../scenario';
+import { injectClearDrawer, injectQueryParams, saveDelayMs, scenarioOf } from '../scenario';
 
 const dataAsOf = new Date(sampleNow).toISOString();
 const models = [...new Set(sampleDevices.map((device) => device.model))].sort();
@@ -90,10 +92,8 @@ function kpisOf(devices: readonly SampleDevice[]): DeviceKpis {
       [notice]="notice()"
       (stateChange)="state.set($event)"
       (create)="openEditor(null)"
-      (edit)="openEditor($event)"
-      (rowAction)="rowAction($event.action, $event.id)"
+      (action)="run($event)"
       (selectionChange)="selection.set($event)"
-      (bulkAction)="restart(selection())"
       (retry)="failed.set(false)"
       (dismissNotice)="notice.set(null)"
     />
@@ -107,7 +107,7 @@ function kpisOf(devices: readonly SampleDevice[]): DeviceKpis {
         [saveError]="saveError()"
         [fieldErrors]="fieldErrors()"
         (save)="save($event)"
-        (closed)="editor.set(null)"
+        (closed)="closeEditor()"
       />
     }
   `,
@@ -116,6 +116,7 @@ export class DevicesPage {
   private readonly language = inject(UI_LANGUAGE);
   private readonly router = inject(Router);
   private readonly query = injectQueryParams();
+  private readonly clearDrawer = injectClearDrawer();
   private readonly scenario = computed(() =>
     scenarioOf(this.query(), ['loading', 'empty', 'error', 'save-error']),
   );
@@ -134,7 +135,7 @@ export class DevicesPage {
     this.scenario() === 'empty' ? [] : sampleDevices,
   );
   protected readonly state = signal<ListQuery>(initialQuery({ field: 'imei', direction: 'asc' }));
-  protected readonly selection = signal<readonly string[]>([]);
+  protected readonly selection = signal<readonly ListRecord<DeviceActionId>[]>([]);
   protected readonly notice = signal<TableNotice | null>(null);
   protected readonly failed = linkedSignal(() => this.scenario() === 'error');
   private readonly failNextSave = linkedSignal(() => this.scenario() === 'save-error');
@@ -177,24 +178,25 @@ export class DevicesPage {
     this.editor.set({ device: device ? toRow(device) : null });
   }
 
-  protected rowAction(action: string, id: string): void {
-    const device = this.devices().find((item) => item.id === id);
-    if (!device) return;
-    if (action === 'edit') this.openEditor(id);
-    if (action === 'restart') this.restart([id]);
-    if (action === 'vehicle' && device.vehicleId)
-      void this.router.navigate(['/examples/vehicles', device.vehicleId]);
+  protected closeEditor(): void {
+    this.editor.set(null);
+    this.clearDrawer();
   }
 
-  protected restart(ids: readonly string[]): void {
-    const online = this.devices().filter(
-      (device) => ids.includes(device.id) && device.status === 'ONLINE',
-    );
-    this.selection.set([]);
-    this.notice.set({
-      severity: online.length ? 'success' : 'warn',
-      text: interpolate(this.text().notices.restarted, { count: online.length }),
-    });
+  /** Row and bulk actions alike: the view already confirmed them and left out other records. */
+  protected run({ action, ids }: ListActionRequest<DeviceActionId>): void {
+    const [id] = ids;
+    switch (action) {
+      case 'edit':
+        if (id) this.openEditor(id);
+        return;
+      case 'restart':
+        this.restart(ids);
+        return;
+      case 'vehicle':
+        if (id) this.openVehicle(id);
+        return;
+    }
   }
 
   protected save(form: DeviceForm): void {
@@ -232,9 +234,23 @@ export class DevicesPage {
               ...devices,
             ],
       );
-      this.editor.set(null);
+      this.closeEditor();
       const template = id ? this.text().notices.saved : this.text().notices.created;
       this.notice.set({ severity: 'success', text: interpolate(template, { imei: form.imei }) });
     }, saveDelayMs);
+  }
+
+  /** A simulated restart: the devices keep reporting afterwards, so no row changes. */
+  private restart(ids: readonly string[]): void {
+    this.selection.update((selection) => selection.filter((record) => !ids.includes(record.id)));
+    this.notice.set({
+      severity: 'success',
+      text: interpolate(this.text().notices.restarted, { count: ids.length }),
+    });
+  }
+
+  private openVehicle(id: string): void {
+    const vehicleId = this.devices().find((item) => item.id === id)?.vehicleId;
+    if (vehicleId) void this.router.navigate(['/examples/vehicles', vehicleId]);
   }
 }

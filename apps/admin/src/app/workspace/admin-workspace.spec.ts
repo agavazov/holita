@@ -124,7 +124,7 @@ describe('Demo tenant login workspace', () => {
       `//bg/${branch.id}/fleet/vehicles`,
       `//bg/${branch.id}/fleet/devices`,
     ]);
-    expect(shell.context()).toEqual({ group: 'Автопарк', page: 'Устройства' });
+    expect(shell.context()).toMatchObject({ group: 'Автопарк', page: 'Устройства', record: null });
     expect(document.title).toBe('Устройства · holita');
     expect(harness.routeDebugElement?.injector.get(UI_LANGUAGE)()).toBe('bg');
     const primeNG = TestBed.inject(PrimeNG);
@@ -135,7 +135,7 @@ describe('Demo tenant login workspace', () => {
     http.expectOne((r) => operation(r, 'AdminBranches')).flush({ data: { branches: [branch] } });
     await harness.fixture.whenStable();
     http.match(() => true);
-    expect(shell.context()).toEqual({ group: 'Karma Client', page: 'Projects' });
+    expect(shell.context()).toMatchObject({ group: 'Karma Client', page: 'Projects' });
     expect(document.title).toBe('Projects · holita');
     expect(primeNG.translation.monthNames?.[0]).toBe('January');
     expect(harness.routeDebugElement?.injector.get(UI_LANGUAGE)()).toBe('en');

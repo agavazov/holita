@@ -24,6 +24,7 @@
     "selectPage": "Select all on this page",
     "selectRow": "Select {task} on {plate}",
     "edit": "Edit {task} on {plate}",
+    "record": "{task} on {plate}",
     "dueOn": "by {date}",
     "dueKm": "at {km} km",
     "kmLeft": "{km} km left",
@@ -38,15 +39,16 @@
     "OK": "Planned",
     "DONE": "Done"
   },
-  "rowActions": {
+  "actions": {
     "edit": "Edit",
     "complete": "Mark as done",
     "vehicle": "Open vehicle profile",
-    "delete": "Delete"
-  },
-  "bulk": {
-    "complete": "Mark as done",
-    "delete": "Delete"
+    "delete": "Delete",
+    "confirmDelete": {
+      "one": "Delete {name}?",
+      "many": "Delete {count} service tasks?",
+      "accept": "Delete"
+    }
   },
   "filters": {
     "urgency": "Urgency",
@@ -58,12 +60,8 @@
   "notices": {
     "saved": "{task} was saved.",
     "created": "{task} was planned.",
-    "completed": "{count} task(s) marked as done.",
-    "deleted": "{count} task(s) deleted."
-  },
-  "confirmDelete": {
-    "title": "Delete service tasks",
-    "message": "Delete {count} service task(s)?"
+    "completed": "Service tasks marked as done: {count}.",
+    "deleted": "Service tasks deleted: {count}."
   },
   "drawer": {
     "createTitle": "New service task",

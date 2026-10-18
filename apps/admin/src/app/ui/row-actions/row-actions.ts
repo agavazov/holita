@@ -1,64 +1,51 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  input,
-  output,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { EllipsisV } from '@primeicons/angular/ellipsis-v';
-import type { MenuItem } from 'primeng/api';
-import { Menu } from 'primeng/menu';
 import { interpolate, uiMessages } from '../i18n/messages';
+import type { ListActionBase, ListRecord } from '../list/list-actions';
+import { type MenuChoice, MenuButton, type MenuOption } from '../menu-button/menu-button';
 import { UI_LANGUAGE } from '../ui-language';
 
-export interface RowAction {
-  readonly id: string;
-  readonly label: string;
-  /** Destructive actions come last, after a separator, in the danger tone. */
-  readonly danger?: boolean;
-  readonly disabled?: boolean;
+/** The chosen row action and the "⋮" button it came from (focused again). */
+export interface RowChoice<A extends string> {
+  readonly action: A;
+  readonly origin: HTMLElement;
 }
 
 /**
- * The "⋮" menu of one list row: the row's actions open in a popup, so lists never show a
- * destructive button directly next to the data.
+ * The "⋮" menu of one list row: all of the list's actions in a popup, those that do not apply
+ * to the record disabled, so lists never show a destructive button next to the data.
  */
 @Component({
   selector: 'holita-row-actions',
-  imports: [Menu, EllipsisV],
-  templateUrl: './row-actions.html',
+  imports: [MenuButton, EllipsisV],
+  template: `
+    <holita-menu-button [ariaLabel]="label()" [options]="options()" (choose)="chosen($event)">
+      <svg data-p-icon="ellipsis-v" aria-hidden="true"></svg>
+    </holita-menu-button>
+  `,
   styleUrl: './row-actions.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class RowActions {
-  readonly actions = input.required<readonly RowAction[]>();
-  /** What the row is, for the accessible name, e.g. the licence plate. */
-  readonly subject = input.required<string>();
-  readonly action = output<string>();
+export class RowActions<A extends string> {
+  readonly actions = input.required<readonly ListActionBase<A>[]>();
+  readonly record = input.required<ListRecord<A>>();
+  readonly choose = output<RowChoice<A>>();
 
-  protected readonly open = signal(false);
   private readonly language = inject(UI_LANGUAGE);
   protected readonly label = computed(() =>
-    interpolate(uiMessages[this.language()].table.rowActions, { name: this.subject() }),
+    interpolate(uiMessages[this.language()].table.rowActions, { name: this.record().label }),
   );
-  protected readonly items = computed<MenuItem[]>(() => {
-    const toItem = (action: RowAction): MenuItem => ({
+  protected readonly options = computed<readonly MenuOption[]>(() =>
+    this.actions().map((action) => ({
       id: action.id,
       label: action.label,
-      disabled: action.disabled ?? false,
-      ...(action.danger ? { styleClass: 'app-menu-danger' } : {}),
-      command: () => {
-        this.action.emit(action.id);
-      },
-    });
-    const regular = this.actions().filter((action) => !action.danger);
-    const danger = this.actions().filter((action) => action.danger);
-    return [
-      ...regular.map(toItem),
-      ...(regular.length && danger.length ? [{ separator: true }] : []),
-      ...danger.map(toItem),
-    ];
-  });
+      danger: action.danger ?? false,
+      disabled: this.record().unavailable.includes(action.id),
+    })),
+  );
+
+  protected chosen(choice: MenuChoice): void {
+    const action = this.actions().find((candidate) => candidate.id === choice.id);
+    if (action) this.choose.emit({ action: action.id, origin: choice.origin });
+  }
 }

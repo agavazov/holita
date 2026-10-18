@@ -60,8 +60,11 @@
       [error]="remarkError()"
       [counter]="{ length: remarkLength(), max: 2000 }"
     >
+      <!-- pAutoFocus focuses in a later task, once the drawer has moved to the body: moving a
+      focused field would blur it. -->
       <textarea
         pTextarea
+        [pAutoFocus]="focusRemark()"
         id="alert-remark"
         rows="4"
         [formControl]="remark"

@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
-import { ButtonDirective } from 'primeng/button';
 import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import type { StatusTone } from '../../../theme/status-tones';
@@ -9,9 +8,16 @@ import { FormatNumberPipe, FormatRelativePipe } from '../../../ui/format/format.
 import { interpolate } from '../../../ui/i18n/messages';
 import { KpiStrip } from '../../../ui/kpi/kpi-strip';
 import { KpiTile } from '../../../ui/kpi/kpi-tile';
+import {
+  type ListAction,
+  type ListActionRequest,
+  type ListRecord,
+  listRecord,
+  trackById,
+} from '../../../ui/list/list-actions';
 import { injectSortReady, listQuery, type ListQuery } from '../../../ui/list/list-query';
 import { PageHeader } from '../../../ui/page-header/page-header';
-import { RowActions, type RowAction } from '../../../ui/row-actions/row-actions';
+import { RowActions } from '../../../ui/row-actions/row-actions';
 import { TablePanel, type TableNotice } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { toneSeverity } from '../../../ui/tones';
@@ -22,6 +28,7 @@ export const alertSeverities = ['CRITICAL', 'WARNING', 'INFO'] as const;
 export const alertStatuses = ['OPEN', 'ACKNOWLEDGED', 'RESOLVED'] as const;
 export type AlertSeverityCode = (typeof alertSeverities)[number];
 export type AlertStatusCode = (typeof alertStatuses)[number];
+export type AlertActionId = 'open' | 'acknowledge' | 'resolve' | 'vehicle';
 
 /** One alert, as the Alerts list query returns it (the drawer shows the same record). */
 export interface AlertRow {
@@ -63,13 +70,13 @@ export const alertStatusTones: Record<AlertStatusCode, StatusTone> = {
 
 /**
  * The Alerts list page: severity and status tags, the default "not resolved" filter as a chip,
- * row and bulk actions that depend on the status. A row opens the alert in a view drawer with
- * actions. Presentation only: the host owns data, list state and the updates.
+ * row actions that follow the status and Acknowledge for the selected alerts. A row opens the
+ * alert in a view drawer with actions. Presentation only: the host owns data, list state and the
+ * updates.
  */
 @Component({
   selector: 'holita-alerts-view',
   imports: [
-    ButtonDirective,
     TableModule,
     Tag,
     FilterBuilder,
@@ -95,13 +102,12 @@ export class AlertsView {
   readonly state = input.required<ListQuery>();
   readonly kpis = input<AlertKpis | null>(null);
   readonly vehicles = input<readonly AlertOption[]>([]);
-  readonly selection = input<readonly string[]>([]);
+  readonly selection = input<readonly ListRecord<AlertActionId>[]>([]);
   readonly notice = input<TableNotice | null>(null);
   readonly stateChange = output<ListQuery>();
-  readonly open = output<string>();
-  readonly rowAction = output<{ readonly action: string; readonly id: string }>();
-  readonly selectionChange = output<readonly string[]>();
-  readonly bulkAction = output<string>();
+  /** Row and bulk actions alike, with the IDs they apply to. */
+  readonly action = output<ListActionRequest<AlertActionId>>();
+  readonly selectionChange = output<readonly ListRecord<AlertActionId>[]>();
   readonly retry = output();
   readonly dismissNotice = output();
 
@@ -143,25 +149,40 @@ export class AlertsView {
       },
     ];
   });
-  /** The row menu: Acknowledge only for open alerts, Resolve until resolved. */
-  protected readonly rowActions = computed(() => {
-    const text = this.text().rowActions;
-    return new Map<string, readonly RowAction[]>(
-      this.rows().map((row) => [
-        row.id,
-        [
-          { id: 'open', label: text.open },
-          { id: 'acknowledge', label: text.acknowledge, disabled: row.status !== 'OPEN' },
-          { id: 'resolve', label: text.resolve, disabled: row.status === 'RESOLVED' },
-          { id: 'vehicle', label: text.vehicle },
-        ],
-      ]),
-    );
+  /**
+   * The list's actions, once for the row menu and the bulk bar: Acknowledge only for open alerts,
+   * Resolve until resolved. Resolving needs a remark, so Resolve opens the alert and is not bulk.
+   */
+  protected readonly actions = computed<readonly ListAction<AlertActionId, AlertRow>[]>(() => {
+    const text = this.text().actions;
+    return [
+      { id: 'open', label: text.open },
+      {
+        id: 'acknowledge',
+        label: text.acknowledge,
+        bulk: true,
+        appliesTo: (row) => row.status === 'OPEN',
+      },
+      { id: 'resolve', label: text.resolve, appliesTo: (row) => row.status !== 'RESOLVED' },
+      { id: 'vehicle', label: text.vehicle },
+    ];
   });
+  private readonly records = computed(
+    () => new Map(this.rows().map((row) => [row.id, this.toRecord(row)])),
+  );
+  protected readonly trackById = trackById;
   /** PrimeNG's table takes a mutable array. */
   protected readonly tableRows = computed(() => [...this.rows()]);
-  protected readonly selectedRows = computed(() =>
-    this.rows().filter((row) => this.selection().includes(row.id)),
+  protected readonly selectedRows = computed(() => {
+    const selected = new Set(this.selection().map((record) => record.id));
+    return this.rows().filter((row) => selected.has(row.id));
+  });
+  /**
+   * The selection for the bulk bar, as the rows on screen are now: the drawer changes the status
+   * of a selected alert (a resolved one leaves the default list) without a new selection.
+   */
+  protected readonly selectedRecords = computed(() =>
+    this.selectedRows().map((row) => this.recordOf(row)),
   );
   protected readonly page = computed(() => ({
     page: this.state().page,
@@ -187,37 +208,48 @@ export class AlertsView {
     return this.text().statuses[status];
   }
 
-  protected actionsOf(row: AlertRow): readonly RowAction[] {
-    return this.rowActions().get(row.id) ?? [];
-  }
-
   protected label(template: string, row: AlertRow): string {
     return interpolate(template, { kind: row.kind, plate: row.plate });
   }
 
+  protected recordOf(row: AlertRow): ListRecord<AlertActionId> {
+    return this.records().get(row.id) ?? this.toRecord(row);
+  }
+
   protected changeSearch(search: string): void {
-    this.stateChange.emit(listQuery.search(this.state(), search));
+    this.changeQuery(listQuery.search(this.state(), search));
   }
 
   protected changeConditions(conditions: readonly FilterCondition[]): void {
-    this.stateChange.emit(listQuery.conditions(this.state(), conditions));
+    this.changeQuery(listQuery.conditions(this.state(), conditions));
   }
 
   protected changePage(page: { page: number; pageSize: number }): void {
-    this.stateChange.emit(listQuery.page(this.state(), page));
+    this.changeQuery(listQuery.page(this.state(), page));
   }
 
   protected clearFilters(): void {
-    this.stateChange.emit(listQuery.cleared(this.state()));
+    this.changeQuery(listQuery.cleared(this.state()));
   }
 
   protected sort(event: TableLazyLoadEvent): void {
     if (!this.sortReady()) return;
     const next = listQuery.sorted(this.state(), event);
-    if (next) this.stateChange.emit(next);
+    if (next) this.changeQuery(next);
   }
 
   protected select(rows: readonly AlertRow[] | null): void {
-    this.selectionChange.emit((rows ?? []).map((row) => row.id));
+    this.selectionChange.emit((rows ?? []).map((row) => this.recordOf(row)));
+  }
+
+  /** The selection belongs to the rows on screen, so any new query clears it. */
+  private changeQuery(query: ListQuery): void {
+    this.stateChange.emit(query);
+    if (this.selection().length) this.selectionChange.emit([]);
+  }
+
+  /** Named by kind and plate: several alerts of one kind are open at once. */
+  private toRecord(row: AlertRow): ListRecord<AlertActionId> {
+    return listRecord(this.actions(), row, row.id, this.label(this.text().table.record, row));
   }
 }

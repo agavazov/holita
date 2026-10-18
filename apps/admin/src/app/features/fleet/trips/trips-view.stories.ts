@@ -1,11 +1,13 @@
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
+import { chooseMenuItem } from '../../../../storybook/interactions';
 import { exampleAt } from '../../../../storybook/samples/example-app';
 import { sampleTrips } from '../../../../storybook/samples/fleet-samples';
 
 /**
  * The Trips example: a read-only list (no selection or bulk actions) whose rows open a view
- * drawer with the trip summary and its timeline. Sample data, inside the shell.
+ * drawer with the trip summary and its timeline, or the vehicle profile from the row menu.
+ * Sample data, inside the shell.
  */
 const meta: Meta = {
   title: 'Examples/Monitoring/Trips',
@@ -64,6 +66,27 @@ export const OpenFromList: Story = {
     await userEvent.click(first);
     const body = within(canvasElement.ownerDocument.body);
     await waitFor(() => expect(body.getByRole('button', { name: 'Open vehicle' })).toBeVisible());
+  },
+};
+
+/** The row menu opens the trip or, as here, the profile of its vehicle. */
+export const OpenVehicleFromRow: Story = {
+  name: 'Open the vehicle from a row',
+  render: exampleAt('trips'),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(() => expect(canvas.getByRole('table')).toBeVisible(), appReady);
+    const [trigger] = canvas.getAllByRole('button', { name: /^Actions for / });
+    if (!trigger) throw new Error('No row actions');
+    // The menu names the trip "<plate>, <started>".
+    const name = (trigger.getAttribute('aria-label') ?? '').replace('Actions for ', '');
+    const plate = name.split(', ')[0] ?? '';
+    await userEvent.click(trigger);
+    await chooseMenuItem(canvasElement.ownerDocument.body, 'Open vehicle profile');
+    await waitFor(
+      () => expect(canvas.getByRole('heading', { level: 1, name: plate })).toBeVisible(),
+      appReady,
+    );
   },
 };
 

@@ -1,11 +1,23 @@
-import { Component, computed, effect, inject, input } from '@angular/core';
+import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
 import { AdminShell } from '../../app/layout/admin-shell';
-import type { LanguageOption } from '../../app/layout/admin-topbar';
+import type {
+  LanguageOption,
+  ShellAccount,
+  ShellNotification,
+} from '../../app/layout/admin-topbar';
 import { navigationContext, type NavGroup } from '../../app/layout/navigation';
+import { PageRecord } from '../../app/layout/page-record';
 import { defaultBranchId, fixtureBranches, fixtureTenant } from '../session-fixtures';
+import {
+  sampleAlerts,
+  sampleDevices,
+  sampleNow,
+  sampleServiceTasks,
+  vehicleById,
+} from './fleet-samples';
 import { exampleRoutes } from './pages/example-routes';
 
 /** Sample entries only: Storybook stays in English and the language menu changes nothing. */
@@ -56,6 +68,58 @@ export const exampleNavigation: readonly NavGroup[] = [
   },
 ];
 
+/** A sample account: the profile menu's heading. */
+export const sampleAccount: ShellAccount = {
+  name: 'Elena Petrova',
+  detail: 'Fleet manager · Demo Logistics Ltd',
+};
+
+interface SampleNotification extends ShellNotification {
+  readonly link: readonly string[];
+  readonly queryParams?: Readonly<Record<string, string>>;
+}
+
+/** Sample notifications from the sample alerts, service plan and trackers; each opens its record. */
+export function sampleNotifications(): readonly SampleNotification[] {
+  const minute = 60_000;
+  const critical = sampleAlerts.filter(
+    (alert) => alert.status === 'OPEN' && alert.severity === 'CRITICAL',
+  );
+  const overdue = sampleServiceTasks.find((task) => task.urgency === 'OVERDUE');
+  const offline = sampleDevices.filter((device) => device.status === 'OFFLINE').length;
+  return [
+    ...critical.slice(0, 2).map((alert, index) => ({
+      id: `alert-${alert.id}`,
+      title: `${alert.kind} · ${vehicleById(alert.vehicleId)?.plate ?? '—'}`,
+      detail: alert.detail,
+      at: alert.occurredAt,
+      unread: index === 0,
+      link: link('alerts'),
+      queryParams: { drawer: alert.id },
+    })),
+    ...(overdue
+      ? [
+          {
+            id: `task-${overdue.id}`,
+            title: `${overdue.kind} overdue · ${vehicleById(overdue.vehicleId)?.plate ?? '—'}`,
+            detail: 'Plan the workshop visit.',
+            at: new Date(sampleNow - 95 * minute).toISOString(),
+            unread: true,
+            link: link('maintenance'),
+            queryParams: { drawer: overdue.id },
+          },
+        ]
+      : []),
+    {
+      id: 'devices-offline',
+      title: `${String(offline)} trackers offline`,
+      detail: 'No connection for more than 48 hours.',
+      at: new Date(sampleNow - 6 * 60 * minute).toISOString(),
+      unread: false,
+      link: link('devices'),
+    },
+  ];
+}
 /**
  * The example pages inside the real shell, with their own routes: the sidebar switches pages and
  * every page keeps its state until the story is reloaded. Story-only.
@@ -70,6 +134,10 @@ export const exampleNavigation: readonly NavGroup[] = [
       language="en"
       [languages]="languages"
       [tenantName]="tenant"
+      [account]="account"
+      [notifications]="notifications()"
+      (notificationOpen)="openNotification($event)"
+      (notificationsRead)="markAllRead()"
       [navigation]="navigation"
       [context]="context()"
     >
@@ -84,7 +152,10 @@ export class ExampleApp {
   readonly tenant = fixtureTenant.name;
   readonly languages = sampleLanguages;
   readonly navigation = exampleNavigation;
+  readonly account = sampleAccount;
+  readonly notifications = signal<readonly SampleNotification[]>(sampleNotifications());
   private readonly router = inject(Router);
+  private readonly pageRecord = inject(PageRecord);
   private readonly path = toSignal(
     this.router.events.pipe(
       filter((event) => event instanceof NavigationEnd),
@@ -92,13 +163,31 @@ export class ExampleApp {
     ),
     { initialValue: '' },
   );
-  readonly context = computed(() => navigationContext(exampleNavigation, this.path()));
+  readonly context = computed(() => {
+    const context = navigationContext(exampleNavigation, this.path());
+    return context ? { ...context, record: this.pageRecord.label() } : null;
+  });
 
   constructor() {
     this.router.resetConfig(exampleRoutes);
     effect(() => {
       void this.router.navigateByUrl(this.url());
     });
+  }
+
+  protected openNotification(id: string): void {
+    const notification = this.notifications().find((item) => item.id === id);
+    if (!notification) return;
+    this.notifications.update((items) =>
+      items.map((item) => (item.id === id ? { ...item, unread: false } : item)),
+    );
+    void this.router.navigate([...notification.link], {
+      queryParams: notification.queryParams ?? {},
+    });
+  }
+
+  protected markAllRead(): void {
+    this.notifications.update((items) => items.map((item) => ({ ...item, unread: false })));
   }
 }
 

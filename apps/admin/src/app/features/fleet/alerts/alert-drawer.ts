@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { AutoFocus } from 'primeng/autofocus';
 import { ButtonDirective } from 'primeng/button';
 import { Message } from 'primeng/message';
 import { Tag } from 'primeng/tag';
@@ -42,6 +43,7 @@ export type AlertAction = 'acknowledge' | 'resolve' | 'reopen';
   selector: 'holita-alert-drawer',
   imports: [
     ReactiveFormsModule,
+    AutoFocus,
     ButtonDirective,
     Message,
     Tag,
@@ -60,6 +62,11 @@ export class AlertDrawer {
   /** The action being applied, if any. */
   readonly busy = input<AlertAction | null>(null);
   readonly saveError = input<string | null>(null);
+  /**
+   * Opened to resolve (the list's Resolve): the remark it needs takes the focus once the drawer
+   * is shown, instead of the title.
+   */
+  readonly focusRemark = input(false);
   readonly action = output<{ readonly action: AlertAction; readonly remark: string }>();
   readonly openVehicle = output<string>();
   readonly closed = output();

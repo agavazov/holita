@@ -14,6 +14,7 @@ import { messages, readLanguage, type Language } from '../i18n/messages';
 import { AdminShell } from '../layout/admin-shell';
 import type { LanguageOption } from '../layout/admin-topbar';
 import { navigationContext } from '../layout/navigation';
+import { PageRecord } from '../layout/page-record';
 import { UI_LANGUAGE } from '../ui/ui-language';
 import { adminNavigation } from './admin-navigation';
 import { primeNgTranslation } from './primeng-translation';
@@ -34,6 +35,7 @@ export class AdminWorkspace {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly primeNG = inject(PrimeNG);
+  private readonly pageRecord = inject(PageRecord);
   private readonly params = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
   });
@@ -57,12 +59,16 @@ export class AdminWorkspace {
   readonly navigation = computed(() =>
     adminNavigation(this.language(), this.branches.selectedId(), this.fleetEnabled),
   );
-  /** The topbar context: the navigation item whose link is the longest prefix of the path. */
+  /**
+   * The topbar context: the navigation item whose link is the longest prefix of the path, and the
+   * record a record page registered.
+   */
   readonly context = computed(() => {
     this.navigationEnd();
     const primary = this.router.parseUrl(this.router.url).root.children['primary'];
     const path = `/${(primary?.segments ?? []).map((segment) => segment.path).join('/')}`;
-    return navigationContext(this.navigation(), path);
+    const context = navigationContext(this.navigation(), path);
+    return context ? { ...context, record: this.pageRecord.label() } : null;
   });
 
   constructor() {

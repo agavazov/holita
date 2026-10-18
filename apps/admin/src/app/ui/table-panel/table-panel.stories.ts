@@ -1,11 +1,19 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, signal } from '@angular/core';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { ButtonDirective } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
+import { chooseMenuItem } from '../../../storybook/interactions';
 import { onFrame } from '../../../storybook/story-config';
-import { RowActions, type RowAction } from '../row-actions/row-actions';
+import {
+  type ListAction,
+  type ListActionRequest,
+  type ListRecord,
+  listRecord,
+  trackById,
+} from '../list/list-actions';
+import { RowActions } from '../row-actions/row-actions';
 import { TablePanel, type TableNotice, type TablePage } from './table-panel';
 import type { TableView } from './table-view';
 
@@ -68,12 +76,41 @@ const rows: readonly DemoRow[] = [
   },
 ];
 
-const actions: readonly RowAction[] = [
+type DemoAction = 'edit' | 'duplicate' | 'deactivate' | 'delete';
+
+/** One definition for the row menu and the bulk bar; Deactivate applies to active vehicles only. */
+const actions: readonly ListAction<DemoAction, DemoRow>[] = [
   { id: 'edit', label: 'Edit' },
   { id: 'duplicate', label: 'Duplicate' },
-  { id: 'deactivate', label: 'Deactivate' },
-  { id: 'delete', label: 'Delete', danger: true },
+  {
+    id: 'deactivate',
+    label: 'Deactivate',
+    bulk: true,
+    appliesTo: (row) => row.status.label !== 'Inactive',
+    confirm: {
+      one: 'Deactivate {name}?',
+      many: 'Deactivate {count} vehicles?',
+      detail: 'They stay in reports and can be activated again.',
+      accept: 'Deactivate',
+    },
+  },
+  {
+    id: 'delete',
+    label: 'Delete',
+    bulk: true,
+    danger: true,
+    confirm: {
+      one: 'Delete {name}?',
+      many: 'Delete {count} vehicles?',
+      detail: 'Their trips and history stay in reports.',
+      accept: 'Delete',
+    },
+  },
 ];
+
+function recordOf(row: DemoRow): ListRecord<DemoAction> {
+  return listRecord(actions, row, row.id, row.plate);
+}
 
 /** A story host with a real p-table inside the panel, as list pages use it. */
 @Component({
@@ -81,6 +118,7 @@ const actions: readonly RowAction[] = [
   imports: [TablePanel, TableModule, Tag, ButtonDirective, RowActions],
   template: `
     <holita-table-panel
+      #panel
       heading="Vehicles"
       [total]="view().kind === 'rows' || view().kind === 'rows-error' ? page().total : null"
       [view]="view()"
@@ -89,9 +127,11 @@ const actions: readonly RowAction[] = [
       emptyTitle="No vehicles yet"
       emptyDescription="Add the first vehicle of this branch."
       [notice]="notice()"
-      [selectedCount]="selection().length"
+      [actions]="actions"
+      [selection]="records()"
       [selectionProgress]="progress()"
       [page]="page()"
+      (action)="requested.set($event)"
     >
       <button
         panelActions
@@ -104,13 +144,13 @@ const actions: readonly RowAction[] = [
         Columns
       </button>
       <button emptyActions pButton type="button">New vehicle</button>
-      <button bulkActions pButton type="button" size="small" severity="secondary" [outlined]="true">
-        Deactivate
-      </button>
-      <button bulkActions pButton type="button" size="small" severity="danger" [outlined]="true">
-        Delete
-      </button>
-      <p-table [value]="shownRows()" dataKey="id" [selection]="selection()" [scrollable]="true">
+      <p-table
+        [value]="shownRows()"
+        dataKey="id"
+        [rowTrackBy]="trackById"
+        [selection]="selection()"
+        [scrollable]="true"
+      >
         <ng-template #header>
           <tr>
             <th scope="col" class="app-col-check">
@@ -132,7 +172,14 @@ const actions: readonly RowAction[] = [
             <td><p-table-checkbox [value]="row" [ariaLabel]="'Select ' + row.plate" /></td>
             <td>
               <span class="app-cell-stack">
-                <a class="app-link" href="#">{{ row.plate }}</a>
+                <button
+                  type="button"
+                  class="app-link"
+                  [attr.aria-label]="'Edit ' + row.plate"
+                  (click)="panel.run('edit', [recordOf(row)], $event.currentTarget)"
+                >
+                  {{ row.plate }}
+                </button>
                 <span>{{ row.fleetNumber }}</span>
               </span>
             </td>
@@ -147,12 +194,22 @@ const actions: readonly RowAction[] = [
             </td>
             <td class="app-num">{{ row.odometer }}</td>
             <td class="app-col-actions">
-              <holita-row-actions [actions]="actions" [subject]="row.plate" />
+              <holita-row-actions
+                [actions]="actions"
+                [record]="recordOf(row)"
+                (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
+              />
             </td>
           </tr>
         </ng-template>
       </p-table>
-      <span panelFooter>Total distance: 1,399,905 km</span>
+      <span panelFooter>
+        @if (requested(); as request) {
+          Last request: {{ request.action }} {{ request.ids.join(', ') }}
+        } @else {
+          Total distance: 1,399,905 km
+        }
+      </span>
     </holita-table-panel>
   `,
 })
@@ -164,8 +221,17 @@ class TablePanelDemo {
   readonly progress = input<string | null>(null);
   /** The list total: 46 pages through the rows, 5 fits on one page. */
   readonly total = input(46);
+  readonly pageSize = input(20);
   readonly actions = actions;
-  readonly page = computed<TablePage>(() => ({ page: 1, pageSize: 20, total: this.total() }));
+  readonly trackById = trackById;
+  readonly recordOf = recordOf;
+  readonly requested = signal<ListActionRequest<DemoAction> | null>(null);
+  readonly records = computed(() => this.selection().map(recordOf));
+  readonly page = computed<TablePage>(() => ({
+    page: 1,
+    pageSize: this.pageSize(),
+    total: this.total(),
+  }));
   readonly shownRows = computed(() => rows.slice(0, Math.min(rows.length, this.total())));
 }
 
@@ -182,14 +248,36 @@ type Story = StoryObj<TablePanelDemo>;
 export const Loading: Story = { args: { view: { kind: 'loading' } } };
 export const Rows: Story = { args: { view: { kind: 'rows' } } };
 
-/** All rows fit on one page: no page controls, only the range. */
+/** Everything fits on one page: the range and the page size stay, the page links go. */
 export const SinglePage: Story = {
   name: 'Single page',
   args: { view: { kind: 'rows' }, total: 5 },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByText('1–5 of 5')).toBeVisible();
-    await expect(canvas.queryByRole('navigation')).toBeNull();
+    await expect(canvasElement.querySelector('.p-paginator-pages')).toBeNull();
+    await expect(canvasElement.querySelector('.p-paginator-rpp-dropdown')).not.toBeNull();
+  },
+};
+
+/** A larger page size than the list: it can still be changed back. */
+export const LargePageSize: Story = {
+  name: 'Large page size',
+  args: { view: { kind: 'rows' }, total: 46, pageSize: 100 },
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelector('.p-paginator-rpp-dropdown')).not.toBeNull();
+    await expect(canvasElement.querySelector('.p-paginator-pages')).toBeNull();
+  },
+};
+
+/** A size outside the offered ones (e.g. from an old link) is added to them, so it shows. */
+export const UnlistedPageSize: Story = {
+  name: 'Unlisted page size',
+  args: { view: { kind: 'rows' }, total: 46, pageSize: 25 },
+  play: async ({ canvasElement }) => {
+    await waitFor(() =>
+      expect(canvasElement.querySelector('.p-paginator-rpp-dropdown')).toHaveTextContent('25'),
+    );
   },
 };
 
@@ -231,13 +319,69 @@ export const SelectionWithProgress: Story = {
   },
 };
 
+/** The row menu: Deactivate is disabled for the inactive vehicle. */
 export const RowActionsOpen: Story = {
   name: 'Row actions open',
   args: { view: { kind: 'rows' } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole('button', { name: 'Actions for CB 1002 AX' }));
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for CB 1005 AX' }));
     const body = within(canvasElement.ownerDocument.body);
     await waitFor(() => expect(body.getByRole('menuitem', { name: 'Delete' })).toBeVisible());
+    await expect(body.getByRole('menuitem', { name: 'Deactivate' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+  },
+};
+
+/**
+ * A row's Delete names the record in the question and describes it with the detail; Cancel
+ * returns the focus to its "⋮".
+ */
+export const ConfirmFromRow: Story = {
+  name: 'Confirm from a row',
+  args: { view: { kind: 'rows' } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const trigger = canvas.getByRole('button', { name: 'Actions for CB 1002 AX' });
+    await userEvent.click(trigger);
+    const body = within(canvasElement.ownerDocument.body);
+    await chooseMenuItem(canvasElement.ownerDocument.body, 'Delete');
+    const dialog = await body.findByRole('alertdialog', { name: 'Delete CB 1002 AX?' });
+    await waitFor(() =>
+      expect(dialog).toHaveAccessibleDescription(/Their trips and history stay in reports\./),
+    );
+    await waitFor(() =>
+      expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus(),
+    );
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(trigger).toHaveFocus());
+  },
+};
+
+/**
+ * The bulk bar runs the same actions: the question counts the records it applies to, lists them
+ * and says how many selected records it leaves unchanged, all part of the dialog's description.
+ */
+export const ConfirmSelection: Story = {
+  name: 'Confirm a selection',
+  args: { view: { kind: 'rows' }, selection: rows.slice(2, 5) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const bar = canvas.getByRole('region', { name: 'Actions for selected records' });
+    await userEvent.click(within(bar).getByRole('button', { name: 'Deactivate' }));
+    const body = within(canvasElement.ownerDocument.body);
+    const dialog = await body.findByRole('alertdialog', { name: 'Deactivate 2 vehicles?' });
+    await expect(within(dialog).getAllByRole('listitem')).toHaveLength(2);
+    // The dialog fades in: wait until its content is shown.
+    await waitFor(() =>
+      expect(
+        within(dialog).getByText('Selected records it does not apply to are left unchanged: 1.'),
+      ).toBeVisible(),
+    );
+    await expect(dialog).toHaveAccessibleDescription(/left unchanged: 1\./);
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Deactivate' }));
+    await waitFor(() => expect(canvas.getByText('Last request: deactivate 3, 4')).toBeVisible());
   },
 };

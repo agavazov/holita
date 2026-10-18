@@ -41,6 +41,7 @@
 />
 
 <holita-table-panel
+  #panel
   [heading]="text().table.heading"
   [total]="total()"
   [view]="view()"
@@ -48,39 +49,20 @@
   [emptyTitle]="text().table.emptyTitle"
   [emptyDescription]="text().table.emptyDescription"
   [notice]="notice()"
-  [selectedCount]="selection().length"
+  [actions]="actions()"
+  [selection]="selectedRecords()"
   [page]="page()"
+  (action)="action.emit($event)"
   (pageChange)="changePage($event)"
   (clearFilters)="clearFilters()"
   (retry)="retry.emit()"
   (dismissNotice)="dismissNotice.emit()"
   (clearSelection)="selectionChange.emit([])"
 >
-  <button
-    bulkActions
-    pButton
-    type="button"
-    size="small"
-    severity="secondary"
-    [outlined]="true"
-    (click)="bulkAction.emit('acknowledge')"
-  >
-    {{ text().bulk.acknowledge }}
-  </button>
-  <button
-    bulkActions
-    pButton
-    type="button"
-    size="small"
-    severity="secondary"
-    [outlined]="true"
-    (click)="bulkAction.emit('resolve')"
-  >
-    {{ text().bulk.resolve }}
-  </button>
   <p-table
     [value]="tableRows()"
     dataKey="id"
+    [rowTrackBy]="trackById"
     [lazy]="true"
     [lazyLoadOnInit]="false"
     [selection]="selectedRows()"
@@ -132,7 +114,7 @@
               type="button"
               class="app-link"
               [attr.aria-label]="label(text().table.open, row)"
-              (click)="open.emit(row.id)"
+              (click)="panel.run('open', [recordOf(row)], $event.currentTarget)"
             >
               {{ row.kind }}
             </button>
@@ -162,9 +144,9 @@
         </td>
         <td class="app-col-actions" pFrozenColumn alignFrozen="right">
           <holita-row-actions
-            [actions]="actionsOf(row)"
-            [subject]="row.kind"
-            (action)="rowAction.emit({ action: $event, id: row.id })"
+            [actions]="actions()"
+            [record]="recordOf(row)"
+            (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
           />
         </td>
       </tr>

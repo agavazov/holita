@@ -107,6 +107,11 @@ const preview: Preview = {
           styles: { width: '1440px', height: '900px' },
           type: 'desktop',
         },
+        desktop1024: {
+          name: 'Desktop 1024',
+          styles: { width: '1024px', height: '768px' },
+          type: 'desktop',
+        },
         tablet768: {
           name: 'Tablet 768',
           styles: { width: '768px', height: '1024px' },

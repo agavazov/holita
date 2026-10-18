@@ -37,13 +37,16 @@
 />
 
 <holita-table-panel
+  #panel
   [heading]="text().table.heading"
   [total]="total()"
   [view]="view()"
   [errorText]="text().table.errorText"
   [emptyTitle]="text().table.emptyTitle"
   [emptyDescription]="text().table.emptyDescription"
+  [actions]="actions()"
   [page]="page()"
+  (action)="action.emit($event)"
   (pageChange)="changePage($event)"
   (clearFilters)="clearFilters()"
   (retry)="retry.emit()"
@@ -51,6 +54,7 @@
   <p-table
     [value]="tableRows()"
     dataKey="id"
+    [rowTrackBy]="trackById"
     [lazy]="true"
     [lazyLoadOnInit]="false"
     [sortField]="sortField()"
@@ -89,7 +93,7 @@
             type="button"
             class="app-link"
             [attr.aria-label]="openLabel(row)"
-            (click)="open.emit(row.id)"
+            (click)="panel.run('open', [recordOf(row)], $event.currentTarget)"
           >
             {{ row.startedAt | holitaDateTime }}
           </button>
@@ -134,8 +138,8 @@
         <td class="app-col-actions" pFrozenColumn alignFrozen="right">
           <holita-row-actions
             [actions]="actions()"
-            [subject]="row.plate"
-            (action)="rowAction.emit({ action: $event, id: row.id })"
+            [record]="recordOf(row)"
+            (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
           />
         </td>
       </tr>
