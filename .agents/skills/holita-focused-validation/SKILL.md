@@ -31,8 +31,10 @@ Use VITEST_MAX_WORKERS=1 on constrained hosts without reducing case coverage or 
 
 Compiled-app browser checks use test:smoke:admin with angular-vehicles, angular-devices,
 angular-foundation or angular-shell smoke files. Match the behavior to the authoritative mapping.
-Review shell/feature desktop/mobile light/dark visuals at matching Sakai viewport sizes; keep
-behavioral evidence separate from visual review. Captures stay in ignored .references/review.
+Shell/feature presentation changes use test:storybook:admin and test:visual:admin with
+[candidate review](../../../docs/testing.md#storybook-visual-review) of the light/dark
+desktop/mobile captures; keep behavioral evidence separate from visual review. Baselines stay in
+ignored .references/review/storybook-baselines and change only after a person approves them.
 
 Root tooling changes require root lint/typecheck/build plus affected behavior. CI changes
 require actionlint/ShellCheck and explicit Nx impact examples; actual PR runs use event base/head,

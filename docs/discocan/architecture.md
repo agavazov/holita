@@ -207,7 +207,7 @@ foreign key is CONFLICT with an entity message.
 ## Angular admin foundation
 
 The standalone Angular flow is component → concrete feature API → generated TypedDocumentNode
-→ Apollo Angular/HttpLink → Gateway. Login owns the standalone Sakai login view and sequential
+→ Apollo Angular/HttpLink → Gateway. Login owns the standalone login view and sequential
 Tenant/Branch selection. A candidate token loads tenant-scoped Branches through a disposable client;
 changing Tenant cancels discovery and ignores late tokens. Submitting a valid Branch activates the
 tab session and opens Vehicles. AdminWorkspace coordinates the common session, language,
@@ -235,19 +235,21 @@ Typed Reactive Forms provide validation, server-field focus, null clearing, dirt
 and retained failed drafts. Device's remote Vehicle picker searches/pages through the captured
 DevicesApi and hydrates the assigned Vehicle. Multiple Devices can use the same Vehicle.
 
-The browser title is Admin. The header and login show only the logo mark.
-Sakai defines the shell and feature presentation. The ignored [source](../development.md#sakai-source-reference)
-is a visual reference only. PrimeNG Aura compatibility tokens and local Cyrillic-capable Lato use
-Sakai's 14px root. Desktop header/sidebar are 56px/280px; content caps at 1504px on wide screens.
-Below 992px, one Branch selector moves into a second 56px row without resetting editor drafts.
-The mobile Drawer traps focus and supports Escape/backdrop dismissal; collapsed desktop links
-are inert. The footer carries holita. Light/dark preference uses `holita.admin.theme`; denied
-storage leaves the toggle usable and reports its failure. Bulgarian/English catalogs supply UI text.
-Every sidebar navigation link and truck-data section link pairs its visible label with
-a decorative inline PrimeIcons SVG. Icons inherit the link color, retain the Sakai
-spacing and remain hidden from assistive technology so labels supply accessible names.
-The trimmed preset contains implemented controls and their PrimeNG dependencies.
-Public startup config selects GraphQL URL, availability and optional user-supplied PrimeUI license.
+The document title is `<page> · holita` (`Sign in · holita` / `Вход · holita` on Login).
+The [admin design system](../admin-design-system.md#shell) defines the shell and feature
+presentation: a desktop sidebar that collapses to a persisted rail whose links keep their names
+and tooltips, a modal navigation drawer below 1024px that traps focus and closes on Escape,
+backdrop, navigation and at 1024px, and one topbar row at every width with the breadcrumb and the
+Branch, language and account menus (theme switch and Sign out), so resizing keeps editor drafts.
+The application passes no account or notifications: the bell is hidden and the account menu
+names the tenant. The sidebar ends with `holita · <tenant>`. Light/dark preference uses
+`holita.admin.theme`; denied storage leaves the switch usable and reports its failure.
+Bulgarian/English catalogs supply UI text. Every sidebar navigation link and truck-data section
+link pairs its visible label with a decorative inline PrimeIcons SVG. Icons inherit the link color
+and remain hidden from assistive technology so labels supply accessible names. The preset
+registers only the rendered PrimeNG controls and their dependencies. Public startup config
+selects GraphQL URL and availability; a developer's PrimeUI license key belongs only in the
+Git-ignored `config.local.json` ([development](development.md#telemetry-admin)).
 
 Demo sessions last eight hours and persist only in the browser tab sessionStorage. Logout navigates through the dirty-editor guard, clears the tab session and destroys discovery/business clients. Expiry retires the current workspace. Submitted writes retain their captured token and may settle after logout. Logout has no server-side token revocation. [Development](development.md#demo-tenant-login) describes configuration and production limitations.
 
@@ -289,7 +291,8 @@ The read-only table fetches all rows on entry or Refresh. Registration links ope
 `/cars/:recordId` detail route with the verified car fields, Refresh and a return link.
 Registration links use the shared `content-link` styling, matching the Fleet tables in both themes.
 Missing/invalid IDs show a not-found message; refresh failures retain previous details.
-All Karma views have Bulgarian/English labels and use the existing Sakai/PrimeNG theme.
+All Karma views have Bulgarian/English labels and use the admin theme; `styles/_legacy-karma.scss`
+maps their legacy classes to the design-system tokens.
 
 The concrete eData feature validates car/message/parameter IDs as positive safe integers
 represented by GraphQL IDs. It maps all verified message fields and numeric parameter

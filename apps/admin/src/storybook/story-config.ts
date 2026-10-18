@@ -98,8 +98,9 @@ export function storybookApplicationConfig(
 }
 
 /**
- * The developer's PrimeUI key from the Git-ignored `config.local.json`, which only the interactive
- * Storybook serves (never `build-storybook`). Missing or invalid means no key.
+ * The developer's PrimeUI key from the Git-ignored `public/config.local.json`. `public/` is Vite's
+ * public directory: the interactive Storybook serves the file and `build-storybook` copies it into
+ * `storybook-static`. Missing or invalid means no key.
  */
 export async function loadStoryLicense(): Promise<string | undefined> {
   try {

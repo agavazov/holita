@@ -1,6 +1,6 @@
 # Fleet implementation index
 
-Sakai owns Angular presentation. Concrete features own contracts, validation and scoped
+The [admin design system](../admin-design-system.md) owns Angular presentation. Concrete features own contracts, validation and scoped
 request lifecycles. Use the existing files directly; there is no generic CRUD layer.
 
 ## Fleet backend modules
@@ -135,7 +135,7 @@ The shared [Simple eData vendor catalog](erm-resources/simple-edata-catalog/READ
 is implemented by [file validation](../../apps/fleet/src/modules/edata-catalog/catalog-file.ts),
 [transactional persistence](../../apps/fleet/src/modules/edata-catalog/catalog.repository.ts)
 and a [local CLI](../../apps/fleet/src/modules/edata-catalog/cli.ts). Its offline TypeScript extractor
-is [tools/erm-edata/catalog.mts](../../tools/erm-edata/catalog.mts); it has no API or admin integration.
+is [tools/erm-edata/catalog.py](../../tools/erm-edata/catalog.py); it has no API or admin integration.
 
 ## Angular foundation
 

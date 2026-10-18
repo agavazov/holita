@@ -25,40 +25,43 @@ reviewed against a running backend.
   `holitaPreset(choice)` = `definePreset` over standard Aura with brand ramps, density tokens,
   status tones, component tokens and the `extend.app` tokens (`--p-app-*`). `appTheme` in
   `theme-choice.ts` is the application's single configured choice of brand (`cobalt`, `ember`,
-  `pine`) and density (`compact`, `comfortable`). Every colour pair the admin relies on is checked
-  for WCAG AA by a unit spec from the Aura primitives.
+  `pine`) and density (`compact`, `comfortable`). The text, border and status-mark pairs the admin
+  relies on are checked for WCAG AA by a unit spec from the Aura primitives (`theme/contrast.ts`).
 - **CSS layers and one dark-mode mechanism.** Global styles live in `src/styles/` in the layers
   `holita-reset, primeng, holita`; PrimeNG emits its tokens into `primeng`. Every value that
   differs between schemes is a `light-dark()` token, so `.app-dark` switches PrimeNG and holita
   tokens alike. Breakpoints are declared once in Sass and exposed to TypeScript as `--app-bp-*`.
 - **A new shell** (canvas, grouped sidebar with a rail, framed topbar and content) replaces the
   Sakai layout; it reads no business data.
-- **Domain-neutral patterns** in `app/ui` (page header, KPI strip, filter bar, table panel, route
-  drawer, form field, empty state, charts) and helpers (URL list state, sequential bulk actions,
-  GraphQL field errors, validators, formatting, remote options) are the only building blocks of
-  new screens. Single PrimeNG controls are used directly, never wrapped.
-- **Editing in route drawers.** Editors are child routes rendered in `RouteDrawer`; closing is a
-  navigation guarded by `leaveDrawer`, so dirty drafts, Escape, the backdrop and unload all pass
-  through one confirmation. Drawers report saves to their host through `ROUTER_OUTLET_DATA`.
-  Page and drawer lifetime follows the URL scope: the Branch outlet is keyed by Branch, drawer
-  routes are recreated when their own record parameter changes (a parameter-keyed route reuse
-  strategy), and every page, tab and drawer owns its Apollo client, so a Branch or record switch
-  retires the previous scope's requests instead of filtering their results.
-- **Storybook as the review tool.** Every pattern and screen state has stories on the real
-  Angular components with deterministic GraphQL fixtures; brand, density, theme and language are
-  toolbar globals. `@storybook/addon-vitest` with `@vitest/browser-playwright` runs every story,
-  play function and axe check as a test (`npm run test:storybook:admin`); these test-tooling dev
-  dependencies were approved for this purpose.
+- **Domain-neutral patterns** in `app/ui` (page header, KPI strip, filter builder, table panel
+  with row actions, menu button, route drawer, form field, empty state, charts) and helpers (list
+  actions and query, URL list state, sequential bulk actions, confirmations, GraphQL field errors,
+  validators, formatting, remote options) are the only building blocks of new screens. Single
+  PrimeNG controls are used directly, never wrapped.
+- **Editing in drawers.** `RouteDrawer` is the editor container: closing a dirty draft with the
+  close button, Escape or the backdrop passes through one `confirmLeave` confirmation, and a dirty
+  drawer also triggers the browser's leave-page prompt on unload. It closes either through its
+  host (`closeRequest`) or, as a child route guarded by `leaveDrawer`, by navigating.
+- **Storybook as the review tool.** The patterns, the shell and the states of presentation-only
+  example screens have stories on the real Angular components with deterministic fixtures and
+  sample data (MenuButton and RowActions only inside the Shell, TablePanel and example stories);
+  the application's current Fleet screens are not in Storybook. Brand, density and theme are
+  toolbar globals, and stories are English only. `@storybook/addon-vitest` with
+  `@vitest/browser-playwright` runs every story, play function and axe check as a test
+  (`npm run test:storybook:admin`); these test-tooling dev dependencies were approved for this
+  purpose.
 
 ## Consequences
 
 - A brand, density, token or pattern change is made once and reaches every screen; Storybook
   shows the alternatives side by side, and changing `appTheme` is the only code change needed to
   switch the application.
-- The root font size follows the browser (16 px by default). Karma Client pages keep working
-  through `styles/_legacy-karma.scss`, the only place the old class names and Sakai variable
-  aliases survive; their look is not redesigned and the file is removed together with Karma.
+- The root font size follows the browser (16 px by default). Karma Client pages and the Fleet
+  Vehicles/Devices screens that predate the patterns keep working through
+  `styles/_legacy-karma.scss`, the only place the old class names and Sakai variable aliases
+  survive; their look is not redesigned and the file is removed once both are gone.
 - `light-dark()` and `color-mix()` require current evergreen browsers.
-- The Fleet screens move to the patterns in their own changes; route-tree details that land with
-  them are documented in the [Discocan architecture](../../discocan/architecture.md). The
-  implemented design system is described in [admin design system](../../admin-design-system.md).
+- The application still routes the pre-pattern Fleet Vehicles/Devices screens
+  ([Discocan Fleet](../../discocan/fleet.md)); the Fleet views and drawers built from the patterns
+  are presentation-only and render only in Storybook. The implemented design system is described
+  in [admin design system](../../admin-design-system.md).

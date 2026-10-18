@@ -18,8 +18,9 @@ This Vehicles/Devices workflow belongs to Discocan; online-shop work uses [Ecomm
 ## Trace the concrete implementation
 
 - [app.config.ts](../../../apps/admin/src/app/app.config.ts) configures standalone routing,
-  HTTP, Sakai preset and Branch discovery Apollo. Public startup config selects Gateway URL,
-  availability and optional private user license; validate before bootstrap.
+  HTTP, the holita theme (`provideHolitaTheme`) and Branch discovery Apollo. Public startup
+  config selects Gateway URL, availability and optional private user license; validate before
+  bootstrap.
 - [AdminWorkspace](../../../apps/admin/src/app/workspace/admin-workspace.ts) coordinates the common
   session/language/login and shell. Its component-scoped
   [BranchContext](../../../apps/admin/src/app/features/branches/branch-context.ts) owns authenticated
@@ -62,10 +63,12 @@ change, stop unsent sequential deletes, preserve successes and retain failed row
 
 ## Presentation and verification
 
-Sakai owns the shell/feature visual composition. Use the [pinned source](../../../docs/development.md#sakai-source-reference)
-for comparisons, PrimeNG documented APIs/tokens for controls, local feature styles and minimal
-global CSS. Keep Bulgarian/English, keyboard/mobile, light/dark and loading/error/empty states.
-Do not import ignored template source or add demo routes/dependencies.
+The [admin design system](../../../docs/admin-design-system.md) owns shell and feature
+presentation; follow the [admin design-system skill](../holita-admin-design-system/SKILL.md) for
+tokens, patterns, PrimeNG controls and stories, and review in the
+[admin Storybook](../../../docs/development.md#admin-storybook). Use PrimeNG documented APIs/tokens
+for controls, local feature styles and minimal global CSS. Keep Bulgarian/English,
+keyboard/mobile, light/dark and loading/error/empty states. Do not add demo routes/dependencies.
 
 Use [focused validation](../holita-focused-validation/SKILL.md). Select concrete Vehicles/Devices
 API/query/editor/deletion suites, AdminWorkspace/BranchContext/FleetWorkspace and RelationPicker as affected.

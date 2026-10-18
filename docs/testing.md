@@ -3,8 +3,10 @@
 ## Select the narrowest relevant target
 
 Use named root npm targets with native runner selectors. Jest handles backend tests;
-Angular CLI uses Vitest/jsdom; Playwright handles compiled-app browser checks.
-Commands are non-watch. `npm test` is not the validation interface.
+Angular CLI uses Vitest/jsdom; Playwright handles compiled-app browser checks. Admin stories run
+in Vitest with Chromium ([story tests](#storybook-story-tests)), and Playwright captures them for
+[visual review](#storybook-visual-review). Commands are non-watch. `npm test` is not the
+validation interface.
 
 ```bash
 npm run test:fleet -- vehicles.service.spec.ts --skip-nx-cache
@@ -13,15 +15,26 @@ npm run test:core -- health.spec.ts --skip-nx-cache
 npm run test:gateway -- router.runtime.spec.mts
 npm run test:karma-client -- cars.spec.ts --skip-nx-cache
 npm run test:admin -- --include=app/features/fleet/vehicles/vehicles-api.spec.ts --skip-nx-cache
+npm run test:admin -- --include="app/theme/**/*.spec.ts" --include="app/ui/**/*.spec.ts" --skip-nx-cache
 ```
 
-Without a file, each named target selects its own current unit/bootstrap suite. Gateway
-bootstrap checks run the installed native Router with unavailable subgraphs, without a
+Without a file, each named target selects its own current unit/bootstrap suite. Admin `--include`
+paths are relative to `apps/admin/src`, accept globs and may repeat. Gateway bootstrap checks run the installed native Router with unavailable subgraphs, without a
 database, and verify health, a local GraphQL query, unknown routes and oversized headers.
 DB targets are separate and noncached. Do not accept zero executed tests, enable
 `--passWithNoTests` or use watch mode. Read actual counts; mocks are not persistence proof.
 Root tooling changes require `npm run lint`, `npm run typecheck` and `npm run build` plus
 relevant behavioral checks. SDL/operations also require codegen, schema:check and test:schema.
+
+Admin unit specs run in jsdom with the `matchMedia`, `ResizeObserver` and `scrollIntoView` stubs
+of `src/test-setup.ts` ([breakpoints](admin-design-system.md#global-styles-layers-and-breakpoints)).
+In the combined admin unit run under load (WSL), the first `app/workspace/admin-workspace.spec.ts`
+case can exceed the 5-second test timeout; the file passes alone
+(`npm run test:admin -- --include=app/workspace/admin-workspace.spec.ts --skip-nx-cache`), so
+rerun it that way before treating the timeout as a regression. Run heavy Nx, Angular and Storybook
+checks (builds, `test:admin`, `test:storybook:admin`, `test:visual:admin`, browser smokes) one at a
+time in a worktree: each first runs the admin `graphql-generate` target, which rewrites
+`apps/admin/src/generated/graphql`, and parallel runs collide.
 
 ## Domain checks
 
@@ -69,11 +82,49 @@ Gateway has no database dependency. The fixture uses only the pinned Apollo Rout
 waits on its dedicated health listener and closes it before subgraphs and test schemas.
 No fixture starts a JavaScript Gateway or selects another runtime.
 
-Angular fixtures serve the compiled production app with their own runtime configuration.
-They own dedicated backend processes/schemas and never load private development licenses.
+Angular fixtures serve the compiled production app from `apps/admin/dist/browser` and answer
+`/config.json` with their own runtime configuration; every other path comes from the build. When
+the Git-ignored `apps/admin/public/config.local.json` exists, the build contains it and the smokes
+run with that developer's PrimeUI license ([admin Storybook](development.md#admin-storybook)).
+They own dedicated backend processes/schemas.
 Browser fixtures seed Core and obtain real demo sessions; they create their own business records without running Fleet sample seeds. The Isolation tenant/branch exists only in these test fixtures.
 Browser targets build the admin and three subgraphs, prepare Router, use Chromium, disable retries and retain
 failure screenshots/traces under ignored test-results. Clean up task-started connections/processes.
+
+The admin smokes still drive the topbar that preceded the menu buttons: `chooseBranch` in
+`tools/browser/angular-fixture.mts` and every `angular-*.smoke.spec.mts` file use a Branch
+combobox, a language link or signed-in theme and sign-out buttons, which the topbar no longer
+renders (it has Branch, language and account menus). The smokes therefore fail until they are
+rewritten ([backlog](todo/admin-design-system.md)) and are not current evidence for the mapping
+below; PR CI's smoke step fails whenever the admin is selected, and `test:full` stops before the
+story tests. The login page keeps its Tenant and Branch comboboxes, language link and theme
+button.
+
+## Storybook story tests
+
+```bash
+npm run test:storybook:admin
+```
+
+The uncached `admin:test-storybook` target runs `vitest run --config .storybook/vitest.config.mts`
+in `apps/admin` after `graphql-generate`; no Storybook server or static build is needed.
+`@storybook/addon-vitest` turns every story of the [admin Storybook](development.md#admin-storybook)
+into a test in headless Chromium (`@vitest/browser-playwright`), one file at a time. Each test
+renders the story, runs its `play` function and then axe. `a11y.test: 'error'` in
+`.storybook/preview.ts` turns every violation into a failure; only the PrimeUI license notice
+(`#p-license-host`) is excluded. Fix a violation in the token, component or story markup; never
+lower the level or exclude more elements. Axe runs after `play`, so a play function waits
+(`waitFor`) for asynchronously rendered content before it ends.
+
+The target needs Playwright's Chromium: `npm exec -- playwright install chromium` (add
+`--with-deps` on a fresh Linux host). `ng test` ignores this Vitest configuration, so
+`test:admin` runs no stories; `src/storybook/graphql-fixtures.spec.ts` is an ordinary admin unit
+spec. Story tests answer GraphQL from fixtures, so they do not prove backend contracts or the
+compiled application; the browser smoke checks cover those.
+
+Under WSL a run can fail a whole story file with "Failed to fetch dynamically imported module".
+That is Vite failing to load the file in the browser, not a story failure; the file passes on a
+rerun. Treat only a failure that repeats as a story failure.
 
 ## Storybook visual review
 
@@ -81,21 +132,44 @@ failure screenshots/traces under ignored test-results. Clean up task-started con
 npm run test:visual:admin
 ```
 
-The target builds the static [admin Storybook](development.md#admin-storybook) and captures the
-stories listed in [storybook-visual.spec.mts](../tools/browser/storybook-visual.spec.mts) (the
-introduction, the example pages, foundations, patterns, PrimeNG coverage and the shell) in light
-and dark at the viewports each capture names (1440×900, 768×1024, 375×812) with Chromium,
-`bg-BG`, `Europe/Sofia`, a fixed clock and device scale 1.
+The target builds the static [admin Storybook](development.md#admin-storybook), then runs
+Playwright with [storybook-visual.config.mts](../tools/browser/storybook-visual.config.mts). The
+spec serves `apps/admin/storybook-static` itself on an ephemeral loopback port, so no Storybook
+server is needed. It captures the stories listed in
+[storybook-visual.spec.mts](../tools/browser/storybook-visual.spec.mts) (the introduction, the
+example pages, foundations, patterns, PrimeNG coverage and the shell) with Chromium, `bg-BG`,
+`Europe/Sofia`, a fixed clock (`2026-10-18T07:00:00Z`), device scale 1 and one worker.
 Each capture waits until no fixture request has been in flight for 400 ms.
 
 - Every run writes reviewable candidates to the ignored `test-results/storybook-visual-candidates/`
-  and attaches them to the HTML report in `playwright-report/storybook-visual/`.
+  and attaches them to the HTML report in `playwright-report/storybook-visual/`
+  (`npm exec -- playwright show-report playwright-report/storybook-visual`). Mismatch diffs are in
+  `test-results/storybook-visual/`. Candidates are overwritten but never removed; delete the
+  candidates directory before a run to review only the current list.
 - Approved baselines are per checkout in the ignored `.references/review/storybook-baselines/`.
   Missing or changed baselines fail the run; Playwright never creates them (`updateSnapshots: 'none'`).
   A run without baselines reports "A snapshot doesn't exist": candidates exist, nothing is approved.
 - Only after a person approves the candidates, record them from a fresh build:
   `npx playwright test --config tools/browser/storybook-visual.config.mts --update-snapshots=all`.
-  Never update baselines or loosen comparison to make the check pass.
+  Add `-g "<story id>"` to record only an approved subset. Never update baselines or loosen
+  comparison to make the check pass.
+- Captures are declared in `captures` in the spec. `bothThemes(id, sizes)` adds a light and a dark
+  capture per size: `desktop` (1440×900), `tablet` (768×1024) or `mobile` (375×812); the current
+  list uses desktop and mobile, and the introduction is captured in light only.
+  `viewportOnly: true` captures only the viewport for stories whose drawer or dialog is fixed to
+  it. Optional `brand` and `density` set those toolbar globals.
+- A story ID is the title lowercased with every run of other characters replaced by `-`, then
+  `--` and the export name split into words (`Examples/Fleet/Vehicles` and `Edit` give
+  `examples-fleet-vehicles--edit`; `ErrorState` gives `…--error-state`). A story's `name` changes
+  only its label. Files are named `<id>--<theme>[--<brand>][--<density>]--<viewport>.png`, both
+  as candidates and as baselines. Test titles start with the story ID, so
+  `npm run test:visual:admin -- -g "examples-fleet-vehicles"` selects captures.
+- The static build carries the developer's PrimeUI key when `apps/admin/public/config.local.json`
+  exists ([admin Storybook](development.md#admin-storybook)), so captures then show no license
+  notice. Approve and compare baselines from checkouts with the same key state. Nx does not hash
+  that Git-ignored file: after adding, removing or rotating it, run
+  `npm run build:storybook:admin -- --skip-nx-cache` before `npm run test:visual:admin`, whose own
+  arguments go to Playwright, not Nx.
 - Matching screenshots show that pixels equal the approved state; they do not establish UX quality,
   accessibility or behavior. Unit and smoke checks keep covering behavior.
 
@@ -201,10 +275,17 @@ a fixed-arrival-rate latency SLA, cold-start performance or real Karma network l
 | Branch/language/default routing         | branch-context.spec.ts, fleet-workspace.spec.ts, angular-foundation.smoke.spec.mts                                                                                                                                                                                                     |
 | Captured feature clients/forms/deletion | concrete vehicles/devices Angular suites                                                                                                                                                                                                                                               |
 | Remote picker cancellation              | relation-picker.spec.ts, device-editor.spec.ts                                                                                                                                                                                                                                         |
-| Shell/theme/mobile/keyboard             | angular-shell.smoke.spec.mts and matching visual review                                                                                                                                                                                                                                |
+| Admin theme/tokens/global styles        | app/theme specs, test:storybook:admin, test:visual:admin with candidate review                                                                                                                                                                                                         |
+| Admin app/ui patterns                   | the pattern's app/ui spec, test:storybook:admin, test:visual:admin with candidate review                                                                                                                                                                                               |
+| Shell/topbar menus/mobile/keyboard      | app/layout, app/workspace and app/i18n specs, test:storybook:admin, test:visual:admin with candidate review; angular-shell.smoke.spec.mts covers shell geometry, the navigation drawer, focus and theme, not the topbar menus                                                          |
 | Real CRUD and narrow views              | angular-vehicles.smoke.spec.mts, angular-devices.smoke.spec.mts                                                                                                                                                                                                                        |
-| Admin stories/fixtures/presentation     | admin typecheck and lint, build:storybook:admin, test:visual:admin with candidate review                                                                                                                                                                                               |
+| Admin stories/fixtures/example pages    | admin typecheck and lint, test:storybook:admin, graphql-fixtures.spec.ts for fixture changes, test:visual:admin with candidate review                                                                                                                                                  |
 | Root tooling                            | root lint/typecheck/build and relevant behavior                                                                                                                                                                                                                                        |
+
+Admin specs are selected with `npm run test:admin -- --include=...` as above;
+[changing the design centrally](admin-design-system.md#changing-the-design-centrally) lists the
+combined checks for a central design change. The admin smokes in this table currently fail
+([browser smoke checks](#real-federation-and-browser-smoke-checks)).
 
 ## Local diff versus PR affected selection
 
@@ -275,6 +356,10 @@ The PR sequence is:
 6. Stop Compose even after a failed check, without deleting volumes. Test fixtures own their
    application processes and per-run schemas; failures stay visible in the job log.
 
+PR CI does not build Storybook or run `test:storybook:admin` or `test:visual:admin`. Story tests
+run locally and in [full regression](#full-regression); visual baselines exist only in local
+checkouts.
+
 Docs-only changes can select no applications. The summary explains that no application
 tests ran; format, root-tool and schema checks still run. This is not evidence of product
 behavior. Shared configuration/workflow/ignore changes intentionally select all five apps;
@@ -303,10 +388,13 @@ or shell check does not prove that checkout, npm ci or browser installation work
 
 ## Full regression
 
-`npm run test:full` explicitly runs schema tests, the configured test/test-db/test-router project targets
-and the Angular Chromium smoke target. It is
-reserved for a user/reviewer request and must never be invoked automatically during
-implementation. It requires the pinned Router binary, test databases and Chromium.
+`npm run test:full` explicitly runs schema tests, the configured test/test-db/test-router project targets,
+the Angular Chromium smoke target and the Storybook story tests (`test:storybook:admin`), in that
+order, and stops at the first failing step. While the admin smokes fail
+([browser smoke checks](#real-federation-and-browser-smoke-checks)), it stops before the story
+tests. It is reserved for a user/reviewer request and must never be invoked automatically during
+implementation. It requires the pinned Router binary, test databases and Chromium. It does not
+run the visual review.
 [Full regression (manual)](../.github/workflows/full-regression.yml) has workflow_dispatch
 as its only trigger. In GitHub Actions, choose that workflow, Run workflow and the desired
 branch. Manual dispatch requires the workflow on the default branch; see

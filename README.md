@@ -2,7 +2,8 @@
 
 holita is a strict TypeScript npm-workspaces repository with Nx tasks and five host
 applications: Angular admin, native Apollo Router gateway and NestJS core, fleet and karma-client services.
-The admin uses Sakai with holita branding, PrimeNG and Bulgarian/English catalogs.
+The admin uses the holita [design system](docs/admin-design-system.md) on PrimeNG and
+Bulgarian/English catalogs.
 Its modules are Vehicles, Devices and the shared Karma truck data and reference views. Core provides Branch discovery; Gateway
 exposes their schema-first federated GraphQL API. PostgreSQL is the only container.
 
@@ -35,7 +36,7 @@ On Ubuntu/WSL, run `npm run kill` in another terminal to stop the applications a
 watchers. PostgreSQL remains running; `npm run db:down` stops it separately.
 
 If needed, run `nvm install` before `nvm use`. Open [Angular admin](http://127.0.0.1:11000).
-Choose RentalSofia and a Branch on the standalone demo login screen to open Vehicles. There is no Branch list landing page; the header selector switches Branches after login. Switching Branches preserves the current Vehicles/Devices
+Choose RentalSofia and a Branch on the standalone demo login screen to open Vehicles. There is no Branch list landing page; the topbar Branch menu switches Branches after login. Switching Branches preserves the current Vehicles/Devices
 section and resets the list query. Routes and list filters survive reloads and language changes.
 Each mounted workspace owns its Apollo client/cache. Submitted writes settle in their original
 Branch; navigation cancels obsolete reads and callbacks.
@@ -64,15 +65,16 @@ Driving profile shows nine category scores/weights for a default seven-day perio
 editable bounds. Trip/profile filters use API wall-clock values with an unspecified
 provider timezone; metrics and event codes retain their original values.
 Karma has no persistence or Fleet synchronization.
-Karma is independent of the Branch selector and `fleetEnabled`. See
+Karma is independent of the Branch menu and `fleetEnabled`. See
 [Karma configuration](docs/discocan/development.md#karma-client).
 
-The shell supports keyboard/mobile navigation and persisted light/dark themes. The startup
-`fleetEnabled` flag gates both business modules; Branch discovery stays available.
-The ignored [Sakai source](docs/development.md#sakai-source-reference) supplies the visual reference.
-`npm run storybook:admin` opens the [admin Storybook](docs/development.md#admin-storybook) on
-port 11003 with synthetic fixture data and no backend; `npm run test:visual:admin` captures
-[visual review candidates](docs/testing.md#storybook-visual-review).
+The shell supports keyboard/mobile navigation, a persisted sidebar rail and persisted light/dark
+themes. The startup `fleetEnabled` flag gates both business modules; Branch discovery stays available.
+The [admin design system](docs/admin-design-system.md) describes the theme, shell and patterns.
+`npm run storybook:admin` serves the [admin Storybook](docs/development.md#admin-storybook) at
+`http://127.0.0.1:11003` with synthetic data and no backend. `npm run test:storybook:admin` runs
+every story with its interactions and axe ([story tests](docs/testing.md#storybook-story-tests));
+`npm run test:visual:admin` captures [visual review candidates](docs/testing.md#storybook-visual-review).
 
 Gateway, Core, Fleet and Karma Client listen on loopback ports 11010, 11011, 11013 and 11014; PostgreSQL uses 11084. `dev` waits for PostgreSQL health before starting the five applications. Ctrl+C stops
 the native Router and Node application group. `npm run db:down` stops PostgreSQL and preserves its volume. Setup, migrations

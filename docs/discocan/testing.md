@@ -126,16 +126,17 @@ npm run test:admin -- --include=app/features/branches/branch-context.spec.ts --s
 npm run test:admin -- --include=app/features/fleet/fleet-workspace.spec.ts --skip-nx-cache
 npm run test:admin -- --include=app/core/config/admin-config.spec.ts --skip-nx-cache
 npm run test:admin -- --include=app/core/graphql/graphql-options.spec.ts --skip-nx-cache
-npm run test:admin -- --include=app/layout/appearance.spec.ts --skip-nx-cache
+npm run test:admin -- --include=app/theme/appearance.spec.ts --skip-nx-cache
 ```
 
 Branch/workspace tests prove independent login layout, sequential Tenant/Branch selection, cancellation
 of obsolete candidate tokens and Branch discovery, tenant A → B → A, direct/default Vehicles navigation, A → B → A, cancellation on Branch/language
 change, unknown Branch and disabled Fleet behavior. Feature APIs prove retired submitted-write
 success/failure and isolated caches. Real transport uses `angular-foundation.smoke.spec.mts`;
-Sakai focus/theme/resizing/mobile behavior uses `angular-shell.smoke.spec.mts`.
-Behavioral checks and visual review are separate evidence. Compare matching viewport sizes
-against the pinned [Sakai source](../development.md#sakai-source-reference).
+Shell focus/theme/resizing/mobile behavior uses `angular-shell.smoke.spec.mts`; design-system
+changes use the checks in the [admin design system](../admin-design-system.md#changing-the-design-centrally).
+Behavioral checks and [Storybook visual review](../testing.md#storybook-visual-review) are
+separate evidence.
 
 ## Tenant sessions and migrations
 

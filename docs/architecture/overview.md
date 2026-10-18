@@ -30,17 +30,20 @@ Angular keeps business pages, concrete API services, GraphQL operations and test
 `features/`. Fleet and Karma Client own separate route arrays composed by `app.routes.ts`
 at the existing route level. `workspace/` owns the common admin session/language/login
 coordination, while Branch discovery and selection remain in `features/branches/`.
-`layout/` owns presentation and `core/` contains only admin-local authentication,
-configuration and GraphQL transport. Feature clients and caches retain their mounted
-view lifetime; neither route grouping nor shared login makes business clients global.
+Presentation is split between the theme in `theme/`, the global styles in `src/styles/`, the
+patterns in `ui/` and the shell in `layout/`
+([admin design system](../admin-design-system.md#where-presentation-lives)); the presentational
+views and drawers in `features/fleet/*` (`*-view.ts`, `*-drawer.ts`) are rendered only by the
+Storybook examples in `src/storybook`. `core/` contains only admin-local authentication,
+configuration and GraphQL transport. Feature clients and caches retain their mounted view lifetime; neither route grouping nor shared login makes business clients global.
 
-| Application  | Responsibility                                                                                      | Local port |
-| ------------ | --------------------------------------------------------------------------------------------------- | ---------- |
-| admin        | Standalone Angular, Sakai/PrimeNG, Branch discovery, Fleet CRUD, Karma truck data and account views | 11000      |
-| gateway      | Native Apollo Router federation, `/graphql`; `/health` on 11016                                     | 11010      |
-| core         | Tenant demo login, scoped Branch discovery/lookup, owning database                                  | 11011      |
-| fleet        | Tenant/Branch-scoped Fleet master data, telemetry, trips, alerts and service, owning database       | 11013      |
-| karma-client | Authenticated, shared Karma truck data and account views; no database                               | 11014      |
+| Application  | Responsibility                                                                                                              | Local port |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| admin        | Standalone Angular, PrimeNG with the holita design system, Branch discovery, Fleet CRUD, Karma truck data and account views | 11000      |
+| gateway      | Native Apollo Router federation, `/graphql`; `/health` on 11016                                                             | 11010      |
+| core         | Tenant demo login, scoped Branch discovery/lookup, owning database                                                          | 11011      |
+| fleet        | Tenant/Branch-scoped Fleet master data, telemetry, trips, alerts and service, owning database                               | 11013      |
+| karma-client | Authenticated, shared Karma truck data and account views; no database                                                       | 11014      |
 
 ```mermaid
 flowchart LR

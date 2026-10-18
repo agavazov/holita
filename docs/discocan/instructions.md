@@ -40,14 +40,15 @@ and the relevant Fleet documents.
   the feature boundary on navigation, dispose reads and let submitted writes settle against
   their captured client. Late results, invalidation and callbacks must not affect another workspace.
   Prove A → B → A and delayed reads/writes through the concrete Angular feature tests.
-- Prefer PrimeNG components and theme tokens. Sakai supplies the shell/layout reference;
-  keep global CSS minimal, feature styles local and remove unused demo rules. Do not add
-  wrappers without concrete reuse or depend on the deprecated PrimeNG Editor.
-- Sakai is the Angular admin's theme and owns shell/feature visual design and responsive composition. Consult
-  the Angular Vehicles/Devices implementation index for contracts, validation and scoped lifecycles.
-- Use the pinned local Sakai source in `.references/sakai-ng` for layout comparisons;
-  [setup and source paths](../development.md#sakai-source-reference) are documented separately.
-  It is ignored reference material, not an npm/Nx application or runtime dependency.
+- Prefer PrimeNG components and theme tokens; keep global CSS minimal, feature styles local and
+  remove unused demo rules. Do not add wrappers without concrete reuse or depend on the
+  deprecated PrimeNG Editor.
+- The [admin design system](../admin-design-system.md) owns shell and feature visual design and
+  responsive composition; follow the
+  [admin design-system skill](../../.agents/skills/holita-admin-design-system/SKILL.md). The old
+  Vehicles/Devices screens and Karma pages keep their legacy classes only through
+  `styles/_legacy-karma.scss`. Consult the Angular Vehicles/Devices
+  [implementation index](fleet.md) for contracts, validation and scoped lifecycles.
 - Keep the shell independent of business data access, with explicit inputs/outputs and only
   implemented navigation. Preserve Bulgarian/English catalogs, keyboard/mobile behavior and
   light/dark themes, with focused tests and visual review at matching viewport sizes.

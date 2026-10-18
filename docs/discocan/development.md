@@ -1,27 +1,31 @@
 # Discocan development
 
 Use the [shared development guide](../development.md) for installation, host processes,
-environment, database setup, Sakai references and Angular agent tools.
+environment, database setup, the admin Storybook and Angular agent tools.
 The current implementation uses Branch terminology; see [the domain index](README.md#terminology).
 
 ## Telemetry admin
 
 Prepare databases, migrate and seed, then run `npm run dev` and open
-[Angular admin](http://127.0.0.1:11000). Choose RentalSofia in the Tenant dropdown, then choose a Branch in the second dropdown and sign in to open Vehicles. Login has its own Sakai layout without the application header/sidebar. Vehicles and Devices are under Fleet; the header Branch selector switches the active Branch.
+[Angular admin](http://127.0.0.1:11000). Choose RentalSofia in the Tenant dropdown, then choose a Branch in the second dropdown and sign in to open Vehicles. Login has its own layout without the application topbar/sidebar. Vehicles and Devices are under Fleet; the topbar Branch menu switches the active Branch.
 `dev:admin` runs Angular alone when the backends are available. Development defaults to `/bg`;
 `/en` selects English. Branch/language/list query survive reloads. Language switching keeps
 path/query/hash; Branch switching preserves Vehicles/Devices and resets the list context.
 
-The shell uses Sakai, local Lato and PrimeNG Aura compatibility tokens. Desktop navigation can
-collapse; mobile navigation opens a modal Drawer. Below 992px one Branch selector moves into a
-second 56px header row. Resizing preserves drafts and closes obsolete overlays.
+The shell follows the [admin design system](../admin-design-system.md#shell): desktop navigation
+collapses to a rail (remembered in `holita.admin.sidebar`), below 1024px navigation opens a modal
+drawer, and the topbar stays one row of menus (Branch, language, account with the theme switch
+and Sign out) at every width. Resizing preserves drafts and closes obsolete overlays.
 Themes persist in `holita.admin.theme`; denied storage displays a status message.
 
 `apps/admin/public/config.json` supplies `graphqlUrl`, optional boolean `fleetEnabled`
 and optional `primeUiLicense`. GraphQL may use a root-relative endpoint or an absolute HTTP(S)
 URL without credentials/fragment. The development proxy forwards `/graphql` to Gateway.
 Startup validates configuration before bootstrap and displays a localized error on failure.
-Issued license keys stay private and must not be committed. Browser fixtures use their own config.
+Issued license keys stay private and must not be committed: a developer's key belongs only in the
+Git-ignored `apps/admin/public/config.local.json` (`{ "primeUiLicense": "…" }`), which `main.ts`
+merges over `config.json` (a 404 or a non-JSON fallback page means none). Browser fixtures use
+their own config.
 `fleetEnabled` defaults true; false hides business navigation and blocks direct routes,
 without business requests. Branch discovery stays usable. Backend availability is separately
 controlled by `FLEET_ENABLED`; keep the two settings consistent for a disabled installation.

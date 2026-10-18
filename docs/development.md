@@ -32,23 +32,24 @@ in environment examples, documentation, agent instructions, command arguments or
 
 ## Commands
 
-| Command                  | Behavior                                                              |
-| ------------------------ | --------------------------------------------------------------------- |
-| npm run dev              | Wait for PostgreSQL, start Router, Angular and three Nest subgraphs   |
-| npm run kill             | Stop this checkout's application processes and watchers on Ubuntu/WSL |
-| npm run dev:admin        | Angular watcher                                                       |
-| npm run storybook:admin  | Admin Storybook with fixture data on port 11003                       |
-| npm run dev:gateway      | Native Router after Nx supergraph generation                          |
-| npm run dev:core         | Core watcher                                                          |
-| npm run dev:fleet        | Fleet watcher                                                         |
-| npm run dev:karma-client | Karma Client watcher                                                  |
-| npm run projects         | List five Nx applications                                             |
-| npm run lint             | Lint source/tooling and application boundaries                        |
-| npm run typecheck        | Check tools and all applications                                      |
-| npm run build            | Build all applications                                                |
-| npm run format:check     | Check formatting                                                      |
-| npm run codegen          | Generate application GraphQL contracts                                |
-| npm run schema:check     | Compose SDL and validate operations offline                           |
+| Command                       | Behavior                                                              |
+| ----------------------------- | --------------------------------------------------------------------- |
+| npm run dev                   | Wait for PostgreSQL, start Router, Angular and three Nest subgraphs   |
+| npm run kill                  | Stop this checkout's application processes and watchers on Ubuntu/WSL |
+| npm run dev:admin             | Angular watcher                                                       |
+| npm run storybook:admin       | Admin Storybook with synthetic data on port 11003                     |
+| npm run build:storybook:admin | Static admin Storybook in the ignored `apps/admin/storybook-static`   |
+| npm run dev:gateway           | Native Router after Nx supergraph generation                          |
+| npm run dev:core              | Core watcher                                                          |
+| npm run dev:fleet             | Fleet watcher                                                         |
+| npm run dev:karma-client      | Karma Client watcher                                                  |
+| npm run projects              | List five Nx applications                                             |
+| npm run lint                  | Lint source/tooling and application boundaries                        |
+| npm run typecheck             | Check tools and all applications                                      |
+| npm run build                 | Build all applications                                                |
+| npm run format:check          | Check formatting                                                      |
+| npm run codegen               | Generate application GraphQL contracts                                |
+| npm run schema:check          | Compose SDL and validate operations offline                           |
 
 Backend output is `apps/NAME/dist`; `npm run start:prod --workspace @holita/core`
 (or fleet/karma-client) runs the compiled app. Gateway `build` generates the supergraph and
@@ -73,8 +74,7 @@ PostgreSQL and processes from other checkouts remain running. Running it again i
 | Karma Client    | 11014                 |
 | PostgreSQL      | 11084                 |
 
-Visual previews use 11000–11009; the optional Sakai preview uses 11002 and the admin Storybook
-uses 11003. The single root
+Visual previews use 11000–11009; the admin Storybook uses 11003. The single root
 [`.env.example`](../.env.example) describes all variables, their consumers, safe examples,
 types and sensitivity using [`@env-spec` style annotations](https://varlock.dev/reference/data-types/).
 These comments document configuration; dotenv and Compose do not validate them, and no
@@ -206,91 +206,107 @@ assert the public contract directly over real subgraphs and isolated test databa
 
 ## Angular presentation and agent tools
 
+### Admin presentation
+
+The [admin design system](admin-design-system.md) describes the implemented theme (`holitaPreset`
+over standard Aura), global styles, shell, patterns and their Storybook review; the decision is
+[ADR 0004](architecture/decisions/0004-admin-design-system.md). The root font size is the browser
+default (16 px). Lato weights 400, 500, 600, 700 and 800, including Cyrillic glyphs, are served
+from `apps/admin/public/fonts/lato`; no external font CDN is required. Font sources and licenses
+are recorded in [the admin attribution](../apps/admin/THIRD_PARTY_NOTICES.md).
+
 ### Admin Storybook
 
 Storybook renders the admin's real Angular components with deterministic synthetic data and no
-backend. `npm run storybook:admin` serves `http://127.0.0.1:11003`; `npm run build:storybook:admin`
-writes the ignored `apps/admin/storybook-static`. [Visual review](testing.md#storybook-visual-review)
-captures selected stories from that build.
+backend. `npm run storybook:admin` serves `http://127.0.0.1:11003` without opening a browser;
+`npm run build:storybook:admin` writes the ignored `apps/admin/storybook-static`. Storybook starts
+at "Start here", followed by Examples and Design System; the
+[Storybook review](admin-design-system.md#storybook-review) lists what each title shows.
+[Story tests](testing.md#storybook-story-tests) run every story with its play function and axe;
+[visual review](testing.md#storybook-visual-review) captures selected stories from the static
+build.
 
 - The framework is `@storybook/angular-vite` on Vite and `@angular/build`, without webpack. It is a
-  preview framework in Storybook 10. Configuration is in `apps/admin/.storybook`; the `storybook`
-  and `build-storybook` targets are in `apps/admin/angular.json`. These builders do not inherit
-  the application build's styles or assets, so `src/styles.scss` and the `public/fonts` asset are
-  repeated there and must stay aligned with the `build` target. Telemetry is disabled in `main.ts`.
+  preview framework in Storybook 10. Configuration is in `apps/admin/.storybook`: `main.ts`
+  (stories, the a11y and Vitest addons, telemetry disabled), `preview.ts` (decorator, toolbar
+  globals, viewports, story order and the accessibility level) and `vitest.config.mts` (story
+  tests). These builders do not inherit the application build's styles or assets, so
+  `src/styles.scss`, the `src/styles` SCSS path and the `public/fonts` asset are repeated in the
+  `storybook` and `build-storybook` targets of `apps/admin/angular.json` and in
+  `storybookAngularVitest` in `vitest.config.mts`. All three must stay aligned with the `build`
+  target.
+- The Nx targets in `apps/admin/project.json` are `storybook` (continuous, uncached),
+  `build-storybook` (cached, output `apps/admin/storybook-static`) and `test-storybook` (uncached,
+  `vitest run --config .storybook/vitest.config.mts`); each first runs `graphql-generate`.
+- Toolbar globals switch the theme (light/dark), brand and density; the application itself uses
+  `appTheme`. A change re-bootstraps the story: the `holitaApplication` decorator in `preview.ts`
+  rebuilds `storybookApplicationConfig(choice)` and keys a `STORY_GLOBALS` provider on brand,
+  density and theme. Viewports are `desktop1440`, `desktop1024`, `tablet768` and `mobile375`.
+  Stories start in English: `UI_LANGUAGE` is fixed to `en`, and fixtures and samples are English.
+  The shell previews and the example pages list sample languages that change nothing; the routed
+  Shell stories render the real `AdminWorkspace`, whose bg/en menu navigates to the other
+  language's route and so switches the workspace texts.
 - Stories are `*.stories.ts` files beside the components they render. Story-only support lives in
-  `apps/admin/src/storybook`: `storybookApplicationConfig()` reuses the application's `appConfig`
-  providers with a fixture `HttpBackend` and an in-memory location; fixtures answer generated
-  GraphQL documents by operation name and Branch header; `StoryApp` opens a real route. Feature
-  services, their Apollo clients, error mapping and request headers run unchanged.
-- A story's `parameters.holita` (`StoryFixtures`) selects a signed-out session, an empty fleet,
-  latency, or a forced `network`, `graphql` or `pending` outcome per operation. Before every story,
-  fixtures, the stored session, theme and document language are reset. Toolbar globals switch
-  light/dark and Bulgarian/English. Fixture data is synthetic and contains no real identities.
-- `tsconfig.app.json` excludes stories and `src/storybook`; `npm run typecheck` compiles them through
-  `apps/admin/.storybook/tsconfig.json`, and ESLint rejects Storybook or fixture imports from
-  application code.
-- Storybook does not read `public/config.json` or a PrimeUI license key, so PrimeNG shows its
-  "Invalid PrimeUI License" notice in Storybook and its screenshots.
-
-### Sakai source reference
-
-The Angular admin uses Sakai's 14px root scale, PrimeNG 22's
-[`aura-compat` preset](https://primeng.dev/theming/styled#base-font-size) and Lato.
-The compatibility preset preserves control typography and spacing at a 14px root.
-[The preset composition](../apps/admin/src/app/layout/sakai-preset.ts) imports the original
-Aura base and only the component presets used by the admin, including PrimeNG's internal
-dependencies. When introducing another PrimeNG control, include its preset and any component
-dependencies there; keep the original tokens and review both themes at the same viewport sizes.
-Font weights 400, 500, 600, 700 and 800 are served from `apps/admin/public/fonts/lato`, including Cyrillic glyphs;
-no external font CDN is required. Font sources and licenses are recorded in
-[the admin attribution](../apps/admin/THIRD_PARTY_NOTICES.md).
-
-Sakai is the Angular admin's theme and visual reference for shell and feature presentation,
-including spacing, typography, geometry and responsive layout.
-Concrete Angular features supply contracts, validation and request lifecycles.
-
-The local Sakai Angular source is `.references/sakai-ng`, outside `apps/` and the npm
-workspaces. Git, Nx, ESLint and Prettier ignore `.references/`. The checkout is a source
-reference for the Angular admin's layout and visual comparisons; the application does
-not import or load files from it, and normal installation/build/test commands do not
-require it. No template dependencies are installed by the workspace.
-
-The reference uses [PrimeTek's official repository](https://github.com/primefaces/sakai-ng)
-at revision `96d71496d685b5c110efd2875abaa2bf89a56ad2`. Its `src/assets` submodule is
-[sakai-assets](https://github.com/cetincakiroglu/sakai-assets) at
-`eaa70ece4cfa9aeb8f60b36dce5a422b6bae8003`. To recreate the checkout from the repository root
-when the destination does not exist:
-
-```bash
-git clone https://github.com/primefaces/sakai-ng.git .references/sakai-ng
-git -C .references/sakai-ng checkout --detach 96d71496d685b5c110efd2875abaa2bf89a56ad2
-git -C .references/sakai-ng submodule update --init --recursive
-```
-
-For an optional rendered comparison, install the reference's own locked dependencies
-and run its existing preview script from that checkout:
-
-```bash
-cd .references/sakai-ng
-nvm use
-npm ci --no-audit --no-fund
-npm start -- --host 127.0.0.1 --port 11002
-```
-
-Open `http://127.0.0.1:11002/pages/empty` for the shell,
-`/pages/crud` for the template's CRUD presentation and `/uikit/formlayout` for forms.
-Use another free port if needed. The reference has its own dependencies and cache;
-it does not change holita's lockfile or join the workspace. Stop its preview after
-the comparison. Temporary comparison captures belong in the ignored `.references/review/`.
-
-Use `src/app/layout/component` for the original shell components, `src/app/layout/service`
-for their presentation state, and `src/assets/layout` for layout SCSS. Compare the original
-and holita at matching viewport sizes. The reference uses Angular/PrimeNG 21; holita uses
-Angular/PrimeNG 22, so component APIs must follow the installed versions and current
-official metadata. The upstream template contains demo routes and dependencies that are
-not part of holita. The adapted files and their licenses are recorded in
-[the admin attribution](../apps/admin/THIRD_PARTY_NOTICES.md).
+  `apps/admin/src/storybook`. `storybookApplicationConfig()` reuses the application's `appConfig`
+  providers with `FixtureHttpBackend` as `HttpBackend`, an in-memory location, the story clock
+  (`WALL_CLOCK`) and PrimeNG texts. Feature services, their Apollo clients, error mapping and
+  request headers run unchanged.
+- Render helpers: pattern stories wrap the component in the `onFrame` decorator (frame surface,
+  gutter and content width). `routeAt(path)` with `StoryApp` opens a real application route under
+  `/en/` with GraphQL answered by fixtures (the routed Design System/Shell stories).
+  `exampleAt(path)` (`src/storybook/samples/example-app.ts`) renders `ExampleApp`, which replaces
+  the router configuration with the example routes and shows the example pages inside
+  `AdminShell` without GraphQL; `?scenario=` and `?drawer=` in the path open their states. The
+  example pages feed the `features/fleet/*` views and drawers from
+  `src/storybook/samples/fleet-samples.ts`, generated with fixed seeds relative to
+  `2026-10-18T07:00:00.000Z`. Stories pick sample records by position, so a generator change
+  moves records under play functions and visual captures.
+- GraphQL fixtures: a module registers an answer at load time with
+  `graphqlFixture(GeneratedDocument, (variables) => result)` and must be imported by the story or
+  by `story-config.ts`. Handlers read `FixtureVariables` (runtime-checked accessors and `branchId`
+  from `x-branch-id`) and throw `fixtureError(code, message, fieldErrors?)` for a GraphQL error.
+  Only `AdminBranches` (`session-fixtures.ts`) is registered; any other operation answers with
+  the GraphQL error `No Storybook fixture answers <Operation>.` Responses carry the request ID
+  `fixture-<Operation>`. The backend sets `data-fixture-in-flight` and `data-fixture-activity` on
+  `<html>` for the visual check. `src/storybook/graphql-fixtures.spec.ts` is an admin unit spec.
+- `parameters.holita` (`StoryFixtures`, declared with `satisfies StoryFixtures`) is read at runtime
+  by `readStoryFixtures`, which ignores unknown values:
+  - `signedIn: false` clears the stored demo session; by default a story starts signed in as the
+    synthetic tenant `Demo Logistics Ltd` on its first Branch, `Sofia Fleet`.
+  - `fleetEnabled: false` sets the runtime `fleetEnabled` flag.
+  - `now` is the ISO instant behind `WALL_CLOCK` (`AdminTopbar` uses it for relative notification
+    times); the default is `2026-10-18T07:00:00.000Z`, and an invalid value falls back to it.
+  - `scenario.latencyMs` delays every answered operation.
+  - `scenario.failures` maps an operation name, or `<Operation>:<id>` for calls whose `id`
+    variable matches (that key wins), to `network` (HTTP 503), `graphql` (an error without a
+    code), `pending` (no answer), `not-found`, `conflict`, `unavailable`, `bad-input` (errors with
+    `NOT_FOUND`, `CONFLICT`, `SERVICE_UNAVAILABLE` and `BAD_USER_INPUT`) or `network-after-first`
+    (the first call answers, later calls get HTTP 503).
+- Before every story the preview's `beforeEach` (`prepareStory`) resets the scenario and call
+  counts, the clock, the stored session, the theme and the document language. Session and failure
+  options affect only stories that call GraphQL, which are the routed Shell stories.
+- PrimeNG drawers, dialogs and menus render into `document.body`, so play functions query
+  `within(canvasElement.ownerDocument.body)` and choose menu items with `chooseMenuItem` from
+  `src/storybook/interactions.ts`, which clicks the item's label as `p-menu` expects. Dialogs fade
+  in, so visibility and focus assertions on them run inside `waitFor`; example stories wait for
+  the routed page with `{ timeout: 10_000 }`.
+- `tsconfig.app.json` excludes stories and `src/storybook`; `npm run typecheck` compiles them
+  through `apps/admin/.storybook/tsconfig.json`, which excludes specs, and ESLint rejects Storybook
+  or fixture imports from application code.
+- PrimeUI license: the interactive Storybook serves the Git-ignored
+  `apps/admin/public/config.local.json` at `/config.local.json`, and `loadStoryLicense()` passes
+  its `primeUiLicense` to the theme once per page. A missing file, a non-JSON answer or an invalid
+  file means no key, whereas the application rejects an invalid file. The static Storybook and the
+  application `build` both copy every file of `apps/admin/public`, so when `config.local.json`
+  exists, `apps/admin/storybook-static` and `apps/admin/dist/browser` contain it: the built
+  stories, their visual captures and the compiled-app browser smokes then run licensed. Both
+  outputs are Git-ignored; never publish or share either from a checkout with a key. Nx does not
+  hash Git-ignored files, so adding, removing or rotating the key leaves the hashes of `build` and
+  `build-storybook` unchanged: their cached outputs keep the previous key state, and the local Nx
+  cache entries can hold a copy of the key. After such a change rebuild with `--skip-nx-cache`
+  (`npm run build:storybook:admin -- --skip-nx-cache`,
+  `npm exec -- nx run admin:build --skip-nx-cache`). Without a key PrimeNG shows its "Invalid
+  PrimeUI License" notice; story tests exclude it (`#p-license-host`) from axe.
 
 ### Angular agent tools
 
@@ -304,6 +320,9 @@ skills automatically; start a new turn, or restart Codex if the new skill does n
 
 [holita-admin-development](../.agents/skills/holita-admin-development/SKILL.md) adds only
 Holita's application boundaries, generated contracts, lifecycle and check selection.
+[holita-admin-design-system](../.agents/skills/holita-admin-design-system/SKILL.md) covers central
+token, brand, density and pattern changes, new PrimeNG controls and screens built from the
+patterns, with their stories and checks.
 
 Install the official [PrimeNG plugin](https://primeng.dev/plugin) in the Codex user environment:
 

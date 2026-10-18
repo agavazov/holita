@@ -16,16 +16,22 @@ verified Tenant scope.
 - [Foundation requirements](req/foundation.md): implemented shared infrastructure and contracts.
 - [Architecture](architecture/overview.md): applications, execution and ownership boundaries.
 - [Development](development.md): installation, configuration, ports and local commands.
-- [Testing](testing.md): focused checks, affected CI and manual regression.
+- [Testing](testing.md): focused checks, Storybook story tests and visual review, affected CI and
+  manual regression.
+- [Admin design system](admin-design-system.md): theme, global styles, shell, patterns and the
+  Storybook review of `apps/admin`.
 - [Workspace decision](architecture/decisions/0001-npm-workspaces-and-nx.md).
 - [Database ownership](architecture/decisions/0002-database-ownership.md).
 - [Schema-first federation](architecture/decisions/0003-schema-first-federation.md).
+- [Admin design system decision](architecture/decisions/0004-admin-design-system.md).
 - [Fleet list contract and derived values](architecture/decisions/0005-fleet-list-contract-and-derived-values.md).
 - [Contributor rules](../AGENTS.md).
 - [Backend skill](../.agents/skills/holita-backend-feature/SKILL.md).
 - [Angular admin skill](../.agents/skills/holita-admin-development/SKILL.md).
+- [Admin design-system skill](../.agents/skills/holita-admin-design-system/SKILL.md).
 - [Focused validation skill](../.agents/skills/holita-focused-validation/SKILL.md).
-- [Sakai source and Angular agent tools](development.md#sakai-source-reference).
+- [Admin Storybook](development.md#admin-storybook) and
+  [Angular agent tools](development.md#angular-agent-tools).
 
 Choose the domain before reading or updating its documentation. Shared tooling remains in
 this directory; business behavior belongs in its domain directory. Product descriptions
