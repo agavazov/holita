@@ -1,0 +1,127 @@
+<holita-page-header
+  [eyebrow]="text().eyebrow"
+  [title]="text().title"
+  [description]="description()"
+/>
+
+@switch (state()) {
+  @case ('error') {
+    <holita-empty-state kind="error" [title]="text().errorTitle" [description]="text().errorText">
+      <button emptyActions pButton type="button" (click)="retry.emit()">{{ text().retry }}</button>
+    </holita-empty-state>
+  }
+  @case ('loading') {
+    <holita-kpi-strip [label]="text().kpis.label" [loading]="true">
+      <holita-kpi-tile [label]="text().kpis.moving" [loading]="true" />
+      <holita-kpi-tile [label]="text().kpis.distance" [loading]="true" />
+      <holita-kpi-tile [label]="text().kpis.critical" [loading]="true" />
+      <holita-kpi-tile [label]="text().kpis.overdue" [loading]="true" />
+    </holita-kpi-strip>
+    <div class="app-card-grid" [attr.aria-busy]="true">
+      @for (item of placeholders; track item) {
+        <section class="app-card overview__placeholder">
+          <p-skeleton width="40%" height="1rem" />
+          <p-skeleton height="7rem" />
+        </section>
+      }
+    </div>
+  }
+  @case ('ready') {
+    @if (kpis(); as kpis) {
+      <holita-kpi-strip [label]="text().kpis.label">
+        <holita-kpi-tile
+          [label]="text().kpis.moving"
+          [value]="kpis.moving | holitaNumber"
+          [secondary]="movingSecondary(kpis.active)"
+          tone="success"
+          [link]="links().vehicles"
+        />
+        <holita-kpi-tile
+          [label]="text().kpis.distance"
+          [value]="kpis.distanceTodayKm | holitaNumber"
+          unit="km"
+          [link]="links().trips"
+        />
+        <holita-kpi-tile
+          [label]="text().kpis.critical"
+          [value]="kpis.criticalAlerts | holitaNumber"
+          [tone]="kpis.criticalAlerts ? 'danger' : null"
+          [link]="links().alerts"
+        />
+        <holita-kpi-tile
+          [label]="text().kpis.overdue"
+          [value]="kpis.overdueService | holitaNumber"
+          [tone]="kpis.overdueService ? 'warn' : null"
+          [link]="links().maintenance"
+        />
+        <holita-kpi-tile
+          [label]="text().kpis.notReporting"
+          [value]="kpis.notReporting | holitaNumber"
+          [tone]="kpis.notReporting ? 'danger' : null"
+          [link]="links().vehicles"
+        />
+      </holita-kpi-strip>
+    }
+
+    <div class="app-card-grid">
+      <section class="app-card overview__attention">
+        <h2 class="app-card__title app-card__header">{{ text().attention.title }}</h2>
+        @if (attention().length) {
+          <ul class="overview__list">
+            @for (item of attention(); track item.key) {
+              <li>
+                <span [class]="dotClass(item)" aria-hidden="true"></span>
+                <span class="app-cell-stack">
+                  <a class="app-link" [routerLink]="item.link" [queryParams]="item.queryParams">{{
+                    item.title
+                  }}</a>
+                  <span>{{ item.detail }}</span>
+                </span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <holita-empty-state kind="done" [compact]="true" [title]="text().attention.empty" />
+        }
+      </section>
+
+      <section class="app-card">
+        <h2 class="app-card__title app-card__header">{{ text().distance.title }}</h2>
+        <holita-column-series [label]="text().distance.chart" [points]="distance()" />
+      </section>
+
+      <section class="app-card">
+        <h2 class="app-card__title app-card__header">{{ text().activity.title }}</h2>
+        <holita-stacked-bars
+          [label]="text().activity.chart"
+          [rows]="activity()"
+          [legend]="legend()"
+        />
+      </section>
+
+      <section class="app-card">
+        <div class="app-card__header">
+          <h2 class="app-card__title">{{ text().trips.title }}</h2>
+          <a class="app-link" [routerLink]="links().trips">{{ text().trips.all }}</a>
+        </div>
+        @if (trips().length) {
+          <ul class="overview__list">
+            @for (trip of trips(); track trip.id) {
+              <li>
+                <span class="app-cell-stack">
+                  <span>{{ trip.plate }} · {{ trip.from }} → {{ trip.to }}</span>
+                  <span
+                    >{{ trip.startedAt | holitaDateTime }} ·
+                    {{ trip.distanceKm | holitaNumber }} km</span
+                  >
+                </span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="app-muted">{{ text().trips.empty }}</p>
+        }
+      </section>
+    </div>
+  }
+}

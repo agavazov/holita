@@ -1,0 +1,39 @@
+{
+  "eyebrow": "Monitoring",
+  "title": "Overview",
+  "description": "{branch} · data as of {asOf}",
+  "kpis": {
+    "label": "Fleet today",
+    "moving": "Moving now",
+    "movingSecondary": "of {active} active",
+    "distance": "Distance today",
+    "critical": "Critical alerts",
+    "overdue": "Overdue service",
+    "notReporting": "Not reporting"
+  },
+  "attention": {
+    "title": "Needs attention",
+    "empty": "Nothing needs attention right now.",
+    "open": "Open"
+  },
+  "distance": {
+    "title": "Distance per day",
+    "chart": "Fleet distance per day, last 14 days"
+  },
+  "activity": {
+    "title": "Activity by group",
+    "chart": "Vehicles by activity in each group",
+    "moving": "Moving",
+    "idle": "Idling",
+    "parked": "Parked",
+    "notReporting": "Not reporting"
+  },
+  "trips": {
+    "title": "Latest trips",
+    "all": "All trips",
+    "empty": "No trips yet."
+  },
+  "errorTitle": "The overview could not be loaded",
+  "errorText": "Try again in a moment. (demo-request-15)",
+  "retry": "Try again"
+}

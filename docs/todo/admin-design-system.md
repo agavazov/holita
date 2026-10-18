@@ -69,8 +69,11 @@ Work is on `feature/admin-design-system` in the worktree
   passes alone, as in the baseline before this work); address it before `test:full`.
 - Storybook first (user decision, 2026-10-18): finish a complete English-only Storybook before
   returning to the admin wiring and backend. Example pages are view components fed by story
-  data (no GraphQL). Phases: S1 English-only Storybook, language menu, local PrimeUI key;
-  S2 table, filter builder and drawer modes; S3 example pages; S4 polish and review.
+  data (no GraphQL). S1–S3 are in place (English-only Storybook, filter builder, row actions,
+  drawer modes, the Examples pages); remaining: S4 polish, visual captures and the user review.
+- Admin phase for the examples: replace each story host in `src/storybook/samples/pages` with an
+  Apollo-backed container that feeds the same `features/fleet/*` view and drawer, mapping
+  `ListQuery` to the standard list contract.
 - Pending for the admin phase: the topbar language control is now a menu, so
   `angular-shell.smoke.spec.mts` ("theme persists and the language link keeps path, query and
   fragment") must select the language from the menu.
