@@ -24,8 +24,9 @@ URL without credentials/fragment. The development proxy forwards `/graphql` to G
 Startup validates configuration before bootstrap and displays a localized error on failure.
 Issued license keys stay private and must not be committed: a developer's key belongs only in the
 Git-ignored `apps/admin/public/config.local.json` (`{ "primeUiLicense": "…" }`), which `main.ts`
-merges over `config.json` (a 404 or a non-JSON fallback page means none). Browser fixtures use
-their own config.
+merges over `config.json` (a 404 or a non-JSON fallback page means none). Browser fixtures
+replace `config.json` with their own, but a `config.local.json` that the build copied into
+`apps/admin/dist/browser` is still served ([testing](../testing.md#real-federation-and-browser-smoke-checks)).
 `fleetEnabled` defaults true; false hides business navigation and blocks direct routes,
 without business requests. Branch discovery stays usable. Backend availability is separately
 controlled by `FLEET_ENABLED`; keep the two settings consistent for a disabled installation.

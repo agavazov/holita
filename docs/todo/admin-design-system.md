@@ -53,16 +53,9 @@ each spec says which of its sections are superseded by those documents.
 - Work in small phases with minimal, focused diffs. End each phase with a short report to the
   user in Bulgarian and one commit on `feature/admin-design-system`.
 - Never push, merge or amend. Never edit, build or run anything in the main checkout (the
-  worktree of `main`): it holds the user's own uncommitted work and a development Router.
-
-Cautions while working on the branch:
-
-- An untracked Vim swap file, `apps/admin/src/app/layout/.admin-shell.stories.ts.swp`, may belong
-  to an open editor (`*.swp` is not ignored). Never stage it; stage files by name, never with
-  `git add -A` or `git add .`. Deleting it is the user's decision.
-- Never read, print, commit or publish `apps/admin/public/config.local.json`.
-- With `core.autocrlf` set, Git's "LF will be replaced by CRLF" warning is harmless; files are
-  committed with LF. Edit files with tools that preserve their line endings.
+  worktree of `main`).
+- Never stage editor swap files (`*.swp` is not ignored), and never read, print, commit or
+  publish `apps/admin/public/config.local.json`.
 
 ## Open tasks
 
@@ -206,8 +199,9 @@ hosts are in `apps/admin/src/storybook/samples/pages`.
   - Trips: sort by duration and filters by distance, score above and "has events" are
     unsupported; date conditions become half-open `DateTime` ranges.
   - Alerts: sort by status is unsupported; transitions need `expectedStatus`.
-  - Maintenance: sorts by task, vehicle and cost and filters by task, due date and cost are
-    unsupported; urgency `OK`/`DONE` differs from `UPCOMING`/`UNKNOWN_ODOMETER` (null unless
+  - Maintenance: sorts by task, vehicle and cost and filters by due date and cost are
+    unsupported; the task filter must use the `FleetServiceType` enum (`serviceTypes`) instead of
+    free-text task names; urgency `OK`/`DONE` differs from `UPCOMING`/`UNKNOWN_ODOMETER` (null unless
     PLANNED); "complete" is only a list action, without the completion form
     `completeFleetServiceTask` needs.
   - Devices: the status, vehicle and last-seen sorts, the online/offline/in-stock status filter
