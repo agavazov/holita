@@ -19,3 +19,6 @@ storybook-static/
 
 # Canonical generated catalog bytes are checksummed by the offline extractor.
 docs/discocan/erm-resources/simple-edata-catalog/*/catalog.json
+
+# Preserve the supplied integration note and its recorded source checksum.
+docs/discocan/erm-resources/erm-device-eg915u-la-lc86g/source/ERM_INTEGRATION_EN.md

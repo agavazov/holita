@@ -2,8 +2,7 @@
 
 Open work for a centrally controlled admin design that new modules reuse, reviewed in the
 [admin Storybook](../development.md#admin-storybook) before it reaches application screens. The
-work continues on the `feature/admin-design-system` branch (find its worktree with
-`git worktree list`). The implemented design system, shell and Storybook are described in
+implemented design system, shell and Storybook are described in
 [docs/admin-design-system.md](../admin-design-system.md) and
 [ADR 0004](../architecture/decisions/0004-admin-design-system.md); the Fleet list contract and the
 implemented Fleet backend in the [Discocan documents](../discocan/README.md) and
@@ -28,15 +27,16 @@ each spec says which of its sections are superseded by those documents.
 - Keep light and dark themes and Bulgarian/English in the application. Brand tokens (color,
   neutrals, density, font, shell geometry) are undecided and must stay easy to change centrally
   (`appTheme`).
-- Prepare the current shell, shared patterns, sample Fleet views and expanded Fleet API for
-  the first merge into `main`: complete the confirmed review fixes, align the documentation,
-  rewrite the smoke tests and pass the relevant automated checks. New Fleet routes and Apollo
-  containers (F2/F3), Overview (B3) and the rich demo seed (B4) are outside this merge.
+- The user accepts the current shell, shared patterns, sample Fleet views and expanded Fleet API
+  snapshot in `main` for internal testing. The remaining review fixes (R2–R7), the trip
+  in-progress upper bound and their release checks are post-merge stabilization required before
+  public release. New Fleet routes and Apollo containers (F2/F3), Overview (B3) and the rich demo
+  seed (B4) remain separate later work.
 - Stabilization and documentation come before further visual refinement; connecting the new
   Fleet screens to the backend comes last. Keep the current sample hosts until the fixture
   decision for that later integration is made. The shell previews and example pages offer sample
   languages that change nothing.
-- Use automated checks for release preparation. Do not perform visual reviews, take screenshots
+- Use automated checks for stabilization. Do not perform visual reviews, take screenshots
   or create/update baselines in this phase. Keep visual feedback and baseline review as separate
   later work; automated story interaction and accessibility checks remain in scope.
 - Example pages use sample data in stories (no GraphQL). They must be replaceable by
@@ -60,18 +60,16 @@ each spec says which of its sections are superseded by those documents.
 - The design system is shared by both domains' future admin screens.
 - Approved screenshot baselines stay local and ignored; visual checks stay out of CI for now.
   Baselines are recorded or updated only after the user approves the candidates.
-- Work in small phases with minimal, focused diffs. End each phase with a short report to the
-  user in Bulgarian and one commit on `feature/admin-design-system`.
-- Keep implementation, builds and tests in the feature worktree. Merge into `main` only after
-  the release checks below pass, preserving unrelated changes in the main checkout. Never push
-  or amend.
+- Work in small phases with minimal, focused diffs and report changes and actual checks briefly
+  to the user in Bulgarian.
+- Preserve unrelated changes in every checkout. Never push or amend.
 - Never stage editor swap files (`*.swp` is not ignored), and never read, print, commit or
   publish `apps/admin/public/config.local.json`.
 
 ## Open tasks
 
-Complete the review fixes, smoke rewrite and release checks before merging the current scope.
-Visual review and the remaining implementation phases follow separately; keep the
+Complete the review fixes, smoke rewrite and stabilization checks before public release.
+Visual review follows separately, and new screen integration comes last; keep the
 [open decisions](admin-design-system-review-fixes.md#decisions-needed-from-the-user) explicit.
 For the later integration, F2's operation registration and gate wait for B3, and F4 waits for B4.
 Run every build, generation, test and server command one at a time; the
@@ -83,12 +81,11 @@ static builds, current smoke failures) is described in [testing](../testing.md) 
 
 ### Review fixes
 
-The verified fixes from the external review of this branch are planned in
-[review fixes](admin-design-system-review-fixes.md): resolving the formatting gate, reducing the
-compiled TablePanel stylesheet below its warning budget, editors locked while saving, required
+The remaining verified fixes are planned in
+[review fixes](admin-design-system-review-fixes.md): editors locked while saving, required
 General settings fields, FilterBuilder focus, serialized odometer readings and driver/vehicle
-writes, and the trip in-progress upper bound. Its last section lists the remaining product and
-fixture decisions; the first-merge scope is agreed above.
+writes (R3–R7), and the trip in-progress upper bound. R2's smoke rewrite is below. The review
+plan's last section lists the remaining product and fixture decisions.
 
 ### Smoke rewrite for the menu topbar
 
@@ -101,10 +98,10 @@ before the story tests ([browser smoke checks](../testing.md#real-federation-and
 The login page keeps its Tenant and Branch comboboxes, language link and theme button; those
 locators stay valid.
 
-- Before running this release's smoke checks, make the unconditional shell screenshots
+- Before running the rewritten smoke suite, make the unconditional shell screenshots
   (`tools/browser/angular-shell.smoke.spec.mts`) opt-in and disable automatic failure screenshots
-  for this run (`tools/browser/angular.config.mts`). Retain the behavioral assertions and textual
-  diagnostics; do not inspect or generate screenshots during release preparation.
+  for stabilization runs (`tools/browser/angular.config.mts`). Retain the behavioral assertions
+  and textual diagnostics; do not inspect or generate screenshots during stabilization.
 - `tools/browser/angular-fixture.mts:8-18` `chooseBranch`: open the Branch menu button and choose
   the `menuitem` (used by the foundation, Vehicles, Devices, shell, Karma and eData smokes).
 - Language links (`getByRole('link', { name: 'Български' })`) become "open the language menu,
@@ -125,31 +122,31 @@ locators stay valid.
   [testing](../testing.md#real-federation-and-browser-smoke-checks) and update the shell row of
   [frontend 8.2](admin-design-system-frontend.md#8-tests).
 
-### Release checks and merge
+### Stabilization checks before public release
 
-- Complete the confirmed review fixes and menu-topbar smoke rewrite, updating the authoritative
-  documentation with each behavior change and removing completed backlog entries.
-- Run root lint, typecheck and build for the packaging changes, build the static Storybook and
-  prove that both production outputs exclude the local key while retaining fonts.
+- Complete R2–R7 and the trip in-progress upper bound, updating the authoritative documentation
+  with each behavior change and removing completed backlog entries.
+- Run each fix's focused checks. Tooling changes also require root lint, typecheck and build;
+  asset-handling changes require a static Storybook build and proof that production outputs
+  exclude the local key while retaining fonts.
 - Run the relevant admin/unit, Fleet persistence and federation checks from
   [testing](../testing.md#current-change-to-check-mapping), schema checks, the compiled-admin
   smoke suite and Storybook interaction/axe tests. Use the guarded test databases and report
   actual results; a static review or cached live-DB result is not runtime evidence.
-- Check the final branch diff and documentation for the agreed scope, commit the verified
-  phases and merge into `main`. Keep the later integration and unresolved product choices in
-  their existing backlog sections. No visual checks or screenshot baselines are required in
-  this release phase.
+- Review the final diff and documentation for each fix. Keep the later integration and
+  unresolved product choices in their existing backlog sections. Visual checks and screenshot
+  baselines remain separate later work.
 
 ### Storybook review
 
-After the first merge, the user reviews the Storybook (`npm run storybook:admin`, `http://127.0.0.1:11003`, starting at
+The user reviews the Storybook (`npm run storybook:admin`, `http://127.0.0.1:11003`, starting at
 "Start here") and gives feedback; implement it in small phases. Start from
 [Storybook review](../admin-design-system.md#storybook-review), the stories beside the components
 (`apps/admin/src/app/**/*.stories.ts`) and the example pages in `apps/admin/src/storybook/samples`.
 
 ### Visual candidates and baselines
 
-This is separate post-merge work; no captures or baseline changes belong to release preparation.
+This is separate later work; no captures or baseline changes belong to stabilization.
 After the user approves the look, delete
 `test-results/storybook-visual-candidates/` and run `npm run test:visual:admin` for fresh
 candidates. The user reviews them; only then record the first baselines with the command in

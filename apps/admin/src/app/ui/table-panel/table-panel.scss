@@ -19,8 +19,6 @@
   justify-content: space-between;
   gap: var(--p-app-space-2) var(--p-app-space-4);
   min-block-size: 3.25rem;
-  padding: var(--p-app-space-2) var(--p-app-panel-padding);
-  border-block-end: 1px solid var(--p-app-panel-border-color);
 }
 
 .table-panel__heading {
@@ -36,8 +34,6 @@
   border-radius: 999px;
   background: var(--p-app-tone-neutral-background);
   font-size: var(--p-app-text-sm);
-  font-weight: 600;
-  font-variant-numeric: var(--p-app-font-numeric);
   color: var(--p-app-tone-neutral-color);
 }
 
@@ -68,11 +64,11 @@
     inset-block: 0;
     inline-size: 35%;
     background: var(--p-primary-color);
-    animation: table-panel-progress 1.1s ease-in-out infinite;
+    animation: refresh 1.1s ease-in-out infinite;
   }
 }
 
-@keyframes table-panel-progress {
+@keyframes refresh {
   from {
     inset-inline-start: -35%;
   }
@@ -82,18 +78,23 @@
   }
 }
 
+.table-panel__header,
 .table-panel__notice,
 .table-panel__inline-error {
   padding: var(--p-app-space-2) var(--p-app-panel-padding);
   border-block-end: 1px solid var(--p-app-panel-border-color);
 }
 
-.table-panel__inline-error {
+.table-panel__inline-error,
+.table-panel__footer {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--p-app-space-2);
+}
+
+.table-panel__inline-error {
   background: var(--p-app-tone-danger-background);
 }
 
@@ -147,28 +148,31 @@
   align-items: center;
   gap: var(--p-app-space-2) var(--p-app-space-3);
   max-inline-size: 100%;
-  padding: var(--p-app-space-2) var(--p-app-space-2) var(--p-app-space-2) var(--p-app-space-4);
+  padding: var(--p-app-space-2);
+  padding-left: var(--p-app-space-4);
   pointer-events: auto;
   border: 1px solid var(--p-app-panel-border-color);
   border-radius: var(--p-app-radius-frame);
   background: var(--p-app-frame-background);
   box-shadow: var(--p-app-shadow-floating);
-  animation: table-panel-bulk-in var(--p-transition-duration) ease-out;
+  animation: bulk-in var(--p-transition-duration) ease-out;
 }
 
-@keyframes table-panel-bulk-in {
+@keyframes bulk-in {
   from {
     opacity: 0;
     translate: 0 var(--p-app-space-2);
   }
 }
 
+.table-panel__count,
 .table-panel__bulk-count {
   font-weight: 600;
   font-variant-numeric: var(--p-app-font-numeric);
 }
 
-.table-panel__bulk-progress {
+.table-panel__bulk-progress,
+.table-panel__footer-start {
   font-size: var(--p-app-text-sm);
   color: var(--p-text-muted-color);
 }
@@ -180,18 +184,9 @@
 }
 
 .table-panel__footer {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--p-app-space-2);
-  padding: var(--p-app-space-1) var(--p-app-space-2) var(--p-app-space-1) var(--p-app-panel-padding);
+  padding: var(--p-app-space-1) var(--p-app-space-2);
+  padding-left: var(--p-app-panel-padding);
   border-block-start: 1px solid var(--p-app-panel-border-color);
-}
-
-.table-panel__footer-start {
-  font-size: var(--p-app-text-sm);
-  color: var(--p-text-muted-color);
 }
 
 // The confirmation renders in the dialog appended to the body; the template is this component's,

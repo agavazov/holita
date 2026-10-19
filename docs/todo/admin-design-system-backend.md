@@ -1,7 +1,7 @@
 # Admin design system: Fleet backend build spec
 
-Pending work for `feature/admin-design-system`. This is the authoritative backend plan for the
-Discocan Fleet demo domain; the frontend plan lives in
+Pending work for the Discocan Fleet backend supporting the admin design system. This is the
+authoritative backend plan for the Fleet demo domain; the frontend plan lives in
 [admin-design-system-frontend.md](admin-design-system-frontend.md) and the decision record in
 [admin-design-system.md](admin-design-system.md). It replaces the backend parts of the decision
 record's "Fleet demo scope".
@@ -33,7 +33,7 @@ User decisions that shape the backend:
   VehicleGroup, VehicleStatusSample, Trip, FleetEvent and ServiceTask; deterministic synthetic data.
 - Overview becomes the landing page; all editing happens in route-driven drawers (frontend work,
   but the API must serve every screen listed in the frontend plan).
-- Karma Client is untouched and its tests must keep passing. Nothing is merged to `main`.
+- Karma Client is untouched and its tests must keep passing.
 
 Every fix from the scope review is applied. Where each one lands:
 

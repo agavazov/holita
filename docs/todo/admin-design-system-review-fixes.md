@@ -1,32 +1,16 @@
 # Admin design system: review fixes
 
-Open fixes from an external review of `feature/admin-design-system`, each verified against the
-code; R1–R7 are the review's finding numbers. Line numbers are approximate: re-check them before
-editing. Work in the order of the sections below. R2 (smokes for the menu topbar), the agreed
-decisions and the remaining phases are in [admin-design-system.md](admin-design-system.md).
+Open fixes from the design-system review, each verified against the code. R2–R7 are the
+review's finding numbers; these fixes and the trip in-progress upper bound remain required
+before public release after the accepted merge into `main` for internal testing. Line numbers
+are approximate: re-check them before editing. Work in the order of the sections below. R2
+(smokes for the menu topbar), the agreed decisions and the remaining phases are in
+[admin-design-system.md](admin-design-system.md).
 When a section is done, remove it and its mention in the "Review fixes" summary of
 [admin-design-system.md](admin-design-system.md#review-fixes); when a decision is made, record it
 under "Decisions agreed with the user" there and remove it here. When this file is empty, delete
 it and its links (`git grep -n "admin-design-system-review-fixes" -- docs .agents` must then print
 nothing).
-
-## Formatting gate
-
-Resolve the Prettier differences in these files before the release formatting gate:
-
-- `apps/admin/src/app/theme/primeng-coverage.html`
-- `docs/discocan/erm-resources/erm-device-eg915u-la-lc86g/source/ERM_INTEGRATION_EN.md`
-- `docs/discocan/erm-resources/karma-api-v2/holita-integration.md`
-
-Keep imported source-reference provenance intact when addressing its formatting.
-
-## Component stylesheet budget
-
-Reduce the compiled CSS of `apps/admin/src/app/ui/table-panel/table-panel.scss` from 4.34 kB
-below the existing 4 kB warning budget (336 bytes over); keep the 8 kB error budget unchanged.
-Preserve the component's behavior and appearance, and do not raise the budget to hide the
-warning. Verify with `npm exec -- nx run admin:build --skip-nx-cache --output-style=static`,
-using the compiled budget report rather than the SCSS source-file size.
 
 ## R5 Editors locked while saving
 
@@ -148,7 +132,7 @@ npm run format:check
 npm run test:storybook:admin   # needs `npm exec -- playwright install chromium` once
 ```
 
-No DB checks. Any visual candidate review belongs to the separate post-merge phase; do not
+No DB checks. Any visual candidate review belongs to the separate later visual-review phase; do not
 run `test:visual:admin` or capture screenshots during this fix.
 
 **Docs to update**
@@ -285,7 +269,7 @@ npm run typecheck
 npm run format:check
 ```
 
-Any comparison with visual baselines belongs to the separate post-merge phase; do not run
+Any comparison with visual baselines belongs to the separate later visual-review phase; do not run
 `test:visual:admin` or capture screenshots during this fix.
 
 **Docs to update.** `docs/admin-design-system.md:414`, the `holita-filter-builder` row, before
@@ -584,8 +568,8 @@ asOf]`" (keep "(`false` without a data clock)"); `docs/discocan/testing.md:90-91
 
 ## Decisions needed from the user
 
-The [first-merge scope](admin-design-system.md#decisions-agreed-with-the-user) is agreed.
-The choices below remain open; new screen integration is a later phase.
+The [internal-testing scope and stabilization requirements](admin-design-system.md#decisions-agreed-with-the-user)
+are agreed. The choices below remain open; new screen integration comes last.
 
 ### 2. Storybook sample hosts or GraphQL fixtures
 

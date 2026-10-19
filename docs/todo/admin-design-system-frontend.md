@@ -1,15 +1,16 @@
 # Admin design system: frontend build spec
 
-Pending work for `feature/admin-design-system`. This is the authoritative frontend plan for the
-holita admin design system and the Discocan Fleet screens. The backend plan is
+Pending work for the holita admin design system and the Discocan Fleet screens. This is the
+authoritative frontend plan. The backend plan is
 [admin-design-system-backend.md](admin-design-system-backend.md); the frontend consumes exactly its
 SDL (section 6) and its standard list contract (section 3). The decisions and the open tasks in
 order are in [admin-design-system.md](admin-design-system.md); the verified review fixes and their
 open decisions are in [admin-design-system-review-fixes.md](admin-design-system-review-fixes.md).
 
 [docs/admin-design-system.md](../admin-design-system.md) is authoritative for the theme, styles,
-shell, patterns and Storybook. The first merge stabilizes the implemented scope; backend
-integration remains a later phase ([release scope](admin-design-system.md#decisions-agreed-with-the-user)).
+shell, patterns and Storybook. The current snapshot is accepted in `main` for internal testing.
+Stabilization remains required before public release; backend integration comes last
+([release scope](admin-design-system.md#decisions-agreed-with-the-user)).
 Presentational views and drawers for every Fleet screen except the driver scorecard and the
 odometer reading exist in `apps/admin/src/app/features/fleet/*`, fed only by story hosts in
 `apps/admin/src/storybook/samples/pages`; F2–F5 wire Apollo-backed containers, routes and
@@ -66,8 +67,8 @@ BG/EN catalogs, light/dark, Tenant/Branch isolation, retired reads and captured 
 - Fleet is developed "to the max" as a demo and test bed over one standard list contract.
 - Overview is the landing page after login (FND-013 changes). The old Vehicles/Devices screens are
   replaced, not duplicated.
-- Work stays on `feature/admin-design-system`; full regression (`test:full`) runs at the end on the
-  user's explicit request (section 11, F5).
+- Full regression (`test:full`) runs at the end only on the user's explicit request
+  (section 11, F5).
 
 ### 0.2 Scope-review fixes as they land on the frontend
 
