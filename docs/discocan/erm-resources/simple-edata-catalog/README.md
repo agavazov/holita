@@ -13,18 +13,12 @@ Keep each version's original filename and bytes. No unpacked XML, firmware INI,
 existing JSON, credentials or device connection is needed for extraction. Vendor
 download discovery and automatic updates are not implemented.
 
-Use the repository's Ubuntu/WSL Node environment and installed npm dependencies.
-Python 3.10+ with venv/pip support is required. On Ubuntu, install the venv package
-matching the selected Python interpreter if absent. Create an isolated ignored environment:
-
-```bash
-python3 -m venv .references/erm-edata-venv
-.references/erm-edata-venv/bin/python -m pip install -r tools/erm-edata/requirements.txt
-```
-
-The three parser packages are pinned in `tools/erm-edata/requirements.txt`; they are
-development tools, not application runtime dependencies. Extraction runs on the host
-without starting the EXE, loading its assemblies or using a debugger.
+Use the repository's Ubuntu/WSL Node 24 environment and dependencies installed with
+`npm ci`. The TypeScript tools run through the existing `tsx` loader. XML parsing
+and validation dependencies are pinned in the root npm manifest/lockfile; PE/CLI and
+ZIP inspection use bounded readers and Node's native decompression/CRC support.
+No Python, .NET runtime or external unpacker is required. Extraction runs on the
+host without starting the EXE, loading its assemblies or using a debugger.
 
 ## Inspect a supplied version
 
@@ -34,7 +28,7 @@ Run from the repository root. Set the EXE and independent operator-supplied labe
 exe='resources/discocan/Simple eData FMS Monitor/Simple eData FMS Monitor v9.56.exe'
 label='v9.56'
 work=$(mktemp -d -t holita-edata-XXXXXX)
-.references/erm-edata-venv/bin/python tools/erm-edata/catalog.py inspect "$exe" > "$work/inspection.json"
+node --import tsx tools/erm-edata/catalog.mts inspect "$exe" > "$work/inspection.json"
 ```
 
 Compare the EXE hash with the previous catalog before processing an update. An unchanged
@@ -48,9 +42,9 @@ values. The package label does not establish a device's installed firmware versi
 ## Extract and compare before import
 
 ```bash
-.references/erm-edata-venv/bin/python tools/erm-edata/catalog.py extract "$exe" \
+node --import tsx tools/erm-edata/catalog.mts extract "$exe" \
   --label "$label" --out "$work/catalog"
-.references/erm-edata-venv/bin/python tools/erm-edata/catalog.py diff \
+node --import tsx tools/erm-edata/catalog.mts diff \
   docs/discocan/erm-resources/simple-edata-catalog/v9.56/catalog.json \
   "$work/catalog/catalog.json" --out "$work/diff.json"
 ```
@@ -72,6 +66,9 @@ not create semantic changes. There is no assumed preferred workbook.
 The tool checks PE resources, workbook relationships/shared strings, CRCs, ZIP directory
 boundaries and all constant writes/declared array lengths. Its supported format is
 explicitly the x86 constant-array layout and recognized initializer instructions.
+ZIP input supports single-disk, non-ZIP64 archives with stored/deflated entries,
+ASCII or UTF-8 filenames, at most 10,000 entries and 100 MB total expanded data.
+Encrypted archives, external XML relationships and DTD/entity declarations are rejected.
 Missing workbooks, unknown headers, incomplete tables, unsupported architecture/code,
 invalid profile references and corruption stop extraction. Inspect a changed format
 and extend the parser with focused fixtures before import. Never substitute old XML
@@ -142,14 +139,15 @@ facts. This procedure does not load settings into a device.
 ## Focused validation
 
 ```bash
-.references/erm-edata-venv/bin/python -m unittest discover -s tools/erm-edata -p test_catalog.py -v
+npm run test:schema -- catalog.unit.spec.mts
 npm run test:fleet -- edata-catalog.unit.spec.ts --skip-nx-cache
 npm run test:fleet:db -- edata-catalog.db.spec.ts initial-migration.db.spec.ts --skip-nx-cache
 ```
 
-Python tests copy only the EXE into a fresh temporary input directory and verify both
-variants, deterministic content, conflicts, duplicates, initializer discovery, invalid
-input/layouts and comparison. DB tests use the guarded helper and per-run schemas in
+TypeScript tests copy only the EXE into a fresh temporary input directory and verify both
+variants, exact canonical catalog/workbook bytes against the retained v9.56 fixtures,
+conflicts, duplicates, initializer discovery, invalid input/layouts, comparison and
+direct CLI output/overwrite behavior. DB tests use the guarded helper and per-run schemas in
 `holita_fleet_test`, covering the full v9.56 import, concurrent/idempotent writes,
 rollback and corruption detection. The workflow adds no npm commands; existing npm
 targets remain the repository validation interface. Follow [shared checks](../../../testing.md)

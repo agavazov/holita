@@ -25,6 +25,8 @@ DB targets are separate and noncached. Do not accept zero executed tests, enable
 `--passWithNoTests` or use watch mode. Read actual counts; mocks are not persistence proof.
 Root tooling changes require `npm run lint`, `npm run typecheck` and `npm run build` plus
 relevant behavioral checks. SDL/operations also require codegen, schema:check and test:schema.
+The existing `test:schema` runner also includes the offline eData extraction tools;
+select them with `npm run test:schema -- catalog.unit.spec.mts`.
 
 Admin unit specs run in jsdom with the `matchMedia`, `ResizeObserver` and `scrollIntoView` stubs
 of `src/test-setup.ts` ([breakpoints](admin-design-system.md#global-styles-layers-and-breakpoints)).
