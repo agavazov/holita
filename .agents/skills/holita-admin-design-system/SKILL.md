@@ -54,7 +54,8 @@ instructions.
 1. Import its preset (and presets of controls it renders internally) into `registeredComponents`
    in `theme/holita-preset.ts`; update the sorted list in `holita-preset.spec.ts`.
 2. Render it in `theme/primeng-coverage.html` in both schemes (overlays in the overlay stories) and
-   update the control count asserted in `primeng-coverage.stories.ts`.
+   update the registered-preset count (31) that the `Controls` play function asserts in
+   `primeng-coverage.stories.ts`.
 3. Give it an accessible name the way the design-system document lists (`ariaLabel`,
    `ariaCloseLabel`, `closeAriaLabel`, `dropdownAriaLabel`, `aria-label` on `p-metergroup`,
    `[pt]="confirmDialogPt(language)"` on `p-confirmdialog`, plus the message ID with a `#message`
@@ -87,7 +88,7 @@ instructions.
   record uses a view drawer; a complex record may open as a view whose Edit button switches the
   same drawer to the form. The component renders `holita-route-drawer` with `[closeLink]="null"`:
   `closeRequest` → `await drawer.confirmLeave(dirty)` → its own `closed` output (every editing
-  `features/fleet/*-drawer` works this way; the read-only trip drawer emits `closed` directly). It
+  `features/fleet/*/*-drawer.ts` works this way; the read-only trip drawer emits `closed` directly). It
   builds a typed Reactive Form in
   `.app-form-section` / `.app-form-grid` with `holita-form-field`, maps server errors with
   `errorCode`/`fieldErrors`, and focuses the first invalid field (`focusFirstInvalid`). A routed
@@ -139,6 +140,6 @@ Undo storage writes and spies in a story `beforeEach` cleanup, and type fixture 
 - `npm run test:storybook:admin`, `npm run test:visual:admin` (candidates for a person to review;
   baselines only after approval) and, when the shell changes, the workspace and catalog specs
   (`--include="app/workspace/**/*.spec.ts" --include="app/i18n/**/*.spec.ts"`) and the shell smoke
-  (`npm run test:smoke:admin -- angular-shell.smoke.spec.mts`; the admin browser smokes still
-  target the pre-menu topbar and fail until they are rewritten). Follow
+  (`npm run test:smoke:admin -- angular-shell.smoke.spec.mts`; the signed-in admin smokes
+  currently fail; see [browser smoke checks](../../../docs/testing.md#real-federation-and-browser-smoke-checks)). Follow
   [focused validation](../holita-focused-validation/SKILL.md) for everything else.

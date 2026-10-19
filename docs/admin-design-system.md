@@ -23,6 +23,8 @@ Colours, the spacing scale, radius and shadow tokens and breakpoints are defined
 and `styles/`. Component styles use `var(--p-*)` tokens (including `--p-app-*`), the global pattern
 classes and the breakpoint mixins for colours, spacing-scale steps, the radius and shadow tokens and
 breakpoints; global and component SCSS contain no `.app-dark` selectors and no literal colours.
+The story-only components of the Foundations, PrimeNG coverage and Start here stories use
+literal spacing in their inline styles.
 Component-specific values stay literal, for example icon boxes, chart and header heights, popup,
 card and text maximum widths, small gaps, paddings and offsets (`2px`, `0.125rem`, `-0.25rem`), the
 3 px corners of chart columns and the KPI tone marker, the login card's type sizes, hairlines, pill
@@ -198,8 +200,9 @@ primary tag), each family → the same name; there is no status-tag wrapper.
 
 Vehicle groups and chart series use the eight categorical slots (`categoryPalette`): c1 blue 600,
 c2 teal 600, c3 amber 600, c4 violet 600, c5 rose 600, c6 lime 700, c7 cyan 700, c8 fuchsia 600;
-every slot is 400 in dark. Colour is never the only carrier of meaning: dots sit next to labels
-and charts carry a visually hidden table.
+every slot is 400 in dark. Colour is never the only carrier of meaning: dots sit next to labels,
+column and stacked-bar charts carry a visually hidden table, and a sparkline's accessible name
+states its value range and last value.
 
 ### Light and dark
 
@@ -275,7 +278,7 @@ must change with the Sass map), provides a deterministic `matchMedia` driven by 
 `--text-color`, `--text-color-secondary`, `--primary-color` and `--content-border-radius` survive,
 mapped to the new tokens. Karma Client pages and the Fleet Vehicles/Devices screens that predate
 the patterns (`vehicles-page`, `devices-page`, `vehicle-editor`, `device-editor`,
-`fleet-workspace`, `fleet-editor.scss`, `fleet-list.scss`) still read them, so the file can be
+`fleet-workspace`, `fleet-editor.scss`, `fleet-list.scss`) read them, so the file can be
 removed only after both are gone. New code does not use them.
 
 ## Shell
@@ -446,13 +449,14 @@ CSS patterns (`styles/_patterns.scss`):
   `.app-col-check` (3rem), `.app-col-actions` (3.25rem), `.app-link` (`button.app-link` is a
   row's record link that opens its drawer).
 - Other: `.app-timeline-event` with `__title`, `__meta` and `__body` (keeps line breaks),
-  `.app-icon-button`, `.app-logo` with `.app-logo__mark` and `.app-logo__word`, and the popup menu
-  classes `.app-menu-scroll` (a long list scrolls) and `.app-menu-wide`.
+  `.app-icon-button`, `.app-logo` with `.app-logo__mark` (the `.app-logo__word` span has no
+  pattern rule; the topbar hides it below `sm`), and the popup menu classes `.app-menu-scroll`
+  (a long list scrolls) and `.app-menu-wide`.
 - Global rules: every DataTable header and body cell is `nowrap`; the focusable scroll container
   shows an inset focus ring; inputs, textareas, `p-select`, `p-autocomplete`, `p-inputnumber` and
   `p-datepicker` projected directly into `holita-form-field` fill its width.
 - Set by components, not by hand: `.p-drawer.app-route-drawer` (`--md`/`--lg` from RouteDrawer
-  `size`), `.p-drawer.app-nav-drawer` and `.app-menu-danger` (from `MenuOption.danger`).
+  `size`) and `.app-menu-danger` (from `MenuOption.danger`).
 
 Helpers:
 
@@ -575,7 +579,8 @@ Because stories run axe with violations as failures, and lint rejects deprecated
 - every `<p-confirmdialog>` uses `[pt]="confirmDialogPt(language)"` (names its close button and
   makes the `p-dialog` host presentational); with a `#message` template it passes the message's
   ID as the second argument, which becomes the dialog's `aria-describedby`;
-- `p-popover` gets `ariaLabel`, `p-drawer` `ariaCloseLabel`, `p-dialog` `closeAriaLabel`,
+- `p-popover` gets `ariaLabel` (FilterBuilder sets the root `aria-label` through `[pt]`
+  instead), `p-drawer` `ariaCloseLabel`, `p-dialog` `closeAriaLabel`,
   `p-autocomplete [dropdown]` `dropdownAriaLabel`, `p-metergroup` an `aria-label`;
 - multiple choice uses `p-select [multiple]="true" [pt]="selectMultiplePt"`
   (`ui/select-multiple.ts`: Select puts `aria-multiselectable` on its combobox, which axe rejects;
@@ -590,7 +595,7 @@ Because stories run axe with violations as failures, and lint rejects deprecated
 
 ## List URL state
 
-List views with search, sort or paging (`features/fleet/*-view.ts` for vehicles, drivers, devices,
+List views with search, sort or paging (`features/fleet/*/*-view.ts` for vehicles, drivers, devices,
 maintenance, alerts and trips) take a `ListQuery` input (`state`) and emit `stateChange` with the
 next query (`listQuery` transitions); their hosts keep the query and map it to their own query
 variables. The groups view has no query (only `rows`, `view` and `notice`). In that flow
@@ -640,7 +645,7 @@ leaves the drawer open, and a dirty drawer also guards page unload.
 - Host-controlled (`[closeLink]="null"`): the close button, Escape and the backdrop emit
   `closeRequest`; the component that renders the drawer awaits `confirmLeave(dirty)` and only on
   `true` emits its own `closed` output, after which its page removes it. Every
-  `features/fleet/*-drawer` uses this mode (the read-only trip drawer closes without asking).
+  `features/fleet/*/*-drawer.ts` uses this mode (the read-only trip drawer closes without asking).
 - Routed (`closeLink`, default `['..']`): closing navigates relative to the drawer's route with
   the query and fragment preserved. A child route with
   `data: { drawer: true, mode, recordParam?, fixedVehicleParam? }` and
@@ -704,7 +709,7 @@ clock (`now`, default `2026-10-18T07:00:00.000Z`) and the fixture `scenario` (`l
 | Title                          | Content                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Design System/Foundations      | Colors (the canvas, frame and panel colour tokens, the sidebar hover and active backgrounds and indicator, the tone and category tokens, the semantic colour tokens and the primary and surface ramps in both schemes; the contrast checks of the toolbar brand), Brand variants, Typography, Spacing and density (measured), Radii and borders, Status tones, Categorical palette, Breakpoints                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| Design System/Patterns         | PageHeader, KpiStrip, FilterBuilder, TablePanel (states, paging with one page, a large and an unlisted page size, selection, row actions, confirmation from a row and for a selection), Drawer (edit, view, view then edit), FormField, EmptyState, Charts, CSS patterns; MenuButton and RowActions have no stories of their own (TablePanel, the Shell menus and the examples show them)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Design System/Patterns         | PageHeader, KpiStrip, FilterBuilder, TablePanel (states, paging with one page, a large and an unlisted page size, selection, row actions, confirmation from a row and for a selection), Drawer (edit, view, view then edit, loading, saving, not found, error, server field errors, dirty with confirm), FormField, EmptyState, Charts, CSS patterns; MenuButton and RowActions have no stories of their own (TablePanel, the Shell menus and the examples show them)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | Design System/PrimeNG coverage | Every registered control in both schemes, non-modal overlays and the confirm dialog                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | Design System/Shell            | Desktop, Rail, Mobile with navigation open, Fleet disabled, Unknown Branch, Branch discovery loading/error, theme-persistence warning, Branch menu, Notifications, Account menu, No notifications, Long names (desktop, narrow desktop and phone)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | Examples                       | Example pages inside the shell with sample data (no GraphQL); the sidebar switches between them and Examples/Tour visits all of them. Overview: KPI tiles that open their lists, items that need attention, distance and activity charts, latest trips. Vehicles: quick search, filters, sorting, row and bulk actions, direct edit in the drawer, all states. Drivers: document expiry flags, scores and the mixed drawer (view, then Edit). Trips: a read-only list and a view drawer with a timeline. Alerts: a default filter chip, row actions by status, Acknowledge as the only bulk action (Resolve opens the drawer at the remark it needs), and a view drawer with workflow actions (acknowledge, resolve with a remark, reopen). Vehicle profile: a full record page with back link, the plate as the breadcrumb's last crumb, Edit (the vehicle drawer), KPIs and tabs (overview with facts and a chart, trips, alerts, service plan), loading, not found and error. Maintenance: urgency by date or odometer, money, and a drawer form that needs a date or an odometer reading. Devices: connection, signal and firmware, Restart for online devices (also in bulk, after a confirmation), and a drawer with read-only diagnostics above the installation form. Settings: a short groups list without search or paging (groups in use cannot be deleted; the others are deleted after a confirmation that names them) and the General page form with titled cards and a sticky save bar |
@@ -745,8 +750,8 @@ Checks for such a change: `npm run test:admin -- --include="app/theme/**/*.spec.
 --include="app/ui/**/*.spec.ts" --include="app/layout/**/*.spec.ts" --skip-nx-cache` (add
 `--include="app/workspace/**/*.spec.ts" --include="app/i18n/**/*.spec.ts"` for shell or catalog
 changes), `npm run test:storybook:admin`, `npm run test:visual:admin` (candidates for review) and
-the shell smoke (`npm run test:smoke:admin -- angular-shell.smoke.spec.mts`; the admin browser
-smokes still target the pre-menu topbar and fail until they are rewritten).
+the shell smoke (`npm run test:smoke:admin -- angular-shell.smoke.spec.mts`; the signed-in
+admin smokes currently fail; see [browser smoke checks](testing.md#real-federation-and-browser-smoke-checks)).
 
 ## Extending
 

@@ -26,9 +26,17 @@ each spec says which of its sections are superseded by those documents.
 - Keep light and dark themes and Bulgarian/English in the application. Brand tokens (color,
   neutrals, density, font, shell geometry) are undecided and must stay easy to change centrally
   (`appTheme`).
-- Storybook first (2026-10-18): finish and review a complete English-only Storybook before the
-  admin wiring and the backend continue; the real admin and its smoke tests may stay broken
-  meanwhile. The shell previews and example pages offer sample languages that change nothing.
+- Prepare the current shell, shared patterns, sample Fleet views and expanded Fleet API for
+  the first merge into `main`: complete the confirmed review fixes, align the documentation,
+  rewrite the smoke tests and pass the relevant automated checks. New Fleet routes and Apollo
+  containers (F2/F3), Overview (B3) and the rich demo seed (B4) are outside this merge.
+- Stabilization and documentation come before further visual refinement; connecting the new
+  Fleet screens to the backend comes last. Keep the current sample hosts until the fixture
+  decision for that later integration is made. The shell previews and example pages offer sample
+  languages that change nothing.
+- Use automated checks for release preparation. Do not perform visual reviews, take screenshots
+  or create/update baselines in this phase. Keep visual feedback and baseline review as separate
+  later work; automated story interaction and accessibility checks remain in scope.
 - Example pages use sample data in stories (no GraphQL). They must be replaceable by
   Apollo-backed containers that feed the same `features/fleet/*` views and drawers.
 - Editing happens in a right-hand drawer: direct edit by default, a view drawer for read-only
@@ -52,49 +60,34 @@ each spec says which of its sections are superseded by those documents.
   Baselines are recorded or updated only after the user approves the candidates.
 - Work in small phases with minimal, focused diffs. End each phase with a short report to the
   user in Bulgarian and one commit on `feature/admin-design-system`.
-- Never push, merge or amend. Never edit, build or run anything in the main checkout (the
-  worktree of `main`).
+- Keep implementation, builds and tests in the feature worktree. Merge into `main` only after
+  the release checks below pass, preserving unrelated changes in the main checkout. Never push
+  or amend.
 - Never stage editor swap files (`*.swp` is not ignored), and never read, print, commit or
   publish `apps/admin/public/config.local.json`.
 
 ## Open tasks
 
-Work through the tasks below in order. Apart from "Storybook first" and the open decisions in
-[review fixes](admin-design-system-review-fixes.md#decisions-needed-from-the-user) (including the
-merge scope), the order follows the specs' dependencies (F2's operation registration and gate
-wait for B3, F4 for B4). Run every build, generation, test and server command one at a time; the
+Complete the review fixes, smoke rewrite and release checks before merging the current scope.
+Visual review and the remaining implementation phases follow separately; keep the
+[open decisions](admin-design-system-review-fixes.md#decisions-needed-from-the-user) explicit.
+For the later integration, F2's operation registration and gate wait for B3, and F4 waits for B4.
+Run every build, generation, test and server command one at a time; the
 specs' check lock matters only when agents run in parallel. Choose checks with [testing](../testing.md), the
 [design-system checks](../admin-design-system.md#changing-the-design-centrally) and the gates of
 the specs. Known Storybook and test behaviour (overlays in `document.body`, seeded samples, cached
 static builds, current smoke failures) is described in [testing](../testing.md) and the
 [admin Storybook](../development.md#admin-storybook) section.
 
-### Storybook review
-
-The user reviews the Storybook (`npm run storybook:admin`, `http://127.0.0.1:11003`, starting at
-"Start here") and gives feedback; implement it in small phases. Start from
-[Storybook review](../admin-design-system.md#storybook-review), the stories beside the components
-(`apps/admin/src/app/**/*.stories.ts`) and the example pages in `apps/admin/src/storybook/samples`.
-
 ### Review fixes
 
 The verified fixes from the external review of this branch are planned in
-[review fixes](admin-design-system-review-fixes.md): documentation corrections, the PrimeUI key
-out of the build outputs (the Storybook `assets` options are no-ops, so the static build must stop
+[review fixes](admin-design-system-review-fixes.md): checking the compiled stylesheet budget,
+keeping the PrimeUI key out of the build outputs (the Storybook `assets` options are no-ops, so the static build must stop
 copying Vite's public directory and copy only the fonts), editors locked while saving, required
 General settings fields, FilterBuilder focus, serialized odometer readings and driver/vehicle
-writes, and the trip in-progress upper bound. Its last section lists the decisions they need,
-including which tasks must precede a merge.
-
-### Visual candidates and baselines
-
-Keep the PrimeUI key out of the build outputs first
-([R1](admin-design-system-review-fixes.md#r1-primeui-key-out-of-build-outputs)), so that the
-captures show the final key state (the license notice). After the user approves the look, delete
-`test-results/storybook-visual-candidates/` and run `npm run test:visual:admin` for fresh
-candidates. The user reviews them; only then record the first baselines with the command in
-[Storybook visual review](../testing.md#storybook-visual-review).
-The captures are listed in `tools/browser/storybook-visual.spec.mts`.
+writes, and the trip in-progress upper bound. Its last section lists the remaining product and
+fixture decisions; the first-merge scope is agreed above.
 
 ### Smoke rewrite for the menu topbar
 
@@ -107,6 +100,10 @@ before the story tests ([browser smoke checks](../testing.md#real-federation-and
 The login page keeps its Tenant and Branch comboboxes, language link and theme button; those
 locators stay valid.
 
+- Before running this release's smoke checks, make the unconditional shell screenshots
+  (`tools/browser/angular-shell.smoke.spec.mts`) opt-in and disable automatic failure screenshots
+  for this run (`tools/browser/angular.config.mts`). Retain the behavioral assertions and textual
+  diagnostics; do not inspect or generate screenshots during release preparation.
 - `tools/browser/angular-fixture.mts:8-18` `chooseBranch`: open the Branch menu button and choose
   the `menuitem` (used by the foundation, Vehicles, Devices, shell, Karma and eData smokes).
 - Language links (`getByRole('link', { name: 'Български' })`) become "open the language menu,
@@ -126,6 +123,39 @@ locators stay valid.
 - When the smokes pass, remove the smoke limitation from
   [testing](../testing.md#real-federation-and-browser-smoke-checks) and update the shell row of
   [frontend 8.2](admin-design-system-frontend.md#8-tests).
+
+### Release checks and merge
+
+- Complete the confirmed review fixes and menu-topbar smoke rewrite, updating the authoritative
+  documentation with each behavior change and removing completed backlog entries.
+- Run root lint, typecheck and build for the packaging changes, build the static Storybook and
+  prove that both production outputs exclude the local key while retaining fonts.
+- Run the relevant admin/unit, Fleet persistence and federation checks from
+  [testing](../testing.md#current-change-to-check-mapping), schema checks, the compiled-admin
+  smoke suite and Storybook interaction/axe tests. Use the guarded test databases and report
+  actual results; a static review or cached live-DB result is not runtime evidence.
+- Check the final branch diff and documentation for the agreed scope, commit the verified
+  phases and merge into `main`. Keep the later integration and unresolved product choices in
+  their existing backlog sections. No visual checks or screenshot baselines are required in
+  this release phase.
+
+### Storybook review
+
+After the first merge, the user reviews the Storybook (`npm run storybook:admin`, `http://127.0.0.1:11003`, starting at
+"Start here") and gives feedback; implement it in small phases. Start from
+[Storybook review](../admin-design-system.md#storybook-review), the stories beside the components
+(`apps/admin/src/app/**/*.stories.ts`) and the example pages in `apps/admin/src/storybook/samples`.
+
+### Visual candidates and baselines
+
+This is separate post-merge work; no captures or baseline changes belong to release preparation.
+Keep the PrimeUI key out of the build outputs first
+([R1](admin-design-system-review-fixes.md#r1-primeui-key-out-of-build-outputs)), so that the
+captures show the final key state (the license notice). After the user approves the look, delete
+`test-results/storybook-visual-candidates/` and run `npm run test:visual:admin` for fresh
+candidates. The user reviews them; only then record the first baselines with the command in
+[Storybook visual review](../testing.md#storybook-visual-review).
+The captures are listed in `tools/browser/storybook-visual.spec.mts`.
 
 ### Backend B3 and B4
 

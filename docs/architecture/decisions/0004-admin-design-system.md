@@ -61,7 +61,7 @@ reviewed against a running backend.
   `styles/_legacy-karma.scss`, the only place the old class names and Sakai variable aliases
   survive; their look is not redesigned and the file is removed once both are gone.
 - `light-dark()` and `color-mix()` require current evergreen browsers.
-- The application still routes the pre-pattern Fleet Vehicles/Devices screens
+- The application routes the pre-pattern Fleet Vehicles/Devices screens
   ([Discocan Fleet](../../discocan/fleet.md)); the Fleet views and drawers built from the patterns
   are presentation-only and render only in Storybook. The implemented design system is described
   in [admin design system](../../admin-design-system.md).

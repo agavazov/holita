@@ -10,108 +10,14 @@ under "Decisions agreed with the user" there and remove it here. When this file 
 it and its links (`git grep -n "admin-design-system-review-fixes" -- docs .agents` must then print
 nothing).
 
-## Documentation corrections
+## Component stylesheet budget check
 
-**Problem.** The design-system guide, ADR 0004 and the design-system skill contain small errors,
-and the [frontend spec](admin-design-system-frontend.md) still plans Storybook fixtures under
-`src/storybook/fleet/*` that do not exist, although whether the Apollo containers get GraphQL
-fixtures is an [open decision](#2-storybook-sample-hosts-or-graphql-fixtures).
-
-**Fix: product documents** (corrected wording)
-
-- `docs/admin-design-system.md:22-25`: after "…no literal colours." add "The story-only
-  components of the Foundations, PrimeNG coverage and Start here stories use literal spacing in
-  their inline styles." (`theme/foundations.stories.ts`, 37 declarations, e.g. :110-111;
-  `theme/primeng-coverage.stories.ts`, 7, :84-85; `storybook/introduction.stories.ts`, 8, :142,
-  :156, :161; the app `*.scss` files comply).
-- `docs/admin-design-system.md:201-202`: "dots sit next to labels, column and stacked-bar charts
-  carry a visually hidden table, and a sparkline's accessible name states its range and last
-  value" (tables only in `column-series.ts:38` and `stacked-bars.ts:59`; `sparkline.ts:25-26` is
-  `role="img"` with an `aria-label`).
-- `docs/admin-design-system.md:449`: "`.app-logo` with `.app-logo__mark` (the `.app-logo__word`
-  span has no pattern rule; the topbar hides it below `sm`)" (`_patterns.scss:10-33`; the only
-  `.app-logo__word` rule is `_shell.scss:102-109`).
-- `docs/admin-design-system.md:454-455`: "Set by components, not by hand: `.p-drawer.app-route-drawer`
-  (`--md`/`--lg` from RouteDrawer `size`) and `.app-menu-danger` (from `MenuOption.danger`)."
-  (`.p-drawer.app-nav-drawer` is defined in `_shell.scss:475-501`, as :241 says).
-- `docs/admin-design-system.md:578`: "`p-popover` gets `ariaLabel`" holds for KpiTile
-  (`app/ui/kpi/kpi-tile.html:18`), but FilterBuilder names its popover through `[pt]` root
-  `aria-label` (`filter-builder.html:93`): name FilterBuilder as the exception.
-- Globs one level too shallow: `docs/admin-design-system.md:593` becomes
-  `features/fleet/*/*-view.ts`; `:643` and `.agents/skills/holita-admin-design-system/SKILL.md:90`
-  become `features/fleet/*/*-drawer.ts`.
-- `docs/admin-design-system.md:707`: "Drawer (edit, view, view then edit, loading, saving, not
-  found, error, server field errors, dirty with confirm)" (`route-drawer.stories.ts:230-254`).
-- Progress wording: in `docs/admin-design-system.md:748-749` and `SKILL.md:142-143` the smokes
-  sentence becomes "the signed-in admin smokes currently fail (browser smoke checks)", linking
-  `testing.md#real-federation-and-browser-smoke-checks` (from the skill:
-  `../../../docs/testing.md#real-federation-and-browser-smoke-checks`);
-  `docs/architecture/decisions/0004-admin-design-system.md:64` "still routes" becomes "routes";
-  `docs/admin-design-system.md:276-278` "still read them" becomes "read them".
-- `SKILL.md:56-57`: "update the registered-preset count (31) that the `Controls` play function
-  asserts in `primeng-coverage.stories.ts`" (:247 counts registered presets, not controls).
-- Unverified, check the `npm run build` budget warnings before changing it: `SKILL.md:28` says
-  "Keep each component stylesheet below 4 kB"; `table-panel.scss` has 5,411 bytes of source, and
-  the `angular.json:40-44` budget (warning 4 kB, error 8 kB) applies to compiled output.
-- The Theme section (:80-86) and the fonts bullet (:238) are corrected with
-  [R1](#r1-primeui-key-out-of-build-outputs).
-
-**Fix: frontend spec.** Mark every item that needs `src/storybook/fleet/*` as depending on the
-open decision without deciding it; if the decision is already made, write the chosen plan
-instead of the conditions.
-
-- Intro, after the "Still the plan" bullet (:21-22): "Depends on the open decision "GraphQL
-  fixtures for the Apollo containers or sample hosts" ([admin
-  phase](admin-design-system.md#admin-phase-per-screen-f3)): everything in 0.2, 8.1, 11 F2–F4 and
-  12 that needs `src/storybook/fleet/*` (demo dataset, store, derived values, per-feature
-  handlers, `fixture-coverage.spec.ts`, `demo-dataset.spec.ts`, `derived.spec.ts`, the F4 dataset
-  re-sync). None of it exists; the example pages use `src/storybook/samples/fleet-samples.ts`. If
-  the sample hosts stay, these items are dropped."
-- 0.2 (:72): "GraphQL fixtures, if chosen, follow the same contract (3.5, 7.2)"; (:80): "the
-  error variants exist (`graphql-fixtures.ts`); per-feature handler modules (7.3) only with
-  GraphQL fixtures".
-- 8.1 (:3118), Fate cell: "`graphql-fixtures.spec.ts` exists; the `src/storybook/fleet/*.spec.ts`
-  files are new in F2 only with GraphQL fixtures".
-- F2 scope (:3340-3342): "…stubs and catalogs per feature, `operationPaths` registration,
-  foundation/tenants smoke rewrites, `fleetSql` fixture helper and, only with GraphQL fixtures,
-  the Storybook session/dataset/store/derived/shared fixtures and their coverage specs (7.3)";
-  :3347 "and, with GraphQL fixtures, the fixture list helpers and store)"; :3349-3350 "(feature
-  APIs and stubs that use operations; with GraphQL fixtures also fixture handlers and dataset
-  specs)". The gate (:3355) stays: `--include="storybook/**/*.spec.ts"` already runs
-  `graphql-fixtures.spec.ts`.
-- F3 (:3367-3368): "Each group: Apollo-backed containers that feed the existing views, drawers and
-  tabs, APIs, operations, Bulgarian catalogs, unit specs and its smoke spec. With GraphQL fixtures
-  it also adds fixture handlers and container stories with play flows; otherwise the
-  `Examples/…` stories and sample hosts stay." (:3384-3387) ends "…and the shared Storybook
-  files. With GraphQL fixtures the same rule applies to `fixture-coverage.spec.ts`, which fails
-  while another group still lacks handlers for its new operations." (drops the stale "while DS
-  works in F1" clause).
-- F4 (:3391-3396): the scope keeps the visual capture list, documentation and rules (9.3),
-  backlog (9.4), retirement check, requirements and removal of completed items; the dataset
-  re-sync (its current text) applies only with GraphQL fixtures. With the sample hosts there is no
-  re-sync: `fleet-samples.ts` is generated story data, not a restatement of the backend catalog.
-- 12 (:3432-3433): "(only with GraphQL fixtures; the examples use `samples/fleet-samples.ts`)";
-  :3445 "the stubs (and, with GraphQL fixtures, the fixture modules) created in F2".
-- Optional, 10 (parallel agents only, :3254, :3267-3271): append "(only with GraphQL fixtures)"
-  after the `src/storybook/fleet/...` paths.
-
-**Tests.** None: documentation only. Say so in the report; zero executed tests is not evidence.
-
-**Checks**
-
-```bash
-npm run format:check   # on failure: npx prettier --write <edited files>, then repeat
-git diff --check
-git grep -n -e "src/storybook/fleet" -e "demo-dataset" -e "fixture-coverage" -- docs/todo/admin-design-system-frontend.md
-git grep -n -e 'features/fleet/\*-view' -e 'features/fleet/\*-drawer' -- docs/admin-design-system.md .agents
-git grep -n "pre-menu topbar" -- docs/admin-design-system.md docs/architecture .agents
-```
-
-Every remaining frontend-spec hit is in superseded section 7, in section 10 or conditional; the
-other two greps print nothing.
-
-**Docs to update.** The files above. The stale "page state survives sidebar navigation" comments
-are already tracked under [open items](admin-design-system.md#open-items).
+On the next production build, inspect the `anyComponentStyle` warnings before changing the
+4 kB guidance in the [design-system skill](../../.agents/skills/holita-admin-design-system/SKILL.md).
+The configured warning/error thresholds are 4 kB/8 kB of compiled CSS
+(`apps/admin/angular.json`); the 5,411-byte `table-panel.scss` source does not prove that the
+compiled stylesheet exceeds either threshold. Keep this question open until the build provides
+evidence; do not start a build for a documentation-only correction.
 
 ## R1 PrimeUI key out of build outputs
 
@@ -171,8 +77,9 @@ Nx-cached, and Nx does not hash Git-ignored files (`nx.json:52-56`,
 
 Afterwards the static Storybook, visual candidates and compiled-app smokes always show the
 "Invalid PrimeUI License" notice (fixed bottom-right, `pointer-events: none`; it blocks no
-clicks). Finish this before recording baselines and regenerate the candidates, which were taken
-with a key ([visual candidates](admin-design-system.md#visual-candidates-and-baselines)).
+clicks). Regenerating candidates taken with a key and recording baselines belong only to the
+separate post-merge [visual review](admin-design-system.md#visual-candidates-and-baselines);
+do not run captures during release preparation.
 
 **Tests.** No spec can observe asset globs or Storybook's static copy; prove the outputs. Never
 read or print `config.local.json`: check it by name (`test -e`) and by status-only `curl`.
@@ -239,8 +146,9 @@ Under WSL, rerun a story file that fails with "Failed to fetch dynamically impor
   run without a key.
 - Comments: `apps/admin/src/storybook/story-config.ts:100-104` (`loadStoryLicense()`), and
   `.storybook/vitest.config.mts:14` if its `assets` go.
-- Remove this section; in `docs/todo/admin-design-system.md` the first sentence of "Visual
-  candidates and baselines" (R1 first) and the PrimeUI key clause of the "Review fixes" summary;
+- Remove this section; in `docs/todo/admin-design-system.md` remove only the R1 prerequisite
+  and its link from "Visual candidates and baselines", preserving the post-merge phase boundary,
+  and remove the PrimeUI key clause of the "Review fixes" summary;
   and in [frontend 12](admin-design-system-frontend.md#12-risks-accepted-trade-offs-and-deferred-items)
   the "PrimeUI key" sentence about copying and its link. Then
   `git grep -n "r1-primeui-key-out-of-build-outputs" -- docs .agents` must print nothing. The decision "build outputs must not carry it" stays. No
@@ -366,8 +274,8 @@ npm run format:check
 npm run test:storybook:admin   # needs `npm exec -- playwright install chromium` once
 ```
 
-No DB checks. Optional `npm run test:visual:admin` with a candidate review (`drawer--saving` is
-not captured, so no diff is expected).
+No DB checks. Any visual candidate review belongs to the separate post-merge phase; do not
+run `test:visual:admin` or capture screenshots during this fix.
 
 **Docs to update**
 
@@ -503,8 +411,8 @@ npm run typecheck
 npm run format:check
 ```
 
-Once baselines exist, `npm run test:visual:admin` with a review (only
-`filterbuilder--with-conditions` is captured; no diff is expected).
+Any comparison with visual baselines belongs to the separate post-merge phase; do not run
+`test:visual:admin` or capture screenshots during this fix.
 
 **Docs to update.** `docs/admin-design-system.md:414`, the `holita-filter-builder` row, before
 "Slot `[filterActions]`": "Focus: the editor opens with the focus on its first control (Column),
@@ -802,18 +710,8 @@ asOf]`" (keep "(`false` without a data clock)"); `docs/discocan/testing.md:90-91
 
 ## Decisions needed from the user
 
-All open.
-
-### 1. First merge scope
-
-Facts: until R2, every signed-in browser smoke fails and `test:full` stops before the story tests
-([smoke rewrite](admin-design-system.md#smoke-rewrite-for-the-menu-topbar)); without R1 a
-production build or static Storybook made from a checkout with a key carries it; without R3 and R4
-the Fleet API can store a falling odometer series or an INACTIVE driver with a current vehicle.
-The other fixes are UI, documentation or a read-model bug. F2, F3, B3 and B4 have not started.
-Options: merge after R1–R4; after every task in this file; after F2–F4.
-
-Recommended: the merge needs R1, R2, R3 and R4; F2, F3, B3 and B4 come after it.
+The [first-merge scope](admin-design-system.md#decisions-agreed-with-the-user) is agreed.
+The choices below remain open; new screen integration is a later phase.
 
 ### 2. Storybook sample hosts or GraphQL fixtures
 
@@ -836,8 +734,8 @@ per-feature handlers for the containers' operations and `fixture-coverage.spec.t
 operation has a handler); the handlers build their answers from `samples/fleet-samples.ts`. It
 drops the shared demo dataset that restates the backend catalog, the store, the derived values,
 `demo-dataset.spec.ts`, `derived.spec.ts` and the F4 dataset re-sync. Then apply the
-frontend-spec part of the [documentation corrections](#documentation-corrections) with that
-split as the chosen plan.
+[frontend spec](admin-design-system-frontend.md) consistently with that split as the chosen
+plan, replacing the conditional fixture items.
 
 ### 3. Editor contract for backend values the examples do not offer
 
