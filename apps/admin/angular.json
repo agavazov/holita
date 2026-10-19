@@ -80,7 +80,7 @@
             "configDir": ".storybook",
             "tsConfig": ".storybook/tsconfig.json",
             "host": "127.0.0.1",
-            "port": 11003,
+            "port": 11001,
             "open": false,
             "styles": ["src/styles.scss"],
             "stylePreprocessorOptions": { "includePaths": ["src/styles"] }

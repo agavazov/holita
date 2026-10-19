@@ -668,7 +668,7 @@ On destroy the drawer returns focus to the element that was focused when it was 
 
 ## Storybook review
 
-The admin Storybook (`npm run storybook:admin`, port 11003) renders the real Angular components
+The admin Storybook (`npm run storybook:admin`, port 11001) renders the real Angular components
 ([development](development.md#admin-storybook)). It opens on "Start here" (what to review and links
 to every example), then Examples and Design System. It is English only; the product's languages
 live in the application catalogs, and the example shell's language menu lists sample languages

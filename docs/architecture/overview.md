@@ -60,7 +60,8 @@ flowchart LR
 ## Execution and ownership
 
 The native Router and Node applications run on the host. Root `dev` waits for PostgreSQL health and starts the group
-using concurrently, with group shutdown. Ports and CORS origins are application-local configuration.
+using concurrently, including admin Storybook on port 11001, with group shutdown. Admin GraphQL
+artifacts are generated once before the Angular and Storybook processes start. Ports and CORS origins are application-local configuration.
 Only PostgreSQL runs in Compose. Setup/migration/seed are explicit commands, separate from startup.
 Health endpoints prove application availability without opening database connections.
 
@@ -73,7 +74,7 @@ It consumes the same generated static supergraph and routes directly to Core, Fl
 Karma Client on the public GraphQL port, 11010. Its health listener uses port 11016.
 Authorization, Branch scope and business behavior remain in the owning subgraphs.
 Only `authorization`, `x-branch-id` and `x-request-id` are propagated from client requests.
-`dev` starts Router, three subgraphs and Angular through concurrently. Angular's development
+`dev` starts Router, three subgraphs, Angular and Storybook through concurrently. Angular's development
 proxy follows `ROUTER_PORT`, defaulting to 11010. `kill` stops the native Router and Node
 application processes. Gateway has no Node implementation, Nest bootstrap or npm runtime
 dependencies. Development, federation/browser fixtures and CI all use the official binary.

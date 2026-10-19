@@ -34,7 +34,7 @@ for (const entry of readdirSync('/proc')) {
       args.includes('--watch');
     const group =
       args.includes(resolve(root, 'node_modules/.bin/concurrently')) &&
-      args.includes('gateway,core,fleet,karma-client,admin');
+      args.includes('gateway,core,fleet,karma-client,admin,storybook');
     const admin =
       directory === appDirectories[0] &&
       (args.some((arg) => arg.startsWith('ng serve')) ||

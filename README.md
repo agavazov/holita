@@ -32,8 +32,9 @@ npm run db:seed
 npm run dev
 ```
 
-On Ubuntu/WSL, run `npm run kill` in another terminal to stop the applications and their
-watchers. PostgreSQL remains running; `npm run db:down` stops it separately.
+`npm run dev` also starts [admin Storybook](http://127.0.0.1:11001). On Ubuntu/WSL, run
+`npm run kill` in another terminal to stop the applications, Storybook in the dev group and
+their watchers. PostgreSQL remains running; `npm run db:down` stops it separately.
 
 If needed, run `nvm install` before `nvm use`. Open [Angular admin](http://127.0.0.1:11000).
 Choose RentalSofia and a Branch on the standalone demo login screen to open Vehicles. There is no Branch list landing page; the topbar Branch menu switches Branches after login. Switching Branches preserves the current Vehicles/Devices
@@ -71,13 +72,13 @@ Karma is independent of the Branch menu and `fleetEnabled`. See
 The shell supports keyboard/mobile navigation, a persisted sidebar rail and persisted light/dark
 themes. The startup `fleetEnabled` flag gates both business modules; Branch discovery stays available.
 The [admin design system](docs/admin-design-system.md) describes the theme, shell and patterns.
-`npm run storybook:admin` serves the [admin Storybook](docs/development.md#admin-storybook) at
-`http://127.0.0.1:11003` with synthetic data and no backend. `npm run test:storybook:admin` runs
+To start it separately, `npm run storybook:admin` serves the [admin Storybook](docs/development.md#admin-storybook) at
+`http://127.0.0.1:11001` with synthetic data and no backend. `npm run test:storybook:admin` runs
 every story with its interactions and axe ([story tests](docs/testing.md#storybook-story-tests));
 `npm run test:visual:admin` captures [visual review candidates](docs/testing.md#storybook-visual-review).
 
-Gateway, Core, Fleet and Karma Client listen on loopback ports 11010, 11011, 11013 and 11014; PostgreSQL uses 11084. `dev` waits for PostgreSQL health before starting the five applications. Ctrl+C stops
-the native Router and Node application group. `npm run db:down` stops PostgreSQL and preserves its volume. Setup, migrations
+Gateway, Core, Fleet and Karma Client listen on loopback ports 11010, 11011, 11013 and 11014; PostgreSQL uses 11084. `dev` waits for PostgreSQL health and generates admin GraphQL artifacts once before starting the five applications and Storybook. Ctrl+C stops
+the native Router, Node applications and Storybook together. `npm run db:down` stops PostgreSQL and preserves its volume. Setup, migrations
 and seeding are explicit commands. The seed inserts RentalSofia, Discordia and Sandbox Branches, two sample Vehicles and one Device without replacing existing records.
 
 Use [Gateway GraphQL](http://127.0.0.1:11010/graphql). `{ tenants { id name } }` is public for demo login. Sign in through `demoLogin` and send its token as `Authorization: Bearer <token>` to discover Branches. Branch discovery needs no Branch header. Fleet business operations require `x-branch-id`, for example the seeded Discordia Branch

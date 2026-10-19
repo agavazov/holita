@@ -26,7 +26,7 @@
     }
   },
   "scripts": {
-    "dev": "npm run db:up && concurrently --kill-others --names gateway,core,fleet,karma-client,admin --prefix-colors blue,green,cyan,magenta,red \"npm:dev:gateway\" \"npm:dev:core\" \"npm:dev:fleet\" \"npm:dev:karma-client\" \"npm:dev:admin\"",
+    "dev": "npm run db:up && nx run admin:graphql-generate && concurrently --kill-others --names gateway,core,fleet,karma-client,admin,storybook --prefix-colors blue,green,cyan,magenta,red,yellow \"npm:dev:gateway\" \"npm:dev:core\" \"npm:dev:fleet\" \"npm:dev:karma-client\" \"npm run dev:admin --ignore-scripts\" \"npm run storybook --workspace @holita/admin\"",
     "kill": "tsx tools/development/kill.mts",
     "dev:gateway": "npm run dev --workspace @holita/gateway",
     "router:install": "npm run router:install --workspace @holita/gateway",

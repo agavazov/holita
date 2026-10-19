@@ -32,32 +32,34 @@ in environment examples, documentation, agent instructions, command arguments or
 
 ## Commands
 
-| Command                       | Behavior                                                              |
-| ----------------------------- | --------------------------------------------------------------------- |
-| npm run dev                   | Wait for PostgreSQL, start Router, Angular and three Nest subgraphs   |
-| npm run kill                  | Stop this checkout's application processes and watchers on Ubuntu/WSL |
-| npm run dev:admin             | Angular watcher                                                       |
-| npm run storybook:admin       | Admin Storybook with synthetic data on port 11003                     |
-| npm run build:storybook:admin | Static admin Storybook in the ignored `apps/admin/storybook-static`   |
-| npm run dev:gateway           | Native Router after Nx supergraph generation                          |
-| npm run dev:core              | Core watcher                                                          |
-| npm run dev:fleet             | Fleet watcher                                                         |
-| npm run dev:karma-client      | Karma Client watcher                                                  |
-| npm run projects              | List five Nx applications                                             |
-| npm run lint                  | Lint source/tooling and application boundaries                        |
-| npm run typecheck             | Check tools and all applications                                      |
-| npm run build                 | Build all applications                                                |
-| npm run format:check          | Check formatting                                                      |
-| npm run codegen               | Generate application GraphQL contracts                                |
-| npm run schema:check          | Compose SDL and validate operations offline                           |
+| Command                       | Behavior                                                                 |
+| ----------------------------- | ------------------------------------------------------------------------ |
+| npm run dev                   | Wait for PostgreSQL, prepare admin GraphQL, start all apps and Storybook |
+| npm run kill                  | Stop this checkout's application processes and watchers on Ubuntu/WSL    |
+| npm run dev:admin             | Angular watcher                                                          |
+| npm run storybook:admin       | Admin Storybook with synthetic data on port 11001                        |
+| npm run build:storybook:admin | Static admin Storybook in the ignored `apps/admin/storybook-static`      |
+| npm run dev:gateway           | Native Router after Nx supergraph generation                             |
+| npm run dev:core              | Core watcher                                                             |
+| npm run dev:fleet             | Fleet watcher                                                            |
+| npm run dev:karma-client      | Karma Client watcher                                                     |
+| npm run projects              | List five Nx applications                                                |
+| npm run lint                  | Lint source/tooling and application boundaries                           |
+| npm run typecheck             | Check tools and all applications                                         |
+| npm run build                 | Build all applications                                                   |
+| npm run format:check          | Check formatting                                                         |
+| npm run codegen               | Generate application GraphQL contracts                                   |
+| npm run schema:check          | Compose SDL and validate operations offline                              |
 
 Backend output is `apps/NAME/dist`; `npm run start:prod --workspace @holita/core`
 (or fleet/karma-client) runs the compiled app. Gateway `build` generates the supergraph and
 validates the installed native Router configuration. `npm run start:prod --workspace @holita/gateway`
 starts that binary using the generated supergraph; no Node bundle or Rust compilation is involved. `dev` does not migrate or seed databases.
-Ctrl+C stops the process group; `db:down` stops PostgreSQL separately and preserves the volume.
+The group generates admin GraphQL artifacts once before starting Angular and Storybook in
+parallel; their standalone commands keep their own generation step. Ctrl+C stops the process
+group, including Storybook; `db:down` stops PostgreSQL separately and preserves the volume.
 Use `npm run kill` from another terminal when application processes remain running. It stops
-the dev group, individual Angular/Nest watchers and compiled backend processes from this checkout,
+the dev group (including its Storybook), individual Angular/Nest watchers and compiled backend processes from this checkout,
 including the native Router, the concurrently group and their child workers. It sends
 SIGTERM, then SIGKILL to survivors after two seconds.
 PostgreSQL and processes from other checkouts remain running. Running it again is harmless.
@@ -67,6 +69,7 @@ PostgreSQL and processes from other checkouts remain running. Running it again i
 | Application     | Default loopback port |
 | --------------- | --------------------- |
 | Angular admin   | 11000                 |
+| Admin Storybook | 11001                 |
 | Gateway GraphQL | 11010                 |
 | Gateway health  | 11016                 |
 | Core            | 11011                 |
@@ -74,7 +77,7 @@ PostgreSQL and processes from other checkouts remain running. Running it again i
 | Karma Client    | 11014                 |
 | PostgreSQL      | 11084                 |
 
-Visual previews use 11000–11009; the admin Storybook uses 11003. The single root
+Visual previews use 11000–11009; the admin Storybook uses 11001. The single root
 [`.env.example`](../.env.example) describes all variables, their consumers, safe examples,
 types and sensitivity using [`@env-spec` style annotations](https://varlock.dev/reference/data-types/).
 These comments document configuration; dotenv and Compose do not validate them, and no
@@ -123,7 +126,7 @@ npm run dev
 The installer verifies the release archive's pinned SHA-256 before extraction and keeps
 the binary and upstream license notices in ignored `apps/gateway/router/dist/`.
 It requires no npm dependency, Rust toolchain, container, GraphOS account or API key.
-`dev` waits for PostgreSQL and starts Router, Core, Fleet, Karma Client and Angular
+`dev` waits for PostgreSQL and starts Router, Core, Fleet, Karma Client, Angular and Storybook
 using concurrently. Angular keeps the public `/graphql` URL and uses `proxy.conf.mjs`,
 targeting `ROUTER_PORT` (11010 by default). Stop any existing development group before starting
 another because the applications share ports.
@@ -218,7 +221,8 @@ are recorded in [the admin attribution](../apps/admin/THIRD_PARTY_NOTICES.md).
 ### Admin Storybook
 
 Storybook renders the admin's real Angular components with deterministic synthetic data and no
-backend. `npm run storybook:admin` serves `http://127.0.0.1:11003` without opening a browser;
+backend. `npm run dev` includes Storybook; `npm run storybook:admin` starts it separately. Both
+serve `http://127.0.0.1:11001` without opening a browser;
 `npm run build:storybook:admin` writes the ignored `apps/admin/storybook-static`. Storybook starts
 at "Start here", followed by Examples and Design System; the
 [Storybook review](admin-design-system.md#storybook-review) lists what each title shows.

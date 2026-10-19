@@ -139,7 +139,7 @@ locators stay valid.
 
 ### Storybook review
 
-The user reviews the Storybook (`npm run storybook:admin`, `http://127.0.0.1:11003`, starting at
+The user reviews the Storybook (`npm run storybook:admin`, `http://127.0.0.1:11001`, starting at
 "Start here") and gives feedback; implement it in small phases. Start from
 [Storybook review](../admin-design-system.md#storybook-review), the stories beside the components
 (`apps/admin/src/app/**/*.stories.ts`) and the example pages in `apps/admin/src/storybook/samples`.

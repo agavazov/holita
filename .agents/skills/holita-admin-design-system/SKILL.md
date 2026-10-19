@@ -47,7 +47,7 @@ instructions.
    (`ui/css-patterns.stories.ts` for CSS patterns).
 5. Breakpoints, layer order or font weights: follow "Changing the design centrally" in the
    design-system document (several files change together).
-6. Review in Storybook (`npm run storybook:admin`, port 11003) with the toolbar: both themes, the
+6. Review in Storybook (`npm run storybook:admin`, port 11001) with the toolbar: both themes, the
    three brands, both densities, desktop and `mobile375`.
 
 ## Add a PrimeNG control
