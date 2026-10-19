@@ -6,10 +6,16 @@
   [closeLink]="null"
   (closeRequest)="requestClose()"
 >
+  @if (demo()) {
+    <p-tag drawerMeta severity="info" [value]="text().demoLabel" />
+  }
   @if (device(); as device) {
     <p-tag drawerMeta [severity]="statusSeverity(device)" [value]="statusLabel(device)" />
   }
   <form #formElement id="device-form" [formGroup]="form" (ngSubmit)="submit()">
+    @if (demo()) {
+      <p class="app-muted">{{ text().demoDescription }}</p>
+    }
     @if (saveError(); as error) {
       <p-message severity="error" role="alert">{{ error }}</p-message>
     }
@@ -78,6 +84,12 @@
             appendTo="body"
             [invalid]="!!errorOf('model')"
             [ariaLabel]="text().model"
+            [pt]="{
+              label: {
+                'aria-invalid': errorOf('model') ? 'true' : undefined,
+                'aria-describedby': describedBy('model'),
+              },
+            }"
           />
         </holita-form-field>
         <holita-form-field

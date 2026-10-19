@@ -3,7 +3,10 @@ import type { ServiceTaskRow } from '../../app/features/fleet/maintenance/servic
 import type { TripRow } from '../../app/features/fleet/trips/trips-view';
 import type { VehicleForm } from '../../app/features/fleet/vehicles/vehicle-drawer';
 import type { VehicleProfile } from '../../app/features/fleet/vehicles/vehicle-profile-view';
-import type { VehicleRow } from '../../app/features/fleet/vehicles/vehicles-view';
+import type {
+  VehicleRow,
+  VehicleFuelStatus,
+} from '../../app/features/fleet/vehicles/vehicles-view';
 import {
   driverById,
   groupById,
@@ -12,10 +15,19 @@ import {
   type SampleTrip,
   type SampleVehicle,
   vehicleById,
+  sampleNow,
+  sampleAlerts,
 } from './fleet-samples';
 
 // Story-only mapping from sample records to the rows the example views take (what the list
 // queries of a real backend would return).
+
+/** Sample counterpart of the server's fuel freshness classification. */
+export function sampleFuelStatus(vehicle: SampleVehicle): VehicleFuelStatus {
+  if (vehicle.fuelPct === null || vehicle.lastReportedAt === null) return 'NO_DATA';
+  if (Date.parse(vehicle.lastReportedAt) < sampleNow - 6 * 3_600_000) return 'STALE';
+  return vehicle.fuelPct < 12 ? 'LOW' : 'NORMAL';
+}
 
 export function vehicleRow(vehicle: SampleVehicle): VehicleRow {
   const group = groupById(vehicle.groupId);
@@ -35,7 +47,10 @@ export function vehicleRow(vehicle: SampleVehicle): VehicleRow {
     group: group ? { name: group.name, slot: group.slot } : null,
     odometerKm: vehicle.odometerKm,
     fuelPct: vehicle.fuelPct,
-    openAlerts: vehicle.openAlerts,
+    fuelStatus: sampleFuelStatus(vehicle),
+    openAlerts: sampleAlerts.filter(
+      (alert) => alert.vehicleId === vehicle.id && alert.status === 'OPEN',
+    ).length,
     notes: vehicle.notes,
   };
 }
@@ -98,9 +113,15 @@ export function serviceTaskRow(task: SampleServiceTask): ServiceTaskRow {
     vehicleId: task.vehicleId,
     plate: vehicle?.plate ?? '—',
     kind: task.kind,
+    serviceType: task.serviceType,
+    status: task.status,
     dueOn: task.dueOn,
     dueKm: task.dueKm,
-    kmLeft: task.dueKm === null || !vehicle ? null : task.dueKm - vehicle.odometerKm,
+    kmLeft:
+      task.status !== 'PLANNED' || task.dueKm === null || !vehicle
+        ? null
+        : Math.sign(task.dueKm - vehicle.odometerKm) *
+          Math.round(Math.abs(task.dueKm - vehicle.odometerKm)),
     urgency: task.urgency,
     costCents: task.costEur === null ? null : task.costEur * 100,
     notes: task.notes,

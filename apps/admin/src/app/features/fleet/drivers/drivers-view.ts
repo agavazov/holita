@@ -18,6 +18,7 @@ import {
   trackById,
 } from '../../../ui/list/list-actions';
 import { injectSortReady, listQuery, type ListQuery } from '../../../ui/list/list-query';
+import { ListSortMenu, type ListSortField } from '../../../ui/list/list-sort-menu';
 import { PageHeader } from '../../../ui/page-header/page-header';
 import { RowActions } from '../../../ui/row-actions/row-actions';
 import { TablePanel } from '../../../ui/table-panel/table-panel';
@@ -28,7 +29,20 @@ import { driversText } from './i18n/messages';
 
 export const driverStatuses = ['ACTIVE', 'ON_LEAVE', 'INACTIVE'] as const;
 export type DriverStatusCode = (typeof driverStatuses)[number];
-export type DriverActionId = 'view' | 'edit' | 'deactivate' | 'delete';
+export const driverLicenseCategories = [
+  'B',
+  'BE',
+  'C1',
+  'C1E',
+  'C',
+  'CE',
+  'D1',
+  'D1E',
+  'D',
+  'DE',
+] as const;
+export type DriverLicenseCategory = (typeof driverLicenseCategories)[number];
+export type DriverActionId = 'view' | 'scorecard' | 'edit' | 'deactivate' | 'delete';
 
 /** One list row, as the Drivers list query returns it. */
 export interface DriverRow {
@@ -38,8 +52,8 @@ export interface DriverRow {
   readonly status: DriverStatusCode;
   readonly phone: string;
   readonly vehiclePlate: string | null;
-  readonly licenseExpiresOn: string;
-  readonly tachoCardExpiresOn: string;
+  readonly licenseExpiresOn: string | null;
+  readonly tachoCardExpiresOn: string | null;
   readonly score: number | null;
   readonly trips30d: number;
   readonly distance30dKm: number;
@@ -55,7 +69,7 @@ export interface DriverKpis {
 }
 
 /** Documents due within this many days are flagged. */
-export const documentWarningDays = 60;
+export const documentWarningDays = 30;
 
 const statusTones: Record<DriverStatusCode, StatusTone> = {
   ACTIVE: 'success',
@@ -63,9 +77,11 @@ const statusTones: Record<DriverStatusCode, StatusTone> = {
   INACTIVE: 'neutral',
 };
 
-/** Days from the data clock to a date-only expiry (negative when it has passed). */
-export function daysUntil(dateOnly: string, asOf: string): number {
-  return Math.floor((Date.parse(`${dateOnly}T00:00:00Z`) - Date.parse(asOf)) / 86_400_000);
+/** Calendar days from the supplied business date to an expiry (negative after it passed). */
+export function daysUntil(dateOnly: string, businessDate: string): number {
+  return (
+    (Date.parse(`${dateOnly}T00:00:00Z`) - Date.parse(`${businessDate}T00:00:00Z`)) / 86_400_000
+  );
 }
 
 /** The score bands: good, fair and poor driving. */
@@ -90,6 +106,7 @@ export function scoreTone(score: number): StatusTone {
     KpiStrip,
     KpiTile,
     PageHeader,
+    ListSortMenu,
     RowActions,
     TablePanel,
   ],
@@ -100,7 +117,7 @@ export function scoreTone(score: number): StatusTone {
 })
 export class DriversView {
   readonly branchName = input.required<string>();
-  readonly dataAsOf = input.required<string>();
+  readonly businessDate = input.required<string>();
   readonly rows = input.required<readonly DriverRow[]>();
   readonly total = input.required<number>();
   readonly view = input.required<TableView>();
@@ -120,9 +137,28 @@ export class DriversView {
   protected readonly description = computed(() =>
     interpolate(this.text().description, { branch: this.branchName() }),
   );
+  protected readonly sortFields = computed<readonly ListSortField[]>(() => [
+    { field: 'name', label: this.text().table.name },
+    { field: 'lastName', label: this.text().sorts.lastName },
+    { field: 'employeeNo', label: this.text().drawer.employeeNo },
+    { field: 'status', label: this.text().table.status },
+    { field: 'license', label: this.text().table.license },
+    { field: 'tachoCard', label: this.text().table.tachoCard },
+    { field: 'score', label: this.text().table.score },
+    { field: 'trips', label: this.text().table.trips },
+    { field: 'distance', label: this.text().table.distance },
+    { field: 'createdAt', label: this.text().drawer.createdAt },
+  ]);
   protected readonly fields = computed<readonly FilterField[]>(() => {
     const text = this.text();
     return [
+      {
+        key: 'licenseCategories',
+        label: text.drawer.licenseCategories,
+        type: 'enum',
+        operators: ['isAnyOf'],
+        options: driverLicenseCategories.map((value) => ({ value, label: value })),
+      },
       {
         key: 'status',
         label: text.filters.status,
@@ -162,6 +198,7 @@ export class DriversView {
     const text = this.text().actions;
     return [
       { id: 'view', label: text.view },
+      { id: 'scorecard', label: text.scorecard },
       { id: 'edit', label: text.edit },
       {
         id: 'deactivate',
@@ -207,8 +244,9 @@ export class DriversView {
   }
 
   /** The tag beside a document date: expired, or due within the warning window. */
-  protected expiry(dateOnly: string): { severity: 'danger' | 'warn'; label: string } | null {
-    const days = daysUntil(dateOnly, this.dataAsOf());
+  protected expiry(dateOnly: string | null): { severity: 'danger' | 'warn'; label: string } | null {
+    if (dateOnly === null) return null;
+    const days = daysUntil(dateOnly, this.businessDate());
     if (days < 0) return { severity: 'danger', label: this.text().expiry.expired };
     if (days <= documentWarningDays)
       return { severity: 'warn', label: interpolate(this.text().expiry.soon, { days }) };
@@ -233,6 +271,10 @@ export class DriversView {
 
   protected changeSearch(search: string): void {
     this.changeQuery(listQuery.search(this.state(), search));
+  }
+
+  protected changeSort(sort: NonNullable<ListQuery['sort']>): void {
+    this.changeQuery({ ...this.state(), sort, page: 1 });
   }
 
   protected changeConditions(conditions: readonly FilterCondition[]): void {

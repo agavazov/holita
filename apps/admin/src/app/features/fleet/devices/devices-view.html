@@ -4,8 +4,15 @@
   [count]="view().kind === 'rows' || view().kind === 'rows-error' ? total() : null"
   [description]="description()"
 >
+  @if (demo()) {
+    <p-tag headerMeta severity="info" [value]="text().demo.label" />
+  }
   <button headerActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
 </holita-page-header>
+
+@if (demo()) {
+  <p class="app-muted">{{ text().demo.description }}</p>
+}
 
 @if (kpis(); as kpis) {
   <holita-kpi-strip [label]="text().kpis.label">
@@ -55,6 +62,12 @@
   (retry)="retry.emit()"
   (clearSelection)="selectionChange.emit([])"
 >
+  <holita-list-sort-menu
+    panelActions
+    [fields]="sortFields()"
+    [sort]="state().sort"
+    (sortChange)="changeSort($event)"
+  />
   <button emptyActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
   <p-table
     [value]="tableRows()"

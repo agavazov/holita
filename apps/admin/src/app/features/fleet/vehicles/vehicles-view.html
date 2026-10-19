@@ -68,6 +68,12 @@
   (clearSelection)="selectionChange.emit([])"
 >
   <button emptyActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
+  <holita-list-sort-menu
+    panelActions
+    [fields]="sortFields()"
+    [sort]="state().sort"
+    (sortChange)="changeSort($event)"
+  />
   <p-table
     [value]="tableRows()"
     dataKey="id"
@@ -194,6 +200,9 @@
                 aria-hidden="true"
               ></span>
               <span>{{ row.fuelPct }} %</span>
+              @if (row.fuelStatus === 'STALE') {
+                <span class="app-muted">{{ text().table.staleFuel }}</span>
+              }
             </span>
           } @else {
             <span class="app-muted">{{ text().table.noData }}</span>

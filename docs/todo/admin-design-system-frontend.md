@@ -11,19 +11,23 @@ open decisions are in [admin-design-system-review-fixes.md](admin-design-system-
 shell, patterns and Storybook. The current snapshot is accepted in `main` for internal testing.
 Stabilization remains required before public release; backend integration comes last
 ([release scope](admin-design-system.md#decisions-agreed-with-the-user)).
-Presentational views and drawers for every Fleet screen except the driver scorecard and the
-odometer reading exist in `apps/admin/src/app/features/fleet/*`, fed only by story hosts in
+Presentational Fleet views, the driver scorecard, odometer reading and service-completion
+drawers exist in `apps/admin/src/app/features/fleet/*`, fed only by story hosts in
 `apps/admin/src/storybook/samples/pages`; F2–F5 wire Apollo-backed containers, routes and
 operations to those views. Read this file as follows:
 
 - Superseded (background only; the authoritative documents win): 0.4, 1, 2.1, 2.2, 2.4–2.7, 3,
   6.2, 7 (the examples use story-only sample data instead of the GraphQL demo dataset, the
-  `Screens/Fleet/*` stories and a Login story) and 10 (applies only when parallel agents run).
+  `Screens/Fleet/*` stories; the real Login has its own isolated GraphQL-fixture stories) and
+  10 (applies only when parallel agents run).
 - Still the plan: 0.1–0.3, 2.3, 4, 5 (behaviour and operations; file names follow the existing
   views and drawers), 6.1, 6.3, 8 (the F2–F5 specs and smokes), 9, 11 F2–F5 and 12.
 - For F3 row/bulk execution, the [common action API plan](admin-design-system.md#common-row-and-bulk-action-api)
   supersedes singular mutation examples and sequential-delete mechanics below. Adopt it only
   after the user finishes reviewing Storybook, together with the real screen integration.
+- The approved prototype filters, sorts and labelled demo capabilities remain in Storybook.
+  Backend section 3.6 and the Devices contract in 5.9 are adoption baselines, not instructions
+  to remove those capabilities; their support and model mapping need separate integration work.
 - The [operation feedback migration](admin-design-system.md#operation-feedback) owns toast
   placement, lifetime, scope and application adoption. Use it for operation results throughout
   the screens below; TablePanel has no result-message input or output.
@@ -88,7 +92,7 @@ BG/EN catalogs, light/dark, Tenant/Branch isolation, retired reads and captured 
 | No shell badge from business data                  | Navigation has no counts; the Alerts page owns `fleetAlertCounts` (2.3, 5.3)                                                                                             |
 | Low fuel defined three ways                        | The UI shows only `FleetVehicleState.fuelStatus`; it never compares `fuelLevelPct` with a threshold (5.4)                                                                |
 | Per-row derived resolvers                          | Operations select derived fields only on root lists/details; nested selections use the `…Ref` types (5.0)                                                                |
-| Derived sort/filter                                | Lists expose only the filters and sorts of backend 3.6; activity, last report and fuel are display-only columns (5.4)                                                    |
+| Derived sort/filter                                | Keep approved prototype filters/sorts, include every current backend sort, and plan backend support for the extras before integration (5.4)                              |
 | Preset token list and internal dependencies        | Registered presets are the rendered components plus their PrimeNG dependencies, proven by a coverage story (1.10)                                                        |
 | Storybook-only ApolloLink would duplicate fixtures | Keep `FixtureHttpBackend`; the error variants exist (`graphql-fixtures.ts`); per-feature handler modules (7.3) only with GraphQL fixtures                                |
 | Storybook dependencies need approval               | Storybook is approved by the user; the exception is recorded in the docs and the admin skill in F4 (9.3)                                                                 |
@@ -1315,8 +1319,6 @@ the container that replaces the story host, the API, operations, routes, the Bul
 unit specs and the smoke. Where the example views offer filters, sorts or enum values the backend
 contract cannot express, see the
 [admin-phase notes](admin-design-system.md#admin-phase-per-screen-f3).
-Not designed yet: the driver scorecard (5.7), the odometer drawer (5.4, 5.5) and the completion
-form of 5.8.
 
 ### 5.0 Shared Fleet foundation (`features/fleet/shared/`, F2)
 

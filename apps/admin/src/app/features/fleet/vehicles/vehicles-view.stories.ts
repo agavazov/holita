@@ -107,7 +107,7 @@ export const DeleteFromRow: Story = {
 /** The same Delete from the bulk bar lists the selected vehicles; afterwards focus is on the list. */
 export const DeleteSelected: Story = {
   name: 'Delete selected',
-  render: exampleAt('vehicles'),
+  render: exampleAt('vehicles?scenario=deletable'),
   play: async ({ canvasElement }) => {
     const canvas = await tableReady(canvasElement);
     const boxes = canvas.getAllByRole('checkbox', { name: /^Select (?!all)/ });
@@ -173,23 +173,227 @@ export const SaveError: Story = {
   render: exampleAt(`vehicles?scenario=save-error&drawer=${edited.id}`),
   play: async ({ canvasElement }) => {
     const body = await drawerReady(canvasElement, `Edit ${edited.plate}`);
+    const plate = body.getByRole('textbox', { name: /License plate/ });
+    await userEvent.clear(plate);
+    await userEvent.type(plate, 'CB 7777 XX');
     await userEvent.click(body.getByRole('button', { name: 'Save' }));
+    await waitFor(async () => {
+      await expect(plate).toBeDisabled();
+      await expect(body.getByRole('spinbutton', { name: 'Year' })).toBeDisabled();
+    });
     await waitFor(() => expect(body.getByRole('alert')).toHaveTextContent(/could not be saved/), {
       timeout: 3_000,
+    });
+    await expect(plate).toBeEnabled();
+    await expect(plate).toHaveValue('CB 7777 XX');
+    await waitFor(() =>
+      expect(body.getByRole('dialog', { name: `Edit ${edited.plate}` })).toContainElement(
+        canvasElement.ownerDocument.activeElement instanceof HTMLElement
+          ? canvasElement.ownerDocument.activeElement
+          : null,
+      ),
+    );
+  },
+};
+
+export const DuplicateFleetNumber: Story = {
+  name: 'Duplicate fleet number',
+  render: exampleAt(`vehicles?drawer=${edited.id}`),
+  play: async ({ canvasElement }) => {
+    const duplicate = sampleVehicles[1];
+    if (!duplicate) throw new Error('Missing duplicate sample.');
+    const body = await drawerReady(canvasElement, `Edit ${edited.plate}`);
+    const fleetNumber = body.getByRole('textbox', { name: 'Fleet number' });
+    await userEvent.clear(fleetNumber);
+    await userEvent.type(fleetNumber, duplicate.fleetNumber);
+    await userEvent.click(body.getByRole('button', { name: 'Save' }));
+    await waitFor(
+      async () => {
+        await expect(fleetNumber).toBeEnabled();
+        await expect(fleetNumber).toHaveAttribute('aria-invalid', 'true');
+        await expect(fleetNumber).toHaveFocus();
+      },
+      { timeout: 3_000 },
+    );
+    await waitFor(() =>
+      expect(body.getByText('This fleet number is already used in the branch.')).toBeVisible(),
+    );
+  },
+};
+
+export const OptionalSpecification: Story = {
+  name: 'Create with optional specification empty',
+  render: exampleAt('vehicles?drawer=new'),
+  play: async ({ canvasElement }) => {
+    const body = await drawerReady(canvasElement, 'New vehicle');
+    await userEvent.type(body.getByRole('textbox', { name: /License plate/ }), 'AA 0001 XX');
+    await userEvent.click(body.getByRole('button', { name: 'Create vehicle' }));
+    const canvas = within(canvasElement);
+    await waitFor(
+      () => expect(canvas.getByRole('button', { name: 'Edit AA 0001 XX' })).toBeVisible(),
+      { timeout: 3_000 },
+    );
+    await userEvent.click(canvas.getByRole('button', { name: 'Edit AA 0001 XX' }));
+    await drawerReady(canvasElement, 'Edit AA 0001 XX');
+    await expect(body.getByRole('spinbutton', { name: 'Year' })).toHaveDisplayValue('');
+    await expect(body.getByRole('combobox', { name: 'Type' })).toHaveTextContent('None');
+    await expect(body.getByRole('combobox', { name: 'Fuel' })).toHaveTextContent('None');
+    await expect(body.getByRole('textbox', { name: 'Make' })).toHaveValue('');
+  },
+};
+
+export const HistoryPreventsDelete: Story = {
+  name: 'History prevents deletion',
+  render: exampleAt('vehicles'),
+  play: async ({ canvasElement }) => {
+    const canvas = await tableReady(canvasElement);
+    const [trigger] = canvas.getAllByRole('button', { name: /^Actions for / });
+    if (!trigger) throw new Error('Missing vehicle action.');
+    const plate = (trigger.getAttribute('aria-label') ?? '').replace('Actions for ', '');
+    await userEvent.click(trigger);
+    await chooseMenuItem(canvasElement.ownerDocument.body, 'Delete');
+    const body = within(canvasElement.ownerDocument.body);
+    const dialog = await body.findByRole('alertdialog', { name: 'Delete vehicles?' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    await waitFor(() =>
+      expect(
+        body.getByText(
+          'Vehicles with trackers or history cannot be deleted. Deactivate them instead.',
+        ),
+      ).toBeVisible(),
+    );
+    await expect(canvas.getByRole('button', { name: `Edit ${plate}` })).toBeVisible();
+  },
+};
+
+export const SortAdditionalFields: Story = {
+  name: 'Sort by fields from the contract',
+  render: exampleAt('vehicles'),
+  play: async ({ canvasElement }) => {
+    const canvas = await tableReady(canvasElement);
+    await userEvent.click(canvas.getByRole('button', { name: /^Sort/ }));
+    await chooseMenuItem(canvasElement.ownerDocument.body, 'Fleet number');
+    await waitFor(() =>
+      expect(within(canvasElement.ownerDocument.body).queryByRole('menu')).toBeNull(),
+    );
+    await userEvent.click(canvas.getByRole('button', { name: /^Sort/ }));
+    await chooseMenuItem(canvasElement.ownerDocument.body, 'Descending');
+    const expected = [...sampleVehicles].sort((a, b) =>
+      b.fleetNumber.localeCompare(a.fleetNumber, 'en'),
+    )[0];
+    if (!expected) throw new Error('Missing sample.');
+    await waitFor(() =>
+      expect(
+        within(canvas.getAllByRole('row')[1] ?? canvasElement).getByRole('button', {
+          name: `Edit ${expected.plate}`,
+        }),
+      ).toBeVisible(),
+    );
+    await userEvent.click(canvas.getByRole('button', { name: /^Sort/ }));
+    await chooseMenuItem(canvasElement.ownerDocument.body, 'Updated');
+    const updated = [...sampleVehicles].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+    if (!updated) throw new Error('Missing updated sample.');
+    await waitFor(() =>
+      expect(
+        within(canvas.getAllByRole('row')[1] ?? canvasElement).getByRole('button', {
+          name: `Edit ${updated.plate}`,
+        }),
+      ).toBeVisible(),
+    );
+  },
+};
+
+export const DeactivationUpdatesSort: Story = {
+  name: 'Deactivation updates the modification sort',
+  render: exampleAt('vehicles'),
+  play: async ({ canvasElement }) => {
+    const canvas = await tableReady(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    const newestFirst = [...sampleVehicles].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    const vehicle = newestFirst.slice(1, 20).find((item) => item.status !== 'INACTIVE');
+    if (!vehicle) throw new Error('Missing an older active vehicle on the first page.');
+    await userEvent.click(canvas.getByRole('button', { name: /^Sort/ }));
+    await chooseMenuItem(canvasElement.ownerDocument.body, 'Updated');
+    await waitFor(() => expect(body.queryByRole('menu')).toBeNull());
+    await userEvent.click(canvas.getByRole('button', { name: /^Sort/ }));
+    await chooseMenuItem(canvasElement.ownerDocument.body, 'Descending');
+    await waitFor(() => expect(body.queryByRole('menu')).toBeNull());
+    await waitFor(() =>
+      expect(canvas.getByRole('button', { name: `Actions for ${vehicle.plate}` })).toBeVisible(),
+    );
+    await expect(canvas.getAllByRole('row')[1]).not.toHaveTextContent(vehicle.plate);
+    await userEvent.click(canvas.getByRole('button', { name: `Actions for ${vehicle.plate}` }));
+    await chooseMenuItem(canvasElement.ownerDocument.body, 'Deactivate');
+    await waitFor(async () => {
+      const first = canvas.getAllByRole('row')[1];
+      if (!first) throw new Error('Missing the first vehicle row.');
+      await expect(
+        within(first).getByRole('button', { name: `Edit ${vehicle.plate}` }),
+      ).toBeVisible();
+      await expect(within(first).getByText('Inactive', { exact: true })).toBeVisible();
     });
   },
 };
 
-export const Loading: Story = { render: exampleAt('vehicles?scenario=loading') };
-export const Empty: Story = { render: exampleAt('vehicles?scenario=empty') };
-export const ErrorState: Story = { name: 'Error', render: exampleAt('vehicles?scenario=error') };
+export const ContractStates: Story = {
+  name: 'Asset, full vehicle types and stale fuel',
+  render: exampleAt('vehicles?scenario=contract-states'),
+  play: async ({ canvasElement }) => {
+    const canvas = await tableReady(canvasElement);
+    await expect(canvas.getByText('Asset', { exact: true })).toBeVisible();
+    await expect(canvas.getByText(/^Trailer/)).toBeVisible();
+    await expect(canvas.getByText(/^Other/)).toBeVisible();
+    await expect(canvas.getAllByText('Stale reading').length).toBeGreaterThan(0);
+    await userEvent.click(canvas.getByRole('button', { name: `Edit ${edited.plate}` }));
+    const body = await drawerReady(canvasElement, `Edit ${edited.plate}`);
+    await expect(body.getByRole('combobox', { name: 'Fuel' })).toHaveTextContent('CNG');
+  },
+};
+
+export const Loading: Story = {
+  render: exampleAt('vehicles?scenario=loading'),
+  play: async ({ canvasElement }) => {
+    await waitFor(
+      () => expect(within(canvasElement).getByRole('status', { name: 'Loading…' })).toBeVisible(),
+      appReady,
+    );
+  },
+};
+export const Empty: Story = {
+  render: exampleAt('vehicles?scenario=empty'),
+  play: async ({ canvasElement }) => {
+    await waitFor(
+      () => expect(within(canvasElement).getByText('No vehicles yet')).toBeVisible(),
+      appReady,
+    );
+  },
+};
+export const ErrorState: Story = {
+  name: 'Error',
+  render: exampleAt('vehicles?scenario=error'),
+  play: async ({ canvasElement }) => {
+    await waitFor(
+      () =>
+        expect(
+          within(canvasElement).getByText('The vehicles could not be loaded. (demo-request-1)'),
+        ).toBeVisible(),
+      appReady,
+    );
+  },
+};
 
 export const Mobile: Story = {
   render: exampleAt('vehicles'),
+  play: async ({ canvasElement }) => {
+    await tableReady(canvasElement);
+  },
   globals: { viewport: { value: 'mobile375', isRotated: false } },
 };
 
 export const Dark: Story = {
   render: exampleAt('vehicles'),
+  play: async ({ canvasElement }) => {
+    await tableReady(canvasElement);
+  },
   globals: { theme: 'dark' },
 };

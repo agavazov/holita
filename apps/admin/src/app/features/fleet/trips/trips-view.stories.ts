@@ -90,16 +90,76 @@ export const OpenVehicleFromRow: Story = {
   },
 };
 
-export const Loading: Story = { render: exampleAt('trips?scenario=loading') };
-export const Empty: Story = { render: exampleAt('trips?scenario=empty') };
-export const ErrorState: Story = { name: 'Error', render: exampleAt('trips?scenario=error') };
+export const Loading: Story = {
+  render: exampleAt('trips?scenario=loading'),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(
+      () => expect(canvas.getByRole('status', { name: 'Loading…' })).toBeVisible(),
+      appReady,
+    );
+  },
+};
+export const Empty: Story = {
+  render: exampleAt('trips?scenario=empty'),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(() => expect(canvas.getByText('No trips yet')).toBeVisible(), appReady);
+  },
+};
+export const ErrorState: Story = {
+  name: 'Error',
+  render: exampleAt('trips?scenario=error'),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(
+      () =>
+        expect(canvas.getByText('The trips could not be loaded. (demo-request-5)')).toBeVisible(),
+      appReady,
+    );
+  },
+};
+
+export const InProgress: Story = {
+  name: 'Trip in progress',
+  render: exampleAt('trips?scenario=in-progress&drawer=t001'),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await waitFor(() => expect(body.getByRole('dialog')).toBeVisible(), appReady);
+    const drawer = within(body.getByRole('dialog'));
+    await expect(drawer.getByText('In progress')).toBeVisible();
+    await expect(drawer.queryByText(/^Arrived/)).toBeNull();
+    await expect(drawer.getByText('Departed', { exact: true })).toBeVisible();
+  },
+};
+
+export const MissingEnd: Story = {
+  name: 'Old trip without an end',
+  render: exampleAt('trips?scenario=missing-end&drawer=t001'),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await waitFor(() => expect(body.getByRole('dialog')).toBeVisible(), appReady);
+    const drawer = within(body.getByRole('dialog'));
+    await expect(drawer.getByText('End not received')).toBeVisible();
+    await expect(drawer.queryByText('In progress')).toBeNull();
+    await expect(drawer.queryByText(/^Arrived/)).toBeNull();
+  },
+};
 
 export const Mobile: Story = {
   render: exampleAt('trips'),
   globals: { viewport: { value: 'mobile375', isRotated: false } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(() => expect(canvas.getByRole('table')).toBeVisible(), appReady);
+  },
 };
 
 export const Dark: Story = {
   render: exampleAt(`trips?drawer=${withEvents.id}`),
   globals: { theme: 'dark' },
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await waitFor(() => expect(body.getByRole('dialog')).toBeVisible(), appReady);
+  },
 };

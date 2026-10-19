@@ -1,4 +1,13 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
@@ -10,6 +19,7 @@ import type {
 } from '../../app/layout/admin-topbar';
 import { navigationContext, type NavGroup } from '../../app/layout/navigation';
 import { PageRecord } from '../../app/layout/page-record';
+import type { LeavableDrawer } from '../../app/ui/drawer/leave-drawer.guard';
 import { defaultBranchId, fixtureBranches, fixtureTenant } from '../session-fixtures';
 import {
   sampleAlerts,
@@ -19,6 +29,7 @@ import {
   vehicleById,
 } from './fleet-samples';
 import { exampleRoutes } from './pages/example-routes';
+import { SampleDrivers } from './sample-drivers';
 
 /** Sample entries only: Storybook stays in English and the language menu changes nothing. */
 export const sampleLanguages: readonly LanguageOption[] = [
@@ -31,6 +42,15 @@ export const sampleLanguages: readonly LanguageOption[] = [
 
 function link(...path: string[]): readonly string[] {
   return ['/', 'examples', ...path];
+}
+
+function leavable(component: unknown): component is LeavableDrawer {
+  return (
+    component !== null &&
+    typeof component === 'object' &&
+    'canLeave' in component &&
+    typeof component.canLeave === 'function'
+  );
 }
 
 /** The target Fleet navigation the example pages illustrate. */
@@ -122,39 +142,51 @@ export function sampleNotifications(): readonly SampleNotification[] {
 }
 /**
  * The example pages inside the real shell, with their own routes: the sidebar switches pages and
- * every page keeps its state until the story is reloaded. Story-only.
+ * page hosts own local sample state; Drivers shares its records with the scorecard. Story-only.
  */
 @Component({
   selector: 'holita-example-app',
   imports: [AdminShell, RouterOutlet],
+  providers: [SampleDrivers],
   template: `
     <holita-admin-shell
       [branches]="branches"
-      [branchId]="branchId"
+      [branchId]="branchId()"
       language="en"
       [languages]="languages"
-      [tenantName]="tenant"
-      [account]="account"
+      [tenantName]="tenant()"
+      [account]="account()"
       [notifications]="notifications()"
       (notificationOpen)="openNotification($event)"
       (notificationsRead)="markAllRead()"
+      (signOut)="signOut()"
       [navigation]="navigation"
       [context]="context()"
     >
-      <router-outlet />
+      <router-outlet [routerOutletData]="branchName()" />
     </holita-admin-shell>
   `,
 })
 export class ExampleApp {
   readonly url = input.required<string>();
   readonly branches = [...fixtureBranches];
-  readonly branchId = defaultBranchId;
-  readonly tenant = fixtureTenant.name;
+  readonly branchId = input<string>(defaultBranchId);
+  readonly branchName = computed(
+    () =>
+      this.branches.find((branch) => branch.id === this.branchId())?.name ??
+      fixtureBranches[0].name,
+  );
+  readonly tenant = input<string>(fixtureTenant.name);
+  readonly signedOut = output();
   readonly languages = sampleLanguages;
   readonly navigation = exampleNavigation;
-  readonly account = sampleAccount;
+  readonly account = computed(() => ({
+    ...sampleAccount,
+    detail: `Fleet manager · ${this.tenant()}`,
+  }));
   readonly notifications = signal<readonly SampleNotification[]>(sampleNotifications());
   private readonly router = inject(Router);
+  private readonly outlet = viewChild(RouterOutlet);
   private readonly pageRecord = inject(PageRecord);
   private readonly path = toSignal(
     this.router.events.pipe(
@@ -188,6 +220,12 @@ export class ExampleApp {
 
   protected markAllRead(): void {
     this.notifications.update((items) => items.map((item) => ({ ...item, unread: false })));
+  }
+
+  protected async signOut(): Promise<void> {
+    const component: unknown = this.outlet()?.isActivated ? this.outlet()?.component : null;
+    if (leavable(component) && !(await component.canLeave())) return;
+    this.signedOut.emit();
   }
 }
 

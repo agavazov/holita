@@ -24,6 +24,7 @@ import { RouteDrawer } from '../../../ui/drawer/route-drawer';
 import { FormField } from '../../../ui/form-field/form-field';
 import { focusFirstInvalid } from '../../../ui/forms/focus';
 import { innerInputPt } from '../../../ui/forms/inner-input-pt';
+import { lockWhileSaving } from '../../../ui/forms/saving';
 import {
   integerValidator,
   patternValidator,
@@ -41,7 +42,7 @@ import {
   type VehicleTypeCode,
 } from './vehicles-view';
 
-export const vehicleFuelTypes = ['DIESEL', 'PETROL', 'ELECTRIC', 'LPG'] as const;
+export const vehicleFuelTypes = ['DIESEL', 'PETROL', 'ELECTRIC', 'LPG', 'CNG', 'HYBRID'] as const;
 export type VehicleFuelType = (typeof vehicleFuelTypes)[number];
 
 /** The editable vehicle fields, as the create and update mutations take them. */
@@ -49,11 +50,11 @@ export interface VehicleForm {
   readonly plate: string;
   readonly fleetNumber: string;
   readonly vin: string;
-  readonly type: VehicleTypeCode;
+  readonly type: VehicleTypeCode | null;
   readonly make: string;
   readonly model: string;
   readonly year: number | null;
-  readonly fuelType: VehicleFuelType;
+  readonly fuelType: VehicleFuelType | null;
   readonly tankL: number | null;
   readonly status: VehicleStatusCode;
   readonly groupId: string | null;
@@ -83,11 +84,11 @@ const emptyVehicle: VehicleForm = {
   plate: '',
   fleetNumber: '',
   vin: '',
-  type: 'TRACTOR',
+  type: null,
   make: '',
   model: '',
   year: null,
-  fuelType: 'DIESEL',
+  fuelType: null,
   tankL: null,
   status: 'ACTIVE',
   groupId: null,
@@ -143,17 +144,17 @@ export class VehicleDrawer {
       nonNullable: true,
       validators: patternValidator(/^[A-HJ-NPR-Z0-9]{17}$/, { transform: 'upper' }),
     }),
-    type: new FormControl<VehicleTypeCode>('TRACTOR', { nonNullable: true }),
+    type: new FormControl<VehicleTypeCode | null>(null),
     make: new FormControl('', {
       nonNullable: true,
-      validators: textValidator(64, { required: true }),
+      validators: textValidator(64),
     }),
     model: new FormControl('', {
       nonNullable: true,
-      validators: textValidator(64, { required: true }),
+      validators: textValidator(64),
     }),
     year: new FormControl<number | null>(null, integerValidator(1950, 2100)),
-    fuelType: new FormControl<VehicleFuelType>('DIESEL', { nonNullable: true }),
+    fuelType: new FormControl<VehicleFuelType | null>(null),
     tankL: new FormControl<number | null>(null, integerValidator(1, 2000)),
     status: new FormControl<VehicleStatusCode>('ACTIVE', { nonNullable: true }),
     groupId: new FormControl<string | null>(null),
@@ -174,12 +175,14 @@ export class VehicleDrawer {
     this.events();
     return this.form.dirty;
   });
-  protected readonly typeOptions = computed(() =>
-    vehicleTypes.map((value) => ({ value, label: this.labels().types[value] })),
-  );
-  protected readonly fuelOptions = computed(() =>
-    vehicleFuelTypes.map((value) => ({ value, label: this.labels().fuelTypes[value] })),
-  );
+  protected readonly typeOptions = computed(() => [
+    { value: null, label: this.text().none },
+    ...vehicleTypes.map((value) => ({ value, label: this.labels().types[value] })),
+  ]);
+  protected readonly fuelOptions = computed(() => [
+    { value: null, label: this.text().none },
+    ...vehicleFuelTypes.map((value) => ({ value, label: this.labels().fuelTypes[value] })),
+  ]);
   protected readonly statusOptions = computed(() =>
     vehicleStatuses.map((value) => ({ value, label: this.labels().statuses[value] })),
   );
@@ -208,6 +211,15 @@ export class VehicleDrawer {
         this.form.reset({ ...vehicle });
       });
     });
+    lockWhileSaving(
+      this.form,
+      () => this.saving(),
+      () => {
+        if (!focusFirstInvalid(this.formElement().nativeElement, fieldOrder, 'vehicle-')) {
+          this.drawer().keepFocusInside();
+        }
+      },
+    );
   }
 
   /** The message under a field: the server's error first, then the client check once shown. */
@@ -225,6 +237,7 @@ export class VehicleDrawer {
   }
 
   protected submit(): void {
+    if (this.saving()) return;
     this.submitted = true;
     this.form.markAllAsTouched();
     if (this.form.invalid) {
@@ -249,8 +262,11 @@ export class VehicleDrawer {
   }
 
   /** Close button, Escape, backdrop and Cancel: unsaved changes are confirmed first. */
+  canLeave(): boolean | Promise<boolean> {
+    return !this.saving() && this.drawer().confirmLeave(this.form.dirty);
+  }
+
   protected async requestClose(): Promise<void> {
-    if (this.saving()) return;
-    if (await this.drawer().confirmLeave(this.form.dirty)) this.closed.emit();
+    if (await this.canLeave()) this.closed.emit();
   }
 }

@@ -7,6 +7,12 @@ import { tableView, type TableView } from '../../app/ui/table-panel/table-view';
 
 export type SampleValue = string | number | boolean | null;
 
+export interface SampleSecondarySort<T> {
+  readonly value: (row: T) => SampleValue;
+  /** Omitted follows the primary direction; API tie-breakers may fix their own direction. */
+  readonly direction?: 'asc' | 'desc';
+}
+
 export interface SampleListDefinition<T> {
   /** Texts the quick search looks in; every word must appear in one of them. */
   readonly search: (row: T) => readonly (string | null)[];
@@ -14,6 +20,9 @@ export interface SampleListDefinition<T> {
   readonly columns: Readonly<Record<string, (row: T) => SampleValue>>;
   /** Sort keys that differ from the filtered value, e.g. the rank of a severity enum. */
   readonly sortColumns?: Readonly<Record<string, (row: T) => SampleValue>>;
+  readonly secondarySorts?: Readonly<Record<string, readonly SampleSecondarySort<T>[]>>;
+  /** The API's final id DESC tie-breaker, before the stable input order fallback. */
+  readonly id?: (row: T) => string;
 }
 
 export interface SampleListResult<T> {
@@ -95,12 +104,15 @@ function matches(value: SampleValue, condition: FilterCondition): boolean {
   }
 }
 
-function compare(left: SampleValue, right: SampleValue): number {
+function compare(left: SampleValue, right: SampleValue, direction: 'asc' | 'desc'): number {
   if (left === right) return 0;
   if (left === null) return 1;
   if (right === null) return -1;
-  if (typeof left === 'number' && typeof right === 'number') return left - right;
-  return String(left).localeCompare(String(right), 'en');
+  const order =
+    typeof left === 'number' && typeof right === 'number'
+      ? left - right
+      : String(left).localeCompare(String(right), 'en');
+  return direction === 'asc' ? order : -order;
 }
 
 export function runSampleList<T>(
@@ -132,9 +144,18 @@ export function runSampleList<T>(
     : undefined;
   if (sort && read)
     matching.sort((left, right) => {
-      const order = compare(read(left.row), read(right.row));
-      const directed = sort.direction === 'asc' ? order : -order;
-      return directed || left.index - right.index;
+      const order = compare(read(left.row), read(right.row), sort.direction);
+      if (order) return order;
+      for (const secondary of definition.secondarySorts?.[sort.field] ?? []) {
+        const next = compare(
+          secondary.value(left.row),
+          secondary.value(right.row),
+          secondary.direction ?? sort.direction,
+        );
+        if (next) return next;
+      }
+      const id = definition.id;
+      return (id ? compare(id(left.row), id(right.row), 'desc') : 0) || left.index - right.index;
     });
   const total = matching.length;
   const lastPage = Math.max(1, Math.ceil(total / query.pageSize));

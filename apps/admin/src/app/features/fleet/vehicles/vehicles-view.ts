@@ -21,6 +21,7 @@ import {
   trackById,
 } from '../../../ui/list/list-actions';
 import { injectSortReady, listQuery, type ListQuery } from '../../../ui/list/list-query';
+import { ListSortMenu, type ListSortField } from '../../../ui/list/list-sort-menu';
 import { KpiTile } from '../../../ui/kpi/kpi-tile';
 import { PageHeader } from '../../../ui/page-header/page-header';
 import { RowActions } from '../../../ui/row-actions/row-actions';
@@ -35,13 +36,15 @@ export const vehicleActivities = [
   'MOVING',
   'IDLE',
   'PARKED',
+  'ASSET',
   'NOT_CONNECTED',
   'NO_DEVICE',
 ] as const;
-export const vehicleTypes = ['TRACTOR', 'RIGID_TRUCK', 'VAN', 'CAR'] as const;
+export const vehicleTypes = ['TRACTOR', 'RIGID_TRUCK', 'VAN', 'CAR', 'TRAILER', 'OTHER'] as const;
 export type VehicleStatusCode = (typeof vehicleStatuses)[number];
 export type VehicleActivityCode = (typeof vehicleActivities)[number];
 export type VehicleTypeCode = (typeof vehicleTypes)[number];
+export type VehicleFuelStatus = 'NORMAL' | 'LOW' | 'STALE' | 'NO_DATA';
 export type VehicleActionId = 'edit' | 'profile' | 'deactivate' | 'delete';
 
 /** One list row, as the Vehicles list query returns it. */
@@ -49,7 +52,7 @@ export interface VehicleRow {
   readonly id: string;
   readonly plate: string;
   readonly fleetNumber: string | null;
-  readonly type: VehicleTypeCode;
+  readonly type: VehicleTypeCode | null;
   readonly make: string;
   readonly model: string;
   readonly year: number | null;
@@ -61,6 +64,7 @@ export interface VehicleRow {
   readonly group: { readonly name: string; readonly slot: string } | null;
   readonly odometerKm: number | null;
   readonly fuelPct: number | null;
+  readonly fuelStatus: VehicleFuelStatus;
   readonly openAlerts: number;
   readonly notes: string;
 }
@@ -89,12 +93,10 @@ const activityTones: Record<VehicleActivityCode, string> = {
   MOVING: 'success',
   IDLE: 'info',
   PARKED: 'neutral',
+  ASSET: 'info',
   NOT_CONNECTED: 'danger',
   NO_DEVICE: 'neutral',
 };
-
-/** Below this fuel level the meter turns red (the shared low-fuel threshold). */
-const lowFuelPercent = 12;
 
 /**
  * The Vehicles list page: header, KPI strip, quick search and filter builder, and the table with
@@ -114,6 +116,7 @@ const lowFuelPercent = 12;
     PageHeader,
     RowActions,
     TablePanel,
+    ListSortMenu,
   ],
   templateUrl: './vehicles-view.html',
   styleUrl: './vehicles-view.scss',
@@ -130,6 +133,7 @@ export class VehiclesView {
   readonly state = input.required<ListQuery>();
   readonly kpis = input<VehicleKpis | null>(null);
   readonly groups = input<readonly VehicleOption[]>([]);
+  readonly drivers = input<readonly VehicleOption[]>([]);
   readonly selection = input<readonly ListRecord<VehicleActionId>[]>([]);
   readonly busy = input(false);
   readonly stateChange = output<ListQuery>();
@@ -202,6 +206,32 @@ export class VehiclesView {
         operators: ['isTrue', 'isFalse'],
       },
       {
+        key: 'fuelType',
+        label: text.drawer.fuelType,
+        type: 'enum',
+        operators: ['isAnyOf'],
+        options: Object.entries(text.fuelTypes).map(([value, label]) => ({ value, label })),
+      },
+      {
+        key: 'driver',
+        label: text.table.driver,
+        type: 'enum',
+        operators: ['isAnyOf'],
+        options: this.drivers().map((driver) => ({ value: driver.id, label: driver.name })),
+      },
+      {
+        key: 'hasDevice',
+        label: text.filters.hasDevice,
+        type: 'boolean',
+        operators: ['isTrue', 'isFalse'],
+      },
+      {
+        key: 'hasOpenAlerts',
+        label: text.filters.hasOpenAlerts,
+        type: 'boolean',
+        operators: ['isTrue', 'isFalse'],
+      },
+      {
         key: 'createdAt',
         label: text.filters.createdAt,
         type: 'date',
@@ -245,6 +275,18 @@ export class VehiclesView {
   }));
   protected readonly sortField = computed(() => this.state().sort?.field ?? null);
   protected readonly sortOrder = computed(() => (this.state().sort?.direction === 'asc' ? 1 : -1));
+  protected readonly sortFields = computed<readonly ListSortField[]>(() => {
+    const text = this.text();
+    return [
+      { field: 'plate', label: text.table.plate },
+      { field: 'fleetNumber', label: text.drawer.fleetNumber },
+      { field: 'status', label: text.table.status },
+      { field: 'lastReportedAt', label: text.table.activity },
+      { field: 'odometer', label: text.table.odometer },
+      { field: 'createdAt', label: text.filters.createdAt },
+      { field: 'updatedAt', label: text.table.updatedAt },
+    ];
+  });
   protected readonly movingShare = computed(() => {
     const kpis = this.kpis();
     if (!kpis || !kpis.inOperation) return null;
@@ -265,8 +307,8 @@ export class VehiclesView {
     return this.text().activities[activity];
   }
 
-  protected typeLabel(type: VehicleTypeCode): string {
-    return this.text().types[type];
+  protected typeLabel(type: VehicleTypeCode | null): string {
+    return type === null ? '—' : this.text().types[type];
   }
 
   protected activityTone(activity: VehicleActivityCode): string {
@@ -274,7 +316,7 @@ export class VehiclesView {
   }
 
   protected fuelLow(row: VehicleRow): boolean {
-    return row.fuelPct !== null && row.fuelPct < lowFuelPercent;
+    return row.fuelStatus === 'LOW';
   }
 
   protected label(template: string, plate: string): string {
@@ -313,6 +355,10 @@ export class VehiclesView {
     if (!this.sortReady()) return;
     const next = listQuery.sorted(this.state(), event);
     if (next) this.changeQuery(next);
+  }
+
+  protected changeSort(sort: NonNullable<ListQuery['sort']>): void {
+    this.changeQuery({ ...this.state(), sort, page: 1 });
   }
 
   protected select(rows: readonly VehicleRow[] | null): void {

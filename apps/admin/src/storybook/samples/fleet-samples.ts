@@ -1,3 +1,11 @@
+import type {
+  ServiceStatus,
+  ServiceType,
+  ServiceUrgency,
+} from '../../app/features/fleet/maintenance/service-task';
+
+import type { DriverLicenseCategory } from '../../app/features/fleet/drivers/drivers-view';
+
 // Deterministic, synthetic English sample data for the example pages. Story-only: never imported by
 // application code. Every run produces the same rows; dates are relative to the story clock.
 
@@ -32,8 +40,9 @@ function dateOnly(time: number): string {
 }
 
 export type VehicleStatus = 'ACTIVE' | 'IN_WORKSHOP' | 'INACTIVE';
-export type VehicleActivity = 'MOVING' | 'IDLE' | 'PARKED' | 'NOT_CONNECTED' | 'NO_DEVICE';
-export type VehicleType = 'TRACTOR' | 'RIGID_TRUCK' | 'VAN' | 'CAR';
+export type VehicleActivity =
+  'MOVING' | 'IDLE' | 'PARKED' | 'ASSET' | 'NOT_CONNECTED' | 'NO_DEVICE';
+export type VehicleType = 'TRACTOR' | 'RIGID_TRUCK' | 'VAN' | 'CAR' | 'TRAILER' | 'OTHER';
 
 export interface SampleGroup {
   readonly id: string;
@@ -45,12 +54,20 @@ export interface SampleGroup {
 export interface SampleDriver {
   readonly id: string;
   readonly name: string;
+  readonly firstName: string;
+  readonly lastName: string;
   readonly employeeNo: string;
+  readonly identificationKey: string;
   readonly phone: string;
   readonly email: string;
   readonly status: 'ACTIVE' | 'ON_LEAVE' | 'INACTIVE';
-  readonly licenseExpiresOn: string;
-  readonly tachoCardExpiresOn: string;
+  readonly licenseNumber: string;
+  readonly licenseCategories: readonly DriverLicenseCategory[];
+  readonly licenseExpiresOn: string | null;
+  readonly tachographCardNumber: string;
+  readonly tachoCardExpiresOn: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
   readonly score: number | null;
   readonly trips30d: number;
   readonly distance30dKm: number;
@@ -61,12 +78,12 @@ export interface SampleVehicle {
   readonly id: string;
   readonly plate: string;
   readonly fleetNumber: string;
-  readonly type: VehicleType;
+  readonly type: VehicleType | null;
   readonly make: string;
   readonly model: string;
-  readonly year: number;
+  readonly year: number | null;
   readonly vin: string;
-  readonly fuelType: 'DIESEL' | 'PETROL' | 'ELECTRIC' | 'LPG';
+  readonly fuelType: 'DIESEL' | 'PETROL' | 'ELECTRIC' | 'LPG' | 'CNG' | 'HYBRID' | null;
   readonly tankL: number | null;
   readonly status: VehicleStatus;
   readonly groupId: string | null;
@@ -80,6 +97,7 @@ export interface SampleVehicle {
   readonly openAlerts: number;
   readonly notes: string;
   readonly createdAt: string;
+  readonly updatedAt: string;
 }
 
 export interface SampleTripEvent {
@@ -124,10 +142,14 @@ export interface SampleServiceTask {
   readonly id: string;
   readonly vehicleId: string;
   readonly kind: string;
+  readonly serviceType: ServiceType;
+  readonly title: string | null;
+  readonly workshop: string;
+  readonly createdAt: string;
   readonly dueOn: string | null;
   readonly dueKm: number | null;
-  readonly status: 'PLANNED' | 'DONE';
-  readonly urgency: 'OVERDUE' | 'DUE_SOON' | 'OK' | 'DONE';
+  readonly status: ServiceStatus;
+  readonly urgency: ServiceUrgency | null;
   readonly costEur: number | null;
   readonly notes: string;
 }
@@ -195,12 +217,20 @@ function buildDrivers(): SampleDriver[] {
     return {
       id: `d${String(index + 1).padStart(2, '0')}`,
       name,
+      firstName: first,
+      lastName: female ? `${last}a` : last,
       employeeNo: `E-${String(1040 + index * 7)}`,
+      identificationKey: `driver-${String(index + 1).padStart(2, '0')}`,
       phone: `+359 88 ${String(1000000 + Math.floor(random() * 8999999)).replace(/(\d{3})(\d{4})/, '$1 $2')}`,
       email: `${first}.${female ? `${last}a` : last}@demo-logistics.example`.toLowerCase(),
       status,
+      licenseNumber: `BG-${String(104000 + index)}`,
+      licenseCategories: index % 3 === 0 ? ['B', 'C', 'CE'] : ['B'],
       licenseExpiresOn: dateOnly(license),
+      tachographCardNumber: `BG${String(100000000000 + index)}`,
       tachoCardExpiresOn: dateOnly(index === 3 ? sampleNow - 12 * day : tacho),
+      createdAt: iso(sampleNow - (180 + index * 7) * day),
+      updatedAt: iso(sampleNow - (30 + index) * day),
       score: trips < 5 ? null : Math.round(62 + random() * 36),
       trips30d: trips,
       distance30dKm: trips * Math.round(140 + random() * 260),
@@ -315,6 +345,7 @@ function buildVehicles(): SampleVehicle[] {
       openAlerts: index % 7 === 2 ? 1 + Math.floor(random() * 3) : 0,
       notes: noteSamples[index % noteSamples.length] ?? '',
       createdAt: iso(Date.parse('2025-02-03T09:00:00Z') + index * 6 * day),
+      updatedAt: iso(sampleNow - (index + 1) * day),
     };
   });
 }
@@ -430,6 +461,14 @@ const serviceKinds = [
   'Brake pads',
   'Air-conditioning service',
 ];
+const sampleServiceTypes: readonly ServiceType[] = [
+  'OIL_CHANGE',
+  'ANNUAL_INSPECTION',
+  'TACHOGRAPH_CALIBRATION',
+  'TIRES',
+  'BRAKES',
+  'OTHER',
+];
 
 function buildServiceTasks(): SampleServiceTask[] {
   const random = seeded(41);
@@ -441,17 +480,21 @@ function buildServiceTasks(): SampleServiceTask[] {
     const dueOn = index % 3 === 2 ? null : dateOnly(sampleNow + offsetDays * day);
     const dueKm = index % 3 === 0 ? null : vehicle.odometerKm + Math.round(-1500 + index * 900);
     const urgency = done
-      ? 'DONE'
+      ? null
       : (dueOn !== null && offsetDays < 0) || (dueKm !== null && dueKm <= vehicle.odometerKm)
         ? 'OVERDUE'
         : (dueOn !== null && offsetDays <= 14) ||
             (dueKm !== null && dueKm - vehicle.odometerKm <= 1500)
           ? 'DUE_SOON'
-          : 'OK';
+          : 'UPCOMING';
     return {
       id: `s${String(index + 1).padStart(3, '0')}`,
       vehicleId: vehicle.id,
       kind: serviceKinds[index % serviceKinds.length] ?? 'Service',
+      serviceType: sampleServiceTypes[index % sampleServiceTypes.length] ?? 'GENERAL_SERVICE',
+      title: serviceKinds[index % serviceKinds.length] ?? null,
+      workshop: '',
+      createdAt: new Date(sampleNow - (60 + index) * day).toISOString(),
       dueOn,
       dueKm,
       status: done ? 'DONE' : 'PLANNED',

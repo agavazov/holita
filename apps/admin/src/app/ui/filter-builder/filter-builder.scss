@@ -133,7 +133,8 @@
   gap: var(--p-app-space-1);
   min-inline-size: 0;
 
-  label {
+  label,
+  .filter-builder__label {
     font-size: var(--p-app-text-sm);
     font-weight: 600;
     color: var(--p-text-muted-color);

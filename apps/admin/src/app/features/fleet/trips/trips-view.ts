@@ -22,6 +22,7 @@ import {
   trackById,
 } from '../../../ui/list/list-actions';
 import { injectSortReady, listQuery, type ListQuery } from '../../../ui/list/list-query';
+import { ListSortMenu, type ListSortField } from '../../../ui/list/list-sort-menu';
 import { PageHeader } from '../../../ui/page-header/page-header';
 import { RowActions } from '../../../ui/row-actions/row-actions';
 import { TablePanel } from '../../../ui/table-panel/table-panel';
@@ -46,13 +47,15 @@ export interface TripRow {
   readonly vehicleId: string;
   readonly plate: string;
   readonly driverName: string | null;
+  readonly driverId?: string | null;
   readonly startedAt: string;
-  readonly endedAt: string;
-  readonly from: string;
-  readonly to: string;
-  readonly distanceKm: number;
-  readonly durationMin: number;
-  readonly maxSpeedKph: number;
+  readonly endedAt: string | null;
+  readonly from: string | null;
+  readonly to: string | null;
+  readonly distanceKm: number | null;
+  readonly durationMin: number | null;
+  readonly maxSpeedKph: number | null;
+  readonly inProgress?: boolean;
   readonly fuelUsedL: number | null;
   readonly score: number | null;
   readonly events: readonly TripEvent[];
@@ -94,6 +97,7 @@ export function worstTone(events: readonly TripEvent[]): StatusTone {
     KpiStrip,
     KpiTile,
     PageHeader,
+    ListSortMenu,
     RowActions,
     TablePanel,
   ],
@@ -121,6 +125,12 @@ export class TripsView {
   protected readonly description = computed(() =>
     interpolate(this.text().description, { branch: this.branchName() }),
   );
+  protected readonly sortFields = computed<readonly ListSortField[]>(() => [
+    { field: 'startedAt', label: this.text().table.started },
+    { field: 'distance', label: this.text().table.distance },
+    { field: 'duration', label: this.text().table.duration },
+    { field: 'score', label: this.text().table.score },
+  ]);
   protected readonly fields = computed<readonly FilterField[]>(() => {
     const text = this.text();
     const options = (items: readonly TripOption[]) =>
@@ -210,6 +220,10 @@ export class TripsView {
 
   protected changeSearch(search: string): void {
     this.stateChange.emit(listQuery.search(this.state(), search));
+  }
+
+  protected changeSort(sort: NonNullable<ListQuery['sort']>): void {
+    this.stateChange.emit({ ...this.state(), sort, page: 1 });
   }
 
   protected changeConditions(conditions: readonly FilterCondition[]): void {

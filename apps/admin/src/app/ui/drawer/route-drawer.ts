@@ -111,6 +111,12 @@ export class RouteDrawer {
     this.heading()?.nativeElement.focus();
   }
 
+  /** Restores focus lost when a focused editor control is disabled during a save. */
+  keepFocusInside(): void {
+    const container = this.heading()?.nativeElement.closest('.p-drawer');
+    if (!container?.contains(document.activeElement)) this.focusTitle();
+  }
+
   protected shown(): void {
     const mask = this.drawer().mask;
     if (mask) {
@@ -124,8 +130,7 @@ export class RouteDrawer {
     }
     afterNextRender(
       () => {
-        const container = this.heading()?.nativeElement.closest('.p-drawer');
-        if (!container?.contains(document.activeElement)) this.focusTitle();
+        this.keepFocusInside();
       },
       { injector: this.injector },
     );

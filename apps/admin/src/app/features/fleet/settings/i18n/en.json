@@ -40,6 +40,8 @@
     }
   },
   "general": {
+    "demoLabel": "Demo settings",
+    "demoDescription": "Explore regional preferences, thresholds and notifications. Changes apply to this demonstration only.",
     "title": "General",
     "description": "Settings of {branch} that apply to every user of the branch.",
     "branch": "Branch",

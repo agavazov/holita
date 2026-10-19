@@ -3,6 +3,14 @@
   "title": "Devices",
   "description": "{branch} · GPS trackers, their connection and the vehicle they are installed in",
   "new": "Register device",
+  "demo": {
+    "label": "Demo features",
+    "description": "Connection, diagnostics and restart actions use sample data."
+  },
+  "sort": {
+    "installedAt": "Installed at",
+    "createdAt": "Created at"
+  },
   "search": "Search IMEI, SIM, model or plate",
   "kpis": {
     "label": "Device summary",
@@ -60,6 +68,8 @@
     "restarted": "Restart sent to devices: {count}."
   },
   "drawer": {
+    "demoLabel": "Demo features",
+    "demoDescription": "Installation and diagnostics use sample data; changes apply to this demonstration only.",
     "createTitle": "Register device",
     "editTitle": "Device {imei}",
     "diagnostics": "Diagnostics",
@@ -73,7 +83,7 @@
     "imei": "IMEI",
     "imeiHint": "15 digits from the device label",
     "sim": "SIM ICCID",
-    "simHint": "19 or 20 digits",
+    "simHint": "18 to 22 digits",
     "vehicle": "Installed in",
     "notInstalled": "Not installed (in stock)",
     "notes": "Notes",

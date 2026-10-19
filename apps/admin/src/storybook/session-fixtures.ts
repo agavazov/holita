@@ -17,7 +17,7 @@ export const fixtureBranches = [
 export const defaultBranchId = fixtureBranches[0].id;
 
 // The client accepts the demo token shape; Storybook never sends it to a real backend.
-const fixtureToken = `holita-demo.${fixtureTenant.id}.4102444800.${'storybook_fixture_signature_'.padEnd(43, '0')}`;
+export const fixtureToken = `holita-demo.${fixtureTenant.id}.4102444800.${'storybook_fixture_signature_'.padEnd(43, '0')}`;
 
 /** Seeds the stored demo session before the application bootstraps. */
 export function seedSession(branchId: string | null): void {

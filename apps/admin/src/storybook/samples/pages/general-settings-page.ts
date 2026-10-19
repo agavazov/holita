@@ -1,4 +1,12 @@
-import { Component, computed, DestroyRef, inject, linkedSignal, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  linkedSignal,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { MessageService } from 'primeng/api';
 import {
   type GeneralSettings,
@@ -6,11 +14,9 @@ import {
 } from '../../../app/features/fleet/settings/general-settings-view';
 import { settingsText } from '../../../app/features/fleet/settings/i18n/messages';
 import { UI_LANGUAGE } from '../../../app/ui/ui-language';
-import { fixtureBranches } from '../../session-fixtures';
-import { injectQueryParams, saveDelayMs, scenarioOf } from '../scenario';
+import { injectBranchName, injectQueryParams, saveDelayMs, scenarioOf } from '../scenario';
 
-const initialSettings: GeneralSettings = {
-  name: fixtureBranches[0].name,
+const initialSettings: Omit<GeneralSettings, 'name'> = {
   timeZone: 'Europe/Sofia',
   distanceUnit: 'km',
   volumeUnit: 'l',
@@ -28,15 +34,18 @@ const initialSettings: GeneralSettings = {
   imports: [GeneralSettingsView],
   template: `
     <holita-general-settings-view
-      [branchName]="branchName"
+      [demo]="true"
+      [branchName]="branchName()"
       [settings]="settings()"
       [saving]="saving()"
       [saveError]="saveError()"
       (save)="save($event)"
+      (discarded)="saveError.set(null)"
     />
   `,
 })
 export class GeneralSettingsPage {
+  private readonly view = viewChild.required(GeneralSettingsView);
   private readonly language = inject(UI_LANGUAGE);
   private readonly messages = inject(MessageService);
   private readonly query = injectQueryParams();
@@ -45,8 +54,11 @@ export class GeneralSettingsPage {
   private readonly failNextSave = linkedSignal(() => this.scenario() === 'save-error');
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
 
-  protected readonly branchName = fixtureBranches[0].name;
-  protected readonly settings = signal(initialSettings);
+  protected readonly branchName = injectBranchName();
+  protected readonly settings = linkedSignal<GeneralSettings>(() => ({
+    name: this.branchName(),
+    ...initialSettings,
+  }));
   protected readonly saving = signal(false);
   protected readonly saveError = signal<string | null>(null);
 
@@ -54,6 +66,10 @@ export class GeneralSettingsPage {
     inject(DestroyRef).onDestroy(() => {
       clearTimeout(this.saveTimer);
     });
+  }
+
+  canLeave(): boolean | Promise<boolean> {
+    return this.view().canLeave();
   }
 
   protected save(settings: GeneralSettings): void {

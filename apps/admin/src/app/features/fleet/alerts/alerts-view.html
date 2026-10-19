@@ -57,6 +57,12 @@
   (retry)="retry.emit()"
   (clearSelection)="selectionChange.emit([])"
 >
+  <holita-list-sort-menu
+    panelActions
+    [fields]="sortFields()"
+    [sort]="state().sort"
+    (sortChange)="changeSort($event)"
+  />
   <p-table
     [value]="tableRows()"
     dataKey="id"

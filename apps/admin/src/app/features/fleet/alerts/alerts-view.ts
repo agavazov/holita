@@ -16,6 +16,7 @@ import {
   trackById,
 } from '../../../ui/list/list-actions';
 import { injectSortReady, listQuery, type ListQuery } from '../../../ui/list/list-query';
+import { ListSortMenu, type ListSortField } from '../../../ui/list/list-sort-menu';
 import { PageHeader } from '../../../ui/page-header/page-header';
 import { RowActions } from '../../../ui/row-actions/row-actions';
 import { TablePanel } from '../../../ui/table-panel/table-panel';
@@ -85,6 +86,7 @@ export const alertStatusTones: Record<AlertStatusCode, StatusTone> = {
     KpiStrip,
     KpiTile,
     PageHeader,
+    ListSortMenu,
     RowActions,
     TablePanel,
   ],
@@ -115,6 +117,11 @@ export class AlertsView {
   protected readonly description = computed(() =>
     interpolate(this.text().description, { branch: this.branchName() }),
   );
+  protected readonly sortFields = computed<readonly ListSortField[]>(() => [
+    { field: 'severity', label: this.text().table.severity },
+    { field: 'status', label: this.text().table.status },
+    { field: 'occurredAt', label: this.text().table.occurred },
+  ]);
   protected readonly fields = computed<readonly FilterField[]>(() => {
     const text = this.text();
     return [
@@ -149,7 +156,7 @@ export class AlertsView {
   });
   /**
    * The list's actions, once for the row menu and the bulk bar: Acknowledge only for open alerts,
-   * Resolve until resolved. Resolving needs a remark, so Resolve opens the alert and is not bulk.
+   * Resolve until resolved. Resolve opens one alert for review; Acknowledge is the bulk action.
    */
   protected readonly actions = computed<readonly ListAction<AlertActionId, AlertRow>[]>(() => {
     const text = this.text().actions;
@@ -216,6 +223,10 @@ export class AlertsView {
 
   protected changeSearch(search: string): void {
     this.changeQuery(listQuery.search(this.state(), search));
+  }
+
+  protected changeSort(sort: NonNullable<ListQuery['sort']>): void {
+    this.changeQuery({ ...this.state(), sort, page: 1 });
   }
 
   protected changeConditions(conditions: readonly FilterCondition[]): void {

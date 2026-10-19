@@ -13,3 +13,8 @@ export function innerInputPt(controlId: string, invalid: boolean) {
     },
   };
 }
+
+/** The grid cell already carries selection; its child span must not repeat aria-selected. */
+export function datePickerInputPt(controlId: string, invalid: boolean) {
+  return { ...innerInputPt(controlId, invalid), day: { 'aria-selected': null } };
+}

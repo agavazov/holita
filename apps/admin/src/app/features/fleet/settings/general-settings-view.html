@@ -1,4 +1,12 @@
-<holita-page-header [eyebrow]="eyebrow()" [title]="text().title" [description]="description()" />
+<holita-page-header [eyebrow]="eyebrow()" [title]="text().title" [description]="description()">
+  @if (demo()) {
+    <p-tag headerMeta severity="info" [value]="text().demoLabel" />
+  }
+</holita-page-header>
+
+@if (demo()) {
+  <p class="app-muted">{{ text().demoDescription }}</p>
+}
 
 @if (saveError(); as error) {
   <p-message severity="error" role="alert">{{ error }}</p-message>
@@ -181,3 +189,4 @@
     </div>
   }
 </form>
+<p-confirmdialog [pt]="confirmPt()" [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }" />

@@ -28,6 +28,7 @@
   </div>
   @if (fields().length) {
     <button
+      #addButton
       type="button"
       class="filter-builder__add"
       pButton
@@ -55,6 +56,7 @@
           [class.filter-builder__chip--editing]="editingId() === chip.id && open()"
         >
           <button
+            #chipButton
             type="button"
             class="filter-builder__chip-label"
             aria-haspopup="dialog"
@@ -90,15 +92,17 @@
 <p-popover
   appendTo="body"
   styleClass="filter-builder__popover"
-  [pt]="{ root: { 'aria-label': text().editor } }"
-  (onShow)="open.set(true)"
-  (onHide)="open.set(false)"
+  [ariaLabel]="text().editor"
+  [pt]="{ root: { 'aria-modal': false } }"
+  (onShow)="shown()"
+  (onHide)="closed()"
 >
-  <form class="filter-builder__editor" [formGroup]="form" (ngSubmit)="apply()">
+  <form #formElement class="filter-builder__editor" [formGroup]="form" (ngSubmit)="apply()">
     <div class="filter-builder__editor-field">
-      <label [for]="id + '-field'">{{ text().field }}</label>
+      <span class="filter-builder__label" [id]="id + '-field-label'">{{ text().field }}</span>
       <p-select
         [inputId]="id + '-field'"
+        [ariaLabelledBy]="id + '-field-label'"
         formControlName="field"
         [options]="fieldOptions()"
         optionLabel="label"
@@ -108,9 +112,10 @@
       />
     </div>
     <div class="filter-builder__editor-field">
-      <label [for]="id + '-operator'">{{ text().operator }}</label>
+      <span class="filter-builder__label" [id]="id + '-operator-label'">{{ text().operator }}</span>
       <p-select
         [inputId]="id + '-operator'"
+        [ariaLabelledBy]="id + '-operator-label'"
         formControlName="operator"
         [options]="operatorOptions()"
         optionLabel="label"
@@ -128,9 +133,10 @@
       }
       @case ('enum-one') {
         <div class="filter-builder__editor-field">
-          <label [for]="id + '-value'">{{ text().value }}</label>
+          <span class="filter-builder__label" [id]="id + '-value-label'">{{ text().value }}</span>
           <p-select
             [inputId]="id + '-value'"
+            [ariaLabelledBy]="id + '-value-label'"
             formControlName="text"
             [options]="choiceOptions()"
             optionLabel="label"
@@ -142,9 +148,10 @@
       }
       @case ('enum-set') {
         <div class="filter-builder__editor-field">
-          <label [for]="id + '-value'">{{ text().value }}</label>
+          <span class="filter-builder__label" [id]="id + '-value-label'">{{ text().value }}</span>
           <p-select
             [inputId]="id + '-value'"
+            [ariaLabelledBy]="id + '-value-label'"
             [multiple]="true"
             [pt]="selectMultiplePt"
             formControlName="choices"
@@ -194,6 +201,8 @@
         <div class="filter-builder__editor-field">
           <label [for]="id + '-value'">{{ text().value }}</label>
           <p-datepicker
+            [pt]="calendarPt"
+            (keydown.escape)="calendarEscape($event)"
             [inputId]="id + '-value'"
             formControlName="fromDate"
             dateFormat="yy-mm-dd"
@@ -207,6 +216,8 @@
           <div class="filter-builder__editor-field">
             <label [for]="id + '-from'">{{ text().from }}</label>
             <p-datepicker
+              [pt]="calendarPt"
+              (keydown.escape)="calendarEscape($event)"
               [inputId]="id + '-from'"
               formControlName="fromDate"
               dateFormat="yy-mm-dd"
@@ -217,6 +228,8 @@
           <div class="filter-builder__editor-field">
             <label [for]="id + '-to'">{{ text().to }}</label>
             <p-datepicker
+              [pt]="calendarPt"
+              (keydown.escape)="calendarEscape($event)"
               [inputId]="id + '-to'"
               formControlName="toDate"
               dateFormat="yy-mm-dd"

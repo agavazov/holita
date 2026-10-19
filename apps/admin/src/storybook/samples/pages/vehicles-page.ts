@@ -1,4 +1,12 @@
-import { Component, computed, DestroyRef, inject, linkedSignal, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  linkedSignal,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import {
@@ -16,10 +24,13 @@ import { interpolate } from '../../../app/ui/i18n/messages';
 import type { ListActionRequest, ListRecord } from '../../../app/ui/list/list-actions';
 import type { ListQuery } from '../../../app/ui/list/list-query';
 import { UI_LANGUAGE } from '../../../app/ui/ui-language';
-import { fixtureBranches } from '../../session-fixtures';
 import {
   driverById,
   sampleDrivers,
+  sampleDevices,
+  sampleTrips,
+  sampleAlerts,
+  sampleServiceTasks,
   sampleGroups,
   sampleNow,
   type SampleVehicle,
@@ -31,10 +42,18 @@ import {
   type SampleListDefinition,
   sampleTableView,
 } from '../sample-list';
-import { vehicleForm, vehicleRow } from '../rows';
-import { injectClearDrawer, injectQueryParams, saveDelayMs, scenarioOf } from '../scenario';
+import { sampleFuelStatus, vehicleForm, vehicleRow } from '../rows';
+import { vehicleFormErrors } from '../vehicle-validation';
+import {
+  injectBranchName,
+  injectClearDrawer,
+  injectQueryParams,
+  saveDelayMs,
+  scenarioOf,
+} from '../scenario';
 
 const definition: SampleListDefinition<SampleVehicle> = {
+  id: (vehicle) => vehicle.id,
   search: (vehicle) => [
     vehicle.plate,
     vehicle.fleetNumber,
@@ -45,6 +64,7 @@ const definition: SampleListDefinition<SampleVehicle> = {
   ],
   columns: {
     plate: (vehicle) => vehicle.plate,
+    fleetNumber: (vehicle) => vehicle.fleetNumber || null,
     status: (vehicle) => vehicle.status,
     activity: (vehicle) => vehicle.activity,
     group: (vehicle) => vehicle.groupId,
@@ -53,7 +73,12 @@ const definition: SampleListDefinition<SampleVehicle> = {
     odometer: (vehicle) => vehicle.odometerKm,
     year: (vehicle) => vehicle.year,
     hasDriver: (vehicle) => vehicle.driverId !== null,
+    driver: (vehicle) => vehicle.driverId,
+    fuelType: (vehicle) => vehicle.fuelType,
+    hasDevice: (vehicle) => sampleDevices.some((device) => device.vehicleId === vehicle.id),
+    hasOpenAlerts: (vehicle) => vehicleRow(vehicle).openAlerts > 0,
     createdAt: (vehicle) => vehicle.createdAt,
+    updatedAt: (vehicle) => vehicle.updatedAt,
     lastReportedAt: (vehicle) => vehicle.lastReportedAt,
   },
 };
@@ -65,8 +90,8 @@ function kpisOf(vehicles: readonly SampleVehicle[]): VehicleKpis {
     inWorkshop: count((vehicle) => vehicle.status === 'IN_WORKSHOP'),
     moving: count((vehicle) => vehicle.activity === 'MOVING'),
     notReporting: count((vehicle) => vehicle.activity === 'NOT_CONNECTED'),
-    openAlerts: vehicles.reduce((sum, vehicle) => sum + vehicle.openAlerts, 0),
-    lowFuel: count((vehicle) => vehicle.fuelPct !== null && vehicle.fuelPct < 12),
+    openAlerts: vehicles.reduce((sum, vehicle) => sum + vehicleRow(vehicle).openAlerts, 0),
+    lowFuel: count((vehicle) => sampleFuelStatus(vehicle) === 'LOW'),
   };
 }
 
@@ -80,7 +105,7 @@ function kpisOf(vehicles: readonly SampleVehicle[]): VehicleKpis {
   imports: [VehiclesView, VehicleDrawer],
   template: `
     <holita-vehicles-view
-      [branchName]="branchName"
+      [branchName]="branchName()"
       [dataAsOf]="dataAsOf"
       [rows]="rows()"
       [total]="result().total"
@@ -88,6 +113,7 @@ function kpisOf(vehicles: readonly SampleVehicle[]): VehicleKpis {
       [state]="listState()"
       [kpis]="kpis()"
       [groups]="groups"
+      [drivers]="drivers"
       [selection]="selection()"
       (stateChange)="state.set($event)"
       (create)="openEditor(null)"
@@ -110,19 +136,27 @@ function kpisOf(vehicles: readonly SampleVehicle[]): VehicleKpis {
   `,
 })
 export class VehiclesPage {
+  private readonly drawer = viewChild(VehicleDrawer);
   private readonly language = inject(UI_LANGUAGE);
   private readonly messages = inject(MessageService);
   private readonly router = inject(Router);
   private readonly query = injectQueryParams();
   private readonly clearDrawer = injectClearDrawer();
   private readonly scenario = computed(() =>
-    scenarioOf(this.query(), ['loading', 'empty', 'error', 'save-error']),
+    scenarioOf(this.query(), [
+      'loading',
+      'empty',
+      'error',
+      'save-error',
+      'deletable',
+      'contract-states',
+    ]),
   );
   private readonly text = computed(() => vehiclesText(this.language()));
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
   private nextId = 1;
 
-  protected readonly branchName = fixtureBranches[0].name;
+  protected readonly branchName = injectBranchName();
   protected readonly dataAsOf = new Date(sampleNow).toISOString();
   protected readonly groups = sampleGroups.map((group) => ({ id: group.id, name: group.name }));
   protected readonly drivers = sampleDrivers
@@ -130,9 +164,44 @@ export class VehiclesPage {
     .map((driver) => ({ id: driver.id, name: driver.name }));
 
   protected readonly vehicles = linkedSignal<readonly SampleVehicle[]>(() =>
-    this.scenario() === 'empty' ? [] : sampleVehicles,
+    this.scenario() === 'empty'
+      ? []
+      : this.scenario() === 'deletable'
+        ? sampleVehicles.slice(0, 6).map((vehicle, index) => ({
+            ...vehicle,
+            id: `new-${String(index)}`,
+            plate: `AA 100${String(index)} XX`,
+            driverId: null,
+            odometerKm: 0,
+            activity: 'NO_DEVICE',
+            lastReportedAt: null,
+            location: null,
+            speedKph: null,
+            fuelPct: null,
+            openAlerts: 0,
+          }))
+        : this.scenario() === 'contract-states'
+          ? sampleVehicles.map((vehicle, index) =>
+              index === 0
+                ? { ...vehicle, type: 'TRAILER', fuelType: 'CNG', activity: 'ASSET' }
+                : index === 1
+                  ? {
+                      ...vehicle,
+                      type: 'OTHER',
+                      fuelType: 'HYBRID',
+                      fuelPct: 8,
+                      lastReportedAt: new Date(sampleNow - 7 * 3_600_000).toISOString(),
+                    }
+                  : vehicle,
+            )
+          : sampleVehicles,
   );
-  protected readonly state = signal<ListQuery>(initialQuery({ field: 'plate', direction: 'asc' }));
+  protected readonly state = signal<ListQuery>(
+    initialQuery(
+      { field: 'plate', direction: 'asc' },
+      this.scenario() === 'contract-states' ? 100 : 20,
+    ),
+  );
   protected readonly selection = signal<readonly ListRecord<VehicleActionId>[]>([]);
   protected readonly failed = linkedSignal(() => this.scenario() === 'error');
   private readonly failNextSave = linkedSignal(() => this.scenario() === 'save-error');
@@ -168,6 +237,11 @@ export class VehiclesPage {
     inject(DestroyRef).onDestroy(() => {
       clearTimeout(this.saveTimer);
     });
+  }
+
+  canLeave(): boolean | Promise<boolean> {
+    if (this.saving()) return false;
+    return this.drawer()?.canLeave() ?? true;
   }
 
   protected openEditor(id: string | null): void {
@@ -214,12 +288,9 @@ export class VehiclesPage {
         this.saveError.set(this.text().drawer.saveError);
         return;
       }
-      const plate = form.plate.toLocaleUpperCase('en');
-      const duplicate = this.vehicles().some(
-        (item) => item.id !== editor.id && item.plate.toLocaleUpperCase('en') === plate,
-      );
-      if (duplicate) {
-        this.fieldErrors.set({ plate: this.text().drawer.duplicatePlate });
+      const errors = vehicleFormErrors(this.vehicles(), editor.id, form, this.text().drawer);
+      if (Object.keys(errors).length) {
+        this.fieldErrors.set(errors);
         return;
       }
       this.store(editor.id, form);
@@ -233,7 +304,7 @@ export class VehiclesPage {
   }
 
   private store(id: string | null, form: VehicleForm): void {
-    const fields = { ...form, year: form.year ?? 0 };
+    const fields = { ...form, updatedAt: new Date(sampleNow).toISOString() };
     if (id) {
       this.vehicles.update((vehicles) =>
         vehicles.map((item) => (item.id === id ? { ...item, ...fields } : item)),
@@ -257,7 +328,16 @@ export class VehiclesPage {
 
   private deactivate(ids: readonly string[]): void {
     this.vehicles.update((vehicles) =>
-      vehicles.map((item) => (ids.includes(item.id) ? { ...item, status: 'INACTIVE' } : item)),
+      vehicles.map((item) =>
+        ids.includes(item.id)
+          ? {
+              ...item,
+              status: 'INACTIVE',
+              driverId: null,
+              updatedAt: new Date(sampleNow).toISOString(),
+            }
+          : item,
+      ),
     );
     this.selection.update((selection) => selection.filter((record) => !ids.includes(record.id)));
     this.messages.add({
@@ -267,11 +347,29 @@ export class VehiclesPage {
   }
 
   private delete(ids: readonly string[]): void {
-    this.vehicles.update((vehicles) => vehicles.filter((item) => !ids.includes(item.id)));
-    this.selection.update((selection) => selection.filter((record) => !ids.includes(record.id)));
-    this.messages.add({
-      severity: 'success',
-      summary: interpolate(this.text().notices.deleted, { count: ids.length }),
-    });
+    const hasReference = (id: string) =>
+      [sampleDevices, sampleTrips, sampleAlerts, sampleServiceTasks].some((records) =>
+        records.some((record) => record.vehicleId === id),
+      );
+    const deleted = this.vehicles()
+      .filter(
+        (vehicle) =>
+          ids.includes(vehicle.id) &&
+          vehicle.lastReportedAt === null &&
+          vehicle.odometerKm === 0 &&
+          !hasReference(vehicle.id),
+      )
+      .map((vehicle) => vehicle.id);
+    this.vehicles.update((vehicles) => vehicles.filter((item) => !deleted.includes(item.id)));
+    this.selection.update((selection) =>
+      selection.filter((record) => !deleted.includes(record.id)),
+    );
+    if (deleted.length)
+      this.messages.add({
+        severity: 'success',
+        summary: interpolate(this.text().notices.deleted, { count: deleted.length }),
+      });
+    if (deleted.length < ids.length)
+      this.messages.add({ severity: 'error', summary: this.text().notices.historyConflict });
   }
 }

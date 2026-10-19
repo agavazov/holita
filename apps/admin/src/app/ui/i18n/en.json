@@ -71,6 +71,11 @@
   "menu": {
     "current": "current choice"
   },
+  "sort": {
+    "label": "Sort",
+    "ascending": "Ascending",
+    "descending": "Descending"
+  },
   "filters": {
     "addFilter": "Add filter",
     "editor": "Filter condition",

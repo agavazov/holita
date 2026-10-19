@@ -65,6 +65,14 @@ describe('formatting', () => {
     expect(formatRelative(null, asOf, 'en')).toBe('—');
   });
 
+  it('shows seconds when an instant is a precise reading bound', () => {
+    const instant = '2026-10-18T06:30:45.125Z';
+    expect(formatDateTime(instant, 'bg', 'Europe/Sofia', true)).toBe('18.10.2026 09:30:45');
+    expect(formatDateTime(instant, 'en', 'Europe/Sofia', true)).toBe('18 Oct 2026, 09:30:45');
+    expect(formatDateTime(instant, 'en', 'Europe/Sofia')).toBe('18 Oct 2026, 09:30');
+    expect(formatDateTime(null, 'en', 'Europe/Sofia', true)).toBe('—');
+  });
+
   it('formats durations', () => {
     expect(formatDuration(4020, 'bg')).toBe('1 ч 07 мин');
     expect(formatDuration(420, 'en')).toBe('7 min');

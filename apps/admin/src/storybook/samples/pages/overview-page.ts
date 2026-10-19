@@ -10,7 +10,6 @@ import type { StackedRow } from '../../../app/ui/charts/stacked-bars';
 import type { Language } from '../../../app/i18n/messages';
 import { formatNumber } from '../../../app/ui/format/format';
 import { UI_LANGUAGE } from '../../../app/ui/ui-language';
-import { fixtureBranches } from '../../session-fixtures';
 import {
   sampleAlerts,
   sampleDevices,
@@ -23,7 +22,7 @@ import {
   vehicleById,
 } from '../fleet-samples';
 import { tripRow } from '../rows';
-import { injectQueryParams, scenarioOf } from '../scenario';
+import { injectBranchName, injectQueryParams, scenarioOf } from '../scenario';
 
 const day = 86_400_000;
 const dayLabel = new Intl.DateTimeFormat('en-GB', {
@@ -70,6 +69,8 @@ function activityByGroup(language: Language): readonly StackedRow[] {
         { key: 'idle', value: count('IDLE'), tone: 'info' },
         { key: 'parked', value: count('PARKED'), tone: 'muted' },
         { key: 'notReporting', value: count('NOT_CONNECTED'), tone: 'danger' },
+        { key: 'asset', value: count('ASSET'), tone: 'c1' },
+        { key: 'noDevice', value: count('NO_DEVICE'), tone: 'c2' },
       ],
     };
   });
@@ -82,7 +83,9 @@ function attentionItems(): readonly AttentionItem[] {
   const overdue = sampleServiceTasks.filter((task) => task.urgency === 'OVERDUE');
   const today = new Date(sampleNow).toISOString().slice(0, 10);
   const expired = sampleDrivers.filter(
-    (driver) => driver.licenseExpiresOn < today || driver.tachoCardExpiresOn < today,
+    (driver) =>
+      (driver.licenseExpiresOn !== null && driver.licenseExpiresOn < today) ||
+      (driver.tachoCardExpiresOn !== null && driver.tachoCardExpiresOn < today),
   );
   const offline = sampleDevices.filter((device) => device.status === 'OFFLINE');
   return [
@@ -127,7 +130,7 @@ function attentionItems(): readonly AttentionItem[] {
   template: `
     <holita-overview-view
       [state]="state()"
-      [branchName]="branchName"
+      [branchName]="branchName()"
       [dataAsOf]="dataAsOf"
       [links]="links"
       [kpis]="kpis"
@@ -146,7 +149,7 @@ export class OverviewPage {
     scenarioOf(this.query(), ['loading', 'error', 'calm']),
   );
 
-  protected readonly branchName = fixtureBranches[0].name;
+  protected readonly branchName = injectBranchName();
   protected readonly dataAsOf = new Date(sampleNow).toISOString();
   protected readonly links = links;
   protected readonly failed = linkedSignal(() => this.scenario() === 'error');
@@ -169,5 +172,8 @@ export class OverviewPage {
   );
   protected readonly distance = fleetDistance(this.language());
   protected readonly activity = activityByGroup(this.language());
-  protected readonly trips = sampleTrips.slice(0, 5).map(tripRow);
+  protected readonly trips = [...sampleTrips]
+    .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+    .slice(0, 5)
+    .map(tripRow);
 }

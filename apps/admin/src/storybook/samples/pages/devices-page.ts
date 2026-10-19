@@ -1,4 +1,12 @@
-import { Component, computed, DestroyRef, inject, linkedSignal, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  linkedSignal,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import {
@@ -18,7 +26,6 @@ import { interpolate } from '../../../app/ui/i18n/messages';
 import type { ListActionRequest, ListRecord } from '../../../app/ui/list/list-actions';
 import type { ListQuery } from '../../../app/ui/list/list-query';
 import { UI_LANGUAGE } from '../../../app/ui/ui-language';
-import { fixtureBranches } from '../../session-fixtures';
 import {
   type SampleDevice,
   sampleDevices,
@@ -32,12 +39,30 @@ import {
   type SampleListDefinition,
   sampleTableView,
 } from '../sample-list';
-import { injectClearDrawer, injectQueryParams, saveDelayMs, scenarioOf } from '../scenario';
+import {
+  injectBranchName,
+  injectClearDrawer,
+  injectQueryParams,
+  saveDelayMs,
+  scenarioOf,
+} from '../scenario';
 
 const dataAsOf = new Date(sampleNow).toISOString();
 const models = [...new Set(sampleDevices.map((device) => device.model))].sort();
+interface SampleDeviceRecord extends SampleDevice {
+  readonly createdAt: string;
+}
+const initialDevices: readonly SampleDeviceRecord[] = sampleDevices.map((device) => ({
+  ...device,
+  createdAt: new Date(
+    device.installedOn
+      ? Date.parse(`${device.installedOn}T00:00:00.000Z`) - 86_400_000
+      : sampleNow - Number(device.id.replace(/\D/g, '')) * 86_400_000,
+  ).toISOString(),
+}));
 
-const definition: SampleListDefinition<SampleDevice> = {
+const definition: SampleListDefinition<SampleDeviceRecord> = {
+  id: (device) => device.id,
   search: (device) => [
     device.imei,
     device.simIccid,
@@ -52,6 +77,8 @@ const definition: SampleListDefinition<SampleDevice> = {
     model: (device) => device.model,
     firmware: (device) => device.firmware,
     installed: (device) => device.vehicleId !== null,
+    installedAt: (device) => device.installedOn,
+    createdAt: (device) => device.createdAt,
   },
 };
 
@@ -80,7 +107,8 @@ function kpisOf(devices: readonly SampleDevice[]): DeviceKpis {
   imports: [DevicesView, DeviceDrawer],
   template: `
     <holita-devices-view
-      [branchName]="branchName"
+      [demo]="true"
+      [branchName]="branchName()"
       [dataAsOf]="dataAsOf"
       [rows]="rows()"
       [total]="result().total"
@@ -97,6 +125,7 @@ function kpisOf(devices: readonly SampleDevice[]): DeviceKpis {
     />
     @if (editor(); as open) {
       <holita-device-drawer
+        [demo]="true"
         [device]="open.device"
         [models]="models"
         [vehicles]="vehicles"
@@ -111,6 +140,7 @@ function kpisOf(devices: readonly SampleDevice[]): DeviceKpis {
   `,
 })
 export class DevicesPage {
+  private readonly drawer = viewChild(DeviceDrawer);
   private readonly language = inject(UI_LANGUAGE);
   private readonly messages = inject(MessageService);
   private readonly router = inject(Router);
@@ -123,15 +153,15 @@ export class DevicesPage {
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
   private nextId = 1;
 
-  protected readonly branchName = fixtureBranches[0].name;
+  protected readonly branchName = injectBranchName();
   protected readonly dataAsOf = dataAsOf;
   protected readonly models = models;
   protected readonly vehicles = sampleVehicles.map((vehicle) => ({
     id: vehicle.id,
     name: vehicle.plate,
   }));
-  protected readonly devices = linkedSignal<readonly SampleDevice[]>(() =>
-    this.scenario() === 'empty' ? [] : sampleDevices,
+  protected readonly devices = linkedSignal<readonly SampleDeviceRecord[]>(() =>
+    this.scenario() === 'empty' ? [] : initialDevices,
   );
   protected readonly state = signal<ListQuery>(initialQuery({ field: 'imei', direction: 'asc' }));
   protected readonly selection = signal<readonly ListRecord<DeviceActionId>[]>([]);
@@ -167,6 +197,10 @@ export class DevicesPage {
     inject(DestroyRef).onDestroy(() => {
       clearTimeout(this.saveTimer);
     });
+  }
+
+  canLeave(): boolean | Promise<boolean> {
+    return this.drawer()?.canLeave() ?? true;
   }
 
   protected openEditor(id: string | null): void {
@@ -215,19 +249,35 @@ export class DevicesPage {
         this.fieldErrors.set({ imei: this.text().drawer.duplicateImei });
         return;
       }
+      const status: SampleDevice['status'] = form.vehicleId === null ? 'IN_STOCK' : 'OFFLINE';
       this.devices.update((devices) =>
         id
-          ? devices.map((item) => (item.id === id ? { ...item, ...form } : item))
+          ? devices.map((item) =>
+              item.id !== id
+                ? item
+                : item.vehicleId === form.vehicleId
+                  ? { ...item, ...form }
+                  : {
+                      ...item,
+                      ...form,
+                      status,
+                      lastSeenAt: null,
+                      signal: null,
+                      voltage: null,
+                      installedOn: null,
+                    },
+            )
           : [
               {
                 ...form,
                 id: `example-device-${String(this.nextId++)}`,
                 firmware: currentFirmware,
-                status: 'IN_STOCK',
+                status,
                 lastSeenAt: null,
                 signal: null,
                 voltage: null,
                 installedOn: null,
+                createdAt: dataAsOf,
               },
               ...devices,
             ],

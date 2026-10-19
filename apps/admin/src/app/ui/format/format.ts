@@ -86,11 +86,12 @@ function validDate(iso: string | null | undefined): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-/** `dd.MM.yyyy HH:mm` (bg) or `dd MMM yyyy, HH:mm` (en) in the given time zone. */
+/** `dd.MM.yyyy HH:mm` (bg) or `dd MMM yyyy, HH:mm` (en), optionally with seconds. */
 export function formatDateTime(
   iso: string | null | undefined,
   language: Language,
   timeZone: string,
+  seconds = false,
 ): string {
   const date = validDate(iso);
   if (!date) return emptyValue;
@@ -101,12 +102,12 @@ export function formatDateTime(
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+    ...(seconds ? { second: '2-digit' as const } : {}),
     hourCycle: 'h23',
   });
   const { day = '', month = '', year = '', hour = '', minute = '' } = value;
-  return language === 'bg'
-    ? `${day}.${month}.${year} ${hour}:${minute}`
-    : `${day} ${month} ${year}, ${hour}:${minute}`;
+  const time = `${hour}:${minute}${seconds ? `:${value.second ?? ''}` : ''}`;
+  return language === 'bg' ? `${day}.${month}.${year} ${time}` : `${day} ${month} ${year}, ${time}`;
 }
 
 /** A calendar date (`YYYY-MM-DD`) without time-zone conversion. */

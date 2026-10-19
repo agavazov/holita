@@ -124,6 +124,21 @@ describe('RouteDrawer', () => {
     });
   });
 
+  it('keeps editor focus and restores the title when focus leaves the drawer', async () => {
+    const { harness } = await open();
+    const editor: unknown = harness.fixture.debugElement.query(
+      (debug) => debug.componentInstance instanceof TestEditor,
+    ).componentInstance;
+    if (!(editor instanceof TestEditor)) throw new Error('Missing editor.');
+    const input = document.getElementById('plate');
+    input?.focus();
+    editor.drawer().keepFocusInside();
+    expect(document.activeElement).toBe(input);
+    input?.blur();
+    editor.drawer().keepFocusInside();
+    expect(document.activeElement).toBe(drawer().querySelector('h2'));
+  });
+
   it('opens as a labelled modal dialog and closes to its list with query and fragment', async () => {
     const { harness, router, trigger } = await open();
     const element = drawer();

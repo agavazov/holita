@@ -44,6 +44,18 @@
         <button headerActions pButton type="button" (click)="edit.emit()">
           {{ text().edit }}
         </button>
+        @if (vehicle.status !== 'INACTIVE') {
+          <button
+            headerActions
+            pButton
+            type="button"
+            severity="secondary"
+            [outlined]="true"
+            (click)="recordOdometer.emit()"
+          >
+            {{ text().recordOdometer }}
+          </button>
+        }
       </holita-page-header>
 
       <holita-kpi-strip [label]="text().kpis.label">
@@ -56,7 +68,8 @@
           [label]="text().kpis.fuel"
           [value]="vehicle.fuelPct === null ? null : (vehicle.fuelPct | holitaNumber)"
           [unit]="vehicle.fuelPct === null ? null : '%'"
-          [tone]="vehicle.fuelPct !== null && vehicle.fuelPct < 12 ? 'danger' : null"
+          [tone]="vehicle.fuelStatus === 'LOW' ? 'danger' : null"
+          [footnote]="vehicle.fuelStatus === 'STALE' ? staleFuelText() : null"
         />
         <holita-kpi-tile
           [label]="text().kpis.distance"
@@ -134,7 +147,7 @@
                 <dl class="app-facts">
                   <div class="app-facts--wide">
                     <dt>{{ text().vin }}</dt>
-                    <dd class="app-mono">{{ vehicle.vin }}</dd>
+                    <dd class="app-mono">{{ vehicle.vin || '—' }}</dd>
                   </div>
                   <div>
                     <dt>{{ text().year }}</dt>
@@ -198,7 +211,11 @@
                     </td>
                     <td>{{ tripLabel(trip) }}</td>
                     <td class="app-num">{{ trip.distanceKm | holitaNumber }}</td>
-                    <td class="app-num">{{ trip.durationMin * 60 | holitaDuration }}</td>
+                    <td class="app-num">
+                      {{
+                        (trip.durationMin === null ? null : trip.durationMin * 60) | holitaDuration
+                      }}
+                    </td>
                     <td>
                       @if (trip.score !== null) {
                         <span class="app-meter-cell">
@@ -286,7 +303,11 @@
                 </ng-template>
                 <ng-template #body let-task>
                   <tr>
-                    <td>{{ task.kind }}</td>
+                    <td>
+                      <button type="button" class="app-link" (click)="openService.emit(task.id)">
+                        {{ task.kind }}
+                      </button>
+                    </td>
                     <td>
                       <span class="app-cell-stack">
                         <span>
@@ -306,10 +327,7 @@
                       </span>
                     </td>
                     <td>
-                      <p-tag
-                        [severity]="urgencySeverity(task.urgency)"
-                        [value]="urgencyLabel(task.urgency)"
-                      />
+                      <p-tag [severity]="urgencySeverity(task)" [value]="urgencyLabel(task)" />
                     </td>
                     <td class="app-num">{{ task.costCents | holitaMoney }}</td>
                   </tr>

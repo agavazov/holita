@@ -1,0 +1,89 @@
+<holita-route-drawer
+  [title]="title()"
+  [saving]="saving()"
+  [dirty]="dirty()"
+  [closeLink]="null"
+  (closeRequest)="requestClose()"
+>
+  <form #formElement id="odometer-form" [formGroup]="form" (ngSubmit)="submit()">
+    @if (saveError(); as error) {
+      <p-message severity="error" role="alert">{{ error }}</p-message>
+    }
+    <section class="app-form-section">
+      <p>{{ text().description }}</p>
+      @if (previous(); as previous) {
+        <dl class="app-facts">
+          <div>
+            <dt>{{ text().previous }}</dt>
+            <dd>{{ previous.odometerKm | holitaNumber: 1 }} km</dd>
+          </div>
+          <div>
+            <dt>{{ text().recordedAt }}</dt>
+            <dd>{{ previous.recordedAt | holitaDateTime: 'Europe/Sofia' : true }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().source }}</dt>
+            <dd>{{ text().sources[previous.source] }}</dd>
+          </div>
+        </dl>
+      } @else {
+        <p class="app-muted">{{ text().noPrevious }}</p>
+      }
+      <p class="app-muted">
+        {{ text().latestAllowed }}: {{ latestAllowedAt() | holitaDateTime: 'Europe/Sofia' : true }}
+      </p>
+      <div class="app-form-grid">
+        <holita-form-field
+          [label]="text().odometerKm"
+          controlId="odometer-odometerKm"
+          [required]="true"
+          [error]="errorOf('odometerKm')"
+        >
+          <p-inputnumber
+            inputId="odometer-odometerKm"
+            formControlName="odometerKm"
+            [maxFractionDigits]="1"
+            [fluid]="true"
+            [invalid]="!!errorOf('odometerKm')"
+            [pt]="numberPt()"
+          />
+        </holita-form-field>
+        <holita-form-field
+          [label]="text().recordedAt"
+          controlId="odometer-recordedAt"
+          [required]="true"
+          [hint]="text().timeZone"
+          [error]="errorOf('recordedAt')"
+        >
+          <p-datepicker
+            inputId="odometer-recordedAt"
+            formControlName="recordedAt"
+            dateFormat="yy-mm-dd"
+            [showTime]="true"
+            [showSeconds]="true"
+            hourFormat="24"
+            appendTo="body"
+            [fluid]="true"
+            [invalid]="!!errorOf('recordedAt')"
+            [pt]="datePt()"
+          />
+        </holita-form-field>
+      </div>
+    </section>
+  </form>
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="requestClose()"
+    >
+      {{ text().cancel }}
+    </button>
+    <button pButton type="submit" form="odometer-form" [loading]="saving()" [disabled]="saving()">
+      {{ text().save }}
+    </button>
+  </div>
+</holita-route-drawer>

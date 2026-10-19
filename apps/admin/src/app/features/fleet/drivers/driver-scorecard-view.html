@@ -1,0 +1,150 @@
+@switch (state()) {
+  @case ('not-found') {
+    <holita-empty-state
+      kind="not-found"
+      [title]="text().notFoundTitle"
+      [description]="text().notFoundDescription"
+    >
+      <a emptyActions pButton [routerLink]="backLink()">{{ text().back }}</a>
+    </holita-empty-state>
+  }
+  @case ('error') {
+    <holita-empty-state
+      kind="error"
+      [title]="text().errorTitle"
+      [description]="text().errorDescription"
+    >
+      <button emptyActions pButton type="button" (click)="retry.emit()">{{ text().retry }}</button>
+      <a emptyActions pButton severity="secondary" [outlined]="true" [routerLink]="backLink()">{{
+        text().back
+      }}</a>
+    </holita-empty-state>
+  }
+  @case ('loading') {
+    <holita-page-header
+      [eyebrow]="text().eyebrow"
+      [title]="text().title"
+      [backLink]="backLink()"
+      [backLabel]="text().back"
+    />
+    <holita-kpi-strip [label]="text().summary" [loading]="true">
+      <holita-kpi-tile [label]="text().drivingScore" [loading]="true" />
+      <holita-kpi-tile [label]="text().ecoScore" [loading]="true" />
+      <holita-kpi-tile [label]="text().distance" [loading]="true" />
+      <holita-kpi-tile [label]="text().trips" [loading]="true" />
+    </holita-kpi-strip>
+  }
+  @case ('ready') {
+    @if (scorecard(); as card) {
+      <holita-page-header
+        [eyebrow]="text().eyebrow"
+        [title]="card.name"
+        [description]="description()"
+        [backLink]="backLink()"
+        [backLabel]="text().back"
+      />
+
+      <section class="app-card scorecard__period" [attr.aria-label]="text().period">
+        <div role="group" class="app-inline" [attr.aria-label]="text().period">
+          @for (days of periods; track days) {
+            <button
+              pButton
+              type="button"
+              severity="secondary"
+              [outlined]="period() !== days"
+              [attr.aria-pressed]="period() === days"
+              (click)="periodChange.emit(days)"
+            >
+              {{ periodLabel(days) }}
+            </button>
+          }
+        </div>
+        @if (card.asOf) {
+          <p class="app-muted scorecard__clock">
+            {{ text().asOf }} {{ card.asOf | holitaDateTime }}
+          </p>
+        }
+      </section>
+
+      @if (!card.asOf) {
+        <holita-empty-state
+          kind="no-telemetry"
+          [title]="text().noTelemetryTitle"
+          [description]="text().noTelemetryDescription"
+        />
+      } @else {
+        <holita-kpi-strip [label]="text().summary">
+          <holita-kpi-tile
+            [label]="text().drivingScore"
+            [value]="card.averageDrivingScore | holitaNumber: 1"
+            [footnote]="text().outOf100"
+          />
+          <holita-kpi-tile
+            [label]="text().ecoScore"
+            [value]="card.averageEcoScore | holitaNumber: 1"
+            [footnote]="text().outOf100"
+          />
+          <holita-kpi-tile
+            [label]="text().distance"
+            [value]="card.distanceKm | holitaNumber: 1"
+            unit="km"
+          />
+          <holita-kpi-tile
+            [label]="text().trips"
+            [value]="card.tripCount | holitaNumber"
+            [footnote]="coverage()"
+          />
+          <holita-kpi-tile
+            [label]="text().maneuversPer100Km"
+            [value]="card.maneuversPer100Km | holitaNumber: 1"
+          />
+        </holita-kpi-strip>
+
+        @if (!card.tripCount) {
+          <holita-empty-state
+            kind="empty"
+            [title]="text().noTripsTitle"
+            [description]="text().noTripsDescription"
+          />
+        } @else if (card.lowConfidence) {
+          <p-message severity="warn" role="status">{{ text().lowConfidence }}</p-message>
+        }
+
+        <div class="app-card-grid">
+          <section class="app-card">
+            <h2 class="app-card__title app-card__header">{{ text().maneuvers }}</h2>
+            <p class="app-muted">{{ text().maneuverDescription }}</p>
+            <holita-stacked-bars
+              [label]="text().maneuvers"
+              [rows]="maneuverRows()"
+              [legend]="legend()"
+            />
+            <p class="app-muted scorecard__total">
+              {{ text().maneuverTotal }} {{ card.maneuverCount | holitaNumber }}
+            </p>
+          </section>
+          <section class="app-card">
+            <h2 class="app-card__title app-card__header">{{ text().calculation }}</h2>
+            <dl class="app-facts">
+              <div class="app-facts--wide">
+                <dt>{{ text().windowStart }}</dt>
+                <dd>{{ card.windowStart | holitaDateTime }}</dd>
+              </div>
+              <div class="app-facts--wide">
+                <dt>{{ text().windowEnd }}</dt>
+                <dd>{{ card.windowEnd | holitaDateTime }}</dd>
+              </div>
+              <div>
+                <dt>{{ text().scoredTrips }}</dt>
+                <dd>{{ card.scoredTripCount | holitaNumber }}</dd>
+              </div>
+            </dl>
+            <p class="app-muted">{{ text().windowDescription }}</p>
+            <p class="app-muted">{{ text().weightedDescription }}</p>
+            <p class="app-muted">{{ text().missingDescription }}</p>
+          </section>
+        </div>
+      }
+    }
+  }
+}

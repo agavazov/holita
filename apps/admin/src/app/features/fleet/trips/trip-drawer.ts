@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { ButtonDirective } from 'primeng/button';
 import { Timeline } from 'primeng/timeline';
+import { Tag } from 'primeng/tag';
 import { RouteDrawer } from '../../../ui/drawer/route-drawer';
 import {
   displayTimeZone,
@@ -31,6 +32,7 @@ interface TimelineEntry {
   imports: [
     ButtonDirective,
     Timeline,
+    Tag,
     RouteDrawer,
     FormatDateTimePipe,
     FormatDurationPipe,
@@ -51,7 +53,7 @@ export class TripDrawer {
   );
   protected readonly subtitle = computed(() => {
     const trip = this.trip();
-    return `${formatDateTime(trip.startedAt, this.language(), displayTimeZone)} · ${trip.from} → ${trip.to}`;
+    return `${formatDateTime(trip.startedAt, this.language(), displayTimeZone)} · ${trip.from ?? '—'} → ${trip.to ?? '—'}`;
   });
   protected readonly timeline = computed<readonly TimelineEntry[]>(() => {
     const trip = this.trip();
@@ -59,22 +61,34 @@ export class TripDrawer {
     return [
       {
         at: trip.startedAt,
-        title: interpolate(text.departed, { place: trip.from }),
+        title:
+          trip.from === null
+            ? text.departedUnknown
+            : interpolate(text.departed, { place: trip.from }),
         detail: null,
         tone: 'neutral',
       },
-      ...trip.events.map((event) => ({
-        at: event.at,
-        title: event.kind,
-        detail: event.detail,
-        tone: event.tone,
-      })),
-      {
-        at: trip.endedAt,
-        title: interpolate(text.arrived, { place: trip.to }),
-        detail: null,
-        tone: 'neutral',
-      },
+      ...[...trip.events]
+        .sort((first, second) => first.at.localeCompare(second.at))
+        .map((event) => ({
+          at: event.at,
+          title: event.kind,
+          detail: event.detail,
+          tone: event.tone,
+        })),
+      ...(trip.endedAt === null
+        ? []
+        : [
+            {
+              at: trip.endedAt,
+              title:
+                trip.to === null
+                  ? text.arrivedUnknown
+                  : interpolate(text.arrived, { place: trip.to }),
+              detail: null,
+              tone: 'neutral',
+            },
+          ]),
     ];
   });
   /** p-timeline takes a mutable array. */

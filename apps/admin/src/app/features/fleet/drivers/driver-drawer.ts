@@ -14,13 +14,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import {
-  FormControl,
-  FormGroup,
-  ReactiveFormsModule,
-  type ValidatorFn,
-  Validators,
-} from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonDirective } from 'primeng/button';
 import { DatePicker } from 'primeng/datepicker';
 import { InputText } from 'primeng/inputtext';
@@ -30,10 +24,15 @@ import { Tag } from 'primeng/tag';
 import { Textarea } from 'primeng/textarea';
 import { RouteDrawer } from '../../../ui/drawer/route-drawer';
 import { FormField } from '../../../ui/form-field/form-field';
-import { FormatDateOnlyPipe, FormatNumberPipe } from '../../../ui/format/format.pipes';
+import {
+  FormatDateOnlyPipe,
+  FormatDateTimePipe,
+  FormatNumberPipe,
+} from '../../../ui/format/format.pipes';
 import { fromDateOnly, toDateOnly } from '../../../ui/format/zoned-time';
 import { focusFirstInvalid } from '../../../ui/forms/focus';
-import { innerInputPt } from '../../../ui/forms/inner-input-pt';
+import { datePickerInputPt } from '../../../ui/forms/inner-input-pt';
+import { lockWhileSaving } from '../../../ui/forms/saving';
 import {
   dateOnlyValidator,
   patternValidator,
@@ -43,10 +42,13 @@ import {
 import { interpolate } from '../../../ui/i18n/messages';
 import { toneSeverity } from '../../../ui/tones';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
+import { selectMultiplePt } from '../../../ui/select-multiple';
 import {
   daysUntil,
   documentWarningDays,
   driverStatuses,
+  driverLicenseCategories,
+  type DriverLicenseCategory,
   type DriverStatusCode,
   scoreTone,
 } from './drivers-view';
@@ -54,18 +56,26 @@ import { driversText } from './i18n/messages';
 
 /** The editable driver fields, as the create and update mutations take them. */
 export interface DriverForm {
-  readonly name: string;
+  readonly firstName: string;
+  readonly lastName: string;
   readonly employeeNo: string;
+  readonly identificationKey: string;
   readonly phone: string;
   readonly email: string;
   readonly status: DriverStatusCode;
-  readonly licenseExpiresOn: string;
-  readonly tachoCardExpiresOn: string;
+  readonly licenseNumber: string;
+  readonly licenseCategories: readonly DriverLicenseCategory[];
+  readonly licenseExpiresOn: string | null;
+  readonly tachographCardNumber: string;
+  readonly tachoCardExpiresOn: string | null;
   readonly notes: string;
 }
 
 /** The driver record shown read-only: the form fields plus assignment and driving data. */
 export interface DriverDetails extends DriverForm {
+  readonly name: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
   readonly vehiclePlate: string | null;
   readonly score: number | null;
   readonly trips30d: number;
@@ -75,19 +85,22 @@ export interface DriverDetails extends DriverForm {
 export type DriverField = keyof DriverForm;
 
 const fieldOrder: readonly DriverField[] = [
-  'name',
+  'firstName',
+  'lastName',
   'employeeNo',
+  'identificationKey',
   'phone',
   'email',
   'status',
+  'licenseNumber',
+  'licenseCategories',
   'licenseExpiresOn',
+  'tachographCardNumber',
   'tachoCardExpiresOn',
   'notes',
 ];
 
 const statusTones = { ACTIVE: 'success', ON_LEAVE: 'info', INACTIVE: 'neutral' } as const;
-
-const required: ValidatorFn = (control) => Validators.required(control);
 
 /**
  * The mixed drawer: a driver opens read-only and Edit switches the same drawer to the form;
@@ -108,6 +121,7 @@ const required: ValidatorFn = (control) => Validators.required(control);
     RouteDrawer,
     FormField,
     FormatDateOnlyPipe,
+    FormatDateTimePipe,
     FormatNumberPipe,
   ],
   templateUrl: './driver-drawer.html',
@@ -118,12 +132,13 @@ export class DriverDrawer {
   readonly driver = input<DriverDetails | null>(null);
   /** Opens an existing driver on the form (the row's Edit action) instead of the record. */
   readonly startEditing = input(false);
-  readonly dataAsOf = input.required<string>();
+  readonly businessDate = input.required<string>();
   readonly saving = input(false);
   readonly saveError = input<string | null>(null);
   readonly fieldErrors = input<Partial<Record<DriverField, string>>>({});
   readonly save = output<DriverForm>();
   readonly closed = output();
+  readonly openScorecard = output();
 
   private readonly language = inject(UI_LANGUAGE);
   private readonly injector = inject(Injector);
@@ -136,28 +151,39 @@ export class DriverDrawer {
   protected readonly editing = linkedSignal(() => this.driver() === null || this.startEditing());
 
   protected readonly form = new FormGroup({
-    name: new FormControl('', {
+    firstName: new FormControl('', {
       nonNullable: true,
-      validators: textValidator(80, { required: true }),
+      validators: textValidator(64, { required: true }),
+    }),
+    lastName: new FormControl('', {
+      nonNullable: true,
+      validators: textValidator(64, { required: true }),
     }),
     employeeNo: new FormControl('', {
       nonNullable: true,
-      validators: textValidator(16, { required: true }),
+      validators: textValidator(32),
     }),
+    identificationKey: new FormControl('', { nonNullable: true, validators: textValidator(32) }),
     phone: new FormControl('', {
       nonNullable: true,
-      validators: [textValidator(32), patternValidator(/^\+?[0-9 ]{6,20}$/)],
+      validators: [textValidator(20), patternValidator(/^\+?[0-9 ]{6,20}$/)],
     }),
     email: new FormControl('', {
       nonNullable: true,
-      validators: [textValidator(120), patternValidator(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)],
+      validators: [textValidator(254), patternValidator(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)],
     }),
     status: new FormControl<DriverStatusCode>('ACTIVE', { nonNullable: true }),
-    licenseExpiresOn: new FormControl<Date | null>(null, [required, dateOnlyValidator(null, null)]),
-    tachoCardExpiresOn: new FormControl<Date | null>(null, [
-      required,
-      dateOnlyValidator(null, null),
-    ]),
+    licenseNumber: new FormControl('', { nonNullable: true, validators: textValidator(32) }),
+    licenseCategories: new FormControl<DriverLicenseCategory[]>([], { nonNullable: true }),
+    licenseExpiresOn: new FormControl<Date | null>(
+      null,
+      dateOnlyValidator('1900-01-01', '2100-12-31'),
+    ),
+    tachographCardNumber: new FormControl('', { nonNullable: true, validators: textValidator(16) }),
+    tachoCardExpiresOn: new FormControl<Date | null>(
+      null,
+      dateOnlyValidator('1900-01-01', '2100-12-31'),
+    ),
     notes: new FormControl('', { nonNullable: true, validators: textValidator(2000) }),
   });
   /** Re-reads errors and the dirty state whenever the form reports a change. */
@@ -181,13 +207,21 @@ export class DriverDrawer {
   protected readonly statusOptions = computed(() =>
     driverStatuses.map((value) => ({ value, label: this.catalog().statuses[value] })),
   );
+  protected readonly categoryOptions = driverLicenseCategories.map((value) => ({
+    value,
+    label: value,
+  }));
+  protected readonly categoryPt = selectMultiplePt;
   protected readonly notesLength = computed(() => {
     this.events();
     return Array.from(this.form.controls.notes.value).length;
   });
   protected readonly datePt = computed(() => ({
-    licenseExpiresOn: innerInputPt('driver-licenseExpiresOn', !!this.errorOf('licenseExpiresOn')),
-    tachoCardExpiresOn: innerInputPt(
+    licenseExpiresOn: datePickerInputPt(
+      'driver-licenseExpiresOn',
+      !!this.errorOf('licenseExpiresOn'),
+    ),
+    tachoCardExpiresOn: datePickerInputPt(
       'driver-tachoCardExpiresOn',
       !!this.errorOf('tachoCardExpiresOn'),
     ),
@@ -200,6 +234,15 @@ export class DriverDrawer {
         this.reset(driver);
       });
     });
+    lockWhileSaving(
+      this.form,
+      () => this.saving(),
+      () => {
+        const form = this.formElement()?.nativeElement;
+        if (!form || !focusFirstInvalid(form, fieldOrder, 'driver-'))
+          this.drawer().keepFocusInside();
+      },
+    );
   }
 
   protected statusSeverity(status: DriverStatusCode) {
@@ -210,8 +253,9 @@ export class DriverDrawer {
     return this.catalog().statuses[status];
   }
 
-  protected expiry(dateOnly: string): { severity: 'danger' | 'warn'; label: string } | null {
-    const days = daysUntil(dateOnly, this.dataAsOf());
+  protected expiry(dateOnly: string | null): { severity: 'danger' | 'warn'; label: string } | null {
+    if (dateOnly === null) return null;
+    const days = daysUntil(dateOnly, this.businessDate());
     if (days < 0) return { severity: 'danger', label: this.catalog().expiry.expired };
     if (days <= documentWarningDays)
       return { severity: 'warn', label: interpolate(this.catalog().expiry.soon, { days }) };
@@ -241,10 +285,11 @@ export class DriverDrawer {
   }
 
   protected submit(): void {
+    if (this.saving()) return;
     this.submitted = true;
     this.form.markAllAsTouched();
     const value = this.form.getRawValue();
-    if (this.form.invalid || !value.licenseExpiresOn || !value.tachoCardExpiresOn) {
+    if (this.form.invalid) {
       afterNextRender(
         () => {
           const form = this.formElement()?.nativeElement;
@@ -256,12 +301,16 @@ export class DriverDrawer {
     }
     this.save.emit({
       ...value,
-      name: value.name.trim(),
+      firstName: value.firstName.trim(),
+      lastName: value.lastName.trim(),
       employeeNo: value.employeeNo.trim(),
+      identificationKey: value.identificationKey.trim(),
       phone: value.phone.trim(),
       email: value.email.trim(),
-      licenseExpiresOn: toDateOnly(value.licenseExpiresOn),
-      tachoCardExpiresOn: toDateOnly(value.tachoCardExpiresOn),
+      licenseNumber: value.licenseNumber.trim(),
+      licenseExpiresOn: value.licenseExpiresOn ? toDateOnly(value.licenseExpiresOn) : null,
+      tachographCardNumber: value.tachographCardNumber.trim(),
+      tachoCardExpiresOn: value.tachoCardExpiresOn ? toDateOnly(value.tachoCardExpiresOn) : null,
       notes: value.notes.trim(),
     });
   }
@@ -280,19 +329,27 @@ export class DriverDrawer {
 
   /** Close button, Escape and backdrop: unsaved changes are confirmed first. */
   protected async requestClose(): Promise<void> {
-    if (this.saving()) return;
-    if (await this.drawer().confirmLeave(this.dirty())) this.closed.emit();
+    if (await this.canLeave()) this.closed.emit();
+  }
+
+  canLeave(): Promise<boolean> | boolean {
+    return this.saving() ? false : this.drawer().confirmLeave(this.dirty());
   }
 
   private reset(driver: DriverDetails | null): void {
     this.submitted = false;
     this.form.reset({
-      name: driver?.name ?? '',
+      firstName: driver?.firstName ?? '',
+      lastName: driver?.lastName ?? '',
       employeeNo: driver?.employeeNo ?? '',
+      identificationKey: driver?.identificationKey ?? '',
       phone: driver?.phone ?? '',
       email: driver?.email ?? '',
       status: driver?.status ?? 'ACTIVE',
+      licenseNumber: driver?.licenseNumber ?? '',
+      licenseCategories: [...(driver?.licenseCategories ?? [])],
       licenseExpiresOn: fromDateOnly(driver?.licenseExpiresOn),
+      tachographCardNumber: driver?.tachographCardNumber ?? '',
       tachoCardExpiresOn: fromDateOnly(driver?.tachoCardExpiresOn),
       notes: driver?.notes ?? '',
     });

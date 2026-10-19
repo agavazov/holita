@@ -71,6 +71,11 @@
   "menu": {
     "current": "текущ избор"
   },
+  "sort": {
+    "label": "Сортиране",
+    "ascending": "Възходящо",
+    "descending": "Низходящо"
+  },
   "filters": {
     "addFilter": "Добави филтър",
     "editor": "Условие за филтриране",

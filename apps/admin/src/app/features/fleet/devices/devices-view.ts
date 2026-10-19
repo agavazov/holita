@@ -17,6 +17,7 @@ import {
   trackById,
 } from '../../../ui/list/list-actions';
 import { injectSortReady, listQuery, type ListQuery } from '../../../ui/list/list-query';
+import { ListSortMenu, type ListSortField } from '../../../ui/list/list-sort-menu';
 import { PageHeader } from '../../../ui/page-header/page-header';
 import { RowActions } from '../../../ui/row-actions/row-actions';
 import { TablePanel } from '../../../ui/table-panel/table-panel';
@@ -79,6 +80,7 @@ export const deviceStatusTones: Record<DeviceStatusCode, StatusTone> = {
     KpiTile,
     PageHeader,
     RowActions,
+    ListSortMenu,
     TablePanel,
   ],
   templateUrl: './devices-view.html',
@@ -86,6 +88,7 @@ export const deviceStatusTones: Record<DeviceStatusCode, StatusTone> = {
   host: { class: 'app-view' },
 })
 export class DevicesView {
+  readonly demo = input(false);
   readonly branchName = input.required<string>();
   readonly dataAsOf = input.required<string>();
   readonly rows = input.required<readonly DeviceRow[]>();
@@ -176,6 +179,21 @@ export class DevicesView {
   }));
   protected readonly sortField = computed(() => this.state().sort?.field ?? null);
   protected readonly sortOrder = computed(() => (this.state().sort?.direction === 'asc' ? 1 : -1));
+  protected readonly sortFields = computed<readonly ListSortField[]>(() => {
+    const text = this.text();
+    return [
+      { field: 'imei', label: text.drawer.imei },
+      { field: 'status', label: text.table.status },
+      { field: 'vehicle', label: text.table.vehicle },
+      { field: 'lastSeenAt', label: text.table.lastSeen },
+      { field: 'installedAt', label: text.sort.installedAt },
+      { field: 'createdAt', label: text.sort.createdAt },
+    ];
+  });
+
+  protected changeSort(sort: NonNullable<ListQuery['sort']>): void {
+    this.changeQuery({ ...this.state(), sort, page: 1 });
+  }
 
   protected statusSeverity(status: DeviceStatusCode) {
     return toneSeverity(deviceStatusTones[status]);

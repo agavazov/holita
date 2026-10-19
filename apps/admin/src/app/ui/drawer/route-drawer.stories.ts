@@ -9,6 +9,7 @@ import { Tag } from 'primeng/tag';
 import { Textarea } from 'primeng/textarea';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { FormField } from '../form-field/form-field';
+import { lockWhileSaving } from '../forms/saving';
 import { RouteDrawer, type RouteDrawerState } from './route-drawer';
 
 /**
@@ -44,6 +45,8 @@ type DrawerMode = 'edit' | 'view' | 'view-edit';
     >
       @if (!editing()) {
         <p-tag drawerMeta severity="success" value="Active" />
+      }
+      @if (!editing()) {
         <dl class="app-facts">
           <div>
             <dt>Plate</dt>
@@ -194,6 +197,13 @@ class RouteDrawerDemo {
   readonly drawer = viewChild.required(RouteDrawer);
 
   constructor() {
+    lockWhileSaving(
+      this.form,
+      () => this.saving(),
+      () => {
+        this.drawer().keepFocusInside();
+      },
+    );
     afterNextRender(() => {
       if (this.confirmOnOpen()) void this.drawer().confirmLeave(this.dirty());
     });
@@ -245,7 +255,16 @@ export const ViewThenEdit: Story = {
 };
 
 export const Loading: Story = { args: { state: 'loading' } };
-export const Saving: Story = { args: { saving: true } };
+export const Saving: Story = {
+  args: { saving: true },
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await waitFor(() =>
+      expect(body.getByRole('textbox', { name: /License plate/ })).toBeDisabled(),
+    );
+    await expect(body.getByRole('spinbutton', { name: 'Fuel tank, L' })).toBeDisabled();
+  },
+};
 export const NotFound: Story = { name: 'Not found', args: { state: 'not-found' } };
 export const ErrorState: Story = { name: 'Error', args: { state: 'error' } };
 export const ServerFieldErrors: Story = { name: 'Server field errors', args: { errors: true } };

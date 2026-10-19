@@ -5,6 +5,13 @@
   (closeRequest)="closed.emit()"
 >
   @let record = trip();
+  @if (record.endedAt === null) {
+    <p-tag
+      drawerMeta
+      severity="info"
+      [value]="record.inProgress ? text().inProgress : text().noEnd"
+    />
+  }
   <section class="app-form-section">
     <h3>{{ text().summary }}</h3>
     <dl class="app-facts">
@@ -26,15 +33,19 @@
       </div>
       <div>
         <dt>{{ text().duration }}</dt>
-        <dd>{{ record.durationMin * 60 | holitaDuration }}</dd>
+        <dd>
+          {{ (record.durationMin === null ? null : record.durationMin * 60) | holitaDuration }}
+        </dd>
       </div>
       <div>
         <dt>{{ text().distance }}</dt>
-        <dd>{{ record.distanceKm | holitaNumber }} km</dd>
+        <dd>{{ record.distanceKm | holitaNumber }}{{ record.distanceKm === null ? '' : ' km' }}</dd>
       </div>
       <div>
         <dt>{{ text().maxSpeed }}</dt>
-        <dd>{{ record.maxSpeedKph | holitaNumber }} km/h</dd>
+        <dd>
+          {{ record.maxSpeedKph | holitaNumber }}{{ record.maxSpeedKph === null ? '' : ' km/h' }}
+        </dd>
       </div>
       <div>
         <dt>{{ text().fuel }}</dt>

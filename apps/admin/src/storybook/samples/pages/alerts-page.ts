@@ -1,4 +1,12 @@
-import { Component, computed, DestroyRef, inject, linkedSignal, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  linkedSignal,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { type AlertAction, AlertDrawer } from '../../../app/features/fleet/alerts/alert-drawer';
@@ -12,7 +20,6 @@ import { interpolate } from '../../../app/ui/i18n/messages';
 import type { ListActionRequest, ListRecord } from '../../../app/ui/list/list-actions';
 import type { ListQuery } from '../../../app/ui/list/list-query';
 import { UI_LANGUAGE } from '../../../app/ui/ui-language';
-import { fixtureBranches } from '../../session-fixtures';
 import {
   driverById,
   type SampleAlert,
@@ -28,15 +35,22 @@ import {
   sampleTableView,
 } from '../sample-list';
 import { alertRow } from '../rows';
-import { injectClearDrawer, injectQueryParams, saveDelayMs, scenarioOf } from '../scenario';
+import {
+  injectBranchName,
+  injectClearDrawer,
+  injectQueryParams,
+  saveDelayMs,
+  scenarioOf,
+} from '../scenario';
 
 const dataAsOf = new Date(sampleNow).toISOString();
 const weekAgo = new Date(sampleNow - 7 * 86_400_000).toISOString();
-/** Most severe first when sorted ascending, as a backend ranks the enum. */
-const severityRank = { CRITICAL: 0, WARNING: 1, INFO: 2 } as const;
+/** PostgreSQL follows the enum declaration: INFO < WARNING < CRITICAL. */
+const severityRank = { INFO: 0, WARNING: 1, CRITICAL: 2 } as const;
 const statusRank = { OPEN: 0, ACKNOWLEDGED: 1, RESOLVED: 2 } as const;
 
 const definition: SampleListDefinition<SampleAlert> = {
+  id: (alert) => alert.id,
   search: (alert) => [
     alert.kind,
     alert.detail,
@@ -53,6 +67,9 @@ const definition: SampleListDefinition<SampleAlert> = {
   sortColumns: {
     severity: (alert) => severityRank[alert.severity],
     status: (alert) => statusRank[alert.status],
+  },
+  secondarySorts: {
+    severity: [{ value: (alert) => alert.occurredAt, direction: 'desc' }],
   },
 };
 
@@ -75,10 +92,9 @@ const notResolved = {
   values: ['RESOLVED'],
 } as const;
 
-/** The alert in the drawer; `focusRemark` when the list's Resolve opened it. */
+/** The alert in the drawer. */
 interface OpenDrawer {
   readonly id: string;
-  readonly focusRemark: boolean;
 }
 
 /**
@@ -90,7 +106,7 @@ interface OpenDrawer {
   imports: [AlertsView, AlertDrawer],
   template: `
     <holita-alerts-view
-      [branchName]="branchName"
+      [branchName]="branchName()"
       [dataAsOf]="dataAsOf"
       [rows]="rows()"
       [total]="result().total"
@@ -110,7 +126,6 @@ interface OpenDrawer {
         [dataAsOf]="dataAsOf"
         [busy]="busy()"
         [saveError]="saveError()"
-        [focusRemark]="open.focusRemark"
         (action)="apply(open.alert.id, $event.action, $event.remark)"
         (openVehicle)="openVehicle($event)"
         (closed)="closeDrawer()"
@@ -122,6 +137,7 @@ export class AlertsPage {
   private readonly language = inject(UI_LANGUAGE);
   private readonly messages = inject(MessageService);
   private readonly router = inject(Router);
+  private readonly alertDrawer = viewChild(AlertDrawer);
   private readonly query = injectQueryParams();
   private readonly clearDrawer = injectClearDrawer();
   private readonly scenario = computed(() =>
@@ -130,7 +146,7 @@ export class AlertsPage {
   private readonly text = computed(() => alertsText(this.language()));
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
 
-  protected readonly branchName = fixtureBranches[0].name;
+  protected readonly branchName = injectBranchName();
   protected readonly dataAsOf = dataAsOf;
   protected readonly vehicles = sampleVehicles
     .filter((vehicle) => sampleAlerts.some((alert) => alert.vehicleId === vehicle.id))
@@ -146,12 +162,12 @@ export class AlertsPage {
   private readonly failNextSave = linkedSignal(() => this.scenario() === 'save-error');
   protected readonly drawer = linkedSignal<OpenDrawer | null>(() => {
     const id = this.query().get('drawer');
-    return id ? { id, focusRemark: false } : null;
+    return id ? { id } : null;
   });
   protected readonly openAlert = computed(() => {
     const drawer = this.drawer();
     const alert = drawer ? this.alerts().find((item) => item.id === drawer.id) : undefined;
-    return drawer && alert ? { alert: alertRow(alert), focusRemark: drawer.focusRemark } : null;
+    return drawer && alert ? { alert: alertRow(alert) } : null;
   });
   protected readonly busy = signal<AlertAction | null>(null);
   protected readonly saveError = signal<string | null>(null);
@@ -177,22 +193,25 @@ export class AlertsPage {
     });
   }
 
+  canLeave(): Promise<boolean> | boolean {
+    return this.alertDrawer()?.canLeave() ?? true;
+  }
+
   /** Row and bulk actions alike: the view already left out alerts an action does not apply to. */
   protected run({ action, ids }: ListActionRequest<AlertActionId>): void {
     const [id] = ids;
     switch (action) {
       case 'open':
-        if (id) this.drawer.set({ id, focusRemark: false });
+        if (id) this.drawer.set({ id });
         return;
       case 'acknowledge':
-        this.update(ids, 'acknowledge', '');
+        this.update(ids, 'acknowledge');
         this.selection.update((selection) =>
           selection.filter((record) => !ids.includes(record.id)),
         );
         return;
       case 'resolve':
-        // Resolving needs a remark: the alert opens with the focus on it.
-        if (id) this.drawer.set({ id, focusRemark: true });
+        if (id) this.drawer.set({ id });
         return;
       case 'vehicle': {
         const alert = id ? this.alerts().find((item) => item.id === id) : undefined;
@@ -230,12 +249,14 @@ export class AlertsPage {
   }
 
   /** Changes exactly these alerts: the list and the drawer offer only the steps that apply. */
-  private update(ids: readonly string[], action: AlertAction, remark: string): void {
+  private update(ids: readonly string[], action: AlertAction, remark?: string): void {
     const status =
       action === 'acknowledge' ? 'ACKNOWLEDGED' : action === 'resolve' ? 'RESOLVED' : 'OPEN';
     this.alerts.update((alerts) =>
       alerts.map((alert) =>
-        ids.includes(alert.id) ? { ...alert, status, remark: remark || alert.remark } : alert,
+        ids.includes(alert.id)
+          ? { ...alert, status, remark: remark === undefined ? alert.remark : remark }
+          : alert,
       ),
     );
     if (action === 'reopen') return;

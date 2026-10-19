@@ -22,6 +22,7 @@
     "vehicle": "Vehicle",
     "status": "Status",
     "activity": "Activity",
+    "updatedAt": "Updated",
     "driver": "Driver",
     "group": "Group",
     "odometer": "Odometer, km",
@@ -34,6 +35,7 @@
     "noDriver": "No driver",
     "noGroup": "No group",
     "noData": "No data",
+    "staleFuel": "Stale reading",
     "emptyTitle": "No vehicles yet",
     "emptyDescription": "Add the first vehicle of this branch.",
     "alerts": "{count} open alerts",
@@ -48,6 +50,7 @@
     "MOVING": "Moving",
     "IDLE": "Idling",
     "PARKED": "Parked",
+    "ASSET": "Asset",
     "NOT_CONNECTED": "Not reporting",
     "NO_DEVICE": "No tracker"
   },
@@ -55,13 +58,17 @@
     "TRACTOR": "Tractor unit",
     "RIGID_TRUCK": "Rigid truck",
     "VAN": "Van",
-    "CAR": "Car"
+    "CAR": "Car",
+    "TRAILER": "Trailer",
+    "OTHER": "Other"
   },
   "fuelTypes": {
     "DIESEL": "Diesel",
     "PETROL": "Petrol",
     "ELECTRIC": "Electric",
-    "LPG": "LPG"
+    "LPG": "LPG",
+    "CNG": "CNG",
+    "HYBRID": "Hybrid"
   },
   "actions": {
     "edit": "Edit",
@@ -70,7 +77,7 @@
     "delete": "Delete",
     "confirmDelete": {
       "title": "Delete vehicles?",
-      "detail": "Their trips and history stay in reports.",
+      "detail": "Vehicles with trackers or history must be deactivated instead.",
       "accept": "Delete"
     }
   },
@@ -83,18 +90,22 @@
     "odometer": "Odometer",
     "year": "Year",
     "hasDriver": "Has a driver",
+    "hasDevice": "Has a tracker",
+    "hasOpenAlerts": "Has open alerts",
     "createdAt": "Added"
   },
   "notices": {
     "saved": "{plate} was saved.",
     "created": "{plate} was created.",
     "deactivated": "Vehicles deactivated: {count}.",
-    "deleted": "Vehicles deleted: {count}."
+    "deleted": "Vehicles deleted: {count}.",
+    "historyConflict": "Vehicles with trackers or history cannot be deleted. Deactivate them instead."
   },
   "profile": {
     "eyebrow": "Vehicle",
     "back": "Vehicles",
     "edit": "Edit",
+    "recordOdometer": "Record odometer",
     "kpis": {
       "label": "Vehicle summary",
       "odometer": "Odometer",
@@ -138,6 +149,27 @@
     "errorText": "The vehicle could not be loaded. (demo-request-8)",
     "retry": "Try again"
   },
+  "odometer": {
+    "title": "Record odometer · {plate}",
+    "description": "Record a manual reading. It updates the odometer only; activity and the data clock stay unchanged.",
+    "previous": "Latest reading, km",
+    "recordedAt": "Reading time",
+    "source": "Source",
+    "sources": { "DEMO": "Device data", "MANUAL": "Manual" },
+    "noPrevious": "No previous odometer reading.",
+    "latestAllowed": "Latest allowed reading time",
+    "odometerKm": "Odometer, km",
+    "timeZone": "Europe/Sofia time (24-hour clock)",
+    "lowerReading": "The odometer cannot be lower than the latest reading.",
+    "earlierReading": "Use a time after the latest odometer reading of this vehicle.",
+    "futureReading": "The reading cannot be later than the latest vehicle data or now.",
+    "invalidTime": "Enter a valid reading time.",
+    "dateRange": "Use a reading time from 2000-01-01 through 2100-12-31 in UTC.",
+    "save": "Record reading",
+    "cancel": "Cancel",
+    "saved": "Odometer reading recorded.",
+    "saveError": "The reading could not be saved. Try again. (demo-request-9)"
+  },
   "drawer": {
     "createTitle": "New vehicle",
     "editTitle": "Edit {plate}",
@@ -164,6 +196,8 @@
     "create": "Create vehicle",
     "cancel": "Cancel",
     "saveError": "The vehicle could not be saved. Try again. (demo-request-2)",
-    "duplicatePlate": "This plate is already used in the branch."
+    "duplicateFleetNumber": "This fleet number is already used in the branch.",
+    "duplicateVin": "This VIN is already used in the branch.",
+    "inactiveDriver": "Unassign the driver before deactivating the vehicle."
   }
 }

@@ -51,6 +51,12 @@
   (clearFilters)="clearFilters()"
   (retry)="retry.emit()"
 >
+  <holita-list-sort-menu
+    panelActions
+    [fields]="sortFields()"
+    [sort]="state().sort"
+    (sortChange)="changeSort($event)"
+  />
   <p-table
     [value]="tableRows()"
     dataKey="id"
@@ -97,6 +103,12 @@
           >
             {{ row.startedAt | holitaDateTime }}
           </button>
+          @if (row.endedAt === null) {
+            <p-tag
+              severity="info"
+              [value]="row.inProgress ? text().table.inProgress : text().table.noEnd"
+            />
+          }
         </td>
         <td>
           <span class="app-cell-stack">
@@ -106,13 +118,17 @@
         </td>
         <td>
           <span class="app-cell-stack">
-            <span>{{ row.from }}</span>
-            <span>→ {{ row.to }}</span>
+            <span>{{ row.from ?? '—' }}</span>
+            <span>→ {{ row.to ?? '—' }}</span>
           </span>
         </td>
         <td class="app-num">{{ row.distanceKm | holitaNumber }}</td>
-        <td class="app-num">{{ row.durationMin * 60 | holitaDuration }}</td>
-        <td class="app-num app-col-secondary">{{ row.maxSpeedKph | holitaNumber }} km/h</td>
+        <td class="app-num">
+          {{ (row.durationMin === null ? null : row.durationMin * 60) | holitaDuration }}
+        </td>
+        <td class="app-num app-col-secondary">
+          {{ row.maxSpeedKph | holitaNumber }}{{ row.maxSpeedKph === null ? '' : ' km/h' }}
+        </td>
         <td class="app-num app-col-secondary">{{ row.fuelUsedL | holitaNumber }}</td>
         <td>
           @if (row.score !== null) {

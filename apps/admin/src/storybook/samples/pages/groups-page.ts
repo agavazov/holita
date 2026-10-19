@@ -1,4 +1,12 @@
-import { Component, computed, DestroyRef, inject, linkedSignal, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  linkedSignal,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { MessageService } from 'primeng/api';
 import {
   GroupDrawer,
@@ -45,6 +53,7 @@ import { injectClearDrawer, injectQueryParams, saveDelayMs, scenarioOf } from '.
   `,
 })
 export class GroupsPage {
+  private readonly drawer = viewChild(GroupDrawer);
   private readonly language = inject(UI_LANGUAGE);
   private readonly messages = inject(MessageService);
   private readonly query = injectQueryParams();
@@ -89,6 +98,10 @@ export class GroupsPage {
     inject(DestroyRef).onDestroy(() => {
       clearTimeout(this.saveTimer);
     });
+  }
+
+  canLeave(): boolean | Promise<boolean> {
+    return this.drawer()?.canLeave() ?? true;
   }
 
   protected openEditor(id: string | null): void {

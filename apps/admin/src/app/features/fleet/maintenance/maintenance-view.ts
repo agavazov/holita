@@ -27,12 +27,13 @@ import { TablePanel } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { toneSeverity } from '../../../ui/tones';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
+import { ListSortMenu, type ListSortField } from '../../../ui/list/list-sort-menu';
 import { maintenanceText } from './i18n/messages';
 import {
   serviceUrgencies,
   type ServiceTaskRow,
-  type ServiceUrgency,
   urgencyTones,
+  serviceStatusTones,
 } from './service-task';
 
 export interface MaintenanceKpis {
@@ -47,7 +48,7 @@ export interface MaintenanceOption {
   readonly name: string;
 }
 
-export type MaintenanceActionId = 'edit' | 'complete' | 'vehicle' | 'delete';
+export type MaintenanceActionId = 'view' | 'edit' | 'complete' | 'cancel' | 'vehicle' | 'delete';
 
 /**
  * The Maintenance list page: service tasks due by date and/or odometer with urgency, cost and
@@ -69,6 +70,7 @@ export type MaintenanceActionId = 'edit' | 'complete' | 'vehicle' | 'delete';
     PageHeader,
     RowActions,
     TablePanel,
+    ListSortMenu,
   ],
   templateUrl: './maintenance-view.html',
   styleUrl: './maintenance-view.scss',
@@ -129,23 +131,47 @@ export class MaintenanceView {
       },
     ];
   });
+  protected readonly sortFields = computed<readonly ListSortField[]>(() => {
+    const text = this.text();
+    return [
+      { field: 'urgency', label: text.table.urgency },
+      { field: 'dueOn', label: text.filters.dueOn },
+      { field: 'completedOn', label: text.table.completedOn },
+      { field: 'createdAt', label: text.table.createdAt },
+      { field: 'task', label: text.table.task },
+      { field: 'vehicle', label: text.table.vehicle },
+      { field: 'cost', label: text.table.cost },
+    ];
+  });
   /**
-   * The list's actions, once for the row menu and the bulk bar. Mark as done applies only to
-   * open tasks.
+   * Completion opens a per-record form; only deletion is a quick bulk action.
    */
   protected readonly actions = computed<readonly ListAction<MaintenanceActionId, ServiceTaskRow>[]>(
     () => {
       const text = this.text().actions;
       return [
-        { id: 'edit', label: text.edit },
+        { id: 'view', label: text.view, appliesTo: (row) => row.status !== 'PLANNED' },
+        { id: 'edit', label: text.edit, appliesTo: (row) => row.status === 'PLANNED' },
         {
           id: 'complete',
           label: text.complete,
+          appliesTo: (row) => row.status === 'PLANNED',
+        },
+        {
+          id: 'cancel',
+          label: text.cancel,
           bulk: true,
-          appliesTo: (row) => row.urgency !== 'DONE',
+          appliesTo: (row) => row.status === 'PLANNED',
         },
         { id: 'vehicle', label: text.vehicle },
-        { id: 'delete', label: text.delete, bulk: true, danger: true, confirm: text.confirmDelete },
+        {
+          id: 'delete',
+          label: text.delete,
+          bulk: true,
+          danger: true,
+          confirm: text.confirmDelete,
+          appliesTo: (row) => row.status !== 'DONE',
+        },
       ];
     },
   );
@@ -171,17 +197,19 @@ export class MaintenanceView {
   protected readonly sortField = computed(() => this.state().sort?.field ?? null);
   protected readonly sortOrder = computed(() => (this.state().sort?.direction === 'asc' ? 1 : -1));
 
-  protected urgencySeverity(urgency: ServiceUrgency) {
-    return toneSeverity(urgencyTones[urgency]);
+  protected urgencySeverity(task: ServiceTaskRow) {
+    return toneSeverity(
+      task.urgency ? urgencyTones[task.urgency] : serviceStatusTones[task.status],
+    );
   }
 
-  protected urgencyLabel(urgency: ServiceUrgency): string {
-    return this.text().urgencies[urgency];
+  protected urgencyLabel(task: ServiceTaskRow): string {
+    return task.urgency ? this.text().urgencies[task.urgency] : this.text().statuses[task.status];
   }
 
   /** "1,200 km left" or "300 km over" against the current odometer. */
   protected kmLeftLabel(task: ServiceTaskRow): string | null {
-    if (task.kmLeft === null || task.urgency === 'DONE') return null;
+    if (task.kmLeft === null || task.status !== 'PLANNED') return null;
     const km = formatNumber(Math.abs(task.kmLeft), this.language());
     return interpolate(task.kmLeft < 0 ? this.text().table.kmOver : this.text().table.kmLeft, {
       km,
@@ -206,6 +234,10 @@ export class MaintenanceView {
 
   protected changePage(page: { page: number; pageSize: number }): void {
     this.changeQuery(listQuery.page(this.state(), page));
+  }
+
+  protected changeSort(sort: NonNullable<ListQuery['sort']>): void {
+    this.changeQuery({ ...this.state(), sort, page: 1 });
   }
 
   protected clearFilters(): void {

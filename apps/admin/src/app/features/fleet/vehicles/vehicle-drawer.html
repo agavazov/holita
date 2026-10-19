@@ -91,12 +91,7 @@
             [ariaLabel]="text().fuelType"
           />
         </holita-form-field>
-        <holita-form-field
-          [label]="text().make"
-          controlId="vehicle-make"
-          [required]="true"
-          [error]="errorOf('make')"
-        >
+        <holita-form-field [label]="text().make" controlId="vehicle-make" [error]="errorOf('make')">
           <input
             pInputText
             id="vehicle-make"
@@ -109,7 +104,6 @@
         <holita-form-field
           [label]="text().model"
           controlId="vehicle-model"
-          [required]="true"
           [error]="errorOf('model')"
         >
           <input
@@ -174,6 +168,7 @@
           class="app-form-grid--wide"
           [label]="text().driver"
           controlId="vehicle-driverId"
+          [error]="errorOf('driverId')"
         >
           <p-select
             inputId="vehicle-driverId"
@@ -184,6 +179,13 @@
             [filter]="true"
             appendTo="body"
             [ariaLabel]="text().driver"
+            [invalid]="!!errorOf('driverId')"
+            [pt]="{
+              label: {
+                'aria-invalid': errorOf('driverId') ? 'true' : null,
+                'aria-describedby': describedBy('driverId'),
+              },
+            }"
           />
         </holita-form-field>
         <holita-form-field

@@ -24,6 +24,7 @@ import { RouteDrawer } from '../../../ui/drawer/route-drawer';
 import { FormField } from '../../../ui/form-field/form-field';
 import { FormatNumberPipe, FormatRelativePipe } from '../../../ui/format/format.pipes';
 import { focusFirstInvalid } from '../../../ui/forms/focus';
+import { lockWhileSaving } from '../../../ui/forms/saving';
 import { patternValidator, textValidator, validationMessage } from '../../../ui/forms/validators';
 import { interpolate } from '../../../ui/i18n/messages';
 import { toneSeverity } from '../../../ui/tones';
@@ -69,6 +70,7 @@ const required = (control: { value: unknown }) => (control.value ? null : { requ
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DeviceDrawer {
+  readonly demo = input(false);
   /** The device to edit; null registers a new one. */
   readonly device = input<DeviceRow | null>(null);
   readonly models = input<readonly string[]>([]);
@@ -95,7 +97,7 @@ export class DeviceDrawer {
     model: new FormControl<string | null>(null, required),
     simIccid: new FormControl('', {
       nonNullable: true,
-      validators: patternValidator(/^\d{19,20}$/),
+      validators: patternValidator(/^\d{18,22}$/),
     }),
     vehicleId: new FormControl<string | null>(null),
     notes: new FormControl('', { nonNullable: true, validators: textValidator(2000) }),
@@ -139,6 +141,14 @@ export class DeviceDrawer {
         });
       });
     });
+    lockWhileSaving(
+      this.form,
+      () => this.saving(),
+      () => {
+        if (!focusFirstInvalid(this.formElement().nativeElement, fieldOrder, 'device-'))
+          this.drawer().keepFocusInside();
+      },
+    );
   }
 
   protected statusSeverity(device: DeviceRow) {
@@ -163,6 +173,7 @@ export class DeviceDrawer {
   }
 
   protected submit(): void {
+    if (this.saving()) return;
     this.submitted = true;
     this.form.markAllAsTouched();
     const value = this.form.getRawValue();
@@ -185,7 +196,10 @@ export class DeviceDrawer {
   }
 
   protected async requestClose(): Promise<void> {
-    if (this.saving()) return;
-    if (await this.drawer().confirmLeave(this.form.dirty)) this.closed.emit();
+    if (await this.canLeave()) this.closed.emit();
+  }
+
+  canLeave(): boolean | Promise<boolean> {
+    return this.saving() ? false : this.drawer().confirmLeave(this.form.dirty);
   }
 }

@@ -6,13 +6,11 @@ import {
   inject,
   input,
   output,
-  signal,
   untracked,
   viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { AutoFocus } from 'primeng/autofocus';
 import { ButtonDirective } from 'primeng/button';
 import { Message } from 'primeng/message';
 import { Tag } from 'primeng/tag';
@@ -21,6 +19,7 @@ import { RouteDrawer } from '../../../ui/drawer/route-drawer';
 import { FormField } from '../../../ui/form-field/form-field';
 import { FormatDateTimePipe, FormatRelativePipe } from '../../../ui/format/format.pipes';
 import { textValidator, validationMessage } from '../../../ui/forms/validators';
+import { lockWhileSaving } from '../../../ui/forms/saving';
 import { toneSeverity } from '../../../ui/tones';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
 import {
@@ -36,14 +35,13 @@ export type AlertAction = 'acknowledge' | 'resolve' | 'reopen';
 
 /**
  * A view drawer with actions: the alert is read-only, and the footer offers the next steps of
- * its workflow (acknowledge, resolve with a remark, reopen). Presentation only: the host applies
+ * its workflow (acknowledge, resolve, reopen). Remarks are optional. The host applies
  * the action and passes back `busy` and `saveError`.
  */
 @Component({
   selector: 'holita-alert-drawer',
   imports: [
     ReactiveFormsModule,
-    AutoFocus,
     ButtonDirective,
     Message,
     Tag,
@@ -62,11 +60,6 @@ export class AlertDrawer {
   /** The action being applied, if any. */
   readonly busy = input<AlertAction | null>(null);
   readonly saveError = input<string | null>(null);
-  /**
-   * Opened to resolve (the list's Resolve): the remark it needs takes the focus once the drawer
-   * is shown, instead of the title.
-   */
-  readonly focusRemark = input(false);
   readonly action = output<{ readonly action: AlertAction; readonly remark: string }>();
   readonly openVehicle = output<string>();
   readonly closed = output();
@@ -78,11 +71,9 @@ export class AlertDrawer {
 
   protected readonly remark = new FormControl('', {
     nonNullable: true,
-    validators: textValidator(2000),
+    validators: textValidator(1000),
   });
   private readonly events = toSignal(this.remark.events);
-  /** Resolving needs a remark; the message shows after a resolve attempt without one. */
-  private readonly remarkMissing = signal(false);
 
   protected readonly subtitle = computed(() => `${this.alert().plate} · ${this.alert().detail}`);
   protected readonly dirty = computed(() => {
@@ -91,7 +82,6 @@ export class AlertDrawer {
   });
   protected readonly remarkError = computed(() => {
     this.events();
-    if (this.remarkMissing()) return this.text().remarkRequired;
     if (!this.remark.invalid || !this.remark.touched) return null;
     return validationMessage(this.remark.errors, this.language());
   });
@@ -104,10 +94,16 @@ export class AlertDrawer {
     effect(() => {
       const alert = this.alert();
       untracked(() => {
-        this.remarkMissing.set(false);
         this.remark.reset(alert.remark);
       });
     });
+    lockWhileSaving(
+      this.remark,
+      () => this.busy() !== null,
+      () => {
+        this.drawer().keepFocusInside();
+      },
+    );
   }
 
   protected severitySeverity(severity: AlertSeverityCode) {
@@ -130,19 +126,26 @@ export class AlertDrawer {
     if (this.busy()) return;
     this.remark.markAsTouched();
     const remark = this.remark.value.trim();
-    if (action === 'resolve' && !remark) {
-      this.remarkMissing.set(true);
+    if (this.remark.invalid) {
       document.getElementById('alert-remark')?.focus();
       return;
     }
-    this.remarkMissing.set(false);
-    if (this.remark.invalid) return;
     this.action.emit({ action, remark });
   }
 
   /** Close button, Escape and backdrop: an unsaved remark is confirmed first. */
   protected async requestClose(): Promise<void> {
-    if (this.busy()) return;
-    if (await this.drawer().confirmLeave(this.dirty())) this.closed.emit();
+    if (await this.canLeave()) this.closed.emit();
+  }
+
+  canLeave(): Promise<boolean> | boolean {
+    return this.busy() ? false : this.drawer().confirmLeave(this.dirty());
+  }
+
+  protected async requestVehicle(): Promise<void> {
+    if (await this.canLeave()) {
+      this.remark.markAsPristine();
+      this.openVehicle.emit(this.alert().vehicleId);
+    }
   }
 }

@@ -111,6 +111,17 @@ npm run test:storybook:admin
 
 The uncached `admin:test-storybook` target runs `vitest run --config .storybook/vitest.config.mts`
 in `apps/admin` after `graphql-generate`; no Storybook server or static build is needed.
+For native Vitest selectors, use the existing workspace script from the repository root (the
+inferred Nx package-script target passes extra flags to npm instead of Vitest):
+
+```bash
+npm run graphql:generate --workspace=@holita/admin
+npm run test-storybook --workspace=@holita/admin -- --testNamePattern="Case name" --testTimeout=30000
+```
+
+The timeout option allows a cold browser start on slower hosts; it does not change the play
+function's explicit waits. Omit `--testNamePattern` to run every story with that timeout.
+
 `@storybook/addon-vitest` turns every story of the [admin Storybook](development.md#admin-storybook)
 into a test in headless Chromium (`@vitest/browser-playwright`), one file at a time. Each test
 renders the story, runs its `play` function and then axe. `a11y.test: 'error'` in

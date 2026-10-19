@@ -3,14 +3,14 @@
   "title": "Maintenance",
   "description": "{branch} · service tasks by date or odometer, whichever comes first",
   "new": "New service task",
-  "search": "Search task, plate or notes",
+  "search": "Search task, plate, workshop or notes",
   "kpis": {
     "label": "Maintenance summary",
     "overdue": "Overdue",
     "dueSoon": "Due soon",
     "dueSoonFootnote": "within 14 days or 1,500 km",
     "planned": "Planned",
-    "cost": "Cost, last 90 days"
+    "cost": "Cost, last 30 days"
   },
   "table": {
     "heading": "Service tasks",
@@ -20,10 +20,14 @@
     "urgency": "Urgency",
     "cost": "Cost",
     "notes": "Notes",
+    "completedOn": "Completion date",
+    "createdAt": "Added",
     "actions": "Actions",
     "selectPage": "Select all on this page",
     "selectRow": "Select {task} on {plate}",
     "edit": "Edit {task} on {plate}",
+    "view": "View completed {task} on {plate}",
+    "viewCancelled": "View cancelled {task} on {plate}",
     "record": "{task} on {plate}",
     "dueOn": "by {date}",
     "dueKm": "at {km} km",
@@ -36,12 +40,25 @@
   "urgencies": {
     "OVERDUE": "Overdue",
     "DUE_SOON": "Due soon",
-    "OK": "Planned",
-    "DONE": "Done"
+    "UNKNOWN_ODOMETER": "Unknown odometer",
+    "UPCOMING": "Upcoming"
+  },
+  "statuses": { "PLANNED": "Planned", "DONE": "Done", "CANCELLED": "Cancelled" },
+  "serviceTypes": {
+    "GENERAL_SERVICE": "General service",
+    "OIL_CHANGE": "Oil change",
+    "ANNUAL_INSPECTION": "Annual inspection",
+    "TACHOGRAPH_CALIBRATION": "Tachograph calibration",
+    "BRAKES": "Brakes",
+    "TIRES": "Tyres",
+    "REPAIR": "Repair",
+    "OTHER": "Other"
   },
   "actions": {
+    "view": "View service record",
     "edit": "Edit",
-    "complete": "Mark as done",
+    "complete": "Complete service",
+    "cancel": "Cancel service",
     "vehicle": "Open vehicle profile",
     "delete": "Delete",
     "confirmDelete": {
@@ -59,26 +76,56 @@
   "notices": {
     "saved": "{task} was saved.",
     "created": "{task} was planned.",
-    "completed": "Service tasks marked as done: {count}.",
-    "deleted": "Service tasks deleted: {count}."
+    "completed": "{task} was completed.",
+    "completedAndPlanned": "{task} was completed and the next service was planned.",
+    "deleted": "Service tasks deleted: {count}.",
+    "cancelled": "Service tasks cancelled: {count}."
   },
   "drawer": {
     "createTitle": "New service task",
     "editTitle": "Edit {task}",
-    "task": "Task",
+    "viewTitle": "Cancelled {task}",
+    "serviceType": "Service type",
+    "task": "Task title",
     "vehicle": "Vehicle",
     "schedule": "Schedule",
     "scheduleHint": "Set a date, an odometer reading or both; the first one reached makes it due.",
     "dueOn": "Due date",
     "dueKm": "Due at odometer, km",
-    "costing": "Cost and notes",
-    "cost": "Cost, EUR",
+    "details": "Workshop and notes",
+    "workshop": "Workshop",
     "notes": "Notes",
-    "done": "Done",
     "save": "Save",
     "create": "Plan task",
     "cancel": "Cancel",
+    "close": "Close",
     "chooseVehicle": "Choose a vehicle",
     "saveError": "The service task could not be saved. Try again. (demo-request-10)"
+  },
+  "completion": {
+    "title": "Complete {task}",
+    "recordTitle": "Completed {task}",
+    "details": "Completed service",
+    "completedOn": "Completion date",
+    "completedOdometerKm": "Completion odometer, km",
+    "odometerHint": "The service odometer is optional and stays in service history. It does not update vehicle telemetry.",
+    "cost": "Actual cost, EUR",
+    "workshop": "Workshop",
+    "replacedParts": "Replaced parts",
+    "notes": "Service notes",
+    "next": "Next service (optional)",
+    "nextHint": "Set a next date, an odometer or both to plan the same service for this vehicle. Leave both empty to complete only this task.",
+    "nextDueOn": "Next due date",
+    "nextDueOdometerKm": "Next due odometer, km",
+    "nextTitle": "Next task title",
+    "nextTitleHint": "Leave blank to reuse the current task title.",
+    "nextDateError": "The next due date must be after the completion date.",
+    "nextOdometerError": "The next due odometer must be above the completion odometer.",
+    "earlierOdometerError": "The odometer cannot be below an earlier completed service of this vehicle.",
+    "complete": "Complete service",
+    "completeAndPlan": "Complete and plan next",
+    "cancel": "Cancel",
+    "close": "Close",
+    "saveError": "The service could not be completed. Your draft is kept; try again. (demo-request-14)"
   }
 }

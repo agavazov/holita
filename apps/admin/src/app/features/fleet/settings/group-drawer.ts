@@ -21,6 +21,7 @@ import { Textarea } from 'primeng/textarea';
 import { RouteDrawer } from '../../../ui/drawer/route-drawer';
 import { FormField } from '../../../ui/form-field/form-field';
 import { focusFirstInvalid } from '../../../ui/forms/focus';
+import { lockWhileSaving } from '../../../ui/forms/saving';
 import { textValidator, validationMessage } from '../../../ui/forms/validators';
 import { interpolate } from '../../../ui/i18n/messages';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
@@ -36,6 +37,7 @@ export interface GroupForm {
 }
 
 export type GroupField = keyof GroupForm;
+const fieldOrder: readonly GroupField[] = ['name', 'description'];
 
 /** Create or edit a vehicle group in the right-hand drawer (a small form, `md` size). */
 @Component({
@@ -105,6 +107,14 @@ export class GroupDrawer {
         });
       });
     });
+    lockWhileSaving(
+      this.form,
+      () => this.saving(),
+      () => {
+        if (!focusFirstInvalid(this.formElement().nativeElement, fieldOrder, 'group-'))
+          this.drawer().keepFocusInside();
+      },
+    );
   }
 
   protected errorOf(name: GroupField): string | null {
@@ -117,12 +127,13 @@ export class GroupDrawer {
   }
 
   protected submit(): void {
+    if (this.saving()) return;
     this.submitted = true;
     this.form.markAllAsTouched();
     if (this.form.invalid) {
       afterNextRender(
         () => {
-          focusFirstInvalid(this.formElement().nativeElement, ['name', 'description'], 'group-');
+          focusFirstInvalid(this.formElement().nativeElement, fieldOrder, 'group-');
         },
         { injector: this.injector },
       );
@@ -133,7 +144,10 @@ export class GroupDrawer {
   }
 
   protected async requestClose(): Promise<void> {
-    if (this.saving()) return;
-    if (await this.drawer().confirmLeave(this.form.dirty)) this.closed.emit();
+    if (await this.canLeave()) this.closed.emit();
+  }
+
+  canLeave(): boolean | Promise<boolean> {
+    return this.saving() ? false : this.drawer().confirmLeave(this.form.dirty);
   }
 }

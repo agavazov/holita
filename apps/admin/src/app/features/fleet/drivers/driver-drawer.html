@@ -20,6 +20,10 @@
       <h3>{{ text().contact }}</h3>
       <dl class="app-facts">
         <div>
+          <dt>{{ text().identificationKey }}</dt>
+          <dd>{{ driver.identificationKey || '—' }}</dd>
+        </div>
+        <div>
           <dt>{{ text().phone }}</dt>
           <dd>{{ driver.phone || '—' }}</dd>
         </div>
@@ -37,6 +41,14 @@
       <h3>{{ text().documents }}</h3>
       <dl class="app-facts">
         <div>
+          <dt>{{ text().licenseNumber }}</dt>
+          <dd>{{ driver.licenseNumber || '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().licenseCategories }}</dt>
+          <dd>{{ driver.licenseCategories.join(', ') || '—' }}</dd>
+        </div>
+        <div>
           <dt>{{ text().license }}</dt>
           <dd class="app-inline">
             {{ driver.licenseExpiresOn | holitaDate }}
@@ -44,6 +56,10 @@
               <p-tag [severity]="flag.severity" [value]="flag.label" />
             }
           </dd>
+        </div>
+        <div>
+          <dt>{{ text().tachographCardNumber }}</dt>
+          <dd>{{ driver.tachographCardNumber || '—' }}</dd>
         </div>
         <div>
           <dt>{{ text().tachoCard }}</dt>
@@ -93,6 +109,14 @@
           <dt class="app-visually-hidden">{{ text().notes }}</dt>
           <dd>{{ driver.notes || text().noNotes }}</dd>
         </div>
+        <div>
+          <dt>{{ text().createdAt }}</dt>
+          <dd>{{ driver.createdAt | holitaDateTime }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().updatedAt }}</dt>
+          <dd>{{ driver.updatedAt | holitaDateTime }}</dd>
+        </div>
       </dl>
     </section>
   } @else {
@@ -104,26 +128,40 @@
         <h3>{{ text().contact }}</h3>
         <div class="app-form-grid">
           <holita-form-field
-            class="app-form-grid--wide"
-            [label]="text().name"
-            controlId="driver-name"
+            [label]="text().firstName"
+            controlId="driver-firstName"
             [required]="true"
-            [error]="errorOf('name')"
+            [error]="errorOf('firstName')"
           >
             <input
               pInputText
-              id="driver-name"
-              formControlName="name"
+              id="driver-firstName"
+              formControlName="firstName"
               autocomplete="off"
-              [invalid]="!!errorOf('name')"
-              [attr.aria-invalid]="errorOf('name') ? 'true' : null"
-              [attr.aria-describedby]="describedBy('name')"
+              [invalid]="!!errorOf('firstName')"
+              [attr.aria-invalid]="errorOf('firstName') ? 'true' : null"
+              [attr.aria-describedby]="describedBy('firstName')"
+            />
+          </holita-form-field>
+          <holita-form-field
+            [label]="text().lastName"
+            controlId="driver-lastName"
+            [required]="true"
+            [error]="errorOf('lastName')"
+          >
+            <input
+              pInputText
+              id="driver-lastName"
+              formControlName="lastName"
+              autocomplete="off"
+              [invalid]="!!errorOf('lastName')"
+              [attr.aria-invalid]="errorOf('lastName') ? 'true' : null"
+              [attr.aria-describedby]="describedBy('lastName')"
             />
           </holita-form-field>
           <holita-form-field
             [label]="text().employeeNo"
             controlId="driver-employeeNo"
-            [required]="true"
             [error]="errorOf('employeeNo')"
           >
             <input
@@ -136,7 +174,25 @@
               [attr.aria-describedby]="describedBy('employeeNo')"
             />
           </holita-form-field>
-          <holita-form-field [label]="text().status" controlId="driver-status">
+          <holita-form-field
+            [label]="text().identificationKey"
+            controlId="driver-identificationKey"
+            [error]="errorOf('identificationKey')"
+          >
+            <input
+              pInputText
+              id="driver-identificationKey"
+              formControlName="identificationKey"
+              [invalid]="!!errorOf('identificationKey')"
+              [attr.aria-invalid]="errorOf('identificationKey') ? 'true' : null"
+              [attr.aria-describedby]="describedBy('identificationKey')"
+            />
+          </holita-form-field>
+          <holita-form-field
+            [label]="text().status"
+            controlId="driver-status"
+            [error]="errorOf('status')"
+          >
             <p-select
               inputId="driver-status"
               formControlName="status"
@@ -145,6 +201,13 @@
               optionValue="value"
               appendTo="body"
               [ariaLabel]="text().status"
+              [invalid]="!!errorOf('status')"
+              [pt]="{
+                label: {
+                  'aria-invalid': errorOf('status') ? 'true' : undefined,
+                  'aria-describedby': describedBy('status'),
+                },
+              }"
             />
           </holita-form-field>
           <holita-form-field
@@ -184,9 +247,38 @@
         <h3>{{ text().documents }}</h3>
         <div class="app-form-grid">
           <holita-form-field
+            [label]="text().licenseNumber"
+            controlId="driver-licenseNumber"
+            [error]="errorOf('licenseNumber')"
+          >
+            <input
+              pInputText
+              id="driver-licenseNumber"
+              formControlName="licenseNumber"
+              [invalid]="!!errorOf('licenseNumber')"
+              [attr.aria-invalid]="errorOf('licenseNumber') ? 'true' : null"
+              [attr.aria-describedby]="describedBy('licenseNumber')"
+            />
+          </holita-form-field>
+          <holita-form-field
+            [label]="text().licenseCategories"
+            controlId="driver-licenseCategories"
+          >
+            <p-select
+              inputId="driver-licenseCategories"
+              formControlName="licenseCategories"
+              [multiple]="true"
+              [options]="categoryOptions"
+              optionLabel="label"
+              optionValue="value"
+              [pt]="categoryPt"
+              [ariaLabel]="text().licenseCategories"
+              appendTo="body"
+            />
+          </holita-form-field>
+          <holita-form-field
             [label]="text().license"
             controlId="driver-licenseExpiresOn"
-            [required]="true"
             [error]="errorOf('licenseExpiresOn')"
           >
             <p-datepicker
@@ -200,9 +292,22 @@
             />
           </holita-form-field>
           <holita-form-field
+            [label]="text().tachographCardNumber"
+            controlId="driver-tachographCardNumber"
+            [error]="errorOf('tachographCardNumber')"
+          >
+            <input
+              pInputText
+              id="driver-tachographCardNumber"
+              formControlName="tachographCardNumber"
+              [invalid]="!!errorOf('tachographCardNumber')"
+              [attr.aria-invalid]="errorOf('tachographCardNumber') ? 'true' : null"
+              [attr.aria-describedby]="describedBy('tachographCardNumber')"
+            />
+          </holita-form-field>
+          <holita-form-field
             [label]="text().tachoCard"
             controlId="driver-tachoCardExpiresOn"
-            [required]="true"
             [error]="errorOf('tachoCardExpiresOn')"
           >
             <p-datepicker
@@ -257,6 +362,15 @@
     } @else {
       <button pButton type="button" severity="secondary" [outlined]="true" (click)="requestClose()">
         {{ text().close }}
+      </button>
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [outlined]="true"
+        (click)="openScorecard.emit()"
+      >
+        {{ text().scorecard }}
       </button>
       <button pButton type="button" (click)="edit()">{{ text().edit }}</button>
     }

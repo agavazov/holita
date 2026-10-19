@@ -4,19 +4,12 @@ import { TripDrawer } from '../../../app/features/fleet/trips/trip-drawer';
 import {
   type TripActionId,
   type TripKpis,
+  type TripRow,
   TripsView,
 } from '../../../app/features/fleet/trips/trips-view';
 import type { ListActionRequest } from '../../../app/ui/list/list-actions';
 import type { ListQuery } from '../../../app/ui/list/list-query';
-import { fixtureBranches } from '../../session-fixtures';
-import {
-  driverById,
-  sampleDrivers,
-  type SampleTrip,
-  sampleTrips,
-  sampleVehicles,
-  vehicleById,
-} from '../fleet-samples';
+import { sampleDrivers, sampleTrips, sampleNow, sampleVehicles } from '../fleet-samples';
 import {
   initialQuery,
   runSampleList,
@@ -24,32 +17,32 @@ import {
   sampleTableView,
 } from '../sample-list';
 import { tripRow } from '../rows';
-import { injectClearDrawer, injectQueryParams, scenarioOf } from '../scenario';
+import { injectBranchName, injectClearDrawer, injectQueryParams, scenarioOf } from '../scenario';
 
-const definition: SampleListDefinition<SampleTrip> = {
-  search: (trip) => [
-    vehicleById(trip.vehicleId)?.plate ?? null,
-    driverById(trip.driverId)?.name ?? null,
-    trip.from,
-    trip.to,
-  ],
+const definition: SampleListDefinition<TripRow> = {
+  id: (trip) => trip.id,
+  search: (trip) => [trip.plate, trip.driverName, trip.from, trip.to],
   columns: {
     startedAt: (trip) => trip.startedAt,
     vehicle: (trip) => trip.vehicleId,
-    driver: (trip) => trip.driverId,
+    driver: (trip) => trip.driverId ?? null,
     distance: (trip) => trip.distanceKm,
     duration: (trip) => trip.durationMin,
     score: (trip) => trip.score,
     hasEvents: (trip) => trip.events.length > 0,
   },
+  secondarySorts: {
+    distance: [{ value: (trip) => trip.startedAt, direction: 'desc' }],
+    score: [{ value: (trip) => trip.startedAt, direction: 'desc' }],
+  },
 };
 
-function kpisOf(trips: readonly SampleTrip[]): TripKpis {
+function kpisOf(trips: readonly TripRow[]): TripKpis {
   const scores = trips.flatMap((trip) => (trip.score === null ? [] : [trip.score]));
   return {
     trips: trips.length,
-    distanceKm: trips.reduce((sum, trip) => sum + trip.distanceKm, 0),
-    drivingMin: trips.reduce((sum, trip) => sum + trip.durationMin, 0),
+    distanceKm: trips.reduce((sum, trip) => sum + (trip.distanceKm ?? 0), 0),
+    drivingMin: trips.reduce((sum, trip) => sum + (trip.durationMin ?? 0), 0),
     averageScore: scores.length
       ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)
       : null,
@@ -63,7 +56,7 @@ function kpisOf(trips: readonly SampleTrip[]): TripKpis {
   imports: [TripsView, TripDrawer],
   template: `
     <holita-trips-view
-      [branchName]="branchName"
+      [branchName]="branchName()"
       [rows]="rows()"
       [total]="result().total"
       [view]="view()"
@@ -89,10 +82,10 @@ export class TripsPage {
   private readonly query = injectQueryParams();
   private readonly clearDrawer = injectClearDrawer();
   private readonly scenario = computed(() =>
-    scenarioOf(this.query(), ['loading', 'empty', 'error']),
+    scenarioOf(this.query(), ['loading', 'empty', 'error', 'in-progress', 'missing-end']),
   );
 
-  protected readonly branchName = fixtureBranches[0].name;
+  protected readonly branchName = injectBranchName();
   protected readonly vehicles = sampleVehicles
     .filter((vehicle) => sampleTrips.some((trip) => trip.vehicleId === vehicle.id))
     .map((vehicle) => ({ id: vehicle.id, name: vehicle.plate }));
@@ -100,7 +93,31 @@ export class TripsPage {
     id: driver.id,
     name: driver.name,
   }));
-  private readonly trips = computed(() => (this.scenario() === 'empty' ? [] : sampleTrips));
+  private readonly trips = computed<readonly TripRow[]>(() => {
+    if (this.scenario() === 'empty') return [];
+    const rows = sampleTrips.map(tripRow);
+    if (this.scenario() !== 'in-progress' && this.scenario() !== 'missing-end') return rows;
+    return rows.map((row) =>
+      row.id !== 't001'
+        ? row
+        : {
+            ...row,
+            startedAt: new Date(
+              sampleNow - (this.scenario() === 'in-progress' ? 1 : 48) * 3_600_000,
+            ).toISOString(),
+            endedAt: null,
+            from: null,
+            to: null,
+            distanceKm: null,
+            durationMin: null,
+            maxSpeedKph: null,
+            fuelUsedL: null,
+            score: null,
+            events: [],
+            inProgress: this.scenario() === 'in-progress',
+          },
+    );
+  });
   protected readonly state = signal<ListQuery>(
     initialQuery({ field: 'startedAt', direction: 'desc' }),
   );
@@ -108,11 +125,11 @@ export class TripsPage {
   protected readonly openId = linkedSignal(() => this.query().get('drawer'));
   protected readonly openTrip = computed(() => {
     const trip = this.trips().find((item) => item.id === this.openId());
-    return trip ? tripRow(trip) : null;
+    return trip ?? null;
   });
 
   protected readonly result = computed(() => runSampleList(this.trips(), definition, this.state()));
-  protected readonly rows = computed(() => this.result().items.map(tripRow));
+  protected readonly rows = computed(() => this.result().items);
   protected readonly listState = computed(() => ({ ...this.state(), page: this.result().page }));
   protected readonly kpis = computed(() =>
     this.scenario() === 'loading' || this.failed() ? null : kpisOf(this.trips()),

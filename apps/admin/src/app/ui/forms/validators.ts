@@ -49,10 +49,14 @@ function numberValue(value: unknown): number {
   return Number.NaN;
 }
 
-/** Whole number in [min, max]; empty values pass. */
-export function integerValidator(min: number, max: number): ValidatorFn {
+/** Whole number in [min, max]; empty values pass unless required. */
+export function integerValidator(
+  min: number,
+  max: number,
+  options: { readonly required?: boolean } = {},
+): ValidatorFn {
   return (control) => {
-    if (isBlank(control.value)) return null;
+    if (isBlank(control.value)) return options.required ? { required: true } : null;
     const value = numberValue(control.value);
     if (!Number.isInteger(value)) return { integer: true };
     if (value < min) return { min: { min } };
@@ -62,14 +66,18 @@ export function integerValidator(min: number, max: number): ValidatorFn {
 
 /** Decimal in [min, max] on a `step` grid; empty values pass. */
 export function decimalValidator(min: number, max: number, step: number): ValidatorFn {
+  const [coefficient = '', exponent = '0'] = step.toString().split('e');
+  const scale = 10 ** Math.max(0, (coefficient.split('.')[1]?.length ?? 0) - Number(exponent));
+  const stepUnits = Math.round(step * scale);
   return (control) => {
     if (isBlank(control.value)) return null;
     const value = numberValue(control.value);
     if (!Number.isFinite(value)) return { decimal: true };
     if (value < min) return { min: { min } };
     if (value > max) return { max: { max } };
-    const steps = value / step;
-    return Math.abs(steps - Math.round(steps)) < 1e-9 ? null : { step: { step } };
+    // Rebuild the nearest decimal value without multiplying by an inexact fractional step.
+    const nearest = (Math.round(value / step) * stepUnits) / scale;
+    return value === nearest ? null : { step: { step } };
   };
 }
 

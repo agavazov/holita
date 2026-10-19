@@ -21,15 +21,13 @@ import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 import { Textarea } from 'primeng/textarea';
-import { ToggleSwitch } from 'primeng/toggleswitch';
 import { RouteDrawer } from '../../../ui/drawer/route-drawer';
 import { FormField } from '../../../ui/form-field/form-field';
 import { fromDateOnly, toDateOnly } from '../../../ui/format/zoned-time';
 import { focusFirstInvalid } from '../../../ui/forms/focus';
-import { innerInputPt } from '../../../ui/forms/inner-input-pt';
+import { datePickerInputPt, innerInputPt } from '../../../ui/forms/inner-input-pt';
 import {
   dateOnlyValidator,
-  decimalValidator,
   integerValidator,
   requireOneOf,
   textValidator,
@@ -37,34 +35,38 @@ import {
 } from '../../../ui/forms/validators';
 import { interpolate } from '../../../ui/i18n/messages';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
+import { lockWhileSaving } from '../../../ui/forms/saving';
+import { FormatDateOnlyPipe, FormatNumberPipe } from '../../../ui/format/format.pipes';
 import { maintenanceText } from './i18n/messages';
 import type { MaintenanceOption } from './maintenance-view';
+import { serviceTypes, type ServiceType } from './service-task';
 
 /** The editable service task fields, as the create and update mutations take them. */
 export interface ServiceTaskForm {
-  readonly kind: string;
+  readonly serviceType: ServiceType;
+  readonly title: string | null;
   readonly vehicleId: string;
   readonly dueOn: string | null;
   readonly dueKm: number | null;
-  readonly costCents: number | null;
+  readonly workshop: string;
   readonly notes: string;
-  readonly done: boolean;
 }
 
 export type ServiceTaskField = keyof ServiceTaskForm;
 
 const fieldOrder: readonly ServiceTaskField[] = [
-  'kind',
+  'serviceType',
+  'title',
   'vehicleId',
   'dueOn',
   'dueKm',
-  'costCents',
+  'workshop',
   'notes',
 ];
 
 /**
  * Create or edit a service task in the right-hand drawer: a date, an odometer reading or both
- * (at least one), cost and notes. Presentation only: the host saves and passes back `saving`
+ * (at least one), workshop and notes. Presentation only: the host saves and passes back `saving`
  * and `saveError`.
  */
 @Component({
@@ -78,9 +80,10 @@ const fieldOrder: readonly ServiceTaskField[] = [
     Message,
     Select,
     Textarea,
-    ToggleSwitch,
     RouteDrawer,
     FormField,
+    FormatDateOnlyPipe,
+    FormatNumberPipe,
   ],
   templateUrl: './service-task-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -88,6 +91,7 @@ const fieldOrder: readonly ServiceTaskField[] = [
 export class ServiceTaskDrawer {
   /** The task to edit; null plans a new one. */
   readonly task = input<ServiceTaskForm | null>(null);
+  readonly readOnly = input(false);
   readonly vehicles = input<readonly MaintenanceOption[]>([]);
   readonly saving = input(false);
   readonly saveError = input<string | null>(null);
@@ -97,25 +101,32 @@ export class ServiceTaskDrawer {
   private readonly language = inject(UI_LANGUAGE);
   private readonly injector = inject(Injector);
   private readonly drawer = viewChild.required(RouteDrawer);
-  private readonly formElement = viewChild.required<ElementRef<HTMLFormElement>>('formElement');
+  private readonly formElement = viewChild<ElementRef<HTMLFormElement>>('formElement');
+  protected readonly catalog = computed(() => maintenanceText(this.language()));
   protected readonly text = computed(() => maintenanceText(this.language()).drawer);
   /** PrimeNG's select takes a mutable array. */
   protected readonly vehicleOptions = computed(() => [...this.vehicles()]);
+  protected readonly serviceOptions = computed(() =>
+    serviceTypes.map((value) => ({ value, label: this.catalog().serviceTypes[value] })),
+  );
+  protected readonly vehicleName = computed(
+    () => this.vehicles().find((vehicle) => vehicle.id === this.task()?.vehicleId)?.name ?? '—',
+  );
 
   protected readonly form = new FormGroup(
     {
-      kind: new FormControl('', {
+      serviceType: new FormControl<ServiceType>('GENERAL_SERVICE', { nonNullable: true }),
+      title: new FormControl('', {
         nonNullable: true,
-        validators: textValidator(80, { required: true }),
+        validators: textValidator(120),
       }),
       vehicleId: new FormControl<string | null>(null, (control) =>
         control.value ? null : { required: true },
       ),
-      dueOn: new FormControl<Date | null>(null, dateOnlyValidator(null, null)),
-      dueKm: new FormControl<number | null>(null, integerValidator(0, 3_000_000)),
-      cost: new FormControl<number | null>(null, decimalValidator(0, 1_000_000, 0.01)),
+      dueOn: new FormControl<Date | null>(null, dateOnlyValidator('2000-01-01', '2100-12-31')),
+      dueKm: new FormControl<number | null>(null, integerValidator(0, 9_999_999)),
+      workshop: new FormControl('', { nonNullable: true, validators: textValidator(128) }),
       notes: new FormControl('', { nonNullable: true, validators: textValidator(2000) }),
-      done: new FormControl(false, { nonNullable: true }),
     },
     { validators: requireOneOf('dueOn', 'dueKm') },
   );
@@ -125,20 +136,23 @@ export class ServiceTaskDrawer {
 
   protected readonly title = computed(() => {
     const task = this.task();
-    return task ? interpolate(this.text().editTitle, { task: task.kind }) : this.text().createTitle;
+    return task
+      ? interpolate(this.readOnly() ? this.text().viewTitle : this.text().editTitle, {
+          task: task.title ?? this.catalog().serviceTypes[task.serviceType],
+        })
+      : this.text().createTitle;
   });
   protected readonly dirty = computed(() => {
     this.events();
-    return this.form.dirty;
+    return !this.readOnly() && this.form.dirty;
   });
   protected readonly notesLength = computed(() => {
     this.events();
     return Array.from(this.form.controls.notes.value).length;
   });
   protected readonly inputPt = computed(() => ({
-    dueOn: innerInputPt('task-dueOn', !!this.errorOf('dueOn')),
+    dueOn: datePickerInputPt('task-dueOn', !!this.errorOf('dueOn')),
     dueKm: innerInputPt('task-dueKm', !!this.errorOf('dueKm')),
-    costCents: innerInputPt('task-costCents', !!this.errorOf('costCents')),
   }));
 
   constructor() {
@@ -147,23 +161,29 @@ export class ServiceTaskDrawer {
       untracked(() => {
         this.submitted = false;
         this.form.reset({
-          kind: task?.kind ?? '',
+          serviceType: task?.serviceType ?? 'GENERAL_SERVICE',
+          title: task?.title ?? '',
           vehicleId: task?.vehicleId ?? null,
           dueOn: fromDateOnly(task?.dueOn),
           dueKm: task?.dueKm ?? null,
-          cost:
-            task?.costCents === null || task?.costCents === undefined ? null : task.costCents / 100,
+          workshop: task?.workshop ?? '',
           notes: task?.notes ?? '',
-          done: task?.done ?? false,
         });
       });
     });
+    lockWhileSaving(
+      this.form,
+      () => this.saving(),
+      () => {
+        this.drawer().keepFocusInside();
+      },
+    );
   }
 
   /** The message under a field once the user touched it or tried to save. */
   protected errorOf(name: ServiceTaskField): string | null {
     this.events();
-    const control = name === 'costCents' ? this.form.controls.cost : this.form.get(name);
+    const control = this.form.get(name);
     if (!control?.invalid || (!control.touched && !this.submitted)) return null;
     return validationMessage(control.errors, this.language());
   }
@@ -173,32 +193,38 @@ export class ServiceTaskDrawer {
   }
 
   protected submit(): void {
+    if (this.saving() || this.readOnly()) return;
     this.submitted = true;
     this.form.markAllAsTouched();
     const value = this.form.getRawValue();
     if (this.form.invalid || !value.vehicleId) {
       afterNextRender(
         () => {
-          focusFirstInvalid(this.formElement().nativeElement, fieldOrder, 'task-');
+          const form = this.formElement()?.nativeElement;
+          if (form) focusFirstInvalid(form, fieldOrder, 'task-');
         },
         { injector: this.injector },
       );
       return;
     }
     this.save.emit({
-      kind: value.kind.trim(),
-      vehicleId: value.vehicleId,
+      serviceType: value.serviceType,
+      title: value.title.trim() || null,
+      vehicleId: this.task()?.vehicleId ?? value.vehicleId,
       dueOn: value.dueOn ? toDateOnly(value.dueOn) : null,
       dueKm: value.dueKm,
-      costCents: value.cost === null ? null : Math.round(value.cost * 100),
+      workshop: value.workshop.trim(),
       notes: value.notes.trim(),
-      done: value.done,
     });
   }
 
   /** Close button, Escape, backdrop and Cancel: unsaved changes are confirmed first. */
   protected async requestClose(): Promise<void> {
     if (this.saving()) return;
-    if (await this.drawer().confirmLeave(this.form.dirty)) this.closed.emit();
+    if (await this.drawer().confirmLeave(this.dirty())) this.closed.emit();
+  }
+
+  canLeave(): boolean | Promise<boolean> {
+    return this.saving() ? false : this.drawer().confirmLeave(this.dirty());
   }
 }

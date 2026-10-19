@@ -2,11 +2,13 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  type ElementRef,
   inject,
   input,
   output,
   signal,
   viewChild,
+  viewChildren,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
@@ -54,6 +56,7 @@ let nextCondition = 0;
  * conditions (column → condition → value). Conditions show as chips that open the same editor;
  * all of them apply together. The host passes only the columns and conditions its backend
  * supports and keeps search and conditions in its URL state.
+ * Opening focuses Column; closing restores the opener unless focus moved outside the editor.
  */
 @Component({
   selector: 'holita-filter-builder',
@@ -88,9 +91,20 @@ export class FilterBuilder {
   protected readonly id = `filter-builder-${String(nextId++)}`;
   protected readonly maxLength = maxSearchLength;
   protected readonly selectMultiplePt = selectMultiplePt;
+  protected readonly calendarPt = {
+    day: { 'aria-selected': null },
+    panel: {
+      onkeydown: (event: KeyboardEvent) => {
+        this.calendarEscape(event);
+      },
+    },
+  };
   protected readonly open = signal(false);
   protected readonly editingId = signal<string | null>(null);
   private readonly popover = viewChild.required(Popover);
+  private readonly formElement = viewChild.required<ElementRef<HTMLFormElement>>('formElement');
+  private readonly addButton = viewChild<ElementRef<HTMLButtonElement>>('addButton');
+  private readonly chipButtons = viewChildren<ElementRef<HTMLButtonElement>>('chipButton');
   private readonly language = inject(UI_LANGUAGE);
   protected readonly text = computed(() => uiMessages[this.language()].filters);
   protected readonly common = computed(() => uiMessages[this.language()]);
@@ -109,6 +123,8 @@ export class FilterBuilder {
     initialValue: this.form.getRawValue(),
   });
   private loading = false;
+  private opener: HTMLElement | null = null;
+  private returnFocus = false;
 
   protected readonly fieldOptions = computed(() => [...this.fields()]);
   protected readonly field = computed(
@@ -199,7 +215,7 @@ export class FilterBuilder {
   protected openNew(event: Event): void {
     this.editingId.set(null);
     this.load(this.fields()[0]?.key ?? '', null);
-    this.popover().show(event);
+    this.show(event);
   }
 
   protected edit(id: string, event: Event): void {
@@ -207,7 +223,7 @@ export class FilterBuilder {
     if (!condition) return;
     this.editingId.set(id);
     this.load(condition.field, condition);
-    this.popover().show(event);
+    this.show(event);
   }
 
   protected apply(): void {
@@ -220,19 +236,66 @@ export class FilterBuilder {
         ? this.conditions().map((candidate) => (candidate.id === editing ? condition : candidate))
         : [...this.conditions(), condition],
     );
-    this.popover().hide();
+    this.close();
   }
 
   protected cancel(): void {
-    this.popover().hide();
+    this.close();
+  }
+
+  protected calendarEscape(event: Event): void {
+    if (event instanceof KeyboardEvent && event.key === 'Escape' && event.defaultPrevented)
+      event.stopPropagation();
   }
 
   protected remove(id: string): void {
+    const index = this.chips().findIndex((chip) => chip.id === id);
+    const buttons = this.chipButtons();
+    const target = buttons[index + 1] ?? buttons[index - 1] ?? this.addButton();
+    target?.nativeElement.focus();
     this.conditionsChange.emit(this.conditions().filter((condition) => condition.id !== id));
   }
 
   protected clearAll(): void {
+    this.addButton()?.nativeElement.focus();
     this.conditionsChange.emit([]);
+  }
+
+  protected shown(): void {
+    this.open.set(true);
+    this.focusFirstControl();
+  }
+
+  protected closed(): void {
+    this.open.set(false);
+    if (
+      (this.returnFocus || this.formElement().nativeElement.contains(document.activeElement)) &&
+      this.opener?.isConnected
+    ) {
+      this.opener.focus();
+    }
+    this.opener = null;
+    this.returnFocus = false;
+  }
+
+  private show(event: Event): void {
+    this.opener = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+    this.returnFocus = false;
+    const wasOpen = this.open();
+    this.popover().show(event);
+    if (wasOpen) {
+      this.popover().align();
+      this.focusFirstControl();
+    }
+  }
+
+  private close(): void {
+    this.returnFocus = true;
+    this.popover().hide();
+  }
+
+  private focusFirstControl(): void {
+    this.formElement().nativeElement.querySelector<HTMLElement>(`#${this.id}-field`)?.focus();
   }
 
   protected chipEditLabel(label: string): string {

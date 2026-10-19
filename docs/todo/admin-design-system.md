@@ -28,7 +28,7 @@ each spec says which of its sections are superseded by those documents.
   neutrals, density, font, shell geometry) are undecided and must stay easy to change centrally
   (`appTheme`).
 - The user accepts the current shell, shared patterns, sample Fleet views and expanded Fleet API
-  snapshot in `main` for internal testing. The remaining review fixes (R2–R7), the trip
+  snapshot in `main` for internal testing. The remaining review fixes (R2–R4), the trip
   in-progress upper bound and their release checks are post-merge stabilization required before
   public release. New Fleet routes and Apollo containers (F2/F3), Overview (B3) and the rich demo
   seed (B4) remain separate later work.
@@ -39,7 +39,7 @@ each spec says which of its sections are superseded by those documents.
 - Use automated checks for stabilization. Do not perform visual reviews, take screenshots
   or create/update baselines in this phase. Keep visual feedback and baseline review as separate
   later work; automated story interaction and accessibility checks remain in scope.
-- Example pages use sample data in stories (no GraphQL). They must be replaceable by
+- Fleet example pages use sample data in stories (no GraphQL). They must be replaceable by
   Apollo-backed containers that feed the same `features/fleet/*` views and drawers.
 - Editing happens in a right-hand drawer: direct edit by default, a view drawer for read-only
   records, and a view drawer with Edit for complex records.
@@ -67,6 +67,17 @@ each spec says which of its sections are superseded by those documents.
 - Never stage editor swap files (`*.swp` is not ignored), and never read, print, commit or
   publish `apps/admin/public/config.local.json`.
 
+- Storybook leads the target product behavior. Keep its additional filters and sorts; extend
+  backend contracts during adoption rather than removing approved prototype capabilities. Offer
+  the current API's sort fields in the prototype too.
+- Keep unsupported device diagnostics, uninstalled devices, Restart and General settings visible
+  as demo features. Use visible Demo labels and Storybook `prototype` tags, with the contract
+  differences documented. No backend operations or live application wiring are added now.
+- Alert resolution accepts an optional comment, matching the current API.
+- The driver prototype editor uses separate first/last names and the identity, licence and
+  tachograph-card fields already supported by the backend. The live admin still needs the later
+  Drivers container and integration.
+
 ## Open tasks
 
 Complete the review fixes, smoke rewrite and stabilization checks before public release.
@@ -83,9 +94,8 @@ static builds, current smoke failures) is described in [testing](../testing.md) 
 ### Review fixes
 
 The remaining verified fixes are planned in
-[review fixes](admin-design-system-review-fixes.md): editors locked while saving, required
-General settings fields, FilterBuilder focus, serialized odometer readings and driver/vehicle
-writes (R3–R7), and the trip in-progress upper bound. R2's smoke rewrite is below. The review
+[review fixes](admin-design-system-review-fixes.md): serialized odometer readings and
+driver/vehicle writes (R3–R4), and the trip in-progress upper bound. R2's smoke rewrite is below. The review
 plan's last section lists the remaining product and fixture decisions.
 
 ### Smoke rewrite for the menu topbar
@@ -125,7 +135,7 @@ locators stay valid.
 
 ### Stabilization checks before public release
 
-- Complete R2–R7 and the trip in-progress upper bound, updating the authoritative documentation
+- Complete R2–R4 and the trip in-progress upper bound, updating the authoritative documentation
   with each behavior change and removing completed backlog entries.
 - Run each fix's focused checks. Tooling changes also require root lint, typecheck and build;
   asset-handling changes require a static Storybook build and proof that production outputs
@@ -201,34 +211,40 @@ hosts are in `apps/admin/src/storybook/samples/pages`.
   (ESLint enforces it). Decide with the user whether the stories then use GraphQL fixtures for
   the containers or keep the sample hosts
   ([open decision](admin-design-system-review-fixes.md#2-storybook-sample-hosts-or-graphql-fixtures)).
-- Reduce each view's FilterBuilder fields, operators, sortable columns and enum lists to the
-  [standard list contract](../discocan/architecture.md#standard-list-contract), or extend the
-  backend first. Backend filters are any-of lists, booleans and ranges; there is no `isNoneOf`.
+- Preserve the Storybook's selected-Branch identity, repeated-hour odometer bounds, exact-cent
+  costs and unchanged-sort selection behavior when replacing sample hosts with live containers.
+  Scope actual records and writes to the verified Branch; the shared sample datasets are not a
+  real Branch-data implementation.
+- Preserve the approved prototype filters and sorts, and extend the
+  [standard list contract](../discocan/architecture.md#standard-list-contract) before connecting
+  capabilities that it does not yet support. Backend filters currently use any-of lists,
+  booleans and ranges; `isNoneOf` still needs backend support.
   Use backend enums and derived values (`state.activity` including `ASSET`, `state.fuelStatus`,
   `documentStatus`, `urgency`) instead of client thresholds. Differences in the examples:
-  - Vehicles: filters activity, make, odometer, year and created date and sorts by status, last
-    report and odometer are unsupported; the backend's fuel type, current driver, has-device and
-    open-alert filters are not offered; low fuel is computed as `fuelPct < 12`.
-  - Drivers: sorts by status, score, trips and distance and filters by score and trips are
-    unsupported; the licence and tachograph-card date filters are unsupported and map only to
-    `documentsExpireWithinDays`; the name sort must be by last name (`LAST_NAME`, the examples
-    sort by "First Last"); the backend's `licenseCategories` filter is not offered. Documents are
-    flagged at 60 days from the data clock; the backend uses `documentsExpireWithinDays` and 30
-    days at the business date.
+  - Vehicles: the prototype's activity, make, odometer, year and created-date filters and status,
+    last-report and odometer sorts need backend support. Fuel type, driver, has-device and
+    open-alert filters and all current backend sorts are offered. Fuel status comes from a
+    supplied classification; sample hosts model its six-hour freshness rule.
+  - Drivers: the prototype's status, score, trips and distance sorts and score/trip/date
+    filters need backend support. All current API sort fields are offered. Document status
+    uses 30 days from the business date and licence categories have an any-of filter.
+    `documentsExpireWithinDays` still needs adoption. The expanded prototype editor maps the
+    existing backend identity, licence and tachograph-card fields; the live admin has no
+    connected Drivers page yet.
   - Trips: sort by duration and filters by distance, score above and "has events" are
     unsupported; date conditions become half-open `DateTime` ranges.
   - Alerts: sort by status is unsupported; transitions need `expectedStatus`.
-  - Maintenance: sorts by task, vehicle and cost and filters by due date and cost are
-    unsupported; the task filter must use the `FleetServiceType` enum (`serviceTypes`) instead of
-    free-text task names; urgency `OK`/`DONE` differs from `UPCOMING`/`UNKNOWN_ODOMETER` (null unless
-    PLANNED); "complete" is only a list action, without the completion form
-    `completeFleetServiceTask` needs.
+  - Maintenance: task, vehicle and cost sorts and due-date/cost filters need backend support.
+    Planning uses `FleetServiceType`, optional title/workshop, immutable vehicle on edit and
+    contract bounds. Status and nullable urgency are separate; cancellation and read-only
+    history are represented. Map the completion form to `completeFleetServiceTask` during adoption.
   - Devices: the status, vehicle and last-seen sorts, the online/offline/in-stock status filter
     and the firmware and installed filters are unsupported; the signal and voltage columns and
-    Restart have no backend (`FleetDevice.vehicleId` is mandatory). The model filter must use the
-    `FleetDeviceModel` enum instead of the examples' free model names. The backend's `options`
+    Restart have no backend (`FleetDevice.vehicleId` is mandatory). Settle model mapping before
+    integration: preserve existing `FleetDeviceModel` enum values and nulls alongside the
+    approved prototype capabilities. The backend's `options`
     and `vehicleIds` filters are not offered. General settings (units, time zone, thresholds,
-    notifications) have no backend either (backend 14). Both need a user decision or must be cut.
+    notifications) have no backend either (backend 14). Keep the labelled demo capabilities and design their backend support separately.
   - Overview: the example has one loading/error state and KPIs (distance today, activity by
     group) that differ from B3's per-card queries.
 - PrimeNG 22 `p-table` reports an intermediate ascending sort on the first render. The components
@@ -238,8 +254,9 @@ hosts are in `apps/admin/src/storybook/samples/pages`.
 - Turn the example drawers, which use `[closeLink]="null"` with `(closeRequest)`, into child-route
   drawers with `leaveDrawer`, `canLeave()` and `injectDrawerHost`
   ([frontend 4.1](admin-design-system-frontend.md#41-route-tree),
-  [route drawers](../admin-design-system.md#route-drawers)). `leaveDrawer`, `drawerRouteData` and
-  `drawerParam` are unit-tested but used only by their specs. `injectDrawerHost`
+  [route drawers](../admin-design-system.md#route-drawers)). Story hosts already delegate
+  `canLeave()` through `leaveDrawer`; `drawerRouteData` and `drawerParam` remain spec-only.
+  `injectDrawerHost`
   (`apps/admin/src/app/ui/drawer/drawer-host.ts`) has no spec: unit-test it (`ROUTER_OUTLET_DATA`
   present, absent, malformed) when the first container uses it.
 - Define the URL encoding of `ListQuery` (search, conditions, sort, page, page size) per list from
@@ -248,11 +265,9 @@ hosts are in `apps/admin/src/storybook/samples/pages`.
   specs). The example lists keep a `ListQuery` in signals; production lists keep URL-backed
   state. The search applies on every keystroke today: add the debounce and the five-word limit.
 - Add `i18n/bg.json` and a parity spec to each of the eight feature catalogs (only `en.json`
-  exists) and unit specs for the views and drawers (none exist).
+  exists) and unit specs for the adopted views and drawers beyond their Storybook coverage.
 - Routed pages use `holita-page-header` (`#page-title` receives focus after a page change), record
   pages call `injectPageRecord`, and future tab child routes set `data: { tab: true }`.
-- Not designed yet: the Driver scorecard page, the MANUAL odometer-reading drawer, the
-  service-completion form with the next task and a Login story.
 
 #### Common row and bulk action API
 

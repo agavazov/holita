@@ -51,6 +51,12 @@
   (retry)="retry.emit()"
   (clearSelection)="selectionChange.emit([])"
 >
+  <holita-list-sort-menu
+    panelActions
+    [fields]="sortFields()"
+    [sort]="state().sort"
+    (sortChange)="changeSort($event)"
+  />
   <button emptyActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
   <p-table
     [value]="tableRows()"
@@ -100,14 +106,27 @@
           <p-table-checkbox [value]="row" [ariaLabel]="label(text().table.selectRow, row)" />
         </td>
         <td>
-          <button
-            type="button"
-            class="app-link"
-            [attr.aria-label]="label(text().table.edit, row)"
-            (click)="panel.run('edit', [recordOf(row)], $event.currentTarget)"
-          >
-            {{ row.kind }}
-          </button>
+          @if (row.status !== 'PLANNED') {
+            <button
+              type="button"
+              class="app-link"
+              [attr.aria-label]="
+                label(row.status === 'DONE' ? text().table.view : text().table.viewCancelled, row)
+              "
+              (click)="panel.run('view', [recordOf(row)], $event.currentTarget)"
+            >
+              {{ row.kind }}
+            </button>
+          } @else {
+            <button
+              type="button"
+              class="app-link"
+              [attr.aria-label]="label(text().table.edit, row)"
+              (click)="panel.run('edit', [recordOf(row)], $event.currentTarget)"
+            >
+              {{ row.kind }}
+            </button>
+          }
         </td>
         <td>{{ row.plate }}</td>
         <td>
@@ -129,7 +148,7 @@
           </span>
         </td>
         <td>
-          <p-tag [severity]="urgencySeverity(row.urgency)" [value]="urgencyLabel(row.urgency)" />
+          <p-tag [severity]="urgencySeverity(row)" [value]="urgencyLabel(row)" />
         </td>
         <td class="app-num">{{ row.costCents | holitaMoney }}</td>
         <td class="app-col-secondary">

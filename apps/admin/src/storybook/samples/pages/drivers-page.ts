@@ -1,4 +1,13 @@
-import { Component, computed, DestroyRef, inject, linkedSignal, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  linkedSignal,
+  signal,
+  viewChild,
+} from '@angular/core';
+import { Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import {
   type DriverDetails,
@@ -19,26 +28,53 @@ import { interpolate } from '../../../app/ui/i18n/messages';
 import type { ListActionRequest, ListRecord } from '../../../app/ui/list/list-actions';
 import type { ListQuery } from '../../../app/ui/list/list-query';
 import { UI_LANGUAGE } from '../../../app/ui/ui-language';
-import { fixtureBranches } from '../../session-fixtures';
-import { type SampleDriver, sampleDrivers, sampleNow, sampleVehicles } from '../fleet-samples';
+import {
+  type SampleDriver,
+  sampleAlerts,
+  sampleNow,
+  sampleTrips,
+  sampleVehicles,
+} from '../fleet-samples';
 import {
   initialQuery,
   runSampleList,
   type SampleListDefinition,
   sampleTableView,
 } from '../sample-list';
-import { injectClearDrawer, injectQueryParams, saveDelayMs, scenarioOf } from '../scenario';
+import {
+  injectBranchName,
+  injectClearDrawer,
+  injectQueryParams,
+  saveDelayMs,
+  scenarioOf,
+} from '../scenario';
+import { SampleDrivers } from '../sample-drivers';
 
-const dataAsOf = new Date(sampleNow).toISOString();
+const businessDate = new Date(sampleNow).toISOString().slice(0, 10);
 
 function plateOf(driverId: string): string | null {
-  return sampleVehicles.find((vehicle) => vehicle.driverId === driverId)?.plate ?? null;
+  return (
+    sampleVehicles
+      .filter((vehicle) => vehicle.driverId === driverId)
+      .map((vehicle) => vehicle.plate)
+      .join(', ') || null
+  );
 }
 
 const definition: SampleListDefinition<SampleDriver> = {
-  search: (driver) => [driver.name, driver.employeeNo, driver.phone, driver.notes],
+  id: (driver) => driver.id,
+  search: (driver) => [
+    driver.name,
+    driver.employeeNo,
+    driver.identificationKey,
+    driver.phone,
+    driver.notes,
+  ],
   columns: {
     name: (driver) => driver.name,
+    lastName: (driver) => driver.lastName,
+    employeeNo: (driver) => driver.employeeNo || null,
+    createdAt: (driver) => driver.createdAt,
     status: (driver) => driver.status,
     license: (driver) => driver.licenseExpiresOn,
     tachoCard: (driver) => driver.tachoCardExpiresOn,
@@ -46,6 +82,9 @@ const definition: SampleListDefinition<SampleDriver> = {
     trips: (driver) => driver.trips30d,
     distance: (driver) => driver.distance30dKm,
     hasVehicle: (driver) => plateOf(driver.id) !== null,
+  },
+  secondarySorts: {
+    lastName: [{ value: (driver) => driver.firstName }],
   },
 };
 
@@ -58,7 +97,8 @@ function toDetails(driver: SampleDriver): DriverDetails {
 }
 
 function kpisOf(drivers: readonly SampleDriver[]): DriverKpis {
-  const due = (date: string) => daysUntil(date, dataAsOf) <= documentWarningDays;
+  const due = (date: string | null) =>
+    date !== null && daysUntil(date, businessDate) <= documentWarningDays;
   const scores = drivers.flatMap((driver) => (driver.score === null ? [] : [driver.score]));
   return {
     active: drivers.filter((driver) => driver.status === 'ACTIVE').length,
@@ -84,8 +124,8 @@ function kpisOf(drivers: readonly SampleDriver[]): DriverKpis {
   imports: [DriversView, DriverDrawer],
   template: `
     <holita-drivers-view
-      [branchName]="branchName"
-      [dataAsOf]="dataAsOf"
+      [branchName]="branchName()"
+      [businessDate]="businessDate"
       [rows]="rows()"
       [total]="result().total"
       [view]="view()"
@@ -102,17 +142,21 @@ function kpisOf(drivers: readonly SampleDriver[]): DriverKpis {
       <holita-driver-drawer
         [driver]="drawerDriver()"
         [startEditing]="open.editing"
-        [dataAsOf]="dataAsOf"
+        [businessDate]="businessDate"
         [saving]="saving()"
         [saveError]="saveError()"
         [fieldErrors]="fieldErrors()"
         (save)="save($event)"
         (closed)="closeDrawer()"
+        (openScorecard)="openScorecard(open.id)"
       />
     }
   `,
 })
 export class DriversPage {
+  private readonly router = inject(Router);
+  private readonly samples = inject(SampleDrivers);
+  private readonly driverDrawer = viewChild(DriverDrawer);
   private readonly language = inject(UI_LANGUAGE);
   private readonly messages = inject(MessageService);
   private readonly query = injectQueryParams();
@@ -122,14 +166,11 @@ export class DriversPage {
   );
   private readonly text = computed(() => driversText(this.language()));
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
-  private nextId = 1;
 
-  protected readonly branchName = fixtureBranches[0].name;
-  protected readonly dataAsOf = dataAsOf;
+  protected readonly branchName = injectBranchName();
+  protected readonly businessDate = businessDate;
 
-  protected readonly drivers = linkedSignal<readonly SampleDriver[]>(() =>
-    this.scenario() === 'empty' ? [] : sampleDrivers,
-  );
+  protected readonly drivers = this.samples.rows;
   protected readonly state = signal<ListQuery>(initialQuery({ field: 'name', direction: 'asc' }));
   protected readonly selection = signal<readonly ListRecord<DriverActionId>[]>([]);
   protected readonly failed = linkedSignal(() => this.scenario() === 'error');
@@ -138,7 +179,7 @@ export class DriversPage {
   protected readonly drawer = linkedSignal<{ id: string | null; editing: boolean } | null>(() => {
     const id = this.query().get('drawer');
     if (id === 'new') return { id: null, editing: true };
-    const exists = id !== null && sampleDrivers.some((driver) => driver.id === id);
+    const exists = id !== null && this.drivers().some((driver) => driver.id === id);
     return exists ? { id, editing: this.query().get('edit') === '1' } : null;
   });
   protected readonly drawerDriver = computed(() => {
@@ -150,9 +191,23 @@ export class DriversPage {
   protected readonly saveError = signal<string | null>(null);
   protected readonly fieldErrors = signal<Partial<Record<DriverField, string>>>({});
 
-  protected readonly result = computed(() =>
-    runSampleList(this.drivers(), definition, this.state()),
-  );
+  protected readonly result = computed(() => {
+    const state = this.state();
+    const categories = state.conditions.filter(
+      (condition) => condition.field === 'licenseCategories',
+    );
+    const drivers = this.drivers().filter((driver) =>
+      categories.every((condition) =>
+        condition.values.some((value) =>
+          driver.licenseCategories.some((category) => category === value),
+        ),
+      ),
+    );
+    return runSampleList(drivers, definition, {
+      ...state,
+      conditions: state.conditions.filter((condition) => condition.field !== 'licenseCategories'),
+    });
+  });
   protected readonly rows = computed(() => this.result().items.map(toRow));
   protected readonly listState = computed(() => ({ ...this.state(), page: this.result().page }));
   protected readonly kpis = computed(() =>
@@ -166,9 +221,14 @@ export class DriversPage {
   );
 
   constructor() {
+    if (this.scenario() === 'empty') this.drivers.set([]);
     inject(DestroyRef).onDestroy(() => {
       clearTimeout(this.saveTimer);
     });
+  }
+
+  canLeave(): Promise<boolean> | boolean {
+    return this.driverDrawer()?.canLeave() ?? true;
   }
 
   protected openDrawer(id: string | null, editing: boolean): void {
@@ -192,6 +252,9 @@ export class DriversPage {
       case 'edit':
         if (id) this.openDrawer(id, true);
         return;
+      case 'scorecard':
+        if (id) this.openScorecard(id);
+        return;
       case 'deactivate':
         this.deactivate(ids);
         return;
@@ -214,12 +277,26 @@ export class DriversPage {
         this.saveError.set(this.text().drawer.saveError);
         return;
       }
-      const number = form.employeeNo.toLocaleUpperCase('en');
+      const number = form.employeeNo;
       const duplicate = this.drivers().some(
-        (item) => item.id !== drawer.id && item.employeeNo.toLocaleUpperCase('en') === number,
+        (item) => item.id !== drawer.id && number !== '' && item.employeeNo === number,
       );
       if (duplicate) {
         this.fieldErrors.set({ employeeNo: this.text().drawer.duplicateEmployeeNo });
+        return;
+      }
+      if (
+        form.identificationKey &&
+        this.drivers().some(
+          (driver) =>
+            driver.id !== drawer.id && driver.identificationKey === form.identificationKey,
+        )
+      ) {
+        this.fieldErrors.set({ identificationKey: this.text().drawer.duplicateIdentificationKey });
+        return;
+      }
+      if (drawer.id && form.status === 'INACTIVE' && plateOf(drawer.id) !== null) {
+        this.fieldErrors.set({ status: this.text().drawer.assignedDriver });
         return;
       }
       const id = this.store(drawer.id, form);
@@ -228,21 +305,37 @@ export class DriversPage {
       const template = drawer.id ? this.text().notices.saved : this.text().notices.created;
       this.messages.add({
         severity: 'success',
-        summary: interpolate(template, { name: form.name }),
+        summary: interpolate(template, { name: `${form.firstName} ${form.lastName}` }),
       });
     }, saveDelayMs);
+  }
+
+  protected openScorecard(id: string | null): void {
+    if (id) void this.router.navigate(['/examples/drivers', id, 'scorecard']);
   }
 
   private store(id: string | null, form: DriverForm): string {
     if (id) {
       this.drivers.update((drivers) =>
-        drivers.map((item) => (item.id === id ? { ...item, ...form } : item)),
+        drivers.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                ...form,
+                name: `${form.firstName} ${form.lastName}`,
+                updatedAt: new Date(sampleNow).toISOString(),
+              }
+            : item,
+        ),
       );
       return id;
     }
     const created: SampleDriver = {
       ...form,
-      id: `example-driver-${String(this.nextId++)}`,
+      name: `${form.firstName} ${form.lastName}`,
+      id: this.samples.createId(),
+      createdAt: new Date(sampleNow).toISOString(),
+      updatedAt: new Date(sampleNow).toISOString(),
       score: null,
       trips30d: 0,
       distance30dKm: 0,
@@ -252,22 +345,58 @@ export class DriversPage {
   }
 
   private deactivate(ids: readonly string[]): void {
+    const changed = ids.filter((id) => plateOf(id) === null);
+    const failed = ids.length - changed.length;
     this.drivers.update((drivers) =>
-      drivers.map((item) => (ids.includes(item.id) ? { ...item, status: 'INACTIVE' } : item)),
+      drivers.map((item) =>
+        changed.includes(item.id)
+          ? { ...item, status: 'INACTIVE', updatedAt: new Date(sampleNow).toISOString() }
+          : item,
+      ),
     );
-    this.selection.update((selection) => selection.filter((record) => !ids.includes(record.id)));
-    this.messages.add({
-      severity: 'success',
-      summary: interpolate(this.text().notices.deactivated, { count: ids.length }),
-    });
+    this.selection.update((selection) =>
+      selection.filter((record) => !changed.includes(record.id)),
+    );
+    if (changed.length && !failed)
+      this.messages.add({
+        severity: 'success',
+        summary: interpolate(this.text().notices.deactivated, { count: changed.length }),
+      });
+    if (failed)
+      this.messages.add({
+        severity: 'warn',
+        sticky: true,
+        summary: changed.length
+          ? interpolate(this.text().notices.deactivatedPartial, { changed: changed.length, failed })
+          : interpolate(this.text().notices.assigned, { count: failed }),
+      });
   }
 
   private delete(ids: readonly string[]): void {
-    this.drivers.update((drivers) => drivers.filter((item) => !ids.includes(item.id)));
-    this.selection.update((selection) => selection.filter((record) => !ids.includes(record.id)));
-    this.messages.add({
-      severity: 'success',
-      summary: interpolate(this.text().notices.deleted, { count: ids.length }),
-    });
+    const changed = ids.filter(
+      (id) =>
+        plateOf(id) === null &&
+        !this.drivers().some((driver) => driver.id === id && driver.trips30d > 0) &&
+        !sampleTrips.some((trip) => trip.driverId === id) &&
+        !sampleAlerts.some((alert) => alert.driverId === id),
+    );
+    const failed = ids.length - changed.length;
+    this.drivers.update((drivers) => drivers.filter((item) => !changed.includes(item.id)));
+    this.selection.update((selection) =>
+      selection.filter((record) => !changed.includes(record.id)),
+    );
+    if (changed.length && !failed)
+      this.messages.add({
+        severity: 'success',
+        summary: interpolate(this.text().notices.deleted, { count: changed.length }),
+      });
+    if (failed)
+      this.messages.add({
+        severity: 'warn',
+        sticky: true,
+        summary: changed.length
+          ? interpolate(this.text().notices.deletedPartial, { changed: changed.length, failed })
+          : interpolate(this.text().notices.protected, { count: failed }),
+      });
   }
 }

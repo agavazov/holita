@@ -23,8 +23,8 @@ export class FormatNumberPipe implements PipeTransform {
 @Pipe({ name: 'holitaDateTime' })
 export class FormatDateTimePipe implements PipeTransform {
   private readonly language = inject(UI_LANGUAGE);
-  transform(value: string | null | undefined, timeZone = displayTimeZone): string {
-    return formatDateTime(value, this.language(), timeZone);
+  transform(value: string | null | undefined, timeZone = displayTimeZone, seconds = false): string {
+    return formatDateTime(value, this.language(), timeZone, seconds);
   }
 }
 

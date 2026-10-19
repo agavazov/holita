@@ -1,6 +1,6 @@
 # Admin design system: review fixes
 
-Open fixes from the design-system review, each verified against the code. R2–R7 are the
+Open fixes from the design-system review, each verified against the code. R2–R4 are the
 review's finding numbers; these fixes and the trip in-progress upper bound remain required
 before public release after the accepted merge into `main` for internal testing. Line numbers
 are approximate: re-check them before editing. Work in the order of the sections below. R2
@@ -11,283 +11,6 @@ When a section is done, remove it and its mention in the "Review fixes" summary 
 under "Decisions agreed with the user" there and remove it here. When this file is empty, delete
 it and its links (`git grep -n "admin-design-system-review-fixes" -- docs .agents` must then print
 nothing).
-
-## R5 Editors locked while saving
-
-**Problem.** No editor disables its controls while its host saves: only the footer buttons get
-`[disabled]="saving()"`, and `submit()` has no saving guard (a disabled form still fires
-`ngSubmit` with `invalid` false). Hosts capture the emitted value (story hosts wait
-`saveDelayMs`, 700 ms, `storybook/samples/scenario.ts:39`) and on success close the drawer
-(`vehicles-page.ts:228`, `vehicle-profile-page.ts:194`, `devices-page.ts:237`,
-`groups-page.ts:141`, `maintenance-page.ts:242`, `alerts-page.ts:220`) or reset it to the saved
-value (`drivers-page.ts:229` → `driver-drawer.ts:196-203`; `general-settings-page.ts:72` →
-`general-settings-view.ts:131-137`; alert reopen `alerts-page.ts:219` → `alert-drawer.ts:103-110`),
-so edits typed during a save are lost. Affected editors (under
-`apps/admin/src/app/features/fleet/`): `vehicles/vehicle-drawer.ts` (saving :123, submit
-:227-249), `drivers/driver-drawer.ts` (:122, :243-267), `devices/device-drawer.ts` (:77,
-:165-185), `settings/group-drawer.ts` (:57, :119-133), `maintenance/service-task-drawer.ts` (:92,
-:175-197), `alerts/alert-drawer.ts` (`busy` :63, remark :79-82; `apply()` is guarded),
-`settings/general-settings-view.ts` (:75, :151-177), plus the demo in
-`app/ui/drawer/route-drawer.stories.ts:184-218` (story Saving :248). A failed save changes no
-input, so the draft survives and must keep surviving.
-
-**Fix**
-
-1. New `apps/admin/src/app/ui/forms/saving.ts` (seven editors need it; next to `focus.ts`):
-
-   ```ts
-   /** Locks an editor's form while its host saves; enabled again with the draft and its
-    * dirty/touched state when saving ends. `settled` runs after the next render once a save has
-    * ended while the editor is still shown. The form must not disable controls of its own. */
-   export function lockWhileSaving(
-     form: AbstractControl,
-     saving: () => boolean,
-     settled: () => void,
-   ): void {
-     const injector = inject(Injector);
-     let locked = false;
-     effect(() => {
-       const busy = saving();
-       untracked(() => {
-         if (busy === locked) return; // no enable()/settled on the first run
-         locked = busy;
-         if (busy) {
-           form.disable();
-           return;
-         }
-         form.enable();
-         afterNextRender(settled, { injector }); // never from a reactive context
-       });
-     });
-   }
-   ```
-
-   Keep the default `emitEvent`: the drawers derive dirty, counters and number state from
-   `toSignal(form.events)`; `vehicle-editor.ts:182` passes `emitEvent: false` only because its
-   `valueChanges` clears `writeError`. A blanket `enable()` is safe because no drawer disables a
-   control of its own (only `auth/login.ts` and the old editors do). `disable()` keeps dirty,
-   touched and `getRawValue()`; `enable()` reruns validators (including `requireOneOf`,
-   `service-task-drawer.ts:120`). When the host removes the drawer on success, `settled` never
-   runs. Reviewer fallback: inline the same transition effect per editor, keeping the no-op first
-   run.
-
-2. `app/ui/drawer/route-drawer.ts`: move the check in `shown()` (:125-131) into a public
-   `keepFocusInside()` (focus the title unless focus is inside the `.p-drawer`) and call it from
-   `shown()`. Chromium moves focus to the body when the focused control or the clicked Save button
-   is disabled.
-3. In each editor's constructor (after the reset effect) call `lockWhileSaving`, and make
-   `if (this.saving()) return;` the first line of `submit()`:
-   - vehicle and device drawers: settled =
-     `if (!focusFirstInvalid(this.formElement().nativeElement, fieldOrder, 'vehicle-')) this.drawer().keepFocusInside();`
-     (prefix `device-`);
-   - group drawer: extract `const fieldOrder: readonly GroupField[] = ['name', 'description'];`
-     (inline at :125), prefix `group-`;
-   - driver drawer: the form element is absent in the record view, so focus the first invalid
-     field only when `this.formElement()?.nativeElement` exists, else `keepFocusInside()`;
-   - service-task drawer (no server field errors) and the RouteDrawer demo: `keepFocusInside()`;
-   - alert drawer: `lockWhileSaving(this.remark, () => this.busy() !== null, …keepFocusInside)`;
-   - General settings: `private readonly header = viewChild.required(PageHeader);` and settled
-     focuses `this.header().focusTitle()` when `document.activeElement` is null or the body; the
-     save bar `@if (dirty() || saving())` stays.
-4. Keep the story hosts' `if (… this.saving()) return` guards, and give real containers the same:
-   the drawer's `saving` input changes only at the next change detection, so the host guard stays
-   authoritative against double submits (a keystroke in that sub-frame gap is accepted).
-
-**Tests**
-
-- New `app/ui/forms/saving.spec.ts` (TestBed host as in `page-header.spec.ts`;
-  `saving = signal(false)`, a `settled` counter, a form with `textValidator(10, { required: true })`;
-  `await fixture.whenStable()` after each change): enabled and `settled` 0 after the first render;
-  a dirty, touched 'Draft' with saving true is disabled, keeps `getRawValue()`, dirty and is not
-  invalid; saving false enables it with the value, dirty and touched kept, `settled` 1, and
-  `setValue('')` shows `required` again; destroyed while saving, then saving false and
-  `TestBed.tick()`: nothing throws and `settled` is unchanged.
-- `app/ui/drawer/route-drawer.spec.ts`: with the TestEditor (:154-157), `keepFocusInside()` keeps
-  focus on a focused `#plate`; after a blur it focuses the drawer's `h2` title (jsdom does not
-  blur disabled elements; the stories prove that).
-- Stories (Chromium; query drawers with `within(canvasElement.ownerDocument.body)`, `waitFor`
-  with `{ timeout: 3_000 }` for the 700 ms save; assert focus inside the dialog, or not on the
-  body, rather than one exact element):
-  - `vehicles-view.stories.ts` SaveError (:166-177): type plate 'CB 7777 XX', Save: plate and Year
-    disabled; after /could not be saved/ plate enabled with the value and focus inside the
-    `Edit <plate>` dialog. New DuplicatePlate: type the second sample's plate, Save: 'This plate is
-    already used in the branch.', plate focused with `aria-invalid="true"`.
-  - `settings.stories.ts` new GeneralSaveError on `settings/general?scenario=save-error`: type
-    ' North' into Branch name, Save changes: Branch name and the 'Daily summary' switch disabled;
-    after /could not be saved/ enabled with `${fixtureBranches[0].name} North` (from
-    `storybook/session-fixtures`), 'You have unsaved changes.' visible, focus not on the body.
-  - Disabled-then-enabled checks in drivers SaveError (:128-138, Full name), maintenance SaveError
-    (:125-135, /^Task/), alerts SaveError (:129-139, typed remark kept after Acknowledge fails),
-    devices DuplicateImei (:92-105, IMEI then focused with `aria-invalid`), and a play on the
-    RouteDrawer Saving story (:248). Optional: a groups duplicate-name story
-    (`groups-page.ts:128-134`).
-
-**Checks**
-
-```bash
-npm run test:admin -- --include=app/ui/forms/saving.spec.ts --include=app/ui/drawer/route-drawer.spec.ts --skip-nx-cache
-npm run lint
-npm run typecheck
-npm run format:check
-npm run test:storybook:admin   # needs `npm exec -- playwright install chromium` once
-```
-
-No DB checks. Any visual candidate review belongs to the separate later visual-review phase; do not
-run `test:visual:admin` or capture screenshots during this fix.
-
-**Docs to update**
-
-- `docs/admin-design-system.md` forms helpers (:481-493): a `forms/saving.ts` bullet
-  (`lockWhileSaving(form, saving, settled)`); the `holita-route-drawer` row (:418):
-  `keepFocusInside()`; [Route drawers](../admin-design-system.md#route-drawers) (:635-658): editors
-  lock while saving (controls and footer disabled, close ignored); a failed save keeps the draft
-  and focuses the first server-invalid field, else `keepFocusInside()` (General settings: its page
-  title when focus was lost).
-- `.agents/skills/holita-admin-design-system/SKILL.md` Editor bullet (:86-96): "locks the form
-  while saving with `lockWhileSaving`".
-- Unverified, outside this task: the `p-select`s in `service-task-drawer.html:37-48` and
-  `device-drawer.html:72-81` bind `[invalid]` without `aria-invalid`, so `focusFirstInvalid` may
-  not reach a required select.
-
-## R6 Required General settings fields
-
-**Problem.** `settings/general-settings-view.ts:108-110` gives `lowFuelPct`,
-`notReportingHours` and `speedLimitKph` only `integerValidator(…)`, which passes blank values
-(`app/ui/forms/validators.ts:52-61`, `isBlank` :12-14), although the template marks them required
-(`general-settings-view.html:81`, `:95`, `:109`). `submit()` (:156-168) stops on the null value,
-but no control is invalid: no `aria-invalid`, no message, and `focusFirstInvalid`
-(`ui/forms/focus.ts:6-19`) finds nothing, so Save silently does nothing. Every other required
-control already rejects empty values.
-
-**Fix**
-
-- `integerValidator(min, max, options: { readonly required?: boolean } = {})`, following
-  `textValidator(max, { required })` (:17-30): the blank branch returns
-  `options.required ? { required: true } : null` (use `isBlank`; the truthiness check of
-  `device-drawer.ts:47` would reject 0); doc comment "empty values pass unless required".
-- `general-settings-view.ts:108-110`: `integerValidator(1, 50, { required: true })`,
-  `(1, 168, { required: true })`, `(30, 130, { required: true })`; keep the null checks in
-  `submit()` for narrowing.
-- No catalog change: `required` already maps to "This field is required." / "Полето е
-  задължително." (`validators.ts:130-131`, `en.json:28`, `bg.json:28`). Never pass
-  `Validators.required` directly (unbound-method lint); exporting the `driver-drawer.ts:90`
-  wrapper instead was rejected.
-
-**Tests**
-
-- `app/ui/forms/validators.spec.ts`, next to :35-47: `integerValidator(1, 50, { required: true })`
-  gives `{ required: true }` for null and '', `{ min: { min: 1 } }` for 0 and null for 12; the
-  existing case that `integerValidator(0, 2_000_000)` passes null stays.
-- `settings.stories.ts` new GeneralRequired on `settings/general`: clear the "Low fuel below, %
-  (required)" spinbutton and tab out (InputNumber updates its model on blur or keydown, not on
-  input; else triple-click and Backspace), click 'Save changes': the field has focus and
-  `aria-invalid="true"`, 'This field is required.' is visible, 'Settings saved.' is absent.
-
-**Checks** (combine with R5 when done together)
-
-```bash
-npm run test:admin -- --include=app/ui/forms/validators.spec.ts --skip-nx-cache
-npm run lint
-npm run typecheck
-npm run format:check
-npm run test:storybook:admin
-```
-
-**Docs to update.** `docs/admin-design-system.md` forms helpers (:481-493):
-`integerValidator(min, max, { required })`, and "Empty values pass all except a required
-`textValidator` or `integerValidator`".
-
-## R7 FilterBuilder focus
-
-**Problem.** FilterBuilder (`apps/admin/src/app/ui/filter-builder/`) never moves or restores
-focus. The popover (`filter-builder.html:90-96`) only flips `open` on show and hide; `openNew` and
-`edit` (`filter-builder.ts:199-211`) do not remember the opener; `apply` and `cancel` (:213-228)
-only hide. PrimeNG's Popover focuses only an `[autofocus]` element (there is none) and restores
-nothing. `remove` (:230-232) and `clearAll` (:234-236, missed by the review) destroy the focused
-button (the chips block is `@if (chips().length)`, html:49), so focus drops to the body.
-
-Facts the fix relies on: Select's `autofocus` fires once at creation, and projected content is
-created with FilterBuilder at page render, so neither `[autofocus]` nor `focusOnShow` helps.
-Popover emits `onHide` before it unrenders, so the form is still in the DOM in the handler.
-`p-select` puts `inputId` on its `span[role=combobox]`, so `#<id>-field` (html:100-102) is the first
-control; its accessible name is its value, not "Column". Select stops Escape only while its own
-overlay is open. jsdom (`src/test-setup.ts:14-17` forces reduced motion) emits `onShow`/`onHide`
-synchronously; in Chromium the leave animation takes 300 ms.
-
-**Fix** (`filter-builder.ts` and `.html` only; reuses the restore patterns of
-`menu-button.ts:113-116`, `table-panel.ts:175-199` and `route-drawer.ts:72-84`)
-
-- HTML: `#addButton` on Add filter (:30), `#chipButton` on the chip label button (:57),
-  `(onShow)="shown()"` and `(onHide)="closed()"` (:94-95), `#formElement` on the editor form (:97).
-- Queries: `formElement = viewChild.required<ElementRef<HTMLFormElement>>('formElement')`,
-  `addButton = viewChild<ElementRef<HTMLButtonElement>>('addButton')`,
-  `chipButtons = viewChildren<ElementRef<HTMLButtonElement>>('chipButton')`; private fields
-  `opener: HTMLElement | null = null` and `returnFocus = false` (after `loading`, :111).
-- `shown()`: `open.set(true)` and focus the first control
-  (`querySelector<HTMLElement>('#' + id + '-field')`).
-- `closed()`: `open.set(false)`; when `returnFocus` (Apply or Cancel) is set or focus is still
-  inside the form (Escape, scroll, resize) and `opener?.isConnected`, focus the opener; reset both
-  fields. After an outside click focus stays where the click put it, even on the body.
-- `show(event)`, used by `openNew` and `edit`: store `event.currentTarget` when it is an
-  `HTMLElement`; always call `popover().show(event)` (it retargets the outside-click check;
-  skipping it closes the editor right after a chip click); if the editor was already open, focus
-  the first control (no second `onShow`).
-- `close()`, used by `apply` and `cancel`: `returnFocus = true`, then `popover().hide()`.
-- `remove(id)`: before emitting, focus the next chip's label button, else the previous one, else
-  Add filter; `clearAll()`: focus Add filter before emitting `[]`. Focus moves before the emit onto
-  nodes that `track chip.id` keeps, so it works when the host updates asynchronously (URL state).
-- Class JSDoc (:52-57): one sentence on the focus contract.
-
-**Tests**
-
-- New `app/ui/filter-builder/filter-builder.spec.ts`, modelled on `menu-button.spec.ts` (Host
-  binding `[conditions]`/`(conditionsChange)`, `UI_LANGUAGE` provider, fields status (enum),
-  odometer (number range) and hasDevice (boolean), conditions a, b, c; overlay queries on
-  `document.body`, `afterEach` removes `.p-popover` nodes; `.focus()` before `.click()` because
-  jsdom does not focus on click; Escape as a bubbling `keydown` `KeyboardEvent` with key and code
-  `Escape`, submit as `new Event('submit', { bubbles: true, cancelable: true })`).
-  Cases: Add filter opens with focus on the first control (`[role="combobox"]`, id ending
-  `-field`) and Escape returns it to Add filter; Update returns it to the edited chip (ids a, b, c
-  kept); Cancel after a blur to the body returns it to Add filter; an outside click into the
-  search input keeps it there; a chip retargeting the open editor focuses the first control and
-  the editor stays open; removing b focuses c (synchronously and after `whenStable`), then
-  removing c focuses a, then removing a focuses Add filter; Clear all focuses Add filter.
-- `filter-builder.stories.ts`: KeyboardFocus after EditCondition (:117): keyboard open and Escape
-  back to Add filter; chip click and Cancel back to the chip; outside click into the 'Search
-  plate, model or notes' searchbox keeps focus; removing "Odometer between" and then the last chip
-  focuses "Edit filter: Added…". End with no dialog open (axe runs after `play`); query the
-  combobox by role, never by the name "Column".
-
-**Checks**
-
-```bash
-npm run test:admin -- --include=app/ui/filter-builder/filter-builder.spec.ts --skip-nx-cache   # at least 7 executed cases
-npm run test:admin -- --include="app/theme/**/*.spec.ts" --include="app/ui/**/*.spec.ts" --skip-nx-cache
-npm run test:storybook:admin
-npm run lint
-npm run typecheck
-npm run format:check
-```
-
-Any comparison with visual baselines belongs to the separate later visual-review phase; do not run
-`test:visual:admin` or capture screenshots during this fix.
-
-**Docs to update.** `docs/admin-design-system.md:414`, the `holita-filter-builder` row, before
-"Slot `[filterActions]`": "Focus: the editor opens with the focus on its first control (Column),
-by keyboard or pointer, also when another chip retargets an open editor. Apply, Cancel and Escape
-(any close while the focus is still in the editor) return the focus to the button that opened it
-(Add filter or the chip). After an outside click it stays where the click put it. Removing a chip
-moves the focus to the next chip, else the previous one, else Add filter; Clear all moves it to
-Add filter. Chips are tracked by condition `id`, so hosts keep the ids through their URL round
-trip." Prettier re-pads the table.
-
-Outside this task (ask first): switching FilterBuilder from the `[pt]` root `aria-label` to the
-documented `[ariaLabel]` (keep its stories' axe runs green); DatePicker does not stop Escape, so one Escape closes its overlay
-and the editor; Popover sets `aria-modal="true"` without a focus trap (appended to the body, Tab
-past Apply leaves the row); the editor's `<label for>` targets the non-labelable `p-select` span;
-a retargeted open editor is not realigned; containers must keep the condition ids
-(`condition-N`, :217) through the URL, or `track chip.id` recreates the chips and the moved
-focus is lost.
 
 ## R3 Serialized MANUAL odometer readings
 
@@ -575,7 +298,8 @@ are agreed. The choices below remain open; new screen integration comes last.
 
 Facts: the example pages use `src/storybook/samples/fleet-samples.ts` (fixed `sampleNow` :4;
 groups g1–g4; 22 drivers, 46 vehicles, 64 trips, 38 alerts and 30 service tasks; devices
-:493-524). The only GraphQL handler is `AdminBranches` (`session-fixtures.ts:38`); nothing exists
+:493-524). The shell's GraphQL handler is `AdminBranches` (`session-fixtures.ts`); the standalone
+Login stories also register `AdminTenants` and `AdminDemoLogin` in `storybook/login-fixtures.ts`. Nothing exists
 under `src/storybook/fleet/`. Example lists keep a `ListQuery` in signals; `UrlListState` and
 `ListDefinition` are unit-tested but unused ([list URL state](../admin-design-system.md#list-url-state)).
 Application code must not import `src/storybook`. The open point is recorded under
@@ -595,18 +319,15 @@ drops the shared demo dataset that restates the backend catalog, the store, the 
 [frontend spec](admin-design-system-frontend.md) consistently with that split as the chosen
 plan, replacing the conditional fixture items.
 
-### 3. Editor contract for backend values the examples do not offer
+### 3. Remaining device model and installation design
 
-Facts: [admin phase per screen](admin-design-system.md#admin-phase-per-screen-f3) lists where the
-examples differ from the backend, for example the `FleetDeviceModel` and `FleetServiceType` enums
-against free names, urgency `UPCOMING`/`UNKNOWN_ODOMETER` and null unless PLANNED against
-`OK`/`DONE`, and in-stock devices although `FleetDevice.vehicleId` is `ID!`
-(`apps/fleet/src/modules/devices/devices.graphql:27`). Not decided: what a view or drawer shows
-and submits for an enum value it has no option for, a null, or a device without the vehicle it
-expects. Options: accept and show every backend value and null and send back only what the user
-changed; map unknown values to a default; filter such records out in the container.
-
-Recommended: views accept every backend value and null and never coerce.
+The prototype deliberately includes uninstalled devices, a free model list, diagnostics and
+Restart, while the current API requires a vehicle and has a nullable `FleetDeviceModel` enum.
+These demo capabilities stay visible with a Demo label; backend support is separate work.
+Before real integration, settle the model/installation editor: accept all existing API enum
+values and nulls alongside the approved prototype capabilities, without coercing a stored value.
+The Vehicles, Drivers, Trips and Maintenance views already cover their added contract states;
+this does not resolve the device product model.
 
 ### 4. Service-task rules: INACTIVE vehicles and completion odometers
 
@@ -627,7 +348,8 @@ Facts (`apps/fleet/src/modules/service-tasks/`):
   (`service-tasks.service.ts:259-270` against `:285`), so parallel completions can both pass. DONE
   tasks cannot be updated or deleted (`service-tasks.service.ts:202-203` and `:311`), so a wrong
   completion cannot be corrected. `docs/discocan/fleet.md:92-93` matches the code; no test covers
-  same-day, backdated or INACTIVE completion; the admin has no completion UI yet.
+  same-day, backdated or INACTIVE completion. The Storybook completion form follows these
+  current rules; the live admin does not use it yet. Changing the rules remains a backend decision.
 - Options, INACTIVE: keep and document; reject only the next task (BAD_USER_INPUT on
   `nextDueOn`/`nextDueOdometerKm` via an inline `findVehicle` check in `complete`, or CONFLICT);
   reject completion and update too. Odometer: keep "earlier date" and document it; include the

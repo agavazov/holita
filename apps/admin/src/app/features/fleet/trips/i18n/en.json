@@ -28,6 +28,8 @@
     "open": "Open trip {trip}",
     "noDriver": "No driver",
     "noEvents": "None",
+    "inProgress": "In progress",
+    "noEnd": "End not received",
     "eventCount": "{count} events",
     "emptyTitle": "No trips yet",
     "emptyDescription": "Trips appear when the trackers report the first journeys.",
@@ -60,6 +62,10 @@
     "score": "Score",
     "departed": "Departed from {place}",
     "arrived": "Arrived at {place}",
+    "departedUnknown": "Departed",
+    "arrivedUnknown": "Arrived",
+    "inProgress": "In progress",
+    "noEnd": "End not received",
     "close": "Close",
     "openVehicle": "Open vehicle"
   }

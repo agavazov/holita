@@ -1,6 +1,6 @@
 import { Component, input, linkedSignal, signal } from '@angular/core';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
-import { expect, userEvent, waitFor, within } from 'storybook/test';
+import { expect, fireEvent, userEvent, waitFor, within } from 'storybook/test';
 import { onFrame } from '../../../storybook/story-config';
 import { FilterBuilder } from './filter-builder';
 import type { FilterCondition, FilterField } from './filter-model';
@@ -119,4 +119,76 @@ export const EditCondition: Story = {
 export const Mobile: Story = {
   args: { initial: someConditions },
   globals: { viewport: { value: 'mobile375', isRotated: false } },
+};
+
+export const KeyboardFocus: Story = {
+  name: 'Keyboard focus',
+  args: { initial: someConditions },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    const add = canvas.getByRole('button', { name: 'Add filter' });
+    add.focus();
+    await userEvent.keyboard('{Enter}');
+    const column = () =>
+      body.getByRole('dialog', { name: 'Filter condition' }).querySelector('[id$="-field"]');
+    await waitFor(() => expect(column()).toHaveFocus());
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(add).toHaveFocus());
+    const chip = canvas.getByRole('button', { name: /^Edit filter: Odometer between/ });
+    await userEvent.click(chip);
+    await waitFor(() => expect(column()).toHaveFocus());
+    await userEvent.click(body.getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(chip).toHaveFocus());
+    await userEvent.click(add);
+    await waitFor(() => expect(column()).toHaveFocus());
+    const search = canvas.getByRole('searchbox');
+    await userEvent.click(search);
+    await waitFor(() => expect(search).toHaveFocus());
+    await userEvent.click(canvas.getByRole('button', { name: /^Remove filter: Odometer between/ }));
+    await waitFor(() =>
+      expect(canvas.getByRole('button', { name: /^Edit filter: Added/ })).toHaveFocus(),
+    );
+    await userEvent.click(canvas.getByRole('button', { name: /^Remove filter: Has a tracker/ }));
+    await waitFor(() =>
+      expect(canvas.getByRole('button', { name: /^Edit filter: Added/ })).toHaveFocus(),
+    );
+  },
+};
+
+export const CalendarEscape: Story = {
+  name: 'Calendar Escape keeps the filter editor',
+  args: { initial: someConditions },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    const chip = canvas.getByRole('button', { name: /^Edit filter: Added/ });
+    for (const target of ['input', 'cell']) {
+      await userEvent.click(chip);
+      const editor = await body.findByRole('dialog', { name: 'Filter condition' });
+      const input = within(editor).getByRole('combobox', { name: 'Value' });
+      await userEvent.click(input);
+      await waitFor(() =>
+        expect(canvasElement.ownerDocument.querySelector('.p-datepicker-panel')).toBeVisible(),
+      );
+      const cell = canvasElement.ownerDocument.querySelector<HTMLElement>(
+        '.p-datepicker-panel [data-date][tabindex="0"]',
+      );
+      const source = target === 'input' ? input : cell;
+      if (!source) throw new Error('Missing focusable calendar cell.');
+      source.focus();
+      // PrimeNG 22 reads legacy Escape codes in both the input and its calendar cells.
+      await fireEvent.keyDown(source, { key: 'Escape', code: 'Escape', keyCode: 27, which: 27 });
+      await waitFor(() =>
+        expect(canvasElement.ownerDocument.querySelector('.p-datepicker-panel')).toBeNull(),
+      );
+      await expect(editor).toBeVisible();
+      await waitFor(() => expect(input).toHaveFocus());
+      await fireEvent.keyDown(input, { key: 'Escape', code: 'Escape', keyCode: 27, which: 27 });
+      await waitFor(() =>
+        expect(body.queryByRole('dialog', { name: 'Filter condition' })).toBeNull(),
+      );
+      await waitFor(() => expect(chip).toHaveFocus());
+    }
+  },
 };

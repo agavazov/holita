@@ -33,11 +33,7 @@ import {
 import { alertsText } from '../alerts/i18n/messages';
 import { scoreTone } from '../drivers/drivers-view';
 import { maintenanceText } from '../maintenance/i18n/messages';
-import {
-  type ServiceTaskRow,
-  type ServiceUrgency,
-  urgencyTones,
-} from '../maintenance/service-task';
+import { type ServiceTaskRow, urgencyTones, serviceStatusTones } from '../maintenance/service-task';
 import { tripsText } from '../trips/i18n/messages';
 import { type TripRow, worstTone } from '../trips/trips-view';
 import { vehiclesText } from './i18n/messages';
@@ -47,7 +43,7 @@ import type { VehicleRow } from './vehicles-view';
 /** The vehicle record of the profile page: the list row plus specification and live data. */
 export interface VehicleProfile extends VehicleRow {
   readonly vin: string;
-  readonly fuelType: VehicleFuelType;
+  readonly fuelType: VehicleFuelType | null;
   readonly tankL: number | null;
   readonly speedKph: number | null;
   readonly createdAt: string;
@@ -110,13 +106,16 @@ export class VehicleProfileView {
   readonly tab = input<VehicleProfileTab>('overview');
   readonly tabChange = output<VehicleProfileTab>();
   readonly edit = output();
+  readonly recordOdometer = output();
   readonly retry = output();
   readonly openTrip = output<string>();
   readonly openAlert = output<string>();
+  readonly openService = output<string>();
 
   private readonly language = inject(UI_LANGUAGE);
   private readonly vehicles = computed(() => vehiclesText(this.language()));
   protected readonly text = computed(() => this.vehicles().profile);
+  protected readonly staleFuelText = computed(() => this.vehicles().table.staleFuel);
   protected readonly tripText = computed(() => tripsText(this.language()).table);
   private readonly alertCatalog = computed(() => alertsText(this.language()));
   protected readonly alertCatalogTable = computed(() => this.alertCatalog().table);
@@ -126,19 +125,20 @@ export class VehicleProfileView {
   protected readonly description = computed(() => {
     const vehicle = this.vehicle();
     if (!vehicle) return null;
-    const type = this.vehicles().types[vehicle.type];
-    return [vehicle.fleetNumber, `${vehicle.make} ${vehicle.model}`, type]
+    const type = vehicle.type ? this.vehicles().types[vehicle.type] : null;
+    return [vehicle.fleetNumber, [vehicle.make, vehicle.model].filter(Boolean).join(' '), type]
       .filter(Boolean)
       .join(' · ');
   });
   protected readonly openAlerts = computed(
-    () => this.alerts().filter((alert) => alert.status !== 'RESOLVED').length,
+    () => this.alerts().filter((alert) => alert.status === 'OPEN').length,
   );
-  protected readonly distanceTotal = computed(() =>
-    this.distance().reduce((sum, point) => sum + (point.value ?? 0), 0),
-  );
+  protected readonly distanceTotal = computed(() => {
+    const values = this.distance().flatMap((point) => (point.value === null ? [] : [point.value]));
+    return values.length ? values.reduce((sum, value) => sum + value, 0) : null;
+  });
   protected readonly nextService = computed(() => {
-    const task = this.service().find((item) => item.urgency !== 'DONE');
+    const task = this.service().find((item) => item.status === 'PLANNED');
     if (!task) return { value: this.text().kpis.noService, footnote: null, tone: null };
     const due = task.dueOn ? formatDateOnly(task.dueOn, this.language()) : null;
     return {
@@ -174,7 +174,7 @@ export class VehicleProfileView {
   }
 
   protected fuelTypeLabel(vehicle: VehicleProfile): string {
-    return this.vehicles().fuelTypes[vehicle.fuelType];
+    return vehicle.fuelType ? this.vehicles().fuelTypes[vehicle.fuelType] : '—';
   }
 
   protected selectTab(value: string | number | undefined): void {
@@ -210,22 +210,26 @@ export class VehicleProfileView {
     return this.alertCatalog().statuses[status];
   }
 
-  protected urgencySeverity(urgency: ServiceUrgency) {
-    return toneSeverity(urgencyTones[urgency]);
+  protected urgencySeverity(task: ServiceTaskRow) {
+    return toneSeverity(
+      task.urgency ? urgencyTones[task.urgency] : serviceStatusTones[task.status],
+    );
   }
 
-  protected urgencyLabel(urgency: ServiceUrgency): string {
-    return this.maintenance().urgencies[urgency];
+  protected urgencyLabel(task: ServiceTaskRow): string {
+    return task.urgency
+      ? this.maintenance().urgencies[task.urgency]
+      : this.maintenance().statuses[task.status];
   }
 
   protected kmLeftLabel(task: ServiceTaskRow): string | null {
-    if (task.kmLeft === null) return null;
+    if (task.kmLeft === null || task.status !== 'PLANNED') return null;
     const table = this.maintenance().table;
     const km = formatNumber(Math.abs(task.kmLeft), this.language());
     return interpolate(task.kmLeft < 0 ? table.kmOver : table.kmLeft, { km });
   }
 
   protected tripLabel(trip: TripRow): string {
-    return `${trip.from} → ${trip.to}`;
+    return `${trip.from ?? '—'} → ${trip.to ?? '—'}`;
   }
 }

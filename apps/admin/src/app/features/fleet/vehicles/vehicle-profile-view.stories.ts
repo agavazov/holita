@@ -93,7 +93,55 @@ export const ServiceTab: Story = {
   name: 'Service tab',
   render: exampleAt(`${profile}?tab=service`),
   play: async ({ canvasElement }) => {
-    await pageReady(canvasElement);
+    const canvas = await pageReady(canvasElement);
+    const task = sampleServiceTasks.find((item) => item.vehicleId === vehicle.id);
+    if (!task) throw new Error('Missing service task.');
+    await userEvent.click(canvas.getByRole('button', { name: task.kind }));
+    const body = within(canvasElement.ownerDocument.body);
+    await waitFor(
+      () =>
+        expect(
+          body.getByRole('dialog', {
+            name: `${task.status === 'DONE' ? 'Completed' : 'Edit'} ${task.kind}`,
+          }),
+        ).toBeVisible(),
+      appReady,
+    );
+  },
+};
+
+const completedServiceTask = sampleServiceTasks.find((item) => item.id === 's023');
+if (!completedServiceTask) throw new Error('Missing completed service fixture.');
+
+export const CompletedServiceLink: Story = {
+  name: 'Open completed service from the profile',
+  render: exampleAt(`vehicles/${completedServiceTask.vehicleId}?tab=service`),
+  play: async ({ canvasElement }) => {
+    const task = completedServiceTask;
+    const canvas = within(canvasElement);
+    await waitFor(
+      () => expect(canvas.getByRole('button', { name: task.kind })).toBeVisible(),
+      appReady,
+    );
+    await userEvent.click(canvas.getByRole('button', { name: task.kind }));
+    const body = within(canvasElement.ownerDocument.body);
+    await waitFor(
+      () => expect(body.getByRole('dialog', { name: `Completed ${task.kind}` })).toBeVisible(),
+      appReady,
+    );
+    await expect(body.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
+  },
+};
+
+export const AcknowledgedAlerts: Story = {
+  name: 'Acknowledged alerts are excluded from the open count',
+  render: exampleAt(`${profile}?scenario=acknowledged-alerts&tab=alerts`),
+  play: async ({ canvasElement }) => {
+    const canvas = await pageReady(canvasElement);
+    const tile = canvas.getByText('Open alerts', { exact: true }).closest('holita-kpi-tile');
+    if (!(tile instanceof HTMLElement)) throw new Error('Missing open-alert KPI.');
+    await expect(within(tile).getByText('0', { exact: true })).toBeVisible();
+    await expect(canvas.getAllByText('Acknowledged', { exact: true }).length).toBeGreaterThan(0);
   },
 };
 
@@ -122,9 +170,59 @@ export const Saved: Story = {
       ' Updated from the profile.',
     );
     await userEvent.click(body.getByRole('button', { name: 'Save' }));
-    await waitFor(() => expect(body.getByText(`${plate} was saved.`)).toBeVisible());
+    await waitFor(() => expect(body.getByText(`${plate} was saved.`)).toBeVisible(), {
+      timeout: 3_000,
+    });
     await expect(body.getByText(`${plate} was saved.`).closest('.p-toast-message')).not.toBeNull();
     await waitFor(() => expect(body.queryByRole('dialog')).toBeNull());
+  },
+};
+
+export const SaveError: Story = {
+  name: 'Profile save error and retry',
+  render: exampleAt(`${profile}?scenario=save-error&drawer=edit`),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await waitFor(
+      () => expect(body.getByRole('dialog', { name: `Edit ${plate}` })).toBeVisible(),
+      appReady,
+    );
+    const notes = body.getByRole('textbox', { name: 'Notes' });
+    await userEvent.type(notes, ' Draft from profile.');
+    const draft = notes instanceof HTMLTextAreaElement ? notes.value : '';
+    await userEvent.click(body.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(notes).toBeDisabled());
+    await waitFor(() => expect(body.getByText(/The vehicle could not be saved/)).toBeVisible(), {
+      timeout: 3_000,
+    });
+    await expect(notes).toBeEnabled();
+    await expect(notes).toHaveValue(draft);
+    await userEvent.click(body.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(body.getByText(`${plate} was saved.`)).toBeVisible(), {
+      timeout: 3_000,
+    });
+    await waitFor(() => expect(body.queryByRole('dialog')).toBeNull());
+  },
+};
+
+export const DuplicateFleetNumber: Story = {
+  name: 'Profile rejects an existing fleet number',
+  render: exampleAt(`${profile}?drawer=edit`),
+  play: async ({ canvasElement }) => {
+    const other = sampleVehicles.find((item) => item.id !== vehicle.id && item.fleetNumber);
+    if (!other) throw new Error('Missing duplicate fleet-number fixture.');
+    const body = within(canvasElement.ownerDocument.body);
+    await waitFor(
+      () => expect(body.getByRole('dialog', { name: `Edit ${plate}` })).toBeVisible(),
+      appReady,
+    );
+    const number = body.getByRole('textbox', { name: 'Fleet number' });
+    await userEvent.clear(number);
+    await userEvent.type(number, other.fleetNumber);
+    await userEvent.click(body.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(number).toHaveAttribute('aria-invalid', 'true'), { timeout: 3_000 });
+    await waitFor(() => expect(number).toHaveFocus());
+    await expect(number).toHaveValue(other.fleetNumber);
   },
 };
 

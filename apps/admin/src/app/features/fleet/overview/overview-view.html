@@ -109,7 +109,12 @@
             @for (trip of trips(); track trip.id) {
               <li>
                 <span class="app-cell-stack">
-                  <span>{{ trip.plate }} · {{ trip.from }} → {{ trip.to }}</span>
+                  <a
+                    class="app-link"
+                    [routerLink]="links().trips"
+                    [queryParams]="{ drawer: trip.id }"
+                    >{{ trip.plate }} · {{ trip.from ?? '—' }} → {{ trip.to ?? '—' }}</a
+                  >
                   <span
                     >{{ trip.startedAt | holitaDateTime }} ·
                     {{ trip.distanceKm | holitaNumber }} km</span

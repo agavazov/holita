@@ -5,134 +5,212 @@
   [closeLink]="null"
   (closeRequest)="requestClose()"
 >
-  <form #formElement id="task-form" [formGroup]="form" (ngSubmit)="submit()">
-    @if (saveError(); as error) {
-      <p-message severity="error" role="alert">{{ error }}</p-message>
-    }
+  @if (readOnly() && task(); as record) {
     <section class="app-form-section">
-      <div class="app-form-grid">
-        <holita-form-field
-          class="app-form-grid--wide"
-          [label]="text().task"
-          controlId="task-kind"
-          [required]="true"
-          [error]="errorOf('kind')"
-        >
-          <input
-            pInputText
-            id="task-kind"
-            formControlName="kind"
-            [invalid]="!!errorOf('kind')"
-            [attr.aria-invalid]="errorOf('kind') ? 'true' : null"
-            [attr.aria-describedby]="describedBy('kind')"
-          />
-        </holita-form-field>
-        <holita-form-field
-          class="app-form-grid--wide"
-          [label]="text().vehicle"
-          controlId="task-vehicleId"
-          [required]="true"
-          [error]="errorOf('vehicleId')"
-        >
-          <p-select
-            inputId="task-vehicleId"
-            formControlName="vehicleId"
-            [options]="vehicleOptions()"
-            optionLabel="name"
-            optionValue="id"
-            [filter]="true"
-            [placeholder]="text().chooseVehicle"
-            appendTo="body"
-            [invalid]="!!errorOf('vehicleId')"
-            [ariaLabel]="text().vehicle"
-          />
-        </holita-form-field>
-      </div>
+      <dl class="app-facts">
+        <div>
+          <dt>{{ text().serviceType }}</dt>
+          <dd>{{ catalog().serviceTypes[record.serviceType] }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().task }}</dt>
+          <dd>{{ record.title ?? '—' }}</dd>
+        </div>
+        <div class="app-facts--wide">
+          <dt>{{ text().vehicle }}</dt>
+          <dd>{{ vehicleName() }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().dueOn }}</dt>
+          <dd>{{ record.dueOn | holitaDate }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().dueKm }}</dt>
+          <dd>{{ record.dueKm | holitaNumber }}</dd>
+        </div>
+        <div class="app-facts--wide">
+          <dt>{{ text().workshop }}</dt>
+          <dd>{{ record.workshop || '—' }}</dd>
+        </div>
+        <div class="app-facts--wide">
+          <dt>{{ text().notes }}</dt>
+          <dd>{{ record.notes || '—' }}</dd>
+        </div>
+      </dl>
     </section>
+  } @else {
+    <form #formElement id="task-form" [formGroup]="form" (ngSubmit)="submit()">
+      @if (saveError(); as error) {
+        <p-message severity="error" role="alert">{{ error }}</p-message>
+      }
+      <section class="app-form-section">
+        <div class="app-form-grid">
+          <holita-form-field
+            class="app-form-grid--wide"
+            [label]="text().serviceType"
+            controlId="task-serviceType"
+            [required]="true"
+            [error]="errorOf('serviceType')"
+          >
+            <p-select
+              inputId="task-serviceType"
+              formControlName="serviceType"
+              [options]="serviceOptions()"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+              [invalid]="!!errorOf('serviceType')"
+              [ariaLabel]="text().serviceType"
+              [pt]="{
+                label: {
+                  'aria-invalid': errorOf('serviceType') ? 'true' : undefined,
+                  'aria-describedby': describedBy('serviceType'),
+                },
+              }"
+            />
+          </holita-form-field>
+          <holita-form-field
+            class="app-form-grid--wide"
+            [label]="text().task"
+            controlId="task-title"
+            [error]="errorOf('title')"
+          >
+            <input
+              pInputText
+              id="task-title"
+              formControlName="title"
+              [invalid]="!!errorOf('title')"
+              [attr.aria-invalid]="errorOf('title') ? 'true' : null"
+              [attr.aria-describedby]="describedBy('title')"
+            />
+          </holita-form-field>
+          <holita-form-field
+            class="app-form-grid--wide"
+            [label]="text().vehicle"
+            controlId="task-vehicleId"
+            [required]="true"
+            [error]="errorOf('vehicleId')"
+          >
+            @if (task()) {
+              <p>{{ vehicleName() }}</p>
+            } @else {
+              <p-select
+                inputId="task-vehicleId"
+                formControlName="vehicleId"
+                [options]="vehicleOptions()"
+                optionLabel="name"
+                optionValue="id"
+                [filter]="true"
+                [placeholder]="text().chooseVehicle"
+                appendTo="body"
+                [invalid]="!!errorOf('vehicleId')"
+                [ariaLabel]="text().vehicle"
+                [pt]="{
+                  label: {
+                    'aria-invalid': errorOf('vehicleId') ? 'true' : undefined,
+                    'aria-describedby': describedBy('vehicleId'),
+                  },
+                }"
+              />
+            }
+          </holita-form-field>
+        </div>
+      </section>
 
-    <section class="app-form-section">
-      <h3>{{ text().schedule }}</h3>
-      <p>{{ text().scheduleHint }}</p>
-      <div class="app-form-grid">
-        <holita-form-field [label]="text().dueOn" controlId="task-dueOn" [error]="errorOf('dueOn')">
-          <p-datepicker
-            inputId="task-dueOn"
-            formControlName="dueOn"
-            dateFormat="yy-mm-dd"
-            appendTo="body"
-            [fluid]="true"
-            [invalid]="!!errorOf('dueOn')"
-            [pt]="inputPt().dueOn"
-          />
-        </holita-form-field>
-        <holita-form-field [label]="text().dueKm" controlId="task-dueKm" [error]="errorOf('dueKm')">
-          <p-inputnumber
-            inputId="task-dueKm"
-            formControlName="dueKm"
-            [fluid]="true"
-            [invalid]="!!errorOf('dueKm')"
-            [pt]="inputPt().dueKm"
-          />
-        </holita-form-field>
-      </div>
-    </section>
+      <section class="app-form-section">
+        <h3>{{ text().schedule }}</h3>
+        <p>{{ text().scheduleHint }}</p>
+        <div class="app-form-grid">
+          <holita-form-field
+            [label]="text().dueOn"
+            controlId="task-dueOn"
+            [error]="errorOf('dueOn')"
+          >
+            <p-datepicker
+              inputId="task-dueOn"
+              formControlName="dueOn"
+              dateFormat="yy-mm-dd"
+              appendTo="body"
+              [fluid]="true"
+              [invalid]="!!errorOf('dueOn')"
+              [pt]="inputPt().dueOn"
+            />
+          </holita-form-field>
+          <holita-form-field
+            [label]="text().dueKm"
+            controlId="task-dueKm"
+            [error]="errorOf('dueKm')"
+          >
+            <p-inputnumber
+              inputId="task-dueKm"
+              formControlName="dueKm"
+              [fluid]="true"
+              [invalid]="!!errorOf('dueKm')"
+              [pt]="inputPt().dueKm"
+            />
+          </holita-form-field>
+        </div>
+      </section>
 
-    <section class="app-form-section">
-      <h3>{{ text().costing }}</h3>
-      <div class="app-form-grid">
-        <holita-form-field
-          [label]="text().cost"
-          controlId="task-costCents"
-          [error]="errorOf('costCents')"
-        >
-          <p-inputnumber
-            inputId="task-costCents"
-            formControlName="cost"
-            mode="decimal"
-            [minFractionDigits]="2"
-            [maxFractionDigits]="2"
-            [fluid]="true"
-            [invalid]="!!errorOf('costCents')"
-            [pt]="inputPt().costCents"
-          />
-        </holita-form-field>
-        <holita-form-field [label]="text().done" controlId="task-done">
-          <p-toggleswitch inputId="task-done" formControlName="done" [ariaLabel]="text().done" />
-        </holita-form-field>
-        <holita-form-field
-          class="app-form-grid--wide"
-          [label]="text().notes"
-          controlId="task-notes"
-          [error]="errorOf('notes')"
-          [counter]="{ length: notesLength(), max: 2000 }"
-        >
-          <textarea
-            pTextarea
-            id="task-notes"
-            formControlName="notes"
-            rows="3"
-            [invalid]="!!errorOf('notes')"
-            [attr.aria-invalid]="errorOf('notes') ? 'true' : null"
-            [attr.aria-describedby]="describedBy('notes')"
-          ></textarea>
-        </holita-form-field>
-      </div>
-    </section>
-  </form>
+      <section class="app-form-section">
+        <h3>{{ text().details }}</h3>
+        <div class="app-form-grid">
+          <holita-form-field
+            class="app-form-grid--wide"
+            [label]="text().workshop"
+            controlId="task-workshop"
+            [error]="errorOf('workshop')"
+          >
+            <input
+              pInputText
+              id="task-workshop"
+              formControlName="workshop"
+              [invalid]="!!errorOf('workshop')"
+              [attr.aria-invalid]="errorOf('workshop') ? 'true' : null"
+              [attr.aria-describedby]="describedBy('workshop')"
+            />
+          </holita-form-field>
+          <holita-form-field
+            class="app-form-grid--wide"
+            [label]="text().notes"
+            controlId="task-notes"
+            [error]="errorOf('notes')"
+            [counter]="{ length: notesLength(), max: 2000 }"
+          >
+            <textarea
+              pTextarea
+              id="task-notes"
+              formControlName="notes"
+              rows="3"
+              [invalid]="!!errorOf('notes')"
+              [attr.aria-invalid]="errorOf('notes') ? 'true' : null"
+              [attr.aria-describedby]="describedBy('notes')"
+            ></textarea>
+          </holita-form-field>
+        </div>
+      </section>
+    </form>
+  }
 
   <div drawerFooter class="app-drawer-actions">
-    <button
-      pButton
-      type="button"
-      severity="secondary"
-      [outlined]="true"
-      [disabled]="saving()"
-      (click)="requestClose()"
-    >
-      {{ text().cancel }}
-    </button>
-    <button pButton type="submit" form="task-form" [loading]="saving()" [disabled]="saving()">
-      {{ task() ? text().save : text().create }}
-    </button>
+    @if (readOnly()) {
+      <button pButton type="button" severity="secondary" [outlined]="true" (click)="requestClose()">
+        {{ text().close }}
+      </button>
+    } @else {
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="saving()"
+        (click)="requestClose()"
+      >
+        {{ text().cancel }}
+      </button>
+      <button pButton type="submit" form="task-form" [loading]="saving()" [disabled]="saving()">
+        {{ task() ? text().save : text().create }}
+      </button>
+    }
   </div>
 </holita-route-drawer>

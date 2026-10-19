@@ -9,9 +9,15 @@ interface Entry {
 
 const examples: readonly Entry[] = [
   {
+    story: 'examples-authentication-login--default',
+    title: 'Login',
+    shows:
+      'The real Tenant and Branch sign-in flow with local GraphQL fixtures; success opens the sample Fleet.',
+  },
+  {
     story: 'examples-tour--all-pages',
     title: 'Tour',
-    shows: 'Every example page in one app; switch pages in the sidebar.',
+    shows: 'Every sample navigation page in one app; switch pages in the sidebar.',
   },
   {
     story: 'examples-monitoring-overview--default',
@@ -35,6 +41,18 @@ const examples: readonly Entry[] = [
     shows: 'The mixed drawer: a record opens read-only and Edit switches to the form.',
   },
   {
+    story: 'examples-fleet-driver-scorecard--default',
+    title: 'Driver scorecard',
+    shows:
+      'Distance-weighted driving and eco scores, scored-trip coverage and maneuver intensities for 7, 30 or 90 days.',
+  },
+  {
+    story: 'examples-fleet-odometer--default',
+    title: 'Manual odometer',
+    shows:
+      'Record a reading from the vehicle profile, with chronological checks and a retryable save.',
+  },
+  {
     story: 'examples-monitoring-trips--trip-drawer',
     title: 'Trips',
     shows: 'A read-only list and a view drawer with a timeline.',
@@ -47,7 +65,14 @@ const examples: readonly Entry[] = [
   {
     story: 'examples-service-maintenance--default',
     title: 'Maintenance',
-    shows: 'Due by date or odometer, money, and a form with "one of two" validation.',
+    shows:
+      'Plan by date or odometer, complete a service with optional next task, and review its completion details.',
+  },
+  {
+    story: 'examples-service-service-completion--default',
+    title: 'Service completion',
+    shows:
+      'Completion details, chronological validation, a single save with the next task, and retry without losing the draft.',
   },
   {
     story: 'examples-fleet-devices--edit',

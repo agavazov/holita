@@ -36,7 +36,7 @@
       <div>
         <dt>{{ text().vehicle }}</dt>
         <dd>
-          <button type="button" class="app-link" (click)="openVehicle.emit(alert().vehicleId)">
+          <button type="button" class="app-link" [disabled]="!!busy()" (click)="requestVehicle()">
             {{ alert().plate }}
           </button>
         </dd>
@@ -58,13 +58,10 @@
       controlId="alert-remark"
       [hint]="text().remarkHint"
       [error]="remarkError()"
-      [counter]="{ length: remarkLength(), max: 2000 }"
+      [counter]="{ length: remarkLength(), max: 1000 }"
     >
-      <!-- pAutoFocus focuses in a later task, once the drawer has moved to the body: moving a
-      focused field would blur it. -->
       <textarea
         pTextarea
-        [pAutoFocus]="focusRemark()"
         id="alert-remark"
         rows="4"
         [formControl]="remark"

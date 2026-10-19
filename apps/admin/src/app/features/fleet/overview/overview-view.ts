@@ -104,6 +104,8 @@ export class OverviewView {
       { key: 'idle', label: text.idle, tone: 'info' },
       { key: 'parked', label: text.parked, tone: 'muted' },
       { key: 'notReporting', label: text.notReporting, tone: 'danger' },
+      { key: 'asset', label: text.asset, tone: 'c1' },
+      { key: 'noDevice', label: text.noDevice, tone: 'c2' },
     ];
   });
   protected readonly placeholders = [1, 2, 3, 4];

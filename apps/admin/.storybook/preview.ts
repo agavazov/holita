@@ -113,7 +113,15 @@ const preview: Preview = {
         order: [
           'Start here',
           'Examples',
-          ['Tour', 'Monitoring', ['Overview', 'Alerts', 'Trips'], 'Fleet', 'Service', 'Settings'],
+          [
+            'Tour',
+            'Authentication',
+            'Monitoring',
+            ['Overview', 'Alerts', 'Trips'],
+            'Fleet',
+            'Service',
+            'Settings',
+          ],
           'Design System',
           ['Foundations', 'Patterns', 'Shell', 'PrimeNG coverage'],
         ],

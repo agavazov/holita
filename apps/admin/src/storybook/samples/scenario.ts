@@ -1,6 +1,16 @@
-import { inject, type Signal } from '@angular/core';
+import { computed, inject, type Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, type ParamMap, Router } from '@angular/router';
+import { ActivatedRoute, type ParamMap, Router, ROUTER_OUTLET_DATA } from '@angular/router';
+import { fixtureBranches } from '../session-fixtures';
+
+/** The selected sample Branch name supplied by the containing RouterOutlet. */
+export function injectBranchName(): Signal<string> {
+  const data = inject(ROUTER_OUTLET_DATA);
+  return computed(() => {
+    const name = data();
+    return typeof name === 'string' ? name : fixtureBranches[0].name;
+  });
+}
 
 /**
  * The query parameters of an example page: stories open pages on a state with `?scenario=` (e.g.

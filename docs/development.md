@@ -265,14 +265,19 @@ build.
   `AdminShell` without GraphQL; `?scenario=` and `?drawer=` in the path open their states. The
   example pages feed the `features/fleet/*` views and drawers from
   `src/storybook/samples/fleet-samples.ts`, generated with fixed seeds relative to
-  `2026-10-18T07:00:00.000Z`. Stories pick sample records by position, so a generator change
-  moves records under play functions and visual captures.
+  `2026-10-18T07:00:00.000Z`. Stories use seeded sample records; generator changes can alter the
+  data used by play functions and visual captures.
+  The standalone `Examples/Authentication/Login` mounts the real `Login` through the story-only
+  `LoginPage`; its successful submission enters the existing sample Fleet with the selected
+  Tenant and Branch, without activating a real session.
 - GraphQL fixtures: a module registers an answer at load time with
   `graphqlFixture(GeneratedDocument, (variables) => result)` and must be imported by the story or
   by `story-config.ts`. Handlers read `FixtureVariables` (runtime-checked accessors and `branchId`
   from `x-branch-id`) and throw `fixtureError(code, message, fieldErrors?)` for a GraphQL error.
-  Only `AdminBranches` (`session-fixtures.ts`) is registered; any other operation answers with
-  the GraphQL error `No Storybook fixture answers <Operation>.` Responses carry the request ID
+  `AdminBranches` (`session-fixtures.ts`) is registered globally. Login stories also register
+  `AdminTenants` and `AdminDemoLogin` and override Branch discovery for their empty scenarios
+  through `login-fixtures.ts`, restoring the shared Branch handler on cleanup. Unregistered
+  operations answer with the GraphQL error `No Storybook fixture answers <Operation>.` Responses carry the request ID
   `fixture-<Operation>`. The backend sets `data-fixture-in-flight` and `data-fixture-activity` on
   `<html>` for the visual check. `src/storybook/graphql-fixtures.spec.ts` is an admin unit spec.
 - `parameters.holita` (`StoryFixtures`, declared with `satisfies StoryFixtures`) is read at runtime
