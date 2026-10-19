@@ -1,9 +1,7 @@
 /** The question asked before an action runs. */
 export interface ActionConfirm {
-  /** The question for one record; may use {name}, e.g. "Delete CB 1001 AX?". */
-  readonly one: string;
-  /** The question for several records; may use {count}, e.g. "Delete {count} vehicles?". */
-  readonly many: string;
+  /** The same question for one or several records, which the dialog lists below it. */
+  readonly title: string;
   /** What follows from it, e.g. "Their trips stay in reports." */
   readonly detail?: string;
   /** The label of the confirming button. */

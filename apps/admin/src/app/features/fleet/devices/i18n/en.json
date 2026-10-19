@@ -43,8 +43,7 @@
     "restart": "Restart",
     "vehicle": "Open vehicle profile",
     "confirmRestart": {
-      "one": "Restart {name}?",
-      "many": "Restart {count} devices?",
+      "title": "Restart devices?",
       "detail": "They stop reporting for about a minute.",
       "accept": "Restart"
     }

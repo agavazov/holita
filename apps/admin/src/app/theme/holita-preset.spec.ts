@@ -55,6 +55,7 @@ describe('holita preset', () => {
       'tag',
       'textarea',
       'timeline',
+      'toast',
       'togglebutton',
       'toggleswitch',
       'tooltip',
@@ -128,6 +129,10 @@ describe('holita preset', () => {
     expect(css.component('message')).toContain(
       '--p-message-error-color:light-dark(var(--p-red-700), var(--p-red-300))',
     );
+    expect(css.component('toast')).toContain(
+      '--p-toast-warn-color:light-dark(var(--p-amber-700), var(--p-amber-300))',
+    );
+    expect(css.component('toast')).toContain('--p-toast-error-shadow:var(--p-app-shadow-floating)');
     expect(css.component('button')).toContain(
       '--p-button-danger-background:light-dark(var(--p-red-600), var(--p-red-400))',
     );

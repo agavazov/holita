@@ -117,6 +117,8 @@ export function toneContrastChecks(brand: Brand): readonly ContrastCheck[] {
       check(`Dark solid ${tone} mark on surface 900`, hex(400), surface(900), 3),
       check(`Message ${tone}: 700 on 50`, hex(700), hex(50), 4.5),
       check(`Dark message ${tone}: 300 on tint`, hex(300), darkTint, 4.5),
+      check(`Toast ${tone} detail: surface 700 on 50`, surface(700), hex(50), 4.5),
+      check(`Dark toast ${tone}: 300 on surface 900`, hex(300), surface(900), 4.5),
       check(`Button ${tone}: white on ${String(step)}`, white, hex(step), 4.5),
       check(`Dark button ${tone}: surface 950 on 400`, surface(950), hex(400), 4.5),
       check(`Outlined/text button ${tone}: 700 on surface 0`, hex(700), white, 4.5),

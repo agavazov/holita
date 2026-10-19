@@ -35,7 +35,7 @@ export const Default: Story = {
 };
 
 /**
- * Restart from the bulk bar applies to online devices only: the question counts them, lists
+ * Restart from the bulk bar applies to online devices only: the dialog counts them, lists
  * them, and says how many selected devices it leaves unchanged; afterwards focus is on the list.
  */
 export const RestartSelected: Story = {
@@ -54,7 +54,7 @@ export const RestartSelected: Story = {
     const bar = await canvas.findByRole('region', { name: 'Actions for selected records' });
     await userEvent.click(within(bar).getByRole('button', { name: 'Restart' }));
     const body = within(canvasElement.ownerDocument.body);
-    const dialog = await body.findByRole('alertdialog', { name: 'Restart 2 devices?' });
+    const dialog = await body.findByRole('alertdialog', { name: 'Restart devices?' });
     await expect(within(dialog).getAllByRole('listitem')).toHaveLength(2);
     // The dialog fades in: wait until its content is shown.
     await waitFor(() =>

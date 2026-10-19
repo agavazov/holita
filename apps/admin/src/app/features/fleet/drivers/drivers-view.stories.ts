@@ -57,7 +57,8 @@ export const DeleteFromRow: Story = {
     await userEvent.click(trigger);
     const body = within(canvasElement.ownerDocument.body);
     await chooseMenuItem(canvasElement.ownerDocument.body, 'Delete');
-    const dialog = await body.findByRole('alertdialog', { name: `Delete ${name}?` });
+    const dialog = await body.findByRole('alertdialog', { name: 'Delete drivers?' });
+    await expect(within(dialog).getByRole('listitem')).toHaveTextContent(name);
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(trigger).toHaveFocus());
   },
@@ -74,7 +75,7 @@ export const DeleteSelected: Story = {
     const bar = await canvas.findByRole('region', { name: 'Actions for selected records' });
     await userEvent.click(within(bar).getByRole('button', { name: 'Delete' }));
     const body = within(canvasElement.ownerDocument.body);
-    const dialog = await body.findByRole('alertdialog', { name: 'Delete 3 drivers?' });
+    const dialog = await body.findByRole('alertdialog', { name: 'Delete drivers?' });
     await expect(within(dialog).getAllByRole('listitem')).toHaveLength(3);
     await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
     await waitFor(() => expect(canvas.getByText('Drivers deleted: 3.')).toBeVisible());

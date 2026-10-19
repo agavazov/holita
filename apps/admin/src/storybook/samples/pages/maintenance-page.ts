@@ -1,5 +1,6 @@
 import { Component, computed, DestroyRef, inject, linkedSignal, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { MessageService } from 'primeng/api';
 import { maintenanceText } from '../../../app/features/fleet/maintenance/i18n/messages';
 import {
   type MaintenanceActionId,
@@ -14,7 +15,6 @@ import type { ServiceUrgency } from '../../../app/features/fleet/maintenance/ser
 import { interpolate } from '../../../app/ui/i18n/messages';
 import type { ListActionRequest, ListRecord } from '../../../app/ui/list/list-actions';
 import type { ListQuery } from '../../../app/ui/list/list-query';
-import type { TableNotice } from '../../../app/ui/table-panel/table-panel';
 import { UI_LANGUAGE } from '../../../app/ui/ui-language';
 import { fixtureBranches } from '../../session-fixtures';
 import {
@@ -103,13 +103,11 @@ function toForm(task: SampleServiceTask): ServiceTaskForm {
       [kpis]="kpis()"
       [vehicles]="vehicles"
       [selection]="selection()"
-      [notice]="notice()"
       (stateChange)="state.set($event)"
       (create)="openEditor(null)"
       (action)="run($event)"
       (selectionChange)="selection.set($event)"
       (retry)="failed.set(false)"
-      (dismissNotice)="notice.set(null)"
     />
     @if (editor(); as open) {
       <holita-service-task-drawer
@@ -125,6 +123,7 @@ function toForm(task: SampleServiceTask): ServiceTaskForm {
 })
 export class MaintenancePage {
   private readonly language = inject(UI_LANGUAGE);
+  private readonly messages = inject(MessageService);
   private readonly router = inject(Router);
   private readonly query = injectQueryParams();
   private readonly clearDrawer = injectClearDrawer();
@@ -147,7 +146,6 @@ export class MaintenancePage {
     initialQuery({ field: 'urgency', direction: 'asc' }),
   );
   protected readonly selection = signal<readonly ListRecord<MaintenanceActionId>[]>([]);
-  protected readonly notice = signal<TableNotice | null>(null);
   protected readonly failed = linkedSignal(() => this.scenario() === 'error');
   private readonly failNextSave = linkedSignal(() => this.scenario() === 'save-error');
   protected readonly editor = linkedSignal<{
@@ -241,7 +239,10 @@ export class MaintenancePage {
       );
       this.closeEditor();
       const template = editor.id ? this.text().notices.saved : this.text().notices.created;
-      this.notice.set({ severity: 'success', text: interpolate(template, { task: form.kind }) });
+      this.messages.add({
+        severity: 'success',
+        summary: interpolate(template, { task: form.kind }),
+      });
     }, saveDelayMs);
   }
 
@@ -252,18 +253,18 @@ export class MaintenancePage {
       ),
     );
     this.selection.update((selection) => selection.filter((record) => !ids.includes(record.id)));
-    this.notice.set({
+    this.messages.add({
       severity: 'success',
-      text: interpolate(this.text().notices.completed, { count: ids.length }),
+      summary: interpolate(this.text().notices.completed, { count: ids.length }),
     });
   }
 
   private delete(ids: readonly string[]): void {
     this.tasks.update((tasks) => tasks.filter((item) => !ids.includes(item.id)));
     this.selection.update((selection) => selection.filter((record) => !ids.includes(record.id)));
-    this.notice.set({
+    this.messages.add({
       severity: 'success',
-      text: interpolate(this.text().notices.deleted, { count: ids.length }),
+      summary: interpolate(this.text().notices.deleted, { count: ids.length }),
     });
   }
 }

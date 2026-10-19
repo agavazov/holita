@@ -18,7 +18,7 @@ import {
 import { injectSortReady, listQuery, type ListQuery } from '../../../ui/list/list-query';
 import { PageHeader } from '../../../ui/page-header/page-header';
 import { RowActions } from '../../../ui/row-actions/row-actions';
-import { TablePanel, type TableNotice } from '../../../ui/table-panel/table-panel';
+import { TablePanel } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { toneSeverity } from '../../../ui/tones';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
@@ -103,13 +103,11 @@ export class AlertsView {
   readonly kpis = input<AlertKpis | null>(null);
   readonly vehicles = input<readonly AlertOption[]>([]);
   readonly selection = input<readonly ListRecord<AlertActionId>[]>([]);
-  readonly notice = input<TableNotice | null>(null);
   readonly stateChange = output<ListQuery>();
   /** Row and bulk actions alike, with the IDs they apply to. */
   readonly action = output<ListActionRequest<AlertActionId>>();
   readonly selectionChange = output<readonly ListRecord<AlertActionId>[]>();
   readonly retry = output();
-  readonly dismissNotice = output();
 
   private readonly language = inject(UI_LANGUAGE);
   private readonly sortReady = injectSortReady();

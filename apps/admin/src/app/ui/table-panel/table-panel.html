@@ -27,17 +27,6 @@
     <!-- Decorative: aria-busy on the panel announces the refresh. -->
     <span class="table-panel__progress" aria-hidden="true"></span>
   }
-  @if (notice(); as notice) {
-    <div class="table-panel__notice" role="status">
-      <p-message
-        [severity]="notice.severity"
-        [closable]="true"
-        size="small"
-        (onClose)="dismissNotice.emit()"
-        >{{ notice.text }}</p-message
-      >
-    </div>
-  }
   @switch (view().kind) {
     @case ('loading') {
       <div class="table-panel__skeleton" role="status" [attr.aria-label]="text().loading">
@@ -169,24 +158,25 @@ dock sticks to the viewport bottom while a long list is on screen. -->
     </div>
   }
 </div>
-<!-- The confirmation of list actions: the question names one record or counts several, which are
-listed below it; the block below the question is the dialog's description. -->
+<!-- Every list action confirms the same way; the records below the question describe the dialog. -->
 <p-confirmdialog [pt]="confirmPt()" [style]="{ width: 'min(30rem, calc(100vw - 2rem))' }">
   <ng-template #message>
     @if (pending(); as pending) {
       <div class="table-panel__confirm" [id]="id + '-confirm'">
+        <p class="table-panel__confirm-count" [id]="id + '-confirm-count'">
+          {{ confirmRecordsText(pending.records.length) }}
+        </p>
+        <ul
+          class="table-panel__confirm-records"
+          tabindex="0"
+          [attr.aria-labelledby]="id + '-confirm-count'"
+        >
+          @for (record of pending.records; track record.id) {
+            <li [title]="record.label">{{ record.label }}</li>
+          }
+        </ul>
         @if (pending.detail) {
           <p>{{ pending.detail }}</p>
-        }
-        @if (pending.named.length) {
-          <ul class="table-panel__confirm-records">
-            @for (name of pending.named; track $index) {
-              <li>{{ name }}</li>
-            }
-            @if (pending.more) {
-              <li class="table-panel__confirm-more">{{ moreText(pending.more) }}</li>
-            }
-          </ul>
         }
         @if (pending.skipped) {
           <p class="table-panel__confirm-skipped">{{ skippedText(pending.skipped) }}</p>

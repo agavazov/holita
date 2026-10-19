@@ -1,6 +1,7 @@
 import { Component, computed, DestroyRef, inject, linkedSignal, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
+import { MessageService } from 'primeng/api';
 import { TripDrawer } from '../../../app/features/fleet/trips/trip-drawer';
 import {
   VehicleDrawer,
@@ -11,10 +12,12 @@ import {
   vehicleProfileTabs,
   VehicleProfileView,
 } from '../../../app/features/fleet/vehicles/vehicle-profile-view';
+import { vehiclesText } from '../../../app/features/fleet/vehicles/i18n/messages';
 import type { Language } from '../../../app/i18n/messages';
 import { injectPageRecord } from '../../../app/layout/page-record';
 import type { SeriesPoint } from '../../../app/ui/charts/column-series';
 import { formatNumber } from '../../../app/ui/format/format';
+import { interpolate } from '../../../app/ui/i18n/messages';
 import { UI_LANGUAGE } from '../../../app/ui/ui-language';
 import {
   sampleAlerts,
@@ -104,6 +107,7 @@ function distanceSeries(vehicle: SampleVehicle, language: Language): readonly Se
 })
 export class VehicleProfilePage {
   private readonly language = inject(UI_LANGUAGE);
+  private readonly messages = inject(MessageService);
   private readonly router = inject(Router);
   private readonly query = injectQueryParams();
   private readonly clearDrawer = injectClearDrawer();
@@ -192,6 +196,10 @@ export class VehicleProfilePage {
         ),
       );
       this.closeEditor();
+      this.messages.add({
+        severity: 'success',
+        summary: interpolate(vehiclesText(this.language()).notices.saved, { plate: form.plate }),
+      });
     }, saveDelayMs);
   }
 }

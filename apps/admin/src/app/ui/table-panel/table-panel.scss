@@ -79,7 +79,6 @@
 }
 
 .table-panel__header,
-.table-panel__notice,
 .table-panel__inline-error {
   padding: var(--p-app-space-2) var(--p-app-panel-padding);
   border-block-end: 1px solid var(--p-app-panel-border-color);
@@ -196,16 +195,12 @@
   flex-direction: column;
   gap: var(--p-app-space-3);
   min-inline-size: 0;
-
-  > p {
-    margin: 0;
-  }
+  inline-size: 100%;
 }
 
 .table-panel__confirm-records {
-  display: flex;
-  flex-direction: column;
-  gap: var(--p-app-space-1);
+  max-block-size: min(16rem, 40dvh);
+  overflow-y: auto;
   margin: 0;
   padding: var(--p-app-space-2) var(--p-app-space-3);
   border: 1px solid var(--p-content-border-color);
@@ -213,6 +208,7 @@
   list-style: none;
 
   > li {
+    padding-block: var(--p-app-space-1);
     overflow: hidden;
     font-weight: 600;
     text-overflow: ellipsis;
@@ -220,7 +216,7 @@
   }
 }
 
-.table-panel__confirm-more,
+.table-panel__confirm-count,
 .table-panel__confirm-skipped {
   font-weight: 400;
   color: var(--p-text-muted-color);

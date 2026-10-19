@@ -1,4 +1,5 @@
 import { Component, computed, DestroyRef, inject, linkedSignal, signal } from '@angular/core';
+import { MessageService } from 'primeng/api';
 import {
   GroupDrawer,
   type GroupField,
@@ -12,7 +13,6 @@ import {
 import { settingsText } from '../../../app/features/fleet/settings/i18n/messages';
 import { interpolate } from '../../../app/ui/i18n/messages';
 import type { ListActionRequest } from '../../../app/ui/list/list-actions';
-import type { TableNotice } from '../../../app/ui/table-panel/table-panel';
 import { tableView } from '../../../app/ui/table-panel/table-view';
 import { UI_LANGUAGE } from '../../../app/ui/ui-language';
 import { type SampleGroup, sampleGroups, sampleVehicles } from '../fleet-samples';
@@ -29,11 +29,9 @@ import { injectClearDrawer, injectQueryParams, saveDelayMs, scenarioOf } from '.
     <holita-groups-view
       [rows]="rows()"
       [view]="view()"
-      [notice]="notice()"
       (create)="openEditor(null)"
       (action)="run($event)"
       (retry)="failed.set(false)"
-      (dismissNotice)="notice.set(null)"
     />
     @if (editor(); as open) {
       <holita-group-drawer
@@ -48,6 +46,7 @@ import { injectClearDrawer, injectQueryParams, saveDelayMs, scenarioOf } from '.
 })
 export class GroupsPage {
   private readonly language = inject(UI_LANGUAGE);
+  private readonly messages = inject(MessageService);
   private readonly query = injectQueryParams();
   private readonly clearDrawer = injectClearDrawer();
   private readonly scenario = computed(() =>
@@ -61,7 +60,6 @@ export class GroupsPage {
     this.scenario() === 'empty' ? [] : sampleGroups,
   );
   protected readonly failed = linkedSignal(() => this.scenario() === 'error');
-  protected readonly notice = signal<TableNotice | null>(null);
   protected readonly editor = linkedSignal<{ id: string | null; form: GroupForm | null } | null>(
     () => {
       const drawer = this.query().get('drawer');
@@ -140,15 +138,18 @@ export class GroupsPage {
       );
       this.closeEditor();
       const template = editor.id ? this.text().saved : this.text().created;
-      this.notice.set({ severity: 'success', text: interpolate(template, { name: form.name }) });
+      this.messages.add({
+        severity: 'success',
+        summary: interpolate(template, { name: form.name }),
+      });
     }, saveDelayMs);
   }
 
   private delete(ids: readonly string[]): void {
     this.groups.update((groups) => groups.filter((item) => !ids.includes(item.id)));
-    this.notice.set({
+    this.messages.add({
       severity: 'success',
-      text: interpolate(this.text().deleted, { count: ids.length }),
+      summary: interpolate(this.text().deleted, { count: ids.length }),
     });
   }
 }

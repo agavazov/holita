@@ -2,7 +2,7 @@ import { afterNextRender, Component, type ElementRef, inject, viewChild } from '
 import { FormsModule } from '@angular/forms';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { Search } from '@primeicons/angular/search';
-import { ConfirmationService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { AutoComplete } from 'primeng/autocomplete';
 import { Avatar } from 'primeng/avatar';
 import { Badge } from 'primeng/badge';
@@ -33,7 +33,7 @@ import { Timeline } from 'primeng/timeline';
 import { ToggleButton } from 'primeng/togglebutton';
 import { ToggleSwitch } from 'primeng/toggleswitch';
 import { Tooltip } from 'primeng/tooltip';
-import { expect, waitFor, within } from 'storybook/test';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { confirmAction, confirmDialogPt } from '../ui/confirm';
 import { selectMultiplePt } from '../ui/select-multiple';
 import { registeredComponents } from './holita-preset';
@@ -230,6 +230,20 @@ class PrimeNgConfirm {
   }
 }
 
+/** Uses the preview's single Toast host, as every example page does. */
+@Component({
+  selector: 'holita-primeng-toast',
+  imports: [ButtonDirective],
+  template: '<button pButton type="button" (click)="show()">Show toast</button>',
+})
+class PrimeNgToast {
+  private readonly messages = inject(MessageService);
+
+  protected show(): void {
+    this.messages.add({ severity: 'info', summary: 'Toast notification', sticky: true });
+  }
+}
+
 const meta: Meta = {
   title: 'Design System/PrimeNG coverage',
   tags: ['!autodocs'],
@@ -244,7 +258,7 @@ export const Controls: Story = {
     template: '<holita-primeng-controls />',
   }),
   play: async ({ canvasElement }) => {
-    await expect(Object.keys(registeredComponents)).toHaveLength(31);
+    await expect(Object.keys(registeredComponents)).toHaveLength(32);
     await expect(canvasElement.querySelectorAll('.scheme').length).toBe(2);
   },
 };
@@ -274,5 +288,20 @@ export const ConfirmDialogStory: Story = {
     const body = within(canvasElement.ownerDocument.body);
     await waitFor(() => expect(body.getByRole('alertdialog')).toBeVisible());
     await waitFor(() => expect(body.getByRole('button', { name: 'Cancel' })).toHaveFocus());
+  },
+};
+
+export const ToastStory: Story = {
+  name: 'Toast',
+  render: () => ({
+    moduleMetadata: { imports: [PrimeNgToast] },
+    template: '<holita-primeng-toast />',
+  }),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Show toast' }));
+    await waitFor(() =>
+      expect(within(canvasElement).getByRole('alert')).toHaveTextContent('Toast notification'),
+    );
+    await expect(canvasElement.querySelectorAll('p-toast')).toHaveLength(1);
   },
 };

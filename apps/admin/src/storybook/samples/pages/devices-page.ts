@@ -1,5 +1,6 @@
 import { Component, computed, DestroyRef, inject, linkedSignal, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { MessageService } from 'primeng/api';
 import {
   DeviceDrawer,
   type DeviceField,
@@ -16,7 +17,6 @@ import { devicesText } from '../../../app/features/fleet/devices/i18n/messages';
 import { interpolate } from '../../../app/ui/i18n/messages';
 import type { ListActionRequest, ListRecord } from '../../../app/ui/list/list-actions';
 import type { ListQuery } from '../../../app/ui/list/list-query';
-import type { TableNotice } from '../../../app/ui/table-panel/table-panel';
 import { UI_LANGUAGE } from '../../../app/ui/ui-language';
 import { fixtureBranches } from '../../session-fixtures';
 import {
@@ -89,13 +89,11 @@ function kpisOf(devices: readonly SampleDevice[]): DeviceKpis {
       [kpis]="kpis()"
       [models]="models"
       [selection]="selection()"
-      [notice]="notice()"
       (stateChange)="state.set($event)"
       (create)="openEditor(null)"
       (action)="run($event)"
       (selectionChange)="selection.set($event)"
       (retry)="failed.set(false)"
-      (dismissNotice)="notice.set(null)"
     />
     @if (editor(); as open) {
       <holita-device-drawer
@@ -114,6 +112,7 @@ function kpisOf(devices: readonly SampleDevice[]): DeviceKpis {
 })
 export class DevicesPage {
   private readonly language = inject(UI_LANGUAGE);
+  private readonly messages = inject(MessageService);
   private readonly router = inject(Router);
   private readonly query = injectQueryParams();
   private readonly clearDrawer = injectClearDrawer();
@@ -136,7 +135,6 @@ export class DevicesPage {
   );
   protected readonly state = signal<ListQuery>(initialQuery({ field: 'imei', direction: 'asc' }));
   protected readonly selection = signal<readonly ListRecord<DeviceActionId>[]>([]);
-  protected readonly notice = signal<TableNotice | null>(null);
   protected readonly failed = linkedSignal(() => this.scenario() === 'error');
   private readonly failNextSave = linkedSignal(() => this.scenario() === 'save-error');
   /** The open drawer: `device` null registers a new one. */
@@ -236,16 +234,19 @@ export class DevicesPage {
       );
       this.closeEditor();
       const template = id ? this.text().notices.saved : this.text().notices.created;
-      this.notice.set({ severity: 'success', text: interpolate(template, { imei: form.imei }) });
+      this.messages.add({
+        severity: 'success',
+        summary: interpolate(template, { imei: form.imei }),
+      });
     }, saveDelayMs);
   }
 
   /** A simulated restart: the devices keep reporting afterwards, so no row changes. */
   private restart(ids: readonly string[]): void {
     this.selection.update((selection) => selection.filter((record) => !ids.includes(record.id)));
-    this.notice.set({
+    this.messages.add({
       severity: 'success',
-      text: interpolate(this.text().notices.restarted, { count: ids.length }),
+      summary: interpolate(this.text().notices.restarted, { count: ids.length }),
     });
   }
 

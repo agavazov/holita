@@ -74,9 +74,7 @@ export class GeneralSettingsView {
   readonly settings = input.required<GeneralSettings>();
   readonly saving = input(false);
   readonly saveError = input<string | null>(null);
-  readonly savedNotice = input<string | null>(null);
   readonly save = output<GeneralSettings>();
-  readonly dismissNotice = output();
 
   private readonly language = inject(UI_LANGUAGE);
   private readonly injector = inject(Injector);

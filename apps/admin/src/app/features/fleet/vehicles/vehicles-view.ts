@@ -24,7 +24,7 @@ import { injectSortReady, listQuery, type ListQuery } from '../../../ui/list/lis
 import { KpiTile } from '../../../ui/kpi/kpi-tile';
 import { PageHeader } from '../../../ui/page-header/page-header';
 import { RowActions } from '../../../ui/row-actions/row-actions';
-import { TablePanel, type TableNotice } from '../../../ui/table-panel/table-panel';
+import { TablePanel } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { toneSeverity } from '../../../ui/tones';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
@@ -131,7 +131,6 @@ export class VehiclesView {
   readonly kpis = input<VehicleKpis | null>(null);
   readonly groups = input<readonly VehicleOption[]>([]);
   readonly selection = input<readonly ListRecord<VehicleActionId>[]>([]);
-  readonly notice = input<TableNotice | null>(null);
   readonly busy = input(false);
   readonly stateChange = output<ListQuery>();
   readonly create = output();
@@ -139,7 +138,6 @@ export class VehiclesView {
   readonly action = output<ListActionRequest<VehicleActionId>>();
   readonly selectionChange = output<readonly ListRecord<VehicleActionId>[]>();
   readonly retry = output();
-  readonly dismissNotice = output();
 
   private readonly language = inject(UI_LANGUAGE);
   private readonly sortReady = injectSortReady();

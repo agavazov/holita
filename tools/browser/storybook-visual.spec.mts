@@ -76,6 +76,10 @@ interface Capture {
   readonly density?: 'compact' | 'comfortable';
   /** Only the viewport: an open drawer is fixed to it, so a full-page capture would cut it. */
   readonly viewportOnly?: boolean;
+  /** Wait for a play function to leave this confirmation open before capturing it. */
+  readonly confirmation?: string;
+  /** Wait for operation feedback triggered by the story before capturing it. */
+  readonly toast?: boolean;
 }
 
 /** One story in light and dark at the given viewports. */
@@ -139,6 +143,23 @@ const captures: readonly Capture[] = [
     'pageheader--detail-with-back-link',
     'formfield--variants',
   ].flatMap((story) => bothThemes(`design-system-patterns-${story}`)),
+  ...['confirm-from-row', 'confirm-delete-selection', 'confirm-long-selection'].flatMap((story) =>
+    bothThemes(`design-system-patterns-tablepanel--${story}`, ['desktop', 'mobile']).map(
+      (capture) => ({ ...capture, viewportOnly: true, confirmation: 'Delete vehicles?' }),
+    ),
+  ),
+  ...[
+    'design-system-patterns-tablepanel--notification',
+    'design-system-patterns-notifications--long-message',
+    'design-system-patterns-notifications--stacked',
+    'examples-settings--general-saved',
+  ].flatMap((story) =>
+    bothThemes(story, ['desktop', 'mobile']).map((capture) => ({
+      ...capture,
+      viewportOnly: true,
+      toast: true,
+    })),
+  ),
   ...['controls', 'overlays', 'confirm-dialog-story'].flatMap((story) =>
     bothThemes(`design-system-primeng-coverage--${story}`),
   ),
@@ -177,6 +198,14 @@ for (const capture of captures)
       await page.evaluate(async () => {
         await document.fonts.ready;
       });
+      if (capture.confirmation || capture.toast)
+        await expect(page.locator('#storybook-root')).toHaveAttribute(
+          'data-story-ready',
+          capture.id,
+        );
+      if (capture.confirmation)
+        await expect(page.getByRole('alertdialog', { name: capture.confirmation })).toBeVisible();
+      if (capture.toast) await expect(page.locator('.p-toast-message').first()).toBeVisible();
       const name = [
         capture.id,
         capture.theme,
@@ -195,5 +224,6 @@ for (const capture of captures)
       await mkdir(candidates, { recursive: true });
       await writeFile(join(candidates, name), candidate);
       await test.info().attach('candidate', { body: candidate, contentType: 'image/png' });
+      if (capture.toast) expect(await page.locator('.p-toast-close-button:focus').count()).toBe(0);
       await expect(page).toHaveScreenshot(name, { fullPage });
     });

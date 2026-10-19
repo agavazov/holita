@@ -1,5 +1,6 @@
 import { Component, computed, DestroyRef, inject, linkedSignal, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { MessageService } from 'primeng/api';
 import { type AlertAction, AlertDrawer } from '../../../app/features/fleet/alerts/alert-drawer';
 import {
   type AlertActionId,
@@ -10,7 +11,6 @@ import { alertsText } from '../../../app/features/fleet/alerts/i18n/messages';
 import { interpolate } from '../../../app/ui/i18n/messages';
 import type { ListActionRequest, ListRecord } from '../../../app/ui/list/list-actions';
 import type { ListQuery } from '../../../app/ui/list/list-query';
-import type { TableNotice } from '../../../app/ui/table-panel/table-panel';
 import { UI_LANGUAGE } from '../../../app/ui/ui-language';
 import { fixtureBranches } from '../../session-fixtures';
 import {
@@ -99,12 +99,10 @@ interface OpenDrawer {
       [kpis]="kpis()"
       [vehicles]="vehicles"
       [selection]="selection()"
-      [notice]="notice()"
       (stateChange)="state.set($event)"
       (action)="run($event)"
       (selectionChange)="selection.set($event)"
       (retry)="failed.set(false)"
-      (dismissNotice)="notice.set(null)"
     />
     @if (openAlert(); as open) {
       <holita-alert-drawer
@@ -122,6 +120,7 @@ interface OpenDrawer {
 })
 export class AlertsPage {
   private readonly language = inject(UI_LANGUAGE);
+  private readonly messages = inject(MessageService);
   private readonly router = inject(Router);
   private readonly query = injectQueryParams();
   private readonly clearDrawer = injectClearDrawer();
@@ -143,7 +142,6 @@ export class AlertsPage {
     initialQuery({ field: 'occurredAt', direction: 'desc' }, 20, [notResolved]),
   );
   protected readonly selection = signal<readonly ListRecord<AlertActionId>[]>([]);
-  protected readonly notice = signal<TableNotice | null>(null);
   protected readonly failed = linkedSignal(() => this.scenario() === 'error');
   private readonly failNextSave = linkedSignal(() => this.scenario() === 'save-error');
   protected readonly drawer = linkedSignal<OpenDrawer | null>(() => {
@@ -243,9 +241,9 @@ export class AlertsPage {
     if (action === 'reopen') return;
     const template =
       action === 'acknowledge' ? this.text().notices.acknowledged : this.text().notices.resolved;
-    this.notice.set({
+    this.messages.add({
       severity: 'success',
-      text: interpolate(template, { count: ids.length }),
+      summary: interpolate(template, { count: ids.length }),
     });
   }
 }

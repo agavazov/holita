@@ -69,8 +69,7 @@
     "deactivate": "Deactivate",
     "delete": "Delete",
     "confirmDelete": {
-      "one": "Delete {name}?",
-      "many": "Delete {count} vehicles?",
+      "title": "Delete vehicles?",
       "detail": "Their trips and history stay in reports.",
       "accept": "Delete"
     }

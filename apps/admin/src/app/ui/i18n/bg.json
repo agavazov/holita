@@ -65,7 +65,7 @@
     "clearSelection": "Изчисти избора",
     "pageReport": "{first}–{last} от {totalRecords}",
     "rowActions": "Действия за {name}",
-    "moreRecords": "и още {count}",
+    "confirmRecords": "Записи: {count}",
     "skippedRecords": "Избрани записи, за които действието не важи, остават непроменени: {count}."
   },
   "menu": {

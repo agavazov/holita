@@ -23,6 +23,7 @@ export default defineConfig({
   // which loads Angular twice (NG0203) and fails the stories of that run.
   optimizeDeps: {
     entries: ['src/**/*.stories.ts', '.storybook/preview.ts'],
+    include: ['primeng/toast', '@primeuix/themes/aura/toast', '@primeicons/angular/times-circle'],
   },
   test: {
     name: 'storybook',

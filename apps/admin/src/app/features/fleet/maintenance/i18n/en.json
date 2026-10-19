@@ -45,8 +45,7 @@
     "vehicle": "Open vehicle profile",
     "delete": "Delete",
     "confirmDelete": {
-      "one": "Delete {name}?",
-      "many": "Delete {count} service tasks?",
+      "title": "Delete service tasks?",
       "accept": "Delete"
     }
   },

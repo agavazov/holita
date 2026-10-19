@@ -1,5 +1,6 @@
-import { Component, computed, input, signal } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
+import { MessageService } from 'primeng/api';
 import { ButtonDirective } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
@@ -14,7 +15,7 @@ import {
   trackById,
 } from '../list/list-actions';
 import { RowActions } from '../row-actions/row-actions';
-import { TablePanel, type TableNotice, type TablePage } from './table-panel';
+import { TablePanel, type TablePage } from './table-panel';
 import type { TableView } from './table-view';
 
 interface DemoRow {
@@ -88,8 +89,7 @@ const actions: readonly ListAction<DemoAction, DemoRow>[] = [
     bulk: true,
     appliesTo: (row) => row.status.label !== 'Inactive',
     confirm: {
-      one: 'Deactivate {name}?',
-      many: 'Deactivate {count} vehicles?',
+      title: 'Deactivate vehicles?',
       detail: 'They stay in reports and can be activated again.',
       accept: 'Deactivate',
     },
@@ -100,8 +100,7 @@ const actions: readonly ListAction<DemoAction, DemoRow>[] = [
     bulk: true,
     danger: true,
     confirm: {
-      one: 'Delete {name}?',
-      many: 'Delete {count} vehicles?',
+      title: 'Delete vehicles?',
       detail: 'Their trips and history stay in reports.',
       accept: 'Delete',
     },
@@ -126,13 +125,17 @@ function recordOf(row: DemoRow): ListRecord<DemoAction> {
       [busy]="busy()"
       emptyTitle="No vehicles yet"
       emptyDescription="Add the first vehicle of this branch."
-      [notice]="notice()"
       [actions]="actions"
       [selection]="records()"
       [selectionProgress]="progress()"
       [page]="page()"
       (action)="requested.set($event)"
     >
+      @if (notification()) {
+        <button panelActions pButton type="button" size="small" (click)="notify()">
+          Show notification
+        </button>
+      }
       <button
         panelActions
         pButton
@@ -216,7 +219,7 @@ function recordOf(row: DemoRow): ListRecord<DemoAction> {
 class TablePanelDemo {
   readonly view = input<TableView>({ kind: 'rows' });
   readonly busy = input(false);
-  readonly notice = input<TableNotice | null>(null);
+  readonly notification = input(false);
   readonly selection = input<readonly DemoRow[]>([]);
   readonly progress = input<string | null>(null);
   /** The list total: 46 pages through the rows, 5 fits on one page. */
@@ -233,6 +236,11 @@ class TablePanelDemo {
     total: this.total(),
   }));
   readonly shownRows = computed(() => rows.slice(0, Math.min(rows.length, this.total())));
+  private readonly messages = inject(MessageService);
+
+  notify(): void {
+    this.messages.add({ severity: 'success', summary: 'The vehicle was saved.' });
+  }
 }
 
 const meta: Meta<TablePanelDemo> = {
@@ -302,10 +310,25 @@ export const NoResults: Story = {
 export const ErrorState: Story = { name: 'Error', args: { view: { kind: 'error' } } };
 export const RowsError: Story = { name: 'Rows error', args: { view: { kind: 'rows-error' } } };
 
-export const Notice: Story = {
-  args: {
-    view: { kind: 'rows' },
-    notice: { severity: 'success', text: 'The vehicle was saved.' },
+/** Operation feedback leaves the table and keyboard focus in place, including when repeated. */
+export const Notification: Story = {
+  args: { notification: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    const table = canvas.getByRole('table');
+    const top = table.getBoundingClientRect().top;
+    const trigger = canvas.getByRole('button', { name: 'Show notification' });
+    await userEvent.click(trigger);
+    await waitFor(() => expect(body.getByText('The vehicle was saved.')).toBeVisible());
+    await expect(table.getBoundingClientRect().top).toBe(top);
+    await expect(trigger).toHaveFocus();
+    await userEvent.click(body.getByRole('button', { name: 'Close' }));
+    await waitFor(() => expect(body.queryByText('The vehicle was saved.')).toBeNull());
+    await expect(table.getBoundingClientRect().top).toBe(top);
+    await userEvent.click(trigger);
+    await waitFor(() => expect(body.getByText('The vehicle was saved.')).toBeVisible());
+    await expect(trigger).toHaveFocus();
   },
 };
 
@@ -336,8 +359,8 @@ export const RowActionsOpen: Story = {
 };
 
 /**
- * A row's Delete names the record in the question and describes it with the detail; Cancel
- * returns the focus to its "⋮".
+ * A row uses the same title and record list as a selection; Cancel returns focus to its "⋮".
+ * Reopen the dialog so the same story also covers its open state and visual review.
  */
 export const ConfirmFromRow: Story = {
   name: 'Confirm from a row',
@@ -348,7 +371,10 @@ export const ConfirmFromRow: Story = {
     await userEvent.click(trigger);
     const body = within(canvasElement.ownerDocument.body);
     await chooseMenuItem(canvasElement.ownerDocument.body, 'Delete');
-    const dialog = await body.findByRole('alertdialog', { name: 'Delete CB 1002 AX?' });
+    const dialog = await body.findByRole('alertdialog', { name: 'Delete vehicles?' });
+    await expect(within(dialog).getAllByRole('listitem')).toHaveLength(1);
+    await expect(within(dialog).getByRole('listitem')).toHaveTextContent('CB 1002 AX');
+    await expect(dialog).toHaveTextContent('Records: 1');
     await waitFor(() =>
       expect(dialog).toHaveAccessibleDescription(/Their trips and history stay in reports\./),
     );
@@ -356,12 +382,20 @@ export const ConfirmFromRow: Story = {
       expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus(),
     );
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(dialog).not.toBeInTheDocument());
     await waitFor(() => expect(trigger).toHaveFocus());
+    await expect(canvas.queryByText(/Last request:/)).toBeNull();
+    await userEvent.click(trigger);
+    await chooseMenuItem(canvasElement.ownerDocument.body, 'Delete');
+    const reopened = await body.findByRole('alertdialog', { name: 'Delete vehicles?' });
+    await waitFor(() =>
+      expect(within(reopened).getByRole('button', { name: 'Cancel' })).toHaveFocus(),
+    );
   },
 };
 
 /**
- * The bulk bar runs the same actions: the question counts the records it applies to, lists them
+ * The bulk bar runs the same actions: the dialog counts the records it applies to, lists them
  * and says how many selected records it leaves unchanged, all part of the dialog's description.
  */
 export const ConfirmSelection: Story = {
@@ -372,8 +406,9 @@ export const ConfirmSelection: Story = {
     const bar = canvas.getByRole('region', { name: 'Actions for selected records' });
     await userEvent.click(within(bar).getByRole('button', { name: 'Deactivate' }));
     const body = within(canvasElement.ownerDocument.body);
-    const dialog = await body.findByRole('alertdialog', { name: 'Deactivate 2 vehicles?' });
+    const dialog = await body.findByRole('alertdialog', { name: 'Deactivate vehicles?' });
     await expect(within(dialog).getAllByRole('listitem')).toHaveLength(2);
+    await expect(dialog).toHaveTextContent('Records: 2');
     // The dialog fades in: wait until its content is shown.
     await waitFor(() =>
       expect(
@@ -383,5 +418,48 @@ export const ConfirmSelection: Story = {
     await expect(dialog).toHaveAccessibleDescription(/left unchanged: 1\./);
     await userEvent.click(within(dialog).getByRole('button', { name: 'Deactivate' }));
     await waitFor(() => expect(canvas.getByText('Last request: deactivate 3, 4')).toBeVisible());
+  },
+};
+
+export const ConfirmDeleteSelection: Story = {
+  name: 'Confirm deleting a selection',
+  args: { view: { kind: 'rows' }, selection: rows.slice(0, 3) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const bar = canvas.getByRole('region', { name: 'Actions for selected records' });
+    await userEvent.click(within(bar).getByRole('button', { name: 'Delete' }));
+    const body = within(canvasElement.ownerDocument.body);
+    const dialog = await body.findByRole('alertdialog', { name: 'Delete vehicles?' });
+    await expect(within(dialog).getAllByRole('listitem')).toHaveLength(3);
+    await expect(dialog).toHaveTextContent('Records: 3');
+    await waitFor(() => expect(dialog).toBeVisible());
+  },
+};
+
+/** Long names and selections stay in a scrollable list; every selected record is present. */
+export const ConfirmLongSelection: Story = {
+  name: 'Confirm a long selection',
+  args: {
+    view: { kind: 'rows' },
+    selection: rows.flatMap((row) =>
+      Array.from({ length: 6 }, (_, index) => ({
+        ...row,
+        id: `${row.id}-${String(index)}`,
+        plate: `${row.plate} · ${row.model} · Sofia distribution fleet, international routes · ${String(index + 1)}`,
+      })),
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const bar = canvas.getByRole('region', { name: 'Actions for selected records' });
+    await userEvent.click(within(bar).getByRole('button', { name: 'Delete' }));
+    const body = within(canvasElement.ownerDocument.body);
+    const dialog = await body.findByRole('alertdialog', { name: 'Delete vehicles?' });
+    await expect(within(dialog).getAllByRole('listitem')).toHaveLength(30);
+    await expect(dialog).toHaveTextContent('Records: 30');
+    await waitFor(() => expect(dialog).toBeVisible());
+    const list = within(dialog).getByRole('list');
+    await expect(list.scrollHeight).toBeGreaterThan(list.clientHeight);
+    await expect(dialog.scrollWidth).toBeLessThanOrEqual(dialog.clientWidth);
   },
 };

@@ -109,6 +109,25 @@ export const Edit: Story = {
   },
 };
 
+export const Saved: Story = {
+  render: exampleAt(`${profile}?drawer=edit`),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await waitFor(
+      () => expect(body.getByRole('dialog', { name: `Edit ${plate}` })).toBeVisible(),
+      appReady,
+    );
+    await userEvent.type(
+      body.getByRole('textbox', { name: 'Notes' }),
+      ' Updated from the profile.',
+    );
+    await userEvent.click(body.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(body.getByText(`${plate} was saved.`)).toBeVisible());
+    await expect(body.getByText(`${plate} was saved.`).closest('.p-toast-message')).not.toBeNull();
+    await waitFor(() => expect(body.queryByRole('dialog')).toBeNull());
+  },
+};
+
 export const Loading: Story = { render: exampleAt(`${profile}?scenario=loading`) };
 export const NotFound: Story = {
   name: 'Not found',

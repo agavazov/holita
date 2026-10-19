@@ -1,5 +1,6 @@
 import { Component, computed, DestroyRef, inject, linkedSignal, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { MessageService } from 'primeng/api';
 import {
   VehicleDrawer,
   type VehicleField,
@@ -14,7 +15,6 @@ import { vehiclesText } from '../../../app/features/fleet/vehicles/i18n/messages
 import { interpolate } from '../../../app/ui/i18n/messages';
 import type { ListActionRequest, ListRecord } from '../../../app/ui/list/list-actions';
 import type { ListQuery } from '../../../app/ui/list/list-query';
-import type { TableNotice } from '../../../app/ui/table-panel/table-panel';
 import { UI_LANGUAGE } from '../../../app/ui/ui-language';
 import { fixtureBranches } from '../../session-fixtures';
 import {
@@ -89,13 +89,11 @@ function kpisOf(vehicles: readonly SampleVehicle[]): VehicleKpis {
       [kpis]="kpis()"
       [groups]="groups"
       [selection]="selection()"
-      [notice]="notice()"
       (stateChange)="state.set($event)"
       (create)="openEditor(null)"
       (action)="run($event)"
       (selectionChange)="selection.set($event)"
       (retry)="failed.set(false)"
-      (dismissNotice)="notice.set(null)"
     />
     @if (editor(); as editor) {
       <holita-vehicle-drawer
@@ -113,6 +111,7 @@ function kpisOf(vehicles: readonly SampleVehicle[]): VehicleKpis {
 })
 export class VehiclesPage {
   private readonly language = inject(UI_LANGUAGE);
+  private readonly messages = inject(MessageService);
   private readonly router = inject(Router);
   private readonly query = injectQueryParams();
   private readonly clearDrawer = injectClearDrawer();
@@ -135,7 +134,6 @@ export class VehiclesPage {
   );
   protected readonly state = signal<ListQuery>(initialQuery({ field: 'plate', direction: 'asc' }));
   protected readonly selection = signal<readonly ListRecord<VehicleActionId>[]>([]);
-  protected readonly notice = signal<TableNotice | null>(null);
   protected readonly failed = linkedSignal(() => this.scenario() === 'error');
   private readonly failNextSave = linkedSignal(() => this.scenario() === 'save-error');
   /** The open drawer: `id` null creates a vehicle. */
@@ -227,7 +225,10 @@ export class VehiclesPage {
       this.store(editor.id, form);
       this.closeEditor();
       const template = editor.id ? this.text().notices.saved : this.text().notices.created;
-      this.notice.set({ severity: 'success', text: interpolate(template, { plate: form.plate }) });
+      this.messages.add({
+        severity: 'success',
+        summary: interpolate(template, { plate: form.plate }),
+      });
     }, saveDelayMs);
   }
 
@@ -259,18 +260,18 @@ export class VehiclesPage {
       vehicles.map((item) => (ids.includes(item.id) ? { ...item, status: 'INACTIVE' } : item)),
     );
     this.selection.update((selection) => selection.filter((record) => !ids.includes(record.id)));
-    this.notice.set({
+    this.messages.add({
       severity: 'success',
-      text: interpolate(this.text().notices.deactivated, { count: ids.length }),
+      summary: interpolate(this.text().notices.deactivated, { count: ids.length }),
     });
   }
 
   private delete(ids: readonly string[]): void {
     this.vehicles.update((vehicles) => vehicles.filter((item) => !ids.includes(item.id)));
     this.selection.update((selection) => selection.filter((record) => !ids.includes(record.id)));
-    this.notice.set({
+    this.messages.add({
       severity: 'success',
-      text: interpolate(this.text().notices.deleted, { count: ids.length }),
+      summary: interpolate(this.text().notices.deleted, { count: ids.length }),
     });
   }
 }

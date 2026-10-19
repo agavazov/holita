@@ -27,6 +27,7 @@ import Tabs from '@primeuix/themes/aura/tabs';
 import Tag from '@primeuix/themes/aura/tag';
 import Textarea from '@primeuix/themes/aura/textarea';
 import Timeline from '@primeuix/themes/aura/timeline';
+import Toast from '@primeuix/themes/aura/toast';
 import ToggleButton from '@primeuix/themes/aura/togglebutton';
 import ToggleSwitch from '@primeuix/themes/aura/toggleswitch';
 import Tooltip from '@primeuix/themes/aura/tooltip';
@@ -41,6 +42,7 @@ import {
   buttonVariantToneTokens,
   messageToneTokens,
   tagToneTokens,
+  toastToneTokens,
 } from './status-tones';
 import type { ThemeChoice } from './theme-choice';
 
@@ -78,6 +80,7 @@ export const registeredComponents = {
   tag: Tag,
   textarea: Textarea,
   timeline: Timeline,
+  toast: Toast,
   togglebutton: ToggleButton,
   toggleswitch: ToggleSwitch,
   tooltip: Tooltip,
@@ -259,6 +262,7 @@ function componentTokens(brand: Brand, density: Density) {
     drawer,
     message: messageToneTokens(),
     tag,
+    toast: { ...toastToneTokens(), summary: { fontWeight: '600' } },
     togglebutton,
     tooltip,
   };

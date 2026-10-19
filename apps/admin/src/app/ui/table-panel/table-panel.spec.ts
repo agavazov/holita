@@ -4,7 +4,7 @@ import { By } from '@angular/platform-browser';
 import { ConfirmationService } from 'primeng/api';
 import type { ListActionBase, ListActionRequest, ListRecord } from '../list/list-actions';
 import { UI_LANGUAGE } from '../ui-language';
-import { TablePanel, type TableNotice, type TablePage } from './table-panel';
+import { TablePanel, type TablePage } from './table-panel';
 import type { TableView } from './table-view';
 
 type ActionId = 'archive' | 'delete' | 'pin';
@@ -20,14 +20,12 @@ type ActionId = 'archive' | 'delete' | 'pin';
       errorText="Няма връзка (fixture-AdminVehicles)"
       [busy]="busy()"
       emptyTitle="Все още няма превозни средства"
-      [notice]="notice()"
       [actions]="actions"
       [selection]="selection()"
       selectionProgress="Изтриване 1 от 3"
       [page]="page()"
       (retry)="events.push('retry')"
       (clearFilters)="events.push('clear')"
-      (dismissNotice)="events.push('dismiss')"
       (clearSelection)="events.push('unselect')"
       (pageChange)="pages.push($event)"
       (action)="request($event)"
@@ -57,7 +55,6 @@ class Host {
   readonly total = signal<number | null>(1250);
   readonly view = signal<TableView>({ kind: 'loading' });
   readonly busy = signal(false);
-  readonly notice = signal<TableNotice | null>(null);
   readonly actions: readonly ListActionBase<ActionId>[] = [
     { id: 'archive', label: 'Архивирай', bulk: true },
     { id: 'pin', label: 'Закачи най-горе' },
@@ -67,8 +64,7 @@ class Host {
       bulk: true,
       danger: true,
       confirm: {
-        one: 'Изтриване на {name}?',
-        many: 'Изтриване на {count} превозни средства?',
+        title: 'Изтриване на превозни средства?',
         accept: 'Изтрий',
       },
     },
@@ -158,13 +154,12 @@ describe('TablePanel', () => {
     expect(host.events).toEqual(['clear', 'retry', 'retry']);
   });
 
-  it('shows the refresh bar, notices, the bulk bar and paginator events with rows', () => {
+  it('shows the refresh bar, the bulk bar and paginator events with rows', () => {
     const fixture = render();
     const root = element(fixture);
     const host = fixture.componentInstance;
     host.view.set({ kind: 'rows' });
     host.busy.set(true);
-    host.notice.set({ severity: 'success', text: 'Превозното средство е запазено.' });
     host.selection.set([
       { id: 'a', label: 'CB 1001 AX', unavailable: [] },
       { id: 'b', label: 'CB 1002 AX', unavailable: [] },
@@ -173,8 +168,6 @@ describe('TablePanel', () => {
     fixture.detectChanges();
     expect(root.querySelector('.table-panel__progress')?.getAttribute('aria-hidden')).toBe('true');
     expect(root.querySelector('section')?.getAttribute('aria-busy')).toBe('true');
-    expect(root.querySelector('.table-panel__notice')?.getAttribute('role')).toBe('status');
-    expect(root.querySelector('.table-panel__notice')?.textContent).toContain('запазено');
     const bulk = root.querySelector('.table-panel__bulk');
     expect(bulk?.getAttribute('role')).toBe('region');
     expect(bulk?.textContent).toContain('3 избрани');
@@ -228,7 +221,7 @@ describe('TablePanel', () => {
       { id: 'c', label: 'CB 1003 AX', unavailable: ['delete'] },
     ];
     await host.panel().run('delete', records, null);
-    expect(asked).toEqual(['Изтриване на CB 1001 AX?']);
+    expect(asked).toEqual(['Изтриване на превозни средства?']);
     expect(host.requests).toEqual([{ action: 'delete', ids: ['a'] }]);
     // Nothing to do when the action applies to none of the records: no question, no request.
     await host.panel().run(
@@ -240,37 +233,50 @@ describe('TablePanel', () => {
     expect(host.requests).toHaveLength(1);
   });
 
-  it('names eight records of a larger confirmation, counts the rest and describes the question', async () => {
-    const fixture = render();
-    const host = fixture.componentInstance;
-    host.view.set({ kind: 'rows' });
-    fixture.detectChanges();
-    const records: readonly ListRecord<ActionId>[] = Array.from({ length: 10 }, (_, index) => ({
-      id: String(index),
-      label: `CB ${String(1001 + index)} AX`,
-      unavailable: [],
-    }));
-    const answer = host.panel().run('delete', records, null, 'bulk');
-    await fixture.whenStable();
-    const dialog = document.querySelector('.p-confirmdialog');
-    expect(dialog?.querySelector('.p-dialog-title')?.textContent.trim()).toBe(
-      'Изтриване на 10 превозни средства?',
-    );
-    const items = [...(dialog?.querySelectorAll('.table-panel__confirm-records li') ?? [])];
-    expect(items.map((item) => item.textContent.trim())).toEqual([
-      ...records.slice(0, 8).map((record) => record.label),
-      'и още 2',
-    ]);
-    // The records below the question are the dialog's description.
-    const description = document.getElementById(dialog?.getAttribute('aria-describedby') ?? '');
-    expect(description?.textContent).toContain('CB 1008 AX');
-    dialog?.querySelector<HTMLButtonElement>('.p-confirmdialog-reject-button')?.click();
-    await answer;
-    expect(host.requests).toEqual([]);
-    await vi.waitFor(() => {
-      expect(document.querySelector('.p-confirmdialog')).toBeNull();
-    });
-  });
+  it.each([1, 10])(
+    'lists all %i records in the same confirmation and emits their IDs',
+    async (count) => {
+      const fixture = render();
+      const host = fixture.componentInstance;
+      host.view.set({ kind: 'rows' });
+      fixture.detectChanges();
+      const records: readonly ListRecord<ActionId>[] = Array.from(
+        { length: count },
+        (_, index) => ({
+          id: String(index),
+          label: `CB ${String(1001 + index)} AX`,
+          unavailable: [],
+        }),
+      );
+      const answer = host.panel().run('delete', records, null, count === 1 ? 'row' : 'bulk');
+      await fixture.whenStable();
+      const dialog = document.querySelector('.p-confirmdialog');
+      expect(dialog?.querySelector('.p-dialog-title')?.textContent.trim()).toBe(
+        'Изтриване на превозни средства?',
+      );
+      const items = [...(dialog?.querySelectorAll('.table-panel__confirm-records li') ?? [])];
+      expect(items.map((item) => item.textContent.trim())).toEqual(
+        records.map((record) => record.label),
+      );
+      expect(items.map((item) => item.getAttribute('title'))).toEqual(
+        records.map((record) => record.label),
+      );
+      expect(dialog?.querySelector('.table-panel__confirm-count')?.textContent.trim()).toBe(
+        `Записи: ${String(count)}`,
+      );
+      // The records below the question are the dialog's description.
+      const description = document.getElementById(dialog?.getAttribute('aria-describedby') ?? '');
+      expect(description?.textContent).toContain(records.at(-1)?.label);
+      dialog?.querySelector<HTMLButtonElement>('.p-confirmdialog-accept-button')?.click();
+      await answer;
+      expect(host.requests).toEqual([
+        { action: 'delete', ids: records.map((record) => record.id) },
+      ]);
+      await vi.waitFor(() => {
+        expect(document.querySelector('.p-confirmdialog')).toBeNull();
+      });
+    },
+  );
 
   it('moves focus to the heading when a row action takes its own row out of the list', async () => {
     const fixture = render();

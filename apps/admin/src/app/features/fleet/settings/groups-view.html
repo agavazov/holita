@@ -15,11 +15,9 @@
   [errorText]="text().errorText"
   [emptyTitle]="text().emptyTitle"
   [emptyDescription]="text().emptyDescription"
-  [notice]="notice()"
   [actions]="actions()"
   (action)="action.emit($event)"
   (retry)="retry.emit()"
-  (dismissNotice)="dismissNotice.emit()"
 >
   <button emptyActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
   <p-table [value]="tableRows()" dataKey="id" [rowTrackBy]="trackById" [scrollable]="true">

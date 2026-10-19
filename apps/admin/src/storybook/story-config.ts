@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { Router, RouterOutlet } from '@angular/router';
 import { componentWrapperDecorator } from '@storybook/angular-vite';
+import { MessageService } from 'primeng/api';
 import { PrimeNG } from 'primeng/config';
 import { appConfig } from '../app/app.config';
 import { readLocalAdminConfig } from '../app/core/config/admin-config';
@@ -85,6 +86,7 @@ export function storybookApplicationConfig(
         choice,
       ).providers,
       { provide: HttpBackend, useClass: FixtureHttpBackend },
+      MessageService,
       { provide: UI_LANGUAGE, useValue: signal(storyLanguage).asReadonly() },
       { provide: WALL_CLOCK, useValue: () => storyNow() },
       provideLocationMocks(),

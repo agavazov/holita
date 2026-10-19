@@ -97,7 +97,8 @@ export const DeleteFromRow: Story = {
     await userEvent.click(trigger);
     const body = within(canvasElement.ownerDocument.body);
     await chooseMenuItem(canvasElement.ownerDocument.body, 'Delete');
-    const dialog = await body.findByRole('alertdialog', { name: `Delete ${plate}?` });
+    const dialog = await body.findByRole('alertdialog', { name: 'Delete vehicles?' });
+    await expect(within(dialog).getByRole('listitem')).toHaveTextContent(plate);
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(trigger).toHaveFocus());
   },
@@ -111,13 +112,16 @@ export const DeleteSelected: Story = {
     const canvas = await tableReady(canvasElement);
     const boxes = canvas.getAllByRole('checkbox', { name: /^Select (?!all)/ });
     for (const box of boxes.slice(0, 3)) await userEvent.click(box);
+    const tableTop = canvas.getByRole('table').getBoundingClientRect().top;
     const bar = await canvas.findByRole('region', { name: 'Actions for selected records' });
     await userEvent.click(within(bar).getByRole('button', { name: 'Delete' }));
     const body = within(canvasElement.ownerDocument.body);
-    const dialog = await body.findByRole('alertdialog', { name: 'Delete 3 vehicles?' });
+    const dialog = await body.findByRole('alertdialog', { name: 'Delete vehicles?' });
     await expect(within(dialog).getAllByRole('listitem')).toHaveLength(3);
     await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
     await waitFor(() => expect(canvas.getByText('Vehicles deleted: 3.')).toBeVisible());
+    await expect(canvasElement.querySelectorAll('.p-toast-message')).toHaveLength(1);
+    await expect(canvas.getByRole('table').getBoundingClientRect().top).toBe(tableTop);
     await waitFor(() =>
       expect(canvas.getByRole('heading', { level: 2, name: /^Vehicles/ })).toHaveFocus(),
     );

@@ -1,0 +1,25 @@
+@use 'breakpoints' as bp;
+
+@layer holita {
+  .app-toast {
+    --app-toast-inset: var(--p-app-gutter);
+    --app-toast-top: calc(
+      var(--p-app-frame-gap) + var(--p-app-topbar-height) + var(--p-app-space-3)
+    );
+
+    @include bp.below(lg) {
+      --app-toast-inset: var(--p-app-gutter-narrow);
+      --app-toast-top: calc(var(--p-app-topbar-height) + var(--p-app-space-3));
+    }
+
+    // PrimeNG positions the close button absolutely, so reserve its space in the content.
+    .p-toast-message-content {
+      padding-inline-end: calc(var(--p-toast-close-button-width) + var(--p-app-space-2));
+    }
+
+    .p-toast-message-text {
+      min-inline-size: 0;
+      overflow-wrap: anywhere;
+    }
+  }
+}

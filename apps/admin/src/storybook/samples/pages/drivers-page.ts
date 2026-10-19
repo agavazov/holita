@@ -1,4 +1,5 @@
 import { Component, computed, DestroyRef, inject, linkedSignal, signal } from '@angular/core';
+import { MessageService } from 'primeng/api';
 import {
   type DriverDetails,
   DriverDrawer,
@@ -17,7 +18,6 @@ import { driversText } from '../../../app/features/fleet/drivers/i18n/messages';
 import { interpolate } from '../../../app/ui/i18n/messages';
 import type { ListActionRequest, ListRecord } from '../../../app/ui/list/list-actions';
 import type { ListQuery } from '../../../app/ui/list/list-query';
-import type { TableNotice } from '../../../app/ui/table-panel/table-panel';
 import { UI_LANGUAGE } from '../../../app/ui/ui-language';
 import { fixtureBranches } from '../../session-fixtures';
 import { type SampleDriver, sampleDrivers, sampleNow, sampleVehicles } from '../fleet-samples';
@@ -92,13 +92,11 @@ function kpisOf(drivers: readonly SampleDriver[]): DriverKpis {
       [state]="listState()"
       [kpis]="kpis()"
       [selection]="selection()"
-      [notice]="notice()"
       (stateChange)="state.set($event)"
       (create)="openDrawer(null, true)"
       (action)="run($event)"
       (selectionChange)="selection.set($event)"
       (retry)="failed.set(false)"
-      (dismissNotice)="notice.set(null)"
     />
     @if (drawer(); as open) {
       <holita-driver-drawer
@@ -116,6 +114,7 @@ function kpisOf(drivers: readonly SampleDriver[]): DriverKpis {
 })
 export class DriversPage {
   private readonly language = inject(UI_LANGUAGE);
+  private readonly messages = inject(MessageService);
   private readonly query = injectQueryParams();
   private readonly clearDrawer = injectClearDrawer();
   private readonly scenario = computed(() =>
@@ -133,7 +132,6 @@ export class DriversPage {
   );
   protected readonly state = signal<ListQuery>(initialQuery({ field: 'name', direction: 'asc' }));
   protected readonly selection = signal<readonly ListRecord<DriverActionId>[]>([]);
-  protected readonly notice = signal<TableNotice | null>(null);
   protected readonly failed = linkedSignal(() => this.scenario() === 'error');
   private readonly failNextSave = linkedSignal(() => this.scenario() === 'save-error');
   /** The open drawer: `id` null adds a driver; `editing` opens an existing one on the form. */
@@ -228,7 +226,10 @@ export class DriversPage {
       // The mixed drawer returns to the saved record.
       this.drawer.set({ id, editing: false });
       const template = drawer.id ? this.text().notices.saved : this.text().notices.created;
-      this.notice.set({ severity: 'success', text: interpolate(template, { name: form.name }) });
+      this.messages.add({
+        severity: 'success',
+        summary: interpolate(template, { name: form.name }),
+      });
     }, saveDelayMs);
   }
 
@@ -255,18 +256,18 @@ export class DriversPage {
       drivers.map((item) => (ids.includes(item.id) ? { ...item, status: 'INACTIVE' } : item)),
     );
     this.selection.update((selection) => selection.filter((record) => !ids.includes(record.id)));
-    this.notice.set({
+    this.messages.add({
       severity: 'success',
-      text: interpolate(this.text().notices.deactivated, { count: ids.length }),
+      summary: interpolate(this.text().notices.deactivated, { count: ids.length }),
     });
   }
 
   private delete(ids: readonly string[]): void {
     this.drivers.update((drivers) => drivers.filter((item) => !ids.includes(item.id)));
     this.selection.update((selection) => selection.filter((record) => !ids.includes(record.id)));
-    this.notice.set({
+    this.messages.add({
       severity: 'success',
-      text: interpolate(this.text().notices.deleted, { count: ids.length }),
+      summary: interpolate(this.text().notices.deleted, { count: ids.length }),
     });
   }
 }

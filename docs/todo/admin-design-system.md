@@ -46,7 +46,8 @@ each spec says which of its sections are superseded by those documents.
 - Filters are AND-only; the quick search is the fastest filter and is always visible.
 - List actions are defined once for the row menu and the bulk bar. Bulk actions are the quick,
   small changes (deactivate, delete, acknowledge, restart); opening or editing one record is never
-  bulk. Destructive actions confirm in a modal that names the record or lists the selection.
+  bulk. An action uses the same confirmation layout and execution path for one or many records;
+  actions that do not require confirmation keep that behavior.
 - Topbar: no visible Branch label; Branch and language are popup menus like the row menu, not
   selects; an account (profile) menu and notifications, with sample data in Storybook until the
   backend has them.
@@ -143,6 +144,11 @@ The user reviews the Storybook (`npm run storybook:admin`, `http://127.0.0.1:110
 "Start here") and gives feedback; implement it in small phases. Start from
 [Storybook review](../admin-design-system.md#storybook-review), the stories beside the components
 (`apps/admin/src/app/**/*.stories.ts`) and the example pages in `apps/admin/src/storybook/samples`.
+Finish the review and refinements across Storybook before applying the approved screens to the
+real application. Storybook may lead the live UI and API during this review; the F2/F3 work below
+owns their later adoption, including the [common action API](#common-row-and-bulk-action-api).
+The [operation feedback migration](#operation-feedback) owns application adoption of the
+Storybook toasts, including flows outside lists.
 
 ### Visual candidates and baselines
 
@@ -247,6 +253,56 @@ hosts are in `apps/admin/src/storybook/samples/pages`.
   pages call `injectPageRecord`, and future tab child routes set `data: { tab: true }`.
 - Not designed yet: the Driver scorecard page, the MANUAL odometer-reading drawer, the
   service-completion form with the next task and a Login story.
+
+#### Common row and bulk action API
+
+During F3 adoption, replace separate per-record requests with one operation accepting `ids[]`
+for every action offered from both a row and the selection. One record passes `[id]`; the same
+concrete feature method and server mutation handle both cases. Reuse the approved shared
+confirmation and trigger path; do not introduce a generic action dispatcher or implement a
+backend for simulated actions such as Restart as part of this migration.
+
+- Update the owning Fleet contracts, generated operations and concrete admin APIs together.
+  Validate a bounded, non-empty ID list before writes and retain Tenant/Branch scope for every
+  target. Preserve required action inputs, including per-record expected alert status and
+  service-completion data; settle their simplest sufficient signatures when adopting the screen.
+- Preserve per-record successes and failures, protected-deletion rules and retry of failed
+  selections. Do not turn partial success into an all-or-nothing batch as an incidental change.
+- One submitted batch settles against its captured workspace scope. Navigation retires UI
+  callbacks and cache effects in the new workspace; it cannot stop the remaining IDs already
+  submitted to the server. Replace the old sequential-deletion guarantee, its documentation and
+  its tests explicitly when adopting this contract.
+- Verify one/many execution, mixed success, scope isolation and late results after navigation.
+  Run codegen/schema checks and focused service, database, federation and admin API/navigation
+  tests, plus the relevant story checks and visual candidates. Use the rewritten browser smokes
+  described above; their current obsolete controls are not evidence of adoption.
+
+#### Operation feedback
+
+During application adoption, use one top-right toast outlet and one `MessageService` provider
+above both the login and signed-in shell, following the reviewed
+[Storybook operation feedback](../admin-design-system.md#operation-feedback). Keep this separate
+from the topbar notification feed. This migration changes frontend feedback only and requires
+no backend contract changes.
+
+- Replace the real Vehicles/Devices save/delete result strips and the remaining operation
+  feedback in adopted screens with toasts. Use the same host for list, drawer, record-page and
+  settings results, and for applicable login/shell operations; do not make tables own an outlet
+  or add a notification service per feature.
+- Show one summary per completed operation or batch. Successful results disappear after five
+  seconds; warning/error operation summaries remain until dismissed. Preserve partial-failure
+  details, failed selections and their retry action; the toast does not replace retry controls
+  or remove rows that failed.
+- Keep field validation, save errors beside an editable draft, initial-load/refresh errors with
+  Retry, and contextual warnings inline. Operation feedback must not insert a row or shift the
+  table, and announcing a toast must not move focus away from the active control.
+- Publish a result only while its initiating UI/workspace is current. Clear displayed feedback
+  when Tenant, Branch, language or authentication changes; a late write from a retired
+  workspace must never produce a toast after navigation or logout. Preserve the captured-client
+  write and cache lifecycle while suppressing stale UI callbacks.
+- Verify success, failure and mixed batch outcomes, dismissal, auto-close, keyboard/mobile and
+  light/dark presentation. Extend the real Vehicles/Devices API/navigation checks and rewritten
+  browser smokes to prove retained selections/retry and no late cross-workspace toasts.
 
 ### Account and notifications
 

@@ -26,31 +26,22 @@ import type { ListActionBase, ListActionRequest, ListRecord } from '../list/list
 import { UI_LANGUAGE } from '../ui-language';
 import type { TableView } from './table-view';
 
-export interface TableNotice {
-  readonly severity: 'success' | 'warn' | 'error';
-  readonly text: string;
-}
-
 export interface TablePage {
   readonly page: number;
   readonly pageSize: number;
   readonly total: number;
 }
 
-/** The records a confirmation names: up to this many, then a count. */
-const namedRecords = 8;
-
 interface PendingConfirm {
   readonly detail: string | null;
-  readonly named: readonly string[];
-  readonly more: number;
+  readonly records: readonly ListRecord<string>[];
   readonly skipped: number;
 }
 
 let nextId = 0;
 
 /**
- * A list panel: heading and count, the six list states, refresh bar, notices, the paginator of
+ * A list panel: heading and count, the six list states, refresh bar, the paginator of
  * the standard list contract, and the list's actions. The host projects its `p-table`; row menus
  * and record links call `run()`, the bulk bar offers the `bulk` actions for the selection, and
  * both confirm the same way before `action` is emitted with the IDs the action applies to.
@@ -72,7 +63,6 @@ export class TablePanel<A extends string = string> {
   readonly busy = input(false);
   readonly emptyTitle = input<string | null>(null);
   readonly emptyDescription = input<string | null>(null);
-  readonly notice = input<TableNotice | null>(null);
   /** The list's actions, defined once for row menus and the bulk bar. */
   readonly actions = input<readonly ListActionBase<A>[]>([]);
   /** The selected rows of the shown page. */
@@ -84,7 +74,6 @@ export class TablePanel<A extends string = string> {
   readonly action = output<ListActionRequest<A>>();
   readonly retry = output();
   readonly clearFilters = output();
-  readonly dismissNotice = output();
   readonly clearSelection = output();
   readonly pageChange = output<{ page: number; pageSize: number }>();
 
@@ -212,27 +201,21 @@ export class TablePanel<A extends string = string> {
   ): Promise<boolean> {
     const confirm = action.confirm;
     if (!confirm) return Promise.resolve(true);
-    // One record is named in the question; several are listed below it.
-    const name = records.length === 1 ? records[0]?.label : undefined;
     this.pending.set({
       detail: confirm.detail ?? null,
-      named: name === undefined ? records.slice(0, namedRecords).map((record) => record.label) : [],
-      more: name === undefined ? Math.max(records.length - namedRecords, 0) : 0,
+      records,
       skipped,
     });
     return confirmAction(this.confirmation, this.language(), {
-      header:
-        name === undefined
-          ? interpolate(confirm.many, { count: formatNumber(records.length, this.language()) })
-          : interpolate(confirm.one, { name }),
+      header: confirm.title,
       acceptLabel: confirm.accept,
       danger: action.danger ?? false,
     });
   }
 
-  protected moreText(more: number): string {
-    return interpolate(this.text().table.moreRecords, {
-      count: formatNumber(more, this.language()),
+  protected confirmRecordsText(count: number): string {
+    return interpolate(this.text().table.confirmRecords, {
+      count: formatNumber(count, this.language()),
     });
   }
 

@@ -1,4 +1,10 @@
-import { applicationConfig, type Decorator, type Preview } from '@storybook/angular-vite';
+import {
+  applicationConfig,
+  componentWrapperDecorator,
+  moduleMetadata,
+  type Decorator,
+  type Preview,
+} from '@storybook/angular-vite';
 import { brands } from '../src/app/theme/brands';
 import { densities } from '../src/app/theme/densities';
 import { appTheme } from '../src/app/theme/theme-choice';
@@ -11,6 +17,12 @@ import {
   storyThemeChoice,
   storybookApplicationConfig,
 } from '../src/storybook/story-config';
+import {
+  storyToastImports,
+  storyToastPt,
+  storyToastStyle,
+  storyToastTemplate,
+} from '../src/storybook/toast';
 
 /** The local PrimeUI key is read once per Storybook page. */
 let license: Promise<string | undefined> | undefined;
@@ -45,7 +57,14 @@ const holitaApplication: Decorator = (story, context) => {
 };
 
 const preview: Preview = {
-  decorators: [holitaApplication],
+  decorators: [
+    holitaApplication,
+    moduleMetadata({ imports: storyToastImports }),
+    componentWrapperDecorator((story) => `${storyToastTemplate}${story}`, {
+      storyToastPt,
+      storyToastStyle,
+    }),
+  ],
   loaders: [async () => ({ primeUiLicense: await (license ??= loadStoryLicense()) })],
   globalTypes: {
     theme: {
@@ -127,8 +146,12 @@ const preview: Preview = {
     // Accessibility violations fail story tests; the PrimeUI license banner is not ours.
     a11y: { test: 'error', context: { exclude: ['#p-license-host'] } },
   },
-  beforeEach: ({ globals, parameters }) => {
+  beforeEach: ({ canvasElement, globals, parameters }) => {
+    delete canvasElement.dataset['storyReady'];
     prepareStory(parameters['holita'], globals);
+  },
+  afterEach: ({ canvasElement, id }) => {
+    canvasElement.dataset['storyReady'] = id;
   },
 };
 

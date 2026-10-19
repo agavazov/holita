@@ -74,7 +74,7 @@ export const GroupInUse: Story = {
 
 /**
  * Every sample group has vehicles, so the story creates an empty one first. Its Delete asks
- * about the group by name; afterwards the notice confirms it and focus is on the list.
+ * about the group by name; afterwards a toast confirms it and focus is on the list.
  */
 export const DeleteGroup: Story = {
   name: 'Delete a group',
@@ -95,7 +95,8 @@ export const DeleteGroup: Story = {
     await waitFor(() => expect(body.queryByRole('dialog', { name: 'New group' })).toBeNull());
     await userEvent.click(canvas.getByRole('button', { name: `Actions for ${name}` }));
     await chooseMenuItem(canvasElement.ownerDocument.body, 'Delete');
-    const dialog = await body.findByRole('alertdialog', { name: `Delete ${name}?` });
+    const dialog = await body.findByRole('alertdialog', { name: 'Delete groups?' });
+    await expect(within(dialog).getByRole('listitem')).toHaveTextContent(name);
     // The dialog fades in: wait until its content is shown.
     await waitFor(() =>
       expect(within(dialog).getByText('Vehicles are not affected.')).toBeVisible(),
@@ -165,10 +166,14 @@ export const GeneralSaved: Story = {
       appReady,
     );
     await userEvent.click(canvas.getByRole('switch', { name: 'Daily summary' }));
+    const field = canvas.getByRole('textbox', { name: /Branch name/ });
+    const top = field.getBoundingClientRect().top;
     await userEvent.click(await canvas.findByRole('button', { name: 'Save changes' }));
     await waitFor(() => expect(canvas.getByText('Settings saved.')).toBeVisible(), {
       timeout: 3_000,
     });
+    await expect(canvas.getByText('Settings saved.').closest('.p-toast-message')).not.toBeNull();
+    await expect(field.getBoundingClientRect().top).toBe(top);
   },
 };
 

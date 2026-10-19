@@ -12,7 +12,7 @@ import {
 } from '../../../ui/list/list-actions';
 import { PageHeader } from '../../../ui/page-header/page-header';
 import { RowActions } from '../../../ui/row-actions/row-actions';
-import { TablePanel, type TableNotice } from '../../../ui/table-panel/table-panel';
+import { TablePanel } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
 import { settingsText } from './i18n/messages';
@@ -42,12 +42,10 @@ export interface GroupRow {
 export class GroupsView {
   readonly rows = input.required<readonly GroupRow[]>();
   readonly view = input.required<TableView>();
-  readonly notice = input<TableNotice | null>(null);
   readonly create = output();
   /** Row actions, with the ID of the group they apply to. */
   readonly action = output<ListActionRequest<GroupActionId>>();
   readonly retry = output();
-  readonly dismissNotice = output();
 
   private readonly language = inject(UI_LANGUAGE);
   private readonly catalog = computed(() => settingsText(this.language()));

@@ -65,7 +65,7 @@
     "clearSelection": "Clear selection",
     "pageReport": "{first}–{last} of {totalRecords}",
     "rowActions": "Actions for {name}",
-    "moreRecords": "and {count} more",
+    "confirmRecords": "Records: {count}",
     "skippedRecords": "Selected records it does not apply to are left unchanged: {count}."
   },
   "menu": {

@@ -1,10 +1,5 @@
 <holita-page-header [eyebrow]="eyebrow()" [title]="text().title" [description]="description()" />
 
-@if (savedNotice(); as notice) {
-  <p-message severity="success" [closable]="true" (onClose)="dismissNotice.emit()">{{
-    notice
-  }}</p-message>
-}
 @if (saveError(); as error) {
   <p-message severity="error" role="alert">{{ error }}</p-message>
 }

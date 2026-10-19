@@ -42,7 +42,6 @@
   [errorText]="text().table.errorText"
   [emptyTitle]="text().table.emptyTitle"
   [emptyDescription]="text().table.emptyDescription"
-  [notice]="notice()"
   [actions]="actions()"
   [selection]="selectedRecords()"
   [page]="page()"
@@ -50,7 +49,6 @@
   (pageChange)="changePage($event)"
   (clearFilters)="clearFilters()"
   (retry)="retry.emit()"
-  (dismissNotice)="dismissNotice.emit()"
   (clearSelection)="selectionChange.emit([])"
 >
   <button emptyActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>

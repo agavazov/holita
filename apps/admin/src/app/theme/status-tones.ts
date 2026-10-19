@@ -142,6 +142,27 @@ export function messageToneTokens() {
   };
 }
 
+/** Toast uses the same readable severity colours with an opaque floating surface. */
+export function toastToneTokens() {
+  const tone = (family: string) => {
+    const message = messageTone(family);
+    return {
+      background: `light-dark({${family}.50}, {surface.900})`,
+      borderColor: message.borderColor,
+      color: message.color,
+      detailColor: '{text.color}',
+      shadow: '{app.shadow.floating}',
+      closeButton: message.closeButton,
+    };
+  };
+  return {
+    info: tone(statusTones.info),
+    success: tone(statusTones.success),
+    warn: tone(statusTones.warn),
+    error: tone(statusTones.danger),
+  };
+}
+
 function solidTone(family: string, light: PaletteStep) {
   const hover = Math.min(light + 100, 900);
   const active = Math.min(light + 200, 950);
