@@ -16,7 +16,9 @@ async function fieldErrors(action: Promise<unknown>): Promise<unknown> {
   try {
     await action;
   } catch (error) {
-    if (!(error instanceof BadRequestException)) throw error;
+    if (!(error instanceof BadRequestException)) {
+      throw error;
+    }
     const response = error.getResponse();
     return typeof response === 'object' && 'fieldErrors' in response
       ? response.fieldErrors
@@ -227,10 +229,11 @@ describe('Drivers validation and scope', () => {
       lowConfidence: true,
     });
     expect(driverScore).not.toHaveBeenCalled();
-    for (const days of [0, 94, 1.5])
+    for (const days of [0, 94, 1.5]) {
       expect(
         await fieldErrors(service.scorecard(context, { driverId: driver.id, days })),
       ).toMatchObject([{ path: 'days' }]);
+    }
     find.mockResolvedValue(null);
     await expect(service.scorecard(context, { driverId: driver.id })).rejects.toThrow(
       NotFoundException,
@@ -260,10 +263,11 @@ describe('Drivers validation and scope', () => {
       },
       { field: 'LAST_NAME', direction: 'ASC' },
     );
-    for (const documentsExpireWithinDays of [-1, 366, 1.5])
+    for (const documentsExpireWithinDays of [-1, 366, 1.5]) {
       expect(
         await fieldErrors(service.list(context, { filter: { documentsExpireWithinDays } })),
       ).toMatchObject([{ path: 'filter' }]);
+    }
     expect(requireBranch).not.toHaveBeenCalled();
   });
 
@@ -391,8 +395,9 @@ describe('Drivers validation and scope', () => {
     find.mockResolvedValue(row({ id }));
     await service.update(context, id, { status: 'INACTIVE' });
     expect(update).toHaveBeenLastCalledWith(scope, id, { status: 'INACTIVE' });
-    for (const input of [{ firstName: null }, { status: null }])
+    for (const input of [{ firstName: null }, { status: null }]) {
       expect(await fieldErrors(service.update(context, id, input))).toHaveLength(1);
+    }
     await expect(service.update(context, id, {})).rejects.toThrow(
       'Provide at least one driver field to update',
     );

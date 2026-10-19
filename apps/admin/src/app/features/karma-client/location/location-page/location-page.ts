@@ -36,7 +36,9 @@ export class LocationPage {
   private read: ReturnType<KarmaApi['watchLocation']> | undefined;
   constructor() {
     effect((onCleanup) => {
-      if (!this.validId()) return;
+      if (!this.validId()) {
+        return;
+      }
       this.api.initialize(this.language());
       this.loading.set(true);
       const read = this.api.watchCar(this.carId());
@@ -50,7 +52,9 @@ export class LocationPage {
           if (result.dataState === 'complete' && !result.error && !result.loading) {
             this.car.set(result.data.karmaCar);
             this.carLoaded.set(true);
-            if (!result.data.karmaCar) this.loading.set(false);
+            if (!result.data.karmaCar) {
+              this.loading.set(false);
+            }
           }
         },
         error: () => {
@@ -65,7 +69,9 @@ export class LocationPage {
     });
     effect((onCleanup) => {
       const car = this.car();
-      if (!car) return;
+      if (!car) {
+        return;
+      }
       this.loading.set(true);
       const read = this.api.watchLocation(car.id);
       this.read = read;
@@ -90,7 +96,9 @@ export class LocationPage {
     });
   }
   refresh(): void {
-    if (this.loading()) return;
+    if (this.loading()) {
+      return;
+    }
     this.error.set(false);
     this.loading.set(true);
     const read = this.read ?? this.carRead;

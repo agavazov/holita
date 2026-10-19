@@ -11,7 +11,9 @@ async function fieldErrors(action: Promise<unknown>): Promise<unknown> {
   try {
     await action;
   } catch (error) {
-    if (!(error instanceof BadRequestException)) throw error;
+    if (!(error instanceof BadRequestException)) {
+      throw error;
+    }
     const response = error.getResponse();
     return typeof response === 'object' && 'fieldErrors' in response
       ? response.fieldErrors

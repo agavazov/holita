@@ -75,7 +75,9 @@ const UNIQUE_INDEXES = new Map([['Device_tenantId_branchId_imei_key', DUPLICATE_
 
 function imei(value: unknown): string {
   const result = typeof value === 'string' ? value.trim() : '';
-  if (!/^[0-9]{15}$/.test(result)) invalid('imei', 'Enter an IMEI of exactly 15 digits.');
+  if (!/^[0-9]{15}$/.test(result)) {
+    invalid('imei', 'Enter an IMEI of exactly 15 digits.');
+  }
   return result;
 }
 
@@ -87,13 +89,14 @@ function options(value: unknown): DeviceData['options'] {
 
 function checkOptions(model: FleetDeviceModel | null, selected: readonly FleetDeviceOption[]) {
   const supported = model === null ? [] : MODEL_OPTIONS[model];
-  if (selected.some((option) => !supported.includes(option)))
+  if (selected.some((option) => !supported.includes(option))) {
     invalid(
       'options',
       model === null
         ? 'Choose a device model before selecting options.'
         : 'Choose only options that the selected model supports.',
     );
+  }
 }
 
 function toDevice(row: DeviceRow): StoredDevice {
@@ -151,7 +154,9 @@ export class DevicesService {
   async find(context: RequestContext, id: string): Promise<DeviceResult> {
     const scope = requireScope(context);
     const row = await this.devices.find(scope, uuid(id, 'id'));
-    if (!row) throw new NotFoundException('Device not found');
+    if (!row) {
+      throw new NotFoundException('Device not found');
+    }
     return this.completeOne(scope, row);
   }
 
@@ -189,27 +194,50 @@ export class DevicesService {
     const scope = requireScope(context);
     const recordId = uuid(id, 'id');
     const data: Partial<DeviceData> = {};
-    if (input.imei !== undefined) data.imei = imei(input.imei);
-    if (input.vehicleId !== undefined) data.vehicleId = uuid(input.vehicleId, 'vehicleId');
-    if (input.model !== undefined) data.model = optionalEnum(input.model, DEVICE_MODELS, 'model');
-    if (input.options !== undefined) data.options = options(input.options);
-    if (input.firmwareVersion !== undefined)
+    if (input.imei !== undefined) {
+      data.imei = imei(input.imei);
+    }
+    if (input.vehicleId !== undefined) {
+      data.vehicleId = uuid(input.vehicleId, 'vehicleId');
+    }
+    if (input.model !== undefined) {
+      data.model = optionalEnum(input.model, DEVICE_MODELS, 'model');
+    }
+    if (input.options !== undefined) {
+      data.options = options(input.options);
+    }
+    if (input.firmwareVersion !== undefined) {
       data.firmwareVersion = this.firmwareVersion(input.firmwareVersion);
-    if (input.simPhoneNumber !== undefined)
+    }
+    if (input.simPhoneNumber !== undefined) {
       data.simPhoneNumber = this.simPhoneNumber(input.simPhoneNumber);
-    if (input.simIccid !== undefined) data.simIccid = this.simIccid(input.simIccid);
-    if (input.installedAt !== undefined) data.installedAt = this.installedAt(input.installedAt);
-    if (input.notes !== undefined) data.notes = optionalText(input.notes, 'notes', 2000);
-    if (!Object.keys(data).length)
+    }
+    if (input.simIccid !== undefined) {
+      data.simIccid = this.simIccid(input.simIccid);
+    }
+    if (input.installedAt !== undefined) {
+      data.installedAt = this.installedAt(input.installedAt);
+    }
+    if (input.notes !== undefined) {
+      data.notes = optionalText(input.notes, 'notes', 2000);
+    }
+    if (!Object.keys(data).length) {
       throw new BadRequestException('Provide at least one device field to update');
+    }
     const stored = await this.devices.find(scope, recordId);
-    if (!stored) throw new NotFoundException('Device not found');
+    if (!stored) {
+      throw new NotFoundException('Device not found');
+    }
     checkOptions(
       data.model === undefined ? stored.model : data.model,
       data.options ?? stored.options,
     );
-    if (data.vehicleId !== undefined) await this.requireVehicle(scope, data.vehicleId);
-    if (data.imei !== undefined) await this.requireUniqueImei(scope, data.imei, recordId);
+    if (data.vehicleId !== undefined) {
+      await this.requireVehicle(scope, data.vehicleId);
+    }
+    if (data.imei !== undefined) {
+      await this.requireUniqueImei(scope, data.imei, recordId);
+    }
     let row: DeviceRow;
     try {
       row = await this.devices.update(scope, recordId, data);
@@ -234,7 +262,9 @@ export class DevicesService {
 
   /** Attaches `lastReportedAt` of each device's current (vehicle, IMEI) pair in one query. */
   private async complete(scope: FleetScope, rows: readonly DeviceRow[]): Promise<DeviceResult[]> {
-    if (!rows.length) return [];
+    if (!rows.length) {
+      return [];
+    }
     const reported = await this.telemetry.lastReported(
       scope,
       rows.map((row) => ({ vehicleId: row.vehicleId, imei: row.imei })),
@@ -247,7 +277,9 @@ export class DevicesService {
 
   private async completeOne(scope: FleetScope, row: DeviceRow): Promise<DeviceResult> {
     const [device] = await this.complete(scope, [row]);
-    if (!device) throw new NotFoundException('Device not found');
+    if (!device) {
+      throw new NotFoundException('Device not found');
+    }
     return device;
   }
 
@@ -278,14 +310,16 @@ export class DevicesService {
   /** Installation time from 2000-01-01 up to now. */
   private installedAt(value: unknown): Date | null {
     const result = optionalDateTime(value, 'installedAt');
-    if (result !== null && result.getTime() > this.clock.now().getTime())
+    if (result !== null && result.getTime() > this.clock.now().getTime()) {
       invalid('installedAt', 'Installation time cannot be in the future.');
+    }
     return result;
   }
 
   private async requireVehicle(scope: FleetScope, vehicleId: string): Promise<void> {
-    if (!(await this.devices.findVehicle(scope, vehicleId)))
+    if (!(await this.devices.findVehicle(scope, vehicleId))) {
       invalid('vehicleId', 'Choose a vehicle in this branch.');
+    }
   }
 
   private async requireUniqueImei(
@@ -293,14 +327,16 @@ export class DevicesService {
     value: string,
     excludeId: string | null,
   ): Promise<void> {
-    if (await this.devices.imeiTaken(scope, value, excludeId))
+    if (await this.devices.imeiTaken(scope, value, excludeId)) {
       invalid(DUPLICATE_IMEI.path, DUPLICATE_IMEI.message);
+    }
   }
 
   private writeError(error: unknown): never {
     rethrowUniqueViolation(error, UNIQUE_INDEXES);
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003')
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
       invalid('vehicleId', 'Choose a vehicle in this branch.');
+    }
     persistenceError(error, 'Device');
   }
 }

@@ -14,10 +14,14 @@ document.head.append(breakpoints);
 function evaluate(query: string): boolean {
   // jsdom runs no animations and never fires animationend, so motion must be reduced: PrimeNG
   // otherwise waits forever for an overlay's leave animation (e.g. a closing confirm dialog).
-  if (/\(prefers-reduced-motion:\s*reduce\)/.test(query)) return true;
+  if (/\(prefers-reduced-motion:\s*reduce\)/.test(query)) {
+    return true;
+  }
   const width = window.innerWidth;
   const conditions = [...query.matchAll(/\((min|max)-width:\s*([\d.]+)px\)/g)];
-  if (!conditions.length) return false;
+  if (!conditions.length) {
+    return false;
+  }
   return conditions.every(([, kind, value]) => {
     const limit = Number(value);
     return kind === 'min' ? width >= limit : width <= limit;
@@ -45,21 +49,29 @@ class TestMediaQueryList extends EventTarget implements MediaQueryList {
     this.matches = evaluate(media);
     window.addEventListener('resize', () => {
       const matches = evaluate(media);
-      if (matches === this.matches) return;
+      if (matches === this.matches) {
+        return;
+      }
       this.matches = matches;
       const event = new TestMediaQueryListEvent(matches, media);
       this.dispatchEvent(event);
       this.onchange?.call(this, event);
-      for (const listener of this.legacy) listener.call(this, event);
+      for (const listener of this.legacy) {
+        listener.call(this, event);
+      }
     });
   }
 
   addListener(listener: LegacyListener | null): void {
-    if (listener) this.legacy.add(listener);
+    if (listener) {
+      this.legacy.add(listener);
+    }
   }
 
   removeListener(listener: LegacyListener | null): void {
-    if (listener) this.legacy.delete(listener);
+    if (listener) {
+      this.legacy.delete(listener);
+    }
   }
 }
 
@@ -83,16 +95,17 @@ class TestResizeObserver implements ResizeObserver {
   }
 }
 
-if (!('ResizeObserver' in globalThis))
+if (!('ResizeObserver' in globalThis)) {
   Object.defineProperty(globalThis, 'ResizeObserver', {
     configurable: true,
     writable: true,
     value: TestResizeObserver,
   });
+}
 
 // jsdom has no scrollIntoView; MenuButton keeps the keyboard-focused option in view. Nothing is
 // laid out in jsdom, so there is nothing to scroll.
-if (!('scrollIntoView' in Element.prototype))
+if (!('scrollIntoView' in Element.prototype)) {
   Object.defineProperty(Element.prototype, 'scrollIntoView', {
     configurable: true,
     writable: true,
@@ -100,3 +113,4 @@ if (!('scrollIntoView' in Element.prototype))
       /* no layout in jsdom */
     },
   });
+}

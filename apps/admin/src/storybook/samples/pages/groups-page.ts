@@ -72,7 +72,9 @@ export class GroupsPage {
   protected readonly editor = linkedSignal<{ id: string | null; form: GroupForm | null } | null>(
     () => {
       const drawer = this.query().get('drawer');
-      if (drawer === 'new') return { id: null, form: null };
+      if (drawer === 'new') {
+        return { id: null, form: null };
+      }
       const group = drawer ? sampleGroups.find((item) => item.id === drawer) : undefined;
       return group ? { id: group.id, form: group } : null;
     },
@@ -120,7 +122,9 @@ export class GroupsPage {
     const [id] = ids;
     switch (action) {
       case 'edit':
-        if (id) this.openEditor(id);
+        if (id) {
+          this.openEditor(id);
+        }
         return;
       case 'delete':
         this.delete(ids);
@@ -130,7 +134,9 @@ export class GroupsPage {
 
   protected save(form: GroupForm): void {
     const editor = this.editor();
-    if (!editor || this.saving()) return;
+    if (!editor || this.saving()) {
+      return;
+    }
     this.saving.set(true);
     this.fieldErrors.set({});
     this.saveTimer = setTimeout(() => {

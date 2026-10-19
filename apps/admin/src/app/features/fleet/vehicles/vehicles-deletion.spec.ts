@@ -68,7 +68,9 @@ function page(harness: RouterTestingHarness): VehiclesPage {
   const component: unknown = harness.routeDebugElement?.query(
     By.directive(VehiclesPage),
   ).componentInstance;
-  if (!(component instanceof VehiclesPage)) throw new Error('Missing Vehicles page.');
+  if (!(component instanceof VehiclesPage)) {
+    throw new Error('Missing Vehicles page.');
+  }
   return component;
 }
 function click(harness: RouterTestingHarness, label: string): void {
@@ -78,7 +80,9 @@ function click(harness: RouterTestingHarness, label: string): void {
     (element) =>
       element.getAttribute('aria-label') === label || element.textContent.trim() === label,
   );
-  if (!button) throw new Error('Missing button: ' + label);
+  if (!button) {
+    throw new Error('Missing button: ' + label);
+  }
   button.click();
 }
 function select(harness: RouterTestingHarness, label: string): void {
@@ -86,7 +90,9 @@ function select(harness: RouterTestingHarness, label: string): void {
     ...(harness.routeNativeElement?.querySelectorAll<HTMLInputElement>('input[type="checkbox"]') ??
       []),
   ].find((element) => element.getAttribute('aria-label') === label);
-  if (!input) throw new Error('Missing checkbox: ' + label);
+  if (!input) {
+    throw new Error('Missing checkbox: ' + label);
+  }
   input.click();
 }
 async function decide(accept: boolean): Promise<void> {
@@ -96,7 +102,9 @@ async function decide(accept: boolean): Promise<void> {
   const button = document.querySelector<HTMLButtonElement>(
     accept ? '.p-confirmdialog-accept-button' : '.p-confirmdialog-reject-button',
   );
-  if (!button) throw new Error('Missing confirmation button.');
+  if (!button) {
+    throw new Error('Missing confirmation button.');
+  }
   button.click();
   await vi.waitFor(() => {
     expect(document.querySelector('.p-confirmdialog')).toBeNull();
@@ -335,21 +343,28 @@ describe('Vehicles deletion and selection lifecycle', () => {
       }
       write.flush(deletion(alpha));
       const completion: unknown = submitted.mock.results[0]?.value;
-      if (!(completion instanceof Promise)) throw new Error('Missing submitted deletion.');
+      if (!(completion instanceof Promise)) {
+        throw new Error('Missing submitted deletion.');
+      }
       await completion;
       await harness.fixture.whenStable();
       expect(router.url).toBe(url);
-      if (destination !== 'query') expect(harness.routeNativeElement?.textContent).toBe(before);
-      else
+      if (destination !== 'query') {
+        expect(harness.routeNativeElement?.textContent).toBe(before);
+      } else {
         expect(
           page(harness)
             .selected()
             .map((vehicle) => vehicle.id),
         ).toEqual([beta.id]);
+      }
       expect(harness.routeNativeElement?.textContent).not.toContain('Deleted vehicles:');
       expect(harness.routeNativeElement?.textContent).not.toContain('Failed vehicles:');
-      if (destination === 'query') expect(stop).not.toHaveBeenCalled();
-      else expect(stop).toHaveBeenCalledTimes(destination === 'language' ? 2 : 1);
+      if (destination === 'query') {
+        expect(stop).not.toHaveBeenCalled();
+      } else {
+        expect(stop).toHaveBeenCalledTimes(destination === 'language' ? 2 : 1);
+      }
       http.expectNone('/graphql');
     },
   );
@@ -363,7 +378,9 @@ describe('Vehicles deletion and selection lifecycle', () => {
     await decide(true);
     const write = await nextRequest('AdminDeleteVehicle');
     const completion: unknown = submitted.mock.results[0]?.value;
-    if (!(completion instanceof Promise)) throw new Error('Missing submitted deletion.');
+    if (!(completion instanceof Promise)) {
+      throw new Error('Missing submitted deletion.');
+    }
     const rejection = expect(completion).rejects.toThrow('Vehicle not found');
     await router.navigateByUrl(path.replace(branchA, branchB));
     await harness.fixture.whenStable();

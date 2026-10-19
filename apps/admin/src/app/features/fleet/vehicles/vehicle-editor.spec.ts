@@ -68,7 +68,9 @@ function editor(harness: RouterTestingHarness): VehicleEditor {
   const instance: unknown = harness.routeDebugElement?.query(
     By.directive(VehicleEditor),
   ).componentInstance;
-  if (!(instance instanceof VehicleEditor)) throw new Error('Missing editor.');
+  if (!(instance instanceof VehicleEditor)) {
+    throw new Error('Missing editor.');
+  }
   return instance;
 }
 function field(
@@ -78,7 +80,9 @@ function field(
   const input = harness.routeNativeElement?.querySelector<HTMLInputElement | HTMLTextAreaElement>(
     `#vehicle-${licensePlate}`,
   );
-  if (!input) throw new Error('Missing field.');
+  if (!input) {
+    throw new Error('Missing field.');
+  }
   return input;
 }
 function type(
@@ -97,7 +101,9 @@ async function decide(accept: boolean): Promise<void> {
   const button = document.querySelector<HTMLButtonElement>(
     accept ? '.p-confirmdialog-accept-button' : '.p-confirmdialog-reject-button',
   );
-  if (!button) throw new Error('Missing confirmation button.');
+  if (!button) {
+    throw new Error('Missing confirmation button.');
+  }
   button.click();
   await vi.waitFor(() => {
     expect(document.querySelector('.p-confirmdialog')).toBeNull();
@@ -250,7 +256,9 @@ describe('Vehicle editor forms and route lifecycle', () => {
     const shell: unknown = harness.routeDebugElement?.query(
       By.directive(AdminShell),
     ).componentInstance;
-    if (!(shell instanceof AdminShell)) throw new Error('Missing shell.');
+    if (!(shell instanceof AdminShell)) {
+      throw new Error('Missing shell.');
+    }
     shell.chooseBranch(branchB);
     await decide(false);
     await harness.fixture.whenStable();
@@ -339,11 +347,12 @@ describe('Vehicle editor forms and route lifecycle', () => {
               ? `/en/${branchB}/fleet/vehicles/${vehicleA}/edit`
               : path.replace('/en/', '/bg/') + `/${vehicleA}/edit`;
       await harness.navigateByUrl(url);
-      if (destination === 'language')
+      if (destination === 'language') {
         http
           .expectOne((request) => operation(request, 'AdminBranches'))
           .flush({ data: { branches } });
-      if (destination !== 'new')
+      }
+      if (destination !== 'new') {
         http
           .expectOne((request) => operation(request, 'AdminVehicle'))
           .flush(
@@ -355,6 +364,7 @@ describe('Vehicle editor forms and route lifecycle', () => {
               ),
             ),
           );
+      }
       await harness.fixture.whenStable();
       type(harness, 'licensePlate', 'Current draft');
       expect(write.cancelled).toBe(false);
@@ -465,7 +475,9 @@ describe('Vehicle editor forms and route lifecycle', () => {
     const retry = Array.from(harness.routeNativeElement?.querySelectorAll('button') ?? []).find(
       (button) => button.textContent.trim() === current.text().retry,
     );
-    if (!retry) throw new Error('Missing read recovery button.');
+    if (!retry) {
+      throw new Error('Missing read recovery button.');
+    }
     retry.click();
     http
       .expectOne((request) => operation(request, 'AdminVehicle'))

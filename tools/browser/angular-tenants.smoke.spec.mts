@@ -24,8 +24,9 @@ test('real tenant login gates deep links, survives reload, clears on logout and 
       request.method() === 'POST' &&
       request.url() === app.gatewayUrl &&
       /Admin(Vehicles|Devices|Branches)/.test(request.postData() ?? '')
-    )
+    ) {
       business.push(request.headers()['authorization'] ?? 'missing');
+    }
   });
   await page.goto(
     `${app.url}/en/10000000-0000-4000-8000-000000000002/fleet/devices/new?search=old`,

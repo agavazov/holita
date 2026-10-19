@@ -15,7 +15,9 @@ async function fieldErrors(action: Promise<unknown>): Promise<unknown> {
   try {
     await action;
   } catch (error) {
-    if (!(error instanceof BadRequestException)) throw error;
+    if (!(error instanceof BadRequestException)) {
+      throw error;
+    }
     const response = error.getResponse();
     return typeof response === 'object' && 'fieldErrors' in response
       ? response.fieldErrors
@@ -244,8 +246,9 @@ describe('Vehicles validation and scope', () => {
     await expect(service.list({ ...context, branchId: 'bad' }, {})).rejects.toThrow(
       BadRequestException,
     );
-    for (const args of [{ offset: -1 }, { limit: 101 }])
+    for (const args of [{ offset: -1 }, { limit: 101 }]) {
       await expect(service.list(context, args)).rejects.toThrow(BadRequestException);
+    }
     expect(list).not.toHaveBeenCalled();
   });
 
@@ -380,8 +383,9 @@ describe('Vehicles validation and scope', () => {
     expect(duplicates).not.toHaveBeenCalled();
     await service.update(context, id, { fleetNumber: 'T-02' });
     expect(duplicates).toHaveBeenLastCalledWith(scope, { fleetNumber: 'T-02', vin: null }, id);
-    for (const input of [{ licensePlate: null }, { status: null }])
+    for (const input of [{ licensePlate: null }, { status: null }]) {
       expect(await fieldErrors(service.update(context, id, input))).toHaveLength(1);
+    }
     await expect(service.update(context, id, {})).rejects.toThrow(
       'Provide at least one vehicle field to update',
     );

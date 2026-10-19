@@ -5,7 +5,9 @@ export interface JsonObject {
   [key: string]: Json;
 }
 export function requireValue(condition: unknown, message: string): asserts condition {
-  if (!condition) throw new Error(message);
+  if (!condition) {
+    throw new Error(message);
+  }
 }
 export function object(value: unknown): JsonObject {
   requireValue(
@@ -13,16 +15,22 @@ export function object(value: unknown): JsonObject {
     'Expected JSON object',
   );
   const result: JsonObject = {};
-  for (const [key, child] of Object.entries(value)) result[key] = json(child);
+  for (const [key, child] of Object.entries(value)) {
+    result[key] = json(child);
+  }
   return result;
 }
 export function json(value: unknown): Json {
-  if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') {
+    return value;
+  }
   if (typeof value === 'number') {
     requireValue(Number.isFinite(value), 'Nonfinite JSON number');
     return value;
   }
-  if (Array.isArray(value)) return value.map(json);
+  if (Array.isArray(value)) {
+    return value.map(json);
+  }
   return object(value);
 }
 export function array(value: Json | undefined): Json[] {
@@ -46,12 +54,15 @@ export function sha256(value: Uint8Array | string): string {
   return createHash('sha256').update(value).digest('hex');
 }
 export function canonical(value: Json): string {
-  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
-  if (value !== null && typeof value === 'object')
+  if (Array.isArray(value)) {
+    return `[${value.map(canonical).join(',')}]`;
+  }
+  if (value !== null && typeof value === 'object') {
     return `{${Object.keys(value)
       .sort()
       .map((key) => `${JSON.stringify(key)}:${canonical(value[key] ?? null)}`)
       .join(',')}}`;
+  }
   requireValue(typeof value !== 'number' || Number.isFinite(value), 'Nonfinite JSON number');
   return JSON.stringify(value);
 }

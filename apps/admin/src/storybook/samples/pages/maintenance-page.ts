@@ -86,12 +86,16 @@ function urgencyOf(
   task: Omit<SampleServiceTask, 'urgency'>,
   odometer = vehicleById(task.vehicleId)?.odometerKm ?? null,
 ): ServiceUrgency | null {
-  if (task.status !== 'PLANNED') return null;
+  if (task.status !== 'PLANNED') {
+    return null;
+  }
   const kmLeft = task.dueKm === null || odometer === null ? null : task.dueKm - odometer;
-  if ((task.dueOn !== null && task.dueOn < today) || (kmLeft !== null && kmLeft <= 0))
+  if ((task.dueOn !== null && task.dueOn < today) || (kmLeft !== null && kmLeft <= 0)) {
     return 'OVERDUE';
-  if ((task.dueOn !== null && task.dueOn <= soon) || (kmLeft !== null && kmLeft <= 1500))
+  }
+  if ((task.dueOn !== null && task.dueOn <= soon) || (kmLeft !== null && kmLeft <= 1500)) {
     return 'DUE_SOON';
+  }
   return task.dueKm !== null && odometer === null ? 'UNKNOWN_ODOMETER' : 'UPCOMING';
 }
 
@@ -246,12 +250,19 @@ export class MaintenancePage {
     (option) => vehicleById(option.id)?.status !== 'INACTIVE',
   );
   protected readonly tasks = linkedSignal<readonly MaintenanceSampleTask[]>(() => {
-    if (this.scenario() === 'empty') return [];
-    if (this.scenario() === 'no-odometer')
+    if (this.scenario() === 'empty') {
+      return [];
+    }
+    if (this.scenario() === 'no-odometer') {
       return initialTasks.map((task) => ({ ...task, urgency: urgencyOf(task, null) }));
-    if (this.scenario() !== 'earlier-service') return initialTasks;
+    }
+    if (this.scenario() !== 'earlier-service') {
+      return initialTasks;
+    }
     const task = initialTasks.find((item) => item.id === 's001');
-    if (!task) throw new Error('Missing earlier service fixture.');
+    if (!task) {
+      throw new Error('Missing earlier service fixture.');
+    }
     return [
       ...initialTasks,
       {
@@ -287,7 +298,9 @@ export class MaintenancePage {
     readOnly: boolean;
   } | null>(() => {
     const drawer = this.query().get('drawer');
-    if (drawer === 'new') return { id: null, form: null, readOnly: false };
+    if (drawer === 'new') {
+      return { id: null, form: null, readOnly: false };
+    }
     const task = drawer ? sampleServiceTasks.find((item) => item.id === drawer) : undefined;
     return task?.status === 'PLANNED' || task?.status === 'CANCELLED'
       ? { id: task.id, form: toForm(task), readOnly: task.status === 'CANCELLED' }
@@ -355,16 +368,23 @@ export class MaintenancePage {
     const [id] = ids;
     switch (action) {
       case 'edit':
-        if (id) this.openEditor(id);
+        if (id) {
+          this.openEditor(id);
+        }
         return;
       case 'complete':
-        if (id) this.openCompletion(id);
+        if (id) {
+          this.openCompletion(id);
+        }
         return;
       case 'view':
         if (id) {
           const task = this.tasks().find((item) => item.id === id);
-          if (task?.status === 'CANCELLED') this.openEditor(id);
-          else this.openCompletion(id);
+          if (task?.status === 'CANCELLED') {
+            this.openEditor(id);
+          } else {
+            this.openCompletion(id);
+          }
         }
         return;
       case 'cancel':
@@ -372,7 +392,9 @@ export class MaintenancePage {
         return;
       case 'vehicle': {
         const task = this.tasks().find((item) => item.id === id);
-        if (task) void this.router.navigate(['/examples/vehicles', task.vehicleId]);
+        if (task) {
+          void this.router.navigate(['/examples/vehicles', task.vehicleId]);
+        }
         return;
       }
       case 'delete':
@@ -383,7 +405,9 @@ export class MaintenancePage {
 
   protected save(form: ServiceTaskForm): void {
     const editor = this.editor();
-    if (!editor || editor.readOnly || this.saving()) return;
+    if (!editor || editor.readOnly || this.saving()) {
+      return;
+    }
     this.saving.set(true);
     this.saveError.set(null);
     this.saveTimer = setTimeout(() => {
@@ -427,7 +451,9 @@ export class MaintenancePage {
 
   private openCompletion(id: string): void {
     const task = this.tasks().find((item) => item.id === id);
-    if (!task) return;
+    if (!task) {
+      return;
+    }
     this.editor.set(null);
     this.saveError.set(null);
     this.completionErrors.set({});
@@ -440,7 +466,9 @@ export class MaintenancePage {
 
   protected complete(form: ServiceCompletionForm): void {
     const open = this.completion();
-    if (!open || open.completed || this.saving()) return;
+    if (!open || open.completed || this.saving()) {
+      return;
+    }
     this.saving.set(true);
     this.saveError.set(null);
     this.completionErrors.set({});
@@ -452,7 +480,9 @@ export class MaintenancePage {
         return;
       }
       const stored = this.tasks().find((task) => task.id === open.id);
-      if (!stored) return;
+      if (!stored) {
+        return;
+      }
       const earlierOdometers = this.tasks().flatMap((task) => {
         const completion = task.completion;
         return task.vehicleId === stored.vehicleId &&
@@ -488,7 +518,9 @@ export class MaintenancePage {
               }
             : task,
         );
-        if (!hasNext) return completed;
+        if (!hasNext) {
+          return completed;
+        }
         const next = {
           id: `example-task-${String(this.nextId++)}`,
           vehicleId: stored.vehicleId,

@@ -100,7 +100,9 @@ export class RouteDrawer {
 
   /** For the host's `canLeave()`: confirms discarding a dirty draft; concurrent calls share one dialog. */
   confirmLeave(dirty: boolean): boolean | Promise<boolean> {
-    if (!dirty) return true;
+    if (!dirty) {
+      return true;
+    }
     this.pendingLeave ??= confirmDiscard(this.confirmation, this.language()).finally(() => {
       this.pendingLeave = null;
     });
@@ -114,7 +116,9 @@ export class RouteDrawer {
   /** Restores focus lost when a focused editor control is disabled during a save. */
   keepFocusInside(): void {
     const container = this.heading()?.nativeElement.closest('.p-drawer');
-    if (!container?.contains(document.activeElement)) this.focusTitle();
+    if (!container?.contains(document.activeElement)) {
+      this.focusTitle();
+    }
   }
 
   protected shown(): void {
@@ -139,10 +143,14 @@ export class RouteDrawer {
   protected escape(event: Event): void {
     // PrimeNG's drawer would drop its modality on Escape; the route decides instead.
     event.stopPropagation();
-    if (!event.defaultPrevented) this.close();
+    if (!event.defaultPrevented) {
+      this.close();
+    }
   }
 
   protected beforeUnload(event: BeforeUnloadEvent): void {
-    if (this.dirty()) event.preventDefault();
+    if (this.dirty()) {
+      event.preventDefault();
+    }
   }
 }

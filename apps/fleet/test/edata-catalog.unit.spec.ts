@@ -24,14 +24,30 @@ describe('eData catalog file validation', () => {
     'source',
   ])('rejects invalid %s before connecting to the database', (kind) => {
     const value = catalogDocument();
-    if (kind === 'schema') value.schemaVersion = 2;
-    if (kind === 'coverage') value.coverage.parameters = 999;
-    if (kind === 'reference' && value.profiles[0]) value.profiles[0].setId = 999;
-    if (kind === 'duplicate' && value.parameters[0]) value.parameters.push(value.parameters[0]);
-    if (kind === 'membership' && value.sets[0]) value.sets[0].parameterIds.push(2);
-    if (kind === 'mapping') value.mappings.pop();
-    if (kind === 'issues') value.coverage.issues.decimal_hex_mismatch = 0;
-    if (kind === 'source' && value.parameters[0]) value.parameters[0].sourceKey = 'missing';
+    if (kind === 'schema') {
+      value.schemaVersion = 2;
+    }
+    if (kind === 'coverage') {
+      value.coverage.parameters = 999;
+    }
+    if (kind === 'reference' && value.profiles[0]) {
+      value.profiles[0].setId = 999;
+    }
+    if (kind === 'duplicate' && value.parameters[0]) {
+      value.parameters.push(value.parameters[0]);
+    }
+    if (kind === 'membership' && value.sets[0]) {
+      value.sets[0].parameterIds.push(2);
+    }
+    if (kind === 'mapping') {
+      value.mappings.pop();
+    }
+    if (kind === 'issues') {
+      value.coverage.issues.decimal_hex_mismatch = 0;
+    }
+    if (kind === 'source' && value.parameters[0]) {
+      value.parameters[0].sourceKey = 'missing';
+    }
     expect(() => parseCatalog(Buffer.from(JSON.stringify(value)))).toThrow();
   });
   it('rejects truncated JSON and incomplete extraction', () => {

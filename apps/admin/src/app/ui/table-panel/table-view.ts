@@ -15,8 +15,14 @@ export function tableView(input: {
   readonly filtered: boolean;
 }): TableView {
   const failed = input.error !== null && input.error !== undefined;
-  if (input.rows !== null && input.rows > 0) return { kind: failed ? 'rows-error' : 'rows' };
-  if (failed) return { kind: 'error' };
-  if (input.loading || input.rows === null) return { kind: 'loading' };
+  if (input.rows !== null && input.rows > 0) {
+    return { kind: failed ? 'rows-error' : 'rows' };
+  }
+  if (failed) {
+    return { kind: 'error' };
+  }
+  if (input.loading || input.rows === null) {
+    return { kind: 'loading' };
+  }
   return { kind: input.filtered ? 'no-results' : 'empty' };
 }

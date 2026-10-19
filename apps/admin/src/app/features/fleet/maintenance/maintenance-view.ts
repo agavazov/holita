@@ -209,7 +209,9 @@ export class MaintenanceView {
 
   /** "1,200 km left" or "300 km over" against the current odometer. */
   protected kmLeftLabel(task: ServiceTaskRow): string | null {
-    if (task.kmLeft === null || task.status !== 'PLANNED') return null;
+    if (task.kmLeft === null || task.status !== 'PLANNED') {
+      return null;
+    }
     const km = formatNumber(Math.abs(task.kmLeft), this.language());
     return interpolate(task.kmLeft < 0 ? this.text().table.kmOver : this.text().table.kmLeft, {
       km,
@@ -245,9 +247,13 @@ export class MaintenanceView {
   }
 
   protected sort(event: TableLazyLoadEvent): void {
-    if (!this.sortReady()) return;
+    if (!this.sortReady()) {
+      return;
+    }
     const next = listQuery.sorted(this.state(), event);
-    if (next) this.changeQuery(next);
+    if (next) {
+      this.changeQuery(next);
+    }
   }
 
   protected select(rows: readonly ServiceTaskRow[] | null): void {
@@ -257,7 +263,9 @@ export class MaintenanceView {
   /** The selection belongs to the rows on screen, so any new query clears it. */
   private changeQuery(query: ListQuery): void {
     this.stateChange.emit(query);
-    if (this.selection().length) this.selectionChange.emit([]);
+    if (this.selection().length) {
+      this.selectionChange.emit([]);
+    }
   }
 
   private toRecord(row: ServiceTaskRow): ListRecord<MaintenanceActionId> {

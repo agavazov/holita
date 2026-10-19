@@ -54,7 +54,9 @@ function vehiclePage(vehicle: AdminVehicleFragment) {
 
 function pageElement(fixture: ComponentFixture<VehiclesPage>): HTMLElement {
   const element: unknown = fixture.nativeElement;
-  if (!(element instanceof HTMLElement)) throw new Error('Missing Vehicles page element.');
+  if (!(element instanceof HTMLElement)) {
+    throw new Error('Missing Vehicles page element.');
+  }
   return element;
 }
 

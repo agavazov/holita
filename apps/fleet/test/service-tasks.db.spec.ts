@@ -34,7 +34,9 @@ describe('Service tasks and urgency with PostgreSQL', () => {
   let foreignTask = '';
   function task(key: TaskKey): string {
     const id = tasks.get(key);
-    if (!id) throw new Error(`Missing task ${key}`);
+    if (!id) {
+      throw new Error(`Missing task ${key}`);
+    }
     return id;
   }
   beforeAll(async () => {
@@ -69,10 +71,11 @@ describe('Service tasks and urgency with PostgreSQL', () => {
       ['b', 'CB 2002 AX', 'ACTIVE'],
       ['c', 'CB 2003 AX', 'INACTIVE'],
       ['d', 'CB 2004 AX', 'IN_WORKSHOP'],
-    ] as const)
+    ] as const) {
       vehicles[key] = (
         await client.vehicle.create({ data: { tenantId, branchId, licensePlate, status } })
       ).id;
+    }
     await client.vehicleStatusSample.createMany({
       data: [
         {
@@ -170,7 +173,7 @@ describe('Service tasks and urgency with PostgreSQL', () => {
         ],
         ['t13', { vehicleId: vehicles.b, serviceType: 'TIRES', status: 'CANCELLED' }],
       ];
-    for (const [index, [key, data]] of rows.entries())
+    for (const [index, [key, data]] of rows.entries()) {
       tasks.set(
         key,
         (
@@ -184,6 +187,7 @@ describe('Service tasks and urgency with PostgreSQL', () => {
           })
         ).id,
       );
+    }
     // Matching tasks of another Branch and another Tenant stay invisible and uncounted.
     for (const [scopeTenant, scopeBranch] of [
       [tenantId, randomUUID()],
@@ -214,7 +218,9 @@ describe('Service tasks and urgency with PostgreSQL', () => {
       await app?.close();
     } finally {
       try {
-        if (connected) await connection.end();
+        if (connected) {
+          await connection.end();
+        }
       } finally {
         await closeDatabase?.();
       }
@@ -270,10 +276,11 @@ describe('Service tasks and urgency with PostgreSQL', () => {
       ['t11', null, null, null],
       ['t13', null, null, null],
     ];
-    for (const [key, urgency, remainingDays, remainingKm] of expected)
+    for (const [key, urgency, remainingDays, remainingKm] of expected) {
       expect(await query(detail, { id: task(key) })).toMatchObject({
         data: { fleetServiceTask: { urgency, remainingDays, remainingKm } },
       });
+    }
     expect(await query(detail, { id: foreignTask })).toMatchObject({
       errors: [{ extensions: { code: 'NOT_FOUND' } }],
     });
@@ -325,10 +332,11 @@ describe('Service tasks and urgency with PostgreSQL', () => {
     ];
     for (const [sort, keys] of orders) {
       expect(await listed({ sort })).toEqual(page(keys));
-      for (let offset = 0; offset < keys.length; offset += 4)
+      for (let offset = 0; offset < keys.length; offset += 4) {
         expect(await listed({ sort, offset, limit: 4 })).toEqual(
           page(keys.slice(offset, offset + 4), keys.length, offset, 4),
         );
+      }
     }
   });
 
@@ -418,10 +426,11 @@ describe('Service tasks and urgency with PostgreSQL', () => {
       [{ vehicleId: foreignTask, serviceType: 'BRAKES', dueOn: '2026-11-01' }, 'vehicleId'],
       [{ vehicleId: vehicles.a, serviceType: 'BRAKES' }, 'dueOn'],
       [{ vehicleId: vehicles.a, serviceType: 'BRAKES', dueOn: '2026-02-30' }, 'dueOn'],
-    ] satisfies [Record<string, unknown>, string][])
+    ] satisfies [Record<string, unknown>, string][]) {
       expect(await query(create, { input })).toMatchObject({
         errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path }] } }],
       });
+    }
     expect(requireBranch).toHaveBeenCalledTimes(1);
     const update = `mutation($id:ID!,$input:UpdateFleetServiceTaskInput!){updateFleetServiceTask(id:$id,input:$input){${fields}}}`;
     expect(await query(update, { id: task('t3'), input: { dueOn: '2026-10-25' } })).toMatchObject({
@@ -487,10 +496,11 @@ describe('Service tasks and urgency with PostgreSQL', () => {
       [{ completedOn: '2026-10-18', completedOdometerKm: 94_000 }, 'completedOdometerKm'],
       [{ completedOn: '2026-10-19' }, 'completedOn'],
       [{ completedOn: '2026-10-18', nextDueOn: '2026-10-18' }, 'nextDueOn'],
-    ] satisfies [Record<string, unknown>, string][])
+    ] satisfies [Record<string, unknown>, string][]) {
       expect(await query(complete, { id: task('t5'), input })).toMatchObject({
         errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path }] } }],
       });
+    }
     expect(
       await query(complete, { id: task('t11'), input: { completedOn: '2026-10-18' } }),
     ).toMatchObject({
@@ -534,10 +544,11 @@ describe('Service tasks and urgency with PostgreSQL', () => {
         { message: 'Completed service is kept as history', extensions: { code: 'CONFLICT' } },
       ],
     });
-    for (const source of [cancel, remove])
+    for (const source of [cancel, remove]) {
       expect(await query(source, { id: foreignTask })).toMatchObject({
         errors: [{ extensions: { code: 'NOT_FOUND' } }],
       });
+    }
     expect(
       await database.client.serviceTask.findMany({
         where: { id: { in: [task('t7'), task('t8'), task('t11')] } },

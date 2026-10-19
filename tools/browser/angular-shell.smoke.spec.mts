@@ -27,15 +27,21 @@ async function tokenPx(page: Page, name: string): Promise<number> {
     const value = root.getPropertyValue(property).trim();
     const rem = Number.parseFloat(root.fontSize);
     const number = Number.parseFloat(value);
-    if (value.endsWith('rem')) return number * rem;
-    if (value.endsWith('px')) return number;
+    if (value.endsWith('rem')) {
+      return number * rem;
+    }
+    if (value.endsWith('px')) {
+      return number;
+    }
     throw new Error(`Unsupported token ${property}: ${value}`);
   }, name);
 }
 
 async function box(locator: Locator) {
   const bounds = await locator.boundingBox();
-  if (!bounds) throw new Error('Element has no box.');
+  if (!bounds) {
+    throw new Error('Element has no box.');
+  }
   return bounds;
 }
 
@@ -169,11 +175,13 @@ test('one Branch selector keeps editor drafts across widths, on a second row bel
     expect(await noHorizontalOverflow(page)).toBe(true);
     const selectBox = await box(select);
     const menuBox = await box(menu);
-    if (width < 640) expect(selectBox.y).toBeGreaterThanOrEqual(menuBox.y + menuBox.height);
-    else
+    if (width < 640) {
+      expect(selectBox.y).toBeGreaterThanOrEqual(menuBox.y + menuBox.height);
+    } else {
       expect(
         Math.abs(selectBox.y + selectBox.height / 2 - (menuBox.y + menuBox.height / 2)),
       ).toBeLessThanOrEqual(2);
+    }
   }
   await page.screenshot({ path: testInfo.outputPath('editor-1024.png'), fullPage: true });
   await page.setViewportSize({ width: 1023, height: 844 });
@@ -237,7 +245,9 @@ test('keyboard order and visible focus in both themes on desktop and mobile', as
     ]) {
       await page.keyboard.press('Tab');
       await expect(target).toBeFocused();
-      if (target !== select) await expectVisibleFocus(target);
+      if (target !== select) {
+        await expectVisibleFocus(target);
+      }
     }
     await expect(firstNavigationLink).toHaveAttribute('aria-current', 'page');
     if (theme === 'light') {
@@ -335,8 +345,9 @@ test('mobile navigation drawer traps focus and closes on Escape, backdrop, navig
     await page.screenshot({ path: testInfo.outputPath(`narrow-${theme}.png`), fullPage: true });
     await page.keyboard.press('Escape');
     await expect(drawer).not.toBeVisible();
-    if (theme === 'light')
+    if (theme === 'light') {
       await page.getByRole('button', { name: 'Use dark theme', exact: true }).click();
+    }
   }
 });
 

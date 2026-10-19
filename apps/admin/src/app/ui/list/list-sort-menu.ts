@@ -63,13 +63,17 @@ export class ListSortMenu {
     const current = this.sort();
     const field = this.fields().find((field) => `field:${field.field}` === id);
     if (field) {
-      if (field.field !== current?.field)
+      if (field.field !== current?.field) {
         this.sortChange.emit({ field: field.field, direction: current?.direction ?? 'asc' });
+      }
       return;
     }
-    if (!current) return;
+    if (!current) {
+      return;
+    }
     const direction = id === 'direction:asc' ? 'asc' : id === 'direction:desc' ? 'desc' : null;
-    if (direction && direction !== current.direction)
+    if (direction && direction !== current.direction) {
       this.sortChange.emit({ field: current.field, direction });
+    }
   }
 }

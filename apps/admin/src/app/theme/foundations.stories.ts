@@ -618,10 +618,14 @@ export const Colors: Story = {
   play: async ({ canvasElement }) => {
     // T1: app tokens resolve differently in the light and dark schemes.
     const [light, dark] = Array.from(canvasElement.querySelectorAll<HTMLElement>('.scheme'));
-    if (!light || !dark) throw new Error('Missing schemes.');
+    if (!light || !dark) {
+      throw new Error('Missing schemes.');
+    }
     const chip = (scheme: HTMLElement) => {
       const element = scheme.querySelector('.chip');
-      if (!element) throw new Error('Missing swatch.');
+      if (!element) {
+        throw new Error('Missing swatch.');
+      }
       return getComputedStyle(element).backgroundColor;
     };
     await expect(chip(light)).not.toBe(chip(dark));

@@ -11,7 +11,9 @@ async function fieldErrors(action: Promise<unknown>): Promise<unknown> {
   try {
     await action;
   } catch (error) {
-    if (!(error instanceof BadRequestException)) throw error;
+    if (!(error instanceof BadRequestException)) {
+      throw error;
+    }
     const response = error.getResponse();
     return typeof response === 'object' && 'fieldErrors' in response
       ? response.fieldErrors
@@ -125,8 +127,9 @@ describe('Vehicle groups validation and scope', () => {
       { path: 'name' },
     ]);
     expect(nameTaken).toHaveBeenLastCalledWith(scope, 'Long haul', id);
-    for (const input of [{ name: null }, { colorToken: null }])
+    for (const input of [{ name: null }, { colorToken: null }]) {
       expect(await fieldErrors(service.update(context, id, input))).toHaveLength(1);
+    }
     await expect(service.update(context, id, {})).rejects.toThrow(BadRequestException);
     await service.update(context, id, { colorToken: 'C5', description: null });
     expect(update).toHaveBeenCalledWith(scope, id, { colorToken: 'C5', description: null });

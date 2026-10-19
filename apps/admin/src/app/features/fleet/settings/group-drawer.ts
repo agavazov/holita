@@ -111,8 +111,9 @@ export class GroupDrawer {
       this.form,
       () => this.saving(),
       () => {
-        if (!focusFirstInvalid(this.formElement().nativeElement, fieldOrder, 'group-'))
+        if (!focusFirstInvalid(this.formElement().nativeElement, fieldOrder, 'group-')) {
           this.drawer().keepFocusInside();
+        }
       },
     );
   }
@@ -120,14 +121,20 @@ export class GroupDrawer {
   protected errorOf(name: GroupField): string | null {
     this.events();
     const server = this.fieldErrors()[name];
-    if (server) return server;
+    if (server) {
+      return server;
+    }
     const control = this.form.controls[name];
-    if (!control.invalid || (!control.touched && !this.submitted)) return null;
+    if (!control.invalid || (!control.touched && !this.submitted)) {
+      return null;
+    }
     return validationMessage(control.errors, this.language());
   }
 
   protected submit(): void {
-    if (this.saving()) return;
+    if (this.saving()) {
+      return;
+    }
     this.submitted = true;
     this.form.markAllAsTouched();
     if (this.form.invalid) {
@@ -144,7 +151,9 @@ export class GroupDrawer {
   }
 
   protected async requestClose(): Promise<void> {
-    if (await this.canLeave()) this.closed.emit();
+    if (await this.canLeave()) {
+      this.closed.emit();
+    }
   }
 
   canLeave(): boolean | Promise<boolean> {

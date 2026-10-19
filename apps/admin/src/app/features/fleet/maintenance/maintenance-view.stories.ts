@@ -22,7 +22,9 @@ export default meta;
 type Story = StoryObj;
 
 const [task] = sampleServiceTasks;
-if (!task) throw new Error('The sample service tasks are empty.');
+if (!task) {
+  throw new Error('The sample service tasks are empty.');
+}
 /** The example app routes and renders its first page before the list appears. */
 const appReady = { timeout: 10_000 };
 
@@ -68,7 +70,9 @@ export const DeleteFromRow: Story = {
   play: async ({ canvasElement }) => {
     const canvas = await tableReady(canvasElement);
     const [trigger] = canvas.getAllByRole('button', { name: /^Actions for / });
-    if (!trigger) throw new Error('No row actions');
+    if (!trigger) {
+      throw new Error('No row actions');
+    }
     const name = (trigger.getAttribute('aria-label') ?? '').replace('Actions for ', '');
     await userEvent.click(trigger);
     const body = within(canvasElement.ownerDocument.body);
@@ -87,7 +91,9 @@ export const DeleteSelected: Story = {
   play: async ({ canvasElement }) => {
     const canvas = await tableReady(canvasElement);
     const boxes = canvas.getAllByRole('checkbox', { name: /^Select (?!all)/ });
-    for (const box of boxes.slice(0, 3)) await userEvent.click(box);
+    for (const box of boxes.slice(0, 3)) {
+      await userEvent.click(box);
+    }
     const bar = await canvas.findByRole('region', { name: 'Actions for selected records' });
     await userEvent.click(within(bar).getByRole('button', { name: 'Delete' }));
     const body = within(canvasElement.ownerDocument.body);
@@ -153,7 +159,9 @@ export const PlanWithoutTitle: Story = {
     await waitFor(() => expect(serviceType).toHaveTextContent('Repair'));
     await waitFor(() => expect(body.queryByRole('listbox')).not.toBeInTheDocument());
     const vehicle = sampleVehicles.find((item) => item.status !== 'INACTIVE');
-    if (!vehicle) throw new Error('No serviceable vehicle fixture.');
+    if (!vehicle) {
+      throw new Error('No serviceable vehicle fixture.');
+    }
     const vehicleSelect = body.getByRole('combobox', { name: 'Vehicle' });
     await userEvent.click(vehicleSelect);
     await userEvent.click(
@@ -226,7 +234,9 @@ export const AddedSort: Story = {
     await userEvent.click(canvas.getByRole('button', { name: /^Sort/ }));
     await chooseMenuItem(canvasElement.ownerDocument.body, 'Descending');
     const first = sampleServiceTasks.find((item) => item.id === 's001');
-    if (!first) throw new Error('Missing latest created task.');
+    if (!first) {
+      throw new Error('Missing latest created task.');
+    }
     const plate = vehicleById(first.vehicleId)?.plate ?? '—';
     await waitFor(() =>
       expect(canvas.getAllByRole('button', { name: /^Actions for / })[0]).toHaveAccessibleName(

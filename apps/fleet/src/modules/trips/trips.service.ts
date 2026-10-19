@@ -136,15 +136,21 @@ export class TripsService {
   async find(context: RequestContext, id: string): Promise<FleetTrip> {
     const scope = requireScope(context);
     const row = await this.trips.find(scope, uuid(id, 'id'));
-    if (!row) throw new NotFoundException('Trip not found');
+    if (!row) {
+      throw new NotFoundException('Trip not found');
+    }
     const [trip] = await this.complete(scope, [row]);
-    if (!trip) throw new NotFoundException('Trip not found');
+    if (!trip) {
+      throw new NotFoundException('Trip not found');
+    }
     return trip;
   }
 
   /** Distance and trip count per driver ID for trips started in the window. */
   async driverTotals(scope: FleetScope, driverIds: readonly string[], window: DataWindow) {
-    if (!driverIds.length) return new Map<string, { distanceKm: number; tripCount: number }>();
+    if (!driverIds.length) {
+      return new Map<string, { distanceKm: number; tripCount: number }>();
+    }
     const rows = await this.trips.driverTotals(scope, driverIds, window);
     return new Map(rows.map((row) => [row.driverId, row]));
   }
@@ -155,7 +161,9 @@ export class TripsService {
 
   /** Attaches `inProgress` (one clock query) and maneuver counts (one grouped query). */
   private async complete(scope: FleetScope, rows: readonly TripRow[]): Promise<FleetTrip[]> {
-    if (!rows.length) return [];
+    if (!rows.length) {
+      return [];
+    }
     const [asOf, maneuvers] = await Promise.all([
       this.telemetry.asOf(scope),
       this.events.maneuverCountsByTrip(

@@ -139,7 +139,9 @@ describe('History and period lifecycle', () => {
     });
     await harness.fixture.whenStable();
     const button = harness.routeNativeElement?.querySelector('tbody button');
-    if (!(button instanceof HTMLButtonElement)) throw new Error('Missing details');
+    if (!(button instanceof HTMLButtonElement)) {
+      throw new Error('Missing details');
+    }
     button.click();
     await harness.fixture.whenStable();
     expect(harness.routeNativeElement?.querySelectorAll('dd')).toHaveLength(23);
@@ -169,7 +171,9 @@ describe('History and period lifecycle', () => {
     });
     await harness.fixture.whenStable();
     const button = harness.routeNativeElement?.querySelector('tbody button');
-    if (!(button instanceof HTMLButtonElement)) throw new Error('Missing details');
+    if (!(button instanceof HTMLButtonElement)) {
+      throw new Error('Missing details');
+    }
     button.click();
     await harness.fixture.whenStable();
     expect(harness.routeNativeElement?.querySelectorAll('dd')).toHaveLength(12);
@@ -220,8 +224,9 @@ describe('History and period lifecycle', () => {
       !('toDate' in body.variables.input) ||
       typeof body.variables.input.fromDate !== 'string' ||
       typeof body.variables.input.toDate !== 'string'
-    )
+    ) {
       throw new Error('Missing period');
+    }
     expect(
       new Date(body.variables.input.toDate + 'Z').getTime() -
         new Date(body.variables.input.fromDate + 'Z').getTime(),
@@ -245,7 +250,9 @@ describe('History and period lifecycle', () => {
     const harness = await open('events?types=-1');
     http.expectNone((req) => operation(req, 'AdminKarmaEvents'));
     const input = harness.routeNativeElement?.querySelector('#events-types');
-    if (!(input instanceof HTMLInputElement)) throw new Error('Missing filter');
+    if (!(input instanceof HTMLInputElement)) {
+      throw new Error('Missing filter');
+    }
     input.value = '0';
     input.dispatchEvent(new Event('input'));
     const form = harness.routeNativeElement?.querySelector('form');

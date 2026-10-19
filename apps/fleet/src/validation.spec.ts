@@ -29,7 +29,9 @@ function fieldErrors(action: () => unknown): unknown {
   try {
     action();
   } catch (error) {
-    if (!(error instanceof BadRequestException)) throw error;
+    if (!(error instanceof BadRequestException)) {
+      throw error;
+    }
     const response = error.getResponse();
     return typeof response === 'object' && 'fieldErrors' in response
       ? response.fieldErrors
@@ -74,10 +76,12 @@ describe('Fleet validation helpers', () => {
       offset: 2147483647,
       limit: 100,
     });
-    for (const args of [{ offset: -1 }, { offset: 2147483648 }, { offset: 1.5 }])
+    for (const args of [{ offset: -1 }, { offset: 2147483648 }, { offset: 1.5 }]) {
       expect(fieldErrors(() => pagination(args))).toMatchObject([{ path: 'offset' }]);
-    for (const args of [{ limit: 0 }, { limit: 101 }])
+    }
+    for (const args of [{ limit: 0 }, { limit: 101 }]) {
       expect(fieldErrors(() => pagination(args))).toMatchObject([{ path: 'limit' }]);
+    }
   });
 
   it('tokenizes search on Unicode whitespace with code point and token limits', () => {
@@ -86,18 +90,20 @@ describe('Fleet validation helpers', () => {
     expect(searchTokens(' Георги Иванов\tCA ')).toEqual(['Георги', 'Иванов', 'CA']);
     expect(searchTokens('a b c d e')).toHaveLength(5);
     expect(searchTokens('😀'.repeat(200))).toHaveLength(1);
-    for (const value of ['a b c d e f', '😀'.repeat(201), 'a\u0000b', 42])
+    for (const value of ['a b c d e f', '😀'.repeat(201), 'a\u0000b', 42]) {
       expect(fieldErrors(() => searchTokens(value))).toMatchObject([{ path: 'search' }]);
+    }
   });
 
   it('validates input enum lists and returns them in enumeration order', () => {
     const allowed = ['A', 'B', 'C'] as const;
     expect(enumList(['C', 'A'], allowed, 'options', 3)).toEqual(['A', 'C']);
     expect(enumList([], allowed, 'options', 3)).toEqual([]);
-    for (const value of [['A', 'A'], ['D'], 'A', ['A', 'B', 'C']])
+    for (const value of [['A', 'A'], ['D'], 'A', ['A', 'B', 'C']]) {
       expect(fieldErrors(() => enumList(value, allowed, 'options', 2))).toMatchObject([
         { path: 'options' },
       ]);
+    }
   });
 
   it('treats null filters as no constraint and rejects empty or repeated filter lists', () => {
@@ -124,19 +130,21 @@ describe('Fleet validation helpers', () => {
       () => booleanFilter('true', 'hasGroup'),
       () => integerFilter(366, 'documentsExpireWithinDays', 0, 365),
       () => integerFilter(-1, 'documentsExpireWithinDays', 0, 365),
-    ])
+    ]) {
       expect(fieldErrors(action)).toMatchObject([
         { path: 'filter', message: expect.stringMatching(/^filter\./) },
       ]);
+    }
   });
 
   it('accepts real calendar dates only', () => {
     expect(dateOnly('2028-02-29', 'licenseExpiresOn')).toBe('2028-02-29');
     expect(dateOnly('1900-01-01', 'licenseExpiresOn')).toBe('1900-01-01');
-    for (const value of ['2026-02-29', '2026-02-30', '2026-13-01', '2026-1-01', '1899-12-31', 7])
+    for (const value of ['2026-02-29', '2026-02-30', '2026-13-01', '2026-1-01', '1899-12-31', 7]) {
       expect(fieldErrors(() => dateOnly(value, 'licenseExpiresOn'))).toMatchObject([
         { path: 'licenseExpiresOn' },
       ]);
+    }
   });
 
   it('requires an offset on date-times and converts them to instants', () => {
@@ -156,10 +164,11 @@ describe('Fleet validation helpers', () => {
       '2026-10-18T24:00:00Z',
       '1999-12-31T23:59:59Z',
       '2026-10-18T06:30:00+3:00',
-    ])
+    ]) {
       expect(fieldErrors(() => dateTime(value, 'installedAt'))).toMatchObject([
         { path: 'installedAt' },
       ]);
+    }
   });
 
   it('uses half-open DateTime ranges and closed Date ranges with single bounds', () => {
@@ -193,10 +202,11 @@ describe('Fleet validation helpers', () => {
     expect(integer(2100, 'modelYear', 1950, 2100)).toBe(2100);
     expect(optionalPattern(' +359 ', 'phone', 20, /^\+?[0-9]+$/, 'Phone')).toBe('+359');
     expect(optionalPattern('  ', 'phone', 20, /^\+?[0-9]+$/, 'Phone')).toBeNull();
-    for (const value of [Number.NaN, Number.POSITIVE_INFINITY, -0.1, '1'])
+    for (const value of [Number.NaN, Number.POSITIVE_INFINITY, -0.1, '1']) {
       expect(fieldErrors(() => finite(value, 'odometerKm', 0, 10))).toMatchObject([
         { path: 'odometerKm' },
       ]);
+    }
     expect(fieldErrors(() => integer(1949, 'modelYear', 1950, 2100))).toMatchObject([
       { path: 'modelYear' },
     ]);
@@ -259,7 +269,7 @@ describe('Fleet validation helpers', () => {
     for (const constraint of [
       { index: 'Vehicle_tenantId_branchId_vin_key' },
       { fields: ['tenantId', 'branchId', 'vin'] },
-    ])
+    ]) {
       expect(
         fieldErrors(() => {
           rethrowUniqueViolation(
@@ -268,6 +278,7 @@ describe('Fleet validation helpers', () => {
           );
         }),
       ).toEqual([{ path: 'vin', message: 'VIN is taken.' }]);
+    }
     expect(() => {
       rethrowUniqueViolation(prismaError('P2002'), indexes);
     }).toThrow('A value that must be unique is already used.');

@@ -120,7 +120,9 @@ describe('Angular branch routing', () => {
     expect(harness.routeNativeElement?.textContent).toContain('Branch not found');
     http.expectNone('/graphql');
     const workspace: unknown = harness.routeDebugElement?.componentInstance;
-    if (!(workspace instanceof AdminWorkspace)) throw new Error('Missing workspace');
+    if (!(workspace instanceof AdminWorkspace)) {
+      throw new Error('Missing workspace');
+    }
     workspace.branches.refresh();
     http.expectOne('/graphql').flush({ errors: [{ message: 'Discovery unavailable' }] });
     await harness.fixture.whenStable();
@@ -133,7 +135,9 @@ describe('Angular branch routing', () => {
     http.expectOne('/graphql').flush({ data: { branches } });
     await harness.fixture.whenStable();
     const workspace: unknown = harness.routeDebugElement?.componentInstance;
-    if (!(workspace instanceof AdminWorkspace)) throw new Error('Missing workspace');
+    if (!(workspace instanceof AdminWorkspace)) {
+      throw new Error('Missing workspace');
+    }
     workspace.branches.refresh();
     const oldRefresh = http.expectOne('/graphql');
     await harness.navigateByUrl('/bg/not-a-uuid/fleet/vehicles');

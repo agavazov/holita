@@ -21,13 +21,15 @@ function restoredSession(): (Session & { branchId: string | null }) | null {
       typeof value.tenant.name !== 'string' ||
       !('branchId' in value) ||
       (value.branchId !== null && typeof value.branchId !== 'string')
-    )
+    ) {
       return null;
+    }
     const match = /^holita-demo\.([0-9a-f-]{36})\.([0-9]{10})\.[A-Za-z0-9_-]{43}$/.exec(
       value.token,
     );
-    if (!match || match[1] !== value.tenant.id || Number(match[2]) <= Date.now() / 1000)
+    if (!match || match[1] !== value.tenant.id || Number(match[2]) <= Date.now() / 1000) {
       return null;
+    }
     // The backend verifies the signature on every request; storage is never an authority.
     return {
       token: value.token,
@@ -60,7 +62,9 @@ export class DemoSession {
     this.scheduleExpiry();
   }
   selectBranch(branchId: string): void {
-    if (!this.current()) return;
+    if (!this.current()) {
+      return;
+    }
     this.selectedBranch.set(branchId);
     this.persist();
   }
@@ -86,18 +90,21 @@ export class DemoSession {
   }
   capture(): Readonly<{ tenantId: string; token: string }> {
     const session = this.current();
-    if (!session) throw new Error('Sign in to a tenant first.');
+    if (!session) {
+      throw new Error('Sign in to a tenant first.');
+    }
     return { tenantId: session.tenant.id, token: session.token };
   }
   private scheduleExpiry(): void {
     clearTimeout(this.expiryTimer);
     const expiry = this.current()?.token.split('.')[2];
-    if (expiry && /^[0-9]{10}$/.test(expiry))
+    if (expiry && /^[0-9]{10}$/.test(expiry)) {
       this.expiryTimer = setTimeout(
         () => {
           this.logout();
         },
         Math.min(28800_000, Math.max(0, Number(expiry) * 1000 - Date.now())),
       );
+    }
   }
 }

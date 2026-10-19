@@ -65,8 +65,9 @@ const COST_WINDOW_DAYS = 30;
 /** Service dates are real calendar days from 2000 to 2100. */
 function serviceDate(value: unknown, path: string): string | null {
   const result = optionalDateOnly(value, path);
-  if (result !== null && result < EARLIEST_SERVICE_DATE)
+  if (result !== null && result < EARLIEST_SERVICE_DATE) {
     invalid(path, 'Use a date from 2000-01-01 to 2100-12-31.');
+  }
   return result;
 }
 
@@ -83,8 +84,9 @@ const fieldRules = {
 };
 
 function requireDue(dueOn: unknown, dueOdometerKm: unknown): void {
-  if (dueOn === null && dueOdometerKm === null)
+  if (dueOn === null && dueOdometerKm === null) {
     invalid('dueOn', 'Give a due date, a due odometer or both.');
+  }
 }
 
 @Injectable()
@@ -172,8 +174,9 @@ export class ServiceTasksService {
     try {
       id = await this.tasks.create(scope, vehicleId, plan);
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003')
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
         invalid('vehicleId', 'Choose a vehicle in this branch.');
+      }
       throw error;
     }
     return this.load(scope, id);
@@ -187,26 +190,41 @@ export class ServiceTasksService {
     const scope = requireScope(context);
     const recordId = uuid(id, 'id');
     const data: Partial<ServiceTaskPlan> = {};
-    if (input.serviceType !== undefined)
+    if (input.serviceType !== undefined) {
       data.serviceType = enumValue(input.serviceType, SERVICE_TYPES, 'serviceType');
-    if (input.title !== undefined) data.title = fieldRules.title(input.title);
-    if (input.dueOn !== undefined) data.dueOn = dateValue(serviceDate(input.dueOn, 'dueOn'));
-    if (input.dueOdometerKm !== undefined)
+    }
+    if (input.title !== undefined) {
+      data.title = fieldRules.title(input.title);
+    }
+    if (input.dueOn !== undefined) {
+      data.dueOn = dateValue(serviceDate(input.dueOn, 'dueOn'));
+    }
+    if (input.dueOdometerKm !== undefined) {
       data.dueOdometerKm = fieldRules.dueOdometerKm(input.dueOdometerKm);
-    if (input.workshop !== undefined) data.workshop = fieldRules.workshop(input.workshop);
-    if (input.notes !== undefined) data.notes = fieldRules.notes(input.notes);
-    if (!Object.keys(data).length)
+    }
+    if (input.workshop !== undefined) {
+      data.workshop = fieldRules.workshop(input.workshop);
+    }
+    if (input.notes !== undefined) {
+      data.notes = fieldRules.notes(input.notes);
+    }
+    if (!Object.keys(data).length) {
       throw new BadRequestException('Provide at least one service task field to update');
+    }
     const stored = await this.tasks.findTask(scope, recordId);
-    if (!stored) throw new NotFoundException('Service task not found');
-    if (stored.status !== 'PLANNED')
+    if (!stored) {
+      throw new NotFoundException('Service task not found');
+    }
+    if (stored.status !== 'PLANNED') {
       throw new ConflictException('Only planned service can be changed');
+    }
     requireDue(
       data.dueOn === undefined ? stored.dueOn : data.dueOn,
       data.dueOdometerKm === undefined ? stored.dueOdometerKm : data.dueOdometerKm,
     );
-    if (!(await this.tasks.updatePlanned(scope, recordId, data)))
+    if (!(await this.tasks.updatePlanned(scope, recordId, data))) {
       await this.plannedConflict(scope, recordId, 'Only planned service can be changed');
+    }
     return this.load(scope, recordId);
   }
 
@@ -223,8 +241,9 @@ export class ServiceTasksService {
     const recordId = uuid(id, 'id');
     const today = this.today();
     const completedOn = dateOnly(input.completedOn, 'completedOn');
-    if (completedOn < EARLIEST_SERVICE_DATE || completedOn > today)
+    if (completedOn < EARLIEST_SERVICE_DATE || completedOn > today) {
       invalid('completedOn', 'Use a completion date from 2000-01-01 up to today.');
+    }
     const data: ServiceTaskCompletionData = {
       completedOn: dateOnlyToDate(completedOn),
       completedOdometerKm: optionalInteger(
@@ -239,8 +258,9 @@ export class ServiceTasksService {
       ...(input.notes === undefined ? {} : { notes: fieldRules.notes(input.notes) }),
     };
     const nextDueOn = serviceDate(input.nextDueOn, 'nextDueOn');
-    if (nextDueOn !== null && nextDueOn <= completedOn)
+    if (nextDueOn !== null && nextDueOn <= completedOn) {
       invalid('nextDueOn', 'The next due date must be after the completion date.');
+    }
     const nextDueOdometerKm = fieldRules.dueOdometerKm(
       input.nextDueOdometerKm,
       'nextDueOdometerKm',
@@ -249,24 +269,29 @@ export class ServiceTasksService {
       nextDueOdometerKm !== null &&
       data.completedOdometerKm !== null &&
       nextDueOdometerKm <= data.completedOdometerKm
-    )
+    ) {
       invalid('nextDueOdometerKm', 'The next due odometer must be above the completion odometer.');
+    }
     const nextTitle = fieldRules.title(input.nextTitle, 'nextTitle');
     const stored = await this.tasks.findTask(scope, recordId);
-    if (!stored) throw new NotFoundException('Service task not found');
-    if (stored.status !== 'PLANNED')
+    if (!stored) {
+      throw new NotFoundException('Service task not found');
+    }
+    if (stored.status !== 'PLANNED') {
       throw new ConflictException('Only planned service can be completed');
+    }
     if (data.completedOdometerKm !== null) {
       const highest = await this.tasks.highestCompletedOdometer(
         scope,
         stored.vehicleId,
         data.completedOn,
       );
-      if (highest !== null && data.completedOdometerKm < highest)
+      if (highest !== null && data.completedOdometerKm < highest) {
         invalid(
           'completedOdometerKm',
           'The odometer cannot be below an earlier completed service of this vehicle.',
         );
+      }
     }
     const next =
       nextDueOn === null && nextDueOdometerKm === null
@@ -283,23 +308,27 @@ export class ServiceTasksService {
             },
           };
     const result = await this.tasks.complete(scope, recordId, data, next);
-    if (!result.completed)
+    if (!result.completed) {
       await this.plannedConflict(scope, recordId, 'Only planned service can be completed');
+    }
     const taskIds = result.nextId === null ? [recordId] : [recordId, result.nextId];
     const [completed, created] = await this.withRefs(
       scope,
       await this.tasks.findMany(scope, today, taskIds),
       taskIds,
     );
-    if (!completed) throw new NotFoundException('Service task not found');
+    if (!completed) {
+      throw new NotFoundException('Service task not found');
+    }
     return { completed, next: created ?? null };
   }
 
   async cancel(context: RequestContext, id: string): Promise<FleetServiceTask> {
     const scope = requireScope(context);
     const recordId = uuid(id, 'id');
-    if (!(await this.tasks.cancelPlanned(scope, recordId)))
+    if (!(await this.tasks.cancelPlanned(scope, recordId))) {
       await this.plannedConflict(scope, recordId, 'Only planned service can be cancelled');
+    }
     return this.load(scope, recordId);
   }
 
@@ -308,9 +337,12 @@ export class ServiceTasksService {
     const scope = requireScope(context);
     const recordId = uuid(id, 'id');
     const task = await this.load(scope, recordId);
-    if (task.status === 'DONE') throw new ConflictException('Completed service is kept as history');
-    if (!(await this.tasks.deleteUncompleted(scope, recordId)))
+    if (task.status === 'DONE') {
+      throw new ConflictException('Completed service is kept as history');
+    }
+    if (!(await this.tasks.deleteUncompleted(scope, recordId))) {
       await this.plannedConflict(scope, recordId, 'Completed service is kept as history');
+    }
     return task;
   }
 
@@ -319,7 +351,9 @@ export class ServiceTasksService {
     scope: FleetScope,
     vehicleIds: readonly string[],
   ): Promise<Map<string, FleetServiceTask>> {
-    if (!vehicleIds.length) return new Map();
+    if (!vehicleIds.length) {
+      return new Map();
+    }
     const tasks = await this.withRefs(
       scope,
       await this.tasks.nextForVehicles(scope, this.today(), vehicleIds),
@@ -333,20 +367,24 @@ export class ServiceTasksService {
 
   private async requireServiceableVehicle(scope: FleetScope, vehicleId: string): Promise<void> {
     const vehicle = await this.tasks.findVehicle(scope, vehicleId);
-    if (!vehicle || vehicle.status === 'INACTIVE')
+    if (!vehicle || vehicle.status === 'INACTIVE') {
       invalid('vehicleId', 'Choose a vehicle in this branch that is not inactive.');
+    }
   }
 
   private async load(scope: FleetScope, id: string): Promise<FleetServiceTask> {
     const [task] = await this.withRefs(scope, await this.tasks.findMany(scope, this.today(), [id]));
-    if (!task) throw new NotFoundException('Service task not found');
+    if (!task) {
+      throw new NotFoundException('Service task not found');
+    }
     return task;
   }
 
   /** A conditional write changed nothing: the task is missing (NOT_FOUND) or not PLANNED. */
   private async plannedConflict(scope: FleetScope, id: string, message: string): Promise<never> {
-    if (!(await this.tasks.findTask(scope, id)))
+    if (!(await this.tasks.findTask(scope, id))) {
       throw new NotFoundException('Service task not found');
+    }
     throw new ConflictException(message);
   }
 
@@ -359,7 +397,9 @@ export class ServiceTasksService {
     rows: readonly ServiceTaskRow[],
     order?: readonly string[],
   ): Promise<FleetServiceTask[]> {
-    if (!rows.length) return [];
+    if (!rows.length) {
+      return [];
+    }
     const vehicles = new Map(
       (await this.tasks.vehicleRefs(scope, [...new Set(rows.map((row) => row.vehicleId))])).map(
         (vehicle) => [vehicle.id, vehicle],
@@ -368,7 +408,9 @@ export class ServiceTasksService {
     const sorted = order ? order.flatMap((id) => rows.filter((row) => row.id === id)) : [...rows];
     return sorted.map((row) => {
       const vehicle = vehicles.get(row.vehicleId);
-      if (!vehicle) throw new Error('Service task without its vehicle');
+      if (!vehicle) {
+        throw new Error('Service task without its vehicle');
+      }
       return { ...row, branchId: scope.branchId, vehicle };
     });
   }

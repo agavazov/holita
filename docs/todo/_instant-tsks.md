@@ -1,9 +1,5 @@
 # Instant tasks
 
-- виж дали да купиш тема
-- направи настройките за edata
-- направи каталога и всичко от карма
-
 ## Storybook feedback
 
 - Confirm approval and bulk actions in a modal listing the affected records, including a single selected record.

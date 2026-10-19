@@ -20,7 +20,9 @@ type Story = StoryObj;
 
 const open = sampleAlerts.find((alert) => alert.status === 'OPEN');
 const resolved = sampleAlerts.find((alert) => alert.status === 'RESOLVED');
-if (!open || !resolved) throw new Error('The sample alerts lack a status.');
+if (!open || !resolved) {
+  throw new Error('The sample alerts lack a status.');
+}
 const appReady = { timeout: 10_000 };
 
 async function tableReady(canvasElement: HTMLElement) {
@@ -59,7 +61,9 @@ export const ResolveFromRow: Story = {
   play: async ({ canvasElement }) => {
     const canvas = await tableReady(canvasElement);
     const [trigger] = canvas.getAllByRole('button', { name: /^Actions for / });
-    if (!trigger) throw new Error('No row actions');
+    if (!trigger) {
+      throw new Error('No row actions');
+    }
     await userEvent.click(trigger);
     await chooseMenuItem(canvasElement.ownerDocument.body, 'Resolve');
     const drawer = await drawerReady(canvasElement);
@@ -79,9 +83,13 @@ export const AcknowledgeSelected: Story = {
   play: async ({ canvasElement }) => {
     const canvas = await tableReady(canvasElement);
     const [acknowledged] = rowsWithStatus(canvasElement, 'Acknowledged');
-    if (!acknowledged) throw new Error('No acknowledged alert');
+    if (!acknowledged) {
+      throw new Error('No acknowledged alert');
+    }
     const rows = [...rowsWithStatus(canvasElement, 'Open').slice(0, 2), acknowledged];
-    for (const row of rows) await userEvent.click(within(row).getByRole('checkbox'));
+    for (const row of rows) {
+      await userEvent.click(within(row).getByRole('checkbox'));
+    }
     const bar = await canvas.findByRole('region', { name: 'Actions for selected records' });
     await expect(within(bar).queryByRole('button', { name: 'Resolve' })).toBeNull();
     await userEvent.click(within(bar).getByRole('button', { name: 'Acknowledge' }));
@@ -184,7 +192,9 @@ export const DirtyVehicleNavigation: Story = {
     const remark = drawer.getByRole('textbox', { name: /Remark/ });
     await userEvent.type(remark, 'Draft remark');
     const vehicle = vehicleById(open.vehicleId);
-    if (!vehicle) throw new Error('The sample alert lacks its vehicle.');
+    if (!vehicle) {
+      throw new Error('The sample alert lacks its vehicle.');
+    }
     await userEvent.click(drawer.getByRole('button', { name: vehicle.plate }));
     await waitFor(() =>
       expect(body.getByRole('alertdialog', { name: 'Unsaved changes' })).toBeVisible(),

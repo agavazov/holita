@@ -108,17 +108,23 @@ export function metadata(pe: PortableExecutable): Metadata {
     present = slice(tables, 8, 8).readBigUInt64LE(),
     counts = new Map<number, number>();
   cursor = 24;
-  for (let i = 0; i < 64; i++)
+  for (let i = 0; i < 64; i++) {
     if (present & (1n << BigInt(i))) {
       requireValue(i < schemas.length, 'Unsupported CLI metadata table');
       counts.set(i, u32(tables, cursor));
       cursor += 4;
     }
+  }
   function width(column: string): number {
-    if (column === '2' || column === '4') return Number(column);
-    if (column === 's' || column === 'g' || column === 'b')
+    if (column === '2' || column === '4') {
+      return Number(column);
+    }
+    if (column === 's' || column === 'g' || column === 'b') {
       return heap & { s: 1, g: 2, b: 4 }[column] ? 4 : 2;
-    if (column.startsWith('t:')) return (counts.get(Number(column.slice(2))) ?? 0) >= 65536 ? 4 : 2;
+    }
+    if (column.startsWith('t:')) {
+      return (counts.get(Number(column.slice(2))) ?? 0) >= 65536 ? 4 : 2;
+    }
     const code = coded[column.slice(2)];
     requireValue(code, 'Unknown coded metadata index');
     return code.tables.some((table) => (counts.get(table) ?? 0) >= 2 ** (16 - code.bits)) ? 4 : 2;
@@ -224,10 +230,14 @@ export function constantWrites(
         address.field > 0 && address.field <= model.fields.length,
         'Invalid field token',
       );
-      if (op === 0x7f) stack.push(address);
-      else write(address, pop(), 4);
-    } else if (op >= 0x15 && op <= 0x1e) stack.push(op - 0x16);
-    else if (op === 0x1f) {
+      if (op === 0x7f) {
+        stack.push(address);
+      } else {
+        write(address, pop(), 4);
+      }
+    } else if (op >= 0x15 && op <= 0x1e) {
+      stack.push(op - 0x16);
+    } else if (op === 0x1f) {
       stack.push(slice(code, cursor, 1).readInt8());
       cursor++;
     } else if (op === 0x20) {
@@ -249,8 +259,11 @@ export function constantWrites(
     } else if (op === 0x52 || op === 0x54 || op === 0x57) {
       const value = pop();
       write(pop(), value, op === 0x52 ? 1 : op === 0x54 ? 4 : 8);
-    } else if (op === 0x2a) requireValue(stack.length === 0, 'Unbalanced initializer stack');
-    else throw new Error(`Unsupported initializer instruction 0x${op.toString(16)} for ${symbol}`);
+    } else if (op === 0x2a) {
+      requireValue(stack.length === 0, 'Unbalanced initializer stack');
+    } else {
+      throw new Error(`Unsupported initializer instruction 0x${op.toString(16)} for ${symbol}`);
+    }
   }
   requireValue(fields.size === 1 && !stack.length, `Invalid initializer writes for ${symbol}`);
   const field = at([...fields], 0),
@@ -271,7 +284,9 @@ export function constantWrites(
 // and scientific-notation thresholds; conversions remain source text in the DB.
 export function floatText(value: number): string {
   requireValue(Number.isFinite(value), 'Nonfinite conversion');
-  if (Object.is(value, -0)) return '-0.0';
+  if (Object.is(value, -0)) {
+    return '-0.0';
+  }
   const magnitude = Math.abs(value);
   if (magnitude !== 0 && (magnitude < 1e-4 || magnitude >= 1e16)) {
     const [mantissa, exponent] = value.toExponential().split('e');

@@ -246,10 +246,11 @@ describe('Telemetry, data clock and odometer readings with PostgreSQL', () => {
       [{ vehicleId, odometerKm: 1100, recordedAt: '2026-10-18T06:00:00' }, 'recordedAt'],
       [{ vehicleId: inactive.id, odometerKm: 1, recordedAt: asOf.toISOString() }, 'vehicleId'],
       [{ vehicleId: foreign.id, odometerKm: 1, recordedAt: asOf.toISOString() }, 'vehicleId'],
-    ] satisfies [Record<string, unknown>, string][])
+    ] satisfies [Record<string, unknown>, string][]) {
       expect(await query(record, { input })).toMatchObject({
         errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path }] } }],
       });
+    }
     expect(await database.client.vehicleStatusSample.count({ where: { branchId } })).toBe(before);
     expect(requireBranch).not.toHaveBeenCalled();
   });

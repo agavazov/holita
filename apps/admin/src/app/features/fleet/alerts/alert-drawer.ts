@@ -82,7 +82,9 @@ export class AlertDrawer {
   });
   protected readonly remarkError = computed(() => {
     this.events();
-    if (!this.remark.invalid || !this.remark.touched) return null;
+    if (!this.remark.invalid || !this.remark.touched) {
+      return null;
+    }
     return validationMessage(this.remark.errors, this.language());
   });
   protected readonly remarkLength = computed(() => {
@@ -123,7 +125,9 @@ export class AlertDrawer {
   }
 
   protected apply(action: AlertAction): void {
-    if (this.busy()) return;
+    if (this.busy()) {
+      return;
+    }
     this.remark.markAsTouched();
     const remark = this.remark.value.trim();
     if (this.remark.invalid) {
@@ -135,7 +139,9 @@ export class AlertDrawer {
 
   /** Close button, Escape and backdrop: an unsaved remark is confirmed first. */
   protected async requestClose(): Promise<void> {
-    if (await this.canLeave()) this.closed.emit();
+    if (await this.canLeave()) {
+      this.closed.emit();
+    }
   }
 
   canLeave(): Promise<boolean> | boolean {

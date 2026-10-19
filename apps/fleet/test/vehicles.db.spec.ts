@@ -91,10 +91,11 @@ describe('Vehicle GraphQL with PostgreSQL', () => {
     const row = await database.client.vehicle.create({
       data: { tenantId, branchId, licensePlate: 'OWNER' },
     });
-    for (const source of [read, update, remove])
+    for (const source of [read, update, remove]) {
       expect(
         await query(source, { id: row.id, input: { licensePlate: 'Wrong' } }, foreign),
       ).toMatchObject({ errors: [{ extensions: { code: 'NOT_FOUND' } }] });
+    }
     const entity =
       'query($refs:[_Any!]!){_entities(representations:$refs){...on FleetVehicle{id branchId licensePlate}}}';
     const variables = {
@@ -121,8 +122,9 @@ describe('Vehicle GraphQL with PostgreSQL', () => {
       { licensePlate: 'A\u0000' },
       { licensePlate: 'CA1234AB', notes: 'A'.repeat(2001) },
       { licensePlate: 'CA1234AB', branchId },
-    ])
+    ]) {
       expect(await query(create, { input }, branchId)).toHaveProperty('errors');
+    }
     expect(await database.client.vehicle.count({ where: { branchId } })).toBe(0);
     expect(requireBranch).not.toHaveBeenCalled();
   });
@@ -303,10 +305,11 @@ describe('Vehicle GraphQL with PostgreSQL', () => {
       [{ licensePlate: 'X', currentDriverId: foreignDriver.id }, 'currentDriverId'],
       [{ licensePlate: 'X', currentDriverId: inactiveDriver.id }, 'currentDriverId'],
       [{ licensePlate: 'X', status: 'INACTIVE', currentDriverId: driver.id }, 'currentDriverId'],
-    ] satisfies [Record<string, unknown>, string][])
+    ] satisfies [Record<string, unknown>, string][]) {
       expect(await query(create, { input }, branchId)).toMatchObject({
         errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path }] } }],
       });
+    }
     expect(await database.client.vehicle.count({ where: { branchId } })).toBe(0);
     const vehicle = await database.client.vehicle.create({
       data: { tenantId, branchId, licensePlate: 'ASSIGNED', currentDriverId: driver.id },
@@ -322,7 +325,7 @@ describe('Vehicle GraphQL with PostgreSQL', () => {
       database.client.vehicle.update({ where: { id: vehicle.id }, data: { status: 'INACTIVE' } }),
     ).rejects.toThrow();
     const deactivate = `mutation($id:ID!){deactivateFleetVehicle(id:$id){status currentDriverId currentDriver{id}}}`;
-    for (let attempt = 0; attempt < 2; attempt++)
+    for (let attempt = 0; attempt < 2; attempt++) {
       expect(await query(deactivate, { id: vehicle.id }, branchId)).toEqual({
         data: {
           deactivateFleetVehicle: {
@@ -332,6 +335,7 @@ describe('Vehicle GraphQL with PostgreSQL', () => {
           },
         },
       });
+    }
     expect(await query(deactivate, { id: vehicle.id }, foreign)).toMatchObject({
       errors: [{ extensions: { code: 'NOT_FOUND' } }],
     });
@@ -378,8 +382,9 @@ describe('Vehicle GraphQL with PostgreSQL', () => {
       { licensePlate: 'CB 50%_\\ AX', fleetNumber: 'B-01', status: 'IN_WORKSHOP' },
       { id: lowerId, licensePlate: 'PB 0001 AA', fleetNumber: null, status: 'INACTIVE' },
     ] as const;
-    for (const row of rows)
+    for (const row of rows) {
       await database.client.vehicle.create({ data: { tenantId, branchId, ...row } });
+    }
     await database.client.vehicle.create({
       data: { tenantId, branchId: randomUUID(), licensePlate: 'CA7712KH OTHER BRANCH' },
     });
@@ -420,10 +425,11 @@ describe('Vehicle GraphQL with PostgreSQL', () => {
     for (const [offset, licensePlate] of [
       [3, 'CB 1001 AX'],
       [4, 'PB 0001 AA'],
-    ] as const)
+    ] as const) {
       expect(
         await plates({ sort: { field: 'FLEET_NUMBER', direction: 'ASC' }, offset, limit: 1 }),
       ).toEqual(page([licensePlate], 5, offset, 1));
+    }
     expect(
       await plates({ search: 'ca 7712', sort: { field: 'LICENSE_PLATE', direction: 'ASC' } }),
     ).toEqual(page(['CA7712KH']));
@@ -468,14 +474,17 @@ describe('Vehicle GraphQL with PostgreSQL', () => {
         database.client.vehicle.create({ data: { tenantId, branchId, licensePlate } }),
       ),
     );
-    if (!moving || !idle || !silent) throw new Error('Missing vehicles');
+    if (!moving || !idle || !silent) {
+      throw new Error('Missing vehicles');
+    }
     for (const [vehicle, imei] of [
       [moving, '990601000000010'],
       [silent, '990601000000037'],
-    ] as const)
+    ] as const) {
       await database.client.device.create({
         data: { tenantId, branchId, vehicleId: vehicle.id, imei },
       });
+    }
     await database.client.vehicleStatusSample.createMany({
       data: [
         {

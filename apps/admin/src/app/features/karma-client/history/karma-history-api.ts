@@ -26,7 +26,9 @@ export class KarmaHistoryApi implements OnDestroy {
   private language: Language = 'bg';
 
   initialize(language: Language): void {
-    if (this.apollo) throw new Error('KarmaHistoryApi belongs to one session workspace.');
+    if (this.apollo) {
+      throw new Error('KarmaHistoryApi belongs to one session workspace.');
+    }
     this.apollo = new ApolloBase(
       this.zone,
       undefined,
@@ -38,7 +40,9 @@ export class KarmaHistoryApi implements OnDestroy {
   }
 
   watchCar(id: string) {
-    if (!this.apollo) throw new Error('An active Karma workspace is required.');
+    if (!this.apollo) {
+      throw new Error('An active Karma workspace is required.');
+    }
     return this.apollo.watchQuery({
       query: AdminKarmaCarDocument,
       variables: { id },
@@ -48,7 +52,9 @@ export class KarmaHistoryApi implements OnDestroy {
   }
 
   watchTrips(input: KarmaTripsInput) {
-    if (!this.apollo) throw new Error('An active Karma workspace is required.');
+    if (!this.apollo) {
+      throw new Error('An active Karma workspace is required.');
+    }
     return this.apollo.watchQuery({
       query: AdminKarmaTripsDocument,
       variables: { input },
@@ -58,7 +64,9 @@ export class KarmaHistoryApi implements OnDestroy {
   }
 
   watchEvents(input: KarmaEventsInput) {
-    if (!this.apollo) throw new Error('An active Karma workspace is required.');
+    if (!this.apollo) {
+      throw new Error('An active Karma workspace is required.');
+    }
     return this.apollo.watchQuery({
       query: AdminKarmaEventsDocument,
       variables: { input },
@@ -68,7 +76,9 @@ export class KarmaHistoryApi implements OnDestroy {
   }
 
   watchDrivingProfile(input: KarmaDrivingProfileInput) {
-    if (!this.apollo) throw new Error('An active Karma workspace is required.');
+    if (!this.apollo) {
+      throw new Error('An active Karma workspace is required.');
+    }
     return this.apollo.watchQuery({
       query: AdminKarmaDrivingProfileDocument,
       variables: { input },

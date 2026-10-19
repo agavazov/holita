@@ -58,6 +58,8 @@ export class RemoteOptions<T extends { readonly id: string }> {
 
   /** Loads the selected records by ID (e.g. to label values from the URL or a record). */
   hydrate(ids: readonly string[]): void {
-    if (ids.length) this.requests.next({ search: '', ids, delay: 0 });
+    if (ids.length) {
+      this.requests.next({ search: '', ids, delay: 0 });
+    }
   }
 }

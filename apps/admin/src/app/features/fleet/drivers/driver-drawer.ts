@@ -192,12 +192,16 @@ export class DriverDrawer {
 
   protected readonly title = computed(() => {
     const driver = this.driver();
-    if (!driver) return this.text().createTitle;
+    if (!driver) {
+      return this.text().createTitle;
+    }
     return this.editing() ? interpolate(this.text().editTitle, { name: driver.name }) : driver.name;
   });
   protected readonly subtitle = computed(() => {
     const driver = this.driver();
-    if (!driver) return null;
+    if (!driver) {
+      return null;
+    }
     return [driver.employeeNo, driver.vehiclePlate].filter(Boolean).join(' · ');
   });
   protected readonly dirty = computed(() => {
@@ -239,8 +243,9 @@ export class DriverDrawer {
       () => this.saving(),
       () => {
         const form = this.formElement()?.nativeElement;
-        if (!form || !focusFirstInvalid(form, fieldOrder, 'driver-'))
+        if (!form || !focusFirstInvalid(form, fieldOrder, 'driver-')) {
           this.drawer().keepFocusInside();
+        }
       },
     );
   }
@@ -254,11 +259,16 @@ export class DriverDrawer {
   }
 
   protected expiry(dateOnly: string | null): { severity: 'danger' | 'warn'; label: string } | null {
-    if (dateOnly === null) return null;
+    if (dateOnly === null) {
+      return null;
+    }
     const days = daysUntil(dateOnly, this.businessDate());
-    if (days < 0) return { severity: 'danger', label: this.catalog().expiry.expired };
-    if (days <= documentWarningDays)
+    if (days < 0) {
+      return { severity: 'danger', label: this.catalog().expiry.expired };
+    }
+    if (days <= documentWarningDays) {
       return { severity: 'warn', label: interpolate(this.catalog().expiry.soon, { days }) };
+    }
     return null;
   }
 
@@ -270,9 +280,13 @@ export class DriverDrawer {
   protected errorOf(name: DriverField): string | null {
     this.events();
     const server = this.fieldErrors()[name];
-    if (server) return server;
+    if (server) {
+      return server;
+    }
     const control = this.form.controls[name];
-    if (!control.invalid || (!control.touched && !this.submitted)) return null;
+    if (!control.invalid || (!control.touched && !this.submitted)) {
+      return null;
+    }
     return validationMessage(control.errors, this.language());
   }
 
@@ -285,7 +299,9 @@ export class DriverDrawer {
   }
 
   protected submit(): void {
-    if (this.saving()) return;
+    if (this.saving()) {
+      return;
+    }
     this.submitted = true;
     this.form.markAllAsTouched();
     const value = this.form.getRawValue();
@@ -293,7 +309,9 @@ export class DriverDrawer {
       afterNextRender(
         () => {
           const form = this.formElement()?.nativeElement;
-          if (form) focusFirstInvalid(form, fieldOrder, 'driver-');
+          if (form) {
+            focusFirstInvalid(form, fieldOrder, 'driver-');
+          }
         },
         { injector: this.injector },
       );
@@ -322,14 +340,18 @@ export class DriverDrawer {
       await this.requestClose();
       return;
     }
-    if (!(await this.drawer().confirmLeave(this.form.dirty))) return;
+    if (!(await this.drawer().confirmLeave(this.form.dirty))) {
+      return;
+    }
     this.reset(driver);
     this.editing.set(false);
   }
 
   /** Close button, Escape and backdrop: unsaved changes are confirmed first. */
   protected async requestClose(): Promise<void> {
-    if (await this.canLeave()) this.closed.emit();
+    if (await this.canLeave()) {
+      this.closed.emit();
+    }
   }
 
   canLeave(): Promise<boolean> | boolean {

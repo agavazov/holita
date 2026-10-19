@@ -189,10 +189,13 @@ export class ServiceCompletionDrawer {
     effect(() => {
       const saving = this.saving();
       untracked(() => {
-        if (saving === locked) return;
+        if (saving === locked) {
+          return;
+        }
         locked = saving;
-        if (saving) this.form.disable();
-        else {
+        if (saving) {
+          this.form.disable();
+        } else {
           this.form.enable();
           afterNextRender(
             () => {
@@ -219,14 +222,23 @@ export class ServiceCompletionDrawer {
   protected errorOf(name: ServiceCompletionField): string | null {
     this.events();
     const server = this.fieldErrors()[name];
-    if (server) return server;
+    if (server) {
+      return server;
+    }
     const control = name === 'costCents' ? this.form.controls.cost : this.form.controls[name];
-    if (!control.touched && !this.submitted) return null;
+    if (!control.touched && !this.submitted) {
+      return null;
+    }
     const validation = validationMessage(control.errors, this.language());
-    if (validation) return validation;
-    if (name === 'nextDueOn' && this.form.hasError('nextDate')) return this.text().nextDateError;
-    if (name === 'nextDueOdometerKm' && this.form.hasError('nextOdometer'))
+    if (validation) {
+      return validation;
+    }
+    if (name === 'nextDueOn' && this.form.hasError('nextDate')) {
+      return this.text().nextDateError;
+    }
+    if (name === 'nextDueOdometerKm' && this.form.hasError('nextOdometer')) {
       return this.text().nextOdometerError;
+    }
     return null;
   }
 
@@ -240,8 +252,12 @@ export class ServiceCompletionDrawer {
   }
 
   protected submit(): void {
-    if (this.saving() || this.completed()) return;
-    if (!this.hasNext()) this.form.controls.nextTitle.reset('');
+    if (this.saving() || this.completed()) {
+      return;
+    }
+    if (!this.hasNext()) {
+      this.form.controls.nextTitle.reset('');
+    }
     this.submitted = true;
     this.form.markAllAsTouched();
     const value = this.form.getRawValue();
@@ -268,13 +284,19 @@ export class ServiceCompletionDrawer {
   }
 
   protected async requestClose(): Promise<void> {
-    if (this.saving()) return;
-    if (await this.drawer().confirmLeave(this.dirty())) this.closed.emit();
+    if (this.saving()) {
+      return;
+    }
+    if (await this.drawer().confirmLeave(this.dirty())) {
+      this.closed.emit();
+    }
   }
 
   private focusErrors(): void {
     const form = this.formElement()?.nativeElement;
-    if (!form || !focusFirstInvalid(form, fieldOrder, 'completion-')) this.drawer().focusTitle();
+    if (!form || !focusFirstInvalid(form, fieldOrder, 'completion-')) {
+      this.drawer().focusTitle();
+    }
   }
 
   canLeave(): boolean | Promise<boolean> {

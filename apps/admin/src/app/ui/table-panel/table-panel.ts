@@ -92,7 +92,9 @@ export class TablePanel<A extends string = string> {
   protected readonly totalText = computed(() => {
     const total = this.total();
     const kind = this.view().kind;
-    if (total === null || kind === 'loading' || kind === 'error') return null;
+    if (total === null || kind === 'loading' || kind === 'error') {
+      return null;
+    }
     return formatNumber(total, this.language());
   });
   protected readonly showTable = computed(
@@ -121,7 +123,9 @@ export class TablePanel<A extends string = string> {
   protected readonly pageSizeOptions = computed(() => {
     const current = this.page()?.pageSize;
     const sizes = new Set(this.pageSizes());
-    if (current) sizes.add(current);
+    if (current) {
+      sizes.add(current);
+    }
     return [...sizes].sort((left, right) => left - right);
   });
   protected readonly first = computed(() => {
@@ -158,16 +162,23 @@ export class TablePanel<A extends string = string> {
     source: 'row' | 'bulk' = 'row',
   ): Promise<void> {
     const action = this.actions().find((candidate) => candidate.id === actionId);
-    if (!action) return;
+    if (!action) {
+      return;
+    }
     const applicable = records.filter((record) => !record.unavailable.includes(action.id));
-    if (!applicable.length) return;
+    if (!applicable.length) {
+      return;
+    }
     const element = origin instanceof HTMLElement ? origin : null;
     if (action.confirm) {
       const accepted = await this.ask(action, applicable, records.length - applicable.length);
       if (!accepted) {
         this.afterRender(() => {
-          if (element?.isConnected) element.focus();
-          else this.focusHeading();
+          if (element?.isConnected) {
+            element.focus();
+          } else {
+            this.focusHeading();
+          }
         });
         return;
       }
@@ -180,11 +191,19 @@ export class TablePanel<A extends string = string> {
       return;
     }
     this.afterRender(() => {
-      if (!element) return;
-      if (!element.isConnected) this.focusHeading();
+      if (!element) {
+        return;
+      }
+      if (!element.isConnected) {
+        this.focusHeading();
+      }
       // A row the change re-sorted is moved in the DOM, which drops its focus to the body.
-      else if (action.confirm || element.ownerDocument.activeElement === element.ownerDocument.body)
+      else if (
+        action.confirm ||
+        element.ownerDocument.activeElement === element.ownerDocument.body
+      ) {
         element.focus();
+      }
     });
   }
 
@@ -200,7 +219,9 @@ export class TablePanel<A extends string = string> {
     skipped: number,
   ): Promise<boolean> {
     const confirm = action.confirm;
-    if (!confirm) return Promise.resolve(true);
+    if (!confirm) {
+      return Promise.resolve(true);
+    }
     this.pending.set({
       detail: confirm.detail ?? null,
       records,

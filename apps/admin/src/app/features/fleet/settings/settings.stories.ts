@@ -19,11 +19,15 @@ export default meta;
 type Story = StoryObj;
 
 const [group] = sampleGroups;
-if (!group) throw new Error('The sample groups are empty.');
+if (!group) {
+  throw new Error('The sample groups are empty.');
+}
 const inUse = sampleGroups.find((item) =>
   sampleVehicles.some((vehicle) => vehicle.groupId === item.id),
 );
-if (!inUse) throw new Error('No sample group has vehicles.');
+if (!inUse) {
+  throw new Error('No sample group has vehicles.');
+}
 const appReady = { timeout: 10_000 };
 const generalReady: NonNullable<Story['play']> = async ({ canvasElement }) => {
   await waitFor(

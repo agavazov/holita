@@ -89,7 +89,9 @@ export const registeredComponents = {
 
 function ramp(palette: string): Record<string, string> {
   const steps: Record<string, string> = {};
-  for (const step of paletteSteps) steps[String(step)] = `{${palette}.${String(step)}}`;
+  for (const step of paletteSteps) {
+    steps[String(step)] = `{${palette}.${String(step)}}`;
+  }
   return steps;
 }
 

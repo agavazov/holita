@@ -70,19 +70,33 @@ function vehicleWhere(scope: FleetScope, criteria: VehicleListCriteria): Prisma.
       ],
     };
   });
-  if (criteria.ids) conditions.push({ id: { in: criteria.ids } });
-  if (criteria.statuses) conditions.push({ status: { in: criteria.statuses } });
-  if (criteria.vehicleTypes) conditions.push({ vehicleType: { in: criteria.vehicleTypes } });
-  if (criteria.fuelTypes) conditions.push({ fuelType: { in: criteria.fuelTypes } });
-  if (criteria.groupIds) conditions.push({ groupId: { in: criteria.groupIds } });
-  if (criteria.hasGroup !== undefined)
+  if (criteria.ids) {
+    conditions.push({ id: { in: criteria.ids } });
+  }
+  if (criteria.statuses) {
+    conditions.push({ status: { in: criteria.statuses } });
+  }
+  if (criteria.vehicleTypes) {
+    conditions.push({ vehicleType: { in: criteria.vehicleTypes } });
+  }
+  if (criteria.fuelTypes) {
+    conditions.push({ fuelType: { in: criteria.fuelTypes } });
+  }
+  if (criteria.groupIds) {
+    conditions.push({ groupId: { in: criteria.groupIds } });
+  }
+  if (criteria.hasGroup !== undefined) {
     conditions.push({ groupId: criteria.hasGroup ? { not: null } : null });
-  if (criteria.currentDriverIds)
+  }
+  if (criteria.currentDriverIds) {
     conditions.push({ currentDriverId: { in: criteria.currentDriverIds } });
-  if (criteria.hasDriver !== undefined)
+  }
+  if (criteria.hasDriver !== undefined) {
     conditions.push({ currentDriverId: criteria.hasDriver ? { not: null } : null });
-  if (criteria.hasDevice !== undefined)
+  }
+  if (criteria.hasDevice !== undefined) {
     conditions.push({ devices: criteria.hasDevice ? { some: {} } : { none: {} } });
+  }
   if (criteria.hasOpenAlerts !== undefined) {
     const open = { alertStatus: 'OPEN' } satisfies Prisma.FleetEventWhereInput;
     conditions.push({ events: criteria.hasOpenAlerts ? { some: open } : { none: open } });
@@ -152,9 +166,15 @@ export class VehiclesRepository {
     excludeId: string | null,
   ): Promise<{ fleetNumber: boolean; vin: boolean }> {
     const candidates: Prisma.VehicleWhereInput[] = [];
-    if (values.fleetNumber !== null) candidates.push({ fleetNumber: values.fleetNumber });
-    if (values.vin !== null) candidates.push({ vin: values.vin });
-    if (!candidates.length) return { fleetNumber: false, vin: false };
+    if (values.fleetNumber !== null) {
+      candidates.push({ fleetNumber: values.fleetNumber });
+    }
+    if (values.vin !== null) {
+      candidates.push({ vin: values.vin });
+    }
+    if (!candidates.length) {
+      return { fleetNumber: false, vin: false };
+    }
     const rows = await this.prisma.client.vehicle.findMany({
       where: {
         tenantId: scope.tenantId,

@@ -28,7 +28,9 @@ describe('Events and alert workflow with PostgreSQL', () => {
   let van: string, truck: string, driver: string, tripId: string, foreignAlert: string;
   function event(key: EventKey): string {
     const id = events.get(key);
-    if (!id) throw new Error(`Missing event ${key}`);
+    if (!id) {
+      throw new Error(`Missing event ${key}`);
+    }
     return id;
   }
   beforeAll(async () => {
@@ -146,11 +148,12 @@ describe('Events and alert workflow with PostgreSQL', () => {
           },
         ],
       ];
-    for (const [key, data] of rows)
+    for (const [key, data] of rows) {
       events.set(
         key,
         (await client.fleetEvent.create({ data: { ...data, tenantId, branchId } })).id,
       );
+    }
     // Alerts of another Branch and another Tenant never appear or count.
     for (const [scopeTenant, scopeBranch] of [
       [tenantId, otherBranchId],
@@ -431,7 +434,7 @@ describe('Events and alert workflow with PostgreSQL', () => {
       [event('ignition'), branchId],
       [foreignAlert, branchId],
       [event('idling'), otherBranchId],
-    ] as const)
+    ] as const) {
       expect(
         await query(
           transition('resolveFleetAlert'),
@@ -441,6 +444,7 @@ describe('Events and alert workflow with PostgreSQL', () => {
       ).toMatchObject({
         errors: [{ message: 'Alert not found', extensions: { code: 'NOT_FOUND' } }],
       });
+    }
     expect(
       await database.client.fleetEvent.findUniqueOrThrow({ where: { id: event('idling') } }),
     ).toMatchObject({ alertStatus: 'ACKNOWLEDGED' });

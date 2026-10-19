@@ -109,7 +109,9 @@ export class VehiclesPage implements OnInit {
   });
   readonly deletionSummary = computed(() => {
     const result = this.deletionResult();
-    if (!result) return '';
+    if (!result) {
+      return '';
+    }
     return (
       this.text().vehiclesDeleted.replace('{count}', String(result.deleted)) +
       (result.failures.length
@@ -160,7 +162,9 @@ export class VehiclesPage implements OnInit {
       )
       .subscribe((sort) => {
         const current = this.listQuery();
-        if (sort.sort !== current.sort || sort.order !== current.order) this.applyFilters(sort);
+        if (sort.sort !== current.sort || sort.order !== current.order) {
+          this.applyFilters(sort);
+        }
       });
     this.route.queryParamMap
       .pipe(
@@ -201,7 +205,9 @@ export class VehiclesPage implements OnInit {
           const lastPage = Math.max(1, Math.ceil(vehicles.total / current.pageSize));
           if (current.page > lastPage) {
             // Cached totals may be stale; wait for a successful network result before correcting the URL.
-            if (!result.loading) this.navigate({ ...current, page: lastPage }, true);
+            if (!result.loading) {
+              this.navigate({ ...current, page: lastPage }, true);
+            }
           } else {
             this.page.set(vehicles);
             const selectedIds = new Set(this.selected().map((vehicle) => vehicle.id));
@@ -214,12 +220,16 @@ export class VehiclesPage implements OnInit {
   refresh(): void {
     const query = this.query;
     void query?.refetch().catch((error: unknown) => {
-      if (!this.destroyRef.destroyed && this.query === query) this.error.set(error);
+      if (!this.destroyRef.destroyed && this.query === query) {
+        this.error.set(error);
+      }
     });
   }
 
   selectVehicles(value: unknown): void {
-    if (this.deleting() || !Array.isArray(value)) return;
+    if (this.deleting() || !Array.isArray(value)) {
+      return;
+    }
     const ids = new Set(
       value.flatMap((vehicle: unknown) =>
         typeof vehicle === 'object' &&
@@ -235,7 +245,9 @@ export class VehiclesPage implements OnInit {
 
   confirmDelete(vehicles: readonly AdminVehicleFragment[], event: Event): void {
     const query = this.query;
-    if (this.deleting() || !query || vehicles.length === 0) return;
+    if (this.deleting() || !query || vehicles.length === 0) {
+      return;
+    }
     const targets = [...vehicles];
     const text = this.text();
     const trigger = event.currentTarget instanceof HTMLElement ? event.currentTarget : undefined;
@@ -249,12 +261,16 @@ export class VehiclesPage implements OnInit {
       rejectButtonProps: { label: text.cancel, severity: 'secondary', outlined: true },
       acceptButtonProps: { label: text.deleteVehicles, severity: 'danger' },
       accept: () => {
-        if (!this.isCurrentQuery(query)) return;
+        if (!this.isCurrentQuery(query)) {
+          return;
+        }
         this.heading().nativeElement.focus();
         void this.deleteVehicles(targets, query);
       },
       reject: () => {
-        if (this.isCurrentQuery(query)) trigger?.focus();
+        if (this.isCurrentQuery(query)) {
+          trigger?.focus();
+        }
       },
     });
   }
@@ -263,7 +279,9 @@ export class VehiclesPage implements OnInit {
     targets: readonly AdminVehicleFragment[],
     query: ReturnType<VehiclesApi['watch']>,
   ): Promise<void> {
-    if (!this.isCurrentQuery(query) || this.deleting()) return;
+    if (!this.isCurrentQuery(query) || this.deleting()) {
+      return;
+    }
     this.cancelEdits.next();
     this.deletionResult.set(null);
     this.deleteProgress.set({ completed: 0, total: targets.length });
@@ -272,11 +290,15 @@ export class VehiclesPage implements OnInit {
     try {
       for (const vehicle of targets) {
         // Navigation retires this query: let the submitted write settle, but do not send the remainder.
-        if (!this.isCurrentQuery(query)) return;
+        if (!this.isCurrentQuery(query)) {
+          return;
+        }
         try {
           await this.api.delete({ id: vehicle.id });
           deleted++;
-          if (!this.isCurrentQuery(query)) return;
+          if (!this.isCurrentQuery(query)) {
+            return;
+          }
           this.page.update(
             (page) =>
               page && {
@@ -285,7 +307,9 @@ export class VehiclesPage implements OnInit {
               },
           );
         } catch (error: unknown) {
-          if (!this.isCurrentQuery(query)) return;
+          if (!this.isCurrentQuery(query)) {
+            return;
+          }
           failures.push({ vehicle, message: requestError(error, this.text().networkError) });
         }
         this.deleteProgress.set({ completed: deleted + failures.length, total: targets.length });
@@ -295,9 +319,13 @@ export class VehiclesPage implements OnInit {
       // The server owns totals and last-page correction, including concurrent changes.
       await query.refetch();
     } catch (error: unknown) {
-      if (this.isCurrentQuery(query)) this.error.set(error);
+      if (this.isCurrentQuery(query)) {
+        this.error.set(error);
+      }
     } finally {
-      if (this.isCurrentQuery(query)) this.deleteProgress.set(null);
+      if (this.isCurrentQuery(query)) {
+        this.deleteProgress.set(null);
+      }
     }
   }
 
@@ -306,18 +334,25 @@ export class VehiclesPage implements OnInit {
   }
 
   editSearch(value: unknown): void {
-    if (typeof value !== 'string') return;
+    if (typeof value !== 'string') {
+      return;
+    }
     this.search.set(value);
     this.textEdits.next();
   }
 
   sortChanged(event: unknown): void {
-    if (typeof event !== 'object' || event === null || !('field' in event) || !('order' in event))
+    if (typeof event !== 'object' || event === null || !('field' in event) || !('order' in event)) {
       return;
-    if (event.order !== 1 && event.order !== -1) return;
+    }
+    if (event.order !== 1 && event.order !== -1) {
+      return;
+    }
     const field = event.field;
     const sort = field === 'licensePlate' ? 'LICENSE_PLATE' : undefined;
-    if (sort) this.sortEdits.next({ sort, order: event.order === 1 ? 'ASC' : 'DESC' });
+    if (sort) {
+      this.sortEdits.next({ sort, order: event.order === 1 ? 'ASC' : 'DESC' });
+    }
   }
 
   resetSort(): void {
@@ -331,7 +366,9 @@ export class VehiclesPage implements OnInit {
   changePage(event: PaginatorState): void {
     const current = this.listQuery();
     const size = event.rows ?? current.pageSize;
-    if (!vehiclePageSizes.includes(size)) return;
+    if (!vehiclePageSizes.includes(size)) {
+      return;
+    }
     this.navigate({
       ...current,
       pageSize: size,
@@ -365,7 +402,8 @@ export class VehiclesPage implements OnInit {
         ([key, value]) =>
           params.get(key) !== value || params.getAll(key).length > (value === null ? 0 : 1),
       )
-    )
+    ) {
       this.navigate(query, true);
+    }
   }
 }

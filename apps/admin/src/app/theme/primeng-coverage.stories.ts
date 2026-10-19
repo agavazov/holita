@@ -272,7 +272,9 @@ export const Overlays: Story = {
     // Overlays fade in; the accessibility check runs on their final colours.
     await waitFor(() => {
       const tooltip = canvasElement.ownerDocument.querySelector('.p-tooltip');
-      if (!tooltip) throw new Error('Missing tooltip.');
+      if (!tooltip) {
+        throw new Error('Missing tooltip.');
+      }
       return expect(getComputedStyle(tooltip).opacity).toBe('1');
     });
   },

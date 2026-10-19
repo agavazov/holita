@@ -209,7 +209,9 @@ export class VehiclesPage {
   protected readonly editor = linkedSignal<{ id: string | null; form: VehicleForm | null } | null>(
     () => {
       const drawer = this.query().get('drawer');
-      if (drawer === 'new') return { id: null, form: null };
+      if (drawer === 'new') {
+        return { id: null, form: null };
+      }
       const vehicle = drawer ? this.vehicles().find((item) => item.id === drawer) : undefined;
       return vehicle ? { id: vehicle.id, form: vehicleForm(vehicle) } : null;
     },
@@ -240,7 +242,9 @@ export class VehiclesPage {
   }
 
   canLeave(): boolean | Promise<boolean> {
-    if (this.saving()) return false;
+    if (this.saving()) {
+      return false;
+    }
     return this.drawer()?.canLeave() ?? true;
   }
 
@@ -261,10 +265,14 @@ export class VehiclesPage {
     const [id] = ids;
     switch (action) {
       case 'edit':
-        if (id) this.openEditor(id);
+        if (id) {
+          this.openEditor(id);
+        }
         return;
       case 'profile':
-        if (id) void this.router.navigate(['/examples/vehicles', id]);
+        if (id) {
+          void this.router.navigate(['/examples/vehicles', id]);
+        }
         return;
       case 'deactivate':
         this.deactivate(ids);
@@ -277,7 +285,9 @@ export class VehiclesPage {
 
   protected save(form: VehicleForm): void {
     const editor = this.editor();
-    if (!editor || this.saving()) return;
+    if (!editor || this.saving()) {
+      return;
+    }
     this.saving.set(true);
     this.saveError.set(null);
     this.fieldErrors.set({});
@@ -364,12 +374,14 @@ export class VehiclesPage {
     this.selection.update((selection) =>
       selection.filter((record) => !deleted.includes(record.id)),
     );
-    if (deleted.length)
+    if (deleted.length) {
       this.messages.add({
         severity: 'success',
         summary: interpolate(this.text().notices.deleted, { count: deleted.length }),
       });
-    if (deleted.length < ids.length)
+    }
+    if (deleted.length < ids.length) {
       this.messages.add({ severity: 'error', summary: this.text().notices.historyConflict });
+    }
   }
 }

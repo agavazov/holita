@@ -224,7 +224,9 @@ describe('Location and reference reads and view retirement', () => {
     read('AdminKarmaProjects').flush(references);
     await harness.fixture.whenStable();
     const input = harness.routeNativeElement?.querySelector('input');
-    if (!input) throw new Error('Missing search');
+    if (!input) {
+      throw new Error('Missing search');
+    }
     input.value = 'Fixture';
     input.dispatchEvent(new Event('input', { bubbles: true }));
     harness.routeNativeElement
@@ -267,7 +269,8 @@ describe('map coordinate boundaries', () => {
       [0, 181],
       [Infinity, 0],
       [0, NaN],
-    ])
+    ]) {
       expect(locationMap(latitude, longitude)).toBeNull();
+    }
   });
 });

@@ -289,7 +289,9 @@ export class VehiclesView {
   });
   protected readonly movingShare = computed(() => {
     const kpis = this.kpis();
-    if (!kpis || !kpis.inOperation) return null;
+    if (!kpis || !kpis.inOperation) {
+      return null;
+    }
     return interpolate(this.text().kpis.movingShare, {
       share: `${formatNumber(Math.round((kpis.moving / kpis.inOperation) * 100), this.language())} %`,
     });
@@ -352,9 +354,13 @@ export class VehiclesView {
   }
 
   protected sort(event: TableLazyLoadEvent): void {
-    if (!this.sortReady()) return;
+    if (!this.sortReady()) {
+      return;
+    }
     const next = listQuery.sorted(this.state(), event);
-    if (next) this.changeQuery(next);
+    if (next) {
+      this.changeQuery(next);
+    }
   }
 
   protected changeSort(sort: NonNullable<ListQuery['sort']>): void {
@@ -368,7 +374,9 @@ export class VehiclesView {
   /** The selection belongs to the rows on screen, so any new query clears it. */
   private changeQuery(query: ListQuery): void {
     this.stateChange.emit(query);
-    if (this.selection().length) this.selectionChange.emit([]);
+    if (this.selection().length) {
+      this.selectionChange.emit([]);
+    }
   }
 
   private toRecord(row: VehicleRow): ListRecord<VehicleActionId> {

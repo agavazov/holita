@@ -28,8 +28,9 @@ export class ApiInfoPage {
         next: (result) => {
           this.loading.set(result.loading);
           this.error.set(!!result.error);
-          if (result.dataState === 'complete' && !result.error)
+          if (result.dataState === 'complete' && !result.error) {
             this.version.set(result.data.karmaVersion.version);
+          }
         },
         error: () => {
           this.loading.set(false);
@@ -43,7 +44,9 @@ export class ApiInfoPage {
     });
   }
   refresh(): void {
-    if (this.loading()) return;
+    if (this.loading()) {
+      return;
+    }
     this.error.set(false);
     const read = this.read;
     void read?.refetch().catch(() => {

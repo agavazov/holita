@@ -226,9 +226,13 @@ export class VehicleDrawer {
   protected errorOf(name: VehicleField): string | null {
     this.events();
     const server = this.fieldErrors()[name];
-    if (server) return server;
+    if (server) {
+      return server;
+    }
     const control = this.form.controls[name];
-    if (!control.invalid || (!control.touched && !this.submitted)) return null;
+    if (!control.invalid || (!control.touched && !this.submitted)) {
+      return null;
+    }
     return validationMessage(control.errors, this.language());
   }
 
@@ -237,7 +241,9 @@ export class VehicleDrawer {
   }
 
   protected submit(): void {
-    if (this.saving()) return;
+    if (this.saving()) {
+      return;
+    }
     this.submitted = true;
     this.form.markAllAsTouched();
     if (this.form.invalid) {
@@ -267,6 +273,8 @@ export class VehicleDrawer {
   }
 
   protected async requestClose(): Promise<void> {
-    if (await this.canLeave()) this.closed.emit();
+    if (await this.canLeave()) {
+      this.closed.emit();
+    }
   }
 }

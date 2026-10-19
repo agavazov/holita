@@ -48,27 +48,37 @@ export function classifyActivity(
   facts: Pick<VehicleFacts, 'hasDevice' | 'latest'>,
   asOf: Date | null,
 ): FleetActivityStatus {
-  if (!facts.hasDevice) return 'NO_DEVICE';
+  if (!facts.hasDevice) {
+    return 'NO_DEVICE';
+  }
   const sample = facts.latest;
   if (
     sample === null ||
     asOf === null ||
     sample.recordedAt.getTime() < asOf.getTime() - NOT_CONNECTED_AFTER_HOURS * HOUR_MS
-  )
+  ) {
     return 'NOT_CONNECTED';
-  if (sample.ignition === null) return 'ASSET';
-  if (!sample.ignition) return 'PARKED';
+  }
+  if (sample.ignition === null) {
+    return 'ASSET';
+  }
+  if (!sample.ignition) {
+    return 'PARKED';
+  }
   return sample.speedKph !== null && sample.speedKph >= MOVING_MIN_SPEED_KPH ? 'MOVING' : 'IDLE';
 }
 
 /** The single fuel status definition (list tone, KPI and attention). */
 export function fuelStatus(sample: DeviceSample | null, asOf: Date | null): FleetFuelStatus {
-  if (sample === null || sample.fuelLevelPct === null) return 'NO_DATA';
+  if (sample === null || sample.fuelLevelPct === null) {
+    return 'NO_DATA';
+  }
   if (
     asOf === null ||
     sample.recordedAt.getTime() < asOf.getTime() - FUEL_READING_MAX_AGE_HOURS * HOUR_MS
-  )
+  ) {
     return 'STALE';
+  }
   return sample.fuelLevelPct < LOW_FUEL_PERCENT ? 'LOW' : 'NORMAL';
 }
 

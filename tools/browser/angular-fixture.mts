@@ -41,14 +41,18 @@ export const test = base.extend<{
   },
   fleetEnabled: [true, { option: true }],
   app: async ({ browserName, fleetEnabled }, use) => {
-    if (browserName !== 'chromium') throw new Error('This focused smoke target uses Chromium.');
+    if (browserName !== 'chromium') {
+      throw new Error('This focused smoke target uses Chromium.');
+    }
     const root = join(workspaceRoot, 'apps/admin/dist/browser');
     let gatewayUrl: string | undefined;
     const server = createServer((request, response) => {
       void (async () => {
         const pathname = new URL(request.url ?? '/', 'http://127.0.0.1').pathname;
         if (pathname === '/config.json') {
-          if (!gatewayUrl) throw new Error('The test gateway is not ready.');
+          if (!gatewayUrl) {
+            throw new Error('The test gateway is not ready.');
+          }
           response.writeHead(200, { 'content-type': 'application/json' });
           response.end(JSON.stringify({ graphqlUrl: gatewayUrl, fleetEnabled }));
           return;
@@ -71,8 +75,9 @@ export const test = base.extend<{
             !(error instanceof Error) ||
             !('code' in error) ||
             !['ENOENT', 'EISDIR'].includes(String(error.code))
-          )
+          ) {
             throw error;
+          }
           if (!request.headers.accept?.includes('text/html')) {
             response.writeHead(404);
             response.end();
@@ -102,7 +107,9 @@ export const test = base.extend<{
     });
     try {
       const address = server.address();
-      if (!address || typeof address === 'string') throw new Error('Missing Angular fixture port.');
+      if (!address || typeof address === 'string') {
+        throw new Error('Missing Angular fixture port.');
+      }
       const url = `http://127.0.0.1:${String(address.port)}`;
       const backend = await createFederationFixture({ adminOrigin: url, fleetEnabled });
       try {
@@ -123,16 +130,18 @@ export const test = base.extend<{
           !body.data ||
           typeof body.data !== 'object' ||
           !('demoLogin' in body.data)
-        )
+        ) {
           throw new Error('Missing demo login result');
+        }
         const session = body.data.demoLogin;
         if (
           !session ||
           typeof session !== 'object' ||
           !('token' in session) ||
           typeof session.token !== 'string'
-        )
+        ) {
           throw new Error('Missing demo token');
+        }
         const demoSession = {
           token: session.token,
           tenant: { id: '01000000-0000-4000-8000-000000000001', name: 'RentalSofia' },
@@ -144,8 +153,11 @@ export const test = base.extend<{
     } finally {
       await new Promise<void>((resolve, reject) => {
         server.close((error) => {
-          if (error) reject(error);
-          else resolve();
+          if (error) {
+            reject(error);
+          } else {
+            resolve();
+          }
         });
         server.closeAllConnections();
       });

@@ -94,7 +94,9 @@ export class TimeZonesPage {
     });
   }
   refresh(): void {
-    if (this.loading()) return;
+    if (this.loading()) {
+      return;
+    }
     this.error.set(false);
     const read = this.read;
     void read?.refetch().catch(() => {

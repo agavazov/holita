@@ -7,7 +7,9 @@ import { workspaceRoot } from '../graphql/contracts.mjs';
 // Serves the built Storybook; run `npm run build:storybook:admin` first (test:visual:admin does).
 const test = base.extend<{ storybook: string }>({
   storybook: async ({ browserName }, use) => {
-    if (browserName !== 'chromium') throw new Error('Visual review uses Chromium.');
+    if (browserName !== 'chromium') {
+      throw new Error('Visual review uses Chromium.');
+    }
     const root = join(workspaceRoot, 'apps/admin/storybook-static');
     const types: Record<string, string> = {
       '.html': 'text/html',
@@ -46,7 +48,9 @@ const test = base.extend<{ storybook: string }>({
       server.listen(0, '127.0.0.1', resolveListen);
     });
     const address = server.address();
-    if (!address || typeof address === 'string') throw new Error('Missing Storybook port.');
+    if (!address || typeof address === 'string') {
+      throw new Error('Missing Storybook port.');
+    }
     await use(`http://127.0.0.1:${String(address.port)}`);
     await new Promise<void>((resolveClose) => {
       server.close(() => {
@@ -181,8 +185,8 @@ function globalsOf(capture: Capture): string {
   ].join(';');
 }
 
-for (const capture of captures)
-  for (const viewportName of capture.viewports)
+for (const capture of captures) {
+  for (const viewportName of capture.viewports) {
     test(`${capture.id} ${globalsOf(capture)} ${viewportName}`, async ({ page, storybook }) => {
       const viewport = viewports[viewportName];
       await page.clock.setFixedTime(new Date('2026-10-18T07:00:00Z'));
@@ -203,14 +207,18 @@ for (const capture of captures)
       await page.evaluate(async () => {
         await document.fonts.ready;
       });
-      if (capture.confirmation || capture.toast)
+      if (capture.confirmation || capture.toast) {
         await expect(page.locator('#storybook-root')).toHaveAttribute(
           'data-story-ready',
           capture.id,
         );
-      if (capture.confirmation)
+      }
+      if (capture.confirmation) {
         await expect(page.getByRole('alertdialog', { name: capture.confirmation })).toBeVisible();
-      if (capture.toast) await expect(page.locator('.p-toast-message').first()).toBeVisible();
+      }
+      if (capture.toast) {
+        await expect(page.locator('.p-toast-message').first()).toBeVisible();
+      }
       const name = [
         capture.id,
         capture.theme,
@@ -229,6 +237,10 @@ for (const capture of captures)
       await mkdir(candidates, { recursive: true });
       await writeFile(join(candidates, name), candidate);
       await test.info().attach('candidate', { body: candidate, contentType: 'image/png' });
-      if (capture.toast) expect(await page.locator('.p-toast-close-button:focus').count()).toBe(0);
+      if (capture.toast) {
+        expect(await page.locator('.p-toast-close-button:focus').count()).toBe(0);
+      }
       await expect(page).toHaveScreenshot(name, { fullPage });
     });
+  }
+}

@@ -48,8 +48,9 @@ test('pages all users, exposes eleven escaped fields and navigates account menus
 }) => {
   const headers: Record<string, string>[] = [];
   page.on('request', (request) => {
-    if (request.url() === app.gatewayUrl && request.postData()?.includes('AdminKarmaUsers'))
+    if (request.url() === app.gatewayUrl && request.postData()?.includes('AdminKarmaUsers')) {
       headers.push(request.headers());
+    }
   });
   await page.goto(`${app.url}/en/karma-client/users`);
   const rows = page.locator('holita-users-page tbody tr');
@@ -139,7 +140,7 @@ test('retains account rows on refresh failure, retries empty data and leaves Bra
     0,
   );
 });
-for (const section of ['users', 'roles'])
+for (const section of ['users', 'roles']) {
   test(`reviews ${section} desktop/mobile light/dark and user detail focus`, async ({
     page,
     app,
@@ -187,3 +188,4 @@ for (const section of ['users', 'roles'])
       }
     }
   });
+}

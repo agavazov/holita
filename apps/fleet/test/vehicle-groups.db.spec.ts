@@ -111,10 +111,11 @@ describe('Vehicle group GraphQL with PostgreSQL', () => {
         },
       ],
     });
-    for (const source of [read, update, remove])
+    for (const source of [read, update, remove]) {
       expect(
         await query(source, { id: group.id, input: { name: 'Spoofed' } }, randomUUID()),
       ).toMatchObject({ errors: [{ extensions: { code: 'NOT_FOUND' } }] });
+    }
     expect(await query(read, { id: group.id }, branchId, randomUUID())).toMatchObject({
       errors: [{ extensions: { code: 'NOT_FOUND' } }],
     });
@@ -166,10 +167,11 @@ describe('Vehicle group GraphQL with PostgreSQL', () => {
       ['A3', haul.id, 'IN_WORKSHOP'],
       ['A4', null, 'ACTIVE'],
       ['A5', null, 'INACTIVE'],
-    ] as const)
+    ] as const) {
       await database.client.vehicle.create({
         data: { tenantId, branchId, licensePlate, groupId, status },
       });
+    }
     await database.client.vehicle.create({
       data: { tenantId, branchId: randomUUID(), licensePlate: 'OTHER BRANCH' },
     });

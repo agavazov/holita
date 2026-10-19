@@ -101,7 +101,9 @@ describe('Karma eData page', () => {
     const value: unknown = harness.fixture.debugElement.query(
       By.directive(EdataPage),
     ).componentInstance;
-    if (!(value instanceof EdataPage)) throw new Error('Missing eData page');
+    if (!(value instanceof EdataPage)) {
+      throw new Error('Missing eData page');
+    }
     return value;
   }
   function read() {
@@ -131,7 +133,9 @@ describe('Karma eData page', () => {
     view.view(message);
     await harness.fixture.whenStable();
     const dialog = harness.routeNativeElement?.querySelector('[role="dialog"]');
-    if (!dialog) throw new Error('Missing message dialog');
+    if (!dialog) {
+      throw new Error('Missing message dialog');
+    }
     expect(dialog.textContent).toContain('000123456789012');
     expect(dialog.textContent).toContain('99999');
     expect(dialog.textContent).toContain('2026-01-01 11:59:00');

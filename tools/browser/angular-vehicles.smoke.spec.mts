@@ -65,13 +65,14 @@ test.describe('Vehicles', () => {
           (await page
             .locator('html')
             .evaluate((element) => element.classList.contains('app-dark'))) !== dark
-        )
+        ) {
           await page
             .getByRole('button', {
               name: dark ? 'Включи тъмна тема' : 'Включи светла тема',
               exact: true,
             })
             .click();
+        }
         await expect(page.getByRole('textbox', { name: 'Бележки', exact: true })).toHaveValue(
           'Бележки за автомобила. '.repeat(70),
         );
@@ -93,13 +94,14 @@ test.describe('Vehicles', () => {
           (await page
             .locator('html')
             .evaluate((element) => element.classList.contains('app-dark'))) !== dark
-        )
+        ) {
           await page
             .getByRole('button', {
               name: dark ? 'Включи тъмна тема' : 'Включи светла тема',
               exact: true,
             })
             .click();
+        }
         expect(
           await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
         ).toBe(true);

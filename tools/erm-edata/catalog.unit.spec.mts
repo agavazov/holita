@@ -256,8 +256,9 @@ describe('static eData catalog', () => {
       '<r a="<"/>',
       '<r>]]></r>',
       '<r><!-- a--b --></r>',
-    ])
+    ]) {
       expect(() => xml(Buffer.from(invalid))).toThrow();
+    }
     expect(xml(Buffer.from('<r>&amp;&#65;<![CDATA[&unknown;]]></r>')).text).toBe('&A&unknown;');
   });
   it('ignores metadata changes and reports domain changes, category moves and formula changes with original records', () => {

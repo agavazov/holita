@@ -8,18 +8,26 @@ function object(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 function identifier(value: unknown, minimum = 0): string {
-  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < minimum) unavailable();
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < minimum) {
+    unavailable();
+  }
   return String(value);
 }
 function text(value: unknown): string {
-  if (typeof value !== 'string') unavailable();
+  if (typeof value !== 'string') {
+    unavailable();
+  }
   return value;
 }
 
 export function users(value: unknown): KarmaUser[] {
-  if (!Array.isArray(value)) unavailable();
+  if (!Array.isArray(value)) {
+    unavailable();
+  }
   const rows = value.map((row: unknown) => {
-    if (!object(row)) unavailable();
+    if (!object(row)) {
+      unavailable();
+    }
     const active = row['active'],
       zone = row['time_zone'],
       expiry = row['expire_date'],
@@ -33,8 +41,9 @@ export function users(value: unknown): KarmaUser[] {
       zone > 2147483647 ||
       (expiry !== null && typeof expiry !== 'string') ||
       !Array.isArray(projects)
-    )
+    ) {
       unavailable();
+    }
     return {
       id: identifier(row['user_id'], 1),
       userName: text(row['user_name']),
@@ -49,16 +58,24 @@ export function users(value: unknown): KarmaUser[] {
       projectIds: projects.map((id: unknown) => identifier(id)),
     };
   });
-  if (new Set(rows.map((row) => row.id)).size !== rows.length) unavailable();
+  if (new Set(rows.map((row) => row.id)).size !== rows.length) {
+    unavailable();
+  }
   return rows;
 }
 
 export function roles(value: unknown): KarmaRole[] {
-  if (!Array.isArray(value)) unavailable();
+  if (!Array.isArray(value)) {
+    unavailable();
+  }
   const rows = value.map((row: unknown) => {
-    if (!object(row)) unavailable();
+    if (!object(row)) {
+      unavailable();
+    }
     return { id: identifier(row['role_id'], 1), description: text(row['description']) };
   });
-  if (new Set(rows.map((row) => row.id)).size !== rows.length) unavailable();
+  if (new Set(rows.map((row) => row.id)).size !== rows.length) {
+    unavailable();
+  }
   return rows;
 }

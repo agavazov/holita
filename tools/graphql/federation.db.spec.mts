@@ -11,7 +11,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function record(value: unknown): Record<string, unknown> {
-  if (!isRecord(value)) throw new Error('Expected a GraphQL object');
+  if (!isRecord(value)) {
+    throw new Error('Expected a GraphQL object');
+  }
   return value;
 }
 
@@ -31,7 +33,9 @@ describe('Fleet through the actual federation boundary', () => {
     });
     const body: unknown = await response.json();
     const value = record(record(record(body).data).demoLogin).token;
-    if (typeof value !== 'string') throw new Error('Missing demo session token');
+    if (typeof value !== 'string') {
+      throw new Error('Missing demo session token');
+    }
     token = value;
   });
   afterAll(async () => {
@@ -85,7 +89,9 @@ describe('Fleet through the actual federation boundary', () => {
         ).data,
       ).demoLogin,
     );
-    if (typeof login.token !== 'string') throw new Error('Missing second tenant session');
+    if (typeof login.token !== 'string') {
+      throw new Error('Missing second tenant session');
+    }
     expect(record(record(await query(source, {}, sandbox, fixture.url, login.token)).data)).toEqual(
       first,
     );
@@ -160,7 +166,9 @@ describe('Fleet through the actual federation boundary', () => {
       'mutation {demoLogin(tenantId:"01000000-0000-4000-8000-000000000002"){token}}',
     );
     const otherToken = record(record(record(login).data).demoLogin).token;
-    if (typeof otherToken !== 'string') throw new Error('Missing token');
+    if (typeof otherToken !== 'string') {
+      throw new Error('Missing token');
+    }
     expect(record(await query(source, variables, sandbox, fixture.url, otherToken)).data).toEqual(
       first,
     );
@@ -202,7 +210,9 @@ describe('Fleet through the actual federation boundary', () => {
       'mutation {demoLogin(tenantId:"01000000-0000-4000-8000-000000000002"){token}}',
     );
     const otherToken = record(record(record(login).data).demoLogin).token;
-    if (typeof otherToken !== 'string') throw new Error('Missing other tenant token');
+    if (typeof otherToken !== 'string') {
+      throw new Error('Missing other tenant token');
+    }
     expect(await query(source, {}, '', fixture.url, otherToken)).toEqual(first);
     const reads = fixture.karma.requests.length;
     expect(await query(source, {}, '', fixture.url, '')).toMatchObject({
@@ -264,7 +274,7 @@ describe('Fleet through the actual federation boundary', () => {
   it('reads Karma location and references across tenants/Branches with authorization and session renewal', async () => {
     const source =
       '{karmaLocation(carId:"41"){carId deviceId messageId eventId latitude longitude spd extra} karmaProjects{id name} karmaTimeZones{id name} karmaVersion{version}}';
-    for (const branch of ['', sandbox])
+    for (const branch of ['', sandbox]) {
       expect(await query(source, {}, branch)).toMatchObject({
         data: {
           karmaLocation: {
@@ -281,15 +291,18 @@ describe('Fleet through the actual federation boundary', () => {
           karmaVersion: { version: '2.26.1.1' },
         },
       });
+    }
     const first = await query(source, {}, '');
     const login = await query(
       'mutation {demoLogin(tenantId:"01000000-0000-4000-8000-000000000002"){token}}',
     );
     const otherToken = record(record(record(login).data).demoLogin).token;
-    if (typeof otherToken !== 'string') throw new Error('Missing other tenant token');
+    if (typeof otherToken !== 'string') {
+      throw new Error('Missing other tenant token');
+    }
     expect(await query(source, {}, '', fixture.url, otherToken)).toEqual(first);
     const reads = fixture.karma.requests.length;
-    for (const session of ['', 'invalid'])
+    for (const session of ['', 'invalid']) {
       expect(await query(source, {}, '', fixture.url, session)).toMatchObject({
         errors: expect.arrayContaining([
           expect.objectContaining({
@@ -297,6 +310,7 @@ describe('Fleet through the actual federation boundary', () => {
           }),
         ]),
       });
+    }
     expect(fixture.karma.requests).toHaveLength(reads);
     expect(await query('{karmaLocation(carId:"../login"){carId}}', {}, '')).toMatchObject({
       errors: [{ extensions: { code: 'BAD_USER_INPUT' } }],
@@ -409,7 +423,9 @@ describe('Fleet through the actual federation boundary', () => {
       },
     });
     const id = record(record(record(created).data).createFleetVehicle).id;
-    if (typeof id !== 'string') throw new Error('Missing Vehicle ID');
+    if (typeof id !== 'string') {
+      throw new Error('Missing Vehicle ID');
+    }
     expect(await query('query($id:ID!){fleetVehicle(id:$id){id}}', { id }, sandbox)).toMatchObject({
       errors: [{ extensions: { code: 'NOT_FOUND' } }],
     });
@@ -437,7 +453,9 @@ describe('Fleet through the actual federation boundary', () => {
       'mutation {createFleetVehicle(input:{licensePlate:"DEVICE-TRUCK"}){id}}',
     );
     const vehicleId = record(record(record(createdTruck).data).createFleetVehicle).id;
-    if (typeof vehicleId !== 'string') throw new Error('Missing truck ID');
+    if (typeof vehicleId !== 'string') {
+      throw new Error('Missing truck ID');
+    }
     const created = await query(
       'mutation($input:CreateFleetDeviceInput!){createFleetDevice(input:$input){id imei vehicle{__typename id licensePlate} branch{id name}}}',
       {
@@ -454,7 +472,9 @@ describe('Fleet through the actual federation boundary', () => {
       },
     });
     const id = record(record(record(created).data).createFleetDevice).id;
-    if (typeof id !== 'string') throw new Error('Missing device ID');
+    if (typeof id !== 'string') {
+      throw new Error('Missing device ID');
+    }
     expect(await query('query($id:ID!){fleetDevice(id:$id){imei}}', { id }, sandbox)).toMatchObject(
       { errors: [{ extensions: { code: 'NOT_FOUND' } }] },
     );
@@ -530,7 +550,9 @@ describe('Fleet through the actual federation boundary', () => {
   it('gates Fleet operations and entities while keeping health and discovery usable', async () => {
     const created = await query('mutation {createFleetVehicle(input:{licensePlate:"GATED"}){id}}');
     const id = record(record(record(created).data).createFleetVehicle).id;
-    if (typeof id !== 'string') throw new Error('Missing Vehicle ID');
+    if (typeof id !== 'string') {
+      throw new Error('Missing Vehicle ID');
+    }
     await fixture.setFleetEnabled(false);
     try {
       expect(await query('{fleetVehicles{total}}')).toMatchObject({
@@ -589,7 +611,9 @@ describe('Fleet through the actual federation boundary', () => {
       'mutation {createFleetVehicle(input:{licensePlate:"OFFLINE"}){id}}',
     );
     const id = record(record(record(created).data).createFleetVehicle).id;
-    if (typeof id !== 'string') throw new Error('Missing Vehicle ID');
+    if (typeof id !== 'string') {
+      throw new Error('Missing Vehicle ID');
+    }
     await fixture.stopCore();
     try {
       expect(await query('query($id:ID!){fleetVehicle(id:$id){licensePlate}}', { id })).toEqual({
@@ -631,7 +655,9 @@ describe('Fleet through the actual federation boundary', () => {
       'mutation {demoLogin(tenantId:"01000000-0000-4000-8000-000000000002"){token}}',
     );
     const otherToken = record(record(record(login).data).demoLogin).token;
-    if (typeof otherToken !== 'string') throw new Error('Missing second tenant session');
+    if (typeof otherToken !== 'string') {
+      throw new Error('Missing second tenant session');
+    }
     expect(await query('{branches{id name}}', {}, discordia, fixture.url, otherToken)).toEqual({
       data: {
         branches: [{ id: '10000000-0000-4000-8000-000000000003', name: 'Isolation branch' }],
@@ -641,15 +667,18 @@ describe('Fleet through the actual federation boundary', () => {
       'mutation {createFleetVehicle(input:{licensePlate:"TENANT-PRIVATE"}){id}}',
     );
     const id = record(record(record(created).data).createFleetVehicle).id;
-    if (typeof id !== 'string') throw new Error('Missing tenant Vehicle ID');
+    if (typeof id !== 'string') {
+      throw new Error('Missing tenant Vehicle ID');
+    }
     for (const source of [
       'query($id:ID!){fleetVehicle(id:$id){id}}',
       'mutation($id:ID!){updateFleetVehicle(id:$id,input:{notes:"Spoofed"}){id}}',
       'mutation($id:ID!){deleteFleetVehicle(id:$id){id}}',
-    ])
+    ]) {
       expect(await query(source, { id }, discordia, fixture.url, otherToken)).toMatchObject({
         errors: [{ extensions: { code: 'NOT_FOUND' } }],
       });
+    }
     expect(
       await query(
         'mutation {createFleetVehicle(input:{licensePlate:"WRONG-BRANCH"}){id}}',
@@ -816,10 +845,11 @@ describe('Fleet through the actual federation boundary', () => {
     for (const source of [
       'query($id:ID!){fleetDriver(id:$id){id}}',
       'mutation($id:ID!){deleteFleetDriver(id:$id){id}}',
-    ])
+    ]) {
       expect(await query(source, { id: driverId }, sandbox)).toMatchObject({
         errors: [{ extensions: { code: 'NOT_FOUND' } }],
       });
+    }
     expect(
       await query('mutation($id:ID!){deleteFleetVehicleGroup(id:$id){id}}', { id: groupId }),
     ).toMatchObject({
@@ -850,7 +880,9 @@ describe('Fleet through the actual federation boundary', () => {
       'mutation {createFleetVehicle(input:{licensePlate:"CB 1004 AX"}){id}}',
     );
     const vehicleId = record(record(record(created).data).createFleetVehicle).id;
-    if (typeof vehicleId !== 'string') throw new Error('Missing vehicle ID');
+    if (typeof vehicleId !== 'string') {
+      throw new Error('Missing vehicle ID');
+    }
     // A vehicle without an installed device is NO_DEVICE whatever its samples say.
     expect(
       await query(

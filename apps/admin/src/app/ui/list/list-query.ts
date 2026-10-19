@@ -44,9 +44,13 @@ export const listQuery = {
   /** The query after a `p-table` sort event, or null when the sort did not change. */
   sorted: (query: ListQuery, event: TableLazyLoadEvent): ListQuery | null => {
     const field = typeof event.sortField === 'string' ? event.sortField : null;
-    if (!field) return null;
+    if (!field) {
+      return null;
+    }
     const direction = event.sortOrder === 1 ? 'asc' : 'desc';
-    if (query.sort?.field === field && query.sort.direction === direction) return null;
+    if (query.sort?.field === field && query.sort.direction === direction) {
+      return null;
+    }
     return { ...query, sort: { field, direction }, page: 1 };
   },
   filtered: (query: ListQuery): boolean =>

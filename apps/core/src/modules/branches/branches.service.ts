@@ -15,8 +15,9 @@ export class BranchesService {
 
   find(context: RequestContext, id: string): Promise<Branch | null> {
     const tenantId = requireTenant(context);
-    if (typeof id !== 'string' || !isUUID(id))
+    if (typeof id !== 'string' || !isUUID(id)) {
       throw new BadRequestException('Branch ID must be a UUID');
+    }
     return this.branches.find(tenantId, id.toLowerCase());
   }
 }

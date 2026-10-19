@@ -24,8 +24,12 @@ import {
 
 /** Sample counterpart of the server's fuel freshness classification. */
 export function sampleFuelStatus(vehicle: SampleVehicle): VehicleFuelStatus {
-  if (vehicle.fuelPct === null || vehicle.lastReportedAt === null) return 'NO_DATA';
-  if (Date.parse(vehicle.lastReportedAt) < sampleNow - 6 * 3_600_000) return 'STALE';
+  if (vehicle.fuelPct === null || vehicle.lastReportedAt === null) {
+    return 'NO_DATA';
+  }
+  if (Date.parse(vehicle.lastReportedAt) < sampleNow - 6 * 3_600_000) {
+    return 'STALE';
+  }
   return vehicle.fuelPct < 12 ? 'LOW' : 'NORMAL';
 }
 

@@ -57,15 +57,18 @@ export class DrivingProfilePage implements OnInit {
   private query: ReturnType<KarmaHistoryApi['watchDrivingProfile']> | undefined;
   private subscription: Subscription | undefined;
   ngOnInit(): void {
-    if (!this.validId()) return;
+    if (!this.validId()) {
+      return;
+    }
     this.api.initialize(this.language());
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       if (
         this.route.snapshot.paramMap.get('recordId') !== this.carId() ||
         this.route.parent?.snapshot.paramMap.get('language') !== this.language() ||
         this.route.snapshot.data['section'] !== 'driving-profile'
-      )
+      ) {
         return;
+      }
       this.subscription?.unsubscribe();
       this.query = undefined;
       this.profile.set(null);
@@ -79,7 +82,9 @@ export class DrivingProfilePage implements OnInit {
         from: params.get('from') ?? this.defaults.from,
         to: params.get('to') ?? this.defaults.to,
       });
-      if (this.car()) this.read();
+      if (this.car()) {
+        this.read();
+      }
     });
     this.loading.set(true);
     this.carQuery = this.api.watchCar(this.carId());
@@ -90,7 +95,9 @@ export class DrivingProfilePage implements OnInit {
         if (result.dataState === 'complete' && !result.error) {
           this.car.set(result.data.karmaCar);
           this.carLoaded.set(true);
-          if (this.car() && !this.query) this.read();
+          if (this.car() && !this.query) {
+            this.read();
+          }
         }
       },
       error: () => {
@@ -105,7 +112,9 @@ export class DrivingProfilePage implements OnInit {
     });
   }
   private read(): void {
-    if (!this.input) return;
+    if (!this.input) {
+      return;
+    }
     this.query = this.api.watchDrivingProfile(this.input);
     this.loading.set(true);
     this.subscription = this.query.valueChanges.subscribe({
@@ -124,7 +133,9 @@ export class DrivingProfilePage implements OnInit {
     });
   }
   refresh(): void {
-    if (this.loading()) return;
+    if (this.loading()) {
+      return;
+    }
     this.error.set(false);
     const query = this.query ?? this.carQuery;
     void query?.refetch().catch(() => {
@@ -138,7 +149,9 @@ export class DrivingProfilePage implements OnInit {
     const params = this.form.getRawValue(),
       input = profileFilters(this.carId(), convertToParamMap(params), this.defaults);
     this.formError.set(input === null);
-    if (!input) return;
+    if (!input) {
+      return;
+    }
     if (JSON.stringify(input) === JSON.stringify(this.input)) {
       this.refresh();
       return;

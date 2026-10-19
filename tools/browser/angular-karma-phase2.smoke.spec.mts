@@ -9,8 +9,9 @@ test('shows reference labels and last-known summary and opens every location fie
 }) => {
   const headers: Record<string, string>[] = [];
   page.on('request', (request) => {
-    if (request.url() === app.gatewayUrl && request.postData()?.includes('AdminKarmaLocation'))
+    if (request.url() === app.gatewayUrl && request.postData()?.includes('AdminKarmaLocation')) {
       headers.push(request.headers());
+    }
   });
   await page.goto(`${app.url}/en/karma-client/cars/41`);
   await expect(page.locator('dl')).toContainText('Fixture project (12)');

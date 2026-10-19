@@ -29,8 +29,11 @@ function formatter(timeZone: string): Intl.DateTimeFormat {
 
 function zonedFields(epoch: number, timeZone: string) {
   const fields: Partial<Record<Intl.DateTimeFormatPartTypes, number>> = {};
-  for (const part of formatter(timeZone).formatToParts(new Date(epoch)))
-    if (part.type !== 'literal') fields[part.type] = Number(part.value);
+  for (const part of formatter(timeZone).formatToParts(new Date(epoch))) {
+    if (part.type !== 'literal') {
+      fields[part.type] = Number(part.value);
+    }
+  }
   return {
     year: fields.year ?? 0,
     month: fields.month ?? 1,
@@ -51,7 +54,9 @@ function offsetAt(epoch: number, timeZone: string): number {
 /** The wall-clock parts of an ISO instant in a time zone; `null` for an invalid instant. */
 export function isoToZonedParts(iso: string, timeZone: string): ZonedParts | null {
   const epoch = new Date(iso).getTime();
-  if (Number.isNaN(epoch)) return null;
+  if (Number.isNaN(epoch)) {
+    return null;
+  }
   const { year, month, day, hour, minute } = zonedFields(epoch, timeZone);
   return { year, month, day, hour, minute };
 }
@@ -67,7 +72,9 @@ export function zonedWallTimeToIso(parts: ZonedParts, timeZone: string): string 
   // Prefer the earliest instant whose wall clock equals the requested time (autumn overlap).
   for (const offset of offsets.sort((a, b) => b - a)) {
     const candidate = wall - offset;
-    if (offsetAt(candidate, timeZone) === offset) return new Date(candidate).toISOString();
+    if (offsetAt(candidate, timeZone) === offset) {
+      return new Date(candidate).toISOString();
+    }
   }
   return new Date(earlier).toISOString();
 }
@@ -83,7 +90,9 @@ export function toDateOnly(date: Date): string {
 /** `YYYY-MM-DD` as a local-midnight `Date` for a DatePicker; `null` when not a real date. */
 export function fromDateOnly(text: string | null | undefined): Date | null {
   const match = text ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(text) : null;
-  if (!match) return null;
+  if (!match) {
+    return null;
+  }
   const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
   const date = new Date(year, month - 1, day);
   return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day

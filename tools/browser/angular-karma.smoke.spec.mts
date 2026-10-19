@@ -12,8 +12,9 @@ test('opens truck details from the list, preserves scope through Branch/language
     if (
       request.url() === app.gatewayUrl &&
       request.postData()?.includes('"operationName":"AdminKarmaCar"')
-    )
+    ) {
       headers.push(request.headers());
+    }
   });
   await page.goto(`${app.url}/en/karma-client/cars`);
   await page.getByRole('link', { name: 'KARMA TEST 41', exact: true }).click();
@@ -96,8 +97,9 @@ test('lists Karma trucks through Gateway, preserves the route on Branch switchin
 }) => {
   const headers: Record<string, string>[] = [];
   page.on('request', (request) => {
-    if (request.url() === app.gatewayUrl && request.postData()?.includes('AdminKarmaCars'))
+    if (request.url() === app.gatewayUrl && request.postData()?.includes('AdminKarmaCars')) {
       headers.push(request.headers());
+    }
   });
   await page.goto(`${app.url}/en/karma-client/cars`);
   await expect(page.getByRole('heading', { name: 'Trucks', exact: true })).toBeVisible();

@@ -57,10 +57,12 @@ describe('form validators', () => {
       999_999.99,
       1_000_000,
       '999999.19',
-    ])
+    ]) {
       expect(errors(cost, value)).toBeNull();
-    for (const value of [0.001, 999_999.191, 999_999.199, 999_999.190000001, 999_999.189999999])
+    }
+    for (const value of [0.001, 999_999.191, 999_999.199, 999_999.190000001, 999_999.189999999]) {
       expect(errors(cost, value)).toEqual({ step: { step: 0.01 } });
+    }
     expect(errors(cost, -0.01)).toEqual({ min: { min: 0 } });
     expect(errors(cost, 1_000_000.01)).toEqual({ max: { max: 1_000_000 } });
   });
@@ -86,8 +88,9 @@ describe('form validators', () => {
 
   it('requires an integer when configured without treating zero as blank', () => {
     const required = integerValidator(1, 50, { required: true });
-    for (const value of [null, undefined, '', '   '])
+    for (const value of [null, undefined, '', '   ']) {
       expect(errors(required, value)).toEqual({ required: true });
+    }
     expect(errors(required, 0)).toEqual({ min: { min: 1 } });
     expect(errors(required, 12)).toBeNull();
     expect(errors(integerValidator(0, 50, { required: true }), 0)).toBeNull();

@@ -236,9 +236,13 @@ export class DevicesView {
   }
 
   protected sort(event: TableLazyLoadEvent): void {
-    if (!this.sortReady()) return;
+    if (!this.sortReady()) {
+      return;
+    }
     const next = listQuery.sorted(this.state(), event);
-    if (next) this.changeQuery(next);
+    if (next) {
+      this.changeQuery(next);
+    }
   }
 
   protected select(rows: readonly DeviceRow[] | null): void {
@@ -248,7 +252,9 @@ export class DevicesView {
   /** The selection belongs to the rows on screen, so any new query clears it. */
   private changeQuery(query: ListQuery): void {
     this.stateChange.emit(query);
-    if (this.selection().length) this.selectionChange.emit([]);
+    if (this.selection().length) {
+      this.selectionChange.emit([]);
+    }
   }
 
   private toRecord(row: DeviceRow): ListRecord<DeviceActionId> {

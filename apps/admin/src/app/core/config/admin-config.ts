@@ -18,15 +18,17 @@ export function readGraphqlUrl(value: unknown): string {
     !('graphqlUrl' in value) ||
     typeof value.graphqlUrl !== 'string' ||
     !value.graphqlUrl.trim()
-  )
+  ) {
     throw new Error('config.json requires graphqlUrl.');
+  }
   const endpoint = value.graphqlUrl.trim();
   const url =
     endpoint.startsWith('/') && !endpoint.startsWith('//')
       ? new URL(endpoint, window.location.origin)
       : new URL(endpoint);
-  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.hash)
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.hash) {
     throw new Error('graphqlUrl must be an HTTP URL without credentials or a fragment.');
+  }
   return endpoint;
 }
 
@@ -36,12 +38,14 @@ export function readAdminConfig(value: unknown): AdminRuntimeConfig {
     typeof value === 'object' && value !== null && 'fleetEnabled' in value
       ? value.fleetEnabled
       : undefined;
-  if (fleet !== undefined && typeof fleet !== 'boolean')
+  if (fleet !== undefined && typeof fleet !== 'boolean') {
     throw new Error('fleetEnabled must be a boolean.');
+  }
   const availability = fleet === undefined ? {} : { fleetEnabled: fleet };
   if (typeof value === 'object' && value !== null && 'primeUiLicense' in value) {
-    if (typeof value.primeUiLicense !== 'string')
+    if (typeof value.primeUiLicense !== 'string') {
       throw new Error('primeUiLicense must be a string.');
+    }
     const primeUiLicense = value.primeUiLicense.trim();
     return { graphqlUrl, ...availability, ...(primeUiLicense ? { primeUiLicense } : {}) };
   }
@@ -54,12 +58,19 @@ export interface LocalAdminConfig {
 }
 
 export function readLocalAdminConfig(value: unknown): LocalAdminConfig {
-  if (typeof value !== 'object' || value === null || Array.isArray(value))
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new Error('config.local.json must be an object.');
+  }
   const unknownKey = Object.keys(value).find((key) => key !== 'primeUiLicense');
-  if (unknownKey) throw new Error(`config.local.json does not support "${unknownKey}".`);
-  if (!('primeUiLicense' in value)) return {};
-  if (typeof value.primeUiLicense !== 'string') throw new Error('primeUiLicense must be a string.');
+  if (unknownKey) {
+    throw new Error(`config.local.json does not support "${unknownKey}".`);
+  }
+  if (!('primeUiLicense' in value)) {
+    return {};
+  }
+  if (typeof value.primeUiLicense !== 'string') {
+    throw new Error('primeUiLicense must be a string.');
+  }
   const primeUiLicense = value.primeUiLicense.trim();
   return primeUiLicense ? { primeUiLicense } : {};
 }

@@ -22,8 +22,12 @@ function row(id = 3000000001) {
 }
 
 function url(value: Parameters<typeof fetch>[0]): URL {
-  if (value instanceof URL) return value;
-  if (typeof value === 'string') return new URL(value);
+  if (value instanceof URL) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    return new URL(value);
+  }
   return new URL(value.url);
 }
 
@@ -72,7 +76,9 @@ describe('Karma eData reads', () => {
       ],
     });
     const read = upstream.mock.calls[1];
-    if (!read) throw new Error('Missing eData read');
+    if (!read) {
+      throw new Error('Missing eData read');
+    }
     expect(url(read[0]).pathname).toBe('/apiv2/edata');
     expect(Object.fromEntries(url(read[0]).searchParams)).toEqual({
       car: '41',
@@ -112,7 +118,9 @@ describe('Karma eData reads', () => {
     expect(ids).not.toContain('3000000601');
     expect(upstream).toHaveBeenCalledTimes(13);
     const second = upstream.mock.calls[2];
-    if (!second) throw new Error('Missing older read');
+    if (!second) {
+      throw new Error('Missing older read');
+    }
     expect(url(second[0]).searchParams.get('to_id')).toBe('3000000550');
   });
 
@@ -176,7 +184,9 @@ describe('Karma eData reads', () => {
       { id: '785', value: null, description: null },
     ]);
     const call = upstream.mock.calls[1];
-    if (!call) throw new Error('Missing filtered read');
+    if (!call) {
+      throw new Error('Missing filtered read');
+    }
     expect(url(call[0]).searchParams.getAll('parameter_id[]')).toEqual(['1', '785']);
     expect(url(call[0]).searchParams.get('from_date')).toBe('2026-01-01 00:00:00');
   });
@@ -208,10 +218,11 @@ describe('Karma eData reads', () => {
       { pageSize: 25 },
       { parameterIds: ['1'] },
       { fromDate: '2026-01-01T00:00:00Z', toDate: '2026-01-01T23:59:59Z' },
-    ])
+    ]) {
       await expect(
         client.list({ carId: '41', cursor: page.nextCursor ?? null, ...change }, signedContext),
       ).rejects.toThrow('Invalid Karma eData');
+    }
     expect(upstream).toHaveBeenCalledTimes(count);
   });
 

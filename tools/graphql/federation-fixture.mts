@@ -90,12 +90,17 @@ export async function availablePort(): Promise<number> {
     server.listen(0, '127.0.0.1', resolve);
   });
   const address = server.address();
-  if (!address || typeof address === 'string') throw new Error('Missing ephemeral port');
+  if (!address || typeof address === 'string') {
+    throw new Error('Missing ephemeral port');
+  }
   const port = address.port;
   await new Promise<void>((resolve, reject) =>
     server.close((error) => {
-      if (error) reject(error);
-      else resolve();
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
     }),
   );
   return port;
@@ -108,11 +113,14 @@ export async function startRouter(options: {
   const cwd = join(workspaceRoot, 'apps/gateway');
   const binary = join(cwd, 'router/dist/router');
   const version = await execute(binary, ['--version']);
-  if (version.stdout.trim() !== '2.18.0')
+  if (version.stdout.trim() !== '2.18.0') {
     throw new Error('Install Apollo Router 2.18.0 with npm run router:install.');
+  }
   const port = await availablePort();
   let healthPort = await availablePort();
-  while (healthPort === port) healthPort = await availablePort();
+  while (healthPort === port) {
+    healthPort = await availablePort();
+  }
   const url = `http://127.0.0.1:${String(port)}/graphql`;
   const healthUrl = `http://127.0.0.1:${String(healthPort)}/health`;
   const child = spawn(
@@ -157,7 +165,9 @@ export async function startRouter(options: {
     });
   });
   async function stop() {
-    if (finished) return;
+    if (finished) {
+      return;
+    }
     child.kill('SIGTERM');
     const timer = setTimeout(() => child.kill('SIGKILL'), 5000);
     try {
@@ -177,8 +187,9 @@ export async function startRouter(options: {
         health !== null &&
         'status' in health &&
         health.status === 'UP'
-      )
+      ) {
         return { url, healthUrl, pid: child.pid, stop, logs: () => logs };
+      }
     } catch {
       /* Wait for the Router's dedicated health listener. */
     }
@@ -214,7 +225,9 @@ async function startApplication(service: string, env: NodeJS.ProcessEnv, selecte
     });
   });
   async function stop() {
-    if (finished) return;
+    if (finished) {
+      return;
+    }
     child.kill('SIGTERM');
     const timer = setTimeout(() => child.kill('SIGKILL'), 5000);
     try {
@@ -235,7 +248,7 @@ async function startApplication(service: string, env: NodeJS.ProcessEnv, selecte
         health !== null &&
         'service' in health &&
         health.service === service
-      )
+      ) {
         return {
           port,
           pid: child.pid,
@@ -243,12 +256,17 @@ async function startApplication(service: string, env: NodeJS.ProcessEnv, selecte
           url: `${baseUrl}/graphql`,
           stop,
           pause: () => {
-            if (!child.kill('SIGSTOP')) throw new Error(`Could not pause ${service}`);
+            if (!child.kill('SIGSTOP')) {
+              throw new Error(`Could not pause ${service}`);
+            }
           },
           resume: () => {
-            if (!child.kill('SIGCONT')) throw new Error(`Could not resume ${service}`);
+            if (!child.kill('SIGCONT')) {
+              throw new Error(`Could not resume ${service}`);
+            }
           },
         };
+      }
     } catch {
       /* The child has not started listening yet. */
     }
@@ -268,9 +286,13 @@ async function observeRequests(target: string) {
   async function forward(req: IncomingMessage, res: ServerResponse) {
     const chunks: Buffer[] = [];
     for await (const chunk of req) {
-      if (Buffer.isBuffer(chunk)) chunks.push(chunk);
-      else if (typeof chunk === 'string') chunks.push(Buffer.from(chunk));
-      else throw new Error('Unexpected HTTP chunk');
+      if (Buffer.isBuffer(chunk)) {
+        chunks.push(chunk);
+      } else if (typeof chunk === 'string') {
+        chunks.push(Buffer.from(chunk));
+      } else {
+        throw new Error('Unexpected HTTP chunk');
+      }
     }
     const body = Buffer.concat(chunks).toString();
     requests.push({
@@ -286,7 +308,9 @@ async function observeRequests(target: string) {
     const headers: Record<string, string> = { 'content-type': 'application/json' };
     for (const key of ['x-request-id', 'x-branch-id', 'authorization']) {
       const value = req.headers[key];
-      if (typeof value === 'string') headers[key] = value;
+      if (typeof value === 'string') {
+        headers[key] = value;
+      }
     }
     const response = await fetch(target, {
       method: 'POST',
@@ -308,7 +332,9 @@ async function observeRequests(target: string) {
     server.listen(0, '127.0.0.1', resolve);
   });
   const address = server.address();
-  if (!address || typeof address === 'string') throw new Error('Missing observer port');
+  if (!address || typeof address === 'string') {
+    throw new Error('Missing observer port');
+  }
   return {
     url: `http://127.0.0.1:${String(address.port)}/graphql`,
     requests,
@@ -318,8 +344,11 @@ async function observeRequests(target: string) {
     close: () =>
       new Promise<void>((resolve, reject) => {
         server.close((error) => {
-          if (error) reject(error);
-          else resolve();
+          if (error) {
+            reject(error);
+          } else {
+            resolve();
+          }
         });
         server.closeAllConnections();
       }),
@@ -348,7 +377,9 @@ export async function createFederationFixture(
       }
     }
     cleanup.length = 0;
-    if (errors.length) throw new AggregateError(errors, 'Federation fixture cleanup failed');
+    if (errors.length) {
+      throw new AggregateError(errors, 'Federation fixture cleanup failed');
+    }
   }
   try {
     const coreDatabase = await prepareDatabase('core');

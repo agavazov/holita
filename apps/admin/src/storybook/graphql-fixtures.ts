@@ -88,7 +88,9 @@ export class FixtureVariables {
 
   requiredString(name: string): string {
     const value = this.string(name);
-    if (value === null) throw new FixtureGraphqlError(`Variable "${name}" must be a string.`);
+    if (value === null) {
+      throw new FixtureGraphqlError(`Variable "${name}" must be a string.`);
+    }
     return value;
   }
 
@@ -146,9 +148,11 @@ function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
 }
 
 function operationName(document: DocumentNode): string {
-  for (const definition of document.definitions)
-    if (definition.kind === Kind.OPERATION_DEFINITION && definition.name)
+  for (const definition of document.definitions) {
+    if (definition.kind === Kind.OPERATION_DEFINITION && definition.name) {
       return definition.name.value;
+    }
+  }
   throw new Error('Fixture documents must be named operations.');
 }
 
@@ -189,7 +193,9 @@ export function failureFor(name: string, variables: FixtureVariables): FixtureFa
   const id = variables.string('id');
   const key = id !== null && `${name}:${id}` in scenario.failures ? `${name}:${id}` : name;
   const failure = scenario.failures[key];
-  if (failure !== 'network-after-first') return failure;
+  if (failure !== 'network-after-first') {
+    return failure;
+  }
   const count = (calls.get(key) ?? 0) + 1;
   calls.set(key, count);
   return count > 1 ? 'network' : undefined;
@@ -216,7 +222,9 @@ export class FixtureHttpBackend implements HttpBackend {
     const requestId = `fixture-${name}`;
     const url = request.urlWithParams;
     const failure = failureFor(name, variables);
-    if (failure === 'pending') return NEVER;
+    if (failure === 'pending') {
+      return NEVER;
+    }
     return defer(() => {
       track(1);
       return this.answer(name, variables, failure, requestId, url).pipe(
@@ -237,7 +245,7 @@ export class FixtureHttpBackend implements HttpBackend {
     const headers = new HttpHeaders({ 'x-request-id': requestId });
     return timer(scenario.latencyMs).pipe(
       mergeMap(() => {
-        if (failure === 'network')
+        if (failure === 'network') {
           return throwError(
             () =>
               new HttpErrorResponse({
@@ -247,21 +255,25 @@ export class FixtureHttpBackend implements HttpBackend {
                 url,
               }),
           );
+        }
         const forced = failure ? failureErrors[failure] : undefined;
-        if (forced)
+        if (forced) {
           return of(graphqlErrorResponse(forced.message, forced.extensions, requestId, url));
+        }
         const handler = handlers.get(name);
-        if (!handler)
+        if (!handler) {
           return of(
             graphqlErrorResponse(`No Storybook fixture answers ${name}.`, {}, requestId, url),
           );
+        }
         try {
           return of(
             new HttpResponse({ status: 200, body: { data: handler(variables) }, headers, url }),
           );
         } catch (error) {
-          if (error instanceof FixtureGraphqlError)
+          if (error instanceof FixtureGraphqlError) {
             return of(graphqlErrorResponse(error.message, error.extensions, requestId, url));
+          }
           throw error;
         }
       }),

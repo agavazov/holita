@@ -42,9 +42,13 @@ describe('RowActions', () => {
     const fixture = TestBed.createComponent(Host);
     await fixture.whenStable();
     const root: unknown = fixture.nativeElement;
-    if (!(root instanceof HTMLElement)) throw new Error('Missing host.');
+    if (!(root instanceof HTMLElement)) {
+      throw new Error('Missing host.');
+    }
     const trigger = root.querySelector('button');
-    if (!(trigger instanceof HTMLButtonElement)) throw new Error('Missing trigger.');
+    if (!(trigger instanceof HTMLButtonElement)) {
+      throw new Error('Missing trigger.');
+    }
     expect(trigger.getAttribute('aria-label')).toBe('Actions for CB 1001 AX');
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
 
@@ -58,7 +62,9 @@ describe('RowActions', () => {
     expect(items[2]?.closest('.app-menu-danger')).not.toBeNull();
 
     const link = items[0]?.querySelector('.p-menu-item-link');
-    if (!(link instanceof HTMLElement)) throw new Error('Missing menu link.');
+    if (!(link instanceof HTMLElement)) {
+      throw new Error('Missing menu link.');
+    }
     link.click();
     await fixture.whenStable();
     expect(fixture.componentInstance.chosen).toEqual([{ action: 'edit', origin: trigger }]);

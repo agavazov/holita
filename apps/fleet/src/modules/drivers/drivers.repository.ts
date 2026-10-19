@@ -61,19 +61,26 @@ function driverWhere(scope: FleetScope, criteria: DriverListCriteria): Prisma.Dr
       ],
     };
   });
-  if (criteria.ids) conditions.push({ id: { in: criteria.ids } });
-  if (criteria.statuses) conditions.push({ status: { in: criteria.statuses } });
-  if (criteria.licenseCategories)
+  if (criteria.ids) {
+    conditions.push({ id: { in: criteria.ids } });
+  }
+  if (criteria.statuses) {
+    conditions.push({ status: { in: criteria.statuses } });
+  }
+  if (criteria.licenseCategories) {
     conditions.push({ licenseCategories: { hasSome: criteria.licenseCategories } });
-  if (criteria.documentsExpireBy)
+  }
+  if (criteria.documentsExpireBy) {
     conditions.push({
       OR: [
         { licenseExpiresOn: { lte: criteria.documentsExpireBy } },
         { tachographCardExpiresOn: { lte: criteria.documentsExpireBy } },
       ],
     });
-  if (criteria.hasVehicle !== undefined)
+  }
+  if (criteria.hasVehicle !== undefined) {
     conditions.push({ vehicles: criteria.hasVehicle ? { some: {} } : { none: {} } });
+  }
   return { tenantId: scope.tenantId, branchId: scope.branchId, AND: conditions };
 }
 
@@ -126,10 +133,15 @@ export class DriversRepository {
     excludeId: string | null,
   ): Promise<{ employeeNumber: boolean; identificationKey: boolean }> {
     const candidates: Prisma.DriverWhereInput[] = [];
-    if (values.employeeNumber !== null) candidates.push({ employeeNumber: values.employeeNumber });
-    if (values.identificationKey !== null)
+    if (values.employeeNumber !== null) {
+      candidates.push({ employeeNumber: values.employeeNumber });
+    }
+    if (values.identificationKey !== null) {
       candidates.push({ identificationKey: values.identificationKey });
-    if (!candidates.length) return { employeeNumber: false, identificationKey: false };
+    }
+    if (!candidates.length) {
+      return { employeeNumber: false, identificationKey: false };
+    }
     const rows = await this.prisma.client.driver.findMany({
       where: {
         tenantId: scope.tenantId,

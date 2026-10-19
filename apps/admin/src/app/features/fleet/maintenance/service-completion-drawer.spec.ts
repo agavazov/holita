@@ -29,7 +29,9 @@ describe('ServiceCompletionDrawer', () => {
     fixture.componentInstance.save.subscribe((value) => saved.push(value));
     async function submit() {
       const element = document.getElementById('completion-form');
-      if (!(element instanceof HTMLFormElement)) throw new Error('Missing completion form.');
+      if (!(element instanceof HTMLFormElement)) {
+        throw new Error('Missing completion form.');
+      }
       element.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
       fixture.detectChanges();
       await fixture.whenStable();
@@ -197,7 +199,9 @@ describe('ServiceCompletionDrawer', () => {
     const close = Array.from(document.querySelectorAll('button')).find(
       (button) => button.textContent.trim() === 'Close',
     );
-    if (!close) throw new Error('Missing Close button.');
+    if (!close) {
+      throw new Error('Missing Close button.');
+    }
     close.click();
     await fixture.whenStable();
     expect(closed).toBe(1);

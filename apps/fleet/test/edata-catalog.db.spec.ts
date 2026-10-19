@@ -27,7 +27,9 @@ describe('shared versioned eData catalog persistence', () => {
     expect(await database.client.edataCatalog.count()).toBe(0);
     const imported = await importCatalog(database.client, catalog, true);
     expect(imported.action).toBe('inserted');
-    if (!imported.catalogId) throw new Error('Missing imported v9.56 catalog');
+    if (!imported.catalogId) {
+      throw new Error('Missing imported v9.56 catalog');
+    }
     expect(imported.counts).toMatchObject({ parameters: 5488, memberships: 3728, profiles: 2 });
     expect((await importCatalog(database.client, catalog, true)).action).toBe('verified');
     expect(await database.client.edataCatalog.count()).toBe(1);
@@ -74,7 +76,9 @@ describe('shared versioned eData catalog persistence', () => {
   it('detects stored row corruption even when identity and stored hash are unchanged', async () => {
     const catalog = catalogFixture();
     const imported = await importCatalog(database.client, catalog);
-    if (!imported.catalogId) throw new Error('Missing imported fixture');
+    if (!imported.catalogId) {
+      throw new Error('Missing imported fixture');
+    }
     await database.client.edataCatalogParameter.update({
       where: { catalogId_key: { catalogId: imported.catalogId, key: 'monitor:0' } },
       data: { name: 'Corrupted' },

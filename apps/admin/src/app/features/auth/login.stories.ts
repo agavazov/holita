@@ -84,7 +84,9 @@ export const SelectedBranchAcrossPages: Story = {
       await waitFor(async () => {
         const heading = canvas.getByRole('heading', { level: 1, name: page });
         const header = heading.closest('holita-page-header');
-        if (!(header instanceof HTMLElement)) throw new Error(`Missing ${page} page header.`);
+        if (!(header instanceof HTMLElement)) {
+          throw new Error(`Missing ${page} page header.`);
+        }
         await expect(within(header).getByText(new RegExp(selected.name))).toBeVisible();
       }, appReady);
     };

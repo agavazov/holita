@@ -109,14 +109,18 @@ export class Sparkline {
     let current: string[] = [];
     for (const point of this.points()) {
       if (point.value === null || !Number.isFinite(point.value)) {
-        if (current.length) lines.push(current.join(' '));
+        if (current.length) {
+          lines.push(current.join(' '));
+        }
         current = [];
         continue;
       }
       const { x, y } = this.position({ at: point.at, value: point.value });
       current.push(`${String(x)},${String(y)}`);
     }
-    if (current.length) lines.push(current.join(' '));
+    if (current.length) {
+      lines.push(current.join(' '));
+    }
     return lines;
   });
 
@@ -131,7 +135,9 @@ export class Sparkline {
     const language = this.language();
     const text = uiMessages[language].chart;
     const { values } = this.range();
-    if (!values.length) return interpolate(text.sparklineEmpty, { label: this.label() });
+    if (!values.length) {
+      return interpolate(text.sparklineEmpty, { label: this.label() });
+    }
     const unit = this.unit() ? `\u00a0${this.unit()}` : '';
     const lastValue = [...this.points()].reverse().find((point) => point.value !== null)?.value;
     return interpolate(text.sparkline, {

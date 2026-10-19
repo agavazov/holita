@@ -22,7 +22,9 @@ export async function runSequential<T>(
   const failures: { item: T; message: string }[] = [];
   let done = 0;
   for (const item of items) {
-    if (!options.isCurrent()) return { succeeded, failures, stopped: true };
+    if (!options.isCurrent()) {
+      return { succeeded, failures, stopped: true };
+    }
     try {
       await action(item);
       succeeded.push(item);
@@ -30,7 +32,9 @@ export async function runSequential<T>(
       failures.push({ item, message: options.errorText(error, item) });
     }
     done++;
-    if (options.isCurrent()) options.progress(done, items.length);
+    if (options.isCurrent()) {
+      options.progress(done, items.length);
+    }
   }
   return { succeeded, failures, stopped: false };
 }

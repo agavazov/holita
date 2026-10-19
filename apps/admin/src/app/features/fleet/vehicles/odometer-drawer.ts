@@ -43,7 +43,9 @@ const timeZone = 'Europe/Sofia';
 /** A DatePicker Date carries Branch wall-clock fields, independent of the browser's zone. */
 export function odometerWallTime(iso: string): Date | null {
   const parts = isoToZonedParts(iso, timeZone);
-  if (!parts) return null;
+  if (!parts) {
+    return null;
+  }
   const instant = new Date(iso);
   return new Date(
     parts.year,
@@ -61,7 +63,9 @@ export function odometerInstant(
   date: Date | null,
   bounds?: { readonly previousAt: string | null; readonly latestAllowedAt: string },
 ): string | null {
-  if (!date || Number.isNaN(date.getTime())) return null;
+  if (!date || Number.isNaN(date.getTime())) {
+    return null;
+  }
   const parts = {
     year: date.getFullYear(),
     month: date.getMonth() + 1,
@@ -73,7 +77,9 @@ export function odometerInstant(
     Date.parse(zonedWallTimeToIso(parts, timeZone)) +
     date.getSeconds() * 1000 +
     date.getMilliseconds();
-  if (!bounds) return new Date(first).toISOString();
+  if (!bounds) {
+    return new Date(first).toISOString();
+  }
   const later = first + 3_600_000;
   const repeated = isoToZonedParts(new Date(later).toISOString(), timeZone);
   const candidates =
@@ -129,9 +135,15 @@ export class OdometerDrawer {
   protected readonly form = new FormGroup({
     odometerKm: new FormControl<number | null>(null, (control) => {
       const value: unknown = control.value;
-      if (value === null) return { required: true };
-      if (typeof value !== 'number' || !Number.isFinite(value)) return { decimal: true };
-      if (value < 0) return { min: { min: 0 } };
+      if (value === null) {
+        return { required: true };
+      }
+      if (typeof value !== 'number' || !Number.isFinite(value)) {
+        return { decimal: true };
+      }
+      if (value < 0) {
+        return { min: { min: 0 } };
+      }
       return value > 9_999_999.9 ? { max: { max: 9_999_999.9 } } : null;
     }),
     recordedAt: new FormControl<Date | null>(null, (control) =>
@@ -167,15 +179,19 @@ export class OdometerDrawer {
     effect(() => {
       const saving = this.saving();
       untracked(() => {
-        if (saving === locked) return;
+        if (saving === locked) {
+          return;
+        }
         locked = saving;
-        if (saving) this.form.disable();
-        else {
+        if (saving) {
+          this.form.disable();
+        } else {
           this.form.enable();
           afterNextRender(
             () => {
-              if (!focusFirstInvalid(this.formElement().nativeElement, fields, 'odometer-'))
+              if (!focusFirstInvalid(this.formElement().nativeElement, fields, 'odometer-')) {
                 this.drawer().focusTitle();
+              }
             },
             { injector: this.injector },
           );
@@ -187,10 +203,16 @@ export class OdometerDrawer {
   protected errorOf(field: OdometerField, includeServer = true): string | null {
     this.events();
     const server = this.fieldErrors()[field];
-    if (includeServer && server) return server;
+    if (includeServer && server) {
+      return server;
+    }
     const control = this.form.controls[field];
-    if (!control.touched && !this.submitted) return null;
-    if (control.errors) return validationMessage(control.errors, this.language());
+    if (!control.touched && !this.submitted) {
+      return null;
+    }
+    if (control.errors) {
+      return validationMessage(control.errors, this.language());
+    }
     const previous = this.previous();
     if (field === 'odometerKm') {
       const km = this.form.controls.odometerKm.value;
@@ -199,17 +221,25 @@ export class OdometerDrawer {
         : null;
     }
     const at = this.readingInstant();
-    if (!at) return this.text().invalidTime;
+    if (!at) {
+      return this.text().invalidTime;
+    }
     const year = new Date(at).getUTCFullYear();
-    if (year < 2000 || year > 2100) return this.text().dateRange;
-    if (Date.parse(at) > Date.parse(this.latestAllowedAt())) return this.text().futureReading;
+    if (year < 2000 || year > 2100) {
+      return this.text().dateRange;
+    }
+    if (Date.parse(at) > Date.parse(this.latestAllowedAt())) {
+      return this.text().futureReading;
+    }
     return previous && Date.parse(at) <= Date.parse(previous.recordedAt)
       ? this.text().earlierReading
       : null;
   }
 
   protected submit(): void {
-    if (this.saving()) return;
+    if (this.saving()) {
+      return;
+    }
     this.submitted = true;
     this.form.markAllAsTouched();
     if (fields.some((field) => this.errorOf(field, false))) {
@@ -223,12 +253,15 @@ export class OdometerDrawer {
     }
     const value = this.form.getRawValue();
     const recordedAt = this.readingInstant();
-    if (value.odometerKm !== null && recordedAt)
+    if (value.odometerKm !== null && recordedAt) {
       this.save.emit({ odometerKm: Math.round(value.odometerKm * 10) / 10, recordedAt });
+    }
   }
 
   protected async requestClose(): Promise<void> {
-    if (!this.saving() && (await this.drawer().confirmLeave(this.form.dirty))) this.closed.emit();
+    if (!this.saving() && (await this.drawer().confirmLeave(this.form.dirty))) {
+      this.closed.emit();
+    }
   }
 
   canLeave(): boolean | Promise<boolean> {

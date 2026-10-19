@@ -245,11 +245,16 @@ export class DriversView {
 
   /** The tag beside a document date: expired, or due within the warning window. */
   protected expiry(dateOnly: string | null): { severity: 'danger' | 'warn'; label: string } | null {
-    if (dateOnly === null) return null;
+    if (dateOnly === null) {
+      return null;
+    }
     const days = daysUntil(dateOnly, this.businessDate());
-    if (days < 0) return { severity: 'danger', label: this.text().expiry.expired };
-    if (days <= documentWarningDays)
+    if (days < 0) {
+      return { severity: 'danger', label: this.text().expiry.expired };
+    }
+    if (days <= documentWarningDays) {
       return { severity: 'warn', label: interpolate(this.text().expiry.soon, { days }) };
+    }
     return null;
   }
 
@@ -290,9 +295,13 @@ export class DriversView {
   }
 
   protected sort(event: TableLazyLoadEvent): void {
-    if (!this.sortReady()) return;
+    if (!this.sortReady()) {
+      return;
+    }
     const next = listQuery.sorted(this.state(), event);
-    if (next) this.changeQuery(next);
+    if (next) {
+      this.changeQuery(next);
+    }
   }
 
   protected select(rows: readonly DriverRow[] | null): void {
@@ -302,7 +311,9 @@ export class DriversView {
   /** The selection belongs to the rows on screen, so any new query clears it. */
   private changeQuery(query: ListQuery): void {
     this.stateChange.emit(query);
-    if (this.selection().length) this.selectionChange.emit([]);
+    if (this.selection().length) {
+      this.selectionChange.emit([]);
+    }
   }
 
   private toRecord(row: DriverRow): ListRecord<DriverActionId> {

@@ -14,7 +14,9 @@ export function lockWhileSaving(
   effect(() => {
     const busy = saving();
     untracked(() => {
-      if (busy === locked) return;
+      if (busy === locked) {
+        return;
+      }
       locked = busy;
       if (busy) {
         form.disable();

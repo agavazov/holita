@@ -36,8 +36,9 @@ test('pages trips from truck details, restores cursor history and exposes all 23
 }) => {
   const headers: Record<string, string>[] = [];
   page.on('request', (request) => {
-    if (request.url() === app.gatewayUrl && request.postData()?.includes('AdminKarmaTrips'))
+    if (request.url() === app.gatewayUrl && request.postData()?.includes('AdminKarmaTrips')) {
       headers.push(request.headers());
+    }
   });
   await page.goto(`${app.url}/en/karma-client/cars/41`);
   await page.getByRole('link', { name: 'Trips', exact: true }).click();
@@ -95,7 +96,9 @@ test('walks 600 events and filters UTC dates/code zero and changes page size wit
       expect(seen.has(id)).toBe(false);
       seen.add(id);
     }
-    if (index < 11) await page.getByRole('button', { name: 'Older', exact: true }).click();
+    if (index < 11) {
+      await page.getByRole('button', { name: 'Older', exact: true }).click();
+    }
   }
   expect(seen.size).toBe(600);
   await expect(page.getByRole('button', { name: 'Older', exact: true })).toBeDisabled();
@@ -153,7 +156,7 @@ test('extends the profile period and retains data on failed refresh with retry a
   await page.goto(`${app.url}/en/karma-client/cars/999/driving-profile`);
   await expect(page.getByRole('alert')).toContainText('Truck not found');
 });
-for (const section of ['trips', 'events', 'driving-profile'])
+for (const section of ['trips', 'events', 'driving-profile']) {
   test(`reviews ${section} on desktop/mobile in light/dark themes and validates keyboard details`, async ({
     page,
     app,
@@ -176,3 +179,4 @@ for (const section of ['trips', 'events', 'driving-profile'])
       await expect(button).toBeFocused();
     }
   });
+}

@@ -33,7 +33,9 @@ export class HistoryService {
     const query = historyQuery(input, 'trips');
     const signal = AbortSignal.timeout(4000);
     const car = await this.cars.find(query.carId, context, signal);
-    if (!car) return tripsPage([], query);
+    if (!car) {
+      return tripsPage([], query);
+    }
     const result = tripsPage(
       await this.karma.read('trips', historyParameters(query), signal),
       query,
@@ -49,7 +51,9 @@ export class HistoryService {
         await this.karma.read('trips', historyParameters(older), signal),
         older,
       );
-      if (lookahead.items.length) return { ...result, hasMore: true, nextCursor: lookahead.cursor };
+      if (lookahead.items.length) {
+        return { ...result, hasMore: true, nextCursor: lookahead.cursor };
+      }
     }
     return result;
   }
@@ -58,7 +62,9 @@ export class HistoryService {
     const query = historyQuery(input, 'events');
     const signal = AbortSignal.timeout(4000);
     const car = await this.cars.find(query.carId, context, signal);
-    if (!car) return eventsPage([], query);
+    if (!car) {
+      return eventsPage([], query);
+    }
     return eventsPage(await this.karma.read('events', historyParameters(query), signal), query);
   }
 
@@ -66,7 +72,9 @@ export class HistoryService {
     const parameters = profileParameters(input);
     const signal = AbortSignal.timeout(4000);
     const car = await this.cars.find(input.carId, context, signal);
-    if (!car) return null;
+    if (!car) {
+      return null;
+    }
     return drivingProfile(
       await this.karma.read('driving-profile', parameters, signal),
       input.carId,

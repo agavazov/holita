@@ -87,8 +87,9 @@ export class AdminTopbar {
 
   /** Without Branches the menu is disabled and its label says why. */
   protected readonly branchLabel = computed(() => {
-    if (!this.branches().length)
+    if (!this.branches().length) {
       return this.loading() ? this.text().loadingBranches : this.text().emptyBranches;
+    }
     return (
       this.branches().find((branch) => branch.id === this.branchId())?.name ?? this.text().branches
     );
@@ -176,11 +177,15 @@ export class AdminTopbar {
 
   /** Choosing the current Branch again is not a change (it would reload the page). */
   protected chooseBranch(id: string): void {
-    if (id !== this.branchId()) this.branchChange.emit(id);
+    if (id !== this.branchId()) {
+      this.branchChange.emit(id);
+    }
   }
 
   protected chooseLanguage(code: string): void {
-    if (code !== this.language()) this.languageChange.emit(code);
+    if (code !== this.language()) {
+      this.languageChange.emit(code);
+    }
   }
 
   protected refreshNow(): void {
@@ -188,12 +193,19 @@ export class AdminTopbar {
   }
 
   protected chooseNotification(id: string): void {
-    if (id === markAllRead) this.notificationsRead.emit();
-    else this.notificationOpen.emit(id);
+    if (id === markAllRead) {
+      this.notificationsRead.emit();
+    } else {
+      this.notificationOpen.emit(id);
+    }
   }
 
   protected chooseAccount(id: string): void {
-    if (id === 'theme') this.appearance.toggle();
-    if (id === 'sign-out') this.signOut.emit();
+    if (id === 'theme') {
+      this.appearance.toggle();
+    }
+    if (id === 'sign-out') {
+      this.signOut.emit();
+    }
   }
 }

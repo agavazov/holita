@@ -11,7 +11,8 @@ export function fleetAdminOrigins(value: string | undefined, legacy: string | un
         return true;
       }
     })
-  )
+  ) {
     throw new Error('ADMIN_ORIGINS must contain exact HTTP(S) origins separated by commas.');
+  }
   return [...new Set(origins)];
 }

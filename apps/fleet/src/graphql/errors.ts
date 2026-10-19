@@ -30,8 +30,9 @@ export const graphqlDiagnostics: ApolloServerPlugin<RequestContext> = {
           if (
             (cause instanceof HttpException && codes.has(cause.getStatus())) ||
             (typeof code === 'string' && publicCodes.has(code))
-          )
+          ) {
             continue;
+          }
           logger.error({
             requestId: contextValue.requestId,
             error: cause instanceof Error ? cause.name : 'UnknownError',
@@ -51,7 +52,9 @@ export const graphqlDiagnostics: ApolloServerPlugin<RequestContext> = {
 };
 
 function fieldErrors(value: unknown): { path: string; message: string }[] {
-  if (!Array.isArray(value)) return [];
+  if (!Array.isArray(value)) {
+    return [];
+  }
   return value.slice(0, 30).flatMap((entry: unknown) => {
     if (
       typeof entry !== 'object' ||
@@ -62,8 +65,9 @@ function fieldErrors(value: unknown): { path: string; message: string }[] {
       typeof entry.message !== 'string' ||
       !/^[a-zA-Z][a-zA-Z0-9]*$/.test(entry.path) ||
       entry.message.length > 300
-    )
+    ) {
       return [];
+    }
     return [{ path: entry.path, message: entry.message }];
   });
 }
@@ -91,8 +95,9 @@ export function formatGraphqlError(
     }
   }
   const code = formatted.extensions?.['code'];
-  if (typeof code === 'string' && publicCodes.has(code))
+  if (typeof code === 'string' && publicCodes.has(code)) {
     return { ...formatted, extensions: { code, ...trace } };
+  }
   return {
     ...formatted,
     message: 'Internal server error',

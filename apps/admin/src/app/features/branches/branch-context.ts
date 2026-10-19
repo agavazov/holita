@@ -47,7 +47,9 @@ export class BranchContext {
       this.branchState.set(null);
       this.discoveryToken = session?.token ?? null;
     }
-    if (!session) return;
+    if (!session) {
+      return;
+    }
     this.loading.set(true);
     this.error.set(null);
     const { query, close } = this.api.watch(language);
@@ -56,7 +58,9 @@ export class BranchContext {
       next: (result) => {
         this.loading.set(result.loading);
         this.error.set(result.error ?? null);
-        if (result.dataState === 'complete') this.branchState.set(result.data.branches);
+        if (result.dataState === 'complete') {
+          this.branchState.set(result.data.branches);
+        }
       },
       error: (error: unknown) => {
         this.loading.set(false);
@@ -75,14 +79,16 @@ export class BranchContext {
     const branches = this.branches();
     const selected = this.selectedId();
     if (this.session.current() && branches?.length) {
-      if (selected) this.session.selectBranch(selected);
-      else if (!this.route.firstChild && !this.defaultNavigationPaused) {
+      if (selected) {
+        this.session.selectBranch(selected);
+      } else if (!this.route.firstChild && !this.defaultNavigationPaused) {
         const branch =
           branches.find((branch) => branch.id === this.session.branchId()) ?? branches[0];
-        if (branch)
+        if (branch) {
           void this.router.navigate(['/', language, branch.id, 'fleet', 'vehicles'], {
             replaceUrl: true,
           });
+        }
       }
     }
   }
@@ -123,7 +129,9 @@ export class BranchContext {
   refresh(): void {
     const query = this.query;
     void query?.refetch().catch((error: unknown) => {
-      if (this.query === query) this.error.set(error);
+      if (this.query === query) {
+        this.error.set(error);
+      }
     });
   }
 

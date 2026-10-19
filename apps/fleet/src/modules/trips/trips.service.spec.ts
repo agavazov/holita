@@ -11,7 +11,9 @@ async function fieldErrors(action: Promise<unknown>): Promise<unknown> {
   try {
     await action;
   } catch (error) {
-    if (!(error instanceof BadRequestException)) throw error;
+    if (!(error instanceof BadRequestException)) {
+      throw error;
+    }
     const response = error.getResponse();
     return typeof response === 'object' && 'fieldErrors' in response
       ? response.fieldErrors
@@ -169,10 +171,11 @@ describe('Trips list contract', () => {
       { startedFrom: '2026-10-18' },
       { vehicleIds: [] },
       { driverIds: ['driver'] },
-    ])
+    ]) {
       expect(await fieldErrors(service.list(context, { filter }))).toMatchObject([
         { path: 'filter' },
       ]);
+    }
     const sort = { field: 'STARTED_AT' as const, direction: 'ASC' as const };
     Reflect.set(sort, 'field', 'SPEED');
     expect(await fieldErrors(service.list(context, { sort }))).toMatchObject([{ path: 'sort' }]);

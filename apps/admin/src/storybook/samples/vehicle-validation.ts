@@ -11,11 +11,18 @@ export function vehicleFormErrors(
 ): Partial<Record<VehicleField, string>> {
   const errors: Partial<Record<VehicleField, string>> = {};
   for (const vehicle of vehicles) {
-    if (vehicle.id === excludeId) continue;
-    if (form.fleetNumber && form.fleetNumber === vehicle.fleetNumber)
+    if (vehicle.id === excludeId) {
+      continue;
+    }
+    if (form.fleetNumber && form.fleetNumber === vehicle.fleetNumber) {
       errors.fleetNumber = text.duplicateFleetNumber;
-    if (form.vin && form.vin === vehicle.vin) errors.vin = text.duplicateVin;
+    }
+    if (form.vin && form.vin === vehicle.vin) {
+      errors.vin = text.duplicateVin;
+    }
   }
-  if (form.status === 'INACTIVE' && form.driverId !== null) errors.driverId = text.inactiveDriver;
+  if (form.status === 'INACTIVE' && form.driverId !== null) {
+    errors.driverId = text.inactiveDriver;
+  }
   return errors;
 }

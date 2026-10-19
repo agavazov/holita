@@ -175,7 +175,9 @@ export const CalendarEscape: Story = {
         '.p-datepicker-panel [data-date][tabindex="0"]',
       );
       const source = target === 'input' ? input : cell;
-      if (!source) throw new Error('Missing focusable calendar cell.');
+      if (!source) {
+        throw new Error('Missing focusable calendar cell.');
+      }
       source.focus();
       // PrimeNG 22 reads legacy Escape codes in both the input and its calendar cells.
       await fireEvent.keyDown(source, { key: 'Escape', code: 'Escape', keyCode: 27, which: 27 });

@@ -205,13 +205,17 @@ class RouteDrawerDemo {
       },
     );
     afterNextRender(() => {
-      if (this.confirmOnOpen()) void this.drawer().confirmLeave(this.dirty());
+      if (this.confirmOnOpen()) {
+        void this.drawer().confirmLeave(this.dirty());
+      }
     });
   }
 
   cancel(): void {
     // In view-edit, Cancel returns to the record; a direct editor would close instead.
-    if (this.mode() === 'view-edit') this.editing.set(false);
+    if (this.mode() === 'view-edit') {
+      this.editing.set(false);
+    }
   }
 
   readonly statuses = ['Active', 'In service', 'Inactive'];

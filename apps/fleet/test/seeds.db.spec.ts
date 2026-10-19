@@ -15,7 +15,9 @@ describe('RentalSofia Fleet seeds', () => {
   it('inserts sample records once without replacing edited records or assignments', async () => {
     expect(await seedFleet(database.client)).toEqual({ vehicles: 2, devices: 1 });
     const first = vehicleSeeds[0];
-    if (!first) throw new Error('Missing vehicle seed');
+    if (!first) {
+      throw new Error('Missing vehicle seed');
+    }
     await database.client.vehicle.update({
       where: { id: first.id },
       data: { licensePlate: 'EDITED', notes: 'Preserve this' },

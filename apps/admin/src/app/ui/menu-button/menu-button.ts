@@ -132,13 +132,17 @@ export class MenuButton {
     afterRenderEffect(() => {
       const menu = this.menu();
       const focused = menu.focusedOptionId();
-      if (!menu.visible() || focused === null) return;
+      if (!menu.visible() || focused === null) {
+        return;
+      }
       this.document.getElementById(String(focused))?.scrollIntoView({ block: 'nearest' });
     });
   }
 
   protected toggle(event: Event): void {
-    if (this.disabled()) return;
+    if (this.disabled()) {
+      return;
+    }
     this.menu().toggle(event);
   }
 

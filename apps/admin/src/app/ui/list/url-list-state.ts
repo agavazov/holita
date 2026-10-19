@@ -61,10 +61,14 @@ export class UrlListState<F, S extends string> {
       const differs = Object.entries(normalized).some(
         ([name, value]) => params.get(name) !== (typeof value === 'string' ? value : null),
       );
-      if (differs) this.navigate(normalized, true);
+      if (differs) {
+        this.navigate(normalized, true);
+      }
     });
     this.changes.pipe(takeUntilDestroyed(destroyRef)).subscribe((state) => {
-      if (!this.pendingSearch) this.searchDraft.set(state.search);
+      if (!this.pendingSearch) {
+        this.searchDraft.set(state.search);
+      }
     });
     this.searchEdits
       .pipe(
@@ -73,8 +77,9 @@ export class UrlListState<F, S extends string> {
       )
       .subscribe((value) => {
         this.pendingSearch = false;
-        if (searchApplies(value))
+        if (searchApplies(value)) {
           this.apply({ ...this.state(), search: normalizeSearch(value), page: 1 });
+        }
       });
     // p-table can emit several sort events for one click; the last one wins.
     this.tableSorts
@@ -101,17 +106,23 @@ export class UrlListState<F, S extends string> {
 
   setSort(field: S, direction: SortDirection): void {
     const state = this.state();
-    if (state.sort.field === field && state.sort.direction === direction) return;
+    if (state.sort.field === field && state.sort.direction === direction) {
+      return;
+    }
     this.apply({ ...state, sort: { field, direction }, page: 1 });
   }
 
   /** Maps a `p-table` sort event whose `field` is a sort param of the definition. */
   sortFromTable(event: unknown): void {
-    if (typeof event !== 'object' || event === null) return;
+    if (typeof event !== 'object' || event === null) {
+      return;
+    }
     const param = 'field' in event ? event.field : undefined;
     const order = 'order' in event ? event.order : undefined;
     const field = this.definition.sorts.find((sort) => sort.param === param)?.field;
-    if (!field || (order !== 1 && order !== -1)) return;
+    if (!field || (order !== 1 && order !== -1)) {
+      return;
+    }
     this.tableSorts.next({ field, direction: order === 1 ? 'ASC' : 'DESC' });
   }
 
@@ -133,7 +144,11 @@ export class UrlListState<F, S extends string> {
     const state = this.state();
     const view = this.definition.viewDefaultSorts?.param;
     const filter: Partial<F> = {};
-    for (const key in this.definition.filters) if (key === view) filter[key] = state.filter[key];
+    for (const key in this.definition.filters) {
+      if (key === view) {
+        filter[key] = state.filter[key];
+      }
+    }
     this.searchDraft.set('');
     this.apply({ ...state, search: '', filter, page: 1 });
   }
@@ -142,8 +157,9 @@ export class UrlListState<F, S extends string> {
   correctPage(lastPage: number): void {
     const state = this.state();
     const target = Math.max(1, lastPage);
-    if (state.page > target)
+    if (state.page > target) {
       this.navigate(listStateParams({ ...state, page: target }, this.definition), true);
+    }
   }
 
   /** Drops a pending debounced search. */
@@ -153,7 +169,9 @@ export class UrlListState<F, S extends string> {
   }
 
   private apply(state: ListState<F, S>): void {
-    if (sameListState(state, this.state(), this.definition)) return;
+    if (sameListState(state, this.state(), this.definition)) {
+      return;
+    }
     this.navigate(listStateParams(state, this.definition), false);
   }
 

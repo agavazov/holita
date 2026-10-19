@@ -75,15 +75,18 @@ export class EventsPage implements OnInit {
   private trigger: HTMLElement | null = null;
 
   ngOnInit(): void {
-    if (!this.validId()) return;
+    if (!this.validId()) {
+      return;
+    }
     this.api.initialize(this.language());
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       if (
         this.route.snapshot.paramMap.get('recordId') !== this.carId() ||
         this.route.parent?.snapshot.paramMap.get('language') !== this.language() ||
         this.route.snapshot.data['section'] !== 'events'
-      )
+      ) {
         return;
+      }
       this.pageSubscription?.unsubscribe();
       this.pageQuery = undefined;
       this.page.set(null);
@@ -101,7 +104,9 @@ export class EventsPage implements OnInit {
         types: params.get('types') ?? '',
       });
       this.restorePrevious();
-      if (this.car()) this.readPage();
+      if (this.car()) {
+        this.readPage();
+      }
     });
     this.carLoading.set(true);
     this.carQuery = this.api.watchCar(this.carId());
@@ -112,7 +117,9 @@ export class EventsPage implements OnInit {
         if (result.dataState === 'complete' && !result.error) {
           this.car.set(result.data.karmaCar);
           this.carLoaded.set(true);
-          if (this.car() && !this.pageQuery) this.readPage();
+          if (this.car() && !this.pageQuery) {
+            this.readPage();
+          }
         }
       },
       error: () => {
@@ -128,7 +135,9 @@ export class EventsPage implements OnInit {
   }
 
   private readPage(): void {
-    if (!this.input) return;
+    if (!this.input) {
+      return;
+    }
     const query = this.api.watchEvents(this.input);
     this.pageQuery = query;
     this.pageLoading.set(true);
@@ -136,8 +145,9 @@ export class EventsPage implements OnInit {
       next: (result) => {
         this.pageLoading.set(result.loading);
         this.error.set(!!result.error);
-        if (result.dataState === 'complete' && !result.error)
+        if (result.dataState === 'complete' && !result.error) {
           this.page.set(result.data.karmaEvents);
+        }
       },
       error: () => {
         this.pageLoading.set(false);
@@ -147,7 +157,9 @@ export class EventsPage implements OnInit {
   }
 
   refresh(): void {
-    if (this.loading()) return;
+    if (this.loading()) {
+      return;
+    }
     this.error.set(false);
     const query = this.pageQuery ?? this.carQuery;
     void query?.refetch().catch(() => {
@@ -169,7 +181,9 @@ export class EventsPage implements OnInit {
     };
     const input = eventsFilters(this.carId(), convertToParamMap(params));
     this.formError.set(input === null);
-    if (!input) return;
+    if (!input) {
+      return;
+    }
     if (JSON.stringify(input) === JSON.stringify(this.input)) {
       this.refresh();
       return;
@@ -184,18 +198,24 @@ export class EventsPage implements OnInit {
 
   older(): void {
     const cursor = this.page()?.nextCursor;
-    if (!cursor || this.loading() || this.error()) return;
+    if (!cursor || this.loading() || this.error()) {
+      return;
+    }
     this.navigate(cursor, [...this.previous(), this.page()?.cursor ?? this.input?.cursor ?? null]);
   }
 
   newer(): void {
     const history = this.previous();
-    if (!history.length || this.loading()) return;
+    if (!history.length || this.loading()) {
+      return;
+    }
     this.navigate(history.at(-1) ?? null, history.slice(0, -1));
   }
 
   latest(): void {
-    if (this.loading()) return;
+    if (this.loading()) {
+      return;
+    }
     if (!this.input?.cursor) {
       this.refresh();
       return;
@@ -235,7 +255,9 @@ export class EventsPage implements OnInit {
           (value: unknown): value is string | null => value === null || typeof value === 'string',
         ),
       );
-    } else this.previous.set([]);
+    } else {
+      this.previous.set([]);
+    }
   }
 
   view(row: EventsRow, event?: Event): void {
@@ -246,7 +268,9 @@ export class EventsPage implements OnInit {
 
   closeDetails(): void {
     this.selected.set(null);
-    if (this.trigger?.isConnected) this.trigger.focus();
+    if (this.trigger?.isConnected) {
+      this.trigger.focus();
+    }
     this.trigger = null;
   }
   fields(row: EventsRow) {

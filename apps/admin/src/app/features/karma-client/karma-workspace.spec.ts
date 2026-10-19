@@ -61,10 +61,16 @@ describe('authenticated global Karma workspace', () => {
     http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => {
-    for (const read of http.match((request) => operation(request, 'AdminKarmaReferences')))
-      if (!read.cancelled) read.flush({ data: { karmaProjects: [], karmaTimeZones: [] } });
-    for (const read of http.match((request) => operation(request, 'AdminKarmaLocation')))
-      if (!read.cancelled) read.flush({ data: { karmaLocation: null } });
+    for (const read of http.match((request) => operation(request, 'AdminKarmaReferences'))) {
+      if (!read.cancelled) {
+        read.flush({ data: { karmaProjects: [], karmaTimeZones: [] } });
+      }
+    }
+    for (const read of http.match((request) => operation(request, 'AdminKarmaLocation'))) {
+      if (!read.cancelled) {
+        read.flush({ data: { karmaLocation: null } });
+      }
+    }
     http.verify({ ignoreCancelled: true });
   });
 
@@ -175,7 +181,9 @@ describe('authenticated global Karma workspace', () => {
       .flush({ data: { branches: [{ id: branch, name: 'Branch A' }] } });
     await harness.fixture.whenStable();
     const workspace: unknown = harness.routeDebugElement?.componentInstance;
-    if (!(workspace instanceof AdminWorkspace)) throw new Error('Missing AdminWorkspace');
+    if (!(workspace instanceof AdminWorkspace)) {
+      throw new Error('Missing AdminWorkspace');
+    }
     const old = http.expectOne((request) => operation(request, 'AdminKarmaCars'));
     workspace.branches.choose(branch, workspace.language());
     await harness.fixture.whenStable();

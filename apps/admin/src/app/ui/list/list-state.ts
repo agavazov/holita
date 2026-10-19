@@ -63,7 +63,9 @@ function listCodec<T extends string>(
       const result: T[] = [];
       for (const value of values) {
         const accepted = accept(value.trim());
-        if (accepted !== undefined && !result.includes(accepted)) result.push(accepted);
+        if (accepted !== undefined && !result.includes(accepted)) {
+          result.push(accepted);
+        }
       }
       return result.length ? result.slice(0, max) : undefined;
     },
@@ -74,7 +76,9 @@ function listCodec<T extends string>(
 
 function realDate(text: string): boolean {
   const match = dateOnly.exec(text);
-  if (!match) return false;
+  if (!match) {
+    return false;
+  }
   const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
   const date = new Date(Date.UTC(year, month - 1, day));
   return (
@@ -130,7 +134,9 @@ export const codecs = {
     return {
       read: (values) => {
         const text = values[0]?.trim() ?? '';
-        if (!/^-?\d+$/.test(text)) return undefined;
+        if (!/^-?\d+$/.test(text)) {
+          return undefined;
+        }
         const value = Number(text);
         return value >= min && value <= max ? value : undefined;
       },
@@ -144,7 +150,9 @@ export const codecs = {
     return {
       read: (values) => {
         const text = values[0]?.trim() ?? '';
-        if (!/^-?\d+(\.\d+)?$/.test(text)) return undefined;
+        if (!/^-?\d+(\.\d+)?$/.test(text)) {
+          return undefined;
+        }
         const value = Number((Math.round(Number(text) / step) * step).toFixed(places));
         return Number.isFinite(value) && value >= min && value <= max ? value : undefined;
       },
@@ -186,8 +194,11 @@ function writtenFilter<F, S extends string>(
   definition: ListDefinition<F, S>,
   name: string,
 ): string | null {
-  for (const key in definition.filters)
-    if (key === name) return definition.filters[key].write(state.filter[key]);
+  for (const key in definition.filters) {
+    if (key === name) {
+      return definition.filters[key].write(state.filter[key]);
+    }
+  }
   return null;
 }
 
@@ -227,9 +238,13 @@ export function readListState<F, S extends string>(
   for (const key in definition.filters) {
     const raw = params.get(key);
     const value = definition.filters[key].read(raw === null ? [] : raw.split(','));
-    if (value !== undefined) filter[key] = value;
+    if (value !== undefined) {
+      filter[key] = value;
+    }
   }
-  if (definition.normalizeFilter) filter = definition.normalizeFilter(filter);
+  if (definition.normalizeFilter) {
+    filter = definition.normalizeFilter(filter);
+  }
   return {
     page,
     pageSize: size,
@@ -261,7 +276,9 @@ export function listStateParams<F, S extends string>(
     page: state.page > 1 ? String(state.page) : null,
     pageSize: state.pageSize === definition.defaultPageSize ? null : String(state.pageSize),
   };
-  for (const key in definition.filters) params[key] = definition.filters[key].write(filter[key]);
+  for (const key in definition.filters) {
+    params[key] = definition.filters[key].write(filter[key]);
+  }
   return params;
 }
 
@@ -277,10 +294,14 @@ export function sameListState<F, S extends string>(
     a.search !== b.search ||
     a.sort.field !== b.sort.field ||
     a.sort.direction !== b.sort.direction
-  )
+  ) {
     return false;
-  for (const key in definition.filters)
-    if (!definition.filters[key].same(a.filter[key], b.filter[key])) return false;
+  }
+  for (const key in definition.filters) {
+    if (!definition.filters[key].same(a.filter[key], b.filter[key])) {
+      return false;
+    }
+  }
   return true;
 }
 
@@ -290,11 +311,13 @@ export function activeFilterCount<F, S extends string>(
   definition: ListDefinition<F, S>,
 ): number {
   let count = 0;
-  for (const key in definition.filters)
+  for (const key in definition.filters) {
     if (
       key !== definition.viewDefaultSorts?.param &&
       definition.filters[key].write(state.filter[key]) !== null
-    )
+    ) {
       count++;
+    }
+  }
   return count;
 }

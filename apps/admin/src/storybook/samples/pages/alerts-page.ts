@@ -202,7 +202,9 @@ export class AlertsPage {
     const [id] = ids;
     switch (action) {
       case 'open':
-        if (id) this.drawer.set({ id });
+        if (id) {
+          this.drawer.set({ id });
+        }
         return;
       case 'acknowledge':
         this.update(ids, 'acknowledge');
@@ -211,11 +213,15 @@ export class AlertsPage {
         );
         return;
       case 'resolve':
-        if (id) this.drawer.set({ id });
+        if (id) {
+          this.drawer.set({ id });
+        }
         return;
       case 'vehicle': {
         const alert = id ? this.alerts().find((item) => item.id === id) : undefined;
-        if (alert) this.openVehicle(alert.vehicleId);
+        if (alert) {
+          this.openVehicle(alert.vehicleId);
+        }
         return;
       }
     }
@@ -223,7 +229,9 @@ export class AlertsPage {
 
   /** A drawer action: applied after the simulated latency, or failed once in `save-error`. */
   protected apply(id: string, action: AlertAction, remark: string): void {
-    if (this.busy()) return;
+    if (this.busy()) {
+      return;
+    }
     this.busy.set(action);
     this.saveError.set(null);
     this.saveTimer = setTimeout(() => {
@@ -234,7 +242,9 @@ export class AlertsPage {
         return;
       }
       this.update([id], action, remark);
-      if (action !== 'reopen') this.closeDrawer();
+      if (action !== 'reopen') {
+        this.closeDrawer();
+      }
     }, saveDelayMs);
   }
 
@@ -259,7 +269,9 @@ export class AlertsPage {
           : alert,
       ),
     );
-    if (action === 'reopen') return;
+    if (action === 'reopen') {
+      return;
+    }
     const template =
       action === 'acknowledge' ? this.text().notices.acknowledged : this.text().notices.resolved;
     this.messages.add({

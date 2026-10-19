@@ -46,6 +46,8 @@ export class RowActions<A extends string> {
 
   protected chosen(choice: MenuChoice): void {
     const action = this.actions().find((candidate) => candidate.id === choice.id);
-    if (action) this.choose.emit({ action: action.id, origin: choice.origin });
+    if (action) {
+      this.choose.emit({ action: action.id, origin: choice.origin });
+    }
   }
 }

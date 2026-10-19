@@ -51,8 +51,9 @@ function pageKey(root: ActivatedRouteSnapshot): string {
   let depth = 0;
   for (let route: ActivatedRouteSnapshot | null = root; route; route = route.firstChild) {
     const data = route.data;
-    if (route.routeConfig && data['drawer'] !== true && data['tab'] !== true)
+    if (route.routeConfig && data['drawer'] !== true && data['tab'] !== true) {
       parts.push(`${String(depth)}:${route.routeConfig.path ?? ''}`);
+    }
     depth++;
   }
   return parts.join('/');
@@ -128,16 +129,19 @@ export class AdminShell {
         takeUntilDestroyed(),
       )
       .subscribe((event) => {
-        if (!(event instanceof NavigationEnd)) return;
+        if (!(event instanceof NavigationEnd)) {
+          return;
+        }
         this.mobileOpen.set(false);
         const next = pageKey(this.router.routerState.snapshot.root);
-        if (next !== page && event.id > 1)
+        if (next !== page && event.id > 1) {
           afterNextRender(
             () => {
               this.focusPage();
             },
             { injector: this.injector },
           );
+        }
         page = next;
       });
   }
@@ -148,8 +152,9 @@ export class AdminShell {
       typeof value === 'string' &&
       value !== this.branchId() &&
       this.branches().some((branch) => branch.id === value)
-    )
+    ) {
       this.branchSelected.emit(value);
+    }
   }
 
   toggleNavigation(): void {
@@ -171,13 +176,17 @@ export class AdminShell {
 
   drawerVisibilityChanged(visible: boolean): void {
     this.mobileOpen.set(visible);
-    if (!visible) this.topbar().focusMenu();
+    if (!visible) {
+      this.topbar().focusMenu();
+    }
   }
 
   /** After a page change: the page title, else the main region (unless the page took focus). */
   private focusPage(): void {
     const main = document.getElementById('main-content');
-    if (!main || main.contains(document.activeElement)) return;
+    if (!main || main.contains(document.activeElement)) {
+      return;
+    }
     (document.getElementById('page-title') ?? main).focus();
   }
 }

@@ -70,7 +70,9 @@ export class KarmaTransport {
         });
         if (response.status === 401) {
           await response.body?.cancel();
-          if (this.session === session) this.session = undefined;
+          if (this.session === session) {
+            this.session = undefined;
+          }
           continue;
         }
         if (response.status === 404 && missingCar) {
@@ -85,7 +87,9 @@ export class KarmaTransport {
         const expired = record(data) && data['error'] === 'Not logged in';
         if (expired) {
           // An older response must not discard a newer session established by another request.
-          if (this.session === session) this.session = undefined;
+          if (this.session === session) {
+            this.session = undefined;
+          }
           continue;
         }
         return data;
@@ -105,14 +109,17 @@ export class KarmaTransport {
       url.password ||
       url.search ||
       url.hash
-    )
+    ) {
       throw unavailable();
+    }
     url.pathname = url.pathname.replace(/\/$/, '') + '/' + path;
     return url;
   }
 
   private async authenticate(signal: AbortSignal): Promise<string> {
-    if (this.session) return this.session;
+    if (this.session) {
+      return this.session;
+    }
     if (!this.login) {
       this.login = this.signIn(signal).finally(() => {
         this.login = undefined;
@@ -124,7 +131,9 @@ export class KarmaTransport {
   private async signIn(signal: AbortSignal): Promise<string> {
     const user = process.env.KARMA_USER;
     const password = process.env.KARMA_PASSWORD;
-    if (!user || !password) throw unavailable();
+    if (!user || !password) {
+      throw unavailable();
+    }
     const response = await fetch(this.url('login'), {
       method: 'POST',
       signal,
@@ -137,8 +146,9 @@ export class KarmaTransport {
       throw unavailable();
     }
     const data: unknown = await response.json();
-    if (!record(data) || typeof data['session_id'] !== 'string' || !data['session_id'])
+    if (!record(data) || typeof data['session_id'] !== 'string' || !data['session_id']) {
       throw unavailable();
+    }
     this.session = data['session_id'];
     return this.session;
   }

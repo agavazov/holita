@@ -41,7 +41,9 @@ async function drawerAt(url: string): Promise<ActivatedRoute> {
   const drawer: unknown = harness.fixture.debugElement.query(
     (element) => element.componentInstance instanceof TestDrawer,
   ).componentInstance;
-  if (!(drawer instanceof TestDrawer)) throw new Error('Missing drawer.');
+  if (!(drawer instanceof TestDrawer)) {
+    throw new Error('Missing drawer.');
+  }
   return drawer.route;
 }
 

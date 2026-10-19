@@ -57,17 +57,36 @@ function eventWhere(scope: FleetScope, criteria: EventCriteria): Prisma.FleetEve
       ],
     };
   });
-  if (criteria.ids) conditions.push({ id: { in: criteria.ids } });
-  if (criteria.actionable !== undefined)
+  if (criteria.ids) {
+    conditions.push({ id: { in: criteria.ids } });
+  }
+  if (criteria.actionable !== undefined) {
     conditions.push({ alertStatus: criteria.actionable ? { not: null } : null });
-  if (criteria.alertStatuses) conditions.push({ alertStatus: { in: criteria.alertStatuses } });
-  if (criteria.severities) conditions.push({ severity: { in: criteria.severities } });
-  if (criteria.kinds) conditions.push({ kind: { in: criteria.kinds } });
-  if (criteria.vehicleIds) conditions.push({ vehicleId: { in: criteria.vehicleIds } });
-  if (criteria.driverIds) conditions.push({ driverId: { in: criteria.driverIds } });
-  if (criteria.tripIds) conditions.push({ tripId: { in: criteria.tripIds } });
-  if (criteria.occurredFrom) conditions.push({ occurredAt: { gte: criteria.occurredFrom } });
-  if (criteria.occurredTo) conditions.push({ occurredAt: { lt: criteria.occurredTo } });
+  }
+  if (criteria.alertStatuses) {
+    conditions.push({ alertStatus: { in: criteria.alertStatuses } });
+  }
+  if (criteria.severities) {
+    conditions.push({ severity: { in: criteria.severities } });
+  }
+  if (criteria.kinds) {
+    conditions.push({ kind: { in: criteria.kinds } });
+  }
+  if (criteria.vehicleIds) {
+    conditions.push({ vehicleId: { in: criteria.vehicleIds } });
+  }
+  if (criteria.driverIds) {
+    conditions.push({ driverId: { in: criteria.driverIds } });
+  }
+  if (criteria.tripIds) {
+    conditions.push({ tripId: { in: criteria.tripIds } });
+  }
+  if (criteria.occurredFrom) {
+    conditions.push({ occurredAt: { gte: criteria.occurredFrom } });
+  }
+  if (criteria.occurredTo) {
+    conditions.push({ occurredAt: { lt: criteria.occurredTo } });
+  }
   return { tenantId: scope.tenantId, branchId: scope.branchId, AND: conditions };
 }
 

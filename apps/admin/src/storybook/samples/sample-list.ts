@@ -105,9 +105,15 @@ function matches(value: SampleValue, condition: FilterCondition): boolean {
 }
 
 function compare(left: SampleValue, right: SampleValue, direction: 'asc' | 'desc'): number {
-  if (left === right) return 0;
-  if (left === null) return 1;
-  if (right === null) return -1;
+  if (left === right) {
+    return 0;
+  }
+  if (left === null) {
+    return 1;
+  }
+  if (right === null) {
+    return -1;
+  }
   const order =
     typeof left === 'number' && typeof right === 'number'
       ? left - right
@@ -142,21 +148,26 @@ export function runSampleList<T>(
   const read = sort
     ? (definition.sortColumns?.[sort.field] ?? definition.columns[sort.field])
     : undefined;
-  if (sort && read)
+  if (sort && read) {
     matching.sort((left, right) => {
       const order = compare(read(left.row), read(right.row), sort.direction);
-      if (order) return order;
+      if (order) {
+        return order;
+      }
       for (const secondary of definition.secondarySorts?.[sort.field] ?? []) {
         const next = compare(
           secondary.value(left.row),
           secondary.value(right.row),
           secondary.direction ?? sort.direction,
         );
-        if (next) return next;
+        if (next) {
+          return next;
+        }
       }
       const id = definition.id;
       return (id ? compare(id(left.row), id(right.row), 'desc') : 0) || left.index - right.index;
     });
+  }
   const total = matching.length;
   const lastPage = Math.max(1, Math.ceil(total / query.pageSize));
   const page = Math.min(Math.max(1, query.page), lastPage);

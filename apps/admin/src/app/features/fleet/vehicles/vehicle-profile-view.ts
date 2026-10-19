@@ -124,7 +124,9 @@ export class VehicleProfileView {
 
   protected readonly description = computed(() => {
     const vehicle = this.vehicle();
-    if (!vehicle) return null;
+    if (!vehicle) {
+      return null;
+    }
     const type = vehicle.type ? this.vehicles().types[vehicle.type] : null;
     return [vehicle.fleetNumber, [vehicle.make, vehicle.model].filter(Boolean).join(' '), type]
       .filter(Boolean)
@@ -139,7 +141,9 @@ export class VehicleProfileView {
   });
   protected readonly nextService = computed(() => {
     const task = this.service().find((item) => item.status === 'PLANNED');
-    if (!task) return { value: this.text().kpis.noService, footnote: null, tone: null };
+    if (!task) {
+      return { value: this.text().kpis.noService, footnote: null, tone: null };
+    }
     const due = task.dueOn ? formatDateOnly(task.dueOn, this.language()) : null;
     return {
       value: task.kind,
@@ -179,7 +183,9 @@ export class VehicleProfileView {
 
   protected selectTab(value: string | number | undefined): void {
     const tab = vehicleProfileTabs.find((item) => item === value);
-    if (tab) this.tabChange.emit(tab);
+    if (tab) {
+      this.tabChange.emit(tab);
+    }
   }
 
   protected scoreClass(score: number): string {
@@ -223,7 +229,9 @@ export class VehicleProfileView {
   }
 
   protected kmLeftLabel(task: ServiceTaskRow): string | null {
-    if (task.kmLeft === null || task.status !== 'PLANNED') return null;
+    if (task.kmLeft === null || task.status !== 'PLANNED') {
+      return null;
+    }
     const table = this.maintenance().table;
     const km = formatNumber(Math.abs(task.kmLeft), this.language());
     return interpolate(task.kmLeft < 0 ? table.kmOver : table.kmLeft, { km });

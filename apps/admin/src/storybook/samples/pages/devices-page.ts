@@ -170,7 +170,9 @@ export class DevicesPage {
   /** The open drawer: `device` null registers a new one. */
   protected readonly editor = linkedSignal<{ device: DeviceRow | null } | null>(() => {
     const drawer = this.query().get('drawer');
-    if (drawer === 'new') return { device: null };
+    if (drawer === 'new') {
+      return { device: null };
+    }
     const device = drawer ? sampleDevices.find((item) => item.id === drawer) : undefined;
     return device ? { device: toRow(device) } : null;
   });
@@ -220,20 +222,26 @@ export class DevicesPage {
     const [id] = ids;
     switch (action) {
       case 'edit':
-        if (id) this.openEditor(id);
+        if (id) {
+          this.openEditor(id);
+        }
         return;
       case 'restart':
         this.restart(ids);
         return;
       case 'vehicle':
-        if (id) this.openVehicle(id);
+        if (id) {
+          this.openVehicle(id);
+        }
         return;
     }
   }
 
   protected save(form: DeviceForm): void {
     const editor = this.editor();
-    if (!editor || this.saving()) return;
+    if (!editor || this.saving()) {
+      return;
+    }
     const id = editor.device?.id ?? null;
     this.saving.set(true);
     this.saveError.set(null);
@@ -302,6 +310,8 @@ export class DevicesPage {
 
   private openVehicle(id: string): void {
     const vehicleId = this.devices().find((item) => item.id === id)?.vehicleId;
-    if (vehicleId) void this.router.navigate(['/examples/vehicles', vehicleId]);
+    if (vehicleId) {
+      void this.router.navigate(['/examples/vehicles', vehicleId]);
+    }
   }
 }

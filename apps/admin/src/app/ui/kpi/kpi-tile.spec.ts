@@ -43,7 +43,9 @@ class Host {
 
 function element(fixture: ComponentFixture<Host>): HTMLElement {
   const value: unknown = fixture.nativeElement;
-  if (!(value instanceof HTMLElement)) throw new Error('Missing host element.');
+  if (!(value instanceof HTMLElement)) {
+    throw new Error('Missing host element.');
+  }
   return value;
 }
 

@@ -173,8 +173,12 @@ export class VehicleProfilePage {
   );
   protected readonly failed = linkedSignal(() => this.scenario() === 'error');
   protected readonly state = computed(() => {
-    if (this.scenario() === 'loading') return 'loading';
-    if (this.failed()) return 'error';
+    if (this.scenario() === 'loading') {
+      return 'loading';
+    }
+    if (this.failed()) {
+      return 'error';
+    }
     return this.vehicle() ? 'ready' : 'not-found';
   });
   protected readonly tab = linkedSignal<VehicleProfileTab>(
@@ -182,7 +186,9 @@ export class VehicleProfilePage {
   );
   protected readonly profile = computed(() => {
     const vehicle = this.vehicle();
-    if (!vehicle) return null;
+    if (!vehicle) {
+      return null;
+    }
     const profile = vehicleProfile(vehicle);
     return this.scenario() === 'no-odometer' && !this.recordedReading()
       ? { ...profile, odometerKm: null }
@@ -194,9 +200,13 @@ export class VehicleProfilePage {
   });
   protected readonly previousReading = computed<PreviousOdometerReading | null>(() => {
     const recorded = this.recordedReading();
-    if (recorded) return recorded;
+    if (recorded) {
+      return recorded;
+    }
     const vehicle = this.vehicle();
-    if (!vehicle || this.scenario() === 'no-odometer') return null;
+    if (!vehicle || this.scenario() === 'no-odometer') {
+      return null;
+    }
     return {
       odometerKm: vehicle.odometerKm,
       recordedAt: vehicle.lastReportedAt ?? new Date(sampleNow - 3_600_000).toISOString(),
@@ -281,10 +291,11 @@ export class VehicleProfilePage {
 
   protected openService(id: string): void {
     const task = sampleServiceTasks.find((item) => item.id === id);
-    if (task)
+    if (task) {
       void this.router.navigate(['/examples/maintenance'], {
         queryParams: { drawer: task.status === 'DONE' ? `complete-${id}` : id },
       });
+    }
   }
 
   protected closeEditor(): void {
@@ -308,7 +319,9 @@ export class VehicleProfilePage {
 
   protected saveReading(reading: OdometerReading): void {
     const id = this.vehicle()?.id;
-    if (!id || this.saving() || this.vehicle()?.status === 'INACTIVE') return;
+    if (!id || this.saving() || this.vehicle()?.status === 'INACTIVE') {
+      return;
+    }
     this.saving.set(true);
     this.readingError.set(null);
     this.saveTimer = setTimeout(() => {
@@ -334,7 +347,9 @@ export class VehicleProfilePage {
 
   protected save(form: VehicleForm): void {
     const id = this.vehicle()?.id;
-    if (!id || this.saving()) return;
+    if (!id || this.saving()) {
+      return;
+    }
     this.saving.set(true);
     this.saveError.set(null);
     this.fieldErrors.set({});

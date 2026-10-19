@@ -19,9 +19,13 @@ const backendEntries = ['core', 'fleet', 'karma-client'].flatMap((app) => [
 const processes: { pid: number; parent: number; service: boolean }[] = [];
 
 for (const entry of readdirSync('/proc')) {
-  if (!/^\d+$/.test(entry)) continue;
+  if (!/^\d+$/.test(entry)) {
+    continue;
+  }
   const pid = Number(entry);
-  if (pid === process.pid) continue;
+  if (pid === process.pid) {
+    continue;
+  }
   try {
     const directory = readlinkSync(`/proc/${entry}/cwd`);
     const args = readFileSync(`/proc/${entry}/cmdline`, 'utf8').split('\0');
@@ -52,8 +56,9 @@ for (const entry of readdirSync('/proc')) {
       !(error instanceof Error) ||
       !('code' in error) ||
       !['ENOENT', 'ESRCH', 'EACCES', 'EPERM'].includes(String(error.code))
-    )
+    ) {
       throw error;
+    }
   }
 }
 
@@ -63,7 +68,9 @@ let previousSize = -1;
 while (previousSize !== targets.size) {
   previousSize = targets.size;
   for (const entry of processes) {
-    if (targets.has(entry.parent)) targets.add(entry.pid);
+    if (targets.has(entry.parent)) {
+      targets.add(entry.pid);
+    }
   }
 }
 
@@ -72,7 +79,9 @@ function signal(pid: number, value: NodeJS.Signals | 0): boolean {
     process.kill(pid, value);
     return true;
   } catch (error) {
-    if (error instanceof Error && 'code' in error && error.code === 'ESRCH') return false;
+    if (error instanceof Error && 'code' in error && error.code === 'ESRCH') {
+      return false;
+    }
     throw error;
   }
 }
@@ -80,14 +89,22 @@ function signal(pid: number, value: NodeJS.Signals | 0): boolean {
 if (targets.size === 0) {
   console.log('No running holita applications found.');
 } else {
-  for (const pid of targets) signal(pid, 'SIGTERM');
+  for (const pid of targets) {
+    signal(pid, 'SIGTERM');
+  }
   for (let attempt = 0; attempt < 20; attempt++) {
     await setTimeout(100);
     for (const pid of targets) {
-      if (!signal(pid, 0)) targets.delete(pid);
+      if (!signal(pid, 0)) {
+        targets.delete(pid);
+      }
     }
-    if (targets.size === 0) break;
+    if (targets.size === 0) {
+      break;
+    }
   }
-  for (const pid of targets) signal(pid, 'SIGKILL');
+  for (const pid of targets) {
+    signal(pid, 'SIGKILL');
+  }
   console.log('Stopped holita applications and their watchers. PostgreSQL remains running.');
 }

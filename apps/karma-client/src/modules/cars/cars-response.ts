@@ -10,21 +10,31 @@ function record(value: unknown): value is Record<string, unknown> {
 }
 
 function identifier(value: unknown): string {
-  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 1) throw unavailable();
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 1) {
+    throw unavailable();
+  }
   return String(value);
 }
 
 function text(value: unknown, required = false): string | null {
-  if (typeof value === 'string') return value;
-  if (!required && (value === null || value === undefined)) return null;
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (!required && (value === null || value === undefined)) {
+    return null;
+  }
   throw unavailable();
 }
 
 function car(value: unknown): KarmaCar {
-  if (!record(value)) throw unavailable();
+  if (!record(value)) {
+    throw unavailable();
+  }
   const deviceId = text(value['device_id'], true);
   const carNumber = text(value['car_number'], true);
-  if (deviceId === null || carNumber === null) throw unavailable();
+  if (deviceId === null || carNumber === null) {
+    throw unavailable();
+  }
   const year = value['car_year'];
   const timeZone = value['time_zone'];
   const drivers = value['driver_ids'];
@@ -35,9 +45,12 @@ function car(value: unknown): KarmaCar {
       !Number.isInteger(timeZone) ||
       timeZone < 0 ||
       timeZone > 2147483647)
-  )
+  ) {
     throw unavailable();
-  if (drivers !== null && drivers !== undefined && !Array.isArray(drivers)) throw unavailable();
+  }
+  if (drivers !== null && drivers !== undefined && !Array.isArray(drivers)) {
+    throw unavailable();
+  }
   return {
     id: identifier(value['car_id']),
     projectId: identifier(value['project_id']),
@@ -53,8 +66,12 @@ function car(value: unknown): KarmaCar {
 }
 
 export function cars(data: unknown): KarmaCar[] {
-  if (!Array.isArray(data)) throw unavailable();
+  if (!Array.isArray(data)) {
+    throw unavailable();
+  }
   const result = data.map((value: unknown) => car(value));
-  if (new Set(result.map((entry) => entry.id)).size !== result.length) throw unavailable();
+  if (new Set(result.map((entry) => entry.id)).size !== result.length) {
+    throw unavailable();
+  }
   return result;
 }

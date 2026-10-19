@@ -20,11 +20,13 @@ export class CarsService {
   }
 
   private async readCar(id: string, signal?: AbortSignal) {
-    if (!/^[1-9]\d*$/.test(id) || !Number.isSafeInteger(Number(id)))
+    if (!/^[1-9]\d*$/.test(id) || !Number.isSafeInteger(Number(id))) {
       throw new BadRequestException('Invalid Karma car ID');
+    }
     const result = cars(await this.karma.readCar(id, signal));
-    if (result.length > 1 || (result[0] && result[0].id !== id))
+    if (result.length > 1 || (result[0] && result[0].id !== id)) {
       throw new ServiceUnavailableException('Karma is unavailable; try again later');
+    }
     return result[0] ?? null;
   }
 }

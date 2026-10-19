@@ -209,7 +209,9 @@ export class ExampleApp {
 
   protected openNotification(id: string): void {
     const notification = this.notifications().find((item) => item.id === id);
-    if (!notification) return;
+    if (!notification) {
+      return;
+    }
     this.notifications.update((items) =>
       items.map((item) => (item.id === id ? { ...item, unread: false } : item)),
     );
@@ -224,7 +226,9 @@ export class ExampleApp {
 
   protected async signOut(): Promise<void> {
     const component: unknown = this.outlet()?.isActivated ? this.outlet()?.component : null;
-    if (leavable(component) && !(await component.canLeave())) return;
+    if (leavable(component) && !(await component.canLeave())) {
+      return;
+    }
     this.signedOut.emit();
   }
 }

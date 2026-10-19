@@ -16,10 +16,14 @@ describe('DriverDrawer contract fields', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     const form = document.getElementById('driver-form');
-    if (!form) throw new Error('Missing driver form.');
+    if (!form) {
+      throw new Error('Missing driver form.');
+    }
     const fill = (field: string, value: string) => {
       const input = document.getElementById(`driver-${field}`);
-      if (!(input instanceof HTMLInputElement)) throw new Error(`Missing ${field}.`);
+      if (!(input instanceof HTMLInputElement)) {
+        throw new Error(`Missing ${field}.`);
+      }
       input.dispatchEvent(
         new KeyboardEvent('keydown', { key: value.at(-1) ?? 'Backspace', bubbles: true }),
       );

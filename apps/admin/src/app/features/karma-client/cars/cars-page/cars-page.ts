@@ -44,7 +44,9 @@ export class CarsPage {
       const referenceSubscription = references.valueChanges.subscribe({
         next: (result) => {
           this.referencesError.set(!!result.error);
-          if (result.dataState === 'complete' && !result.error) this.references.set(result.data);
+          if (result.dataState === 'complete' && !result.error) {
+            this.references.set(result.data);
+          }
         },
         error: () => {
           this.referencesError.set(true);
@@ -78,11 +80,15 @@ export class CarsPage {
   }
 
   refresh(): void {
-    if (this.loading()) return;
+    if (this.loading()) {
+      return;
+    }
     this.error.set(false);
     const references = this.referenceRead;
     void references?.refetch().catch(() => {
-      if (this.referenceRead === references) this.referencesError.set(true);
+      if (this.referenceRead === references) {
+        this.referencesError.set(true);
+      }
     });
     const query = this.query;
     void query?.refetch().catch(() => {

@@ -27,7 +27,9 @@ describe('ServiceTaskDrawer', () => {
     fixture.componentInstance.save.subscribe((value) => saved.push(value));
     async function submit() {
       const element = document.getElementById('task-form');
-      if (!element) throw new Error('Missing task form.');
+      if (!element) {
+        throw new Error('Missing task form.');
+      }
       element.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
       fixture.detectChanges();
       await fixture.whenStable();

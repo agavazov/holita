@@ -27,7 +27,9 @@ function seeded(seed: number): () => number {
 
 function pick<T>(random: () => number, items: readonly T[]): T {
   const item = items[Math.floor(random() * items.length)];
-  if (item === undefined) throw new Error('Empty sample list.');
+  if (item === undefined) {
+    throw new Error('Empty sample list.');
+  }
   return item;
 }
 
@@ -295,7 +297,9 @@ function buildVehicles(): SampleVehicle[] {
   const random = seeded(7);
   return Array.from({ length: 46 }, (_, index) => {
     const spec = models[index % models.length] ?? models[0];
-    if (!spec) throw new Error('Missing model.');
+    if (!spec) {
+      throw new Error('Missing model.');
+    }
     const status: VehicleStatus =
       index % 13 === 4 ? 'IN_WORKSHOP' : index % 17 === 9 ? 'INACTIVE' : 'ACTIVE';
     const activity: VehicleActivity =
@@ -365,7 +369,9 @@ function buildTrips(): SampleTrip[] {
   const active = sampleVehicles.filter((vehicle) => vehicle.status === 'ACTIVE');
   return Array.from({ length: 64 }, (_, index) => {
     const vehicle = active[(index * 7) % active.length] ?? active[0];
-    if (!vehicle) throw new Error('Missing vehicle.');
+    if (!vehicle) {
+      throw new Error('Missing vehicle.');
+    }
     const start = sampleNow - Math.floor((index * 4.3 + random() * 3) * 60 * minute);
     const durationMin = Math.round(25 + random() * 420);
     const distanceKm = Math.round((durationMin / 60) * (45 + random() * 30));
@@ -430,7 +436,9 @@ function buildAlerts(): SampleAlert[] {
   return Array.from({ length: 38 }, (_, index) => {
     const kind = alertKinds[index % alertKinds.length] ?? alertKinds[0];
     const vehicle = sampleVehicles[(index * 5 + 2) % sampleVehicles.length] ?? sampleVehicles[0];
-    if (!vehicle) throw new Error('Missing vehicle.');
+    if (!vehicle) {
+      throw new Error('Missing vehicle.');
+    }
     const status: AlertStatus = index < 14 ? 'OPEN' : index < 24 ? 'ACKNOWLEDGED' : 'RESOLVED';
     return {
       id: `a${String(index + 1).padStart(3, '0')}`,
@@ -474,7 +482,9 @@ function buildServiceTasks(): SampleServiceTask[] {
   const random = seeded(41);
   return Array.from({ length: 30 }, (_, index) => {
     const vehicle = sampleVehicles[(index * 3 + 1) % sampleVehicles.length] ?? sampleVehicles[0];
-    if (!vehicle) throw new Error('Missing vehicle.');
+    if (!vehicle) {
+      throw new Error('Missing vehicle.');
+    }
     const done = index >= 22;
     const offsetDays = done ? -10 - index : Math.round(-20 + index * 4 - random() * 6);
     const dueOn = index % 3 === 2 ? null : dateOnly(sampleNow + offsetDays * day);

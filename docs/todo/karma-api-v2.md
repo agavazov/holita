@@ -18,6 +18,15 @@ source assets and coverage are documented in the
   That task owns the user-facing configuration work; provider questions below
   remain shared investigation items.
 
+## Vehicle diagnostic fault monitoring
+
+- **DTC-01:** Develop per-truck diagnostic fault monitoring. First prove end-to-end
+  acquisition of a known-present ECU fault through the installed ERM/eData
+  connection; then implement continuous ingestion, persistent history, tracking of
+  fault status changes and notifications. Preserve captured fault evidence after
+  a fault is cleared on the vehicle, and distinguish confirmed clearance from
+  missing telemetry or an empty module buffer.
+
 ## Direct ERM telemetry
 
 - [Build an ERM TCP receiver and test device routing](erm-tcp-receiver-and-test-device-routing.md):

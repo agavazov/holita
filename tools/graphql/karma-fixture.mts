@@ -164,17 +164,20 @@ export async function createKarmaFixture() {
       request.method === 'GET'
     ) {
       let result: unknown;
-      if (url.searchParams.get('karma_sid') !== `fixture-session-${String(session)}`)
+      if (url.searchParams.get('karma_sid') !== `fixture-session-${String(session)}`) {
         result = { error: 'Not logged in' };
-      else if (url.pathname !== '/apiv2/location' && referencesFailed) {
+      } else if (url.pathname !== '/apiv2/location' && referencesFailed) {
         response.writeHead(503);
         result = { error: 'Reference fixture unavailable' };
-      } else if (url.pathname === '/apiv2/projects')
+      } else if (url.pathname === '/apiv2/projects') {
         result = empty ? [] : [{ project_id: 12, name: 'Fixture project' }];
-      else if (url.pathname === '/apiv2/time-zones') result = empty ? [] : zones;
-      else if (url.searchParams.get('car') !== '41') result = { error: 'Car not found' };
-      else if (locationEmpty || empty) result = [];
-      else {
+      } else if (url.pathname === '/apiv2/time-zones') {
+        result = empty ? [] : zones;
+      } else if (url.searchParams.get('car') !== '41') {
+        result = { error: 'Car not found' };
+      } else if (locationEmpty || empty) {
+        result = [];
+      } else {
         const last = edata.at(-1);
         const row = {
           car_id: 41,
@@ -188,9 +191,15 @@ export async function createKarmaFixture() {
         };
         const selected: Record<string, unknown> = { ...row };
         for (const field of url.searchParams.getAll('fields[]')) {
-          if (field === 'spd' || field === 'odo') selected[field] = 0;
-          if (field === 'pdt') selected[field] = last?.pdt ?? null;
-          if (field === 'edt_tz') selected[field] = last?.edt_tz ?? null;
+          if (field === 'spd' || field === 'odo') {
+            selected[field] = 0;
+          }
+          if (field === 'pdt') {
+            selected[field] = last?.pdt ?? null;
+          }
+          if (field === 'edt_tz') {
+            selected[field] = last?.edt_tz ?? null;
+          }
         }
         result = [selected];
       }
@@ -200,11 +209,13 @@ export async function createKarmaFixture() {
       request.method === 'GET'
     ) {
       let result: unknown;
-      if (url.searchParams.get('karma_sid') !== `fixture-session-${String(session)}`)
+      if (url.searchParams.get('karma_sid') !== `fixture-session-${String(session)}`) {
         result = { error: 'Not logged in' };
-      else if (url.searchParams.get('car') !== '41') result = { error: 'Car not found' };
-      else if (empty || historyEmpty) result = [];
-      else if (url.pathname === '/apiv2/driving-profile')
+      } else if (url.searchParams.get('car') !== '41') {
+        result = { error: 'Car not found' };
+      } else if (empty || historyEmpty) {
+        result = [];
+      } else if (url.pathname === '/apiv2/driving-profile') {
         result = [
           {
             car_id: 41,
@@ -225,7 +236,7 @@ export async function createKarmaFixture() {
             ),
           },
         ];
-      else if (url.pathname === '/apiv2/trips')
+      } else if (url.pathname === '/apiv2/trips') {
         result = trips
           .filter(
             (row) =>
@@ -237,7 +248,7 @@ export async function createKarmaFixture() {
                 row.start_date <= (url.searchParams.get('to_date') ?? '')),
           )
           .slice(-500);
-      else
+      } else {
         result = events
           .filter(
             (row) =>
@@ -251,6 +262,7 @@ export async function createKarmaFixture() {
                 url.searchParams.getAll('event_type[]').includes(String(row.eid))),
           )
           .slice(-500);
+      }
       response.end(JSON.stringify(result));
     } else if (url.pathname === '/apiv2/edata' && request.method === 'GET') {
       const parameters = url.searchParams.getAll('parameter_id[]');
@@ -293,7 +305,9 @@ export async function createKarmaFixture() {
     server.listen(0, '127.0.0.1', resolve);
   });
   const address = server.address();
-  if (!address || typeof address === 'string') throw new Error('Missing Karma fixture port');
+  if (!address || typeof address === 'string') {
+    throw new Error('Missing Karma fixture port');
+  }
   return {
     url: `http://127.0.0.1:${String(address.port)}/apiv2/`,
     requests,
@@ -324,8 +338,11 @@ export async function createKarmaFixture() {
     close: () =>
       new Promise<void>((resolve, reject) => {
         server.close((error) => {
-          if (error) reject(error);
-          else resolve();
+          if (error) {
+            reject(error);
+          } else {
+            resolve();
+          }
         });
         server.closeAllConnections();
       }),

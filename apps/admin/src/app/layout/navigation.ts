@@ -52,17 +52,19 @@ export function navigationContext(
   path: string,
 ): PageContext | null {
   let match: { readonly length: number; readonly context: PageContext } | null = null;
-  for (const group of navigation)
+  for (const group of navigation) {
     for (const item of group.items) {
       const prefix = linkPath(item.link);
       if (
         (path === prefix || path.startsWith(`${prefix}/`)) &&
         prefix.length > (match?.length ?? -1)
-      )
+      ) {
         match = {
           length: prefix.length,
           context: { group: group.label, page: item.label, pageLink: item.link },
         };
+      }
     }
+  }
   return match?.context ?? null;
 }

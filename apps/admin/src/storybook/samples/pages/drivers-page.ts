@@ -178,7 +178,9 @@ export class DriversPage {
   /** The open drawer: `id` null adds a driver; `editing` opens an existing one on the form. */
   protected readonly drawer = linkedSignal<{ id: string | null; editing: boolean } | null>(() => {
     const id = this.query().get('drawer');
-    if (id === 'new') return { id: null, editing: true };
+    if (id === 'new') {
+      return { id: null, editing: true };
+    }
     const exists = id !== null && this.drivers().some((driver) => driver.id === id);
     return exists ? { id, editing: this.query().get('edit') === '1' } : null;
   });
@@ -221,7 +223,9 @@ export class DriversPage {
   );
 
   constructor() {
-    if (this.scenario() === 'empty') this.drivers.set([]);
+    if (this.scenario() === 'empty') {
+      this.drivers.set([]);
+    }
     inject(DestroyRef).onDestroy(() => {
       clearTimeout(this.saveTimer);
     });
@@ -247,13 +251,19 @@ export class DriversPage {
     const [id] = ids;
     switch (action) {
       case 'view':
-        if (id) this.openDrawer(id, false);
+        if (id) {
+          this.openDrawer(id, false);
+        }
         return;
       case 'edit':
-        if (id) this.openDrawer(id, true);
+        if (id) {
+          this.openDrawer(id, true);
+        }
         return;
       case 'scorecard':
-        if (id) this.openScorecard(id);
+        if (id) {
+          this.openScorecard(id);
+        }
         return;
       case 'deactivate':
         this.deactivate(ids);
@@ -266,7 +276,9 @@ export class DriversPage {
 
   protected save(form: DriverForm): void {
     const drawer = this.drawer();
-    if (!drawer || this.saving()) return;
+    if (!drawer || this.saving()) {
+      return;
+    }
     this.saving.set(true);
     this.saveError.set(null);
     this.fieldErrors.set({});
@@ -311,7 +323,9 @@ export class DriversPage {
   }
 
   protected openScorecard(id: string | null): void {
-    if (id) void this.router.navigate(['/examples/drivers', id, 'scorecard']);
+    if (id) {
+      void this.router.navigate(['/examples/drivers', id, 'scorecard']);
+    }
   }
 
   private store(id: string | null, form: DriverForm): string {
@@ -357,12 +371,13 @@ export class DriversPage {
     this.selection.update((selection) =>
       selection.filter((record) => !changed.includes(record.id)),
     );
-    if (changed.length && !failed)
+    if (changed.length && !failed) {
       this.messages.add({
         severity: 'success',
         summary: interpolate(this.text().notices.deactivated, { count: changed.length }),
       });
-    if (failed)
+    }
+    if (failed) {
       this.messages.add({
         severity: 'warn',
         sticky: true,
@@ -370,6 +385,7 @@ export class DriversPage {
           ? interpolate(this.text().notices.deactivatedPartial, { changed: changed.length, failed })
           : interpolate(this.text().notices.assigned, { count: failed }),
       });
+    }
   }
 
   private delete(ids: readonly string[]): void {
@@ -385,12 +401,13 @@ export class DriversPage {
     this.selection.update((selection) =>
       selection.filter((record) => !changed.includes(record.id)),
     );
-    if (changed.length && !failed)
+    if (changed.length && !failed) {
       this.messages.add({
         severity: 'success',
         summary: interpolate(this.text().notices.deleted, { count: changed.length }),
       });
-    if (failed)
+    }
+    if (failed) {
       this.messages.add({
         severity: 'warn',
         sticky: true,
@@ -398,5 +415,6 @@ export class DriversPage {
           ? interpolate(this.text().notices.deletedPartial, { changed: changed.length, failed })
           : interpolate(this.text().notices.protected, { count: failed }),
       });
+    }
   }
 }

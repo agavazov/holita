@@ -5,7 +5,9 @@ import { exampleAt } from '../../../../storybook/samples/example-app';
 import { sampleServiceTasks, vehicleById } from '../../../../storybook/samples/fleet-samples';
 
 const task = sampleServiceTasks.find((item) => item.id === 's001');
-if (!task) throw new Error('Missing completion sample.');
+if (!task) {
+  throw new Error('Missing completion sample.');
+}
 const path = `maintenance?drawer=complete-${task.id}`;
 const title = `Complete ${task.kind}`;
 const ready = { timeout: 10_000 };
@@ -42,7 +44,9 @@ export const CompleteFromRow: Story = {
     const canvas = within(canvasElement);
     await waitFor(() => expect(canvas.getByRole('table')).toBeVisible(), ready);
     const trigger = canvas.getAllByRole('button', { name: /^Actions for / })[0];
-    if (!trigger) throw new Error('Missing service row action.');
+    if (!trigger) {
+      throw new Error('Missing service row action.');
+    }
     await userEvent.click(trigger);
     await chooseMenuItem(canvasElement.ownerDocument.body, 'Complete service');
     const body = within(canvasElement.ownerDocument.body);

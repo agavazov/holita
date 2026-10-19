@@ -22,7 +22,9 @@ export class KarmaEdataApi implements OnDestroy {
   private language: Language = 'bg';
 
   initialize(language: Language): void {
-    if (this.apollo) throw new Error('KarmaEdataApi belongs to one session workspace.');
+    if (this.apollo) {
+      throw new Error('KarmaEdataApi belongs to one session workspace.');
+    }
     this.apollo = new ApolloBase(
       this.zone,
       undefined,
@@ -34,7 +36,9 @@ export class KarmaEdataApi implements OnDestroy {
   }
 
   watchCar(id: string) {
-    if (!this.apollo) throw new Error('An active Karma workspace is required.');
+    if (!this.apollo) {
+      throw new Error('An active Karma workspace is required.');
+    }
     return this.apollo.watchQuery({
       query: AdminKarmaCarDocument,
       variables: { id },
@@ -44,7 +48,9 @@ export class KarmaEdataApi implements OnDestroy {
   }
 
   watch(input: KarmaEdataInput) {
-    if (!this.apollo) throw new Error('An active Karma workspace is required.');
+    if (!this.apollo) {
+      throw new Error('An active Karma workspace is required.');
+    }
     return this.apollo.watchQuery({
       query: AdminKarmaEdataDocument,
       variables: { input },

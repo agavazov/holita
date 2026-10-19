@@ -20,11 +20,16 @@ export function textValidator(
 ): ValidatorFn {
   return (control) => {
     const value: unknown = control.value;
-    if (value === null || value === undefined || value === '')
+    if (value === null || value === undefined || value === '') {
       return options.required ? { required: true } : null;
-    if (typeof value !== 'string' || value.includes('\u0000')) return { unsupported: true };
+    }
+    if (typeof value !== 'string' || value.includes('\u0000')) {
+      return { unsupported: true };
+    }
     const text = value.trim();
-    if (!text) return options.required ? { required: true } : null;
+    if (!text) {
+      return options.required ? { required: true } : null;
+    }
     return Array.from(text).length > max ? { maxLength: { max } } : null;
   };
 }
@@ -36,16 +41,24 @@ export function patternValidator(
 ): ValidatorFn {
   return (control) => {
     const value: unknown = control.value;
-    if (isBlank(value)) return null;
-    if (typeof value !== 'string') return { pattern: true };
+    if (isBlank(value)) {
+      return null;
+    }
+    if (typeof value !== 'string') {
+      return { pattern: true };
+    }
     const text = options.transform === 'upper' ? value.trim().toUpperCase() : value.trim();
     return pattern.test(text) ? null : { pattern: true };
   };
 }
 
 function numberValue(value: unknown): number {
-  if (typeof value === 'number') return value;
-  if (typeof value === 'string' && /^-?\d+(\.\d+)?$/.test(value.trim())) return Number(value);
+  if (typeof value === 'number') {
+    return value;
+  }
+  if (typeof value === 'string' && /^-?\d+(\.\d+)?$/.test(value.trim())) {
+    return Number(value);
+  }
   return Number.NaN;
 }
 
@@ -56,10 +69,16 @@ export function integerValidator(
   options: { readonly required?: boolean } = {},
 ): ValidatorFn {
   return (control) => {
-    if (isBlank(control.value)) return options.required ? { required: true } : null;
+    if (isBlank(control.value)) {
+      return options.required ? { required: true } : null;
+    }
     const value = numberValue(control.value);
-    if (!Number.isInteger(value)) return { integer: true };
-    if (value < min) return { min: { min } };
+    if (!Number.isInteger(value)) {
+      return { integer: true };
+    }
+    if (value < min) {
+      return { min: { min } };
+    }
     return value > max ? { max: { max } } : null;
   };
 }
@@ -70,11 +89,19 @@ export function decimalValidator(min: number, max: number, step: number): Valida
   const scale = 10 ** Math.max(0, (coefficient.split('.')[1]?.length ?? 0) - Number(exponent));
   const stepUnits = Math.round(step * scale);
   return (control) => {
-    if (isBlank(control.value)) return null;
+    if (isBlank(control.value)) {
+      return null;
+    }
     const value = numberValue(control.value);
-    if (!Number.isFinite(value)) return { decimal: true };
-    if (value < min) return { min: { min } };
-    if (value > max) return { max: { max } };
+    if (!Number.isFinite(value)) {
+      return { decimal: true };
+    }
+    if (value < min) {
+      return { min: { min } };
+    }
+    if (value > max) {
+      return { max: { max } };
+    }
     // Rebuild the nearest decimal value without multiplying by an inexact fractional step.
     const nearest = (Math.round(value / step) * stepUnits) / scale;
     return value === nearest ? null : { step: { step } };
@@ -88,17 +115,23 @@ export function dateOnlyValidator(
 ): ValidatorFn {
   return (control) => {
     const value: unknown = control.value;
-    if (isBlank(value)) return null;
+    if (isBlank(value)) {
+      return null;
+    }
     const text =
       value instanceof Date && !Number.isNaN(value.getTime())
         ? toDateOnly(value)
         : typeof value === 'string'
           ? value
           : '';
-    if (!dateOnly.test(text)) return { date: true };
+    if (!dateOnly.test(text)) {
+      return { date: true };
+    }
     const lower = typeof min === 'function' ? min() : min;
     const upper = typeof max === 'function' ? max() : max;
-    if (lower && text < lower) return { dateMin: { min: lower } };
+    if (lower && text < lower) {
+      return { dateMin: { min: lower } };
+    }
     return upper && text > upper ? { dateMax: { max: upper } } : null;
   };
 }
@@ -108,11 +141,17 @@ export function requireOneOf(first: string, second: string): ValidatorFn {
   return (group: AbstractControl) => {
     const a = group.get(first);
     const b = group.get(second);
-    if (!a || !b) return null;
+    if (!a || !b) {
+      return null;
+    }
     const missing = isBlank(a.value) && isBlank(b.value);
     const { requireOneOf: present, ...others } = a.errors ?? {};
-    if (missing && !present) a.setErrors({ ...others, requireOneOf: true });
-    if (!missing && present) a.setErrors(Object.keys(others).length ? others : null);
+    if (missing && !present) {
+      a.setErrors({ ...others, requireOneOf: true });
+    }
+    if (!missing && present) {
+      a.setErrors(Object.keys(others).length ? others : null);
+    }
     return null;
   };
 }
@@ -122,16 +161,21 @@ export function validationMessage(
   errors: ValidationErrors | null | undefined,
   language: Language,
 ): string | null {
-  if (!errors) return null;
+  if (!errors) {
+    return null;
+  }
   const text = uiMessages[language].validation;
   const [key] = Object.keys(errors);
   const detail: unknown = key ? errors[key] : undefined;
   const value = (name: string): string => {
     const item: unknown =
       typeof detail === 'object' && detail !== null ? Reflect.get(detail, name) : undefined;
-    if (typeof item === 'number') return formatNumber(item, language, { fraction: 3 });
-    if (typeof item === 'string')
+    if (typeof item === 'number') {
+      return formatNumber(item, language, { fraction: 3 });
+    }
+    if (typeof item === 'string') {
       return dateOnly.test(item) ? formatDateOnly(item, language) : item;
+    }
     return '';
   };
   switch (key) {

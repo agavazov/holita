@@ -159,8 +159,9 @@ export class GeneralSettingsView {
       this.form,
       () => this.saving(),
       () => {
-        if (!this.document.activeElement || this.document.activeElement === this.document.body)
+        if (!this.document.activeElement || this.document.activeElement === this.document.body) {
           this.header().focusTitle();
+        }
       },
     );
   }
@@ -168,13 +169,19 @@ export class GeneralSettingsView {
   protected errorOf(name: GeneralSettingsField): string | null {
     this.events();
     const control = this.form.controls[name];
-    if (!control.invalid || (!control.touched && !this.submitted)) return null;
+    if (!control.invalid || (!control.touched && !this.submitted)) {
+      return null;
+    }
     return validationMessage(control.errors, this.language());
   }
 
   canLeave(): boolean | Promise<boolean> {
-    if (this.saving()) return false;
-    if (!this.form.dirty) return true;
+    if (this.saving()) {
+      return false;
+    }
+    if (!this.form.dirty) {
+      return true;
+    }
     this.pendingLeave ??= confirmDiscard(this.confirmation, this.language()).finally(() => {
       this.pendingLeave = null;
     });
@@ -182,18 +189,24 @@ export class GeneralSettingsView {
   }
 
   protected beforeUnload(event: BeforeUnloadEvent): void {
-    if (this.form.dirty || this.saving()) event.preventDefault();
+    if (this.form.dirty || this.saving()) {
+      event.preventDefault();
+    }
   }
 
   protected discard(): void {
-    if (this.saving()) return;
+    if (this.saving()) {
+      return;
+    }
     this.reset(this.settings());
     this.discarded.emit();
     this.header().focusTitle();
   }
 
   protected submit(): void {
-    if (this.saving()) return;
+    if (this.saving()) {
+      return;
+    }
     this.submitted = true;
     this.form.markAllAsTouched();
     const value = this.form.getRawValue();

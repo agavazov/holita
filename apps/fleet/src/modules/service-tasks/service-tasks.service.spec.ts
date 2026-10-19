@@ -13,7 +13,9 @@ async function fieldErrors(action: Promise<unknown>): Promise<unknown> {
   try {
     await action;
   } catch (error) {
-    if (!(error instanceof BadRequestException)) throw error;
+    if (!(error instanceof BadRequestException)) {
+      throw error;
+    }
     const response = error.getResponse();
     return typeof response === 'object' && 'fieldErrors' in response
       ? response.fieldErrors
@@ -176,10 +178,11 @@ describe('Service task rules', () => {
       { completedFrom: '2026-10-02', completedTo: '2026-10-01' },
       { urgencies: [] },
       { completedFrom: '2026-02-30' },
-    ])
+    ]) {
       expect(await fieldErrors(service.list(context, { filter }))).toMatchObject([
         { path: 'filter' },
       ]);
+    }
   });
 
   it('creates planned tasks with a due date or odometer on active vehicles only', async () => {
@@ -212,10 +215,11 @@ describe('Service task rules', () => {
       [{ dueOn: '2026-11-01', title: 't'.repeat(121) }, 'title'],
       [{ dueOn: '2026-11-01', workshop: 'w'.repeat(129) }, 'workshop'],
       [{ dueOn: '2026-11-01', notes: 'n'.repeat(2001) }, 'notes'],
-    ] satisfies [Record<string, unknown>, string][])
+    ] satisfies [Record<string, unknown>, string][]) {
       expect(
         await fieldErrors(service.create(context, { vehicleId, serviceType: 'BRAKES', ...input })),
       ).toMatchObject([{ path }]);
+    }
     findVehicle.mockResolvedValue({ id: vehicleId, status: 'INACTIVE' });
     expect(
       await fieldErrors(

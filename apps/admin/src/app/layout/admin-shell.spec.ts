@@ -100,8 +100,9 @@ async function mount() {
   const host: unknown = harness.fixture.debugElement.query(
     By.directive(ShellHost),
   ).componentInstance;
-  if (!(shell instanceof AdminShell) || !(host instanceof ShellHost))
+  if (!(shell instanceof AdminShell) || !(host instanceof ShellHost)) {
     throw new Error('Missing shell.');
+  }
   return { harness, shell, host };
 }
 
@@ -118,11 +119,15 @@ function menuOf(trigger: HTMLElement): Element | null {
 }
 
 async function open(harness: RouterTestingHarness, trigger: HTMLElement | null): Promise<Element> {
-  if (!trigger) throw new Error('Missing menu trigger.');
+  if (!trigger) {
+    throw new Error('Missing menu trigger.');
+  }
   trigger.click();
   await harness.fixture.whenStable();
   const menu = menuOf(trigger);
-  if (!menu) throw new Error('The menu did not open.');
+  if (!menu) {
+    throw new Error('The menu did not open.');
+  }
   return menu;
 }
 
@@ -137,7 +142,9 @@ async function choose(
     item.textContent.includes(label),
   );
   const link = option?.querySelector('.p-menu-item-link');
-  if (!(link instanceof HTMLElement)) throw new Error(`Missing option ${label}.`);
+  if (!(link instanceof HTMLElement)) {
+    throw new Error(`Missing option ${label}.`);
+  }
   link.click();
   await harness.fixture.whenStable();
 }

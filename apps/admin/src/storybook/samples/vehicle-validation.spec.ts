@@ -4,7 +4,9 @@ import { sampleFuelStatus, vehicleForm } from './rows';
 import { vehicleFormErrors } from './vehicle-validation';
 
 const [vehicle, other] = sampleVehicles;
-if (!vehicle || !other) throw new Error('Missing sample vehicles.');
+if (!vehicle || !other) {
+  throw new Error('Missing sample vehicles.');
+}
 const text = vehiclesText('en').drawer;
 
 describe('sample vehicle contracts', () => {

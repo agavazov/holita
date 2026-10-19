@@ -56,7 +56,9 @@ function devicePage(device: AdminDeviceFragment) {
 
 function pageElement(fixture: ComponentFixture<DevicesPage>): HTMLElement {
   const element: unknown = fixture.nativeElement;
-  if (!(element instanceof HTMLElement)) throw new Error('Missing Devices page element.');
+  if (!(element instanceof HTMLElement)) {
+    throw new Error('Missing Devices page element.');
+  }
   return element;
 }
 

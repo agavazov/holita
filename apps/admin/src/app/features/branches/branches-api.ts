@@ -35,7 +35,9 @@ export class BranchesApi {
         context: { language },
       }),
     );
-    if (!result.data?.demoLogin) throw new Error('Missing demo login result.');
+    if (!result.data?.demoLogin) {
+      throw new Error('Missing demo login result.');
+    }
     return result.data.demoLogin;
   }
   watch(language: Language, scope = this.session.capture()) {

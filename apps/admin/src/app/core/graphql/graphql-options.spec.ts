@@ -42,7 +42,9 @@ describe('GraphQL transport diagnostics', () => {
     const bulgarianFailure = bulgarian.catch((error: unknown) => error);
     const bulgarianRequest = http.expectOne('/graphql');
     const bulgarianId = bulgarianRequest.request.headers.get('x-request-id');
-    if (!englishId || !bulgarianId) throw new Error('Missing request diagnostics headers.');
+    if (!englishId || !bulgarianId) {
+      throw new Error('Missing request diagnostics headers.');
+    }
     expect(englishId).not.toBe(bulgarianId);
     bulgarianRequest.flush('Unavailable', { status: 503, statusText: 'Service Unavailable' });
     const httpError = await bulgarianFailure;
@@ -70,7 +72,9 @@ describe('GraphQL transport diagnostics', () => {
         .catch((error: unknown) => error);
       const request = http.expectOne('/graphql');
       const requestId = request.request.headers.get('x-request-id');
-      if (!requestId) throw new Error('Missing request diagnostics header.');
+      if (!requestId) {
+        throw new Error('Missing request diagnostics header.');
+      }
       request.flush(
         {
           errors: [
@@ -109,7 +113,9 @@ describe('GraphQL transport diagnostics', () => {
     const failure = client.query({ query: AdminBranchesDocument }).catch((error: unknown) => error);
     const request = http.expectOne('/graphql');
     const requestId = request.request.headers.get('x-request-id');
-    if (!requestId) throw new Error('Missing request diagnostics header.');
+    if (!requestId) {
+      throw new Error('Missing request diagnostics header.');
+    }
     await vi.advanceTimersByTimeAsync(10_000);
     const error = await failure;
     expect(error).toHaveProperty('name', 'TimeoutError');

@@ -18,10 +18,11 @@ describe('shared authenticated Karma eData access', () => {
     const client = new KarmaTransport(),
       read = jest.spyOn(client, 'read').mockResolvedValue([]);
     const service = new EdataService(client);
-    for (const tenantId of ['tenant-a', 'tenant-b'])
+    for (const tenantId of ['tenant-a', 'tenant-b']) {
       await expect(
         service.list({ carId: '41' }, { tenantId, requestId: 'test' }),
       ).resolves.toMatchObject({ items: [] });
+    }
     expect(read).toHaveBeenCalledTimes(2);
   });
 });

@@ -138,10 +138,11 @@ describe('Driver GraphQL with PostgreSQL', () => {
         { extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'licenseExpiresOn' }] } },
       ],
     });
-    for (const source of [read, update, remove])
+    for (const source of [read, update, remove]) {
       expect(
         await query(source, { id: row.id, input: { notes: 'x' } }, randomUUID()),
       ).toMatchObject({ errors: [{ extensions: { code: 'NOT_FOUND' } }] });
+    }
     expect(await query(read, { id: row.id }, branchId, randomUUID())).toMatchObject({
       errors: [{ extensions: { code: 'NOT_FOUND' } }],
     });
@@ -206,10 +207,11 @@ describe('Driver GraphQL with PostgreSQL', () => {
     const driver = await database.client.driver.create({
       data: { tenantId, branchId, firstName: 'A', lastName: 'Assigned' },
     });
-    for (const licensePlate of ['PB 2002 KM', 'CB 1001 AX'])
+    for (const licensePlate of ['PB 2002 KM', 'CB 1001 AX']) {
       await database.client.vehicle.create({
         data: { tenantId, branchId, licensePlate, currentDriverId: driver.id },
       });
+    }
     expect(await query(read, { id: driver.id }, branchId)).toMatchObject({
       data: {
         fleetDriver: {
@@ -271,7 +273,7 @@ describe('Driver GraphQL with PostgreSQL', () => {
       },
       { firstName: 'Anton', lastName: 'Ivanov', employeeNumber: 'E-2', status: 'INACTIVE' },
     ] as const;
-    for (const row of rows)
+    for (const row of rows) {
       await database.client.driver.create({
         data: {
           tenantId,
@@ -280,6 +282,7 @@ describe('Driver GraphQL with PostgreSQL', () => {
           licenseCategories: 'licenseCategories' in row ? [...row.licenseCategories] : [],
         },
       });
+    }
     await database.client.driver.create({
       data: { tenantId, branchId: randomUUID(), firstName: 'Other', lastName: 'Ivanov' },
     });
@@ -367,7 +370,9 @@ describe('Driver GraphQL with PostgreSQL', () => {
         }),
       ),
     );
-    if (!driver || !idle) throw new Error('Missing drivers');
+    if (!driver || !idle) {
+      throw new Error('Missing drivers');
+    }
     await database.client.vehicleStatusSample.create({
       data: {
         tenantId,

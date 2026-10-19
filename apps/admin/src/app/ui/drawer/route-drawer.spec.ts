@@ -76,7 +76,9 @@ async function open() {
 
 function drawer(): HTMLElement {
   const element = document.querySelector('.p-drawer.app-route-drawer');
-  if (!(element instanceof HTMLElement)) throw new Error('Missing drawer.');
+  if (!(element instanceof HTMLElement)) {
+    throw new Error('Missing drawer.');
+  }
   return element;
 }
 
@@ -88,7 +90,9 @@ function findButton(label: string): HTMLButtonElement | undefined {
 
 function button(label: string): HTMLButtonElement {
   const match = findButton(label);
-  if (!match) throw new Error(`Missing button ${label}.`);
+  if (!match) {
+    throw new Error(`Missing button ${label}.`);
+  }
   return match;
 }
 
@@ -104,7 +108,9 @@ async function dialogButton(
     await new Promise((resolve) => setTimeout(resolve, 10));
     harness.fixture.detectChanges();
     const match = findButton(label);
-    if (match) return match;
+    if (match) {
+      return match;
+    }
   }
   throw new Error(`Missing button ${label}.`);
 }
@@ -129,7 +135,9 @@ describe('RouteDrawer', () => {
     const editor: unknown = harness.fixture.debugElement.query(
       (debug) => debug.componentInstance instanceof TestEditor,
     ).componentInstance;
-    if (!(editor instanceof TestEditor)) throw new Error('Missing editor.');
+    if (!(editor instanceof TestEditor)) {
+      throw new Error('Missing editor.');
+    }
     const input = document.getElementById('plate');
     input?.focus();
     editor.drawer().keepFocusInside();
@@ -169,7 +177,9 @@ describe('RouteDrawer', () => {
     const editor: unknown = harness.fixture.debugElement.query(
       (debug) => debug.componentInstance instanceof TestEditor,
     ).componentInstance;
-    if (!(editor instanceof TestEditor)) throw new Error('Missing editor.');
+    if (!(editor instanceof TestEditor)) {
+      throw new Error('Missing editor.');
+    }
     const first = editor.drawer().confirmLeave(true);
     const second = editor.drawer().confirmLeave(true);
     expect(second).toBe(first);

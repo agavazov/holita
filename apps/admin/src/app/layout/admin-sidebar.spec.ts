@@ -39,7 +39,9 @@ describe('AdminSidebar and navigation', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     const element: unknown = fixture.nativeElement;
-    if (!(element instanceof HTMLElement)) throw new Error('Missing host element.');
+    if (!(element instanceof HTMLElement)) {
+      throw new Error('Missing host element.');
+    }
     return { harness, fixture, element };
   }
 

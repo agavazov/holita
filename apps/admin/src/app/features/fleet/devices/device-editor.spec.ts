@@ -30,7 +30,9 @@ function operation(request: HttpRequest<unknown>, name: string): boolean {
 }
 function element(fixture: ComponentFixture<DeviceEditor>): HTMLElement {
   const element: unknown = fixture.nativeElement;
-  if (!(element instanceof HTMLElement)) throw new Error('Missing editor element');
+  if (!(element instanceof HTMLElement)) {
+    throw new Error('Missing editor element');
+  }
   return element;
 }
 describe('Device editor validation and captured writes', () => {

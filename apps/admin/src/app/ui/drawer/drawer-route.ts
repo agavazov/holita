@@ -23,13 +23,18 @@ export function drawerRouteData(route: ActivatedRoute): DrawerRouteData {
   const mode = modes.find((candidate) => candidate === data['mode']);
   const recordParam = recordParams.find((candidate) => candidate === data['recordParam']);
   const fixed: unknown = data['fixedVehicleParam'];
-  if (data['drawer'] !== true || !mode) throw new Error('Not a drawer route.');
-  if (mode === 'create' && data['recordParam'] !== undefined)
+  if (data['drawer'] !== true || !mode) {
+    throw new Error('Not a drawer route.');
+  }
+  if (mode === 'create' && data['recordParam'] !== undefined) {
     throw new Error('A create drawer has no record parameter.');
-  if (mode !== 'create' && !recordParam)
+  }
+  if (mode !== 'create' && !recordParam) {
     throw new Error('An edit or view drawer needs a record parameter.');
-  if (fixed !== undefined && fixed !== 'vehicleId')
+  }
+  if (fixed !== undefined && fixed !== 'vehicleId') {
     throw new Error('Unknown fixed vehicle parameter.');
+  }
   return {
     drawer: true,
     mode,
@@ -42,7 +47,9 @@ export function drawerRouteData(route: ActivatedRoute): DrawerRouteData {
 export function drawerParam(route: ActivatedRoute, name: string): string | null {
   for (const snapshot of [...route.snapshot.pathFromRoot].reverse()) {
     const value = snapshot.paramMap.get(name);
-    if (value !== null) return value;
+    if (value !== null) {
+      return value;
+    }
   }
   return null;
 }

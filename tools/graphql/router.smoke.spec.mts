@@ -59,7 +59,9 @@ describe('Apollo Router with the local supergraph and real subgraphs', () => {
   }
 
   function errors(body: Record<string, unknown>) {
-    if (!Array.isArray(body.errors) || body.errors.length === 0) throw new Error('Expected errors');
+    if (!Array.isArray(body.errors) || body.errors.length === 0) {
+      throw new Error('Expected errors');
+    }
     return body.errors.map((value: unknown) => {
       const error = record(value);
       return { message: error.message, extensions: record(error.extensions) };
@@ -72,7 +74,9 @@ describe('Apollo Router with the local supergraph and real subgraphs', () => {
     });
     expect(result.errors).toBeUndefined();
     const value = record(record(result.data).demoLogin).token;
-    if (typeof value !== 'string') throw new Error('Missing demo session token');
+    if (typeof value !== 'string') {
+      throw new Error('Missing demo session token');
+    }
     return value;
   }
 
@@ -103,7 +107,9 @@ describe('Apollo Router with the local supergraph and real subgraphs', () => {
     );
     expect(created.errors).toBeUndefined();
     const id = record(record(created.data).createFleetVehicle).id;
-    if (typeof id !== 'string') throw new Error('Missing created Vehicle');
+    if (typeof id !== 'string') {
+      throw new Error('Missing created Vehicle');
+    }
     const coreBefore = fixture.coreRequests.length;
     const fleetBefore = fixture.fleetRequests.length;
     const source = 'query($id:ID!){fleetVehicle(id:$id){id licensePlate branch{id name}}}';
@@ -203,9 +209,11 @@ describe('Apollo Router with the local supergraph and real subgraphs', () => {
       expect(result.status).toBe(200);
       expect(result.body.errors).toBeUndefined();
       const id = result.headers.get('x-request-id');
-      if (supplied && /^[A-Za-z0-9._:-]{1,100}$/.test(supplied)) expect(id).toBe(supplied);
-      else
+      if (supplied && /^[A-Za-z0-9._:-]{1,100}$/.test(supplied)) {
+        expect(id).toBe(supplied);
+      } else {
         expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+      }
       for (const observed of [
         fixture.coreRequests.slice(coreBefore),
         fixture.fleetRequests.slice(fleetBefore),
@@ -240,7 +248,9 @@ describe('Apollo Router with the local supergraph and real subgraphs', () => {
     const created = await query(create, {}, headers);
     expect(created.errors).toBeUndefined();
     const vehicleId = record(record(created.data).createFleetVehicle).id;
-    if (typeof vehicleId !== 'string') throw new Error('Missing conflict-test Vehicle');
+    if (typeof vehicleId !== 'string') {
+      throw new Error('Missing conflict-test Vehicle');
+    }
     expect(
       (
         await query(

@@ -13,8 +13,9 @@ describe('Fleet scalars', () => {
     expect(DateTimeScalar.serialize(new Date('2026-10-18T09:30:00+03:00'))).toBe(
       '2026-10-18T06:30:00.000Z',
     );
-    for (const value of ['2026-10-18T06:30:00.000Z', new Date(Number.NaN), 0, null])
+    for (const value of ['2026-10-18T06:30:00.000Z', new Date(Number.NaN), 0, null]) {
       expect(() => DateTimeScalar.serialize(value)).toThrow('DateTime cannot represent');
+    }
   });
 
   it('parses DateTime and Date inputs leniently as strings only', () => {
@@ -38,8 +39,9 @@ describe('Fleet scalars', () => {
       '2026-02-29',
       '2026-10-18T00:00:00Z',
       20261018,
-    ])
+    ]) {
       expect(() => DateScalar.serialize(value)).toThrow('Date cannot represent');
+    }
   });
 
   it('converts calendar dates through UTC midnight', () => {

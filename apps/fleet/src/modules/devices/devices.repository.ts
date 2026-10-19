@@ -53,10 +53,18 @@ function deviceWhere(scope: FleetScope, criteria: DeviceListCriteria): Prisma.De
       ],
     };
   });
-  if (criteria.ids) conditions.push({ id: { in: criteria.ids } });
-  if (criteria.models) conditions.push({ model: { in: criteria.models } });
-  if (criteria.options) conditions.push({ options: { hasEvery: criteria.options } });
-  if (criteria.vehicleIds) conditions.push({ vehicleId: { in: criteria.vehicleIds } });
+  if (criteria.ids) {
+    conditions.push({ id: { in: criteria.ids } });
+  }
+  if (criteria.models) {
+    conditions.push({ model: { in: criteria.models } });
+  }
+  if (criteria.options) {
+    conditions.push({ options: { hasEvery: criteria.options } });
+  }
+  if (criteria.vehicleIds) {
+    conditions.push({ vehicleId: { in: criteria.vehicleIds } });
+  }
   return { tenantId: scope.tenantId, branchId: scope.branchId, AND: conditions };
 }
 

@@ -88,7 +88,9 @@ export class VehicleGroupsService {
 
   async find(context: RequestContext, id: string): Promise<FleetVehicleGroup> {
     const row = await this.groups.find(requireScope(context), uuid(id, 'id'));
-    if (!row) throw new NotFoundException('Vehicle group not found');
+    if (!row) {
+      throw new NotFoundException('Vehicle group not found');
+    }
     return toGroup(row);
   }
 
@@ -119,14 +121,21 @@ export class VehicleGroupsService {
     const scope = requireScope(context);
     const recordId = uuid(id, 'id');
     const data: Partial<VehicleGroupData> = {};
-    if (input.name !== undefined) data.name = text(input.name, 'name', 64);
-    if (input.description !== undefined)
+    if (input.name !== undefined) {
+      data.name = text(input.name, 'name', 64);
+    }
+    if (input.description !== undefined) {
       data.description = optionalText(input.description, 'description', 500);
-    if (input.colorToken !== undefined)
+    }
+    if (input.colorToken !== undefined) {
       data.colorToken = enumValue(input.colorToken, GROUP_COLORS, 'colorToken');
-    if (!Object.keys(data).length)
+    }
+    if (!Object.keys(data).length) {
       throw new BadRequestException('Provide at least one vehicle group field to update');
-    if (data.name !== undefined) await this.requireUniqueName(scope, data.name, recordId);
+    }
+    if (data.name !== undefined) {
+      await this.requireUniqueName(scope, data.name, recordId);
+    }
     try {
       return toGroup(await this.groups.update(scope, recordId, data));
     } catch (error) {
@@ -149,8 +158,9 @@ export class VehicleGroupsService {
     name: string,
     excludeId: string | null,
   ): Promise<void> {
-    if (await this.groups.nameTaken(scope, name, excludeId))
+    if (await this.groups.nameTaken(scope, name, excludeId)) {
       invalid(DUPLICATE_NAME.path, DUPLICATE_NAME.message);
+    }
   }
 
   private writeError(error: unknown): never {

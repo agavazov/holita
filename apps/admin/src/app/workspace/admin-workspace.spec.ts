@@ -27,7 +27,9 @@ function operation(request: HttpRequest<unknown>, name: string): boolean {
 }
 function loginScreen(harness: RouterTestingHarness): Login {
   const screen: unknown = harness.routeDebugElement?.query(By.directive(Login)).componentInstance;
-  if (!(screen instanceof Login)) throw new Error('Missing Login');
+  if (!(screen instanceof Login)) {
+    throw new Error('Missing Login');
+  }
   return screen;
 }
 describe('Demo tenant login workspace', () => {
@@ -61,7 +63,9 @@ describe('Demo tenant login workspace', () => {
     expect(loginScreen(harness).branchControl.disabled).toBe(true);
     http.expectNone((r) => operation(r, 'AdminBranches') || operation(r, 'AdminVehicles'));
     const workspace: unknown = harness.routeDebugElement?.componentInstance;
-    if (!(workspace instanceof AdminWorkspace)) throw new Error('Missing AdminWorkspace');
+    if (!(workspace instanceof AdminWorkspace)) {
+      throw new Error('Missing AdminWorkspace');
+    }
     async function login(tenant: typeof tenantA, token: string) {
       const screen = loginScreen(harness);
       screen.tenantControl.setValue(tenant.id);
@@ -118,7 +122,9 @@ describe('Demo tenant login workspace', () => {
     const shell: unknown = harness.routeDebugElement?.query(
       By.directive(AdminShell),
     ).componentInstance;
-    if (!(shell instanceof AdminShell)) throw new Error('Missing shell.');
+    if (!(shell instanceof AdminShell)) {
+      throw new Error('Missing shell.');
+    }
     expect(shell.navigation().map((group) => group.id)).toEqual(['fleet', 'karma-client']);
     expect(shell.navigation()[0]?.items.map((item) => item.link.join('/'))).toEqual([
       `//bg/${branch.id}/fleet/vehicles`,
@@ -151,7 +157,9 @@ describe('Demo tenant login workspace', () => {
     http.expectOne((r) => operation(r, 'AdminTenants')).flush({ data: { tenants: [tenantA] } });
     await harness.fixture.whenStable();
     const workspace: unknown = harness.routeDebugElement?.componentInstance;
-    if (!(workspace instanceof AdminWorkspace)) throw new Error('Missing workspace');
+    if (!(workspace instanceof AdminWorkspace)) {
+      throw new Error('Missing workspace');
+    }
     loginScreen(harness).tenantControl.setValue(tenantA.id);
     http
       .expectOne((r) => operation(r, 'AdminDemoLogin'))
@@ -240,7 +248,9 @@ describe('Demo tenant login workspace', () => {
     await harness.fixture.whenStable();
     screen.branchControl.setValue(branch.id);
     const form = harness.routeNativeElement?.querySelector<HTMLFormElement>('form');
-    if (!form) throw new Error('Missing login form');
+    if (!form) {
+      throw new Error('Missing login form');
+    }
     expect(form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))).toBe(
       false,
     );

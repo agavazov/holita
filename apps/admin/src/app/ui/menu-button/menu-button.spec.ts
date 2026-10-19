@@ -36,9 +36,13 @@ async function render(
   configure(fixture.componentInstance);
   await fixture.whenStable();
   const root: unknown = fixture.nativeElement;
-  if (!(root instanceof HTMLElement)) throw new Error('Missing host.');
+  if (!(root instanceof HTMLElement)) {
+    throw new Error('Missing host.');
+  }
   const trigger = root.querySelector('button');
-  if (!(trigger instanceof HTMLButtonElement)) throw new Error('Missing trigger.');
+  if (!(trigger instanceof HTMLButtonElement)) {
+    throw new Error('Missing trigger.');
+  }
   return { fixture, trigger };
 }
 
@@ -81,7 +85,9 @@ describe('MenuButton', () => {
     expect(items.some((item) => item.id === 'plovdiv')).toBe(false);
 
     const link = items[1]?.querySelector('.p-menu-item-link');
-    if (!(link instanceof HTMLElement)) throw new Error('Missing option.');
+    if (!(link instanceof HTMLElement)) {
+      throw new Error('Missing option.');
+    }
     link.click();
     await fixture.whenStable();
     expect(fixture.componentInstance.chosen.map((choice) => choice.id)).toEqual(['plovdiv']);
@@ -130,7 +136,9 @@ describe('MenuButton', () => {
     trigger.click();
     await fixture.whenStable();
     const list = document.body.querySelector('.p-menu [role="menu"]');
-    if (!list) throw new Error('Missing menu.');
+    if (!list) {
+      throw new Error('Missing menu.');
+    }
 
     list.dispatchEvent(
       new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape', bubbles: true }),

@@ -94,4 +94,9 @@ export default tseslint.config(
     extends: [angular.configs.templateRecommended, angular.configs.templateAccessibility],
   },
   eslintConfigPrettier,
+  {
+    rules: {
+      curly: ['error', 'all'],
+    },
+  },
 );

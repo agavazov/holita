@@ -69,7 +69,9 @@ function page(harness: RouterTestingHarness): DevicesPage {
   const component: unknown = harness.routeDebugElement?.query(
     By.directive(DevicesPage),
   ).componentInstance;
-  if (!(component instanceof DevicesPage)) throw new Error('Missing Devices page.');
+  if (!(component instanceof DevicesPage)) {
+    throw new Error('Missing Devices page.');
+  }
   return component;
 }
 function click(harness: RouterTestingHarness, label: string): void {
@@ -79,7 +81,9 @@ function click(harness: RouterTestingHarness, label: string): void {
     (element) =>
       element.getAttribute('aria-label') === label || element.textContent.trim() === label,
   );
-  if (!button) throw new Error('Missing button: ' + label);
+  if (!button) {
+    throw new Error('Missing button: ' + label);
+  }
   button.click();
 }
 function select(harness: RouterTestingHarness, label: string): void {
@@ -87,7 +91,9 @@ function select(harness: RouterTestingHarness, label: string): void {
     ...(harness.routeNativeElement?.querySelectorAll<HTMLInputElement>('input[type="checkbox"]') ??
       []),
   ].find((element) => element.getAttribute('aria-label') === label);
-  if (!input) throw new Error('Missing checkbox: ' + label);
+  if (!input) {
+    throw new Error('Missing checkbox: ' + label);
+  }
   input.click();
 }
 async function decide(accept: boolean): Promise<void> {
@@ -97,7 +103,9 @@ async function decide(accept: boolean): Promise<void> {
   const button = document.querySelector<HTMLButtonElement>(
     accept ? '.p-confirmdialog-accept-button' : '.p-confirmdialog-reject-button',
   );
-  if (!button) throw new Error('Missing confirmation button.');
+  if (!button) {
+    throw new Error('Missing confirmation button.');
+  }
   button.click();
   await vi.waitFor(() => {
     expect(document.querySelector('.p-confirmdialog')).toBeNull();
@@ -340,21 +348,28 @@ describe('Devices deletion and selection lifecycle', () => {
       }
       write.flush(deletion(alpha));
       const completion: unknown = submitted.mock.results[0]?.value;
-      if (!(completion instanceof Promise)) throw new Error('Missing submitted deletion.');
+      if (!(completion instanceof Promise)) {
+        throw new Error('Missing submitted deletion.');
+      }
       await completion;
       await harness.fixture.whenStable();
       expect(router.url).toBe(url);
-      if (destination !== 'query') expect(harness.routeNativeElement?.textContent).toBe(before);
-      else
+      if (destination !== 'query') {
+        expect(harness.routeNativeElement?.textContent).toBe(before);
+      } else {
         expect(
           page(harness)
             .selected()
             .map((device) => device.id),
         ).toEqual([beta.id]);
+      }
       expect(harness.routeNativeElement?.textContent).not.toContain('Deleted devices:');
       expect(harness.routeNativeElement?.textContent).not.toContain('Failed devices:');
-      if (destination === 'query') expect(stop).not.toHaveBeenCalled();
-      else expect(stop).toHaveBeenCalledTimes(destination === 'language' ? 2 : 1);
+      if (destination === 'query') {
+        expect(stop).not.toHaveBeenCalled();
+      } else {
+        expect(stop).toHaveBeenCalledTimes(destination === 'language' ? 2 : 1);
+      }
       http.expectNone('/graphql');
     },
   );
@@ -368,7 +383,9 @@ describe('Devices deletion and selection lifecycle', () => {
     await decide(true);
     const write = await nextRequest('AdminDeleteDevice');
     const completion: unknown = submitted.mock.results[0]?.value;
-    if (!(completion instanceof Promise)) throw new Error('Missing submitted deletion.');
+    if (!(completion instanceof Promise)) {
+      throw new Error('Missing submitted deletion.');
+    }
     const rejection = expect(completion).rejects.toThrow('Device not found');
     await router.navigateByUrl(path.replace(branchA, branchB));
     await harness.fixture.whenStable();

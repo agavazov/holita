@@ -59,8 +59,9 @@ describe('Fleet raw SQL helpers', () => {
       () => number(row, 'title'),
       () => date(row, 'id'),
       () => booleanOrNull(row, 'count'),
-    ])
+    ]) {
       expect(read).toThrow('Unexpected database value');
+    }
     expect(() => recordOf(null)).toThrow('Unexpected database row');
     expect(() => recordOf([1])).toThrow('Unexpected database row');
     expect(() => rowsOf({}, (value) => value)).toThrow('Unexpected database result');

@@ -76,7 +76,9 @@ export interface TripOption {
 
 /** The most severe event tone of a trip. */
 export function worstTone(events: readonly TripEvent[]): StatusTone {
-  if (events.some((event) => event.tone === 'danger')) return 'danger';
+  if (events.some((event) => event.tone === 'danger')) {
+    return 'danger';
+  }
   return events.some((event) => event.tone === 'warn') ? 'warn' : 'info';
 }
 
@@ -239,9 +241,13 @@ export class TripsView {
   }
 
   protected sort(event: TableLazyLoadEvent): void {
-    if (!this.sortReady()) return;
+    if (!this.sortReady()) {
+      return;
+    }
     const next = listQuery.sorted(this.state(), event);
-    if (next) this.stateChange.emit(next);
+    if (next) {
+      this.stateChange.emit(next);
+    }
   }
 
   /** A trip is recognised by its vehicle and start, e.g. "CB 1001 AX, 18 Oct 2026, 08:12". */

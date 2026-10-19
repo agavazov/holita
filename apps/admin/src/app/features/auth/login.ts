@@ -87,7 +87,9 @@ export class Login {
       next: (result) => {
         this.tenantsLoading.set(result.loading);
         this.tenantError.set(result.error ?? null);
-        if (result.dataState === 'complete') this.tenants.set(result.data.tenants);
+        if (result.dataState === 'complete') {
+          this.tenants.set(result.data.tenants);
+        }
       },
       error: (error: unknown) => {
         this.tenantsLoading.set(false);
@@ -108,11 +110,15 @@ export class Login {
     this.branches.set([]);
     this.branchError.set(null);
     this.branchesLoading.set(!!tenantId);
-    if (!tenantId) return;
+    if (!tenantId) {
+      return;
+    }
     try {
       // A candidate token can only discover its tenant's branches; it is not an active UI session.
       const session = await this.api.login(tenantId, language);
-      if (revision !== this.revision) return;
+      if (revision !== this.revision) {
+        return;
+      }
       const { query, close } = this.api.watch(language, {
         tenantId: session.tenant.id,
         token: session.token,
@@ -124,7 +130,9 @@ export class Login {
           if (result.dataState === 'complete') {
             this.branches.set(result.data.branches);
             this.preparedSession = session;
-            if (result.data.branches.length) this.branchControl.enable();
+            if (result.data.branches.length) {
+              this.branchControl.enable();
+            }
           }
         },
         error: (error: unknown) => {
@@ -145,8 +153,11 @@ export class Login {
   }
 
   retry(): void {
-    if (this.tenantError()) this.loadTenants(this.language());
-    else void this.loadBranches(this.tenantControl.value, this.language());
+    if (this.tenantError()) {
+      this.loadTenants(this.language());
+    } else {
+      void this.loadBranches(this.tenantControl.value, this.language());
+    }
   }
 
   login(): void {
@@ -160,8 +171,9 @@ export class Login {
       this.submitted() ||
       this.tenantControl.value !== session.tenant.id ||
       !this.branches().some((branch) => branch.id === branchId)
-    )
+    ) {
       return;
+    }
     this.submitted.set(true);
     this.tenantControl.disable({ emitEvent: false });
     this.branchControl.disable({ emitEvent: false });

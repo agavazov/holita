@@ -86,11 +86,14 @@ export class VehicleEditor implements OnInit {
   ngOnInit(): void {
     this.api.initialize(this.branch().id, this.language());
     this.form.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
-      if (!this.pending()) this.writeError.set(null);
+      if (!this.pending()) {
+        this.writeError.set(null);
+      }
     });
     const id = this.vehicleId();
-    if (id === null) this.ready.set(true);
-    else if (!this.invalidId()) {
+    if (id === null) {
+      this.ready.set(true);
+    } else if (!this.invalidId()) {
       this.loading.set(true);
       this.query = this.api.watchVehicle(id);
       this.query.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -120,11 +123,19 @@ export class VehicleEditor implements OnInit {
   fieldError(field: VehicleField): string {
     this.formEvents();
     const server = this.serverErrors()[field];
-    if (server) return server;
+    if (server) {
+      return server;
+    }
     const control = this.form.controls[field];
-    if (!control.touched || !control.invalid) return '';
-    if (control.hasError('required')) return this.text().licensePlateRequired;
-    if (control.hasError('unsupported')) return this.text().unsupportedCharacters;
+    if (!control.touched || !control.invalid) {
+      return '';
+    }
+    if (control.hasError('required')) {
+      return this.text().licensePlateRequired;
+    }
+    if (control.hasError('unsupported')) {
+      return this.text().unsupportedCharacters;
+    }
     if (control.hasError('maxLength')) {
       const max = field === 'licensePlate' ? 32 : 2000;
       return this.text().maxCharacters.replace('{max}', String(max));
@@ -138,16 +149,22 @@ export class VehicleEditor implements OnInit {
 
   retry(): void {
     void this.query?.refetch().catch((error: unknown) => {
-      if (!this.destroyRef.destroyed) this.readError.set(error);
+      if (!this.destroyRef.destroyed) {
+        this.readError.set(error);
+      }
     });
   }
 
   async save(): Promise<void> {
-    if (!this.ready() || this.pending()) return;
+    if (!this.ready() || this.pending()) {
+      return;
+    }
     this.form.markAllAsTouched();
     if (this.form.invalid) {
       const first = vehicleFields.find((field) => this.form.controls[field].invalid);
-      if (first) this.focusField(first);
+      if (first) {
+        this.focusField(first);
+      }
       return;
     }
     const values = this.form.getRawValue();
@@ -163,7 +180,9 @@ export class VehicleEditor implements OnInit {
       const id = this.vehicleId();
       const vehicle =
         id === null ? await this.api.create({ input }) : await this.api.update({ id, input });
-      if (this.destroyRef.destroyed) return;
+      if (this.destroyRef.destroyed) {
+        return;
+      }
       this.hydrate(vehicle);
       await this.router.navigate(this.listLink(), {
         queryParamsHandling: 'preserve',
@@ -180,7 +199,9 @@ export class VehicleEditor implements OnInit {
       if (!this.destroyRef.destroyed) {
         this.pending.set(false);
         this.form.enable({ emitEvent: false });
-        if (invalidField) this.focusField(invalidField);
+        if (invalidField) {
+          this.focusField(invalidField);
+        }
       }
     }
   }
@@ -193,8 +214,10 @@ export class VehicleEditor implements OnInit {
   }
 
   canLeave(): boolean | Promise<boolean> {
-    if (!this.form.dirty || this.pending()) return true;
-    if (!this.leaveDecision)
+    if (!this.form.dirty || this.pending()) {
+      return true;
+    }
+    if (!this.leaveDecision) {
       this.leaveDecision = new Promise<boolean>((resolve) => {
         const settle = (leave: boolean) => {
           this.leaveDecision = undefined;
@@ -217,10 +240,13 @@ export class VehicleEditor implements OnInit {
           },
         });
       });
+    }
     return this.leaveDecision;
   }
 
   beforeUnload(event: BeforeUnloadEvent): void {
-    if (this.form.dirty && !this.pending()) event.preventDefault();
+    if (this.form.dirty && !this.pending()) {
+      event.preventDefault();
+    }
   }
 }

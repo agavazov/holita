@@ -37,7 +37,9 @@ function button(name: string): HTMLButtonElement {
   const match = Array.from(document.querySelectorAll('button')).find((element) =>
     (element.getAttribute('aria-label') ?? element.textContent.trim()).startsWith(name),
   );
-  if (!match) throw new Error(`Missing button ${name}.`);
+  if (!match) {
+    throw new Error(`Missing button ${name}.`);
+  }
   return match;
 }
 
@@ -48,7 +50,9 @@ function click(element: HTMLElement): void {
 
 function firstControl(): HTMLElement {
   const match = document.querySelector<HTMLElement>('.p-popover [id$="-field"]');
-  if (!match) throw new Error('Missing Column control.');
+  if (!match) {
+    throw new Error('Missing Column control.');
+  }
   return match;
 }
 
@@ -114,7 +118,9 @@ describe('FilterBuilder focus', () => {
     click(button('Add filter'));
     await fixture.whenStable();
     const search = document.querySelector<HTMLInputElement>('input[type="search"]');
-    if (!search) throw new Error('Missing search.');
+    if (!search) {
+      throw new Error('Missing search.');
+    }
     click(search);
     await fixture.whenStable();
     expect(document.activeElement).toBe(search);
@@ -173,14 +179,18 @@ describe('FilterBuilder focus', () => {
       const input = document.querySelector<HTMLInputElement>(
         '.filter-builder__editor input[id$="-value"]',
       );
-      if (!input) throw new Error('Missing filter date input.');
+      if (!input) {
+        throw new Error('Missing filter date input.');
+      }
       click(input);
       await fixture.whenStable();
       const cell = document.querySelector<HTMLElement>(
         '.p-datepicker-panel [data-date][tabindex="0"]',
       );
       const source = target === 'input' ? input : cell;
-      if (!source) throw new Error('Missing focusable calendar cell.');
+      if (!source) {
+        throw new Error('Missing focusable calendar cell.');
+      }
       source.focus();
       source.dispatchEvent(
         new KeyboardEvent('keydown', {

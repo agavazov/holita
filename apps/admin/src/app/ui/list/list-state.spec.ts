@@ -50,7 +50,9 @@ const definition: ListDefinition<Filter, Sort> = {
   },
   // Selected groups win over "without a group".
   normalizeFilter: (filter) => {
-    if (!filter.groupIds?.length || filter.hasGroup !== false) return filter;
+    if (!filter.groupIds?.length || filter.hasGroup !== false) {
+      return filter;
+    }
     const { hasGroup: _dropped, ...rest } = filter;
     return rest;
   },

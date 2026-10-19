@@ -4,7 +4,9 @@ import type { Prisma } from '../../generated/prisma/client.js';
 export class CatalogValidationError extends Error {}
 
 export function check(condition: unknown, message: string): asserts condition {
-  if (!condition) throw new CatalogValidationError(message);
+  if (!condition) {
+    throw new CatalogValidationError(message);
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -42,10 +44,18 @@ function nullableText(value: unknown): string | null {
 }
 
 function json(value: unknown): Prisma.InputJsonValue | null {
-  if (value === null) return null;
-  if (typeof value === 'string' || typeof value === 'boolean') return value;
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (Array.isArray(value)) return value.map(json);
+  if (value === null) {
+    return null;
+  }
+  if (typeof value === 'string' || typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map(json);
+  }
   return jsonObject(value);
 }
 
@@ -124,8 +134,9 @@ export function parseCatalog(bytes: Buffer) {
       'silentMode',
       'obdProtocolsMask',
       'regularProtocolsMask',
-    ])
+    ]) {
       check(integer(details[field]) <= 255, 'Invalid set default byte');
+    }
     const parameterIds = list(item.parameterIds).map(integer);
     const rawIds = text(details.rawParameterIds);
     check(
@@ -174,8 +185,9 @@ export function parseCatalog(bytes: Buffer) {
     memberships: memberships.length,
     categories: categories.length,
     profiles: profiles.length,
-  }))
+  })) {
     check(coverage[name] === count, `Invalid coverage count: ${name}`);
+  }
   const issues = list(root.issues);
   const issueCounts: Record<string, number> = {};
   for (const value of issues) {

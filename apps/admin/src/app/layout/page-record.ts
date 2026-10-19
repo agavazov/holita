@@ -15,7 +15,9 @@ export class PageRecord {
     this.current.set(registration);
     return () => {
       // Only the page that registered last clears it, so a page leaving late keeps the new one.
-      if (this.current() === registration) this.current.set(null);
+      if (this.current() === registration) {
+        this.current.set(null);
+      }
     };
   }
 }

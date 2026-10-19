@@ -9,13 +9,16 @@ const white = '#ffffff';
 /** The hex value of an Aura primitive, e.g. `primitiveHex('blue', 600)`. */
 export function primitiveHex(palette: PaletteName, step: PaletteStep): string {
   const value = primitive[palette]?.[step];
-  if (typeof value !== 'string' || !/^#[0-9a-f]{6}$/i.test(value))
+  if (typeof value !== 'string' || !/^#[0-9a-f]{6}$/i.test(value)) {
     throw new Error(`Missing Aura primitive ${palette}.${String(step)}.`);
+  }
   return value;
 }
 
 function channels(hex: string): readonly [number, number, number] {
-  if (!/^#[0-9a-f]{6}$/i.test(hex)) throw new Error(`Expected a #rrggbb colour, got ${hex}.`);
+  if (!/^#[0-9a-f]{6}$/i.test(hex)) {
+    throw new Error(`Expected a #rrggbb colour, got ${hex}.`);
+  }
   const value = Number.parseInt(hex.slice(1), 16);
   return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
 }

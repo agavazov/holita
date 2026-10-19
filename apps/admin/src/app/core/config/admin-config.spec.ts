@@ -54,8 +54,9 @@ describe('public Angular configuration', () => {
     expect(() => readLocalAdminConfig({ graphqlUrl: '/graphql' })).toThrow(
       'config.local.json does not support "graphqlUrl".',
     );
-    for (const value of [null, 'key', ['key']])
+    for (const value of [null, 'key', ['key']]) {
       expect(() => readLocalAdminConfig(value)).toThrow('config.local.json must be an object.');
+    }
   });
   it('accepts a same-origin proxy path and a public HTTP gateway URL', () => {
     expect(readGraphqlUrl({ graphqlUrl: '/graphql' })).toBe('/graphql');

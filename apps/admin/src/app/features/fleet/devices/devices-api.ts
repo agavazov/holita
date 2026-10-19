@@ -32,8 +32,9 @@ export class DevicesApi implements OnDestroy {
   private pendingWrites = 0;
 
   initialize(branchId: string, language: Language): void {
-    if (this.apollo || this.destroyed)
+    if (this.apollo || this.destroyed) {
       throw new Error('DevicesApi belongs to one branch workspace.');
+    }
     const client = new ApolloClient(
       graphqlOptions(
         this.httpLink,
@@ -46,7 +47,9 @@ export class DevicesApi implements OnDestroy {
   }
 
   watch(variables: AdminDevicesQueryVariables) {
-    if (!this.apollo || this.destroyed) throw new Error('An active Devices workspace is required.');
+    if (!this.apollo || this.destroyed) {
+      throw new Error('An active Devices workspace is required.');
+    }
     return this.apollo.watchQuery({
       query: AdminDevicesDocument,
       variables,
@@ -54,7 +57,9 @@ export class DevicesApi implements OnDestroy {
   }
 
   vehicles(request: RelationRequest) {
-    if (!this.apollo || this.destroyed) throw new Error('An active Devices workspace is required.');
+    if (!this.apollo || this.destroyed) {
+      throw new Error('An active Devices workspace is required.');
+    }
     return this.apollo
       .watchQuery({
         query: AdminDeviceVehiclesDocument,
@@ -63,9 +68,12 @@ export class DevicesApi implements OnDestroy {
       })
       .valueChanges.pipe(
         map((result): RelationPage | null => {
-          if (result.error)
+          if (result.error) {
             throw result.error instanceof Error ? result.error : new Error(result.error.message);
-          if (result.dataState !== 'complete') return null;
+          }
+          if (result.dataState !== 'complete') {
+            return null;
+          }
           return {
             items: result.data.fleetVehicles.items.map((vehicle) => ({
               id: vehicle.id,
@@ -80,13 +88,17 @@ export class DevicesApi implements OnDestroy {
 
   async update(variables: AdminUpdateDeviceMutationVariables) {
     const apollo = this.apollo;
-    if (!apollo || this.destroyed) throw new Error('An active Devices workspace is required.');
+    if (!apollo || this.destroyed) {
+      throw new Error('An active Devices workspace is required.');
+    }
     this.pendingWrites++;
     try {
       const result = await firstValueFrom(
         apollo.mutate({ mutation: AdminUpdateDeviceDocument, variables }),
       );
-      if (!result.data?.updateFleetDevice) throw new Error('Missing updateFleetDevice result.');
+      if (!result.data?.updateFleetDevice) {
+        throw new Error('Missing updateFleetDevice result.');
+      }
       // Invalidation belongs to the client captured at submission, including after navigation.
       apollo.client.cache.evict({ id: 'ROOT_QUERY', fieldName: 'fleetDevices' });
       return result.data.updateFleetDevice;
@@ -97,7 +109,9 @@ export class DevicesApi implements OnDestroy {
   }
 
   watchDevice(id: string) {
-    if (!this.apollo || this.destroyed) throw new Error('An active Devices workspace is required.');
+    if (!this.apollo || this.destroyed) {
+      throw new Error('An active Devices workspace is required.');
+    }
     return this.apollo.watchQuery({
       query: AdminDeviceDocument,
       variables: { id },
@@ -107,13 +121,17 @@ export class DevicesApi implements OnDestroy {
 
   async create(variables: AdminCreateDeviceMutationVariables) {
     const apollo = this.apollo;
-    if (!apollo || this.destroyed) throw new Error('An active Devices workspace is required.');
+    if (!apollo || this.destroyed) {
+      throw new Error('An active Devices workspace is required.');
+    }
     this.pendingWrites++;
     try {
       const result = await firstValueFrom(
         apollo.mutate({ mutation: AdminCreateDeviceDocument, variables }),
       );
-      if (!result.data?.createFleetDevice) throw new Error('Missing createFleetDevice result.');
+      if (!result.data?.createFleetDevice) {
+        throw new Error('Missing createFleetDevice result.');
+      }
       apollo.client.cache.evict({ id: 'ROOT_QUERY', fieldName: 'fleetDevices' });
       return result.data.createFleetDevice;
     } finally {
@@ -124,17 +142,23 @@ export class DevicesApi implements OnDestroy {
 
   async delete(variables: AdminDeleteDeviceMutationVariables) {
     const apollo = this.apollo;
-    if (!apollo || this.destroyed) throw new Error('An active Devices workspace is required.');
+    if (!apollo || this.destroyed) {
+      throw new Error('An active Devices workspace is required.');
+    }
     this.pendingWrites++;
     try {
       const result = await firstValueFrom(
         apollo.mutate({ mutation: AdminDeleteDeviceDocument, variables }),
       );
       const device = result.data?.deleteFleetDevice;
-      if (!device) throw new Error('Missing deleteFleetDevice result.');
+      if (!device) {
+        throw new Error('Missing deleteFleetDevice result.');
+      }
       // Reconcile the visible list once per batch; invalidate every list variant in this client only.
       const entity = apollo.client.cache.identify(device);
-      if (entity) apollo.client.cache.evict({ id: entity, broadcast: false });
+      if (entity) {
+        apollo.client.cache.evict({ id: entity, broadcast: false });
+      }
       apollo.client.cache.evict({
         id: 'ROOT_QUERY',
         fieldName: 'fleetDevices',

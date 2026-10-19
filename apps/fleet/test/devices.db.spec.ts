@@ -71,7 +71,7 @@ describe('Device GraphQL with PostgreSQL', () => {
     const branchId = randomUUID();
     const first = await truck(branchId),
       second = await truck(branchId, 'CB5678AB');
-    for (const imei of ['001234567890123', '001234567890124'])
+    for (const imei of ['001234567890123', '001234567890124']) {
       expect(await query(create, { input: { imei, vehicleId: first.id } }, branchId)).toMatchObject(
         {
           data: {
@@ -84,6 +84,7 @@ describe('Device GraphQL with PostgreSQL', () => {
           },
         },
       );
+    }
     expect(requireBranch).toHaveBeenCalledTimes(2);
     const row = await database.client.device.findFirstOrThrow({
       where: { branchId, imei: '001234567890123' },
@@ -172,10 +173,11 @@ describe('Device GraphQL with PostgreSQL', () => {
     const row = await database.client.device.create({
       data: { tenantId, branchId, vehicleId: vehicle.id, imei: '123456789012345' },
     });
-    for (const source of [read, update, remove])
+    for (const source of [read, update, remove]) {
       expect(
         await query(source, { id: row.id, input: { imei: '123456789012346' } }, foreign),
       ).toMatchObject({ errors: [{ extensions: { code: 'NOT_FOUND' } }] });
+    }
     const entity =
       'query($refs:[_Any!]!){_entities(representations:$refs){...on FleetDevice{id imei vehicle{licensePlate}}}}';
     const variables = {
@@ -214,8 +216,9 @@ describe('Device GraphQL with PostgreSQL', () => {
       { imei: '123456789012345', vehicleId: null },
       { imei: '123456789012345', vehicleId: randomUUID() },
       { imei: '123456789012345', vehicleId: vehicle.id, branchId },
-    ])
+    ]) {
       expect(await query(create, { input }, branchId)).toHaveProperty('errors');
+    }
     expect(await database.client.device.count({ where: { branchId } })).toBe(0);
     expect(requireBranch).not.toHaveBeenCalled();
   });
@@ -229,8 +232,9 @@ describe('Device GraphQL with PostgreSQL', () => {
       [branchId, own.id, '001234567890124'],
       [branchId, own.id, '991234567890125'],
       [foreign, other.id, '001234567890123'],
-    ] satisfies [string, string, string][])
+    ] satisfies [string, string, string][]) {
       await database.client.device.create({ data: { tenantId, branchId: scope, vehicleId, imei } });
+    }
     const source =
       'query($search:String,$offset:Int!,$ids:[ID!]){fleetDevices(search:$search,offset:$offset,limit:1,ids:$ids,sort:{field:IMEI,direction:ASC}){items{imei vehicle{licensePlate}}total}}';
     expect(await query(source, { search: '001', offset: 1 }, branchId)).toEqual({
@@ -313,10 +317,11 @@ describe('Device GraphQL with PostgreSQL', () => {
       [{ installedAt: '2999-01-01T00:00:00Z' }, 'installedAt'],
       [{ installedAt: '2026-10-01T09:15:00' }, 'installedAt'],
       [{ simIccid: '123' }, 'simIccid'],
-    ] satisfies [Record<string, unknown>, string][])
+    ] satisfies [Record<string, unknown>, string][]) {
       expect(await query(update, { id: device.id, input }, branchId)).toMatchObject({
         errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path }] } }],
       });
+    }
     expect(
       await query(
         update,
@@ -366,10 +371,11 @@ describe('Device GraphQL with PostgreSQL', () => {
       { id: higherId, imei: '100000000000003', vehicleId: second.id, model: 'OTHER' },
       { id: lowerId, imei: '100000000000004', vehicleId: second.id },
     ] as const;
-    for (const row of rows)
+    for (const row of rows) {
       await database.client.device.create({
         data: { tenantId, branchId, ...row, options: 'options' in row ? [...row.options] : [] },
       });
+    }
     const foreignBranch = randomUUID();
     await database.client.device.create({
       data: {
@@ -436,7 +442,7 @@ describe('Device GraphQL with PostgreSQL', () => {
     expect(await query('{fleetDevices{items{id}total}}', {}, branchId)).toEqual({
       data: { fleetDevices: { items: [{ id: device.id }], total: 1 } },
     });
-    for (const source of [read, update, remove])
+    for (const source of [read, update, remove]) {
       expect(
         await query(
           source,
@@ -445,6 +451,7 @@ describe('Device GraphQL with PostgreSQL', () => {
           otherTenant,
         ),
       ).toMatchObject({ errors: [{ extensions: { code: 'NOT_FOUND' } }] });
+    }
     expect(
       await query(create, { input: { imei: '001234567890997', vehicleId: foreign.id } }, branchId),
     ).toMatchObject({ errors: [{ extensions: { fieldErrors: [{ path: 'vehicleId' }] } }] });

@@ -50,10 +50,12 @@ describe('local GraphQL contracts', () => {
       'FleetServiceTask',
       'FleetServiceSummary',
       'FleetDriverScorecard',
-    ])
+    ]) {
       expect(result.apiSchema.getType(name)).toBeDefined();
-    for (const name of ['FleetVehicleSortDirection', 'FleetDeviceSortDirection'])
+    }
+    for (const name of ['FleetVehicleSortDirection', 'FleetDeviceSortDirection']) {
       expect(result.apiSchema.getType(name)).toBeUndefined();
+    }
     expect(Object.keys(result.apiSchema.getQueryType()?.getFields() ?? {}).sort()).toEqual([
       'branch',
       'branches',
@@ -124,13 +126,14 @@ describe('local GraphQL contracts', () => {
       'fleetTrips',
       'fleetEvents',
       'fleetServiceTasks',
-    ])
+    ]) {
       expect(
         result.apiSchema
           .getQueryType()
           ?.getFields()
           [name]?.args.map((argument) => argument.name),
       ).toEqual(['offset', 'limit', 'search', 'ids', 'filter', 'sort']);
+    }
     expect(composeContracts(await readContracts()).supergraphSdl).toBe(result.supergraphSdl);
   });
   it('rejects an operation that no longer matches the API', async () => {

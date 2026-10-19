@@ -136,7 +136,9 @@ describe.each([
     const shell: unknown = harness.routeDebugElement?.query(
       By.directive(AdminShell),
     ).componentInstance;
-    if (!(shell instanceof AdminShell)) throw new Error('Missing shell.');
+    if (!(shell instanceof AdminShell)) {
+      throw new Error('Missing shell.');
+    }
     shell.chooseBranch(branchB);
     await harness.fixture.whenStable();
     expect(oldRead.cancelled).toBe(true);

@@ -29,8 +29,9 @@ export class KarmaApi implements OnDestroy {
   private language: Language = 'bg';
 
   initialize(language: Language): void {
-    if (this.apollo || this.destroyed)
+    if (this.apollo || this.destroyed) {
       throw new Error('KarmaApi belongs to one session workspace.');
+    }
     const client = new ApolloClient(
       graphqlOptions(this.httpLink, this.config.graphqlUrl, undefined, this.session.capture()),
     );
@@ -39,7 +40,9 @@ export class KarmaApi implements OnDestroy {
   }
 
   watch() {
-    if (!this.apollo || this.destroyed) throw new Error('An active Karma workspace is required.');
+    if (!this.apollo || this.destroyed) {
+      throw new Error('An active Karma workspace is required.');
+    }
     return this.apollo.watchQuery({
       query: AdminKarmaCarsDocument,
       fetchPolicy: 'network-only',
@@ -48,7 +51,9 @@ export class KarmaApi implements OnDestroy {
   }
 
   watchCar(id: string) {
-    if (!this.apollo || this.destroyed) throw new Error('An active Karma workspace is required.');
+    if (!this.apollo || this.destroyed) {
+      throw new Error('An active Karma workspace is required.');
+    }
     return this.apollo.watchQuery({
       query: AdminKarmaCarDocument,
       variables: { id },
@@ -58,7 +63,9 @@ export class KarmaApi implements OnDestroy {
   }
 
   watchLocation(carId: string) {
-    if (!this.apollo || this.destroyed) throw new Error('An active Karma workspace is required.');
+    if (!this.apollo || this.destroyed) {
+      throw new Error('An active Karma workspace is required.');
+    }
     return this.apollo.watchQuery({
       query: AdminKarmaLocationDocument,
       variables: { carId },
@@ -68,7 +75,9 @@ export class KarmaApi implements OnDestroy {
   }
 
   watchUsers() {
-    if (!this.apollo || this.destroyed) throw new Error('An active Karma workspace is required.');
+    if (!this.apollo || this.destroyed) {
+      throw new Error('An active Karma workspace is required.');
+    }
     return this.apollo.watchQuery({
       query: AdminKarmaUsersDocument,
       fetchPolicy: 'network-only',
@@ -76,7 +85,9 @@ export class KarmaApi implements OnDestroy {
     });
   }
   watchRoles() {
-    if (!this.apollo || this.destroyed) throw new Error('An active Karma workspace is required.');
+    if (!this.apollo || this.destroyed) {
+      throw new Error('An active Karma workspace is required.');
+    }
     return this.apollo.watchQuery({
       query: AdminKarmaRolesDocument,
       fetchPolicy: 'network-only',
@@ -84,7 +95,9 @@ export class KarmaApi implements OnDestroy {
     });
   }
   watchProjects() {
-    if (!this.apollo || this.destroyed) throw new Error('An active Karma workspace is required.');
+    if (!this.apollo || this.destroyed) {
+      throw new Error('An active Karma workspace is required.');
+    }
     return this.apollo.watchQuery({
       query: AdminKarmaProjectsDocument,
 
@@ -94,7 +107,9 @@ export class KarmaApi implements OnDestroy {
   }
 
   watchTimeZones() {
-    if (!this.apollo || this.destroyed) throw new Error('An active Karma workspace is required.');
+    if (!this.apollo || this.destroyed) {
+      throw new Error('An active Karma workspace is required.');
+    }
     return this.apollo.watchQuery({
       query: AdminKarmaTimeZonesDocument,
 
@@ -104,7 +119,9 @@ export class KarmaApi implements OnDestroy {
   }
 
   watchVersion() {
-    if (!this.apollo || this.destroyed) throw new Error('An active Karma workspace is required.');
+    if (!this.apollo || this.destroyed) {
+      throw new Error('An active Karma workspace is required.');
+    }
     return this.apollo.watchQuery({
       query: AdminKarmaVersionDocument,
 
@@ -114,7 +131,9 @@ export class KarmaApi implements OnDestroy {
   }
 
   watchReferences() {
-    if (!this.apollo || this.destroyed) throw new Error('An active Karma workspace is required.');
+    if (!this.apollo || this.destroyed) {
+      throw new Error('An active Karma workspace is required.');
+    }
     return this.apollo.watchQuery({
       query: AdminKarmaReferencesDocument,
 

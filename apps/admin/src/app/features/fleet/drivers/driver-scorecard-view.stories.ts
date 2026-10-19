@@ -12,7 +12,9 @@ export default meta;
 type Story = StoryObj;
 
 const driver = sampleDrivers.find((driver) => driver.id === 'd01');
-if (!driver) throw new Error('Missing scorecard sample driver d01.');
+if (!driver) {
+  throw new Error('Missing scorecard sample driver d01.');
+}
 const name = driver.name;
 const path = `drivers/${driver.id}/scorecard`;
 const appReady = { timeout: 10_000 };

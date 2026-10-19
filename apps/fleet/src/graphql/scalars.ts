@@ -5,21 +5,29 @@ import { GraphQLError, GraphQLScalarType, Kind, type ValueNode } from 'graphql';
 // BAD_USER_INPUT fieldErrors instead of a subgraph variable-coercion failure.
 
 function stringInput(name: string, value: unknown): string {
-  if (typeof value !== 'string') throw new GraphQLError(`${name} must be a string.`);
+  if (typeof value !== 'string') {
+    throw new GraphQLError(`${name} must be a string.`);
+  }
   return value;
 }
 
 function stringLiteral(name: string, node: ValueNode): string {
-  if (node.kind !== Kind.STRING) throw new GraphQLError(`${name} must be a string.`);
+  if (node.kind !== Kind.STRING) {
+    throw new GraphQLError(`${name} must be a string.`);
+  }
   return node.value;
 }
 
 /** `YYYY-MM-DD` that names a real calendar day (checked by a UTC round trip). */
 export function isDateOnly(value: string): boolean {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return false;
+  if (!match) {
+    return false;
+  }
   const [, year, month, day] = match.map(Number);
-  if (year === undefined || month === undefined || day === undefined) return false;
+  if (year === undefined || month === undefined || day === undefined) {
+    return false;
+  }
   const date = new Date(Date.UTC(year, month - 1, day));
   date.setUTCFullYear(year);
   return !Number.isNaN(date.getTime()) && dateToDateOnly(date) === value;
@@ -39,7 +47,9 @@ export const DateTimeScalar = new GraphQLScalarType<string, string>({
   name: 'DateTime',
   description: 'ISO-8601 instant with an offset; serialized in UTC with milliseconds.',
   serialize(value) {
-    if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString();
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+      return value.toISOString();
+    }
     throw new GraphQLError('DateTime cannot represent this value.');
   },
   parseValue: (value) => stringInput('DateTime', value),
@@ -52,8 +62,12 @@ export const DateScalar = new GraphQLScalarType<string, string>({
   serialize(value) {
     if (value instanceof Date && !Number.isNaN(value.getTime())) {
       const text = dateToDateOnly(value);
-      if (dateOnlyToDate(text).getTime() === value.getTime()) return text;
-    } else if (typeof value === 'string' && isDateOnly(value)) return value;
+      if (dateOnlyToDate(text).getTime() === value.getTime()) {
+        return text;
+      }
+    } else if (typeof value === 'string' && isDateOnly(value)) {
+      return value;
+    }
     throw new GraphQLError('Date cannot represent this value.');
   },
   parseValue: (value) => stringInput('Date', value),

@@ -30,8 +30,9 @@ export const graphqlDiagnostics: ApolloServerPlugin<RequestContext> = {
           if (
             (cause instanceof HttpException && codes.has(cause.getStatus())) ||
             (typeof code === 'string' && publicCodes.has(code))
-          )
+          ) {
             continue;
+          }
           logger.error({
             requestId: contextValue.requestId,
             error: cause instanceof Error ? cause.name : 'UnknownError',
@@ -59,11 +60,14 @@ export function formatGraphqlError(
   const original: unknown = unwrapResolverError(error);
   if (original instanceof HttpException) {
     const code = codes.get(original.getStatus());
-    if (code) return { ...formatted, message: original.message, extensions: { code, ...trace } };
+    if (code) {
+      return { ...formatted, message: original.message, extensions: { code, ...trace } };
+    }
   }
   const code = formatted.extensions?.['code'];
-  if (typeof code === 'string' && publicCodes.has(code))
+  if (typeof code === 'string' && publicCodes.has(code)) {
     return { ...formatted, extensions: { code, ...trace } };
+  }
   return {
     ...formatted,
     message: 'Internal server error',

@@ -31,19 +31,21 @@ export function reconcile(catalog: Catalog): void {
     mappings: JsonObject[] = [],
     byId = new Map<number, Parameter[]>(),
     membership = new Map<number, number[]>();
-  for (const set of catalog.sets)
+  for (const set of catalog.sets) {
     for (const id of array(set['parameterIds'])) {
       const key = number(id),
         members = membership.get(key) ?? [];
       members.push(number(set['vendorId']));
       membership.set(key, members);
     }
+  }
   for (const parameter of catalog.parameters) {
     const records = byId.get(parameter.parameterId) ?? [];
     records.push(parameter);
     byId.set(parameter.parameterId, records);
-    for (const issue of array(parameter.details['issues']))
+    for (const issue of array(parameter.details['issues'])) {
       issues.push({ kind: string(issue), parameterKey: parameter.key });
+    }
   }
   for (const id of [...new Set([...byId.keys(), ...membership.keys()])].sort((a, b) => a - b)) {
     const records = byId.get(id) ?? [],
@@ -62,14 +64,16 @@ export function reconcile(catalog: Catalog): void {
       deviceSupport: 'unverified',
       karmaMapping: 'unverified',
     });
-    if (!monitor.length && setIds.length)
+    if (!monitor.length && setIds.length) {
       issues.push({ kind: 'set_member_without_monitor_definition', parameterId: id, setIds });
-    if (!monitor.length || !workbook.length)
+    }
+    if (!monitor.length || !workbook.length) {
       issues.push({
         kind: 'source_coverage_difference',
         parameterId: id,
         missing: monitor.length ? 'workbook' : 'monitor',
       });
+    }
   }
   for (const key of ['sets', 'profiles', 'categories']) {
     const ids = array(catalog[key]).map((row) => number(object(row)['vendorId']));
@@ -131,7 +135,9 @@ export function extract(path: string, label: string): Catalog {
 }
 // Semantic identities retain schema 1's spaced, ASCII-escaped JSON strings.
 function identity(value: Json): string {
-  if (Array.isArray(value)) return `[${value.map(identity).join(', ')}]`;
+  if (Array.isArray(value)) {
+    return `[${value.map(identity).join(', ')}]`;
+  }
   return JSON.stringify(value).replace(
     /[\u007f-\uffff]/g,
     (character) => `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`,
@@ -176,7 +182,9 @@ function semanticRecords(catalog: JsonObject): Map<string, JsonObject> {
         formulas: JsonObject = {};
       for (const [column, value] of Object.entries(object(details['cells'] ?? {}))) {
         const cell = object(value);
-        if (cell['formula'] === undefined) continue;
+        if (cell['formula'] === undefined) {
+          continue;
+        }
         const formula = object(cell['formula']),
           anchor = object(
             formula['sharedAnchor'] ?? {
@@ -187,7 +195,9 @@ function semanticRecords(catalog: JsonObject): Map<string, JsonObject> {
         let expression = anchor['text'] ?? null;
         const originRow = /[0-9]+$/.exec(string(anchor['cell']));
         requireValue(originRow, 'Invalid formula cell');
-        if (expression === `DEC2HEX(A${originRow[0]})`) expression = 'DEC2HEX(parameterId)';
+        if (expression === `DEC2HEX(A${originRow[0]})`) {
+          expression = 'DEC2HEX(parameterId)';
+        }
         formulas[column] = expression;
       }
       return {
@@ -203,11 +213,12 @@ function semanticRecords(catalog: JsonObject): Map<string, JsonObject> {
     values.sort((a, b) => Buffer.compare(Buffer.from(canonical(a)), Buffer.from(canonical(b))));
     result.set(key, { value: values, records });
   }
-  for (const kind of ['sets', 'profiles', 'categories'])
+  for (const kind of ['sets', 'profiles', 'categories']) {
     for (const value of array(catalog[kind])) {
       const row = object(value);
       result.set(identity([kind, number(row['vendorId'])]), { value: row, records: [row] });
     }
+  }
   return result;
 }
 export function compare(before: JsonObject, after: JsonObject): JsonObject {
@@ -216,16 +227,19 @@ export function compare(before: JsonObject, after: JsonObject): JsonObject {
     added: JsonObject[] = [],
     removed: JsonObject[] = [],
     changed: JsonObject[] = [];
-  for (const key of [...current.keys()].filter((key) => !old.has(key)).sort())
+  for (const key of [...current.keys()].filter((key) => !old.has(key)).sort()) {
     added.push({ identity: key, after: current.get(key) ?? null });
-  for (const key of [...old.keys()].filter((key) => !current.has(key)).sort())
+  }
+  for (const key of [...old.keys()].filter((key) => !current.has(key)).sort()) {
     removed.push({ identity: key, before: old.get(key) ?? null });
+  }
   for (const key of [...old.keys()].filter((key) => current.has(key)).sort()) {
     const previous = old.get(key),
       next = current.get(key);
     requireValue(previous && next, 'Missing comparison record');
-    if (canonical(previous['value'] ?? null) !== canonical(next['value'] ?? null))
+    if (canonical(previous['value'] ?? null) !== canonical(next['value'] ?? null)) {
       changed.push({ identity: key, before: previous, after: next });
+    }
   }
   const oldSource = object(before['source']),
     newSource = object(after['source']);
@@ -264,18 +278,21 @@ export function markdown(catalog: Catalog): string {
             .filter((location) => location['kind'] === 'resource')
             .map((location) => string(location['path']))
             .join(', ') || string(source['key']);
-      for (const sheet of array(evidence['sheets']).map(object))
+      for (const sheet of array(evidence['sheets']).map(object)) {
         lines.push(
           `| ${locations} | ${string(sheet['name'])} | ${String(number(sheet['rows']))} |`,
         );
+      }
     } else {
       const counts = new Map<string, number>();
       for (const parameter of catalog.parameters.filter(
         (parameter) => parameter.sourceKey === 'monitor',
-      ))
+      )) {
         counts.set(parameter.category, (counts.get(parameter.category) ?? 0) + 1);
-      for (const category of [...counts.keys()].sort())
+      }
+      for (const category of [...counts.keys()].sort()) {
         lines.push(`| Monitor | ${category} | ${String(counts.get(category))} |`);
+      }
     }
   }
   lines.push(
@@ -287,10 +304,11 @@ export function markdown(catalog: Catalog): string {
     '| ID | Name | Set | Category |',
     '| --- | --- | --- | --- |',
   );
-  for (const profile of catalog.profiles)
+  for (const profile of catalog.profiles) {
     lines.push(
       `| ${String(number(profile['vendorId']))} | ${string(profile['name'])} | ${String(number(profile['setId']))} | ${String(number(profile['categoryId']))} |`,
     );
+  }
   lines.push(
     '',
     '## Source qualifications',
@@ -304,8 +322,9 @@ export function markdown(catalog: Catalog): string {
     '## Issues',
     '',
   );
-  for (const [kind, count] of Object.entries(object(catalog.coverage['issues'])))
+  for (const [kind, count] of Object.entries(object(catalog.coverage['issues']))) {
     lines.push(`- \`${kind}\`: ${String(number(count))}.`);
+  }
   return `${lines.join('\n')}\n`;
 }
 export function main(args = process.argv.slice(2)): void {
@@ -370,8 +389,9 @@ export function main(args = process.argv.slice(2)): void {
       });
     mkdirSync(out, { recursive: true });
     mkdirSync(join(out, 'workbooks'));
-    for (const book of workbooks)
+    for (const book of workbooks) {
       writeFileSync(join(out, 'workbooks', `${book.key}.xlsx`), book.payload, { flag: 'wx' });
+    }
     const content = canonical(catalog),
       contentSha256 = sha256(content);
     writeFileSync(join(out, 'catalog.json'), `${content}\n`, { flag: 'wx' });

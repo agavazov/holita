@@ -19,7 +19,9 @@ export default meta;
 type Story = StoryObj;
 
 const [driver] = sampleDrivers;
-if (!driver) throw new Error('The sample drivers are empty.');
+if (!driver) {
+  throw new Error('The sample drivers are empty.');
+}
 const appReady = { timeout: 10_000 };
 
 async function tableReady(canvasElement: HTMLElement) {
@@ -52,7 +54,9 @@ export const DeleteFromRow: Story = {
   play: async ({ canvasElement }) => {
     const canvas = await tableReady(canvasElement);
     const [trigger] = canvas.getAllByRole('button', { name: /^Actions for / });
-    if (!trigger) throw new Error('No row actions');
+    if (!trigger) {
+      throw new Error('No row actions');
+    }
     const name = (trigger.getAttribute('aria-label') ?? '').replace('Actions for ', '');
     await userEvent.click(trigger);
     const body = within(canvasElement.ownerDocument.body);
@@ -71,8 +75,9 @@ export const DeleteSelected: Story = {
   play: async ({ canvasElement }) => {
     const canvas = await tableReady(canvasElement);
     const protectedDrivers = sampleDrivers.filter((driver) => driver.trips30d > 0).slice(0, 3);
-    for (const driver of protectedDrivers)
+    for (const driver of protectedDrivers) {
       await userEvent.click(canvas.getByRole('checkbox', { name: `Select ${driver.name}` }));
+    }
     const bar = await canvas.findByRole('region', { name: 'Actions for selected records' });
     await userEvent.click(within(bar).getByRole('button', { name: 'Delete' }));
     const body = within(canvasElement.ownerDocument.body);
@@ -82,8 +87,9 @@ export const DeleteSelected: Story = {
     await waitFor(() =>
       expect(canvas.getByText('Drivers with assignments or history were kept: 3.')).toBeVisible(),
     );
-    for (const driver of protectedDrivers)
+    for (const driver of protectedDrivers) {
       await expect(canvas.getByRole('checkbox', { name: `Select ${driver.name}` })).toBeChecked();
+    }
   },
 };
 
@@ -230,9 +236,13 @@ export const SortMenu: Story = {
     const expected = [...sampleDrivers].sort((first, second) =>
       second.createdAt.localeCompare(first.createdAt),
     )[0];
-    if (!expected) throw new Error('Missing driver sorting fixture.');
+    if (!expected) {
+      throw new Error('Missing driver sorting fixture.');
+    }
     const first = canvas.getAllByRole('row')[1];
-    if (!first) throw new Error('Missing sorted driver row.');
+    if (!first) {
+      throw new Error('Missing sorted driver row.');
+    }
     await expect(
       within(first).getByRole('button', { name: `Open ${expected.name}` }),
     ).toBeVisible();

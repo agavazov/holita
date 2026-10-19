@@ -129,7 +129,9 @@ class ShellPreview {
   readonly navigation = computed(() => adminNavigation(this.language(), defaultBranchId, true));
   readonly context = computed(() => {
     const context = navigationContext(this.navigation(), `/${this.language()}/${vehicles}`);
-    if (!context || !this.longNames()) return context;
+    if (!context || !this.longNames()) {
+      return context;
+    }
     return {
       ...context,
       page: 'Vehicles of the international long-haul fleet',
@@ -265,7 +267,9 @@ export const ThemePersistenceWarning: Story = {
   beforeEach: () => {
     // The browser refuses the stored theme preference.
     const spy = spyOn(Storage.prototype, 'getItem').mockImplementation((key: string) => {
-      if (key === 'holita.admin.theme') throw new Error('Storage denied');
+      if (key === 'holita.admin.theme') {
+        throw new Error('Storage denied');
+      }
       return null;
     });
     return () => {
@@ -360,7 +364,9 @@ async function longNamesFit(canvasElement: HTMLElement): Promise<void> {
     }),
   ).toBeVisible();
   const branch = canvasElement.querySelector('#active-branch');
-  if (!(branch instanceof HTMLElement)) throw new Error('Missing Branch name.');
+  if (!(branch instanceof HTMLElement)) {
+    throw new Error('Missing Branch name.');
+  }
   await expect(branch.scrollWidth).toBeGreaterThan(branch.clientWidth);
   await expect(breadcrumb.getBoundingClientRect().height).toBeLessThan(40);
 }

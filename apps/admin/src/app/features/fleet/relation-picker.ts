@@ -93,7 +93,9 @@ export class RelationPicker implements OnInit {
       this.selectedReads.next([...this.selectedIds()]);
     });
     effect(() => {
-      if (this.disabled() && this.open()) this.close();
+      if (this.disabled() && this.open()) {
+        this.close();
+      }
     });
   }
   ngOnInit(): void {
@@ -152,7 +154,9 @@ export class RelationPicker implements OnInit {
       });
   }
   show(): void {
-    if (this.disabled()) return;
+    if (this.disabled()) {
+      return;
+    }
     this.edits.next(null);
     this.search.set('');
     this.offset.set(0);
@@ -187,7 +191,9 @@ export class RelationPicker implements OnInit {
   }
   retry(): void {
     this.edits.next(null);
-    if (this.open()) this.fetch();
+    if (this.open()) {
+      this.fetch();
+    }
     this.selectedReads.next([...this.selectedIds()]);
   }
   changePage(event: PaginatorState): void {
@@ -197,7 +203,9 @@ export class RelationPicker implements OnInit {
     this.focusSearch();
   }
   select(value: unknown): void {
-    if (this.disabled()) return;
+    if (this.disabled()) {
+      return;
+    }
     const id = typeof value === 'string' ? value : undefined;
     const allowed =
       id && (this.selectedIds().includes(id) || this.page().items.some((row) => row.id === id));
@@ -205,6 +213,8 @@ export class RelationPicker implements OnInit {
     this.close();
   }
   clear(): void {
-    if (!this.disabled()) this.selectedIdsChange.emit([]);
+    if (!this.disabled()) {
+      this.selectedIdsChange.emit([]);
+    }
   }
 }

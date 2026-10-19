@@ -53,14 +53,18 @@ export class CarDetails {
 
   constructor() {
     effect((onCleanup) => {
-      if (!this.validId()) return;
+      if (!this.validId()) {
+        return;
+      }
       this.api.initialize(this.language());
       const references = this.api.watchReferences();
       this.referenceRead = references;
       const referenceSubscription = references.valueChanges.subscribe({
         next: (result) => {
           this.referencesError.set(!!result.error);
-          if (result.dataState === 'complete' && !result.error) this.references.set(result.data);
+          if (result.dataState === 'complete' && !result.error) {
+            this.references.set(result.data);
+          }
         },
         error: () => {
           this.referencesError.set(true);
@@ -94,7 +98,9 @@ export class CarDetails {
     });
     effect((onCleanup) => {
       const car = this.car();
-      if (!car) return;
+      if (!car) {
+        return;
+      }
       const read = this.api.watchLocation(car.id);
       this.locationRead = read;
       const subscription = read.valueChanges.subscribe({
@@ -117,15 +123,21 @@ export class CarDetails {
   }
 
   refresh(): void {
-    if (this.loading()) return;
+    if (this.loading()) {
+      return;
+    }
     this.error.set(false);
     const references = this.referenceRead;
     void references?.refetch().catch(() => {
-      if (this.referenceRead === references) this.referencesError.set(true);
+      if (this.referenceRead === references) {
+        this.referencesError.set(true);
+      }
     });
     const location = this.locationRead;
     void location?.refetch().catch(() => {
-      if (this.locationRead === location) this.locationError.set(true);
+      if (this.locationRead === location) {
+        this.locationError.set(true);
+      }
     });
     const query = this.query;
     void query?.refetch().catch(() => {

@@ -9,12 +9,21 @@ const initial = {
   nodeEnv: process.env.NODE_ENV,
 };
 afterEach(() => {
-  if (initial.secret === undefined) delete process.env.DEMO_AUTH_SECRET;
-  else process.env.DEMO_AUTH_SECRET = initial.secret;
-  if (initial.enabled === undefined) delete process.env.DEMO_AUTH_ENABLED;
-  else process.env.DEMO_AUTH_ENABLED = initial.enabled;
-  if (initial.nodeEnv === undefined) delete process.env.NODE_ENV;
-  else process.env.NODE_ENV = initial.nodeEnv;
+  if (initial.secret === undefined) {
+    delete process.env.DEMO_AUTH_SECRET;
+  } else {
+    process.env.DEMO_AUTH_SECRET = initial.secret;
+  }
+  if (initial.enabled === undefined) {
+    delete process.env.DEMO_AUTH_ENABLED;
+  } else {
+    process.env.DEMO_AUTH_ENABLED = initial.enabled;
+  }
+  if (initial.nodeEnv === undefined) {
+    delete process.env.NODE_ENV;
+  } else {
+    process.env.NODE_ENV = initial.nodeEnv;
+  }
 });
 describe('Demo tenant session verification', () => {
   it('accepts issued tokens and rejects tenant tampering, expiry, arrays and unbounded headers', () => {
@@ -34,8 +43,9 @@ describe('Demo tenant session verification', () => {
       ['Bearer ' + token],
       'Bearer ' + 'x'.repeat(1000),
       undefined,
-    ])
+    ]) {
       expect(readDemoTenant(header)).toBeUndefined();
+    }
     expect(() => requireTenant({ tenantId: undefined })).toThrow(UnauthorizedException);
   });
   it('rejects a token signed with another secret and disables demo login and sessions together', () => {

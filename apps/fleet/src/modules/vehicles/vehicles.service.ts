@@ -76,34 +76,54 @@ const DELETE_CONFLICT = 'Vehicle has devices or history; deactivate it instead.'
 /** VIN: trimmed, upper-cased, 17 characters without I, O and Q. */
 function vin(value: unknown): string | null {
   const result = optionalText(value, 'vin', 17)?.toUpperCase() ?? null;
-  if (result !== null && !/^[A-HJ-NPR-Z0-9]{17}$/.test(result))
+  if (result !== null && !/^[A-HJ-NPR-Z0-9]{17}$/.test(result)) {
     invalid('vin', 'Enter a VIN of 17 letters and digits without I, O or Q.');
+  }
   return result;
 }
 
 /** Validates the fields present in the input; `undefined` leaves a field unchanged. */
 function vehicleChanges(input: UpdateFleetVehicleInput): Partial<VehicleData> {
   const data: Partial<VehicleData> = {};
-  if (input.licensePlate !== undefined)
+  if (input.licensePlate !== undefined) {
     data.licensePlate = text(input.licensePlate, 'licensePlate', 32);
-  if (input.notes !== undefined) data.notes = optionalText(input.notes, 'notes', 2000);
-  if (input.fleetNumber !== undefined)
+  }
+  if (input.notes !== undefined) {
+    data.notes = optionalText(input.notes, 'notes', 2000);
+  }
+  if (input.fleetNumber !== undefined) {
     data.fleetNumber = optionalText(input.fleetNumber, 'fleetNumber', 16);
-  if (input.vehicleType !== undefined)
+  }
+  if (input.vehicleType !== undefined) {
     data.vehicleType = optionalEnum(input.vehicleType, VEHICLE_TYPES, 'vehicleType');
-  if (input.make !== undefined) data.make = optionalText(input.make, 'make', 64);
-  if (input.model !== undefined) data.model = optionalText(input.model, 'model', 64);
-  if (input.modelYear !== undefined)
+  }
+  if (input.make !== undefined) {
+    data.make = optionalText(input.make, 'make', 64);
+  }
+  if (input.model !== undefined) {
+    data.model = optionalText(input.model, 'model', 64);
+  }
+  if (input.modelYear !== undefined) {
     data.modelYear = optionalInteger(input.modelYear, 'modelYear', 1950, 2100);
-  if (input.vin !== undefined) data.vin = vin(input.vin);
-  if (input.fuelType !== undefined)
+  }
+  if (input.vin !== undefined) {
+    data.vin = vin(input.vin);
+  }
+  if (input.fuelType !== undefined) {
     data.fuelType = optionalEnum(input.fuelType, FUEL_TYPES, 'fuelType');
-  if (input.fuelTankCapacityL !== undefined)
+  }
+  if (input.fuelTankCapacityL !== undefined) {
     data.fuelTankCapacityL = optionalInteger(input.fuelTankCapacityL, 'fuelTankCapacityL', 1, 2000);
-  if (input.status !== undefined) data.status = enumValue(input.status, VEHICLE_STATUSES, 'status');
-  if (input.groupId !== undefined) data.groupId = optionalUuid(input.groupId, 'groupId');
-  if (input.currentDriverId !== undefined)
+  }
+  if (input.status !== undefined) {
+    data.status = enumValue(input.status, VEHICLE_STATUSES, 'status');
+  }
+  if (input.groupId !== undefined) {
+    data.groupId = optionalUuid(input.groupId, 'groupId');
+  }
+  if (input.currentDriverId !== undefined) {
     data.currentDriverId = optionalUuid(input.currentDriverId, 'currentDriverId');
+  }
   return data;
 }
 
@@ -175,7 +195,9 @@ export class VehiclesService {
   async find(context: RequestContext, id: string): Promise<VehicleResult> {
     const scope = requireScope(context);
     const row = await this.vehicles.find(scope, uuid(id, 'id'));
-    if (!row) throw new NotFoundException('Vehicle not found');
+    if (!row) {
+      throw new NotFoundException('Vehicle not found');
+    }
     return this.completeOne(scope, row);
   }
 
@@ -216,10 +238,13 @@ export class VehiclesService {
     const scope = requireScope(context);
     const recordId = uuid(id, 'id');
     const data = vehicleChanges(input);
-    if (!Object.keys(data).length)
+    if (!Object.keys(data).length) {
       throw new BadRequestException('Provide at least one vehicle field to update');
+    }
     const stored = await this.vehicles.find(scope, recordId);
-    if (!stored) throw new NotFoundException('Vehicle not found');
+    if (!stored) {
+      throw new NotFoundException('Vehicle not found');
+    }
     await this.checkRelations(
       scope,
       {
@@ -269,7 +294,9 @@ export class VehiclesService {
    * alert count query and one next-service urgency query, never a query per row.
    */
   private async complete(scope: FleetScope, rows: readonly VehicleRow[]): Promise<VehicleResult[]> {
-    if (!rows.length) return [];
+    if (!rows.length) {
+      return [];
+    }
     const vehicleIds = rows.map((row) => row.id);
     const [states, openAlerts, nextServices] = await Promise.all([
       this.telemetry.vehicleStates(scope, vehicleIds),
@@ -278,7 +305,9 @@ export class VehiclesService {
     ]);
     return rows.map((row) => {
       const state = states.get(row.id);
-      if (!state) throw new Error('Missing vehicle state');
+      if (!state) {
+        throw new Error('Missing vehicle state');
+      }
       return {
         ...toVehicle(row),
         state,
@@ -290,7 +319,9 @@ export class VehiclesService {
 
   private async completeOne(scope: FleetScope, row: VehicleRow): Promise<VehicleResult> {
     const [vehicle] = await this.complete(scope, [row]);
-    if (!vehicle) throw new NotFoundException('Vehicle not found');
+    if (!vehicle) {
+      throw new NotFoundException('Vehicle not found');
+    }
     return vehicle;
   }
 
@@ -303,18 +334,21 @@ export class VehiclesService {
     result: Pick<VehicleData, 'status' | 'currentDriverId'>,
     changes: Partial<VehicleData>,
   ): Promise<void> {
-    if (result.status === 'INACTIVE' && result.currentDriverId !== null)
+    if (result.status === 'INACTIVE' && result.currentDriverId !== null) {
       invalid('currentDriverId', 'Unassign the driver before deactivating the vehicle.');
+    }
     if (
       changes.groupId !== undefined &&
       changes.groupId !== null &&
       !(await this.vehicles.findGroup(scope, changes.groupId))
-    )
+    ) {
       invalid('groupId', 'Choose a vehicle group in this branch.');
+    }
     if (changes.currentDriverId !== undefined && changes.currentDriverId !== null) {
       const driver = await this.vehicles.findDriver(scope, changes.currentDriverId);
-      if (!driver || driver.status === 'INACTIVE')
+      if (!driver || driver.status === 'INACTIVE') {
         invalid('currentDriverId', 'Choose an active driver in this branch.');
+      }
     }
   }
 
@@ -324,19 +358,24 @@ export class VehiclesService {
     excludeId: string | null,
   ): Promise<void> {
     const values = { fleetNumber: changes.fleetNumber ?? null, vin: changes.vin ?? null };
-    if (values.fleetNumber === null && values.vin === null) return;
+    if (values.fleetNumber === null && values.vin === null) {
+      return;
+    }
     const taken = await this.vehicles.duplicates(scope, values, excludeId);
     const errors = [
       ...(taken.fleetNumber ? [DUPLICATE_FLEET_NUMBER] : []),
       ...(taken.vin ? [DUPLICATE_VIN] : []),
     ];
-    if (errors.length) invalidFields(errors);
+    if (errors.length) {
+      invalidFields(errors);
+    }
   }
 
   private writeError(error: unknown): never {
     rethrowUniqueViolation(error, UNIQUE_INDEXES);
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003')
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
       throw new BadRequestException('The selected group or driver is no longer in this branch.');
+    }
     persistenceError(error, 'Vehicle');
   }
 }

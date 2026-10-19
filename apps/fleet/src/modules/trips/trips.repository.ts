@@ -62,20 +62,34 @@ function tripWhere(scope: FleetScope, criteria: TripCriteria): Prisma.TripWhereI
       ],
     };
   });
-  if (criteria.ids) conditions.push({ id: { in: criteria.ids } });
-  if (criteria.startedFrom) conditions.push({ startedAt: { gte: criteria.startedFrom } });
-  if (criteria.startedTo) conditions.push({ startedAt: { lt: criteria.startedTo } });
-  if (criteria.vehicleIds) conditions.push({ vehicleId: { in: criteria.vehicleIds } });
-  if (criteria.driverIds) conditions.push({ driverId: { in: criteria.driverIds } });
-  if (criteria.hasDriver !== undefined)
+  if (criteria.ids) {
+    conditions.push({ id: { in: criteria.ids } });
+  }
+  if (criteria.startedFrom) {
+    conditions.push({ startedAt: { gte: criteria.startedFrom } });
+  }
+  if (criteria.startedTo) {
+    conditions.push({ startedAt: { lt: criteria.startedTo } });
+  }
+  if (criteria.vehicleIds) {
+    conditions.push({ vehicleId: { in: criteria.vehicleIds } });
+  }
+  if (criteria.driverIds) {
+    conditions.push({ driverId: { in: criteria.driverIds } });
+  }
+  if (criteria.hasDriver !== undefined) {
     conditions.push({ driverId: criteria.hasDriver ? { not: null } : null });
-  if (criteria.scored !== undefined)
+  }
+  if (criteria.scored !== undefined) {
     conditions.push({ drivingScore: criteria.scored ? { not: null } : null });
+  }
   // `lt` never matches null, so a score threshold also selects scored trips only.
-  if (criteria.drivingScoreBelow !== undefined)
+  if (criteria.drivingScoreBelow !== undefined) {
     conditions.push({ drivingScore: { lt: criteria.drivingScoreBelow } });
-  if (criteria.hasEnd !== undefined)
+  }
+  if (criteria.hasEnd !== undefined) {
     conditions.push({ endedAt: criteria.hasEnd ? { not: null } : null });
+  }
   return { tenantId: scope.tenantId, branchId: scope.branchId, AND: conditions };
 }
 
@@ -183,7 +197,9 @@ export class TripsRepository {
         AND t."driverId" = ${driverId}::uuid
         AND t."startedAt" > ${window.start}::timestamptz AND t."startedAt" <= ${window.end}::timestamptz`);
     const [score] = rowsOf(rows, parseDriverScore);
-    if (!score) throw new Error('Missing driver score aggregate');
+    if (!score) {
+      throw new Error('Missing driver score aggregate');
+    }
     return score;
   }
 }

@@ -27,11 +27,12 @@ async function main() {
       .digest('hex') === catalog.sourceSha256,
     'EXE hash does not match catalog provenance',
   );
-  if (values.write)
+  if (values.write) {
     check(
       values['expect-sha256'] === catalog.contentSha256,
       'Writing requires --expect-sha256 with the content hash from the reviewed preview',
     );
+  }
   const url = new URL(getDatabaseUrl());
   check(
     ['127.0.0.1', 'localhost'].includes(url.hostname) &&

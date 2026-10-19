@@ -8,34 +8,50 @@ function object(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 function id(value: unknown, minimum = 1): string {
-  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < minimum) unavailable();
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < minimum) {
+    unavailable();
+  }
   return String(value);
 }
 function optionalId(value: unknown): string | null {
   return value === null || value === undefined ? null : id(value, 0);
 }
 function text(value: unknown): string | null {
-  if (value === null || value === undefined) return null;
-  if (typeof value !== 'string') unavailable();
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (typeof value !== 'string') {
+    unavailable();
+  }
   return value;
 }
 function required(value: unknown): string {
   const result = text(value);
-  if (result === null) unavailable();
+  if (result === null) {
+    unavailable();
+  }
   return result;
 }
 function number(value: unknown): number | null {
-  if (value === null || value === undefined) return null;
-  if (typeof value !== 'number' || !Number.isFinite(value)) unavailable();
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    unavailable();
+  }
   return value;
 }
 function timestamp(value: unknown): string | null {
   const result = text(value);
-  if (result !== null && !/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(result)) unavailable();
+  if (result !== null && !/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(result)) {
+    unavailable();
+  }
   return result;
 }
 function trip(value: unknown): KarmaTrip {
-  if (!object(value)) unavailable();
+  if (!object(value)) {
+    unavailable();
+  }
   return {
     id: id(value['trip_id']),
     carId: id(value['car_id']),
@@ -63,7 +79,9 @@ function trip(value: unknown): KarmaTrip {
   };
 }
 function event(value: unknown): KarmaEvent {
-  if (!object(value)) unavailable();
+  if (!object(value)) {
+    unavailable();
+  }
   return {
     id: id(value['message_id']),
     carId: id(value['car_id']),
@@ -89,14 +107,17 @@ function page<T extends { id: string; carId: string }>(rows: T[], query: History
       (previous && Number(previous.id) >= Number(row.id)) ||
       (query.before !== null && Number(row.id) > query.before) ||
       (query.snapshot !== null && Number(row.id) > query.snapshot)
-    )
+    ) {
       unavailable();
+    }
   }
   const items = rows.slice().reverse().slice(0, query.pageSize),
     snapshot = query.snapshot ?? Number(items[0]?.id),
     last = items.at(-1);
   const hasMore = rows.length > query.pageSize;
-  if (hasMore && (!last || Number(last.id) <= 1)) unavailable();
+  if (hasMore && (!last || Number(last.id) <= 1)) {
+    unavailable();
+  }
   return {
     items,
     hasMore,
@@ -105,20 +126,27 @@ function page<T extends { id: string; carId: string }>(rows: T[], query: History
   };
 }
 export function tripsPage(value: unknown, query: HistoryQuery) {
-  if (!Array.isArray(value)) unavailable();
+  if (!Array.isArray(value)) {
+    unavailable();
+  }
   return page(
     value.map((entry: unknown) => trip(entry)),
     query,
   );
 }
 export function eventsPage(value: unknown, query: HistoryQuery) {
-  if (!Array.isArray(value) || value.length > 500) unavailable();
+  if (!Array.isArray(value) || value.length > 500) {
+    unavailable();
+  }
   const rows = value.map((entry: unknown) => event(entry));
   for (const row of rows) {
     const utc = typeof row.edt === 'string' ? row.edt.replace(' ', 'T') + 'Z' : null;
-    if (query.fromDate && query.toDate && (!utc || utc < query.fromDate || utc > query.toDate))
+    if (query.fromDate && query.toDate && (!utc || utc < query.fromDate || utc > query.toDate)) {
       unavailable();
-    if (query.eventTypes.length && !query.eventTypes.includes(row.eventId)) unavailable();
+    }
+    if (query.eventTypes.length && !query.eventTypes.includes(row.eventId)) {
+      unavailable();
+    }
   }
   return page(rows, query);
 }
@@ -134,19 +162,29 @@ export const drivingCategories = [
   'speed',
 ] as const;
 export function drivingProfile(value: unknown, carId: string): KarmaDrivingProfile | null {
-  if (!Array.isArray(value) || value.length > 1) unavailable();
-  if (!value.length) return null;
+  if (!Array.isArray(value) || value.length > 1) {
+    unavailable();
+  }
+  if (!value.length) {
+    return null;
+  }
   const row: unknown = value[0];
-  if (!object(row) || id(row['car_id']) !== carId || !object(row['score'])) unavailable();
+  if (!object(row) || id(row['car_id']) !== carId || !object(row['score'])) {
+    unavailable();
+  }
   const scores = row['score'];
-  if (Object.keys(scores).length !== drivingCategories.length) unavailable();
+  if (Object.keys(scores).length !== drivingCategories.length) {
+    unavailable();
+  }
   return {
     carId,
     carNumber: required(row['car_number']),
     deviceId: required(row['device_id']),
     categories: drivingCategories.map((name) => {
       const category = scores[name];
-      if (!object(category)) unavailable();
+      if (!object(category)) {
+        unavailable();
+      }
       return { name, score: number(category['score']), weight: number(category['weight']) };
     }),
   };

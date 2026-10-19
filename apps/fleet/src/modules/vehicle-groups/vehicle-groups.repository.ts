@@ -44,7 +44,9 @@ export class VehicleGroupsRepository {
       const contains = literalContains(token);
       return { OR: [{ name: contains }, { description: contains }] };
     });
-    if (criteria.ids) conditions.push({ id: { in: criteria.ids } });
+    if (criteria.ids) {
+      conditions.push({ id: { in: criteria.ids } });
+    }
     const where: Prisma.VehicleGroupWhereInput = {
       tenantId: scope.tenantId,
       branchId: scope.branchId,

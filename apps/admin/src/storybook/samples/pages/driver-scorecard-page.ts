@@ -117,8 +117,12 @@ export class DriverScorecardPage {
     () => scorecardPeriods.find((days) => String(days) === this.query().get('days')) ?? 30,
   );
   protected readonly state = computed(() => {
-    if (this.scenario() === 'loading') return 'loading';
-    if (this.failed()) return 'error';
+    if (this.scenario() === 'loading') {
+      return 'loading';
+    }
+    if (this.failed()) {
+      return 'error';
+    }
     return this.driver() ? 'ready' : 'not-found';
   });
   protected readonly scorecard = computed(() => {

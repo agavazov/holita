@@ -73,7 +73,9 @@ describe('OdometerDrawer', () => {
         .query(By.directive(FormGroupDirective))
         .injector.get(FormGroupDirective).form;
       const element = document.getElementById('odometer-form');
-      if (!element) throw new Error('Missing odometer form.');
+      if (!element) {
+        throw new Error('Missing odometer form.');
+      }
       element.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
       await fixture.whenStable();
       expect(saved).toEqual([{ odometerKm: 100, recordedAt: latestAllowedAt }]);
@@ -105,7 +107,9 @@ describe('OdometerDrawer', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     const form = document.getElementById('odometer-form');
-    if (!form) throw new Error('Missing odometer form.');
+    if (!form) {
+      throw new Error('Missing odometer form.');
+    }
     expect(form.textContent).toContain('18 Oct 2026, 10:00:15');
     expect(form.textContent).toContain('18 Oct 2026, 10:00:45');
     form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
@@ -125,7 +129,9 @@ describe('OdometerDrawer', () => {
     await fixture.whenStable();
     const input = document.getElementById('odometer-odometerKm');
     const form = document.getElementById('odometer-form');
-    if (!(input instanceof HTMLInputElement) || !form) throw new Error('Missing odometer form.');
+    if (!(input instanceof HTMLInputElement) || !form) {
+      throw new Error('Missing odometer form.');
+    }
     input.value = '0';
     input.dispatchEvent(new Event('input', { bubbles: true }));
     input.dispatchEvent(new Event('blur'));
@@ -166,7 +172,9 @@ describe('OdometerDrawer', () => {
       .injector.get(FormGroupDirective).form;
     form.get('odometerKm')?.setValue(100.06);
     const element = document.getElementById('odometer-form');
-    if (!element) throw new Error('Missing odometer form.');
+    if (!element) {
+      throw new Error('Missing odometer form.');
+    }
     element.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     expect(saved).toEqual([{ odometerKm: 100.1, recordedAt: '2026-10-18T07:00:00.000Z' }]);
     form.get('odometerKm')?.setValue(9_999_999.91);
@@ -191,7 +199,9 @@ describe('OdometerDrawer', () => {
       .injector.get(FormGroupDirective).form;
     form.get('odometerKm')?.setValue(0);
     const element = document.getElementById('odometer-form');
-    if (!element) throw new Error('Missing odometer form.');
+    if (!element) {
+      throw new Error('Missing odometer form.');
+    }
     const submit = async (at: string) => {
       form.get('recordedAt')?.setValue(odometerWallTime(at));
       element.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));

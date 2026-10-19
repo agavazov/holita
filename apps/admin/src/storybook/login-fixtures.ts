@@ -24,7 +24,9 @@ export function loginFixtures(
   }));
   graphqlFixture(AdminDemoLoginDocument, (variables) => {
     const tenant = loginTenants.find((item) => item.id === variables.requiredString('tenantId'));
-    if (!tenant) throw fixtureError('NOT_FOUND', 'The tenant was not found.');
+    if (!tenant) {
+      throw fixtureError('NOT_FOUND', 'The tenant was not found.');
+    }
     return {
       demoLogin: {
         __typename: 'DemoSession',

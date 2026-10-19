@@ -82,18 +82,23 @@ class Host {
 
   request(request: ListActionRequest<ActionId>): void {
     this.requests.push(request);
-    if (request.action === 'archive') this.archived.set(true);
-    if (request.action === 'pin')
+    if (request.action === 'archive') {
+      this.archived.set(true);
+    }
+    if (request.action === 'pin') {
       this.order.update((order) => [
         ...request.ids,
         ...order.filter((id) => !request.ids.includes(id)),
       ]);
+    }
   }
 }
 
 function element(fixture: ComponentFixture<Host>): HTMLElement {
   const value: unknown = fixture.nativeElement;
-  if (!(value instanceof HTMLElement)) throw new Error('Missing host element.');
+  if (!(value instanceof HTMLElement)) {
+    throw new Error('Missing host element.');
+  }
   return value;
 }
 
@@ -285,7 +290,9 @@ describe('TablePanel', () => {
     host.view.set({ kind: 'rows' });
     fixture.detectChanges();
     const trigger = root.querySelector<HTMLButtonElement>('.row-trigger');
-    if (!trigger) throw new Error('Missing row trigger.');
+    if (!trigger) {
+      throw new Error('Missing row trigger.');
+    }
     trigger.focus();
     // Archive needs no confirmation, and the host's change removes the row with its trigger.
     await host.panel().run('archive', [{ id: 'a', label: 'CB 1001 AX', unavailable: [] }], trigger);
@@ -302,7 +309,9 @@ describe('TablePanel', () => {
     host.view.set({ kind: 'rows' });
     fixture.detectChanges();
     const trigger = root.querySelector<HTMLButtonElement>('.moving-y');
-    if (!trigger) throw new Error('Missing row trigger.');
+    if (!trigger) {
+      throw new Error('Missing row trigger.');
+    }
     trigger.focus();
     await host.panel().run('pin', [{ id: 'y', label: 'CB 1002 AX', unavailable: [] }], trigger);
     await fixture.whenStable();

@@ -9,7 +9,9 @@ describe('runSequential', () => {
       async (item) => {
         calls.push(item);
         await Promise.resolve();
-        if (item === 'b') throw new Error('b is blocked');
+        if (item === 'b') {
+          throw new Error('b is blocked');
+        }
       },
       {
         isCurrent: () => true,

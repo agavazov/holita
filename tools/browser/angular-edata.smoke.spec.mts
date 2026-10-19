@@ -9,8 +9,9 @@ test('browses all 600 messages with 50-row pages and restores pages on reload/ba
 }) => {
   const headers: Record<string, string>[] = [];
   page.on('request', (request) => {
-    if (request.url() === app.gatewayUrl && request.postData()?.includes('AdminKarmaEdata'))
+    if (request.url() === app.gatewayUrl && request.postData()?.includes('AdminKarmaEdata')) {
       headers.push(request.headers());
+    }
   });
   await page.goto(`${app.url}/en/karma-client/cars/41`);
   await page.getByRole('link', { name: 'eData', exact: true }).click();
@@ -27,7 +28,9 @@ test('browses all 600 messages with 50-row pages and restores pages on reload/ba
       expect(seen.has(id)).toBe(false);
       seen.add(id);
     });
-    if (index < 11) await page.getByRole('button', { name: 'Older', exact: true }).click();
+    if (index < 11) {
+      await page.getByRole('button', { name: 'Older', exact: true }).click();
+    }
   }
   expect(seen.size).toBe(600);
   await expect(page.getByRole('button', { name: 'Older', exact: true })).toBeDisabled();

@@ -107,8 +107,9 @@ export function storybookApplicationConfig(
 export async function loadStoryLicense(): Promise<string | undefined> {
   try {
     const response = await fetch('/config.local.json');
-    if (!response.ok || !response.headers.get('content-type')?.includes('application/json'))
+    if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
       return undefined;
+    }
     return readLocalAdminConfig(await response.json()).primeUiLicense;
   } catch {
     return undefined;
@@ -116,21 +117,28 @@ export async function loadStoryLicense(): Promise<string | undefined> {
 }
 
 function readScenario(value: unknown): FixtureScenario {
-  if (!isRecord(value)) return {};
+  if (!isRecord(value)) {
+    return {};
+  }
   const latencyMs = typeof value['latencyMs'] === 'number' ? value['latencyMs'] : 0;
   const forced: Record<string, FixtureFailure> = {};
   const failures = value['failures'];
-  if (isRecord(failures))
+  if (isRecord(failures)) {
     for (const [operation, failure] of Object.entries(failures)) {
       const known = fixtureFailures.find((candidate) => candidate === failure);
-      if (known) forced[operation] = known;
+      if (known) {
+        forced[operation] = known;
+      }
     }
+  }
   return { latencyMs, failures: forced };
 }
 
 /** Reads `parameters.holita` with runtime checks. */
 export function readStoryFixtures(value: unknown): StoryFixtures {
-  if (!isRecord(value)) return {};
+  if (!isRecord(value)) {
+    return {};
+  }
   return {
     ...(value['signedIn'] === false ? { signedIn: false } : {}),
     ...(value['fleetEnabled'] === false ? { fleetEnabled: false } : {}),
@@ -161,8 +169,11 @@ export function prepareStory(fixtures: unknown, globals: Readonly<Record<string,
   useFixtureScenario(options.scenario);
   const instant = Date.parse(options.now ?? defaultStoryNow);
   now = Number.isNaN(instant) ? Date.parse(defaultStoryNow) : instant;
-  if (options.signedIn === false) clearSession();
-  else seedSession(defaultBranchId);
+  if (options.signedIn === false) {
+    clearSession();
+  } else {
+    seedSession(defaultBranchId);
+  }
   applyStoryGlobals(globals);
 }
 

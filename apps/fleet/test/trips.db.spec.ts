@@ -210,10 +210,11 @@ describe('Trips list contract with PostgreSQL', () => {
       [0, ['t3', 't1']],
       [2, ['t4', 't5']],
       [4, ['t2']],
-    ] as const)
+    ] as const) {
       expect(
         await ids({ sort: { field: 'DISTANCE_KM', direction: 'ASC' }, offset, limit: 2 }),
       ).toEqual(page([...keys], 150.5, 5, offset, 2));
+    }
   });
 
   it('filters by period, vehicles, drivers, score and end, and searches stored relations', async () => {

@@ -62,7 +62,9 @@ describe('Fleet master data and activity constraints in PostgreSQL', () => {
       await app?.close();
     } finally {
       try {
-        if (connected) await connection.end();
+        if (connected) {
+          await connection.end();
+        }
       } finally {
         await closeDatabase?.();
       }
@@ -255,8 +257,9 @@ describe('Fleet master data and activity constraints in PostgreSQL', () => {
         database.client.vehicleGroup.create({ data: { tenantId, branchId, name: 'Unique' } }),
       ],
     ];
-    for (const [index, write] of cases)
+    for (const [index, write] of cases) {
       expect(uniqueViolation(await rejection(write))).toEqual({ index, fields: [] });
+    }
 
     // Bypass each service's scoped pre-check so the real insert raises P2002 (a concurrent write).
     jest
@@ -299,11 +302,12 @@ describe('Fleet master data and activity constraints in PostgreSQL', () => {
         { input: { name: ' Unique ' } },
       ],
     ];
-    for (const [path, source, variables] of mapped)
+    for (const [path, source, variables] of mapped) {
       expect(await query(source, variables)).toMatchObject({
         data: null,
         errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path }] } }],
       });
+    }
     jest.restoreAllMocks();
   });
 

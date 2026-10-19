@@ -18,7 +18,9 @@ export default meta;
 type Story = StoryObj;
 
 const withEvents = sampleTrips.find((trip) => trip.events.length > 1);
-if (!withEvents) throw new Error('The sample trips have no events.');
+if (!withEvents) {
+  throw new Error('The sample trips have no events.');
+}
 const appReady = { timeout: 10_000 };
 
 export const Default: Story = {
@@ -62,7 +64,9 @@ export const OpenFromList: Story = {
     const canvas = within(canvasElement);
     await waitFor(() => expect(canvas.getByRole('table')).toBeVisible(), appReady);
     const [first] = canvas.getAllByRole('button', { name: /^Open trip / });
-    if (!first) throw new Error('No trip rows');
+    if (!first) {
+      throw new Error('No trip rows');
+    }
     await userEvent.click(first);
     const body = within(canvasElement.ownerDocument.body);
     await waitFor(() => expect(body.getByRole('button', { name: 'Open vehicle' })).toBeVisible());
@@ -77,7 +81,9 @@ export const OpenVehicleFromRow: Story = {
     const canvas = within(canvasElement);
     await waitFor(() => expect(canvas.getByRole('table')).toBeVisible(), appReady);
     const [trigger] = canvas.getAllByRole('button', { name: /^Actions for / });
-    if (!trigger) throw new Error('No row actions');
+    if (!trigger) {
+      throw new Error('No row actions');
+    }
     // The menu names the trip "<plate>, <started>".
     const name = (trigger.getAttribute('aria-label') ?? '').replace('Actions for ', '');
     const plate = name.split(', ')[0] ?? '';

@@ -40,7 +40,9 @@ export const OpenAttentionItem: Story = {
       appReady,
     );
     const [first] = canvas.getAllByRole('link', { name: / · / });
-    if (!first) throw new Error('No attention items');
+    if (!first) {
+      throw new Error('No attention items');
+    }
     await userEvent.click(first);
     const body = within(canvasElement.ownerDocument.body);
     await waitFor(() => expect(body.getByRole('dialog')).toBeVisible(), appReady);
@@ -69,9 +71,13 @@ export const OpenLatestTrip: Story = {
       appReady,
     );
     const latest = [...sampleTrips].sort((a, b) => b.startedAt.localeCompare(a.startedAt))[0];
-    if (!latest) throw new Error('Missing sample trip.');
+    if (!latest) {
+      throw new Error('Missing sample trip.');
+    }
     const link = canvasElement.querySelector<HTMLAnchorElement>(`a[href$="drawer=${latest.id}"]`);
-    if (!link) throw new Error('Missing trip link.');
+    if (!link) {
+      throw new Error('Missing trip link.');
+    }
     await userEvent.click(link);
     await waitFor(
       () => expect(within(canvasElement.ownerDocument.body).getByRole('dialog')).toBeVisible(),

@@ -6,7 +6,9 @@ export type DeviceField = (typeof deviceFields)[number];
 
 export const deviceImei: ValidatorFn = (control) => {
   const value: unknown = control.value;
-  if (typeof value !== 'string' || !value.trim()) return { required: true };
+  if (typeof value !== 'string' || !value.trim()) {
+    return { required: true };
+  }
   return /^[0-9]{15}$/.test(value.trim()) ? null : { imei: true };
 };
 export const deviceVehicle: ValidatorFn = (control) => {
@@ -19,10 +21,14 @@ export const deviceVehicle: ValidatorFn = (control) => {
 
 export function deviceFieldErrors(error: unknown): Partial<Record<DeviceField, string>> {
   const result: Partial<Record<DeviceField, string>> = {};
-  if (!CombinedGraphQLErrors.is(error)) return result;
+  if (!CombinedGraphQLErrors.is(error)) {
+    return result;
+  }
   for (const failure of error.errors) {
     const fields: unknown = failure.extensions?.['fieldErrors'];
-    if (!Array.isArray(fields)) continue;
+    if (!Array.isArray(fields)) {
+      continue;
+    }
     for (const candidate of fields.slice(0, 30)) {
       const field: unknown = candidate;
       if (
@@ -32,10 +38,13 @@ export function deviceFieldErrors(error: unknown): Partial<Record<DeviceField, s
         !('message' in field) ||
         typeof field.message !== 'string' ||
         field.message.length > 300
-      )
+      ) {
         continue;
+      }
       const path = deviceFields.find((name) => name === field.path);
-      if (path && !result[path]) result[path] = field.message;
+      if (path && !result[path]) {
+        result[path] = field.message;
+      }
     }
   }
   return result;

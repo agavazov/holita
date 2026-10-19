@@ -35,7 +35,9 @@ export class FormField {
   protected readonly text = computed(() => uiMessages[this.language()]);
   protected readonly counterText = computed(() => {
     const counter = this.counter();
-    if (!counter) return null;
+    if (!counter) {
+      return null;
+    }
     return interpolate(this.text().field.counter, {
       length: formatNumber(counter.length, this.language()),
       max: formatNumber(counter.max, this.language()),

@@ -16,7 +16,9 @@ export function formatNumber(
   language: Language,
   options: { readonly fraction?: number } = {},
 ): string {
-  if (value === null || value === undefined || !Number.isFinite(value)) return emptyValue;
+  if (value === null || value === undefined || !Number.isFinite(value)) {
+    return emptyValue;
+  }
   return new Intl.NumberFormat(localeOf(language), {
     maximumFractionDigits: options.fraction ?? 0,
     minimumFractionDigits: 0,
@@ -33,7 +35,9 @@ function withUnit(
   fraction: number,
   spaced = true,
 ): string {
-  if (value === null || value === undefined || !Number.isFinite(value)) return emptyValue;
+  if (value === null || value === undefined || !Number.isFinite(value)) {
+    return emptyValue;
+  }
   const number = formatNumber(value, language, { fraction });
   const label = uiMessages[language].units[unit];
   return spaced ? `${number}\u00a0${label}` : `${number}${label}`;
@@ -65,7 +69,9 @@ export function formatTemperature(value: number | null | undefined, language: La
 
 /** EUR from integer cents; `null` → "—", `0` → "0,00 €". */
 export function formatMoneyCents(cents: number | null | undefined, language: Language): string {
-  if (cents === null || cents === undefined || !Number.isFinite(cents)) return emptyValue;
+  if (cents === null || cents === undefined || !Number.isFinite(cents)) {
+    return emptyValue;
+  }
   return new Intl.NumberFormat(localeOf(language), {
     style: 'currency',
     currency: 'EUR',
@@ -75,13 +81,16 @@ export function formatMoneyCents(cents: number | null | undefined, language: Lan
 
 function parts(date: Date, language: Language, options: Intl.DateTimeFormatOptions) {
   const values: Partial<Record<Intl.DateTimeFormatPartTypes, string>> = {};
-  for (const part of new Intl.DateTimeFormat(localeOf(language), options).formatToParts(date))
+  for (const part of new Intl.DateTimeFormat(localeOf(language), options).formatToParts(date)) {
     values[part.type] = part.value;
+  }
   return values;
 }
 
 function validDate(iso: string | null | undefined): Date | null {
-  if (!iso) return null;
+  if (!iso) {
+    return null;
+  }
   const date = new Date(iso);
   return Number.isNaN(date.getTime()) ? null : date;
 }
@@ -94,7 +103,9 @@ export function formatDateTime(
   seconds = false,
 ): string {
   const date = validDate(iso);
-  if (!date) return emptyValue;
+  if (!date) {
+    return emptyValue;
+  }
   const value = parts(date, language, {
     timeZone,
     year: 'numeric',
@@ -113,9 +124,13 @@ export function formatDateTime(
 /** A calendar date (`YYYY-MM-DD`) without time-zone conversion. */
 export function formatDateOnly(text: string | null | undefined, language: Language): string {
   const match = text ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(text) : null;
-  if (!match) return emptyValue;
+  if (!match) {
+    return emptyValue;
+  }
   const [, year = '', month = '', day = ''] = match;
-  if (language === 'bg') return `${day}.${month}.${year}`;
+  if (language === 'bg') {
+    return `${day}.${month}.${year}`;
+  }
   const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
   const { month: name = '' } = parts(date, language, { timeZone: 'UTC', month: 'short' });
   return `${day} ${name} ${year}`;
@@ -129,11 +144,15 @@ export function formatRelative(
 ): string {
   const date = validDate(iso);
   const base = typeof reference === 'number' ? new Date(reference) : validDate(reference);
-  if (!date || !base || Number.isNaN(base.getTime())) return emptyValue;
+  if (!date || !base || Number.isNaN(base.getTime())) {
+    return emptyValue;
+  }
   const text = uiMessages[language].relative;
   const seconds = Math.round((base.getTime() - date.getTime()) / 1000);
   const span = Math.abs(seconds);
-  if (span < 60) return text.now;
+  if (span < 60) {
+    return text.now;
+  }
   const minutes = Math.floor(span / 60);
   const hours = Math.floor(minutes / 60);
   const value =
@@ -147,13 +166,16 @@ export function formatRelative(
 
 /** "1 ч 07 мин" / "1 h 07 min"; under an hour only minutes. */
 export function formatDuration(seconds: number | null | undefined, language: Language): string {
-  if (seconds === null || seconds === undefined || !Number.isFinite(seconds) || seconds < 0)
+  if (seconds === null || seconds === undefined || !Number.isFinite(seconds) || seconds < 0) {
     return emptyValue;
+  }
   const text = uiMessages[language].duration;
   const totalMinutes = Math.round(seconds / 60);
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  if (!hours) return interpolate(text.minutes, { minutes });
+  if (!hours) {
+    return interpolate(text.minutes, { minutes });
+  }
   return `${interpolate(text.hours, { hours })} ${interpolate(text.minutes, {
     minutes: String(minutes).padStart(2, '0'),
   })}`;

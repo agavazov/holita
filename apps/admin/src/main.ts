@@ -14,9 +14,15 @@ import {
  */
 async function loadLocalConfig(): Promise<LocalAdminConfig> {
   const response = await fetch('/config.local.json', { signal: AbortSignal.timeout(10_000) });
-  if (response.status === 404) return {};
-  if (!response.ok) throw new Error('Could not load local admin configuration.');
-  if (!response.headers.get('content-type')?.toLowerCase().includes('application/json')) return {};
+  if (response.status === 404) {
+    return {};
+  }
+  if (!response.ok) {
+    throw new Error('Could not load local admin configuration.');
+  }
+  if (!response.headers.get('content-type')?.toLowerCase().includes('application/json')) {
+    return {};
+  }
   const value: unknown = await response.json();
   return readLocalAdminConfig(value);
 }
@@ -24,7 +30,9 @@ async function loadLocalConfig(): Promise<LocalAdminConfig> {
 // PrimeNG requires its license in the bootstrap providers, before its initializer runs.
 async function start(): Promise<void> {
   const response = await fetch('/config.json', { signal: AbortSignal.timeout(10_000) });
-  if (!response.ok) throw new Error('Could not load public admin configuration.');
+  if (!response.ok) {
+    throw new Error('Could not load public admin configuration.');
+  }
   const value: unknown = await response.json();
   const config = readAdminConfig(value);
   const local = await loadLocalConfig();

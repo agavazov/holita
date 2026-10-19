@@ -11,7 +11,9 @@ export function breakpointWidth(name: BreakpointName): number {
     .getPropertyValue(`--app-bp-${name}`)
     .trim();
   const width = value.endsWith('px') ? Number(value.slice(0, -2)) : Number.NaN;
-  if (!Number.isFinite(width) || width <= 0) throw new Error('Global styles are not loaded');
+  if (!Number.isFinite(width) || width <= 0) {
+    throw new Error('Global styles are not loaded');
+  }
   return width;
 }
 

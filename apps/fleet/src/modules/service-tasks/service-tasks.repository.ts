@@ -130,7 +130,9 @@ export class ServiceTasksRepository {
     today: string,
     ids: readonly string[],
   ): Promise<ServiceTaskRow[]> {
-    if (!ids.length) return [];
+    if (!ids.length) {
+      return [];
+    }
     const base = serviceTasksWithUrgency(this.prisma.schema, scope, today);
     const rows: unknown = await this.prisma.client.$queryRaw(Prisma.sql`
       WITH tasks AS (${base})
@@ -147,7 +149,9 @@ export class ServiceTasksRepository {
     today: string,
     vehicleIds: readonly string[],
   ): Promise<ServiceTaskRow[]> {
-    if (!vehicleIds.length) return [];
+    if (!vehicleIds.length) {
+      return [];
+    }
     const base = serviceTasksWithUrgency(this.prisma.schema, scope, today);
     const rows: unknown = await this.prisma.client.$queryRaw(Prisma.sql`
       WITH tasks AS (${base})
@@ -175,7 +179,9 @@ export class ServiceTasksRepository {
           AND v."id" = t."vehicleId" AND v."status"::text <> 'INACTIVE'
       )`);
     const [counts] = rowsOf(rows, parseUrgencyCounts);
-    if (!counts) throw new Error('Missing service urgency counts');
+    if (!counts) {
+      throw new Error('Missing service urgency counts');
+    }
     return counts;
   }
 
@@ -276,7 +282,9 @@ export class ServiceTasksRepository {
         where: { id, tenantId: scope.tenantId, branchId: scope.branchId, status: 'PLANNED' },
         data: { ...data, status: 'DONE' },
       });
-      if (!count || !next) return { completed: count, nextId: null };
+      if (!count || !next) {
+        return { completed: count, nextId: null };
+      }
       const created = await transaction.serviceTask.create({
         data: {
           ...next.plan,
@@ -323,20 +331,28 @@ export class ServiceTasksRepository {
             AND (v."licensePlate" ILIKE ${pattern}::text OR v."fleetNumber" ILIKE ${pattern}::text)
         ))`;
     });
-    if (criteria.ids) conditions.push(Prisma.sql`t."id" = ANY(${criteria.ids}::uuid[])`);
-    if (criteria.statuses)
+    if (criteria.ids) {
+      conditions.push(Prisma.sql`t."id" = ANY(${criteria.ids}::uuid[])`);
+    }
+    if (criteria.statuses) {
       conditions.push(Prisma.sql`t."status" = ANY(${criteria.statuses}::text[])`);
+    }
     // Only PLANNED tasks have an urgency, so an urgency filter implies PLANNED.
-    if (criteria.urgencies)
+    if (criteria.urgencies) {
       conditions.push(Prisma.sql`t."urgency" = ANY(${criteria.urgencies}::text[])`);
-    if (criteria.serviceTypes)
+    }
+    if (criteria.serviceTypes) {
       conditions.push(Prisma.sql`t."serviceType" = ANY(${criteria.serviceTypes}::text[])`);
-    if (criteria.vehicleIds)
+    }
+    if (criteria.vehicleIds) {
       conditions.push(Prisma.sql`t."vehicleId" = ANY(${criteria.vehicleIds}::uuid[])`);
-    if (criteria.completedFrom)
+    }
+    if (criteria.completedFrom) {
       conditions.push(Prisma.sql`t."completedOn"::date >= ${criteria.completedFrom}::date`);
-    if (criteria.completedTo)
+    }
+    if (criteria.completedTo) {
       conditions.push(Prisma.sql`t."completedOn"::date <= ${criteria.completedTo}::date`);
+    }
     return conditions.length ? Prisma.join(conditions, ' AND ') : Prisma.sql`TRUE`;
   }
 }

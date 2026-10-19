@@ -16,18 +16,22 @@ const { values } = parseArgs({
 });
 function positiveInteger(value: string, name: string, maximum: number): number {
   const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 1 || parsed > maximum)
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > maximum) {
     throw new Error(`${name} must be an integer from 1 to ${String(maximum)}.`);
+  }
   return parsed;
 }
 const seconds = positiveInteger(values.seconds, 'seconds', 60);
 const warmup = positiveInteger(values.warmup, 'warmup', 30);
 const rounds = positiveInteger(values.rounds, 'rounds', 10);
-if (process.platform !== 'linux')
+if (process.platform !== 'linux') {
   throw new Error('Run the benchmark on Linux/WSL for /proc metrics.');
+}
 const execute = promisify(execFile);
 const ticksPerSecond = Number((await execute('getconf', ['CLK_TCK'])).stdout.trim());
-if (!Number.isFinite(ticksPerSecond) || ticksPerSecond <= 0) throw new Error('Invalid CLK_TCK.');
+if (!Number.isFinite(ticksPerSecond) || ticksPerSecond <= 0) {
+  throw new Error('Invalid CLK_TCK.');
+}
 const cancellation = new AbortController();
 function cancel() {
   cancellation.abort(new Error('Benchmark interrupted; cleaning up fixtures.'));
@@ -39,15 +43,21 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 function record(value: unknown): Record<string, unknown> {
-  if (!isRecord(value)) throw new Error('Expected a GraphQL object.');
+  if (!isRecord(value)) {
+    throw new Error('Expected a GraphQL object.');
+  }
   return value;
 }
 function string(value: unknown): string {
-  if (typeof value !== 'string') throw new Error('Expected a GraphQL string.');
+  if (typeof value !== 'string') {
+    throw new Error('Expected a GraphQL string.');
+  }
   return value;
 }
 function processId(pid: number | undefined): number {
-  if (pid === undefined) throw new Error('Missing gateway process ID.');
+  if (pid === undefined) {
+    throw new Error('Missing gateway process ID.');
+  }
   return pid;
 }
 let requestNumber = 0;
@@ -60,11 +70,14 @@ async function request(url: string, body: string, headers: Record<string, string
     signal: AbortSignal.any([cancellation.signal, AbortSignal.timeout(10000)]),
   });
   const result = record(await response.json());
-  if (response.status !== 200 || result.errors !== undefined || !result.data)
+  if (response.status !== 200 || result.errors !== undefined || !result.data) {
     throw new Error(
       `GraphQL request failed: HTTP ${String(response.status)} ${JSON.stringify(result)}`,
     );
-  if (response.headers.get('x-request-id') !== requestId) throw new Error('Request ID was lost.');
+  }
+  if (response.headers.get('x-request-id') !== requestId) {
+    throw new Error('Request ID was lost.');
+  }
   return record(result.data);
 }
 async function resources(pid: number) {
@@ -79,12 +92,16 @@ async function resources(pid: number) {
     .split(/\s+/);
   const ticks = Number(fields[11]) + Number(fields[12]);
   const rssKb = Number(/^VmRSS:\s+(\d+) kB$/m.exec(status)?.[1]);
-  if (!Number.isFinite(ticks) || !Number.isFinite(rssKb)) throw new Error('Missing /proc metrics.');
+  if (!Number.isFinite(ticks) || !Number.isFinite(rssKb)) {
+    throw new Error('Missing /proc metrics.');
+  }
   return { cpuMs: (ticks * 1000) / ticksPerSecond, rssMiB: rssKb / 1024 };
 }
 function percentile(sorted: number[], fraction: number): number {
   const value = sorted[Math.max(0, Math.ceil(sorted.length * fraction) - 1)];
-  if (value === undefined) throw new Error('No completed requests.');
+  if (value === undefined) {
+    throw new Error('No completed requests.');
+  }
   return value;
 }
 function rounded(value: number): number {
@@ -130,8 +147,9 @@ async function sample(
           try {
             const actual = await request(endpoint.url, body, headers);
             const elapsed = performance.now() - sent;
-            if (!isDeepStrictEqual(actual, expected))
+            if (!isDeepStrictEqual(actual, expected)) {
               throw new Error('Response data differs from preflight.');
+            }
             latencies.push(elapsed);
           } catch (error) {
             failures++;
@@ -147,7 +165,9 @@ async function sample(
     monitoring.abort();
     monitoringError = await monitor;
   }
-  if (monitoringError instanceof Error) throw monitoringError;
+  if (monitoringError instanceof Error) {
+    throw monitoringError;
+  }
   cancellation.signal.throwIfAborted();
   latencies.sort((a, b) => a - b);
   const elapsedMs = completedAt - started;
@@ -259,14 +279,16 @@ async function main() {
         const page = record(
           expected[scenario.name === 'fleet-vehicles' ? 'fleetVehicles' : 'fleetDevices'],
         );
-        if (page.total !== 50 || !Array.isArray(page.items) || page.items.length !== 20)
+        if (page.total !== 50 || !Array.isArray(page.items) || page.items.length !== 20) {
           throw new Error('Expected a complete 20-row page from 50 seeded records.');
+        }
       }
       for (const concurrency of [1, 16]) {
         for (let round = 1; round <= rounds; round++) {
           const warmed = await sample(endpoint, scenario, headers, expected, concurrency, warmup);
-          if (warmed.failures)
+          if (warmed.failures) {
             throw new Error(`Warmup failed: ${warmed.firstFailure ?? 'unknown error'}`);
+          }
           fixture.karma.requests.length = 0;
           const result = {
             ...(await sample(endpoint, scenario, headers, expected, concurrency, seconds)),
@@ -275,8 +297,9 @@ async function main() {
           samples.push(result);
           console.log(JSON.stringify(result));
           await appendFile(tracePath, JSON.stringify(result) + '\n');
-          if (result.failures)
+          if (result.failures) {
             throw new Error(`Measured requests failed: ${result.firstFailure ?? 'unknown error'}`);
+          }
           fixture.karma.requests.length = 0;
         }
       }

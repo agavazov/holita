@@ -140,17 +140,29 @@ export class FilterBuilder {
   protected readonly editorKind = computed<EditorKind>(() => {
     const field = this.field();
     const operator = this.value().operator;
-    if (!field || !operator) return 'none';
+    if (!field || !operator) {
+      return 'none';
+    }
     const operands = operandsOf(operator);
-    if (operands === 'none') return 'none';
-    if (field.type === 'enum') return operands === 'set' ? 'enum-set' : 'enum-one';
-    if (field.type === 'number') return operands === 'range' ? 'number-range' : 'number-one';
-    if (field.type === 'date') return operands === 'range' ? 'date-range' : 'date-one';
+    if (operands === 'none') {
+      return 'none';
+    }
+    if (field.type === 'enum') {
+      return operands === 'set' ? 'enum-set' : 'enum-one';
+    }
+    if (field.type === 'number') {
+      return operands === 'range' ? 'number-range' : 'number-one';
+    }
+    if (field.type === 'date') {
+      return operands === 'range' ? 'date-range' : 'date-one';
+    }
     return 'text';
   });
   protected readonly draft = computed<FilterCondition | null>(() => {
     const field = this.field();
-    if (!field) return null;
+    if (!field) {
+      return null;
+    }
     const value = this.form.getRawValue();
     this.value();
     const number = (input: number | null) => (input === null ? '' : String(input));
@@ -194,7 +206,9 @@ export class FilterBuilder {
   constructor() {
     // A new column starts with its default condition and no values.
     this.form.controls.field.valueChanges.pipe(takeUntilDestroyed()).subscribe((key) => {
-      if (this.loading) return;
+      if (this.loading) {
+        return;
+      }
       const field = this.fields().find((candidate) => candidate.key === key);
       this.form.patchValue({
         operator: field?.operators[0] ?? 'contains',
@@ -209,7 +223,9 @@ export class FilterBuilder {
   }
 
   protected inputSearch(event: Event): void {
-    if (event.target instanceof HTMLInputElement) this.searchChange.emit(event.target.value);
+    if (event.target instanceof HTMLInputElement) {
+      this.searchChange.emit(event.target.value);
+    }
   }
 
   protected openNew(event: Event): void {
@@ -220,7 +236,9 @@ export class FilterBuilder {
 
   protected edit(id: string, event: Event): void {
     const condition = this.conditions().find((candidate) => candidate.id === id);
-    if (!condition) return;
+    if (!condition) {
+      return;
+    }
     this.editingId.set(id);
     this.load(condition.field, condition);
     this.show(event);
@@ -228,7 +246,9 @@ export class FilterBuilder {
 
   protected apply(): void {
     const draft = this.draft();
-    if (!draft || !this.canApply()) return;
+    if (!draft || !this.canApply()) {
+      return;
+    }
     const editing = this.editingId();
     const condition = { ...draft, id: editing ?? `condition-${String(nextCondition++)}` };
     this.conditionsChange.emit(
@@ -244,8 +264,9 @@ export class FilterBuilder {
   }
 
   protected calendarEscape(event: Event): void {
-    if (event instanceof KeyboardEvent && event.key === 'Escape' && event.defaultPrevented)
+    if (event instanceof KeyboardEvent && event.key === 'Escape' && event.defaultPrevented) {
       event.stopPropagation();
+    }
   }
 
   protected remove(id: string): void {

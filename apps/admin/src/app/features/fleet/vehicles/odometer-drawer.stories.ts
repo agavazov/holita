@@ -17,7 +17,9 @@ const vehicle = sampleVehicles.find(
     item.lastReportedAt &&
     Date.parse(item.lastReportedAt) < sampleNow - 60_000,
 );
-if (!vehicle) throw new Error('No active sample vehicle with an earlier odometer reading.');
+if (!vehicle) {
+  throw new Error('No active sample vehicle with an earlier odometer reading.');
+}
 const path = `vehicles/${vehicle.id}?drawer=odometer`;
 const appReady = { timeout: 10_000 };
 
@@ -87,8 +89,9 @@ export const Saved: Story = {
   },
 };
 const serviceTask = sampleServiceTasks.find((task) => task.id === 's003');
-if (!serviceTask || serviceTask.dueKm === null)
+if (!serviceTask || serviceTask.dueKm === null) {
   throw new Error('Missing odometer service fixture.');
+}
 const serviceDueKm = serviceTask.dueKm;
 
 export const ServicePlanUpdated: Story = {

@@ -51,6 +51,10 @@ in environment examples, documentation, agent instructions, command arguments or
 | npm run codegen               | Generate application GraphQL contracts                                   |
 | npm run schema:check          | Compose SDL and validate operations offline                              |
 
+ESLint requires braces for every conditional and loop body (`curly: ['error', 'all']`),
+including single-statement bodies in application code, tests, tools and Storybook stories.
+The rule is configured after `eslint-config-prettier` so that it remains enabled.
+
 Backend output is `apps/NAME/dist`; `npm run start:prod --workspace @holita/core`
 (or fleet/karma-client) runs the compiled app. Gateway `build` generates the supergraph and
 validates the installed native Router configuration. `npm run start:prod --workspace @holita/gateway`

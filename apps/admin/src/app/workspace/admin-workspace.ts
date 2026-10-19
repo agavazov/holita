@@ -77,7 +77,9 @@ export class AdminWorkspace {
       document.documentElement.lang = language;
       this.primeNG.setTranslation(primeNgTranslation(language, this.primeNG.translation.aria));
       const close = this.branches.watch(language);
-      if (close) onCleanup(close);
+      if (close) {
+        onCleanup(close);
+      }
     });
     effect(() => {
       this.branches.synchronizeRoute(this.language());
@@ -103,13 +105,17 @@ export class AdminWorkspace {
   }
 
   changeLanguage(code: string): void {
-    if (code === 'bg' || code === 'en') void this.router.navigateByUrl(this.languageLink(code));
+    if (code === 'bg' || code === 'en') {
+      void this.router.navigateByUrl(this.languageLink(code));
+    }
   }
 
   languageLink(language: Language) {
     const url = this.router.parseUrl(this.router.url);
     const primary = url.root.children['primary'];
-    if (primary) primary.segments[0] = new UrlSegment(language, {});
+    if (primary) {
+      primary.segments[0] = new UrlSegment(language, {});
+    }
     return url;
   }
 }

@@ -38,7 +38,9 @@ async function mount(url: string) {
   });
   const harness = await RouterTestingHarness.create(url);
   const host: unknown = harness.routeDebugElement?.componentInstance;
-  if (!(host instanceof ListHost)) throw new Error('Missing host.');
+  if (!(host instanceof ListHost)) {
+    throw new Error('Missing host.');
+  }
   return { harness, host, router: TestBed.inject(Router) };
 }
 

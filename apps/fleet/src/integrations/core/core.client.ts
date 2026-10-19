@@ -17,7 +17,9 @@ export class CoreClient {
 
   requireBranch(branchId: string, context: RequestContext): Promise<void> {
     const existing = context.branchChecks.get(branchId);
-    if (existing) return existing;
+    if (existing) {
+      return existing;
+    }
     const check = this.lookupBranch(branchId, context);
     context.branchChecks.set(branchId, check);
     return check;
@@ -37,7 +39,9 @@ export class CoreClient {
         body: JSON.stringify({ query: print(BranchForFleetCreationDocument), variables }),
         signal: AbortSignal.timeout(3000),
       });
-      if (!response.ok) throw new Error('Core returned an HTTP error');
+      if (!response.ok) {
+        throw new Error('Core returned an HTTP error');
+      }
       const body: unknown = await response.json();
       if (
         !isRecord(body) ||
@@ -46,11 +50,16 @@ export class CoreClient {
       ) {
         throw new Error('Core returned an invalid GraphQL response');
       }
-      if (body.data.branch === null) throw new NotFoundException('Branch not found');
-      if (!isRecord(body.data.branch) || body.data.branch.id !== branchId)
+      if (body.data.branch === null) {
+        throw new NotFoundException('Branch not found');
+      }
+      if (!isRecord(body.data.branch) || body.data.branch.id !== branchId) {
         throw new Error('Core returned an invalid branch');
+      }
     } catch (error) {
-      if (error instanceof NotFoundException) throw error;
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       this.logger.warn({
         message: 'Core branch validation failed',
         requestId,

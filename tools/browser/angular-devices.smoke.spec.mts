@@ -21,14 +21,17 @@ async function truck(
   });
   expect(response.ok()).toBe(true);
   const body: unknown = await response.json();
-  if (typeof body !== 'object' || body === null || !('data' in body))
+  if (typeof body !== 'object' || body === null || !('data' in body)) {
     throw new Error('Missing truck result');
+  }
   const data = body.data;
-  if (typeof data !== 'object' || data === null || !('createFleetVehicle' in data))
+  if (typeof data !== 'object' || data === null || !('createFleetVehicle' in data)) {
     throw new Error('Missing truck');
+  }
   const row = data.createFleetVehicle;
-  if (typeof row !== 'object' || row === null || !('id' in row) || typeof row.id !== 'string')
+  if (typeof row !== 'object' || row === null || !('id' in row) || typeof row.id !== 'string') {
     throw new Error('Missing truck ID');
+  }
   return row.id;
 }
 async function chooseTruck(page: Page, plate: string, language = 'en') {
@@ -123,13 +126,14 @@ test.describe('Devices', () => {
             (await page
               .locator('html')
               .evaluate((element) => element.classList.contains('app-dark'))) !== dark
-          )
+          ) {
             await page
               .getByRole('button', {
                 name: dark ? 'Включи тъмна тема' : 'Включи светла тема',
                 exact: true,
               })
               .click();
+          }
           expect(
             await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
           ).toBe(true);

@@ -16,7 +16,9 @@ async function fieldErrors(action: Promise<unknown>): Promise<unknown> {
   try {
     await action;
   } catch (error) {
-    if (!(error instanceof BadRequestException)) throw error;
+    if (!(error instanceof BadRequestException)) {
+      throw error;
+    }
     const response = error.getResponse();
     return typeof response === 'object' && 'fieldErrors' in response
       ? response.fieldErrors
@@ -39,7 +41,9 @@ describe('Event measurement units', () => {
       ['DIAGNOSTIC_TROUBLE_CODE', null],
       ['CRASH_DETECTED', null],
     ];
-    for (const [kind, unit] of units) expect(measurementUnit(kind)).toBe(unit);
+    for (const [kind, unit] of units) {
+      expect(measurementUnit(kind)).toBe(unit);
+    }
     expect(MANEUVER_KINDS).toHaveLength(9);
     expect(MANEUVER_KINDS.at(-1)).toBe('SPEEDING');
   });
@@ -217,10 +221,11 @@ describe('Events, alert counts and transitions', () => {
       {},
       { occurredFrom: '2026-07-17T06:29:59Z', occurredTo: '2026-10-18T06:30:00Z' },
       { occurredFrom: '2026-10-11T00:00:00Z' },
-    ])
+    ]) {
       expect(await fieldErrors(service.maneuverCounts(context, { filter }))).toMatchObject([
         { path: 'filter' },
       ]);
+    }
     expect(kindIntensityCounts).toHaveBeenCalledTimes(2);
   });
 
@@ -235,8 +240,8 @@ describe('Events, alert counts and transitions', () => {
     resolve: { alertStatus: 'RESOLVED', resolvedAt: now },
     reopen: { alertStatus: 'OPEN', acknowledgedAt: null, resolvedAt: null },
   };
-  for (const action of ['acknowledge', 'resolve', 'reopen'] as const)
-    for (const expectedStatus of statuses)
+  for (const action of ['acknowledge', 'resolve', 'reopen'] as const) {
+    for (const expectedStatus of statuses) {
       it(`${action} with expected ${expectedStatus}`, async () => {
         const id = randomUUID();
         const result = service.transition(context, action, id, { expectedStatus });
@@ -249,6 +254,8 @@ describe('Events, alert counts and transitions', () => {
           expect(find).not.toHaveBeenCalled();
         }
       });
+    }
+  }
 
   it('keeps, clears or sets the remark', async () => {
     const id = randomUUID();
@@ -276,12 +283,13 @@ describe('Events, alert counts and transitions', () => {
       remark: 'Разговор с водача',
     });
     transition.mockClear();
-    for (const remark of ['r'.repeat(1001), 'a\u0000b'])
+    for (const remark of ['r'.repeat(1001), 'a\u0000b']) {
       expect(
         await fieldErrors(
           service.transition(context, 'acknowledge', id, { expectedStatus: 'OPEN', remark }),
         ),
       ).toMatchObject([{ path: 'remark' }]);
+    }
     expect(transition).not.toHaveBeenCalled();
   });
 

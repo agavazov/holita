@@ -44,7 +44,9 @@ describe('DriverScorecardView', () => {
     fixture.componentRef.setInput('backLink', ['/drivers']);
     fixture.detectChanges();
     const root: unknown = fixture.nativeElement;
-    if (!(root instanceof HTMLElement)) throw new Error('Missing scorecard element.');
+    if (!(root instanceof HTMLElement)) {
+      throw new Error('Missing scorecard element.');
+    }
     return { fixture, root };
   }
 

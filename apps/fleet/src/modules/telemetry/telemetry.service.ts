@@ -62,11 +62,15 @@ export class TelemetryService {
     const vehicleId = uuid(args.vehicleId, 'vehicleId');
     const from = dateTime(args.from, 'from');
     const to = dateTime(args.to, 'to');
-    if (to.getTime() <= from.getTime()) invalid('to', 'Use an end after the start.');
-    if (to.getTime() - from.getTime() > MAX_SERIES_DAYS * DAY_MS)
+    if (to.getTime() <= from.getTime()) {
+      invalid('to', 'Use an end after the start.');
+    }
+    if (to.getTime() - from.getTime() > MAX_SERIES_DAYS * DAY_MS) {
       invalid('to', `Use a period of at most ${String(MAX_SERIES_DAYS)} days.`);
-    if (!(await this.telemetry.findVehicle(scope, vehicleId)))
+    }
+    if (!(await this.telemetry.findVehicle(scope, vehicleId))) {
       throw new NotFoundException('Vehicle not found');
+    }
     const rows = await this.telemetry.samples(
       scope,
       vehicleId,
@@ -95,19 +99,23 @@ export class TelemetryService {
     const odometerKm = Math.round(finite(input.odometerKm, 'odometerKm', 0, 9_999_999.9) * 10) / 10;
     const recordedAt = dateTime(input.recordedAt, 'recordedAt');
     const vehicle = await this.telemetry.findVehicle(scope, vehicleId);
-    if (!vehicle || vehicle.status === 'INACTIVE')
+    if (!vehicle || vehicle.status === 'INACTIVE') {
       invalid('vehicleId', 'Choose a vehicle in this branch that is not inactive.');
+    }
     const now = this.clock.now();
     const asOf = await this.telemetry.asOf(scope);
     const latestAllowed = asOf === null || asOf.getTime() > now.getTime() ? now : asOf;
-    if (recordedAt.getTime() > latestAllowed.getTime())
+    if (recordedAt.getTime() > latestAllowed.getTime()) {
       invalid('recordedAt', 'The reading cannot be later than the latest vehicle data or now.');
+    }
     const previous = await this.telemetry.latestOdometerReading(scope, vehicleId);
     if (previous?.odometerKm != null) {
-      if (recordedAt.getTime() <= previous.recordedAt.getTime())
+      if (recordedAt.getTime() <= previous.recordedAt.getTime()) {
         invalid('recordedAt', 'Use a time after the latest odometer reading of this vehicle.');
-      if (odometerKm < previous.odometerKm)
+      }
+      if (odometerKm < previous.odometerKm) {
         invalid('odometerKm', 'The odometer cannot be lower than the latest reading.');
+      }
     }
     await this.core.requireBranch(scope.branchId, context);
     return toSample(
@@ -132,7 +140,9 @@ export class TelemetryService {
     scope: FleetScope,
     ids: readonly string[],
   ): Promise<Map<string, FleetVehicleState>> {
-    if (!ids.length) return new Map();
+    if (!ids.length) {
+      return new Map();
+    }
     const [asOf, facts] = await Promise.all([
       this.telemetry.asOf(scope),
       this.telemetry.vehicleFacts(scope, ids),

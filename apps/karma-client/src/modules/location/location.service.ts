@@ -18,13 +18,18 @@ export class LocationService {
   }
 
   private async readLocation(carId: string, context: RequestContext) {
-    if (!/^[1-9]\d*$/.test(carId) || !Number.isSafeInteger(Number(carId)))
+    if (!/^[1-9]\d*$/.test(carId) || !Number.isSafeInteger(Number(carId))) {
       throw new BadRequestException('Invalid Karma car ID');
+    }
     const signal = AbortSignal.timeout(4000);
     const car = await this.cars.find(carId, context, signal);
-    if (!car) return null;
+    if (!car) {
+      return null;
+    }
     const parameters = new URLSearchParams({ car: carId });
-    for (const field of ['spd', 'odo', 'edt_tz', 'pdt']) parameters.append('fields[]', field);
+    for (const field of ['spd', 'odo', 'edt_tz', 'pdt']) {
+      parameters.append('fields[]', field);
+    }
     return location(await this.karma.read('location', parameters, signal), carId);
   }
 }

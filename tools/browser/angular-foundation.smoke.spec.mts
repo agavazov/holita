@@ -44,8 +44,9 @@ test('compiled Angular discovers branches and reads Vehicles through the real ga
       request.url() === app.gatewayUrl &&
       request.method() === 'POST' &&
       operation(request, 'AdminVehicles')
-    )
+    ) {
       scopes.push(request.headers()['x-branch-id'] ?? 'missing');
+    }
   });
   await page.goto(`${app.url}/en`);
   await expect(page).toHaveURL(`${app.url}/en/${branchA}/fleet/vehicles`);
@@ -152,7 +153,9 @@ test('a language change starts a new Vehicles request while the old real respons
     if (operation(request, 'AdminVehicles')) {
       const language = request.headers()['accept-language'];
       const branchId = request.headers()['x-branch-id'];
-      if (!language || !branchId) throw new Error('Missing scoped Vehicles request headers.');
+      if (!language || !branchId) {
+        throw new Error('Missing scoped Vehicles request headers.');
+      }
       scopes.push(`${branchId}/${language}`);
       if (language === 'en') {
         const response = await route.fetch();

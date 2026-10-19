@@ -44,7 +44,9 @@ describe('VehicleProfileView', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     const element: unknown = fixture.nativeElement;
-    if (!(element instanceof HTMLElement)) throw new Error('Missing profile.');
+    if (!(element instanceof HTMLElement)) {
+      throw new Error('Missing profile.');
+    }
     const host = element;
     function kpi(label: string): string | undefined {
       return Array.from(host.querySelectorAll('holita-kpi-tile'))

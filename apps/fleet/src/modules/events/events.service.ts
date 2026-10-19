@@ -208,7 +208,9 @@ export class EventsService {
 
   async find(context: RequestContext, id: string): Promise<FleetEvent> {
     const row = await this.events.find(requireScope(context), uuid(id, 'id'));
-    if (!row) throw new NotFoundException('Event not found');
+    if (!row) {
+      throw new NotFoundException('Event not found');
+    }
     return toEvent(row);
   }
 
@@ -254,11 +256,12 @@ export class EventsService {
         occurredTo &&
         occurredTo.getTime() - occurredFrom.getTime() <= MANEUVER_PERIOD_DAYS * DAY_MS
       )
-    )
+    ) {
       invalid(
         'filter',
         `filter.tripIds or filter.occurredFrom and filter.occurredTo at most ${String(MANEUVER_PERIOD_DAYS)} days apart are required.`,
       );
+    }
     return maneuverRows(await this.events.kindIntensityCounts(scope, criteria, MANEUVER_KINDS));
   }
 
@@ -277,8 +280,9 @@ export class EventsService {
     const rule = TRANSITIONS[transition];
     const expected = enumValue(input.expectedStatus, ALERT_STATUSES, 'expectedStatus');
     const allowed: readonly FleetAlertStatus[] = rule.from;
-    if (!allowed.includes(expected))
+    if (!allowed.includes(expected)) {
       invalid('expectedStatus', `An alert cannot be changed this way from ${expected}.`);
+    }
     const remark =
       input.remark === undefined ? {} : { remark: optionalText(input.remark, 'remark', 1000) };
     const changed = await this.events.transition(scope, recordId, expected, {
@@ -286,14 +290,20 @@ export class EventsService {
       ...remark,
     });
     const row = await this.events.find(scope, recordId);
-    if (!row || row.alertStatus === null) throw new NotFoundException('Alert not found');
-    if (!changed) throw new ConflictException('The alert changed after it was loaded; reload it.');
+    if (!row || row.alertStatus === null) {
+      throw new NotFoundException('Alert not found');
+    }
+    if (!changed) {
+      throw new ConflictException('The alert changed after it was loaded; reload it.');
+    }
     return toEvent(row);
   }
 
   /** OPEN alerts per vehicle ID (vehicles without any are absent). */
   async openAlertCounts(scope: FleetScope, vehicleIds: readonly string[]) {
-    if (!vehicleIds.length) return new Map<string, number>();
+    if (!vehicleIds.length) {
+      return new Map<string, number>();
+    }
     const rows = await this.events.openAlertCounts(scope, vehicleIds);
     return new Map(rows.map((row) => [row.vehicleId, row.count]));
   }
@@ -303,7 +313,9 @@ export class EventsService {
     scope: FleetScope,
     trips: readonly { vehicleId: string; tripId: string }[],
   ) {
-    if (!trips.length) return new Map<string, number>();
+    if (!trips.length) {
+      return new Map<string, number>();
+    }
     const rows = await this.events.countsByTrip(scope, trips, MANEUVER_KINDS);
     return new Map(rows.map((row) => [row.tripId, row.count]));
   }
@@ -314,7 +326,9 @@ export class EventsService {
     driverIds: readonly string[],
     window: DataWindow,
   ) {
-    if (!driverIds.length) return new Map<string, number>();
+    if (!driverIds.length) {
+      return new Map<string, number>();
+    }
     const rows = await this.events.countsByDriver(scope, driverIds, MANEUVER_KINDS, window);
     return new Map(rows.map((row) => [row.driverId, row.count]));
   }
@@ -325,7 +339,9 @@ export class EventsService {
     driverId: string,
     window: DataWindow | null,
   ): Promise<FleetManeuverCount[]> {
-    if (window === null) return maneuverRows([]);
+    if (window === null) {
+      return maneuverRows([]);
+    }
     return maneuverRows(
       await this.events.driverKindIntensityCounts(scope, driverId, MANEUVER_KINDS, window),
     );

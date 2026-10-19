@@ -242,9 +242,13 @@ export class AlertsView {
   }
 
   protected sort(event: TableLazyLoadEvent): void {
-    if (!this.sortReady()) return;
+    if (!this.sortReady()) {
+      return;
+    }
     const next = listQuery.sorted(this.state(), event);
-    if (next) this.changeQuery(next);
+    if (next) {
+      this.changeQuery(next);
+    }
   }
 
   protected select(rows: readonly AlertRow[] | null): void {
@@ -254,7 +258,9 @@ export class AlertsView {
   /** The selection belongs to the rows on screen, so any new query clears it. */
   private changeQuery(query: ListQuery): void {
     this.stateChange.emit(query);
-    if (this.selection().length) this.selectionChange.emit([]);
+    if (this.selection().length) {
+      this.selectionChange.emit([]);
+    }
   }
 
   /** Named by kind and plate: several alerts of one kind are open at once. */

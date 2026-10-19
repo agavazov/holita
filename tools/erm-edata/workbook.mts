@@ -26,14 +26,17 @@ function isXmlCharacter(code: number): boolean {
 export function xml(data: Buffer): XmlNode {
   const source = utf8(data);
   requireValue(!/<!DOCTYPE|<!ENTITY/i.test(source), 'DTD/entity XML is unsupported');
-  for (const character of source)
+  for (const character of source) {
     requireValue(isXmlCharacter(character.codePointAt(0) ?? 0), 'Invalid XML character');
+  }
   // The syntax validator does not resolve entities. Match ElementTree's strict
   // predefined/numeric entity handling without interpreting comments or CDATA.
   const entityText = source.replace(/<!\[CDATA\[[\s\S]*?\]\]>|<!--[\s\S]*?-->|<\?[\s\S]*?\?>/g, '');
   for (const match of entityText.matchAll(/&([^;]*);/g)) {
     const entity = at(match, 1);
-    if (['lt', 'gt', 'amp', 'quot', 'apos'].includes(entity)) continue;
+    if (['lt', 'gt', 'amp', 'quot', 'apos'].includes(entity)) {
+      continue;
+    }
     requireValue(/^#(?:[0-9]+|x[0-9a-fA-F]+)$/.test(entity), 'Unsupported XML entity');
     const code = entity.startsWith('#x')
       ? Number.parseInt(entity.slice(2), 16)
@@ -63,9 +66,11 @@ export function xml(data: Buffer): XmlNode {
       const item = object(entry),
         attributes = item[':@'] === undefined ? {} : object(item[':@']),
         namespaces = { ...inherited };
-      for (const [key, value] of Object.entries(attributes))
-        if (key === 'xmlns' || key.startsWith('xmlns:'))
+      for (const [key, value] of Object.entries(attributes)) {
+        if (key === 'xmlns' || key.startsWith('xmlns:')) {
           namespaces[key === 'xmlns' ? '' : key.slice(6)] = string(value);
+        }
+      }
       function expanded(name: string, attribute = false): string {
         const colon = name.indexOf(':'),
           prefix = colon < 0 ? '' : name.slice(0, colon),
@@ -75,20 +80,25 @@ export function xml(data: Buffer): XmlNode {
         return uri ? `{${uri}}${local}` : local;
       }
       for (const [name, children] of Object.entries(item)) {
-        if (name === ':@' || name.startsWith('?') || name.startsWith('#')) continue;
+        if (name === ':@' || name.startsWith('?') || name.startsWith('#')) {
+          continue;
+        }
         const content = array(children),
           texts: string[] = [];
         for (const child of content) {
           const value = object(child)['#text'];
-          if (value !== undefined) texts.push(string(value));
+          if (value !== undefined) {
+            texts.push(string(value));
+          }
         }
         const attrs: Record<string, string> = {};
-        for (const [key, value] of Object.entries(attributes))
+        for (const [key, value] of Object.entries(attributes)) {
           if (key !== 'xmlns' && !key.startsWith('xmlns:')) {
             const name = expanded(key, true);
             requireValue(!Object.hasOwn(attrs, name), 'Duplicate expanded XML attribute');
             attrs[name] = string(value);
           }
+        }
         result.push({
           name: expanded(name),
           attributes: attrs,
@@ -203,11 +213,12 @@ export function workbookRecords(item: Workbook): { source: JsonObject; parameter
             'Invalid shared string index',
           );
           value = at(strings, Number(raw));
-        } else if (type === 'inlineStr')
+        } else if (type === 'inlineStr') {
           value = children(cell, 'is')
             .flatMap((container) => descendants(container, 't'))
             .map((t) => t.text ?? '')
             .join('');
+        }
         const detail: Cell = { address, type, raw, value },
           formula = children(cell, 'f')[0];
         if (formula) {
@@ -239,8 +250,12 @@ export function workbookRecords(item: Workbook): { source: JsonObject; parameter
     let count = 0;
     for (const row of rows) {
       const cells = row.cells;
-      if (row.number <= header.number || Object.values(cells).every((cell) => cell.value === null))
+      if (
+        row.number <= header.number ||
+        Object.values(cells).every((cell) => cell.value === null)
+      ) {
         continue;
+      }
       const decimal = cells['A']?.value,
         title = cells['C']?.value;
       requireValue(

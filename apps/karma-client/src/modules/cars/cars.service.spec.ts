@@ -16,8 +16,9 @@ describe('shared Karma cars access', () => {
     const client = new KarmaTransport();
     const read = jest.spyOn(client, 'readCar').mockResolvedValue([]);
     const service = new CarsService(client);
-    for (const tenantId of ['tenant-a', 'tenant-b'])
+    for (const tenantId of ['tenant-a', 'tenant-b']) {
       await expect(service.find('41', { tenantId, requestId: 'test' })).resolves.toBeNull();
+    }
     expect(read).toHaveBeenCalledTimes(2);
   });
   it('requires an authenticated session before contacting Karma', () => {
@@ -32,8 +33,9 @@ describe('shared Karma cars access', () => {
     const client = new KarmaTransport();
     const read = jest.spyOn(client, 'read').mockResolvedValue([]);
     const service = new CarsService(client);
-    for (const tenantId of ['tenant-a', 'tenant-b'])
+    for (const tenantId of ['tenant-a', 'tenant-b']) {
       await expect(service.list({ tenantId, requestId: 'test' })).resolves.toEqual([]);
+    }
     expect(read).toHaveBeenCalledTimes(2);
   });
 });

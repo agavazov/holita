@@ -18,7 +18,9 @@ export default meta;
 type Story = StoryObj;
 
 const [device] = sampleDevices;
-if (!device) throw new Error('The sample devices are empty.');
+if (!device) {
+  throw new Error('The sample devices are empty.');
+}
 const appReady = { timeout: 10_000 };
 const pageReady: NonNullable<Story['play']> = async ({ canvasElement }) => {
   await waitFor(
@@ -60,11 +62,16 @@ export const RestartSelected: Story = {
     await waitFor(() => expect(canvas.getByRole('table')).toBeVisible(), appReady);
     const rows = canvas.getAllByRole('row');
     const online = rows.filter((row) => within(row).queryByText('Online') !== null).slice(0, 2);
-    if (online.length < 2) throw new Error('Fewer than two online devices on the first page');
+    if (online.length < 2) {
+      throw new Error('Fewer than two online devices on the first page');
+    }
     const offline = rows.find((row) => within(row).queryByText('Offline') !== null);
-    if (!offline) throw new Error('No offline device on the first page');
-    for (const row of [...online, offline])
+    if (!offline) {
+      throw new Error('No offline device on the first page');
+    }
+    for (const row of [...online, offline]) {
       await userEvent.click(within(row).getByRole('checkbox', { name: /^Select / }));
+    }
     const bar = await canvas.findByRole('region', { name: 'Actions for selected records' });
     await userEvent.click(within(bar).getByRole('button', { name: 'Restart' }));
     const body = within(canvasElement.ownerDocument.body);
@@ -149,7 +156,9 @@ export const RegisterInstalled: Story = {
     const body = await drawerReady(canvasElement, 'Register device');
     const imei = '000000000000123';
     const vehicle = sampleVehicles.find((item) => item.id === 'v01');
-    if (!vehicle) throw new Error('Missing registration vehicle.');
+    if (!vehicle) {
+      throw new Error('Missing registration vehicle.');
+    }
     await userEvent.type(body.getByRole('textbox', { name: /^IMEI/ }), imei);
     await userEvent.click(body.getByRole('combobox', { name: 'Model' }));
     await userEvent.click(await body.findByRole('option', { name: device.model }));
@@ -183,7 +192,9 @@ export const InstalledAtSort: Story = {
     const canvas = within(canvasElement);
     await waitFor(() => expect(canvas.getByRole('table')).toBeVisible(), appReady);
     const selected = canvas.getAllByRole('checkbox', { name: /^Select (?!all)/ })[0];
-    if (!selected) throw new Error('No device row to select.');
+    if (!selected) {
+      throw new Error('No device row to select.');
+    }
     await userEvent.click(selected);
     await userEvent.click(canvas.getByRole('button', { name: /^Sort/ }));
     await chooseMenuItem(canvasElement.ownerDocument.body, 'Installed at');
@@ -207,7 +218,9 @@ export const CurrentSortPreservesSelection: Story = {
     await waitFor(() => expect(canvas.getAllByRole('row')[1]?.textContent).not.toBe(firstPageRow));
     const selected = canvas.getAllByRole('checkbox', { name: /^Select (?!all)/ })[0];
     const name = selected?.getAttribute('aria-label');
-    if (!selected || !name) throw new Error('No named device checkbox on page two.');
+    if (!selected || !name) {
+      throw new Error('No named device checkbox on page two.');
+    }
     const imei = name.replace(/^Select /, '');
     await userEvent.click(selected);
     for (const label of ['IMEI', 'Ascending']) {

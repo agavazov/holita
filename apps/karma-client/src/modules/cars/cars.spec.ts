@@ -15,9 +15,15 @@ const row = {
 };
 
 function requestUrl(value: Parameters<typeof fetch>[0] | undefined): string {
-  if (typeof value === 'string') return value;
-  if (value instanceof URL) return value.href;
-  if (value instanceof Request) return value.url;
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (value instanceof URL) {
+    return value.href;
+  }
+  if (value instanceof Request) {
+    return value.url;
+  }
   throw new Error('Missing upstream request URL');
 }
 
@@ -222,7 +228,9 @@ describe('Karma upstream client', () => {
         cancelled = true;
       },
     });
-    if (endpoint === 'cars') signIn();
+    if (endpoint === 'cars') {
+      signIn();
+    }
     upstream.mockResolvedValueOnce(new Response(body, { status: 503 }));
     await expect(client.list(signedContext)).rejects.toThrow('Karma is unavailable');
     expect(cancelled).toBe(true);

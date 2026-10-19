@@ -24,9 +24,13 @@ async function writeChanged(path: string, content: string) {
   try {
     previous = await readFile(absolute, 'utf8');
   } catch (error) {
-    if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') throw error;
+    if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') {
+      throw error;
+    }
   }
-  if (previous === content) return;
+  if (previous === content) {
+    return;
+  }
   await mkdir(dirname(absolute), { recursive: true });
   await writeFile(absolute, content);
 }
@@ -75,7 +79,9 @@ if (target === 'gateway') {
   );
 } else if (target === 'core' || target === 'fleet' || target === 'karma-client') {
   const schema = composition.schemas.get(target);
-  if (!schema) throw new Error(`Missing ${target} schema`);
+  if (!schema) {
+    throw new Error(`Missing ${target} schema`);
+  }
   await generateTypes(`apps/${target}/src/generated/graphql/types.ts`, schema, false);
   if (target === 'fleet') {
     await generateTypes(

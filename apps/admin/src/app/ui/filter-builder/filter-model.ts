@@ -83,8 +83,12 @@ function isDate(text: string | undefined): text is string {
 }
 
 function isValue(type: FilterFieldType, text: string | undefined): boolean {
-  if (type === 'number') return isNumber(text);
-  if (type === 'date') return isDate(text);
+  if (type === 'number') {
+    return isNumber(text);
+  }
+  if (type === 'date') {
+    return isDate(text);
+  }
   return text !== undefined && text.trim() !== '';
 }
 
@@ -99,8 +103,12 @@ export function isComplete(field: FilterField, condition: FilterCondition): bool
     case 'set':
       return condition.values.length > 0;
     case 'range': {
-      if (!isValue(field.type, first) || !isValue(field.type, second)) return false;
-      if (field.type === 'number') return Number(first) <= Number(second);
+      if (!isValue(field.type, first) || !isValue(field.type, second)) {
+        return false;
+      }
+      if (field.type === 'number') {
+        return Number(first) <= Number(second);
+      }
       return (first ?? '') <= (second ?? '');
     }
   }
@@ -111,9 +119,12 @@ function formatValue(field: FilterField, value: string, language: Language): str
     const number = formatNumber(Number(value), language);
     return field.unit ? `${number} ${field.unit}` : number;
   }
-  if (field.type === 'date') return formatDateOnly(value, language);
-  if (field.type === 'enum')
+  if (field.type === 'date') {
+    return formatDateOnly(value, language);
+  }
+  if (field.type === 'enum') {
     return field.options?.find((option) => option.value === value)?.label ?? value;
+  }
   return value;
 }
 

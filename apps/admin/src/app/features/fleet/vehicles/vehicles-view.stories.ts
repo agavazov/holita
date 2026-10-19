@@ -18,7 +18,9 @@ export default meta;
 type Story = StoryObj;
 
 const [edited] = sampleVehicles;
-if (!edited) throw new Error('The sample fleet is empty.');
+if (!edited) {
+  throw new Error('The sample fleet is empty.');
+}
 /** The example app routes and renders its first page before the list appears. */
 const appReady = { timeout: 10_000 };
 
@@ -75,7 +77,9 @@ export const RowActionsMenu: Story = {
   play: async ({ canvasElement }) => {
     const canvas = await tableReady(canvasElement);
     const [first] = canvas.getAllByRole('button', { name: /^Actions for / });
-    if (!first) throw new Error('No row actions');
+    if (!first) {
+      throw new Error('No row actions');
+    }
     await userEvent.click(first);
     const body = within(canvasElement.ownerDocument.body);
     await waitFor(() => expect(body.getByRole('menuitem', { name: 'Delete' })).toBeVisible());
@@ -92,7 +96,9 @@ export const DeleteFromRow: Story = {
   play: async ({ canvasElement }) => {
     const canvas = await tableReady(canvasElement);
     const [trigger] = canvas.getAllByRole('button', { name: /^Actions for / });
-    if (!trigger) throw new Error('No row actions');
+    if (!trigger) {
+      throw new Error('No row actions');
+    }
     const plate = (trigger.getAttribute('aria-label') ?? '').replace('Actions for ', '');
     await userEvent.click(trigger);
     const body = within(canvasElement.ownerDocument.body);
@@ -111,7 +117,9 @@ export const DeleteSelected: Story = {
   play: async ({ canvasElement }) => {
     const canvas = await tableReady(canvasElement);
     const boxes = canvas.getAllByRole('checkbox', { name: /^Select (?!all)/ });
-    for (const box of boxes.slice(0, 3)) await userEvent.click(box);
+    for (const box of boxes.slice(0, 3)) {
+      await userEvent.click(box);
+    }
     const tableTop = canvas.getByRole('table').getBoundingClientRect().top;
     const bar = await canvas.findByRole('region', { name: 'Actions for selected records' });
     await userEvent.click(within(bar).getByRole('button', { name: 'Delete' }));
@@ -135,7 +143,9 @@ export const BulkSelection: Story = {
   play: async ({ canvasElement }) => {
     const canvas = await tableReady(canvasElement);
     const boxes = canvas.getAllByRole('checkbox', { name: /^Select (?!all)/ });
-    for (const box of boxes.slice(0, 3)) await userEvent.click(box);
+    for (const box of boxes.slice(0, 3)) {
+      await userEvent.click(box);
+    }
     await waitFor(() => expect(canvas.getByText('3 selected')).toBeVisible());
   },
 };
@@ -201,7 +211,9 @@ export const DuplicateFleetNumber: Story = {
   render: exampleAt(`vehicles?drawer=${edited.id}`),
   play: async ({ canvasElement }) => {
     const duplicate = sampleVehicles[1];
-    if (!duplicate) throw new Error('Missing duplicate sample.');
+    if (!duplicate) {
+      throw new Error('Missing duplicate sample.');
+    }
     const body = await drawerReady(canvasElement, `Edit ${edited.plate}`);
     const fleetNumber = body.getByRole('textbox', { name: 'Fleet number' });
     await userEvent.clear(fleetNumber);
@@ -248,7 +260,9 @@ export const HistoryPreventsDelete: Story = {
   play: async ({ canvasElement }) => {
     const canvas = await tableReady(canvasElement);
     const [trigger] = canvas.getAllByRole('button', { name: /^Actions for / });
-    if (!trigger) throw new Error('Missing vehicle action.');
+    if (!trigger) {
+      throw new Error('Missing vehicle action.');
+    }
     const plate = (trigger.getAttribute('aria-label') ?? '').replace('Actions for ', '');
     await userEvent.click(trigger);
     await chooseMenuItem(canvasElement.ownerDocument.body, 'Delete');
@@ -281,7 +295,9 @@ export const SortAdditionalFields: Story = {
     const expected = [...sampleVehicles].sort((a, b) =>
       b.fleetNumber.localeCompare(a.fleetNumber, 'en'),
     )[0];
-    if (!expected) throw new Error('Missing sample.');
+    if (!expected) {
+      throw new Error('Missing sample.');
+    }
     await waitFor(() =>
       expect(
         within(canvas.getAllByRole('row')[1] ?? canvasElement).getByRole('button', {
@@ -292,7 +308,9 @@ export const SortAdditionalFields: Story = {
     await userEvent.click(canvas.getByRole('button', { name: /^Sort/ }));
     await chooseMenuItem(canvasElement.ownerDocument.body, 'Updated');
     const updated = [...sampleVehicles].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
-    if (!updated) throw new Error('Missing updated sample.');
+    if (!updated) {
+      throw new Error('Missing updated sample.');
+    }
     await waitFor(() =>
       expect(
         within(canvas.getAllByRole('row')[1] ?? canvasElement).getByRole('button', {
@@ -311,7 +329,9 @@ export const DeactivationUpdatesSort: Story = {
     const body = within(canvasElement.ownerDocument.body);
     const newestFirst = [...sampleVehicles].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
     const vehicle = newestFirst.slice(1, 20).find((item) => item.status !== 'INACTIVE');
-    if (!vehicle) throw new Error('Missing an older active vehicle on the first page.');
+    if (!vehicle) {
+      throw new Error('Missing an older active vehicle on the first page.');
+    }
     await userEvent.click(canvas.getByRole('button', { name: /^Sort/ }));
     await chooseMenuItem(canvasElement.ownerDocument.body, 'Updated');
     await waitFor(() => expect(body.queryByRole('menu')).toBeNull());
@@ -326,7 +346,9 @@ export const DeactivationUpdatesSort: Story = {
     await chooseMenuItem(canvasElement.ownerDocument.body, 'Deactivate');
     await waitFor(async () => {
       const first = canvas.getAllByRole('row')[1];
-      if (!first) throw new Error('Missing the first vehicle row.');
+      if (!first) {
+        throw new Error('Missing the first vehicle row.');
+      }
       await expect(
         within(first).getByRole('button', { name: `Edit ${vehicle.plate}` }),
       ).toBeVisible();

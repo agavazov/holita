@@ -184,7 +184,9 @@ export class ServiceTaskDrawer {
   protected errorOf(name: ServiceTaskField): string | null {
     this.events();
     const control = this.form.get(name);
-    if (!control?.invalid || (!control.touched && !this.submitted)) return null;
+    if (!control?.invalid || (!control.touched && !this.submitted)) {
+      return null;
+    }
     return validationMessage(control.errors, this.language());
   }
 
@@ -193,7 +195,9 @@ export class ServiceTaskDrawer {
   }
 
   protected submit(): void {
-    if (this.saving() || this.readOnly()) return;
+    if (this.saving() || this.readOnly()) {
+      return;
+    }
     this.submitted = true;
     this.form.markAllAsTouched();
     const value = this.form.getRawValue();
@@ -201,7 +205,9 @@ export class ServiceTaskDrawer {
       afterNextRender(
         () => {
           const form = this.formElement()?.nativeElement;
-          if (form) focusFirstInvalid(form, fieldOrder, 'task-');
+          if (form) {
+            focusFirstInvalid(form, fieldOrder, 'task-');
+          }
         },
         { injector: this.injector },
       );
@@ -220,8 +226,12 @@ export class ServiceTaskDrawer {
 
   /** Close button, Escape, backdrop and Cancel: unsaved changes are confirmed first. */
   protected async requestClose(): Promise<void> {
-    if (this.saving()) return;
-    if (await this.drawer().confirmLeave(this.dirty())) this.closed.emit();
+    if (this.saving()) {
+      return;
+    }
+    if (await this.drawer().confirmLeave(this.dirty())) {
+      this.closed.emit();
+    }
   }
 
   canLeave(): boolean | Promise<boolean> {

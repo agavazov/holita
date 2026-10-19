@@ -287,7 +287,9 @@ describe('authenticated bounded Karma history transport', () => {
       items: [{ eventId: '0' }],
     });
     const call = upstream.mock.calls.at(-1);
-    if (!call) throw new Error('Missing read');
+    if (!call) {
+      throw new Error('Missing read');
+    }
     expect(url(call[0]).pathname).toBe('/apiv2/events');
     expect(url(call[0]).searchParams.getAll('fields[]')).toEqual(['spd', 'odo', 'edt_tz', 'pdt']);
     expect(url(call[0]).searchParams.getAll('event_type[]')).toEqual(['0']);

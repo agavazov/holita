@@ -35,7 +35,9 @@ describe('PageHeader', () => {
     const fixture = TestBed.createComponent(Host);
     fixture.detectChanges();
     const element: unknown = fixture.nativeElement;
-    if (!(element instanceof HTMLElement)) throw new Error('Missing host element.');
+    if (!(element instanceof HTMLElement)) {
+      throw new Error('Missing host element.');
+    }
     return { fixture, element };
   }
 

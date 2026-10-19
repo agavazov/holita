@@ -97,7 +97,9 @@ export class TelemetryRepository {
    * non-null odometer of any source (one scoped query for the whole page).
    */
   async vehicleFacts(scope: FleetScope, ids: readonly string[]): Promise<VehicleFacts[]> {
-    if (!ids.length) return [];
+    if (!ids.length) {
+      return [];
+    }
     const { tenantId, branchId } = scope;
     const vehicles = fleetTable(this.prisma.schema, 'Vehicle');
     const devices = fleetTable(this.prisma.schema, 'Device');
@@ -145,7 +147,9 @@ export class TelemetryRepository {
     scope: FleetScope,
     pairs: readonly { vehicleId: string; imei: string }[],
   ): Promise<{ vehicleId: string; imei: string; recordedAt: Date }[]> {
-    if (!pairs.length) return [];
+    if (!pairs.length) {
+      return [];
+    }
     const rows = await this.prisma.client.vehicleStatusSample.groupBy({
       by: ['vehicleId', 'deviceImei'],
       where: {

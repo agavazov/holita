@@ -36,7 +36,9 @@ describe('core PostgreSQL persistence', () => {
       }),
     ).toEqual([{ name: 'Discordia' }, { name: 'Sandbox' }]);
     const first = branchSeeds[0];
-    if (!first) throw new Error('Missing branch seed');
+    if (!first) {
+      throw new Error('Missing branch seed');
+    }
     await database.client.branch.update({
       where: { id: first.id },
       data: { tenantId: rentalSofiaId, name: 'My edited branch' },

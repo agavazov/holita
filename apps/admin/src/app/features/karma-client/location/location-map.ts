@@ -11,8 +11,9 @@ export function locationMap(
     !Number.isFinite(longitude) ||
     Math.abs(latitude) > 90 ||
     Math.abs(longitude) > 180
-  )
+  ) {
     return null;
+  }
   const lat = String(latitude),
     lon = String(longitude);
   return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=15/${lat}/${lon}`;

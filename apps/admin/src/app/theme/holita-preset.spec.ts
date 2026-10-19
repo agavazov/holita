@@ -119,8 +119,9 @@ describe('holita preset', () => {
       '--p-app-tone-warn-solid:light-dark(var(--p-amber-600), var(--p-amber-400))',
       '--p-app-tone-neutral-background:light-dark(var(--p-surface-100), var(--p-surface-800))',
       '--p-app-category-c6:light-dark(var(--p-lime-700), var(--p-lime-400))',
-    ])
+    ]) {
       expect(css.app).toContain(token);
+    }
     expect(css.app).toContain('.app-dark{color-scheme:dark}');
     expect(css.app).toMatch(/^@layer primeng\{/);
     expect(css.component('tag')).toContain(

@@ -94,9 +94,13 @@ export class TripsPage {
     name: driver.name,
   }));
   private readonly trips = computed<readonly TripRow[]>(() => {
-    if (this.scenario() === 'empty') return [];
+    if (this.scenario() === 'empty') {
+      return [];
+    }
     const rows = sampleTrips.map(tripRow);
-    if (this.scenario() !== 'in-progress' && this.scenario() !== 'missing-end') return rows;
+    if (this.scenario() !== 'in-progress' && this.scenario() !== 'missing-end') {
+      return rows;
+    }
     return rows.map((row) =>
       row.id !== 't001'
         ? row
@@ -146,11 +150,15 @@ export class TripsPage {
     const [id] = ids;
     switch (action) {
       case 'open':
-        if (id) this.openId.set(id);
+        if (id) {
+          this.openId.set(id);
+        }
         return;
       case 'vehicle': {
         const trip = this.trips().find((item) => item.id === id);
-        if (trip) this.openVehicle(trip.vehicleId);
+        if (trip) {
+          this.openVehicle(trip.vehicleId);
+        }
         return;
       }
     }

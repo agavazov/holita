@@ -79,8 +79,9 @@ describe('location and reference read contracts', () => {
         { project_id: 12, name: 'x' },
         { project_id: 12, name: 'y' },
       ],
-    ])
+    ]) {
       expect(() => projects(data)).toThrow('Karma is unavailable');
+    }
     for (const data of [
       [{ zone_id: -1, zone_name: 'x' }],
       [{ zone_id: 2147483648, zone_name: 'x' }],
@@ -89,10 +90,12 @@ describe('location and reference read contracts', () => {
         { zone_id: 0, zone_name: 'x' },
         { zone_id: 0, zone_name: 'y' },
       ],
-    ])
+    ]) {
       expect(() => timeZones(data)).toThrow('Karma is unavailable');
-    for (const data of [null, { version: '' }, { version: 2 }])
+    }
+    for (const data of [null, { version: '' }, { version: 2 }]) {
       expect(() => version(data)).toThrow('Karma is unavailable');
+    }
   });
 });
 
@@ -130,7 +133,9 @@ describe('authenticated bounded location and reference transport', () => {
       messageId: '3000000001',
     });
     const url = upstream.mock.calls[2]?.[0];
-    if (!(url instanceof URL)) throw new Error('Expected URL');
+    if (!(url instanceof URL)) {
+      throw new Error('Expected URL');
+    }
     expect(url.pathname).toBe('/apiv2/location');
     expect(url.searchParams.get('car')).toBe('41');
     expect(url.searchParams.getAll('fields[]')).toEqual(['spd', 'odo', 'edt_tz', 'pdt']);
@@ -177,7 +182,9 @@ describe('authenticated bounded location and reference transport', () => {
     upstream.mockResolvedValueOnce(Response.json({ version: '2.26.1.1' }));
     await expect(references.version(signedContext)).resolves.toEqual({ version: '2.26.1.1' });
     const url = upstream.mock.calls[0]?.[0];
-    if (!(url instanceof URL)) throw new Error('Expected URL');
+    if (!(url instanceof URL)) {
+      throw new Error('Expected URL');
+    }
     expect(url.pathname).toBe('/apiv2/version');
     expect(url.search).toBe('');
     expect(upstream).toHaveBeenCalledTimes(1);

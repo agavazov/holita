@@ -33,7 +33,9 @@ describe('TripDrawer', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     const dialog = document.querySelector('[role="dialog"]');
-    if (!dialog) throw new Error('Missing trip drawer.');
+    if (!dialog) {
+      throw new Error('Missing trip drawer.');
+    }
     return dialog;
   }
 

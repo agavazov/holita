@@ -27,7 +27,9 @@ const vehicle = sampleVehicles.find(
     sampleAlerts.some((alert) => alert.vehicleId === item.id) &&
     sampleServiceTasks.some((task) => task.vehicleId === item.id),
 );
-if (!vehicle) throw new Error('No sample vehicle has trips, alerts and service tasks.');
+if (!vehicle) {
+  throw new Error('No sample vehicle has trips, alerts and service tasks.');
+}
 const profile = `vehicles/${vehicle.id}`;
 const plate = vehicle.plate;
 const appReady = { timeout: 10_000 };
@@ -74,7 +76,9 @@ export const TripsTab: Story = {
   play: async ({ canvasElement }) => {
     const canvas = await pageReady(canvasElement);
     const [first] = canvas.getAllByRole('button', { name: /2026/ });
-    if (!first) throw new Error('No trips');
+    if (!first) {
+      throw new Error('No trips');
+    }
     await userEvent.click(first);
     const body = within(canvasElement.ownerDocument.body);
     await waitFor(() => expect(body.getByRole('dialog')).toBeVisible());
@@ -95,7 +99,9 @@ export const ServiceTab: Story = {
   play: async ({ canvasElement }) => {
     const canvas = await pageReady(canvasElement);
     const task = sampleServiceTasks.find((item) => item.vehicleId === vehicle.id);
-    if (!task) throw new Error('Missing service task.');
+    if (!task) {
+      throw new Error('Missing service task.');
+    }
     await userEvent.click(canvas.getByRole('button', { name: task.kind }));
     const body = within(canvasElement.ownerDocument.body);
     await waitFor(
@@ -111,7 +117,9 @@ export const ServiceTab: Story = {
 };
 
 const completedServiceTask = sampleServiceTasks.find((item) => item.id === 's023');
-if (!completedServiceTask) throw new Error('Missing completed service fixture.');
+if (!completedServiceTask) {
+  throw new Error('Missing completed service fixture.');
+}
 
 export const CompletedServiceLink: Story = {
   name: 'Open completed service from the profile',
@@ -139,7 +147,9 @@ export const AcknowledgedAlerts: Story = {
   play: async ({ canvasElement }) => {
     const canvas = await pageReady(canvasElement);
     const tile = canvas.getByText('Open alerts', { exact: true }).closest('holita-kpi-tile');
-    if (!(tile instanceof HTMLElement)) throw new Error('Missing open-alert KPI.');
+    if (!(tile instanceof HTMLElement)) {
+      throw new Error('Missing open-alert KPI.');
+    }
     await expect(within(tile).getByText('0', { exact: true })).toBeVisible();
     await expect(canvas.getAllByText('Acknowledged', { exact: true }).length).toBeGreaterThan(0);
   },
@@ -210,7 +220,9 @@ export const DuplicateFleetNumber: Story = {
   render: exampleAt(`${profile}?drawer=edit`),
   play: async ({ canvasElement }) => {
     const other = sampleVehicles.find((item) => item.id !== vehicle.id && item.fleetNumber);
-    if (!other) throw new Error('Missing duplicate fleet-number fixture.');
+    if (!other) {
+      throw new Error('Missing duplicate fleet-number fixture.');
+    }
     const body = within(canvasElement.ownerDocument.body);
     await waitFor(
       () => expect(body.getByRole('dialog', { name: `Edit ${plate}` })).toBeVisible(),

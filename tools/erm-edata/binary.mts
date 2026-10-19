@@ -31,8 +31,12 @@ export function zipEntries(payload: Buffer): ZipEntry[] {
   // Archive comments have variable lengths; locate the end record that ends at EOF.
   let eocd = -1;
   for (let i = Math.max(0, payload.length - 65557); i <= payload.length - 22; i++) {
-    if (payload.readUInt32LE(i) === 0x06054b50 && i + 22 + u16(payload, i + 20) === payload.length)
+    if (
+      payload.readUInt32LE(i) === 0x06054b50 &&
+      i + 22 + u16(payload, i + 20) === payload.length
+    ) {
       eocd = i;
+    }
   }
   requireValue(eocd >= 0, 'Invalid ZIP end record');
   const count = u16(payload, eocd + 10),
@@ -128,8 +132,9 @@ export function archiveCandidates(data: Buffer): { offset: number; payload: Buff
     requireValue(first >= 0 && last <= data.length, 'Invalid ZIP boundaries');
     const payload = slice(data, first, last - first),
       names = zipEntries(payload).map((entry) => entry.path);
-    if (names.includes('[Content_Types].xml') && names.includes('_rels/.rels'))
+    if (names.includes('[Content_Types].xml') && names.includes('_rels/.rels')) {
       result.push({ offset: first, payload });
+    }
   }
   return result;
 }
@@ -215,7 +220,9 @@ function versionStrings(data: Buffer): JsonObject[] {
       end = start + length;
     requireValue(length >= 6 && end <= limit, 'Invalid version resource');
     let cursor = start + 6;
-    while (u16(data, cursor) !== 0) cursor += 2;
+    while (u16(data, cursor) !== 0) {
+      cursor += 2;
+    }
     const key = slice(data, start + 6, cursor - start - 6).toString('utf16le');
     cursor = (cursor + 2 + 3) & ~3;
     const valueBytes = valueLength * (type === 1 ? 2 : 1),
@@ -233,8 +240,9 @@ function versionStrings(data: Buffer): JsonObject[] {
   for (const info of read(0, data.length).children.filter(
     (child) => child.key === 'StringFileInfo',
   )) {
-    for (const table of info.children)
+    for (const table of info.children) {
       result.push(Object.fromEntries(table.children.map((child) => [child.key, child.value])));
+    }
   }
   return result;
 }
@@ -265,8 +273,9 @@ export function resourceInventory(pe: PortableExecutable): {
             item.offset === location.offset &&
             item.bytes === location.bytes,
         )
-      )
+      ) {
         workbook.locations.push(location);
+      }
       books.set(key, workbook);
     }
     return candidates.length;
@@ -292,8 +301,9 @@ export function resourceInventory(pe: PortableExecutable): {
               )
             : String(name);
         const names = [...parts, identity];
-        if (target & 0x80000000) walk(target & 0x7fffffff, names);
-        else {
+        if (target & 0x80000000) {
+          walk(target & 0x7fffffff, names);
+        } else {
           const rva = u32(data, target),
             size = u32(data, target + 4),
             payload = pe.data(rva, size),
@@ -304,16 +314,21 @@ export function resourceInventory(pe: PortableExecutable): {
             at(names, 0) !== 'EXCEL' || collect(payload, fileOffset, 'resource', path) > 0,
             'EXCEL resource has no supported workbook',
           );
-          if (at(names, 0) !== 'EXCEL') collect(payload, fileOffset, 'resource', path);
-          if (at(names, 0) === '16') versions.push(...versionStrings(payload));
+          if (at(names, 0) !== 'EXCEL') {
+            collect(payload, fileOffset, 'resource', path);
+          }
+          if (at(names, 0) === '16') {
+            versions.push(...versionStrings(payload));
+          }
         }
       }
       active.delete(offset);
     }
     walk(0, []);
   }
-  for (const section of pe.sections)
+  for (const section of pe.sections) {
     collect(slice(pe.raw, section.offset, section.size), section.offset, 'section', section.name);
+  }
   requireValue(books.size, 'No embedded workbook found; extraction coverage is incomplete');
   return {
     resources,

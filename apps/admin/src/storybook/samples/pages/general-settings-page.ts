@@ -73,7 +73,9 @@ export class GeneralSettingsPage {
   }
 
   protected save(settings: GeneralSettings): void {
-    if (this.saving()) return;
+    if (this.saving()) {
+      return;
+    }
     this.saving.set(true);
     this.saveError.set(null);
     this.saveTimer = setTimeout(() => {

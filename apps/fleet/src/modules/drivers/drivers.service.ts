@@ -91,8 +91,12 @@ export function documentStatus(
   expiresOn: string | null,
   today: string,
 ): Exclude<FleetDocumentStatus, 'NOT_RECORDED'> | null {
-  if (expiresOn === null) return null;
-  if (expiresOn < today) return 'EXPIRED';
+  if (expiresOn === null) {
+    return null;
+  }
+  if (expiresOn < today) {
+    return 'EXPIRED';
+  }
   return expiresOn <= addDays(today, DOCUMENT_EXPIRING_DAYS) ? 'EXPIRING' : 'VALID';
 }
 
@@ -105,8 +109,12 @@ export function driverDocumentStatus(
     documentStatus(documents.licenseExpiresOn, today),
     documentStatus(documents.tachographCardExpiresOn, today),
   ];
-  if (statuses.includes('EXPIRED')) return 'EXPIRED';
-  if (statuses.includes('EXPIRING')) return 'EXPIRING';
+  if (statuses.includes('EXPIRED')) {
+    return 'EXPIRED';
+  }
+  if (statuses.includes('EXPIRING')) {
+    return 'EXPIRING';
+  }
   return statuses.includes('VALID') ? 'VALID' : 'NOT_RECORDED';
 }
 
@@ -225,7 +233,9 @@ export class DriversService {
   async find(context: RequestContext, id: string): Promise<DriverResult> {
     const scope = requireScope(context);
     const row = await this.drivers.find(scope, uuid(id, 'id'));
-    if (!row) throw new NotFoundException('Driver not found');
+    if (!row) {
+      throw new NotFoundException('Driver not found');
+    }
     return this.completeOne(scope, row);
   }
 
@@ -238,7 +248,9 @@ export class DriversService {
     const driverId = uuid(args.driverId, 'driverId');
     const days = integer(args.days ?? DRIVER_STATS_DAYS, 'days', 1, MAX_SCORECARD_DAYS);
     const row = await this.drivers.find(scope, driverId);
-    if (!row) throw new NotFoundException('Driver not found');
+    if (!row) {
+      throw new NotFoundException('Driver not found');
+    }
     const asOf = await this.telemetry.asOf(scope);
     const window = dataWindow(asOf, days);
     const [[driver], score, maneuvers] = await Promise.all([
@@ -246,7 +258,9 @@ export class DriversService {
       window === null ? null : this.trips.driverScore(scope, driverId, window),
       this.events.driverManeuvers(scope, driverId, window),
     ]);
-    if (!driver) throw new NotFoundException('Driver not found');
+    if (!driver) {
+      throw new NotFoundException('Driver not found');
+    }
     const distanceKm = score?.distanceKm ?? 0;
     const scoredTripCount = score?.scoredTripCount ?? 0;
     const maneuverCount = maneuvers.reduce((sum, item) => sum + item.total, 0);
@@ -303,36 +317,58 @@ export class DriversService {
     const scope = requireScope(context);
     const recordId = uuid(id, 'id');
     const data: Partial<DriverData> = {};
-    if (input.firstName !== undefined) data.firstName = text(input.firstName, 'firstName', 64);
-    if (input.lastName !== undefined) data.lastName = text(input.lastName, 'lastName', 64);
-    if (input.employeeNumber !== undefined)
+    if (input.firstName !== undefined) {
+      data.firstName = text(input.firstName, 'firstName', 64);
+    }
+    if (input.lastName !== undefined) {
+      data.lastName = text(input.lastName, 'lastName', 64);
+    }
+    if (input.employeeNumber !== undefined) {
       data.employeeNumber = fieldRules.employeeNumber(input.employeeNumber);
-    if (input.identificationKey !== undefined)
+    }
+    if (input.identificationKey !== undefined) {
       data.identificationKey = fieldRules.identificationKey(input.identificationKey);
-    if (input.phone !== undefined) data.phone = fieldRules.phone(input.phone);
-    if (input.email !== undefined) data.email = fieldRules.email(input.email);
-    if (input.licenseNumber !== undefined)
+    }
+    if (input.phone !== undefined) {
+      data.phone = fieldRules.phone(input.phone);
+    }
+    if (input.email !== undefined) {
+      data.email = fieldRules.email(input.email);
+    }
+    if (input.licenseNumber !== undefined) {
       data.licenseNumber = fieldRules.licenseNumber(input.licenseNumber);
-    if (input.licenseCategories !== undefined)
+    }
+    if (input.licenseCategories !== undefined) {
       data.licenseCategories = licenseCategories(input.licenseCategories);
-    if (input.licenseExpiresOn !== undefined)
+    }
+    if (input.licenseExpiresOn !== undefined) {
       data.licenseExpiresOn = expiryDate(input.licenseExpiresOn, 'licenseExpiresOn');
-    if (input.tachographCardNumber !== undefined)
+    }
+    if (input.tachographCardNumber !== undefined) {
       data.tachographCardNumber = fieldRules.tachographCardNumber(input.tachographCardNumber);
-    if (input.tachographCardExpiresOn !== undefined)
+    }
+    if (input.tachographCardExpiresOn !== undefined) {
       data.tachographCardExpiresOn = expiryDate(
         input.tachographCardExpiresOn,
         'tachographCardExpiresOn',
       );
-    if (input.status !== undefined)
+    }
+    if (input.status !== undefined) {
       data.status = enumValue(input.status, DRIVER_STATUSES, 'status');
-    if (input.notes !== undefined) data.notes = fieldRules.notes(input.notes);
-    if (!Object.keys(data).length)
+    }
+    if (input.notes !== undefined) {
+      data.notes = fieldRules.notes(input.notes);
+    }
+    if (!Object.keys(data).length) {
       throw new BadRequestException('Provide at least one driver field to update');
+    }
     const stored = await this.drivers.find(scope, recordId);
-    if (!stored) throw new NotFoundException('Driver not found');
-    if (data.status === 'INACTIVE' && stored.vehicles.length)
+    if (!stored) {
+      throw new NotFoundException('Driver not found');
+    }
+    if (data.status === 'INACTIVE' && stored.vehicles.length) {
       invalid('status', 'Unassign the driver from its vehicles first.');
+    }
     await this.checkDuplicates(scope, data, recordId);
     let row: DriverRow;
     try {
@@ -361,13 +397,17 @@ export class DriversService {
     rows: readonly DriverRow[],
     today: string,
   ): Promise<DriverResult[]> {
-    if (!rows.length) return [];
+    if (!rows.length) {
+      return [];
+    }
     return this.withStats(scope, rows, today, await this.telemetry.asOf(scope));
   }
 
   private async completeOne(scope: FleetScope, row: DriverRow): Promise<DriverResult> {
     const [driver] = await this.complete(scope, [row], businessDate(this.clock.now()));
-    if (!driver) throw new NotFoundException('Driver not found');
+    if (!driver) {
+      throw new NotFoundException('Driver not found');
+    }
     return driver;
   }
 
@@ -412,13 +452,17 @@ export class DriversService {
       employeeNumber: changes.employeeNumber ?? null,
       identificationKey: changes.identificationKey ?? null,
     };
-    if (values.employeeNumber === null && values.identificationKey === null) return;
+    if (values.employeeNumber === null && values.identificationKey === null) {
+      return;
+    }
     const taken = await this.drivers.duplicates(scope, values, excludeId);
     const errors = [
       ...(taken.employeeNumber ? [DUPLICATE_EMPLOYEE_NUMBER] : []),
       ...(taken.identificationKey ? [DUPLICATE_IDENTIFICATION_KEY] : []),
     ];
-    if (errors.length) invalidFields(errors);
+    if (errors.length) {
+      invalidFields(errors);
+    }
   }
 
   private writeError(error: unknown): never {

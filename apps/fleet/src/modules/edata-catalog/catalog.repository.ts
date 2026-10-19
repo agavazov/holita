@@ -2,12 +2,15 @@ import type { Prisma, PrismaClient } from '../../generated/prisma/client.js';
 import { check, type Catalog } from './catalog-file.js';
 
 function stable(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(stable).join(',')}]`;
-  if (value !== null && typeof value === 'object')
+  if (Array.isArray(value)) {
+    return `[${value.map(stable).join(',')}]`;
+  }
+  if (value !== null && typeof value === 'object') {
     return `{${Object.entries(value)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([k, v]) => `${JSON.stringify(k)}:${stable(v)}`)
       .join(',')}}`;
+  }
   return JSON.stringify(value);
 }
 
@@ -48,8 +51,9 @@ export async function verifyCatalog(
     [memberships, catalog.memberships, 'memberships'],
     [categories, catalog.categories, 'categories'],
     [profiles, catalog.profiles, 'profiles'],
-  ] satisfies [unknown[], unknown[], string][])
+  ] satisfies [unknown[], unknown[], string][]) {
     sameRows(actual, expected, label);
+  }
 }
 
 export async function importCatalog(client: PrismaClient, catalog: Catalog, write = false) {
@@ -83,7 +87,9 @@ export async function importCatalog(client: PrismaClient, catalog: Catalog, writ
     async (tx) => {
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${JSON.stringify(identity)}, 0))::text`;
       const row = await existing(tx);
-      if (row) return { action: 'verified', catalogId: row.id, counts: catalog.counts };
+      if (row) {
+        return { action: 'verified', catalogId: row.id, counts: catalog.counts };
+      }
       const release = await tx.edataCatalog.create({
         data: {
           ...identity,
