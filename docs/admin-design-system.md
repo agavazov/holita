@@ -79,13 +79,16 @@ The tracked `public/config.json` holds no license; a developer with a key puts
 `main.ts` merges over `config.json` (a 404 or a non-JSON fallback page means none; any other
 failure or unknown key is a configuration error). `readLocalAdminConfig` accepts only
 `primeUiLicense`, as a string; it is trimmed and empty means none. Without a license PrimeNG shows
-its "Invalid PrimeUI License" notice, which is not hidden. The `build` target copies all of
-`public/` (assets glob `**/*`), so a build from a checkout with the file puts it into
-`apps/admin/dist/browser`, and the compiled-app browser fixtures then serve it to the app. Storybook
-reads the same file through `loadStoryLicense()`. Its Vite root is `apps/admin`, so `public/` is
-Vite's public directory: the interactive Storybook serves `config.local.json`, and
-`build-storybook` copies it into `storybook-static`. Both outputs are Git-ignored, but neither may
-be published or shared from a checkout with a key.
+its "Invalid PrimeUI License" notice, which is accepted and is not hidden. The `build` target
+excludes `config.local.json` from its base `public/` assets. Its `development` configuration
+copies it: `ng serve` serves the output from memory, while `admin:build:development` writes it
+into `apps/admin/dist/browser` and the Nx cache; never publish or share that development output.
+The production build excludes the file, so compiled-app browser fixtures run without a key.
+Storybook reads the same local file through `loadStoryLicense()`. Its Vite root is `apps/admin`,
+so `public/` is Vite's public directory: the interactive Storybook and the story tests serve
+`config.local.json`. For `build-storybook`, `.storybook/main.ts` sets `build.copyPublicDir: false`
+and copies only `public/fonts` through `staticDirs`. The static stories and their visual captures
+therefore run without a key and show the notice.
 
 ### The configured choice
 
@@ -238,7 +241,8 @@ Component stylesheets are unlayered.
   `font-display: swap`, from `/fonts/lato/Lato-{Regular,Medium,SemiBold,Bold,ExtraBold}.woff`
   (`apps/admin/public/fonts/lato` with `OFL.txt`; attribution in
   [`apps/admin/THIRD_PARTY_NOTICES.md`](../apps/admin/THIRD_PARTY_NOTICES.md)). There are no
-  italic or other weights. The Storybook targets copy `public/fonts` to `fonts`.
+  italic or other weights. Vite's public directory serves them to the interactive Storybook and
+  the story tests; the static build copies `public/fonts` to `fonts`.
 - `_shell`: only the shell components' own classes (`.app-shell`, `.app-shell--rail`,
   `.app-topbar*`, `.app-breadcrumb*`, `.app-sidebar*`, `.app-nav*`, `.app-main`,
   `.p-drawer.app-nav-drawer`) and the host display of `holita-admin-shell`, `-topbar` and

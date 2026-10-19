@@ -22,7 +22,8 @@
             "assets": [
               {
                 "glob": "**/*",
-                "input": "public"
+                "input": "public",
+                "ignore": ["config.local.json"]
               }
             ],
             "styles": ["src/styles.scss"],
@@ -48,7 +49,8 @@
             "development": {
               "optimization": false,
               "extractLicenses": false,
-              "sourceMap": true
+              "sourceMap": true,
+              "assets": [{ "glob": "**/*", "input": "public" }]
             }
           },
           "defaultConfiguration": "production"
@@ -81,11 +83,7 @@
             "port": 11003,
             "open": false,
             "styles": ["src/styles.scss"],
-            "stylePreprocessorOptions": { "includePaths": ["src/styles"] },
-            "assets": [
-              { "glob": "**/*", "input": "public/fonts", "output": "fonts" },
-              { "glob": "config.local.json", "input": "public", "output": "/" }
-            ]
+            "stylePreprocessorOptions": { "includePaths": ["src/styles"] }
           }
         },
         "build-storybook": {
@@ -95,8 +93,7 @@
             "tsConfig": ".storybook/tsconfig.json",
             "outputDir": "storybook-static",
             "styles": ["src/styles.scss"],
-            "stylePreprocessorOptions": { "includePaths": ["src/styles"] },
-            "assets": [{ "glob": "**/*", "input": "public/fonts", "output": "fonts" }]
+            "stylePreprocessorOptions": { "includePaths": ["src/styles"] }
           }
         }
       }

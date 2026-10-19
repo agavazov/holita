@@ -25,7 +25,8 @@ instructions.
   BG/EN catalogs with a parity spec (`expectCatalogParity` from `app/i18n/catalog-parity.ts`).
   The Storybook-only Fleet view catalogs (`features/fleet/*/i18n`) are English-only with an
   English fallback; a screen wired into the application first gets its `bg.json` and a parity
-  spec. Keep each component stylesheet below 4 kB.
+  spec. Keep compiled component CSS below the 4 kB warning budget (the build fails above 8 kB).
+  Verify the production build's budget report, not the SCSS source-file size.
 - Accessibility is a gate, not a review note: stories run axe with violations as failures. Fix a
   violation in the token, component or markup; never lower `a11y.test` or exclude elements
   (only the PrimeUI license notice is excluded, and it is never hidden).

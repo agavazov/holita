@@ -10,149 +10,23 @@ under "Decisions agreed with the user" there and remove it here. When this file 
 it and its links (`git grep -n "admin-design-system-review-fixes" -- docs .agents` must then print
 nothing).
 
-## Component stylesheet budget check
+## Formatting gate
 
-On the next production build, inspect the `anyComponentStyle` warnings before changing the
-4 kB guidance in the [design-system skill](../../.agents/skills/holita-admin-design-system/SKILL.md).
-The configured warning/error thresholds are 4 kB/8 kB of compiled CSS
-(`apps/admin/angular.json`); the 5,411-byte `table-panel.scss` source does not prove that the
-compiled stylesheet exceeds either threshold. Keep this question open until the build provides
-evidence; do not start a build for a documentation-only correction.
+Resolve the Prettier differences in these files before the release formatting gate:
 
-## R1 PrimeUI key out of build outputs
+- `apps/admin/src/app/theme/primeng-coverage.html`
+- `docs/discocan/erm-resources/erm-device-eg915u-la-lc86g/source/ERM_INTEGRATION_EN.md`
+- `docs/discocan/erm-resources/karma-api-v2/holita-integration.md`
 
-**Problem.** The application `build` copies all of `public/` (`apps/admin/angular.json:22-27`,
-glob `**/*`, no `ignore`; `@angular/build` does not read `.gitignore`), so the Git-ignored
-`apps/admin/public/config.local.json` lands in `apps/admin/dist/browser`, which the compiled-app
-fixtures serve (`tools/browser/angular-fixture.mts:45`; `main.ts:15-22` fetches
-`/config.local.json`). `build-storybook` copies it into `apps/admin/storybook-static` through
-Vite's public directory: builder-vite sets the Vite root to `apps/admin` without `publicDir`, so
-`apps/admin/public` is copied (`build.copyPublicDir` defaults to true). The Storybook `assets`
-options are no-ops in `@storybook/angular-vite` 10.6.1 (the builders only put them into
-`angularBuilderOptions`, which nothing reads; the same holds for `assets` in
-`.storybook/vitest.config.mts:19`), so the former proposal `publicDir: false` would also drop the
-Lato fonts and leave the `/fonts/…` CSS URLs unresolved. `build` and `build-storybook` are
-Nx-cached, and Nx does not hash Git-ignored files (`nx.json:52-56`,
-`apps/admin/project.json:42-47`), so cached outputs keep the key state they were built with.
+Keep imported source-reference provenance intact when addressing its formatting.
 
-**Fix**
+## Component stylesheet budget
 
-1. Prepare: `git status --short`; delete `apps/admin/storybook-static` and `apps/admin/dist`
-   (either may hold a copy); locate the Nx cache (`ls -d .nx/cache; printenv NX_CACHE_DIRECTORY`)
-   and run `npm exec -- nx reset` only when it is this worktree's own `.nx` or absent; ask the
-   user before resetting a cache outside the worktree.
-2. `apps/admin/angular.json`, `build` target: base `options.assets` becomes
-   `[{ "glob": "**/*", "input": "public", "ignore": ["config.local.json"] }]` (`ignore` is
-   relative to `input`), and `configurations.development` (:48-52) gets
-   `"assets": [{ "glob": "**/*", "input": "public" }]`. Architect replaces arrays per
-   configuration, so `ng serve` (in memory), `admin:build:development` and unit tests keep the
-   file, while production (the default; `npm run build`) and any future configuration exclude it.
-   Chosen over a production-only `ignore` because new configurations are safe by default.
-3. `apps/admin/.storybook/main.ts` (no `staticDirs` or `viteFinal` today), with a short comment:
-
-   ```ts
-   // Vite's public directory (apps/admin/public) serves the Git-ignored config.local.json to the
-   // interactive Storybook and the story tests. The static build copies only the fonts.
-   staticDirs: (dirs, { configType }) =>
-     configType === 'PRODUCTION' ? [...(dirs ?? []), { from: '../public/fonts', to: '/fonts' }] : dirs,
-   viteFinal: (viteConfig, { configType }) =>
-     configType === 'PRODUCTION'
-       ? { ...viteConfig, build: { ...viteConfig.build, copyPublicDir: false } }
-       : viteConfig,
-   ```
-
-   `publicDir` stays set, so the CSS keeps `url(../fonts/lato/…)`. The interactive Storybook and
-   the story tests (addon-vitest applies both functions without a `configType`) are unchanged and
-   keep serving the key. Precedent: addon-vitest's own `staticDirs` checks
-   `configType === 'PRODUCTION'`. Do not import `vite` (not an admin dependency); no `any` or
-   casts.
-
-4. Remove the no-op Storybook `assets`: `angular.json:85-88` (`storybook`, including the
-   misleading `config.local.json` entry at :87), `:99` (`build-storybook`) and
-   `.storybook/vitest.config.mts:19`; keep its :14 comment true (styles and SCSS paths still
-   mirror the targets). Smallest alternative: remove only :87 and correct the docs.
-5. Optional guard, offered to the user: fail fast when the served output contains
-   `config.local.json` in `tools/browser/angular-fixture.mts` (after :45) and
-   `tools/browser/storybook-visual.spec.mts` (after :11).
-
-Afterwards the static Storybook, visual candidates and compiled-app smokes always show the
-"Invalid PrimeUI License" notice (fixed bottom-right, `pointer-events: none`; it blocks no
-clicks). Regenerating candidates taken with a key and recording baselines belong only to the
-separate post-merge [visual review](admin-design-system.md#visual-candidates-and-baselines);
-do not run captures during release preparation.
-
-**Tests.** No spec can observe asset globs or Storybook's static copy; prove the outputs. Never
-read or print `config.local.json`: check it by name (`test -e`) and by status-only `curl`.
-
-- A sentinel `apps/admin/public/holita-sentinel.txt` must reach `dist/browser` (the `ignore` is
-  narrow) and must not reach `storybook-static` (the public-dir copy is off); delete it after.
-- In a checkout without a key, create a temporary `config.local.json` with
-  `{"primeUiLicense":"holita-sentinel-not-a-key"}`, check that
-  `grep -rl holita-sentinel-not-a-key apps/admin/dist apps/admin/storybook-static` prints nothing,
-  then delete only that file.
-- Fonts: `storybook-static/fonts/lato/Lato-Regular.woff` exists and `assets/iframe-*.css` contains
-  `url(../fonts/lato/Lato-Regular.woff)`.
-- Development: `/config.local.json` answers 200 `application/json` on `ng serve` (11000) and 200
-  on the interactive Storybook (11003), as does `/fonts/lato/Lato-Regular.woff`.
-- Regression: `test:storybook:admin` (Vitest applies the new `main.ts` functions).
-
-**Checks** (one at a time, from the worktree root in WSL)
-
-```bash
-printf 'sentinel\n' > apps/admin/public/holita-sentinel.txt
-npm run lint
-npm run typecheck
-npm run format:check
-npm exec -- nx run admin:build --skip-nx-cache
-test ! -e apps/admin/dist/browser/config.local.json && echo 'app: key excluded'
-test -f apps/admin/dist/browser/holita-sentinel.txt && test -f apps/admin/dist/browser/config.json && test -f apps/admin/dist/browser/fonts/lato/Lato-Regular.woff && echo 'app: other files copied'
-npm run build:storybook:admin -- --skip-nx-cache
-test ! -e apps/admin/storybook-static/config.local.json && test ! -e apps/admin/storybook-static/holita-sentinel.txt && test ! -e apps/admin/storybook-static/config.json && echo 'storybook: public dir not copied'
-test -f apps/admin/storybook-static/fonts/lato/Lato-Regular.woff && grep -l 'url(../fonts/lato/Lato-Regular.woff)' apps/admin/storybook-static/assets/*.css
-rm apps/admin/public/holita-sentinel.txt
-npm run dev:admin         # second terminal
-curl -s -o /dev/null -w '%{http_code} %{content_type}\n' http://127.0.0.1:11000/config.local.json
-npm run storybook:admin   # second terminal
-curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:11003/config.local.json
-curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:11003/fonts/lato/Lato-Regular.woff
-npm run kill
-npm run test:storybook:admin
-npm run build             # then repeat the first `test ! -e` check
-git status --short        # no sentinel left
-```
-
-Never verify with `nx run admin:build:development`: it writes the key into `dist` and the Nx
-cache. `test:smoke:admin` (until R2) and `test:visual:admin` (no baselines) are not evidence yet.
-Under WSL, rerun a story file that fails with "Failed to fetch dynamically imported module".
-
-**Docs to update**
-
-- `docs/development.md:229-237`: only `src/styles.scss` and the `src/styles` path repeat in both
-  Storybook targets and `storybookAngularVitest`; Vite's public directory `apps/admin/public`
-  serves `/fonts` and `/config.local.json` to the interactive Storybook and the story tests; the
-  static build copies only `public/fonts` (`staticDirs` and `copyPublicDir: false` in
-  `.storybook/main.ts`).
-- `docs/development.md:296-309` (license bullet): the interactive Storybook and the story tests
-  serve the key; the production `build` and `build-storybook` never contain it, so built stories,
-  captures and compiled-app smokes show the notice; only `development` copies it (`ng serve` from
-  memory; `admin:build:development` writes it into `dist` and the Nx cache, never publish that
-  output); drop the `--skip-nx-cache` key advice.
-- `docs/testing.md:85-88` (the fixtures answer `/config.local.json` with 404, smokes run without
-  a key) and `:167-172` (captures always show the notice; drop the same-key-state and
-  `--skip-nx-cache` advice).
-- `docs/admin-design-system.md:80-86` (Theme) and `:238` ("Vite's public directory serves them;
-  the static build copies `public/fonts` to `fonts`").
-- `docs/discocan/development.md:27-29`: the production build excludes the file, so the fixtures
-  run without a key.
-- Comments: `apps/admin/src/storybook/story-config.ts:100-104` (`loadStoryLicense()`), and
-  `.storybook/vitest.config.mts:14` if its `assets` go.
-- Remove this section; in `docs/todo/admin-design-system.md` remove only the R1 prerequisite
-  and its link from "Visual candidates and baselines", preserving the post-merge phase boundary,
-  and remove the PrimeUI key clause of the "Review fixes" summary;
-  and in [frontend 12](admin-design-system-frontend.md#12-risks-accepted-trade-offs-and-deferred-items)
-  the "PrimeUI key" sentence about copying and its link. Then
-  `git grep -n "r1-primeui-key-out-of-build-outputs" -- docs .agents` must print nothing. The decision "build outputs must not carry it" stays. No
-  change in `README.md`, `AGENTS.md`, `.env.example` or `docs/discocan/architecture.md:250-252`.
+Reduce the compiled CSS of `apps/admin/src/app/ui/table-panel/table-panel.scss` from 4.34 kB
+below the existing 4 kB warning budget (336 bytes over); keep the 8 kB error budget unchanged.
+Preserve the component's behavior and appearance, and do not raise the budget to hide the
+warning. Verify with `npm exec -- nx run admin:build --skip-nx-cache --output-style=static`,
+using the compiled budget report rather than the SCSS source-file size.
 
 ## R5 Editors locked while saving
 
@@ -816,7 +690,7 @@ GitHub Actions section of [testing](../testing.md#github-actions); validate with
 
 Facts: an earlier commit stored a key in `apps/admin/public/config.json`; the tracked file no
 longer holds it, but the value stays in Git history ([open items](admin-design-system.md#open-items)).
-R1 only keeps the current developer key out of build outputs.
+Build exclusions keep the current developer key out of production outputs; they do not rotate the historical key.
 
 Recommended: rotation is the user's to confirm; then remove the open item and the key risk in
 [frontend 12](admin-design-system-frontend.md#12-risks-accepted-trade-offs-and-deferred-items).

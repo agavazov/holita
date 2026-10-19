@@ -83,9 +83,10 @@ waits on its dedicated health listener and closes it before subgraphs and test s
 No fixture starts a JavaScript Gateway or selects another runtime.
 
 Angular fixtures serve the compiled production app from `apps/admin/dist/browser` and answer
-`/config.json` with their own runtime configuration; every other path comes from the build. When
-the Git-ignored `apps/admin/public/config.local.json` exists, the build contains it and the smokes
-run with that developer's PrimeUI license ([admin Storybook](development.md#admin-storybook)).
+`/config.json` with their own runtime configuration; every other path comes from the build.
+The production build excludes `config.local.json`, so the application's request for
+`/config.local.json` receives 404. Smokes run without a PrimeUI key and show the "Invalid PrimeUI
+License" notice ([admin Storybook](development.md#admin-storybook)).
 They own dedicated backend processes/schemas.
 Browser fixtures seed Core and obtain real demo sessions; they create their own business records without running Fleet sample seeds. The Isolation tenant/branch exists only in these test fixtures.
 Browser targets build the admin and three subgraphs, prepare Router, use Chromium, disable retries and retain
@@ -164,12 +165,11 @@ Each capture waits until no fixture request has been in flight for 400 ms.
   only its label. Files are named `<id>--<theme>[--<brand>][--<density>]--<viewport>.png`, both
   as candidates and as baselines. Test titles start with the story ID, so
   `npm run test:visual:admin -- -g "examples-fleet-vehicles"` selects captures.
-- The static build carries the developer's PrimeUI key when `apps/admin/public/config.local.json`
-  exists ([admin Storybook](development.md#admin-storybook)), so captures then show no license
-  notice. Approve and compare baselines from checkouts with the same key state. Nx does not hash
-  that Git-ignored file: after adding, removing or rotating it, run
-  `npm run build:storybook:admin -- --skip-nx-cache` before `npm run test:visual:admin`, whose own
-  arguments go to Playwright, not Nx.
+- The static build excludes `apps/admin/public/config.local.json`
+  ([admin Storybook](development.md#admin-storybook)), so captures always show the "Invalid
+  PrimeUI License" notice, regardless of whether a developer has a local key. Keep the notice
+  visible in approved baselines. Arguments to `npm run test:visual:admin` go to Playwright, not
+  Nx.
 - Matching screenshots show that pixels equal the approved state; they do not establish UX quality,
   accessibility or behavior. Unit and smoke checks keep covering behavior.
 

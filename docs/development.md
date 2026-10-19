@@ -230,11 +230,13 @@ build.
   preview framework in Storybook 10. Configuration is in `apps/admin/.storybook`: `main.ts`
   (stories, the a11y and Vitest addons, telemetry disabled), `preview.ts` (decorator, toolbar
   globals, viewports, story order and the accessibility level) and `vitest.config.mts` (story
-  tests). These builders do not inherit the application build's styles or assets, so
-  `src/styles.scss`, the `src/styles` SCSS path and the `public/fonts` asset are repeated in the
-  `storybook` and `build-storybook` targets of `apps/admin/angular.json` and in
-  `storybookAngularVitest` in `vitest.config.mts`. All three must stay aligned with the `build`
-  target.
+  tests). These builders do not inherit the application build's styles, so `src/styles.scss` and
+  the `src/styles` SCSS path are repeated in the `storybook` and `build-storybook` targets of
+  `apps/admin/angular.json` and in `storybookAngularVitest` in `vitest.config.mts`. Keep those
+  styles and paths aligned with the `build` target. Vite's public directory, `apps/admin/public`,
+  serves `/fonts` and `/config.local.json` to the interactive Storybook and the story tests.
+  For the static build, `main.ts` sets `build.copyPublicDir: false` and uses `staticDirs` to copy
+  only `public/fonts` to `/fonts`; the other public files are excluded.
 - The Nx targets in `apps/admin/project.json` are `storybook` (continuous, uncached),
   `build-storybook` (cached, output `apps/admin/storybook-static`) and `test-storybook` (uncached,
   `vitest run --config .storybook/vitest.config.mts`); each first runs `graphql-generate`.
@@ -293,20 +295,17 @@ build.
 - `tsconfig.app.json` excludes stories and `src/storybook`; `npm run typecheck` compiles them
   through `apps/admin/.storybook/tsconfig.json`, which excludes specs, and ESLint rejects Storybook
   or fixture imports from application code.
-- PrimeUI license: the interactive Storybook serves the Git-ignored
+- PrimeUI license: the interactive Storybook and the story tests serve the Git-ignored
   `apps/admin/public/config.local.json` at `/config.local.json`, and `loadStoryLicense()` passes
   its `primeUiLicense` to the theme once per page. A missing file, a non-JSON answer or an invalid
-  file means no key, whereas the application rejects an invalid file. The static Storybook and the
-  application `build` both copy every file of `apps/admin/public`, so when `config.local.json`
-  exists, `apps/admin/storybook-static` and `apps/admin/dist/browser` contain it: the built
-  stories, their visual captures and the compiled-app browser smokes then run licensed. Both
-  outputs are Git-ignored; never publish or share either from a checkout with a key. Nx does not
-  hash Git-ignored files, so adding, removing or rotating the key leaves the hashes of `build` and
-  `build-storybook` unchanged: their cached outputs keep the previous key state, and the local Nx
-  cache entries can hold a copy of the key. After such a change rebuild with `--skip-nx-cache`
-  (`npm run build:storybook:admin -- --skip-nx-cache`,
-  `npm exec -- nx run admin:build --skip-nx-cache`). Without a key PrimeNG shows its "Invalid
-  PrimeUI License" notice; story tests exclude it (`#p-license-host`) from axe.
+  file means no key, whereas the application rejects an invalid file. The application `build`
+  excludes `config.local.json` from its base assets; only its `development` configuration copies
+  it. `ng serve` serves that development output from memory; `admin:build:development` writes it
+  into `apps/admin/dist/browser` and the Nx cache, so never publish or share that output.
+  The production `build` and `build-storybook` exclude the file even when it exists locally.
+  Built stories, visual captures and compiled-app browser smokes therefore run without a key and
+  show the "Invalid PrimeUI License" notice. The notice is accepted and is never hidden; story
+  tests exclude it (`#p-license-host`) from axe.
 
 ### Angular agent tools
 

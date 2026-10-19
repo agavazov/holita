@@ -11,12 +11,11 @@ const configDir = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [
-    // The same build options as the `storybook` target in angular.json.
+    // The same styles and SCSS paths as the Storybook targets in angular.json.
     storybookAngularVitest({
       tsConfig: join(configDir, 'tsconfig.json'),
       styles: ['src/styles.scss'],
       stylePreprocessorOptions: { loadPaths: ['src/styles'] },
-      assets: [{ glob: '**/*', input: 'public/fonts', output: 'fonts' }],
     }),
     storybookTest({ configDir }),
   ],

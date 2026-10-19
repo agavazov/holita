@@ -3460,10 +3460,8 @@ npm run lint && npm run typecheck && npm run build && npm run format:check
 - **Check lock** (11) serialises every build, generation, test and server command across the seven
   agents; it removes races on `dist`, generated types and fixtures at the cost of wall-clock time.
 - **PrimeUI key**: the tracked `config.json` no longer holds it (1.1), but the old value stays in
-  Git history until the user rotates it. The application and the interactive Storybook read the
-  Git-ignored `config.local.json`; the production build (its `public` asset glob) and the static
-  Storybook build (Vite's public directory; the Storybook `assets` options are no-ops) still copy
-  it ([R1](admin-design-system-review-fixes.md#r1-primeui-key-out-of-build-outputs)).
+  Git history until the user rotates it. Production license configuration remains
+  [open](admin-design-system.md#open-items); the current test release accepts the license notice.
 - **Visual approval** is a non-blocking user review (7.7); unapproved candidates do not stop a phase.
   If the user wants approval to block F4, the orchestrator pauses F4 until the user approves.
 - **`test:full` duration** grows by the Storybook run (7.1); the full-regression workflow's

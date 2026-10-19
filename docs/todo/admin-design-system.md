@@ -18,8 +18,10 @@ each spec says which of its sections are superseded by those documents.
 - Keep PrimeNG 22 with its styled-mode tokens. The organisation qualifies for the PrimeUI
   Community license. A developer's key lives only in the Git-ignored
   `apps/admin/public/config.local.json`, which the application and the interactive Storybook
-  read; build outputs must not carry it. The license notice is never hidden with CSS or
-  JavaScript.
+  read; production and static Storybook outputs must not carry it. Keep this local-file setup
+  without adding environment-variable injection. For the current test release the "Invalid
+  PrimeUI License" notice is accepted and is never hidden with CSS or JavaScript; a production
+  license is planned before the public release.
 - The current admin presentation is not a reference. Design a new, better visual language from
   the actual data flows; Meridian (meridian.primeuipro.dev, a Nuxt/PrimeVue showcase) is visual
   inspiration only, never a source of code or assets.
@@ -82,9 +84,8 @@ static builds, current smoke failures) is described in [testing](../testing.md) 
 ### Review fixes
 
 The verified fixes from the external review of this branch are planned in
-[review fixes](admin-design-system-review-fixes.md): checking the compiled stylesheet budget,
-keeping the PrimeUI key out of the build outputs (the Storybook `assets` options are no-ops, so the static build must stop
-copying Vite's public directory and copy only the fonts), editors locked while saving, required
+[review fixes](admin-design-system-review-fixes.md): resolving the formatting gate, reducing the
+compiled TablePanel stylesheet below its warning budget, editors locked while saving, required
 General settings fields, FilterBuilder focus, serialized odometer readings and driver/vehicle
 writes, and the trip in-progress upper bound. Its last section lists the remaining product and
 fixture decisions; the first-merge scope is agreed above.
@@ -149,9 +150,7 @@ After the first merge, the user reviews the Storybook (`npm run storybook:admin`
 ### Visual candidates and baselines
 
 This is separate post-merge work; no captures or baseline changes belong to release preparation.
-Keep the PrimeUI key out of the build outputs first
-([R1](admin-design-system-review-fixes.md#r1-primeui-key-out-of-build-outputs)), so that the
-captures show the final key state (the license notice). After the user approves the look, delete
+After the user approves the look, delete
 `test-results/storybook-visual-candidates/` and run `npm run test:visual:admin` for fresh
 candidates. The user reviews them; only then record the first baselines with the command in
 [Storybook visual review](../testing.md#storybook-visual-review).
@@ -290,6 +289,8 @@ scoped with composite foreign keys, and unrelated to the temporary Karma Client.
 
 ## Open items
 
+- Configure the production PrimeUI license before the public release; the current test build
+  intentionally shows the license notice.
 - Rotate the PrimeUI license key that an earlier commit stored in `apps/admin/public/config.json`;
   the tracked file no longer holds it (user action).
 - `holita-menu-button` and `holita-row-actions` have no dedicated `Design System/Patterns` stories;
