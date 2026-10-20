@@ -13,6 +13,8 @@ import { TelemetryModule } from './modules/telemetry/telemetry.module.js';
 import { TripsModule } from './modules/trips/trips.module.js';
 import { VehicleGroupsModule } from './modules/vehicle-groups/vehicle-groups.module.js';
 import { VehiclesModule } from './modules/vehicles/vehicles.module.js';
+import { OverviewModule } from './modules/overview/overview.module.js';
+import { SettingsModule } from './modules/settings/settings.module.js';
 
 import { HealthController } from './health/health.controller.js';
 
@@ -27,6 +29,8 @@ const typeDefPaths = [
   'modules/trips/trips',
   'modules/events/events',
   'modules/service-tasks/service-tasks',
+  'modules/overview/overview',
+  'modules/settings/settings',
 ];
 
 @Module({
@@ -39,6 +43,8 @@ const typeDefPaths = [
     TripsModule,
     EventsModule,
     ServiceTasksModule,
+    OverviewModule,
+    SettingsModule,
     GraphQLModule.forRoot<ApolloFederationDriverConfig>({
       driver: ApolloFederationDriver,
       fieldResolverEnhancers: ['guards'],

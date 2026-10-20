@@ -8,7 +8,7 @@
     "label": "Maintenance summary",
     "overdue": "Overdue",
     "dueSoon": "Due soon",
-    "dueSoonFootnote": "within 14 days or 1,500 km",
+    "dueSoonFootnote": "within 14 days or {distance}",
     "planned": "Planned",
     "cost": "Cost, last 30 days"
   },
@@ -30,12 +30,12 @@
     "viewCancelled": "View cancelled {task} on {plate}",
     "record": "{task} on {plate}",
     "dueOn": "by {date}",
-    "dueKm": "at {km} km",
-    "kmLeft": "{km} km left",
-    "kmOver": "{km} km over",
+    "dueKm": "at {km} {unit}",
+    "kmLeft": "{km} {unit} left",
+    "kmOver": "{km} {unit} over",
     "emptyTitle": "No service tasks",
     "emptyDescription": "Plan inspections and services by date or odometer.",
-    "errorText": "The service tasks could not be loaded. (demo-request-9)"
+    "errorText": "The service tasks could not be loaded."
   },
   "urgencies": {
     "OVERDUE": "Overdue",
@@ -43,7 +43,11 @@
     "UNKNOWN_ODOMETER": "Unknown odometer",
     "UPCOMING": "Upcoming"
   },
-  "statuses": { "PLANNED": "Planned", "DONE": "Done", "CANCELLED": "Cancelled" },
+  "statuses": {
+    "PLANNED": "Planned",
+    "DONE": "Done",
+    "CANCELLED": "Cancelled"
+  },
   "serviceTypes": {
     "GENERAL_SERVICE": "General service",
     "OIL_CHANGE": "Oil change",
@@ -71,7 +75,9 @@
     "vehicle": "Vehicle",
     "task": "Task",
     "dueOn": "Due date",
-    "cost": "Cost, EUR"
+    "cost": "Cost, EUR",
+    "status": "Status",
+    "vehicleStatus": "Vehicle status"
   },
   "notices": {
     "saved": "{task} was saved.",
@@ -79,7 +85,8 @@
     "completed": "{task} was completed.",
     "completedAndPlanned": "{task} was completed and the next service was planned.",
     "deleted": "Service tasks deleted: {count}.",
-    "cancelled": "Service tasks cancelled: {count}."
+    "cancelled": "Service tasks cancelled: {count}.",
+    "partialFailure": "Failed: {count}."
   },
   "drawer": {
     "createTitle": "New service task",
@@ -92,6 +99,7 @@
     "scheduleHint": "Set a date, an odometer reading or both; the first one reached makes it due.",
     "dueOn": "Due date",
     "dueKm": "Due at odometer, km",
+    "dueKmDisplay": "Due at odometer, {unit}",
     "details": "Workshop and notes",
     "workshop": "Workshop",
     "notes": "Notes",
@@ -100,7 +108,8 @@
     "cancel": "Cancel",
     "close": "Close",
     "chooseVehicle": "Choose a vehicle",
-    "saveError": "The service task could not be saved. Try again. (demo-request-10)"
+    "saveError": "The service task could not be saved. Try again.",
+    "recordTitle": "Service task: {task}"
   },
   "completion": {
     "title": "Complete {task}",
@@ -108,6 +117,7 @@
     "details": "Completed service",
     "completedOn": "Completion date",
     "completedOdometerKm": "Completion odometer, km",
+    "completedOdometerDisplay": "Completion odometer, {unit}",
     "odometerHint": "The service odometer is optional and stays in service history. It does not update vehicle telemetry.",
     "cost": "Actual cost, EUR",
     "workshop": "Workshop",
@@ -126,6 +136,8 @@
     "completeAndPlan": "Complete and plan next",
     "cancel": "Cancel",
     "close": "Close",
-    "saveError": "The service could not be completed. Your draft is kept; try again. (demo-request-14)"
+    "saveError": "The service could not be completed. Your draft is kept; try again.",
+    "loadingTitle": "Service record",
+    "inactiveNext": "This vehicle is inactive. You can record completed service, but cannot plan its next occurrence."
   }
 }

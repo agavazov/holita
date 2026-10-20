@@ -396,9 +396,7 @@ export const ErrorState: Story = {
   play: async ({ canvasElement }) => {
     await waitFor(
       () =>
-        expect(
-          within(canvasElement).getByText('The vehicles could not be loaded. (demo-request-1)'),
-        ).toBeVisible(),
+        expect(within(canvasElement).getByText('The vehicles could not be loaded.')).toBeVisible(),
       appReady,
     );
   },

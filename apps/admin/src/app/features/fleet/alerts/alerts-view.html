@@ -34,8 +34,10 @@
 <holita-filter-builder
   [searchLabel]="text().search"
   [search]="state().search"
+  [searchError]="searchError()"
   [fields]="fields()"
   [conditions]="state().conditions"
+  [maxConditions]="50"
   (searchChange)="changeSearch($event)"
   (conditionsChange)="changeConditions($event)"
 />
@@ -45,7 +47,9 @@
   [heading]="text().table.heading"
   [total]="total()"
   [view]="view()"
-  [errorText]="text().table.errorText"
+  [errorText]="errorText() ?? text().table.errorText"
+  [busy]="busy()"
+  [actionContext]="state()"
   [emptyTitle]="text().table.emptyTitle"
   [emptyDescription]="text().table.emptyDescription"
   [actions]="actions()"
@@ -82,7 +86,10 @@
           <label class="app-visually-hidden" for="alerts-select-page">{{
             text().table.selectPage
           }}</label>
-          <p-table-header-checkbox inputId="alerts-select-page" />
+          <p-table-header-checkbox
+            inputId="alerts-select-page"
+            [ariaLabel]="text().table.selectPage"
+          />
         </th>
         <th scope="col" pSortableColumn="severity">
           {{ text().table.severity }} <p-sort-icon field="severity" />

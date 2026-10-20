@@ -18,15 +18,16 @@ import { ButtonDirective } from 'primeng/button';
 import { DatePicker } from 'primeng/datepicker';
 import { InputNumber } from 'primeng/inputnumber';
 import { Message } from 'primeng/message';
-import { RouteDrawer } from '../../../ui/drawer/route-drawer';
+import { RouteDrawer, type RouteDrawerState } from '../../../ui/drawer/route-drawer';
 import { FormField } from '../../../ui/form-field/form-field';
-import { FormatDateTimePipe, FormatNumberPipe } from '../../../ui/format/format.pipes';
+import { FormatDateTimePipe } from '../../../ui/format/format.pipes';
 import { isoToZonedParts, zonedWallTimeToIso } from '../../../ui/format/zoned-time';
 import { focusFirstInvalid } from '../../../ui/forms/focus';
 import { datePickerInputPt, innerInputPt } from '../../../ui/forms/inner-input-pt';
 import { validationMessage } from '../../../ui/forms/validators';
 import { interpolate } from '../../../ui/i18n/messages';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
+import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { vehiclesText } from './i18n/messages';
 
 export interface OdometerReading {
@@ -110,13 +111,15 @@ export function odometerInstant(
     RouteDrawer,
     FormField,
     FormatDateTimePipe,
-    FormatNumberPipe,
   ],
   templateUrl: './odometer-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class OdometerDrawer {
   readonly plate = input.required<string>();
+  readonly state = input<RouteDrawerState>('ready');
+  readonly loadError = input<string | null>(null);
+  readonly closeLink = input<readonly string[] | null>(null);
   readonly previous = input<PreviousOdometerReading | null>(null);
   readonly latestAllowedAt = input.required<string>();
   readonly saving = input(false);
@@ -124,11 +127,18 @@ export class OdometerDrawer {
   readonly fieldErrors = input<Partial<Record<OdometerField, string>>>({});
   readonly save = output<OdometerReading>();
   readonly closed = output();
+  readonly retry = output();
+  protected readonly units = injectFleetFormat();
   private readonly language = inject(UI_LANGUAGE);
   private readonly injector = inject(Injector);
   private readonly drawer = viewChild.required(RouteDrawer);
   private readonly formElement = viewChild.required<ElementRef<HTMLFormElement>>('formElement');
   protected readonly text = computed(() => vehiclesText(this.language()).odometer);
+  protected readonly previousLabel = computed(() =>
+    interpolate(this.text().previous, {
+      unit: this.units.distanceUnit(),
+    }),
+  );
   protected readonly title = computed(() =>
     interpolate(this.text().title, { plate: this.plate() }),
   );
@@ -174,6 +184,21 @@ export class OdometerDrawer {
           recordedAt: odometerWallTime(latest),
         });
       });
+    });
+    effect(() => {
+      const errors = this.fieldErrors();
+      if (this.state() !== 'ready' || !Object.keys(errors).length) {
+        return;
+      }
+      afterNextRender(
+        () => {
+          const form = this.formElement().nativeElement;
+          if (this.state() === 'ready' && !this.saving() && form.isConnected) {
+            focusFirstInvalid(form, fields, 'odometer-');
+          }
+        },
+        { injector: this.injector },
+      );
     });
     let locked = false;
     effect(() => {
@@ -259,9 +284,19 @@ export class OdometerDrawer {
   }
 
   protected async requestClose(): Promise<void> {
+    if (this.closeLink() !== null) {
+      if (!this.saving()) {
+        this.drawer().close();
+      }
+      return;
+    }
     if (!this.saving() && (await this.drawer().confirmLeave(this.form.dirty))) {
       this.closed.emit();
     }
+  }
+
+  markSaved(): void {
+    this.form.markAsPristine();
   }
 
   canLeave(): boolean | Promise<boolean> {

@@ -1,6 +1,7 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { inject, provideBrowserGlobalErrorListeners, type ApplicationConfig } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, RouteReuseStrategy } from '@angular/router';
+import { FleetRouteReuseStrategy } from './features/fleet/fleet-route-reuse';
 import { provideApollo } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
 import { timeout } from 'rxjs';
@@ -27,6 +28,7 @@ export function appConfig(
       provideHolitaTheme(theme, config.primeUiLicense),
       provideApollo(() => graphqlOptions(inject(HttpLink), inject(AdminConfig).graphqlUrl)),
       provideRouter(routes),
+      { provide: RouteReuseStrategy, useClass: FleetRouteReuseStrategy },
     ],
   };
 }

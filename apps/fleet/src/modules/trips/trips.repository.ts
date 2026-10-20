@@ -1,12 +1,27 @@
 import { Injectable } from '@nestjs/common';
 import type { DataWindow } from '../../clock/fleet-clock.js';
 import { PrismaService } from '../../database/prisma.service.js';
-import { literalContains, nullsLast, prismaDirection } from '../../database/search.js';
-import { fleetTable, integer, number, numberOrNull, rowsOf } from '../../database/sql.js';
+import {
+  dateOrNull,
+  fleetTable,
+  integer,
+  number,
+  numberOrNull,
+  rowsOf,
+  text,
+} from '../../database/sql.js';
 import { SCORE_MIN_DISTANCE_KM } from '../../fleet-thresholds.js';
-import type { FleetTripSortField } from '../../generated/graphql/types.js';
+import type {
+  FleetTripDrivingEvent,
+  FleetTripSortField,
+  FleetTripSummary,
+} from '../../generated/graphql/types.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import type { FleetScope, SortDirection } from '../../validation.js';
+import { MANEUVER_KINDS } from '../events/events.service.js';
+import { vehicleDataClockSql } from '../telemetry/vehicle-facts.sql.js';
+import type { TripConditionCriteria } from './trip-filter.js';
+import { tripListOrderSql, tripListRowsSql, tripListWhereSql } from './trip-list.sql.js';
 
 /** Stored vehicle and driver references are loaded with every trip (no per-row query). */
 const tripInclude = {
@@ -19,6 +34,7 @@ const tripInclude = {
 } satisfies Prisma.TripInclude;
 
 export type TripRow = Prisma.TripGetPayload<{ include: typeof tripInclude }>;
+export type TripListRow = TripRow & { drivingEvents: FleetTripDrivingEvent[] };
 
 /** Validated search and filter; `undefined` means no constraint. */
 export interface TripCriteria {
@@ -32,6 +48,7 @@ export interface TripCriteria {
   scored: boolean | undefined;
   drivingScoreBelow: number | undefined;
   hasEnd: boolean | undefined;
+  allOf?: TripConditionCriteria[] | undefined;
 }
 
 export interface TripSort {
@@ -46,51 +63,6 @@ export interface DriverScore {
   scoredTripCount: number;
   averageDrivingScore: number | null;
   averageEcoScore: number | null;
-}
-
-function tripWhere(scope: FleetScope, criteria: TripCriteria): Prisma.TripWhereInput {
-  const conditions: Prisma.TripWhereInput[] = criteria.tokens.map((token) => {
-    const contains = literalContains(token);
-    return {
-      OR: [
-        { vehicle: { licensePlate: contains } },
-        { vehicle: { fleetNumber: contains } },
-        { driver: { firstName: contains } },
-        { driver: { lastName: contains } },
-        { startAddress: contains },
-        { endAddress: contains },
-      ],
-    };
-  });
-  if (criteria.ids) {
-    conditions.push({ id: { in: criteria.ids } });
-  }
-  if (criteria.startedFrom) {
-    conditions.push({ startedAt: { gte: criteria.startedFrom } });
-  }
-  if (criteria.startedTo) {
-    conditions.push({ startedAt: { lt: criteria.startedTo } });
-  }
-  if (criteria.vehicleIds) {
-    conditions.push({ vehicleId: { in: criteria.vehicleIds } });
-  }
-  if (criteria.driverIds) {
-    conditions.push({ driverId: { in: criteria.driverIds } });
-  }
-  if (criteria.hasDriver !== undefined) {
-    conditions.push({ driverId: criteria.hasDriver ? { not: null } : null });
-  }
-  if (criteria.scored !== undefined) {
-    conditions.push({ drivingScore: criteria.scored ? { not: null } : null });
-  }
-  // `lt` never matches null, so a score threshold also selects scored trips only.
-  if (criteria.drivingScoreBelow !== undefined) {
-    conditions.push({ drivingScore: { lt: criteria.drivingScoreBelow } });
-  }
-  if (criteria.hasEnd !== undefined) {
-    conditions.push({ endedAt: criteria.hasEnd ? { not: null } : null });
-  }
-  return { tenantId: scope.tenantId, branchId: scope.branchId, AND: conditions };
 }
 
 function parseDriverScore(row: Record<string, unknown>): DriverScore {
@@ -112,29 +84,95 @@ export class TripsRepository {
     page: { offset: number; limit: number },
     criteria: TripCriteria,
     sort: TripSort,
-  ): Promise<{ items: TripRow[]; total: number; totalDistanceKm: number }> {
-    const where = tripWhere(scope, criteria);
-    const direction = prismaDirection(sort.direction);
-    const ordering: Record<FleetTripSortField, Prisma.TripOrderByWithRelationInput[]> = {
-      STARTED_AT: [{ startedAt: direction }],
-      DISTANCE_KM: [{ distanceKm: nullsLast(sort.direction) }, { startedAt: 'desc' }],
-      DRIVING_SCORE: [{ drivingScore: nullsLast(sort.direction) }, { startedAt: 'desc' }],
-    };
-    const [items, total, totals] = await this.prisma.client.$transaction(
-      [
-        this.prisma.client.trip.findMany({
-          where,
-          include: tripInclude,
-          skip: page.offset,
-          take: page.limit,
-          orderBy: [...ordering[sort.field], { id: 'desc' }],
-        }),
-        this.prisma.client.trip.count({ where }),
-        this.prisma.client.trip.aggregate({ where, _sum: { distanceKm: true } }),
-      ],
+  ): Promise<{
+    items: TripListRow[];
+    total: number;
+    totalDistanceKm: number;
+    dataAsOf: Date | null;
+  }> {
+    const base = tripListRowsSql(this.prisma.schema, scope);
+    const where = tripListWhereSql(this.prisma.schema, scope, criteria);
+    const order = tripListOrderSql(sort);
+    return this.prisma.client.$transaction(
+      async (transaction) => {
+        const selected: unknown = await transaction.$queryRaw(Prisma.sql`
+          WITH trips AS (${base}) SELECT t."id"::text AS "id" FROM trips t
+          WHERE ${where} ORDER BY ${order} LIMIT ${page.limit}::int OFFSET ${page.offset}::int`);
+        const counted: unknown = await transaction.$queryRaw(Prisma.sql`
+          WITH trips AS (${base}), clock AS (${vehicleDataClockSql(this.prisma.schema, scope)})
+          SELECT count(*)::int AS "total",
+            coalesce(sum(t."distanceKm"), 0)::float8 AS "totalDistanceKm",
+            (SELECT "asOf" FROM clock) AS "dataAsOf"
+          FROM trips t WHERE ${where}`);
+        const ids = rowsOf(selected, (row) => text(row, 'id'));
+        const [totals] = rowsOf(counted, (row) => ({
+          total: integer(row, 'total'),
+          totalDistanceKm: number(row, 'totalDistanceKm'),
+          dataAsOf: dateOrNull(row, 'dataAsOf'),
+        }));
+        if (!totals) {
+          throw new Error('Missing trip list aggregate.');
+        }
+        const rows = ids.length
+          ? await transaction.trip.findMany({
+              where: { tenantId: scope.tenantId, branchId: scope.branchId, id: { in: ids } },
+              include: {
+                ...tripInclude,
+                events: {
+                  where: {
+                    tenantId: scope.tenantId,
+                    branchId: scope.branchId,
+                    kind: { in: [...MANEUVER_KINDS] },
+                  },
+                  select: { id: true, occurredAt: true, kind: true, severity: true, details: true },
+                  orderBy: [{ occurredAt: 'asc' }, { id: 'asc' }],
+                },
+              },
+            })
+          : [];
+        const byId = new Map(rows.map((row) => [row.id, row]));
+        const items = ids.map((id) => {
+          const row = byId.get(id);
+          if (!row) {
+            throw new Error('Missing trip in the list snapshot.');
+          }
+          const { events, ...trip } = row;
+          return { ...trip, drivingEvents: events };
+        });
+        return { items, ...totals };
+      },
       { isolationLevel: 'RepeatableRead' },
     );
-    return { items, total, totalDistanceKm: totals._sum.distanceKm ?? 0 };
+  }
+
+  /** Whole-Branch totals, with an arithmetic mean of non-null device trip scores. */
+  async summary(scope: FleetScope): Promise<FleetTripSummary> {
+    const base = tripListRowsSql(this.prisma.schema, scope);
+    const events = fleetTable(this.prisma.schema, 'FleetEvent');
+    const rows: unknown = await this.prisma.client.$queryRaw(Prisma.sql`
+      WITH trips AS (${base})
+      SELECT count(*)::int AS "totalTrips",
+        coalesce(sum(t."distanceKm"), 0)::float8 AS "distanceKm",
+        coalesce(sum(t."durationSeconds"), 0)::float8 AS "totalDurationSeconds",
+        avg(t."drivingScore")::float8 AS "averageDrivingScore",
+        (SELECT count(*)::int FROM ${events} e
+          WHERE e."tenantId" = ${scope.tenantId}::uuid AND e."branchId" = ${scope.branchId}::uuid
+            AND e."kind"::text = ANY(${MANEUVER_KINDS}::text[])
+            AND EXISTS (SELECT 1 FROM trips attached
+              WHERE attached."id" = e."tripId" AND attached."vehicleId" = e."vehicleId")
+        ) AS "totalManeuverEvents"
+      FROM trips t`);
+    const [summary] = rowsOf(rows, (row) => ({
+      totalTrips: integer(row, 'totalTrips'),
+      distanceKm: number(row, 'distanceKm'),
+      totalDurationSeconds: integer(row, 'totalDurationSeconds'),
+      averageDrivingScore: numberOrNull(row, 'averageDrivingScore'),
+      totalManeuverEvents: integer(row, 'totalManeuverEvents'),
+    }));
+    if (!summary) {
+      throw new Error('Missing trip summary.');
+    }
+    return summary;
   }
 
   find(scope: FleetScope, id: string): Promise<TripRow | null> {

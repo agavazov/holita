@@ -12,15 +12,18 @@ and, where needed, `database/` and `clock/` hold the supporting code. These dire
 runtime packages. Prisma schemas, migrations and generated output retain their existing
 owning-application locations.
 
-| Application  | Feature modules                                                                                            | Integration ownership                                                                                                                   |
-| ------------ | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Core         | Tenants, Branches                                                                                          | Tenant/Branch API; one local DatabaseModule provides Prisma to both features                                                            |
-| Fleet        | Vehicles, Devices, Drivers, Vehicle groups, Telemetry, Trips, Events, Service tasks, offline eData catalog | `integrations/core/` owns Branch existence checks; one local DatabaseModule provides Fleet Prisma; `clock/` provides the business clock |
-| Karma Client | Cars, eData, Location, History, References, Accounts                                                       | `integrations/karma/` owns external HTTP and the shared upstream account session; no database                                           |
+| Application  | Feature modules                                                                                                                | Integration ownership                                                                                                                   |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Core         | Tenants, Branches                                                                                                              | Tenant/Branch API; one local DatabaseModule provides Prisma to both features                                                            |
+| Fleet        | Vehicles, Devices, Drivers, Vehicle groups, Telemetry, Trips, Events, Service tasks, Overview, Settings, offline eData catalog | `integrations/core/` owns Branch existence checks; one local DatabaseModule provides Fleet Prisma; `clock/` provides the business clock |
+| Karma Client | Cars, eData, Location, History, References, Accounts                                                                           | `integrations/karma/` owns external HTTP and the shared upstream account session; no database                                           |
 
 Fleet feature modules import each other only in one direction: Telemetry and Events are used by
 Vehicles, Devices (Telemetry only), Drivers and Trips; Trips by Drivers; Service tasks by
-Vehicles. Cross-module calls pass the already verified Tenant/Branch scope.
+Vehicles. Settings is used by Telemetry, Devices, Drivers and Service tasks. Overview owns
+the scoped KPI, group activity and daily distance queries, composing the concrete telemetry,
+service urgency and settings SQL in its repository. Cross-module calls pass the already
+verified Tenant/Branch scope.
 
 The offline Fleet catalog remains a CLI feature, without a Nest runtime module or public API.
 Core is the Tenant/Branch service, not a common implementation library. Fleet and Karma Client
@@ -33,16 +36,17 @@ coordination, while Branch discovery and selection remain in `features/branches/
 Presentation is split between the theme in `theme/`, the global styles in `src/styles/`, the
 patterns in `ui/` and the shell in `layout/`
 ([admin design system](../admin-design-system.md#where-presentation-lives)); the presentational
-views and drawers in `features/fleet/*` (`*-view.ts`, `*-drawer.ts`) are rendered only by the
-Storybook examples in `src/storybook`. `core/` contains only admin-local authentication,
+views and drawers in `features/fleet/*` (`*-view.ts`, `*-drawer.ts`) are shared by live feature
+pages and Storybook examples. Storybook fixtures and sample pages stay in `src/storybook`
+and outside application output. `core/` contains only admin-local authentication,
 configuration and GraphQL transport. Feature clients and caches retain their mounted view lifetime; neither route grouping nor shared login makes business clients global.
 
 | Application  | Responsibility                                                                                                              | Local port |
 | ------------ | --------------------------------------------------------------------------------------------------------------------------- | ---------- |
 | admin        | Standalone Angular, PrimeNG with the holita design system, Branch discovery, Fleet CRUD, Karma truck data and account views | 11000      |
 | gateway      | Native Apollo Router federation, `/graphql`; `/health` on 11016                                                             | 11010      |
-| core         | Tenant demo login, scoped Branch discovery/lookup, owning database                                                          | 11011      |
-| fleet        | Tenant/Branch-scoped Fleet master data, telemetry, trips, alerts and service, owning database                               | 11013      |
+| core         | Tenant demo login, scoped Branch discovery/lookup and selected Branch rename, owning database                               | 11011      |
+| fleet        | Tenant/Branch-scoped Fleet master data, telemetry, trips, alerts, service, Overview and settings, owning database           | 11013      |
 | karma-client | Authenticated, shared Karma truck data and account views; no database                                                       | 11014      |
 
 ```mermaid
@@ -54,7 +58,7 @@ flowchart LR
   KarmaClient --> KarmaAPI[Karma API]
   Core --> CoreDB[(Core database)]
   Fleet --> FleetDB[(Fleet database)]
-  Fleet -->|Branch existence on create| Core
+  Fleet -->|Branch existence on create and settings upsert| Core
 ```
 
 ## Execution and ownership

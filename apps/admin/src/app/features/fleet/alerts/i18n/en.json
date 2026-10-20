@@ -10,7 +10,7 @@
     "acknowledged": "Acknowledged",
     "acknowledgedFootnote": "being handled",
     "resolved": "Resolved",
-    "resolvedFootnote": "in the last 7 days"
+    "resolvedFootnote": "matching current filters"
   },
   "table": {
     "heading": "Alerts",
@@ -28,7 +28,7 @@
     "noDriver": "No driver",
     "emptyTitle": "No alerts",
     "emptyDescription": "Alerts appear when a vehicle reports a rule violation or a fault.",
-    "errorText": "The alerts could not be loaded. (demo-request-6)"
+    "errorText": "The alerts could not be loaded."
   },
   "severities": {
     "CRITICAL": "Critical",
@@ -39,6 +39,28 @@
     "OPEN": "Open",
     "ACKNOWLEDGED": "Acknowledged",
     "RESOLVED": "Resolved"
+  },
+  "kinds": {
+    "HARSH_ACCELERATION": "Harsh acceleration",
+    "HARSH_BRAKING": "Harsh braking",
+    "SPEED_BUMP": "Speed bump",
+    "OVERTAKING": "Overtaking",
+    "ROUNDABOUT": "Roundabout",
+    "LANE_CHANGE": "Lane change",
+    "SHARP_TURN": "Sharp turn",
+    "OFF_ROAD": "Off road",
+    "SPEEDING": "Speeding",
+    "IGNITION_ON": "Ignition on",
+    "IGNITION_OFF": "Ignition off",
+    "IDLING": "Idling",
+    "LOW_FUEL": "Low fuel",
+    "FUEL_DROP": "Fuel drop",
+    "POWER_DISCONNECTED": "Power disconnected",
+    "LOW_BACKUP_BATTERY": "Low backup battery",
+    "CAN_DISCONNECTED": "CAN disconnected",
+    "DEVICE_OFFLINE": "Device offline",
+    "DIAGNOSTIC_TROUBLE_CODE": "Diagnostic trouble code",
+    "CRASH_DETECTED": "Crash detected"
   },
   "actions": {
     "open": "Open",
@@ -54,9 +76,12 @@
   },
   "notices": {
     "acknowledged": "Alerts acknowledged: {count}.",
-    "resolved": "Alerts resolved: {count}."
+    "resolved": "Alerts resolved: {count}.",
+    "reopened": "The alert was reopened.",
+    "partialFailure": "Failed: {count}."
   },
   "drawer": {
+    "title": "Alert",
     "details": "Details",
     "handling": "Handling",
     "severity": "Severity",
@@ -71,6 +96,6 @@
     "resolve": "Resolve",
     "reopen": "Reopen",
     "close": "Close",
-    "saveError": "The alert could not be updated. Try again. (demo-request-7)"
+    "saveError": "The alert could not be updated. Try again."
   }
 }

@@ -10,17 +10,14 @@ import {
   type StackedRow,
 } from '../../../ui/charts/stacked-bars';
 import { EmptyState } from '../../../ui/empty-state/empty-state';
-import {
-  displayTimeZone,
-  FormatDateTimePipe,
-  FormatNumberPipe,
-} from '../../../ui/format/format.pipes';
+import { FormatDateTimePipe, FormatNumberPipe } from '../../../ui/format/format.pipes';
 import { formatDateTime } from '../../../ui/format/format';
 import { interpolate } from '../../../ui/i18n/messages';
 import { KpiStrip } from '../../../ui/kpi/kpi-strip';
 import { KpiTile } from '../../../ui/kpi/kpi-tile';
 import { PageHeader } from '../../../ui/page-header/page-header';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
+import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import type { TripRow } from '../trips/trips-view';
 import { overviewText } from './i18n/messages';
 
@@ -80,21 +77,36 @@ export type OverviewState = 'loading' | 'ready' | 'error';
 export class OverviewView {
   readonly state = input.required<OverviewState>();
   readonly branchName = input.required<string>();
-  readonly dataAsOf = input.required<string>();
+  readonly dataAsOf = input.required<string | null>();
+  readonly errorText = input<string | null>(null);
+  readonly tripLink = input<((id: string) => readonly string[]) | null>(null);
   readonly links = input.required<OverviewLinks>();
   readonly kpis = input<OverviewKpis | null>(null);
   readonly attention = input<readonly AttentionItem[]>([]);
   readonly distance = input<readonly SeriesPoint[]>([]);
   readonly activity = input<readonly StackedRow[]>([]);
-  readonly trips = input<readonly TripRow[]>([]);
+  readonly trips = input<
+    readonly Pick<
+      TripRow,
+      'id' | 'vehicleId' | 'plate' | 'startedAt' | 'from' | 'to' | 'distanceKm'
+    >[]
+  >([]);
   readonly retry = output();
 
+  protected readonly units = injectFleetFormat();
   private readonly language = inject(UI_LANGUAGE);
   protected readonly text = computed(() => overviewText(this.language()));
+  protected readonly distancePoints = computed(() =>
+    this.distance().map((point) => ({
+      ...point,
+      value: this.units.distanceValue(point.value),
+      valueText: this.units.distance(point.value, true, 0),
+    })),
+  );
   protected readonly description = computed(() =>
     interpolate(this.text().description, {
       branch: this.branchName(),
-      asOf: formatDateTime(this.dataAsOf(), this.language(), displayTimeZone),
+      asOf: formatDateTime(this.dataAsOf(), this.language(), this.units.preferences().timeZone),
     }),
   );
   protected readonly legend = computed<readonly StackedLegendItem[]>(() => {

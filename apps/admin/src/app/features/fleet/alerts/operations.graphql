@@ -1,0 +1,101 @@
+fragment AdminAlertDetails on FleetEvent {
+  id
+  branchId
+  vehicleId
+  vehicle {
+    id
+    licensePlate
+  }
+  driverId
+  driver {
+    id
+    firstName
+    lastName
+  }
+  tripId
+  occurredAt
+  kind
+  severity
+  alertStatus
+  details
+  remark
+  acknowledgedAt
+  resolvedAt
+  address
+  measuredValue
+  thresholdValue
+  measurementUnit
+  troubleCode
+}
+query AdminAlerts(
+  $offset: Int!
+  $limit: Int!
+  $search: String
+  $filter: FleetEventFilter
+  $sort: FleetEventSort
+) {
+  fleetEvents(offset: $offset, limit: $limit, search: $search, filter: $filter, sort: $sort) {
+    items {
+      ...AdminAlertDetails
+    }
+    total
+    offset
+    limit
+  }
+}
+query AdminAlert($id: ID!) {
+  fleetEvent(id: $id) {
+    ...AdminAlertDetails
+  }
+}
+query AdminAlertCounts($search: String, $filter: FleetEventFilter) {
+  fleetAlertCounts(search: $search, filter: $filter) {
+    open
+    openCritical
+    acknowledged
+    resolved
+  }
+}
+query AdminAlertsDataClock {
+  fleetDataClock {
+    asOf
+    businessDate
+    timeZone
+  }
+}
+query AdminAlertVehicles($offset: Int!, $limit: Int!) {
+  fleetVehicles(offset: $offset, limit: $limit, sort: { field: LICENSE_PLATE, direction: ASC }) {
+    items {
+      id
+      licensePlate
+    }
+    total
+    offset
+    limit
+  }
+}
+mutation AdminAcknowledgeAlerts($ids: [ID!]!, $input: FleetAlertTransitionInput!) {
+  acknowledgeFleetAlerts(ids: $ids, input: $input) {
+    succeededIds
+    failures {
+      id
+      code
+      message
+    }
+  }
+}
+mutation AdminAcknowledgeAlert($id: ID!, $input: FleetAlertTransitionInput!) {
+  acknowledgeFleetAlert(id: $id, input: $input) {
+    ...AdminAlertDetails
+  }
+}
+mutation AdminResolveAlert($id: ID!, $input: FleetAlertTransitionInput!) {
+  resolveFleetAlert(id: $id, input: $input) {
+    ...AdminAlertDetails
+  }
+}
+mutation AdminReopenAlert($id: ID!, $input: FleetAlertTransitionInput!) {
+  reopenFleetAlert(id: $id, input: $input) {
+    ...AdminAlertDetails
+  }
+}

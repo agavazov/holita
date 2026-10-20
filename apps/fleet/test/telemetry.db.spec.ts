@@ -255,6 +255,114 @@ describe('Telemetry, data clock and odometer readings with PostgreSQL', () => {
     expect(requireBranch).not.toHaveBeenCalled();
   });
 
+  it.each([
+    {
+      name: 'conflicting values',
+      readings: [
+        { odometerKm: 1200, recordedAt: minutes(-20).toISOString() },
+        { odometerKm: 1100, recordedAt: minutes(-10).toISOString() },
+      ],
+    },
+    {
+      name: 'duplicate submissions',
+      readings: [
+        { odometerKm: 1200, recordedAt: minutes(-20).toISOString() },
+        { odometerKm: 1200, recordedAt: minutes(-20).toISOString() },
+      ],
+    },
+  ])(
+    'serializes concurrent MANUAL readings with $name after both early checks passed',
+    async ({ readings }) => {
+      const vehicle = await database.client.vehicle.create({
+        data: { tenantId, branchId, licensePlate: 'CB 2026 KM' },
+      });
+      let release: () => void = () => undefined;
+      const bothArrived = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let arrivals = 0;
+      const meet = async () => {
+        if (++arrivals === 2) {
+          release();
+        }
+        await bothArrived;
+      };
+      requireBranch.mockImplementationOnce(meet).mockImplementationOnce(meet);
+      let responses: unknown[];
+      try {
+        responses = await Promise.all(
+          readings.map((reading) =>
+            query(record, {
+              input: { vehicleId: vehicle.id, ...reading },
+            }),
+          ),
+        );
+      } finally {
+        release();
+      }
+      expect(responses).toEqual(
+        expect.arrayContaining([
+          {
+            data: {
+              recordFleetOdometerReading: expect.objectContaining({
+                vehicleId: vehicle.id,
+                source: 'MANUAL',
+              }),
+            },
+          },
+          expect.objectContaining({
+            errors: expect.arrayContaining([
+              expect.objectContaining({
+                extensions: expect.objectContaining({ code: 'BAD_USER_INPUT' }),
+              }),
+            ]),
+          }),
+        ]),
+      );
+      expect(
+        await database.client.vehicleStatusSample.count({
+          where: { tenantId, branchId, vehicleId: vehicle.id },
+        }),
+      ).toBe(1);
+      expect(requireBranch).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it('does not insert a MANUAL reading when its vehicle is deactivated after the early check', async () => {
+    const vehicle = await database.client.vehicle.create({
+      data: { tenantId, branchId, licensePlate: 'CB 2027 KM' },
+    });
+    requireBranch.mockImplementationOnce(async () => {
+      await database.client.vehicle.update({
+        where: { id: vehicle.id, tenantId, branchId },
+        data: { status: 'INACTIVE' },
+      });
+    });
+    expect(
+      await query(record, {
+        input: {
+          vehicleId: vehicle.id,
+          odometerKm: 100,
+          recordedAt: minutes(-10).toISOString(),
+        },
+      }),
+    ).toMatchObject({
+      errors: [
+        {
+          extensions: {
+            code: 'BAD_USER_INPUT',
+            fieldErrors: [{ path: 'vehicleId' }],
+          },
+        },
+      ],
+    });
+    expect(
+      await database.client.vehicleStatusSample.count({
+        where: { tenantId, branchId, vehicleId: vehicle.id },
+      }),
+    ).toBe(0);
+  });
+
   it('returns ascending samples of any source in a half-open window of at most seven days', async () => {
     const series =
       'query($vehicleId:ID!,$from:DateTime!,$to:DateTime!){fleetVehicleSamples(vehicleId:$vehicleId,from:$from,to:$to){vehicleId from to truncated items{source recordedAt odometerKm}}}';

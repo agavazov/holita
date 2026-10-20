@@ -1,6 +1,11 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import {
+  defaultFleetDisplay,
+  FLEET_DISPLAY,
+  type FleetDisplayPreferences,
+} from '../../../ui/format/fleet-format';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
 import {
   type DriverScorecard,
@@ -34,9 +39,16 @@ const card: DriverScorecard = {
 };
 
 describe('DriverScorecardView', () => {
-  function render(overrides: Partial<DriverScorecard> = {}) {
+  function render(
+    overrides: Partial<DriverScorecard> = {},
+    display: FleetDisplayPreferences = defaultFleetDisplay,
+  ) {
     TestBed.configureTestingModule({
-      providers: [provideRouter([]), { provide: UI_LANGUAGE, useValue: signal('en') }],
+      providers: [
+        provideRouter([]),
+        { provide: UI_LANGUAGE, useValue: signal('en') },
+        { provide: FLEET_DISPLAY, useValue: signal(display) },
+      ],
     });
     const fixture = TestBed.createComponent(DriverScorecardView);
     fixture.componentRef.setInput('state', 'ready');
@@ -58,6 +70,20 @@ describe('DriverScorecardView', () => {
     expect(values.slice(0, 2)).toEqual(['0', '—']);
     expect(root.textContent).toContain('with a driving score: 6 of 8');
     expect(root.textContent).not.toContain('Limited data:');
+  });
+
+  it('converts the maneuver rate denominator with the selected distance unit', () => {
+    const { root, fixture } = render(
+      { distanceKm: 160.9344, maneuversPer100Km: 1 },
+      { ...defaultFleetDisplay, distanceUnit: 'MI' },
+    );
+    const tile = Array.from(root.querySelectorAll('holita-kpi-tile')).find((item) =>
+      item.textContent.includes('Maneuvers per 100 mi'),
+    );
+    expect(tile?.querySelector('.app-num')?.textContent.trim()).toBe('1.6');
+    expect(root.textContent).toContain('100 mi');
+    expect(root.textContent).not.toContain('{unit}');
+    expect(fixture.componentInstance.scorecard()?.maneuversPer100Km).toBe(1);
   });
 
   it('keeps zero-count categories and the separate unknown-intensity count accessible', () => {

@@ -1,6 +1,6 @@
 // The only place the pre-design-system class names and Sakai variable aliases survive. Karma Client
-// pages (and the old Fleet screens until they are replaced) still read them. New code must use the
-// holita tokens and `app/ui` patterns instead. Remove this file together with Karma.
+// pages still read them. New code must use the holita tokens and `app/ui` patterns instead.
+// Remove this file together with Karma.
 @use 'breakpoints' as bp;
 
 @layer holita {

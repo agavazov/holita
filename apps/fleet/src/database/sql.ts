@@ -1,6 +1,8 @@
 import { Prisma } from '../generated/prisma/client.js';
 
-// Helpers for the few raw queries Fleet runs (vehicle facts, service urgency, score aggregates).
+// Helpers for Fleet raw queries (vehicle/device/driver facts and lists, trip duration,
+// overview/daily distance, service urgency, score aggregates, scoped settings and
+// scoped Vehicle/Driver row locks for odometer readings and driver assignment).
 // The adapter does not set `search_path`, so every table reference is schema-qualified; raw rows
 // are `unknown` and each query parses them with these readers instead of trusting a type argument.
 
@@ -12,6 +14,7 @@ export type FleetTableName =
   | 'VehicleStatusSample'
   | 'Trip'
   | 'FleetEvent'
+  | 'FleetSettings'
   | 'ServiceTask';
 
 const FLEET_TABLES: readonly FleetTableName[] = [
@@ -22,6 +25,7 @@ const FLEET_TABLES: readonly FleetTableName[] = [
   'VehicleStatusSample',
   'Trip',
   'FleetEvent',
+  'FleetSettings',
   'ServiceTask',
 ];
 

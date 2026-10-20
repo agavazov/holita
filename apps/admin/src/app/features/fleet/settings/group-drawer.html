@@ -2,9 +2,15 @@
   [title]="title()"
   [saving]="saving()"
   [dirty]="dirty()"
-  [closeLink]="null"
+  [state]="state()"
+  [errorText]="loadError()"
+  [closeLink]="closeLink()"
+  (retry)="retry.emit()"
   (closeRequest)="requestClose()"
 >
+  @if (saveError(); as error) {
+    <p-message severity="error">{{ error }}</p-message>
+  }
   <form #formElement id="group-form" [formGroup]="form" (ngSubmit)="submit()">
     <section class="app-form-section">
       <holita-form-field
@@ -22,7 +28,12 @@
           aria-describedby="group-name-hint group-name-error"
         />
       </holita-form-field>
-      <holita-form-field [label]="text().color" controlId="group-slot" [hint]="text().colorHint">
+      <holita-form-field
+        [label]="text().color"
+        controlId="group-slot"
+        [hint]="text().colorHint"
+        [error]="errorOf('slot')"
+      >
         <p-select
           inputId="group-slot"
           formControlName="slot"
@@ -31,6 +42,13 @@
           optionValue="value"
           appendTo="body"
           [ariaLabel]="text().color"
+          [invalid]="!!errorOf('slot')"
+          [pt]="{
+            label: {
+              'aria-invalid': errorOf('slot') ? 'true' : null,
+              'aria-describedby': 'group-slot-hint group-slot-error',
+            },
+          }"
         >
           <ng-template #selectedItem let-option>
             <span class="app-inline">
@@ -69,7 +87,7 @@
       severity="secondary"
       [outlined]="true"
       [disabled]="saving()"
-      (click)="requestClose()"
+      (click)="close()"
     >
       {{ text().cancel }}
     </button>

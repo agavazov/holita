@@ -9,3 +9,7 @@ type Query {
   branches: [Branch!]!
   branch(id: ID!): Branch
 }
+
+extend type Mutation {
+  updateBranchName(id: ID!, name: String!): Branch!
+}

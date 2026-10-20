@@ -25,6 +25,7 @@ import { TablePanel } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { toneSeverity } from '../../../ui/tones';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
+import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { driversText } from './i18n/messages';
 
 export const driverStatuses = ['ACTIVE', 'ON_LEAVE', 'INACTIVE'] as const;
@@ -117,12 +118,15 @@ export function scoreTone(score: number): StatusTone {
 })
 export class DriversView {
   readonly branchName = input.required<string>();
-  readonly businessDate = input.required<string>();
+  readonly businessDate = input.required<string | null>();
   readonly rows = input.required<readonly DriverRow[]>();
   readonly total = input.required<number>();
   readonly view = input.required<TableView>();
   readonly state = input.required<ListQuery>();
   readonly kpis = input<DriverKpis | null>(null);
+  readonly busy = input(false);
+  readonly searchError = input<string | null>(null);
+  readonly errorText = input<string | null>(null);
   readonly selection = input<readonly ListRecord<DriverActionId>[]>([]);
   readonly stateChange = output<ListQuery>();
   readonly create = output();
@@ -131,9 +135,19 @@ export class DriversView {
   readonly selectionChange = output<readonly ListRecord<DriverActionId>[]>();
   readonly retry = output();
 
+  protected readonly units = injectFleetFormat();
   private readonly language = inject(UI_LANGUAGE);
   private readonly sortReady = injectSortReady();
-  protected readonly text = computed(() => driversText(this.language()));
+  protected readonly text = computed(() => {
+    const text = driversText(this.language());
+    return {
+      ...text,
+      table: {
+        ...text.table,
+        distance: interpolate(text.table.distance, { unit: this.units.distanceUnit() }),
+      },
+    };
+  });
   protected readonly description = computed(() =>
     interpolate(this.text().description, { branch: this.branchName() }),
   );
@@ -171,6 +185,8 @@ export class DriversView {
         label: text.filters.score,
         type: 'number',
         operators: ['lt', 'gt', 'between', 'isEmpty'],
+        min: 0,
+        max: 100,
       },
       {
         key: 'license',
@@ -190,7 +206,15 @@ export class DriversView {
         type: 'boolean',
         operators: ['isTrue', 'isFalse'],
       },
-      { key: 'trips', label: text.filters.trips, type: 'number', operators: ['gt', 'lt'] },
+      {
+        key: 'trips',
+        label: text.filters.trips,
+        type: 'number',
+        operators: ['gt', 'lt'],
+        min: 0,
+        max: 2_147_483_647,
+        integer: true,
+      },
     ];
   });
   /** The list's actions, once for the row menu and the bulk bar. */
@@ -245,10 +269,11 @@ export class DriversView {
 
   /** The tag beside a document date: expired, or due within the warning window. */
   protected expiry(dateOnly: string | null): { severity: 'danger' | 'warn'; label: string } | null {
-    if (dateOnly === null) {
+    const today = this.businessDate();
+    if (dateOnly === null || today === null) {
       return null;
     }
-    const days = daysUntil(dateOnly, this.businessDate());
+    const days = daysUntil(dateOnly, today);
     if (days < 0) {
       return { severity: 'danger', label: this.text().expiry.expired };
     }

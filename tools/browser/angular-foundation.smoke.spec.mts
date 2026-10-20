@@ -1,5 +1,5 @@
 import { expect, type Request } from '@playwright/test';
-import { chooseBranch, test } from './angular-fixture.mjs';
+import { chooseBranch, chooseLanguage, test } from './angular-fixture.mjs';
 
 const branchA = '10000000-0000-4000-8000-000000000001';
 
@@ -49,28 +49,47 @@ test('compiled Angular discovers branches and reads Vehicles through the real ga
     }
   });
   await page.goto(`${app.url}/en`);
-  await expect(page).toHaveURL(`${app.url}/en/${branchA}/fleet/vehicles`);
+  await expect(page).toHaveURL(`${app.url}/en/${branchA}/fleet/overview`);
+  await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
   await expect(page.locator('aside nav').getByRole('heading', { level: 2 })).toHaveText([
+    'Monitoring',
     'Fleet',
+    'Service',
+    'Settings',
     /^Karma Client/,
   ]);
   await expect(page.getByRole('link', { name: 'Branches', exact: true })).toHaveCount(0);
-  await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Vehicles', exact: true }).click();
+  await expect(page).toHaveURL(`${app.url}/en/${branchA}/fleet/vehicles`);
+  await expect(
+    page.getByRole('button', { name: 'Edit Discordia truck', exact: true }),
+  ).toBeVisible();
   await chooseBranch(page, 'Sandbox');
-  await expect(page.getByRole('cell', { name: 'Sandbox truck', exact: true })).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Edit Sandbox truck', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Edit Discordia truck', exact: true })).toHaveCount(
+    0,
+  );
   await chooseBranch(page, 'Discordia');
-  await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'Sandbox truck', exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Edit Discordia truck', exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Edit Sandbox truck', exact: true })).toHaveCount(
+    0,
+  );
   expect(scopes).toEqual([branchA, branchB, branchA]);
   await page.reload();
-  await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toBeVisible();
-  await page.getByRole('link', { name: 'Български', exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: 'Edit Discordia truck', exact: true }),
+  ).toBeVisible();
+  await chooseLanguage(page, 'Български');
   await expect(page).toHaveURL(`${app.url}/bg/${branchA}/fleet/vehicles`);
-  await expect(page.getByRole('heading', { name: 'Автомобили', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /^Автомобили/ })).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('lang', 'bg');
   await expect(page.locator('aside nav').getByRole('heading', { level: 2 })).toHaveText([
+    'Наблюдение',
     'Автопарк',
+    'Обслужване',
+    'Настройки',
     /^Karma Client/,
   ]);
   await page.getByRole('link', { name: 'Устройства', exact: true }).click();
@@ -119,13 +138,21 @@ test('a delayed real A response cannot replace B and returning to A fetches agai
     await page.goto(`${app.url}/en/${branchA}/fleet/vehicles`);
     await capturedResponse;
     await chooseBranch(page, 'Sandbox');
-    await expect(page.getByRole('cell', { name: 'Sandbox truck', exact: true })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Edit Sandbox truck', exact: true }),
+    ).toBeVisible();
     release();
     await deliveredResponse;
-    await expect(page.getByRole('cell', { name: 'Sandbox truck', exact: true })).toBeVisible();
-    await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: 'Edit Sandbox truck', exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Edit Discordia truck', exact: true }),
+    ).toHaveCount(0);
     await chooseBranch(page, 'Discordia');
-    await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Edit Discordia truck', exact: true }),
+    ).toBeVisible();
   } finally {
     release();
   }
@@ -171,14 +198,18 @@ test('a language change starts a new Vehicles request while the old real respons
   try {
     await page.goto(`${app.url}/en/${branchA}/fleet/vehicles`);
     await capturedResponse;
-    await page.getByRole('link', { name: 'Български', exact: true }).click();
+    await chooseLanguage(page, 'Български');
     await expect(page).toHaveURL(`${app.url}/bg/${branchA}/fleet/vehicles`);
-    await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Редактиране на Discordia truck', exact: true }),
+    ).toBeVisible();
     expect(scopes).toEqual([`${branchA}/en`, `${branchA}/bg`]);
     release();
     await deliveredResponse;
-    await expect(page.getByRole('heading', { name: 'Автомобили', exact: true })).toBeVisible();
-    await expect(page.getByRole('cell', { name: 'Discordia truck', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: /^Автомобили/ })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Редактиране на Discordia truck', exact: true }),
+    ).toBeVisible();
     await expect(page.getByRole('alert')).toHaveCount(0);
   } finally {
     release();

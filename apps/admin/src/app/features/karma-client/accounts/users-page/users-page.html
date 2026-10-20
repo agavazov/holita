@@ -42,7 +42,7 @@
     [first]="first()"
     [rowsPerPageOptions]="[25, 50, 100]"
     (onPage)="page($event)"
-    [tableStyle]="{ 'min-width': '60rem' }"
+    [tableStyle]="{ width: '100%' }"
   >
     <ng-template #header
       ><tr>
@@ -59,9 +59,9 @@
     <ng-template #body let-item
       ><tr>
         <td>{{ item.id }}</td>
-        <td>{{ item.userName || '—' }}</td>
-        <td>{{ (item.firstName + ' ' + item.lastName).trim() || '—' }}</td>
-        <td>{{ item.email || '—' }}</td>
+        <td class="text-cell">{{ item.userName || '—' }}</td>
+        <td class="text-cell">{{ (item.firstName + ' ' + item.lastName).trim() || '—' }}</td>
+        <td class="text-cell">{{ item.email || '—' }}</td>
         <td>{{ item.roleId }}</td>
         <td>{{ item.projectId }}</td>
         <td>{{ item.active }}</td>

@@ -5,11 +5,7 @@ import { Tag } from 'primeng/tag';
 import type { StatusTone } from '../../../theme/status-tones';
 import type { FilterCondition, FilterField } from '../../../ui/filter-builder/filter-model';
 import { FilterBuilder } from '../../../ui/filter-builder/filter-builder';
-import {
-  displayTimeZone,
-  FormatNumberPipe,
-  FormatRelativePipe,
-} from '../../../ui/format/format.pipes';
+import { FormatNumberPipe, FormatRelativePipe } from '../../../ui/format/format.pipes';
 import { formatDateTime, formatNumber } from '../../../ui/format/format';
 import { interpolate } from '../../../ui/i18n/messages';
 import { KpiStrip } from '../../../ui/kpi/kpi-strip';
@@ -29,6 +25,7 @@ import { TablePanel } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { toneSeverity } from '../../../ui/tones';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
+import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { vehiclesText } from './i18n/messages';
 
 export const vehicleStatuses = ['ACTIVE', 'IN_WORKSHOP', 'INACTIVE'] as const;
@@ -136,6 +133,9 @@ export class VehiclesView {
   readonly drivers = input<readonly VehicleOption[]>([]);
   readonly selection = input<readonly ListRecord<VehicleActionId>[]>([]);
   readonly busy = input(false);
+  readonly profileEnabled = input(true);
+  readonly searchError = input<string | null>(null);
+  readonly errorText = input<string | null>(null);
   readonly stateChange = output<ListQuery>();
   readonly create = output();
   /** Row and bulk actions alike, with the IDs they apply to. */
@@ -143,13 +143,32 @@ export class VehiclesView {
   readonly selectionChange = output<readonly ListRecord<VehicleActionId>[]>();
   readonly retry = output();
 
+  protected readonly units = injectFleetFormat();
   private readonly language = inject(UI_LANGUAGE);
   private readonly sortReady = injectSortReady();
-  protected readonly text = computed(() => vehiclesText(this.language()));
+  protected readonly text = computed(() => {
+    const text = vehiclesText(this.language());
+    return {
+      ...text,
+      kpis: {
+        ...text.kpis,
+        notReportingFootnote: interpolate(text.kpis.notReportingFootnote, {
+          hours: this.units.preferences().notReportingHours,
+        }),
+        lowFuelFootnote: interpolate(text.kpis.lowFuelFootnote, {
+          percent: this.units.preferences().lowFuelPct,
+        }),
+      },
+      table: {
+        ...text.table,
+        odometer: interpolate(text.table.odometer, { unit: this.units.distanceUnit() }),
+      },
+    };
+  });
   protected readonly description = computed(() =>
     interpolate(this.text().description, {
       branch: this.branchName(),
-      asOf: formatDateTime(this.dataAsOf(), this.language(), displayTimeZone),
+      asOf: formatDateTime(this.dataAsOf(), this.language(), this.units.preferences().timeZone),
     }),
   );
   protected readonly fields = computed<readonly FilterField[]>(() => {
@@ -163,6 +182,7 @@ export class VehiclesView {
         type: 'enum',
         operators: ['isAnyOf', 'isNoneOf'],
         options: options(vehicleStatuses, text.statuses),
+        maxValues: 100,
       },
       {
         key: 'activity',
@@ -170,6 +190,7 @@ export class VehiclesView {
         type: 'enum',
         operators: ['isAnyOf', 'isNoneOf'],
         options: options(vehicleActivities, text.activities),
+        maxValues: 100,
       },
       {
         key: 'group',
@@ -177,6 +198,7 @@ export class VehiclesView {
         type: 'enum',
         operators: ['isAnyOf', 'isNoneOf', 'isEmpty'],
         options: this.groups().map((group) => ({ value: group.id, label: group.name })),
+        maxValues: 100,
       },
       {
         key: 'type',
@@ -184,20 +206,32 @@ export class VehiclesView {
         type: 'enum',
         operators: ['isAnyOf', 'isNoneOf'],
         options: options(vehicleTypes, text.types),
+        maxValues: 100,
       },
-      { key: 'make', label: text.filters.make, type: 'text', operators: ['contains', 'equals'] },
+      {
+        key: 'make',
+        label: text.filters.make,
+        type: 'text',
+        operators: ['contains', 'equals'],
+        maxLength: 64,
+      },
       {
         key: 'odometer',
         label: text.filters.odometer,
         type: 'number',
         unit: 'km',
         operators: ['gt', 'lt', 'between'],
+        min: 0,
+        max: 10_000_000,
       },
       {
         key: 'year',
         label: text.filters.year,
         type: 'number',
         operators: ['equals', 'gt', 'lt', 'between'],
+        min: 1950,
+        max: 2100,
+        integer: true,
       },
       {
         key: 'hasDriver',
@@ -211,6 +245,7 @@ export class VehiclesView {
         type: 'enum',
         operators: ['isAnyOf'],
         options: Object.entries(text.fuelTypes).map(([value, label]) => ({ value, label })),
+        maxValues: 100,
       },
       {
         key: 'driver',
@@ -218,6 +253,7 @@ export class VehiclesView {
         type: 'enum',
         operators: ['isAnyOf'],
         options: this.drivers().map((driver) => ({ value: driver.id, label: driver.name })),
+        maxValues: 100,
       },
       {
         key: 'hasDevice',
@@ -244,7 +280,7 @@ export class VehiclesView {
     const text = this.text().actions;
     return [
       { id: 'edit', label: text.edit },
-      { id: 'profile', label: text.profile },
+      ...(this.profileEnabled() ? [{ id: 'profile' as const, label: text.profile }] : []),
       {
         id: 'deactivate',
         label: text.deactivate,
@@ -364,6 +400,12 @@ export class VehiclesView {
   }
 
   protected changeSort(sort: NonNullable<ListQuery['sort']>): void {
+    if (
+      this.state().sort?.field === sort.field &&
+      this.state().sort?.direction === sort.direction
+    ) {
+      return;
+    }
     this.changeQuery({ ...this.state(), sort, page: 1 });
   }
 

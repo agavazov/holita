@@ -37,16 +37,31 @@ npm run dev
 their watchers. PostgreSQL remains running; `npm run db:down` stops it separately.
 
 If needed, run `nvm install` before `nvm use`. Open [Angular admin](http://127.0.0.1:11000).
-Choose RentalSofia and a Branch on the standalone demo login screen to open Vehicles. There is no Branch list landing page; the topbar Branch menu switches Branches after login. Switching Branches preserves the current Vehicles/Devices
+Choose RentalSofia and a Branch on the standalone demo login screen to open Overview. There is no Branch list landing page; the topbar Branch menu switches Branches after login. Switching Branches preserves the current Fleet
 section and resets the list query. Routes and list filters survive reloads and language changes.
 Each mounted workspace owns its Apollo client/cache. Submitted writes settle in their original
 Branch; navigation cancels obsolete reads and callbacks.
 
-Vehicles has required License Plate and optional multiline Notes. Devices has a required
-15-digit IMEI unique within a Branch and a mandatory same-tenant/same-branch Vehicle, labeled Truck in the
-editor. Multiple Devices can share a Vehicle; assigned Vehicles cannot be deleted.
-Both Fleet modules provide search, sorting, paging, typed create/edit forms, dirty-form guards,
-confirmed single/page-local sequential deletion and failed-row retry.
+Vehicles uses the shared Storybook list and routed create/edit drawer with the full master-data
+fields, telemetry state, whole-Branch KPIs and URL-backed AND filters. Row and selection
+delete/deactivate actions submit one IDs-array operation; partial failures retain selected
+records for retry and appear in the shared operation toast. See the
+[Vehicles workflow](docs/discocan/development.md#angular-fleet-vehicles).
+
+The other live Fleet screens share their Storybook views: Overview, Alerts, Trip log,
+Drivers/scorecards, Maintenance, Devices, Vehicle groups, General settings and Vehicle profile/manual odometer.
+Devices have a required 15-digit IMEI unique per Branch and optional scoped Vehicle assignment;
+unassigned Devices are stock. Multiple Devices may share a Vehicle. Editable lists use typed
+route drawers, URL filters and captured clients; supported row/selection actions preserve
+partial failures for retry. Restart and notification delivery are clearly labelled Demo/unavailable.
+General settings saves Branch regional preferences and thresholds plus a separate Core Branch
+rename; partial saves retain the actual persisted values. Read values use the saved display units
+and time zone, while editors keep explicitly labelled canonical entry units. See the
+[General settings workflow](docs/discocan/development.md#angular-fleet-general-settings).
+
+For richer local Fleet data, run `npm run db:seed:fleet-demo` after setup/migrations and with Core
+running. It inserts only missing synthetic Discordia records and preserves existing edits.
+The [demo seed guide](docs/discocan/development.md#fleet-demo-data) explains its fixed anchor and guards.
 
 Karma Client → Users/Roles provides read-only account search, local paging and full user
 details. Role descriptions and numeric flags are shown as source values.

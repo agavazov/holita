@@ -237,10 +237,12 @@ async function startApplication(service: string, env: NodeJS.ProcessEnv, selecte
     }
   }
   const baseUrl = `http://127.0.0.1:${String(port)}`;
-  const deadline = Date.now() + 15000;
+  const deadline = Date.now() + 30000;
   while (child.exitCode === null && child.signalCode === null && Date.now() < deadline) {
     try {
-      const response = await fetch(`${baseUrl}/health`, { signal: AbortSignal.timeout(300) });
+      const response = await fetch(`${baseUrl}/health`, {
+        signal: AbortSignal.timeout(Math.max(1, Math.min(1000, deadline - Date.now()))),
+      });
       const health: unknown = await response.json();
       if (
         response.ok &&

@@ -2,8 +2,7 @@ import { inject, Injectable, NgZone, type OnDestroy } from '@angular/core';
 import { ApolloClient } from '@apollo/client/core';
 import { ApolloBase } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
-import { firstValueFrom, map, filter } from 'rxjs';
-import type { RelationRequest, RelationPage } from '../relation-picker';
+import { firstValueFrom } from 'rxjs';
 import { DemoSession } from '../../../core/auth/demo-session';
 import { AdminConfig } from '../../../core/config/admin-config';
 import { graphqlOptions } from '../../../core/graphql/graphql-options';
@@ -14,11 +13,12 @@ import {
   AdminDeviceDocument,
   AdminCreateDeviceDocument,
   AdminUpdateDeviceDocument,
-  AdminDeleteDeviceDocument,
+  AdminDeleteDevicesDocument,
+  AdminDeviceSummaryDocument,
   type AdminDevicesQueryVariables,
   type AdminCreateDeviceMutationVariables,
   type AdminUpdateDeviceMutationVariables,
-  type AdminDeleteDeviceMutationVariables,
+  type AdminDeviceVehiclesQueryVariables,
 } from '../../../../generated/graphql/operations';
 
 @Injectable()
@@ -56,34 +56,22 @@ export class DevicesApi implements OnDestroy {
     });
   }
 
-  vehicles(request: RelationRequest) {
+  watchVehicles(variables: AdminDeviceVehiclesQueryVariables) {
     if (!this.apollo || this.destroyed) {
       throw new Error('An active Devices workspace is required.');
     }
-    return this.apollo
-      .watchQuery({
-        query: AdminDeviceVehiclesDocument,
-        variables: { offset: request.offset, limit: 20, search: request.search, ids: request.ids },
-        fetchPolicy: 'network-only',
-      })
-      .valueChanges.pipe(
-        map((result): RelationPage | null => {
-          if (result.error) {
-            throw result.error instanceof Error ? result.error : new Error(result.error.message);
-          }
-          if (result.dataState !== 'complete') {
-            return null;
-          }
-          return {
-            items: result.data.fleetVehicles.items.map((vehicle) => ({
-              id: vehicle.id,
-              name: vehicle.licensePlate,
-            })),
-            total: result.data.fleetVehicles.total,
-          };
-        }),
-        filter((page): page is RelationPage => page !== null),
-      );
+    return this.apollo.watchQuery({
+      query: AdminDeviceVehiclesDocument,
+      variables,
+      fetchPolicy: 'network-only',
+    });
+  }
+
+  watchSummary() {
+    if (!this.apollo || this.destroyed) {
+      throw new Error('An active Devices workspace is required.');
+    }
+    return this.apollo.watchQuery({ query: AdminDeviceSummaryDocument });
   }
 
   async update(variables: AdminUpdateDeviceMutationVariables) {
@@ -100,7 +88,7 @@ export class DevicesApi implements OnDestroy {
         throw new Error('Missing updateFleetDevice result.');
       }
       // Invalidation belongs to the client captured at submission, including after navigation.
-      apollo.client.cache.evict({ id: 'ROOT_QUERY', fieldName: 'fleetDevices' });
+      this.invalidateDevices(apollo);
       return result.data.updateFleetDevice;
     } finally {
       this.pendingWrites--;
@@ -132,39 +120,8 @@ export class DevicesApi implements OnDestroy {
       if (!result.data?.createFleetDevice) {
         throw new Error('Missing createFleetDevice result.');
       }
-      apollo.client.cache.evict({ id: 'ROOT_QUERY', fieldName: 'fleetDevices' });
+      this.invalidateDevices(apollo);
       return result.data.createFleetDevice;
-    } finally {
-      this.pendingWrites--;
-      this.stopWhenIdle();
-    }
-  }
-
-  async delete(variables: AdminDeleteDeviceMutationVariables) {
-    const apollo = this.apollo;
-    if (!apollo || this.destroyed) {
-      throw new Error('An active Devices workspace is required.');
-    }
-    this.pendingWrites++;
-    try {
-      const result = await firstValueFrom(
-        apollo.mutate({ mutation: AdminDeleteDeviceDocument, variables }),
-      );
-      const device = result.data?.deleteFleetDevice;
-      if (!device) {
-        throw new Error('Missing deleteFleetDevice result.');
-      }
-      // Reconcile the visible list once per batch; invalidate every list variant in this client only.
-      const entity = apollo.client.cache.identify(device);
-      if (entity) {
-        apollo.client.cache.evict({ id: entity, broadcast: false });
-      }
-      apollo.client.cache.evict({
-        id: 'ROOT_QUERY',
-        fieldName: 'fleetDevices',
-        broadcast: false,
-      });
-      return device;
     } finally {
       this.pendingWrites--;
       this.stopWhenIdle();
@@ -174,6 +131,41 @@ export class DevicesApi implements OnDestroy {
   ngOnDestroy(): void {
     this.destroyed = true;
     this.stopWhenIdle();
+  }
+
+  async deleteMany(ids: readonly string[]) {
+    const apollo = this.apollo;
+    if (!apollo || this.destroyed) {
+      throw new Error('An active Devices workspace is required.');
+    }
+    this.pendingWrites++;
+    try {
+      const result = await firstValueFrom(
+        apollo.mutate({ mutation: AdminDeleteDevicesDocument, variables: { ids: [...ids] } }),
+      );
+      const action = result.data?.deleteFleetDevices;
+      if (!action) {
+        throw new Error('Missing deleteFleetDevices result.');
+      }
+      for (const id of action.succeededIds) {
+        const entity = apollo.client.cache.identify({ __typename: 'FleetDevice', id });
+        if (entity) {
+          apollo.client.cache.evict({ id: entity, broadcast: false });
+        }
+      }
+      if (action.succeededIds.length) {
+        this.invalidateDevices(apollo, false);
+      }
+      return action;
+    } finally {
+      this.pendingWrites--;
+      this.stopWhenIdle();
+    }
+  }
+
+  private invalidateDevices(apollo: ApolloBase, broadcast = true): void {
+    apollo.client.cache.evict({ id: 'ROOT_QUERY', fieldName: 'fleetDevices', broadcast });
+    apollo.client.cache.evict({ id: 'ROOT_QUERY', fieldName: 'fleetDeviceSummary', broadcast });
   }
 
   private stopWhenIdle(): void {

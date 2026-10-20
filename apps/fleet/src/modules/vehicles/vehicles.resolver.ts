@@ -15,6 +15,8 @@ import type {
   MutationDeactivateFleetVehicleArgs,
   MutationDeleteFleetVehicleArgs,
   MutationUpdateFleetVehicleArgs,
+  MutationDeleteFleetVehiclesArgs,
+  MutationDeactivateFleetVehiclesArgs,
   FleetVehicle,
   QueryFleetVehicleArgs,
   QueryFleetVehiclesArgs,
@@ -36,6 +38,27 @@ export class VehiclesResolver {
   @Query('fleetVehicle')
   fleetVehicle(@Args() args: QueryFleetVehicleArgs, @Context() context: RequestContext) {
     return this.vehiclesService.find(context, args.id);
+  }
+
+  @Query('fleetVehicleSummary')
+  fleetVehicleSummary(@Context() context: RequestContext) {
+    return this.vehiclesService.summary(context);
+  }
+
+  @Mutation('deleteFleetVehicles')
+  deleteFleetVehicles(
+    @Args() args: MutationDeleteFleetVehiclesArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.vehiclesService.deleteMany(context, args.ids);
+  }
+
+  @Mutation('deactivateFleetVehicles')
+  deactivateFleetVehicles(
+    @Args() args: MutationDeactivateFleetVehiclesArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.vehiclesService.deactivateMany(context, args.ids);
   }
 
   @Mutation('createFleetVehicle')

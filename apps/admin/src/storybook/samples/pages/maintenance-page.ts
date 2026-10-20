@@ -110,14 +110,17 @@ const definition: SampleListDefinition<MaintenanceSampleTask> = {
   columns: {
     urgency: (task) => task.urgency,
     vehicle: (task) => task.vehicleId,
+    status: (task) => task.status,
+    serviceType: (task) => task.serviceType,
+    vehicleStatus: (task) => vehicleById(task.vehicleId)?.status ?? null,
     task: (task) => task.kind,
     dueOn: (task) => task.dueOn,
+    completedOn: (task) => task.completion?.completedOn ?? null,
     cost: (task) => task.costEur,
   },
   sortColumns: {
     urgency: (task) => (task.urgency ? urgencyRank[task.urgency] : null),
     vehicle: (task) => vehicleById(task.vehicleId)?.plate ?? null,
-    completedOn: (task) => task.completion?.completedOn ?? null,
     createdAt: (task) => task.createdAt,
   },
   secondarySorts: {
@@ -207,6 +210,7 @@ function toForm(task: SampleServiceTask): ServiceTaskForm {
       <holita-service-completion-drawer
         [task]="open.task"
         [completed]="open.completed"
+        [allowNext]="allowNext()"
         [businessDate]="businessDate"
         [saving]="saving()"
         [saveError]="saveError()"
@@ -319,6 +323,11 @@ export class MaintenancePage {
       : null;
   });
   protected readonly completionErrors = signal<Partial<Record<ServiceCompletionField, string>>>({});
+  protected readonly allowNext = computed(() => {
+    const task = this.tasks().find((item) => item.id === this.completion()?.id);
+    const vehicle = task ? vehicleById(task.vehicleId) : undefined;
+    return vehicle !== undefined && vehicle.status !== 'INACTIVE';
+  });
   protected readonly saving = signal(false);
   protected readonly saveError = signal<string | null>(null);
 
@@ -483,6 +492,17 @@ export class MaintenancePage {
       if (!stored) {
         return;
       }
+      const hasNext = form.nextDueOn !== null || form.nextDueOdometerKm !== null;
+      if (hasNext && vehicleById(stored.vehicleId)?.status === 'INACTIVE') {
+        this.completionErrors.set({
+          ...(form.nextDueOn === null ? {} : { nextDueOn: this.text().completion.inactiveNext }),
+          ...(form.nextDueOdometerKm === null
+            ? {}
+            : { nextDueOdometerKm: this.text().completion.inactiveNext }),
+        });
+        this.saveError.set(this.text().completion.inactiveNext);
+        return;
+      }
       const earlierOdometers = this.tasks().flatMap((task) => {
         const completion = task.completion;
         return task.vehicleId === stored.vehicleId &&
@@ -503,7 +523,6 @@ export class MaintenancePage {
         });
         return;
       }
-      const hasNext = form.nextDueOn !== null || form.nextDueOdometerKm !== null;
       this.tasks.update((tasks) => {
         const completed = tasks.map((task): MaintenanceSampleTask =>
           task.id === open.id

@@ -21,7 +21,7 @@ import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 import { Textarea } from 'primeng/textarea';
-import { RouteDrawer } from '../../../ui/drawer/route-drawer';
+import { RouteDrawer, type RouteDrawerState } from '../../../ui/drawer/route-drawer';
 import { FormField } from '../../../ui/form-field/form-field';
 import { fromDateOnly, toDateOnly } from '../../../ui/format/zoned-time';
 import { focusFirstInvalid } from '../../../ui/forms/focus';
@@ -33,10 +33,11 @@ import {
   textValidator,
   validationMessage,
 } from '../../../ui/forms/validators';
-import { interpolate } from '../../../ui/i18n/messages';
+import { interpolate, uiMessages } from '../../../ui/i18n/messages';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
+import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { lockWhileSaving } from '../../../ui/forms/saving';
-import { FormatDateOnlyPipe, FormatNumberPipe } from '../../../ui/format/format.pipes';
+import { FormatDateOnlyPipe } from '../../../ui/format/format.pipes';
 import { maintenanceText } from './i18n/messages';
 import type { MaintenanceOption } from './maintenance-view';
 import { serviceTypes, type ServiceType } from './service-task';
@@ -83,7 +84,6 @@ const fieldOrder: readonly ServiceTaskField[] = [
     RouteDrawer,
     FormField,
     FormatDateOnlyPipe,
-    FormatNumberPipe,
   ],
   templateUrl: './service-task-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -95,15 +95,30 @@ export class ServiceTaskDrawer {
   readonly vehicles = input<readonly MaintenanceOption[]>([]);
   readonly saving = input(false);
   readonly saveError = input<string | null>(null);
+  readonly state = input<RouteDrawerState>('ready');
+  readonly loadError = input<string | null>(null);
+  readonly closeLink = input<readonly unknown[] | null>(null);
+  readonly choicesError = input<string | null>(null);
+  readonly readOnlyTitle = input<string | null>(null);
+  readonly fieldErrors = input<Partial<Record<ServiceTaskField, string>>>({});
+  readonly retry = output();
+  readonly retryChoices = output();
   readonly save = output<ServiceTaskForm>();
   readonly closed = output();
 
+  protected readonly units = injectFleetFormat();
   private readonly language = inject(UI_LANGUAGE);
   private readonly injector = inject(Injector);
   private readonly drawer = viewChild.required(RouteDrawer);
   private readonly formElement = viewChild<ElementRef<HTMLFormElement>>('formElement');
   protected readonly catalog = computed(() => maintenanceText(this.language()));
   protected readonly text = computed(() => maintenanceText(this.language()).drawer);
+  protected readonly dueOdometerLabel = computed(() =>
+    interpolate(this.text().dueKmDisplay, {
+      unit: this.units.distanceUnit(),
+    }),
+  );
+  protected readonly retryLabel = computed(() => uiMessages[this.language()].retry);
   /** PrimeNG's select takes a mutable array. */
   protected readonly vehicleOptions = computed(() => [...this.vehicles()]);
   protected readonly serviceOptions = computed(() =>
@@ -136,6 +151,9 @@ export class ServiceTaskDrawer {
 
   protected readonly title = computed(() => {
     const task = this.task();
+    if (this.readOnly() && this.readOnlyTitle()) {
+      return this.readOnlyTitle() ?? '';
+    }
     return task
       ? interpolate(this.readOnly() ? this.text().viewTitle : this.text().editTitle, {
           task: task.title ?? this.catalog().serviceTypes[task.serviceType],
@@ -171,6 +189,23 @@ export class ServiceTaskDrawer {
         });
       });
     });
+    effect(() => {
+      const errors = this.fieldErrors();
+      if (this.state() !== 'ready' || !Object.keys(errors).length) {
+        return;
+      }
+      untracked(() => {
+        afterNextRender(
+          () => {
+            const form = this.formElement()?.nativeElement;
+            if (this.state() === 'ready' && form?.isConnected) {
+              focusFirstInvalid(form, fieldOrder, 'task-');
+            }
+          },
+          { injector: this.injector },
+        );
+      });
+    });
     lockWhileSaving(
       this.form,
       () => this.saving(),
@@ -183,6 +218,10 @@ export class ServiceTaskDrawer {
   /** The message under a field once the user touched it or tried to save. */
   protected errorOf(name: ServiceTaskField): string | null {
     this.events();
+    const server = this.fieldErrors()[name];
+    if (server) {
+      return server;
+    }
     const control = this.form.get(name);
     if (!control?.invalid || (!control.touched && !this.submitted)) {
       return null;
@@ -195,7 +234,7 @@ export class ServiceTaskDrawer {
   }
 
   protected submit(): void {
-    if (this.saving() || this.readOnly()) {
+    if (this.saving() || this.readOnly() || this.state() !== 'ready') {
       return;
     }
     this.submitted = true;
@@ -236,5 +275,11 @@ export class ServiceTaskDrawer {
 
   canLeave(): boolean | Promise<boolean> {
     return this.saving() ? false : this.drawer().confirmLeave(this.dirty());
+  }
+  protected close(): void {
+    this.drawer().close();
+  }
+  markSaved(): void {
+    this.form.markAsPristine();
   }
 }

@@ -5,6 +5,8 @@ import { randomUUID } from 'node:crypto';
 import { FleetClock } from '../../clock/fleet-clock.js';
 import type { CompleteFleetServiceTaskInput } from '../../generated/graphql/types.js';
 import { CoreClient } from '../../integrations/core/core.client.js';
+import { SettingsService } from '../settings/settings.service.js';
+import { defaultFleetSettings } from '../settings/settings-defaults.js';
 import { ServiceTasksRepository } from './service-tasks.repository.js';
 import { ServiceTasksService } from './service-tasks.service.js';
 import type { ServiceTaskRow } from './service-urgency.sql.js';
@@ -104,6 +106,10 @@ describe('Service task rules', () => {
       providers: [
         ServiceTasksService,
         {
+          provide: SettingsService,
+          useValue: { read: () => Promise.resolve(defaultFleetSettings()) },
+        },
+        {
           provide: ServiceTasksRepository,
           useValue: {
             list,
@@ -183,6 +189,84 @@ describe('Service task rules', () => {
         { path: 'filter' },
       ]);
     }
+  });
+
+  it('validates independent conditions without collapsing repeated filters', async () => {
+    list.mockResolvedValue({ items: [], total: 0 });
+    await service.list(context, {
+      filter: {
+        allOf: [
+          { costCentsAbove: 0 },
+          { costCentsBelow: 100 },
+          { hasCost: true, taskContains: 'масло', untitledServiceTypes: ['OIL_CHANGE'] },
+        ],
+      },
+      sort: { field: 'COST_CENTS', direction: 'DESC' },
+    });
+    expect(list).toHaveBeenLastCalledWith(
+      scope,
+      today,
+      { offset: 0, limit: 20 },
+      expect.objectContaining({
+        allOf: [
+          expect.objectContaining({ costCentsAbove: 0 }),
+          expect.objectContaining({ costCentsBelow: 100 }),
+          expect.objectContaining({
+            hasCost: true,
+            taskContains: 'масло',
+            untitledServiceTypes: ['OIL_CHANGE'],
+          }),
+        ],
+      }),
+      { field: 'COST_CENTS', direction: 'DESC' },
+    );
+    for (const allOf of [
+      Array.from({ length: 51 }, () => ({})),
+      [{ dueOnFrom: '2026-11-01', dueOnTo: '2026-10-01' }],
+      [{ costCentsAbove: -1 }],
+      [{ taskEquals: 'x'.repeat(121) }],
+    ]) {
+      await expect(service.list(context, { filter: { allOf } })).rejects.toThrow(
+        BadRequestException,
+      );
+    }
+  });
+
+  it('keeps successful batch changes when another task conflicts or is foreign', async () => {
+    const first = randomUUID(),
+      done = randomUUID(),
+      foreign = randomUUID();
+    const cancel = jest
+      .spyOn(service, 'cancel')
+      .mockResolvedValueOnce({ ...task(), branchId: scope.branchId, vehicle })
+      .mockRejectedValueOnce(new ConflictException('Only planned service can be cancelled'))
+      .mockRejectedValueOnce(new NotFoundException('Service task not found'));
+    await expect(service.cancelMany(context, [first, done, foreign])).resolves.toEqual({
+      succeededIds: [first],
+      failures: [
+        { id: done, code: 'CONFLICT', message: 'Only planned service can be cancelled' },
+        { id: foreign, code: 'NOT_FOUND', message: 'Service task not found' },
+      ],
+    });
+    cancel.mockRestore();
+    const remove = jest
+      .spyOn(service, 'delete')
+      .mockResolvedValueOnce({ ...task(), branchId: scope.branchId, vehicle })
+      .mockRejectedValueOnce(new ConflictException('Completed service is kept as history'));
+    await expect(service.deleteMany(context, [first, done])).resolves.toMatchObject({
+      succeededIds: [first],
+      failures: [{ id: done, code: 'CONFLICT' }],
+    });
+    remove.mockClear();
+    await expect(service.deleteMany(context, [])).rejects.toThrow(BadRequestException);
+    await expect(
+      service.deleteMany(
+        context,
+        Array.from({ length: 101 }, () => randomUUID()),
+      ),
+    ).rejects.toThrow(BadRequestException);
+    expect(remove).not.toHaveBeenCalled();
+    remove.mockRestore();
   });
 
   it('creates planned tasks with a due date or odometer on active vehicles only', async () => {
@@ -281,6 +365,7 @@ describe('Service task rules', () => {
     expect(complete).toHaveBeenCalledWith(
       scope,
       id,
+      vehicleId,
       {
         completedOn: new Date('2026-10-18T00:00:00.000Z'),
         completedOdometerKm: 400_000,
@@ -309,6 +394,7 @@ describe('Service task rules', () => {
     expect(complete).toHaveBeenLastCalledWith(
       scope,
       id,
+      vehicleId,
       expect.objectContaining({ workshop: null, notes: 'Done', completedOdometerKm: null }),
       { vehicleId, plan: expect.objectContaining({ title: 'Next oil', workshop: null }) },
     );
@@ -316,6 +402,7 @@ describe('Service task rules', () => {
     expect(complete).toHaveBeenLastCalledWith(
       scope,
       id,
+      vehicleId,
       {
         completedOn: new Date('2026-10-18T00:00:00.000Z'),
         completedOdometerKm: null,
@@ -362,6 +449,39 @@ describe('Service task rules', () => {
     await expect(service.complete(context, id, completion)).rejects.toThrow(ConflictException);
     findTask.mockResolvedValueOnce(null);
     await expect(service.complete(context, id, completion)).rejects.toThrow(NotFoundException);
+  });
+
+  it('rejects only scheduling when the vehicle becomes inactive before the completion transaction', async () => {
+    const id = randomUUID();
+    complete.mockResolvedValue({ completed: 0, nextId: null, schedulingBlocked: true });
+    expect(
+      await fieldErrors(
+        service.complete(context, id, {
+          completedOn: today,
+          nextDueOn: '2026-11-01',
+          nextDueOdometerKm: 200000,
+        }),
+      ),
+    ).toEqual([
+      { path: 'nextDueOn', message: 'A next service cannot be planned for an inactive vehicle.' },
+      {
+        path: 'nextDueOdometerKm',
+        message: 'A next service cannot be planned for an inactive vehicle.',
+      },
+    ]);
+  });
+
+  it('returns the existing odometer field error when an earlier service commits after the early check', async () => {
+    const id = randomUUID();
+    complete.mockResolvedValueOnce({ completed: 0, nextId: null, odometerTooLow: true });
+    expect(await fieldErrors(service.complete(context, id, completion))).toEqual([
+      {
+        path: 'completedOdometerKm',
+        message: 'The odometer cannot be below an earlier completed service of this vehicle.',
+      },
+    ]);
+    expect(highestCompletedOdometer).toHaveBeenCalledTimes(1);
+    expect(findMany).not.toHaveBeenCalled();
   });
 
   it('cancels planned tasks and deletes only planned or cancelled ones', async () => {

@@ -1,9 +1,12 @@
 <holita-route-drawer
   [title]="title()"
-  [subtitle]="task().plate"
+  [subtitle]="task()?.plate ?? null"
   [saving]="saving()"
   [dirty]="dirty()"
-  [closeLink]="null"
+  [state]="state()"
+  [errorText]="loadError()"
+  [closeLink]="closeLink()"
+  (retry)="retry.emit()"
   (closeRequest)="requestClose()"
 >
   @if (completed(); as record) {
@@ -15,8 +18,8 @@
           <dd>{{ record.completedOn | holitaDate }}</dd>
         </div>
         <div>
-          <dt>{{ text().completedOdometerKm }}</dt>
-          <dd>{{ record.completedOdometerKm | holitaNumber }}</dd>
+          <dt>{{ completedOdometerLabel() }}</dt>
+          <dd>{{ units.distance(record.completedOdometerKm, false, 0) }}</dd>
         </div>
         <div>
           <dt>{{ text().cost }}</dt>
@@ -138,63 +141,67 @@
           </holita-form-field>
         </div>
       </section>
-      <section class="app-form-section">
-        <h3>{{ text().next }}</h3>
-        <p>{{ text().nextHint }}</p>
-        <div class="app-form-grid">
-          <holita-form-field
-            [label]="text().nextDueOn"
-            controlId="completion-nextDueOn"
-            [error]="errorOf('nextDueOn')"
-          >
-            <p-datepicker
-              inputId="completion-nextDueOn"
-              formControlName="nextDueOn"
-              dateFormat="yy-mm-dd"
-              appendTo="body"
-              [fluid]="true"
-              [invalid]="!!errorOf('nextDueOn')"
-              [pt]="inputPt('nextDueOn')"
-            />
-          </holita-form-field>
-          <holita-form-field
-            [label]="text().nextDueOdometerKm"
-            controlId="completion-nextDueOdometerKm"
-            [error]="errorOf('nextDueOdometerKm')"
-          >
-            <p-inputnumber
-              inputId="completion-nextDueOdometerKm"
-              formControlName="nextDueOdometerKm"
-              [fluid]="true"
-              [invalid]="!!errorOf('nextDueOdometerKm')"
-              [pt]="inputPt('nextDueOdometerKm')"
-            />
-          </holita-form-field>
-          @if (hasNext()) {
+      @if (allowNext()) {
+        <section class="app-form-section">
+          <h3>{{ text().next }}</h3>
+          <p>{{ text().nextHint }}</p>
+          <div class="app-form-grid">
             <holita-form-field
-              class="app-form-grid--wide"
-              [label]="text().nextTitle"
-              controlId="completion-nextTitle"
-              [hint]="text().nextTitleHint"
-              [error]="errorOf('nextTitle')"
+              [label]="text().nextDueOn"
+              controlId="completion-nextDueOn"
+              [error]="errorOf('nextDueOn')"
             >
-              <input
-                pInputText
-                id="completion-nextTitle"
-                formControlName="nextTitle"
-                [invalid]="!!errorOf('nextTitle')"
-                [attr.aria-invalid]="errorOf('nextTitle') ? 'true' : null"
-                [attr.aria-describedby]="describedBy('nextTitle')"
+              <p-datepicker
+                inputId="completion-nextDueOn"
+                formControlName="nextDueOn"
+                dateFormat="yy-mm-dd"
+                appendTo="body"
+                [fluid]="true"
+                [invalid]="!!errorOf('nextDueOn')"
+                [pt]="inputPt('nextDueOn')"
               />
             </holita-form-field>
-          }
-        </div>
-      </section>
+            <holita-form-field
+              [label]="text().nextDueOdometerKm"
+              controlId="completion-nextDueOdometerKm"
+              [error]="errorOf('nextDueOdometerKm')"
+            >
+              <p-inputnumber
+                inputId="completion-nextDueOdometerKm"
+                formControlName="nextDueOdometerKm"
+                [fluid]="true"
+                [invalid]="!!errorOf('nextDueOdometerKm')"
+                [pt]="inputPt('nextDueOdometerKm')"
+              />
+            </holita-form-field>
+            @if (hasNext()) {
+              <holita-form-field
+                class="app-form-grid--wide"
+                [label]="text().nextTitle"
+                controlId="completion-nextTitle"
+                [hint]="text().nextTitleHint"
+                [error]="errorOf('nextTitle')"
+              >
+                <input
+                  pInputText
+                  id="completion-nextTitle"
+                  formControlName="nextTitle"
+                  [invalid]="!!errorOf('nextTitle')"
+                  [attr.aria-invalid]="errorOf('nextTitle') ? 'true' : null"
+                  [attr.aria-describedby]="describedBy('nextTitle')"
+                />
+              </holita-form-field>
+            }
+          </div>
+        </section>
+      } @else {
+        <p-message severity="info">{{ text().inactiveNext }}</p-message>
+      }
     </form>
   }
   <div drawerFooter class="app-drawer-actions">
     @if (completed()) {
-      <button pButton type="button" severity="secondary" [outlined]="true" (click)="requestClose()">
+      <button pButton type="button" severity="secondary" [outlined]="true" (click)="close()">
         {{ text().close }}
       </button>
     } @else {
@@ -204,7 +211,7 @@
         severity="secondary"
         [outlined]="true"
         [disabled]="saving()"
-        (click)="requestClose()"
+        (click)="close()"
       >
         {{ text().cancel }}
       </button>

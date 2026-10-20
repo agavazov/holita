@@ -3,7 +3,10 @@
   [subtitle]="device()?.model ?? null"
   [saving]="saving()"
   [dirty]="dirty()"
-  [closeLink]="null"
+  [state]="state()"
+  [errorText]="loadError()"
+  [closeLink]="closeLink()"
+  (retry)="retry.emit()"
   (closeRequest)="requestClose()"
 >
   @if (demo()) {
@@ -12,149 +15,238 @@
   @if (device(); as device) {
     <p-tag drawerMeta [severity]="statusSeverity(device)" [value]="statusLabel(device)" />
   }
-  <form #formElement id="device-form" [formGroup]="form" (ngSubmit)="submit()">
-    @if (demo()) {
-      <p class="app-muted">{{ text().demoDescription }}</p>
-    }
-    @if (saveError(); as error) {
-      <p-message severity="error" role="alert">{{ error }}</p-message>
-    }
-    @if (device(); as device) {
+  @if (state() === 'ready') {
+    <form #formElement id="device-form" [formGroup]="form" (ngSubmit)="submit()">
+      @if (demo()) {
+        <p class="app-muted">{{ text().demoDescription }}</p>
+      }
+      @if (saveError(); as error) {
+        <p-message severity="error" role="alert">{{ error }}</p-message>
+      }
+      @if (!demo()) {
+        <p class="app-muted">{{ text().unavailable }}</p>
+      }
+      @if (choicesError(); as error) {
+        <p-message severity="warn"
+          >{{ error }}
+          <button pButton type="button" (click)="retryChoices.emit()">
+            {{ text().retry }}
+          </button></p-message
+        >
+      }
+      @if (device(); as device) {
+        <section class="app-form-section">
+          <h3>{{ text().diagnostics }}</h3>
+          <dl class="app-facts">
+            <div>
+              <dt>{{ text().lastSeen }}</dt>
+              <dd>{{ device.lastSeenAt | holitaRelative: dataAsOf() }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().signal }}</dt>
+              <dd>{{ device.signal === null ? '—' : device.signal + '/5' }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().voltage }}</dt>
+              <dd>
+                @if (device.voltage !== null) {
+                  {{ device.voltage | holitaNumber: 1 }} V
+                } @else {
+                  —
+                }
+              </dd>
+            </div>
+            <div>
+              <dt>{{ text().firmware }}</dt>
+              <dd class="app-mono">{{ device.firmware }}</dd>
+            </div>
+          </dl>
+        </section>
+      }
       <section class="app-form-section">
-        <h3>{{ text().diagnostics }}</h3>
-        <dl class="app-facts">
-          <div>
-            <dt>{{ text().lastSeen }}</dt>
-            <dd>{{ device.lastSeenAt | holitaRelative: dataAsOf() }}</dd>
-          </div>
-          <div>
-            <dt>{{ text().signal }}</dt>
-            <dd>{{ device.signal === null ? '—' : device.signal + '/5' }}</dd>
-          </div>
-          <div>
-            <dt>{{ text().voltage }}</dt>
-            <dd>
-              @if (device.voltage !== null) {
-                {{ device.voltage | holitaNumber: 1 }} V
-              } @else {
-                —
-              }
-            </dd>
-          </div>
-          <div>
-            <dt>{{ text().firmware }}</dt>
-            <dd class="app-mono">{{ device.firmware }}</dd>
-          </div>
-        </dl>
+        <h3>{{ text().installation }}</h3>
+        <div class="app-form-grid">
+          <holita-form-field
+            [label]="text().imei"
+            controlId="device-imei"
+            [hint]="text().imeiHint"
+            [required]="true"
+            [error]="errorOf('imei')"
+          >
+            <input
+              pInputText
+              id="device-imei"
+              formControlName="imei"
+              inputmode="numeric"
+              class="app-mono"
+              [invalid]="!!errorOf('imei')"
+              [attr.aria-invalid]="errorOf('imei') ? 'true' : null"
+              [attr.aria-describedby]="describedBy('imei')"
+            />
+          </holita-form-field>
+          <holita-form-field
+            [label]="text().model"
+            controlId="device-model"
+            [required]="demo()"
+            [error]="errorOf('model')"
+          >
+            <p-select
+              inputId="device-model"
+              formControlName="model"
+              [options]="modelOptions()"
+              [showClear]="!demo()"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+              [invalid]="!!errorOf('model')"
+              [ariaLabel]="text().model"
+              [pt]="{
+                label: {
+                  'aria-invalid': errorOf('model') ? 'true' : undefined,
+                  'aria-describedby': describedBy('model'),
+                },
+              }"
+            />
+          </holita-form-field>
+          @if (!demo()) {
+            <holita-form-field
+              [label]="text().options"
+              controlId="device-options"
+              [error]="errorOf('options')"
+            >
+              <p-select
+                inputId="device-options"
+                formControlName="options"
+                [multiple]="true"
+                [pt]="multiplePt()"
+                [options]="optionChoices"
+                optionLabel="label"
+                optionValue="value"
+                appendTo="body"
+                [ariaLabel]="text().options"
+                [invalid]="!!errorOf('options')"
+              />
+            </holita-form-field>
+            <holita-form-field
+              [label]="text().firmware"
+              controlId="device-firmwareVersion"
+              [error]="errorOf('firmwareVersion')"
+            >
+              <input
+                pInputText
+                id="device-firmwareVersion"
+                formControlName="firmwareVersion"
+                [invalid]="!!errorOf('firmwareVersion')"
+                [attr.aria-invalid]="errorOf('firmwareVersion') ? 'true' : null"
+                [attr.aria-describedby]="describedBy('firmwareVersion')"
+              />
+            </holita-form-field>
+            <holita-form-field
+              [label]="text().simPhone"
+              controlId="device-simPhoneNumber"
+              [error]="errorOf('simPhoneNumber')"
+            >
+              <input
+                pInputText
+                id="device-simPhoneNumber"
+                formControlName="simPhoneNumber"
+                [invalid]="!!errorOf('simPhoneNumber')"
+                [attr.aria-invalid]="errorOf('simPhoneNumber') ? 'true' : null"
+                [attr.aria-describedby]="describedBy('simPhoneNumber')"
+              />
+            </holita-form-field>
+            <holita-form-field
+              [label]="text().installedAt"
+              controlId="device-installedAt"
+              [hint]="text().installedAtHint"
+              [error]="errorOf('installedAt')"
+            >
+              <input
+                pInputText
+                id="device-installedAt"
+                formControlName="installedAt"
+                [invalid]="!!errorOf('installedAt')"
+                [attr.aria-invalid]="errorOf('installedAt') ? 'true' : null"
+                [attr.aria-describedby]="describedBy('installedAt')"
+              />
+            </holita-form-field>
+          }
+          <holita-form-field
+            [label]="text().sim"
+            controlId="device-simIccid"
+            [hint]="text().simHint"
+            [error]="errorOf('simIccid')"
+          >
+            <input
+              pInputText
+              id="device-simIccid"
+              formControlName="simIccid"
+              inputmode="numeric"
+              class="app-mono"
+              [invalid]="!!errorOf('simIccid')"
+              [attr.aria-invalid]="errorOf('simIccid') ? 'true' : null"
+              [attr.aria-describedby]="describedBy('simIccid')"
+            />
+          </holita-form-field>
+          <holita-form-field
+            [label]="text().vehicle"
+            controlId="device-vehicleId"
+            [error]="errorOf('vehicleId')"
+          >
+            <p-select
+              inputId="device-vehicleId"
+              formControlName="vehicleId"
+              [options]="vehicleOptions()"
+              optionLabel="name"
+              optionValue="id"
+              [filter]="true"
+              appendTo="body"
+              [ariaLabel]="text().vehicle"
+              [invalid]="!!errorOf('vehicleId')"
+              [pt]="{
+                label: {
+                  'aria-invalid': errorOf('vehicleId') ? 'true' : undefined,
+                  'aria-describedby': describedBy('vehicleId'),
+                },
+              }"
+            />
+          </holita-form-field>
+          <holita-form-field
+            class="app-form-grid--wide"
+            [label]="text().notes"
+            controlId="device-notes"
+            [error]="errorOf('notes')"
+            [counter]="{ length: notesLength(), max: 2000 }"
+          >
+            <textarea
+              pTextarea
+              id="device-notes"
+              formControlName="notes"
+              rows="3"
+              [invalid]="!!errorOf('notes')"
+              [attr.aria-invalid]="errorOf('notes') ? 'true' : null"
+              [attr.aria-describedby]="describedBy('notes')"
+            ></textarea>
+          </holita-form-field>
+        </div>
       </section>
-    }
-    <section class="app-form-section">
-      <h3>{{ text().installation }}</h3>
-      <div class="app-form-grid">
-        <holita-form-field
-          [label]="text().imei"
-          controlId="device-imei"
-          [hint]="text().imeiHint"
-          [required]="true"
-          [error]="errorOf('imei')"
-        >
-          <input
-            pInputText
-            id="device-imei"
-            formControlName="imei"
-            inputmode="numeric"
-            class="app-mono"
-            [invalid]="!!errorOf('imei')"
-            [attr.aria-invalid]="errorOf('imei') ? 'true' : null"
-            [attr.aria-describedby]="describedBy('imei')"
-          />
-        </holita-form-field>
-        <holita-form-field
-          [label]="text().model"
-          controlId="device-model"
-          [required]="true"
-          [error]="errorOf('model')"
-        >
-          <p-select
-            inputId="device-model"
-            formControlName="model"
-            [options]="modelOptions()"
-            optionLabel="label"
-            optionValue="value"
-            appendTo="body"
-            [invalid]="!!errorOf('model')"
-            [ariaLabel]="text().model"
-            [pt]="{
-              label: {
-                'aria-invalid': errorOf('model') ? 'true' : undefined,
-                'aria-describedby': describedBy('model'),
-              },
-            }"
-          />
-        </holita-form-field>
-        <holita-form-field
-          [label]="text().sim"
-          controlId="device-simIccid"
-          [hint]="text().simHint"
-          [error]="errorOf('simIccid')"
-        >
-          <input
-            pInputText
-            id="device-simIccid"
-            formControlName="simIccid"
-            inputmode="numeric"
-            class="app-mono"
-            [invalid]="!!errorOf('simIccid')"
-            [attr.aria-invalid]="errorOf('simIccid') ? 'true' : null"
-            [attr.aria-describedby]="describedBy('simIccid')"
-          />
-        </holita-form-field>
-        <holita-form-field [label]="text().vehicle" controlId="device-vehicleId">
-          <p-select
-            inputId="device-vehicleId"
-            formControlName="vehicleId"
-            [options]="vehicleOptions()"
-            optionLabel="name"
-            optionValue="id"
-            [filter]="true"
-            appendTo="body"
-            [ariaLabel]="text().vehicle"
-          />
-        </holita-form-field>
-        <holita-form-field
-          class="app-form-grid--wide"
-          [label]="text().notes"
-          controlId="device-notes"
-          [error]="errorOf('notes')"
-          [counter]="{ length: notesLength(), max: 2000 }"
-        >
-          <textarea
-            pTextarea
-            id="device-notes"
-            formControlName="notes"
-            rows="3"
-            [invalid]="!!errorOf('notes')"
-            [attr.aria-invalid]="errorOf('notes') ? 'true' : null"
-            [attr.aria-describedby]="describedBy('notes')"
-          ></textarea>
-        </holita-form-field>
-      </div>
-    </section>
-  </form>
-
-  <div drawerFooter class="app-drawer-actions">
-    <button
-      pButton
-      type="button"
-      severity="secondary"
-      [outlined]="true"
-      [disabled]="saving()"
-      (click)="requestClose()"
-    >
-      {{ text().cancel }}
-    </button>
-    <button pButton type="submit" form="device-form" [loading]="saving()" [disabled]="saving()">
-      {{ device() ? text().save : text().create }}
-    </button>
-  </div>
+    </form>
+  }
+  @if (state() === 'ready') {
+    <div drawerFooter class="app-drawer-actions">
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="saving()"
+        (click)="requestClose()"
+      >
+        {{ text().cancel }}
+      </button>
+      <button pButton type="submit" form="device-form" [loading]="saving()" [disabled]="saving()">
+        {{ device() ? text().save : text().create }}
+      </button>
+    </div>
+  }
 </holita-route-drawer>

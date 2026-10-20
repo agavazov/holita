@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { join } from 'node:path';
 import { workspaceRoot } from '../graphql/contracts.mjs';
-import { chooseBranch, test } from './angular-fixture.mjs';
+import { chooseBranch, chooseLanguage, setDarkTheme, test } from './angular-fixture.mjs';
 async function captures(page: Page, section: string) {
   for (const viewport of [
     { name: 'desktop', width: 1280, height: 900 },
@@ -24,21 +24,18 @@ async function captures(page: Page, section: string) {
           )
           .toBe(true);
       }
-      await page.screenshot({
-        path: join(
-          workspaceRoot,
-          '.references/review',
-          `karma-${section}-${viewport.name}-${theme}.png`,
-        ),
-        fullPage: true,
-        animations: 'disabled',
-      });
-      await page
-        .getByRole('button', {
-          name: theme === 'light' ? 'Use dark theme' : 'Use light theme',
-          exact: true,
-        })
-        .click();
+      if (process.env.HOLITA_BROWSER_SCREENSHOTS === '1') {
+        await page.screenshot({
+          path: join(
+            workspaceRoot,
+            '.references/review',
+            `karma-${section}-${viewport.name}-${theme}.png`,
+          ),
+          fullPage: true,
+          animations: 'disabled',
+        });
+      }
+      await setDarkTheme(page, theme === 'light');
     }
   }
 }
@@ -98,7 +95,7 @@ test('pages all users, exposes eleven escaped fields and navigates account menus
   await page.reload();
   await expect(rows).toHaveCount(1);
   await expect(rows.first()).toContainText('fixture-119');
-  await page.getByRole('link', { name: 'Български', exact: true }).click();
+  await chooseLanguage(page, 'Български');
   await expect(page.getByRole('heading', { name: 'Потребители', exact: true })).toBeVisible();
   await expect(rows.first()).toContainText('fixture-119');
   await page.getByRole('link', { name: 'Роли', exact: true }).click();
@@ -161,30 +158,33 @@ for (const section of ['users', 'roles']) {
             page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
           )
           .toBe(true);
-        await page.screenshot({
-          path: join(workspaceRoot, '.references/review', `karma-user-dialog-mobile-${theme}.png`),
-          fullPage: false,
-          animations: 'disabled',
-        });
+        if (process.env.HOLITA_BROWSER_SCREENSHOTS === '1') {
+          await page.screenshot({
+            path: join(
+              workspaceRoot,
+              '.references/review',
+              `karma-user-dialog-mobile-${theme}.png`,
+            ),
+            fullPage: false,
+            animations: 'disabled',
+          });
+        }
         await page.getByRole('dialog').locator('dd').last().scrollIntoViewIfNeeded();
         await expect(page.getByRole('dialog').locator('dd').last()).toBeVisible();
-        await page.screenshot({
-          path: join(
-            workspaceRoot,
-            '.references/review',
-            `karma-user-dialog-mobile-${theme}-lower.png`,
-          ),
-          fullPage: false,
-          animations: 'disabled',
-        });
+        if (process.env.HOLITA_BROWSER_SCREENSHOTS === '1') {
+          await page.screenshot({
+            path: join(
+              workspaceRoot,
+              '.references/review',
+              `karma-user-dialog-mobile-${theme}-lower.png`,
+            ),
+            fullPage: false,
+            animations: 'disabled',
+          });
+        }
         await page.keyboard.press('Escape');
         await expect(open).toBeFocused();
-        await page
-          .getByRole('button', {
-            name: theme === 'light' ? 'Use dark theme' : 'Use light theme',
-            exact: true,
-          })
-          .click();
+        await setDarkTheme(page, theme === 'light');
       }
     }
   });

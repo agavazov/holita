@@ -1,11 +1,22 @@
 <holita-route-drawer
+  [state]="state()"
+  [errorText]="loadError()"
+  (retry)="retry.emit()"
   size="lg"
   [title]="title()"
   [saving]="saving()"
   [dirty]="dirty()"
-  [closeLink]="null"
+  [closeLink]="closeLink()"
   (closeRequest)="requestClose()"
 >
+  @if (choicesError()) {
+    <p-message severity="warn"
+      >{{ choicesError() }}
+      <button pButton type="button" severity="secondary" (click)="retryChoices.emit()">
+        {{ labels().profile.retry }}
+      </button>
+    </p-message>
+  }
   <form #formElement id="vehicle-form" [formGroup]="form" (ngSubmit)="submit()">
     @if (saveError(); as error) {
       <p-message severity="error" role="alert">{{ error }}</p-message>
@@ -153,7 +164,11 @@
             [ariaLabel]="text().status"
           />
         </holita-form-field>
-        <holita-form-field [label]="text().group" controlId="vehicle-groupId">
+        <holita-form-field
+          [label]="text().group"
+          controlId="vehicle-groupId"
+          [error]="errorOf('groupId')"
+        >
           <p-select
             inputId="vehicle-groupId"
             formControlName="groupId"
@@ -162,6 +177,13 @@
             optionValue="id"
             appendTo="body"
             [ariaLabel]="text().group"
+            [invalid]="!!errorOf('groupId')"
+            [pt]="{
+              label: {
+                'aria-invalid': errorOf('groupId') ? 'true' : null,
+                'aria-describedby': describedBy('groupId'),
+              },
+            }"
           />
         </holita-form-field>
         <holita-form-field

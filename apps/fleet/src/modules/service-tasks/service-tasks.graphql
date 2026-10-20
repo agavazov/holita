@@ -78,6 +78,34 @@ input FleetServiceTaskFilter {
   vehicleIds: [ID!]
   completedFrom: Date
   completedTo: Date
+  "Independent AND conditions; at most 50."
+  allOf: [FleetServiceTaskCondition!]
+}
+
+input FleetServiceTaskCondition {
+  vehicleStatuses: [FleetVehicleStatus!]
+  statuses: [FleetServiceStatus!]
+  excludedStatuses: [FleetServiceStatus!]
+  urgencies: [FleetServiceUrgency!]
+  excludedUrgencies: [FleetServiceUrgency!]
+  serviceTypes: [FleetServiceType!]
+  excludedServiceTypes: [FleetServiceType!]
+  vehicleIds: [ID!]
+  excludedVehicleIds: [ID!]
+  taskContains: String
+  taskEquals: String
+  "Translated service labels matching the task text, applied only to tasks without a title."
+  untitledServiceTypes: [FleetServiceType!]
+  dueOnBefore: Date
+  dueOnAfter: Date
+  dueOnFrom: Date
+  dueOnTo: Date
+  hasDueOn: Boolean
+  completedFrom: Date
+  completedTo: Date
+  costCentsAbove: Int
+  costCentsBelow: Int
+  hasCost: Boolean
 }
 
 enum FleetServiceTaskSortField {
@@ -85,6 +113,9 @@ enum FleetServiceTaskSortField {
   DUE_ON
   COMPLETED_ON
   CREATED_AT
+  TASK
+  VEHICLE_LICENSE_PLATE
+  COST_CENTS
 }
 input FleetServiceTaskSort {
   field: FleetServiceTaskSortField! = URGENCY
@@ -124,6 +155,17 @@ input CompleteFleetServiceTaskInput {
   nextTitle: String
 }
 
+type FleetServiceTaskActionFailure {
+  id: ID!
+  code: String!
+  message: String!
+}
+
+type FleetServiceTaskActionResult {
+  succeededIds: [ID!]!
+  failures: [FleetServiceTaskActionFailure!]!
+}
+
 extend type Query {
   fleetServiceTasks(
     offset: Int! = 0
@@ -138,6 +180,8 @@ extend type Query {
 }
 
 extend type Mutation {
+  cancelFleetServiceTasks(ids: [ID!]!): FleetServiceTaskActionResult!
+  deleteFleetServiceTasks(ids: [ID!]!): FleetServiceTaskActionResult!
   createFleetServiceTask(input: CreateFleetServiceTaskInput!): FleetServiceTask!
   updateFleetServiceTask(id: ID!, input: UpdateFleetServiceTaskInput!): FleetServiceTask!
   completeFleetServiceTask(

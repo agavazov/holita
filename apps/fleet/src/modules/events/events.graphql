@@ -102,11 +102,31 @@ input FleetEventFilter {
   tripIds: [ID!]
   occurredFrom: DateTime
   occurredTo: DateTime
+  "Independent AND conditions; at most 50."
+  allOf: [FleetEventCondition!]
+}
+
+input FleetEventCondition {
+  actionable: Boolean
+  alertStatuses: [FleetAlertStatus!]
+  excludedAlertStatuses: [FleetAlertStatus!]
+  severities: [FleetEventSeverity!]
+  excludedSeverities: [FleetEventSeverity!]
+  kinds: [FleetEventKind!]
+  excludedKinds: [FleetEventKind!]
+  vehicleIds: [ID!]
+  excludedVehicleIds: [ID!]
+  driverIds: [ID!]
+  excludedDriverIds: [ID!]
+  tripIds: [ID!]
+  occurredFrom: DateTime
+  occurredTo: DateTime
 }
 
 enum FleetEventSortField {
   OCCURRED_AT
   SEVERITY
+  ALERT_STATUS
 }
 input FleetEventSort {
   field: FleetEventSortField! = OCCURRED_AT
@@ -119,6 +139,17 @@ input FleetAlertTransitionInput {
   remark: String
 }
 
+type FleetAlertActionFailure {
+  id: ID!
+  code: String!
+  message: String!
+}
+
+type FleetAlertActionResult {
+  succeededIds: [ID!]!
+  failures: [FleetAlertActionFailure!]!
+}
+
 extend type Query {
   fleetEvents(
     offset: Int! = 0
@@ -129,13 +160,15 @@ extend type Query {
     sort: FleetEventSort
   ): FleetEventPage!
   fleetEvent(id: ID!): FleetEvent!
-  "Counts actionable events matching search and filter (same rules as fleetEvents), ignoring filter.actionable and filter.alertStatuses."
+  "Counts actionable events matching search and filter, ignoring actionable and included/excluded alert statuses in every condition."
   fleetAlertCounts(search: String, filter: FleetEventFilter): FleetAlertCounts!
   "Nine maneuver kinds in enum order, zero rows included. Requires tripIds or a period of at most 93 days."
   fleetManeuverCounts(filter: FleetEventFilter!): [FleetManeuverCount!]!
 }
 
 extend type Mutation {
+  "Acknowledges 1–100 unique alerts with independent results and optimistic concurrency."
+  acknowledgeFleetAlerts(ids: [ID!]!, input: FleetAlertTransitionInput!): FleetAlertActionResult!
   acknowledgeFleetAlert(id: ID!, input: FleetAlertTransitionInput!): FleetEvent!
   resolveFleetAlert(id: ID!, input: FleetAlertTransitionInput!): FleetEvent!
   reopenFleetAlert(id: ID!, input: FleetAlertTransitionInput!): FleetEvent!

@@ -3,6 +3,7 @@ import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { FleetEnabledGuard } from '../../fleet-enabled.guard.js';
 import type {
   MutationAcknowledgeFleetAlertArgs,
+  MutationAcknowledgeFleetAlertsArgs,
   MutationReopenFleetAlertArgs,
   MutationResolveFleetAlertArgs,
   QueryFleetAlertCountsArgs,
@@ -47,6 +48,14 @@ export class EventsResolver {
     @Context() context: RequestContext,
   ) {
     return this.eventsService.transition(context, 'acknowledge', args.id, args.input);
+  }
+
+  @Mutation('acknowledgeFleetAlerts')
+  acknowledgeFleetAlerts(
+    @Args() args: MutationAcknowledgeFleetAlertsArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.eventsService.acknowledgeMany(context, args.ids, args.input);
   }
 
   @Mutation('resolveFleetAlert')

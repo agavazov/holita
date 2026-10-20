@@ -90,7 +90,7 @@
       }}</span>
     </holita-menu-button>
   }
-  @if (notifications()) {
+  @if (notifications() || notificationsUnavailable()) {
     <holita-menu-button
       buttonClass="app-topbar__bell"
       menuClass="app-menu-wide app-menu-scroll"

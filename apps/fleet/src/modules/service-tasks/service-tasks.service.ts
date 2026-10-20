@@ -1,7 +1,9 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { addDays, businessDate, FleetClock } from '../../clock/fleet-clock.js';
@@ -11,6 +13,8 @@ import type {
   FleetServiceSummary,
   FleetServiceTask,
   FleetServiceTaskCompletion,
+  FleetServiceTaskActionFailure,
+  FleetServiceTaskActionResult,
   FleetServiceTaskPage,
   FleetServiceTaskSortField,
   QueryFleetServiceTasksArgs,
@@ -30,6 +34,7 @@ import {
   idList,
   ids,
   invalid,
+  invalidFields,
   optionalDateOnly,
   optionalInteger,
   optionalText,
@@ -47,6 +52,8 @@ import {
   ServiceTasksRepository,
 } from './service-tasks.repository.js';
 import { SERVICE_URGENCIES, type ServiceTaskRow } from './service-urgency.sql.js';
+import { serviceTaskConditions } from './service-task-filter.js';
+import { SettingsService } from '../settings/settings.service.js';
 
 const SERVICE_TYPES = Object.values(FleetServiceType);
 const SERVICE_STATUSES = Object.values(FleetServiceStatus);
@@ -55,12 +62,17 @@ const SORT_FIELDS: readonly FleetServiceTaskSortField[] = [
   'DUE_ON',
   'COMPLETED_ON',
   'CREATED_AT',
+  'TASK',
+  'VEHICLE_LICENSE_PLATE',
+  'COST_CENTS',
 ];
 const MAX_ODOMETER_KM = 9_999_999;
 const MAX_COST_CENTS = 100_000_000;
 const EARLIEST_SERVICE_DATE = '2000-01-01';
 /** The cost window is the business date and the 29 days before it. */
 const COST_WINDOW_DAYS = 30;
+const ODOMETER_BELOW_EARLIER_SERVICE =
+  'The odometer cannot be below an earlier completed service of this vehicle.';
 
 /** Service dates are real calendar days from 2000 to 2100. */
 function serviceDate(value: unknown, path: string): string | null {
@@ -91,10 +103,12 @@ function requireDue(dueOn: unknown, dueOdometerKm: unknown): void {
 
 @Injectable()
 export class ServiceTasksService {
+  private readonly logger = new Logger(ServiceTasksService.name);
   constructor(
     private readonly tasks: ServiceTasksRepository,
     private readonly core: CoreClient,
     private readonly clock: FleetClock,
+    private readonly settings: SettingsService,
   ) {}
 
   async list(
@@ -119,12 +133,19 @@ export class ServiceTasksService {
       vehicleIds: idList(filter?.vehicleIds, 'vehicleIds'),
       completedFrom: completed.from,
       completedTo: completed.to,
+      ...(filter?.allOf == null ? {} : { allOf: serviceTaskConditions(filter.allOf) }),
     };
     const sort = {
       field: sortField(args.sort?.field, SORT_FIELDS, 'URGENCY'),
       direction: sortDirection(args.sort?.direction, 'ASC'),
     };
-    const page = await this.tasks.list(scope, this.today(), { offset, limit }, criteria, sort);
+    const page = await this.tasks.list(
+      scope,
+      await this.today(scope),
+      { offset, limit },
+      criteria,
+      sort,
+    );
     return { items: await this.withRefs(scope, page.items), total: page.total, offset, limit };
   }
 
@@ -134,7 +155,7 @@ export class ServiceTasksService {
 
   async summary(context: RequestContext): Promise<FleetServiceSummary> {
     const scope = requireScope(context);
-    const today = this.today();
+    const today = await this.today(scope);
     const costWindowStart = addDays(today, 1 - COST_WINDOW_DAYS);
     const [urgency, inWorkshopVehicles, completed] = await Promise.all([
       this.tasks.urgencyCounts(scope, today),
@@ -239,7 +260,7 @@ export class ServiceTasksService {
   ): Promise<FleetServiceTaskCompletion> {
     const scope = requireScope(context);
     const recordId = uuid(id, 'id');
-    const today = this.today();
+    const today = await this.today(scope);
     const completedOn = dateOnly(input.completedOn, 'completedOn');
     if (completedOn < EARLIEST_SERVICE_DATE || completedOn > today) {
       invalid('completedOn', 'Use a completion date from 2000-01-01 up to today.');
@@ -287,10 +308,7 @@ export class ServiceTasksService {
         data.completedOn,
       );
       if (highest !== null && data.completedOdometerKm < highest) {
-        invalid(
-          'completedOdometerKm',
-          'The odometer cannot be below an earlier completed service of this vehicle.',
-        );
+        invalid('completedOdometerKm', ODOMETER_BELOW_EARLIER_SERVICE);
       }
     }
     const next =
@@ -307,7 +325,30 @@ export class ServiceTasksService {
               notes: null,
             },
           };
-    const result = await this.tasks.complete(scope, recordId, data, next);
+    const result = await this.tasks.complete(scope, recordId, stored.vehicleId, data, next);
+    if (result.odometerTooLow) {
+      invalid('completedOdometerKm', ODOMETER_BELOW_EARLIER_SERVICE);
+    }
+    if (result.schedulingBlocked) {
+      invalidFields([
+        ...(nextDueOn === null
+          ? []
+          : [
+              {
+                path: 'nextDueOn',
+                message: 'A next service cannot be planned for an inactive vehicle.',
+              },
+            ]),
+        ...(nextDueOdometerKm === null
+          ? []
+          : [
+              {
+                path: 'nextDueOdometerKm',
+                message: 'A next service cannot be planned for an inactive vehicle.',
+              },
+            ]),
+      ]);
+    }
     if (!result.completed) {
       await this.plannedConflict(scope, recordId, 'Only planned service can be completed');
     }
@@ -346,6 +387,73 @@ export class ServiceTasksService {
     return task;
   }
 
+  async cancelMany(
+    context: RequestContext,
+    values: readonly string[],
+  ): Promise<FleetServiceTaskActionResult> {
+    requireScope(context);
+    const selected = ids(values, 'ids');
+    if (!selected.length) {
+      invalid('ids', 'Choose at least one service task.');
+    }
+    const succeededIds: string[] = [];
+    const failures: FleetServiceTaskActionFailure[] = [];
+    for (const id of selected) {
+      try {
+        await this.cancel(context, id);
+        succeededIds.push(id);
+      } catch (error: unknown) {
+        failures.push(this.actionFailure(context, id, error));
+      }
+    }
+    return { succeededIds, failures };
+  }
+
+  async deleteMany(
+    context: RequestContext,
+    values: readonly string[],
+  ): Promise<FleetServiceTaskActionResult> {
+    requireScope(context);
+    const selected = ids(values, 'ids');
+    if (!selected.length) {
+      invalid('ids', 'Choose at least one service task.');
+    }
+    const succeededIds: string[] = [];
+    const failures: FleetServiceTaskActionFailure[] = [];
+    for (const id of selected) {
+      try {
+        await this.delete(context, id);
+        succeededIds.push(id);
+      } catch (error: unknown) {
+        failures.push(this.actionFailure(context, id, error));
+      }
+    }
+    return { succeededIds, failures };
+  }
+
+  private actionFailure(
+    context: RequestContext,
+    id: string,
+    error: unknown,
+  ): FleetServiceTaskActionFailure {
+    if (error instanceof HttpException) {
+      const code = new Map([
+        [400, 'BAD_USER_INPUT'],
+        [404, 'NOT_FOUND'],
+        [409, 'CONFLICT'],
+        [503, 'SERVICE_UNAVAILABLE'],
+      ]).get(error.getStatus());
+      if (code) {
+        return { id, code, message: error.message };
+      }
+    }
+    this.logger.error({
+      requestId: context.requestId,
+      error: error instanceof Error ? error.name : 'UnknownError',
+    });
+    return { id, code: 'INTERNAL_SERVER_ERROR', message: 'Unable to change service task.' };
+  }
+
   /** The next PLANNED task per vehicle ID (`FleetVehicle.nextService`, one raw query). */
   async nextForVehicles(
     scope: FleetScope,
@@ -356,13 +464,13 @@ export class ServiceTasksService {
     }
     const tasks = await this.withRefs(
       scope,
-      await this.tasks.nextForVehicles(scope, this.today(), vehicleIds),
+      await this.tasks.nextForVehicles(scope, await this.today(scope), vehicleIds),
     );
     return new Map(tasks.map((task) => [task.vehicleId, task]));
   }
 
-  private today(): string {
-    return businessDate(this.clock.now());
+  private async today(scope: FleetScope): Promise<string> {
+    return businessDate(this.clock.now(), (await this.settings.read(scope)).timeZone);
   }
 
   private async requireServiceableVehicle(scope: FleetScope, vehicleId: string): Promise<void> {
@@ -373,7 +481,10 @@ export class ServiceTasksService {
   }
 
   private async load(scope: FleetScope, id: string): Promise<FleetServiceTask> {
-    const [task] = await this.withRefs(scope, await this.tasks.findMany(scope, this.today(), [id]));
+    const [task] = await this.withRefs(
+      scope,
+      await this.tasks.findMany(scope, await this.today(scope), [id]),
+    );
     if (!task) {
       throw new NotFoundException('Service task not found');
     }

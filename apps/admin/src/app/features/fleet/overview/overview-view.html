@@ -6,7 +6,11 @@
 
 @switch (state()) {
   @case ('error') {
-    <holita-empty-state kind="error" [title]="text().errorTitle" [description]="text().errorText">
+    <holita-empty-state
+      kind="error"
+      [title]="text().errorTitle"
+      [description]="errorText() ?? text().errorText"
+    >
       <button emptyActions pButton type="button" (click)="retry.emit()">{{ text().retry }}</button>
     </holita-empty-state>
   }
@@ -38,8 +42,8 @@
         />
         <holita-kpi-tile
           [label]="text().kpis.distance"
-          [value]="kpis.distanceTodayKm | holitaNumber"
-          unit="km"
+          [value]="units.distance(kpis.distanceTodayKm, false, 0)"
+          [unit]="units.distanceUnit()"
           [link]="links().trips"
         />
         <holita-kpi-tile
@@ -87,7 +91,7 @@
 
       <section class="app-card">
         <h2 class="app-card__title app-card__header">{{ text().distance.title }}</h2>
-        <holita-column-series [label]="text().distance.chart" [points]="distance()" />
+        <holita-column-series [label]="text().distance.chart" [points]="distancePoints()" />
       </section>
 
       <section class="app-card">
@@ -111,13 +115,13 @@
                 <span class="app-cell-stack">
                   <a
                     class="app-link"
-                    [routerLink]="links().trips"
-                    [queryParams]="{ drawer: trip.id }"
+                    [routerLink]="tripLink()?.(trip.id) ?? links().trips"
+                    [queryParams]="tripLink() ? null : { drawer: trip.id }"
                     >{{ trip.plate }} · {{ trip.from ?? '—' }} → {{ trip.to ?? '—' }}</a
                   >
                   <span
                     >{{ trip.startedAt | holitaDateTime }} ·
-                    {{ trip.distanceKm | holitaNumber }} km</span
+                    {{ units.distance(trip.distanceKm, true, 0) }}</span
                   >
                 </span>
               </li>

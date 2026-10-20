@@ -82,6 +82,8 @@ describe('Fleet Branch upgrade', () => {
         '20261017010000_rename_store_to_branch',
         '20261018100000_fleet_master_data',
         '20261018110000_fleet_activity',
+        '20261020110000_device_stock',
+        '20261020220000_fleet_settings',
       ]);
     } finally {
       try {

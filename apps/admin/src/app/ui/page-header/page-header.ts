@@ -7,7 +7,7 @@ import {
   input,
   viewChild,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { RouterLink, type Params } from '@angular/router';
 import { ArrowLeft } from '@primeicons/angular/arrow-left';
 import { formatNumber } from '../format/format';
 import { UI_LANGUAGE } from '../ui-language';
@@ -27,6 +27,8 @@ export class PageHeader {
   readonly description = input<string | null>(null);
   readonly backLink = input<readonly string[] | null>(null);
   readonly backLabel = input<string | null>(null);
+  readonly backQueryParams = input<Params | null>(null);
+  readonly backFragment = input<string | null>(null);
 
   private readonly language = inject(UI_LANGUAGE);
   private readonly heading = viewChild.required<ElementRef<HTMLElement>>('heading');

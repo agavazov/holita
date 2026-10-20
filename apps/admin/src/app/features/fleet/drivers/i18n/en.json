@@ -3,7 +3,7 @@
   "title": "Drivers",
   "description": "{branch} · driving data of the last 30 days",
   "new": "New driver",
-  "search": "Search name, employee number, identification key, phone or notes",
+  "search": "Search name, employee number, identification key or phone",
   "kpis": {
     "label": "Driver summary",
     "active": "Active drivers",
@@ -11,7 +11,7 @@
     "documents": "Documents to renew",
     "documentsFootnote": "expired or within 30 days of the business date",
     "score": "Average score",
-    "scoreFootnote": "trips of the last 30 days",
+    "scoreFootnote": "mean of drivers' distance-weighted scores, last 30 days",
     "distance": "Distance, 30 days"
   },
   "table": {
@@ -23,7 +23,7 @@
     "tachoCard": "Tachograph card",
     "score": "Score",
     "trips": "Trips, 30 d",
-    "distance": "Distance, km",
+    "distance": "Distance, {unit}",
     "phone": "Phone",
     "notes": "Notes",
     "actions": "Actions",
@@ -34,7 +34,7 @@
     "noScore": "No score",
     "emptyTitle": "No drivers yet",
     "emptyDescription": "Add the drivers of this branch to assign them to vehicles.",
-    "errorText": "The drivers could not be loaded. (demo-request-3)"
+    "errorText": "The drivers could not be loaded."
   },
   "statuses": {
     "ACTIVE": "Active",
@@ -43,7 +43,8 @@
   },
   "expiry": {
     "expired": "Expired",
-    "soon": "Expires in {days} d"
+    "soon": "Expires in {days} d",
+    "unavailable": "Document expiry status is unavailable until the Fleet business date is loaded."
   },
   "actions": {
     "view": "Open",
@@ -69,6 +70,7 @@
     "lastName": "Last name"
   },
   "notices": {
+    "partialFailure": "Failed: {count}.",
     "saved": "{name} was saved.",
     "created": "{name} was added.",
     "deactivated": "Drivers deactivated: {count}.",
@@ -79,6 +81,7 @@
     "deletedPartial": "Drivers deleted: {changed}. Drivers with assignments or history kept: {failed}."
   },
   "drawer": {
+    "recordTitle": "Driver",
     "createTitle": "New driver",
     "editTitle": "Edit {name}",
     "contact": "Contact",
@@ -111,7 +114,7 @@
     "save": "Save",
     "create": "Add driver",
     "cancel": "Cancel",
-    "saveError": "The driver could not be saved. Try again. (demo-request-4)",
+    "saveError": "The driver could not be saved. Try again.",
     "duplicateEmployeeNo": "This employee number is already used.",
     "duplicateIdentificationKey": "This identification key is already used.",
     "assignedDriver": "Unassign this driver from its vehicles first."
@@ -130,7 +133,7 @@
     "distance": "Distance",
     "trips": "Trips",
     "coverage": "with a driving score: {scored} of {total}",
-    "maneuversPer100Km": "Maneuvers per 100 km",
+    "maneuversPer100Km": "Maneuvers per 100 {unit}",
     "maneuvers": "Maneuvers by intensity",
     "maneuverDescription": "Event counts for the selected period. Intensity is reported by the device.",
     "maneuverTotal": "Total maneuvers:",
@@ -154,8 +157,8 @@
     "windowEnd": "Period ends at",
     "scoredTrips": "Trips with a driving score",
     "windowDescription": "Trip statistics include trips that started after the start and up to and including the end. Maneuvers use their event time within the same window. The period ends at the branch's latest device sample, not today's date.",
-    "weightedDescription": "Each average is weighted by distance over trips of at least 0.5 km that have that score. Trips with a driving score are counted even when they are shorter than 0.5 km.",
-    "missingDescription": "A dash means no value is available. Zero is a reported value. Maneuvers per 100 km needs distance greater than zero.",
+    "weightedDescription": "Each average is weighted by distance over trips of at least {minimumDistance} that have that score. Trips with a driving score are counted even when they are shorter than {minimumDistance}.",
+    "missingDescription": "A dash means no value is available. Zero is a reported value. Maneuvers per 100 {unit} needs distance greater than zero.",
     "lowConfidence": "Limited data: fewer than five trips have a driving score. Treat the averages with care.",
     "noTripsTitle": "No trips in this period",
     "noTripsDescription": "Try a longer period. The branch has telemetry, but no trips for this driver in the selected window.",

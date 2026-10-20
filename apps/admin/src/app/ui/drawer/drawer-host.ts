@@ -8,6 +8,10 @@ export interface DrawerSaved {
 
 /** What a list or detail page offers the drawers in its outlet (`[routerOutletData]`). */
 export interface DrawerHost {
+  /** Absolute destination when an editor is opened over a record page. */
+  readonly closeLink?: readonly string[];
+  /** Vehicle owning related records opened over its profile. */
+  readonly vehicleId?: string;
   saved(event: DrawerSaved): void;
 }
 
@@ -20,7 +24,11 @@ function isDrawerHost(value: unknown): value is DrawerHost {
     typeof value === 'object' &&
     value !== null &&
     'saved' in value &&
-    typeof value.saved === 'function'
+    typeof value.saved === 'function' &&
+    (!('closeLink' in value) ||
+      (Array.isArray(value.closeLink) &&
+        value.closeLink.every((segment: unknown) => typeof segment === 'string'))) &&
+    (!('vehicleId' in value) || typeof value.vehicleId === 'string')
   );
 }
 

@@ -1,5 +1,5 @@
 @if (!enabled) {
-  <section class="card">
+  <section class="app-card">
     <h1>{{ workspace.text().fleet }}</h1>
     <p-message severity="warn">{{ workspace.text().fleetDisabled }}</p-message>
   </section>
@@ -18,32 +18,55 @@
       '/' +
       scope.recordId
   ) {
-    @switch (scope.resource) {
-      @case ('devices') {
-        @if (scope.editor) {
-          <holita-device-editor
-            [branch]="scope.branch"
-            [language]="scope.language"
-            [deviceId]="scope.recordId"
-          />
+    @if (!preferences.settings()) {
+      <section class="app-card">
+        <h1>{{ workspace.text().fleet }}</h1>
+        @if (preferences.loading()) {
+          <p role="status">{{ uiText().loading }}</p>
         } @else {
-          <holita-devices-page [branch]="scope.branch" [language]="scope.language" />
+          <p-message severity="error" role="alert">{{ preferencesError() }}</p-message>
+          <button pButton type="button" (click)="preferences.retry()">{{ uiText().retry }}</button>
         }
-      }
-      @case ('vehicles') {
-        @if (scope.editor) {
-          <holita-vehicle-editor
-            [branch]="scope.branch"
-            [language]="scope.language"
-            [vehicleId]="scope.recordId"
-          />
-        } @else {
+      </section>
+    } @else {
+      @switch (scope.resource) {
+        @case ('general') {
+          <holita-general-settings-page [branch]="scope.branch" [language]="scope.language" />
+        }
+        @case ('vehicle-profile') {
+          <holita-vehicle-profile-page [branch]="scope.branch" [language]="scope.language" />
+        }
+        @case ('maintenance') {
+          <holita-maintenance-page [branch]="scope.branch" [language]="scope.language" />
+        }
+        @case ('trips') {
+          <holita-trips-page [branch]="scope.branch" [language]="scope.language" />
+        }
+        @case ('drivers') {
+          <holita-drivers-page [branch]="scope.branch" [language]="scope.language" />
+        }
+        @case ('driver-scorecard') {
+          <holita-driver-scorecard-page [branch]="scope.branch" [language]="scope.language" />
+        }
+        @case ('overview') {
+          <holita-overview-page [branch]="scope.branch" [language]="scope.language" />
+        }
+        @case ('alerts') {
+          <holita-alerts-page [branch]="scope.branch" [language]="scope.language" />
+        }
+        @case ('groups') {
+          <holita-vehicle-groups-page [branch]="scope.branch" [language]="scope.language" />
+        }
+        @case ('devices') {
+          <holita-devices-list-page [branch]="scope.branch" [language]="scope.language" />
+        }
+        @case ('vehicles') {
           <holita-vehicles-page [branch]="scope.branch" [language]="scope.language" />
         }
       }
     }
   } @empty {
-    <section class="card">
+    <section class="app-card">
       <p-message severity="error">{{ workspace.text().unavailableBranch }}</p-message>
     </section>
   }

@@ -20,7 +20,7 @@ import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 import { Textarea } from 'primeng/textarea';
-import { RouteDrawer } from '../../../ui/drawer/route-drawer';
+import { RouteDrawer, type RouteDrawerState } from '../../../ui/drawer/route-drawer';
 import { FormField } from '../../../ui/form-field/form-field';
 import { focusFirstInvalid } from '../../../ui/forms/focus';
 import { innerInputPt } from '../../../ui/forms/inner-input-pt';
@@ -122,17 +122,23 @@ export class VehicleDrawer {
   readonly groups = input<readonly VehicleOption[]>([]);
   readonly drivers = input<readonly VehicleOption[]>([]);
   readonly saving = input(false);
+  readonly state = input<RouteDrawerState>('ready');
+  readonly loadError = input<string | null>(null);
+  readonly choicesError = input<string | null>(null);
+  readonly closeLink = input<readonly unknown[] | null>(null);
   readonly saveError = input<string | null>(null);
   readonly fieldErrors = input<Partial<Record<VehicleField, string>>>({});
   readonly save = output<VehicleForm>();
   readonly closed = output();
+  readonly retry = output();
+  readonly retryChoices = output();
 
   private readonly language = inject(UI_LANGUAGE);
   private readonly injector = inject(Injector);
   private readonly drawer = viewChild.required(RouteDrawer);
-  private readonly formElement = viewChild.required<ElementRef<HTMLFormElement>>('formElement');
+  private readonly formElement = viewChild<ElementRef<HTMLFormElement>>('formElement');
   protected readonly text = computed(() => vehiclesText(this.language()).drawer);
-  private readonly labels = computed(() => vehiclesText(this.language()));
+  protected readonly labels = computed(() => vehiclesText(this.language()));
 
   protected readonly form = new FormGroup({
     plate: new FormControl('', {
@@ -211,11 +217,28 @@ export class VehicleDrawer {
         this.form.reset({ ...vehicle });
       });
     });
+    // A fast rejection can settle before a saving frame; field errors still need focus.
+    effect(() => {
+      const errors = this.fieldErrors();
+      if (this.state() !== 'ready' || !Object.keys(errors).length) {
+        return;
+      }
+      afterNextRender(
+        () => {
+          const form = this.formElement()?.nativeElement;
+          if (this.state() === 'ready' && form?.isConnected) {
+            focusFirstInvalid(form, fieldOrder, 'vehicle-');
+          }
+        },
+        { injector: this.injector },
+      );
+    });
     lockWhileSaving(
       this.form,
       () => this.saving(),
       () => {
-        if (!focusFirstInvalid(this.formElement().nativeElement, fieldOrder, 'vehicle-')) {
+        const form = this.formElement()?.nativeElement;
+        if (!form || !focusFirstInvalid(form, fieldOrder, 'vehicle-')) {
           this.drawer().keepFocusInside();
         }
       },
@@ -249,7 +272,10 @@ export class VehicleDrawer {
     if (this.form.invalid) {
       afterNextRender(
         () => {
-          focusFirstInvalid(this.formElement().nativeElement, fieldOrder, 'vehicle-');
+          const form = this.formElement()?.nativeElement;
+          if (form) {
+            focusFirstInvalid(form, fieldOrder, 'vehicle-');
+          }
         },
         { injector: this.injector },
       );
@@ -272,7 +298,16 @@ export class VehicleDrawer {
     return !this.saving() && this.drawer().confirmLeave(this.form.dirty);
   }
 
+  /** A successful save clears the draft before its route is closed. */
+  markSaved(): void {
+    this.form.markAsPristine();
+  }
+
   protected async requestClose(): Promise<void> {
+    if (this.closeLink() !== null) {
+      this.drawer().close();
+      return;
+    }
     if (await this.canLeave()) {
       this.closed.emit();
     }

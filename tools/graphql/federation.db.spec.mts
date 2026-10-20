@@ -1011,4 +1011,107 @@ describe('Fleet through the actual federation boundary', () => {
       },
     });
   });
+  it('persists complete General preferences through Gateway only in the verified Tenant and selected Branch', async () => {
+    const fields = 'timeZone distanceUnit volumeUnit lowFuelPct notReportingHours speedLimitKph';
+    const read = `{fleetSettings{${fields}}}`;
+    const update = `mutation($input:UpdateFleetSettingsInput!){updateFleetSettings(input:$input){${fields}}}`;
+    const defaults = {
+      timeZone: 'Europe/Sofia',
+      distanceUnit: 'KM',
+      volumeUnit: 'LITRE',
+      lowFuelPct: 12,
+      notReportingHours: 48,
+      speedLimitKph: 90,
+    };
+    expect(await query(read)).toEqual({ data: { fleetSettings: defaults } });
+    expect(await query(read, {}, sandbox)).toEqual({ data: { fleetSettings: defaults } });
+    const input = {
+      timeZone: 'Europe/Belgrade',
+      distanceUnit: 'MI',
+      volumeUnit: 'US_GALLON',
+      lowFuelPct: 18,
+      notReportingHours: 24,
+      speedLimitKph: 100,
+    };
+    expect(await query(update, { input })).toEqual({ data: { updateFleetSettings: input } });
+    expect(await query(read)).toEqual({ data: { fleetSettings: input } });
+    expect(await query(read, {}, sandbox)).toEqual({ data: { fleetSettings: defaults } });
+    const login = await query(
+      'mutation{demoLogin(tenantId:"01000000-0000-4000-8000-000000000002"){token}}',
+    );
+    const otherToken = record(record(record(login).data).demoLogin).token;
+    if (typeof otherToken !== 'string') {
+      throw new Error('Missing second tenant session');
+    }
+    expect(await query(read, {}, discordia, fixture.url, otherToken)).toEqual({
+      data: { fleetSettings: defaults },
+    });
+    expect(
+      await query(update, { input: defaults }, discordia, fixture.url, otherToken),
+    ).toMatchObject({
+      errors: [{ extensions: { code: 'NOT_FOUND' } }],
+    });
+    expect(await query(update, { input: { ...input, lowFuelPct: 0 } })).toMatchObject({
+      errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'lowFuelPct' }] } }],
+    });
+    expect(await query(read)).toEqual({ data: { fleetSettings: input } });
+    const connection = new pg.Client({ connectionString: fixture.fleetDatabaseUrl });
+    await connection.connect();
+    try {
+      const rows = await connection.query<{ tenantId: string; branchId: string }>(
+        `SELECT "tenantId"::text, "branchId"::text FROM ${pg.escapeIdentifier(fixture.fleetSchema)}."FleetSettings"`,
+      );
+      expect(rows.rows).toEqual([
+        { tenantId: '01000000-0000-4000-8000-000000000001', branchId: discordia },
+      ]);
+    } finally {
+      await connection.end();
+    }
+  });
+
+  it('renames the selected Core Branch through Gateway and rejects a mismatched selection or foreign Tenant', async () => {
+    const rename = 'mutation($id:ID!,$name:String!){updateBranchName(id:$id,name:$name){id name}}';
+    expect(await query(rename, { id: discordia, name: '  Gateway renamed fleet  ' })).toEqual({
+      data: { updateBranchName: { id: discordia, name: 'Gateway renamed fleet' } },
+    });
+    const read = 'query($id:ID!){branch(id:$id){id name} branches{id name}}';
+    expect(await query(read, { id: discordia })).toEqual({
+      data: {
+        branch: { id: discordia, name: 'Gateway renamed fleet' },
+        branches: [
+          { id: discordia, name: 'Gateway renamed fleet' },
+          { id: sandbox, name: 'Sandbox' },
+        ],
+      },
+    });
+    expect(
+      await query(rename, { id: discordia, name: 'Wrong selected Branch' }, sandbox),
+    ).toMatchObject({
+      errors: [{ extensions: { code: 'BAD_USER_INPUT' } }],
+    });
+    const login = await query(
+      'mutation{demoLogin(tenantId:"01000000-0000-4000-8000-000000000002"){token}}',
+    );
+    const otherToken = record(record(record(login).data).demoLogin).token;
+    if (typeof otherToken !== 'string') {
+      throw new Error('Missing second tenant session');
+    }
+    expect(
+      await query(
+        rename,
+        { id: discordia, name: 'Wrong Tenant' },
+        discordia,
+        fixture.url,
+        otherToken,
+      ),
+    ).toMatchObject({ errors: [{ extensions: { code: 'NOT_FOUND' } }] });
+    expect(await query('query($id:ID!){branch(id:$id){id name}}', { id: discordia })).toEqual({
+      data: { branch: { id: discordia, name: 'Gateway renamed fleet' } },
+    });
+    expect(
+      await query('query($id:ID!){branch(id:$id){id name}}', { id: sandbox }, sandbox),
+    ).toEqual({
+      data: { branch: { id: sandbox, name: 'Sandbox' } },
+    });
+  });
 });

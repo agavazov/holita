@@ -7,6 +7,7 @@ import { issueDemoToken } from '../src/auth/demo-auth.js';
 import { CoreClient } from '../src/integrations/core/core.client.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { createTestDatabase } from './test-database.js';
+import { afterLockedDriverChange } from './driver-row-lock.js';
 
 const tenantId = '01000000-0000-4000-8000-000000000001';
 const create =
@@ -356,6 +357,62 @@ describe('Vehicle GraphQL with PostgreSQL', () => {
         },
       ],
     });
+  });
+
+  it('rejects create and update assignments when driver deactivation commits while they wait', async () => {
+    const branchId = randomUUID();
+    const driver = await database.client.driver.create({
+      data: { tenantId, branchId, firstName: 'D', lastName: 'Concurrent deactivation' },
+    });
+    const vehicle = await database.client.vehicle.create({
+      data: { tenantId, branchId, licensePlate: 'CB 4003 AX' },
+    });
+    const responses = await afterLockedDriverChange(
+      database,
+      { tenantId, branchId },
+      driver.id,
+      (transaction) =>
+        transaction.driver.update({
+          where: { id: driver.id, tenantId, branchId },
+          data: { status: 'INACTIVE' },
+        }),
+      () =>
+        Promise.all([
+          query(
+            create,
+            { input: { licensePlate: 'CB 4004 AX', currentDriverId: driver.id } },
+            branchId,
+          ),
+          query(update, { id: vehicle.id, input: { currentDriverId: driver.id } }, branchId),
+        ]),
+      2,
+    );
+    for (const response of responses) {
+      expect(response).toMatchObject({
+        errors: [
+          {
+            extensions: {
+              code: 'BAD_USER_INPUT',
+              fieldErrors: [
+                { path: 'currentDriverId', message: 'Choose an active driver in this branch.' },
+              ],
+            },
+          },
+        ],
+      });
+    }
+    expect(await database.client.vehicle.count({ where: { tenantId, branchId } })).toBe(1);
+    expect(
+      await database.client.vehicle.count({
+        where: { tenantId, branchId, currentDriverId: driver.id },
+      }),
+    ).toBe(0);
+    expect(
+      await database.client.driver.findUniqueOrThrow({
+        where: { id: driver.id, tenantId, branchId },
+        select: { status: true },
+      }),
+    ).toEqual({ status: 'INACTIVE' });
   });
 
   it('filters, sorts with nulls last, searches tokens case-insensitively and pages consistently in scope', async () => {

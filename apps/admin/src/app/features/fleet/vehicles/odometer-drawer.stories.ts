@@ -191,6 +191,15 @@ export const DiscardDraft: Story = {
 };
 export const Mobile: Story = {
   render: exampleAt(path),
+  play: async ({ canvasElement }) => {
+    await ready(canvasElement);
+  },
   globals: { viewport: { value: 'mobile375', isRotated: false } },
 };
-export const Dark: Story = { render: exampleAt(path), globals: { theme: 'dark' } };
+export const Dark: Story = {
+  render: exampleAt(path),
+  play: async ({ canvasElement }) => {
+    await ready(canvasElement);
+  },
+  globals: { theme: 'dark' },
+};

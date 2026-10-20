@@ -42,6 +42,9 @@ export interface GroupRow {
 export class GroupsView {
   readonly rows = input.required<readonly GroupRow[]>();
   readonly view = input.required<TableView>();
+  readonly busy = input(false);
+  readonly errorText = input<string | null>(null);
+  readonly actionContext = input<unknown>(null);
   readonly create = output();
   /** Row actions, with the ID of the group they apply to. */
   readonly action = output<ListActionRequest<GroupActionId>>();

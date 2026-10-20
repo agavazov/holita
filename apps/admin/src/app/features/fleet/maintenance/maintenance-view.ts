@@ -9,7 +9,6 @@ import {
   FormatMoneyPipe,
   FormatNumberPipe,
 } from '../../../ui/format/format.pipes';
-import { formatNumber } from '../../../ui/format/format';
 import { interpolate } from '../../../ui/i18n/messages';
 import { KpiStrip } from '../../../ui/kpi/kpi-strip';
 import { KpiTile } from '../../../ui/kpi/kpi-tile';
@@ -27,13 +26,18 @@ import { TablePanel } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { toneSeverity } from '../../../ui/tones';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
+import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { ListSortMenu, type ListSortField } from '../../../ui/list/list-sort-menu';
 import { maintenanceText } from './i18n/messages';
+import { vehiclesText } from '../vehicles/i18n/messages';
+import { vehicleStatuses } from '../vehicles/vehicles-view';
 import {
   serviceUrgencies,
   type ServiceTaskRow,
   urgencyTones,
   serviceStatusTones,
+  serviceStatuses,
+  serviceTypes,
 } from './service-task';
 
 export interface MaintenanceKpis {
@@ -86,6 +90,9 @@ export class MaintenanceView {
   readonly kpis = input<MaintenanceKpis | null>(null);
   readonly vehicles = input<readonly MaintenanceOption[]>([]);
   readonly selection = input<readonly ListRecord<MaintenanceActionId>[]>([]);
+  readonly busy = input(false);
+  readonly searchError = input<string | null>(null);
+  readonly errorText = input<string | null>(null);
   readonly stateChange = output<ListQuery>();
   readonly create = output();
   /** Row and bulk actions alike, with the IDs they apply to. */
@@ -93,9 +100,21 @@ export class MaintenanceView {
   readonly selectionChange = output<readonly ListRecord<MaintenanceActionId>[]>();
   readonly retry = output();
 
+  protected readonly units = injectFleetFormat();
   private readonly language = inject(UI_LANGUAGE);
   private readonly sortReady = injectSortReady();
-  protected readonly text = computed(() => maintenanceText(this.language()));
+  protected readonly text = computed(() => {
+    const text = maintenanceText(this.language());
+    return {
+      ...text,
+      kpis: {
+        ...text.kpis,
+        dueSoonFootnote: interpolate(text.kpis.dueSoonFootnote, {
+          distance: this.units.distance(1500, true, 0),
+        }),
+      },
+    };
+  });
   protected readonly description = computed(() =>
     interpolate(this.text().description, { branch: this.branchName() }),
   );
@@ -108,6 +127,7 @@ export class MaintenanceView {
         type: 'enum',
         operators: ['isAnyOf', 'isNoneOf'],
         options: serviceUrgencies.map((value) => ({ value, label: text.urgencies[value] })),
+        maxValues: 100,
       },
       {
         key: 'vehicle',
@@ -115,19 +135,62 @@ export class MaintenanceView {
         type: 'enum',
         operators: ['isAnyOf', 'isNoneOf'],
         options: this.vehicles().map((vehicle) => ({ value: vehicle.id, label: vehicle.name })),
+        maxValues: 100,
       },
-      { key: 'task', label: text.filters.task, type: 'text', operators: ['contains', 'equals'] },
+      {
+        key: 'status',
+        label: text.filters.status,
+        type: 'enum',
+        operators: ['isAnyOf', 'isNoneOf'],
+        options: serviceStatuses.map((value) => ({ value, label: text.statuses[value] })),
+        maxValues: 100,
+      },
+      {
+        key: 'serviceType',
+        label: text.drawer.serviceType,
+        type: 'enum',
+        operators: ['isAnyOf', 'isNoneOf'],
+        options: serviceTypes.map((value) => ({ value, label: text.serviceTypes[value] })),
+        maxValues: 100,
+      },
+      {
+        key: 'vehicleStatus',
+        label: text.filters.vehicleStatus,
+        type: 'enum',
+        operators: ['isAnyOf'],
+        options: vehicleStatuses.map((value) => ({
+          value,
+          label: vehiclesText(this.language()).statuses[value],
+        })),
+        maxValues: 100,
+      },
+      {
+        key: 'task',
+        label: text.filters.task,
+        type: 'text',
+        operators: ['contains', 'equals'],
+        maxLength: 120,
+      },
       {
         key: 'dueOn',
         label: text.filters.dueOn,
         type: 'date',
-        operators: ['before', 'after', 'between', 'isEmpty'],
+        operators: ['on', 'before', 'after', 'between', 'isEmpty'],
+      },
+      {
+        key: 'completedOn',
+        label: text.table.completedOn,
+        type: 'date',
+        operators: ['on', 'before', 'after', 'between'],
       },
       {
         key: 'cost',
         label: text.filters.cost,
         type: 'number',
         operators: ['gt', 'lt', 'isEmpty'],
+        min: 0,
+        max: 1_000_000,
+        decimalPlaces: 2,
       },
     ];
   });
@@ -212,9 +275,10 @@ export class MaintenanceView {
     if (task.kmLeft === null || task.status !== 'PLANNED') {
       return null;
     }
-    const km = formatNumber(Math.abs(task.kmLeft), this.language());
+    const km = this.units.distance(Math.abs(task.kmLeft), false, 0);
     return interpolate(task.kmLeft < 0 ? this.text().table.kmOver : this.text().table.kmLeft, {
       km,
+      unit: this.units.distanceUnit(),
     });
   }
 
@@ -239,6 +303,12 @@ export class MaintenanceView {
   }
 
   protected changeSort(sort: NonNullable<ListQuery['sort']>): void {
+    if (
+      this.state().sort?.field === sort.field &&
+      this.state().sort?.direction === sort.direction
+    ) {
+      return;
+    }
     this.changeQuery({ ...this.state(), sort, page: 1 });
   }
 
@@ -257,7 +327,7 @@ export class MaintenanceView {
   }
 
   protected select(rows: readonly ServiceTaskRow[] | null): void {
-    this.selectionChange.emit((rows ?? []).map((row) => this.recordOf(row)));
+    this.selectionChange.emit((rows ?? []).slice(0, 100).map((row) => this.recordOf(row)));
   }
 
   /** The selection belongs to the rows on screen, so any new query clears it. */

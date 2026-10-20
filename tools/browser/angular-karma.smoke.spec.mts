@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test';
 import { join } from 'node:path';
 import { workspaceRoot } from '../graphql/contracts.mjs';
-import { chooseBranch, test } from './angular-fixture.mjs';
+import { chooseBranch, chooseLanguage, setDarkTheme, test } from './angular-fixture.mjs';
 
 test('opens truck details from the list, preserves scope through Branch/language changes and returns to the list', async ({
   page,
@@ -32,21 +32,18 @@ test('opens truck details from the list, preserves scope through Branch/language
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       ).toBe(true);
-      await page.screenshot({
-        path: join(
-          workspaceRoot,
-          '.references/review',
-          `karma-details-${viewport.name}-${theme}.png`,
-        ),
-        fullPage: true,
-        animations: 'disabled',
-      });
-      await page
-        .getByRole('button', {
-          name: theme === 'light' ? 'Use dark theme' : 'Use light theme',
-          exact: true,
-        })
-        .click();
+      if (process.env.HOLITA_BROWSER_SCREENSHOTS === '1') {
+        await page.screenshot({
+          path: join(
+            workspaceRoot,
+            '.references/review',
+            `karma-details-${viewport.name}-${theme}.png`,
+          ),
+          fullPage: true,
+          animations: 'disabled',
+        });
+      }
+      await setDarkTheme(page, theme === 'light');
     }
   }
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -55,7 +52,7 @@ test('opens truck details from the list, preserves scope through Branch/language
   expect(headers).toHaveLength(1);
   await page.reload();
   await expect(page.locator('dl')).toContainText('KARMA TEST 41');
-  await page.getByRole('link', { name: 'Български', exact: true }).click();
+  await chooseLanguage(page, 'Български');
   await expect(page).toHaveURL(`${app.url}/bg/karma-client/cars/41`);
   await expect(
     page.getByRole('heading', { name: 'Детайли за камиона', exact: true }),
@@ -113,7 +110,7 @@ test('lists Karma trucks through Gateway, preserves the route on Branch switchin
   expect(headers).toHaveLength(2);
   await page.reload();
   await expect(page.getByRole('cell', { name: 'KARMA TEST 41', exact: true })).toBeVisible();
-  await page.getByRole('link', { name: 'Български', exact: true }).click();
+  await chooseLanguage(page, 'Български');
   await expect(page).toHaveURL(`${app.url}/bg/karma-client/cars`);
   await expect(page.getByRole('heading', { name: 'Камиони', exact: true })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'KARMA TEST 41', exact: true })).toBeVisible();

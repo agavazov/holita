@@ -10,8 +10,8 @@
     <holita-kpi-tile [label]="text().kpis.trips" [value]="kpis.trips | holitaNumber" />
     <holita-kpi-tile
       [label]="text().kpis.distance"
-      [value]="kpis.distanceKm | holitaNumber"
-      unit="km"
+      [value]="units.distance(kpis.distanceKm, false, 0)"
+      [unit]="units.distanceUnit()"
     />
     <holita-kpi-tile
       [label]="text().kpis.drivingTime"
@@ -30,8 +30,10 @@
 <holita-filter-builder
   [searchLabel]="text().search"
   [search]="state().search"
+  [searchError]="searchError()"
   [fields]="fields()"
   [conditions]="state().conditions"
+  [maxConditions]="50"
   (searchChange)="changeSearch($event)"
   (conditionsChange)="changeConditions($event)"
 />
@@ -41,7 +43,9 @@
   [heading]="text().table.heading"
   [total]="total()"
   [view]="view()"
-  [errorText]="text().table.errorText"
+  [errorText]="errorText() ?? text().table.errorText"
+  [busy]="busy()"
+  [actionContext]="state()"
   [emptyTitle]="text().table.emptyTitle"
   [emptyDescription]="text().table.emptyDescription"
   [actions]="actions()"
@@ -122,14 +126,14 @@
             <span>→ {{ row.to ?? '—' }}</span>
           </span>
         </td>
-        <td class="app-num">{{ row.distanceKm | holitaNumber }}</td>
+        <td class="app-num">{{ units.distance(row.distanceKm, false, 0) }}</td>
         <td class="app-num">
           {{ (row.durationMin === null ? null : row.durationMin * 60) | holitaDuration }}
         </td>
         <td class="app-num app-col-secondary">
-          {{ row.maxSpeedKph | holitaNumber }}{{ row.maxSpeedKph === null ? '' : ' km/h' }}
+          {{ units.speed(row.maxSpeedKph) }}
         </td>
-        <td class="app-num app-col-secondary">{{ row.fuelUsedL | holitaNumber }}</td>
+        <td class="app-num app-col-secondary">{{ units.volume(row.fuelUsedL, false, 0) }}</td>
         <td>
           @if (row.score !== null) {
             <span class="app-meter-cell">

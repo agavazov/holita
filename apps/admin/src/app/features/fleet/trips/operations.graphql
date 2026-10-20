@@ -1,0 +1,86 @@
+fragment AdminTripDetails on FleetTrip {
+  id
+  branchId
+  vehicleId
+  vehicle {
+    id
+    licensePlate
+  }
+  driverId
+  driver {
+    id
+    firstName
+    lastName
+  }
+  startedAt
+  endedAt
+  durationSeconds
+  startAddress
+  endAddress
+  distanceKm
+  maxSpeedKph
+  fuelUsedL
+  drivingScore
+  inProgress
+  drivingEvents {
+    id
+    occurredAt
+    kind
+    severity
+    details
+  }
+}
+query AdminTrips(
+  $offset: Int!
+  $limit: Int!
+  $search: String
+  $filter: FleetTripFilter
+  $sort: FleetTripSort
+) {
+  fleetTrips(offset: $offset, limit: $limit, search: $search, filter: $filter, sort: $sort) {
+    items {
+      ...AdminTripDetails
+    }
+    total
+    offset
+    limit
+    totalDistanceKm
+  }
+}
+query AdminTrip($id: ID!) {
+  fleetTrip(id: $id) {
+    ...AdminTripDetails
+  }
+}
+query AdminTripSummary {
+  fleetTripSummary {
+    totalTrips
+    distanceKm
+    totalDurationSeconds
+    averageDrivingScore
+    totalManeuverEvents
+  }
+}
+query AdminTripVehicles($offset: Int!, $limit: Int!) {
+  fleetVehicles(offset: $offset, limit: $limit, sort: { field: LICENSE_PLATE, direction: ASC }) {
+    items {
+      id
+      licensePlate
+    }
+    total
+    offset
+    limit
+  }
+}
+query AdminTripDrivers($offset: Int!, $limit: Int!) {
+  fleetDrivers(offset: $offset, limit: $limit, sort: { field: LAST_NAME, direction: ASC }) {
+    items {
+      id
+      firstName
+      lastName
+    }
+    total
+    offset
+    limit
+  }
+}

@@ -1,9 +1,12 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
   effect,
+  type ElementRef,
   inject,
+  Injector,
   input,
   output,
   untracked,
@@ -15,11 +18,12 @@ import { ButtonDirective } from 'primeng/button';
 import { Message } from 'primeng/message';
 import { Tag } from 'primeng/tag';
 import { Textarea } from 'primeng/textarea';
-import { RouteDrawer } from '../../../ui/drawer/route-drawer';
+import { RouteDrawer, type RouteDrawerState } from '../../../ui/drawer/route-drawer';
 import { FormField } from '../../../ui/form-field/form-field';
 import { FormatDateTimePipe, FormatRelativePipe } from '../../../ui/format/format.pipes';
 import { textValidator, validationMessage } from '../../../ui/forms/validators';
 import { lockWhileSaving } from '../../../ui/forms/saving';
+import { uiMessages } from '../../../ui/i18n/messages';
 import { toneSeverity } from '../../../ui/tones';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
 import {
@@ -55,19 +59,29 @@ export type AlertAction = 'acknowledge' | 'resolve' | 'reopen';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AlertDrawer {
-  readonly alert = input.required<AlertRow>();
+  readonly alert = input<AlertRow | null>(null);
   readonly dataAsOf = input.required<string>();
   /** The action being applied, if any. */
   readonly busy = input<AlertAction | null>(null);
   readonly saveError = input<string | null>(null);
+  readonly state = input<RouteDrawerState>('ready');
+  readonly loadError = input<string | null>(null);
+  readonly closeLink = input<readonly unknown[] | null>(null);
+  readonly fieldError = input<string | null>(null);
+  readonly clockError = input<string | null>(null);
   readonly action = output<{ readonly action: AlertAction; readonly remark: string }>();
   readonly openVehicle = output<string>();
   readonly closed = output();
+  readonly retry = output();
+  readonly retryClock = output();
 
   private readonly language = inject(UI_LANGUAGE);
+  private readonly injector = inject(Injector);
   private readonly drawer = viewChild.required(RouteDrawer);
+  private readonly remarkElement = viewChild<ElementRef<HTMLTextAreaElement>>('remarkElement');
   private readonly catalog = computed(() => alertsText(this.language()));
   protected readonly text = computed(() => this.catalog().drawer);
+  protected readonly clockRetry = computed(() => uiMessages[this.language()].retry);
 
   protected readonly remark = new FormControl('', {
     nonNullable: true,
@@ -75,13 +89,20 @@ export class AlertDrawer {
   });
   private readonly events = toSignal(this.remark.events);
 
-  protected readonly subtitle = computed(() => `${this.alert().plate} · ${this.alert().detail}`);
+  protected readonly title = computed(() => this.alert()?.kind ?? this.text().title);
+  protected readonly subtitle = computed(() => {
+    const alert = this.alert();
+    return alert ? `${alert.plate} · ${alert.detail}` : null;
+  });
   protected readonly dirty = computed(() => {
     this.events();
     return this.remark.dirty;
   });
   protected readonly remarkError = computed(() => {
     this.events();
+    if (this.fieldError()) {
+      return this.fieldError();
+    }
     if (!this.remark.invalid || !this.remark.touched) {
       return null;
     }
@@ -96,8 +117,21 @@ export class AlertDrawer {
     effect(() => {
       const alert = this.alert();
       untracked(() => {
-        this.remark.reset(alert.remark);
+        this.remark.reset(alert?.remark ?? '');
       });
+    });
+    effect(() => {
+      if (this.fieldError()) {
+        afterNextRender(
+          () => {
+            const input = this.remarkElement()?.nativeElement;
+            if (input?.isConnected) {
+              input.focus();
+            }
+          },
+          { injector: this.injector },
+        );
+      }
     });
     lockWhileSaving(
       this.remark,
@@ -125,7 +159,7 @@ export class AlertDrawer {
   }
 
   protected apply(action: AlertAction): void {
-    if (this.busy()) {
+    if (this.busy() || this.state() !== 'ready' || !this.alert()) {
       return;
     }
     this.remark.markAsTouched();
@@ -144,6 +178,13 @@ export class AlertDrawer {
     }
   }
 
+  protected close(): void {
+    this.drawer().close();
+  }
+  markSaved(): void {
+    this.remark.markAsPristine();
+  }
+
   canLeave(): Promise<boolean> | boolean {
     return this.busy() ? false : this.drawer().confirmLeave(this.dirty());
   }
@@ -151,7 +192,10 @@ export class AlertDrawer {
   protected async requestVehicle(): Promise<void> {
     if (await this.canLeave()) {
       this.remark.markAsPristine();
-      this.openVehicle.emit(this.alert().vehicleId);
+      const alert = this.alert();
+      if (alert) {
+        this.openVehicle.emit(alert.vehicleId);
+      }
     }
   }
 }

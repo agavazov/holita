@@ -74,6 +74,42 @@ input FleetVehicleFilter {
   hasDriver: Boolean
   hasDevice: Boolean
   hasOpenAlerts: Boolean # B2
+  "At most 50 nonrecursive conditions; every condition and field applies together (AND)."
+  allOf: [FleetVehicleCondition!]
+}
+
+"One Vehicles filter condition; omitted/null fields apply no constraint."
+input FleetVehicleCondition {
+  statuses: [FleetVehicleStatus!]
+  excludedStatuses: [FleetVehicleStatus!]
+  activities: [FleetActivityStatus!]
+  excludedActivities: [FleetActivityStatus!]
+  vehicleTypes: [FleetVehicleType!]
+  excludedVehicleTypes: [FleetVehicleType!]
+  groupIds: [ID!]
+  excludedGroupIds: [ID!]
+  hasGroup: Boolean
+  fuelTypes: [FleetFuelType!]
+  currentDriverIds: [ID!]
+  hasDriver: Boolean
+  hasDevice: Boolean
+  hasOpenAlerts: Boolean
+  makeContains: String
+  makeEquals: String
+  modelYearEquals: Int
+  modelYearAbove: Int
+  modelYearBelow: Int
+  modelYearFrom: Int
+  modelYearTo: Int
+  odometerKmAbove: Float
+  odometerKmBelow: Float
+  odometerKmFrom: Float
+  odometerKmTo: Float
+  "Calendar dates of createdAt in the configured Branch time zone; after/before are exclusive, from/to inclusive."
+  createdOnAfter: Date
+  createdOnBefore: Date
+  createdOnFrom: Date
+  createdOnTo: Date
 }
 
 enum FleetVehicleSortField {
@@ -81,6 +117,31 @@ enum FleetVehicleSortField {
   FLEET_NUMBER
   CREATED_AT
   UPDATED_AT
+  STATUS
+  LAST_REPORTED_AT
+  ODOMETER_KM
+}
+
+"Exact whole-Branch counts, independent of list search, conditions and pagination."
+type FleetVehicleSummary {
+  dataAsOf: DateTime
+  inOperation: Int!
+  inWorkshop: Int!
+  moving: Int!
+  notReporting: Int!
+  openAlerts: Int!
+  lowFuel: Int!
+}
+
+type FleetVehicleActionFailure {
+  id: ID!
+  code: String!
+  message: String!
+}
+
+type FleetVehicleActionResult {
+  succeededIds: [ID!]!
+  failures: [FleetVehicleActionFailure!]!
 }
 
 input FleetVehicleSort {
@@ -131,6 +192,7 @@ type Query {
     sort: FleetVehicleSort
   ): FleetVehiclePage!
   fleetVehicle(id: ID!): FleetVehicle!
+  fleetVehicleSummary: FleetVehicleSummary!
 }
 
 type Mutation {
@@ -139,4 +201,7 @@ type Mutation {
   "Sets status INACTIVE and clears the current driver; idempotent."
   deactivateFleetVehicle(id: ID!): FleetVehicle!
   deleteFleetVehicle(id: ID!): FleetVehicle!
+  "One or many IDs (1–100 unique); each submitted record settles with an independent result."
+  deleteFleetVehicles(ids: [ID!]!): FleetVehicleActionResult!
+  deactivateFleetVehicles(ids: [ID!]!): FleetVehicleActionResult!
 }

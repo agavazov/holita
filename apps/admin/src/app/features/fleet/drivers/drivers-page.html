@@ -1,0 +1,27 @@
+@if (summaryError()) {
+  <p-message severity="warn">
+    {{ summaryFailure() }}
+    <button pButton type="button" severity="secondary" (click)="refreshSummary()">
+      {{ text().scorecard.retry }}
+    </button>
+  </p-message>
+}
+<holita-drivers-view
+  [branchName]="branch().name"
+  [businessDate]="businessDate()"
+  [rows]="rows()"
+  [total]="total()"
+  [view]="view()"
+  [state]="state()"
+  [kpis]="kpis()"
+  [selection]="selected()"
+  [busy]="acting() || loading()"
+  [searchError]="searchError()"
+  [errorText]="failure()"
+  (stateChange)="changeState($event)"
+  (create)="open(null)"
+  (action)="run($event)"
+  (selectionChange)="selected.set($event)"
+  (retry)="refresh()"
+/>
+<router-outlet [routerOutletData]="drawerHost" />

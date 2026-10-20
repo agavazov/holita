@@ -4,7 +4,7 @@ import { By } from '@angular/platform-browser';
 import { Login } from '../features/auth/login';
 import { inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { Router, provideRouter } from '@angular/router';
+import { Router, RouteReuseStrategy, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { provideApollo } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
@@ -15,15 +15,53 @@ import { graphqlOptions } from '../core/graphql/graphql-options';
 import { AdminShell } from '../layout/admin-shell';
 import { UI_LANGUAGE } from '../ui/ui-language';
 import { AdminWorkspace } from './admin-workspace';
+import { FleetRouteReuseStrategy } from '../features/fleet/fleet-route-reuse';
 
 const tenantA = { id: '01000000-0000-4000-8000-000000000001', name: 'RentalSofia' };
 const tenantB = { id: '01000000-0000-4000-8000-000000000002', name: 'Other tenant' };
 const branch = { id: '10000000-0000-4000-8000-000000000001', name: 'Branch' };
+const preferences = {
+  __typename: 'FleetSettings',
+  timeZone: 'Europe/Sofia',
+  distanceUnit: 'KM',
+  volumeUnit: 'LITRE',
+  lowFuelPct: 12,
+  notReportingHours: 48,
+  speedLimitKph: 90,
+};
 function operation(request: HttpRequest<unknown>, name: string): boolean {
   const body: unknown = request.body;
   return (
     !!body && typeof body === 'object' && 'operationName' in body && body.operationName === name
   );
+}
+function flushVehicleContext(http: HttpTestingController): void {
+  const responses = {
+    AdminDeviceSummary: {
+      fleetDeviceSummary: { dataAsOf: null, online: 0, offline: 0, inStock: 0 },
+    },
+    AdminDeviceVehicles: { fleetVehicles: { items: [], total: 0, offset: 0, limit: 100 } },
+    AdminVehicleSummary: {
+      fleetVehicleSummary: {
+        dataAsOf: null,
+        inOperation: 0,
+        inWorkshop: 0,
+        moving: 0,
+        notReporting: 0,
+        openAlerts: 0,
+        lowFuel: 0,
+      },
+    },
+    AdminVehicleGroups: { fleetVehicleGroups: { items: [], total: 0, offset: 0, limit: 100 } },
+    AdminVehicleDrivers: { fleetDrivers: { items: [], total: 0, offset: 0, limit: 100 } },
+  };
+  for (const [name, data] of Object.entries(responses)) {
+    for (const request of http.match((candidate) => operation(candidate, name))) {
+      if (!request.cancelled) {
+        request.flush({ data });
+      }
+    }
+  }
 }
 function loginScreen(harness: RouterTestingHarness): Login {
   const screen: unknown = harness.routeDebugElement?.query(By.directive(Login)).componentInstance;
@@ -40,6 +78,7 @@ describe('Demo tenant login workspace', () => {
     TestBed.configureTestingModule({
       providers: [
         provideRouter(routes),
+        { provide: RouteReuseStrategy, useClass: FleetRouteReuseStrategy },
         provideHttpClient(),
         provideHttpClientTesting(),
         provideApollo(() => graphqlOptions(inject(HttpLink), '/graphql')),
@@ -52,6 +91,14 @@ describe('Demo tenant login workspace', () => {
     session.logout();
     http.verify({ ignoreCancelled: true });
   });
+  async function loadPreferences(harness: RouterTestingHarness, token: string, language = 'en') {
+    const request = http.expectOne((candidate) => operation(candidate, 'AdminFleetPreferences'));
+    expect(request.request.headers.get('authorization')).toBe(`Bearer ${token}`);
+    expect(request.request.headers.get('x-branch-id')).toBe(branch.id);
+    expect(request.request.headers.get('Accept-Language')).toBe(language);
+    request.flush({ data: { fleetSettings: preferences } });
+    await harness.fixture.whenStable();
+  }
   it('gates a bookmarked business route until tenant login and resets clients during A → B → A', async () => {
     const harness = await RouterTestingHarness.create(`/en/${branch.id}/fleet/vehicles`);
     const discovery = http.expectOne((r) => operation(r, 'AdminTenants'));
@@ -61,7 +108,12 @@ describe('Demo tenant login workspace', () => {
     expect(harness.routeNativeElement?.textContent).toContain('Demo sign in');
     expect(harness.routeNativeElement?.querySelector('holita-admin-shell')).toBeNull();
     expect(loginScreen(harness).branchControl.disabled).toBe(true);
-    http.expectNone((r) => operation(r, 'AdminBranches') || operation(r, 'AdminVehicles'));
+    http.expectNone(
+      (r) =>
+        operation(r, 'AdminBranches') ||
+        operation(r, 'AdminVehicles') ||
+        operation(r, 'AdminFleetPreferences'),
+    );
     const workspace: unknown = harness.routeDebugElement?.componentInstance;
     if (!(workspace instanceof AdminWorkspace)) {
       throw new Error('Missing AdminWorkspace');
@@ -83,6 +135,16 @@ describe('Demo tenant login workspace', () => {
       await harness.fixture.whenStable();
       http.expectOne((r) => operation(r, 'AdminBranches')).flush({ data: { branches: [branch] } });
       await harness.fixture.whenStable();
+      await loadPreferences(harness, token);
+      expect(TestBed.inject(Router).url).toBe(`/en/${branch.id}/fleet/overview`);
+      expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toBe('Overview');
+      const overview = http.expectOne((r) => operation(r, 'AdminFleetOverview'));
+      expect(overview.request.headers.get('authorization')).toBe(`Bearer ${token}`);
+      expect(overview.request.headers.get('x-branch-id')).toBe(branch.id);
+      await harness.navigateByUrl(`/en/${branch.id}/fleet/vehicles`);
+      expect(overview.cancelled).toBe(true);
+      await loadPreferences(harness, token);
+      flushVehicleContext(http);
     }
     await login(tenantA, 'token-a');
     const retiredA = http.expectOne((r) => operation(r, 'AdminVehicles'));
@@ -112,24 +174,51 @@ describe('Demo tenant login workspace', () => {
     expect(fresh.request.headers.get('authorization')).toBe('Bearer fresh-token-a');
     fresh.flush({ data: { fleetVehicles: { items: [], total: 0, offset: 0, limit: 20 } } });
     await harness.fixture.whenStable();
-  });
+  }, 15_000);
   it('composes the shell navigation, page context, title, UI language and PrimeNG texts', async () => {
     session.start({ token: 'token-a', tenant: tenantA });
     const harness = await RouterTestingHarness.create(`/bg/${branch.id}/fleet/devices`);
     http.expectOne((r) => operation(r, 'AdminBranches')).flush({ data: { branches: [branch] } });
     await harness.fixture.whenStable();
-    http.match((r) => operation(r, 'AdminDevices'));
+    await loadPreferences(harness, 'token-a', 'bg');
+    http
+      .expectOne((r) => operation(r, 'AdminDevices'))
+      .flush({ data: { fleetDevices: { items: [], total: 0, offset: 0, limit: 20 } } });
+    flushVehicleContext(http);
+    await harness.fixture.whenStable();
     const shell: unknown = harness.routeDebugElement?.query(
       By.directive(AdminShell),
     ).componentInstance;
     if (!(shell instanceof AdminShell)) {
       throw new Error('Missing shell.');
     }
-    expect(shell.navigation().map((group) => group.id)).toEqual(['fleet', 'karma-client']);
-    expect(shell.navigation()[0]?.items.map((item) => item.link.join('/'))).toEqual([
+    expect(shell.navigation().map((group) => group.id)).toEqual([
+      'monitoring',
+      'fleet',
+      'service',
+      'settings',
+      'karma-client',
+    ]);
+    expect(
+      shell
+        .navigation()
+        .find((group) => group.id === 'settings')
+        ?.items.map((item) => item.link.join('/')),
+    ).toEqual([
+      `//bg/${branch.id}/fleet/settings/groups`,
+      `//bg/${branch.id}/fleet/settings/general`,
+    ]);
+    expect(
+      shell
+        .navigation()
+        .find((group) => group.id === 'fleet')
+        ?.items.map((item) => item.link.join('/')),
+    ).toEqual([
       `//bg/${branch.id}/fleet/vehicles`,
+      `//bg/${branch.id}/fleet/drivers`,
       `//bg/${branch.id}/fleet/devices`,
     ]);
+    expect(shell.notificationsUnavailable()).toBe(true);
     expect(shell.context()).toMatchObject({ group: 'Автопарк', page: 'Устройства', record: null });
     expect(document.title).toBe('Устройства · holita');
     expect(harness.routeDebugElement?.injector.get(UI_LANGUAGE)()).toBe('bg');
@@ -140,12 +229,15 @@ describe('Demo tenant login workspace', () => {
     await harness.navigateByUrl(`/en/karma-client/projects`);
     http.expectOne((r) => operation(r, 'AdminBranches')).flush({ data: { branches: [branch] } });
     await harness.fixture.whenStable();
-    http.match(() => true);
+    http
+      .expectOne((r) => operation(r, 'AdminKarmaProjects'))
+      .flush({ data: { karmaProjects: [] } });
+    await harness.fixture.whenStable();
     expect(shell.context()).toMatchObject({ group: 'Karma Client', page: 'Projects' });
     expect(document.title).toBe('Projects · holita');
     expect(primeNG.translation.monthNames?.[0]).toBe('January');
     expect(harness.routeDebugElement?.injector.get(UI_LANGUAGE)()).toBe('en');
-  });
+  }, 15_000);
   it('titles the login screen', async () => {
     const harness = await RouterTestingHarness.create('/bg');
     http.expectOne((r) => operation(r, 'AdminTenants')).flush({ data: { tenants: [tenantA] } });
@@ -232,7 +324,7 @@ describe('Demo tenant login workspace', () => {
     expect(TestBed.inject(DemoSession).current()).toBeNull();
     http.expectNone((r) => operation(r, 'AdminVehicles'));
   });
-  it('opens the login-selected Branch in Vehicles instead of a bookmarked editor from another Branch', async () => {
+  it('opens the login-selected Branch in Overview instead of a bookmarked editor from another Branch', async () => {
     const harness = await RouterTestingHarness.create(
       '/en/10000000-0000-4000-8000-000000000002/fleet/devices/new?search=old',
     );
@@ -257,10 +349,13 @@ describe('Demo tenant login workspace', () => {
     await harness.fixture.whenStable();
     http.expectOne((r) => operation(r, 'AdminBranches')).flush({ data: { branches: [branch] } });
     await harness.fixture.whenStable();
-    expect(TestBed.inject(Router).url).toBe(`/en/${branch.id}/fleet/vehicles`);
-    const read = http.expectOne((r) => operation(r, 'AdminVehicles'));
+    expect(TestBed.inject(Router).url).toBe(`/en/${branch.id}/fleet/overview`);
+    await loadPreferences(harness, 'chosen-a');
+    const read = http.expectOne((r) => operation(r, 'AdminFleetOverview'));
     expect(read.request.headers.get('x-branch-id')).toBe(branch.id);
-    read.flush({ data: { fleetVehicles: { items: [], total: 0, offset: 0, limit: 20 } } });
+    expect(read.request.headers.get('authorization')).toBe('Bearer chosen-a');
+    expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toBe('Overview');
+    http.expectNone((r) => operation(r, 'AdminVehicles'));
     http.expectNone((r) => operation(r, 'AdminDevices'));
     expect(session.branchId()).toBe(branch.id);
   });

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { randomUUID } from 'node:crypto';
+import type { FleetTripDrivingEvent } from '../../generated/graphql/types.js';
 import { EventsService } from '../events/events.service.js';
 import { TelemetryService } from '../telemetry/telemetry.service.js';
 import { type TripRow, TripsRepository } from './trips.repository.js';
@@ -35,10 +36,12 @@ describe('Trip derived values', () => {
     expect(tripDurationSeconds({ startedAt, endedAt: null })).toBeNull();
   });
 
-  it('marks open trips in progress only within 24 h before the data clock', () => {
+  it('marks open trips in progress only from 24 h before up to the data clock', () => {
     const started = (offset: number) => new Date(asOf.getTime() + offset);
     expect(tripInProgress({ startedAt: started(-24 * HOUR), endedAt: null }, asOf)).toBe(true);
     expect(tripInProgress({ startedAt: started(-24 * HOUR - 1), endedAt: null }, asOf)).toBe(false);
+    expect(tripInProgress({ startedAt: started(0), endedAt: null }, asOf)).toBe(true);
+    expect(tripInProgress({ startedAt: started(1), endedAt: null }, asOf)).toBe(false);
     expect(tripInProgress({ startedAt: started(-HOUR), endedAt: asOf }, asOf)).toBe(false);
     expect(tripInProgress({ startedAt: started(-HOUR), endedAt: null }, null)).toBe(false);
   });
@@ -47,8 +50,9 @@ describe('Trip derived values', () => {
 describe('Trips list contract', () => {
   const list = jest.fn<TripsRepository['list']>();
   const find = jest.fn<TripsRepository['find']>();
+  const summary = jest.fn<TripsRepository['summary']>();
   const telemetryAsOf = jest.fn<TelemetryService['asOf']>();
-  const maneuverCountsByTrip = jest.fn<EventsService['maneuverCountsByTrip']>();
+  const drivingEventsByTrip = jest.fn<EventsService['drivingEventsByTrip']>();
   const context = {
     requestId: randomUUID(),
     tenantId: '01000000-0000-4000-8000-000000000001',
@@ -102,22 +106,36 @@ describe('Trips list contract', () => {
     const module = await Test.createTestingModule({
       providers: [
         TripsService,
-        { provide: TripsRepository, useValue: { list, find } },
+        { provide: TripsRepository, useValue: { list, find, summary } },
         { provide: TelemetryService, useValue: { asOf: telemetryAsOf } },
-        { provide: EventsService, useValue: { maneuverCountsByTrip } },
+        { provide: EventsService, useValue: { drivingEventsByTrip } },
       ],
     }).compile();
     service = module.get(TripsService);
     telemetryAsOf.mockResolvedValue(asOf);
-    maneuverCountsByTrip.mockResolvedValue(new Map());
-    list.mockResolvedValue({ items: [], total: 0, totalDistanceKm: 0 });
+    drivingEventsByTrip.mockResolvedValue(new Map());
+    list.mockResolvedValue({ items: [], total: 0, totalDistanceKm: 0, dataAsOf: null });
   });
 
   it('maps every filter, the default sort and the page aggregate', async () => {
     const open = row(),
       ended = row({ endedAt: asOf, distanceKm: 12.5 });
-    list.mockResolvedValue({ items: [open, ended], total: 7, totalDistanceKm: 812.25 });
-    maneuverCountsByTrip.mockResolvedValue(new Map([[ended.id, 4]]));
+    const events: FleetTripDrivingEvent[] = Array.from({ length: 4 }, (_, index) => ({
+      id: randomUUID(),
+      occurredAt: new Date(asOf.getTime() - (4 - index) * 1000),
+      kind: 'HARSH_BRAKING',
+      severity: 'WARNING',
+      details: `Maneuver ${String(index + 1)}`,
+    }));
+    list.mockResolvedValue({
+      items: [
+        { ...open, drivingEvents: [] },
+        { ...ended, drivingEvents: events },
+      ],
+      total: 7,
+      totalDistanceKm: 812.25,
+      dataAsOf: asOf,
+    });
     const page = await service.list(context, {
       search: ' cb  иван ',
       filter: {
@@ -148,19 +166,109 @@ describe('Trips list contract', () => {
       },
       { field: 'STARTED_AT', direction: 'DESC' },
     );
-    expect(maneuverCountsByTrip).toHaveBeenCalledWith(scope, [
-      { vehicleId, tripId: open.id },
-      { vehicleId, tripId: ended.id },
-    ]);
-    expect(telemetryAsOf).toHaveBeenCalledTimes(1);
+    expect(drivingEventsByTrip).not.toHaveBeenCalled();
+    expect(telemetryAsOf).not.toHaveBeenCalled();
     expect(page).toMatchObject({
       total: 7,
       totalDistanceKm: 812.25,
       items: [
-        { id: open.id, inProgress: true, maneuverCount: 0, durationSeconds: null },
-        { id: ended.id, inProgress: false, maneuverCount: 4, durationSeconds: 7200 },
+        {
+          id: open.id,
+          inProgress: true,
+          maneuverCount: 0,
+          durationSeconds: null,
+          drivingEvents: [],
+        },
+        {
+          id: ended.id,
+          inProgress: false,
+          maneuverCount: 4,
+          durationSeconds: 7200,
+          drivingEvents: events,
+        },
       ],
     });
+  });
+
+  it('keeps captured list events and clock when later reads would disagree with hasEvents', async () => {
+    const trip = row();
+    list.mockResolvedValue({
+      items: [{ ...trip, drivingEvents: [] }],
+      total: 1,
+      totalDistanceKm: 0,
+      dataAsOf: asOf,
+    });
+    telemetryAsOf.mockResolvedValue(new Date(asOf.getTime() + 48 * HOUR));
+    const laterEvent: FleetTripDrivingEvent = {
+      id: randomUUID(),
+      occurredAt: asOf,
+      kind: 'HARSH_BRAKING',
+      severity: 'INFO',
+      details: null,
+    };
+    drivingEventsByTrip.mockResolvedValue(new Map([[trip.id, [laterEvent]]]));
+    const page = await service.list(context, { filter: { allOf: [{ hasEvents: false }] } });
+    expect(page.items).toMatchObject([
+      { id: trip.id, inProgress: true, maneuverCount: 0, drivingEvents: [] },
+    ]);
+    expect(page.total).toBe(1);
+    expect(telemetryAsOf).not.toHaveBeenCalled();
+    expect(drivingEventsByTrip).not.toHaveBeenCalled();
+  });
+
+  it('preserves independent conditions and delegates duration sorting before pagination', async () => {
+    await service.list(context, {
+      offset: 3,
+      limit: 2,
+      filter: {
+        allOf: [
+          { vehicleIds: [vehicleId.toUpperCase()] },
+          { excludedVehicleIds: [vehicleId], excludedDriverIds: [driverId] },
+          { hasDriver: false, hasEvents: false, distanceKmFrom: 0, distanceKmTo: 0 },
+          { drivingScoreAbove: 0, drivingScoreBelow: 100 },
+        ],
+      },
+      sort: { field: 'DURATION_SECONDS', direction: 'ASC' },
+    });
+    expect(list).toHaveBeenCalledWith(
+      scope,
+      { offset: 3, limit: 2 },
+      expect.objectContaining({
+        allOf: [
+          expect.objectContaining({ vehicleIds: [vehicleId] }),
+          expect.objectContaining({
+            excludedVehicleIds: [vehicleId],
+            excludedDriverIds: [driverId],
+          }),
+          expect.objectContaining({
+            hasDriver: false,
+            hasEvents: false,
+            distanceKmFrom: 0,
+            distanceKmTo: 0,
+          }),
+          expect.objectContaining({ drivingScoreAbove: 0, drivingScoreBelow: 100 }),
+        ],
+      }),
+      { field: 'DURATION_SECONDS', direction: 'ASC' },
+    );
+    expect(telemetryAsOf).not.toHaveBeenCalled();
+    expect(drivingEventsByTrip).not.toHaveBeenCalled();
+  });
+
+  it('reads whole-Branch summary without fetching a filtered list or per-trip projections', async () => {
+    const totals = {
+      totalTrips: 5,
+      distanceKm: 150.5,
+      totalDurationSeconds: 14_400,
+      averageDrivingScore: 71.75,
+      totalManeuverEvents: 2,
+    };
+    summary.mockResolvedValue(totals);
+    await expect(service.summary(context)).resolves.toEqual(totals);
+    expect(summary).toHaveBeenCalledWith(scope);
+    expect(list).not.toHaveBeenCalled();
+    expect(telemetryAsOf).not.toHaveBeenCalled();
+    expect(drivingEventsByTrip).not.toHaveBeenCalled();
   });
 
   it('rejects invalid filters and sorts on their top-level paths before reading', async () => {

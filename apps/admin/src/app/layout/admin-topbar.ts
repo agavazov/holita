@@ -69,6 +69,7 @@ export class AdminTopbar {
   readonly account = input<ShellAccount | null>(null);
   /** Null hides the bell. */
   readonly notifications = input<readonly ShellNotification[] | null>(null);
+  readonly notificationsUnavailable = input(false);
   readonly notificationOpen = output<string>();
   readonly notificationsRead = output();
   readonly homeLink = input.required<readonly string[]>();
@@ -120,11 +121,13 @@ export class AdminTopbar {
     () => this.notifications()?.filter((notification) => notification.unread).length ?? 0,
   );
   protected readonly bellLabel = computed(() =>
-    this.unreadCount()
-      ? interpolate(this.text().unreadNotifications, {
-          count: formatNumber(this.unreadCount(), this.language()),
-        })
-      : this.text().notifications,
+    this.notificationsUnavailable()
+      ? this.text().notificationsDemo
+      : this.unreadCount()
+        ? interpolate(this.text().unreadNotifications, {
+            count: formatNumber(this.unreadCount(), this.language()),
+          })
+        : this.text().notifications,
   );
   protected readonly notificationOptions = computed<readonly MenuOption[]>(() => [
     ...(this.notifications() ?? []).map((notification) => ({
@@ -142,7 +145,14 @@ export class AdminTopbar {
   ]);
   /** An empty bell menu states it in its heading, which also names the menu. */
   protected readonly notificationHeader = computed(() =>
-    this.notifications()?.length ? null : { title: this.text().noNotifications },
+    this.notificationsUnavailable()
+      ? {
+          title: this.text().notificationsDemo,
+          detail: this.text().notificationDeliveryUnavailable,
+        }
+      : this.notifications()?.length
+        ? null
+        : { title: this.text().noNotifications },
   );
   protected readonly accountName = computed(
     () => this.account()?.name ?? this.tenantName() ?? 'holita',

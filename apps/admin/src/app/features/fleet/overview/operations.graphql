@@ -1,0 +1,85 @@
+query AdminFleetOverview {
+  fleetOverview {
+    dataAsOf
+    businessDate
+    activeVehicles
+    movingVehicles
+    notReportingVehicles
+    distanceTodayKm
+    openCriticalAlerts
+    overdueService
+    dailyDistance {
+      date
+      distanceKm
+    }
+    activityByGroup {
+      group {
+        id
+        name
+        colorToken
+      }
+      total
+      moving
+      idle
+      parked
+      notReporting
+      asset
+      noDevice
+    }
+  }
+  critical: fleetEvents(
+    limit: 3
+    filter: { actionable: true, alertStatuses: [OPEN], severities: [CRITICAL] }
+  ) {
+    items {
+      id
+      kind
+      details
+      vehicle {
+        licensePlate
+      }
+    }
+  }
+  overdue: fleetServiceTasks(
+    limit: 2
+    filter: { urgencies: [OVERDUE], allOf: [{ vehicleStatuses: [ACTIVE, IN_WORKSHOP] }] }
+  ) {
+    items {
+      id
+      title
+      serviceType
+      dueOn
+      vehicle {
+        licensePlate
+      }
+    }
+  }
+  documents: fleetDrivers(
+    limit: 2
+    filter: { documentsExpireWithinDays: 0 }
+    sort: { field: LICENSE_EXPIRES_ON, direction: ASC }
+  ) {
+    items {
+      id
+      firstName
+      lastName
+      documentStatus
+    }
+  }
+  fleetDeviceSummary {
+    offline
+  }
+  fleetTrips(limit: 5, sort: { field: STARTED_AT, direction: DESC }) {
+    items {
+      id
+      vehicleId
+      vehicle {
+        licensePlate
+      }
+      startedAt
+      startAddress
+      endAddress
+      distanceKm
+    }
+  }
+}

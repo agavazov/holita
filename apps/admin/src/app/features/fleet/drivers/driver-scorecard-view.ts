@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { RouterLink, type Params } from '@angular/router';
 import { ButtonDirective } from 'primeng/button';
 import { Message } from 'primeng/message';
 import {
@@ -15,6 +15,7 @@ import { KpiStrip } from '../../../ui/kpi/kpi-strip';
 import { KpiTile } from '../../../ui/kpi/kpi-tile';
 import { PageHeader } from '../../../ui/page-header/page-header';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
+import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { driversText } from './i18n/messages';
 
 export const scorecardPeriods = [7, 30, 90] as const;
@@ -82,11 +83,29 @@ export class DriverScorecardView {
   readonly scorecard = input<DriverScorecard | null>(null);
   readonly period = input<ScorecardPeriod>(30);
   readonly backLink = input.required<readonly string[]>();
+  readonly backQueryParams = input<Params | null>(null);
+  readonly backFragment = input<string | null>(null);
+  readonly errorText = input<string | null>(null);
   readonly periodChange = output<ScorecardPeriod>();
   readonly retry = output();
 
+  protected readonly units = injectFleetFormat();
   private readonly language = inject(UI_LANGUAGE);
-  protected readonly text = computed(() => driversText(this.language()).scorecard);
+  protected readonly text = computed(() => {
+    const text = driversText(this.language()).scorecard;
+    return {
+      ...text,
+      maneuversPer100Km: interpolate(text.maneuversPer100Km, { unit: this.units.distanceUnit() }),
+      missingDescription: interpolate(text.missingDescription, { unit: this.units.distanceUnit() }),
+      weightedDescription: interpolate(text.weightedDescription, {
+        minimumDistance: this.units.distance(0.5, true, 6),
+      }),
+    };
+  });
+  protected readonly maneuverRate = computed(() => {
+    const rate = this.scorecard()?.maneuversPer100Km;
+    return rate === null || rate === undefined ? null : rate / (this.units.distanceValue(1) ?? 1);
+  });
   protected readonly periods = scorecardPeriods;
   protected readonly description = computed(() => {
     const employeeNo = this.scorecard()?.employeeNo;

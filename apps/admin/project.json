@@ -50,8 +50,9 @@
       "dependsOn": ["graphql-generate"],
       "cache": false,
       "options": {
-        "command": "npm run test-storybook",
-        "cwd": "apps/admin"
+        "command": "npm run test-storybook --",
+        "cwd": "apps/admin",
+        "forwardAllArgs": true
       }
     },
     "test-smoke": {

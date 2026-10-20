@@ -6,6 +6,7 @@ import { AppModule } from '../src/app.module.js';
 import { issueDemoToken } from '../src/auth/demo-auth.js';
 import { CoreClient } from '../src/integrations/core/core.client.js';
 import { PrismaService } from '../src/database/prisma.service.js';
+import { DevicesRepository } from '../src/modules/devices/devices.repository.js';
 import { createTestDatabase } from './test-database.js';
 
 const tenantId = '01000000-0000-4000-8000-000000000001';
@@ -202,7 +203,7 @@ describe('Device GraphQL with PostgreSQL', () => {
       errors: [{ extensions: { code: 'NOT_FOUND' } }],
     });
   });
-  it('requires scope, valid IMEI and a mandatory truck without writing', async () => {
+  it('requires scope, valid IMEI and valid optional Vehicle references without writing', async () => {
     const branchId = randomUUID();
     const vehicle = await truck(branchId);
     expect(
@@ -212,8 +213,6 @@ describe('Device GraphQL with PostgreSQL', () => {
       { imei: '12345678901234', vehicleId: vehicle.id },
       { imei: '12345678901234A', vehicleId: vehicle.id },
       { imei: '1234567890123456', vehicleId: vehicle.id },
-      { imei: '123456789012345' },
-      { imei: '123456789012345', vehicleId: null },
       { imei: '123456789012345', vehicleId: randomUUID() },
       { imei: '123456789012345', vehicleId: vehicle.id, branchId },
     ]) {
@@ -471,6 +470,312 @@ describe('Device GraphQL with PostgreSQL', () => {
         otherTenant,
       ),
     ).toMatchObject({ errors: [{ extensions: { code: 'NOT_FOUND' } }] });
+  });
+
+  it('registers stock, assigns and releases it while retaining scope, IMEI and restrictive references', async () => {
+    const branchId = randomUUID();
+    const vehicle = await truck(branchId);
+    for (const input of [
+      { imei: '000000000000001' },
+      { imei: '000000000000002', vehicleId: null },
+    ]) {
+      expect(await query(create, { input }, branchId)).toMatchObject({
+        data: {
+          createFleetDevice: {
+            imei: input.imei,
+            vehicleId: null,
+            vehicle: null,
+          },
+        },
+      });
+    }
+    const device = await database.client.device.findFirstOrThrow({
+      where: { tenantId, branchId, imei: '000000000000001' },
+    });
+    expect(
+      await query(update, { id: device.id, input: { vehicleId: vehicle.id } }, branchId),
+    ).toMatchObject({
+      data: {
+        updateFleetDevice: {
+          vehicleId: vehicle.id,
+          vehicle: { licensePlate: vehicle.licensePlate },
+        },
+      },
+    });
+    await expect(
+      database.client.vehicle.delete({ where: { id: vehicle.id, tenantId, branchId } }),
+    ).rejects.toMatchObject({ code: 'P2003' });
+    expect(
+      await query(update, { id: device.id, input: { vehicleId: null } }, branchId),
+    ).toMatchObject({
+      data: { updateFleetDevice: { vehicleId: null, vehicle: null } },
+    });
+    await database.client.vehicle.delete({ where: { id: vehicle.id, tenantId, branchId } });
+    const source =
+      'query($id:ID!){fleetDevice(id:$id){imei vehicleId vehicle{id} model status lastReportedAt}}';
+    expect(await query(source, { id: device.id }, branchId)).toEqual({
+      data: {
+        fleetDevice: {
+          imei: device.imei,
+          vehicleId: null,
+          vehicle: null,
+          model: null,
+          status: 'IN_STOCK',
+          lastReportedAt: null,
+        },
+      },
+    });
+  });
+
+  it('filters and sorts current reporting before paging, counts the Branch exactly and settles batch deletions', async () => {
+    const branchId = randomUUID();
+    const alpha = await truck(branchId, 'ALPHA'),
+      beta = await truck(branchId, 'BETA');
+    const asOf = new Date('2026-10-20T10:00:00.000Z');
+    const boundary = new Date(asOf.getTime() - 48 * 3_600_000);
+    const rows = await Promise.all(
+      (
+        [
+          {
+            imei: '000000000000011',
+            vehicleId: alpha.id,
+            model: 'STARLINK_TRACKER',
+            firmwareVersion: '1_2',
+          },
+          {
+            imei: '000000000000012',
+            vehicleId: beta.id,
+            model: 'STARLINK_SCOUT',
+            firmwareVersion: '1X2',
+          },
+          { imei: '000000000000013', vehicleId: alpha.id, model: 'OTHER', firmwareVersion: null },
+          { imei: '000000000000014', vehicleId: alpha.id, model: null, firmwareVersion: null },
+          { imei: '000000000000015', vehicleId: null, model: null, firmwareVersion: null },
+        ] as const
+      ).map((data) => database.client.device.create({ data: { tenantId, branchId, ...data } })),
+    );
+    const [online, edge, old, silent, stock] = rows;
+    if (!online || !edge || !old || !silent || !stock) {
+      throw new Error('Missing device fixtures.');
+    }
+    for (const [device, vehicleId, recordedAt] of [
+      [online, alpha.id, asOf],
+      [edge, beta.id, boundary],
+      [old, alpha.id, new Date(boundary.getTime() - 1)],
+      [stock, alpha.id, asOf],
+    ] as const) {
+      await database.client.vehicleStatusSample.create({
+        data: {
+          tenantId,
+          branchId,
+          vehicleId,
+          deviceImei: device.imei,
+          source: 'DEMO',
+          recordedAt,
+          receivedAt: recordedAt,
+        },
+      });
+    }
+    const foreignBranch = randomUUID();
+    const foreignVehicle = await truck(foreignBranch);
+    const foreignDevice = await database.client.device.create({
+      data: {
+        tenantId,
+        branchId: foreignBranch,
+        vehicleId: foreignVehicle.id,
+        imei: online.imei,
+      },
+    });
+    for (const [scopeTenant, scopeBranch] of [
+      [tenantId, foreignBranch],
+      [randomUUID(), branchId],
+    ] as const) {
+      const other = await database.client.vehicle.create({
+        data: { tenantId: scopeTenant, branchId: scopeBranch, licensePlate: 'FOREIGN CLOCK' },
+      });
+      await database.client.vehicleStatusSample.create({
+        data: {
+          tenantId: scopeTenant,
+          branchId: scopeBranch,
+          vehicleId: other.id,
+          deviceImei: '000000000000099',
+          source: 'DEMO',
+          recordedAt: new Date(asOf.getTime() + 100 * 3_600_000),
+          receivedAt: asOf,
+        },
+      });
+    }
+    const list = `query($filter:FleetDeviceFilter,$sort:FleetDeviceSort,$offset:Int!=0,$limit:Int!=20,$search:String){
+      fleetDevices(filter:$filter,sort:$sort,offset:$offset,limit:$limit,search:$search){items{id imei status lastReportedAt vehicleId}total}}`;
+    expect(
+      await query(
+        list,
+        {
+          filter: { allOf: [{ statuses: ['ONLINE'] }] },
+          sort: { field: 'LAST_REPORTED_AT', direction: 'DESC' },
+          offset: 1,
+          limit: 1,
+        },
+        branchId,
+      ),
+    ).toEqual({
+      data: {
+        fleetDevices: {
+          total: 2,
+          items: [
+            {
+              id: edge.id,
+              imei: edge.imei,
+              status: 'ONLINE',
+              lastReportedAt: boundary.toISOString(),
+              vehicleId: beta.id,
+            },
+          ],
+        },
+      },
+    });
+    expect(
+      await query(
+        list,
+        { sort: { field: 'LAST_REPORTED_AT', direction: 'ASC' }, limit: 1 },
+        branchId,
+      ),
+    ).toMatchObject({
+      data: { fleetDevices: { total: 5, items: [{ id: old.id, status: 'OFFLINE' }] } },
+    });
+    expect(
+      await query(
+        list,
+        { sort: { field: 'VEHICLE_LICENSE_PLATE', direction: 'DESC' }, limit: 1 },
+        branchId,
+      ),
+    ).toMatchObject({ data: { fleetDevices: { items: [{ id: edge.id }] } } });
+    expect(
+      await query(list, { sort: { field: 'STATUS', direction: 'ASC' }, limit: 1 }, branchId),
+    ).toMatchObject({
+      data: {
+        fleetDevices: { items: [{ id: stock.id, status: 'IN_STOCK', lastReportedAt: null }] },
+      },
+    });
+    for (const [allOf, total] of [
+      [[{ hasVehicle: false }], 1],
+      [[{ excludedModels: ['STARLINK_TRACKER'] }], 4],
+      [[{ firmwareVersionStartsWith: '1_' }], 1],
+      [[{ firmwareVersionStartsWith: '%' }], 0],
+      [[{ firmwareVersionNotEquals: '1_2' }], 4],
+      [[{ models: ['STARLINK_TRACKER'] }, { models: ['STARLINK_SCOUT'] }], 0],
+      [[{ statuses: ['ONLINE'] }, { excludedStatuses: ['ONLINE'] }], 0],
+    ] satisfies [Record<string, unknown>[], number][]) {
+      expect(await query(list, { filter: { allOf } }, branchId)).toMatchObject({
+        data: { fleetDevices: { total } },
+      });
+    }
+    const summary = '{fleetDeviceSummary{dataAsOf online offline inStock}}';
+    expect(await query(summary, {}, branchId)).toEqual({
+      data: {
+        fleetDeviceSummary: { dataAsOf: asOf.toISOString(), online: 2, offline: 2, inStock: 1 },
+      },
+    });
+    expect(await query(summary, {}, randomUUID())).toEqual({
+      data: { fleetDeviceSummary: { dataAsOf: null, online: 0, offline: 0, inStock: 0 } },
+    });
+    const deleted = await query(
+      'mutation($ids:[ID!]!){deleteFleetDevices(ids:$ids){succeededIds failures{id code message}}}',
+      { ids: [online.id, foreignDevice.id, stock.id] },
+      branchId,
+    );
+    expect(deleted).toEqual({
+      data: {
+        deleteFleetDevices: {
+          succeededIds: [online.id, stock.id],
+          failures: [{ id: foreignDevice.id, code: 'NOT_FOUND', message: 'Device not found' }],
+        },
+      },
+    });
+    expect(
+      await database.client.device.findUnique({ where: { id: foreignDevice.id } }),
+    ).not.toBeNull();
+    expect(
+      await database.client.vehicleStatusSample.count({
+        where: { tenantId, branchId, deviceImei: online.imei },
+      }),
+    ).toBe(1);
+  });
+
+  it('returns the same filtered Device facts when a new report arrives after list selection', async () => {
+    if (!app) {
+      throw new Error('Missing Fleet application.');
+    }
+    const branchId = randomUUID();
+    const vehicle = await truck(branchId, 'SNAPSHOT'),
+      clockVehicle = await truck(branchId, 'CLOCK');
+    const device = await database.client.device.create({
+      data: { tenantId, branchId, vehicleId: vehicle.id, imei: '000000000000031' },
+    });
+    const asOf = new Date('2026-10-18T06:00:00.000Z');
+    const oldReport = new Date(asOf.getTime() - 49 * 3_600_000);
+    for (const [vehicleId, deviceImei, recordedAt] of [
+      [vehicle.id, device.imei, oldReport],
+      [clockVehicle.id, '000000000000032', asOf],
+    ] as const) {
+      await database.client.vehicleStatusSample.create({
+        data: {
+          tenantId,
+          branchId,
+          vehicleId,
+          deviceImei,
+          recordedAt,
+          receivedAt: recordedAt,
+          source: 'DEMO',
+        },
+      });
+    }
+    const repository = app.get(DevicesRepository);
+    const originalList = repository.list.bind(repository);
+    const freshReport = new Date(asOf.getTime() + 60_000);
+    const selected = jest
+      .spyOn(repository, 'list')
+      .mockImplementationOnce(async (scope, page, criteria, sort) => {
+        const result = await originalList(scope, page, criteria, sort);
+        await database.client.vehicleStatusSample.create({
+          data: {
+            tenantId,
+            branchId,
+            vehicleId: vehicle.id,
+            deviceImei: device.imei,
+            recordedAt: freshReport,
+            receivedAt: freshReport,
+            source: 'DEMO',
+          },
+        });
+        return result;
+      });
+    const list =
+      'query($filter:FleetDeviceFilter!){fleetDevices(filter:$filter,sort:{field:LAST_REPORTED_AT,direction:DESC}){items{id status lastReportedAt}total}}';
+    try {
+      expect(
+        await query(list, { filter: { allOf: [{ statuses: ['OFFLINE'] }] } }, branchId),
+      ).toEqual({
+        data: {
+          fleetDevices: {
+            total: 1,
+            items: [{ id: device.id, status: 'OFFLINE', lastReportedAt: oldReport.toISOString() }],
+          },
+        },
+      });
+      expect(
+        await query(list, { filter: { allOf: [{ statuses: ['ONLINE'] }] } }, branchId),
+      ).toEqual({
+        data: {
+          fleetDevices: {
+            total: 1,
+            items: [{ id: device.id, status: 'ONLINE', lastReportedAt: freshReport.toISOString() }],
+          },
+        },
+      });
+    } finally {
+      selected.mockRestore();
+    }
   });
 
   it('reports lastReportedAt for the current (vehicle, IMEI) pair and keeps history on deletion', async () => {

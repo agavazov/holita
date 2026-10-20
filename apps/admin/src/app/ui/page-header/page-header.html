@@ -1,5 +1,10 @@
 @if (backLink(); as link) {
-  <a class="page-header__back" [routerLink]="link">
+  <a
+    class="page-header__back"
+    [routerLink]="link"
+    [queryParams]="backQueryParams()"
+    [fragment]="backFragment() ?? undefined"
+  >
     <svg data-p-icon="arrow-left" aria-hidden="true"></svg>
     {{ backLabel() }}
   </a>

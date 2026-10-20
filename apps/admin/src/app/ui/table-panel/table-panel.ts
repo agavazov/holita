@@ -3,6 +3,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
+  effect,
   type ElementRef,
   inject,
   Injector,
@@ -61,6 +63,8 @@ export class TablePanel<A extends string = string> {
   readonly view = input.required<TableView>();
   readonly errorText = input<string | null>(null);
   readonly busy = input(false);
+  /** Query identity: a changed context retires unsubmitted confirmations. */
+  readonly actionContext = input<unknown>(null);
   readonly emptyTitle = input<string | null>(null);
   readonly emptyDescription = input<string | null>(null);
   /** The list's actions, defined once for row menus and the bulk bar. */
@@ -81,6 +85,9 @@ export class TablePanel<A extends string = string> {
   private readonly language = inject(UI_LANGUAGE);
   private readonly confirmation = inject(ConfirmationService);
   private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
+  private actionGeneration = 0;
+  private confirmationController: AbortController | null = null;
   private readonly headingElement = viewChild<ElementRef<HTMLElement>>('headingElement');
   protected readonly text = computed(() => uiMessages[this.language()]);
   protected readonly locale = computed(() => localeOf(this.language()));
@@ -143,6 +150,28 @@ export class TablePanel<A extends string = string> {
     return !!page && page.total > page.pageSize;
   });
 
+  constructor() {
+    effect(() => {
+      this.actionContext();
+      this.busy();
+      this.retireActions();
+    });
+    this.destroyRef.onDestroy(() => {
+      this.retireActions();
+    });
+  }
+
+  private retireActions(): void {
+    this.actionGeneration++;
+    this.confirmationController?.abort();
+    this.confirmationController = null;
+    this.pending.set(null);
+  }
+
+  private alive(): boolean {
+    return !this.destroyRef.destroyed;
+  }
+
   /** Moves focus to the panel heading (after rows or the bulk bar went away). */
   focusHeading(): void {
     this.headingElement()?.nativeElement.focus();
@@ -161,6 +190,10 @@ export class TablePanel<A extends string = string> {
     origin: EventTarget | null,
     source: 'row' | 'bulk' = 'row',
   ): Promise<void> {
+    if (!this.alive() || this.confirmationController !== null) {
+      return;
+    }
+    const generation = this.actionGeneration;
     const action = this.actions().find((candidate) => candidate.id === actionId);
     if (!action) {
       return;
@@ -172,6 +205,9 @@ export class TablePanel<A extends string = string> {
     const element = origin instanceof HTMLElement ? origin : null;
     if (action.confirm) {
       const accepted = await this.ask(action, applicable, records.length - applicable.length);
+      if (this.destroyRef.destroyed || generation !== this.actionGeneration) {
+        return;
+      }
       if (!accepted) {
         this.afterRender(() => {
           if (element?.isConnected) {
@@ -227,10 +263,18 @@ export class TablePanel<A extends string = string> {
       records,
       skipped,
     });
+    const controller = new AbortController();
+    this.confirmationController = controller;
     return confirmAction(this.confirmation, this.language(), {
       header: confirm.title,
       acceptLabel: confirm.accept,
       danger: action.danger ?? false,
+      signal: controller.signal,
+    }).finally(() => {
+      if (this.confirmationController === controller) {
+        this.confirmationController = null;
+        this.pending.set(null);
+      }
     });
   }
 

@@ -1,14 +1,15 @@
-// Fleet demo thresholds. TypeScript uses them directly; raw SQL receives them as parameters.
+// Fleet fixed thresholds and defaults for configurable Branch settings.
+// TypeScript classifiers and raw SQL use scoped settings where configurable.
 // Units are holita's demo contract: km, km/h, litres, volts, °C, minutes, percent, 0–100 scores
 // and EUR cents. No equivalence with Karma values is claimed.
 
-/** Business dates and daily-distance buckets. */
+/** Default Branch time zone for business dates and daily-distance buckets. */
 export const BUSINESS_TIME_ZONE = 'Europe/Sofia';
-/** Latest device sample older than `asOf − 48 h` ⇒ `NOT_CONNECTED`. */
+/** Default reporting window; Branch settings configure NOT_CONNECTED/OFFLINE cutoffs. */
 export const NOT_CONNECTED_AFTER_HOURS = 48;
 /** Ignition on and speed ≥ 5 km/h ⇒ `MOVING`. */
 export const MOVING_MIN_SPEED_KPH = 5;
-/** Fresh fuel reading below 12 % ⇒ `LOW`. */
+/** Default LOW boundary; Branch settings configure the fresh-fuel percentage. */
 export const LOW_FUEL_PERCENT = 12;
 /** Older fuel readings ⇒ `STALE`. */
 export const FUEL_READING_MAX_AGE_HOURS = 6;

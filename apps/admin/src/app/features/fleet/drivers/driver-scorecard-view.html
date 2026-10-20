@@ -5,19 +5,33 @@
       [title]="text().notFoundTitle"
       [description]="text().notFoundDescription"
     >
-      <a emptyActions pButton [routerLink]="backLink()">{{ text().back }}</a>
+      <a
+        emptyActions
+        pButton
+        [routerLink]="backLink()"
+        [queryParams]="backQueryParams()"
+        [fragment]="backFragment() ?? undefined"
+        >{{ text().back }}</a
+      >
     </holita-empty-state>
   }
   @case ('error') {
     <holita-empty-state
       kind="error"
       [title]="text().errorTitle"
-      [description]="text().errorDescription"
+      [description]="errorText() ?? text().errorDescription"
     >
       <button emptyActions pButton type="button" (click)="retry.emit()">{{ text().retry }}</button>
-      <a emptyActions pButton severity="secondary" [outlined]="true" [routerLink]="backLink()">{{
-        text().back
-      }}</a>
+      <a
+        emptyActions
+        pButton
+        severity="secondary"
+        [outlined]="true"
+        [routerLink]="backLink()"
+        [queryParams]="backQueryParams()"
+        [fragment]="backFragment() ?? undefined"
+        >{{ text().back }}</a
+      >
     </holita-empty-state>
   }
   @case ('loading') {
@@ -26,6 +40,8 @@
       [title]="text().title"
       [backLink]="backLink()"
       [backLabel]="text().back"
+      [backQueryParams]="backQueryParams()"
+      [backFragment]="backFragment()"
     />
     <holita-kpi-strip [label]="text().summary" [loading]="true">
       <holita-kpi-tile [label]="text().drivingScore" [loading]="true" />
@@ -42,6 +58,8 @@
         [description]="description()"
         [backLink]="backLink()"
         [backLabel]="text().back"
+        [backQueryParams]="backQueryParams()"
+        [backFragment]="backFragment()"
       />
 
       <section class="app-card scorecard__period" [attr.aria-label]="text().period">
@@ -86,8 +104,8 @@
           />
           <holita-kpi-tile
             [label]="text().distance"
-            [value]="card.distanceKm | holitaNumber: 1"
-            unit="km"
+            [value]="units.distance(card.distanceKm, false, 1)"
+            [unit]="units.distanceUnit()"
           />
           <holita-kpi-tile
             [label]="text().trips"
@@ -96,7 +114,7 @@
           />
           <holita-kpi-tile
             [label]="text().maneuversPer100Km"
-            [value]="card.maneuversPer100Km | holitaNumber: 1"
+            [value]="maneuverRate() | holitaNumber: 1"
           />
         </holita-kpi-strip>
 

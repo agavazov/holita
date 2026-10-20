@@ -14,7 +14,6 @@ import Drawer from '@primeuix/themes/aura/drawer';
 import IconField from '@primeuix/themes/aura/iconfield';
 import InputNumber from '@primeuix/themes/aura/inputnumber';
 import InputText from '@primeuix/themes/aura/inputtext';
-import Listbox from '@primeuix/themes/aura/listbox';
 import Menu from '@primeuix/themes/aura/menu';
 import Message from '@primeuix/themes/aura/message';
 import MeterGroup from '@primeuix/themes/aura/metergroup';
@@ -49,8 +48,8 @@ import type { ThemeChoice } from './theme-choice';
 /**
  * The PrimeNG controls the admin renders plus the controls they render internally. Adding a
  * PrimeNG control means adding its preset here and to the "PrimeNG coverage" story.
- * `listbox` renders only in the Fleet RelationPicker. ProgressBar is not used: it renders an
- * `aria-level` attribute that a progress bar may not carry (axe `aria-allowed-attr`).
+ * ProgressBar is not used: it renders an `aria-level` attribute that a progress bar may not
+ * carry (axe `aria-allowed-attr`).
  */
 export const registeredComponents = {
   autocomplete: AutoComplete,
@@ -67,7 +66,6 @@ export const registeredComponents = {
   iconfield: IconField,
   inputnumber: InputNumber,
   inputtext: InputText,
-  listbox: Listbox,
   menu: Menu,
   message: Message,
   metergroup: MeterGroup,
@@ -272,8 +270,8 @@ function componentTokens(brand: Brand, density: Density) {
 
 /**
  * Central rules that tokens alone cannot express: small uppercase column titles (also for plain
- * header cells without a sortable title), tabular numbers, the density row height, the tab bar
- * alignment, single-sided timelines and calendar days outside the month in the muted text colour
+ * header cells without a sortable title), the density row height, the tab bar alignment,
+ * single-sided timelines and calendar days outside the month in the muted text colour
  * (PrimeNG dims them with opacity below AA contrast and without `aria-disabled`).
  */
 const presetCss = `
@@ -288,10 +286,6 @@ const presetCss = `
 }
 .p-datatable-tbody > tr {
   height: var(--p-app-row-height);
-}
-.app-num,
-.p-datatable .app-num {
-  font-variant-numeric: var(--p-app-font-numeric);
 }
 .p-tablist-tab-list {
   gap: var(--p-app-space-1);

@@ -44,7 +44,6 @@ import {
 } from '../scenario';
 
 const dataAsOf = new Date(sampleNow).toISOString();
-const weekAgo = new Date(sampleNow - 7 * 86_400_000).toISOString();
 /** PostgreSQL follows the enum declaration: INFO < WARNING < CRITICAL. */
 const severityRank = { INFO: 0, WARNING: 1, CRITICAL: 2 } as const;
 const statusRank = { OPEN: 0, ACKNOWLEDGED: 1, RESOLVED: 2 } as const;
@@ -73,14 +72,20 @@ const definition: SampleListDefinition<SampleAlert> = {
   },
 };
 
-function kpisOf(alerts: readonly SampleAlert[]): AlertKpis {
-  const open = alerts.filter((alert) => alert.status === 'OPEN');
+/** Match live counts: retain search and every non-status condition, across all pages. */
+export function sampleAlertKpis(alerts: readonly SampleAlert[], query: ListQuery): AlertKpis {
+  const matching = runSampleList(alerts, definition, {
+    ...query,
+    conditions: query.conditions.filter((condition) => condition.field !== 'status'),
+    page: 1,
+    pageSize: Math.max(1, alerts.length),
+  }).items;
+  const open = matching.filter((alert) => alert.status === 'OPEN');
   return {
     critical: open.filter((alert) => alert.severity === 'CRITICAL').length,
     open: open.length,
-    acknowledged: alerts.filter((alert) => alert.status === 'ACKNOWLEDGED').length,
-    resolved: alerts.filter((alert) => alert.status === 'RESOLVED' && alert.occurredAt >= weekAgo)
-      .length,
+    acknowledged: matching.filter((alert) => alert.status === 'ACKNOWLEDGED').length,
+    resolved: matching.filter((alert) => alert.status === 'RESOLVED').length,
   };
 }
 
@@ -178,7 +183,9 @@ export class AlertsPage {
   protected readonly rows = computed(() => this.result().items.map(alertRow));
   protected readonly listState = computed(() => ({ ...this.state(), page: this.result().page }));
   protected readonly kpis = computed(() =>
-    this.scenario() === 'loading' || this.failed() ? null : kpisOf(this.alerts()),
+    this.scenario() === 'loading' || this.failed()
+      ? null
+      : sampleAlertKpis(this.alerts(), this.state()),
   );
   protected readonly view = computed(() =>
     sampleTableView(this.state(), this.rows().length, {

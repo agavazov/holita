@@ -1,5 +1,6 @@
 import { inject, Pipe, type PipeTransform } from '@angular/core';
 import { UI_LANGUAGE } from '../ui-language';
+import { FLEET_DISPLAY } from './fleet-format';
 import {
   formatDateOnly,
   formatDateTime,
@@ -9,7 +10,7 @@ import {
   formatRelative,
 } from './format';
 
-/** Sofia is the admin's display zone for every instant (Fleet demo contract). */
+/** Default for standalone examples and non-Fleet screens. */
 export const displayTimeZone = 'Europe/Sofia';
 
 @Pipe({ name: 'holitaNumber' })
@@ -20,11 +21,12 @@ export class FormatNumberPipe implements PipeTransform {
   }
 }
 
-@Pipe({ name: 'holitaDateTime' })
+@Pipe({ name: 'holitaDateTime', pure: false })
 export class FormatDateTimePipe implements PipeTransform {
   private readonly language = inject(UI_LANGUAGE);
-  transform(value: string | null | undefined, timeZone = displayTimeZone, seconds = false): string {
-    return formatDateTime(value, this.language(), timeZone, seconds);
+  private readonly preferences = inject(FLEET_DISPLAY);
+  transform(value: string | null | undefined, timeZone?: string, seconds = false): string {
+    return formatDateTime(value, this.language(), timeZone ?? this.preferences().timeZone, seconds);
   }
 }
 

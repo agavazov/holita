@@ -73,6 +73,16 @@ describe('UrlListState', () => {
     expect(router.url).toBe('/list?search=alpha');
   });
 
+  it('retires a pending search when external URL navigation restores another query', async () => {
+    const { harness, host, router } = await mount('/list?search=current&page=4');
+    host.list.editSearch('unsent draft');
+    await harness.navigateByUrl('/list?search=previous&page=2', ListHost);
+    expect(host.list.searchDraft()).toBe('previous');
+    await settle(harness, 350);
+    expect(router.url).toBe('/list?search=previous&page=2');
+    expect(host.list.state()).toMatchObject({ search: 'previous', page: 2 });
+  });
+
   it('patches filters, sorts from table events and pages', async () => {
     const { harness, host, router } = await mount('/list?page=2');
     host.list.patchFilter({ statuses: ['B'] });

@@ -1,0 +1,93 @@
+{
+  "eyebrow": "Наблюдение",
+  "title": "Сигнали",
+  "description": "{branch} · първо отворените и приетите сигнали",
+  "search": "Търсене по сигнал, регистрация, водач или бележка",
+  "kpis": {
+    "label": "Обобщение на сигналите",
+    "critical": "Отворени критични",
+    "open": "Отворени",
+    "acknowledged": "Приети",
+    "acknowledgedFootnote": "в процес на обработка",
+    "resolved": "Разрешени",
+    "resolvedFootnote": "според текущите филтри"
+  },
+  "table": {
+    "heading": "Сигнали",
+    "severity": "Важност",
+    "alert": "Сигнал",
+    "vehicle": "Автомобил",
+    "status": "Статус",
+    "occurred": "Възникнал",
+    "remark": "Бележка",
+    "actions": "Действия",
+    "selectPage": "Избор на всички на тази страница",
+    "selectRow": "Избор на {kind} за {plate}",
+    "open": "Отваряне на {kind} за {plate}",
+    "record": "{kind} за {plate}",
+    "noDriver": "Без водач",
+    "emptyTitle": "Няма сигнали",
+    "emptyDescription": "Сигналите се появяват, когато автомобилът отчете нарушение на правило или неизправност.",
+    "errorText": "Сигналите не могат да бъдат заредени."
+  },
+  "severities": { "CRITICAL": "Критичен", "WARNING": "Предупреждение", "INFO": "Информация" },
+  "statuses": { "OPEN": "Отворен", "ACKNOWLEDGED": "Приет", "RESOLVED": "Разрешен" },
+  "kinds": {
+    "HARSH_ACCELERATION": "Рязко ускорение",
+    "HARSH_BRAKING": "Рязко спиране",
+    "SPEED_BUMP": "Преминаване през неравност",
+    "OVERTAKING": "Изпреварване",
+    "ROUNDABOUT": "Кръгово кръстовище",
+    "LANE_CHANGE": "Смяна на лента",
+    "SHARP_TURN": "Остър завой",
+    "OFF_ROAD": "Движение извън пътя",
+    "SPEEDING": "Превишена скорост",
+    "IGNITION_ON": "Включено запалване",
+    "IGNITION_OFF": "Изключено запалване",
+    "IDLING": "Работа на празен ход",
+    "LOW_FUEL": "Ниско ниво на гориво",
+    "FUEL_DROP": "Спад на горивото",
+    "POWER_DISCONNECTED": "Прекъснато захранване",
+    "LOW_BACKUP_BATTERY": "Изтощена резервна батерия",
+    "CAN_DISCONNECTED": "Прекъсната CAN връзка",
+    "DEVICE_OFFLINE": "Устройство без връзка",
+    "DIAGNOSTIC_TROUBLE_CODE": "Диагностичен код за неизправност",
+    "CRASH_DETECTED": "Засечен удар"
+  },
+  "actions": {
+    "open": "Отваряне",
+    "acknowledge": "Приемане",
+    "resolve": "Разрешаване",
+    "vehicle": "Профил на автомобила"
+  },
+  "filters": {
+    "severity": "Важност",
+    "status": "Статус",
+    "vehicle": "Автомобил",
+    "occurredAt": "Възникнал"
+  },
+  "notices": {
+    "acknowledged": "Приети сигнали: {count}.",
+    "resolved": "Разрешени сигнали: {count}.",
+    "reopened": "Сигналът е отворен отново.",
+    "partialFailure": "Неуспешни: {count}."
+  },
+  "drawer": {
+    "title": "Сигнал",
+    "details": "Подробности",
+    "handling": "Обработка",
+    "severity": "Важност",
+    "status": "Статус",
+    "vehicle": "Автомобил",
+    "driver": "Водач",
+    "occurred": "Възникнал",
+    "detail": "Какво се е случило",
+    "remark": "Бележка",
+    "remarkHint": "Незадължителна; видима в историята на автомобила.",
+    "acknowledge": "Приемане",
+    "resolve": "Разрешаване",
+    "reopen": "Отваряне отново",
+    "close": "Затваряне",
+    "saveError": "Сигналът не може да бъде обновен. Опитайте отново."
+  }
+}

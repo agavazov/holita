@@ -3,6 +3,7 @@
   "title": "Devices",
   "description": "{branch} · GPS trackers, their connection and the vehicle they are installed in",
   "new": "Register device",
+  "unavailable": "Signal, voltage, firmware policy and restart are Demo features and are unavailable for these records.",
   "demo": {
     "label": "Demo features",
     "description": "Connection, diagnostics and restart actions use sample data."
@@ -16,9 +17,10 @@
     "label": "Device summary",
     "online": "Online",
     "offline": "Offline",
-    "offlineFootnote": "no connection for 48 h",
+    "offlineFootnote": "no connection for {hours} h",
     "stock": "In stock",
-    "outdated": "Outdated firmware"
+    "outdated": "Outdated firmware",
+    "firmwareUnavailable": "Demo · firmware policy unavailable"
   },
   "table": {
     "heading": "Devices",
@@ -39,7 +41,7 @@
     "outdated": "Update available",
     "emptyTitle": "No devices yet",
     "emptyDescription": "Register the trackers of this branch to see their connection.",
-    "errorText": "The devices could not be loaded. (demo-request-11)"
+    "errorText": "The devices could not be loaded. Try again."
   },
   "statuses": {
     "ONLINE": "Online",
@@ -49,6 +51,14 @@
   "actions": {
     "edit": "Edit",
     "restart": "Restart",
+    "restartUnavailable": "Restart · Demo unavailable",
+    "diagnostics": "Diagnostics",
+    "delete": "Delete",
+    "confirmDelete": {
+      "title": "Delete devices?",
+      "detail": "Their recorded history is retained.",
+      "accept": "Delete"
+    },
     "vehicle": "Open vehicle profile",
     "confirmRestart": {
       "title": "Restart devices?",
@@ -65,7 +75,9 @@
   "notices": {
     "saved": "Device {imei} was saved.",
     "created": "Device {imei} was registered.",
-    "restarted": "Restart sent to devices: {count}."
+    "restarted": "Restart sent to devices: {count}.",
+    "deleted": "Devices deleted: {count}.",
+    "partialFailure": "Failed records: {count}."
   },
   "drawer": {
     "demoLabel": "Demo features",
@@ -73,6 +85,13 @@
     "createTitle": "Register device",
     "editTitle": "Device {imei}",
     "diagnostics": "Diagnostics",
+    "unavailable": "Signal and voltage are unavailable. Firmware policy and restart remain Demo features.",
+    "notAvailable": "Unavailable",
+    "retry": "Try again",
+    "options": "Device options",
+    "simPhone": "SIM phone number",
+    "installedAt": "Installed at",
+    "installedAtHint": "Date and time with an explicit offset, for example 2026-10-20T10:00:00+03:00",
     "status": "Connection",
     "lastSeen": "Last seen",
     "signal": "Signal",
@@ -90,7 +109,7 @@
     "save": "Save",
     "create": "Register",
     "cancel": "Cancel",
-    "saveError": "The device could not be saved. Try again. (demo-request-12)",
+    "saveError": "The device could not be saved. Try again.",
     "duplicateImei": "This IMEI is already registered."
   }
 }

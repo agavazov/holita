@@ -1,12 +1,12 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, type Page, type APIRequestContext } from '@playwright/test';
-import { chooseBranch, test } from './angular-fixture.mjs';
+import { chooseBranch, chooseMenuItem, setDarkTheme, test } from './angular-fixture.mjs';
 import { workspaceRoot } from '../graphql/contracts.mjs';
 
 const branchA = '10000000-0000-4000-8000-000000000001';
 const path = `/en/${branchA}/fleet/devices`;
-async function truck(
+async function vehicle(
   request: APIRequestContext,
   gatewayUrl: string,
   token: string,
@@ -35,41 +35,51 @@ async function truck(
   return row.id;
 }
 async function chooseTruck(page: Page, plate: string, language = 'en') {
-  await page
-    .getByRole('button', { name: language === 'en' ? 'Truck' : 'Камион', exact: true })
-    .click();
-  const dialog = page.getByRole('dialog', {
-    name: language === 'en' ? 'Truck' : 'Камион',
+  const control = page.getByRole('combobox', {
+    name: language === 'en' ? 'Installed in' : 'Монтирано в',
     exact: true,
   });
-  await dialog.getByRole('option', { name: plate, exact: true }).click();
-  await expect(dialog).not.toBeVisible();
+  await control.click();
+  const listboxId = await control.getAttribute('aria-controls');
+  if (!listboxId) {
+    throw new Error('Missing installation listbox.');
+  }
+  await page
+    .locator(`[id="${listboxId}"]`)
+    .getByRole('option', { name: plate, exact: true })
+    .click();
+  await expect(control).toHaveAttribute('aria-expanded', 'false');
 }
 test.describe('Devices', () => {
-  test('creates multiple devices per truck, rejects duplicates, reassigns, reloads and isolates A → B → A', async ({
+  test('creates multiple devices per vehicle, rejects duplicates, reassigns, reloads and isolates A → B → A', async ({
     page,
     app,
     request,
   }) => {
-    const first = await truck(request, app.gatewayUrl, app.demoSession.token, 'CA1234AB');
-    await truck(request, app.gatewayUrl, app.demoSession.token, 'CB5678AB');
+    const first = await vehicle(request, app.gatewayUrl, app.demoSession.token, 'CA1234AB');
+    await vehicle(request, app.gatewayUrl, app.demoSession.token, 'CB5678AB');
     await page.goto(app.url + path + '/new');
-    await page.getByRole('button', { name: 'Save device', exact: true }).click();
-    await expect(page.getByRole('textbox', { name: 'IMEI', exact: true })).toBeFocused();
-    await page.getByRole('textbox', { name: 'IMEI', exact: true }).fill('001234567890123');
+    await page.getByRole('button', { name: 'Register', exact: true }).click();
+    await expect(page.getByRole('textbox', { name: /^IMEI/ })).toBeFocused();
+    await page.getByRole('textbox', { name: /^IMEI/ }).fill('001234567890123');
     await chooseTruck(page, 'CA1234AB');
-    await page.getByRole('button', { name: 'Save device', exact: true }).click();
-    await expect(page.getByText('Device saved.', { exact: true })).toBeVisible();
-    await page.getByRole('link', { name: 'Create device', exact: true }).click();
-    await page.getByRole('textbox', { name: 'IMEI', exact: true }).fill('001234567890123');
+    await page.getByRole('button', { name: 'Register', exact: true }).click();
+    await expect(
+      page.getByText('Device 001234567890123 was registered.', { exact: true }),
+    ).toBeVisible();
+    await page
+      .locator('holita-page-header')
+      .getByRole('button', { name: 'Register device', exact: true })
+      .click();
+    await page.getByRole('textbox', { name: /^IMEI/ }).fill('001234567890123');
     await chooseTruck(page, 'CA1234AB');
-    await page.getByRole('button', { name: 'Save device', exact: true }).click();
+    await page.getByRole('button', { name: 'Register', exact: true }).click();
     await expect(
       page.getByText('IMEI is already used in this branch.', { exact: true }),
     ).toBeVisible();
-    await expect(page.getByRole('textbox', { name: 'IMEI', exact: true })).toBeFocused();
-    await page.getByRole('textbox', { name: 'IMEI', exact: true }).fill('001234567890124');
-    await page.getByRole('button', { name: 'Save device', exact: true }).click();
+    await expect(page.getByRole('textbox', { name: /^IMEI/ })).toBeFocused();
+    await page.getByRole('textbox', { name: /^IMEI/ }).fill('001234567890124');
+    await page.getByRole('button', { name: 'Register', exact: true }).click();
     await expect(page.locator('tbody tr')).toHaveCount(2);
     const deletion = await request.post(app.gatewayUrl, {
       headers: { authorization: `Bearer ${app.demoSession.token}`, 'x-branch-id': branchA },
@@ -79,10 +89,12 @@ test.describe('Devices', () => {
       },
     });
     expect(await deletion.json()).toMatchObject({ errors: [{ extensions: { code: 'CONFLICT' } }] });
-    await page.getByRole('link', { name: '001234567890123', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Truck', exact: true })).toHaveText('CA1234AB');
+    await page.getByRole('button', { name: 'Edit device 001234567890123', exact: true }).click();
+    await expect(page.getByRole('combobox', { name: 'Installed in', exact: true })).toHaveText(
+      'CA1234AB',
+    );
     await chooseTruck(page, 'CB5678AB');
-    await page.getByRole('button', { name: 'Save device', exact: true }).click();
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(page).toHaveURL(app.url + path);
     await page.reload();
     await expect(page.locator('tbody tr').filter({ hasText: '001234567890123' })).toContainText(
@@ -90,57 +102,121 @@ test.describe('Devices', () => {
     );
     await chooseBranch(page, 'Sandbox');
     await expect(page).toHaveURL(/\/fleet\/devices$/);
-    await expect(page.getByRole('link', { name: '001234567890123', exact: true })).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: 'Edit device 001234567890123', exact: true }),
+    ).toHaveCount(0);
     await chooseBranch(page, 'Discordia');
-    await page.getByRole('button', { name: 'Delete 001234567890123', exact: true }).click();
-    const confirmation = page.getByRole('alertdialog', { name: 'Delete devices', exact: true });
+    await page.getByRole('button', { name: 'Actions for 001234567890123', exact: true }).click();
+    await chooseMenuItem(page, 'Delete');
+    const confirmation = page.getByRole('alertdialog', { name: 'Delete devices?', exact: true });
     await expect(confirmation.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused();
-    await confirmation.getByRole('button', { name: 'Delete devices', exact: true }).click();
-    await expect(page.getByText('Deleted devices: 1.', { exact: true })).toBeVisible();
+    await confirmation.getByRole('button', { name: 'Delete', exact: true }).click();
+    await expect(page.getByText('Devices deleted: 1.', { exact: true })).toBeVisible();
     await page.reload();
-    await expect(page.getByRole('link', { name: '001234567890123', exact: true })).toHaveCount(0);
-    await expect(page.getByRole('link', { name: '001234567890124', exact: true })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Edit device 001234567890123', exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: 'Edit device 001234567890124', exact: true }),
+    ).toBeVisible();
+  });
+  test('registers stock with the existing catalog and persists explicit installation and metadata clears', async ({
+    page,
+    app,
+    request,
+  }) => {
+    await vehicle(request, app.gatewayUrl, app.demoSession.token, 'STOCK-VEHICLE');
+    await page.goto(app.url + path + '/new');
+    const create = page.getByRole('dialog', { name: 'Register device', exact: true });
+    await create.getByRole('textbox', { name: /^IMEI/ }).fill('001234567890125');
+    const model = create.getByRole('combobox', { name: 'Model', exact: true });
+    await model.click();
+    await page.getByRole('option', { name: 'STARLINK_TRACKER', exact: true }).click();
+    await create.getByRole('textbox', { name: 'Firmware', exact: true }).fill('03.29.02');
+    await create
+      .getByRole('textbox', { name: 'SIM phone number', exact: true })
+      .fill('+359888123456');
+    await create.getByRole('button', { name: 'Register', exact: true }).click();
+    await expect(create).toBeHidden();
+    const row = page.locator('tbody tr').filter({ hasText: '001234567890125' });
+    await expect(row).toContainText('In stock');
+    await expect(row).toContainText('Not installed');
+    await row.getByRole('button', { name: 'Edit device 001234567890125', exact: true }).click();
+    const edit = page.getByRole('dialog', { name: 'Device 001234567890125', exact: true });
+    await expect(edit.getByRole('textbox', { name: 'Firmware', exact: true })).toHaveValue(
+      '03.29.02',
+    );
+    await expect(edit.getByRole('textbox', { name: 'SIM phone number', exact: true })).toHaveValue(
+      '+359888123456',
+    );
+    await chooseTruck(page, 'STOCK-VEHICLE');
+    await edit.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(edit).toBeHidden();
+    await expect(row).toContainText('STOCK-VEHICLE');
+    await row.getByRole('button', { name: 'Edit device 001234567890125', exact: true }).click();
+    await chooseTruck(page, 'Not installed (in stock)');
+    await edit.getByRole('textbox', { name: 'Firmware', exact: true }).fill('');
+    await edit.getByRole('textbox', { name: 'SIM phone number', exact: true }).fill('');
+    await edit.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(edit).toBeHidden();
+    await page.reload();
+    await expect(row).toContainText('In stock');
+    await row.getByRole('button', { name: 'Edit device 001234567890125', exact: true }).click();
+    await expect(edit.getByRole('textbox', { name: 'Firmware', exact: true })).toHaveValue('');
+    await expect(edit.getByRole('textbox', { name: 'SIM phone number', exact: true })).toHaveValue(
+      '',
+    );
   });
   test('renders Bulgarian forms and lists in desktop/mobile light and dark themes', async ({
     page,
     app,
     request,
   }) => {
-    await truck(request, app.gatewayUrl, app.demoSession.token, 'CA1234AB');
+    await vehicle(request, app.gatewayUrl, app.demoSession.token, 'CA1234AB');
     const captures = join(workspaceRoot, '.references/review/devices');
-    await mkdir(captures, { recursive: true });
+    if (process.env.HOLITA_BROWSER_SCREENSHOTS === '1') {
+      await mkdir(captures, { recursive: true });
+    }
     await page.goto(app.url + path.replace('/en/', '/bg/') + '/new');
-    await page.getByRole('textbox', { name: 'IMEI', exact: true }).fill('001234567890123');
+    await page.getByRole('textbox', { name: /^IMEI/ }).fill('001234567890123');
     await chooseTruck(page, 'CA1234AB', 'bg');
+    await page.getByRole('button', { name: 'Регистрирай', exact: true }).click();
+    const openDevice = page.getByRole('button', {
+      name: 'Редактирай устройство 001234567890123',
+      exact: true,
+    });
+    const editor = page.getByRole('dialog', { name: 'Устройство 001234567890123', exact: true });
+    await expect(openDevice).toBeVisible();
     for (const mode of ['form', 'list']) {
-      if (mode === 'list') {
-        await page.getByRole('button', { name: 'Запази устройството', exact: true }).click();
-        await expect(
-          page.getByRole('link', { name: '001234567890123', exact: true }),
-        ).toBeVisible();
-      }
       for (const width of [1280, 390, 320]) {
         await page.setViewportSize({ width, height: 900 });
         for (const dark of [false, true]) {
-          if (
-            (await page
-              .locator('html')
-              .evaluate((element) => element.classList.contains('app-dark'))) !== dark
-          ) {
-            await page
-              .getByRole('button', {
-                name: dark ? 'Включи тъмна тема' : 'Включи светла тема',
-                exact: true,
-              })
-              .click();
+          await setDarkTheme(page, dark);
+          if (mode === 'form') {
+            await openDevice.click();
+            await expect(editor.getByRole('textbox', { name: /^IMEI/ })).toHaveValue(
+              '001234567890123',
+            );
+            await expect(
+              editor.getByRole('combobox', { name: 'Монтирано в', exact: true }),
+            ).toHaveText('CA1234AB');
+          } else {
+            await expect(openDevice).toBeVisible();
           }
           expect(
             await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
           ).toBe(true);
-          await page.screenshot({
-            path: join(captures, `${mode}-${String(width)}-${dark ? 'dark' : 'light'}.png`),
-            fullPage: true,
-          });
+          if (process.env.HOLITA_BROWSER_SCREENSHOTS === '1') {
+            await page.screenshot({
+              path: join(captures, `${mode}-${String(width)}-${dark ? 'dark' : 'light'}.png`),
+              fullPage: true,
+            });
+          }
+          if (mode === 'form') {
+            // Close the pristine editor before using the account menu outside its modal.
+            await editor.getByRole('button', { name: 'Отказ', exact: true }).click();
+            await expect(editor).toBeHidden();
+          }
         }
       }
     }

@@ -3,9 +3,11 @@ import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { FleetEnabledGuard } from '../../fleet-enabled.guard.js';
 import type {
   MutationCancelFleetServiceTaskArgs,
+  MutationCancelFleetServiceTasksArgs,
   MutationCompleteFleetServiceTaskArgs,
   MutationCreateFleetServiceTaskArgs,
   MutationDeleteFleetServiceTaskArgs,
+  MutationDeleteFleetServiceTasksArgs,
   MutationUpdateFleetServiceTaskArgs,
   QueryFleetServiceTaskArgs,
   QueryFleetServiceTasksArgs,
@@ -63,6 +65,22 @@ export class ServiceTasksResolver {
     @Context() context: RequestContext,
   ) {
     return this.serviceTasksService.cancel(context, args.id);
+  }
+
+  @Mutation('cancelFleetServiceTasks')
+  cancelFleetServiceTasks(
+    @Args() args: MutationCancelFleetServiceTasksArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.serviceTasksService.cancelMany(context, args.ids);
+  }
+
+  @Mutation('deleteFleetServiceTasks')
+  deleteFleetServiceTasks(
+    @Args() args: MutationDeleteFleetServiceTasksArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.serviceTasksService.deleteMany(context, args.ids);
   }
 
   @Mutation('deleteFleetServiceTask')

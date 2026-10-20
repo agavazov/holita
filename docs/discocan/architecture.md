@@ -1,8 +1,8 @@
 # Discocan architecture
 
 Discocan covers fleet telemetry. Its implemented Fleet modules are Vehicles, Devices, Drivers,
-Vehicle groups, Telemetry (status samples and the data clock), Trips, Events (alerts) and
-Service tasks.
+Vehicle groups, Telemetry (status samples and the data clock), Trips, Events (alerts),
+Service tasks, Overview and Settings.
 The [shared architecture](../architecture/overview.md) describes applications, execution and tooling.
 The shared Branch concept and its domain meaning are explained in [the domain index](README.md#terminology).
 
@@ -12,11 +12,12 @@ One PostgreSQL instance contains independent Core/Fleet development and test dat
 with distinct owner/login roles. Admin/Gateway have no Prisma client or database credentials.
 Each owning service has its own schema, reviewed SQL migrations and generated client.
 Core owns the [Tenant/Branch foundation](../ecommerce/branches.md) currently reused as Discocan organizational scope.
-Fleet owns Vehicle, Device, Driver, VehicleGroup, VehicleStatusSample, Trip, FleetEvent and
-ServiceTask plus the shared versioned Simple eData vendor catalog. Both services preserve their
-applied migration history and add a Branch rename migration. Fleet also retains its additive
-catalog migration and the additive `20261018100000_fleet_master_data` and
-`20261018110000_fleet_activity` migrations. Branch and every Fleet business table have
+Fleet owns Vehicle, Device, Driver, VehicleGroup, VehicleStatusSample, Trip, FleetEvent,
+ServiceTask and FleetSettings plus the shared versioned Simple eData vendor catalog. Both services
+preserve their applied migration history and add a Branch rename migration. Fleet also retains
+its additive catalog migration and the additive `20261018100000_fleet_master_data`,
+`20261018110000_fleet_activity`, `20261020110000_device_stock` and
+`20261020220000_fleet_settings` migrations. Branch and every Fleet business table have
 mandatory tenantId physically second after id; Fleet branchId is physically third (new tables
 declare them in that order; the master data columns are appended to Vehicle and Device).
 Tenant data is inserted by the seed, not by schema migrations.
@@ -30,7 +31,7 @@ configuration integration. This scope does not change Vehicle/Device isolation.
 Vehicle has UUID, tenantId, branchId, required License Plate (32 characters, not unique),
 nullable Notes (2000), Fleet number (16), type, make/model (64), model year (SMALLINT), VIN (17),
 fuel type, tank capacity (SMALLINT litres), status (default `ACTIVE`), groupId, currentDriverId
-and timestamps. Device has UUID, tenantId, branchId, required 15-digit IMEI, required vehicleId,
+and timestamps. Device has UUID, tenantId, branchId, required 15-digit IMEI, nullable vehicleId,
 nullable model, an options enum array (default empty), firmware (32), SIM phone (20), ICCID
 (22), installation time, notes and timestamps. IMEI stays a string, preserving leading zeros.
 Driver has names (64), employee number and identification key (32), phone (20), email (254),
@@ -51,7 +52,9 @@ default list orders and relation filters. A CHECK keeps IMEI at 15 digits; hand-
 year 1950–2100, the VIN pattern, tank capacity 1–2000, `INACTIVE` vehicles without a driver, the
 SIM/ICCID/phone patterns and non-null enum arrays with at most 13 options and 10 licence
 categories (Prisma generates enum arrays as nullable columns). Several Devices may share a
-Vehicle. There is no cross-database Branch foreign key.
+Vehicle. Unassigned Devices represent stock. The `device_stock` migration only removes the
+Vehicle column's NOT NULL requirement, preserving rows, indexes and scoped foreign keys.
+There is no cross-database Branch foreign key.
 
 The activity migration adds four Tenant/Branch-scoped tables and the enums `FleetDataSource`
 (`DEMO`, `MANUAL`), `FleetEventKind` (the first nine are maneuvers), `FleetEventSeverity`,
@@ -85,8 +88,63 @@ completion date and CANCELLED tasks no completion or cost; odometers 0–10,000,
 0–100,000,000 cents.
 Seeds insert RentalSofia, the stable Discordia and Sandbox Branches, two Discordia Vehicles and one Device. Repeated seeds skip existing keys and never overwrite edits. Fleet has no cross-database Tenant/Branch foreign key; creation verifies the tenant-scoped Branch through Core. Mandatory tenant predicates and composite indexes enforce application isolation; PostgreSQL has no row-level-security policy. Direct SQL access by the owning role can access every tenant.
 
+The optional [Fleet demo seed](development.md#fleet-demo-data) inserts richer synthetic Discordia
+data with stable IDs and a fixed anchor. Its initial transaction takes a transaction-scoped
+`pg_advisory_xact_lock` keyed by the seed identity, schema, Tenant and Branch before checking
+reserved IDs, natural keys or the anchor. Master records, service tasks and the anchor sample
+are inserted in that transaction. The lock releases at commit or rollback; subsequent activity
+batches insert missing records without holding it. Concurrent runs must use the same persisted
+anchor, and existing records remain unchanged.
+
 Tests deploy migrations into random schemas in dedicated test databases and drop only their
 own schema. Development connections, broad resets and shared truncation are not test fixtures.
+
+### Branch settings
+
+The concrete [Settings module](../../apps/fleet/src/modules/settings/settings.module.ts)
+owns `FleetSettings`, with UUID/timestamps and a unique `(tenantId, branchId)` key. Its additive
+[migration](../../apps/fleet/prisma/migrations/20261020220000_fleet_settings/migration.sql)
+preserves existing rows and adds database checks for the four time zones and threshold bounds.
+The [Settings SDL](../../apps/fleet/src/modules/settings/settings.graphql) exposes
+`fleetSettings` and `updateFleetSettings(input: UpdateFleetSettingsInput!)`. Input replaces all
+six fields; tenant and Branch come from verified request context. The mutation verifies the
+Branch through Core before a scoped upsert. A read without a saved row returns explicit defaults
+without inserting one:
+
+| Field               | Default        | Accepted values                                                        |
+| ------------------- | -------------- | ---------------------------------------------------------------------- |
+| `timeZone`          | `Europe/Sofia` | `Europe/Sofia`, `Europe/Bucharest`, `Europe/Athens`, `Europe/Belgrade` |
+| `distanceUnit`      | `KM`           | `KM`, `MI`                                                             |
+| `volumeUnit`        | `LITRE`        | `LITRE`, `US_GALLON`                                                   |
+| `lowFuelPct`        | `12`           | Integer 1–50                                                           |
+| `notReportingHours` | `48`           | Integer 1–168                                                          |
+| `speedLimitKph`     | `90`           | Integer 30–130                                                         |
+
+`lowFuelPct` changes the fresh-reading LOW boundary (strictly below it) in vehicle state and
+KPIs; fuel freshness remains six elapsed hours. `notReportingHours` changes vehicle
+NOT_CONNECTED and assigned-device OFFLINE boundaries against the Branch data clock; a report
+exactly on the cutoff still reports. Stock stays IN_STOCK. Pure TypeScript classifiers receive
+the scoped settings. The concrete [settings SQL](../../apps/fleet/src/modules/settings/settings.sql.ts)
+returns one scoped row, with defaults when absent, within the caller's snapshot. Vehicles and
+Devices derived lists and Overview use it before filtering, sorting, paging and counting;
+Vehicles retains those threshold values with its selected facts in the same `RepeatableRead`
+transaction. There is no process-global settings cache or per-row settings query.
+
+`FleetClock.now()` supplies the instant for business dates in the configured time zone, including
+driver document status, service urgency, completion-date validation and business-date summaries.
+`fleetDataClock` returns that `businessDate` and the configured `timeZone` alongside telemetry
+`asOf`. Vehicles created-date conditions use that zone. Overview's daily buckets and today's
+distance use the calendar date of telemetry `asOf` in that zone; changing the zone does not move
+either clock. Trip/score/statistics windows remain fixed elapsed-day windows ending at `asOf`,
+and sample freshness and trip in-progress limits remain elapsed hours.
+
+Distance and volume units are display preferences. Stored measurements and GraphQL measurements,
+numeric filters and sort values remain canonical km, km/h and litres; money remains EUR cents.
+`speedLimitKph` is a stored reference only. Saving settings does not generate alerts, send device
+commands or configure notification delivery; the SDL has no notification fields and no
+notifications provider is implemented. Branch
+names remain owned by [Core's selected-Tenant/Branch rename contract](../ecommerce/branches.md#graphql-contracts),
+separate from Fleet settings and without importing another application's implementation.
 
 ## GraphQL contracts and context
 
@@ -99,8 +157,10 @@ link, the `DateTime` and `Date` scalars, the Branch reference and `FleetSortDire
 [Vehicle group](../../apps/fleet/src/modules/vehicle-groups/vehicle-groups.graphql),
 [Telemetry](../../apps/fleet/src/modules/telemetry/telemetry.graphql),
 [Trip](../../apps/fleet/src/modules/trips/trips.graphql),
-[Event](../../apps/fleet/src/modules/events/events.graphql) and
-[Service task](../../apps/fleet/src/modules/service-tasks/service-tasks.graphql) SDL extend it,
+[Event](../../apps/fleet/src/modules/events/events.graphql),
+[Service task](../../apps/fleet/src/modules/service-tasks/service-tasks.graphql),
+[Overview](../../apps/fleet/src/modules/overview/overview.graphql) and
+[Settings](../../apps/fleet/src/modules/settings/settings.graphql) SDL extend it,
 in that order in both `app.module.ts` and [contracts.mts](../../tools/graphql/contracts.mts).
 Backend resolvers use generated types and delegate to concrete services/repositories.
 Runtime SDL assets are copied into builds. Named Angular/Core lookup operations are explicit
@@ -115,22 +175,34 @@ scalars) and the services validate it: `DateTime` needs `Z` or `±hh:mm` and yea
 as path. Codegen maps server `DateTime` to `string` input / `Date` output and `Date` to `string`;
 the admin uses strings.
 
-Public demo discovery exposes tenants and demoLogin. Core/Fleet authenticated queries are
-branches, branch, fleetVehicles, fleetVehicle, fleetDevices, fleetDevice, fleetDrivers,
-fleetDriver, fleetDriverScorecard, fleetVehicleGroups, fleetVehicleGroup, fleetDataClock,
-fleetVehicleSamples, fleetTrips, fleetTrip, fleetEvents, fleetEvent, fleetAlertCounts,
-fleetManeuverCounts, fleetServiceTasks, fleetServiceTask and fleetServiceSummary. Mutations
-create/update/delete FleetVehicle, FleetDevice, FleetDriver and FleetVehicleGroup, plus
-`deactivateFleetVehicle`, `recordFleetOdometerReading`, `acknowledgeFleetAlert`,
-`resolveFleetAlert`, `reopenFleetAlert` and create/update/complete/cancel/delete
-FleetServiceTask. There is no navigation-badge query; `fleetAlertCounts` serves only the alert
-list. Only FleetVehicle and FleetDevice are federation entities (`@key(fields: "id")`) and
+Public demo discovery exposes `tenants` and `demoLogin`. Core authenticated queries are
+`branches` and `branch`; `updateBranchName` uses Core's selected Branch contract. Fleet exposes
+list and single-record queries for Vehicles, Devices,
+Drivers, Vehicle groups, Trips, Events and Service tasks, plus `fleetVehicleSummary`,
+`fleetDeviceSummary`, `fleetDriverSummary`, `fleetTripSummary`, `fleetServiceSummary`,
+`fleetDriverScorecard`, `fleetDataClock`, `fleetVehicleSamples`, `fleetAlertCounts`,
+`fleetManeuverCounts`, `fleetOverview`, `fleetDailyDistance` and `fleetSettings`. Branch summaries
+are independent
+of list search, filters and pagination; scorecard and aggregate semantics are described in
+[additional list conditions and aggregates](fleet.md#additional-list-conditions-and-aggregates).
+Mutations create/update/delete FleetVehicle, FleetDevice, FleetDriver and FleetVehicleGroup,
+deactivate a Vehicle, record an odometer reading, acknowledge/resolve/reopen an alert and
+create/update/complete/cancel/delete a Service task, and replace preferences with
+`updateFleetSettings`. Batch mutations are `deleteFleetVehicles`,
+`deactivateFleetVehicles`, `deleteFleetDevices`, `deleteFleetDrivers`, `deactivateFleetDrivers`,
+`acknowledgeFleetAlerts`, `cancelFleetServiceTasks` and `deleteFleetServiceTasks`. They accept
+1–100 unique IDs and return `succeededIds` plus independent failures, preserving record
+protections and alert optimistic concurrency. There is no navigation-badge query;
+`fleetAlertCounts` serves only the alert list and ignores actionable and included/excluded
+alert-status predicates while retaining the other search and filters.
+Only FleetVehicle and FleetDevice are federation entities (`@key(fields: "id")`) and
 carry `branch: Branch!`; their reference resolution computes the same derived values as the
 list for one ID.
 All Branch/business operations require a signed demo session in Authorization. Business operations additionally require a valid `x-branch-id` UUID. Inputs never accept tenantId or branchId.
 Repository predicates, totals, relation lookup and federation reference resolution always include the verified Tenant and active Branch.
-Foreign IDs appear as NOT_FOUND. Creation checks Branch existence through Core once per
-Fleet HTTP request; read/update/delete do not make that network call. Requesting a
+Foreign IDs appear as NOT_FOUND. Creation and the settings upsert check Branch existence through
+Core once per Fleet HTTP request; ordinary business read/update/delete do not make that network
+call. Requesting a
 federated Branch field beyond its known ID (for example `branch { name }`) asks Core to resolve
 its persisted Branch.
 
@@ -161,41 +233,90 @@ null apply no constraint; lists hold 1–100 unique values; booleans require (`t
 keys, then `id DESC`. The page and its total are read in one `RepeatableRead` transaction with
 the scope in the same `where`, so search, filters and IDs never reach another Tenant or Branch.
 
-| Query                | Search fields                                                       | Sort fields (default)                                                                                                                | Filter                                                                                                                                                        |
-| -------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `fleetVehicles`      | plate, Fleet number, VIN, make, model                               | `LICENSE_PLATE`, `FLEET_NUMBER`, `CREATED_AT`, `UPDATED_AT` (`CREATED_AT DESC`)                                                      | statuses, vehicleTypes, fuelTypes, groupIds, hasGroup, currentDriverIds, hasDriver, hasDevice, hasOpenAlerts                                                  |
-| `fleetDevices`       | IMEI, firmware, SIM phone, vehicle plate                            | `IMEI`, `INSTALLED_AT`, `CREATED_AT` (`CREATED_AT DESC`)                                                                             | models, options (all given), vehicleIds                                                                                                                       |
-| `fleetDrivers`       | first name, last name, employee number, identification key, phone   | `LAST_NAME` (then first name), `EMPLOYEE_NUMBER`, `LICENSE_EXPIRES_ON`, `TACHOGRAPH_CARD_EXPIRES_ON`, `CREATED_AT` (`LAST_NAME ASC`) | statuses, licenseCategories (any given), documentsExpireWithinDays 0–365 (licence or card on or before business date + N, expired included), hasVehicle       |
-| `fleetVehicleGroups` | name, description                                                   | `NAME`, `CREATED_AT` (`NAME ASC`)                                                                                                    | —                                                                                                                                                             |
-| `fleetTrips`         | vehicle plate and Fleet number, driver names, start/end address     | `STARTED_AT`, `DISTANCE_KM`, `DRIVING_SCORE` (`STARTED_AT DESC`; others then `startedAt DESC`)                                       | startedFrom/startedTo (half-open), vehicleIds, driverIds, hasDriver, scored, drivingScoreBelow 0–100 (scored trips only), hasEnd; page adds `totalDistanceKm` |
-| `fleetEvents`        | vehicle plate and Fleet number, driver names, address, trouble code | `OCCURRED_AT`, `SEVERITY` (INFO < WARNING < CRITICAL, then `occurredAt DESC`) (`OCCURRED_AT DESC`)                                   | actionable, alertStatuses, severities, kinds, vehicleIds, driverIds, tripIds, occurredFrom/occurredTo (half-open)                                             |
-| `fleetServiceTasks`  | title, workshop, vehicle plate and Fleet number                     | `URGENCY` (then `dueOn`, remaining km), `DUE_ON`, `COMPLETED_ON`, `CREATED_AT` (`URGENCY ASC`)                                       | statuses, urgencies (PLANNED only), serviceTypes, vehicleIds, completedFrom/completedTo (`Date`, inclusive)                                                   |
+| Query                | Search fields                                                                                          | Sort fields (default)                                                                                                                                                                                                             | Filter                                                                                                                                                                                                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fleetVehicles`      | plate, Fleet number, VIN, make, model, notes, current driver names                                     | `LICENSE_PLATE`, `FLEET_NUMBER`, `CREATED_AT`, `UPDATED_AT`, `STATUS`, `LAST_REPORTED_AT`, `ODOMETER_KM` (`CREATED_AT DESC`)                                                                                                      | statuses, vehicleTypes, fuelTypes, groupIds, hasGroup, currentDriverIds, hasDriver, hasDevice, hasOpenAlerts; `allOf` adds activity, exclusions, make, model year, odometer and created-date conditions                                                                |
+| `fleetDevices`       | IMEI, firmware, SIM phone/ICCID, model, vehicle plate                                                  | `IMEI`, `INSTALLED_AT`, `CREATED_AT`, `STATUS`, `VEHICLE_LICENSE_PLATE`, `LAST_REPORTED_AT` (`CREATED_AT DESC`)                                                                                                                   | models, options (all given), vehicleIds; `allOf` adds status/model inclusion/exclusion, literal firmware equality/inequality/prefix and hasVehicle                                                                                                                     |
+| `fleetDrivers`       | first name, last name, employee number, identification key, phone                                      | `NAME` (then last name), `LAST_NAME` (then first name), `EMPLOYEE_NUMBER`, `LICENSE_EXPIRES_ON`, `TACHOGRAPH_CARD_EXPIRES_ON`, `CREATED_AT`, `STATUS`, `DRIVING_SCORE_30D`, `TRIP_COUNT_30D`, `DISTANCE_30D_KM` (`LAST_NAME ASC`) | statuses, licenseCategories (any given), documentsExpireWithinDays 0–365 (expired included), hasVehicle; `allOf` adds status/assigned-Vehicle exclusions, 30-day score 0–100, trip count 0–2,147,483,647, distance 0–10,000,000 km and document-date conditions        |
+| `fleetVehicleGroups` | name, description                                                                                      | `NAME`, `CREATED_AT` (`NAME ASC`)                                                                                                                                                                                                 | —                                                                                                                                                                                                                                                                      |
+| `fleetTrips`         | vehicle plate and Fleet number, driver names, start/end address                                        | `STARTED_AT`, `DISTANCE_KM`, `DRIVING_SCORE`, `DURATION_SECONDS` (`STARTED_AT DESC`; others then `startedAt DESC`)                                                                                                                | startedFrom/startedTo (half-open), vehicleIds, driverIds, hasDriver, scored, drivingScoreBelow 0–100, hasEnd; `allOf` adds Vehicle/Driver exclusions, distance 0–5,000 km, score 0–100 and hasEvents (driving maneuvers); page adds filtered `totalDistanceKm`         |
+| `fleetEvents`        | vehicle plate and Fleet number, driver names, address, trouble code, details, remark, event-kind names | `OCCURRED_AT`, `SEVERITY` (INFO < WARNING < CRITICAL), `ALERT_STATUS` (OPEN < ACKNOWLEDGED < RESOLVED; null last); latter two then `occurredAt DESC` (`OCCURRED_AT DESC`)                                                         | actionable, alertStatuses, severities, kinds, vehicleIds, driverIds, tripIds, occurredFrom/occurredTo (half-open); `allOf` adds independent repeats and status/severity/kind/Vehicle/Driver exclusions                                                                 |
+| `fleetServiceTasks`  | title, workshop, notes, service-type names, vehicle plate and Fleet number                             | `URGENCY` (then `dueOn`, remaining km), `DUE_ON`, `COMPLETED_ON`, `CREATED_AT`, `TASK`, `VEHICLE_LICENSE_PLATE`, `COST_CENTS` (`URGENCY ASC`)                                                                                     | statuses, urgencies (PLANNED only), serviceTypes, vehicleIds, completedFrom/completedTo (closed `Date` range); `allOf` adds Vehicle status, exclusions, literal task text/translated untitled types, due dates, missing due date/cost and cost 0–100,000,000 EUR cents |
+
+All lists except Vehicle groups accept at most 50 nonrecursive `filter.allOf` conditions.
+Every condition and present field applies with AND, preserving repeated or contradictory
+predicates. Derived filters and sorts apply before pagination and counting. See
+[additional list conditions and aggregates](fleet.md#additional-list-conditions-and-aggregates)
+for feature-specific null, exclusion, range and summary semantics.
 
 `DateTime` ranges are half-open (`from` inclusive, `to` exclusive, `to` after `from`); `Date`
-ranges are closed. `fleetServiceTasks` is the one list whose filter and sort use a derived value:
-one scoped raw query computes urgency and pages it with its total in the same `RepeatableRead`
-transaction; tasks that are not PLANNED have no urgency and sort last in both directions.
+ranges are closed. `fleetServiceTasks` computes urgency before filtering and paging it with its
+total in the same `RepeatableRead` transaction; tasks that are not PLANNED have no urgency and
+sort last in both directions. Vehicles also computes activity, latest device report and latest
+non-null odometer before filtering/sorting/paging/counting. Its list and summary reuse telemetry's
+latest-facts SQL, scoped settings and shared fixed thresholds. The list retains the complete
+vehicle state and OPEN
+alert count from that snapshot and loads stored references for the selected IDs in the same
+transaction, preserving the SQL order and final `id DESC` tie-breaker.
+Status order is ACTIVE, IN_WORKSHOP, INACTIVE; nullable values sort last in both directions.
 
-Raw SQL is limited to the vehicle facts (latest device sample and latest odometer per vehicle),
-the service urgency queries and the distance-weighted driver score aggregate. It uses
+Vehicles `filter.allOf` accepts at most 50 nonrecursive `FleetVehicleCondition` inputs. Every
+entry and every present field applies with AND; repeated or contradictory conditions are kept.
+Conditions support statuses, activities, types and groups with inclusion/exclusion lists;
+fuel types, current drivers and the existing has-group/driver/device/open-alert booleans;
+case-insensitive literal make contains/equality; model-year equality, strict above/below and
+inclusive from/to; strict odometer above/below and inclusive from/to; and created calendar
+dates in the configured Branch time zone (after/before exclusive, from/to inclusive). Excluding optional types or
+groups includes rows with null values. Null numeric values do not match numeric comparisons.
+
+`fleetVehicleSummary` returns the complete Branch's data clock and exact counts independent of
+search, filters and page: non-INACTIVE vehicles, IN_WORKSHOP vehicles, MOVING and NOT_CONNECTED
+activities, OPEN alerts and LOW fuel status. Empty Branch counts are zero with a null data clock.
+`deleteFleetVehicles` and `deactivateFleetVehicles` accept 1–100 unique IDs, retain scope per
+record and return `succeededIds` plus independent failures (`id`, public code, message).
+Expected missing/blocked records do not stop the submitted batch. Deactivation clears the
+current driver; deletion preserves the existing history/device restrictions. Single-record
+mutations remain available.
+
+Raw SQL is limited to vehicle/device/driver facts and their derived lists and summaries,
+Trip duration/list/summary, Overview and daily-distance aggregates, service urgency,
+distance-weighted driver scores and the scoped settings/default row in those queries, plus the
+scoped Vehicle/Driver row locks and the demo seed's
+scoped advisory lock described here. It uses
 `$queryRaw` with `Prisma.sql` only, schema-qualifies every table with
 [`fleetTable`](../../apps/fleet/src/database/sql.ts) (the pg adapter does not set
 `search_path`), repeats the Tenant/Branch predicate on every table reference, casts every
 parameter, returns `::int`/`::float8` aggregates and `::text` enums and dates, and parses the
 `unknown` rows with concrete readers. Everything else uses the Prisma query API.
 
+MANUAL odometer insertion locks its scoped non-INACTIVE Vehicle with `FOR NO KEY UPDATE`,
+then repeats latest-reading validation before inserting. Driver deactivation and every
+Vehicle create/update that assigns a driver take the same scoped Driver row lock, then
+recheck status or assigned vehicles. These write transactions use READ COMMITTED so a waiter
+sees the preceding commit. Core existence checks run before entering the transaction.
+
 Links to other records use reference types with stored fields only: `FleetVehicleRef`
 (`id licensePlate fleetNumber vehicleType status`) on `FleetDevice.vehicle` and
 `FleetDriver.vehicles`, `FleetTrip.vehicle`, `FleetEvent.vehicle` and `FleetServiceTask.vehicle`,
 `FleetDriverRef` (`id firstName lastName employeeNumber status`) on `FleetVehicle.currentDriver`,
 `FleetTrip.driver` and `FleetEvent.driver`, and `FleetVehicleGroupRef` (`id name colorToken`) on
-`FleetVehicle.group`. Repositories load them, `deviceCount` and `vehicleCount` in the page query;
-`documentStatus` is computed by a pure function from the business date. Values computed from
-other rows or a clock are attached by the owning service for the whole page: vehicle state (one
-data-clock aggregate and one raw facts query), open alert counts and the next service (one raw
-urgency query), device `lastReportedAt`, driver 30-day statistics, and trip maneuver counts and
-`inProgress`. A type with derived values is returned only by its own module, except the
-documented `FleetVehicle.nextService`, a full `FleetServiceTask`. `FleetEvent` exposes `tripId`
+`FleetVehicle.group`. Repositories load stored references and counts with the records or through
+scoped batch reads; `documentStatus` is computed by a pure function from the business date.
+Derived facts used by list filters or sorting are retained with selection and totals in the
+same `RepeatableRead` transaction. Vehicles retains state and OPEN alert counts; Devices retains
+connectivity and last-report time; Drivers retains the Branch data clock and its 30-day distance,
+trip count and weighted score. Trips retains stored trip rows, chronological driving events,
+filtered distance total and the Branch data clock; duration, maneuver count and `inProgress`
+are computed from those captured values. Services must not replace these with newer facts
+after selecting the page.
+
+Display-only derived fields that do not participate in that list's filters or sorting can use
+later scoped batches, including Vehicle `nextService` and Driver maneuver rate. Single-record,
+federation-reference and mutation responses compute current values through the owning module's
+concrete helpers. These boundaries do not provide one transaction for an entire GraphQL response,
+separate summary queries or later display-only reads. A type with derived values is returned
+only by its own module, except the documented `FleetVehicle.nextService`, a full
+`FleetServiceTask`. `FleetEvent` exposes `tripId`
 without a `trip` field and `FleetVehicle` `deviceCount` without a device list. There is no
 per-row field resolver query. Text validation trims, counts Unicode code points and rejects NUL;
 optional fields can be cleared to null. Duplicate unique values are BAD_USER_INPUT with every
@@ -210,30 +331,49 @@ The standalone Angular flow is component → concrete feature API → generated 
 → Apollo Angular/HttpLink → Gateway. Login owns the standalone login view and sequential
 Tenant/Branch selection. A candidate token loads tenant-scoped Branches through a disposable client;
 changing Tenant cancels discovery and ignores late tokens. Submitting a valid Branch activates the
-tab session and opens Vehicles. AdminWorkspace coordinates the common session, language,
+tab session and opens Overview. AdminWorkspace coordinates the common session, language,
 login and shell. Its component-scoped BranchContext owns authenticated discovery and
 Branch route selection; the shell receives explicit inputs and emits Branch changes
 without business data access. KarmaWorkspace consumes only AdminWorkspace session/language,
 while FleetWorkspace also consumes BranchContext. Karma routes declare `requiresBranch: false`.
-Routes use `/bg` or `/en`, then `/:branchId/fleet/vehicles` or `/devices`, with `/new`
-and `/:recordId/edit`. Previous `/reference` URLs redirect to `/fleet`, preserving the resource,
+Routes use `/bg` or `/en`, then `/:branchId/fleet/` with Overview, Alerts, Trip log,
+Vehicles, Drivers, Devices, Maintenance and `settings/groups`. Editable lists use `/new`
+and `/:recordId/edit`; details, scorecards and profile tabs use the concrete routes in
+[`fleet.routes.ts`](../../apps/admin/src/app/features/fleet/fleet.routes.ts).
+Previous `/reference` URLs redirect to `/fleet`, preserving the resource,
 editor path, query parameters and fragment. The language root shows Login while signed out and redirects to the saved
-(or first available) Branch's Vehicles while signed in. There is no Branch list landing page.
-Fleet navigation contains Vehicles/Devices; the header keeps its Branch switcher. Choosing a Branch at login opens Vehicles; switching Branches preserves the enabled
+(or first available) Branch's Overview while signed in; `/:branchId/fleet` also opens Overview.
+There is no Branch list landing page. The header keeps its Branch switcher. Switching Branches preserves the enabled
 current business section and resets list context. Language switching preserves path/query/hash.
 Unknown Branches and disabled Fleet never start business requests.
 
-FleetWorkspace keys child views by session/Branch/language/resource/editor/ID. Each mounted page/editor
-owns an immutable session/Branch/language-scoped Apollo client and InMemoryCache. A → B → A creates a fresh A client.
+FleetWorkspace keys business views by session/Branch/language/resource/record. Lists retain their
+state while child-route drawers open and close; the routed editor is recreated when its record
+or workspace identity changes. Vehicle profile tabs retain their record client and keep independent
+table pagination in the URL. Each mounted page/editor owns an immutable session/Branch/language-scoped
+Apollo client and InMemoryCache. A → B → A creates a fresh A client.
 Reads unsubscribe on retirement; submitted writes settle with their captured client and affect
 only its cache. Obsolete callbacks cannot navigate, notify or mutate a new workspace.
 
-Lists provide URL-backed search/sort/paging, selection and confirmed page-local sequential deletion.
-Successful deletions remain removed after refresh failures; failed rows remain selected for retry.
-Navigation retires confirmation callbacks and stops unsent deletes. Submitted writes still settle.
-Typed Reactive Forms provide validation, server-field focus, null clearing, dirty navigation guards
-and retained failed drafts. Device's remote Vehicle picker searches/pages through the captured
-DevicesApi and hydrates the assigned Vehicle. Multiple Devices can use the same Vehicle.
+Vehicles composes the shared `VehiclesView` and `VehicleDrawer` with concrete API-backed hosts.
+`UrlListState` owns debounced search, validated AND conditions, sorting and paging; `vehicle-query.ts`
+maps them to generated variables, including configured Branch calendar-date conditions. A separate
+whole-Branch summary supplies KPIs and the nullable data clock. Activity and fuel freshness come
+from server-derived state. The UI preserves an absent clock instead of inventing one.
+The full typed editor maps optional empty values to null and loads bounded pages of group and
+driver choices through its own captured client.
+
+Vehicles row and selection actions use one `ids[]` delete/deactivate mutation per submission.
+The response preserves per-record successes and failures; successful deleted rows remain hidden
+if refresh fails, and failed selections stay available for retry. One shared operation toast
+reports the result, with persistent partial-failure details. Submitted batches settle in their
+captured scope after navigation, while obsolete callbacks cannot update another workspace.
+Devices, Drivers, Alerts acknowledgment and Maintenance cancel/delete use their own scoped
+IDs-array mutations with the same partial-result and captured-client lifecycle.
+Typed Reactive Forms retain failed drafts, focus field errors and guard dirty navigation.
+Device Vehicle choices load through bounded pages in its captured editor client; assignment may
+be cleared to stock. Multiple Devices can use the same Vehicle. Concrete hosts, supported fields
+and workflows are indexed in [Fleet admin](fleet.md#angular-foundation).
 
 The document title is `<page> · holita` (`Sign in · holita` / `Вход · holita` on Login).
 The [admin design system](../admin-design-system.md#shell) defines the shell and feature
@@ -241,10 +381,13 @@ presentation: a desktop sidebar that collapses to a persisted rail whose links k
 and tooltips, a modal navigation drawer below 1024px that traps focus and closes on Escape,
 backdrop, navigation and at 1024px, and one topbar row at every width with the breadcrumb and the
 Branch, language and account menus (theme switch and Sign out), so resizing keeps editor drafts.
-The application passes no account or notifications: the bell is hidden and the account menu
-names the tenant. The sidebar ends with `holita · <tenant>`. Light/dark preference uses
+The account menu names the tenant. The notification bell is labelled Demo and explains that
+delivery is unavailable until a provider is connected; no fake feed or business-count badge is
+supplied. The sidebar ends with `holita · <tenant>`. Light/dark preference uses
 `holita.admin.theme`; denied storage leaves the switch usable and reports its failure.
-Bulgarian/English catalogs supply UI text. Every sidebar navigation link and truck-data section
+Bulgarian/English catalogs supply shell and all live Fleet UI text. `AdminWorkspace` owns the
+shared operation-toast outlet and its scoped `MessageService` above login and signed-in content;
+changing the workspace clears its messages. Load and field errors remain inline. Every sidebar navigation link and truck-data section
 link pairs its visible label with a decorative inline PrimeIcons SVG. Icons inherit the link color
 and remain hidden from assistive technology so labels supply accessible names. The preset
 registers only the rendered PrimeNG controls and their dependencies. Public startup config

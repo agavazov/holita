@@ -19,4 +19,9 @@ export class TripsResolver {
   fleetTrip(@Args() args: QueryFleetTripArgs, @Context() context: RequestContext) {
     return this.tripsService.find(context, args.id);
   }
+
+  @Query('fleetTripSummary')
+  fleetTripSummary(@Context() context: RequestContext) {
+    return this.tripsService.summary(context);
+  }
 }

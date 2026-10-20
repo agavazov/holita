@@ -1,9 +1,11 @@
 import {
   ChangeDetectionStrategy,
+  afterNextRender,
   Component,
   computed,
   type ElementRef,
   inject,
+  Injector,
   input,
   output,
   signal,
@@ -19,7 +21,7 @@ import { ButtonDirective } from 'primeng/button';
 import { DatePicker } from 'primeng/datepicker';
 import { IconField } from 'primeng/iconfield';
 import { InputIcon } from 'primeng/inputicon';
-import { InputNumber } from 'primeng/inputnumber';
+import { InputNumber, type InputNumberPassThrough } from 'primeng/inputnumber';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Popover } from 'primeng/popover';
@@ -29,12 +31,14 @@ import { interpolate, uiMessages } from '../i18n/messages';
 import { maxSearchLength } from '../list/list-state';
 import { selectMultiplePt } from '../select-multiple';
 import { UI_LANGUAGE } from '../ui-language';
+import { validationMessage } from '../forms/validators';
 import {
   describeCondition,
   type FilterCondition,
   type FilterField,
   type FilterOperator,
   isComplete,
+  filterValueErrors,
   operandsOf,
 } from './filter-model';
 
@@ -85,6 +89,7 @@ export class FilterBuilder {
   readonly searchError = input<string | null>(null);
   readonly fields = input<readonly FilterField[]>([]);
   readonly conditions = input<readonly FilterCondition[]>([]);
+  readonly maxConditions = input<number | null>(null);
   readonly searchChange = output<string>();
   readonly conditionsChange = output<readonly FilterCondition[]>();
 
@@ -106,6 +111,7 @@ export class FilterBuilder {
   private readonly addButton = viewChild<ElementRef<HTMLButtonElement>>('addButton');
   private readonly chipButtons = viewChildren<ElementRef<HTMLButtonElement>>('chipButton');
   private readonly language = inject(UI_LANGUAGE);
+  private readonly injector = inject(Injector);
   protected readonly text = computed(() => uiMessages[this.language()].filters);
   protected readonly common = computed(() => uiMessages[this.language()]);
 
@@ -127,6 +133,15 @@ export class FilterBuilder {
   private returnFocus = false;
 
   protected readonly fieldOptions = computed(() => [...this.fields()]);
+  protected readonly canAdd = computed(() => {
+    const limit = this.maxConditions();
+    return limit === null || this.conditions().length < limit;
+  });
+  /** Native maxlength counts UTF-16 units; Apply enforces the code-point limit. */
+  protected readonly textMaxLength = computed(() => {
+    const max = this.field()?.maxLength;
+    return max === undefined ? null : max * 2;
+  });
   protected readonly field = computed(
     () => this.fields().find((field) => field.key === this.value().field) ?? null,
   );
@@ -191,8 +206,38 @@ export class FilterBuilder {
     const field = this.field();
     const draft = this.draft();
     return (
-      !!field && !!draft && field.operators.includes(draft.operator) && isComplete(field, draft)
+      !!field &&
+      !!draft &&
+      field.operators.includes(draft.operator) &&
+      isComplete(field, draft) &&
+      (this.canAdd() ||
+        (this.editingId() !== null && this.conditions().length === this.maxConditions()))
     );
+  });
+  protected readonly valueError = computed(() => {
+    const field = this.field();
+    const draft = this.draft();
+    return field && draft
+      ? validationMessage(filterValueErrors(field, draft.values), this.language())
+      : null;
+  });
+  /** Native hints expose bounds without InputNumber clamping invalid drafts on blur. */
+  protected readonly numberPt = computed<InputNumberPassThrough>(() => {
+    const field = this.field();
+    return {
+      pcInputText: {
+        root: {
+          ...(field?.min === undefined
+            ? {}
+            : { min: String(field.min), 'aria-valuemin': field.min }),
+          ...(field?.max === undefined
+            ? {}
+            : { max: String(field.max), 'aria-valuemax': field.max }),
+          inputmode: field?.integer ? 'numeric' : 'decimal',
+          step: field?.integer ? '1' : 'any',
+        },
+      },
+    };
   });
   protected readonly chips = computed(() =>
     this.conditions().flatMap((condition) => {
@@ -229,6 +274,9 @@ export class FilterBuilder {
   }
 
   protected openNew(event: Event): void {
+    if (!this.canAdd()) {
+      return;
+    }
     this.editingId.set(null);
     this.load(this.fields()[0]?.key ?? '', null);
     this.show(event);
@@ -250,7 +298,15 @@ export class FilterBuilder {
       return;
     }
     const editing = this.editingId();
-    const condition = { ...draft, id: editing ?? `condition-${String(nextCondition++)}` };
+    let id = editing;
+    if (id === null) {
+      const used = new Set(this.conditions().map((condition) => condition.id));
+      // URL-restored conditions can predate this browser session's counter.
+      do {
+        id = `condition-${String(nextCondition++)}`;
+      } while (used.has(id));
+    }
+    const condition = { ...draft, id };
     this.conditionsChange.emit(
       editing
         ? this.conditions().map((candidate) => (candidate.id === editing ? condition : candidate))
@@ -278,7 +334,17 @@ export class FilterBuilder {
   }
 
   protected clearAll(): void {
-    this.addButton()?.nativeElement.focus();
+    const add = this.addButton()?.nativeElement;
+    if (add?.disabled) {
+      afterNextRender(
+        () => {
+          add.focus();
+        },
+        { injector: this.injector },
+      );
+    } else {
+      add?.focus();
+    }
     this.conditionsChange.emit([]);
   }
 

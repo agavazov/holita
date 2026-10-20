@@ -290,10 +290,11 @@ export const ErrorState: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await waitFor(
-      () =>
-        expect(canvas.getByText('The drivers could not be loaded. (demo-request-3)')).toBeVisible(),
+      () => expect(canvas.getByText('The drivers could not be loaded.')).toBeVisible(),
       appReady,
     );
+    await userEvent.click(canvas.getByRole('button', { name: 'Retry' }));
+    await tableReady(canvasElement);
   },
 };
 

@@ -7,6 +7,10 @@
   <button headerActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
 </holita-page-header>
 
+@if (businessDate() === null) {
+  <p class="app-muted" role="status">{{ text().expiry.unavailable }}</p>
+}
+
 @if (kpis(); as kpis) {
   <holita-kpi-strip [label]="text().kpis.label">
     <holita-kpi-tile
@@ -27,8 +31,8 @@
     />
     <holita-kpi-tile
       [label]="text().kpis.distance"
-      [value]="kpis.distanceKm | holitaNumber"
-      unit="km"
+      [value]="units.distance(kpis.distanceKm, false, 0)"
+      [unit]="units.distanceUnit()"
     />
   </holita-kpi-strip>
 }
@@ -36,8 +40,10 @@
 <holita-filter-builder
   [searchLabel]="text().search"
   [search]="state().search"
+  [searchError]="searchError()"
   [fields]="fields()"
   [conditions]="state().conditions"
+  [maxConditions]="50"
   (searchChange)="changeSearch($event)"
   (conditionsChange)="changeConditions($event)"
 />
@@ -47,7 +53,9 @@
   [heading]="text().table.heading"
   [total]="total()"
   [view]="view()"
-  [errorText]="text().table.errorText"
+  [errorText]="errorText() ?? text().table.errorText"
+  [busy]="busy()"
+  [actionContext]="state()"
   [emptyTitle]="text().table.emptyTitle"
   [emptyDescription]="text().table.emptyDescription"
   [actions]="actions()"
@@ -175,7 +183,7 @@
           }
         </td>
         <td class="app-num app-col-secondary">{{ row.trips30d | holitaNumber }}</td>
-        <td class="app-num app-col-secondary">{{ row.distance30dKm | holitaNumber }}</td>
+        <td class="app-num app-col-secondary">{{ units.distance(row.distance30dKm, false, 0) }}</td>
         <td class="app-col-secondary">{{ row.phone }}</td>
         <td class="app-col-secondary">
           @if (row.notes) {

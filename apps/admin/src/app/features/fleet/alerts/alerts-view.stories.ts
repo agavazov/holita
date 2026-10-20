@@ -52,6 +52,52 @@ export const Default: Story = {
   },
 };
 
+export const FilteredCounts: Story = {
+  name: 'Summary follows severity while ignoring status',
+  render: exampleAt('alerts'),
+  play: async ({ canvasElement }) => {
+    const canvas = await tableReady(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(canvas.getByRole('button', { name: 'Add filter' }));
+    const editor = await body.findByRole('dialog', { name: 'Filter condition' });
+    const column = within(editor).getByRole('combobox', { name: 'Column' });
+    await userEvent.click(column);
+    const columns = await body.findByRole('listbox');
+    await userEvent.click(await body.findByRole('option', { name: /^Severity$/ }));
+    await waitFor(() => expect(column).toHaveAttribute('aria-expanded', 'false'));
+    await waitFor(() => expect(columns).not.toBeInTheDocument());
+    const valueSelect = within(editor).getByRole('combobox', { name: 'Value' });
+    await userEvent.click(valueSelect);
+    const choices = await body.findByRole('listbox');
+    await userEvent.click(await body.findByRole('option', { name: /^Critical$/ }));
+    await waitFor(() => expect(valueSelect).toHaveTextContent('Critical'));
+    await userEvent.click(valueSelect);
+    await waitFor(() => expect(valueSelect).toHaveAttribute('aria-expanded', 'false'));
+    await waitFor(() => expect(choices).not.toBeInTheDocument());
+    await userEvent.click(within(editor).getByRole('button', { name: 'Apply' }));
+    await waitFor(() => expect(editor).not.toBeInTheDocument());
+    const critical = sampleAlerts.filter((alert) => alert.severity === 'CRITICAL');
+    for (const [label, value] of [
+      ['Open critical', critical.filter((alert) => alert.status === 'OPEN').length],
+      ['Open', critical.filter((alert) => alert.status === 'OPEN').length],
+      ['Acknowledged', critical.filter((alert) => alert.status === 'ACKNOWLEDGED').length],
+      ['Resolved', critical.filter((alert) => alert.status === 'RESOLVED').length],
+    ] as const) {
+      const tile = canvas
+        .getByText(label, { selector: '.kpi-tile__label' })
+        .closest<HTMLElement>('holita-kpi-tile');
+      if (!tile) {
+        throw new Error(`Missing ${label} summary tile.`);
+      }
+      await waitFor(() =>
+        expect(within(tile).getByText(String(value), { selector: '.app-num' })).toBeVisible(),
+      );
+    }
+    await expect(canvas.queryByText('Warning', { selector: '.p-tag-label' })).toBeNull();
+    await expect(canvas.queryByText('Resolved', { selector: '.p-tag-label' })).toBeNull();
+  },
+};
+
 /**
  * Resolve in the row menu opens the alert; Escape returns focus to the row's menu button.
  */
@@ -230,8 +276,7 @@ export const ErrorState: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await waitFor(
-      () =>
-        expect(canvas.getByText('The alerts could not be loaded. (demo-request-6)')).toBeVisible(),
+      () => expect(canvas.getByText('The alerts could not be loaded.')).toBeVisible(),
       appReady,
     );
   },

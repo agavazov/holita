@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { join } from 'node:path';
 import { workspaceRoot } from '../graphql/contracts.mjs';
-import { chooseBranch, test } from './angular-fixture.mjs';
+import { chooseBranch, chooseLanguage, setDarkTheme, test } from './angular-fixture.mjs';
 async function captures(page: Page, section: string) {
   for (const viewport of [
     { name: 'desktop', width: 1280, height: 900 },
@@ -12,21 +12,18 @@ async function captures(page: Page, section: string) {
       await expect
         .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
         .toBe(true);
-      await page.screenshot({
-        path: join(
-          workspaceRoot,
-          '.references/review',
-          `karma-${section}-${viewport.name}-${theme}.png`,
-        ),
-        fullPage: true,
-        animations: 'disabled',
-      });
-      await page
-        .getByRole('button', {
-          name: theme === 'light' ? 'Use dark theme' : 'Use light theme',
-          exact: true,
-        })
-        .click();
+      if (process.env.HOLITA_BROWSER_SCREENSHOTS === '1') {
+        await page.screenshot({
+          path: join(
+            workspaceRoot,
+            '.references/review',
+            `karma-${section}-${viewport.name}-${theme}.png`,
+          ),
+          fullPage: true,
+          animations: 'disabled',
+        });
+      }
+      await setDarkTheme(page, theme === 'light');
     }
   }
 }
@@ -69,7 +66,7 @@ test('pages trips from truck details, restores cursor history and exposes all 23
   const before = headers.length;
   await chooseBranch(page, 'Sandbox');
   expect(headers).toHaveLength(before);
-  await page.getByRole('link', { name: 'Български', exact: true }).click();
+  await chooseLanguage(page, 'Български');
   await expect(page.getByRole('heading', { name: 'Пътувания', exact: true })).toBeVisible();
   await expect(rows.first()).toContainText('4000000020');
   await page.getByRole('button', { name: 'Последни', exact: true }).click();
@@ -171,10 +168,12 @@ for (const section of ['trips', 'events', 'driving-profile']) {
       await page.keyboard.press('Enter');
       const dialog = page.getByRole('dialog');
       await expect(dialog.locator('dd')).toHaveCount(section === 'trips' ? 23 : 12);
-      await page.screenshot({
-        path: join(workspaceRoot, '.references/review', `karma-${section}-mobile-details.png`),
-        animations: 'disabled',
-      });
+      if (process.env.HOLITA_BROWSER_SCREENSHOTS === '1') {
+        await page.screenshot({
+          path: join(workspaceRoot, '.references/review', `karma-${section}-mobile-details.png`),
+          animations: 'disabled',
+        });
+      }
       await page.keyboard.press('Escape');
       await expect(button).toBeFocused();
     }

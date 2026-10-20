@@ -17,12 +17,7 @@ import {
   storyThemeChoice,
   storybookApplicationConfig,
 } from '../src/storybook/story-config';
-import {
-  storyToastImports,
-  storyToastPt,
-  storyToastStyle,
-  storyToastTemplate,
-} from '../src/storybook/toast';
+import { storyToastImports, storyToastTemplate } from '../src/storybook/toast';
 
 /** The local PrimeUI key is read once per Storybook page. */
 let license: Promise<string | undefined> | undefined;
@@ -60,10 +55,7 @@ const preview: Preview = {
   decorators: [
     holitaApplication,
     moduleMetadata({ imports: storyToastImports }),
-    componentWrapperDecorator((story) => `${storyToastTemplate}${story}`, {
-      storyToastPt,
-      storyToastStyle,
-    }),
+    componentWrapperDecorator((story) => `${storyToastTemplate}${story}`),
   ],
   loaders: [async () => ({ primeUiLicense: await (license ??= loadStoryLicense()) })],
   globalTypes: {
@@ -112,6 +104,8 @@ const preview: Preview = {
       storySort: {
         order: [
           'Start here',
+          'Admin',
+          ['Fleet', ['Vehicles']],
           'Examples',
           [
             'Tour',

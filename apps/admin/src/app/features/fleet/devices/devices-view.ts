@@ -6,6 +6,7 @@ import type { StatusTone } from '../../../theme/status-tones';
 import type { FilterCondition, FilterField } from '../../../ui/filter-builder/filter-model';
 import { FilterBuilder } from '../../../ui/filter-builder/filter-builder';
 import { FormatNumberPipe, FormatRelativePipe } from '../../../ui/format/format.pipes';
+import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { interpolate } from '../../../ui/i18n/messages';
 import { KpiStrip } from '../../../ui/kpi/kpi-strip';
 import { KpiTile } from '../../../ui/kpi/kpi-tile';
@@ -28,7 +29,7 @@ import { devicesText } from './i18n/messages';
 
 export const deviceStatuses = ['ONLINE', 'OFFLINE', 'IN_STOCK'] as const;
 export type DeviceStatusCode = (typeof deviceStatuses)[number];
-export type DeviceActionId = 'edit' | 'restart' | 'vehicle';
+export type DeviceActionId = 'edit' | 'restart' | 'vehicle' | 'diagnostics' | 'delete';
 
 /** The firmware every device should run; older ones are flagged. */
 export const currentFirmware = '03.29.02';
@@ -53,7 +54,7 @@ export interface DeviceKpis {
   readonly online: number;
   readonly offline: number;
   readonly stock: number;
-  readonly outdated: number;
+  readonly outdated: number | null;
 }
 
 export const deviceStatusTones: Record<DeviceStatusCode, StatusTone> = {
@@ -89,6 +90,9 @@ export const deviceStatusTones: Record<DeviceStatusCode, StatusTone> = {
 })
 export class DevicesView {
   readonly demo = input(false);
+  readonly busy = input(false);
+  readonly searchError = input<string | null>(null);
+  readonly errorText = input<string | null>(null);
   readonly branchName = input.required<string>();
   readonly dataAsOf = input.required<string>();
   readonly rows = input.required<readonly DeviceRow[]>();
@@ -107,7 +111,19 @@ export class DevicesView {
 
   private readonly language = inject(UI_LANGUAGE);
   private readonly sortReady = injectSortReady();
-  protected readonly text = computed(() => devicesText(this.language()));
+  private readonly units = injectFleetFormat();
+  protected readonly text = computed(() => {
+    const text = devicesText(this.language());
+    return {
+      ...text,
+      kpis: {
+        ...text.kpis,
+        offlineFootnote: interpolate(text.kpis.offlineFootnote, {
+          hours: this.units.preferences().notReportingHours,
+        }),
+      },
+    };
+  });
   protected readonly currentFirmware = currentFirmware;
   protected readonly description = computed(() =>
     interpolate(this.text().description, { branch: this.branchName() }),
@@ -117,6 +133,7 @@ export class DevicesView {
     return [
       {
         key: 'status',
+        maxValues: 100,
         label: text.filters.status,
         type: 'enum',
         operators: ['isAnyOf', 'isNoneOf'],
@@ -124,6 +141,7 @@ export class DevicesView {
       },
       {
         key: 'model',
+        maxValues: 100,
         label: text.filters.model,
         type: 'enum',
         operators: ['isAnyOf', 'isNoneOf'],
@@ -131,6 +149,7 @@ export class DevicesView {
       },
       {
         key: 'firmware',
+        maxLength: 32,
         label: text.filters.firmware,
         type: 'text',
         operators: ['equals', 'notEquals', 'startsWith'],
@@ -146,17 +165,37 @@ export class DevicesView {
   /** The list's actions, once for the row menu and the bulk bar. */
   protected readonly actions = computed<readonly ListAction<DeviceActionId, DeviceRow>[]>(() => {
     const text = this.text().actions;
-    return [
-      { id: 'edit', label: text.edit },
+    const actions: ListAction<DeviceActionId, DeviceRow>[] = [
+      { id: 'edit', label: text.edit, appliesTo: () => !this.busy() },
       {
         id: 'restart',
-        label: text.restart,
+        label: this.demo() ? text.restart : text.restartUnavailable,
         bulk: true,
         confirm: text.confirmRestart,
-        appliesTo: (row) => row.status === 'ONLINE',
+        appliesTo: (row) => this.demo() && !this.busy() && row.status === 'ONLINE',
       },
-      { id: 'vehicle', label: text.vehicle, appliesTo: (row) => row.vehicleId !== null },
+      {
+        id: 'vehicle',
+        label: text.vehicle,
+        appliesTo: (row) => !this.busy() && row.vehicleId !== null,
+      },
     ];
+    if (!this.demo()) {
+      actions.splice(1, 0, {
+        id: 'diagnostics',
+        label: text.diagnostics,
+        appliesTo: () => !this.busy(),
+      });
+      actions.push({
+        id: 'delete',
+        label: text.delete,
+        bulk: true,
+        danger: true,
+        confirm: text.confirmDelete,
+        appliesTo: () => !this.busy(),
+      });
+    }
+    return actions;
   });
   private readonly records = computed(
     () => new Map(this.rows().map((row) => [row.id, this.toRecord(row)])),

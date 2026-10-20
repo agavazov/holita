@@ -16,9 +16,10 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonDirective } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
+import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 import { Textarea } from 'primeng/textarea';
-import { RouteDrawer } from '../../../ui/drawer/route-drawer';
+import { RouteDrawer, type RouteDrawerState } from '../../../ui/drawer/route-drawer';
 import { FormField } from '../../../ui/form-field/form-field';
 import { focusFirstInvalid } from '../../../ui/forms/focus';
 import { lockWhileSaving } from '../../../ui/forms/saving';
@@ -37,7 +38,7 @@ export interface GroupForm {
 }
 
 export type GroupField = keyof GroupForm;
-const fieldOrder: readonly GroupField[] = ['name', 'description'];
+const fieldOrder: readonly GroupField[] = ['name', 'slot', 'description'];
 
 /** Create or edit a vehicle group in the right-hand drawer (a small form, `md` size). */
 @Component({
@@ -46,6 +47,7 @@ const fieldOrder: readonly GroupField[] = ['name', 'description'];
     ReactiveFormsModule,
     ButtonDirective,
     InputText,
+    Message,
     Select,
     Textarea,
     RouteDrawer,
@@ -57,23 +59,28 @@ const fieldOrder: readonly GroupField[] = ['name', 'description'];
 export class GroupDrawer {
   readonly group = input<GroupForm | null>(null);
   readonly saving = input(false);
+  readonly state = input<RouteDrawerState>('ready');
+  readonly loadError = input<string | null>(null);
+  readonly saveError = input<string | null>(null);
+  readonly closeLink = input<readonly unknown[] | null>(null);
   readonly fieldErrors = input<Partial<Record<GroupField, string>>>({});
   readonly save = output<GroupForm>();
   readonly closed = output();
+  readonly retry = output();
 
   private readonly language = inject(UI_LANGUAGE);
   private readonly injector = inject(Injector);
   private readonly drawer = viewChild.required(RouteDrawer);
-  private readonly formElement = viewChild.required<ElementRef<HTMLFormElement>>('formElement');
+  private readonly formElement = viewChild<ElementRef<HTMLFormElement>>('formElement');
   protected readonly text = computed(() => settingsText(this.language()).groups.drawer);
 
   protected readonly form = new FormGroup({
     name: new FormControl('', {
       nonNullable: true,
-      validators: textValidator(40, { required: true }),
+      validators: textValidator(64, { required: true }),
     }),
     slot: new FormControl<string>('c1', { nonNullable: true }),
-    description: new FormControl('', { nonNullable: true, validators: textValidator(200) }),
+    description: new FormControl('', { nonNullable: true, validators: textValidator(500) }),
   });
   private readonly events = toSignal(this.form.events);
   private submitted = false;
@@ -107,11 +114,28 @@ export class GroupDrawer {
         });
       });
     });
+    // Server field errors need focus even when a fast response skipped the saving frame.
+    effect(() => {
+      const errors = this.fieldErrors();
+      if (this.state() !== 'ready' || !Object.keys(errors).length) {
+        return;
+      }
+      afterNextRender(
+        () => {
+          const form = this.formElement()?.nativeElement;
+          if (this.state() === 'ready' && form?.isConnected) {
+            focusFirstInvalid(form, fieldOrder, 'group-');
+          }
+        },
+        { injector: this.injector },
+      );
+    });
     lockWhileSaving(
       this.form,
       () => this.saving(),
       () => {
-        if (!focusFirstInvalid(this.formElement().nativeElement, fieldOrder, 'group-')) {
+        const form = this.formElement()?.nativeElement;
+        if (!form || !focusFirstInvalid(form, fieldOrder, 'group-')) {
           this.drawer().keepFocusInside();
         }
       },
@@ -132,7 +156,7 @@ export class GroupDrawer {
   }
 
   protected submit(): void {
-    if (this.saving()) {
+    if (this.saving() || this.state() !== 'ready') {
       return;
     }
     this.submitted = true;
@@ -140,7 +164,10 @@ export class GroupDrawer {
     if (this.form.invalid) {
       afterNextRender(
         () => {
-          focusFirstInvalid(this.formElement().nativeElement, fieldOrder, 'group-');
+          const form = this.formElement()?.nativeElement;
+          if (form) {
+            focusFirstInvalid(form, fieldOrder, 'group-');
+          }
         },
         { injector: this.injector },
       );
@@ -154,6 +181,14 @@ export class GroupDrawer {
     if (await this.canLeave()) {
       this.closed.emit();
     }
+  }
+
+  protected close(): void {
+    this.drawer().close();
+  }
+
+  markSaved(): void {
+    this.form.markAsPristine();
   }
 
   canLeave(): boolean | Promise<boolean> {

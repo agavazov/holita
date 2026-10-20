@@ -13,15 +13,14 @@ export class FleetClock {
   }
 }
 
-const businessDateFormat = new Intl.DateTimeFormat('en-US', {
-  timeZone: BUSINESS_TIME_ZONE,
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-});
-
-/** Calendar date (`YYYY-MM-DD`) of an instant in the business time zone (Europe/Sofia). */
-export function businessDate(instant: Date): string {
+/** Calendar date (`YYYY-MM-DD`) in the configured Branch time zone. */
+export function businessDate(instant: Date, timeZone = BUSINESS_TIME_ZONE): string {
+  const businessDateFormat = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
   const parts = new Map(
     businessDateFormat.formatToParts(instant).map((part) => [part.type, part.value]),
   );

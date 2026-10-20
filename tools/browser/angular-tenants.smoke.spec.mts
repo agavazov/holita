@@ -1,7 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, type Page } from '@playwright/test';
-import { test } from './angular-fixture.mjs';
+import { signOut, test } from './angular-fixture.mjs';
 import { workspaceRoot } from '../graphql/contracts.mjs';
 
 test.use({ demoSignedIn: false });
@@ -23,7 +23,9 @@ test('real tenant login gates deep links, survives reload, clears on logout and 
     if (
       request.method() === 'POST' &&
       request.url() === app.gatewayUrl &&
-      /Admin(Vehicles|Devices|Branches)/.test(request.postData() ?? '')
+      /Admin(Vehicles|Devices|Branches|FleetOverview|FleetPreferences)/.test(
+        request.postData() ?? '',
+      )
     ) {
       business.push(request.headers()['authorization'] ?? 'missing');
     }
@@ -40,8 +42,8 @@ test('real tenant login gates deep links, survives reload, clears on logout and 
     'true',
   );
   await signIn(page, 'RentalSofia');
-  await expect(page).toHaveURL(`${app.url}/en/${branchId}/fleet/vehicles`);
-  await expect(page.getByRole('heading', { name: 'Vehicles', exact: true })).toBeVisible();
+  await expect(page).toHaveURL(`${app.url}/en/${branchId}/fleet/overview`);
+  await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
   expect(business.length).toBeGreaterThan(0);
   expect(
     business.every((header) =>
@@ -49,16 +51,18 @@ test('real tenant login gates deep links, survives reload, clears on logout and 
     ),
   ).toBe(true);
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Vehicles', exact: true })).toBeVisible();
-  await page.getByTestId('demo-logout').click();
+  await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
+  await signOut(page);
   await expect(page.getByRole('heading', { name: 'Demo sign in', exact: true })).toBeVisible();
   expect(await page.evaluate(() => sessionStorage.getItem('holita.admin.demo-session'))).toBeNull();
   await signIn(page, 'Isolation tenant', 'Isolation branch');
-  await expect(page.getByRole('combobox', { name: 'Branch', exact: true })).toContainText(
-    'Isolation branch',
-  );
+  await expect(
+    page
+      .locator('holita-admin-topbar')
+      .getByRole('button', { name: 'Branch: Isolation branch', exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Branches', exact: true })).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Vehicles', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
   expect(business.at(-1)).toContain('Bearer holita-demo.01000000-0000-4000-8000-000000000002.');
 });
 
@@ -81,10 +85,12 @@ test('tenant login works by keyboard in Bulgarian narrow/light/dark layouts', as
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
         true,
       );
-      await page.screenshot({
-        path: join(captures, `login-${String(width)}-${theme}.png`),
-        fullPage: true,
-      });
+      if (process.env.HOLITA_BROWSER_SCREENSHOTS === '1') {
+        await page.screenshot({
+          path: join(captures, `login-${String(width)}-${theme}.png`),
+          fullPage: true,
+        });
+      }
       await page
         .getByRole('button', {
           name: theme === 'light' ? 'Включи тъмна тема' : 'Включи светла тема',
@@ -105,7 +111,7 @@ test('tenant login works by keyboard in Bulgarian narrow/light/dark layouts', as
   await page.keyboard.press('End');
   await page.keyboard.press('Enter');
   await page.getByTestId('demo-login').click();
-  await expect(page.getByRole('heading', { name: 'Автомобили', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Преглед', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Клони', exact: true })).toHaveCount(0);
   // At 320 px the navigation is a closed drawer, so no group headings are rendered.
   await expect(page.locator('aside nav').getByRole('heading')).toHaveCount(0);

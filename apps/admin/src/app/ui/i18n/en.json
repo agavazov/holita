@@ -7,6 +7,9 @@
   "units": {
     "km": "km",
     "kmh": "km/h",
+    "mi": "mi",
+    "mph": "mph",
+    "gallon": "gal",
     "litre": "L",
     "volt": "V",
     "percent": "%",

@@ -7,10 +7,12 @@ The current implementation uses Branch terminology; see [the domain index](READM
 ## Telemetry admin
 
 Prepare databases, migrate and seed, then run `npm run dev` and open
-[Angular admin](http://127.0.0.1:11000). Choose RentalSofia in the Tenant dropdown, then choose a Branch in the second dropdown and sign in to open Vehicles. Login has its own layout without the application topbar/sidebar. Vehicles and Devices are under Fleet; the topbar Branch menu switches the active Branch.
+[Angular admin](http://127.0.0.1:11000). Choose RentalSofia in the Tenant dropdown, then choose a Branch in the second dropdown and sign in to open Overview. Login has its own layout without the application topbar/sidebar. Fleet navigation opens Overview, Vehicles, Devices, Drivers, Trips, Alerts, Maintenance, Vehicle groups and General settings; the topbar Branch menu switches the active Branch.
 `dev:admin` runs Angular alone when the backends are available. Development defaults to `/bg`;
 `/en` selects English. Branch/language/list query survive reloads. Language switching keeps
-path/query/hash; Branch switching preserves Vehicles/Devices and resets the list context.
+path/query/hash; Branch switching returns to the current Fleet section's list or Overview and
+clears record, filter, paging and fragment context. Vehicle groups and General settings stay
+in their selected Settings section on a Branch switch.
 
 The shell follows the [admin design system](../admin-design-system.md#shell): desktop navigation
 collapses to a rail (remembered in `holita.admin.sidebar`), below 1024px navigation opens a modal
@@ -38,7 +40,7 @@ The standalone login screen is shown before login, including on bookmarked busin
 Selecting a Tenant obtains a candidate demo token and loads only its Branches into the second dropdown.
 Changing Tenant clears the Branch selection, cancels its old discovery client and ignores late candidate
 tokens. The candidate session is activated and stored only after selecting a valid Branch and submitting
-Sign in; no business requests run before this. Login opens Vehicles for the selected Branch. The seed creates the RentalSofia Tenant with Discordia and Sandbox Branches.
+Sign in; no business requests run before this. Login opens Overview for the selected Branch. The seed creates the RentalSofia Tenant with Discordia and Sandbox Branches.
 Core issues an HMAC-SHA256 token containing Tenant ID and an eight-hour expiry. Core, Fleet and Karma Client
 verify it per request and reject missing/invalid/expired sessions as UNAUTHENTICATED. Gateway
 forwards Authorization; tenantId never comes from a business input or x-tenant-id header.
@@ -51,7 +53,7 @@ for deliberate demonstration deployments only; it does not make this login produ
 
 Angular stores the session in tab-local sessionStorage under holita.admin.demo-session, restores
 unexpired sessions and the last selected Branch on reload and clears them on logout/expiry.
-The language root redirects signed-in sessions to Vehicles for that Branch (or the first available
+The language root redirects signed-in sessions to Overview for that Branch (or the first available
 Branch if the saved selection no longer exists). There is no Branch list page; the application header
 retains the Branch switcher. Saved Branch IDs are checked against current tenant discovery. Denied storage leaves a memory-only
 session. Each discovery/business client captures its token and owns its cache. Logout honors
@@ -65,30 +67,177 @@ cookies or an appropriate identity-provider flow, and add revocation and require
 The database has mandatory tenant columns, scoped repositories and same-tenant composite keys;
 it does not use PostgreSQL RLS. Owning-role/direct SQL access is not tenant-isolated.
 
+### Fleet demo data
+
+The optional `npm run db:seed:fleet-demo` command runs from the repository root. First follow
+the shared database setup/migration/seed steps, so Core contains RentalSofia and its Discordia
+Branch, and start local Core (`npm run dev:core` or the development group). The CLI verifies
+that Branch through Core before writing. It uses `FLEET_DATABASE_URL`, `CORE_GRAPHQL_URL` and
+the same `DEMO_AUTH_SECRET` as Core; export non-default values in the invoking shell. Its
+root entry point loads root `.env`, rather than Fleet's workspace `.env`.
+
+```bash
+npm run db:seed:fleet-demo
+```
+
+This inserts missing synthetic Discordia groups, drivers, vehicles, devices, service tasks,
+trips, samples and events. It preserves existing records, edits and workflow transitions;
+natural-key or reserved-ID conflicts fail explicitly. The default anchor is
+`2026-10-18T06:30:00.000Z`, independent of the execution date. An explicit anchor uses
+`npm run db:seed:fleet-demo -- --as-of=2026-10-18T06:30:00.000Z`; reruns must use the same
+anchor once its clock sample exists. The CLI refuses production mode, future anchors, remote
+Core/database URLs and database scopes outside local development or a guarded isolated test
+schema. It creates stored demo data; it does not connect a telemetry provider or send device commands.
+
+### Angular Fleet runtime
+
+The connected screens use the same views and drawers as Storybook, with concrete feature APIs
+and generated operations through Gateway. `FleetWorkspace` mounts each section for one
+session/Branch/language scope. Its captured `FleetPreferences` read must succeed before business
+views mount; failure exposes Retry, and unknown or disabled Branches issue no preferences or
+business queries. Routed record drawers keep their parent list mounted and use
+their own captured client. Closing a drawer preserves its list query and fragment. Browser
+Back and direct bookmarks follow the same routes and dirty guards.
+
+Lists persist applied search, independent AND filter conditions, sort, page and page size in
+the URL. Search applies after 300 ms, with at most five words and 200 Unicode code points.
+Changing a query retires its old read and selection; a failed refresh of the same query keeps
+the last rows. Full relation choices load with bounded pages, rather than treating the first
+page as the complete Branch. Loading, unavailable data and missing records remain explicit.
+All displayed activity, alert, odometer and urgency classifications come from Fleet; a missing
+telemetry clock stays unknown. Instant filters use the configured Branch calendar zone, while
+service dates remain `YYYY-MM-DD` calendar values.
+
 ### Angular Fleet Vehicles
 
 Routes are `/:language/:branchId/fleet/vehicles`, `/new` and `/:recordId/edit`.
 Previous `/reference/vehicles` and `/reference/devices` URLs redirect to `/fleet`, retaining
 editor paths, query parameters and fragments. The backend service, subgraph and GraphQL contracts use Fleet names.
-Fields are required License Plate (32 characters) and optional multiline Notes (2000 characters).
-Blank Notes clear to null. License Plate is not unique. Lists offer URL-backed search/sort/paging,
-confirmed single/page-local sequential deletion, partial result feedback and failed-row retry.
-Deleting an assigned Vehicle fails without deleting its Devices.
+The list uses the shared Storybook presentation with real GraphQL data: server-derived activity,
+fuel freshness, driver/group labels, odometer and whole-Branch KPIs. The displayed data time is
+the backend clock; a missing clock remains unknown. Search applies after 300 ms and at most five
+words. AND filter conditions, sort, page and page size stay in the URL; created-date filters use
+the configured Branch's calendar dates.
+
+New vehicle and a row's Edit action open routed drawers over the retained list. The typed form
+edits required License Plate (32 Unicode code points), fleet number, VIN, type, make/model/year,
+fuel type/tank capacity, status, group, current driver and multiline Notes (2000 code points).
+Optional empty fields clear to null; License Plate is not unique. The drawer loads group/driver
+choices through its own scoped client, excludes inactive drivers except the current assignment,
+retains failed drafts and preserves list query/fragment on close.
+
+Open profile navigates to `/fleet/vehicles/:recordId/overview`. The `overview`, `trips`, `alerts`
+and `service` tabs retain the vehicle profile and independently page related real records.
+Edit reuses `VehicleEditorPage`; Record odometer opens the profile's `odometer` child drawer.
+Both return to the current tab. A manual reading preserves zero, source and recorded time; it
+does not invent device activity, advance the telemetry data clock or change service history.
+
+Delete and Deactivate use the same IDs-array mutation from a row or the selection. Delete asks
+for confirmation and preserves protected Vehicle failures without deleting related Devices.
+One toast reports successes and partial/error details; failed selections remain for retry.
 
 ### Angular Fleet Devices
 
-Routes mirror Vehicles under `/fleet/devices`. IMEI is a required string of exactly 15 digits,
-unique within a Tenant/Branch; leading zeros are preserved. Truck is a required same-tenant/same-branch Vehicle selected
-through a remote search/paging dialog. Several Devices may share a Truck. Create/update validates
-assignment scope, and the database protects it with a composite foreign key.
+The `/fleet/devices` runtime mounts `DevicesPage` from `devices-list-page.ts`, with routed
+`DeviceEditorPage` children at `new` and `:recordId/edit`, and `DeviceDiagnosticsPage` at
+`:recordId/diagnostics`. IMEI is a required 15-digit string, unique within a Tenant/Branch;
+leading zeros are preserved. Vehicle assignment is optional: clearing it stores `null` and
+shows the device as in stock. Several devices may share a vehicle. The editor loads all
+Branch vehicle choices with bounded pages and edits model/options, firmware, SIM fields,
+installation time with an explicit offset, and notes. Assignment validation and the composite
+foreign key preserve Tenant/Branch scope.
 
-Both modules use typed Reactive Forms, dirty guards, retained failed drafts and focused field errors.
-Clients/caches belong to mounted session/Branch/language views. Navigation cancels reads and stops unsent
-batch deletes; submitted writes finish in their captured scope without obsolete UI callbacks.
+Whole-Branch online/offline/in-stock KPIs and last report come from Fleet. Firmware policy,
+hardware signal/voltage and restart are unavailable in the connected runtime; no provider
+command or success is simulated. Diagnostics shows the actual stored metadata and labels
+unsupported readings explicitly. The separately labelled Storybook Demo can illustrate those
+sample interactions. Runtime Delete uses one IDs-array mutation with per-ID failures and
+retains failed selections for retry.
+
+### Angular Fleet monitoring and Drivers
+
+`/fleet/overview` loads the Branch overview, daily distance, activity by group, recent trips
+and attention links through `OverviewApi`. It preserves unknown telemetry and retains the
+previous overview on a failed refresh. Login, the language root and `/:language/:branchId/fleet`
+open Overview; an unrecognized current section also falls back to Overview on Branch switching.
+
+`/fleet/alerts` opens actual actionable events, server counts and clock; `:recordId` opens
+`AlertDetailPage`. Acknowledge uses one optimistic `expectedStatus: OPEN` batch. Resolve and
+reopen use the status actually loaded in the drawer, retaining a rejected remark draft on
+conflict. Count KPIs ignore status/actionable selections but keep other filters and search;
+the resolved footnote describes the current filters, rather than an invented time window.
+
+`/fleet/trips` and its `:recordId` detail use `TripsPage` and `TripDetailPage`. The drawer shows
+the full returned driving-event timeline. Whole-Branch summary and filtered distance total
+stay separate. An unknown duration or end time remains unknown; duration seconds are converted
+to minutes for presentation.
+
+`/fleet/drivers` uses `DriversPage` and a routed `DriverEditorPage` for `new`, `:recordId` and
+`:recordId/edit`. Read/Edit/Cancel navigation retains the parent list. The form edits contact,
+identification and document fields with explicit null clearing. The `:recordId/scorecard`
+page loads the actual 7/30/90-day scorecard with `days` in the URL and preserves list context
+on return; no telemetry shows its own empty state. Assigned-driver deletion stays protected.
+
+### Angular Fleet Maintenance and Vehicle groups
+
+`/fleet/maintenance` mounts `MaintenancePage`; `MaintenanceRecordPage` dispatches `new`,
+`:recordId/edit`, `:recordId` and `:recordId/complete` to the shared task or completion drawer.
+Only planned records are editable; DONE receipts and CANCELLED plans are read-only. Completion
+uses Fleet's business date and can atomically plan the next occurrence. An inactive vehicle
+can receive a historical completion but cannot receive next planning. A service odometer is
+separate from telemetry; the server enforces its earlier-service floor. Costs are exact EUR
+cents, including zero, and filter controls reject fractional cents. Untitled task filters
+also match the active catalog's service-type labels. Cancel/Delete use real batch results.
+
+`/fleet/settings/groups` uses `VehicleGroupsPage` and `VehicleGroupEditorPage` at `new` and
+`:recordId/edit`. It loads the complete paged group list before local presentation paging,
+including real vehicle and ungrouped counts. Delete is a single-record operation and cannot
+remove a group that still contains vehicles.
+
+### Angular Fleet General settings
+
+`/fleet/settings/general` mounts `GeneralSettingsPage` and the shared full-page
+`GeneralSettingsView`. It edits the Core Branch name plus Fleet time zone, distance/volume
+display units, low-fuel percentage, not-reporting hours and the stored speed-limit reference.
+Fleet validates the four supported regional zones, KM/MI and LITRE/US_GALLON choices, and
+integer bounds of 1–50%, 1–168 hours and 30–130 km/h. A Branch without stored preferences
+receives Sofia/KM/LITRE/12/48/90 defaults from Fleet.
+
+Saved units convert read values and chart labels to km/mi, km/h/mph and litres/US gallons.
+Stored API measurements remain canonical; typed editors and filters keep their explicitly
+labelled km, km/h and litre entry units to preserve precision and contract bounds. Displayed
+instants use the Branch zone; calendar filters and backend daily/business-date rules use it
+as well. Date-only service/document values are not converted between zones. Editors with a
+specific entry-zone hint, such as the Sofia odometer input, retain that labelled zone.
+Low-fuel/reporting thresholds affect server-derived facts and counts. The speed limit is a
+stored reference only; saving it does not generate or rewrite historical speeding alerts.
+
+Save writes Fleet preferences first and renames the Core Branch only when its trimmed name
+changed. There is no cross-service transaction. A Fleet failure leaves both pending drafts
+unchanged. If Fleet succeeds but the name fails, the saved preferences apply immediately,
+the name stays editable with field/error feedback, and a sticky warning reports partial
+success. Discard restores the actual persisted Fleet settings and original Branch name;
+retry does not claim an earlier failed rename succeeded. Full success clears the dirty form
+and refreshes Branch discovery after a rename. Navigation retires UI callbacks while submitted
+writes settle in their captured scope.
+
+Notification switches are disabled and visibly labelled Demo/unavailable in the live page;
+they are not sent to either service. No email delivery or notification preferences are
+simulated. The shell's Demo bell remains separate from operation toasts.
+
+All editors use typed Reactive Forms, dirty guards, disabled submitted forms, retained drafts
+and mapped field errors with focus. Navigation cancels obsolete reads and confirmations.
+Submitted writes, including Vehicles/Devices/Drivers/Alerts/Maintenance batches, settle against
+their initiating session/Branch/language client. Successful IDs leave the selection; failed
+IDs remain available for retry. Retired callbacks cannot refresh or notify a new workspace.
+One `OperationToast` and `MessageService` in `AdminWorkspace` owns operation feedback; load and
+field errors stay inline.
 
 ## Admin translations
 
-Bundled Bulgarian/English catalogs supply shell, forms, confirmations and startup text.
+Bundled Bulgarian/English catalogs supply shell, forms, confirmations, startup text and every
+connected Fleet screen, including profile/odometer, scorecard and both settings views.
+Feature `i18n/messages.spec.ts` files check key and placeholder parity.
 Document language follows the route. Apollo clients capture `Accept-Language`; submitted
 writes keep their initiating session/Branch/language. Record content/backend messages display as received.
 
@@ -143,7 +292,7 @@ query TractorsWithoutGroup {
 }
 ```
 
-Drivers whose licence or tachograph card expires within 30 days of the Europe/Sofia business
+Drivers whose licence or tachograph card expires within 30 days of the configured Branch business
 date (expired ones included), with their document status and current vehicles:
 
 ```graphql

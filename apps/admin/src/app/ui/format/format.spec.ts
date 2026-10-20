@@ -26,6 +26,24 @@ describe('formatting', () => {
     expect(formatNumber(Number.NaN, 'en')).toBe('—');
   });
 
+  it.each(['en', 'bg'] as const)(
+    'keeps tiny finite numbers distinct from zero with significant digits in %s',
+    (language) => {
+      const options = { significantDigits: 21 };
+      const separator = language === 'bg' ? ',' : '.';
+      expect(formatNumber(1e-21, language, options)).toBe(`0${separator}${'0'.repeat(20)}1`);
+      expect(formatNumber(Number.MIN_VALUE, language, options)).toBe(
+        `0${separator}${'0'.repeat(323)}5`,
+      );
+      expect(formatNumber(0, language, options)).toBe('0');
+      expect(formatNumber(null, language, options)).toBe('—');
+      expect(formatNumber(0.29, language, { fraction: 2 })).toBe(
+        language === 'bg' ? '0,29' : '0.29',
+      );
+      expect(formatNumber(123.4, language, { fraction: 0 })).toBe('123');
+    },
+  );
+
   it('formats units from the catalogs', () => {
     expect(formatDistanceKm(12.34, 'bg')).toBe(`12,3${nbsp}км`);
     expect(formatSpeed(88, 'en')).toBe(`88${nbsp}km/h`);

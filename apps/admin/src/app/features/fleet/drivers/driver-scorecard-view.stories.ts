@@ -198,6 +198,16 @@ export const Unscored: Story = {
 export const ZeroScores: Story = {
   name: 'Reported zero scores',
   render: exampleAt(`${path}?scenario=zero-scores`),
+  play: async ({ canvasElement }) => {
+    const canvas = await pageReady(canvasElement);
+    for (const label of ['Driving score', 'Eco score']) {
+      const tile = canvas.getByText(label, { exact: true }).closest('holita-kpi-tile');
+      if (!(tile instanceof HTMLElement)) {
+        throw new Error(`Missing ${label} KPI.`);
+      }
+      await expect(within(tile).getByText('0', { exact: true })).toBeVisible();
+    }
+  },
 };
 export const Empty: Story = {
   render: exampleAt(`${path}?scenario=empty`),
@@ -215,7 +225,21 @@ export const NoTelemetry: Story = {
     await expect(canvas.queryByRole('group', { name: 'Driving summary' })).toBeNull();
   },
 };
-export const Loading: Story = { render: exampleAt(`${path}?scenario=loading`) };
+export const Loading: Story = {
+  render: exampleAt(`${path}?scenario=loading`),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(async () => {
+      await expect(
+        canvas.getByRole('heading', { level: 1, name: 'Driver scorecard' }),
+      ).toBeVisible();
+      await expect(canvas.getByRole('group', { name: 'Driving summary' })).toHaveAttribute(
+        'aria-busy',
+        'true',
+      );
+    }, appReady);
+  },
+};
 export const NotFound: Story = {
   name: 'Not found',
   render: exampleAt('drivers/no-such-driver/scorecard'),
@@ -239,9 +263,17 @@ export const ErrorState: Story = {
 };
 export const Mobile: Story = {
   render: exampleAt(path),
+  play: async ({ canvasElement }) => {
+    const canvas = await pageReady(canvasElement);
+    await expect(canvas.getByRole('figure', { name: 'Maneuvers by intensity' })).toBeVisible();
+  },
   globals: { viewport: { value: 'mobile375', isRotated: false } },
 };
 export const Dark: Story = {
   render: exampleAt(path),
+  play: async ({ canvasElement }) => {
+    const canvas = await pageReady(canvasElement);
+    await expect(canvas.getByRole('figure', { name: 'Maneuvers by intensity' })).toBeVisible();
+  },
   globals: { theme: 'dark' },
 };

@@ -1,17 +1,21 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  output,
+  viewChild,
+} from '@angular/core';
 import { ButtonDirective } from 'primeng/button';
 import { Timeline } from 'primeng/timeline';
 import { Tag } from 'primeng/tag';
-import { RouteDrawer } from '../../../ui/drawer/route-drawer';
-import {
-  displayTimeZone,
-  FormatDateTimePipe,
-  FormatDurationPipe,
-  FormatNumberPipe,
-} from '../../../ui/format/format.pipes';
+import { RouteDrawer, type RouteDrawerState } from '../../../ui/drawer/route-drawer';
+import { FormatDateTimePipe, FormatDurationPipe } from '../../../ui/format/format.pipes';
 import { formatDateTime } from '../../../ui/format/format';
 import { interpolate } from '../../../ui/i18n/messages';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
+import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { scoreTone } from '../drivers/drivers-view';
 import { tripsText } from './i18n/messages';
 import type { TripRow } from './trips-view';
@@ -29,34 +33,40 @@ interface TimelineEntry {
  */
 @Component({
   selector: 'holita-trip-drawer',
-  imports: [
-    ButtonDirective,
-    Timeline,
-    Tag,
-    RouteDrawer,
-    FormatDateTimePipe,
-    FormatDurationPipe,
-    FormatNumberPipe,
-  ],
+  imports: [ButtonDirective, Timeline, Tag, RouteDrawer, FormatDateTimePipe, FormatDurationPipe],
   templateUrl: './trip-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TripDrawer {
-  readonly trip = input.required<TripRow>();
+  readonly trip = input<TripRow | null>(null);
+  readonly state = input<RouteDrawerState>('ready');
+  readonly loadError = input<string | null>(null);
+  readonly closeLink = input<readonly unknown[] | null>(null);
+  readonly retry = output();
   readonly closed = output();
   readonly openVehicle = output<string>();
 
+  protected readonly units = injectFleetFormat();
   private readonly language = inject(UI_LANGUAGE);
+  private readonly drawer = viewChild.required(RouteDrawer);
   protected readonly text = computed(() => tripsText(this.language()).drawer);
   protected readonly title = computed(() =>
-    interpolate(this.text().title, { plate: this.trip().plate }),
+    this.trip()
+      ? interpolate(this.text().title, { plate: this.trip()?.plate ?? '' })
+      : this.text().recordTitle,
   );
   protected readonly subtitle = computed(() => {
     const trip = this.trip();
-    return `${formatDateTime(trip.startedAt, this.language(), displayTimeZone)} · ${trip.from ?? '—'} → ${trip.to ?? '—'}`;
+    if (!trip) {
+      return null;
+    }
+    return `${formatDateTime(trip.startedAt, this.language(), this.units.preferences().timeZone)} · ${trip.from ?? '—'} → ${trip.to ?? '—'}`;
   });
   protected readonly timeline = computed<readonly TimelineEntry[]>(() => {
     const trip = this.trip();
+    if (!trip) {
+      return [];
+    }
     const text = this.text();
     return [
       {
@@ -100,5 +110,9 @@ export class TripDrawer {
 
   protected dotClass(entry: TimelineEntry): string {
     return `app-dot app-dot--${entry.tone}`;
+  }
+
+  protected close(): void {
+    this.drawer().close();
   }
 }

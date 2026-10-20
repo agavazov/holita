@@ -17,10 +17,10 @@
     "started": "Started",
     "vehicle": "Vehicle",
     "route": "Route",
-    "distance": "Distance, km",
+    "distance": "Distance, {unit}",
     "duration": "Duration",
     "maxSpeed": "Max speed",
-    "fuel": "Fuel, L",
+    "fuel": "Fuel, {unit}",
     "score": "Score",
     "events": "Events",
     "actions": "Actions",
@@ -33,7 +33,7 @@
     "eventCount": "{count} events",
     "emptyTitle": "No trips yet",
     "emptyDescription": "Trips appear when the trackers report the first journeys.",
-    "errorText": "The trips could not be loaded. (demo-request-5)"
+    "errorText": "The trips could not be loaded."
   },
   "actions": {
     "open": "Open trip",
@@ -48,6 +48,7 @@
     "hasEvents": "Has driving events"
   },
   "drawer": {
+    "recordTitle": "Trip",
     "title": "Trip {plate}",
     "summary": "Summary",
     "timeline": "Timeline",

@@ -22,7 +22,7 @@ import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 import { Tag } from 'primeng/tag';
 import { Textarea } from 'primeng/textarea';
-import { RouteDrawer } from '../../../ui/drawer/route-drawer';
+import { RouteDrawer, type RouteDrawerState } from '../../../ui/drawer/route-drawer';
 import { FormField } from '../../../ui/form-field/form-field';
 import {
   FormatDateOnlyPipe,
@@ -42,6 +42,7 @@ import {
 import { interpolate } from '../../../ui/i18n/messages';
 import { toneSeverity } from '../../../ui/tones';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
+import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { selectMultiplePt } from '../../../ui/select-multiple';
 import {
   daysUntil,
@@ -132,19 +133,28 @@ export class DriverDrawer {
   readonly driver = input<DriverDetails | null>(null);
   /** Opens an existing driver on the form (the row's Edit action) instead of the record. */
   readonly startEditing = input(false);
-  readonly businessDate = input.required<string>();
+  readonly businessDate = input.required<string | null>();
   readonly saving = input(false);
+  readonly state = input<RouteDrawerState>('ready');
+  readonly loadError = input<string | null>(null);
+  readonly closeLink = input<readonly unknown[] | null>(null);
+  /** Routed hosts own Edit/Cancel navigation; stories keep the local mixed-drawer behavior. */
+  readonly routed = input(false);
   readonly saveError = input<string | null>(null);
   readonly fieldErrors = input<Partial<Record<DriverField, string>>>({});
   readonly save = output<DriverForm>();
   readonly closed = output();
   readonly openScorecard = output();
+  readonly editRequest = output();
+  readonly cancelEdit = output();
+  readonly retry = output();
 
+  protected readonly units = injectFleetFormat();
   private readonly language = inject(UI_LANGUAGE);
   private readonly injector = inject(Injector);
   private readonly drawer = viewChild.required(RouteDrawer);
   private readonly formElement = viewChild<ElementRef<HTMLFormElement>>('formElement');
-  private readonly catalog = computed(() => driversText(this.language()));
+  protected readonly catalog = computed(() => driversText(this.language()));
   protected readonly text = computed(() => this.catalog().drawer);
 
   /** A new record, or a saved one reopening, decides between the record and the form. */
@@ -191,6 +201,9 @@ export class DriverDrawer {
   private submitted = false;
 
   protected readonly title = computed(() => {
+    if (this.state() !== 'ready') {
+      return this.text().recordTitle;
+    }
     const driver = this.driver();
     if (!driver) {
       return this.text().createTitle;
@@ -238,6 +251,21 @@ export class DriverDrawer {
         this.reset(driver);
       });
     });
+    effect(() => {
+      const errors = this.fieldErrors();
+      if (this.state() !== 'ready' || !Object.keys(errors).length) {
+        return;
+      }
+      afterNextRender(
+        () => {
+          const form = this.formElement()?.nativeElement;
+          if (this.state() === 'ready' && form?.isConnected) {
+            focusFirstInvalid(form, fieldOrder, 'driver-');
+          }
+        },
+        { injector: this.injector },
+      );
+    });
     lockWhileSaving(
       this.form,
       () => this.saving(),
@@ -259,10 +287,11 @@ export class DriverDrawer {
   }
 
   protected expiry(dateOnly: string | null): { severity: 'danger' | 'warn'; label: string } | null {
-    if (dateOnly === null) {
+    const today = this.businessDate();
+    if (dateOnly === null || today === null) {
       return null;
     }
-    const days = daysUntil(dateOnly, this.businessDate());
+    const days = daysUntil(dateOnly, today);
     if (days < 0) {
       return { severity: 'danger', label: this.catalog().expiry.expired };
     }
@@ -295,6 +324,10 @@ export class DriverDrawer {
   }
 
   protected edit(): void {
+    if (this.routed()) {
+      this.editRequest.emit();
+      return;
+    }
     this.editing.set(true);
   }
 
@@ -340,6 +373,10 @@ export class DriverDrawer {
       await this.requestClose();
       return;
     }
+    if (this.routed()) {
+      this.cancelEdit.emit();
+      return;
+    }
     if (!(await this.drawer().confirmLeave(this.form.dirty))) {
       return;
     }
@@ -349,6 +386,10 @@ export class DriverDrawer {
 
   /** Close button, Escape and backdrop: unsaved changes are confirmed first. */
   protected async requestClose(): Promise<void> {
+    if (this.closeLink() !== null) {
+      this.drawer().close();
+      return;
+    }
     if (await this.canLeave()) {
       this.closed.emit();
     }
@@ -356,6 +397,10 @@ export class DriverDrawer {
 
   canLeave(): Promise<boolean> | boolean {
     return this.saving() ? false : this.drawer().confirmLeave(this.dirty());
+  }
+
+  markSaved(): void {
+    this.form.markAsPristine();
   }
 
   private reset(driver: DriverDetails | null): void {

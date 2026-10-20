@@ -6,6 +6,6 @@ import type { SelectPassThrough } from 'primeng/select';
  * `aria-allowed-attr`); the listbox in the overlay keeps the attribute.
  * Usage: `<p-select [multiple]="true" [pt]="selectMultiplePt" … />`.
  */
-export const selectMultiplePt: SelectPassThrough = {
+export const selectMultiplePt = {
   label: { 'aria-multiselectable': null },
-};
+} satisfies SelectPassThrough;

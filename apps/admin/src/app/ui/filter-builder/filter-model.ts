@@ -1,4 +1,5 @@
 import type { Language } from '../../i18n/messages';
+import type { ValidationErrors } from '@angular/forms';
 import { formatDateOnly, formatNumber } from '../format/format';
 import { interpolate, uiMessages } from '../i18n/messages';
 
@@ -41,6 +42,14 @@ export interface FilterField {
   readonly options?: readonly FilterOption[];
   /** Unit shown after `number` values, e.g. "km". */
   readonly unit?: string;
+  readonly min?: number;
+  readonly max?: number;
+  readonly integer?: boolean;
+  /** Maximum fractional decimal places, e.g. 2 for a currency amount. */
+  readonly decimalPlaces?: number;
+  /** Trimmed Unicode code points. */
+  readonly maxLength?: number;
+  readonly maxValues?: number;
 }
 
 /**
@@ -94,6 +103,9 @@ function isValue(type: FilterFieldType, text: string | undefined): boolean {
 
 /** Whether the condition has every value its operator needs, in the right format and order. */
 export function isComplete(field: FilterField, condition: FilterCondition): boolean {
+  if (filterValueErrors(field, condition.values)) {
+    return false;
+  }
   const [first, second] = condition.values;
   switch (operandsOf(condition.operator)) {
     case 'none':
@@ -114,9 +126,57 @@ export function isComplete(field: FilterField, condition: FilterCondition): bool
   }
 }
 
+/** Optional backend bounds; shared by Apply eligibility and its localized explanation. */
+export function filterValueErrors(
+  field: FilterField,
+  values: readonly string[],
+): ValidationErrors | null {
+  if (field.maxValues !== undefined && values.length > field.maxValues) {
+    return { max: { max: field.maxValues } };
+  }
+  for (const text of values) {
+    if (field.type === 'text') {
+      if (text.includes('\u0000')) {
+        return { unsupported: true };
+      }
+      if (field.maxLength !== undefined && Array.from(text.trim()).length > field.maxLength) {
+        return { maxLength: { max: field.maxLength } };
+      }
+    }
+    if (field.type === 'number' && isNumber(text)) {
+      const value = Number(text);
+      if (field.integer && !Number.isInteger(value)) {
+        return { integer: true };
+      }
+      if (field.decimalPlaces !== undefined) {
+        const [coefficient = '', exponent = '0'] = String(value).split(/[eE]/);
+        const places = Math.max(0, (coefficient.split('.')[1]?.length ?? 0) - Number(exponent));
+        if (places > field.decimalPlaces) {
+          return { step: { step: 10 ** -field.decimalPlaces } };
+        }
+      }
+      if (field.min !== undefined && value < field.min) {
+        return { min: { min: field.min } };
+      }
+      if (field.max !== undefined && value > field.max) {
+        return { max: { max: field.max } };
+      }
+    }
+  }
+  return null;
+}
+
 function formatValue(field: FilterField, value: string, language: Language): string {
   if (field.type === 'number') {
-    const number = formatNumber(Number(value), language);
+    const number = formatNumber(
+      Number(value),
+      language,
+      field.integer
+        ? { fraction: 0 }
+        : field.decimalPlaces === undefined
+          ? { significantDigits: 21 }
+          : { fraction: field.decimalPlaces },
+    );
     return field.unit ? `${number} ${field.unit}` : number;
   }
   if (field.type === 'date') {

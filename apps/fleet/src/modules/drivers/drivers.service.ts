@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { addDays, businessDate, dataWindow, FleetClock } from '../../clock/fleet-clock.js';
 import {
   DOCUMENT_EXPIRING_DAYS,
@@ -10,9 +16,12 @@ import type {
   CreateFleetDriverInput,
   FleetDocumentStatus,
   FleetDriver,
+  FleetDriverActionFailure,
+  FleetDriverActionResult,
   FleetDriverPage,
   FleetDriverScorecard,
   FleetDriverSortField,
+  FleetDriverSummary,
   QueryFleetDriverScorecardArgs,
   QueryFleetDriversArgs,
   UpdateFleetDriverInput,
@@ -53,11 +62,17 @@ import {
   type DriverData,
   type DriverListCriteria,
   type DriverRow,
+  type DriverStats,
   DriversRepository,
 } from './drivers.repository.js';
+import { driverConditions } from './driver-filter.js';
+import { SettingsService } from '../settings/settings.service.js';
 
 export type DriverResult = FleetDriver;
-type StoredDriver = Omit<DriverResult, 'distance30dKm' | 'tripCount30d' | 'maneuversPer100Km30d'>;
+type StoredDriver = Omit<
+  DriverResult,
+  'distance30dKm' | 'tripCount30d' | 'drivingScore30d' | 'maneuversPer100Km30d'
+>;
 
 /** Longest scorecard period; matches the `fleetManeuverCounts` period limit. */
 const MAX_SCORECARD_DAYS = 93;
@@ -65,11 +80,16 @@ const MAX_SCORECARD_DAYS = 93;
 const DRIVER_STATUSES = Object.values(FleetDriverStatus);
 const LICENSE_CATEGORIES = Object.values(FleetLicenseCategory);
 const SORT_FIELDS: readonly FleetDriverSortField[] = [
+  'NAME',
   'LAST_NAME',
   'EMPLOYEE_NUMBER',
   'LICENSE_EXPIRES_ON',
   'TACHOGRAPH_CARD_EXPIRES_ON',
   'CREATED_AT',
+  'STATUS',
+  'DRIVING_SCORE_30D',
+  'TRIP_COUNT_30D',
+  'DISTANCE_30D_KM',
 ];
 
 const DUPLICATE_EMPLOYEE_NUMBER: FieldError = {
@@ -79,6 +99,10 @@ const DUPLICATE_EMPLOYEE_NUMBER: FieldError = {
 const DUPLICATE_IDENTIFICATION_KEY: FieldError = {
   path: 'identificationKey',
   message: 'Identification key is already used in this branch.',
+};
+const ASSIGNED_DRIVER: FieldError = {
+  path: 'status',
+  message: 'Unassign the driver from its vehicles first.',
 };
 const UNIQUE_INDEXES = new Map([
   ['Driver_tenantId_branchId_employeeNumber_key', DUPLICATE_EMPLOYEE_NUMBER],
@@ -182,6 +206,7 @@ function per100Km(count: number, distanceKm: number): number | null {
 
 @Injectable()
 export class DriversService {
+  private readonly logger = new Logger(DriversService.name);
   constructor(
     private readonly drivers: DriversRepository,
     private readonly core: CoreClient,
@@ -189,6 +214,7 @@ export class DriversService {
     private readonly telemetry: TelemetryService,
     private readonly trips: TripsService,
     private readonly events: EventsService,
+    private readonly settings: SettingsService,
   ) {}
 
   async list(context: RequestContext, args: QueryFleetDriversArgs): Promise<FleetDriverPage> {
@@ -197,7 +223,7 @@ export class DriversService {
     const tokens = searchTokens(args.search);
     const selected = args.ids == null ? undefined : ids(args.ids, 'ids');
     const filter = args.filter;
-    const today = businessDate(this.clock.now());
+    const today = await this.today(scope);
     const withinDays = integerFilter(
       filter?.documentsExpireWithinDays,
       'documentsExpireWithinDays',
@@ -216,6 +242,7 @@ export class DriversService {
       documentsExpireBy:
         withinDays === undefined ? undefined : dateOnlyToDate(addDays(today, withinDays)),
       hasVehicle: booleanFilter(filter?.hasVehicle, 'hasVehicle'),
+      ...(filter?.allOf == null ? {} : { allOf: driverConditions(filter.allOf) }),
     };
     const sort = {
       field: sortField(args.sort?.field, SORT_FIELDS, 'LAST_NAME'),
@@ -223,7 +250,13 @@ export class DriversService {
     };
     const page = await this.drivers.list(scope, { offset, limit }, criteria, sort);
     return {
-      items: await this.complete(scope, page.items, today),
+      items: await this.withStats(
+        scope,
+        page.items,
+        today,
+        page.items[0]?.dataAsOf ?? null,
+        new Map(page.items.map((row) => [row.id, row])),
+      ),
       total: page.total,
       offset,
       limit,
@@ -237,6 +270,79 @@ export class DriversService {
       throw new NotFoundException('Driver not found');
     }
     return this.completeOne(scope, row);
+  }
+
+  async summary(context: RequestContext): Promise<FleetDriverSummary> {
+    const scope = requireScope(context);
+    const dueBy = addDays(await this.today(scope), DOCUMENT_EXPIRING_DAYS);
+    return this.drivers.summary(scope, dateOnlyToDate(dueBy));
+  }
+
+  async deleteMany(
+    context: RequestContext,
+    values: readonly string[],
+  ): Promise<FleetDriverActionResult> {
+    requireScope(context);
+    const selected = ids(values, 'ids');
+    if (!selected.length) {
+      invalid('ids', 'Choose at least one driver.');
+    }
+    const succeededIds: string[] = [];
+    const failures: FleetDriverActionFailure[] = [];
+    for (const id of selected) {
+      try {
+        await this.delete(context, id);
+        succeededIds.push(id);
+      } catch (error: unknown) {
+        failures.push(this.actionFailure(context, id, error));
+      }
+    }
+    return { succeededIds, failures };
+  }
+
+  async deactivateMany(
+    context: RequestContext,
+    values: readonly string[],
+  ): Promise<FleetDriverActionResult> {
+    requireScope(context);
+    const selected = ids(values, 'ids');
+    if (!selected.length) {
+      invalid('ids', 'Choose at least one driver.');
+    }
+    const succeededIds: string[] = [];
+    const failures: FleetDriverActionFailure[] = [];
+    for (const id of selected) {
+      try {
+        await this.update(context, id, { status: 'INACTIVE' });
+        succeededIds.push(id);
+      } catch (error: unknown) {
+        failures.push(this.actionFailure(context, id, error));
+      }
+    }
+    return { succeededIds, failures };
+  }
+
+  private actionFailure(
+    context: RequestContext,
+    id: string,
+    error: unknown,
+  ): FleetDriverActionFailure {
+    if (error instanceof HttpException) {
+      const code = new Map([
+        [400, 'BAD_USER_INPUT'],
+        [404, 'NOT_FOUND'],
+        [409, 'CONFLICT'],
+        [503, 'SERVICE_UNAVAILABLE'],
+      ]).get(error.getStatus());
+      if (code) {
+        return { id, code, message: error.message };
+      }
+    }
+    this.logger.error({
+      requestId: context.requestId,
+      error: error instanceof Error ? error.name : 'UnknownError',
+    });
+    return { id, code: 'INTERNAL_SERVER_ERROR', message: 'Unable to change driver.' };
   }
 
   /** Statistics of the `days` before the data clock; empty windows when there is no data. */
@@ -254,7 +360,7 @@ export class DriversService {
     const asOf = await this.telemetry.asOf(scope);
     const window = dataWindow(asOf, days);
     const [[driver], score, maneuvers] = await Promise.all([
-      this.withStats(scope, [row], businessDate(this.clock.now()), asOf),
+      this.withStats(scope, [row], await this.today(scope), asOf),
       window === null ? null : this.trips.driverScore(scope, driverId, window),
       this.events.driverManeuvers(scope, driverId, window),
     ]);
@@ -367,14 +473,17 @@ export class DriversService {
       throw new NotFoundException('Driver not found');
     }
     if (data.status === 'INACTIVE' && stored.vehicles.length) {
-      invalid('status', 'Unassign the driver from its vehicles first.');
+      invalidFields([ASSIGNED_DRIVER]);
     }
     await this.checkDuplicates(scope, data, recordId);
-    let row: DriverRow;
+    let row: DriverRow | null;
     try {
       row = await this.drivers.update(scope, recordId, data);
     } catch (error) {
       this.writeError(error);
+    }
+    if (row === null) {
+      invalidFields([ASSIGNED_DRIVER]);
     }
     return this.completeOne(scope, row);
   }
@@ -404,7 +513,7 @@ export class DriversService {
   }
 
   private async completeOne(scope: FleetScope, row: DriverRow): Promise<DriverResult> {
-    const [driver] = await this.complete(scope, [row], businessDate(this.clock.now()));
+    const [driver] = await this.complete(scope, [row], await this.today(scope));
     if (!driver) {
       throw new NotFoundException('Driver not found');
     }
@@ -412,7 +521,7 @@ export class DriversService {
   }
 
   /**
-   * Attaches the 30-day statistics before the data clock with one trip and one event grouping
+   * Attaches the 30-day statistics before the data clock with one trip-facts and one event grouping
    * for the whole page; without device data every driver has zero distance and trips.
    */
   private async withStats(
@@ -420,27 +529,33 @@ export class DriversService {
     rows: readonly DriverRow[],
     today: string,
     asOf: Date | null,
+    capturedStats?: ReadonlyMap<string, DriverStats>,
   ): Promise<DriverResult[]> {
     const window = dataWindow(asOf, DRIVER_STATS_DAYS);
     const driverIds = rows.map((row) => row.id);
     const [totals, maneuvers] =
       window === null
-        ? [new Map<string, { distanceKm: number; tripCount: number }>(), new Map<string, number>()]
+        ? [new Map<string, DriverStats>(), new Map<string, number>()]
         : await Promise.all([
-            this.trips.driverTotals(scope, driverIds, window),
+            capturedStats ?? this.drivers.stats(scope, driverIds, window),
             this.events.maneuverTotalsByDriver(scope, driverIds, window),
           ]);
     return rows.map((row) => {
       const total = totals.get(row.id);
-      const distanceKm = total?.distanceKm ?? 0;
+      const distanceKm = total?.distance30dKm ?? 0;
       return {
         ...toDriver(row, today),
         distance30dKm: distanceKm,
-        tripCount30d: total?.tripCount ?? 0,
+        tripCount30d: total?.tripCount30d ?? 0,
+        drivingScore30d: total?.drivingScore30d ?? null,
         maneuversPer100Km30d:
           window === null ? null : per100Km(maneuvers.get(row.id) ?? 0, distanceKm),
       };
     });
+  }
+
+  private async today(scope: FleetScope): Promise<string> {
+    return businessDate(this.clock.now(), (await this.settings.read(scope)).timeZone);
   }
 
   private async checkDuplicates(

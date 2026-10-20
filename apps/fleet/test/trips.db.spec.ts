@@ -7,6 +7,7 @@ import { issueDemoToken } from '../src/auth/demo-auth.js';
 import { FleetClock } from '../src/clock/fleet-clock.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { CoreClient } from '../src/integrations/core/core.client.js';
+import { TripsRepository } from '../src/modules/trips/trips.repository.js';
 import { createTestDatabase } from './test-database.js';
 
 const tenantId = '01000000-0000-4000-8000-000000000001';
@@ -19,6 +20,8 @@ describe('Trips list contract with PostgreSQL', () => {
   let app: INestApplication | undefined;
   let url: string;
   const branchId = randomUUID();
+  const firstManeuver = randomUUID();
+  const secondManeuver = randomUUID();
   const trips: Record<'t1' | 't2' | 't3' | 't4' | 't5', string> = {
     t1: '',
     t2: '',
@@ -89,7 +92,7 @@ describe('Trips list contract with PostgreSQL', () => {
       distanceKm: 120.5,
       drivingScore: 88,
       startAddress: 'София',
-      endAddress: 'Пловдив',
+      endAddress: 'Пловдив %_\\',
     });
     trips.t2 = await create({
       vehicleId: firstVehicle,
@@ -108,9 +111,14 @@ describe('Trips list contract with PostgreSQL', () => {
     trips.t5 = await create({ vehicleId: firstVehicle, driverId: anna, startedAt: hours(-30) });
     await client.fleetEvent.createMany({
       data: [
-        { kind: 'HARSH_BRAKING' as const, intensity: 2 },
-        { kind: 'SHARP_TURN' as const, intensity: null },
-        { kind: 'IGNITION_ON' as const, intensity: null },
+        {
+          id: firstManeuver,
+          kind: 'HARSH_BRAKING' as const,
+          intensity: 2,
+          details: 'Brake applied',
+        },
+        { id: secondManeuver, kind: 'SHARP_TURN' as const, intensity: null, details: null },
+        { id: randomUUID(), kind: 'IGNITION_ON' as const, intensity: null, details: null },
       ].map((event, index) => ({
         tenantId,
         branchId,
@@ -123,6 +131,29 @@ describe('Trips list contract with PostgreSQL', () => {
         ...event,
       })),
     });
+    await client.fleetEvent.createMany({
+      data: [
+        {
+          tenantId,
+          branchId,
+          vehicleId: firstVehicle,
+          tripId: trips.t2,
+          source: 'DEMO',
+          occurredAt: hours(-47.5),
+          severity: 'INFO',
+          kind: 'IGNITION_ON',
+        },
+        {
+          tenantId,
+          branchId,
+          vehicleId: firstVehicle,
+          source: 'DEMO',
+          occurredAt: hours(-1),
+          severity: 'WARNING',
+          kind: 'HARSH_BRAKING',
+        },
+      ],
+    });
     // Same plates and drivers in another Branch and another Tenant stay invisible.
     for (const [scopeTenant, scopeBranch] of [
       [tenantId, randomUUID()],
@@ -131,7 +162,7 @@ describe('Trips list contract with PostgreSQL', () => {
       const vehicle = await client.vehicle.create({
         data: { tenantId: scopeTenant, branchId: scopeBranch, licensePlate: 'CB 1001 AX' },
       });
-      await client.trip.create({
+      const foreignTrip = await client.trip.create({
         data: {
           tenantId: scopeTenant,
           branchId: scopeBranch,
@@ -142,7 +173,31 @@ describe('Trips list contract with PostgreSQL', () => {
           drivingScore: 10,
         },
       });
+      await client.fleetEvent.create({
+        data: {
+          tenantId: scopeTenant,
+          branchId: scopeBranch,
+          vehicleId: vehicle.id,
+          tripId: foreignTrip.id,
+          source: 'DEMO',
+          occurredAt: hours(-0.5),
+          severity: 'WARNING',
+          kind: 'HARSH_BRAKING',
+        },
+      });
     }
+  });
+
+  it('sorts whole-second duration before paging, with nulls last and stable startedAt ties', async () => {
+    expect(await ids({ sort: { field: 'DURATION_SECONDS', direction: 'ASC' } })).toEqual(
+      page(['t3', 't2', 't1', 't4', 't5'], 150.5),
+    );
+    expect(await ids({ sort: { field: 'DURATION_SECONDS', direction: 'DESC' } })).toEqual(
+      page(['t1', 't3', 't2', 't4', 't5'], 150.5),
+    );
+    expect(
+      await ids({ sort: { field: 'DURATION_SECONDS', direction: 'ASC' }, offset: 1, limit: 2 }),
+    ).toEqual(page(['t2', 't1'], 150.5, 5, 1, 2));
   });
   afterAll(async () => {
     try {
@@ -234,14 +289,325 @@ describe('Trips list contract with PostgreSQL', () => {
     expect(await ids({ search: 'ПЛОВДИВ' })).toEqual(page(['t1'], 120.5));
     expect(await ids({ search: 'cb 1002' })).toEqual(page(['t4', 't3'], 30));
     expect(await ids({ search: 'т-01 георги' })).toEqual(page(['t1'], 120.5));
+    expect(await ids({ search: '%_\\' })).toEqual(page(['t1'], 120.5));
+    expect(await ids({ search: '%' })).toEqual(page(['t1'], 120.5));
     expect(
       await query(list, { offset: 0, limit: 20, filter: { drivingScoreBelow: 101 } }),
     ).toMatchObject({ errors: [{ extensions: { fieldErrors: [{ path: 'filter' }] } }] });
   });
 
+  it('ANDs independent exclusions, ranges and repeated conditions before count and distance totals', async () => {
+    expect(
+      await ids({
+        filter: { allOf: [{ vehicleIds: [firstVehicle] }, { excludedVehicleIds: [firstVehicle] }] },
+      }),
+    ).toEqual(page([], 0));
+    expect(await ids({ filter: { allOf: [{ excludedVehicleIds: [firstVehicle] }] } })).toEqual(
+      page(['t4', 't3'], 30),
+    );
+    expect(
+      await ids({ filter: { allOf: [{ driverIds: [georgi] }, { excludedDriverIds: [anna] }] } }),
+    ).toEqual(page(['t4', 't1'], 120.5));
+    expect(await ids({ filter: { allOf: [{ excludedDriverIds: [georgi] }] } })).toEqual(
+      page(['t3', 't5', 't2'], 30),
+    );
+    expect(await ids({ filter: { allOf: [{ driverIds: [anna] }, { hasDriver: false }] } })).toEqual(
+      page([], 0),
+    );
+    expect(await ids({ filter: { allOf: [{ hasEvents: true }] } })).toEqual(page(['t1'], 120.5));
+    expect(await ids({ filter: { allOf: [{ hasEvents: false }] } })).toEqual(
+      page(['t4', 't3', 't5', 't2'], 30),
+    );
+    expect(await ids({ filter: { allOf: [{ hasEvents: true }, { hasEvents: false }] } })).toEqual(
+      page([], 0),
+    );
+    expect(await ids({ filter: { allOf: [{ distanceKmFrom: 30, distanceKmTo: 120.5 }] } })).toEqual(
+      page(['t3', 't1'], 150.5),
+    );
+    expect(
+      await ids({ filter: { allOf: [{ distanceKmAbove: 30 }, { distanceKmBelow: 120.5 }] } }),
+    ).toEqual(page([], 0));
+    expect(
+      await ids({ filter: { allOf: [{ drivingScoreAbove: 55.5 }, { drivingScoreBelow: 88 }] } }),
+    ).toEqual(page([], 0));
+    expect(
+      await ids({
+        filter: { allOf: [{ drivingScoreAbove: 55.4 }, { drivingScoreBelow: 88.1 }] },
+        limit: 1,
+      }),
+    ).toEqual(page(['t3'], 150.5, 2, 0, 1));
+    expect(
+      await ids({
+        filter: {
+          allOf: [
+            { startedFrom: hours(-48).toISOString(), startedTo: hours(-23).toISOString() },
+            { startedFrom: hours(-30).toISOString(), startedTo: hours(-24).toISOString() },
+          ],
+        },
+      }),
+    ).toEqual(page(['t5'], 0));
+    expect(
+      await ids({
+        filter: {
+          vehicleIds: [firstVehicle],
+          allOf: [{ distanceKmFrom: 30, distanceKmTo: 120.5 }],
+        },
+      }),
+    ).toEqual(page(['t1'], 120.5));
+    expect(
+      await query(list, {
+        offset: 0,
+        limit: 20,
+        filter: { allOf: Array.from({ length: 51 }, () => ({ hasEvents: true })) },
+      }),
+    ).toMatchObject({ errors: [{ extensions: { fieldErrors: [{ path: 'filter' }] } }] });
+  });
+
+  it('reports whole-Branch totals independently of list filters and excludes standalone maneuvers', async () => {
+    const summary =
+      '{fleetTripSummary{totalTrips distanceKm totalDurationSeconds averageDrivingScore totalManeuverEvents}}';
+    const expected = {
+      data: {
+        fleetTripSummary: {
+          totalTrips: 5,
+          distanceKm: 150.5,
+          totalDurationSeconds: 14_400,
+          averageDrivingScore: 71.75,
+          totalManeuverEvents: 2,
+        },
+      },
+    };
+    expect(await query(summary, {})).toEqual(expected);
+    expect(await ids({ filter: { allOf: [{ hasEvents: false }] }, offset: 2, limit: 1 })).toEqual(
+      page(['t5'], 30, 4, 2, 1),
+    );
+    expect(await query(summary, {})).toEqual(expected);
+    expect(await query(summary, {}, randomUUID())).toEqual({
+      data: {
+        fleetTripSummary: {
+          totalTrips: 0,
+          distanceKm: 0,
+          totalDurationSeconds: 0,
+          averageDrivingScore: null,
+          totalManeuverEvents: 0,
+        },
+      },
+    });
+  });
+
+  it('keeps zero and maximum measurements distinct from null and sums per-trip whole seconds', async () => {
+    const edgeBranch = randomUUID();
+    const vehicle = await database.client.vehicle.create({
+      data: { tenantId, branchId: edgeBranch, licensePlate: 'EDGE 0001' },
+    });
+    const zero = await database.client.trip.create({
+      data: {
+        tenantId,
+        branchId: edgeBranch,
+        vehicleId: vehicle.id,
+        source: 'DEMO',
+        startedAt: hours(-1),
+        endedAt: new Date(hours(-1).getTime() + 999),
+        distanceKm: 0,
+        drivingScore: 0,
+      },
+    });
+    const maximum = await database.client.trip.create({
+      data: {
+        tenantId,
+        branchId: edgeBranch,
+        vehicleId: vehicle.id,
+        source: 'DEMO',
+        startedAt: hours(-2),
+        endedAt: new Date(hours(-2).getTime() + 1999),
+        distanceKm: 5000,
+        drivingScore: 100,
+      },
+    });
+    const unknown = await database.client.trip.create({
+      data: {
+        tenantId,
+        branchId: edgeBranch,
+        vehicleId: vehicle.id,
+        source: 'DEMO',
+        startedAt: hours(-3),
+      },
+    });
+    const read = (filter: Record<string, unknown>) =>
+      query(list, { offset: 0, limit: 20, filter }, edgeBranch);
+    expect(await read({ allOf: [{ distanceKmFrom: 0, distanceKmTo: 0 }] })).toMatchObject({
+      data: { fleetTrips: { items: [{ id: zero.id }], total: 1, totalDistanceKm: 0 } },
+    });
+    expect(
+      await read({ allOf: [{ distanceKmAbove: 0 }, { distanceKmBelow: 5000 }] }),
+    ).toMatchObject({
+      data: { fleetTrips: { items: [], total: 0, totalDistanceKm: 0 } },
+    });
+    expect(await read({ allOf: [{ drivingScoreBelow: 100 }] })).toMatchObject({
+      data: { fleetTrips: { items: [{ id: zero.id }], total: 1 } },
+    });
+    expect(await read({ allOf: [{ drivingScoreAbove: 0 }] })).toMatchObject({
+      data: { fleetTrips: { items: [{ id: maximum.id }], total: 1 } },
+    });
+    expect(
+      await query(
+        list,
+        {
+          offset: 0,
+          limit: 20,
+          sort: { field: 'DURATION_SECONDS', direction: 'ASC' },
+        },
+        edgeBranch,
+      ),
+    ).toMatchObject({
+      data: {
+        fleetTrips: {
+          items: [{ id: zero.id }, { id: maximum.id }, { id: unknown.id }],
+          total: 3,
+        },
+      },
+    });
+    expect(
+      await query(
+        '{fleetTripSummary{totalTrips distanceKm totalDurationSeconds averageDrivingScore totalManeuverEvents}}',
+        {},
+        edgeBranch,
+      ),
+    ).toEqual({
+      data: {
+        fleetTripSummary: {
+          totalTrips: 3,
+          distanceKm: 5000,
+          totalDurationSeconds: 1,
+          averageDrivingScore: 50,
+          totalManeuverEvents: 0,
+        },
+      },
+    });
+  });
+
+  it('keeps hasEvents and in-progress projections from the list snapshot when a maneuver and clock arrive later', async () => {
+    if (!app) {
+      throw new Error('Missing Fleet application.');
+    }
+    const scope = randomUUID();
+    const vehicle = await database.client.vehicle.create({
+      data: { tenantId, branchId: scope, licensePlate: 'TRIP SNAPSHOT' },
+    });
+    const trip = await database.client.trip.create({
+      data: {
+        tenantId,
+        branchId: scope,
+        vehicleId: vehicle.id,
+        source: 'DEMO',
+        startedAt: hours(-1),
+        distanceKm: 10,
+      },
+    });
+    await database.client.vehicleStatusSample.create({
+      data: {
+        tenantId,
+        branchId: scope,
+        vehicleId: vehicle.id,
+        deviceImei: '000000000000051',
+        source: 'DEMO',
+        recordedAt: asOf,
+        receivedAt: asOf,
+      },
+    });
+    await database.client.fleetEvent.create({
+      data: {
+        tenantId,
+        branchId: scope,
+        vehicleId: vehicle.id,
+        tripId: trip.id,
+        source: 'DEMO',
+        occurredAt: hours(-1),
+        kind: 'IGNITION_ON',
+        severity: 'INFO',
+      },
+    });
+    const maneuverId = randomUUID();
+    const repository = app.get(TripsRepository);
+    const originalList = repository.list.bind(repository);
+    const selected = jest
+      .spyOn(repository, 'list')
+      .mockImplementationOnce(async (capturedScope, page, criteria, sort) => {
+        const result = await originalList(capturedScope, page, criteria, sort);
+        await database.client.$transaction([
+          database.client.fleetEvent.create({
+            data: {
+              id: maneuverId,
+              tenantId,
+              branchId: scope,
+              vehicleId: vehicle.id,
+              tripId: trip.id,
+              source: 'DEMO',
+              occurredAt: hours(-0.5),
+              kind: 'HARSH_BRAKING',
+              severity: 'INFO',
+              intensity: 1,
+              details: 'Arrived after list selection',
+            },
+          }),
+          database.client.vehicleStatusSample.create({
+            data: {
+              tenantId,
+              branchId: scope,
+              vehicleId: vehicle.id,
+              deviceImei: '000000000000051',
+              source: 'DEMO',
+              recordedAt: hours(48),
+              receivedAt: hours(48),
+            },
+          }),
+        ]);
+        return result;
+      });
+    const source =
+      'query($filter:FleetTripFilter!){fleetTrips(filter:$filter){items{id inProgress maneuverCount drivingEvents{id occurredAt kind severity details}}total totalDistanceKm}}';
+    try {
+      expect(await query(source, { filter: { allOf: [{ hasEvents: false }] } }, scope)).toEqual({
+        data: {
+          fleetTrips: {
+            items: [{ id: trip.id, inProgress: true, maneuverCount: 0, drivingEvents: [] }],
+            total: 1,
+            totalDistanceKm: 10,
+          },
+        },
+      });
+      expect(await query(source, { filter: { allOf: [{ hasEvents: true }] } }, scope)).toEqual({
+        data: {
+          fleetTrips: {
+            items: [
+              {
+                id: trip.id,
+                inProgress: false,
+                maneuverCount: 1,
+                drivingEvents: [
+                  {
+                    id: maneuverId,
+                    occurredAt: hours(-0.5).toISOString(),
+                    kind: 'HARSH_BRAKING',
+                    severity: 'INFO',
+                    details: 'Arrived after list selection',
+                  },
+                ],
+              },
+            ],
+            total: 1,
+            totalDistanceKm: 10,
+          },
+        },
+      });
+    } finally {
+      selected.mockRestore();
+    }
+  });
+
   it('reads one trip with maneuvers, duration and in-progress state in scope', async () => {
     const trip =
-      'query($id:ID!){fleetTrip(id:$id){id vehicle{licensePlate fleetNumber} driver{firstName lastName} durationSeconds maneuverCount inProgress endedAt}}';
+      'query($id:ID!){fleetTrip(id:$id){id vehicle{licensePlate fleetNumber} driver{firstName lastName} durationSeconds maneuverCount drivingEvents{id occurredAt kind severity details} inProgress endedAt}}';
     expect(await query(trip, { id: trips.t1 })).toEqual({
       data: {
         fleetTrip: {
@@ -250,6 +616,22 @@ describe('Trips list contract with PostgreSQL', () => {
           driver: { firstName: 'Георги', lastName: 'Иванов' },
           durationSeconds: 7200,
           maneuverCount: 2,
+          drivingEvents: [
+            {
+              id: firstManeuver,
+              occurredAt: hours(-71).toISOString(),
+              kind: 'HARSH_BRAKING',
+              severity: 'INFO',
+              details: 'Brake applied',
+            },
+            {
+              id: secondManeuver,
+              occurredAt: hours(-70.9).toISOString(),
+              kind: 'SHARP_TURN',
+              severity: 'INFO',
+              details: null,
+            },
+          ],
           inProgress: false,
           endedAt: hours(-70).toISOString(),
         },

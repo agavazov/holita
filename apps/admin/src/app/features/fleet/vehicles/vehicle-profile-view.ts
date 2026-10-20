@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { RouterLink, type Params } from '@angular/router';
 import { ButtonDirective } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { Tabs, TabList, Tab, TabPanels, TabPanel } from 'primeng/tabs';
@@ -14,15 +14,16 @@ import {
   FormatNumberPipe,
   FormatRelativePipe,
 } from '../../../ui/format/format.pipes';
-import { formatDateOnly, formatNumber } from '../../../ui/format/format';
+import { formatDateOnly } from '../../../ui/format/format';
 import { interpolate } from '../../../ui/i18n/messages';
 import { KpiStrip } from '../../../ui/kpi/kpi-strip';
 import { KpiTile } from '../../../ui/kpi/kpi-tile';
 import { PageHeader } from '../../../ui/page-header/page-header';
-import { TablePanel } from '../../../ui/table-panel/table-panel';
+import { TablePanel, type TablePage } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { toneSeverity } from '../../../ui/tones';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
+import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import {
   type AlertRow,
   type AlertSeverityCode,
@@ -99,10 +100,30 @@ export class VehicleProfileView {
   readonly vehicle = input<VehicleProfile | null>(null);
   readonly dataAsOf = input.required<string>();
   readonly backLink = input.required<readonly string[]>();
+  readonly backQueryParams = input<Params | null>(null);
+  readonly backFragment = input<string | null>(null);
+  readonly errorText = input<string | null>(null);
   readonly distance = input<readonly SeriesPoint[]>([]);
   readonly trips = input<readonly TripRow[]>([]);
   readonly alerts = input<readonly AlertRow[]>([]);
   readonly service = input<readonly ServiceTaskRow[]>([]);
+  /** Undefined keeps the standalone sample's presentation fallback; live hosts pass exact nextService. */
+  readonly nextServiceTask = input<ServiceTaskRow | null | undefined>(undefined);
+  readonly tripPage = input<TablePage | null>(null);
+  readonly alertPage = input<TablePage | null>(null);
+  readonly servicePage = input<TablePage | null>(null);
+  readonly tripState = input<TableView | null>(null);
+  readonly alertState = input<TableView | null>(null);
+  readonly serviceState = input<TableView | null>(null);
+  readonly tripError = input<string | null>(null);
+  readonly alertError = input<string | null>(null);
+  readonly serviceError = input<string | null>(null);
+  readonly tripPageChange = output<{ page: number; pageSize: number }>();
+  readonly alertPageChange = output<{ page: number; pageSize: number }>();
+  readonly servicePageChange = output<{ page: number; pageSize: number }>();
+  readonly retryTrips = output();
+  readonly retryAlerts = output();
+  readonly retryService = output();
   readonly tab = input<VehicleProfileTab>('overview');
   readonly tabChange = output<VehicleProfileTab>();
   readonly edit = output();
@@ -112,11 +133,15 @@ export class VehicleProfileView {
   readonly openAlert = output<string>();
   readonly openService = output<string>();
 
+  protected readonly units = injectFleetFormat();
   private readonly language = inject(UI_LANGUAGE);
   private readonly vehicles = computed(() => vehiclesText(this.language()));
   protected readonly text = computed(() => this.vehicles().profile);
   protected readonly staleFuelText = computed(() => this.vehicles().table.staleFuel);
-  protected readonly tripText = computed(() => tripsText(this.language()).table);
+  protected readonly tripText = computed(() => {
+    const table = tripsText(this.language()).table;
+    return { ...table, distance: interpolate(table.distance, { unit: this.units.distanceUnit() }) };
+  });
   private readonly alertCatalog = computed(() => alertsText(this.language()));
   protected readonly alertCatalogTable = computed(() => this.alertCatalog().table);
   private readonly maintenance = computed(() => maintenanceText(this.language()));
@@ -132,23 +157,30 @@ export class VehicleProfileView {
       .filter(Boolean)
       .join(' · ');
   });
-  protected readonly openAlerts = computed(
-    () => this.alerts().filter((alert) => alert.status === 'OPEN').length,
-  );
+  protected readonly openAlerts = computed(() => this.vehicle()?.openAlerts ?? 0);
   protected readonly distanceTotal = computed(() => {
     const values = this.distance().flatMap((point) => (point.value === null ? [] : [point.value]));
     return values.length ? values.reduce((sum, value) => sum + value, 0) : null;
   });
+  protected readonly distancePoints = computed(() =>
+    this.distance().map((point) => ({
+      ...point,
+      value: this.units.distanceValue(point.value),
+      valueText: this.units.distance(point.value, true, 0),
+    })),
+  );
   protected readonly nextService = computed(() => {
-    const task = this.service().find((item) => item.status === 'PLANNED');
+    const task =
+      this.nextServiceTask() === undefined
+        ? this.service().find((item) => item.status === 'PLANNED')
+        : this.nextServiceTask();
     if (!task) {
       return { value: this.text().kpis.noService, footnote: null, tone: null };
     }
     const due = task.dueOn ? formatDateOnly(task.dueOn, this.language()) : null;
     return {
       value: task.kind,
-      footnote:
-        due ?? (task.dueKm === null ? null : `${formatNumber(task.dueKm, this.language())} km`),
+      footnote: due ?? (task.dueKm === null ? null : this.units.distance(task.dueKm, true, 0)),
       tone:
         task.urgency === 'OVERDUE'
           ? ('danger' as const)
@@ -157,9 +189,9 @@ export class VehicleProfileView {
             : null,
     };
   });
-  protected readonly tripView = computed(() => listView(this.trips()));
-  protected readonly alertView = computed(() => listView(this.alerts()));
-  protected readonly serviceView = computed(() => listView(this.service()));
+  protected readonly tripView = computed(() => this.tripState() ?? listView(this.trips()));
+  protected readonly alertView = computed(() => this.alertState() ?? listView(this.alerts()));
+  protected readonly serviceView = computed(() => this.serviceState() ?? listView(this.service()));
   /** PrimeNG's table takes mutable arrays. */
   protected readonly tripRows = computed(() => [...this.trips()]);
   protected readonly alertRows = computed(() => [...this.alerts()]);
@@ -233,8 +265,11 @@ export class VehicleProfileView {
       return null;
     }
     const table = this.maintenance().table;
-    const km = formatNumber(Math.abs(task.kmLeft), this.language());
-    return interpolate(task.kmLeft < 0 ? table.kmOver : table.kmLeft, { km });
+    const km = this.units.distance(Math.abs(task.kmLeft), false, 0);
+    return interpolate(task.kmLeft < 0 ? table.kmOver : table.kmLeft, {
+      km,
+      unit: this.units.distanceUnit(),
+    });
   }
 
   protected tripLabel(trip: TripRow): string {

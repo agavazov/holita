@@ -29,6 +29,7 @@ import {
   useFixtureScenario,
 } from './graphql-fixtures';
 import { clearSession, defaultBranchId, seedSession } from './session-fixtures';
+import './general-settings-fixtures';
 
 /** Per-story fixture options, passed as `parameters.holita`. */
 export interface StoryFixtures {

@@ -17,7 +17,6 @@ import { IconField } from 'primeng/iconfield';
 import { InputIcon } from 'primeng/inputicon';
 import { InputNumber } from 'primeng/inputnumber';
 import { InputText } from 'primeng/inputtext';
-import { Listbox } from 'primeng/listbox';
 import { Message } from 'primeng/message';
 import { MeterGroup } from 'primeng/metergroup';
 import { Paginator } from 'primeng/paginator';
@@ -56,7 +55,6 @@ const vehicles = Array.from({ length: 200 }, (_, index) => `CB ${String(1001 + i
     InputIcon,
     InputNumber,
     InputText,
-    Listbox,
     Message,
     MeterGroup,
     Paginator,
@@ -258,8 +256,41 @@ export const Controls: Story = {
     template: '<holita-primeng-controls />',
   }),
   play: async ({ canvasElement }) => {
-    await expect(Object.keys(registeredComponents)).toHaveLength(32);
-    await expect(canvasElement.querySelectorAll('.scheme').length).toBe(2);
+    await expect(Object.keys(registeredComponents)).toHaveLength(31);
+    const schemes = canvasElement.querySelectorAll<HTMLElement>('.scheme');
+    await expect(schemes.length).toBe(2);
+    for (const scheme of schemes) {
+      await expect(scheme.offsetWidth).toBeGreaterThan(0);
+    }
+    await canvasElement.ownerDocument.fonts.ready;
+    // Tabs measures its bar on selection; font loading can change the initial measurement.
+    for (const scheme of schemes) {
+      const tabs = within(scheme);
+      for (const name of ['Trips', 'Overview']) {
+        const tab = tabs.getByRole('tab', { name });
+        await userEvent.click(tab);
+        await waitFor(async () => {
+          const bar = scheme.querySelector<HTMLElement>('.p-tablist-active-bar');
+          if (!bar) {
+            throw new Error('Missing active tab bar.');
+          }
+          await expect(tab).toHaveAttribute('aria-selected', 'true');
+          await expect(bar.offsetWidth).toBe(tab.offsetWidth);
+          await expect(bar.offsetLeft).toBe(tab.offsetLeft);
+          await expect(
+            bar
+              .getAnimations()
+              .filter((animation) => animation.pending || animation.playState === 'running'),
+          ).toHaveLength(0);
+        });
+        tab.blur();
+      }
+    }
+    const preview = canvasElement.ownerDocument.defaultView;
+    if (preview) {
+      preview.scrollTo(0, 0);
+      await waitFor(() => expect(preview.scrollY).toBe(0));
+    }
   },
 };
 

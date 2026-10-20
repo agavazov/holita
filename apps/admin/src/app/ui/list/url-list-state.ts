@@ -35,7 +35,6 @@ export class UrlListState<F, S extends string> {
   private readonly router = inject(Router);
   private readonly searchEdits = new Subject<string | null>();
   private readonly tableSorts = new Subject<{ field: S; direction: SortDirection }>();
-  private pendingSearch = false;
 
   /** Normalised states, distinct under the definition's codecs. */
   readonly changes: Observable<ListState<F, S>>;
@@ -66,9 +65,8 @@ export class UrlListState<F, S extends string> {
       }
     });
     this.changes.pipe(takeUntilDestroyed(destroyRef)).subscribe((state) => {
-      if (!this.pendingSearch) {
-        this.searchDraft.set(state.search);
-      }
+      this.cancelPending();
+      this.searchDraft.set(state.search);
     });
     this.searchEdits
       .pipe(
@@ -76,7 +74,6 @@ export class UrlListState<F, S extends string> {
         takeUntilDestroyed(destroyRef),
       )
       .subscribe((value) => {
-        this.pendingSearch = false;
         if (searchApplies(value)) {
           this.apply({ ...this.state(), search: normalizeSearch(value), page: 1 });
         }
@@ -95,7 +92,6 @@ export class UrlListState<F, S extends string> {
   /** Records search input; it is applied after 300 ms unless it has more than five words. */
   editSearch(value: string): void {
     this.searchDraft.set(value);
-    this.pendingSearch = true;
     this.searchEdits.next(value);
   }
 
@@ -164,7 +160,6 @@ export class UrlListState<F, S extends string> {
 
   /** Drops a pending debounced search. */
   cancelPending(): void {
-    this.pendingSearch = false;
     this.searchEdits.next(null);
   }
 
@@ -173,6 +168,12 @@ export class UrlListState<F, S extends string> {
       return;
     }
     this.navigate(listStateParams(state, this.definition), false);
+  }
+
+  /** Applies a complete query emitted by a presentation-only list in one navigation. */
+  setState(state: ListState<F, S>): void {
+    this.cancelPending();
+    this.apply(state);
   }
 
   private navigate(queryParams: Params, replaceUrl: boolean): void {

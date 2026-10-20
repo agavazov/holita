@@ -5,11 +5,22 @@
       [title]="text().notFoundTitle"
       [description]="text().notFoundDescription"
     >
-      <a emptyActions pButton [routerLink]="backLink()">{{ text().back }}</a>
+      <a
+        emptyActions
+        pButton
+        [routerLink]="backLink()"
+        [queryParams]="backQueryParams()"
+        [fragment]="backFragment() ?? undefined"
+        >{{ text().back }}</a
+      >
     </holita-empty-state>
   }
   @case ('error') {
-    <holita-empty-state kind="error" [title]="text().errorTitle" [description]="text().errorText">
+    <holita-empty-state
+      kind="error"
+      [title]="text().errorTitle"
+      [description]="errorText() ?? text().errorText"
+    >
       <button emptyActions pButton type="button" (click)="retry.emit()">{{ text().retry }}</button>
     </holita-empty-state>
   }
@@ -19,6 +30,8 @@
       title="…"
       [backLink]="backLink()"
       [backLabel]="text().back"
+      [backQueryParams]="backQueryParams()"
+      [backFragment]="backFragment()"
     />
     <holita-kpi-strip [label]="text().kpis.label" [loading]="true">
       <holita-kpi-tile [label]="text().kpis.odometer" [loading]="true" />
@@ -35,6 +48,8 @@
         [description]="description()"
         [backLink]="backLink()"
         [backLabel]="text().back"
+        [backQueryParams]="backQueryParams()"
+        [backFragment]="backFragment()"
       >
         <p-tag
           headerMeta
@@ -61,8 +76,8 @@
       <holita-kpi-strip [label]="text().kpis.label">
         <holita-kpi-tile
           [label]="text().kpis.odometer"
-          [value]="vehicle.odometerKm | holitaNumber"
-          unit="km"
+          [value]="units.distance(vehicle.odometerKm, false, 0)"
+          [unit]="units.distanceUnit()"
         />
         <holita-kpi-tile
           [label]="text().kpis.fuel"
@@ -73,8 +88,8 @@
         />
         <holita-kpi-tile
           [label]="text().kpis.distance"
-          [value]="distanceTotal() | holitaNumber"
-          unit="km"
+          [value]="units.distance(distanceTotal(), false, 0)"
+          [unit]="units.distanceUnit()"
         />
         <holita-kpi-tile
           [label]="text().kpis.openAlerts"
@@ -118,7 +133,7 @@
                     <dt>{{ text().speed }}</dt>
                     <dd>
                       @if (vehicle.speedKph !== null) {
-                        {{ vehicle.speedKph | holitaNumber }} km/h
+                        {{ units.speed(vehicle.speedKph) }}
                       } @else {
                         —
                       }
@@ -161,7 +176,7 @@
                     <dt>{{ text().tank }}</dt>
                     <dd>
                       @if (vehicle.tankL !== null) {
-                        {{ vehicle.tankL | holitaNumber }} L
+                        {{ units.volume(vehicle.tankL, true, 0) }}
                       } @else {
                         —
                       }
@@ -175,7 +190,7 @@
               </section>
               <section class="app-card">
                 <h2 class="app-card__title app-card__header">{{ text().distanceChart }}</h2>
-                <holita-column-series [label]="text().distanceChart" [points]="distance()" />
+                <holita-column-series [label]="text().distanceChart" [points]="distancePoints()" />
               </section>
               <section class="app-card">
                 <h2 class="app-card__title app-card__header">{{ text().notes }}</h2>
@@ -187,9 +202,13 @@
           <p-tabpanel value="trips">
             <holita-table-panel
               [heading]="text().recentTrips"
-              [total]="trips().length"
+              [total]="tripPage()?.total ?? trips().length"
+              [page]="tripPage()"
+              [errorText]="tripError()"
               [view]="tripView()"
               [emptyTitle]="text().noTrips"
+              (pageChange)="tripPageChange.emit($event)"
+              (retry)="retryTrips.emit()"
             >
               <p-table [value]="tripRows()" dataKey="id" [scrollable]="true">
                 <ng-template #header>
@@ -210,7 +229,7 @@
                       </button>
                     </td>
                     <td>{{ tripLabel(trip) }}</td>
-                    <td class="app-num">{{ trip.distanceKm | holitaNumber }}</td>
+                    <td class="app-num">{{ units.distance(trip.distanceKm, false, 0) }}</td>
                     <td class="app-num">
                       {{
                         (trip.durationMin === null ? null : trip.durationMin * 60) | holitaDuration
@@ -246,9 +265,13 @@
           <p-tabpanel value="alerts">
             <holita-table-panel
               [heading]="text().alertsHeading"
-              [total]="alerts().length"
+              [total]="alertPage()?.total ?? alerts().length"
+              [page]="alertPage()"
+              [errorText]="alertError()"
               [view]="alertView()"
               [emptyTitle]="text().noAlerts"
+              (pageChange)="alertPageChange.emit($event)"
+              (retry)="retryAlerts.emit()"
             >
               <p-table [value]="alertRows()" dataKey="id" [scrollable]="true">
                 <ng-template #header>
@@ -288,9 +311,13 @@
           <p-tabpanel value="service">
             <holita-table-panel
               [heading]="text().serviceHeading"
-              [total]="service().length"
+              [total]="servicePage()?.total ?? service().length"
+              [page]="servicePage()"
+              [errorText]="serviceError()"
               [view]="serviceView()"
               [emptyTitle]="text().noServiceTasks"
+              (pageChange)="servicePageChange.emit($event)"
+              (retry)="retryService.emit()"
             >
               <p-table [value]="serviceRows()" dataKey="id" [scrollable]="true">
                 <ng-template #header>
@@ -318,7 +345,7 @@
                             ·
                           }
                           @if (task.dueKm !== null) {
-                            {{ task.dueKm | holitaNumber }} km
+                            {{ units.distance(task.dueKm, true, 0) }}
                           }
                         </span>
                         @if (kmLeftLabel(task); as left) {

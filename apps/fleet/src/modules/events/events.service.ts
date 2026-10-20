@@ -1,7 +1,15 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  HttpException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { type DataWindow, FleetClock } from '../../clock/fleet-clock.js';
 import type {
   FleetAlertCounts,
+  FleetAlertActionFailure,
+  FleetAlertActionResult,
   FleetAlertTransitionInput,
   FleetEvent,
   FleetEventFilter,
@@ -9,6 +17,7 @@ import type {
   FleetEventSortField,
   FleetManeuverCount,
   FleetMeasurementUnit,
+  FleetTripDrivingEvent,
   QueryFleetAlertCountsArgs,
   QueryFleetEventsArgs,
   QueryFleetManeuverCountsArgs,
@@ -38,11 +47,12 @@ import {
   uuid,
 } from '../../validation.js';
 import { type EventCriteria, type EventRow, EventsRepository } from './events.repository.js';
+import { eventConditions } from './event-filter.js';
 
 const ALERT_STATUSES = Object.values(FleetAlertStatus);
 const SEVERITIES = Object.values(FleetEventSeverity);
 const EVENT_KINDS = Object.values(FleetEventKind);
-const SORT_FIELDS: readonly FleetEventSortField[] = ['OCCURRED_AT', 'SEVERITY'];
+const SORT_FIELDS: readonly FleetEventSortField[] = ['OCCURRED_AT', 'SEVERITY', 'ALERT_STATUS'];
 /** Longest period `fleetManeuverCounts` accepts without trip IDs. */
 const MANEUVER_PERIOD_DAYS = 93;
 const DAY_MS = 86_400_000;
@@ -161,6 +171,7 @@ function eventCriteria(
     tripIds: idList(filter?.tripIds, 'tripIds'),
     occurredFrom: period.from,
     occurredTo: period.to,
+    ...(filter?.allOf == null ? {} : { allOf: eventConditions(filter.allOf) }),
   };
 }
 
@@ -189,6 +200,7 @@ function maneuverRows(
 
 @Injectable()
 export class EventsService {
+  private readonly logger = new Logger(EventsService.name);
   constructor(
     private readonly events: EventsRepository,
     private readonly clock: FleetClock,
@@ -225,6 +237,16 @@ export class EventsService {
       ...criteria,
       actionable: undefined,
       alertStatuses: undefined,
+      ...(criteria.allOf === undefined
+        ? {}
+        : {
+            allOf: criteria.allOf.map((condition) => ({
+              ...condition,
+              actionable: undefined,
+              alertStatuses: undefined,
+              excludedAlertStatuses: undefined,
+            })),
+          }),
     });
     const count = (status: FleetAlertStatus, severity?: FleetEventSeverity) =>
       rows
@@ -297,6 +319,81 @@ export class EventsService {
       throw new ConflictException('The alert changed after it was loaded; reload it.');
     }
     return toEvent(row);
+  }
+
+  async acknowledgeMany(
+    context: RequestContext,
+    values: readonly string[],
+    input: FleetAlertTransitionInput,
+  ): Promise<FleetAlertActionResult> {
+    requireScope(context);
+    const selected = ids(values, 'ids');
+    if (!selected.length) {
+      invalid('ids', 'Choose at least one alert.');
+    }
+    // Validate the shared input before the first write, including an empty selection boundary.
+    const expected = enumValue(input.expectedStatus, ALERT_STATUSES, 'expectedStatus');
+    if (expected !== 'OPEN') {
+      invalid('expectedStatus', 'Only open alerts can be acknowledged.');
+    }
+    if (input.remark !== undefined) {
+      optionalText(input.remark, 'remark', 1000);
+    }
+    const succeededIds: string[] = [];
+    const failures: FleetAlertActionFailure[] = [];
+    for (const id of selected) {
+      try {
+        await this.transition(context, 'acknowledge', id, input);
+        succeededIds.push(id);
+      } catch (error: unknown) {
+        failures.push(this.actionFailure(context, id, error));
+      }
+    }
+    return { succeededIds, failures };
+  }
+
+  private actionFailure(
+    context: RequestContext,
+    id: string,
+    error: unknown,
+  ): FleetAlertActionFailure {
+    if (error instanceof HttpException) {
+      const code = new Map([
+        [400, 'BAD_USER_INPUT'],
+        [404, 'NOT_FOUND'],
+        [409, 'CONFLICT'],
+        [503, 'SERVICE_UNAVAILABLE'],
+      ]).get(error.getStatus());
+      if (code) {
+        return { id, code, message: error.message };
+      }
+    }
+    this.logger.error({
+      requestId: context.requestId,
+      error: error instanceof Error ? error.name : 'UnknownError',
+    });
+    return { id, code: 'INTERNAL_SERVER_ERROR', message: 'Unable to acknowledge alert.' };
+  }
+
+  /** Complete maneuver timelines for a page of scoped trip/vehicle pairs. */
+  async drivingEventsByTrip(
+    scope: FleetScope,
+    trips: readonly { readonly id: string; readonly vehicleId: string }[],
+  ): Promise<Map<string, FleetTripDrivingEvent[]>> {
+    const result = new Map<string, FleetTripDrivingEvent[]>();
+    if (!trips.length) {
+      return result;
+    }
+    const rows = await this.events.drivingEventsByTrip(scope, trips, MANEUVER_KINDS);
+    for (const { tripId, ...event } of rows) {
+      if (tripId === null) {
+        continue;
+      }
+      const timeline = result.get(tripId) ?? [];
+      timeline.push(event);
+      result.set(tripId, timeline);
+    }
+    return result;
   }
 
   /** OPEN alerts per vehicle ID (vehicles without any are absent). */

@@ -1,0 +1,42 @@
+fragment AdminVehicleGroupDetails on FleetVehicleGroup {
+  id
+  branchId
+  name
+  description
+  colorToken
+  vehicleCount
+  createdAt
+  updatedAt
+}
+
+query AdminVehicleGroupsList($offset: Int!, $limit: Int!) {
+  fleetVehicleGroups(offset: $offset, limit: $limit, sort: { field: NAME, direction: ASC }) {
+    items {
+      ...AdminVehicleGroupDetails
+    }
+    total
+    offset
+    limit
+    ungroupedVehicleCount
+  }
+}
+query AdminVehicleGroup($id: ID!) {
+  fleetVehicleGroup(id: $id) {
+    ...AdminVehicleGroupDetails
+  }
+}
+mutation AdminCreateVehicleGroup($input: CreateFleetVehicleGroupInput!) {
+  createFleetVehicleGroup(input: $input) {
+    ...AdminVehicleGroupDetails
+  }
+}
+mutation AdminUpdateVehicleGroup($id: ID!, $input: UpdateFleetVehicleGroupInput!) {
+  updateFleetVehicleGroup(id: $id, input: $input) {
+    ...AdminVehicleGroupDetails
+  }
+}
+mutation AdminDeleteVehicleGroup($id: ID!) {
+  deleteFleetVehicleGroup(id: $id) {
+    ...AdminVehicleGroupDetails
+  }
+}

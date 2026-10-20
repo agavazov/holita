@@ -11,16 +11,37 @@ fragment AdminDevice on FleetDevice {
   updatedAt
 }
 
+fragment AdminDeviceDetails on FleetDevice {
+  ...AdminDevice
+  status
+  model
+  options
+  firmwareVersion
+  simPhoneNumber
+  simIccid
+  installedAt
+  notes
+  lastReportedAt
+}
+
 query AdminDevices(
   $offset: Int!
   $limit: Int!
   $search: String
   $ids: [ID!]
+  $filter: FleetDeviceFilter
   $sort: FleetDeviceSort
 ) {
-  fleetDevices(offset: $offset, limit: $limit, search: $search, ids: $ids, sort: $sort) {
+  fleetDevices(
+    offset: $offset
+    limit: $limit
+    search: $search
+    ids: $ids
+    filter: $filter
+    sort: $sort
+  ) {
     items {
-      ...AdminDevice
+      ...AdminDeviceDetails
     }
     total
     offset
@@ -29,25 +50,19 @@ query AdminDevices(
 }
 query AdminDevice($id: ID!) {
   fleetDevice(id: $id) {
-    ...AdminDevice
+    ...AdminDeviceDetails
   }
 }
 mutation AdminCreateDevice($input: CreateFleetDeviceInput!) {
   createFleetDevice(input: $input) {
-    ...AdminDevice
+    ...AdminDeviceDetails
   }
 }
 mutation AdminUpdateDevice($id: ID!, $input: UpdateFleetDeviceInput!) {
   updateFleetDevice(id: $id, input: $input) {
-    ...AdminDevice
+    ...AdminDeviceDetails
   }
 }
-mutation AdminDeleteDevice($id: ID!) {
-  deleteFleetDevice(id: $id) {
-    ...AdminDevice
-  }
-}
-
 query AdminDeviceVehicles($offset: Int!, $limit: Int!, $search: String, $ids: [ID!]) {
   fleetVehicles(
     offset: $offset
@@ -61,5 +76,27 @@ query AdminDeviceVehicles($offset: Int!, $limit: Int!, $search: String, $ids: [I
       licensePlate
     }
     total
+    offset
+    limit
+  }
+}
+
+query AdminDeviceSummary {
+  fleetDeviceSummary {
+    dataAsOf
+    online
+    offline
+    inStock
+  }
+}
+
+mutation AdminDeleteDevices($ids: [ID!]!) {
+  deleteFleetDevices(ids: $ids) {
+    succeededIds
+    failures {
+      id
+      code
+      message
+    }
   }
 }

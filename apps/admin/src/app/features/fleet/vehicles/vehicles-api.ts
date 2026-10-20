@@ -12,11 +12,16 @@ import {
   AdminVehicleDocument,
   AdminCreateVehicleDocument,
   AdminUpdateVehicleDocument,
-  AdminDeleteVehicleDocument,
+  AdminVehicleSummaryDocument,
+  AdminVehicleGroupsDocument,
+  AdminVehicleDriversDocument,
+  AdminDeleteVehiclesDocument,
+  AdminDeactivateVehiclesDocument,
   type AdminVehiclesQueryVariables,
   type AdminCreateVehicleMutationVariables,
   type AdminUpdateVehicleMutationVariables,
-  type AdminDeleteVehicleMutationVariables,
+  type AdminVehicleGroupsQueryVariables,
+  type AdminVehicleDriversQueryVariables,
 } from '../../../../generated/graphql/operations';
 
 @Injectable()
@@ -54,6 +59,35 @@ export class VehiclesApi implements OnDestroy {
     });
   }
 
+  watchSummary() {
+    if (!this.apollo || this.destroyed) {
+      throw new Error('An active Vehicles workspace is required.');
+    }
+    return this.apollo.watchQuery({ query: AdminVehicleSummaryDocument });
+  }
+
+  watchGroups(variables: AdminVehicleGroupsQueryVariables) {
+    if (!this.apollo || this.destroyed) {
+      throw new Error('An active Vehicles workspace is required.');
+    }
+    return this.apollo.watchQuery({
+      query: AdminVehicleGroupsDocument,
+      variables,
+      fetchPolicy: 'network-only',
+    });
+  }
+
+  watchDrivers(variables: AdminVehicleDriversQueryVariables) {
+    if (!this.apollo || this.destroyed) {
+      throw new Error('An active Vehicles workspace is required.');
+    }
+    return this.apollo.watchQuery({
+      query: AdminVehicleDriversDocument,
+      variables,
+      fetchPolicy: 'network-only',
+    });
+  }
+
   async update(variables: AdminUpdateVehicleMutationVariables) {
     const apollo = this.apollo;
     if (!apollo || this.destroyed) {
@@ -68,7 +102,7 @@ export class VehiclesApi implements OnDestroy {
         throw new Error('Missing updateFleetVehicle result.');
       }
       // Invalidation belongs to the client captured at submission, including after navigation.
-      apollo.client.cache.evict({ id: 'ROOT_QUERY', fieldName: 'fleetVehicles' });
+      this.invalidateVehicles(apollo);
       return result.data.updateFleetVehicle;
     } finally {
       this.pendingWrites--;
@@ -100,7 +134,7 @@ export class VehiclesApi implements OnDestroy {
       if (!result.data?.createFleetVehicle) {
         throw new Error('Missing createFleetVehicle result.');
       }
-      apollo.client.cache.evict({ id: 'ROOT_QUERY', fieldName: 'fleetVehicles' });
+      this.invalidateVehicles(apollo);
       return result.data.createFleetVehicle;
     } finally {
       this.pendingWrites--;
@@ -108,7 +142,7 @@ export class VehiclesApi implements OnDestroy {
     }
   }
 
-  async delete(variables: AdminDeleteVehicleMutationVariables) {
+  async deleteMany(ids: readonly string[]) {
     const apollo = this.apollo;
     if (!apollo || this.destroyed) {
       throw new Error('An active Vehicles workspace is required.');
@@ -116,23 +150,46 @@ export class VehiclesApi implements OnDestroy {
     this.pendingWrites++;
     try {
       const result = await firstValueFrom(
-        apollo.mutate({ mutation: AdminDeleteVehicleDocument, variables }),
+        apollo.mutate({ mutation: AdminDeleteVehiclesDocument, variables: { ids: [...ids] } }),
       );
-      const vehicle = result.data?.deleteFleetVehicle;
-      if (!vehicle) {
-        throw new Error('Missing deleteFleetVehicle result.');
+      const action = result.data?.deleteFleetVehicles;
+      if (!action) {
+        throw new Error('Missing deleteFleetVehicles result.');
       }
-      // Reconcile the visible list once per batch; invalidate every list variant in this client only.
-      const entity = apollo.client.cache.identify(vehicle);
-      if (entity) {
-        apollo.client.cache.evict({ id: entity, broadcast: false });
+      if (action.succeededIds.length) {
+        for (const id of action.succeededIds) {
+          const entity = apollo.client.cache.identify({ __typename: 'FleetVehicle', id });
+          if (entity) {
+            apollo.client.cache.evict({ id: entity, broadcast: false });
+          }
+        }
+        this.invalidateVehicles(apollo, false);
       }
-      apollo.client.cache.evict({
-        id: 'ROOT_QUERY',
-        fieldName: 'fleetVehicles',
-        broadcast: false,
-      });
-      return vehicle;
+      return action;
+    } finally {
+      this.pendingWrites--;
+      this.stopWhenIdle();
+    }
+  }
+
+  async deactivateMany(ids: readonly string[]) {
+    const apollo = this.apollo;
+    if (!apollo || this.destroyed) {
+      throw new Error('An active Vehicles workspace is required.');
+    }
+    this.pendingWrites++;
+    try {
+      const result = await firstValueFrom(
+        apollo.mutate({ mutation: AdminDeactivateVehiclesDocument, variables: { ids: [...ids] } }),
+      );
+      const action = result.data?.deactivateFleetVehicles;
+      if (!action) {
+        throw new Error('Missing deactivateFleetVehicles result.');
+      }
+      if (action.succeededIds.length) {
+        this.invalidateVehicles(apollo, false);
+      }
+      return action;
     } finally {
       this.pendingWrites--;
       this.stopWhenIdle();
@@ -142,6 +199,11 @@ export class VehiclesApi implements OnDestroy {
   ngOnDestroy(): void {
     this.destroyed = true;
     this.stopWhenIdle();
+  }
+
+  private invalidateVehicles(apollo: ApolloBase, broadcast = true): void {
+    apollo.client.cache.evict({ id: 'ROOT_QUERY', fieldName: 'fleetVehicles', broadcast });
+    apollo.client.cache.evict({ id: 'ROOT_QUERY', fieldName: 'fleetVehicleSummary', broadcast });
   }
 
   private stopWhenIdle(): void {

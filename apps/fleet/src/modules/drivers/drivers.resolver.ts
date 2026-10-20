@@ -4,6 +4,8 @@ import { FleetEnabledGuard } from '../../fleet-enabled.guard.js';
 import type {
   MutationCreateFleetDriverArgs,
   MutationDeleteFleetDriverArgs,
+  MutationDeleteFleetDriversArgs,
+  MutationDeactivateFleetDriversArgs,
   MutationUpdateFleetDriverArgs,
   QueryFleetDriverArgs,
   QueryFleetDriverScorecardArgs,
@@ -35,6 +37,11 @@ export class DriversResolver {
     return this.driversService.scorecard(context, args);
   }
 
+  @Query('fleetDriverSummary')
+  fleetDriverSummary(@Context() context: RequestContext) {
+    return this.driversService.summary(context);
+  }
+
   @Mutation('createFleetDriver')
   createFleetDriver(
     @Args() args: MutationCreateFleetDriverArgs,
@@ -57,5 +64,21 @@ export class DriversResolver {
     @Context() context: RequestContext,
   ) {
     return this.driversService.delete(context, args.id);
+  }
+
+  @Mutation('deleteFleetDrivers')
+  deleteFleetDrivers(
+    @Args() args: MutationDeleteFleetDriversArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.driversService.deleteMany(context, args.ids);
+  }
+
+  @Mutation('deactivateFleetDrivers')
+  deactivateFleetDrivers(
+    @Args() args: MutationDeactivateFleetDriversArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.driversService.deactivateMany(context, args.ids);
   }
 }

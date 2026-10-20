@@ -60,6 +60,26 @@ describe('ServiceCompletionDrawer', () => {
     ]);
   });
 
+  it('keeps exact cents for a decimal amount that is not exactly representable as a binary float', async () => {
+    const { form, saved, submit } = await render();
+    form.get('cost')?.setValue(0.29);
+    await submit();
+    expect(saved[0]?.costCents).toBe(29);
+  });
+
+  it('clears next planning when the vehicle becomes inactive but still records historical service', async () => {
+    const { fixture, form, saved, submit } = await render();
+    form.get('nextDueOn')?.setValue(fromDateOnly('2026-11-19'));
+    form.get('nextDueOdometerKm')?.setValue(150000);
+    form.get('nextTitle')?.setValue('Next oil change');
+    fixture.componentRef.setInput('allowNext', false);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(document.getElementById('completion-nextDueOn')).toBeNull();
+    await submit();
+    expect(saved[0]).toMatchObject({ nextDueOn: null, nextDueOdometerKm: null, nextTitle: null });
+  });
+
   it('accepts cents near the cost maximum while rejecting fractional cents', async () => {
     const { form, saved, submit } = await render();
     form.get('cost')?.setValue(999_999.191);

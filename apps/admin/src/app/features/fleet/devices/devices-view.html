@@ -7,11 +7,16 @@
   @if (demo()) {
     <p-tag headerMeta severity="info" [value]="text().demo.label" />
   }
-  <button headerActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
+  <button headerActions pButton type="button" [disabled]="busy()" (click)="create.emit()">
+    {{ text().new }}
+  </button>
 </holita-page-header>
 
 @if (demo()) {
   <p class="app-muted">{{ text().demo.description }}</p>
+}
+@if (!demo()) {
+  <p class="app-muted">{{ text().unavailable }}</p>
 }
 
 @if (kpis(); as kpis) {
@@ -31,6 +36,7 @@
     <holita-kpi-tile
       [label]="text().kpis.outdated"
       [value]="kpis.outdated | holitaNumber"
+      [footnote]="demo() ? null : text().kpis.firmwareUnavailable"
       [tone]="kpis.outdated ? 'warn' : null"
     />
   </holita-kpi-strip>
@@ -41,6 +47,8 @@
   [search]="state().search"
   [fields]="fields()"
   [conditions]="state().conditions"
+  [maxConditions]="50"
+  [searchError]="searchError()"
   (searchChange)="changeSearch($event)"
   (conditionsChange)="changeConditions($event)"
 />
@@ -50,7 +58,9 @@
   [heading]="text().table.heading"
   [total]="total()"
   [view]="view()"
-  [errorText]="text().table.errorText"
+  [errorText]="errorText() ?? text().table.errorText"
+  [actionContext]="state()"
+  [busy]="busy()"
   [emptyTitle]="text().table.emptyTitle"
   [emptyDescription]="text().table.emptyDescription"
   [actions]="actions()"
@@ -169,7 +179,7 @@
         <td class="app-col-secondary">
           <span class="app-inline">
             <span class="app-mono">{{ row.firmware }}</span>
-            @if (row.firmware !== currentFirmware) {
+            @if (demo() && row.firmware !== currentFirmware) {
               <p-tag severity="warn" [value]="text().table.outdated" />
             }
           </span>

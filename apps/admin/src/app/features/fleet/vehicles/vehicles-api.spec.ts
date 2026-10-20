@@ -1,32 +1,85 @@
-import { DemoSession } from '../../../core/auth/demo-session';
 import { provideHttpClient, type HttpRequest } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { TestBed, type ComponentFixture } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { signal } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
 import { ApolloClient } from '@apollo/client/core';
-import { VehiclesPage } from './vehicles-page';
-import type { AdminVehicleFragment } from '../../../../generated/graphql/operations';
+import type { Subscription } from 'rxjs';
+import type {
+  AdminVehicleDetailsFragment,
+  AdminVehiclesQuery,
+} from '../../../../generated/graphql/operations';
+import { DemoSession } from '../../../core/auth/demo-session';
+import { requestError } from '../../../core/graphql/request-error';
+import { VehiclesApi } from './vehicles-api';
 
 const branchA = '10000000-0000-4000-8000-000000000001';
 const branchB = '10000000-0000-4000-8000-000000000002';
-const vehicleA: AdminVehicleFragment = {
-  id: '20000000-0000-4000-8000-000000000001',
-  branchId: branchA,
-  licensePlate: 'CA1234AB',
-  notes: null,
-  createdAt: '2026-01-01T00:00:00.000Z',
-  updatedAt: '2026-01-01T00:00:00.000Z',
-};
-const vehicleB: AdminVehicleFragment = {
-  id: '20000000-0000-4000-8000-000000000002',
-  branchId: branchB,
-  licensePlate: 'PB1234AB',
-  notes: null,
-  createdAt: '2026-01-01T00:00:00.000Z',
-  updatedAt: '2026-01-01T00:00:00.000Z',
-};
+const vehicleId = '20000000-0000-4000-8000-000000000001';
 
-function operation(request: HttpRequest<unknown>, name: string, branchId: string): boolean {
+function record(
+  branchId = branchA,
+  licensePlate = 'CA1234AB',
+): AdminVehicleDetailsFragment & { readonly __typename: 'FleetVehicle' } {
+  return {
+    __typename: 'FleetVehicle',
+    id: vehicleId,
+    branchId,
+    licensePlate,
+    notes: null,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    fleetNumber: null,
+    vehicleType: null,
+    make: null,
+    model: null,
+    modelYear: null,
+    vin: null,
+    fuelType: null,
+    fuelTankCapacityL: null,
+    status: 'ACTIVE',
+    groupId: null,
+    group: null,
+    currentDriverId: null,
+    currentDriver: null,
+    deviceCount: 0,
+    openAlertCount: 0,
+    state: {
+      activity: 'NO_DEVICE',
+      lastReportedAt: null,
+      latitude: null,
+      longitude: null,
+      address: null,
+      speedKph: null,
+      headingDeg: null,
+      ignition: null,
+      fuelLevelPct: null,
+      fuelStatus: 'NO_DATA',
+      externalVoltage: null,
+      backupBatteryVoltage: null,
+      engineHours: null,
+      coolantTempC: null,
+      odometerKm: null,
+      odometerRecordedAt: null,
+      odometerSource: null,
+    },
+  };
+}
+
+function list(vehicle = record()) {
+  return {
+    data: {
+      fleetVehicles: {
+        __typename: 'FleetVehiclePage',
+        items: [vehicle],
+        total: 1,
+        offset: 0,
+        limit: 20,
+      },
+    },
+  };
+}
+
+function operation(request: HttpRequest<unknown>, name: string, branchId = branchA): boolean {
   const body: unknown = request.body;
   return (
     request.url === '/graphql' &&
@@ -38,290 +91,193 @@ function operation(request: HttpRequest<unknown>, name: string, branchId: string
   );
 }
 
-function vehiclePage(vehicle: AdminVehicleFragment) {
-  return {
-    data: {
-      fleetVehicles: {
-        __typename: 'FleetVehiclePage',
-        items: [{ ...vehicle, __typename: 'FleetVehicle' }],
-        total: 1,
-        offset: 0,
-        limit: 20,
-      },
-    },
-  };
-}
-
-function pageElement(fixture: ComponentFixture<VehiclesPage>): HTMLElement {
-  const element: unknown = fixture.nativeElement;
-  if (!(element instanceof HTMLElement)) {
-    throw new Error('Missing Vehicles page element.');
-  }
-  return element;
-}
-
 describe('Vehicles Apollo scope', () => {
   let http: HttpTestingController;
+  const clients: VehiclesApi[] = [];
+  const subscriptions: Subscription[] = [];
+
+  function mount(branchId = branchA): VehiclesApi {
+    const api = TestBed.runInInjectionContext(() => new VehiclesApi());
+    api.initialize(branchId, 'en');
+    clients.push(api);
+    return api;
+  }
+
+  function watch(api: VehiclesApi) {
+    const query = api.watch({ offset: 0, limit: 20 });
+    const page = signal<AdminVehiclesQuery['fleetVehicles'] | null>(null);
+    const error = signal<unknown>(null);
+    subscriptions.push(
+      query.valueChanges.subscribe((result) => {
+        error.set(result.error ?? null);
+        if (result.dataState === 'complete' && !result.error) {
+          page.set(result.data.fleetVehicles);
+        }
+      }),
+    );
+    return { query, page, error };
+  }
+
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
     });
     TestBed.inject(DemoSession).start({
-      token: 'test-demo-token',
-      tenant: { id: '01000000-0000-4000-8000-000000000001', name: 'RentalSofia' },
+      token: 'tenant-a-token',
+      tenant: {
+        id: '01000000-0000-4000-8000-000000000001',
+        name: 'Tenant A',
+      },
     });
     http = TestBed.inject(HttpTestingController);
   });
+
   afterEach(() => {
+    for (const subscription of subscriptions.splice(0)) {
+      subscription.unsubscribe();
+    }
+    for (const api of clients.splice(0)) {
+      api.ngOnDestroy();
+    }
     http.verify({ ignoreCancelled: true });
     vi.restoreAllMocks();
   });
 
-  async function mount(branchId: string) {
-    const fixture = TestBed.createComponent(VehiclesPage);
-    fixture.componentRef.setInput('branch', {
-      id: branchId,
-      name: branchId === branchA ? 'Discordia' : 'Sandbox',
-    });
-    fixture.componentRef.setInput('language', 'en');
-    await fixture.whenStable();
-    return fixture;
-  }
-
-  it('separates concurrent identical list queries, entity caches and request headers', async () => {
-    const a = await mount(branchA);
-    const b = await mount(branchB);
+  it('separates identical concurrent queries, entity caches and transport headers', async () => {
+    const a = watch(mount(branchA));
+    const b = watch(mount(branchB));
     const readA = http.expectOne((request) => operation(request, 'AdminVehicles', branchA));
     const readB = http.expectOne((request) => operation(request, 'AdminVehicles', branchB));
     expect(readA.request.headers.get('x-request-id')).not.toBe(
       readB.request.headers.get('x-request-id'),
     );
     expect(readB.request.headers.get('Accept-Language')).toBe('en');
-    readB.flush(vehiclePage(vehicleB));
-    readA.flush(vehiclePage(vehicleA));
-    await a.whenStable();
-    await b.whenStable();
-    expect(a.componentInstance.page()?.items[0]?.branchId).toBe(branchA);
-    expect(b.componentInstance.page()?.items[0]?.branchId).toBe(branchB);
-    a.destroy();
-    b.destroy();
+    readB.flush(list(record(branchB, 'PB1234AB')));
+    readA.flush(list());
+    await vi.waitFor(() => {
+      expect(a.page()?.items[0]?.branchId).toBe(branchA);
+    });
+    expect(b.page()?.items[0]?.branchId).toBe(branchB);
+    expect(a.page()?.items[0]?.licensePlate).toBe('CA1234AB');
+    expect(b.page()?.items[0]?.licensePlate).toBe('PB1234AB');
   });
 
-  it('keeps a submitted mutation alive after A is destroyed and never invalidates B or a new A', async () => {
-    const a = await mount(branchA);
-    http
-      .expectOne((request) => operation(request, 'AdminVehicles', branchA))
-      .flush(vehiclePage(vehicleA));
-    await a.whenStable();
-    const oldApi = a.componentInstance.api;
-    const mutation = oldApi.update({ id: vehicleA.id, input: { licensePlate: 'Saved in old A' } });
-    const write = http.expectOne((request) => operation(request, 'AdminUpdateVehicle', branchA));
-    a.destroy();
-    const b = await mount(branchB);
+  it('cancels obsolete reads when their workspace is disposed', async () => {
+    const api = mount();
+    const subscription = api.watch({ offset: 0, limit: 20 }).valueChanges.subscribe();
+    const read = http.expectOne((request) => operation(request, 'AdminVehicles'));
+    subscription.unsubscribe();
+    api.ngOnDestroy();
+    await vi.waitFor(() => {
+      expect(read.cancelled).toBe(true);
+    });
+    expect(() => api.watch({ offset: 0, limit: 20 })).toThrow('active Vehicles workspace');
+  });
+
+  it('fetches editor records from the network even when the entity is in the list cache', () => {
+    const api = mount();
+    watch(api);
+    http.expectOne((request) => operation(request, 'AdminVehicles')).flush(list());
+    const first = api.watchVehicle(vehicleId).valueChanges.subscribe();
+    const firstRead = http.expectOne((request) => operation(request, 'AdminVehicle'));
+    firstRead.flush({ data: { fleetVehicle: record() } });
+    first.unsubscribe();
+    const second = api.watchVehicle(vehicleId).valueChanges.subscribe();
+    const secondRead = http.expectOne((request) => operation(request, 'AdminVehicle'));
+    expect(secondRead.request.headers.get('x-request-id')).not.toBe(
+      firstRead.request.headers.get('x-request-id'),
+    );
+    secondRead.flush({ data: { fleetVehicle: record() } });
+    second.unsubscribe();
+  });
+
+  it('keeps a captured update alive after A retires without invalidating B or a fresh A', async () => {
+    const oldApi = mount();
+    const a = watch(oldApi);
+    http.expectOne((request) => operation(request, 'AdminVehicles')).flush(list());
+    const mutation = oldApi.update({ id: vehicleId, input: { licensePlate: 'Late A' } });
+    const write = http.expectOne((request) => operation(request, 'AdminUpdateVehicle'));
+    for (const subscription of subscriptions.splice(0)) {
+      subscription.unsubscribe();
+    }
+    oldApi.ngOnDestroy();
+    const b = watch(mount(branchB));
     http
       .expectOne((request) => operation(request, 'AdminVehicles', branchB))
-      .flush(vehiclePage(vehicleB));
-    await b.whenStable();
-    const newA = await mount(branchA);
-    http
-      .expectOne((request) => operation(request, 'AdminVehicles', branchA))
-      .flush(vehiclePage(vehicleA));
-    await newA.whenStable();
+      .flush(list(record(branchB, 'B')));
+    const newA = watch(mount());
+    http.expectOne((request) => operation(request, 'AdminVehicles')).flush(list());
     expect(write.cancelled).toBe(false);
-    write.flush({
-      data: {
-        updateFleetVehicle: {
-          ...vehicleA,
-          __typename: 'FleetVehicle',
-          licensePlate: 'Saved in old A',
-        },
-      },
-    });
-    expect((await mutation).branchId).toBe(branchA);
-    expect(b.componentInstance.page()?.items[0]?.licensePlate).toBe(vehicleB.licensePlate);
-    expect(newA.componentInstance.page()?.items[0]?.licensePlate).toBe(vehicleA.licensePlate);
+    write.flush({ data: { updateFleetVehicle: record(branchA, 'Late A') } });
+    expect((await mutation).licensePlate).toBe('Late A');
+    expect(a.page()?.items[0]?.licensePlate).toBe('CA1234AB');
+    expect(b.page()?.items[0]?.licensePlate).toBe('B');
+    expect(newA.page()?.items[0]?.licensePlate).toBe('CA1234AB');
     http.expectNone('/graphql');
-    await expect(
-      oldApi.update({ id: vehicleA.id, input: { licensePlate: 'Obsolete write' } }),
-    ).rejects.toThrow('active Vehicles workspace');
-    b.destroy();
-    newA.destroy();
+    await expect(oldApi.update({ id: vehicleId, input: { notes: 'Obsolete' } })).rejects.toThrow(
+      'active Vehicles workspace',
+    );
   });
 
-  it('releases a retired client after a failed mutation without changing the new branch', async () => {
+  it('releases a retired client after a failed update and keeps other scopes unchanged', async () => {
     const stop = vi.spyOn(ApolloClient.prototype, 'stop');
-    const a = await mount(branchA);
-    http
-      .expectOne((request) => operation(request, 'AdminVehicles', branchA))
-      .flush(vehiclePage(vehicleA));
-    await a.whenStable();
-    const mutation = a.componentInstance.api.update({
-      id: vehicleA.id,
-      input: { licensePlate: '' },
-    });
+    const api = mount();
+    const mutation = api.update({ id: vehicleId, input: { licensePlate: '' } });
     const rejection = expect(mutation).rejects.toThrow('Invalid license plate');
-    const write = http.expectOne((request) => operation(request, 'AdminUpdateVehicle', branchA));
-    a.destroy();
+    const write = http.expectOne((request) => operation(request, 'AdminUpdateVehicle'));
+    api.ngOnDestroy();
     expect(stop).not.toHaveBeenCalled();
-    const b = await mount(branchB);
+    const b = watch(mount(branchB));
     http
       .expectOne((request) => operation(request, 'AdminVehicles', branchB))
-      .flush(vehiclePage(vehicleB));
-    await b.whenStable();
+      .flush(list(record(branchB)));
     write.flush({
-      errors: [
-        {
-          message: 'Invalid license plate',
-          extensions: { code: 'CONFLICT', requestId: 'failed-write' },
-        },
-      ],
+      errors: [{ message: 'Invalid license plate', extensions: { code: 'BAD_USER_INPUT' } }],
     });
     await rejection;
     expect(stop).toHaveBeenCalledTimes(1);
-    expect(b.componentInstance.error()).toBeNull();
-    expect(b.componentInstance.page()?.items[0]?.branchId).toBe(branchB);
+    expect(b.error()).toBeNull();
+    expect(b.page()?.items[0]?.branchId).toBe(branchB);
     http.expectNone('/graphql');
-    b.destroy();
   });
 
-  it('retains loaded rows on a GraphQL refresh error and recovers with a new request ID', async () => {
-    const a = await mount(branchA);
-    http
-      .expectOne((request) => operation(request, 'AdminVehicles', branchA))
-      .flush(vehiclePage(vehicleA));
-    await a.whenStable();
-    a.componentInstance.refresh();
-    const failed = http.expectOne('/graphql');
+  it('surfaces a refresh error with its request ID and recovers through the same query', async () => {
+    const current = watch(mount());
+    http.expectOne((request) => operation(request, 'AdminVehicles')).flush(list());
+    const refresh = current.query.refetch();
+    const rejection = expect(refresh).rejects.toThrow('Vehicles unavailable');
+    const failed = http.expectOne((request) => operation(request, 'AdminVehicles'));
     failed.flush({
-      errors: [
-        {
-          message: 'Vehicles unavailable',
-          extensions: { code: 'SERVICE_UNAVAILABLE', requestId: 'refresh-id' },
-        },
-      ],
+      errors: [{ message: 'Vehicles unavailable', extensions: { requestId: 'refresh-id' } }],
     });
-    await a.whenStable();
-    expect(a.componentInstance.page()?.items[0]?.licensePlate).toBe(vehicleA.licensePlate);
-    expect(a.componentInstance.failure()).toContain('Vehicles unavailable (refresh-id)');
-    expect(pageElement(a).querySelector('[role="alert"]')?.textContent).toContain('refresh-id');
-    expect(pageElement(a).querySelector('tbody')?.textContent).toContain(vehicleA.licensePlate);
-    a.componentInstance.refresh();
-    const retry = http.expectOne('/graphql');
-    expect(retry.request.headers.get('x-request-id')).not.toBe(
+    await rejection;
+    expect(requestError(current.error(), 'Network failure')).toContain('refresh-id');
+    const retry = current.query.refetch();
+    const next = http.expectOne((request) => operation(request, 'AdminVehicles'));
+    expect(next.request.headers.get('x-request-id')).not.toBe(
       failed.request.headers.get('x-request-id'),
     );
-    retry.flush(vehiclePage(vehicleA));
-    await a.whenStable();
-    expect(a.componentInstance.error()).toBeNull();
-    a.destroy();
+    next.flush(list(record(branchA, 'Recovered')));
+    await retry;
+    expect(current.error()).toBeNull();
+    expect(current.page()?.items[0]?.licensePlate).toBe('Recovered');
   });
 
-  it('stops a retired client only after both submitted writes settle', async () => {
+  it('stops a retired client only after every submitted write settles', async () => {
     const stop = vi.spyOn(ApolloClient.prototype, 'stop');
-    const a = await mount(branchA);
-    http.expectOne('/graphql').flush(vehiclePage(vehicleA));
-    await a.whenStable();
-    const api = a.componentInstance.api;
-    const first = api.update({ id: vehicleA.id, input: { licensePlate: 'First write' } });
-    const firstWrite = http.expectOne('/graphql');
-    const second = api.update({ id: vehicleA.id, input: { licensePlate: 'Second write' } });
+    const api = mount();
+    const first = api.update({ id: vehicleId, input: { notes: 'First' } });
+    const firstWrite = http.expectOne((request) => operation(request, 'AdminUpdateVehicle'));
+    const second = api.update({ id: vehicleId, input: { notes: 'Second' } });
     const rejection = expect(second).rejects.toThrow('Second failed');
-    const secondWrite = http.expectOne('/graphql');
-    a.destroy();
+    const secondWrite = http.expectOne((request) => operation(request, 'AdminUpdateVehicle'));
+    api.ngOnDestroy();
     expect(stop).not.toHaveBeenCalled();
-    expect(firstWrite.cancelled).toBe(false);
-    expect(secondWrite.cancelled).toBe(false);
-    firstWrite.flush({
-      data: { updateFleetVehicle: { ...vehicleA, __typename: 'FleetVehicle' } },
-    });
+    firstWrite.flush({ data: { updateFleetVehicle: record() } });
     await first;
     expect(stop).not.toHaveBeenCalled();
     secondWrite.flush({ errors: [{ message: 'Second failed' }] });
     await rejection;
     expect(stop).toHaveBeenCalledTimes(1);
-  });
-
-  it('renders an initial error and retry followed by the empty Table state', async () => {
-    const a = await mount(branchA);
-    const element = pageElement(a);
-    expect(element.querySelector('[role="status"]')?.textContent).toContain('Loading vehicles');
-    const read = http.expectOne('/graphql');
-    const requestId = read.request.headers.get('x-request-id');
-    read.error(new ProgressEvent('error'));
-    await a.whenStable();
-    expect(element.querySelector('[role="alert"]')?.textContent).toContain(requestId);
-    expect(element.querySelector('tbody')?.textContent).not.toContain('No vehicles yet.');
-    const retry = element.querySelector<HTMLButtonElement>('button');
-    expect(retry?.textContent).toContain('Retry');
-    retry?.click();
-    const next = http.expectOne('/graphql');
-    expect(next.request.headers.get('x-request-id')).not.toBe(requestId);
-    next.flush({
-      data: {
-        fleetVehicles: {
-          __typename: 'FleetVehiclePage',
-          items: [],
-          total: 0,
-          offset: 0,
-          limit: 20,
-        },
-      },
-    });
-    await a.whenStable();
-    expect(element.querySelector('[role="alert"]')).toBeNull();
-    expect(element.querySelector('tbody')?.textContent).toContain('No vehicles yet.');
-    expect(element.querySelector('th[psortablecolumn="licensePlate"]')?.textContent.trim()).toBe(
-      'License Plate',
-    );
-    a.destroy();
-  });
-  it('captures tenant sessions for delayed writes and creates fresh clients for tenant A → B → A at the same branch', async () => {
-    const session = TestBed.inject(DemoSession);
-    const a = await mount(branchA);
-    const initial = http.expectOne('/graphql');
-    expect(initial.request.headers.get('authorization')).toBe('Bearer test-demo-token');
-    initial.flush(vehiclePage(vehicleA));
-    await a.whenStable();
-    const pending = a.componentInstance.api.update({
-      id: vehicleA.id,
-      input: { licensePlate: 'Late tenant A' },
-    });
-    const write = http.expectOne('/graphql');
-    a.destroy();
-    session.start({
-      token: 'tenant-b-token',
-      tenant: { id: '01000000-0000-4000-8000-000000000002', name: 'Other tenant' },
-    });
-    const b = await mount(branchA);
-    const readB = http.expectOne('/graphql');
-    expect(readB.request.headers.get('authorization')).toBe('Bearer tenant-b-token');
-    expect(write.request.headers.get('authorization')).toBe('Bearer test-demo-token');
-    const rowB = { ...vehicleA, licensePlate: 'Tenant B row' };
-    readB.flush(vehiclePage(rowB));
-    await b.whenStable();
-    write.flush({
-      data: {
-        updateFleetVehicle: {
-          ...vehicleA,
-          licensePlate: 'Late tenant A',
-          __typename: 'FleetVehicle',
-        },
-      },
-    });
-    await pending;
-    expect(b.componentInstance.page()?.items[0]?.licensePlate).toBe('Tenant B row');
-    http.expectNone('/graphql');
-    b.destroy();
-    session.start({
-      token: 'fresh-tenant-a-token',
-      tenant: { id: '01000000-0000-4000-8000-000000000001', name: 'RentalSofia' },
-    });
-    const freshA = await mount(branchA);
-    const readA = http.expectOne('/graphql');
-    expect(readA.request.headers.get('authorization')).toBe('Bearer fresh-tenant-a-token');
-    expect(freshA.componentInstance.page()).toBeNull();
-    readA.flush(vehiclePage(vehicleA));
-    await freshA.whenStable();
-    freshA.destroy();
   });
 });

@@ -1,134 +1,148 @@
 <holita-route-drawer
-  [title]="alert().kind"
+  [title]="title()"
   [subtitle]="subtitle()"
   [saving]="!!busy()"
   [dirty]="dirty()"
-  [closeLink]="null"
+  [state]="state()"
+  [errorText]="loadError()"
+  [closeLink]="closeLink()"
+  (retry)="retry.emit()"
   (closeRequest)="requestClose()"
 >
-  <p-tag
-    drawerMeta
-    [severity]="severitySeverity(alert().severity)"
-    [value]="severityLabel(alert().severity)"
-  />
-  @if (saveError(); as error) {
-    <p-message severity="error" role="alert">{{ error }}</p-message>
+  @if (clockError(); as error) {
+    <p-message severity="warn"
+      >{{ error }}
+      <button pButton type="button" severity="secondary" (click)="retryClock.emit()">
+        {{ clockRetry() }}
+      </button></p-message
+    >
   }
-  <section class="app-form-section">
-    <h3>{{ text().details }}</h3>
-    <dl class="app-facts">
-      <div>
-        <dt>{{ text().status }}</dt>
-        <dd>
-          <p-tag
-            [severity]="statusSeverity(alert().status)"
-            [value]="statusLabel(alert().status)"
-          />
-        </dd>
-      </div>
-      <div>
-        <dt>{{ text().occurred }}</dt>
-        <dd>
-          {{ alert().occurredAt | holitaDateTime }}
-          <span class="app-muted">({{ alert().occurredAt | holitaRelative: dataAsOf() }})</span>
-        </dd>
-      </div>
-      <div>
-        <dt>{{ text().vehicle }}</dt>
-        <dd>
-          <button type="button" class="app-link" [disabled]="!!busy()" (click)="requestVehicle()">
-            {{ alert().plate }}
-          </button>
-        </dd>
-      </div>
-      <div>
-        <dt>{{ text().driver }}</dt>
-        <dd>{{ alert().driverName ?? '—' }}</dd>
-      </div>
-      <div class="app-facts--wide">
-        <dt>{{ text().detail }}</dt>
-        <dd>{{ alert().detail }}</dd>
-      </div>
-    </dl>
-  </section>
-  <section class="app-form-section">
-    <h3>{{ text().handling }}</h3>
-    <holita-form-field
-      [label]="text().remark"
-      controlId="alert-remark"
-      [hint]="text().remarkHint"
-      [error]="remarkError()"
-      [counter]="{ length: remarkLength(), max: 1000 }"
-    >
-      <textarea
-        pTextarea
-        id="alert-remark"
-        rows="4"
-        [formControl]="remark"
-        [invalid]="!!remarkError()"
-        [attr.aria-invalid]="remarkError() ? 'true' : null"
-        aria-describedby="alert-remark-hint alert-remark-error"
-      ></textarea>
-    </holita-form-field>
-  </section>
-
+  @if (alert(); as alert) {
+    <p-tag
+      drawerMeta
+      [severity]="severitySeverity(alert.severity)"
+      [value]="severityLabel(alert.severity)"
+    />
+  }
+  @if (alert(); as alert) {
+    @if (saveError(); as error) {
+      <p-message severity="error" role="alert">{{ error }}</p-message>
+    }
+    <section class="app-form-section">
+      <h3>{{ text().details }}</h3>
+      <dl class="app-facts">
+        <div>
+          <dt>{{ text().status }}</dt>
+          <dd>
+            <p-tag [severity]="statusSeverity(alert.status)" [value]="statusLabel(alert.status)" />
+          </dd>
+        </div>
+        <div>
+          <dt>{{ text().occurred }}</dt>
+          <dd>
+            {{ alert.occurredAt | holitaDateTime }}
+            <span class="app-muted">({{ alert.occurredAt | holitaRelative: dataAsOf() }})</span>
+          </dd>
+        </div>
+        <div>
+          <dt>{{ text().vehicle }}</dt>
+          <dd>
+            <button type="button" class="app-link" [disabled]="!!busy()" (click)="requestVehicle()">
+              {{ alert.plate }}
+            </button>
+          </dd>
+        </div>
+        <div>
+          <dt>{{ text().driver }}</dt>
+          <dd>{{ alert.driverName ?? '—' }}</dd>
+        </div>
+        <div class="app-facts--wide">
+          <dt>{{ text().detail }}</dt>
+          <dd>{{ alert.detail }}</dd>
+        </div>
+      </dl>
+    </section>
+    <section class="app-form-section">
+      <h3>{{ text().handling }}</h3>
+      <holita-form-field
+        [label]="text().remark"
+        controlId="alert-remark"
+        [hint]="text().remarkHint"
+        [error]="remarkError()"
+        [counter]="{ length: remarkLength(), max: 1000 }"
+      >
+        <textarea
+          #remarkElement
+          pTextarea
+          id="alert-remark"
+          rows="4"
+          [formControl]="remark"
+          [invalid]="!!remarkError()"
+          [attr.aria-invalid]="remarkError() ? 'true' : null"
+          aria-describedby="alert-remark-hint alert-remark-error"
+        ></textarea>
+      </holita-form-field>
+    </section>
+  }
   <div drawerFooter class="app-drawer-actions">
-    <button
-      pButton
-      type="button"
-      severity="secondary"
-      [outlined]="true"
-      [disabled]="!!busy()"
-      (click)="requestClose()"
-    >
-      {{ text().close }}
-    </button>
-    @switch (alert().status) {
-      @case ('OPEN') {
-        <button
-          pButton
-          type="button"
-          severity="secondary"
-          [outlined]="true"
-          [loading]="busy() === 'acknowledge'"
-          [disabled]="!!busy()"
-          (click)="apply('acknowledge')"
-        >
-          {{ text().acknowledge }}
-        </button>
-        <button
-          pButton
-          type="button"
-          [loading]="busy() === 'resolve'"
-          [disabled]="!!busy()"
-          (click)="apply('resolve')"
-        >
-          {{ text().resolve }}
-        </button>
-      }
-      @case ('ACKNOWLEDGED') {
-        <button
-          pButton
-          type="button"
-          [loading]="busy() === 'resolve'"
-          [disabled]="!!busy()"
-          (click)="apply('resolve')"
-        >
-          {{ text().resolve }}
-        </button>
-      }
-      @case ('RESOLVED') {
-        <button
-          pButton
-          type="button"
-          severity="secondary"
-          [outlined]="true"
-          [loading]="busy() === 'reopen'"
-          [disabled]="!!busy()"
-          (click)="apply('reopen')"
-        >
-          {{ text().reopen }}
-        </button>
+    @if (alert(); as alert) {
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="!!busy()"
+        (click)="close()"
+      >
+        {{ text().close }}
+      </button>
+      @switch (alert.status) {
+        @case ('OPEN') {
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            [outlined]="true"
+            [loading]="busy() === 'acknowledge'"
+            [disabled]="!!busy()"
+            (click)="apply('acknowledge')"
+          >
+            {{ text().acknowledge }}
+          </button>
+          <button
+            pButton
+            type="button"
+            [loading]="busy() === 'resolve'"
+            [disabled]="!!busy()"
+            (click)="apply('resolve')"
+          >
+            {{ text().resolve }}
+          </button>
+        }
+        @case ('ACKNOWLEDGED') {
+          <button
+            pButton
+            type="button"
+            [loading]="busy() === 'resolve'"
+            [disabled]="!!busy()"
+            (click)="apply('resolve')"
+          >
+            {{ text().resolve }}
+          </button>
+        }
+        @case ('RESOLVED') {
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            [outlined]="true"
+            [loading]="busy() === 'reopen'"
+            [disabled]="!!busy()"
+            (click)="apply('reopen')"
+          >
+            {{ text().reopen }}
+          </button>
+        }
       }
     }
   </div>

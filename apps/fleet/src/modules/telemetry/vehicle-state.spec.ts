@@ -63,6 +63,26 @@ describe('vehicle activity and fuel status', () => {
     expect(fuelStatus(sample(), null)).toBe('STALE');
   });
 
+  it('uses configured thresholds with the same inclusive reporting and exclusive low-fuel boundaries', () => {
+    const configured = { lowFuelPct: 20, notReportingHours: 1 };
+    const at = (ageMs: number, fuelLevelPct: number) =>
+      classifyVehicleState(
+        {
+          hasDevice: true,
+          latest: sample({ recordedAt: new Date(asOf.getTime() - ageMs), fuelLevelPct }),
+          odometer: null,
+        },
+        asOf,
+        configured,
+      );
+    expect(at(HOUR, 20)).toMatchObject({ activity: 'PARKED', fuelStatus: 'NORMAL' });
+    expect(at(HOUR + 1, 19.9)).toMatchObject({ activity: 'NOT_CONNECTED', fuelStatus: 'LOW' });
+    expect(at(6 * HOUR + 1, 19.9)).toMatchObject({
+      activity: 'NOT_CONNECTED',
+      fuelStatus: 'STALE',
+    });
+  });
+
   it('builds the full state with the odometer of any source', () => {
     const odometer = {
       odometerKm: 120_000.5,

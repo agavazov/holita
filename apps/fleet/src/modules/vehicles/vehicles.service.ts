@@ -1,10 +1,19 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { CoreClient } from '../../integrations/core/core.client.js';
 import type {
   CreateFleetVehicleInput,
   FleetVehicle,
   FleetVehiclePage,
   FleetVehicleSortField,
+  FleetVehicleActionFailure,
+  FleetVehicleActionResult,
+  FleetVehicleSummary,
   QueryFleetVehiclesArgs,
   UpdateFleetVehicleInput,
 } from '../../generated/graphql/types.js';
@@ -45,9 +54,11 @@ import { TelemetryService } from '../telemetry/telemetry.service.js';
 import {
   type VehicleData,
   type VehicleListCriteria,
+  type VehicleListRow,
   type VehicleRow,
   VehiclesRepository,
 } from './vehicles.repository.js';
+import { vehicleConditions } from './vehicle-filter.js';
 
 export type VehicleResult = Omit<FleetVehicle, 'branch'>;
 type StoredVehicle = Omit<VehicleResult, 'state' | 'openAlertCount' | 'nextService'>;
@@ -60,6 +71,9 @@ const SORT_FIELDS: readonly FleetVehicleSortField[] = [
   'FLEET_NUMBER',
   'CREATED_AT',
   'UPDATED_AT',
+  'STATUS',
+  'LAST_REPORTED_AT',
+  'ODOMETER_KM',
 ];
 
 const DUPLICATE_FLEET_NUMBER: FieldError = {
@@ -67,6 +81,10 @@ const DUPLICATE_FLEET_NUMBER: FieldError = {
   message: 'Fleet number is already used in this branch.',
 };
 const DUPLICATE_VIN: FieldError = { path: 'vin', message: 'VIN is already used in this branch.' };
+const UNAVAILABLE_DRIVER: FieldError = {
+  path: 'currentDriverId',
+  message: 'Choose an active driver in this branch.',
+};
 const UNIQUE_INDEXES = new Map([
   ['Vehicle_tenantId_branchId_fleetNumber_key', DUPLICATE_FLEET_NUMBER],
   ['Vehicle_tenantId_branchId_vin_key', DUPLICATE_VIN],
@@ -154,6 +172,7 @@ function toVehicle(row: VehicleRow): StoredVehicle {
 
 @Injectable()
 export class VehiclesService {
+  private readonly logger = new Logger(VehiclesService.name);
   constructor(
     private readonly vehicles: VehiclesRepository,
     private readonly core: CoreClient,
@@ -183,13 +202,85 @@ export class VehiclesService {
       hasDriver: booleanFilter(filter?.hasDriver, 'hasDriver'),
       hasDevice: booleanFilter(filter?.hasDevice, 'hasDevice'),
       hasOpenAlerts: booleanFilter(filter?.hasOpenAlerts, 'hasOpenAlerts'),
+      ...(filter?.allOf == null ? {} : { allOf: vehicleConditions(filter.allOf) }),
     };
     const sort = {
       field: sortField(args.sort?.field, SORT_FIELDS, 'CREATED_AT'),
       direction: sortDirection(args.sort?.direction, 'DESC'),
     };
     const page = await this.vehicles.list(scope, { offset, limit }, criteria, sort);
-    return { items: await this.complete(scope, page.items), total: page.total, offset, limit };
+    return { items: await this.completeList(scope, page.items), total: page.total, offset, limit };
+  }
+
+  summary(context: RequestContext): Promise<FleetVehicleSummary> {
+    return this.vehicles.summary(requireScope(context));
+  }
+
+  async deleteMany(
+    context: RequestContext,
+    values: readonly string[],
+  ): Promise<FleetVehicleActionResult> {
+    requireScope(context);
+    const selected = ids(values, 'ids');
+    if (!selected.length) {
+      invalid('ids', 'Choose at least one vehicle.');
+    }
+    const succeededIds: string[] = [];
+    const failures: FleetVehicleActionFailure[] = [];
+    for (const id of selected) {
+      try {
+        await this.delete(context, id);
+        succeededIds.push(id);
+      } catch (error: unknown) {
+        failures.push(this.actionFailure(context, id, error));
+      }
+    }
+    return { succeededIds, failures };
+  }
+
+  async deactivateMany(
+    context: RequestContext,
+    values: readonly string[],
+  ): Promise<FleetVehicleActionResult> {
+    requireScope(context);
+    const selected = ids(values, 'ids');
+    if (!selected.length) {
+      invalid('ids', 'Choose at least one vehicle.');
+    }
+    const succeededIds: string[] = [];
+    const failures: FleetVehicleActionFailure[] = [];
+    for (const id of selected) {
+      try {
+        await this.deactivate(context, id);
+        succeededIds.push(id);
+      } catch (error: unknown) {
+        failures.push(this.actionFailure(context, id, error));
+      }
+    }
+    return { succeededIds, failures };
+  }
+
+  private actionFailure(
+    context: RequestContext,
+    id: string,
+    error: unknown,
+  ): FleetVehicleActionFailure {
+    if (error instanceof HttpException) {
+      const code = new Map([
+        [400, 'BAD_USER_INPUT'],
+        [404, 'NOT_FOUND'],
+        [409, 'CONFLICT'],
+        [503, 'SERVICE_UNAVAILABLE'],
+      ]).get(error.getStatus());
+      if (code) {
+        return { id, code, message: error.message };
+      }
+    }
+    this.logger.error({
+      requestId: context.requestId,
+      error: error instanceof Error ? error.name : 'UnknownError',
+    });
+    return { id, code: 'INTERNAL_SERVER_ERROR', message: 'Unable to change vehicle.' };
   }
 
   async find(context: RequestContext, id: string): Promise<VehicleResult> {
@@ -221,11 +312,14 @@ export class VehiclesService {
     await this.checkRelations(scope, data, data);
     await this.checkDuplicates(scope, data, null);
     await this.core.requireBranch(scope.branchId, context);
-    let row: VehicleRow;
+    let row: VehicleRow | null;
     try {
       row = await this.vehicles.create(scope, data);
     } catch (error) {
       this.writeError(error);
+    }
+    if (row === null) {
+      invalidFields([UNAVAILABLE_DRIVER]);
     }
     return this.completeOne(scope, row);
   }
@@ -255,11 +349,14 @@ export class VehiclesService {
       data,
     );
     await this.checkDuplicates(scope, data, recordId);
-    let row: VehicleRow;
+    let row: VehicleRow | null;
     try {
       row = await this.vehicles.update(scope, recordId, data);
     } catch (error) {
       this.writeError(error);
+    }
+    if (row === null) {
+      invalidFields([UNAVAILABLE_DRIVER]);
     }
     return this.completeOne(scope, row);
   }
@@ -289,10 +386,27 @@ export class VehiclesService {
     return this.completeOne(scope, row);
   }
 
-  /**
-   * Attaches the B2 derived values to a page: one state batch (data clock + facts), one OPEN
-   * alert count query and one next-service urgency query, never a query per row.
-   */
+  /** Keep filtered/sorted facts from the list snapshot; next service is not a list predicate. */
+  private async completeList(
+    scope: FleetScope,
+    rows: readonly VehicleListRow[],
+  ): Promise<VehicleResult[]> {
+    if (!rows.length) {
+      return [];
+    }
+    const nextServices = await this.serviceTasks.nextForVehicles(
+      scope,
+      rows.map((row) => row.id),
+    );
+    return rows.map((row) => ({
+      ...toVehicle(row),
+      state: row.state,
+      openAlertCount: row.openAlertCount,
+      nextService: nextServices.get(row.id) ?? null,
+    }));
+  }
+
+  /** Reads and writes attach current derived values through three scoped batches. */
   private async complete(scope: FleetScope, rows: readonly VehicleRow[]): Promise<VehicleResult[]> {
     if (!rows.length) {
       return [];
@@ -347,7 +461,7 @@ export class VehiclesService {
     if (changes.currentDriverId !== undefined && changes.currentDriverId !== null) {
       const driver = await this.vehicles.findDriver(scope, changes.currentDriverId);
       if (!driver || driver.status === 'INACTIVE') {
-        invalid('currentDriverId', 'Choose an active driver in this branch.');
+        invalidFields([UNAVAILABLE_DRIVER]);
       }
     }
   }

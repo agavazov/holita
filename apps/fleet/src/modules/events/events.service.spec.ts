@@ -55,6 +55,7 @@ describe('Events, alert counts and transitions', () => {
   const alertCounts = jest.fn<EventsRepository['alertCounts']>();
   const kindIntensityCounts = jest.fn<EventsRepository['kindIntensityCounts']>();
   const transition = jest.fn<EventsRepository['transition']>();
+  const drivingEventsByTrip = jest.fn<EventsRepository['drivingEventsByTrip']>();
   const now = new Date('2026-10-18T07:00:00.000Z');
   const context = {
     requestId: randomUUID(),
@@ -112,7 +113,14 @@ describe('Events, alert counts and transitions', () => {
         EventsService,
         {
           provide: EventsRepository,
-          useValue: { list, find, alertCounts, kindIntensityCounts, transition },
+          useValue: {
+            list,
+            find,
+            alertCounts,
+            kindIntensityCounts,
+            transition,
+            drivingEventsByTrip,
+          },
         },
         { provide: FleetClock, useValue: { now: () => now } },
       ],
@@ -187,6 +195,103 @@ describe('Events, alert counts and transitions', () => {
     expect(
       await fieldErrors(service.alertCounts(context, { search: 'a b c d e f' })),
     ).toMatchObject([{ path: 'search' }]);
+  });
+
+  it('retains repeated conditions and strips all status conditions only from counts', async () => {
+    const allOf = [
+      { excludedAlertStatuses: ['RESOLVED' as const], severities: ['WARNING' as const] },
+      { alertStatuses: ['OPEN' as const], actionable: true, excludedVehicleIds: [vehicleId] },
+      { severities: ['CRITICAL' as const] },
+    ];
+    await service.list(context, { filter: { allOf }, sort: { field: 'ALERT_STATUS' } });
+    expect(list).toHaveBeenLastCalledWith(
+      scope,
+      expect.anything(),
+      expect.objectContaining({
+        allOf: allOf.map((condition) => expect.objectContaining(condition)),
+      }),
+      { field: 'ALERT_STATUS', direction: 'DESC' },
+    );
+    alertCounts.mockResolvedValue([]);
+    await service.alertCounts(context, { filter: { allOf } });
+    expect(alertCounts).toHaveBeenCalledWith(
+      scope,
+      expect.objectContaining({
+        allOf: [
+          expect.objectContaining({ excludedAlertStatuses: undefined, severities: ['WARNING'] }),
+          expect.objectContaining({
+            alertStatuses: undefined,
+            actionable: undefined,
+            excludedVehicleIds: [vehicleId],
+          }),
+          expect.objectContaining({ severities: ['CRITICAL'] }),
+        ],
+      }),
+    );
+    expect(
+      await fieldErrors(
+        service.list(context, { filter: { allOf: Array.from({ length: 51 }, () => ({})) } }),
+      ),
+    ).toMatchObject([{ path: 'filter' }]);
+  });
+
+  it('returns complete maneuver timelines in one page batch', async () => {
+    const tripId = randomUUID();
+    const event = {
+      id: randomUUID(),
+      occurredAt: now,
+      kind: 'SPEEDING' as const,
+      severity: 'WARNING' as const,
+      details: 'Curve',
+    };
+    drivingEventsByTrip.mockResolvedValue([{ tripId, ...event }]);
+    await expect(service.drivingEventsByTrip(scope, [{ id: tripId, vehicleId }])).resolves.toEqual(
+      new Map([[tripId, [event]]]),
+    );
+    expect(drivingEventsByTrip).toHaveBeenCalledWith(
+      scope,
+      [{ id: tripId, vehicleId }],
+      MANEUVER_KINDS,
+    );
+    drivingEventsByTrip.mockClear();
+    await expect(service.drivingEventsByTrip(scope, [])).resolves.toEqual(new Map());
+    expect(drivingEventsByTrip).not.toHaveBeenCalled();
+  });
+
+  it('reports independent batch outcomes and validates shared input before writes', async () => {
+    const first = randomUUID(),
+      stale = randomUUID(),
+      missing = randomUUID();
+    transition.mockResolvedValueOnce(1).mockResolvedValueOnce(0).mockResolvedValueOnce(0);
+    find
+      .mockResolvedValueOnce(row({ id: first, alertStatus: 'ACKNOWLEDGED' }))
+      .mockResolvedValueOnce(row({ id: stale, alertStatus: 'RESOLVED' }))
+      .mockResolvedValueOnce(null);
+    await expect(
+      service.acknowledgeMany(context, [first, stale, missing], { expectedStatus: 'OPEN' }),
+    ).resolves.toEqual({
+      succeededIds: [first],
+      failures: [
+        {
+          id: stale,
+          code: 'CONFLICT',
+          message: 'The alert changed after it was loaded; reload it.',
+        },
+        { id: missing, code: 'NOT_FOUND', message: 'Alert not found' },
+      ],
+    });
+    transition.mockClear();
+    for (const action of [
+      service.acknowledgeMany(context, [], { expectedStatus: 'OPEN' }),
+      service.acknowledgeMany(context, [first], { expectedStatus: 'RESOLVED' }),
+      service.acknowledgeMany(context, [first], {
+        expectedStatus: 'OPEN',
+        remark: 'a'.repeat(1001),
+      }),
+    ]) {
+      await expect(action).rejects.toThrow(BadRequestException);
+    }
+    expect(transition).not.toHaveBeenCalled();
   });
 
   it('returns nine maneuver rows and requires trips or a bounded period', async () => {

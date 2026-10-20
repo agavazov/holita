@@ -11,7 +11,7 @@
     "edit": "Edit {name}",
     "emptyTitle": "No groups yet",
     "emptyDescription": "Create groups such as International or City to organise the fleet.",
-    "errorText": "The groups could not be loaded. (demo-request-13)",
+    "errorText": "The groups could not be loaded.",
     "inUse": "Groups with vehicles cannot be deleted; move the vehicles first.",
     "saved": "{name} was saved.",
     "created": "{name} was created.",
@@ -36,7 +36,8 @@
       "save": "Save",
       "create": "Create group",
       "cancel": "Cancel",
-      "duplicateName": "A group with this name already exists."
+      "duplicateName": "A group with this name already exists.",
+      "saveError": "The group could not be saved. Try again."
     }
   },
   "general": {
@@ -45,7 +46,7 @@
     "title": "General",
     "description": "Settings of {branch} that apply to every user of the branch.",
     "branch": "Branch",
-    "branchHint": "Name and regional settings used in lists and reports.",
+    "branchHint": "Name and regional preferences. Display units apply to readings and charts; fields and filters keep their explicitly labelled entry units.",
     "name": "Branch name",
     "timeZone": "Time zone",
     "distanceUnit": "Distance",
@@ -53,9 +54,9 @@
     "kilometres": "Kilometres",
     "miles": "Miles",
     "litres": "Litres",
-    "gallons": "Gallons",
+    "gallons": "US gallons",
     "thresholds": "Thresholds",
-    "thresholdsHint": "When vehicles and devices are flagged in lists and alerts.",
+    "thresholdsHint": "Thresholds for low fuel and device reporting. The speed limit is a stored reference.",
     "lowFuel": "Low fuel below, %",
     "notReporting": "Not reporting after, hours",
     "speedLimit": "Truck speed limit, km/h",
@@ -71,6 +72,13 @@
     "discard": "Discard",
     "save": "Save changes",
     "saved": "Settings saved.",
-    "saveError": "The settings could not be saved. Try again. (demo-request-14)"
+    "saveError": "The settings could not be saved. Try again.",
+    "loading": "Loading settings…",
+    "loadError": "The settings could not be loaded.",
+    "retry": "Try again",
+    "notificationsDemoLabel": "Demo",
+    "notificationsUnavailable": "Notification delivery is not connected. These options are unavailable and are not saved.",
+    "speedLimitHint": "Stored reference only. Changing it does not create or change speeding alerts.",
+    "partialSaveError": "Fleet settings were saved, but the Branch name was not saved. Retry the name or discard it."
   }
 }

@@ -1,7 +1,7 @@
 <holita-page-header
   [eyebrow]="eyebrow()"
   [title]="text().title"
-  [count]="view().kind === 'rows' ? rows().length : null"
+  [count]="view().kind === 'rows' || view().kind === 'rows-error' ? rows().length : null"
   [description]="text().description"
 >
   <button headerActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
@@ -12,7 +12,9 @@
   [heading]="text().heading"
   [total]="rows().length"
   [view]="view()"
-  [errorText]="text().errorText"
+  [errorText]="errorText() ?? text().errorText"
+  [busy]="busy()"
+  [actionContext]="actionContext()"
   [emptyTitle]="text().emptyTitle"
   [emptyDescription]="text().emptyDescription"
   [actions]="actions()"

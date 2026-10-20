@@ -1,0 +1,27 @@
+fragment AdminFleetSettings on FleetSettings {
+  timeZone
+  distanceUnit
+  volumeUnit
+  lowFuelPct
+  notReportingHours
+  speedLimitKph
+}
+
+query AdminFleetPreferences {
+  fleetSettings {
+    ...AdminFleetSettings
+  }
+}
+
+mutation AdminUpdateFleetSettings($input: UpdateFleetSettingsInput!) {
+  updateFleetSettings(input: $input) {
+    ...AdminFleetSettings
+  }
+}
+
+mutation AdminUpdateBranchName($id: ID!, $name: String!) {
+  updateBranchName(id: $id, name: $name) {
+    id
+    name
+  }
+}

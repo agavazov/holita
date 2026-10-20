@@ -43,8 +43,10 @@
 <holita-filter-builder
   [searchLabel]="text().search"
   [search]="state().search"
+  [searchError]="searchError()"
   [fields]="fields()"
   [conditions]="state().conditions"
+  [maxConditions]="50"
   (searchChange)="changeSearch($event)"
   (conditionsChange)="changeConditions($event)"
 />
@@ -54,8 +56,9 @@
   [heading]="text().table.heading"
   [total]="total()"
   [view]="view()"
-  [errorText]="text().table.errorText"
+  [errorText]="errorText() ?? text().table.errorText"
   [busy]="busy()"
+  [actionContext]="state()"
   [emptyTitle]="text().table.emptyTitle"
   [emptyDescription]="text().table.emptyDescription"
   [actions]="actions()"
@@ -189,7 +192,7 @@
             <span class="app-muted">{{ text().table.noGroup }}</span>
           }
         </td>
-        <td class="app-num">{{ row.odometerKm | holitaNumber }}</td>
+        <td class="app-num">{{ units.distance(row.odometerKm, false, 0) }}</td>
         <td>
           @if (row.fuelPct !== null) {
             <span class="app-meter-cell" [class.vehicles__fuel--low]="fuelLow(row)">

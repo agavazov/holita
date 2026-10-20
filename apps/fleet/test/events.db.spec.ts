@@ -312,6 +312,62 @@ describe('Events and alert workflow with PostgreSQL', () => {
     });
   });
 
+  it('applies repeated exclusions before pagination and sorts statuses with informational rows last', async () => {
+    expect(
+      await listed({
+        filter: { allOf: [{ severities: ['WARNING'] }, { severities: ['CRITICAL'] }] },
+      }),
+    ).toEqual(page([]));
+    expect(
+      await listed({
+        filter: {
+          allOf: [{ excludedVehicleIds: [truck] }, { excludedAlertStatuses: ['ACKNOWLEDGED'] }],
+        },
+      }),
+    ).toEqual(page(['speeding', 'braking', 'ignition']));
+    expect(await listed({ filter: { allOf: [{ excludedDriverIds: [driver] }] } })).toEqual(
+      page(['ignition', 'trouble', 'idling', 'crash']),
+    );
+    expect(
+      await listed({
+        filter: { allOf: [{ excludedKinds: ['SPEEDING', 'HARSH_BRAKING'] }] },
+        sort: { field: 'ALERT_STATUS', direction: 'ASC' },
+      }),
+    ).toEqual(page(['trouble', 'idling', 'crash', 'ignition']));
+    expect(
+      await query(
+        'query{fleetEvents(sort:{field:ALERT_STATUS,direction:DESC},offset:1,limit:2){items{id}total offset limit}}',
+        {},
+      ),
+    ).toEqual({
+      data: {
+        fleetEvents: {
+          items: [{ id: event('idling') }, { id: event('speeding') }],
+          total: 6,
+          offset: 1,
+          limit: 2,
+        },
+      },
+    });
+    expect(await listed({ search: 'harsh braking' })).toEqual(page(['braking']));
+    expect(
+      await query(
+        'query($filter:FleetEventFilter){fleetAlertCounts(filter:$filter){open openCritical acknowledged resolved}}',
+        {
+          filter: {
+            allOf: [
+              { excludedAlertStatuses: ['RESOLVED'] },
+              { actionable: false, alertStatuses: ['OPEN'] },
+              { vehicleIds: [truck] },
+            ],
+          },
+        },
+      ),
+    ).toEqual({
+      data: { fleetAlertCounts: { open: 1, openCritical: 1, acknowledged: 0, resolved: 1 } },
+    });
+  });
+
   it('counts maneuvers per kind and intensity for a trip', async () => {
     const body = await query(
       'query($filter:FleetEventFilter!){fleetManeuverCounts(filter:$filter){kind intensity1 intensity2 intensity3 intensityUnknown total}}',
@@ -448,5 +504,50 @@ describe('Events and alert workflow with PostgreSQL', () => {
     expect(
       await database.client.fleetEvent.findUniqueOrThrow({ where: { id: event('idling') } }),
     ).toMatchObject({ alertStatus: 'ACKNOWLEDGED' });
+  });
+
+  it('acknowledges a batch with independent optimistic and scope failures', async () => {
+    const id = randomUUID();
+    await database.client.fleetEvent.create({
+      data: {
+        id,
+        tenantId,
+        branchId,
+        vehicleId: van,
+        source: 'DEMO',
+        occurredAt: now,
+        kind: 'LOW_FUEL',
+        severity: 'WARNING',
+        alertStatus: 'OPEN',
+      },
+    });
+    const mutation =
+      'mutation($ids:[ID!]!,$input:FleetAlertTransitionInput!){acknowledgeFleetAlerts(ids:$ids,input:$input){succeededIds failures{id code message}}}';
+    const result = await query(mutation, {
+      ids: [id, event('idling'), foreignAlert, event('ignition')],
+      input: { expectedStatus: 'OPEN' },
+    });
+    expect(result).toEqual({
+      data: {
+        acknowledgeFleetAlerts: {
+          succeededIds: [id],
+          failures: [
+            {
+              id: event('idling'),
+              code: 'CONFLICT',
+              message: 'The alert changed after it was loaded; reload it.',
+            },
+            { id: foreignAlert, code: 'NOT_FOUND', message: 'Alert not found' },
+            { id: event('ignition'), code: 'NOT_FOUND', message: 'Alert not found' },
+          ],
+        },
+      },
+    });
+    expect(
+      await database.client.fleetEvent.findUniqueOrThrow({ where: { id: foreignAlert } }),
+    ).toMatchObject({ alertStatus: 'OPEN' });
+    expect(await query(mutation, { ids: [], input: { expectedStatus: 'OPEN' } })).toMatchObject({
+      errors: [{ extensions: { fieldErrors: [{ path: 'ids' }] } }],
+    });
   });
 });

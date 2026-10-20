@@ -22,6 +22,7 @@ describe('Fleet raw SQL helpers', () => {
     expect(fleetTable('test_abc', 'Trip').sql).toBe('"test_abc"."Trip"');
     expect(fleetTable('we"ird', 'VehicleStatusSample').sql).toBe('"we""ird"."VehicleStatusSample"');
     expect(fleetTable('public', 'ServiceTask').values).toEqual([]);
+    expect(fleetTable('test_abc', 'FleetSettings').sql).toBe('"test_abc"."FleetSettings"');
     // TypeScript already rejects other names; a direct call still fails at runtime.
     expect(() => {
       Reflect.apply(fleetTable, undefined, ['public', 'Trip"; DROP TABLE "Vehicle']);

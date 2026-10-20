@@ -8,7 +8,9 @@ import type {
   FleetActivityStatus,
   FleetFuelStatus,
   FleetVehicleState,
+  FleetSettings,
 } from '../../generated/graphql/types.js';
+import { defaultFleetSettings } from '../settings/settings-defaults.js';
 import type { FleetDataSource, FleetVehicleStatus } from '../../generated/prisma/enums.js';
 
 const HOUR_MS = 3_600_000;
@@ -47,6 +49,7 @@ export interface VehicleFacts {
 export function classifyActivity(
   facts: Pick<VehicleFacts, 'hasDevice' | 'latest'>,
   asOf: Date | null,
+  notReportingHours = NOT_CONNECTED_AFTER_HOURS,
 ): FleetActivityStatus {
   if (!facts.hasDevice) {
     return 'NO_DEVICE';
@@ -55,7 +58,7 @@ export function classifyActivity(
   if (
     sample === null ||
     asOf === null ||
-    sample.recordedAt.getTime() < asOf.getTime() - NOT_CONNECTED_AFTER_HOURS * HOUR_MS
+    sample.recordedAt.getTime() < asOf.getTime() - notReportingHours * HOUR_MS
   ) {
     return 'NOT_CONNECTED';
   }
@@ -69,7 +72,11 @@ export function classifyActivity(
 }
 
 /** The single fuel status definition (list tone, KPI and attention). */
-export function fuelStatus(sample: DeviceSample | null, asOf: Date | null): FleetFuelStatus {
+export function fuelStatus(
+  sample: DeviceSample | null,
+  asOf: Date | null,
+  lowFuelPct = LOW_FUEL_PERCENT,
+): FleetFuelStatus {
   if (sample === null || sample.fuelLevelPct === null) {
     return 'NO_DATA';
   }
@@ -79,7 +86,7 @@ export function fuelStatus(sample: DeviceSample | null, asOf: Date | null): Flee
   ) {
     return 'STALE';
   }
-  return sample.fuelLevelPct < LOW_FUEL_PERCENT ? 'LOW' : 'NORMAL';
+  return sample.fuelLevelPct < lowFuelPct ? 'LOW' : 'NORMAL';
 }
 
 type StateFacts = Pick<VehicleFacts, 'hasDevice' | 'latest' | 'odometer'>;
@@ -87,10 +94,14 @@ type StateFacts = Pick<VehicleFacts, 'hasDevice' | 'latest' | 'odometer'>;
 /** Facts of a vehicle without devices, samples or readings (also a deleted vehicle). */
 export const NO_FACTS: StateFacts = { hasDevice: false, latest: null, odometer: null };
 
-export function classifyVehicleState(facts: StateFacts, asOf: Date | null): FleetVehicleState {
+export function classifyVehicleState(
+  facts: StateFacts,
+  asOf: Date | null,
+  settings: Pick<FleetSettings, 'lowFuelPct' | 'notReportingHours'> = defaultFleetSettings(),
+): FleetVehicleState {
   const sample = facts.latest;
   return {
-    activity: classifyActivity(facts, asOf),
+    activity: classifyActivity(facts, asOf, settings.notReportingHours),
     lastReportedAt: sample?.recordedAt ?? null,
     latitude: sample?.latitude ?? null,
     longitude: sample?.longitude ?? null,
@@ -99,7 +110,7 @@ export function classifyVehicleState(facts: StateFacts, asOf: Date | null): Flee
     headingDeg: sample?.headingDeg ?? null,
     ignition: sample?.ignition ?? null,
     fuelLevelPct: sample?.fuelLevelPct ?? null,
-    fuelStatus: fuelStatus(sample, asOf),
+    fuelStatus: fuelStatus(sample, asOf, settings.lowFuelPct),
     externalVoltage: sample?.externalVoltage ?? null,
     backupBatteryVoltage: sample?.backupBatteryVoltage ?? null,
     engineHours: sample?.engineHours ?? null,

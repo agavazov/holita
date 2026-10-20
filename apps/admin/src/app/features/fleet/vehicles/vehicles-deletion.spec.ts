@@ -1,406 +1,326 @@
-import { DemoSession } from '../../../core/auth/demo-session';
 import { provideHttpClient, type HttpRequest } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { inject } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
-import { By } from '@angular/platform-browser';
-import { Router, provideRouter } from '@angular/router';
-import { RouterTestingHarness } from '@angular/router/testing';
-import { ApolloClient } from '@apollo/client/core';
-import { provideApollo } from 'apollo-angular';
-import { HttpLink } from 'apollo-angular/http';
-import type { AdminVehicleFragment } from '../../../../generated/graphql/operations';
-import { routes } from '../../../app.routes';
-import { graphqlOptions } from '../../../core/graphql/graphql-options';
+import { signal } from '@angular/core';
+import { TestBed, type ComponentFixture } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { MessageService } from 'primeng/api';
+import type { AdminVehicleDetailsFragment } from '../../../../generated/graphql/operations';
+import { DemoSession } from '../../../core/auth/demo-session';
+import { UI_LANGUAGE } from '../../../ui/ui-language';
 import { VehiclesPage } from './vehicles-page';
 
 const branchA = '10000000-0000-4000-8000-000000000001';
 const branchB = '10000000-0000-4000-8000-000000000002';
-const path = `/en/${branchA}/fleet/vehicles`;
-const branches = [
-  { id: branchA, name: 'Discordia' },
-  { id: branchB, name: 'Sandbox' },
-];
-const alpha: AdminVehicleFragment = {
-  id: '20000000-0000-4000-8000-000000000001',
-  branchId: branchA,
-  licensePlate: 'Alpha',
-  notes: null,
-  createdAt: '2026-01-01T00:00:00.000Z',
-  updatedAt: '2026-01-01T00:00:00.000Z',
-};
-const beta: AdminVehicleFragment = {
-  ...alpha,
-  id: '20000000-0000-4000-8000-000000000002',
-  licensePlate: 'Beta',
-};
-function operation(request: HttpRequest<unknown>, name: string): boolean {
+const firstId = '20000000-0000-4000-8000-000000000001';
+const secondId = '20000000-0000-4000-8000-000000000002';
+
+function record(
+  id = firstId,
+  branchId = branchA,
+): AdminVehicleDetailsFragment & { readonly __typename: 'FleetVehicle' } {
+  return {
+    __typename: 'FleetVehicle',
+    id,
+    branchId,
+    licensePlate: id === firstId ? 'CA1234AB' : 'PB1234AB',
+    notes: null,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    fleetNumber: null,
+    vehicleType: null,
+    make: null,
+    model: null,
+    modelYear: null,
+    vin: null,
+    fuelType: null,
+    fuelTankCapacityL: null,
+    status: 'ACTIVE',
+    groupId: null,
+    group: null,
+    currentDriverId: null,
+    currentDriver: null,
+    deviceCount: 0,
+    openAlertCount: 0,
+    state: {
+      activity: 'NO_DEVICE',
+      lastReportedAt: null,
+      latitude: null,
+      longitude: null,
+      address: null,
+      speedKph: null,
+      headingDeg: null,
+      ignition: null,
+      fuelLevelPct: null,
+      fuelStatus: 'NO_DATA',
+      externalVoltage: null,
+      backupBatteryVoltage: null,
+      engineHours: null,
+      coolantTempC: null,
+      odometerKm: null,
+      odometerRecordedAt: null,
+      odometerSource: null,
+    },
+  };
+}
+
+function list(items: readonly AdminVehicleDetailsFragment[]) {
+  return {
+    data: {
+      fleetVehicles: {
+        __typename: 'FleetVehiclePage',
+        items,
+        total: items.length,
+        offset: 0,
+        limit: 20,
+      },
+    },
+  };
+}
+
+function operation(request: HttpRequest<unknown>, name: string, branchId = branchA): boolean {
   const body: unknown = request.body;
   return (
+    request.url === '/graphql' &&
+    request.headers.get('x-branch-id') === branchId &&
     typeof body === 'object' &&
     body !== null &&
     'operationName' in body &&
     body.operationName === name
   );
 }
-function list(
-  items: AdminVehicleFragment[] = [alpha, beta],
-  total = items.length,
-  offset = 0,
-  limit = 20,
-) {
-  return {
-    data: {
-      fleetVehicles: {
-        __typename: 'FleetVehiclePage',
-        items: items.map((vehicle) => ({ ...vehicle, __typename: 'FleetVehicle' })),
-        total,
-        offset,
-        limit,
-      },
-    },
-  };
-}
-function deletion(vehicle: AdminVehicleFragment) {
-  return { data: { deleteFleetVehicle: { ...vehicle, __typename: 'FleetVehicle' } } };
-}
-function page(harness: RouterTestingHarness): VehiclesPage {
-  const component: unknown = harness.routeDebugElement?.query(
-    By.directive(VehiclesPage),
-  ).componentInstance;
-  if (!(component instanceof VehiclesPage)) {
-    throw new Error('Missing Vehicles page.');
-  }
-  return component;
-}
-function click(harness: RouterTestingHarness, label: string): void {
-  const button = [
-    ...(harness.routeNativeElement?.querySelectorAll<HTMLButtonElement>('button') ?? []),
-  ].find(
-    (element) =>
-      element.getAttribute('aria-label') === label || element.textContent.trim() === label,
-  );
-  if (!button) {
-    throw new Error('Missing button: ' + label);
-  }
-  button.click();
-}
-function select(harness: RouterTestingHarness, label: string): void {
-  const input = [
-    ...(harness.routeNativeElement?.querySelectorAll<HTMLInputElement>('input[type="checkbox"]') ??
-      []),
-  ].find((element) => element.getAttribute('aria-label') === label);
-  if (!input) {
-    throw new Error('Missing checkbox: ' + label);
-  }
-  input.click();
-}
-async function decide(accept: boolean): Promise<void> {
-  await vi.waitFor(() => {
-    expect(document.querySelector('.p-confirmdialog')).not.toBeNull();
-  });
-  const button = document.querySelector<HTMLButtonElement>(
-    accept ? '.p-confirmdialog-accept-button' : '.p-confirmdialog-reject-button',
-  );
-  if (!button) {
-    throw new Error('Missing confirmation button.');
-  }
-  button.click();
-  await vi.waitFor(() => {
-    expect(document.querySelector('.p-confirmdialog')).toBeNull();
-  });
-}
 
-describe('Vehicles deletion and selection lifecycle', () => {
+describe('Vehicles live list actions and refresh', () => {
   let http: HttpTestingController;
-  let router: Router;
+  const noticeSpy = vi.fn<MessageService['add']>();
+  const fixtures: ComponentFixture<VehiclesPage>[] = [];
+
+  function flushSummary(branchId = branchA): void {
+    http
+      .expectOne((request) => operation(request, 'AdminVehicleSummary', branchId))
+      .flush({
+        data: {
+          fleetVehicleSummary: {
+            dataAsOf: null,
+            inOperation: 2,
+            inWorkshop: 0,
+            moving: 0,
+            notReporting: 0,
+            openAlerts: 0,
+            lowFuel: 0,
+          },
+        },
+      });
+  }
+
+  async function mount(branchId = branchA): Promise<ComponentFixture<VehiclesPage>> {
+    const fixture = TestBed.createComponent(VehiclesPage);
+    fixtures.push(fixture);
+    fixture.componentRef.setInput('branch', {
+      id: branchId,
+      name: branchId === branchA ? 'Discordia' : 'Sandbox',
+    });
+    fixture.componentRef.setInput('language', 'en');
+    await fixture.whenStable();
+    http
+      .expectOne((request) => operation(request, 'AdminVehicleGroups', branchId))
+      .flush({
+        data: {
+          fleetVehicleGroups: { items: [], total: 0, offset: 0, limit: 100 },
+        },
+      });
+    http
+      .expectOne((request) => operation(request, 'AdminVehicleDrivers', branchId))
+      .flush({
+        data: {
+          fleetDrivers: { items: [], total: 0, offset: 0, limit: 100 },
+        },
+      });
+    flushSummary(branchId);
+    http
+      .expectOne((request) => operation(request, 'AdminVehicles', branchId))
+      .flush(list([record(firstId, branchId), record(secondId, branchId)]));
+    await fixture.whenStable();
+    fixture.componentInstance.selected.set([
+      { id: firstId, label: 'CA1234AB', unavailable: [] },
+      { id: secondId, label: 'PB1234AB', unavailable: [] },
+    ]);
+    return fixture;
+  }
+
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
-        provideRouter(routes),
+        provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
-        provideApollo(() => graphqlOptions(inject(HttpLink), '/graphql')),
+        MessageService,
+        { provide: UI_LANGUAGE, useValue: signal('en') },
       ],
     });
     TestBed.inject(DemoSession).start({
-      token: 'test-demo-token',
-      tenant: { id: '01000000-0000-4000-8000-000000000001', name: 'RentalSofia' },
+      token: 'test-token',
+      tenant: {
+        id: '01000000-0000-4000-8000-000000000001',
+        name: 'Tenant A',
+      },
     });
     http = TestBed.inject(HttpTestingController);
-    router = TestBed.inject(Router);
+    const notices = TestBed.inject(MessageService);
+    noticeSpy.mockReset();
+    vi.spyOn(notices, 'add').mockImplementation(noticeSpy);
   });
+
   afterEach(() => {
-    try {
-      http.verify({ ignoreCancelled: true });
-    } finally {
-      vi.restoreAllMocks();
-      TestBed.resetTestingModule();
+    for (const fixture of fixtures.splice(0)) {
+      fixture.destroy();
     }
+    http.verify({ ignoreCancelled: true });
+    vi.restoreAllMocks();
   });
-  async function nextRequest(name = 'AdminVehicles') {
-    return vi.waitFor(() => http.expectOne((request) => operation(request, name)));
-  }
-  async function mount(
-    query = '',
-    items = [alpha, beta],
-    total = items.length,
-    offset = 0,
-    limit = 20,
-  ) {
-    const harness = await RouterTestingHarness.create(path + query);
-    (await nextRequest('AdminBranches')).flush({ data: { branches } });
-    await harness.fixture.whenStable();
+
+  it.each(['delete', 'deactivate'] as const)(
+    'runs one %s batch, retains failed selections and retries only failures',
+    async (action) => {
+      const fixture = await mount();
+      const page = fixture.componentInstance;
+      const running = page.run({ action, ids: [firstId, secondId] });
+      await page.run({ action, ids: [firstId] });
+      expect(page.acting()).toBe(true);
+      const operationName = action === 'delete' ? 'AdminDeleteVehicles' : 'AdminDeactivateVehicles';
+      const field = action === 'delete' ? 'deleteFleetVehicles' : 'deactivateFleetVehicles';
+      const batch = http.expectOne((request) => operation(request, operationName));
+      expect(batch.request.body).toMatchObject({ variables: { ids: [firstId, secondId] } });
+      batch.flush({
+        data: {
+          [field]: {
+            succeededIds: [firstId],
+            failures: [{ id: secondId, code: 'CONFLICT', message: 'Assigned tracker.' }],
+          },
+        },
+      });
+      await running;
+      const remaining =
+        action === 'delete'
+          ? [record(secondId)]
+          : [{ ...record(), status: 'INACTIVE' as const }, record(secondId)];
+      http.expectOne((request) => operation(request, 'AdminVehicles')).flush(list(remaining));
+      flushSummary();
+      await fixture.whenStable();
+      expect(page.selected().map((item) => item.id)).toEqual([secondId]);
+      expect(page.acting()).toBe(false);
+      expect(noticeSpy).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          severity: 'warn',
+          detail: 'PB1234AB: Assigned tracker.',
+          sticky: true,
+        }),
+      );
+      const retry = page.run({ action, ids: page.selected().map((item) => item.id) });
+      const retryWrite = http.expectOne((request) => operation(request, operationName));
+      expect(retryWrite.request.body).toMatchObject({ variables: { ids: [secondId] } });
+      retryWrite.flush({ data: { [field]: { succeededIds: [secondId], failures: [] } } });
+      await retry;
+      http
+        .expectOne((request) => operation(request, 'AdminVehicles'))
+        .flush(
+          list(
+            action === 'delete'
+              ? []
+              : [
+                  { ...record(), status: 'INACTIVE' },
+                  { ...record(secondId), status: 'INACTIVE' },
+                ],
+          ),
+        );
+      flushSummary();
+      await fixture.whenStable();
+      expect(page.selected()).toEqual([]);
+      expect(noticeSpy).toHaveBeenLastCalledWith(expect.objectContaining({ severity: 'success' }));
+    },
+  );
+
+  it('keeps rows and selection on a transport failure and includes its diagnostic request ID', async () => {
+    const fixture = await mount();
+    const page = fixture.componentInstance;
+    const running = page.run({ action: 'delete', ids: [firstId, secondId] });
     http
-      .expectOne((request) => operation(request, 'AdminVehicles'))
-      .flush(list(items, total, offset, limit));
-    await harness.fixture.whenStable();
-    return harness;
-  }
-
-  it('requires confirmation and Cancel submits nothing', async () => {
-    const harness = await mount();
-    click(harness, 'Delete Alpha');
-    await harness.fixture.whenStable();
-    expect(document.querySelector('.p-confirmdialog')?.textContent).toContain(
-      'Permanently delete vehicle “Alpha”?',
+      .expectOne((request) => operation(request, 'AdminDeleteVehicles'))
+      .flush({
+        errors: [
+          {
+            message: 'Deletion unavailable',
+            extensions: { requestId: 'batch-request' },
+          },
+        ],
+      });
+    await running;
+    expect(page.selected().map((item) => item.id)).toEqual([firstId, secondId]);
+    expect(page.page()?.items).toHaveLength(2);
+    expect(page.acting()).toBe(false);
+    expect(noticeSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        severity: 'error',
+        summary: 'Deletion unavailable (batch-request)',
+        sticky: true,
+      }),
     );
-    http.expectNone('/graphql');
-    await decide(false);
-    expect(harness.routeNativeElement?.querySelector('tbody')?.textContent).toContain('Alpha');
     http.expectNone('/graphql');
   });
 
-  it('selects only loaded rows, retains selection on refresh and clears it on list-query changes', async () => {
-    const harness = await mount('', [alpha, beta], 40);
-    select(harness, 'Select vehicles on this page');
-    await harness.fixture.whenStable();
-    expect(
-      page(harness)
-        .selected()
-        .map((vehicle) => vehicle.id),
-    ).toEqual([alpha.id, beta.id]);
-    page(harness).refresh();
-    (await nextRequest()).flush(list([beta], 39));
-    await harness.fixture.whenStable();
-    expect(
-      page(harness)
-        .selected()
-        .map((vehicle) => vehicle.id),
-    ).toEqual([beta.id]);
-    await router.navigateByUrl(path + '?page=2');
-    await harness.fixture.whenStable();
-    expect(page(harness).selected()).toEqual([]);
-    (await nextRequest()).flush(list([alpha], 39, 20));
-    await harness.fixture.whenStable();
-    select(harness, 'Select Alpha');
-    await router.navigateByUrl(path + '?search=Beta');
-    await harness.fixture.whenStable();
-    expect(page(harness).selected()).toEqual([]);
-    (await nextRequest()).flush(list([beta]));
-    await harness.fixture.whenStable();
-  });
-
-  it('deletes sequentially, reports partial failures with request IDs and retries only failed rows', async () => {
-    const harness = await mount();
-    select(harness, 'Select vehicles on this page');
-    await harness.fixture.whenStable();
-    click(harness, 'Delete selected vehicles');
-    await decide(true);
-    const first = await nextRequest('AdminDeleteVehicle');
-    expect(first.request.body).toMatchObject({ variables: { id: alpha.id } });
-    expect(first.request.headers.get('x-branch-id')).toBe(branchA);
-    expect(first.request.headers.get('Accept-Language')).toBe('en');
-    click(harness, 'Delete selected vehicles');
-    http.expectNone('/graphql');
-    expect(
-      harness.routeNativeElement?.querySelector<HTMLInputElement>('input[type="checkbox"]')
-        ?.disabled,
-    ).toBe(true);
-    first.flush(deletion(alpha));
-    await harness.fixture.whenStable();
-    const second = await nextRequest('AdminDeleteVehicle');
-    expect(second.request.body).toMatchObject({ variables: { id: beta.id } });
-    expect(second.request.headers.get('x-request-id')).not.toBe(
-      first.request.headers.get('x-request-id'),
-    );
-    http.expectNone('/graphql');
-    second.flush(
-      { statusCode: 503 },
-      { status: 503, statusText: 'Unavailable', headers: { 'x-request-id': 'failed-delete-id' } },
-    );
-    await harness.fixture.whenStable();
-    (await nextRequest()).flush(list([beta]));
-    await harness.fixture.whenStable();
-    expect(harness.routeNativeElement?.textContent).toContain(
-      'Deleted vehicles: 1. Failed vehicles: 1.',
-    );
-    expect(harness.routeNativeElement?.textContent).toContain(
-      'Beta: Could not reach the gateway. (failed-delete-id)',
-    );
-    expect(
-      page(harness)
-        .selected()
-        .map((vehicle) => vehicle.id),
-    ).toEqual([beta.id]);
-    expect(harness.routeNativeElement?.querySelector('tbody')?.textContent).not.toContain('Alpha');
-    click(harness, 'Delete selected vehicles');
-    await decide(true);
-    const retry = await nextRequest('AdminDeleteVehicle');
-    expect(retry.request.body).toMatchObject({ variables: { id: beta.id } });
-    retry.flush(deletion(beta));
-    await harness.fixture.whenStable();
-    (await nextRequest()).flush(list([]));
-    await harness.fixture.whenStable();
-    expect(page(harness).selected()).toEqual([]);
-    expect(harness.routeNativeElement?.querySelector('tbody')?.textContent).toContain(
-      'No vehicles yet.',
-    );
-    expect(harness.routeNativeElement?.textContent).not.toContain('failed-delete-id');
-    http.expectNone('/graphql');
-  });
-
-  it('corrects an emptied last page from the server total and preserves the batch summary and URL context', async () => {
-    const harness = await mount('?page=2&pageSize=10&keep=yes#rows', [alpha], 11, 10, 10);
-    click(harness, 'Delete Alpha');
-    await decide(true);
-    (await nextRequest('AdminDeleteVehicle')).flush(deletion(alpha));
-    await harness.fixture.whenStable();
-    const refresh = await nextRequest();
-    expect(refresh.request.body).toMatchObject({ variables: { offset: 10, limit: 10 } });
-    refresh.flush(list([], 10, 10, 10));
-    await harness.fixture.whenStable();
-    expect(router.url).toBe(path + '?pageSize=10&keep=yes#rows');
-    (await nextRequest()).flush(list([beta], 10, 0, 10));
-    await harness.fixture.whenStable();
-    expect(harness.routeNativeElement?.textContent).toContain('Deleted vehicles: 1.');
-    expect(harness.routeNativeElement?.querySelector('tbody')?.textContent).toContain('Beta');
-    expect(page(harness).deleting()).toBe(false);
-    http.expectNone('/graphql');
-  });
-
-  it('does not resurrect confirmed deletions when list refresh fails', async () => {
-    const harness = await mount();
-    click(harness, 'Delete Alpha');
-    await decide(true);
-    (await nextRequest('AdminDeleteVehicle')).flush(deletion(alpha));
-    await harness.fixture.whenStable();
-    const refresh = await nextRequest();
-    refresh.error(new ProgressEvent('error'));
-    await harness.fixture.whenStable();
-    expect(harness.routeNativeElement?.querySelector('tbody')?.textContent).not.toContain('Alpha');
-    expect(harness.routeNativeElement?.querySelector('tbody')?.textContent).toContain('Beta');
-    expect(harness.routeNativeElement?.textContent).toContain('Deleted vehicles: 1.');
-    expect(harness.routeNativeElement?.textContent).toContain(
-      refresh.request.headers.get('x-request-id'),
-    );
-    click(harness, 'Retry');
-    (await nextRequest()).flush(list([beta]));
-    await harness.fixture.whenStable();
-    expect(harness.routeNativeElement?.querySelector('tbody')?.textContent).not.toContain('Alpha');
-  });
-
-  it.each(['branch', 'language', 'query', 'editor'])(
-    'stops the unsent batch after %s navigation and retires late success',
-    async (destination) => {
-      const harness = await mount();
-      const stop = vi.spyOn(ApolloClient.prototype, 'stop');
-      const submitted = vi.spyOn(page(harness).api, 'delete');
-      select(harness, 'Select vehicles on this page');
-      await harness.fixture.whenStable();
-      click(harness, 'Delete selected vehicles');
-      await decide(true);
-      const write = await nextRequest('AdminDeleteVehicle');
-      const url =
-        destination === 'branch'
-          ? path.replace(branchA, branchB)
-          : destination === 'language'
-            ? path.replace('/en/', '/bg/')
-            : destination === 'query'
-              ? path + '?search=Beta'
-              : path + `/${beta.id}/edit`;
-      await router.navigateByUrl(url);
-      await harness.fixture.whenStable();
+  it.each([true, false])(
+    'suppresses a retired batch result (success=%s) in the next Branch',
+    async (success) => {
+      const old = await mount();
+      const running = old.componentInstance.run({ action: 'delete', ids: [firstId, secondId] });
+      const write = http.expectOne((request) => operation(request, 'AdminDeleteVehicles'));
+      old.destroy();
+      const current = await mount(branchB);
       expect(write.cancelled).toBe(false);
-      expect(stop).toHaveBeenCalledTimes(destination === 'language' ? 1 : 0);
-      if (destination === 'language') {
-        (await nextRequest('AdminBranches')).flush({ data: { branches } });
-        await harness.fixture.whenStable();
-      }
-      if (destination === 'editor') {
-        http
-          .expectOne((request) => operation(request, 'AdminVehicle'))
-          .flush({ data: { fleetVehicle: beta } });
-      } else {
-        const current = { ...beta, branchId: destination === 'branch' ? branchB : branchA };
-        (await nextRequest()).flush(list([current]));
-      }
-      await harness.fixture.whenStable();
-      const before = harness.routeNativeElement?.textContent;
-      if (destination === 'query') {
-        select(harness, 'Select Beta');
-        await harness.fixture.whenStable();
-      }
-      write.flush(deletion(alpha));
-      const completion: unknown = submitted.mock.results[0]?.value;
-      if (!(completion instanceof Promise)) {
-        throw new Error('Missing submitted deletion.');
-      }
-      await completion;
-      await harness.fixture.whenStable();
-      expect(router.url).toBe(url);
-      if (destination !== 'query') {
-        expect(harness.routeNativeElement?.textContent).toBe(before);
-      } else {
-        expect(
-          page(harness)
-            .selected()
-            .map((vehicle) => vehicle.id),
-        ).toEqual([beta.id]);
-      }
-      expect(harness.routeNativeElement?.textContent).not.toContain('Deleted vehicles:');
-      expect(harness.routeNativeElement?.textContent).not.toContain('Failed vehicles:');
-      if (destination === 'query') {
-        expect(stop).not.toHaveBeenCalled();
-      } else {
-        expect(stop).toHaveBeenCalledTimes(destination === 'language' ? 2 : 1);
-      }
+      expect(write.request.headers.get('x-branch-id')).toBe(branchA);
+      write.flush(
+        success
+          ? { data: { deleteFleetVehicles: { succeededIds: [firstId, secondId], failures: [] } } }
+          : {
+              errors: [{ message: 'Late deletion failure' }],
+            },
+      );
+      await running;
+      await current.whenStable();
+      expect(current.componentInstance.page()?.items[0]?.branchId).toBe(branchB);
+      expect(current.componentInstance.selected()).toHaveLength(2);
+      expect(noticeSpy).not.toHaveBeenCalled();
       http.expectNone('/graphql');
     },
   );
 
-  it('suppresses a retired delete failure and stops the remaining batch', async () => {
-    const harness = await mount();
-    const submitted = vi.spyOn(page(harness).api, 'delete');
-    select(harness, 'Select vehicles on this page');
-    await harness.fixture.whenStable();
-    click(harness, 'Delete selected vehicles');
-    await decide(true);
-    const write = await nextRequest('AdminDeleteVehicle');
-    const completion: unknown = submitted.mock.results[0]?.value;
-    if (!(completion instanceof Promise)) {
-      throw new Error('Missing submitted deletion.');
-    }
-    const rejection = expect(completion).rejects.toThrow('Vehicle not found');
-    await router.navigateByUrl(path.replace(branchA, branchB));
-    await harness.fixture.whenStable();
+  it('keeps loaded rows during a failed refresh and recovers without recreating the page', async () => {
+    const fixture = await mount();
+    const page = fixture.componentInstance;
+    page.refresh();
     http
       .expectOne((request) => operation(request, 'AdminVehicles'))
-      .flush(list([{ ...beta, branchId: branchB }]));
-    await harness.fixture.whenStable();
-    write.flush({
-      errors: [
-        {
-          message: 'Vehicle not found',
-          extensions: { code: 'NOT_FOUND', requestId: 'retired-delete' },
-        },
-      ],
-    });
-    await rejection;
-    await harness.fixture.whenStable();
-    expect(page(harness).deletionResult()).toBeNull();
-    expect(page(harness).deleting()).toBe(false);
-    expect(harness.routeNativeElement?.textContent).not.toContain('retired-delete');
-    http.expectNone('/graphql');
+      .flush({
+        errors: [
+          {
+            message: 'Vehicles unavailable',
+            extensions: { requestId: 'refresh-id' },
+          },
+        ],
+      });
+    flushSummary();
+    await fixture.whenStable();
+    expect(page.page()?.items).toHaveLength(2);
+    expect(page.failure()).toContain('refresh-id');
+    const element: unknown = fixture.nativeElement;
+    if (!(element instanceof HTMLElement)) {
+      throw new Error('Missing Vehicles page element.');
+    }
+    expect(element.textContent).toContain('CA1234AB');
+    page.refresh();
+    http.expectOne((request) => operation(request, 'AdminVehicles')).flush(list([record()]));
+    flushSummary();
+    await fixture.whenStable();
+    expect(page.error()).toBeNull();
+    expect(page.page()?.items).toHaveLength(1);
   });
 });

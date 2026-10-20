@@ -8,185 +8,219 @@
   <p class="app-muted">{{ text().demoDescription }}</p>
 }
 
+@if (state() === 'error') {
+  <holita-empty-state kind="error" [title]="text().loadError" [description]="loadError()">
+    <button emptyActions pButton type="button" (click)="retry.emit()">{{ text().retry }}</button>
+  </holita-empty-state>
+} @else if (state() === 'loading' || !settings()) {
+  <p role="status">{{ text().loading }}</p>
+}
+
 @if (saveError(); as error) {
   <p-message severity="error" role="alert">{{ error }}</p-message>
 }
 
-<form #formElement class="app-view" [formGroup]="form" (ngSubmit)="submit()">
-  <section class="app-card app-settings-section">
-    <header>
-      <h2>{{ text().branch }}</h2>
-      <p>{{ text().branchHint }}</p>
-    </header>
-    <div class="app-form-grid">
-      <holita-form-field
-        class="app-form-grid--wide"
-        [label]="text().name"
-        controlId="settings-name"
-        [required]="true"
-        [error]="errorOf('name')"
-      >
-        <input
-          pInputText
-          id="settings-name"
-          formControlName="name"
-          [invalid]="!!errorOf('name')"
-          [attr.aria-invalid]="errorOf('name') ? 'true' : null"
-          aria-describedby="settings-name-hint settings-name-error"
-        />
-      </holita-form-field>
-      <holita-form-field [label]="text().timeZone" controlId="settings-timeZone">
-        <p-select
-          inputId="settings-timeZone"
-          formControlName="timeZone"
-          [options]="timeZones"
-          optionLabel="label"
-          optionValue="value"
-          appendTo="body"
-          [ariaLabel]="text().timeZone"
-        />
-      </holita-form-field>
-      <div></div>
-      <holita-form-field [label]="text().distanceUnit" controlId="settings-distanceUnit">
-        <p-select
-          inputId="settings-distanceUnit"
-          formControlName="distanceUnit"
-          [options]="distanceUnits()"
-          optionLabel="label"
-          optionValue="value"
-          appendTo="body"
-          [ariaLabel]="text().distanceUnit"
-        />
-      </holita-form-field>
-      <holita-form-field [label]="text().volumeUnit" controlId="settings-volumeUnit">
-        <p-select
-          inputId="settings-volumeUnit"
-          formControlName="volumeUnit"
-          [options]="volumeUnits()"
-          optionLabel="label"
-          optionValue="value"
-          appendTo="body"
-          [ariaLabel]="text().volumeUnit"
-        />
-      </holita-form-field>
-    </div>
-  </section>
-
-  <section class="app-card app-settings-section">
-    <header>
-      <h2>{{ text().thresholds }}</h2>
-      <p>{{ text().thresholdsHint }}</p>
-    </header>
-    <div class="app-form-grid">
-      <holita-form-field
-        [label]="text().lowFuel"
-        controlId="settings-lowFuelPct"
-        [required]="true"
-        [error]="errorOf('lowFuelPct')"
-      >
-        <p-inputnumber
-          inputId="settings-lowFuelPct"
-          formControlName="lowFuelPct"
-          [fluid]="true"
-          [invalid]="!!errorOf('lowFuelPct')"
-          [pt]="numberPt().lowFuelPct"
-        />
-      </holita-form-field>
-      <holita-form-field
-        [label]="text().notReporting"
-        controlId="settings-notReportingHours"
-        [required]="true"
-        [error]="errorOf('notReportingHours')"
-      >
-        <p-inputnumber
-          inputId="settings-notReportingHours"
-          formControlName="notReportingHours"
-          [fluid]="true"
-          [invalid]="!!errorOf('notReportingHours')"
-          [pt]="numberPt().notReportingHours"
-        />
-      </holita-form-field>
-      <holita-form-field
-        [label]="text().speedLimit"
-        controlId="settings-speedLimitKph"
-        [required]="true"
-        [error]="errorOf('speedLimitKph')"
-      >
-        <p-inputnumber
-          inputId="settings-speedLimitKph"
-          formControlName="speedLimitKph"
-          [fluid]="true"
-          [invalid]="!!errorOf('speedLimitKph')"
-          [pt]="numberPt().speedLimitKph"
-        />
-      </holita-form-field>
-    </div>
-  </section>
-
-  <section class="app-card app-settings-section">
-    <header>
-      <h2>{{ text().notifications }}</h2>
-      <p>{{ text().notificationsHint }}</p>
-    </header>
-    <div class="app-form-grid">
-      <holita-form-field
-        class="app-form-grid--wide"
-        [label]="text().criticalAlerts"
-        controlId="settings-criticalAlerts"
-        [hint]="text().criticalAlertsHint"
-      >
-        <p-toggleswitch
-          inputId="settings-criticalAlerts"
-          formControlName="criticalAlerts"
-          [ariaLabel]="text().criticalAlerts"
-        />
-      </holita-form-field>
-      <holita-form-field
-        class="app-form-grid--wide"
-        [label]="text().dailySummary"
-        controlId="settings-dailySummary"
-        [hint]="text().dailySummaryHint"
-      >
-        <p-toggleswitch
-          inputId="settings-dailySummary"
-          formControlName="dailySummary"
-          [ariaLabel]="text().dailySummary"
-        />
-      </holita-form-field>
-      <holita-form-field
-        class="app-form-grid--wide"
-        [label]="text().documentReminders"
-        controlId="settings-documentReminders"
-        [hint]="text().documentRemindersHint"
-      >
-        <p-toggleswitch
-          inputId="settings-documentReminders"
-          formControlName="documentReminders"
-          [ariaLabel]="text().documentReminders"
-        />
-      </holita-form-field>
-    </div>
-  </section>
-
-  @if (dirty() || saving()) {
-    <div class="app-save-bar" role="region" [attr.aria-label]="text().unsaved">
-      <span>{{ text().unsaved }}</span>
-      <span class="app-inline">
-        <button
-          pButton
-          type="button"
-          severity="secondary"
-          [outlined]="true"
-          [disabled]="saving()"
-          (click)="discard()"
+<div [hidden]="state() !== 'ready' || !settings()">
+  <form #formElement class="app-view" [formGroup]="form" (ngSubmit)="submit()">
+    <section class="app-card app-settings-section">
+      <header>
+        <h2>{{ text().branch }}</h2>
+        <p>{{ text().branchHint }}</p>
+      </header>
+      <div class="app-form-grid">
+        <holita-form-field
+          class="app-form-grid--wide"
+          [label]="text().name"
+          controlId="settings-name"
+          [required]="true"
+          [error]="errorOf('name')"
         >
-          {{ text().discard }}
-        </button>
-        <button pButton type="submit" [loading]="saving()" [disabled]="saving()">
-          {{ text().save }}
-        </button>
-      </span>
-    </div>
-  }
-</form>
+          <input
+            pInputText
+            id="settings-name"
+            formControlName="name"
+            [invalid]="!!errorOf('name')"
+            [attr.aria-invalid]="errorOf('name') ? 'true' : null"
+            aria-describedby="settings-name-hint settings-name-error"
+          />
+        </holita-form-field>
+        <holita-form-field
+          [label]="text().timeZone"
+          controlId="settings-timeZone"
+          [error]="errorOf('timeZone')"
+        >
+          <p-select
+            inputId="settings-timeZone"
+            formControlName="timeZone"
+            [options]="timeZones"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+            [ariaLabel]="text().timeZone"
+            [invalid]="!!errorOf('timeZone')"
+            [pt]="selectPt().timeZone"
+          />
+        </holita-form-field>
+        <div></div>
+        <holita-form-field
+          [label]="text().distanceUnit"
+          controlId="settings-distanceUnit"
+          [error]="errorOf('distanceUnit')"
+        >
+          <p-select
+            inputId="settings-distanceUnit"
+            formControlName="distanceUnit"
+            [options]="distanceUnits()"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+            [ariaLabel]="text().distanceUnit"
+            [invalid]="!!errorOf('distanceUnit')"
+            [pt]="selectPt().distanceUnit"
+          />
+        </holita-form-field>
+        <holita-form-field
+          [label]="text().volumeUnit"
+          controlId="settings-volumeUnit"
+          [error]="errorOf('volumeUnit')"
+        >
+          <p-select
+            inputId="settings-volumeUnit"
+            formControlName="volumeUnit"
+            [options]="volumeUnits()"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+            [ariaLabel]="text().volumeUnit"
+            [invalid]="!!errorOf('volumeUnit')"
+            [pt]="selectPt().volumeUnit"
+          />
+        </holita-form-field>
+      </div>
+    </section>
+
+    <section class="app-card app-settings-section">
+      <header>
+        <h2>{{ text().thresholds }}</h2>
+        <p>{{ text().thresholdsHint }}</p>
+      </header>
+      <div class="app-form-grid">
+        <holita-form-field
+          [label]="text().lowFuel"
+          controlId="settings-lowFuelPct"
+          [required]="true"
+          [error]="errorOf('lowFuelPct')"
+        >
+          <p-inputnumber
+            inputId="settings-lowFuelPct"
+            formControlName="lowFuelPct"
+            [fluid]="true"
+            [invalid]="!!errorOf('lowFuelPct')"
+            [pt]="numberPt().lowFuelPct"
+          />
+        </holita-form-field>
+        <holita-form-field
+          [label]="text().notReporting"
+          controlId="settings-notReportingHours"
+          [required]="true"
+          [error]="errorOf('notReportingHours')"
+        >
+          <p-inputnumber
+            inputId="settings-notReportingHours"
+            formControlName="notReportingHours"
+            [fluid]="true"
+            [invalid]="!!errorOf('notReportingHours')"
+            [pt]="numberPt().notReportingHours"
+          />
+        </holita-form-field>
+        <holita-form-field
+          [label]="text().speedLimit"
+          controlId="settings-speedLimitKph"
+          [required]="true"
+          [error]="errorOf('speedLimitKph')"
+          [hint]="text().speedLimitHint"
+        >
+          <p-inputnumber
+            inputId="settings-speedLimitKph"
+            formControlName="speedLimitKph"
+            [fluid]="true"
+            [invalid]="!!errorOf('speedLimitKph')"
+            [pt]="numberPt().speedLimitKph"
+          />
+        </holita-form-field>
+      </div>
+    </section>
+
+    <section class="app-card app-settings-section">
+      <header>
+        <h2>{{ text().notifications }}</h2>
+        @if (notificationsUnavailable()) {
+          <p-tag severity="info" [value]="text().notificationsDemoLabel" />
+          <p>{{ text().notificationsUnavailable }}</p>
+        } @else {
+          <p>{{ text().notificationsHint }}</p>
+        }
+      </header>
+      <div class="app-form-grid">
+        <holita-form-field
+          class="app-form-grid--wide"
+          [label]="text().criticalAlerts"
+          controlId="settings-criticalAlerts"
+          [hint]="text().criticalAlertsHint"
+        >
+          <p-toggleswitch
+            inputId="settings-criticalAlerts"
+            formControlName="criticalAlerts"
+            [ariaLabel]="text().criticalAlerts"
+          />
+        </holita-form-field>
+        <holita-form-field
+          class="app-form-grid--wide"
+          [label]="text().dailySummary"
+          controlId="settings-dailySummary"
+          [hint]="text().dailySummaryHint"
+        >
+          <p-toggleswitch
+            inputId="settings-dailySummary"
+            formControlName="dailySummary"
+            [ariaLabel]="text().dailySummary"
+          />
+        </holita-form-field>
+        <holita-form-field
+          class="app-form-grid--wide"
+          [label]="text().documentReminders"
+          controlId="settings-documentReminders"
+          [hint]="text().documentRemindersHint"
+        >
+          <p-toggleswitch
+            inputId="settings-documentReminders"
+            formControlName="documentReminders"
+            [ariaLabel]="text().documentReminders"
+          />
+        </holita-form-field>
+      </div>
+    </section>
+
+    @if (dirty() || saving()) {
+      <div class="app-save-bar" role="region" [attr.aria-label]="text().unsaved">
+        <span>{{ text().unsaved }}</span>
+        <span class="app-inline">
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="saving()"
+            (click)="discard()"
+          >
+            {{ text().discard }}
+          </button>
+          <button pButton type="submit" [loading]="saving()" [disabled]="saving()">
+            {{ text().save }}
+          </button>
+        </span>
+      </div>
+    }
+  </form>
+</div>
 <p-confirmdialog [pt]="confirmPt()" [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }" />

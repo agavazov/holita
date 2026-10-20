@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
@@ -522,6 +523,403 @@ describe('Service tasks and urgency with PostgreSQL', () => {
       await database.client.serviceTask.findUniqueOrThrow({ where: { id: task('t6') } }),
     ).toMatchObject({ status: 'PLANNED', completedOn: null });
     expect(await database.client.serviceTask.count({ where: { tenantId, branchId } })).toBe(before);
+  });
+
+  it('filters and sorts the complete scoped result and retains partial batch outcomes', async () => {
+    const parityBranch = randomUUID();
+    const a = await database.client.vehicle.create({
+      data: { tenantId, branchId: parityBranch, licensePlate: 'AA 001' },
+    });
+    const b = await database.client.vehicle.create({
+      data: { tenantId, branchId: parityBranch, licensePlate: 'ZZ 001' },
+    });
+    const plan = await database.client.serviceTask.create({
+      data: {
+        tenantId,
+        branchId: parityBranch,
+        vehicleId: b.id,
+        serviceType: 'OIL_CHANGE',
+        title: 'Literal %_\\ task',
+        notes: 'Find %_\\ here',
+        dueOn: day('2026-10-20'),
+      },
+    });
+    const free = await database.client.serviceTask.create({
+      data: {
+        tenantId,
+        branchId: parityBranch,
+        vehicleId: a.id,
+        serviceType: 'BRAKES',
+        status: 'DONE',
+        completedOn: day('2026-10-17'),
+        costCents: 0,
+      },
+    });
+    const paid = await database.client.serviceTask.create({
+      data: {
+        tenantId,
+        branchId: parityBranch,
+        vehicleId: a.id,
+        serviceType: 'REPAIR',
+        title: 'Paid',
+        status: 'DONE',
+        completedOn: day('2026-10-16'),
+        costCents: 12345,
+      },
+    });
+    const cancelled = await database.client.serviceTask.create({
+      data: {
+        tenantId,
+        branchId: parityBranch,
+        vehicleId: b.id,
+        serviceType: 'TIRES',
+        status: 'CANCELLED',
+      },
+    });
+    const read = (
+      filter: Record<string, unknown>,
+      sort = { field: 'COST_CENTS', direction: 'ASC' },
+    ) => query(list, { filter, sort, offset: 0, limit: 100 }, parityBranch);
+    const expected = (recordIds: readonly string[]) => ({
+      data: {
+        fleetServiceTasks: {
+          items: recordIds.map((id) => ({ id })),
+          total: recordIds.length,
+          offset: 0,
+          limit: 100,
+        },
+      },
+    });
+    expect(await read({ allOf: [{ costCentsAbove: 0 }, { costCentsBelow: 12346 }] })).toEqual(
+      expected([paid.id]),
+    );
+    expect(await read({ allOf: [{ hasCost: true }, { costCentsBelow: 1 }] })).toEqual(
+      expected([free.id]),
+    );
+    expect(await read({ allOf: [{ statuses: ['PLANNED'] }, { statuses: ['DONE'] }] })).toEqual(
+      expected([]),
+    );
+    expect(
+      await read({
+        allOf: [{ hasDueOn: true }, { dueOnAfter: '2026-10-19', dueOnBefore: '2026-10-21' }],
+      }),
+    ).toEqual(expected([plan.id]));
+    expect(
+      await read({ allOf: [{ taskContains: 'Спирач', untitledServiceTypes: ['BRAKES'] }] }),
+    ).toEqual(expected([free.id]));
+    expect(await read({ allOf: [{ taskContains: '%_\\' }] })).toEqual(expected([plan.id]));
+    expect(await read({ allOf: [{ taskEquals: 'literal %_\\ TASK' }] })).toEqual(
+      expected([plan.id]),
+    );
+    expect(
+      await read({ allOf: [{ excludedVehicleIds: [b.id] }, { excludedServiceTypes: ['BRAKES'] }] }),
+    ).toEqual(expected([paid.id]));
+    expect(
+      await read({
+        allOf: [
+          { excludedUrgencies: ['OVERDUE', 'DUE_SOON', 'UNKNOWN_ODOMETER', 'UPCOMING'] },
+          { hasCost: false },
+        ],
+      }),
+    ).toEqual(expected([cancelled.id]));
+    expect(await query(list, { search: '%_\\', offset: 0, limit: 100 }, parityBranch)).toEqual(
+      expected([plan.id]),
+    );
+    expect(
+      await query(
+        list,
+        { sort: { field: 'COST_CENTS', direction: 'DESC' }, offset: 0, limit: 1 },
+        parityBranch,
+      ),
+    ).toEqual({
+      data: { fleetServiceTasks: { items: [{ id: paid.id }], total: 4, offset: 0, limit: 1 } },
+    });
+    expect(
+      await query(
+        list,
+        { sort: { field: 'VEHICLE_LICENSE_PLATE', direction: 'ASC' }, offset: 0, limit: 2 },
+        parityBranch,
+      ),
+    ).toEqual({
+      data: {
+        fleetServiceTasks: {
+          items: [free.id, paid.id]
+            .sort()
+            .reverse()
+            .map((id) => ({ id })),
+          total: 4,
+          offset: 0,
+          limit: 2,
+        },
+      },
+    });
+    expect(
+      await read({ allOf: [{ taskEquals: 'Paid' }] }, { field: 'TASK', direction: 'DESC' }),
+    ).toEqual(expected([paid.id]));
+    const cancel =
+      'mutation($ids:[ID!]!){cancelFleetServiceTasks(ids:$ids){succeededIds failures{id code}}}';
+    expect(await query(cancel, { ids: [plan.id, paid.id, foreignTask] }, parityBranch)).toEqual({
+      data: {
+        cancelFleetServiceTasks: {
+          succeededIds: [plan.id],
+          failures: [
+            { id: paid.id, code: 'CONFLICT' },
+            { id: foreignTask, code: 'NOT_FOUND' },
+          ],
+        },
+      },
+    });
+    const remove =
+      'mutation($ids:[ID!]!){deleteFleetServiceTasks(ids:$ids){succeededIds failures{id code}}}';
+    expect(await query(remove, { ids: [plan.id, free.id] }, parityBranch)).toEqual({
+      data: {
+        deleteFleetServiceTasks: {
+          succeededIds: [plan.id],
+          failures: [{ id: free.id, code: 'CONFLICT' }],
+        },
+      },
+    });
+    expect(
+      await database.client.serviceTask.findUniqueOrThrow({ where: { id: free.id } }),
+    ).toMatchObject({ status: 'DONE', costCents: 0 });
+  });
+
+  it('completes inactive vehicle history without scheduling and keeps the earlier-date odometer rule', async () => {
+    const historyBranch = randomUUID();
+    const vehicle = await database.client.vehicle.create({
+      data: { tenantId, branchId: historyBranch, licensePlate: 'History', status: 'INACTIVE' },
+    });
+    const history = await database.client.serviceTask.create({
+      data: {
+        tenantId,
+        branchId: historyBranch,
+        vehicleId: vehicle.id,
+        serviceType: 'OIL_CHANGE',
+        dueOn: day('2026-10-01'),
+      },
+    });
+    expect(
+      await query(
+        complete,
+        {
+          id: history.id,
+          input: { completedOn: '2026-10-18', nextDueOn: '2026-11-01', nextDueOdometerKm: 200000 },
+        },
+        historyBranch,
+      ),
+    ).toMatchObject({
+      errors: [
+        {
+          extensions: {
+            code: 'BAD_USER_INPUT',
+            fieldErrors: [{ path: 'nextDueOn' }, { path: 'nextDueOdometerKm' }],
+          },
+        },
+      ],
+    });
+    expect(
+      await database.client.serviceTask.findUniqueOrThrow({ where: { id: history.id } }),
+    ).toMatchObject({ status: 'PLANNED' });
+    expect(
+      await database.client.serviceTask.count({ where: { tenantId, branchId: historyBranch } }),
+    ).toBe(1);
+    expect(
+      await query(
+        complete,
+        { id: history.id, input: { completedOn: '2026-10-18', completedOdometerKm: 1000 } },
+        historyBranch,
+      ),
+    ).toMatchObject({
+      data: {
+        completeFleetServiceTask: { completed: { id: history.id, status: 'DONE' }, next: null },
+      },
+    });
+    const sameDay = await database.client.serviceTask.create({
+      data: {
+        tenantId,
+        branchId: historyBranch,
+        vehicleId: vehicle.id,
+        serviceType: 'BRAKES',
+        dueOn: day('2026-10-01'),
+      },
+    });
+    expect(
+      await query(
+        complete,
+        { id: sameDay.id, input: { completedOn: '2026-10-18', completedOdometerKm: 900 } },
+        historyBranch,
+      ),
+    ).toMatchObject({
+      data: {
+        completeFleetServiceTask: { completed: { id: sameDay.id, status: 'DONE' }, next: null },
+      },
+    });
+    const earlier = await database.client.serviceTask.create({
+      data: {
+        tenantId,
+        branchId: historyBranch,
+        vehicleId: vehicle.id,
+        serviceType: 'TIRES',
+        dueOn: day('2026-10-01'),
+      },
+    });
+    expect(
+      await query(
+        complete,
+        { id: earlier.id, input: { completedOn: '2026-10-17', completedOdometerKm: 5000 } },
+        historyBranch,
+      ),
+    ).toMatchObject({
+      data: {
+        completeFleetServiceTask: { completed: { id: earlier.id, status: 'DONE' }, next: null },
+      },
+    });
+    const later = await database.client.serviceTask.create({
+      data: {
+        tenantId,
+        branchId: historyBranch,
+        vehicleId: vehicle.id,
+        serviceType: 'REPAIR',
+        dueOn: day('2026-10-01'),
+      },
+    });
+    expect(
+      await query(
+        complete,
+        { id: later.id, input: { completedOn: '2026-10-18', completedOdometerKm: 4999 } },
+        historyBranch,
+      ),
+    ).toMatchObject({
+      errors: [{ extensions: { fieldErrors: [{ path: 'completedOdometerKm' }] } }],
+    });
+  });
+
+  it('rechecks earlier-date odometers after concurrent completions acquire the Vehicle lock without restricting backdated history', async () => {
+    const concurrentBranch = randomUUID();
+    const scope = { tenantId, branchId: concurrentBranch };
+    const vehicle = await database.client.vehicle.create({
+      data: { ...scope, licensePlate: 'Concurrent history', status: 'INACTIVE' },
+    });
+    const plans = await Promise.all(
+      ['Earlier', 'Later', 'Backdated'].map((title) =>
+        database.client.serviceTask.create({
+          data: {
+            ...scope,
+            vehicleId: vehicle.id,
+            serviceType: 'OIL_CHANGE',
+            title,
+            dueOn: day('2026-10-01'),
+          },
+        }),
+      ),
+    );
+    const [earlier, later, backdated] = plans;
+    if (!earlier || !later || !backdated) {
+      throw new Error('Missing concurrent completion fixtures.');
+    }
+    const submitted: Promise<unknown>[] = [];
+    async function waitForWaiters(pid: number, expected: number): Promise<void> {
+      for (let attempt = 0; attempt < 250; attempt++) {
+        const waiting = await connection.query<{ count: number }>(
+          `WITH RECURSIVE blocked AS (
+            SELECT $1::int AS pid
+            UNION
+            SELECT activity.pid FROM pg_stat_activity activity
+            JOIN blocked holder ON holder.pid = ANY(pg_blocking_pids(activity.pid))
+          ) SELECT (count(*) - 1)::int AS count FROM blocked`,
+          [pid],
+        );
+        if ((waiting.rows[0]?.count ?? 0) >= expected) {
+          return;
+        }
+        await delay(20);
+      }
+      throw new Error('Completion requests did not reach the held row locks.');
+    }
+    await connection.query('BEGIN');
+    try {
+      const locked = await connection.query<{ pid: number }>(
+        'SELECT pg_backend_pid()::int AS pid FROM "Vehicle" WHERE "tenantId"=$1::uuid AND "branchId"=$2::uuid AND "id"=$3::uuid FOR UPDATE',
+        [tenantId, concurrentBranch, vehicle.id],
+      );
+      const pid = locked.rows[0]?.pid;
+      if (pid === undefined) {
+        throw new Error('Missing Vehicle lock holder.');
+      }
+      // The old implementation waits on the task updates; the fixed flow waits on Vehicle.
+      // Both early checks therefore pass before release, and the final result proves the rule.
+      await connection.query(
+        'SELECT "id" FROM "ServiceTask" WHERE "tenantId"=$1::uuid AND "branchId"=$2::uuid AND "id"=ANY($3::uuid[]) FOR UPDATE',
+        [tenantId, concurrentBranch, [earlier.id, later.id]],
+      );
+      const earlierRequest = query(
+        complete,
+        {
+          id: earlier.id,
+          input: { completedOn: '2026-10-17', completedOdometerKm: 200 },
+        },
+        concurrentBranch,
+      );
+      submitted.push(earlierRequest);
+      void earlierRequest.catch(() => undefined);
+      await waitForWaiters(pid, 1);
+      const laterRequest = query(
+        complete,
+        {
+          id: later.id,
+          input: { completedOn: '2026-10-18', completedOdometerKm: 100 },
+        },
+        concurrentBranch,
+      );
+      submitted.push(laterRequest);
+      void laterRequest.catch(() => undefined);
+      await waitForWaiters(pid, 2);
+      await connection.query('COMMIT');
+    } finally {
+      await connection.query('ROLLBACK');
+      // Always settle requests after releasing the holder, including a failed barrier.
+      await Promise.allSettled(submitted);
+    }
+    const [earlierResponse, laterResponse] = await Promise.all(submitted);
+    expect(earlierResponse).toMatchObject({
+      data: {
+        completeFleetServiceTask: {
+          completed: { id: earlier.id, status: 'DONE', completedOdometerKm: 200 },
+          next: null,
+        },
+      },
+    });
+    expect(laterResponse).toMatchObject({
+      errors: [
+        {
+          extensions: {
+            code: 'BAD_USER_INPUT',
+            fieldErrors: [{ path: 'completedOdometerKm' }],
+          },
+        },
+      ],
+    });
+    expect(
+      await database.client.serviceTask.findUniqueOrThrow({ where: { id: later.id } }),
+    ).toMatchObject({ status: 'PLANNED', completedOn: null, completedOdometerKm: null });
+    // A higher reading on an earlier date is still allowed: later-date history is excluded.
+    expect(
+      await query(
+        complete,
+        {
+          id: backdated.id,
+          input: { completedOn: '2026-10-16', completedOdometerKm: 300 },
+        },
+        concurrentBranch,
+      ),
+    ).toMatchObject({
+      data: {
+        completeFleetServiceTask: {
+          completed: { id: backdated.id, status: 'DONE', completedOdometerKm: 300 },
+          next: null,
+        },
+      },
+    });
   });
 
   it('cancels planned tasks and deletes only planned or cancelled ones', async () => {

@@ -238,7 +238,19 @@ export const DuplicateFleetNumber: Story = {
   },
 };
 
-export const Loading: Story = { render: exampleAt(`${profile}?scenario=loading`) };
+export const Loading: Story = {
+  render: exampleAt(`${profile}?scenario=loading`),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(async () => {
+      await expect(canvas.getByRole('heading', { level: 1, name: '…' })).toBeVisible();
+      await expect(canvas.getByRole('group', { name: 'Vehicle summary' })).toHaveAttribute(
+        'aria-busy',
+        'true',
+      );
+    }, appReady);
+  },
+};
 export const NotFound: Story = {
   name: 'Not found',
   render: exampleAt('vehicles/no-such-vehicle'),
@@ -247,14 +259,32 @@ export const NotFound: Story = {
     await waitFor(() => expect(canvas.getByText('Vehicle not found')).toBeVisible(), appReady);
   },
 };
-export const ErrorState: Story = { name: 'Error', render: exampleAt(`${profile}?scenario=error`) };
+export const ErrorState: Story = {
+  name: 'Error',
+  render: exampleAt(`${profile}?scenario=error`),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(async () => {
+      await expect(canvas.getByText('The vehicle could not be loaded.')).toBeVisible();
+      await expect(canvas.getByRole('button', { name: 'Try again' })).toBeVisible();
+    }, appReady);
+  },
+};
 
 export const Mobile: Story = {
   render: exampleAt(profile),
+  play: async ({ canvasElement }) => {
+    const canvas = await pageReady(canvasElement);
+    await expect(canvas.getByRole('figure', { name: /Distance per day/ })).toBeVisible();
+  },
   globals: { viewport: { value: 'mobile375', isRotated: false } },
 };
 
 export const Dark: Story = {
   render: exampleAt(profile),
+  play: async ({ canvasElement }) => {
+    const canvas = await pageReady(canvasElement);
+    await expect(canvas.getByRole('figure', { name: /Distance per day/ })).toBeVisible();
+  },
   globals: { theme: 'dark' },
 };

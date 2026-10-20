@@ -6,9 +6,10 @@ import { CoreClientModule } from '../../integrations/core/core-client.module.js'
 import { TelemetryRepository } from './telemetry.repository.js';
 import { TelemetryResolver } from './telemetry.resolver.js';
 import { TelemetryService } from './telemetry.service.js';
+import { SettingsModule } from '../settings/settings.module.js';
 
 @Module({
-  imports: [DatabaseModule, CoreClientModule, ClockModule],
+  imports: [DatabaseModule, CoreClientModule, ClockModule, SettingsModule],
   exports: [TelemetryService],
   providers: [FleetEnabledGuard, TelemetryRepository, TelemetryService, TelemetryResolver],
 })

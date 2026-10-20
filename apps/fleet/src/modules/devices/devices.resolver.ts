@@ -13,6 +13,7 @@ import {
 import type {
   MutationCreateFleetDeviceArgs,
   MutationDeleteFleetDeviceArgs,
+  MutationDeleteFleetDevicesArgs,
   MutationUpdateFleetDeviceArgs,
   FleetDevice,
   QueryFleetDeviceArgs,
@@ -37,6 +38,11 @@ export class DevicesResolver {
     return this.devicesService.find(context, args.id);
   }
 
+  @Query('fleetDeviceSummary')
+  fleetDeviceSummary(@Context() context: RequestContext) {
+    return this.devicesService.summary(context);
+  }
+
   @Mutation('createFleetDevice')
   createFleetDevice(
     @Args() args: MutationCreateFleetDeviceArgs,
@@ -59,6 +65,14 @@ export class DevicesResolver {
     @Context() context: RequestContext,
   ) {
     return this.devicesService.delete(context, args.id);
+  }
+
+  @Mutation('deleteFleetDevices')
+  deleteFleetDevices(
+    @Args() args: MutationDeleteFleetDevicesArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.devicesService.deleteMany(context, args.ids);
   }
 
   @ResolveReference()

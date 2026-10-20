@@ -1,0 +1,113 @@
+fragment AdminServiceTaskDetails on FleetServiceTask {
+  id
+  branchId
+  vehicleId
+  vehicle {
+    id
+    licensePlate
+    status
+  }
+  serviceType
+  status
+  title
+  dueOn
+  dueOdometerKm
+  completedOn
+  completedOdometerKm
+  workshop
+  replacedParts
+  costCents
+  notes
+  urgency
+  remainingDays
+  remainingKm
+  createdAt
+  updatedAt
+}
+query AdminServiceTasks(
+  $offset: Int!
+  $limit: Int!
+  $search: String
+  $filter: FleetServiceTaskFilter
+  $sort: FleetServiceTaskSort
+) {
+  fleetServiceTasks(offset: $offset, limit: $limit, search: $search, filter: $filter, sort: $sort) {
+    items {
+      ...AdminServiceTaskDetails
+    }
+    total
+    offset
+    limit
+  }
+}
+query AdminServiceTask($id: ID!) {
+  fleetServiceTask(id: $id) {
+    ...AdminServiceTaskDetails
+  }
+}
+query AdminServiceSummary {
+  fleetServiceSummary {
+    businessDate
+    overdue
+    dueSoon
+    unknownOdometer
+    upcoming
+    inWorkshopVehicles
+    completedLast30Days
+    costLast30DaysCents
+    costWindowStart
+    costWindowEnd
+  }
+}
+query AdminServiceVehicles($offset: Int!, $limit: Int!) {
+  fleetVehicles(offset: $offset, limit: $limit, sort: { field: LICENSE_PLATE, direction: ASC }) {
+    items {
+      id
+      licensePlate
+      status
+    }
+    total
+    offset
+    limit
+  }
+}
+mutation AdminCreateServiceTask($input: CreateFleetServiceTaskInput!) {
+  createFleetServiceTask(input: $input) {
+    ...AdminServiceTaskDetails
+  }
+}
+mutation AdminUpdateServiceTask($id: ID!, $input: UpdateFleetServiceTaskInput!) {
+  updateFleetServiceTask(id: $id, input: $input) {
+    ...AdminServiceTaskDetails
+  }
+}
+mutation AdminCompleteServiceTask($id: ID!, $input: CompleteFleetServiceTaskInput!) {
+  completeFleetServiceTask(id: $id, input: $input) {
+    completed {
+      ...AdminServiceTaskDetails
+    }
+    next {
+      ...AdminServiceTaskDetails
+    }
+  }
+}
+mutation AdminCancelServiceTasks($ids: [ID!]!) {
+  cancelFleetServiceTasks(ids: $ids) {
+    succeededIds
+    failures {
+      id
+      code
+      message
+    }
+  }
+}
+mutation AdminDeleteServiceTasks($ids: [ID!]!) {
+  deleteFleetServiceTasks(ids: $ids) {
+    succeededIds
+    failures {
+      id
+      code
+      message
+    }
+  }
+}

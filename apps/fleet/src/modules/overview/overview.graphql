@@ -1,0 +1,42 @@
+type FleetDailyDistancePoint {
+  date: Date!
+  distanceKm: Float!
+}
+
+type FleetDailyDistance {
+  dataAsOf: DateTime
+  points: [FleetDailyDistancePoint!]!
+}
+
+"Non-INACTIVE vehicles by their current group; null group is the ungrouped bucket."
+type FleetGroupActivity {
+  group: FleetVehicleGroupRef
+  total: Int!
+  moving: Int!
+  idle: Int!
+  parked: Int!
+  notReporting: Int!
+  asset: Int!
+  noDevice: Int!
+}
+
+type FleetOverview {
+  dataAsOf: DateTime
+  businessDate: Date!
+  activeVehicles: Int!
+  movingVehicles: Int!
+  notReportingVehicles: Int!
+  "Trip distance on the data-clock date in the configured Branch time zone, excluding future trips."
+  distanceTodayKm: Float!
+  openCriticalAlerts: Int!
+  "PLANNED overdue tasks whose vehicle is not INACTIVE."
+  overdueService: Int!
+  dailyDistance: [FleetDailyDistancePoint!]!
+  activityByGroup: [FleetGroupActivity!]!
+}
+
+extend type Query {
+  fleetOverview: FleetOverview!
+  "1–93 calendar days in the configured Branch time zone ending at the data date, zero days included. Empty without a data clock."
+  fleetDailyDistance(vehicleId: ID, days: Int! = 14): FleetDailyDistance!
+}

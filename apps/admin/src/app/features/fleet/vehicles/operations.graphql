@@ -7,16 +7,71 @@ fragment AdminVehicle on FleetVehicle {
   updatedAt
 }
 
+fragment AdminVehicleDetails on FleetVehicle {
+  ...AdminVehicle
+  fleetNumber
+  vehicleType
+  make
+  model
+  modelYear
+  vin
+  fuelType
+  fuelTankCapacityL
+  status
+  groupId
+  group {
+    id
+    name
+    colorToken
+  }
+  currentDriverId
+  currentDriver {
+    id
+    firstName
+    lastName
+    status
+  }
+  deviceCount
+  openAlertCount
+  state {
+    activity
+    lastReportedAt
+    latitude
+    longitude
+    address
+    speedKph
+    headingDeg
+    ignition
+    fuelLevelPct
+    fuelStatus
+    externalVoltage
+    backupBatteryVoltage
+    engineHours
+    coolantTempC
+    odometerKm
+    odometerRecordedAt
+    odometerSource
+  }
+}
+
 query AdminVehicles(
   $offset: Int!
   $limit: Int!
   $search: String
   $ids: [ID!]
+  $filter: FleetVehicleFilter
   $sort: FleetVehicleSort
 ) {
-  fleetVehicles(offset: $offset, limit: $limit, search: $search, ids: $ids, sort: $sort) {
+  fleetVehicles(
+    offset: $offset
+    limit: $limit
+    search: $search
+    ids: $ids
+    filter: $filter
+    sort: $sort
+  ) {
     items {
-      ...AdminVehicle
+      ...AdminVehicleDetails
     }
     total
     offset
@@ -25,21 +80,259 @@ query AdminVehicles(
 }
 query AdminVehicle($id: ID!) {
   fleetVehicle(id: $id) {
-    ...AdminVehicle
+    ...AdminVehicleDetails
+  }
+}
+query AdminVehicleSummary {
+  fleetVehicleSummary {
+    dataAsOf
+    inOperation
+    inWorkshop
+    moving
+    notReporting
+    openAlerts
+    lowFuel
+  }
+}
+query AdminVehicleGroups($offset: Int!, $limit: Int!, $search: String, $ids: [ID!]) {
+  fleetVehicleGroups(
+    offset: $offset
+    limit: $limit
+    search: $search
+    ids: $ids
+    sort: { field: NAME, direction: ASC }
+  ) {
+    items {
+      id
+      name
+    }
+    total
+    offset
+    limit
+  }
+}
+query AdminVehicleDrivers($offset: Int!, $limit: Int!, $search: String, $ids: [ID!]) {
+  fleetDrivers(
+    offset: $offset
+    limit: $limit
+    search: $search
+    ids: $ids
+    sort: { field: LAST_NAME, direction: ASC }
+  ) {
+    items {
+      id
+      firstName
+      lastName
+      status
+    }
+    total
+    offset
+    limit
   }
 }
 mutation AdminCreateVehicle($input: CreateFleetVehicleInput!) {
   createFleetVehicle(input: $input) {
-    ...AdminVehicle
+    ...AdminVehicleDetails
   }
 }
 mutation AdminUpdateVehicle($id: ID!, $input: UpdateFleetVehicleInput!) {
   updateFleetVehicle(id: $id, input: $input) {
-    ...AdminVehicle
+    ...AdminVehicleDetails
   }
 }
-mutation AdminDeleteVehicle($id: ID!) {
-  deleteFleetVehicle(id: $id) {
-    ...AdminVehicle
+mutation AdminDeleteVehicles($ids: [ID!]!) {
+  deleteFleetVehicles(ids: $ids) {
+    succeededIds
+    failures {
+      id
+      code
+      message
+    }
+  }
+}
+mutation AdminDeactivateVehicles($ids: [ID!]!) {
+  deactivateFleetVehicles(ids: $ids) {
+    succeededIds
+    failures {
+      id
+      code
+      message
+    }
+  }
+}
+
+fragment AdminVehicleProfileServiceDetails on FleetServiceTask {
+  id
+  branchId
+  vehicleId
+  vehicle {
+    id
+    licensePlate
+    status
+  }
+  serviceType
+  status
+  title
+  dueOn
+  dueOdometerKm
+  completedOn
+  completedOdometerKm
+  workshop
+  replacedParts
+  costCents
+  notes
+  urgency
+  remainingDays
+  remainingKm
+  createdAt
+  updatedAt
+}
+fragment AdminVehicleProfileTripDetails on FleetTrip {
+  id
+  branchId
+  vehicleId
+  vehicle {
+    id
+    licensePlate
+  }
+  driverId
+  driver {
+    id
+    firstName
+    lastName
+  }
+  startedAt
+  endedAt
+  durationSeconds
+  startAddress
+  endAddress
+  distanceKm
+  maxSpeedKph
+  fuelUsedL
+  drivingScore
+  inProgress
+  drivingEvents {
+    id
+    occurredAt
+    kind
+    severity
+    details
+  }
+}
+fragment AdminVehicleProfileAlertDetails on FleetEvent {
+  id
+  branchId
+  vehicleId
+  vehicle {
+    id
+    licensePlate
+  }
+  driverId
+  driver {
+    id
+    firstName
+    lastName
+  }
+  tripId
+  occurredAt
+  kind
+  severity
+  alertStatus
+  details
+  remark
+  acknowledgedAt
+  resolvedAt
+  address
+  measuredValue
+  thresholdValue
+  measurementUnit
+  troubleCode
+}
+fragment AdminVehicleProfile on FleetVehicle {
+  ...AdminVehicleDetails
+  nextService {
+    ...AdminVehicleProfileServiceDetails
+  }
+}
+query AdminVehicleProfile($id: ID!) {
+  fleetVehicle(id: $id) {
+    ...AdminVehicleProfile
+  }
+  fleetDataClock {
+    asOf
+    businessDate
+    timeZone
+  }
+  fleetDailyDistance(vehicleId: $id, days: 14) {
+    dataAsOf
+    points {
+      date
+      distanceKm
+    }
+  }
+}
+query AdminVehicleProfileTrips($vehicleId: ID!, $offset: Int!, $limit: Int!) {
+  fleetTrips(
+    offset: $offset
+    limit: $limit
+    filter: { vehicleIds: [$vehicleId] }
+    sort: { field: STARTED_AT, direction: DESC }
+  ) {
+    items {
+      ...AdminVehicleProfileTripDetails
+    }
+    total
+    offset
+    limit
+    totalDistanceKm
+  }
+}
+query AdminVehicleProfileAlerts($vehicleId: ID!, $offset: Int!, $limit: Int!) {
+  fleetEvents(
+    offset: $offset
+    limit: $limit
+    filter: { vehicleIds: [$vehicleId], actionable: true }
+    sort: { field: OCCURRED_AT, direction: DESC }
+  ) {
+    items {
+      ...AdminVehicleProfileAlertDetails
+    }
+    total
+    offset
+    limit
+  }
+}
+query AdminVehicleProfileService($vehicleId: ID!, $offset: Int!, $limit: Int!) {
+  fleetServiceTasks(
+    offset: $offset
+    limit: $limit
+    filter: { vehicleIds: [$vehicleId] }
+    sort: { field: URGENCY, direction: ASC }
+  ) {
+    items {
+      ...AdminVehicleProfileServiceDetails
+    }
+    total
+    offset
+    limit
+  }
+}
+query AdminVehicleOdometer($id: ID!) {
+  fleetVehicle(id: $id) {
+    ...AdminVehicleDetails
+  }
+  fleetDataClock {
+    asOf
+    businessDate
+    timeZone
+  }
+}
+mutation AdminRecordOdometer($input: RecordFleetOdometerReadingInput!) {
+  recordFleetOdometerReading(input: $input) {
+    id
+    vehicleId
+    source
+    recordedAt
+    odometerKm
   }
 }

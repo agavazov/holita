@@ -119,8 +119,7 @@ export const ErrorState: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await waitFor(
-      () =>
-        expect(canvas.getByText('The trips could not be loaded. (demo-request-5)')).toBeVisible(),
+      () => expect(canvas.getByText('The trips could not be loaded.')).toBeVisible(),
       appReady,
     );
   },

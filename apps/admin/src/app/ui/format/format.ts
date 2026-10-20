@@ -10,18 +10,19 @@ export function localeOf(language: Language): string {
   return locales[language];
 }
 
-/** Grouped number with up to `fraction` decimals; `null`/`undefined` → "—". */
+/** Grouped number; `significantDigits` takes precedence over `fraction`; absent values → "—". */
 export function formatNumber(
   value: number | null | undefined,
   language: Language,
-  options: { readonly fraction?: number } = {},
+  options: { readonly fraction?: number; readonly significantDigits?: number } = {},
 ): string {
   if (value === null || value === undefined || !Number.isFinite(value)) {
     return emptyValue;
   }
   return new Intl.NumberFormat(localeOf(language), {
-    maximumFractionDigits: options.fraction ?? 0,
-    minimumFractionDigits: 0,
+    ...(options.significantDigits === undefined
+      ? { maximumFractionDigits: options.fraction ?? 0, minimumFractionDigits: 0 }
+      : { maximumSignificantDigits: options.significantDigits }),
     useGrouping: 'always',
   }).format(value);
 }

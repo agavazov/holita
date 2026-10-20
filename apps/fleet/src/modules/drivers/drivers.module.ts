@@ -9,6 +9,7 @@ import { TripsModule } from '../trips/trips.module.js';
 import { DriversRepository } from './drivers.repository.js';
 import { DriversResolver } from './drivers.resolver.js';
 import { DriversService } from './drivers.service.js';
+import { SettingsModule } from '../settings/settings.module.js';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { DriversService } from './drivers.service.js';
     TelemetryModule,
     TripsModule,
     EventsModule,
+    SettingsModule,
   ],
   exports: [DriversService],
   providers: [FleetEnabledGuard, DriversRepository, DriversService, DriversResolver],

@@ -1,182 +1,38 @@
-<section class="card" [attr.aria-label]="text().vehicles">
-  <div class="page-heading">
-    <div>
-      <h1 #vehiclesHeading tabindex="-1">{{ text().vehicles }}</h1>
-      <p>{{ branch().name }}</p>
-    </div>
-    <div class="page-actions">
-      <button
-        pButton
-        type="button"
-        severity="secondary"
-        [outlined]="true"
-        [disabled]="loading() || deleting()"
-        (click)="refresh()"
-      >
-        {{ error() ? text().retry : text().refresh }}
-      </button>
-      <a pButton [routerLink]="['new']" queryParamsHandling="preserve" [preserveFragment]="true">{{
-        text().createVehicle
-      }}</a>
-    </div>
-  </div>
-  @if (saved) {
-    <p-message severity="success">{{ text().vehicleSaved }}</p-message>
-  }
-  <div class="fleet-filters" role="group" [attr.aria-label]="text().vehicleFilters">
-    <div class="filter-field">
-      <label for="vehicle-search">{{ text().searchVehicles }}</label>
-      <input
-        pInputText
-        id="vehicle-search"
-        type="search"
-        [ngModel]="search()"
-        (ngModelChange)="editSearch($event)"
-        [fluid]="true"
-      />
-    </div>
-    <button pButton type="button" severity="secondary" [outlined]="true" (click)="clearFilters()">
-      {{ text().clearFilters }}
+@if (summaryError()) {
+  <p-message severity="warn"
+    >{{ summaryFailure() }}
+    <button pButton type="button" severity="secondary" (click)="refreshSummary()">
+      {{ text().profile.retry }}
     </button>
-    @if (listQuery().sort !== 'CREATED_AT') {
-      <button pButton type="button" severity="secondary" [text]="true" (click)="resetSort()">
-        {{ text().resetSort }}
-      </button>
-    }
-  </div>
-  @if (loading()) {
-    <p role="status">{{ text().loadingVehicles }}</p>
-  }
-  @if (error()) {
-    <p-message severity="error">{{ failure() }}</p-message>
-  }
-  @if (deleteProgress()) {
-    <p role="status">{{ deletingMessage() }}</p>
-  }
-  @if (deletionResult(); as result) {
-    <p-message [severity]="result.failures.length ? 'warn' : 'success'">{{
-      deletionSummary()
-    }}</p-message>
-    @for (failure of result.failures; track failure.vehicle.id) {
-      <p-message severity="error"
-        >{{ failure.vehicle.licensePlate }}: {{ failure.message }}</p-message
-      >
-    }
-  }
-  @if (selected().length) {
-    <div class="page-actions" role="group" [attr.aria-label]="text().selectedVehicles">
-      <span>{{ text().selectedVehicles }}: {{ selected().length }}</span>
-      <button
-        pButton
-        type="button"
-        severity="danger"
-        [outlined]="true"
-        [disabled]="deleting()"
-        (click)="confirmDelete(selected(), $event)"
-      >
-        {{ text().deleteSelectedVehicles }}
-      </button>
-    </div>
-  }
-  @if (page(); as vehicles) {
-    <p class="fleet-summary">{{ text().total }}: {{ vehicles.total }}</p>
-  }
-  <p-table
-    [value]="page()?.items ?? []"
-    [selection]="selected()"
-    (selectionChange)="selectVehicles($event)"
-    dataKey="id"
-    [rowTrackBy]="trackVehicle"
-    [loading]="loading()"
-    [lazy]="true"
-    [lazyLoadOnInit]="false"
-    [sortField]="sortField()"
-    [sortOrder]="sortOrder()"
-    [resetPageOnSort]="false"
-    (onSort)="sortChanged($event)"
-    [tableStyle]="{ 'min-width': '36rem' }"
-  >
-    <ng-template #header>
-      <tr>
-        <th scope="col">
-          <p-table-header-checkbox
-            [disabled]="deleting()"
-            [ariaLabel]="text().selectVehiclesPage"
-          />
-        </th>
-        <th scope="col" pSortableColumn="licensePlate">
-          {{ text().licensePlate }} <p-sort-icon field="licensePlate" />
-        </th>
-        <th scope="col">{{ text().notes }}</th>
-        <th scope="col">{{ text().actions }}</th>
-      </tr>
-    </ng-template>
-    <ng-template #body let-vehicle>
-      <tr>
-        <td>
-          <p-table-checkbox
-            [value]="vehicle"
-            [disabled]="deleting()"
-            [ariaLabel]="text().selectVehicle.replace('{name}', vehicle.licensePlate)"
-          />
-        </td>
-        <td>
-          <a
-            class="content-link"
-            [routerLink]="[vehicle.id, 'edit']"
-            queryParamsHandling="preserve"
-            [preserveFragment]="true"
-            >{{ vehicle.licensePlate }}</a
-          >
-        </td>
-        <td>
-          <span class="vehicle-notes" [title]="vehicle.notes ?? ''">{{
-            vehicle.notes ?? '—'
-          }}</span>
-        </td>
-        <td>
-          <button
-            pButton
-            type="button"
-            severity="danger"
-            [text]="true"
-            size="small"
-            [disabled]="deleting()"
-            [attr.aria-label]="text().deleteVehicleAction.replace('{name}', vehicle.licensePlate)"
-            (click)="confirmDelete([vehicle], $event)"
-          >
-            {{ text().deleteVehicle }}
-          </button>
-        </td>
-      </tr>
-    </ng-template>
-    <ng-template #emptymessage>
-      <tr>
-        <td colspan="4">
-          @if (!loading() && !error()) {
-            {{ listQuery().search ? text().noMatchingVehicles : text().emptyVehicles }}
-          }
-        </td>
-      </tr>
-    </ng-template>
-  </p-table>
-  @if (page(); as vehicles) {
-    <p-paginator
-      [first]="(listQuery().page - 1) * listQuery().pageSize"
-      [rows]="listQuery().pageSize"
-      [totalRecords]="vehicles.total"
-      [rowsPerPageOptions]="pageSizes"
-      [pageLinkSize]="3"
-      [showCurrentPageReport]="true"
-      [currentPageReportTemplate]="text().pageReport"
-      [locale]="language()"
-      (onPageChange)="changePage($event)"
-    />
-  }
-</section>
-<p-confirmdialog
-  defaultFocus="reject"
-  [closeAriaLabel]="text().closeConfirmation"
-  [draggable]="false"
-  [style]="{ width: 'min(30rem, 90vw)', overflowWrap: 'anywhere' }"
+  </p-message>
+}
+@if (choices.error()) {
+  <p-message severity="warn"
+    >{{ choicesFailure() }}
+    <button pButton type="button" severity="secondary" (click)="choices.load()">
+      {{ text().profile.retry }}
+    </button>
+  </p-message>
+}
+<holita-vehicles-view
+  [branchName]="branch().name"
+  [dataAsOf]="summary()?.dataAsOf ?? ''"
+  [rows]="rows()"
+  [total]="total()"
+  [view]="view()"
+  [state]="state()"
+  [kpis]="summary()"
+  [groups]="choices.groups()"
+  [drivers]="choices.drivers()"
+  [selection]="selected()"
+  [busy]="acting() || loading()"
+  [profileEnabled]="true"
+  [searchError]="searchError()"
+  [errorText]="failure()"
+  (stateChange)="changeState($event)"
+  (create)="openEditor(null)"
+  (action)="run($event)"
+  (selectionChange)="selected.set($event)"
+  (retry)="refresh()"
 />
+<router-outlet [routerOutletData]="drawerHost" />

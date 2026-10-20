@@ -99,6 +99,16 @@ function bothThemes(id: string, sizes: readonly ViewportName[] = ['desktop']): C
 const captures: readonly Capture[] = [
   { id: 'start-here--introduction', theme: 'light', viewports: ['desktop'] },
   ...[
+    'admin-fleet-vehicles--default',
+    'admin-fleet-devices--default',
+    'admin-fleet-drivers--default',
+    'admin-fleet-vehicle-profile--overview',
+    'admin-monitoring-overview--default',
+    'admin-monitoring-alerts--default',
+    'admin-monitoring-trips--default',
+    'admin-service-maintenance--default',
+    'admin-settings-vehicle-groups--default',
+    'admin-settings-general--default',
     'examples-monitoring-overview--default',
     'examples-fleet-vehicles--default',
     'examples-fleet-vehicle-profile--overview',
@@ -207,17 +217,16 @@ for (const capture of captures) {
       await page.evaluate(async () => {
         await document.fonts.ready;
       });
-      if (capture.confirmation || capture.toast) {
-        await expect(page.locator('#storybook-root')).toHaveAttribute(
-          'data-story-ready',
-          capture.id,
-        );
-      }
+      // Fixture quiet alone can precede lazy routing; the preview marks every completed story.
+      await expect(page.locator('#storybook-root')).toHaveAttribute('data-story-ready', capture.id);
       if (capture.confirmation) {
         await expect(page.getByRole('alertdialog', { name: capture.confirmation })).toBeVisible();
       }
       if (capture.toast) {
-        await expect(page.locator('.p-toast-message').first()).toBeVisible();
+        const toast = page.locator('.p-toast-message').first();
+        await expect(toast).toBeVisible();
+        // Pause dismissal through the real hover behavior while both captures are taken.
+        await toast.hover();
       }
       const name = [
         capture.id,

@@ -246,6 +246,41 @@ export const AddedSort: Story = {
   },
 };
 
+export const FilterByStatus: Story = {
+  name: 'Filter completed service history',
+  render: exampleAt('maintenance'),
+  play: async ({ canvasElement }) => {
+    const canvas = await tableReady(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(canvas.getByRole('button', { name: 'Add filter' }));
+    const editor = await body.findByRole('dialog', { name: 'Filter condition' });
+    const column = within(editor).getByRole('combobox', { name: 'Column' });
+    await userEvent.click(column);
+    const columns = await body.findByRole('listbox');
+    await userEvent.click(await body.findByRole('option', { name: /^Status$/ }));
+    await waitFor(() => expect(column).toHaveAttribute('aria-expanded', 'false'));
+    await waitFor(() => expect(columns).not.toBeInTheDocument());
+    const valueSelect = within(editor).getByRole('combobox', { name: 'Value' });
+    await userEvent.click(valueSelect);
+    const choices = await body.findByRole('listbox');
+    await userEvent.click(await body.findByRole('option', { name: /^Done$/ }));
+    await waitFor(() => expect(valueSelect).toHaveTextContent('Done'));
+    await userEvent.click(valueSelect);
+    await waitFor(() => expect(valueSelect).toHaveAttribute('aria-expanded', 'false'));
+    await waitFor(() => expect(choices).not.toBeInTheDocument());
+    await userEvent.click(within(editor).getByRole('button', { name: 'Apply' }));
+    await waitFor(() => expect(editor).not.toBeInTheDocument());
+    const completed = sampleServiceTasks.filter((item) => item.status === 'DONE');
+    await waitFor(() =>
+      expect(canvas.getAllByRole('button', { name: /^View completed / })).toHaveLength(
+        completed.length,
+      ),
+    );
+    await expect(canvas.queryByRole('button', { name: /^Edit .+ on / })).toBeNull();
+    await expect(canvas.queryByText('Overdue', { selector: '.p-tag-label' })).toBeNull();
+  },
+};
+
 export const Loading: Story = {
   render: exampleAt('maintenance?scenario=loading'),
   play: async ({ canvasElement }) => {

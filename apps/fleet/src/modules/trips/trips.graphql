@@ -27,9 +27,30 @@ type FleetTrip {
   drivingScore: Float
   ecoScore: Float
   maneuverCount: Int!
+  "Driving maneuvers of this trip, ordered by occurrence and ID; excludes informational events."
+  drivingEvents: [FleetTripDrivingEvent!]!
   "True when endedAt is null and startedAt is within 24 h before the Branch data clock; false otherwise (also when asOf is null)."
   inProgress: Boolean!
   createdAt: DateTime!
+}
+
+type FleetTripDrivingEvent {
+  id: ID!
+  occurredAt: DateTime!
+  kind: FleetEventKind!
+  severity: FleetEventSeverity!
+  details: String
+}
+
+type FleetTripSummary {
+  totalTrips: Int!
+  distanceKm: Float!
+  "Sum of whole-second durations of ended trips; open trips contribute zero."
+  totalDurationSeconds: Float!
+  "Arithmetic mean of non-null device-reported driving scores, independent of distance."
+  averageDrivingScore: Float
+  "Driving maneuvers attached to trips in this Branch, excluding informational and unassigned events."
+  totalManeuverEvents: Int!
 }
 
 type FleetTripPage {
@@ -50,12 +71,35 @@ input FleetTripFilter {
   scored: Boolean
   drivingScoreBelow: Float
   hasEnd: Boolean
+  "Independent conditions combined with AND; at most 50 entries."
+  allOf: [FleetTripCondition!]
+}
+
+input FleetTripCondition {
+  "Inclusive instant; calendar filter values are converted by the caller."
+  startedFrom: DateTime
+  "Exclusive instant; calendar filter values are converted by the caller."
+  startedTo: DateTime
+  vehicleIds: [ID!]
+  excludedVehicleIds: [ID!]
+  driverIds: [ID!]
+  excludedDriverIds: [ID!]
+  hasDriver: Boolean
+  distanceKmAbove: Float
+  distanceKmBelow: Float
+  distanceKmFrom: Float
+  distanceKmTo: Float
+  drivingScoreAbove: Float
+  drivingScoreBelow: Float
+  "Whether the trip has driving maneuver events, matching drivingEvents and maneuverCount."
+  hasEvents: Boolean
 }
 
 enum FleetTripSortField {
   STARTED_AT
   DISTANCE_KM
   DRIVING_SCORE
+  DURATION_SECONDS
 }
 input FleetTripSort {
   field: FleetTripSortField! = STARTED_AT
@@ -72,4 +116,6 @@ extend type Query {
     sort: FleetTripSort
   ): FleetTripPage!
   fleetTrip(id: ID!): FleetTrip!
+  "Whole-Branch totals independent of list filters and pagination."
+  fleetTripSummary: FleetTripSummary!
 }

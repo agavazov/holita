@@ -11,10 +11,10 @@
     "moving": "Moving now",
     "movingShare": "{share} of active vehicles",
     "notReporting": "Not reporting",
-    "notReportingFootnote": "no data for 48 h",
+    "notReportingFootnote": "no data for {hours} h",
     "openAlerts": "Open alerts",
     "lowFuel": "Low fuel",
-    "lowFuelFootnote": "below 12 %"
+    "lowFuelFootnote": "below {percent} %"
   },
   "table": {
     "heading": "Vehicles",
@@ -25,7 +25,7 @@
     "updatedAt": "Updated",
     "driver": "Driver",
     "group": "Group",
-    "odometer": "Odometer, km",
+    "odometer": "Odometer, {unit}",
     "fuel": "Fuel",
     "notes": "Notes",
     "actions": "Actions",
@@ -39,7 +39,7 @@
     "emptyTitle": "No vehicles yet",
     "emptyDescription": "Add the first vehicle of this branch.",
     "alerts": "{count} open alerts",
-    "errorText": "The vehicles could not be loaded. (demo-request-1)"
+    "errorText": "The vehicles could not be loaded."
   },
   "statuses": {
     "ACTIVE": "Active",
@@ -99,6 +99,7 @@
     "created": "{plate} was created.",
     "deactivated": "Vehicles deactivated: {count}.",
     "deleted": "Vehicles deleted: {count}.",
+    "partialFailure": "Failed: {count}.",
     "historyConflict": "Vehicles with trackers or history cannot be deleted. Deactivate them instead."
   },
   "profile": {
@@ -138,7 +139,7 @@
     "tank": "Fuel tank",
     "added": "Added",
     "recentTrips": "Recent trips",
-    "noTrips": "No trips in the last days",
+    "noTrips": "No trips",
     "alertsHeading": "Alerts of this vehicle",
     "noAlerts": "No alerts",
     "serviceHeading": "Service plan",
@@ -146,13 +147,13 @@
     "notFoundTitle": "Vehicle not found",
     "notFoundDescription": "It may have been deleted or belongs to another branch.",
     "errorTitle": "Something went wrong",
-    "errorText": "The vehicle could not be loaded. (demo-request-8)",
+    "errorText": "The vehicle could not be loaded.",
     "retry": "Try again"
   },
   "odometer": {
     "title": "Record odometer · {plate}",
     "description": "Record a manual reading. It updates the odometer only; activity and the data clock stay unchanged.",
-    "previous": "Latest reading, km",
+    "previous": "Latest reading, {unit}",
     "recordedAt": "Reading time",
     "source": "Source",
     "sources": { "DEMO": "Device data", "MANUAL": "Manual" },
@@ -168,7 +169,7 @@
     "save": "Record reading",
     "cancel": "Cancel",
     "saved": "Odometer reading recorded.",
-    "saveError": "The reading could not be saved. Try again. (demo-request-9)"
+    "saveError": "The reading could not be saved. Try again."
   },
   "drawer": {
     "createTitle": "New vehicle",
@@ -195,7 +196,7 @@
     "save": "Save",
     "create": "Create vehicle",
     "cancel": "Cancel",
-    "saveError": "The vehicle could not be saved. Try again. (demo-request-2)",
+    "saveError": "The vehicle could not be saved. Try again.",
     "duplicateFleetNumber": "This fleet number is already used in the branch.",
     "duplicateVin": "This VIN is already used in the branch.",
     "inactiveDriver": "Unassign the driver before deactivating the vehicle."

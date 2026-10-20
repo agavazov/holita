@@ -1,0 +1,42 @@
+enum FleetDistanceUnit {
+  KM
+  MI
+}
+
+enum FleetVolumeUnit {
+  LITRE
+  US_GALLON
+}
+
+"Branch preferences; telemetry measurements remain stored and returned in canonical km, km/h and litres."
+type FleetSettings {
+  timeZone: String!
+  distanceUnit: FleetDistanceUnit!
+  volumeUnit: FleetVolumeUnit!
+  lowFuelPct: Int!
+  notReportingHours: Int!
+  "Stored reference only; changing it does not generate alerts or send hardware commands."
+  speedLimitKph: Int!
+}
+
+"Full replacement. Supported zones: Europe/Sofia, Europe/Bucharest, Europe/Athens and Europe/Belgrade."
+input UpdateFleetSettingsInput {
+  timeZone: String!
+  distanceUnit: FleetDistanceUnit!
+  volumeUnit: FleetVolumeUnit!
+  "1–50."
+  lowFuelPct: Int!
+  "1–168."
+  notReportingHours: Int!
+  "30–130 km/h."
+  speedLimitKph: Int!
+}
+
+extend type Query {
+  "Returns defaults without inserting a row when no settings have been saved for this Branch."
+  fleetSettings: FleetSettings!
+}
+
+extend type Mutation {
+  updateFleetSettings(input: UpdateFleetSettingsInput!): FleetSettings!
+}

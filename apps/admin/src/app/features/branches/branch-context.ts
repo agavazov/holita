@@ -85,7 +85,7 @@ export class BranchContext {
         const branch =
           branches.find((branch) => branch.id === this.session.branchId()) ?? branches[0];
         if (branch) {
-          void this.router.navigate(['/', language, branch.id, 'fleet', 'vehicles'], {
+          void this.router.navigate(['/', language, branch.id, 'fleet', 'overview'], {
             replaceUrl: true,
           });
         }
@@ -105,7 +105,7 @@ export class BranchContext {
       language,
       selection.branchId,
       'fleet',
-      'vehicles',
+      'overview',
     ]);
     if (
       this.router.url === this.router.serializeUrl(destination) ||
@@ -145,7 +145,25 @@ export class BranchContext {
     const fleet =
       this.fleetEnabled &&
       section?.[1]?.path === 'fleet' &&
-      (resource === 'vehicles' || resource === 'devices');
-    void this.router.navigate(['/', language, id, 'fleet', fleet ? resource : 'vehicles']);
+      (resource === 'vehicles' ||
+        resource === 'devices' ||
+        resource === 'alerts' ||
+        resource === 'overview' ||
+        resource === 'trips' ||
+        resource === 'drivers' ||
+        resource === 'maintenance');
+    const settingsPage = section?.[3]?.path;
+    const settings =
+      this.fleetEnabled &&
+      section?.[1]?.path === 'fleet' &&
+      resource === 'settings' &&
+      (settingsPage === 'groups' || settingsPage === 'general');
+    void this.router.navigate([
+      '/',
+      language,
+      id,
+      'fleet',
+      ...(settings ? ['settings', settingsPage] : [fleet ? resource : 'overview']),
+    ]);
   }
 }

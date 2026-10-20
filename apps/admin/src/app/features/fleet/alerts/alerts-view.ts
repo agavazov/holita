@@ -105,6 +105,9 @@ export class AlertsView {
   readonly kpis = input<AlertKpis | null>(null);
   readonly vehicles = input<readonly AlertOption[]>([]);
   readonly selection = input<readonly ListRecord<AlertActionId>[]>([]);
+  readonly busy = input(false);
+  readonly searchError = input<string | null>(null);
+  readonly errorText = input<string | null>(null);
   readonly stateChange = output<ListQuery>();
   /** Row and bulk actions alike, with the IDs they apply to. */
   readonly action = output<ListActionRequest<AlertActionId>>();
@@ -131,6 +134,7 @@ export class AlertsView {
         type: 'enum',
         operators: ['isAnyOf', 'isNoneOf'],
         options: alertSeverities.map((value) => ({ value, label: text.severities[value] })),
+        maxValues: 100,
       },
       {
         key: 'status',
@@ -138,6 +142,7 @@ export class AlertsView {
         type: 'enum',
         operators: ['isAnyOf', 'isNoneOf'],
         options: alertStatuses.map((value) => ({ value, label: text.statuses[value] })),
+        maxValues: 100,
       },
       {
         key: 'vehicle',
@@ -145,6 +150,7 @@ export class AlertsView {
         type: 'enum',
         operators: ['isAnyOf', 'isNoneOf'],
         options: this.vehicles().map((vehicle) => ({ value: vehicle.id, label: vehicle.name })),
+        maxValues: 100,
       },
       {
         key: 'occurredAt',
@@ -226,6 +232,12 @@ export class AlertsView {
   }
 
   protected changeSort(sort: NonNullable<ListQuery['sort']>): void {
+    if (
+      this.state().sort?.field === sort.field &&
+      this.state().sort?.direction === sort.direction
+    ) {
+      return;
+    }
     this.changeQuery({ ...this.state(), sort, page: 1 });
   }
 
@@ -252,7 +264,7 @@ export class AlertsView {
   }
 
   protected select(rows: readonly AlertRow[] | null): void {
-    this.selectionChange.emit((rows ?? []).map((row) => this.recordOf(row)));
+    this.selectionChange.emit((rows ?? []).slice(0, 100).map((row) => this.recordOf(row)));
   }
 
   /** The selection belongs to the rows on screen, so any new query clears it. */

@@ -32,11 +32,12 @@ const SERVICE_TYPES = Object.values(FleetServiceType);
 export function serviceTasksWithUrgency(
   schema: string,
   scope: FleetScope,
-  today: string,
+  today: string | Prisma.Sql,
 ): Prisma.Sql {
   const tasks = fleetTable(schema, 'ServiceTask');
   const samples = fleetTable(schema, 'VehicleStatusSample');
   const { tenantId, branchId } = scope;
+  const date = typeof today === 'string' ? Prisma.sql`${today}::date` : today;
   return Prisma.sql`
     SELECT t."id", t."vehicleId", t."serviceType"::text AS "serviceType",
       t."status"::text AS "status", t."title", t."dueOn"::text AS "dueOn", t."dueOdometerKm",
@@ -45,16 +46,16 @@ export function serviceTasksWithUrgency(
       o."odometerKm" AS "currentOdometerKm",
       CASE
         WHEN t."status"::text <> 'PLANNED' THEN NULL
-        WHEN (t."dueOn" IS NOT NULL AND t."dueOn" < ${today}::date)
+        WHEN (t."dueOn" IS NOT NULL AND t."dueOn" < ${date})
           OR (t."dueOdometerKm" IS NOT NULL AND o."odometerKm" >= t."dueOdometerKm") THEN 'OVERDUE'
-        WHEN (t."dueOn" IS NOT NULL AND t."dueOn" <= ${today}::date + ${SERVICE_DUE_SOON_DAYS}::int)
+        WHEN (t."dueOn" IS NOT NULL AND t."dueOn" <= ${date} + ${SERVICE_DUE_SOON_DAYS}::int)
           OR (t."dueOdometerKm" IS NOT NULL
             AND t."dueOdometerKm" - o."odometerKm" <= ${SERVICE_DUE_SOON_KM}::int) THEN 'DUE_SOON'
         WHEN t."dueOdometerKm" IS NOT NULL AND o."odometerKm" IS NULL THEN 'UNKNOWN_ODOMETER'
         ELSE 'UPCOMING'
       END AS "urgency",
       CASE WHEN t."status"::text = 'PLANNED' AND t."dueOn" IS NOT NULL
-        THEN (t."dueOn" - ${today}::date)::int END AS "remainingDays",
+        THEN (t."dueOn" - ${date})::int END AS "remainingDays",
       CASE WHEN t."status"::text = 'PLANNED' AND t."dueOdometerKm" IS NOT NULL
           AND o."odometerKm" IS NOT NULL
         THEN round(t."dueOdometerKm" - o."odometerKm")::int END AS "remainingKm"

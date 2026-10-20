@@ -17,6 +17,7 @@ import { Prisma } from '../../generated/prisma/client.js';
 import { FleetDataSource, FleetVehicleStatus } from '../../generated/prisma/enums.js';
 import type { FleetScope } from '../../validation.js';
 import type { VehicleFacts } from './vehicle-state.js';
+import { vehicleFactsSql } from './vehicle-facts.sql.js';
 
 const VEHICLE_STATUSES = Object.values(FleetVehicleStatus);
 const DATA_SOURCES = Object.values(FleetDataSource);
@@ -44,7 +45,33 @@ export const sampleSelect = {
 
 export type SampleRow = Prisma.VehicleStatusSampleGetPayload<{ select: typeof sampleSelect }>;
 
-function parseFacts(row: Record<string, unknown>): VehicleFacts {
+const odometerSelect = {
+  odometerKm: true,
+  recordedAt: true,
+} satisfies Prisma.VehicleStatusSampleSelect;
+
+export type OdometerReading = Prisma.VehicleStatusSampleGetPayload<{
+  select: typeof odometerSelect;
+}>;
+
+function latestOdometer(
+  client: Prisma.TransactionClient,
+  scope: FleetScope,
+  vehicleId: string,
+): Promise<OdometerReading | null> {
+  return client.vehicleStatusSample.findFirst({
+    where: {
+      tenantId: scope.tenantId,
+      branchId: scope.branchId,
+      vehicleId,
+      odometerKm: { not: null },
+    },
+    orderBy: [{ recordedAt: 'desc' }, { id: 'desc' }],
+    select: odometerSelect,
+  });
+}
+
+export function parseVehicleFacts(row: Record<string, unknown>): VehicleFacts {
   const recordedAt = dateOrNull(row, 'sampleRecordedAt');
   const odometerKm = numberOrNull(row, 'odometerKm');
   return {
@@ -100,46 +127,10 @@ export class TelemetryRepository {
     if (!ids.length) {
       return [];
     }
-    const { tenantId, branchId } = scope;
-    const vehicles = fleetTable(this.prisma.schema, 'Vehicle');
-    const devices = fleetTable(this.prisma.schema, 'Device');
-    const samples = fleetTable(this.prisma.schema, 'VehicleStatusSample');
-    const rows: unknown = await this.prisma.client.$queryRaw(Prisma.sql`
-      SELECT v."id"::text AS "id", v."status"::text AS "status",
-        EXISTS (
-          SELECT 1 FROM ${devices} d
-          WHERE d."tenantId" = ${tenantId}::uuid AND d."branchId" = ${branchId}::uuid
-            AND d."vehicleId" = v."id"
-        ) AS "hasDevice",
-        latest."recordedAt" AS "sampleRecordedAt", latest."latitude", latest."longitude",
-        latest."address", latest."speedKph", latest."headingDeg"::int AS "headingDeg",
-        latest."ignition", latest."fuelLevelPct", latest."externalVoltage",
-        latest."backupBatteryVoltage", latest."engineHours",
-        latest."coolantTempC"::int AS "coolantTempC",
-        odometer."odometerKm", odometer."recordedAt" AS "odometerRecordedAt",
-        odometer."source"::text AS "odometerSource"
-      FROM ${vehicles} v
-      LEFT JOIN LATERAL (
-        SELECT s."recordedAt", s."latitude", s."longitude", s."address", s."speedKph",
-          s."headingDeg", s."ignition", s."fuelLevelPct", s."externalVoltage",
-          s."backupBatteryVoltage", s."engineHours", s."coolantTempC"
-        FROM ${samples} s
-        WHERE s."tenantId" = ${tenantId}::uuid AND s."branchId" = ${branchId}::uuid
-          AND s."vehicleId" = v."id" AND s."deviceImei" IS NOT NULL
-        ORDER BY s."recordedAt" DESC, s."id" DESC
-        LIMIT 1
-      ) latest ON TRUE
-      LEFT JOIN LATERAL (
-        SELECT s."odometerKm", s."recordedAt", s."source"
-        FROM ${samples} s
-        WHERE s."tenantId" = ${tenantId}::uuid AND s."branchId" = ${branchId}::uuid
-          AND s."vehicleId" = v."id" AND s."odometerKm" IS NOT NULL
-        ORDER BY s."recordedAt" DESC, s."id" DESC
-        LIMIT 1
-      ) odometer ON TRUE
-      WHERE v."tenantId" = ${tenantId}::uuid AND v."branchId" = ${branchId}::uuid
-        AND v."id" = ANY(${ids}::uuid[])`);
-    return rowsOf(rows, parseFacts);
+    const rows: unknown = await this.prisma.client.$queryRaw(
+      vehicleFactsSql(this.prisma.schema, scope, ids),
+    );
+    return rowsOf(rows, parseVehicleFacts);
   }
 
   /** `max(recordedAt)` per (vehicle, IMEI) pair; pairs that never reported are absent. */
@@ -195,32 +186,38 @@ export class TelemetryRepository {
 
   /** Latest non-null odometer reading of the vehicle from any source. */
   latestOdometerReading(scope: FleetScope, vehicleId: string) {
-    return this.prisma.client.vehicleStatusSample.findFirst({
-      where: {
-        tenantId: scope.tenantId,
-        branchId: scope.branchId,
-        vehicleId,
-        odometerKm: { not: null },
-      },
-      orderBy: [{ recordedAt: 'desc' }, { id: 'desc' }],
-      select: { odometerKm: true, recordedAt: true },
-    });
+    return latestOdometer(this.prisma.client, scope, vehicleId);
   }
 
-  /** Inserts a MANUAL odometer reading; every other measurement stays null. */
+  /**
+   * Serializes readings with Vehicle updates/deactivation. Default READ COMMITTED lets the
+   * latest-reading check see a reading committed while this transaction waited for the lock.
+   */
   insertManualReading(
     scope: FleetScope,
     data: { vehicleId: string; odometerKm: number; recordedAt: Date; receivedAt: Date },
-  ): Promise<SampleRow> {
-    return this.prisma.client.vehicleStatusSample.create({
-      data: {
-        ...data,
-        tenantId: scope.tenantId,
-        branchId: scope.branchId,
-        source: 'MANUAL',
-        deviceImei: null,
-      },
-      select: sampleSelect,
+    check: (latest: OdometerReading | null) => void,
+  ): Promise<SampleRow | null> {
+    return this.prisma.client.$transaction(async (transaction) => {
+      const locked: unknown = await transaction.$queryRaw(Prisma.sql`
+        SELECT v."id"::text AS "id" FROM ${fleetTable(this.prisma.schema, 'Vehicle')} v
+        WHERE v."tenantId" = ${scope.tenantId}::uuid AND v."branchId" = ${scope.branchId}::uuid
+          AND v."id" = ${data.vehicleId}::uuid AND v."status"::text <> 'INACTIVE'
+        FOR NO KEY UPDATE`);
+      if (!rowsOf(locked, (row) => text(row, 'id')).length) {
+        return null;
+      }
+      check(await latestOdometer(transaction, scope, data.vehicleId));
+      return transaction.vehicleStatusSample.create({
+        data: {
+          ...data,
+          tenantId: scope.tenantId,
+          branchId: scope.branchId,
+          source: 'MANUAL',
+          deviceImei: null,
+        },
+        select: sampleSelect,
+      });
     });
   }
 }

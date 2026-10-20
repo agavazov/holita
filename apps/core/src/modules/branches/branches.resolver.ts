@@ -1,5 +1,17 @@
-import { Args, Context, Parent, Query, ResolveReference, Resolver } from '@nestjs/graphql';
-import type { QueryBranchArgs, Branch } from '../../generated/graphql/types.js';
+import {
+  Args,
+  Context,
+  Mutation,
+  Parent,
+  Query,
+  ResolveReference,
+  Resolver,
+} from '@nestjs/graphql';
+import type {
+  QueryBranchArgs,
+  MutationUpdateBranchNameArgs,
+  Branch,
+} from '../../generated/graphql/types.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import { BranchesService } from './branches.service.js';
 
@@ -18,6 +30,14 @@ export class BranchesResolver {
     @Context() context: RequestContext,
   ): Promise<Branch | null> {
     return this.branchesService.find(context, args.id);
+  }
+
+  @Mutation('updateBranchName')
+  updateName(
+    @Args() args: MutationUpdateBranchNameArgs,
+    @Context() context: RequestContext,
+  ): Promise<Branch> {
+    return this.branchesService.updateName(context, args.id, args.name);
   }
 
   @ResolveReference()

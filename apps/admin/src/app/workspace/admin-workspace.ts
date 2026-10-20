@@ -5,6 +5,8 @@ import { filter } from 'rxjs';
 import { ButtonDirective } from 'primeng/button';
 import { Message } from 'primeng/message';
 import { PrimeNG } from 'primeng/config';
+import { MessageService } from 'primeng/api';
+import { OperationToast } from '../ui/operation-toast';
 import { DemoSession } from '../core/auth/demo-session';
 import { AdminConfig } from '../core/config/admin-config';
 import { requestError } from '../core/graphql/request-error';
@@ -21,9 +23,10 @@ import { primeNgTranslation } from './primeng-translation';
 
 @Component({
   selector: 'holita-admin-workspace',
-  imports: [RouterOutlet, AdminShell, ButtonDirective, Message, Login],
+  imports: [RouterOutlet, AdminShell, ButtonDirective, Message, Login, OperationToast],
   providers: [
     BranchContext,
+    MessageService,
     { provide: UI_LANGUAGE, useFactory: () => inject(AdminWorkspace).language },
   ],
   templateUrl: './admin-workspace.html',
@@ -36,6 +39,7 @@ export class AdminWorkspace {
   private readonly router = inject(Router);
   private readonly primeNG = inject(PrimeNG);
   private readonly pageRecord = inject(PageRecord);
+  private readonly operationMessages = inject(MessageService);
   private readonly params = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
   });
@@ -72,6 +76,12 @@ export class AdminWorkspace {
   });
 
   constructor() {
+    effect(() => {
+      this.session.current();
+      this.language();
+      this.branches.selectedId();
+      this.operationMessages.clear();
+    });
     effect((onCleanup) => {
       const language = this.language();
       document.documentElement.lang = language;

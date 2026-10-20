@@ -20,7 +20,9 @@ import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 import { Tag } from 'primeng/tag';
 import { Textarea } from 'primeng/textarea';
-import { RouteDrawer } from '../../../ui/drawer/route-drawer';
+import { RouteDrawer, type RouteDrawerState } from '../../../ui/drawer/route-drawer';
+import { selectMultiplePt } from '../../../ui/select-multiple';
+import { deviceOptions } from './device-query';
 import { FormField } from '../../../ui/form-field/form-field';
 import { FormatNumberPipe, FormatRelativePipe } from '../../../ui/format/format.pipes';
 import { focusFirstInvalid } from '../../../ui/forms/focus';
@@ -39,13 +41,25 @@ export interface DeviceForm {
   readonly simIccid: string;
   readonly vehicleId: string | null;
   readonly notes: string;
+  readonly options?: readonly string[];
+  readonly firmwareVersion?: string;
+  readonly simPhoneNumber?: string;
+  readonly installedAt?: string;
 }
 
 export type DeviceField = keyof DeviceForm;
 
-const fieldOrder: readonly DeviceField[] = ['imei', 'model', 'simIccid', 'vehicleId', 'notes'];
-
-const required = (control: { value: unknown }) => (control.value ? null : { required: true });
+const fieldOrder: readonly DeviceField[] = [
+  'imei',
+  'model',
+  'options',
+  'simIccid',
+  'simPhoneNumber',
+  'firmwareVersion',
+  'installedAt',
+  'vehicleId',
+  'notes',
+];
 
 /**
  * Direct edit with read-only context: the device's live diagnostics sit above the installation
@@ -73,6 +87,11 @@ export class DeviceDrawer {
   readonly demo = input(false);
   /** The device to edit; null registers a new one. */
   readonly device = input<DeviceRow | null>(null);
+  readonly value = input<DeviceForm | null>(null);
+  readonly state = input<RouteDrawerState>('ready');
+  readonly loadError = input<string | null>(null);
+  readonly choicesError = input<string | null>(null);
+  readonly closeLink = input<readonly unknown[] | null>(null);
   readonly models = input<readonly string[]>([]);
   readonly vehicles = input<readonly { readonly id: string; readonly name: string }[]>([]);
   readonly dataAsOf = input.required<string>();
@@ -81,11 +100,22 @@ export class DeviceDrawer {
   readonly fieldErrors = input<Partial<Record<DeviceField, string>>>({});
   readonly save = output<DeviceForm>();
   readonly closed = output();
+  readonly retry = output();
+  readonly retryChoices = output();
 
   private readonly language = inject(UI_LANGUAGE);
   private readonly injector = inject(Injector);
   private readonly drawer = viewChild.required(RouteDrawer);
-  private readonly formElement = viewChild.required<ElementRef<HTMLFormElement>>('formElement');
+  private readonly formElement = viewChild<ElementRef<HTMLFormElement>>('formElement');
+  protected readonly multiplePt = computed(() => ({
+    ...selectMultiplePt,
+    label: {
+      'aria-multiselectable': null,
+      'aria-invalid': this.errorOf('options') ? 'true' : undefined,
+      'aria-describedby': this.describedBy('options'),
+    },
+  }));
+  protected readonly optionChoices = deviceOptions.map((value) => ({ value, label: value }));
   private readonly catalog = computed(() => devicesText(this.language()));
   protected readonly text = computed(() => this.catalog().drawer);
 
@@ -94,7 +124,24 @@ export class DeviceDrawer {
       nonNullable: true,
       validators: [textValidator(15, { required: true }), patternValidator(/^\d{15}$/)],
     }),
-    model: new FormControl<string | null>(null, required),
+    model: new FormControl<string | null>(null, (control) =>
+      this.demo() && !control.value ? { required: true } : null,
+    ),
+    options: new FormControl<readonly string[]>([], { nonNullable: true }),
+    firmwareVersion: new FormControl('', {
+      nonNullable: true,
+      validators: [textValidator(32), patternValidator(/^[0-9A-Za-z._-]{1,32}$/)],
+    }),
+    simPhoneNumber: new FormControl('', {
+      nonNullable: true,
+      validators: [textValidator(20), patternValidator(/^\+?[0-9]{6,19}$/)],
+    }),
+    installedAt: new FormControl('', {
+      nonNullable: true,
+      validators: patternValidator(
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/,
+      ),
+    }),
     simIccid: new FormControl('', {
       nonNullable: true,
       validators: patternValidator(/^\d{18,22}$/),
@@ -129,7 +176,8 @@ export class DeviceDrawer {
 
   constructor() {
     effect(() => {
-      const device = this.device();
+      const device = this.value() ?? this.device();
+      const value = this.value();
       untracked(() => {
         this.submitted = false;
         this.form.reset({
@@ -138,16 +186,29 @@ export class DeviceDrawer {
           simIccid: device?.simIccid ?? '',
           vehicleId: device?.vehicleId ?? null,
           notes: device?.notes ?? '',
+          options: value?.options ?? [],
+          firmwareVersion: value?.firmwareVersion ?? '',
+          simPhoneNumber: value?.simPhoneNumber ?? '',
+          installedAt: value?.installedAt ?? '',
         });
       });
+    });
+    effect(() => {
+      const errors = this.fieldErrors();
+      if (Object.keys(errors).length) {
+        afterNextRender(
+          () => {
+            this.focusInvalid();
+          },
+          { injector: this.injector },
+        );
+      }
     });
     lockWhileSaving(
       this.form,
       () => this.saving(),
       () => {
-        if (!focusFirstInvalid(this.formElement().nativeElement, fieldOrder, 'device-')) {
-          this.drawer().keepFocusInside();
-        }
+        this.focusInvalid();
       },
     );
   }
@@ -184,10 +245,11 @@ export class DeviceDrawer {
     this.submitted = true;
     this.form.markAllAsTouched();
     const value = this.form.getRawValue();
-    if (this.form.invalid || !value.model) {
+    this.form.controls.model.updateValueAndValidity();
+    if (this.form.invalid) {
       afterNextRender(
         () => {
-          focusFirstInvalid(this.formElement().nativeElement, fieldOrder, 'device-');
+          this.focusInvalid();
         },
         { injector: this.injector },
       );
@@ -195,14 +257,22 @@ export class DeviceDrawer {
     }
     this.save.emit({
       imei: value.imei.trim(),
-      model: value.model,
+      model: value.model ?? '',
       simIccid: value.simIccid.trim(),
       vehicleId: value.vehicleId,
       notes: value.notes.trim(),
+      options: value.options,
+      firmwareVersion: value.firmwareVersion.trim(),
+      simPhoneNumber: value.simPhoneNumber.trim(),
+      installedAt: value.installedAt.trim(),
     });
   }
 
   protected async requestClose(): Promise<void> {
+    if (this.closeLink() !== null) {
+      this.drawer().close();
+      return;
+    }
     if (await this.canLeave()) {
       this.closed.emit();
     }
@@ -210,5 +280,16 @@ export class DeviceDrawer {
 
   canLeave(): boolean | Promise<boolean> {
     return this.saving() ? false : this.drawer().confirmLeave(this.form.dirty);
+  }
+
+  markSaved(): void {
+    this.form.markAsPristine();
+  }
+
+  private focusInvalid(): void {
+    const element = this.formElement()?.nativeElement;
+    if (!element || !focusFirstInvalid(element, fieldOrder, 'device-')) {
+      this.drawer().keepFocusInside();
+    }
   }
 }

@@ -5,7 +5,6 @@ import type { StatusTone } from '../../../theme/status-tones';
 import type { FilterCondition, FilterField } from '../../../ui/filter-builder/filter-model';
 import { FilterBuilder } from '../../../ui/filter-builder/filter-builder';
 import {
-  displayTimeZone,
   FormatDateTimePipe,
   FormatDurationPipe,
   FormatNumberPipe,
@@ -29,12 +28,14 @@ import { TablePanel } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { toneSeverity } from '../../../ui/tones';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
+import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { scoreTone } from '../drivers/drivers-view';
 import { tripsText } from './i18n/messages';
 
 export type TripActionId = 'open' | 'vehicle';
 
 export interface TripEvent {
+  readonly id?: string;
   readonly at: string;
   readonly kind: string;
   readonly detail: string;
@@ -116,14 +117,28 @@ export class TripsView {
   readonly kpis = input<TripKpis | null>(null);
   readonly vehicles = input<readonly TripOption[]>([]);
   readonly drivers = input<readonly TripOption[]>([]);
+  readonly busy = input(false);
+  readonly searchError = input<string | null>(null);
+  readonly errorText = input<string | null>(null);
   readonly stateChange = output<ListQuery>();
   /** Row actions, with the ID of the trip. */
   readonly action = output<ListActionRequest<TripActionId>>();
   readonly retry = output();
 
+  protected readonly units = injectFleetFormat();
   private readonly language = inject(UI_LANGUAGE);
   private readonly sortReady = injectSortReady();
-  protected readonly text = computed(() => tripsText(this.language()));
+  protected readonly text = computed(() => {
+    const text = tripsText(this.language());
+    return {
+      ...text,
+      table: {
+        ...text.table,
+        distance: interpolate(text.table.distance, { unit: this.units.distanceUnit() }),
+        fuel: interpolate(text.table.fuel, { unit: this.units.volumeUnit() }),
+      },
+    };
+  });
   protected readonly description = computed(() =>
     interpolate(this.text().description, { branch: this.branchName() }),
   );
@@ -144,6 +159,7 @@ export class TripsView {
         type: 'enum',
         operators: ['isAnyOf', 'isNoneOf'],
         options: options(this.vehicles()),
+        maxValues: 100,
       },
       {
         key: 'driver',
@@ -151,6 +167,7 @@ export class TripsView {
         type: 'enum',
         operators: ['isAnyOf', 'isNoneOf', 'isEmpty'],
         options: options(this.drivers()),
+        maxValues: 100,
       },
       {
         key: 'startedAt',
@@ -164,8 +181,17 @@ export class TripsView {
         type: 'number',
         unit: 'km',
         operators: ['gt', 'lt', 'between'],
+        min: 0,
+        max: 5000,
       },
-      { key: 'score', label: text.filters.score, type: 'number', operators: ['lt', 'gt'] },
+      {
+        key: 'score',
+        label: text.filters.score,
+        type: 'number',
+        operators: ['lt', 'gt'],
+        min: 0,
+        max: 100,
+      },
       {
         key: 'hasEvents',
         label: text.filters.hasEvents,
@@ -225,6 +251,12 @@ export class TripsView {
   }
 
   protected changeSort(sort: NonNullable<ListQuery['sort']>): void {
+    if (
+      this.state().sort?.field === sort.field &&
+      this.state().sort?.direction === sort.direction
+    ) {
+      return;
+    }
     this.stateChange.emit({ ...this.state(), sort, page: 1 });
   }
 
@@ -254,7 +286,7 @@ export class TripsView {
   private toRecord(row: TripRow): ListRecord<TripActionId> {
     const label = interpolate(this.text().table.tripName, {
       plate: row.plate,
-      started: formatDateTime(row.startedAt, this.language(), displayTimeZone),
+      started: formatDateTime(row.startedAt, this.language(), this.units.preferences().timeZone),
     });
     return listRecord(this.actions(), row, row.id, label);
   }

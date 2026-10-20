@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test';
 import { join } from 'node:path';
 import { workspaceRoot } from '../graphql/contracts.mjs';
-import { chooseBranch, test } from './angular-fixture.mjs';
+import { chooseBranch, chooseLanguage, setDarkTheme, test } from './angular-fixture.mjs';
 
 test('shows reference labels and last-known summary and opens every location field in both themes and viewport sizes', async ({
   page,
@@ -52,21 +52,18 @@ test('shows reference labels and last-known summary and opens every location fie
       await expect
         .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
         .toBe(true);
-      await page.screenshot({
-        path: join(
-          workspaceRoot,
-          '.references/review',
-          `karma-location-${viewport.name}-${theme}.png`,
-        ),
-        fullPage: true,
-        animations: 'disabled',
-      });
-      await page
-        .getByRole('button', {
-          name: theme === 'light' ? 'Use dark theme' : 'Use light theme',
-          exact: true,
-        })
-        .click();
+      if (process.env.HOLITA_BROWSER_SCREENSHOTS === '1') {
+        await page.screenshot({
+          path: join(
+            workspaceRoot,
+            '.references/review',
+            `karma-location-${viewport.name}-${theme}.png`,
+          ),
+          fullPage: true,
+          animations: 'disabled',
+        });
+      }
+      await setDarkTheme(page, theme === 'light');
     }
   }
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -75,7 +72,7 @@ test('shows reference labels and last-known summary and opens every location fie
   expect(headers).toHaveLength(before);
   await page.reload();
   await expect(map).toBeVisible();
-  await page.getByRole('link', { name: 'Български', exact: true }).click();
+  await chooseLanguage(page, 'Български');
   await expect(page.getByRole('heading', { name: 'Местоположение', exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Към камиона', exact: true }).click();
   await expect(page.getByRole('link', { name: 'eData', exact: true })).toBeVisible();
@@ -157,7 +154,7 @@ test('navigates separate account menus, pages and searches the complete referenc
   await expect(rows).toContainText('Europe/Sofia');
   await page.reload();
   await expect(rows).toContainText('Europe/Sofia');
-  await page.getByRole('link', { name: 'Български', exact: true }).click();
+  await chooseLanguage(page, 'Български');
   await expect(page.getByRole('heading', { name: 'Часови зони', exact: true })).toBeVisible();
   await expect(rows).toContainText('Europe/Sofia');
   await expect(page.getByLabel('Търсене по ID или име', { exact: true })).toHaveValue(
@@ -172,21 +169,18 @@ test('navigates separate account menus, pages and searches the complete referenc
       await expect
         .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
         .toBe(true);
-      await page.screenshot({
-        path: join(
-          workspaceRoot,
-          '.references/review',
-          `karma-time-zones-${viewport.name}-${theme}.png`,
-        ),
-        fullPage: true,
-        animations: 'disabled',
-      });
-      await page
-        .getByRole('button', {
-          name: theme === 'light' ? 'Включи тъмна тема' : 'Включи светла тема',
-          exact: true,
-        })
-        .click();
+      if (process.env.HOLITA_BROWSER_SCREENSHOTS === '1') {
+        await page.screenshot({
+          path: join(
+            workspaceRoot,
+            '.references/review',
+            `karma-time-zones-${viewport.name}-${theme}.png`,
+          ),
+          fullPage: true,
+          animations: 'disabled',
+        });
+      }
+      await setDarkTheme(page, theme === 'light');
     }
   }
   await page.setViewportSize({ width: 1280, height: 900 });

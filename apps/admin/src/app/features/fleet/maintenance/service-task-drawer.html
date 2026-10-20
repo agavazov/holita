@@ -2,9 +2,20 @@
   [title]="title()"
   [saving]="saving()"
   [dirty]="dirty()"
-  [closeLink]="null"
+  [state]="state()"
+  [errorText]="loadError()"
+  [closeLink]="closeLink()"
+  (retry)="retry.emit()"
   (closeRequest)="requestClose()"
 >
+  @if (choicesError(); as error) {
+    <p-message severity="warn"
+      >{{ error }}
+      <button pButton type="button" severity="secondary" (click)="retryChoices.emit()">
+        {{ retryLabel() }}
+      </button></p-message
+    >
+  }
   @if (readOnly() && task(); as record) {
     <section class="app-form-section">
       <dl class="app-facts">
@@ -25,8 +36,8 @@
           <dd>{{ record.dueOn | holitaDate }}</dd>
         </div>
         <div>
-          <dt>{{ text().dueKm }}</dt>
-          <dd>{{ record.dueKm | holitaNumber }}</dd>
+          <dt>{{ dueOdometerLabel() }}</dt>
+          <dd>{{ units.distance(record.dueKm, false, 0) }}</dd>
         </div>
         <div class="app-facts--wide">
           <dt>{{ text().workshop }}</dt>
@@ -194,7 +205,7 @@
 
   <div drawerFooter class="app-drawer-actions">
     @if (readOnly()) {
-      <button pButton type="button" severity="secondary" [outlined]="true" (click)="requestClose()">
+      <button pButton type="button" severity="secondary" [outlined]="true" (click)="close()">
         {{ text().close }}
       </button>
     } @else {
@@ -204,7 +215,7 @@
         severity="secondary"
         [outlined]="true"
         [disabled]="saving()"
-        (click)="requestClose()"
+        (click)="close()"
       >
         {{ text().cancel }}
       </button>

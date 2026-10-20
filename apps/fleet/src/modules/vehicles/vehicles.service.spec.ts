@@ -8,7 +8,7 @@ import { EventsService } from '../events/events.service.js';
 import { ServiceTasksService } from '../service-tasks/service-tasks.service.js';
 import { TelemetryService } from '../telemetry/telemetry.service.js';
 import { classifyVehicleState, NO_FACTS } from '../telemetry/vehicle-state.js';
-import { type VehicleRow, VehiclesRepository } from './vehicles.repository.js';
+import { type VehicleListRow, type VehicleRow, VehiclesRepository } from './vehicles.repository.js';
 import { VehiclesService } from './vehicles.service.js';
 
 async function fieldErrors(action: Promise<unknown>): Promise<unknown> {
@@ -28,6 +28,7 @@ async function fieldErrors(action: Promise<unknown>): Promise<unknown> {
 
 describe('Vehicles validation and scope', () => {
   const list = jest.fn<VehiclesRepository['list']>();
+  const summary = jest.fn<VehiclesRepository['summary']>();
   const find = jest.fn<VehiclesRepository['find']>();
   const findGroup = jest.fn<VehiclesRepository['findGroup']>();
   const findDriver = jest.fn<VehiclesRepository['findDriver']>();
@@ -76,6 +77,14 @@ describe('Vehicles validation and scope', () => {
       ...overrides,
     };
   }
+  function listRow(overrides: Partial<VehicleListRow> = {}): VehicleListRow {
+    return {
+      ...row(),
+      state: classifyVehicleState(NO_FACTS, null),
+      openAlertCount: 0,
+      ...overrides,
+    };
+  }
   let service: VehiclesService;
   beforeEach(async () => {
     jest.resetAllMocks();
@@ -86,6 +95,7 @@ describe('Vehicles validation and scope', () => {
           provide: VehiclesRepository,
           useValue: {
             list,
+            summary,
             find,
             findGroup,
             findDriver,
@@ -103,7 +113,7 @@ describe('Vehicles validation and scope', () => {
       ],
     }).compile();
     service = module.get(VehiclesService);
-    list.mockResolvedValue({ items: [row()], total: 1 });
+    list.mockResolvedValue({ items: [listRow()], total: 1 });
     create.mockResolvedValue(row());
     update.mockResolvedValue(row());
     findGroup.mockResolvedValue({ id: groupId });
@@ -116,22 +126,15 @@ describe('Vehicles validation and scope', () => {
     nextForVehicles.mockResolvedValue(new Map());
   });
 
-  it('attaches state, open alerts and the next service to a page with three batched calls', async () => {
-    const first = row(),
-      second = row();
-    list.mockResolvedValue({ items: [first, second], total: 2 });
+  it('preserves scoped list snapshot state and alert counts while batching next service separately', async () => {
     const parked = {
       ...classifyVehicleState(NO_FACTS, null),
       activity: 'PARKED' as const,
       lastReportedAt: new Date('2026-10-18T06:00:00.000Z'),
     };
-    vehicleStates.mockResolvedValue(
-      new Map([
-        [first.id, parked],
-        [second.id, classifyVehicleState(NO_FACTS, null)],
-      ]),
-    );
-    openAlertCounts.mockResolvedValue(new Map([[second.id, 3]]));
+    const first = listRow({ state: parked, openAlertCount: 1 }),
+      second = listRow({ openAlertCount: 3 });
+    list.mockResolvedValue({ items: [first, second], total: 2 });
     const nextService = {
       id: randomUUID(),
       branchId: context.branchId,
@@ -159,12 +162,12 @@ describe('Vehicles validation and scope', () => {
       expect.objectContaining({ hasOpenAlerts: true }),
       { field: 'CREATED_AT', direction: 'DESC' },
     );
-    for (const batch of [vehicleStates, openAlertCounts, nextForVehicles]) {
-      expect(batch).toHaveBeenCalledTimes(1);
-      expect(batch).toHaveBeenCalledWith(scope, [first.id, second.id]);
-    }
+    expect(vehicleStates).not.toHaveBeenCalled();
+    expect(openAlertCounts).not.toHaveBeenCalled();
+    expect(nextForVehicles).toHaveBeenCalledTimes(1);
+    expect(nextForVehicles).toHaveBeenCalledWith(scope, [first.id, second.id]);
     expect(page.items).toMatchObject([
-      { id: first.id, state: { activity: 'PARKED' }, openAlertCount: 0, nextService },
+      { id: first.id, state: parked, openAlertCount: 1, nextService },
       {
         id: second.id,
         state: { activity: 'NO_DEVICE', fuelStatus: 'NO_DATA' },
@@ -173,9 +176,11 @@ describe('Vehicles validation and scope', () => {
       },
     ]);
     list.mockResolvedValue({ items: [], total: 0 });
-    vehicleStates.mockClear();
+    nextForVehicles.mockClear();
     await service.list(context, {});
     expect(vehicleStates).not.toHaveBeenCalled();
+    expect(openAlertCounts).not.toHaveBeenCalled();
+    expect(nextForVehicles).not.toHaveBeenCalled();
   });
 
   it('maps filters, tokens and sorting without checking Core', async () => {
@@ -250,6 +255,150 @@ describe('Vehicles validation and scope', () => {
       await expect(service.list(context, args)).rejects.toThrow(BadRequestException);
     }
     expect(list).not.toHaveBeenCalled();
+  });
+
+  it('preserves repeated conditions and validates their bounds before reading', async () => {
+    await service.list(context, {
+      filter: {
+        allOf: [
+          { activities: ['MOVING'] },
+          { excludedActivities: ['NO_DEVICE'] },
+          { modelYearAbove: 2020 },
+          { modelYearBelow: 2024 },
+          { makeContains: ' VOLVO ' },
+          { createdOnFrom: '2026-10-01', createdOnTo: '2026-10-18' },
+        ],
+      },
+      sort: { field: 'ODOMETER_KM', direction: 'DESC' },
+    });
+    expect(list).toHaveBeenCalledWith(
+      scope,
+      { offset: 0, limit: 20 },
+      expect.objectContaining({
+        allOf: [
+          expect.objectContaining({ activities: ['MOVING'] }),
+          expect.objectContaining({ excludedActivities: ['NO_DEVICE'] }),
+          expect.objectContaining({ modelYearAbove: 2020 }),
+          expect.objectContaining({ modelYearBelow: 2024 }),
+          expect.objectContaining({ makeContains: 'VOLVO' }),
+          expect.objectContaining({ createdOnFrom: '2026-10-01', createdOnTo: '2026-10-18' }),
+        ],
+      }),
+      { field: 'ODOMETER_KM', direction: 'DESC' },
+    );
+    list.mockClear();
+    for (const allOf of [
+      [{ modelYearAbove: 1900 }],
+      [{ odometerKmFrom: 20, odometerKmTo: 10 }],
+      [{ modelYearFrom: 2024, modelYearTo: 2020 }],
+      [{ makeContains: '\u0000' }],
+      [{ excludedGroupIds: ['bad'] }],
+      [{ statuses: [] }],
+      [{ createdOnAfter: '2026-02-30' }],
+      [{ createdOnFrom: '2026-10-18', createdOnTo: '2026-10-01' }],
+      Array.from({ length: 51 }, () => ({ hasDriver: true })),
+    ]) {
+      expect(await fieldErrors(service.list(context, { filter: { allOf } }))).toMatchObject([
+        { path: 'filter' },
+      ]);
+    }
+    expect(list).not.toHaveBeenCalled();
+  });
+
+  it('reports a driver deactivated before the locked create or update as unavailable', async () => {
+    const id = randomUUID();
+    find.mockResolvedValue(row({ id }));
+    create.mockResolvedValue(null);
+    update.mockResolvedValue(null);
+    const expected = [
+      { path: 'currentDriverId', message: 'Choose an active driver in this branch.' },
+    ];
+    expect(
+      await fieldErrors(
+        service.create(context, {
+          licensePlate: 'CA1234AB',
+          currentDriverId: driverId,
+        }),
+      ),
+    ).toEqual(expected);
+    expect(await fieldErrors(service.update(context, id, { currentDriverId: driverId }))).toEqual(
+      expected,
+    );
+    expect(requireBranch).toHaveBeenCalledTimes(1);
+    expect(vehicleStates).not.toHaveBeenCalled();
+  });
+
+  it('reads a whole-Branch summary with the verified scope and no Core lookup', async () => {
+    summary.mockResolvedValue({
+      dataAsOf: null,
+      inOperation: 4,
+      inWorkshop: 1,
+      moving: 2,
+      notReporting: 1,
+      openAlerts: 3,
+      lowFuel: 1,
+    });
+    await expect(service.summary(context)).resolves.toMatchObject({
+      inOperation: 4,
+      openAlerts: 3,
+    });
+    expect(summary).toHaveBeenCalledWith(scope);
+    expect(requireBranch).not.toHaveBeenCalled();
+    expect(() => service.summary({ ...context, branchId: 'bad' })).toThrow(BadRequestException);
+  });
+
+  it('returns mixed batch failures and continues submitted work in the captured scope', async () => {
+    const selected = [randomUUID(), randomUUID(), randomUUID()];
+    const [first = '', missing = '', last = ''] = selected;
+    deactivate.mockImplementation((_scope, id) =>
+      id === missing
+        ? Promise.reject(
+            new Prisma.PrismaClientKnownRequestError('missing', {
+              code: 'P2025',
+              clientVersion: '7',
+            }),
+          )
+        : Promise.resolve(row({ id, status: 'INACTIVE' })),
+    );
+    await expect(service.deactivateMany(context, selected)).resolves.toEqual({
+      succeededIds: [first, last],
+      failures: [{ id: missing, code: 'NOT_FOUND', message: 'Vehicle not found' }],
+    });
+    for (const id of selected) {
+      expect(deactivate).toHaveBeenCalledWith(scope, id);
+    }
+    remove.mockImplementation((_scope, id) =>
+      id === first
+        ? Promise.reject(
+            new Prisma.PrismaClientKnownRequestError('history', {
+              code: 'P2003',
+              clientVersion: '7',
+            }),
+          )
+        : Promise.resolve(row({ id })),
+    );
+    await expect(service.deleteMany(context, selected)).resolves.toEqual({
+      succeededIds: [missing, last],
+      failures: [
+        {
+          id: first,
+          code: 'CONFLICT',
+          message: 'Vehicle has devices or history; deactivate it instead.',
+        },
+      ],
+    });
+    for (const values of [
+      [],
+      [first, first],
+      ['bad'],
+      Array.from({ length: 101 }, () => randomUUID()),
+    ]) {
+      expect(await fieldErrors(service.deleteMany(context, values))).toMatchObject([
+        { path: 'ids' },
+      ]);
+    }
+    expect(remove).toHaveBeenCalledTimes(3);
+    expect(requireBranch).not.toHaveBeenCalled();
   });
 
   it('creates with defaults, normalised VIN and scoped relation checks, calling Core once', async () => {

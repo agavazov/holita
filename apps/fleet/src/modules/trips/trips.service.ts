@@ -3,8 +3,10 @@ import type { DataWindow } from '../../clock/fleet-clock.js';
 import { OPEN_TRIP_MAX_HOURS } from '../../fleet-thresholds.js';
 import type {
   FleetTrip,
+  FleetTripDrivingEvent,
   FleetTripPage,
   FleetTripSortField,
+  FleetTripSummary,
   QueryFleetTripsArgs,
 } from '../../generated/graphql/types.js';
 import type { RequestContext } from '../../graphql/request-context.js';
@@ -24,6 +26,7 @@ import {
 } from '../../validation.js';
 import { EventsService } from '../events/events.service.js';
 import { TelemetryService } from '../telemetry/telemetry.service.js';
+import { tripConditions } from './trip-filter.js';
 import {
   type DriverScore,
   type TripCriteria,
@@ -31,7 +34,12 @@ import {
   TripsRepository,
 } from './trips.repository.js';
 
-const SORT_FIELDS: readonly FleetTripSortField[] = ['STARTED_AT', 'DISTANCE_KM', 'DRIVING_SCORE'];
+const SORT_FIELDS: readonly FleetTripSortField[] = [
+  'STARTED_AT',
+  'DISTANCE_KM',
+  'DRIVING_SCORE',
+  'DURATION_SECONDS',
+];
 const HOUR_MS = 3_600_000;
 
 /** Whole seconds between start and end; null without an end. */
@@ -44,7 +52,7 @@ export function tripDurationSeconds(trip: {
     : Math.floor((trip.endedAt.getTime() - trip.startedAt.getTime()) / 1000);
 }
 
-/** No end and started within `OPEN_TRIP_MAX_HOURS` before the data clock. */
+/** No end and started in `OPEN_TRIP_MAX_HOURS` up to and including the data clock. */
 export function tripInProgress(
   trip: { startedAt: Date; endedAt: Date | null },
   asOf: Date | null,
@@ -52,11 +60,16 @@ export function tripInProgress(
   return (
     trip.endedAt === null &&
     asOf !== null &&
-    trip.startedAt.getTime() >= asOf.getTime() - OPEN_TRIP_MAX_HOURS * HOUR_MS
+    trip.startedAt.getTime() >= asOf.getTime() - OPEN_TRIP_MAX_HOURS * HOUR_MS &&
+    trip.startedAt.getTime() <= asOf.getTime()
   );
 }
 
-function toTrip(row: TripRow, asOf: Date | null, maneuverCount: number): FleetTrip {
+function toTrip(
+  row: TripRow,
+  asOf: Date | null,
+  drivingEvents: FleetTripDrivingEvent[],
+): FleetTrip {
   return {
     id: row.id,
     branchId: row.branchId,
@@ -83,7 +96,8 @@ function toTrip(row: TripRow, asOf: Date | null, maneuverCount: number): FleetTr
     fuelUsedL: row.fuelUsedL,
     drivingScore: row.drivingScore,
     ecoScore: row.ecoScore,
-    maneuverCount,
+    maneuverCount: drivingEvents.length,
+    drivingEvents,
     inProgress: tripInProgress(row, asOf),
     createdAt: row.createdAt,
   };
@@ -118,6 +132,7 @@ export class TripsService {
       scored: booleanFilter(filter?.scored, 'scored'),
       drivingScoreBelow: numberFilter(filter?.drivingScoreBelow, 'drivingScoreBelow', 0, 100),
       hasEnd: booleanFilter(filter?.hasEnd, 'hasEnd'),
+      ...(filter?.allOf == null ? {} : { allOf: tripConditions(filter.allOf) }),
     };
     const sort = {
       field: sortField(args.sort?.field, SORT_FIELDS, 'STARTED_AT'),
@@ -125,12 +140,16 @@ export class TripsService {
     };
     const page = await this.trips.list(scope, { offset, limit }, criteria, sort);
     return {
-      items: await this.complete(scope, page.items),
+      items: page.items.map((row) => toTrip(row, page.dataAsOf, row.drivingEvents)),
       total: page.total,
       offset,
       limit,
       totalDistanceKm: page.totalDistanceKm,
     };
+  }
+
+  summary(context: RequestContext): Promise<FleetTripSummary> {
+    return this.trips.summary(requireScope(context));
   }
 
   async find(context: RequestContext, id: string): Promise<FleetTrip> {
@@ -159,18 +178,18 @@ export class TripsService {
     return this.trips.driverScore(scope, driverId, window);
   }
 
-  /** Attaches `inProgress` (one clock query) and maneuver counts (one grouped query). */
+  /** Attaches the data clock and chronological maneuver projections in two batched reads. */
   private async complete(scope: FleetScope, rows: readonly TripRow[]): Promise<FleetTrip[]> {
     if (!rows.length) {
       return [];
     }
-    const [asOf, maneuvers] = await Promise.all([
+    const [asOf, drivingEvents] = await Promise.all([
       this.telemetry.asOf(scope),
-      this.events.maneuverCountsByTrip(
+      this.events.drivingEventsByTrip(
         scope,
-        rows.map((row) => ({ vehicleId: row.vehicleId, tripId: row.id })),
+        rows.map((row) => ({ id: row.id, vehicleId: row.vehicleId })),
       ),
     ]);
-    return rows.map((row) => toTrip(row, asOf, maneuvers.get(row.id) ?? 0));
+    return rows.map((row) => toTrip(row, asOf, drivingEvents.get(row.id) ?? []));
   }
 }

@@ -26,13 +26,9 @@ import { InputNumber } from 'primeng/inputnumber';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Textarea } from 'primeng/textarea';
-import { RouteDrawer } from '../../../ui/drawer/route-drawer';
+import { RouteDrawer, type RouteDrawerState } from '../../../ui/drawer/route-drawer';
 import { FormField } from '../../../ui/form-field/form-field';
-import {
-  FormatDateOnlyPipe,
-  FormatMoneyPipe,
-  FormatNumberPipe,
-} from '../../../ui/format/format.pipes';
+import { FormatDateOnlyPipe, FormatMoneyPipe } from '../../../ui/format/format.pipes';
 import { fromDateOnly, toDateOnly } from '../../../ui/format/zoned-time';
 import { focusFirstInvalid } from '../../../ui/forms/focus';
 import { datePickerInputPt, innerInputPt } from '../../../ui/forms/inner-input-pt';
@@ -45,7 +41,9 @@ import {
 } from '../../../ui/forms/validators';
 import { interpolate } from '../../../ui/i18n/messages';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
+import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { maintenanceText } from './i18n/messages';
+import { serviceEuroCents } from './service-money';
 
 /** Presentation context for completing one planned task, separate from live telemetry. */
 export interface ServiceCompletionTask {
@@ -111,37 +109,49 @@ const nextSchedule: ValidatorFn = (group) => {
     FormField,
     FormatDateOnlyPipe,
     FormatMoneyPipe,
-    FormatNumberPipe,
   ],
   templateUrl: './service-completion-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ServiceCompletionDrawer {
-  readonly task = input.required<ServiceCompletionTask>();
+  readonly task = input<ServiceCompletionTask | null>(null);
   readonly completed = input<ServiceCompletionForm | null>(null);
   /** The service business date, independent of the telemetry data clock. */
-  readonly businessDate = input.required<string>();
+  readonly businessDate = input<string | null>(null);
   readonly saving = input(false);
   readonly saveError = input<string | null>(null);
+  readonly state = input<RouteDrawerState>('ready');
+  readonly loadError = input<string | null>(null);
+  readonly closeLink = input<readonly unknown[] | null>(null);
+  readonly allowNext = input(true);
+  readonly retry = output();
   readonly fieldErrors = input<Partial<Record<ServiceCompletionField, string>>>({});
   readonly save = output<ServiceCompletionForm>();
   readonly closed = output();
 
+  protected readonly units = injectFleetFormat();
   private readonly language = inject(UI_LANGUAGE);
   private readonly injector = inject(Injector);
   private readonly drawer = viewChild.required(RouteDrawer);
   private readonly formElement = viewChild<ElementRef<HTMLFormElement>>('formElement');
   protected readonly text = computed(() => maintenanceText(this.language()).completion);
-  protected readonly title = computed(() =>
-    interpolate(this.completed() ? this.text().recordTitle : this.text().title, {
-      task: this.task().kind,
+  protected readonly completedOdometerLabel = computed(() =>
+    interpolate(this.text().completedOdometerDisplay, {
+      unit: this.units.distanceUnit(),
     }),
+  );
+  protected readonly title = computed(() =>
+    this.task()
+      ? interpolate(this.completed() ? this.text().recordTitle : this.text().title, {
+          task: this.task()?.kind ?? '',
+        })
+      : this.text().loadingTitle,
   );
   protected readonly form = new FormGroup(
     {
       completedOn: new FormControl<Date | null>(null, [
         required,
-        dateOnlyValidator('2000-01-01', () => this.businessDate()),
+        dateOnlyValidator('2000-01-01', () => this.businessDate() ?? ''),
       ]),
       completedOdometerKm: new FormControl<number | null>(null, integerValidator(0, 9_999_999)),
       cost: new FormControl<number | null>(null, decimalValidator(0, 1_000_000, 0.01)),
@@ -162,6 +172,9 @@ export class ServiceCompletionDrawer {
   });
   protected readonly hasNext = computed(() => {
     this.events();
+    if (!this.allowNext()) {
+      return false;
+    }
     const value = this.form.getRawValue();
     return value.nextDueOn !== null || value.nextDueOdometerKm !== null;
   });
@@ -170,6 +183,9 @@ export class ServiceCompletionDrawer {
     effect(() => {
       const task = this.task();
       const today = this.businessDate();
+      if (!task || !today) {
+        return;
+      }
       untracked(() => {
         this.submitted = false;
         this.form.reset({
@@ -184,6 +200,15 @@ export class ServiceCompletionDrawer {
           nextTitle: '',
         });
       });
+    });
+    effect(() => {
+      if (!this.allowNext()) {
+        untracked(() => {
+          this.form.controls.nextDueOn.reset(null);
+          this.form.controls.nextDueOdometerKm.reset(null);
+          this.form.controls.nextTitle.reset('');
+        });
+      }
     });
     let locked = false;
     effect(() => {
@@ -207,7 +232,10 @@ export class ServiceCompletionDrawer {
       });
     });
     effect(() => {
-      this.fieldErrors();
+      const errors = this.fieldErrors();
+      if (this.state() !== 'ready' || !Object.keys(errors).length) {
+        return;
+      }
       untracked(() => {
         afterNextRender(
           () => {
@@ -252,7 +280,7 @@ export class ServiceCompletionDrawer {
   }
 
   protected submit(): void {
-    if (this.saving() || this.completed()) {
+    if (this.saving() || this.completed() || this.state() !== 'ready' || !this.task()) {
       return;
     }
     if (!this.hasNext()) {
@@ -261,6 +289,10 @@ export class ServiceCompletionDrawer {
     this.submitted = true;
     this.form.markAllAsTouched();
     const value = this.form.getRawValue();
+    const costCents = value.cost === null ? null : serviceEuroCents(String(value.cost));
+    if (value.cost !== null && costCents === null) {
+      this.form.controls.cost.setErrors({ step: { step: 0.01 } });
+    }
     if (this.form.invalid || !value.completedOn) {
       afterNextRender(
         () => {
@@ -273,7 +305,7 @@ export class ServiceCompletionDrawer {
     this.save.emit({
       completedOn: toDateOnly(value.completedOn),
       completedOdometerKm: value.completedOdometerKm,
-      costCents: value.cost === null ? null : Math.round(value.cost * 100),
+      costCents,
       workshop: value.workshop.trim(),
       replacedParts: value.replacedParts.trim(),
       notes: value.notes.trim(),
@@ -301,5 +333,11 @@ export class ServiceCompletionDrawer {
 
   canLeave(): boolean | Promise<boolean> {
     return this.saving() ? false : this.drawer().confirmLeave(this.dirty());
+  }
+  protected close(): void {
+    this.drawer().close();
+  }
+  markSaved(): void {
+    this.form.markAsPristine();
   }
 }

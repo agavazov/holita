@@ -28,7 +28,7 @@ import { confirmDialogPt, confirmDiscard } from '../../../ui/confirm';
 import { FormField } from '../../../ui/form-field/form-field';
 import { focusFirstInvalid } from '../../../ui/forms/focus';
 import { innerInputPt } from '../../../ui/forms/inner-input-pt';
-import { lockWhileSaving } from '../../../ui/forms/saving';
+import { EmptyState } from '../../../ui/empty-state/empty-state';
 import { integerValidator, textValidator, validationMessage } from '../../../ui/forms/validators';
 import { interpolate } from '../../../ui/i18n/messages';
 import { PageHeader } from '../../../ui/page-header/page-header';
@@ -51,7 +51,13 @@ export interface GeneralSettings {
 export type GeneralSettingsField = keyof GeneralSettings;
 
 const numberFields = ['lowFuelPct', 'notReportingHours', 'speedLimitKph'] as const;
-const fieldOrder: readonly GeneralSettingsField[] = ['name', ...numberFields];
+const fieldOrder: readonly GeneralSettingsField[] = [
+  'name',
+  'timeZone',
+  'distanceUnit',
+  'volumeUnit',
+  ...numberFields,
+];
 const timeZones = ['Europe/Sofia', 'Europe/Bucharest', 'Europe/Athens', 'Europe/Belgrade'];
 
 /**
@@ -72,6 +78,7 @@ const timeZones = ['Europe/Sofia', 'Europe/Bucharest', 'Europe/Athens', 'Europe/
     Tag,
     FormField,
     PageHeader,
+    EmptyState,
   ],
   templateUrl: './general-settings-view.html',
   providers: [ConfirmationService],
@@ -80,12 +87,19 @@ const timeZones = ['Europe/Sofia', 'Europe/Bucharest', 'Europe/Athens', 'Europe/
 })
 export class GeneralSettingsView {
   readonly demo = input(false);
+  readonly notificationsUnavailable = input(false);
   readonly branchName = input.required<string>();
-  readonly settings = input.required<GeneralSettings>();
+  readonly settings = input<GeneralSettings | null>(null);
+  readonly state = input<'loading' | 'error' | 'ready'>('ready');
+  readonly loadError = input<string | null>(null);
   readonly saving = input(false);
   readonly saveError = input<string | null>(null);
+  /** Update the persisted baseline without replacing a failed, editable draft. */
+  readonly retainDraft = input(false);
+  readonly fieldErrors = input<Partial<Record<GeneralSettingsField, string>>>({});
   readonly save = output<GeneralSettings>();
   readonly discarded = output();
+  readonly retry = output();
 
   private readonly language = inject(UI_LANGUAGE);
   private readonly injector = inject(Injector);
@@ -147,27 +161,94 @@ export class GeneralSettingsView {
     ),
     speedLimitKph: innerInputPt('settings-speedLimitKph', !!this.errorOf('speedLimitKph')),
   }));
+  protected readonly selectPt = computed(() => ({
+    timeZone: {
+      label: {
+        'aria-invalid': this.errorOf('timeZone') ? 'true' : undefined,
+        'aria-describedby': 'settings-timeZone-hint settings-timeZone-error',
+      },
+    },
+    distanceUnit: {
+      label: {
+        'aria-invalid': this.errorOf('distanceUnit') ? 'true' : undefined,
+        'aria-describedby': 'settings-distanceUnit-hint settings-distanceUnit-error',
+      },
+    },
+    volumeUnit: {
+      label: {
+        'aria-invalid': this.errorOf('volumeUnit') ? 'true' : undefined,
+        'aria-describedby': 'settings-volumeUnit-hint settings-volumeUnit-error',
+      },
+    },
+  }));
 
   constructor() {
     effect(() => {
       const settings = this.settings();
+      if (settings && !this.retainDraft()) {
+        untracked(() => {
+          this.reset(settings);
+        });
+      }
+    });
+    let locked = false;
+    effect(() => {
+      const busy = this.saving() || this.state() !== 'ready';
+      const unavailable = this.notificationsUnavailable();
       untracked(() => {
-        this.reset(settings);
+        if (busy) {
+          this.form.disable();
+        } else {
+          if (locked) {
+            this.form.enable();
+          }
+          for (const name of ['criticalAlerts', 'dailySummary', 'documentReminders'] as const) {
+            const control = this.form.controls[name];
+            if (unavailable) {
+              control.disable();
+            } else {
+              control.enable();
+            }
+          }
+          if (locked) {
+            afterNextRender(
+              () => {
+                if (
+                  !focusFirstInvalid(this.formElement().nativeElement, fieldOrder, 'settings-') &&
+                  (!this.document.activeElement ||
+                    this.document.activeElement === this.document.body)
+                ) {
+                  this.header().focusTitle();
+                }
+              },
+              { injector: this.injector },
+            );
+          }
+        }
+        locked = busy;
       });
     });
-    lockWhileSaving(
-      this.form,
-      () => this.saving(),
-      () => {
-        if (!this.document.activeElement || this.document.activeElement === this.document.body) {
-          this.header().focusTitle();
-        }
-      },
-    );
+    effect(() => {
+      if (this.state() !== 'ready' || !Object.keys(this.fieldErrors()).length) {
+        return;
+      }
+      afterNextRender(
+        () => {
+          if (this.state() === 'ready') {
+            focusFirstInvalid(this.formElement().nativeElement, fieldOrder, 'settings-');
+          }
+        },
+        { injector: this.injector },
+      );
+    });
   }
 
   protected errorOf(name: GeneralSettingsField): string | null {
     this.events();
+    const server = this.fieldErrors()[name];
+    if (server) {
+      return server;
+    }
     const control = this.form.controls[name];
     if (!control.invalid || (!control.touched && !this.submitted)) {
       return null;
@@ -198,13 +279,16 @@ export class GeneralSettingsView {
     if (this.saving()) {
       return;
     }
-    this.reset(this.settings());
+    const settings = this.settings();
+    if (settings) {
+      this.reset(settings);
+    }
     this.discarded.emit();
     this.header().focusTitle();
   }
 
   protected submit(): void {
-    if (this.saving()) {
+    if (this.saving() || this.state() !== 'ready' || !this.settings()) {
       return;
     }
     this.submitted = true;

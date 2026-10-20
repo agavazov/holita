@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import type { DataWindow } from '../../clock/fleet-clock.js';
 import { PrismaService } from '../../database/prisma.service.js';
-import { literalContains, prismaDirection } from '../../database/search.js';
+import { literalContains, nullsLast, prismaDirection } from '../../database/search.js';
+import { FleetEventKind as EventKinds } from '../../generated/prisma/enums.js';
 import type { FleetEventSortField } from '../../generated/graphql/types.js';
 import type {
   FleetAlertStatus,
@@ -10,6 +11,7 @@ import type {
 } from '../../generated/prisma/enums.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import type { FleetScope, SortDirection } from '../../validation.js';
+import type { EventConditionCriteria } from './event-filter.js';
 
 /** Stored vehicle and driver references are loaded with every event (no per-row query). */
 const eventInclude = {
@@ -36,6 +38,7 @@ export interface EventCriteria {
   tripIds: string[] | undefined;
   occurredFrom: Date | undefined;
   occurredTo: Date | undefined;
+  allOf?: EventConditionCriteria[] | undefined;
 }
 
 export interface EventSort {
@@ -54,38 +57,70 @@ function eventWhere(scope: FleetScope, criteria: EventCriteria): Prisma.FleetEve
         { driver: { lastName: contains } },
         { address: contains },
         { troubleCode: contains },
+        { details: contains },
+        { remark: contains },
+        {
+          kind: {
+            in: Object.values(EventKinds).filter(
+              (kind) =>
+                kind.replaceAll('_', ' ').toLowerCase().includes(token.toLowerCase()) ||
+                kind.toLowerCase().includes(token.toLowerCase()),
+            ),
+          },
+        },
       ],
     };
   });
   if (criteria.ids) {
     conditions.push({ id: { in: criteria.ids } });
   }
-  if (criteria.actionable !== undefined) {
-    conditions.push({ alertStatus: criteria.actionable ? { not: null } : null });
-  }
-  if (criteria.alertStatuses) {
-    conditions.push({ alertStatus: { in: criteria.alertStatuses } });
-  }
-  if (criteria.severities) {
-    conditions.push({ severity: { in: criteria.severities } });
-  }
-  if (criteria.kinds) {
-    conditions.push({ kind: { in: criteria.kinds } });
-  }
-  if (criteria.vehicleIds) {
-    conditions.push({ vehicleId: { in: criteria.vehicleIds } });
-  }
-  if (criteria.driverIds) {
-    conditions.push({ driverId: { in: criteria.driverIds } });
-  }
-  if (criteria.tripIds) {
-    conditions.push({ tripId: { in: criteria.tripIds } });
-  }
-  if (criteria.occurredFrom) {
-    conditions.push({ occurredAt: { gte: criteria.occurredFrom } });
-  }
-  if (criteria.occurredTo) {
-    conditions.push({ occurredAt: { lt: criteria.occurredTo } });
+  for (const condition of [criteria, ...(criteria.allOf ?? [])]) {
+    if (condition.actionable !== undefined && condition.actionable !== null) {
+      conditions.push({ alertStatus: condition.actionable ? { not: null } : null });
+    }
+    if (condition.alertStatuses) {
+      conditions.push({ alertStatus: { in: condition.alertStatuses } });
+    }
+    if (condition.severities) {
+      conditions.push({ severity: { in: condition.severities } });
+    }
+    if (condition.kinds) {
+      conditions.push({ kind: { in: condition.kinds } });
+    }
+    if (condition.vehicleIds) {
+      conditions.push({ vehicleId: { in: condition.vehicleIds } });
+    }
+    if (condition.driverIds) {
+      conditions.push({ driverId: { in: condition.driverIds } });
+    }
+    if (condition.tripIds) {
+      conditions.push({ tripId: { in: condition.tripIds } });
+    }
+    if (condition.occurredFrom) {
+      conditions.push({ occurredAt: { gte: condition.occurredFrom } });
+    }
+    if (condition.occurredTo) {
+      conditions.push({ occurredAt: { lt: condition.occurredTo } });
+    }
+    if ('excludedAlertStatuses' in condition && condition.excludedAlertStatuses) {
+      conditions.push({
+        OR: [{ alertStatus: null }, { alertStatus: { notIn: condition.excludedAlertStatuses } }],
+      });
+    }
+    if ('excludedSeverities' in condition && condition.excludedSeverities) {
+      conditions.push({ severity: { notIn: condition.excludedSeverities } });
+    }
+    if ('excludedKinds' in condition && condition.excludedKinds) {
+      conditions.push({ kind: { notIn: condition.excludedKinds } });
+    }
+    if ('excludedVehicleIds' in condition && condition.excludedVehicleIds) {
+      conditions.push({ vehicleId: { notIn: condition.excludedVehicleIds } });
+    }
+    if ('excludedDriverIds' in condition && condition.excludedDriverIds) {
+      conditions.push({
+        OR: [{ driverId: null }, { driverId: { notIn: condition.excludedDriverIds } }],
+      });
+    }
   }
   return { tenantId: scope.tenantId, branchId: scope.branchId, AND: conditions };
 }
@@ -106,6 +141,7 @@ export class EventsRepository {
     const ordering: Record<FleetEventSortField, Prisma.FleetEventOrderByWithRelationInput[]> = {
       OCCURRED_AT: [{ occurredAt: direction }],
       SEVERITY: [{ severity: direction }, { occurredAt: 'desc' }],
+      ALERT_STATUS: [{ alertStatus: nullsLast(sort.direction) }, { occurredAt: 'desc' }],
     };
     const [items, total] = await this.prisma.client.$transaction(
       [
@@ -222,6 +258,31 @@ export class EventsRepository {
     return rows.flatMap((row) =>
       row.tripId === null ? [] : [{ tripId: row.tripId, count: row._count._all }],
     );
+  }
+
+  /** One page-batched timeline query with explicit (trip, vehicle) scope. */
+  drivingEventsByTrip(
+    scope: FleetScope,
+    trips: readonly { readonly id: string; readonly vehicleId: string }[],
+    kinds: readonly FleetEventKind[],
+  ) {
+    return this.prisma.client.fleetEvent.findMany({
+      where: {
+        tenantId: scope.tenantId,
+        branchId: scope.branchId,
+        OR: trips.map((trip) => ({ tripId: trip.id, vehicleId: trip.vehicleId })),
+        kind: { in: [...kinds] },
+      },
+      select: {
+        tripId: true,
+        id: true,
+        occurredAt: true,
+        kind: true,
+        severity: true,
+        details: true,
+      },
+      orderBy: [{ occurredAt: 'asc' }, { id: 'asc' }],
+    });
   }
 
   /** Events of `kinds` per driver with `occurredAt` in `(start, end]`. */

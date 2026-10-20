@@ -42,7 +42,6 @@ describe('holita preset', () => {
       'iconfield',
       'inputnumber',
       'inputtext',
-      'listbox',
       'menu',
       'message',
       'metergroup',

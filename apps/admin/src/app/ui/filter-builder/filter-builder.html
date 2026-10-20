@@ -36,6 +36,7 @@
       [outlined]="true"
       aria-haspopup="dialog"
       [attr.aria-expanded]="open() && !editingId()"
+      [disabled]="!canAdd()"
       (click)="openNew($event)"
     >
       <svg data-p-icon="filter" aria-hidden="true"></svg>
@@ -128,7 +129,16 @@
       @case ('text') {
         <div class="filter-builder__editor-field">
           <label [for]="id + '-value'">{{ text().value }}</label>
-          <input pInputText [id]="id + '-value'" formControlName="text" [fluid]="true" />
+          <input
+            pInputText
+            [id]="id + '-value'"
+            formControlName="text"
+            [fluid]="true"
+            [attr.maxlength]="textMaxLength()"
+            [invalid]="!!valueError()"
+            [attr.aria-invalid]="valueError() ? 'true' : null"
+            [attr.aria-describedby]="valueError() ? id + '-value-error' : null"
+          />
         </div>
       }
       @case ('enum-one') {
@@ -170,6 +180,10 @@
           <p-inputnumber
             [inputId]="id + '-value'"
             formControlName="from"
+            [pt]="numberPt()"
+            [maxFractionDigits]="field()?.decimalPlaces"
+            [invalid]="!!valueError()"
+            [ariaDescribedBy]="valueError() ? id + '-value-error' : undefined"
             [suffix]="field()?.unit ? ' ' + field()?.unit : ''"
             [fluid]="true"
           />
@@ -182,6 +196,10 @@
             <p-inputnumber
               [inputId]="id + '-from'"
               formControlName="from"
+              [pt]="numberPt()"
+              [maxFractionDigits]="field()?.decimalPlaces"
+              [invalid]="!!valueError()"
+              [ariaDescribedBy]="valueError() ? id + '-value-error' : undefined"
               [suffix]="field()?.unit ? ' ' + field()?.unit : ''"
               [fluid]="true"
             />
@@ -191,6 +209,10 @@
             <p-inputnumber
               [inputId]="id + '-to'"
               formControlName="to"
+              [pt]="numberPt()"
+              [maxFractionDigits]="field()?.decimalPlaces"
+              [invalid]="!!valueError()"
+              [ariaDescribedBy]="valueError() ? id + '-value-error' : undefined"
               [suffix]="field()?.unit ? ' ' + field()?.unit : ''"
               [fluid]="true"
             />
@@ -239,6 +261,11 @@
           </div>
         </div>
       }
+    }
+    @if (valueError(); as error) {
+      <p-message [id]="id + '-value-error'" severity="error" variant="simple" size="small">{{
+        error
+      }}</p-message>
     }
     <div class="filter-builder__editor-actions">
       <button type="button" pButton severity="secondary" [text]="true" (click)="cancel()">

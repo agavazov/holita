@@ -8,6 +8,7 @@ import { FleetClock } from '../src/clock/fleet-clock.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { CoreClient } from '../src/integrations/core/core.client.js';
 import { createTestDatabase } from './test-database.js';
+import { afterLockedDriverChange } from './driver-row-lock.js';
 
 const tenantId = '01000000-0000-4000-8000-000000000001';
 // 22:30 UTC on 17 October is the business date 18 October 2026 in Europe/Sofia.
@@ -245,6 +246,48 @@ describe('Driver GraphQL with PostgreSQL', () => {
     expect(await query(remove, { id: driver.id }, branchId)).toEqual({
       data: { deleteFleetDriver: { id: driver.id } },
     });
+  });
+
+  it('rejects deactivation when an assignment commits while waiting for the Driver lock', async () => {
+    const branchId = randomUUID();
+    const driver = await database.client.driver.create({
+      data: { tenantId, branchId, firstName: 'A', lastName: 'Concurrent assignment' },
+    });
+    const response = await afterLockedDriverChange(
+      database,
+      { tenantId, branchId },
+      driver.id,
+      (transaction) =>
+        transaction.vehicle.create({
+          data: { tenantId, branchId, licensePlate: 'CB 3003 AX', currentDriverId: driver.id },
+        }),
+      () => query(update, { id: driver.id, input: { status: 'INACTIVE' } }, branchId),
+      1,
+    );
+    expect(response).toMatchObject({
+      errors: [
+        {
+          extensions: {
+            code: 'BAD_USER_INPUT',
+            fieldErrors: [
+              { path: 'status', message: 'Unassign the driver from its vehicles first.' },
+            ],
+          },
+        },
+      ],
+    });
+    expect(
+      await database.client.driver.findUniqueOrThrow({
+        where: { id: driver.id, tenantId, branchId },
+        select: { status: true },
+      }),
+    ).toEqual({ status: 'ACTIVE' });
+    expect(
+      await database.client.vehicle.count({
+        where: { tenantId, branchId, currentDriverId: driver.id },
+      }),
+    ).toBe(1);
+    expect(requireBranch).not.toHaveBeenCalled();
   });
 
   it('filters documents at the fixed business date, searches names and sorts in scope', async () => {

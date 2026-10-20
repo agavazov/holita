@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { businessDate, FleetClock } from '../../clock/fleet-clock.js';
-import { BUSINESS_TIME_ZONE } from '../../fleet-thresholds.js';
 import type {
   FleetDataClock,
   FleetStatusSample,
@@ -19,13 +18,33 @@ import {
   requireScope,
   uuid,
 } from '../../validation.js';
-import { type SampleRow, TelemetryRepository } from './telemetry.repository.js';
+import {
+  type OdometerReading,
+  type SampleRow,
+  TelemetryRepository,
+} from './telemetry.repository.js';
 import { classifyVehicleState, NO_FACTS } from './vehicle-state.js';
+import { SettingsService } from '../settings/settings.service.js';
 
 /** Most samples one series returns; the newest are kept. */
 export const MAX_SERIES_SAMPLES = 2000;
 const MAX_SERIES_DAYS = 7;
 const DAY_MS = 86_400_000;
+const VEHICLE_REQUIRED = 'Choose a vehicle in this branch that is not inactive.';
+
+function requireAfterLatest(
+  latest: OdometerReading | null,
+  reading: { odometerKm: number; recordedAt: Date },
+): void {
+  if (latest?.odometerKm != null) {
+    if (reading.recordedAt.getTime() <= latest.recordedAt.getTime()) {
+      invalid('recordedAt', 'Use a time after the latest odometer reading of this vehicle.');
+    }
+    if (reading.odometerKm < latest.odometerKm) {
+      invalid('odometerKm', 'The odometer cannot be lower than the latest reading.');
+    }
+  }
+}
 
 function toSample(row: SampleRow): FleetStatusSample {
   return row;
@@ -42,14 +61,19 @@ export class TelemetryService {
     private readonly telemetry: TelemetryRepository,
     private readonly core: CoreClient,
     private readonly clock: FleetClock,
+    private readonly settings: SettingsService,
   ) {}
 
   async dataClock(context: RequestContext): Promise<FleetDataClock> {
     const scope = requireScope(context);
+    const [asOf, settings] = await Promise.all([
+      this.telemetry.asOf(scope),
+      this.settings.read(scope),
+    ]);
     return {
-      asOf: await this.telemetry.asOf(scope),
-      businessDate: businessDate(this.clock.now()),
-      timeZone: BUSINESS_TIME_ZONE,
+      asOf,
+      businessDate: businessDate(this.clock.now(), settings.timeZone),
+      timeZone: settings.timeZone,
     };
   }
 
@@ -88,7 +112,8 @@ export class TelemetryService {
 
   /**
    * Stores an operator odometer reading (source MANUAL). It never moves the data clock or the
-   * vehicle state; it only becomes the latest odometer when it is the newest reading.
+   * vehicle activity. Readings of one vehicle are rechecked and stored one at a time under
+   * its row lock; an overtaken reading receives the same validation error as a later request.
    */
   async recordOdometerReading(
     context: RequestContext,
@@ -100,7 +125,7 @@ export class TelemetryService {
     const recordedAt = dateTime(input.recordedAt, 'recordedAt');
     const vehicle = await this.telemetry.findVehicle(scope, vehicleId);
     if (!vehicle || vehicle.status === 'INACTIVE') {
-      invalid('vehicleId', 'Choose a vehicle in this branch that is not inactive.');
+      invalid('vehicleId', VEHICLE_REQUIRED);
     }
     const now = this.clock.now();
     const asOf = await this.telemetry.asOf(scope);
@@ -108,24 +133,16 @@ export class TelemetryService {
     if (recordedAt.getTime() > latestAllowed.getTime()) {
       invalid('recordedAt', 'The reading cannot be later than the latest vehicle data or now.');
     }
-    const previous = await this.telemetry.latestOdometerReading(scope, vehicleId);
-    if (previous?.odometerKm != null) {
-      if (recordedAt.getTime() <= previous.recordedAt.getTime()) {
-        invalid('recordedAt', 'Use a time after the latest odometer reading of this vehicle.');
-      }
-      if (odometerKm < previous.odometerKm) {
-        invalid('odometerKm', 'The odometer cannot be lower than the latest reading.');
-      }
-    }
+    const reading = { vehicleId, odometerKm, recordedAt, receivedAt: now };
+    requireAfterLatest(await this.telemetry.latestOdometerReading(scope, vehicleId), reading);
     await this.core.requireBranch(scope.branchId, context);
-    return toSample(
-      await this.telemetry.insertManualReading(scope, {
-        vehicleId,
-        odometerKm,
-        recordedAt,
-        receivedAt: now,
-      }),
-    );
+    const stored = await this.telemetry.insertManualReading(scope, reading, (latest) => {
+      requireAfterLatest(latest, reading);
+    });
+    if (stored === null) {
+      invalid('vehicleId', VEHICLE_REQUIRED);
+    }
+    return toSample(stored);
   }
 
   asOf(scope: FleetScope): Promise<Date | null> {
@@ -143,14 +160,17 @@ export class TelemetryService {
     if (!ids.length) {
       return new Map();
     }
-    const [asOf, facts] = await Promise.all([
+    const [asOf, facts, settings] = await Promise.all([
       this.telemetry.asOf(scope),
       this.telemetry.vehicleFacts(scope, ids),
+      this.settings.read(scope),
     ]);
     const states = new Map(
-      facts.map((item) => [item.vehicleId, classifyVehicleState(item, asOf)] as const),
+      facts.map((item) => [item.vehicleId, classifyVehicleState(item, asOf, settings)] as const),
     );
-    return new Map(ids.map((id) => [id, states.get(id) ?? classifyVehicleState(NO_FACTS, asOf)]));
+    return new Map(
+      ids.map((id) => [id, states.get(id) ?? classifyVehicleState(NO_FACTS, asOf, settings)]),
+    );
   }
 
   /** `lastReportedAt` per current (vehicle, IMEI) pair, keyed by `reportingPair`. */

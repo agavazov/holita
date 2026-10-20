@@ -4,7 +4,10 @@
   [subtitle]="subtitle()"
   [saving]="saving()"
   [dirty]="dirty()"
-  [closeLink]="null"
+  [state]="state()"
+  [errorText]="loadError()"
+  [closeLink]="closeLink()"
+  (retry)="retry.emit()"
   (closeRequest)="requestClose()"
 >
   @if (!editing() && driver(); as driver) {
@@ -39,6 +42,9 @@
     </section>
     <section class="app-form-section">
       <h3>{{ text().documents }}</h3>
+      @if (businessDate() === null) {
+        <p class="app-muted" role="status">{{ catalog().expiry.unavailable }}</p>
+      }
       <dl class="app-facts">
         <div>
           <dt>{{ text().licenseNumber }}</dt>
@@ -98,7 +104,7 @@
         </div>
         <div>
           <dt>{{ text().distance }}</dt>
-          <dd>{{ driver.distance30dKm | holitaNumber }} km</dd>
+          <dd>{{ units.distance(driver.distance30dKm, true, 0) }}</dd>
         </div>
       </dl>
     </section>
@@ -344,35 +350,43 @@
     </form>
   }
 
-  <div drawerFooter class="app-drawer-actions">
-    @if (editing()) {
-      <button
-        pButton
-        type="button"
-        severity="secondary"
-        [outlined]="true"
-        [disabled]="saving()"
-        (click)="cancel()"
-      >
-        {{ text().cancel }}
-      </button>
-      <button pButton type="submit" form="driver-form" [loading]="saving()" [disabled]="saving()">
-        {{ driver() ? text().save : text().create }}
-      </button>
-    } @else {
-      <button pButton type="button" severity="secondary" [outlined]="true" (click)="requestClose()">
-        {{ text().close }}
-      </button>
-      <button
-        pButton
-        type="button"
-        severity="secondary"
-        [outlined]="true"
-        (click)="openScorecard.emit()"
-      >
-        {{ text().scorecard }}
-      </button>
-      <button pButton type="button" (click)="edit()">{{ text().edit }}</button>
-    }
-  </div>
+  @if (state() === 'ready') {
+    <div drawerFooter class="app-drawer-actions">
+      @if (editing()) {
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="saving()"
+          (click)="cancel()"
+        >
+          {{ text().cancel }}
+        </button>
+        <button pButton type="submit" form="driver-form" [loading]="saving()" [disabled]="saving()">
+          {{ driver() ? text().save : text().create }}
+        </button>
+      } @else {
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          (click)="requestClose()"
+        >
+          {{ text().close }}
+        </button>
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          (click)="openScorecard.emit()"
+        >
+          {{ text().scorecard }}
+        </button>
+        <button pButton type="button" (click)="edit()">{{ text().edit }}</button>
+      }
+    </div>
+  }
 </holita-route-drawer>

@@ -1,10 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
-import { literalContains, nullsLast, prismaDirection } from '../../database/search.js';
-import type { FleetDeviceSortField } from '../../generated/graphql/types.js';
+import { dateOrNull, integer, oneOf, rowsOf, text } from '../../database/sql.js';
+import type {
+  FleetDeviceSortField,
+  FleetDeviceStatus,
+  FleetDeviceSummary,
+} from '../../generated/graphql/types.js';
 import type { FleetDeviceModel, FleetDeviceOption } from '../../generated/prisma/enums.js';
-import type { Prisma } from '../../generated/prisma/client.js';
+import { Prisma } from '../../generated/prisma/client.js';
 import type { FleetScope, SortDirection } from '../../validation.js';
+import { vehicleDataClockSql } from '../telemetry/vehicle-facts.sql.js';
+import type { DeviceConditionCriteria } from './device-filter.js';
+import { deviceListOrderSql, deviceListRowsSql, deviceListWhereSql } from './device-list.sql.js';
+import { DEVICE_STATUSES } from './device-state.js';
 
 /** The vehicle reference is loaded with every device through the composite relation. */
 const deviceInclude = {
@@ -14,10 +22,14 @@ const deviceInclude = {
 } satisfies Prisma.DeviceInclude;
 
 export type DeviceRow = Prisma.DeviceGetPayload<{ include: typeof deviceInclude }>;
+export type DeviceListRow = DeviceRow & {
+  status: FleetDeviceStatus;
+  lastReportedAt: Date | null;
+};
 
 export interface DeviceData {
   imei: string;
-  vehicleId: string;
+  vehicleId: string | null;
   model: FleetDeviceModel | null;
   options: FleetDeviceOption[];
   firmwareVersion: string | null;
@@ -34,38 +46,12 @@ export interface DeviceListCriteria {
   models: FleetDeviceModel[] | undefined;
   options: FleetDeviceOption[] | undefined;
   vehicleIds: string[] | undefined;
+  allOf?: DeviceConditionCriteria[] | undefined;
 }
 
 export interface DeviceSort {
   field: FleetDeviceSortField;
   direction: SortDirection;
-}
-
-function deviceWhere(scope: FleetScope, criteria: DeviceListCriteria): Prisma.DeviceWhereInput {
-  const conditions: Prisma.DeviceWhereInput[] = criteria.tokens.map((token) => {
-    const contains = literalContains(token);
-    return {
-      OR: [
-        { imei: contains },
-        { firmwareVersion: contains },
-        { simPhoneNumber: contains },
-        { vehicle: { licensePlate: contains } },
-      ],
-    };
-  });
-  if (criteria.ids) {
-    conditions.push({ id: { in: criteria.ids } });
-  }
-  if (criteria.models) {
-    conditions.push({ model: { in: criteria.models } });
-  }
-  if (criteria.options) {
-    conditions.push({ options: { hasEvery: criteria.options } });
-  }
-  if (criteria.vehicleIds) {
-    conditions.push({ vehicleId: { in: criteria.vehicleIds } });
-  }
-  return { tenantId: scope.tenantId, branchId: scope.branchId, AND: conditions };
 }
 
 @Injectable()
@@ -77,28 +63,62 @@ export class DevicesRepository {
     page: { offset: number; limit: number },
     criteria: DeviceListCriteria,
     sort: DeviceSort,
-  ): Promise<{ items: DeviceRow[]; total: number }> {
-    const where = deviceWhere(scope, criteria);
-    const direction = prismaDirection(sort.direction);
-    const ordering: Record<FleetDeviceSortField, Prisma.DeviceOrderByWithRelationInput> = {
-      IMEI: { imei: direction },
-      INSTALLED_AT: { installedAt: nullsLast(sort.direction) },
-      CREATED_AT: { createdAt: direction },
-    };
-    const [items, total] = await this.prisma.client.$transaction(
-      [
-        this.prisma.client.device.findMany({
-          where,
-          include: deviceInclude,
-          skip: page.offset,
-          take: page.limit,
-          orderBy: [ordering[sort.field], { id: 'desc' }],
-        }),
-        this.prisma.client.device.count({ where }),
-      ],
+  ): Promise<{ items: DeviceListRow[]; total: number }> {
+    const base = deviceListRowsSql(this.prisma.schema, scope);
+    const where = deviceListWhereSql(criteria);
+    const order = deviceListOrderSql(sort);
+    return this.prisma.client.$transaction(
+      async (transaction) => {
+        const selected: unknown = await transaction.$queryRaw(Prisma.sql`
+          WITH devices AS (${base}) SELECT d."id"::text AS "id", d."status", d."lastReportedAt" FROM devices d
+          WHERE ${where} ORDER BY ${order} LIMIT ${page.limit}::int OFFSET ${page.offset}::int`);
+        const counted: unknown = await transaction.$queryRaw(Prisma.sql`
+          WITH devices AS (${base}) SELECT count(*)::int AS "total" FROM devices d WHERE ${where}`);
+        const facts = rowsOf(selected, (row) => ({
+          id: text(row, 'id'),
+          status: oneOf(row, 'status', DEVICE_STATUSES),
+          lastReportedAt: dateOrNull(row, 'lastReportedAt'),
+        }));
+        const ids = facts.map((row) => row.id);
+        const [total] = rowsOf(counted, (row) => integer(row, 'total'));
+        const rows = ids.length
+          ? await transaction.device.findMany({
+              where: { tenantId: scope.tenantId, branchId: scope.branchId, id: { in: ids } },
+              include: deviceInclude,
+            })
+          : [];
+        const byId = new Map(rows.map((row) => [row.id, row]));
+        const items = facts.map((fact) => {
+          const row = byId.get(fact.id);
+          if (!row) {
+            throw new Error('Missing device in the list snapshot.');
+          }
+          return { ...row, status: fact.status, lastReportedAt: fact.lastReportedAt };
+        });
+        return { items, total: total ?? 0 };
+      },
       { isolationLevel: 'RepeatableRead' },
     );
-    return { items, total };
+  }
+
+  async summary(scope: FleetScope): Promise<FleetDeviceSummary> {
+    const rows: unknown = await this.prisma.client.$queryRaw(Prisma.sql`
+      WITH devices AS (${deviceListRowsSql(this.prisma.schema, scope)}),
+      clock AS (${vehicleDataClockSql(this.prisma.schema, scope)})
+      SELECT (SELECT "asOf" FROM clock) AS "dataAsOf",
+        count(*) FILTER (WHERE d."status" = 'ONLINE')::int AS "online",
+        count(*) FILTER (WHERE d."status" = 'OFFLINE')::int AS "offline",
+        count(*) FILTER (WHERE d."status" = 'IN_STOCK')::int AS "inStock" FROM devices d`);
+    const [summary] = rowsOf(rows, (row) => ({
+      dataAsOf: dateOrNull(row, 'dataAsOf'),
+      online: integer(row, 'online'),
+      offline: integer(row, 'offline'),
+      inStock: integer(row, 'inStock'),
+    }));
+    if (!summary) {
+      throw new Error('Missing device summary.');
+    }
+    return summary;
   }
 
   find(scope: FleetScope, id: string): Promise<DeviceRow | null> {

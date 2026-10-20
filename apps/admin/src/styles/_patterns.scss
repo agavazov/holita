@@ -203,8 +203,7 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
   }
 
   // Controls projected into FormField fill its width.
-  holita-form-field
-    > :is(input, textarea, p-select, p-autocomplete, p-inputnumber, p-datepicker, p-multiselect) {
+  holita-form-field > :is(input, textarea, p-select, p-autocomplete, p-inputnumber, p-datepicker) {
     inline-size: 100%;
   }
 

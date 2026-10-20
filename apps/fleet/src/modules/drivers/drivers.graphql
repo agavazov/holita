@@ -44,11 +44,13 @@ type FleetDriver {
   notes: String
   "Vehicles whose current driver this is, by licence plate."
   vehicles: [FleetVehicleRef!]!
-  "Worst status of the licence and tachograph card at the business date (Europe/Sofia)."
+  "Worst status of the licence and tachograph card at the business date in the configured Branch time zone."
   documentStatus: FleetDocumentStatus!
   "Distance of the driver's trips started in the 30 days up to the Branch data clock." # B2
   distance30dKm: Float! # B2
   tripCount30d: Int! # B2
+  "Distance-weighted device score over scored trips of at least 0.5 km in (asOf minus 30 days, asOf]; null without eligible distance."
+  drivingScore30d: Float
   "Maneuver events per 100 km in the same window; null without distance or data clock." # B2
   maneuversPer100Km30d: Float # B2
   createdAt: DateTime!
@@ -76,14 +78,72 @@ input FleetDriverFilter {
   "0–365: licence or tachograph card expires on or before the business date plus this many days (expired included)."
   documentsExpireWithinDays: Int
   hasVehicle: Boolean
+  "Independent conditions combined with AND; at most 50 entries."
+  allOf: [FleetDriverCondition!]
+}
+
+input FleetDriverCondition {
+  statuses: [FleetDriverStatus!]
+  excludedStatuses: [FleetDriverStatus!]
+  licenseCategories: [FleetLicenseCategory!]
+  hasVehicle: Boolean
+  vehicleIds: [ID!]
+  excludedVehicleIds: [ID!]
+  scoreAbove: Float
+  scoreBelow: Float
+  scoreFrom: Float
+  scoreTo: Float
+  hasScore: Boolean
+  tripCountAbove: Int
+  tripCountBelow: Int
+  distanceKmAbove: Float
+  distanceKmBelow: Float
+  distanceKmFrom: Float
+  distanceKmTo: Float
+  licenseExpiresOnAfter: Date
+  licenseExpiresOnBefore: Date
+  licenseExpiresOnFrom: Date
+  licenseExpiresOnTo: Date
+  tachographCardExpiresOnAfter: Date
+  tachographCardExpiresOnBefore: Date
+  tachographCardExpiresOnFrom: Date
+  tachographCardExpiresOnTo: Date
+}
+
+type FleetDriverSummary {
+  dataAsOf: DateTime
+  active: Int!
+  onLeave: Int!
+  "Drivers with either document expired or due within 30 business-calendar days, including inactive drivers."
+  documentsExpiring: Int!
+  "Arithmetic mean across non-null per-driver distance-weighted 30-day scores, including inactive drivers."
+  averageDrivingScore: Float
+  "30-day trip distance across all drivers, including inactive drivers."
+  distance30dKm: Float!
+}
+
+type FleetDriverActionFailure {
+  id: ID!
+  code: String!
+  message: String!
+}
+
+type FleetDriverActionResult {
+  succeededIds: [ID!]!
+  failures: [FleetDriverActionFailure!]!
 }
 
 enum FleetDriverSortField {
+  NAME
   LAST_NAME
   EMPLOYEE_NUMBER
   LICENSE_EXPIRES_ON
   TACHOGRAPH_CARD_EXPIRES_ON
   CREATED_AT
+  STATUS
+  DRIVING_SCORE_30D
+  TRIP_COUNT_30D
+  DISTANCE_30D_KM
 }
 input FleetDriverSort {
   field: FleetDriverSortField! = LAST_NAME
@@ -154,6 +214,8 @@ extend type Query {
     sort: FleetDriverSort
   ): FleetDriverPage!
   fleetDriver(id: ID!): FleetDriver!
+  "Whole-Branch summary independent of list filters and pagination."
+  fleetDriverSummary: FleetDriverSummary!
   "days: 1–93." # B2
   fleetDriverScorecard(driverId: ID!, days: Int! = 30): FleetDriverScorecard! # B2
 }
@@ -162,4 +224,8 @@ extend type Mutation {
   createFleetDriver(input: CreateFleetDriverInput!): FleetDriver!
   updateFleetDriver(id: ID!, input: UpdateFleetDriverInput!): FleetDriver!
   deleteFleetDriver(id: ID!): FleetDriver!
+  "At most 100 distinct IDs; each result retains its scoped deletion protection."
+  deleteFleetDrivers(ids: [ID!]!): FleetDriverActionResult!
+  "At most 100 distinct IDs; assigned drivers remain unchanged and return a failure."
+  deactivateFleetDrivers(ids: [ID!]!): FleetDriverActionResult!
 }

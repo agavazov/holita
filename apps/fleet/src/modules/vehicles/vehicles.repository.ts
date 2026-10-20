@@ -1,14 +1,28 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
-import { literalContains, nullsLast, prismaDirection } from '../../database/search.js';
-import type { FleetVehicleSortField } from '../../generated/graphql/types.js';
+import { dateOrNull, integer, rowsOf, text } from '../../database/sql.js';
+import type {
+  FleetVehicleSortField,
+  FleetVehicleState,
+  FleetVehicleSummary,
+} from '../../generated/graphql/types.js';
 import type {
   FleetFuelType,
   FleetVehicleStatus,
   FleetVehicleType,
 } from '../../generated/prisma/enums.js';
-import type { Prisma } from '../../generated/prisma/client.js';
+import { Prisma } from '../../generated/prisma/client.js';
 import type { FleetScope, SortDirection } from '../../validation.js';
+import { lockDriverStatus } from '../drivers/drivers.repository.js';
+import { vehicleDataClockSql } from '../telemetry/vehicle-facts.sql.js';
+import { parseVehicleFacts } from '../telemetry/telemetry.repository.js';
+import { classifyVehicleState } from '../telemetry/vehicle-state.js';
+import {
+  vehicleListOrderSql,
+  vehicleListRowsSql,
+  vehicleListWhereSql,
+} from './vehicle-list.sql.js';
+import type { VehicleConditionCriteria } from './vehicle-filter.js';
 
 /** Stored references and the device count are loaded with every vehicle (no per-row query). */
 const vehicleInclude = {
@@ -20,6 +34,10 @@ const vehicleInclude = {
 } satisfies Prisma.VehicleInclude;
 
 export type VehicleRow = Prisma.VehicleGetPayload<{ include: typeof vehicleInclude }>;
+export type VehicleListRow = VehicleRow & {
+  state: FleetVehicleState;
+  openAlertCount: number;
+};
 
 export interface VehicleData {
   licensePlate: string;
@@ -50,58 +68,12 @@ export interface VehicleListCriteria {
   hasDriver: boolean | undefined;
   hasDevice: boolean | undefined;
   hasOpenAlerts: boolean | undefined;
+  allOf?: VehicleConditionCriteria[] | undefined;
 }
 
 export interface VehicleSort {
   field: FleetVehicleSortField;
   direction: SortDirection;
-}
-
-function vehicleWhere(scope: FleetScope, criteria: VehicleListCriteria): Prisma.VehicleWhereInput {
-  const conditions: Prisma.VehicleWhereInput[] = criteria.tokens.map((token) => {
-    const contains = literalContains(token);
-    return {
-      OR: [
-        { licensePlate: contains },
-        { fleetNumber: contains },
-        { vin: contains },
-        { make: contains },
-        { model: contains },
-      ],
-    };
-  });
-  if (criteria.ids) {
-    conditions.push({ id: { in: criteria.ids } });
-  }
-  if (criteria.statuses) {
-    conditions.push({ status: { in: criteria.statuses } });
-  }
-  if (criteria.vehicleTypes) {
-    conditions.push({ vehicleType: { in: criteria.vehicleTypes } });
-  }
-  if (criteria.fuelTypes) {
-    conditions.push({ fuelType: { in: criteria.fuelTypes } });
-  }
-  if (criteria.groupIds) {
-    conditions.push({ groupId: { in: criteria.groupIds } });
-  }
-  if (criteria.hasGroup !== undefined) {
-    conditions.push({ groupId: criteria.hasGroup ? { not: null } : null });
-  }
-  if (criteria.currentDriverIds) {
-    conditions.push({ currentDriverId: { in: criteria.currentDriverIds } });
-  }
-  if (criteria.hasDriver !== undefined) {
-    conditions.push({ currentDriverId: criteria.hasDriver ? { not: null } : null });
-  }
-  if (criteria.hasDevice !== undefined) {
-    conditions.push({ devices: criteria.hasDevice ? { some: {} } : { none: {} } });
-  }
-  if (criteria.hasOpenAlerts !== undefined) {
-    const open = { alertStatus: 'OPEN' } satisfies Prisma.FleetEventWhereInput;
-    conditions.push({ events: criteria.hasOpenAlerts ? { some: open } : { none: open } });
-  }
-  return { tenantId: scope.tenantId, branchId: scope.branchId, AND: conditions };
 }
 
 @Injectable()
@@ -113,29 +85,77 @@ export class VehiclesRepository {
     page: { offset: number; limit: number },
     criteria: VehicleListCriteria,
     sort: VehicleSort,
-  ): Promise<{ items: VehicleRow[]; total: number }> {
-    const where = vehicleWhere(scope, criteria);
-    const direction = prismaDirection(sort.direction);
-    const ordering: Record<FleetVehicleSortField, Prisma.VehicleOrderByWithRelationInput> = {
-      LICENSE_PLATE: { licensePlate: direction },
-      FLEET_NUMBER: { fleetNumber: nullsLast(sort.direction) },
-      CREATED_AT: { createdAt: direction },
-      UPDATED_AT: { updatedAt: direction },
-    };
-    const [items, total] = await this.prisma.client.$transaction(
-      [
-        this.prisma.client.vehicle.findMany({
-          where,
-          include: vehicleInclude,
-          skip: page.offset,
-          take: page.limit,
-          orderBy: [ordering[sort.field], { id: 'desc' }],
-        }),
-        this.prisma.client.vehicle.count({ where }),
-      ],
+  ): Promise<{ items: VehicleListRow[]; total: number }> {
+    const base = vehicleListRowsSql(this.prisma.schema, scope);
+    const where = vehicleListWhereSql(this.prisma.schema, scope, criteria);
+    const order = vehicleListOrderSql(sort);
+    return this.prisma.client.$transaction(
+      async (transaction) => {
+        const selected: unknown = await transaction.$queryRaw(Prisma.sql`
+          WITH vehicles AS (${base})
+          SELECT v."id"::text AS "id", v."status", v."hasDevice", v."sampleRecordedAt",
+            v."latitude", v."longitude", v."address", v."speedKph", v."headingDeg", v."ignition",
+            v."fuelLevelPct", v."externalVoltage", v."backupBatteryVoltage", v."engineHours",
+            v."coolantTempC", v."odometerKm", v."odometerRecordedAt", v."odometerSource",
+            v."asOf", v."openAlertCount", v."lowFuelPct", v."notReportingHours" FROM vehicles v
+          WHERE ${where} ORDER BY ${order} LIMIT ${page.limit}::int OFFSET ${page.offset}::int`);
+        const counted: unknown = await transaction.$queryRaw(Prisma.sql`
+          WITH vehicles AS (${base}) SELECT count(*)::int AS "total" FROM vehicles v WHERE ${where}`);
+        const facts = rowsOf(selected, (row) => ({
+          id: text(row, 'id'),
+          state: classifyVehicleState(parseVehicleFacts(row), dateOrNull(row, 'asOf'), {
+            lowFuelPct: integer(row, 'lowFuelPct'),
+            notReportingHours: integer(row, 'notReportingHours'),
+          }),
+          openAlertCount: integer(row, 'openAlertCount'),
+        }));
+        const ids = facts.map((row) => row.id);
+        const [total] = rowsOf(counted, (row) => integer(row, 'total'));
+        const rows = ids.length
+          ? await transaction.vehicle.findMany({
+              where: { tenantId: scope.tenantId, branchId: scope.branchId, id: { in: ids } },
+              include: vehicleInclude,
+            })
+          : [];
+        const byId = new Map(rows.map((row) => [row.id, row]));
+        const items = facts.map((fact) => {
+          const row = byId.get(fact.id);
+          if (!row) {
+            throw new Error('Missing vehicle in the list snapshot.');
+          }
+          return { ...row, state: fact.state, openAlertCount: fact.openAlertCount };
+        });
+        return { items, total: total ?? 0 };
+      },
       { isolationLevel: 'RepeatableRead' },
     );
-    return { items, total };
+  }
+
+  async summary(scope: FleetScope): Promise<FleetVehicleSummary> {
+    const base = vehicleListRowsSql(this.prisma.schema, scope);
+    const rows: unknown = await this.prisma.client.$queryRaw(Prisma.sql`
+      WITH vehicles AS (${base}), clock AS (${vehicleDataClockSql(this.prisma.schema, scope)})
+      SELECT (SELECT "asOf" FROM clock) AS "dataAsOf",
+        count(*) FILTER (WHERE v."status" <> 'INACTIVE')::int AS "inOperation",
+        count(*) FILTER (WHERE v."status" = 'IN_WORKSHOP')::int AS "inWorkshop",
+        count(*) FILTER (WHERE v."activity" = 'MOVING')::int AS "moving",
+        count(*) FILTER (WHERE v."activity" = 'NOT_CONNECTED')::int AS "notReporting",
+        coalesce(sum(v."openAlertCount"), 0)::int AS "openAlerts",
+        count(*) FILTER (WHERE v."fuelStatus" = 'LOW')::int AS "lowFuel"
+      FROM vehicles v`);
+    const [summary] = rowsOf(rows, (row) => ({
+      dataAsOf: dateOrNull(row, 'dataAsOf'),
+      inOperation: integer(row, 'inOperation'),
+      inWorkshop: integer(row, 'inWorkshop'),
+      moving: integer(row, 'moving'),
+      notReporting: integer(row, 'notReporting'),
+      openAlerts: integer(row, 'openAlerts'),
+      lowFuel: integer(row, 'lowFuel'),
+    }));
+    if (!summary) {
+      throw new Error('Missing vehicle summary.');
+    }
+    return summary;
   }
 
   find(scope: FleetScope, id: string): Promise<VehicleRow | null> {
@@ -192,19 +212,51 @@ export class VehiclesRepository {
     };
   }
 
-  create(scope: FleetScope, data: VehicleData): Promise<VehicleRow> {
-    return this.prisma.client.vehicle.create({
-      data: { ...data, tenantId: scope.tenantId, branchId: scope.branchId },
-      include: vehicleInclude,
-    });
+  create(scope: FleetScope, data: VehicleData): Promise<VehicleRow | null> {
+    return this.prisma.client.$transaction(
+      async (transaction) => {
+        if (data.currentDriverId !== null) {
+          const status = await lockDriverStatus(
+            transaction,
+            this.prisma.schema,
+            scope,
+            data.currentDriverId,
+          );
+          if (status === null || status === 'INACTIVE') {
+            return null;
+          }
+        }
+        return transaction.vehicle.create({
+          data: { ...data, tenantId: scope.tenantId, branchId: scope.branchId },
+          include: vehicleInclude,
+        });
+      },
+      { isolationLevel: 'ReadCommitted' },
+    );
   }
 
-  update(scope: FleetScope, id: string, data: Partial<VehicleData>): Promise<VehicleRow> {
-    return this.prisma.client.vehicle.update({
-      where: { id, tenantId: scope.tenantId, branchId: scope.branchId },
-      data,
-      include: vehicleInclude,
-    });
+  update(scope: FleetScope, id: string, data: Partial<VehicleData>): Promise<VehicleRow | null> {
+    return this.prisma.client.$transaction(
+      async (transaction) => {
+        if (data.currentDriverId != null) {
+          const status = await lockDriverStatus(
+            transaction,
+            this.prisma.schema,
+            scope,
+            data.currentDriverId,
+          );
+          if (status === null || status === 'INACTIVE') {
+            return null;
+          }
+        }
+        return transaction.vehicle.update({
+          where: { id, tenantId: scope.tenantId, branchId: scope.branchId },
+          data,
+          include: vehicleInclude,
+        });
+      },
+      { isolationLevel: 'ReadCommitted' },
+    );
   }
 
   /** Sets INACTIVE and clears the current driver in one scoped update. */

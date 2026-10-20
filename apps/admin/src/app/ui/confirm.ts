@@ -35,10 +35,24 @@ export function confirmAction(
     readonly message?: string;
     readonly acceptLabel: string;
     readonly danger: boolean;
+    readonly signal?: AbortSignal;
   },
 ): Promise<boolean> {
   const text = uiMessages[language];
   return new Promise((resolve) => {
+    const settle = (accepted: boolean) => {
+      options.signal?.removeEventListener('abort', cancel);
+      resolve(accepted);
+    };
+    const cancel = () => {
+      confirmation.close();
+      settle(false);
+    };
+    if (options.signal?.aborted) {
+      settle(false);
+      return;
+    }
+    options.signal?.addEventListener('abort', cancel, { once: true });
     confirmation.confirm({
       header: options.header,
       ...(options.message ? { message: options.message } : {}),
@@ -50,10 +64,10 @@ export function confirmAction(
         severity: options.danger ? 'danger' : 'primary',
       },
       accept: () => {
-        resolve(true);
+        settle(true);
       },
       reject: () => {
-        resolve(false);
+        settle(false);
       },
     });
   });

@@ -1,0 +1,149 @@
+fragment AdminDriverDetails on FleetDriver {
+  id
+  branchId
+  firstName
+  lastName
+  employeeNumber
+  identificationKey
+  phone
+  email
+  licenseNumber
+  licenseCategories
+  licenseExpiresOn
+  tachographCardNumber
+  tachographCardExpiresOn
+  status
+  notes
+  vehicles {
+    id
+    licensePlate
+    fleetNumber
+    vehicleType
+    status
+  }
+  documentStatus
+  distance30dKm
+  tripCount30d
+  drivingScore30d
+  maneuversPer100Km30d
+  createdAt
+  updatedAt
+}
+
+query AdminDrivers(
+  $offset: Int!
+  $limit: Int!
+  $search: String
+  $ids: [ID!]
+  $filter: FleetDriverFilter
+  $sort: FleetDriverSort
+) {
+  fleetDrivers(
+    offset: $offset
+    limit: $limit
+    search: $search
+    ids: $ids
+    filter: $filter
+    sort: $sort
+  ) {
+    items {
+      ...AdminDriverDetails
+    }
+    total
+    offset
+    limit
+  }
+}
+
+query AdminDriver($id: ID!) {
+  fleetDataClock {
+    businessDate
+  }
+  fleetDriver(id: $id) {
+    ...AdminDriverDetails
+  }
+}
+
+query AdminDriverSummary {
+  fleetDataClock {
+    businessDate
+  }
+  fleetDriverSummary {
+    dataAsOf
+    active
+    onLeave
+    documentsExpiring
+    averageDrivingScore
+    distance30dKm
+  }
+}
+
+query AdminDriverContext {
+  fleetDataClock {
+    businessDate
+  }
+}
+
+query AdminDriverScorecard($driverId: ID!, $days: Int!) {
+  fleetDriverScorecard(driverId: $driverId, days: $days) {
+    driver {
+      id
+      firstName
+      lastName
+      employeeNumber
+    }
+    asOf
+    windowStart
+    windowEnd
+    distanceKm
+    tripCount
+    scoredTripCount
+    averageDrivingScore
+    averageEcoScore
+    maneuverCount
+    maneuversPer100Km
+    lowConfidence
+    maneuvers {
+      kind
+      intensity1
+      intensity2
+      intensity3
+      intensityUnknown
+      total
+    }
+  }
+}
+
+mutation AdminCreateDriver($input: CreateFleetDriverInput!) {
+  createFleetDriver(input: $input) {
+    ...AdminDriverDetails
+  }
+}
+
+mutation AdminUpdateDriver($id: ID!, $input: UpdateFleetDriverInput!) {
+  updateFleetDriver(id: $id, input: $input) {
+    ...AdminDriverDetails
+  }
+}
+
+mutation AdminDeleteDrivers($ids: [ID!]!) {
+  deleteFleetDrivers(ids: $ids) {
+    succeededIds
+    failures {
+      id
+      code
+      message
+    }
+  }
+}
+
+mutation AdminDeactivateDrivers($ids: [ID!]!) {
+  deactivateFleetDrivers(ids: $ids) {
+    succeededIds
+    failures {
+      id
+      code
+      message
+    }
+  }
+}

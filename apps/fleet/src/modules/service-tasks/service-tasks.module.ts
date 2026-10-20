@@ -6,9 +6,10 @@ import { CoreClientModule } from '../../integrations/core/core-client.module.js'
 import { ServiceTasksRepository } from './service-tasks.repository.js';
 import { ServiceTasksResolver } from './service-tasks.resolver.js';
 import { ServiceTasksService } from './service-tasks.service.js';
+import { SettingsModule } from '../settings/settings.module.js';
 
 @Module({
-  imports: [DatabaseModule, CoreClientModule, ClockModule],
+  imports: [DatabaseModule, CoreClientModule, ClockModule, SettingsModule],
   exports: [ServiceTasksService],
   providers: [FleetEnabledGuard, ServiceTasksRepository, ServiceTasksService, ServiceTasksResolver],
 })

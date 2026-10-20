@@ -81,6 +81,7 @@ export class AdminShell {
   readonly account = input<ShellAccount | null>(null);
   /** The bell's notifications; null hides the bell. */
   readonly notifications = input<readonly ShellNotification[] | null>(null);
+  readonly notificationsUnavailable = input(false);
   readonly navigation = input<readonly NavGroup[]>([]);
   readonly context = input<PageContext | null>(null);
   readonly signOut = output();

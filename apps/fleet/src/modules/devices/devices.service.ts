@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { FleetClock } from '../../clock/fleet-clock.js';
 import { CoreClient } from '../../integrations/core/core.client.js';
 import type {
@@ -6,6 +12,9 @@ import type {
   FleetDevice,
   FleetDevicePage,
   FleetDeviceSortField,
+  FleetDeviceActionFailure,
+  FleetDeviceActionResult,
+  FleetDeviceSummary,
   QueryFleetDevicesArgs,
   UpdateFleetDeviceInput,
 } from '../../generated/graphql/types.js';
@@ -23,6 +32,7 @@ import {
   optionalEnum,
   optionalPattern,
   optionalText,
+  optionalUuid,
   pagination,
   persistenceError,
   requireScope,
@@ -40,13 +50,23 @@ import {
   type DeviceRow,
   DevicesRepository,
 } from './devices.repository.js';
+import { deviceConditions } from './device-filter.js';
+import { deviceStatus } from './device-state.js';
+import { SettingsService } from '../settings/settings.service.js';
 
 export type DeviceResult = Omit<FleetDevice, 'branch'>;
-type StoredDevice = Omit<DeviceResult, 'lastReportedAt'>;
+type StoredDevice = Omit<DeviceResult, 'lastReportedAt' | 'status'>;
 
 const DEVICE_MODELS = Object.values(FleetDeviceModel);
 const DEVICE_OPTIONS = Object.values(FleetDeviceOption);
-const SORT_FIELDS: readonly FleetDeviceSortField[] = ['IMEI', 'INSTALLED_AT', 'CREATED_AT'];
+const SORT_FIELDS: readonly FleetDeviceSortField[] = [
+  'IMEI',
+  'INSTALLED_AT',
+  'CREATED_AT',
+  'STATUS',
+  'VEHICLE_LICENSE_PLATE',
+  'LAST_REPORTED_AT',
+];
 
 /** Options each model supports; OTHER accepts every option and no model accepts none. */
 const MODEL_OPTIONS: Record<FleetDeviceModel, readonly FleetDeviceOption[]> = {
@@ -120,11 +140,14 @@ function toDevice(row: DeviceRow): StoredDevice {
 
 @Injectable()
 export class DevicesService {
+  private readonly logger = new Logger(DevicesService.name);
+
   constructor(
     private readonly devices: DevicesRepository,
     private readonly core: CoreClient,
     private readonly clock: FleetClock,
     private readonly telemetry: TelemetryService,
+    private readonly settings: SettingsService,
   ) {}
 
   async list(
@@ -142,13 +165,23 @@ export class DevicesService {
       models: enumFilter(filter?.models, DEVICE_MODELS, 'models'),
       options: enumFilter(filter?.options, DEVICE_OPTIONS, 'options'),
       vehicleIds: idList(filter?.vehicleIds, 'vehicleIds'),
+      allOf: deviceConditions(filter?.allOf),
     };
     const sort = {
       field: sortField(args.sort?.field, SORT_FIELDS, 'CREATED_AT'),
       direction: sortDirection(args.sort?.direction, 'DESC'),
     };
     const page = await this.devices.list(scope, { offset, limit }, criteria, sort);
-    return { items: await this.complete(scope, page.items), total: page.total, offset, limit };
+    return {
+      items: page.items.map((row) => ({
+        ...toDevice(row),
+        status: row.status,
+        lastReportedAt: row.lastReportedAt,
+      })),
+      total: page.total,
+      offset,
+      limit,
+    };
   }
 
   async find(context: RequestContext, id: string): Promise<DeviceResult> {
@@ -160,11 +193,54 @@ export class DevicesService {
     return this.completeOne(scope, row);
   }
 
+  summary(context: RequestContext): Promise<FleetDeviceSummary> {
+    return this.devices.summary(requireScope(context));
+  }
+
+  async deleteMany(
+    context: RequestContext,
+    values: readonly string[],
+  ): Promise<FleetDeviceActionResult> {
+    requireScope(context);
+    const selected = ids(values, 'ids');
+    if (!selected.length) {
+      invalid('ids', 'Choose at least one device.');
+    }
+    const succeededIds: string[] = [];
+    const failures: FleetDeviceActionFailure[] = [];
+    for (const id of selected) {
+      try {
+        await this.delete(context, id);
+        succeededIds.push(id);
+      } catch (error: unknown) {
+        const code =
+          error instanceof HttpException
+            ? new Map([
+                [400, 'BAD_USER_INPUT'],
+                [404, 'NOT_FOUND'],
+                [409, 'CONFLICT'],
+                [503, 'SERVICE_UNAVAILABLE'],
+              ]).get(error.getStatus())
+            : undefined;
+        if (code && error instanceof HttpException) {
+          failures.push({ id, code, message: error.message });
+        } else {
+          this.logger.error({
+            requestId: context.requestId,
+            error: error instanceof Error ? error.name : 'UnknownError',
+          });
+          failures.push({ id, code: 'INTERNAL_SERVER_ERROR', message: 'Unable to delete device.' });
+        }
+      }
+    }
+    return { succeededIds, failures };
+  }
+
   async create(context: RequestContext, input: CreateFleetDeviceInput): Promise<DeviceResult> {
     const scope = requireScope(context);
     const data: DeviceData = {
       imei: imei(input.imei),
-      vehicleId: uuid(input.vehicleId, 'vehicleId'),
+      vehicleId: optionalUuid(input.vehicleId, 'vehicleId'),
       model: optionalEnum(input.model, DEVICE_MODELS, 'model'),
       options: options(input.options),
       firmwareVersion: this.firmwareVersion(input.firmwareVersion),
@@ -174,7 +250,9 @@ export class DevicesService {
       notes: optionalText(input.notes, 'notes', 2000),
     };
     checkOptions(data.model, data.options);
-    await this.requireVehicle(scope, data.vehicleId);
+    if (data.vehicleId !== null) {
+      await this.requireVehicle(scope, data.vehicleId);
+    }
     await this.requireUniqueImei(scope, data.imei, null);
     await this.core.requireBranch(scope.branchId, context);
     let row: DeviceRow;
@@ -198,7 +276,7 @@ export class DevicesService {
       data.imei = imei(input.imei);
     }
     if (input.vehicleId !== undefined) {
-      data.vehicleId = uuid(input.vehicleId, 'vehicleId');
+      data.vehicleId = optionalUuid(input.vehicleId, 'vehicleId');
     }
     if (input.model !== undefined) {
       data.model = optionalEnum(input.model, DEVICE_MODELS, 'model');
@@ -232,7 +310,7 @@ export class DevicesService {
       data.model === undefined ? stored.model : data.model,
       data.options ?? stored.options,
     );
-    if (data.vehicleId !== undefined) {
+    if (data.vehicleId != null) {
       await this.requireVehicle(scope, data.vehicleId);
     }
     if (data.imei !== undefined) {
@@ -260,19 +338,30 @@ export class DevicesService {
     return this.completeOne(scope, row);
   }
 
-  /** Attaches `lastReportedAt` of each device's current (vehicle, IMEI) pair in one query. */
+  /** Current-pair reports are batched; status shares the Branch clock and never reports stock. */
   private async complete(scope: FleetScope, rows: readonly DeviceRow[]): Promise<DeviceResult[]> {
     if (!rows.length) {
       return [];
     }
-    const reported = await this.telemetry.lastReported(
-      scope,
-      rows.map((row) => ({ vehicleId: row.vehicleId, imei: row.imei })),
+    const pairs = rows.flatMap((row) =>
+      row.vehicleId === null ? [] : [{ vehicleId: row.vehicleId, imei: row.imei }],
     );
-    return rows.map((row) => ({
-      ...toDevice(row),
-      lastReportedAt: reported.get(reportingPair(row.vehicleId, row.imei)) ?? null,
-    }));
+    const [reported, asOf, settings] = await Promise.all([
+      this.telemetry.lastReported(scope, pairs),
+      this.telemetry.asOf(scope),
+      this.settings.read(scope),
+    ]);
+    return rows.map((row) => {
+      const lastReportedAt =
+        row.vehicleId === null
+          ? null
+          : (reported.get(reportingPair(row.vehicleId, row.imei)) ?? null);
+      return {
+        ...toDevice(row),
+        lastReportedAt,
+        status: deviceStatus(row.vehicleId, lastReportedAt, asOf, settings.notReportingHours),
+      };
+    });
   }
 
   private async completeOne(scope: FleetScope, row: DeviceRow): Promise<DeviceResult> {

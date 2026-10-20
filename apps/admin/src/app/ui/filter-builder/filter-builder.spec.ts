@@ -1,5 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { UI_LANGUAGE } from '../ui-language';
 import { FilterBuilder } from './filter-builder';
 import type { FilterCondition, FilterField } from './filter-model';
@@ -8,13 +9,14 @@ import type { FilterCondition, FilterField } from './filter-model';
   imports: [FilterBuilder],
   template: `<holita-filter-builder
     searchLabel="Search records"
-    [fields]="fields"
+    [fields]="fields()"
     [conditions]="conditions()"
+    [maxConditions]="maxConditions()"
     (conditionsChange)="conditions.set($event)"
   />`,
 })
 class Host {
-  readonly fields: readonly FilterField[] = [
+  readonly fields = signal<readonly FilterField[]>([
     {
       key: 'status',
       label: 'Status',
@@ -25,7 +27,18 @@ class Host {
     { key: 'odometer', label: 'Odometer', type: 'number', operators: ['between'] },
     { key: 'hasDevice', label: 'Has device', type: 'boolean', operators: ['isTrue'] },
     { key: 'createdAt', label: 'Added', type: 'date', operators: ['after'] },
-  ];
+    {
+      key: 'year',
+      label: 'Year',
+      type: 'number',
+      operators: ['equals'],
+      min: 1950,
+      max: 2100,
+      integer: true,
+    },
+    { key: 'make', label: 'Make', type: 'text', operators: ['contains'], maxLength: 64 },
+  ]);
+  readonly maxConditions = signal<number | null>(null);
   readonly conditions = signal<readonly FilterCondition[]>([
     { id: 'a', field: 'status', operator: 'isAnyOf', values: ['ACTIVE'] },
     { id: 'b', field: 'odometer', operator: 'between', values: ['10', '20'] },
@@ -70,6 +83,148 @@ describe('FilterBuilder focus', () => {
     document.querySelectorAll('.p-popover').forEach((element) => {
       element.remove();
     });
+  });
+
+  it('adds a distinct condition after restoring filters from a previous browser session', async () => {
+    const fixture = await render();
+    const host = fixture.componentInstance;
+    host.fields.set([
+      { key: 'hasDevice', label: 'Has device', type: 'boolean', operators: ['isTrue'] },
+    ]);
+    host.maxConditions.set(50);
+    const restored: readonly FilterCondition[] = Array.from({ length: 49 }, (_, index) => ({
+      id: `condition-${String(index)}`,
+      field: 'hasDevice',
+      operator: 'isTrue',
+      values: [],
+    }));
+    host.conditions.set(restored);
+    await fixture.whenStable();
+    click(button('Add filter'));
+    await fixture.whenStable();
+    click(button('Apply'));
+    await fixture.whenStable();
+    const conditions = host.conditions();
+    expect(conditions).toHaveLength(50);
+    expect(conditions.slice(0, 49)).toEqual(restored);
+    expect(new Set(conditions.map((condition) => condition.id)).size).toBe(50);
+    expect(button('Add filter').disabled).toBe(true);
+  });
+
+  it('blocks invalid bounded values even on direct form submission, and applies a corrected value', async () => {
+    const fixture = await render();
+    fixture.componentInstance.conditions.set([
+      { id: 'year', field: 'year', operator: 'equals', values: ['1900'] },
+    ]);
+    await fixture.whenStable();
+    click(button('Edit filter: Year'));
+    await fixture.whenStable();
+    const component: unknown = fixture.debugElement.query(
+      By.directive(FilterBuilder),
+    ).componentInstance;
+    if (!(component instanceof FilterBuilder)) {
+      throw new Error('Missing filter builder.');
+    }
+    const emit = vi.spyOn(component.conditionsChange, 'emit');
+    expect(button('Update').disabled).toBe(true);
+    expect(document.querySelector('.filter-builder__editor p-message')?.textContent).toContain(
+      '1,950',
+    );
+    document
+      .querySelector('form.filter-builder__editor')
+      ?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    expect(emit).not.toHaveBeenCalled();
+    const input = document.querySelector<HTMLInputElement>(
+      '.filter-builder__editor input[id$="-value"]',
+    );
+    if (!input) {
+      throw new Error('Missing year value.');
+    }
+    // InputNumber commits raw input through its blur handler; a native input event alone
+    // does not update its ControlValueAccessor.
+    for (const value of ['1900', '2101', '2024.5']) {
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new FocusEvent('blur'));
+      await fixture.whenStable();
+      expect(button('Update').disabled).toBe(true);
+    }
+    input.value = '2024';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new FocusEvent('blur'));
+    await fixture.whenStable();
+    expect(button('Update').disabled).toBe(false);
+    click(button('Update'));
+    await fixture.whenStable();
+    expect(fixture.componentInstance.conditions()).toEqual([
+      { id: 'year', field: 'year', operator: 'equals', values: ['2024'] },
+    ]);
+  });
+
+  it('caps new conditions while keeping existing conditions editable and clear-all reachable', async () => {
+    const fixture = await render();
+    const host = fixture.componentInstance;
+    const fields: readonly FilterField[] = [
+      { key: 'hasDevice', label: 'Has device', type: 'boolean', operators: ['isTrue'] },
+    ];
+    host.fields.set(fields);
+    host.maxConditions.set(50);
+    const conditions: FilterCondition[] = Array.from({ length: 50 }, (_, index) => ({
+      id: `condition-${String(index)}`,
+      field: 'hasDevice',
+      operator: 'isTrue',
+      values: [],
+    }));
+    host.conditions.set(conditions.slice(0, 49));
+    await fixture.whenStable();
+    click(button('Add filter'));
+    await fixture.whenStable();
+    expect(button('Apply').disabled).toBe(false);
+    host.conditions.set(conditions);
+    await fixture.whenStable();
+    expect(button('Apply').disabled).toBe(true);
+    document
+      .querySelector('form.filter-builder__editor')
+      ?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    expect(host.conditions()).toHaveLength(50);
+    click(button('Cancel'));
+    await fixture.whenStable();
+    expect(button('Add filter').disabled).toBe(true);
+    click(button('Edit filter: Has device'));
+    await fixture.whenStable();
+    expect(button('Update').disabled).toBe(false);
+    click(button('Update'));
+    await fixture.whenStable();
+    expect(host.conditions()).toHaveLength(50);
+    click(button('Clear all'));
+    await fixture.whenStable();
+    expect(host.conditions()).toEqual([]);
+    expect(button('Add filter').disabled).toBe(false);
+    expect(document.activeElement).toBe(button('Add filter'));
+  });
+
+  it('blocks a selected value set larger than its backend limit', async () => {
+    const fixture = await render();
+    const host = fixture.componentInstance;
+    const values = Array.from({ length: 101 }, (_, index) => String(index));
+    host.fields.set([
+      {
+        key: 'group',
+        label: 'Group',
+        type: 'enum',
+        operators: ['isAnyOf'],
+        maxValues: 100,
+        options: values.map((value) => ({ value, label: value })),
+      },
+    ]);
+    host.conditions.set([{ id: 'group', field: 'group', operator: 'isAnyOf', values }]);
+    await fixture.whenStable();
+    click(button('Edit filter: Group'));
+    await fixture.whenStable();
+    expect(button('Update').disabled).toBe(true);
+    expect(document.querySelector('.filter-builder__editor p-message')?.textContent).toContain(
+      '100',
+    );
   });
 
   it('opens on Column and restores Add filter on Escape', async () => {

@@ -29,10 +29,8 @@ Component-specific values stay literal, for example icon boxes, chart and header
 card and text maximum widths, small gaps, paddings and offsets (`2px`, `0.125rem`, `-0.25rem`), the
 3 px corners of chart columns and the KPI tone marker, the login card's type sizes, hairlines, pill
 and round shapes (`999px`, `50%`) and pattern-local custom properties (`--app-meter-value`,
-`--app-truncate-width`). Exceptions: the Karma Client component CSS and the pre-pattern Fleet
-styles (`features/fleet/fleet-list.scss`, `fleet-editor.scss`, `relation-picker.scss`) use literal
-spacing and sizes, and the Karma CSS and `relation-picker.scss` keep Sakai-era
-`@media (max-width: 575px)` and `(max-width: 1100px)` queries.
+`--app-truncate-width`). The Karma Client component CSS uses literal spacing and sizes and
+keeps Sakai-era `@media (max-width: 575px)` and `(max-width: 1100px)` queries.
 
 ## Theme
 
@@ -57,11 +55,13 @@ spacing and sizes, and the Karma CSS and `relation-picker.scss` keep Sakai-era
   text (surface 100 with 900 text in dark);
 - `extend.app`: the holita tokens, emitted as `--p-app-*` (below);
 - `css`: central rules tokens cannot express: uppercase 11–12 px column titles with 0.06em letter
-  spacing for every DataTable header cell, `tabular-nums` for `.app-num` (the holita layer adds
-  no-wrap and end alignment), the density row height, the tab-bar gap, single-sided `p-timeline`
-  events (an empty opposite side is hidden), no transition on select and autocomplete options,
+  spacing for every DataTable header cell, the density row height, the tab-bar gap, single-sided
+  `p-timeline` events (an empty opposite side is hidden), no transition on select and autocomplete options,
   table rows and header cells, and disabled DatePicker days in the muted text colour at full
   opacity (PrimeNG dims them below AA contrast).
+
+The `.app-num` pattern in `styles/_patterns.scss` owns tabular numbers, no-wrap and end
+alignment in the `holita` layer.
 
 `provideHolitaTheme(choice, license?)` (`theme/provide-holita-theme.ts`) calls `providePrimeNG`
 with `ripple: false`, `theme: holitaTheme(choice)`, the global pass-through
@@ -280,10 +280,9 @@ must change with the Sass map), provides a deterministic `matchMedia` driven by 
 `_legacy-karma.scss` is the only place the pre-design-system classes `.card`, `.page-heading`,
 `.page-actions` and `.content-link` and the Sakai aliases `--surface-border`, `--surface-card`,
 `--text-color`, `--text-color-secondary`, `--primary-color` and `--content-border-radius` survive,
-mapped to the new tokens. Karma Client pages and the Fleet Vehicles/Devices screens that predate
-the patterns (`vehicles-page`, `devices-page`, `vehicle-editor`, `device-editor`,
-`fleet-workspace`, `fleet-editor.scss`, `fleet-list.scss`) read them, so the file can be
-removed only after both are gone. New code does not use them.
+mapped to the new tokens. Karma Client pages still read them. All connected Fleet screens
+use the shared views and drawer patterns. Remove the legacy rules only after their remaining
+consumers are gone.
 
 ## Shell
 
@@ -317,9 +316,9 @@ navigation has no counts.
   wide as the sidebar (at most 90vw), shows a decorative logo in its header and keeps the footer.
 - The topbar is one row at every width: the menu button, the logo (below `lg` only), the
   breadcrumb, then the Branch, language, notifications and account menus. The logo links to
-  `/<language>/<Branch>/fleet`, or `/<language>` without a Branch; that path has no route of its
-  own, and the `**` redirect leads to the language root, where the workspace opens a Branch's
-  Vehicles. The four menus are `holita-menu-button` popups (below), not form selects; each
+  `/<language>/<Branch>/fleet`, or `/<language>` without a Branch; the Fleet root redirects to
+  Overview and the signed-in language root opens Overview for the selected Branch. The four
+  menus are `holita-menu-button` popups (below), not form selects; each
   button's name starts with a visually hidden "Branch:", "Language:", "Notifications" or
   "Account:".
 - Breadcrumb (`<nav>` with an `<ol>`, `aria-current="page"` on the last crumb): the navigation
@@ -377,13 +376,15 @@ navigation has no counts.
   `navigation` and `context`.
   It binds `languageChange` (only `bg`/`en`: the current URL with its first segment replaced, so
   path, query and fragment are kept), `branchSelected` (`BranchContext.choose`: on Branch routes it
-  navigates to `/<language>/<id>/fleet/<vehicles|devices>` without the list query; on routes with
+  preserves the supported Fleet section without its record/list query; on routes with
   `data.requiresBranch: false` it only remembers the Branch) and `signOut` (pauses the default
   Branch navigation and navigates to `/<language>` through the route guards; only if that succeeds
-  does it clear the Branches and end the demo session). It passes no `account` or
-  `notifications`, so the bell is hidden and the account menu shows the tenant name.
-  `adminNavigation(language, branchId, fleetEnabled)` returns the Fleet group (Vehicles `truck`,
-  Devices `mobile`) only when a Branch is selected and Fleet is enabled, followed by the Karma
+  does it clear the Branches and end the demo session). The account menu shows the tenant name.
+  `notificationsUnavailable` exposes the Demo bell with an explicit provider-unavailable heading,
+  no feed and no unread badge.
+  `adminNavigation(language, branchId, fleetEnabled)` returns Monitoring (Overview, Alerts, Trip log),
+  Fleet (Vehicles, Drivers, Devices), Service (Maintenance) and Settings (Vehicle groups, General)
+  only when a Branch is selected and Fleet is enabled, followed by the Karma
   Client group with the note "temporary" (Trucks, Users, Roles, Projects, Time zones, API
   information). On a route that requires a Branch, while discovery is loading, empty or failed,
   the workspace projects a status card with Retry (`data-testid="refresh-branches"`) and renders
@@ -402,9 +403,9 @@ Application texts live in `src/app/i18n/{bg,en}.json` (`messages[language]`, typ
 other value redirects to `/bg`, and `readLanguage` maps every value other than `en` to `bg`.
 `i18n/catalog-parity.ts` (`catalogParityProblems`, `expectCatalogParity`) checks a BG/EN pair for
 identical key trees and array lengths, non-empty texts and identical `{placeholder}` sets;
-`i18n/messages.spec.ts` and `ui/i18n/messages.spec.ts` use it. The Fleet view catalogs under
-`features/fleet/*/i18n` have only `en.json`: `<view>Text(language)` returns English until a
-Bulgarian catalog with the same keys is added beside it, and they have no parity spec.
+`i18n/messages.spec.ts` and `ui/i18n/messages.spec.ts` use it. Every connected Fleet feature has
+BG/EN catalogs and a parity spec under its `i18n` directory. Storybook renders English while
+using the same presentation components.
 
 ## Patterns (`src/app/ui`)
 
@@ -514,7 +515,7 @@ Helpers:
   returns an Observable of options, for `p-autocomplete`; signals `options`, `loading` and
   `error`; `search(text)` after 250 ms of quiet input, `hydrate(ids)` at once; the latest request
   wins.
-- `confirm.ts`: `confirmAction(confirmation, language, { header, message?, acceptLabel, danger })`
+- `confirm.ts`: `confirmAction(confirmation, language, { header, message?, acceptLabel, danger, signal? })`
   and `confirmDiscard(confirmation, language)` (Keep editing / Discard changes) resolve `true` on
   accept; Cancel or Keep editing has the initial focus and Escape rejects. ConfirmDialog renders
   `message` as HTML, so it never carries record data; hosts that name records use a `#message`
@@ -527,11 +528,17 @@ Helpers:
   `formatDateTime(iso, language, timeZone, seconds = false)`, `formatDateOnly` (no zone conversion),
   `formatRelative(iso, reference, language)` against an explicit reference and
   `formatDuration(seconds, language)`. `format/format.pipes.ts`:
-  `holitaNumber[:fraction]`, `holitaDateTime[:timeZone][:seconds]` (default `displayTimeZone` =
-  `Europe/Sofia`, optional seconds for precise reading bounds), `holitaDate`, `holitaRelative:reference`, `holitaDuration` and `holitaMoney`,
+  `holitaNumber[:fraction]`, `holitaDateTime[:timeZone][:seconds]` (the Fleet Branch's configured
+  zone, or `Europe/Sofia` outside Fleet; an explicit zone overrides it, with optional seconds for
+  precise reading bounds), `holitaDate`, `holitaRelative:reference`, `holitaDuration` and `holitaMoney`,
   all reading `UI_LANGUAGE`. `format/zoned-time.ts`: `isoToZonedParts`, `zonedWallTimeToIso`
   (DST-aware: a spring-gap time resolves after the gap, an ambiguous autumn time to its first
   occurrence), `toDateOnly`/`fromDateOnly` between a DatePicker `Date` and `YYYY-MM-DD`.
+- `format/fleet-format.ts`: `FLEET_DISPLAY` is a signal supplied by the verified Fleet workspace;
+  standalone examples keep Sofia/KM/LITRE defaults. `injectFleetFormat()` converts read values
+  and chart labels between km/mi, km/h/mph and litres/US gallons, preserving null and zero.
+  API storage remains km, km/h and litres. Typed editors and filters retain their explicitly
+  labelled canonical entry units; they do not round-trip displayed rounded conversions.
 - `clock.ts`: `WALL_CLOCK` (`() => number`, `Date.now` by default; stories fix it).
   `ui-language.ts`: `UI_LANGUAGE` (`Signal<Language>`, `bg` by default; AdminWorkspace provides the
   route language and Storybook `en`). `media.ts`: `below(name)` and `breakpointWidth(name)`
@@ -582,36 +589,47 @@ selection with every query change (search, filters, sort, page, page size); afte
 host removes only the records it changed from the selection, and the other selected records stay
 (a row action on an unselected row keeps the selection).
 
+Bind TablePanel's `actionContext` to the current query identity, as `VehiclesView` does with its
+`state` input. A context change or component destruction retires pending confirmations and
+their callbacks, so an obsolete answer cannot emit an action or restore focus into another
+query. The panel aborts its confirmation controller and clears the pending record list.
+`confirmAction` also accepts an optional `AbortSignal`; aborting closes the dialog and resolves
+`false`, and an already-aborted signal returns `false` without opening it.
+
 ### Operation feedback
 
-Storybook installs one `p-toast` outlet through the shared decorator in `.storybook/preview.ts`
-and one `MessageService` provider in `src/storybook/story-config.ts`. The outlet sits at the top
-right below the topbar, fits the viewport width and shows up to three messages as separate cards;
-`src/styles/_toast.scss` owns its responsive spacing. The sample hosts publish operation results
-with `MessageService.add`; the six list examples, General settings and the vehicle profile use
-this same outlet. A completed batch produces one summary. Success messages close after five
-seconds; warning/error operation summaries stay until dismissed. The outlet floats above the
-page, so results do not change table height or move its rows and controls.
+`ui/operation-toast.ts` provides the shared `holita-operation-toast` presentation. `AdminWorkspace`
+installs one outlet and one component-scoped `MessageService` above its login and signed-in
+content. Connected Fleet lists, drawers and General settings use that provider. Workspace
+changes clear displayed messages, and retired write callbacks cannot publish into another workspace. Storybook's shared
+decorator installs the same component with its own provider for pattern and sample stories; real
+routed stories use the provider inside `AdminWorkspace`.
+
+The outlet sits at the top right below the topbar, fits the viewport width and shows up to three
+messages as separate cards; `src/styles/_toast.scss` owns its responsive spacing. A completed
+batch publishes one summary, with failed record labels and messages when needed.
+Only successful IDs leave the selection; failed records stay available for retry. Success
+messages close after five seconds; warning/error operation summaries stay until dismissed.
+The outlet floats above the page, so results do not change table height or move its controls.
 
 TablePanel has no result-message input or dismissal output. Its loading/error states and Retry
 remain local to the list; field validation, save errors beside an editable draft and contextual
-warnings also remain inline. The message pass-through in `src/storybook/toast.ts` announces
+warnings also remain inline. The message pass-through in `ui/operation-toast.ts` announces
 success with `role="status"`/`aria-live="polite"` and other severities with
 `role="alert"`/`aria-live="assertive"`. Its headless content uses the standard toast classes and
 icons with a normal close button: PrimeNG's default close button has native `autofocus`, which
 can steal focus when an initiating save button disappears. PrimeNG still owns the message
 lifecycle, stacking and dismissal.
 
-The outlet and provider are installed only by Storybook. The live application keeps its current
-feedback flows; its adoption is tracked in the
-[operation feedback migration](todo/admin-design-system.md#operation-feedback).
+All connected Fleet screens use this workspace feedback flow. Karma retains its temporary legacy
+feedback presentation.
 
 ### PrimeNG usage rules
 
-Registered component presets (`registeredComponents`, 32): autocomplete, avatar, badge, button,
+Registered component presets (`registeredComponents`, 31): autocomplete, avatar, badge, button,
 checkbox, chip, confirmdialog, datatable, datepicker, dialog, drawer, iconfield, inputnumber,
-inputtext, listbox (the existing Fleet relation picker), menu, message, metergroup, paginator,
-popover, select, selectbutton, skeleton, tabs, tag, textarea, timeline, toast, togglebutton,
+inputtext, menu, message, metergroup, paginator, popover, select, selectbutton, skeleton, tabs,
+tag, textarea, timeline, toast, togglebutton,
 toggleswitch, tooltip and virtualscroller. Adding a control means adding its preset there (and
 those of the controls it renders internally), to the sorted list in `holita-preset.spec.ts` and to
 the "PrimeNG coverage" story (`primeng-coverage.html` and the count its play function asserts).
@@ -641,9 +659,20 @@ maintenance, alerts and trips) take a `ListQuery` input (`state`) and emit `stat
 next query (`listQuery` transitions); their hosts keep the query and map it to their own query
 variables. The groups view has no query (only `rows` and `view`). In that flow
 FilterBuilder search applies on every input, and sorting goes through `listQuery.sorted`.
-`UrlListState` and the `list-state.ts` helpers keep a list's state in the query string; they are
-implemented and unit-tested, and only their specs use them, apart from `maxSearchLength`, which
-FilterBuilder uses as its input limit.
+The live `VehiclesPage` uses `UrlListState` and a `ListDefinition` in `vehicle-query.ts` to keep
+search, AND conditions, sort, page and page size in the query string. Its `conditions` parameter
+contains the validated JSON condition array, mapped explicitly to the generated Fleet filter
+input. Created-date conditions use the configured Branch's calendar dates. Summary counts cover the whole
+Branch and do not depend on the list query. The displayed data time comes from the server;
+an absent clock is formatted as unknown rather than replaced with the browser's current time.
+The other example hosts keep their `ListQuery` in local signals.
+
+`FilterField` can declare numeric `min`/`max`/`integer`, trimmed Unicode `maxLength` and
+selection `maxValues`. FilterBuilder blocks Apply and shows a localized explanation when a
+draft exceeds these bounds; numeric native hints preserve the invalid draft for correction.
+Its optional `maxConditions` limits new conditions while allowing existing ones to be edited
+or cleared. Vehicles uses the backend limits: 50 conditions, 100 selected values per condition,
+year 1950–2100 as an integer, odometer 0–10,000,000 km and make up to 64 code points.
 
 A `ListDefinition<F, S>` declares `pageSizes` and `defaultPageSize`, `sorts` (`{ param, field }`:
 URL parameter to API sort field), `defaultSort` and optional `viewDefaultSorts` (`{ param, sorts }`:
@@ -685,8 +714,8 @@ leaves the drawer open, and a dirty drawer also guards page unload.
 
 - Host-controlled (`[closeLink]="null"`): the close button, Escape and the backdrop emit
   `closeRequest`; the component that renders the drawer awaits `confirmLeave(dirty)` and only on
-  `true` emits its own `closed` output, after which its page removes it. Every
-  `features/fleet/*/*-drawer.ts` uses this mode (the read-only trip drawer closes without asking).
+  `true` emits its own `closed` output, after which its page removes it. Sample Fleet hosts use
+  this mode (the read-only trip drawer closes without asking).
 - Routed (`closeLink`, default `['..']`): closing navigates relative to the drawer's route with
   the query and fragment preserved. A child route with
   `data: { drawer: true, mode, recordParam?, fixedVehicleParam? }` and
@@ -697,8 +726,13 @@ leaves the drawer open, and a dirty drawer also guards page unload.
   `fixedVehicleParam` `vehicleId`) and `drawerParam(route, name)` reads a parameter from the route
   or its ancestors. The host renders `<router-outlet [routerOutletData]="drawerHost" />`, and
   `injectDrawerHost()` reads that `DrawerHost` from `ROUTER_OUTLET_DATA` (a no-op host when
-  absent) so a drawer can report `saved({ message, recordId })` while it is alive. Only the unit
-  specs use this mode, and `injectDrawerHost()` has no spec.
+  absent) so a drawer can report `saved({ message, recordId })` while it is alive. Live Vehicles
+  uses this mode: `/new` and `/:recordId/edit` are child routes over the retained list.
+  `VehicleEditorPage` supplies the absolute list `closeLink` to `VehicleDrawer`; the route guard
+  asks once before discarding a dirty draft. A saved drawer clears its dirty state, notifies its
+  list host and closes while preserving the list query and fragment. Its own scoped API client
+  loads the record and group/driver choices; loading, invalid ID, missing record and read failure
+  use the shared drawer states.
 
 Editing Fleet drawers lock their form while saving, reject duplicate submits and ignore close
 and route-leave attempts until the operation settles. A failed save retains the draft and
@@ -709,6 +743,25 @@ locks its fields, and restores its page title if focus was lost or its draft was
 
 On destroy the drawer returns focus to the element that was focused when it was created, or
 `#page-title`.
+
+## General settings and Fleet preferences
+
+`GeneralSettingsPage` at `/fleet/settings/general` reuses the full-page
+`GeneralSettingsView`: titled cards, typed Reactive Forms and a sticky dirty/save bar. Server
+field errors focus the first affected control even after a synchronous failure. The form
+guards navigation and unload, locks during submission, retains rejected drafts and restores
+the saved baseline on Discard. Notification controls are visibly labelled Demo/unavailable,
+disabled in the live page and excluded from persistence. The speed limit is a stored reference;
+changing it does not create or change speeding alerts.
+
+`FleetWorkspace` gates business views on its captured `FleetPreferences` read. Loading and
+read failure/Retry appear before business queries; unknown/disabled Branches issue neither
+preferences nor business reads. The same workspace supplies display units and time zone.
+General's separate write client saves Fleet preferences first, then conditionally renames the
+Core Branch. These writes are not atomic. A failed rename leaves the saved Fleet values in
+effect, keeps the name draft editable and reports a partial-save warning. Discard restores
+the actual persisted values. Full success clears the draft and refreshes Branch discovery
+after a rename; retired callbacks cannot apply preferences or announce results in a new scope.
 
 ## Storybook review
 
@@ -729,15 +782,22 @@ relative to `sampleNow`, which equals the default story clock), the story-only l
 `runSampleList` (search, AND conditions, sort with unknown values last in either direction,
 contract secondary keys and final ID ordering, paging) and simulated saves (`saveDelayMs`, 700 ms).
 Devices and General settings examples use visible PrimeNG Demo labels and Storybook
-`prototype` tags. Uninstalled devices, connection diagnostics, Restart and editable General
-settings are product demos without backend operations. Existing prototype filters/sorts stay
+`prototype` tags. The live Devices screen supports stock and stored connection facts; signal,
+voltage, firmware policy and Restart remain unavailable/Demo. The General sample host remains
+a product demonstration; the live General page persists regional preferences/thresholds and
+the Core Branch name, while notification delivery remains explicitly unavailable. Existing prototype filters/sorts stay
 available; the shared sort menus also expose all sort fields in the current contracts. Sample
 sort timestamps are deterministic fixture facts. Vehicle saves and deactivation both set
-`updatedAt` to the fixed sample clock, so modification sorting reflects those writes. API adoption is tracked separately in the
-[design-system plan](todo/admin-design-system.md#admin-phase-per-screen-f3).
+`updatedAt` to the fixed sample clock, so modification sorting reflects those writes.
 
-The application does not route these views: Fleet Vehicles and Devices render through
-`FleetWorkspace` ([Discocan Fleet](discocan/fleet.md)).
+Live Fleet containers render the same presentation components inside `FleetWorkspace`:
+Vehicles/profile/odometer, Devices, Drivers/scorecard, Overview, Alerts, Trip log, Maintenance
+and Vehicle groups/General settings ([Discocan Fleet](discocan/fleet.md#angular-foundation)). Their `Admin/...`
+stories exercise real routes, APIs and captured Apollo clients using typed deterministic
+`src/storybook/*-fixtures.ts` responses. These immutable snapshots exercise rendering, errors,
+forms, save/close and partial actions; backend persistence, filtering and derived facts are
+verified by database and real-Gateway browser checks. The sample `Examples/...` hosts remain
+separate and demonstrate the presentation components without importing into the app.
 
 `Examples/Authentication/Login` renders the existing application `Login` without a shell.
 `storybook/login-fixtures.ts` answers its `AdminTenants`, `AdminDemoLogin` and `AdminBranches`
@@ -801,9 +861,8 @@ services can be opened read-only; they cannot be edited or deleted. There is no 
 or Done switch in the planning form. The completion stories also cover failure and retry,
 invalid next schedules and earlier-service odometer errors; the planning stories cover an
 optional title, cancellation and its retained record, and searching the saved workshop.
-The examples preserve the current API's allowance for
-completing and scheduling on INACTIVE vehicles; the policy decision remains in the
-[review backlog](todo/admin-design-system-review-fixes.md#4-service-task-rules-inactive-vehicles-and-completion-odometers).
+Historical completion is allowed for INACTIVE vehicles, but scheduling a next service requires a
+non-INACTIVE Vehicle. The odometer floor continues to use only services completed on earlier dates.
 
 Drivers open `DriverScorecardView` from a row action or their view drawer. Its 7/30/90-day
 windows show the data clock and exact interval, distance-weighted driving and eco scores,
@@ -888,8 +947,8 @@ Checks for such a change: `npm run test:admin -- --include="app/theme/**/*.spec.
 --include="app/ui/**/*.spec.ts" --include="app/layout/**/*.spec.ts" --skip-nx-cache` (add
 `--include="app/workspace/**/*.spec.ts" --include="app/i18n/**/*.spec.ts"` for shell or catalog
 changes), `npm run test:storybook:admin`, `npm run test:visual:admin` (candidates for review) and
-the shell smoke (`npm run test:smoke:admin -- angular-shell.smoke.spec.mts`; the signed-in
-admin smokes currently fail; see [browser smoke checks](testing.md#real-federation-and-browser-smoke-checks)).
+the shell smoke (`npm run test:smoke:admin -- angular-shell.smoke.spec.mts`; see
+[browser smoke checks](testing.md#real-federation-and-browser-smoke-checks)).
 
 ## Extending
 

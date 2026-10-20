@@ -7,9 +7,10 @@ import { TelemetryModule } from '../telemetry/telemetry.module.js';
 import { DevicesRepository } from './devices.repository.js';
 import { DevicesResolver } from './devices.resolver.js';
 import { DevicesService } from './devices.service.js';
+import { SettingsModule } from '../settings/settings.module.js';
 
 @Module({
-  imports: [DatabaseModule, CoreClientModule, ClockModule, TelemetryModule],
+  imports: [DatabaseModule, CoreClientModule, ClockModule, TelemetryModule, SettingsModule],
   providers: [FleetEnabledGuard, DevicesRepository, DevicesService, DevicesResolver],
 })
 export class DevicesModule {}

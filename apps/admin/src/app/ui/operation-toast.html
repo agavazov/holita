@@ -1,0 +1,53 @@
+<p-toast
+  class="app-toast"
+  position="top-right"
+  mode="expanded"
+  [life]="5000"
+  [stackVisibleLimit]="3"
+  [pt]="pt"
+  [style]="style"
+>
+  <ng-template #headless let-message let-close="closeFn">
+    @if (message) {
+      <div class="p-toast-message-content">
+        @switch (message.severity) {
+          @case ('success') {
+            <svg class="p-toast-message-icon" data-p-icon="check" aria-hidden="true"></svg>
+          }
+          @case ('warn') {
+            <svg
+              class="p-toast-message-icon"
+              data-p-icon="exclamation-triangle"
+              aria-hidden="true"
+            ></svg>
+          }
+          @case ('error') {
+            <svg class="p-toast-message-icon" data-p-icon="times-circle" aria-hidden="true"></svg>
+          }
+          @default {
+            <svg class="p-toast-message-icon" data-p-icon="info-circle" aria-hidden="true"></svg>
+          }
+        }
+        <div class="p-toast-message-text">
+          @if (message.summary) {
+            <div class="p-toast-summary">{{ message.summary }}</div>
+          }
+          @if (message.detail) {
+            <div class="p-toast-detail">{{ message.detail }}</div>
+          }
+        </div>
+        @if (message.closable !== false) {
+          <button
+            type="button"
+            class="p-toast-close-button"
+            data-pc-section="closebutton"
+            [attr.aria-label]="text().close"
+            (click)="close($event)"
+          >
+            <svg class="p-toast-close-icon" data-p-icon="times" aria-hidden="true"></svg>
+          </button>
+        }
+      </div>
+    }
+  </ng-template>
+</p-toast>

@@ -4,6 +4,8 @@ import { Test } from '@nestjs/testing';
 import { randomUUID } from 'node:crypto';
 import { FleetClock } from '../../clock/fleet-clock.js';
 import { CoreClient } from '../../integrations/core/core.client.js';
+import { SettingsService } from '../settings/settings.service.js';
+import { defaultFleetSettings } from '../settings/settings-defaults.js';
 import { type SampleRow, TelemetryRepository } from './telemetry.repository.js';
 import { MAX_SERIES_SAMPLES, TelemetryService } from './telemetry.service.js';
 
@@ -72,6 +74,10 @@ describe('Telemetry clocks, samples and odometer readings', () => {
       providers: [
         TelemetryService,
         {
+          provide: SettingsService,
+          useValue: { read: () => Promise.resolve(defaultFleetSettings()) },
+        },
+        {
           provide: TelemetryRepository,
           useValue: {
             asOf,
@@ -114,13 +120,33 @@ describe('Telemetry clocks, samples and odometer readings', () => {
         recordedAt: '2026-10-17T21:00:00Z',
       }),
     ).resolves.toMatchObject({ source: 'MANUAL', deviceImei: null, odometerKm: 1234.6 });
-    expect(insertManualReading).toHaveBeenCalledWith(scope, {
-      vehicleId,
-      odometerKm: 1234.6,
-      recordedAt: dataClock,
-      receivedAt: now,
-    });
+    expect(insertManualReading).toHaveBeenCalledWith(
+      scope,
+      { vehicleId, odometerKm: 1234.6, recordedAt: dataClock, receivedAt: now },
+      expect.any(Function),
+    );
     expect(requireBranch).toHaveBeenCalledTimes(1);
+  });
+
+  it('repeats latest-reading validation under the Vehicle lock and rejects a retired vehicle', async () => {
+    const reading = { vehicleId, odometerKm: 1500, recordedAt: '2026-10-17T21:00:00Z' };
+    for (const [latest, path] of [
+      [{ odometerKm: 1600, recordedAt: new Date('2026-10-17T20:45:00Z') }, 'odometerKm'],
+      [{ odometerKm: 1000, recordedAt: dataClock }, 'recordedAt'],
+    ] as const) {
+      insertManualReading.mockImplementationOnce((_scope, data, check) => {
+        check(latest);
+        return Promise.resolve(sample(data));
+      });
+      expect(await fieldErrors(service.recordOdometerReading(context, reading))).toMatchObject([
+        { path },
+      ]);
+    }
+    insertManualReading.mockResolvedValueOnce(null);
+    expect(await fieldErrors(service.recordOdometerReading(context, reading))).toEqual([
+      { path: 'vehicleId', message: 'Choose a vehicle in this branch that is not inactive.' },
+    ]);
+    expect(requireBranch).toHaveBeenCalledTimes(3);
   });
 
   it.each([

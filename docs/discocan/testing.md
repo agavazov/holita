@@ -25,10 +25,13 @@ page/total consistency.
 ```bash
 npm run test:admin -- --include="app/features/fleet/vehicles/*.spec.ts" --include=app/features/fleet/fleet-workspace.spec.ts --skip-nx-cache
 npm run test:smoke:admin -- angular-vehicles.smoke.spec.mts
+npm run test:smoke:admin -- angular-fleet.smoke.spec.mts --grep="profile tab"
 ```
 
 Angular suites cover URL query helpers, typed forms, server-field focus, client/cache isolation,
-late writes, partial deletion/retry and retired confirmations. Browser checks use real CRUD,
+late writes, partial deletion/retry and retired confirmations. `vehicle-profile.spec.ts` and
+`vehicle-profile-query.spec.ts` cover the profile API/adapter, related-record paging, shared
+editor return paths and manual readings without a fabricated data clock. Browser checks use real CRUD,
 reload/scoping and Bulgarian 1280/390/320px light/dark forms/lists. Captures belong in ignored
 `.references/review/vehicles`.
 
@@ -42,14 +45,17 @@ reassignment, scoped CRUD, the new fields, option rules, the `FleetVehicleRef` v
 filters/search/sorting.
 
 ```bash
-npm run test:admin -- --include="app/features/fleet/devices/*.spec.ts" --include=app/features/fleet/relation-picker.spec.ts --include=app/features/fleet/fleet-workspace.spec.ts --skip-nx-cache
+npm run test:admin -- --include="app/features/fleet/devices/*.spec.ts" --skip-nx-cache
 npm run test:smoke:admin -- angular-devices.smoke.spec.mts
 ```
 
-Controlled Angular tests cover captured clients, typed forms, remote Vehicle selection, field
-focus, delayed writes and sequential deletion retirement/retry. Real browser cases check
-persistent assignments/reassignment/uniqueness, scope and Bulgarian desktop/narrow light/dark
-views. Captures belong in ignored `.references/review/devices`.
+Controlled Angular tests exercise the routed `devices-list-page.ts`/`device-editor-page.ts`
+runtime: captured clients, optional stock assignment, full bounded Vehicle choices, typed
+fields, diagnostics metadata, field focus and real IDs-array deletion with partial results.
+Submitted batches survive scope retirement without late UI callbacks. Real browser cases check
+persistent stock and assignment/reassignment/uniqueness, scope and Bulgarian desktop/narrow light/dark views.
+Captures belong in ignored `.references/review/devices`. Signal/voltage, firmware policy and
+restart have no live provider contract; Storybook Demo interactions do not prove such a command.
 
 ## Fleet list contract, Drivers and Vehicle groups checks
 
@@ -130,13 +136,73 @@ npm run test:admin -- --include=app/theme/appearance.spec.ts --skip-nx-cache
 ```
 
 Branch/workspace tests prove independent login layout, sequential Tenant/Branch selection, cancellation
-of obsolete candidate tokens and Branch discovery, tenant A → B → A, direct/default Vehicles navigation, A → B → A, cancellation on Branch/language
+of obsolete candidate tokens and Branch discovery, tenant A → B → A, direct Fleet navigation and
+the Overview landing route, cancellation on Branch/language
 change, unknown Branch and disabled Fleet behavior. Feature APIs prove retired submitted-write
 success/failure and isolated caches. Real transport uses `angular-foundation.smoke.spec.mts`;
 Shell focus/theme/resizing/mobile behavior uses `angular-shell.smoke.spec.mts`; design-system
 changes use the checks in the [admin design system](../admin-design-system.md#changing-the-design-centrally).
 Behavioral checks and [Storybook visual review](../testing.md#storybook-visual-review) are
 separate evidence.
+
+### Connected Fleet screens
+
+Select the concrete feature files that own a changed contract or workflow. Paths below are
+relative to `apps/admin/src/app/features/fleet`; run one with
+`npm run test:admin -- --include=app/features/fleet/<path> --skip-nx-cache`.
+
+| Feature                      | Focused Angular specs                                                                                                                                                                                                                                                                                         |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Overview                     | `overview/overview-page.spec.ts`                                                                                                                                                                                                                                                                              |
+| Alerts                       | `alerts/alerts-api.spec.ts`, `alerts/alert-query.spec.ts`, `alerts/alert-mapping.spec.ts`, `alerts/alerts-page.spec.ts`, `alerts/alert-detail-page.spec.ts`                                                                                                                                                   |
+| Trips                        | `trips/trips-api.spec.ts`, `trips/trip-query.spec.ts`, `trips/trip-mapping.spec.ts`, `trips/trips-page.spec.ts`, `trips/trip-detail-page.spec.ts`                                                                                                                                                             |
+| Drivers and scorecard        | `drivers/drivers-api.spec.ts`, `drivers/driver-query.spec.ts`, `drivers/driver-mapping.spec.ts`, `drivers/drivers-page.spec.ts`, `drivers/driver-editor-page.spec.ts`, `drivers/driver-scorecard-page.spec.ts`                                                                                                |
+| Maintenance                  | `maintenance/maintenance-api.spec.ts`, `maintenance/maintenance-query.spec.ts`, `maintenance/service-task-mapping.spec.ts`, `maintenance/maintenance-choices.spec.ts`, `maintenance/maintenance-page.spec.ts`, `maintenance/maintenance-record-page.spec.ts`, `maintenance/service-completion-drawer.spec.ts` |
+| Vehicle groups               | `vehicle-groups/vehicle-groups-api.spec.ts`, `vehicle-groups/vehicle-group-mapping.spec.ts`, `vehicle-groups/vehicle-groups-page.spec.ts`, `vehicle-groups/vehicle-group-editor-page.spec.ts`                                                                                                                 |
+| General settings/preferences | `settings/general-settings-api.spec.ts`, `settings/general-settings-mapping.spec.ts`, `settings/general-settings-page.spec.ts`, `settings/general-settings-view.spec.ts`, `settings/fleet-preferences.spec.ts`                                                                                                |
+| Vehicle profile and odometer | `vehicles/vehicle-profile.spec.ts`, `vehicles/vehicle-profile-query.spec.ts`, `vehicles/vehicle-profile-view.spec.ts`, `vehicles/odometer-drawer.spec.ts`                                                                                                                                                     |
+
+These adapters cover actual generated operation shapes and captured-client lifetime, direct
+record bookmarks, full choice paging, retained refresh data and drafts, field errors, URL
+filters and partial batch retry. Alerts cases exercise optimistic transitions; Trips cases
+preserve the returned event timeline and unknown measurements. Driver scorecard cases change
+7/30/90-day URL periods without inventing telemetry. Maintenance cases distinguish immutable
+vehicle assignment, exact cents, read-only history, atomic completion/next planning and an
+inactive vehicle's historical completion. Group deletion checks preserve protected records.
+Keep these checks distinct from the backend rules in the Fleet unit/database suites.
+
+General settings cases cover the initial preferences gate and Retry before business queries,
+captured reads/writes through Branch/language/session changes, conditional Core renaming and
+honest partial saves. A failed name remains editable while Discard keeps already saved Fleet
+preferences. `app/ui/format/fleet-format.spec.ts` covers display-unit conversion without losing
+null/zero or changing labelled canonical editor/filter inputs. Include the workspace/Branch
+specs when changing the gate or navigation.
+
+```bash
+npm run test:admin -- --include="app/features/fleet/**/i18n/*.spec.ts" --skip-nx-cache
+npm run test:admin -- --include=app/ui/filter-builder/filter-model.spec.ts --include=app/ui/table-panel/table-panel.spec.ts --include=app/ui/drawer/route-drawer.spec.ts --skip-nx-cache
+npm run test:smoke:admin -- angular-fleet.smoke.spec.mts
+```
+
+Catalog specs compare Bulgarian/English keys and placeholders; the shared filter/action/drawer
+cases cover numeric precision, retired confirmations and guarded close behavior.
+`angular-fleet.smoke.spec.mts` owns compiled-app/Gateway/database checks for Overview retry and
+null telemetry, Group persistence/scope, Driver documents/scorecard, profile tab and editor
+return paths, manual zero readings, Maintenance receipts/next tasks and empty or missing
+Trips/Alerts. Use the native `--grep` selector for one relevant case. The fixture owns its
+dedicated database schemas and services; do not substitute a development database.
+
+Live-container stories sit beside the adapters (`overview-page.stories.ts`,
+`alerts-page.stories.ts`, `trips-page.stories.ts`, `drivers-page.stories.ts`,
+`maintenance-page.stories.ts`, `devices-list-page.stories.ts`,
+`vehicle-groups-page.stories.ts`, `vehicles-page.stories.ts`,
+`vehicle-profile-page.stories.ts`). They exercise real routes/services against typed immutable
+GraphQL snapshots under `src/storybook`, including controlled failures. Refetch intentionally
+returns the same read snapshot after a mutation; these stories are transport/presentation
+evidence, not persistence or a second backend query engine. Existing sample stories remain
+presentation examples. Run the native Storybook play/a11y target and the relevant visual
+captures using the [shared selectors](../testing.md#storybook-visual-review); captures remain
+candidates until a person approves them.
 
 ## Tenant sessions and migrations
 
@@ -156,7 +222,7 @@ identical Branch IDs and IMEIs across tenants, composite relation rejection and 
 Initial-migration tests deploy the complete schema in dedicated guarded databases, then check
 mandatory scope columns, physical id/tenantId/branchId order for all eight Fleet business tables, and the full applied migration history. Upgrade tests preserve existing records (which receive the master data defaults) and migration checksums through the Branch rename, master data and activity migrations. They never touch
 development tables. Angular tests cover logged-out deep links, Tenant/Branch dropdown gating and retry, obsolete candidate
-responses, root-to-Vehicles navigation, remembered Branch selection, tenant client/cache retirement,
+responses, root-to-Overview navigation, remembered Branch selection, tenant client/cache retirement,
 delayed submitted writes and fresh A → B → A clients. Browser login checks use the actual dropdown,
 logout/reload and desktop/narrow light/dark views; fixture auto-login is disabled for that suite.
 

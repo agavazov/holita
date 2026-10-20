@@ -1,104 +1,112 @@
 <holita-route-drawer
   [title]="title()"
   [subtitle]="subtitle()"
-  [closeLink]="null"
+  [state]="state()"
+  [errorText]="loadError()"
+  [closeLink]="closeLink()"
+  (retry)="retry.emit()"
   (closeRequest)="closed.emit()"
 >
-  @let record = trip();
-  @if (record.endedAt === null) {
+  @if (trip()?.endedAt === null) {
     <p-tag
       drawerMeta
       severity="info"
-      [value]="record.inProgress ? text().inProgress : text().noEnd"
+      [value]="trip()?.inProgress ? text().inProgress : text().noEnd"
     />
   }
-  <section class="app-form-section">
-    <h3>{{ text().summary }}</h3>
-    <dl class="app-facts">
-      <div>
-        <dt>{{ text().vehicle }}</dt>
-        <dd>{{ record.plate }}</dd>
-      </div>
-      <div>
-        <dt>{{ text().driver }}</dt>
-        <dd>{{ record.driverName ?? '—' }}</dd>
-      </div>
-      <div>
-        <dt>{{ text().started }}</dt>
-        <dd>{{ record.startedAt | holitaDateTime }}</dd>
-      </div>
-      <div>
-        <dt>{{ text().ended }}</dt>
-        <dd>{{ record.endedAt | holitaDateTime }}</dd>
-      </div>
-      <div>
-        <dt>{{ text().duration }}</dt>
-        <dd>
-          {{ (record.durationMin === null ? null : record.durationMin * 60) | holitaDuration }}
-        </dd>
-      </div>
-      <div>
-        <dt>{{ text().distance }}</dt>
-        <dd>{{ record.distanceKm | holitaNumber }}{{ record.distanceKm === null ? '' : ' km' }}</dd>
-      </div>
-      <div>
-        <dt>{{ text().maxSpeed }}</dt>
-        <dd>
-          {{ record.maxSpeedKph | holitaNumber }}{{ record.maxSpeedKph === null ? '' : ' km/h' }}
-        </dd>
-      </div>
-      <div>
-        <dt>{{ text().fuel }}</dt>
-        <dd>
-          @if (record.fuelUsedL !== null) {
-            {{ record.fuelUsedL | holitaNumber }} L
-          } @else {
-            —
-          }
-        </dd>
-      </div>
-      <div>
-        <dt>{{ text().score }}</dt>
-        <dd>
-          @if (record.score !== null) {
-            <span class="app-meter-cell">
-              <span
-                [class]="scoreClass(record.score)"
-                [style.--app-meter-value]="record.score + '%'"
-                aria-hidden="true"
-              ></span>
-              <span>{{ record.score }}</span>
-            </span>
-          } @else {
-            —
-          }
-        </dd>
-      </div>
-    </dl>
-  </section>
-  <section class="app-form-section">
-    <h3>{{ text().timeline }}</h3>
-    <p-timeline [value]="entries()">
-      <ng-template #marker let-entry>
-        <span [class]="dotClass(entry)"></span>
-      </ng-template>
-      <ng-template #content let-entry>
-        <div class="app-timeline-event">
-          <span class="app-timeline-event__title">{{ entry.title }}</span>
-          <span class="app-timeline-event__meta">{{ entry.at | holitaDateTime }}</span>
-          @if (entry.detail) {
-            <span class="app-timeline-event__body">{{ entry.detail }}</span>
-          }
+  @if (trip(); as record) {
+    <section class="app-form-section">
+      <h3>{{ text().summary }}</h3>
+      <dl class="app-facts">
+        <div>
+          <dt>{{ text().vehicle }}</dt>
+          <dd>{{ record.plate }}</dd>
         </div>
-      </ng-template>
-    </p-timeline>
-  </section>
+        <div>
+          <dt>{{ text().driver }}</dt>
+          <dd>{{ record.driverName ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().started }}</dt>
+          <dd>{{ record.startedAt | holitaDateTime }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().ended }}</dt>
+          <dd>{{ record.endedAt | holitaDateTime }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().duration }}</dt>
+          <dd>
+            {{ (record.durationMin === null ? null : record.durationMin * 60) | holitaDuration }}
+          </dd>
+        </div>
+        <div>
+          <dt>{{ text().distance }}</dt>
+          <dd>
+            {{ units.distance(record.distanceKm, true, 0) }}
+          </dd>
+        </div>
+        <div>
+          <dt>{{ text().maxSpeed }}</dt>
+          <dd>
+            {{ units.speed(record.maxSpeedKph) }}
+          </dd>
+        </div>
+        <div>
+          <dt>{{ text().fuel }}</dt>
+          <dd>
+            @if (record.fuelUsedL !== null) {
+              {{ units.volume(record.fuelUsedL, true, 0) }}
+            } @else {
+              —
+            }
+          </dd>
+        </div>
+        <div>
+          <dt>{{ text().score }}</dt>
+          <dd>
+            @if (record.score !== null) {
+              <span class="app-meter-cell">
+                <span
+                  [class]="scoreClass(record.score)"
+                  [style.--app-meter-value]="record.score + '%'"
+                  aria-hidden="true"
+                ></span>
+                <span>{{ record.score }}</span>
+              </span>
+            } @else {
+              —
+            }
+          </dd>
+        </div>
+      </dl>
+    </section>
+    <section class="app-form-section">
+      <h3>{{ text().timeline }}</h3>
+      <p-timeline [value]="entries()">
+        <ng-template #marker let-entry>
+          <span [class]="dotClass(entry)"></span>
+        </ng-template>
+        <ng-template #content let-entry>
+          <div class="app-timeline-event">
+            <span class="app-timeline-event__title">{{ entry.title }}</span>
+            <span class="app-timeline-event__meta">{{ entry.at | holitaDateTime }}</span>
+            @if (entry.detail) {
+              <span class="app-timeline-event__body">{{ entry.detail }}</span>
+            }
+          </div>
+        </ng-template>
+      </p-timeline>
+    </section>
+  }
   <div drawerFooter class="app-drawer-actions">
-    <button pButton type="button" severity="secondary" [outlined]="true" (click)="closed.emit()">
+    <button pButton type="button" severity="secondary" [outlined]="true" (click)="close()">
       {{ text().close }}
     </button>
-    <button pButton type="button" (click)="openVehicle.emit(record.vehicleId)">
-      {{ text().openVehicle }}
-    </button>
+    @if (trip(); as record) {
+      <button pButton type="button" (click)="openVehicle.emit(record.vehicleId)">
+        {{ text().openVehicle }}
+      </button>
+    }
   </div>
 </holita-route-drawer>

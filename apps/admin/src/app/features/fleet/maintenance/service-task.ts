@@ -11,7 +11,8 @@ export const serviceTypes = [
   'OTHER',
 ] as const;
 export type ServiceType = (typeof serviceTypes)[number];
-export type ServiceStatus = 'PLANNED' | 'DONE' | 'CANCELLED';
+export const serviceStatuses = ['PLANNED', 'DONE', 'CANCELLED'] as const;
+export type ServiceStatus = (typeof serviceStatuses)[number];
 export const serviceUrgencies = ['OVERDUE', 'DUE_SOON', 'UNKNOWN_ODOMETER', 'UPCOMING'] as const;
 export type ServiceUrgency = (typeof serviceUrgencies)[number];
 

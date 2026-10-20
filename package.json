@@ -57,6 +57,7 @@
     "db:validate": "npm run db:validate --workspace @holita/core && npm run db:validate --workspace @holita/fleet",
     "db:migrate": "npm run db:migrate --workspace @holita/core && npm run db:migrate --workspace @holita/fleet",
     "db:seed": "npm run db:seed --workspace @holita/core && npm run db:seed --workspace @holita/fleet",
+    "db:seed:fleet-demo": "tsx apps/fleet/prisma/demo/cli.ts",
     "test:core:db": "nx run core:test-db --output-style=static",
     "prelint": "npm run db:generate && npm run codegen",
     "typecheck:tools": "tsc --project tools/tsconfig.json",

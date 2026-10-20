@@ -4,6 +4,8 @@ import { Test } from '@nestjs/testing';
 import { randomUUID } from 'node:crypto';
 import { FleetClock } from '../../clock/fleet-clock.js';
 import { CoreClient } from '../../integrations/core/core.client.js';
+import { SettingsService } from '../settings/settings.service.js';
+import { defaultFleetSettings } from '../settings/settings-defaults.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import type { CreateFleetDeviceInput } from '../../generated/graphql/types.js';
 import type { FleetDeviceModel, FleetDeviceOption } from '../../generated/prisma/enums.js';
@@ -29,12 +31,15 @@ async function fieldErrors(action: Promise<unknown>): Promise<unknown> {
 describe('Devices validation and scope', () => {
   const list = jest.fn<DevicesRepository['list']>();
   const find = jest.fn<DevicesRepository['find']>();
+  const summary = jest.fn<DevicesRepository['summary']>();
+  const remove = jest.fn<DevicesRepository['delete']>();
   const create = jest.fn<DevicesRepository['create']>();
   const update = jest.fn<DevicesRepository['update']>();
   const findVehicle = jest.fn<DevicesRepository['findVehicle']>();
   const imeiTaken = jest.fn<DevicesRepository['imeiTaken']>();
   const requireBranch = jest.fn<CoreClient['requireBranch']>();
   const lastReported = jest.fn<TelemetryService['lastReported']>();
+  const asOf = jest.fn<TelemetryService['asOf']>();
   const now = new Date('2026-10-18T07:00:00.000Z');
   const context = {
     requestId: randomUUID(),
@@ -77,40 +82,55 @@ describe('Devices validation and scope', () => {
       providers: [
         DevicesService,
         {
+          provide: SettingsService,
+          useValue: { read: () => Promise.resolve(defaultFleetSettings()) },
+        },
+        {
           provide: DevicesRepository,
-          useValue: { list, find, create, update, findVehicle, imeiTaken },
+          useValue: { list, find, create, update, findVehicle, imeiTaken, summary, delete: remove },
         },
         { provide: CoreClient, useValue: { requireBranch } },
         { provide: FleetClock, useValue: { now: () => now } },
-        { provide: TelemetryService, useValue: { lastReported } },
+        { provide: TelemetryService, useValue: { lastReported, asOf } },
       ],
     }).compile();
     service = module.get(DevicesService);
     jest.resetAllMocks();
     findVehicle.mockResolvedValue({ id: vehicleId });
     imeiTaken.mockResolvedValue(false);
-    list.mockResolvedValue({ items: [row()], total: 1 });
+    list.mockResolvedValue({
+      items: [{ ...row(), status: 'OFFLINE', lastReportedAt: null }],
+      total: 1,
+    });
     create.mockResolvedValue(row());
     update.mockResolvedValue(row());
     find.mockResolvedValue(row());
     lastReported.mockResolvedValue(new Map());
+    asOf.mockResolvedValue(now);
   });
 
-  it('attaches lastReportedAt of each current (vehicle, IMEI) pair with one batched call', async () => {
+  it('keeps the filtered list facts and order when newer telemetry is available after its snapshot', async () => {
     const reporting = row({ imei: '001234567890111' }),
       silent = row({ imei: '001234567890222' });
-    list.mockResolvedValue({ items: [reporting, silent], total: 2 });
-    const reportedAt = new Date('2026-10-18T06:25:00.000Z');
-    lastReported.mockResolvedValue(
-      new Map([[reportingPair(vehicleId, '001234567890111'), reportedAt]]),
-    );
-    const page = await service.list(context, {});
-    expect(lastReported).toHaveBeenCalledTimes(1);
-    expect(lastReported).toHaveBeenCalledWith(scope, [
-      { vehicleId, imei: '001234567890111' },
-      { vehicleId, imei: '001234567890222' },
-    ]);
+    const reportedAt = new Date(now.getTime() - 49 * 3_600_000);
+    list.mockResolvedValue({
+      items: [
+        { ...reporting, status: 'OFFLINE', lastReportedAt: reportedAt },
+        { ...silent, status: 'OFFLINE', lastReportedAt: null },
+      ],
+      total: 2,
+    });
+    lastReported.mockResolvedValue(new Map([[reportingPair(vehicleId, '001234567890111'), now]]));
+    const page = await service.list(context, {
+      filter: { allOf: [{ statuses: ['OFFLINE'] }] },
+      sort: { field: 'LAST_REPORTED_AT', direction: 'DESC' },
+    });
+    expect(page.total).toBe(2);
+    expect(page.items.map((item) => item.id)).toEqual([reporting.id, silent.id]);
+    expect(page.items.map((item) => item.status)).toEqual(['OFFLINE', 'OFFLINE']);
     expect(page.items.map((item) => item.lastReportedAt)).toEqual([reportedAt, null]);
+    expect(lastReported).not.toHaveBeenCalled();
+    expect(asOf).not.toHaveBeenCalled();
   });
 
   it('maps tokens, filters and sorting without checking Core', async () => {
@@ -128,6 +148,7 @@ describe('Devices validation and scope', () => {
         models: ['STARLINK_TRACKER'],
         options: ['CAN', 'WIFI'],
         vehicleIds: [vehicleId],
+        allOf: undefined,
       },
       { field: 'INSTALLED_AT', direction: 'ASC' },
     );
@@ -298,17 +319,103 @@ describe('Devices validation and scope', () => {
     expect(requireBranch).not.toHaveBeenCalled();
   });
 
-  it('reassigns without calling Core and rejects clearing required fields or empty updates', async () => {
+  it('reassigns or clears the Vehicle without calling Core and rejects clearing IMEI or empty updates', async () => {
     const id = randomUUID();
     await service.update(context, id, { vehicleId });
     expect(update).toHaveBeenCalledWith(scope, id, { vehicleId });
-    await expect(service.update(context, id, { vehicleId: null })).rejects.toThrow(
-      BadRequestException,
-    );
+    await service.update(context, id, { vehicleId: null });
+    expect(update).toHaveBeenLastCalledWith(scope, id, { vehicleId: null });
     await expect(service.update(context, id, { imei: null })).rejects.toThrow(BadRequestException);
     await expect(service.update(context, id, {})).rejects.toThrow(BadRequestException);
     find.mockResolvedValue(null);
     await expect(service.update(context, id, { notes: 'x' })).rejects.toThrow(NotFoundException);
+    expect(requireBranch).not.toHaveBeenCalled();
+  });
+
+  it('creates stock without a Vehicle read and suppresses historical reporting for stock', async () => {
+    create.mockResolvedValue(row({ vehicleId: null, vehicle: null }));
+    lastReported.mockResolvedValue(new Map([[reportingPair(vehicleId, '001234567890123'), now]]));
+    await expect(service.create(context, { imei: '001234567890123' })).resolves.toMatchObject({
+      vehicleId: null,
+      vehicle: null,
+      model: null,
+      lastReportedAt: null,
+      status: 'IN_STOCK',
+    });
+    expect(findVehicle).not.toHaveBeenCalled();
+    expect(lastReported).toHaveBeenCalledWith(scope, []);
+    expect(requireBranch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps repeated conditions independent and validates bounds before reading', async () => {
+    await service.list(context, {
+      filter: {
+        allOf: [
+          { statuses: ['ONLINE'] },
+          { excludedStatuses: ['IN_STOCK'] },
+          { firmwareVersionStartsWith: ' v1. ' },
+          { firmwareVersionNotEquals: 'v1.0' },
+          { hasVehicle: true },
+        ],
+      },
+      sort: { field: 'LAST_REPORTED_AT', direction: 'DESC' },
+    });
+    expect(list).toHaveBeenCalledWith(
+      scope,
+      { offset: 0, limit: 20 },
+      expect.objectContaining({
+        allOf: [
+          expect.objectContaining({ statuses: ['ONLINE'] }),
+          expect.objectContaining({ excludedStatuses: ['IN_STOCK'] }),
+          expect.objectContaining({ firmwareVersionStartsWith: 'v1.' }),
+          expect.objectContaining({ firmwareVersionNotEquals: 'v1.0' }),
+          expect.objectContaining({ hasVehicle: true }),
+        ],
+      }),
+      { field: 'LAST_REPORTED_AT', direction: 'DESC' },
+    );
+    list.mockClear();
+    for (const allOf of [
+      [{ models: [] }],
+      [{ firmwareVersionEquals: 'v'.repeat(33) }],
+      [{ firmwareVersionStartsWith: '\u0000' }],
+      Array.from({ length: 51 }, () => ({ hasVehicle: false })),
+    ]) {
+      expect(await fieldErrors(service.list(context, { filter: { allOf } }))).toMatchObject([
+        { path: 'filter' },
+      ]);
+    }
+    expect(list).not.toHaveBeenCalled();
+  });
+
+  it('reads the exact whole-Branch summary and settles all submitted batch deletions', async () => {
+    summary.mockResolvedValue({ dataAsOf: now, online: 2, offline: 3, inStock: 4 });
+    await expect(service.summary(context)).resolves.toMatchObject({ online: 2, inStock: 4 });
+    expect(summary).toHaveBeenCalledWith(scope);
+    const selected = [randomUUID(), randomUUID(), randomUUID()];
+    const [first = '', missing = '', last = ''] = selected;
+    remove.mockImplementation((_scope, id) =>
+      id === missing
+        ? Promise.reject(
+            new Prisma.PrismaClientKnownRequestError('missing', {
+              code: 'P2025',
+              clientVersion: '7',
+            }),
+          )
+        : Promise.resolve(row({ id })),
+    );
+    await expect(service.deleteMany(context, selected)).resolves.toEqual({
+      succeededIds: [first, last],
+      failures: [{ id: missing, code: 'NOT_FOUND', message: 'Device not found' }],
+    });
+    for (const id of selected) {
+      expect(remove).toHaveBeenCalledWith(scope, id);
+    }
+    remove.mockClear();
+    for (const ids of [[], [first, first], Array.from({ length: 101 }, () => randomUUID())]) {
+      expect(await fieldErrors(service.deleteMany(context, ids))).toMatchObject([{ path: 'ids' }]);
+    }
+    expect(remove).not.toHaveBeenCalled();
     expect(requireBranch).not.toHaveBeenCalled();
   });
 

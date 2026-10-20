@@ -19,6 +19,7 @@ type ActionId = 'archive' | 'delete' | 'pin';
       [view]="view()"
       errorText="Няма връзка (fixture-AdminVehicles)"
       [busy]="busy()"
+      [actionContext]="actionContext()"
       emptyTitle="Все още няма превозни средства"
       [actions]="actions"
       [selection]="selection()"
@@ -55,6 +56,7 @@ class Host {
   readonly total = signal<number | null>(1250);
   readonly view = signal<TableView>({ kind: 'loading' });
   readonly busy = signal(false);
+  readonly actionContext = signal('initial-query');
   readonly actions: readonly ListActionBase<ActionId>[] = [
     { id: 'archive', label: 'Архивирай', bulk: true },
     { id: 'pin', label: 'Закачи най-горе' },
@@ -236,6 +238,62 @@ describe('TablePanel', () => {
     );
     expect(asked).toHaveLength(1);
     expect(host.requests).toHaveLength(1);
+  });
+
+  it.each(['query', 'busy'] as const)(
+    'retires a confirmation when %s changes and ignores a late accept',
+    async (change) => {
+      const fixture = render();
+      const host = fixture.componentInstance;
+      const confirmation = fixture.debugElement
+        .query(By.directive(TablePanel))
+        .injector.get(ConfirmationService);
+      const lateAccepts: (() => void)[] = [];
+      vi.spyOn(confirmation, 'confirm').mockImplementation((options) => {
+        lateAccepts.push(() => {
+          options.accept?.();
+        });
+        return confirmation;
+      });
+      const close = vi.spyOn(confirmation, 'close');
+      const pending = host
+        .panel()
+        .run('delete', [{ id: 'a', label: 'Previous query row', unavailable: [] }], null);
+      if (change === 'query') {
+        host.actionContext.set('restored-query');
+      } else {
+        host.busy.set(true);
+      }
+      fixture.detectChanges();
+      await pending;
+      lateAccepts[0]?.();
+      await Promise.resolve();
+      expect(close).toHaveBeenCalledOnce();
+      expect(host.requests).toEqual([]);
+    },
+  );
+
+  it('settles and retires an unsubmitted confirmation when the panel is destroyed', async () => {
+    const fixture = render();
+    const host = fixture.componentInstance;
+    const confirmation = fixture.debugElement
+      .query(By.directive(TablePanel))
+      .injector.get(ConfirmationService);
+    const lateAccepts: (() => void)[] = [];
+    vi.spyOn(confirmation, 'confirm').mockImplementation((options) => {
+      lateAccepts.push(() => {
+        options.accept?.();
+      });
+      return confirmation;
+    });
+    const pending = host
+      .panel()
+      .run('delete', [{ id: 'a', label: 'Retired workspace row', unavailable: [] }], null);
+    fixture.destroy();
+    await pending;
+    lateAccepts[0]?.();
+    await Promise.resolve();
+    expect(host.requests).toEqual([]);
   });
 
   it.each([1, 10])(

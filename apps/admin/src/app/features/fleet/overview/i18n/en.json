@@ -5,7 +5,7 @@
   "kpis": {
     "label": "Fleet today",
     "moving": "Moving now",
-    "movingSecondary": "of {active} active",
+    "movingSecondary": "{active} active vehicles",
     "distance": "Distance today",
     "critical": "Critical alerts",
     "overdue": "Overdue service",
@@ -14,7 +14,14 @@
   "attention": {
     "title": "Needs attention",
     "empty": "Nothing needs attention right now.",
-    "open": "Open"
+    "open": "Open",
+    "overdue": "{task} overdue · {plate}",
+    "dueOn": "Due {date}",
+    "dueKm": "Due by odometer",
+    "document": "Document needs attention · {name}",
+    "documentDetail": "A driving licence or tachograph card is expired or expires today.",
+    "offline": "{count} trackers offline",
+    "offlineDetail": "No current report for the assigned vehicle."
   },
   "distance": {
     "title": "Distance per day",
@@ -28,7 +35,8 @@
     "parked": "Parked",
     "notReporting": "Not reporting",
     "asset": "Asset",
-    "noDevice": "No tracker"
+    "noDevice": "No tracker",
+    "ungrouped": "Ungrouped"
   },
   "trips": {
     "title": "Latest trips",

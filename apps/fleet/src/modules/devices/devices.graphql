@@ -19,13 +19,21 @@ enum FleetDeviceOption {
   WILIOT
 }
 
+enum FleetDeviceStatus {
+  ONLINE
+  OFFLINE
+  IN_STOCK
+}
+
 type FleetDevice @key(fields: "id") {
   id: ID!
   branchId: ID!
   branch: Branch!
   imei: String!
-  vehicleId: ID!
-  vehicle: FleetVehicleRef!
+  vehicleId: ID
+  vehicle: FleetVehicleRef
+  "Unassigned means IN_STOCK; assigned devices are ONLINE when their current pair reported within the configured not-reporting hours of the Branch data clock."
+  status: FleetDeviceStatus!
   model: FleetDeviceModel
   options: [FleetDeviceOption!]!
   firmwareVersion: String
@@ -50,12 +58,28 @@ input FleetDeviceFilter {
   models: [FleetDeviceModel!]
   options: [FleetDeviceOption!]
   vehicleIds: [ID!]
+  "Independent AND conditions, including repeated fields; at most 50."
+  allOf: [FleetDeviceCondition!]
+}
+
+input FleetDeviceCondition {
+  statuses: [FleetDeviceStatus!]
+  excludedStatuses: [FleetDeviceStatus!]
+  models: [FleetDeviceModel!]
+  excludedModels: [FleetDeviceModel!]
+  firmwareVersionEquals: String
+  firmwareVersionNotEquals: String
+  firmwareVersionStartsWith: String
+  hasVehicle: Boolean
 }
 
 enum FleetDeviceSortField {
   IMEI
   INSTALLED_AT
   CREATED_AT
+  STATUS
+  VEHICLE_LICENSE_PLATE
+  LAST_REPORTED_AT
 }
 input FleetDeviceSort {
   field: FleetDeviceSortField! = CREATED_AT
@@ -64,7 +88,7 @@ input FleetDeviceSort {
 
 input CreateFleetDeviceInput {
   imei: String!
-  vehicleId: ID!
+  vehicleId: ID
   model: FleetDeviceModel
   options: [FleetDeviceOption!]
   firmwareVersion: String
@@ -87,6 +111,25 @@ input UpdateFleetDeviceInput {
   notes: String
 }
 
+"Exact whole-Branch counts, independent of the list query/page; firmware policy and hardware diagnostics are unavailable."
+type FleetDeviceSummary {
+  dataAsOf: DateTime
+  online: Int!
+  offline: Int!
+  inStock: Int!
+}
+
+type FleetDeviceActionFailure {
+  id: ID!
+  code: String!
+  message: String!
+}
+
+type FleetDeviceActionResult {
+  succeededIds: [ID!]!
+  failures: [FleetDeviceActionFailure!]!
+}
+
 extend type Query {
   fleetDevices(
     offset: Int! = 0
@@ -97,10 +140,13 @@ extend type Query {
     sort: FleetDeviceSort
   ): FleetDevicePage!
   fleetDevice(id: ID!): FleetDevice!
+  fleetDeviceSummary: FleetDeviceSummary!
 }
 
 extend type Mutation {
   createFleetDevice(input: CreateFleetDeviceInput!): FleetDevice!
   updateFleetDevice(id: ID!, input: UpdateFleetDeviceInput!): FleetDevice!
   deleteFleetDevice(id: ID!): FleetDevice!
+  "One or many unique IDs (1–100); each submitted deletion settles independently."
+  deleteFleetDevices(ids: [ID!]!): FleetDeviceActionResult!
 }

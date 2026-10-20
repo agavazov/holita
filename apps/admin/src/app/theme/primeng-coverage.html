@@ -87,7 +87,7 @@
       <p-metergroup aria-label="Fleet activity" [value]="meter" [style]="{ width: '100%' }" />
     </div>
     <div class="row">
-      <span class="label">datatable · paginator · listbox · timeline · tabs</span>
+      <span class="label">datatable · paginator · timeline · tabs</span>
       <p-table [value]="rows" [style]="{ width: '100%' }">
         <ng-template #header>
           <tr>
@@ -108,7 +108,6 @@
         [rowsPerPageOptions]="[10, 20, 50]"
         appendTo="body"
       />
-      <p-listbox [options]="statuses" [(ngModel)]="status" ariaLabel="Statuses" />
       <p-timeline [value]="events">
         <ng-template #content let-event>{{ event.title }}</ng-template>
       </p-timeline>

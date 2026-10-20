@@ -5,7 +5,10 @@ import { exampleAt } from '../../../../storybook/samples/example-app';
 import { sampleServiceTasks, vehicleById } from '../../../../storybook/samples/fleet-samples';
 
 const task = sampleServiceTasks.find((item) => item.id === 's001');
-if (!task) {
+const inactiveTask = sampleServiceTasks.find(
+  (item) => item.status === 'PLANNED' && vehicleById(item.vehicleId)?.status === 'INACTIVE',
+);
+if (!task || !inactiveTask) {
   throw new Error('Missing completion sample.');
 }
 const path = `maintenance?drawer=complete-${task.id}`;
@@ -114,6 +117,37 @@ export const InvalidNextSchedule: Story = {
       expect(
         drawer.getByText('The next due odometer must be above the completion odometer.'),
       ).toBeVisible(),
+    );
+  },
+};
+
+export const InactiveVehicleHistory: Story = {
+  name: 'Inactive vehicle history without next planning',
+  render: exampleAt(`maintenance?drawer=complete-${inactiveTask.id}`),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const name = `Complete ${inactiveTask.kind}`;
+    await waitFor(() => expect(body.getByRole('dialog', { name })).toBeVisible(), ready);
+    const drawer = within(body.getByRole('dialog', { name }));
+    await waitFor(() => expect(drawer.getByText(/This vehicle is inactive/)).toBeVisible(), ready);
+    await expect(drawer.queryByRole('combobox', { name: 'Next due date' })).not.toBeInTheDocument();
+    await expect(
+      drawer.queryByRole('spinbutton', { name: 'Next due odometer, km' }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(drawer.getByRole('button', { name: 'Complete service' }));
+    await waitFor(() => expect(body.queryByRole('dialog', { name })).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(body.getByText(`${inactiveTask.kind} was completed.`)).toBeVisible(),
+    );
+    const plate = vehicleById(inactiveTask.vehicleId)?.plate ?? '—';
+    const canvas = within(canvasElement);
+    await userEvent.type(canvas.getByRole('searchbox'), plate);
+    await waitFor(() => expect(canvas.getAllByRole('row')).toHaveLength(2));
+    await userEvent.click(
+      canvas.getByRole('button', { name: `View completed ${inactiveTask.kind} on ${plate}` }),
+    );
+    await waitFor(() =>
+      expect(body.getByRole('dialog', { name: `Completed ${inactiveTask.kind}` })).toBeVisible(),
     );
   },
 };

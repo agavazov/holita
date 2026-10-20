@@ -30,17 +30,16 @@ select them with `npm run test:schema -- catalog.unit.spec.mts`.
 
 Admin unit specs run in jsdom with the `matchMedia`, `ResizeObserver` and `scrollIntoView` stubs
 of `src/test-setup.ts` ([breakpoints](admin-design-system.md#global-styles-layers-and-breakpoints)).
-In the combined admin unit run under load (WSL), the first `app/workspace/admin-workspace.spec.ts`
-case can exceed the 5-second test timeout; the file passes alone
-(`npm run test:admin -- --include=app/workspace/admin-workspace.spec.ts --skip-nx-cache`), so
-rerun it that way before treating the timeout as a regression. Run heavy Nx, Angular and Storybook
+The longer login, Branch and language transition cases declare their own deadlines. Rerun a
+timed-out case with its native file selector before treating it as a regression. Run heavy Nx, Angular and Storybook
 checks (builds, `test:admin`, `test:storybook:admin`, `test:visual:admin`, browser smokes) one at a
 time in a worktree: each first runs the admin `graphql-generate` target, which rewrites
 `apps/admin/src/generated/graphql`, and parallel runs collide.
 
 ## Domain checks
 
-[Discocan checks](discocan/testing.md) cover Fleet Vehicles, Devices, Drivers, Vehicle groups, telemetry, trips, alerts, service tasks and the list contract, Angular workspaces,
+[Discocan checks](discocan/testing.md) cover Fleet Vehicles, Devices, Drivers, Vehicle groups,
+General settings/preferences, telemetry, trips, alerts, service tasks and the list contract, Angular workspaces,
 telemetry login, captured clients and browser behavior. [Ecommerce Branch checks](ecommerce/branches.md#validation)
 cover tenant-scoped Branch discovery and persistence.
 
@@ -82,6 +81,9 @@ Vehicle group CRUD with Core creation checks, stored group/driver references, sa
 bounds, availability, request-local Core validation and scoped CRUD while Core is stopped.
 Gateway has no database dependency. The fixture uses only the pinned Apollo Router binary,
 waits on its dedicated health listener and closes it before subgraphs and test schemas.
+Each native subgraph has a 30-second startup readiness budget from process spawn, including
+module loading before Nest logs appear. Health probes take at most one second, capped by
+that remaining budget. A process exit ends startup polling.
 No fixture starts a JavaScript Gateway or selects another runtime.
 
 Angular fixtures serve the compiled production app from `apps/admin/dist/browser` and answer
@@ -91,17 +93,26 @@ The production build excludes `config.local.json`, so the application's request 
 License" notice ([admin Storybook](development.md#admin-storybook)).
 They own dedicated backend processes/schemas.
 Browser fixtures seed Core and obtain real demo sessions; they create their own business records without running Fleet sample seeds. The Isolation tenant/branch exists only in these test fixtures.
+The app fixture has an independent 120-second provisioning budget for isolated schemas and native
+backend processes. Browser scenarios retain their 60-second timeout and 10-second expectations.
+When Fleet is enabled, provisioning also waits up to 10 seconds for a signed Branch-scoped
+Fleet list and summary read through the real Gateway, proving GraphQL and Prisma readiness before
+business mutations run. Only this idempotent readiness read is polled; mutations are never retried.
+Router's 5-second and Fleet's Core-client 3-second production deadlines remain unchanged.
 Browser targets build the admin and three subgraphs, prepare Router, use Chromium, disable retries and retain
-failure screenshots/traces under ignored test-results. Clean up task-started connections/processes.
+failure traces under ignored test-results. Screenshots are opt-in with the exported
+`HOLITA_BROWSER_SCREENSHOTS=1` for shell captures and failure/trace images; the default retains
+DOM and ARIA diagnostics. The separate Storybook visual target still produces review candidates.
+Clean up task-started connections/processes.
 
-The admin smokes still drive the topbar that preceded the menu buttons: `chooseBranch` in
-`tools/browser/angular-fixture.mts` and every `angular-*.smoke.spec.mts` file use a Branch
-combobox, a language link or signed-in theme and sign-out buttons, which the topbar no longer
-renders (it has Branch, language and account menus). The smokes therefore fail until they are
-rewritten ([backlog](todo/admin-design-system.md)) and are not current evidence for the mapping
-below; PR CI's smoke step fails whenever the admin is selected, and `test:full` stops before the
-story tests. The login page keeps its Tenant and Branch comboboxes, language link and theme
-button.
+The shared Branch, language, theme and Sign out helpers operate the topbar menus in signed-in
+smokes. Vehicles checks exercise the real list and routed drawer,
+rich field persistence/null clearing, filter/sort URL state, batch partial results, dirty drafts,
+scope isolation, themes and narrow widths. Devices checks cover stock, metadata, assignment and
+clearing. `angular-fleet.smoke.spec.mts` covers Overview retry/null data, Groups and Drivers CRUD,
+scorecards, Vehicle profile/odometer, Maintenance completion/history and empty Trips/Alerts.
+The shell checks include menu keyboard order and the explicitly unavailable Demo notification bell.
+The login page keeps its Tenant/Branch comboboxes, language link and theme button.
 
 ## Storybook story tests
 
@@ -111,12 +122,10 @@ npm run test:storybook:admin
 
 The uncached `admin:test-storybook` target runs `vitest run --config .storybook/vitest.config.mts`
 in `apps/admin` after `graphql-generate`; no Storybook server or static build is needed.
-For native Vitest selectors, use the existing workspace script from the repository root (the
-inferred Nx package-script target passes extra flags to npm instead of Vitest):
+The target forwards native Vitest selectors through npm's argument separator:
 
 ```bash
-npm run graphql:generate --workspace=@holita/admin
-npm run test-storybook --workspace=@holita/admin -- --testNamePattern="Case name" --testTimeout=30000
+npm run test:storybook:admin -- --testNamePattern="Case name" --testTimeout=30000
 ```
 
 The timeout option allows a cold browser start on slower hosts; it does not change the play
@@ -153,7 +162,8 @@ server is needed. It captures the stories listed in
 [storybook-visual.spec.mts](../tools/browser/storybook-visual.spec.mts) (the introduction, the
 example pages, foundations, patterns, PrimeNG coverage and the shell) with Chromium, `bg-BG`,
 `Europe/Sofia`, a fixed clock (`2026-10-18T07:00:00Z`), device scale 1 and one worker.
-Each capture waits until no fixture request has been in flight for 400 ms.
+Each capture waits until no fixture request has been in flight for 400 ms and the preview marks
+the story's play function complete. Fixture quiet alone can precede lazy route loading.
 
 - Every run writes reviewable candidates to the ignored `test-results/storybook-visual-candidates/`
   and attaches them to the HTML report in `playwright-report/storybook-visual/`
@@ -273,12 +283,12 @@ a fixed-arrival-rate latency SLA, cold-start performance or real Karma network l
 
 | Change                                  | Focused checks                                                                                                                                                                                                                                                                         |
 | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Vehicle validation/query/persistence    | vehicles.service.spec.ts, vehicles.db.spec.ts                                                                                                                                                                                                                                          |
+| Vehicle validation/query/persistence    | vehicles.service.spec.ts, vehicles.db.spec.ts, vehicles-list.db.spec.ts                                                                                                                                                                                                                |
 | Device IMEI/assignment/persistence      | devices.service.spec.ts, devices.db.spec.ts                                                                                                                                                                                                                                            |
 | Driver/Vehicle group rules/persistence  | drivers.service.spec.ts, drivers.db.spec.ts, vehicle-groups.service.spec.ts, vehicle-groups.db.spec.ts                                                                                                                                                                                 |
 | Fleet list contract/validation/scalars  | validation.spec.ts, scalars.spec.ts and the affected module's service and db specs                                                                                                                                                                                                     |
-| Fleet telemetry/trips/alerts/service    | sql.spec.ts, vehicle-state.spec.ts, the telemetry/trips/events/service-tasks service and db specs, vehicles/devices/drivers db specs for derived values, federation.db.spec.mts                                                                                                        |
-| Fleet migration/CHECKs/unique mapping   | initial-migration.db.spec.ts, branch-migration.db.spec.ts, constraints.db.spec.ts, seeds.db.spec.ts                                                                                                                                                                                    |
+| Fleet telemetry/trips/alerts/service    | sql.spec.ts, vehicle-state.spec.ts, the owning telemetry/trips/events/service-tasks/overview service and DB specs, drivers-list.db.spec.ts and federation.db.spec.mts                                                                                                                  |
+| Fleet migration/CHECKs/unique mapping   | initial-migration.db.spec.ts, branch-migration.db.spec.ts, constraints.db.spec.ts, seeds.db.spec.ts; rich seed uses demo-seed.unit.spec.ts and demo-seeds.db.spec.ts                                                                                                                   |
 | Fleet business errors through Router    | router.smoke.spec.mts (`npm run test:gateway:router`), federation.db.spec.mts                                                                                                                                                                                                          |
 | Runtime module/health                   | Fleet/Core health.spec.ts; Gateway router.runtime.spec.mts                                                                                                                                                                                                                             |
 | Karma account client/access             | accounts.spec.ts, history.spec.ts, location.spec.ts, edata.spec.ts, edata.service.spec.ts, cars.spec.ts, cars.service.spec.ts, Karma health.spec.ts                                                                                                                                    |
@@ -286,19 +296,28 @@ a fixed-arrival-rate latency SLA, cold-start performance or real Karma network l
 | SDL/operations                          | codegen, schema:check, contracts.unit.spec.mts                                                                                                                                                                                                                                         |
 | Cross-service contracts/context         | federation.db.spec.mts                                                                                                                                                                                                                                                                 |
 | Branch/language/default routing         | branch-context.spec.ts, fleet-workspace.spec.ts, angular-foundation.smoke.spec.mts                                                                                                                                                                                                     |
-| Captured feature clients/forms/deletion | concrete vehicles/devices Angular suites                                                                                                                                                                                                                                               |
-| Remote picker cancellation              | relation-picker.spec.ts, device-editor.spec.ts                                                                                                                                                                                                                                         |
+| General settings/preferences/units      | settings/general-settings-api.spec.ts, general-settings-mapping.spec.ts, general-settings-page.spec.ts, general-settings-view.spec.ts, fleet-preferences.spec.ts; ui/format/fleet-format.spec.ts and the workspace/Branch routing specs                                                |
+| Captured feature clients/forms/deletion | the owning Fleet API/query/editor/page specs; Vehicle profile and odometer use vehicle-profile.spec.ts; every connected feature has catalog parity checks                                                                                                                              |
+| Scoped relation choices/cancellation    | device-choices.ts behavior in device-editor-page.spec.ts, VehicleChoices and MaintenanceChoices specs; scoped reads retire with their editor clients                                                                                                                                   |
 | Admin theme/tokens/global styles        | app/theme specs, test:storybook:admin, test:visual:admin with candidate review                                                                                                                                                                                                         |
 | Admin app/ui patterns                   | the pattern's app/ui spec, test:storybook:admin, test:visual:admin with candidate review                                                                                                                                                                                               |
-| Shell/topbar menus/mobile/keyboard      | app/layout, app/workspace and app/i18n specs, test:storybook:admin, test:visual:admin with candidate review; angular-shell.smoke.spec.mts covers shell geometry, the navigation drawer, focus and theme, not the topbar menus                                                          |
-| Real CRUD and narrow views              | angular-vehicles.smoke.spec.mts, angular-devices.smoke.spec.mts                                                                                                                                                                                                                        |
+| Shell/topbar menus/mobile/keyboard      | app/layout, app/workspace and app/i18n specs, test:storybook:admin, test:visual:admin with candidate review; angular-shell.smoke.spec.mts covers topbar menus, Demo bell, geometry, drawer, focus and theme                                                                            |
+| Real CRUD and narrow views              | angular-vehicles.smoke.spec.mts, angular-devices.smoke.spec.mts, angular-fleet.smoke.spec.mts                                                                                                                                                                                          |
 | Admin stories/fixtures/example pages    | admin typecheck and lint, test:storybook:admin, graphql-fixtures.spec.ts for fixture changes, test:visual:admin with candidate review                                                                                                                                                  |
 | Root tooling                            | root lint/typecheck/build and relevant behavior                                                                                                                                                                                                                                        |
 
 Admin specs are selected with `npm run test:admin -- --include=...` as above;
 [changing the design centrally](admin-design-system.md#changing-the-design-centrally) lists the
-combined checks for a central design change. The admin smokes in this table currently fail
-([browser smoke checks](#real-federation-and-browser-smoke-checks)).
+combined checks for a central design change.
+
+General settings cases explicitly flush `AdminFleetPreferences` before business operations;
+they cover read gating/Retry, Branch/language/session isolation, saved-unit propagation and
+the separate Fleet-save/Core-rename outcomes. A failed rename must retain its name draft and
+the actual persisted Fleet baseline, without a false full-success toast. Disabled Demo
+notification switches never become a persistence/delivery assertion. Read-value conversion
+preserves null/zero; canonical labelled editor/filter values remain unchanged. Live capture
+`admin-settings-general--default` is included in both themes at desktop/mobile widths;
+its candidates still require the usual human baseline approval.
 
 ## Local diff versus PR affected selection
 
@@ -403,9 +422,7 @@ or shell check does not prove that checkout, npm ci or browser installation work
 
 `npm run test:full` explicitly runs schema tests, the configured test/test-db/test-router project targets,
 the Angular Chromium smoke target and the Storybook story tests (`test:storybook:admin`), in that
-order, and stops at the first failing step. While the admin smokes fail
-([browser smoke checks](#real-federation-and-browser-smoke-checks)), it stops before the story
-tests. It is reserved for a user/reviewer request and must never be invoked automatically during
+order, and stops at the first failing step. It is reserved for a user/reviewer request and must never be invoked automatically during
 implementation. It requires the pinned Router binary, test databases and Chromium. It does not
 run the visual review.
 [Full regression (manual)](../.github/workflows/full-regression.yml) has workflow_dispatch

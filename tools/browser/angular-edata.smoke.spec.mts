@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test';
 import { join } from 'node:path';
 import { workspaceRoot } from '../graphql/contracts.mjs';
-import { chooseBranch, test } from './angular-fixture.mjs';
+import { chooseBranch, chooseLanguage, setDarkTheme, test } from './angular-fixture.mjs';
 
 test('browses all 600 messages with 50-row pages and restores pages on reload/back/language', async ({
   page,
@@ -45,7 +45,7 @@ test('browses all 600 messages with 50-row pages and restores pages on reload/ba
   const before = headers.length;
   await chooseBranch(page, 'Sandbox');
   expect(headers).toHaveLength(before);
-  await page.getByRole('link', { name: 'Български', exact: true }).click();
+  await chooseLanguage(page, 'Български');
   await expect(rows.first()).toContainText('3000000100');
   await page.getByRole('button', { name: 'Последни', exact: true }).click();
   await expect(rows.first()).toContainText('3000000600');
@@ -84,15 +84,17 @@ test('filters UTC dates and IDs, changes page size and shows every message field
       await expect
         .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
         .toBe(true);
-      await page.screenshot({
-        path: join(
-          workspaceRoot,
-          '.references/review',
-          `karma-edata-${viewport.name}-${theme}.png`,
-        ),
-        fullPage: true,
-        animations: 'disabled',
-      });
+      if (process.env.HOLITA_BROWSER_SCREENSHOTS === '1') {
+        await page.screenshot({
+          path: join(
+            workspaceRoot,
+            '.references/review',
+            `karma-edata-${viewport.name}-${theme}.png`,
+          ),
+          fullPage: true,
+          animations: 'disabled',
+        });
+      }
       await view.click();
       await expect(dialog).toBeVisible();
       await expect(dialog.locator('dd')).toHaveText([
@@ -114,24 +116,21 @@ test('filters UTC dates and IDs, changes page size and shows every message field
       });
       await parameter.scrollIntoViewIfNeeded();
       await expect(parameter).toBeInViewport();
-      await page.screenshot({
-        path: join(
-          workspaceRoot,
-          '.references/review',
-          `karma-edata-detail-${viewport.name}-${theme}.png`,
-        ),
-        fullPage: true,
-        animations: 'disabled',
-      });
+      if (process.env.HOLITA_BROWSER_SCREENSHOTS === '1') {
+        await page.screenshot({
+          path: join(
+            workspaceRoot,
+            '.references/review',
+            `karma-edata-detail-${viewport.name}-${theme}.png`,
+          ),
+          fullPage: true,
+          animations: 'disabled',
+        });
+      }
       await page.keyboard.press('Escape');
       await expect(dialog).toHaveCount(0);
       await expect(view).toBeFocused();
-      await page
-        .getByRole('button', {
-          name: theme === 'light' ? 'Use dark theme' : 'Use light theme',
-          exact: true,
-        })
-        .click();
+      await setDarkTheme(page, theme === 'light');
     }
   }
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -140,11 +139,13 @@ test('filters UTC dates and IDs, changes page size and shows every message field
   await expect(page.getByLabel('Parameter IDs', { exact: true })).toHaveValue('99999');
   await page.getByRole('button', { name: 'Clear filters', exact: true }).click();
   await expect(page.locator('holita-edata-page section tbody tr')).toHaveCount(50);
-  await page.screenshot({
-    path: join(workspaceRoot, '.references/review', 'karma-edata-latest-desktop-light.png'),
-    fullPage: true,
-    animations: 'disabled',
-  });
+  if (process.env.HOLITA_BROWSER_SCREENSHOTS === '1') {
+    await page.screenshot({
+      path: join(workspaceRoot, '.references/review', 'karma-edata-latest-desktop-light.png'),
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
 });
 
 test('recovers from refresh failure, preserves rows and handles empty, invalid and missing data', async ({

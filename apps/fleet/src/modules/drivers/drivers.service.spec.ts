@@ -6,6 +6,8 @@ import { FleetClock } from '../../clock/fleet-clock.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import type { CreateFleetDriverInput } from '../../generated/graphql/types.js';
 import { CoreClient } from '../../integrations/core/core.client.js';
+import { SettingsService } from '../settings/settings.service.js';
+import { defaultFleetSettings } from '../settings/settings-defaults.js';
 import { EventsService } from '../events/events.service.js';
 import { TelemetryService } from '../telemetry/telemetry.service.js';
 import { TripsService } from '../trips/trips.service.js';
@@ -70,9 +72,10 @@ describe('Drivers validation and scope', () => {
   const create = jest.fn<DriversRepository['create']>();
   const update = jest.fn<DriversRepository['update']>();
   const remove = jest.fn<DriversRepository['delete']>();
+  const stats = jest.fn<DriversRepository['stats']>();
+  const summary = jest.fn<DriversRepository['summary']>();
   const requireBranch = jest.fn<CoreClient['requireBranch']>();
   const asOf = jest.fn<TelemetryService['asOf']>();
-  const driverTotals = jest.fn<TripsService['driverTotals']>();
   const driverScore = jest.fn<TripsService['driverScore']>();
   const maneuverTotalsByDriver = jest.fn<EventsService['maneuverTotalsByDriver']>();
   const driverManeuvers = jest.fn<EventsService['driverManeuvers']>();
@@ -117,13 +120,17 @@ describe('Drivers validation and scope', () => {
       providers: [
         DriversService,
         {
+          provide: SettingsService,
+          useValue: { read: () => Promise.resolve(defaultFleetSettings()) },
+        },
+        {
           provide: DriversRepository,
-          useValue: { list, find, duplicates, create, update, delete: remove },
+          useValue: { list, find, duplicates, create, update, delete: remove, stats, summary },
         },
         { provide: CoreClient, useValue: { requireBranch } },
         { provide: FleetClock, useValue: { now: () => now } },
         { provide: TelemetryService, useValue: { asOf } },
-        { provide: TripsService, useValue: { driverTotals, driverScore } },
+        { provide: TripsService, useValue: { driverScore } },
         { provide: EventsService, useValue: { maneuverTotalsByDriver, driverManeuvers } },
       ],
     }).compile();
@@ -134,34 +141,59 @@ describe('Drivers validation and scope', () => {
     create.mockResolvedValue(row());
     update.mockResolvedValue(row());
     asOf.mockResolvedValue(null);
-    driverTotals.mockResolvedValue(new Map());
+    stats.mockResolvedValue(new Map());
     maneuverTotalsByDriver.mockResolvedValue(new Map());
     driverManeuvers.mockResolvedValue([]);
   });
 
-  it('attaches 30-day statistics before the data clock for the whole page', async () => {
+  it('retains filtered 30-day facts and their clock when newer telemetry and trips are available', async () => {
     const clock = new Date('2026-10-18T06:30:00.000Z');
     const busy = row(),
       idle = row();
-    list.mockResolvedValue({ items: [busy, idle], total: 2 });
-    asOf.mockResolvedValue(clock);
-    driverTotals.mockResolvedValue(new Map([[busy.id, { distanceKm: 250, tripCount: 4 }]]));
+    list.mockResolvedValue({
+      items: [
+        { ...busy, dataAsOf: clock, distance30dKm: 250, tripCount30d: 4, drivingScore30d: 81.25 },
+        { ...idle, dataAsOf: clock, distance30dKm: 0, tripCount30d: 0, drivingScore30d: null },
+      ],
+      total: 2,
+    });
+    asOf.mockResolvedValue(new Date(clock.getTime() + 86_400_000));
+    stats.mockResolvedValue(
+      new Map([[busy.id, { distance30dKm: 1000, tripCount30d: 5, drivingScore30d: 20 }]]),
+    );
     maneuverTotalsByDriver.mockResolvedValue(new Map([[busy.id, 5]]));
-    const page = await service.list(context, {});
+    const page = await service.list(context, {
+      filter: { allOf: [{ distanceKmBelow: 300 }] },
+      sort: { field: 'DRIVING_SCORE_30D', direction: 'DESC' },
+    });
     const window = { start: new Date('2026-09-18T06:30:00.000Z'), end: clock };
-    expect(driverTotals).toHaveBeenCalledWith(scope, [busy.id, idle.id], window);
+    expect(stats).not.toHaveBeenCalled();
+    expect(asOf).not.toHaveBeenCalled();
     expect(maneuverTotalsByDriver).toHaveBeenCalledWith(scope, [busy.id, idle.id], window);
+    expect(page.total).toBe(2);
+    expect(page.items.map((driver) => driver.id)).toEqual([busy.id, idle.id]);
     expect(page.items).toMatchObject([
-      { distance30dKm: 250, tripCount30d: 4, maneuversPer100Km30d: 2 },
-      { distance30dKm: 0, tripCount30d: 0, maneuversPer100Km30d: null },
+      { distance30dKm: 250, tripCount30d: 4, drivingScore30d: 81.25, maneuversPer100Km30d: 2 },
+      { distance30dKm: 0, tripCount30d: 0, drivingScore30d: null, maneuversPer100Km30d: null },
     ]);
-    asOf.mockResolvedValue(null);
-    driverTotals.mockClear();
+    list.mockResolvedValue({
+      items: [busy, idle].map((driver) => ({
+        ...driver,
+        dataAsOf: null,
+        distance30dKm: 0,
+        tripCount30d: 0,
+        drivingScore30d: null,
+      })),
+      total: 2,
+    });
+    maneuverTotalsByDriver.mockClear();
     expect((await service.list(context, {})).items).toMatchObject([
-      { distance30dKm: 0, tripCount30d: 0, maneuversPer100Km30d: null },
-      { distance30dKm: 0, tripCount30d: 0, maneuversPer100Km30d: null },
+      { distance30dKm: 0, tripCount30d: 0, drivingScore30d: null, maneuversPer100Km30d: null },
+      { distance30dKm: 0, tripCount30d: 0, drivingScore30d: null, maneuversPer100Km30d: null },
     ]);
-    expect(driverTotals).not.toHaveBeenCalled();
+    expect(stats).not.toHaveBeenCalled();
+    expect(asOf).not.toHaveBeenCalled();
+    expect(maneuverTotalsByDriver).not.toHaveBeenCalled();
   });
 
   it('builds the scorecard over the requested days and flags low confidence', async () => {
@@ -269,6 +301,129 @@ describe('Drivers validation and scope', () => {
       ).toMatchObject([{ path: 'filter' }]);
     }
     expect(requireBranch).not.toHaveBeenCalled();
+  });
+
+  it('keeps repeated conditions and derived sort in the repository request before paging', async () => {
+    const vehicleId = randomUUID();
+    await service.list(context, {
+      offset: 2,
+      limit: 1,
+      filter: {
+        allOf: [
+          { statuses: ['ACTIVE'], scoreAbove: 70 },
+          { excludedStatuses: ['ACTIVE'], scoreBelow: 85 },
+          { vehicleIds: [vehicleId.toUpperCase()], hasScore: false },
+        ],
+      },
+      sort: { field: 'DRIVING_SCORE_30D', direction: 'DESC' },
+    });
+    expect(list).toHaveBeenCalledWith(
+      scope,
+      { offset: 2, limit: 1 },
+      expect.objectContaining({
+        allOf: [
+          expect.objectContaining({ statuses: ['ACTIVE'], scoreAbove: 70 }),
+          expect.objectContaining({ excludedStatuses: ['ACTIVE'], scoreBelow: 85 }),
+          expect.objectContaining({ vehicleIds: [vehicleId], hasScore: false }),
+        ],
+      }),
+      { field: 'DRIVING_SCORE_30D', direction: 'DESC' },
+    );
+    expect(driverScore).not.toHaveBeenCalled();
+    expect(stats).not.toHaveBeenCalled();
+  });
+
+  it('delegates whole-Branch summary using the inclusive document warning boundary', async () => {
+    const totals = {
+      dataAsOf: null,
+      active: 2,
+      onLeave: 1,
+      documentsExpiring: 3,
+      averageDrivingScore: 81.25,
+      distance30dKm: 400,
+    };
+    summary.mockResolvedValue(totals);
+    await expect(service.summary(context)).resolves.toEqual(totals);
+    expect(summary).toHaveBeenCalledWith(scope, new Date('2026-11-17T00:00:00Z'));
+    expect(list).not.toHaveBeenCalled();
+    expect(driverScore).not.toHaveBeenCalled();
+  });
+
+  it('keeps successful bulk deletions and scoped history/not-found failures independent', async () => {
+    const deleted = row();
+    const protectedId = randomUUID();
+    const missingId = randomUUID();
+    remove
+      .mockResolvedValueOnce(deleted)
+      .mockRejectedValueOnce(
+        new Prisma.PrismaClientKnownRequestError('FK', { code: 'P2003', clientVersion: '7' }),
+      )
+      .mockRejectedValueOnce(
+        new Prisma.PrismaClientKnownRequestError('Missing', { code: 'P2025', clientVersion: '7' }),
+      );
+    await expect(
+      service.deleteMany(context, [deleted.id, protectedId, missingId]),
+    ).resolves.toEqual({
+      succeededIds: [deleted.id],
+      failures: [
+        {
+          id: protectedId,
+          code: 'CONFLICT',
+          message: 'Driver is assigned or has trip history; set the driver inactive instead.',
+        },
+        { id: missingId, code: 'NOT_FOUND', message: 'Driver not found' },
+      ],
+    });
+    expect(remove).toHaveBeenNthCalledWith(1, scope, deleted.id);
+    expect(remove).toHaveBeenNthCalledWith(2, scope, protectedId);
+    expect(remove).toHaveBeenNthCalledWith(3, scope, missingId);
+    expect(requireBranch).not.toHaveBeenCalled();
+  });
+
+  it('deactivates only unassigned bulk rows and preserves the locked assignment failure', async () => {
+    const assigned = row({
+      vehicles: [
+        {
+          id: randomUUID(),
+          licensePlate: 'ASSIGNED',
+          fleetNumber: null,
+          vehicleType: null,
+          status: 'ACTIVE',
+        },
+      ],
+    });
+    const available = row();
+    const missingId = randomUUID();
+    find
+      .mockResolvedValueOnce(assigned)
+      .mockResolvedValueOnce(available)
+      .mockResolvedValueOnce(null);
+    update.mockResolvedValue(row({ id: available.id, status: 'INACTIVE' }));
+    await expect(
+      service.deactivateMany(context, [assigned.id, available.id, missingId]),
+    ).resolves.toEqual({
+      succeededIds: [available.id],
+      failures: [
+        {
+          id: assigned.id,
+          code: 'BAD_USER_INPUT',
+          message: 'Unassign the driver from its vehicles first.',
+        },
+        { id: missingId, code: 'NOT_FOUND', message: 'Driver not found' },
+      ],
+    });
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledWith(scope, available.id, { status: 'INACTIVE' });
+    expect(requireBranch).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid bulk selections before any mutation', async () => {
+    for (const values of [[], ['invalid'], Array.from({ length: 101 }, () => randomUUID())]) {
+      await expect(service.deleteMany(context, values)).rejects.toThrow(BadRequestException);
+      await expect(service.deactivateMany(context, values)).rejects.toThrow(BadRequestException);
+    }
+    expect(remove).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
   });
 
   it('creates with normalised fields, dates as UTC midnight and one Core check', async () => {
@@ -403,6 +558,17 @@ describe('Drivers validation and scope', () => {
     );
     find.mockResolvedValue(null);
     await expect(service.update(context, id, { notes: 'x' })).rejects.toThrow(NotFoundException);
+    expect(requireBranch).not.toHaveBeenCalled();
+  });
+
+  it('reports an assignment committed before the locked deactivation as the same status error', async () => {
+    const id = randomUUID();
+    find.mockResolvedValue(row({ id }));
+    update.mockResolvedValue(null);
+    expect(await fieldErrors(service.update(context, id, { status: 'INACTIVE' }))).toEqual([
+      { path: 'status', message: 'Unassign the driver from its vehicles first.' },
+    ]);
+    expect(update).toHaveBeenCalledWith(scope, id, { status: 'INACTIVE' });
     expect(requireBranch).not.toHaveBeenCalled();
   });
 
