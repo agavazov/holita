@@ -4,6 +4,9 @@ import { DEMO_SCOPE } from './catalog.js';
 import { generateFleetDemo, type FleetDemoDataset } from './generate.js';
 import { DEMO_CLOCK_SAMPLE_ID } from './ids.js';
 
+// Bound activity batches while limiting repeated Prisma query compilation.
+const ACTIVITY_BATCH_SIZE = 4000;
+
 export interface FleetDemoInserted {
   groups: number;
   drivers: number;
@@ -269,26 +272,26 @@ export async function seedFleetDemo(
     },
     { isolationLevel: 'ReadCommitted', timeout: 30_000 },
   );
-  for (let offset = 0; offset < data.trips.length; offset += 1000) {
+  for (let offset = 0; offset < data.trips.length; offset += ACTIVITY_BATCH_SIZE) {
     inserted.trips += (
       await client.trip.createMany({
-        data: data.trips.slice(offset, offset + 1000),
+        data: data.trips.slice(offset, offset + ACTIVITY_BATCH_SIZE),
         skipDuplicates: true,
       })
     ).count;
   }
-  for (let offset = 0; offset < data.samples.length; offset += 1000) {
+  for (let offset = 0; offset < data.samples.length; offset += ACTIVITY_BATCH_SIZE) {
     inserted.samples += (
       await client.vehicleStatusSample.createMany({
-        data: data.samples.slice(offset, offset + 1000),
+        data: data.samples.slice(offset, offset + ACTIVITY_BATCH_SIZE),
         skipDuplicates: true,
       })
     ).count;
   }
-  for (let offset = 0; offset < data.events.length; offset += 1000) {
+  for (let offset = 0; offset < data.events.length; offset += ACTIVITY_BATCH_SIZE) {
     inserted.events += (
       await client.fleetEvent.createMany({
-        data: data.events.slice(offset, offset + 1000),
+        data: data.events.slice(offset, offset + ACTIVITY_BATCH_SIZE),
         skipDuplicates: true,
       })
     ).count;

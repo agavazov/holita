@@ -15,9 +15,6 @@ focused regression at the affected boundary; database races require guarded Post
 - **Validation / P2:** Restore the existing formatting gate on the files it reports. Reproduce
   admin timeout failures with the documented single-worker setting before classifying them
   as functional defects; keep deadlines and behavioral assertions intact.
-- **Validation / P2, cause unverified:** Investigate demo-seed persistence test timeouts without
-  weakening deadlines or assertions. Distinguish dataset generation, insertion, duplicate reruns
-  and anchor rejection before selecting a correction.
 
 ## Performance
 
