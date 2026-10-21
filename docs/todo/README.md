@@ -25,3 +25,9 @@ Do not keep completed tasks, verification journals or session handoffs here.
 
 Remove or replace cancelled or superseded tasks. When no short tasks remain, keep the
 instant-task file with `No open instant tasks.`.
+
+## Review corrections and Karma management
+
+Track the confirmed review corrections, pending Karma design and deferred cleanup in
+[the review backlog](review-corrections-and-karma-management.md). It supersedes the temporary
+review scratchpad; unverified candidates remain explicitly marked.
