@@ -12,6 +12,9 @@
     @if (saveError(); as error) {
       <p-message severity="error" role="alert">{{ error }}</p-message>
     }
+    @if (unavailable(); as reason) {
+      <p-message severity="warn" role="status">{{ reason }}</p-message>
+    }
     <section class="app-form-section">
       <p>{{ text().description }}</p>
       @if (previous(); as previous) {
@@ -38,7 +41,7 @@
       </p>
       <div class="app-form-grid">
         <holita-form-field
-          [label]="text().odometerKm"
+          [label]="odometerLabel()"
           controlId="odometer-odometerKm"
           [required]="true"
           [error]="errorOf('odometerKm')"
@@ -56,37 +59,34 @@
           [label]="text().recordedAt"
           controlId="odometer-recordedAt"
           [required]="true"
-          [hint]="text().timeZone"
+          [hint]="timeZoneHint()"
           [error]="errorOf('recordedAt')"
         >
-          <p-datepicker
-            inputId="odometer-recordedAt"
+          <input
+            pInputText
+            id="odometer-recordedAt"
+            type="datetime-local"
+            step="0.001"
             formControlName="recordedAt"
-            dateFormat="yy-mm-dd"
-            [showTime]="true"
-            [showSeconds]="true"
-            hourFormat="24"
-            appendTo="body"
-            [fluid]="true"
             [invalid]="!!errorOf('recordedAt')"
-            [pt]="datePt()"
+            [attr.aria-invalid]="errorOf('recordedAt') ? 'true' : null"
+            aria-describedby="odometer-recordedAt-hint odometer-recordedAt-error"
           />
         </holita-form-field>
       </div>
     </section>
   </form>
   <div drawerFooter class="app-drawer-actions">
-    <button
-      pButton
-      type="button"
-      severity="secondary"
-      [outlined]="true"
-      [disabled]="saving()"
-      (click)="requestClose()"
-    >
+    <button pButton type="button" severity="secondary" [outlined]="true" (click)="requestClose()">
       {{ text().cancel }}
     </button>
-    <button pButton type="submit" form="odometer-form" [loading]="saving()" [disabled]="saving()">
+    <button
+      pButton
+      type="submit"
+      form="odometer-form"
+      [loading]="saving()"
+      [disabled]="saving() || !!unavailable() || state() !== 'ready'"
+    >
       {{ text().save }}
     </button>
   </div>

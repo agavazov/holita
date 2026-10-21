@@ -38,6 +38,7 @@ import {
       [loadError]="loadFailure()"
       [closeLink]="closeLink"
       [previous]="previous()"
+      [inactive]="inactive()"
       [latestAllowedAt]="latestAllowedAt()"
       [saving]="saving()"
       [saveError]="saveFailure()"
@@ -78,6 +79,14 @@ export class VehicleOdometerPage implements OnInit {
     const record = this.record();
     return record ? previousOdometer(record.fleetVehicle) : null;
   });
+  protected readonly inactive = computed(() => this.record()?.fleetVehicle.status === 'INACTIVE');
+  private readonly readingUnavailable = computed(() => {
+    const previous = this.previous();
+    return (
+      this.inactive() ||
+      (previous !== null && Date.parse(previous.recordedAt) >= Date.parse(this.latestAllowedAt()))
+    );
+  });
   private readonly text = computed(() => vehiclesText(this.language()));
   protected readonly loadFailure = computed(() =>
     requestError(this.loadError(), this.text().profile.errorText),
@@ -85,7 +94,9 @@ export class VehicleOdometerPage implements OnInit {
   protected readonly saveFailure = computed(() =>
     this.saveError() ? requestError(this.saveError(), this.text().odometer.saveError) : null,
   );
-  protected readonly fieldErrors = computed(() => odometerFieldErrors(this.saveError(), this.language()));
+  protected readonly fieldErrors = computed(() =>
+    odometerFieldErrors(this.saveError(), this.language()),
+  );
 
   ngOnInit(): void {
     const branch = drawerParam(this.route, 'branchId');
@@ -130,7 +141,13 @@ export class VehicleOdometerPage implements OnInit {
   }
 
   async save(reading: OdometerReading): Promise<void> {
-    if (this.saving() || this.state() !== 'ready' || !this.id) {
+    if (
+      this.saving() ||
+      this.state() !== 'ready' ||
+      !this.id ||
+      !this.record() ||
+      this.readingUnavailable()
+    ) {
       return;
     }
     this.saving.set(true);
@@ -161,7 +178,7 @@ export class VehicleOdometerPage implements OnInit {
   }
 
   canLeave(): boolean | Promise<boolean> {
-    return this.closingAfterSave || (this.drawer()?.canLeave() ?? true);
+    return this.closingAfterSave || this.saving() || (this.drawer()?.canLeave() ?? true);
   }
 
   private failRead(error: unknown): void {

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/angular-vite';
-import { expect, userEvent, waitFor, within } from 'storybook/test';
+import { expect, fireEvent, userEvent, waitFor, within } from 'storybook/test';
 import { enterNumber } from '../../../../storybook/interactions';
 import { exampleAt } from '../../../../storybook/samples/example-app';
 import {
@@ -46,11 +46,14 @@ export const Default: Story = {
   },
 };
 export const Calendar: Story = {
+  name: 'Branch wall time control',
   render: exampleAt(path),
   play: async ({ canvasElement }) => {
     const body = await ready(canvasElement);
-    await userEvent.click(body.getByRole('combobox', { name: /Reading time/ }));
-    await waitFor(() => expect(body.getByRole('grid')).toBeVisible());
+    const input = body.getByLabelText(/Reading time/);
+    await expect(input).toHaveAttribute('type', 'datetime-local');
+    await userEvent.click(input);
+    await expect(input).toHaveFocus();
   },
 };
 export const InactiveVehicle: Story = {
@@ -73,7 +76,10 @@ export const NoPreviousReading: Story = {
     const { body } = await enterKm(canvasElement, 0);
     await expect(body.getByText('No previous odometer reading.')).toBeVisible();
     await userEvent.click(body.getByRole('button', { name: 'Record reading' }));
-    await waitFor(() => expect(body.getByText('Odometer reading recorded.')).toBeVisible());
+    await waitFor(
+      () => expect(body.getByText('Odometer reading recorded.')).toBeVisible(),
+      appReady,
+    );
   },
 };
 export const Saved: Story = {
@@ -81,8 +87,11 @@ export const Saved: Story = {
   play: async ({ canvasElement }) => {
     const { body } = await enterKm(canvasElement, vehicle.odometerKm + 10.5);
     await userEvent.click(body.getByRole('button', { name: 'Record reading' }));
-    await waitFor(() => expect(body.getByText('Odometer reading recorded.')).toBeVisible());
-    await waitFor(() => expect(body.queryByRole('dialog')).toBeNull());
+    await waitFor(
+      () => expect(body.getByText('Odometer reading recorded.')).toBeVisible(),
+      appReady,
+    );
+    await waitFor(() => expect(body.queryByRole('dialog')).toBeNull(), appReady);
     await userEvent.click(body.getByRole('button', { name: 'Record odometer' }));
     await ready(canvasElement);
     await expect(body.getByText('Manual', { exact: true })).toBeVisible();
@@ -105,12 +114,12 @@ export const ServicePlanUpdated: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Record odometer' }));
     const { body } = await enterKm(canvasElement, serviceDueKm + 100);
     await userEvent.click(body.getByRole('button', { name: 'Record reading' }));
-    await waitFor(() => expect(body.queryByRole('dialog')).toBeNull());
+    await waitFor(() => expect(body.queryByRole('dialog')).toBeNull(), appReady);
     await waitFor(async () => {
       const updated = canvas.getByRole('row', { name: new RegExp(serviceTask.kind) });
       await expect(within(updated).getByText('100 km over')).toBeVisible();
       await expect(within(updated).getByText('Overdue', { exact: true })).toBeVisible();
-    });
+    }, appReady);
   },
 };
 export const LowerReading: Story = {
@@ -132,21 +141,25 @@ export const SaveError: Story = {
     const draft = input instanceof HTMLInputElement ? input.value : '';
     await userEvent.click(body.getByRole('button', { name: 'Record reading' }));
     await waitFor(() => expect(input).toBeDisabled());
-    await waitFor(() => expect(body.getByText(/The reading could not be saved/)).toBeVisible());
+    await waitFor(
+      () => expect(body.getByText(/The reading could not be saved/)).toBeVisible(),
+      appReady,
+    );
     await expect(input).toBeEnabled();
     await expect(input).toHaveValue(draft);
     await userEvent.click(body.getByRole('button', { name: 'Record reading' }));
-    await waitFor(() => expect(body.getByText('Odometer reading recorded.')).toBeVisible());
+    await waitFor(
+      () => expect(body.getByText('Odometer reading recorded.')).toBeVisible(),
+      appReady,
+    );
   },
 };
 export const FutureReading: Story = {
   render: exampleAt(path),
   play: async ({ canvasElement }) => {
     const body = await ready(canvasElement);
-    const input = body.getByRole('combobox', { name: /Reading time/ });
-    await userEvent.clear(input);
-    await userEvent.type(input, '2026-10-19 10:00:00');
-    await userEvent.tab();
+    const input = body.getByLabelText(/Reading time/);
+    await fireEvent.input(input, { target: { value: '2026-10-19T10:00' } });
     await userEvent.click(body.getByRole('button', { name: 'Record reading' }));
     await waitFor(() =>
       expect(
@@ -160,10 +173,8 @@ export const EarlierReading: Story = {
   render: exampleAt(path),
   play: async ({ canvasElement }) => {
     const body = await ready(canvasElement);
-    const input = body.getByRole('combobox', { name: /Reading time/ });
-    await userEvent.clear(input);
-    await userEvent.type(input, '2020-01-01 10:00:00');
-    await userEvent.tab();
+    const input = body.getByLabelText(/Reading time/);
+    await fireEvent.input(input, { target: { value: '2020-01-01T10:00' } });
     await userEvent.click(body.getByRole('button', { name: 'Record reading' }));
     await waitFor(() =>
       expect(

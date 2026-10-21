@@ -4,6 +4,7 @@ import { provideRouter } from '@angular/router';
 import { FormGroupDirective } from '@angular/forms';
 import { By } from '@angular/platform-browser';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
+import { defaultFleetDisplay, FLEET_DISPLAY } from '../../../ui/format/fleet-format';
 import {
   OdometerDrawer,
   odometerInstant,
@@ -20,7 +21,7 @@ describe('OdometerDrawer', () => {
 
   it('uses Sofia wall time independently of the browser zone', () => {
     const wall = odometerWallTime('2026-10-18T07:00:00.000Z');
-    expect(wall?.getHours()).toBe(10);
+    expect(wall).toBe('2026-10-18T10:00:00.000');
     expect(odometerInstant(wall)).toBe('2026-10-18T07:00:00.000Z');
     expect(odometerInstant(null)).toBeNull();
     expect(odometerWallTime('invalid')).toBeNull();
@@ -38,6 +39,119 @@ describe('OdometerDrawer', () => {
       }),
     ).toBe(latestAllowedAt);
   });
+
+  it('uses configured zones, rejects a skipped wall time and disambiguates a half-hour overlap', () => {
+    const instant = '2026-10-18T07:00:45.125Z';
+    const wall = odometerWallTime(instant, 'Asia/Kathmandu');
+    expect(wall).toBe('2026-10-18T12:45:45.125');
+    expect(odometerInstant(wall, undefined, 'Asia/Kathmandu')).toBe(instant);
+    expect(odometerInstant('2026-03-08T02:30', undefined, 'America/New_York')).toBeNull();
+    expect(odometerInstant('2026-02-30T12:00', undefined, 'UTC')).toBeNull();
+    expect(
+      odometerInstant(
+        odometerWallTime('2026-04-04T15:15:20.125Z', 'Australia/Lord_Howe'),
+        { previousAt: '2026-04-04T15:00:00.000Z', latestAllowedAt: '2026-04-04T15:20:00.000Z' },
+        'Australia/Lord_Howe',
+      ),
+    ).toBe('2026-04-04T15:15:20.125Z');
+  });
+
+  it('preserves Branch wall time even when that time is skipped in the browser zone', () => {
+    // Europe/Sofia skips 03:30 on this date; a floating UTC Branch value must still remain 03:30.
+    const instant = '2026-03-29T03:30:15.125Z';
+    const wall = odometerWallTime(instant, 'UTC');
+    expect(wall).toBe('2026-03-29T03:30:15.125');
+    expect(odometerInstant(wall, undefined, 'UTC')).toBe(instant);
+  });
+
+  it('edits miles and Branch wall time, preserving the initial canonical reading and converting edits once', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        { provide: UI_LANGUAGE, useValue: signal('en') },
+        {
+          provide: FLEET_DISPLAY,
+          useValue: signal({
+            ...defaultFleetDisplay,
+            distanceUnit: 'MI',
+            timeZone: 'America/New_York',
+          }),
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(OdometerDrawer);
+    fixture.componentRef.setInput('plate', 'CB 1000 AA');
+    fixture.componentRef.setInput('previous', {
+      odometerKm: 1000.1,
+      recordedAt: '2026-10-18T06:00:00.000Z',
+      source: 'DEMO',
+    });
+    fixture.componentRef.setInput('latestAllowedAt', '2026-10-18T07:00:00.000Z');
+    const saved: OdometerReading[] = [];
+    fixture.componentInstance.save.subscribe((reading) => saved.push(reading));
+    await fixture.whenStable();
+    const form = fixture.debugElement
+      .query(By.directive(FormGroupDirective))
+      .injector.get(FormGroupDirective).form;
+    const element = document.getElementById('odometer-form');
+    if (!element) throw new Error('Missing odometer form.');
+    expect(element.textContent).toContain('Odometer, mi');
+    expect(element.textContent).toContain('America/New_York time');
+    const time: unknown = form.get('recordedAt')?.value;
+    expect(time).toBe('2026-10-18T03:00:00.000');
+    element.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    expect(saved).toEqual([{ odometerKm: 1000.1, recordedAt: '2026-10-18T07:00:00.000Z' }]);
+    form.get('odometerKm')?.setValue(621.4);
+    element.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    expect(saved[1]).toEqual({ odometerKm: 1000.1, recordedAt: '2026-10-18T07:00:00.000Z' });
+    form.get('odometerKm')?.setValue(621.3);
+    element.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await fixture.whenStable();
+    expect(saved).toHaveLength(2);
+    expect(element.textContent).toContain('The odometer cannot be lower than the latest reading.');
+    form.get('odometerKm')?.setValue(621.5);
+    element.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    expect(saved[2]).toEqual({ odometerKm: 1000.2, recordedAt: '2026-10-18T07:00:00.000Z' });
+  });
+
+  it.each(['inactive', 'empty-interval'] as const)(
+    'disables an unavailable %s reading rather than presenting an invalid default',
+    async (reason) => {
+      TestBed.configureTestingModule({
+        providers: [provideRouter([]), { provide: UI_LANGUAGE, useValue: signal('en') }],
+      });
+      const fixture = TestBed.createComponent(OdometerDrawer);
+      fixture.componentRef.setInput('plate', 'CB 1000 AA');
+      fixture.componentRef.setInput('inactive', reason === 'inactive');
+      fixture.componentRef.setInput('previous', {
+        odometerKm: 100,
+        recordedAt: '2026-10-18T07:00:00.000Z',
+        source: 'DEMO',
+      });
+      fixture.componentRef.setInput(
+        'latestAllowedAt',
+        reason === 'inactive' ? '2026-10-18T07:01:00.000Z' : '2026-10-18T07:00:00.000Z',
+      );
+      const saved: OdometerReading[] = [];
+      fixture.componentInstance.save.subscribe((reading) => saved.push(reading));
+      await fixture.whenStable();
+      const input = document.getElementById('odometer-odometerKm');
+      if (!(input instanceof HTMLInputElement)) throw new Error('Missing odometer input.');
+      expect(input.disabled).toBe(true);
+      expect(
+        document.querySelector<HTMLButtonElement>('button[form="odometer-form"]')?.disabled,
+      ).toBe(true);
+      expect(document.getElementById('odometer-form')?.textContent).toContain(
+        reason === 'inactive'
+          ? 'Manual readings are unavailable for inactive vehicles.'
+          : 'No later reading time is available yet.',
+      );
+      document
+        .getElementById('odometer-form')
+        ?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      expect(saved).toEqual([]);
+    },
+  );
 
   it.each([
     {

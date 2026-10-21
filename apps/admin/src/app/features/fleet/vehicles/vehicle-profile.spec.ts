@@ -285,13 +285,13 @@ describe('Vehicle profile and odometer routed containers', () => {
     await fixture.whenStable();
     return fixture;
   }
-  async function readyOdometer(asOf: string | null = at) {
+  async function readyOdometer(asOf: string | null = at, record: typeof vehicle = vehicle) {
     const fixture = TestBed.createComponent(VehicleOdometerPage);
     fixtures.push(fixture);
     fixture.detectChanges();
     http
       .expectOne((request) => operation(request, 'AdminVehicleOdometer'))
-      .flush(profile(vehicle, asOf));
+      .flush(profile(record, asOf));
     await fixture.whenStable();
     return fixture;
   }
@@ -490,6 +490,24 @@ describe('Vehicle profile and odometer routed containers', () => {
     await fixture.whenStable();
     expect(fixture.componentInstance.vehicle()?.plate).toBe('CB 1001 AX');
   });
+  it.each(['inactive', 'empty-interval'] as const)(
+    'blocks writes from an unavailable %s direct odometer route',
+    async (reason) => {
+      const fixture = await readyOdometer(
+        at,
+        reason === 'inactive'
+          ? { ...vehicle, status: 'INACTIVE' }
+          : { ...vehicle, state: { ...vehicle.state, odometerRecordedAt: at } },
+      );
+      expect(field('odometerKm').disabled).toBe(true);
+      submit();
+      await fixture.componentInstance.save({ odometerKm: 10, recordedAt: at });
+      http.expectNone((request) => operation(request, 'AdminRecordOdometer'));
+      expect(saved).not.toHaveBeenCalled();
+      expect(navigate).not.toHaveBeenCalled();
+    },
+  );
+
   it('records a zero odometer and returns to the hosting profile tab after success', async () => {
     const fixture = await readyOdometer();
     submit();

@@ -12,9 +12,6 @@ review scratchpad; retain only open work here. Implemented contracts belong in
 The identifiers below retain the original review's references. Each correction requires a
 focused regression at the affected boundary; database races require guarded PostgreSQL tests.
 
-- **D2 / P2:** Use the configured Branch time zone and display distance unit in the odometer
-  editor, preserving canonical km on submission. Expose unavailable states for INACTIVE
-  vehicles and for an empty valid time interval; cover DST and direct routes.
 - **D10 / P2:** Restore FilterBuilder focus to an enabled control at the condition limit;
   preserve a debounced search draft during correctPage URL rewrites; give simulated-save
   story waits explicit bounds; use a DatePicker with explicit time interpretation for Device

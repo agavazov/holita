@@ -275,6 +275,13 @@ context. Planned services open for editing; completed and cancelled records are 
 record must belong to the profile's Vehicle. Back removes profile pagination while retaining list
 context.
 
+Manual odometer entry uses the configured Branch time zone and distance unit, submitting canonical
+kilometres. Its native date/time field retains floating wall-clock text so the browser's own DST
+cannot change another zone's intended time. Skipped Branch times are rejected; repeated times use
+an occurrence inside the permitted reading interval. An unchanged displayed reading preserves its
+exact stored value, including after conversion to miles. INACTIVE vehicles and empty valid time
+intervals display an unavailable reason and cannot submit.
+
 Stored Vehicle/Driver references in profiles, Device lists/Diagnostics, Trips, Alerts and Maintenance
 are native links in the current language and Branch. Cross-resource navigation starts with
 that resource's own filters. Opening an assigned Vehicle from a Driver preserves a bounded
