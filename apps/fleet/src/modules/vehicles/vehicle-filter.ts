@@ -31,7 +31,17 @@ function makeFilter(value: unknown, field: string): string | undefined {
     Array.from(value.trim()).length > 64 ||
     value.includes('\u0000')
   ) {
-    invalid('filter', `filter.${field}: use 1 to 64 supported characters.`);
+    invalid(
+      'filter',
+      `filter.${field}: use 1 to 64 supported characters.`,
+      typeof value !== 'string'
+        ? 'INVALID_TYPE'
+        : !value.trim()
+          ? 'REQUIRED'
+          : Array.from(value.trim()).length > 64
+            ? 'TOO_LONG'
+            : 'INVALID_FORMAT',
+    );
   }
   return value.trim();
 }
@@ -44,11 +54,15 @@ export function vehicleConditions(
     return undefined;
   }
   if (!Array.isArray(value) || value.length > 50) {
-    invalid('filter', 'filter.allOf: use at most 50 conditions.');
+    invalid(
+      'filter',
+      'filter.allOf: use at most 50 conditions.',
+      Array.isArray(value) ? 'TOO_MANY_ITEMS' : 'INVALID_TYPE',
+    );
   }
   return value.map((condition: FleetVehicleCondition | null) => {
     if (typeof condition !== 'object' || condition === null || Array.isArray(condition)) {
-      invalid('filter', 'filter.allOf: use valid vehicle conditions.');
+      invalid('filter', 'filter.allOf: use valid vehicle conditions.', 'INVALID_TYPE');
     }
     const years = {
       modelYearEquals: integerFilter(condition.modelYearEquals, 'modelYearEquals', 1950, 2100),
@@ -68,14 +82,22 @@ export function vehicleConditions(
       years.modelYearTo !== undefined &&
       years.modelYearFrom > years.modelYearTo
     ) {
-      invalid('filter', 'filter.modelYearTo must not be below filter.modelYearFrom.');
+      invalid(
+        'filter',
+        'filter.modelYearTo must not be below filter.modelYearFrom.',
+        'INVALID_RANGE',
+      );
     }
     if (
       odometer.odometerKmFrom !== undefined &&
       odometer.odometerKmTo !== undefined &&
       odometer.odometerKmFrom > odometer.odometerKmTo
     ) {
-      invalid('filter', 'filter.odometerKmTo must not be below filter.odometerKmFrom.');
+      invalid(
+        'filter',
+        'filter.odometerKmTo must not be below filter.odometerKmFrom.',
+        'INVALID_RANGE',
+      );
     }
     const dates = dateOnlyRange(condition.createdOnFrom, condition.createdOnTo, {
       from: 'createdOnFrom',

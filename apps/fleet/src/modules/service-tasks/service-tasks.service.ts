@@ -78,7 +78,7 @@ const ODOMETER_BELOW_EARLIER_SERVICE =
 function serviceDate(value: unknown, path: string): string | null {
   const result = optionalDateOnly(value, path);
   if (result !== null && result < EARLIEST_SERVICE_DATE) {
-    invalid(path, 'Use a date from 2000-01-01 to 2100-12-31.');
+    invalid(path, 'Use a date from 2000-01-01 to 2100-12-31.', 'OUT_OF_RANGE');
   }
   return result;
 }
@@ -97,7 +97,7 @@ const fieldRules = {
 
 function requireDue(dueOn: unknown, dueOdometerKm: unknown): void {
   if (dueOn === null && dueOdometerKm === null) {
-    invalid('dueOn', 'Give a due date, a due odometer or both.');
+    invalid('dueOn', 'Give a due date, a due odometer or both.', 'DUE_THRESHOLD_REQUIRED');
   }
 }
 
@@ -196,12 +196,16 @@ export class ServiceTasksService {
       id = await this.tasks.create(scope, vehicleId, plan);
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
-        invalid('vehicleId', 'Choose a vehicle in this branch.');
+        invalid('vehicleId', 'Choose a vehicle in this branch.', 'VEHICLE_UNAVAILABLE');
       }
       throw error;
     }
     if (id === null) {
-      invalid('vehicleId', 'Choose a vehicle in this branch that is not inactive.');
+      invalid(
+        'vehicleId',
+        'Choose a vehicle in this branch that is not inactive.',
+        'VEHICLE_UNAVAILABLE',
+      );
     }
     return this.load(scope, id);
   }
@@ -266,7 +270,7 @@ export class ServiceTasksService {
     const today = await this.today(scope);
     const completedOn = dateOnly(input.completedOn, 'completedOn');
     if (completedOn < EARLIEST_SERVICE_DATE || completedOn > today) {
-      invalid('completedOn', 'Use a completion date from 2000-01-01 up to today.');
+      invalid('completedOn', 'Use a completion date from 2000-01-01 up to today.', 'OUT_OF_RANGE');
     }
     const data: ServiceTaskCompletionData = {
       completedOn: dateOnlyToDate(completedOn),
@@ -283,7 +287,11 @@ export class ServiceTasksService {
     };
     const nextDueOn = serviceDate(input.nextDueOn, 'nextDueOn');
     if (nextDueOn !== null && nextDueOn <= completedOn) {
-      invalid('nextDueOn', 'The next due date must be after the completion date.');
+      invalid(
+        'nextDueOn',
+        'The next due date must be after the completion date.',
+        'NEXT_DUE_NOT_LATER',
+      );
     }
     const nextDueOdometerKm = fieldRules.dueOdometerKm(
       input.nextDueOdometerKm,
@@ -294,7 +302,11 @@ export class ServiceTasksService {
       data.completedOdometerKm !== null &&
       nextDueOdometerKm <= data.completedOdometerKm
     ) {
-      invalid('nextDueOdometerKm', 'The next due odometer must be above the completion odometer.');
+      invalid(
+        'nextDueOdometerKm',
+        'The next due odometer must be above the completion odometer.',
+        'NEXT_DUE_NOT_LATER',
+      );
     }
     const nextTitle = fieldRules.title(input.nextTitle, 'nextTitle');
     const stored = await this.tasks.findTask(scope, recordId);
@@ -311,7 +323,7 @@ export class ServiceTasksService {
         data.completedOn,
       );
       if (highest !== null && data.completedOdometerKm < highest) {
-        invalid('completedOdometerKm', ODOMETER_BELOW_EARLIER_SERVICE);
+        invalid('completedOdometerKm', ODOMETER_BELOW_EARLIER_SERVICE, 'ODOMETER_DECREASE');
       }
     }
     const next =
@@ -330,7 +342,7 @@ export class ServiceTasksService {
           };
     const result = await this.tasks.complete(scope, recordId, stored.vehicleId, data, next);
     if (result.odometerTooLow) {
-      invalid('completedOdometerKm', ODOMETER_BELOW_EARLIER_SERVICE);
+      invalid('completedOdometerKm', ODOMETER_BELOW_EARLIER_SERVICE, 'ODOMETER_DECREASE');
     }
     if (result.schedulingBlocked) {
       invalidFields([
@@ -340,6 +352,7 @@ export class ServiceTasksService {
               {
                 path: 'nextDueOn',
                 message: 'A next service cannot be planned for an inactive vehicle.',
+                code: 'VEHICLE_UNAVAILABLE',
               },
             ]),
         ...(nextDueOdometerKm === null
@@ -348,6 +361,7 @@ export class ServiceTasksService {
               {
                 path: 'nextDueOdometerKm',
                 message: 'A next service cannot be planned for an inactive vehicle.',
+                code: 'VEHICLE_UNAVAILABLE',
               },
             ]),
       ]);
@@ -397,7 +411,7 @@ export class ServiceTasksService {
     requireScope(context);
     const selected = ids(values, 'ids');
     if (!selected.length) {
-      invalid('ids', 'Choose at least one service task.');
+      invalid('ids', 'Choose at least one service task.', 'REQUIRED');
     }
     const succeededIds: string[] = [];
     const failures: FleetServiceTaskActionFailure[] = [];
@@ -419,7 +433,7 @@ export class ServiceTasksService {
     requireScope(context);
     const selected = ids(values, 'ids');
     if (!selected.length) {
-      invalid('ids', 'Choose at least one service task.');
+      invalid('ids', 'Choose at least one service task.', 'REQUIRED');
     }
     const succeededIds: string[] = [];
     const failures: FleetServiceTaskActionFailure[] = [];
@@ -479,7 +493,11 @@ export class ServiceTasksService {
   private async requireServiceableVehicle(scope: FleetScope, vehicleId: string): Promise<void> {
     const vehicle = await this.tasks.findVehicle(scope, vehicleId);
     if (!vehicle || vehicle.status === 'INACTIVE') {
-      invalid('vehicleId', 'Choose a vehicle in this branch that is not inactive.');
+      invalid(
+        'vehicleId',
+        'Choose a vehicle in this branch that is not inactive.',
+        'VEHICLE_UNAVAILABLE',
+      );
     }
   }
 

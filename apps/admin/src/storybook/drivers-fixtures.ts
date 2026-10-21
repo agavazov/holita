@@ -166,7 +166,11 @@ function savedDriver(variables: FixtureVariables): WithTypename<AdminDriverDetai
   const input = variables.object('input');
   if (input.string('employeeNumber') === 'TAKEN') {
     throw fixtureError('BAD_USER_INPUT', 'Employee number is already used in this branch.', [
-      { path: 'employeeNumber', message: 'Employee number is already used in this branch.' },
+      {
+        path: 'employeeNumber',
+        message: 'Employee number is already used in this branch.',
+        code: 'ALREADY_EXISTS',
+      },
     ]);
   }
   return {

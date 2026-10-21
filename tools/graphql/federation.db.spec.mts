@@ -811,6 +811,7 @@ describe('Fleet through the actual federation boundary', () => {
               {
                 path: 'employeeNumber',
                 message: 'Employee number is already used in this branch.',
+                code: 'ALREADY_EXISTS',
               },
             ],
           },
@@ -823,7 +824,12 @@ describe('Fleet through the actual federation boundary', () => {
       }),
     ).toMatchObject({
       errors: [
-        { extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'licenseExpiresOn' }] } },
+        {
+          extensions: {
+            code: 'BAD_USER_INPUT',
+            fieldErrors: [{ path: 'licenseExpiresOn', code: 'INVALID_FORMAT' }],
+          },
+        },
       ],
     });
     expect(
@@ -946,7 +952,14 @@ describe('Fleet through the actual federation boundary', () => {
         { input: { vehicleId, odometerKm: 119_999, recordedAt: asOf.toISOString() } },
       ),
     ).toMatchObject({
-      errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'odometerKm' }] } }],
+      errors: [
+        {
+          extensions: {
+            code: 'BAD_USER_INPUT',
+            fieldErrors: [{ path: 'odometerKm', code: 'ODOMETER_DECREASE' }],
+          },
+        },
+      ],
     });
     expect(
       await query(
@@ -1062,7 +1075,14 @@ describe('Fleet through the actual federation boundary', () => {
       errors: [{ extensions: { code: 'NOT_FOUND' } }],
     });
     expect(await query(update, { input: { ...input, lowFuelPct: 0 } })).toMatchObject({
-      errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'lowFuelPct' }] } }],
+      errors: [
+        {
+          extensions: {
+            code: 'BAD_USER_INPUT',
+            fieldErrors: [{ path: 'lowFuelPct', code: 'OUT_OF_RANGE' }],
+          },
+        },
+      ],
     });
     expect(await query(read)).toEqual({ data: { fleetSettings: input } });
     const connection = new pg.Client({ connectionString: fixture.fleetDatabaseUrl });
@@ -1078,6 +1098,81 @@ describe('Fleet through the actual federation boundary', () => {
       await connection.end();
     }
   });
+
+  it('sanitizes field reason metadata through the native Gateway without dropping legacy entries', async () => {
+    const longest = 'A'.repeat(64);
+    const fieldErrors = [
+      { path: 'name', message: 'Legacy input' },
+      { path: 'name', message: 'Future reason', code: 'FUTURE_REASON_2' },
+      { path: 'name', message: 'Longest reason', code: longest },
+      ...['', 'a', 'A-B', '1_A', 'A'.repeat(65), null, 42].map((code) => ({
+        path: 'name',
+        message: 'Invalid metadata',
+        code,
+      })),
+    ];
+    fixture.setCoreResponse({
+      status: 200,
+      body: JSON.stringify({
+        data: { branches: null },
+        errors: [
+          {
+            message: 'Invalid input',
+            path: ['branches'],
+            extensions: {
+              code: 'BAD_USER_INPUT',
+              fieldErrors,
+              privateDetail: 'not public',
+            },
+          },
+        ],
+      }),
+    });
+    try {
+      const result = record(await query('{branches{id name}}'));
+      expect(result.errors).toEqual([
+        expect.objectContaining({
+          extensions: {
+            code: 'BAD_USER_INPUT',
+            requestId: 'fleet-integration',
+            fieldErrors: [
+              fieldErrors[0],
+              fieldErrors[1],
+              fieldErrors[2],
+              ...Array.from({ length: 7 }, () => ({ path: 'name', message: 'Invalid metadata' })),
+            ],
+          },
+        }),
+      ]);
+    } finally {
+      fixture.setCoreResponse(undefined);
+    }
+  });
+
+  it.each([
+    { name: '   ', code: 'REQUIRED' },
+    { name: 'x'.repeat(81), code: 'TOO_LONG' },
+  ])(
+    'preserves Core field reason $code through Gateway with the compatibility message',
+    async ({ name, code }) => {
+      expect(
+        await query('mutation($id:ID!,$name:String!){updateBranchName(id:$id,name:$name){id}}', {
+          id: discordia,
+          name,
+        }),
+      ).toMatchObject({
+        errors: [
+          {
+            extensions: {
+              code: 'BAD_USER_INPUT',
+              requestId: 'fleet-integration',
+              fieldErrors: [{ path: 'name', message: 'Use 1 to 80 supported characters.', code }],
+            },
+          },
+        ],
+      });
+    },
+  );
 
   it('renames the selected Core Branch through Gateway and rejects a mismatched selection or foreign Tenant', async () => {
     const rename = 'mutation($id:ID!,$name:String!){updateBranchName(id:$id,name:$name){id name}}';

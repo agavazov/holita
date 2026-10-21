@@ -40,6 +40,7 @@ const SORT_FIELDS: readonly FleetVehicleGroupSortField[] = ['NAME', 'CREATED_AT'
 const DUPLICATE_NAME: FieldError = {
   path: 'name',
   message: 'A vehicle group with this name already exists in this branch.',
+  code: 'ALREADY_EXISTS',
 };
 const UNIQUE_INDEXES = new Map([['VehicleGroup_tenantId_branchId_name_key', DUPLICATE_NAME]]);
 const DELETE_CONFLICT = 'Vehicle group still contains vehicles; move them first.';
@@ -159,7 +160,7 @@ export class VehicleGroupsService {
     excludeId: string | null,
   ): Promise<void> {
     if (await this.groups.nameTaken(scope, name, excludeId)) {
-      invalid(DUPLICATE_NAME.path, DUPLICATE_NAME.message);
+      invalid(DUPLICATE_NAME.path, DUPLICATE_NAME.message, DUPLICATE_NAME.code);
     }
   }
 

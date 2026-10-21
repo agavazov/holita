@@ -1,3 +1,4 @@
+import type { Language } from '../../../i18n/messages';
 import type {
   AdminFleetSettingsFragment,
   UpdateFleetSettingsInput,
@@ -47,6 +48,7 @@ export function generalSettingsInput(form: GeneralSettings): UpdateFleetSettings
 
 export function generalSettingsFieldErrors(
   error: unknown,
+  language: Language = 'en',
 ): Partial<Record<GeneralSettingsField, string>> {
-  return fieldErrors(error, generalSettingsFields);
+  return fieldErrors(error, generalSettingsFields, language);
 }

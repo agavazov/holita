@@ -37,7 +37,12 @@ export class BranchesService {
     const trimmed = name.trim();
     if (!trimmed || Array.from(trimmed).length > 80 || trimmed.includes('\u0000')) {
       const message = 'Use 1 to 80 supported characters.';
-      throw new BadRequestException({ message, fieldErrors: [{ path: 'name', message }] });
+      const code = !trimmed
+        ? 'REQUIRED'
+        : Array.from(trimmed).length > 80
+          ? 'TOO_LONG'
+          : 'INVALID_FORMAT';
+      throw new BadRequestException({ message, fieldErrors: [{ path: 'name', message, code }] });
     }
     try {
       return await this.branches.updateName(tenantId, recordId, trimmed);

@@ -22,11 +22,15 @@ export function driverConditions(
     return undefined;
   }
   if (!Array.isArray(value) || value.length > 50) {
-    invalid('filter', 'filter.allOf: use at most 50 conditions.');
+    invalid(
+      'filter',
+      'filter.allOf: use at most 50 conditions.',
+      Array.isArray(value) ? 'TOO_MANY_ITEMS' : 'INVALID_TYPE',
+    );
   }
   return value.map((condition: FleetDriverCondition | null) => {
     if (typeof condition !== 'object' || condition === null || Array.isArray(condition)) {
-      invalid('filter', 'filter.allOf: use valid driver conditions.');
+      invalid('filter', 'filter.allOf: use valid driver conditions.', 'INVALID_TYPE');
     }
     const score = {
       scoreAbove: numberFilter(condition.scoreAbove, 'scoreAbove', 0, 100),
@@ -45,14 +49,18 @@ export function driverConditions(
       score.scoreTo !== undefined &&
       score.scoreFrom > score.scoreTo
     ) {
-      invalid('filter', 'filter.scoreTo must not be below filter.scoreFrom.');
+      invalid('filter', 'filter.scoreTo must not be below filter.scoreFrom.', 'INVALID_RANGE');
     }
     if (
       distance.distanceKmFrom !== undefined &&
       distance.distanceKmTo !== undefined &&
       distance.distanceKmFrom > distance.distanceKmTo
     ) {
-      invalid('filter', 'filter.distanceKmTo must not be below filter.distanceKmFrom.');
+      invalid(
+        'filter',
+        'filter.distanceKmTo must not be below filter.distanceKmFrom.',
+        'INVALID_RANGE',
+      );
     }
     const license = dateOnlyRange(condition.licenseExpiresOnFrom, condition.licenseExpiresOnTo, {
       from: 'licenseExpiresOnFrom',

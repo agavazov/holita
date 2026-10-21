@@ -85,7 +85,7 @@ export class VehicleOdometerPage implements OnInit {
   protected readonly saveFailure = computed(() =>
     this.saveError() ? requestError(this.saveError(), this.text().odometer.saveError) : null,
   );
-  protected readonly fieldErrors = computed(() => odometerFieldErrors(this.saveError()));
+  protected readonly fieldErrors = computed(() => odometerFieldErrors(this.saveError(), this.language()));
 
   ngOnInit(): void {
     const branch = drawerParam(this.route, 'branchId');

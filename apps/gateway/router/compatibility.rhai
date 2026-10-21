@@ -30,6 +30,15 @@ fn valid_field_message(value) {
     true
 }
 
+fn valid_field_reason(value) {
+    if type_of(value) != "string" || value.len() == 0 || value.len() > 64 { return false; }
+    if !"ABCDEFGHIJKLMNOPQRSTUVWXYZ".contains(value[0]) { return false; }
+    for character in value.chars() {
+        if !"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_".contains(character) { return false; }
+    }
+    true
+}
+
 fn public_field_errors(value) {
     let result = [];
     if type_of(value) != "array" { return result; }
@@ -38,7 +47,9 @@ fn public_field_errors(value) {
         if inspected == 30 { break; }
         inspected += 1;
         if type_of(entry) == "map" && valid_field_path(entry.path) && valid_field_message(entry.message) {
-            result.push(#{path: entry.path, message: entry.message});
+            let details = #{path: entry.path, message: entry.message};
+            if valid_field_reason(entry.code) { details.code = entry.code; }
+            result.push(details);
         }
     }
     result

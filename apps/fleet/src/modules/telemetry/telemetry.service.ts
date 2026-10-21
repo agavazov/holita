@@ -38,10 +38,18 @@ function requireAfterLatest(
 ): void {
   if (latest?.odometerKm != null) {
     if (reading.recordedAt.getTime() <= latest.recordedAt.getTime()) {
-      invalid('recordedAt', 'Use a time after the latest odometer reading of this vehicle.');
+      invalid(
+        'recordedAt',
+        'Use a time after the latest odometer reading of this vehicle.',
+        'READING_NOT_LATER',
+      );
     }
     if (reading.odometerKm < latest.odometerKm) {
-      invalid('odometerKm', 'The odometer cannot be lower than the latest reading.');
+      invalid(
+        'odometerKm',
+        'The odometer cannot be lower than the latest reading.',
+        'ODOMETER_DECREASE',
+      );
     }
   }
 }
@@ -87,10 +95,10 @@ export class TelemetryService {
     const from = dateTime(args.from, 'from');
     const to = dateTime(args.to, 'to');
     if (to.getTime() <= from.getTime()) {
-      invalid('to', 'Use an end after the start.');
+      invalid('to', 'Use an end after the start.', 'INVALID_RANGE');
     }
     if (to.getTime() - from.getTime() > MAX_SERIES_DAYS * DAY_MS) {
-      invalid('to', `Use a period of at most ${String(MAX_SERIES_DAYS)} days.`);
+      invalid('to', `Use a period of at most ${String(MAX_SERIES_DAYS)} days.`, 'OUT_OF_RANGE');
     }
     if (!(await this.telemetry.findVehicle(scope, vehicleId))) {
       throw new NotFoundException('Vehicle not found');
@@ -125,13 +133,17 @@ export class TelemetryService {
     const recordedAt = dateTime(input.recordedAt, 'recordedAt');
     const vehicle = await this.telemetry.findVehicle(scope, vehicleId);
     if (!vehicle || vehicle.status === 'INACTIVE') {
-      invalid('vehicleId', VEHICLE_REQUIRED);
+      invalid('vehicleId', VEHICLE_REQUIRED, 'VEHICLE_UNAVAILABLE');
     }
     const now = this.clock.now();
     const asOf = await this.telemetry.asOf(scope);
     const latestAllowed = asOf === null || asOf.getTime() > now.getTime() ? now : asOf;
     if (recordedAt.getTime() > latestAllowed.getTime()) {
-      invalid('recordedAt', 'The reading cannot be later than the latest vehicle data or now.');
+      invalid(
+        'recordedAt',
+        'The reading cannot be later than the latest vehicle data or now.',
+        'READING_AFTER_LATEST_DATA',
+      );
     }
     const reading = { vehicleId, odometerKm, recordedAt, receivedAt: now };
     requireAfterLatest(await this.telemetry.latestOdometerReading(scope, vehicleId), reading);
@@ -140,7 +152,7 @@ export class TelemetryService {
       requireAfterLatest(latest, reading);
     });
     if (stored === null) {
-      invalid('vehicleId', VEHICLE_REQUIRED);
+      invalid('vehicleId', VEHICLE_REQUIRED, 'VEHICLE_UNAVAILABLE');
     }
     return toSample(stored);
   }

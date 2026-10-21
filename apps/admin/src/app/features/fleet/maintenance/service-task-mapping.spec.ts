@@ -119,10 +119,10 @@ describe('Maintenance contract mapping', () => {
         },
       ],
     });
-    expect(serviceTaskFieldErrors(error)).toEqual({ dueKm: 'Invalid due odometer.' });
+    expect(serviceTaskFieldErrors(error)).toEqual({ dueKm: 'The value is not valid.' });
     expect(serviceCompletionFieldErrors(error)).toEqual({
-      nextDueOn: 'Inactive vehicle.',
-      nextDueOdometerKm: 'Inactive vehicle.',
+      nextDueOn: 'The value is not valid.',
+      nextDueOdometerKm: 'The value is not valid.',
     });
   });
 });

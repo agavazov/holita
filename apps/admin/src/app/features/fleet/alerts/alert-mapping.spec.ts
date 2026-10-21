@@ -69,7 +69,7 @@ describe('Alert mappings', () => {
         },
       ],
     });
-    expect(alertRemarkError(error)).toBe('Too long.');
+    expect(alertRemarkError(error)).toBe('The value is not valid.');
     expect(alertRemarkError(new Error('Conflict'))).toBeNull();
   });
 });

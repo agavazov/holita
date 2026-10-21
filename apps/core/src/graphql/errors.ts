@@ -51,7 +51,7 @@ export const graphqlDiagnostics: ApolloServerPlugin<RequestContext> = {
   },
 };
 
-function fieldErrors(value: unknown): { path: string; message: string }[] {
+function fieldErrors(value: unknown): { path: string; message: string; code?: string }[] {
   if (!Array.isArray(value)) {
     return [];
   }
@@ -68,7 +68,16 @@ function fieldErrors(value: unknown): { path: string; message: string }[] {
     ) {
       return [];
     }
-    return [{ path: entry.path, message: entry.message }];
+    const code =
+      'code' in entry &&
+      typeof entry.code === 'string' &&
+      entry.code.length >= 1 &&
+      entry.code.length <= 64 &&
+      /^[A-Z]/.test(entry.code) &&
+      !/[^A-Z0-9_]/.test(entry.code)
+        ? entry.code
+        : undefined;
+    return [{ path: entry.path, message: entry.message, ...(code ? { code } : {}) }];
   });
 }
 

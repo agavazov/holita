@@ -9,11 +9,15 @@ import {
   dateTimeRange,
   enumFilter,
   enumList,
+  enumValue,
   finite,
   idList,
+  ids,
   integer,
   integerFilter,
+  invalid,
   invalidFields,
+  numberFilter,
   optionalPattern,
   pagination,
   persistenceError,
@@ -22,6 +26,7 @@ import {
   searchTokens,
   sortDirection,
   sortField,
+  text,
   uniqueViolation,
 } from './validation.js';
 
@@ -66,7 +71,7 @@ describe('Fleet validation helpers', () => {
       'Sign in to a tenant first',
     );
     expect(fieldErrors(() => requireScope({ ...scope, branchId: 'bad' }))).toEqual([
-      { path: 'x-branch-id', message: 'Use a valid UUID.' },
+      { path: 'x-branch-id', message: 'Use a valid UUID.', code: 'INVALID_FORMAT' },
     ]);
   });
 
@@ -211,7 +216,7 @@ describe('Fleet validation helpers', () => {
       { path: 'modelYear' },
     ]);
     expect(fieldErrors(() => optionalPattern('12a', 'phone', 20, /^\d+$/, 'Phone'))).toEqual([
-      { path: 'phone', message: 'Phone' },
+      { path: 'phone', message: 'Phone', code: 'INVALID_FORMAT' },
     ]);
   });
 
@@ -233,9 +238,72 @@ describe('Fleet validation helpers', () => {
         ]),
       ),
     ).toEqual([
-      { path: 'fleetNumber', message: 'Fleet number is taken.' },
-      { path: 'vin', message: 'VIN is taken.' },
+      { path: 'fleetNumber', message: 'Fleet number is taken.', code: 'INVALID_VALUE' },
+      { path: 'vin', message: 'VIN is taken.', code: 'INVALID_VALUE' },
     ]);
+  });
+
+  it.each([
+    { code: 'REQUIRED', action: () => text(undefined, 'name', 3) },
+    { code: 'REQUIRED', action: () => text('   ', 'name', 3) },
+    { code: 'INVALID_TYPE', action: () => text(3, 'name', 3) },
+    { code: 'TOO_LONG', action: () => text('😀'.repeat(4), 'name', 3) },
+    { code: 'INVALID_FORMAT', action: () => text('a\u0000b', 'name', 3) },
+    { code: 'INVALID_TYPE', action: () => integer('1', 'name', 0, 3) },
+    { code: 'NOT_INTEGER', action: () => integer(1.5, 'name', 0, 3) },
+    { code: 'OUT_OF_RANGE', action: () => integer(4, 'name', 0, 3) },
+    { code: 'INVALID_FORMAT', action: () => finite(Number.NaN, 'name', 0, 3) },
+    { code: 'OUT_OF_RANGE', action: () => finite(-1, 'name', 0, 3) },
+    { code: 'UNSUPPORTED_VALUE', action: () => enumValue('OTHER', ['A'], 'name') },
+    { code: 'INVALID_TYPE', action: () => enumList('A', ['A'], 'name', 1) },
+    { code: 'DUPLICATE_VALUE', action: () => enumList(['A', 'A'], ['A'], 'name', 2) },
+    { code: 'TOO_MANY_ITEMS', action: () => enumList(['A', 'B'], ['A', 'B'], 'name', 1) },
+    { code: 'INVALID_TYPE', action: () => ids('id', 'name') },
+    {
+      code: 'TOO_MANY_ITEMS',
+      action: () =>
+        ids(
+          Array.from({ length: 101 }, () => 'id'),
+          'name',
+        ),
+    },
+  ])('emits $code for an invalid generic value', ({ code, action }) => {
+    expect(fieldErrors(action)).toMatchObject([{ path: 'name', code }]);
+  });
+
+  it('uses stable reasons for invalid filters, search and ranges', () => {
+    expect(fieldErrors(() => idList([], 'groupIds'))).toMatchObject([
+      { path: 'filter', code: 'REQUIRED' },
+    ]);
+    expect(fieldErrors(() => integerFilter(1.5, 'days', 0, 3))).toMatchObject([
+      { path: 'filter', code: 'NOT_INTEGER' },
+    ]);
+    expect(fieldErrors(() => numberFilter(4, 'score', 0, 3))).toMatchObject([
+      { path: 'filter', code: 'OUT_OF_RANGE' },
+    ]);
+    expect(fieldErrors(() => searchTokens('a b c d e f'))).toMatchObject([
+      { path: 'search', code: 'TOO_MANY_ITEMS' },
+    ]);
+    expect(fieldErrors(() => searchTokens('a\u0000b'))).toMatchObject([
+      { path: 'search', code: 'INVALID_FORMAT' },
+    ]);
+    expect(
+      fieldErrors(() => dateOnlyRange('2026-10-18', '2026-10-17', { from: 'from', to: 'to' })),
+    ).toMatchObject([{ path: 'filter', code: 'INVALID_RANGE' }]);
+  });
+
+  it('preserves explicit semantic codes independently of compatibility messages', () => {
+    expect(fieldErrors(() => invalid('name', 'Same message.', 'ALREADY_EXISTS'))).toEqual([
+      { path: 'name', message: 'Same message.', code: 'ALREADY_EXISTS' },
+    ]);
+    expect(fieldErrors(() => invalid('name', 'Same message.'))).toEqual([
+      { path: 'name', message: 'Same message.', code: 'INVALID_VALUE' },
+    ]);
+    expect(
+      fieldErrors(() =>
+        invalidFields([{ path: 'name', message: 'Same message.', code: 'REQUIRED' }]),
+      ),
+    ).toEqual([{ path: 'name', message: 'Same message.', code: 'REQUIRED' }]);
   });
 
   it('reads unique violations from the pg adapter error by index or columns', () => {
@@ -277,7 +345,7 @@ describe('Fleet validation helpers', () => {
             indexes,
           );
         }),
-      ).toEqual([{ path: 'vin', message: 'VIN is taken.' }]);
+      ).toEqual([{ path: 'vin', message: 'VIN is taken.', code: 'INVALID_VALUE' }]);
     }
     expect(() => {
       rethrowUniqueViolation(prismaError('P2002'), indexes);

@@ -17,7 +17,17 @@ function firmware(value: unknown, field: string): string | undefined {
     Array.from(value.trim()).length > 32 ||
     value.includes('\u0000')
   ) {
-    invalid('filter', `filter.${field}: use 1 to 32 supported characters.`);
+    invalid(
+      'filter',
+      `filter.${field}: use 1 to 32 supported characters.`,
+      typeof value !== 'string'
+        ? 'INVALID_TYPE'
+        : !value.trim()
+          ? 'REQUIRED'
+          : Array.from(value.trim()).length > 32
+            ? 'TOO_LONG'
+            : 'INVALID_FORMAT',
+    );
   }
   return value.trim();
 }
@@ -29,11 +39,15 @@ export function deviceConditions(
     return undefined;
   }
   if (!Array.isArray(value) || value.length > 50) {
-    invalid('filter', 'filter.allOf: use at most 50 conditions.');
+    invalid(
+      'filter',
+      'filter.allOf: use at most 50 conditions.',
+      Array.isArray(value) ? 'TOO_MANY_ITEMS' : 'INVALID_TYPE',
+    );
   }
   return value.map((condition: FleetDeviceCondition | null) => {
     if (typeof condition !== 'object' || condition === null || Array.isArray(condition)) {
-      invalid('filter', 'filter.allOf: use valid device conditions.');
+      invalid('filter', 'filter.allOf: use valid device conditions.', 'INVALID_TYPE');
     }
     return {
       statuses: enumFilter(condition.statuses, DEVICE_STATUSES, 'statuses'),

@@ -71,8 +71,8 @@ describe('General settings mapping', () => {
       ],
     });
     expect(generalSettingsFieldErrors(error)).toEqual({
-      name: 'Invalid Branch name.',
-      lowFuelPct: 'Invalid threshold.',
+      name: 'The value is not valid.',
+      lowFuelPct: 'The value is not valid.',
     });
   });
 });

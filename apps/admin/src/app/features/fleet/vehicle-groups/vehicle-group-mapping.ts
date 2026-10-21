@@ -1,9 +1,10 @@
+import type { Language } from '../../../i18n/messages';
 import type {
   AdminVehicleGroupDetailsFragment,
   CreateFleetVehicleGroupInput,
   FleetGroupColor,
 } from '../../../../generated/graphql/operations';
-import { fieldErrors } from '../../../ui/forms/field-errors';
+import { fleetFieldErrors } from '../field-errors';
 import type { GroupField, GroupForm } from '../settings/group-drawer';
 import type { GroupRow } from '../settings/groups-view';
 
@@ -50,8 +51,11 @@ const fieldPaths = {
   colorToken: 'slot',
 } satisfies Record<keyof CreateFleetVehicleGroupInput, GroupField>;
 
-export function vehicleGroupFieldErrors(error: unknown): Partial<Record<GroupField, string>> {
-  const errors = fieldErrors(error, Object.keys(fieldPaths));
+export function vehicleGroupFieldErrors(
+  error: unknown,
+  language: Language = 'en',
+): Partial<Record<GroupField, string>> {
+  const errors = fleetFieldErrors(error, Object.keys(fieldPaths), language);
   const result: Partial<Record<GroupField, string>> = {};
   for (const [path, field] of Object.entries(fieldPaths)) {
     const message = errors[path];

@@ -19,11 +19,15 @@ export function eventConditions(
     return undefined;
   }
   if (!Array.isArray(value) || value.length > 50) {
-    invalid('filter', 'filter.allOf: use at most 50 conditions.');
+    invalid(
+      'filter',
+      'filter.allOf: use at most 50 conditions.',
+      Array.isArray(value) ? 'TOO_MANY_ITEMS' : 'INVALID_TYPE',
+    );
   }
   return value.map((condition: FleetEventCondition | null) => {
     if (typeof condition !== 'object' || condition === null || Array.isArray(condition)) {
-      invalid('filter', 'filter.allOf: use valid event conditions.');
+      invalid('filter', 'filter.allOf: use valid event conditions.', 'INVALID_TYPE');
     }
     const period = dateTimeRange(condition.occurredFrom, condition.occurredTo, {
       from: 'occurredFrom',

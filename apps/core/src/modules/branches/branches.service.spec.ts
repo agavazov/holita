@@ -47,13 +47,19 @@ describe('Branch name updates', () => {
     expect(updateName).toHaveBeenCalledWith(tenantId, branchId, name);
   });
 
-  it.each(['', ' \t ', 'x'.repeat(81), '🚚'.repeat(81), 'Fleet\u0000name'])(
+  it.each([
+    { name: '', code: 'REQUIRED' },
+    { name: ' \t ', code: 'REQUIRED' },
+    { name: 'x'.repeat(81), code: 'TOO_LONG' },
+    { name: '🚚'.repeat(81), code: 'TOO_LONG' },
+    { name: 'Fleet\u0000name', code: 'INVALID_FORMAT' },
+  ])(
     'rejects an invalid name with a name field error before persistence',
-    async (name) => {
+    async ({ name, code }) => {
       await expect(service.updateName(context, branchId, name)).rejects.toMatchObject({
         response: {
           message: 'Use 1 to 80 supported characters.',
-          fieldErrors: [{ path: 'name', message: 'Use 1 to 80 supported characters.' }],
+          fieldErrors: [{ path: 'name', message: 'Use 1 to 80 supported characters.', code }],
         },
       });
       expect(updateName).not.toHaveBeenCalled();

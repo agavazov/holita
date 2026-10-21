@@ -91,13 +91,14 @@ const MODEL_OPTIONS: Record<FleetDeviceModel, readonly FleetDeviceOption[]> = {
 const DUPLICATE_IMEI: FieldError = {
   path: 'imei',
   message: 'IMEI is already used in this branch.',
+  code: 'ALREADY_EXISTS',
 };
 const UNIQUE_INDEXES = new Map([['Device_tenantId_branchId_imei_key', DUPLICATE_IMEI]]);
 
 function imei(value: unknown): string {
   const result = typeof value === 'string' ? value.trim() : '';
   if (!/^[0-9]{15}$/.test(result)) {
-    invalid('imei', 'Enter an IMEI of exactly 15 digits.');
+    invalid('imei', 'Enter an IMEI of exactly 15 digits.', 'INVALID_FORMAT');
   }
   return result;
 }
@@ -116,6 +117,7 @@ function checkOptions(model: FleetDeviceModel | null, selected: readonly FleetDe
       model === null
         ? 'Choose a device model before selecting options.'
         : 'Choose only options that the selected model supports.',
+      model === null ? 'MODEL_REQUIRED' : 'MODEL_OPTIONS_UNSUPPORTED',
     );
   }
 }
@@ -205,7 +207,7 @@ export class DevicesService {
     requireScope(context);
     const selected = ids(values, 'ids');
     if (!selected.length) {
-      invalid('ids', 'Choose at least one device.');
+      invalid('ids', 'Choose at least one device.', 'REQUIRED');
     }
     const succeededIds: string[] = [];
     const failures: FleetDeviceActionFailure[] = [];
@@ -404,14 +406,14 @@ export class DevicesService {
   private installedAt(value: unknown): Date | null {
     const result = optionalDateTime(value, 'installedAt');
     if (result !== null && result.getTime() > this.clock.now().getTime()) {
-      invalid('installedAt', 'Installation time cannot be in the future.');
+      invalid('installedAt', 'Installation time cannot be in the future.', 'FUTURE_NOT_ALLOWED');
     }
     return result;
   }
 
   private async requireVehicle(scope: FleetScope, vehicleId: string): Promise<void> {
     if (!(await this.devices.findVehicle(scope, vehicleId))) {
-      invalid('vehicleId', 'Choose a vehicle in this branch.');
+      invalid('vehicleId', 'Choose a vehicle in this branch.', 'VEHICLE_UNAVAILABLE');
     }
   }
 
@@ -421,14 +423,14 @@ export class DevicesService {
     excludeId: string | null,
   ): Promise<void> {
     if (await this.devices.imeiTaken(scope, value, excludeId)) {
-      invalid(DUPLICATE_IMEI.path, DUPLICATE_IMEI.message);
+      invalid(DUPLICATE_IMEI.path, DUPLICATE_IMEI.message, DUPLICATE_IMEI.code);
     }
   }
 
   private writeError(error: unknown): never {
     rethrowUniqueViolation(error, UNIQUE_INDEXES);
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
-      invalid('vehicleId', 'Choose a vehicle in this branch.');
+      invalid('vehicleId', 'Choose a vehicle in this branch.', 'VEHICLE_UNAVAILABLE');
     }
     persistenceError(error, 'Device');
   }

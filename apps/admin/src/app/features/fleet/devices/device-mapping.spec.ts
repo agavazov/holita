@@ -56,8 +56,8 @@ describe('Device editor mapping', () => {
       ],
     });
     expect(deviceFieldErrors(error)).toEqual({
-      options: 'Choose compatible options.',
-      vehicleId: 'Choose a vehicle in this branch.',
+      options: 'The value is not valid.',
+      vehicleId: 'The value is not valid.',
     });
   });
 });

@@ -120,7 +120,11 @@ describe('Vehicle groups validation and scope', () => {
   it('rejects duplicate names, null required fields and empty updates', async () => {
     nameTaken.mockResolvedValue(true);
     expect(await fieldErrors(service.create(context, { name: 'Long haul' }))).toEqual([
-      { path: 'name', message: 'A vehicle group with this name already exists in this branch.' },
+      {
+        path: 'name',
+        message: 'A vehicle group with this name already exists in this branch.',
+        code: 'ALREADY_EXISTS',
+      },
     ]);
     const id = randomUUID();
     expect(await fieldErrors(service.update(context, id, { name: 'Long haul' }))).toMatchObject([

@@ -79,11 +79,17 @@ const SORT_FIELDS: readonly FleetVehicleSortField[] = [
 const DUPLICATE_FLEET_NUMBER: FieldError = {
   path: 'fleetNumber',
   message: 'Fleet number is already used in this branch.',
+  code: 'ALREADY_EXISTS',
 };
-const DUPLICATE_VIN: FieldError = { path: 'vin', message: 'VIN is already used in this branch.' };
+const DUPLICATE_VIN: FieldError = {
+  path: 'vin',
+  message: 'VIN is already used in this branch.',
+  code: 'ALREADY_EXISTS',
+};
 const UNAVAILABLE_DRIVER: FieldError = {
   path: 'currentDriverId',
   message: 'Choose an active driver in this branch.',
+  code: 'DRIVER_UNAVAILABLE',
 };
 const UNIQUE_INDEXES = new Map([
   ['Vehicle_tenantId_branchId_fleetNumber_key', DUPLICATE_FLEET_NUMBER],
@@ -95,7 +101,7 @@ const DELETE_CONFLICT = 'Vehicle has devices or history; deactivate it instead.'
 function vin(value: unknown): string | null {
   const result = optionalText(value, 'vin', 17)?.toUpperCase() ?? null;
   if (result !== null && !/^[A-HJ-NPR-Z0-9]{17}$/.test(result)) {
-    invalid('vin', 'Enter a VIN of 17 letters and digits without I, O or Q.');
+    invalid('vin', 'Enter a VIN of 17 letters and digits without I, O or Q.', 'INVALID_FORMAT');
   }
   return result;
 }
@@ -223,7 +229,7 @@ export class VehiclesService {
     requireScope(context);
     const selected = ids(values, 'ids');
     if (!selected.length) {
-      invalid('ids', 'Choose at least one vehicle.');
+      invalid('ids', 'Choose at least one vehicle.', 'REQUIRED');
     }
     const succeededIds: string[] = [];
     const failures: FleetVehicleActionFailure[] = [];
@@ -245,7 +251,7 @@ export class VehiclesService {
     requireScope(context);
     const selected = ids(values, 'ids');
     if (!selected.length) {
-      invalid('ids', 'Choose at least one vehicle.');
+      invalid('ids', 'Choose at least one vehicle.', 'REQUIRED');
     }
     const succeededIds: string[] = [];
     const failures: FleetVehicleActionFailure[] = [];
@@ -353,7 +359,11 @@ export class VehiclesService {
     try {
       const result = await this.vehicles.update(scope, recordId, data);
       if (result && 'inactiveAssignment' in result) {
-        invalid('currentDriverId', 'Unassign the driver before deactivating the vehicle.');
+        invalid(
+          'currentDriverId',
+          'Unassign the driver before deactivating the vehicle.',
+          'DRIVER_ASSIGNED',
+        );
       }
       row = result;
     } catch (error) {
@@ -453,14 +463,18 @@ export class VehiclesService {
     changes: Partial<VehicleData>,
   ): Promise<void> {
     if (result.status === 'INACTIVE' && result.currentDriverId !== null) {
-      invalid('currentDriverId', 'Unassign the driver before deactivating the vehicle.');
+      invalid(
+        'currentDriverId',
+        'Unassign the driver before deactivating the vehicle.',
+        'DRIVER_ASSIGNED',
+      );
     }
     if (
       changes.groupId !== undefined &&
       changes.groupId !== null &&
       !(await this.vehicles.findGroup(scope, changes.groupId))
     ) {
-      invalid('groupId', 'Choose a vehicle group in this branch.');
+      invalid('groupId', 'Choose a vehicle group in this branch.', 'GROUP_UNAVAILABLE');
     }
     if (changes.currentDriverId !== undefined && changes.currentDriverId !== null) {
       const driver = await this.vehicles.findDriver(scope, changes.currentDriverId);

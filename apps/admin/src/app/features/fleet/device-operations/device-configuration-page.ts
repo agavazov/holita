@@ -24,7 +24,8 @@ import { requestError } from '../../../core/graphql/request-error';
 import type { Language } from '../../../i18n/messages';
 import { injectPageRecord } from '../../../layout/page-record';
 import { drawerParam } from '../../../ui/drawer/drawer-route';
-import { errorCode, fieldErrors } from '../../../ui/forms/field-errors';
+import { errorCode } from '../../../ui/forms/field-errors';
+import { fleetFieldErrors } from '../field-errors';
 import { DeviceConfigurationApi } from './device-configuration-api';
 import {
   DeviceConfigurationView,
@@ -121,7 +122,11 @@ export class DeviceConfigurationPage implements OnInit {
     this.writeError() ? requestError(this.writeError(), this.text().editor.requestError) : null,
   );
   protected readonly writeFieldErrors = computed(() =>
-    fieldErrors(this.writeError(), ['catalogId', 'parameterId', 'intervalSeconds']),
+    fleetFieldErrors(
+      this.writeError(),
+      ['catalogId', 'parameterId', 'intervalSeconds'],
+      this.language(),
+    ),
   );
 
   constructor() {

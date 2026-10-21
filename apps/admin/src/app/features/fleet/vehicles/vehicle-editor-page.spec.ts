@@ -371,7 +371,8 @@ describe('Vehicle editor drawer adapter', () => {
     await vi.waitFor(() => {
       expect(document.activeElement).toBe(field('plate'));
     });
-    expect(document.body.textContent).toContain('Duplicate plate.');
+    expect(document.body.textContent).toContain('The value is not valid.');
+    expect(document.body.textContent).not.toContain('Duplicate plate.');
     expect(document.body.textContent).toContain('field-id');
     expect(fixture.componentInstance.saving()).toBe(false);
     const unload = new Event('beforeunload', { cancelable: true });
@@ -412,7 +413,13 @@ describe('Vehicle editor drawer adapter', () => {
           message: 'Invalid input',
           extensions: {
             code: 'BAD_USER_INPUT',
-            fieldErrors: [{ path: 'groupId', message: 'Choose a vehicle group in this branch.' }],
+            fieldErrors: [
+              {
+                path: 'groupId',
+                message: 'Choose a vehicle group in this branch.',
+                code: 'GROUP_UNAVAILABLE',
+              },
+            ],
           },
         },
       ],

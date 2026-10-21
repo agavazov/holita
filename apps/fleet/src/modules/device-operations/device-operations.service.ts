@@ -122,7 +122,7 @@ export class DeviceOperationsService {
     const intervalSeconds = integer(input.intervalSeconds, 'intervalSeconds', 0, 65000);
     const karmaCarId = text(input.karmaCarId, 'karmaCarId', 16);
     if (!/^[1-9][0-9]*$/.test(karmaCarId) || !Number.isSafeInteger(Number(karmaCarId))) {
-      invalid('karmaCarId', 'Use a valid Karma car ID.');
+      invalid('karmaCarId', 'Use a valid Karma car ID.', 'INVALID_FORMAT');
     }
     const expected = text(input.expectedKarmaDeviceId, 'expectedKarmaDeviceId', 128);
     const device = await this.operations.findDevice(scope, deviceId);
@@ -148,17 +148,25 @@ export class DeviceOperationsService {
     let catalogId: string | null = null;
     if (kind === 'ADD_PARAMETER') {
       if (parameters.length >= 1000) {
-        invalid('parameterId', 'The configuration has reached the supported readback capacity.');
+        invalid(
+          'parameterId',
+          'The configuration has reached the supported readback capacity.',
+          'CONFIGURATION_CAPACITY',
+        );
       }
       if (!('catalogId' in input)) {
-        invalid('catalogId', 'Choose a supported catalog preset.');
+        invalid('catalogId', 'Choose a supported catalog preset.', 'UNSUPPORTED_VALUE');
       }
       catalogId = uuid(input.catalogId, 'catalogId');
       const eligible = (await this.operations.presets()).some(
         (preset) => preset.catalogId === catalogId && preset.parameterId === parameterId,
       );
       if (!eligible) {
-        invalid('parameterId', 'Choose an unambiguous predefined Monitor catalog parameter.');
+        invalid(
+          'parameterId',
+          'Choose an unambiguous predefined Monitor catalog parameter.',
+          'CATALOG_PARAMETER_UNSUPPORTED',
+        );
       }
       if (previous) {
         throw new ConflictException('This parameter is already configured.');
@@ -168,7 +176,7 @@ export class DeviceOperationsService {
         throw new ConflictException('This parameter is absent from the confirmed configuration.');
       }
       if (previous.intervalSeconds === intervalSeconds) {
-        invalid('intervalSeconds', 'Choose a different reporting interval.');
+        invalid('intervalSeconds', 'Choose a different reporting interval.', 'VALUE_UNCHANGED');
       }
     }
     const target = await this.karma.target(karmaCarId);
@@ -230,7 +238,7 @@ export class DeviceOperationsService {
     const deviceId = uuid(input.deviceId, 'deviceId');
     const karmaCarId = text(input.karmaCarId, 'karmaCarId', 16);
     if (!/^[1-9][0-9]*$/.test(karmaCarId) || !Number.isSafeInteger(Number(karmaCarId))) {
-      invalid('karmaCarId', 'Use a valid Karma car ID.');
+      invalid('karmaCarId', 'Use a valid Karma car ID.', 'INVALID_FORMAT');
     }
     const expected = text(input.expectedKarmaDeviceId, 'expectedKarmaDeviceId', 128);
     const device = await this.operations.findDevice(scope, deviceId);

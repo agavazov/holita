@@ -78,7 +78,9 @@ export class VehicleGroupEditorPage implements OnInit {
   protected readonly saveFailure = computed(() =>
     this.saveError() ? requestError(this.saveError(), this.text().drawer.saveError) : null,
   );
-  protected readonly fieldErrors = computed(() => vehicleGroupFieldErrors(this.saveError()));
+  protected readonly fieldErrors = computed(() =>
+    vehicleGroupFieldErrors(this.saveError(), this.language()),
+  );
 
   ngOnInit(): void {
     const branch = drawerParam(this.route, 'branchId');

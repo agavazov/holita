@@ -95,7 +95,9 @@ export class DriverEditorPage implements OnInit {
   protected readonly saveFailure = computed(() =>
     this.saveError() ? requestError(this.saveError(), this.text().drawer.saveError) : null,
   );
-  protected readonly fieldErrors = computed(() => driverFieldErrors(this.saveError()));
+  protected readonly fieldErrors = computed(() =>
+    driverFieldErrors(this.saveError(), this.language()),
+  );
 
   ngOnInit(): void {
     const branch = drawerParam(this.route, 'branchId');

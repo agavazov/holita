@@ -213,8 +213,13 @@ its persisted Branch.
 Gateway forwards Branch context without blanket Branch validation. Request IDs accept 1–100 ASCII
 letters/digits or `._:-`; invalid/missing IDs are replaced with UUIDs. Responses/errors expose the
 ID. Expected Nest exceptions map to BAD_USER_INPUT, NOT_FOUND, CONFLICT or SERVICE_UNAVAILABLE;
-unexpected details remain hidden. BAD_USER_INPUT may carry `fieldErrors` whose paths match
-`^[a-zA-Z][a-zA-Z0-9]*$` with messages of at most 300 characters. Creation's Core timeout is 3 seconds, Gateway's subgraph timeout
+unexpected details remain hidden. BAD_USER_INPUT may carry at most 30 `fieldErrors` whose paths
+match `^[a-zA-Z][a-zA-Z0-9]*$` with compatibility messages of at most 300 UTF-16 units. Each
+newly emitted field error includes a stable `code` for localization, independent of its English
+message. Codes contain 1–64 ASCII uppercase letters, digits or underscores and start with a
+letter. Core, Fleet, Karma Client and Gateway preserve valid unknown codes and accept legacy entries
+without a code; invalid code metadata is omitted without discarding a valid path/message.
+Creation's Core timeout is 3 seconds, Gateway's subgraph timeout
 is 5 seconds. No global current Branch or cross-request Branch validation cache exists.
 Tenant identity comes only from the HMAC-verified, expiring session. Gateway forwards Authorization; Core, Fleet and Karma Client independently verify it. Arbitrary tenant headers and entity representations cannot select a Tenant. Demo login deliberately allows anyone to choose any Tenant; it is not production identity or membership authorization.
 

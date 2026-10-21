@@ -1,8 +1,9 @@
+import type { Language } from '../../../i18n/messages';
 import type {
   AdminVehicleDetailsFragment,
   CreateFleetVehicleInput,
 } from '../../../../generated/graphql/operations';
-import { fieldErrors } from '../../../ui/forms/field-errors';
+import { fleetFieldErrors } from '../field-errors';
 import type { VehicleField, VehicleForm } from './vehicle-drawer';
 import type { VehicleRow } from './vehicles-view';
 
@@ -87,8 +88,11 @@ const fieldPaths = {
   notes: 'notes',
 } satisfies Record<keyof CreateFleetVehicleInput, VehicleField>;
 
-export function vehicleFieldErrors(error: unknown): Partial<Record<VehicleField, string>> {
-  const errors = fieldErrors(error, Object.keys(fieldPaths));
+export function vehicleFieldErrors(
+  error: unknown,
+  language: Language = 'en',
+): Partial<Record<VehicleField, string>> {
+  const errors = fleetFieldErrors(error, Object.keys(fieldPaths), language);
   const result: Partial<Record<VehicleField, string>> = {};
   for (const [path, field] of Object.entries(fieldPaths)) {
     const message = errors[path];

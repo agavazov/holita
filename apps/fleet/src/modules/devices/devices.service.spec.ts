@@ -423,7 +423,9 @@ describe('Devices validation and scope', () => {
     imeiTaken.mockResolvedValueOnce(true);
     expect(
       await fieldErrors(service.create(context, { imei: '001234567890123', vehicleId })),
-    ).toEqual([{ path: 'imei', message: 'IMEI is already used in this branch.' }]);
+    ).toEqual([
+      { path: 'imei', message: 'IMEI is already used in this branch.', code: 'ALREADY_EXISTS' },
+    ]);
     create.mockRejectedValue(
       new Prisma.PrismaClientKnownRequestError('Unique', {
         code: 'P2002',
@@ -437,7 +439,9 @@ describe('Devices validation and scope', () => {
     );
     expect(
       await fieldErrors(service.create(context, { imei: '001234567890123', vehicleId })),
-    ).toEqual([{ path: 'imei', message: 'IMEI is already used in this branch.' }]);
+    ).toEqual([
+      { path: 'imei', message: 'IMEI is already used in this branch.', code: 'ALREADY_EXISTS' },
+    ]);
     create.mockRejectedValue(
       new Prisma.PrismaClientKnownRequestError('FK', { code: 'P2003', clientVersion: '7' }),
     );

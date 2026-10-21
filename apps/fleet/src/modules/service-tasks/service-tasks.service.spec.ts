@@ -463,10 +463,15 @@ describe('Service task rules', () => {
         }),
       ),
     ).toEqual([
-      { path: 'nextDueOn', message: 'A next service cannot be planned for an inactive vehicle.' },
+      {
+        path: 'nextDueOn',
+        message: 'A next service cannot be planned for an inactive vehicle.',
+        code: 'VEHICLE_UNAVAILABLE',
+      },
       {
         path: 'nextDueOdometerKm',
         message: 'A next service cannot be planned for an inactive vehicle.',
+        code: 'VEHICLE_UNAVAILABLE',
       },
     ]);
   });
@@ -478,6 +483,7 @@ describe('Service task rules', () => {
       {
         path: 'completedOdometerKm',
         message: 'The odometer cannot be below an earlier completed service of this vehicle.',
+        code: 'ODOMETER_DECREASE',
       },
     ]);
     expect(highestCompletedOdometer).toHaveBeenCalledTimes(1);

@@ -95,7 +95,9 @@ export class DeviceEditorPage implements OnInit {
   protected readonly saveFailure = computed(() =>
     this.saveError() ? requestError(this.saveError(), this.text().drawer.saveError) : null,
   );
-  protected readonly fieldErrors = computed(() => deviceFieldErrors(this.saveError()));
+  protected readonly fieldErrors = computed(() =>
+    deviceFieldErrors(this.saveError(), this.language()),
+  );
   protected readonly choicesFailure = computed(() =>
     this.choices.error() ? requestError(this.choices.error(), this.text().table.errorText) : null,
   );

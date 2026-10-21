@@ -144,7 +144,11 @@ describe('Telemetry clocks, samples and odometer readings', () => {
     }
     insertManualReading.mockResolvedValueOnce(null);
     expect(await fieldErrors(service.recordOdometerReading(context, reading))).toEqual([
-      { path: 'vehicleId', message: 'Choose a vehicle in this branch that is not inactive.' },
+      {
+        path: 'vehicleId',
+        message: 'Choose a vehicle in this branch that is not inactive.',
+        code: 'VEHICLE_UNAVAILABLE',
+      },
     ]);
     expect(requireBranch).toHaveBeenCalledTimes(3);
   });

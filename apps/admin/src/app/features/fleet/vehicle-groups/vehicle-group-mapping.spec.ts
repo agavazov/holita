@@ -61,8 +61,8 @@ describe('Vehicle group mappings', () => {
       ],
     });
     expect(vehicleGroupFieldErrors(error)).toEqual({
-      name: 'Duplicate group.',
-      slot: 'Choose a colour.',
+      name: 'The value is not valid.',
+      slot: 'The value is not valid.',
     });
   });
 });

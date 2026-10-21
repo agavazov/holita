@@ -1,9 +1,10 @@
+import type { Language } from '../../../i18n/messages';
 import type {
   AdminDriverDetailsFragment,
   AdminDriverScorecardQuery,
   CreateFleetDriverInput,
 } from '../../../../generated/graphql/operations';
-import { fieldErrors } from '../../../ui/forms/field-errors';
+import { fleetFieldErrors } from '../field-errors';
 import type { DriverDetails, DriverField, DriverForm } from './driver-drawer';
 import { maneuverKinds, type DriverScorecard } from './driver-scorecard-view';
 import type { DriverRow } from './drivers-view';
@@ -75,8 +76,11 @@ const fieldPaths = {
   notes: 'notes',
 } satisfies Record<keyof CreateFleetDriverInput, DriverField>;
 
-export function driverFieldErrors(error: unknown): Partial<Record<DriverField, string>> {
-  const errors = fieldErrors(error, Object.keys(fieldPaths));
+export function driverFieldErrors(
+  error: unknown,
+  language: Language = 'en',
+): Partial<Record<DriverField, string>> {
+  const errors = fleetFieldErrors(error, Object.keys(fieldPaths), language);
   const result: Partial<Record<DriverField, string>> = {};
   for (const [path, field] of Object.entries(fieldPaths)) {
     const message = errors[path];

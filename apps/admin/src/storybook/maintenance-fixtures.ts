@@ -179,9 +179,23 @@ graphqlFixture(
         'BAD_USER_INPUT',
         'Next service cannot be planned for an inactive vehicle.',
         [
-          ...(nextDueOn ? [{ path: 'nextDueOn', message: 'The vehicle is inactive.' }] : []),
+          ...(nextDueOn
+            ? [
+                {
+                  path: 'nextDueOn',
+                  message: 'The vehicle is inactive.',
+                  code: 'VEHICLE_UNAVAILABLE',
+                },
+              ]
+            : []),
           ...(nextDueOdometerKm !== null
-            ? [{ path: 'nextDueOdometerKm', message: 'The vehicle is inactive.' }]
+            ? [
+                {
+                  path: 'nextDueOdometerKm',
+                  message: 'The vehicle is inactive.',
+                  code: 'VEHICLE_UNAVAILABLE',
+                },
+              ]
             : []),
         ],
       );

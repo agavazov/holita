@@ -264,7 +264,7 @@ describe('Live Alert detail workflow', () => {
     await fixture.whenStable();
     expect(remark().value).toBe('Keep this draft.');
     expect(dialog().querySelector('#alert-remark-error')?.textContent).toContain(
-      'Rejected remark.',
+      'The value is not valid.',
     );
     await vi.waitFor(() => {
       expect(document.activeElement).toBe(remark());

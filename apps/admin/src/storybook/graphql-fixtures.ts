@@ -69,7 +69,11 @@ export class FixtureGraphqlError extends Error {
 export function fixtureError(
   code: FixtureErrorCode,
   message: string,
-  fieldErrors?: readonly { readonly path: string; readonly message: string }[],
+  fieldErrors?: readonly {
+    readonly path: string;
+    readonly message: string;
+    readonly code?: string;
+  }[],
 ): FixtureGraphqlError {
   return new FixtureGraphqlError(message, { code, ...(fieldErrors ? { fieldErrors } : {}) });
 }

@@ -192,9 +192,11 @@ export class MaintenanceRecordPage implements OnInit {
   protected readonly choicesFailure = computed(() =>
     this.choices.error() ? requestError(this.choices.error(), this.text().table.errorText) : null,
   );
-  protected readonly taskErrors = computed(() => serviceTaskFieldErrors(this.saveError()));
+  protected readonly taskErrors = computed(() =>
+    serviceTaskFieldErrors(this.saveError(), this.language()),
+  );
   protected readonly completionErrors = computed(() =>
-    serviceCompletionFieldErrors(this.saveError()),
+    serviceCompletionFieldErrors(this.saveError(), this.language()),
   );
 
   ngOnInit(): void {

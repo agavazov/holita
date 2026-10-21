@@ -514,10 +514,15 @@ describe('Drivers validation and scope', () => {
         }),
       ),
     ).toEqual([
-      { path: 'employeeNumber', message: 'Employee number is already used in this branch.' },
+      {
+        path: 'employeeNumber',
+        message: 'Employee number is already used in this branch.',
+        code: 'ALREADY_EXISTS',
+      },
       {
         path: 'identificationKey',
         message: 'Identification key is already used in this branch.',
+        code: 'ALREADY_EXISTS',
       },
     ]);
     expect(create).not.toHaveBeenCalled();
@@ -540,7 +545,11 @@ describe('Drivers validation and scope', () => {
       }),
     );
     expect(await fieldErrors(service.update(context, id, { status: 'INACTIVE' }))).toEqual([
-      { path: 'status', message: 'Unassign the driver from its vehicles first.' },
+      {
+        path: 'status',
+        message: 'Unassign the driver from its vehicles first.',
+        code: 'DRIVER_ASSIGNED',
+      },
     ]);
     await service.update(context, id, { status: 'ON_LEAVE', licenseExpiresOn: null });
     expect(update).toHaveBeenLastCalledWith(scope, id, {
@@ -566,7 +575,11 @@ describe('Drivers validation and scope', () => {
     find.mockResolvedValue(row({ id }));
     update.mockResolvedValue(null);
     expect(await fieldErrors(service.update(context, id, { status: 'INACTIVE' }))).toEqual([
-      { path: 'status', message: 'Unassign the driver from its vehicles first.' },
+      {
+        path: 'status',
+        message: 'Unassign the driver from its vehicles first.',
+        code: 'DRIVER_ASSIGNED',
+      },
     ]);
     expect(update).toHaveBeenCalledWith(scope, id, { status: 'INACTIVE' });
     expect(requireBranch).not.toHaveBeenCalled();

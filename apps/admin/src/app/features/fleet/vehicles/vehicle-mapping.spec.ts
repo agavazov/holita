@@ -238,12 +238,12 @@ describe('Vehicles contract mapping', () => {
       ],
     });
     expect(vehicleFieldErrors(error)).toEqual({
-      plate: 'Plate required.',
-      type: 'Unsupported type.',
-      year: 'Invalid year.',
-      tankL: 'Invalid tank.',
-      driverId: 'Inactive driver.',
-      vin: 'Duplicate VIN.',
+      plate: 'The value is not valid.',
+      type: 'The value is not valid.',
+      year: 'The value is not valid.',
+      tankL: 'The value is not valid.',
+      driverId: 'The value is not valid.',
+      vin: 'The value is not valid.',
     });
     expect(vehicleFieldErrors(new Error('Network unavailable.'))).toEqual({});
   });

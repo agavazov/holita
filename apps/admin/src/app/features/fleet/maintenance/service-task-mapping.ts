@@ -6,7 +6,7 @@ import type {
   UpdateFleetServiceTaskInput,
 } from '../../../../generated/graphql/operations';
 import type { Language } from '../../../i18n/messages';
-import { fieldErrors } from '../../../ui/forms/field-errors';
+import { fleetFieldErrors } from '../field-errors';
 import { maintenanceText } from './i18n/messages';
 import type { MaintenanceKpis } from './maintenance-view';
 import type {
@@ -129,8 +129,11 @@ const taskPaths = {
   workshop: 'workshop',
   notes: 'notes',
 } satisfies Record<keyof CreateFleetServiceTaskInput, ServiceTaskField>;
-export function serviceTaskFieldErrors(error: unknown): Partial<Record<ServiceTaskField, string>> {
-  const errors = fieldErrors(error, Object.keys(taskPaths));
+export function serviceTaskFieldErrors(
+  error: unknown,
+  language: Language = 'en',
+): Partial<Record<ServiceTaskField, string>> {
+  const errors = fleetFieldErrors(error, Object.keys(taskPaths), language);
   const result: Partial<Record<ServiceTaskField, string>> = {};
   for (const [path, name] of Object.entries(taskPaths)) {
     const message = errors[path];
@@ -153,6 +156,7 @@ const completionFields: readonly ServiceCompletionField[] = [
 ];
 export function serviceCompletionFieldErrors(
   error: unknown,
+  language: Language = 'en',
 ): Partial<Record<ServiceCompletionField, string>> {
-  return fieldErrors(error, completionFields);
+  return fleetFieldErrors(error, completionFields, language);
 }

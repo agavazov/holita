@@ -101,7 +101,9 @@ export class AlertDetailPage implements OnInit {
   protected readonly saveFailure = computed(() =>
     this.saveError() ? requestError(this.saveError(), this.text().drawer.saveError) : null,
   );
-  protected readonly fieldError = computed(() => alertRemarkError(this.saveError()));
+  protected readonly fieldError = computed(() =>
+    alertRemarkError(this.saveError(), this.language()),
+  );
   protected readonly clockFailure = computed(() =>
     this.clockError() ? requestError(this.clockError(), this.text().table.errorText) : null,
   );

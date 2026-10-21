@@ -112,6 +112,16 @@ describe('GraphQL fixtures', () => {
     });
   });
 
+  it('preserves stable reason codes on controlled field-error outcomes', () => {
+    const error = fixtureError('BAD_USER_INPUT', 'Invalid vehicle.', [
+      { path: 'vin', message: 'VIN is already used.', code: 'ALREADY_EXISTS' },
+    ]);
+    expect(error.extensions).toEqual({
+      code: 'BAD_USER_INPUT',
+      fieldErrors: [{ path: 'vin', message: 'VIN is already used.', code: 'ALREADY_EXISTS' }],
+    });
+  });
+
   it('builds field errors with backend codes', () => {
     const error = fixtureError('BAD_USER_INPUT', 'Invalid vehicle.', [
       { path: 'vin', message: 'VIN is already used.' },

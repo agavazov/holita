@@ -41,7 +41,13 @@
     "dateMin": "Choose {min} or later.",
     "dateMax": "Choose {max} or earlier.",
     "requireOneOf": "Fill in at least one of these fields.",
-    "invalid": "The value is not valid."
+    "invalid": "The value is not valid.",
+    "tooLong": "The text is too long.",
+    "tooManyItems": "Too many values are selected.",
+    "duplicateValue": "Do not repeat values.",
+    "outOfRange": "The value is outside the allowed range.",
+    "unsupportedValue": "Choose a supported value.",
+    "invalidRange": "Check the order of the start and end values."
   },
   "discard": {
     "title": "Unsaved changes",

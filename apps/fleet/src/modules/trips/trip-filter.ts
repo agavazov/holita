@@ -15,11 +15,15 @@ export function tripConditions(
     return undefined;
   }
   if (!Array.isArray(value) || value.length > 50) {
-    invalid('filter', 'filter.allOf: use at most 50 conditions.');
+    invalid(
+      'filter',
+      'filter.allOf: use at most 50 conditions.',
+      Array.isArray(value) ? 'TOO_MANY_ITEMS' : 'INVALID_TYPE',
+    );
   }
   return value.map((condition: FleetTripCondition | null) => {
     if (typeof condition !== 'object' || condition === null || Array.isArray(condition)) {
-      invalid('filter', 'filter.allOf: use valid trip conditions.');
+      invalid('filter', 'filter.allOf: use valid trip conditions.', 'INVALID_TYPE');
     }
     const period = dateTimeRange(condition.startedFrom, condition.startedTo, {
       from: 'startedFrom',
@@ -36,7 +40,11 @@ export function tripConditions(
       distance.distanceKmTo !== undefined &&
       distance.distanceKmFrom > distance.distanceKmTo
     ) {
-      invalid('filter', 'filter.distanceKmTo must not be below filter.distanceKmFrom.');
+      invalid(
+        'filter',
+        'filter.distanceKmTo must not be below filter.distanceKmFrom.',
+        'INVALID_RANGE',
+      );
     }
     return {
       startedFrom: period.from,

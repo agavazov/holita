@@ -95,14 +95,17 @@ const SORT_FIELDS: readonly FleetDriverSortField[] = [
 const DUPLICATE_EMPLOYEE_NUMBER: FieldError = {
   path: 'employeeNumber',
   message: 'Employee number is already used in this branch.',
+  code: 'ALREADY_EXISTS',
 };
 const DUPLICATE_IDENTIFICATION_KEY: FieldError = {
   path: 'identificationKey',
   message: 'Identification key is already used in this branch.',
+  code: 'ALREADY_EXISTS',
 };
 const ASSIGNED_DRIVER: FieldError = {
   path: 'status',
   message: 'Unassign the driver from its vehicles first.',
+  code: 'DRIVER_ASSIGNED',
 };
 const UNIQUE_INDEXES = new Map([
   ['Driver_tenantId_branchId_employeeNumber_key', DUPLICATE_EMPLOYEE_NUMBER],
@@ -285,7 +288,7 @@ export class DriversService {
     requireScope(context);
     const selected = ids(values, 'ids');
     if (!selected.length) {
-      invalid('ids', 'Choose at least one driver.');
+      invalid('ids', 'Choose at least one driver.', 'REQUIRED');
     }
     const succeededIds: string[] = [];
     const failures: FleetDriverActionFailure[] = [];
@@ -307,7 +310,7 @@ export class DriversService {
     requireScope(context);
     const selected = ids(values, 'ids');
     if (!selected.length) {
-      invalid('ids', 'Choose at least one driver.');
+      invalid('ids', 'Choose at least one driver.', 'REQUIRED');
     }
     const succeededIds: string[] = [];
     const failures: FleetDriverActionFailure[] = [];

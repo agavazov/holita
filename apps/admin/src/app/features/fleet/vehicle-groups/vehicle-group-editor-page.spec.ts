@@ -192,6 +192,7 @@ describe('Live Vehicle group editor', () => {
                 {
                   path: 'name',
                   message: 'A vehicle group with this name already exists in this branch.',
+                  code: 'ALREADY_EXISTS',
                 },
               ],
             },

@@ -119,9 +119,9 @@ describe('Driver generated contract mapping', () => {
       ],
     });
     expect(driverFieldErrors(error)).toEqual({
-      employeeNo: 'Duplicate employee number.',
-      tachoCardExpiresOn: 'Invalid expiry.',
-      status: 'Assigned driver.',
+      employeeNo: 'The value is not valid.',
+      tachoCardExpiresOn: 'The value is not valid.',
+      status: 'The value is not valid.',
     });
   });
 });

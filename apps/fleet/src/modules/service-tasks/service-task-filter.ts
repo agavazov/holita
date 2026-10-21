@@ -27,11 +27,15 @@ export function serviceTaskConditions(
     return undefined;
   }
   if (!Array.isArray(value) || value.length > 50) {
-    invalid('filter', 'filter.allOf: use at most 50 conditions.');
+    invalid(
+      'filter',
+      'filter.allOf: use at most 50 conditions.',
+      Array.isArray(value) ? 'TOO_MANY_ITEMS' : 'INVALID_TYPE',
+    );
   }
   return value.map((condition: FleetServiceTaskCondition | null) => {
     if (typeof condition !== 'object' || condition === null || Array.isArray(condition)) {
-      invalid('filter', 'filter.allOf: use valid service conditions.');
+      invalid('filter', 'filter.allOf: use valid service conditions.', 'INVALID_TYPE');
     }
     const due = dateOnlyRange(condition.dueOnFrom, condition.dueOnTo, {
       from: 'dueOnFrom',

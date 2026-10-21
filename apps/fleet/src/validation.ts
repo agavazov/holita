@@ -7,6 +7,7 @@ import { dateOnlyToDate, isDateOnly } from './graphql/scalars.js';
 // Concrete validation helpers shared by the Fleet services. Paths are input field names for
 // mutation inputs and top-level argument names for list arguments (`filter`, `sort`, `search`);
 // messages name the nested field. Messages stay English and below 300 UTF-16 units.
+// Stable reason codes are assigned by validation, independently of those compatibility messages.
 
 /** Verified Tenant and active Branch; every Fleet predicate includes both. */
 export interface FleetScope {
@@ -17,10 +18,12 @@ export interface FleetScope {
 export interface FieldError {
   readonly path: string;
   readonly message: string;
+  /** Legacy callers may omit a reason; invalidFields emits INVALID_VALUE for them. */
+  readonly code?: string;
 }
 
-export function invalid(path: string, message: string): never {
-  throw new BadRequestException({ message, fieldErrors: [{ path, message }] });
+export function invalid(path: string, message: string, code = 'INVALID_VALUE'): never {
+  throw new BadRequestException({ message, fieldErrors: [{ path, message, code }] });
 }
 
 /** One BAD_USER_INPUT carrying every field error; the message is the first error's. */
@@ -31,7 +34,11 @@ export function invalidFields(errors: readonly FieldError[]): never {
   }
   throw new BadRequestException({
     message: first.message,
-    fieldErrors: errors.map(({ path, message }) => ({ path, message })),
+    fieldErrors: errors.map(({ path, message, code = 'INVALID_VALUE' }) => ({
+      path,
+      message,
+      code,
+    })),
   });
 }
 
@@ -41,7 +48,7 @@ export function conflict(message: string): never {
 
 export function uuid(value: unknown, path: string): string {
   if (typeof value !== 'string' || !isUUID(value)) {
-    invalid(path, 'Use a valid UUID.');
+    invalid(path, 'Use a valid UUID.', 'INVALID_FORMAT');
   }
   return value.toLowerCase();
 }
@@ -60,7 +67,17 @@ export function requireScope(context: {
 export function text(value: unknown, path: string, max: number): string {
   const trimmed = typeof value === 'string' ? value.trim() : '';
   if (!trimmed || Array.from(trimmed).length > max || trimmed.includes('\u0000')) {
-    invalid(path, `Use 1 to ${String(max)} supported characters.`);
+    invalid(
+      path,
+      `Use 1 to ${String(max)} supported characters.`,
+      value === null || value === undefined || (typeof value === 'string' && !trimmed)
+        ? 'REQUIRED'
+        : typeof value !== 'string'
+          ? 'INVALID_TYPE'
+          : Array.from(trimmed).length > max
+            ? 'TOO_LONG'
+            : 'INVALID_FORMAT',
+    );
   }
   return trimmed;
 }
@@ -81,14 +98,22 @@ export function optionalPattern(
 ): string | null {
   const result = optionalText(value, path, max);
   if (result !== null && !pattern.test(result)) {
-    invalid(path, message);
+    invalid(path, message, 'INVALID_FORMAT');
   }
   return result;
 }
 
 export function integer(value: unknown, path: string, min: number, max: number): number {
   if (typeof value !== 'number' || !Number.isInteger(value) || value < min || value > max) {
-    invalid(path, `Use a whole number from ${String(min)} to ${String(max)}.`);
+    invalid(
+      path,
+      `Use a whole number from ${String(min)} to ${String(max)}.`,
+      typeof value !== 'number'
+        ? 'INVALID_TYPE'
+        : !Number.isInteger(value)
+          ? 'NOT_INTEGER'
+          : 'OUT_OF_RANGE',
+    );
   }
   return value;
 }
@@ -104,7 +129,15 @@ export function optionalInteger(
 
 export function finite(value: unknown, path: string, min: number, max: number): number {
   if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max) {
-    invalid(path, `Use a number from ${String(min)} to ${String(max)}.`);
+    invalid(
+      path,
+      `Use a number from ${String(min)} to ${String(max)}.`,
+      typeof value !== 'number'
+        ? 'INVALID_TYPE'
+        : !Number.isFinite(value)
+          ? 'INVALID_FORMAT'
+          : 'OUT_OF_RANGE',
+    );
   }
   return value;
 }
@@ -130,7 +163,7 @@ function parseDateOnly(value: unknown): string | null {
 export function dateOnly(value: unknown, path: string): string {
   const result = parseDateOnly(value);
   if (result === null) {
-    invalid(path, 'Use a real calendar date YYYY-MM-DD from 1900 to 2100.');
+    invalid(path, 'Use a real calendar date YYYY-MM-DD from 1900 to 2100.', 'INVALID_FORMAT');
   }
   return result;
 }
@@ -188,7 +221,11 @@ function parseDateTime(value: unknown): Date | null {
 export function dateTime(value: unknown, path: string): Date {
   const result = parseDateTime(value);
   if (result === null) {
-    invalid(path, 'Use an ISO 8601 date and time with Z or ±hh:mm from 2000 to 2100.');
+    invalid(
+      path,
+      'Use an ISO 8601 date and time with Z or ±hh:mm from 2000 to 2100.',
+      'INVALID_FORMAT',
+    );
   }
   return result;
 }
@@ -206,7 +243,7 @@ export function enumValue<T extends string>(
 ): T {
   const result = allowed.find((item) => item === value);
   if (result === undefined) {
-    invalid(path, message);
+    invalid(path, message, 'UNSUPPORTED_VALUE');
   }
   return result;
 }
@@ -227,25 +264,29 @@ export function enumList<T extends string>(
   max: number,
 ): T[] {
   if (!Array.isArray(value)) {
-    invalid(path, 'Choose a list of supported values.');
+    invalid(path, 'Choose a list of supported values.', 'INVALID_TYPE');
   }
   const selected = value.map((item: unknown) => enumValue(item, allowed, path));
   if (new Set(selected).size !== selected.length) {
-    invalid(path, 'Do not repeat values.');
+    invalid(path, 'Do not repeat values.', 'DUPLICATE_VALUE');
   }
   if (selected.length > max) {
-    invalid(path, `Choose at most ${String(max)} values.`);
+    invalid(path, `Choose at most ${String(max)} values.`, 'TOO_MANY_ITEMS');
   }
   return allowed.filter((item) => selected.includes(item));
 }
 
 export function ids(value: unknown, path: string): string[] {
   if (!Array.isArray(value) || value.length > 100) {
-    invalid(path, 'Choose at most 100 records.');
+    invalid(
+      path,
+      'Choose at most 100 records.',
+      Array.isArray(value) ? 'TOO_MANY_ITEMS' : 'INVALID_TYPE',
+    );
   }
   const result = value.map((id: unknown) => uuid(id, path));
   if (new Set(result).size !== result.length) {
-    invalid(path, 'Do not repeat record IDs.');
+    invalid(path, 'Do not repeat record IDs.', 'DUPLICATE_VALUE');
   }
   return result;
 }
@@ -254,10 +295,18 @@ export function pagination(args: { offset?: number; limit?: number }) {
   const offset = args.offset ?? 0,
     limit = args.limit ?? 20;
   if (!Number.isInteger(offset) || offset < 0 || offset > 2147483647) {
-    invalid('offset', 'Use a nonnegative offset.');
+    invalid(
+      'offset',
+      'Use a nonnegative offset.',
+      Number.isInteger(offset) ? 'OUT_OF_RANGE' : 'NOT_INTEGER',
+    );
   }
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
-    invalid('limit', 'Use a limit from 1 to 100.');
+    invalid(
+      'limit',
+      'Use a limit from 1 to 100.',
+      Number.isInteger(limit) ? 'OUT_OF_RANGE' : 'NOT_INTEGER',
+    );
   }
   return { offset, limit };
 }
@@ -271,18 +320,22 @@ export function searchTokens(value: unknown): string[] {
     return [];
   }
   if (typeof value !== 'string') {
-    invalid('search', 'Use text to search.');
+    invalid('search', 'Use text to search.', 'INVALID_TYPE');
   }
   const trimmed = value.trim();
   if (!trimmed) {
     return [];
   }
   if (Array.from(trimmed).length > 200 || trimmed.includes('\u0000')) {
-    invalid('search', 'Use at most 200 supported characters to search.');
+    invalid(
+      'search',
+      'Use at most 200 supported characters to search.',
+      trimmed.includes('\u0000') ? 'INVALID_FORMAT' : 'TOO_LONG',
+    );
   }
   const tokens = trimmed.split(/\s+/u);
   if (tokens.length > 5) {
-    invalid('search', 'Use at most 5 search words.');
+    invalid('search', 'Use at most 5 search words.', 'TOO_MANY_ITEMS');
   }
   return tokens;
 }
@@ -294,7 +347,11 @@ function filterValues(value: unknown, field: string): unknown[] | undefined {
     return undefined;
   }
   if (!Array.isArray(value) || value.length < 1 || value.length > 100) {
-    invalid('filter', `filter.${field}: choose 1 to 100 values.`);
+    invalid(
+      'filter',
+      `filter.${field}: choose 1 to 100 values.`,
+      !Array.isArray(value) ? 'INVALID_TYPE' : value.length === 0 ? 'REQUIRED' : 'TOO_MANY_ITEMS',
+    );
   }
   return value.map((item: unknown) => item);
 }
@@ -306,12 +363,12 @@ export function idList(value: unknown, field: string): string[] | undefined {
   }
   const result = values.map((id: unknown) => {
     if (typeof id !== 'string' || !isUUID(id)) {
-      invalid('filter', `filter.${field}: use valid IDs.`);
+      invalid('filter', `filter.${field}: use valid IDs.`, 'INVALID_FORMAT');
     }
     return id.toLowerCase();
   });
   if (new Set(result).size !== result.length) {
-    invalid('filter', `filter.${field}: do not repeat values.`);
+    invalid('filter', `filter.${field}: do not repeat values.`, 'DUPLICATE_VALUE');
   }
   return result;
 }
@@ -329,7 +386,7 @@ export function enumFilter<T extends string>(
     enumValue(item, allowed, 'filter', `filter.${field}: choose supported values.`),
   );
   if (new Set(result).size !== result.length) {
-    invalid('filter', `filter.${field}: do not repeat values.`);
+    invalid('filter', `filter.${field}: do not repeat values.`, 'DUPLICATE_VALUE');
   }
   return result;
 }
@@ -340,7 +397,7 @@ export function booleanFilter(value: unknown, field: string): boolean | undefine
     return undefined;
   }
   if (typeof value !== 'boolean') {
-    invalid('filter', `filter.${field}: use true or false.`);
+    invalid('filter', `filter.${field}: use true or false.`, 'INVALID_TYPE');
   }
   return value;
 }
@@ -355,7 +412,15 @@ export function integerFilter(
     return undefined;
   }
   if (typeof value !== 'number' || !Number.isInteger(value) || value < min || value > max) {
-    invalid('filter', `filter.${field}: use a whole number from ${String(min)} to ${String(max)}.`);
+    invalid(
+      'filter',
+      `filter.${field}: use a whole number from ${String(min)} to ${String(max)}.`,
+      typeof value !== 'number'
+        ? 'INVALID_TYPE'
+        : !Number.isInteger(value)
+          ? 'NOT_INTEGER'
+          : 'OUT_OF_RANGE',
+    );
   }
   return value;
 }
@@ -370,7 +435,15 @@ export function numberFilter(
     return undefined;
   }
   if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max) {
-    invalid('filter', `filter.${field}: use a number from ${String(min)} to ${String(max)}.`);
+    invalid(
+      'filter',
+      `filter.${field}: use a number from ${String(min)} to ${String(max)}.`,
+      typeof value !== 'number'
+        ? 'INVALID_TYPE'
+        : !Number.isFinite(value)
+          ? 'INVALID_FORMAT'
+          : 'OUT_OF_RANGE',
+    );
   }
   return value;
 }
@@ -387,14 +460,18 @@ export function dateTimeRange(
     }
     const result = parseDateTime(value);
     if (result === null) {
-      invalid('filter', `filter.${field}: use an ISO 8601 date and time with Z or ±hh:mm.`);
+      invalid(
+        'filter',
+        `filter.${field}: use an ISO 8601 date and time with Z or ±hh:mm.`,
+        'INVALID_FORMAT',
+      );
     }
     return result;
   };
   const start = bound(from, fields.from),
     end = bound(to, fields.to);
   if (start && end && end.getTime() <= start.getTime()) {
-    invalid('filter', `filter.${fields.to} must be after filter.${fields.from}.`);
+    invalid('filter', `filter.${fields.to} must be after filter.${fields.from}.`, 'INVALID_RANGE');
   }
   return { ...(start ? { from: start } : {}), ...(end ? { to: end } : {}) };
 }
@@ -411,14 +488,18 @@ export function dateOnlyRange(
     }
     const result = parseDateOnly(value);
     if (result === null) {
-      invalid('filter', `filter.${field}: use a real date YYYY-MM-DD.`);
+      invalid('filter', `filter.${field}: use a real date YYYY-MM-DD.`, 'INVALID_FORMAT');
     }
     return result;
   };
   const start = bound(from, fields.from),
     end = bound(to, fields.to);
   if (start && end && dateOnlyToDate(end).getTime() < dateOnlyToDate(start).getTime()) {
-    invalid('filter', `filter.${fields.to} must not be before filter.${fields.from}.`);
+    invalid(
+      'filter',
+      `filter.${fields.to} must not be before filter.${fields.from}.`,
+      'INVALID_RANGE',
+    );
   }
   return { ...(start ? { from: start } : {}), ...(end ? { to: end } : {}) };
 }

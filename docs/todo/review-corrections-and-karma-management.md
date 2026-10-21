@@ -19,9 +19,6 @@ focused regression at the affected boundary; database races require guarded Post
   cancellation in `maintenance-view.ts`.
 - **D4 / P2:** Reload an alert after an optimistic conflict, preserve its remark draft and
   retry with the refreshed status rather than resending the stale expectedStatus.
-- **D5 / P2:** Add stable reason codes to fieldErrors, retain the compatibility message and
-  map supported reasons to BG/EN catalogs. Cover sanitizer bounds, unknown/legacy reasons,
-  concrete field mapping and the GraphQL boundary; update the contract documentation.
 - **D10 / P2:** Restore FilterBuilder focus to an enabled control at the condition limit;
   preserve a debounced search draft during correctPage URL rewrites; give simulated-save
   story waits explicit bounds; use a DatePicker with explicit time interpretation for Device

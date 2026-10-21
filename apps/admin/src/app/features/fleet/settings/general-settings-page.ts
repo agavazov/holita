@@ -60,7 +60,9 @@ export class GeneralSettingsPage implements OnInit {
   readonly retainDraft = signal(false);
   readonly saveError = signal<unknown>(null);
   readonly partialSave = signal(false);
-  protected readonly fieldErrors = computed(() => generalSettingsFieldErrors(this.saveError()));
+  protected readonly fieldErrors = computed(() =>
+    generalSettingsFieldErrors(this.saveError(), this.language()),
+  );
   protected readonly failure = computed(() => {
     const error = this.saveError();
     if (!error) {

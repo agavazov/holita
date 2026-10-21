@@ -3,7 +3,7 @@ import type {
   FleetEventKind,
 } from '../../../../generated/graphql/operations';
 import type { Language } from '../../../i18n/messages';
-import { fieldErrors } from '../../../ui/forms/field-errors';
+import { fleetFieldErrors } from '../field-errors';
 import type { AlertRow } from './alerts-view';
 import { alertsText } from './i18n/messages';
 
@@ -27,6 +27,6 @@ export function alertRow(event: AdminAlertDetailsFragment, language: Language): 
   };
 }
 
-export function alertRemarkError(error: unknown): string | null {
-  return fieldErrors(error, ['remark']).remark ?? null;
+export function alertRemarkError(error: unknown, language: Language = 'en'): string | null {
+  return fleetFieldErrors(error, ['remark'], language).remark ?? null;
 }

@@ -6,7 +6,7 @@ import type {
 import type { Language } from '../../../i18n/messages';
 import type { SeriesPoint } from '../../../ui/charts/column-series';
 import { formatNumber } from '../../../ui/format/format';
-import { fieldErrors } from '../../../ui/forms/field-errors';
+import { fleetFieldErrors } from '../field-errors';
 import type { OdometerField, PreviousOdometerReading } from './odometer-drawer';
 import { vehicleRow } from './vehicle-mapping';
 import type { VehicleProfile } from './vehicle-profile-view';
@@ -59,6 +59,9 @@ export function odometerLatestAllowed(asOf: string | null, now: number): string 
   return new Date(asOf === null ? now : Math.min(now, Date.parse(asOf))).toISOString();
 }
 
-export function odometerFieldErrors(error: unknown): Partial<Record<OdometerField, string>> {
-  return fieldErrors(error, ['odometerKm', 'recordedAt']);
+export function odometerFieldErrors(
+  error: unknown,
+  language: Language = 'en',
+): Partial<Record<OdometerField, string>> {
+  return fleetFieldErrors(error, ['odometerKm', 'recordedAt'], language);
 }

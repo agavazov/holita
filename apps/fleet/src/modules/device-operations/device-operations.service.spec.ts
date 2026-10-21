@@ -200,7 +200,18 @@ describe('Durable device configuration reads', () => {
       now,
     );
     presets.mockResolvedValue([]);
-    await expect(service.requestAddition(context, addition)).rejects.toThrow('Monitor');
+    await expect(service.requestAddition(context, addition)).rejects.toMatchObject({
+      response: {
+        message: 'Choose an unambiguous predefined Monitor catalog parameter.',
+        fieldErrors: [
+          {
+            path: 'parameterId',
+            message: 'Choose an unambiguous predefined Monitor catalog parameter.',
+            code: 'CATALOG_PARAMETER_UNSUPPORTED',
+          },
+        ],
+      },
+    });
   });
 
   it('rejects an addition at the complete readback capacity before contacting Karma', async () => {
@@ -223,7 +234,18 @@ describe('Durable device configuration reads', () => {
         parameterId: 2000,
         intervalSeconds: 60,
       }),
-    ).rejects.toThrow('capacity');
+    ).rejects.toMatchObject({
+      response: {
+        message: 'The configuration has reached the supported readback capacity.',
+        fieldErrors: [
+          {
+            path: 'parameterId',
+            message: 'The configuration has reached the supported readback capacity.',
+            code: 'CONFIGURATION_CAPACITY',
+          },
+        ],
+      },
+    });
     expect(target).not.toHaveBeenCalled();
     expect(createWrite).not.toHaveBeenCalled();
   });

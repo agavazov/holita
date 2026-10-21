@@ -311,7 +311,11 @@ describe('Vehicles validation and scope', () => {
     create.mockResolvedValue(null);
     update.mockResolvedValue(null);
     const expected = [
-      { path: 'currentDriverId', message: 'Choose an active driver in this branch.' },
+      {
+        path: 'currentDriverId',
+        message: 'Choose an active driver in this branch.',
+        code: 'DRIVER_UNAVAILABLE',
+      },
     ];
     expect(
       await fieldErrors(
@@ -476,7 +480,11 @@ describe('Vehicles validation and scope', () => {
         }),
       ),
     ).toEqual([
-      { path: 'currentDriverId', message: 'Unassign the driver before deactivating the vehicle.' },
+      {
+        path: 'currentDriverId',
+        message: 'Unassign the driver before deactivating the vehicle.',
+        code: 'DRIVER_ASSIGNED',
+      },
     ]);
     expect(create).not.toHaveBeenCalled();
     expect(requireBranch).not.toHaveBeenCalled();
@@ -493,8 +501,12 @@ describe('Vehicles validation and scope', () => {
         }),
       ),
     ).toEqual([
-      { path: 'fleetNumber', message: 'Fleet number is already used in this branch.' },
-      { path: 'vin', message: 'VIN is already used in this branch.' },
+      {
+        path: 'fleetNumber',
+        message: 'Fleet number is already used in this branch.',
+        code: 'ALREADY_EXISTS',
+      },
+      { path: 'vin', message: 'VIN is already used in this branch.', code: 'ALREADY_EXISTS' },
     ]);
     expect(create).not.toHaveBeenCalled();
   });
@@ -513,7 +525,9 @@ describe('Vehicles validation and scope', () => {
     );
     expect(
       await fieldErrors(service.create(context, { licensePlate: 'CA', vin: 'WDB9634031L123456' })),
-    ).toEqual([{ path: 'vin', message: 'VIN is already used in this branch.' }]);
+    ).toEqual([
+      { path: 'vin', message: 'VIN is already used in this branch.', code: 'ALREADY_EXISTS' },
+    ]);
   });
 
   it('validates the merged row on update and never calls Core', async () => {

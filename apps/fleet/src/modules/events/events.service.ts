@@ -282,6 +282,7 @@ export class EventsService {
       invalid(
         'filter',
         `filter.tripIds or filter.occurredFrom and filter.occurredTo at most ${String(MANEUVER_PERIOD_DAYS)} days apart are required.`,
+        'BOUNDED_PERIOD_REQUIRED',
       );
     }
     return maneuverRows(await this.events.kindIntensityCounts(scope, criteria, MANEUVER_KINDS));
@@ -303,7 +304,11 @@ export class EventsService {
     const expected = enumValue(input.expectedStatus, ALERT_STATUSES, 'expectedStatus');
     const allowed: readonly FleetAlertStatus[] = rule.from;
     if (!allowed.includes(expected)) {
-      invalid('expectedStatus', `An alert cannot be changed this way from ${expected}.`);
+      invalid(
+        'expectedStatus',
+        `An alert cannot be changed this way from ${expected}.`,
+        'INVALID_TRANSITION',
+      );
     }
     const remark =
       input.remark === undefined ? {} : { remark: optionalText(input.remark, 'remark', 1000) };
@@ -329,12 +334,12 @@ export class EventsService {
     requireScope(context);
     const selected = ids(values, 'ids');
     if (!selected.length) {
-      invalid('ids', 'Choose at least one alert.');
+      invalid('ids', 'Choose at least one alert.', 'REQUIRED');
     }
     // Validate the shared input before the first write, including an empty selection boundary.
     const expected = enumValue(input.expectedStatus, ALERT_STATUSES, 'expectedStatus');
     if (expected !== 'OPEN') {
-      invalid('expectedStatus', 'Only open alerts can be acknowledged.');
+      invalid('expectedStatus', 'Only open alerts can be acknowledged.', 'INVALID_TRANSITION');
     }
     if (input.remark !== undefined) {
       optionalText(input.remark, 'remark', 1000);

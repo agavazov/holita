@@ -1,8 +1,9 @@
+import type { Language } from '../../../i18n/messages';
 import type {
   AdminDeviceDetailsFragment,
   CreateFleetDeviceInput,
 } from '../../../../generated/graphql/operations';
-import { fieldErrors } from '../../../ui/forms/field-errors';
+import { fleetFieldErrors } from '../field-errors';
 import type { DeviceField, DeviceForm } from './device-drawer';
 import type { DeviceRow } from './devices-view';
 import { deviceModels, deviceOptions } from './device-query';
@@ -56,16 +57,23 @@ export function deviceInput(form: DeviceForm): CreateFleetDeviceInput {
     installedAt: form.installedAt?.trim() || null,
   };
 }
-export function deviceFieldErrors(error: unknown): Partial<Record<DeviceField, string>> {
-  return fieldErrors(error, [
-    'imei',
-    'vehicleId',
-    'model',
-    'options',
-    'simIccid',
-    'notes',
-    'firmwareVersion',
-    'simPhoneNumber',
-    'installedAt',
-  ]);
+export function deviceFieldErrors(
+  error: unknown,
+  language: Language = 'en',
+): Partial<Record<DeviceField, string>> {
+  return fleetFieldErrors(
+    error,
+    [
+      'imei',
+      'vehicleId',
+      'model',
+      'options',
+      'simIccid',
+      'notes',
+      'firmwareVersion',
+      'simPhoneNumber',
+      'installedAt',
+    ],
+    language,
+  );
 }
