@@ -31,3 +31,6 @@ instant-task file with `No open instant tasks.`.
 Track the confirmed review corrections, pending Karma design and deferred cleanup in
 [the review backlog](review-corrections-and-karma-management.md). It supersedes the temporary
 review scratchpad; unverified candidates remain explicitly marked.
+
+The [Karma device-management design](karma-device-management-design.md) and its
+[proposed identity/scope ADR](karma-device-management-identity-adr.md) await user confirmation.

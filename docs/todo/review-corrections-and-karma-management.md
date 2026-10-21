@@ -25,28 +25,11 @@ focused regression at the affected boundary; database races require guarded Post
 
 ## Karma device-management design and approval
 
-Prepare a short design note and stop for user confirmation before implementing the move.
-Keep the interface small, accessible and based on existing components; no broad redesign.
-
-- Verify configured-account inventory and combined car/device fields using read-only API
-  requests. Distinguish car_id, opaque device_id, local Device UUID and IMEI; registration text
-  and a 15-digit format do not establish identity equality or a persistent link.
-- Specify inventory/truck/device/configuration screens, retained/removed screens and old-route
-  redirects. Keep account inventory Branch-less; require verified Tenant/Branch scope for every
-  Fleet read/write and key clients to the selected scope/target/session/language.
-- Prefer the existing explicit per-request target selection unless a demonstrated workflow
-  requires a persistent link. Record the identity/scope decision in an ADR; any stored link
-  needs verified matching, duplicate prevention and missing/ambiguous states.
-- List protocol-supported parameter/operator/value/unit/combinations and distinguish them from
-  implemented writes. The current command 301 allowlist permits only 0702BC, 1F and 02 plus exactly
-  one 22-byte definition. Any extension needs retained encoding evidence and explicit approval;
-  do not invent rule bytecode or add a server rule engine.
-- Reuse QUEUED, SUBMITTING, WAITING, UNKNOWN, COMPLETE, TIMED_OUT, FAILED with readable BG/EN labels.
-  Define catalog-derived names, localized unknown-ID fallbacks and technical disclosures.
-- Preserve whole-set/unknown definitions, baseline comparison, 120-second preflight, independent
-  verification, durable refresh/restart recovery and no replay after uncertain writes. Queue
-  acceptance does not confirm application. Providers remain in Karma Client; reusable durable
-  behavior and history remain scoped in Fleet.
+User approval is pending for the [small-screen-flow proposal](karma-device-management-design.md)
+and its [proposed identity/scope ADR](karma-device-management-identity-adr.md).
+Implement the inventory-to-truck/device/settings move only after confirmation, with the
+proposal's scope, durable-operation and validation requirements. No persistent identity links
+or command-allowlist extensions are proposed.
 
 ## Behavior-preserving cleanup after the approved feature
 
