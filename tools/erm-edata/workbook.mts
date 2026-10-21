@@ -164,8 +164,9 @@ export function workbookRecords(item: Workbook): { source: JsonObject; parameter
       rel.attributes['TargetMode'] !== 'External',
       'External workbook relationship is unsupported',
     );
+    const value = attribute(rel, 'Target');
     const target = posix.normalize(
-      posix.join(parent, attribute(rel, 'Target')).replace(/^\/+/, ''),
+      posix.isAbsolute(value) ? value.replace(/^\/+/, '') : posix.join(parent, value),
     );
     requireValue(!target.startsWith('../') && files.has(target), 'Invalid workbook relationship');
     targets.set(attribute(rel, 'Id'), {

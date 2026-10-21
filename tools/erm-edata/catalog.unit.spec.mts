@@ -227,6 +227,35 @@ describe('static eData catalog', () => {
     oversized.writeUInt32LE(100_000_001, oversized.indexOf(Buffer.from('504b0102', 'hex')) + 24);
     expect(() => archiveCandidates(oversized)).toThrow('Oversized');
   });
+  it('resolves absolute workbook targets from the package root without changing extracted records', () => {
+    const book = at(books, 0);
+    const absolute = mutateBook(book, 'xl/_rels/workbook.xml.rels', (value) =>
+      value.replaceAll('Target="', 'Target="/xl/'),
+    );
+    const original = workbookRecords(book);
+    // The mutated archive has new evidence hashes; parameter records and sheet provenance stay.
+    expect(workbookRecords(absolute)).toEqual({
+      ...original,
+      source: {
+        ...original.source,
+        evidence: {
+          ...object(original.source['evidence']),
+          entries: zipEntries(absolute.payload).map((entry) => ({
+            path: entry.path,
+            bytes: entry.data.length,
+            sha256: sha256(entry.data),
+          })),
+        },
+      },
+    });
+    expect(() =>
+      workbookRecords(
+        mutateBook(book, 'xl/_rels/workbook.xml.rels', (value) =>
+          value.replace('Target="', 'Target="/../'),
+        ),
+      ),
+    ).toThrow('Invalid workbook relationship');
+  });
   it('rejects unknown headers, broken shared formulas, external relationships and XML declarations', () => {
     const book = at(books, 0);
     expect(() =>

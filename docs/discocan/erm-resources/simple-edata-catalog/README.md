@@ -66,7 +66,9 @@ and after support conflict review. Archive hashes/locations and row shifts alone
 not create semantic changes. There is no assumed preferred workbook.
 
 The tool checks PE resources, workbook relationships/shared strings, CRCs, ZIP directory
-boundaries and all constant writes/declared array lengths. Its supported format is
+boundaries and all constant writes/declared array lengths. Relative workbook targets resolve
+from their owning part; absolute targets resolve from the package root. External targets and
+paths escaping that root are rejected. Its supported format is
 explicitly the x86 constant-array layout and recognized initializer instructions.
 ZIP input supports single-disk, non-ZIP64 archives with stored/deflated entries,
 ASCII or UTF-8 filenames, at most 10,000 entries and 100 MB total expanded data.

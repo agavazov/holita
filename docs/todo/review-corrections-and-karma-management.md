@@ -27,8 +27,6 @@ focused regression at the affected boundary; database races require guarded Post
   concrete field mapping and the GraphQL boundary; update the contract documentation.
 - **D8 / P3:** Recognize an orphaned admin:storybook development process in `tools/development/kill.mts`
   without matching another checkout or Storybook build/test processes; add a focused tool spec.
-- **D9 / P3:** Resolve absolute XLSX relationship targets from the package root and cover the
-  case with an independently mutated workbook in `tools/erm-edata/catalog.unit.spec.mts`.
 - **D10 / P2:** Restore FilterBuilder focus to an enabled control at the condition limit;
   preserve a debounced search draft during correctPage URL rewrites; give simulated-save
   story waits explicit bounds; use a DatePicker with explicit time interpretation for Device
