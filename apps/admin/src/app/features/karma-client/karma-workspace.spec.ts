@@ -99,7 +99,11 @@ describe('authenticated global Karma workspace', () => {
     expect(harness.routeNativeElement?.querySelector('dl')?.textContent).toContain(
       '000123456789012',
     );
-    expect(harness.routeNativeElement?.querySelector('dl')?.textContent).toContain('Trailer');
+    const source = harness.routeNativeElement?.querySelector('details');
+    expect(source instanceof HTMLDetailsElement && source.open).toBe(false);
+    expect(source?.querySelector('dl')?.textContent).toContain('Trailer');
+    expect(source?.querySelectorAll('dd')).toHaveLength(10);
+    expect(Array.from(source?.querySelectorAll('dd') ?? []).at(-1)?.textContent).toBe('0');
   });
 
   it('retires detail reads across truck A → B → A, language changes and logout', async () => {
@@ -159,7 +163,9 @@ describe('authenticated global Karma workspace', () => {
     expect(harness.routeNativeElement?.querySelector('tbody')?.textContent).toContain(
       '000123456789012',
     );
-    expect(harness.routeNativeElement?.textContent).not.toContain('No branches available');
+    expect(
+      harness.routeNativeElement?.querySelector('holita-karma-cars-page')?.textContent,
+    ).not.toContain('No branches available');
   });
 
   it('keeps the global list accessible when Branch discovery fails', async () => {

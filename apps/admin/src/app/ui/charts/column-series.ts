@@ -35,27 +35,29 @@ export interface SeriesPoint {
         <span class="column-series__tick">{{ bar.showLabel ? bar.label : '' }}</span>
       }
     </div>
-    <table class="app-visually-hidden">
-      <caption>
-        {{
-          label()
-        }}
-      </caption>
-      <thead>
-        <tr>
-          <th scope="col">{{ text().period }}</th>
-          <th scope="col">{{ text().value }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (point of points(); track point.key) {
+    <div class="app-visually-hidden">
+      <table>
+        <caption>
+          {{
+            label()
+          }}
+        </caption>
+        <thead>
           <tr>
-            <th scope="row">{{ point.label }}</th>
-            <td>{{ point.valueText }}</td>
+            <th scope="col">{{ text().period }}</th>
+            <th scope="col">{{ text().value }}</th>
           </tr>
-        }
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          @for (point of points(); track point.key) {
+            <tr>
+              <th scope="row">{{ point.label }}</th>
+              <td>{{ point.valueText }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
   `,
   styleUrl: './column-series.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

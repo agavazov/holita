@@ -195,10 +195,15 @@ describe('Demo tenant login workspace', () => {
     expect(shell.navigation().map((group) => group.id)).toEqual([
       'monitoring',
       'fleet',
-      'service',
-      'settings',
       'karma-client',
+      'settings',
     ]);
+    expect(
+      shell
+        .navigation()
+        .find((group) => group.id === 'fleet')
+        ?.items.map((item) => item.id),
+    ).toEqual(['vehicles', 'drivers', 'devices', 'maintenance']);
     expect(
       shell
         .navigation()
@@ -217,6 +222,7 @@ describe('Demo tenant login workspace', () => {
       `//bg/${branch.id}/fleet/vehicles`,
       `//bg/${branch.id}/fleet/drivers`,
       `//bg/${branch.id}/fleet/devices`,
+      `//bg/${branch.id}/fleet/maintenance`,
     ]);
     expect(shell.notificationsUnavailable()).toBe(true);
     expect(shell.context()).toMatchObject({ group: 'Автопарк', page: 'Устройства', record: null });

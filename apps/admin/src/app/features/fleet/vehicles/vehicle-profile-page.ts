@@ -1,3 +1,4 @@
+import { driverReturnId, fleetRecordLinks } from '../fleet-record-links';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -64,10 +65,12 @@ const samePage = (left: ProfilePage, right: ProfilePage) =>
   providers: [VehicleProfileApi],
   template: `
     <holita-vehicle-profile-view
+      [recordLinks]="recordLinks()"
       [state]="state()"
       [vehicle]="vehicle()"
       [dataAsOf]="record()?.fleetDataClock.asOf ?? ''"
       [backLink]="backLink()"
+      [backLabel]="backLabel()"
       [backQueryParams]="backQueryParams()"
       [backFragment]="fragment()"
       [errorText]="failure()"
@@ -107,6 +110,9 @@ const samePage = (left: ProfilePage, right: ProfilePage) =>
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class VehicleProfilePage implements OnInit {
+  protected readonly recordLinks = computed(() =>
+    fleetRecordLinks(this.language(), this.branch().id),
+  );
   readonly branch = input.required<AdminBranchesQuery['branches'][number]>();
   readonly language = input.required<Language>();
   private readonly api = inject(VehicleProfileApi);
@@ -139,16 +145,34 @@ export class VehicleProfilePage implements OnInit {
     const task = this.record()?.fleetVehicle.nextService;
     return task ? serviceTaskRow(task, this.language()) : null;
   });
-  protected readonly backLink = computed(() => [
+  private readonly fromDriver = computed(() =>
+    this.queryParams().getAll('fromDriver').length === 1
+      ? driverReturnId(this.queryParams().get('fromDriver'))
+      : null,
+  );
+  private readonly vehicleListLink = computed(() => [
     '/',
     this.language(),
     this.branch().id,
     'fleet',
     'vehicles',
   ]);
-  protected readonly backQueryParams = computed(() => profileBackParams(this.queryParams()));
+  protected readonly backLink = computed(() => {
+    const driverId = this.fromDriver();
+    return driverId
+      ? ['/', this.language(), this.branch().id, 'fleet', 'drivers', driverId]
+      : this.vehicleListLink();
+  });
+  protected readonly backLabel = computed(() =>
+    this.fromDriver()
+      ? vehiclesText(this.language()).profile.backToDriver
+      : vehiclesText(this.language()).profile.back,
+  );
+  protected readonly backQueryParams = computed(() =>
+    this.fromDriver() ? null : profileBackParams(this.queryParams()),
+  );
   protected readonly profileLink = computed(() => [
-    ...this.backLink(),
+    ...this.vehicleListLink(),
     drawerParam(this.route, 'recordId') ?? '',
     this.tab(),
   ]);
@@ -289,10 +313,13 @@ export class VehicleProfilePage implements OnInit {
   }
 
   changeTab(tab: VehicleProfileTab): void {
-    void this.router.navigate([...this.backLink(), drawerParam(this.route, 'recordId'), tab], {
-      queryParamsHandling: 'preserve',
-      preserveFragment: true,
-    });
+    void this.router.navigate(
+      [...this.vehicleListLink(), drawerParam(this.route, 'recordId'), tab],
+      {
+        queryParamsHandling: 'preserve',
+        preserveFragment: true,
+      },
+    );
   }
 
   changePage(tab: ProfileListTab, value: ProfilePage): void {

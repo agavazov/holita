@@ -135,6 +135,29 @@ describe('Live Alert detail workflow', () => {
     http.verify({ ignoreCancelled: true });
     vi.restoreAllMocks();
   });
+  it('links the Vehicle and assigned Driver within its captured scope without Alerts filters', async () => {
+    const fixture = await mount();
+    const driverId = '40000000-0000-4000-8000-000000000001';
+    http
+      .expectOne((request) => operation(request, 'AdminAlert'))
+      .flush({
+        data: {
+          fleetEvent: {
+            ...event,
+            driverId,
+            driver: { id: driverId, firstName: 'Elena', lastName: 'Petrova' },
+          },
+        },
+      });
+    await fixture.whenStable();
+    const links = [...dialog().querySelectorAll('a')];
+    const vehicle = links.find((link) => link.textContent.trim() === 'CB 1001 AX');
+    const driver = links.find((link) => link.textContent.trim() === 'Elena Petrova');
+    expect(vehicle?.getAttribute('href')).toBe(
+      `/en/${branchA}/fleet/vehicles/${event.vehicleId}/overview`,
+    );
+    expect(driver?.getAttribute('href')).toBe(`/en/${branchA}/fleet/drivers/${driverId}`);
+  });
   it('sends the captured expected status and explicit remark clearing, disables duplicate writes and closes once', async () => {
     const fixture = await mount();
     http
@@ -150,6 +173,11 @@ describe('Live Alert detail workflow', () => {
     });
     await fixture.whenStable();
     expect(remark().disabled).toBe(true);
+    const vehicle = [...dialog().querySelectorAll('a')].find(
+      (link) => link.textContent.trim() === 'CB 1001 AX',
+    );
+    expect(vehicle?.getAttribute('href')).toBeNull();
+    expect(vehicle?.getAttribute('aria-disabled')).toBe('true');
     write.flush({
       data: { resolveFleetAlert: { ...event, alertStatus: 'RESOLVED', remark: null } },
     });
@@ -170,6 +198,12 @@ describe('Live Alert detail workflow', () => {
       .expectOne((request) => operation(request, 'AdminAlert'))
       .flush({ data: { fleetEvent: event } });
     await fixture.whenStable();
+    const vehicle = [...dialog().querySelectorAll('a')].find(
+      (link) => link.textContent.trim() === 'CB 1001 AX',
+    );
+    expect(vehicle?.getAttribute('href')).toBe(
+      `/en/${branchA}/fleet/vehicles/${event.vehicleId}/alerts`,
+    );
     fixture.componentInstance.openVehicle(event.vehicleId);
     expect(navigate).toHaveBeenCalledExactlyOnceWith(
       closeLink,

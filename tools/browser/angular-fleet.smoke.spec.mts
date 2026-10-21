@@ -124,6 +124,36 @@ test.describe('Fleet adopted screens', () => {
     await expect(
       page.getByRole('heading', { level: 1, name: 'Преглед', exact: true }),
     ).toBeVisible();
+    for (const dark of [true, false]) {
+      await setDarkTheme(page, dark);
+      for (const viewport of [
+        { width: 1440, height: 900 },
+        { width: 1280, height: 720 },
+        { width: 375, height: 812 },
+      ]) {
+        await page.setViewportSize(viewport);
+        await expect(page.locator('holita-column-series').getByRole('table')).toHaveCount(1);
+        await expect(page.locator('holita-stacked-bars').getByRole('table')).toHaveCount(1);
+        await expect
+          .poll(() =>
+            page.evaluate(
+              () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+            ),
+          )
+          .toBe(true);
+        if (viewport.width === 1280) {
+          await expect
+            .poll(() =>
+              page.evaluate(
+                () =>
+                  document.documentElement.scrollHeight <= document.documentElement.clientHeight,
+              ),
+            )
+            .toBe(true);
+        }
+      }
+      await page.setViewportSize({ width: 1280, height: 720 });
+    }
     await setDarkTheme(page, false);
     await chooseLanguage(page, 'English');
     await page.getByRole('link', { name: 'Distance today', exact: true }).click();
@@ -296,8 +326,7 @@ test.describe('Fleet adopted screens', () => {
   }) => {
     const vehicleId = await createVehicle(page, app, 'PROFILE-01');
     await page.goto(app.url + fleet + '/vehicles?search=PROFILE');
-    await page.getByRole('button', { name: 'Actions for PROFILE-01', exact: true }).click();
-    await chooseMenuItem(page, 'Open profile');
+    await page.getByRole('button', { name: 'Open PROFILE-01', exact: true }).click();
     const profile = app.url + fleet + '/vehicles/' + vehicleId;
     await expect(page).toHaveURL(profile + '/overview?search=PROFILE');
     await expect(kpi(page, 'Odometer')).toHaveText('—');
@@ -352,10 +381,64 @@ test.describe('Fleet adopted screens', () => {
       .getByRole('link', { name: 'Vehicles', exact: true })
       .click();
     await expect(page).toHaveURL(app.url + fleet + '/vehicles?search=PROFILE');
-    await expect(page.getByRole('button', { name: 'Edit PROFILE-01', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Open PROFILE-01', exact: true })).toBeVisible();
     await page.goto(app.url + `/en/${branchB}/fleet/vehicles/${vehicleId}/overview`);
     await expect(page.getByText('Vehicle not found', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Record odometer', exact: true })).toHaveCount(0);
+  });
+
+  test('follows scoped Vehicle and Driver anchors and returns to the originating Driver after profile editing', async ({
+    page,
+    app,
+  }) => {
+    const data = await graphql(
+      page,
+      app,
+      'mutation BrowserRelationDriver { driver: createFleetDriver(input:{firstName:"Mira",lastName:"Relations"}) { id } }',
+    );
+    const driverId = string(object(data['driver'])['id']);
+    const vehicle = await graphql(
+      page,
+      app,
+      'mutation BrowserRelationVehicle($driverId:ID!) { vehicle: createFleetVehicle(input:{licensePlate:"LINK-01",currentDriverId:$driverId}) { id } }',
+      { driverId },
+    );
+    const vehicleId = string(object(vehicle['vehicle'])['id']);
+    const profile = fleet + '/vehicles/' + vehicleId;
+    const driver = fleet + '/drivers/' + driverId;
+    await page.goto(app.url + profile + '/overview?search=LINK');
+    const driverLink = page
+      .locator('holita-vehicle-profile-view')
+      .getByRole('link', { name: 'Mira Relations', exact: true });
+    await expect(driverLink).toHaveAttribute('href', driver);
+    await driverLink.click();
+    const view = page.getByRole('dialog', { name: 'Mira Relations', exact: true });
+    const assignedVehicle = view.getByRole('link', { name: 'LINK-01', exact: true });
+    await expect(assignedVehicle).toHaveAttribute(
+      'href',
+      profile + '/overview?fromDriver=' + driverId,
+    );
+    await assignedVehicle.click();
+    await page.getByRole('tab', { name: 'Trips', exact: true }).click();
+    await expect(page).toHaveURL(app.url + profile + '/trips?fromDriver=' + driverId);
+    await page
+      .locator('holita-page-header')
+      .getByRole('button', { name: 'Edit', exact: true })
+      .click();
+    const editor = page.getByRole('dialog', { name: 'Edit LINK-01', exact: true });
+    await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(editor).toBeHidden();
+    await expect(page).toHaveURL(app.url + profile + '/trips?fromDriver=' + driverId);
+    await page
+      .locator('holita-page-header')
+      .getByRole('link', { name: 'Back to driver', exact: true })
+      .click();
+    await expect(page).toHaveURL(app.url + driver);
+    await expect(view).toBeVisible();
+    await page.goto(app.url + profile + '/overview?fromDriver=invalid');
+    await expect(
+      page.locator('holita-page-header').getByRole('link', { name: 'Vehicles', exact: true }),
+    ).toHaveAttribute('href', fleet + '/vehicles');
   });
 
   test('creates Maintenance, records a zero-cost receipt and the next task while keeping service odometer separate', async ({
@@ -428,6 +511,10 @@ test.describe('Fleet adopted screens', () => {
       .getByRole('button', { name: 'View completed Warranty oil on SERVICE-01', exact: true })
       .click();
     const receipt = page.getByRole('dialog', { name: 'Completed Warranty oil', exact: true });
+    await expect(receipt.getByRole('link', { name: 'SERVICE-01', exact: true })).toHaveAttribute(
+      'href',
+      fleet + '/vehicles/' + vehicleId + '/overview',
+    );
     await expect(receipt.getByText('Warranty workshop', { exact: true })).toBeVisible();
     await expect(receipt.getByText('Oil filter', { exact: true })).toBeVisible();
     await expect(receipt.getByText('Warranty claim accepted.', { exact: true })).toBeVisible();
@@ -458,6 +545,8 @@ test.describe('Fleet adopted screens', () => {
       total: 1,
     });
     expect(object(object(stored['fleetVehicle'])['state'])['odometerKm']).toBeNull();
+    await receipt.getByRole('link', { name: 'SERVICE-01', exact: true }).click();
+    await expect(page).toHaveURL(app.url + fleet + '/vehicles/' + vehicleId + '/overview');
   });
 
   test('keeps Trips and Alerts empty and scopes missing record drawers without creating demo rows', async ({

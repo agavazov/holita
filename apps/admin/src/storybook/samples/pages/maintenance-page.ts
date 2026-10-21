@@ -1,3 +1,4 @@
+import { sampleRecordLinks } from '../record-links';
 import {
   Component,
   computed,
@@ -181,6 +182,7 @@ function toForm(task: SampleServiceTask): ServiceTaskForm {
   imports: [MaintenanceView, ServiceTaskDrawer, ServiceCompletionDrawer],
   template: `
     <holita-maintenance-view
+      [recordLinks]="recordLinks"
       [branchName]="branchName()"
       [rows]="rows()"
       [total]="result().total"
@@ -197,6 +199,7 @@ function toForm(task: SampleServiceTask): ServiceTaskForm {
     />
     @if (editor(); as open) {
       <holita-service-task-drawer
+        [recordLinks]="recordLinks"
         [task]="open.form"
         [readOnly]="open.readOnly"
         [vehicles]="open.form ? vehicles : serviceableVehicles"
@@ -208,6 +211,7 @@ function toForm(task: SampleServiceTask): ServiceTaskForm {
     }
     @if (completion(); as open) {
       <holita-service-completion-drawer
+        [vehicleLink]="completionVehicleLink()"
         [task]="open.task"
         [completed]="open.completed"
         [allowNext]="allowNext()"
@@ -222,6 +226,7 @@ function toForm(task: SampleServiceTask): ServiceTaskForm {
   `,
 })
 export class MaintenancePage {
+  protected readonly recordLinks = sampleRecordLinks;
   private readonly taskDrawer = viewChild(ServiceTaskDrawer);
   private readonly completionDrawer = viewChild(ServiceCompletionDrawer);
   private readonly language = inject(UI_LANGUAGE);
@@ -323,6 +328,10 @@ export class MaintenancePage {
       : null;
   });
   protected readonly completionErrors = signal<Partial<Record<ServiceCompletionField, string>>>({});
+  protected readonly completionVehicleLink = computed(() => {
+    const task = this.tasks().find((task) => task.id === this.completion()?.id);
+    return task ? this.recordLinks.vehicle(task.vehicleId) : null;
+  });
   protected readonly allowNext = computed(() => {
     const task = this.tasks().find((item) => item.id === this.completion()?.id);
     const vehicle = task ? vehicleById(task.vehicleId) : undefined;

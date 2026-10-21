@@ -87,7 +87,7 @@ test('shell geometry follows the theme tokens: root, topbar, sidebar, rail, fram
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${app.url}/en/${branchA}/fleet/vehicles`);
   await expect(
-    page.getByRole('button', { name: 'Edit Discordia truck', exact: true }),
+    page.getByRole('button', { name: 'Open Discordia truck', exact: true }),
   ).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
   await expect(page.locator('html')).toHaveCSS('font-size', '16px');
@@ -129,7 +129,7 @@ test('shell geometry follows the theme tokens: root, topbar, sidebar, rail, fram
   await capture(page, testInfo, 'desktop-rail.png');
   await page.reload();
   await expect(
-    page.getByRole('button', { name: 'Edit Discordia truck', exact: true }),
+    page.getByRole('button', { name: 'Open Discordia truck', exact: true }),
   ).toBeVisible();
   expect((await box(aside)).width).toBeCloseTo(
     await tokenPx(page, '--p-app-sidebar-rail-width'),
@@ -154,7 +154,7 @@ test('CSS and TypeScript switch to the navigation drawer at the same pixel', asy
 }) => {
   await page.goto(`${app.url}/en/${branchA}/fleet/vehicles`);
   await expect(
-    page.getByRole('button', { name: 'Edit Discordia truck', exact: true }),
+    page.getByRole('button', { name: 'Open Discordia truck', exact: true }),
   ).toBeVisible();
   const columns = () =>
     page
@@ -176,7 +176,7 @@ test('one Branch menu stays on the topbar row and the editor keeps drafts across
 }, testInfo) => {
   await page.goto(`${app.url}/en/${branchA}/fleet/vehicles`);
   await expect(
-    page.getByRole('button', { name: 'Edit Discordia truck', exact: true }),
+    page.getByRole('button', { name: 'Open Discordia truck', exact: true }),
   ).toBeVisible();
   const select = page.locator('holita-admin-topbar').getByRole('button', { name: /^Branch:/ });
   const menu = page.getByRole('button', { name: 'Toggle navigation', exact: true });
@@ -222,7 +222,7 @@ test('one Branch menu stays on the topbar row and the editor keeps drafts across
 test('no horizontal overflow on the list from 320 to 1440 px', async ({ page, app }, testInfo) => {
   await page.goto(`${app.url}/en/${branchA}/fleet/vehicles`);
   await expect(
-    page.getByRole('button', { name: 'Edit Discordia truck', exact: true }),
+    page.getByRole('button', { name: 'Open Discordia truck', exact: true }),
   ).toBeVisible();
   for (const width of [320, 375, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 844 });
@@ -240,7 +240,7 @@ test('keyboard order and visible focus in both themes on desktop and mobile', as
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto(`${app.url}/en/${branchA}/fleet/vehicles`);
   await expect(
-    page.getByRole('button', { name: 'Edit Discordia truck', exact: true }),
+    page.getByRole('button', { name: 'Open Discordia truck', exact: true }),
   ).toBeVisible();
   const skip = page.getByRole('link', { name: 'Skip to content', exact: true });
   const menu = page.getByRole('button', { name: 'Toggle navigation', exact: true });
@@ -312,7 +312,7 @@ test('mobile navigation drawer traps focus and closes on Escape, backdrop, navig
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${app.url}/en/${branchA}/fleet/vehicles`);
   await expect(
-    page.getByRole('button', { name: 'Edit Discordia truck', exact: true }),
+    page.getByRole('button', { name: 'Open Discordia truck', exact: true }),
   ).toBeVisible();
   const menu = page.getByRole('button', { name: 'Toggle navigation', exact: true });
   // The desktop sidebar is also a "Navigation" landmark, so the drawer is matched by its class too.
@@ -333,24 +333,24 @@ test('mobile navigation drawer traps focus and closes on Escape, backdrop, navig
     'Drivers',
     'Devices',
     'Maintenance',
-    'Vehicle groups',
-    'General',
     'Trucks',
     'Users',
     'Roles',
     'Projects',
     'Time zones',
     'API information',
+    'Vehicle groups',
+    'General',
   ];
   for (const name of linkNames) {
     await page.keyboard.press('Tab');
     await expect(drawer.getByRole('link', { name, exact: true })).toBeFocused();
   }
-  await expectVisibleFocus(drawer.getByRole('link', { name: 'API information', exact: true }));
+  await expectVisibleFocus(drawer.getByRole('link', { name: 'General', exact: true }));
   await page.keyboard.press('Tab');
   await expect(close).toBeFocused();
   await page.keyboard.press('Shift+Tab');
-  await expect(drawer.getByRole('link', { name: 'API information', exact: true })).toBeFocused();
+  await expect(drawer.getByRole('link', { name: 'General', exact: true })).toBeFocused();
   await finishAnimations(drawer);
   await capture(page, testInfo, 'mobile-navigation.png');
   await page.keyboard.press('Escape');
@@ -399,7 +399,7 @@ test('theme persists and the language menu keeps path, query and fragment', asyn
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto(`${app.url}/en/${branchA}/fleet/vehicles?review=1#main-content`);
   await expect(
-    page.getByRole('button', { name: 'Edit Discordia truck', exact: true }),
+    page.getByRole('button', { name: 'Open Discordia truck', exact: true }),
   ).toBeVisible();
   await expect(page).toHaveTitle('Vehicles · holita');
   const notifications = page
@@ -419,7 +419,7 @@ test('theme persists and the language menu keeps path, query and fragment', asyn
   await expect(page.locator('html')).toHaveClass(/app-dark/);
   await page.reload();
   await expect(
-    page.getByRole('button', { name: 'Edit Discordia truck', exact: true }),
+    page.getByRole('button', { name: 'Open Discordia truck', exact: true }),
   ).toBeVisible();
   await expect(page.locator('html')).toHaveClass(/app-dark/);
   await page
@@ -469,7 +469,7 @@ test('branch selection works with the keyboard and unknown branches expose no Fl
   await page.keyboard.press('Home');
   await page.keyboard.press('Enter');
   await expect(
-    page.getByRole('button', { name: 'Edit Discordia truck', exact: true }),
+    page.getByRole('button', { name: 'Open Discordia truck', exact: true }),
   ).toBeVisible();
   await expect(
     page.locator('aside').getByRole('link', { name: 'Vehicles', exact: true }),
@@ -481,9 +481,8 @@ test('branch selection works with the keyboard and unknown branches expose no Fl
   await expect(page.locator('aside nav').getByRole('heading', { level: 2 })).toHaveText([
     'Monitoring',
     'Fleet',
-    'Service',
-    'Settings',
     /^Karma Client/,
+    'Settings',
   ]);
   await expect(page.getByRole('link', { name: 'Branches', exact: true })).toHaveCount(0);
   await expect(

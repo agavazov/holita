@@ -14,6 +14,8 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import type { FleetRecordLinks } from '../fleet-record-links';
 import { ButtonDirective } from 'primeng/button';
 import { Message } from 'primeng/message';
 import { Tag } from 'primeng/tag';
@@ -45,6 +47,7 @@ export type AlertAction = 'acknowledge' | 'resolve' | 'reopen';
 @Component({
   selector: 'holita-alert-drawer',
   imports: [
+    RouterLink,
     ReactiveFormsModule,
     ButtonDirective,
     Message,
@@ -59,6 +62,7 @@ export type AlertAction = 'acknowledge' | 'resolve' | 'reopen';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AlertDrawer {
+  readonly recordLinks = input<FleetRecordLinks | null>(null);
   readonly alert = input<AlertRow | null>(null);
   readonly dataAsOf = input.required<string>();
   /** The action being applied, if any. */

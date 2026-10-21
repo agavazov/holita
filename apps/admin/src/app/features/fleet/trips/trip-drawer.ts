@@ -1,3 +1,5 @@
+import { RouterLink } from '@angular/router';
+import type { FleetRecordLinks } from '../fleet-record-links';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -33,11 +35,20 @@ interface TimelineEntry {
  */
 @Component({
   selector: 'holita-trip-drawer',
-  imports: [ButtonDirective, Timeline, Tag, RouteDrawer, FormatDateTimePipe, FormatDurationPipe],
+  imports: [
+    RouterLink,
+    ButtonDirective,
+    Timeline,
+    Tag,
+    RouteDrawer,
+    FormatDateTimePipe,
+    FormatDurationPipe,
+  ],
   templateUrl: './trip-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TripDrawer {
+  readonly recordLinks = input<FleetRecordLinks | null>(null);
   readonly trip = input<TripRow | null>(null);
   readonly state = input<RouteDrawerState>('ready');
   readonly loadError = input<string | null>(null);

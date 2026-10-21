@@ -1,26 +1,36 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { ButtonDirective } from 'primeng/button';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { Message } from 'primeng/message';
 import type {
   AdminKarmaCarQuery,
   AdminKarmaLocationQuery,
 } from '../../../../../generated/graphql/operations';
 import { KarmaApi } from '../../karma-api';
-import { locationMap } from '../location-map';
+import { mapCoordinates } from '../location-map';
+import { karmaMapMessages, MapPreview } from '../map-preview/map-preview';
 import { messages, type Language } from '../../../../i18n/messages';
+import { KarmaCarHeader } from '../../car-header/karma-car-header';
 
 @Component({
   selector: 'holita-location-page',
-  imports: [RouterLink, ButtonDirective, Message],
+  imports: [KarmaCarHeader, Message, MapPreview],
   providers: [KarmaApi],
   templateUrl: './location-page.html',
   styleUrl: './location-page.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LocationPage {
   readonly language = input.required<Language>();
   readonly carId = input.required<string>();
   readonly text = computed(() => messages[this.language()]);
+  readonly mapText = computed(() => karmaMapMessages[this.language()]);
   readonly car = signal<AdminKarmaCarQuery['karmaCar']>(null);
   readonly location = signal<AdminKarmaLocationQuery['karmaLocation']>(null);
   readonly loading = signal(false);
@@ -30,7 +40,9 @@ export class LocationPage {
   readonly validId = computed(
     () => /^[1-9]\d*$/.test(this.carId()) && Number.isSafeInteger(Number(this.carId())),
   );
-  readonly map = computed(() => locationMap(this.location()?.latitude, this.location()?.longitude));
+  readonly coordinates = computed(() =>
+    mapCoordinates(this.location()?.latitude, this.location()?.longitude),
+  );
   private readonly api = inject(KarmaApi);
   private carRead: ReturnType<KarmaApi['watchCar']> | undefined;
   private read: ReturnType<KarmaApi['watchLocation']> | undefined;

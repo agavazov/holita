@@ -1,11 +1,23 @@
 import { Location } from '@angular/common';
-import { Component, computed, DestroyRef, inject, input, signal, type OnInit } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  input,
+  signal,
+  type OnInit,
+  afterNextRender,
+  Injector,
+  viewChild,
+  type ElementRef,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, convertToParamMap, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import { ButtonDirective } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
-import { InputTextModule } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
@@ -19,17 +31,32 @@ import { messages, type Language } from '../../../../i18n/messages';
 import { KarmaHistoryApi } from '../karma-history-api';
 import { tripsFilters } from '../history-filters';
 import { positiveId } from '../../edata/edata-page/edata-filters';
+import { mapCoordinates } from '../../location/location-map';
+import { karmaMapMessages, MapPreview } from '../../location/map-preview/map-preview';
+import { karmaDateControl, karmaDateParameter } from '../../karma-date-time';
+import { FormField } from '../../../../ui/form-field/form-field';
+import { focusFirstInvalid } from '../../../../ui/forms/focus';
+import {
+  karmaFilterErrors,
+  karmaFilterFocusOrder,
+  type KarmaFilterErrors,
+} from '../../filter-validation/karma-filter-errors';
+import { KarmaDateTime } from '../../date-time/karma-date-time';
+import { KarmaCarHeader } from '../../car-header/karma-car-header';
+import { karmaCarNavigationContext } from '../../car-header/karma-car-context';
 
 type TripsPageResult = AdminKarmaTripsQuery['karmaTrips'];
 type TripsRow = TripsPageResult['items'][number];
 
 @Component({
   imports: [
-    RouterLink,
+    KarmaCarHeader,
     ReactiveFormsModule,
+    FormField,
     ButtonDirective,
     DialogModule,
-    InputTextModule,
+    KarmaDateTime,
+    MapPreview,
     Message,
     SelectModule,
     TableModule,
@@ -38,15 +65,23 @@ type TripsRow = TripsPageResult['items'][number];
   selector: 'holita-trips-page',
   styleUrl: './trips-page.css',
   templateUrl: './trips-page.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TripsPage implements OnInit {
   readonly language = input.required<Language>();
   readonly carId = input.required<string>();
   readonly text = computed(() => messages[this.language()]);
+  readonly mapText = computed(() => karmaMapMessages[this.language()]);
   readonly car = signal<AdminKarmaCarQuery['karmaCar']>(null);
   readonly carLoaded = signal(false);
   readonly page = signal<TripsPageResult | null>(null);
   readonly selected = signal<TripsRow | null>(null);
+  readonly startCoordinates = computed(() =>
+    mapCoordinates(this.selected()?.startLatitude, this.selected()?.startLongitude),
+  );
+  readonly stopCoordinates = computed(() =>
+    mapCoordinates(this.selected()?.stopLatitude, this.selected()?.stopLongitude),
+  );
   readonly dialogVisible = signal(false);
   readonly carLoading = signal(false);
   readonly pageLoading = signal(false);
@@ -54,6 +89,7 @@ export class TripsPage implements OnInit {
   readonly error = signal(false);
   readonly invalidFilters = signal(false);
   readonly formError = signal(false);
+  readonly fieldErrors = signal<KarmaFilterErrors>({});
   readonly previous = signal<(string | null)[]>([]);
   readonly validId = computed(() => positiveId(this.carId()));
   readonly pageSizes = [25, 50, 100];
@@ -67,6 +103,8 @@ export class TripsPage implements OnInit {
   private readonly router = inject(Router);
   private readonly location = inject(Location);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
+  private readonly formElement = viewChild<ElementRef<HTMLFormElement>>('filterForm');
   private input: KarmaTripsInput | null = null;
   private carQuery: ReturnType<KarmaHistoryApi['watchCar']> | undefined;
   private pageQuery: ReturnType<KarmaHistoryApi['watchTrips']> | undefined;
@@ -77,6 +115,11 @@ export class TripsPage implements OnInit {
     if (!this.validId()) {
       return;
     }
+    this.form.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      if (this.formError()) {
+        this.fieldErrors.set(karmaFilterErrors('trips', this.form.getRawValue(), this.language()));
+      }
+    });
     this.api.initialize(this.language());
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       if (
@@ -94,12 +137,13 @@ export class TripsPage implements OnInit {
       this.pageLoading.set(false);
       this.error.set(false);
       this.formError.set(false);
+      this.fieldErrors.set({});
       this.input = tripsFilters(this.carId(), params);
       this.invalidFilters.set(this.input === null);
       this.form.reset({
         size: this.input?.pageSize ?? 50,
-        from: params.get('from') ?? '',
-        to: params.get('to') ?? '',
+        from: karmaDateControl(params.get('from') ?? ''),
+        to: karmaDateControl(params.get('to') ?? ''),
       });
       this.restorePrevious();
       if (this.car()) {
@@ -173,19 +217,34 @@ export class TripsPage implements OnInit {
     const values = this.form.getRawValue();
     const params = {
       size: String(values.size),
-      from: values.from,
-      to: values.to,
+      from: karmaDateParameter(values.from),
+      to: karmaDateParameter(values.to),
     };
     const input = tripsFilters(this.carId(), convertToParamMap(params));
     this.formError.set(input === null);
+    this.fieldErrors.set(
+      input ? {} : karmaFilterErrors('trips', this.form.getRawValue(), this.language()),
+    );
     if (!input) {
+      afterNextRender(
+        () => {
+          const form = this.formElement()?.nativeElement;
+          if (form) {
+            focusFirstInvalid(form, karmaFilterFocusOrder, 'trips-');
+          }
+        },
+        { injector: this.injector },
+      );
       return;
     }
     if (JSON.stringify(input) === JSON.stringify(this.input)) {
       this.refresh();
       return;
     }
-    void this.router.navigate([], { relativeTo: this.route, queryParams: params });
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { ...karmaCarNavigationContext(this.route.snapshot.queryParamMap), ...params },
+    });
   }
 
   reset(): void {

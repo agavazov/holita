@@ -446,6 +446,72 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
     text-align: end;
   }
 
+  // One compact identity stays with its row actions while the remaining values scroll.
+  .app-table-mobile-actions,
+  .app-table-mobile-meta {
+    display: none;
+  }
+
+  @include bp.below(sm) {
+    .app-responsive-table {
+      .app-col-actions,
+      .app-table-merged-column {
+        display: none;
+      }
+
+      .app-col-identity {
+        position: sticky;
+        inset-inline-start: 0;
+        z-index: 1;
+        vertical-align: top;
+        white-space: normal;
+        border-inline-end: 1px solid var(--p-content-border-color);
+        background: var(--p-content-background);
+
+        > .app-cell-stack,
+        > .app-table-identity {
+          inline-size: 8.5rem;
+          min-inline-size: 8.5rem;
+          max-inline-size: 8.5rem;
+          overflow-wrap: anywhere;
+        }
+
+        .app-link,
+        .content-link {
+          white-space: normal;
+          overflow-wrap: anywhere;
+          text-align: start;
+        }
+      }
+
+      .p-datatable-thead .app-col-identity {
+        z-index: 2;
+        background: var(--p-app-panel-header-background);
+      }
+
+      .app-table-mobile-meta {
+        display: block;
+        font-size: var(--p-app-text-sm);
+        color: var(--p-text-muted-color);
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+
+      .app-table-mobile-actions {
+        display: flex;
+        margin-block-start: var(--p-app-space-2);
+      }
+
+      .p-datatable-tbody > tr:hover > .app-col-identity {
+        background: var(--p-app-panel-header-background);
+      }
+
+      .p-datatable-tbody > tr[aria-selected='true'] > .app-col-identity {
+        background: var(--p-highlight-background);
+      }
+    }
+  }
+
   // Content template for p-timeline events.
   .app-timeline-event {
     display: flex;

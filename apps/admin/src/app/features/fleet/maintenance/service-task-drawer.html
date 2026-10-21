@@ -29,7 +29,23 @@
         </div>
         <div class="app-facts--wide">
           <dt>{{ text().vehicle }}</dt>
-          <dd>{{ vehicleName() }}</dd>
+          <dd>
+            @if (task(); as record) {
+              @if (recordLinks()?.vehicle(record.vehicleId); as link) {
+                <a
+                  class="app-link"
+                  [routerLink]="link.commands"
+                  [queryParams]="link.queryParams"
+                  [fragment]="link.fragment"
+                  >{{ vehicleName() }}</a
+                >
+              } @else {
+                {{ vehicleName() }}
+              }
+            } @else {
+              {{ vehicleName() }}
+            }
+          </dd>
         </div>
         <div>
           <dt>{{ text().dueOn }}</dt>
@@ -103,7 +119,23 @@
             [error]="errorOf('vehicleId')"
           >
             @if (task()) {
-              <p>{{ vehicleName() }}</p>
+              <p>
+                @if (task(); as record) {
+                  @if (recordLinks()?.vehicle(record.vehicleId); as link) {
+                    <a
+                      class="app-link"
+                      [routerLink]="link.commands"
+                      [queryParams]="link.queryParams"
+                      [fragment]="link.fragment"
+                      >{{ vehicleName() }}</a
+                    >
+                  } @else {
+                    {{ vehicleName() }}
+                  }
+                } @else {
+                  {{ vehicleName() }}
+                }
+              </p>
             } @else {
               <p-select
                 inputId="task-vehicleId"

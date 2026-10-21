@@ -106,7 +106,7 @@ describe('Location and reference reads and view retirement', () => {
     expect(element?.querySelector('dl')?.textContent).toContain('<script>untrusted</script>');
     expect(element?.querySelector('dl script')).toBeNull();
     expect(element?.querySelector('a[target="_blank"]')?.getAttribute('href')).toContain(
-      'mlat=0&mlon=0',
+      'https://www.google.com/maps/search/?api=1&query=0%2C0',
     );
   });
   it('preserves null coordinates without a map link, rejects malformed routes and handles missing trucks', async () => {
@@ -260,7 +260,7 @@ describe('Location and reference reads and view retirement', () => {
 
 describe('map coordinate boundaries', () => {
   it('accepts zeros and valid boundary pairs and rejects absent/nonfinite/out-of-range values', () => {
-    expect(locationMap(0, 0)).toContain('mlat=0&mlon=0');
+    expect(locationMap(0, 0)).toContain('https://www.google.com/maps/search/?api=1&query=0%2C0');
     expect(locationMap(90, -180)).not.toBeNull();
     for (const [latitude, longitude] of [
       [null, 0],

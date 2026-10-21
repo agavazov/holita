@@ -434,12 +434,31 @@ no Branch header. The route is mounted while authenticated even when Branch disc
 or fails and when Fleet is disabled. Changing the Branch on this page updates the remembered
 Branch without navigation or reloading Karma. Navigation, language changes, session replacement
 and logout retire obsolete reads. Refresh retains the previous successful rows on failure.
-The read-only table fetches all rows on entry or Refresh. Registration links open a dedicated
-`/cars/:recordId` detail route with the verified car fields, Refresh and a return link.
+The read-only table fetches all rows on entry or Refresh. Registration, car ID and device ID
+search, a project selector and 25/50/100-row pagination operate on that complete account response
+without another upstream read. `q`, `project`, `size` and `first` retain list state in the URL;
+filter changes reset the page and shortened refreshed lists clamp the visible page.
+Registration links open a dedicated `/cars/:recordId` detail route with the verified car fields,
+Refresh and a return link. All six truck sections share a header with registration/ID and
+Overview, eData, Location, Trips, Events and Driving profile navigation links. Bounded
+`listQ`, `listProject`, `listSize` and `listFirst` context restores the originating list;
+history filters and cursors are not carried between sections with different clock semantics.
 Registration links use the shared `content-link` styling, matching the Fleet tables in both themes.
 Missing/invalid IDs show a not-found message; refresh failures retain previous details.
+Truck details place registration, device and resolved project/time-zone labels first, followed
+by the last-known location. A closed Source fields disclosure retains every original truck field.
 All Karma views have Bulgarian/English labels and use the admin theme; `styles/_legacy-karma.scss`
 maps their legacy classes to the design-system tokens.
+Search fields, filter actions, pagination and detail grids share the same token-based Karma
+patterns. Narrow list tables pin a compact identity cell with its available View action while
+the other columns scroll; identity and row actions remain attributable without removing data.
+eData, trips, events and driving-profile periods use a PrimeNG date picker with a
+separate time field including seconds. The shared control preserves literal UTC or API wall-clock
+fields without browser time-zone or daylight-saving conversion;
+URL state and existing request validation remain authoritative.
+Invalid submitted dates, time ranges and ID lists show field-specific translated errors and
+focus the first invalid input. Invalid URL filters retain their separate warning and do not
+issue data reads until corrected.
 
 The concrete eData feature validates car/message/parameter IDs as positive safe integers
 represented by GraphQL IDs. It maps all verified message fields and numeric parameter
@@ -477,9 +496,11 @@ units, timezone conversion or online status. Finite out-of-range coordinates rem
 inspectable but cannot produce a map link.
 
 The separate `/cars/:recordId/location` page loads the truck then its location, exposes
-all 13 verified fields and offers an OpenStreetMap link only for valid coordinate pairs.
-Zero coordinates are valid. Maps open on user action in a new tab; no map SDK or embedded
-map requests are used. Truck details load a last-known summary independently; its failure
+all 13 verified fields and offers a Google Maps link only for valid coordinate pairs.
+Zero coordinates are valid. With optional browser `googleMapsEmbedApiKey` configuration,
+the location page embeds Google Maps after the user requests it. The fixed Google Embed URL
+contains validated coordinates and the public browser key; no Karma session or credential is sent.
+Without that key, the external map link remains available. Truck details load a last-known summary independently; its failure
 does not hide the truck.
 
 Concrete reference reads validate complete project/time-zone lists, reject duplicate IDs
@@ -525,6 +546,14 @@ shown without implicit browser conversion. Profile starts with a seven-day wall-
 range derived from the current UTC clock and supports replacing/expanding it; the
 period aggregate needs no record paginator. Its nine category names, nullable scores
 and weights remain original values, without a combined rating or invented scale.
+eData and Event dialogs show message/time summaries before their content and a closed
+Source fields disclosure. Parameter readings and original event text stay directly visible;
+the disclosure retains all original fields, including nulls, zeros and unknown codes.
+Driving profile puts its applied API period above the categories and preserves original
+identity fields in the same disclosure pattern.
+Trip dialogs group the verified start/end points and offer Google Maps directions, optionally
+embedded after user action with the configured browser key. These are suggested driving directions
+between endpoints; the provider supplies no historical GPS trace for drawing the driven route.
 
 Every mounted history/profile owns a fresh captured Apollo client/cache. Filter/period
 or cursor changes cancel obsolete reads and clear old rows/details; same-query Refresh

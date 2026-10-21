@@ -1,3 +1,4 @@
+import { sampleRecordLinks } from '../record-links';
 import {
   Component,
   computed,
@@ -7,8 +8,9 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, NavigationEnd, NavigationSkipped, Router } from '@angular/router';
+import type { FleetRecordLinks } from '../../../app/features/fleet/fleet-record-links';
 import { MessageService } from 'primeng/api';
 import { TripDrawer } from '../../../app/features/fleet/trips/trip-drawer';
 import type { ServiceUrgency } from '../../../app/features/fleet/maintenance/service-task';
@@ -89,6 +91,7 @@ function distanceSeries(vehicle: SampleVehicle, language: Language): readonly Se
   imports: [VehicleProfileView, VehicleDrawer, TripDrawer, OdometerDrawer],
   template: `
     <holita-vehicle-profile-view
+      [recordLinks]="recordLinks"
       [state]="state()"
       [vehicle]="profile()"
       [dataAsOf]="dataAsOf"
@@ -131,6 +134,7 @@ function distanceSeries(vehicle: SampleVehicle, language: Language): readonly Se
     }
     @if (openTrip(); as trip) {
       <holita-trip-drawer
+        [recordLinks]="tripRecordLinks"
         [trip]="trip"
         (closed)="openTripId.set(null)"
         (openVehicle)="openTripId.set(null)"
@@ -139,6 +143,14 @@ function distanceSeries(vehicle: SampleVehicle, language: Language): readonly Se
   `,
 })
 export class VehicleProfilePage {
+  protected readonly recordLinks = sampleRecordLinks;
+  protected readonly tripRecordLinks: FleetRecordLinks = {
+    ...sampleRecordLinks,
+    vehicle: (id) =>
+      id === this.vehicle()?.id
+        ? { ...sampleRecordLinks.vehicle(id), queryParams: { tab: this.tab() } }
+        : sampleRecordLinks.vehicle(id),
+  };
   private readonly vehicleDrawer = viewChild(VehicleDrawer);
   private readonly odometerDrawer = viewChild(OdometerDrawer);
   private readonly language = inject(UI_LANGUAGE);
@@ -280,6 +292,11 @@ export class VehicleProfilePage {
   constructor() {
     // The breadcrumb: Fleet › Vehicles (a link back) › the plate.
     injectPageRecord(() => this.profile()?.plate ?? null);
+    this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
+      if (event instanceof NavigationEnd || event instanceof NavigationSkipped) {
+        this.openTripId.set(null);
+      }
+    });
     inject(DestroyRef).onDestroy(() => {
       clearTimeout(this.saveTimer);
     });

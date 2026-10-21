@@ -100,6 +100,42 @@ function bothThemes(id: string, sizes: readonly ViewportName[] = ['desktop']): C
 // PrimeNG coverage and the shell.
 const captures: readonly Capture[] = [
   { id: 'start-here--introduction', theme: 'light', viewports: ['desktop'] },
+  ...bothThemes('design-system-karma-controls--default', ['desktop', 'mobile']),
+  ...bothThemes('design-system-karma-controls--invalid-filters', ['desktop', 'mobile']),
+  ...bothThemes('admin-karma-client-trucks--project', ['desktop', 'mobile']),
+  ...bothThemes('design-system-patterns-responsive-table--identity-and-actions', [
+    'desktop',
+    'mobile',
+  ]),
+  ...(['cobalt', 'ember', 'pine'] as const).flatMap((brand) =>
+    (['compact', 'comfortable'] as const).flatMap((density) =>
+      bothThemes('design-system-patterns-responsive-table--identity-and-actions', ['mobile']).map(
+        (capture) => ({ ...capture, brand, density }),
+      ),
+    ),
+  ),
+  ...['edata', 'edata-source-fields', 'events'].flatMap((section) =>
+    bothThemes(`admin-karma-client-record-details--${section}`, ['desktop', 'mobile']).map(
+      (capture) => ({ ...capture, viewportOnly: true }),
+    ),
+  ),
+  ...['driving-profile', 'truck-overview'].flatMap((section) =>
+    bothThemes(`admin-karma-client-record-details--${section}`, ['desktop', 'mobile']),
+  ),
+  ...bothThemes('admin-karma-client-truck-workspace--location', ['desktop', 'mobile']),
+  ...(['cobalt', 'ember', 'pine'] as const).flatMap((brand) =>
+    (['compact', 'comfortable'] as const).flatMap((density) =>
+      bothThemes('admin-karma-client-truck-workspace--location', ['desktop', 'mobile']).map(
+        (capture) => ({ ...capture, brand, density }),
+      ),
+    ),
+  ),
+  ...bothThemes('admin-fleet-devices--diagnostics', ['desktop', 'mobile']).map((capture) => ({
+    ...capture,
+    viewportOnly: true,
+  })),
+  ...bothThemes('admin-karma-client-maps--location', ['desktop', 'mobile']),
+  ...bothThemes('admin-karma-client-maps--trip-endpoints', ['desktop', 'mobile']),
   ...[
     'admin-fleet-vehicles--default',
     'admin-fleet-devices--default',

@@ -1,0 +1,18 @@
+{
+  "locationTitle": "Last reported location",
+  "locationHint": "The pin uses the coordinates in the latest location record.",
+  "routeTitle": "Trip route",
+  "routeHint": "Google suggests a driving route between the recorded start and end. Karma does not supply the driven GPS track.",
+  "openGoogleMaps": "Open in Google Maps",
+  "loadMap": "Load Google Maps",
+  "loadHint": "Load the interactive map to view these coordinates in Google Maps.",
+  "notConfigured": "Map preview is unavailable. Open these coordinates in Google Maps.",
+  "noCoordinates": "No valid coordinates are available for this map.",
+  "incompleteRoute": "Only one recorded endpoint is available. The map shows that location.",
+  "start": "Recorded start",
+  "stop": "Recorded end",
+  "sourceDetails": "Source fields",
+  "viewLocation": "Last location",
+  "viewTrips": "Trips",
+  "noEndpoint": "No valid endpoint coordinates"
+}

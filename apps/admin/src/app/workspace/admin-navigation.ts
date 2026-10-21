@@ -27,35 +27,11 @@ export function adminNavigation(
         { id: 'vehicles', label: text.vehicles, icon: 'truck', link: [...fleet, 'vehicles'] },
         { id: 'drivers', label: text.drivers, icon: 'id-card', link: [...fleet, 'drivers'] },
         { id: 'devices', label: text.devices, icon: 'mobile', link: [...fleet, 'devices'] },
-      ],
-    });
-    groups.push({
-      id: 'service',
-      label: text.service,
-      items: [
         {
           id: 'maintenance',
           label: text.maintenance,
           icon: 'wrench',
           link: [...fleet, 'maintenance'],
-        },
-      ],
-    });
-    groups.push({
-      id: 'settings',
-      label: text.settings,
-      items: [
-        {
-          id: 'vehicle-groups',
-          label: text.vehicleGroups,
-          icon: 'tags',
-          link: [...fleet, 'settings', 'groups'],
-        },
-        {
-          id: 'general',
-          label: text.settingsGeneral,
-          icon: 'info-circle',
-          link: [...fleet, 'settings', 'general'],
         },
       ],
     });
@@ -89,5 +65,26 @@ export function adminNavigation(
       },
     ],
   });
+  if (fleetEnabled && branchId) {
+    const fleet = ['/', language, branchId, 'fleet'];
+    groups.push({
+      id: 'settings',
+      label: text.settings,
+      items: [
+        {
+          id: 'vehicle-groups',
+          label: text.vehicleGroups,
+          icon: 'tags',
+          link: [...fleet, 'settings', 'groups'],
+        },
+        {
+          id: 'general',
+          label: text.settingsGeneral,
+          icon: 'info-circle',
+          link: [...fleet, 'settings', 'general'],
+        },
+      ],
+    });
+  }
   return groups;
 }

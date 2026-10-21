@@ -9,7 +9,7 @@ import {
 } from './app/core/config/admin-config';
 
 /**
- * The optional, Git-ignored `config.local.json` holds a developer's PrimeUI key. A 404, or a
+ * The optional, Git-ignored `config.local.json` holds developer browser keys. A 404, or a
  * server's HTML fallback page instead of JSON, means there is none.
  */
 async function loadLocalConfig(): Promise<LocalAdminConfig> {

@@ -42,7 +42,35 @@ describe('public Angular configuration', () => {
       'primeUiLicense must be a string.',
     );
   });
-  it('reads only a trimmed PrimeUI license from the ignored local configuration', () => {
+  it('accepts an optional trimmed Maps Embed key in public and local configuration', () => {
+    expect(
+      readAdminConfig({ graphqlUrl: '/graphql', googleMapsEmbedApiKey: ' maps-key ' }),
+    ).toEqual({
+      graphqlUrl: '/graphql',
+      googleMapsEmbedApiKey: 'maps-key',
+    });
+    expect(readAdminConfig({ graphqlUrl: '/graphql', googleMapsEmbedApiKey: ' ' })).toEqual({
+      graphqlUrl: '/graphql',
+    });
+    expect(readLocalAdminConfig({ googleMapsEmbedApiKey: ' maps-key ' })).toEqual({
+      googleMapsEmbedApiKey: 'maps-key',
+    });
+    expect(
+      readLocalAdminConfig({ primeUiLicense: ' license ', googleMapsEmbedApiKey: ' maps-key ' }),
+    ).toEqual({
+      primeUiLicense: 'license',
+      googleMapsEmbedApiKey: 'maps-key',
+    });
+    for (const googleMapsEmbedApiKey of [42, null, false]) {
+      expect(() => readAdminConfig({ graphqlUrl: '/graphql', googleMapsEmbedApiKey })).toThrow(
+        'googleMapsEmbedApiKey must be a string.',
+      );
+      expect(() => readLocalAdminConfig({ googleMapsEmbedApiKey })).toThrow(
+        'googleMapsEmbedApiKey must be a string.',
+      );
+    }
+  });
+  it('reads supported browser keys from the ignored local configuration', () => {
     expect(readLocalAdminConfig({})).toEqual({});
     expect(readLocalAdminConfig({ primeUiLicense: ' local-key ' })).toEqual({
       primeUiLicense: 'local-key',

@@ -2,7 +2,7 @@ import { provideHttpClient, type HttpRequest } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import type { AdminDeviceDetailsFragment } from '../../../../generated/graphql/operations';
 import { DemoSession } from '../../../core/auth/demo-session';
@@ -89,6 +89,41 @@ describe('Live Devices list action lifecycle', () => {
   afterEach(() => {
     http.verify({ ignoreCancelled: true });
     vi.restoreAllMocks();
+  });
+  it('opens Diagnostics from the primary IMEI while preserving direct row-menu editing', async () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const fixture = TestBed.createComponent(DevicesPage);
+    fixture.componentRef.setInput('branch', { id: branch, name: 'Fleet A' });
+    fixture.componentRef.setInput('language', 'en');
+    await fixture.whenStable();
+    http.expectOne((request) => operation(request, 'AdminDeviceSummary')).flush(summary(2));
+    http.expectOne((request) => operation(request, 'AdminDevices')).flush(list());
+    await fixture.whenStable();
+    const element: unknown = fixture.nativeElement;
+    if (!(element instanceof HTMLElement)) {
+      throw new Error('Missing Devices list.');
+    }
+    const open = element.querySelector<HTMLButtonElement>(
+      'button[aria-label="Open device 000000000000001"]',
+    );
+    expect(open).not.toBeNull();
+    open?.click();
+    expect(navigate).toHaveBeenLastCalledWith(
+      [firstId, 'diagnostics'],
+      expect.objectContaining({
+        queryParamsHandling: 'preserve',
+        preserveFragment: true,
+      }),
+    );
+    await fixture.componentInstance.run({ action: 'edit', ids: [firstId] });
+    expect(navigate).toHaveBeenLastCalledWith(
+      [firstId, 'edit'],
+      expect.objectContaining({
+        queryParamsHandling: 'preserve',
+        preserveFragment: true,
+      }),
+    );
+    fixture.destroy();
   });
   it('submits one batch, retains failed selections after a failed refresh and retries only the failure', async () => {
     const fixture = TestBed.createComponent(DevicesPage);

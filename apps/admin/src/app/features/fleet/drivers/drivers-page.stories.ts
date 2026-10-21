@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { fixtureDriver } from '../../../../storybook/drivers-fixtures';
+import { fixtureVehicleProfile } from '../../../../storybook/vehicle-profile-fixtures';
 import { chooseMenuItem } from '../../../../storybook/interactions';
 import { defaultBranchId } from '../../../../storybook/session-fixtures';
 import { routeAt, StoryApp, type StoryFixtures } from '../../../../storybook/story-config';
@@ -8,6 +9,7 @@ import { AdminWorkspace } from '../../../workspace/admin-workspace';
 import { FleetWorkspace } from '../fleet-workspace';
 import { DriverEditorPage } from './driver-editor-page';
 import { DriverScorecardPage } from './driver-scorecard-page';
+import { VehicleProfilePage } from '../vehicles/vehicle-profile-page';
 import { DriversPage } from './drivers-page';
 
 const meta: Meta = {
@@ -33,6 +35,7 @@ function routed(suffix = ''): NonNullable<Story['render']> {
         DriversPage,
         DriverEditorPage,
         DriverScorecardPage,
+        VehicleProfilePage,
       ],
     },
     template: '<holita-story-app [url]="url" />',
@@ -55,6 +58,31 @@ export const Default: Story = {
     await expect(canvas.getByRole('heading', { level: 1, name: /^Drivers/ })).toBeVisible();
     await expect(canvas.getByText('E-004', { exact: true })).toBeVisible();
     await expect(canvas.getByText('No score', { exact: true })).toBeVisible();
+  },
+};
+
+export const AssignedVehicle: Story = {
+  name: 'Assigned vehicle profile',
+  render: routed(`/${fixtureDriver.id}`),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await waitFor(() => expect(body.getByRole('dialog', { name })).toBeVisible(), appReady);
+    await userEvent.click(
+      within(body.getByRole('dialog', { name })).getByRole('link', {
+        name: fixtureVehicleProfile.licensePlate,
+      }),
+    );
+    await waitFor(
+      () =>
+        expect(
+          within(canvasElement).getByRole('heading', {
+            level: 1,
+            name: fixtureVehicleProfile.licensePlate,
+          }),
+        ).toBeVisible(),
+      appReady,
+    );
+    await expect(body.queryByRole('dialog')).toBeNull();
   },
 };
 

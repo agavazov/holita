@@ -11,7 +11,7 @@
         [routerLink]="backLink()"
         [queryParams]="backQueryParams()"
         [fragment]="backFragment() ?? undefined"
-        >{{ text().back }}</a
+        >{{ backLabel() ?? text().back }}</a
       >
     </holita-empty-state>
   }
@@ -29,7 +29,7 @@
       [eyebrow]="text().eyebrow"
       title="…"
       [backLink]="backLink()"
-      [backLabel]="text().back"
+      [backLabel]="backLabel() ?? text().back"
       [backQueryParams]="backQueryParams()"
       [backFragment]="backFragment()"
     />
@@ -47,7 +47,7 @@
         [title]="vehicle.plate"
         [description]="description()"
         [backLink]="backLink()"
-        [backLabel]="text().back"
+        [backLabel]="backLabel() ?? text().back"
         [backQueryParams]="backQueryParams()"
         [backFragment]="backFragment()"
       >
@@ -141,7 +141,21 @@
                   </div>
                   <div>
                     <dt>{{ text().driver }}</dt>
-                    <dd>{{ vehicle.driverName ?? '—' }}</dd>
+                    <dd>
+                      @if (
+                        vehicle.currentDriverId && recordLinks()?.driver(vehicle.currentDriverId);
+                        as link
+                      ) {
+                        <a
+                          class="app-link"
+                          [routerLink]="link.commands"
+                          [queryParams]="link.queryParams"
+                          >{{ vehicle.driverName ?? '—' }}</a
+                        >
+                      } @else {
+                        {{ vehicle.driverName ?? '—' }}
+                      }
+                    </dd>
                   </div>
                   <div>
                     <dt>{{ text().group }}</dt>

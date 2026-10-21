@@ -47,14 +47,44 @@
         <div>
           <dt>{{ text().vehicle }}</dt>
           <dd>
-            <button type="button" class="app-link" [disabled]="!!busy()" (click)="requestVehicle()">
-              {{ alert.plate }}
-            </button>
+            @if (recordLinks()?.vehicle(alert.vehicleId); as link) {
+              <a
+                class="app-link"
+                [routerLink]="busy() ? null : link.commands"
+                [queryParams]="link.queryParams"
+                [fragment]="link.fragment"
+                [attr.aria-disabled]="busy() ? 'true' : null"
+                [attr.tabindex]="busy() ? -1 : null"
+                >{{ alert.plate }}</a
+              >
+            } @else {
+              <button
+                type="button"
+                class="app-link"
+                [disabled]="!!busy()"
+                (click)="requestVehicle()"
+              >
+                {{ alert.plate }}
+              </button>
+            }
           </dd>
         </div>
         <div>
           <dt>{{ text().driver }}</dt>
-          <dd>{{ alert.driverName ?? '—' }}</dd>
+          <dd>
+            @if (alert.driverId && recordLinks()?.driver(alert.driverId); as link) {
+              <a
+                class="app-link"
+                [routerLink]="busy() ? null : link.commands"
+                [queryParams]="link.queryParams"
+                [attr.aria-disabled]="busy() ? 'true' : null"
+                [attr.tabindex]="busy() ? -1 : null"
+                >{{ alert.driverName }}</a
+              >
+            } @else {
+              {{ alert.driverName ?? '—' }}
+            }
+          </dd>
         </div>
         <div class="app-facts--wide">
           <dt>{{ text().detail }}</dt>

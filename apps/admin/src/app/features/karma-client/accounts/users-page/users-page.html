@@ -1,4 +1,4 @@
-<section class="card" [attr.aria-label]="text().karmaUsers" [attr.aria-busy]="loading()">
+<section class="card karma-page" [attr.aria-label]="text().karmaUsers" [attr.aria-busy]="loading()">
   <div class="page-heading">
     <div>
       <h1>{{ text().karmaUsers }}</h1>
@@ -15,8 +15,13 @@
       {{ error() ? text().retry : text().refresh }}
     </button>
   </div>
-  <form class="search-form" [formGroup]="form" (ngSubmit)="applySearch()">
-    <div class="search-field">
+  <form
+    [attr.aria-label]="text().karmaSearch + ': ' + text().karmaUsers"
+    class="karma-search"
+    [formGroup]="form"
+    (ngSubmit)="applySearch()"
+  >
+    <div class="karma-field karma-search-field">
       <label for="users-page-search">{{ text().karmaReferenceSearch }}</label
       ><input pInputText id="users-page-search" [formControl]="search" />
     </div>
@@ -35,6 +40,7 @@
   }
   <p class="hint">{{ text().karmaUsersHint }}</p>
   <p-table
+    class="app-responsive-table"
     [value]="filtered()"
     dataKey="id"
     [paginator]="true"
@@ -46,26 +52,51 @@
   >
     <ng-template #header
       ><tr>
-        <th scope="col">{{ text().karmaUserId }}</th>
-        <th scope="col">{{ text().karmaUserName }}</th>
-        <th scope="col">{{ text().karmaPersonName }}</th>
+        <th scope="col" class="app-table-merged-column">{{ text().karmaUserId }}</th>
+        <th scope="col" class="app-col-identity">{{ text().karmaUserName }}</th>
+        <th scope="col" class="app-table-merged-column">{{ text().karmaPersonName }}</th>
         <th scope="col">{{ text().karmaEmail }}</th>
         <th scope="col">{{ text().karmaRoleId }}</th>
         <th scope="col">{{ text().karmaProjectId }}</th>
         <th scope="col">{{ text().karmaActiveValue }}</th>
-        <th scope="col">{{ text().view }}</th>
+        <th scope="col" class="app-col-actions">{{ text().view }}</th>
       </tr></ng-template
     >
     <ng-template #body let-item
       ><tr>
-        <td>{{ item.id }}</td>
-        <td class="text-cell">{{ item.userName || '—' }}</td>
-        <td class="text-cell">{{ (item.firstName + ' ' + item.lastName).trim() || '—' }}</td>
+        <td class="app-table-merged-column">{{ item.id }}</td>
+        <td class="text-cell app-col-identity">
+          <div class="app-table-identity">
+            {{ item.userName || '—' }}
+            <span class="app-table-mobile-meta">{{ text().karmaUserId }}: {{ item.id }}</span>
+            <span class="app-table-mobile-meta">{{
+              (item.firstName + ' ' + item.lastName).trim() || '—'
+            }}</span>
+            <div class="app-table-mobile-actions">
+              <button
+                pButton
+                type="button"
+                size="small"
+                severity="secondary"
+                [outlined]="true"
+                [attr.aria-label]="text().karmaUserDetails + ' ' + item.id"
+                [attr.aria-expanded]="detail()?.id === item.id"
+                aria-controls="karma-user-detail"
+                (click)="open(item, $event)"
+              >
+                {{ text().view }}
+              </button>
+            </div>
+          </div>
+        </td>
+        <td class="text-cell app-table-merged-column">
+          {{ (item.firstName + ' ' + item.lastName).trim() || '—' }}
+        </td>
         <td class="text-cell">{{ item.email || '—' }}</td>
         <td>{{ item.roleId }}</td>
         <td>{{ item.projectId }}</td>
         <td>{{ item.active }}</td>
-        <td>
+        <td class="app-col-actions">
           <button
             pButton
             type="button"
@@ -102,7 +133,7 @@
   [style]="{ width: '48rem', maxWidth: '95vw' }"
 >
   @if (detail(); as item) {
-    <dl class="details">
+    <dl class="details karma-details">
       <div>
         <dt>{{ text().karmaUserId }} <code>user_id</code></dt>
         <dd>{{ item.id }}</dd>

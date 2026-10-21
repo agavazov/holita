@@ -80,6 +80,7 @@
   />
   <button emptyActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
   <p-table
+    class="app-responsive-table"
     [value]="tableRows()"
     dataKey="id"
     [rowTrackBy]="trackById"
@@ -100,7 +101,7 @@
           }}</label>
           <p-table-header-checkbox inputId="devices-select-page" />
         </th>
-        <th scope="col" pSortableColumn="imei">
+        <th scope="col" class="app-col-identity" pSortableColumn="imei">
           {{ text().table.device }} <p-sort-icon field="imei" />
         </th>
         <th scope="col" pSortableColumn="status">
@@ -125,25 +126,42 @@
         <td class="app-col-check">
           <p-table-checkbox [value]="row" [ariaLabel]="label(text().table.selectRow, row)" />
         </td>
-        <td>
+        <td class="app-col-identity">
           <span class="app-cell-stack">
             <button
               type="button"
               class="app-link app-mono"
-              [attr.aria-label]="label(text().table.edit, row)"
-              (click)="panel.run('edit', [recordOf(row)], $event.currentTarget)"
+              [attr.aria-label]="label(text().table.view, row)"
+              (click)="panel.run('diagnostics', [recordOf(row)], $event.currentTarget)"
             >
               {{ row.imei }}
             </button>
             <span>{{ row.model }}</span>
           </span>
+          <div class="app-table-mobile-actions">
+            <holita-row-actions
+              [actions]="actions()"
+              [record]="recordOf(row)"
+              (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
+            />
+          </div>
         </td>
         <td>
           <p-tag [severity]="statusSeverity(row.status)" [value]="statusLabel(row.status)" />
         </td>
         <td>
           @if (row.plate) {
-            {{ row.plate }}
+            @if (row.vehicleId && recordLinks()?.vehicle(row.vehicleId); as link) {
+              <a
+                class="app-link"
+                [routerLink]="link.commands"
+                [queryParams]="link.queryParams"
+                [fragment]="link.fragment"
+                >{{ row.plate }}</a
+              >
+            } @else {
+              {{ row.plate }}
+            }
           } @else {
             <span class="app-muted">{{ text().table.notInstalled }}</span>
           }

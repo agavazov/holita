@@ -80,6 +80,7 @@ export function vehicleForm(vehicle: SampleVehicle): VehicleForm {
 export function vehicleProfile(vehicle: SampleVehicle): VehicleProfile {
   return {
     ...vehicleRow(vehicle),
+    currentDriverId: vehicle.driverId,
     vin: vehicle.vin,
     fuelType: vehicle.fuelType,
     tankL: vehicle.tankL,

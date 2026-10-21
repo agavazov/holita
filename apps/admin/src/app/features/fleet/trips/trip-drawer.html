@@ -20,11 +20,31 @@
       <dl class="app-facts">
         <div>
           <dt>{{ text().vehicle }}</dt>
-          <dd>{{ record.plate }}</dd>
+          <dd>
+            @if (recordLinks()?.vehicle(record.vehicleId); as link) {
+              <a
+                class="app-link"
+                [routerLink]="link.commands"
+                [queryParams]="link.queryParams"
+                [fragment]="link.fragment"
+                >{{ record.plate }}</a
+              >
+            } @else {
+              {{ record.plate }}
+            }
+          </dd>
         </div>
         <div>
           <dt>{{ text().driver }}</dt>
-          <dd>{{ record.driverName ?? '—' }}</dd>
+          <dd>
+            @if (record.driverId && recordLinks()?.driver(record.driverId); as link) {
+              <a class="app-link" [routerLink]="link.commands" [queryParams]="link.queryParams">{{
+                record.driverName
+              }}</a>
+            } @else {
+              {{ record.driverName ?? '—' }}
+            }
+          </dd>
         </div>
         <div>
           <dt>{{ text().started }}</dt>
@@ -104,9 +124,19 @@
       {{ text().close }}
     </button>
     @if (trip(); as record) {
-      <button pButton type="button" (click)="openVehicle.emit(record.vehicleId)">
-        {{ text().openVehicle }}
-      </button>
+      @if (recordLinks()?.vehicle(record.vehicleId); as link) {
+        <a
+          pButton
+          [routerLink]="link.commands"
+          [queryParams]="link.queryParams"
+          [fragment]="link.fragment"
+          >{{ text().openVehicle }}</a
+        >
+      } @else {
+        <button pButton type="button" (click)="openVehicle.emit(record.vehicleId)">
+          {{ text().openVehicle }}
+        </button>
+      }
     }
   </div>
 </holita-route-drawer>

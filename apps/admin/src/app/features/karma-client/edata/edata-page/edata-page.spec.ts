@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { provideApollo } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
@@ -140,8 +140,19 @@ describe('Karma eData page', () => {
     expect(dialog.textContent).toContain('99999');
     expect(dialog.textContent).toContain('2026-01-01 11:59:00');
     expect(dialog.querySelector('tbody')?.textContent).toContain('0');
-    expect(dialog.querySelectorAll('dd')).toHaveLength(11);
-    expect([...dialog.querySelectorAll('dd')].map((value: Element) => value.textContent)).toEqual([
+    const source = dialog.querySelector('details');
+    if (!(source instanceof HTMLDetailsElement)) {
+      throw new Error('Missing eData source disclosure.');
+    }
+    expect(source.open).toBe(false);
+    expect(dialog.querySelector('.karma-record-summary')?.textContent).toContain('3000000600');
+    expect(dialog.querySelector('.karma-record-summary')?.textContent).toContain(
+      '2026-01-01 09:59:00',
+    );
+    source.querySelector('summary')?.click();
+    expect(source.open).toBe(true);
+    expect(source.querySelectorAll('dd')).toHaveLength(11);
+    expect([...source.querySelectorAll('dd')].map((value: Element) => value.textContent)).toEqual([
       '3000000600',
       '41',
       'KARMA TEST 41',
@@ -176,6 +187,55 @@ describe('Karma eData page', () => {
     expect(read().request.body).toMatchObject({
       variables: { input: { cursor: 'fixture_current' } },
     });
+  });
+
+  it('hydrates DatePicker values from bookmarked UTC filters and submits manually edited clock fields', async () => {
+    const harness = await open(
+      '/en/karma-client/cars/41/edata?from=2026-03-29T03:30&to=2026-03-29T04:45:30',
+    );
+    read().flush(result);
+    await harness.fixture.whenStable();
+    const from = harness.routeNativeElement?.querySelector('#edata-from');
+    const to = harness.routeNativeElement?.querySelector('#edata-to');
+    const time = harness.routeNativeElement?.querySelector('#edata-from-time');
+    if (
+      !(from instanceof HTMLInputElement) ||
+      !(to instanceof HTMLInputElement) ||
+      !(time instanceof HTMLInputElement)
+    ) {
+      throw new Error('Missing Karma DatePicker inputs.');
+    }
+    expect(from.type).toBe('text');
+    expect(from.getAttribute('role')).toBe('combobox');
+    expect(from.value).toBe('2026-03-29');
+    expect(time.value).toBe('03:30:00');
+    expect(to.value).toBe('2026-03-29');
+    let entered = '';
+    for (const key of '2026-03-29') {
+      from.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+      entered += key;
+      from.value = entered;
+      from.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    from.dispatchEvent(new FocusEvent('blur'));
+    time.value = '03:45:00';
+    time.dispatchEvent(new Event('input', { bubbles: true }));
+    time.dispatchEvent(new FocusEvent('blur'));
+    harness.routeNativeElement
+      ?.querySelector('form')
+      ?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await harness.fixture.whenStable();
+    const request = read();
+    expect(request.request.body).toMatchObject({
+      variables: {
+        input: {
+          fromDate: '2026-03-29T03:45:00Z',
+          toDate: '2026-03-29T04:45:30Z',
+          cursor: null,
+        },
+      },
+    });
+    request.flush(result);
   });
 
   it('retires obsolete reads on URL filters, truck, language, session replacement and logout', async () => {
@@ -278,6 +338,79 @@ describe('Karma eData page', () => {
     const request = read();
     expect(request.request.body).toMatchObject({
       variables: { input: { pageSize: 100, parameterIds: ['1', '99999'], cursor: null } },
+    });
+    request.flush(result);
+  });
+
+  it('shows draft errors beside their fields, focuses the first invalid control and preserves URL errors separately', async () => {
+    const harness = await open(
+      '/en/karma-client/cars/41/edata?cursor=invalid!&listQ=truck&listSize=25&listFirst=25&listProject=12&unsafe=drop',
+    );
+    const view = component(harness);
+    expect(view.invalidFilters()).toBe(true);
+    expect(view.fieldErrors()).toEqual({});
+    http.expectNone((request) => operation(request, 'AdminKarmaEdata'));
+    view.form.patchValue({
+      from: '2026-02-30T03:30:00',
+      to: '2026-03-01T04:00:00',
+      parameters: '0',
+    });
+    view.apply();
+    await harness.fixture.whenStable();
+    const from = harness.routeNativeElement?.querySelector('#edata-from');
+    const parameters = harness.routeNativeElement?.querySelector('#edata-parameters');
+    expect(from?.getAttribute('aria-invalid')).toBe('true');
+    expect(from?.getAttribute('aria-describedby')).toContain('edata-from-error');
+    expect(harness.routeNativeElement?.querySelector('#edata-from-error')?.textContent).toContain(
+      'Enter a valid date',
+    );
+    expect(document.activeElement).toBe(from);
+    expect(view.invalidFilters()).toBe(true);
+    view.form.patchValue({ from: '2026-03-01T03:30:00' });
+    await harness.fixture.whenStable();
+    expect(from?.getAttribute('aria-invalid')).not.toBe('true');
+    view.apply();
+    await harness.fixture.whenStable();
+    expect(document.activeElement).toBe(parameters);
+    expect(parameters?.getAttribute('aria-describedby')).toContain('edata-parameters-error');
+    expect(
+      harness.routeNativeElement?.querySelector('#edata-parameters-error')?.textContent,
+    ).toContain('up to 25 positive integer');
+    http.expectNone((request) => operation(request, 'AdminKarmaEdata'));
+    view.form.patchValue({ parameters: '1, 99999' });
+    view.apply();
+    await harness.fixture.whenStable();
+    expect(view.fieldErrors()).toEqual({});
+    expect(view.invalidFilters()).toBe(false);
+    const params = new URL('http://example.test' + TestBed.inject(Router).url).searchParams;
+    expect(params.get('listQ')).toBe('truck');
+    expect(params.get('listSize')).toBe('25');
+    expect(params.get('listFirst')).toBe('25');
+    expect(params.get('listProject')).toBe('12');
+    expect(params.has('unsafe')).toBe(false);
+    read().flush(result);
+  });
+
+  it('focuses an invalid clock without marking its valid calendar date invalid', async () => {
+    const harness = await open();
+    read().flush(result);
+    await harness.fixture.whenStable();
+    const view = component(harness);
+    view.form.patchValue({ from: '2026-03-29T25:30:00', to: '2026-03-29T04:00:00' });
+    view.apply();
+    await harness.fixture.whenStable();
+    const date = harness.routeNativeElement?.querySelector('#edata-from');
+    const clock = harness.routeNativeElement?.querySelector('#edata-from-time');
+    expect(date?.getAttribute('aria-invalid')).not.toBe('true');
+    expect(clock?.getAttribute('aria-invalid')).toBe('true');
+    expect(document.activeElement).toBe(clock);
+    http.expectNone((request) => operation(request, 'AdminKarmaEdata'));
+    view.form.patchValue({ from: '2026-03-29T03:30:00' });
+    view.apply();
+    await harness.fixture.whenStable();
+    const request = read();
+    expect(request.request.body).toMatchObject({
+      variables: { input: { fromDate: '2026-03-29T03:30:00Z' } },
     });
     request.flush(result);
   });

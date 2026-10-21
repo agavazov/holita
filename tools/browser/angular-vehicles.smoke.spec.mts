@@ -40,7 +40,7 @@ async function createVehicle(
   await drawer.getByRole('textbox', { name: 'Make', exact: true }).fill(make);
   await drawer.getByRole('button', { name: 'Create vehicle', exact: true }).click();
   await expect(drawer).toBeHidden();
-  await expect(page.getByRole('button', { name: `Edit ${plate}`, exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: `Open ${plate}`, exact: true })).toBeVisible();
 }
 
 test.describe('Vehicles', () => {
@@ -91,7 +91,8 @@ test.describe('Vehicles', () => {
     await create.getByRole('button', { name: 'Create vehicle', exact: true }).click();
     await expect(create).toBeHidden();
     await expect(page).toHaveURL(app.url + path + '?search=CA1234');
-    await page.getByRole('button', { name: 'Edit CA1234AB', exact: true }).click();
+    await page.getByRole('button', { name: 'Actions for CA1234AB', exact: true }).click();
+    await chooseMenuItem(page, 'Edit');
     const edit = page.getByRole('dialog', { name: 'Edit CA1234AB', exact: true });
     await expect(page).toHaveURL(/\/[^/]+\/edit\?search=CA1234$/);
     await expect(edit.getByRole('textbox', { name: 'Fleet number', exact: true })).toHaveValue(
@@ -134,7 +135,8 @@ test.describe('Vehicles', () => {
     await edit.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(edit).toBeHidden();
     await page.reload();
-    await page.getByRole('button', { name: 'Edit CA1234AB', exact: true }).click();
+    await page.getByRole('button', { name: 'Actions for CA1234AB', exact: true }).click();
+    await chooseMenuItem(page, 'Edit');
     await expect(edit.getByRole('textbox', { name: 'Notes', exact: true })).toHaveValue('');
     await expect(edit.getByRole('spinbutton', { name: 'Year', exact: true })).toHaveValue('');
     await expect(edit.getByRole('spinbutton', { name: 'Fuel tank, L', exact: true })).toHaveValue(
@@ -156,7 +158,7 @@ test.describe('Vehicles', () => {
     await expect(edit).toBeHidden();
     await chooseBranch(page, 'Sandbox');
     await expect(page).toHaveURL(/\/fleet\/vehicles$/);
-    await expect(page.getByRole('button', { name: 'Edit CA1234AB', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Open CA1234AB', exact: true })).toHaveCount(0);
     await chooseBranch(page, 'Discordia');
     const actions = page.getByRole('button', { name: 'Actions for CA1234AB', exact: true });
     await actions.click();
@@ -173,7 +175,7 @@ test.describe('Vehicles', () => {
     await confirmation.getByRole('button', { name: 'Delete', exact: true }).click();
     await expect(page.getByText('Vehicles deleted: 1.', { exact: true })).toBeVisible();
     await page.reload();
-    await expect(page.getByRole('button', { name: 'Edit CA1234AB', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Open CA1234AB', exact: true })).toHaveCount(0);
   });
 
   test('keeps filter and sorting in the URL and deactivates the selected real records', async ({
@@ -192,16 +194,16 @@ test.describe('Vehicles', () => {
     await page.getByRole('option', { name: 'Make', exact: true }).click();
     await filter.getByRole('textbox', { name: 'Value', exact: true }).fill('Volvo');
     await filter.getByRole('button', { name: 'Apply', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Edit SORT-A', exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Edit SORT-B', exact: true })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Edit SORT-C', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Open SORT-A', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Open SORT-B', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Open SORT-C', exact: true })).toBeVisible();
     await page.getByRole('button', { name: /^Sort:/ }).click();
     await chooseMenuItem(page, 'Fleet number');
     await page.getByRole('button', { name: /^Sort:/ }).click();
     await chooseMenuItem(page, 'Descending');
     await expect.poll(() => new URL(page.url()).searchParams.get('sort')).toBe('fleetNumber');
     await expect.poll(() => new URL(page.url()).searchParams.get('order')).toBe('desc');
-    const ordered = page.getByRole('button', { name: /^Edit SORT-/ });
+    const ordered = page.getByRole('button', { name: /^Open SORT-/ });
     await expect(ordered).toHaveText(['SORT-C', 'SORT-A']);
     const filteredUrl = page.url();
     await page.reload();
@@ -218,13 +220,13 @@ test.describe('Vehicles', () => {
     for (const plate of ['SORT-A', 'SORT-C']) {
       const row = page
         .getByRole('row')
-        .filter({ has: page.getByRole('button', { name: `Edit ${plate}`, exact: true }) });
+        .filter({ has: page.getByRole('button', { name: `Open ${plate}`, exact: true }) });
       await expect(row.getByText('Inactive', { exact: true })).toBeVisible();
     }
     await page.getByRole('button', { name: 'Clear all', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Edit SORT-B', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Open SORT-B', exact: true })).toBeVisible();
     await page.goBack();
-    await expect(page.getByRole('button', { name: 'Edit SORT-B', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Open SORT-B', exact: true })).toHaveCount(0);
   });
 
   test('keeps a protected vehicle selected after a partial bulk deletion and allows retry', async ({
@@ -234,7 +236,8 @@ test.describe('Vehicles', () => {
     await page.goto(app.url + path);
     await createVehicle(page, 'DELETE-A', 'D-01', 'Volvo');
     await createVehicle(page, 'DELETE-B', 'D-02', 'Scania');
-    await page.getByRole('button', { name: 'Edit DELETE-B', exact: true }).click();
+    await page.getByRole('button', { name: 'Actions for DELETE-B', exact: true }).click();
+    await chooseMenuItem(page, 'Edit');
     const vehicleId = new URL(page.url()).pathname.split('/').at(-2);
     expect(vehicleId).toMatch(/^[0-9a-f-]{36}$/);
     await page
@@ -270,8 +273,8 @@ test.describe('Vehicles', () => {
     await confirmation.getByRole('button', { name: 'Delete', exact: true }).click();
     await expect(page.getByText(/Vehicles deleted: 1\./)).toBeVisible();
     await expect(page.getByText(/DELETE-B:.*devices or history/)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Edit DELETE-A', exact: true })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Edit DELETE-B', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Open DELETE-A', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Open DELETE-B', exact: true })).toBeVisible();
     await expect(
       page.getByRole('checkbox', { name: 'Select DELETE-B', exact: true }),
     ).toBeChecked();
@@ -283,8 +286,8 @@ test.describe('Vehicles', () => {
       page.getByRole('checkbox', { name: 'Select DELETE-B', exact: true }),
     ).toBeChecked();
     await page.reload();
-    await expect(page.getByRole('button', { name: 'Edit DELETE-B', exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Edit DELETE-A', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Open DELETE-B', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Open DELETE-A', exact: true })).toHaveCount(0);
   });
 
   test('renders the Bulgarian list and drawer at desktop/mobile sizes in both themes and changes language', async ({
@@ -305,7 +308,8 @@ test.describe('Vehicles', () => {
         expect(
           await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
         ).toBe(true);
-        await page.getByRole('button', { name: 'Редактиране на CB1234AB', exact: true }).click();
+        await page.getByRole('button', { name: 'Действия за CB1234AB', exact: true }).click();
+        await chooseMenuItem(page, 'Редактиране');
         const drawer = page.getByRole('dialog', { name: 'Редактиране на CB1234AB', exact: true });
         await expect(drawer.getByRole('textbox', { name: 'Бележки', exact: true })).toHaveValue(
           notes.trim(),
@@ -319,11 +323,11 @@ test.describe('Vehicles', () => {
     }
     await chooseLanguage(page, 'English');
     await expect(page).toHaveURL(app.url + path);
-    await expect(page.getByRole('button', { name: 'Edit CB1234AB', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Open CB1234AB', exact: true })).toBeVisible();
     await chooseLanguage(page, 'Български');
     await expect(page).toHaveURL(app.url + bgPath);
     await expect(
-      page.getByRole('button', { name: 'Редактиране на CB1234AB', exact: true }),
+      page.getByRole('button', { name: 'Отваряне на CB1234AB', exact: true }),
     ).toBeVisible();
   });
 });

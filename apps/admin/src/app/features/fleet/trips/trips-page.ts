@@ -1,3 +1,4 @@
+import { fleetRecordLinks } from '../fleet-record-links';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -54,6 +55,7 @@ import { TripsView, type TripActionId } from './trips-view';
       >
     }
     <holita-trips-view
+      [recordLinks]="recordLinks()"
       [branchName]="branch().name"
       [rows]="rows()"
       [total]="page()?.total ?? 0"
@@ -74,6 +76,9 @@ import { TripsView, type TripActionId } from './trips-view';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TripsPage implements OnInit {
+  protected readonly recordLinks = computed(() =>
+    fleetRecordLinks(this.language(), this.branch().id),
+  );
   readonly branch = input.required<AdminBranchesQuery['branches'][number]>();
   readonly language = input.required<Language>();
   readonly api = inject(TripsApi);

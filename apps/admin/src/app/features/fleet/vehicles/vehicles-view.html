@@ -78,6 +78,7 @@
     (sortChange)="changeSort($event)"
   />
   <p-table
+    class="app-responsive-table"
     [value]="tableRows()"
     dataKey="id"
     [rowTrackBy]="trackById"
@@ -99,10 +100,10 @@
           }}</label>
           <p-table-header-checkbox inputId="vehicles-select-page" />
         </th>
-        <th scope="col" pSortableColumn="plate">
+        <th scope="col" class="app-col-identity" pSortableColumn="plate">
           {{ text().table.plate }} <p-sort-icon field="plate" />
         </th>
-        <th scope="col">{{ text().table.vehicle }}</th>
+        <th scope="col" class="app-table-merged-column">{{ text().table.vehicle }}</th>
         <th scope="col" pSortableColumn="status">
           {{ text().table.status }} <p-sort-icon field="status" />
         </th>
@@ -126,13 +127,24 @@
         <td class="app-col-check">
           <p-table-checkbox [value]="row" [ariaLabel]="label(text().table.selectRow, row.plate)" />
         </td>
-        <td>
+        <td class="app-col-identity">
           <span class="app-cell-stack">
             <button
               type="button"
               class="app-link"
-              [attr.aria-label]="label(text().table.openEditor, row.plate)"
-              (click)="panel.run('edit', [recordOf(row)], $event.currentTarget)"
+              [attr.aria-label]="
+                label(
+                  profileEnabled() ? text().table.openProfile : text().table.openEditor,
+                  row.plate
+                )
+              "
+              (click)="
+                panel.run(
+                  profileEnabled() ? 'profile' : 'edit',
+                  [recordOf(row)],
+                  $event.currentTarget
+                )
+              "
             >
               {{ row.plate }}
             </button>
@@ -142,9 +154,17 @@
                 <span class="vehicles__alerts">{{ alertsLabel(row.openAlerts) }}</span>
               }
             </span>
+            <span class="app-table-mobile-meta">{{ row.make }} {{ row.model }}</span>
           </span>
+          <div class="app-table-mobile-actions">
+            <holita-row-actions
+              [actions]="actions()"
+              [record]="recordOf(row)"
+              (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
+            />
+          </div>
         </td>
-        <td>
+        <td class="app-table-merged-column">
           <span class="app-cell-stack">
             <span>{{ row.make }} {{ row.model }}</span>
             <span

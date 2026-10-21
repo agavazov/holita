@@ -14,6 +14,7 @@ import type { VehicleProfile } from './vehicle-profile-view';
 export function vehicleProfile(vehicle: AdminVehicleProfileFragment): VehicleProfile {
   return {
     ...vehicleRow(vehicle),
+    currentDriverId: vehicle.currentDriverId,
     vin: vehicle.vin ?? '',
     fuelType: vehicle.fuelType,
     tankL: vehicle.fuelTankCapacityL,

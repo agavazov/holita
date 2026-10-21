@@ -1,4 +1,5 @@
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
+import { expect, waitFor, within } from 'storybook/test';
 import { onFrame } from '../../../storybook/story-config';
 import { ColumnSeries, type SeriesPoint } from './column-series';
 import { Sparkline, type SparkPoint } from './sparkline';
@@ -86,4 +87,15 @@ export const Charts: Story = {
       </div>
     `,
   }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByRole('table', { name: 'Daily mileage, last 14 days' }),
+    ).toBeInTheDocument();
+    await expect(canvas.getByRole('table', { name: 'Maneuvers by vehicle' })).toBeInTheDocument();
+    await waitFor(() => {
+      const root = canvasElement.ownerDocument.documentElement;
+      return expect(root.scrollWidth).toBeLessThanOrEqual(root.clientWidth);
+    });
+  },
 };

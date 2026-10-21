@@ -1,0 +1,10 @@
+{
+  "date": "Enter a valid date in YYYY-MM-DD format.",
+  "time": "Enter a valid time in HH:mm:ss format (00:00:00–23:59:59).",
+  "requiredDate": "Enter a date and time for this period.",
+  "pairedDate": "Enter both dates, or clear both to show all records.",
+  "dateOrder": "The end date and time must be the same as or later than the start.",
+  "pageSize": "Choose 25, 50 or 100 records per page.",
+  "parameterIds": "Enter up to 25 positive integer parameter IDs, separated by commas.",
+  "eventCodes": "Enter up to 25 non-negative integer event codes, separated by commas."
+}

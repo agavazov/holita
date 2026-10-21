@@ -1,0 +1,15 @@
+{
+  "karmaClient": "Karma Client",
+  "truck": "Truck",
+  "carId": "Karma ID",
+  "navigation": "Truck sections",
+  "overview": "Overview",
+  "edata": "eData",
+  "location": "Location",
+  "trips": "Trips",
+  "events": "Events",
+  "drivingProfile": "Driving profile",
+  "backToTrucks": "Back to trucks",
+  "refresh": "Refresh",
+  "retry": "Retry"
+}

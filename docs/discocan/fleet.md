@@ -244,6 +244,8 @@ bounded pages through the editor's captured API client.
 Created-date filters use calendar dates in the configured Branch time zone. The whole-Branch summary is independent of
 list filters and pagination; state activity, fuel freshness and nullable data time come from the
 backend. Opening a create/edit child-route drawer retains the list and its URL context.
+Selecting a vehicle plate opens its read-only profile overview first. The profile's Edit
+button and the list's Edit row action open the shared Vehicle editor.
 
 Row and selection delete/deactivate actions submit one IDs-array mutation. Protected deletions
 return per-record failures; only successful IDs are removed from the selection, and failed rows
@@ -262,6 +264,19 @@ context. Planned services open for editing; completed and cancelled records are 
 record must belong to the profile's Vehicle. Back removes profile pagination while retaining list
 context.
 
+Stored Vehicle/Driver references in profiles, Device lists/Diagnostics, Trips, Alerts and Maintenance
+are native links in the current language and Branch. Cross-resource navigation starts with
+that resource's own filters. Opening an assigned Vehicle from a Driver preserves a bounded
+`fromDriver` UUID so the profile's Back link returns to that Driver, including after tab changes
+or Vehicle editing; malformed markers fall back to Vehicles.
+
+On narrow screens, Fleet tables keep a compact identity cell and its row menu pinned together
+while the remaining columns scroll. The separate right-hand menu column is used at wider widths;
+secondary fields hidden at narrow widths remain available in record details.
+
+The sidebar places Maintenance in Fleet. Settings follows Karma Client and retains the
+selected Branch's Vehicle groups and General settings links.
+
 ## Devices admin
 
 - [API](../../apps/admin/src/app/features/fleet/devices/devices-api.ts), [page](../../apps/admin/src/app/features/fleet/devices/devices-list-page.ts), [editor](../../apps/admin/src/app/features/fleet/devices/device-editor-page.ts), [mapping](../../apps/admin/src/app/features/fleet/devices/device-mapping.ts), [diagnostics](../../apps/admin/src/app/features/fleet/devices/device-diagnostics-page.ts).
@@ -274,6 +289,8 @@ delete actions use one partial-result batch. Connection status and whole-Branch 
 server. Each list response retains one database snapshot for status/report dates, filters, sorting
 and count. Diagnostics display available stored metadata; signal, voltage, firmware policy and Restart
 are explicitly unavailable/Demo until integrated.
+The primary IMEI action opens Diagnostics before editing. Edit from that drawer returns to
+Diagnostics on save/cancel; the row-menu Edit action retains its direct list return.
 
 ## Other Fleet admin screens
 
@@ -292,7 +309,8 @@ captured clients, generated operations and shared load/error/empty states:
 - [Drivers](../../apps/admin/src/app/features/fleet/drivers/drivers-page.ts) edits identity, contact,
   licence and tachograph documents and supports protected partial delete/deactivate batches. Expiry
   badges use the actual Fleet business date, including when telemetry has no data clock. Scorecards
-  accept 7, 30 or 90 days and preserve the list context on Back.
+  accept 7, 30 or 90 days and preserve the list context on Back. Each assigned vehicle in the
+  read-only Driver record opens that vehicle's profile in the current Branch.
 - [Maintenance](../../apps/admin/src/app/features/fleet/maintenance/maintenance-page.ts) supports
   planning, editing PLANNED tasks, completion with optional next task, cancellation and protected
   deletion. DONE/CANCELLED records open as read-only history. Costs convert decimal text to exact

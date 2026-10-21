@@ -1,3 +1,4 @@
+import { fleetRecordLinks, type FleetRecordLinks } from '../fleet-record-links';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -30,6 +31,7 @@ import { alertsText } from './i18n/messages';
   providers: [AlertsApi],
   template: `
     <holita-alert-drawer
+      [recordLinks]="recordLinks"
       [alert]="alert()"
       [dataAsOf]="dataAsOf() ?? ''"
       [state]="state()"
@@ -54,6 +56,21 @@ export class AlertDetailPage implements OnInit {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly host = injectDrawerHost();
+  private readonly baseLinks = fleetRecordLinks(
+    this.language(),
+    drawerParam(this.route, 'branchId') ?? '',
+  );
+  protected readonly recordLinks: FleetRecordLinks = {
+    ...this.baseLinks,
+    vehicle: (id) =>
+      this.host.closeLink && this.host.vehicleId === id
+        ? {
+            commands: this.host.closeLink,
+            queryParams: this.route.snapshot.queryParams,
+            fragment: this.route.snapshot.fragment ?? undefined,
+          }
+        : this.baseLinks.vehicle(id),
+  };
   private readonly drawer = viewChild(AlertDrawer);
   private readonly text = computed(() => alertsText(this.language()));
   private clockQuery: ReturnType<AlertsApi['watchClock']> | undefined;

@@ -1,30 +1,19 @@
-<section class="card" [attr.aria-label]="text().karmaDrivingProfile" [attr.aria-busy]="loading()">
-  <div class="page-heading">
-    <div>
-      <h1>{{ text().karmaDrivingProfile }}</h1>
-      <p>{{ car()?.carNumber ?? text().karmaClient }} · {{ text().karmaCarId }} {{ carId() }}</p>
-    </div>
-    <div class="page-actions">
-      <a
-        pButton
-        severity="secondary"
-        [outlined]="true"
-        [routerLink]="['/', language(), 'karma-client', 'cars', carId()]"
-        >{{ text().backToKarmaTruck }}</a
-      >
-      @if (validId()) {
-        <button
-          pButton
-          type="button"
-          severity="secondary"
-          [disabled]="loading() || invalidFilters()"
-          (click)="refresh()"
-        >
-          {{ error() ? text().retry : text().refresh }}
-        </button>
-      }
-    </div>
-  </div>
+<section
+  class="card karma-page"
+  [attr.aria-label]="text().karmaDrivingProfile"
+  [attr.aria-busy]="loading()"
+>
+  <holita-karma-car-header
+    [language]="language()"
+    [carId]="carId()"
+    [carNumber]="car()?.carNumber"
+    [title]="text().karmaDrivingProfile"
+    [canNavigate]="validId()"
+    [busy]="loading()"
+    [error]="error()"
+    [refreshDisabled]="invalidFilters()"
+    (refreshRequest)="refresh()"
+  />
   @if (!validId() || (carLoaded() && !car() && !error())) {
     <p-message severity="warn">{{ text().karmaTruckNotFound }}</p-message>
   }
@@ -33,32 +22,43 @@
   }
   @if (validId()) {
     <form
+      #filterForm
       [formGroup]="form"
       (ngSubmit)="apply()"
-      class="filters"
+      class="karma-filters"
       [attr.aria-label]="text().karmaProfilePeriod"
     >
-      <div class="field">
-        <label for="profile-from">{{ text().karmaFromApi }}</label
-        ><input
-          pInputText
-          id="profile-from"
-          type="datetime-local"
-          [attr.step]="1"
+      <holita-form-field
+        class="karma-field"
+        [label]="text().karmaFromApi"
+        controlId="profile-from"
+        [error]="fieldErrors().from?.message ?? null"
+      >
+        <holita-karma-date-time
+          inputId="profile-from"
+          [label]="text().karmaFromApi"
+          [invalid]="!!fieldErrors().from"
+          [invalidPart]="fieldErrors().from?.part ?? 'both'"
+          describedBy="profile-from-error profile-filter-hint"
           formControlName="from"
         />
-      </div>
-      <div class="field">
-        <label for="profile-to">{{ text().karmaToApi }}</label
-        ><input
-          pInputText
-          id="profile-to"
-          type="datetime-local"
-          [attr.step]="1"
+      </holita-form-field>
+      <holita-form-field
+        class="karma-field"
+        [label]="text().karmaToApi"
+        controlId="profile-to"
+        [error]="fieldErrors().to?.message ?? null"
+      >
+        <holita-karma-date-time
+          inputId="profile-to"
+          [label]="text().karmaToApi"
+          [invalid]="!!fieldErrors().to"
+          [invalidPart]="fieldErrors().to?.part ?? 'both'"
+          describedBy="profile-to-error profile-filter-hint"
           formControlName="to"
         />
-      </div>
-      <div class="page-actions">
+      </holita-form-field>
+      <div class="page-actions karma-filter-actions">
         <button pButton type="submit" [disabled]="loading()">{{ text().applyFilters }}</button
         ><button
           pButton
@@ -71,9 +71,11 @@
           {{ text().karmaLastSevenDays }}
         </button>
       </div>
-      <p class="filter-hint">{{ text().karmaApiTimeHint }}</p>
+      <p id="profile-filter-hint" class="filter-hint karma-filter-hint">
+        {{ text().karmaApiTimeHint }}
+      </p>
     </form>
-    @if (invalidFilters() || formError()) {
+    @if (invalidFilters()) {
       <p-message severity="warn">{{ text().karmaHistoryInvalidFilters }}</p-message>
     }
   }
@@ -81,7 +83,22 @@
     <p role="status">{{ text().karmaHistoryLoading }}</p>
   }
   @if (car() && !invalidFilters()) {
-    <p class="filter-hint">{{ text().karmaProfileHint }}</p>
+    @if (appliedPeriod(); as period) {
+      <section [attr.aria-label]="detailText().appliedPeriod">
+        <h2>{{ detailText().appliedPeriod }}</h2>
+        <dl class="karma-record-summary">
+          <div>
+            <dt>{{ text().karmaFromApi }}</dt>
+            <dd>{{ period.from }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().karmaToApi }}</dt>
+            <dd>{{ period.to }}</dd>
+          </div>
+        </dl>
+      </section>
+    }
+    <p class="filter-hint karma-filter-hint">{{ text().karmaProfileHint }}</p>
     <p-table
       [value]="profile()?.categories ?? []"
       dataKey="name"
@@ -116,20 +133,23 @@
       >
     </p-table>
     @if (profile(); as result) {
-      <dl class="message-details">
-        <div>
-          <dt>car_id</dt>
-          <dd>{{ result.carId }}</dd>
-        </div>
-        <div>
-          <dt>car_number</dt>
-          <dd>{{ result.carNumber }}</dd>
-        </div>
-        <div>
-          <dt>device_id</dt>
-          <dd>{{ result.deviceId }}</dd>
-        </div>
-      </dl>
+      <details class="karma-source-details">
+        <summary>{{ detailText().sourceFields }}</summary>
+        <dl class="message-details karma-details">
+          <div>
+            <dt>car_id</dt>
+            <dd>{{ result.carId }}</dd>
+          </div>
+          <div>
+            <dt>car_number</dt>
+            <dd>{{ result.carNumber }}</dd>
+          </div>
+          <div>
+            <dt>device_id</dt>
+            <dd>{{ result.deviceId }}</dd>
+          </div>
+        </dl>
+      </details>
     }
   }
 </section>

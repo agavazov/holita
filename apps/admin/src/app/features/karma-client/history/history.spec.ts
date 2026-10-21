@@ -138,7 +138,7 @@ describe('History and period lifecycle', () => {
       },
     });
     await harness.fixture.whenStable();
-    const button = harness.routeNativeElement?.querySelector('tbody button');
+    const button = harness.routeNativeElement?.querySelector('tbody .app-col-actions button');
     if (!(button instanceof HTMLButtonElement)) {
       throw new Error('Missing details');
     }
@@ -146,6 +146,42 @@ describe('History and period lifecycle', () => {
     await harness.fixture.whenStable();
     expect(harness.routeNativeElement?.querySelectorAll('dd')).toHaveLength(23);
     expect(harness.routeNativeElement?.textContent).toContain('stop_date');
+    expect(
+      harness.routeNativeElement?.querySelector('holita-map-preview a')?.getAttribute('href'),
+    ).toContain('query=0%2C0');
+    expect(harness.routeNativeElement?.textContent).toContain('Only one recorded endpoint');
+    expect(harness.routeNativeElement?.querySelector('holita-map-preview iframe')).toBeNull();
+  });
+  it('shows suggested Google directions from the actual trip endpoints without inventing a GPS trace', async () => {
+    const harness = await open('trips');
+    read('AdminKarmaTrips').flush({
+      data: {
+        karmaTrips: {
+          __typename: 'KarmaTripsPage',
+          items: [
+            { ...trip, stopLatitude: 42.7, stopLongitude: 23.3, stopDate: '2026-01-01 01:00:00' },
+          ],
+          hasMore: false,
+          cursor: 'fixture',
+          nextCursor: null,
+        },
+      },
+    });
+    await harness.fixture.whenStable();
+    const button = harness.routeNativeElement?.querySelector('tbody .app-col-actions button');
+    if (!(button instanceof HTMLButtonElement)) {
+      throw new Error('Missing trip details');
+    }
+    button.click();
+    await harness.fixture.whenStable();
+    const element = harness.routeNativeElement;
+    const href = element?.querySelector('holita-map-preview a')?.getAttribute('href');
+    expect(href).toBe(
+      'https://www.google.com/maps/dir/?api=1&origin=0%2C0&destination=42.7%2C23.3&travelmode=driving',
+    );
+    expect(element?.textContent).toContain('Google suggests a driving route');
+    expect(element?.textContent).toContain('does not supply the driven GPS track');
+    expect(element?.querySelector('.trip-endpoints')?.textContent).toContain('2026-01-01 01:00:00');
   });
   it('escapes all event extra text and cancels an obsolete read when filters change', async () => {
     const harness = await open('events');
@@ -170,17 +206,28 @@ describe('History and period lifecycle', () => {
       },
     });
     await harness.fixture.whenStable();
-    const button = harness.routeNativeElement?.querySelector('tbody button');
+    const button = harness.routeNativeElement?.querySelector('tbody .app-col-actions button');
     if (!(button instanceof HTMLButtonElement)) {
       throw new Error('Missing details');
     }
     button.click();
     await harness.fixture.whenStable();
-    expect(harness.routeNativeElement?.querySelectorAll('dd')).toHaveLength(12);
-    expect(harness.routeNativeElement?.querySelector('dl')?.textContent).toContain(
+    const source = harness.routeNativeElement?.querySelector('details');
+    if (!(source instanceof HTMLDetailsElement)) {
+      throw new Error('Missing event source disclosure.');
+    }
+    expect(source.open).toBe(false);
+    expect(
+      harness.routeNativeElement?.querySelector('.karma-record-summary')?.textContent,
+    ).toContain('0');
+    expect(harness.routeNativeElement?.querySelector('.karma-source-text')?.textContent).toContain(
       '<script>untrusted</script>',
     );
-    expect(harness.routeNativeElement?.querySelector('dl script')).toBeNull();
+    source.querySelector('summary')?.click();
+    expect(source.open).toBe(true);
+    expect(source.querySelectorAll('dd')).toHaveLength(12);
+    expect(source.textContent).toContain('<script>untrusted</script>');
+    expect(harness.routeNativeElement?.querySelector('script')).toBeNull();
   });
   it('retires trip/event reads across A → B → A, language and logout', async () => {
     const harness = await open('trips');
@@ -235,6 +282,23 @@ describe('History and period lifecycle', () => {
     await harness.fixture.whenStable();
     expect(harness.routeNativeElement?.querySelector('tbody')?.textContent).toContain('0');
     expect(harness.routeNativeElement?.querySelector('tbody')?.textContent).toContain('—');
+    const period = harness.routeNativeElement?.querySelector('.karma-record-summary')?.textContent;
+    expect(period).toContain(body.variables.input.fromDate);
+    expect(period).toContain(body.variables.input.toDate);
+    const source = harness.routeNativeElement?.querySelector('details');
+    expect(source instanceof HTMLDetailsElement && source.open).toBe(false);
+    expect(source?.querySelectorAll('dd')).toHaveLength(3);
+    const draftClock = harness.routeNativeElement?.querySelector('#profile-from-time');
+    if (!(draftClock instanceof HTMLInputElement)) {
+      throw new Error('Missing profile draft clock.');
+    }
+    draftClock.value = '00:00:01';
+    draftClock.dispatchEvent(new Event('input', { bubbles: true }));
+    await harness.fixture.whenStable();
+    expect(harness.routeNativeElement?.querySelector('.karma-record-summary')?.textContent).toBe(
+      period,
+    );
+    http.expectNone((request) => operation(request, 'AdminKarmaDrivingProfile'));
     await harness.navigateByUrl(
       '/en/karma-client/cars/41/driving-profile?from=2026-01-01T00:00&to=2026-02-01T00:00',
     );
@@ -249,13 +313,20 @@ describe('History and period lifecycle', () => {
   it('rejects invalid filters locally and allows a native form submit to replace them', async () => {
     const harness = await open('events?types=-1');
     http.expectNone((req) => operation(req, 'AdminKarmaEvents'));
+    const form = harness.routeNativeElement?.querySelector('form');
+    form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await harness.fixture.whenStable();
     const input = harness.routeNativeElement?.querySelector('#events-types');
     if (!(input instanceof HTMLInputElement)) {
       throw new Error('Missing filter');
     }
+    expect(document.activeElement).toBe(input);
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(harness.routeNativeElement?.querySelector('#events-types-error')?.textContent).toContain(
+      'non-negative integer event codes',
+    );
     input.value = '0';
     input.dispatchEvent(new Event('input'));
-    const form = harness.routeNativeElement?.querySelector('form');
     form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     await harness.fixture.whenStable();
     expect(TestBed.inject(Router).url).toContain('types=0');
@@ -272,6 +343,74 @@ describe('History and period lifecycle', () => {
     });
     await harness.fixture.whenStable();
   });
+
+  for (const section of ['trips', 'events', 'driving-profile']) {
+    it(`identifies the missing ${section} period end and accepts its correction through the calendar`, async () => {
+      const harness = await open(
+        section +
+          '?from=2026-01-01T00:00&to=&listQ=truck&listSize=25&listFirst=25&listProject=12&unsafe=drop',
+      );
+      const prefix = section === 'driving-profile' ? 'profile' : section;
+      const operationName =
+        section === 'trips'
+          ? 'AdminKarmaTrips'
+          : section === 'events'
+            ? 'AdminKarmaEvents'
+            : 'AdminKarmaDrivingProfile';
+      http.expectNone((req) => operation(req, operationName));
+      const form = harness.routeNativeElement?.querySelector('form');
+      form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      await harness.fixture.whenStable();
+      const end = harness.routeNativeElement?.querySelector(`#${prefix}-to`);
+      if (!(end instanceof HTMLInputElement)) {
+        throw new Error('Missing period end calendar.');
+      }
+      expect(end.getAttribute('aria-invalid')).toBe('true');
+      expect(end.getAttribute('aria-describedby')).toContain(`${prefix}-to-error`);
+      expect(document.activeElement).toBe(end);
+      expect(
+        harness.routeNativeElement?.querySelector(`#${prefix}-to-error`)?.textContent,
+      ).toContain(section === 'driving-profile' ? 'Enter a date and time' : 'Enter both dates');
+      let entered = '';
+      for (const key of '2026-01-02') {
+        end.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+        entered += key;
+        end.value = entered;
+        end.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      end.dispatchEvent(new FocusEvent('blur'));
+      form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      await harness.fixture.whenStable();
+      const request = read(operationName);
+      const params = new URL('http://example.test' + TestBed.inject(Router).url).searchParams;
+      expect(params.get('listQ')).toBe('truck');
+      expect(params.get('listSize')).toBe('25');
+      expect(params.get('listFirst')).toBe('25');
+      expect(params.get('listProject')).toBe('12');
+      expect(params.has('unsafe')).toBe(false);
+      expect(request.request.body).toMatchObject({
+        variables: {
+          input: { toDate: section === 'events' ? '2026-01-02T00:00:00Z' : '2026-01-02T00:00:00' },
+        },
+      });
+      if (section === 'driving-profile') {
+        request.flush({ data: { karmaDrivingProfile: profile } });
+      } else {
+        request.flush({
+          data: {
+            [section === 'trips' ? 'karmaTrips' : 'karmaEvents']: {
+              items: [],
+              hasMore: false,
+              cursor: null,
+              nextCursor: null,
+            },
+          },
+        });
+      }
+      await harness.fixture.whenStable();
+      expect(end.getAttribute('aria-invalid')).not.toBe('true');
+    });
+  }
   it('validates period syntax, optional filters and code zero without implicit timezone conversion', () => {
     expect(
       tripsFilters('41', convertToParamMap({ from: '2026-01-01T00:00', to: '2026-01-02T00:00' })),

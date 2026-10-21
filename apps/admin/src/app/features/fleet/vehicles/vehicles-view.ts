@@ -279,8 +279,8 @@ export class VehiclesView {
   protected readonly actions = computed<readonly ListAction<VehicleActionId, VehicleRow>[]>(() => {
     const text = this.text().actions;
     return [
-      { id: 'edit', label: text.edit },
       ...(this.profileEnabled() ? [{ id: 'profile' as const, label: text.profile }] : []),
+      { id: 'edit', label: text.edit },
       {
         id: 'deactivate',
         label: text.deactivate,

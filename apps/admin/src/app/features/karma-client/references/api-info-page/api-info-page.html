@@ -1,4 +1,8 @@
-<section class="card" [attr.aria-label]="text().karmaApiInfo" [attr.aria-busy]="loading()">
+<section
+  class="card karma-page"
+  [attr.aria-label]="text().karmaApiInfo"
+  [attr.aria-busy]="loading()"
+>
   <div class="page-heading">
     <div>
       <h1>{{ text().karmaApiInfo }}</h1>
@@ -22,7 +26,7 @@
     <p-message severity="error">{{ text().karmaUnavailable }}</p-message>
   }
   @if (version(); as value) {
-    <dl class="details">
+    <dl class="details karma-details">
       <div>
         <dt>{{ text().karmaApiVersion }}</dt>
         <dd>{{ value }}</dd>

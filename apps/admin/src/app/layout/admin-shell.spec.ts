@@ -175,6 +175,7 @@ describe('AdminShell', () => {
       'loading',
       'navigation',
       'notifications',
+      'notificationsUnavailable',
       'tenantName',
     ]);
   });

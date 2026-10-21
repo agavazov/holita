@@ -1,3 +1,4 @@
+import { sampleRecordLinks } from '../record-links';
 import {
   Component,
   computed,
@@ -111,6 +112,7 @@ interface OpenDrawer {
   imports: [AlertsView, AlertDrawer],
   template: `
     <holita-alerts-view
+      [recordLinks]="recordLinks"
       [branchName]="branchName()"
       [dataAsOf]="dataAsOf"
       [rows]="rows()"
@@ -127,6 +129,7 @@ interface OpenDrawer {
     />
     @if (openAlert(); as open) {
       <holita-alert-drawer
+        [recordLinks]="recordLinks"
         [alert]="open.alert"
         [dataAsOf]="dataAsOf"
         [busy]="busy()"
@@ -139,6 +142,7 @@ interface OpenDrawer {
   `,
 })
 export class AlertsPage {
+  protected readonly recordLinks = sampleRecordLinks;
   private readonly language = inject(UI_LANGUAGE);
   private readonly messages = inject(MessageService);
   private readonly router = inject(Router);

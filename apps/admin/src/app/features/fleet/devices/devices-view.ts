@@ -1,3 +1,5 @@
+import { RouterLink } from '@angular/router';
+import type { FleetRecordLinks } from '../fleet-record-links';
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { ButtonDirective } from 'primeng/button';
 import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
@@ -65,12 +67,13 @@ export const deviceStatusTones: Record<DeviceStatusCode, StatusTone> = {
 
 /**
  * The Devices list page: connection, installation, signal, voltage and firmware of the trackers,
- * with row actions and bulk actions; a row opens straight into its form. Presentation only: the
+ * with row actions and bulk actions; the primary record action opens its read-only overview. Presentation only: the
  * host owns data and editing.
  */
 @Component({
   selector: 'holita-devices-view',
   imports: [
+    RouterLink,
     ButtonDirective,
     TableModule,
     Tag,
@@ -89,6 +92,7 @@ export const deviceStatusTones: Record<DeviceStatusCode, StatusTone> = {
   host: { class: 'app-view' },
 })
 export class DevicesView {
+  readonly recordLinks = input<FleetRecordLinks | null>(null);
   readonly demo = input(false);
   readonly busy = input(false);
   readonly searchError = input<string | null>(null);
@@ -166,6 +170,7 @@ export class DevicesView {
   protected readonly actions = computed<readonly ListAction<DeviceActionId, DeviceRow>[]>(() => {
     const text = this.text().actions;
     const actions: ListAction<DeviceActionId, DeviceRow>[] = [
+      { id: 'diagnostics', label: text.diagnostics, appliesTo: () => !this.busy() },
       { id: 'edit', label: text.edit, appliesTo: () => !this.busy() },
       {
         id: 'restart',
@@ -181,11 +186,6 @@ export class DevicesView {
       },
     ];
     if (!this.demo()) {
-      actions.splice(1, 0, {
-        id: 'diagnostics',
-        label: text.diagnostics,
-        appliesTo: () => !this.busy(),
-      });
       actions.push({
         id: 'delete',
         label: text.delete,

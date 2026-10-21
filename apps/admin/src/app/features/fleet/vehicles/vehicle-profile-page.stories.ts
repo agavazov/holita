@@ -100,7 +100,7 @@ export const RelatedTabs: Story = {
     );
     const trip = body.getByRole('dialog', { name: 'Trip ' + fixtureVehicleProfile.licensePlate });
     await expect(heading.isConnected).toBe(true);
-    await userEvent.click(within(trip).getByRole('button', { name: 'Open vehicle' }));
+    await userEvent.click(within(trip).getByRole('link', { name: 'Open vehicle' }));
     await waitFor(
       async () => {
         await expect(trip).not.toBeInTheDocument();

@@ -1,0 +1,8 @@
+{
+  "summary": "Record summary",
+  "truckSummary": "Truck summary",
+  "sourceFields": "Source fields",
+  "parameterCount": "Parameters in this message",
+  "eventText": "Source event text",
+  "appliedPeriod": "Applied API period"
+}

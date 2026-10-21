@@ -16,6 +16,7 @@ export function alertRow(event: AdminAlertDetailsFragment, language: Language): 
     id: event.id,
     vehicleId: event.vehicleId,
     plate: event.vehicle.licensePlate,
+    driverId: event.driverId,
     driverName: event.driver ? `${event.driver.firstName} ${event.driver.lastName}` : null,
     kind: kinds[event.kind],
     detail: event.details ?? '',

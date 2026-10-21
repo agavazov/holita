@@ -44,6 +44,8 @@ import { UI_LANGUAGE } from '../../../ui/ui-language';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { maintenanceText } from './i18n/messages';
 import { serviceEuroCents } from './service-money';
+import { RouterLink } from '@angular/router';
+import type { FleetRecordLink } from '../fleet-record-links';
 
 /** Presentation context for completing one planned task, separate from live telemetry. */
 export interface ServiceCompletionTask {
@@ -98,6 +100,7 @@ const nextSchedule: ValidatorFn = (group) => {
 @Component({
   selector: 'holita-service-completion-drawer',
   imports: [
+    RouterLink,
     ReactiveFormsModule,
     ButtonDirective,
     DatePicker,
@@ -114,6 +117,7 @@ const nextSchedule: ValidatorFn = (group) => {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ServiceCompletionDrawer {
+  readonly vehicleLink = input<FleetRecordLink | null>(null);
   readonly task = input<ServiceCompletionTask | null>(null);
   readonly completed = input<ServiceCompletionForm | null>(null);
   /** The service business date, independent of the telemetry data clock. */
@@ -135,6 +139,7 @@ export class ServiceCompletionDrawer {
   private readonly drawer = viewChild.required(RouteDrawer);
   private readonly formElement = viewChild<ElementRef<HTMLFormElement>>('formElement');
   protected readonly text = computed(() => maintenanceText(this.language()).completion);
+  protected readonly vehicleLabel = computed(() => maintenanceText(this.language()).drawer.vehicle);
   protected readonly completedOdometerLabel = computed(() =>
     interpolate(this.text().completedOdometerDisplay, {
       unit: this.units.distanceUnit(),

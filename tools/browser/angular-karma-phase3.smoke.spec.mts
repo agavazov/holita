@@ -2,6 +2,7 @@ import { expect, type Page } from '@playwright/test';
 import { join } from 'node:path';
 import { workspaceRoot } from '../graphql/contracts.mjs';
 import { chooseBranch, chooseLanguage, setDarkTheme, test } from './angular-fixture.mjs';
+import { enterKarmaDateTime } from './karma-date-time.mjs';
 async function captures(page: Page, section: string) {
   for (const viewport of [
     { name: 'desktop', width: 1280, height: 900 },
@@ -46,6 +47,7 @@ test('pages trips from truck details, restores cursor history and exposes all 23
   await view.click();
   const dialog = page.getByRole('dialog', { name: 'Trip details', exact: true });
   await expect(dialog.locator('dd')).toHaveCount(23);
+  await dialog.getByText('Source fields', { exact: true }).click();
   await expect(dialog).toContainText('stop_date');
   await expect(dialog).toContainText('—');
   await page.keyboard.press('Escape');
@@ -101,8 +103,8 @@ test('walks 600 events and filters UTC dates/code zero and changes page size wit
   await expect(page.getByRole('button', { name: 'Older', exact: true })).toBeDisabled();
   await page.getByRole('combobox', { name: 'Records per page', exact: true }).click();
   await page.getByRole('option', { name: '25', exact: true }).click();
-  await page.getByLabel('From (UTC)', { exact: true }).fill('2026-01-01T00:01');
-  await page.getByLabel('To (UTC)', { exact: true }).fill('2026-01-01T00:01');
+  await enterKarmaDateTime(page, 'From (UTC)', '2026-01-01', '00:01:00');
+  await enterKarmaDateTime(page, 'To (UTC)', '2026-01-01', '00:01:00');
   await page.getByLabel('Event codes', { exact: true }).fill('0');
   await page.getByRole('button', { name: 'Apply filters', exact: true }).click();
   await expect(rows).toHaveCount(1);
@@ -111,7 +113,13 @@ test('walks 600 events and filters UTC dates/code zero and changes page size wit
   const view = rows.first().getByRole('button', { name: 'View 3000000002', exact: true });
   await view.click();
   const dialog = page.getByRole('dialog', { name: 'Event details', exact: true });
-  await expect(dialog.locator('dd')).toHaveCount(12);
+  const source = dialog.locator('details');
+  await expect(source).not.toHaveAttribute('open');
+  await expect(dialog.getByRole('region', { name: 'Record summary', exact: true })).toContainText(
+    /Event code \(eid\)\s*0/,
+  );
+  await dialog.getByText('Source fields', { exact: true }).click();
+  await expect(source.locator('dd')).toHaveCount(12);
   await expect(dialog).toContainText('<b>Fixture event text</b>');
   await expect(dialog.locator('dl b')).toHaveCount(0);
   await page.keyboard.press('Escape');
@@ -130,16 +138,27 @@ test('extends the profile period and retains data on failed refresh with retry a
   await expect(rows).toHaveCount(9);
   await expect(rows.first()).toContainText('—');
   await expect(rows.nth(1)).toContainText('0');
-  const from = await page.getByLabel('From (API time)', { exact: true }).inputValue(),
-    to = await page.getByLabel('To (API time)', { exact: true }).inputValue();
-  expect(new Date(to + 'Z').getTime() - new Date(from + 'Z').getTime()).toBe(7 * 86400000);
-  await page.getByLabel('From (API time)', { exact: true }).fill('2026-01-01T00:00');
-  await page.getByLabel('To (API time)', { exact: true }).fill('2026-02-01T00:00');
+  const from = await page.getByLabel('From (API time)', { exact: true }).inputValue();
+  const fromTime = await page
+    .getByRole('textbox', { name: 'From (API time): time (HH:mm:ss)', exact: true })
+    .inputValue();
+  const to = await page.getByLabel('To (API time)', { exact: true }).inputValue();
+  const toTime = await page
+    .getByRole('textbox', { name: 'To (API time): time (HH:mm:ss)', exact: true })
+    .inputValue();
+  expect(
+    new Date(to + 'T' + toTime + 'Z').getTime() - new Date(from + 'T' + fromTime + 'Z').getTime(),
+  ).toBe(7 * 86400000);
+  await enterKarmaDateTime(page, 'From (API time)', '2026-01-01', '00:00:00');
+  await enterKarmaDateTime(page, 'To (API time)', '2026-02-01', '00:00:00');
   await page.getByRole('button', { name: 'Apply filters', exact: true }).click();
   await expect(page).toHaveURL(/from=2026/);
   await expect(rows).toHaveCount(9);
   await page.reload();
-  await expect(page.getByLabel('From (API time)', { exact: true })).toHaveValue('2026-01-01T00:00');
+  await expect(page.getByLabel('From (API time)', { exact: true })).toHaveValue('2026-01-01');
+  await expect(
+    page.getByRole('textbox', { name: 'From (API time): time (HH:mm:ss)', exact: true }),
+  ).toHaveValue('00:00:00');
   await expect(rows).toHaveCount(9);
   app.karma.setFailed(true);
   await page.getByRole('button', { name: 'Refresh', exact: true }).click();
@@ -167,7 +186,9 @@ for (const section of ['trips', 'events', 'driving-profile']) {
       await button.focus();
       await page.keyboard.press('Enter');
       const dialog = page.getByRole('dialog');
-      await expect(dialog.locator('dd')).toHaveCount(section === 'trips' ? 23 : 12);
+      await expect(dialog.locator('details')).not.toHaveAttribute('open');
+      await dialog.getByText('Source fields', { exact: true }).click();
+      await expect(dialog.locator('details dd')).toHaveCount(section === 'trips' ? 23 : 12);
       if (process.env.HOLITA_BROWSER_SCREENSHOTS === '1') {
         await page.screenshot({
           path: join(workspaceRoot, '.references/review', `karma-${section}-mobile-details.png`),

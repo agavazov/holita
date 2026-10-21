@@ -36,10 +36,11 @@ const device: AdminDeviceDetailsFragment = {
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
 };
-function snapshot(mode: 'create' | 'edit', recordId = id) {
+function snapshot(mode: 'create' | 'edit', recordId = id, editFrom: string | null = null) {
   const current = {
     data: { drawer: true, mode, ...(mode === 'edit' ? { recordParam: 'recordId' } : {}) },
     paramMap: convertToParamMap({ branchId: branch, ...(mode === 'edit' ? { recordId } : {}) }),
+    queryParamMap: convertToParamMap(editFrom ? { editFrom } : {}),
   };
   return { ...current, pathFromRoot: [current] };
 }
@@ -102,8 +103,12 @@ describe('Live Device routed editor', () => {
     http.verify({ ignoreCancelled: true });
     vi.restoreAllMocks();
   });
-  async function mount(mode: 'create' | 'edit' = 'create', recordId = id) {
-    route.snapshot = snapshot(mode, recordId);
+  async function mount(
+    mode: 'create' | 'edit' = 'create',
+    recordId = id,
+    editFrom: string | null = null,
+  ) {
+    route.snapshot = snapshot(mode, recordId, editFrom);
     const fixture = TestBed.createComponent(DeviceEditorPage);
     fixtures.push(fixture);
     await fixture.whenStable();
@@ -200,6 +205,38 @@ describe('Live Device routed editor', () => {
     expect(field('notes').value).toBe('Changed');
     expect(hostSaved).not.toHaveBeenCalled();
     expect(navigate).not.toHaveBeenCalled();
+  });
+  it('returns an overview-initiated edit to Diagnostics on Cancel and successful Save', async () => {
+    const fixture = await mount('edit', id, 'diagnostics');
+    const cancel = [...document.querySelectorAll('button')].find(
+      (button) => button.textContent.trim() === 'Cancel',
+    );
+    expect(cancel).toBeDefined();
+    cancel?.click();
+    expect(navigate).toHaveBeenLastCalledWith(
+      ['/', 'en', branch, 'fleet', 'devices', id, 'diagnostics'],
+      expect.objectContaining({ queryParamsHandling: 'preserve', preserveFragment: true }),
+    );
+    const completion = fixture.componentInstance.save(deviceForm(device));
+    http
+      .expectOne((request) => operation(request, 'AdminUpdateDevice'))
+      .flush({
+        data: { updateFleetDevice: { ...device, __typename: 'FleetDevice' } },
+      });
+    await completion;
+    expect(hostSaved).toHaveBeenCalledOnce();
+    expect(navigate).toHaveBeenLastCalledWith(
+      ['/', 'en', branch, 'fleet', 'devices', id, 'diagnostics'],
+      { queryParamsHandling: 'preserve', preserveFragment: true },
+    );
+  });
+  it('ignores an unknown edit origin and keeps direct edits returning to the list', async () => {
+    const fixture = await mount('edit', id, 'external');
+    await fixture.componentInstance.close();
+    expect(navigate).toHaveBeenCalledWith(['/', 'en', branch, 'fleet', 'devices'], {
+      queryParamsHandling: 'preserve',
+      preserveFragment: true,
+    });
   });
   it('lets a submitted write settle after retirement without notifying or navigating', async () => {
     const fixture = await mount('edit');

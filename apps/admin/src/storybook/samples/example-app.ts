@@ -71,12 +71,8 @@ export const exampleNavigation: readonly NavGroup[] = [
       { id: 'vehicles', label: 'Vehicles', icon: 'truck', link: link('vehicles') },
       { id: 'drivers', label: 'Drivers', icon: 'id-card', link: link('drivers') },
       { id: 'devices', label: 'Devices', icon: 'mobile', link: link('devices') },
+      { id: 'maintenance', label: 'Maintenance', icon: 'wrench', link: link('maintenance') },
     ],
-  },
-  {
-    id: 'service',
-    label: 'Service',
-    items: [{ id: 'maintenance', label: 'Maintenance', icon: 'wrench', link: link('maintenance') }],
   },
   {
     id: 'settings',

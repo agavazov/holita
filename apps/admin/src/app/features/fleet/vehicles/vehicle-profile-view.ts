@@ -1,3 +1,4 @@
+import type { FleetRecordLinks } from '../fleet-record-links';
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { RouterLink, type Params } from '@angular/router';
 import { ButtonDirective } from 'primeng/button';
@@ -43,6 +44,7 @@ import type { VehicleRow } from './vehicles-view';
 
 /** The vehicle record of the profile page: the list row plus specification and live data. */
 export interface VehicleProfile extends VehicleRow {
+  readonly currentDriverId: string | null;
   readonly vin: string;
   readonly fuelType: VehicleFuelType | null;
   readonly tankL: number | null;
@@ -96,12 +98,14 @@ function listView(rows: readonly unknown[]): TableView {
   host: { class: 'app-view' },
 })
 export class VehicleProfileView {
+  readonly recordLinks = input<FleetRecordLinks | null>(null);
   readonly state = input.required<VehicleProfileState>();
   readonly vehicle = input<VehicleProfile | null>(null);
   readonly dataAsOf = input.required<string>();
   readonly backLink = input.required<readonly string[]>();
   readonly backQueryParams = input<Params | null>(null);
   readonly backFragment = input<string | null>(null);
+  readonly backLabel = input<string | null>(null);
   readonly errorText = input<string | null>(null);
   readonly distance = input<readonly SeriesPoint[]>([]);
   readonly trips = input<readonly TripRow[]>([]);

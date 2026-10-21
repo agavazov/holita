@@ -3,7 +3,6 @@ import { provideHttpClient, type HttpRequest } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ReactiveFormsModule } from '@angular/forms';
 import { By } from '@angular/platform-browser';
 import { provideRouter, RouteReuseStrategy, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -13,11 +12,9 @@ import { routes } from '../../app.routes';
 import { ADMIN_RUNTIME_CONFIG } from '../../core/config/admin-config';
 import { graphqlOptions } from '../../core/graphql/graphql-options';
 import { AdminShell } from '../../layout/admin-shell';
-import { RouteDrawer } from '../../ui/drawer/route-drawer';
 import type { AdminVehicleDetailsFragment } from '../../../generated/graphql/operations';
 import { FleetRouteReuseStrategy } from './fleet-route-reuse';
 import { VehicleEditorPage } from './vehicles/vehicle-editor-page';
-import { VehicleDrawer } from './vehicles/vehicle-drawer';
 import { VehiclesPage } from './vehicles/vehicles-page';
 
 const branchA = '10000000-0000-4000-8000-000000000001';
@@ -314,21 +311,6 @@ describe.each([
     });
 
     it('retains the list while replacing A → B → A editors and cancelling obsolete detail reads', async () => {
-      // This case covers routed clients and form hydration; the editor and browser suites cover
-      // the full specification controls. Keep the actual drawer, form and leave guard here.
-      TestBed.overrideComponent(VehicleDrawer, {
-        set: {
-          imports: [ReactiveFormsModule, RouteDrawer],
-          template: `
-          <holita-route-drawer title="Vehicle editor" [state]="state()" [dirty]="dirty()"
-            [saving]="saving()" [closeLink]="closeLink()" (closeRequest)="requestClose()">
-            <form #formElement [formGroup]="form">
-              <input id="vehicle-plate" formControlName="plate" />
-            </form>
-          </holita-route-drawer>
-        `,
-        },
-      });
       const firstId = '20000000-0000-4000-8000-000000000001';
       const secondId = '20000000-0000-4000-8000-000000000002';
       const harness = await mount(`${path}/${firstId}/edit`);

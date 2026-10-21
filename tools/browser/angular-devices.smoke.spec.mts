@@ -89,21 +89,61 @@ test.describe('Devices', () => {
       },
     });
     expect(await deletion.json()).toMatchObject({ errors: [{ extensions: { code: 'CONFLICT' } }] });
-    await page.getByRole('button', { name: 'Edit device 001234567890123', exact: true }).click();
+    await page.getByRole('button', { name: 'Open device 001234567890123', exact: true }).click();
+    await expect(page).toHaveURL(/\/diagnostics$/);
+    const overviewUrl = page.url();
+    const overview = page.getByRole('dialog', { name: 'Diagnostics', exact: true });
+    await expect(overview.getByRole('textbox')).toHaveCount(0);
+    await expect(overview.getByRole('link', { name: 'CA1234AB', exact: true })).toHaveAttribute(
+      'href',
+      `/en/${branchA}/fleet/vehicles/${first}/overview`,
+    );
+    await overview.getByRole('button', { name: 'Edit', exact: true }).click();
     await expect(page.getByRole('combobox', { name: 'Installed in', exact: true })).toHaveText(
       'CA1234AB',
     );
     await chooseTruck(page, 'CB5678AB');
     await page.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(page).toHaveURL(overviewUrl);
+    await expect(overview).toBeVisible();
+    await overview.locator('button.route-drawer__close').click();
     await expect(page).toHaveURL(app.url + path);
     await page.reload();
     await expect(page.locator('tbody tr').filter({ hasText: '001234567890123' })).toContainText(
       'CB5678AB',
     );
+    await page.setViewportSize({ width: 375, height: 812 });
+    const table = page.locator('holita-devices-view .p-datatable-table-container');
+    const identity = page
+      .locator('tbody tr')
+      .filter({ hasText: '001234567890123' })
+      .locator('td.app-col-identity');
+    await identity.scrollIntoViewIfNeeded();
+    const initial = await identity.boundingBox();
+    expect(initial).not.toBeNull();
+    expect(initial?.width).toBeLessThan(200);
+    await table.evaluate((element) => {
+      element.scrollLeft = element.scrollWidth;
+    });
+    await expect
+      .poll(async () => {
+        const cell = await identity.boundingBox();
+        const container = await table.boundingBox();
+        return cell && container ? Math.abs(cell.x - container.x) : Infinity;
+      })
+      .toBeLessThan(2);
+    await expect(
+      identity.getByRole('button', { name: 'Open device 001234567890123', exact: true }),
+    ).toBeInViewport();
+    await expect(
+      identity.getByRole('button', { name: 'Actions for 001234567890123', exact: true }),
+    ).toBeInViewport();
+    await expect.poll(() => table.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+    await page.setViewportSize({ width: 1280, height: 900 });
     await chooseBranch(page, 'Sandbox');
     await expect(page).toHaveURL(/\/fleet\/devices$/);
     await expect(
-      page.getByRole('button', { name: 'Edit device 001234567890123', exact: true }),
+      page.getByRole('button', { name: 'Open device 001234567890123', exact: true }),
     ).toHaveCount(0);
     await chooseBranch(page, 'Discordia');
     await page.getByRole('button', { name: 'Actions for 001234567890123', exact: true }).click();
@@ -114,10 +154,10 @@ test.describe('Devices', () => {
     await expect(page.getByText('Devices deleted: 1.', { exact: true })).toBeVisible();
     await page.reload();
     await expect(
-      page.getByRole('button', { name: 'Edit device 001234567890123', exact: true }),
+      page.getByRole('button', { name: 'Open device 001234567890123', exact: true }),
     ).toHaveCount(0);
     await expect(
-      page.getByRole('button', { name: 'Edit device 001234567890124', exact: true }),
+      page.getByRole('button', { name: 'Open device 001234567890124', exact: true }),
     ).toBeVisible();
   });
   test('registers stock with the existing catalog and persists explicit installation and metadata clears', async ({
@@ -141,7 +181,8 @@ test.describe('Devices', () => {
     const row = page.locator('tbody tr').filter({ hasText: '001234567890125' });
     await expect(row).toContainText('In stock');
     await expect(row).toContainText('Not installed');
-    await row.getByRole('button', { name: 'Edit device 001234567890125', exact: true }).click();
+    await row.getByRole('button', { name: 'Actions for 001234567890125', exact: true }).click();
+    await chooseMenuItem(page, 'Edit');
     const edit = page.getByRole('dialog', { name: 'Device 001234567890125', exact: true });
     await expect(edit.getByRole('textbox', { name: 'Firmware', exact: true })).toHaveValue(
       '03.29.02',
@@ -153,7 +194,8 @@ test.describe('Devices', () => {
     await edit.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(edit).toBeHidden();
     await expect(row).toContainText('STOCK-VEHICLE');
-    await row.getByRole('button', { name: 'Edit device 001234567890125', exact: true }).click();
+    await row.getByRole('button', { name: 'Actions for 001234567890125', exact: true }).click();
+    await chooseMenuItem(page, 'Edit');
     await chooseTruck(page, 'Not installed (in stock)');
     await edit.getByRole('textbox', { name: 'Firmware', exact: true }).fill('');
     await edit.getByRole('textbox', { name: 'SIM phone number', exact: true }).fill('');
@@ -161,7 +203,8 @@ test.describe('Devices', () => {
     await expect(edit).toBeHidden();
     await page.reload();
     await expect(row).toContainText('In stock');
-    await row.getByRole('button', { name: 'Edit device 001234567890125', exact: true }).click();
+    await row.getByRole('button', { name: 'Actions for 001234567890125', exact: true }).click();
+    await chooseMenuItem(page, 'Edit');
     await expect(edit.getByRole('textbox', { name: 'Firmware', exact: true })).toHaveValue('');
     await expect(edit.getByRole('textbox', { name: 'SIM phone number', exact: true })).toHaveValue(
       '',
@@ -182,24 +225,34 @@ test.describe('Devices', () => {
     await chooseTruck(page, 'CA1234AB', 'bg');
     await page.getByRole('button', { name: 'Регистрирай', exact: true }).click();
     const openDevice = page.getByRole('button', {
-      name: 'Редактирай устройство 001234567890123',
+      name: 'Отвори устройство 001234567890123',
       exact: true,
     });
     const editor = page.getByRole('dialog', { name: 'Устройство 001234567890123', exact: true });
     await expect(openDevice).toBeVisible();
-    for (const mode of ['form', 'list']) {
+    const overview = page.getByRole('dialog', { name: 'Диагностика', exact: true });
+    for (const mode of ['view', 'form', 'list']) {
       for (const width of [1280, 390, 320]) {
         await page.setViewportSize({ width, height: 900 });
         for (const dark of [false, true]) {
           await setDarkTheme(page, dark);
           if (mode === 'form') {
-            await openDevice.click();
+            await page
+              .getByRole('button', { name: 'Действия за 001234567890123', exact: true })
+              .click();
+            await chooseMenuItem(page, 'Редактирай');
             await expect(editor.getByRole('textbox', { name: /^IMEI/ })).toHaveValue(
               '001234567890123',
             );
             await expect(
               editor.getByRole('combobox', { name: 'Монтирано в', exact: true }),
             ).toHaveText('CA1234AB');
+          } else if (mode === 'view') {
+            await openDevice.click();
+            await expect(
+              overview.getByRole('button', { name: 'Редактирай', exact: true }),
+            ).toBeVisible();
+            await expect(overview.getByRole('textbox')).toHaveCount(0);
           } else {
             await expect(openDevice).toBeVisible();
           }
@@ -216,6 +269,9 @@ test.describe('Devices', () => {
             // Close the pristine editor before using the account menu outside its modal.
             await editor.getByRole('button', { name: 'Отказ', exact: true }).click();
             await expect(editor).toBeHidden();
+          } else if (mode === 'view') {
+            await overview.locator('button.route-drawer__close').click();
+            await expect(overview).toBeHidden();
           }
         }
       }

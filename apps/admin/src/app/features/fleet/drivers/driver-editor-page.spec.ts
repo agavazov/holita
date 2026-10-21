@@ -315,6 +315,43 @@ describe('Live Driver drawer adapter', () => {
     expect(dialog().textContent).not.toContain('Expired');
   });
 
+  it('opens each assigned vehicle profile in the current Branch without carrying Driver filters', async () => {
+    const view = await mount('view');
+    const vehicles = [
+      { id: '50000000-0000-4000-8000-000000000001', licensePlate: 'CA1234AB' },
+      { id: '50000000-0000-4000-8000-000000000002', licensePlate: 'PB1234AB' },
+    ];
+    http
+      .expectOne((request) => operation(request, 'AdminDriver'))
+      .flush({
+        data: {
+          fleetDriver: {
+            ...record,
+            vehicles: vehicles.map((vehicle) => ({
+              __typename: 'FleetVehicleRef',
+              ...vehicle,
+              fleetNumber: null,
+              vehicleType: null,
+              status: 'ACTIVE',
+            })),
+          },
+          fleetDataClock: clock,
+        },
+      });
+    await view.whenStable();
+    for (const vehicle of vehicles) {
+      const link = [...dialog().querySelectorAll('a')].find(
+        (candidate) => candidate.textContent.trim() === vehicle.licensePlate,
+      );
+      expect(link?.getAttribute('href')).toBe(
+        `/en/${branch}/fleet/vehicles/${vehicle.id}/overview?fromDriver=${id}`,
+      );
+    }
+    navigate.mockClear();
+    view.componentInstance.openVehicle('foreign-vehicle');
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
   it('retries create context without loading any record or guessing a business date', async () => {
     route.snapshot = snapshot('create');
     const fixture = TestBed.createComponent(DriverEditorPage);

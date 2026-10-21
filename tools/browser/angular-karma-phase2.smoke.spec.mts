@@ -14,11 +14,18 @@ test('shows reference labels and last-known summary and opens every location fie
     }
   });
   await page.goto(`${app.url}/en/karma-client/cars/41`);
-  await expect(page.locator('dl')).toContainText('Fixture project (12)');
-  await expect(page.locator('dl')).toContainText('Europe/Sofia (8)');
+  const summary = page.getByRole('region', { name: 'Truck summary', exact: true });
+  await expect(summary).toContainText('Fixture project (12)');
+  await expect(summary).toContainText('Europe/Sofia (8)');
+  const source = page.locator('holita-car-details details');
+  await expect(source).not.toHaveAttribute('open');
+  await source.locator('summary').click();
+  await expect(source.locator('dd')).toContainText(['8']);
+  await expect(source.locator('dd')).toHaveCount(10);
   await expect(page.locator('.location-summary')).toContainText('2026-01-01 09:59:00');
   await page.getByRole('link', { name: 'Location', exact: true }).click();
   await expect(page).toHaveURL(`${app.url}/en/karma-client/cars/41/location`);
+  await page.locator('holita-location-page summary').click();
   await expect(page.locator('holita-location-page dd')).toHaveCount(13);
   await expect(page.locator('holita-location-page dd')).toHaveText([
     'KARMA TEST 41',
@@ -36,10 +43,10 @@ test('shows reference labels and last-known summary and opens every location fie
     '<b>Fixture plain text</b>',
   ]);
   expect(await page.locator('holita-location-page dl b').count()).toBe(0);
-  const map = page.getByRole('link', { name: 'Open map (new tab)', exact: true });
+  const map = page.getByRole('link', { name: 'Open in Google Maps', exact: true });
   await expect(map).toHaveAttribute(
     'href',
-    'https://www.openstreetmap.org/?mlat=0&mlon=0#map=15/0/0',
+    'https://www.google.com/maps/search/?api=1&query=0%2C0',
   );
   await expect(map).toHaveAttribute('rel', 'noopener noreferrer');
   for (const viewport of [
@@ -74,7 +81,7 @@ test('shows reference labels and last-known summary and opens every location fie
   await expect(map).toBeVisible();
   await chooseLanguage(page, 'Български');
   await expect(page.getByRole('heading', { name: 'Местоположение', exact: true })).toBeVisible();
-  await page.getByRole('link', { name: 'Към камиона', exact: true }).click();
+  await page.getByRole('link', { name: 'Обзор', exact: true }).click();
   await expect(page.getByRole('link', { name: 'eData', exact: true })).toBeVisible();
   expect(
     headers.every(
@@ -89,7 +96,7 @@ test('retains location on failed refresh and handles null, invalid and absent co
   app,
 }) => {
   await page.goto(`${app.url}/en/karma-client/cars/41/location`);
-  const map = page.getByRole('link', { name: 'Open map (new tab)', exact: true });
+  const map = page.getByRole('link', { name: 'Open in Google Maps', exact: true });
   await expect(map).toBeVisible();
   app.karma.setFailed(true);
   await page.getByRole('button', { name: 'Refresh', exact: true }).click();
@@ -99,7 +106,9 @@ test('retains location on failed refresh and handles null, invalid and absent co
   app.karma.setLocationCoordinates(null, null);
   await page.getByRole('button', { name: 'Retry', exact: true }).click();
   await expect(map).toHaveCount(0);
-  await expect(page.getByRole('status')).toContainText('Coordinates are missing or invalid.');
+  await expect(page.getByRole('status')).toContainText(
+    'No valid coordinates are available for this map.',
+  );
   app.karma.setLocationCoordinates(91, 0);
   await page.getByRole('button', { name: 'Refresh', exact: true }).click();
   await expect(page.locator('dd')).toContainText([

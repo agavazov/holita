@@ -51,21 +51,36 @@ describe('AdminSidebar and navigation', () => {
       Array.from(element.querySelectorAll('h2 > span:first-child')).map(
         (heading) => heading.textContent,
       ),
-    ).toEqual(['Автопарк', 'Karma Client']);
+    ).toEqual(['Наблюдение', 'Автопарк', 'Karma Client', 'Настройки']);
     expect(element.querySelector('h2 .app-nav__note')?.textContent).toBe('временно');
     const links = Array.from(element.querySelectorAll('a.app-nav__item'));
     expect(links.map((link) => link.textContent.trim())).toEqual([
+      'Преглед',
+      'Сигнали',
+      'Дневник на пътуванията',
       'Автомобили',
+      'Шофьори',
       'Устройства',
+      'Сервизно обслужване',
       'Камиони',
       'Потребители',
       'Роли',
       'Проекти',
       'Часови зони',
       'Информация за API',
+      'Групи автомобили',
+      'Общи',
     ]);
-    expect(links[0]?.getAttribute('aria-current')).toBe('page');
-    expect(links[1]?.hasAttribute('aria-current')).toBe(false);
+    expect(
+      element
+        .querySelector(`a.app-nav__item[href="/bg/${branch}/fleet/vehicles"]`)
+        ?.getAttribute('aria-current'),
+    ).toBe('page');
+    expect(
+      element
+        .querySelector(`a.app-nav__item[href="/bg/${branch}/fleet/devices"]`)
+        ?.hasAttribute('aria-current'),
+    ).toBe(false);
     // The visible word names the logo link; the mark is decorative.
     expect(element.querySelector('a.app-logo')?.textContent.trim()).toBe('hholita');
     expect(element.querySelector('a.app-logo .app-logo__mark')?.getAttribute('aria-hidden')).toBe(
@@ -78,7 +93,7 @@ describe('AdminSidebar and navigation', () => {
     const { fixture, element } = await mount('/bg');
     fixture.componentInstance.rail.set(true);
     fixture.detectChanges();
-    const link = element.querySelector('a.app-nav__item');
+    const link = element.querySelector(`a.app-nav__item[href="/bg/${branch}/fleet/vehicles"]`);
     expect(link?.querySelector('.app-nav__text')?.classList.contains('app-visually-hidden')).toBe(
       true,
     );
@@ -86,7 +101,7 @@ describe('AdminSidebar and navigation', () => {
     const word = element.querySelector('.app-logo__word');
     expect(word?.classList.contains('app-visually-hidden')).toBe(true);
     expect(word?.textContent).toBe('holita');
-    expect(element.querySelector('h2 .app-visually-hidden')?.textContent).toBe('Автопарк');
+    expect(element.querySelector('#nav-fleet .app-visually-hidden')?.textContent).toBe('Автопарк');
   });
 
   it('omits Fleet without a Branch or when Fleet is disabled', () => {

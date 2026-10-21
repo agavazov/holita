@@ -32,6 +32,7 @@
     "selectPage": "Select all on this page",
     "selectRow": "Select {plate}",
     "openEditor": "Edit {plate}",
+    "openProfile": "Open {plate}",
     "noDriver": "No driver",
     "noGroup": "No group",
     "noData": "No data",
@@ -103,6 +104,7 @@
     "historyConflict": "Vehicles with trackers or history cannot be deleted. Deactivate them instead."
   },
   "profile": {
+    "backToDriver": "Back to driver",
     "eyebrow": "Vehicle",
     "back": "Vehicles",
     "edit": "Edit",

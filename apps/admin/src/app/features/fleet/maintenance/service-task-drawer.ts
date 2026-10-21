@@ -1,3 +1,5 @@
+import { RouterLink } from '@angular/router';
+import type { FleetRecordLinks } from '../fleet-record-links';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -73,6 +75,7 @@ const fieldOrder: readonly ServiceTaskField[] = [
 @Component({
   selector: 'holita-service-task-drawer',
   imports: [
+    RouterLink,
     ReactiveFormsModule,
     ButtonDirective,
     DatePicker,
@@ -89,6 +92,7 @@ const fieldOrder: readonly ServiceTaskField[] = [
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ServiceTaskDrawer {
+  readonly recordLinks = input<FleetRecordLinks | null>(null);
   /** The task to edit; null plans a new one. */
   readonly task = input<ServiceTaskForm | null>(null);
   readonly readOnly = input(false);

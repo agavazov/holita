@@ -1,4 +1,8 @@
-<section class="card" [attr.aria-label]="text().karmaTimeZones" [attr.aria-busy]="loading()">
+<section
+  class="card karma-page"
+  [attr.aria-label]="text().karmaTimeZones"
+  [attr.aria-busy]="loading()"
+>
   <div class="page-heading">
     <div>
       <h1>{{ text().karmaTimeZones }}</h1>
@@ -15,8 +19,13 @@
       {{ error() ? text().retry : text().refresh }}
     </button>
   </div>
-  <form class="search-form" [formGroup]="form" (ngSubmit)="applySearch()">
-    <div class="search-field">
+  <form
+    [attr.aria-label]="text().karmaSearch + ': ' + text().karmaTimeZones"
+    class="karma-search"
+    [formGroup]="form"
+    (ngSubmit)="applySearch()"
+  >
+    <div class="karma-field karma-search-field">
       <label for="time-zones-page-search">{{ text().karmaReferenceSearch }}</label
       ><input pInputText id="time-zones-page-search" [formControl]="search" />
     </div>

@@ -1,3 +1,5 @@
+import { RouterLink } from '@angular/router';
+import type { FleetRecordLinks } from '../fleet-record-links';
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
 import { Tag } from 'primeng/tag';
@@ -91,6 +93,7 @@ export function worstTone(events: readonly TripEvent[]): StatusTone {
 @Component({
   selector: 'holita-trips-view',
   imports: [
+    RouterLink,
     TableModule,
     Tag,
     FilterBuilder,
@@ -109,6 +112,7 @@ export function worstTone(events: readonly TripEvent[]): StatusTone {
   host: { class: 'app-view' },
 })
 export class TripsView {
+  readonly recordLinks = input<FleetRecordLinks | null>(null);
   readonly branchName = input.required<string>();
   readonly rows = input.required<readonly TripRow[]>();
   readonly total = input.required<number>();

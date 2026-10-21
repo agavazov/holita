@@ -50,6 +50,10 @@ describe('Driver generated contract mapping', () => {
       name: 'Elena Petrova',
       employeeNo: '',
       vehiclePlate: 'CB 1001 AX, PB 2002 KM',
+      vehicles: [
+        { id: 'v1', plate: 'CB 1001 AX' },
+        { id: 'v2', plate: 'PB 2002 KM' },
+      ],
       score: 0,
       trips30d: 0,
       distance30dKm: 0,
@@ -58,6 +62,7 @@ describe('Driver generated contract mapping', () => {
     expect(driverDetails({ ...driver, drivingScore30d: null, vehicles: [] })).toMatchObject({
       score: null,
       vehiclePlate: null,
+      vehicles: [],
       employeeNo: '',
     });
   });

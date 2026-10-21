@@ -106,7 +106,9 @@ DOM and ARIA diagnostics. The separate Storybook visual target still produces re
 Clean up task-started connections/processes.
 
 The shared Branch, language, theme and Sign out helpers operate the topbar menus in signed-in
-smokes. Vehicles checks exercise the real list and routed drawer,
+smokes. Menu activation waits for the owning popup to close; a theme command changes its item
+label before the leave animation finishes, so the old label disappearing is insufficient.
+Vehicles checks exercise the real list and routed drawer,
 rich field persistence/null clearing, filter/sort URL state, batch partial results, dirty drafts,
 scope isolation, themes and narrow widths. Devices checks cover stock, metadata, assignment and
 clearing. `angular-fleet.smoke.spec.mts` covers Overview retry/null data, Groups and Drivers CRUD,
@@ -309,6 +311,14 @@ a fixed-arrival-rate latency SLA, cold-start performance or real Karma network l
 Admin specs are selected with `npm run test:admin -- --include=...` as above;
 [changing the design centrally](admin-design-system.md#changing-the-design-centrally) lists the
 combined checks for a central design change.
+
+`fleet-record-links.spec.ts` and the concrete Driver/profile/Device/Trip/Alert specs check scoped
+native anchor targets and the bounded Driver return marker. The Fleet browser smoke follows
+Driver → Vehicle → edit → Driver through the compiled routes; Device and Karma smoke cases
+verify that identity/actions stay in the table viewport after horizontal scrolling at 375px.
+Karma record-detail stories and eData/history specs check collapsed source fields, preserved
+null/zero values, escaped source text and focus restoration. Their visual candidates cover
+desktop/mobile and both themes; the responsive-table pattern also varies brand and density.
 
 General settings cases explicitly flush `AdminFleetPreferences` before business operations;
 they cover read gating/Retry, Branch/language/session isolation, saved-unit propagation and

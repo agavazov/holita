@@ -31,7 +31,10 @@ export function profilePageParams(tab: ProfileListTab, value: ProfilePage): Para
 }
 
 export function profileBackParams(params: ParamMap): Params {
-  const ownKeys = new Set(profileListTabs.flatMap((tab) => [`${tab}Page`, `${tab}Size`]));
+  const ownKeys = new Set([
+    'fromDriver',
+    ...profileListTabs.flatMap((tab) => [`${tab}Page`, `${tab}Size`]),
+  ]);
   return Object.fromEntries(
     params.keys
       .filter((key) => !ownKeys.has(key))

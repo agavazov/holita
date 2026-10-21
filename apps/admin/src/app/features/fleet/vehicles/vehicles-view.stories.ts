@@ -6,8 +6,8 @@ import { sampleVehicles } from '../../../../storybook/samples/fleet-samples';
 
 /**
  * The Vehicles example inside the shell, with sample data: quick search, the filter builder,
- * sorting, paging, row and bulk actions, and editing in the right-hand drawer (a row opens
- * straight into its form). The sidebar leads to the other example pages.
+ * sorting, paging, row and bulk actions. A vehicle plate opens its profile; Edit opens
+ * the form in the right-hand drawer. The sidebar leads to the other example pages.
  */
 const meta: Meta = {
   title: 'Examples/Fleet/Vehicles',
@@ -150,7 +150,7 @@ export const BulkSelection: Story = {
   },
 };
 
-/** Direct edit: the row opens straight into the form in the drawer. */
+/** The Edit action opens the form directly in the drawer. */
 export const Edit: Story = {
   render: exampleAt(`vehicles?drawer=${edited.id}`),
   play: async ({ canvasElement }) => {
@@ -242,10 +242,11 @@ export const OptionalSpecification: Story = {
     await userEvent.click(body.getByRole('button', { name: 'Create vehicle' }));
     const canvas = within(canvasElement);
     await waitFor(
-      () => expect(canvas.getByRole('button', { name: 'Edit AA 0001 XX' })).toBeVisible(),
+      () => expect(canvas.getByRole('button', { name: 'Open AA 0001 XX' })).toBeVisible(),
       { timeout: 3_000 },
     );
-    await userEvent.click(canvas.getByRole('button', { name: 'Edit AA 0001 XX' }));
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for AA 0001 XX' }));
+    await chooseMenuItem(canvasElement.ownerDocument.body, 'Edit');
     await drawerReady(canvasElement, 'Edit AA 0001 XX');
     await expect(body.getByRole('spinbutton', { name: 'Year' })).toHaveDisplayValue('');
     await expect(body.getByRole('combobox', { name: 'Type' })).toHaveTextContent('None');
@@ -276,7 +277,7 @@ export const HistoryPreventsDelete: Story = {
         ),
       ).toBeVisible(),
     );
-    await expect(canvas.getByRole('button', { name: `Edit ${plate}` })).toBeVisible();
+    await expect(canvas.getByRole('button', { name: `Open ${plate}` })).toBeVisible();
   },
 };
 
@@ -301,7 +302,7 @@ export const SortAdditionalFields: Story = {
     await waitFor(() =>
       expect(
         within(canvas.getAllByRole('row')[1] ?? canvasElement).getByRole('button', {
-          name: `Edit ${expected.plate}`,
+          name: `Open ${expected.plate}`,
         }),
       ).toBeVisible(),
     );
@@ -314,7 +315,7 @@ export const SortAdditionalFields: Story = {
     await waitFor(() =>
       expect(
         within(canvas.getAllByRole('row')[1] ?? canvasElement).getByRole('button', {
-          name: `Edit ${updated.plate}`,
+          name: `Open ${updated.plate}`,
         }),
       ).toBeVisible(),
     );
@@ -350,7 +351,7 @@ export const DeactivationUpdatesSort: Story = {
         throw new Error('Missing the first vehicle row.');
       }
       await expect(
-        within(first).getByRole('button', { name: `Edit ${vehicle.plate}` }),
+        within(first).getByRole('button', { name: `Open ${vehicle.plate}` }),
       ).toBeVisible();
       await expect(within(first).getByText('Inactive', { exact: true })).toBeVisible();
     });
@@ -366,7 +367,8 @@ export const ContractStates: Story = {
     await expect(canvas.getByText(/^Trailer/)).toBeVisible();
     await expect(canvas.getByText(/^Other/)).toBeVisible();
     await expect(canvas.getAllByText('Stale reading').length).toBeGreaterThan(0);
-    await userEvent.click(canvas.getByRole('button', { name: `Edit ${edited.plate}` }));
+    await userEvent.click(canvas.getByRole('button', { name: `Actions for ${edited.plate}` }));
+    await chooseMenuItem(canvasElement.ownerDocument.body, 'Edit');
     const body = await drawerReady(canvasElement, `Edit ${edited.plate}`);
     await expect(body.getByRole('combobox', { name: 'Fuel' })).toHaveTextContent('CNG');
   },

@@ -1,0 +1,15 @@
+{
+  "karmaClient": "Karma Client",
+  "truck": "Камион",
+  "carId": "Karma ID",
+  "navigation": "Раздели на камиона",
+  "overview": "Обзор",
+  "edata": "eData",
+  "location": "Местоположение",
+  "trips": "Пътувания",
+  "events": "Събития",
+  "drivingProfile": "Профил на шофиране",
+  "backToTrucks": "Към камионите",
+  "refresh": "Обнови",
+  "retry": "Опитай отново"
+}

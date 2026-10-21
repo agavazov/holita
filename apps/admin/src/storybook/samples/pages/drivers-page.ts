@@ -1,3 +1,4 @@
+import { sampleRecordLinks } from '../record-links';
 import {
   Component,
   computed,
@@ -93,7 +94,13 @@ function toRow(driver: SampleDriver): DriverRow {
 }
 
 function toDetails(driver: SampleDriver): DriverDetails {
-  return { ...driver, vehiclePlate: plateOf(driver.id) };
+  return {
+    ...driver,
+    vehiclePlate: plateOf(driver.id),
+    vehicles: sampleVehicles
+      .filter((vehicle) => vehicle.driverId === driver.id)
+      .map((vehicle) => ({ id: vehicle.id, plate: vehicle.plate })),
+  };
 }
 
 function kpisOf(drivers: readonly SampleDriver[]): DriverKpis {
@@ -140,6 +147,7 @@ function kpisOf(drivers: readonly SampleDriver[]): DriverKpis {
     />
     @if (drawer(); as open) {
       <holita-driver-drawer
+        [recordLinks]="recordLinks"
         [driver]="drawerDriver()"
         [startEditing]="open.editing"
         [businessDate]="businessDate"
@@ -149,11 +157,17 @@ function kpisOf(drivers: readonly SampleDriver[]): DriverKpis {
         (save)="save($event)"
         (closed)="closeDrawer()"
         (openScorecard)="openScorecard(open.id)"
+        (openVehicle)="openVehicle($event)"
       />
     }
   `,
 })
 export class DriversPage {
+  protected readonly recordLinks = sampleRecordLinks;
+  protected openVehicle(id: string): void {
+    void this.router.navigate(['/examples/vehicles', id]);
+  }
+
   private readonly router = inject(Router);
   private readonly samples = inject(SampleDrivers);
   private readonly driverDrawer = viewChild(DriverDrawer);

@@ -313,6 +313,30 @@ describe('Vehicle profile and odometer routed containers', () => {
     expect(fixture.componentInstance.vehicle()?.speedKph).toBe(0);
     expect(fixture.componentInstance.vehicle()?.fuelPct).toBe(0);
   });
+  it('keeps a bounded Driver return link while profile tab and editor commands remain Vehicle routes', async () => {
+    const driverId = '60000000-0000-4000-8000-000000000001';
+    query.next(convertToParamMap({ fromDriver: driverId, search: 'not-a-driver-filter' }));
+    const fixture = await readyProfile();
+    const element: unknown = fixture.nativeElement;
+    if (!(element instanceof HTMLElement)) {
+      throw new Error('Missing profile.');
+    }
+    const back = [...element.querySelectorAll('a')].find(
+      (link) => link.textContent.trim() === 'Back to driver',
+    );
+    expect(back?.getAttribute('href')).toBe(`/en/${branch}/fleet/drivers/${driverId}`);
+    fixture.componentInstance.changeTab('alerts');
+    expect(navigate).toHaveBeenLastCalledWith(
+      ['/', 'en', branch, 'fleet', 'vehicles', id, 'alerts'],
+      expect.objectContaining({ queryParamsHandling: 'preserve' }),
+    );
+    query.next(convertToParamMap({ fromDriver: 'invalid' }));
+    await fixture.whenStable();
+    const fallback = [...element.querySelectorAll('a')].find(
+      (link) => link.textContent.trim() === 'Vehicles',
+    );
+    expect(fallback?.getAttribute('href')).toBe(`/en/${branch}/fleet/vehicles`);
+  });
   it('keeps an absent data clock and unknown distance distinct from a measured zero', async () => {
     const fixture = await readyProfile(null);
     expect(fixture.componentInstance.record()?.fleetDataClock.asOf).toBeNull();

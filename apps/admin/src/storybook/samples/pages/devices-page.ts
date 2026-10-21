@@ -1,3 +1,4 @@
+import { sampleRecordLinks } from '../record-links';
 import {
   Component,
   computed,
@@ -7,8 +8,10 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { MessageService } from 'primeng/api';
+import { ButtonDirective } from 'primeng/button';
+import { Tag } from 'primeng/tag';
 import {
   DeviceDrawer,
   type DeviceField,
@@ -23,6 +26,8 @@ import {
 } from '../../../app/features/fleet/devices/devices-view';
 import { devicesText } from '../../../app/features/fleet/devices/i18n/messages';
 import { interpolate } from '../../../app/ui/i18n/messages';
+import { RouteDrawer } from '../../../app/ui/drawer/route-drawer';
+import { FormatNumberPipe, FormatRelativePipe } from '../../../app/ui/format/format.pipes';
 import type { ListActionRequest, ListRecord } from '../../../app/ui/list/list-actions';
 import type { ListQuery } from '../../../app/ui/list/list-query';
 import { UI_LANGUAGE } from '../../../app/ui/ui-language';
@@ -104,9 +109,19 @@ function kpisOf(devices: readonly SampleDevice[]): DeviceKpis {
  */
 @Component({
   selector: 'holita-example-devices-page',
-  imports: [DevicesView, DeviceDrawer],
+  imports: [
+    RouterLink,
+    DevicesView,
+    DeviceDrawer,
+    RouteDrawer,
+    ButtonDirective,
+    Tag,
+    FormatNumberPipe,
+    FormatRelativePipe,
+  ],
   template: `
     <holita-devices-view
+      [recordLinks]="recordLinks"
       [demo]="true"
       [branchName]="branchName()"
       [dataAsOf]="dataAsOf"
@@ -123,6 +138,78 @@ function kpisOf(devices: readonly SampleDevice[]): DeviceKpis {
       (selectionChange)="selection.set($event)"
       (retry)="failed.set(false)"
     />
+    @if (overview(); as device) {
+      <holita-route-drawer
+        [title]="text().drawer.diagnostics"
+        [subtitle]="device.imei"
+        [closeLink]="null"
+        (closeRequest)="closeOverview()"
+      >
+        <p-tag drawerMeta severity="info" [value]="text().drawer.demoLabel" />
+        <p class="app-muted">{{ text().drawer.demoDescription }}</p>
+        <dl class="app-facts">
+          <div>
+            <dt>{{ text().drawer.imei }}</dt>
+            <dd class="app-mono">{{ device.imei }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().drawer.model }}</dt>
+            <dd>{{ device.model || '—' }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().drawer.status }}</dt>
+            <dd>{{ text().statuses[device.status] }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().drawer.vehicle }}</dt>
+            <dd>
+              @if (device.vehicleId) {
+                <a class="app-link" [routerLink]="recordLinks.vehicle(device.vehicleId).commands">{{
+                  device.plate
+                }}</a>
+              } @else {
+                {{ text().drawer.notInstalled }}
+              }
+            </dd>
+          </div>
+          <div>
+            <dt>{{ text().drawer.lastSeen }}</dt>
+            <dd>{{ device.lastSeenAt | holitaRelative: dataAsOf }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().drawer.firmware }}</dt>
+            <dd>{{ device.firmware || '—' }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().drawer.sim }}</dt>
+            <dd>{{ device.simIccid || '—' }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().drawer.signal }}</dt>
+            <dd>{{ device.signal === null ? '—' : device.signal + '/5' }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().drawer.voltage }}</dt>
+            <dd>
+              @if (device.voltage !== null) {
+                {{ device.voltage | holitaNumber: 1 }} V
+              } @else {
+                —
+              }
+            </dd>
+          </div>
+          <div>
+            <dt>{{ text().drawer.notes }}</dt>
+            <dd>{{ device.notes || '—' }}</dd>
+          </div>
+        </dl>
+        <div drawerFooter class="app-drawer-actions">
+          <button pButton type="button" (click)="openEditor(device.id, true)">
+            {{ text().actions.edit }}
+          </button>
+        </div>
+      </holita-route-drawer>
+    }
     @if (editor(); as open) {
       <holita-device-drawer
         [demo]="true"
@@ -140,6 +227,7 @@ function kpisOf(devices: readonly SampleDevice[]): DeviceKpis {
   `,
 })
 export class DevicesPage {
+  protected readonly recordLinks = sampleRecordLinks;
   private readonly drawer = viewChild(DeviceDrawer);
   private readonly language = inject(UI_LANGUAGE);
   private readonly messages = inject(MessageService);
@@ -152,6 +240,7 @@ export class DevicesPage {
   private readonly text = computed(() => devicesText(this.language()));
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
   private nextId = 1;
+  private returnToOverviewId: string | null = null;
 
   protected readonly branchName = injectBranchName();
   protected readonly dataAsOf = dataAsOf;
@@ -177,6 +266,7 @@ export class DevicesPage {
     return device ? { device: toRow(device) } : null;
   });
   protected readonly saving = signal(false);
+  protected readonly overview = signal<DeviceRow | null>(null);
   protected readonly saveError = signal<string | null>(null);
   protected readonly fieldErrors = signal<Partial<Record<DeviceField, string>>>({});
 
@@ -205,8 +295,10 @@ export class DevicesPage {
     return this.drawer()?.canLeave() ?? true;
   }
 
-  protected openEditor(id: string | null): void {
+  protected openEditor(id: string | null, fromOverview = false): void {
     const device = id ? this.devices().find((item) => item.id === id) : undefined;
+    this.returnToOverviewId = fromOverview ? (device?.id ?? null) : null;
+    this.overview.set(null);
     this.saveError.set(null);
     this.fieldErrors.set({});
     this.editor.set({ device: device ? toRow(device) : null });
@@ -214,6 +306,18 @@ export class DevicesPage {
 
   protected closeEditor(): void {
     this.editor.set(null);
+    const id = this.returnToOverviewId;
+    this.returnToOverviewId = null;
+    const device = this.devices().find((item) => item.id === id);
+    if (device) {
+      this.overview.set(toRow(device));
+      return;
+    }
+    this.clearDrawer();
+  }
+
+  protected closeOverview(): void {
+    this.overview.set(null);
     this.clearDrawer();
   }
 
@@ -221,6 +325,13 @@ export class DevicesPage {
   protected run({ action, ids }: ListActionRequest<DeviceActionId>): void {
     const [id] = ids;
     switch (action) {
+      case 'diagnostics': {
+        const device = this.devices().find((item) => item.id === id);
+        if (device) {
+          this.overview.set(toRow(device));
+        }
+        return;
+      }
       case 'edit':
         if (id) {
           this.openEditor(id);

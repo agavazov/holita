@@ -1,4 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import type { FleetRecordLinks } from '../fleet-record-links';
 import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import type { StatusTone } from '../../../theme/status-tones';
@@ -36,6 +38,7 @@ export interface AlertRow {
   readonly id: string;
   readonly vehicleId: string;
   readonly plate: string;
+  readonly driverId: string | null;
   readonly driverName: string | null;
   readonly kind: string;
   readonly detail: string;
@@ -78,6 +81,7 @@ export const alertStatusTones: Record<AlertStatusCode, StatusTone> = {
 @Component({
   selector: 'holita-alerts-view',
   imports: [
+    RouterLink,
     TableModule,
     Tag,
     FilterBuilder,
@@ -96,6 +100,7 @@ export const alertStatusTones: Record<AlertStatusCode, StatusTone> = {
   host: { class: 'app-view' },
 })
 export class AlertsView {
+  readonly recordLinks = input<FleetRecordLinks | null>(null);
   readonly branchName = input.required<string>();
   readonly dataAsOf = input.required<string>();
   readonly rows = input.required<readonly AlertRow[]>();

@@ -241,7 +241,7 @@ export const DirtyVehicleNavigation: Story = {
     if (!vehicle) {
       throw new Error('The sample alert lacks its vehicle.');
     }
-    await userEvent.click(drawer.getByRole('button', { name: vehicle.plate }));
+    await userEvent.click(drawer.getByRole('link', { name: vehicle.plate }));
     await waitFor(() =>
       expect(body.getByRole('alertdialog', { name: 'Unsaved changes' })).toBeVisible(),
     );

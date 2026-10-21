@@ -123,6 +123,12 @@ to be enabled. Keep the token
 in process environments or ignored runtime `.env` files, never admin configuration.
 See [device configuration setup](discocan/development.md#background-device-configuration-reads).
 
+The admin reads browser configuration from `apps/admin/public/config.json` and optional
+Git-ignored `apps/admin/public/config.local.json`. Karma's optional `googleMapsEmbedApiKey`
+belongs in that JSON configuration, not a Node environment variable; see
+[Karma maps](discocan/development.md#karma-maps). Local configuration overrides the public
+file and is excluded from production assets.
+
 ## Apollo Router
 
 The Gateway workspace includes a standalone [Apollo Router 2.18.0](https://github.com/apollographql/router/releases/tag/v2.18.0)

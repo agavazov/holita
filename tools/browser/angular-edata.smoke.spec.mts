@@ -2,6 +2,42 @@ import { expect } from '@playwright/test';
 import { join } from 'node:path';
 import { workspaceRoot } from '../graphql/contracts.mjs';
 import { chooseBranch, chooseLanguage, setDarkTheme, test } from './angular-fixture.mjs';
+import { enterKarmaDateTime } from './karma-date-time.mjs';
+
+test('shows field errors and focuses the invalid clock or parameter before applying corrected filters', async ({
+  page,
+  app,
+}) => {
+  await page.goto(`${app.url}/en/karma-client/cars/41/edata?listQ=TEST&listSize=25`);
+  await expect(page.locator('holita-edata-page section tbody tr')).toHaveCount(50);
+  const reads = () =>
+    app.karma.requests.filter((request) => request.path === '/apiv2/edata').length;
+  const before = reads();
+  await enterKarmaDateTime(page, 'From (UTC)', '2026-01-01', '25:00:00');
+  await page.getByRole('button', { name: 'Apply filters', exact: true }).click();
+  const clock = page.getByRole('textbox', { name: 'From (UTC): time (HH:mm:ss)', exact: true });
+  await expect(clock).toBeFocused();
+  await expect(clock).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.locator('#edata-from-error')).toContainText('Enter a valid time');
+  await expect(page.locator('#edata-to-error')).toContainText('Enter both dates');
+  expect(reads()).toBe(before);
+  await clock.fill('00:00:00');
+  await enterKarmaDateTime(page, 'To (UTC)', '2026-01-01', '00:00:00');
+  await page.getByLabel('Parameter IDs', { exact: true }).fill('0');
+  await page.getByRole('button', { name: 'Apply filters', exact: true }).click();
+  await expect(page.getByLabel('Parameter IDs', { exact: true })).toBeFocused();
+  await expect(page.locator('#edata-parameters-error')).toContainText(
+    'positive integer parameter IDs',
+  );
+  expect(reads()).toBe(before);
+  await page.getByLabel('Parameter IDs', { exact: true }).fill('1');
+  await page.getByRole('button', { name: 'Apply filters', exact: true }).click();
+  await expect(page.locator('holita-edata-page section tbody tr')).toHaveCount(1);
+  await expect(page.locator('#edata-from-error')).toBeEmpty();
+  await expect(page.locator('#edata-parameters-error')).toBeEmpty();
+  await expect(page).toHaveURL(/listQ=TEST/);
+  await expect(page).toHaveURL(/parameters=1/);
+});
 
 test('browses all 600 messages with 50-row pages and restores pages on reload/back/language', async ({
   page,
@@ -67,8 +103,8 @@ test('filters UTC dates and IDs, changes page size and shows every message field
   await page.getByRole('option', { name: '25', exact: true }).click();
   await page.getByRole('button', { name: 'Apply filters', exact: true }).click();
   await expect(page.locator('holita-edata-page section tbody tr')).toHaveCount(25);
-  await page.getByLabel('From (UTC)', { exact: true }).fill('2026-01-01T00:00');
-  await page.getByLabel('To (UTC)', { exact: true }).fill('2026-01-01T00:00');
+  await enterKarmaDateTime(page, 'From (UTC)', '2026-01-01', '00:00:00');
+  await enterKarmaDateTime(page, 'To (UTC)', '2026-01-01', '00:00:00');
   await page.getByLabel('Parameter IDs', { exact: true }).fill('99999');
   await page.getByRole('button', { name: 'Apply filters', exact: true }).click();
   await expect(page.locator('holita-edata-page section tbody tr')).toHaveCount(1);
@@ -97,7 +133,13 @@ test('filters UTC dates and IDs, changes page size and shows every message field
       }
       await view.click();
       await expect(dialog).toBeVisible();
-      await expect(dialog.locator('dd')).toHaveText([
+      const source = dialog.locator('details');
+      await expect(source).not.toHaveAttribute('open');
+      await expect(
+        dialog.getByRole('region', { name: 'Record summary', exact: true }),
+      ).toContainText('3000000001');
+      await dialog.getByText('Source fields', { exact: true }).click();
+      await expect(source.locator('dd')).toHaveText([
         '3000000001',
         '41',
         'KARMA TEST 41',
@@ -116,6 +158,7 @@ test('filters UTC dates and IDs, changes page size and shows every message field
       });
       await parameter.scrollIntoViewIfNeeded();
       await expect(parameter).toBeInViewport();
+      await expect(dialog.getByRole('cell', { name: '0', exact: true })).toBeInViewport();
       if (process.env.HOLITA_BROWSER_SCREENSHOTS === '1') {
         await page.screenshot({
           path: join(

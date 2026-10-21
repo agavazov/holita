@@ -1,3 +1,4 @@
+import { fleetRecordLinks } from '../fleet-record-links';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -66,6 +67,7 @@ import { alertsText } from './i18n/messages';
       >
     }
     <holita-alerts-view
+      [recordLinks]="recordLinks()"
       [branchName]="branch().name"
       [dataAsOf]="dataAsOf() ?? ''"
       [rows]="rows()"
@@ -88,6 +90,9 @@ import { alertsText } from './i18n/messages';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AlertsPage implements OnInit {
+  protected readonly recordLinks = computed(() =>
+    fleetRecordLinks(this.language(), this.branch().id),
+  );
   readonly branch = input.required<AdminBranchesQuery['branches'][number]>();
   readonly language = input.required<Language>();
   readonly api = inject(AlertsApi);

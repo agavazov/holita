@@ -1,3 +1,4 @@
+import { fleetRecordLinks, type FleetRecordLinks } from '../fleet-record-links';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -26,7 +27,7 @@ import { TripsApi } from './trips-api';
   imports: [TripDrawer],
   providers: [TripsApi],
   template:
-    '<holita-trip-drawer [trip]="trip()" [state]="state()" [loadError]="failure()" [closeLink]="listLink" (retry)="retry.next()" (openVehicle)="openVehicle($event)" />',
+    '<holita-trip-drawer [recordLinks]="recordLinks" [trip]="trip()" [state]="state()" [loadError]="failure()" [closeLink]="listLink" (retry)="retry.next()" (openVehicle)="openVehicle($event)" />',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TripDetailPage implements OnInit {
@@ -36,6 +37,21 @@ export class TripDetailPage implements OnInit {
   private readonly language = inject(UI_LANGUAGE);
   private readonly destroyRef = inject(DestroyRef);
   private readonly host = injectDrawerHost();
+  private readonly baseLinks = fleetRecordLinks(
+    this.language(),
+    drawerParam(this.route, 'branchId') ?? '',
+  );
+  protected readonly recordLinks: FleetRecordLinks = {
+    ...this.baseLinks,
+    vehicle: (id) =>
+      this.host.closeLink && this.host.vehicleId === id
+        ? {
+            commands: this.host.closeLink,
+            queryParams: this.route.snapshot.queryParams,
+            fragment: this.route.snapshot.fragment ?? undefined,
+          }
+        : this.baseLinks.vehicle(id),
+  };
   readonly id = drawerParam(this.route, 'recordId');
   readonly listLink = this.host.closeLink ?? [
     '/',

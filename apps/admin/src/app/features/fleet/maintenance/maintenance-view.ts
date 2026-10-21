@@ -1,3 +1,5 @@
+import { RouterLink } from '@angular/router';
+import type { FleetRecordLinks } from '../fleet-record-links';
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { ButtonDirective } from 'primeng/button';
 import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
@@ -62,6 +64,7 @@ export type MaintenanceActionId = 'view' | 'edit' | 'complete' | 'cancel' | 'veh
 @Component({
   selector: 'holita-maintenance-view',
   imports: [
+    RouterLink,
     ButtonDirective,
     TableModule,
     Tag,
@@ -82,6 +85,7 @@ export type MaintenanceActionId = 'view' | 'edit' | 'complete' | 'cancel' | 'veh
   host: { class: 'app-view' },
 })
 export class MaintenanceView {
+  readonly recordLinks = input<FleetRecordLinks | null>(null);
   readonly branchName = input.required<string>();
   readonly rows = input.required<readonly ServiceTaskRow[]>();
   readonly total = input.required<number>();

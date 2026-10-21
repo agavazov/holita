@@ -11,6 +11,7 @@ import {
 import { UI_LANGUAGE } from '../../../ui/ui-language';
 import type { AlertRow } from '../alerts/alerts-view';
 import { VehicleProfileView, type VehicleProfile } from './vehicle-profile-view';
+import { fleetRecordLinks } from '../fleet-record-links';
 
 const vehicle: VehicleProfile = {
   id: 'v1',
@@ -25,6 +26,7 @@ const vehicle: VehicleProfile = {
   lastReportedAt: null,
   location: null,
   driverName: null,
+  currentDriverId: null,
   group: null,
   odometerKm: null,
   fuelPct: null,
@@ -80,12 +82,27 @@ describe('VehicleProfileView', () => {
     await fixture.whenStable();
     expect(kpi('Distance, 14 days')).toBe('0');
   });
+  it('renders the assigned Driver as a real link using the captured workspace scope', async () => {
+    const { fixture, element } = await render();
+    fixture.componentRef.setInput('recordLinks', fleetRecordLinks('en', 'branch-a'));
+    fixture.componentRef.setInput('vehicle', {
+      ...vehicle,
+      currentDriverId: 'driver-a',
+      driverName: 'Elena Fleet',
+    });
+    await fixture.whenStable();
+    const driver = [...element.querySelectorAll('a')].find(
+      (link) => link.textContent.trim() === 'Elena Fleet',
+    );
+    expect(driver?.getAttribute('href')).toBe('/en/branch-a/fleet/drivers/driver-a');
+  });
 
   it('uses the exact Vehicle count independently of the loaded alerts page', async () => {
     const { fixture, kpi } = await render();
     const alert: AlertRow = {
       id: 'a1',
       vehicleId: 'v1',
+      driverId: null,
       plate: vehicle.plate,
       driverName: null,
       kind: 'Low fuel',

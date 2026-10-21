@@ -10,6 +10,7 @@ import {
 } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { of } from 'rxjs';
+import type { MockInstance } from 'vitest';
 import { maintenanceText } from '../../../app/features/fleet/maintenance/i18n/messages';
 import { MaintenanceView } from '../../../app/features/fleet/maintenance/maintenance-view';
 import {
@@ -30,14 +31,11 @@ if (!task) {
 }
 
 describe('Maintenance sample completion', () => {
-  let fixture: ComponentFixture<MaintenancePage> | undefined;
+  let fixture: ComponentFixture<MaintenancePage>;
+  let navigate: MockInstance<Router['navigate']>;
+  let notice: MockInstance<MessageService['add']>;
 
-  afterEach(() => {
-    fixture?.destroy();
-    vi.useRealTimers();
-  });
-
-  it('rejects stale next planning atomically, then permits inactive vehicle history without a new task', async () => {
+  beforeEach(async () => {
     const query = convertToParamMap({ drawer: `complete-${task.id}` });
     TestBed.configureTestingModule({
       providers: [
@@ -51,11 +49,19 @@ describe('Maintenance sample completion', () => {
         },
       ],
     });
-    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    const notice = vi.spyOn(TestBed.inject(MessageService), 'add');
+    navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    notice = vi.spyOn(TestBed.inject(MessageService), 'add');
     fixture = TestBed.createComponent(MaintenancePage);
     fixture.detectChanges();
     await fixture.whenStable();
+  });
+
+  afterEach(() => {
+    fixture.destroy();
+    vi.useRealTimers();
+  });
+
+  it('rejects stale next planning atomically, then permits inactive vehicle history without a new task', async () => {
     const view = fixture.debugElement
       .query(By.directive(MaintenanceView))
       .injector.get(MaintenanceView);

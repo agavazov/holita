@@ -1,3 +1,4 @@
+import { fleetRecordLinks, type FleetRecordLinks } from '../fleet-record-links';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -43,6 +44,7 @@ import {
   template: `
     @if (completionMode()) {
       <holita-service-completion-drawer
+        [vehicleLink]="completionVehicleLink()"
         [task]="completionTask()"
         [completed]="completed()"
         [businessDate]="businessDate()"
@@ -58,6 +60,7 @@ import {
       />
     } @else {
       <holita-service-task-drawer
+        [recordLinks]="recordLinks"
         [task]="task()"
         [readOnly]="readOnly()"
         [readOnlyTitle]="readOnlyTitle()"
@@ -85,6 +88,25 @@ export class MaintenanceRecordPage implements OnInit {
   private readonly language = inject(UI_LANGUAGE);
   private readonly destroyRef = inject(DestroyRef);
   private readonly host = injectDrawerHost();
+  private readonly baseLinks = fleetRecordLinks(
+    this.language(),
+    drawerParam(this.route, 'branchId') ?? '',
+  );
+  protected readonly recordLinks: FleetRecordLinks = {
+    ...this.baseLinks,
+    vehicle: (id) =>
+      this.host.closeLink && this.host.vehicleId === id
+        ? {
+            commands: this.host.closeLink,
+            queryParams: this.route.snapshot.queryParams,
+            fragment: this.route.snapshot.fragment ?? undefined,
+          }
+        : this.baseLinks.vehicle(id),
+  };
+  protected readonly completionVehicleLink = computed(() => {
+    const record = this.record();
+    return record ? this.recordLinks.vehicle(record.vehicleId) : null;
+  });
   private readonly taskDrawer = viewChild(ServiceTaskDrawer);
   private readonly completionDrawer = viewChild(ServiceCompletionDrawer);
   private readonly routeData = drawerRouteData(this.route);

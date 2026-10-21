@@ -147,6 +147,10 @@ Branch vehicle choices with bounded pages and edits model/options, firmware, SIM
 installation time with an explicit offset, and notes. Assignment validation and the composite
 foreign key preserve Tenant/Branch scope.
 
+The primary IMEI action opens the read-only Diagnostics drawer. Its Edit action opens the
+existing editor and returns to Diagnostics on save or cancel; direct row-menu Edit keeps its
+list return. The bounded `editFrom=diagnostics` query marker preserves that return after reload.
+
 Whole-Branch online/offline/in-stock KPIs and last report come from Fleet. Firmware policy,
 hardware signal/voltage and restart are unavailable in the connected runtime; no provider
 command or success is simulated. Diagnostics shows the actual stored metadata and labels
@@ -433,18 +437,30 @@ After signing in, open **Karma Client → Trucks** (Bulgarian: **Камиони*
 `/en/karma-client/cars` or `/bg/karma-client/cars`. Every authenticated Tenant/Branch sees all
 cars returned by the configured account. The list has no Branch filter and is independent
 of `fleetEnabled`. The table loads on entry and with Refresh, retaining the previous list
-if refresh fails. Click a registration number to open `/en/karma-client/cars/:recordId` or
+if refresh fails. Search by registration, car ID or device ID and optionally select a project;
+filtering and 25/50/100-row pagination use the full loaded account list. Search, project and
+page state survive reload and language changes in the URL. Clear filters returns to the first
+page. Click a registration number to open `/en/karma-client/cars/:recordId` or
 `/bg/karma-client/cars/:recordId`. Details load independently of the list and show the car
-fields, subtype, timezone ID and assigned-driver count. Refresh retains prior details on
+summary and last-known location, with subtype, timezone ID, assigned-driver count and every
+other original field available in the closed Source fields section. Refresh retains prior details on
 failure; missing/invalid IDs show a not-found message. There is no editing, automatic polling,
 persistence or Fleet synchronization.
+
+Each truck section has the same registration/ID header and navigation for Overview, eData,
+Location, Trips, Events and Driving profile. Back to trucks restores the originating list
+filters/page. Switching sections keeps that list context without copying the section's date
+filters or cursor. Invalid submitted date/time ranges and ID lists show errors beside the
+relevant fields and focus the first invalid input; malformed URL filters keep their warning.
 
 From truck details, open **eData** at `/en/karma-client/cars/:recordId/edata` (or `/bg/…`).
 It starts with the latest 50 messages without a date requirement. Apply a page size of
 25/50/100, optional paired UTC date/time bounds, or up to 25 comma-separated parameter IDs.
 The dates are UTC even though the browser input uses a local-date control. Older/Newer
 browse a snapshot; Latest starts again with the newest matching messages. The API supplies
-no total. View opens all message fields and parameter readings/descriptions, preserving
+no total. View opens a message/time summary and parameter readings/descriptions. The parameter
+table wraps long content so IDs and values stay visible within narrow dialogs. Source fields
+expands all original message fields, preserving
 unknown IDs and zero values. `spd`, `odo` and `pdt` display their original values without
 unverified units or timezone labels.
 
@@ -616,6 +632,29 @@ is their actual array length. A bookmarked offset is preserved until data arrive
 then clamped to the last matching page if necessary. No historical location paging is
 implied: Location displays the last-known message; eData provides message history.
 
+### Karma maps
+
+Location displays the last reported coordinate pair and source fields. Trips group the start and
+stop coordinates in their detail dialog and offer a Google suggested driving route between them.
+Karma does not supply a historical GPS trace; suggested directions do not establish the route driven.
+Invalid or missing coordinate pairs cannot open a map. Zero is a valid coordinate.
+
+Google Maps links work without application configuration. For an interactive embedded preview,
+enable Maps Embed API in a Google Cloud project and add a browser key as
+`googleMapsEmbedApiKey` to `apps/admin/public/config.local.json`, preserving any existing
+`primeUiLicense`. Production can supply the same property in public `config.json`.
+These are browser-visible keys; restrict the key to Maps Embed API and the exact admin website
+referrers, including `http://127.0.0.1:11000/*` for local development. Configuration is validated
+at bootstrap; reload after changing it. The ignored local file is excluded from production builds.
+See Google's [Embed setup](https://developers.google.com/maps/documentation/embed/get-api-key)
+and [embedding guide](https://developers.google.com/maps/documentation/embed/embedding-map).
+The preview loads only after clicking its load button and sends the displayed coordinates to Google.
+Without a configured key, the page explains preview availability and retains the external link.
+
+Karma list/search/filter controls share one responsive layout. All period filters use PrimeNG
+DatePicker with a separate textual time including seconds, retaining the existing UTC or API
+wall-clock interpretation and URL values even during daylight-saving clock gaps.
+
 ### Trips, events and driving profile
 
 From truck details, open **Trips**, **Events** or **Driving profile** at
@@ -633,6 +672,9 @@ wall-clock values; no timezone conversion is asserted. Edit both bounds to expan
 replace it, or select Last seven days to reset. It is an aggregate with nine source
 category names and nullable score/weight values. Zero and absent measurements remain
 distinct, and no combined score or quality threshold is invented.
+The applied API period appears above the category values. Event details show the original code
+and escaped source text first. Both views keep their original identity/source fields in a closed
+Source fields section, matching truck and eData details.
 
 Generated `AdminKarmaTrips`, `AdminKarmaEvents` and `AdminKarmaDrivingProfile` operations
 use these fixed signed-session queries, without an upstream session or Branch argument:

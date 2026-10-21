@@ -1,3 +1,5 @@
+import { RouterLink } from '@angular/router';
+import type { FleetRecordLinks } from '../fleet-record-links';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -78,6 +80,7 @@ export interface DriverDetails extends DriverForm {
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly vehiclePlate: string | null;
+  readonly vehicles: readonly { readonly id: string; readonly plate: string }[];
   readonly score: number | null;
   readonly trips30d: number;
   readonly distance30dKm: number;
@@ -111,6 +114,7 @@ const statusTones = { ACTIVE: 'success', ON_LEAVE: 'info', INACTIVE: 'neutral' }
 @Component({
   selector: 'holita-driver-drawer',
   imports: [
+    RouterLink,
     ReactiveFormsModule,
     ButtonDirective,
     DatePicker,
@@ -129,6 +133,7 @@ const statusTones = { ACTIVE: 'success', ON_LEAVE: 'info', INACTIVE: 'neutral' }
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DriverDrawer {
+  readonly recordLinks = input<FleetRecordLinks | null>(null);
   /** The driver to show; null creates a new one. */
   readonly driver = input<DriverDetails | null>(null);
   /** Opens an existing driver on the form (the row's Edit action) instead of the record. */
@@ -145,6 +150,7 @@ export class DriverDrawer {
   readonly save = output<DriverForm>();
   readonly closed = output();
   readonly openScorecard = output();
+  readonly openVehicle = output<string>();
   readonly editRequest = output();
   readonly cancelEdit = output();
   readonly retry = output();

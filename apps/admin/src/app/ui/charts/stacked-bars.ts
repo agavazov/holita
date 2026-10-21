@@ -58,33 +58,35 @@ export function barColor(tone: BarTone): string {
         <span class="stacked-bars__total app-num">{{ row.totalText }}</span>
       }
     </div>
-    <table class="app-visually-hidden">
-      <caption>
-        {{
-          label()
-        }}
-      </caption>
-      <thead>
-        <tr>
-          <th scope="col">{{ text().category }}</th>
-          @for (item of legend(); track item.key) {
-            <th scope="col">{{ item.label }}</th>
-          }
-          <th scope="col">{{ text().total }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (row of rows(); track row.key) {
+    <div class="app-visually-hidden">
+      <table>
+        <caption>
+          {{
+            label()
+          }}
+        </caption>
+        <thead>
           <tr>
-            <th scope="row">{{ row.label }}</th>
+            <th scope="col">{{ text().category }}</th>
             @for (item of legend(); track item.key) {
-              <td>{{ valueOf(row, item.key) }}</td>
+              <th scope="col">{{ item.label }}</th>
             }
-            <td>{{ row.totalText }}</td>
+            <th scope="col">{{ text().total }}</th>
           </tr>
-        }
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.key) {
+            <tr>
+              <th scope="row">{{ row.label }}</th>
+              @for (item of legend(); track item.key) {
+                <td>{{ valueOf(row, item.key) }}</td>
+              }
+              <td>{{ row.totalText }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
   `,
   styleUrl: './stacked-bars.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

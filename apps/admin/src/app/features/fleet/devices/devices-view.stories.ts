@@ -6,8 +6,7 @@ import { sampleDevices, sampleVehicles } from '../../../../storybook/samples/fle
 
 /**
  * The Devices example: tracker connection, signal, voltage and firmware, row and bulk actions; a
- * row opens the drawer with the device's diagnostics above its installation form (direct edit
- * with context).
+ * row opens read-only Diagnostics, followed by an explicit Edit action.
  */
 const meta: Meta = {
   title: 'Examples/Fleet/Devices',
@@ -47,6 +46,36 @@ export const Default: Story = {
     await expect(
       canvas.getByText('Connection, diagnostics and restart actions use sample data.'),
     ).toBeVisible();
+  },
+};
+
+export const ViewThenEdit: Story = {
+  name: 'Read device before editing',
+  render: exampleAt('devices'),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(
+      () =>
+        expect(canvas.getByRole('button', { name: `Open device ${device.imei}` })).toBeVisible(),
+      appReady,
+    );
+    await userEvent.click(canvas.getByRole('button', { name: `Open device ${device.imei}` }));
+    const body = await drawerReady(canvasElement, 'Diagnostics');
+    await expect(
+      within(body.getByRole('dialog', { name: 'Diagnostics' })).queryByRole('textbox'),
+    ).toBeNull();
+    await userEvent.click(
+      within(body.getByRole('dialog', { name: 'Diagnostics' })).getByRole('button', {
+        name: 'Edit',
+      }),
+    );
+    await drawerReady(canvasElement, `Device ${device.imei}`);
+    await userEvent.click(
+      within(body.getByRole('dialog', { name: `Device ${device.imei}` })).getByRole('button', {
+        name: 'Cancel',
+      }),
+    );
+    await drawerReady(canvasElement, 'Diagnostics');
   },
 };
 

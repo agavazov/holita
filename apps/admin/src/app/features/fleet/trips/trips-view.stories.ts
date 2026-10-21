@@ -69,7 +69,7 @@ export const OpenFromList: Story = {
     }
     await userEvent.click(first);
     const body = within(canvasElement.ownerDocument.body);
-    await waitFor(() => expect(body.getByRole('button', { name: 'Open vehicle' })).toBeVisible());
+    await waitFor(() => expect(body.getByRole('link', { name: 'Open vehicle' })).toBeVisible());
   },
 };
 

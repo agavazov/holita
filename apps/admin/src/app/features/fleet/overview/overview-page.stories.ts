@@ -38,6 +38,10 @@ export const Default: Story = {
       'href',
       `/en/${defaultBranchId}/fleet/trips/70000000-0000-4000-8000-000000000001`,
     );
+    await waitFor(() => {
+      const root = canvasElement.ownerDocument.documentElement;
+      return expect(root.scrollWidth).toBeLessThanOrEqual(root.clientWidth);
+    });
   },
 };
 export const Loading: Story = {

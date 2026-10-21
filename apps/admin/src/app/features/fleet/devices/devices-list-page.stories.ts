@@ -41,7 +41,7 @@ export const Default: Story = {
     await waitFor(
       () =>
         expect(
-          canvas.getByRole('button', { name: 'Edit device ' + fixtureDevice.imei }),
+          canvas.getByRole('button', { name: 'Open device ' + fixtureDevice.imei }),
         ).toBeVisible(),
       { timeout: 10000 },
     );
@@ -105,6 +105,101 @@ export const Diagnostics: Story = {
       timeout: 10000,
     });
     await expect(drawer.getAllByText('Unavailable', { exact: true })).toHaveLength(2);
+  },
+};
+export const ViewThenEdit: Story = {
+  name: 'Open Diagnostics before editing and return',
+  render: routed('?keep=devices#devices'),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await waitFor(
+      () =>
+        expect(
+          canvas.getByRole('button', { name: 'Open device ' + fixtureDevice.imei }),
+        ).toBeVisible(),
+      { timeout: 10000 },
+    );
+    await userEvent.click(
+      canvas.getByRole('button', { name: 'Open device ' + fixtureDevice.imei }),
+    );
+    await waitFor(() => expect(body.getByRole('dialog', { name: 'Diagnostics' })).toBeVisible(), {
+      timeout: 10000,
+    });
+    await waitFor(
+      () =>
+        expect(
+          within(body.getByRole('dialog', { name: 'Diagnostics' })).getByRole('button', {
+            name: 'Edit',
+          }),
+        ).toBeVisible(),
+      { timeout: 10000 },
+    );
+    await expect(
+      within(body.getByRole('dialog', { name: 'Diagnostics' })).queryByRole('textbox'),
+    ).toBeNull();
+    await userEvent.click(
+      within(body.getByRole('dialog', { name: 'Diagnostics' })).getByRole('button', {
+        name: 'Edit',
+      }),
+    );
+    const title = 'Device ' + fixtureDevice.imei;
+    await waitFor(() => expect(body.getByRole('dialog', { name: title })).toBeVisible(), {
+      timeout: 10000,
+    });
+    await waitFor(
+      () =>
+        expect(
+          within(body.getByRole('dialog', { name: title })).getByRole('textbox', { name: 'Notes' }),
+        ).toHaveValue(fixtureDevice.notes),
+      { timeout: 10000 },
+    );
+    await userEvent.type(
+      within(body.getByRole('dialog', { name: title })).getByRole('textbox', { name: 'Notes' }),
+      ' Unsaved',
+    );
+    await userEvent.click(
+      within(body.getByRole('dialog', { name: title })).getByRole('button', {
+        name: 'Cancel',
+      }),
+    );
+    const confirmation = await body.findByRole('alertdialog', { name: 'Unsaved changes' });
+    await userEvent.click(within(confirmation).getByRole('button', { name: 'Discard changes' }));
+    await waitFor(() => expect(body.getByRole('dialog', { name: 'Diagnostics' })).toBeVisible(), {
+      timeout: 10000,
+    });
+    await waitFor(
+      () =>
+        expect(
+          within(body.getByRole('dialog', { name: 'Diagnostics' })).getByRole('button', {
+            name: 'Edit',
+          }),
+        ).toBeVisible(),
+      { timeout: 10000 },
+    );
+    await userEvent.click(
+      within(body.getByRole('dialog', { name: 'Diagnostics' })).getByRole('button', {
+        name: 'Edit',
+      }),
+    );
+    await waitFor(() => expect(body.getByRole('dialog', { name: title })).toBeVisible(), {
+      timeout: 10000,
+    });
+    await waitFor(
+      () =>
+        expect(
+          within(body.getByRole('dialog', { name: title })).getByRole('textbox', { name: 'Notes' }),
+        ).toHaveValue(fixtureDevice.notes),
+      { timeout: 10000 },
+    );
+    await userEvent.click(
+      within(body.getByRole('dialog', { name: title })).getByRole('button', {
+        name: 'Save',
+      }),
+    );
+    await waitFor(() => expect(body.getByRole('dialog', { name: 'Diagnostics' })).toBeVisible(), {
+      timeout: 10000,
+    });
   },
 };
 export const ErrorState: Story = {

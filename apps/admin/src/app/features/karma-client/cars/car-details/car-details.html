@@ -1,30 +1,18 @@
-<section class="card" [attr.aria-label]="text().karmaTruckDetails" [attr.aria-busy]="loading()">
-  <div class="page-heading">
-    <div>
-      <h1>{{ text().karmaTruckDetails }}</h1>
-      <p>{{ text().karmaClient }}</p>
-    </div>
-    <div class="page-actions">
-      <a
-        pButton
-        severity="secondary"
-        [outlined]="true"
-        [routerLink]="['/', language(), 'karma-client', 'cars']"
-        >{{ text().backToKarmaTrucks }}</a
-      >
-      @if (validId()) {
-        <button
-          pButton
-          type="button"
-          severity="secondary"
-          [disabled]="loading()"
-          (click)="refresh()"
-        >
-          {{ error() ? text().retry : text().refresh }}
-        </button>
-      }
-    </div>
-  </div>
+<section
+  class="card karma-page"
+  [attr.aria-label]="text().karmaTruckDetails"
+  [attr.aria-busy]="loading()"
+>
+  <holita-karma-car-header
+    [language]="language()"
+    [carId]="carId()"
+    [carNumber]="car()?.carNumber"
+    [title]="text().karmaTruckDetails"
+    [canNavigate]="validId()"
+    [busy]="loading()"
+    [error]="error()"
+    (refreshRequest)="refresh()"
+  />
   @if (loading()) {
     <p role="status">{{ text().loadingKarmaTruck }}</p>
   }
@@ -41,74 +29,26 @@
     <p-message severity="warn">{{ text().karmaLocationUnavailable }}</p-message>
   }
   @if (car(); as truck) {
-    <h2>{{ truck.carNumber || '—' }}</h2>
-    <nav class="page-actions" [attr.aria-label]="text().karmaTruckData">
-      <a pButton [routerLink]="['/', language(), 'karma-client', 'cars', truck.id, 'edata']">
-        <svg data-p-icon="database" size="18" aria-hidden="true"></svg>
-        {{ text().karmaEdata }}
-      </a>
-      <a pButton [routerLink]="['/', language(), 'karma-client', 'cars', truck.id, 'location']">
-        <svg data-p-icon="map-marker" size="18" aria-hidden="true"></svg>
-        {{ text().karmaLocation }}
-      </a>
-      <a pButton [routerLink]="['/', language(), 'karma-client', 'cars', truck.id, 'trips']">
-        <svg data-p-icon="directions" size="18" aria-hidden="true"></svg>
-        {{ text().karmaTrips }}
-      </a>
-      <a pButton [routerLink]="['/', language(), 'karma-client', 'cars', truck.id, 'events']">
-        <svg data-p-icon="bolt" size="18" aria-hidden="true"></svg>
-        {{ text().karmaEvents }}
-      </a>
-      <a
-        pButton
-        [routerLink]="['/', language(), 'karma-client', 'cars', truck.id, 'driving-profile']"
-      >
-        <svg data-p-icon="chart-line" size="18" aria-hidden="true"></svg>
-        {{ text().karmaDrivingProfile }}
-      </a>
-    </nav>
-    <dl class="truck-details">
-      <div>
-        <dt>{{ text().licensePlate }}</dt>
-        <dd>{{ truck.carNumber || '—' }}</dd>
-      </div>
-      <div>
-        <dt>{{ text().karmaCarId }}</dt>
-        <dd>{{ truck.id }}</dd>
-      </div>
-      <div>
-        <dt>{{ text().karmaDeviceId }}</dt>
-        <dd>{{ truck.deviceId || '—' }}</dd>
-      </div>
-      <div>
-        <dt>{{ text().karmaProjectId }}</dt>
-        <dd>{{ projectName(truck.projectId) }} ({{ truck.projectId }})</dd>
-      </div>
-      <div>
-        <dt>{{ text().karmaCarType }}</dt>
-        <dd>{{ truck.carType || '—' }}</dd>
-      </div>
-      <div>
-        <dt>{{ text().karmaCarSubType }}</dt>
-        <dd>{{ truck.subType || '—' }}</dd>
-      </div>
-      <div>
-        <dt>{{ text().karmaCarYear }}</dt>
-        <dd>{{ truck.carYear || '—' }}</dd>
-      </div>
-      <div>
-        <dt>{{ text().karmaCarColor }}</dt>
-        <dd>{{ truck.carColor || '—' }}</dd>
-      </div>
-      <div>
-        <dt>{{ text().karmaTimeZoneId }}</dt>
-        <dd>{{ timeZoneName(truck.timeZoneId) }} ({{ truck.timeZoneId ?? '—' }})</dd>
-      </div>
-      <div>
-        <dt>{{ text().karmaDriverCount }}</dt>
-        <dd>{{ truck.driverCount ?? '—' }}</dd>
-      </div>
-    </dl>
+    <section [attr.aria-label]="detailText().truckSummary">
+      <dl class="karma-record-summary">
+        <div>
+          <dt>{{ text().licensePlate }}</dt>
+          <dd>{{ truck.carNumber }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().karmaDeviceId }}</dt>
+          <dd>{{ truck.deviceId }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().karmaProjectId }}</dt>
+          <dd>{{ projectName(truck.projectId) }} ({{ truck.projectId }})</dd>
+        </div>
+        <div>
+          <dt>{{ text().karmaTimeZoneId }}</dt>
+          <dd>{{ timeZoneName(truck.timeZoneId) }} ({{ truck.timeZoneId ?? '—' }})</dd>
+        </div>
+      </dl>
+    </section>
     <section class="location-summary" [attr.aria-label]="text().karmaLocation">
       <h2>{{ text().karmaLocation }}</h2>
       <p class="hint">{{ text().karmaLocationHint }}</p>
@@ -131,5 +71,50 @@
         <p role="status">{{ text().karmaLoadingLocation }}</p>
       }
     </section>
+    <details class="karma-source-details">
+      <summary>{{ detailText().sourceFields }}</summary>
+      <dl class="truck-details karma-details">
+        <div>
+          <dt>{{ text().licensePlate }}</dt>
+          <dd>{{ truck.carNumber }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().karmaCarId }}</dt>
+          <dd>{{ truck.id }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().karmaDeviceId }}</dt>
+          <dd>{{ truck.deviceId }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().karmaProjectId }}</dt>
+          <dd>{{ truck.projectId }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().karmaCarType }}</dt>
+          <dd>{{ truck.carType ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().karmaCarSubType }}</dt>
+          <dd>{{ truck.subType ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().karmaCarYear }}</dt>
+          <dd>{{ truck.carYear ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().karmaCarColor }}</dt>
+          <dd>{{ truck.carColor ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().karmaTimeZoneId }}</dt>
+          <dd>{{ truck.timeZoneId ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().karmaDriverCount }}</dt>
+          <dd>{{ truck.driverCount ?? '—' }}</dd>
+        </div>
+      </dl>
+    </details>
   }
 </section>

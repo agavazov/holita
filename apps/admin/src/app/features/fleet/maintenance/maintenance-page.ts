@@ -1,3 +1,4 @@
+import { fleetRecordLinks } from '../fleet-record-links';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -61,6 +62,7 @@ import { maintenanceKpis, serviceTaskRow } from './service-task-mapping';
       >
     }
     <holita-maintenance-view
+      [recordLinks]="recordLinks()"
       [branchName]="branch().name"
       [rows]="rows()"
       [total]="total()"
@@ -83,6 +85,9 @@ import { maintenanceKpis, serviceTaskRow } from './service-task-mapping';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MaintenancePage implements OnInit {
+  protected readonly recordLinks = computed(() =>
+    fleetRecordLinks(this.language(), this.branch().id),
+  );
   readonly branch = input.required<AdminBranchesQuery['branches'][number]>();
   readonly language = input.required<Language>();
   readonly api = inject(MaintenanceApi);

@@ -231,6 +231,21 @@ and one Fleet Core client with separate authorization and Branch-check promises 
 
 ## Karma Client checks
 
+Shared Karma date/time controls use `app/features/karma-client/date-time/karma-date-time.spec.ts`
+and `app/features/karma-client/karma-date-time.spec.ts`. The component keeps API clock hours textual,
+including daylight-saving gaps; run with `TZ=Europe/Sofia` to exercise that boundary.
+Map validation, optional configuration and explicit loading use
+`app/features/karma-client/location/map-preview/map-preview.spec.ts`. Storybook's
+`Design System/Karma/Controls` and `Admin/Karma Client/Maps` cover the shared responsive controls,
+location, suggested endpoint route and missing-coordinate states without external map requests.
+Truck section navigation and list-return context use
+`app/features/karma-client/car-header/karma-car-header.spec.ts`; local search/project/pagination
+use `app/features/karma-client/cars/cars-page/cars-page.spec.ts` and the
+`Admin/Karma Client/Trucks` stories. Filter field errors and focus have routed form coverage
+beside the date/history forms. Device overview-before-edit and save/cancel return use
+`app/features/fleet/devices/device-diagnostics-page.spec.ts`, the editor/list specs and
+`angular-devices.smoke.spec.mts`.
+
 ```bash
 npm run test:karma-client -- accounts.spec.ts history.spec.ts location.spec.ts edata.spec.ts edata.service.spec.ts cars.spec.ts cars.service.spec.ts karma-transport.spec.ts health.spec.ts --skip-nx-cache
 npm run test:admin -- --include=app/features/karma-client/accounts/accounts.spec.ts --include=app/features/karma-client/history/history.spec.ts --include=app/features/karma-client/location-references.spec.ts --include=app/features/karma-client/edata/edata-page/edata-page.spec.ts --include=app/features/karma-client/karma-workspace.spec.ts --include=app/features/branches/branch-context.spec.ts --skip-nx-cache

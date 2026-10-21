@@ -24,6 +24,7 @@ export function driverDetails(driver: AdminDriverDetailsFragment): DriverDetails
     tachographCardNumber: driver.tachographCardNumber ?? '',
     tachoCardExpiresOn: driver.tachographCardExpiresOn,
     notes: driver.notes ?? '',
+    vehicles: driver.vehicles.map((vehicle) => ({ id: vehicle.id, plate: vehicle.licensePlate })),
     vehiclePlate: driver.vehicles.length
       ? driver.vehicles.map((vehicle) => vehicle.licensePlate).join(', ')
       : null,

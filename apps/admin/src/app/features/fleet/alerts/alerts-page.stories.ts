@@ -37,7 +37,14 @@ export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = await listReady(canvasElement);
     await expect(canvas.getByRole('heading', { level: 1, name: /^Alerts/ })).toBeVisible();
-    await expect(canvas.getAllByText('Elena Petrova')[0]).toBeVisible();
+    await expect(canvas.getAllByRole('link', { name: 'CB 1001 AX' })[0]).toHaveAttribute(
+      'href',
+      `/en/${defaultBranchId}/fleet/vehicles/${fixtureAlert.vehicleId}/overview`,
+    );
+    await expect(canvas.getAllByRole('link', { name: 'Elena Petrova' })[0]).toHaveAttribute(
+      'href',
+      `/en/${defaultBranchId}/fleet/drivers/${String(fixtureAlert.driverId)}`,
+    );
   },
 };
 export const Resolve: Story = {
@@ -49,6 +56,14 @@ export const Resolve: Story = {
       appReady,
     );
     const drawer = within(body.getByRole('dialog', { name: 'Low fuel' }));
+    await expect(drawer.getByRole('link', { name: 'CB 1001 AX' })).toHaveAttribute(
+      'href',
+      `/en/${defaultBranchId}/fleet/vehicles/${fixtureAlert.vehicleId}/overview`,
+    );
+    await expect(drawer.getByRole('link', { name: 'Elena Petrova' })).toHaveAttribute(
+      'href',
+      `/en/${defaultBranchId}/fleet/drivers/${String(fixtureAlert.driverId)}`,
+    );
     await waitFor(
       () =>
         expect(drawer.getByRole('textbox', { name: /Remark/ })).toHaveValue(

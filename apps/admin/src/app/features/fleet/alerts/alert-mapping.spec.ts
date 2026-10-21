@@ -28,6 +28,7 @@ describe('Alert mappings', () => {
     expect(alertRow(event, 'en')).toMatchObject({
       kind: 'Low fuel',
       status: 'OPEN',
+      driverId: null,
       driverName: null,
       detail: '',
       remark: '',
@@ -37,6 +38,7 @@ describe('Alert mappings', () => {
       alertRow(
         {
           ...event,
+          driverId: '40000000-0000-4000-8000-000000000001',
           driver: {
             id: '40000000-0000-4000-8000-000000000001',
             firstName: 'Elena',
@@ -44,8 +46,11 @@ describe('Alert mappings', () => {
           },
         },
         'en',
-      )?.driverName,
-    ).toBe('Elena Petrova');
+      ),
+    ).toMatchObject({
+      driverId: '40000000-0000-4000-8000-000000000001',
+      driverName: 'Elena Petrova',
+    });
   });
   it('keeps informational events out of actionable alert views', () => {
     expect(alertRow({ ...event, alertStatus: null }, 'en')).toBeNull();

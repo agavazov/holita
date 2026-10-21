@@ -1,3 +1,4 @@
+import { sampleRecordLinks } from '../record-links';
 import { Component, computed, linkedSignal, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { TripDrawer } from '../../../app/features/fleet/trips/trip-drawer';
@@ -56,6 +57,7 @@ function kpisOf(trips: readonly TripRow[]): TripKpis {
   imports: [TripsView, TripDrawer],
   template: `
     <holita-trips-view
+      [recordLinks]="recordLinks"
       [branchName]="branchName()"
       [rows]="rows()"
       [total]="result().total"
@@ -70,6 +72,7 @@ function kpisOf(trips: readonly TripRow[]): TripKpis {
     />
     @if (openTrip(); as trip) {
       <holita-trip-drawer
+        [recordLinks]="recordLinks"
         [trip]="trip"
         (closed)="closeDrawer()"
         (openVehicle)="openVehicle($event)"
@@ -78,6 +81,7 @@ function kpisOf(trips: readonly TripRow[]): TripKpis {
   `,
 })
 export class TripsPage {
+  protected readonly recordLinks = sampleRecordLinks;
   private readonly router = inject(Router);
   private readonly query = injectQueryParams();
   private readonly clearDrawer = injectClearDrawer();

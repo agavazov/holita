@@ -22,6 +22,7 @@ import { DriverDrawer, type DriverDetails, type DriverForm } from './driver-draw
 import { driverDetails, driverFieldErrors, driverInput } from './driver-mapping';
 import { DriversApi } from './drivers-api';
 import { driversText } from './i18n/messages';
+import { fleetRecordLinks, type FleetRecordLinks } from '../fleet-record-links';
 
 @Component({
   selector: 'holita-driver-editor-page',
@@ -29,6 +30,7 @@ import { driversText } from './i18n/messages';
   providers: [DriversApi],
   template: `
     <holita-driver-drawer
+      [recordLinks]="recordLinks"
       [driver]="driver()"
       [startEditing]="editing"
       [businessDate]="businessDate()"
@@ -44,6 +46,7 @@ import { driversText } from './i18n/messages';
       (editRequest)="edit()"
       (cancelEdit)="viewRecord()"
       (openScorecard)="openScorecard()"
+      (openVehicle)="openVehicle($event)"
     />
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -69,6 +72,17 @@ export class DriverEditorPage implements OnInit {
     'drivers',
   ];
   readonly driver = signal<DriverDetails | null>(null);
+  private readonly baseLinks = fleetRecordLinks(
+    this.language(),
+    drawerParam(this.route, 'branchId') ?? '',
+  );
+  protected readonly recordLinks: FleetRecordLinks = {
+    ...this.baseLinks,
+    vehicle: (vehicleId) => ({
+      ...this.baseLinks.vehicle(vehicleId),
+      ...(this.id ? { queryParams: { fromDriver: this.id } } : {}),
+    }),
+  };
   readonly state = signal<RouteDrawerState>('loading');
   readonly saving = signal(false);
   readonly loadError = signal<unknown>(null);
@@ -177,6 +191,20 @@ export class DriverEditorPage implements OnInit {
   openScorecard(): void {
     if (this.id) {
       void this.navigate([...this.listLink, this.id, 'scorecard']);
+    }
+  }
+
+  openVehicle(vehicleId: string): void {
+    if (this.driver()?.vehicles.some((vehicle) => vehicle.id === vehicleId)) {
+      void this.router.navigate([
+        '/',
+        this.language(),
+        drawerParam(this.route, 'branchId'),
+        'fleet',
+        'vehicles',
+        vehicleId,
+        'overview',
+      ]);
     }
   }
 

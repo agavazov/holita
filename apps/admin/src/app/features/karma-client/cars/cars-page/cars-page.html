@@ -1,4 +1,8 @@
-<section class="card" [attr.aria-label]="text().karmaTrucks" [attr.aria-busy]="loading()">
+<section
+  class="card karma-page"
+  [attr.aria-label]="text().karmaTrucks"
+  [attr.aria-busy]="loading()"
+>
   <div class="page-heading">
     <div>
       <h1>{{ text().karmaTrucks }}</h1>
@@ -15,6 +19,44 @@
       {{ error() ? text().retry : text().refresh }}
     </button>
   </div>
+  <form
+    class="karma-search"
+    [formGroup]="form"
+    (ngSubmit)="applySearch()"
+    [attr.aria-label]="text().karmaSearch + ': ' + text().karmaTrucks"
+  >
+    <div class="karma-field karma-search-field">
+      <label for="cars-search">{{ listText().search }}</label>
+      <input pInputText id="cars-search" formControlName="search" maxlength="200" />
+    </div>
+    <div class="karma-field karma-project-field">
+      <label for="cars-project">{{ listText().project }}</label>
+      <p-select
+        inputId="cars-project"
+        formControlName="project"
+        [options]="projectOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [placeholder]="listText().allProjects"
+        [showClear]="true"
+        [ariaLabel]="listText().project"
+      />
+    </div>
+    <div class="page-actions">
+      <button pButton type="submit">{{ text().karmaSearch }}</button>
+      @if (query().search || query().project) {
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          (click)="clearSearch()"
+        >
+          {{ text().clearFilters }}
+        </button>
+      }
+    </div>
+  </form>
   @if (loading()) {
     <p role="status">{{ text().loadingKarmaCars }}</p>
   }
@@ -25,14 +67,26 @@
     <p-message severity="warn">{{ text().karmaReferencesUnavailable }}</p-message>
   }
   @if (loaded()) {
-    <p>{{ text().total }}: {{ cars().length }}</p>
+    <p role="status">
+      {{ text().total }}: {{ cars().length }} · {{ text().karmaMatching }}: {{ filtered().length }}
+    </p>
   }
-  <p-table [value]="cars()" dataKey="id" [tableStyle]="{ 'min-width': '52rem' }">
+  <p-table
+    class="app-responsive-table"
+    [value]="filtered()"
+    dataKey="id"
+    [paginator]="true"
+    [rows]="query().rows"
+    [first]="first()"
+    [rowsPerPageOptions]="[25, 50, 100]"
+    (onPage)="page($event)"
+    [tableStyle]="{ width: '100%' }"
+  >
     <ng-template #header>
       <tr>
-        <th scope="col">{{ text().licensePlate }}</th>
-        <th scope="col">{{ text().karmaCarId }}</th>
-        <th scope="col">{{ text().karmaDeviceId }}</th>
+        <th scope="col" class="app-col-identity">{{ text().licensePlate }}</th>
+        <th scope="col" class="app-table-merged-column">{{ text().karmaCarId }}</th>
+        <th scope="col" class="app-table-merged-column">{{ text().karmaDeviceId }}</th>
         <th scope="col">{{ text().karmaProjectId }}</th>
         <th scope="col">{{ text().karmaTimeZones }}</th>
         <th scope="col">{{ text().karmaCarType }}</th>
@@ -42,15 +96,22 @@
     </ng-template>
     <ng-template #body let-car>
       <tr>
-        <td>
-          <a
-            class="content-link"
-            [routerLink]="['/', language(), 'karma-client', 'cars', car.id]"
-            >{{ car.carNumber || text().karmaTruckDetails }}</a
-          >
+        <td class="app-col-identity">
+          <div class="app-table-identity">
+            <a
+              class="content-link"
+              [routerLink]="['/', language(), 'karma-client', 'cars', car.id]"
+              [queryParams]="carContext()"
+              >{{ car.carNumber || text().karmaTruckDetails }}</a
+            >
+            <span class="app-table-mobile-meta">{{ text().karmaCarId }}: {{ car.id }}</span>
+            <span class="app-table-mobile-meta"
+              >{{ text().karmaDeviceId }}: {{ car.deviceId }}</span
+            >
+          </div>
         </td>
-        <td>{{ car.id }}</td>
-        <td>{{ car.deviceId }}</td>
+        <td class="app-table-merged-column">{{ car.id }}</td>
+        <td class="app-table-merged-column">{{ car.deviceId }}</td>
         <td>
           {{ projectName(car.projectId) }} <small>({{ car.projectId }})</small>
         </td>
@@ -66,7 +127,7 @@
       <tr>
         <td colspan="8">
           @if (!loading() && !error()) {
-            {{ text().emptyKarmaCars }}
+            {{ cars().length ? listText().noMatches : text().emptyKarmaCars }}
           }
         </td>
       </tr>

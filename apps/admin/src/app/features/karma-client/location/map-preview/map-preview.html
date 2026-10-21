@@ -1,0 +1,43 @@
+<section class="map-panel" [attr.aria-label]="heading()">
+  <div class="map-panel__heading">
+    <div>
+      <h2>{{ heading() }}</h2>
+      <p>{{ route() ? text().routeHint : text().locationHint }}</p>
+    </div>
+    @if (externalUrl(); as url) {
+      <a
+        pButton
+        severity="secondary"
+        [outlined]="true"
+        [href]="url"
+        target="_blank"
+        rel="noopener noreferrer"
+        >{{ text().openGoogleMaps }}</a
+      >
+    }
+  </div>
+  @if (source(); as url) {
+    <iframe
+      [src]="url"
+      [title]="heading()"
+      loading="lazy"
+      allowfullscreen
+      referrerpolicy="strict-origin-when-cross-origin"
+    ></iframe>
+  } @else {
+    <div class="map-panel__placeholder">
+      <svg data-p-icon="map-marker" aria-hidden="true"></svg>
+      @if (externalUrl()) {
+        <p>{{ embedUrl() ? text().loadHint : text().notConfigured }}</p>
+        @if (embedUrl()) {
+          <button pButton type="button" (click)="activate()">{{ text().loadMap }}</button>
+        }
+      } @else {
+        <p role="status">{{ text().noCoordinates }}</p>
+      }
+    </div>
+  }
+  @if (route() && externalUrl() && (!validOrigin() || !validDestination())) {
+    <p class="map-panel__note">{{ text().incompleteRoute }}</p>
+  }
+</section>

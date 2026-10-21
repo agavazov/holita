@@ -1,0 +1,43 @@
+<holita-page-header
+  [title]="title()"
+  [eyebrow]="text().karmaClient"
+  [description]="description()"
+  [backLink]="['/', language(), 'karma-client', 'cars']"
+  [backLabel]="text().backToTrucks"
+  [backQueryParams]="returnQuery()"
+>
+  @if (canNavigate()) {
+    <button
+      headerActions
+      pButton
+      type="button"
+      severity="secondary"
+      [disabled]="busy() || refreshDisabled()"
+      (click)="refreshRequest.emit()"
+    >
+      {{ error() ? text().retry : text().refresh }}
+    </button>
+  }
+</holita-page-header>
+@if (canNavigate()) {
+  <nav [attr.aria-label]="text().navigation">
+    <ul class="car-tabs" role="list">
+      @for (tab of tabs(); track tab.path) {
+        <li>
+          <a
+            [routerLink]="
+              tab.path
+                ? ['/', language(), 'karma-client', 'cars', carId(), tab.path]
+                : ['/', language(), 'karma-client', 'cars', carId()]
+            "
+            [queryParams]="navigationContext()"
+            routerLinkActive="car-tabs__link--active"
+            [routerLinkActiveOptions]="activeMatch"
+            ariaCurrentWhenActive="page"
+            >{{ tab.label }}</a
+          >
+        </li>
+      }
+    </ul>
+  </nav>
+}

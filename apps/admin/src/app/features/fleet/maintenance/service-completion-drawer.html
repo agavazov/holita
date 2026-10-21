@@ -9,6 +9,22 @@
   (retry)="retry.emit()"
   (closeRequest)="requestClose()"
 >
+  @if (vehicleLink(); as link) {
+    <dl class="app-facts">
+      <div>
+        <dt>{{ vehicleLabel() }}</dt>
+        <dd>
+          <a
+            class="app-link"
+            [routerLink]="link.commands"
+            [queryParams]="link.queryParams"
+            [fragment]="link.fragment"
+            >{{ task()?.plate }}</a
+          >
+        </dd>
+      </div>
+    </dl>
+  }
   @if (completed(); as record) {
     <section class="app-form-section">
       <h3>{{ text().details }}</h3>

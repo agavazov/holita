@@ -121,6 +121,12 @@ describe('Live Trip detail reads', () => {
     expect(fixture.componentInstance.trip()?.events).toHaveLength(1);
     expect(dialog().textContent).toContain('Actual trip event.');
     expect(dialog().textContent).toContain('Harsh braking');
+    const vehicle = [...dialog().querySelectorAll('a')].find(
+      (anchor) => anchor.textContent.trim() === 'CB 1001 AX',
+    );
+    expect(vehicle?.getAttribute('href')).toBe(
+      `/en/${branch}/fleet/vehicles/${trip.vehicleId}/overview`,
+    );
     const close = Array.from(dialog().querySelectorAll<HTMLButtonElement>('button')).find(
       (button) => button.textContent.trim() === 'Close',
     );
@@ -141,6 +147,12 @@ describe('Live Trip detail reads', () => {
     http.expectOne(operation).flush({ data: { fleetTrip: trip } });
     await fixture.whenStable();
     expect(fixture.componentInstance.state()).toBe('ready');
+    const vehicle = [...dialog().querySelectorAll('a')].find(
+      (anchor) => anchor.textContent.trim() === 'Open vehicle',
+    );
+    expect(vehicle?.getAttribute('href')).toBe(
+      `/en/${branch}/fleet/vehicles/${trip.vehicleId}/trips`,
+    );
     fixture.componentInstance.openVehicle(trip.vehicleId);
     expect(navigate).toHaveBeenCalledWith(
       closeLink,

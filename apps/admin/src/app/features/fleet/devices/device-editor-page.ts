@@ -35,7 +35,7 @@ import { devicesText } from './i18n/messages';
     [value]="value()"
     [state]="state()"
     [loadError]="loadFailure()"
-    [closeLink]="listLink"
+    [closeLink]="closeLink"
     [models]="models"
     [vehicles]="choices.vehicles()"
     [choicesError]="choicesFailure()"
@@ -69,6 +69,10 @@ export class DeviceEditorPage implements OnInit {
     'devices',
   ];
   readonly models = deviceModels;
+  readonly closeLink =
+    this.id && this.route.snapshot.queryParamMap.get('editFrom') === 'diagnostics'
+      ? [...this.listLink, this.id, 'diagnostics']
+      : this.listLink;
   readonly record = signal<AdminDeviceDetailsFragment | null>(null);
   protected readonly row = computed(() => {
     const record = this.record();
@@ -193,7 +197,7 @@ export class DeviceEditorPage implements OnInit {
     }
   }
   close(): Promise<boolean> {
-    return this.router.navigate(this.listLink, {
+    return this.router.navigate(this.closeLink, {
       queryParamsHandling: 'preserve',
       preserveFragment: true,
     });

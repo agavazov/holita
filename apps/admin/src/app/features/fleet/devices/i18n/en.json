@@ -35,6 +35,7 @@
     "selectPage": "Select all on this page",
     "selectRow": "Select {imei}",
     "edit": "Edit device {imei}",
+    "view": "Open device {imei}",
     "notInstalled": "Not installed",
     "never": "Never",
     "signalBars": "{bars} of 5 bars",

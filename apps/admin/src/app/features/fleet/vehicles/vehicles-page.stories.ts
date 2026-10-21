@@ -4,9 +4,11 @@ import { chooseMenuItem } from '../../../../storybook/interactions';
 import { defaultBranchId } from '../../../../storybook/session-fixtures';
 import { routeAt, StoryApp, type StoryFixtures } from '../../../../storybook/story-config';
 import { fixtureVehicle } from '../../../../storybook/vehicles-fixtures';
+import { fixtureVehicleProfile } from '../../../../storybook/vehicle-profile-fixtures';
 import { AdminWorkspace } from '../../../workspace/admin-workspace';
 import { FleetWorkspace } from '../fleet-workspace';
 import { VehicleEditorPage } from './vehicle-editor-page';
+import { VehicleProfilePage } from './vehicle-profile-page';
 
 /** Real routes, page adapters, scoped Apollo clients and the shared Storybook presentation. */
 const meta: Meta = {
@@ -25,7 +27,9 @@ function routed(suffix = ''): NonNullable<Story['render']> {
   return () => ({
     ...render(),
     // Compile the real lazy component graph before play starts on a cold Vite server.
-    moduleMetadata: { imports: [StoryApp, AdminWorkspace, FleetWorkspace, VehicleEditorPage] },
+    moduleMetadata: {
+      imports: [StoryApp, AdminWorkspace, FleetWorkspace, VehicleEditorPage, VehicleProfilePage],
+    },
     template: '<holita-story-app [url]="url" />',
   });
 }
@@ -36,7 +40,7 @@ async function tableReady(canvasElement: HTMLElement) {
   await waitFor(
     () =>
       expect(
-        canvas.getByRole('button', { name: `Edit ${fixtureVehicle.licensePlate}` }),
+        canvas.getByRole('button', { name: `Open ${fixtureVehicle.licensePlate}` }),
       ).toBeVisible(),
     appReady,
   );
@@ -56,6 +60,34 @@ export const Default: Story = {
           'aria-current',
           'page',
         ),
+      appReady,
+    );
+  },
+};
+
+export const ViewThenEdit: Story = {
+  name: 'Open profile before editing',
+  render: routed('?keep=vehicles#vehicles'),
+  play: async ({ canvasElement }) => {
+    const canvas = await tableReady(canvasElement);
+    await userEvent.click(
+      canvas.getByRole('button', { name: `Open ${fixtureVehicle.licensePlate}` }),
+    );
+    await waitFor(
+      () =>
+        expect(
+          canvas.getByRole('heading', { level: 1, name: fixtureVehicleProfile.licensePlate }),
+        ).toBeVisible(),
+      appReady,
+    );
+    const body = within(canvasElement.ownerDocument.body);
+    await expect(body.queryByRole('dialog')).toBeNull();
+    await userEvent.click(canvas.getByRole('button', { name: /^Edit$/ }));
+    await waitFor(
+      () =>
+        expect(
+          body.getByRole('dialog', { name: `Edit ${fixtureVehicle.licensePlate}` }),
+        ).toBeVisible(),
       appReady,
     );
   },
@@ -134,7 +166,7 @@ export const ProtectedDelete: Story = {
       appReady,
     );
     await expect(
-      canvas.getByRole('button', { name: `Edit ${fixtureVehicle.licensePlate}` }),
+      canvas.getByRole('button', { name: `Open ${fixtureVehicle.licensePlate}` }),
     ).toBeVisible();
   },
 };

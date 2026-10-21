@@ -63,6 +63,7 @@
   />
   <button emptyActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
   <p-table
+    class="app-responsive-table"
     [value]="tableRows()"
     dataKey="id"
     [rowTrackBy]="trackById"
@@ -83,7 +84,7 @@
           }}</label>
           <p-table-header-checkbox inputId="maintenance-select-page" />
         </th>
-        <th scope="col" pSortableColumn="task">
+        <th scope="col" class="app-col-identity" pSortableColumn="task">
           {{ text().table.task }} <p-sort-icon field="task" />
         </th>
         <th scope="col" pSortableColumn="vehicle">
@@ -109,30 +110,48 @@
         <td class="app-col-check">
           <p-table-checkbox [value]="row" [ariaLabel]="label(text().table.selectRow, row)" />
         </td>
+        <td class="app-col-identity">
+          <div class="app-table-identity">
+            <span class="app-table-mobile-meta">{{ row.plate }}</span>
+            @if (row.status !== 'PLANNED') {
+              <button
+                type="button"
+                class="app-link"
+                [attr.aria-label]="
+                  label(row.status === 'DONE' ? text().table.view : text().table.viewCancelled, row)
+                "
+                (click)="panel.run('view', [recordOf(row)], $event.currentTarget)"
+              >
+                {{ row.kind }}
+              </button>
+            } @else {
+              <button
+                type="button"
+                class="app-link"
+                [attr.aria-label]="label(text().table.edit, row)"
+                (click)="panel.run('edit', [recordOf(row)], $event.currentTarget)"
+              >
+                {{ row.kind }}
+              </button>
+            }
+            <div class="app-table-mobile-actions">
+              <holita-row-actions
+                [actions]="actions()"
+                [record]="recordOf(row)"
+                (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
+              />
+            </div>
+          </div>
+        </td>
         <td>
-          @if (row.status !== 'PLANNED') {
-            <button
-              type="button"
-              class="app-link"
-              [attr.aria-label]="
-                label(row.status === 'DONE' ? text().table.view : text().table.viewCancelled, row)
-              "
-              (click)="panel.run('view', [recordOf(row)], $event.currentTarget)"
-            >
-              {{ row.kind }}
-            </button>
+          @if (recordLinks()?.vehicle(row.vehicleId); as link) {
+            <a class="app-link" [routerLink]="link.commands" [queryParams]="link.queryParams">{{
+              row.plate
+            }}</a>
           } @else {
-            <button
-              type="button"
-              class="app-link"
-              [attr.aria-label]="label(text().table.edit, row)"
-              (click)="panel.run('edit', [recordOf(row)], $event.currentTarget)"
-            >
-              {{ row.kind }}
-            </button>
+            {{ row.plate }}
           }
         </td>
-        <td>{{ row.plate }}</td>
         <td>
           <span class="app-cell-stack">
             <span>

@@ -17,8 +17,14 @@ export async function chooseBranch(page: Page, name: string): Promise<void> {
 /** PrimeNG handles item activation on the item's link, rather than its menuitem container. */
 export async function chooseMenuItem(page: Page, name: string | RegExp): Promise<void> {
   const item = page.getByRole('menuitem', { name, exact: typeof name === 'string' });
+  const menuId = await item.evaluate((element) => element.closest('[role="menu"][id]')?.id);
+  if (!menuId) {
+    throw new Error('The selected menu item has no owning menu ID.');
+  }
+  const popup = page.locator(`[id="${menuId}"]`);
   await item.locator('a').click();
-  await expect(item).toBeHidden();
+  // Theme commands change the item's label before the popup's leave animation finishes.
+  await expect(popup).toBeHidden();
 }
 
 export async function chooseLanguage(page: Page, name: 'English' | 'Български'): Promise<void> {

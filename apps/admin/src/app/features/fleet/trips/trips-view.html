@@ -62,6 +62,7 @@
     (sortChange)="changeSort($event)"
   />
   <p-table
+    class="app-responsive-table"
     [value]="tableRows()"
     dataKey="id"
     [rowTrackBy]="trackById"
@@ -74,7 +75,7 @@
   >
     <ng-template #header>
       <tr>
-        <th scope="col" pSortableColumn="startedAt">
+        <th scope="col" class="app-col-identity" pSortableColumn="startedAt">
           {{ text().table.started }} <p-sort-icon field="startedAt" />
         </th>
         <th scope="col">{{ text().table.vehicle }}</th>
@@ -98,26 +99,52 @@
     </ng-template>
     <ng-template #body let-row>
       <tr>
-        <td>
-          <button
-            type="button"
-            class="app-link"
-            [attr.aria-label]="openLabel(row)"
-            (click)="panel.run('open', [recordOf(row)], $event.currentTarget)"
-          >
-            {{ row.startedAt | holitaDateTime }}
-          </button>
-          @if (row.endedAt === null) {
-            <p-tag
-              severity="info"
-              [value]="row.inProgress ? text().table.inProgress : text().table.noEnd"
-            />
-          }
+        <td class="app-col-identity">
+          <div class="app-table-identity">
+            <span class="app-table-mobile-meta">{{ row.plate }}</span>
+            <button
+              type="button"
+              class="app-link"
+              [attr.aria-label]="openLabel(row)"
+              (click)="panel.run('open', [recordOf(row)], $event.currentTarget)"
+            >
+              {{ row.startedAt | holitaDateTime }}
+            </button>
+            @if (row.endedAt === null) {
+              <p-tag
+                severity="info"
+                [value]="row.inProgress ? text().table.inProgress : text().table.noEnd"
+              />
+            }
+            <div class="app-table-mobile-actions">
+              <holita-row-actions
+                [actions]="actions()"
+                [record]="recordOf(row)"
+                (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
+              />
+            </div>
+          </div>
         </td>
         <td>
           <span class="app-cell-stack">
-            <span>{{ row.plate }}</span>
-            <span>{{ row.driverName ?? text().table.noDriver }}</span>
+            <span>
+              @if (recordLinks()?.vehicle(row.vehicleId); as link) {
+                <a class="app-link" [routerLink]="link.commands" [queryParams]="link.queryParams">{{
+                  row.plate
+                }}</a>
+              } @else {
+                {{ row.plate }}
+              }
+            </span>
+            <span>
+              @if (row.driverId && recordLinks()?.driver(row.driverId); as link) {
+                <a class="app-link" [routerLink]="link.commands" [queryParams]="link.queryParams">{{
+                  row.driverName
+                }}</a>
+              } @else {
+                {{ row.driverName ?? text().table.noDriver }}
+              }
+            </span>
           </span>
         </td>
         <td>
