@@ -81,6 +81,9 @@ Vehicle group CRUD with Core creation checks, stored group/driver references, sa
 bounds, availability, request-local Core validation and scoped CRUD while Core is stopped.
 Gateway has no database dependency. The fixture uses only the pinned Apollo Router binary,
 waits on its dedicated health listener and closes it before subgraphs and test schemas.
+After Router health, federation provisioning obtains one synthetic demo session and polls bounded
+signed Core Branch and scoped Fleet list/summary reads for up to ten seconds. Positive counts are
+valid readiness results. Browser fixtures reuse that verified session and readiness result.
 Each native subgraph has a 30-second startup readiness budget from process spawn, including
 module loading before Nest logs appear. Health probes take at most one second, capped by
 that remaining budget. A process exit ends startup polling.
@@ -92,17 +95,17 @@ The production build excludes `config.local.json`, so the application's request 
 `/config.local.json` receives 404. Smokes run without a PrimeUI key and show the "Invalid PrimeUI
 License" notice ([admin Storybook](development.md#admin-storybook)).
 They own dedicated backend processes/schemas.
-Browser fixtures seed Core and obtain real demo sessions; they create their own business records without running Fleet sample seeds. The Isolation tenant/branch exists only in these test fixtures.
+Browser fixtures create their own business records without running Fleet sample seeds. The Isolation tenant/branch exists only in these test fixtures.
 The app fixture has an independent 120-second provisioning budget for isolated schemas and native
 backend processes. Browser scenarios retain their 60-second timeout and 10-second expectations.
-When Fleet is enabled, provisioning also waits up to 10 seconds for a signed Branch-scoped
-Fleet list and summary read through the real Gateway, proving GraphQL and Prisma readiness before
-business mutations run. Only this idempotent readiness read is polled; mutations are never retried.
+Shared federation readiness proves GraphQL and Prisma availability before business mutations run.
+Only idempotent readiness reads are polled; mutations are never retried.
 Router's 5-second and Fleet's Core-client 3-second production deadlines remain unchanged.
 Browser targets build the admin and three subgraphs, prepare Router, use Chromium, disable retries and retain
 failure traces under ignored test-results. Screenshots are opt-in with the exported
-`HOLITA_BROWSER_SCREENSHOTS=1` for shell captures and failure/trace images; the default retains
-DOM and ARIA diagnostics. The separate Storybook visual target still produces review candidates.
+`HOLITA_BROWSER_SCREENSHOTS=1` for browser-fixture captures and failure/trace images across all
+Angular smoke suites; the default retains DOM and ARIA diagnostics. The separate Storybook
+visual target produces review candidates.
 Clean up task-started connections/processes.
 
 The shared Branch, language, theme and Sign out helpers operate the topbar menus in signed-in
@@ -161,9 +164,10 @@ The target builds the static [admin Storybook](development.md#admin-storybook), 
 Playwright with [storybook-visual.config.mts](../tools/browser/storybook-visual.config.mts). The
 spec serves `apps/admin/storybook-static` itself on an ephemeral loopback port, so no Storybook
 server is needed. It captures the stories listed in
-[storybook-visual.spec.mts](../tools/browser/storybook-visual.spec.mts) (the introduction, the
-example pages, foundations, patterns, PrimeNG coverage and the shell) with Chromium, `bg-BG`,
-`Europe/Sofia`, a fixed clock (`2026-10-18T07:00:00Z`), device scale 1 and one worker.
+[storybook-visual.spec.mts](../tools/browser/storybook-visual.spec.mts): the introduction,
+connected Fleet/settings and Karma views, device configuration states, example pages,
+foundations, patterns, confirmations, operation toasts, PrimeNG coverage and the shell.
+It uses Chromium, `bg-BG`, `Europe/Sofia`, a fixed clock (`2026-10-18T07:00:00Z`), device scale 1 and one worker.
 Each capture waits until no fixture request has been in flight for 400 ms and the preview marks
 the story's play function complete. Fixture quiet alone can precede lazy route loading.
 
@@ -298,7 +302,7 @@ a fixed-arrival-rate latency SLA, cold-start performance or real Karma network l
 | SDL/operations                          | codegen, schema:check, contracts.unit.spec.mts                                                                                                                                                                                                                                         |
 | Cross-service contracts/context         | federation.db.spec.mts                                                                                                                                                                                                                                                                 |
 | Branch/language/default routing         | branch-context.spec.ts, fleet-workspace.spec.ts, angular-foundation.smoke.spec.mts                                                                                                                                                                                                     |
-| General settings/preferences/units      | settings/general-settings-api.spec.ts, general-settings-mapping.spec.ts, general-settings-page.spec.ts, general-settings-view.spec.ts, fleet-preferences.spec.ts; ui/format/fleet-format.spec.ts and the workspace/Branch routing specs                                                |
+| General settings/preferences/units      | settings/general-settings-api.spec.ts, general-settings-mapping.spec.ts, general-settings-page.spec.ts, general-settings-view.spec.ts, fleet-preferences.spec.ts; ui/format/fleet-format.spec.ts, workspace/Branch routing specs and angular-settings.smoke.spec.mts                   |
 | Captured feature clients/forms/deletion | the owning Fleet API/query/editor/page specs; Vehicle profile and odometer use vehicle-profile.spec.ts; every connected feature has catalog parity checks                                                                                                                              |
 | Scoped relation choices/cancellation    | device-choices.ts behavior in device-editor-page.spec.ts, VehicleChoices and MaintenanceChoices specs; scoped reads retire with their editor clients                                                                                                                                   |
 | Admin theme/tokens/global styles        | app/theme specs, test:storybook:admin, test:visual:admin with candidate review                                                                                                                                                                                                         |
@@ -320,14 +324,15 @@ Karma record-detail stories and eData/history specs check collapsed source field
 null/zero values, escaped source text and focus restoration. Their visual candidates cover
 desktop/mobile and both themes; the responsive-table pattern also varies brand and density.
 
+Run `npm run test:smoke:admin -- angular-settings.smoke.spec.mts` for the compiled settings flow.
 General settings cases explicitly flush `AdminFleetPreferences` before business operations;
 they cover read gating/Retry, Branch/language/session isolation, saved-unit propagation and
 the separate Fleet-save/Core-rename outcomes. A failed rename must retain its name draft and
 the actual persisted Fleet baseline, without a false full-success toast. Disabled Demo
 notification switches never become a persistence/delivery assertion. Read-value conversion
-preserves null/zero; canonical labelled editor/filter values remain unchanged. Live capture
-`admin-settings-general--default` is included in both themes at desktop/mobile widths;
-its candidates still require the usual human baseline approval.
+preserves null/zero; editor/filter values use canonical units. The
+`admin-settings-general--default` capture covers both themes at desktop/mobile widths;
+its candidates require human baseline approval.
 
 ## Local diff versus PR affected selection
 

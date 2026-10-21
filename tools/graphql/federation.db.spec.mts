@@ -33,19 +33,7 @@ describe('Fleet through the actual federation boundary', () => {
       return;
     }
     cleanup = fixture.close;
-    const response = await fetch(fixture.url, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        query: 'mutation {demoLogin(tenantId:"01000000-0000-4000-8000-000000000001"){token}}',
-      }),
-    });
-    const body: unknown = await response.json();
-    const value = record(record(record(body).data).demoLogin).token;
-    if (typeof value !== 'string') {
-      throw new Error('Missing demo session token');
-    }
-    token = value;
+    token = fixture.demoSession.token;
   }, 180_000);
   afterAll(async () => {
     disposed = true;
@@ -1584,4 +1572,47 @@ describe('Fleet through the actual federation boundary', () => {
       data: { fleetDeviceOperation: null },
     });
   }, 240_000);
+});
+
+describe('Federation fixture readiness', () => {
+  it('returns after signed Core and Fleet reads when the Fleet database already contains a vehicle', async () => {
+    const fixture = await createFederationFixture({ seedFleetVehicle: true });
+    try {
+      expect(
+        fixture.coreRequests.some(
+          (request) => request.branchId === discordia && request.body.includes('branches'),
+        ),
+      ).toBe(true);
+      expect(
+        fixture.fleetRequests.some(
+          (request) => request.branchId === discordia && request.body.includes('fleetVehicles'),
+        ),
+      ).toBe(true);
+      expect(fixture.karma.requests).toHaveLength(0);
+      const response = await fetch(fixture.url, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${fixture.demoSession.token}`,
+          'x-branch-id': discordia,
+        },
+        body: JSON.stringify({
+          query:
+            '{ branches { id } fleetVehicles { total items { licensePlate } } fleetVehicleSummary { inOperation } }',
+        }),
+        signal: AbortSignal.timeout(10000),
+      });
+      const body: unknown = await response.json();
+      expect(response.status).toBe(200);
+      expect(body).toEqual({
+        data: {
+          branches: expect.arrayContaining([{ id: discordia }]),
+          fleetVehicles: { total: 1, items: [{ licensePlate: 'READINESS FIXTURE' }] },
+          fleetVehicleSummary: { inOperation: 1 },
+        },
+      });
+    } finally {
+      await fixture.close();
+    }
+  }, 180_000);
 });

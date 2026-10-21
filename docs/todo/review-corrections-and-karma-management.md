@@ -23,9 +23,6 @@ focused regression at the affected boundary; database races require guarded Post
 - **D11 / P2:** Add connected Devices out-of-range-page coverage and exercise real Fleet route
   definitions in route-reuse specs. Extend the existing list lifecycle coverage where a real
   gap remains; do not recreate the already existing device-diagnostics spec.
-- **D12 / P2:** Own signed Gateway/Fleet readiness in the federation fixture after Router
-  starts, checking readiness rather than assuming empty business data. Remove the browser
-  fixture's duplicate readiness implementation and cover seeded/nonempty fixture use.
 - **Validation / P2:** Restore the existing formatting gate on the files it reports. Reproduce
   admin timeout failures with the documented single-worker setting before classifying them
   as functional defects; keep deadlines and behavioral assertions intact.

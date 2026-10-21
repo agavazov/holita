@@ -1,5 +1,4 @@
 import { createServer } from 'node:http';
-import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { extname, join, resolve, sep } from 'node:path';
 import { expect, test as base, type Page } from '@playwright/test';
@@ -170,94 +169,7 @@ export const test = base.extend<{
         });
         try {
           gatewayUrl = backend.url;
-          const login = await fetch(gatewayUrl, {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({
-              query:
-                'mutation {demoLogin(tenantId:"01000000-0000-4000-8000-000000000001"){token tenant{id name}}}',
-            }),
-          });
-          const body: unknown = await login.json();
-          if (
-            !body ||
-            typeof body !== 'object' ||
-            !('data' in body) ||
-            !body.data ||
-            typeof body.data !== 'object' ||
-            !('demoLogin' in body.data)
-          ) {
-            throw new Error('Missing demo login result');
-          }
-          const session = body.data.demoLogin;
-          if (
-            !session ||
-            typeof session !== 'object' ||
-            !('token' in session) ||
-            typeof session.token !== 'string'
-          ) {
-            throw new Error('Missing demo token');
-          }
-          const demoSession = {
-            token: session.token,
-            tenant: { id: '01000000-0000-4000-8000-000000000001', name: 'RentalSofia' },
-          };
-          if (fleetEnabled) {
-            const readinessDeadline = Date.now() + 10000;
-            await expect
-              .poll(
-                async () => {
-                  try {
-                    const response = await fetch(backend.url, {
-                      method: 'POST',
-                      headers: {
-                        'content-type': 'application/json',
-                        authorization: `Bearer ${demoSession.token}`,
-                        'x-branch-id': '10000000-0000-4000-8000-000000000001',
-                        'x-request-id': randomUUID(),
-                      },
-                      body: JSON.stringify({
-                        query: `query AngularFixtureReady {
-                    fleetVehicles(offset: 0, limit: 1) { items { id } total offset limit }
-                    fleetVehicleSummary {
-                      dataAsOf inOperation inWorkshop moving notReporting openAlerts lowFuel
-                    }
-                  }`,
-                      }),
-                      signal: AbortSignal.timeout(
-                        Math.max(1, Math.min(5000, readinessDeadline - Date.now())),
-                      ),
-                    });
-                    const body: unknown = await response.json();
-                    return { status: response.status, body };
-                  } catch (error) {
-                    return { transportError: error instanceof Error ? error.name : 'UnknownError' };
-                  }
-                },
-                {
-                  message:
-                    'The signed Gateway Fleet list and summary become ready before browser setup',
-                  timeout: 10000,
-                },
-              )
-              .toEqual({
-                status: 200,
-                body: {
-                  data: {
-                    fleetVehicles: { items: [], total: 0, offset: 0, limit: 1 },
-                    fleetVehicleSummary: {
-                      dataAsOf: null,
-                      inOperation: 0,
-                      inWorkshop: 0,
-                      moving: 0,
-                      notReporting: 0,
-                      openAlerts: 0,
-                      lowFuel: 0,
-                    },
-                  },
-                },
-              });
-          }
+          const demoSession = backend.demoSession;
           await use({ url, gatewayUrl, demoSession, karma: backend.karma });
         } finally {
           await backend.close();

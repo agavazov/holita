@@ -11,6 +11,122 @@ import { workspaceRoot } from './contracts.mjs';
 
 const execute = promisify(execFile);
 
+const readinessTenantId = '01000000-0000-4000-8000-000000000001';
+const readinessBranchId = '10000000-0000-4000-8000-000000000001';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isGatewayReady(body: unknown, fleetEnabled: boolean): boolean {
+  if (!isRecord(body) || body.errors !== undefined || !isRecord(body.data)) {
+    return false;
+  }
+  const branches = body.data.branches;
+  if (
+    !Array.isArray(branches) ||
+    !branches.every((branch: unknown) => isRecord(branch) && typeof branch.id === 'string') ||
+    !branches.some((branch: unknown) => isRecord(branch) && branch.id === readinessBranchId)
+  ) {
+    return false;
+  }
+  if (!fleetEnabled) {
+    return true;
+  }
+  const vehicles = body.data.fleetVehicles;
+  const summary = body.data.fleetVehicleSummary;
+  return (
+    isRecord(vehicles) &&
+    Array.isArray(vehicles.items) &&
+    vehicles.items.length <= 1 &&
+    vehicles.items.every((item: unknown) => isRecord(item) && typeof item.id === 'string') &&
+    typeof vehicles.total === 'number' &&
+    Number.isSafeInteger(vehicles.total) &&
+    vehicles.total >= vehicles.items.length &&
+    vehicles.offset === 0 &&
+    vehicles.limit === 1 &&
+    isRecord(summary) &&
+    typeof summary.inOperation === 'number' &&
+    Number.isSafeInteger(summary.inOperation) &&
+    summary.inOperation >= 0
+  );
+}
+
+async function waitForGatewayReadiness(url: string, fleetEnabled: boolean) {
+  const deadline = Date.now() + 10000;
+  // Obtain one synthetic session; retry only the signed, read-only readiness query.
+  const login = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      query:
+        'mutation($tenantId: ID!) { demoLogin(tenantId: $tenantId) { token tenant { id name } } }',
+      variables: { tenantId: readinessTenantId },
+    }),
+    signal: AbortSignal.timeout(Math.max(1, Math.min(5000, deadline - Date.now()))),
+  });
+  const loginBody: unknown = await login.json();
+  if (
+    login.status !== 200 ||
+    !isRecord(loginBody) ||
+    loginBody.errors !== undefined ||
+    !isRecord(loginBody.data) ||
+    !isRecord(loginBody.data.demoLogin)
+  ) {
+    throw new Error(`Gateway readiness demo login failed (HTTP ${String(login.status)})`);
+  }
+  const session = loginBody.data.demoLogin;
+  if (
+    typeof session.token !== 'string' ||
+    session.token.length === 0 ||
+    !isRecord(session.tenant) ||
+    session.tenant.id !== readinessTenantId ||
+    typeof session.tenant.name !== 'string'
+  ) {
+    throw new Error('Gateway readiness demo login returned an invalid session');
+  }
+  const demoSession = {
+    token: session.token,
+    tenant: { id: session.tenant.id, name: session.tenant.name },
+  };
+  const query = `query FederationFixtureReady {
+    branches { id }
+    ${
+      fleetEnabled
+        ? `fleetVehicles(offset: 0, limit: 1) { items { id } total offset limit }
+    fleetVehicleSummary { inOperation }`
+        : ''
+    }
+  }`;
+  let lastFailure = 'No signed readiness response';
+  while (Date.now() < deadline) {
+    const requestId = randomUUID();
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${demoSession.token}`,
+          'x-branch-id': readinessBranchId,
+          'x-request-id': requestId,
+        },
+        body: JSON.stringify({ query }),
+        signal: AbortSignal.timeout(Math.max(1, Math.min(5000, deadline - Date.now()))),
+      });
+      const body: unknown = await response.json();
+      if (response.status === 200 && isGatewayReady(body, fleetEnabled)) {
+        return demoSession;
+      }
+      lastFailure = `HTTP ${String(response.status)}, unexpected readiness response`;
+    } catch (error) {
+      lastFailure = error instanceof Error ? error.name : 'Unknown transport error';
+    }
+    lastFailure += ` (request ${requestId})`;
+    await delay(Math.max(0, Math.min(100, deadline - Date.now())));
+  }
+  throw new Error(`Signed Gateway Core/Fleet readiness timed out after 10 seconds: ${lastFailure}`);
+}
+
 export function guardedTestUrl(service: 'core' | 'fleet', value: string): URL {
   let url: URL;
   try {
@@ -154,6 +270,21 @@ async function seedDeviceParameterCatalog(databaseUrl: string, schemaName: strin
   } catch (error) {
     await connection.query('ROLLBACK');
     throw error;
+  } finally {
+    await connection.end();
+  }
+}
+
+async function seedFleetVehicle(databaseUrl: string, schemaName: string) {
+  const connection = new pg.Client({ connectionString: databaseUrl });
+  await connection.connect();
+  try {
+    await connection.query(
+      `INSERT INTO ${pg.escapeIdentifier(schemaName)}."Vehicle"
+       ("id", "tenantId", "branchId", "licensePlate", "updatedAt")
+       VALUES ($1, $2, $3, 'READINESS FIXTURE', CURRENT_TIMESTAMP)`,
+      [randomUUID(), readinessTenantId, readinessBranchId],
+    );
   } finally {
     await connection.end();
   }
@@ -417,6 +548,7 @@ export async function createFederationFixture(
     observeSubgraphs?: boolean;
     deviceOperations?: boolean;
     deviceConfigurationWrites?: boolean;
+    seedFleetVehicle?: boolean;
   } = {},
 ) {
   config({
@@ -463,6 +595,9 @@ export async function createFederationFixture(
 
     const fleetDatabase = await prepareDatabase('fleet');
     cleanup.push(fleetDatabase.close);
+    if (options.seedFleetVehicle) {
+      await seedFleetVehicle(fleetDatabase.databaseUrl, fleetDatabase.schema);
+    }
     if (options.deviceConfigurationWrites) {
       await seedDeviceParameterCatalog(fleetDatabase.databaseUrl, fleetDatabase.schema);
     }
@@ -507,8 +642,18 @@ export async function createFederationFixture(
     const adminOrigin = options.adminOrigin ?? 'http://127.0.0.1:11000';
     const gateway = await startRouter({ adminOrigin, subgraphUrls });
     cleanup.push(gateway.stop);
+    const demoSession = await waitForGatewayReadiness(
+      gateway.url,
+      options.fleetEnabled ?? true,
+    ).catch((cause: unknown) => {
+      throw new Error(
+        `Gateway readiness failed:\nRouter:\n${gateway.logs()}\nCore:\n${core.logs()}\nFleet:\n${fleet.logs()}`,
+        { cause },
+      );
+    });
     return {
       url: gateway.url,
+      demoSession,
       pid: gateway.pid,
       logs: () => ({
         gateway: gateway.logs(),
