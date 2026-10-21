@@ -294,7 +294,7 @@ describe('Apollo Router with the local supergraph and real subgraphs', () => {
             code,
             requestId: 'router-business-errors',
             ...(code === 'BAD_USER_INPUT'
-              ? { fieldErrors: [{ path: 'licensePlate', message }] }
+              ? { fieldErrors: [{ path: 'licensePlate', message, code: 'REQUIRED' }] }
               : {}),
           },
         },

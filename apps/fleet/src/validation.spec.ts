@@ -27,6 +27,7 @@ import {
   sortDirection,
   sortField,
   text,
+  textErrorCode,
   uniqueViolation,
 } from './validation.js';
 
@@ -290,6 +291,17 @@ describe('Fleet validation helpers', () => {
     expect(
       fieldErrors(() => dateOnlyRange('2026-10-18', '2026-10-17', { from: 'from', to: 'to' })),
     ).toMatchObject([{ path: 'filter', code: 'INVALID_RANGE' }]);
+  });
+
+  it.each([
+    { value: undefined, code: 'REQUIRED' },
+    { value: null, code: 'REQUIRED' },
+    { value: ' \t ', code: 'REQUIRED' },
+    { value: 3, code: 'INVALID_TYPE' },
+    { value: '😀'.repeat(4), code: 'TOO_LONG' },
+    { value: 'a\u0000b', code: 'INVALID_FORMAT' },
+  ])('classifies supported-text failures as $code', ({ value, code }) => {
+    expect(textErrorCode(value, 3)).toBe(code);
   });
 
   it('preserves explicit semantic codes independently of compatibility messages', () => {

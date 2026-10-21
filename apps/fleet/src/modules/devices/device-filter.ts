@@ -1,6 +1,6 @@
 import type { FleetDeviceCondition } from '../../generated/graphql/types.js';
 import { FleetDeviceModel } from '../../generated/prisma/enums.js';
-import { booleanFilter, enumFilter, invalid } from '../../validation.js';
+import { booleanFilter, enumFilter, invalid, textErrorCode } from '../../validation.js';
 import { DEVICE_STATUSES } from './device-state.js';
 
 export type DeviceConditionCriteria = {
@@ -20,13 +20,7 @@ function firmware(value: unknown, field: string): string | undefined {
     invalid(
       'filter',
       `filter.${field}: use 1 to 32 supported characters.`,
-      typeof value !== 'string'
-        ? 'INVALID_TYPE'
-        : !value.trim()
-          ? 'REQUIRED'
-          : Array.from(value.trim()).length > 32
-            ? 'TOO_LONG'
-            : 'INVALID_FORMAT',
+      textErrorCode(value, 32),
     );
   }
   return value.trim();

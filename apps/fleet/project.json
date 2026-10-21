@@ -8,6 +8,11 @@
   "targets": {
     "test": {
       "executor": "nx:run-commands",
+      "inputs": [
+        "default",
+        "{workspaceRoot}/apps/admin/src/app/ui/forms/field-errors.ts",
+        "{workspaceRoot}/apps/admin/src/app/features/fleet/field-errors.ts"
+      ],
       "options": {
         "command": "npm run test --",
         "cwd": "apps/fleet",

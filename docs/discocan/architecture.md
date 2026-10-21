@@ -219,6 +219,42 @@ newly emitted field error includes a stable `code` for localization, independent
 message. Codes contain 1–64 ASCII uppercase letters, digits or underscores and start with a
 letter. Core, Fleet, Karma Client and Gateway preserve valid unknown codes and accept legacy entries
 without a code; invalid code metadata is omitted without discarding a valid path/message.
+Fleet's `FieldErrorCode` union restricts application-emitted reasons; Core uses its own text-validation
+subset. The wire format remains open to valid future codes. A source-contract spec checks this
+vocabulary against the actual admin maps without importing another application's implementation.
+
+| Code                            | Meaning                                                             | Admin mapping |
+| ------------------------------- | ------------------------------------------------------------------- | ------------- |
+| `INVALID_VALUE`                 | Generic invalid-value fallback                                      | Generic       |
+| `REQUIRED`                      | A required value is absent or blank                                 | Generic       |
+| `INVALID_TYPE`                  | Wrong input type; intentionally uses the generic invalid-value text | Generic       |
+| `INVALID_FORMAT`                | Malformed or unsupported text/date format                           | Generic       |
+| `TOO_LONG`                      | Text exceeds its maximum length                                     | Generic       |
+| `TOO_MANY_ITEMS`                | List exceeds its maximum size                                       | Generic       |
+| `DUPLICATE_VALUE`               | A value or record ID is repeated                                    | Generic       |
+| `NOT_INTEGER`                   | A whole number is required                                          | Generic       |
+| `OUT_OF_RANGE`                  | A numeric value or period exceeds its bounds                        | Generic       |
+| `UNSUPPORTED_VALUE`             | Value is outside the supported enum/catalog choices                 | Generic       |
+| `INVALID_RANGE`                 | Range endpoints are inconsistent                                    | Generic       |
+| `ALREADY_EXISTS`                | A scoped unique value already exists                                | Fleet         |
+| `DRIVER_ASSIGNED`               | An assignment must be removed before deactivation                   | Fleet         |
+| `DRIVER_UNAVAILABLE`            | An active scoped Driver is required                                 | Fleet         |
+| `VEHICLE_UNAVAILABLE`           | An available scoped Vehicle is required                             | Fleet         |
+| `GROUP_UNAVAILABLE`             | A scoped Vehicle group is required                                  | Fleet         |
+| `MODEL_REQUIRED`                | Device options require a model                                      | Fleet         |
+| `MODEL_OPTIONS_UNSUPPORTED`     | Options are unsupported by the selected model                       | Fleet         |
+| `FUTURE_NOT_ALLOWED`            | A future timestamp is forbidden                                     | Fleet         |
+| `INVALID_TRANSITION`            | The requested status transition is invalid                          | Fleet         |
+| `DUE_THRESHOLD_REQUIRED`        | A due date or due odometer is required                              | Fleet         |
+| `ODOMETER_DECREASE`             | An odometer would decrease stored history                           | Fleet         |
+| `READING_NOT_LATER`             | An odometer reading must follow the latest reading                  | Fleet         |
+| `READING_AFTER_LATEST_DATA`     | A reading exceeds the permitted data time                           | Fleet         |
+| `NEXT_DUE_NOT_LATER`            | Next service must follow the completion threshold                   | Fleet         |
+| `CONFIGURATION_CAPACITY`        | Device configuration has reached capacity                           | Fleet         |
+| `CATALOG_PARAMETER_UNSUPPORTED` | The parameter is unsupported by the selected catalog                | Fleet         |
+| `VALUE_UNCHANGED`               | The requested value equals the current value                        | Fleet         |
+| `BOUNDED_PERIOD_REQUIRED`       | A bounded period or explicit Trip selection is required             | Fleet         |
+
 Creation's Core timeout is 3 seconds, Gateway's subgraph timeout
 is 5 seconds. No global current Branch or cross-request Branch validation cache exists.
 Tenant identity comes only from the HMAC-verified, expiring session. Gateway forwards Authorization; Core, Fleet and Karma Client independently verify it. Arbitrary tenant headers and entity representations cannot select a Tenant. Demo login deliberately allows anyone to choose any Tenant; it is not production identity or membership authorization.

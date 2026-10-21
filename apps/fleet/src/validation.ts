@@ -15,14 +15,49 @@ export interface FleetScope {
   readonly branchId: string;
 }
 
+export type FieldErrorCode =
+  | 'INVALID_VALUE'
+  | 'REQUIRED'
+  | 'INVALID_TYPE'
+  | 'INVALID_FORMAT'
+  | 'TOO_LONG'
+  | 'TOO_MANY_ITEMS'
+  | 'DUPLICATE_VALUE'
+  | 'NOT_INTEGER'
+  | 'OUT_OF_RANGE'
+  | 'UNSUPPORTED_VALUE'
+  | 'INVALID_RANGE'
+  | 'ALREADY_EXISTS'
+  | 'DRIVER_ASSIGNED'
+  | 'DRIVER_UNAVAILABLE'
+  | 'VEHICLE_UNAVAILABLE'
+  | 'GROUP_UNAVAILABLE'
+  | 'MODEL_REQUIRED'
+  | 'MODEL_OPTIONS_UNSUPPORTED'
+  | 'FUTURE_NOT_ALLOWED'
+  | 'INVALID_TRANSITION'
+  | 'DUE_THRESHOLD_REQUIRED'
+  | 'ODOMETER_DECREASE'
+  | 'READING_NOT_LATER'
+  | 'READING_AFTER_LATEST_DATA'
+  | 'NEXT_DUE_NOT_LATER'
+  | 'CONFIGURATION_CAPACITY'
+  | 'CATALOG_PARAMETER_UNSUPPORTED'
+  | 'VALUE_UNCHANGED'
+  | 'BOUNDED_PERIOD_REQUIRED';
+
 export interface FieldError {
   readonly path: string;
   readonly message: string;
   /** Legacy callers may omit a reason; invalidFields emits INVALID_VALUE for them. */
-  readonly code?: string;
+  readonly code?: FieldErrorCode;
 }
 
-export function invalid(path: string, message: string, code = 'INVALID_VALUE'): never {
+export function invalid(
+  path: string,
+  message: string,
+  code: FieldErrorCode = 'INVALID_VALUE',
+): never {
   throw new BadRequestException({ message, fieldErrors: [{ path, message, code }] });
 }
 
@@ -64,20 +99,21 @@ export function requireScope(context: {
   return { tenantId: requireTenant(context), branchId: uuid(context.branchId, 'x-branch-id') };
 }
 
+/** Classify a failed supported-text check without interpreting its compatibility message. */
+export function textErrorCode(value: unknown, max: number): FieldErrorCode {
+  if (value == null || (typeof value === 'string' && !value.trim())) {
+    return 'REQUIRED';
+  }
+  if (typeof value !== 'string') {
+    return 'INVALID_TYPE';
+  }
+  return Array.from(value.trim()).length > max ? 'TOO_LONG' : 'INVALID_FORMAT';
+}
+
 export function text(value: unknown, path: string, max: number): string {
   const trimmed = typeof value === 'string' ? value.trim() : '';
   if (!trimmed || Array.from(trimmed).length > max || trimmed.includes('\u0000')) {
-    invalid(
-      path,
-      `Use 1 to ${String(max)} supported characters.`,
-      value === null || value === undefined || (typeof value === 'string' && !trimmed)
-        ? 'REQUIRED'
-        : typeof value !== 'string'
-          ? 'INVALID_TYPE'
-          : Array.from(trimmed).length > max
-            ? 'TOO_LONG'
-            : 'INVALID_FORMAT',
-    );
+    invalid(path, `Use 1 to ${String(max)} supported characters.`, textErrorCode(value, max));
   }
   return trimmed;
 }

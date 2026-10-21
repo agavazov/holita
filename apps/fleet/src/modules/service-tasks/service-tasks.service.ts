@@ -30,6 +30,7 @@ import {
   dateOnlyRange,
   enumFilter,
   enumValue,
+  type FieldError,
   type FleetScope,
   idList,
   ids,
@@ -353,7 +354,7 @@ export class ServiceTasksService {
                 path: 'nextDueOn',
                 message: 'A next service cannot be planned for an inactive vehicle.',
                 code: 'VEHICLE_UNAVAILABLE',
-              },
+              } satisfies FieldError,
             ]),
         ...(nextDueOdometerKm === null
           ? []
@@ -362,7 +363,7 @@ export class ServiceTasksService {
                 path: 'nextDueOdometerKm',
                 message: 'A next service cannot be planned for an inactive vehicle.',
                 code: 'VEHICLE_UNAVAILABLE',
-              },
+              } satisfies FieldError,
             ]),
       ]);
     }

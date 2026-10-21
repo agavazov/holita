@@ -4,6 +4,7 @@ import type { RequestContext } from '../../graphql/request-context.js';
 import { isUUID } from 'class-validator';
 import type { Branch } from '../../generated/graphql/types.js';
 import { Prisma } from '../../generated/prisma/client.js';
+import { textErrorCode } from '../../validation.js';
 import { BranchesRepository } from './branches.repository.js';
 
 @Injectable()
@@ -37,11 +38,7 @@ export class BranchesService {
     const trimmed = name.trim();
     if (!trimmed || Array.from(trimmed).length > 80 || trimmed.includes('\u0000')) {
       const message = 'Use 1 to 80 supported characters.';
-      const code = !trimmed
-        ? 'REQUIRED'
-        : Array.from(trimmed).length > 80
-          ? 'TOO_LONG'
-          : 'INVALID_FORMAT';
+      const code = textErrorCode(name, 80);
       throw new BadRequestException({ message, fieldErrors: [{ path: 'name', message, code }] });
     }
     try {

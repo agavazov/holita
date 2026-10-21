@@ -11,6 +11,7 @@ import {
   idList,
   integerFilter,
   invalid,
+  textErrorCode,
 } from '../../validation.js';
 import { SERVICE_URGENCIES } from './service-urgency.sql.js';
 
@@ -32,13 +33,7 @@ function taskText(value: unknown, field: 'taskContains' | 'taskEquals'): string 
     invalid(
       'filter',
       `filter.${field}: use 1 to 120 supported characters.`,
-      typeof value !== 'string'
-        ? 'INVALID_TYPE'
-        : !trimmed
-          ? 'REQUIRED'
-          : Array.from(trimmed).length > 120
-            ? 'TOO_LONG'
-            : 'INVALID_FORMAT',
+      textErrorCode(value, 120),
     );
   }
   return trimmed;

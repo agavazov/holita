@@ -11,6 +11,7 @@ import {
   idList,
   integerFilter,
   invalid,
+  textErrorCode,
   numberFilter,
 } from '../../validation.js';
 
@@ -34,13 +35,7 @@ function makeFilter(value: unknown, field: string): string | undefined {
     invalid(
       'filter',
       `filter.${field}: use 1 to 64 supported characters.`,
-      typeof value !== 'string'
-        ? 'INVALID_TYPE'
-        : !value.trim()
-          ? 'REQUIRED'
-          : Array.from(value.trim()).length > 64
-            ? 'TOO_LONG'
-            : 'INVALID_FORMAT',
+      textErrorCode(value, 64),
     );
   }
   return value.trim();
