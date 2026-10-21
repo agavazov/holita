@@ -398,6 +398,89 @@ describe('Background device configuration page', () => {
     }
   });
 
+  it('blocks another submission and retries reconciliation when both the save response and refresh fail', async () => {
+    const fixture = await mount();
+    const baseline = saved('COMPLETE');
+    http
+      .expectOne((request) => operation(request, 'AdminDeviceConfigurationPage'))
+      .flush(pageResponse([baseline]));
+    await fixture.whenStable();
+    targets();
+    await fixture.whenStable();
+    const view: unknown = fixture.debugElement.query(
+      By.directive(DeviceConfigurationView),
+    ).componentInstance;
+    if (!(view instanceof DeviceConfigurationView)) {
+      throw new Error('Missing device configuration view.');
+    }
+    view.form.controls.carId.setValue(input.karmaCarId);
+    await fixture.whenStable();
+    const editor: unknown = fixture.debugElement.query(
+      By.directive(DeviceParameterEditor),
+    ).componentInstance;
+    if (!(editor instanceof DeviceParameterEditor)) {
+      throw new Error('Missing parameter editor.');
+    }
+    editor.form.patchValue({ mode: 'interval', parameterId: 65000, intervalSeconds: 60 });
+    editor.form.controls.confirmed.setValue(true);
+    editor.form.markAsDirty();
+    const change = {
+      ...input,
+      baselineOperationId: baseline.id,
+      parameterId: 65000,
+      intervalSeconds: 60,
+    };
+    const submission = fixture.componentInstance.requestIntervalUpdate(change);
+    http
+      .expectOne((request) => operation(request, 'AdminRequestDeviceParameterIntervalUpdate'))
+      .flush('Lost response', { status: 503, statusText: 'Unavailable' });
+    await submission;
+    http
+      .expectOne((request) => operation(request, 'AdminDeviceConfigurationPage'))
+      .flush('Refresh unavailable', { status: 503, statusText: 'Unavailable' });
+    await fixture.whenStable();
+    expect(pageText(fixture)).toContain('Checking whether the request was saved.');
+    expect(editor.form.controls.intervalSeconds.disabled).toBe(true);
+    expect(editor.form.controls.intervalSeconds.value).toBe(60);
+    expect(editor.form.dirty).toBe(true);
+    const blockedWrite = fixture.componentInstance.requestIntervalUpdate(change);
+    const blockedRead = fixture.componentInstance.requestRead(input);
+    http.expectNone((request) => operation(request, 'AdminRequestDeviceParameterIntervalUpdate'));
+    http.expectNone((request) => operation(request, 'AdminRequestDeviceConfigurationRead'));
+    await Promise.all([blockedWrite, blockedRead]);
+    const refreshButton = fixture.debugElement.queryAll(By.css('button')).find((item) => {
+      const element: unknown = item.nativeElement;
+      return (
+        element instanceof HTMLButtonElement &&
+        element.textContent.trim() === 'Refresh saved results'
+      );
+    });
+    const element: unknown = refreshButton?.nativeElement;
+    expect(element instanceof HTMLButtonElement && !element.disabled).toBe(true);
+
+    // No pending operation was known before the lost response; reconciliation still polls.
+    const poll = await vi.waitFor(
+      () => http.expectOne((request) => operation(request, 'AdminDeviceConfigurationPage')),
+      { timeout: 6500 },
+    );
+    const uncertain: AdminDeviceConfigurationOperationFragment = {
+      ...saved('UNKNOWN', '80000000-0000-4000-8000-000000000003'),
+      kind: 'UPDATE_INTERVAL',
+      phase: 'VERIFY_PARAMETERS',
+      baselineOperationId: baseline.id,
+      parameterId: 65000,
+      previousIntervalSeconds: 0,
+      intervalSeconds: 60,
+      writeUncertain: true,
+    };
+    poll.flush(pageResponse([uncertain, baseline]));
+    await fixture.whenStable();
+    expect(pageText(fixture)).not.toContain('Checking whether the request was saved.');
+    expect(pageText(fixture)).toContain('Submission uncertain; checking for response');
+    expect(editor.form.controls.intervalSeconds.disabled).toBe(true);
+    http.expectNone((request) => operation(request, 'AdminRequestDeviceParameterIntervalUpdate'));
+  }, 10000);
+
   it.each(['change', 'discard'] as const)(
     'retains a failed parameter draft without resending and clears obsolete errors on %s',
     async (action) => {

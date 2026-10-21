@@ -700,4 +700,6 @@ With writes enabled, the same page offers one catalog addition or one existing i
 change. Its typed form previews target, baseline, ID and before/after interval, requires
 explicit confirmation and a separate zero-interval confirmation, and guards dirty navigation.
 A changed target or baseline invalidates the draft. Saved history shows kind, phase and
-uncertainty; a lost browser response requires refreshing saved operations before resubmission.
+uncertainty; a lost browser response blocks new submissions until saved operations are
+successfully refreshed. A failed reconciliation read keeps the draft blocked and retries every
+five seconds even without a previously known pending operation. Manual refresh remains available.

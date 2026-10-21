@@ -31,6 +31,9 @@
     [title]="state() === 'invalid-id' ? text().invalidId : text().notFound"
   />
 } @else {
+  @if (reconciling()) {
+    <p-message severity="warn" role="status">{{ text().reconciling }}</p-message>
+  }
   @if (pollError(); as error) {
     <p-message severity="warn" role="status">{{ error }}</p-message>
   }
@@ -238,6 +241,7 @@
         pending() ||
         requesting() ||
         refreshing() ||
+        reconciling() ||
         targetsState() !== 'ready'
       "
       [submitting]="requesting()"

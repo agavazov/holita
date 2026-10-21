@@ -89,6 +89,7 @@ export class DeviceConfigurationView {
   readonly targetsState = input<'loading' | 'ready' | 'error'>('loading');
   readonly requesting = input(false);
   readonly refreshing = input(false);
+  readonly reconciling = input(false);
   readonly loadError = input<string | null>(null);
   readonly pollError = input<string | null>(null);
   readonly requestError = input<string | null>(null);
@@ -164,6 +165,7 @@ export class DeviceConfigurationView {
       this.pending() ||
       this.requesting() ||
       this.refreshing() ||
+      this.reconciling() ||
       this.targetsState() !== 'ready' ||
       !target ||
       !snapshot ||
@@ -178,6 +180,7 @@ export class DeviceConfigurationView {
       this.pending() ||
       this.requesting() ||
       this.refreshing() ||
+      this.reconciling() ||
       this.targetsState() !== 'ready' ||
       !this.targets().length,
   );

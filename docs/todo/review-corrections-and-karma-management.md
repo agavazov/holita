@@ -33,9 +33,6 @@ focused regression at the affected boundary; database races require guarded Post
 - **D12 / P2:** Own signed Gateway/Fleet readiness in the federation fixture after Router
   starts, checking readiness rather than assuming empty business data. Remove the browser
   fixture's duplicate readiness implementation and cover seeded/nonempty fixture use.
-- **D13 / P2:** Keep new device-operation submissions blocked until a lost save response is
-  reconciled, even when the reconciliation read also fails. Retry reconciliation without relying
-  on an already known pending operation; cover recovery and duplicate-submit prevention.
 - **B3 / P2:** Correct nested service-task filter error paths and Device status ordering to match
   the enum contract. Preserve the intentional empty untitledServiceTypes array used when localized
   text matches no enum label; verify remaining untitled-task/event sort and search expectations

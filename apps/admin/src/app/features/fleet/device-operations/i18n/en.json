@@ -27,6 +27,7 @@
   "targetRequired": "Select the Karma truck to read.",
   "read": "Read selected device settings",
   "requesting": "Saving request…",
+  "reconciling": "Checking whether the request was saved. Refresh saved results before submitting again.",
   "requestError": "The read request could not be saved. Refresh saved results before trying again.",
   "requestAccepted": "The read request was saved. The server is waiting for the device.",
   "disabled": "Background device reads are disabled on the server. Previously saved requests and results remain available.",

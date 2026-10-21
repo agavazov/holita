@@ -56,6 +56,7 @@ import { deviceConfigurationText } from './i18n/messages';
       [targetsError]="targetsFailure()"
       [requesting]="requesting()"
       [refreshing]="refreshing()"
+      [reconciling]="reconciling()"
       [loadError]="failure()"
       [pollError]="pollFailure()"
       [requestError]="requestFailure()"
@@ -91,6 +92,7 @@ export class DeviceConfigurationPage implements OnInit {
   readonly requesting = signal(false);
   readonly acceptedWrite = signal<string | null>(null);
   readonly refreshing = signal(false);
+  readonly reconciling = signal(false);
   private readonly loadError = signal<unknown>(null);
   private readonly targetsError = signal<unknown>(null);
   private readonly requestError = signal<unknown>(null);
@@ -185,6 +187,7 @@ export class DeviceConfigurationPage implements OnInit {
           this.operations.set(result.data.fleetDeviceOperations);
           this.state.set('ready');
           this.refreshing.set(false);
+          this.reconciling.set(false);
           if (result.data.fleetDeviceOperationsEnabled && !this.targetsStarted) {
             this.targetsStarted = true;
             this.loadTargets();
@@ -210,6 +213,7 @@ export class DeviceConfigurationPage implements OnInit {
     if (
       this.requesting() ||
       this.refreshing() ||
+      this.reconciling() ||
       this.state() !== 'ready' ||
       !this.data()?.fleetDeviceOperationsEnabled ||
       input.deviceId !== this.id ||
@@ -239,6 +243,7 @@ export class DeviceConfigurationPage implements OnInit {
     } catch (error: unknown) {
       if (!this.destroyRef.destroyed) {
         this.requestError.set(error);
+        this.reconciling.set(true);
         if (errorCode(error) === 'CONFLICT') {
           this.loadTargets();
         }
@@ -280,6 +285,7 @@ export class DeviceConfigurationPage implements OnInit {
     if (
       this.requesting() ||
       this.refreshing() ||
+      this.reconciling() ||
       this.state() !== 'ready' ||
       !this.data()?.fleetDeviceConfigurationWritesEnabled ||
       input.deviceId !== this.id ||
@@ -314,6 +320,7 @@ export class DeviceConfigurationPage implements OnInit {
     } catch (error: unknown) {
       if (!this.destroyRef.destroyed) {
         this.writeError.set(error);
+        this.reconciling.set(true);
         if (errorCode(error) === 'CONFLICT') {
           this.loadTargets();
         }
@@ -328,7 +335,10 @@ export class DeviceConfigurationPage implements OnInit {
 
   private schedulePoll(): void {
     this.clearPoll();
-    if (this.operations().some(deviceReadPending) && !this.destroyRef.destroyed) {
+    if (
+      (this.reconciling() || this.operations().some(deviceReadPending)) &&
+      !this.destroyRef.destroyed
+    ) {
       this.pollTimer = setTimeout(() => {
         this.refresh();
       }, 5000);
