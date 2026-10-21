@@ -7,9 +7,12 @@ import {
   Router,
   RouterOutlet,
   provideRouter,
+  type Route,
+  type Routes,
 } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { FleetRouteReuseStrategy } from './fleet-route-reuse';
+import { fleetRoutes } from './fleet.routes';
 
 @Component({
   selector: 'holita-route-reuse-test-host',
@@ -17,22 +20,47 @@ import { FleetRouteReuseStrategy } from './fleet-route-reuse';
   template: '<router-outlet />',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-class RouteHost {}
+class RouteHost {
+  canLeave(): boolean {
+    return true;
+  }
+}
+
+/** Keep production paths, matchers, data and guards; only replace rendered business components. */
+function withTestHosts(routes: Routes): Routes {
+  return routes.map((route) => {
+    const testRoute: Route = { ...route };
+    if (testRoute.loadComponent) {
+      delete testRoute.loadComponent;
+      testRoute.component = RouteHost;
+    }
+    if (route.children) {
+      testRoute.children = withTestHosts(route.children);
+    }
+    return testRoute;
+  });
+}
 
 describe('Fleet route reuse', () => {
   const branchA = '10000000-0000-4000-8000-000000000001';
   const branchB = '10000000-0000-4000-8000-000000000002';
   const listRoute = ':branchId/fleet/vehicles';
   const editRoute = ':recordId/edit';
-  const profileRoute = ':branchId/fleet/vehicles/:recordId/:tab';
+  const profileRoute = 'vehicle-profile';
   const profileTripRoute = 'trips/:recordId';
   const strategy = new FleetRouteReuseStrategy();
   let harness: RouterTestingHarness;
 
+  function matches(route: ActivatedRouteSnapshot, path: string): boolean {
+    return path === profileRoute
+      ? route.routeConfig?.data?.['resource'] === 'vehicle-profile'
+      : route.routeConfig?.path === path;
+  }
+
   function snapshot(path: string): ActivatedRouteSnapshot {
     let current: ActivatedRouteSnapshot | null = TestBed.inject(Router).routerState.snapshot.root;
     while (current) {
-      if (current.routeConfig?.path === path) {
+      if (matches(current, path)) {
         return current;
       }
       current = current.firstChild;
@@ -43,7 +71,7 @@ describe('Fleet route reuse', () => {
   function component(path: string): unknown {
     for (const element of harness.fixture.debugElement.queryAll(By.directive(RouterOutlet))) {
       const outlet = element.injector.get(RouterOutlet);
-      if (outlet.isActivated && outlet.activatedRoute.snapshot.routeConfig?.path === path) {
+      if (outlet.isActivated && matches(outlet.activatedRoute.snapshot, path)) {
         return outlet.component;
       }
     }
@@ -57,43 +85,7 @@ describe('Fleet route reuse', () => {
           {
             path: ':language',
             component: RouteHost,
-            children: [
-              {
-                path: profileRoute,
-                canMatch: [
-                  (_route, segments) =>
-                    ['overview', 'trips', 'alerts', 'service'].includes(segments[4]?.path ?? ''),
-                ],
-                component: RouteHost,
-                data: { resource: 'vehicle-profile' },
-                children: [
-                  {
-                    path: profileTripRoute,
-                    component: RouteHost,
-                    data: { drawer: true, mode: 'view' },
-                  },
-                ],
-              },
-              {
-                path: listRoute,
-                component: RouteHost,
-                data: { resource: 'vehicles' },
-                children: [
-                  { path: 'new', component: RouteHost, data: { drawer: true, mode: 'create' } },
-                  { path: editRoute, component: RouteHost, data: { drawer: true, mode: 'edit' } },
-                ],
-              },
-              {
-                path: ':branchId/fleet/devices',
-                component: RouteHost,
-                data: { resource: 'devices' },
-              },
-              {
-                path: ':branchId/fleet/overview',
-                component: RouteHost,
-                data: { resource: 'overview' },
-              },
-            ],
+            children: withTestHosts(fleetRoutes),
           },
         ]),
         { provide: RouteReuseStrategy, useClass: FleetRouteReuseStrategy },
@@ -166,6 +158,25 @@ describe('Fleet route reuse', () => {
     expect(strategy.shouldReuseRoute(snapshot(overviewRoute), initial)).toBe(false);
     await harness.navigateByUrl(`/bg/${branchA}/fleet/overview`);
     expect(strategy.shouldReuseRoute(snapshot(overviewRoute), initial)).toBe(false);
+  });
+
+  it('retains the Devices list across diagnostics navigation and replaces a changed device drawer', async () => {
+    const devicesRoute = ':branchId/fleet/devices';
+    const diagnosticsRoute = ':recordId/diagnostics';
+    await harness.navigateByUrl(`/en/${branchA}/fleet/devices?page=2`);
+    const devices = component(devicesRoute);
+    await harness.navigateByUrl(`/en/${branchA}/fleet/devices/device-a/diagnostics?page=2`);
+    const diagnostics = component(diagnosticsRoute);
+    const initial = snapshot(diagnosticsRoute);
+    expect(component(devicesRoute)).toBe(devices);
+    await harness.navigateByUrl(`/en/${branchA}/fleet/devices/device-a/diagnostics?page=3`);
+    expect(component(diagnosticsRoute)).toBe(diagnostics);
+    await harness.navigateByUrl(`/en/${branchA}/fleet/devices/device-b/diagnostics?page=3`);
+    expect(component(devicesRoute)).toBe(devices);
+    expect(component(diagnosticsRoute)).not.toBe(diagnostics);
+    expect(strategy.shouldReuseRoute(snapshot(diagnosticsRoute), initial)).toBe(false);
+    await harness.navigateByUrl(`/en/${branchA}/fleet/devices?page=3`);
+    expect(component(devicesRoute)).toBe(devices);
   });
 
   it('keeps different route configurations separate and replaces Devices on scope changes', async () => {

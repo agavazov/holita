@@ -2,7 +2,8 @@ import { provideHttpClient, type HttpRequest } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { Router, provideRouter } from '@angular/router';
+import { Router, provideRouter, withComponentInputBinding } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { MessageService } from 'primeng/api';
 import type { AdminDeviceDetailsFragment } from '../../../../generated/graphql/operations';
 import { DemoSession } from '../../../core/auth/demo-session';
@@ -73,7 +74,16 @@ describe('Live Devices list action lifecycle', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
-        provideRouter([]),
+        provideRouter(
+          [
+            {
+              path: 'devices',
+              component: DevicesPage,
+              data: { branch: { id: branch, name: 'Fleet A' }, language: 'en' },
+            },
+          ],
+          withComponentInputBinding(),
+        ),
         provideHttpClient(),
         provideHttpClientTesting(),
         MessageService,
@@ -90,6 +100,44 @@ describe('Live Devices list action lifecycle', () => {
     http.verify({ ignoreCancelled: true });
     vi.restoreAllMocks();
   });
+  it('waits for totals before correcting a bookmarked out-of-range page and loads its last page', async () => {
+    const harness = await RouterTestingHarness.create('/devices?page=9');
+    const router = TestBed.inject(Router);
+    expect(router.url).toBe('/devices?page=9');
+    http.expectOne((request) => operation(request, 'AdminDeviceSummary')).flush(summary(22));
+    const initial = http.expectOne((request) => operation(request, 'AdminDevices'));
+    expect(initial.request.body).toMatchObject({ variables: { offset: 160, limit: 20 } });
+    initial.flush({
+      data: {
+        fleetDevices: {
+          __typename: 'FleetDevicePage',
+          items: [],
+          total: 22,
+          offset: 160,
+          limit: 20,
+        },
+      },
+    });
+    await harness.fixture.whenStable();
+    expect(router.url).toBe('/devices?page=2');
+    const corrected = http.expectOne((request) => operation(request, 'AdminDevices'));
+    expect(corrected.request.body).toMatchObject({ variables: { offset: 20, limit: 20 } });
+    corrected.flush({
+      data: {
+        fleetDevices: {
+          ...list().data.fleetDevices,
+          total: 22,
+          offset: 20,
+        },
+      },
+    });
+    await harness.fixture.whenStable();
+    expect(harness.routeNativeElement?.textContent).toContain('000000000000001');
+    http.expectNone((request) => operation(request, 'AdminDevices'));
+    http.expectNone((request) => operation(request, 'AdminDeviceSummary'));
+    harness.fixture.destroy();
+  });
+
   it('opens Diagnostics from the primary IMEI while preserving direct row-menu editing', async () => {
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     const fixture = TestBed.createComponent(DevicesPage);

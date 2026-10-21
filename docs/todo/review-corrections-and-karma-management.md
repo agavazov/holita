@@ -17,9 +17,6 @@ focused regression at the affected boundary; database races require guarded Post
   story waits explicit bounds; use a DatePicker with explicit time interpretation for Device
   installedAt; permit captured submitted writes to finish after route retirement; announce
   sort direction; fix the read-only task Vehicle label and nonbreaking unit spacing.
-- **D11 / P2:** Add connected Devices out-of-range-page coverage and exercise real Fleet route
-  definitions in route-reuse specs. Extend the existing list lifecycle coverage where a real
-  gap remains; do not recreate the already existing device-diagnostics spec.
 - **Validation / P2:** Restore the existing formatting gate on the files it reports. Reproduce
   admin timeout failures with the documented single-worker setting before classifying them
   as functional defects; keep deadlines and behavioral assertions intact.
