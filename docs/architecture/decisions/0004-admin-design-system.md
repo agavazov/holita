@@ -42,11 +42,13 @@ reviewed against a running backend.
   close button, Escape or the backdrop passes through one `confirmLeave` confirmation, and a dirty
   drawer also triggers the browser's leave-page prompt on unload. It closes either through its
   host (`closeRequest`) or, as a child route guarded by `leaveDrawer`, by navigating.
-- **Storybook as the review tool.** The patterns, the shell and the states of presentation-only
-  example screens have stories on the real Angular components with deterministic fixtures and
-  sample data (MenuButton and RowActions only inside the Shell, TablePanel and example stories);
-  the application's current Fleet screens are not in Storybook. Brand, density and theme are
-  toolbar globals, and stories are English only. `@storybook/addon-vitest` with
+- **Storybook as the review tool.** Patterns, the shell, presentation-only examples and connected
+  Fleet screens have stories on the real Angular components with deterministic fixtures and
+  sample data. The `Admin/...` stories render application routes, concrete feature services and
+  captured Apollo clients with fixture GraphQL responses; `Examples/...` hosts demonstrate the
+  shared views and drawers with synthetic data and simulated saves. Backend persistence and
+  service-boundary behavior are checked separately. Brand, density and theme are toolbar
+  globals, and stories are English only. `@storybook/addon-vitest` with
   `@vitest/browser-playwright` runs every story, play function and axe check as a test
   (`npm run test:storybook:admin`); these test-tooling dev dependencies were approved for this
   purpose.
@@ -56,12 +58,12 @@ reviewed against a running backend.
 - A brand, density, token or pattern change is made once and reaches every screen; Storybook
   shows the alternatives side by side, and changing `appTheme` is the only code change needed to
   switch the application.
-- The root font size follows the browser (16 px by default). Karma Client pages and the Fleet
-  Vehicles/Devices screens that predate the patterns keep working through
+- The root font size follows the browser (16 px by default). Karma Client pages use
   `styles/_legacy-karma.scss`, the only place the old class names and Sakai variable aliases
-  survive; their look is not redesigned and the file is removed once both are gone.
+  survive. Remove the file only after its remaining consumers are gone.
 - `light-dark()` and `color-mix()` require current evergreen browsers.
-- The application routes the pre-pattern Fleet Vehicles/Devices screens
-  ([Discocan Fleet](../../discocan/fleet.md)); the Fleet views and drawers built from the patterns
-  are presentation-only and render only in Storybook. The implemented design system is described
-  in [admin design system](../../admin-design-system.md).
+- The connected Fleet application uses the shared views and drawers for Vehicles, Devices,
+  Drivers, monitoring, Maintenance and settings
+  ([Discocan Fleet](../../discocan/fleet.md)), with generated TypedDocumentNodes through Gateway.
+  Storybook uses those presentation components and routed containers without a backend.
+  The design system is described in [admin design system](../../admin-design-system.md).

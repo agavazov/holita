@@ -243,7 +243,7 @@ Storybook renders the admin's real Angular components with deterministic synthet
 backend. `npm run dev` includes Storybook; `npm run storybook:admin` starts it separately. Both
 serve `http://127.0.0.1:11001` without opening a browser;
 `npm run build:storybook:admin` writes the ignored `apps/admin/storybook-static`. Storybook starts
-at "Start here", followed by Examples and Design System; the
+at "Start here", followed by Admin, Examples and Design System; the
 [Storybook review](admin-design-system.md#storybook-review) lists what each title shows.
 [Story tests](testing.md#storybook-story-tests) run every story with its play function and axe;
 [visual review](testing.md#storybook-visual-review) captures selected stories from the static
@@ -278,7 +278,8 @@ build.
   request headers run unchanged.
 - Render helpers: pattern stories wrap the component in the `onFrame` decorator (frame surface,
   gutter and content width). `routeAt(path)` with `StoryApp` opens a real application route under
-  `/en/` with GraphQL answered by fixtures (the routed Design System/Shell stories).
+  `/en/` with GraphQL answered by fixtures (the connected `Admin/...` and routed
+  `Design System/Shell` stories).
   `exampleAt(path)` (`src/storybook/samples/example-app.ts`) renders `ExampleApp`, which replaces
   the router configuration with the example routes and shows the example pages inside
   `AdminShell` without GraphQL; `?scenario=` and `?drawer=` in the path open their states. The
@@ -313,8 +314,10 @@ build.
     `NOT_FOUND`, `CONFLICT`, `SERVICE_UNAVAILABLE` and `BAD_USER_INPUT`) or `network-after-first`
     (the first call answers, later calls get HTTP 503).
 - Before every story the preview's `beforeEach` (`prepareStory`) resets the scenario and call
-  counts, the clock, the stored session, the theme and the document language. Session and failure
-  options affect only stories that call GraphQL, which are the routed Shell stories.
+  counts, the clock, the stored session, the theme and the document language. Session options
+  apply before application bootstrap; fixture latency and failures affect GraphQL operations in
+  connected `Admin/...`, routed Shell and Login stories. Fleet sample hosts do not send
+  GraphQL operations.
 - PrimeNG drawers, dialogs and menus render into `document.body`, so play functions query
   `within(canvasElement.ownerDocument.body)` and choose menu items with `chooseMenuItem` from
   `src/storybook/interactions.ts`, which clicks the item's label as `p-menu` expects. Dialogs fade
@@ -385,7 +388,8 @@ npm exec -- prettier --check 'apps/admin/src/**/*.html'
 
 SDL and named operation paths are explicit in `tools/graphql/contracts.mts`. Runtime Fleet
 loads its common SDL followed by the Vehicle, Device, Driver, Vehicle group, Telemetry, Trip,
-Event and Service task SDL in the same order; Gateway loads the generated static supergraph. No database or running
+Event, Service task, Overview, Settings and Device operations SDL in the same order;
+Gateway loads the generated static supergraph. No database or running
 backend is required for codegen/schema validation. Generated outputs stay ignored.
 Codegen maps `ID` to `string`; on the servers `DateTime` is a `string` input (validated by the
 service) and a `Date` output, and the calendar `Date` scalar is a `YYYY-MM-DD` string. Admin
@@ -429,16 +433,18 @@ Compose project `holita` uses `holita_postgres_data` mounted at `/var/lib/postgr
 `db:down` preserves the volume. Do not delete volumes or reset databases to repair setup.
 
 Core/Fleet own their schemas, generated Prisma clients and reviewed SQL migrations. Core
-retains its initial migration; Fleet retains its initial migration and adds the shared
-eData reference catalog, the Branch rename, the master data (`20261018100000_fleet_master_data`:
-Vehicle/Device columns, Driver, VehicleGroup) and the activity tables
-(`20261018110000_fleet_activity`: VehicleStatusSample, Trip, FleetEvent, ServiceTask), durable
+retains its initial migration and the shared Branch rename; Fleet retains its initial migration
+and adds the shared eData reference catalog, the Branch rename, the master data
+(`20261018100000_fleet_master_data`: Vehicle/Device columns, Driver, VehicleGroup) and activity tables
+(`20261018110000_fleet_activity`: VehicleStatusSample, Trip, FleetEvent, ServiceTask), Device
+stock (`20261020110000_device_stock`), Fleet settings (`20261020220000_fleet_settings`), durable
 device reads (`20261021000000_device_configuration_reads`) and parameter change intent/phases
 (`20261021100000_device_parameter_changes`) through
-additive migrations. Branch and every
-Fleet business table place tenantId immediately after id. Fleet foreign keys include
-Tenant/Branch, and natural-key uniqueness includes Tenant/Branch. `db:migrate` deploys Core then Fleet; `db:generate` generates both ignored
-clients. Initial migrations require empty databases; a previous migration history needs an
+additive migrations. Branch places `tenantId` immediately after `id`. The ten scoped Fleet
+tables (`FleetSettings`, `Vehicle`, `Device`, `FleetDeviceOperation`, `Driver`, `VehicleGroup`,
+`VehicleStatusSample`, `Trip`, `FleetEvent`, `ServiceTask`) begin with `id`, `tenantId`, `branchId`.
+Scoped Fleet foreign keys and natural-key uniqueness include Tenant/Branch. `db:migrate`
+deploys Core then Fleet; `db:generate` generates both ignored clients. Initial migrations require empty databases; a previous migration history needs an
 explicitly authorized database rebuild. `db:migrate` never resets databases. Subsequent schema
 changes require new reviewed SQL migrations, not edits to applied history or db push.
 

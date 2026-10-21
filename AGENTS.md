@@ -97,6 +97,9 @@ Keep shared rules in this guide and never put credential values in agent instruc
 
 ## Angular admin (apps/admin)
 
+- Meridian is visual inspiration only. Do not copy its source, assets or dependencies into holita.
+- Never read, print or commit `apps/admin/public/config.local.json`.
+
 - Follow the official [angular-developer](.agents/skills/angular-developer/SKILL.md)
   for framework conventions and the PrimeNG plugin/MCP for current component APIs.
   [Agent setup](docs/development.md#angular-agent-tools) is documented separately.

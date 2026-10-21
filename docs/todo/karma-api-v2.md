@@ -11,12 +11,11 @@ source assets and coverage are documented in the
   reported remote configuration changes; attempt verified remote recovery first,
   then arrange on-site work if necessary.
 
-## eData configuration interface
+## eData reporting verification and restoration
 
-- [Build an eData parameter configuration interface](erm-edata-configuration-interface.md),
-  using the documented device workflow and the separately maintained catalog.
-  That task owns the user-facing configuration work; provider questions below
-  remain shared investigation items.
+- Follow up the [implemented eData configuration interface](erm-edata-configuration-interface.md)
+  with measurement reporting verification, scoped restoration and production authorization.
+  Provider questions below remain shared investigation items.
 
 ## Vehicle diagnostic fault monitoring
 

@@ -7,8 +7,7 @@ aggregates, batch actions and demo-data rules belong to the
 documented in [Fleet demo data](../discocan/development.md#fleet-demo-data). Extend those actual
 contracts rather than restoring the former backend slice plan or copying its obsolete SDL.
 
-The [main backlog](admin-design-system.md) owns scope/release decisions; connected presentation
-work belongs to the [frontend backlog](admin-design-system-frontend.md).
+The [main backlog](admin-design-system.md) owns frontend work and product/release decisions.
 
 ## Provider integrations
 
@@ -18,8 +17,10 @@ Real providers and their contracts are prerequisites for:
   data, including units, provenance and freshness semantics.
 - Firmware targets/policy and any update capability; a stored firmware string is not a target
   or a compliance policy.
-- Hardware command transport, including Restart. Define supported devices, authorization,
-  delivery and completion/failure semantics before exposing a live command.
+- Restart and other unsupported hardware commands. The current command 301 transport supports
+  eData configuration reads, predefined-parameter additions and existing-interval changes;
+  it does not establish general command support. Define supported devices, authorization,
+  delivery and completion/failure semantics for each additional command.
 - Notification generation/delivery and any account-backed feed/read state. Fleet counts do
   not constitute notifications or unread delivery state.
 
@@ -31,8 +32,9 @@ successful writes.
 
 The following requires separate product scope and is not pending Storybook screen adoption:
 
-- Fuel entries; geozones/POIs; a diagnostic-fault lifecycle; eData readings and reporting
-  configuration; driver-assignment history.
+- Fuel entries; geozones/POIs; a diagnostic-fault lifecycle; telemetry ingestion/reporting;
+  driver-assignment history. Remaining eData measurement verification and scoped restoration
+  belong to the [eData backlog](erm-edata-configuration-interface.md).
 - Demo dataset refresh/versioning. The fixed anchor intentionally ages against the business
   date; do not update existing seed rows to refresh it. Any refresh proposal must define a new
   dataset version/IDs and preserve insert-only/idempotent behavior and local safety guards.

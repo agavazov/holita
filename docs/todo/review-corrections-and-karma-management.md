@@ -12,15 +12,16 @@ review scratchpad; retain only open work here. Implemented contracts belong in
 The identifiers below retain the original review's references. Each correction requires a
 focused regression at the affected boundary; database races require guarded PostgreSQL tests.
 
-- **Validation / P2:** Restore the existing formatting gate on the files it reports. Reproduce
-  admin timeout failures with the documented single-worker setting before classifying them
-  as functional defects; keep deadlines and behavioral assertions intact.
+- **Validation / P2:** Finish the required broad admin, contract and backend checks. Reproduce
+  admin timeouts with the documented single-worker setting before classifying their cause;
+  keep deadlines and behavioral assertions intact.
 
 ## Performance
 
-- **P3 / measurement required:** Measure count-window alternatives, Overview time predicates,
-  OPEN-alert predicates/indexes, repeated settings reads, Intl construction and drawer choice
-  loading before selecting any optimization. No index or caching change follows from estimates.
+- **P3 / remaining measurement:** Profile repeated settings reads, Intl construction in real
+  display paths and drawer choice loading. Evaluate SQL alternatives against representative
+  workloads before selecting an optimization; demo-sized warm plans do not establish production
+  latency. No index or caching change follows from estimates.
 
 ## Karma device-management design and approval
 
@@ -82,14 +83,3 @@ changing it; use concrete functions/helpers only and retain the existing applica
 Shared backend packages are deferred to a separately justified architectural change. Keep
 feature-owned Apollo lifecycles; do not introduce a shared lifecycle class or a per-worker
 smoke backend. Do not delete branches/worktrees or change visual baselines.
-
-## Documentation corrections accompanying the fixes
-
-- **Doc1:** Correct ADR0004 to describe the connected Fleet screens and current Storybook use.
-- **Doc3:** Correct command/capture/schema/migration references and scoped table counts against
-  the implementation, including FleetSettings and FleetDeviceOperation.
-- **Doc4:** Restore agent rules for Meridian as visual inspiration only and never reading,
-  printing or committing apps/admin/public/config.local.json; ignore editor swap files.
-- **Doc5:** Remove completed/contradictory backlog entries, preserve the theme-purchase decision
-  in English, consolidate release/frontend stubs and repair references.
-- **Doc7:** Remove implementation-progress wording from authoritative product documents.

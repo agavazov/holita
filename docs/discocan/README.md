@@ -38,9 +38,9 @@ a vehicle fleet and scopes Vehicles/Devices and the active admin workspace. In E
 the same Branch concept represents an online shop.
 
 GraphQL uses `Branch`, `branches`, `branch` and `branchId`; Fleet requests carry
-`x-branch-id`. Tenant identity comes from the verified session. Every Fleet business table
-(Vehicle, Device, Driver, VehicleGroup, VehicleStatusSample, Trip, FleetEvent, ServiceTask)
-begins with `id`, `tenantId`, `branchId`. Branch
+`x-branch-id`. Tenant identity comes from the verified session. All ten scoped Fleet business tables
+(FleetSettings, Vehicle, Device, FleetDeviceOperation, Driver, VehicleGroup,
+VehicleStatusSample, Trip, FleetEvent, ServiceTask) begin with `id`, `tenantId`, `branchId`. Branch
 itself has `id` and `tenantId`.
 The admin labels this scope Клон / Branch. Karma account data remains shared across
 authenticated tenants and does not use Branch scope.

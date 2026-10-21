@@ -32,8 +32,8 @@ Angular suites cover URL query helpers, typed forms, server-field focus, client/
 late writes, partial deletion/retry and retired confirmations. `vehicle-profile.spec.ts` and
 `vehicle-profile-query.spec.ts` cover the profile API/adapter, related-record paging, shared
 editor return paths and manual readings without a fabricated data clock. Browser checks use real CRUD,
-reload/scoping and Bulgarian 1280/390/320px light/dark forms/lists. Captures belong in ignored
-`.references/review/vehicles`.
+reload/scoping and Bulgarian 1280/390/320px light/dark forms/lists. Failure/trace screenshots
+use the shared opt-in [browser diagnostics](../testing.md#real-federation-and-browser-smoke-checks).
 
 ## Devices checks
 
@@ -176,7 +176,8 @@ captured reads/writes through Branch/language/session changes, conditional Core 
 honest partial saves. A failed name remains editable while Discard keeps already saved Fleet
 preferences. `app/ui/format/fleet-format.spec.ts` covers display-unit conversion without losing
 null/zero or changing labelled canonical editor/filter inputs. Include the workspace/Branch
-specs when changing the gate or navigation.
+specs when changing the gate or navigation. Use
+`npm run test:smoke:admin -- angular-settings.smoke.spec.mts` for the compiled settings flow.
 
 ```bash
 npm run test:admin -- --include="app/features/fleet/**/i18n/*.spec.ts" --skip-nx-cache
@@ -220,7 +221,7 @@ Session checks cover signatures, tampering, expiry, production opt-in, unauthent
 ignored tenant headers. DB/federation tests exercise scoped discovery/CRUD/entity resolution,
 identical Branch IDs and IMEIs across tenants, composite relation rejection and seed idempotency.
 Initial-migration tests deploy the complete schema in dedicated guarded databases, then check
-mandatory scope columns, physical id/tenantId/branchId order for all eight Fleet business tables, and the full applied migration history. Upgrade tests preserve existing records (which receive the master data defaults) and migration checksums through the Branch rename, master data and activity migrations. They never touch
+mandatory scope columns, physical id/tenantId/branchId order for all ten scoped Fleet business tables, and the full applied migration history. Upgrade tests preserve existing records (which receive the master data defaults) and migration checksums through the Branch rename, master data and activity migrations. They never touch
 development tables. Angular tests cover logged-out deep links, Tenant/Branch dropdown gating and retry, obsolete candidate
 responses, root-to-Overview navigation, remembered Branch selection, tenant client/cache retirement,
 delayed submitted writes and fresh A → B → A clients. Browser login checks use the actual dropdown,

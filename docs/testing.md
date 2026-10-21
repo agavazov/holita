@@ -330,7 +330,8 @@ they cover read gating/Retry, Branch/language/session isolation, saved-unit prop
 the separate Fleet-save/Core-rename outcomes. A failed rename must retain its name draft and
 the actual persisted Fleet baseline, without a false full-success toast. Disabled Demo
 notification switches never become a persistence/delivery assertion. Read-value conversion
-preserves null/zero; editor/filter values use canonical units. The
+preserves null/zero. Numeric API filters and editors explicitly labelled in km use canonical
+units; the odometer editor uses the Branch display unit and converts submissions back to km. The
 `admin-settings-general--default` capture covers both themes at desktop/mobile widths;
 its candidates require human baseline approval.
 

@@ -20,6 +20,7 @@ apps/*/src/generated/
 
 .idea/
 .DS_Store
+*.swp
 
 .tmp/
 /.references/

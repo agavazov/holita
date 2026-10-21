@@ -1,47 +1,53 @@
 # Admin design system
 
-Pending product decisions, release work and design-system refinements. The current presentation,
+Pending product decisions, release work and presentation refinements. Current presentation,
 Storybook workflow and shared patterns are documented in the
 [admin design system](../admin-design-system.md). Connected Fleet screens and their contracts
 belong to the [Fleet implementation index](../discocan/fleet.md) and
-[Discocan architecture](../discocan/architecture.md); they are not implementation tasks in this backlog.
+[Discocan architecture](../discocan/architecture.md).
 
-The remaining work is split between the [frontend backlog](admin-design-system-frontend.md),
-[backend backlog](admin-design-system-backend.md) and
-[release decisions](admin-design-system-review-fixes.md). Keep pending work here and actual
-behavior in those authoritative product documents. Remove an entry when it is implemented;
-report individual validation results in the task response.
+This backlog owns frontend and release work; the
+[backend backlog](admin-design-system-backend.md) owns API and provider work. Focused review
+corrections and the Karma device-management proposal remain in
+[review corrections](review-corrections-and-karma-management.md). Keep only pending work here.
 
 ## Provider integrations
 
-Signal quality and voltage acquisition, firmware targets/policy, hardware command transport
-including Restart, and notification delivery need real integrations that are unavailable in
-the current scope. Keep their explicit Demo/unavailable presentation; do not simulate live
-success or derive a notification feed from Fleet counts. Future work and contract dependencies
-are in the [backend backlog](admin-design-system-backend.md#provider-integrations).
+Signal quality and voltage acquisition, firmware targets/policy, Restart and other unsupported
+hardware commands, and notification delivery require real integrations. The supported command
+301 eData configuration reads, additions and interval changes do not establish support for
+other commands. Keep explicit Demo/unavailable presentation for unsupported capabilities;
+do not simulate live success or derive a notification feed from Fleet counts. Contract
+dependencies belong to the [backend backlog](admin-design-system-backend.md#provider-integrations).
 
 ## Release decisions
 
-- Decide whether affected-admin PR CI should run Storybook interaction and axe tests, following
-  the [story-test gate proposal](admin-design-system-review-fixes.md#story-tests-as-a-pr-gate).
-  Visual checks remain outside CI unless the user changes that decision.
-- Configure the production PrimeUI license before public release. The current internal test
-  release accepts the visible license notice; never hide it with CSS or JavaScript. Retain the
+- Implement the user-approved Storybook interaction/axe gate in affected-admin PR CI after
+  Chromium installation. Update the [testing guidance](../testing.md#github-actions) and
+  validate the workflow with `actionlint`, preserving real event base/head selection and
+  manual-only full regression. Visual checks remain outside CI unless the user changes that
+  separate decision.
+- Decide whether to purchase an admin theme.
+- Configure the production PrimeUI license before public release. The internal test release
+  accepts the visible license notice; never hide it with CSS or JavaScript. Retain the
   local-file developer setup and exclude the local key from production/static Storybook output.
-- Rotate the PrimeUI key retained in Git history, following the
-  [rotation decision](admin-design-system-review-fixes.md#primeui-key-rotation). This requires the
-  user's license action; removing it from the tracked file does not rotate it.
+- Rotate the PrimeUI key retained in Git history through the license provider. This requires
+  the user's license action; removing it from the tracked file does not rotate it. Never read,
+  print or commit the local license file or copy its key into documentation. Remove this entry
+  after rotation; keep the separate production license task until public-release configuration
+  is ready.
 
 ## Frontend refinements
 
-Use the [frontend backlog](admin-design-system-frontend.md) for the mobile filter decision,
-contrast coverage and small stylesheet cleanup. These do not require rebuilding connected
-Fleet screens or replacing their retained API, query,
-editor and batch tests.
+- Settle the proposed mobile "Filters (n)" toggle: implement it in the shared filter pattern
+  or remove the proposal from the design. `activeFilterCount` has no view consumer;
+  do not introduce a separate per-screen filter system.
+- Extend `theme/contrast.ts` coverage to the neutral/accent solid states, dark accent tags,
+  solid-button hover/active states and the notification unread badge where it is rendered.
 
 ## Visual review
 
-Further visual refinement and baseline approval are a separate user review. Use the
+Further visual refinement and baseline approval require user review. Use the
 [Storybook review procedure](../admin-design-system.md#storybook-review); take new candidates or
 record/update baselines only when authorized. Approved baselines stay local and ignored, and
 candidate images are not approval. The capture list is
@@ -49,11 +55,17 @@ candidate images are not approval. The capture list is
 
 ## Deferred extensions
 
-Keep future domain features in the [backend backlog](admin-design-system-backend.md#deferred-domain-work)
-and optional presentation/product extensions in the
-[frontend backlog](admin-design-system-frontend.md#deferred-extensions). They are proposals for
-later scope, not missing Storybook-to-admin adoption.
+These require later product scope:
 
-Select required checks from [testing](../testing.md). Full regression requires an explicit
-user/reviewer request. Do not keep a check-run journal or historical phase/agent ownership map
-in this backlog.
+- Mobile card layouts for additional lists if review requests them; a map view, saved list
+  views and export.
+- System color-scheme default and navigation counts, with an explicit behavior/ownership
+  decision and scope-retirement coverage.
+- Shared account identity and a real notification feed after their contracts/providers exist;
+  do not synthesize either from the current Tenant or Fleet business counts.
+- Remove `styles/_legacy-karma.scss` after its remaining consumers are gone.
+- Screenshot baselines in CI, after the user changes the local-review policy.
+
+Domain features belong to the [backend backlog](admin-design-system-backend.md#deferred-domain-work).
+Select required checks from [Discocan testing](../discocan/testing.md) and
+[shared testing](../testing.md). Full regression requires an explicit user/reviewer request.
