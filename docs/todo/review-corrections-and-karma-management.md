@@ -52,8 +52,6 @@ focused regression at the affected boundary; database races require guarded Post
 - **P1 / P2:** Separate each concrete scoped batch write from its single-record response
   hydration in Vehicles, Drivers, Devices, Events and Service tasks. Preserve sequential
   per-record partial results and error mapping; prove unused reads are absent.
-- **P2 / P2:** Restrict the Driver trip-stat aggregate to requested IDs in the scoped stats path;
-  retain full-Branch aggregation for lists/summaries and verify equivalent facts.
 - **P3 / measurement required:** Measure count-window alternatives, Overview time predicates,
   OPEN-alert predicates/indexes, repeated settings reads, Intl construction and drawer choice
   loading before selecting any optimization. No index or caching change follows from estimates.

@@ -10,6 +10,7 @@ export function driverFactsSql(
   schema: string,
   scope: FleetScope,
   window?: DataWindow | null,
+  driverIds?: readonly string[],
 ): Prisma.Sql {
   const drivers = fleetTable(schema, 'Driver');
   const trips = fleetTable(schema, 'Trip');
@@ -21,6 +22,10 @@ export function driverFactsSql(
     window === undefined
       ? Prisma.sql`clock."asOf" - ${DRIVER_STATS_DAYS * 24}::int * INTERVAL '1 hour'`
       : Prisma.sql`${window?.start ?? null}::timestamptz`;
+  const requestedDrivers =
+    driverIds === undefined
+      ? Prisma.empty
+      : Prisma.sql`AND t."driverId" = ANY(${driverIds}::uuid[])`;
   return Prisma.sql`WITH clock AS (${clock}), trip_stats AS (
     SELECT t."driverId", count(*)::int AS "tripCount30d",
       coalesce(sum(t."distanceKm"), 0)::float8 AS "distance30dKm",
@@ -32,6 +37,7 @@ export function driverFactsSql(
     FROM ${trips} t CROSS JOIN clock
     WHERE t."tenantId" = ${scope.tenantId}::uuid AND t."branchId" = ${scope.branchId}::uuid
       AND t."driverId" IS NOT NULL AND t."startedAt" > ${start} AND t."startedAt" <= clock."asOf"
+      ${requestedDrivers}
     GROUP BY t."driverId"
   )
   SELECT d."id", d."firstName", d."lastName", d."employeeNumber", d."identificationKey", d."phone",

@@ -26,7 +26,8 @@ repository query; counts use Prisma `_count`. Derived values (vehicle state, ope
 service, last report, 30-day driver statistics, trip maneuvers and in-progress flag) are computed
 for the whole page with batched queries in the services and attached before returning; there is
 no per-row resolver query. Resolvers only delegate, resolve federation references and return the
-`branch` stub. The decision is recorded in
+`branch` stub. Driver statistics for requested IDs restrict the Trip aggregate to those IDs;
+list and summary paths retain their full-Branch facts. The decision is recorded in
 [ADR 0005](../architecture/decisions/0005-fleet-list-contract-and-derived-values.md).
 
 The [Vehicles list SQL](../../apps/fleet/src/modules/vehicles/vehicle-list.sql.ts) computes

@@ -148,7 +148,7 @@ export class DriversRepository {
     if (!driverIds.length) {
       return new Map();
     }
-    const base = driverFactsSql(this.prisma.schema, scope, window);
+    const base = driverFactsSql(this.prisma.schema, scope, window, driverIds);
     const selected: unknown = await this.prisma.client.$queryRaw(Prisma.sql`
       WITH drivers AS (${base}) SELECT d."id"::text AS "id", d."distance30dKm", d."tripCount30d", d."drivingScore30d"
       FROM drivers d WHERE d."id" = ANY(${driverIds}::uuid[])`);
