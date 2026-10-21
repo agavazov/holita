@@ -204,7 +204,7 @@ export class DevicesService {
     context: RequestContext,
     values: readonly string[],
   ): Promise<FleetDeviceActionResult> {
-    requireScope(context);
+    const scope = requireScope(context);
     const selected = ids(values, 'ids');
     if (!selected.length) {
       invalid('ids', 'Choose at least one device.', 'REQUIRED');
@@ -213,7 +213,7 @@ export class DevicesService {
     const failures: FleetDeviceActionFailure[] = [];
     for (const id of selected) {
       try {
-        await this.delete(context, id);
+        await this.deleteStored(scope, id);
         succeededIds.push(id);
       } catch (error: unknown) {
         const code =
@@ -331,7 +331,11 @@ export class DevicesService {
   /** Telemetry keeps an IMEI snapshot; saved configuration reads protect their Device. */
   async delete(context: RequestContext, id: string): Promise<DeviceResult> {
     const scope = requireScope(context);
-    const recordId = uuid(id, 'id');
+    const row = await this.deleteStored(scope, uuid(id, 'id'));
+    return this.completeOne(scope, row);
+  }
+
+  private async deleteStored(scope: FleetScope, recordId: string): Promise<DeviceRow> {
     let row: DeviceRow;
     try {
       row = await this.devices.delete(scope, recordId);
@@ -341,7 +345,7 @@ export class DevicesService {
       }
       this.writeError(error);
     }
-    return this.completeOne(scope, row);
+    return row;
   }
 
   /** Current-pair reports are batched; status shares the Branch clock and never reports stock. */

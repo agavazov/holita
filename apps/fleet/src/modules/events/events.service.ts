@@ -300,6 +300,20 @@ export class EventsService {
   ): Promise<FleetEvent> {
     const scope = requireScope(context);
     const recordId = uuid(id, 'id');
+    await this.transitionStored(scope, transition, recordId, input);
+    const row = await this.events.find(scope, recordId);
+    if (!row || row.alertStatus === null) {
+      throw new NotFoundException('Alert not found');
+    }
+    return toEvent(row);
+  }
+
+  private async transitionStored(
+    scope: FleetScope,
+    transition: AlertTransition,
+    recordId: string,
+    input: FleetAlertTransitionInput,
+  ): Promise<void> {
     const rule = TRANSITIONS[transition];
     const expected = enumValue(input.expectedStatus, ALERT_STATUSES, 'expectedStatus');
     const allowed: readonly FleetAlertStatus[] = rule.from;
@@ -316,14 +330,13 @@ export class EventsService {
       ...rule.data(this.clock.now()),
       ...remark,
     });
-    const row = await this.events.find(scope, recordId);
-    if (!row || row.alertStatus === null) {
-      throw new NotFoundException('Alert not found');
-    }
     if (!changed) {
+      const row = await this.events.find(scope, recordId);
+      if (!row || row.alertStatus === null) {
+        throw new NotFoundException('Alert not found');
+      }
       throw new ConflictException('The alert changed after it was loaded; reload it.');
     }
-    return toEvent(row);
   }
 
   async acknowledgeMany(
@@ -331,7 +344,7 @@ export class EventsService {
     values: readonly string[],
     input: FleetAlertTransitionInput,
   ): Promise<FleetAlertActionResult> {
-    requireScope(context);
+    const scope = requireScope(context);
     const selected = ids(values, 'ids');
     if (!selected.length) {
       invalid('ids', 'Choose at least one alert.', 'REQUIRED');
@@ -348,7 +361,7 @@ export class EventsService {
     const failures: FleetAlertActionFailure[] = [];
     for (const id of selected) {
       try {
-        await this.transition(context, 'acknowledge', id, input);
+        await this.transitionStored(scope, 'acknowledge', id, input);
         succeededIds.push(id);
       } catch (error: unknown) {
         failures.push(this.actionFailure(context, id, error));

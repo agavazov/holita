@@ -285,7 +285,7 @@ export class DriversService {
     context: RequestContext,
     values: readonly string[],
   ): Promise<FleetDriverActionResult> {
-    requireScope(context);
+    const scope = requireScope(context);
     const selected = ids(values, 'ids');
     if (!selected.length) {
       invalid('ids', 'Choose at least one driver.', 'REQUIRED');
@@ -294,7 +294,7 @@ export class DriversService {
     const failures: FleetDriverActionFailure[] = [];
     for (const id of selected) {
       try {
-        await this.delete(context, id);
+        await this.deleteStored(scope, id);
         succeededIds.push(id);
       } catch (error: unknown) {
         failures.push(this.actionFailure(context, id, error));
@@ -307,7 +307,7 @@ export class DriversService {
     context: RequestContext,
     values: readonly string[],
   ): Promise<FleetDriverActionResult> {
-    requireScope(context);
+    const scope = requireScope(context);
     const selected = ids(values, 'ids');
     if (!selected.length) {
       invalid('ids', 'Choose at least one driver.', 'REQUIRED');
@@ -316,7 +316,7 @@ export class DriversService {
     const failures: FleetDriverActionFailure[] = [];
     for (const id of selected) {
       try {
-        await this.update(context, id, { status: 'INACTIVE' });
+        await this.updateStored(scope, id, { status: 'INACTIVE' });
         succeededIds.push(id);
       } catch (error: unknown) {
         failures.push(this.actionFailure(context, id, error));
@@ -424,7 +424,15 @@ export class DriversService {
     input: UpdateFleetDriverInput,
   ): Promise<DriverResult> {
     const scope = requireScope(context);
-    const recordId = uuid(id, 'id');
+    const row = await this.updateStored(scope, uuid(id, 'id'), input);
+    return this.completeOne(scope, row);
+  }
+
+  private async updateStored(
+    scope: FleetScope,
+    recordId: string,
+    input: UpdateFleetDriverInput,
+  ): Promise<DriverRow> {
     const data: Partial<DriverData> = {};
     if (input.firstName !== undefined) {
       data.firstName = text(input.firstName, 'firstName', 64);
@@ -488,20 +496,24 @@ export class DriversService {
     if (row === null) {
       invalidFields([ASSIGNED_DRIVER]);
     }
-    return this.completeOne(scope, row);
+    return row;
   }
 
   /** Drivers with trips or events cannot be deleted (composite foreign keys). */
   async delete(context: RequestContext, id: string): Promise<DriverResult> {
     const scope = requireScope(context);
-    const recordId = uuid(id, 'id');
+    const row = await this.deleteStored(scope, uuid(id, 'id'));
+    return this.completeOne(scope, row);
+  }
+
+  private async deleteStored(scope: FleetScope, recordId: string): Promise<DriverRow> {
     let row: DriverRow;
     try {
       row = await this.drivers.delete(scope, recordId);
     } catch (error) {
       persistenceError(error, 'Driver', DELETE_CONFLICT);
     }
-    return this.completeOne(scope, row);
+    return row;
   }
 
   private async complete(

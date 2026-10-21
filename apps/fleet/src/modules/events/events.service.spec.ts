@@ -264,7 +264,6 @@ describe('Events, alert counts and transitions', () => {
       missing = randomUUID();
     transition.mockResolvedValueOnce(1).mockResolvedValueOnce(0).mockResolvedValueOnce(0);
     find
-      .mockResolvedValueOnce(row({ id: first, alertStatus: 'ACKNOWLEDGED' }))
       .mockResolvedValueOnce(row({ id: stale, alertStatus: 'RESOLVED' }))
       .mockResolvedValueOnce(null);
     await expect(
@@ -280,6 +279,15 @@ describe('Events, alert counts and transitions', () => {
         { id: missing, code: 'NOT_FOUND', message: 'Alert not found' },
       ],
     });
+    expect(find).toHaveBeenCalledTimes(2);
+    expect(find).toHaveBeenNthCalledWith(1, scope, stale);
+    expect(find).toHaveBeenNthCalledWith(2, scope, missing);
+    [first, stale, missing].forEach((id, index) => {
+      expect(transition).toHaveBeenNthCalledWith(index + 1, scope, id, 'OPEN', {
+        alertStatus: 'ACKNOWLEDGED',
+        acknowledgedAt: now,
+      });
+    });
     transition.mockClear();
     for (const action of [
       service.acknowledgeMany(context, [], { expectedStatus: 'OPEN' }),
@@ -292,6 +300,35 @@ describe('Events, alert counts and transitions', () => {
       await expect(action).rejects.toThrow(BadRequestException);
     }
     expect(transition).not.toHaveBeenCalled();
+  });
+
+  it('acknowledges a successful batch without loading unused event references', async () => {
+    const selected = [randomUUID(), randomUUID()];
+    await expect(
+      service.acknowledgeMany(context, selected, { expectedStatus: 'OPEN' }),
+    ).resolves.toEqual({
+      succeededIds: selected,
+      failures: [],
+    });
+    expect(transition).toHaveBeenCalledTimes(2);
+    expect(find).not.toHaveBeenCalled();
+  });
+
+  it('still hydrates the public single transition response with event references', async () => {
+    const alert = row({ alertStatus: 'ACKNOWLEDGED', acknowledgedAt: now });
+    find.mockResolvedValue(alert);
+    await expect(
+      service.transition(context, 'acknowledge', alert.id, { expectedStatus: 'OPEN' }),
+    ).resolves.toMatchObject({
+      id: alert.id,
+      vehicle: alert.vehicle,
+      driver: alert.driver,
+      alertStatus: 'ACKNOWLEDGED',
+      acknowledgedAt: now,
+      measurementUnit: 'KPH',
+    });
+    expect(find).toHaveBeenCalledTimes(1);
+    expect(find).toHaveBeenCalledWith(scope, alert.id);
   });
 
   it('returns nine maneuver rows and requires trips or a bounded period', async () => {

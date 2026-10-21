@@ -258,7 +258,9 @@ button and the list's Edit row action open the shared Vehicle editor.
 
 Row and selection delete/deactivate actions submit one IDs-array mutation. Protected deletions
 return per-record failures; only successful IDs are removed from the selection, and failed rows
-remain available for retry. Success and partial/error results use the workspace's shared toast;
+remain available for retry. Concrete batch writes run sequentially without hydrating unused
+single-record responses, aggregate statistics or settings; single-record mutations retain their
+complete response. Success and partial/error results use the workspace's shared toast;
 load and form errors remain inline. A submitted batch settles against its captured scope after
 retirement without navigating or publishing into another workspace. Typed drawers retain failed
 drafts, focus invalid fields and guard dirty navigation.

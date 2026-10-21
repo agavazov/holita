@@ -38,6 +38,7 @@ describe('Devices validation and scope', () => {
   const findVehicle = jest.fn<DevicesRepository['findVehicle']>();
   const imeiTaken = jest.fn<DevicesRepository['imeiTaken']>();
   const requireBranch = jest.fn<CoreClient['requireBranch']>();
+  const readSettings = jest.fn<SettingsService['read']>();
   const lastReported = jest.fn<TelemetryService['lastReported']>();
   const asOf = jest.fn<TelemetryService['asOf']>();
   const now = new Date('2026-10-18T07:00:00.000Z');
@@ -83,7 +84,7 @@ describe('Devices validation and scope', () => {
         DevicesService,
         {
           provide: SettingsService,
-          useValue: { read: () => Promise.resolve(defaultFleetSettings()) },
+          useValue: { read: readSettings },
         },
         {
           provide: DevicesRepository,
@@ -96,6 +97,7 @@ describe('Devices validation and scope', () => {
     }).compile();
     service = module.get(DevicesService);
     jest.resetAllMocks();
+    readSettings.mockResolvedValue(defaultFleetSettings());
     findVehicle.mockResolvedValue({ id: vehicleId });
     imeiTaken.mockResolvedValue(false);
     list.mockResolvedValue({
@@ -408,15 +410,35 @@ describe('Devices validation and scope', () => {
       succeededIds: [first, last],
       failures: [{ id: missing, code: 'NOT_FOUND', message: 'Device not found' }],
     });
-    for (const id of selected) {
-      expect(remove).toHaveBeenCalledWith(scope, id);
-    }
+    selected.forEach((id, index) => {
+      expect(remove).toHaveBeenNthCalledWith(index + 1, scope, id);
+    });
+    expect(lastReported).not.toHaveBeenCalled();
+    expect(asOf).not.toHaveBeenCalled();
+    expect(readSettings).not.toHaveBeenCalled();
+    expect(summary).toHaveBeenCalledTimes(1);
     remove.mockClear();
     for (const ids of [[], [first, first], Array.from({ length: 101 }, () => randomUUID())]) {
       expect(await fieldErrors(service.deleteMany(context, ids))).toMatchObject([{ path: 'ids' }]);
     }
     expect(remove).not.toHaveBeenCalled();
     expect(requireBranch).not.toHaveBeenCalled();
+  });
+
+  it('still hydrates a public single deletion with current reporting status', async () => {
+    const deleted = row();
+    remove.mockResolvedValue(deleted);
+    lastReported.mockResolvedValue(new Map([[reportingPair(vehicleId, deleted.imei), now]]));
+    await expect(service.delete(context, deleted.id)).resolves.toMatchObject({
+      id: deleted.id,
+      vehicle: deleted.vehicle,
+      lastReportedAt: now,
+      status: 'ONLINE',
+    });
+    expect(remove).toHaveBeenCalledWith(scope, deleted.id);
+    expect(lastReported).toHaveBeenCalledWith(scope, [{ vehicleId, imei: deleted.imei }]);
+    expect(asOf).toHaveBeenCalledWith(scope);
+    expect(readSettings).toHaveBeenCalledWith(scope);
   });
 
   it('reports a duplicate IMEI from the scoped pre-check and from a concurrent insert', async () => {

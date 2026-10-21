@@ -226,7 +226,7 @@ export class VehiclesService {
     context: RequestContext,
     values: readonly string[],
   ): Promise<FleetVehicleActionResult> {
-    requireScope(context);
+    const scope = requireScope(context);
     const selected = ids(values, 'ids');
     if (!selected.length) {
       invalid('ids', 'Choose at least one vehicle.', 'REQUIRED');
@@ -235,7 +235,7 @@ export class VehiclesService {
     const failures: FleetVehicleActionFailure[] = [];
     for (const id of selected) {
       try {
-        await this.delete(context, id);
+        await this.deleteStored(scope, id);
         succeededIds.push(id);
       } catch (error: unknown) {
         failures.push(this.actionFailure(context, id, error));
@@ -248,7 +248,7 @@ export class VehiclesService {
     context: RequestContext,
     values: readonly string[],
   ): Promise<FleetVehicleActionResult> {
-    requireScope(context);
+    const scope = requireScope(context);
     const selected = ids(values, 'ids');
     if (!selected.length) {
       invalid('ids', 'Choose at least one vehicle.', 'REQUIRED');
@@ -257,7 +257,7 @@ export class VehiclesService {
     const failures: FleetVehicleActionFailure[] = [];
     for (const id of selected) {
       try {
-        await this.deactivate(context, id);
+        await this.deactivateStored(scope, id);
         succeededIds.push(id);
       } catch (error: unknown) {
         failures.push(this.actionFailure(context, id, error));
@@ -377,27 +377,35 @@ export class VehiclesService {
 
   async deactivate(context: RequestContext, id: string): Promise<VehicleResult> {
     const scope = requireScope(context);
-    const recordId = uuid(id, 'id');
+    const row = await this.deactivateStored(scope, uuid(id, 'id'));
+    return this.completeOne(scope, row);
+  }
+
+  private async deactivateStored(scope: FleetScope, recordId: string): Promise<VehicleRow> {
     let row: VehicleRow;
     try {
       row = await this.vehicles.deactivate(scope, recordId);
     } catch (error) {
       persistenceError(error, 'Vehicle');
     }
-    return this.completeOne(scope, row);
+    return row;
   }
 
   /** A deletable vehicle has no devices, samples, events or tasks, so its derived values are empty. */
   async delete(context: RequestContext, id: string): Promise<VehicleResult> {
     const scope = requireScope(context);
-    const recordId = uuid(id, 'id');
+    const row = await this.deleteStored(scope, uuid(id, 'id'));
+    return this.completeOne(scope, row);
+  }
+
+  private async deleteStored(scope: FleetScope, recordId: string): Promise<VehicleRow> {
     let row: VehicleRow;
     try {
       row = await this.vehicles.delete(scope, recordId);
     } catch (error) {
       persistenceError(error, 'Vehicle', DELETE_CONFLICT);
     }
-    return this.completeOne(scope, row);
+    return row;
   }
 
   /** Keep filtered/sorted facts from the list snapshot; next service is not a list predicate. */

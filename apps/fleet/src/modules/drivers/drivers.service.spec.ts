@@ -75,6 +75,7 @@ describe('Drivers validation and scope', () => {
   const stats = jest.fn<DriversRepository['stats']>();
   const summary = jest.fn<DriversRepository['summary']>();
   const requireBranch = jest.fn<CoreClient['requireBranch']>();
+  const readSettings = jest.fn<SettingsService['read']>();
   const asOf = jest.fn<TelemetryService['asOf']>();
   const driverScore = jest.fn<TripsService['driverScore']>();
   const maneuverTotalsByDriver = jest.fn<EventsService['maneuverTotalsByDriver']>();
@@ -116,12 +117,13 @@ describe('Drivers validation and scope', () => {
   let service: DriversService;
   beforeEach(async () => {
     jest.resetAllMocks();
+    readSettings.mockResolvedValue(defaultFleetSettings());
     const module = await Test.createTestingModule({
       providers: [
         DriversService,
         {
           provide: SettingsService,
-          useValue: { read: () => Promise.resolve(defaultFleetSettings()) },
+          useValue: { read: readSettings },
         },
         {
           provide: DriversRepository,
@@ -377,6 +379,10 @@ describe('Drivers validation and scope', () => {
     expect(remove).toHaveBeenNthCalledWith(1, scope, deleted.id);
     expect(remove).toHaveBeenNthCalledWith(2, scope, protectedId);
     expect(remove).toHaveBeenNthCalledWith(3, scope, missingId);
+    expect(asOf).not.toHaveBeenCalled();
+    expect(stats).not.toHaveBeenCalled();
+    expect(maneuverTotalsByDriver).not.toHaveBeenCalled();
+    expect(readSettings).not.toHaveBeenCalled();
     expect(requireBranch).not.toHaveBeenCalled();
   });
 
@@ -414,7 +420,53 @@ describe('Drivers validation and scope', () => {
     });
     expect(update).toHaveBeenCalledTimes(1);
     expect(update).toHaveBeenCalledWith(scope, available.id, { status: 'INACTIVE' });
+    expect(find).toHaveBeenNthCalledWith(1, scope, assigned.id);
+    expect(find).toHaveBeenNthCalledWith(2, scope, available.id);
+    expect(find).toHaveBeenNthCalledWith(3, scope, missingId);
+    expect(asOf).not.toHaveBeenCalled();
+    expect(stats).not.toHaveBeenCalled();
+    expect(maneuverTotalsByDriver).not.toHaveBeenCalled();
+    expect(readSettings).not.toHaveBeenCalled();
     expect(requireBranch).not.toHaveBeenCalled();
+  });
+
+  it('still hydrates public single status changes and deletions with current statistics', async () => {
+    const changed = row({ status: 'INACTIVE' });
+    const deleted = row();
+    find.mockResolvedValue(changed);
+    update.mockResolvedValue(changed);
+    remove.mockResolvedValue(deleted);
+    asOf.mockResolvedValue(now);
+    stats.mockResolvedValue(
+      new Map([
+        [changed.id, { distance30dKm: 200, tripCount30d: 4, drivingScore30d: 81 }],
+        [deleted.id, { distance30dKm: 100, tripCount30d: 2, drivingScore30d: 90 }],
+      ]),
+    );
+    maneuverTotalsByDriver.mockResolvedValue(new Map([[changed.id, 6], [deleted.id, 2]]));
+    await expect(service.update(context, changed.id, { status: 'INACTIVE' })).resolves.toMatchObject({
+      id: changed.id,
+      status: 'INACTIVE',
+      distance30dKm: 200,
+      tripCount30d: 4,
+      drivingScore30d: 81,
+      maneuversPer100Km30d: 3,
+    });
+    await expect(service.delete(context, deleted.id)).resolves.toMatchObject({
+      id: deleted.id,
+      distance30dKm: 100,
+      tripCount30d: 2,
+      drivingScore30d: 90,
+      maneuversPer100Km30d: 2,
+    });
+    for (const [index, id] of [changed.id, deleted.id].entries()) {
+      expect(asOf).toHaveBeenNthCalledWith(index + 1, scope);
+      expect(stats).toHaveBeenNthCalledWith(index + 1, scope, [id], expect.any(Object));
+      expect(maneuverTotalsByDriver).toHaveBeenNthCalledWith(
+        index + 1, scope, [id], expect.any(Object),
+      );
+      expect(readSettings).toHaveBeenNthCalledWith(index + 1, scope);
+    }
   });
 
   it('rejects invalid bulk selections before any mutation', async () => {

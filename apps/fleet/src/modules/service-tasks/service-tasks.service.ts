@@ -384,10 +384,14 @@ export class ServiceTasksService {
   async cancel(context: RequestContext, id: string): Promise<FleetServiceTask> {
     const scope = requireScope(context);
     const recordId = uuid(id, 'id');
+    await this.cancelStored(scope, recordId);
+    return this.load(scope, recordId);
+  }
+
+  private async cancelStored(scope: FleetScope, recordId: string): Promise<void> {
     if (!(await this.tasks.cancelPlanned(scope, recordId))) {
       await this.plannedConflict(scope, recordId, 'Only planned service can be cancelled');
     }
-    return this.load(scope, recordId);
   }
 
   /** Deletes a PLANNED or CANCELLED task; completed service is kept as history. */
@@ -395,20 +399,31 @@ export class ServiceTasksService {
     const scope = requireScope(context);
     const recordId = uuid(id, 'id');
     const task = await this.load(scope, recordId);
-    if (task.status === 'DONE') {
+    await this.deleteStored(scope, recordId, task.status);
+    return task;
+  }
+
+  private async deleteStored(
+    scope: FleetScope,
+    recordId: string,
+    status: FleetServiceStatus | undefined,
+  ): Promise<void> {
+    if (status === undefined) {
+      throw new NotFoundException('Service task not found');
+    }
+    if (status === 'DONE') {
       throw new ConflictException('Completed service is kept as history');
     }
     if (!(await this.tasks.deleteUncompleted(scope, recordId))) {
       await this.plannedConflict(scope, recordId, 'Completed service is kept as history');
     }
-    return task;
   }
 
   async cancelMany(
     context: RequestContext,
     values: readonly string[],
   ): Promise<FleetServiceTaskActionResult> {
-    requireScope(context);
+    const scope = requireScope(context);
     const selected = ids(values, 'ids');
     if (!selected.length) {
       invalid('ids', 'Choose at least one service task.', 'REQUIRED');
@@ -417,7 +432,7 @@ export class ServiceTasksService {
     const failures: FleetServiceTaskActionFailure[] = [];
     for (const id of selected) {
       try {
-        await this.cancel(context, id);
+        await this.cancelStored(scope, id);
         succeededIds.push(id);
       } catch (error: unknown) {
         failures.push(this.actionFailure(context, id, error));
@@ -430,7 +445,7 @@ export class ServiceTasksService {
     context: RequestContext,
     values: readonly string[],
   ): Promise<FleetServiceTaskActionResult> {
-    requireScope(context);
+    const scope = requireScope(context);
     const selected = ids(values, 'ids');
     if (!selected.length) {
       invalid('ids', 'Choose at least one service task.', 'REQUIRED');
@@ -439,7 +454,8 @@ export class ServiceTasksService {
     const failures: FleetServiceTaskActionFailure[] = [];
     for (const id of selected) {
       try {
-        await this.delete(context, id);
+        const task = await this.tasks.findTask(scope, id);
+        await this.deleteStored(scope, id, task?.status);
         succeededIds.push(id);
       } catch (error: unknown) {
         failures.push(this.actionFailure(context, id, error));

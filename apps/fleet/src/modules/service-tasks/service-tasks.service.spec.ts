@@ -43,6 +43,7 @@ describe('Service task rules', () => {
   const cancelPlanned = jest.fn<ServiceTasksRepository['cancelPlanned']>();
   const deleteUncompleted = jest.fn<ServiceTasksRepository['deleteUncompleted']>();
   const requireBranch = jest.fn<CoreClient['requireBranch']>();
+  const readSettings = jest.fn<SettingsService['read']>();
   // 22:30 UTC on 17 October is the business date 18 October in Europe/Sofia.
   const now = new Date('2026-10-17T22:30:00.000Z');
   const today = '2026-10-18';
@@ -102,12 +103,13 @@ describe('Service task rules', () => {
   let service: ServiceTasksService;
   beforeEach(async () => {
     jest.resetAllMocks();
+    readSettings.mockResolvedValue(defaultFleetSettings());
     const module = await Test.createTestingModule({
       providers: [
         ServiceTasksService,
         {
           provide: SettingsService,
-          useValue: { read: () => Promise.resolve(defaultFleetSettings()) },
+          useValue: { read: readSettings },
         },
         {
           provide: ServiceTasksRepository,
@@ -232,41 +234,110 @@ describe('Service task rules', () => {
     }
   });
 
-  it('keeps successful batch changes when another task conflicts or is foreign', async () => {
+  it('keeps scoped partial batch results without loading unused task urgency or references', async () => {
     const first = randomUUID(),
       done = randomUUID(),
-      foreign = randomUUID();
-    const cancel = jest
-      .spyOn(service, 'cancel')
-      .mockResolvedValueOnce({ ...task(), branchId: scope.branchId, vehicle })
-      .mockRejectedValueOnce(new ConflictException('Only planned service can be cancelled'))
-      .mockRejectedValueOnce(new NotFoundException('Service task not found'));
-    await expect(service.cancelMany(context, [first, done, foreign])).resolves.toEqual({
-      succeededIds: [first],
+      foreign = randomUUID(),
+      last = randomUUID();
+    const selected = [first, done, foreign, last];
+    cancelPlanned
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(1);
+    findTask
+      .mockResolvedValueOnce(stored({ id: done, status: 'DONE' }))
+      .mockResolvedValueOnce(null);
+    await expect(service.cancelMany(context, selected)).resolves.toEqual({
+      succeededIds: [first, last],
       failures: [
         { id: done, code: 'CONFLICT', message: 'Only planned service can be cancelled' },
         { id: foreign, code: 'NOT_FOUND', message: 'Service task not found' },
       ],
     });
-    cancel.mockRestore();
-    const remove = jest
-      .spyOn(service, 'delete')
-      .mockResolvedValueOnce({ ...task(), branchId: scope.branchId, vehicle })
-      .mockRejectedValueOnce(new ConflictException('Completed service is kept as history'));
-    await expect(service.deleteMany(context, [first, done])).resolves.toMatchObject({
-      succeededIds: [first],
-      failures: [{ id: done, code: 'CONFLICT' }],
+    selected.forEach((id, index) => {
+      expect(cancelPlanned).toHaveBeenNthCalledWith(index + 1, scope, id);
     });
-    remove.mockClear();
-    await expect(service.deleteMany(context, [])).rejects.toThrow(BadRequestException);
-    await expect(
-      service.deleteMany(
-        context,
-        Array.from({ length: 101 }, () => randomUUID()),
-      ),
-    ).rejects.toThrow(BadRequestException);
-    expect(remove).not.toHaveBeenCalled();
-    remove.mockRestore();
+    expect(findTask).toHaveBeenNthCalledWith(1, scope, done);
+    expect(findTask).toHaveBeenNthCalledWith(2, scope, foreign);
+    findTask.mockClear();
+    findTask
+      .mockResolvedValueOnce(stored({ id: first }))
+      .mockResolvedValueOnce(stored({ id: done, status: 'DONE' }))
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(stored({ id: last, status: 'CANCELLED' }));
+    await expect(service.deleteMany(context, selected)).resolves.toEqual({
+      succeededIds: [first, last],
+      failures: [
+        { id: done, code: 'CONFLICT', message: 'Completed service is kept as history' },
+        { id: foreign, code: 'NOT_FOUND', message: 'Service task not found' },
+      ],
+    });
+    selected.forEach((id, index) => {
+      expect(findTask).toHaveBeenNthCalledWith(index + 1, scope, id);
+    });
+    expect(deleteUncompleted).toHaveBeenCalledTimes(2);
+    expect(deleteUncompleted).toHaveBeenNthCalledWith(1, scope, first);
+    expect(deleteUncompleted).toHaveBeenNthCalledWith(2, scope, last);
+    expect(findMany).not.toHaveBeenCalled();
+    expect(vehicleRefs).not.toHaveBeenCalled();
+    expect(readSettings).not.toHaveBeenCalled();
+    expect(urgencyCounts).not.toHaveBeenCalled();
+    expect(requireBranch).not.toHaveBeenCalled();
+    deleteUncompleted.mockClear();
+    for (const values of [
+      [],
+      [first, first],
+      ['invalid'],
+      Array.from({ length: 101 }, () => randomUUID()),
+    ]) {
+      await expect(service.deleteMany(context, values)).rejects.toThrow(BadRequestException);
+    }
+    expect(deleteUncompleted).not.toHaveBeenCalled();
+  });
+
+  it('retains the conditional delete guard when a batch task completes or disappears after its status read', async () => {
+    const done = randomUUID(),
+      missing = randomUUID();
+    findTask
+      .mockResolvedValueOnce(stored({ id: done }))
+      .mockResolvedValueOnce(stored({ id: done, status: 'DONE' }))
+      .mockResolvedValueOnce(stored({ id: missing }))
+      .mockResolvedValueOnce(null);
+    deleteUncompleted.mockResolvedValue(0);
+    await expect(service.deleteMany(context, [done, missing])).resolves.toEqual({
+      succeededIds: [],
+      failures: [
+        { id: done, code: 'CONFLICT', message: 'Completed service is kept as history' },
+        { id: missing, code: 'NOT_FOUND', message: 'Service task not found' },
+      ],
+    });
+    expect(deleteUncompleted).toHaveBeenNthCalledWith(1, scope, done);
+    expect(deleteUncompleted).toHaveBeenNthCalledWith(2, scope, missing);
+    expect(findMany).not.toHaveBeenCalled();
+    expect(vehicleRefs).not.toHaveBeenCalled();
+    expect(readSettings).not.toHaveBeenCalled();
+  });
+
+  it('still hydrates public single cancellation and deletion responses', async () => {
+    const cancelled = task({ status: 'CANCELLED', urgency: null });
+    const deleted = task();
+    findMany.mockResolvedValueOnce([cancelled]).mockResolvedValueOnce([deleted]);
+    await expect(service.cancel(context, cancelled.id)).resolves.toEqual({
+      ...cancelled,
+      branchId: scope.branchId,
+      vehicle,
+    });
+    await expect(service.delete(context, deleted.id)).resolves.toEqual({
+      ...deleted,
+      branchId: scope.branchId,
+      vehicle,
+    });
+    for (const [index, id] of [cancelled.id, deleted.id].entries()) {
+      expect(findMany).toHaveBeenNthCalledWith(index + 1, scope, today, [id]);
+      expect(vehicleRefs).toHaveBeenNthCalledWith(index + 1, scope, [vehicleId]);
+      expect(readSettings).toHaveBeenNthCalledWith(index + 1, scope);
+    }
   });
 
   it('creates planned tasks with a due date or odometer on active vehicles only', async () => {

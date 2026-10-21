@@ -402,7 +402,40 @@ describe('Vehicles validation and scope', () => {
       ]);
     }
     expect(remove).toHaveBeenCalledTimes(3);
+    selected.forEach((id, index) => {
+      expect(deactivate).toHaveBeenNthCalledWith(index + 1, scope, id);
+      expect(remove).toHaveBeenNthCalledWith(index + 1, scope, id);
+    });
+    expect(vehicleStates).not.toHaveBeenCalled();
+    expect(openAlertCounts).not.toHaveBeenCalled();
+    expect(nextForVehicles).not.toHaveBeenCalled();
     expect(requireBranch).not.toHaveBeenCalled();
+  });
+
+  it('still hydrates public single deactivation and deletion responses', async () => {
+    const inactive = row({ status: 'INACTIVE' });
+    const deleted = row();
+    deactivate.mockResolvedValue(inactive);
+    remove.mockResolvedValue(deleted);
+    openAlertCounts.mockResolvedValue(new Map([[inactive.id, 3], [deleted.id, 2]]));
+    await expect(service.deactivate(context, inactive.id)).resolves.toMatchObject({
+      id: inactive.id,
+      status: 'INACTIVE',
+      state: classifyVehicleState(NO_FACTS, null),
+      openAlertCount: 3,
+      nextService: null,
+    });
+    await expect(service.delete(context, deleted.id)).resolves.toMatchObject({
+      id: deleted.id,
+      state: classifyVehicleState(NO_FACTS, null),
+      openAlertCount: 2,
+      nextService: null,
+    });
+    for (const [index, id] of [inactive.id, deleted.id].entries()) {
+      expect(vehicleStates).toHaveBeenNthCalledWith(index + 1, scope, [id]);
+      expect(openAlertCounts).toHaveBeenNthCalledWith(index + 1, scope, [id]);
+      expect(nextForVehicles).toHaveBeenNthCalledWith(index + 1, scope, [id]);
+    }
   });
 
   it('creates with defaults, normalised VIN and scoped relation checks, calling Core once', async () => {
