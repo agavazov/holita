@@ -6,6 +6,7 @@ export default {
   testEnvironment: 'node',
   testMatch: [
     '<rootDir>/tools/graphql/**/*.unit.spec.mts',
+    '<rootDir>/tools/development/**/*.unit.spec.mts',
     '<rootDir>/tools/erm-edata/**/*.unit.spec.mts',
   ],
   modulePathIgnorePatterns: [

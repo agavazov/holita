@@ -63,7 +63,8 @@ The group generates admin GraphQL artifacts once before starting Angular and Sto
 parallel; their standalone commands keep their own generation step. Ctrl+C stops the process
 group, including Storybook; `db:down` stops PostgreSQL separately and preserves the volume.
 Use `npm run kill` from another terminal when application processes remain running. It stops
-the dev group (including its Storybook), individual Angular/Nest watchers and compiled backend processes from this checkout,
+the dev group, standalone `admin:storybook`, individual Angular/Nest watchers and compiled
+backend processes from this checkout,
 including the native Router, the concurrently group and their child workers. It sends
 SIGTERM, then SIGKILL to survivors after two seconds.
 PostgreSQL and processes from other checkouts remain running. Running it again is harmless.
