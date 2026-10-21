@@ -154,6 +154,8 @@ Under WSL a run can fail a whole story file with "Failed to fetch dynamically im
 That is Vite failing to load the file in the browser, not a story failure; the file passes on a
 rerun. Treat only a failure that repeats as a story failure.
 
+Failed-test screenshots go to `.references/review/storybook-failures/`.
+
 ## Storybook visual review
 
 ```bash
@@ -171,10 +173,10 @@ It uses Chromium, `bg-BG`, `Europe/Sofia`, a fixed clock (`2026-10-18T07:00:00Z`
 Each capture waits until no fixture request has been in flight for 400 ms and the preview marks
 the story's play function complete. Fixture quiet alone can precede lazy route loading.
 
-- Every run writes reviewable candidates to the ignored `test-results/storybook-visual-candidates/`
-  and attaches them to the HTML report in `playwright-report/storybook-visual/`
-  (`npm exec -- playwright show-report playwright-report/storybook-visual`). Mismatch diffs are in
-  `test-results/storybook-visual/`. Candidates are overwritten but never removed; delete the
+- Every run writes reviewable candidates to the ignored `.references/review/storybook-visual-candidates/`
+  and attaches them to the HTML report in `.references/review/storybook-visual-report/`
+  (`npm exec -- playwright show-report .references/review/storybook-visual-report`). Mismatch diffs are in
+  `.references/review/storybook-visual-results/`. Candidates are overwritten but never removed; delete the
   candidates directory before a run to review only the current list.
 - Approved baselines are per checkout in the ignored `.references/review/storybook-baselines/`.
   Missing or changed baselines fail the run; Playwright never creates them (`updateSnapshots: 'none'`).

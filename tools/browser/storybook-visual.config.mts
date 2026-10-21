@@ -1,12 +1,16 @@
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from '@playwright/test';
 
+const reviewDirectory = fileURLToPath(new URL('../../.references/review/', import.meta.url));
+
 // Visual review of the static admin Storybook. Missing or changed screenshots fail and are written
-// to test-results as candidates; baselines change only through an explicit --update-snapshots run
+// under .references/review as candidates; baselines change only through an explicit --update-snapshots run
 // after a person approves the candidates.
 export default defineConfig({
   testDir: '.',
   testMatch: 'storybook-visual.spec.mts',
-  outputDir: '../../test-results/storybook-visual',
+  outputDir: join(reviewDirectory, 'storybook-visual-results'),
   snapshotPathTemplate: '{testDir}/../../.references/review/storybook-baselines/{arg}{ext}',
   updateSnapshots: 'none',
   fullyParallel: false,
@@ -19,7 +23,7 @@ export default defineConfig({
   },
   reporter: [
     ['list'],
-    ['html', { outputFolder: '../../playwright-report/storybook-visual', open: 'never' }],
+    ['html', { outputFolder: join(reviewDirectory, 'storybook-visual-report'), open: 'never' }],
   ],
   use: {
     browserName: 'chromium',

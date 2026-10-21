@@ -31,6 +31,7 @@ export default defineConfig({
     browser: {
       enabled: true,
       headless: true,
+      screenshotDirectory: join(configDir, '../../../.references/review/storybook-failures'),
       provider: playwright({}),
       instances: [{ browser: 'chromium' }],
     },

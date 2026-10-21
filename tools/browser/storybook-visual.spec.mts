@@ -60,7 +60,7 @@ const test = base.extend<{ storybook: string }>({
   },
 });
 
-const candidates = join(workspaceRoot, 'test-results/storybook-visual-candidates');
+const candidates = join(workspaceRoot, '.references/review/storybook-visual-candidates');
 
 const viewports = {
   desktop: { width: 1440, height: 900 },
@@ -70,7 +70,7 @@ const viewports = {
 
 type ViewportName = keyof typeof viewports;
 
-/** Storybook is English only, so a capture varies by theme, viewport, brand and density. */
+/** Each story fixes its language; captures vary by theme, viewport, brand and density. */
 interface Capture {
   readonly id: string;
   readonly theme: 'light' | 'dark';
@@ -147,6 +147,7 @@ const captures: readonly Capture[] = [
     'admin-service-maintenance--default',
     'admin-settings-vehicle-groups--default',
     'admin-settings-general--default',
+    'admin-fleet-device-configuration-states--reconciliation-needed',
     'examples-monitoring-overview--default',
     'examples-fleet-vehicles--default',
     'examples-fleet-vehicle-profile--overview',
@@ -161,6 +162,10 @@ const captures: readonly Capture[] = [
     'examples-monitoring-trips--trip-drawer',
     'examples-fleet-vehicles--edit',
     'examples-fleet-odometer--default',
+    'admin-fleet-odometer-settings--miles-and-new-york-time',
+    'admin-fleet-odometer-settings--inactive',
+    'admin-fleet-odometer-settings--no-later-time',
+    'admin-fleet-devices--installed-at-calendar',
     'examples-service-service-completion--default',
     'examples-fleet-drivers--view',
     'examples-fleet-devices--edit',
