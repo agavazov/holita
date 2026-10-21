@@ -324,7 +324,8 @@ captured clients, generated operations and shared load/error/empty states:
   read-only Driver record opens that vehicle's profile in the current Branch.
 - [Maintenance](../../apps/admin/src/app/features/fleet/maintenance/maintenance-page.ts) supports
   planning, editing PLANNED tasks, completion with optional next task, cancellation and protected
-  deletion. DONE/CANCELLED records open as read-only history. Costs convert decimal text to exact
+  deletion. Row and selected cancellation require the shared destructive-action confirmation,
+  naming the affected records before submission. DONE/CANCELLED records open as read-only history. Costs convert decimal text to exact
   EUR cents; zero and unknown remain distinct. Completion uses the service business date and the
   inactive-Vehicle/earlier-date rules above.
 - [Vehicle groups](../../apps/admin/src/app/features/fleet/vehicle-groups/vehicle-groups-page.ts)

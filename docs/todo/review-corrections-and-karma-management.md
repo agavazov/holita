@@ -15,8 +15,6 @@ focused regression at the affected boundary; database races require guarded Post
 - **D2 / P2:** Use the configured Branch time zone and display distance unit in the odometer
   editor, preserving canonical km on submission. Expose unavailable states for INACTIVE
   vehicles and for an empty valid time interval; cover DST and direct routes.
-- **D3 / P2:** Require the shared destructive-action confirmation for single/bulk maintenance
-  cancellation in `maintenance-view.ts`.
 - **D4 / P2:** Reload an alert after an optimistic conflict, preserve its remark draft and
   retry with the refreshed status rather than resending the stale expectedStatus.
 - **D10 / P2:** Restore FilterBuilder focus to an enabled control at the condition limit;

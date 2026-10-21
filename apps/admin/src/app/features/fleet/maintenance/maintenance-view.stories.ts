@@ -198,6 +198,11 @@ export const CancelService: Story = {
     );
     const body = within(canvasElement.ownerDocument.body);
     await chooseMenuItem(canvasElement.ownerDocument.body, 'Cancel service');
+    const dialog = await body.findByRole('alertdialog', { name: 'Cancel service tasks?' });
+    await expect(within(dialog).getByRole('listitem')).toHaveTextContent(
+      `${task.kind} on ${plate}`,
+    );
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel service' }));
     await waitFor(() => expect(body.getByText('Service tasks cancelled: 1.')).toBeVisible());
     await userEvent.type(canvas.getByRole('searchbox'), task.kind);
     await userEvent.click(

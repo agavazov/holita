@@ -228,6 +228,8 @@ export class MaintenanceView {
           id: 'cancel',
           label: text.cancel,
           bulk: true,
+          danger: true,
+          confirm: text.confirmCancel,
           appliesTo: (row) => row.status === 'PLANNED',
         },
         { id: 'vehicle', label: text.vehicle },

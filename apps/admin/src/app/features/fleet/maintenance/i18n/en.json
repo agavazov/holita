@@ -63,6 +63,10 @@
     "edit": "Edit",
     "complete": "Complete service",
     "cancel": "Cancel service",
+    "confirmCancel": {
+      "title": "Cancel service tasks?",
+      "accept": "Cancel service"
+    },
     "vehicle": "Open vehicle profile",
     "delete": "Delete",
     "confirmDelete": {
