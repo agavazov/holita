@@ -11,13 +11,38 @@ import {
   idList,
   integerFilter,
   invalid,
-  text,
 } from '../../validation.js';
 import { SERVICE_URGENCIES } from './service-urgency.sql.js';
 
 export type ServiceTaskConditionCriteria = {
   [K in keyof FleetServiceTaskCondition]?: FleetServiceTaskCondition[K] | undefined;
 };
+
+function taskText(value: unknown, field: 'taskContains' | 'taskEquals'): string | undefined {
+  if (value == null) {
+    return undefined;
+  }
+  const trimmed = typeof value === 'string' ? value.trim() : '';
+  if (
+    typeof value !== 'string' ||
+    !trimmed ||
+    Array.from(trimmed).length > 120 ||
+    trimmed.includes('\u0000')
+  ) {
+    invalid(
+      'filter',
+      `filter.${field}: use 1 to 120 supported characters.`,
+      typeof value !== 'string'
+        ? 'INVALID_TYPE'
+        : !trimmed
+          ? 'REQUIRED'
+          : Array.from(trimmed).length > 120
+            ? 'TOO_LONG'
+            : 'INVALID_FORMAT',
+    );
+  }
+  return trimmed;
+}
 
 /** Repeated filters retain their independent AND meaning and bounded input. */
 export function serviceTaskConditions(
@@ -83,12 +108,8 @@ export function serviceTaskConditions(
       ),
       vehicleIds: idList(condition.vehicleIds, 'vehicleIds'),
       excludedVehicleIds: idList(condition.excludedVehicleIds, 'excludedVehicleIds'),
-      taskContains:
-        condition.taskContains == null
-          ? undefined
-          : text(condition.taskContains, 'taskContains', 120),
-      taskEquals:
-        condition.taskEquals == null ? undefined : text(condition.taskEquals, 'taskEquals', 120),
+      taskContains: taskText(condition.taskContains, 'taskContains'),
+      taskEquals: taskText(condition.taskEquals, 'taskEquals'),
       untitledServiceTypes:
         condition.untitledServiceTypes == null
           ? undefined

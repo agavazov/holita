@@ -269,6 +269,13 @@ alert count from that snapshot and loads stored references for the selected IDs 
 transaction, preserving the SQL order and final `id DESC` tie-breaker.
 Status order is ACTIVE, IN_WORKSHOP, INACTIVE; nullable values sort last in both directions.
 
+Devices `STATUS ASC` uses ONLINE, OFFLINE, IN_STOCK; descending reverses those groups while
+retaining `id DESC` within each status. Task and event search use canonical enum names with
+underscores expanded to spaces; events also recognize the raw enum code. `TASK` sorting uses
+the stored title or that canonical service-type name. These API operations have no language
+argument. The task-text conditions accept explicitly matched translated `untitledServiceTypes`
+for title-less tasks; an empty match list remains empty and does not remove the text condition.
+
 Vehicles `filter.allOf` accepts at most 50 nonrecursive `FleetVehicleCondition` inputs. Every
 entry and every present field applies with AND; repeated or contradictory conditions are kept.
 Conditions support statuses, activities, types and groups with inclusion/exclusion lists;

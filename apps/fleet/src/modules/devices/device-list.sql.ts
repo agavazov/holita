@@ -104,7 +104,7 @@ export function deviceListOrderSql(sort: DeviceSort): Prisma.Sql {
     IMEI: Prisma.sql`d."imei"`,
     INSTALLED_AT: Prisma.sql`d."installedAt"`,
     CREATED_AT: Prisma.sql`d."createdAt"`,
-    STATUS: Prisma.sql`d."status"`,
+    STATUS: Prisma.sql`CASE d."status" WHEN 'ONLINE' THEN 0 WHEN 'OFFLINE' THEN 1 WHEN 'IN_STOCK' THEN 2 END`,
     VEHICLE_LICENSE_PLATE: Prisma.sql`d."vehicleLicensePlate"`,
     LAST_REPORTED_AT: Prisma.sql`d."lastReportedAt"`,
   };

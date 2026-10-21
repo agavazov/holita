@@ -650,13 +650,28 @@ describe('Device GraphQL with PostgreSQL', () => {
         branchId,
       ),
     ).toMatchObject({ data: { fleetDevices: { items: [{ id: edge.id }] } } });
-    expect(
-      await query(list, { sort: { field: 'STATUS', direction: 'ASC' }, limit: 1 }, branchId),
-    ).toMatchObject({
-      data: {
-        fleetDevices: { items: [{ id: stock.id, status: 'IN_STOCK', lastReportedAt: null }] },
-      },
-    });
+    const onlineOrder = [online.id, edge.id]
+      .sort()
+      .reverse()
+      .map((id) => ({ id, status: 'ONLINE' }));
+    const offlineOrder = [old.id, silent.id]
+      .sort()
+      .reverse()
+      .map((id) => ({ id, status: 'OFFLINE' }));
+    const stockOrder = [{ id: stock.id, status: 'IN_STOCK', lastReportedAt: null }];
+    for (const [direction, ordered] of [
+      ['ASC', [...onlineOrder, ...offlineOrder, ...stockOrder]],
+      ['DESC', [...stockOrder, ...offlineOrder, ...onlineOrder]],
+    ] as const) {
+      expect(await query(list, { sort: { field: 'STATUS', direction } }, branchId)).toMatchObject({
+        data: { fleetDevices: { total: 5, items: ordered } },
+      });
+      expect(
+        await query(list, { sort: { field: 'STATUS', direction }, offset: 1, limit: 3 }, branchId),
+      ).toMatchObject({
+        data: { fleetDevices: { total: 5, items: ordered.slice(1, 4) } },
+      });
+    }
     for (const [allOf, total] of [
       [[{ hasVehicle: false }], 1],
       [[{ excludedModels: ['STARLINK_TRACKER'] }], 4],

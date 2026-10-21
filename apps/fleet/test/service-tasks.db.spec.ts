@@ -374,6 +374,38 @@ describe('Service tasks and urgency with PostgreSQL', () => {
     ).toMatchObject({ errors: [{ extensions: { fieldErrors: [{ path: 'filter' }] } }] });
   });
 
+  it.each([
+    { field: 'taskContains', value: '   ', code: 'REQUIRED' },
+    { field: 'taskEquals', value: 'x'.repeat(121), code: 'TOO_LONG' },
+    { field: 'taskContains', value: 'invalid\u0000text', code: 'INVALID_FORMAT' },
+  ])(
+    'returns a filter error for nested $field with reason $code',
+    async ({ field, value, code }) => {
+      expect(
+        await query(list, {
+          offset: 0,
+          limit: 20,
+          filter: { allOf: [{ [field]: value }] },
+        }),
+      ).toMatchObject({
+        errors: [
+          {
+            extensions: {
+              code: 'BAD_USER_INPUT',
+              fieldErrors: [
+                {
+                  path: 'filter',
+                  message: `filter.${field}: use 1 to 120 supported characters.`,
+                  code,
+                },
+              ],
+            },
+          },
+        ],
+      });
+    },
+  );
+
   it('summarises active vehicles per task, workshop vehicles and the 30-day cost window', async () => {
     const summary =
       '{fleetServiceSummary{businessDate overdue dueSoon unknownOdometer upcoming inWorkshopVehicles completedLast30Days costLast30DaysCents costWindowStart costWindowEnd}}';
@@ -608,6 +640,12 @@ describe('Service tasks and urgency with PostgreSQL', () => {
     expect(
       await read({ allOf: [{ taskContains: 'Спирач', untitledServiceTypes: ['BRAKES'] }] }),
     ).toEqual(expected([free.id]));
+    expect(await read({ allOf: [{ taskContains: 'Спирач', untitledServiceTypes: [] }] })).toEqual(
+      expected([]),
+    );
+    expect(
+      await read({ allOf: [{ taskEquals: 'literal %_\\ TASK', untitledServiceTypes: [] }] }),
+    ).toEqual(expected([plan.id]));
     expect(await read({ allOf: [{ taskContains: '%_\\' }] })).toEqual(expected([plan.id]));
     expect(await read({ allOf: [{ taskEquals: 'literal %_\\ TASK' }] })).toEqual(
       expected([plan.id]),

@@ -234,6 +234,24 @@ describe('Service task rules', () => {
     }
   });
 
+  it.each([
+    { field: 'taskContains', value: '   ', code: 'REQUIRED' },
+    { field: 'taskContains', value: 'x'.repeat(121), code: 'TOO_LONG' },
+    { field: 'taskContains', value: 'invalid\u0000text', code: 'INVALID_FORMAT' },
+    { field: 'taskEquals', value: '   ', code: 'REQUIRED' },
+    { field: 'taskEquals', value: 'x'.repeat(121), code: 'TOO_LONG' },
+    { field: 'taskEquals', value: 'invalid\u0000text', code: 'INVALID_FORMAT' },
+  ])(
+    'reports nested $field validation on filter with reason $code',
+    async ({ field, value, code }) => {
+      const condition = field === 'taskContains' ? { taskContains: value } : { taskEquals: value };
+      expect(await fieldErrors(service.list(context, { filter: { allOf: [condition] } }))).toEqual([
+        { path: 'filter', message: `filter.${field}: use 1 to 120 supported characters.`, code },
+      ]);
+      expect(list).not.toHaveBeenCalled();
+    },
+  );
+
   it('keeps scoped partial batch results without loading unused task urgency or references', async () => {
     const first = randomUUID(),
       done = randomUUID(),

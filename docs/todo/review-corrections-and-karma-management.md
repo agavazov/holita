@@ -26,10 +26,6 @@ focused regression at the affected boundary; database races require guarded Post
 - **D12 / P2:** Own signed Gateway/Fleet readiness in the federation fixture after Router
   starts, checking readiness rather than assuming empty business data. Remove the browser
   fixture's duplicate readiness implementation and cover seeded/nonempty fixture use.
-- **B3 / P2:** Correct nested service-task filter error paths and Device status ordering to match
-  the enum contract. Preserve the intentional empty untitledServiceTypes array used when localized
-  text matches no enum label; verify remaining untitled-task/event sort and search expectations
-  before changing them.
 - **Validation / P2:** Restore the existing formatting gate on the files it reports. Reproduce
   admin timeout failures with the documented single-worker setting before classifying them
   as functional defects; keep deadlines and behavioral assertions intact.
@@ -82,8 +78,8 @@ changing it; use concrete functions/helpers only and retain the existing applica
 - **A12:** Ensure Admin stories mount one toast host, consolidate concrete operation notices
   and cover dark presentation.
 - **B1-B3:** Remove unused Driver/trip/event aggregate entry points; consolidate concrete
-  failure maps/batch loops/filter helpers. Verify the remaining untitled-task/event sort/search
-  contract before changing behavior; empty localized enum matches are intentional.
+  failure maps/batch loops/filter helpers. Preserve the documented canonical task/event search
+  and sort contract; empty localized enum matches are intentional.
 - **T1-T4:** Consolidate native browser selection/GraphQL/KPI/capture/overflow helpers. Move
   standalone eData tooling checks to an explicit runnable target while retaining relevant
   local requirements and device-configuration coverage; avoid duplicate binary collection.
