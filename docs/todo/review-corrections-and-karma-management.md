@@ -12,9 +12,6 @@ review scratchpad; retain only open work here. Implemented contracts belong in
 The identifiers below retain the original review's references. Each correction requires a
 focused regression at the affected boundary; database races require guarded PostgreSQL tests.
 
-- **D1 / P2:** Stop TablePanel from retiring confirmations on unrelated busy changes; prevent
-  duplicate actions and restore focus when a confirmation is retired. See
-  `apps/admin/src/app/ui/table-panel/table-panel.ts`.
 - **D2 / P2:** Use the configured Branch time zone and display distance unit in the odometer
   editor, preserving canonical km on submission. Expose unavailable states for INACTIVE
   vehicles and for an empty valid time interval; cover DST and direct routes.

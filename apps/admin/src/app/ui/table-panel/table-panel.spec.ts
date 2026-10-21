@@ -182,6 +182,10 @@ describe('TablePanel', () => {
     const buttons = [...(bulk?.querySelectorAll('.table-panel__bulk-actions button') ?? [])];
     expect(buttons.map((button) => button.textContent.trim())).toEqual(['Архивирай', 'Изтрий']);
     buttons[0]?.dispatchEvent(new MouseEvent('click'));
+    expect(host.requests).toEqual([]);
+    host.busy.set(false);
+    fixture.detectChanges();
+    buttons[0]?.dispatchEvent(new MouseEvent('click'));
     expect(host.requests).toEqual([{ action: 'archive', ids: ['a', 'b'] }]);
     root.querySelector<HTMLButtonElement>('.table-panel__bulk-clear')?.click();
     expect(root.querySelector('.p-paginator-current')?.textContent).toContain('21–40 от 45');
@@ -240,36 +244,120 @@ describe('TablePanel', () => {
     expect(host.requests).toHaveLength(1);
   });
 
-  it.each(['query', 'busy'] as const)(
-    'retires a confirmation when %s changes and ignores a late accept',
-    async (change) => {
+  it('retires a confirmation when its query changes, ignores a late accept and restores heading focus', async () => {
+    const fixture = render();
+    const host = fixture.componentInstance;
+    const confirmation = fixture.debugElement
+      .query(By.directive(TablePanel))
+      .injector.get(ConfirmationService);
+    const lateAccepts: (() => void)[] = [];
+    vi.spyOn(confirmation, 'confirm').mockImplementation((options) => {
+      lateAccepts.push(() => {
+        options.accept?.();
+      });
+      return confirmation;
+    });
+    const close = vi.spyOn(confirmation, 'close');
+    const pending = host
+      .panel()
+      .run('delete', [{ id: 'a', label: 'Previous query row', unavailable: [] }], null);
+    host.actionContext.set('restored-query');
+    fixture.detectChanges();
+    await pending;
+    lateAccepts[0]?.();
+    await Promise.resolve();
+    expect(close).toHaveBeenCalledOnce();
+    expect(host.requests).toEqual([]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(document.activeElement).toBe(element(fixture).querySelector('.table-panel__heading'));
+  });
+
+  it('keeps a confirmation through an unrelated refresh and submits once after it settles', async () => {
+    const fixture = render();
+    const host = fixture.componentInstance;
+    const confirmation = fixture.debugElement
+      .query(By.directive(TablePanel))
+      .injector.get(ConfirmationService);
+    const accepts: (() => void)[] = [];
+    vi.spyOn(confirmation, 'confirm').mockImplementation((options) => {
+      accepts.push(() => options.accept?.());
+      return confirmation;
+    });
+    const close = vi.spyOn(confirmation, 'close');
+    const records: readonly ListRecord<ActionId>[] = [
+      { id: 'a', label: 'CB 1001 AX', unavailable: [] },
+    ];
+    const pending = host.panel().run('delete', records, null);
+    host.busy.set(true);
+    fixture.detectChanges();
+    await Promise.resolve();
+    expect(close).not.toHaveBeenCalled();
+    // A repeated trigger cannot open another confirmation or submit another action.
+    await host.panel().run('delete', records, null);
+    expect(accepts).toHaveLength(1);
+    expect(host.requests).toEqual([]);
+    host.busy.set(false);
+    fixture.detectChanges();
+    accepts[0]?.();
+    await pending;
+    accepts[0]?.();
+    expect(host.requests).toEqual([{ action: 'delete', ids: ['a'] }]);
+  });
+
+  it('does not submit a confirmation accepted while the list is busy', async () => {
+    const fixture = render();
+    const host = fixture.componentInstance;
+    const confirmation = fixture.debugElement
+      .query(By.directive(TablePanel))
+      .injector.get(ConfirmationService);
+    const accepts: (() => void)[] = [];
+    vi.spyOn(confirmation, 'confirm').mockImplementation((options) => {
+      accepts.push(() => options.accept?.());
+      return confirmation;
+    });
+    const records: readonly ListRecord<ActionId>[] = [
+      { id: 'a', label: 'CB 1001 AX', unavailable: [] },
+    ];
+    const pending = host.panel().run('delete', records, null);
+    host.busy.set(true);
+    fixture.detectChanges();
+    accepts[0]?.();
+    await pending;
+    await host.panel().run('delete', records, null);
+    expect(accepts).toHaveLength(1);
+    expect(host.requests).toEqual([]);
+  });
+
+  it.each(['disabled', 'removed'] as const)(
+    'restores heading focus after cancellation when its origin is %s',
+    async (state) => {
       const fixture = render();
       const host = fixture.componentInstance;
+      host.view.set({ kind: 'rows' });
+      fixture.detectChanges();
+      const trigger = element(fixture).querySelector<HTMLButtonElement>('.row-trigger');
+      if (!trigger) throw new Error('Missing row trigger.');
+      trigger.focus();
       const confirmation = fixture.debugElement
         .query(By.directive(TablePanel))
         .injector.get(ConfirmationService);
-      const lateAccepts: (() => void)[] = [];
+      const rejects: (() => void)[] = [];
       vi.spyOn(confirmation, 'confirm').mockImplementation((options) => {
-        lateAccepts.push(() => {
-          options.accept?.();
-        });
+        rejects.push(() => options.reject?.());
         return confirmation;
       });
-      const close = vi.spyOn(confirmation, 'close');
       const pending = host
         .panel()
-        .run('delete', [{ id: 'a', label: 'Previous query row', unavailable: [] }], null);
-      if (change === 'query') {
-        host.actionContext.set('restored-query');
-      } else {
-        host.busy.set(true);
-      }
-      fixture.detectChanges();
+        .run('delete', [{ id: 'a', label: 'CB 1001 AX', unavailable: [] }], trigger);
+      if (state === 'disabled') trigger.disabled = true;
+      else trigger.remove();
+      rejects[0]?.();
       await pending;
-      lateAccepts[0]?.();
-      await Promise.resolve();
-      expect(close).toHaveBeenCalledOnce();
+      fixture.detectChanges();
+      await fixture.whenStable();
       expect(host.requests).toEqual([]);
+      expect(document.activeElement).toBe(element(fixture).querySelector('.table-panel__heading'));
     },
   );
 

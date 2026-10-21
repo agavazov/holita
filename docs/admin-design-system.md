@@ -605,8 +605,11 @@ host removes only the records it changed from the selection, and the other selec
 
 Bind TablePanel's `actionContext` to the current query identity, as `VehiclesView` does with its
 `state` input. A context change or component destruction retires pending confirmations and
-their callbacks, so an obsolete answer cannot emit an action or restore focus into another
-query. The panel aborts its confirmation controller and clears the pending record list.
+their callbacks, so an obsolete answer cannot emit an action or restore focus to an obsolete
+row. The panel aborts its confirmation controller and clears the pending record list.
+An unrelated busy/refresh state keeps the question open. No action starts or submits while busy;
+after a retired question, focus returns to the heading. Cancellation restores the trigger when
+it is still available, otherwise the heading.
 `confirmAction` also accepts an optional `AbortSignal`; aborting closes the dialog and resolves
 `false`, and an already-aborted signal returns `false` without opening it.
 

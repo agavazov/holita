@@ -153,7 +153,6 @@ export class TablePanel<A extends string = string> {
   constructor() {
     effect(() => {
       this.actionContext();
-      this.busy();
       this.retireActions();
     });
     this.destroyRef.onDestroy(() => {
@@ -193,6 +192,11 @@ export class TablePanel<A extends string = string> {
     if (!this.alive() || this.confirmationController !== null) {
       return;
     }
+    const element = origin instanceof HTMLElement ? origin : null;
+    if (this.busy()) {
+      this.restoreActionFocus(element);
+      return;
+    }
     const generation = this.actionGeneration;
     const action = this.actions().find((candidate) => candidate.id === actionId);
     if (!action) {
@@ -202,22 +206,23 @@ export class TablePanel<A extends string = string> {
     if (!applicable.length) {
       return;
     }
-    const element = origin instanceof HTMLElement ? origin : null;
     if (action.confirm) {
       const accepted = await this.ask(action, applicable, records.length - applicable.length);
-      if (this.destroyRef.destroyed || generation !== this.actionGeneration) {
+      if (!this.alive()) {
+        return;
+      }
+      if (generation !== this.actionGeneration) {
+        this.restoreActionFocus(null);
         return;
       }
       if (!accepted) {
-        this.afterRender(() => {
-          if (element?.isConnected) {
-            element.focus();
-          } else {
-            this.focusHeading();
-          }
-        });
+        this.restoreActionFocus(element);
         return;
       }
+    }
+    if (this.busy()) {
+      this.restoreActionFocus(element);
+      return;
     }
     this.action.emit({ action: action.id, ids: applicable.map((record) => record.id) });
     if (action.danger || source === 'bulk') {
@@ -247,6 +252,21 @@ export class TablePanel<A extends string = string> {
     const rows = event.rows ?? this.page()?.pageSize ?? 20;
     const page = event.page ?? Math.floor((event.first ?? 0) / rows);
     this.pageChange.emit({ page: page + 1, pageSize: rows });
+  }
+
+  private restoreActionFocus(element: HTMLElement | null): void {
+    this.afterRender(() => {
+      if (!this.alive()) {
+        return;
+      }
+      if (element?.isConnected && !element.matches(':disabled')) {
+        element.focus();
+        if (element.ownerDocument.activeElement === element) {
+          return;
+        }
+      }
+      this.focusHeading();
+    });
   }
 
   private ask(
