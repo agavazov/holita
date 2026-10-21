@@ -156,13 +156,20 @@ describe('Live Device routed editor', () => {
         },
       },
     });
+    await fixture.whenStable();
+    expect(fixture.componentInstance.canLeave()).toBe(false);
+    expect(document.querySelector<HTMLButtonElement>('.app-drawer-actions button')?.disabled).toBe(
+      true,
+    );
     write.flush({
       data: {
         createFleetDevice: { ...device, __typename: 'FleetDevice', imei: '000000000000123' },
       },
     });
     await fixture.whenStable();
-    expect(hostSaved).toHaveBeenCalledOnce();
+    await vi.waitFor(() => {
+      expect(hostSaved).toHaveBeenCalledOnce();
+    });
     expect(navigate).toHaveBeenCalledWith(['/', 'en', branch, 'fleet', 'devices'], {
       queryParamsHandling: 'preserve',
       preserveFragment: true,
@@ -203,6 +210,9 @@ describe('Live Device routed editor', () => {
       expect(document.activeElement?.id).toBe('device-options');
     });
     expect(field('notes').value).toBe('Changed');
+    expect(document.querySelector<HTMLButtonElement>('.app-drawer-actions button')?.disabled).toBe(
+      false,
+    );
     expect(hostSaved).not.toHaveBeenCalled();
     expect(navigate).not.toHaveBeenCalled();
   });

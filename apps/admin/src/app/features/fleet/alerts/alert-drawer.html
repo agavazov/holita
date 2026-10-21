@@ -1,7 +1,7 @@
 <holita-route-drawer
   [title]="title()"
   [subtitle]="subtitle()"
-  [saving]="!!busy()"
+  [saving]="pendingWrite() ?? !!busy()"
   [dirty]="dirty()"
   [state]="state()"
   [errorText]="loadError()"
@@ -116,7 +116,14 @@
   }
   <div drawerFooter class="app-drawer-actions">
     @if (alert(); as alert) {
-      <button pButton type="button" severity="secondary" [outlined]="true" (click)="close()">
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="pendingWrite() ?? !!busy()"
+        (click)="close()"
+      >
         {{ text().close }}
       </button>
       @switch (alert.status) {

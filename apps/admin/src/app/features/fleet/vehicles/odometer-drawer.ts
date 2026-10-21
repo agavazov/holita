@@ -358,7 +358,7 @@ export class OdometerDrawer {
   }
 
   canLeave(): boolean | Promise<boolean> {
-    return this.saving() || this.drawer().confirmLeave(this.dirty());
+    return !this.saving() && this.drawer().confirmLeave(this.dirty());
   }
 
   private readingInstant(): string | null {

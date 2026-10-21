@@ -148,6 +148,10 @@ describe('ServiceCompletionDrawer', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     expect(form.disabled).toBe(true);
+    expect(fixture.componentInstance.canLeave()).toBe(false);
+    expect(document.querySelector<HTMLButtonElement>('.app-drawer-actions button')?.disabled).toBe(
+      true,
+    );
     await submit();
     expect(saved).toHaveLength(1);
     fixture.componentRef.setInput('saveError', 'Try again');
@@ -155,6 +159,9 @@ describe('ServiceCompletionDrawer', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     expect(form.enabled).toBe(true);
+    expect(document.querySelector<HTMLButtonElement>('.app-drawer-actions button')?.disabled).toBe(
+      false,
+    );
     expect(form.get('workshop')?.value).toBe('Draft workshop');
     expect(form.get('workshop')?.dirty).toBe(true);
     expect(form.get('workshop')?.touched).toBe(true);

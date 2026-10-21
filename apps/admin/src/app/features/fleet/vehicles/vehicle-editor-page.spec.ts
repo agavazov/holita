@@ -258,6 +258,10 @@ describe('Vehicle editor drawer adapter', () => {
     expect(write.request.headers.get('Accept-Language')).toBe('en');
     await fixture.whenStable();
     expect(field('plate').disabled).toBe(true);
+    expect(fixture.componentInstance.canLeave()).toBe(false);
+    expect(dialog().querySelector<HTMLButtonElement>('.app-drawer-actions button')?.disabled).toBe(
+      true,
+    );
     write.flush({ data: { createFleetVehicle: record(branchA, 'Created') } });
     await saving;
     await fixture.whenStable();
@@ -533,7 +537,7 @@ class PendingVehicleSaveList {
   readonly host: DrawerHost = { saved: routedSaved };
 }
 
-describe('Routed vehicle save retirement', () => {
+describe('Routed vehicle save settlement', () => {
   let http: HttpTestingController;
   let harness: RouterTestingHarness | undefined;
 
@@ -600,18 +604,19 @@ describe('Routed vehicle save retirement', () => {
   });
 
   it.each([true, false])(
-    'leaves a captured submitted write alive and isolates its late result (success=%s)',
+    'blocks close and navigation until a submitted write settles (success=%s)',
     async (success) => {
-      const pathA = `/en/${branchA}/fleet/vehicles`;
-      const pathB = `/en/${branchB}/fleet/vehicles/new`;
-      harness = await RouterTestingHarness.create(`${pathA}/new`);
+      const pathA = '/en/' + branchA + '/fleet/vehicles';
+      const pathB = '/en/' + branchB + '/fleet/vehicles/new';
+      harness = await RouterTestingHarness.create(pathA + '/new');
       choices(branchA);
       await harness.fixture.whenStable();
       type('plate', 'Submitted A');
       const previous = editor();
-      const saving = previous.save({ ...vehicleForm(record()), plate: 'Submitted A' });
+      const form = { ...vehicleForm(record()), plate: 'Submitted A' };
+      const saving = previous.save(form);
       const write = http.expectOne((request) => operation(request, 'AdminCreateVehicle'));
-      expect(previous.canLeave()).toBe(true);
+      expect(previous.canLeave()).toBe(false);
       expect(write.request.headers.get('authorization')).toBe('Bearer route-session-a');
       expect(write.request.body).toMatchObject({
         variables: { input: { licensePlate: 'Submitted A' } },
@@ -621,20 +626,68 @@ describe('Routed vehicle save retirement', () => {
       const unload = new Event('beforeunload', { cancelable: true });
       window.dispatchEvent(unload);
       expect(unload.defaultPrevented).toBe(true);
-      const cancel = [...dialog().querySelectorAll<HTMLButtonElement>('button')].find(
-        (button) => button.textContent.trim() === 'Cancel',
-      );
-      if (!cancel) {
-        throw new Error('Missing vehicle Cancel action.');
+      const cancel = dialog().querySelector<HTMLButtonElement>('.app-drawer-actions button');
+      const close = dialog().querySelector<HTMLButtonElement>('.route-drawer__close');
+      if (!cancel || !close) {
+        throw new Error('Missing vehicle Cancel or Close action.');
       }
-      expect(cancel.disabled).toBe(false);
+      expect(cancel.disabled).toBe(true);
+      expect(close.disabled).toBe(true);
       cancel.click();
+      close.click();
+      field('plate').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       await harness.fixture.whenStable();
       const router = TestBed.inject(Router);
-      expect(router.url).toBe(pathA);
+      expect(router.url).toBe(pathA + '/new');
+      await harness.navigateByUrl(pathB);
+      expect(router.url).toBe(pathA + '/new');
+      expect(editor()).toBe(previous);
       expect(write.cancelled).toBe(false);
       expect(document.querySelector('.p-confirmdialog-reject-button')).toBeNull();
+      http.expectNone((request) => operation(request, 'AdminVehicleGroups', branchB));
 
+      if (success) {
+        write.flush({ data: { createFleetVehicle: record(branchA, 'Submitted A') } });
+      } else {
+        write.flush({
+          errors: [{ message: 'Rejected write.', extensions: { code: 'BAD_USER_INPUT' } }],
+        });
+      }
+      await saving;
+      await harness.fixture.whenStable();
+      if (!success) {
+        expect(router.url).toBe(pathA + '/new');
+        expect(editor()).toBe(previous);
+        expect(field('plate').value).toBe('Submitted A');
+        expect(field('plate').disabled).toBe(false);
+        expect(cancel.disabled).toBe(false);
+        expect(close.disabled).toBe(false);
+        expect(previous.saveError()).not.toBeNull();
+        expect(routedSaved).not.toHaveBeenCalled();
+        http.expectNone((request) => operation(request, 'AdminCreateVehicle'));
+        cancel.click();
+        await vi.waitFor(() => {
+          expect(document.querySelector('.p-confirmdialog-reject-button')).not.toBeNull();
+        });
+        document.querySelector<HTMLButtonElement>('.p-confirmdialog-reject-button')?.click();
+        await harness.fixture.whenStable();
+        expect(router.url).toBe(pathA + '/new');
+        expect(field('plate').value).toBe('Submitted A');
+        const retry = previous.save(form);
+        http
+          .expectOne((request) => operation(request, 'AdminCreateVehicle'))
+          .flush({ data: { createFleetVehicle: record(branchA, 'Submitted A') } });
+        await retry;
+        await harness.fixture.whenStable();
+      }
+      expect(router.url).toBe(pathA);
+      expect(routedSaved).toHaveBeenCalledExactlyOnceWith({
+        recordId: vehicleId,
+        message: 'Submitted A was created.',
+      });
+
+      // The next scope is entered only after the initiating write has settled.
+      routedSaved.mockClear();
       TestBed.inject(DemoSession).start({
         token: 'route-session-b',
         tenant: { id: '01000000-0000-4000-8000-000000000002', name: 'Tenant B' },
@@ -645,27 +698,6 @@ describe('Routed vehicle save retirement', () => {
       const current = editor();
       expect(current).not.toBe(previous);
       type('plate', 'Current B draft');
-      const navigate = vi.spyOn(router, 'navigate');
-      expect(write.cancelled).toBe(false);
-      if (success) {
-        write.flush({ data: { createFleetVehicle: record(branchA, 'Submitted A') } });
-      } else {
-        write.flush({
-          errors: [{ message: 'Late rejected write.', extensions: { code: 'BAD_USER_INPUT' } }],
-        });
-      }
-      await saving;
-      await harness.fixture.whenStable();
-      expect(router.url).toBe(pathB);
-      expect(editor()).toBe(current);
-      expect(field('plate').value).toBe('Current B draft');
-      expect(current.saveError()).toBeNull();
-      expect(current.saving()).toBe(false);
-      expect(routedSaved).not.toHaveBeenCalled();
-      expect(navigate).not.toHaveBeenCalled();
-      http.expectNone('/graphql');
-
-      // A current-scope save still notifies and navigates through the actual routed host.
       const currentSaving = current.save({
         ...vehicleForm(record(branchB)),
         plate: 'Current B draft',
@@ -681,8 +713,7 @@ describe('Routed vehicle save retirement', () => {
         recordId: vehicleId,
         message: 'Current B draft was created.',
       });
-      expect(navigate).toHaveBeenCalledTimes(1);
-      expect(router.url).toBe(`/en/${branchB}/fleet/vehicles`);
+      expect(router.url).toBe('/en/' + branchB + '/fleet/vehicles');
     },
   );
 });

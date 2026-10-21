@@ -258,7 +258,7 @@ export class GeneralSettingsView {
 
   canLeave(): boolean | Promise<boolean> {
     if (this.saving()) {
-      return true;
+      return false;
     }
     if (!this.form.dirty) {
       return true;

@@ -134,6 +134,7 @@ describe('General settings independent service writes', () => {
     const form = draft(fixture);
     const save = fixture.componentInstance.save(form);
     await fixture.componentInstance.save(form);
+    expect(fixture.componentInstance.canLeave()).toBe(false);
     http.expectNone((request) => operation(request, 'AdminUpdateBranchName'));
     http
       .expectOne((request) => operation(request, 'AdminUpdateFleetSettings'))
@@ -141,6 +142,7 @@ describe('General settings independent service writes', () => {
     await fixture.whenStable();
     expect(preferences()?.lowFuelPct).toBe(13);
     expect(notice).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.canLeave()).toBe(false);
     const rename = http.expectOne((request) => operation(request, 'AdminUpdateBranchName'));
     expect(rename.request.body).toMatchObject({
       variables: { id: branch.id, name: 'North Fleet' },

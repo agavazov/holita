@@ -205,6 +205,6 @@ export class DeviceEditorPage implements OnInit {
     });
   }
   canLeave(): boolean | Promise<boolean> {
-    return this.closingAfterSave || this.saving() || (this.drawer()?.canLeave() ?? true);
+    return this.closingAfterSave || (!this.saving() && (this.drawer()?.canLeave() ?? true));
   }
 }

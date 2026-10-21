@@ -298,6 +298,8 @@ export class AlertDetailPage implements OnInit {
   }
   canLeave(): boolean | Promise<boolean> {
     const pendingWrite = this.pendingWrite();
-    return this.closingAfterSave || pendingWrite || (this.drawer()?.canLeave(pendingWrite) ?? true);
+    return (
+      this.closingAfterSave || (!pendingWrite && (this.drawer()?.canLeave(pendingWrite) ?? true))
+    );
   }
 }

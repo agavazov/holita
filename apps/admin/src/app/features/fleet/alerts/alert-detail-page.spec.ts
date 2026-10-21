@@ -267,6 +267,9 @@ describe('Live Alert detail workflow', () => {
     await saving;
     await fixture.whenStable();
     expect(remark().value).toBe('Keep this draft.');
+    expect(dialog().querySelector<HTMLButtonElement>('.app-drawer-actions button')?.disabled).toBe(
+      false,
+    );
     expect(dialog().querySelector('#alert-remark-error')?.textContent).toContain(
       'The value is not valid.',
     );
@@ -287,7 +290,7 @@ describe('Live Alert detail workflow', () => {
       await fixture.whenStable();
       type('Investigate.');
       const saving = fixture.componentInstance.apply('resolve', 'Investigate.');
-      expect(fixture.componentInstance.canLeave()).toBe(true);
+      expect(fixture.componentInstance.canLeave()).toBe(false);
       const firstWrite = http.expectOne((request) => operation(request, 'AdminResolveAlert'));
       expect(firstWrite.request.body).toMatchObject({
         variables: { id, input: { expectedStatus: 'OPEN', remark: 'Investigate.' } },
@@ -313,6 +316,9 @@ describe('Live Alert detail workflow', () => {
       expect(await leaving).toBe(false);
       await fixture.whenStable();
       expect(fixture.componentInstance.busy()).toBe('resolve');
+      expect(dialog().querySelector<HTMLButtonElement>('.route-drawer__close')?.disabled).toBe(
+        false,
+      );
       expect(remark().disabled).toBe(true);
       const resolve = [...dialog().querySelectorAll<HTMLButtonElement>('button')].find(
         (button) => button.textContent.trim() === alertsText(currentLanguage).drawer.resolve,

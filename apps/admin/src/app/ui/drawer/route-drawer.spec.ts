@@ -46,7 +46,7 @@ class TestEditor {
   readonly saving = saving;
   readonly drawer = viewChild.required(RouteDrawer);
   canLeave(): boolean | Promise<boolean> {
-    return this.drawer().confirmLeave(this.dirty());
+    return !this.saving() && this.drawer().confirmLeave(this.dirty());
   }
   retry(): void {
     retries++;
@@ -134,10 +134,20 @@ describe('RouteDrawer', () => {
     });
   });
 
-  it('prompts on browser unload for a pending save even when the form is pristine', async () => {
-    const { harness } = await open();
+  it('disables Close and blocks in-app navigation and unload until a pending save settles', async () => {
+    const { harness, router } = await open();
     saving.set(true);
     await harness.fixture.whenStable();
+    const close = drawer().querySelector<HTMLButtonElement>('.route-drawer__close');
+    expect(close?.disabled).toBe(true);
+    close?.click();
+    document
+      .getElementById('plate')
+      ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await harness.fixture.whenStable();
+    expect(router.url).toBe('/list/edit?search=ca#rows');
+    await harness.navigateByUrl('/list?search=other');
+    expect(router.url).toBe('/list/edit?search=ca#rows');
     const pending = new Event('beforeunload', { cancelable: true });
     window.dispatchEvent(pending);
     expect(pending.defaultPrevented).toBe(true);
@@ -146,6 +156,10 @@ describe('RouteDrawer', () => {
     const settled = new Event('beforeunload', { cancelable: true });
     window.dispatchEvent(settled);
     expect(settled.defaultPrevented).toBe(false);
+    expect(close?.disabled).toBe(false);
+    close?.click();
+    await harness.fixture.whenStable();
+    expect(router.url).toBe('/list?search=ca#rows');
   });
 
   it('keeps editor focus and restores the title when focus leaves the drawer', async () => {

@@ -96,7 +96,7 @@ describe('ServiceTaskDrawer', () => {
     expect(saved[0]?.dueOn).toBe('2100-12-31');
   });
 
-  it('locks saving drafts and duplicate submits while allowing captured-write retirement', async () => {
+  it('blocks close and duplicate submits until saving settles, then retains a rejected draft', async () => {
     const { fixture, form, saved, submit } = await render();
     form.patchValue({ vehicleId: 'v1', dueKm: 0, title: 'Draft' });
     form.get('title')?.markAsDirty();
@@ -106,7 +106,10 @@ describe('ServiceTaskDrawer', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     expect(form.disabled).toBe(true);
-    expect(fixture.componentInstance.canLeave()).toBe(true);
+    expect(fixture.componentInstance.canLeave()).toBe(false);
+    expect(document.querySelector<HTMLButtonElement>('.app-drawer-actions button')?.disabled).toBe(
+      true,
+    );
     await submit();
     expect(saved).toHaveLength(1);
     fixture.componentRef.setInput('saving', false);
@@ -114,6 +117,9 @@ describe('ServiceTaskDrawer', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     expect(form.enabled).toBe(true);
+    expect(document.querySelector<HTMLButtonElement>('.app-drawer-actions button')?.disabled).toBe(
+      false,
+    );
     expect(form.get('title')?.value).toBe('Draft');
     expect(form.get('title')?.dirty).toBe(true);
     expect(form.get('title')?.touched).toBe(true);

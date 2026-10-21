@@ -100,4 +100,29 @@ describe('Alert remark refresh lifecycle', () => {
     expect(remark().value).toBe('Another alert remark.');
     expect(fixture.componentInstance.canLeave()).toBe(true);
   });
+
+  it('blocks close during a submitted transition and restores the rejected remark afterward', async () => {
+    const closed = vi.fn();
+    fixture.componentInstance.closed.subscribe(closed);
+    type('Keep my rejected remark.');
+    fixture.componentRef.setInput('busy', 'resolve');
+    fixture.componentRef.setInput('pendingWrite', true);
+    await fixture.whenStable();
+    const close = document.querySelector<HTMLButtonElement>('.app-drawer-actions button');
+    if (!close) {
+      throw new Error('Missing Alert Close action.');
+    }
+    expect(fixture.componentInstance.canLeave()).toBe(false);
+    expect(close.disabled).toBe(true);
+    expect(remark().disabled).toBe(true);
+    close.click();
+    expect(closed).not.toHaveBeenCalled();
+    fixture.componentRef.setInput('pendingWrite', false);
+    fixture.componentRef.setInput('busy', null);
+    fixture.componentRef.setInput('saveError', 'Try again.');
+    await fixture.whenStable();
+    expect(close.disabled).toBe(false);
+    expect(remark().disabled).toBe(false);
+    expect(remark().value).toBe('Keep my rejected remark.');
+  });
 });

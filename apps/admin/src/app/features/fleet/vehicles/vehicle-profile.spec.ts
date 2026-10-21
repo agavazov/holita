@@ -515,9 +515,16 @@ describe('Vehicle profile and odometer routed containers', () => {
     expect(write.request.body).toMatchObject({
       variables: { input: { vehicleId: id, odometerKm: 0, recordedAt: at } },
     });
+    await fixture.whenStable();
+    expect(fixture.componentInstance.canLeave()).toBe(false);
+    expect(document.querySelector<HTMLButtonElement>('.app-drawer-actions button')?.disabled).toBe(
+      true,
+    );
     write.flush(readingResponse());
     await fixture.whenStable();
-    expect(saved).toHaveBeenCalledWith({ recordId: id, message: 'Odometer reading recorded.' });
+    await vi.waitFor(() => {
+      expect(saved).toHaveBeenCalledWith({ recordId: id, message: 'Odometer reading recorded.' });
+    });
     expect(navigate).toHaveBeenCalledWith(closeLink, {
       queryParamsHandling: 'preserve',
       preserveFragment: true,
@@ -548,6 +555,9 @@ describe('Vehicle profile and odometer routed containers', () => {
       expect(document.activeElement).toBe(input);
     });
     expect(input.value).toContain('15');
+    expect(document.querySelector<HTMLButtonElement>('.app-drawer-actions button')?.disabled).toBe(
+      false,
+    );
     expect(saved).not.toHaveBeenCalled();
     expect(navigate).not.toHaveBeenCalled();
   });

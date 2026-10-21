@@ -260,12 +260,19 @@ describe('OdometerDrawer', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     expect(input.disabled).toBe(true);
+    expect(fixture.componentInstance.canLeave()).toBe(false);
+    expect(document.querySelector<HTMLButtonElement>('.app-drawer-actions button')?.disabled).toBe(
+      true,
+    );
     form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     expect(saved).toHaveLength(1);
     fixture.componentRef.setInput('saving', false);
     fixture.detectChanges();
     await fixture.whenStable();
     expect(input.disabled).toBe(false);
+    expect(document.querySelector<HTMLButtonElement>('.app-drawer-actions button')?.disabled).toBe(
+      false,
+    );
     expect(input.value).toBe('0');
   });
 

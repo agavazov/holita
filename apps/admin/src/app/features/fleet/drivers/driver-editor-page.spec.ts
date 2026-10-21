@@ -235,7 +235,10 @@ describe('Live Driver drawer adapter', () => {
       },
     });
     await fixture.whenStable();
-    expect(fixture.componentInstance.canLeave()).toBe(true);
+    expect(fixture.componentInstance.canLeave()).toBe(false);
+    expect(dialog().querySelector<HTMLButtonElement>('.app-drawer-actions button')?.disabled).toBe(
+      true,
+    );
     write.flush({ data: { updateFleetDriver: record } });
     await saving;
     expect(saved).toHaveBeenCalledWith({ recordId: id, message: 'Elena Petrova was saved.' });
@@ -273,6 +276,9 @@ describe('Live Driver drawer adapter', () => {
     await saving;
     await fixture.whenStable();
     expect(field('notes').value).toBe('Keep this draft');
+    expect(dialog().querySelector<HTMLButtonElement>('.app-drawer-actions button')?.disabled).toBe(
+      false,
+    );
     expect(field('employeeNo').getAttribute('aria-invalid')).toBe('true');
     await vi.waitFor(() => {
       expect(document.activeElement).toBe(field('employeeNo'));

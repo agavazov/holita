@@ -35,6 +35,7 @@
           type="button"
           class="app-icon-button route-drawer__close"
           [attr.aria-label]="text().close"
+          [disabled]="saving()"
           (click)="close()"
         >
           <svg data-p-icon="times" aria-hidden="true"></svg>
@@ -64,6 +65,7 @@
                 type="button"
                 severity="secondary"
                 [outlined]="true"
+                [disabled]="saving()"
                 (click)="close()"
               >
                 {{ text().close }}
@@ -82,6 +84,7 @@
                 type="button"
                 severity="secondary"
                 [outlined]="true"
+                [disabled]="saving()"
                 (click)="close()"
               >
                 {{ text().close }}

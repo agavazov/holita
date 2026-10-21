@@ -197,7 +197,7 @@ export class AlertDrawer {
   }
 
   canLeave(pendingWrite = this.pendingWrite() ?? this.busy() !== null): Promise<boolean> | boolean {
-    return pendingWrite || this.drawer().confirmLeave(this.dirty());
+    return !pendingWrite && this.drawer().confirmLeave(this.dirty());
   }
 
   protected async requestVehicle(): Promise<void> {

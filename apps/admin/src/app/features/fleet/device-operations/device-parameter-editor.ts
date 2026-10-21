@@ -357,7 +357,7 @@ export class DeviceParameterEditor {
 
   canLeave(): boolean | Promise<boolean> {
     if (this.submitting()) {
-      return true;
+      return false;
     }
     if (!this.form.dirty) {
       return true;

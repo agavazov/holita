@@ -295,7 +295,7 @@ export class VehicleDrawer {
 
   /** Close button, Escape, backdrop and Cancel: unsaved changes are confirmed first. */
   canLeave(): boolean | Promise<boolean> {
-    return this.saving() || this.drawer().confirmLeave(this.form.dirty);
+    return !this.saving() && this.drawer().confirmLeave(this.form.dirty);
   }
 
   /** A successful save clears the draft before its route is closed. */

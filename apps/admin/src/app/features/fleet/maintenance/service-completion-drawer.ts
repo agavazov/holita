@@ -334,7 +334,7 @@ export class ServiceCompletionDrawer {
   }
 
   canLeave(): boolean | Promise<boolean> {
-    return this.saving() || this.drawer().confirmLeave(this.dirty());
+    return !this.saving() && this.drawer().confirmLeave(this.dirty());
   }
   protected close(): void {
     this.drawer().close();

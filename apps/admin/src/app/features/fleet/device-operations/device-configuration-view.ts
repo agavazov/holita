@@ -234,7 +234,7 @@ export class DeviceConfigurationView {
   }
 
   canLeave(): boolean | Promise<boolean> {
-    return this.editor()?.canLeave() ?? true;
+    return !this.requesting() && (this.editor()?.canLeave() ?? true);
   }
 
   editInterval(parameterId: number): Promise<void> | undefined {

@@ -77,7 +77,14 @@
     </section>
   </form>
   <div drawerFooter class="app-drawer-actions">
-    <button pButton type="button" severity="secondary" [outlined]="true" (click)="requestClose()">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="requestClose()"
+    >
       {{ text().cancel }}
     </button>
     <button

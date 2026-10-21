@@ -57,8 +57,9 @@ The language root redirects signed-in sessions to Overview for that Branch (or t
 Branch if the saved selection no longer exists). There is no Branch list page; the application header
 retains the Branch switcher. Saved Branch IDs are checked against current tenant discovery. Denied storage leaves a memory-only
 session. Each discovery/business client captures its token and owns its cache. Logout honors
-unsaved-form navigation guards. Retired reads stop; submitted writes may finish against their
-captured session, without updating another tenant's UI. No server-side revocation exists.
+unsaved-form navigation guards. Editors block navigation while a submitted save is pending and
+disable Cancel/Close until it settles. Retired reads stop; a forcibly retired write may finish
+against its captured session, without updating another tenant's UI. No server-side revocation exists.
 
 This login has no user verification, passwords, membership checks, roles, login throttling or
 audit trail: anyone can select any tenant. Before production, replace public demoLogin/Tenant

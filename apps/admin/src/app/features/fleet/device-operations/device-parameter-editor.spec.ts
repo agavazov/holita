@@ -75,15 +75,19 @@ describe('Device parameter editor', () => {
     return fixture;
   }
 
-  it('permits route retirement while submission is pending and still warns before browser unload', async () => {
+  it('blocks navigation while submission is pending and still warns before browser unload', async () => {
     const fixture = await mount();
     fixture.componentRef.setInput('submitting', true);
     fixture.componentRef.setInput('busy', true);
     await fixture.whenStable();
-    expect(fixture.componentInstance.canLeave()).toBe(true);
+    expect(fixture.componentInstance.canLeave()).toBe(false);
     const unload = new Event('beforeunload', { cancelable: true });
     window.dispatchEvent(unload);
     expect(unload.defaultPrevented).toBe(true);
+    fixture.componentRef.setInput('submitting', false);
+    fixture.componentRef.setInput('busy', false);
+    await fixture.whenStable();
+    expect(fixture.componentInstance.canLeave()).toBe(true);
   });
 
   it('edits an unknown existing interval using the captured baseline and preserves its original raw definition', async () => {

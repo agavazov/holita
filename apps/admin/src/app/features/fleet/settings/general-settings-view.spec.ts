@@ -57,18 +57,22 @@ describe('GeneralSettingsView load and field feedback', () => {
     expect(root.querySelector<HTMLInputElement>('#settings-name')?.value).toBe('Sofia Fleet');
   });
 
-  it('allows retiring a submitted save while retaining unload protection and form locks', async () => {
+  it('blocks navigation until a submitted save settles while retaining unload protection and form locks', async () => {
     const fixture = TestBed.createComponent(GeneralSettingsView);
     fixture.componentRef.setInput('branchName', 'Sofia Fleet');
     fixture.componentRef.setInput('settings', settings);
     await fixture.whenStable();
     fixture.componentRef.setInput('saving', true);
     await fixture.whenStable();
-    expect(fixture.componentInstance.canLeave()).toBe(true);
+    expect(fixture.componentInstance.canLeave()).toBe(false);
     expect(document.querySelector<HTMLInputElement>('#settings-name')?.disabled).toBe(true);
     const unload = new Event('beforeunload', { cancelable: true });
     window.dispatchEvent(unload);
     expect(unload.defaultPrevented).toBe(true);
+    fixture.componentRef.setInput('saving', false);
+    await fixture.whenStable();
+    expect(fixture.componentInstance.canLeave()).toBe(true);
+    expect(document.querySelector<HTMLInputElement>('#settings-name')?.disabled).toBe(false);
   });
 
   it('focuses a synchronous mapped Select rejection without requiring a rendered busy frame', async () => {

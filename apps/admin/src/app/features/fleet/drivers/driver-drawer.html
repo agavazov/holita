@@ -367,7 +367,14 @@
   @if (state() === 'ready') {
     <div drawerFooter class="app-drawer-actions">
       @if (editing()) {
-        <button pButton type="button" severity="secondary" [outlined]="true" (click)="cancel()">
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="saving()"
+          (click)="cancel()"
+        >
           {{ text().cancel }}
         </button>
         <button pButton type="submit" form="driver-form" [loading]="saving()" [disabled]="saving()">
@@ -379,6 +386,7 @@
           type="button"
           severity="secondary"
           [outlined]="true"
+          [disabled]="saving()"
           (click)="requestClose()"
         >
           {{ text().close }}

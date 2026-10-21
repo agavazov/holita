@@ -211,7 +211,7 @@ export class DriverEditorPage implements OnInit {
   }
 
   canLeave(): boolean | Promise<boolean> {
-    return this.closingAfterSave || this.saving() || (this.drawer()?.canLeave() ?? true);
+    return this.closingAfterSave || (!this.saving() && (this.drawer()?.canLeave() ?? true));
   }
 
   private navigate(commands: readonly unknown[]): Promise<boolean> {

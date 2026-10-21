@@ -178,7 +178,7 @@ export class VehicleOdometerPage implements OnInit {
   }
 
   canLeave(): boolean | Promise<boolean> {
-    return this.closingAfterSave || this.saving() || (this.drawer()?.canLeave() ?? true);
+    return this.closingAfterSave || (!this.saving() && (this.drawer()?.canLeave() ?? true));
   }
 
   private failRead(error: unknown): void {

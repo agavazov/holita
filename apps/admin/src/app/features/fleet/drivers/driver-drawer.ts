@@ -402,7 +402,7 @@ export class DriverDrawer {
   }
 
   canLeave(): Promise<boolean> | boolean {
-    return this.saving() || this.drawer().confirmLeave(this.dirty());
+    return !this.saving() && this.drawer().confirmLeave(this.dirty());
   }
 
   markSaved(): void {

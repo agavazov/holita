@@ -201,6 +201,7 @@ describe('Background device configuration page', () => {
       operation(request, 'AdminRequestDeviceConfigurationRead'),
     );
     expect(previous.componentInstance.requesting()).toBe(true);
+    expect(previous.componentInstance.canLeave()).toBe(false);
     previous.destroy();
     expect(write.cancelled).toBe(false);
     const current = await mount(branchB);
@@ -224,6 +225,7 @@ describe('Background device configuration page', () => {
     targets();
     await fixture.whenStable();
     const submission = fixture.componentInstance.requestRead(input);
+    expect(fixture.componentInstance.canLeave()).toBe(false);
     http
       .expectOne((request) => operation(request, 'AdminRequestDeviceConfigurationRead'))
       .flush('lost response', { status: 503, statusText: 'Unavailable' });
@@ -233,6 +235,7 @@ describe('Background device configuration page', () => {
       .flush(pageResponse([saved('UNKNOWN')]));
     await fixture.whenStable();
     expect(fixture.componentInstance.operations()[0]?.status).toBe('UNKNOWN');
+    expect(fixture.componentInstance.canLeave()).toBe(true);
     await fixture.componentInstance.requestRead(input);
     http.expectNone((request) => operation(request, 'AdminRequestDeviceConfigurationRead'));
   });

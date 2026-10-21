@@ -267,6 +267,8 @@ export const Saving: Story = {
       expect(body.getByRole('textbox', { name: /License plate/ })).toBeDisabled(),
     );
     await expect(body.getByRole('spinbutton', { name: 'Fuel tank, L' })).toBeDisabled();
+    await expect(body.getByRole('button', { name: /^Close$/ })).toBeDisabled();
+    await expect(body.getByRole('button', { name: /^Cancel$/ })).toBeDisabled();
   },
 };
 export const NotFound: Story = { name: 'Not found', args: { state: 'not-found' } };

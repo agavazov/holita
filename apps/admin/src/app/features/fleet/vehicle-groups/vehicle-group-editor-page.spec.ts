@@ -155,6 +155,10 @@ describe('Live Vehicle group editor', () => {
     });
     await fixture.whenStable();
     expect(field('name').disabled).toBe(true);
+    expect(fixture.componentInstance.canLeave()).toBe(false);
+    expect(dialog().querySelector<HTMLButtonElement>('.app-drawer-actions button')?.disabled).toBe(
+      true,
+    );
     write.flush({ data: { createFleetVehicleGroup: { ...group, name: 'Created' } } });
     await saving;
     await fixture.whenStable();
@@ -203,6 +207,9 @@ describe('Live Vehicle group editor', () => {
     await fixture.whenStable();
     expect(field('name').value).toBe('Duplicate');
     expect(field('description').value).toBe('Retain this draft.');
+    expect(dialog().querySelector<HTMLButtonElement>('.app-drawer-actions button')?.disabled).toBe(
+      false,
+    );
     expect(dialog().querySelector('#group-name-error')?.textContent).toContain('already exists');
     await vi.waitFor(() => {
       expect(document.activeElement).toBe(field('name'));

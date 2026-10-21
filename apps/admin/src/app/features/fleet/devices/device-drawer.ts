@@ -290,7 +290,7 @@ export class DeviceDrawer {
   }
 
   canLeave(): boolean | Promise<boolean> {
-    return this.saving() || this.drawer().confirmLeave(this.form.dirty);
+    return !this.saving() && this.drawer().confirmLeave(this.form.dirty);
   }
 
   markSaved(): void {

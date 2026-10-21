@@ -237,11 +237,25 @@
 
   <div drawerFooter class="app-drawer-actions">
     @if (readOnly()) {
-      <button pButton type="button" severity="secondary" [outlined]="true" (click)="close()">
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="saving()"
+        (click)="close()"
+      >
         {{ text().close }}
       </button>
     } @else {
-      <button pButton type="button" severity="secondary" [outlined]="true" (click)="close()">
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="saving()"
+        (click)="close()"
+      >
         {{ text().cancel }}
       </button>
       <button pButton type="submit" form="task-form" [loading]="saving()" [disabled]="saving()">

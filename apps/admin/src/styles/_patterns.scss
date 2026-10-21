@@ -50,9 +50,14 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
       background-color var(--p-transition-duration),
       color var(--p-transition-duration);
 
-    &:hover {
+    &:hover:not(:disabled) {
       background: var(--p-content-hover-background);
       color: var(--p-text-color);
+    }
+
+    &:disabled {
+      opacity: var(--p-disabled-opacity);
+      cursor: default;
     }
 
     svg {

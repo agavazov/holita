@@ -207,6 +207,11 @@ describe('Live Maintenance routed records', () => {
     expect(write.request.body).toMatchObject({
       variables: { input: { vehicleId, dueOdometerKm: 0, workshop: 'Warranty' } },
     });
+    await fixture.whenStable();
+    expect(fixture.componentInstance.canLeave()).toBe(false);
+    expect(dialog().querySelector<HTMLButtonElement>('.app-drawer-actions button')?.disabled).toBe(
+      true,
+    );
     write.flush({ data: { createFleetServiceTask: record() } });
     await saved;
     await fixture.whenStable();

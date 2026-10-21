@@ -282,9 +282,9 @@ an occurrence inside the permitted reading interval. An unchanged displayed read
 exact stored value, including after conversion to miles. INACTIVE vehicles and empty valid time
 intervals display an unavailable reason and cannot submit.
 
-Submitted drawer writes keep their captured client and may finish after in-app navigation. Closing
-the drawer does not cancel the write. Form and submit controls remain locked until settlement, and
-late results cannot notify or navigate the next workspace. Unsubmitted dirty drafts still require
+Drawer saves disable Cancel/Close and block in-app navigation until the write settles. Form and
+submit controls remain locked. A forcibly destroyed editor retains its captured client, and late
+results cannot notify or navigate the next workspace. Unsubmitted dirty drafts still require
 discard confirmation; leaving during a conflict read also guards the retained remark draft.
 Browser unload warns for a dirty form or a pending write.
 

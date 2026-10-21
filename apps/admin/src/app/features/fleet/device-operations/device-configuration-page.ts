@@ -275,7 +275,7 @@ export class DeviceConfigurationPage implements OnInit {
   }
 
   canLeave(): boolean | Promise<boolean> {
-    return this.requesting() || (this.view()?.canLeave() ?? true);
+    return !this.requesting() && (this.view()?.canLeave() ?? true);
   }
 
   clearWriteError(): void {
