@@ -74,9 +74,7 @@ test.describe('Devices', () => {
     await page.getByRole('textbox', { name: /^IMEI/ }).fill('001234567890123');
     await chooseTruck(page, 'CA1234AB');
     await page.getByRole('button', { name: 'Register', exact: true }).click();
-    await expect(
-      page.getByText('IMEI is already used in this branch.', { exact: true }),
-    ).toBeVisible();
+    await expect(page.getByText('This IMEI is already registered.', { exact: true })).toBeVisible();
     await expect(page.getByRole('textbox', { name: /^IMEI/ })).toBeFocused();
     await page.getByRole('textbox', { name: /^IMEI/ }).fill('001234567890124');
     await page.getByRole('button', { name: 'Register', exact: true }).click();
