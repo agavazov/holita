@@ -44,6 +44,8 @@ export function fleetFieldErrors<F extends string>(
         return path === 'nextDueOn' || path === 'nextDueOdometerKm'
           ? maintenanceText(language).completion.inactiveNext
           : text.vehicleUnavailable;
+      case 'VEHICLE_INACTIVE':
+        return text.vehicleInactive;
       case 'GROUP_UNAVAILABLE':
         return text.groupUnavailable;
       case 'MODEL_REQUIRED':

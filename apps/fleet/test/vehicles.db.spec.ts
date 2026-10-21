@@ -400,7 +400,16 @@ describe('Vehicle GraphQL with PostgreSQL', () => {
           {
             extensions: {
               code: 'BAD_USER_INPUT',
-              fieldErrors: [{ path: 'currentDriverId' }],
+              fieldErrors: [
+                {
+                  path: 'currentDriverId',
+                  code: winner === 'deactivation' ? 'VEHICLE_INACTIVE' : 'DRIVER_ASSIGNED',
+                  message:
+                    winner === 'deactivation'
+                      ? 'Reactivate the vehicle before assigning a driver.'
+                      : 'Unassign the driver before deactivating the vehicle.',
+                },
+              ],
             },
           },
         ],

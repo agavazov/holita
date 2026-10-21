@@ -91,6 +91,11 @@ const UNAVAILABLE_DRIVER: FieldError = {
   message: 'Choose an active driver in this branch.',
   code: 'DRIVER_UNAVAILABLE',
 };
+const INACTIVE_VEHICLE: FieldError = {
+  path: 'currentDriverId',
+  message: 'Reactivate the vehicle before assigning a driver.',
+  code: 'VEHICLE_INACTIVE',
+};
 const UNIQUE_INDEXES = new Map([
   ['Vehicle_tenantId_branchId_fleetNumber_key', DUPLICATE_FLEET_NUMBER],
   ['Vehicle_tenantId_branchId_vin_key', DUPLICATE_VIN],
@@ -359,6 +364,9 @@ export class VehiclesService {
     try {
       const result = await this.vehicles.update(scope, recordId, data);
       if (result && 'inactiveAssignment' in result) {
+        if (data.currentDriverId != null && data.status !== 'INACTIVE') {
+          invalidFields([INACTIVE_VEHICLE]);
+        }
         invalid(
           'currentDriverId',
           'Unassign the driver before deactivating the vehicle.',
@@ -471,6 +479,9 @@ export class VehiclesService {
     changes: Partial<VehicleData>,
   ): Promise<void> {
     if (result.status === 'INACTIVE' && result.currentDriverId !== null) {
+      if (changes.currentDriverId != null && changes.status !== 'INACTIVE') {
+        invalidFields([INACTIVE_VEHICLE]);
+      }
       invalid(
         'currentDriverId',
         'Unassign the driver before deactivating the vehicle.',

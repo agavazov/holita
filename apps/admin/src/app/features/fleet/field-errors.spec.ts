@@ -94,6 +94,11 @@ describe('Fleet server validation reasons', () => {
       text: (language: Language) => maintenanceText(language).completion.inactiveNext,
     },
     {
+      code: 'VEHICLE_INACTIVE',
+      path: 'currentDriverId',
+      text: (language: Language) => fleetValidationText(language).vehicleInactive,
+    },
+    {
       code: 'GROUP_UNAVAILABLE',
       path: 'groupId',
       text: (language: Language) => fleetValidationText(language).groupUnavailable,
@@ -190,6 +195,9 @@ describe('Fleet server validation reasons', () => {
         vehicleFieldErrors(failure('currentDriverId', 'DRIVER_UNAVAILABLE'), language),
       ).toEqual({
         driverId: fleetValidationText(language).driverUnavailable,
+      });
+      expect(vehicleFieldErrors(failure('currentDriverId', 'VEHICLE_INACTIVE'), language)).toEqual({
+        driverId: fleetValidationText(language).vehicleInactive,
       });
       expect(driverFieldErrors(failure('employeeNumber', 'ALREADY_EXISTS'), language)).toEqual({
         employeeNo: driversText(language).drawer.duplicateEmployeeNo,

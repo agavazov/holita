@@ -2,6 +2,7 @@
   "alreadyExists": "This value is already used in this branch.",
   "driverUnavailable": "Choose an active driver in this branch.",
   "vehicleUnavailable": "Choose an available vehicle in this branch.",
+  "vehicleInactive": "Reactivate the vehicle before assigning a driver.",
   "groupUnavailable": "Choose a vehicle group in this branch.",
   "modelRequired": "Choose a device model before selecting options.",
   "modelOptionsUnsupported": "Choose only options supported by the selected model.",

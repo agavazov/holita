@@ -240,6 +240,7 @@ vocabulary against the actual admin maps without importing another application's
 | `DRIVER_ASSIGNED`               | An assignment must be removed before deactivation                   | Fleet         |
 | `DRIVER_UNAVAILABLE`            | An active scoped Driver is required                                 | Fleet         |
 | `VEHICLE_UNAVAILABLE`           | An available scoped Vehicle is required                             | Fleet         |
+| `VEHICLE_INACTIVE`              | Reactivate the Vehicle before assigning a Driver                    | Fleet         |
 | `GROUP_UNAVAILABLE`             | A scoped Vehicle group is required                                  | Fleet         |
 | `MODEL_REQUIRED`                | Device options require a model                                      | Fleet         |
 | `MODEL_OPTIONS_UNSUPPORTED`     | Options are unsupported by the selected model                       | Fleet         |

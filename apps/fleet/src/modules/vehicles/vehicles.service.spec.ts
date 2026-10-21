@@ -568,6 +568,29 @@ describe('Vehicles validation and scope', () => {
     ]);
   });
 
+  it.each(['ACTIVE', 'INACTIVE'] as const)(
+    'reports an inactive Vehicle when assignment fails from a %s preflight state',
+    async (status) => {
+      const vehicle = row({ status });
+      find.mockResolvedValue(vehicle);
+      update.mockResolvedValue({ inactiveAssignment: true });
+      expect(
+        await fieldErrors(service.update(context, vehicle.id, { currentDriverId: driverId })),
+      ).toEqual([
+        {
+          path: 'currentDriverId',
+          message: 'Reactivate the vehicle before assigning a driver.',
+          code: 'VEHICLE_INACTIVE',
+        },
+      ]);
+      expect(update).toHaveBeenCalledTimes(status === 'ACTIVE' ? 1 : 0);
+      if (status === 'ACTIVE') {
+        expect(update).toHaveBeenCalledWith(scope, vehicle.id, { currentDriverId: driverId });
+      }
+      expect(requireBranch).not.toHaveBeenCalled();
+    },
+  );
+
   it('validates the merged row on update and never calls Core', async () => {
     const id = randomUUID();
     find.mockResolvedValue(row({ id, currentDriverId: driverId }));
