@@ -538,9 +538,8 @@ describe('Routed vehicle save retirement', () => {
   let harness: RouterTestingHarness | undefined;
 
   function editor(): VehicleEditorPage {
-    const value: unknown = harness?.fixture.debugElement.query(
-      By.directive(VehicleEditorPage),
-    )?.componentInstance;
+    const element = harness?.fixture.debugElement.query(By.directive(VehicleEditorPage));
+    const value: unknown = element?.componentInstance;
     if (!(value instanceof VehicleEditorPage)) {
       throw new Error('Missing routed vehicle editor.');
     }

@@ -33,7 +33,9 @@ class ReconciliationScenario {
   protected readonly backLink = ['/', 'en', defaultBranchId, 'fleet', 'devices'];
   private readonly view = viewChild.required(DeviceConfigurationView);
   constructor() {
-    afterNextRender(() => this.view().form.controls.carId.setValue(this.snapshot.karmaCarId));
+    afterNextRender(() => {
+      this.view().form.controls.carId.setValue(this.snapshot.karmaCarId);
+    });
   }
 }
 

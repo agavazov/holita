@@ -48,7 +48,9 @@ describe('Alert remark refresh lifecycle', () => {
 
   afterEach(() => {
     fixture.destroy();
-    document.querySelectorAll('.p-drawer, .p-overlay-mask').forEach((element) => element.remove());
+    document.querySelectorAll('.p-drawer, .p-overlay-mask').forEach((element) => {
+      element.remove();
+    });
   });
 
   it('preserves a dirty same-record remark and submits it only after a user action', async () => {

@@ -94,7 +94,9 @@ describe('OdometerDrawer', () => {
       .query(By.directive(FormGroupDirective))
       .injector.get(FormGroupDirective).form;
     const element = document.getElementById('odometer-form');
-    if (!element) throw new Error('Missing odometer form.');
+    if (!element) {
+      throw new Error('Missing odometer form.');
+    }
     expect(element.textContent).toContain('Odometer, mi');
     expect(element.textContent).toContain('America/New_York time');
     const time: unknown = form.get('recordedAt')?.value;
@@ -136,7 +138,9 @@ describe('OdometerDrawer', () => {
       fixture.componentInstance.save.subscribe((reading) => saved.push(reading));
       await fixture.whenStable();
       const input = document.getElementById('odometer-odometerKm');
-      if (!(input instanceof HTMLInputElement)) throw new Error('Missing odometer input.');
+      if (!(input instanceof HTMLInputElement)) {
+        throw new Error('Missing odometer input.');
+      }
       expect(input.disabled).toBe(true);
       expect(
         document.querySelector<HTMLButtonElement>('button[form="odometer-form"]')?.disabled,

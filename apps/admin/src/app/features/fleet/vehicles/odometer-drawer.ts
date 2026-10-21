@@ -48,7 +48,7 @@ export function odometerWallTime(iso: string, timeZone = 'Europe/Sofia'): string
   }
   const instant = new Date(iso);
   const pad = (value: number) => String(value).padStart(2, '0');
-  return `${parts.year}-${pad(parts.month)}-${pad(parts.day)}T${pad(parts.hour)}:${pad(parts.minute)}:${pad(instant.getUTCSeconds())}.${String(instant.getUTCMilliseconds()).padStart(3, '0')}`;
+  return `${String(parts.year).padStart(4, '0')}-${pad(parts.month)}-${pad(parts.day)}T${pad(parts.hour)}:${pad(parts.minute)}:${pad(instant.getUTCSeconds())}.${String(instant.getUTCMilliseconds()).padStart(3, '0')}`;
 }
 
 /** Repeated Branch wall times use an occurrence inside the permitted reading interval. */
@@ -60,7 +60,9 @@ export function odometerInstant(
   const match = date
     ? /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?$/.exec(date)
     : null;
-  if (!match) return null;
+  if (!match) {
+    return null;
+  }
   const parts = {
     year: Number(match[1]),
     month: Number(match[2]),
@@ -78,8 +80,9 @@ export function odometerInstant(
     parts.hour > 23 ||
     parts.minute > 59 ||
     second > 59
-  )
+  ) {
     return null;
+  }
   const first = Date.parse(zonedWallTimeToIso(parts, timeZone));
   const wall = Date.UTC(
     parts.year,
@@ -95,7 +98,9 @@ export function odometerInstant(
   for (const shift of [-86_400_000, 0, 86_400_000]) {
     const probe = first + shift;
     const fields = isoToZonedParts(new Date(probe).toISOString(), timeZone);
-    if (!fields) continue;
+    if (!fields) {
+      continue;
+    }
     const offset =
       Date.UTC(fields.year, fields.month - 1, fields.day, fields.hour, fields.minute) -
       Math.floor(probe / 60_000) * 60_000;
@@ -114,8 +119,12 @@ export function odometerInstant(
   const candidates = [...occurrences].sort((left, right) => left - right);
   const earliest = candidates[0];
   // A spring gap has no actual instant; never silently normalize the intended reading.
-  if (earliest === undefined) return null;
-  if (!bounds) return new Date(earliest).toISOString();
+  if (earliest === undefined) {
+    return null;
+  }
+  if (!bounds) {
+    return new Date(earliest).toISOString();
+  }
   const previous =
     bounds.previousAt === null ? Number.NEGATIVE_INFINITY : Date.parse(bounds.previousAt);
   const latest = Date.parse(bounds.latestAllowedAt);
@@ -173,7 +182,9 @@ export class OdometerDrawer {
     }),
   );
   protected readonly unavailable = computed(() => {
-    if (this.inactive()) return this.text().inactive;
+    if (this.inactive()) {
+      return this.text().inactive;
+    }
     const previous = this.previous();
     return previous && Date.parse(previous.recordedAt) >= Date.parse(this.latestAllowedAt())
       ? this.text().noTimeInterval
@@ -260,7 +271,9 @@ export class OdometerDrawer {
           this.form.enable();
           afterNextRender(
             () => {
-              if (this.state() !== 'ready' || this.saving() || this.unavailable()) return;
+              if (this.state() !== 'ready' || this.saving() || this.unavailable()) {
+                return;
+              }
               if (!focusFirstInvalid(this.formElement().nativeElement, fields, 'odometer-')) {
                 this.drawer().focusTitle();
               }

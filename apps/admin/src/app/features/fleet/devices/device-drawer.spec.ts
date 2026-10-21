@@ -28,7 +28,7 @@ describe('Device installation date editor', () => {
     const form = fixture.debugElement
       .query(By.directive(FormGroupDirective))
       .injector.get(FormGroupDirective).form;
-    const picker = fixture.debugElement.query(By.directive(DatePicker)).componentInstance;
+    const picker: unknown = fixture.debugElement.query(By.directive(DatePicker)).componentInstance;
     expect(picker instanceof DatePicker).toBe(true);
     const input = document.getElementById('device-installedAt');
     expect(input?.getAttribute('aria-describedby')).toContain('device-installedAt-hint');
@@ -36,7 +36,9 @@ describe('Device installation date editor', () => {
       Intl.DateTimeFormat().resolvedOptions().timeZone,
     );
     const element = document.getElementById('device-form');
-    if (!element) throw new Error('Missing device form.');
+    if (!element) {
+      throw new Error('Missing device form.');
+    }
     const submit = () =>
       element.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     submit();
@@ -45,6 +47,9 @@ describe('Device installation date editor', () => {
     form.get('installedAt')?.setValue(edited);
     submit();
     expect(saved[1]?.installedAt).toBe(edited.toISOString());
+    form.get('installedAt')?.setValue(new Date('invalid'));
+    submit();
+    expect(saved).toHaveLength(2);
     form.get('installedAt')?.setValue(null);
     submit();
     expect(saved[2]?.installedAt).toBe('');

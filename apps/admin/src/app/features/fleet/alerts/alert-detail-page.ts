@@ -224,23 +224,7 @@ export class AlertDetailPage implements OnInit {
         this.pendingWrite.set(false);
         this.saveError.set(error);
         if (errorCode(error) === 'CONFLICT') {
-          this.state.set('loading');
-          this.loadError.set(null);
-          const query = this.alertQuery;
-          if (!query) {
-            this.failRead(new Error('Missing alert read.'));
-            return;
-          }
-          try {
-            const result = await query.refetch();
-            if (!this.destroyRef.destroyed && result.error) {
-              this.failRead(result.error);
-            }
-          } catch (readError: unknown) {
-            if (!this.destroyRef.destroyed) {
-              this.failRead(readError);
-            }
-          }
+          await this.refreshAfterConflict();
         }
       }
     } finally {
@@ -248,6 +232,25 @@ export class AlertDetailPage implements OnInit {
         this.pendingWrite.set(false);
         this.busy.set(null);
         this.closingAfterSave = false;
+      }
+    }
+  }
+  private async refreshAfterConflict(): Promise<void> {
+    this.state.set('loading');
+    this.loadError.set(null);
+    const query = this.alertQuery;
+    if (!query) {
+      this.failRead(new Error('Missing alert read.'));
+      return;
+    }
+    try {
+      const result = await query.refetch();
+      if (!this.destroyRef.destroyed && result.error) {
+        this.failRead(result.error);
+      }
+    } catch (readError: unknown) {
+      if (!this.destroyRef.destroyed) {
+        this.failRead(readError);
       }
     }
   }

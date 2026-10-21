@@ -147,9 +147,12 @@ export class DeviceDrawer {
       nonNullable: true,
       validators: [textValidator(20), patternValidator(/^\+?[0-9]{6,19}$/)],
     }),
-    installedAt: new FormControl<Date | null>(null, (control) =>
-      control.value !== null && Number.isNaN(control.value.getTime()) ? { pattern: true } : null,
-    ),
+    installedAt: new FormControl<Date | null>(null, (control) => {
+      const value: unknown = control.value;
+      return value === null || (value instanceof Date && !Number.isNaN(value.getTime()))
+        ? null
+        : { pattern: true };
+    }),
     simIccid: new FormControl('', {
       nonNullable: true,
       validators: patternValidator(/^\d{18,22}$/),

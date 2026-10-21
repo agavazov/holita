@@ -173,19 +173,19 @@ export const BulkCancellation: Story = {
     await userEvent.click(
       canvas.getByRole('checkbox', { name: 'Select Oil change on CB 1001 AX' }),
     );
-    await userEvent.click(canvas.getByRole('button', { name: 'Cancel service', exact: true }));
+    await userEvent.click(canvas.getByRole('button', { name: 'Cancel service' }));
     const dialog = await body.findByRole('alertdialog', { name: 'Cancel service tasks?' });
     await expect(within(dialog).getAllByRole('listitem')).toHaveLength(1);
     await expect(within(dialog).getByRole('listitem')).toHaveTextContent(
       'Oil change on CB 1001 AX',
     );
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel', exact: true }));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(dialog).not.toBeInTheDocument(), appReady);
     await expect(
       canvas.getByRole('button', { name: 'Edit Oil change on CB 1001 AX' }),
     ).toBeVisible();
     await expect(body.queryByText('Service tasks cancelled: 1.')).not.toBeInTheDocument();
-    await userEvent.click(canvas.getByRole('button', { name: 'Cancel service', exact: true }));
+    await userEvent.click(canvas.getByRole('button', { name: 'Cancel service' }));
     const reopened = await body.findByRole('alertdialog', { name: 'Cancel service tasks?' });
     await userEvent.click(within(reopened).getByRole('button', { name: 'Cancel service' }));
     await waitFor(
@@ -197,9 +197,7 @@ export const BulkCancellation: Story = {
     await expect(
       canvas.getByRole('checkbox', { name: 'Select Oil change on CB 1001 AX' }),
     ).not.toBeChecked();
-    await expect(
-      canvas.queryByRole('button', { name: 'Cancel service', exact: true }),
-    ).not.toBeInTheDocument();
+    await expect(canvas.queryByRole('button', { name: 'Cancel service' })).not.toBeInTheDocument();
   },
 };
 export const CompletionConflict: Story = {

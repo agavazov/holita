@@ -297,7 +297,7 @@ describe('Telemetry, data clock and odometer readings with PostgreSQL', () => {
         database,
         { tenantId, branchId },
         vehicle.id,
-        async () => undefined,
+        () => Promise.resolve(),
         () =>
           Promise.all(
             readings.map((reading) =>

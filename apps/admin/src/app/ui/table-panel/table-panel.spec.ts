@@ -337,7 +337,9 @@ describe('TablePanel', () => {
       host.view.set({ kind: 'rows' });
       fixture.detectChanges();
       const trigger = element(fixture).querySelector<HTMLButtonElement>('.row-trigger');
-      if (!trigger) throw new Error('Missing row trigger.');
+      if (!trigger) {
+        throw new Error('Missing row trigger.');
+      }
       trigger.focus();
       const confirmation = fixture.debugElement
         .query(By.directive(TablePanel))
@@ -350,8 +352,11 @@ describe('TablePanel', () => {
       const pending = host
         .panel()
         .run('delete', [{ id: 'a', label: 'CB 1001 AX', unavailable: [] }], trigger);
-      if (state === 'disabled') trigger.disabled = true;
-      else trigger.remove();
+      if (state === 'disabled') {
+        trigger.disabled = true;
+      } else {
+        trigger.remove();
+      }
       rejects[0]?.();
       await pending;
       fixture.detectChanges();

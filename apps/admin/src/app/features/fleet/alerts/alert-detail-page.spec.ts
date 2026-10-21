@@ -306,9 +306,9 @@ describe('Live Alert detail workflow', () => {
       const refresh = http.expectOne((request) => operation(request, 'AdminAlert'));
       expect(fixture.componentInstance.pendingWrite()).toBe(false);
       const leaving = fixture.componentInstance.canLeave();
-      await vi.waitFor(() =>
-        expect(document.querySelector('.p-confirmdialog-reject-button')).not.toBeNull(),
-      );
+      await vi.waitFor(() => {
+        expect(document.querySelector('.p-confirmdialog-reject-button')).not.toBeNull();
+      });
       document.querySelector<HTMLButtonElement>('.p-confirmdialog-reject-button')?.click();
       expect(await leaving).toBe(false);
       await fixture.whenStable();
