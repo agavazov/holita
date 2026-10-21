@@ -138,7 +138,7 @@ describe('Live Devices list action lifecycle', () => {
     harness.fixture.destroy();
   });
 
-  it('opens Diagnostics from the primary IMEI while preserving direct row-menu editing', async () => {
+  it('opens Diagnostics and row-menu editing while a same-query refresh is pending', async () => {
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     const fixture = TestBed.createComponent(DevicesPage);
     fixture.componentRef.setInput('branch', { id: branch, name: 'Fleet A' });
@@ -147,6 +147,9 @@ describe('Live Devices list action lifecycle', () => {
     http.expectOne((request) => operation(request, 'AdminDeviceSummary')).flush(summary(2));
     http.expectOne((request) => operation(request, 'AdminDevices')).flush(list());
     await fixture.whenStable();
+    fixture.componentInstance.refresh();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.loading()).toBe(true);
     const element: unknown = fixture.nativeElement;
     if (!(element instanceof HTMLElement)) {
       throw new Error('Missing Devices list.');
@@ -171,6 +174,9 @@ describe('Live Devices list action lifecycle', () => {
         preserveFragment: true,
       }),
     );
+    http.expectOne((request) => operation(request, 'AdminDevices')).flush(list());
+    http.expectOne((request) => operation(request, 'AdminDeviceSummary')).flush(summary(2));
+    await fixture.whenStable();
     fixture.destroy();
   });
   it('submits one batch, retains failed selections after a failed refresh and retries only the failure', async () => {
@@ -187,6 +193,8 @@ describe('Live Devices list action lifecycle', () => {
     );
     const notice = vi.spyOn(TestBed.inject(MessageService), 'add');
     const completion = page.run({ action: 'delete', ids: [firstId, secondId] });
+    await page.run({ action: 'delete', ids: [firstId] });
+    expect(page.acting()).toBe(true);
     const write = http.expectOne((request) => operation(request, 'AdminDeleteDevices'));
     expect(write.request.body).toMatchObject({ variables: { ids: [firstId, secondId] } });
     write.flush({

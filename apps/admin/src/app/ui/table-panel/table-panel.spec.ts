@@ -181,10 +181,7 @@ describe('TablePanel', () => {
     expect(bulk?.textContent).toContain('Изтриване 1 от 3');
     const buttons = [...(bulk?.querySelectorAll('.table-panel__bulk-actions button') ?? [])];
     expect(buttons.map((button) => button.textContent.trim())).toEqual(['Архивирай', 'Изтрий']);
-    buttons[0]?.dispatchEvent(new MouseEvent('click'));
-    expect(host.requests).toEqual([]);
-    host.busy.set(false);
-    fixture.detectChanges();
+    expect(buttons[0]?.hasAttribute('disabled')).toBe(false);
     buttons[0]?.dispatchEvent(new MouseEvent('click'));
     expect(host.requests).toEqual([{ action: 'archive', ids: ['a', 'b'] }]);
     root.querySelector<HTMLButtonElement>('.table-panel__bulk-clear')?.click();
@@ -305,7 +302,7 @@ describe('TablePanel', () => {
     expect(host.requests).toEqual([{ action: 'delete', ids: ['a'] }]);
   });
 
-  it('does not submit a confirmation accepted while the list is busy', async () => {
+  it('submits a confirmation accepted during a same-query refresh exactly once', async () => {
     const fixture = render();
     const host = fixture.componentInstance;
     const confirmation = fixture.debugElement
@@ -324,9 +321,9 @@ describe('TablePanel', () => {
     fixture.detectChanges();
     accepts[0]?.();
     await pending;
-    await host.panel().run('delete', records, null);
+    accepts[0]?.();
     expect(accepts).toHaveLength(1);
-    expect(host.requests).toEqual([]);
+    expect(host.requests).toEqual([{ action: 'delete', ids: ['a'] }]);
   });
 
   it.each(['disabled', 'removed'] as const)(

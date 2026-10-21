@@ -289,7 +289,21 @@ export const UnlistedPageSize: Story = {
   },
 };
 
-export const Busy: Story = { args: { view: { kind: 'rows' }, busy: true } };
+export const Busy: Story = {
+  args: { view: { kind: 'rows' }, busy: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole('button', { name: 'Edit CB 1001 AX' }));
+    await expect(canvas.getByText('Last request: edit 1')).toBeVisible();
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for CB 1002 AX' }));
+    await chooseMenuItem(canvasElement.ownerDocument.body, 'Delete');
+    const body = within(canvasElement.ownerDocument.body);
+    const dialog = await body.findByRole('alertdialog', { name: 'Delete vehicles?' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(canvas.getByText('Last request: delete 2')).toBeVisible());
+    await waitFor(() => expect(dialog).not.toBeInTheDocument());
+  },
+};
 
 /** No rows: no footer and no paging. */
 export const Empty: Story = {

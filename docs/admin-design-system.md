@@ -608,8 +608,9 @@ Bind TablePanel's `actionContext` to the current query identity, as `VehiclesVie
 `state` input. A context change or component destruction retires pending confirmations and
 their callbacks, so an obsolete answer cannot emit an action or restore focus to an obsolete
 row. The panel aborts its confirmation controller and clears the pending record list.
-An unrelated busy/refresh state keeps the question open. No action starts or submits while busy;
-after a retired question, focus returns to the heading. Cancellation restores the trigger when
+An unrelated busy/refresh state keeps the question open and its actions available. The concrete
+host blocks overlapping actions only while its write is in flight; `busy` describes refresh/progress
+and does not authorize dropping an enabled action. After a retired question, focus returns to the heading. Cancellation restores the trigger when
 it is still available, otherwise the heading.
 `confirmAction` also accepts an optional `AbortSignal`; aborting closes the dialog and resolves
 `false`, and an already-aborted signal returns `false` without opening it.

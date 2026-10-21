@@ -193,10 +193,6 @@ export class TablePanel<A extends string = string> {
       return;
     }
     const element = origin instanceof HTMLElement ? origin : null;
-    if (this.busy()) {
-      this.restoreActionFocus(element);
-      return;
-    }
     const generation = this.actionGeneration;
     const action = this.actions().find((candidate) => candidate.id === actionId);
     if (!action) {
@@ -220,10 +216,7 @@ export class TablePanel<A extends string = string> {
         return;
       }
     }
-    if (this.busy()) {
-      this.restoreActionFocus(element);
-      return;
-    }
+    // A refresh does not disable actions. The concrete host guards writes already in flight.
     this.action.emit({ action: action.id, ids: applicable.map((record) => record.id) });
     if (action.danger || source === 'bulk') {
       this.afterRender(() => {

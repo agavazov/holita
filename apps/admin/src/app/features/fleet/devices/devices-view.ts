@@ -170,19 +170,19 @@ export class DevicesView {
   protected readonly actions = computed<readonly ListAction<DeviceActionId, DeviceRow>[]>(() => {
     const text = this.text().actions;
     const actions: ListAction<DeviceActionId, DeviceRow>[] = [
-      { id: 'diagnostics', label: text.diagnostics, appliesTo: () => !this.busy() },
-      { id: 'edit', label: text.edit, appliesTo: () => !this.busy() },
+      { id: 'diagnostics', label: text.diagnostics },
+      { id: 'edit', label: text.edit },
       {
         id: 'restart',
         label: this.demo() ? text.restart : text.restartUnavailable,
         bulk: true,
         confirm: text.confirmRestart,
-        appliesTo: (row) => this.demo() && !this.busy() && row.status === 'ONLINE',
+        appliesTo: (row) => this.demo() && row.status === 'ONLINE',
       },
       {
         id: 'vehicle',
         label: text.vehicle,
-        appliesTo: (row) => !this.busy() && row.vehicleId !== null,
+        appliesTo: (row) => row.vehicleId !== null,
       },
     ];
     if (!this.demo()) {
@@ -192,7 +192,6 @@ export class DevicesView {
         bulk: true,
         danger: true,
         confirm: text.confirmDelete,
-        appliesTo: () => !this.busy(),
       });
     }
     return actions;
