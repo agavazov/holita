@@ -272,29 +272,51 @@ export async function seedFleetDemo(
     },
     { isolationLevel: 'ReadCommitted', timeout: 30_000 },
   );
+  // Repeated runs need not compile inserts for unchanged activity; partial runs still fill gaps.
   for (let offset = 0; offset < data.trips.length; offset += ACTIVITY_BATCH_SIZE) {
-    inserted.trips += (
-      await client.trip.createMany({
-        data: data.trips.slice(offset, offset + ACTIVITY_BATCH_SIZE),
-        skipDuplicates: true,
-      })
-    ).count;
+    const batch = data.trips.slice(offset, offset + ACTIVITY_BATCH_SIZE);
+    const existing = await client.trip.findMany({
+      where: { ...DEMO_SCOPE, id: { in: batch.map((row) => row.id) } },
+      select: { id: true },
+    });
+    const existingIds = new Set(existing.map((row) => row.id));
+    const missing = batch.filter((row) => !existingIds.has(row.id));
+    if (missing.length) {
+      inserted.trips += (
+        await client.trip.createMany({ data: missing, skipDuplicates: true })
+      ).count;
+    }
   }
   for (let offset = 0; offset < data.samples.length; offset += ACTIVITY_BATCH_SIZE) {
-    inserted.samples += (
-      await client.vehicleStatusSample.createMany({
-        data: data.samples.slice(offset, offset + ACTIVITY_BATCH_SIZE),
-        skipDuplicates: true,
-      })
-    ).count;
+    const batch = data.samples.slice(offset, offset + ACTIVITY_BATCH_SIZE);
+    const existing = await client.vehicleStatusSample.findMany({
+      where: { ...DEMO_SCOPE, id: { in: batch.map((row) => row.id) } },
+      select: { id: true },
+    });
+    const existingIds = new Set(existing.map((row) => row.id));
+    const missing = batch.filter((row) => !existingIds.has(row.id));
+    if (missing.length) {
+      inserted.samples += (
+        await client.vehicleStatusSample.createMany({ data: missing, skipDuplicates: true })
+      ).count;
+    }
   }
   for (let offset = 0; offset < data.events.length; offset += ACTIVITY_BATCH_SIZE) {
-    inserted.events += (
-      await client.fleetEvent.createMany({
-        data: data.events.slice(offset, offset + ACTIVITY_BATCH_SIZE),
-        skipDuplicates: true,
-      })
-    ).count;
+    const batch = data.events.slice(offset, offset + ACTIVITY_BATCH_SIZE);
+    const existing = await client.fleetEvent.findMany({
+      where: { ...DEMO_SCOPE, id: { in: batch.map((row) => row.id) } },
+      select: { id: true },
+    });
+    const existingIds = new Set(existing.map((row) => row.id));
+    const missing = batch.filter((row) => !existingIds.has(row.id));
+    if (missing.length) {
+      inserted.events += (
+        await client.fleetEvent.createMany({
+          data: missing,
+          skipDuplicates: true,
+        })
+      ).count;
+    }
   }
   return inserted;
 }

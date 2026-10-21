@@ -148,6 +148,50 @@ describe('Insert-only rich Fleet demo seed with PostgreSQL', () => {
     expect(
       await client.serviceTask.findUniqueOrThrow({ where: { ...DEMO_SCOPE, id: taskId } }),
     ).toMatchObject({ status: 'DONE', costCents: 0 });
+    const missingTrip = data.trips.find(
+      (row) =>
+        row.endedAt == null && data.events.filter((event) => event.tripId === row.id).length === 1,
+    );
+    const missingSample = data.samples.find((row) => row.id !== DEMO_CLOCK_SAMPLE_ID);
+    const missingEvent =
+      missingTrip && data.events.find((row) => row.tripId === missingTrip.id && row.id !== eventId);
+    if (!missingTrip || !missingSample || !missingEvent) {
+      throw new Error('Missing activity rows for the partial demo seed regression.');
+    }
+    await client.fleetEvent.deleteMany({ where: { ...DEMO_SCOPE, id: missingEvent.id } });
+    await Promise.all([
+      client.trip.deleteMany({ where: { ...DEMO_SCOPE, id: missingTrip.id } }),
+      client.vehicleStatusSample.deleteMany({ where: { ...DEMO_SCOPE, id: missingSample.id } }),
+    ]);
+    expect(await seedFleetDemo(client, options)).toEqual({
+      groups: 0,
+      drivers: 0,
+      vehicles: 0,
+      devices: 0,
+      serviceTasks: 0,
+      trips: 1,
+      samples: 1,
+      events: 1,
+    });
+    expect(
+      await Promise.all([
+        client.trip.findUniqueOrThrow({
+          where: { ...DEMO_SCOPE, id: missingTrip.id },
+          select: { id: true },
+        }),
+        client.vehicleStatusSample.findUniqueOrThrow({
+          where: { ...DEMO_SCOPE, id: missingSample.id },
+          select: { id: true },
+        }),
+        client.fleetEvent.findUniqueOrThrow({
+          where: { ...DEMO_SCOPE, id: missingEvent.id },
+          select: { id: true },
+        }),
+      ]),
+    ).toEqual([{ id: missingTrip.id }, { id: missingSample.id }, { id: missingEvent.id }]);
+    expect(
+      await client.fleetEvent.findUniqueOrThrow({ where: { ...DEMO_SCOPE, id: eventId } }),
+    ).toMatchObject({ alertStatus: 'ACKNOWLEDGED', remark: 'Reviewed by operator.' });
     await expect(
       seedFleetDemo(client, {
         anchor: new Date(anchor.getTime() + DAY_MS),

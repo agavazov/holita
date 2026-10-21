@@ -82,7 +82,10 @@ npm run db:seed:fleet-demo
 
 This inserts missing synthetic Discordia groups, drivers, vehicles, devices, service tasks,
 trips, samples and events. It preserves existing records, edits and workflow transitions;
-natural-key or reserved-ID conflicts fail explicitly. The default anchor is
+natural-key or reserved-ID conflicts fail explicitly. Activity batches read existing IDs in
+the demo Tenant/Branch and insert only missing rows, retaining duplicate protection for
+concurrent inserts. Reruns fill gaps from partial activity inserts without replacing the
+original clock sample. The default anchor is
 `2026-10-18T06:30:00.000Z`, independent of the execution date. An explicit anchor uses
 `npm run db:seed:fleet-demo -- --as-of=2026-10-18T06:30:00.000Z`; reruns must use the same
 anchor once its clock sample exists. The CLI refuses production mode, future anchors, remote
