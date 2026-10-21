@@ -7,14 +7,11 @@ review scratchpad; retain only open work here. Implemented contracts belong in
 [the Karma backlog](karma-api-v2.md), and reporting/restoration work remains in
 [the eData backlog](erm-edata-configuration-interface.md).
 
-## Correctness and focused coverage
+## Visual review
 
-The identifiers below retain the original review's references. Each correction requires a
-focused regression at the affected boundary; database races require guarded PostgreSQL tests.
-
-- **Validation / P2:** Finish the required broad admin, contract and backend checks. Reproduce
-  admin timeouts with the documented single-worker setting before classifying their cause;
-  keep deadlines and behavioral assertions intact.
+- Review the changed admin screen candidates with the user. Missing approved visual baselines
+  remain unresolved until a person reviews them and explicitly requests a baseline update;
+  never create or update baselines automatically.
 
 ## Performance
 
