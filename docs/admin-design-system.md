@@ -790,9 +790,10 @@ after a rename; retired callbacks cannot apply preferences or announce results i
 
 The admin Storybook (`npm run storybook:admin`, port 11001) renders the real Angular components
 ([development](development.md#admin-storybook)). It opens on "Start here" (what to review and links
-to the stories), then Admin, Examples and Design System. Examples default to English; focused
-stories also cover Bulgarian/English catalogs. The example shell's language menu lists sample languages
-that change nothing. Pattern stories render `app/ui` components with story inputs. The Shell
+to the stories), then Admin, Examples and Design System. Stories render in English;
+Bulgarian/English catalog behavior is covered by unit and compiled-app browser checks.
+The example shell's language menu lists sample languages that change nothing.
+Pattern stories render `app/ui` components with story inputs. The Shell
 stories use the real navigation, and the routed ones (Fleet disabled, Unknown Branch, Branch
 discovery loading and error) answer `AdminBranches` through `FixtureHttpBackend`. The Fleet
 examples use no GraphQL: `ExampleApp`
