@@ -1,3 +1,4 @@
+import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { fleetRecordLinks, type FleetRecordLinks } from '../fleet-record-links';
 import {
   ChangeDetectionStrategy,
@@ -74,6 +75,7 @@ export class AlertDetailPage implements OnInit {
   private readonly drawer = viewChild(AlertDrawer);
   private readonly text = computed(() => alertsText(this.language()));
   private clockQuery: ReturnType<AlertsApi['watchClock']> | undefined;
+  private alertQuery: ReturnType<AlertsApi['watchAlert']> | undefined;
   private closingAfterSave = false;
   readonly id = drawerParam(this.route, 'recordId');
   readonly listLink = this.host.closeLink ?? [
@@ -98,9 +100,20 @@ export class AlertDetailPage implements OnInit {
   protected readonly loadFailure = computed(() =>
     requestError(this.loadError(), this.text().table.errorText),
   );
-  protected readonly saveFailure = computed(() =>
-    this.saveError() ? requestError(this.saveError(), this.text().drawer.saveError) : null,
-  );
+  protected readonly saveFailure = computed(() => {
+    const error = this.saveError();
+    if (errorCode(error) === 'CONFLICT') {
+      const notice =
+        this.state() === 'ready'
+          ? this.text().drawer.conflictRetry
+          : this.text().drawer.conflictRefreshing;
+      const requestId: unknown = CombinedGraphQLErrors.is(error)
+        ? error.errors[0]?.extensions?.['requestId']
+        : undefined;
+      return typeof requestId === 'string' ? `${notice} (${requestId})` : notice;
+    }
+    return error ? requestError(error, this.text().drawer.saveError) : null;
+  });
   protected readonly fieldError = computed(() =>
     alertRemarkError(this.saveError(), this.language()),
   );
@@ -137,7 +150,8 @@ export class AlertDetailPage implements OnInit {
         switchMap(() => {
           this.state.set('loading');
           this.loadError.set(null);
-          return this.api.watchAlert(id).valueChanges.pipe(
+          this.alertQuery = this.api.watchAlert(id);
+          return this.alertQuery.valueChanges.pipe(
             catchError((error: unknown) => {
               this.failRead(error);
               return EMPTY;
@@ -204,6 +218,25 @@ export class AlertDetailPage implements OnInit {
     } catch (error: unknown) {
       if (!this.destroyRef.destroyed) {
         this.saveError.set(error);
+        if (errorCode(error) === 'CONFLICT') {
+          this.state.set('loading');
+          this.loadError.set(null);
+          const query = this.alertQuery;
+          if (!query) {
+            this.failRead(new Error('Missing alert read.'));
+            return;
+          }
+          try {
+            const result = await query.refetch();
+            if (!this.destroyRef.destroyed && result.error) {
+              this.failRead(result.error);
+            }
+          } catch (readError: unknown) {
+            if (!this.destroyRef.destroyed) {
+              this.failRead(readError);
+            }
+          }
+        }
       }
     } finally {
       if (!this.destroyRef.destroyed) {

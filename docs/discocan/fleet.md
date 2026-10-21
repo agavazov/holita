@@ -314,6 +314,9 @@ captured clients, generated operations and shared load/error/empty states:
 - [Alerts](../../apps/admin/src/app/features/fleet/alerts/alerts-page.ts) lists actionable events,
   with filtered counts independent of alert status. Acknowledge accepts an IDs-array with partial
   results; detail resolve/reopen uses the loaded expected status and retains failed remarks.
+  An optimistic conflict reloads the latest status before enabling another action, preserving a
+  dirty remark. Failed refreshes block stale writes and expose read retry; mutations are never
+  retried automatically.
 - [Trips](../../apps/admin/src/app/features/fleet/trips/trips-page.ts) preserves URL filters and
   half-open date ranges in the configured Branch time zone. Its detail drawer shows the complete chronological maneuver timeline;
   whole-Branch KPIs remain independent of the current list page.

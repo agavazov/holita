@@ -92,6 +92,7 @@ export class AlertDrawer {
     validators: textValidator(1000),
   });
   private readonly events = toSignal(this.remark.events);
+  private remarkAlertId: string | null = null;
 
   protected readonly title = computed(() => this.alert()?.kind ?? this.text().title);
   protected readonly subtitle = computed(() => {
@@ -120,8 +121,12 @@ export class AlertDrawer {
   constructor() {
     effect(() => {
       const alert = this.alert();
+      const alertId = alert?.id ?? null;
       untracked(() => {
-        this.remark.reset(alert?.remark ?? '');
+        if (alertId !== this.remarkAlertId || this.remark.pristine) {
+          this.remark.reset(alert?.remark ?? '');
+        }
+        this.remarkAlertId = alertId;
       });
     });
     effect(() => {

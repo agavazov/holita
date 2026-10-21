@@ -10,9 +10,11 @@ import {
   provideRouter,
 } from '@angular/router';
 import { DemoSession } from '../../../core/auth/demo-session';
+import type { Language } from '../../../i18n/messages';
 import type { DrawerHost } from '../../../ui/drawer/drawer-host';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
 import { AlertDetailPage } from './alert-detail-page';
+import { alertsText } from './i18n/messages';
 const branchA = '10000000-0000-4000-8000-000000000001';
 const branchB = '10000000-0000-4000-8000-000000000002';
 const id = '60000000-0000-4000-8000-000000000001';
@@ -90,6 +92,7 @@ describe('Live Alert detail workflow', () => {
   const navigate = vi.fn<Router['navigate']>();
   const outletHost = signal<DrawerHost>({ saved });
   const fixtures: ComponentFixture<AlertDetailPage>[] = [];
+  const language = signal<Language>('en');
   async function mount(recordId = id, branchId = branchA) {
     route.snapshot = snapshot(recordId, branchId);
     const fixture = TestBed.createComponent(AlertDetailPage);
@@ -107,6 +110,7 @@ describe('Live Alert detail workflow', () => {
     return fixture;
   }
   beforeEach(() => {
+    language.set('en');
     outletHost.set({ saved });
     TestBed.configureTestingModule({
       providers: [
@@ -115,7 +119,7 @@ describe('Live Alert detail workflow', () => {
         provideHttpClientTesting(),
         { provide: ActivatedRoute, useValue: route },
         { provide: ROUTER_OUTLET_DATA, useValue: outletHost },
-        { provide: UI_LANGUAGE, useValue: signal('en') },
+        { provide: UI_LANGUAGE, useValue: language },
       ],
     });
     TestBed.inject(DemoSession).start({
@@ -272,24 +276,177 @@ describe('Live Alert detail workflow', () => {
     expect(saved).not.toHaveBeenCalled();
     expect(navigate).not.toHaveBeenCalled();
   });
-  it('keeps the draft after an optimistic conflict and never treats it as success', async () => {
+  it.each(['bg', 'en'] as const)(
+    'refreshes a conflicted alert in %s and preserves its remark for an explicit retry',
+    async (currentLanguage) => {
+      language.set(currentLanguage);
+      const fixture = await mount();
+      http
+        .expectOne((request) => operation(request, 'AdminAlert'))
+        .flush({ data: { fleetEvent: event } });
+      await fixture.whenStable();
+      type('Investigate.');
+      const saving = fixture.componentInstance.apply('resolve', 'Investigate.');
+      const firstWrite = http.expectOne((request) => operation(request, 'AdminResolveAlert'));
+      expect(firstWrite.request.body).toMatchObject({
+        variables: { id, input: { expectedStatus: 'OPEN', remark: 'Investigate.' } },
+      });
+      firstWrite.flush({
+        errors: [
+          {
+            message: 'The alert changed meanwhile.',
+            extensions: { code: 'CONFLICT', requestId: 'conflict-request' },
+          },
+        ],
+      });
+      await vi.waitFor(() => {
+        expect(fixture.componentInstance.state()).toBe('loading');
+      });
+      const refresh = http.expectOne((request) => operation(request, 'AdminAlert'));
+      await fixture.whenStable();
+      expect(fixture.componentInstance.busy()).toBe('resolve');
+      expect(remark().disabled).toBe(true);
+      const resolve = [...dialog().querySelectorAll<HTMLButtonElement>('button')].find(
+        (button) => button.textContent.trim() === alertsText(currentLanguage).drawer.resolve,
+      );
+      expect(resolve?.disabled).toBe(true);
+      await fixture.componentInstance.apply('resolve', 'Do not submit while refreshing.');
+      http.expectNone((request) => operation(request, 'AdminResolveAlert'));
+      expect(saved).not.toHaveBeenCalled();
+      expect(navigate).not.toHaveBeenCalled();
+      refresh.flush({
+        data: {
+          fleetEvent: {
+            ...event,
+            alertStatus: 'ACKNOWLEDGED',
+            remark: 'A different saved remark.',
+          },
+        },
+      });
+      await saving;
+      await fixture.whenStable();
+      expect(fixture.componentInstance.state()).toBe('ready');
+      expect(fixture.componentInstance.alert()?.status).toBe('ACKNOWLEDGED');
+      expect(remark().value).toBe('Investigate.');
+      expect(remark().disabled).toBe(false);
+      expect(dialog().textContent).toContain(alertsText(currentLanguage).drawer.conflictRetry);
+      expect(dialog().textContent).toContain('conflict-request');
+      expect(dialog().textContent).not.toContain('The alert changed meanwhile.');
+      http.expectNone((request) => operation(request, 'AdminResolveAlert'));
+      expect(saved).not.toHaveBeenCalled();
+      expect(navigate).not.toHaveBeenCalled();
+
+      const retrying = fixture.componentInstance.apply('resolve', remark().value);
+      const secondWrite = http.expectOne((request) => operation(request, 'AdminResolveAlert'));
+      expect(secondWrite.request.body).toMatchObject({
+        variables: { id, input: { expectedStatus: 'ACKNOWLEDGED', remark: 'Investigate.' } },
+      });
+      secondWrite.flush({
+        data: {
+          resolveFleetAlert: {
+            ...event,
+            alertStatus: 'RESOLVED',
+            remark: 'Investigate.',
+          },
+        },
+      });
+      await retrying;
+      await fixture.whenStable();
+      expect(saved).toHaveBeenCalledTimes(1);
+      expect(navigate).toHaveBeenCalledTimes(1);
+    },
+  );
+  it('shows only the fresh workflow action when the conflict read returns a resolved alert', async () => {
     const fixture = await mount();
     http
       .expectOne((request) => operation(request, 'AdminAlert'))
       .flush({ data: { fleetEvent: event } });
     await fixture.whenStable();
-    type('Investigate.');
-    const saving = fixture.componentInstance.apply('resolve', 'Investigate.');
+    type('Keep this investigation.');
+    const saving = fixture.componentInstance.apply('resolve', 'Keep this investigation.');
     http
       .expectOne((request) => operation(request, 'AdminResolveAlert'))
+      .flush({ errors: [{ message: 'Changed.', extensions: { code: 'CONFLICT' } }] });
+    await vi.waitFor(() => {
+      expect(fixture.componentInstance.state()).toBe('loading');
+    });
+    http
+      .expectOne((request) => operation(request, 'AdminAlert'))
+      .flush({ data: { fleetEvent: { ...event, alertStatus: 'RESOLVED', remark: 'Remote.' } } });
+    await saving;
+    await fixture.whenStable();
+    expect(fixture.componentInstance.alert()?.status).toBe('RESOLVED');
+    expect(remark().value).toBe('Keep this investigation.');
+    const labels = [...dialog().querySelectorAll<HTMLButtonElement>('button')].map((button) =>
+      button.textContent.trim(),
+    );
+    expect(labels).toContain(alertsText('en').drawer.reopen);
+    expect(labels).not.toContain(alertsText('en').drawer.resolve);
+    expect(labels).not.toContain(alertsText('en').drawer.acknowledge);
+    http.expectNone('/graphql');
+    expect(saved).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+  it('blocks stale actions after a failed conflict refresh and retains the draft through read retry', async () => {
+    const fixture = await mount();
+    http
+      .expectOne((request) => operation(request, 'AdminAlert'))
+      .flush({ data: { fleetEvent: event } });
+    await fixture.whenStable();
+    type('Keep this remark.');
+    const saving = fixture.componentInstance.apply('resolve', 'Keep this remark.');
+    http
+      .expectOne((request) => operation(request, 'AdminResolveAlert'))
+      .flush({ errors: [{ message: 'Changed.', extensions: { code: 'CONFLICT' } }] });
+    await vi.waitFor(() => {
+      expect(fixture.componentInstance.state()).toBe('loading');
+    });
+    http
+      .expectOne((request) => operation(request, 'AdminAlert'))
       .flush({
-        errors: [{ message: 'The alert changed meanwhile.', extensions: { code: 'CONFLICT' } }],
+        errors: [{ message: 'Refresh failed.', extensions: { code: 'SERVICE_UNAVAILABLE' } }],
       });
     await saving;
     await fixture.whenStable();
-    expect(remark().value).toBe('Investigate.');
-    expect(dialog().textContent).toContain('The alert changed meanwhile.');
+    expect(fixture.componentInstance.state()).toBe('error');
+    expect(fixture.componentInstance.busy()).toBeNull();
+    expect(fixture.componentInstance.record()?.alertStatus).toBe('OPEN');
+    expect(remark().value).toBe('Keep this remark.');
+    await fixture.componentInstance.apply('resolve', 'Do not submit stale status.');
+    http.expectNone('/graphql');
     expect(saved).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+    const retry = [...dialog().querySelectorAll<HTMLButtonElement>('button')].find(
+      (button) => button.textContent.trim() === 'Retry',
+    );
+    if (!retry) {
+      throw new Error('Missing alert read retry.');
+    }
+    retry.click();
+    await vi.waitFor(() => {
+      expect(fixture.componentInstance.state()).toBe('loading');
+    });
+    const refresh = http.expectOne((request) => operation(request, 'AdminAlert'));
+    await fixture.componentInstance.apply('resolve', 'Still not fresh.');
+    http.expectNone((request) => operation(request, 'AdminResolveAlert'));
+    refresh.flush({
+      data: { fleetEvent: { ...event, alertStatus: 'ACKNOWLEDGED', remark: 'Remote.' } },
+    });
+    await fixture.whenStable();
+    expect(fixture.componentInstance.state()).toBe('ready');
+    expect(remark().value).toBe('Keep this remark.');
+    expect(fixture.componentInstance.alert()?.status).toBe('ACKNOWLEDGED');
+    expect(dialog().textContent).toContain(alertsText('en').drawer.conflictRetry);
+    http.expectNone((request) => operation(request, 'AdminResolveAlert'));
+    const retrying = fixture.componentInstance.apply('resolve', remark().value);
+    const write = http.expectOne((request) => operation(request, 'AdminResolveAlert'));
+    expect(write.request.body).toMatchObject({
+      variables: { input: { expectedStatus: 'ACKNOWLEDGED', remark: 'Keep this remark.' } },
+    });
+    write.flush({ data: { resolveFleetAlert: { ...event, alertStatus: 'RESOLVED' } } });
+    await retrying;
+    await fixture.whenStable();
+    expect(saved).toHaveBeenCalledTimes(1);
   });
   it('reopens a resolved alert and keeps its drawer open with the new status', async () => {
     const fixture = await mount();

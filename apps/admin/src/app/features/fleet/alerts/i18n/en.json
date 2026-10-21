@@ -96,6 +96,8 @@
     "resolve": "Resolve",
     "reopen": "Reopen",
     "close": "Close",
-    "saveError": "The alert could not be updated. Try again."
+    "saveError": "The alert could not be updated. Try again.",
+    "conflictRefreshing": "This alert changed. Loading its latest status; your remark edits remain in the field.",
+    "conflictRetry": "This alert changed. Its latest status is shown. Your remark edits remain in the field; review the status and try the action again."
   }
 }

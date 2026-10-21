@@ -133,7 +133,7 @@ export const Conflict: Story = {
     await userEvent.type(remark, 'Retain my draft.');
     await userEvent.click(drawer.getByRole('button', { name: /^Resolve$/ }));
     await waitFor(
-      () => expect(drawer.getByText(/The record changed meanwhile/)).toBeVisible(),
+      () => expect(drawer.getByText(/Its latest status is shown/)).toBeVisible(),
       appReady,
     );
     await expect(remark).toHaveValue('Retain my draft.');
