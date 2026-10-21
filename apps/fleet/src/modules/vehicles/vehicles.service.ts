@@ -351,7 +351,11 @@ export class VehiclesService {
     await this.checkDuplicates(scope, data, recordId);
     let row: VehicleRow | null;
     try {
-      row = await this.vehicles.update(scope, recordId, data);
+      const result = await this.vehicles.update(scope, recordId, data);
+      if (result && 'inactiveAssignment' in result) {
+        invalid('currentDriverId', 'Unassign the driver before deactivating the vehicle.');
+      }
+      row = result;
     } catch (error) {
       this.writeError(error);
     }

@@ -191,7 +191,7 @@ export class ServiceTasksService {
     requireDue(plan.dueOn, plan.dueOdometerKm);
     await this.requireServiceableVehicle(scope, vehicleId);
     await this.core.requireBranch(scope.branchId, context);
-    let id: string;
+    let id: string | null;
     try {
       id = await this.tasks.create(scope, vehicleId, plan);
     } catch (error) {
@@ -199,6 +199,9 @@ export class ServiceTasksService {
         invalid('vehicleId', 'Choose a vehicle in this branch.');
       }
       throw error;
+    }
+    if (id === null) {
+      invalid('vehicleId', 'Choose a vehicle in this branch that is not inactive.');
     }
     return this.load(scope, id);
   }

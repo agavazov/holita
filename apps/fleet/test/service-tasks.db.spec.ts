@@ -12,6 +12,7 @@ import type { Prisma } from '../src/generated/prisma/client.js';
 import { CoreClient } from '../src/integrations/core/core.client.js';
 import { createTestDatabase } from './test-database.js';
 import { getTestDatabaseUrl } from './test-database-url.js';
+import { afterLockedVehicleChange } from './vehicle-row-lock.js';
 
 const tenantId = '01000000-0000-4000-8000-000000000001';
 // 22:30 UTC on 17 October is the business date 18 October 2026 in Europe/Sofia.
@@ -792,6 +793,93 @@ describe('Service tasks and urgency with PostgreSQL', () => {
     ).toMatchObject({
       errors: [{ extensions: { fieldErrors: [{ path: 'completedOdometerKm' }] } }],
     });
+  });
+
+  it('rejects new planning and atomically preserves completion when Vehicle deactivation wins the lock', async () => {
+    const branchId = randomUUID();
+    const scope = { tenantId, branchId };
+    const vehicle = await database.client.vehicle.create({
+      data: { ...scope, licensePlate: 'NO NEW PLANNING' },
+    });
+    const existing = await database.client.serviceTask.create({
+      data: {
+        ...scope,
+        vehicleId: vehicle.id,
+        serviceType: 'OIL_CHANGE',
+        dueOn: day('2026-10-17'),
+      },
+    });
+    const responses = await afterLockedVehicleChange(
+      database,
+      scope,
+      vehicle.id,
+      (transaction) =>
+        transaction.vehicle.update({
+          where: { ...scope, id: vehicle.id },
+          data: { status: 'INACTIVE' },
+        }),
+      () =>
+        Promise.all([
+          query(
+            'mutation($input:CreateFleetServiceTaskInput!){createFleetServiceTask(input:$input){id}}',
+            { input: { vehicleId: vehicle.id, serviceType: 'OIL_CHANGE', dueOn: '2026-11-01' } },
+            branchId,
+          ),
+          query(
+            complete,
+            { id: existing.id, input: { completedOn: '2026-10-18', nextDueOn: '2026-11-01' } },
+            branchId,
+          ),
+        ]),
+      2,
+    );
+    expect(responses).toMatchObject([
+      {
+        errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'vehicleId' }] } }],
+      },
+      {
+        errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'nextDueOn' }] } }],
+      },
+    ]);
+    expect(
+      await database.client.serviceTask.findMany({ where: { ...scope, vehicleId: vehicle.id } }),
+    ).toEqual([expect.objectContaining({ id: existing.id, status: 'PLANNED', completedOn: null })]);
+  });
+
+  it('retains planning committed before concurrent Vehicle deactivation', async () => {
+    const branchId = randomUUID();
+    const scope = { tenantId, branchId };
+    const vehicle = await database.client.vehicle.create({
+      data: { ...scope, licensePlate: 'PLANNING WINS' },
+    });
+    expect(
+      await afterLockedVehicleChange(
+        database,
+        scope,
+        vehicle.id,
+        (transaction) =>
+          transaction.serviceTask.create({
+            data: {
+              ...scope,
+              vehicleId: vehicle.id,
+              serviceType: 'OIL_CHANGE',
+              dueOn: day('2026-11-01'),
+            },
+          }),
+        () =>
+          query(
+            'mutation($id:ID!){deactivateFleetVehicle(id:$id){status}}',
+            { id: vehicle.id },
+            branchId,
+          ),
+        1,
+      ),
+    ).toEqual({ data: { deactivateFleetVehicle: { status: 'INACTIVE' } } });
+    expect(
+      await database.client.serviceTask.count({
+        where: { ...scope, vehicleId: vehicle.id, status: 'PLANNED' },
+      }),
+    ).toBe(1);
   });
 
   it('rechecks earlier-date odometers after concurrent completions acquire the Vehicle lock without restricting backdated history', async () => {

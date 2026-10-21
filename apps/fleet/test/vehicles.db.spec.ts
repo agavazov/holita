@@ -8,6 +8,7 @@ import { CoreClient } from '../src/integrations/core/core.client.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { createTestDatabase } from './test-database.js';
 import { afterLockedDriverChange } from './driver-row-lock.js';
+import { afterLockedVehicleChange } from './vehicle-row-lock.js';
 
 const tenantId = '01000000-0000-4000-8000-000000000001';
 const create =
@@ -357,6 +358,124 @@ describe('Vehicle GraphQL with PostgreSQL', () => {
         },
       ],
     });
+  });
+
+  it.each(['deactivation', 'assignment'] as const)(
+    'rechecks the resulting assignment after a concurrent Vehicle %s wins the lock',
+    async (winner) => {
+      const branchId = randomUUID();
+      const scope = { tenantId, branchId };
+      const vehicle = await database.client.vehicle.create({
+        data: { ...scope, licensePlate: 'LOCKED ASSIGNMENT' },
+      });
+      const driver = await database.client.driver.create({
+        data: { ...scope, firstName: 'Concurrent', lastName: 'Assignment' },
+      });
+      const response = await afterLockedVehicleChange(
+        database,
+        scope,
+        vehicle.id,
+        (transaction) =>
+          transaction.vehicle.update({
+            where: { ...scope, id: vehicle.id },
+            data:
+              winner === 'deactivation'
+                ? { status: 'INACTIVE', currentDriverId: null }
+                : { currentDriverId: driver.id },
+          }),
+        () =>
+          query(
+            update,
+            {
+              id: vehicle.id,
+              input:
+                winner === 'deactivation' ? { currentDriverId: driver.id } : { status: 'INACTIVE' },
+            },
+            branchId,
+          ),
+        1,
+      );
+      expect(response).toMatchObject({
+        errors: [
+          {
+            extensions: {
+              code: 'BAD_USER_INPUT',
+              fieldErrors: [{ path: 'currentDriverId' }],
+            },
+          },
+        ],
+      });
+      expect(
+        await database.client.vehicle.findUniqueOrThrow({ where: { ...scope, id: vehicle.id } }),
+      ).toMatchObject(
+        winner === 'deactivation'
+          ? { status: 'INACTIVE', currentDriverId: null }
+          : { status: 'ACTIVE', currentDriverId: driver.id },
+      );
+    },
+  );
+
+  it('clears an assignment that commits before concurrent Vehicle deactivation', async () => {
+    const branchId = randomUUID();
+    const scope = { tenantId, branchId };
+    const vehicle = await database.client.vehicle.create({
+      data: { ...scope, licensePlate: 'ASSIGNMENT WINS' },
+    });
+    const driver = await database.client.driver.create({
+      data: { ...scope, firstName: 'Earlier', lastName: 'Assignment' },
+    });
+    expect(
+      await afterLockedVehicleChange(
+        database,
+        scope,
+        vehicle.id,
+        (transaction) =>
+          transaction.vehicle.update({
+            where: { ...scope, id: vehicle.id },
+            data: { currentDriverId: driver.id },
+          }),
+        () =>
+          query(
+            'mutation($id:ID!){deactivateFleetVehicle(id:$id){status currentDriverId}}',
+            { id: vehicle.id },
+            branchId,
+          ),
+        1,
+      ),
+    ).toEqual({ data: { deactivateFleetVehicle: { status: 'INACTIVE', currentDriverId: null } } });
+  });
+
+  it('preserves an explicit reactivation and assignment after a concurrent deactivation', async () => {
+    const branchId = randomUUID();
+    const scope = { tenantId, branchId };
+    const vehicle = await database.client.vehicle.create({
+      data: { ...scope, licensePlate: 'EXPLICIT REACTIVATION' },
+    });
+    const driver = await database.client.driver.create({
+      data: { ...scope, firstName: 'Explicit', lastName: 'Reactivation' },
+    });
+    expect(
+      await afterLockedVehicleChange(
+        database,
+        scope,
+        vehicle.id,
+        (transaction) =>
+          transaction.vehicle.update({
+            where: { ...scope, id: vehicle.id },
+            data: { status: 'INACTIVE' },
+          }),
+        () =>
+          query(
+            update,
+            { id: vehicle.id, input: { status: 'ACTIVE', currentDriverId: driver.id } },
+            branchId,
+          ),
+        1,
+      ),
+    ).toMatchObject({ data: { updateFleetVehicle: { id: vehicle.id } } });
+    expect(
+      await database.client.vehicle.findUniqueOrThrow({ where: { ...scope, id: vehicle.id } }),
+    ).toMatchObject({ status: 'ACTIVE', currentDriverId: driver.id });
   });
 
   it('rejects create and update assignments when driver deactivation commits while they wait', async () => {

@@ -91,7 +91,8 @@ belongs to the (vehicle, IMEI) pair at reporting time.
   stored rounded to 0.1; `recordedAt` no later than the data clock (or now without one) and now,
   strictly after the vehicle's latest odometer reading of any source and not lower than it.
   It never changes the data clock, activity or reporting; it only becomes the latest odometer.
-  The service repeats latest-reading validation under a scoped Vehicle row lock and stores
+  The service repeats latest-reading validation under a scoped Vehicle row lock in an explicit
+  READ COMMITTED transaction and stores
   concurrent readings in sequence. A waiting or duplicate reading receives the usual
   `recordedAt` or `odometerKm` field error. Vehicle deactivation cannot land between the
   final active-status check and insertion. Core checks finish before taking the lock.
@@ -102,6 +103,13 @@ Driver deactivation and Vehicle assignments share a scoped Driver row lock in RE
 transactions. Deactivation repeats its assigned-vehicle check after locking; assignment repeats
 the driver's active-status check. A concurrent assignment and deactivation cannot leave an
 INACTIVE driver assigned to a Vehicle.
+
+Vehicle updates lock the scoped Vehicle row before a Driver row and recheck the resulting
+status/assignment after waiting. Explicit reactivation with assignment remains permitted.
+New service planning takes the same Vehicle lock and repeats the active-status check before
+insertion. An earlier committed task may remain when its Vehicle is subsequently deactivated;
+planning after deactivation is rejected. Completion with a next task uses that lock and rolls
+back both writes when the Vehicle becomes inactive.
 
 ### Additional list conditions and aggregates
 

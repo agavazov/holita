@@ -23,6 +23,7 @@ import {
   vehicleListWhereSql,
 } from './vehicle-list.sql.js';
 import type { VehicleConditionCriteria } from './vehicle-filter.js';
+import { lockVehicleState } from './vehicle-lock.js';
 
 /** Stored references and the device count are loaded with every vehicle (no per-row query). */
 const vehicleInclude = {
@@ -34,6 +35,7 @@ const vehicleInclude = {
 } satisfies Prisma.VehicleInclude;
 
 export type VehicleRow = Prisma.VehicleGetPayload<{ include: typeof vehicleInclude }>;
+export type VehicleUpdateResult = VehicleRow | { inactiveAssignment: true } | null;
 export type VehicleListRow = VehicleRow & {
   state: FleetVehicleState;
   openAlertCount: number;
@@ -235,9 +237,19 @@ export class VehiclesRepository {
     );
   }
 
-  update(scope: FleetScope, id: string, data: Partial<VehicleData>): Promise<VehicleRow | null> {
+  update(scope: FleetScope, id: string, data: Partial<VehicleData>): Promise<VehicleUpdateResult> {
     return this.prisma.client.$transaction(
       async (transaction) => {
+        // Keep Vehicle -> Driver lock order across every assignment path.
+        const vehicle = await lockVehicleState(transaction, this.prisma.schema, scope, id);
+        if (
+          vehicle &&
+          (data.status ?? vehicle.status) === 'INACTIVE' &&
+          (data.currentDriverId === undefined ? vehicle.currentDriverId : data.currentDriverId) !==
+            null
+        ) {
+          return { inactiveAssignment: true };
+        }
         if (data.currentDriverId != null) {
           const status = await lockDriverStatus(
             transaction,

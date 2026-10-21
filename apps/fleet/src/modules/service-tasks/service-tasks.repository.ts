@@ -1,18 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
 import { containsPattern } from '../../database/search.js';
-import { fleetTable, integer, oneOf, rowsOf } from '../../database/sql.js';
+import { fleetTable, integer, rowsOf } from '../../database/sql.js';
 import type {
   FleetServiceTaskSortField,
   FleetServiceUrgency,
 } from '../../generated/graphql/types.js';
 import { Prisma } from '../../generated/prisma/client.js';
-import {
-  FleetVehicleStatus,
-  type FleetServiceStatus,
-  type FleetServiceType,
-} from '../../generated/prisma/enums.js';
+import type { FleetServiceStatus, FleetServiceType } from '../../generated/prisma/enums.js';
 import type { FleetScope, SortDirection } from '../../validation.js';
+import { lockVehicleState } from '../vehicles/vehicle-lock.js';
 import {
   parseServiceTaskRow,
   SERVICE_TASK_COLUMNS,
@@ -265,12 +262,21 @@ export class ServiceTasksRepository {
     return highestCompletedOdometer(this.prisma.client, scope, vehicleId, before);
   }
 
-  async create(scope: FleetScope, vehicleId: string, data: ServiceTaskPlan): Promise<string> {
-    const row = await this.prisma.client.serviceTask.create({
-      data: { ...data, vehicleId, tenantId: scope.tenantId, branchId: scope.branchId },
-      select: { id: true },
-    });
-    return row.id;
+  create(scope: FleetScope, vehicleId: string, data: ServiceTaskPlan): Promise<string | null> {
+    return this.prisma.client.$transaction(
+      async (transaction) => {
+        const vehicle = await lockVehicleState(transaction, this.prisma.schema, scope, vehicleId);
+        if (!vehicle || vehicle.status === 'INACTIVE') {
+          return null;
+        }
+        const row = await transaction.serviceTask.create({
+          data: { ...data, vehicleId, tenantId: scope.tenantId, branchId: scope.branchId },
+          select: { id: true },
+        });
+        return row.id;
+      },
+      { isolationLevel: 'ReadCommitted' },
+    );
   }
 
   /** Changes a task only while it is PLANNED; returns the number of changed rows. */
@@ -305,18 +311,11 @@ export class ServiceTasksRepository {
   }> {
     return this.prisma.client.$transaction(
       async (transaction) => {
-        const locked: unknown = await transaction.$queryRaw(Prisma.sql`
-          SELECT v."status"::text AS "status" FROM ${fleetTable(this.prisma.schema, 'Vehicle')} v
-          WHERE v."tenantId"=${scope.tenantId}::uuid AND v."branchId"=${scope.branchId}::uuid
-            AND v."id"=${vehicleId}::uuid
-          FOR NO KEY UPDATE`);
-        const [status] = rowsOf(locked, (row) =>
-          oneOf(row, 'status', Object.values(FleetVehicleStatus)),
-        );
-        if (status === undefined) {
+        const vehicle = await lockVehicleState(transaction, this.prisma.schema, scope, vehicleId);
+        if (!vehicle) {
           return { completed: 0, nextId: null };
         }
-        if (next && status === 'INACTIVE') {
+        if (next && vehicle.status === 'INACTIVE') {
           return { completed: 0, nextId: null, schedulingBlocked: true };
         }
         if (data.completedOdometerKm !== null) {

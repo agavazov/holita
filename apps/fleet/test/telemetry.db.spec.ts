@@ -2,12 +2,16 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { AppModule } from '../src/app.module.js';
 import { issueDemoToken } from '../src/auth/demo-auth.js';
 import { FleetClock } from '../src/clock/fleet-clock.js';
 import { PrismaService } from '../src/database/prisma.service.js';
+import { PrismaClient } from '../src/generated/prisma/client.js';
 import { CoreClient } from '../src/integrations/core/core.client.js';
 import { createTestDatabase } from './test-database.js';
+import { getTestDatabaseUrl } from './test-database-url.js';
+import { afterLockedVehicleChange } from './vehicle-row-lock.js';
 
 const tenantId = '01000000-0000-4000-8000-000000000001';
 const otherTenantId = randomUUID();
@@ -20,6 +24,7 @@ const imei = '990601000000001';
 describe('Telemetry, data clock and odometer readings with PostgreSQL', () => {
   let database: Awaited<ReturnType<typeof createTestDatabase>>;
   let closeDatabase: (() => Promise<void>) | undefined;
+  let applicationClient: PrismaClient | undefined;
   let app: INestApplication | undefined;
   let url: string;
   const requireBranch = jest.fn<CoreClient['requireBranch']>().mockResolvedValue(undefined);
@@ -29,9 +34,17 @@ describe('Telemetry, data clock and odometer readings with PostgreSQL', () => {
   beforeAll(async () => {
     database = await createTestDatabase();
     closeDatabase = database.close;
+    // A stronger client default exposes stale snapshots unless the write pins ReadCommitted.
+    applicationClient = new PrismaClient({
+      adapter: new PrismaPg(
+        { connectionString: getTestDatabaseUrl(), connectionTimeoutMillis: 5000, max: 5 },
+        { schema: database.schema },
+      ),
+      transactionOptions: { isolationLevel: 'RepeatableRead' },
+    });
     const module = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PrismaService)
-      .useValue({ client: database.client, schema: database.schema })
+      .useValue({ client: applicationClient, schema: database.schema })
       .overrideProvider(CoreClient)
       .useValue({ requireBranch })
       .overrideProvider(FleetClock)
@@ -106,7 +119,11 @@ describe('Telemetry, data clock and odometer readings with PostgreSQL', () => {
     try {
       await app?.close();
     } finally {
-      await closeDatabase?.();
+      try {
+        await applicationClient?.$disconnect();
+      } finally {
+        await closeDatabase?.();
+      }
     }
   });
   async function query(
@@ -271,35 +288,26 @@ describe('Telemetry, data clock and odometer readings with PostgreSQL', () => {
       ],
     },
   ])(
-    'serializes concurrent MANUAL readings with $name after both early checks passed',
+    'serializes concurrent MANUAL readings with $name at the Vehicle lock despite a RepeatableRead default',
     async ({ readings }) => {
       const vehicle = await database.client.vehicle.create({
         data: { tenantId, branchId, licensePlate: 'CB 2026 KM' },
       });
-      let release: () => void = () => undefined;
-      const bothArrived = new Promise<void>((resolve) => {
-        release = resolve;
-      });
-      let arrivals = 0;
-      const meet = async () => {
-        if (++arrivals === 2) {
-          release();
-        }
-        await bothArrived;
-      };
-      requireBranch.mockImplementationOnce(meet).mockImplementationOnce(meet);
-      let responses: unknown[];
-      try {
-        responses = await Promise.all(
-          readings.map((reading) =>
-            query(record, {
-              input: { vehicleId: vehicle.id, ...reading },
-            }),
+      const responses = await afterLockedVehicleChange(
+        database,
+        { tenantId, branchId },
+        vehicle.id,
+        async () => undefined,
+        () =>
+          Promise.all(
+            readings.map((reading) =>
+              query(record, {
+                input: { vehicleId: vehicle.id, ...reading },
+              }),
+            ),
           ),
-        );
-      } finally {
-        release();
-      }
+        2,
+      );
       expect(responses).toEqual(
         expect.arrayContaining([
           {

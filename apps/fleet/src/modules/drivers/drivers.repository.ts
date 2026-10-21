@@ -27,8 +27,9 @@ import { driverListOrderSql, driverListWhereSql } from './driver-list.sql.js';
 const DRIVER_STATUSES = Object.values(FleetDriverStatus);
 
 /**
- * Deactivation and Vehicle writes setting a driver take this scoped lock first. NO KEY UPDATE
- * serializes those checks without blocking the foreign-key KEY SHARE locks of other inserts.
+ * Deactivation and Vehicle writes setting a driver share this scoped lock. Vehicle updates
+ * lock their Vehicle first. NO KEY UPDATE serializes the Driver checks without blocking
+ * the foreign-key KEY SHARE locks of other inserts.
  */
 export async function lockDriverStatus(
   transaction: Prisma.TransactionClient,

@@ -25,11 +25,6 @@ focused regression at the affected boundary; database races require guarded Post
 - **D5 / P2:** Add stable reason codes to fieldErrors, retain the compatibility message and
   map supported reasons to BG/EN catalogs. Cover sanitizer bounds, unknown/legacy reasons,
   concrete field mapping and the GraphQL boundary; update the contract documentation.
-- **D6 / P2:** Serialize Vehicle assignment/deactivation and service-task creation on the
-  scoped Vehicle row, rechecking state after the lock. Cover both winning orders, Driver
-  deactivation interaction and completion with next planning versus Vehicle deactivation.
-- **D7 / P2:** Pin manual-odometer transactions to ReadCommitted and place their concurrency
-  test barrier on the actual Vehicle lock.
 - **D8 / P3:** Recognize an orphaned admin:storybook development process in `tools/development/kill.mts`
   without matching another checkout or Storybook build/test processes; add a focused tool spec.
 - **D9 / P3:** Resolve absolute XLSX relationship targets from the package root and cover the

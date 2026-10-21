@@ -190,7 +190,7 @@ export class TelemetryRepository {
   }
 
   /**
-   * Serializes readings with Vehicle updates/deactivation. Default READ COMMITTED lets the
+   * Serializes readings with Vehicle updates/deactivation. Explicit READ COMMITTED lets the
    * latest-reading check see a reading committed while this transaction waited for the lock.
    */
   insertManualReading(
@@ -198,26 +198,29 @@ export class TelemetryRepository {
     data: { vehicleId: string; odometerKm: number; recordedAt: Date; receivedAt: Date },
     check: (latest: OdometerReading | null) => void,
   ): Promise<SampleRow | null> {
-    return this.prisma.client.$transaction(async (transaction) => {
-      const locked: unknown = await transaction.$queryRaw(Prisma.sql`
+    return this.prisma.client.$transaction(
+      async (transaction) => {
+        const locked: unknown = await transaction.$queryRaw(Prisma.sql`
         SELECT v."id"::text AS "id" FROM ${fleetTable(this.prisma.schema, 'Vehicle')} v
         WHERE v."tenantId" = ${scope.tenantId}::uuid AND v."branchId" = ${scope.branchId}::uuid
           AND v."id" = ${data.vehicleId}::uuid AND v."status"::text <> 'INACTIVE'
         FOR NO KEY UPDATE`);
-      if (!rowsOf(locked, (row) => text(row, 'id')).length) {
-        return null;
-      }
-      check(await latestOdometer(transaction, scope, data.vehicleId));
-      return transaction.vehicleStatusSample.create({
-        data: {
-          ...data,
-          tenantId: scope.tenantId,
-          branchId: scope.branchId,
-          source: 'MANUAL',
-          deviceImei: null,
-        },
-        select: sampleSelect,
-      });
-    });
+        if (!rowsOf(locked, (row) => text(row, 'id')).length) {
+          return null;
+        }
+        check(await latestOdometer(transaction, scope, data.vehicleId));
+        return transaction.vehicleStatusSample.create({
+          data: {
+            ...data,
+            tenantId: scope.tenantId,
+            branchId: scope.branchId,
+            source: 'MANUAL',
+            deviceImei: null,
+          },
+          select: sampleSelect,
+        });
+      },
+      { isolationLevel: 'ReadCommitted' },
+    );
   }
 }
