@@ -443,8 +443,15 @@ describe('Drivers validation and scope', () => {
         [deleted.id, { distance30dKm: 100, tripCount30d: 2, drivingScore30d: 90 }],
       ]),
     );
-    maneuverTotalsByDriver.mockResolvedValue(new Map([[changed.id, 6], [deleted.id, 2]]));
-    await expect(service.update(context, changed.id, { status: 'INACTIVE' })).resolves.toMatchObject({
+    maneuverTotalsByDriver.mockResolvedValue(
+      new Map([
+        [changed.id, 6],
+        [deleted.id, 2],
+      ]),
+    );
+    await expect(
+      service.update(context, changed.id, { status: 'INACTIVE' }),
+    ).resolves.toMatchObject({
       id: changed.id,
       status: 'INACTIVE',
       distance30dKm: 200,
@@ -463,7 +470,10 @@ describe('Drivers validation and scope', () => {
       expect(asOf).toHaveBeenNthCalledWith(index + 1, scope);
       expect(stats).toHaveBeenNthCalledWith(index + 1, scope, [id], expect.any(Object));
       expect(maneuverTotalsByDriver).toHaveBeenNthCalledWith(
-        index + 1, scope, [id], expect.any(Object),
+        index + 1,
+        scope,
+        [id],
+        expect.any(Object),
       );
       expect(readSettings).toHaveBeenNthCalledWith(index + 1, scope);
     }

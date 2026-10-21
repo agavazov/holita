@@ -417,7 +417,12 @@ describe('Vehicles validation and scope', () => {
     const deleted = row();
     deactivate.mockResolvedValue(inactive);
     remove.mockResolvedValue(deleted);
-    openAlertCounts.mockResolvedValue(new Map([[inactive.id, 3], [deleted.id, 2]]));
+    openAlertCounts.mockResolvedValue(
+      new Map([
+        [inactive.id, 3],
+        [deleted.id, 2],
+      ]),
+    );
     await expect(service.deactivate(context, inactive.id)).resolves.toMatchObject({
       id: inactive.id,
       status: 'INACTIVE',
