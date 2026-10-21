@@ -79,6 +79,81 @@ export function zonedWallTimeToIso(parts: ZonedParts, timeZone: string): string 
   return new Date(earlier).toISOString();
 }
 
+/** Floating wall time for a native date/time input, independent of the browser's DST rules. */
+export function isoToZonedWallTime(iso: string, timeZone: string): string | null {
+  const parts = isoToZonedParts(iso, timeZone);
+  if (!parts) {
+    return null;
+  }
+  const instant = new Date(iso);
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${String(parts.year).padStart(4, '0')}-${pad(parts.month)}-${pad(parts.day)}T${pad(parts.hour)}:${pad(parts.minute)}:${pad(instant.getUTCSeconds())}.${String(instant.getUTCMilliseconds()).padStart(3, '0')}`;
+}
+
+/** Actual instants of strict wall-clock input, earliest first; invalid/skipped times have none. */
+export function zonedWallTimeInstants(date: string | null, timeZone: string): readonly number[] {
+  const match = date
+    ? /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?$/.exec(date)
+    : null;
+  if (!match) {
+    return [];
+  }
+  const parts = {
+    year: Number(match[1]),
+    month: Number(match[2]),
+    day: Number(match[3]),
+    hour: Number(match[4]),
+    minute: Number(match[5]),
+  };
+  const second = Number(match[6] ?? 0),
+    millisecond = Number((match[7] ?? '').padEnd(3, '0'));
+  const calendar = new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
+  if (
+    calendar.getUTCFullYear() !== parts.year ||
+    calendar.getUTCMonth() + 1 !== parts.month ||
+    calendar.getUTCDate() !== parts.day ||
+    parts.hour > 23 ||
+    parts.minute > 59 ||
+    second > 59
+  ) {
+    return [];
+  }
+  const first = Date.parse(zonedWallTimeToIso(parts, timeZone));
+  const wall = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    second,
+    millisecond,
+  );
+  const occurrences = new Set<number>();
+  // Nearby offsets cover repeated times including half-hour and multi-hour DST changes.
+  for (const shift of [-86_400_000, 0, 86_400_000]) {
+    const probe = first + shift;
+    const fields = isoToZonedParts(new Date(probe).toISOString(), timeZone);
+    if (!fields) {
+      continue;
+    }
+    const offset =
+      Date.UTC(fields.year, fields.month - 1, fields.day, fields.hour, fields.minute) -
+      Math.floor(probe / 60_000) * 60_000;
+    const candidate = wall - offset;
+    const repeated = isoToZonedParts(new Date(candidate).toISOString(), timeZone);
+    if (
+      repeated?.year === parts.year &&
+      repeated.month === parts.month &&
+      repeated.day === parts.day &&
+      repeated.hour === parts.hour &&
+      repeated.minute === parts.minute
+    ) {
+      occurrences.add(candidate);
+    }
+  }
+  return [...occurrences].sort((left, right) => left - right);
+}
+
 /** A DatePicker `Date` (local calendar day) as `YYYY-MM-DD`. */
 export function toDateOnly(date: Date): string {
   const year = String(date.getFullYear()).padStart(4, '0');

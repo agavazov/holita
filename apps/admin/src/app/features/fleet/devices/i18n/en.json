@@ -93,7 +93,7 @@
     "options": "Device options",
     "simPhone": "SIM phone number",
     "installedAt": "Installed at",
-    "installedAtHint": "Browser time zone: {timeZone}. Saved as a UTC instant.",
+    "installedAtHint": "Branch time zone: {timeZone}. Saved as a UTC instant.",
     "status": "Connection",
     "lastSeen": "Last seen",
     "signal": "Signal",

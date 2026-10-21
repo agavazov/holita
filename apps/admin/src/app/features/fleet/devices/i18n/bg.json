@@ -86,7 +86,7 @@
     "options": "Опции на устройството",
     "simPhone": "Телефонен номер на SIM",
     "installedAt": "Дата на монтаж",
-    "installedAtHint": "Часова зона на браузъра: {timeZone}. Запазва се като момент в UTC.",
+    "installedAtHint": "Часова зона на клона: {timeZone}. Запазва се като момент в UTC.",
     "status": "Връзка",
     "lastSeen": "Последен отчет",
     "signal": "Сигнал",

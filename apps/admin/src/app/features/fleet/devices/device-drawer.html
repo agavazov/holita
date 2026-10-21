@@ -161,17 +161,15 @@
               [hint]="installedAtHint()"
               [error]="errorOf('installedAt')"
             >
-              <p-datepicker
-                inputId="device-installedAt"
+              <input
+                pInputText
+                id="device-installedAt"
+                type="datetime-local"
+                step="0.001"
                 formControlName="installedAt"
-                dateFormat="yy-mm-dd"
-                [showTime]="true"
-                [showSeconds]="true"
-                hourFormat="24"
-                appendTo="body"
-                [fluid]="true"
                 [invalid]="!!errorOf('installedAt')"
-                [pt]="datePt()"
+                [attr.aria-invalid]="errorOf('installedAt') ? 'true' : null"
+                [attr.aria-describedby]="describedBy('installedAt')"
               />
             </holita-form-field>
           }

@@ -15,7 +15,6 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonDirective } from 'primeng/button';
-import { DatePicker } from 'primeng/datepicker';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
@@ -26,8 +25,9 @@ import { selectMultiplePt } from '../../../ui/select-multiple';
 import { deviceOptions } from './device-query';
 import { FormField } from '../../../ui/form-field/form-field';
 import { FormatNumberPipe, FormatRelativePipe } from '../../../ui/format/format.pipes';
+import { injectFleetFormat } from '../../../ui/format/fleet-format';
+import { isoToZonedWallTime, zonedWallTimeInstants } from '../../../ui/format/zoned-time';
 import { focusFirstInvalid } from '../../../ui/forms/focus';
-import { datePickerInputPt } from '../../../ui/forms/inner-input-pt';
 import { lockWhileSaving } from '../../../ui/forms/saving';
 import { patternValidator, textValidator, validationMessage } from '../../../ui/forms/validators';
 import { interpolate } from '../../../ui/i18n/messages';
@@ -72,7 +72,6 @@ const fieldOrder: readonly DeviceField[] = [
   imports: [
     ReactiveFormsModule,
     ButtonDirective,
-    DatePicker,
     InputText,
     Message,
     Select,
@@ -107,6 +106,8 @@ export class DeviceDrawer {
   readonly retryChoices = output();
 
   private readonly language = inject(UI_LANGUAGE);
+  private readonly units = injectFleetFormat();
+  private readonly timeZone = computed(() => this.units.preferences().timeZone);
   private readonly injector = inject(Injector);
   private readonly drawer = viewChild.required(RouteDrawer);
   private readonly formElement = viewChild<ElementRef<HTMLFormElement>>('formElement');
@@ -123,11 +124,8 @@ export class DeviceDrawer {
   protected readonly text = computed(() => this.catalog().drawer);
   protected readonly installedAtHint = computed(() =>
     interpolate(this.text().installedAtHint, {
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      timeZone: this.timeZone(),
     }),
-  );
-  protected readonly datePt = computed(() =>
-    datePickerInputPt('device-installedAt', !!this.errorOf('installedAt')),
   );
 
   protected readonly form = new FormGroup({
@@ -147,11 +145,15 @@ export class DeviceDrawer {
       nonNullable: true,
       validators: [textValidator(20), patternValidator(/^\+?[0-9]{6,19}$/)],
     }),
-    installedAt: new FormControl<Date | null>(null, (control) => {
-      const value: unknown = control.value;
-      return value === null || (value instanceof Date && !Number.isNaN(value.getTime()))
-        ? null
-        : { pattern: true };
+    installedAt: new FormControl('', {
+      nonNullable: true,
+      validators: (control) => {
+        const value: unknown = control.value;
+        return value === '' ||
+          (typeof value === 'string' && this.installedAtInstant(value) !== null)
+          ? null
+          : { pattern: true };
+      },
     }),
     simIccid: new FormControl('', {
       nonNullable: true,
@@ -189,6 +191,7 @@ export class DeviceDrawer {
     effect(() => {
       const device = this.value() ?? this.device();
       const value = this.value();
+      const timeZone = this.timeZone();
       untracked(() => {
         this.submitted = false;
         this.form.reset({
@@ -200,7 +203,9 @@ export class DeviceDrawer {
           options: value?.options ?? [],
           firmwareVersion: value?.firmwareVersion ?? '',
           simPhoneNumber: value?.simPhoneNumber ?? '',
-          installedAt: value?.installedAt ? new Date(value.installedAt) : null,
+          installedAt: value?.installedAt
+            ? (isoToZonedWallTime(value.installedAt, timeZone) ?? '')
+            : '',
         });
       });
     });
@@ -275,7 +280,7 @@ export class DeviceDrawer {
       options: value.options,
       firmwareVersion: value.firmwareVersion.trim(),
       simPhoneNumber: value.simPhoneNumber.trim(),
-      installedAt: value.installedAt?.toISOString() ?? '',
+      installedAt: this.installedAtInstant(value.installedAt) ?? '',
     });
   }
 
@@ -295,6 +300,15 @@ export class DeviceDrawer {
 
   markSaved(): void {
     this.form.markAsPristine();
+  }
+
+  private installedAtInstant(wallTime: string): string | null {
+    const candidates = zonedWallTimeInstants(wallTime, this.timeZone());
+    const original = this.value()?.installedAt;
+    const originalAt = original ? Date.parse(original) : Number.NaN;
+    // An unchanged repeated wall time must retain its original occurrence and precision.
+    const selected = candidates.includes(originalAt) ? originalAt : candidates[0];
+    return selected === undefined ? null : new Date(selected).toISOString();
   }
 
   private focusInvalid(): void {

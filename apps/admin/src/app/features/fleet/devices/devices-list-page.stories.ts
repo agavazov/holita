@@ -77,6 +77,7 @@ export const Edit: Story = {
   },
 };
 export const InstalledAtCalendar: Story = {
+  name: 'Installed at in Branch time',
   render: routed('/' + fixtureDevice.id + '/edit'),
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
@@ -86,12 +87,19 @@ export const InstalledAtCalendar: Story = {
       { timeout: 10000 },
     );
     const drawer = within(dialog);
-    const date = await drawer.findByRole('combobox', { name: 'Installed at' }, { timeout: 10000 });
-    await expect(drawer.getByText(/Browser time zone:/)).toBeVisible();
-    await userEvent.click(date);
-    await waitFor(() => expect(body.getByRole('grid')).toBeVisible());
-    await fireEvent.keyDown(date, { key: 'Escape', code: 'Escape', keyCode: 27, which: 27 });
-    await waitFor(() => expect(body.queryByRole('grid')).toBeNull());
+    await waitFor(
+      () => expect(drawer.getByRole('textbox', { name: /^IMEI/ })).toHaveValue(fixtureDevice.imei),
+      { timeout: 10000 },
+    );
+    const date = await drawer.findByLabelText('Installed at', {}, { timeout: 10000 });
+    await expect(date).toHaveAttribute('type', 'datetime-local');
+    await expect(drawer.getByText(/Branch time zone: Europe\/Sofia/)).toBeVisible();
+    await fireEvent.input(date, { target: { value: '2026-03-29T03:30' } });
+    await fireEvent.blur(date);
+    await waitFor(() => expect(date).toHaveAttribute('aria-invalid', 'true'));
+    await fireEvent.input(date, { target: { value: '2026-10-18T10:15:30.125' } });
+    await waitFor(() => expect(date).not.toHaveAttribute('aria-invalid', 'true'));
+    await expect(date).toHaveValue('2026-10-18T10:15:30.125');
     await expect(dialog).toBeVisible();
   },
 };

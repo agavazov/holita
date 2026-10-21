@@ -54,6 +54,13 @@ runtime: captured clients, optional stock assignment, full bounded Vehicle choic
 fields, diagnostics metadata, field focus and real IDs-array deletion with partial results.
 Submitted batches survive scope retirement without late UI callbacks. Real browser cases check
 persistent stock and assignment/reassignment/uniqueness, scope and Bulgarian desktop/narrow light/dark views.
+They also persist a Branch-zone installation timestamp with milliseconds, reject a skipped DST
+time and verify exact storage, reloading and explicit clearing.
+`device-drawer.spec.ts` checks Branch-zone native date/time input in BG/EN, strict skipped-time
+rejection, exact unchanged overlap instants and explicit clearing. Include
+`app/ui/format/zoned-time.spec.ts` for shared strict conversion, half-hour overlaps and preserved
+calendar/filter gap behavior. The Installed at in Branch time story covers the native input and
+validation feedback.
 Captures belong in ignored `.references/review/devices`. Signal/voltage, firmware policy and
 restart have no live provider contract; Storybook Demo interactions do not prove such a command.
 

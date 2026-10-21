@@ -313,9 +313,10 @@ delete actions use one partial-result batch. Connection status and whole-Branch 
 server. Each list response retains one database snapshot for status/report dates, filters, sorting
 and count. Diagnostics display available stored metadata; signal, voltage, firmware policy and Restart
 are explicitly unavailable/Demo until integrated.
-The installation DatePicker interprets its date/time in the displayed browser time zone, preserving
-an unchanged instant and converting edits to UTC. Clearing it submits the existing nullable-field
-clear value.
+The installation field uses native floating date/time text in the displayed Branch time zone,
+matching odometer entry. Invalid dates and skipped DST times are rejected. An unchanged instant
+retains its seconds, milliseconds and overlap occurrence; an edited ambiguous time uses the first
+occurrence. Submissions convert to UTC, and clearing retains the nullable-field clear value.
 The primary IMEI action opens Diagnostics before editing. Edit from that drawer returns to
 Diagnostics on save/cancel; the row-menu Edit action retains its direct list return.
 

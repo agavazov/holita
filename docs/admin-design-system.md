@@ -514,7 +514,7 @@ Helpers:
 - `forms/focus.ts`: `focusFirstInvalid(form, order, prefix)` focuses the first `#<prefix><name>`
   in `order` with `aria-invalid="true"`. `forms/inner-input-pt.ts`:
   `innerInputPt(controlId, invalid)` links the hint and error and sets `aria-invalid` on the inner
-  input of `p-inputnumber` and `p-datepicker`. The Device installation and service completion drawers use
+  input of `p-inputnumber` and `p-datepicker`. The service completion drawer uses
   `datePickerInputPt` for DatePicker: selection stays on its grid cell, with the duplicate
   unsupported `aria-selected` removed from the child day span.
 - `remote-options.ts`: `new RemoteOptions(load)` in an injection context, where `load(search, ids)`
@@ -540,6 +540,12 @@ Helpers:
   all reading `UI_LANGUAGE`. `format/zoned-time.ts`: `isoToZonedParts`, `zonedWallTimeToIso`
   (DST-aware: a spring-gap time resolves after the gap, an ambiguous autumn time to its first
   occurrence), `toDateOnly`/`fromDateOnly` between a DatePicker `Date` and `YYYY-MM-DD`.
+  Instant editors use `isoToZonedWallTime` for native `datetime-local` text and
+  `zonedWallTimeInstants` for strict conversion: skipped/invalid times have no instant, and
+  overlaps return actual occurrences in chronological order. Device installation and odometer
+  entry use the configured Branch zone, retaining seconds/milliseconds and an unchanged instant.
+  The odometer selects an overlap occurrence inside its reading bounds; an edited installation
+  time uses the first occurrence. Calendar/filter conversion keeps its existing gap normalization.
 - `format/fleet-format.ts`: `FLEET_DISPLAY` is a signal supplied by the verified Fleet workspace;
   standalone examples keep Sofia/KM/LITRE defaults. `injectFleetFormat()` converts read values
   and chart labels between km/mi, km/h/mph and litres/US gallons, preserving null and zero.

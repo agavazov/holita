@@ -337,6 +337,11 @@ units; the odometer editor uses the Branch display unit and converts submissions
 `admin-settings-general--default` capture covers both themes at desktop/mobile widths;
 its candidates require human baseline approval.
 
+Device installation and odometer instant editors use native floating date/time text in the
+configured Branch zone. Check `devices/device-drawer.spec.ts`, `vehicles/odometer-drawer.spec.ts`
+and `ui/format/zoned-time.spec.ts` for exact seconds/milliseconds, overlap selection and strict
+gap rejection; calendar/filter conversion retains its separate gap-normalizing contract.
+
 ## Local diff versus PR affected selection
 
 Inspect both tracked changes and new files; exclude the local task directory:

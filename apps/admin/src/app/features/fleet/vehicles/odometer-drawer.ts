@@ -21,7 +21,7 @@ import { Message } from 'primeng/message';
 import { RouteDrawer, type RouteDrawerState } from '../../../ui/drawer/route-drawer';
 import { FormField } from '../../../ui/form-field/form-field';
 import { FormatDateTimePipe } from '../../../ui/format/format.pipes';
-import { isoToZonedParts, zonedWallTimeToIso } from '../../../ui/format/zoned-time';
+import { isoToZonedWallTime, zonedWallTimeInstants } from '../../../ui/format/zoned-time';
 import { focusFirstInvalid } from '../../../ui/forms/focus';
 import { innerInputPt } from '../../../ui/forms/inner-input-pt';
 import { validationMessage } from '../../../ui/forms/validators';
@@ -42,13 +42,7 @@ const fields: readonly OdometerField[] = ['odometerKm', 'recordedAt'];
 
 /** Floating wall time avoids normalization by the browser's own DST rules. */
 export function odometerWallTime(iso: string, timeZone = 'Europe/Sofia'): string | null {
-  const parts = isoToZonedParts(iso, timeZone);
-  if (!parts) {
-    return null;
-  }
-  const instant = new Date(iso);
-  const pad = (value: number) => String(value).padStart(2, '0');
-  return `${String(parts.year).padStart(4, '0')}-${pad(parts.month)}-${pad(parts.day)}T${pad(parts.hour)}:${pad(parts.minute)}:${pad(instant.getUTCSeconds())}.${String(instant.getUTCMilliseconds()).padStart(3, '0')}`;
+  return isoToZonedWallTime(iso, timeZone);
 }
 
 /** Repeated Branch wall times use an occurrence inside the permitted reading interval. */
@@ -57,68 +51,8 @@ export function odometerInstant(
   bounds?: { readonly previousAt: string | null; readonly latestAllowedAt: string },
   timeZone = 'Europe/Sofia',
 ): string | null {
-  const match = date
-    ? /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?$/.exec(date)
-    : null;
-  if (!match) {
-    return null;
-  }
-  const parts = {
-    year: Number(match[1]),
-    month: Number(match[2]),
-    day: Number(match[3]),
-    hour: Number(match[4]),
-    minute: Number(match[5]),
-  };
-  const second = Number(match[6] ?? 0),
-    millisecond = Number((match[7] ?? '').padEnd(3, '0'));
-  const calendar = new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
-  if (
-    calendar.getUTCFullYear() !== parts.year ||
-    calendar.getUTCMonth() + 1 !== parts.month ||
-    calendar.getUTCDate() !== parts.day ||
-    parts.hour > 23 ||
-    parts.minute > 59 ||
-    second > 59
-  ) {
-    return null;
-  }
-  const first = Date.parse(zonedWallTimeToIso(parts, timeZone));
-  const wall = Date.UTC(
-    parts.year,
-    parts.month - 1,
-    parts.day,
-    parts.hour,
-    parts.minute,
-    second,
-    millisecond,
-  );
-  const occurrences = new Set<number>();
-  // Nearby offsets cover repeated times including half-hour and multi-hour DST changes.
-  for (const shift of [-86_400_000, 0, 86_400_000]) {
-    const probe = first + shift;
-    const fields = isoToZonedParts(new Date(probe).toISOString(), timeZone);
-    if (!fields) {
-      continue;
-    }
-    const offset =
-      Date.UTC(fields.year, fields.month - 1, fields.day, fields.hour, fields.minute) -
-      Math.floor(probe / 60_000) * 60_000;
-    const candidate = wall - offset;
-    const repeated = isoToZonedParts(new Date(candidate).toISOString(), timeZone);
-    if (
-      repeated?.year === parts.year &&
-      repeated.month === parts.month &&
-      repeated.day === parts.day &&
-      repeated.hour === parts.hour &&
-      repeated.minute === parts.minute
-    ) {
-      occurrences.add(candidate);
-    }
-  }
-  const candidates = [...occurrences].sort((left, right) => left - right);
+  const candidates = zonedWallTimeInstants(date, timeZone);
   const earliest = candidates[0];
-  // A spring gap has no actual instant; never silently normalize the intended reading.
   if (earliest === undefined) {
     return null;
   }

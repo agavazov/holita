@@ -163,6 +163,20 @@ test.describe('Devices', () => {
     app,
     request,
   }) => {
+    const settings = await request.post(app.gatewayUrl, {
+      headers: { authorization: `Bearer ${app.demoSession.token}`, 'x-branch-id': branchA },
+      data: {
+        query: `mutation {
+          updateFleetSettings(input: {
+            timeZone: "Europe/Belgrade", distanceUnit: KM, volumeUnit: LITRE,
+            lowFuelPct: 12, notReportingHours: 48, speedLimitKph: 90
+          }) { timeZone }
+        }`,
+      },
+    });
+    expect(await settings.json()).toEqual({
+      data: { updateFleetSettings: { timeZone: 'Europe/Belgrade' } },
+    });
     await vehicle(request, app.gatewayUrl, app.demoSession.token, 'STOCK-VEHICLE');
     await page.goto(app.url + path + '/new');
     const create = page.getByRole('dialog', { name: 'Register device', exact: true });
@@ -189,12 +203,33 @@ test.describe('Devices', () => {
       '+359888123456',
     );
     await chooseTruck(page, 'STOCK-VEHICLE');
+    const installedAt = edit.getByLabel('Installed at', { exact: true });
+    await expect(installedAt).toHaveAttribute('type', 'datetime-local');
+    await expect(edit.locator('#device-installedAt-hint')).toContainText('Europe/Belgrade');
+    await installedAt.fill('2026-03-29T02:30');
+    await edit.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(installedAt).toHaveAttribute('aria-invalid', 'true');
+    await installedAt.fill('2026-10-18T09:00:15.125');
     await edit.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(edit).toBeHidden();
     await expect(row).toContainText('STOCK-VEHICLE');
+    const persisted = await request.post(app.gatewayUrl, {
+      headers: { authorization: `Bearer ${app.demoSession.token}`, 'x-branch-id': branchA },
+      data: { query: '{ fleetDevices { items { imei installedAt } } }' },
+    });
+    expect(await persisted.json()).toEqual({
+      data: {
+        fleetDevices: {
+          items: [{ imei: '001234567890125', installedAt: '2026-10-18T07:00:15.125Z' }],
+        },
+      },
+    });
+    await page.reload();
     await row.getByRole('button', { name: 'Actions for 001234567890125', exact: true }).click();
     await chooseMenuItem(page, 'Edit');
+    await expect(installedAt).toHaveValue('2026-10-18T09:00:15.125');
     await chooseTruck(page, 'Not installed (in stock)');
+    await installedAt.fill('');
     await edit.getByRole('textbox', { name: 'Firmware', exact: true }).fill('');
     await edit.getByRole('textbox', { name: 'SIM phone number', exact: true }).fill('');
     await edit.getByRole('button', { name: 'Save', exact: true }).click();
@@ -204,6 +239,7 @@ test.describe('Devices', () => {
     await row.getByRole('button', { name: 'Actions for 001234567890125', exact: true }).click();
     await chooseMenuItem(page, 'Edit');
     await expect(edit.getByRole('textbox', { name: 'Firmware', exact: true })).toHaveValue('');
+    await expect(installedAt).toHaveValue('');
     await expect(edit.getByRole('textbox', { name: 'SIM phone number', exact: true })).toHaveValue(
       '',
     );
