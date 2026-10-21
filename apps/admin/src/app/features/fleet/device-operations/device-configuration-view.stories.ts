@@ -6,7 +6,10 @@ import { fixtureDevice } from '../../../../storybook/devices-fixtures';
 import { fixtureKarmaCars } from '../../../../storybook/karma-fixtures';
 import { defaultBranchId } from '../../../../storybook/session-fixtures';
 import { onFrame } from '../../../../storybook/story-config';
-import { DeviceConfigurationView } from './device-configuration-view';
+import {
+  DeviceConfigurationView,
+  type DeviceConfigurationOperation,
+} from './device-configuration-view';
 
 /** Present the captured target while the result of its submitted request is being reconciled. */
 @Component({
@@ -28,7 +31,16 @@ import { DeviceConfigurationView } from './device-configuration-view';
 })
 class ReconciliationScenario {
   protected readonly device = fixtureDevice;
-  protected readonly snapshot = fixtureConfigurationOperation;
+  protected readonly snapshot: DeviceConfigurationOperation = {
+    ...fixtureConfigurationOperation,
+    queueIds: [...fixtureConfigurationOperation.queueIds],
+    configuration: fixtureConfigurationOperation.configuration
+      ? {
+          ...fixtureConfigurationOperation.configuration,
+          parameters: [...fixtureConfigurationOperation.configuration.parameters],
+        }
+      : null,
+  };
   protected readonly targets = fixtureKarmaCars;
   protected readonly backLink = ['/', 'en', defaultBranchId, 'fleet', 'devices'];
   private readonly view = viewChild.required(DeviceConfigurationView);
