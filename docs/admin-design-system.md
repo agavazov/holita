@@ -282,7 +282,7 @@ must change with the Sass map), provides a deterministic `matchMedia` driven by 
 `_legacy-karma.scss` is the only place the pre-design-system classes `.card`, `.page-heading`,
 `.page-actions` and `.content-link` and the Sakai aliases `--surface-border`, `--surface-card`,
 `--text-color`, `--text-color-secondary`, `--primary-color` and `--content-border-radius` survive,
-mapped to the new tokens. Karma Client pages still read them. All connected Fleet screens
+mapped to the theme tokens. Karma Client pages consume them. All connected Fleet screens
 use the shared views and drawer patterns. Remove the legacy rules only after their remaining
 consumers are gone.
 
@@ -514,7 +514,7 @@ Helpers:
 - `forms/focus.ts`: `focusFirstInvalid(form, order, prefix)` focuses the first `#<prefix><name>`
   in `order` with `aria-invalid="true"`. `forms/inner-input-pt.ts`:
   `innerInputPt(controlId, invalid)` links the hint and error and sets `aria-invalid` on the inner
-  input of `p-inputnumber` and `p-datepicker`. The new reading/completion drawers use
+  input of `p-inputnumber` and `p-datepicker`. The Device installation and service completion drawers use
   `datePickerInputPt` for DatePicker: selection stays on its grid cell, with the duplicate
   unsupported `aria-selected` removed from the child day span.
 - `remote-options.ts`: `new RemoteOptions(load)` in an injection context, where `load(search, ids)`
@@ -543,8 +543,9 @@ Helpers:
 - `format/fleet-format.ts`: `FLEET_DISPLAY` is a signal supplied by the verified Fleet workspace;
   standalone examples keep Sofia/KM/LITRE defaults. `injectFleetFormat()` converts read values
   and chart labels between km/mi, km/h/mph and litres/US gallons, preserving null and zero.
-  API storage remains km, km/h and litres. Typed editors and filters retain their explicitly
-  labelled canonical entry units; they do not round-trip displayed rounded conversions.
+  API storage remains km, km/h and litres. Numeric API filters and explicitly labelled canonical
+  editors retain those units. The odometer editor uses the configured display unit, converts edits
+  back to km and preserves the exact canonical baseline when its displayed reading is unchanged.
 - `clock.ts`: `WALL_CLOCK` (`() => number`, `Date.now` by default; stories fix it).
   `ui-language.ts`: `UI_LANGUAGE` (`Signal<Language>`, `bg` by default; AdminWorkspace provides the
   route language and Storybook `en`). `media.ts`: `below(name)` and `breakpointWidth(name)`
@@ -721,13 +722,15 @@ parameter), `normalizeSearch`, `searchTokens`, `searchApplies`, `maxSearchLength
 burst. `setPage({ page, pageSize })` returns to page 1 when the size changes. `clearFilters()`
 clears the search and every filter except the per-view parameter. `correctPage(lastPage)` moves a
 past-the-end page back. User changes push a history entry; invalid or non-normalised URLs and page
-corrections are rewritten with `replaceUrl`. Query parameters are merged and the fragment is kept.
+corrections are rewritten with `replaceUrl`. A correction preserves its own pending search draft
+and debounce; external navigation retires them, including navigation to an equivalent normalized
+state. Query parameters are merged and the fragment is kept.
 `UrlListState` never fetches: pages map the state to their own query variables.
 
 ## Route drawers
 
 `holita-route-drawer` closes in one of two ways; in both, "keep editing" in `confirmLeave(dirty)`
-leaves the drawer open, and a dirty drawer also guards page unload.
+leaves the drawer open. A dirty form or pending write guards page unload.
 
 - Host-controlled (`[closeLink]="null"`): the close button, Escape and the backdrop emit
   `closeRequest`; the component that renders the drawer awaits `confirmLeave(dirty)` and only on
@@ -751,8 +754,11 @@ leaves the drawer open, and a dirty drawer also guards page unload.
   loads the record and group/driver choices; loading, invalid ID, missing record and read failure
   use the shared drawer states.
 
-Editing Fleet drawers lock their form while saving, reject duplicate submits and ignore close
-and route-leave attempts until the operation settles. A failed save retains the draft and
+Editing Fleet drawers lock their form while saving and reject duplicate submits. A submitted
+write retains its captured client and may finish after in-app navigation; closing does not cancel
+it, and late results cannot notify or navigate a subsequent workspace. Unsubmitted dirty drafts
+still require discard confirmation, including an Alert remark retained during a conflict read.
+A failed save retains the draft and
 focuses the first server-invalid field, or calls `keepFocusInside()` to restore a lost focus to
 the drawer title. Story hosts delegate `canLeave()` through the existing `leaveDrawer` guard,
 so sidebar navigation protects open drafts too. General settings guards navigation and unload,
@@ -784,8 +790,8 @@ after a rename; retired callbacks cannot apply preferences or announce results i
 
 The admin Storybook (`npm run storybook:admin`, port 11001) renders the real Angular components
 ([development](development.md#admin-storybook)). It opens on "Start here" (what to review and links
-to every example), then Examples and Design System. It is English only; the product's languages
-live in the application catalogs, and the example shell's language menu lists sample languages
+to the stories), then Admin, Examples and Design System. Examples default to English; focused
+stories also cover Bulgarian/English catalogs. The example shell's language menu lists sample languages
 that change nothing. Pattern stories render `app/ui` components with story inputs. The Shell
 stories use the real navigation, and the routed ones (Fleet disabled, Unknown Branch, Branch
 discovery loading and error) answer `AdminBranches` through `FixtureHttpBackend`. The Fleet
@@ -802,8 +808,8 @@ Devices and General settings examples use visible PrimeNG Demo labels and Storyb
 `prototype` tags. The live Devices screen supports stock and stored connection facts; signal,
 voltage, firmware policy and Restart remain unavailable/Demo. The General sample host remains
 a product demonstration; the live General page persists regional preferences/thresholds and
-the Core Branch name, while notification delivery remains explicitly unavailable. Existing prototype filters/sorts stay
-available; the shared sort menus also expose all sort fields in the current contracts. Sample
+the Core Branch name, while notification delivery is explicitly unavailable. The prototype
+filters/sorts and shared sort menus expose the supported fields in the current contracts. Sample
 sort timestamps are deterministic fixture facts. Vehicle saves and deactivation both set
 `updatedAt` to the fixed sample clock, so modification sorting reflects those writes.
 

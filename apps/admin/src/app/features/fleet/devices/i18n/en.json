@@ -93,7 +93,7 @@
     "options": "Device options",
     "simPhone": "SIM phone number",
     "installedAt": "Installed at",
-    "installedAtHint": "Date and time with an explicit offset, for example 2026-10-20T10:00:00+03:00",
+    "installedAtHint": "Browser time zone: {timeZone}. Saved as a UTC instant.",
     "status": "Connection",
     "lastSeen": "Last seen",
     "signal": "Signal",

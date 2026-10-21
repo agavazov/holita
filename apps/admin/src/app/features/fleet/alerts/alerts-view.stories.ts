@@ -139,7 +139,10 @@ export const AcknowledgeSelected: Story = {
     const bar = await canvas.findByRole('region', { name: 'Actions for selected records' });
     await expect(within(bar).queryByRole('button', { name: 'Resolve' })).toBeNull();
     await userEvent.click(within(bar).getByRole('button', { name: 'Acknowledge' }));
-    await waitFor(() => expect(canvas.getByText('Alerts acknowledged: 2.')).toBeVisible());
+    await waitFor(
+      () => expect(canvas.getByText('Alerts acknowledged: 2.')).toBeVisible(),
+      appReady,
+    );
     await waitFor(() =>
       expect(canvas.getByRole('heading', { level: 2, name: /^Alerts/ })).toHaveFocus(),
     );
@@ -164,8 +167,8 @@ export const ResolveWithoutRemark: Story = {
     const body = await drawerReady(canvasElement);
     await userEvent.clear(body.getByRole('textbox', { name: /Remark/ }));
     await userEvent.click(body.getByRole('button', { name: 'Resolve' }));
-    await waitFor(() => expect(body.queryByRole('dialog')).toBeNull(), { timeout: 3_000 });
-    await waitFor(() => expect(body.getByText('Alerts resolved: 1.')).toBeVisible());
+    await waitFor(() => expect(body.queryByRole('dialog')).toBeNull(), appReady);
+    await waitFor(() => expect(body.getByText('Alerts resolved: 1.')).toBeVisible(), appReady);
   },
 };
 
@@ -188,9 +191,10 @@ export const SaveError: Story = {
     await userEvent.type(remark, 'Workshop contacted.');
     await userEvent.click(body.getByRole('button', { name: 'Acknowledge' }));
     await waitFor(() => expect(remark).toBeDisabled());
-    await waitFor(() => expect(body.getByRole('alert')).toHaveTextContent(/could not be updated/), {
-      timeout: 3_000,
-    });
+    await waitFor(
+      () => expect(body.getByRole('alert')).toHaveTextContent(/could not be updated/),
+      appReady,
+    );
     await expect(remark).toBeEnabled();
     await expect(remark).toHaveValue('Workshop contacted.');
     await waitFor(() =>
@@ -209,7 +213,10 @@ export const ClearRemark: Story = {
     const remark = body.getByRole('textbox', { name: /Remark/ });
     await userEvent.clear(remark);
     await userEvent.click(body.getByRole('button', { name: 'Reopen' }));
-    await waitFor(() => expect(body.getByRole('button', { name: 'Acknowledge' })).toBeVisible());
+    await waitFor(
+      () => expect(body.getByRole('button', { name: 'Acknowledge' })).toBeVisible(),
+      appReady,
+    );
     await expect(remark).toHaveValue('');
   },
 };

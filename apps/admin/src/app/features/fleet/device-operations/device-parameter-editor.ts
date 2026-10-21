@@ -356,8 +356,8 @@ export class DeviceParameterEditor {
   }
 
   canLeave(): boolean | Promise<boolean> {
-    if (this.submitting() && this.form.dirty) {
-      return false;
+    if (this.submitting()) {
+      return true;
     }
     if (!this.form.dirty) {
       return true;
@@ -399,7 +399,7 @@ export class DeviceParameterEditor {
   }
 
   protected beforeUnload(event: BeforeUnloadEvent): void {
-    if (this.form.dirty) {
+    if (this.submitting() || this.form.dirty) {
       event.preventDefault();
     }
   }

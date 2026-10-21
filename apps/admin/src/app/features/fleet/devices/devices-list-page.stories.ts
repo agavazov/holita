@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/angular-vite';
-import { expect, userEvent, waitFor, within } from 'storybook/test';
+import { expect, fireEvent, userEvent, waitFor, within } from 'storybook/test';
 import { defaultBranchId } from '../../../../storybook/session-fixtures';
 import { routeAt, StoryApp, type StoryFixtures } from '../../../../storybook/story-config';
 import { fixtureDevice } from '../../../../storybook/devices-fixtures';
@@ -76,6 +76,26 @@ export const Edit: Story = {
     );
   },
 };
+export const InstalledAtCalendar: Story = {
+  render: routed('/' + fixtureDevice.id + '/edit'),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const dialog = await body.findByRole(
+      'dialog',
+      { name: 'Device ' + fixtureDevice.imei },
+      { timeout: 10000 },
+    );
+    const drawer = within(dialog);
+    const date = await drawer.findByRole('combobox', { name: 'Installed at' }, { timeout: 10000 });
+    await expect(drawer.getByText(/Browser time zone:/)).toBeVisible();
+    await userEvent.click(date);
+    await waitFor(() => expect(body.getByRole('grid')).toBeVisible());
+    await fireEvent.keyDown(date, { key: 'Escape', code: 'Escape', keyCode: 27, which: 27 });
+    await waitFor(() => expect(body.queryByRole('grid')).toBeNull());
+    await expect(dialog).toBeVisible();
+  },
+};
+
 export const Stock: Story = {
   render: routed('/new'),
   play: async ({ canvasElement }) => {

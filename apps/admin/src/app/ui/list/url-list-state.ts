@@ -35,6 +35,7 @@ export class UrlListState<F, S extends string> {
   private readonly router = inject(Router);
   private readonly searchEdits = new Subject<string | null>();
   private readonly tableSorts = new Subject<{ field: S; direction: SortDirection }>();
+  private readonly pageCorrectionNavigation = {};
 
   /** Normalised states, distinct under the definition's codecs. */
   readonly changes: Observable<ListState<F, S>>;
@@ -64,9 +65,12 @@ export class UrlListState<F, S extends string> {
         this.navigate(normalized, true);
       }
     });
-    this.changes.pipe(takeUntilDestroyed(destroyRef)).subscribe((state) => {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(destroyRef)).subscribe((params) => {
+      if (this.router.currentNavigation()?.extras.info === this.pageCorrectionNavigation) {
+        return;
+      }
       this.cancelPending();
-      this.searchDraft.set(state.search);
+      this.searchDraft.set(readListState(params, definition).search);
     });
     this.searchEdits
       .pipe(
@@ -149,12 +153,12 @@ export class UrlListState<F, S extends string> {
     this.apply({ ...state, search: '', filter, page: 1 });
   }
 
-  /** Moves a past-the-end page to the last page once totals arrive (replacing the URL). */
+  /** Replaces a past-the-end page once totals arrive, preserving an unsubmitted search draft. */
   correctPage(lastPage: number): void {
     const state = this.state();
     const target = Math.max(1, lastPage);
     if (state.page > target) {
-      this.navigate(listStateParams({ ...state, page: target }, this.definition), true);
+      this.navigate(listStateParams({ ...state, page: target }, this.definition), true, true);
     }
   }
 
@@ -176,13 +180,14 @@ export class UrlListState<F, S extends string> {
     this.apply(state);
   }
 
-  private navigate(queryParams: Params, replaceUrl: boolean): void {
+  private navigate(queryParams: Params, replaceUrl: boolean, preserveSearchDraft = false): void {
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams,
       queryParamsHandling: 'merge',
       preserveFragment: true,
       replaceUrl,
+      ...(preserveSearchDraft ? { info: this.pageCorrectionNavigation } : {}),
     });
   }
 }

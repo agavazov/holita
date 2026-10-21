@@ -55,8 +55,8 @@ export const CompleteFromRow: Story = {
     const body = within(canvasElement.ownerDocument.body);
     const dialog = await body.findByRole('dialog', { name: /^Complete / });
     await userEvent.click(within(dialog).getByRole('button', { name: 'Complete service' }));
-    await waitFor(() => expect(body.queryByRole('dialog')).not.toBeInTheDocument());
-    await waitFor(() => expect(body.getByText(/was completed\.$/)).toBeVisible());
+    await waitFor(() => expect(body.queryByRole('dialog')).not.toBeInTheDocument(), ready);
+    await waitFor(() => expect(body.getByText(/was completed\.$/)).toBeVisible(), ready);
   },
 };
 
@@ -75,12 +75,14 @@ export const CompleteAndPlanNext: Story = {
     );
     await userEvent.click(await drawer.findByRole('button', { name: 'Complete and plan next' }));
     const body = within(canvasElement.ownerDocument.body);
-    await waitFor(() =>
-      expect(body.queryByRole('dialog', { name: title })).not.toBeInTheDocument(),
+    await waitFor(
+      () => expect(body.queryByRole('dialog', { name: title })).not.toBeInTheDocument(),
+      ready,
     );
     const canvas = within(canvasElement);
-    await waitFor(() =>
-      expect(body.getByText(/was completed and the next service was planned/)).toBeVisible(),
+    await waitFor(
+      () => expect(body.getByText(/was completed and the next service was planned/)).toBeVisible(),
+      ready,
     );
     await userEvent.type(canvas.getByRole('searchbox'), 'Next oil service');
     await waitFor(() =>
@@ -135,9 +137,13 @@ export const InactiveVehicleHistory: Story = {
       drawer.queryByRole('spinbutton', { name: 'Next due odometer, km' }),
     ).not.toBeInTheDocument();
     await userEvent.click(drawer.getByRole('button', { name: 'Complete service' }));
-    await waitFor(() => expect(body.queryByRole('dialog', { name })).not.toBeInTheDocument());
-    await waitFor(() =>
-      expect(body.getByText(`${inactiveTask.kind} was completed.`)).toBeVisible(),
+    await waitFor(
+      () => expect(body.queryByRole('dialog', { name })).not.toBeInTheDocument(),
+      ready,
+    );
+    await waitFor(
+      () => expect(body.getByText(`${inactiveTask.kind} was completed.`)).toBeVisible(),
+      ready,
     );
     const plate = vehicleById(inactiveTask.vehicleId)?.plate ?? '—';
     const canvas = within(canvasElement);
@@ -163,18 +169,24 @@ export const SaveError: Story = {
     await expect(workshop).toBeDisabled();
     await waitFor(
       () => expect(drawer.getByRole('alert')).toHaveTextContent(/could not be completed/),
-      { timeout: 3_000 },
+      ready,
     );
     await expect(workshop).toBeEnabled();
     await expect(workshop).toHaveValue('Plovdiv workshop');
     await userEvent.click(drawer.getByRole('button', { name: 'Complete service' }));
-    await waitFor(() =>
-      expect(
-        within(canvasElement.ownerDocument.body).queryByRole('dialog', { name: title }),
-      ).not.toBeInTheDocument(),
+    await waitFor(
+      () =>
+        expect(
+          within(canvasElement.ownerDocument.body).queryByRole('dialog', { name: title }),
+        ).not.toBeInTheDocument(),
+      ready,
     );
-    await waitFor(() =>
-      expect(within(canvasElement.ownerDocument.body).getByText(/was completed\.$/)).toBeVisible(),
+    await waitFor(
+      () =>
+        expect(
+          within(canvasElement.ownerDocument.body).getByText(/was completed\.$/),
+        ).toBeVisible(),
+      ready,
     );
   },
 };
@@ -187,17 +199,17 @@ export const EarlierServiceOdometer: Story = {
     const odometer = drawer.getByRole('spinbutton', { name: 'Completion odometer, km' });
     await enterNumber(odometer, 120000);
     await userEvent.click(drawer.getByRole('button', { name: 'Complete service' }));
-    await waitFor(() => expect(odometer).toHaveAttribute('aria-invalid', 'true'), {
-      timeout: 3_000,
-    });
+    await waitFor(() => expect(odometer).toHaveAttribute('aria-invalid', 'true'), ready);
     await waitFor(() => expect(odometer).toHaveFocus());
     await expect(odometer).toHaveValue('120,000');
-    await waitFor(() =>
-      expect(
-        drawer.getByText(
-          'The odometer cannot be below an earlier completed service of this vehicle.',
-        ),
-      ).toBeVisible(),
+    await waitFor(
+      () =>
+        expect(
+          drawer.getByText(
+            'The odometer cannot be below an earlier completed service of this vehicle.',
+          ),
+        ).toBeVisible(),
+      ready,
     );
   },
 };

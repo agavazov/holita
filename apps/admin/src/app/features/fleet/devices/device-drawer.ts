@@ -15,6 +15,7 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonDirective } from 'primeng/button';
+import { DatePicker } from 'primeng/datepicker';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
@@ -26,6 +27,7 @@ import { deviceOptions } from './device-query';
 import { FormField } from '../../../ui/form-field/form-field';
 import { FormatNumberPipe, FormatRelativePipe } from '../../../ui/format/format.pipes';
 import { focusFirstInvalid } from '../../../ui/forms/focus';
+import { datePickerInputPt } from '../../../ui/forms/inner-input-pt';
 import { lockWhileSaving } from '../../../ui/forms/saving';
 import { patternValidator, textValidator, validationMessage } from '../../../ui/forms/validators';
 import { interpolate } from '../../../ui/i18n/messages';
@@ -70,6 +72,7 @@ const fieldOrder: readonly DeviceField[] = [
   imports: [
     ReactiveFormsModule,
     ButtonDirective,
+    DatePicker,
     InputText,
     Message,
     Select,
@@ -118,6 +121,14 @@ export class DeviceDrawer {
   protected readonly optionChoices = deviceOptions.map((value) => ({ value, label: value }));
   private readonly catalog = computed(() => devicesText(this.language()));
   protected readonly text = computed(() => this.catalog().drawer);
+  protected readonly installedAtHint = computed(() =>
+    interpolate(this.text().installedAtHint, {
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    }),
+  );
+  protected readonly datePt = computed(() =>
+    datePickerInputPt('device-installedAt', !!this.errorOf('installedAt')),
+  );
 
   protected readonly form = new FormGroup({
     imei: new FormControl('', {
@@ -136,12 +147,9 @@ export class DeviceDrawer {
       nonNullable: true,
       validators: [textValidator(20), patternValidator(/^\+?[0-9]{6,19}$/)],
     }),
-    installedAt: new FormControl('', {
-      nonNullable: true,
-      validators: patternValidator(
-        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/,
-      ),
-    }),
+    installedAt: new FormControl<Date | null>(null, (control) =>
+      control.value !== null && Number.isNaN(control.value.getTime()) ? { pattern: true } : null,
+    ),
     simIccid: new FormControl('', {
       nonNullable: true,
       validators: patternValidator(/^\d{18,22}$/),
@@ -189,7 +197,7 @@ export class DeviceDrawer {
           options: value?.options ?? [],
           firmwareVersion: value?.firmwareVersion ?? '',
           simPhoneNumber: value?.simPhoneNumber ?? '',
-          installedAt: value?.installedAt ?? '',
+          installedAt: value?.installedAt ? new Date(value.installedAt) : null,
         });
       });
     });
@@ -264,7 +272,7 @@ export class DeviceDrawer {
       options: value.options,
       firmwareVersion: value.firmwareVersion.trim(),
       simPhoneNumber: value.simPhoneNumber.trim(),
-      installedAt: value.installedAt.trim(),
+      installedAt: value.installedAt?.toISOString() ?? '',
     });
   }
 
@@ -279,7 +287,7 @@ export class DeviceDrawer {
   }
 
   canLeave(): boolean | Promise<boolean> {
-    return this.saving() ? false : this.drawer().confirmLeave(this.form.dirty);
+    return this.saving() || this.drawer().confirmLeave(this.form.dirty);
   }
 
   markSaved(): void {

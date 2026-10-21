@@ -282,6 +282,12 @@ an occurrence inside the permitted reading interval. An unchanged displayed read
 exact stored value, including after conversion to miles. INACTIVE vehicles and empty valid time
 intervals display an unavailable reason and cannot submit.
 
+Submitted drawer writes keep their captured client and may finish after in-app navigation. Closing
+the drawer does not cancel the write. Form and submit controls remain locked until settlement, and
+late results cannot notify or navigate the next workspace. Unsubmitted dirty drafts still require
+discard confirmation; leaving during a conflict read also guards the retained remark draft.
+Browser unload warns for a dirty form or a pending write.
+
 Stored Vehicle/Driver references in profiles, Device lists/Diagnostics, Trips, Alerts and Maintenance
 are native links in the current language and Branch. Cross-resource navigation starts with
 that resource's own filters. Opening an assigned Vehicle from a Driver preserves a bounded
@@ -307,6 +313,9 @@ delete actions use one partial-result batch. Connection status and whole-Branch 
 server. Each list response retains one database snapshot for status/report dates, filters, sorting
 and count. Diagnostics display available stored metadata; signal, voltage, firmware policy and Restart
 are explicitly unavailable/Demo until integrated.
+The installation DatePicker interprets its date/time in the displayed browser time zone, preserving
+an unchanged instant and converting edits to UTC. Clearing it submits the existing nullable-field
+clear value.
 The primary IMEI action opens Diagnostics before editing. Edit from that drawer returns to
 Diagnostics on save/cancel; the row-menu Edit action retains its direct list return.
 

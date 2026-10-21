@@ -221,14 +221,7 @@
         {{ text().close }}
       </button>
     } @else {
-      <button
-        pButton
-        type="button"
-        severity="secondary"
-        [outlined]="true"
-        [disabled]="saving()"
-        (click)="close()"
-      >
+      <button pButton type="button" severity="secondary" [outlined]="true" (click)="close()">
         {{ text().cancel }}
       </button>
       <button

@@ -66,8 +66,8 @@ describe('TripDrawer', () => {
       maxSpeedKph: 0,
     });
     expect(dialog.textContent).toContain('Arrived');
-    expect(dialog.textContent).toContain('0 km');
-    expect(dialog.textContent).toContain('0 km/h');
+    expect(dialog.textContent).toContain('0\u00a0km');
+    expect(dialog.textContent).toContain('0\u00a0km/h');
     expect(dialog.querySelectorAll('.app-timeline-event').length).toBe(2);
   });
 });

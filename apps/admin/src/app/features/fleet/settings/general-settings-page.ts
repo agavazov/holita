@@ -143,7 +143,7 @@ export class GeneralSettingsPage implements OnInit {
   }
 
   canLeave(): boolean | Promise<boolean> {
-    return !this.saving() && (this.view()?.canLeave() ?? true);
+    return this.saving() || (this.view()?.canLeave() ?? true);
   }
 
   private current(): boolean {

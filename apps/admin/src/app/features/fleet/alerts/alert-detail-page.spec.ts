@@ -287,6 +287,7 @@ describe('Live Alert detail workflow', () => {
       await fixture.whenStable();
       type('Investigate.');
       const saving = fixture.componentInstance.apply('resolve', 'Investigate.');
+      expect(fixture.componentInstance.canLeave()).toBe(true);
       const firstWrite = http.expectOne((request) => operation(request, 'AdminResolveAlert'));
       expect(firstWrite.request.body).toMatchObject({
         variables: { id, input: { expectedStatus: 'OPEN', remark: 'Investigate.' } },
@@ -303,6 +304,13 @@ describe('Live Alert detail workflow', () => {
         expect(fixture.componentInstance.state()).toBe('loading');
       });
       const refresh = http.expectOne((request) => operation(request, 'AdminAlert'));
+      expect(fixture.componentInstance.pendingWrite()).toBe(false);
+      const leaving = fixture.componentInstance.canLeave();
+      await vi.waitFor(() =>
+        expect(document.querySelector('.p-confirmdialog-reject-button')).not.toBeNull(),
+      );
+      document.querySelector<HTMLButtonElement>('.p-confirmdialog-reject-button')?.click();
+      expect(await leaving).toBe(false);
       await fixture.whenStable();
       expect(fixture.componentInstance.busy()).toBe('resolve');
       expect(remark().disabled).toBe(true);

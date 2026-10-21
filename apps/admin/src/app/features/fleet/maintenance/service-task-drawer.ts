@@ -269,16 +269,13 @@ export class ServiceTaskDrawer {
 
   /** Close button, Escape, backdrop and Cancel: unsaved changes are confirmed first. */
   protected async requestClose(): Promise<void> {
-    if (this.saving()) {
-      return;
-    }
-    if (await this.drawer().confirmLeave(this.dirty())) {
+    if (await this.canLeave()) {
       this.closed.emit();
     }
   }
 
   canLeave(): boolean | Promise<boolean> {
-    return this.saving() ? false : this.drawer().confirmLeave(this.dirty());
+    return this.saving() || this.drawer().confirmLeave(this.dirty());
   }
   protected close(): void {
     this.drawer().close();

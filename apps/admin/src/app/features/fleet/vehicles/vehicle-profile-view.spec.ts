@@ -132,7 +132,7 @@ describe('VehicleProfileView', () => {
     });
     const points = [
       { key: 'zero', label: '17 Oct', value: 0, valueText: '0 km' },
-      { key: 'distance', label: '18 Oct', value: 160.9344, valueText: '161 km' },
+      { key: 'distance', label: '18 Oct', value: 160.9344, valueText: '161\u00a0km' },
     ];
     fixture.componentRef.setInput('vehicle', {
       ...vehicle,
@@ -145,13 +145,13 @@ describe('VehicleProfileView', () => {
     await fixture.whenStable();
     expect(kpi('Odometer')).toBe('100');
     expect(kpi('Distance, 14 days')).toBe('100');
-    expect(element.textContent).toContain('100 mph');
-    expect(element.textContent).toContain('1 gal');
+    expect(element.textContent).toContain('100\u00a0mph');
+    expect(element.textContent).toContain('1\u00a0gal');
     expect(element.textContent).toContain('03:00');
     const chart = fixture.debugElement.query(By.directive(ColumnSeries)).injector.get(ColumnSeries);
     expect(chart.points()).toMatchObject([
-      { value: 0, valueText: '0 mi' },
-      { valueText: '100 mi' },
+      { value: 0, valueText: '0\u00a0mi' },
+      { valueText: '100\u00a0mi' },
     ]);
     expect(chart.points()[1]?.value).toBeCloseTo(100);
     expect(fixture.componentInstance.distance()).toEqual(points);
@@ -160,6 +160,6 @@ describe('VehicleProfileView', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     expect(kpi('Distance, 14 days')).toBe('161');
-    expect(chart.points()[1]?.valueText).toBe('161 km');
+    expect(chart.points()[1]?.valueText).toBe('161\u00a0km');
   });
 });

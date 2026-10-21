@@ -39,6 +39,7 @@ import { alertsText } from './i18n/messages';
       [loadError]="loadFailure()"
       [closeLink]="listLink"
       [busy]="busy()"
+      [pendingWrite]="pendingWrite()"
       [saveError]="saveFailure()"
       [fieldError]="fieldError()"
       [clockError]="clockFailure()"
@@ -88,6 +89,7 @@ export class AlertDetailPage implements OnInit {
   readonly record = signal<AdminAlertDetailsFragment | null>(null);
   readonly state = signal<RouteDrawerState>('loading');
   readonly busy = signal<AlertAction | null>(null);
+  readonly pendingWrite = signal(false);
   readonly dataAsOf = signal<string | null>(null);
   readonly loadError = signal<unknown>(null);
   readonly saveError = signal<unknown>(null);
@@ -189,6 +191,7 @@ export class AlertDetailPage implements OnInit {
       return;
     }
     this.busy.set(action);
+    this.pendingWrite.set(true);
     this.saveError.set(null);
     try {
       const event = await this.api.transition(action, {
@@ -198,6 +201,7 @@ export class AlertDetailPage implements OnInit {
       if (this.destroyRef.destroyed) {
         return;
       }
+      this.pendingWrite.set(false);
       this.record.set(event);
       this.drawer()?.markSaved();
       this.busy.set(null);
@@ -217,6 +221,7 @@ export class AlertDetailPage implements OnInit {
       }
     } catch (error: unknown) {
       if (!this.destroyRef.destroyed) {
+        this.pendingWrite.set(false);
         this.saveError.set(error);
         if (errorCode(error) === 'CONFLICT') {
           this.state.set('loading');
@@ -240,6 +245,7 @@ export class AlertDetailPage implements OnInit {
       }
     } finally {
       if (!this.destroyRef.destroyed) {
+        this.pendingWrite.set(false);
         this.busy.set(null);
         this.closingAfterSave = false;
       }
@@ -288,6 +294,7 @@ export class AlertDetailPage implements OnInit {
     });
   }
   canLeave(): boolean | Promise<boolean> {
-    return this.closingAfterSave || (this.drawer()?.canLeave() ?? true);
+    const pendingWrite = this.pendingWrite();
+    return this.closingAfterSave || pendingWrite || (this.drawer()?.canLeave(pendingWrite) ?? true);
   }
 }

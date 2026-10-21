@@ -23,6 +23,9 @@ export interface ListSortField {
       {{ text().label }}{{ selectedLabel() ? ': ' + selectedLabel() : '' }}
       @if (sort(); as sort) {
         <span aria-hidden="true">{{ sort.direction === 'asc' ? '↑' : '↓' }}</span>
+        <span class="app-visually-hidden">{{
+          sort.direction === 'asc' ? text().ascending : text().descending
+        }}</span>
       }
     </holita-menu-button>
   `,

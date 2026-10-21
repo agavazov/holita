@@ -12,14 +12,12 @@ review scratchpad; retain only open work here. Implemented contracts belong in
 The identifiers below retain the original review's references. Each correction requires a
 focused regression at the affected boundary; database races require guarded PostgreSQL tests.
 
-- **D10 / P2:** Restore FilterBuilder focus to an enabled control at the condition limit;
-  preserve a debounced search draft during correctPage URL rewrites; give simulated-save
-  story waits explicit bounds; use a DatePicker with explicit time interpretation for Device
-  installedAt; permit captured submitted writes to finish after route retirement; announce
-  sort direction; fix the read-only task Vehicle label and nonbreaking unit spacing.
 - **Validation / P2:** Restore the existing formatting gate on the files it reports. Reproduce
   admin timeout failures with the documented single-worker setting before classifying them
   as functional defects; keep deadlines and behavioral assertions intact.
+- **Validation / P2, cause unverified:** Investigate demo-seed persistence test timeouts without
+  weakening deadlines or assertions. Distinguish dataset generation, insertion, duplicate reruns
+  and anchor rejection before selecting a correction.
 
 ## Performance
 

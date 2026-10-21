@@ -70,7 +70,12 @@ describe('ServiceTaskDrawer', () => {
       workshop: '',
       notes: '',
     });
-    expect(document.getElementById('task-vehicleId')).toBeNull();
+    const vehicle = document.getElementById('task-vehicleId');
+    expect(vehicle?.tagName).toBe('OUTPUT');
+    expect(vehicle?.textContent).toContain('CB 1001 AX');
+    const label = document.querySelector<HTMLLabelElement>('label[for="task-vehicleId"]');
+    expect(label?.control).toBe(vehicle);
+    expect(label?.textContent).not.toContain('*');
     form.patchValue({ vehicleId: 'v2', title: 'x'.repeat(120) });
     await submit();
     expect(saved[0]?.vehicleId).toBe('v1');
@@ -91,7 +96,7 @@ describe('ServiceTaskDrawer', () => {
     expect(saved[0]?.dueOn).toBe('2100-12-31');
   });
 
-  it('locks saving drafts and rejects navigation and duplicate submits until the save settles', async () => {
+  it('locks saving drafts and duplicate submits while allowing captured-write retirement', async () => {
     const { fixture, form, saved, submit } = await render();
     form.patchValue({ vehicleId: 'v1', dueKm: 0, title: 'Draft' });
     form.get('title')?.markAsDirty();
@@ -101,7 +106,7 @@ describe('ServiceTaskDrawer', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     expect(form.disabled).toBe(true);
-    expect(fixture.componentInstance.canLeave()).toBe(false);
+    expect(fixture.componentInstance.canLeave()).toBe(true);
     await submit();
     expect(saved).toHaveLength(1);
     fixture.componentRef.setInput('saving', false);

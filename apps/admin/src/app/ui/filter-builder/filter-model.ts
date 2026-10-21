@@ -177,7 +177,7 @@ function formatValue(field: FilterField, value: string, language: Language): str
           ? { significantDigits: 21 }
           : { fraction: field.decimalPlaces },
     );
-    return field.unit ? `${number} ${field.unit}` : number;
+    return field.unit ? `${number}\u00a0${field.unit}` : number;
   }
   if (field.type === 'date') {
     return formatDateOnly(value, language);

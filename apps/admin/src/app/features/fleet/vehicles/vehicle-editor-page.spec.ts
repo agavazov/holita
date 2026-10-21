@@ -1,12 +1,14 @@
 import { provideHttpClient, type HttpRequest } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { signal } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import {
   ActivatedRoute,
   ROUTER_OUTLET_DATA,
+  RouteReuseStrategy,
   Router,
+  RouterOutlet,
   convertToParamMap,
   provideRouter,
 } from '@angular/router';
@@ -15,7 +17,10 @@ import type {
   AdminVehicleDriversQuery,
   AdminVehicleGroupsQuery,
 } from '../../../../generated/graphql/operations';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { DemoSession } from '../../../core/auth/demo-session';
+import { leaveDrawer } from '../../../ui/drawer/leave-drawer.guard';
+import { FleetRouteReuseStrategy } from '../fleet-route-reuse';
 import type { DrawerHost } from '../../../ui/drawer/drawer-host';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
 import { VehicleEditorPage } from './vehicle-editor-page';
@@ -515,4 +520,170 @@ describe('Vehicle editor drawer adapter', () => {
     expect(field('plate').value).toBe('Unsaved draft');
     expect(navigateSpy).not.toHaveBeenCalled();
   });
+});
+
+const routedSaved = vi.fn<DrawerHost['saved']>();
+
+@Component({
+  selector: 'holita-pending-vehicle-save-list',
+  imports: [RouterOutlet],
+  template: '<router-outlet [routerOutletData]="host" />',
+})
+class PendingVehicleSaveList {
+  readonly host: DrawerHost = { saved: routedSaved };
+}
+
+describe('Routed vehicle save retirement', () => {
+  let http: HttpTestingController;
+  let harness: RouterTestingHarness | undefined;
+
+  function editor(): VehicleEditorPage {
+    const value: unknown = harness?.fixture.debugElement.query(
+      By.directive(VehicleEditorPage),
+    )?.componentInstance;
+    if (!(value instanceof VehicleEditorPage)) {
+      throw new Error('Missing routed vehicle editor.');
+    }
+    return value;
+  }
+
+  function choices(branchId: string): void {
+    const groups = http.expectOne((request) => operation(request, 'AdminVehicleGroups', branchId));
+    expect(groups.request.headers.get('authorization')).toBe(
+      branchId === branchA ? 'Bearer route-session-a' : 'Bearer route-session-b',
+    );
+    groups.flush({ data: { fleetVehicleGroups: { items: [], total: 0, offset: 0, limit: 100 } } });
+    http
+      .expectOne((request) => operation(request, 'AdminVehicleDrivers', branchId))
+      .flush({
+        data: { fleetDrivers: { items: [], total: 0, offset: 0, limit: 100 } },
+      });
+  }
+
+  beforeEach(() => {
+    routedSaved.mockReset();
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: UI_LANGUAGE, useValue: signal('en') },
+        { provide: RouteReuseStrategy, useClass: FleetRouteReuseStrategy },
+        provideRouter([
+          {
+            path: ':language/:branchId/fleet/vehicles',
+            component: PendingVehicleSaveList,
+            data: { resource: 'vehicles' },
+            children: [
+              {
+                path: 'new',
+                component: VehicleEditorPage,
+                data: { drawer: true, mode: 'create' },
+                canDeactivate: [leaveDrawer],
+              },
+            ],
+          },
+        ]),
+      ],
+    });
+    TestBed.inject(DemoSession).start({
+      token: 'route-session-a',
+      tenant: { id: '01000000-0000-4000-8000-000000000001', name: 'Tenant A' },
+    });
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    harness?.fixture.destroy();
+    harness = undefined;
+    clearOverlays();
+    http.verify({ ignoreCancelled: true });
+    vi.restoreAllMocks();
+  });
+
+  it.each([true, false])(
+    'leaves a captured submitted write alive and isolates its late result (success=%s)',
+    async (success) => {
+      const pathA = `/en/${branchA}/fleet/vehicles`;
+      const pathB = `/en/${branchB}/fleet/vehicles/new`;
+      harness = await RouterTestingHarness.create(`${pathA}/new`);
+      choices(branchA);
+      await harness.fixture.whenStable();
+      type('plate', 'Submitted A');
+      const previous = editor();
+      const saving = previous.save({ ...vehicleForm(record()), plate: 'Submitted A' });
+      const write = http.expectOne((request) => operation(request, 'AdminCreateVehicle'));
+      expect(previous.canLeave()).toBe(true);
+      expect(write.request.headers.get('authorization')).toBe('Bearer route-session-a');
+      expect(write.request.body).toMatchObject({
+        variables: { input: { licensePlate: 'Submitted A' } },
+      });
+      await harness.fixture.whenStable();
+      expect(field('plate').disabled).toBe(true);
+      const unload = new Event('beforeunload', { cancelable: true });
+      window.dispatchEvent(unload);
+      expect(unload.defaultPrevented).toBe(true);
+      const cancel = [...dialog().querySelectorAll<HTMLButtonElement>('button')].find(
+        (button) => button.textContent.trim() === 'Cancel',
+      );
+      if (!cancel) {
+        throw new Error('Missing vehicle Cancel action.');
+      }
+      expect(cancel.disabled).toBe(false);
+      cancel.click();
+      await harness.fixture.whenStable();
+      const router = TestBed.inject(Router);
+      expect(router.url).toBe(pathA);
+      expect(write.cancelled).toBe(false);
+      expect(document.querySelector('.p-confirmdialog-reject-button')).toBeNull();
+
+      TestBed.inject(DemoSession).start({
+        token: 'route-session-b',
+        tenant: { id: '01000000-0000-4000-8000-000000000002', name: 'Tenant B' },
+      });
+      await harness.navigateByUrl(pathB);
+      choices(branchB);
+      await harness.fixture.whenStable();
+      const current = editor();
+      expect(current).not.toBe(previous);
+      type('plate', 'Current B draft');
+      const navigate = vi.spyOn(router, 'navigate');
+      expect(write.cancelled).toBe(false);
+      if (success) {
+        write.flush({ data: { createFleetVehicle: record(branchA, 'Submitted A') } });
+      } else {
+        write.flush({
+          errors: [{ message: 'Late rejected write.', extensions: { code: 'BAD_USER_INPUT' } }],
+        });
+      }
+      await saving;
+      await harness.fixture.whenStable();
+      expect(router.url).toBe(pathB);
+      expect(editor()).toBe(current);
+      expect(field('plate').value).toBe('Current B draft');
+      expect(current.saveError()).toBeNull();
+      expect(current.saving()).toBe(false);
+      expect(routedSaved).not.toHaveBeenCalled();
+      expect(navigate).not.toHaveBeenCalled();
+      http.expectNone('/graphql');
+
+      // A current-scope save still notifies and navigates through the actual routed host.
+      const currentSaving = current.save({
+        ...vehicleForm(record(branchB)),
+        plate: 'Current B draft',
+      });
+      const currentWrite = http.expectOne((request) =>
+        operation(request, 'AdminCreateVehicle', branchB),
+      );
+      expect(currentWrite.request.headers.get('authorization')).toBe('Bearer route-session-b');
+      currentWrite.flush({ data: { createFleetVehicle: record(branchB, 'Current B draft') } });
+      await currentSaving;
+      await harness.fixture.whenStable();
+      expect(routedSaved).toHaveBeenCalledExactlyOnceWith({
+        recordId: vehicleId,
+        message: 'Current B draft was created.',
+      });
+      expect(navigate).toHaveBeenCalledTimes(1);
+      expect(router.url).toBe(`/en/${branchB}/fleet/vehicles`);
+    },
+  );
 });

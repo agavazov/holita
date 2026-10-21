@@ -184,7 +184,7 @@
             [maxFractionDigits]="field()?.decimalPlaces"
             [invalid]="!!valueError()"
             [ariaDescribedBy]="valueError() ? id + '-value-error' : undefined"
-            [suffix]="field()?.unit ? ' ' + field()?.unit : ''"
+            [suffix]="field()?.unit ? '\u00a0' + field()?.unit : ''"
             [fluid]="true"
           />
         </div>
@@ -200,7 +200,7 @@
               [maxFractionDigits]="field()?.decimalPlaces"
               [invalid]="!!valueError()"
               [ariaDescribedBy]="valueError() ? id + '-value-error' : undefined"
-              [suffix]="field()?.unit ? ' ' + field()?.unit : ''"
+              [suffix]="field()?.unit ? '\u00a0' + field()?.unit : ''"
               [fluid]="true"
             />
           </div>
@@ -213,7 +213,7 @@
               [maxFractionDigits]="field()?.decimalPlaces"
               [invalid]="!!valueError()"
               [ariaDescribedBy]="valueError() ? id + '-value-error' : undefined"
-              [suffix]="field()?.unit ? ' ' + field()?.unit : ''"
+              [suffix]="field()?.unit ? '\u00a0' + field()?.unit : ''"
               [fluid]="true"
             />
           </div>

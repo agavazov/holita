@@ -115,11 +115,11 @@
             class="app-form-grid--wide"
             [label]="text().vehicle"
             controlId="task-vehicleId"
-            [required]="true"
+            [required]="!task()"
             [error]="errorOf('vehicleId')"
           >
             @if (task()) {
-              <p>
+              <output id="task-vehicleId">
                 @if (task(); as record) {
                   @if (recordLinks()?.vehicle(record.vehicleId); as link) {
                     <a
@@ -135,7 +135,7 @@
                 } @else {
                   {{ vehicleName() }}
                 }
-              </p>
+              </output>
             } @else {
               <p-select
                 inputId="task-vehicleId"
@@ -241,14 +241,7 @@
         {{ text().close }}
       </button>
     } @else {
-      <button
-        pButton
-        type="button"
-        severity="secondary"
-        [outlined]="true"
-        [disabled]="saving()"
-        (click)="close()"
-      >
+      <button pButton type="button" severity="secondary" [outlined]="true" (click)="close()">
         {{ text().cancel }}
       </button>
       <button pButton type="submit" form="task-form" [loading]="saving()" [disabled]="saving()">

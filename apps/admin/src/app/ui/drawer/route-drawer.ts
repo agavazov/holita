@@ -149,7 +149,7 @@ export class RouteDrawer {
   }
 
   protected beforeUnload(event: BeforeUnloadEvent): void {
-    if (this.dirty()) {
+    if (this.saving() || this.dirty()) {
       event.preventDefault();
     }
   }

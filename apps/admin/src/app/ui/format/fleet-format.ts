@@ -35,7 +35,7 @@ export function volumeValue(value: number | null, unit: FleetDisplayPreferences[
   return value === null ? null : unit === 'US_GALLON' ? value / litresPerUsGallon : value;
 }
 
-/** Display conversion only. Typed editors and filters retain their explicitly labelled API units. */
+/** Display conversions; an editor accepting these units converts back to its canonical API units. */
 export function injectFleetFormat() {
   const preferences = inject(FLEET_DISPLAY);
   const language = inject(UI_LANGUAGE);
@@ -53,19 +53,19 @@ export function injectFleetFormat() {
     const result = formatNumber(distanceValue(value, preferences().distanceUnit), language(), {
       fraction,
     });
-    return value === null || !withUnit ? result : `${result} ${distanceUnit()}`;
+    return value === null || !withUnit ? result : `${result}\u00a0${distanceUnit()}`;
   }
   function speed(value: number | null, withUnit = true, fraction = 0): string {
     const result = formatNumber(distanceValue(value, preferences().distanceUnit), language(), {
       fraction,
     });
-    return value === null || !withUnit ? result : `${result} ${speedUnit()}`;
+    return value === null || !withUnit ? result : `${result}\u00a0${speedUnit()}`;
   }
   function volume(value: number | null, withUnit = true, fraction = 1): string {
     const result = formatNumber(volumeValue(value, preferences().volumeUnit), language(), {
       fraction,
     });
-    return value === null || !withUnit ? result : `${result} ${volumeUnit()}`;
+    return value === null || !withUnit ? result : `${result}\u00a0${volumeUnit()}`;
   }
   return {
     preferences,

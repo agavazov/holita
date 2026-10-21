@@ -235,7 +235,7 @@ describe('Live Driver drawer adapter', () => {
       },
     });
     await fixture.whenStable();
-    expect(fixture.componentInstance.canLeave()).toBe(false);
+    expect(fixture.componentInstance.canLeave()).toBe(true);
     write.flush({ data: { updateFleetDriver: record } });
     await saving;
     expect(saved).toHaveBeenCalledWith({ recordId: id, message: 'Elena Petrova was saved.' });

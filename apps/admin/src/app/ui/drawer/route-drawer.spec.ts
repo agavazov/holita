@@ -8,6 +8,7 @@ import { RouteDrawer, type RouteDrawerState } from './route-drawer';
 
 const state = signal<RouteDrawerState>('ready');
 const dirty = signal(false);
+const saving = signal(false);
 let retries = 0;
 
 @Component({
@@ -31,6 +32,7 @@ class TestList {}
       [state]="state()"
       errorText="Няма връзка"
       [dirty]="dirty()"
+      [saving]="saving()"
       (retry)="retry()"
     >
       <input id="plate" />
@@ -41,6 +43,7 @@ class TestList {}
 class TestEditor {
   readonly state = state;
   readonly dirty = dirty;
+  readonly saving = saving;
   readonly drawer = viewChild.required(RouteDrawer);
   canLeave(): boolean | Promise<boolean> {
     return this.drawer().confirmLeave(this.dirty());
@@ -53,6 +56,7 @@ class TestEditor {
 async function open() {
   state.set('ready');
   dirty.set(false);
+  saving.set(false);
   retries = 0;
   TestBed.configureTestingModule({
     providers: [
@@ -128,6 +132,20 @@ describe('RouteDrawer', () => {
     document.body.querySelectorAll('.p-drawer, .p-overlay-mask').forEach((node) => {
       node.remove();
     });
+  });
+
+  it('prompts on browser unload for a pending save even when the form is pristine', async () => {
+    const { harness } = await open();
+    saving.set(true);
+    await harness.fixture.whenStable();
+    const pending = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(pending);
+    expect(pending.defaultPrevented).toBe(true);
+    saving.set(false);
+    await harness.fixture.whenStable();
+    const settled = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(settled);
+    expect(settled.defaultPrevented).toBe(false);
   });
 
   it('keeps editor focus and restores the title when focus leaves the drawer', async () => {

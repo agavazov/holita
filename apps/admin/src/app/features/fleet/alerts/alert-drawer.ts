@@ -67,6 +67,8 @@ export class AlertDrawer {
   readonly dataAsOf = input.required<string>();
   /** The action being applied, if any. */
   readonly busy = input<AlertAction | null>(null);
+  /** Separates a submitted write from a busy conflict read; examples can supply only busy. */
+  readonly pendingWrite = input<boolean>();
   readonly saveError = input<string | null>(null);
   readonly state = input<RouteDrawerState>('ready');
   readonly loadError = input<string | null>(null);
@@ -194,8 +196,8 @@ export class AlertDrawer {
     this.remark.markAsPristine();
   }
 
-  canLeave(): Promise<boolean> | boolean {
-    return this.busy() ? false : this.drawer().confirmLeave(this.dirty());
+  canLeave(pendingWrite = this.pendingWrite() ?? this.busy() !== null): Promise<boolean> | boolean {
+    return pendingWrite || this.drawer().confirmLeave(this.dirty());
   }
 
   protected async requestVehicle(): Promise<void> {

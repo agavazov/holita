@@ -33,6 +33,9 @@ export const FieldAndDirection: Story = {
   name: 'Choose a field and direction',
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    await expect(canvas.getByRole('button', { name: /^Sort/ })).toHaveAccessibleName(
+      /Name.*Ascending/,
+    );
     await userEvent.click(canvas.getByRole('button', { name: /^Sort/ }));
     await chooseMenuItem(canvasElement.ownerDocument.body, 'Created at');
     await expect(canvas.getByRole('button', { name: /^Sort/ })).toHaveTextContent('Created at');
@@ -40,6 +43,9 @@ export const FieldAndDirection: Story = {
     await chooseMenuItem(canvasElement.ownerDocument.body, 'Descending');
     await waitFor(() =>
       expect(canvas.getByRole('button', { name: /^Sort/ })).toHaveTextContent('↓'),
+    );
+    await expect(canvas.getByRole('button', { name: /^Sort/ })).toHaveAccessibleName(
+      /Created at.*Descending/,
     );
     await expect(canvas.getByRole('button', { name: /^Sort/ })).toHaveFocus();
   },

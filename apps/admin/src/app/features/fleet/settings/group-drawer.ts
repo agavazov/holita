@@ -192,6 +192,6 @@ export class GroupDrawer {
   }
 
   canLeave(): boolean | Promise<boolean> {
-    return this.saving() ? false : this.drawer().confirmLeave(this.form.dirty);
+    return this.saving() || this.drawer().confirmLeave(this.form.dirty);
   }
 }

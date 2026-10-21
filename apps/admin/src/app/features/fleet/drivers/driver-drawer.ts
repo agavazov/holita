@@ -383,7 +383,7 @@ export class DriverDrawer {
       this.cancelEdit.emit();
       return;
     }
-    if (!(await this.drawer().confirmLeave(this.form.dirty))) {
+    if (!(await this.canLeave())) {
       return;
     }
     this.reset(driver);
@@ -402,7 +402,7 @@ export class DriverDrawer {
   }
 
   canLeave(): Promise<boolean> | boolean {
-    return this.saving() ? false : this.drawer().confirmLeave(this.dirty());
+    return this.saving() || this.drawer().confirmLeave(this.dirty());
   }
 
   markSaved(): void {

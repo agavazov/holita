@@ -59,7 +59,7 @@ describe('Fleet display preferences', () => {
     }
     const text = (id: string) => element.querySelector(`#${id}`)?.textContent.trim();
     expect(text('instant')).toBe('02 Jan 2026, 00:30');
-    expect(text('distance')).toBe('1,609.3 km');
+    expect(text('distance')).toBe('1,609.3\u00a0km');
     expect(text('unknown')).toBe('—');
     preferences.set({
       ...defaultFleetDisplay,
@@ -70,10 +70,10 @@ describe('Fleet display preferences', () => {
     await fixture.whenStable();
     expect(text('instant')).toBe('01 Jan 2026, 23:30');
     expect(text('explicit-zone')).toBe('01 Jan 2026, 22:30');
-    expect(text('distance')).toBe('1,000 mi');
-    expect(text('speed')).toBe('100 mph');
-    expect(text('volume')).toBe('1 gal');
-    expect(text('zero')).toBe('0 mi');
+    expect(text('distance')).toBe('1,000\u00a0mi');
+    expect(text('speed')).toBe('100\u00a0mph');
+    expect(text('volume')).toBe('1\u00a0gal');
+    expect(text('zero')).toBe('0\u00a0mi');
     expect(text('unknown')).toBe('—');
     expect(fixture.componentInstance.distance).toBe(1609.344);
     fixture.destroy();

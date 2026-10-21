@@ -116,14 +116,7 @@
   }
   <div drawerFooter class="app-drawer-actions">
     @if (alert(); as alert) {
-      <button
-        pButton
-        type="button"
-        severity="secondary"
-        [outlined]="true"
-        [disabled]="!!busy()"
-        (click)="close()"
-      >
+      <button pButton type="button" severity="secondary" [outlined]="true" (click)="close()">
         {{ text().close }}
       </button>
       @switch (alert.status) {

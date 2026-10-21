@@ -158,16 +158,20 @@
             <holita-form-field
               [label]="text().installedAt"
               controlId="device-installedAt"
-              [hint]="text().installedAtHint"
+              [hint]="installedAtHint()"
               [error]="errorOf('installedAt')"
             >
-              <input
-                pInputText
-                id="device-installedAt"
+              <p-datepicker
+                inputId="device-installedAt"
                 formControlName="installedAt"
+                dateFormat="yy-mm-dd"
+                [showTime]="true"
+                [showSeconds]="true"
+                hourFormat="24"
+                appendTo="body"
+                [fluid]="true"
                 [invalid]="!!errorOf('installedAt')"
-                [attr.aria-invalid]="errorOf('installedAt') ? 'true' : null"
-                [attr.aria-describedby]="describedBy('installedAt')"
+                [pt]="datePt()"
               />
             </holita-form-field>
           }
@@ -234,14 +238,7 @@
   }
   @if (state() === 'ready') {
     <div drawerFooter class="app-drawer-actions">
-      <button
-        pButton
-        type="button"
-        severity="secondary"
-        [outlined]="true"
-        [disabled]="saving()"
-        (click)="requestClose()"
-      >
+      <button pButton type="button" severity="secondary" [outlined]="true" (click)="requestClose()">
         {{ text().cancel }}
       </button>
       <button pButton type="submit" form="device-form" [loading]="saving()" [disabled]="saving()">

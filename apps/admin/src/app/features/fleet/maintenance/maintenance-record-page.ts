@@ -354,11 +354,11 @@ export class MaintenanceRecordPage implements OnInit {
   canLeave(): boolean | Promise<boolean> {
     return (
       this.closingAfterSave ||
-      (!this.saving() &&
-        ((this.completionMode()
-          ? this.completionDrawer()?.canLeave()
-          : this.taskDrawer()?.canLeave()) ??
-          true))
+      this.saving() ||
+      ((this.completionMode()
+        ? this.completionDrawer()?.canLeave()
+        : this.taskDrawer()?.canLeave()) ??
+        true)
     );
   }
 }

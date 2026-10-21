@@ -116,7 +116,7 @@ describe('filter model', () => {
     ).toBe('Status is any of Active, In service');
     expect(
       describeCondition(odometer, condition(odometer, 'between', ['100000', '400000']), 'en'),
-    ).toBe('Odometer between 100,000 km and 400,000 km');
+    ).toBe('Odometer between 100,000\u00a0km and 400,000\u00a0km');
     expect(describeCondition(model, condition(model, 'contains', ['MAN']), 'en')).toBe(
       'Model contains “MAN”',
     );
@@ -129,16 +129,16 @@ describe('filter model', () => {
     {
       language: 'en' as const,
       label: 'Cost',
-      amounts: ['Cost greater than 0.01 EUR', 'Cost greater than 0.29 EUR'],
-      range: 'Cost between 0.01 EUR and 0.29 EUR',
-      zero: 'Cost greater than 0 EUR',
+      amounts: ['Cost greater than 0.01\u00a0EUR', 'Cost greater than 0.29\u00a0EUR'],
+      range: 'Cost between 0.01\u00a0EUR and 0.29\u00a0EUR',
+      zero: 'Cost greater than 0\u00a0EUR',
     },
     {
       language: 'bg' as const,
       label: 'Разход',
-      amounts: ['Разход по-голямо от 0,01 EUR', 'Разход по-голямо от 0,29 EUR'],
-      range: 'Разход между 0,01 EUR и 0,29 EUR',
-      zero: 'Разход по-голямо от 0 EUR',
+      amounts: ['Разход по-голямо от 0,01\u00a0EUR', 'Разход по-голямо от 0,29\u00a0EUR'],
+      range: 'Разход между 0,01\u00a0EUR и 0,29\u00a0EUR',
+      zero: 'Разход по-голямо от 0\u00a0EUR',
     },
   ])('describes exact currency amounts, ranges and zero in $language', (expected) => {
     const cost: FilterField = {
@@ -170,9 +170,9 @@ describe('filter model', () => {
       label: 'Odometer',
       unit: 'km',
       labels: [
-        'Odometer greater than 123.4 km',
-        'Odometer greater than 0.001 km',
-        'Odometer greater than 0.000000000000000000001 km',
+        'Odometer greater than 123.4\u00a0km',
+        'Odometer greater than 0.001\u00a0km',
+        'Odometer greater than 0.000000000000000000001\u00a0km',
       ],
     },
     {
@@ -180,9 +180,9 @@ describe('filter model', () => {
       label: 'Километраж',
       unit: 'км',
       labels: [
-        'Километраж по-голямо от 123,4 км',
-        'Километраж по-голямо от 0,001 км',
-        'Километраж по-голямо от 0,000000000000000000001 км',
+        'Километраж по-голямо от 123,4\u00a0км',
+        'Километраж по-голямо от 0,001\u00a0км',
+        'Километраж по-голямо от 0,000000000000000000001\u00a0км',
       ],
     },
   ])('retains accepted fractional odometer values in $language chip text', (expected) => {
@@ -198,7 +198,7 @@ describe('filter model', () => {
     expect(isComplete(field, minimum)).toBe(true);
     const separator = expected.language === 'bg' ? ',' : '.';
     expect(describeCondition(field, minimum, expected.language)).toContain(
-      `0${separator}${'0'.repeat(323)}5 ${expected.unit}`,
+      `0${separator}${'0'.repeat(323)}5\u00a0${expected.unit}`,
     );
     expect(minimum.values).toEqual([tiny]);
   });

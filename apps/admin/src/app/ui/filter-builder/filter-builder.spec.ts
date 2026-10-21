@@ -109,6 +109,10 @@ describe('FilterBuilder focus', () => {
     expect(conditions.slice(0, 49)).toEqual(restored);
     expect(new Set(conditions.map((condition) => condition.id)).size).toBe(50);
     expect(button('Add filter').disabled).toBe(true);
+    const chips = Array.from(
+      document.querySelectorAll<HTMLButtonElement>('.filter-builder__chip-label'),
+    );
+    expect(document.activeElement).toBe(chips.at(-1));
   });
 
   it('blocks invalid bounded values even on direct form submission, and applies a corrected value', async () => {
@@ -190,6 +194,9 @@ describe('FilterBuilder focus', () => {
     click(button('Cancel'));
     await fixture.whenStable();
     expect(button('Add filter').disabled).toBe(true);
+    expect(document.activeElement).toBe(
+      Array.from(document.querySelectorAll('.filter-builder__chip-label')).at(-1),
+    );
     click(button('Edit filter: Has device'));
     await fixture.whenStable();
     expect(button('Update').disabled).toBe(false);

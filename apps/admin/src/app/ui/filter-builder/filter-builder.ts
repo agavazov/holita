@@ -359,7 +359,21 @@ export class FilterBuilder {
       (this.returnFocus || this.formElement().nativeElement.contains(document.activeElement)) &&
       this.opener?.isConnected
     ) {
-      this.opener.focus();
+      const opener = this.opener;
+      afterNextRender(
+        () => {
+          if (!opener.isConnected) {
+            return;
+          }
+          const target =
+            opener instanceof HTMLButtonElement && opener.disabled
+              ? (this.chipButtons().at(-1)?.nativeElement ??
+                document.getElementById(`${this.id}-search`))
+              : opener;
+          target?.focus();
+        },
+        { injector: this.injector },
+      );
     }
     this.opener = null;
     this.returnFocus = false;

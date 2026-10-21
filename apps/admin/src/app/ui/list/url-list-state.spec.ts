@@ -83,6 +83,29 @@ describe('UrlListState', () => {
     expect(host.list.state()).toMatchObject({ search: 'previous', page: 2 });
   });
 
+  it('preserves a pending search through its own out-of-range page correction', async () => {
+    const { harness, host, router } = await mount('/list?search=current&page=9');
+    host.list.editSearch('unsent draft');
+    host.list.correctPage(3);
+    await settle(harness);
+    expect(router.url).toBe('/list?search=current&page=3');
+    expect(host.list.searchDraft()).toBe('unsent draft');
+    await settle(harness, 350);
+    expect(router.url).toBe('/list?search=unsent%20draft');
+    expect(host.list.state()).toMatchObject({ search: 'unsent draft', page: 1 });
+  });
+
+  it('retires the draft on external navigation after correcting its own page', async () => {
+    const { harness, host, router } = await mount('/list?search=current&page=9');
+    host.list.editSearch('unsent draft');
+    host.list.correctPage(3);
+    await settle(harness);
+    await harness.navigateByUrl('/list?search=current&page=3&keep=1', ListHost);
+    expect(host.list.searchDraft()).toBe('current');
+    await settle(harness, 350);
+    expect(router.url).toBe('/list?search=current&page=3&keep=1');
+  });
+
   it('patches filters, sorts from table events and pages', async () => {
     const { harness, host, router } = await mount('/list?page=2');
     host.list.patchFilter({ statuses: ['B'] });

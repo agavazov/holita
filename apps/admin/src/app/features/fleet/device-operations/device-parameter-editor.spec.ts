@@ -75,6 +75,17 @@ describe('Device parameter editor', () => {
     return fixture;
   }
 
+  it('permits route retirement while submission is pending and still warns before browser unload', async () => {
+    const fixture = await mount();
+    fixture.componentRef.setInput('submitting', true);
+    fixture.componentRef.setInput('busy', true);
+    await fixture.whenStable();
+    expect(fixture.componentInstance.canLeave()).toBe(true);
+    const unload = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(unload);
+    expect(unload.defaultPrevented).toBe(true);
+  });
+
   it('edits an unknown existing interval using the captured baseline and preserves its original raw definition', async () => {
     const fixture = await mount();
     const updates: AdminRequestDeviceParameterIntervalUpdateMutationVariables['input'][] = [];
