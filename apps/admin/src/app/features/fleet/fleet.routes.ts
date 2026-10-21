@@ -17,6 +17,12 @@ const vehicleProfileRoute: UrlMatcher = (segments) => {
 };
 
 export const fleetRoutes: Routes = [
+  {
+    path: ':branchId/fleet/devices/:recordId/configuration',
+    data: { resource: 'device-configuration', editor: false },
+    canDeactivate: [leaveDrawer],
+    loadComponent: () => import('./fleet-workspace').then((module) => module.FleetWorkspace),
+  },
   { path: ':branchId/fleet', pathMatch: 'full', redirectTo: ':branchId/fleet/overview' },
   {
     path: ':branchId/fleet/settings/general',

@@ -49,10 +49,26 @@ membership, permissions and session revocation must be implemented before produc
 Every Fleet business table requires tenantId physically second after id in PostgreSQL. Drivers,
 Vehicle groups, samples, trips, events and service tasks are available through the separate insert-only rich Fleet demo command; the minimal seed remains unchanged.
 
+## Background device configuration reads
+
+Fleet implements [durable background parameter reads and changes](architecture.md#background-device-configuration-reads):
+verified Tenant/Branch operations, explicit Karma target selection, leased Nest scheduler,
+persisted multipart replies, restart recovery, latest complete snapshots and a refresh-safe
+admin page. Separately enabled `ADD_PARAMETER` and `UPDATE_INTERVAL` operations require an
+exact-target complete baseline, conservative 120-second preflight, a single additive `02`
+definition and independent whole-set readback. Additions require verified Monitor catalog
+and observed-profile membership; interval changes preserve existing decoding fields,
+including unknown IDs. Requested intervals are integers `0..65000`; zero is Monitor's
+not-in-use setting and has separate UI confirmation. Durable write markers prevent automatic
+replay after uncertainty/restart. Ten-minute deadlines do not cancel delayed vendor queue
+delivery. Configuration confirmation does not verify measurements, and Karma measurement
+history is not ingested.
+
 ## Shared vendor reference data
 
 The [versioned Simple eData catalog](erm-resources/simple-edata-catalog/README.md) is common
 manufacturer metadata without Tenant/Branch scope. An offline EXE-only extractor preserves
 all supported workbook variants, Monitor tables, conflicts and provenance. A local CLI
-imports versions transactionally and verifies repeated imports. This has no GraphQL/admin
-or device-command integration and does not change FND-006 business-entity isolation.
+imports versions transactionally and verifies repeated imports. DeviceOperations exposes
+eligible predefined metadata through its scoped preset query and configuration editor;
+there is no catalog editing/import API. This does not change FND-006 business-entity isolation.

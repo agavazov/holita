@@ -1,14 +1,72 @@
 # Configuring eData parameter reporting through Karma
 
-Reference edition **2.0**, updated **2026-10-17 (Europe/Sofia)**. Sources are the
+Reference edition **2.3**, updated **2026-10-21 (Europe/Sofia)**. Sources are the
 [eData Simple 4.04 protocol](content.md), the
 [Monitor configuration guide](../simple-edata-monitor-configuration-v1.0/README.md),
 the supplied Monitor **9.56** catalog, and observed device responses through
 [Karma API v2](../karma-api-v2/README.md).
 
 This reference describes the device configuration procedure and its evidence
-limits. The current holita Karma client exposes reads; it does not implement
-command submission or a parameter configuration interface.
+limits. Holita implements Fleet-owned persisted parameter reads, single predefined-ID
+additions and existing-interval changes through Karma. Deletion, restoration, global
+settings and other command examples below remain manual upstream procedures.
+
+## Implemented background operations
+
+The [background device configuration read](../../architecture.md#background-device-configuration-reads)
+accepts a scoped Fleet Device and an explicitly selected Karma car/device identity.
+Fleet stores the queued operation before its Nest scheduler dispatches the request.
+Karma Client's internal machine API rechecks the target and submits fixed parameter
+reads (`301`, payload `0702BC`), profile reads (`301`, payload `1F`) or a single
+22-byte parameter definition (`301`, payload `02`). It cannot accept arbitrary
+command strings, replacement/deletion operations or browser-held machine credentials.
+The public Karma GraphQL interface remains read-only; Fleet owns the change mutations.
+
+The reader collects `GET /events` responses for event type `33` in a bounded UTC
+window. Supported text `401` fragments retain their full 22-byte definitions,
+parameter IDs and reporting intervals, including unknown IDs and zero intervals.
+Assembly checks the configuration ID, message numbering, final marker and
+conflicting definitions. Missing fragments or incomplete scan coverage cannot yield
+a complete snapshot. Fleet persists observations so a subsequent check can assemble
+fragments received before and after a process restart.
+
+For a read, `COMPLETE` means the returned fragments form a consistent parameter
+readback. For a change, completion additionally requires a subsequent independent
+whole-set read that matches the intended change and all unrelated definitions.
+It does not prove that measurements are arriving,
+identify an acknowledgment for a particular queue ID, or confirm firmware support
+for every catalog parameter. Queue IDs are references; the worker does not call
+`GET /queue/{id}` or infer success from `transmitted`. An uncertain submission is
+reconciled through later observations rather than automatically replayed. Global
+settings, diagnostics and hardware-version reads in the manual table below remain
+outside the implemented machine API.
+
+Changes require a captured complete baseline for the exact Device/IMEI and selected
+Karma car/device pair. Additions use only eligible Monitor-source entries from the
+imported 9.56 binary SHA-256
+`01dd13e50c55fdf84078ce298bde72320d55bee458baa4c0d2a06fca7c0ca1a0`, extractor
+`1.0.0`, schema `1`, with an unambiguous name, no row issues and membership in the
+observed profile's set. The generic constructor evidence is retained below. Interval
+changes can use unknown IDs: they preserve every captured field except the final
+two interval bytes. Requested intervals are integers `0..65000`; Monitor's zero
+means **not in use**, which is distinct from deletion or proven measurement silence.
+
+Fleet rereads and compares the entire baseline before the one-definition `02` write.
+Profile/baseline freshness is 120 seconds from the earlier phase-request/response
+time, with enough lease/deadline budget reserved for the submission. Old evidence
+causes a safe new read with an advanced watermark; it is not made fresh by fetching
+it again. An addition is rejected at the adapter's 1000-definition readback bound;
+this is not a hardware capacity guarantee. The durable write marker prevents a
+second write attempt after restart, network uncertainty or a lost HTTP response.
+Verification excludes baseline message IDs, compares the whole returned set and
+permits only the documented predefined multiplier/divisor `1/1` to `0/0`
+normalization for additions. Fleet preserves submitted and returned evidence.
+
+The separate write flag defaults to false. All operations have a ten-minute local
+deadline, which cannot cancel an accepted command in the vendor queue. A delayed
+write can arrive after expiry; reconcile a fresh configuration before another
+change. See the [authoritative operation architecture](../../architecture.md#background-device-configuration-reads)
+and [configuration workflow](../../development.md#background-device-configuration-reads).
 
 ## Catalog, configuration and measurements
 
@@ -151,11 +209,80 @@ the other bytes, including flags and device-specific decoding fields. The full
 [field semantics](content.md#231-sending-parameter-definitions-to-the-can-engine)
 remain defined by the vendor protocol.
 
-The Monitor guide describes zero interval as disabling use/reporting and a limit
+The Monitor guide describes zero interval as **not in use** and a limit
 of 100 configured parameters. These are source-version constraints, not proof of
 every firmware's capacity or zero-interval behavior. A stored definition with
 interval zero is not the same observation as an absent definition. Do not assume
 the shortest encodable interval is supported or operationally appropriate.
+
+### Monitor 9.56 predefined-parameter construction
+
+The supplied [Monitor 9.56 binary](../../../../resources/discocan/Simple%20eData%20FMS%20Monitor/README.md)
+establishes a generic definition builder for its predefined parameter grid. This
+was inspected offline through its CLI metadata and method bodies, without running
+the executable or communicating with a device. The binary SHA-256 is
+`01dd13e50c55fdf84078ce298bde72320d55bee458baa4c0d2a06fca7c0ca1a0`.
+
+| Method token                | Method / RVA                                                                                | Relevant behavior                                                                                                                                  |
+| --------------------------- | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `0x060003C2`                | Parameter constructor, RVA `233596`                                                         | Initializes header, start bit, bit count, offset, filter mask/value, type and flags to zero; multiplier and divisor to one; interval to zero       |
+| `0x060003C3`                | `Get_Parameter_From_Row`, RVA `233712`                                                      | Constructs that object and assigns only the grid's name, hexadecimal parameter ID and reporting interval; its GUI interval limit is 65,000 seconds |
+| `0x060003C6`                | `Get_Parameter_As_Binary_Array`, RVA `233908`                                               | Serializes exactly 22 bytes in the field order above; multi-byte values use most-significant byte first                                            |
+| `0x060003C5` / `0x060003C4` | `Get_Parameter_As_Binary_String` / `Get_Parameter_As_Text_String`, RVAs `274844` / `325836` | Converts those bytes to the command's hexadecimal text representation                                                                              |
+| `0x06000440`                | `Prepare_Send_Can_Engine_Parameters_Commands`, RVA `326948`                                 | Uses those serialized definitions; its replace flag selects initial operation `01`, while the additive branch uses `02`                            |
+
+This is direct evidence for the Monitor's generic predefined-ID packet
+construction, rather than an extrapolation from a particular fuel-rate example.
+It does not define a new CAN decoder or establish which signals the installed
+module can measure. For an existing parameter, preserve its captured definition
+instead of reconstructing it from these GUI defaults.
+
+For example, the catalog names ID **781 / `030D`** **Battery Voltage (Starlink)**
+in all three Monitor categories and both retained workbooks. It belongs to set
+`135`, used by profiles `343` and `430`. Using the generic builder with an
+operator-selected 60-second interval produces this single 22-byte definition:
+
+```text
+030D000000000000000100010000000000000000003C
+```
+
+Its additive command contains only operation `02` and that definition:
+
+```text
+30,1,19,0,19,301,0,1,1,02030D000000000000000100010000000000000000003C
+```
+
+On the documented profile `343` installation, a fresh complete device readback
+confirmed the addition of `781` at 60 seconds. Every pre-existing parameter
+definition remained byte-for-byte identical, as did the captured global-settings
+payload and vehicle profile. Preserve all original definitions in that comparison,
+including IDs unknown to the local catalog.
+
+The submitted definition above used multiplier/divisor one. The device returned
+this normalized definition, with those two fields zero and interval `003C`:
+
+```text
+030D000000000000000000000000000000000000003C
+```
+
+Keep the submitted and returned definitions separately. This is observed
+normalization for this predefined parameter and installation; it does not justify
+ignoring other changed fields or normalizing arbitrary definitions.
+
+The 60-second interval is an operator choice, not a documented voltage default.
+Fresh eData measurements were not observed while diagnostics reported ignition
+off and no CAN communication bit. Diagnostic extension bytes remain uninterpreted.
+The configuration readback therefore confirms the stored definition, not working
+voltage measurements or calibration. The catalog name does not establish whether
+`781` represents external supply or internal backup-battery voltage; keep that
+distinction separate from the observed `vin` and `vbat` tracker fields. Measurement
+verification still requires the checks below.
+
+Do not send the Monitor's complete server-command export to perform a single
+addition. `Create_All_Serevr_Commands`, token `0x0600047B`, RVA `343544`, passes
+the replace flag when building its parameter section and also generates global,
+vehicle, reset and other command sections. Construct only the intended additive
+`02` message from the inspected definition.
 
 ### Predefined fuel-rate example
 

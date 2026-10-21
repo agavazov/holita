@@ -16,40 +16,40 @@ Source: [original endpoint definitions](source/endpoints.js.txt), [request helpe
 
 ## Operations and holita coverage
 
-| Method | Path               | Current use                                             |
-| ------ | ------------------ | ------------------------------------------------------- |
-| GET    | `/version`         | `karmaVersion` (see parameter limitations below)        |
-| POST   | `/login`           | Internal server authentication                          |
-| GET    | `/cars`            | `karmaCars` (see parameter limitations below)           |
-| GET    | `/cars/{id}`       | `karmaCar` (see parameter limitations below)            |
-| POST   | `/cars`            | Not implemented in holita                               |
-| PUT    | `/cars/{id}`       | Not implemented in holita                               |
-| DELETE | `/cars/{id}`       | Not implemented in holita                               |
-| GET    | `/drivers`         | Not implemented in holita                               |
-| POST   | `/drivers`         | Not implemented in holita                               |
-| PUT    | `/drivers/{id}`    | Not implemented in holita                               |
-| DELETE | `/drivers/{id}`    | Not implemented in holita                               |
-| GET    | `/projects`        | `karmaProjects` (see parameter limitations below)       |
-| POST   | `/projects`        | Not implemented in holita                               |
-| GET    | `/users`           | `karmaUsers` (see parameter limitations below)          |
-| GET    | `/location`        | `karmaLocation` (see parameter limitations below)       |
-| POST   | `/location`        | Not implemented in holita                               |
-| GET    | `/trips`           | `karmaTrips` (see parameter limitations below)          |
-| POST   | `/trips`           | Not implemented in holita                               |
-| GET    | `/events`          | `karmaEvents` (see parameter limitations below)         |
-| POST   | `/events`          | Not implemented in holita                               |
-| GET    | `/sensors`         | Not implemented in holita                               |
-| POST   | `/sensors`         | Not implemented in holita                               |
-| GET    | `/driving-profile` | `karmaDrivingProfile` (see parameter limitations below) |
-| POST   | `/driving-profile` | Not implemented in holita                               |
-| GET    | `/parameters`      | Not implemented in holita                               |
-| PUT    | `/parameters`      | Not implemented in holita                               |
-| POST   | `/commands`        | Not implemented in holita                               |
-| GET    | `/edata`           | `karmaEdata` (see parameter limitations below)          |
-| GET    | `/black_box/{id}`  | Not implemented in holita                               |
-| GET    | `/queue/{id}`      | Not implemented in holita                               |
-| GET    | `/time-zones`      | `karmaTimeZones` (see parameter limitations below)      |
-| GET    | `/roles`           | `karmaRoles` (see parameter limitations below)          |
+| Method | Path               | Current use                                                              |
+| ------ | ------------------ | ------------------------------------------------------------------------ |
+| GET    | `/version`         | `karmaVersion` (see parameter limitations below)                         |
+| POST   | `/login`           | Internal server authentication                                           |
+| GET    | `/cars`            | `karmaCars` (see parameter limitations below)                            |
+| GET    | `/cars/{id}`       | `karmaCar` (see parameter limitations below)                             |
+| POST   | `/cars`            | Not implemented in holita                                                |
+| PUT    | `/cars/{id}`       | Not implemented in holita                                                |
+| DELETE | `/cars/{id}`       | Not implemented in holita                                                |
+| GET    | `/drivers`         | Not implemented in holita                                                |
+| POST   | `/drivers`         | Not implemented in holita                                                |
+| PUT    | `/drivers/{id}`    | Not implemented in holita                                                |
+| DELETE | `/drivers/{id}`    | Not implemented in holita                                                |
+| GET    | `/projects`        | `karmaProjects` (see parameter limitations below)                        |
+| POST   | `/projects`        | Not implemented in holita                                                |
+| GET    | `/users`           | `karmaUsers` (see parameter limitations below)                           |
+| GET    | `/location`        | `karmaLocation` (see parameter limitations below)                        |
+| POST   | `/location`        | Not implemented in holita                                                |
+| GET    | `/trips`           | `karmaTrips` (see parameter limitations below)                           |
+| POST   | `/trips`           | Not implemented in holita                                                |
+| GET    | `/events`          | `karmaEvents` (see parameter limitations below)                          |
+| POST   | `/events`          | Not implemented in holita                                                |
+| GET    | `/sensors`         | Not implemented in holita                                                |
+| POST   | `/sensors`         | Not implemented in holita                                                |
+| GET    | `/driving-profile` | `karmaDrivingProfile` (see parameter limitations below)                  |
+| POST   | `/driving-profile` | Not implemented in holita                                                |
+| GET    | `/parameters`      | Not implemented in holita                                                |
+| PUT    | `/parameters`      | Not implemented in holita                                                |
+| POST   | `/commands`        | Fixed internal parameter/profile reads and one-definition additive write |
+| GET    | `/edata`           | `karmaEdata` (see parameter limitations below)                           |
+| GET    | `/black_box/{id}`  | Not implemented in holita                                                |
+| GET    | `/queue/{id}`      | Not implemented in holita                                                |
+| GET    | `/time-zones`      | `karmaTimeZones` (see parameter limitations below)                       |
+| GET    | `/roles`           | `karmaRoles` (see parameter limitations below)                           |
 
 ## GET `/version` — Version
 
@@ -248,6 +248,13 @@ Retrieve historical event data with filtering options.
 
 Holita uses GET for one car, date_type=utc, fields[] selections, paired dates, event_type[] codes and internal to_id pagination over message_id. from_id, address, decode, bulk/device/project selection and POST are not exposed.
 
+The separate internal configuration reader fixes `event_type[]=33`, verifies the
+selected car/device identity and UTC window, and reads at most four descending-ID
+pages of up to 500 rows. Each response body is bounded to 2 MiB. It parses supported
+text `401` and `416` messages from `extra`, filtered by an optional message-ID watermark
+before assembly; it is not a general event archive or an arbitrary decode interface.
+See [background configuration operations](../../architecture.md#background-device-configuration-reads).
+
 Direct upstream reads also accept `fields[]=vin` and `fields[]=vbat` to inspect
 voltage across historical messages. Availability on a message is device-dependent;
 see [the observed voltage fields](data-models.md#additional-upstream-voltage-fields).
@@ -326,10 +333,23 @@ Neither GET nor PUT is implemented. These are device configuration parameters, d
 
 Send command message to one or more devices.
 
-Not implemented in holita. Manual single-device eData requests used a one-element
-`car_id` array, a command string and `karma_sid`, and returned numeric queue-ID
-arrays. Selected parameter updates were verified by device readback and subsequent
-measurements; see the [configuration procedure and evidence limits](../edata-simple-protocol-v4.04/parameter-reporting.md).
+Holita constructs only command `301` with payload `0702BC` (parameter read), `1F`
+(profile read), or `02` followed by exactly one 22-byte definition. The internal
+machine endpoints accept a selected `carId` and `expectedDeviceId`, recheck identity
+through `/cars/{id}`, and construct the command themselves. The changing endpoint
+also validates the raw definition against the supplied ID and `0..65000` interval.
+They send a one-element string `car_id` array, the fixed message and the server's
+`karma_sid`; they accept a bounded numeric queue-ID
+array. The adapter never accepts command text from callers and never automatically replays
+a submission after an uncertain transport/authentication result. Fleet persists the
+operation, complete baseline, intended change, queue references, durable marker and
+independent whole-set readback separately from this adapter.
+See [background configuration operations](../../architecture.md#background-device-configuration-reads).
+
+Manual single-device parameter updates were verified independently by device
+readback and subsequent measurements. Implemented additions/interval changes use the
+separate Fleet workflow; public Karma GraphQL queries have no write interface.
+See the [configuration procedure and evidence limits](../edata-simple-protocol-v4.04/parameter-reporting.md).
 This does not establish a universal command catalog, permissions, bulk behavior,
 acknowledgment correlation, idempotency or delivery guarantees.
 

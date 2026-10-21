@@ -84,6 +84,8 @@ interface Capture {
   readonly confirmation?: string;
   /** Wait for operation feedback triggered by the story before capturing it. */
   readonly toast?: boolean;
+  /** Keep fixed shell chrome at the top after a long-page form interaction. */
+  readonly resetScroll?: boolean;
 }
 
 /** One story in light and dark at the given viewports. */
@@ -183,6 +185,36 @@ const captures: readonly Capture[] = [
     bothThemes(`design-system-primeng-coverage--${story}`),
   ),
   ...bothThemes('design-system-shell--desktop', ['desktop', 'mobile']),
+  ...bothThemes('admin-fleet-device-configuration--default', ['desktop', 'mobile']),
+  ...bothThemes('admin-fleet-device-configuration--waiting', ['desktop', 'mobile']),
+  ...(['cobalt', 'ember', 'pine'] as const).flatMap((brand) =>
+    (['compact', 'comfortable'] as const).flatMap((density) =>
+      brand === 'cobalt' && density === 'compact'
+        ? []
+        : bothThemes('admin-fleet-device-configuration--zero-interval-confirmation', [
+            'desktop',
+            'mobile',
+          ]).map((capture) => ({ ...capture, brand, density, resetScroll: true })),
+    ),
+  ),
+  ...[
+    'invalid-interval-focus',
+    'write-failure',
+    'write-waiting',
+    'write-uncertain',
+    'zero-interval-confirmation',
+    'row-action-draft',
+  ].flatMap((story) =>
+    bothThemes(`admin-fleet-device-configuration--${story}`, ['desktop', 'mobile']).map(
+      (capture) => ({ ...capture, resetScroll: true }),
+    ),
+  ),
+  {
+    id: 'admin-fleet-device-configuration--edit-mobile-dark',
+    theme: 'dark',
+    viewports: ['mobile'],
+    resetScroll: true,
+  },
   ...bothThemes('design-system-shell--rail', ['desktop', 'mobile']),
   ...bothThemes('design-system-shell--mobile-navigation-open', ['mobile']),
 ];
@@ -198,6 +230,8 @@ function globalsOf(capture: Capture): string {
 for (const capture of captures) {
   for (const viewportName of capture.viewports) {
     test(`${capture.id} ${globalsOf(capture)} ${viewportName}`, async ({ page, storybook }) => {
+      const browserErrors: string[] = [];
+      page.on('pageerror', (error) => browserErrors.push(error.message));
       const viewport = viewports[viewportName];
       await page.clock.setFixedTime(new Date('2026-10-18T07:00:00Z'));
       await page.setViewportSize(viewport);
@@ -219,6 +253,41 @@ for (const capture of captures) {
       });
       // Fixture quiet alone can precede lazy routing; the preview marks every completed story.
       await expect(page.locator('#storybook-root')).toHaveAttribute('data-story-ready', capture.id);
+      // Interactive configuration stories must reach the reviewed outcome before capture.
+      if (capture.id === 'admin-fleet-device-configuration--zero-interval-confirmation') {
+        await expect(
+          page.getByRole('checkbox', { name: /I intend to use the special zero interval/ }),
+        ).toBeChecked();
+        await expect(
+          page.getByText('Confirm the special meaning of interval zero.', { exact: true }),
+        ).toHaveCount(0);
+      }
+      if (capture.id === 'admin-fleet-device-configuration--row-action-draft') {
+        await expect(page.getByRole('spinbutton', { name: /New reporting interval/ })).toHaveValue(
+          '45',
+        );
+        await expect(
+          page.getByRole('alertdialog', { name: 'Unsaved changes', exact: true }),
+        ).toBeHidden();
+      }
+      if (capture.id === 'admin-fleet-device-configuration--invalid-interval-focus') {
+        await expect(
+          page.getByRole('spinbutton', { name: /New reporting interval/ }),
+        ).toHaveAttribute('aria-invalid', 'true');
+      }
+      if (capture.id === 'admin-fleet-device-configuration--edit-mobile-dark') {
+        await expect(page.getByRole('spinbutton', { name: /New reporting interval/ })).toHaveValue(
+          '60',
+        );
+      }
+      if (capture.id === 'admin-fleet-device-configuration--write-failure') {
+        await expect(
+          page.getByText('The parameter change could not be confirmed as saved.', { exact: false }),
+        ).toBeVisible();
+        await expect(page.getByRole('spinbutton', { name: /New reporting interval/ })).toHaveValue(
+          '60',
+        );
+      }
       if (capture.confirmation) {
         await expect(page.getByRole('alertdialog', { name: capture.confirmation })).toBeVisible();
       }
@@ -228,6 +297,38 @@ for (const capture of captures) {
         // Pause dismissal through the real hover behavior while both captures are taken.
         await toast.hover();
       }
+      if (capture.resetScroll) {
+        await page.evaluate(() => {
+          window.scrollTo({ top: 0, behavior: 'instant' });
+        });
+      }
+      if (
+        capture.id.startsWith('admin-fleet-device-configuration--') &&
+        viewportName === 'mobile'
+      ) {
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+          viewport.width,
+        );
+        const action = page.getByRole('button', { name: 'Edit interval 65000', exact: true });
+        const bounds = await action.boundingBox();
+        expect(bounds).not.toBeNull();
+        if (bounds) {
+          expect(bounds.x).toBeGreaterThanOrEqual(0);
+          expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.width);
+          const interval = await page
+            .getByRole('row')
+            .filter({ has: action })
+            .getByRole('cell')
+            .nth(1)
+            .boundingBox();
+          expect(interval).not.toBeNull();
+          if (interval) {
+            expect(interval.x).toBeGreaterThanOrEqual(0);
+            expect(interval.x + interval.width).toBeLessThanOrEqual(bounds.x);
+          }
+        }
+      }
+      expect(browserErrors).toEqual([]);
       const name = [
         capture.id,
         capture.theme,

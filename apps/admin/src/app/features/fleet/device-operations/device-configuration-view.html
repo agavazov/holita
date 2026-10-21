@@ -1,0 +1,383 @@
+<holita-page-header
+  [eyebrow]="text().eyebrow"
+  [title]="text().title"
+  [description]="device()?.imei ?? null"
+  [backLink]="backLink()"
+  [backLabel]="text().back"
+>
+  @if (state() === 'ready') {
+    <button
+      headerActions
+      pButton
+      type="button"
+      severity="secondary"
+      [disabled]="refreshing() || requesting()"
+      (click)="refresh.emit()"
+    >
+      {{ text().refresh }}
+    </button>
+  }
+</holita-page-header>
+
+@if (state() === 'loading') {
+  <p role="status">{{ text().loading }}</p>
+} @else if (state() === 'error') {
+  <holita-empty-state kind="error" [title]="text().loadError" [description]="loadError()">
+    <button emptyActions pButton type="button" (click)="refresh.emit()">{{ text().retry }}</button>
+  </holita-empty-state>
+} @else if (state() === 'not-found' || state() === 'invalid-id') {
+  <holita-empty-state
+    kind="not-found"
+    [title]="state() === 'invalid-id' ? text().invalidId : text().notFound"
+  />
+} @else {
+  @if (pollError(); as error) {
+    <p-message severity="warn" role="status">{{ error }}</p-message>
+  }
+  <section class="app-card">
+    <h2 class="app-card__title app-card__header">{{ text().identity }}</h2>
+    <dl class="app-facts">
+      <div>
+        <dt>{{ text().imei }}</dt>
+        <dd class="app-mono">{{ device()?.imei }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().vehicle }}</dt>
+        <dd>{{ device()?.vehicle?.licensePlate ?? text().unassigned }}</dd>
+      </div>
+    </dl>
+  </section>
+
+  <section class="app-card app-form-section">
+    <h2 class="app-card__title">{{ text().requestTitle }}</h2>
+    <p class="app-muted">{{ text().requestHint }}</p>
+    @if (!enabled()) {
+      <p-message severity="info">{{ text().disabled }}</p-message>
+    } @else if (pending()) {
+      <p-message severity="info" role="status">{{ text().pending }}</p-message>
+    }
+    @if (enabled()) {
+      @if (targetsState() === 'loading') {
+        <p role="status">{{ text().targetsLoading }}</p>
+      } @else if (targetsState() === 'error') {
+        <p-message severity="error" role="alert">{{
+          targetsError() ?? text().targetsError
+        }}</p-message>
+        <button pButton type="button" severity="secondary" (click)="retryTargets.emit()">
+          {{ text().retry }}
+        </button>
+      } @else if (!targets().length) {
+        <p class="app-muted">{{ text().targetsEmpty }}</p>
+      }
+      <form class="app-form-section" [formGroup]="form" (ngSubmit)="submit()">
+        <holita-form-field
+          [label]="text().target"
+          controlId="configuration-target"
+          [hint]="text().targetHint"
+          [required]="true"
+          [error]="form.controls.carId.touched && !target() ? text().targetRequired : null"
+        >
+          <p-select
+            inputId="configuration-target"
+            formControlName="carId"
+            [options]="targetOptions()"
+            optionLabel="label"
+            optionValue="id"
+            [placeholder]="text().targetPlaceholder"
+            [ariaLabel]="text().target"
+            [ariaFilterLabel]="text().filterTargets"
+            [filter]="true"
+            appendTo="body"
+            [invalid]="form.controls.carId.touched && !target()"
+            [pt]="selectPt"
+          />
+        </holita-form-field>
+        @if (target(); as target) {
+          <dl class="app-facts">
+            <div>
+              <dt>{{ text().karmaCarId }}</dt>
+              <dd class="app-mono">{{ target.id }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().karmaDeviceId }}</dt>
+              <dd class="app-mono">{{ target.deviceId }}</dd>
+            </div>
+          </dl>
+          <label class="device-configuration-confirm" for="configuration-confirm">
+            <input id="configuration-confirm" type="checkbox" formControlName="confirmed" />
+            <span>{{ text().targetConfirmation }}</span>
+          </label>
+        }
+        @if (requestError(); as error) {
+          <p-message severity="error" role="alert">{{ error }}</p-message>
+        }
+        <div>
+          <button pButton type="submit" [disabled]="unavailable() || !target() || !form.valid">
+            {{ requesting() ? text().requesting : text().read }}
+          </button>
+        </div>
+      </form>
+    }
+  </section>
+
+  <section class="app-card app-form-section" aria-labelledby="configuration-snapshot-title">
+    <div class="device-configuration-section-heading">
+      <h2 #snapshotTitle id="configuration-snapshot-title" class="app-card__title" tabindex="-1">
+        {{ snapshotHeading() }}
+      </h2>
+      @if (viewingHistoricalSnapshot()) {
+        <button pButton type="button" severity="secondary" (click)="showLatestSnapshot()">
+          {{ text().latestSnapshotAction }}
+        </button>
+      }
+    </div>
+    @if (viewingHistoricalSnapshot()) {
+      <p-message severity="info">{{ text().historicalSnapshotHint }}</p-message>
+    }
+    <p class="app-muted">{{ text().resultHint }}</p>
+    @if (snapshotOperation(); as operation) {
+      <p class="app-muted">
+        {{ text().snapshotReadbackAt }}: {{ operation.completedAt | holitaDateTime }}
+      </p>
+      <holita-table-panel
+        [heading]="text().parameters"
+        [headingLevel]="3"
+        [total]="parameters().length"
+        [view]="parameters().length ? { kind: 'rows' } : { kind: 'empty' }"
+        [emptyTitle]="text().emptySnapshot"
+      >
+        <p-table
+          [value]="parameters()"
+          dataKey="parameterId"
+          [scrollable]="true"
+          [rowTrackBy]="trackParameter"
+        >
+          <ng-template #header>
+            <tr>
+              <th scope="col" [attr.aria-label]="text().parameterId">
+                {{ text().snapshotIdColumn }}
+              </th>
+              <th scope="col" class="app-num">{{ text().snapshotIntervalColumn }}</th>
+              <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
+                <span class="app-visually-hidden">{{ text().parameterActions }}</span>
+              </th>
+            </tr>
+          </ng-template>
+          <ng-template #body let-parameter>
+            <tr>
+              <td class="app-mono">{{ parameter.parameterId }}</td>
+              <td class="app-num">{{ parameter.intervalSeconds | holitaNumber }}</td>
+              <td class="app-col-actions" pFrozenColumn alignFrozen="right">
+                <button
+                  pButton
+                  type="button"
+                  severity="secondary"
+                  [text]="true"
+                  [disabled]="intervalEditingUnavailable()"
+                  [attr.aria-label]="text().editInterval + ' ' + parameter.parameterId"
+                  (click)="editInterval(parameter.parameterId)"
+                >
+                  {{ text().editIntervalAction }}
+                </button>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </holita-table-panel>
+      <details class="device-configuration-details">
+        <summary>{{ text().snapshotDetailsSummary }}</summary>
+        <dl class="app-facts">
+          <div>
+            <dt>{{ text().imei }}</dt>
+            <dd class="app-mono">{{ operation.deviceImei }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().karmaCarId }}</dt>
+            <dd class="app-mono device-configuration-wrap">{{ operation.karmaCarId }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().karmaDeviceId }}</dt>
+            <dd class="app-mono device-configuration-wrap">{{ operation.karmaDeviceId }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().operationId }}</dt>
+            <dd class="app-mono device-configuration-wrap">{{ operation.id }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().configurationId }}</dt>
+            <dd class="app-mono device-configuration-wrap">
+              {{ operation.configuration?.configurationId }}
+            </dd>
+          </div>
+        </dl>
+        <p class="app-muted">{{ text().unknownParameters }}</p>
+        <h3 class="app-card__title">{{ text().definition }}</h3>
+        <dl class="device-configuration-definitions">
+          @for (parameter of parameters(); track parameter.parameterId) {
+            <div>
+              <dt>{{ text().parameterId }} {{ parameter.parameterId }}</dt>
+              <dd class="app-mono device-configuration-wrap">{{ parameter.definitionHex }}</dd>
+            </div>
+          }
+        </dl>
+      </details>
+    } @else {
+      <p class="app-muted">{{ text().noSnapshot }}</p>
+    }
+  </section>
+
+  @if (device(); as device) {
+    <holita-device-parameter-editor
+      [deviceId]="device.id"
+      [enabled]="writesEnabled()"
+      [target]="target()"
+      [latestBaseline]="lastSnapshot()"
+      [presets]="presets()"
+      [busy]="
+        viewingHistoricalSnapshot() ||
+        pending() ||
+        requesting() ||
+        refreshing() ||
+        targetsState() !== 'ready'
+      "
+      [submitting]="requesting()"
+      [acceptedOperationId]="acceptedOperationId()"
+      [requestError]="writeError()"
+      [serverFieldErrors]="writeFieldErrors()"
+      (addition)="requestAddition.emit($event)"
+      (intervalUpdate)="requestIntervalUpdate.emit($event)"
+      (draftChanged)="writeDraftChanged.emit()"
+    />
+  }
+
+  <section class="app-card app-form-section" aria-labelledby="configuration-history-title">
+    <h2 class="app-card__title" id="configuration-history-title">{{ text().history }}</h2>
+    <p class="app-muted">{{ text().historyHint }}</p>
+    @for (operation of operations(); track operation.id) {
+      <article
+        class="device-configuration-operation"
+        [attr.aria-labelledby]="'configuration-operation-' + operation.id"
+      >
+        <header class="device-configuration-section-heading">
+          <div>
+            <h3 class="app-card__title" [id]="'configuration-operation-' + operation.id">
+              {{ text().kinds[operation.kind] }}
+            </h3>
+            <p class="app-muted">
+              <span>{{ text().requestedAt }}: </span
+              ><time [attr.datetime]="operation.requestedAt">{{
+                operation.requestedAt | holitaDateTime
+              }}</time>
+            </p>
+          </div>
+          <p-tag
+            [severity]="statusSeverity(operation.status)"
+            [value]="text().statuses[operation.status]"
+          />
+        </header>
+        <dl class="app-facts">
+          <div>
+            <dt>{{ text().operationPhase }}</dt>
+            <dd>{{ text().phases[operation.phase] }}</dd>
+          </div>
+          @if (operation.parameterId !== null) {
+            <div>
+              <dt>{{ text().intendedChange }}</dt>
+              <dd>
+                {{ operation.parameterId | holitaNumber }} ·
+                {{ operation.previousIntervalSeconds | holitaNumber }} →
+                {{ operation.intervalSeconds | holitaNumber }} {{ text().secondsShort }}
+              </dd>
+            </div>
+          }
+        </dl>
+        @if (operation.errorCode) {
+          <p>
+            {{ text().operationError }}:
+            <span class="app-mono device-configuration-wrap">{{ operation.errorCode }}</span>
+          </p>
+        }
+        <details class="device-configuration-details">
+          <summary>{{ text().operationDetailsSummary }}</summary>
+          <dl class="app-facts">
+            @if (operation.baselineOperationId) {
+              <div>
+                <dt>{{ text().baselineOperation }}</dt>
+                <dd class="app-mono device-configuration-wrap">
+                  {{ operation.baselineOperationId }}
+                </dd>
+              </div>
+            }
+            @if (operation.writeDispatchedAt) {
+              <div>
+                <dt>{{ text().writeSentAt }}</dt>
+                <dd>{{ operation.writeDispatchedAt | holitaDateTime }}</dd>
+              </div>
+            }
+            @if (operation.catalogId) {
+              <div>
+                <dt>{{ text().editor.catalog }}</dt>
+                <dd class="app-mono device-configuration-wrap">{{ operation.catalogId }}</dd>
+              </div>
+            }
+            @if (operation.profileId !== null) {
+              <div>
+                <dt>{{ text().profileId }}</dt>
+                <dd>{{ operation.profileId | holitaNumber }}</dd>
+              </div>
+            }
+            <div>
+              <dt>{{ text().dispatchedAt }}</dt>
+              <dd>{{ operation.dispatchedAt | holitaDateTime }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().completedAt }}</dt>
+              <dd>{{ operation.completedAt | holitaDateTime }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().deadlineAt }}</dt>
+              <dd>{{ operation.deadlineAt | holitaDateTime }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().karmaCarId }}</dt>
+              <dd class="app-mono">{{ operation.karmaCarId }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().karmaDeviceId }}</dt>
+              <dd class="app-mono">{{ operation.karmaDeviceId }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().queueIds }}</dt>
+              <dd class="app-mono">{{ operation.queueIds.join(', ') || '—' }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().responses }}</dt>
+              <dd>{{ operation.observationCount | holitaNumber }}</dd>
+            </div>
+            <div class="app-facts--wide">
+              <dt>{{ text().operationId }}</dt>
+              <dd class="app-mono device-configuration-wrap">{{ operation.id }}</dd>
+            </div>
+          </dl>
+        </details>
+        @if (operation.writeUncertain) {
+          <p-message severity="warn">{{
+            operation.status === 'COMPLETE'
+              ? text().writeVerifiedAfterUncertainty
+              : text().writeUncertain
+          }}</p-message>
+        }
+        @if (operation.status === 'FAILED' || operation.status === 'TIMED_OUT') {
+          <p class="app-muted">{{ text().errors.generic }}</p>
+        }
+        @if (operation.configuration) {
+          <button pButton type="button" severity="secondary" (click)="showSnapshot(operation.id)">
+            {{ text().viewSnapshot }}
+          </button>
+        }
+      </article>
+    } @empty {
+      <p class="app-muted">{{ text().noRequests }}</p>
+    }
+  </section>
+}

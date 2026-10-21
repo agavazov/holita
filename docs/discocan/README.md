@@ -7,8 +7,12 @@ contract, plus Branch regional preferences and thresholds — and the connected 
 admin in `apps/admin`, including General settings. The shared
 `apps/karma-client` provides read-only truck lists/details, eData, location, trips, events,
 driving profile and account views for projects, time zones, API version, users and roles.
-Activity rows are holita demo data; telemetry ingestion from devices, tracking and measurement
-processing are not implemented.
+Fleet also persists background eData parameter reads, single predefined-parameter additions
+and existing-interval changes through Karma; open a Device's Diagnostics, then **eData settings**.
+Writes are separately disabled by default and require a complete baseline, fresh
+preflight and full readback verification. Requests, response fragments and complete snapshots
+survive page refresh and application restart. Activity rows remain holita demo data;
+telemetry ingestion from devices, tracking and measurement processing are not implemented.
 
 - [Contributor instructions](instructions.md).
 - [Implemented requirements](requirements.md).

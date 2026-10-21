@@ -6,8 +6,9 @@ questions and possible future work are recorded separately in the
 
 ## Method coverage
 
-The integration consumes twelve GET method/path pairs and internal `POST /login`.
-The other nineteen declared operations are absent from holita:
+The integration consumes twelve GET method/path pairs, internal `POST /login` and
+`POST /commands` for fixed parameter/profile reads and one additive definition. The other eighteen
+declared operations are absent from holita:
 
 | Area                            | Declared operations absent from holita                    |
 | ------------------------------- | --------------------------------------------------------- |
@@ -17,7 +18,6 @@ The other nineteen declared operations are absent from holita:
 | Alternative telemetry transport | POST `/location`, `/trips`, `/events`, `/driving-profile` |
 | Sensors                         | GET/POST `/sensors`                                       |
 | Device configuration            | GET/PUT `/parameters`                                     |
-| Device commands                 | POST `/commands`                                          |
 | Accident reports                | GET `/black_box/{id}`                                     |
 | Queue status                    | GET `/queue/{id}`                                         |
 
@@ -58,7 +58,7 @@ Only an empty driver list was observed. Driver and accident-report models remain
 unverified. Manual eData command submissions, single-ID queue reads and device
 configuration responses have limited observations documented in the
 [configuration reference](../edata-simple-protocol-v4.04/parameter-reporting.md).
-They do not establish complete command/queue schemas or holita write support.
+They do not establish complete command/queue schemas or general device-command support.
 
 The adapter ignores additional object fields rather than preserving an arbitrary
 raw JSON payload. A single malformed row generally fails the complete read. Driving
@@ -74,7 +74,7 @@ reconciled. Nullable finite values are preserved, without deriving units or labe
   path arrays leave serialization ambiguities; unknown methods are not promoted
   to established operations solely because the helper offers them.
 - Trips/profile wall-clock timezone, DST behavior, date-bound inclusivity and trip
-  overlap rules are unspecified. Response timestamp checks validate shape, not full
+  overlap rules are unspecified. Public response timestamp checks validate shape, not full
   calendar validity. `pdt` semantics are unresolved.
 - IDs and cursor ordering assume positive safe integers and an ascending source
   batch. Broader ID ranges or reordered batches are rejected rather than coerced.
@@ -88,30 +88,52 @@ reconciled. Nullable finite values are preserved, without deriving units or labe
   not re-check date inclusion against unresolved start/stop interval semantics.
 - Event-code meanings, sensor definitions, parameter units/scales, speed/distance/
   duration units, score ranges, weights and night-driving definitions are not
-  established. `extra` is preserved as text without automatic decoding.
+  established. Public history `extra` is preserved as text without automatic decoding;
+  the internal adapter parses only supported parameter `401` and profile `416` layouts.
 - Missing and empty states differ by operation. A direct backend eData query does
   not independently verify car existence, unlike location/trips/events/profile.
 
 ## Access and operations limits
 
 All authenticated holita Tenants intentionally see the same configured account.
-Karma project memberships do not enforce Tenant/Branch filtering. The demo session
+Karma project memberships do not enforce Tenant/Branch filtering. Fleet's persisted
+configuration operations are separately scoped to their Fleet Tenant/Branch
+Device and selected Karma identity; they do not change the shared Karma query scope
+or establish a verified general `device_id` to IMEI mapping. The demo session
 is not production user identity, membership authorization or a role-permission
 model. A future change to access scope requires an explicit domain decision;
 the present documentation does not authorize it.
 
 The integration has one in-memory session, bounded login renewal and sanitized
 failures. It has no provider logout, proactive session refresh, persistent sessions,
-rate-limit scheduler, arbitrary-failure retry/backoff, circuit breaker or streaming
-body-size bound. Health does not probe Karma. A valid JSON error can use HTTP 200,
+rate-limit scheduler, arbitrary-failure retry/backoff or circuit breaker. Public
+query response reads have no streaming body-size bound; the internal configuration
+reader bounds target responses to 64 KiB and event responses to 2 MiB. Health does
+not probe Karma. A valid JSON error can use HTTP 200,
 so transport success is distinct from usable business data.
 
-No upstream writes, device queries, commands or queue-driven workflows are
-implemented in holita. Scoped manual eData configuration requests have been
-verified independently through the upstream API; their procedure and applicability
-are documented separately. GET `/parameters?query=...` remains unverified and is
-not assumed passive because the help labels it Query Device. Read permission
-does not establish command, configuration, create or delete permission.
+The implemented [background configuration operations](../../architecture.md#background-device-configuration-reads)
+submit fixed `301` reads (`0702BC`, `1F`) and one `02` definition. The internal machine API
+validates the selected target, ID/interval fields and bounded `401`/`416` observations;
+Fleet owns eligibility, complete baseline, persistent intent and readback verification.
+Missing fragments, conflicts and incomplete
+scan coverage do not become complete configuration evidence. Time-window scans
+remain subject to unknown provider retention and late-arrival behavior. No queue
+status poll or queue-to-device acknowledgment correlation is implemented. A timeout
+or lost submission response stays uncertain and does not trigger automatic replay.
+
+Writes default to disabled. Additions require the exact eligible Monitor catalog and a
+fresh observed profile; updates preserve captured fields, including unknown IDs. Both
+require conservative 120-second preflight and independent whole-set verification after
+the single write attempt. A local ten-minute deadline cannot cancel delayed vendor queue
+delivery. A confirmed definition is not proof of available/calibrated measurements or
+zero-interval silence. There are no entity writes, global/profile changes, deletion,
+arbitrary commands, reset, firmware or server-destination controls. Scoped manual
+procedures and installation-specific evidence remain documented separately.
+GET `/parameters?query=...` remains unverified and is not assumed passive because
+the help labels it Query Device. Public read permission does not establish
+configuration, create or delete permission; the internal endpoints require a
+separate machine secret.
 
 See the [backlog](../../../todo/karma-api-v2.md) for the questions required to
-resolve these limits. Current architecture and API contracts remain unchanged.
+resolve these limits.

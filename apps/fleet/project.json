@@ -3,7 +3,7 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
   "sourceRoot": "apps/fleet/src",
-  "implicitDependencies": ["core"],
+  "implicitDependencies": ["core", "karma-client"],
   "tags": ["type:app", "scope:fleet"],
   "targets": {
     "test": {

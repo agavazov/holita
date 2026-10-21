@@ -12,11 +12,11 @@ and, where needed, `database/` and `clock/` hold the supporting code. These dire
 runtime packages. Prisma schemas, migrations and generated output retain their existing
 owning-application locations.
 
-| Application  | Feature modules                                                                                                                | Integration ownership                                                                                                                   |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Core         | Tenants, Branches                                                                                                              | Tenant/Branch API; one local DatabaseModule provides Prisma to both features                                                            |
-| Fleet        | Vehicles, Devices, Drivers, Vehicle groups, Telemetry, Trips, Events, Service tasks, Overview, Settings, offline eData catalog | `integrations/core/` owns Branch existence checks; one local DatabaseModule provides Fleet Prisma; `clock/` provides the business clock |
-| Karma Client | Cars, eData, Location, History, References, Accounts                                                                           | `integrations/karma/` owns external HTTP and the shared upstream account session; no database                                           |
+| Application  | Feature modules                                                                                                                                   | Integration ownership                                                                                                                                                                              |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Core         | Tenants, Branches                                                                                                                                 | Tenant/Branch API; one local DatabaseModule provides Prisma to both features                                                                                                                       |
+| Fleet        | Vehicles, Devices, Device operations, Drivers, Vehicle groups, Telemetry, Trips, Events, Service tasks, Overview, Settings, offline eData catalog | `integrations/core/` owns Branch existence checks; `integrations/karma/` owns internal device-operation HTTP; one local DatabaseModule provides Fleet Prisma; `clock/` provides the business clock |
+| Karma Client | Cars, eData, Location, History, References, Accounts, internal device configuration operations                                                    | `integrations/karma/` owns external HTTP and the shared upstream account session; no database                                                                                                      |
 
 Fleet feature modules import each other only in one direction: Telemetry and Events are used by
 Vehicles, Devices (Telemetry only), Drivers and Trips; Trips by Drivers; Service tasks by
@@ -25,9 +25,13 @@ the scoped KPI, group activity and daily distance queries, composing the concret
 service urgency and settings SQL in its repository. Cross-module calls pass the already
 verified Tenant/Branch scope.
 
-The offline Fleet catalog remains a CLI feature, without a Nest runtime module or public API.
-Core is the Tenant/Branch service, not a common implementation library. Fleet and Karma Client
-have no direct integration or shared business implementation.
+The offline Fleet catalog importer remains a CLI feature, without an import/editing API.
+DeviceOperations reads its eligible predefined presets through the Fleet-owned repository.
+Core is the Tenant/Branch service, not a common implementation library. Fleet's durable
+device-operations module calls Karma Client's fixed machine-authenticated internal HTTP endpoints
+for reads and a single-definition parameter change.
+Fleet owns operation persistence and the Nest scheduler; Karma Client retains the external
+account connection without a database. Applications share no implementation or Prisma client.
 
 Angular keeps business pages, concrete API services, GraphQL operations and tests under
 `features/`. Fleet and Karma Client own separate route arrays composed by `app.routes.ts`
@@ -56,6 +60,7 @@ flowchart LR
   Gateway --> Fleet
   Gateway --> KarmaClient
   KarmaClient --> KarmaAPI[Karma API]
+  Fleet -->|Fixed device configuration operations| KarmaClient
   Core --> CoreDB[(Core database)]
   Fleet --> FleetDB[(Fleet database)]
   Fleet -->|Branch existence on create and settings upsert| Core
@@ -71,7 +76,10 @@ Health endpoints prove application availability without opening database connect
 
 Fleet also owns the [shared Simple eData vendor catalog](../discocan/erm-resources/simple-edata-catalog/README.md).
 Its offline extractor and local import CLI preserve versioned reference data independently
-of Tenant/Branch business records; it has no GraphQL or device-command interface.
+of Tenant/Branch business records. The scoped DeviceOperations API exposes eligible presets
+and owns durable reads/additions/interval updates; the catalog itself does not send commands.
+See [device configuration operations](../discocan/architecture.md#background-device-configuration-reads)
+for freshness, one-attempt writes, verification and vendor-queue limits.
 
 Gateway contains the official Apollo Router 2.18.0 host binary, integrated into development and tests.
 It consumes the same generated static supergraph and routes directly to Core, Fleet and
@@ -91,7 +99,7 @@ Router HTTP 400 error bodies without the application request ID. Business messag
 and diagnostic wording follow the pinned official Router binary without a custom Rust build.
 See [Router setup and error behavior](../development.md#apollo-router).
 
-Nx records admin → gateway, gateway → core/fleet/karma-client and fleet → core runtime dependencies.
+Nx records admin → gateway, gateway → core/fleet/karma-client and fleet → core/karma-client runtime dependencies.
 ESLint independently prohibits application implementation imports. Shared manifests, lockfile,
 configuration, ignore rules, workflows, Node version, SDL and named operations are task inputs.
 Generation restores ignored outputs before dependent lint/typecheck/build/test commands.

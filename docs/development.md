@@ -115,6 +115,14 @@ Angular loopback origin. Database URLs belong only to Core/Fleet. Karma Client h
 [Karma Client configuration](discocan/development.md#karma-client). No upload/storage
 configuration is required.
 
+Background eData parameter operations additionally use `FLEET_DEVICE_OPERATIONS_ENABLED` and
+`FLEET_KARMA_INTERNAL_URL` in Fleet, and the same private `KARMA_INTERNAL_TOKEN` (at least
+32 characters) in Fleet and Karma Client. The worker is disabled by default; Fleet's separate
+`FLEET_DEVICE_CONFIGURATION_WRITES_ENABLED` also defaults to `false` and requires the worker
+to be enabled. Keep the token
+in process environments or ignored runtime `.env` files, never admin configuration.
+See [device configuration setup](discocan/development.md#background-device-configuration-reads).
+
 ## Apollo Router
 
 The Gateway workspace includes a standalone [Apollo Router 2.18.0](https://github.com/apollographql/router/releases/tag/v2.18.0)
@@ -417,7 +425,9 @@ Core/Fleet own their schemas, generated Prisma clients and reviewed SQL migratio
 retains its initial migration; Fleet retains its initial migration and adds the shared
 eData reference catalog, the Branch rename, the master data (`20261018100000_fleet_master_data`:
 Vehicle/Device columns, Driver, VehicleGroup) and the activity tables
-(`20261018110000_fleet_activity`: VehicleStatusSample, Trip, FleetEvent, ServiceTask) through
+(`20261018110000_fleet_activity`: VehicleStatusSample, Trip, FleetEvent, ServiceTask), durable
+device reads (`20261021000000_device_configuration_reads`) and parameter change intent/phases
+(`20261021100000_device_parameter_changes`) through
 additive migrations. Branch and every
 Fleet business table place tenantId immediately after id. Fleet foreign keys include
 Tenant/Branch, and natural-key uniqueness includes Tenant/Branch. `db:migrate` deploys Core then Fleet; `db:generate` generates both ignored

@@ -2331,7 +2331,8 @@
         "operationId": "postCommands",
         "description": "Send command message to one or more devices. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "POST",
-        "x-holita-implemented": false,
+        "x-holita-implemented": true,
+        "x-holita-implementation-scope": "Internal machine-authenticated parameter/profile reads and one additive 22-byte parameter definition; Fleet owns persisted eligibility, baseline and readback verification. No arbitrary command interface.",
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [],
         "x-authentication": {

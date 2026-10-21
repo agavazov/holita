@@ -731,5 +731,69 @@ query KarmaAccountViews {
 
 These queries use the existing signed Gateway session, never browser-held Karma credentials
 or a Branch header. Source expiry timezone/active semantics and role permissions are not
-interpreted. Drivers, populated sensors, device configuration, queue and accident reports
+interpreted. Drivers, populated sensors, queue and accident reports
 have no implemented views because their populated schemas or valid identifiers are unavailable.
+
+## Background device configuration reads
+
+Apply Fleet migrations with `npm run db:migrate --workspace @holita/fleet` and regenerate
+contracts with `npm run codegen`. Configure these entries from the root `.env.example`:
+
+- Fleet: `FLEET_DEVICE_OPERATIONS_ENABLED=true` and `FLEET_KARMA_INTERNAL_URL`, default
+  `http://127.0.0.1:11014` without a path, query or embedded credentials.
+- Fleet: `FLEET_DEVICE_CONFIGURATION_WRITES_ENABLED=true` additionally enables parameter
+  additions and interval changes. It defaults to `false` and requires background operations
+  to be enabled. Import the verified Monitor 9.56 catalog through the
+  [local catalog procedure](erm-resources/simple-edata-catalog/README.md) to offer additions;
+  interval changes can use captured definitions without a catalog entry.
+- Fleet and Karma Client: the same random private `KARMA_INTERNAL_TOKEN`, at least
+  32 characters, supplied through their process environment or ignored runtime `.env` files.
+- Karma Client: its existing API account settings. Browser/demo tokens are not accepted by
+  the internal endpoint, and the machine token must never appear in browser configuration.
+
+Restart both application processes after changing environment configuration. The scheduler
+runs inside Fleet; leaving the browser does not stop it, but stopping Fleet pauses processing.
+Both flags default to `false`; saved requests and snapshots remain readable when disabled.
+Turning off the write flag prevents unsent changes; already marked submissions continue
+readback verification while background operations remain enabled. Turning off background
+operations stops the worker. Keep the configured Karma account stable while requests are active.
+
+In Devices, open Diagnostics and choose **eData settings**. Select the intended Karma
+truck, inspect its upstream device ID and confirm the target before requesting a read.
+The page shows saved state immediately and can be closed/reloaded while the server waits.
+It displays the latest 20 requests and an independent last complete snapshot, preserving
+unknown IDs, full definitions and zero reporting intervals. Changing an IMEI stops using
+that old hardware's snapshot as the latest result; historical requests retain the old IMEI.
+Devices with saved configuration-operation history cannot be deleted.
+
+The confirmed parameter table precedes the change editor. Readback identifiers and original
+hex definitions are available under **Readback details and raw definitions**; request history
+keeps status, phase and requested changes visible, with queue and correlation metadata under
+**Technical operation details**. **Show latest confirmed settings** returns from a historical
+snapshot; editing is available only against the latest matching baseline.
+
+With writes enabled, use **Change eData parameters** after a complete read for that exact
+target. Choose **Add a parameter** from the eligible Monitor presets or **Change an existing
+interval** from the saved definition list, including unknown IDs. Enter an integer from
+`0` to `65000` seconds. Review the selected target, baseline request, parameter ID and old/new
+interval before confirming **Save background change**. The baseline request ID, preserved raw
+definition and catalog provenance are available under **Technical change details**.
+Zero requires its own confirmation:
+Monitor describes it as **not in use**, and readback does not prove measurement silence.
+Changing the target or baseline invalidates the draft; unsaved drafts use a navigation guard.
+
+Fleet rechecks the observed profile for additions and rereads the whole parameter set before
+the sole additive write. Every baseline definition must match, and the conservative phase/
+response age must remain within 120 seconds. Expired evidence causes a safe fresh read.
+The server sends one full 22-byte definition with operation `02`; an interval update changes
+only its last two bytes. An independent complete read must verify the intended change and
+preserve every other definition before the operation completes. Stored history shows its
+kind, phase and uncertainty; it survives navigation, browser reload and Fleet restart.
+
+The ten-minute deadline does not cancel a command in Karma's queue. An uncertain or timed-out
+write may arrive later and is never automatically replayed. If a browser request loses its
+response, refresh saved operations before submitting again. If verification remains incomplete,
+read and reconcile the device state before another change. Parameter values, global settings,
+profile changes, deletion, restoration and measurement verification have no automated editor.
+Demo login identifies a Tenant, not a named operator or production write permission.
+See [operation persistence and evidence limits](architecture.md#background-device-configuration-reads).

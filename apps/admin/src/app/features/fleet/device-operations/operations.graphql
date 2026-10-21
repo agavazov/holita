@@ -1,0 +1,90 @@
+fragment AdminDeviceConfigurationOperation on FleetDeviceOperation {
+  id
+  deviceId
+  deviceImei
+  karmaCarId
+  karmaDeviceId
+  kind
+  phase
+  baselineOperationId
+  parameterId
+  intervalSeconds
+  previousIntervalSeconds
+  catalogId
+  profileId
+  writeDispatchedAt
+  writeUncertain
+  status
+  requestedAt
+  dispatchedAt
+  completedAt
+  nextCheckAt
+  deadlineAt
+  errorCode
+  queueIds
+  observationCount
+  coverageComplete
+  configuration {
+    configurationId
+    parameters {
+      parameterId
+      intervalSeconds
+      definitionHex
+    }
+  }
+}
+
+query AdminDeviceConfigurationPage($deviceId: ID!) {
+  fleetDevice(id: $deviceId) {
+    id
+    imei
+    vehicleId
+    vehicle {
+      id
+      licensePlate
+    }
+  }
+  fleetDeviceOperationsEnabled
+  fleetDeviceConfigurationWritesEnabled
+  fleetDeviceParameterPresets {
+    catalogId
+    catalogLabel
+    parameterId
+    name
+    profileIds
+  }
+  fleetDeviceOperations(deviceId: $deviceId) {
+    ...AdminDeviceConfigurationOperation
+  }
+  fleetDeviceConfigurationSnapshot(deviceId: $deviceId) {
+    ...AdminDeviceConfigurationOperation
+  }
+}
+
+query AdminDeviceConfigurationTargets {
+  karmaCars {
+    id
+    deviceId
+    carNumber
+  }
+}
+
+mutation AdminRequestDeviceConfigurationRead($input: RequestFleetDeviceConfigurationReadInput!) {
+  requestFleetDeviceConfigurationRead(input: $input) {
+    ...AdminDeviceConfigurationOperation
+  }
+}
+
+mutation AdminRequestDeviceParameterAddition($input: RequestFleetDeviceParameterAdditionInput!) {
+  requestFleetDeviceParameterAddition(input: $input) {
+    ...AdminDeviceConfigurationOperation
+  }
+}
+
+mutation AdminRequestDeviceParameterIntervalUpdate(
+  $input: RequestFleetDeviceParameterIntervalUpdateInput!
+) {
+  requestFleetDeviceParameterIntervalUpdate(input: $input) {
+    ...AdminDeviceConfigurationOperation
+  }
+}

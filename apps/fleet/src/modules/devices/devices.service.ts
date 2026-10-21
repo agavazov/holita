@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   HttpException,
   Injectable,
   Logger,
@@ -325,7 +326,7 @@ export class DevicesService {
     return this.completeOne(scope, row);
   }
 
-  /** Devices with telemetry history can be deleted: samples keep the IMEI as a snapshot. */
+  /** Telemetry keeps an IMEI snapshot; saved configuration reads protect their Device. */
   async delete(context: RequestContext, id: string): Promise<DeviceResult> {
     const scope = requireScope(context);
     const recordId = uuid(id, 'id');
@@ -333,6 +334,9 @@ export class DevicesService {
     try {
       row = await this.devices.delete(scope, recordId);
     } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+        throw new ConflictException('Device has saved configuration read history');
+      }
       this.writeError(error);
     }
     return this.completeOne(scope, row);

@@ -2,7 +2,9 @@
 
 Fleet owns a shared, versioned vendor reference catalog, independent of Tenant/Branch.
 Vehicle/Device records retain their existing Tenant/Branch isolation. The catalog has
-no GraphQL endpoint or admin screen and does not generate or send device commands.
+no import/editing API or standalone catalog screen. Fleet DeviceOperations exposes
+eligible predefined options in its configuration editor and owns any device operation;
+the offline catalog tools do not send commands.
 [v9.56](v9.56/README.md) is the initial extracted reference.
 
 ## Sources and prerequisites
@@ -135,6 +137,30 @@ Mappings list Monitor/workbook candidates matched by ID, preserving each categor
 They do not assert category equivalence, units, CAN headers/bit layouts, Karma IDs,
 hardware support or live measurements. Baud codes and profile names remain independent
 facts. This procedure does not load settings into a device.
+
+## Runtime parameter presets
+
+The [durable configuration flow](../../architecture.md#background-device-configuration-reads)
+uses only the imported Monitor 9.56 EXE SHA-256
+`01dd13e50c55fdf84078ce298bde72320d55bee458baa4c0d2a06fca7c0ca1a0`, extractor
+`1.0.0`, schema `1`. `fleetDeviceParameterPresets` returns an ID only when its
+Monitor-source candidates have one nonempty name, no row issues and membership in
+at least one profile's set. Repeated category rows with the same name are retained
+in the source catalog; conflicting names exclude the ID from selectable presets.
+Workbook conversion fields are not used to construct a CAN decoding definition.
+
+Before an addition, Fleet reads the selected device profile and requires membership
+in that profile's set, rereads the complete baseline and rechecks eligibility at
+dispatch. It uses the
+[offline-verified Monitor predefined constructor](../edata-simple-protocol-v4.04/parameter-reporting.md#monitor-956-predefined-parameter-construction)
+for exactly one additive definition. Another imported version is not automatically
+eligible for this constructor. There is no inferred firmware compatibility, signal
+availability or calibration guarantee.
+
+Existing interval changes use captured device definitions, including unknown IDs,
+and do not require a catalog candidate. The server changes only the final two
+interval bytes, then verifies the full returned configuration. Catalog import,
+configuration readback and measurement verification remain distinct evidence.
 
 ## Focused validation
 

@@ -799,6 +799,11 @@ forms, save/close and partial actions; backend persistence, filtering and derive
 verified by database and real-Gateway browser checks. The sample `Examples/...` hosts remain
 separate and demonstrate the presentation components without importing into the app.
 
+`Admin/Fleet/Device configuration` renders the durable eData settings workflow through the
+same routed container. Its compact parameter table keeps interval actions frozen at the right;
+native disclosures retain raw definitions and operation metadata. Stories cover reads, writes,
+confirmation, retained drafts and historical snapshots; see the [focused device checks](discocan/testing.md#background-device-configuration-read-checks).
+
 `Examples/Authentication/Login` renders the existing application `Login` without a shell.
 `storybook/login-fixtures.ts` answers its `AdminTenants`, `AdminDemoLogin` and `AdminBranches`
 operations through the same fixture HTTP transport. It covers Tenant changes, sequential Branch

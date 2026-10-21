@@ -19,6 +19,7 @@ describe('fleet initial database migration', () => {
         'FleetEvent',
         'ServiceTask',
         'FleetSettings',
+        'FleetDeviceOperation',
       ]) {
         const columns = await connection.query<{ column_name: string; is_nullable: string }>(
           'SELECT column_name, is_nullable FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 ORDER BY ordinal_position',
@@ -41,6 +42,8 @@ describe('fleet initial database migration', () => {
         { migration_name: '20261018110000_fleet_activity' },
         { migration_name: '20261020110000_device_stock' },
         { migration_name: '20261020220000_fleet_settings' },
+        { migration_name: '20261021000000_device_configuration_reads' },
+        { migration_name: '20261021100000_device_parameter_changes' },
       ]);
     } finally {
       try {

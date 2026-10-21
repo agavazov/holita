@@ -13,7 +13,7 @@ describe('local GraphQL contracts', () => {
     expect(result.clientSdl).toContain('branch: Branch!');
     expect(result.clientSdl).not.toContain('_entities');
     const operations = await readOperations(result.apiSchema);
-    expect(operations).toHaveLength(17);
+    expect(operations).toHaveLength(18);
     expect(operations.map((operation) => operation.location)).toEqual(
       expect.arrayContaining([
         'apps/admin/src/app/features/karma-client/cars/operations.graphql',
@@ -32,6 +32,7 @@ describe('local GraphQL contracts', () => {
         'apps/admin/src/app/features/fleet/maintenance/operations.graphql',
         'apps/admin/src/app/features/fleet/settings/operations.graphql',
         'apps/admin/src/app/features/fleet/devices/operations.graphql',
+        'apps/admin/src/app/features/fleet/device-operations/operations.graphql',
         'apps/fleet/src/integrations/core/operations.graphql',
       ]),
     );
@@ -58,6 +59,9 @@ describe('local GraphQL contracts', () => {
       'FleetServiceSummary',
       'FleetDriverScorecard',
       'FleetSettings',
+      'FleetDeviceOperation',
+      'FleetDeviceConfiguration',
+      'FleetDeviceOperationStatus',
       'FleetDistanceUnit',
       'FleetVolumeUnit',
       'UpdateFleetSettingsInput',
@@ -74,6 +78,12 @@ describe('local GraphQL contracts', () => {
       'fleetDailyDistance',
       'fleetDataClock',
       'fleetDevice',
+      'fleetDeviceConfigurationSnapshot',
+      'fleetDeviceConfigurationWritesEnabled',
+      'fleetDeviceOperation',
+      'fleetDeviceOperations',
+      'fleetDeviceOperationsEnabled',
+      'fleetDeviceParameterPresets',
       'fleetDeviceSummary',
       'fleetDevices',
       'fleetDriver',
@@ -137,6 +147,9 @@ describe('local GraphQL contracts', () => {
       'demoLogin',
       'recordFleetOdometerReading',
       'reopenFleetAlert',
+      'requestFleetDeviceConfigurationRead',
+      'requestFleetDeviceParameterAddition',
+      'requestFleetDeviceParameterIntervalUpdate',
       'resolveFleetAlert',
       'updateBranchName',
       'updateFleetDevice',

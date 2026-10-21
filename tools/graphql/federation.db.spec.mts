@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from '@jest/globals';
 import { randomUUID } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
 import pg from 'pg';
 import { createFederationFixture } from './federation-fixture.mjs';
 
@@ -21,8 +22,16 @@ describe('Fleet through the actual federation boundary', () => {
   let token: string;
   let fixture: Awaited<ReturnType<typeof createFederationFixture>>;
   let cleanup: (() => Promise<void>) | undefined;
+  let disposed = false;
   beforeAll(async () => {
-    fixture = await createFederationFixture();
+    fixture = await createFederationFixture({
+      deviceOperations: true,
+      deviceConfigurationWrites: true,
+    });
+    if (disposed) {
+      await fixture.close();
+      return;
+    }
     cleanup = fixture.close;
     const response = await fetch(fixture.url, {
       method: 'POST',
@@ -37,8 +46,9 @@ describe('Fleet through the actual federation boundary', () => {
       throw new Error('Missing demo session token');
     }
     token = value;
-  });
+  }, 180_000);
   afterAll(async () => {
+    disposed = true;
     await cleanup?.();
   });
   async function query(
@@ -1114,4 +1124,369 @@ describe('Fleet through the actual federation boundary', () => {
       data: { branch: { id: sandbox, name: 'Sandbox' } },
     });
   });
+
+  it('persists a queued device configuration read across a Fleet restart and completes through the real scheduler', async () => {
+    const created = await query('mutation{createFleetDevice(input:{imei:"000123456789012"}){id}}');
+    const deviceId = record(record(record(created).data).createFleetDevice).id;
+    if (typeof deviceId !== 'string') {
+      throw new Error('Missing device ID');
+    }
+    const login = await query(
+      'mutation{demoLogin(tenantId:"01000000-0000-4000-8000-000000000002"){token}}',
+    );
+    const otherToken = record(record(record(login).data).demoLogin).token;
+    if (typeof otherToken !== 'string') {
+      throw new Error('Missing second tenant session');
+    }
+    const request =
+      'mutation($input:RequestFleetDeviceConfigurationReadInput!){requestFleetDeviceConfigurationRead(input:$input){id deviceId status queueIds configuration{configurationId}}}';
+    const input = { deviceId, karmaCarId: '41', expectedKarmaDeviceId: '000123456789012' };
+    const providerReads = fixture.karma.requests.length;
+    for (const [branchId, sessionToken] of [
+      [sandbox, token],
+      [discordia, otherToken],
+    ]) {
+      expect(await query(request, { input }, branchId, fixture.url, sessionToken)).toMatchObject({
+        errors: [{ extensions: { code: 'NOT_FOUND' } }],
+      });
+    }
+    expect(fixture.karma.requests).toHaveLength(providerReads);
+    for (const authorization of [undefined, `Bearer ${token}`]) {
+      const response = await fetch(
+        new URL('/internal/device-configuration/request', fixture.karmaClientUrl),
+        {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            ...(authorization ? { authorization } : {}),
+          },
+          body: JSON.stringify({ carId: '41', expectedDeviceId: '000123456789012' }),
+          signal: AbortSignal.timeout(5000),
+        },
+      );
+      await response.text();
+      expect(response.status).toBe(401);
+    }
+    expect(fixture.karma.configurationCommands).toEqual([]);
+    const requestedAt = Date.now();
+    const queued = record(
+      record(record(await query(request, { input })).data).requestFleetDeviceConfigurationRead,
+    );
+    expect(Date.now() - requestedAt).toBeLessThan(5000);
+    expect(queued).toMatchObject({ deviceId, status: 'QUEUED', queueIds: [], configuration: null });
+    const id = queued.id;
+    if (typeof id !== 'string') {
+      throw new Error('Missing operation ID');
+    }
+    const read =
+      'query($id:ID!){fleetDeviceOperation(id:$id){id deviceId status queueIds observationCount coverageComplete configuration{configurationId parameters{parameterId intervalSeconds definitionHex}} errorCode}}';
+    async function operation() {
+      return record(record(record(await query(read, { id })).data).fleetDeviceOperation);
+    }
+    async function waitForStatus(status: string, until: number) {
+      let latest: Record<string, unknown> = {};
+      while (Date.now() < until) {
+        latest = await operation();
+        if (latest.status === status) {
+          return latest;
+        }
+        await delay(200);
+      }
+      throw new Error(
+        `Device operation did not reach ${status}; last status ${String(latest.status)}`,
+      );
+    }
+    await waitForStatus('WAITING', Date.now() + 20_000);
+    expect(fixture.karma.configurationCommands).toEqual(['30,1,19,0,19,301,0,1,1,0702BC']);
+    expect(await operation()).toMatchObject({
+      id,
+      status: 'WAITING',
+      queueIds: ['9001'],
+      configuration: null,
+    });
+    for (const [branchId, sessionToken] of [
+      [sandbox, token],
+      [discordia, otherToken],
+    ]) {
+      expect(await query(read, { id }, branchId, fixture.url, sessionToken)).toEqual({
+        data: { fleetDeviceOperation: null },
+      });
+      expect(
+        await query(
+          'query($deviceId:ID!){fleetDeviceOperations(deviceId:$deviceId){id}}',
+          { deviceId },
+          branchId,
+          fixture.url,
+          sessionToken,
+        ),
+      ).toMatchObject({ errors: [{ extensions: { code: 'NOT_FOUND' } }] });
+    }
+    await fixture.restartFleet();
+    expect(await operation()).toMatchObject({
+      id,
+      deviceId,
+      status: 'WAITING',
+      queueIds: ['9001'],
+      configuration: null,
+    });
+    fixture.karma.completeConfigurationRead();
+    const completed = await waitForStatus('COMPLETE', Date.now() + 35_000);
+    expect(completed).toMatchObject({
+      id,
+      deviceId,
+      status: 'COMPLETE',
+      queueIds: ['9001'],
+      observationCount: 2,
+      coverageComplete: true,
+      errorCode: null,
+      configuration: {
+        configurationId: '1001',
+        parameters: [
+          {
+            parameterId: 662,
+            intervalSeconds: 30,
+            definitionHex: '0296000000000000000000000000000000000000001E',
+          },
+          {
+            parameterId: 153,
+            intervalSeconds: 0,
+            definitionHex: '00990000000000000000000000000000000000000000',
+          },
+        ],
+      },
+    });
+    expect(fixture.karma.configurationCommands).toHaveLength(1);
+    expect(await operation()).toEqual(completed);
+  }, 60_000);
+
+  it('adds a parameter through an uncertain write and restart, then preserves unknown definitions during an interval update', async () => {
+    const unknownDefinition = [
+      'FDE8',
+      '12345678',
+      '10',
+      '20',
+      '0003',
+      '0007',
+      'FFFB',
+      'A5A5',
+      '1234',
+      '02',
+      'E0',
+      '000A',
+    ].join('');
+    fixture.karma.setConfigurationDefinitions([
+      '0296000000000000000000000000000000000000001E',
+      '00990000000000000000000000000000000000000000',
+      unknownDefinition,
+    ]);
+    fixture.karma.setConfigurationAutomaticResponses(true);
+    const listed = record(
+      record(await query('{fleetDevices(search:"000123456789012"){items{id}}}')).data,
+    ).fleetDevices;
+    const items = record(listed).items;
+    if (!Array.isArray(items)) {
+      throw new Error('Missing device list');
+    }
+    const existing: unknown = items[0];
+    const created = existing
+      ? record(existing)
+      : record(
+          record(
+            record(await query('mutation{createFleetDevice(input:{imei:"000123456789012"}){id}}'))
+              .data,
+          ).createFleetDevice,
+        );
+    const deviceId = created.id;
+    if (typeof deviceId !== 'string') {
+      throw new Error('Missing device ID');
+    }
+    const target = { deviceId, karmaCarId: '41', expectedKarmaDeviceId: '000123456789012' };
+    const operationQuery = `query($id:ID!){fleetDeviceOperation(id:$id){
+      id deviceId status kind phase baselineOperationId parameterId intervalSeconds
+      writeDispatchedAt writeUncertain errorCode configuration{configurationId parameters{parameterId intervalSeconds definitionHex}}
+    }}`;
+    async function operation(id: string) {
+      return record(record(record(await query(operationQuery, { id })).data).fleetDeviceOperation);
+    }
+    async function waitFor(
+      id: string,
+      predicate: (row: Record<string, unknown>) => boolean,
+      timeout: number,
+    ) {
+      const until = Date.now() + timeout;
+      let latest: Record<string, unknown> = {};
+      while (Date.now() < until) {
+        latest = await operation(id);
+        if (predicate(latest)) {
+          return latest;
+        }
+        if (['FAILED', 'TIMED_OUT'].includes(String(latest.status))) {
+          throw new Error(`Device change failed: ${String(latest.errorCode)}`);
+        }
+        await delay(200);
+      }
+      throw new Error(
+        `Device change did not settle: ${String(latest.status)}/${String(latest.phase)}/${String(latest.errorCode)}`,
+      );
+    }
+    async function waitForCommand(command: string, previous: number) {
+      const until = Date.now() + 35_000;
+      while (Date.now() < until) {
+        if (
+          fixture.karma.configurationCommands.filter((value) => value === command).length > previous
+        ) {
+          return;
+        }
+        await delay(100);
+      }
+      throw new Error('Expected fixed device command was not submitted');
+    }
+    function operationId(body: unknown, field: string) {
+      const id = record(record(record(body).data)[field]).id;
+      if (typeof id !== 'string') {
+        throw new Error('Missing saved operation');
+      }
+      return id;
+    }
+    const baselineId = operationId(
+      await query(
+        'mutation($input:RequestFleetDeviceConfigurationReadInput!){requestFleetDeviceConfigurationRead(input:$input){id}}',
+        { input: target },
+      ),
+      'requestFleetDeviceConfigurationRead',
+    );
+    await waitFor(baselineId, (row) => row.status === 'COMPLETE', 45_000);
+    const presets = record(
+      record(await query('{fleetDeviceParameterPresets{catalogId parameterId profileIds}}')).data,
+    ).fleetDeviceParameterPresets;
+    if (!Array.isArray(presets)) {
+      throw new Error('Missing catalog choices');
+    }
+    const preset = presets
+      .map((value: unknown) => record(value))
+      .find((value) => value.parameterId === 781);
+    if (!preset || typeof preset.catalogId !== 'string') {
+      throw new Error('Missing catalog-backed battery preset');
+    }
+    const addInput = {
+      ...target,
+      baselineOperationId: baselineId,
+      catalogId: preset.catalogId,
+      parameterId: 781,
+      intervalSeconds: 60,
+    };
+    const addition =
+      'mutation($input:RequestFleetDeviceParameterAdditionInput!){requestFleetDeviceParameterAddition(input:$input){id status}}';
+    const beforeForeign = fixture.karma.configurationCommands.length;
+    expect(await query(addition, { input: addInput }, sandbox)).toMatchObject({
+      errors: [{ extensions: { code: 'NOT_FOUND' } }],
+    });
+    expect(fixture.karma.configurationCommands).toHaveLength(beforeForeign);
+    const profileCommand = '30,1,19,0,19,301,0,1,1,1F';
+    const readCommand = '30,1,19,0,19,301,0,1,1,0702BC';
+    const previousProfile = fixture.karma.configurationCommands.filter(
+      (value) => value === profileCommand,
+    ).length;
+    const previousRead = fixture.karma.configurationCommands.filter(
+      (value) => value === readCommand,
+    ).length;
+    fixture.karma.setConfigurationReadsHeld(true);
+    fixture.karma.setConfigurationWriteUncertain(true);
+    const additionId = operationId(
+      await query(addition, { input: addInput }),
+      'requestFleetDeviceParameterAddition',
+    );
+    await waitForCommand(profileCommand, previousProfile);
+    fixture.karma.setConfigurationReadsHeld(false);
+    fixture.karma.setConfigurationReadsHeld(true);
+    await waitForCommand(readCommand, previousRead);
+    fixture.karma.completeConfigurationRead();
+    await waitFor(
+      additionId,
+      (row) => row.phase === 'VERIFY_PARAMETERS' && row.writeUncertain === true,
+      60_000,
+    );
+    await fixture.restartFleet();
+    expect(await operation(additionId)).toMatchObject({
+      kind: 'ADD_PARAMETER',
+      writeUncertain: true,
+      parameterId: 781,
+      intervalSeconds: 60,
+    });
+    fixture.karma.setConfigurationReadsHeld(false);
+    const added = await waitFor(additionId, (row) => row.status === 'COMPLETE', 45_000);
+    expect(added).toMatchObject({
+      kind: 'ADD_PARAMETER',
+      baselineOperationId: baselineId,
+      writeUncertain: true,
+      configuration: {
+        parameters: expect.arrayContaining([
+          { parameterId: 65000, intervalSeconds: 10, definitionHex: unknownDefinition },
+          {
+            parameterId: 781,
+            intervalSeconds: 60,
+            definitionHex: '030D000000000000000000000000000000000000003C',
+          },
+        ]),
+      },
+    });
+    const writes = () =>
+      fixture.karma.configurationCommands.filter((value) =>
+        value.startsWith('30,1,19,0,19,301,0,1,1,02'),
+      );
+    expect(writes()).toEqual([
+      '30,1,19,0,19,301,0,1,1,02030D000000000000000100010000000000000000003C',
+    ]);
+    fixture.karma.setConfigurationWriteUncertain(false);
+    const updateId = operationId(
+      await query(
+        'mutation($input:RequestFleetDeviceParameterIntervalUpdateInput!){requestFleetDeviceParameterIntervalUpdate(input:$input){id}}',
+        {
+          input: {
+            ...target,
+            baselineOperationId: additionId,
+            parameterId: 65000,
+            intervalSeconds: 0,
+          },
+        },
+      ),
+      'requestFleetDeviceParameterIntervalUpdate',
+    );
+    const updated = await waitFor(updateId, (row) => row.status === 'COMPLETE', 90_000);
+    expect(updated).toMatchObject({
+      kind: 'UPDATE_INTERVAL',
+      baselineOperationId: additionId,
+      parameterId: 65000,
+      intervalSeconds: 0,
+      configuration: {
+        parameters: expect.arrayContaining([
+          {
+            parameterId: 65000,
+            intervalSeconds: 0,
+            definitionHex: unknownDefinition.slice(0, 40) + '0000',
+          },
+          {
+            parameterId: 781,
+            intervalSeconds: 60,
+            definitionHex: '030D000000000000000000000000000000000000003C',
+          },
+          {
+            parameterId: 662,
+            intervalSeconds: 30,
+            definitionHex: '0296000000000000000000000000000000000000001E',
+          },
+          {
+            parameterId: 153,
+            intervalSeconds: 0,
+            definitionHex: '00990000000000000000000000000000000000000000',
+          },
+        ]),
+      },
+    });
+    expect(writes()).toHaveLength(2);
+    expect(writes()[1]).toBe('30,1,19,0,19,301,0,1,1,02' + unknownDefinition.slice(0, 40) + '0000');
+    expect(await query(operationQuery, { id: updateId }, sandbox)).toEqual({
+      data: { fleetDeviceOperation: null },
+    });
+  }, 240_000);
 });

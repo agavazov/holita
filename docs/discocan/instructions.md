@@ -13,7 +13,8 @@ and the relevant Fleet documents.
 
 - The [Simple eData vendor catalog](erm-resources/simple-edata-catalog/README.md) is
   shared manufacturer reference data scoped by catalog version, without Tenant/Branch
-  columns. Its local offline importer has no GraphQL or device-command interface.
+  columns. Its local offline importer has no API; DeviceOperations exposes only eligible
+  predefined presets from the verified catalog for its controlled addition flow.
   Fleet business data retains mandatory Tenant/Branch isolation.
 
 - Follow the actual [Vehicles resolver/service/repository](../../apps/fleet/src/modules/vehicles/vehicles.resolver.ts) and its [SDL](../../apps/fleet/src/modules/vehicles/vehicles.graphql). Use @Parent on a federation reference parameter when combining it with Nest parameter decorators; always resolve Vehicle/Device references through scoped service access.
@@ -27,6 +28,21 @@ and the relevant Fleet documents.
 - Duplicates are BAD_USER_INPUT `fieldErrors` from a scoped pre-check plus `rethrowUniqueViolation` with the generated unique index names; foreign-key-blocked deletions are CONFLICT with an entity message.
 - Branch discovery belongs to the shared [Core Branch foundation](../ecommerce/branches.md).
   Keep the domains' business workflows in their own documentation.
+
+- Background parameter-configuration reads and changes belong to Fleet's concrete DeviceOperations
+  module and database. Keep public reads Tenant/Branch-scoped; the trusted scheduler claims
+  due rows across scopes and fences every write with the stored scope and lease token.
+  Karma Client only executes its fixed machine-authenticated protocol. Preserve saved
+  response fragments, baseline, write marker and uncertainty across restarts; never automatically
+  replay an ambiguous submission or expose arbitrary command strings. Additions require the
+  exact eligible Monitor catalog and observed profile; interval changes preserve every
+  captured definition byte except the final two interval bytes, including unknown IDs.
+  Keep the 120-second conservative preflight age, lease/deadline budget checks, one-definition
+  `02` write and independent whole-set verification with separate profile/parameter watermarks.
+  Interval zero means Monitor's special not-in-use setting, not deletion or proven silence.
+  Never treat queue acceptance, delivery state or an expired local deadline as proof that
+  a write was applied, rejected or cancelled. Follow the
+  [implemented operation contract](architecture.md#background-device-configuration-reads).
 
 ## Angular admin (apps/admin)
 

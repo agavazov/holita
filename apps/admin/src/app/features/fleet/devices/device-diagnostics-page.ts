@@ -8,7 +8,8 @@ import {
   type OnInit,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ButtonDirective } from 'primeng/button';
 import { EMPTY, Subject, catchError, startWith, switchMap } from 'rxjs';
 import type { AdminDeviceDetailsFragment } from '../../../../generated/graphql/operations';
 import { requestError } from '../../../core/graphql/request-error';
@@ -22,7 +23,7 @@ import { devicesText } from './i18n/messages';
 
 @Component({
   selector: 'holita-device-diagnostics-page',
-  imports: [RouteDrawer, FormatDateTimePipe],
+  imports: [RouteDrawer, FormatDateTimePipe, ButtonDirective, RouterLink],
   providers: [DevicesApi],
   template: `<holita-route-drawer
     [title]="text().drawer.diagnostics"
@@ -89,6 +90,13 @@ import { devicesText } from './i18n/messages';
         </div>
       </dl>
     }
+    @if (state() === 'ready' && record()) {
+      <div drawerFooter class="app-drawer-actions">
+        <a pButton severity="secondary" [routerLink]="configurationLink()">{{
+          text().drawer.configuration
+        }}</a>
+      </div>
+    }
   </holita-route-drawer>`,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -106,6 +114,11 @@ export class DeviceDiagnosticsPage implements OnInit {
     'devices',
   ];
   readonly record = signal<AdminDeviceDetailsFragment | null>(null);
+  readonly configurationLink = computed(() => [
+    ...this.listLink,
+    this.record()?.id ?? '',
+    'configuration',
+  ]);
   readonly state = signal<RouteDrawerState>('loading');
   private readonly error = signal<unknown>(null);
   protected readonly retry = new Subject<void>();

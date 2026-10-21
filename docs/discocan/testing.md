@@ -294,3 +294,53 @@ complete account arrays across two Tenants/Branches with controlled renewal, fai
 states. Browser cases cover local paging beyond 50, all-field dialogs/focus, menu navigation,
 reload/language, retained failures and desktop/mobile light/dark captures. Use the native
 `--testNamePattern='Karma users'` Gateway selector for this behavior.
+
+## Background device configuration read checks
+
+Use the existing guarded PostgreSQL prerequisites, then run focused native checks:
+
+```bash
+npm run test:fleet -- device-operations.service.spec.ts device-operations.processor.spec.ts device-write-processor.spec.ts device-parameter-change.spec.ts device-read-evidence.spec.ts karma-device-reads.client.spec.ts --skip-nx-cache
+npm run test:karma-client -- device-configuration.spec.ts configuration-transport.spec.ts parameter-write.spec.ts --skip-nx-cache
+npm run test:fleet:db -- device-operations.db.spec.ts device-parameter-changes.db.spec.ts initial-migration.db.spec.ts branch-migration.db.spec.ts constraints.db.spec.ts
+npm run test:gateway:db -- federation.db.spec.mts
+npm run test:admin -- --include="app/features/fleet/device-operations/**/*.spec.ts" --skip-nx-cache
+npm run test:smoke:admin -- angular-device-configuration.smoke.spec.mts
+```
+
+The persistence checks restart the Nest application against the same isolated schema,
+recover a lease, retain multipart evidence and test Tenant/Branch isolation. The write
+DB suite preserves the exact unknown baseline, verifies split evidence across restart
+with writing disabled, recovers an expired write-marker lease without replay, enforces
+cross-kind target locking/scoped baseline references and checks catalog eligibility. Write unit
+checks cover whole-baseline comparison, eligible profiles, unknown-definition preservation,
+zero/65000 intervals, conservative 120-second freshness, stale-reply rereads, capacity and
+post-marker lease/deadline budget. The provider checks fixed `1F`/single-`02` packets,
+cross-field definition validation, watermark filtering, separate `416` evidence, machine
+authentication and uncertainty without replay.
+
+The federation fixture uses real Fleet/Karma Client processes and a controlled upstream,
+releases delayed reads after a Fleet restart, applies one additive definition, simulates an
+accepted write with a lost response and verifies a normalized addition without another write.
+It also updates an unknown ID's interval while preserving all other bytes and definitions.
+The browser fixture verifies saved requests and results across navigation and reload,
+adds a preset with separate zero confirmation, guards a dirty draft and updates an unknown
+interval through uncertain-response verification. These checks send
+no live device commands and do not establish compatibility with every hardware/firmware.
+
+`Admin/Fleet/Device configuration` stories cover waiting, uncertain, timed-out, confirmed,
+empty, disabled and error states, independent write availability, saved write failures,
+historical snapshot selection, raw-definition disclosures and a row action that opens the
+real editor. Interactive stories verify zero confirmation, confirmation reset after an intent
+change and retaining a dirty draft when navigation is cancelled.
+The parameter editor's focused cases cover baseline/target
+changes, catalog choices, previews, zero confirmation, invalid/unchanged intervals, dirty
+navigation and captured-scope submission. Visual candidates require human review; do not create or
+replace approved baselines automatically. Scheduler execution and queue transmission alone
+are not proof of a complete configuration response.
+
+The configuration stories propagate play failures. Static visual captures wait for the
+interaction's final controls and validation state, rather than relying only on the preview's
+render-completion marker. Mobile captures check page width and ensure the interval and edit
+action do not overlap. The zero-interval draft also covers all three brands and both densities
+in light/dark desktop/mobile variants.

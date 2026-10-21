@@ -106,6 +106,59 @@ export async function availablePort(): Promise<number> {
   return port;
 }
 
+async function seedDeviceParameterCatalog(databaseUrl: string, schemaName: string) {
+  const connection = new pg.Client({ connectionString: databaseUrl });
+  await connection.connect();
+  const schema = pg.escapeIdentifier(schemaName);
+  const id = randomUUID();
+  try {
+    await connection.query('BEGIN');
+    await connection.query(
+      `INSERT INTO ${schema}."EdataCatalog"
+       ("id", "sourceSha256", "extractorVersion", "schemaVersion", "packageLabel", "contentSha256", "metadata")
+       VALUES ($1, $2, '1.0.0', 1, 'Monitor 9.56 fixture', $3, '{}')`,
+      [id, '01dd13e50c55fdf84078ce298bde72320d55bee458baa4c0d2a06fca7c0ca1a0', '0'.repeat(64)],
+    );
+    await connection.query(
+      `INSERT INTO ${schema}."EdataCatalogSource" ("catalogId", "key", "kind", "evidence")
+       VALUES ($1, 'monitor', 'monitor', '{}')`,
+      [id],
+    );
+    await connection.query(
+      `INSERT INTO ${schema}."EdataCatalogParameter"
+       ("catalogId", "key", "sourceKey", "parameterId", "category", "name", "details")
+       VALUES ($1, 'monitor:0', 'monitor', 781, '3', 'Battery Voltage (Starlink)', '{"issues":[]}')`,
+      [id],
+    );
+    await connection.query(
+      `INSERT INTO ${schema}."EdataCatalogCategory" ("catalogId", "vendorId", "name")
+       VALUES ($1, 3, 'FMS fixture')`,
+      [id],
+    );
+    await connection.query(
+      `INSERT INTO ${schema}."EdataCatalogSet" ("catalogId", "vendorId", "details")
+       VALUES ($1, 135, '{}')`,
+      [id],
+    );
+    await connection.query(
+      `INSERT INTO ${schema}."EdataCatalogSetMember" ("catalogId", "setId", "position", "parameterId")
+       VALUES ($1, 135, 0, 781)`,
+      [id],
+    );
+    await connection.query(
+      `INSERT INTO ${schema}."EdataCatalogProfile" ("catalogId", "vendorId", "setId", "categoryId", "name")
+       VALUES ($1, 343, 135, 3, 'FMS Parameters (250k)')`,
+      [id],
+    );
+    await connection.query('COMMIT');
+  } catch (error) {
+    await connection.query('ROLLBACK');
+    throw error;
+  } finally {
+    await connection.end();
+  }
+}
+
 export async function startRouter(options: {
   adminOrigin: string;
   subgraphUrls: { core: string; fleet: string; 'karma-client': string };
@@ -362,6 +415,8 @@ export async function createFederationFixture(
     adminOrigin?: string;
     fleetEnabled?: boolean;
     observeSubgraphs?: boolean;
+    deviceOperations?: boolean;
+    deviceConfigurationWrites?: boolean;
   } = {},
 ) {
   config({
@@ -408,31 +463,42 @@ export async function createFederationFixture(
 
     const fleetDatabase = await prepareDatabase('fleet');
     cleanup.push(fleetDatabase.close);
+    if (options.deviceConfigurationWrites) {
+      await seedDeviceParameterCatalog(fleetDatabase.databaseUrl, fleetDatabase.schema);
+    }
     let core = await startApplication('core', { CORE_DATABASE_URL: coreDatabase.url });
     cleanup.push(() => core.stop());
     const coreObserver = await observeRequests(core.url);
     cleanup.push(coreObserver.close);
     const coreUrl = options.observeSubgraphs === false ? core.url : coreObserver.url;
-    const fleetPort = await availablePort();
-    const fleetEnv = {
-      ADMIN_ORIGINS: options.adminOrigin ?? 'http://127.0.0.1:11000',
-      ADMIN_ORIGIN: options.adminOrigin ?? 'http://127.0.0.1:11000',
-      FLEET_DATABASE_URL: fleetDatabase.url,
-      CORE_GRAPHQL_URL: coreUrl,
-      FLEET_ENABLED: String(options.fleetEnabled ?? true),
-    };
-    let fleet = await startApplication('fleet', fleetEnv, fleetPort);
-    cleanup.push(() => fleet.stop());
-    const fleetObserver = await observeRequests(fleet.url);
-    cleanup.push(fleetObserver.close);
+    const internalToken = 'holita-fixture-device-configuration-token';
     const karma = await createKarmaFixture();
     cleanup.push(karma.close);
     const karmaClient = await startApplication('karma-client', {
       KARMA_API_URL: karma.url,
       KARMA_USER: 'fixture-user',
       KARMA_PASSWORD: 'fixture-password',
+      KARMA_INTERNAL_TOKEN: internalToken,
     });
     cleanup.push(karmaClient.stop);
+    const fleetEnv = {
+      ADMIN_ORIGINS: options.adminOrigin ?? 'http://127.0.0.1:11000',
+      ADMIN_ORIGIN: options.adminOrigin ?? 'http://127.0.0.1:11000',
+      FLEET_DATABASE_URL: fleetDatabase.url,
+      CORE_GRAPHQL_URL: coreUrl,
+      FLEET_ENABLED: String(options.fleetEnabled ?? true),
+      FLEET_DEVICE_OPERATIONS_ENABLED: String(
+        options.deviceOperations ?? options.deviceConfigurationWrites ?? false,
+      ),
+      FLEET_DEVICE_CONFIGURATION_WRITES_ENABLED: String(options.deviceConfigurationWrites ?? false),
+      FLEET_KARMA_INTERNAL_URL: new URL(karmaClient.url).origin,
+      KARMA_INTERNAL_TOKEN: internalToken,
+    };
+    const fleetPort = await availablePort();
+    let fleet = await startApplication('fleet', fleetEnv, fleetPort);
+    cleanup.push(() => fleet.stop());
+    const fleetObserver = await observeRequests(fleet.url);
+    cleanup.push(fleetObserver.close);
     const subgraphUrls = {
       core: coreUrl,
       fleet: options.observeSubgraphs === false ? fleet.url : fleetObserver.url,
@@ -464,6 +530,10 @@ export async function createFederationFixture(
       fleetDatabaseUrl: fleetDatabase.databaseUrl,
       fleetSchema: fleetDatabase.schema,
       fleetRequests: fleetObserver.requests,
+      restartFleet: async () => {
+        await fleet.stop();
+        fleet = await startApplication('fleet', fleetEnv, fleet.port);
+      },
       setFleetEnabled: async (enabled: boolean) => {
         await fleet.stop();
         fleet = await startApplication(

@@ -30,6 +30,9 @@
       </section>
     } @else {
       @switch (scope.resource) {
+        @case ('device-configuration') {
+          <holita-device-configuration-page [branch]="scope.branch" [language]="scope.language" />
+        }
         @case ('general') {
           <holita-general-settings-page [branch]="scope.branch" [language]="scope.language" />
         }

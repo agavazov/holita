@@ -11,11 +11,13 @@ import { HistoryModule } from './modules/history/history.module.js';
 import { EdataModule } from './modules/edata/edata.module.js';
 import { HealthController } from './health/health.controller.js';
 import { AccountsModule } from './modules/accounts/accounts.module.js';
+import { DeviceConfigurationModule } from './modules/device-configuration/device-configuration.module.js';
 
 @Module({
   imports: [
     AccountsModule,
     CarsModule,
+    DeviceConfigurationModule,
     EdataModule,
     HistoryModule,
     LocationModule,

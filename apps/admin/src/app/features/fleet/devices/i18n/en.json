@@ -80,6 +80,7 @@
     "partialFailure": "Failed records: {count}."
   },
   "drawer": {
+    "configuration": "eData settings",
     "demoLabel": "Demo features",
     "demoDescription": "Installation and diagnostics use sample data; changes apply to this demonstration only.",
     "createTitle": "Register device",

@@ -1,0 +1,119 @@
+enum FleetDeviceOperationStatus {
+  QUEUED
+  SUBMITTING
+  WAITING
+  COMPLETE
+  TIMED_OUT
+  FAILED
+  UNKNOWN
+}
+
+enum FleetDeviceOperationKind {
+  READ_CONFIGURATION
+  ADD_PARAMETER
+  UPDATE_INTERVAL
+}
+
+enum FleetDeviceOperationPhase {
+  READ_PROFILE
+  READ_PARAMETERS
+  WRITE_PARAMETER
+  VERIFY_PARAMETERS
+}
+
+type FleetDeviceParameterPreset {
+  catalogId: ID!
+  catalogLabel: String!
+  parameterId: Int!
+  name: String!
+  profileIds: [Int!]!
+}
+
+type FleetDeviceConfigurationParameter {
+  parameterId: Int!
+  intervalSeconds: Int!
+  definitionHex: String!
+}
+
+type FleetDeviceConfiguration {
+  configurationId: String!
+  parameters: [FleetDeviceConfigurationParameter!]!
+}
+
+type FleetDeviceOperation {
+  id: ID!
+  deviceId: ID!
+  deviceImei: String!
+  karmaCarId: ID!
+  karmaDeviceId: String!
+  status: FleetDeviceOperationStatus!
+  kind: FleetDeviceOperationKind!
+  phase: FleetDeviceOperationPhase!
+  baselineOperationId: ID
+  parameterId: Int
+  intervalSeconds: Int
+  previousIntervalSeconds: Int
+  catalogId: ID
+  profileId: Int
+  writeDispatchedAt: DateTime
+  writeUncertain: Boolean!
+  requestedAt: DateTime!
+  dispatchedAt: DateTime
+  completedAt: DateTime
+  nextCheckAt: DateTime!
+  deadlineAt: DateTime!
+  queueIds: [ID!]!
+  observationCount: Int!
+  coverageComplete: Boolean!
+  configuration: FleetDeviceConfiguration
+  errorCode: String
+}
+
+input RequestFleetDeviceConfigurationReadInput {
+  deviceId: ID!
+  karmaCarId: ID!
+  expectedKarmaDeviceId: String!
+}
+
+input RequestFleetDeviceParameterAdditionInput {
+  deviceId: ID!
+  karmaCarId: ID!
+  expectedKarmaDeviceId: String!
+  baselineOperationId: ID!
+  catalogId: ID!
+  parameterId: Int!
+  intervalSeconds: Int!
+}
+
+input RequestFleetDeviceParameterIntervalUpdateInput {
+  deviceId: ID!
+  karmaCarId: ID!
+  expectedKarmaDeviceId: String!
+  baselineOperationId: ID!
+  parameterId: Int!
+  intervalSeconds: Int!
+}
+
+extend type Query {
+  fleetDeviceOperationsEnabled: Boolean!
+  fleetDeviceConfigurationWritesEnabled: Boolean!
+  fleetDeviceParameterPresets: [FleetDeviceParameterPreset!]!
+  fleetDeviceOperation(id: ID!): FleetDeviceOperation
+  "The latest complete read for the device's current local identity, independent of recent operation history."
+  fleetDeviceConfigurationSnapshot(deviceId: ID!): FleetDeviceOperation
+  "The latest 20 configuration operations for the scoped device, newest first."
+  fleetDeviceOperations(deviceId: ID!): [FleetDeviceOperation!]!
+}
+
+extend type Mutation {
+  "Requests a device configuration read; it does not change device configuration."
+  requestFleetDeviceConfigurationRead(
+    input: RequestFleetDeviceConfigurationReadInput!
+  ): FleetDeviceOperation!
+  requestFleetDeviceParameterAddition(
+    input: RequestFleetDeviceParameterAdditionInput!
+  ): FleetDeviceOperation!
+  requestFleetDeviceParameterIntervalUpdate(
+    input: RequestFleetDeviceParameterIntervalUpdateInput!
+  ): FleetDeviceOperation!
+}

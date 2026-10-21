@@ -2,14 +2,18 @@
 
 Karma API v2 is the external ERM HTTP API consumed by the independent
 `apps/karma-client` subgraph. The current integration reads one configured account
-through Gateway and exposes it to authenticated admin sessions. It does not write
-to Karma, ingest telemetry into a database or synchronize Fleet Vehicles/Devices.
+through Gateway and exposes it to authenticated admin sessions. A separate internal
+machine API executes fixed parameter/profile reads and single-definition additions or
+interval changes for Fleet's
+[persisted background operations](../../architecture.md#background-device-configuration-reads).
+It does not archive telemetry history or synchronize
+Fleet Vehicles/Devices with Karma records.
 
 ## Contents
 
 For device changes, see [Configuring eData parameter reporting through Karma](../edata-simple-protocol-v4.04/parameter-reporting.md).
-It documents the manually verified upstream procedure and its limits separately
-from the application's implemented read operations.
+It distinguishes implemented read/add/interval operations, manual upstream procedures
+and installation-specific evidence limits.
 
 | Document / artifact                                             | Contents                                                                                            |
 | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
@@ -68,7 +72,7 @@ The documentation distinguishes:
   array proves no element model; a null-only field proves no non-null model.
 - **Device configuration observation:** a scoped command, device readback and
   subsequent telemetry establish behavior for the documented installation/profile,
-  not a universal device capability or an implemented holita write operation.
+  not a universal device capability or a general holita command interface.
 - **Implemented behavior:** a rule enforced by the linked holita source and its
   deterministic fixtures. It can be narrower than upstream capability.
 - **Unresolved behavior:** an explicit limitation linked to the backlog, rather
@@ -77,14 +81,18 @@ The documentation distinguishes:
 ## Current integration boundary
 
 Twelve fixed upstream GET reads back the twelve public Karma queries. Internal
-`POST /login` supplies the upstream session. This uses **13 of the 32 declared
-method/path operations**; several reads expose only part of the upstream filters.
+`POST /login` supplies the upstream session; the internal configuration reader uses
+`POST /commands` for fixed parameter/profile reads and a single additive definition. This uses **14 of
+the 32 declared method/path operations**; several reads expose only part of the upstream filters.
 The number is an operation inventory, not a claim of complete business coverage.
 
 Implemented reads cover cars/list/detail, eData, last location, trips, events,
-driving profile, projects, time zones, API version, users and roles. Missing areas
-include driver management, sensors, vehicle/project writes, configuration
-parameters, device commands, queue status and accident reports. Full comparisons
+driving profile, projects, time zones, API version, users and roles. Fixed machine
+operations collect parameter/profile definitions from bounded `GET /events` responses;
+Fleet owns scoped reads, catalog-gated additions, interval changes and saved verification.
+Public Karma queries remain read-only. Missing areas include driver management,
+sensors, vehicle/project writes, `/parameters`, global/profile changes, deletion or arbitrary
+device commands, queue status and accident reports. Full comparisons
 are in the [catalog](endpoint-catalog.md) and [limitations](limitations.md).
 
 Every Karma GraphQL query requires holita's verified signed session, including
@@ -92,6 +100,12 @@ the public upstream version. All authenticated Tenants see the same configured
 Karma account; Branch selection does not filter it. This is the current intentional
 Karma scope and does not change Fleet Tenant/Branch isolation. The demo login is
 not production user identity or membership authorization.
+
+The configuration machine API requires `KARMA_INTERNAL_TOKEN` rather than a
+browser session. Fleet validates its own Tenant/Branch Device before queueing work,
+captures the explicitly selected Karma identity, and rechecks it before dispatch.
+This does not establish a general Karma `device_id` to IMEI mapping or grant shared
+account queries permission to change device configuration.
 
 ## Maintaining this reference
 

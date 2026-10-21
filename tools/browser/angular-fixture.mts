@@ -64,6 +64,8 @@ export const test = base.extend<{
   };
   demoSignedIn: boolean;
   fleetEnabled: boolean;
+  deviceOperations: boolean;
+  deviceConfigurationWrites: boolean;
 }>({
   demoSignedIn: [true, { option: true }],
   page: async ({ page, app, demoSignedIn }, use) => {
@@ -78,8 +80,10 @@ export const test = base.extend<{
     await use(page);
   },
   fleetEnabled: [true, { option: true }],
+  deviceOperations: [false, { option: true }],
+  deviceConfigurationWrites: [false, { option: true }],
   app: [
-    async ({ browserName, fleetEnabled }, use) => {
+    async ({ browserName, fleetEnabled, deviceOperations, deviceConfigurationWrites }, use) => {
       if (browserName !== 'chromium') {
         throw new Error('This focused smoke target uses Chromium.');
       }
@@ -152,7 +156,12 @@ export const test = base.extend<{
           throw new Error('Missing Angular fixture port.');
         }
         const url = `http://127.0.0.1:${String(address.port)}`;
-        const backend = await createFederationFixture({ adminOrigin: url, fleetEnabled });
+        const backend = await createFederationFixture({
+          adminOrigin: url,
+          fleetEnabled,
+          deviceOperations,
+          deviceConfigurationWrites,
+        });
         try {
           gatewayUrl = backend.url;
           const login = await fetch(gatewayUrl, {

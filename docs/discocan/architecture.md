@@ -5,6 +5,7 @@ Vehicle groups, Telemetry (status samples and the data clock), Trips, Events (al
 Service tasks, Overview and Settings.
 The [shared architecture](../architecture/overview.md) describes applications, execution and tooling.
 The shared Branch concept and its domain meaning are explained in [the domain index](README.md#terminology).
+Fleet also owns [background device configuration reads and parameter changes](#background-device-configuration-reads).
 
 ## Persistence ownership
 
@@ -13,11 +14,12 @@ with distinct owner/login roles. Admin/Gateway have no Prisma client or database
 Each owning service has its own schema, reviewed SQL migrations and generated client.
 Core owns the [Tenant/Branch foundation](../ecommerce/branches.md) currently reused as Discocan organizational scope.
 Fleet owns Vehicle, Device, Driver, VehicleGroup, VehicleStatusSample, Trip, FleetEvent,
-ServiceTask and FleetSettings plus the shared versioned Simple eData vendor catalog. Both services
+ServiceTask, FleetSettings and FleetDeviceOperation plus the shared versioned Simple eData vendor catalog. Both services
 preserve their applied migration history and add a Branch rename migration. Fleet also retains
 its additive catalog migration and the additive `20261018100000_fleet_master_data`,
 `20261018110000_fleet_activity`, `20261020110000_device_stock` and
-`20261020220000_fleet_settings` migrations. Branch and every Fleet business table have
+`20261020220000_fleet_settings`, `20261021000000_device_configuration_reads` and
+`20261021100000_device_parameter_changes` migrations. Branch and every Fleet business table have
 mandatory tenantId physically second after id; Fleet branchId is physically third (new tables
 declare them in that order; the master data columns are appended to Vehicle and Device).
 Tenant data is inserted by the seed, not by schema migrations.
@@ -25,8 +27,10 @@ Tenant data is inserted by the seed, not by schema migrations.
 The [Simple eData catalog](erm-resources/simple-edata-catalog/README.md) is common
 manufacturer reference data without Tenant/Branch columns. Seven related tables preserve
 version/source identity, parameters, sets, ordered members, categories and profiles.
-Only the local offline CLI imports it; it has no GraphQL endpoint or runtime device
-configuration integration. This scope does not change Vehicle/Device isolation.
+Only the local offline CLI imports it. DeviceOperations exposes eligible predefined
+parameters through `fleetDeviceParameterPresets` and checks catalog/profile membership
+before additions. There is no catalog editing/import API. This scope does not change
+Vehicle/Device isolation.
 
 Vehicle has UUID, tenantId, branchId, required License Plate (32 characters, not unique),
 nullable Notes (2000), Fleet number (16), type, make/model (64), model year (SMALLINT), VIN (17),
@@ -539,3 +543,132 @@ have a keyboard-accessible detail dialog showing every source field; null expiry
 remain distinct. Same-scope refresh failures retain rows, and session/language/navigation
 retirement uses the existing captured client lifecycle. These reads keep the global account
 scope and four-second operation bound.
+
+## Background device configuration reads
+
+Fleet's `DeviceOperationsModule` owns `FleetDeviceOperation`, its scoped GraphQL API and
+an `@nestjs/schedule` worker in the existing Nest process. Operation kinds are
+`READ_CONFIGURATION`, `ADD_PARAMETER` and `UPDATE_INTERVAL`. Karma Client exposes fixed
+machine-authenticated internal HTTP operations for target lookup, parameter/profile reads,
+one-definition changes and response-event scans. It has no database or background archive.
+
+`requestFleetDeviceConfigurationRead` accepts the scoped Device UUID and an explicitly
+selected Karma car/device pair. The server verifies the upstream device identity; it never
+infers that the opaque Karma identifier equals IMEI. Each operation captures the local IMEI
+and upstream identifiers. This is a per-request target selection, not automatic synchronization
+or a persistent assignment between the two products. All public operation and snapshot reads
+require verified Tenant/Branch scope and the normal Fleet availability guard. The worker uses
+stored scope without retaining an expiring browser token. Demo authentication identifies a
+Tenant, not a named operator or production device-control permission.
+
+The additive migrations retain operation timestamps, deadline, lease, queue references,
+response fragments, complete definitions, change intent, baseline operation, observed profile,
+submitted definition, write uncertainty and sanitized error codes. Composite Device and
+baseline-operation foreign keys preserve Tenant/Branch scope and protect referenced history.
+A partial unique index permits one active operation per Karma car across all workspaces because
+queue-to-response correlation is not established. Changing the configured Karma account
+while operations are active is unsupported.
+
+The worker runs every ten seconds, processing at most five due operations per pass. A
+conditional database update claims a 30-second lease with a unique token; every result write
+checks the stored Tenant/Branch, token and unexpired lease. Before dispatch it persists
+`SUBMITTING`. Restarted reads in that state become `UNKNOWN` and check for responses instead
+of replaying a potentially accepted request. A durable `writeDispatchedAt` marker is saved
+before the sole write attempt; it records an attempted submission boundary, not proven
+delivery. Recovery after that marker proceeds only to verification. Waiting is stored as `nextCheckAt`, not a long
+HTTP request or database transaction. Shutdown and restart retain the work; at least one
+Fleet process must be running to advance it.
+
+States are `QUEUED`, `SUBMITTING`, `WAITING`, `UNKNOWN`, `COMPLETE`, `TIMED_OUT` and `FAILED`.
+Operations expire ten minutes after creation. HTTP failures leave response polling pending
+until that deadline. A changed target, inconsistent response or exceeded evidence bound fails
+the operation. Stopping Fleet does not extend the deadline. Expiry means no matching complete
+configuration was confirmed; it does not prove a command was never delivered. The vendor queue
+may deliver an accepted command later, and holita cannot cancel it. Refresh and reconcile
+device state before requesting another change; an uncertain write is never automatically replayed.
+
+Parameter reads use command `301`, payload `0702BC`; profile reads use `301`, payload `1F`.
+The only changing command is `301`, payload `02` followed by exactly one 22-byte definition.
+The machine endpoint validates its ID and interval against the supplied definition and
+rechecks upstream identity immediately before submission. It cannot accept arbitrary paths,
+commands, set replacement (`01`), deletion (`10`), global settings or profile changes.
+Karma response-event scans use UTC windows, bounded ID paging and device identity checks.
+The background observation scan shares a 20-second deadline across target lookup, login
+renewal and all event pages. Fleet allows 21 seconds for that internal HTTP call, within
+the 30-second operation lease. Target lookup and device-request submission retain their
+four-second provider budget and Fleet's 4.5-second internal-call budget; public Karma
+queries retain their existing four-second operation bound.
+Each caller also retains its own deadline while joining a shared pending upstream login;
+a public read does not wait for the longer background deadline.
+Original `401` messages and parsed 22-byte definitions are deduplicated and persisted across
+polls/restarts, including incomplete multipart responses. Confirmation requires a consistent,
+complete numbered series and complete bounded scan coverage. Each provider scan retains at
+most 64 relevant fragments and 1000 definitions; Fleet's merged evidence is also bounded.
+Unknown parameter IDs and zero intervals are preserved. Profile observations use separate
+`416` evidence. Firmware updates and telemetry ingestion are outside this feature. An observed
+configuration response is not a universal causal queue acknowledgment or evidence that CAN
+measurements are arriving. The worker does not poll `/queue` or interpret a delivery state as
+an applied configuration acknowledgment.
+
+### Durable additions and interval changes
+
+`requestFleetDeviceParameterAddition` and `requestFleetDeviceParameterIntervalUpdate` require
+a complete baseline operation for the same scoped Device, current local IMEI and selected
+Karma car/device pair. Fleet captures the baseline and intended ID/interval in a new queued
+operation. Public inputs contain intent, not raw device definitions. A changed local or
+upstream identity stops dispatch.
+
+An addition first reads the profile (`READ_PROFILE`). Eligible presets come only from the
+imported Monitor 9.56 EXE SHA-256
+`01dd13e50c55fdf84078ce298bde72320d55bee458baa4c0d2a06fca7c0ca1a0`, extractor `1.0.0`,
+schema `1`: Monitor-source rows must have one nonempty name per ID, no row issues and
+membership in a set used by the observed profile. Fleet checks eligibility again before
+writing. Catalog membership does not establish model/firmware compatibility or a live signal.
+The [retained Monitor constructor evidence](erm-resources/edata-simple-protocol-v4.04/parameter-reporting.md#monitor-956-predefined-parameter-construction)
+defines the generic predefined-ID packet; it does not invent a CAN decoder. No eligible
+catalog means additions are unavailable; existing intervals can still be edited.
+
+Both change kinds request a complete fresh baseline (`READ_PARAMETERS`) and compare every
+ID and raw definition with the operator's captured baseline. Any difference stops the change.
+An addition requires the ID to be absent and fewer than 1000 existing definitions; that is
+the adapter's verification bound, not a promised device capacity. An interval update requires
+the ID to exist, including IDs unknown to the catalog, and changes only its final two interval
+bytes. All other captured fields remain byte-for-byte intact. Supported requested intervals
+are integers `0..65000` seconds. Monitor describes zero as **not in use**; retaining a zero
+definition differs from deleting it and does not prove that measurements stopped.
+
+Preflight freshness is **120 seconds**, measured conservatively from the earlier of the
+phase request time and the earliest response timestamp. Fetching an old reply after restart
+does not refresh its age. Expired evidence triggers a new safe read after advancing its own
+message-ID watermark. Profile and parameter evidence remain separate. Before `WRITE_PARAMETER`,
+and again after saving the durable write marker, the remaining lease, deadline and preflight
+age must accommodate the complete 4.5-second internal submission budget. A marker-bearing
+operation that cannot safely send moves to uncertain verification rather than retrying a write.
+
+`VERIFY_PARAMETERS` issues an independent full parameter read. Its `afterMessageId` watermark
+excludes the baseline fragments before assembly. Completion requires the intended definition
+and every unrelated definition to match the expected whole set; an addition also permits
+the observed predefined multiplier/divisor normalization from `1/1` to `0/0`. Other differences
+fail verification. An unchanged complete read advances the watermark and requests another
+safe read until the deadline. Queue acceptance or an HTTP response alone never completes a
+change. This confirms configuration evidence, not measurement availability, calibration,
+global/profile equality or universal causal correlation with a specific queue entry.
+
+`fleetDeviceOperations` returns the latest 20 requests for one scoped Device;
+`fleetDeviceOperation` retrieves a saved request by ID. `fleetDeviceConfigurationSnapshot`
+independently returns the latest complete operation snapshot for the Device's current IMEI, so newer
+failed reads cannot hide it beyond the history limit. A snapshot describes the observed
+configuration at its recorded time; changes made outside holita can make it stale.
+
+The admin opens `/:language/:branchId/fleet/devices/:recordId/configuration` from Diagnostics.
+It reloads saved state on mount and polls it every five seconds while a request is pending.
+Navigating away cancels browser reads but leaves the server operation intact. Each mounted
+session/Branch/language/device owns its clients; submitted mutations settle against their
+captured scope. The current shared-account Karma target picker has no Branch header.
+After a target-conflict response, the page reloads the Karma choices. A changed device
+identity clears the previous confirmation and requires a new confirmation before retrying.
+With writes enabled, the same page offers one catalog addition or one existing interval
+change. Its typed form previews target, baseline, ID and before/after interval, requires
+explicit confirmation and a separate zero-interval confirmation, and guards dirty navigation.
+A changed target or baseline invalidates the draft. Saved history shows kind, phase and
+uncertainty; a lost browser response requires refreshing saved operations before resubmission.

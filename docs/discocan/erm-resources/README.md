@@ -19,7 +19,8 @@ The [versioned catalog and offline procedure](simple-edata-catalog/README.md) ex
 embedded workbooks and Monitor tables from one EXE, compare versions and import shared
 reference data into Fleet. [v9.56](simple-edata-catalog/v9.56/README.md) retains both
 workbook variants and their conflicts. The workflow uses direct commands and has no
-device communication, GraphQL endpoint or admin integration.
+device communication or import/editing API. Fleet DeviceOperations separately exposes
+eligible presets for its controlled configuration editor.
 
 ## Configuring eData reporting
 
@@ -27,7 +28,12 @@ The [parameter configuration reference](edata-simple-protocol-v4.04/parameter-re
 explains how catalog metadata, device definitions and received measurements relate;
 how to read, add or change reporting parameters through Karma; and how to verify
 or restore a change. It records the verified scope and remaining protocol limits.
-The procedure is a manual upstream capability, not an implemented holita command UI.
+Holita implements [background configuration operations](../architecture.md#background-device-configuration-reads):
+Fleet persists scoped reads, predefined-parameter additions and existing-interval changes,
+including baseline, uncertainty and full-set verification. Karma Client uses fixed
+parameter/profile reads, one additive definition and bounded `401`/`416` event responses.
+The write flag defaults to false. Deletion, restoration, global/profile changes and
+measurement verification remain outside the automated editor.
 
 ## Hardware profiles
 

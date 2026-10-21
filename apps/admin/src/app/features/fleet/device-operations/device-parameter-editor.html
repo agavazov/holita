@@ -1,0 +1,226 @@
+<section class="app-card app-form-section" aria-labelledby="parameter-editor-title">
+  <h2 class="app-card__title" id="parameter-editor-title">{{ text().title }}</h2>
+  <p class="app-muted">{{ text().hint }}</p>
+  @if (!enabled()) {
+    <p-message severity="info">{{ text().disabled }}</p-message>
+  } @else if (!target()) {
+    <p class="app-muted">{{ text().chooseTarget }}</p>
+  } @else if (!matchingBaseline()) {
+    <p-message severity="warn">{{ text().baselineRequired }}</p-message>
+  }
+  @if (stale()) {
+    <p-message severity="warn" role="status">{{ text().stale }}</p-message>
+  }
+  @if (enabled() && target()) {
+    <form #formElement class="app-form-section" [formGroup]="form" (ngSubmit)="submit()">
+      <div class="app-form-grid">
+        <holita-form-field [label]="text().mode" controlId="parameter-mode">
+          <p-select
+            inputId="parameter-mode"
+            formControlName="mode"
+            [options]="modes()"
+            optionLabel="label"
+            optionValue="value"
+            [ariaLabel]="text().mode"
+            appendTo="body"
+          />
+        </holita-form-field>
+        @if (value().mode === 'add') {
+          <holita-form-field
+            [label]="text().preset"
+            controlId="parameter-presetKey"
+            [hint]="text().catalogHint"
+            [required]="true"
+            [error]="errorOf('presetKey')"
+          >
+            <p-select
+              inputId="parameter-presetKey"
+              formControlName="presetKey"
+              [options]="presetOptions()"
+              optionLabel="label"
+              optionValue="value"
+              [placeholder]="text().presetPlaceholder"
+              [ariaLabel]="text().preset"
+              [ariaFilterLabel]="text().filterPresets"
+              [filter]="true"
+              appendTo="body"
+              [invalid]="!!errorOf('presetKey')"
+              [pt]="presetPt()"
+            />
+          </holita-form-field>
+          @if (!presetOptions().length) {
+            <p class="app-muted">{{ text().noPresets }}</p>
+          }
+        } @else {
+          <holita-form-field
+            [label]="text().existing"
+            controlId="parameter-parameterId"
+            [hint]="text().preserveHint"
+            [required]="true"
+            [error]="errorOf('parameterId')"
+          >
+            <p-select
+              inputId="parameter-parameterId"
+              formControlName="parameterId"
+              [options]="parameterOptions()"
+              optionLabel="label"
+              optionValue="value"
+              [placeholder]="text().parameterPlaceholder"
+              [ariaLabel]="text().existing"
+              [ariaFilterLabel]="text().filterParameters"
+              [filter]="true"
+              appendTo="body"
+              [invalid]="!!errorOf('parameterId')"
+              [pt]="parameterPt()"
+            />
+          </holita-form-field>
+        }
+        <holita-form-field
+          [label]="text().interval"
+          controlId="parameter-intervalSeconds"
+          [hint]="text().intervalHint"
+          [required]="true"
+          [error]="errorOf('intervalSeconds')"
+        >
+          <p-inputnumber
+            inputId="parameter-intervalSeconds"
+            formControlName="intervalSeconds"
+            [min]="0"
+            [max]="65000"
+            [minFractionDigits]="0"
+            [maxFractionDigits]="0"
+            [useGrouping]="false"
+            [invalid]="!!errorOf('intervalSeconds')"
+            [pt]="numberPt()"
+          />
+        </holita-form-field>
+      </div>
+      @if (matchingBaseline() && intendedParameterId() !== null && baseline(); as baseline) {
+        <div class="app-form-section" aria-labelledby="parameter-preview-title">
+          <h3 class="app-card__title" id="parameter-preview-title">{{ text().preview }}</h3>
+          <dl class="app-facts">
+            <div>
+              <dt>{{ text().target }}</dt>
+              <dd>
+                {{ target()?.carNumber }}<br />
+                <span class="app-mono">{{ target()?.deviceId }}</span>
+              </dd>
+            </div>
+            <div>
+              <dt>{{ text().parameter }}</dt>
+              <dd>{{ intendedParameterId() | holitaNumber }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().baselineConfirmedAt }}</dt>
+              <dd>{{ baseline.completedAt | holitaDateTime }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().previous }}</dt>
+              <dd>
+                {{
+                  (value().mode === 'interval' ? previous()?.intervalSeconds : null) | holitaNumber
+                }}
+              </dd>
+            </div>
+            <div>
+              <dt>{{ text().next }}</dt>
+              <dd>{{ value().intervalSeconds | holitaNumber }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().parameterCount }}</dt>
+              <dd>
+                {{ baseline.configuration?.parameters.length | holitaNumber }} →
+                {{
+                  (baseline.configuration?.parameters.length ?? 0) +
+                    (value().mode === 'add' && preset() ? 1 : 0) | holitaNumber
+                }}
+              </dd>
+            </div>
+          </dl>
+          <p class="app-muted">{{ text().verificationHint }}</p>
+          <details class="parameter-details">
+            <summary>{{ text().technicalDetails }}</summary>
+            <div class="app-form-section">
+              <dl class="app-facts">
+                <div>
+                  <dt>{{ text().baseline }}</dt>
+                  <dd class="app-mono parameter-wrap">{{ baseline.id }}</dd>
+                </div>
+                <div>
+                  <dt>{{ text().targetCarId }}</dt>
+                  <dd class="app-mono">{{ target()?.id }}</dd>
+                </div>
+                @if (value().mode === 'interval' && previous(); as previous) {
+                  <div class="app-facts--wide">
+                    <dt>{{ text().rawDefinition }}</dt>
+                    <dd class="app-mono parameter-wrap">{{ previous.definitionHex }}</dd>
+                  </div>
+                }
+                @if (value().mode === 'add' && preset(); as preset) {
+                  <div>
+                    <dt>{{ text().catalog }}</dt>
+                    <dd>{{ preset.catalogLabel }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ text().profiles }}</dt>
+                    <dd class="app-mono">{{ preset.profileIds.join(', ') }}</dd>
+                  </div>
+                }
+              </dl>
+            </div>
+          </details>
+        </div>
+      }
+      @if (value().intervalSeconds === 0) {
+        <p-message severity="warn">{{ text().zeroHint }}</p-message>
+        <holita-form-field
+          [label]="text().zeroLabel"
+          controlId="parameter-zeroConfirmed"
+          [error]="errorOf('zeroConfirmed')"
+        >
+          <label class="app-inline" for="parameter-zeroConfirmed"
+            ><input
+              id="parameter-zeroConfirmed"
+              type="checkbox"
+              formControlName="zeroConfirmed"
+              [attr.aria-invalid]="errorOf('zeroConfirmed') ? 'true' : null"
+              aria-describedby="parameter-zeroConfirmed-error"
+            /><span>{{ text().zeroConfirmation }}</span></label
+          >
+        </holita-form-field>
+      }
+      <holita-form-field
+        [label]="text().confirmationLabel"
+        controlId="parameter-confirmed"
+        [error]="errorOf('confirmed')"
+      >
+        <label class="app-inline" for="parameter-confirmed"
+          ><input
+            id="parameter-confirmed"
+            type="checkbox"
+            formControlName="confirmed"
+            [attr.aria-invalid]="errorOf('confirmed') ? 'true' : null"
+            aria-describedby="parameter-confirmed-error"
+          /><span>{{ text().confirmation }}</span></label
+        >
+      </holita-form-field>
+      @if (requestError(); as error) {
+        <p-message severity="error" role="alert">{{ error }}</p-message>
+      }
+      <div class="app-inline">
+        <button pButton type="submit" [disabled]="unavailable()">{{ text().submit }}</button>
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="submitting() || (!dirty() && !stale())"
+          (click)="discard()"
+        >
+          {{ text().discard }}
+        </button>
+      </div>
+    </form>
+  }
+</section>
+<p-confirmdialog [pt]="confirmPt()" [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }" />
