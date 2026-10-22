@@ -88,9 +88,8 @@ The shell supports keyboard/mobile navigation, a persisted sidebar rail and pers
 themes. The startup `fleetEnabled` flag gates both business modules; Branch discovery stays available.
 The [admin design system](docs/admin-design-system.md) describes the theme, shell and patterns.
 To start it separately, `npm run storybook:admin` serves the [admin Storybook](docs/development.md#admin-storybook) at
-`http://127.0.0.1:11001` with synthetic data and no backend. `npm run test:storybook:admin` runs
-every story with its interactions and axe ([story tests](docs/testing.md#storybook-story-tests));
-`npm run test:visual:admin` captures [visual review candidates](docs/testing.md#storybook-visual-review).
+`http://127.0.0.1:11001` with synthetic data and no backend. Storybook is a development and
+review tool; it has no automated tests.
 
 Gateway, Core, Fleet and Karma Client listen on loopback ports 11010, 11011, 11013 and 11014; PostgreSQL uses 11084. `dev` waits for PostgreSQL health and generates admin GraphQL artifacts once before starting the five applications and Storybook. Ctrl+C stops
 the native Router, Node applications and Storybook together. `npm run db:down` stops PostgreSQL and preserves its volume. Setup, migrations
@@ -113,17 +112,14 @@ Generated clients/types are ignored and must not be edited.
 ## Check a change
 
 ```bash
-npm run lint
-npm run typecheck
-npm run build
-npm run schema:check
-npm run test:fleet -- vehicles.service.spec.ts devices.service.spec.ts --skip-nx-cache
-npm run test:admin -- --include="app/features/fleet/vehicles/*.spec.ts" --include="app/features/fleet/devices/*.spec.ts" --skip-nx-cache
+npm run db:up
+npm run check
 ```
 
-Use [focused validation](docs/testing.md) for dedicated database and browser checks, and
-[development](docs/development.md) for configuration. Full regression requires an explicit
-user/reviewer request. Start documentation navigation at [docs/README.md](docs/README.md).
+Run `npm run check` once, when the change is ready. It builds, tests and lints only what the change
+affects, using the Nx and ESLint caches. [Testing](docs/testing.md) describes it and the
+database, federation and browser checks, and [development](docs/development.md) covers
+configuration. Full regression requires an explicit user/reviewer request. Start documentation navigation at [docs/README.md](docs/README.md).
 Pending work and plans belong in the [project backlog](docs/todo/README.md). Machine-specific
 instructions and credential locations belong in the ignored `AGENTS.local.md`; see
 [local contributor setup](docs/development.md#local-contributor-instructions-and-credentials).

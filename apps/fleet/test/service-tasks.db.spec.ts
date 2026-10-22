@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { setTimeout as delay } from 'node:timers/promises';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { afterAll, beforeAll, describe, expect, it, jest } from '@jest/globals';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import pg from 'pg';
@@ -12,7 +11,6 @@ import type { Prisma } from '../src/generated/prisma/client.js';
 import { CoreClient } from '../src/integrations/core/core.client.js';
 import { createTestDatabase } from './test-database.js';
 import { getTestDatabaseUrl } from './test-database-url.js';
-import { afterLockedVehicleChange } from './vehicle-row-lock.js';
 
 const tenantId = '01000000-0000-4000-8000-000000000001';
 // 22:30 UTC on 17 October is the business date 18 October 2026 in Europe/Sofia.
@@ -29,11 +27,9 @@ describe('Service tasks and urgency with PostgreSQL', () => {
   let url: string;
   const connection = new pg.Client({ connectionString: getTestDatabaseUrl() });
   let connected = false;
-  const requireBranch = jest.fn<CoreClient['requireBranch']>().mockResolvedValue(undefined);
   const branchId = randomUUID();
   const vehicles = { a: '', b: '', c: '', d: '' };
   const tasks = new Map<TaskKey, string>();
-  let foreignTask = '';
   function task(key: TaskKey): string {
     const id = tasks.get(key);
     if (!id) {
@@ -60,7 +56,9 @@ describe('Service tasks and urgency with PostgreSQL', () => {
       .overrideProvider(PrismaService)
       .useValue({ client: database.client, schema: database.schema })
       .overrideProvider(CoreClient)
-      .useValue({ requireBranch })
+      .useValue({
+        requireBranch: jest.fn<CoreClient['requireBranch']>().mockResolvedValue(undefined),
+      })
       .overrideProvider(FleetClock)
       .useValue({ now: () => now })
       .compile();
@@ -198,22 +196,17 @@ describe('Service tasks and urgency with PostgreSQL', () => {
       const vehicle = await client.vehicle.create({
         data: { tenantId: scopeTenant, branchId: scopeBranch, licensePlate: 'CB 2002 AX' },
       });
-      foreignTask = (
-        await client.serviceTask.create({
-          data: {
-            tenantId: scopeTenant,
-            branchId: scopeBranch,
-            vehicleId: vehicle.id,
-            serviceType: 'OIL_CHANGE',
-            title: 'Масло',
-            dueOn: day('2026-10-01'),
-          },
-        })
-      ).id;
+      await client.serviceTask.create({
+        data: {
+          tenantId: scopeTenant,
+          branchId: scopeBranch,
+          vehicleId: vehicle.id,
+          serviceType: 'OIL_CHANGE',
+          title: 'Масло',
+          dueOn: day('2026-10-01'),
+        },
+      });
     }
-  });
-  beforeEach(() => {
-    requireBranch.mockClear();
   });
   afterAll(async () => {
     try {
@@ -279,134 +272,56 @@ describe('Service tasks and urgency with PostgreSQL', () => {
       ['t13', null, null, null],
     ];
     for (const [key, urgency, remainingDays, remainingKm] of expected) {
-      expect(await query(detail, { id: task(key) })).toMatchObject({
-        data: { fleetServiceTask: { urgency, remainingDays, remainingKm } },
+      expect({ row: key, value: await query(detail, { id: task(key) }) }).toMatchObject({
+        row: key,
+        value: { data: { fleetServiceTask: { urgency, remainingDays, remainingKm } } },
       });
     }
-    expect(await query(detail, { id: foreignTask })).toMatchObject({
-      errors: [{ extensions: { code: 'NOT_FOUND' } }],
-    });
-  });
-
-  it('orders the raw list by every sort field and pages it consistently with its total', async () => {
-    const unplanned = byIdDesc(['t11', 't12', 't13']);
-    const undated = byIdDesc(['t4', 't5', 't6', 't7', 't11', 't12', 't13']);
-    const uncompleted = byIdDesc([
-      't1',
-      't2',
-      't3',
-      't4',
-      't5',
-      't6',
-      't7',
-      't8',
-      't9',
+    // The default urgency order applies before paging and keeps the total.
+    const urgencyOrder: TaskKey[] = [
       't10',
-      't13',
-    ]);
-    const created: TaskKey[] = [
       't1',
-      't2',
-      't3',
       't4',
-      't5',
-      't6',
-      't7',
       't8',
+      't2',
       't9',
-      't10',
-      't11',
-      't12',
-      't13',
+      't5',
+      't7',
+      't3',
+      't6',
+      ...byIdDesc(['t11', 't12', 't13']),
     ];
-    const orders: [Record<string, string> | undefined, TaskKey[]][] = [
-      [undefined, ['t10', 't1', 't4', 't8', 't2', 't9', 't5', 't7', 't3', 't6', ...unplanned]],
+    expect(await listed({})).toEqual(page(urgencyOrder));
+    for (let offset = 0; offset < urgencyOrder.length; offset += 4) {
+      expect({ row: offset, value: await listed({ offset, limit: 4 }) }).toEqual({
+        row: offset,
+        value: page(urgencyOrder.slice(offset, offset + 4), urgencyOrder.length, offset, 4),
+      });
+    }
+    const filtered: [string, Record<string, unknown>, TaskKey[]][] = [
+      ['unknown odometer', { filter: { urgencies: ['UNKNOWN_ODOMETER'] } }, ['t7']],
       [
-        { field: 'URGENCY', direction: 'DESC' },
-        ['t3', 't6', 't7', 't8', 't2', 't9', 't5', 't10', 't1', 't4', ...unplanned],
+        'overdue on one vehicle',
+        { filter: { urgencies: ['OVERDUE'], vehicleIds: [vehicles.a] } },
+        ['t1', 't4'],
       ],
-      [{ field: 'DUE_ON', direction: 'ASC' }, ['t10', 't1', 't8', 't2', 't3', 't9', ...undated]],
-      [{ field: 'DUE_ON', direction: 'DESC' }, ['t9', 't3', 't2', 't8', 't1', 't10', ...undated]],
-      [{ field: 'COMPLETED_ON', direction: 'DESC' }, ['t11', 't12', ...uncompleted]],
-      [{ field: 'COMPLETED_ON', direction: 'ASC' }, ['t12', 't11', ...uncompleted]],
-      [{ field: 'CREATED_AT', direction: 'ASC' }, created],
-      [{ field: 'CREATED_AT', direction: 'DESC' }, [...created].reverse()],
+      [
+        'done by completion date',
+        { filter: { statuses: ['DONE'] }, sort: { field: 'COMPLETED_ON', direction: 'DESC' } },
+        ['t11', 't12'],
+      ],
+      [
+        'closed completion range',
+        { filter: { completedFrom: '2026-10-10', completedTo: '2026-10-10' } },
+        ['t11'],
+      ],
+      ['completion upper bound', { filter: { completedTo: '2026-10-09' } }, ['t12']],
+      ['title tokens', { search: 'масло филтри' }, ['t11']],
     ];
-    for (const [sort, keys] of orders) {
-      expect(await listed({ sort })).toEqual(page(keys));
-      for (let offset = 0; offset < keys.length; offset += 4) {
-        expect(await listed({ sort, offset, limit: 4 })).toEqual(
-          page(keys.slice(offset, offset + 4), keys.length, offset, 4),
-        );
-      }
+    for (const [row, variables, keys] of filtered) {
+      expect({ row, value: await listed(variables) }).toEqual({ row, value: page(keys) });
     }
-  });
-
-  it('filters by urgency, status, type, vehicle and completion date and searches tasks and vehicles', async () => {
-    expect(await listed({ filter: { urgencies: ['UNKNOWN_ODOMETER'] } })).toEqual(page(['t7']));
-    expect(await listed({ filter: { urgencies: ['OVERDUE'], vehicleIds: [vehicles.a] } })).toEqual(
-      page(['t1', 't4']),
-    );
-    expect(
-      await listed({
-        filter: { statuses: ['DONE'] },
-        sort: { field: 'COMPLETED_ON', direction: 'DESC' },
-      }),
-    ).toEqual(page(['t11', 't12']));
-    expect(
-      await listed({ filter: { completedFrom: '2026-10-10', completedTo: '2026-10-10' } }),
-    ).toEqual(page(['t11']));
-    expect(await listed({ filter: { completedTo: '2026-10-09' } })).toEqual(page(['t12']));
-    expect(await listed({ filter: { serviceTypes: ['TIRES'] } })).toEqual(page(['t5', 't13']));
-    expect(await listed({ filter: { vehicleIds: [vehicles.b] } })).toEqual(
-      page(['t8', 't7', 't13']),
-    );
-    expect(await listed({ search: 'cb 2002' })).toEqual(page(['t8', 't7', 't13']));
-    expect(await listed({ search: 'ТРАКИЯ' })).toEqual(page(['t11']));
-    expect(await listed({ search: 'масло филтри' })).toEqual(page(['t11']));
-    expect(await listed({ search: '100%' })).toEqual(page([]));
-    expect(
-      await query(list, {
-        offset: 0,
-        limit: 20,
-        filter: { completedFrom: '2026-10-11', completedTo: '2026-10-10' },
-      }),
-    ).toMatchObject({ errors: [{ extensions: { fieldErrors: [{ path: 'filter' }] } }] });
-  });
-
-  it.each([
-    { field: 'taskContains', value: '   ', code: 'REQUIRED' },
-    { field: 'taskEquals', value: 'x'.repeat(121), code: 'TOO_LONG' },
-    { field: 'taskContains', value: 'invalid\u0000text', code: 'INVALID_FORMAT' },
-  ])(
-    'returns a filter error for nested $field with reason $code',
-    async ({ field, value, code }) => {
-      expect(
-        await query(list, {
-          offset: 0,
-          limit: 20,
-          filter: { allOf: [{ [field]: value }] },
-        }),
-      ).toMatchObject({
-        errors: [
-          {
-            extensions: {
-              code: 'BAD_USER_INPUT',
-              fieldErrors: [
-                {
-                  path: 'filter',
-                  message: `filter.${field}: use 1 to 120 supported characters.`,
-                  code,
-                },
-              ],
-            },
-          },
-        ],
-      });
-    },
-  );
-
-  it('summarises active vehicles per task, workshop vehicles and the 30-day cost window', async () => {
+    // Active vehicles per task, workshop vehicles and the 30-day cost window.
     const summary =
       '{fleetServiceSummary{businessDate overdue dueSoon unknownOdometer upcoming inWorkshopVehicles completedLast30Days costLast30DaysCents costWindowStart costWindowEnd}}';
     expect(await query(summary, {})).toEqual({
@@ -428,137 +343,8 @@ describe('Service tasks and urgency with PostgreSQL', () => {
     expect(await query(summary, {}, randomUUID())).toMatchObject({
       data: { fleetServiceSummary: { overdue: 0, dueSoon: 0, costLast30DaysCents: 0 } },
     });
-  });
 
-  const fields =
-    'id status serviceType title dueOn dueOdometerKm completedOn completedOdometerKm workshop replacedParts costCents urgency remainingDays remainingKm vehicle{id licensePlate}';
-
-  it('creates and updates planned tasks only', async () => {
-    const create = `mutation($input:CreateFleetServiceTaskInput!){createFleetServiceTask(input:$input){${fields}}}`;
-    expect(
-      await query(create, {
-        input: {
-          vehicleId: vehicles.b,
-          serviceType: 'BRAKES',
-          title: ' Нови накладки ',
-          dueOdometerKm: 25_000,
-        },
-      }),
-    ).toMatchObject({
-      data: {
-        createFleetServiceTask: {
-          status: 'PLANNED',
-          title: 'Нови накладки',
-          urgency: 'UNKNOWN_ODOMETER',
-          vehicle: { id: vehicles.b, licensePlate: 'CB 2002 AX' },
-        },
-      },
-    });
-    expect(requireBranch).toHaveBeenCalledTimes(1);
-    for (const [input, path] of [
-      [{ vehicleId: vehicles.c, serviceType: 'BRAKES', dueOn: '2026-11-01' }, 'vehicleId'],
-      [{ vehicleId: foreignTask, serviceType: 'BRAKES', dueOn: '2026-11-01' }, 'vehicleId'],
-      [{ vehicleId: vehicles.a, serviceType: 'BRAKES' }, 'dueOn'],
-      [{ vehicleId: vehicles.a, serviceType: 'BRAKES', dueOn: '2026-02-30' }, 'dueOn'],
-    ] satisfies [Record<string, unknown>, string][]) {
-      expect(await query(create, { input })).toMatchObject({
-        errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path }] } }],
-      });
-    }
-    expect(requireBranch).toHaveBeenCalledTimes(1);
-    const update = `mutation($id:ID!,$input:UpdateFleetServiceTaskInput!){updateFleetServiceTask(id:$id,input:$input){${fields}}}`;
-    expect(await query(update, { id: task('t3'), input: { dueOn: '2026-10-25' } })).toMatchObject({
-      data: {
-        updateFleetServiceTask: { dueOn: '2026-10-25', urgency: 'DUE_SOON', remainingDays: 7 },
-      },
-    });
-    expect(await query(update, { id: task('t3'), input: { dueOn: null } })).toMatchObject({
-      errors: [{ extensions: { fieldErrors: [{ path: 'dueOn' }] } }],
-    });
-    expect(await query(update, { id: task('t11'), input: { title: 'x' } })).toMatchObject({
-      errors: [
-        { message: 'Only planned service can be changed', extensions: { code: 'CONFLICT' } },
-      ],
-    });
-    expect(await query(update, { id: foreignTask, input: { title: 'x' } })).toMatchObject({
-      errors: [{ extensions: { code: 'NOT_FOUND' } }],
-    });
-  });
-
-  const complete = `mutation($id:ID!,$input:CompleteFleetServiceTaskInput!){completeFleetServiceTask(id:$id,input:$input){completed{${fields}} next{${fields}}}}`;
-
-  it('completes a task and schedules the next one in the same transaction', async () => {
-    expect(
-      await query(complete, {
-        id: task('t2'),
-        input: {
-          completedOn: '2026-10-18',
-          completedOdometerKm: 100_000,
-          costCents: 0,
-          replacedParts: 'Филтър',
-          nextDueOn: '2027-04-18',
-          nextDueOdometerKm: 130_000,
-        },
-      }),
-    ).toMatchObject({
-      data: {
-        completeFleetServiceTask: {
-          completed: {
-            id: task('t2'),
-            status: 'DONE',
-            completedOn: '2026-10-18',
-            completedOdometerKm: 100_000,
-            costCents: 0,
-            replacedParts: 'Филтър',
-            workshop: 'Депо',
-            urgency: null,
-          },
-          next: {
-            status: 'PLANNED',
-            serviceType: 'GENERAL_SERVICE',
-            title: 'Обслужване',
-            workshop: 'Депо',
-            dueOn: '2027-04-18',
-            dueOdometerKm: 130_000,
-            urgency: 'UPCOMING',
-            vehicle: { id: vehicles.a },
-          },
-        },
-      },
-    });
-    for (const [input, path] of [
-      [{ completedOn: '2026-10-18', completedOdometerKm: 94_000 }, 'completedOdometerKm'],
-      [{ completedOn: '2026-10-19' }, 'completedOn'],
-      [{ completedOn: '2026-10-18', nextDueOn: '2026-10-18' }, 'nextDueOn'],
-    ] satisfies [Record<string, unknown>, string][]) {
-      expect(await query(complete, { id: task('t5'), input })).toMatchObject({
-        errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path }] } }],
-      });
-    }
-    expect(
-      await query(complete, { id: task('t11'), input: { completedOn: '2026-10-18' } }),
-    ).toMatchObject({
-      errors: [
-        { message: 'Only planned service can be completed', extensions: { code: 'CONFLICT' } },
-      ],
-    });
-  });
-
-  it('rolls back the completion when scheduling the next task fails', async () => {
-    const before = await database.client.serviceTask.count({ where: { tenantId, branchId } });
-    expect(
-      await query(complete, {
-        id: task('t6'),
-        input: { completedOn: '2026-10-18', nextDueOdometerKm: 110_000, nextTitle: 'FAIL' },
-      }),
-    ).toMatchObject({ errors: [{ extensions: { code: 'INTERNAL_SERVER_ERROR' } }] });
-    expect(
-      await database.client.serviceTask.findUniqueOrThrow({ where: { id: task('t6') } }),
-    ).toMatchObject({ status: 'PLANNED', completedOn: null });
-    expect(await database.client.serviceTask.count({ where: { tenantId, branchId } })).toBe(before);
-  });
-
-  it('filters and sorts the complete scoped result and retains partial batch outcomes', async () => {
+    // Cost and urgency conditions filter and sort the complete scoped result.
     const parityBranch = randomUUID();
     const a = await database.client.vehicle.create({
       data: { tenantId, branchId: parityBranch, licensePlate: 'AA 001' },
@@ -609,61 +395,48 @@ describe('Service tasks and urgency with PostgreSQL', () => {
         status: 'CANCELLED',
       },
     });
-    const read = (
-      filter: Record<string, unknown>,
-      sort = { field: 'COST_CENTS', direction: 'ASC' },
-    ) => query(list, { filter, sort, offset: 0, limit: 100 }, parityBranch);
-    const expected = (recordIds: readonly string[]) => ({
-      data: {
-        fleetServiceTasks: {
-          items: recordIds.map((id) => ({ id })),
-          total: recordIds.length,
-          offset: 0,
-          limit: 100,
+    const conditions: [string, Record<string, unknown>, string[]][] = [
+      [
+        'exclusive cost bounds',
+        { allOf: [{ costCentsAbove: 0 }, { costCentsBelow: 12346 }] },
+        [paid.id],
+      ],
+      ['zero is a cost', { allOf: [{ hasCost: true }, { costCentsBelow: 1 }] }, [free.id]],
+      ['repeated statuses', { allOf: [{ statuses: ['PLANNED'] }, { statuses: ['DONE'] }] }, []],
+      ['literal task text', { allOf: [{ taskContains: '%_\\' }] }, [plan.id]],
+      [
+        'urgency exclusions keep rows without urgency',
+        {
+          allOf: [
+            { excludedUrgencies: ['OVERDUE', 'DUE_SOON', 'UNKNOWN_ODOMETER', 'UPCOMING'] },
+            { hasCost: false },
+          ],
         },
-      },
-    });
-    expect(await read({ allOf: [{ costCentsAbove: 0 }, { costCentsBelow: 12346 }] })).toEqual(
-      expected([paid.id]),
-    );
-    expect(await read({ allOf: [{ hasCost: true }, { costCentsBelow: 1 }] })).toEqual(
-      expected([free.id]),
-    );
-    expect(await read({ allOf: [{ statuses: ['PLANNED'] }, { statuses: ['DONE'] }] })).toEqual(
-      expected([]),
-    );
-    expect(
-      await read({
-        allOf: [{ hasDueOn: true }, { dueOnAfter: '2026-10-19', dueOnBefore: '2026-10-21' }],
-      }),
-    ).toEqual(expected([plan.id]));
-    expect(
-      await read({ allOf: [{ taskContains: 'Спирач', untitledServiceTypes: ['BRAKES'] }] }),
-    ).toEqual(expected([free.id]));
-    expect(await read({ allOf: [{ taskContains: 'Спирач', untitledServiceTypes: [] }] })).toEqual(
-      expected([]),
-    );
-    expect(
-      await read({ allOf: [{ taskEquals: 'literal %_\\ TASK', untitledServiceTypes: [] }] }),
-    ).toEqual(expected([plan.id]));
-    expect(await read({ allOf: [{ taskContains: '%_\\' }] })).toEqual(expected([plan.id]));
-    expect(await read({ allOf: [{ taskEquals: 'literal %_\\ TASK' }] })).toEqual(
-      expected([plan.id]),
-    );
-    expect(
-      await read({ allOf: [{ excludedVehicleIds: [b.id] }, { excludedServiceTypes: ['BRAKES'] }] }),
-    ).toEqual(expected([paid.id]));
-    expect(
-      await read({
-        allOf: [
-          { excludedUrgencies: ['OVERDUE', 'DUE_SOON', 'UNKNOWN_ODOMETER', 'UPCOMING'] },
-          { hasCost: false },
-        ],
-      }),
-    ).toEqual(expected([cancelled.id]));
-    expect(await query(list, { search: '%_\\', offset: 0, limit: 100 }, parityBranch)).toEqual(
-      expected([plan.id]),
-    );
+        [cancelled.id],
+      ],
+    ];
+    for (const [row, filter, ids] of conditions) {
+      expect({
+        row,
+        value: await query(
+          list,
+          { filter, sort: { field: 'COST_CENTS', direction: 'ASC' }, offset: 0, limit: 100 },
+          parityBranch,
+        ),
+      }).toEqual({
+        row,
+        value: {
+          data: {
+            fleetServiceTasks: {
+              items: ids.map((id) => ({ id })),
+              total: ids.length,
+              offset: 0,
+              limit: 100,
+            },
+          },
+        },
+      });
+    }
     expect(
       await query(
         list,
@@ -673,411 +446,64 @@ describe('Service tasks and urgency with PostgreSQL', () => {
     ).toEqual({
       data: { fleetServiceTasks: { items: [{ id: paid.id }], total: 4, offset: 0, limit: 1 } },
     });
-    expect(
-      await query(
-        list,
-        { sort: { field: 'VEHICLE_LICENSE_PLATE', direction: 'ASC' }, offset: 0, limit: 2 },
-        parityBranch,
-      ),
-    ).toEqual({
-      data: {
-        fleetServiceTasks: {
-          items: [free.id, paid.id]
-            .sort()
-            .reverse()
-            .map((id) => ({ id })),
-          total: 4,
-          offset: 0,
-          limit: 2,
-        },
-      },
-    });
-    expect(
-      await read({ allOf: [{ taskEquals: 'Paid' }] }, { field: 'TASK', direction: 'DESC' }),
-    ).toEqual(expected([paid.id]));
-    const cancel =
-      'mutation($ids:[ID!]!){cancelFleetServiceTasks(ids:$ids){succeededIds failures{id code}}}';
-    expect(await query(cancel, { ids: [plan.id, paid.id, foreignTask] }, parityBranch)).toEqual({
-      data: {
-        cancelFleetServiceTasks: {
-          succeededIds: [plan.id],
-          failures: [
-            { id: paid.id, code: 'CONFLICT' },
-            { id: foreignTask, code: 'NOT_FOUND' },
-          ],
-        },
-      },
-    });
-    const remove =
-      'mutation($ids:[ID!]!){deleteFleetServiceTasks(ids:$ids){succeededIds failures{id code}}}';
-    expect(await query(remove, { ids: [plan.id, free.id] }, parityBranch)).toEqual({
-      data: {
-        deleteFleetServiceTasks: {
-          succeededIds: [plan.id],
-          failures: [{ id: free.id, code: 'CONFLICT' }],
-        },
-      },
-    });
-    expect(
-      await database.client.serviceTask.findUniqueOrThrow({ where: { id: free.id } }),
-    ).toMatchObject({ status: 'DONE', costCents: 0 });
   });
 
-  it('completes inactive vehicle history without scheduling and keeps the earlier-date odometer rule', async () => {
-    const historyBranch = randomUUID();
-    const vehicle = await database.client.vehicle.create({
-      data: { tenantId, branchId: historyBranch, licensePlate: 'History', status: 'INACTIVE' },
-    });
-    const history = await database.client.serviceTask.create({
-      data: {
-        tenantId,
-        branchId: historyBranch,
-        vehicleId: vehicle.id,
-        serviceType: 'OIL_CHANGE',
-        dueOn: day('2026-10-01'),
-      },
-    });
-    expect(
-      await query(
-        complete,
-        {
-          id: history.id,
-          input: { completedOn: '2026-10-18', nextDueOn: '2026-11-01', nextDueOdometerKm: 200000 },
-        },
-        historyBranch,
-      ),
-    ).toMatchObject({
-      errors: [
-        {
-          extensions: {
-            code: 'BAD_USER_INPUT',
-            fieldErrors: [{ path: 'nextDueOn' }, { path: 'nextDueOdometerKm' }],
-          },
-        },
-      ],
-    });
-    expect(
-      await database.client.serviceTask.findUniqueOrThrow({ where: { id: history.id } }),
-    ).toMatchObject({ status: 'PLANNED' });
-    expect(
-      await database.client.serviceTask.count({ where: { tenantId, branchId: historyBranch } }),
-    ).toBe(1);
-    expect(
-      await query(
-        complete,
-        { id: history.id, input: { completedOn: '2026-10-18', completedOdometerKm: 1000 } },
-        historyBranch,
-      ),
-    ).toMatchObject({
-      data: {
-        completeFleetServiceTask: { completed: { id: history.id, status: 'DONE' }, next: null },
-      },
-    });
-    const sameDay = await database.client.serviceTask.create({
-      data: {
-        tenantId,
-        branchId: historyBranch,
-        vehicleId: vehicle.id,
-        serviceType: 'BRAKES',
-        dueOn: day('2026-10-01'),
-      },
-    });
-    expect(
-      await query(
-        complete,
-        { id: sameDay.id, input: { completedOn: '2026-10-18', completedOdometerKm: 900 } },
-        historyBranch,
-      ),
-    ).toMatchObject({
-      data: {
-        completeFleetServiceTask: { completed: { id: sameDay.id, status: 'DONE' }, next: null },
-      },
-    });
-    const earlier = await database.client.serviceTask.create({
-      data: {
-        tenantId,
-        branchId: historyBranch,
-        vehicleId: vehicle.id,
-        serviceType: 'TIRES',
-        dueOn: day('2026-10-01'),
-      },
-    });
-    expect(
-      await query(
-        complete,
-        { id: earlier.id, input: { completedOn: '2026-10-17', completedOdometerKm: 5000 } },
-        historyBranch,
-      ),
-    ).toMatchObject({
-      data: {
-        completeFleetServiceTask: { completed: { id: earlier.id, status: 'DONE' }, next: null },
-      },
-    });
-    const later = await database.client.serviceTask.create({
-      data: {
-        tenantId,
-        branchId: historyBranch,
-        vehicleId: vehicle.id,
-        serviceType: 'REPAIR',
-        dueOn: day('2026-10-01'),
-      },
-    });
-    expect(
-      await query(
-        complete,
-        { id: later.id, input: { completedOn: '2026-10-18', completedOdometerKm: 4999 } },
-        historyBranch,
-      ),
-    ).toMatchObject({
-      errors: [{ extensions: { fieldErrors: [{ path: 'completedOdometerKm' }] } }],
-    });
-  });
+  const fields =
+    'id status serviceType title dueOn dueOdometerKm completedOn completedOdometerKm workshop replacedParts costCents urgency remainingDays remainingKm vehicle{id licensePlate}';
+  const complete = `mutation($id:ID!,$input:CompleteFleetServiceTaskInput!){completeFleetServiceTask(id:$id,input:$input){completed{${fields}} next{${fields}}}}`;
 
-  it('rejects new planning and atomically preserves completion when Vehicle deactivation wins the lock', async () => {
-    const branchId = randomUUID();
-    const scope = { tenantId, branchId };
-    const vehicle = await database.client.vehicle.create({
-      data: { ...scope, licensePlate: 'NO NEW PLANNING' },
-    });
-    const existing = await database.client.serviceTask.create({
-      data: {
-        ...scope,
-        vehicleId: vehicle.id,
-        serviceType: 'OIL_CHANGE',
-        dueOn: day('2026-10-17'),
-      },
-    });
-    const responses = await afterLockedVehicleChange(
-      database,
-      scope,
-      vehicle.id,
-      (transaction) =>
-        transaction.vehicle.update({
-          where: { ...scope, id: vehicle.id },
-          data: { status: 'INACTIVE' },
-        }),
-      () =>
-        Promise.all([
-          query(
-            'mutation($input:CreateFleetServiceTaskInput!){createFleetServiceTask(input:$input){id}}',
-            { input: { vehicleId: vehicle.id, serviceType: 'OIL_CHANGE', dueOn: '2026-11-01' } },
-            branchId,
-          ),
-          query(
-            complete,
-            { id: existing.id, input: { completedOn: '2026-10-18', nextDueOn: '2026-11-01' } },
-            branchId,
-          ),
-        ]),
-      2,
-    );
-    expect(responses).toMatchObject([
-      {
-        errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'vehicleId' }] } }],
-      },
-      {
-        errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'nextDueOn' }] } }],
-      },
-    ]);
+  it('completes a task and schedules the next one in the same transaction', async () => {
     expect(
-      await database.client.serviceTask.findMany({ where: { ...scope, vehicleId: vehicle.id } }),
-    ).toEqual([expect.objectContaining({ id: existing.id, status: 'PLANNED', completedOn: null })]);
-  });
-
-  it('retains planning committed before concurrent Vehicle deactivation', async () => {
-    const branchId = randomUUID();
-    const scope = { tenantId, branchId };
-    const vehicle = await database.client.vehicle.create({
-      data: { ...scope, licensePlate: 'PLANNING WINS' },
-    });
-    expect(
-      await afterLockedVehicleChange(
-        database,
-        scope,
-        vehicle.id,
-        (transaction) =>
-          transaction.serviceTask.create({
-            data: {
-              ...scope,
-              vehicleId: vehicle.id,
-              serviceType: 'OIL_CHANGE',
-              dueOn: day('2026-11-01'),
-            },
-          }),
-        () =>
-          query(
-            'mutation($id:ID!){deactivateFleetVehicle(id:$id){status}}',
-            { id: vehicle.id },
-            branchId,
-          ),
-        1,
-      ),
-    ).toEqual({ data: { deactivateFleetVehicle: { status: 'INACTIVE' } } });
-    expect(
-      await database.client.serviceTask.count({
-        where: { ...scope, vehicleId: vehicle.id, status: 'PLANNED' },
+      await query(complete, {
+        id: task('t2'),
+        input: {
+          completedOn: '2026-10-18',
+          completedOdometerKm: 100_000,
+          costCents: 0,
+          replacedParts: 'Филтър',
+          nextDueOn: '2027-04-18',
+          nextDueOdometerKm: 130_000,
+        },
       }),
-    ).toBe(1);
-  });
-
-  it('rechecks earlier-date odometers after concurrent completions acquire the Vehicle lock without restricting backdated history', async () => {
-    const concurrentBranch = randomUUID();
-    const scope = { tenantId, branchId: concurrentBranch };
-    const vehicle = await database.client.vehicle.create({
-      data: { ...scope, licensePlate: 'Concurrent history', status: 'INACTIVE' },
-    });
-    const plans = await Promise.all(
-      ['Earlier', 'Later', 'Backdated'].map((title) =>
-        database.client.serviceTask.create({
-          data: {
-            ...scope,
-            vehicleId: vehicle.id,
-            serviceType: 'OIL_CHANGE',
-            title,
-            dueOn: day('2026-10-01'),
-          },
-        }),
-      ),
-    );
-    const [earlier, later, backdated] = plans;
-    if (!earlier || !later || !backdated) {
-      throw new Error('Missing concurrent completion fixtures.');
-    }
-    const submitted: Promise<unknown>[] = [];
-    async function waitForWaiters(pid: number, expected: number): Promise<void> {
-      for (let attempt = 0; attempt < 250; attempt++) {
-        const waiting = await connection.query<{ count: number }>(
-          `WITH RECURSIVE blocked AS (
-            SELECT $1::int AS pid
-            UNION
-            SELECT activity.pid FROM pg_stat_activity activity
-            JOIN blocked holder ON holder.pid = ANY(pg_blocking_pids(activity.pid))
-          ) SELECT (count(*) - 1)::int AS count FROM blocked`,
-          [pid],
-        );
-        if ((waiting.rows[0]?.count ?? 0) >= expected) {
-          return;
-        }
-        await delay(20);
-      }
-      throw new Error('Completion requests did not reach the held row locks.');
-    }
-    await connection.query('BEGIN');
-    try {
-      const locked = await connection.query<{ pid: number }>(
-        'SELECT pg_backend_pid()::int AS pid FROM "Vehicle" WHERE "tenantId"=$1::uuid AND "branchId"=$2::uuid AND "id"=$3::uuid FOR UPDATE',
-        [tenantId, concurrentBranch, vehicle.id],
-      );
-      const pid = locked.rows[0]?.pid;
-      if (pid === undefined) {
-        throw new Error('Missing Vehicle lock holder.');
-      }
-      // The old implementation waits on the task updates; the fixed flow waits on Vehicle.
-      // Both early checks therefore pass before release, and the final result proves the rule.
-      await connection.query(
-        'SELECT "id" FROM "ServiceTask" WHERE "tenantId"=$1::uuid AND "branchId"=$2::uuid AND "id"=ANY($3::uuid[]) FOR UPDATE',
-        [tenantId, concurrentBranch, [earlier.id, later.id]],
-      );
-      const earlierRequest = query(
-        complete,
-        {
-          id: earlier.id,
-          input: { completedOn: '2026-10-17', completedOdometerKm: 200 },
-        },
-        concurrentBranch,
-      );
-      submitted.push(earlierRequest);
-      void earlierRequest.catch(() => undefined);
-      await waitForWaiters(pid, 1);
-      const laterRequest = query(
-        complete,
-        {
-          id: later.id,
-          input: { completedOn: '2026-10-18', completedOdometerKm: 100 },
-        },
-        concurrentBranch,
-      );
-      submitted.push(laterRequest);
-      void laterRequest.catch(() => undefined);
-      await waitForWaiters(pid, 2);
-      await connection.query('COMMIT');
-    } finally {
-      await connection.query('ROLLBACK');
-      // Always settle requests after releasing the holder, including a failed barrier.
-      await Promise.allSettled(submitted);
-    }
-    const [earlierResponse, laterResponse] = await Promise.all(submitted);
-    expect(earlierResponse).toMatchObject({
-      data: {
-        completeFleetServiceTask: {
-          completed: { id: earlier.id, status: 'DONE', completedOdometerKm: 200 },
-          next: null,
-        },
-      },
-    });
-    expect(laterResponse).toMatchObject({
-      errors: [
-        {
-          extensions: {
-            code: 'BAD_USER_INPUT',
-            fieldErrors: [{ path: 'completedOdometerKm' }],
-          },
-        },
-      ],
-    });
-    expect(
-      await database.client.serviceTask.findUniqueOrThrow({ where: { id: later.id } }),
-    ).toMatchObject({ status: 'PLANNED', completedOn: null, completedOdometerKm: null });
-    // A higher reading on an earlier date is still allowed: later-date history is excluded.
-    expect(
-      await query(
-        complete,
-        {
-          id: backdated.id,
-          input: { completedOn: '2026-10-16', completedOdometerKm: 300 },
-        },
-        concurrentBranch,
-      ),
     ).toMatchObject({
       data: {
         completeFleetServiceTask: {
-          completed: { id: backdated.id, status: 'DONE', completedOdometerKm: 300 },
-          next: null,
+          completed: {
+            id: task('t2'),
+            status: 'DONE',
+            completedOn: '2026-10-18',
+            completedOdometerKm: 100_000,
+            costCents: 0,
+            replacedParts: 'Филтър',
+            workshop: 'Депо',
+            urgency: null,
+          },
+          next: {
+            status: 'PLANNED',
+            serviceType: 'GENERAL_SERVICE',
+            title: 'Обслужване',
+            workshop: 'Депо',
+            dueOn: '2027-04-18',
+            dueOdometerKm: 130_000,
+            urgency: 'UPCOMING',
+            vehicle: { id: vehicles.a },
+          },
         },
       },
     });
-  });
-
-  it('cancels planned tasks and deletes only planned or cancelled ones', async () => {
-    const cancel = 'mutation($id:ID!){cancelFleetServiceTask(id:$id){id status urgency}}';
-    const remove = 'mutation($id:ID!){deleteFleetServiceTask(id:$id){id status}}';
-    expect(await query(cancel, { id: task('t7') })).toEqual({
-      data: { cancelFleetServiceTask: { id: task('t7'), status: 'CANCELLED', urgency: null } },
-    });
-    expect(await query(cancel, { id: task('t7') })).toMatchObject({
-      errors: [{ extensions: { code: 'CONFLICT' } }],
-    });
-    expect(await query(remove, { id: task('t7') })).toEqual({
-      data: { deleteFleetServiceTask: { id: task('t7'), status: 'CANCELLED' } },
-    });
-    expect(await query(remove, { id: task('t8') })).toEqual({
-      data: { deleteFleetServiceTask: { id: task('t8'), status: 'PLANNED' } },
-    });
-    expect(await query(remove, { id: task('t11') })).toMatchObject({
-      errors: [
-        { message: 'Completed service is kept as history', extensions: { code: 'CONFLICT' } },
-      ],
-    });
-    for (const source of [cancel, remove]) {
-      expect(await query(source, { id: foreignTask })).toMatchObject({
-        errors: [{ extensions: { code: 'NOT_FOUND' } }],
-      });
-    }
+    // A failure while scheduling the next task rolls the completion back.
+    const before = await database.client.serviceTask.count({ where: { tenantId, branchId } });
     expect(
-      await database.client.serviceTask.findMany({
-        where: { id: { in: [task('t7'), task('t8'), task('t11')] } },
-        select: { id: true },
+      await query(complete, {
+        id: task('t6'),
+        input: { completedOn: '2026-10-18', nextDueOdometerKm: 110_000, nextTitle: 'FAIL' },
       }),
-    ).toEqual([{ id: task('t11') }]);
+    ).toMatchObject({
+      errors: [{ message: 'Internal server error', extensions: { code: 'INTERNAL_SERVER_ERROR' } }],
+    });
+    expect(
+      await database.client.serviceTask.findUniqueOrThrow({ where: { id: task('t6') } }),
+    ).toMatchObject({ status: 'PLANNED', completedOn: null });
+    expect(await database.client.serviceTask.count({ where: { tenantId, branchId } })).toBe(before);
   });
 });

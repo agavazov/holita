@@ -5,11 +5,6 @@ import { ButtonDirective } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import { expect, spyOn, userEvent, waitFor, within } from 'storybook/test';
-import {
-  sampleAccount,
-  sampleLanguages,
-  sampleNotifications,
-} from '../../storybook/samples/example-app';
 import { defaultBranchId, fixtureBranches, fixtureTenant } from '../../storybook/session-fixtures';
 import { routeAt, StoryApp, type StoryFixtures } from '../../storybook/story-config';
 import { KpiStrip } from '../ui/kpi/kpi-strip';
@@ -19,12 +14,51 @@ import { TablePanel } from '../ui/table-panel/table-panel';
 import { UI_LANGUAGE } from '../ui/ui-language';
 import { adminNavigation } from '../workspace/admin-navigation';
 import { AdminShell } from './admin-shell';
-import type { ShellNotification } from './admin-topbar';
+import type { LanguageOption, ShellAccount, ShellNotification } from './admin-topbar';
 import { navigationContext } from './navigation';
 
 const vehicles = `${defaultBranchId}/fleet/vehicles`;
 /** The routed application bootstraps and discovers Branches before the workspace appears. */
 const appReady = { timeout: 10_000 };
+
+/** Sample entries only: Storybook stays in English and the language menu changes nothing. */
+const languages: readonly LanguageOption[] = [
+  { code: 'en', label: 'English' },
+  { code: 'bg', label: 'Български' },
+  { code: 'de', label: 'Deutsch' },
+  { code: 'es', label: 'Español' },
+  { code: 'fr', label: 'Français' },
+];
+
+const account: ShellAccount = {
+  name: 'Elena Petrova',
+  detail: `Fleet manager · ${fixtureTenant.name}`,
+};
+
+/** Two unread notifications and a read one. */
+const notifications: readonly ShellNotification[] = [
+  {
+    id: 'alert-a002',
+    title: 'Engine fault code P0299 · CA 1260 TE',
+    detail: 'Turbocharger underboost reported by the engine ECU.',
+    at: '2026-10-18T02:43:41.189Z',
+    unread: true,
+  },
+  {
+    id: 'task-s001',
+    title: 'Oil and filter change overdue · CA 1038 TE',
+    detail: 'Plan the workshop visit.',
+    at: '2026-10-18T05:25:00.000Z',
+    unread: true,
+  },
+  {
+    id: 'devices-offline',
+    title: '6 trackers offline',
+    detail: 'No connection for more than 48 hours.',
+    at: '2026-10-18T01:00:00.000Z',
+    unread: false,
+  },
+];
 
 const rows = [
   { id: '1', plate: 'CB 1001 AX', model: 'MAN TGX 18.510', status: 'Active', odometer: '412,330' },
@@ -120,12 +154,12 @@ class ShellPreview {
         )
       : [...fixtureBranches],
   );
-  readonly account = sampleAccount;
-  readonly notifications = input<readonly ShellNotification[]>(sampleNotifications());
+  readonly account = account;
+  readonly notifications = input<readonly ShellNotification[]>(notifications);
   readonly branchId = defaultBranchId;
   readonly tenant = fixtureTenant.name;
   readonly rows = rows;
-  readonly languages = sampleLanguages;
+  readonly languages = languages;
   readonly navigation = computed(() => adminNavigation(this.language(), defaultBranchId, true));
   readonly context = computed(() => {
     const context = navigationContext(this.navigation(), `/${this.language()}/${vehicles}`);
@@ -330,9 +364,9 @@ export const AccountMenu: Story = {
   render: preview,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole('button', { name: `Account: ${sampleAccount.name}` }));
+    await userEvent.click(canvas.getByRole('button', { name: `Account: ${account.name}` }));
     const body = within(canvasElement.ownerDocument.body);
-    await waitFor(() => expect(body.getByRole('menu', { name: sampleAccount.name })).toBeVisible());
+    await waitFor(() => expect(body.getByRole('menu', { name: account.name })).toBeVisible());
     await expect(body.getByRole('menuitem', { name: 'Sign out' })).toBeVisible();
     // The theme item is not chosen here: it would store the preference for the next stories. Its
     // label names the theme the toolbar does not show.

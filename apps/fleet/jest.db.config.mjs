@@ -6,4 +6,6 @@ export default {
   displayName: 'fleet:db',
   testMatch: ['<rootDir>/test/**/*.db.spec.ts'],
   testTimeout: 60000,
+  // Files share no state: each deploys its own schema. `--runInBand` still overrides this.
+  maxWorkers: 2,
 };

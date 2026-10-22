@@ -39,6 +39,5 @@ The following requires separate product scope and is not pending Storybook scree
   date; do not update existing seed rows to refresh it. Any refresh proposal must define a new
   dataset version/IDs and preserve insert-only/idempotent behavior and local safety guards.
 
-Use [Discocan testing](../discocan/testing.md) for the actual focused service, persistence,
-federation and contract checks. Keep validation results in the task response, not a backend
-implementation journal.
+Choose checks with [testing](../testing.md). Keep validation results in the task response, not
+a backend implementation journal.

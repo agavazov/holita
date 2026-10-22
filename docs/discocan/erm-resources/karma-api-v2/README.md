@@ -119,7 +119,7 @@ inputs and admin views. Keep observations separate from server guarantees and
 preserve unknown schemas until supported by evidence. Do not archive raw account
 records, credentials, sessions, private URLs or live telemetry as examples here.
 
-Use [Discocan testing](../../testing.md#karma-client-checks) for application checks.
+Use [testing](../../../testing.md) for application checks.
 Documentation-only edits need link, JSON/schema, source-integrity and diff checks;
 they do not require database fixtures or a full application regression.
 

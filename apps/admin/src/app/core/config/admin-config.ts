@@ -12,7 +12,7 @@ export const ADMIN_RUNTIME_CONFIG = new InjectionToken<AdminRuntimeConfig>('admi
   factory: () => ({ graphqlUrl: '/graphql' }),
 });
 
-export function readGraphqlUrl(value: unknown): string {
+function readGraphqlUrl(value: unknown): string {
   if (
     typeof value !== 'object' ||
     value === null ||

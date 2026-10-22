@@ -41,12 +41,12 @@ export type OdometerField = keyof OdometerReading;
 const fields: readonly OdometerField[] = ['odometerKm', 'recordedAt'];
 
 /** Floating wall time avoids normalization by the browser's own DST rules. */
-export function odometerWallTime(iso: string, timeZone = 'Europe/Sofia'): string | null {
+function odometerWallTime(iso: string, timeZone = 'Europe/Sofia'): string | null {
   return isoToZonedWallTime(iso, timeZone);
 }
 
 /** Repeated Branch wall times use an occurrence inside the permitted reading interval. */
-export function odometerInstant(
+function odometerInstant(
   date: string | null,
   bounds?: { readonly previousAt: string | null; readonly latestAllowedAt: string },
   timeZone = 'Europe/Sofia',

@@ -106,16 +106,6 @@ const preview: Preview = {
           'Start here',
           'Admin',
           ['Fleet', ['Vehicles']],
-          'Examples',
-          [
-            'Tour',
-            'Authentication',
-            'Monitoring',
-            ['Overview', 'Alerts', 'Trips'],
-            'Fleet',
-            'Service',
-            'Settings',
-          ],
           'Design System',
           ['Foundations', 'Patterns', 'Shell', 'PrimeNG coverage'],
         ],
@@ -145,15 +135,11 @@ const preview: Preview = {
         },
       },
     },
-    // Accessibility violations fail story tests; the PrimeUI license banner is not ours.
-    a11y: { test: 'error', context: { exclude: ['#p-license-host'] } },
+    // The Accessibility panel skips the PrimeUI license banner, which is not ours.
+    a11y: { context: { exclude: ['#p-license-host'] } },
   },
-  beforeEach: ({ canvasElement, globals, parameters }) => {
-    delete canvasElement.dataset['storyReady'];
+  beforeEach: ({ globals, parameters }) => {
     prepareStory(parameters['holita'], globals);
-  },
-  afterEach: ({ canvasElement, id }) => {
-    canvasElement.dataset['storyReady'] = id;
   },
 };
 

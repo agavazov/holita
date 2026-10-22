@@ -163,7 +163,7 @@ export const codecs = {
 };
 
 /** Search text as tokens: trimmed and split on Unicode whitespace. */
-export function searchTokens(search: string): readonly string[] {
+function searchTokens(search: string): readonly string[] {
   return search.trim().split(/\s+/u).filter(Boolean);
 }
 
@@ -303,21 +303,4 @@ export function sameListState<F, S extends string>(
     }
   }
   return true;
-}
-
-/** Applied filters (not search, not the per-view parameter) for the mobile "Filters (n)" toggle. */
-export function activeFilterCount<F, S extends string>(
-  state: ListState<F, S>,
-  definition: ListDefinition<F, S>,
-): number {
-  let count = 0;
-  for (const key in definition.filters) {
-    if (
-      key !== definition.viewDefaultSorts?.param &&
-      definition.filters[key].write(state.filter[key]) !== null
-    ) {
-      count++;
-    }
-  }
-  return count;
 }

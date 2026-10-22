@@ -6,7 +6,7 @@ export type BreakpointName = 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
  * A breakpoint width in pixels, read from the `--app-bp-*` custom properties that
  * `styles/_breakpoint-properties.scss` generates from the single Sass map.
  */
-export function breakpointWidth(name: BreakpointName): number {
+function breakpointWidth(name: BreakpointName): number {
   const value = getComputedStyle(document.documentElement)
     .getPropertyValue(`--app-bp-${name}`)
     .trim();

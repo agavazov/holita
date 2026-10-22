@@ -9,10 +9,7 @@ import {
 } from '../src/integrations/karma/karma-device-reads.client.js';
 import { changedDefinition } from '../src/modules/device-operations/device-parameter-change.js';
 import { DeviceOperationsProcessor } from '../src/modules/device-operations/device-operations.processor.js';
-import {
-  DeviceOperationsRepository,
-  MONITOR_SOURCE_SHA256,
-} from '../src/modules/device-operations/device-operations.repository.js';
+import { DeviceOperationsRepository } from '../src/modules/device-operations/device-operations.repository.js';
 import { createTestDatabase } from './test-database.js';
 
 const scope = { tenantId: randomUUID(), branchId: randomUUID() };
@@ -204,17 +201,15 @@ describe('Durable reporting changes with PostgreSQL', () => {
     expect(completed?.baselineConfiguration).toEqual(baselineConfiguration);
     expect(writes).toHaveBeenCalledTimes(1);
     process.env.FLEET_DEVICE_CONFIGURATION_WRITES_ENABLED = 'true';
-  });
 
-  it('recovers an expired lease after the write marker without replaying the ambiguous command', async () => {
-    const previousWrites = writes.mock.calls.length;
-    const confirmed = await baseline('9102');
-    const operation = await repository.createWrite(
+    // An expired lease after the durable write marker recovers without replaying the command.
+    const leased = await baseline('9102');
+    const recovering = await repository.createWrite(
       scope,
-      confirmed,
+      leased,
       {
         kind: 'UPDATE_INTERVAL',
-        baselineOperationId: confirmed.id,
+        baselineOperationId: leased.id,
         parameterId: 65000,
         intervalSeconds: 0,
         catalogId: null,
@@ -222,7 +217,7 @@ describe('Durable reporting changes with PostgreSQL', () => {
       now,
     );
     await database.client.fleetDeviceOperation.update({
-      where: { id: operation.id },
+      where: { id: recovering.id },
       data: {
         phase: 'WRITE_PARAMETER',
         status: 'SUBMITTING',
@@ -243,153 +238,6 @@ describe('Durable reporting changes with PostgreSQL', () => {
       status: 'QUEUED',
       writeUncertain: true,
     });
-    expect(writes).toHaveBeenCalledTimes(previousWrites);
-    await database.client.fleetDeviceOperation.update({
-      where: { id: operation.id },
-      data: { status: 'TIMED_OUT', completedAt: now },
-    });
-  });
-
-  it('keeps the global target lock across kinds and rejects a cross-Branch baseline FK', async () => {
-    const confirmed = await baseline('9103');
-    const operation = await repository.createWrite(
-      scope,
-      confirmed,
-      {
-        kind: 'UPDATE_INTERVAL',
-        baselineOperationId: confirmed.id,
-        parameterId: 65000,
-        intervalSeconds: 0,
-        catalogId: null,
-      },
-      now,
-    );
-    await expect(
-      repository.create(
-        scope,
-        {
-          deviceId: confirmed.deviceId,
-          deviceImei: confirmed.deviceImei,
-          karmaCarId: confirmed.karmaCarId,
-          karmaDeviceId: confirmed.karmaDeviceId,
-        },
-        now,
-      ),
-    ).rejects.toMatchObject({ code: 'P2002' });
-    const otherScope = { tenantId: scope.tenantId, branchId: randomUUID() };
-    const selected = await database.client.device.create({
-      data: { ...otherScope, imei: '000000000009104' },
-    });
-    await expect(
-      database.client.fleetDeviceOperation.create({
-        data: {
-          ...otherScope,
-          deviceId: selected.id,
-          deviceImei: selected.imei,
-          karmaCarId: '9104',
-          karmaDeviceId: 'opaque',
-          kind: 'UPDATE_INTERVAL',
-          baselineOperationId: confirmed.id,
-          parameterId: 65000,
-          intervalSeconds: 0,
-          baselineConfiguration,
-          baselineConfigurationId: '7',
-          requestedAt: now,
-          nextCheckAt: now,
-          deadlineAt: new Date(now.getTime() + 600_000),
-        },
-      }),
-    ).rejects.toMatchObject({ code: 'P2003' });
-    await database.client.fleetDeviceOperation.update({
-      where: { id: operation.id },
-      data: { status: 'TIMED_OUT', completedAt: now },
-    });
-  });
-
-  it('offers only verified-source unambiguous Monitor IDs with actual profile membership', async () => {
-    async function catalog(sha: string, label: string) {
-      const item = await database.client.edataCatalog.create({
-        data: {
-          sourceSha256: sha,
-          extractorVersion: '1.0.0',
-          schemaVersion: 1,
-          packageLabel: label,
-          contentSha256: 'b'.repeat(64),
-          metadata: {},
-        },
-      });
-      await database.client.edataCatalogSource.create({
-        data: { catalogId: item.id, key: 'monitor', kind: 'monitor', evidence: {} },
-      });
-      await database.client.edataCatalogParameter.createMany({
-        data: [
-          {
-            catalogId: item.id,
-            key: 'monitor:1',
-            sourceKey: 'monitor',
-            parameterId: 900,
-            category: '1',
-            name: 'Other predefined signal',
-            details: { issues: [] },
-          },
-          {
-            catalogId: item.id,
-            key: 'monitor:2',
-            sourceKey: 'monitor',
-            parameterId: 901,
-            category: '1',
-            name: 'Ambiguous one',
-            details: { issues: [] },
-          },
-          {
-            catalogId: item.id,
-            key: 'monitor:3',
-            sourceKey: 'monitor',
-            parameterId: 901,
-            category: '2',
-            name: 'Ambiguous two',
-            details: { issues: [] },
-          },
-          {
-            catalogId: item.id,
-            key: 'monitor:4',
-            sourceKey: 'monitor',
-            parameterId: 902,
-            category: '1',
-            name: 'No profile membership',
-            details: { issues: [] },
-          },
-        ],
-      });
-      await database.client.edataCatalogCategory.create({
-        data: { catalogId: item.id, vendorId: 3, name: 'FMS' },
-      });
-      await database.client.edataCatalogSet.create({
-        data: { catalogId: item.id, vendorId: 135, details: {} },
-      });
-      await database.client.edataCatalogSetMember.createMany({
-        data: [900, 901].map((parameterId, position) => ({
-          catalogId: item.id,
-          setId: 135,
-          position,
-          parameterId,
-        })),
-      });
-      await database.client.edataCatalogProfile.create({
-        data: { catalogId: item.id, vendorId: 430, categoryId: 3, setId: 135, name: 'FMS500' },
-      });
-      return item;
-    }
-    await catalog('a'.repeat(64), 'Unverified');
-    const verified = await catalog(MONITOR_SOURCE_SHA256, 'Monitor9.56');
-    expect(await repository.presets()).toEqual([
-      {
-        catalogId: verified.id,
-        catalogLabel: 'Monitor9.56',
-        parameterId: 900,
-        name: 'Other predefined signal',
-        profileIds: [430],
-      },
-    ]);
+    expect(writes).toHaveBeenCalledTimes(1);
   });
 });

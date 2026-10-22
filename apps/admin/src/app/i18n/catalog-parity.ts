@@ -1,4 +1,4 @@
-// Shared check for every Bulgarian/English catalog pair (used by each catalog's messages.spec.ts).
+// Bulgarian/English catalog comparison for the app-wide parity check in messages.spec.ts.
 
 function placeholders(text: string): string {
   return [...new Set([...text.matchAll(/\{(\w+)\}/g)].map((match) => match[1] ?? ''))]
@@ -55,12 +55,4 @@ export function catalogParityProblems(bg: unknown, en: unknown, path = ''): read
     }
   }
   return problems;
-}
-
-/** Throws with every parity problem; catalogs pass when this returns. */
-export function expectCatalogParity(bg: unknown, en: unknown): void {
-  const problems = catalogParityProblems(bg, en);
-  if (problems.length) {
-    throw new Error(`Catalogs differ:\n${problems.join('\n')}`);
-  }
 }

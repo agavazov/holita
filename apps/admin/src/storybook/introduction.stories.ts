@@ -7,85 +7,6 @@ interface Entry {
   readonly shows: string;
 }
 
-const examples: readonly Entry[] = [
-  {
-    story: 'examples-authentication-login--default',
-    title: 'Login',
-    shows:
-      'The real Tenant and Branch sign-in flow with local GraphQL fixtures; success opens the sample Fleet.',
-  },
-  {
-    story: 'examples-tour--all-pages',
-    title: 'Tour',
-    shows: 'Every sample navigation page in one app; switch pages in the sidebar.',
-  },
-  {
-    story: 'examples-monitoring-overview--default',
-    title: 'Overview',
-    shows: 'Dashboard: KPI tiles that open their lists, items that need attention, charts.',
-  },
-  {
-    story: 'examples-fleet-vehicles--default',
-    title: 'Vehicles',
-    shows:
-      'The full list: quick search, "Add filter", sorting, paging, "⋮" row actions, bulk actions and direct edit in the drawer.',
-  },
-  {
-    story: 'examples-fleet-vehicle-profile--overview',
-    title: 'Vehicle profile',
-    shows: 'A record page with tabs, a back link and Edit in the drawer.',
-  },
-  {
-    story: 'examples-fleet-drivers--view',
-    title: 'Drivers',
-    shows: 'The mixed drawer: a record opens read-only and Edit switches to the form.',
-  },
-  {
-    story: 'examples-fleet-driver-scorecard--default',
-    title: 'Driver scorecard',
-    shows:
-      'Distance-weighted driving and eco scores, scored-trip coverage and maneuver intensities for 7, 30 or 90 days.',
-  },
-  {
-    story: 'examples-fleet-odometer--default',
-    title: 'Manual odometer',
-    shows:
-      'Record a reading from the vehicle profile, with chronological checks and a retryable save.',
-  },
-  {
-    story: 'examples-monitoring-trips--trip-drawer',
-    title: 'Trips',
-    shows: 'A read-only list and a view drawer with a timeline.',
-  },
-  {
-    story: 'examples-monitoring-alerts--open-alert',
-    title: 'Alerts',
-    shows: 'A default filter chip and a view drawer with workflow actions.',
-  },
-  {
-    story: 'examples-service-maintenance--default',
-    title: 'Maintenance',
-    shows:
-      'Plan by date or odometer, complete a service with optional next task, and review its completion details.',
-  },
-  {
-    story: 'examples-service-service-completion--default',
-    title: 'Service completion',
-    shows:
-      'Completion details, chronological validation, a single save with the next task, and retry without losing the draft.',
-  },
-  {
-    story: 'examples-fleet-devices--edit',
-    title: 'Devices',
-    shows: 'Direct edit with read-only diagnostics above the form.',
-  },
-  {
-    story: 'examples-settings--general-unsaved',
-    title: 'Settings',
-    shows: 'A page form with a sticky save bar, and a short list of vehicle groups.',
-  },
-];
-
 const foundations: readonly Entry[] = [
   {
     story: 'design-system-foundations--colors',
@@ -116,21 +37,11 @@ const foundations: readonly Entry[] = [
   template: `
     <main class="intro">
       <p class="intro__eyebrow">holita admin</p>
-      <h1>Design system and example pages</h1>
+      <h1>Design system and admin pages</h1>
       <p class="intro__lead">
         Every page of the admin is built from the same patterns, so a change here changes it
-        everywhere. The examples use sample data only; nothing talks to a backend.
+        everywhere. Stories use local fixtures and sample data only; nothing talks to a backend.
       </p>
-
-      <h2>Start with the examples</h2>
-      <ul class="intro__list">
-        @for (entry of examples; track entry.story) {
-          <li>
-            <a [href]="link(entry)" target="_top">{{ entry.title }}</a>
-            <span>{{ entry.shows }}</span>
-          </li>
-        }
-      </ul>
 
       <h2>How to review</h2>
       <ul class="intro__bullets">
@@ -139,14 +50,10 @@ const foundations: readonly Entry[] = [
           <strong>Density</strong> and the viewport (desktop 1440, tablet 768, mobile 375).
         </li>
         <li>
-          Each example has stories for its states: loading, empty, no results, error, save errors,
-          mobile and dark.
-        </li>
-        <li>
           The language menu in the topbar lists sample languages only; Storybook stays in English.
           The product's languages live in the application catalogs.
         </li>
-        <li>The Accessibility panel runs axe on every story; story tests fail on violations.</li>
+        <li>The Accessibility panel runs axe on every story.</li>
       </ul>
 
       <h2>Design system</h2>
@@ -223,7 +130,6 @@ const foundations: readonly Entry[] = [
   `,
 })
 class StorybookIntroduction {
-  protected readonly examples = examples;
   protected readonly foundations = foundations;
 
   /** A link to a story in the Storybook manager (the page above this iframe). */

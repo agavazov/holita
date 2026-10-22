@@ -6,19 +6,9 @@
   "implicitDependencies": ["core", "fleet", "karma-client"],
   "tags": ["type:app", "scope:gateway"],
   "targets": {
-    "test": {
-      "executor": "nx:run-commands",
-      "cache": false,
-      "dependsOn": ["graphql-generate"],
-      "options": {
-        "command": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.federation.config.mjs --testMatch '<rootDir>/tools/graphql/router.runtime.spec.mts' --runInBand",
-        "cwd": ".",
-        "forwardAllArgs": true
-      }
-    },
     "graphql-generate": {
       "executor": "nx:run-commands",
-      "inputs": ["default"],
+      "inputs": ["graphqlGeneration"],
       "cache": true,
       "outputs": ["{projectRoot}/src/generated/graphql"],
       "options": {
@@ -28,26 +18,12 @@
     },
     "lint": {},
     "build": {
-      "cache": false,
+      "cache": true,
+      "inputs": ["default"],
       "outputs": [],
       "dependsOn": ["graphql-generate"]
     },
-    "test-router": {
-      "executor": "nx:run-commands",
-      "cache": false,
-      "dependsOn": [
-        {
-          "projects": ["core", "gateway", "fleet", "karma-client"],
-          "target": "build"
-        }
-      ],
-      "options": {
-        "command": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.federation.config.mjs --testMatch '<rootDir>/tools/graphql/router.smoke.spec.mts' --runInBand",
-        "cwd": ".",
-        "forwardAllArgs": true
-      }
-    },
-    "test-db": {
+    "test-federation": {
       "executor": "nx:run-commands",
       "cache": false,
       "dependsOn": [
@@ -58,21 +34,6 @@
       ],
       "options": {
         "command": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.federation.config.mjs --runInBand",
-        "cwd": ".",
-        "forwardAllArgs": true
-      }
-    },
-    "benchmark": {
-      "executor": "nx:run-commands",
-      "cache": false,
-      "dependsOn": [
-        {
-          "projects": ["core", "gateway", "fleet", "karma-client"],
-          "target": "build"
-        }
-      ],
-      "options": {
-        "command": "tsx tools/graphql/gateway-benchmark.mts",
         "cwd": ".",
         "forwardAllArgs": true
       }

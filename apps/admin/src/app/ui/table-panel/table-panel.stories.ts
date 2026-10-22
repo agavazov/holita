@@ -374,7 +374,7 @@ export const RowActionsOpen: Story = {
 
 /**
  * A row uses the same title and record list as a selection; Cancel returns focus to its "⋮".
- * Reopen the dialog so the same story also covers its open state and visual review.
+ * Reopen the dialog so the same story also shows its open state.
  */
 export const ConfirmFromRow: Story = {
   name: 'Confirm from a row',

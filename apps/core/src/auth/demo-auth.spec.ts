@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it } from '@jest/globals';
 import { createHmac, randomUUID } from 'node:crypto';
-import { UnauthorizedException } from '@nestjs/common';
 import { issueDemoToken, readDemoTenant, requireTenant } from './demo-auth.js';
 
 const initial = {
@@ -25,45 +24,88 @@ afterEach(() => {
     process.env.NODE_ENV = initial.nodeEnv;
   }
 });
+
+function attempt(action: () => string | undefined): string | undefined {
+  try {
+    return action();
+  } catch (error: unknown) {
+    return error instanceof Error ? `${error.name}: ${error.message}` : 'Unexpected failure';
+  }
+}
+
 describe('Demo tenant session verification', () => {
-  it('accepts issued tokens and rejects tenant tampering, expiry, arrays and unbounded headers', () => {
-    process.env.DEMO_AUTH_SECRET = 'test-secret-with-more-than-thirty-two-characters';
+  it('verifies only correctly signed, unexpired demo sessions and keeps demo login off in production without explicit opt-in', () => {
+    const secret = 'first-secret-with-at-least-thirty-two-characters';
+    process.env.DEMO_AUTH_SECRET = secret;
     process.env.DEMO_AUTH_ENABLED = 'true';
     const tenantId = randomUUID();
     const token = issueDemoToken(tenantId);
-    expect(readDemoTenant(`Bearer ${token}`)).toBe(tenantId);
-    expect(readDemoTenant(`Bearer ${token.replace(tenantId, randomUUID())}`)).toBeUndefined();
     const expired = `holita-demo.${tenantId}.${String(Math.floor(Date.now() / 1000) - 1)}`;
-    const signature = createHmac('sha256', process.env.DEMO_AUTH_SECRET)
-      .update(expired)
-      .digest('base64url');
-    for (const header of [
-      `Bearer ${expired}.${signature}`,
-      token,
-      ['Bearer ' + token],
-      'Bearer ' + 'x'.repeat(1000),
-      undefined,
-    ]) {
-      expect(readDemoTenant(header)).toBeUndefined();
+    const signature = createHmac('sha256', secret).update(expired).digest('base64url');
+    for (const [row, header, expected] of [
+      ['issued token', `Bearer ${token}`, tenantId],
+      ['tampered tenant', `Bearer ${token.replace(tenantId, randomUUID())}`, undefined],
+      ['expired token', `Bearer ${expired}.${signature}`, undefined],
+      ['missing Bearer prefix', token, undefined],
+      ['header array', [`Bearer ${token}`], undefined],
+      ['header over 256 characters', `Bearer ${'x'.repeat(1000)}`, undefined],
+      ['missing header', undefined, undefined],
+    ] satisfies [string, unknown, string | undefined][]) {
+      expect({ row, value: readDemoTenant(header) }).toEqual({ row, value: expected });
     }
-    expect(() => requireTenant({ tenantId: undefined })).toThrow(UnauthorizedException);
-  });
-  it('rejects a token signed with another secret and disables demo login and sessions together', () => {
-    process.env.DEMO_AUTH_ENABLED = 'true';
-    process.env.DEMO_AUTH_SECRET = 'first-secret-with-at-least-thirty-two-characters';
-    const token = issueDemoToken(randomUUID());
-    process.env.DEMO_AUTH_SECRET = 'second-secret-with-at-least-thirty-two-characters';
-    expect(readDemoTenant(`Bearer ${token}`)).toBeUndefined();
-    process.env.DEMO_AUTH_ENABLED = 'false';
-    expect(() => issueDemoToken(randomUUID())).toThrow(UnauthorizedException);
-    expect(readDemoTenant(`Bearer ${token}`)).toBeUndefined();
-  });
-  it('requires explicit production opt-in and a configured secret', () => {
-    process.env.NODE_ENV = 'production';
-    delete process.env.DEMO_AUTH_ENABLED;
-    expect(() => issueDemoToken(randomUUID())).toThrow(UnauthorizedException);
-    process.env.DEMO_AUTH_ENABLED = 'true';
-    delete process.env.DEMO_AUTH_SECRET;
-    expect(() => issueDemoToken(randomUUID())).toThrow('DEMO_AUTH_SECRET');
+    expect(attempt(() => requireTenant({ tenantId: undefined }))).toBe(
+      'UnauthorizedException: Sign in to a tenant first',
+    );
+    const disabled = 'UnauthorizedException: Demo login is disabled';
+    const unconfigured = 'Error: DEMO_AUTH_SECRET must contain at least 32 characters.';
+    for (const [row, configure, issued, verified] of [
+      [
+        'another secret',
+        () => {
+          process.env.DEMO_AUTH_SECRET = 'second-secret-with-at-least-thirty-two-characters';
+        },
+        'issued',
+        undefined,
+      ],
+      [
+        'demo login disabled',
+        () => {
+          process.env.DEMO_AUTH_ENABLED = 'false';
+        },
+        disabled,
+        undefined,
+      ],
+      [
+        'production without explicit opt-in',
+        () => {
+          process.env.NODE_ENV = 'production';
+          delete process.env.DEMO_AUTH_ENABLED;
+        },
+        disabled,
+        undefined,
+      ],
+      [
+        'production without a secret',
+        () => {
+          process.env.NODE_ENV = 'production';
+          delete process.env.DEMO_AUTH_SECRET;
+        },
+        unconfigured,
+        unconfigured,
+      ],
+    ] satisfies [string, () => void, string, string | undefined][]) {
+      process.env.DEMO_AUTH_SECRET = secret;
+      process.env.DEMO_AUTH_ENABLED = 'true';
+      process.env.NODE_ENV = 'test';
+      configure();
+      const actual = {
+        issued: attempt(() => {
+          issueDemoToken(randomUUID());
+          return 'issued';
+        }),
+        verified: attempt(() => readDemoTenant(`Bearer ${token}`)),
+      };
+      expect({ row, value: actual }).toEqual({ row, value: { issued, verified } });
+    }
   });
 });

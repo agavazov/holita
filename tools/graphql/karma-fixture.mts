@@ -1,4 +1,4 @@
-import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { createServer } from 'node:http';
 
 // Deterministic upstream for federation/browser checks; never uses a live Karma account.
 export async function createKarmaFixture() {
@@ -16,7 +16,6 @@ export async function createKarmaFixture() {
       driver_ids: [],
     },
   ];
-  let accountsEmpty = false;
   const users = Array.from({ length: 120 }, (_, index) => ({
     user_id: 71 + index,
     user_name: `fixture-${String(index).padStart(3, '0')}`,
@@ -37,15 +36,8 @@ export async function createKarmaFixture() {
     { role_id: 40, description: 'Viewer' },
     { role_id: 50, description: 'Driver' },
   ];
-  let empty = false;
   let failed = false;
   let session = 0;
-  let locationCoordinates: { latitude: number | null; longitude: number | null } = {
-    latitude: 0,
-    longitude: 0,
-  };
-  let locationEmpty = false;
-  let referencesFailed = false;
   const zones = Array.from({ length: 120 }, (_, id) => ({
     zone_id: id,
     zone_name: id === 8 ? 'Europe/Sofia' : `Fixture/Zone${String(id).padStart(3, '0')}`,
@@ -73,7 +65,6 @@ export async function createKarmaFixture() {
       ],
     };
   });
-  let historyEmpty = false;
   const trips = edata.slice(0, 120).map((row, index) => ({
     trip_id: 4000000001 + index,
     car_id: 41,
@@ -114,134 +105,10 @@ export async function createKarmaFixture() {
     edt_tz: row.edt_tz,
   }));
   const requests: { method: string; path: string }[] = [];
-  const configurationCommands: string[] = [];
-  const configurationDefinitions = new Map([
-    [662, '0296000000000000000000000000000000000000001E'],
-    [153, '00990000000000000000000000000000000000000000'],
-  ]);
-  let configurationAutomaticResponses = false;
-  let configurationReadsHeld = false;
-  let configurationWriteUncertain = false;
-  let configurationProfileId = 343;
-  let configurationMessageId = 6000000002;
-  let configurationParameterReadRequested = false;
-  let pendingConfigurationReads: ('parameters' | 'profile')[] = [];
-  function configurationEvent(message: string) {
-    const utc = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    configurationMessageId++;
-    events.push({
-      car_id: 41,
-      device_id: '000123456789012',
-      message_id: configurationMessageId,
-      extra: message,
-      edt: utc,
-      eid: 33,
-      latitude: 0,
-      longitude: 0,
-      spd: 0,
-      odo: 0,
-      pdt: utc,
-      edt_tz: utc,
-    });
-  }
-  function configurationReadback(kind: 'parameters' | 'profile') {
-    if (kind === 'profile') {
-      const profile = configurationProfileId.toString(16).padStart(4, '0').toUpperCase();
-      configurationEvent(`19,0,416,0,1,1,1001,1F${profile}`);
-      return;
-    }
-    const definitions = [...configurationDefinitions.values()];
-    if (definitions.length === 0) {
-      configurationEvent('19,0,401,0,1,1,1001,07');
-    }
-    for (const [index, definition] of definitions.entries()) {
-      const lastMessage = index === definitions.length - 1 ? '1' : '0';
-      configurationEvent(`19,0,401,0,${lastMessage},${String(index + 1)},1001,07${definition}`);
-    }
-  }
-  function configurationReadRequested(kind: 'parameters' | 'profile') {
-    if (!configurationAutomaticResponses) {
-      return;
-    }
-    if (configurationReadsHeld) {
-      pendingConfigurationReads.push(kind);
-    } else {
-      configurationReadback(kind);
-    }
-  }
-  async function configurationRequest(request: IncomingMessage, response: ServerResponse) {
-    const chunks: Buffer[] = [];
-    let size = 0;
-    for await (const chunk of request) {
-      if (!Buffer.isBuffer(chunk)) {
-        throw new Error('Expected a request buffer');
-      }
-      size += chunk.length;
-      if (size > 8192) {
-        throw new Error('Configuration fixture request is too large');
-      }
-      chunks.push(chunk);
-    }
-    const body: unknown = JSON.parse(Buffer.concat(chunks).toString());
-    if (
-      typeof body !== 'object' ||
-      body === null ||
-      !('message' in body) ||
-      typeof body.message !== 'string' ||
-      !('car_id' in body) ||
-      !Array.isArray(body.car_id) ||
-      body.car_id.length !== 1 ||
-      body.car_id[0] !== '41' ||
-      !('karma_sid' in body) ||
-      body.karma_sid !== `fixture-session-${String(session)}`
-    ) {
-      response.writeHead(400);
-      response.end(JSON.stringify({ error: 'Invalid configuration fixture request' }));
-      return;
-    }
-    const prefix = '30,1,19,0,19,301,0,1,1,';
-    const payload = body.message.startsWith(prefix) ? body.message.slice(prefix.length) : '';
-    const writeDefinition = /^02[\da-f]{44}$/i.test(payload) ? payload.slice(2) : null;
-    if (
-      payload !== '0702BC' &&
-      payload !== '1F' &&
-      (writeDefinition === null || Number.parseInt(writeDefinition.slice(40), 16) > 65000)
-    ) {
-      response.writeHead(400);
-      response.end(JSON.stringify({ error: 'Invalid configuration fixture request' }));
-      return;
-    }
-    configurationCommands.push(body.message);
-    if (payload === '0702BC') {
-      configurationParameterReadRequested = true;
-      configurationReadRequested('parameters');
-    } else if (payload === '1F') {
-      configurationReadRequested('profile');
-    } else if (writeDefinition !== null) {
-      const parameterId = Number.parseInt(writeDefinition.slice(0, 4), 16);
-      let definition = writeDefinition.toUpperCase();
-      if (!configurationDefinitions.has(parameterId) && definition.slice(16, 24) === '00010001') {
-        definition = `${definition.slice(0, 16)}00000000${definition.slice(24)}`;
-      }
-      configurationDefinitions.set(parameterId, definition);
-      if (configurationWriteUncertain) {
-        response.destroy();
-        return;
-      }
-    }
-    response.end(JSON.stringify([9000 + configurationCommands.length]));
-  }
   const server = createServer((request, response) => {
     const url = new URL(request.url ?? '/', 'http://127.0.0.1');
     requests.push({ method: request.method ?? '', path: url.pathname });
     response.setHeader('content-type', 'application/json');
-    if (url.pathname === '/apiv2/commands' && request.method === 'POST') {
-      void configurationRequest(request, response).catch(() => {
-        response.writeHead(400);
-        response.end(JSON.stringify({ error: 'Invalid configuration fixture request' }));
-      });
-      return;
-    }
     request.resume();
     if (failed) {
       response.writeHead(503);
@@ -258,11 +125,9 @@ export async function createKarmaFixture() {
       response.end(
         JSON.stringify(
           url.searchParams.get('karma_sid') === `fixture-session-${String(session)}`
-            ? empty
-              ? []
-              : url.pathname === '/apiv2/cars'
-                ? cars
-                : cars.filter((car) => String(car.car_id) === url.pathname.split('/').at(-1))
+            ? url.pathname === '/apiv2/cars'
+              ? cars
+              : cars.filter((car) => String(car.car_id) === url.pathname.split('/').at(-1))
             : { error: 'Not logged in' },
         ),
       );
@@ -274,11 +139,9 @@ export async function createKarmaFixture() {
         JSON.stringify(
           url.searchParams.get('karma_sid') !== `fixture-session-${String(session)}`
             ? { error: 'Not logged in' }
-            : accountsEmpty
-              ? []
-              : url.pathname === '/apiv2/users'
-                ? users
-                : roles,
+            : url.pathname === '/apiv2/users'
+              ? users
+              : roles,
         ),
       );
     } else if (url.pathname === '/apiv2/version' && request.method === 'GET') {
@@ -290,17 +153,12 @@ export async function createKarmaFixture() {
       let result: unknown;
       if (url.searchParams.get('karma_sid') !== `fixture-session-${String(session)}`) {
         result = { error: 'Not logged in' };
-      } else if (url.pathname !== '/apiv2/location' && referencesFailed) {
-        response.writeHead(503);
-        result = { error: 'Reference fixture unavailable' };
       } else if (url.pathname === '/apiv2/projects') {
-        result = empty ? [] : [{ project_id: 12, name: 'Fixture project' }];
+        result = [{ project_id: 12, name: 'Fixture project' }];
       } else if (url.pathname === '/apiv2/time-zones') {
-        result = empty ? [] : zones;
+        result = zones;
       } else if (url.searchParams.get('car') !== '41') {
         result = { error: 'Car not found' };
-      } else if (locationEmpty || empty) {
-        result = [];
       } else {
         const last = edata.at(-1);
         const row = {
@@ -311,7 +169,8 @@ export async function createKarmaFixture() {
           eid: 0,
           extra: '<b>Fixture plain text</b>',
           edt: last?.edt ?? null,
-          ...locationCoordinates,
+          latitude: 0,
+          longitude: 0,
         };
         const selected: Record<string, unknown> = { ...row };
         for (const field of url.searchParams.getAll('fields[]')) {
@@ -337,8 +196,6 @@ export async function createKarmaFixture() {
         result = { error: 'Not logged in' };
       } else if (url.searchParams.get('car') !== '41') {
         result = { error: 'Car not found' };
-      } else if (empty || historyEmpty) {
-        result = [];
       } else if (url.pathname === '/apiv2/driving-profile') {
         result = [
           {
@@ -414,9 +271,7 @@ export async function createKarmaFixture() {
             ? { error: 'Not logged in' }
             : url.searchParams.get('car') !== '41'
               ? { error: 'Car not found' }
-              : empty
-                ? []
-                : rows.slice(-500),
+              : rows.slice(-500),
         ),
       );
     } else {
@@ -435,78 +290,13 @@ export async function createKarmaFixture() {
   return {
     url: `http://127.0.0.1:${String(address.port)}/apiv2/`,
     requests,
-    configurationCommands,
-    completeConfigurationRead: () => {
-      if (!configurationParameterReadRequested) {
-        throw new Error('No configuration read was requested');
-      }
-      pendingConfigurationReads = pendingConfigurationReads.filter((kind) => kind !== 'parameters');
-      configurationReadback('parameters');
-    },
-    setConfigurationAutomaticResponses: (value: boolean) => {
-      configurationAutomaticResponses = value;
-    },
-    setConfigurationReadsHeld: (value: boolean) => {
-      configurationReadsHeld = value;
-      if (!value) {
-        for (const kind of pendingConfigurationReads) {
-          configurationReadback(kind);
-        }
-        pendingConfigurationReads = [];
-      }
-    },
-    setConfigurationWriteUncertain: (value: boolean) => {
-      configurationWriteUncertain = value;
-    },
-    setConfigurationDefinitions: (definitions: string[]) => {
-      const selected = new Map<number, string>();
-      if (definitions.length > 1000) {
-        throw new Error('Too many configuration fixture definitions');
-      }
-      for (const definition of definitions) {
-        if (!/^[\da-f]{44}$/i.test(definition)) {
-          throw new Error('Invalid configuration fixture definition');
-        }
-        const parameterId = Number.parseInt(definition.slice(0, 4), 16);
-        if (selected.has(parameterId)) {
-          throw new Error('Duplicate configuration fixture parameter');
-        }
-        selected.set(parameterId, definition.toUpperCase());
-      }
-      configurationDefinitions.clear();
-      for (const [parameterId, definition] of selected) {
-        configurationDefinitions.set(parameterId, definition);
-      }
-    },
-    setConfigurationProfileId: (value: number) => {
-      if (!Number.isInteger(value) || value < 0 || value > 65535) {
-        throw new Error('Invalid configuration fixture profile');
-      }
-      configurationProfileId = value;
-    },
-    setAccountsEmpty: (value: boolean) => {
-      accountsEmpty = value;
-    },
-    setHistoryEmpty: (value: boolean) => {
-      historyEmpty = value;
-    },
-    setEmpty: (value: boolean) => {
-      empty = value;
+    /** Restores the healthy upstream and forgets recorded requests, e.g. between browser tests. */
+    reset: () => {
+      failed = false;
+      requests.length = 0;
     },
     setFailed: (value: boolean) => {
       failed = value;
-    },
-    setLocationCoordinates: (latitude: number | null, longitude: number | null) => {
-      locationCoordinates = { latitude, longitude };
-    },
-    setLocationEmpty: (value: boolean) => {
-      locationEmpty = value;
-    },
-    setReferencesFailed: (value: boolean) => {
-      referencesFailed = value;
-    },
-    expire: () => {
-      session++;
     },
     close: () =>
       new Promise<void>((resolve, reject) => {

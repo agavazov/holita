@@ -50,7 +50,7 @@ export const ConfiguredPreview: Story = {
     await expect(
       within(canvasElement).getByRole('button', { name: 'Load Google Maps' }),
     ).toBeVisible();
-    // Leave the map unactivated so story tests make no requests to Google.
+    // Leave the map unactivated so the story makes no requests to Google.
     await expect(canvasElement.querySelector('iframe')).toBeNull();
   },
 };

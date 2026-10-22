@@ -27,47 +27,6 @@ export function formatNumber(
   }).format(value);
 }
 
-type UnitName = keyof (typeof uiMessages)['en']['units'];
-
-function withUnit(
-  value: number | null | undefined,
-  language: Language,
-  unit: UnitName,
-  fraction: number,
-  spaced = true,
-): string {
-  if (value === null || value === undefined || !Number.isFinite(value)) {
-    return emptyValue;
-  }
-  const number = formatNumber(value, language, { fraction });
-  const label = uiMessages[language].units[unit];
-  return spaced ? `${number}\u00a0${label}` : `${number}${label}`;
-}
-
-export function formatDistanceKm(value: number | null | undefined, language: Language): string {
-  return withUnit(value, language, 'km', 1);
-}
-
-export function formatSpeed(value: number | null | undefined, language: Language): string {
-  return withUnit(value, language, 'kmh', 0);
-}
-
-export function formatLitres(value: number | null | undefined, language: Language): string {
-  return withUnit(value, language, 'litre', 1);
-}
-
-export function formatVolts(value: number | null | undefined, language: Language): string {
-  return withUnit(value, language, 'volt', 1);
-}
-
-export function formatPercent(value: number | null | undefined, language: Language): string {
-  return withUnit(value, language, 'percent', 0, false);
-}
-
-export function formatTemperature(value: number | null | undefined, language: Language): string {
-  return withUnit(value, language, 'celsius', 1);
-}
-
 /** EUR from integer cents; `null` → "—", `0` → "0,00 €". */
 export function formatMoneyCents(cents: number | null | undefined, language: Language): string {
   if (cents === null || cents === undefined || !Number.isFinite(cents)) {

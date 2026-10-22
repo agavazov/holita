@@ -23,7 +23,7 @@ export interface AlertFilters {
   readonly conditions: readonly FilterCondition[];
 }
 export type AlertQueryState = ListState<AlertFilters, AlertSort>;
-export const defaultAlertConditions: readonly FilterCondition[] = [
+const defaultAlertConditions: readonly FilterCondition[] = [
   { id: 'default-status', field: 'status', operator: 'isNoneOf', values: ['RESOLVED'] },
 ];
 const operators: Readonly<Record<string, readonly FilterOperator[]>> = {

@@ -85,16 +85,6 @@
             "styles": ["src/styles.scss"],
             "stylePreprocessorOptions": { "includePaths": ["src/styles"] }
           }
-        },
-        "build-storybook": {
-          "builder": "@storybook/angular-vite:build-storybook",
-          "options": {
-            "configDir": ".storybook",
-            "tsConfig": ".storybook/tsconfig.json",
-            "outputDir": "storybook-static",
-            "styles": ["src/styles.scss"],
-            "stylePreprocessorOptions": { "includePaths": ["src/styles"] }
-          }
         }
       }
     }

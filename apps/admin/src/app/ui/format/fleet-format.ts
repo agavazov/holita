@@ -31,7 +31,7 @@ export function distanceValue(value: number | null, unit: FleetDisplayPreference
   return value === null ? null : unit === 'MI' ? value / kilometresPerMile : value;
 }
 
-export function volumeValue(value: number | null, unit: FleetDisplayPreferences['volumeUnit']) {
+function volumeValue(value: number | null, unit: FleetDisplayPreferences['volumeUnit']) {
   return value === null ? null : unit === 'US_GALLON' ? value / litresPerUsGallon : value;
 }
 

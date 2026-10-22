@@ -3,12 +3,6 @@
   "compilerOptions": {
     "types": ["node"]
   },
-  "include": [
-    "./*.ts",
-    "./*.mts",
-    "../src/**/*.stories.ts",
-    "../src/storybook/**/*.ts",
-    "../src/**/*.d.ts"
-  ],
+  "include": ["./*.ts", "../src/**/*.stories.ts", "../src/storybook/**/*.ts", "../src/**/*.d.ts"],
   "exclude": ["../src/**/*.spec.ts"]
 }

@@ -33,6 +33,7 @@ jobs:
           npm ci
 
       - run: npm run format:check
+      - run: npm run test:budget
       - run: npm run schema:check
       - name: Install and validate Apollo Router
         run: |
@@ -46,7 +47,6 @@ jobs:
       - name: Prepare PostgreSQL and Chromium
         run: |
           npm run db:up
-          npm run db:setup
           npm run db:test:setup
           npm exec -- playwright install --with-deps chromium
 

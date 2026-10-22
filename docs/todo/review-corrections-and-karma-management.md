@@ -7,12 +7,6 @@ review scratchpad; retain only open work here. Implemented contracts belong in
 [the Karma backlog](karma-api-v2.md), and reporting/restoration work remains in
 [the eData backlog](erm-edata-configuration-interface.md).
 
-## Visual review
-
-- Review the changed admin screen candidates with the user. Missing approved visual baselines
-  remain unresolved until a person reviews them and explicitly requests a baseline update;
-  never create or update baselines automatically.
-
 ## Performance
 
 - **P3 / remaining measurement:** Profile repeated settings reads, Intl construction in real
@@ -37,7 +31,7 @@ changing it; use concrete functions/helpers only and retain the existing applica
   condition codecs and sort transitions. Consolidate the remaining saving/focus helpers;
   remove unused helpers only after checking feature and story consumers.
 - **A5-A6:** Move Fleet-only formatting/context out of neutral ui; remove confirmed unused
-  remote options, formatter exports, list helpers, selections, route data and catalog entries.
+  selections, route data and catalog entries.
   Preserve real consumers, including TablePanel's internal selectionProgress template.
 - **A8-A11:** Reuse duplicated GraphQL fragments/choice operations and bounded page loading,
   remove sample-only alternate view contracts, centralize explanatory thresholds and move
@@ -47,19 +41,12 @@ changing it; use concrete functions/helpers only and retain the existing applica
 - **B1-B3:** Remove unused Driver/trip/event aggregate entry points; consolidate concrete
   failure maps/batch loops/filter helpers. Preserve the documented canonical task/event search
   and sort contract; empty localized enum matches are intentional.
-- **T1-T4:** Consolidate native browser selection/GraphQL/KPI/capture/overflow helpers. Move
-  standalone eData tooling checks to an explicit runnable target while retaining relevant
-  local requirements and device-configuration coverage; avoid duplicate binary collection.
-  Add the formatter commit to git-blame-ignore-revs.
-- Turn Storybook sample hosts into scenario presenters with canned outcomes, retaining useful
-  interactive Examples without copied backend rules.
-- Add Storybook interaction/axe tests to affected-admin PR CI; validate with actionlint and
-  preserve real event base/head selection and manual-only full regression.
+- Add the formatter commit to git-blame-ignore-revs.
 - Replace the added legacy Karma form/detail layouts when their consumers move to shared
   patterns. Existing consumers still need those selectors; add no new legacy rules.
 - **Doc2/Doc6:** Correct stale design-system API/story/helper descriptions and give shared
   settings/workspace behavior one authoritative home with links from consumers.
 
 Shared backend packages are deferred to a separately justified architectural change. Keep
-feature-owned Apollo lifecycles; do not introduce a shared lifecycle class or a per-worker
-smoke backend. Do not delete branches/worktrees or change visual baselines.
+feature-owned Apollo lifecycles; do not introduce a shared lifecycle class. Do not delete
+branches or worktrees.

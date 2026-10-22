@@ -36,7 +36,7 @@ import {
 import { DriversApi } from './drivers-api';
 import { driversText } from './i18n/messages';
 
-export function scorecardPeriod(value: string | null): ScorecardPeriod {
+function scorecardPeriod(value: string | null): ScorecardPeriod {
   return scorecardPeriods.find((days) => String(days) === value) ?? 30;
 }
 

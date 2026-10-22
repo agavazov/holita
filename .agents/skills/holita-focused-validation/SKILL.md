@@ -1,48 +1,31 @@
 ---
 name: holita-focused-validation
-description: Select focused native checks for changes in holita, including current diff and PR affected selection. Use when implementing or verifying repository changes.
+description: Check a holita change once, when handing over the task, and respect the test budget. Use when implementing or verifying repository changes.
 ---
 
 # Focused validation
 
-Read [AGENTS.md](../../../AGENTS.md) and [testing](../../../docs/testing.md).
-Domain check mappings are in [Discocan testing](../../../docs/discocan/testing.md) and
-[Ecommerce Branches](../../../docs/ecommerce/branches.md#validation). Select by changed behavior;
-current telemetry Branch scope does not make Fleet tests Ecommerce feature coverage.
-Inspect tracked/untracked changes while excluding `.credentials/`, `.tmp/`, `.misc/` and `.volumes/`. Distinguish local
-changes from the broader PR diff and use real base/head commits.
+Apply the [delivery policy](../../../AGENTS.md#delivery-policy) and the
+[verification rules](../../../AGENTS.md#verification). The commands are in
+[testing](../../../docs/testing.md).
 
-Start with one relevant file/case through root native targets. Backend examples:
-`test:fleet -- vehicles.service.spec.ts`, `test:fleet -- devices.service.spec.ts`,
-or the affected backend's health.spec.ts for bootstrap. Use --testNamePattern for Jest and
---skip-nx-cache for actual execution. Read test counts; zero/all-skipped tests are not success.
+1. **While writing:** run no checks. Rerun a single failing spec only while you fix it, for
+   example `npm run test:fleet:db -- devices.db.spec.ts` or
+   `npm run test:admin -- --include=app/ui/format/zoned-time.spec.ts`.
+2. **When handing over:** run `npm run check` once.
+   - It builds the affected projects (the build is the type check) and runs their unit and DB
+     tests in parallel, from the Nx cache.
+   - It lints only the changed files.
+   - PostgreSQL must be up (`npm run db:up`).
+   - Add one `npm run test:smoke:admin -- <file>` when login, routing, transport or a main
+     journey changed.
+   - Add `npm run typecheck:tools` when `tools/` changed.
+3. **Only on request:** the whole smoke suite, `test:gateway:db`, `test:full` and Storybook
+   review.
 
-SDL/operation changes require codegen, schema:check and test:schema. Persistence changes
-require db:up, db:setup and db:test:setup, then owning test:core:db/test:fleet:db targets.
-Use vehicles.db.spec.ts/devices.db.spec.ts for Fleet. Dedicated guarded helpers deploy
-migrations into per-run schemas and drop only their schemas; never substitute development URLs
-or broad reset/truncation. Live DB results must not be cached.
+Do not use watch mode, `--passWithNoTests` or `--skip-nx-cache` by default. Database checks use
+only the guarded per-run schema helpers, never development connections, resets or truncation.
 
-Cross-service behavior uses test:gateway:db -- federation.db.spec.mts with real Core/Fleet
-processes/schemas. Angular uses test:admin with --include paths relative to apps/admin/src and
---filter for case selection. Select concrete Vehicles/Devices API/query/editor/deletion suites,
-AdminWorkspace/BranchContext/FleetWorkspace, scoped feature choice loaders, shared drawers and
-transport/config/appearance as affected. Devices uses devices-list-page.spec.ts,
-device-editor-page.spec.ts, device-query.spec.ts and devices-client.spec.ts.
-Use VITEST_MAX_WORKERS=1 on constrained hosts without reducing case coverage or changing deadlines.
-
-Compiled-app browser checks use test:smoke:admin with angular-vehicles, angular-devices,
-angular-foundation or angular-shell smoke files. Match the behavior to the authoritative mapping.
-Shell/feature presentation changes use test:storybook:admin and test:visual:admin with
-[candidate review](../../../docs/testing.md#storybook-visual-review) of the light/dark
-desktop/mobile captures; keep behavioral evidence separate from visual review. Baselines stay in
-ignored .references/review/storybook-baselines and change only after a person approves them.
-
-Root tooling changes require root lint/typecheck/build plus affected behavior. CI changes
-require actionlint/ShellCheck and explicit Nx impact examples; actual PR runs use event base/head,
-fail on missing history and do not replace selection with full regression. Manual regression
-remains workflow_dispatch only. Never invoke test:full automatically.
-
-Report exact commands/counts and unverified work. Clean up task-started connections/processes.
-Do not enable watch/passWithNoTests or invent another selector framework. Update authoritative
-product docs for implemented behavior; put individual run results only in the task response.
+A new test needs a reason from the delivery policy, and `npm run test:budget` must still pass.
+Prefer extending an existing case. Report the commands with their results, and say what you did
+not verify.

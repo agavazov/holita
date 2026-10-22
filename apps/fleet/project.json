@@ -8,11 +8,7 @@
   "targets": {
     "test": {
       "executor": "nx:run-commands",
-      "inputs": [
-        "default",
-        "{workspaceRoot}/apps/admin/src/app/ui/forms/field-errors.ts",
-        "{workspaceRoot}/apps/admin/src/app/features/fleet/field-errors.ts"
-      ],
+      "inputs": ["default"],
       "options": {
         "command": "npm run test --",
         "cwd": "apps/fleet",
@@ -31,7 +27,11 @@
     },
     "db-generate": {
       "executor": "nx:run-commands",
-      "inputs": ["default"],
+      "inputs": [
+        "{projectRoot}/prisma/schema.prisma",
+        "{projectRoot}/prisma.config.ts",
+        "{workspaceRoot}/package-lock.json"
+      ],
       "cache": true,
       "outputs": ["{projectRoot}/src/generated/prisma"],
       "options": {
@@ -42,7 +42,8 @@
     "test-db": {
       "executor": "nx:run-commands",
       "dependsOn": ["db-generate", "graphql-generate"],
-      "cache": false,
+      "cache": true,
+      "inputs": ["default"],
       "options": {
         "command": "npm run test:db --",
         "cwd": "apps/fleet",
@@ -51,7 +52,7 @@
     },
     "graphql-generate": {
       "executor": "nx:run-commands",
-      "inputs": ["default"],
+      "inputs": ["graphqlGeneration"],
       "cache": true,
       "outputs": ["{projectRoot}/src/generated/graphql"],
       "options": {

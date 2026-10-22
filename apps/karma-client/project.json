@@ -8,7 +8,7 @@
     "graphql-generate": {
       "executor": "nx:run-commands",
       "cache": true,
-      "inputs": ["default"],
+      "inputs": ["graphqlGeneration"],
       "outputs": ["{projectRoot}/src/generated/graphql"],
       "options": {
         "command": "npm run graphql:generate",

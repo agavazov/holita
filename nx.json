@@ -36,8 +36,16 @@
       "{workspaceRoot}/apps/admin/src/**/*.graphql",
       "{workspaceRoot}/tools/graphql/**/*",
       "{workspaceRoot}/tools/tsconfig.json",
-      "{workspaceRoot}/jest.schema.config.mjs",
       "{workspaceRoot}/jest.federation.config.mjs"
+    ],
+    "graphqlGeneration": [
+      "{workspaceRoot}/apps/core/src/**/*.graphql",
+      "{workspaceRoot}/apps/fleet/src/**/*.graphql",
+      "{workspaceRoot}/apps/karma-client/src/**/*.graphql",
+      "{workspaceRoot}/apps/admin/src/**/*.graphql",
+      "{workspaceRoot}/tools/graphql/contracts.mts",
+      "{workspaceRoot}/tools/graphql/generate.mts",
+      "{workspaceRoot}/package-lock.json"
     ]
   },
   "targetDefaults": {

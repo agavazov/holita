@@ -24,7 +24,7 @@ function channels(hex: string): readonly [number, number, number] {
 }
 
 /** WCAG 2.x relative luminance of a #rrggbb colour. */
-export function relativeLuminance(hex: string): number {
+function relativeLuminance(hex: string): number {
   const [r, g, b] = channels(hex).map((channel) => {
     const value = channel / 255;
     return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
@@ -39,7 +39,7 @@ export function contrastRatio(a: string, b: string): number {
 }
 
 /** `color-mix(in srgb, a <weight>, b)` for opaque colours; `weight` is the share of `a` (0–1). */
-export function mixSrgb(a: string, b: string, weight: number): string {
+function mixSrgb(a: string, b: string, weight: number): string {
   const first = channels(a);
   const second = channels(b);
   const mixed = first.map((channel, index) =>

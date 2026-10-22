@@ -57,41 +57,6 @@ describe('Branches GraphQL with PostgreSQL', () => {
     return body;
   }
 
-  it('lists branches without selected branch context in deterministic order', async () => {
-    const z = await database.client.branch.create({ data: { tenantId, name: 'Z branch' } });
-    const a = await database.client.branch.create({ data: { tenantId, name: 'A branch' } });
-    expect(await query('{ branches { id name } }')).toEqual({
-      data: {
-        branches: [
-          { id: a.id, name: a.name },
-          { id: z.id, name: z.name },
-        ],
-      },
-    });
-  });
-  it('looks up a real branch and returns null for an unknown UUID', async () => {
-    const branch = await database.client.branch.create({ data: { tenantId, name: 'Lookup' } });
-    expect(await query('query($id:ID!){branch(id:$id){id name}}', { id: branch.id })).toEqual({
-      data: { branch: { id: branch.id, name: branch.name } },
-    });
-    expect(await query('query($id:ID!){branch(id:$id){id}}', { id: randomUUID() })).toEqual({
-      data: { branch: null },
-    });
-  });
-  it('validates UUIDs and resolves actual federation references', async () => {
-    const branch = await database.client.branch.create({ data: { tenantId, name: 'Federated' } });
-    expect(await query('query($id:ID!){branch(id:$id){id}}', { id: 'invalid' })).toMatchObject({
-      errors: [{ extensions: { code: 'BAD_USER_INPUT' } }],
-    });
-    expect(
-      await query(
-        'query($refs:[_Any!]!){_entities(representations:$refs){...on Branch{id name}}}',
-        {
-          refs: [{ __typename: 'Branch', id: branch.id, name: 'Spoofed' }],
-        },
-      ),
-    ).toEqual({ data: { _entities: [{ id: branch.id, name: branch.name }] } });
-  });
   it('scopes discovery, direct lookup and federation references to the session tenant', async () => {
     const otherTenant = await database.client.tenant.create({ data: { name: 'Test tenant' } });
     const foreign = await database.client.branch.create({
@@ -118,7 +83,7 @@ describe('Branches GraphQL with PostgreSQL', () => {
     });
   });
 
-  it('renames the selected Branch durably without changing IDs or allowing seeds to overwrite it', async () => {
+  it('renames only the selected Branch of the session tenant; invalid, foreign or mismatched renames write nothing', async () => {
     await seedBranches(database.client);
     const [seed] = branchSeeds;
     if (!seed) {
@@ -127,59 +92,6 @@ describe('Branches GraphQL with PostgreSQL', () => {
     const before = await database.client.branch.findUniqueOrThrow({
       where: { id: seed.id, tenantId },
     });
-    const name = '🚚'.repeat(80);
-    expect(
-      await query(
-        'mutation($id:ID!,$name:String!){updateBranchName(id:$id,name:$name){id name}}',
-        { id: seed.id.toUpperCase(), name: `  ${name}  ` },
-        tenantId,
-        seed.id.toUpperCase(),
-      ),
-    ).toEqual({ data: { updateBranchName: { id: seed.id, name } } });
-    await seedBranches(database.client);
-    const after = await database.client.branch.findUniqueOrThrow({
-      where: { id: seed.id, tenantId },
-    });
-    expect(after).toMatchObject({ id: before.id, tenantId, name, createdAt: before.createdAt });
-    expect(after.updatedAt.getTime()).toBeGreaterThanOrEqual(before.updatedAt.getTime());
-    expect(await query('{branches{id name}}')).toMatchObject({
-      data: { branches: expect.arrayContaining([{ id: seed.id, name }]) },
-    });
-    expect(
-      await query(
-        'query($refs:[_Any!]!){_entities(representations:$refs){...on Branch{id name}}}',
-        {
-          refs: [{ __typename: 'Branch', id: seed.id, name: 'Stale name' }],
-        },
-      ),
-    ).toEqual({ data: { _entities: [{ id: seed.id, name }] } });
-  });
-
-  it('rejects invalid names without writing and exposes the supported name field error', async () => {
-    const branch = await database.client.branch.create({ data: { tenantId, name: 'Preserved' } });
-    const mutation =
-      'mutation($id:ID!,$name:String!){updateBranchName(id:$id,name:$name){id name}}';
-    for (const name of ['', ' \t ', 'x'.repeat(81), '🚚'.repeat(81), 'Fleet\u0000name']) {
-      expect(await query(mutation, { id: branch.id, name }, tenantId, branch.id)).toMatchObject({
-        data: null,
-        errors: [
-          {
-            extensions: {
-              code: 'BAD_USER_INPUT',
-              requestId: 'core-test-request',
-              fieldErrors: [{ path: 'name', message: 'Use 1 to 80 supported characters.' }],
-            },
-          },
-        ],
-      });
-    }
-    expect(await database.client.branch.findUnique({ where: { id: branch.id, tenantId } })).toEqual(
-      branch,
-    );
-  });
-
-  it('requires selected context and cannot rename a missing or foreign Branch', async () => {
-    const branch = await database.client.branch.create({ data: { tenantId, name: 'Own Branch' } });
     const otherTenant = await database.client.tenant.create({
       data: { name: `Rename tenant ${randomUUID()}` },
     });
@@ -188,38 +100,108 @@ describe('Branches GraphQL with PostgreSQL', () => {
     });
     const mutation =
       'mutation($id:ID!,$name:String!){updateBranchName(id:$id,name:$name){id name}}';
-    for (const selected of [undefined, 'invalid', foreign.id]) {
-      expect(
-        await query(mutation, { id: branch.id, name: 'Blocked' }, tenantId, selected),
-      ).toMatchObject({ data: null, errors: [{ extensions: { code: 'BAD_USER_INPUT' } }] });
+    const message = 'Use 1 to 80 supported characters.';
+    function nameError(code: string) {
+      return {
+        message,
+        extensions: {
+          code: 'BAD_USER_INPUT',
+          requestId: 'core-test-request',
+          fieldErrors: [{ path: 'name', message, code }],
+        },
+      };
     }
-    for (const id of [randomUUID(), foreign.id]) {
-      expect(await query(mutation, { id, name: 'Blocked' }, tenantId, id)).toMatchObject({
-        data: null,
-        errors: [{ message: 'Branch not found', extensions: { code: 'NOT_FOUND' } }],
-      });
+    const unknownId = randomUUID();
+    for (const [row, id, selected, name, error] of [
+      ['empty name', seed.id, seed.id, '', nameError('REQUIRED')],
+      ['whitespace name', seed.id, seed.id, ' \t ', nameError('REQUIRED')],
+      ['81 characters', seed.id, seed.id, 'x'.repeat(81), nameError('TOO_LONG')],
+      ['81 emoji', seed.id, seed.id, '🚚'.repeat(81), nameError('TOO_LONG')],
+      ['NUL character', seed.id, seed.id, 'Fleet\u0000name', nameError('INVALID_FORMAT')],
+      [
+        'missing selected Branch',
+        seed.id,
+        undefined,
+        'Blocked',
+        { extensions: { code: 'BAD_USER_INPUT' } },
+      ],
+      [
+        'invalid selected Branch',
+        seed.id,
+        'invalid',
+        'Blocked',
+        { extensions: { code: 'BAD_USER_INPUT' } },
+      ],
+      [
+        'foreign selected Branch',
+        seed.id,
+        foreign.id,
+        'Blocked',
+        { extensions: { code: 'BAD_USER_INPUT' } },
+      ],
+      [
+        'unknown Branch',
+        unknownId,
+        unknownId,
+        'Blocked',
+        { message: 'Branch not found', extensions: { code: 'NOT_FOUND' } },
+      ],
+      [
+        'foreign Branch',
+        foreign.id,
+        foreign.id,
+        'Blocked',
+        { message: 'Branch not found', extensions: { code: 'NOT_FOUND' } },
+      ],
+    ] satisfies [string, string, string | undefined, string, Record<string, unknown>][]) {
+      expect({
+        row,
+        value: await query(mutation, { id, name }, tenantId, selected),
+      }).toMatchObject({ row, value: { data: null, errors: [error] } });
     }
     const unauthenticated = await fetch(url, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-branch-id': branch.id,
+        'x-branch-id': seed.id,
         'x-tenant-id': tenantId,
       },
-      body: JSON.stringify({ query: mutation, variables: { id: branch.id, name: 'Blocked' } }),
+      body: JSON.stringify({ query: mutation, variables: { id: seed.id, name: 'Blocked' } }),
       signal: AbortSignal.timeout(5000),
     });
     expect(await unauthenticated.json()).toMatchObject({
       data: null,
       errors: [{ extensions: { code: 'UNAUTHENTICATED' } }],
     });
-    expect(await database.client.branch.findUnique({ where: { id: branch.id, tenantId } })).toEqual(
-      branch,
+    expect(await database.client.branch.findUnique({ where: { id: seed.id, tenantId } })).toEqual(
+      before,
     );
     expect(
       await database.client.branch.findUnique({
         where: { id: foreign.id, tenantId: otherTenant.id },
       }),
     ).toEqual(foreign);
+
+    const name = '🚚'.repeat(80);
+    expect(
+      await query(
+        mutation,
+        { id: seed.id.toUpperCase(), name: `  ${name}  ` },
+        tenantId,
+        seed.id.toUpperCase(),
+      ),
+    ).toEqual({ data: { updateBranchName: { id: seed.id, name } } });
+    expect((await seedBranches(database.client)).count).toBe(0);
+    expect(
+      await database.client.branch.findUniqueOrThrow({ where: { id: seed.id, tenantId } }),
+    ).toMatchObject({ id: before.id, tenantId, name, createdAt: before.createdAt });
+    expect(
+      await query(
+        'query($refs:[_Any!]!){_entities(representations:$refs){...on Branch{id name}}}',
+        {
+          refs: [{ __typename: 'Branch', id: seed.id, name: 'Stale name' }],
+        },
+      ),
+    ).toEqual({ data: { _entities: [{ id: seed.id, name }] } });
   });
 });

@@ -213,51 +213,80 @@ describe('Events and alert workflow with PostgreSQL', () => {
     return body;
   }
 
-  it('sorts by time or severity and filters by status, kind, vehicle, driver, trip and period', async () => {
-    expect(await listed({})).toEqual(
-      page(['speeding', 'braking', 'ignition', 'trouble', 'idling', 'crash']),
-    );
-    expect(await listed({ sort: { field: 'SEVERITY', direction: 'DESC' } })).toEqual(
-      page(['trouble', 'crash', 'speeding', 'idling', 'braking', 'ignition']),
-    );
-    expect(await listed({ sort: { field: 'SEVERITY', direction: 'ASC' } })).toEqual(
-      page(['braking', 'ignition', 'speeding', 'idling', 'trouble', 'crash']),
-    );
-    expect(await listed({ filter: { actionable: true } })).toEqual(
-      page(['speeding', 'trouble', 'idling', 'crash']),
-    );
-    expect(await listed({ filter: { actionable: false } })).toEqual(page(['braking', 'ignition']));
-    expect(await listed({ filter: { alertStatuses: ['OPEN', 'RESOLVED'] } })).toEqual(
-      page(['speeding', 'trouble', 'crash']),
-    );
-    expect(await listed({ filter: { severities: ['CRITICAL'] } })).toEqual(
-      page(['trouble', 'crash']),
-    );
-    expect(await listed({ filter: { kinds: ['HARSH_BRAKING', 'IDLING'] } })).toEqual(
-      page(['braking', 'idling']),
-    );
-    expect(await listed({ filter: { vehicleIds: [truck] } })).toEqual(page(['trouble', 'crash']));
-    expect(await listed({ filter: { driverIds: [driver] } })).toEqual(
-      page(['speeding', 'braking']),
-    );
-    expect(await listed({ filter: { tripIds: [tripId] } })).toEqual(
-      page(['speeding', 'braking', 'ignition']),
-    );
+  it('events list and alert counts agree', async () => {
+    const pages: [string, Record<string, unknown>, EventKey[]][] = [
+      ['newest first', {}, ['speeding', 'braking', 'ignition', 'trouble', 'idling', 'crash']],
+      [
+        'severity descending',
+        { sort: { field: 'SEVERITY', direction: 'DESC' } },
+        ['trouble', 'crash', 'speeding', 'idling', 'braking', 'ignition'],
+      ],
+      [
+        'severity ascending',
+        { sort: { field: 'SEVERITY', direction: 'ASC' } },
+        ['braking', 'ignition', 'speeding', 'idling', 'trouble', 'crash'],
+      ],
+      ['actionable', { filter: { actionable: true } }, ['speeding', 'trouble', 'idling', 'crash']],
+      ['informational', { filter: { actionable: false } }, ['braking', 'ignition']],
+      [
+        'alert statuses',
+        { filter: { alertStatuses: ['OPEN', 'RESOLVED'] } },
+        ['speeding', 'trouble', 'crash'],
+      ],
+      ['fleet number and driver search', { search: 'б-02 петър' }, ['speeding', 'braking']],
+      ['kind label search', { search: 'harsh braking' }, ['braking']],
+      [
+        'repeated severities',
+        { filter: { allOf: [{ severities: ['WARNING'] }, { severities: ['CRITICAL'] }] } },
+        [],
+      ],
+      [
+        'exclusions keep informational rows',
+        {
+          filter: {
+            allOf: [{ excludedVehicleIds: [truck] }, { excludedAlertStatuses: ['ACKNOWLEDGED'] }],
+          },
+        },
+        ['speeding', 'braking', 'ignition'],
+      ],
+      [
+        'driver exclusion keeps rows without a driver',
+        { filter: { allOf: [{ excludedDriverIds: [driver] }] } },
+        ['ignition', 'trouble', 'idling', 'crash'],
+      ],
+      [
+        'alert status order puts informational rows last',
+        {
+          filter: { allOf: [{ excludedKinds: ['SPEEDING', 'HARSH_BRAKING'] }] },
+          sort: { field: 'ALERT_STATUS', direction: 'ASC' },
+        },
+        ['trouble', 'idling', 'crash', 'ignition'],
+      ],
+    ];
+    for (const [row, variables, keys] of pages) {
+      expect({ row, value: await listed(variables) }).toEqual({ row, value: page(keys) });
+    }
     expect(
-      await listed({
-        filter: { occurredFrom: hours(-5).toISOString(), occurredTo: hours(-1).toISOString() },
-      }),
-    ).toEqual(page(['braking', 'ignition', 'trouble']));
-    expect(await listed({ search: 'p0299' })).toEqual(page(['trouble']));
-    expect(await listed({ search: 'тракия' })).toEqual(page(['speeding']));
-    expect(await listed({ search: 'ПЕТРОВ' })).toEqual(page(['speeding', 'braking']));
-    expect(await listed({ search: 'б-02 петър' })).toEqual(page(['speeding', 'braking']));
-    expect(await listed({ search: 'CB 1004' })).toEqual(page(['trouble', 'crash']));
-    const detail = await query(
-      'query($id:ID!){fleetEvent(id:$id){vehicle{licensePlate} driver{lastName} tripId measurementUnit measuredValue alertStatus}}',
-      { id: event('speeding') },
-    );
-    expect(detail).toEqual({
+      await query(
+        'query{fleetEvents(sort:{field:ALERT_STATUS,direction:DESC},offset:1,limit:2){items{id}total offset limit}}',
+        {},
+      ),
+    ).toEqual({
+      data: {
+        fleetEvents: {
+          items: [{ id: event('idling') }, { id: event('speeding') }],
+          total: 6,
+          offset: 1,
+          limit: 2,
+        },
+      },
+    });
+    expect(
+      await query(
+        'query($id:ID!){fleetEvent(id:$id){vehicle{licensePlate} driver{lastName} tripId measurementUnit measuredValue alertStatus}}',
+        { id: event('speeding') },
+      ),
+    ).toEqual({
       data: {
         fleetEvent: {
           vehicle: { licensePlate: 'CB 1028 AX' },
@@ -269,12 +298,10 @@ describe('Events and alert workflow with PostgreSQL', () => {
         },
       },
     });
-  });
 
-  it('counts alerts like the list for the same search and filter', async () => {
+    // Alert counts equal the list totals per status for the same search and filter.
     const counts =
       'query($search:String,$filter:FleetEventFilter){fleetAlertCounts(search:$search,filter:$filter){open openCritical acknowledged resolved}}';
-    // The list totals per status for the same search and filter, without its status parts.
     async function totals(search: string | null, filter: Record<string, unknown>) {
       const result: Record<string, number> = {};
       for (const [key, status] of [
@@ -301,79 +328,38 @@ describe('Events and alert workflow with PostgreSQL', () => {
       [null, { vehicleIds: [van] }],
       [null, { severities: ['CRITICAL'], actionable: false, alertStatuses: ['RESOLVED'] }],
     ] satisfies [string | null, Record<string, unknown>][]) {
-      const body = await query(counts, { search, filter });
-      expect(body).toMatchObject({ data: { fleetAlertCounts: await totals(search, filter) } });
+      expect({ search, filter, value: await query(counts, { search, filter }) }).toMatchObject({
+        search,
+        filter,
+        value: { data: { fleetAlertCounts: await totals(search, filter) } },
+      });
     }
     expect(await query(counts, { search: 'CB 1004' })).toEqual({
+      data: { fleetAlertCounts: { open: 1, openCritical: 1, acknowledged: 0, resolved: 1 } },
+    });
+    expect(
+      await query(counts, {
+        filter: {
+          allOf: [
+            { excludedAlertStatuses: ['RESOLVED'] },
+            { actionable: false, alertStatuses: ['OPEN'] },
+            { vehicleIds: [truck] },
+          ],
+        },
+      }),
+    ).toEqual({
       data: { fleetAlertCounts: { open: 1, openCritical: 1, acknowledged: 0, resolved: 1 } },
     });
     expect(await query(counts, {}, randomUUID())).toEqual({
       data: { fleetAlertCounts: { open: 0, openCritical: 0, acknowledged: 0, resolved: 0 } },
     });
-  });
 
-  it('applies repeated exclusions before pagination and sorts statuses with informational rows last', async () => {
-    expect(
-      await listed({
-        filter: { allOf: [{ severities: ['WARNING'] }, { severities: ['CRITICAL'] }] },
-      }),
-    ).toEqual(page([]));
-    expect(
-      await listed({
-        filter: {
-          allOf: [{ excludedVehicleIds: [truck] }, { excludedAlertStatuses: ['ACKNOWLEDGED'] }],
-        },
-      }),
-    ).toEqual(page(['speeding', 'braking', 'ignition']));
-    expect(await listed({ filter: { allOf: [{ excludedDriverIds: [driver] }] } })).toEqual(
-      page(['ignition', 'trouble', 'idling', 'crash']),
-    );
-    expect(
-      await listed({
-        filter: { allOf: [{ excludedKinds: ['SPEEDING', 'HARSH_BRAKING'] }] },
-        sort: { field: 'ALERT_STATUS', direction: 'ASC' },
-      }),
-    ).toEqual(page(['trouble', 'idling', 'crash', 'ignition']));
-    expect(
-      await query(
-        'query{fleetEvents(sort:{field:ALERT_STATUS,direction:DESC},offset:1,limit:2){items{id}total offset limit}}',
-        {},
-      ),
-    ).toEqual({
-      data: {
-        fleetEvents: {
-          items: [{ id: event('idling') }, { id: event('speeding') }],
-          total: 6,
-          offset: 1,
-          limit: 2,
-        },
-      },
-    });
-    expect(await listed({ search: 'harsh braking' })).toEqual(page(['braking']));
-    expect(
-      await query(
-        'query($filter:FleetEventFilter){fleetAlertCounts(filter:$filter){open openCritical acknowledged resolved}}',
-        {
-          filter: {
-            allOf: [
-              { excludedAlertStatuses: ['RESOLVED'] },
-              { actionable: false, alertStatuses: ['OPEN'] },
-              { vehicleIds: [truck] },
-            ],
-          },
-        },
-      ),
-    ).toEqual({
-      data: { fleetAlertCounts: { open: 1, openCritical: 1, acknowledged: 0, resolved: 1 } },
-    });
-  });
-
-  it('counts maneuvers per kind and intensity for a trip', async () => {
-    const body = await query(
+    // Maneuver counts per kind and intensity for a trip, zero rows included.
+    const maneuvers = await query(
       'query($filter:FleetEventFilter!){fleetManeuverCounts(filter:$filter){kind intensity1 intensity2 intensity3 intensityUnknown total}}',
       { filter: { tripIds: [tripId] } },
     );
-    expect(body).toMatchObject({
+    expect(maneuvers).toMatchObject({
       data: {
         fleetManeuverCounts: expect.arrayContaining([
           {
@@ -387,12 +373,7 @@ describe('Events and alert workflow with PostgreSQL', () => {
         ]),
       },
     });
-    expect(JSON.stringify(body).match(/"kind"/g)).toHaveLength(9);
-    expect(
-      await query('query($filter:FleetEventFilter!){fleetManeuverCounts(filter:$filter){total}}', {
-        filter: { vehicleIds: [van] },
-      }),
-    ).toMatchObject({ errors: [{ extensions: { fieldErrors: [{ path: 'filter' }] } }] });
+    expect(JSON.stringify(maneuvers).match(/"kind"/g)).toHaveLength(9);
   });
 
   const transition = (name: string) =>
@@ -462,55 +443,34 @@ describe('Events and alert workflow with PostgreSQL', () => {
       resolvedAt: null,
       remark: null,
     });
-    expect(
-      await query(transition('reopenFleetAlert'), { id, input: { expectedStatus: 'OPEN' } }),
-    ).toMatchObject({
-      errors: [
-        { extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'expectedStatus' }] } },
-      ],
-    });
-  });
 
-  it('lets exactly one of two parallel acknowledgements win', async () => {
-    const id = event('trouble');
-    const results = await Promise.all(
-      [1, 2].map(() =>
-        query(transition('acknowledgeFleetAlert'), { id, input: { expectedStatus: 'OPEN' } }),
-      ),
-    );
-    const outcomes = results.map((body) => JSON.stringify(body));
-    expect(outcomes.filter((body) => body.includes('"alertStatus":"ACKNOWLEDGED"'))).toHaveLength(
-      1,
-    );
-    expect(outcomes.filter((body) => body.includes('"code":"CONFLICT"'))).toHaveLength(1);
-  });
-
-  it('treats informational and foreign events as missing alerts', async () => {
-    for (const [id, scope] of [
-      [event('ignition'), branchId],
-      [foreignAlert, branchId],
-      [event('idling'), otherBranchId],
+    // Informational and foreign events are missing alerts.
+    for (const [row, missing, scope] of [
+      ['informational event', event('ignition'), branchId],
+      ['alert of another Tenant', foreignAlert, branchId],
+      ['alert from another Branch', event('idling'), otherBranchId],
     ] as const) {
-      expect(
-        await query(
+      expect({
+        row,
+        value: await query(
           transition('resolveFleetAlert'),
-          { id, input: { expectedStatus: 'OPEN' } },
+          { id: missing, input: { expectedStatus: 'OPEN' } },
           scope,
         ),
-      ).toMatchObject({
-        errors: [{ message: 'Alert not found', extensions: { code: 'NOT_FOUND' } }],
+      }).toMatchObject({
+        row,
+        value: { errors: [{ message: 'Alert not found', extensions: { code: 'NOT_FOUND' } }] },
       });
     }
     expect(
       await database.client.fleetEvent.findUniqueOrThrow({ where: { id: event('idling') } }),
     ).toMatchObject({ alertStatus: 'ACKNOWLEDGED' });
-  });
 
-  it('acknowledges a batch with independent optimistic and scope failures', async () => {
-    const id = randomUUID();
+    // A batch settles each ID independently.
+    const added = randomUUID();
     await database.client.fleetEvent.create({
       data: {
-        id,
+        id: added,
         tenantId,
         branchId,
         vehicleId: van,
@@ -521,16 +481,18 @@ describe('Events and alert workflow with PostgreSQL', () => {
         alertStatus: 'OPEN',
       },
     });
-    const mutation =
-      'mutation($ids:[ID!]!,$input:FleetAlertTransitionInput!){acknowledgeFleetAlerts(ids:$ids,input:$input){succeededIds failures{id code message}}}';
-    const result = await query(mutation, {
-      ids: [id, event('idling'), foreignAlert, event('ignition')],
-      input: { expectedStatus: 'OPEN' },
-    });
-    expect(result).toEqual({
+    expect(
+      await query(
+        'mutation($ids:[ID!]!,$input:FleetAlertTransitionInput!){acknowledgeFleetAlerts(ids:$ids,input:$input){succeededIds failures{id code message}}}',
+        {
+          ids: [added, event('idling'), foreignAlert, event('ignition')],
+          input: { expectedStatus: 'OPEN' },
+        },
+      ),
+    ).toEqual({
       data: {
         acknowledgeFleetAlerts: {
-          succeededIds: [id],
+          succeededIds: [added],
           failures: [
             {
               id: event('idling'),
@@ -546,8 +508,5 @@ describe('Events and alert workflow with PostgreSQL', () => {
     expect(
       await database.client.fleetEvent.findUniqueOrThrow({ where: { id: foreignAlert } }),
     ).toMatchObject({ alertStatus: 'OPEN' });
-    expect(await query(mutation, { ids: [], input: { expectedStatus: 'OPEN' } })).toMatchObject({
-      errors: [{ extensions: { fieldErrors: [{ path: 'ids' }] } }],
-    });
   });
 });

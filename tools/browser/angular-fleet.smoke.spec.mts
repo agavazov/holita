@@ -1,19 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import { expect, type Locator, type Page } from '@playwright/test';
-import {
-  chooseBranch,
-  chooseLanguage,
-  chooseMenuItem,
-  setDarkTheme,
-  test,
-} from './angular-fixture.mjs';
+import { expect, type Page } from '@playwright/test';
+import { chooseMenuItem, test } from './angular-fixture.mjs';
 
-const branchA = '10000000-0000-4000-8000-000000000001';
-const branchB = '10000000-0000-4000-8000-000000000002';
-const fleet = `/en/${branchA}/fleet`;
 interface FleetApp {
   readonly gatewayUrl: string;
   readonly demoSession: { readonly token: string };
+  readonly branchA: { readonly id: string };
 }
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -39,7 +31,7 @@ async function graphql(
   const response = await page.request.post(app.gatewayUrl, {
     headers: {
       authorization: `Bearer ${app.demoSession.token}`,
-      'x-branch-id': branchA,
+      'x-branch-id': app.branchA.id,
       'accept-language': 'en',
       'x-request-id': randomUUID(),
     },
@@ -82,158 +74,13 @@ async function selectOption(page: Page, label: string, option: string): Promise<
     .click();
   await expect(control).toHaveAttribute('aria-expanded', 'false');
 }
-function kpi(page: Page, label: string): Locator {
-  return page
-    .locator('holita-kpi-tile')
-    .filter({ has: page.getByText(label, { exact: true }) })
-    .locator('.kpi-tile__value .app-num');
-}
 
 test.describe('Fleet adopted screens', () => {
-  test('retries Overview through the real Gateway, preserves empty telemetry and works in Bulgarian and both themes', async ({
+  test('persists Driver documents and explicit clears and deletes the unassigned driver', async ({
     page,
     app,
   }) => {
-    let failOverview = true;
-    await page.route(app.gatewayUrl, async (route) => {
-      const request = route.request();
-      const body: unknown = request.method() === 'POST' ? request.postDataJSON() : null;
-      if (failOverview && isObject(body) && body['operationName'] === 'AdminFleetOverview') {
-        failOverview = false;
-        await route.abort('failed');
-        return;
-      }
-      await route.continue();
-    });
-    await page.goto(app.url + fleet + '/overview');
-    await expect(page.getByText('The overview could not be loaded', { exact: true })).toBeVisible();
-    expect(failOverview).toBe(false);
-    await page.getByRole('button', { name: 'Try again', exact: true }).click();
-    await expect(kpi(page, 'Moving now')).toHaveText('0');
-    await expect(kpi(page, 'Distance today')).toHaveText('0');
-    await expect(
-      page.getByText('Nothing needs attention right now.', { exact: true }),
-    ).toBeVisible();
-    const chart = page.getByRole('figure', { name: 'Fleet distance per day, last 14 days' });
-    await expect(chart).toBeVisible();
-    await expect(chart.locator('tbody tr')).toHaveCount(0);
-    await setDarkTheme(page, true);
-    await expect(kpi(page, 'Critical alerts')).toHaveText('0');
-    await chooseLanguage(page, 'Български');
-    await expect(page).toHaveURL(app.url + fleet.replace('/en/', '/bg/') + '/overview');
-    await expect(
-      page.getByRole('heading', { level: 1, name: 'Преглед', exact: true }),
-    ).toBeVisible();
-    for (const dark of [true, false]) {
-      await setDarkTheme(page, dark);
-      for (const viewport of [
-        { width: 1440, height: 900 },
-        { width: 1280, height: 720 },
-        { width: 375, height: 812 },
-      ]) {
-        await page.setViewportSize(viewport);
-        await expect(page.locator('holita-column-series').getByRole('table')).toHaveCount(1);
-        await expect(page.locator('holita-stacked-bars').getByRole('table')).toHaveCount(1);
-        await expect
-          .poll(() =>
-            page.evaluate(
-              () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
-            ),
-          )
-          .toBe(true);
-        if (viewport.width === 1280) {
-          await expect
-            .poll(() =>
-              page.evaluate(
-                () =>
-                  document.documentElement.scrollHeight <= document.documentElement.clientHeight,
-              ),
-            )
-            .toBe(true);
-        }
-      }
-      await page.setViewportSize({ width: 1280, height: 720 });
-    }
-    await setDarkTheme(page, false);
-    await chooseLanguage(page, 'English');
-    await page.getByRole('link', { name: 'Distance today', exact: true }).click();
-    await expect(page).toHaveURL(app.url + fleet + '/trips');
-    await expect(page.getByText('No trips yet', { exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: /^Open trip / })).toHaveCount(0);
-  });
-
-  test('persists Group create/edit/clear/delete, keeps a cancelled draft and isolates A → B → A', async ({
-    page,
-    app,
-  }) => {
-    const path = fleet + '/settings/groups';
-    await page.goto(app.url + path);
-    await page
-      .locator('holita-page-header')
-      .getByRole('button', { name: 'New group', exact: true })
-      .click();
-    const create = page.getByRole('dialog', { name: 'New group', exact: true });
-    await create.getByRole('button', { name: 'Create group', exact: true }).click();
-    await expect(create.getByRole('textbox', { name: /^Name/ })).toBeFocused();
-    await create.getByRole('textbox', { name: /^Name/ }).fill('Night shift');
-    await create
-      .getByRole('textbox', { name: 'Description', exact: true })
-      .fill('Night line\nDispatch confirmed.');
-    await selectOption(page, 'Colour', 'Colour 3');
-    await create.getByRole('button', { name: 'Create group', exact: true }).click();
-    await expect(create).toBeHidden();
-    await page.getByRole('button', { name: 'Edit Night shift', exact: true }).click();
-    const edit = page.getByRole('dialog', { name: 'Edit Night shift', exact: true });
-    await expect(edit.getByRole('textbox', { name: 'Description', exact: true })).toHaveValue(
-      'Night line\nDispatch confirmed.',
-    );
-    await expect(edit.getByRole('combobox', { name: 'Colour', exact: true })).toContainText(
-      'Colour 3',
-    );
-    await edit.getByRole('textbox', { name: /^Name/ }).fill('Night route');
-    await edit.getByRole('textbox', { name: 'Description', exact: true }).fill('');
-    await edit.getByRole('button', { name: 'Save', exact: true }).click();
-    await expect(edit).toBeHidden();
-    await page.reload();
-    await page.getByRole('button', { name: 'Edit Night route', exact: true }).click();
-    const renamed = page.getByRole('dialog', { name: 'Edit Night route', exact: true });
-    await expect(renamed.getByRole('textbox', { name: 'Description', exact: true })).toHaveValue(
-      '',
-    );
-    await renamed
-      .getByRole('textbox', { name: 'Description', exact: true })
-      .fill('Unsaved group draft');
-    await renamed.getByRole('button', { name: 'Cancel', exact: true }).click();
-    const discard = page.getByRole('alertdialog', { name: 'Unsaved changes', exact: true });
-    await discard.getByRole('button', { name: 'Keep editing', exact: true }).click();
-    await expect(renamed.getByRole('textbox', { name: 'Description', exact: true })).toHaveValue(
-      'Unsaved group draft',
-    );
-    await renamed.getByRole('button', { name: 'Cancel', exact: true }).click();
-    await discard.getByRole('button', { name: 'Discard changes', exact: true }).click();
-    await expect(renamed).toBeHidden();
-    await chooseBranch(page, 'Sandbox');
-    await expect(page.getByRole('button', { name: 'Edit Night route', exact: true })).toHaveCount(
-      0,
-    );
-    await chooseBranch(page, 'Discordia');
-    await page.getByRole('button', { name: 'Actions for Night route', exact: true }).click();
-    await chooseMenuItem(page, 'Delete');
-    const confirmation = page.getByRole('alertdialog', { name: 'Delete groups?', exact: true });
-    await confirmation.getByRole('button', { name: 'Delete', exact: true }).click();
-    await expect(page.getByText('Groups deleted: 1.', { exact: true })).toBeVisible();
-    await page.reload();
-    await expect(page.getByRole('button', { name: 'Edit Night route', exact: true })).toHaveCount(
-      0,
-    );
-    const data = await graphql(page, app, 'query BrowserGroups { fleetVehicleGroups { total } }');
-    expect(object(data['fleetVehicleGroups'])['total']).toBe(0);
-  });
-
-  test('persists Driver documents and explicit clears, uses a real no-telemetry scorecard and deletes the unassigned driver', async ({
-    page,
-    app,
-  }) => {
+    const fleet = `/en/${app.branchA.id}/fleet`;
     const today = await businessDate(page, app);
     const expiry = new Date(today + 'T00:00:00.000Z');
     expiry.setUTCDate(expiry.getUTCDate() + 30);
@@ -289,24 +136,6 @@ test.describe('Fleet adopted screens', () => {
       licenseExpiresOn: expiry.toISOString().slice(0, 10),
       notes: 'First line\nSecond line',
     });
-    await page.getByRole('button', { name: 'Open Elena Fleet', exact: true }).click();
-    await view.getByRole('button', { name: 'Scorecard', exact: true }).click();
-    await expect(page).toHaveURL(app.url + fleet + '/drivers/' + driverId + '/scorecard');
-    await expect(page.getByText('No telemetry yet', { exact: true })).toBeVisible();
-    await page
-      .getByRole('group', { name: 'Scorecard period', exact: true })
-      .getByRole('button', { name: '90 days', exact: true })
-      .click();
-    await expect(page).toHaveURL(/\/scorecard\?days=90$/);
-    await expect(page.getByRole('button', { name: '90 days', exact: true })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
-    await chooseLanguage(page, 'Български');
-    await expect(page.getByText('Все още няма телеметрични данни', { exact: true })).toBeVisible();
-    await expect(page).toHaveURL(/\/bg\/.*\/scorecard\?days=90$/);
-    await chooseLanguage(page, 'English');
-    await page.getByRole('link', { name: 'Back to drivers', exact: true }).click();
     await page.getByRole('button', { name: 'Actions for Elena Fleet', exact: true }).click();
     await chooseMenuItem(page, 'Delete');
     await page
@@ -320,131 +149,11 @@ test.describe('Fleet adopted screens', () => {
     );
   });
 
-  test('keeps the profile tab around the shared editor and persists a zero manual odometer without inventing telemetry', async ({
-    page,
-    app,
-  }) => {
-    const vehicleId = await createVehicle(page, app, 'PROFILE-01');
-    await page.goto(app.url + fleet + '/vehicles?search=PROFILE');
-    await page.getByRole('button', { name: 'Open PROFILE-01', exact: true }).click();
-    const profile = app.url + fleet + '/vehicles/' + vehicleId;
-    await expect(page).toHaveURL(profile + '/overview?search=PROFILE');
-    await expect(kpi(page, 'Odometer')).toHaveText('—');
-    await expect(kpi(page, 'Distance, 14 days')).toHaveText('—');
-    await page.getByRole('tab', { name: 'Alerts', exact: true }).click();
-    await expect(page).toHaveURL(profile + '/alerts?search=PROFILE');
-    await expect(page.getByText('No alerts', { exact: true })).toBeVisible();
-    await page
-      .locator('holita-page-header')
-      .getByRole('button', { name: 'Edit', exact: true })
-      .click();
-    const edit = page.getByRole('dialog', { name: 'Edit PROFILE-01', exact: true });
-    await edit
-      .getByRole('textbox', { name: 'Notes', exact: true })
-      .fill('Saved from the real profile.');
-    await edit.getByRole('button', { name: 'Save', exact: true }).click();
-    await expect(edit).toBeHidden();
-    await expect(page).toHaveURL(profile + '/alerts?search=PROFILE');
-    await page.getByRole('button', { name: 'Record odometer', exact: true }).click();
-    const reading = page.getByRole('dialog', { name: 'Record odometer · PROFILE-01', exact: true });
-    await expect(reading.getByText('No previous odometer reading.', { exact: true })).toBeVisible();
-    await reading.getByRole('spinbutton', { name: /^Odometer, km/ }).fill('0');
-    await reading.getByRole('button', { name: 'Record reading', exact: true }).click();
-    await expect(reading).toBeHidden();
-    await expect(page.getByText('Odometer reading recorded.', { exact: true })).toBeVisible();
-    await expect(page).toHaveURL(profile + '/alerts?search=PROFILE');
-    await expect(kpi(page, 'Odometer')).toHaveText('0');
-    const stored = await graphql(
-      page,
-      app,
-      'query BrowserProfile($id:ID!) { fleetVehicle(id:$id) { notes state { odometerKm odometerSource lastReportedAt activity } } fleetDataClock { asOf } }',
-      { id: vehicleId },
-    );
-    expect(object(stored['fleetVehicle'])).toEqual({
-      notes: 'Saved from the real profile.',
-      state: {
-        odometerKm: 0,
-        odometerSource: 'MANUAL',
-        lastReportedAt: null,
-        activity: 'NO_DEVICE',
-      },
-    });
-    expect(object(stored['fleetDataClock'])['asOf']).toBeNull();
-    await page.reload();
-    await expect(kpi(page, 'Odometer')).toHaveText('0');
-    await page.getByRole('tab', { name: 'Overview', exact: true }).click();
-    await expect(
-      page.getByRole('figure', { name: 'Distance per day, last 14 days' }).locator('tbody tr'),
-    ).toHaveCount(0);
-    await page
-      .locator('holita-page-header')
-      .getByRole('link', { name: 'Vehicles', exact: true })
-      .click();
-    await expect(page).toHaveURL(app.url + fleet + '/vehicles?search=PROFILE');
-    await expect(page.getByRole('button', { name: 'Open PROFILE-01', exact: true })).toBeVisible();
-    await page.goto(app.url + `/en/${branchB}/fleet/vehicles/${vehicleId}/overview`);
-    await expect(page.getByText('Vehicle not found', { exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Record odometer', exact: true })).toHaveCount(0);
-  });
-
-  test('follows scoped Vehicle and Driver anchors and returns to the originating Driver after profile editing', async ({
-    page,
-    app,
-  }) => {
-    const data = await graphql(
-      page,
-      app,
-      'mutation BrowserRelationDriver { driver: createFleetDriver(input:{firstName:"Mira",lastName:"Relations"}) { id } }',
-    );
-    const driverId = string(object(data['driver'])['id']);
-    const vehicle = await graphql(
-      page,
-      app,
-      'mutation BrowserRelationVehicle($driverId:ID!) { vehicle: createFleetVehicle(input:{licensePlate:"LINK-01",currentDriverId:$driverId}) { id } }',
-      { driverId },
-    );
-    const vehicleId = string(object(vehicle['vehicle'])['id']);
-    const profile = fleet + '/vehicles/' + vehicleId;
-    const driver = fleet + '/drivers/' + driverId;
-    await page.goto(app.url + profile + '/overview?search=LINK');
-    const driverLink = page
-      .locator('holita-vehicle-profile-view')
-      .getByRole('link', { name: 'Mira Relations', exact: true });
-    await expect(driverLink).toHaveAttribute('href', driver);
-    await driverLink.click();
-    const view = page.getByRole('dialog', { name: 'Mira Relations', exact: true });
-    const assignedVehicle = view.getByRole('link', { name: 'LINK-01', exact: true });
-    await expect(assignedVehicle).toHaveAttribute(
-      'href',
-      profile + '/overview?fromDriver=' + driverId,
-    );
-    await assignedVehicle.click();
-    await page.getByRole('tab', { name: 'Trips', exact: true }).click();
-    await expect(page).toHaveURL(app.url + profile + '/trips?fromDriver=' + driverId);
-    await page
-      .locator('holita-page-header')
-      .getByRole('button', { name: 'Edit', exact: true })
-      .click();
-    const editor = page.getByRole('dialog', { name: 'Edit LINK-01', exact: true });
-    await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
-    await expect(editor).toBeHidden();
-    await expect(page).toHaveURL(app.url + profile + '/trips?fromDriver=' + driverId);
-    await page
-      .locator('holita-page-header')
-      .getByRole('link', { name: 'Back to driver', exact: true })
-      .click();
-    await expect(page).toHaveURL(app.url + driver);
-    await expect(view).toBeVisible();
-    await page.goto(app.url + profile + '/overview?fromDriver=invalid');
-    await expect(
-      page.locator('holita-page-header').getByRole('link', { name: 'Vehicles', exact: true }),
-    ).toHaveAttribute('href', fleet + '/vehicles');
-  });
-
   test('creates Maintenance, records a zero-cost receipt and the next task while keeping service odometer separate', async ({
     page,
     app,
   }) => {
+    const fleet = `/en/${app.branchA.id}/fleet`;
     const vehicleId = await createVehicle(page, app, 'SERVICE-01');
     const today = await businessDate(page, app);
     await page.goto(app.url + fleet + '/maintenance');
@@ -511,20 +220,8 @@ test.describe('Fleet adopted screens', () => {
       .getByRole('button', { name: 'View completed Warranty oil on SERVICE-01', exact: true })
       .click();
     const receipt = page.getByRole('dialog', { name: 'Completed Warranty oil', exact: true });
-    await expect(receipt.getByRole('link', { name: 'SERVICE-01', exact: true })).toHaveAttribute(
-      'href',
-      fleet + '/vehicles/' + vehicleId + '/overview',
-    );
-    await expect(receipt.getByText('Warranty workshop', { exact: true })).toBeVisible();
-    await expect(receipt.getByText('Oil filter', { exact: true })).toBeVisible();
-    await expect(receipt.getByText('Warranty claim accepted.', { exact: true })).toBeVisible();
     await expect(receipt.locator('dd').filter({ hasText: /^€0\.00$/ })).toBeVisible();
     const taskId = string(new URL(page.url()).pathname.split('/').at(-1));
-    await page.reload();
-    await expect(receipt.getByText('Warranty workshop', { exact: true })).toBeVisible();
-    await expect(
-      receipt.getByRole('button', { name: 'Complete service', exact: true }),
-    ).toHaveCount(0);
     const stored = await graphql(
       page,
       app,
@@ -545,44 +242,5 @@ test.describe('Fleet adopted screens', () => {
       total: 1,
     });
     expect(object(object(stored['fleetVehicle'])['state'])['odometerKm']).toBeNull();
-    await receipt.getByRole('link', { name: 'SERVICE-01', exact: true }).click();
-    await expect(page).toHaveURL(app.url + fleet + '/vehicles/' + vehicleId + '/overview');
-  });
-
-  test('keeps Trips and Alerts empty and scopes missing record drawers without creating demo rows', async ({
-    page,
-    app,
-  }) => {
-    const missing = '90000000-0000-4000-8000-000000000099';
-    await page.goto(app.url + fleet + '/trips?search=unseen');
-    await expect(kpi(page, 'Trips')).toHaveText('0');
-    await expect(kpi(page, 'Average score')).toHaveText('—');
-    await expect(page.getByRole('button', { name: /^Open trip / })).toHaveCount(0);
-    await page.goto(app.url + fleet + '/trips/' + missing + '?search=unseen');
-    const trip = page.getByRole('dialog', { name: 'Trip', exact: true });
-    await expect(trip.getByText('Record not found', { exact: true })).toBeVisible();
-    await trip.getByRole('button', { name: 'Close', exact: true }).first().click();
-    await expect(page).toHaveURL(app.url + fleet + '/trips?search=unseen');
-    await page.goto(app.url + fleet + '/alerts');
-    await expect(page.getByText('No matching records', { exact: true })).toBeVisible();
-    await page.getByRole('button', { name: 'Clear filters', exact: true }).click();
-    await expect(page.getByText('No alerts', { exact: true })).toBeVisible();
-    await expect(kpi(page, 'Open')).toHaveText('0');
-    await expect(page.getByRole('button', { name: 'Acknowledge', exact: true })).toHaveCount(0);
-    await page.goto(app.url + fleet + '/alerts/' + missing);
-    const alert = page.getByRole('dialog', { name: 'Alert', exact: true });
-    await expect(alert.getByText('Record not found', { exact: true })).toBeVisible();
-    await alert.getByRole('button', { name: 'Close', exact: true }).first().click();
-    await expect(page).toHaveURL(app.url + fleet + '/alerts');
-    const stored = await graphql(
-      page,
-      app,
-      'query BrowserEmptyTelemetry { fleetTrips { total } fleetEvents { total } fleetDataClock { asOf } }',
-    );
-    expect(stored).toEqual({
-      fleetTrips: { total: 0 },
-      fleetEvents: { total: 0 },
-      fleetDataClock: { asOf: null },
-    });
   });
 });

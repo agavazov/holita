@@ -164,19 +164,9 @@ and do not require a catalog candidate. The server changes only the final two
 interval bytes, then verifies the full returned configuration. Catalog import,
 configuration readback and measurement verification remain distinct evidence.
 
-## Focused validation
+## Validation
 
-```bash
-npm run test:schema -- catalog.unit.spec.mts
-npm run test:fleet -- edata-catalog.unit.spec.ts --skip-nx-cache
-npm run test:fleet:db -- edata-catalog.db.spec.ts initial-migration.db.spec.ts --skip-nx-cache
-```
-
-TypeScript tests copy only the EXE into a fresh temporary input directory and verify both
-variants, exact canonical catalog/workbook bytes against the retained v9.56 fixtures,
-conflicts, duplicates, initializer discovery, invalid input/layouts, comparison and
-direct CLI output/overwrite behavior. DB tests use the guarded helper and per-run schemas in
-`holita_fleet_test`, covering the full v9.56 import, concurrent/idempotent writes,
-rollback and corruption detection. The workflow adds no npm commands; existing npm
-targets remain the repository validation interface. Follow [shared checks](../../../testing.md)
+The extractor and the Fleet import have no automated tests. Review a new catalog with the
+`extract` and `diff` procedure above before committing it; the Fleet import CLI checks the EXE
+SHA-256 and the content digest again before it writes. Follow [shared checks](../../../testing.md)
 for tooling changes.

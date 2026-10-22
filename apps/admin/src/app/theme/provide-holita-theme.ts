@@ -7,7 +7,7 @@ import type { ThemeChoice } from './theme-choice';
  * PrimeNG emits its tokens and component styles into the `primeng` layer, between the global
  * reset and the holita layer (declared first in `styles/_layers.scss`).
  */
-export const holitaThemeOptions = {
+const holitaThemeOptions = {
   darkModeSelector: '.app-dark',
   cssLayer: { name: 'primeng', order: 'holita-reset, primeng, holita' },
 } as const;

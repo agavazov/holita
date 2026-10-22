@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { UnauthorizedException } from '@nestjs/common';
 
-// Demo session protocol shared with the other subgraph; covered by federation tests.
+// Demo session protocol shared with the other subgraphs; covered by health/health.spec.ts.
 function key(): string {
   const configured = process.env.DEMO_AUTH_SECRET;
   if (configured && configured.length >= 32) {

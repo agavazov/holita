@@ -372,7 +372,7 @@ TypedDocumentNodes/types come from explicit SDL/operation inputs. Backend availa
 gates entity resolution; disabled Angular routes issue no business requests.
 
 See [architecture](architecture.md), [development](development.md) and
-[focused checks](testing.md) for current behavior and validation commands.
+[testing](../testing.md) for current behavior and validation commands.
 
 ## Background device configuration reads
 
@@ -395,4 +395,4 @@ result; [profile evidence](../../apps/fleet/src/modules/device-operations/device
 has its own age and watermark. See the
 [architecture](architecture.md#background-device-configuration-reads),
 [setup and workflow](development.md#background-device-configuration-reads) and
-[focused checks](testing.md#background-device-configuration-read-checks).
+[testing](../testing.md).

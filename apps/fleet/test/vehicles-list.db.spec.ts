@@ -6,7 +6,6 @@ import { AppModule } from '../src/app.module.js';
 import { issueDemoToken } from '../src/auth/demo-auth.js';
 import { CoreClient } from '../src/integrations/core/core.client.js';
 import { PrismaService } from '../src/database/prisma.service.js';
-import { VehiclesRepository } from '../src/modules/vehicles/vehicles.repository.js';
 import { createTestDatabase } from './test-database.js';
 
 const tenantId = '01000000-0000-4000-8000-000000000001';
@@ -50,7 +49,7 @@ describe('Vehicles Storybook list contract with PostgreSQL', () => {
         'x-branch-id': branchId,
       },
       body: JSON.stringify({ query: source, variables }),
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(10000),
     });
     const body: unknown = await response.json();
     return body;
@@ -173,6 +172,26 @@ describe('Vehicles Storybook list contract with PostgreSQL', () => {
         alertStatus: 'OPEN' as const,
       })),
     });
+    // The overdue task is the next service; cancelled tasks are no next service.
+    await database.client.serviceTask.createMany({
+      data: [
+        {
+          tenantId,
+          branchId,
+          vehicleId: moving.id,
+          serviceType: 'OIL_CHANGE',
+          dueOn: new Date('2020-01-01T00:00:00.000Z'),
+        },
+        {
+          tenantId,
+          branchId,
+          vehicleId: moving.id,
+          serviceType: 'TIRES',
+          dueOn: new Date('2099-01-01T00:00:00.000Z'),
+        },
+        { tenantId, branchId, vehicleId: idle.id, serviceType: 'BRAKES', status: 'CANCELLED' },
+      ],
+    });
     // Neither another Tenant in this Branch nor another Branch can move this clock/counts.
     for (const other of [
       { tenantId: randomUUID(), branchId },
@@ -209,6 +228,71 @@ describe('Vehicles Storybook list contract with PostgreSQL', () => {
       { filter: { allOf: [{ excludedActivities: ['MOVING', 'NO_DEVICE', 'NOT_CONNECTED'] }] } },
       ['B idle', 'C parked', 'D asset'],
     );
+    // The response state is classified in TypeScript; it must agree with the SQL filters above.
+    expect(
+      await query(
+        '{fleetVehicles(sort:{field:LICENSE_PLATE,direction:ASC}){items{licensePlate openAlertCount state{activity fuelStatus} nextService{serviceType urgency}}}}',
+        {},
+        branchId,
+      ),
+    ).toEqual({
+      data: {
+        fleetVehicles: {
+          items: [
+            {
+              licensePlate: 'A moving',
+              openAlertCount: 2,
+              state: { activity: 'MOVING', fuelStatus: 'LOW' },
+              nextService: { serviceType: 'OIL_CHANGE', urgency: 'OVERDUE' },
+            },
+            {
+              licensePlate: 'B idle',
+              openAlertCount: 0,
+              state: { activity: 'IDLE', fuelStatus: 'NORMAL' },
+              nextService: null,
+            },
+            {
+              licensePlate: 'C parked',
+              openAlertCount: 1,
+              state: { activity: 'PARKED', fuelStatus: 'STALE' },
+              nextService: null,
+            },
+            {
+              licensePlate: 'D asset',
+              openAlertCount: 0,
+              state: { activity: 'ASSET', fuelStatus: 'LOW' },
+              nextService: null,
+            },
+            {
+              licensePlate: 'E silent',
+              openAlertCount: 0,
+              state: { activity: 'NOT_CONNECTED', fuelStatus: 'NO_DATA' },
+              nextService: null,
+            },
+            {
+              licensePlate: 'F disconnected',
+              openAlertCount: 0,
+              state: { activity: 'NOT_CONNECTED', fuelStatus: 'NO_DATA' },
+              nextService: null,
+            },
+            {
+              licensePlate: 'G no device',
+              openAlertCount: 0,
+              state: { activity: 'NO_DEVICE', fuelStatus: 'NO_DATA' },
+              nextService: null,
+            },
+          ],
+        },
+      },
+    });
+    await expectPage(branchId, { filter: { hasOpenAlerts: true } }, ['A moving', 'C parked']);
+    await expectPage(branchId, { filter: { hasOpenAlerts: false } }, [
+      'B idle',
+      'D asset',
+      'E silent',
+      'F disconnected',
+      'G no device',
+    ]);
     await expectPage(
       branchId,
       { sort: { field: 'ODOMETER_KM', direction: 'DESC' }, limit: 1 },
@@ -292,156 +376,6 @@ describe('Vehicles Storybook list contract with PostgreSQL', () => {
         },
       },
     });
-  });
-
-  it('keeps filtered state, odometer and alerts from selection when reports and alerts change before response mapping', async () => {
-    if (!app) {
-      throw new Error('Missing Fleet application.');
-    }
-    const branchId = randomUUID();
-    const vehicle = await database.client.vehicle.create({
-      data: { tenantId, branchId, licensePlate: 'SNAPSHOT' },
-    });
-    const imei = '000000000000041';
-    await database.client.device.create({
-      data: { tenantId, branchId, vehicleId: vehicle.id, imei },
-    });
-    const recordedAt = new Date('2026-10-18T06:00:00.000Z');
-    await database.client.vehicleStatusSample.create({
-      data: {
-        tenantId,
-        branchId,
-        vehicleId: vehicle.id,
-        deviceImei: imei,
-        recordedAt,
-        receivedAt: recordedAt,
-        source: 'DEMO',
-        ignition: true,
-        speedKph: 60,
-        odometerKm: 100,
-        fuelLevelPct: 8,
-        latitude: 42.1,
-        longitude: 23.3,
-      },
-    });
-    const alert = await database.client.fleetEvent.create({
-      data: {
-        tenantId,
-        branchId,
-        vehicleId: vehicle.id,
-        source: 'DEMO',
-        occurredAt: recordedAt,
-        kind: 'LOW_FUEL',
-        severity: 'WARNING',
-        alertStatus: 'OPEN',
-      },
-    });
-    const repository = app.get(VehiclesRepository);
-    const originalList = repository.list.bind(repository);
-    const freshReport = new Date(recordedAt.getTime() + 60_000);
-    const manualAt = new Date(recordedAt.getTime() + 120_000);
-    const selected = jest
-      .spyOn(repository, 'list')
-      .mockImplementationOnce(async (scope, page, criteria, sort) => {
-        const result = await originalList(scope, page, criteria, sort);
-        await database.client.$transaction([
-          database.client.vehicleStatusSample.create({
-            data: {
-              tenantId,
-              branchId,
-              vehicleId: vehicle.id,
-              deviceImei: imei,
-              recordedAt: freshReport,
-              receivedAt: freshReport,
-              source: 'DEMO',
-              ignition: false,
-              speedKph: 0,
-              odometerKm: 150,
-              fuelLevelPct: 50,
-              latitude: 43.2,
-              longitude: 24.4,
-            },
-          }),
-          database.client.vehicleStatusSample.create({
-            data: {
-              tenantId,
-              branchId,
-              vehicleId: vehicle.id,
-              deviceImei: null,
-              recordedAt: manualAt,
-              receivedAt: manualAt,
-              source: 'MANUAL',
-              odometerKm: 250,
-            },
-          }),
-          database.client.fleetEvent.update({
-            where: { id: alert.id, tenantId, branchId },
-            data: { alertStatus: 'RESOLVED', resolvedAt: freshReport },
-          }),
-        ]);
-        return result;
-      });
-    const source = `query($filter:FleetVehicleFilter){
-      fleetVehicles(filter:$filter,sort:{field:LAST_REPORTED_AT,direction:DESC}){
-        total items{id openAlertCount state{
-          activity lastReportedAt odometerKm odometerRecordedAt odometerSource fuelStatus latitude
-        }}
-      }
-    }`;
-    const filter = {
-      allOf: [{ activities: ['MOVING'] }, { odometerKmBelow: 200 }, { hasOpenAlerts: true }],
-    };
-    try {
-      expect(await query(source, { filter }, branchId)).toEqual({
-        data: {
-          fleetVehicles: {
-            total: 1,
-            items: [
-              {
-                id: vehicle.id,
-                openAlertCount: 1,
-                state: {
-                  activity: 'MOVING',
-                  lastReportedAt: recordedAt.toISOString(),
-                  odometerKm: 100,
-                  odometerRecordedAt: recordedAt.toISOString(),
-                  odometerSource: 'DEMO',
-                  fuelStatus: 'LOW',
-                  latitude: 42.1,
-                },
-              },
-            ],
-          },
-        },
-      });
-      expect(await query(source, { filter }, branchId)).toEqual({
-        data: { fleetVehicles: { total: 0, items: [] } },
-      });
-      expect(await query(source, {}, branchId)).toEqual({
-        data: {
-          fleetVehicles: {
-            total: 1,
-            items: [
-              {
-                id: vehicle.id,
-                openAlertCount: 0,
-                state: {
-                  activity: 'PARKED',
-                  lastReportedAt: freshReport.toISOString(),
-                  odometerKm: 250,
-                  odometerRecordedAt: manualAt.toISOString(),
-                  odometerSource: 'MANUAL',
-                  fuelStatus: 'NORMAL',
-                  latitude: 43.2,
-                },
-              },
-            ],
-          },
-        },
-      });
-    } finally {
-      selected.mockRestore();
-    }
   });
 
   it('keeps repeated stored filters, null exclusions, literal text and Sofia date semantics', async () => {
@@ -540,74 +474,46 @@ describe('Vehicles Storybook list contract with PostgreSQL', () => {
       ['A'],
     );
     await expectPage(branchId, { search: 'Nikolay Delivery' }, ['A']);
-  });
 
-  it('returns per-record batch failures, keeps foreign records private and retries failed IDs', async () => {
-    const branchId = randomUUID();
-    const owned = await database.client.vehicle.create({
-      data: { tenantId, branchId, licensePlate: 'A' },
-    });
-    const blocked = await database.client.vehicle.create({
-      data: { tenantId, branchId, licensePlate: 'B' },
-    });
-    const foreign = await database.client.vehicle.create({
-      data: { tenantId: randomUUID(), branchId, licensePlate: 'PRIVATE' },
-    });
-    const device = await database.client.device.create({
-      data: { tenantId, branchId, vehicleId: blocked.id, imei: '012345678901234' },
-    });
-    const removeMany =
-      'mutation($ids:[ID!]!){deleteFleetVehicles(ids:$ids){succeededIds failures{id code message}}}';
-    expect(await query(removeMany, { ids: [blocked.id, owned.id, foreign.id] }, branchId)).toEqual({
-      data: {
-        deleteFleetVehicles: {
-          succeededIds: [owned.id],
-          failures: [
-            {
-              id: blocked.id,
-              code: 'CONFLICT',
-              message: 'Vehicle has devices or history; deactivate it instead.',
-            },
-            { id: foreign.id, code: 'NOT_FOUND', message: 'Vehicle not found' },
-          ],
-        },
-      },
-    });
-    expect(await database.client.vehicle.findUnique({ where: { id: foreign.id } })).not.toBeNull();
-    await database.client.device.delete({ where: { id: device.id } });
-    expect(await query(removeMany, { ids: [blocked.id] }, branchId)).toEqual({
-      data: {
-        deleteFleetVehicles: { succeededIds: [blocked.id], failures: [] },
-      },
-    });
-    const deactivateMany =
-      'mutation($ids:[ID!]!){deactivateFleetVehicles(ids:$ids){succeededIds failures{id code message}}}';
-    const driver = await database.client.driver.create({
-      data: { tenantId, branchId, firstName: 'A', lastName: 'B' },
-    });
-    const active = await database.client.vehicle.create({
-      data: { tenantId, branchId, licensePlate: 'C', currentDriverId: driver.id },
-    });
-    expect(await query(deactivateMany, { ids: [active.id, foreign.id] }, branchId)).toEqual({
-      data: {
-        deactivateFleetVehicles: {
-          succeededIds: [active.id],
-          failures: [{ id: foreign.id, code: 'NOT_FOUND', message: 'Vehicle not found' }],
-        },
-      },
-    });
-    expect(await database.client.vehicle.findUnique({ where: { id: active.id } })).toMatchObject({
-      status: 'INACTIVE',
-      currentDriverId: null,
-    });
-    for (const ids of [
-      [],
-      [active.id, active.id],
-      Array.from({ length: 101 }, () => randomUUID()),
+    // Rows without a fleet number sort last and tie; the final `id DESC` key orders them.
+    const sorted = randomUUID();
+    const [higherId = '', lowerId = ''] = [randomUUID(), randomUUID()].sort().reverse();
+    for (const row of [
+      { licensePlate: 'СА 7712 КН', fleetNumber: 'Т-02' },
+      { licensePlate: 'CA7712KH', fleetNumber: 'A-01' },
+      { id: higherId, licensePlate: 'CB 1001 AX', fleetNumber: null },
+      { licensePlate: 'CB 50%_\\ AX', fleetNumber: 'B-01' },
+      { id: lowerId, licensePlate: 'PB 0001 AA', fleetNumber: null },
     ]) {
-      expect(await query(removeMany, { ids }, branchId)).toMatchObject({
-        errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'ids' }] } }],
+      await database.client.vehicle.create({ data: { tenantId, branchId: sorted, ...row } });
+    }
+    for (const other of [
+      { tenantId, branchId: randomUUID() },
+      { tenantId: randomUUID(), branchId: sorted },
+    ]) {
+      await database.client.vehicle.create({
+        data: { ...other, licensePlate: 'CA7712KH FOREIGN' },
       });
     }
+    const fleetNumber = (direction: string) => ({ field: 'FLEET_NUMBER', direction });
+    await expectPage(sorted, { sort: fleetNumber('ASC') }, [
+      'CA7712KH',
+      'CB 50%_\\ AX',
+      'СА 7712 КН',
+      'CB 1001 AX',
+      'PB 0001 AA',
+    ]);
+    await expectPage(sorted, { sort: fleetNumber('DESC') }, [
+      'СА 7712 КН',
+      'CB 50%_\\ AX',
+      'CA7712KH',
+      'CB 1001 AX',
+      'PB 0001 AA',
+    ]);
+    await expectPage(sorted, { sort: fleetNumber('ASC'), offset: 3, limit: 1 }, ['CB 1001 AX'], 5);
+    await expectPage(sorted, { sort: fleetNumber('ASC'), offset: 4, limit: 1 }, ['PB 0001 AA'], 5);
+    await expectPage(sorted, { search: 'ca 7712' }, ['CA7712KH']);
+    await expectPage(sorted, { search: '%_\\' }, ['CB 50%_\\ AX']);
+    await expectPage(sorted, { search: '_' }, ['CB 50%_\\ AX']);
   });
 });

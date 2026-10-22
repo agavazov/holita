@@ -29,7 +29,7 @@ Git-ignored `apps/admin/public/config.local.json` (`{ "primeUiLicense": "…" }`
 merges over `config.json` (a 404 or a non-JSON fallback page means none). The production build
 excludes `config.local.json`. Browser fixtures replace `config.json` with their own and run
 without a PrimeUI key, displaying the "Invalid PrimeUI License" notice
-([testing](../testing.md#real-federation-and-browser-smoke-checks)).
+([testing](../testing.md#browser-smoke)).
 `fleetEnabled` defaults true; false hides business navigation and blocks direct routes,
 without business requests. Branch discovery stays usable. Backend availability is separately
 controlled by `FLEET_ENABLED`; keep the two settings consistent for a disabled installation.
@@ -245,7 +245,8 @@ field errors stay inline.
 
 Bundled Bulgarian/English catalogs supply shell, forms, confirmations, startup text and every
 connected Fleet screen, including profile/odometer, scorecard and both settings views.
-Feature `i18n/messages.spec.ts` files check key and placeholder parity.
+`apps/admin/src/app/i18n/messages.spec.ts` checks key and placeholder parity for every catalog
+pair.
 Document language follows the route. Apollo clients capture `Accept-Language`; submitted
 writes keep their initiating session/Branch/language. Record content/backend messages display as received.
 

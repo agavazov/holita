@@ -18,7 +18,6 @@ telemetry ingestion from devices, tracking and measurement processing are not im
 - [Implemented requirements](requirements.md).
 - [Architecture](architecture.md): persistence, federation and Angular request lifecycles.
 - [Development](development.md): telemetry admin, demo login and GraphQL usage.
-- [Testing](testing.md): Fleet, Karma Client and Angular feature checks.
 - [Fleet implementation index](fleet.md): concrete Fleet module source references, list
   contract, the data clock and business date, thresholds, derived values and activity rules.
 - [Simple eData catalog](erm-resources/simple-edata-catalog/README.md): offline EXE

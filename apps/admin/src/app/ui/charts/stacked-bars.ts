@@ -25,7 +25,7 @@ export interface StackedLegendItem {
   readonly tone: BarTone;
 }
 
-export function barColor(tone: BarTone): string {
+function barColor(tone: BarTone): string {
   if (tone === 'muted') {
     return 'var(--p-content-hover-background)';
   }

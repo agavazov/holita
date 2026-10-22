@@ -16,7 +16,7 @@
     "db:generate": "prisma generate",
     "db:validate": "prisma validate",
     "db:migrate": "prisma migrate deploy",
-    "test:db": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.db.config.mjs --runInBand",
+    "test:db": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.db.config.mjs",
     "graphql:generate": "tsx ../../tools/graphql/generate.mts fleet",
     "predb:seed": "npm run db:generate",
     "db:seed": "prisma db seed"

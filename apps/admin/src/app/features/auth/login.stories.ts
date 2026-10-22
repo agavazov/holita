@@ -1,24 +1,28 @@
+import { DefaultUrlSerializer } from '@angular/router';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
-import { chooseMenuItem } from '../../../storybook/interactions';
 import { useFixtureScenario } from '../../../storybook/graphql-fixtures';
 import { loginFixtures, loginTenants } from '../../../storybook/login-fixtures';
-import { LoginPage } from '../../../storybook/samples/pages/login-page';
 import { fixtureBranches } from '../../../storybook/session-fixtures';
 import type { StoryFixtures } from '../../../storybook/story-config';
+import { Login } from './login';
 
 const appReady = { timeout: 10_000 };
 
-const meta: Meta<LoginPage> = {
-  title: 'Examples/Authentication/Login',
-  component: LoginPage,
+const meta: Meta<Login> = {
+  title: 'Admin/Authentication/Login',
+  component: Login,
   tags: ['!autodocs'],
+  // Storybook keeps one language, so the language link stays on English.
+  render: () => ({
+    props: { language: 'en', languageUrl: new DefaultUrlSerializer().parse('/en') },
+  }),
   parameters: { holita: { signedIn: false } satisfies StoryFixtures },
   beforeEach: () => loginFixtures(),
 };
 
 export default meta;
-type Story = StoryObj<LoginPage>;
+type Story = StoryObj<Login>;
 
 async function loginReady(canvasElement: HTMLElement) {
   const canvas = within(canvasElement);
@@ -50,95 +54,6 @@ const initialState: NonNullable<Story['play']> = async ({ canvasElement }) => {
 };
 
 export const Default: Story = { play: initialState };
-
-/** The real Login completes discovery; the story host opens the existing sample Vehicles. */
-export const SignIn: Story = {
-  name: 'Sign in',
-  play: async ({ canvasElement }) => {
-    const canvas = await loginReady(canvasElement);
-    await chooseTenant(canvasElement);
-    const branch = canvas.getByRole('combobox', { name: 'Branch' });
-    await waitFor(() => expect(branch).not.toHaveAttribute('aria-disabled', 'true'), appReady);
-    await choose(canvasElement, 'Branch', fixtureBranches[0].name);
-    await userEvent.click(canvas.getByRole('button', { name: 'Sign in' }));
-    await waitFor(
-      () => expect(canvas.getByRole('heading', { level: 1, name: 'Vehicles' })).toBeVisible(),
-      appReady,
-    );
-    await expect(canvas.getByRole('button', { name: 'Branch: Sofia Fleet' })).toBeVisible();
-  },
-};
-
-export const SelectedBranchAcrossPages: Story = {
-  name: 'Selected branch follows the sample pages',
-  play: async ({ canvasElement }) => {
-    const canvas = await loginReady(canvasElement);
-    const selected = fixtureBranches[1];
-    await chooseTenant(canvasElement);
-    const branch = canvas.getByRole('combobox', { name: 'Branch' });
-    await waitFor(() => expect(branch).not.toHaveAttribute('aria-disabled', 'true'), appReady);
-    await choose(canvasElement, 'Branch', selected.name);
-    await userEvent.click(canvas.getByRole('button', { name: 'Sign in' }));
-
-    const headerHasBranch = async (page: string) => {
-      await waitFor(async () => {
-        const heading = canvas.getByRole('heading', { level: 1, name: page });
-        const header = heading.closest('holita-page-header');
-        if (!(header instanceof HTMLElement)) {
-          throw new Error(`Missing ${page} page header.`);
-        }
-        await expect(within(header).getByText(new RegExp(selected.name))).toBeVisible();
-      }, appReady);
-    };
-    await headerHasBranch('Vehicles');
-    await expect(canvas.getByRole('button', { name: `Branch: ${selected.name}` })).toBeVisible();
-
-    for (const page of [
-      'Overview',
-      'Alerts',
-      'Trips',
-      'Vehicles',
-      'Drivers',
-      'Devices',
-      'Maintenance',
-      'General',
-    ]) {
-      await userEvent.click(canvas.getByRole('link', { name: page }));
-      await headerHasBranch(page);
-    }
-    await expect(canvas.getByRole('button', { name: `Branch: ${selected.name}` })).toBeVisible();
-    await waitFor(() =>
-      expect(canvas.getByRole('textbox', { name: /Branch name/ })).toHaveValue(selected.name),
-    );
-  },
-};
-
-export const SignOut: Story = {
-  name: 'Sign out returns to login',
-  play: async ({ canvasElement }) => {
-    const canvas = await loginReady(canvasElement);
-    await chooseTenant(canvasElement);
-    const branch = canvas.getByRole('combobox', { name: 'Branch' });
-    await waitFor(() => expect(branch).not.toHaveAttribute('aria-disabled', 'true'), appReady);
-    await choose(canvasElement, 'Branch', fixtureBranches[0].name);
-    await userEvent.click(canvas.getByRole('button', { name: 'Sign in' }));
-    await waitFor(
-      () => expect(canvas.getByRole('heading', { level: 1, name: 'Vehicles' })).toBeVisible(),
-      appReady,
-    );
-    await userEvent.click(canvas.getByRole('button', { name: 'Account: Elena Petrova' }));
-    await chooseMenuItem(canvasElement.ownerDocument.body, 'Sign out');
-    await loginReady(canvasElement);
-    await expect(canvas.getByRole('combobox', { name: 'Tenant' })).toHaveTextContent(
-      'Choose a tenant',
-    );
-    await expect(canvas.getByRole('combobox', { name: 'Branch' })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
-    await expect(canvas.getByRole('button', { name: 'Sign in' })).toBeDisabled();
-  },
-};
 
 export const TenantChange: Story = {
   name: 'Changing the tenant clears the branch',

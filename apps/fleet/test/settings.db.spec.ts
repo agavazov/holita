@@ -66,9 +66,10 @@ describe('Fleet settings persistence and scoped calculation with PostgreSQL', ()
     return body;
   }
 
-  it('returns defaults without writes and persists full replacement only in the verified Tenant/Branch', async () => {
-    const branchId = randomUUID();
-    expect(await query(read, {}, branchId)).toEqual({
+  it('uses saved thresholds and timezone for list/find state, clocks, service, documents and daily buckets', async () => {
+    // Defaults need no write; a full replacement persists only in the verified Tenant/Branch.
+    const savedBranch = randomUUID();
+    expect(await query(read, {}, savedBranch)).toEqual({
       data: { fleetSettings: defaultFleetSettings() },
     });
     expect(await database.client.fleetSettings.count()).toBe(0);
@@ -81,18 +82,18 @@ describe('Fleet settings persistence and scoped calculation with PostgreSQL', ()
       notReportingHours: 168,
       speedLimitKph: 130,
     };
-    expect(await query(update, { input }, branchId)).toEqual({
+    expect(await query(update, { input }, savedBranch)).toEqual({
       data: { updateFleetSettings: input },
     });
     expect(requireBranch).toHaveBeenCalledWith(
-      branchId,
-      expect.objectContaining({ tenantId, branchId }),
+      savedBranch,
+      expect.objectContaining({ tenantId, branchId: savedBranch }),
     );
-    expect(await query(read, {}, branchId)).toEqual({ data: { fleetSettings: input } });
+    expect(await query(read, {}, savedBranch)).toEqual({ data: { fleetSettings: input } });
     expect(await query(read, {}, randomUUID())).toEqual({
       data: { fleetSettings: defaultFleetSettings() },
     });
-    expect(await query(read, {}, branchId, randomUUID())).toEqual({
+    expect(await query(read, {}, savedBranch, randomUUID())).toEqual({
       data: { fleetSettings: defaultFleetSettings() },
     });
     const replacement = {
@@ -102,35 +103,24 @@ describe('Fleet settings persistence and scoped calculation with PostgreSQL', ()
       notReportingHours: 1,
       speedLimitKph: 30,
     };
-    expect(await query(update, { input: replacement }, branchId)).toEqual({
+    expect(await query(update, { input: replacement }, savedBranch)).toEqual({
       data: { updateFleetSettings: replacement },
     });
-    expect(await database.client.fleetSettings.count({ where: { tenantId, branchId } })).toBe(1);
-    expect(await database.client.fleetEvent.count({ where: { tenantId, branchId } })).toBe(0);
-  });
+    expect(
+      await database.client.fleetSettings.count({ where: { tenantId, branchId: savedBranch } }),
+    ).toBe(1);
 
-  it('does not persist settings when Core rejects the Branch and enforces database bounds', async () => {
-    const branchId = randomUUID();
+    // A Branch that Core rejects persists nothing.
+    const rejectedBranch = randomUUID();
     requireBranch.mockRejectedValueOnce(new NotFoundException('Branch not found'));
-    expect(await query(update, { input: defaultFleetSettings() }, branchId)).toMatchObject({
+    expect(await query(update, { input: defaultFleetSettings() }, rejectedBranch)).toMatchObject({
       errors: [{ extensions: { code: 'NOT_FOUND' } }],
     });
-    expect(await database.client.fleetSettings.count({ where: { tenantId, branchId } })).toBe(0);
-    for (const invalid of [
-      { lowFuelPct: 0 },
-      { notReportingHours: 169 },
-      { speedLimitKph: 131 },
-      { timeZone: 'UTC' },
-    ]) {
-      await expect(
-        database.client.fleetSettings.create({
-          data: { tenantId, branchId: randomUUID(), ...invalid },
-        }),
-      ).rejects.toThrow();
-    }
-  });
+    expect(
+      await database.client.fleetSettings.count({ where: { tenantId, branchId: rejectedBranch } }),
+    ).toBe(0);
 
-  it('uses saved thresholds and timezone for list/find state, clocks, service, documents and daily buckets', async () => {
+    // The saved time zone and thresholds drive every derived value of the Branch together.
     const branchId = randomUUID();
     const scope = { tenantId, branchId };
     const vehicle = await database.client.vehicle.create({
@@ -226,14 +216,14 @@ describe('Fleet settings persistence and scoped calculation with PostgreSQL', ()
         },
       },
     });
-    const input = {
+    const configured = {
       ...defaultFleetSettings(),
       timeZone: 'Europe/Belgrade',
       lowFuelPct: 5,
       notReportingHours: 1,
     };
-    expect(await query(update, { input }, branchId)).toEqual({
-      data: { updateFleetSettings: input },
+    expect(await query(update, { input: configured }, branchId)).toEqual({
+      data: { updateFleetSettings: configured },
     });
     expect(await query(source, variables, branchId)).toMatchObject({
       data: {

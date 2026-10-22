@@ -18,7 +18,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function isGatewayReady(body: unknown, fleetEnabled: boolean): boolean {
+function isGatewayReady(body: unknown): boolean {
   if (!isRecord(body) || body.errors !== undefined || !isRecord(body.data)) {
     return false;
   }
@@ -29,9 +29,6 @@ function isGatewayReady(body: unknown, fleetEnabled: boolean): boolean {
     !branches.some((branch: unknown) => isRecord(branch) && branch.id === readinessBranchId)
   ) {
     return false;
-  }
-  if (!fleetEnabled) {
-    return true;
   }
   const vehicles = body.data.fleetVehicles;
   const summary = body.data.fleetVehicleSummary;
@@ -52,18 +49,17 @@ function isGatewayReady(body: unknown, fleetEnabled: boolean): boolean {
   );
 }
 
-async function waitForGatewayReadiness(url: string, fleetEnabled: boolean) {
-  const deadline = Date.now() + 10000;
-  // Obtain one synthetic session; retry only the signed, read-only readiness query.
+/** Signs in to an existing Tenant through the Gateway, as the admin login does. */
+async function demoLogin(url: string, tenantId: string) {
   const login = await fetch(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
       query:
         'mutation($tenantId: ID!) { demoLogin(tenantId: $tenantId) { token tenant { id name } } }',
-      variables: { tenantId: readinessTenantId },
+      variables: { tenantId },
     }),
-    signal: AbortSignal.timeout(Math.max(1, Math.min(5000, deadline - Date.now()))),
+    signal: AbortSignal.timeout(5000),
   });
   const loginBody: unknown = await login.json();
   if (
@@ -73,30 +69,29 @@ async function waitForGatewayReadiness(url: string, fleetEnabled: boolean) {
     !isRecord(loginBody.data) ||
     !isRecord(loginBody.data.demoLogin)
   ) {
-    throw new Error(`Gateway readiness demo login failed (HTTP ${String(login.status)})`);
+    throw new Error(`Gateway demo login failed (HTTP ${String(login.status)})`);
   }
   const session = loginBody.data.demoLogin;
   if (
     typeof session.token !== 'string' ||
     session.token.length === 0 ||
     !isRecord(session.tenant) ||
-    session.tenant.id !== readinessTenantId ||
+    session.tenant.id !== tenantId ||
     typeof session.tenant.name !== 'string'
   ) {
-    throw new Error('Gateway readiness demo login returned an invalid session');
+    throw new Error('Gateway demo login returned an invalid session');
   }
-  const demoSession = {
-    token: session.token,
-    tenant: { id: session.tenant.id, name: session.tenant.name },
-  };
+  return { token: session.token, tenant: { id: tenantId, name: session.tenant.name } };
+}
+
+async function waitForGatewayReadiness(url: string) {
+  const deadline = Date.now() + 10000;
+  // Obtain one synthetic session; retry only the signed, read-only readiness query.
+  const demoSession = await demoLogin(url, readinessTenantId);
   const query = `query FederationFixtureReady {
     branches { id }
-    ${
-      fleetEnabled
-        ? `fleetVehicles(offset: 0, limit: 1) { items { id } total offset limit }
-    fleetVehicleSummary { inOperation }`
-        : ''
-    }
+    fleetVehicles(offset: 0, limit: 1) { items { id } total offset limit }
+    fleetVehicleSummary { inOperation }
   }`;
   let lastFailure = 'No signed readiness response';
   while (Date.now() < deadline) {
@@ -114,7 +109,7 @@ async function waitForGatewayReadiness(url: string, fleetEnabled: boolean) {
         signal: AbortSignal.timeout(Math.max(1, Math.min(5000, deadline - Date.now()))),
       });
       const body: unknown = await response.json();
-      if (response.status === 200 && isGatewayReady(body, fleetEnabled)) {
+      if (response.status === 200 && isGatewayReady(body)) {
         return demoSession;
       }
       lastFailure = `HTTP ${String(response.status)}, unexpected readiness response`;
@@ -127,7 +122,7 @@ async function waitForGatewayReadiness(url: string, fleetEnabled: boolean) {
   throw new Error(`Signed Gateway Core/Fleet readiness timed out after 10 seconds: ${lastFailure}`);
 }
 
-export function guardedTestUrl(service: 'core' | 'fleet', value: string): URL {
+function guardedTestUrl(service: 'core' | 'fleet', value: string): URL {
   let url: URL;
   try {
     url = new URL(value);
@@ -199,7 +194,7 @@ async function prepareDatabase(service: 'core' | 'fleet') {
   }
 }
 
-export async function availablePort(): Promise<number> {
+async function availablePort(): Promise<number> {
   const server = createServer();
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject);
@@ -222,75 +217,32 @@ export async function availablePort(): Promise<number> {
   return port;
 }
 
-async function seedDeviceParameterCatalog(databaseUrl: string, schemaName: string) {
+async function insertTenant(
+  databaseUrl: string,
+  schemaName: string,
+  tenant: { id: string; name: string },
+  branches: readonly { id: string; name: string }[],
+) {
   const connection = new pg.Client({ connectionString: databaseUrl });
   await connection.connect();
-  const schema = pg.escapeIdentifier(schemaName);
-  const id = randomUUID();
   try {
-    await connection.query('BEGIN');
+    const schema = pg.escapeIdentifier(schemaName);
     await connection.query(
-      `INSERT INTO ${schema}."EdataCatalog"
-       ("id", "sourceSha256", "extractorVersion", "schemaVersion", "packageLabel", "contentSha256", "metadata")
-       VALUES ($1, $2, '1.0.0', 1, 'Monitor 9.56 fixture', $3, '{}')`,
-      [id, '01dd13e50c55fdf84078ce298bde72320d55bee458baa4c0d2a06fca7c0ca1a0', '0'.repeat(64)],
+      `INSERT INTO ${schema}."Tenant" ("id", "name", "updatedAt") VALUES ($1, $2, CURRENT_TIMESTAMP)`,
+      [tenant.id, tenant.name],
     );
-    await connection.query(
-      `INSERT INTO ${schema}."EdataCatalogSource" ("catalogId", "key", "kind", "evidence")
-       VALUES ($1, 'monitor', 'monitor', '{}')`,
-      [id],
-    );
-    await connection.query(
-      `INSERT INTO ${schema}."EdataCatalogParameter"
-       ("catalogId", "key", "sourceKey", "parameterId", "category", "name", "details")
-       VALUES ($1, 'monitor:0', 'monitor', 781, '3', 'Battery Voltage (Starlink)', '{"issues":[]}')`,
-      [id],
-    );
-    await connection.query(
-      `INSERT INTO ${schema}."EdataCatalogCategory" ("catalogId", "vendorId", "name")
-       VALUES ($1, 3, 'FMS fixture')`,
-      [id],
-    );
-    await connection.query(
-      `INSERT INTO ${schema}."EdataCatalogSet" ("catalogId", "vendorId", "details")
-       VALUES ($1, 135, '{}')`,
-      [id],
-    );
-    await connection.query(
-      `INSERT INTO ${schema}."EdataCatalogSetMember" ("catalogId", "setId", "position", "parameterId")
-       VALUES ($1, 135, 0, 781)`,
-      [id],
-    );
-    await connection.query(
-      `INSERT INTO ${schema}."EdataCatalogProfile" ("catalogId", "vendorId", "setId", "categoryId", "name")
-       VALUES ($1, 343, 135, 3, 'FMS Parameters (250k)')`,
-      [id],
-    );
-    await connection.query('COMMIT');
-  } catch (error) {
-    await connection.query('ROLLBACK');
-    throw error;
+    for (const branch of branches) {
+      await connection.query(
+        `INSERT INTO ${schema}."Branch" ("id", "tenantId", "name", "updatedAt") VALUES ($1, $2, $3, CURRENT_TIMESTAMP)`,
+        [branch.id, tenant.id, branch.name],
+      );
+    }
   } finally {
     await connection.end();
   }
 }
 
-async function seedFleetVehicle(databaseUrl: string, schemaName: string) {
-  const connection = new pg.Client({ connectionString: databaseUrl });
-  await connection.connect();
-  try {
-    await connection.query(
-      `INSERT INTO ${pg.escapeIdentifier(schemaName)}."Vehicle"
-       ("id", "tenantId", "branchId", "licensePlate", "updatedAt")
-       VALUES ($1, $2, $3, 'READINESS FIXTURE', CURRENT_TIMESTAMP)`,
-      [randomUUID(), readinessTenantId, readinessBranchId],
-    );
-  } finally {
-    await connection.end();
-  }
-}
-
-export async function startRouter(options: {
+async function startRouter(options: {
   adminOrigin: string;
   subgraphUrls: { core: string; fleet: string; 'karma-client': string };
 }) {
@@ -372,7 +324,7 @@ export async function startRouter(options: {
         'status' in health &&
         health.status === 'UP'
       ) {
-        return { url, healthUrl, pid: child.pid, stop, logs: () => logs };
+        return { url, stop, logs: () => logs };
       }
     } catch {
       /* Wait for the Router's dedicated health listener. */
@@ -383,8 +335,8 @@ export async function startRouter(options: {
   throw new Error(`Apollo Router did not start:\n${logs}`);
 }
 
-async function startApplication(service: string, env: NodeJS.ProcessEnv, selectedPort?: number) {
-  const port = selectedPort ?? (await availablePort());
+async function startApplication(service: string, env: NodeJS.ProcessEnv) {
+  const port = await availablePort();
   const child = spawn(process.execPath, ['dist/main.js'], {
     cwd: join(workspaceRoot, 'apps', service),
     env: { ...process.env, ...env, PORT: String(port), NODE_ENV: 'test' },
@@ -435,23 +387,7 @@ async function startApplication(service: string, env: NodeJS.ProcessEnv, selecte
         'service' in health &&
         health.service === service
       ) {
-        return {
-          port,
-          pid: child.pid,
-          logs: () => logs,
-          url: `${baseUrl}/graphql`,
-          stop,
-          pause: () => {
-            if (!child.kill('SIGSTOP')) {
-              throw new Error(`Could not pause ${service}`);
-            }
-          },
-          resume: () => {
-            if (!child.kill('SIGCONT')) {
-              throw new Error(`Could not resume ${service}`);
-            }
-          },
-        };
+        return { logs: () => logs, url: `${baseUrl}/graphql`, stop };
       }
     } catch {
       /* The child has not started listening yet. */
@@ -541,16 +477,7 @@ async function observeRequests(target: string) {
   };
 }
 
-export async function createFederationFixture(
-  options: {
-    adminOrigin?: string;
-    fleetEnabled?: boolean;
-    observeSubgraphs?: boolean;
-    deviceOperations?: boolean;
-    deviceConfigurationWrites?: boolean;
-    seedFleetVehicle?: boolean;
-  } = {},
-) {
+export async function createFederationFixture(options: { adminOrigin?: string } = {}) {
   config({
     path: [join(workspaceRoot, 'apps/core/.env'), join(workspaceRoot, 'apps/fleet/.env')],
     quiet: true,
@@ -573,39 +500,19 @@ export async function createFederationFixture(
   try {
     const coreDatabase = await prepareDatabase('core');
     cleanup.push(coreDatabase.close);
-    const tenantConnection = new pg.Client({ connectionString: coreDatabase.url });
-    await tenantConnection.connect();
-    try {
-      const schema = pg.escapeIdentifier(coreDatabase.schema);
-      await tenantConnection.query(
-        `INSERT INTO ${schema}."Tenant" ("id", "name", "updatedAt") VALUES ($1, $2, CURRENT_TIMESTAMP)`,
-        ['01000000-0000-4000-8000-000000000002', 'Isolation tenant'],
-      );
-      await tenantConnection.query(
-        `INSERT INTO ${schema}."Branch" ("id", "tenantId", "name", "updatedAt") VALUES ($1, $2, $3, CURRENT_TIMESTAMP)`,
-        [
-          '10000000-0000-4000-8000-000000000003',
-          '01000000-0000-4000-8000-000000000002',
-          'Isolation branch',
-        ],
-      );
-    } finally {
-      await tenantConnection.end();
-    }
+    await insertTenant(
+      coreDatabase.databaseUrl,
+      coreDatabase.schema,
+      { id: '01000000-0000-4000-8000-000000000002', name: 'Isolation tenant' },
+      [{ id: '10000000-0000-4000-8000-000000000003', name: 'Isolation branch' }],
+    );
 
     const fleetDatabase = await prepareDatabase('fleet');
     cleanup.push(fleetDatabase.close);
-    if (options.seedFleetVehicle) {
-      await seedFleetVehicle(fleetDatabase.databaseUrl, fleetDatabase.schema);
-    }
-    if (options.deviceConfigurationWrites) {
-      await seedDeviceParameterCatalog(fleetDatabase.databaseUrl, fleetDatabase.schema);
-    }
-    let core = await startApplication('core', { CORE_DATABASE_URL: coreDatabase.url });
-    cleanup.push(() => core.stop());
+    const core = await startApplication('core', { CORE_DATABASE_URL: coreDatabase.url });
+    cleanup.push(core.stop);
     const coreObserver = await observeRequests(core.url);
     cleanup.push(coreObserver.close);
-    const coreUrl = options.observeSubgraphs === false ? core.url : coreObserver.url;
     const internalToken = 'holita-fixture-device-configuration-token';
     const karma = await createKarmaFixture();
     cleanup.push(karma.close);
@@ -620,32 +527,27 @@ export async function createFederationFixture(
       ADMIN_ORIGINS: options.adminOrigin ?? 'http://127.0.0.1:11000',
       ADMIN_ORIGIN: options.adminOrigin ?? 'http://127.0.0.1:11000',
       FLEET_DATABASE_URL: fleetDatabase.url,
-      CORE_GRAPHQL_URL: coreUrl,
-      FLEET_ENABLED: String(options.fleetEnabled ?? true),
-      FLEET_DEVICE_OPERATIONS_ENABLED: String(
-        options.deviceOperations ?? options.deviceConfigurationWrites ?? false,
-      ),
-      FLEET_DEVICE_CONFIGURATION_WRITES_ENABLED: String(options.deviceConfigurationWrites ?? false),
+      CORE_GRAPHQL_URL: coreObserver.url,
+      // Explicit values override a developer's apps/fleet/.env.
+      FLEET_ENABLED: 'true',
+      FLEET_DEVICE_OPERATIONS_ENABLED: 'false',
+      FLEET_DEVICE_CONFIGURATION_WRITES_ENABLED: 'false',
       FLEET_KARMA_INTERNAL_URL: new URL(karmaClient.url).origin,
       KARMA_INTERNAL_TOKEN: internalToken,
     };
-    const fleetPort = await availablePort();
-    let fleet = await startApplication('fleet', fleetEnv, fleetPort);
-    cleanup.push(() => fleet.stop());
+    const fleet = await startApplication('fleet', fleetEnv);
+    cleanup.push(fleet.stop);
     const fleetObserver = await observeRequests(fleet.url);
     cleanup.push(fleetObserver.close);
     const subgraphUrls = {
-      core: coreUrl,
-      fleet: options.observeSubgraphs === false ? fleet.url : fleetObserver.url,
+      core: coreObserver.url,
+      fleet: fleetObserver.url,
       'karma-client': karmaClient.url,
     };
     const adminOrigin = options.adminOrigin ?? 'http://127.0.0.1:11000';
     const gateway = await startRouter({ adminOrigin, subgraphUrls });
     cleanup.push(gateway.stop);
-    const demoSession = await waitForGatewayReadiness(
-      gateway.url,
-      options.fleetEnabled ?? true,
-    ).catch((cause: unknown) => {
+    const demoSession = await waitForGatewayReadiness(gateway.url).catch((cause: unknown) => {
       throw new Error(
         `Gateway readiness failed:\nRouter:\n${gateway.logs()}\nCore:\n${core.logs()}\nFleet:\n${fleet.logs()}`,
         { cause },
@@ -654,43 +556,24 @@ export async function createFederationFixture(
     return {
       url: gateway.url,
       demoSession,
-      pid: gateway.pid,
+      /** A new signed-in Tenant per caller lets browser tests share one backend. */
+      createTenant: async (name: string, branchNames: readonly string[]) => {
+        const tenant = { id: randomUUID(), name };
+        const branches = branchNames.map((branchName) => ({ id: randomUUID(), name: branchName }));
+        await insertTenant(coreDatabase.databaseUrl, coreDatabase.schema, tenant, branches);
+        return { demoSession: await demoLogin(gateway.url, tenant.id), branches };
+      },
       logs: () => ({
         gateway: gateway.logs(),
         core: core.logs(),
         fleet: fleet.logs(),
         'karma-client': karmaClient.logs(),
       }),
-      healthUrl: gateway.healthUrl,
       karma,
-      karmaClientUrl: karmaClient.url,
-      stopKarmaClient: karmaClient.stop,
-      pauseKarmaClient: karmaClient.pause,
-      resumeKarmaClient: karmaClient.resume,
       coreRequests: coreObserver.requests,
       setCoreResponse: coreObserver.setResponse,
       fleetUrl: fleet.url,
-      // Guarded Fleet test database (without the schema option) and the per-run schema, for
-      // specs that insert telemetry or event rows no API creates.
-      fleetDatabaseUrl: fleetDatabase.databaseUrl,
-      fleetSchema: fleetDatabase.schema,
       fleetRequests: fleetObserver.requests,
-      restartFleet: async () => {
-        await fleet.stop();
-        fleet = await startApplication('fleet', fleetEnv, fleet.port);
-      },
-      setFleetEnabled: async (enabled: boolean) => {
-        await fleet.stop();
-        fleet = await startApplication(
-          'fleet',
-          { ...fleetEnv, FLEET_ENABLED: String(enabled) },
-          fleet.port,
-        );
-      },
-      stopCore: () => core.stop(),
-      restartCore: async () => {
-        core = await startApplication('core', { CORE_DATABASE_URL: coreDatabase.url }, core.port);
-      },
       close,
     };
   } catch (error) {

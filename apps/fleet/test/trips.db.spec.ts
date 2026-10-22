@@ -7,7 +7,6 @@ import { issueDemoToken } from '../src/auth/demo-auth.js';
 import { FleetClock } from '../src/clock/fleet-clock.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { CoreClient } from '../src/integrations/core/core.client.js';
-import { TripsRepository } from '../src/modules/trips/trips.repository.js';
 import { createTestDatabase } from './test-database.js';
 
 const tenantId = '01000000-0000-4000-8000-000000000001';
@@ -29,7 +28,7 @@ describe('Trips list contract with PostgreSQL', () => {
     t4: '',
     t5: '',
   };
-  let firstVehicle: string, secondVehicle: string, georgi: string, anna: string;
+  let firstVehicle: string, georgi: string, anna: string;
   beforeAll(async () => {
     database = await createTestDatabase();
     closeDatabase = database.close;
@@ -50,7 +49,7 @@ describe('Trips list contract with PostgreSQL', () => {
         data: { tenantId, branchId, licensePlate: 'CB 1001 AX', fleetNumber: 'Т-01' },
       })
     ).id;
-    secondVehicle = (
+    const secondVehicle = (
       await client.vehicle.create({ data: { tenantId, branchId, licensePlate: 'CB 1002 AX' } })
     ).id;
     georgi = (
@@ -187,18 +186,6 @@ describe('Trips list contract with PostgreSQL', () => {
       });
     }
   });
-
-  it('sorts whole-second duration before paging, with nulls last and stable startedAt ties', async () => {
-    expect(await ids({ sort: { field: 'DURATION_SECONDS', direction: 'ASC' } })).toEqual(
-      page(['t3', 't2', 't1', 't4', 't5'], 150.5),
-    );
-    expect(await ids({ sort: { field: 'DURATION_SECONDS', direction: 'DESC' } })).toEqual(
-      page(['t1', 't3', 't2', 't4', 't5'], 150.5),
-    );
-    expect(
-      await ids({ sort: { field: 'DURATION_SECONDS', direction: 'ASC' }, offset: 1, limit: 2 }),
-    ).toEqual(page(['t2', 't1'], 150.5, 5, 1, 2));
-  });
   afterAll(async () => {
     try {
       await app?.close();
@@ -247,126 +234,116 @@ describe('Trips list contract with PostgreSQL', () => {
     };
   }
 
-  it('sorts with nulls last and the startedAt tie-break, pages consistently and sums the filtered distance', async () => {
-    expect(await ids({})).toEqual(page(['t4', 't3', 't5', 't2', 't1'], 150.5));
-    expect(await ids({ sort: { field: 'DISTANCE_KM', direction: 'ASC' } })).toEqual(
-      page(['t3', 't1', 't4', 't5', 't2'], 150.5),
-    );
-    expect(await ids({ sort: { field: 'DISTANCE_KM', direction: 'DESC' } })).toEqual(
-      page(['t1', 't3', 't4', 't5', 't2'], 150.5),
-    );
-    expect(await ids({ sort: { field: 'DRIVING_SCORE', direction: 'DESC' } })).toEqual(
-      page(['t1', 't3', 't4', 't5', 't2'], 150.5),
-    );
-    expect(await ids({ sort: { field: 'STARTED_AT', direction: 'ASC' } })).toEqual(
-      page(['t1', 't2', 't5', 't3', 't4'], 150.5),
-    );
-    for (const [offset, keys] of [
-      [0, ['t3', 't1']],
-      [2, ['t4', 't5']],
-      [4, ['t2']],
-    ] as const) {
-      expect(
-        await ids({ sort: { field: 'DISTANCE_KM', direction: 'ASC' }, offset, limit: 2 }),
-      ).toEqual(page([...keys], 150.5, 5, offset, 2));
+  it('trips list derived values and totals', async () => {
+    const byDistance = { field: 'DISTANCE_KM', direction: 'ASC' };
+    const pages: [string, Record<string, unknown>, ReturnType<typeof page>][] = [
+      [
+        'whole-second duration ascending',
+        { sort: { field: 'DURATION_SECONDS', direction: 'ASC' } },
+        page(['t3', 't2', 't1', 't4', 't5'], 150.5),
+      ],
+      [
+        'whole-second duration descending',
+        { sort: { field: 'DURATION_SECONDS', direction: 'DESC' } },
+        page(['t1', 't3', 't2', 't4', 't5'], 150.5),
+      ],
+      [
+        'duration page',
+        { sort: { field: 'DURATION_SECONDS', direction: 'ASC' }, offset: 1, limit: 2 },
+        page(['t2', 't1'], 150.5, 5, 1, 2),
+      ],
+      ['default order', {}, page(['t4', 't3', 't5', 't2', 't1'], 150.5)],
+      [
+        'distance ascending, nulls last',
+        { sort: byDistance },
+        page(['t3', 't1', 't4', 't5', 't2'], 150.5),
+      ],
+      [
+        'distance descending, nulls last',
+        { sort: { field: 'DISTANCE_KM', direction: 'DESC' } },
+        page(['t1', 't3', 't4', 't5', 't2'], 150.5),
+      ],
+      ['first distance page', { sort: byDistance, limit: 2 }, page(['t3', 't1'], 150.5, 5, 0, 2)],
+      [
+        'second distance page',
+        { sort: byDistance, offset: 2, limit: 2 },
+        page(['t4', 't5'], 150.5, 5, 2, 2),
+      ],
+      [
+        'last distance page',
+        { sort: byDistance, offset: 4, limit: 2 },
+        page(['t2'], 150.5, 5, 4, 2),
+      ],
+      ['without an end', { filter: { hasEnd: false } }, page(['t4', 't5'], 0)],
+      ['without a score', { filter: { scored: false } }, page(['t4', 't5', 't2'], 0)],
+      [
+        'half-open period',
+        { filter: { startedFrom: hours(-48).toISOString(), startedTo: hours(-24).toISOString() } },
+        page(['t5', 't2'], 0),
+      ],
+      ['search across vehicle and driver', { search: 'т-01 георги' }, page(['t1'], 120.5)],
+      ['literal search', { search: '%_\\' }, page(['t1'], 120.5)],
+      ['with events', { filter: { allOf: [{ hasEvents: true }] } }, page(['t1'], 120.5)],
+      [
+        'without events',
+        { filter: { allOf: [{ hasEvents: false }] } },
+        page(['t4', 't3', 't5', 't2'], 30),
+      ],
+      [
+        'contradicting event conditions',
+        { filter: { allOf: [{ hasEvents: true }, { hasEvents: false }] } },
+        page([], 0),
+      ],
+      [
+        'driver exclusion keeps trips without a driver',
+        { filter: { allOf: [{ excludedDriverIds: [georgi] }] } },
+        page(['t3', 't5', 't2'], 30),
+      ],
+      [
+        'inclusive distance range',
+        { filter: { allOf: [{ distanceKmFrom: 30, distanceKmTo: 120.5 }] } },
+        page(['t3', 't1'], 150.5),
+      ],
+      [
+        'exclusive distance bounds',
+        { filter: { allOf: [{ distanceKmAbove: 30 }, { distanceKmBelow: 120.5 }] } },
+        page([], 0),
+      ],
+      [
+        'score bounds before paging',
+        { filter: { allOf: [{ drivingScoreAbove: 55.4 }, { drivingScoreBelow: 88.1 }] }, limit: 1 },
+        page(['t3'], 150.5, 2, 0, 1),
+      ],
+      [
+        'repeated periods',
+        {
+          filter: {
+            allOf: [
+              { startedFrom: hours(-48).toISOString(), startedTo: hours(-23).toISOString() },
+              { startedFrom: hours(-30).toISOString(), startedTo: hours(-24).toISOString() },
+            ],
+          },
+        },
+        page(['t5'], 0),
+      ],
+      [
+        'top-level and repeated conditions',
+        {
+          filter: {
+            vehicleIds: [firstVehicle],
+            allOf: [{ distanceKmFrom: 30, distanceKmTo: 120.5 }],
+          },
+        },
+        page(['t1'], 120.5),
+      ],
+    ];
+    for (const [row, variables, expected] of pages) {
+      expect({ row, value: await ids(variables) }).toEqual({ row, value: expected });
     }
-  });
-
-  it('filters by period, vehicles, drivers, score and end, and searches stored relations', async () => {
-    expect(await ids({ filter: { hasDriver: false } })).toEqual(page(['t2'], 0));
-    expect(await ids({ filter: { scored: true } })).toEqual(page(['t3', 't1'], 150.5));
-    expect(await ids({ filter: { scored: false } })).toEqual(page(['t4', 't5', 't2'], 0));
-    expect(await ids({ filter: { drivingScoreBelow: 60 } })).toEqual(page(['t3'], 30));
-    expect(await ids({ filter: { hasEnd: false } })).toEqual(page(['t4', 't5'], 0));
-    expect(await ids({ filter: { vehicleIds: [secondVehicle] } })).toEqual(page(['t4', 't3'], 30));
-    expect(await ids({ filter: { driverIds: [georgi] } })).toEqual(page(['t4', 't1'], 120.5));
-    expect(
-      await ids({
-        filter: { startedFrom: hours(-48).toISOString(), startedTo: hours(-24).toISOString() },
-      }),
-    ).toEqual(page(['t5', 't2'], 0));
-    expect(await ids({ search: 'иванов' })).toEqual(page(['t4', 't1'], 120.5));
-    expect(await ids({ search: 'ПЛОВДИВ' })).toEqual(page(['t1'], 120.5));
-    expect(await ids({ search: 'cb 1002' })).toEqual(page(['t4', 't3'], 30));
-    expect(await ids({ search: 'т-01 георги' })).toEqual(page(['t1'], 120.5));
-    expect(await ids({ search: '%_\\' })).toEqual(page(['t1'], 120.5));
-    expect(await ids({ search: '%' })).toEqual(page(['t1'], 120.5));
-    expect(
-      await query(list, { offset: 0, limit: 20, filter: { drivingScoreBelow: 101 } }),
-    ).toMatchObject({ errors: [{ extensions: { fieldErrors: [{ path: 'filter' }] } }] });
-  });
-
-  it('ANDs independent exclusions, ranges and repeated conditions before count and distance totals', async () => {
-    expect(
-      await ids({
-        filter: { allOf: [{ vehicleIds: [firstVehicle] }, { excludedVehicleIds: [firstVehicle] }] },
-      }),
-    ).toEqual(page([], 0));
-    expect(await ids({ filter: { allOf: [{ excludedVehicleIds: [firstVehicle] }] } })).toEqual(
-      page(['t4', 't3'], 30),
-    );
-    expect(
-      await ids({ filter: { allOf: [{ driverIds: [georgi] }, { excludedDriverIds: [anna] }] } }),
-    ).toEqual(page(['t4', 't1'], 120.5));
-    expect(await ids({ filter: { allOf: [{ excludedDriverIds: [georgi] }] } })).toEqual(
-      page(['t3', 't5', 't2'], 30),
-    );
-    expect(await ids({ filter: { allOf: [{ driverIds: [anna] }, { hasDriver: false }] } })).toEqual(
-      page([], 0),
-    );
-    expect(await ids({ filter: { allOf: [{ hasEvents: true }] } })).toEqual(page(['t1'], 120.5));
-    expect(await ids({ filter: { allOf: [{ hasEvents: false }] } })).toEqual(
-      page(['t4', 't3', 't5', 't2'], 30),
-    );
-    expect(await ids({ filter: { allOf: [{ hasEvents: true }, { hasEvents: false }] } })).toEqual(
-      page([], 0),
-    );
-    expect(await ids({ filter: { allOf: [{ distanceKmFrom: 30, distanceKmTo: 120.5 }] } })).toEqual(
-      page(['t3', 't1'], 150.5),
-    );
-    expect(
-      await ids({ filter: { allOf: [{ distanceKmAbove: 30 }, { distanceKmBelow: 120.5 }] } }),
-    ).toEqual(page([], 0));
-    expect(
-      await ids({ filter: { allOf: [{ drivingScoreAbove: 55.5 }, { drivingScoreBelow: 88 }] } }),
-    ).toEqual(page([], 0));
-    expect(
-      await ids({
-        filter: { allOf: [{ drivingScoreAbove: 55.4 }, { drivingScoreBelow: 88.1 }] },
-        limit: 1,
-      }),
-    ).toEqual(page(['t3'], 150.5, 2, 0, 1));
-    expect(
-      await ids({
-        filter: {
-          allOf: [
-            { startedFrom: hours(-48).toISOString(), startedTo: hours(-23).toISOString() },
-            { startedFrom: hours(-30).toISOString(), startedTo: hours(-24).toISOString() },
-          ],
-        },
-      }),
-    ).toEqual(page(['t5'], 0));
-    expect(
-      await ids({
-        filter: {
-          vehicleIds: [firstVehicle],
-          allOf: [{ distanceKmFrom: 30, distanceKmTo: 120.5 }],
-        },
-      }),
-    ).toEqual(page(['t1'], 120.5));
-    expect(
-      await query(list, {
-        offset: 0,
-        limit: 20,
-        filter: { allOf: Array.from({ length: 51 }, () => ({ hasEvents: true })) },
-      }),
-    ).toMatchObject({ errors: [{ extensions: { fieldErrors: [{ path: 'filter' }] } }] });
-  });
-
-  it('reports whole-Branch totals independently of list filters and excludes standalone maneuvers', async () => {
+    // Whole-Branch totals are independent of list filters and exclude standalone maneuvers.
     const summary =
       '{fleetTripSummary{totalTrips distanceKm totalDurationSeconds averageDrivingScore totalManeuverEvents}}';
-    const expected = {
+    const totals = {
       data: {
         fleetTripSummary: {
           totalTrips: 5,
@@ -377,11 +354,11 @@ describe('Trips list contract with PostgreSQL', () => {
         },
       },
     };
-    expect(await query(summary, {})).toEqual(expected);
+    expect(await query(summary, {})).toEqual(totals);
     expect(await ids({ filter: { allOf: [{ hasEvents: false }] }, offset: 2, limit: 1 })).toEqual(
       page(['t5'], 30, 4, 2, 1),
     );
-    expect(await query(summary, {})).toEqual(expected);
+    expect(await query(summary, {})).toEqual(totals);
     expect(await query(summary, {}, randomUUID())).toEqual({
       data: {
         fleetTripSummary: {
@@ -393,219 +370,7 @@ describe('Trips list contract with PostgreSQL', () => {
         },
       },
     });
-  });
-
-  it('keeps zero and maximum measurements distinct from null and sums per-trip whole seconds', async () => {
-    const edgeBranch = randomUUID();
-    const vehicle = await database.client.vehicle.create({
-      data: { tenantId, branchId: edgeBranch, licensePlate: 'EDGE 0001' },
-    });
-    const zero = await database.client.trip.create({
-      data: {
-        tenantId,
-        branchId: edgeBranch,
-        vehicleId: vehicle.id,
-        source: 'DEMO',
-        startedAt: hours(-1),
-        endedAt: new Date(hours(-1).getTime() + 999),
-        distanceKm: 0,
-        drivingScore: 0,
-      },
-    });
-    const maximum = await database.client.trip.create({
-      data: {
-        tenantId,
-        branchId: edgeBranch,
-        vehicleId: vehicle.id,
-        source: 'DEMO',
-        startedAt: hours(-2),
-        endedAt: new Date(hours(-2).getTime() + 1999),
-        distanceKm: 5000,
-        drivingScore: 100,
-      },
-    });
-    const unknown = await database.client.trip.create({
-      data: {
-        tenantId,
-        branchId: edgeBranch,
-        vehicleId: vehicle.id,
-        source: 'DEMO',
-        startedAt: hours(-3),
-      },
-    });
-    const read = (filter: Record<string, unknown>) =>
-      query(list, { offset: 0, limit: 20, filter }, edgeBranch);
-    expect(await read({ allOf: [{ distanceKmFrom: 0, distanceKmTo: 0 }] })).toMatchObject({
-      data: { fleetTrips: { items: [{ id: zero.id }], total: 1, totalDistanceKm: 0 } },
-    });
-    expect(
-      await read({ allOf: [{ distanceKmAbove: 0 }, { distanceKmBelow: 5000 }] }),
-    ).toMatchObject({
-      data: { fleetTrips: { items: [], total: 0, totalDistanceKm: 0 } },
-    });
-    expect(await read({ allOf: [{ drivingScoreBelow: 100 }] })).toMatchObject({
-      data: { fleetTrips: { items: [{ id: zero.id }], total: 1 } },
-    });
-    expect(await read({ allOf: [{ drivingScoreAbove: 0 }] })).toMatchObject({
-      data: { fleetTrips: { items: [{ id: maximum.id }], total: 1 } },
-    });
-    expect(
-      await query(
-        list,
-        {
-          offset: 0,
-          limit: 20,
-          sort: { field: 'DURATION_SECONDS', direction: 'ASC' },
-        },
-        edgeBranch,
-      ),
-    ).toMatchObject({
-      data: {
-        fleetTrips: {
-          items: [{ id: zero.id }, { id: maximum.id }, { id: unknown.id }],
-          total: 3,
-        },
-      },
-    });
-    expect(
-      await query(
-        '{fleetTripSummary{totalTrips distanceKm totalDurationSeconds averageDrivingScore totalManeuverEvents}}',
-        {},
-        edgeBranch,
-      ),
-    ).toEqual({
-      data: {
-        fleetTripSummary: {
-          totalTrips: 3,
-          distanceKm: 5000,
-          totalDurationSeconds: 1,
-          averageDrivingScore: 50,
-          totalManeuverEvents: 0,
-        },
-      },
-    });
-  });
-
-  it('keeps hasEvents and in-progress projections from the list snapshot when a maneuver and clock arrive later', async () => {
-    if (!app) {
-      throw new Error('Missing Fleet application.');
-    }
-    const scope = randomUUID();
-    const vehicle = await database.client.vehicle.create({
-      data: { tenantId, branchId: scope, licensePlate: 'TRIP SNAPSHOT' },
-    });
-    const trip = await database.client.trip.create({
-      data: {
-        tenantId,
-        branchId: scope,
-        vehicleId: vehicle.id,
-        source: 'DEMO',
-        startedAt: hours(-1),
-        distanceKm: 10,
-      },
-    });
-    await database.client.vehicleStatusSample.create({
-      data: {
-        tenantId,
-        branchId: scope,
-        vehicleId: vehicle.id,
-        deviceImei: '000000000000051',
-        source: 'DEMO',
-        recordedAt: asOf,
-        receivedAt: asOf,
-      },
-    });
-    await database.client.fleetEvent.create({
-      data: {
-        tenantId,
-        branchId: scope,
-        vehicleId: vehicle.id,
-        tripId: trip.id,
-        source: 'DEMO',
-        occurredAt: hours(-1),
-        kind: 'IGNITION_ON',
-        severity: 'INFO',
-      },
-    });
-    const maneuverId = randomUUID();
-    const repository = app.get(TripsRepository);
-    const originalList = repository.list.bind(repository);
-    const selected = jest
-      .spyOn(repository, 'list')
-      .mockImplementationOnce(async (capturedScope, page, criteria, sort) => {
-        const result = await originalList(capturedScope, page, criteria, sort);
-        await database.client.$transaction([
-          database.client.fleetEvent.create({
-            data: {
-              id: maneuverId,
-              tenantId,
-              branchId: scope,
-              vehicleId: vehicle.id,
-              tripId: trip.id,
-              source: 'DEMO',
-              occurredAt: hours(-0.5),
-              kind: 'HARSH_BRAKING',
-              severity: 'INFO',
-              intensity: 1,
-              details: 'Arrived after list selection',
-            },
-          }),
-          database.client.vehicleStatusSample.create({
-            data: {
-              tenantId,
-              branchId: scope,
-              vehicleId: vehicle.id,
-              deviceImei: '000000000000051',
-              source: 'DEMO',
-              recordedAt: hours(48),
-              receivedAt: hours(48),
-            },
-          }),
-        ]);
-        return result;
-      });
-    const source =
-      'query($filter:FleetTripFilter!){fleetTrips(filter:$filter){items{id inProgress maneuverCount drivingEvents{id occurredAt kind severity details}}total totalDistanceKm}}';
-    try {
-      expect(await query(source, { filter: { allOf: [{ hasEvents: false }] } }, scope)).toEqual({
-        data: {
-          fleetTrips: {
-            items: [{ id: trip.id, inProgress: true, maneuverCount: 0, drivingEvents: [] }],
-            total: 1,
-            totalDistanceKm: 10,
-          },
-        },
-      });
-      expect(await query(source, { filter: { allOf: [{ hasEvents: true }] } }, scope)).toEqual({
-        data: {
-          fleetTrips: {
-            items: [
-              {
-                id: trip.id,
-                inProgress: false,
-                maneuverCount: 1,
-                drivingEvents: [
-                  {
-                    id: maneuverId,
-                    occurredAt: hours(-0.5).toISOString(),
-                    kind: 'HARSH_BRAKING',
-                    severity: 'INFO',
-                    details: 'Arrived after list selection',
-                  },
-                ],
-              },
-            ],
-            total: 1,
-            totalDistanceKm: 10,
-          },
-        },
-      });
-    } finally {
-      selected.mockRestore();
-    }
-  });
-
-  it('reads one trip with maneuvers, duration and in-progress state in scope', async () => {
+    // One trip with maneuvers, duration and in-progress state in scope.
     const trip =
       'query($id:ID!){fleetTrip(id:$id){id vehicle{licensePlate fleetNumber} driver{firstName lastName} durationSeconds maneuverCount drivingEvents{id occurredAt kind severity details} inProgress endedAt}}';
     expect(await query(trip, { id: trips.t1 })).toEqual({

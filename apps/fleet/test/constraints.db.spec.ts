@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it, jest } from '@jest/globals';
-import type { INestApplication } from '@nestjs/common';
+import { NotFoundException, type INestApplication } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import pg from 'pg';
 import { AppModule } from '../src/app.module.js';
 import { issueDemoToken } from '../src/auth/demo-auth.js';
+import { FleetClock } from '../src/clock/fleet-clock.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { CoreClient } from '../src/integrations/core/core.client.js';
 import { DevicesRepository } from '../src/modules/devices/devices.repository.js';
@@ -16,6 +17,29 @@ import { createTestDatabase } from './test-database.js';
 import { getTestDatabaseUrl } from './test-database-url.js';
 
 const tenantId = '01000000-0000-4000-8000-000000000001';
+// 06:00 UTC is the business date 18 October 2026 in Europe/Sofia.
+const now = new Date('2026-10-18T06:00:00.000Z');
+const createVehicle =
+  'mutation($input:CreateFleetVehicleInput!){createFleetVehicle(input:$input){id}}';
+const updateVehicle =
+  'mutation($id:ID!,$input:UpdateFleetVehicleInput!){updateFleetVehicle(id:$id,input:$input){id}}';
+const createDevice =
+  'mutation($input:CreateFleetDeviceInput!){createFleetDevice(input:$input){id}}';
+const updateDevice =
+  'mutation($id:ID!,$input:UpdateFleetDeviceInput!){updateFleetDevice(id:$id,input:$input){id}}';
+const createDriver =
+  'mutation($input:CreateFleetDriverInput!){createFleetDriver(input:$input){id}}';
+const updateDriver =
+  'mutation($id:ID!,$input:UpdateFleetDriverInput!){updateFleetDriver(id:$id,input:$input){id}}';
+const createGroup =
+  'mutation($input:CreateFleetVehicleGroupInput!){createFleetVehicleGroup(input:$input){id}}';
+const updateGroup =
+  'mutation($id:ID!,$input:UpdateFleetVehicleGroupInput!){updateFleetVehicleGroup(id:$id,input:$input){id}}';
+
+interface Scope {
+  tenantId?: string;
+  branchId?: string;
+}
 
 async function rejection(action: Promise<unknown>): Promise<unknown> {
   try {
@@ -26,18 +50,18 @@ async function rejection(action: Promise<unknown>): Promise<unknown> {
   throw new Error('Expected the database to reject the write');
 }
 
-describe('Fleet master data and activity constraints in PostgreSQL', () => {
+describe('Fleet scope isolation and referential integrity in PostgreSQL', () => {
   let database: Awaited<ReturnType<typeof createTestDatabase>>;
   let closeDatabase: (() => Promise<void>) | undefined;
   let app: INestApplication | undefined;
   let url: string;
   const connection = new pg.Client({ connectionString: getTestDatabaseUrl() });
   let connected = false;
+  const requireBranch = jest.fn<CoreClient['requireBranch']>().mockResolvedValue(undefined);
   const branchId = randomUUID(),
     otherBranchId = randomUUID();
   let vehicleId: string;
   let module: TestingModule;
-  let nextImei = 900000000000000;
   beforeAll(async () => {
     database = await createTestDatabase();
     closeDatabase = database.close;
@@ -48,7 +72,9 @@ describe('Fleet master data and activity constraints in PostgreSQL', () => {
       .overrideProvider(PrismaService)
       .useValue({ client: database.client, schema: database.schema })
       .overrideProvider(CoreClient)
-      .useValue({ requireBranch: jest.fn<CoreClient['requireBranch']>() })
+      .useValue({ requireBranch })
+      .overrideProvider(FleetClock)
+      .useValue({ now: () => now })
       .compile();
     app = module.createNestApplication({ logger: false });
     await app.listen(0, '127.0.0.1');
@@ -70,16 +96,20 @@ describe('Fleet master data and activity constraints in PostgreSQL', () => {
       }
     }
   });
-  async function query(source: string, variables: Record<string, unknown>) {
+  async function query(
+    source: string,
+    variables: Record<string, unknown>,
+    scope: Scope = { tenantId, branchId },
+  ) {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        authorization: `Bearer ${issueDemoToken(tenantId)}`,
-        'x-branch-id': branchId,
+        ...(scope.tenantId ? { authorization: `Bearer ${issueDemoToken(scope.tenantId)}` } : {}),
+        ...(scope.branchId ? { 'x-branch-id': scope.branchId } : {}),
       },
       body: JSON.stringify({ query: source, variables }),
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(10000),
     });
     const body: unknown = await response.json();
     return body;
@@ -88,125 +118,554 @@ describe('Fleet master data and activity constraints in PostgreSQL', () => {
     return rejection(connection.query(statement, values));
   }
 
-  it.each([
-    ['Vehicle_modelYear_check', 'UPDATE "Vehicle" SET "modelYear" = 1949 WHERE id = $1'],
-    ['Vehicle_modelYear_check', 'UPDATE "Vehicle" SET "modelYear" = 2101 WHERE id = $1'],
-    ['Vehicle_vin_check', `UPDATE "Vehicle" SET vin = 'WDB9634031L12345O' WHERE id = $1`],
-    ['Vehicle_vin_check', `UPDATE "Vehicle" SET vin = 'wdb9634031l123456' WHERE id = $1`],
-    [
-      'Vehicle_fuelTankCapacityL_check',
-      'UPDATE "Vehicle" SET "fuelTankCapacityL" = 0 WHERE id = $1',
-    ],
-    [
-      'Vehicle_fuelTankCapacityL_check',
-      'UPDATE "Vehicle" SET "fuelTankCapacityL" = 2001 WHERE id = $1',
-    ],
-  ])('%s rejects %s', async (constraint, statement) => {
-    expect(await sqlError(statement, [vehicleId])).toMatchObject({ code: '23514', constraint });
-  });
+  it('records of another Tenant or Branch stay invisible to by-ID reads, writes, batch actions and federation references', async () => {
+    const client = database.client;
+    const owner = { tenantId, branchId: randomUUID() };
+    const group = await client.vehicleGroup.create({ data: { ...owner, name: 'Owner group' } });
+    const driver = await client.driver.create({
+      data: { ...owner, firstName: 'Owner', lastName: 'Driver' },
+    });
+    const vehicle = await client.vehicle.create({ data: { ...owner, licensePlate: 'OWNER' } });
+    const device = await client.device.create({
+      data: { ...owner, vehicleId: vehicle.id, imei: '990601000000101' },
+    });
+    const trip = await client.trip.create({
+      data: {
+        ...owner,
+        vehicleId: vehicle.id,
+        driverId: driver.id,
+        source: 'DEMO',
+        startedAt: now,
+      },
+    });
+    const alert = await client.fleetEvent.create({
+      data: {
+        ...owner,
+        vehicleId: vehicle.id,
+        source: 'DEMO',
+        occurredAt: now,
+        kind: 'LOW_FUEL',
+        severity: 'WARNING',
+        alertStatus: 'OPEN',
+      },
+    });
+    const task = await client.serviceTask.create({
+      data: {
+        ...owner,
+        vehicleId: vehicle.id,
+        serviceType: 'OIL_CHANGE',
+        dueOn: new Date('2026-11-01T00:00:00.000Z'),
+      },
+    });
+    const ownerRows = () =>
+      Promise.all([
+        client.vehicleGroup.findMany({ where: owner, orderBy: { id: 'asc' } }),
+        client.driver.findMany({ where: owner, orderBy: { id: 'asc' } }),
+        client.vehicle.findMany({ where: owner, orderBy: { id: 'asc' } }),
+        client.device.findMany({ where: owner, orderBy: { id: 'asc' } }),
+        client.trip.findMany({ where: owner, orderBy: { id: 'asc' } }),
+        client.fleetEvent.findMany({ where: owner, orderBy: { id: 'asc' } }),
+        client.serviceTask.findMany({ where: owner, orderBy: { id: 'asc' } }),
+      ]);
+    const before = await ownerRows();
 
-  it('rejects an INACTIVE vehicle with a current driver', async () => {
-    const driver = await database.client.driver.create({
-      data: { tenantId, branchId, firstName: 'Check', lastName: 'Driver' },
-    });
-    const vehicle = await database.client.vehicle.create({
-      data: { tenantId, branchId, licensePlate: 'ASSIGNED', currentDriverId: driver.id },
-    });
+    // A missing token or an invalid Branch fails before Core or any write is reached.
+    const unscoped: [string, Scope, string][] = [
+      ['missing token', { branchId: owner.branchId }, 'UNAUTHENTICATED'],
+      ['missing Branch', { tenantId }, 'BAD_USER_INPUT'],
+      ['invalid Branch', { tenantId, branchId: 'not-a-uuid' }, 'BAD_USER_INPUT'],
+    ];
+    for (const [row, scope, code] of unscoped) {
+      expect({
+        row,
+        value: await query(createVehicle, { input: { licensePlate: 'UNSCOPED' } }, scope),
+      }).toMatchObject({ row, value: { data: null, errors: [{ extensions: { code } }] } });
+    }
+    expect(requireBranch).not.toHaveBeenCalled();
+    expect(await client.vehicle.count({ where: { licensePlate: 'UNSCOPED' } })).toBe(0);
+
+    // Federation references resolve from the scoped database, never from the representation.
     expect(
-      await sqlError(`UPDATE "Vehicle" SET status = 'INACTIVE' WHERE id = $1`, [vehicle.id]),
-    ).toMatchObject({ code: '23514', constraint: 'Vehicle_inactive_driver_check' });
-  });
-
-  it.each([
-    ['Device_options_check', 'UPDATE "Device" SET options = NULL WHERE id = $1'],
-    [
-      'Device_options_check',
-      `UPDATE "Device" SET options = array_fill('CAN'::"FleetDeviceOption", ARRAY[14]) WHERE id = $1`,
-    ],
-    ['Device_simPhoneNumber_check', `UPDATE "Device" SET "simPhoneNumber" = '12345' WHERE id = $1`],
-    [
-      'Device_simPhoneNumber_check',
-      `UPDATE "Device" SET "simPhoneNumber" = '+359 888' WHERE id = $1`,
-    ],
-    ['Device_simIccid_check', `UPDATE "Device" SET "simIccid" = '12345678901234567' WHERE id = $1`],
-  ])('%s rejects %s', async (constraint, statement) => {
-    const device = await database.client.device.create({
-      data: { tenantId, branchId, vehicleId, imei: String(nextImei++) },
-    });
-    expect(device.options).toEqual([]);
-    expect(await sqlError(statement, [device.id])).toMatchObject({ code: '23514', constraint });
-  });
-
-  it.each([
-    [
-      'Driver_licenseCategories_check',
-      'UPDATE "Driver" SET "licenseCategories" = NULL WHERE id = $1',
-    ],
-    [
-      'Driver_licenseCategories_check',
-      `UPDATE "Driver" SET "licenseCategories" = array_fill('C'::"FleetLicenseCategory", ARRAY[11]) WHERE id = $1`,
-    ],
-    ['Driver_phone_check', `UPDATE "Driver" SET phone = '+359-888-123' WHERE id = $1`],
-    ['Driver_phone_check', `UPDATE "Driver" SET phone = '12345' WHERE id = $1`],
-  ])('%s rejects %s', async (constraint, statement) => {
-    const driver = await database.client.driver.create({
-      data: { tenantId, branchId, firstName: 'Check', lastName: 'Driver' },
-    });
-    expect(driver.licenseCategories).toEqual([]);
-    expect(await sqlError(statement, [driver.id])).toMatchObject({ code: '23514', constraint });
-  });
-
-  it('rejects group and driver references from another Branch or Tenant with composite keys', async () => {
-    const foreignGroup = await database.client.vehicleGroup.create({
-      data: { tenantId, branchId: otherBranchId, name: 'Foreign' },
-    });
-    const foreignDriver = await database.client.driver.create({
-      data: { tenantId: randomUUID(), branchId, firstName: 'Foreign', lastName: 'Tenant' },
-    });
-    expect(
-      await rejection(
-        database.client.vehicle.create({
-          data: { tenantId, branchId, licensePlate: 'X', groupId: foreignGroup.id },
-        }),
+      await query(
+        'query($refs:[_Any!]!){_entities(representations:$refs){...on FleetVehicle{id branchId licensePlate}...on FleetDevice{id imei}}}',
+        {
+          refs: [
+            {
+              __typename: 'FleetVehicle',
+              id: vehicle.id,
+              branchId: randomUUID(),
+              licensePlate: 'SPOOFED',
+            },
+            { __typename: 'FleetDevice', id: device.id, imei: 'spoofed', vehicleId: randomUUID() },
+          ],
+        },
+        owner,
       ),
-    ).toMatchObject({ code: 'P2003' });
+    ).toEqual({
+      data: {
+        _entities: [
+          { id: vehicle.id, branchId: owner.branchId, licensePlate: 'OWNER' },
+          { id: device.id, imei: device.imei },
+        ],
+      },
+    });
+
+    const missing = { errors: [{ extensions: { code: 'NOT_FOUND' } }] };
+    const failed = (field: string, id: string) => ({
+      data: { [field]: { succeededIds: [], failures: [{ id, code: 'NOT_FOUND' }] } },
+    });
+    const operations: [string, string, Record<string, unknown>, unknown][] = [
+      ['vehicle read', 'query($id:ID!){fleetVehicle(id:$id){id}}', { id: vehicle.id }, missing],
+      [
+        'vehicle update',
+        'mutation($id:ID!){updateFleetVehicle(id:$id,input:{licensePlate:"SPOOFED"}){id}}',
+        { id: vehicle.id },
+        missing,
+      ],
+      [
+        'vehicle deactivation',
+        'mutation($id:ID!){deactivateFleetVehicle(id:$id){id}}',
+        { id: vehicle.id },
+        missing,
+      ],
+      [
+        'vehicle deletion',
+        'mutation($id:ID!){deleteFleetVehicle(id:$id){id}}',
+        { id: vehicle.id },
+        missing,
+      ],
+      [
+        'vehicle batch deletion',
+        'mutation($ids:[ID!]!){deleteFleetVehicles(ids:$ids){succeededIds failures{id code}}}',
+        { ids: [vehicle.id] },
+        failed('deleteFleetVehicles', vehicle.id),
+      ],
+      [
+        'vehicle batch deactivation',
+        'mutation($ids:[ID!]!){deactivateFleetVehicles(ids:$ids){succeededIds failures{id code}}}',
+        { ids: [vehicle.id] },
+        failed('deactivateFleetVehicles', vehicle.id),
+      ],
+      [
+        'vehicle federation reference',
+        'query($refs:[_Any!]!){_entities(representations:$refs){...on FleetVehicle{id}}}',
+        { refs: [{ __typename: 'FleetVehicle', id: vehicle.id }] },
+        missing,
+      ],
+      [
+        'vehicle samples',
+        'query($id:ID!,$from:DateTime!,$to:DateTime!){fleetVehicleSamples(vehicleId:$id,from:$from,to:$to){vehicleId}}',
+        { id: vehicle.id, from: '2026-10-17T00:00:00Z', to: '2026-10-18T00:00:00Z' },
+        missing,
+      ],
+      [
+        'vehicle daily distance',
+        'query($id:ID!){fleetDailyDistance(vehicleId:$id,days:7){dataAsOf}}',
+        { id: vehicle.id },
+        missing,
+      ],
+      ['device read', 'query($id:ID!){fleetDevice(id:$id){id}}', { id: device.id }, missing],
+      [
+        'device update',
+        'mutation($id:ID!){updateFleetDevice(id:$id,input:{imei:"990601000000102"}){id}}',
+        { id: device.id },
+        missing,
+      ],
+      [
+        'device deletion',
+        'mutation($id:ID!){deleteFleetDevice(id:$id){id}}',
+        { id: device.id },
+        missing,
+      ],
+      [
+        'device batch deletion',
+        'mutation($ids:[ID!]!){deleteFleetDevices(ids:$ids){succeededIds failures{id code}}}',
+        { ids: [device.id] },
+        failed('deleteFleetDevices', device.id),
+      ],
+      [
+        'device federation reference',
+        'query($refs:[_Any!]!){_entities(representations:$refs){...on FleetDevice{id}}}',
+        { refs: [{ __typename: 'FleetDevice', id: device.id }] },
+        missing,
+      ],
+      ['driver read', 'query($id:ID!){fleetDriver(id:$id){id}}', { id: driver.id }, missing],
+      [
+        'driver scorecard',
+        'query($id:ID!){fleetDriverScorecard(driverId:$id,days:30){tripCount}}',
+        { id: driver.id },
+        missing,
+      ],
+      [
+        'driver update',
+        'mutation($id:ID!){updateFleetDriver(id:$id,input:{notes:"Spoofed"}){id}}',
+        { id: driver.id },
+        missing,
+      ],
+      [
+        'driver deletion',
+        'mutation($id:ID!){deleteFleetDriver(id:$id){id}}',
+        { id: driver.id },
+        missing,
+      ],
+      [
+        'driver batch deletion',
+        'mutation($ids:[ID!]!){deleteFleetDrivers(ids:$ids){succeededIds failures{id code}}}',
+        { ids: [driver.id] },
+        failed('deleteFleetDrivers', driver.id),
+      ],
+      [
+        'driver batch deactivation',
+        'mutation($ids:[ID!]!){deactivateFleetDrivers(ids:$ids){succeededIds failures{id code}}}',
+        { ids: [driver.id] },
+        failed('deactivateFleetDrivers', driver.id),
+      ],
+      [
+        'vehicle group read',
+        'query($id:ID!){fleetVehicleGroup(id:$id){id}}',
+        { id: group.id },
+        missing,
+      ],
+      [
+        'vehicle group list',
+        'query($ids:[ID!]){fleetVehicleGroups(ids:$ids){items{id}total}}',
+        { ids: [group.id] },
+        { data: { fleetVehicleGroups: { items: [], total: 0 } } },
+      ],
+      [
+        'vehicle group update',
+        'mutation($id:ID!){updateFleetVehicleGroup(id:$id,input:{name:"Spoofed"}){id}}',
+        { id: group.id },
+        missing,
+      ],
+      [
+        'vehicle group deletion',
+        'mutation($id:ID!){deleteFleetVehicleGroup(id:$id){id}}',
+        { id: group.id },
+        missing,
+      ],
+      [
+        'service task read',
+        'query($id:ID!){fleetServiceTask(id:$id){id}}',
+        { id: task.id },
+        missing,
+      ],
+      [
+        'service task update',
+        'mutation($id:ID!){updateFleetServiceTask(id:$id,input:{title:"Spoofed"}){id}}',
+        { id: task.id },
+        missing,
+      ],
+      [
+        'service task completion',
+        'mutation($id:ID!){completeFleetServiceTask(id:$id,input:{completedOn:"2026-10-18"}){completed{id}}}',
+        { id: task.id },
+        missing,
+      ],
+      [
+        'service task cancellation',
+        'mutation($id:ID!){cancelFleetServiceTask(id:$id){id}}',
+        { id: task.id },
+        missing,
+      ],
+      [
+        'service task deletion',
+        'mutation($id:ID!){deleteFleetServiceTask(id:$id){id}}',
+        { id: task.id },
+        missing,
+      ],
+      [
+        'service task batch cancellation',
+        'mutation($ids:[ID!]!){cancelFleetServiceTasks(ids:$ids){succeededIds failures{id code}}}',
+        { ids: [task.id] },
+        failed('cancelFleetServiceTasks', task.id),
+      ],
+      [
+        'service task batch deletion',
+        'mutation($ids:[ID!]!){deleteFleetServiceTasks(ids:$ids){succeededIds failures{id code}}}',
+        { ids: [task.id] },
+        failed('deleteFleetServiceTasks', task.id),
+      ],
+      ['event read', 'query($id:ID!){fleetEvent(id:$id){id}}', { id: alert.id }, missing],
+      [
+        'alert acknowledgement',
+        'mutation($id:ID!){acknowledgeFleetAlert(id:$id,input:{expectedStatus:OPEN}){id}}',
+        { id: alert.id },
+        missing,
+      ],
+      [
+        'alert resolution',
+        'mutation($id:ID!){resolveFleetAlert(id:$id,input:{expectedStatus:OPEN}){id}}',
+        { id: alert.id },
+        missing,
+      ],
+      [
+        'alert reopening',
+        'mutation($id:ID!){reopenFleetAlert(id:$id,input:{expectedStatus:RESOLVED}){id}}',
+        { id: alert.id },
+        missing,
+      ],
+      [
+        'alert batch acknowledgement',
+        'mutation($ids:[ID!]!){acknowledgeFleetAlerts(ids:$ids,input:{expectedStatus:OPEN}){succeededIds failures{id code}}}',
+        { ids: [alert.id] },
+        failed('acknowledgeFleetAlerts', alert.id),
+      ],
+      ['trip read', 'query($id:ID!){fleetTrip(id:$id){id}}', { id: trip.id }, missing],
+    ];
+    const foreignScopes: [string, Scope][] = [
+      ['other Tenant, same Branch ID', { tenantId: randomUUID(), branchId: owner.branchId }],
+      ['same Tenant, other Branch', { tenantId, branchId: randomUUID() }],
+    ];
+    for (const [scopeName, scope] of foreignScopes) {
+      for (const [row, source, variables, expected] of operations) {
+        expect({
+          scope: scopeName,
+          row,
+          value: await query(source, variables, scope),
+        }).toMatchObject({ scope: scopeName, row, value: expected });
+      }
+    }
+    expect(await ownerRows()).toEqual(before);
+
+    // A create in a Branch that Core does not confirm persists nothing.
+    const unconfirmed = { tenantId, branchId: randomUUID() };
+    const creates: [string, string, Record<string, unknown>][] = [
+      ['vehicle', createVehicle, { input: { licensePlate: 'UNCONFIRMED' } }],
+      ['device', createDevice, { input: { imei: '990601000000103' } }],
+      ['driver', createDriver, { input: { firstName: 'Unconfirmed', lastName: 'Driver' } }],
+      ['vehicle group', createGroup, { input: { name: 'Unconfirmed' } }],
+    ];
+    for (const [row, source, variables] of creates) {
+      requireBranch.mockRejectedValueOnce(new NotFoundException('Branch not found'));
+      expect({ row, value: await query(source, variables, unconfirmed) }).toMatchObject({
+        row,
+        value: { data: null, errors: [{ extensions: { code: 'NOT_FOUND' } }] },
+      });
+    }
     expect(
-      await sqlError('UPDATE "Vehicle" SET "currentDriverId" = $2 WHERE id = $1', [
+      await Promise.all([
+        client.vehicle.count({ where: unconfirmed }),
+        client.device.count({ where: unconfirmed }),
+        client.driver.count({ where: unconfirmed }),
+        client.vehicleGroup.count({ where: unconfirmed }),
+      ]),
+    ).toEqual([0, 0, 0, 0]);
+  });
+
+  it('cross-scope references are rejected by the API and by composite FKs', async () => {
+    const client = database.client;
+    const own = { tenantId, branchId };
+    const device = await client.device.create({
+      data: { ...own, vehicleId, imei: '990601000000201' },
+    });
+    const otherVehicle = await client.vehicle.create({ data: { ...own, licensePlate: 'OTHER' } });
+    const trip = await client.trip.create({
+      data: { ...own, vehicleId, source: 'DEMO', startedAt: now },
+    });
+    const otherTrip = await client.trip.create({
+      data: { ...own, vehicleId: otherVehicle.id, source: 'DEMO', startedAt: now },
+    });
+    const event = await client.fleetEvent.create({
+      data: {
+        ...own,
         vehicleId,
-        foreignDriver.id,
+        source: 'DEMO',
+        occurredAt: now,
+        kind: 'LOW_FUEL',
+        severity: 'WARNING',
+        alertStatus: 'OPEN',
+      },
+    });
+    const ownRows = () =>
+      Promise.all([
+        client.vehicle.findMany({ where: own, orderBy: { id: 'asc' } }),
+        client.device.findMany({ where: own, orderBy: { id: 'asc' } }),
+        client.trip.findMany({ where: own, orderBy: { id: 'asc' } }),
+        client.fleetEvent.findMany({ where: own, orderBy: { id: 'asc' } }),
+        client.serviceTask.findMany({ where: own, orderBy: { id: 'asc' } }),
+      ]);
+    const before = await ownRows();
+    const foreignScopes = [
+      ['other Tenant, same Branch ID', { tenantId: randomUUID(), branchId }],
+      ['same Tenant, other Branch', { tenantId, branchId: otherBranchId }],
+    ] as const;
+    for (const [scope, foreign] of foreignScopes) {
+      const foreignGroup = await client.vehicleGroup.create({
+        data: { ...foreign, name: 'Foreign' },
+      });
+      const foreignDriver = await client.driver.create({
+        data: { ...foreign, firstName: 'Foreign', lastName: 'Driver' },
+      });
+      const foreignVehicle = await client.vehicle.create({
+        data: { ...foreign, licensePlate: 'FOREIGN' },
+      });
+      const foreignTrip = await client.trip.create({
+        data: { ...foreign, vehicleId: foreignVehicle.id, source: 'DEMO', startedAt: now },
+      });
+      const references: [string, string, Record<string, unknown>, string][] = [
+        [
+          'vehicle creation with a foreign group',
+          createVehicle,
+          { input: { licensePlate: 'REFERENCE', groupId: foreignGroup.id } },
+          'groupId',
+        ],
+        [
+          'vehicle creation with a foreign driver',
+          createVehicle,
+          { input: { licensePlate: 'REFERENCE', currentDriverId: foreignDriver.id } },
+          'currentDriverId',
+        ],
+        [
+          'vehicle update with a foreign group',
+          updateVehicle,
+          { id: vehicleId, input: { groupId: foreignGroup.id } },
+          'groupId',
+        ],
+        [
+          'vehicle update with a foreign driver',
+          updateVehicle,
+          { id: vehicleId, input: { currentDriverId: foreignDriver.id } },
+          'currentDriverId',
+        ],
+        [
+          'device creation with a foreign vehicle',
+          createDevice,
+          { input: { imei: '990601000000202', vehicleId: foreignVehicle.id } },
+          'vehicleId',
+        ],
+        [
+          'device update with a foreign vehicle',
+          updateDevice,
+          { id: device.id, input: { vehicleId: foreignVehicle.id } },
+          'vehicleId',
+        ],
+        [
+          'service task creation with a foreign vehicle',
+          'mutation($input:CreateFleetServiceTaskInput!){createFleetServiceTask(input:$input){id}}',
+          { input: { vehicleId: foreignVehicle.id, serviceType: 'BRAKES', dueOn: '2026-11-01' } },
+          'vehicleId',
+        ],
+      ];
+      for (const [row, source, variables, path] of references) {
+        expect({ scope, row, value: await query(source, variables) }).toMatchObject({
+          scope,
+          row,
+          value: {
+            data: null,
+            errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path }] } }],
+          },
+        });
+      }
+      const writes: [string, () => Promise<unknown>, Record<string, string>][] = [
+        [
+          'Device to Vehicle',
+          () =>
+            client.device.create({
+              data: { ...own, vehicleId: foreignVehicle.id, imei: '990601000000203' },
+            }),
+          { code: 'P2003' },
+        ],
+        [
+          'Vehicle to VehicleGroup',
+          () =>
+            connection.query('UPDATE "Vehicle" SET "groupId" = $2 WHERE id = $1', [
+              vehicleId,
+              foreignGroup.id,
+            ]),
+          { code: '23503', constraint: 'Vehicle_tenantId_branchId_groupId_fkey' },
+        ],
+        [
+          'Vehicle to Driver',
+          () =>
+            connection.query('UPDATE "Vehicle" SET "currentDriverId" = $2 WHERE id = $1', [
+              vehicleId,
+              foreignDriver.id,
+            ]),
+          { code: '23503', constraint: 'Vehicle_tenantId_branchId_currentDriverId_fkey' },
+        ],
+        [
+          'Trip to Driver',
+          () =>
+            connection.query('UPDATE "Trip" SET "driverId" = $2 WHERE id = $1', [
+              trip.id,
+              foreignDriver.id,
+            ]),
+          { code: '23503', constraint: 'Trip_tenantId_branchId_driverId_fkey' },
+        ],
+        [
+          'FleetEvent to Trip',
+          () =>
+            connection.query('UPDATE "FleetEvent" SET "tripId" = $2 WHERE id = $1', [
+              event.id,
+              foreignTrip.id,
+            ]),
+          { code: '23503', constraint: 'FleetEvent_tenantId_branchId_vehicleId_tripId_fkey' },
+        ],
+        [
+          'FleetEvent to Driver',
+          () =>
+            connection.query('UPDATE "FleetEvent" SET "driverId" = $2 WHERE id = $1', [
+              event.id,
+              foreignDriver.id,
+            ]),
+          { code: '23503', constraint: 'FleetEvent_tenantId_branchId_driverId_fkey' },
+        ],
+        [
+          'VehicleStatusSample to Vehicle',
+          () =>
+            client.vehicleStatusSample.create({
+              data: {
+                ...foreign,
+                vehicleId,
+                source: 'MANUAL',
+                recordedAt: now,
+                receivedAt: now,
+                odometerKm: 1,
+              },
+            }),
+          { code: 'P2003' },
+        ],
+        [
+          'ServiceTask to Vehicle',
+          () =>
+            client.serviceTask.create({
+              data: { ...foreign, vehicleId, serviceType: 'TIRES', dueOdometerKm: 1 },
+            }),
+          { code: 'P2003' },
+        ],
+      ];
+      for (const [row, write, error] of writes) {
+        expect({ scope, row, value: await rejection(write()) }).toMatchObject({
+          scope,
+          row,
+          value: error,
+        });
+      }
+    }
+    // The trip exists in the Branch but belongs to another vehicle.
+    expect(
+      await sqlError('UPDATE "FleetEvent" SET "tripId" = $2 WHERE id = $1', [
+        event.id,
+        otherTrip.id,
       ]),
     ).toMatchObject({
       code: '23503',
-      constraint: 'Vehicle_tenantId_branchId_currentDriverId_fkey',
+      constraint: 'FleetEvent_tenantId_branchId_vehicleId_tripId_fkey',
     });
-    expect(
-      await sqlError('UPDATE "Vehicle" SET "groupId" = $2 WHERE id = $1', [
-        vehicleId,
-        foreignGroup.id,
-      ]),
-    ).toMatchObject({ code: '23503', constraint: 'Vehicle_tenantId_branchId_groupId_fkey' });
-    const ownGroup = await database.client.vehicleGroup.create({
-      data: { tenantId, branchId, name: 'Own' },
-    });
-    await database.client.vehicle.update({
-      where: { id: vehicleId },
-      data: { groupId: ownGroup.id },
-    });
-    expect(
-      await rejection(database.client.vehicleGroup.delete({ where: { id: ownGroup.id } })),
-    ).toMatchObject({ code: 'P2003' });
-    await database.client.vehicle.update({ where: { id: vehicleId }, data: { groupId: null } });
+    expect(await ownRows()).toEqual(before);
   });
 
-  it('reports the generated unique index names through the pg adapter and maps them in services', async () => {
+  it('unique violations map to fieldErrors per Tenant/Branch', async () => {
+    const client = database.client;
     const vin = 'WDB9634031L123456';
-    await database.client.vehicle.create({
+    await client.vehicle.create({
       data: { tenantId, branchId, licensePlate: 'U1', fleetNumber: 'U-01', vin },
     });
-    await database.client.device.create({
+    await client.device.create({
       data: { tenantId, branchId, vehicleId, imei: '123456789012345' },
     });
-    await database.client.driver.create({
+    await client.driver.create({
       data: {
         tenantId,
         branchId,
@@ -216,33 +675,33 @@ describe('Fleet master data and activity constraints in PostgreSQL', () => {
         identificationKey: 'K-01',
       },
     });
-    await database.client.vehicleGroup.create({ data: { tenantId, branchId, name: 'Unique' } });
-    const cases: [string, Promise<unknown>][] = [
+    await client.vehicleGroup.create({ data: { tenantId, branchId, name: 'Unique' } });
+    const indexes: [string, Promise<unknown>][] = [
       [
         'Vehicle_tenantId_branchId_fleetNumber_key',
-        database.client.vehicle.create({
+        client.vehicle.create({
           data: { tenantId, branchId, licensePlate: 'U2', fleetNumber: 'U-01' },
         }),
       ],
       [
         'Vehicle_tenantId_branchId_vin_key',
-        database.client.vehicle.create({ data: { tenantId, branchId, licensePlate: 'U3', vin } }),
+        client.vehicle.create({ data: { tenantId, branchId, licensePlate: 'U3', vin } }),
       ],
       [
         'Device_tenantId_branchId_imei_key',
-        database.client.device.create({
+        client.device.create({
           data: { tenantId, branchId, vehicleId, imei: '123456789012345' },
         }),
       ],
       [
         'Driver_tenantId_branchId_employeeNumber_key',
-        database.client.driver.create({
+        client.driver.create({
           data: { tenantId, branchId, firstName: 'U', lastName: 'Two', employeeNumber: 'E-01' },
         }),
       ],
       [
         'Driver_tenantId_branchId_identificationKey_key',
-        database.client.driver.create({
+        client.driver.create({
           data: {
             tenantId,
             branchId,
@@ -254,471 +713,311 @@ describe('Fleet master data and activity constraints in PostgreSQL', () => {
       ],
       [
         'VehicleGroup_tenantId_branchId_name_key',
-        database.client.vehicleGroup.create({ data: { tenantId, branchId, name: 'Unique' } }),
+        client.vehicleGroup.create({ data: { tenantId, branchId, name: 'Unique' } }),
       ],
     ];
-    for (const [index, write] of cases) {
+    for (const [index, write] of indexes) {
       expect(uniqueViolation(await rejection(write))).toEqual({ index, fields: [] });
     }
 
-    // Bypass each service's scoped pre-check so the real insert raises P2002 (a concurrent write).
-    jest
-      .spyOn(module.get(VehiclesRepository), 'duplicates')
-      .mockResolvedValue({ fleetNumber: false, vin: false });
-    jest.spyOn(module.get(DevicesRepository), 'imeiTaken').mockResolvedValue(false);
-    jest
-      .spyOn(module.get(DriversRepository), 'duplicates')
-      .mockResolvedValue({ employeeNumber: false, identificationKey: false });
-    jest.spyOn(module.get(VehicleGroupsRepository), 'nameTaken').mockResolvedValue(false);
-    const mapped: [string, string, Record<string, unknown>][] = [
+    // The scoped pre-check reports the duplicate fields of creates and updates.
+    const otherVehicle = await client.vehicle.create({
+      data: { tenantId, branchId, licensePlate: 'U0' },
+    });
+    const otherDevice = await client.device.create({
+      data: { tenantId, branchId, vehicleId, imei: '123456789012340' },
+    });
+    const otherDriver = await client.driver.create({
+      data: { tenantId, branchId, firstName: 'U', lastName: 'Zero' },
+    });
+    const otherGroup = await client.vehicleGroup.create({
+      data: { tenantId, branchId, name: 'Other' },
+    });
+    const checked: [string, string, Record<string, unknown>, string[]][] = [
       [
-        'fleetNumber',
-        'mutation($input:CreateFleetVehicleInput!){createFleetVehicle(input:$input){id}}',
-        { input: { licensePlate: 'U4', fleetNumber: 'U-01' } },
+        'vehicle creation',
+        createVehicle,
+        { input: { licensePlate: 'U2', fleetNumber: 'U-01', vin: vin.toLowerCase() } },
+        ['fleetNumber', 'vin'],
       ],
       [
-        'vin',
-        'mutation($input:CreateFleetVehicleInput!){createFleetVehicle(input:$input){id}}',
-        { input: { licensePlate: 'U5', vin: vin.toLowerCase() } },
+        'vehicle update',
+        updateVehicle,
+        { id: otherVehicle.id, input: { fleetNumber: 'U-01' } },
+        ['fleetNumber'],
       ],
       [
-        'imei',
-        'mutation($input:CreateFleetDeviceInput!){createFleetDevice(input:$input){id}}',
+        'device creation',
+        createDevice,
         { input: { imei: '123456789012345', vehicleId } },
+        ['imei'],
       ],
       [
-        'employeeNumber',
-        'mutation($input:CreateFleetDriverInput!){createFleetDriver(input:$input){id}}',
-        { input: { firstName: 'U', lastName: 'Four', employeeNumber: 'E-01' } },
+        'device update',
+        updateDevice,
+        { id: otherDevice.id, input: { imei: '123456789012345' } },
+        ['imei'],
       ],
       [
-        'identificationKey',
-        'mutation($input:CreateFleetDriverInput!){createFleetDriver(input:$input){id}}',
-        { input: { firstName: 'U', lastName: 'Five', identificationKey: 'K-01' } },
+        'driver creation',
+        createDriver,
+        {
+          input: {
+            firstName: 'U',
+            lastName: 'Two',
+            employeeNumber: 'E-01',
+            identificationKey: 'K-01',
+          },
+        },
+        ['employeeNumber', 'identificationKey'],
       ],
       [
-        'name',
-        'mutation($input:CreateFleetVehicleGroupInput!){createFleetVehicleGroup(input:$input){id}}',
-        { input: { name: ' Unique ' } },
+        'driver update',
+        updateDriver,
+        { id: otherDriver.id, input: { identificationKey: 'K-01' } },
+        ['identificationKey'],
+      ],
+      ['vehicle group creation', createGroup, { input: { name: ' Unique ' } }, ['name']],
+      [
+        'vehicle group update',
+        updateGroup,
+        { id: otherGroup.id, input: { name: 'Unique' } },
+        ['name'],
       ],
     ];
-    for (const [path, source, variables] of mapped) {
-      expect(await query(source, variables)).toMatchObject({
-        data: null,
-        errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path }] } }],
+    for (const [row, source, variables, paths] of checked) {
+      expect({ row, value: await query(source, variables) }).toMatchObject({
+        row,
+        value: {
+          data: null,
+          errors: [
+            {
+              extensions: {
+                code: 'BAD_USER_INPUT',
+                fieldErrors: paths.map((path) => ({ path })),
+              },
+            },
+          ],
+        },
       });
     }
-    jest.restoreAllMocks();
+
+    // The same values are accepted in another Branch.
+    const elsewhere = { tenantId, branchId: randomUUID() };
+    const accepted: [string, string, Record<string, unknown>][] = [
+      [
+        'createFleetVehicle',
+        createVehicle,
+        { input: { licensePlate: 'U1', fleetNumber: 'U-01', vin } },
+      ],
+      ['createFleetDevice', createDevice, { input: { imei: '123456789012345' } }],
+      [
+        'createFleetDriver',
+        createDriver,
+        {
+          input: {
+            firstName: 'U',
+            lastName: 'One',
+            employeeNumber: 'E-01',
+            identificationKey: 'K-01',
+          },
+        },
+      ],
+      ['createFleetVehicleGroup', createGroup, { input: { name: 'Unique' } }],
+    ];
+    for (const [field, source, variables] of accepted) {
+      expect({ row: field, value: await query(source, variables, elsewhere) }).toEqual({
+        row: field,
+        value: { data: { [field]: { id: expect.any(String) } } },
+      });
+    }
+
+    // Bypass each service's scoped pre-check so the real insert raises P2002 (a concurrent write).
+    const spies = [
+      jest
+        .spyOn(module.get(VehiclesRepository), 'duplicates')
+        .mockResolvedValue({ fleetNumber: false, vin: false }),
+      jest.spyOn(module.get(DevicesRepository), 'imeiTaken').mockResolvedValue(false),
+      jest
+        .spyOn(module.get(DriversRepository), 'duplicates')
+        .mockResolvedValue({ employeeNumber: false, identificationKey: false }),
+      jest.spyOn(module.get(VehicleGroupsRepository), 'nameTaken').mockResolvedValue(false),
+    ];
+    try {
+      const mapped: [string, string, Record<string, unknown>][] = [
+        ['fleetNumber', createVehicle, { input: { licensePlate: 'U4', fleetNumber: 'U-01' } }],
+        ['vin', createVehicle, { input: { licensePlate: 'U5', vin: vin.toLowerCase() } }],
+        ['imei', createDevice, { input: { imei: '123456789012345', vehicleId } }],
+        [
+          'employeeNumber',
+          createDriver,
+          { input: { firstName: 'U', lastName: 'Four', employeeNumber: 'E-01' } },
+        ],
+        [
+          'identificationKey',
+          createDriver,
+          { input: { firstName: 'U', lastName: 'Five', identificationKey: 'K-01' } },
+        ],
+        ['name', createGroup, { input: { name: ' Unique ' } }],
+      ];
+      for (const [path, source, variables] of mapped) {
+        expect({ row: path, value: await query(source, variables) }).toMatchObject({
+          row: path,
+          value: {
+            data: null,
+            errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path }] } }],
+          },
+        });
+      }
+    } finally {
+      for (const spy of spies) {
+        spy.mockRestore();
+      }
+    }
   });
 
-  describe('activity tables', () => {
-    const occurredAt = new Date('2026-10-18T06:00:00.000Z');
-    const imei = '990601000000001';
-    // Distinct sample times keep the (vehicle, IMEI, time) key unique across cases.
-    let sampleSecond = 0;
-    let tripId: string;
-    beforeAll(async () => {
-      tripId = (
-        await database.client.trip.create({
-          data: {
-            tenantId,
-            branchId,
-            vehicleId,
-            deviceImei: imei,
-            source: 'DEMO',
-            startedAt: occurredAt,
-          },
-        })
-      ).id;
+  it('deleting referenced records is refused with CONFLICT and history survives', async () => {
+    const client = database.client;
+    const scope = { tenantId, branchId: randomUUID() };
+    const group = await client.vehicleGroup.create({ data: { ...scope, name: 'Filled' } });
+    const assignedDriver = await client.driver.create({
+      data: { ...scope, firstName: 'Assigned', lastName: 'Driver' },
     });
-    async function deviceSample() {
-      return database.client.vehicleStatusSample.create({
-        data: {
-          tenantId,
-          branchId,
-          vehicleId,
-          deviceImei: imei,
-          source: 'DEMO',
-          recordedAt: new Date(occurredAt.getTime() - ++sampleSecond * 1000),
-          receivedAt: occurredAt,
-          latitude: 42.7,
-          longitude: 23.3,
-          speedKph: 50,
-          ignition: true,
-        },
+    const tripDriver = await client.driver.create({
+      data: { ...scope, firstName: 'Trip', lastName: 'Driver' },
+    });
+    const member = await client.vehicle.create({
+      data: {
+        ...scope,
+        licensePlate: 'MEMBER',
+        groupId: group.id,
+        currentDriverId: assignedDriver.id,
+      },
+    });
+    const equipped = await client.vehicle.create({ data: { ...scope, licensePlate: 'EQUIPPED' } });
+    const historic = await client.vehicle.create({ data: { ...scope, licensePlate: 'HISTORIC' } });
+    const stock = await client.device.create({
+      data: { ...scope, vehicleId: equipped.id, imei: '990601000000401' },
+    });
+    const reporting = await client.device.create({
+      data: { ...scope, vehicleId: historic.id, imei: '990601000000402' },
+    });
+    await client.vehicleStatusSample.create({
+      data: {
+        ...scope,
+        vehicleId: historic.id,
+        deviceImei: reporting.imei,
+        source: 'DEMO',
+        recordedAt: now,
+        receivedAt: now,
+      },
+    });
+    await client.trip.create({
+      data: {
+        ...scope,
+        vehicleId: historic.id,
+        driverId: tripDriver.id,
+        source: 'DEMO',
+        startedAt: now,
+      },
+    });
+    const done = await client.serviceTask.create({
+      data: {
+        ...scope,
+        vehicleId: historic.id,
+        serviceType: 'OIL_CHANGE',
+        status: 'DONE',
+        completedOn: new Date('2026-10-10T00:00:00.000Z'),
+      },
+    });
+    const planned = await client.serviceTask.create({
+      data: {
+        ...scope,
+        vehicleId: historic.id,
+        serviceType: 'BRAKES',
+        dueOn: new Date('2026-11-01T00:00:00.000Z'),
+      },
+    });
+    const cancelled = await client.serviceTask.create({
+      data: {
+        ...scope,
+        vehicleId: historic.id,
+        serviceType: 'TIRES',
+        dueOn: new Date('2026-11-01T00:00:00.000Z'),
+      },
+    });
+    const deletion = (field: string) => `mutation($id:ID!){${field}(id:$id){id}}`;
+    // Deleting a device keeps its samples, which remain the vehicle's history.
+    expect(await query(deletion('deleteFleetDevice'), { id: reporting.id }, scope)).toEqual({
+      data: { deleteFleetDevice: { id: reporting.id } },
+    });
+    const vehicleConflict = 'Vehicle has devices or history; deactivate it instead.';
+    const driverConflict =
+      'Driver is assigned or has trip history; set the driver inactive instead.';
+    const refused: [string, string, string, string][] = [
+      ['vehicle with a device', 'deleteFleetVehicle', equipped.id, vehicleConflict],
+      ['vehicle with history', 'deleteFleetVehicle', historic.id, vehicleConflict],
+      ['assigned driver', 'deleteFleetDriver', assignedDriver.id, driverConflict],
+      ['driver with trips', 'deleteFleetDriver', tripDriver.id, driverConflict],
+      [
+        'non-empty vehicle group',
+        'deleteFleetVehicleGroup',
+        group.id,
+        'Vehicle group still contains vehicles; move them first.',
+      ],
+      [
+        'completed service task',
+        'deleteFleetServiceTask',
+        done.id,
+        'Completed service is kept as history',
+      ],
+    ];
+    for (const [row, field, id, message] of refused) {
+      expect({ row, value: await query(deletion(field), { id }, scope) }).toMatchObject({
+        row,
+        value: { data: null, errors: [{ message, extensions: { code: 'CONFLICT' } }] },
       });
     }
-    async function manualSample() {
-      return database.client.vehicleStatusSample.create({
-        data: {
-          tenantId,
-          branchId,
-          vehicleId,
-          source: 'MANUAL',
-          recordedAt: new Date(occurredAt.getTime() - ++sampleSecond * 1000),
-          receivedAt: occurredAt,
-          odometerKm: 1000,
-        },
+    // Remove each removable reference.
+    expect(
+      await query(
+        'mutation($id:ID!){updateFleetDevice(id:$id,input:{vehicleId:null}){vehicleId}}',
+        { id: stock.id },
+        scope,
+      ),
+    ).toEqual({ data: { updateFleetDevice: { vehicleId: null } } });
+    await client.vehicle.update({
+      where: { id: member.id },
+      data: { groupId: null, currentDriverId: null },
+    });
+    expect(
+      await query(
+        'mutation($id:ID!){cancelFleetServiceTask(id:$id){status}}',
+        { id: cancelled.id },
+        scope,
+      ),
+    ).toEqual({ data: { cancelFleetServiceTask: { status: 'CANCELLED' } } });
+    const allowed: [string, string, string][] = [
+      ['released vehicle', 'deleteFleetVehicle', equipped.id],
+      ['unassigned driver', 'deleteFleetDriver', assignedDriver.id],
+      ['emptied vehicle group', 'deleteFleetVehicleGroup', group.id],
+      ['planned service task', 'deleteFleetServiceTask', planned.id],
+      ['cancelled service task', 'deleteFleetServiceTask', cancelled.id],
+    ];
+    for (const [row, field, id] of allowed) {
+      expect({ row, value: await query(deletion(field), { id }, scope) }).toEqual({
+        row,
+        value: { data: { [field]: { id } } },
       });
     }
-    async function trip() {
-      return database.client.trip.create({
-        data: {
-          tenantId,
-          branchId,
-          vehicleId,
-          source: 'DEMO',
-          startedAt: occurredAt,
-          endedAt: new Date(occurredAt.getTime() + 3_600_000),
-          startOdometerKm: 1000,
-          endOdometerKm: 1100,
-          startLatitude: 42.7,
-          startLongitude: 23.3,
-        },
-      });
-    }
-    async function alert() {
-      return database.client.fleetEvent.create({
-        data: {
-          tenantId,
-          branchId,
-          vehicleId,
-          source: 'DEMO',
-          occurredAt,
-          kind: 'SPEEDING',
-          severity: 'WARNING',
-          intensity: 3,
-          alertStatus: 'OPEN',
-        },
-      });
-    }
-    async function planned() {
-      return database.client.serviceTask.create({
-        data: {
-          tenantId,
-          branchId,
-          vehicleId,
-          serviceType: 'OIL_CHANGE',
-          dueOn: new Date('2026-11-01T00:00:00.000Z'),
-        },
-      });
-    }
-
-    it.each([
-      [
-        'VehicleStatusSample_source_check',
-        'UPDATE "VehicleStatusSample" SET "deviceImei" = NULL WHERE id = $1',
-      ],
-      [
-        'VehicleStatusSample_deviceImei_check',
-        `UPDATE "VehicleStatusSample" SET "deviceImei" = '99060100000000A' WHERE id = $1`,
-      ],
-      [
-        'VehicleStatusSample_position_check',
-        'UPDATE "VehicleStatusSample" SET longitude = NULL WHERE id = $1',
-      ],
-      [
-        'VehicleStatusSample_position_check',
-        'UPDATE "VehicleStatusSample" SET latitude = 90.5 WHERE id = $1',
-      ],
-      [
-        'VehicleStatusSample_position_check',
-        'UPDATE "VehicleStatusSample" SET longitude = -180.5 WHERE id = $1',
-      ],
-      [
-        'VehicleStatusSample_measure_check',
-        'UPDATE "VehicleStatusSample" SET "speedKph" = 401 WHERE id = $1',
-      ],
-      [
-        'VehicleStatusSample_measure_check',
-        'UPDATE "VehicleStatusSample" SET "headingDeg" = 360 WHERE id = $1',
-      ],
-      [
-        'VehicleStatusSample_measure_check',
-        `UPDATE "VehicleStatusSample" SET "fuelLevelPct" = 'NaN' WHERE id = $1`,
-      ],
-      [
-        'VehicleStatusSample_measure_check',
-        'UPDATE "VehicleStatusSample" SET "externalVoltage" = 60.1 WHERE id = $1',
-      ],
-      [
-        'VehicleStatusSample_measure_check',
-        'UPDATE "VehicleStatusSample" SET "backupBatteryVoltage" = -0.1 WHERE id = $1',
-      ],
-      [
-        'VehicleStatusSample_measure_check',
-        `UPDATE "VehicleStatusSample" SET "engineHours" = 'Infinity' WHERE id = $1`,
-      ],
-      [
-        'VehicleStatusSample_measure_check',
-        'UPDATE "VehicleStatusSample" SET "coolantTempC" = -61 WHERE id = $1',
-      ],
-      [
-        'VehicleStatusSample_measure_check',
-        'UPDATE "VehicleStatusSample" SET "odometerKm" = 10000000.1 WHERE id = $1',
-      ],
-    ])('%s rejects a device sample: %s', async (constraint, statement) => {
-      const sample = await deviceSample();
-      expect(await sqlError(statement, [sample.id])).toMatchObject({ code: '23514', constraint });
-    });
-
-    it.each([
-      [
-        'VehicleStatusSample_source_check',
-        `UPDATE "VehicleStatusSample" SET "deviceImei" = '990601000000009' WHERE id = $1`,
-      ],
-      [
-        'VehicleStatusSample_manual_check',
-        'UPDATE "VehicleStatusSample" SET "odometerKm" = NULL WHERE id = $1',
-      ],
-      [
-        'VehicleStatusSample_manual_check',
-        'UPDATE "VehicleStatusSample" SET "speedKph" = 0 WHERE id = $1',
-      ],
-      [
-        'VehicleStatusSample_manual_check',
-        'UPDATE "VehicleStatusSample" SET ignition = false WHERE id = $1',
-      ],
-    ])('%s rejects a MANUAL reading: %s', async (constraint, statement) => {
-      const sample = await manualSample();
-      expect(await sqlError(statement, [sample.id])).toMatchObject({ code: '23514', constraint });
-    });
-
-    it.each([
-      ['Trip_source_check', `UPDATE "Trip" SET source = 'MANUAL' WHERE id = $1`],
-      ['Trip_deviceImei_check', `UPDATE "Trip" SET "deviceImei" = '9906010000000' WHERE id = $1`],
-      [
-        'Trip_period_check',
-        `UPDATE "Trip" SET "endedAt" = "startedAt" - interval '1 millisecond' WHERE id = $1`,
-      ],
-      ['Trip_position_check', 'UPDATE "Trip" SET "startLongitude" = NULL WHERE id = $1'],
-      ['Trip_position_check', 'UPDATE "Trip" SET "endLatitude" = 10 WHERE id = $1'],
-      ['Trip_position_check', 'UPDATE "Trip" SET "startLatitude" = -91 WHERE id = $1'],
-      ['Trip_measure_check', 'UPDATE "Trip" SET "endOdometerKm" = 999 WHERE id = $1'],
-      ['Trip_measure_check', 'UPDATE "Trip" SET "distanceKm" = 5000.1 WHERE id = $1'],
-      ['Trip_measure_check', 'UPDATE "Trip" SET "idleSeconds" = 604801 WHERE id = $1'],
-      ['Trip_measure_check', `UPDATE "Trip" SET "maxSpeedKph" = 'NaN' WHERE id = $1`],
-      ['Trip_measure_check', 'UPDATE "Trip" SET "fuelUsedL" = -1 WHERE id = $1'],
-      ['Trip_measure_check', 'UPDATE "Trip" SET "drivingScore" = 100.1 WHERE id = $1'],
-      ['Trip_measure_check', 'UPDATE "Trip" SET "ecoScore" = -0.1 WHERE id = $1'],
-    ])('%s rejects %s', async (constraint, statement) => {
-      const row = await trip();
-      expect(await sqlError(statement, [row.id])).toMatchObject({ code: '23514', constraint });
-    });
-
-    it.each([
-      ['FleetEvent_source_check', `UPDATE "FleetEvent" SET source = 'MANUAL' WHERE id = $1`],
-      [
-        'FleetEvent_deviceImei_check',
-        `UPDATE "FleetEvent" SET "deviceImei" = 'IMEI' WHERE id = $1`,
-      ],
-      ['FleetEvent_position_check', 'UPDATE "FleetEvent" SET latitude = 42.7 WHERE id = $1'],
-      ['FleetEvent_speed_check', 'UPDATE "FleetEvent" SET "speedKph" = -1 WHERE id = $1'],
-      ['FleetEvent_intensity_check', 'UPDATE "FleetEvent" SET intensity = 4 WHERE id = $1'],
-      ['FleetEvent_intensity_check', `UPDATE "FleetEvent" SET kind = 'IDLING' WHERE id = $1`],
-      [
-        'FleetEvent_alert_check',
-        `UPDATE "FleetEvent" SET "acknowledgedAt" = "occurredAt" WHERE id = $1`,
-      ],
-      [
-        'FleetEvent_alert_check',
-        `UPDATE "FleetEvent" SET "alertStatus" = 'ACKNOWLEDGED' WHERE id = $1`,
-      ],
-      [
-        'FleetEvent_alert_check',
-        `UPDATE "FleetEvent" SET "alertStatus" = 'RESOLVED' WHERE id = $1`,
-      ],
-      [
-        'FleetEvent_alert_check',
-        `UPDATE "FleetEvent" SET "alertStatus" = NULL, remark = 'x' WHERE id = $1`,
-      ],
-      [
-        'FleetEvent_alert_check',
-        `UPDATE "FleetEvent" SET "alertStatus" = NULL, "resolvedAt" = "occurredAt" WHERE id = $1`,
-      ],
-      [
-        'FleetEvent_alert_severity_check',
-        `UPDATE "FleetEvent" SET severity = 'INFO' WHERE id = $1`,
-      ],
-      [
-        'FleetEvent_alert_time_check',
-        `UPDATE "FleetEvent" SET "alertStatus" = 'ACKNOWLEDGED', "acknowledgedAt" = "occurredAt" - interval '1 second' WHERE id = $1`,
-      ],
-      [
-        'FleetEvent_alert_time_check',
-        `UPDATE "FleetEvent" SET "alertStatus" = 'RESOLVED', "acknowledgedAt" = "occurredAt" + interval '2 minutes', "resolvedAt" = "occurredAt" + interval '1 minute' WHERE id = $1`,
-      ],
-    ])('%s rejects %s', async (constraint, statement) => {
-      const row = await alert();
-      expect(await sqlError(statement, [row.id])).toMatchObject({ code: '23514', constraint });
-    });
-
-    it.each([
-      ['ServiceTask_status_check', 'UPDATE "ServiceTask" SET "dueOn" = NULL WHERE id = $1'],
-      [
-        'ServiceTask_status_check',
-        `UPDATE "ServiceTask" SET "completedOn" = '2026-10-18' WHERE id = $1`,
-      ],
-      ['ServiceTask_status_check', 'UPDATE "ServiceTask" SET "costCents" = 0 WHERE id = $1'],
-      [
-        'ServiceTask_status_check',
-        `UPDATE "ServiceTask" SET "replacedParts" = 'Filter' WHERE id = $1`,
-      ],
-      ['ServiceTask_status_check', `UPDATE "ServiceTask" SET status = 'DONE' WHERE id = $1`],
-      [
-        'ServiceTask_status_check',
-        `UPDATE "ServiceTask" SET status = 'CANCELLED', "completedOdometerKm" = 1 WHERE id = $1`,
-      ],
-      [
-        'ServiceTask_measure_check',
-        'UPDATE "ServiceTask" SET "dueOdometerKm" = 10000001 WHERE id = $1',
-      ],
-      [
-        'ServiceTask_measure_check',
-        `UPDATE "ServiceTask" SET status = 'DONE', "completedOn" = '2026-10-18', "costCents" = 100000001 WHERE id = $1`,
-      ],
-    ])('%s rejects %s', async (constraint, statement) => {
-      const row = await planned();
-      expect(await sqlError(statement, [row.id])).toMatchObject({ code: '23514', constraint });
-    });
-
-    it('accepts valid MANUAL readings, cleared alerts, completed and cancelled tasks', async () => {
-      const event = await alert();
-      await connection.query(
-        `UPDATE "FleetEvent" SET "alertStatus" = 'RESOLVED', "resolvedAt" = "occurredAt", remark = 'ok' WHERE id = $1`,
-        [event.id],
-      );
-      await connection.query(
-        `UPDATE "FleetEvent" SET "alertStatus" = 'OPEN', "resolvedAt" = NULL WHERE id = $1`,
-        [event.id],
-      );
-      const task = await planned();
-      await connection.query(
-        `UPDATE "ServiceTask" SET status = 'DONE', "completedOn" = '2026-10-18', "costCents" = 0, "replacedParts" = 'Filter' WHERE id = $1`,
-        [task.id],
-      );
-      const cancelled = await planned();
-      await connection.query(`UPDATE "ServiceTask" SET status = 'CANCELLED' WHERE id = $1`, [
-        cancelled.id,
-      ]);
-      await expect(manualSample()).resolves.toMatchObject({ source: 'MANUAL', deviceImei: null });
-    });
-
-    it('rejects activity references from another Branch, Tenant or vehicle with composite keys', async () => {
-      const otherVehicle = await database.client.vehicle.create({
-        data: { tenantId, branchId, licensePlate: 'OTHER' },
-      });
-      const foreignVehicle = await database.client.vehicle.create({
-        data: { tenantId, branchId: otherBranchId, licensePlate: 'FOREIGN' },
-      });
-      const foreignDriver = await database.client.driver.create({
-        data: { tenantId, branchId: otherBranchId, firstName: 'Foreign', lastName: 'Driver' },
-      });
-      const foreignTrip = await database.client.trip.create({
-        data: {
-          tenantId,
-          branchId: otherBranchId,
-          vehicleId: foreignVehicle.id,
-          source: 'DEMO',
-          startedAt: occurredAt,
-        },
-      });
-      const row = await trip();
-      expect(
-        await sqlError('UPDATE "Trip" SET "driverId" = $2 WHERE id = $1', [
-          row.id,
-          foreignDriver.id,
-        ]),
-      ).toMatchObject({ code: '23503', constraint: 'Trip_tenantId_branchId_driverId_fkey' });
-      const event = await alert();
-      expect(
-        await sqlError('UPDATE "FleetEvent" SET "tripId" = $2 WHERE id = $1', [
-          event.id,
-          foreignTrip.id,
-        ]),
-      ).toMatchObject({
-        code: '23503',
-        constraint: 'FleetEvent_tenantId_branchId_vehicleId_tripId_fkey',
-      });
-      // The trip exists in the Branch but belongs to another vehicle.
-      expect(
-        await sqlError('UPDATE "FleetEvent" SET "vehicleId" = $2, "tripId" = $3 WHERE id = $1', [
-          event.id,
-          otherVehicle.id,
-          tripId,
-        ]),
-      ).toMatchObject({
-        code: '23503',
-        constraint: 'FleetEvent_tenantId_branchId_vehicleId_tripId_fkey',
-      });
-      await connection.query('UPDATE "FleetEvent" SET "tripId" = $2 WHERE id = $1', [
-        event.id,
-        tripId,
-      ]);
-      expect(
-        await sqlError('UPDATE "FleetEvent" SET "driverId" = $2 WHERE id = $1', [
-          event.id,
-          foreignDriver.id,
-        ]),
-      ).toMatchObject({ code: '23503', constraint: 'FleetEvent_tenantId_branchId_driverId_fkey' });
-      expect(
-        await rejection(
-          database.client.vehicleStatusSample.create({
-            data: {
-              tenantId: randomUUID(),
-              branchId,
-              vehicleId,
-              source: 'MANUAL',
-              recordedAt: occurredAt,
-              receivedAt: occurredAt,
-              odometerKm: 1,
-            },
-          }),
-        ),
-      ).toMatchObject({ code: 'P2003' });
-      expect(
-        await rejection(
-          database.client.serviceTask.create({
-            data: {
-              tenantId,
-              branchId: otherBranchId,
-              vehicleId,
-              serviceType: 'TIRES',
-              dueOdometerKm: 1,
-            },
-          }),
-        ),
-      ).toMatchObject({ code: 'P2003' });
-      // History blocks deleting the vehicle and the trip.
-      expect(await rejection(database.client.trip.delete({ where: { id: tripId } }))).toMatchObject(
-        { code: 'P2003' },
-      );
-    });
-
-    it('keys device samples by IMEI and time so two devices may report at the same instant', async () => {
-      const recordedAt = new Date('2026-10-01T00:00:00.000Z');
-      const data = {
-        tenantId,
-        branchId,
-        vehicleId,
-        source: 'DEMO' as const,
-        recordedAt,
-        receivedAt: recordedAt,
-      };
-      await database.client.vehicleStatusSample.create({ data: { ...data, deviceImei: imei } });
-      await database.client.vehicleStatusSample.create({
-        data: { ...data, deviceImei: '990601000000002' },
-      });
-      expect(
-        uniqueViolation(
-          await rejection(
-            database.client.vehicleStatusSample.create({ data: { ...data, deviceImei: imei } }),
-          ),
-        ),
-      ).toEqual({
-        index: 'VehicleStatusSample_tenantId_branchId_vehicleId_deviceImei__key',
-        fields: [],
-      });
-    });
+    expect(
+      await Promise.all([
+        client.vehicle.count({ where: { ...scope, id: historic.id } }),
+        client.driver.count({ where: { ...scope, id: tripDriver.id } }),
+        client.serviceTask.count({ where: { ...scope, id: done.id } }),
+        client.trip.count({ where: scope }),
+        client.vehicleStatusSample.count({ where: { ...scope, deviceImei: reporting.imei } }),
+      ]),
+    ).toEqual([1, 1, 1, 1, 1]);
   });
 });

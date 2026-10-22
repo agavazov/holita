@@ -42,16 +42,15 @@ reviewed against a running backend.
   close button, Escape or the backdrop passes through one `confirmLeave` confirmation, and a dirty
   drawer also triggers the browser's leave-page prompt on unload. It closes either through its
   host (`closeRequest`) or, as a child route guarded by `leaveDrawer`, by navigating.
-- **Storybook as the review tool.** Patterns, the shell, presentation-only examples and connected
-  Fleet screens have stories on the real Angular components with deterministic fixtures and
-  sample data. The `Admin/...` stories render application routes, concrete feature services and
-  captured Apollo clients with fixture GraphQL responses; `Examples/...` hosts demonstrate the
-  shared views and drawers with synthetic data and simulated saves. Backend persistence and
-  service-boundary behavior are checked separately. Brand, density and theme are toolbar
-  globals, and stories are English only. `@storybook/addon-vitest` with
-  `@vitest/browser-playwright` runs every story, play function and axe check as a test
-  (`npm run test:storybook:admin`); these test-tooling dev dependencies were approved for this
-  purpose.
+- **Storybook as the review tool.** Patterns, the shell and connected Fleet screens have stories
+  on the real Angular components with deterministic fixtures. The `Admin/...` stories render
+  application routes, concrete feature services and captured Apollo clients with fixture GraphQL
+  responses. Backend persistence and service-boundary behavior are checked separately. Brand,
+  density and theme are toolbar globals, and stories are English only.
+  - _Superseded on 2026-10-22:_ the owner removed the story-test runner
+    (`@storybook/addon-vitest`, `@vitest/browser-playwright`), the visual review and the
+    `Examples/...` sample hosts to speed up delivery. Storybook remains a review tool without
+    automated tests.
 
 ## Consequences
 

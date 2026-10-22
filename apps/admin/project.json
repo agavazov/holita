@@ -9,7 +9,7 @@
     "graphql-generate": {
       "executor": "nx:run-commands",
       "cache": true,
-      "inputs": ["default"],
+      "inputs": ["graphqlGeneration"],
       "outputs": ["{projectRoot}/src/generated/graphql"],
       "options": {
         "command": "npm run graphql:generate",
@@ -38,22 +38,6 @@
       "dependsOn": ["graphql-generate"],
       "cache": false,
       "continuous": true
-    },
-    "build-storybook": {
-      "dependsOn": ["graphql-generate"],
-      "cache": true,
-      "inputs": ["default"],
-      "outputs": ["{projectRoot}/storybook-static"]
-    },
-    "test-storybook": {
-      "executor": "nx:run-commands",
-      "dependsOn": ["graphql-generate"],
-      "cache": false,
-      "options": {
-        "command": "npm run test-storybook --",
-        "cwd": "apps/admin",
-        "forwardAllArgs": true
-      }
     },
     "test-smoke": {
       "executor": "nx:run-commands",

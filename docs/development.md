@@ -32,24 +32,25 @@ in environment examples, documentation, agent instructions, command arguments or
 
 ## Commands
 
-| Command                       | Behavior                                                                 |
-| ----------------------------- | ------------------------------------------------------------------------ |
-| npm run dev                   | Wait for PostgreSQL, prepare admin GraphQL, start all apps and Storybook |
-| npm run kill                  | Stop this checkout's application processes and watchers on Ubuntu/WSL    |
-| npm run dev:admin             | Angular watcher                                                          |
-| npm run storybook:admin       | Admin Storybook with synthetic data on port 11001                        |
-| npm run build:storybook:admin | Static admin Storybook in the ignored `apps/admin/storybook-static`      |
-| npm run dev:gateway           | Native Router after Nx supergraph generation                             |
-| npm run dev:core              | Core watcher                                                             |
-| npm run dev:fleet             | Fleet watcher                                                            |
-| npm run dev:karma-client      | Karma Client watcher                                                     |
-| npm run projects              | List five Nx applications                                                |
-| npm run lint                  | Lint source/tooling and application boundaries                           |
-| npm run typecheck             | Check tools and all applications                                         |
-| npm run build                 | Build all applications                                                   |
-| npm run format:check          | Check formatting                                                         |
-| npm run codegen               | Generate application GraphQL contracts                                   |
-| npm run schema:check          | Compose SDL and validate operations offline                              |
+| Command                  | Behavior                                                                 |
+| ------------------------ | ------------------------------------------------------------------------ |
+| npm run dev              | Wait for PostgreSQL, prepare admin GraphQL, start all apps and Storybook |
+| npm run kill             | Stop this checkout's application processes and watchers on Ubuntu/WSL    |
+| npm run dev:admin        | Angular watcher                                                          |
+| npm run storybook:admin  | Admin Storybook with synthetic data on port 11001                        |
+| npm run dev:gateway      | Native Router after Nx supergraph generation                             |
+| npm run dev:core         | Core watcher                                                             |
+| npm run dev:fleet        | Fleet watcher                                                            |
+| npm run dev:karma-client | Karma Client watcher                                                     |
+| npm run projects         | List five Nx applications                                                |
+| npm run lint             | Lint source/tooling and application boundaries                           |
+| npm run check            | Build, test and lint only what the change affects, before handing over   |
+| npm run typecheck        | Check tools and all applications                                         |
+| npm run build            | Build all applications                                                   |
+| npm run format:check     | Check formatting                                                         |
+| npm run codegen          | Generate application GraphQL contracts                                   |
+| npm run schema:check     | Compose SDL and validate operations offline                              |
+| npm run test:budget      | Count test cases against the repository budget of 60                     |
 
 ESLint requires braces for every conditional and loop body (`curly: ['error', 'all']`),
 including single-statement bodies in application code, tests, tools and Storybook stories.
@@ -218,8 +219,8 @@ locally generated request ID, even without a response ID. That local ID alone do
 establish correlation with Router logs for early failures. Native HTTP rejection behavior,
 the default 30-second whole-request timeout and the separate health response are native Router behavior.
 Federation and compiled-admin browser fixtures start Router by default on ephemeral ports.
-There is no JavaScript Gateway fallback or runtime selector. The [Router checks](testing.md#router-contract-check)
-assert the public contract directly over real subgraphs and isolated test databases.
+There is no JavaScript Gateway fallback or runtime selector. The [federation check](testing.md#federation)
+asserts the public contract through Router over real subgraphs and isolated test databases.
 
 ## Domain development
 
@@ -239,57 +240,42 @@ are recorded in [the admin attribution](../apps/admin/THIRD_PARTY_NOTICES.md).
 
 ### Admin Storybook
 
-Storybook renders the admin's real Angular components with deterministic synthetic data and no
-backend. `npm run dev` includes Storybook; `npm run storybook:admin` starts it separately. Both
-serve `http://127.0.0.1:11001` without opening a browser;
-`npm run build:storybook:admin` writes the ignored `apps/admin/storybook-static`. Storybook starts
-at "Start here", followed by Admin, Examples and Design System; the
+Storybook is a development tool, not a test suite. It renders the admin's real Angular
+components with deterministic synthetic data and no backend. `npm run dev` includes Storybook, and
+`npm run storybook:admin` starts it separately. Both serve `http://127.0.0.1:11001` without
+opening a browser. Storybook starts at "Start here", followed by Admin and Design System; the
 [Storybook review](admin-design-system.md#storybook-review) lists what each title shows.
-[Story tests](testing.md#storybook-story-tests) run every story with its play function and axe;
-[visual review](testing.md#storybook-visual-review) captures selected stories from the static
-build.
 
 - The framework is `@storybook/angular-vite` on Vite and `@angular/build`, without webpack. It is a
-  preview framework in Storybook 10. Configuration is in `apps/admin/.storybook`: `main.ts`
-  (stories, the a11y and Vitest addons, telemetry disabled), `preview.ts` (decorator, toolbar
-  globals, viewports, story order and the accessibility level) and `vitest.config.mts` (story
-  tests). These builders do not inherit the application build's styles, so `src/styles.scss` and
-  the `src/styles` SCSS path are repeated in the `storybook` and `build-storybook` targets of
-  `apps/admin/angular.json` and in `storybookAngularVitest` in `vitest.config.mts`. Keep those
-  styles and paths aligned with the `build` target. Vite's public directory, `apps/admin/public`,
-  serves `/fonts` and `/config.local.json` to the interactive Storybook and the story tests.
-  For the static build, `main.ts` sets `build.copyPublicDir: false` and uses `staticDirs` to copy
-  only `public/fonts` to `/fonts`; the other public files are excluded.
-- The Nx targets in `apps/admin/project.json` are `storybook` (continuous, uncached),
-  `build-storybook` (cached, output `apps/admin/storybook-static`) and `test-storybook` (uncached,
-  `vitest run --config .storybook/vitest.config.mts`); each first runs `graphql-generate`.
-- Toolbar globals switch the theme (light/dark), brand and density; the application itself uses
+  preview framework in Storybook 10.
+- Configuration is in `apps/admin/.storybook`:
+  - `main.ts`: stories, the a11y addon, telemetry disabled.
+  - `preview.ts`: the decorator, toolbar globals, viewports and story order.
+- The builder does not inherit the application build's styles. `src/styles.scss` and the
+  `src/styles` SCSS path are therefore repeated in the `storybook` target of
+  `apps/admin/angular.json`; keep them aligned with the `build` target.
+- Vite's public directory, `apps/admin/public`, serves `/fonts` and `/config.local.json`.
+- The Nx target `storybook` in `apps/admin/project.json` is continuous and uncached, and first
+  runs `graphql-generate`.
+- Toolbar globals switch the theme (light/dark), brand and density. The application itself uses
   `appTheme`. A change re-bootstraps the story: the `holitaApplication` decorator in `preview.ts`
   rebuilds `storybookApplicationConfig(choice)` and keys a `STORY_GLOBALS` provider on brand,
-  density and theme. Viewports are `desktop1440`, `desktop1024`, `tablet768` and `mobile375`.
-  Stories start in English: `UI_LANGUAGE` is fixed to `en`, and fixtures and samples are English.
-  The shell previews and the example pages list sample languages that change nothing; the routed
+  density and theme.
+- Viewports are `desktop1440`, `desktop1024`, `tablet768` and `mobile375`.
+- Stories start in English: `UI_LANGUAGE` is fixed to `en` and fixtures are English. The routed
   Shell stories render the real `AdminWorkspace`, whose bg/en menu navigates to the other
-  language's route and so switches the workspace texts.
+  language's route.
 - Stories are `*.stories.ts` files beside the components they render. Story-only support lives in
   `apps/admin/src/storybook`. `storybookApplicationConfig()` reuses the application's `appConfig`
   providers with `FixtureHttpBackend` as `HttpBackend`, an in-memory location, the story clock
   (`WALL_CLOCK`) and PrimeNG texts. Feature services, their Apollo clients, error mapping and
   request headers run unchanged.
-- Render helpers: pattern stories wrap the component in the `onFrame` decorator (frame surface,
-  gutter and content width). `routeAt(path)` with `StoryApp` opens a real application route under
-  `/en/` with GraphQL answered by fixtures (the connected `Admin/...` and routed
-  `Design System/Shell` stories).
-  `exampleAt(path)` (`src/storybook/samples/example-app.ts`) renders `ExampleApp`, which replaces
-  the router configuration with the example routes and shows the example pages inside
-  `AdminShell` without GraphQL; `?scenario=` and `?drawer=` in the path open their states. The
-  example pages feed the `features/fleet/*` views and drawers from
-  `src/storybook/samples/fleet-samples.ts`, generated with fixed seeds relative to
-  `2026-10-18T07:00:00.000Z`. Stories use seeded sample records; generator changes can alter the
-  data used by play functions and visual captures.
-  The standalone `Examples/Authentication/Login` mounts the real `Login` through the story-only
-  `LoginPage`; its successful submission enters the existing sample Fleet with the selected
-  Tenant and Branch, without activating a real session.
+- Render helpers:
+  - Pattern stories wrap the component in the `onFrame` decorator (frame surface, gutter and
+    content width).
+  - `routeAt(path)` with `StoryApp` opens a real application route under `/en/`, with GraphQL
+    answered by fixtures. The connected `Admin/...` and routed `Design System/Shell` stories use
+    it.
 - GraphQL fixtures: a module registers an answer at load time with
   `graphqlFixture(GeneratedDocument, (variables) => result)` and must be imported by the story or
   by `story-config.ts`. Handlers read `FixtureVariables` (runtime-checked accessors and `branchId`
@@ -298,8 +284,7 @@ build.
   `AdminTenants` and `AdminDemoLogin` and override Branch discovery for their empty scenarios
   through `login-fixtures.ts`, restoring the shared Branch handler on cleanup. Unregistered
   operations answer with the GraphQL error `No Storybook fixture answers <Operation>.` Responses carry the request ID
-  `fixture-<Operation>`. The backend sets `data-fixture-in-flight` and `data-fixture-activity` on
-  `<html>` for the visual check. `src/storybook/graphql-fixtures.spec.ts` is an admin unit spec.
+  `fixture-<Operation>`.
 - `parameters.holita` (`StoryFixtures`, declared with `satisfies StoryFixtures`) is read at runtime
   by `readStoryFixtures`, which ignores unknown values:
   - `signedIn: false` clears the stored demo session; by default a story starts signed in as the
@@ -316,27 +301,23 @@ build.
 - Before every story the preview's `beforeEach` (`prepareStory`) resets the scenario and call
   counts, the clock, the stored session, the theme and the document language. Session options
   apply before application bootstrap; fixture latency and failures affect GraphQL operations in
-  connected `Admin/...`, routed Shell and Login stories. Fleet sample hosts do not send
-  GraphQL operations.
-- PrimeNG drawers, dialogs and menus render into `document.body`, so play functions query
-  `within(canvasElement.ownerDocument.body)` and choose menu items with `chooseMenuItem` from
-  `src/storybook/interactions.ts`, which clicks the item's label as `p-menu` expects. Dialogs fade
-  in, so visibility and focus assertions on them run inside `waitFor`; example stories wait for
-  the routed page with `{ timeout: 10_000 }`.
+  connected `Admin/...`, routed Shell and Login stories.
 - `tsconfig.app.json` excludes stories and `src/storybook`; `npm run typecheck` compiles them
   through `apps/admin/.storybook/tsconfig.json`, which excludes specs, and ESLint rejects Storybook
   or fixture imports from application code.
-- PrimeUI license: the interactive Storybook and the story tests serve the Git-ignored
-  `apps/admin/public/config.local.json` at `/config.local.json`, and `loadStoryLicense()` passes
-  its `primeUiLicense` to the theme once per page. A missing file, a non-JSON answer or an invalid
-  file means no key, whereas the application rejects an invalid file. The application `build`
-  excludes `config.local.json` from its base assets; only its `development` configuration copies
-  it. `ng serve` serves that development output from memory; `admin:build:development` writes it
-  into `apps/admin/dist/browser` and the Nx cache, so never publish or share that output.
-  The production `build` and `build-storybook` exclude the file even when it exists locally.
-  Built stories, visual captures and compiled-app browser smokes therefore run without a key and
-  show the "Invalid PrimeUI License" notice. The notice is accepted and is never hidden; story
-  tests exclude it (`#p-license-host`) from axe.
+- PrimeUI license:
+  - The interactive Storybook serves the Git-ignored `apps/admin/public/config.local.json` at
+    `/config.local.json`. `loadStoryLicense()` passes its `primeUiLicense` to the theme once per
+    page.
+  - A missing file, a non-JSON answer or an invalid file means no key. The application, in
+    contrast, rejects an invalid file.
+  - The application `build` excludes `config.local.json` from its base assets; only its
+    `development` configuration copies it. `ng serve` serves that development output from
+    memory. `admin:build:development` writes it into `apps/admin/dist/browser` and the Nx cache,
+    so never publish or share that output.
+  - The production `build` excludes the file even when it exists locally. Compiled-app browser
+    smokes therefore run without a key and show the "Invalid PrimeUI License" notice. The notice
+    is accepted and is never hidden.
 
 ### Angular agent tools
 

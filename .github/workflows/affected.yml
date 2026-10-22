@@ -68,12 +68,13 @@ jobs:
           printf 'projects=%s\n' "$projects" >> "$GITHUB_OUTPUT"
           printf 'Compared PR base %s and head %s.\n\n' "$NX_BASE" "$NX_HEAD" >> "$GITHUB_STEP_SUMMARY"
           if [[ "$projects" == '[]' ]]; then
-            echo 'No affected applications. Format, root-tool and offline schema checks still run; application tests are not selected or claimed as coverage.' >> "$GITHUB_STEP_SUMMARY"
+            echo 'No affected applications. Format, test budget, root-tool and schema checks still run; application tests are not selected or claimed as coverage.' >> "$GITHUB_STEP_SUMMARY"
           else
             printf 'Affected applications: %s. Unit/DB targets run; Chromium smoke runs for the affected admin.\n' "$projects" >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - run: npm run format:check
+      - run: npm run test:budget
       - run: npm run schema:check
       - name: Install and validate Apollo Router
         if: contains(fromJSON(steps.selection.outputs.projects || '[]'), 'gateway') || contains(fromJSON(steps.selection.outputs.projects || '[]'), 'admin')
@@ -87,7 +88,6 @@ jobs:
         if: steps.selection.outputs.projects != '[]'
         run: |
           npm run db:up
-          npm run db:setup
           npm run db:test:setup
 
       - run: npm run test:affected -- --base="$NX_BASE" --head="$NX_HEAD"

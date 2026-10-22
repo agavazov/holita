@@ -1,6 +1,6 @@
 import type { PrismaClient } from '../src/generated/prisma/client.js';
 
-export const rentalSofiaId = '01000000-0000-4000-8000-000000000001';
+const rentalSofiaId = '01000000-0000-4000-8000-000000000001';
 export const tenantSeeds = [{ id: rentalSofiaId, name: 'RentalSofia' }];
 
 export const branchSeeds = [

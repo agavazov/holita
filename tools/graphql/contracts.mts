@@ -103,7 +103,7 @@ export function composeContracts(contracts: Awaited<ReturnType<typeof readContra
   };
 }
 
-export function validateOperation(schema: GraphQLSchema, source: string, location: string) {
+function validateOperation(schema: GraphQLSchema, source: string, location: string) {
   const document = parse(source);
   const errors = validate(schema, document);
   if (errors.length) {

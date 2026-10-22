@@ -22,11 +22,6 @@ dependencies belong to the [backend backlog](admin-design-system-backend.md#prov
 
 ## Release decisions
 
-- Implement the user-approved Storybook interaction/axe gate in affected-admin PR CI after
-  Chromium installation. Update the [testing guidance](../testing.md#github-actions) and
-  validate the workflow with `actionlint`, preserving real event base/head selection and
-  manual-only full regression. Visual checks remain outside CI unless the user changes that
-  separate decision.
 - Decide whether to purchase an admin theme.
 - Configure the production PrimeUI license before public release. The internal test release
   accepts the visible license notice; never hide it with CSS or JavaScript. Retain the
@@ -40,18 +35,9 @@ dependencies belong to the [backend backlog](admin-design-system-backend.md#prov
 ## Frontend refinements
 
 - Settle the proposed mobile "Filters (n)" toggle: implement it in the shared filter pattern
-  or remove the proposal from the design. `activeFilterCount` has no view consumer;
-  do not introduce a separate per-screen filter system.
+  or remove the proposal from the design; do not introduce a separate per-screen filter system.
 - Extend `theme/contrast.ts` coverage to the neutral/accent solid states, dark accent tags,
   solid-button hover/active states and the notification unread badge where it is rendered.
-
-## Visual review
-
-Further visual refinement and baseline approval require user review. Use the
-[Storybook review procedure](../admin-design-system.md#storybook-review); take new candidates or
-record/update baselines only when authorized. Approved baselines stay local and ignored, and
-candidate images are not approval. The capture list is
-`tools/browser/storybook-visual.spec.mts`.
 
 ## Deferred extensions
 
@@ -64,8 +50,6 @@ These require later product scope:
 - Shared account identity and a real notification feed after their contracts/providers exist;
   do not synthesize either from the current Tenant or Fleet business counts.
 - Remove `styles/_legacy-karma.scss` after its remaining consumers are gone.
-- Screenshot baselines in CI, after the user changes the local-review policy.
 
 Domain features belong to the [backend backlog](admin-design-system-backend.md#deferred-domain-work).
-Select required checks from [Discocan testing](../discocan/testing.md) and
-[shared testing](../testing.md). Full regression requires an explicit user/reviewer request.
+Choose checks with [testing](../testing.md).

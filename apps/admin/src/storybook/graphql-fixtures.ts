@@ -9,7 +9,7 @@ import {
 import { Injectable } from '@angular/core';
 import type { TypedDocumentNode } from '@graphql-typed-document-node/core';
 import { Kind, type DocumentNode } from 'graphql';
-import { defer, finalize, mergeMap, NEVER, type Observable, of, throwError, timer } from 'rxjs';
+import { mergeMap, NEVER, type Observable, of, throwError, timer } from 'rxjs';
 
 // Storybook-only GraphQL transport. Real feature services and their Apollo clients run unchanged;
 // only HttpClient's backend answers from deterministic in-memory fixtures.
@@ -168,32 +168,14 @@ export function graphqlFixture<Result, Variables>(
   handlers.set(operationName(document), handler);
 }
 
-/** Operation names with a registered handler (fixture coverage specs). */
-export function registeredOperations(): readonly string[] {
-  return [...handlers.keys()].sort();
-}
-
-let inFlight = 0;
-
-// Exposes answered requests in flight, so visual checks can wait until fixture data has settled.
-// Requests a story deliberately leaves pending are not counted.
-function track(change: number): void {
-  inFlight += change;
-  const root = document.documentElement;
-  root.dataset['fixtureInFlight'] = String(inFlight);
-  root.dataset['fixtureActivity'] = String(performance.now());
-}
-
 /** Applies a story's scenario; called before every story renders. */
 export function useFixtureScenario(next: FixtureScenario | undefined): void {
   scenario = { latencyMs: next?.latencyMs ?? 0, failures: next?.failures ?? {} };
   calls.clear();
-  inFlight = 0;
-  track(0);
 }
 
 /** The forced outcome of one call: a record-specific key wins over the operation name. */
-export function failureFor(name: string, variables: FixtureVariables): FixtureFailure | undefined {
+function failureFor(name: string, variables: FixtureVariables): FixtureFailure | undefined {
   const id = variables.string('id');
   const key = id !== null && `${name}:${id}` in scenario.failures ? `${name}:${id}` : name;
   const failure = scenario.failures[key];
@@ -222,21 +204,14 @@ export class FixtureHttpBackend implements HttpBackend {
       isRecord(body['variables']) ? body['variables'] : {},
       request.headers.get('x-branch-id'),
     );
-    // A fixed request ID keeps error messages identical between runs and screenshots.
+    // A fixed request ID keeps error messages identical between runs.
     const requestId = `fixture-${name}`;
     const url = request.urlWithParams;
     const failure = failureFor(name, variables);
     if (failure === 'pending') {
       return NEVER;
     }
-    return defer(() => {
-      track(1);
-      return this.answer(name, variables, failure, requestId, url).pipe(
-        finalize(() => {
-          track(-1);
-        }),
-      );
-    });
+    return this.answer(name, variables, failure, requestId, url);
   }
 
   private answer(

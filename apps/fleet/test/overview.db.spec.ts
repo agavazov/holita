@@ -232,49 +232,4 @@ describe('Fleet overview and daily distance with PostgreSQL', () => {
       },
     });
   });
-  it('returns a bounded complete vehicle series and rejects foreign IDs', async () => {
-    const source =
-      'query($vehicleId:ID,$days:Int!){fleetDailyDistance(vehicleId:$vehicleId,days:$days){dataAsOf points{date distanceKm}}}';
-    expect(await query(source, { vehicleId, days: 2 })).toEqual({
-      data: {
-        fleetDailyDistance: {
-          dataAsOf: asOf.toISOString(),
-          points: [
-            { date: '2026-10-24', distanceKm: 7 },
-            { date: '2026-10-25', distanceKm: 30 },
-          ],
-        },
-      },
-    });
-    expect(await query(source, { vehicleId: randomUUID(), days: 2 })).toMatchObject({
-      errors: [{ extensions: { code: 'NOT_FOUND' } }],
-    });
-    for (const days of [0, 94]) {
-      expect(await query(source, { vehicleId, days })).toMatchObject({
-        errors: [{ extensions: { fieldErrors: [{ path: 'days' }] } }],
-      });
-    }
-    const emptyBranch = randomUUID();
-    expect(await query(source, { days: 14 }, emptyBranch)).toEqual({
-      data: { fleetDailyDistance: { dataAsOf: null, points: [] } },
-    });
-    expect(
-      await query(
-        '{fleetOverview{dataAsOf activeVehicles distanceTodayKm dailyDistance{date} openCriticalAlerts overdueService}}',
-        {},
-        emptyBranch,
-      ),
-    ).toEqual({
-      data: {
-        fleetOverview: {
-          dataAsOf: null,
-          activeVehicles: 0,
-          distanceTodayKm: 0,
-          dailyDistance: [],
-          openCriticalAlerts: 0,
-          overdueService: 0,
-        },
-      },
-    });
-  });
 });

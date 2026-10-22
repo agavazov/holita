@@ -16,8 +16,8 @@ verified Tenant scope.
 - [Foundation requirements](req/foundation.md): implemented shared infrastructure and contracts.
 - [Architecture](architecture/overview.md): applications, execution and ownership boundaries.
 - [Development](development.md): installation, configuration, ports and local commands.
-- [Testing](testing.md): focused checks, Storybook story tests and visual review, affected CI and
-  manual regression.
+- [Testing](testing.md): the test budget, checks by tier, database, federation and browser smoke
+  checks, affected CI and manual regression.
 - [Admin design system](admin-design-system.md): theme, global styles, shell, patterns and the
   Storybook review of `apps/admin`.
 - [Workspace decision](architecture/decisions/0001-npm-workspaces-and-nx.md).

@@ -62,10 +62,9 @@ are covered by [Discocan architecture](../discocan/architecture.md).
 Use [shared database prerequisites and guarded fixtures](../testing.md#real-postgresql-checks).
 
 ```bash
-npm run test:core -- branches.service.spec.ts errors.spec.ts demo-auth.spec.ts --skip-nx-cache
-npm run test:core:db -- branches.db.spec.ts persistence.db.spec.ts initial-migration.db.spec.ts branch-migration.db.spec.ts
+npm run test:core
+npm run test:core:db
 ```
 
 Changes to the Branch federation contract or the current telemetry consumer also need the
-relevant [Discocan checks](../discocan/testing.md) and real federation validation from
-[the shared guide](../testing.md#real-federation-and-browser-smoke-checks).
+[federation check](../testing.md#federation).

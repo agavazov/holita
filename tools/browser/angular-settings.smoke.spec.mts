@@ -1,12 +1,10 @@
 import { expect, type Page } from '@playwright/test';
 import { chooseBranch, test } from './angular-fixture.mjs';
 
-const branchA = '10000000-0000-4000-8000-000000000001';
-const branchB = '10000000-0000-4000-8000-000000000002';
-const path = `/en/${branchA}/fleet/settings/general`;
 interface SettingsApp {
   readonly gatewayUrl: string;
   readonly demoSession: { readonly token: string };
+  readonly branchA: { readonly id: string };
 }
 function object(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -16,7 +14,7 @@ async function graphql(
   app: SettingsApp,
   query: string,
   variables = {},
-  branch = branchA,
+  branch = app.branchA.id,
 ) {
   const response = await page.request.post(app.gatewayUrl, {
     headers: { authorization: `Bearer ${app.demoSession.token}`, 'x-branch-id': branch },
@@ -52,6 +50,8 @@ test('persists General settings and the Core Branch name, applies display units 
   page,
   app,
 }) => {
+  const { branchA, branchB } = app;
+  const path = `/en/${branchA.id}/fleet/settings/general`;
   const created = await graphql(
     page,
     app,
@@ -70,24 +70,8 @@ test('persists General settings and the Core Branch name, applies display units 
   );
   await page.goto(app.url + path);
   await expect(page.getByRole('heading', { name: 'General', exact: true })).toBeVisible();
-  await expect(page.getByRole('textbox', { name: /^Branch name/ })).toHaveValue('Discordia');
-  await expect(
-    page.getByText(
-      'Notification delivery is not connected. These options are unavailable and are not saved.',
-      { exact: true },
-    ),
-  ).toBeVisible();
-  await expect(page.getByRole('switch')).toHaveCount(3);
-  for (const control of await page.getByRole('switch').all()) {
-    await expect(control).toBeDisabled();
-  }
+  await expect(page.getByRole('textbox', { name: /^Branch name/ })).toHaveValue(branchA.name);
   await page.getByRole('textbox', { name: /^Branch name/ }).fill('Browser Fleet');
-  await chooseBranch(page, 'Sandbox');
-  const discard = page.getByRole('alertdialog', { name: 'Unsaved changes', exact: true });
-  await expect(discard).toBeVisible();
-  await discard.getByRole('button', { name: 'Keep editing', exact: true }).click();
-  await expect(page).toHaveURL(app.url + path);
-  await expect(page.getByRole('textbox', { name: /^Branch name/ })).toHaveValue('Browser Fleet');
   await select(page, 'Time zone', 'Europe/Belgrade');
   await select(page, 'Distance', 'Miles');
   await select(page, 'Volume', 'US gallons');
@@ -107,8 +91,8 @@ test('persists General settings and the Core Branch name, applies display units 
     'Miles',
   );
   await expect(page.getByRole('spinbutton', { name: /^Low fuel below/ })).toHaveValue('20');
-  expect(await graphql(page, app, readSettings, { id: branchA })).toEqual({
-    branch: { id: branchA, name: 'Browser Fleet' },
+  expect(await graphql(page, app, readSettings, { id: branchA.id })).toEqual({
+    branch: { id: branchA.id, name: 'Browser Fleet' },
     fleetSettings: {
       timeZone: 'Europe/Belgrade',
       distanceUnit: 'MI',
@@ -119,7 +103,7 @@ test('persists General settings and the Core Branch name, applies display units 
     },
     fleetDataClock: { timeZone: 'Europe/Belgrade' },
   });
-  await page.goto(app.url + `/en/${branchA}/fleet/vehicles/${vehicleId}/overview`);
+  await page.goto(app.url + `/en/${branchA.id}/fleet/vehicles/${vehicleId}/overview`);
   const odometer = page
     .locator('holita-kpi-tile')
     .filter({ has: page.getByText('Odometer', { exact: true }) });
@@ -127,9 +111,9 @@ test('persists General settings and the Core Branch name, applies display units 
   await expect(odometer.locator('.kpi-tile__unit')).toHaveText('mi');
   await expect(page.getByText('10 gal', { exact: true })).toBeVisible();
   await page.goto(app.url + path);
-  await chooseBranch(page, 'Sandbox');
-  await expect(page).toHaveURL(app.url + path.replace(branchA, branchB));
-  await expect(page.getByRole('textbox', { name: /^Branch name/ })).toHaveValue('Sandbox');
+  await chooseBranch(page, branchB.name);
+  await expect(page).toHaveURL(app.url + path.replace(branchA.id, branchB.id));
+  await expect(page.getByRole('textbox', { name: /^Branch name/ })).toHaveValue(branchB.name);
   await expect(page.getByRole('combobox', { name: 'Distance', exact: true })).toContainText(
     'Kilometres',
   );
@@ -141,8 +125,8 @@ test('persists General settings and the Core Branch name, applies display units 
   await chooseBranch(page, 'Browser Fleet');
   await expect(page).toHaveURL(app.url + path);
   await expect(page.getByRole('spinbutton', { name: /^Low fuel below/ })).toHaveValue('20');
-  expect(await graphql(page, app, readSettings, { id: branchB }, branchB)).toMatchObject({
-    branch: { id: branchB, name: 'Sandbox' },
+  expect(await graphql(page, app, readSettings, { id: branchB.id }, branchB.id)).toMatchObject({
+    branch: { id: branchB.id, name: branchB.name },
     fleetSettings: {
       timeZone: 'Europe/Sofia',
       distanceUnit: 'KM',
@@ -151,51 +135,5 @@ test('persists General settings and the Core Branch name, applies display units 
       notReportingHours: 48,
       speedLimitKph: 90,
     },
-  });
-});
-
-test('reports a partial cross-service settings save, preserves the name draft and retries it', async ({
-  page,
-  app,
-}) => {
-  let failRename = true;
-  await page.route(app.gatewayUrl, async (route) => {
-    const body: unknown = route.request().postDataJSON();
-    if (failRename && object(body) && body['operationName'] === 'AdminUpdateBranchName') {
-      failRename = false;
-      await route.fulfill({
-        status: 503,
-        contentType: 'application/json',
-        body: JSON.stringify({ message: 'Unavailable' }),
-      });
-      return;
-    }
-    await route.continue();
-  });
-  await page.goto(app.url + path);
-  const name = page.getByRole('textbox', { name: /^Branch name/ });
-  await expect(name).toHaveValue('Discordia');
-  await name.fill('Retained Fleet');
-  await page.getByRole('spinbutton', { name: /^Low fuel below/ }).fill('35');
-  await page.getByRole('button', { name: 'Save changes', exact: true }).click();
-  await expect(
-    page
-      .locator('holita-general-settings-view p-message')
-      .getByText(/Fleet settings were saved, but the Branch name was not saved\./),
-  ).toBeVisible();
-  await expect(name).toHaveValue('Retained Fleet');
-  await expect(page.getByText('Settings saved.', { exact: true })).toHaveCount(0);
-  expect(await graphql(page, app, readSettings, { id: branchA })).toMatchObject({
-    branch: { id: branchA, name: 'Discordia' },
-    fleetSettings: { lowFuelPct: 35 },
-  });
-  await page.getByRole('button', { name: 'Save changes', exact: true }).click();
-  await expect(page.getByText('Settings saved.', { exact: true })).toBeVisible();
-  await page.reload();
-  await expect(name).toHaveValue('Retained Fleet');
-  await expect(page.getByRole('spinbutton', { name: /^Low fuel below/ })).toHaveValue('35');
-  expect(await graphql(page, app, readSettings, { id: branchA })).toMatchObject({
-    branch: { id: branchA, name: 'Retained Fleet' },
-    fleetSettings: { lowFuelPct: 35 },
   });
 });

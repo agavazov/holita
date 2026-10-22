@@ -150,7 +150,7 @@ export function eventsPage(value: unknown, query: HistoryQuery) {
   }
   return page(rows, query);
 }
-export const drivingCategories = [
+const drivingCategories = [
   'accelerations',
   'brakes',
   'speed_bumps',

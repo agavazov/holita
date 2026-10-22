@@ -87,10 +87,7 @@ copies it: `ng serve` serves the output from memory, while `admin:build:developm
 into `apps/admin/dist/browser` and the Nx cache; never publish or share that development output.
 The production build excludes the file, so compiled-app browser fixtures run without a key.
 Storybook reads the same local file through `loadStoryLicense()`. Its Vite root is `apps/admin`,
-so `public/` is Vite's public directory: the interactive Storybook and the story tests serve
-`config.local.json`. For `build-storybook`, `.storybook/main.ts` sets `build.copyPublicDir: false`
-and copies only `public/fonts` through `staticDirs`. The static stories and their visual captures
-therefore run without a key and show the notice.
+so `public/` is Vite's public directory and the interactive Storybook serves `config.local.json`.
 
 ### The configured choice
 
@@ -136,11 +133,10 @@ four status families, the neutral tag, secondary outlined/text buttons, segment 
 categorical palette on surface 0 and, in dark, surface 900). Each `ContrastCheck` has `name`,
 `foreground`, `background`, `ratio` and `minimum` (4.5 for text, 3 for non-text); `primitiveHex`,
 `relativeLuminance`, `contrastRatio` and `mixSrgb` compute them from the Aura primitives.
-`theme/contrast.spec.ts` asserts every check for each name in `brandNames`. Not checked: the
-neutral and accent solid marks, the dark accent tag, the hover and active steps of solid status
-buttons and the topbar's unread badge. "Foundations/Colors" lists the ratio and minimum of both
-sets for the toolbar brand without marking failures; "Foundations/Brand variants" lists the brand
-checks of all brands, marks failures and fails its play function on any ratio below its minimum.
+The checks do not cover the neutral and accent solid marks, the dark accent tag, the hover and
+active steps of solid status buttons or the topbar's unread badge. "Foundations/Colors" lists the
+ratio and minimum of both sets for the toolbar brand without marking failures; "Foundations/Brand
+variants" lists the brand checks of all brands and marks failures.
 
 ### Densities
 
@@ -243,8 +239,7 @@ Component stylesheets are unlayered.
   `font-display: swap`, from `/fonts/lato/Lato-{Regular,Medium,SemiBold,Bold,ExtraBold}.woff`
   (`apps/admin/public/fonts/lato` with `OFL.txt`; attribution in
   [`apps/admin/THIRD_PARTY_NOTICES.md`](../apps/admin/THIRD_PARTY_NOTICES.md)). There are no
-  italic or other weights. Vite's public directory serves them to the interactive Storybook and
-  the story tests; the static build copies `public/fonts` to `fonts`.
+  italic or other weights. Vite's public directory serves them to the interactive Storybook.
 - `_shell`: only the shell components' own classes (`.app-shell`, `.app-shell--rail`,
   `.app-topbar*`, `.app-breadcrumb*`, `.app-sidebar*`, `.app-nav*`, `.app-main`,
   `.p-drawer.app-nav-drawer`) and the host display of `holita-admin-shell`, `-topbar` and
@@ -258,8 +253,8 @@ Component stylesheets are unlayered.
 `xxl` 1536 px) and the mixins `below($name)` (`max-width: <value> − 0.02px`) and `from($name)`
 (`min-width: <value>`), so the two never overlap. It emits no CSS; component stylesheets write
 `@use 'breakpoints' as bp;` and `@include bp.below(md)`. The include path `src/styles` is set in
-the `build`, `storybook` and `build-storybook` targets of `apps/admin/angular.json` (the `test`
-target builds through `build:development`) and as `loadPaths` in `.storybook/vitest.config.mts`.
+the `build` and `storybook` targets of `apps/admin/angular.json` (the `test` target builds through
+`build:development`).
 `_breakpoint-properties.scss` emits `--app-bp-*` on `:root`; `ui/media.ts` exports
 `BreakpointName`, `breakpointWidth(name)` (throws "Global styles are not loaded" without the
 properties) and `below(name)`, a readonly `matchMedia` signal created in an injection context that
@@ -404,11 +399,10 @@ navigation has no counts.
 Application texts live in `src/app/i18n/{bg,en}.json` (`messages[language]`, typed by `en.json`);
 `primeng` holds the PrimeNG date names and overlay messages. Routes start with `/bg` or `/en`; any
 other value redirects to `/bg`, and `readLanguage` maps every value other than `en` to `bg`.
-`i18n/catalog-parity.ts` (`catalogParityProblems`, `expectCatalogParity`) checks a BG/EN pair for
-identical key trees and array lengths, non-empty texts and identical `{placeholder}` sets;
-`i18n/messages.spec.ts` and `ui/i18n/messages.spec.ts` use it. Every connected Fleet feature has
-BG/EN catalogs and a parity spec under its `i18n` directory. Storybook renders English while
-using the same presentation components.
+`i18n/messages.spec.ts` checks every BG/EN catalog pair of the application for identical key
+trees, non-empty texts and identical `{placeholder}` sets. Every connected Fleet feature has
+BG/EN catalogs under its `i18n` directory. Storybook renders English while using the same
+presentation components.
 
 ## Patterns (`src/app/ui`)
 
@@ -490,10 +484,6 @@ Helpers:
   return to page one and clear selection when sorting changes. Choosing the current field or
   direction emits nothing and preserves the page and selection.
 - `list/list-state.ts` and `list/url-list-state.ts`: URL state ([below](#list-url-state)).
-- `list/sequential.ts`: `runSequential(items, action, options)` with
-  `options = { isCurrent, progress(done, total), errorText(error, item) }` sends one write per item
-  in order, sends nothing more once `isCurrent()` is false and resolves to
-  `{ succeeded, failures: { item, message }[], stopped }`.
 - `forms/field-errors.ts`: `errorCode(error)` returns the first known `extensions.code`
   (`ErrorCode`: `BAD_USER_INPUT`, `NOT_FOUND`, `CONFLICT`, `SERVICE_UNAVAILABLE`,
   `UNAUTHENTICATED`) or `null`; `fieldErrors(error, fields)` returns the first message per listed
@@ -517,10 +507,6 @@ Helpers:
   input of `p-inputnumber` and `p-datepicker`. The service completion drawer uses
   `datePickerInputPt` for DatePicker: selection stays on its grid cell, with the duplicate
   unsupported `aria-selected` removed from the child day span.
-- `remote-options.ts`: `new RemoteOptions(load)` in an injection context, where `load(search, ids)`
-  returns an Observable of options, for `p-autocomplete`; signals `options`, `loading` and
-  `error`; `search(text)` after 250 ms of quiet input, `hydrate(ids)` at once; the latest request
-  wins.
 - `confirm.ts`: `confirmAction(confirmation, language, { header, message?, acceptLabel, danger, signal? })`
   and `confirmDiscard(confirmation, language)` (Keep editing / Discard changes) resolve `true` on
   accept; Cancel or Keep editing has the initial focus and Escape rejects. ConfirmDialog renders
@@ -529,8 +515,7 @@ Helpers:
 - `select-multiple.ts`: `selectMultiplePt` (PrimeNG usage rules).
 - `format/format.ts`: `emptyValue` "—" for null, undefined and non-finite values (0 stays a number),
   `localeOf` (`bg-BG`/`en-GB`), `formatNumber(value, language, { fraction })`,
-  `formatDistanceKm`, `formatSpeed`, `formatLitres`, `formatVolts`, `formatPercent`,
-  `formatTemperature`, `formatMoneyCents` (EUR from integer cents),
+  `formatMoneyCents` (EUR from integer cents),
   `formatDateTime(iso, language, timeZone, seconds = false)`, `formatDateOnly` (no zone conversion),
   `formatRelative(iso, reference, language)` against an explicit reference and
   `formatDuration(seconds, language)`. `format/format.pipes.ts`:
@@ -556,9 +541,9 @@ Helpers:
   `ui-language.ts`: `UI_LANGUAGE` (`Signal<Language>`, `bg` by default; AdminWorkspace provides the
   route language and Storybook `en`). `media.ts`: `below(name)` and `breakpointWidth(name)`
   (breakpoints above). `tones.ts`: `toneSeverity` and the `StatusTone` and `CategorySlot` types.
-- `i18n/`: `uiMessages` from `ui/i18n/{bg,en}.json` (the pattern texts, checked by
-  `messages.spec.ts` with `expectCatalogParity`) and `interpolate(text, values)`, which fills
-  `{name}` placeholders and leaves unknown ones as written.
+- `i18n/`: `uiMessages` from `ui/i18n/{bg,en}.json` (the pattern texts) and
+  `interpolate(text, values)`, which fills `{name}` placeholders and leaves unknown ones as
+  written.
 
 ### Table conventions
 
@@ -656,9 +641,9 @@ checkbox, chip, confirmdialog, datatable, datepicker, dialog, drawer, iconfield,
 inputtext, menu, message, metergroup, paginator, popover, select, selectbutton, skeleton, tabs,
 tag, textarea, timeline, toast, togglebutton,
 toggleswitch, tooltip and virtualscroller. Adding a control means adding its preset there (and
-those of the controls it renders internally), to the sorted list in `holita-preset.spec.ts` and to
-the "PrimeNG coverage" story (`primeng-coverage.html` and the count its play function asserts).
-Because stories run axe with violations as failures, and lint rejects deprecated APIs:
+those of the controls it renders internally) and to the "PrimeNG coverage" story
+(`primeng-coverage.html`). These rules keep the controls accessible, and lint rejects deprecated
+APIs:
 
 - every `<p-confirmdialog>` uses `[pt]="confirmDialogPt(language)"` (names its close button and
   makes the `p-dialog` host presentational); with a `#message` template it passes the message's
@@ -708,8 +693,7 @@ dropped, at most 100; IDs are UUIDs, lower-cased), `boolean()` (`true`/`false`),
 real `YYYY-MM-DD` date), `choice(values, fallback)` (the fallback is never written),
 `integer(min, max)` and `number(min, max, step)` (rounded to `step`); scalar codecs read the first
 comma-separated value. Pure helpers: `readListState`, `listStateParams` (defaults written as
-`null`), `sameListState`, `defaultSortOf`, `activeFilterCount` (filters other than the per-view
-parameter), `normalizeSearch`, `searchTokens`, `searchApplies`, `maxSearchLength` (200) and
+`null`), `sameListState`, `defaultSortOf`, `normalizeSearch`, `searchApplies`, `maxSearchLength` (200) and
 `maxSearchWords` (5).
 
 | Parameter          | Rules                                                                                                                                                                             |
@@ -798,141 +782,26 @@ after a rename; retired callbacks cannot apply preferences or announce results i
 ## Storybook review
 
 The admin Storybook (`npm run storybook:admin`, port 11001) renders the real Angular components
-([development](development.md#admin-storybook)). It opens on "Start here" (what to review and links
-to the stories), then Admin, Examples and Design System. Stories render in English;
-Bulgarian/English catalog behavior is covered by unit and compiled-app browser checks.
-The example shell's language menu lists sample languages that change nothing.
-Pattern stories render `app/ui` components with story inputs. The Shell
-stories use the real navigation, and the routed ones (Fleet disabled, Unknown Branch, Branch
-discovery loading and error) answer `AdminBranches` through `FixtureHttpBackend`. The Fleet
-examples use no GraphQL: `ExampleApp`
-(`src/storybook/samples/example-app.ts`) renders the real shell with the sample navigation, account
-and notifications, and the story-only hosts in `src/storybook/samples/pages` feed the
-presentation-only `features/fleet/*` views and drawers. The hosts use deterministic samples
-(`samples/fleet-samples.ts`: 4 groups `g1`–`g4`, 22 drivers `d01`–`d22`, 46 vehicles `v01`–`v46`,
-64 trips `t001`–`t064`, 38 alerts, 30 service tasks and the devices, generated from fixed seeds
-relative to `sampleNow`, which equals the default story clock), the story-only list engine
-`runSampleList` (search, AND conditions, sort with unknown values last in either direction,
-contract secondary keys and final ID ordering, paging) and simulated saves (`saveDelayMs`, 700 ms).
-Devices and General settings examples use visible PrimeNG Demo labels and Storybook
-`prototype` tags. The live Devices screen supports stock and stored connection facts; signal,
-voltage, firmware policy and Restart remain unavailable/Demo. The General sample host remains
-a product demonstration; the live General page persists regional preferences/thresholds and
-the Core Branch name, while notification delivery is explicitly unavailable. The prototype
-filters/sorts and shared sort menus expose the supported fields in the current contracts. Sample
-sort timestamps are deterministic fixture facts. Vehicle saves and deactivation both set
-`updatedAt` to the fixed sample clock, so modification sorting reflects those writes.
+([development](development.md#admin-storybook)). It is a development and review tool; no automated
+runner executes its stories. It opens on "Start here" (what to review and links to the stories),
+then Admin and Design System. Stories render in English.
 
-Live Fleet containers render the same presentation components inside `FleetWorkspace`:
+Pattern stories render `app/ui` components with story inputs. The Shell stories use the real
+navigation, and the routed ones (Fleet disabled, Unknown Branch, Branch discovery loading and
+error) answer `AdminBranches` through `FixtureHttpBackend`.
+
+Live Fleet containers render the shared presentation components inside `FleetWorkspace`:
 Vehicles/profile/odometer, Devices, Drivers/scorecard, Overview, Alerts, Trip log, Maintenance
-and Vehicle groups/General settings ([Discocan Fleet](discocan/fleet.md#angular-foundation)). Their `Admin/...`
-stories exercise real routes, APIs and captured Apollo clients using typed deterministic
-`src/storybook/*-fixtures.ts` responses. These immutable snapshots exercise rendering, errors,
-forms, save/close and partial actions; backend persistence, filtering and derived facts are
-verified by database and real-Gateway browser checks. The sample `Examples/...` hosts remain
-separate and demonstrate the presentation components without importing into the app.
+and Vehicle groups/General settings ([Discocan Fleet](discocan/fleet.md#angular-foundation)).
+Their `Admin/...` stories run the real routes, APIs and captured Apollo clients against typed
+deterministic `src/storybook/*-fixtures.ts` responses. These immutable snapshots show rendering,
+errors, forms and partial actions; persistence, filtering and derived facts are not simulated.
 
-`Admin/Fleet/Device configuration` renders the durable eData settings workflow through the
-same routed container. Its compact parameter table keeps interval actions frozen at the right;
-native disclosures retain raw definitions and operation metadata. Stories cover reads, writes,
-confirmation, retained drafts and historical snapshots; see the [focused device checks](discocan/testing.md#background-device-configuration-read-checks).
-
-`Examples/Authentication/Login` renders the existing application `Login` without a shell.
+`Admin/Fleet/Device configuration` renders the durable eData settings workflow through the same
+routed container: reads, writes, confirmation, retained drafts and historical snapshots.
+`Admin/Authentication/Login` renders the application `Login` without a shell;
 `storybook/login-fixtures.ts` answers its `AdminTenants`, `AdminDemoLogin` and `AdminBranches`
-operations through the same fixture HTTP transport. It covers Tenant changes, sequential Branch
-discovery, loading, empty, errors and retry; successful submission opens the sample Fleet with
-the selected Tenant and Branch. The shell passes the selected Branch name through native
-`RouterOutlet` data to the sample page headers and General settings' initial name. The synthetic
-datasets remain shared fixtures; this does not load or switch real Branch data.
-Sign out returns this authentication example to a fresh Login; it checks the active page's
-unsaved draft first. It never activates a real application session.
-
-The vehicle profile counts only OPEN alerts, consumes the fuel classification (including stale
-fuel), and preserves unknown values separately from zero. Its optional vehicle specifications
-can be cleared. The service tab opens the existing Maintenance drawer: PLANNED tasks are editable
-and DONE tasks show their completion history. Profile editing uses the same fleet-number/VIN
-uniqueness and inactive-vehicle/assigned-driver checks as the Vehicles sample; errors retain the
-draft and focus the affected field. `acknowledged-alerts` demonstrates that acknowledged alerts
-are absent from the open count, and `save-error` also covers profile editing and retry.
-
-The Drivers drawer edits separate first and last names (required, 64 characters each),
-optional employee number and identification key (32 each), phone (20), email (254), licence
-number (32), the ten API licence categories, tachograph-card number (16), optional document
-expiry dates, status and notes. Its record view shows all assigned vehicles and created/updated
-timestamps. Empty document dates remain null and an empty category list stays empty. Document
-flags use the supplied business date and the 30-day window; a document expiring today is shown
-as due in zero days. The licence-category filter matches any selected category. Drivers and
-scorecards share `SampleDrivers`; other feature hosts own isolated local sample datasets that
-reset when their page is recreated. They do not synchronize mutations across features.
-
-The vehicle profile opens `OdometerDrawer` for non-INACTIVE vehicles. It shows the previous
-reading and source, accepts a finite odometer from 0 to 9,999,999.9 km and a Europe/Sofia
-timestamp, and rounds distance to one decimal before comparing it with the previous reading.
-The timestamp must be strictly later than the previous reading and no later than the supplied
-minimum of now and the Branch data clock. During the autumn clock overlap, the default preserves
-the exact supplied instant, including seconds and milliseconds; an edited repeated time resolves
-to the earliest occurrence inside that permitted interval. Without a data clock the host supplies now. The sample
-host uses its fixed clock and updates only the odometer and its service-distance display;
-activity and the data clock stay unchanged. Failed saves retain the draft and can be retried.
-
-Maintenance plans tasks with a service type from the API enum, an optional title (120 code
-points), a workshop (128), notes (2,000), and a due date, odometer or both. Service dates are
-2000-01-01 through 2100-12-31; due odometers are whole kilometres from 0 to 9,999,999. New tasks
-offer vehicles that are not INACTIVE; an existing task keeps its vehicle. Planned costs are not
-editable: actual EUR costs belong to completion. Saving locks the planning form and preserves
-the draft on failure. Cancel service retains the plan as a read-only CANCELLED record.
-Status and urgency are separate: only PLANNED tasks have OVERDUE,
-DUE_SOON, UNKNOWN_ODOMETER or UPCOMING urgency. The `no-odometer` scenario shows unknown vehicle
-odometers without inventing remaining kilometres. Summary costs include completions in the
-30 calendar days ending at the fixture business date; planned urgency counts exclude INACTIVE vehicles.
-The Sort menu includes completion date and creation time, with deterministic fixture dates.
-
-Maintenance completes one PLANNED task through `ServiceCompletionDrawer`, with a business date,
-optional service odometer, EUR cost, workshop, replaced parts and notes. Costs accept whole cents
-from 0 through 1,000,000 EUR, with decimal-grid validation that rejects fractional cents without
-rejecting valid amounts because of binary floating-point rounding. Providing a next date
-and/or odometer schedules the same service on the same vehicle in the same simulated save;
-the next date must follow completion and the next odometer must exceed a supplied completion
-odometer. The sample's odometer floor comes only from services completed on earlier dates,
-not telemetry or same-day completions. Completion does not update vehicle telemetry. Completed
-services can be opened read-only; they cannot be edited or deleted. There is no bulk completion
-or Done switch in the planning form. The completion stories also cover failure and retry,
-invalid next schedules and earlier-service odometer errors; the planning stories cover an
-optional title, cancellation and its retained record, and searching the saved workshop.
-Historical completion is allowed for INACTIVE vehicles, but scheduling a next service requires a
-non-INACTIVE Vehicle. The odometer floor continues to use only services completed on earlier dates.
-
-Drivers open `DriverScorecardView` from a row action or their view drawer. Its 7/30/90-day
-windows show the data clock and exact interval, distance-weighted driving and eco scores,
-scored-trip coverage, the backend low-confidence flag and all nine maneuver categories split
-by intensity 1/2/3/unknown. Zero scores and counts remain distinct from missing values;
-no trips, unscored trips and no telemetry have separate scenarios. The view receives all
-aggregates; deterministic sample values belong only to `DriverScorecardPage`. It derives no
-rating bands, rankings, trends or per-category scores.
-The list and scorecard share `samples/sample-drivers.ts` state scoped to `ExampleApp`, so a
-created or edited driver survives navigation between them. A new driver has no trip history,
-zero maneuver counts and unavailable averages; recreating the example app resets its sample state.
-
-Example stories open a page with `exampleAt('<path>?<query>')`; the query belongs to the example
-app's route, not to the Storybook URL. `save-error` fails the first save only, an unknown value
-means the default, and closing a drawer removes `drawer` and `edit` from the route.
-`storybook/interactions.ts` includes `enterNumber(input, value)` for numeric controls: paste,
-Tab and an assertion of the committed numeric value. This exercises InputNumber's supported
-paste handler instead of synthetic keypresses without the legacy key codes it expects.
-
-| Path                     | `scenario`                                                                               | `drawer`                       | Other                                                                         |
-| ------------------------ | ---------------------------------------------------------------------------------------- | ------------------------------ | ----------------------------------------------------------------------------- |
-| `overview`               | `loading`, `error`, `calm` (nothing to handle)                                           | —                              | —                                                                             |
-| `alerts`                 | `loading`, `empty`, `error`, `save-error`                                                | `<id>`                         | Opens with the "not resolved" filter chip                                     |
-| `trips`                  | `loading`, `empty`, `error`                                                              | `<id>`                         | —                                                                             |
-| `vehicles`               | `loading`, `empty`, `error`, `save-error`                                                | `<id>`, `new`                  | —                                                                             |
-| `vehicles/<id>`          | `loading`, `error`, `save-error`, `no-odometer`                                          | `edit`, `odometer`             | `tab=overview`, `trips`, `alerts` or `service`; an unknown ID shows not found |
-| `drivers`                | `loading`, `empty`, `error`, `save-error`                                                | `<id>`, `new`                  | `edit=1` opens the record in its form                                         |
-| `drivers/<id>/scorecard` | `loading`, `error`, `empty`, `no-telemetry`, `low-confidence`, `unscored`, `zero-scores` | —                              | `days=7`, `30` (default) or `90`; an unknown ID shows not found               |
-| `devices`                | `loading`, `empty`, `error`, `save-error`                                                | `<id>`, `new`                  | —                                                                             |
-| `maintenance`            | `loading`, `empty`, `error`, `save-error`, `completion-error`, `earlier-service`         | `<id>`, `new`, `complete-<id>` | Complete opens the per-record form; completed records open read-only          |
-| `settings/groups`        | `loading`, `empty`, `error`                                                              | `<id>`, `new`                  | —                                                                             |
-| `settings/general`       | `save-error`                                                                             | —                              | —                                                                             |
+operations for the loading, empty, error and retry states.
 
 Toolbar globals: theme, brand and density; viewports `desktop1440`, `desktop1024` (the narrowest
 desktop with the sidebar), `tablet768`, `mobile375`. A brand or density change re-bootstraps the
@@ -941,13 +810,12 @@ story with `provideHolitaTheme(choice)` and leaves no stale theme styles. `param
 clock (`now`, default `2026-10-18T07:00:00.000Z`) and the fixture `scenario` (`latencyMs` and
 `failures` per operation or `<Operation>:<id>`).
 
-| Title                          | Content                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Design System/Foundations      | Colors (the canvas, frame and panel colour tokens, the sidebar hover and active backgrounds and indicator, the tone and category tokens, the semantic colour tokens and the primary and surface ramps in both schemes; the contrast checks of the toolbar brand), Brand variants, Typography, Spacing and density (measured), Radii and borders, Status tones, Categorical palette, Breakpoints                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| Design System/Patterns         | PageHeader, KpiStrip, FilterBuilder, TablePanel (states, paging with one page, a large and an unlisted page size, selection, row actions, confirmation from a row and for a selection), Drawer (edit, view, view then edit, loading, saving, not found, error, server field errors, dirty with confirm), FormField, EmptyState, Charts, CSS patterns, Notifications (success, warning, error, long message, stacked); MenuButton and RowActions have no stories of their own (TablePanel, the Shell menus and the examples show them)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| Design System/PrimeNG coverage | Every registered control in both schemes, non-modal overlays and the confirm dialog                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| Design System/Shell            | Desktop, Rail, Mobile with navigation open, Fleet disabled, Unknown Branch, Branch discovery loading/error, theme-persistence warning, Branch menu, Notifications, Account menu, No notifications, Long names (desktop, narrow desktop and phone)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| Examples                       | Fleet example pages inside the shell with sample data (no GraphQL); the sidebar switches between them and Examples/Tour visits every navigation entry. Overview: KPI tiles that open their lists, items that need attention, distance and activity charts, latest trips that open their record. Vehicles: quick search, filters, sorting, row and bulk actions, profile navigation before editing, an Edit action in the drawer, all states. Drivers: document expiry flags, scores and the mixed drawer (view, then Edit). Trips: a read-only list and view drawer, including ongoing trips and unknown end/metrics without a fabricated arrival. Alerts: a default filter chip, row actions by status, Acknowledge as the only bulk action (Resolve opens the record drawer), and a view drawer with workflow actions (acknowledge, resolve with an optional remark, reopen). Vehicle profile: a full record page with back link, the plate as the breadcrumb's last crumb, Edit (the vehicle drawer), KPIs and tabs (overview with facts and a chart, trips, alerts, service plan), loading, not found and error. Maintenance: urgency by date or odometer, money, and a drawer form that needs a date or an odometer reading. Devices: connection, signal and firmware, Restart for online devices (also in bulk, after a confirmation), and a drawer with read-only diagnostics above the installation form. Settings: a short groups list without search or paging (groups in use cannot be deleted; the others are deleted after a confirmation that names them) and the General page form with titled cards and a sticky save bar |
+| Title                          | Content                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Design System/Foundations      | Colors (the canvas, frame and panel colour tokens, the sidebar hover and active backgrounds and indicator, the tone and category tokens, the semantic colour tokens and the primary and surface ramps in both schemes; the contrast checks of the toolbar brand), Brand variants, Typography, Spacing and density (measured), Radii and borders, Status tones, Categorical palette, Breakpoints                                                                                                                                       |
+| Design System/Patterns         | PageHeader, KpiStrip, FilterBuilder, TablePanel (states, paging with one page, a large and an unlisted page size, selection, row actions, confirmation from a row and for a selection), Drawer (edit, view, view then edit, loading, saving, not found, error, server field errors, dirty with confirm), FormField, EmptyState, Charts, CSS patterns, Notifications (success, warning, error, long message, stacked); MenuButton and RowActions have no stories of their own (TablePanel, the Shell menus and the examples show them) |
+| Design System/PrimeNG coverage | Every registered control in both schemes, non-modal overlays and the confirm dialog                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Design System/Shell            | Desktop, Rail, Mobile with navigation open, Fleet disabled, Unknown Branch, Branch discovery loading/error, theme-persistence warning, Branch menu, Notifications, Account menu, No notifications, Long names (desktop, narrow desktop and phone)                                                                                                                                                                                                                                                                                     |
 
 The shared Karma search/date controls are shown in `Design System/Karma/Controls`, and the
 optional map, endpoint directions and missing-coordinate states in `Admin/Karma Client/Maps`.
@@ -956,16 +824,12 @@ Truck sections share `KarmaCarHeader` with the existing PageHeader pattern and r
 links styled with the shared theme tokens; the active route has `aria-current="page"`. Filter errors use
 the shared FormField pattern and focus the first invalid input. Devices' primary IMEI action
 opens read-only Diagnostics, with an explicit Edit action and return to that overview.
-Their default location/route and controls stories have desktop/mobile light/dark visual captures.
 `Design System/Patterns/Responsive table` checks identity/action placement at both widths.
 `Admin/Karma Client/Record details` exercises summaries, closed/expanded source fields,
 escaped event text and focus restoration through connected truck/history fixtures.
 
-`npm run test:storybook:admin` runs every story in Chromium through `@storybook/addon-vitest`:
-rendering, play functions and axe with `a11y.test: 'error'` (the PrimeUI license notice
-`#p-license-host` is excluded). A violation is fixed in the token, component or story markup,
-never by lowering the level. `npm run test:visual:admin` captures the reviewed stories
-([testing](testing.md#storybook-visual-review)).
+Use the Storybook Accessibility panel (axe) to check a changed screen. The PrimeUI license notice
+`#p-license-host` is excluded from that check and is never hidden.
 
 ## Changing the design centrally
 
@@ -973,32 +837,26 @@ never by lowering the level. `npm run test:visual:admin` captures the reviewed s
    else changes.
 2. A token: change it in `theme/` (brand, density, status tone or `appTokens`); when a colour pair
    changes, add or adjust the pair in `brandContrastChecks` or `toneContrastChecks`
-   (`theme/contrast.ts`); update the emitted values `theme/holita-preset.spec.ts` asserts (a fixed
-   list such as `--p-app-sidebar-width:15.5rem`); review Foundations, Patterns and a screen story
-   in both schemes.
+   (`theme/contrast.ts`); review Foundations, Patterns and a screen story in both schemes.
 3. A new brand or density: add its name to the `BrandName`/`DensityName` union and to the
    `brandNames`/`densityNames` arrays in `theme/theme-choice.ts`, and its record to `brands.ts` or
    `densities.ts`; a brand on a new Aura palette also extends `AccentPalette`/`NeutralPalette`.
-   The Storybook toolbar lists the records, while the preset spec, the contrast spec and the
-   toolbar's choice reader iterate the arrays, so a name missing there is silently skipped. Update
-   the brand, contrast and density tables in this document.
+   The Storybook toolbar lists the records, while the toolbar's choice reader iterates the
+   arrays, so a name missing there is silently skipped. Update the brand, contrast and density
+   tables in this document.
 4. A pattern: change the component or CSS pattern once; every screen using it follows. Update its
-   stories (`ui/css-patterns.stories.ts` for CSS patterns) and spec in the same change.
+   stories (`ui/css-patterns.stories.ts` for CSS patterns) in the same change.
 5. Breakpoints: change the Sass map in `styles/_breakpoints.scss`, the restatement in
    `src/test-setup.ts`, the `BreakpointName` union in `ui/media.ts`, the names in the Foundations
    "Breakpoints" story and the width table above.
-6. Layer order: change `styles/_layers.scss` and `holitaThemeOptions.cssLayer.order` together; the
-   preset spec asserts the emitted order.
+6. Layer order: change `styles/_layers.scss` and `holitaThemeOptions.cssLayer.order` together.
 7. A PrimeNG control: see [PrimeNG usage rules](#primeng-usage-rules).
 8. A font weight: add its WOFF file to `public/fonts/lato` and an entry to `$weights` in
    `styles/_fonts.scss`.
 
-Checks for such a change: `npm run test:admin -- --include="app/theme/**/*.spec.ts"
---include="app/ui/**/*.spec.ts" --include="app/layout/**/*.spec.ts" --skip-nx-cache` (add
-`--include="app/workspace/**/*.spec.ts" --include="app/i18n/**/*.spec.ts"` for shell or catalog
-changes), `npm run test:storybook:admin`, `npm run test:visual:admin` (candidates for review) and
-the shell smoke (`npm run test:smoke:admin -- angular-shell.smoke.spec.mts`; see
-[browser smoke checks](testing.md#real-federation-and-browser-smoke-checks)).
+Checks for such a change: `npx nx run admin:typecheck`, `npx nx run admin:build` (it reports the
+component style budgets) and a Storybook review in both schemes, the three brands, both
+densities and `mobile375`.
 
 ## Extending
 
@@ -1007,7 +865,7 @@ the shell smoke (`npm run test:smoke:admin -- angular-shell.smoke.spec.mts`; see
   [Theme](#theme).
 - A CSS pattern: `styles/_patterns.scss` (the CSS patterns list under
   [Patterns](#patterns-srcappui)) and `ui/css-patterns.stories.ts`; a component pattern: a
-  standalone `holita-` component in `src/app/ui/` with its spec, stories under
+  standalone `holita-` component in `src/app/ui/` with stories under
   `Design System/Patterns` and texts in `ui/i18n/{bg,en}.json`.
 - A list page with actions: [Patterns](#patterns-srcappui) for the page header, KPI strip,
   FilterBuilder and TablePanel, [Table conventions](#table-conventions) for the `p-table` and the
@@ -1015,6 +873,5 @@ the shell smoke (`npm run test:smoke:admin -- angular-shell.smoke.spec.mts`; see
 - A drawer: [Route drawers](#route-drawers) and the `holita-form-field` and form helpers under
   [Patterns](#patterns-srcappui).
 - A navigation item or shell change: [Shell](#shell).
-- A story: [Storybook review](#storybook-review); the
-  [design-system skill](../.agents/skills/holita-admin-design-system/SKILL.md) has the procedure
-  for an example page.
+- A story: [Storybook review](#storybook-review) and the
+  [design-system skill](../.agents/skills/holita-admin-design-system/SKILL.md).
