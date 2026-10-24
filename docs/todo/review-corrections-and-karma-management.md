@@ -19,8 +19,10 @@ review scratchpad; retain only open work here. Implemented contracts belong in
 User approval is pending for the [small-screen-flow proposal](karma-device-management-design.md)
 and its [proposed identity/scope ADR](karma-device-management-identity-adr.md).
 Implement the inventory-to-truck/device/settings move only after confirmation, with the
-proposal's scope, durable-operation and validation requirements. No persistent identity links
-or command-allowlist extensions are proposed.
+proposal's scope, durable-operation and validation requirements. The supplied ERM example and
+compiler investigation now support a local general rule editor. Rule reads and one-rule updates
+are proposed allowlist extensions awaiting explicit approval; persistent identity links remain
+outside the proposal. See the screen proposal for the evidence, limits and implementation stages.
 
 ## Behavior-preserving cleanup after the approved feature
 

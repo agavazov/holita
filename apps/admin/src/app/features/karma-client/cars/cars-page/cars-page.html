@@ -1,76 +1,63 @@
-<section
-  class="card karma-page"
-  [attr.aria-label]="text().karmaTrucks"
-  [attr.aria-busy]="loading()"
+<holita-page-header
+  [title]="text().karmaTrucks"
+  [eyebrow]="text().karmaClient"
+  [count]="loaded() ? filtered().length : null"
+  [description]="listText().description"
 >
-  <div class="page-heading">
-    <div>
-      <h1>{{ text().karmaTrucks }}</h1>
-      <p>{{ text().karmaClient }}</p>
-    </div>
-    <button
-      pButton
-      type="button"
-      severity="secondary"
-      [outlined]="true"
-      [disabled]="loading()"
-      (click)="refresh()"
-    >
-      {{ error() ? text().retry : text().refresh }}
-    </button>
-  </div>
-  <form
-    class="karma-search"
-    [formGroup]="form"
-    (ngSubmit)="applySearch()"
-    [attr.aria-label]="text().karmaSearch + ': ' + text().karmaTrucks"
+  <button
+    headerActions
+    pButton
+    type="button"
+    severity="secondary"
+    [disabled]="loading()"
+    (click)="refresh()"
   >
-    <div class="karma-field karma-search-field">
-      <label for="cars-search">{{ listText().search }}</label>
-      <input pInputText id="cars-search" formControlName="search" maxlength="200" />
-    </div>
-    <div class="karma-field karma-project-field">
-      <label for="cars-project">{{ listText().project }}</label>
-      <p-select
-        inputId="cars-project"
-        formControlName="project"
-        [options]="projectOptions()"
-        optionLabel="label"
-        optionValue="value"
-        [placeholder]="listText().allProjects"
-        [showClear]="true"
-        [ariaLabel]="listText().project"
-      />
-    </div>
-    <div class="page-actions">
-      <button pButton type="submit">{{ text().karmaSearch }}</button>
-      @if (query().search || query().project) {
-        <button
-          pButton
-          type="button"
-          severity="secondary"
-          [outlined]="true"
-          (click)="clearSearch()"
-        >
-          {{ text().clearFilters }}
-        </button>
-      }
-    </div>
-  </form>
-  @if (loading()) {
-    <p role="status">{{ text().loadingKarmaCars }}</p>
-  }
-  @if (error()) {
-    <p-message severity="error">{{ text().karmaUnavailable }}</p-message>
-  }
-  @if (referencesError() && !error()) {
-    <p-message severity="warn">{{ text().karmaReferencesUnavailable }}</p-message>
-  }
-  @if (loaded()) {
-    <p role="status">
-      {{ text().total }}: {{ cars().length }} · {{ text().karmaMatching }}: {{ filtered().length }}
-    </p>
-  }
+    {{ text().refresh }}
+  </button>
+</holita-page-header>
+<form
+  class="inventory-filters"
+  [formGroup]="form"
+  (ngSubmit)="applySearch()"
+  [attr.aria-label]="text().karmaSearch + ': ' + text().karmaTrucks"
+>
+  <holita-form-field [label]="listText().search" controlId="cars-search">
+    <input pInputText id="cars-search" formControlName="search" maxlength="200" />
+  </holita-form-field>
+  <holita-form-field [label]="listText().project" controlId="cars-project">
+    <p-select
+      inputId="cars-project"
+      formControlName="project"
+      [options]="projectOptions()"
+      optionLabel="label"
+      optionValue="value"
+      [placeholder]="listText().allProjects"
+      [showClear]="true"
+      [ariaLabel]="listText().project"
+    />
+  </holita-form-field>
+  <div class="app-form-actions">
+    <button pButton type="submit">{{ text().karmaSearch }}</button>
+    @if (query().search || query().project) {
+      <button pButton type="button" severity="secondary" [outlined]="true" (click)="clearSearch()">
+        {{ text().clearFilters }}
+      </button>
+    }
+  </div>
+</form>
+@if (referencesError() && !error()) {
+  <p-message severity="warn">{{ text().karmaReferencesUnavailable }}</p-message>
+}
+<holita-table-panel
+  [heading]="listText().inventory"
+  [view]="view()"
+  [total]="loaded() ? filtered().length : null"
+  [busy]="loading()"
+  [errorText]="text().karmaUnavailable"
+  [emptyTitle]="text().emptyKarmaCars"
+  (retry)="refresh()"
+  (clearFilters)="clearSearch()"
+>
   <p-table
     class="app-responsive-table"
     [value]="filtered()"
@@ -80,57 +67,28 @@
     [first]="first()"
     [rowsPerPageOptions]="[25, 50, 100]"
     (onPage)="page($event)"
-    [tableStyle]="{ width: '100%' }"
   >
     <ng-template #header>
       <tr>
         <th scope="col" class="app-col-identity">{{ text().licensePlate }}</th>
-        <th scope="col" class="app-table-merged-column">{{ text().karmaCarId }}</th>
-        <th scope="col" class="app-table-merged-column">{{ text().karmaDeviceId }}</th>
-        <th scope="col">{{ text().karmaProjectId }}</th>
-        <th scope="col">{{ text().karmaTimeZones }}</th>
-        <th scope="col">{{ text().karmaCarType }}</th>
-        <th scope="col">{{ text().karmaCarYear }}</th>
-        <th scope="col">{{ text().karmaCarColor }}</th>
+        <th scope="col">{{ listText().project }}</th>
       </tr>
     </ng-template>
     <ng-template #body let-car>
       <tr>
         <td class="app-col-identity">
-          <div class="app-table-identity">
+          <span class="app-cell-stack">
             <a
-              class="content-link"
+              class="app-link"
               [routerLink]="['/', language(), 'karma-client', 'cars', car.id]"
               [queryParams]="carContext()"
               >{{ car.carNumber || text().karmaTruckDetails }}</a
             >
-            <span class="app-table-mobile-meta">{{ text().karmaCarId }}: {{ car.id }}</span>
-            <span class="app-table-mobile-meta"
-              >{{ text().karmaDeviceId }}: {{ car.deviceId }}</span
-            >
-          </div>
+            <span>{{ car.carType || '—' }} · {{ car.carYear || '—' }}</span>
+          </span>
         </td>
-        <td class="app-table-merged-column">{{ car.id }}</td>
-        <td class="app-table-merged-column">{{ car.deviceId }}</td>
-        <td>
-          {{ projectName(car.projectId) }} <small>({{ car.projectId }})</small>
-        </td>
-        <td>
-          {{ timeZoneName(car.timeZoneId) }} <small>({{ car.timeZoneId ?? '—' }})</small>
-        </td>
-        <td>{{ car.carType || '—' }}</td>
-        <td>{{ car.carYear || '—' }}</td>
-        <td>{{ car.carColor || '—' }}</td>
-      </tr>
-    </ng-template>
-    <ng-template #emptymessage>
-      <tr>
-        <td colspan="8">
-          @if (!loading() && !error()) {
-            {{ cars().length ? listText().noMatches : text().emptyKarmaCars }}
-          }
-        </td>
+        <td>{{ projectName(car.projectId) }}</td>
       </tr>
     </ng-template>
   </p-table>
-</section>
+</holita-table-panel>

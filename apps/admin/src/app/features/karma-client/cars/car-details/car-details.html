@@ -1,8 +1,4 @@
-<section
-  class="card karma-page"
-  [attr.aria-label]="text().karmaTruckDetails"
-  [attr.aria-busy]="loading()"
->
+<section class="app-view" [attr.aria-label]="text().karmaTruckDetails" [attr.aria-busy]="loading()">
   <holita-karma-car-header
     [language]="language()"
     [carId]="carId()"
@@ -29,29 +25,29 @@
     <p-message severity="warn">{{ text().karmaLocationUnavailable }}</p-message>
   }
   @if (car(); as truck) {
-    <section [attr.aria-label]="detailText().truckSummary">
-      <dl class="karma-record-summary">
+    <section class="app-card" [attr.aria-label]="detailText().truckSummary">
+      <dl class="app-facts">
         <div>
           <dt>{{ text().licensePlate }}</dt>
           <dd>{{ truck.carNumber }}</dd>
         </div>
         <div>
-          <dt>{{ text().karmaDeviceId }}</dt>
-          <dd>{{ truck.deviceId }}</dd>
+          <dt>{{ text().karmaCarType }}</dt>
+          <dd>{{ truck.carType ?? '—' }}</dd>
         </div>
         <div>
           <dt>{{ text().karmaProjectId }}</dt>
-          <dd>{{ projectName(truck.projectId) }} ({{ truck.projectId }})</dd>
+          <dd>{{ projectName(truck.projectId) }}</dd>
         </div>
         <div>
           <dt>{{ text().karmaTimeZoneId }}</dt>
-          <dd>{{ timeZoneName(truck.timeZoneId) }} ({{ truck.timeZoneId ?? '—' }})</dd>
+          <dd>{{ timeZoneName(truck.timeZoneId) }}</dd>
         </div>
       </dl>
     </section>
-    <section class="location-summary" [attr.aria-label]="text().karmaLocation">
-      <h2>{{ text().karmaLocation }}</h2>
-      <p class="hint">{{ text().karmaLocationHint }}</p>
+    <section class="app-card app-stack" [attr.aria-label]="text().karmaLocation">
+      <h2 class="app-card__title">{{ text().karmaLocation }}</h2>
+      <p class="app-muted">{{ text().karmaLocationHint }}</p>
       @if (location(); as point) {
         <p>{{ text().karmaRawEdt }}: {{ point.edt ?? '—' }}</p>
         <p>

@@ -81,7 +81,7 @@
       </holita-empty-state>
     }
     @case ('rows-error') {
-      <div class="table-panel__inline-error" role="alert">
+      <div class="table-panel__inline-error">
         <p-message severity="error" variant="simple" size="small">{{
           errorText() ?? text().table.refreshFailed
         }}</p-message>

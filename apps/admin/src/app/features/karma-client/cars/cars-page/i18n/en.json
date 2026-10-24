@@ -1,5 +1,7 @@
 {
-  "search": "Search by registration, car ID or device ID",
+  "description": "Choose a vehicle to view its device and settings.",
+  "inventory": "Vehicles",
+  "search": "Search by registration",
   "project": "Project",
   "allProjects": "All projects",
   "noMatches": "No trucks match the selected filters."

@@ -1,0 +1,65 @@
+@use 'breakpoints' as bp;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-app-stack-gap);
+  min-inline-size: 0;
+}
+
+.expression-palette,
+.operation-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-app-space-2);
+}
+
+.condition-grid {
+  display: grid;
+  gap: var(--p-app-space-4);
+
+  @include bp.from(sm) {
+    grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
+  }
+}
+
+.expression-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-app-space-2);
+  padding: var(--p-app-space-4);
+  border-radius: var(--p-content-border-radius);
+  background: var(--p-content-hover-background);
+}
+
+.rule-expression,
+code {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.operand-choice {
+  display: flex;
+  align-items: center;
+  gap: var(--p-app-space-2);
+}
+
+.advanced-settings {
+  border-block-start: 1px solid var(--p-content-border-color);
+
+  > summary {
+    padding-block: var(--p-app-space-4);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  > .app-form-section {
+    padding-block-start: 0;
+    border: 0;
+  }
+}
+
+holita-karma-car-header {
+  margin-block-end: 0;
+}

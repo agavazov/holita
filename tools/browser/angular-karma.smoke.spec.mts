@@ -17,7 +17,7 @@ test('opens Karma trucks, details, location and filtered eData through Gateway i
     karmaRequests.filter(({ operation }) => operation === 'AdminKarmaCars').length;
   await page.goto(`${app.url}/en/karma-client/cars`);
   await expect(page.getByRole('heading', { name: 'Trucks', exact: true })).toBeVisible();
-  await expect(page.getByRole('cell', { name: '000123456789012', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'KARMA TEST 41', exact: true })).toBeVisible();
   expect(listReads()).toBe(1);
   // Karma data does not depend on the Branch: switching neither navigates nor refetches.
   await chooseBranch(page, app.branchB.name);
@@ -34,8 +34,8 @@ test('opens Karma trucks, details, location and filtered eData through Gateway i
   await page.getByRole('link', { name: 'KARMA TEST 41', exact: true }).click();
   await expect(page).toHaveURL(`${app.url}/en/karma-client/cars/41`);
   const summary = page.getByRole('region', { name: 'Truck summary', exact: true });
-  await expect(summary).toContainText('Fixture project (12)');
-  await expect(summary).toContainText('Europe/Sofia (8)');
+  await expect(summary).toContainText('Fixture project');
+  await expect(summary).toContainText('Europe/Sofia');
   await page.getByRole('link', { name: 'Location', exact: true }).click();
   await expect(page).toHaveURL(`${app.url}/en/karma-client/cars/41/location`);
   await page.locator('holita-location-page summary').click();

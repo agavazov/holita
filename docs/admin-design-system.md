@@ -799,6 +799,15 @@ errors, forms and partial actions; persistence, filtering and derived facts are 
 
 `Admin/Fleet/Device configuration` renders the durable eData settings workflow through the same
 routed container: reads, writes, confirmation, retained drafts and historical snapshots.
+`Admin/Karma Client/Device management proposal` demonstrates Karma → Trucks → truck detail → Device settings
+inside the real AdminWorkspace shell. The story uses the existing inventory, truck detail and
+reusable settings presentation; its settings route and profile tab exist only in Storybook.
+Inventory uses record links; the truck profile keeps its navigation above settings, with
+Parameters and Rules panels stacked vertically. Advanced
+rule fields and original bytes stay in the drawer, outside the list rows.
+Its scenario presenter retains edits only within the story and supplies canned operation states;
+it does not compile rules, import/export configuration or communicate with a device. BG/EN,
+missing Fleet scope, loading/error, empty rules, waiting and uncertain outcomes have separate stories.
 `Admin/Authentication/Login` renders the application `Login` without a shell;
 `storybook/login-fixtures.ts` answers its `AdminTenants`, `AdminDemoLogin` and `AdminBranches`
 operations for the loading, empty, error and retry states.

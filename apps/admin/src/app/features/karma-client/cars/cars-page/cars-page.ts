@@ -24,6 +24,10 @@ import { KarmaApi } from '../../karma-api';
 import { referenceListQuery } from '../../reference-list-query';
 import { positiveId } from '../../edata/edata-page/edata-filters';
 import { karmaCarListContext } from '../../car-header/karma-car-context';
+import { PageHeader } from '../../../../ui/page-header/page-header';
+import { FormField } from '../../../../ui/form-field/form-field';
+import { TablePanel } from '../../../../ui/table-panel/table-panel';
+import { tableView } from '../../../../ui/table-panel/table-view';
 import en from './i18n/en.json';
 import bg from './i18n/bg.json';
 
@@ -37,6 +41,9 @@ import bg from './i18n/bg.json';
     TableModule,
     RouterLink,
     ReactiveFormsModule,
+    PageHeader,
+    FormField,
+    TablePanel,
   ],
   providers: [KarmaApi],
   templateUrl: './cars-page.html',
@@ -72,6 +79,14 @@ export class CarsPage {
     };
   });
   readonly carContext = computed(() => karmaCarListContext(this.params()));
+  readonly view = computed(() =>
+    tableView({
+      loading: this.loading(),
+      error: this.error() ? true : null,
+      rows: this.loaded() ? this.filtered().length : null,
+      filtered: !!(this.query().search || this.query().project),
+    }),
+  );
   readonly filtered = computed(() => {
     const query = this.query();
     const search = query.search.toLocaleLowerCase(this.language());
@@ -101,16 +116,13 @@ export class CarsPage {
     ]
       .map((value) => {
         const name = this.references()?.karmaProjects.find((project) => project.id === value)?.name;
-        return { value, label: name ? `${name} (${value})` : value };
+        return { value, label: name || `${this.listText().project} ${value}` };
       })
       .sort((left, right) => left.label.localeCompare(right.label, this.language())),
   );
   private referenceRead: ReturnType<KarmaApi['watchReferences']> | undefined;
   projectName(id: string): string {
     return this.references()?.karmaProjects.find((project) => project.id === id)?.name || '—';
-  }
-  timeZoneName(id: number | null | undefined): string {
-    return this.references()?.karmaTimeZones.find((zone) => zone.id === id)?.name || '—';
   }
   private readonly api = inject(KarmaApi);
   private read: ReturnType<KarmaApi['watch']> | undefined;

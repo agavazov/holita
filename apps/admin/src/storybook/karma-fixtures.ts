@@ -119,27 +119,33 @@ graphqlFixture(AdminKarmaReferencesDocument, () => ({
   ],
   karmaTimeZones: [{ __typename: 'KarmaTimeZone', id: 8, name: 'Europe/Sofia' }],
 }));
-graphqlFixture(AdminKarmaCarDocument, (variables) => ({
-  karmaCar: variables.requiredString('id') === '41' ? fixtureKarmaCar : null,
-}));
-graphqlFixture(AdminKarmaLocationDocument, () => ({
-  karmaLocation: {
-    __typename: 'KarmaLocation',
-    carId: '41',
-    deviceId: fixtureKarmaCar.deviceId,
-    carNumber: fixtureKarmaCar.carNumber,
-    messageId: '3000000600',
-    eventId: '0',
-    edt: '2026-01-01 09:59:00',
-    edtTz: '2026-01-01 11:59:00',
-    pdt: null,
-    latitude: 42.6977,
-    longitude: 23.3219,
-    spd: 0,
-    odo: 0,
-    extra: null,
-  },
-}));
+graphqlFixture(AdminKarmaCarDocument, (variables) => {
+  const car = fixtureKarmaCars.find((row) => row.id === variables.requiredString('id'));
+  return { karmaCar: car ? { ...fixtureKarmaCar, ...car } : null };
+});
+graphqlFixture(AdminKarmaLocationDocument, (variables) => {
+  const car = fixtureKarmaCars.find((row) => row.id === variables.requiredString('carId'));
+  return {
+    karmaLocation: car
+      ? {
+          __typename: 'KarmaLocation',
+          carId: car.id,
+          deviceId: car.deviceId,
+          carNumber: car.carNumber,
+          messageId: '3000000600',
+          eventId: '0',
+          edt: '2026-01-01 09:59:00',
+          edtTz: '2026-01-01 11:59:00',
+          pdt: null,
+          latitude: 42.6977,
+          longitude: 23.3219,
+          spd: 0,
+          odo: 0,
+          extra: null,
+        }
+      : null,
+  };
+});
 graphqlFixture(AdminKarmaEdataDocument, () => ({
   karmaEdata: {
     __typename: 'KarmaEdataPage',
