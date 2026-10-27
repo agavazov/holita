@@ -14,7 +14,6 @@ import { AdminConfig } from '../../core/config/admin-config';
 import { AdminWorkspace } from '../../workspace/admin-workspace';
 import { BranchContext } from '../branches/branch-context';
 import { DevicesPage } from './devices/devices-list-page';
-import { DeviceConfigurationPage } from './device-operations/device-configuration-page';
 import { VehiclesPage } from './vehicles/vehicles-page';
 import { VehicleGroupsPage } from './vehicle-groups/vehicle-groups-page';
 import { AlertsPage } from './alerts/alerts-page';
@@ -37,7 +36,6 @@ import { settingsText } from './settings/i18n/messages';
     Message,
     ButtonDirective,
     DevicesPage,
-    DeviceConfigurationPage,
     VehiclesPage,
     VehicleGroupsPage,
     AlertsPage,
@@ -67,7 +65,6 @@ import { settingsText } from './settings/i18n/messages';
 export class FleetWorkspace {
   protected readonly preferences = inject(FleetPreferences);
   private readonly generalSettings = viewChild(GeneralSettingsPage);
-  private readonly deviceConfiguration = viewChild(DeviceConfigurationPage);
   readonly workspace = inject(AdminWorkspace);
   private readonly branches = inject(BranchContext);
   readonly enabled = inject(AdminConfig).fleetEnabled;
@@ -88,7 +85,6 @@ export class FleetWorkspace {
       this.enabled &&
       (resource === 'vehicles' ||
         resource === 'devices' ||
-        resource === 'device-configuration' ||
         resource === 'groups' ||
         resource === 'alerts' ||
         resource === 'overview' ||
@@ -128,6 +124,6 @@ export class FleetWorkspace {
   }
 
   canLeave(): boolean | Promise<boolean> {
-    return this.deviceConfiguration()?.canLeave() ?? this.generalSettings()?.canLeave() ?? true;
+    return this.generalSettings()?.canLeave() ?? true;
   }
 }

@@ -24,8 +24,12 @@ declared operations are absent from holita:
 The help does not declare user/role mutations, driver-detail GET, project
 update/delete, logout, a parameter-definition catalog, accident discovery, webhooks,
 streaming, geofences, reports or video-download operations. Their absence from this
-help is not proof that no other ERM interface offers them. NC2 UI functionality
-must not be assumed to be available through API v2.
+help is not proof that no other ERM interface offers them. The
+[web functionality research](web-functionality-research.md#internal-classic-web-methods-and-public-api-alternatives)
+identifies separate internal `/i/` operations in current classic/NC2 client sources.
+NC2 website sign-in and four visible destinations were inspected, but its UI
+functionality and internal contracts must not be assumed to be available through
+API v2 or supported for external integration.
 
 ## Read parameter coverage
 

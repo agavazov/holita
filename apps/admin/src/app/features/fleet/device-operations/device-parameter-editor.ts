@@ -14,10 +14,12 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ConfirmationService } from 'primeng/api';
 import { ButtonDirective } from 'primeng/button';
+import { Checkbox } from 'primeng/checkbox';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { InputNumber } from 'primeng/inputnumber';
 import { Message } from 'primeng/message';
@@ -34,11 +36,12 @@ import { FormatDateTimePipe, FormatNumberPipe } from '../../../ui/format/format.
 import { focusFirstInvalid } from '../../../ui/forms/focus';
 import { innerInputPt } from '../../../ui/forms/inner-input-pt';
 import { integerValidator, validationMessage } from '../../../ui/forms/validators';
+import { RouteDrawer } from '../../../ui/drawer/route-drawer';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
 import type {
   DeviceConfigurationOperation,
   DeviceConfigurationTarget,
-} from './device-configuration-view';
+} from './device-configuration-types';
 import { deviceConfigurationText } from './i18n/messages';
 
 export type DeviceParameterPreset =
@@ -56,8 +59,11 @@ const fieldOrder: readonly EditorField[] = [
   selector: 'holita-device-parameter-editor',
   imports: [
     ReactiveFormsModule,
+    NgTemplateOutlet,
+    RouteDrawer,
     ButtonDirective,
     ConfirmDialog,
+    Checkbox,
     InputNumber,
     Message,
     Select,
@@ -81,7 +87,9 @@ const fieldOrder: readonly EditorField[] = [
   host: { '(window:beforeunload)': 'beforeUnload($event)' },
 })
 export class DeviceParameterEditor {
-  readonly deviceId = input.required<string>();
+  readonly branchId = input.required<string>();
+  readonly drawer = input(false);
+  protected readonly drawerOpen = signal(false);
   readonly enabled = input(false);
   readonly target = input<DeviceConfigurationTarget | null>(null);
   readonly latestBaseline = input<DeviceConfigurationOperation | null>(null);
@@ -134,7 +142,7 @@ export class DeviceParameterEditor {
   private readonly context = computed(() => {
     const target = this.target();
     const baseline = this.latestBaseline();
-    return JSON.stringify([this.deviceId(), target?.id, target?.deviceId, baseline?.id]);
+    return JSON.stringify([this.branchId(), target?.id, target?.deviceId, baseline?.id]);
   });
   protected readonly baseline = computed(() => this.capturedBaseline() ?? this.latestBaseline());
   protected readonly stale = computed(
@@ -147,7 +155,7 @@ export class DeviceParameterEditor {
       !!target &&
       !!baseline?.configuration &&
       baseline.status === 'COMPLETE' &&
-      baseline.deviceId === this.deviceId() &&
+      baseline.branchId === this.branchId() &&
       baseline.karmaCarId === target.id &&
       baseline.karmaDeviceId === target.deviceId
     );
@@ -155,15 +163,8 @@ export class DeviceParameterEditor {
   protected readonly unavailable = computed(
     () => !this.enabled() || this.busy() || !this.matchingBaseline() || this.stale(),
   );
-  protected readonly modes = computed(() => [
-    { value: 'add', label: this.text().add },
-    { value: 'interval', label: this.text().update },
-  ]);
-  protected readonly parameterOptions = computed(() =>
-    (this.baseline()?.configuration?.parameters ?? []).map((parameter) => ({
-      value: parameter.parameterId,
-      label: String(parameter.parameterId),
-    })),
+  protected readonly title = computed(() =>
+    this.value().mode === 'add' ? this.text().add : this.text().update,
   );
   protected readonly presetOptions = computed(() =>
     this.presets()
@@ -175,7 +176,7 @@ export class DeviceParameterEditor {
       )
       .map((preset) => ({
         value: JSON.stringify([preset.catalogId, preset.parameterId]),
-        label: `${String(preset.parameterId)} · ${preset.name} · ${preset.catalogLabel}`,
+        label: `${preset.name} · ${String(preset.parameterId)} · ${preset.catalogLabel}`,
       })),
   );
   protected readonly preset = computed(
@@ -196,6 +197,14 @@ export class DeviceParameterEditor {
       ? (this.preset()?.parameterId ?? null)
       : (this.previous()?.parameterId ?? null),
   );
+  protected readonly parameterLabel = computed(() => {
+    const id = this.intendedParameterId();
+    if (id === null) {
+      return '—';
+    }
+    const name = this.presets().find((preset) => preset.parameterId === id)?.name;
+    return `${name ?? this.text().parameter} · ${String(id)}`;
+  });
   private readonly intentKey = computed(() =>
     JSON.stringify([
       this.context(),
@@ -208,8 +217,13 @@ export class DeviceParameterEditor {
   protected readonly numberPt = computed(() =>
     innerInputPt('parameter-intervalSeconds', !!this.errorOf('intervalSeconds')),
   );
-  protected readonly presetPt = computed(() => this.selectPt('presetKey'));
-  protected readonly parameterPt = computed(() => this.selectPt('parameterId'));
+  protected readonly presetPt = computed(() => ({
+    listContainer: { tabindex: 0 },
+    label: {
+      'aria-invalid': this.errorOf('presetKey') ? 'true' : undefined,
+      'aria-describedby': 'parameter-presetKey-hint parameter-presetKey-error',
+    },
+  }));
 
   constructor() {
     merge(
@@ -262,6 +276,7 @@ export class DeviceParameterEditor {
       if (accepted) {
         untracked(() => {
           this.reset();
+          this.drawerOpen.set(false);
         });
       }
     });
@@ -338,7 +353,6 @@ export class DeviceParameterEditor {
       return;
     }
     const input = {
-      deviceId: this.deviceId(),
       karmaCarId: target.id,
       expectedKarmaDeviceId: target.deviceId,
       baselineOperationId: baseline.id,
@@ -368,6 +382,21 @@ export class DeviceParameterEditor {
     return this.pendingLeave;
   }
 
+  async openAddition(): Promise<void> {
+    if (this.unavailable() || !(await this.canLeave())) {
+      return;
+    }
+    this.reset();
+    this.drawerOpen.set(true);
+  }
+
+  protected async closeDrawer(): Promise<void> {
+    if (await this.canLeave()) {
+      this.reset();
+      this.drawerOpen.set(false);
+    }
+  }
+
   async editInterval(parameterId: number): Promise<void> {
     if (this.unavailable()) {
       return;
@@ -383,6 +412,7 @@ export class DeviceParameterEditor {
       return;
     }
     this.reset();
+    this.drawerOpen.set(true);
     this.form.patchValue({
       mode: 'interval',
       parameterId,
@@ -407,6 +437,9 @@ export class DeviceParameterEditor {
   protected discard(): void {
     if (!this.submitting()) {
       this.reset();
+      if (this.drawer()) {
+        this.drawerOpen.set(false);
+      }
       this.draftChanged.emit();
     }
   }
@@ -426,16 +459,6 @@ export class DeviceParameterEditor {
     this.resetting = false;
     this.draftContext.set(null);
     this.capturedBaseline.set(null);
-  }
-
-  private selectPt(name: 'presetKey' | 'parameterId') {
-    return {
-      listContainer: { tabindex: 0 },
-      label: {
-        'aria-invalid': this.errorOf(name) ? 'true' : undefined,
-        'aria-describedby': `parameter-${name}-hint parameter-${name}-error`,
-      },
-    };
   }
 
   private focusInvalid(): void {

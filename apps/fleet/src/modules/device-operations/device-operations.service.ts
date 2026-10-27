@@ -1,9 +1,12 @@
+import { ConflictException, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-  ServiceUnavailableException,
-} from '@nestjs/common';
+  decodeRuleRecord,
+  encodeRuleData,
+  encodeRuleRecord,
+  parseRuleExpression,
+  referencedParameterIds,
+  renderRuleExpression,
+} from '@holita/edata-rules';
 import { FleetClock } from '../../clock/fleet-clock.js';
 import type {
   FleetDeviceConfiguration,
@@ -11,12 +14,16 @@ import type {
   RequestFleetDeviceConfigurationReadInput,
   RequestFleetDeviceParameterAdditionInput,
   RequestFleetDeviceParameterIntervalUpdateInput,
+  RequestFleetDeviceRulesReadInput,
+  RequestFleetDeviceRuleChangeInput,
 } from '../../generated/graphql/types.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import type { RequestContext } from '../../graphql/request-context.js';
+import { CoreClient } from '../../integrations/core/core.client.js';
 import { KarmaDeviceReadsClient } from '../../integrations/karma/karma-device-reads.client.js';
 import { integer, invalid, requireScope, text, uuid } from '../../validation.js';
 import { configurationParameters } from './device-parameter-change.js';
+import { configurationRules, deviceRuleResult } from './device-rule-change.js';
 import {
   DeviceOperationsRepository,
   type DeviceOperationRow,
@@ -35,17 +42,26 @@ function configuration(row: DeviceOperationRow): FleetDeviceConfiguration | null
 }
 
 export function deviceOperationResult(row: DeviceOperationRow): FleetDeviceOperation {
-  const evidence = record(row.observations) ? row.observations : {};
+  const observed =
+    row.kind === 'READ_RULES' || row.kind === 'UPSERT_RULE'
+      ? row.rulesObservations
+      : row.observations;
+  const evidence = record(observed) ? observed : {};
   return {
     id: row.id,
-    deviceId: row.deviceId,
-    deviceImei: row.deviceImei,
+    branchId: row.branchId,
     karmaCarId: row.karmaCarId,
     karmaDeviceId: row.karmaDeviceId,
     status: row.status,
     kind: row.kind,
     phase: row.phase,
     baselineOperationId: row.baselineOperationId,
+    parameterBaselineOperationId: row.parameterBaselineOperationId,
+    ruleId: row.ruleId,
+    ruleExpression: row.ruleExpression,
+    ruleTrueEventId: row.ruleTrueEventId,
+    ruleFalseEventId: row.ruleFalseEventId,
+    ruleDebounceMilliseconds: row.ruleDebounceMilliseconds,
     parameterId: row.parameterId,
     intervalSeconds: row.intervalSeconds,
     previousIntervalSeconds: row.previousIntervalSeconds,
@@ -65,6 +81,13 @@ export function deviceOperationResult(row: DeviceOperationRow): FleetDeviceOpera
         : 0,
     coverageComplete: evidence.coverageComplete === true,
     configuration: configuration(row),
+    rulesConfiguration:
+      row.status === 'COMPLETE' && row.rulesConfigurationId && Array.isArray(row.rules)
+        ? {
+            configurationId: row.rulesConfigurationId,
+            rules: configurationRules(row.rules).map(deviceRuleResult),
+          }
+        : null,
     errorCode: row.errorCode,
   };
 }
@@ -75,6 +98,7 @@ export class DeviceOperationsService {
     private readonly operations: DeviceOperationsRepository,
     private readonly karma: KarmaDeviceReadsClient,
     private readonly clock: FleetClock,
+    private readonly core: CoreClient,
   ) {}
 
   enabled(context: RequestContext): boolean {
@@ -106,6 +130,148 @@ export class DeviceOperationsService {
     return this.requestWrite(context, input, 'UPDATE_INTERVAL');
   }
 
+  requestRules(
+    context: RequestContext,
+    input: RequestFleetDeviceRulesReadInput,
+  ): Promise<FleetDeviceOperation> {
+    return this.request(context, input, 'READ_RULES');
+  }
+
+  async requestRuleChange(
+    context: RequestContext,
+    input: RequestFleetDeviceRuleChangeInput,
+  ): Promise<FleetDeviceOperation> {
+    const scope = requireScope(context);
+    if (!deviceConfigurationWritesEnabled()) {
+      throw new ServiceUnavailableException('Device configuration writing is disabled');
+    }
+    const baselineId = uuid(input.baselineOperationId, 'baselineOperationId');
+    const parameterBaselineId = uuid(
+      input.parameterBaselineOperationId,
+      'parameterBaselineOperationId',
+    );
+    const ruleId = integer(input.ruleId, 'ruleId', 0, 65535);
+    const ruleTrueEventId = integer(input.trueEventId, 'trueEventId', 0, 65535);
+    const ruleFalseEventId = integer(input.falseEventId, 'falseEventId', 0, 65535);
+    const ruleDebounceMilliseconds = integer(
+      input.debounceMilliseconds,
+      'debounceMilliseconds',
+      1,
+      32767,
+    );
+    const source = text(input.expression, 'expression', 4096);
+    const expression = (() => {
+      try {
+        return parseRuleExpression(source);
+      } catch {
+        invalid('expression', 'Use a supported rule expression.', 'INVALID_FORMAT');
+      }
+    })();
+    const target = karmaTarget(input.karmaCarId, input.expectedKarmaDeviceId);
+    await this.core.requireBranch(scope.branchId, context);
+    await this.verifyTarget(target);
+    const baseline = await this.operations.find(scope, baselineId);
+    const parameterBaseline = await this.operations.find(scope, parameterBaselineId);
+    for (const row of [baseline, parameterBaseline]) {
+      if (
+        !row ||
+        row.status !== 'COMPLETE' ||
+        row.karmaCarId !== target.karmaCarId ||
+        row.karmaDeviceId !== target.karmaDeviceId
+      ) {
+        throw new ConflictException(
+          'Read complete rules and parameters for the selected device and Karma target.',
+        );
+      }
+    }
+    if (
+      !baseline?.rulesConfigurationId ||
+      !Array.isArray(baseline.rules) ||
+      !parameterBaseline?.configurationId ||
+      !Array.isArray(parameterBaseline.configuration)
+    ) {
+      throw new ConflictException(
+        'Read complete rules and parameters for the selected device and Karma target.',
+      );
+    }
+    const rules = configurationRules(baseline.rules);
+    const previous = rules.find((rule) => rule.ruleId === ruleId);
+    if (previous && deviceRuleResult(previous).expression === null) {
+      invalid(
+        'ruleId',
+        'This rule uses an unsupported expression and must remain unchanged.',
+        'UNSUPPORTED_VALUE',
+      );
+    }
+    if (!previous && rules.length >= 1000) {
+      invalid(
+        'ruleId',
+        'The rules exceed the supported readback capacity.',
+        'CONFIGURATION_CAPACITY',
+      );
+    }
+    const parameters = new Set(
+      configurationParameters(parameterBaseline.configuration).map(
+        (parameter) => parameter.parameterId,
+      ),
+    );
+    if (referencedParameterIds(expression).some((id) => !parameters.has(id))) {
+      invalid(
+        'expression',
+        'Every referenced parameter must exist in the confirmed device configuration.',
+        'UNSUPPORTED_VALUE',
+      );
+    }
+    const ruleDefinitionHex = (() => {
+      try {
+        return encodeRuleRecord({
+          ruleId,
+          trueEventId: ruleTrueEventId,
+          falseEventId: ruleFalseEventId,
+          debounceMilliseconds: ruleDebounceMilliseconds,
+          activateDashboard: previous
+            ? decodeRuleRecord(previous.rawDefinition).activateDashboard
+            : false,
+          ruleDataHex: encodeRuleData(expression),
+        });
+      } catch {
+        invalid(
+          'expression',
+          'Use a supported expression of at most 128 encoded bytes.',
+          'INVALID_FORMAT',
+        );
+      }
+    })();
+    if (previous?.rawDefinition === ruleDefinitionHex) {
+      invalid('expression', 'Change the rule before submitting.', 'VALUE_UNCHANGED');
+    }
+    try {
+      return deviceOperationResult(
+        await this.operations.createRuleWrite(
+          scope,
+          baseline,
+          parameterBaseline,
+          {
+            ruleId,
+            ruleExpression: renderRuleExpression(expression),
+            ruleTrueEventId,
+            ruleFalseEventId,
+            ruleDebounceMilliseconds,
+            ruleDefinitionHex,
+          },
+          this.clock.now(),
+        ),
+      );
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException(
+          'A configuration operation for this Karma target is already active.',
+        );
+      }
+      throw error;
+    }
+  }
+
   private async requestWrite(
     context: RequestContext,
     input:
@@ -116,27 +282,18 @@ export class DeviceOperationsService {
     if (!deviceConfigurationWritesEnabled()) {
       throw new ServiceUnavailableException('Device configuration writing is disabled');
     }
-    const deviceId = uuid(input.deviceId, 'deviceId');
     const baselineOperationId = uuid(input.baselineOperationId, 'baselineOperationId');
     const parameterId = integer(input.parameterId, 'parameterId', 0, 65535);
     const intervalSeconds = integer(input.intervalSeconds, 'intervalSeconds', 0, 65000);
-    const karmaCarId = text(input.karmaCarId, 'karmaCarId', 16);
-    if (!/^[1-9][0-9]*$/.test(karmaCarId) || !Number.isSafeInteger(Number(karmaCarId))) {
-      invalid('karmaCarId', 'Use a valid Karma car ID.', 'INVALID_FORMAT');
-    }
-    const expected = text(input.expectedKarmaDeviceId, 'expectedKarmaDeviceId', 128);
-    const device = await this.operations.findDevice(scope, deviceId);
-    if (!device) {
-      throw new NotFoundException('Device not found');
-    }
+    const target = karmaTarget(input.karmaCarId, input.expectedKarmaDeviceId);
+    await this.core.requireBranch(scope.branchId, context);
+    await this.verifyTarget(target);
     const baseline = await this.operations.find(scope, baselineOperationId);
     if (
       !baseline ||
       baseline.status !== 'COMPLETE' ||
-      baseline.deviceId !== deviceId ||
-      baseline.deviceImei !== device.imei ||
-      baseline.karmaCarId !== karmaCarId ||
-      baseline.karmaDeviceId !== expected ||
+      baseline.karmaCarId !== target.karmaCarId ||
+      baseline.karmaDeviceId !== target.karmaDeviceId ||
       !baseline.configurationId
     ) {
       throw new ConflictException(
@@ -179,10 +336,6 @@ export class DeviceOperationsService {
         invalid('intervalSeconds', 'Choose a different reporting interval.', 'VALUE_UNCHANGED');
       }
     }
-    const target = await this.karma.target(karmaCarId);
-    if (target.deviceId !== expected) {
-      throw new ConflictException('The Karma device target has changed.');
-    }
     try {
       return deviceOperationResult(
         await this.operations.createWrite(
@@ -207,60 +360,60 @@ export class DeviceOperationsService {
     return row ? deviceOperationResult(row) : null;
   }
 
-  async history(context: RequestContext, deviceId: string): Promise<FleetDeviceOperation[]> {
+  async history(
+    context: RequestContext,
+    karmaCarId: string,
+    expectedKarmaDeviceId: string,
+  ): Promise<FleetDeviceOperation[]> {
     const scope = requireScope(context);
-    const id = uuid(deviceId, 'deviceId');
-    if (!(await this.operations.findDevice(scope, id))) {
-      throw new NotFoundException('Device not found');
-    }
-    return (await this.operations.history(scope, id)).map(deviceOperationResult);
+    const target = karmaTarget(karmaCarId, expectedKarmaDeviceId);
+    return (await this.operations.history(scope, target)).map(deviceOperationResult);
   }
 
-  async snapshot(context: RequestContext, deviceId: string): Promise<FleetDeviceOperation | null> {
+  async snapshot(
+    context: RequestContext,
+    karmaCarId: string,
+    expectedKarmaDeviceId: string,
+  ): Promise<FleetDeviceOperation | null> {
     const scope = requireScope(context);
-    const id = uuid(deviceId, 'deviceId');
-    const device = await this.operations.findDevice(scope, id);
-    if (!device) {
-      throw new NotFoundException('Device not found');
-    }
-    const row = await this.operations.lastComplete(scope, id, device.imei);
+    const target = karmaTarget(karmaCarId, expectedKarmaDeviceId);
+    const row = await this.operations.lastComplete(scope, target);
     return row ? deviceOperationResult(row) : null;
+  }
+
+  async rulesSnapshot(
+    context: RequestContext,
+    karmaCarId: string,
+    expectedKarmaDeviceId: string,
+  ): Promise<FleetDeviceOperation | null> {
+    const scope = requireScope(context);
+    const target = karmaTarget(karmaCarId, expectedKarmaDeviceId);
+    const row = await this.operations.lastCompleteRules(scope, target);
+    return row ? deviceOperationResult(row) : null;
+  }
+
+  private async verifyTarget(target: { karmaCarId: string; karmaDeviceId: string }): Promise<void> {
+    const current = await this.karma.target(target.karmaCarId);
+    if (current.deviceId !== target.karmaDeviceId) {
+      throw new ConflictException('The Karma device target has changed.');
+    }
   }
 
   async request(
     context: RequestContext,
     input: RequestFleetDeviceConfigurationReadInput,
+    kind: 'READ_CONFIGURATION' | 'READ_RULES' = 'READ_CONFIGURATION',
   ): Promise<FleetDeviceOperation> {
     const scope = requireScope(context);
     if (!deviceOperationsEnabled()) {
       throw new ServiceUnavailableException('Device configuration reading is disabled');
     }
-    const deviceId = uuid(input.deviceId, 'deviceId');
-    const karmaCarId = text(input.karmaCarId, 'karmaCarId', 16);
-    if (!/^[1-9][0-9]*$/.test(karmaCarId) || !Number.isSafeInteger(Number(karmaCarId))) {
-      invalid('karmaCarId', 'Use a valid Karma car ID.', 'INVALID_FORMAT');
-    }
-    const expected = text(input.expectedKarmaDeviceId, 'expectedKarmaDeviceId', 128);
-    const device = await this.operations.findDevice(scope, deviceId);
-    if (!device) {
-      throw new NotFoundException('Device not found');
-    }
-    const target = await this.karma.target(karmaCarId);
-    if (target.deviceId !== expected) {
-      throw new ConflictException('The Karma device target has changed.');
-    }
+    const target = karmaTarget(input.karmaCarId, input.expectedKarmaDeviceId);
+    await this.core.requireBranch(scope.branchId, context);
+    await this.verifyTarget(target);
     try {
       return deviceOperationResult(
-        await this.operations.create(
-          scope,
-          {
-            deviceId,
-            deviceImei: device.imei,
-            karmaCarId,
-            karmaDeviceId: target.deviceId,
-          },
-          this.clock.now(),
-        ),
+        await this.operations.create(scope, target, this.clock.now(), kind),
       );
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
@@ -271,6 +424,17 @@ export class DeviceOperationsService {
       throw error;
     }
   }
+}
+
+function karmaTarget(carId: string, expectedDeviceId: string) {
+  const karmaCarId = text(carId, 'karmaCarId', 16);
+  if (!/^[1-9][0-9]*$/.test(karmaCarId) || !Number.isSafeInteger(Number(karmaCarId))) {
+    invalid('karmaCarId', 'Use a valid Karma car ID.', 'INVALID_FORMAT');
+  }
+  return {
+    karmaCarId,
+    karmaDeviceId: text(expectedDeviceId, 'expectedKarmaDeviceId', 128),
+  };
 }
 
 export function deviceOperationsEnabled(): boolean {

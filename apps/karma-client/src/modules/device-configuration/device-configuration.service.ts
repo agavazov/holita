@@ -9,19 +9,23 @@ import { cars } from '../cars/cars-response.js';
 import {
   configurationParameterRequest,
   configurationRequest,
+  configurationRuleRequest,
   configurationTarget,
   configurationWindow,
 } from './configuration-input.js';
 import {
   configurationObservation,
   configurationReadback,
+  configurationTerminalResponse,
   type ConfigurationObservation,
+  type ConfigurationTerminalResponse,
 } from './configuration-response.js';
 import {
   profileObservation,
   profileReadback,
   type ProfileObservation,
 } from './profile-response.js';
+import { ruleObservation, ruleReadback, type RuleObservation } from './rule-response.js';
 
 function unavailable(): never {
   throw new ServiceUnavailableException('Karma configuration observations are unavailable');
@@ -61,13 +65,32 @@ export class DeviceConfigurationService {
     return this.karma.requestParameter(input.carId, input.rawDefinition, signal);
   }
 
+  async requestRules(value: unknown) {
+    const input = configurationRequest(value);
+    const signal = AbortSignal.timeout(4000);
+    await this.readTarget(input.carId, input.expectedDeviceId, signal);
+    return this.karma.requestRules(input.carId, signal);
+  }
+
+  async requestRule(value: unknown) {
+    const input = configurationRuleRequest(value);
+    const signal = AbortSignal.timeout(4000);
+    await this.readTarget(input.carId, input.expectedDeviceId, signal);
+    return this.karma.requestRule(input.carId, input.rawDefinition, signal);
+  }
+
   async observations(value: unknown) {
     const input = configurationWindow(value);
     const observations: ConfigurationObservation[] = [];
+    let terminalResponse: ConfigurationTerminalResponse | undefined;
     let truncated = false;
     const scanned = await this.scanConfigurationEvents(
       input,
       (messageId, eventTimeUtc, rawMessage) => {
+        const terminal = configurationTerminalResponse(messageId, eventTimeUtc, rawMessage);
+        if (terminal && Number(messageId) > Number(terminalResponse?.messageId ?? 0)) {
+          terminalResponse = terminal;
+        }
         const observation = configurationObservation(messageId, eventTimeUtc, rawMessage);
         if (!observation) {
           return;
@@ -93,6 +116,7 @@ export class DeviceConfigurationService {
       coverageComplete,
       readback: configurationReadback(observations, coverageComplete),
       observations,
+      ...(terminalResponse ? { terminalResponse } : {}),
     };
   }
 
@@ -120,6 +144,44 @@ export class DeviceConfigurationService {
       coverageComplete,
       readback: profileReadback(observations, coverageComplete),
       observations,
+    };
+  }
+
+  async ruleObservations(value: unknown) {
+    const input = configurationWindow(value);
+    const observations: RuleObservation[] = [];
+    let terminalResponse: ConfigurationTerminalResponse | undefined;
+    let truncated = false;
+    const scanned = await this.scanConfigurationEvents(
+      input,
+      (messageId, eventTimeUtc, rawMessage) => {
+        const terminal = configurationTerminalResponse(messageId, eventTimeUtc, rawMessage);
+        if (terminal && Number(messageId) > Number(terminalResponse?.messageId ?? 0)) {
+          terminalResponse = terminal;
+        }
+        const observation = ruleObservation(messageId, eventTimeUtc, rawMessage);
+        if (!observation) {
+          return;
+        }
+        observations.push(observation);
+        observations.sort((a, b) => Number(b.messageId) - Number(a.messageId));
+        if (observations.length > 64) {
+          observations.length = 64;
+          truncated = true;
+        }
+        let ruleCount = observations.reduce((count, item) => count + item.rules.length, 0);
+        while (ruleCount > 1000) {
+          ruleCount -= observations.pop()?.rules.length ?? 0;
+          truncated = true;
+        }
+      },
+    );
+    const coverageComplete = scanned && !truncated;
+    return {
+      coverageComplete,
+      readback: ruleReadback(observations, coverageComplete),
+      observations,
+      ...(terminalResponse ? { terminalResponse } : {}),
     };
   }
 

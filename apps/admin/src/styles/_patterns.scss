@@ -104,6 +104,50 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
     min-inline-size: 0;
   }
 
+  .app-filter-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+    align-items: end;
+    gap: var(--p-app-space-3);
+  }
+
+  .app-filter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--p-app-space-2);
+  }
+
+  .app-filter-hint {
+    grid-column: 1 / -1;
+  }
+
+  .app-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--p-app-space-3);
+  }
+
+  .app-source-details {
+    min-inline-size: 0;
+
+    > summary {
+      padding-block: var(--p-app-space-3);
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    > :not(summary) {
+      margin-block-start: var(--p-app-space-3);
+    }
+
+    dd {
+      white-space: pre-wrap;
+    }
+  }
+
   // Vertical stack of blocks (messages, text, actions) inside a card.
   .app-stack {
     display: flex;

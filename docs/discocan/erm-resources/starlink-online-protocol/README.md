@@ -2,9 +2,15 @@
 
 The [StarLink online protocol portal](https://sweb.erm.co.il/protocol/) is an ERM
 reference for device/server messages, commands, events, configuration parameters,
-hardware and supporting tools. **We do not yet have portal credentials; they are
-awaited.** This reference describes the three screenshots supplied by the user,
-not an authenticated review of the full portal.
+hardware and supporting tools. **Public reachability is confirmed; authenticated
+access remains blocked by unavailable credentials.** ERM-TEST-01 on 2026-10-27
+received HTTP 200 with the normal username/password login form, both at the root
+and through a vendor-supplied deep link. No login was submitted and no authenticated
+protocol page was read. The
+[engineer's reply](../erm-support-diagnostics-protocol-test-server/correspondence.md#engineers-reply)
+refers to access details sent in an earlier email dated `7/10/2026`; that email and
+its credentials are not included in the supplied reply. This reference describes
+the three screenshots supplied by the user, not an authenticated review of the full portal.
 
 [ERM resources](../README.md) · [Message structure](message-structure.md) ·
 [Screenshots and descriptions](images.md) · [Source metadata](metadata.json)
@@ -15,9 +21,9 @@ not an authenticated review of the full portal.
 | --------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | Portal                      | `https://sweb.erm.co.il/protocol/`                                                                           |
 | Visible title               | StarLink online protocol                                                                                     |
-| Access                      | Credentials awaited; authenticated browsing and downloads are unverified                                     |
+| Access                      | ERM-TEST-01: HTTP 200 login form confirmed; no protocol account located in the available sources; authenticated pages/downloads remain unverified |
 | Analysis date               | 2026-10-16 (Europe/Sofia)                                                                                    |
-| Local reference edition     | 1.0                                                                                                          |
+| Local reference edition     | 1.2; public access checked 2026-10-27, source screenshots unchanged                            |
 | Portal/protocol version     | Not established by the supplied screenshots                                                                  |
 | Home page date              | January 7th, 2026, displayed in `img.png`                                                                    |
 | Message structure page date | May 17th, 2020, displayed in `p1.png`                                                                        |
@@ -29,6 +35,28 @@ and **Version 2.44 (November, 2025)** with an OTA firmware-update note. These ar
 visible news entries, not evidence that the Message structure page or every
 device uses either version. The supplied menu and message page have no visible
 deep-link URLs, so their original addresses have not been reconstructed.
+
+## Access evidence from ERM-TEST-01
+
+The project credential inventory contains only separate Karma API/website
+connections, not a protocol-portal connection. The configured shared inventory
+was unavailable on this host; no assertion is made about credentials outside the
+available locations. Two connected Gmail accounts yielded no matching mail in the
+searched scopes. Outlook did contain Oz Dori's reply, received **2026-10-25
+08:39:01 UTC**, and the text matched the supplied ODT.
+
+The referenced access email was not located through the hostname/topic searches
+or the date-only checks of 7 October and 10 July. This is not proof it was never
+sent. A September ERM pilot thread contained real portal links but no parsed
+username/password instructions; one link also returned the login form. No Karma
+credentials were reused, guessed or submitted to the portal.
+
+Current authenticated content, model/version applicability and the requested
+command/diagnostic/ACK companion pages therefore remain unavailable. Recover the
+actual protocol account/access email before trying another normal sign-in. Known
+source-level eData commands are documented separately in
+[diagnostics and fault reporting](../edata-simple-protocol-v4.04/diagnostics-and-fault-reporting.md);
+they are not a replacement for unread current StarLink pages.
 
 ## Portal overview
 
@@ -76,8 +104,10 @@ in order. Only **Message structure** has supplied page content.
 19. Tools
 
 The menu confirms the spelling **StarLink Test Server**. The earlier resource
-notes used “StartLink Test Server”; its executable and message-replication behavior
-remain unverified. The separate **StarLink Monitor** menu entry does not establish
+notes used “StartLink Test Server”. The later
+[support correspondence](../erm-support-diagnostics-protocol-test-server/README.md)
+describes a fork to our server and ERM's test server, but its setup, actual delivery
+and whether an executable is supplied remain unverified. The separate **StarLink Monitor** menu entry does not establish
 that it is the same tool as the supplied
 [Simple eData Monitor guide](../simple-edata-monitor-configuration-v1.0/README.md).
 

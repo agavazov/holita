@@ -42,4 +42,22 @@ export class DeviceConfigurationController {
   profileObservations(@Body() body: unknown) {
     return this.configurations.profileObservations(body);
   }
+
+  @Post('rules-request')
+  @HttpCode(200)
+  rulesRequest(@Body() body: unknown) {
+    return this.configurations.requestRules(body);
+  }
+
+  @Post('rule-request')
+  @HttpCode(200)
+  ruleRequest(@Body() body: unknown) {
+    return this.configurations.requestRule(body);
+  }
+
+  @Post('rules-observations')
+  @HttpCode(200)
+  rulesObservations(@Body() body: unknown) {
+    return this.configurations.ruleObservations(body);
+  }
 }

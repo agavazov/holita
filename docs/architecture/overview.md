@@ -1,7 +1,12 @@
 # Shared workspace architecture
 
-The repository uses npm workspaces and Nx, with five applications and no shared runtime packages.
+The repository uses npm workspaces and Nx, with five applications and the shared `@holita/edata-rules` package.
 Applications never import another application's implementation, Prisma models or generated client.
+
+`packages/edata-rules` provides the rule expression parser and binary record codec used by the
+Angular editor, Fleet validation and Karma command validation. It preserves opaque rule data
+for inspection and does not simulate device evaluation. Application startup and Nx dependency
+targets build the package before its consumers.
 
 ## Source organization
 
@@ -29,9 +34,9 @@ The offline Fleet catalog importer remains a CLI feature, without an import/edit
 DeviceOperations reads its eligible predefined presets through the Fleet-owned repository.
 Core is the Tenant/Branch service, not a common implementation library. Fleet's durable
 device-operations module calls Karma Client's fixed machine-authenticated internal HTTP endpoints
-for reads and a single-definition parameter change.
+for reads and single-definition parameter or rule changes.
 Fleet owns operation persistence and the Nest scheduler; Karma Client retains the external
-account connection without a database. Applications share no implementation or Prisma client.
+account connection without a database. Each application's Prisma client remains private.
 
 Angular keeps business pages, concrete API services, GraphQL operations and tests under
 `features/`. Fleet and Karma Client own separate route arrays composed by `app.routes.ts`
@@ -77,7 +82,8 @@ Health endpoints prove application availability without opening database connect
 Fleet also owns the [shared Simple eData vendor catalog](../discocan/erm-resources/simple-edata-catalog/README.md).
 Its offline extractor and local import CLI preserve versioned reference data independently
 of Tenant/Branch business records. The scoped DeviceOperations API exposes eligible presets
-and owns durable reads/additions/interval updates; the catalog itself does not send commands.
+and owns durable configuration reads, parameter additions/interval updates and rule changes;
+the catalog itself does not send commands.
 See [device configuration operations](../discocan/architecture.md#background-device-configuration-reads)
 for freshness, one-attempt writes, verification and vendor-queue limits.
 

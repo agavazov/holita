@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { AdminWorkspace } from '../../workspace/admin-workspace';
@@ -13,11 +13,13 @@ import { ApiInfoPage } from './references/api-info-page/api-info-page';
 import { TripsPage } from './history/trips-page/trips-page';
 import { EventsPage } from './history/events-page/events-page';
 import { DrivingProfilePage } from './history/driving-profile-page/driving-profile-page';
+import { DeviceManagementPage } from './device-management/device-management-page';
 import { EdataPage } from './edata/edata-page/edata-page';
 
 @Component({
   selector: 'holita-karma-workspace',
   imports: [
+    DeviceManagementPage,
     UsersPage,
     RolesPage,
     CarsPage,
@@ -44,7 +46,9 @@ import { EdataPage } from './edata/edata-page/edata-page';
         ':' +
         scope.section
     ) {
-      @if (scope.section === 'users') {
+      @if (scope.section === 'configuration' && scope.id !== null) {
+        <holita-device-management-page [language]="scope.language" [carId]="scope.id" />
+      } @else if (scope.section === 'users') {
         <holita-users-page [language]="scope.language" />
       } @else if (scope.section === 'roles') {
         <holita-roles-page [language]="scope.language" />
@@ -73,6 +77,10 @@ import { EdataPage } from './edata/edata-page/edata-page';
   `,
 })
 export class KarmaWorkspace {
+  private readonly management = viewChild(DeviceManagementPage);
+  canLeave(): boolean | Promise<boolean> {
+    return this.management()?.canLeave() ?? true;
+  }
   private readonly workspace = inject(AdminWorkspace);
   private readonly route = inject(ActivatedRoute);
   private readonly params = toSignal(this.route.paramMap, {

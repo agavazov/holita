@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject } from '@angular/core';
+import { Component, computed, effect, inject, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, NavigationEnd, RouterOutlet, UrlSegment } from '@angular/router';
 import { filter } from 'rxjs';
@@ -18,8 +18,18 @@ import type { LanguageOption } from '../layout/admin-topbar';
 import { navigationContext } from '../layout/navigation';
 import { PageRecord } from '../layout/page-record';
 import { UI_LANGUAGE } from '../ui/ui-language';
+import type { LeavableDrawer } from '../ui/drawer/leave-drawer.guard';
 import { adminNavigation } from './admin-navigation';
 import { primeNgTranslation } from './primeng-translation';
+
+function hasLeaveGuard(component: unknown): component is LeavableDrawer {
+  return (
+    component !== null &&
+    typeof component === 'object' &&
+    'canLeave' in component &&
+    typeof component.canLeave === 'function'
+  );
+}
 
 @Component({
   selector: 'holita-admin-workspace',
@@ -40,6 +50,7 @@ export class AdminWorkspace {
   private readonly primeNG = inject(PrimeNG);
   private readonly pageRecord = inject(PageRecord);
   private readonly operationMessages = inject(MessageService);
+  private readonly outlet = viewChild(RouterOutlet);
   private readonly params = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
   });
@@ -118,6 +129,12 @@ export class AdminWorkspace {
     if (code === 'bg' || code === 'en') {
       void this.router.navigateByUrl(this.languageLink(code));
     }
+  }
+
+  chooseBranch(id: string): Promise<void> {
+    const outlet = this.outlet();
+    const component: unknown = outlet?.isActivated ? outlet.component : null;
+    return this.branches.choose(id, this.language(), hasLeaveGuard(component) ? component : null);
   }
 
   languageLink(language: Language) {

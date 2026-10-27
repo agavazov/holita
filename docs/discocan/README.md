@@ -7,10 +7,13 @@ contract, plus Branch regional preferences and thresholds — and the connected 
 admin in `apps/admin`, including General settings. The shared
 `apps/karma-client` provides read-only truck lists/details, eData, location, trips, events,
 driving profile and account views for projects, time zones, API version, users and roles.
-Fleet also persists background eData parameter reads, single predefined-parameter additions
-and existing-interval changes through Karma; open a Device's Diagnostics, then **eData settings**.
+Fleet also persists background eData parameter/rule reads, single predefined-parameter additions,
+existing-interval changes and one-rule changes through Karma. Open a Karma truck's **Device settings**
+tab to author local rule drafts and configure the device identified by that Karma car's `deviceId`.
+The shell's active Branch scopes saved operations; no local Fleet Device registration or association is required.
 Writes are separately disabled by default and require a complete baseline, fresh
-preflight and full readback verification. Requests, response fragments and complete snapshots
+preflight and full readback verification. Rules require both parameter and rule baselines.
+Requests, response fragments and complete snapshots
 survive page refresh and application restart. Activity rows remain holita demo data;
 telemetry ingestion from devices, tracking and measurement processing are not implemented.
 
@@ -26,8 +29,11 @@ telemetry ingestion from devices, tracking and measurement processing are not im
   OpenAPI, endpoint and field reference, current integration coverage and limitations;
   versioned PDF references for eData, Karma and StarLink with extracted images;
   the StarLink protocol portal and Message structure from supplied screenshots,
-  with portal credentials still awaited; a hardware profile for the supplied
+  with authenticated portal access still unverified; a hardware profile for the supplied
   EG915U-LA / LC86G device note, whose exact ERM model remains unidentified.
+- [ERM support correspondence and verification](erm-resources/erm-support-diagnostics-protocol-test-server/README.md):
+  diagnostics/DTCs, protocol access and Test Server questions versus the engineer's
+  reply, original images and the status of unverified claims requiring tests or ERM clarification.
 - [Shared workspace documentation](../README.md).
 
 ## Terminology

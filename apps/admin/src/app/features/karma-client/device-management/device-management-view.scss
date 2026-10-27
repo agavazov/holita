@@ -1,65 +1,57 @@
-@use 'breakpoints' as bp;
-
 :host {
   display: flex;
   flex-direction: column;
   gap: var(--p-app-stack-gap);
   min-inline-size: 0;
 }
-
-.expression-palette,
-.operation-heading {
+.settings-heading {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: var(--p-app-space-2);
-}
-
-.condition-grid {
-  display: grid;
-  gap: var(--p-app-space-4);
-
-  @include bp.from(sm) {
-    grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--p-app-space-3);
+  min-inline-size: 0;
+  > div {
+    min-inline-size: 0;
+  }
+  p {
+    margin-block: var(--p-app-space-1) 0;
   }
 }
-
-.expression-preview {
-  display: flex;
-  flex-direction: column;
-  gap: var(--p-app-space-2);
-  padding: var(--p-app-space-4);
-  border-radius: var(--p-content-border-radius);
-  background: var(--p-content-hover-background);
+.settings-details {
+  min-inline-size: 0;
+  > summary {
+    cursor: pointer;
+    padding-block: var(--p-app-space-3);
+    font-weight: 600;
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-color);
+      outline-offset: var(--p-app-space-1);
+    }
+  }
 }
-
+.settings-operation {
+  display: grid;
+  gap: var(--p-app-space-3);
+  padding-block: var(--p-app-space-3);
+  border-block-start: 1px solid var(--p-content-border-color);
+}
+.settings-note {
+  color: var(--p-app-canvas-muted-color);
+}
+.settings-definitions {
+  display: grid;
+  gap: var(--p-app-space-3);
+  > div {
+    display: grid;
+    gap: var(--p-app-space-1);
+  }
+  dd {
+    margin: 0;
+  }
+}
 .rule-expression,
-code {
+dd {
   overflow-wrap: anywhere;
   white-space: pre-wrap;
-}
-
-.operand-choice {
-  display: flex;
-  align-items: center;
-  gap: var(--p-app-space-2);
-}
-
-.advanced-settings {
-  border-block-start: 1px solid var(--p-content-border-color);
-
-  > summary {
-    padding-block: var(--p-app-space-4);
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  > .app-form-section {
-    padding-block-start: 0;
-    border: 0;
-  }
-}
-
-holita-karma-car-header {
-  margin-block-end: 0;
 }

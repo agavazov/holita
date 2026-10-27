@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { decodeRuleData, decodeRuleRecord } from '@holita/edata-rules';
 
 function invalid(): never {
   throw new BadRequestException('Invalid device configuration request');
@@ -110,5 +111,29 @@ export function configurationWindow(value: unknown) {
     toUtc,
     afterMessageId:
       body['afterMessageId'] === undefined ? undefined : carId(body['afterMessageId']),
+  };
+}
+
+export function configurationRuleRequest(value: unknown) {
+  const body = input(value, ['carId', 'expectedDeviceId', 'ruleId', 'rawDefinition']);
+  const rawDefinition = body['rawDefinition'];
+  const ruleId = body['ruleId'];
+  if (typeof rawDefinition !== 'string' || typeof ruleId !== 'number') {
+    invalid();
+  }
+  try {
+    const rule = decodeRuleRecord(rawDefinition);
+    if (rule.ruleId !== ruleId) {
+      invalid();
+    }
+    decodeRuleData(rule.ruleDataHex);
+  } catch {
+    invalid();
+  }
+  return {
+    carId: carId(body['carId']),
+    expectedDeviceId: expectedDeviceId(body['expectedDeviceId']),
+    ruleId,
+    rawDefinition: rawDefinition.toUpperCase(),
   };
 }

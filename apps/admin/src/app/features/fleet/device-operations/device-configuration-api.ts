@@ -4,12 +4,16 @@ import { ApolloBase } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
 import { firstValueFrom } from 'rxjs';
 import {
+  AdminRequestDeviceRulesReadDocument,
+  AdminRequestDeviceRuleChangeDocument,
+  type AdminRequestDeviceRulesReadMutationVariables,
+  type AdminRequestDeviceRuleChangeMutationVariables,
   AdminDeviceConfigurationPageDocument,
-  AdminDeviceConfigurationTargetsDocument,
   AdminRequestDeviceConfigurationReadDocument,
   AdminRequestDeviceParameterAdditionDocument,
   AdminRequestDeviceParameterIntervalUpdateDocument,
   type AdminRequestDeviceConfigurationReadMutationVariables,
+  type AdminDeviceConfigurationPageQueryVariables,
   type AdminRequestDeviceParameterAdditionMutationVariables,
   type AdminRequestDeviceParameterIntervalUpdateMutationVariables,
 } from '../../../../generated/graphql/operations';
@@ -18,7 +22,7 @@ import { AdminConfig } from '../../../core/config/admin-config';
 import { graphqlOptions } from '../../../core/graphql/graphql-options';
 import type { Language } from '../../../i18n/messages';
 
-/** One mounted device page owns its captured Fleet and shared-account Karma clients. */
+/** One mounted device page owns its captured Fleet client. */
 @Injectable()
 export class DeviceConfigurationApi implements OnDestroy {
   private readonly httpLink = inject(HttpLink);
@@ -26,17 +30,14 @@ export class DeviceConfigurationApi implements OnDestroy {
   private readonly config = inject(AdminConfig);
   private readonly zone = inject(NgZone);
   private fleet: ApolloBase | undefined;
-  private karma: ApolloBase | undefined;
   private destroyed = false;
   private pendingWrites = 0;
-  private language: Language = 'bg';
 
   initialize(branchId: string, language: Language): void {
     if (this.fleet || this.destroyed) {
       throw new Error('DeviceConfigurationApi belongs to one device workspace.');
     }
     const session = this.session.capture();
-    this.language = language;
     this.fleet = new ApolloBase(
       this.zone,
       undefined,
@@ -44,32 +45,16 @@ export class DeviceConfigurationApi implements OnDestroy {
         graphqlOptions(this.httpLink, this.config.graphqlUrl, { branchId, language }, session),
       ),
     );
-    this.karma = new ApolloBase(
-      this.zone,
-      undefined,
-      new ApolloClient(graphqlOptions(this.httpLink, this.config.graphqlUrl, undefined, session)),
-    );
   }
 
-  watchPage(deviceId: string) {
+  watchPage(variables: AdminDeviceConfigurationPageQueryVariables) {
     if (!this.fleet || this.destroyed) {
       throw new Error('An active device configuration workspace is required.');
     }
     return this.fleet.watchQuery({
       query: AdminDeviceConfigurationPageDocument,
-      variables: { deviceId },
+      variables,
       fetchPolicy: 'network-only',
-    });
-  }
-
-  watchTargets() {
-    if (!this.karma || this.destroyed) {
-      throw new Error('An active device configuration workspace is required.');
-    }
-    return this.karma.watchQuery({
-      query: AdminDeviceConfigurationTargetsDocument,
-      fetchPolicy: 'network-only',
-      context: { language: this.language },
     });
   }
 
@@ -162,10 +147,60 @@ export class DeviceConfigurationApi implements OnDestroy {
     }
   }
 
+  async requestRulesRead(input: AdminRequestDeviceRulesReadMutationVariables['input']) {
+    const fleet = this.fleet;
+    if (!fleet || this.destroyed) {
+      throw new Error('An active device configuration workspace is required.');
+    }
+    this.pendingWrites++;
+    try {
+      const result = await firstValueFrom(
+        fleet.mutate({ mutation: AdminRequestDeviceRulesReadDocument, variables: { input } }),
+      );
+      const operation = result.data?.requestFleetDeviceRulesRead;
+      if (!operation) {
+        throw new Error('Missing requestFleetDeviceRulesRead result.');
+      }
+      fleet.client.cache.evict({
+        id: 'ROOT_QUERY',
+        fieldName: 'fleetDeviceOperations',
+        broadcast: false,
+      });
+      return operation;
+    } finally {
+      this.pendingWrites--;
+      this.stopWhenIdle();
+    }
+  }
+
+  async requestRuleChange(input: AdminRequestDeviceRuleChangeMutationVariables['input']) {
+    const fleet = this.fleet;
+    if (!fleet || this.destroyed) {
+      throw new Error('An active device configuration workspace is required.');
+    }
+    this.pendingWrites++;
+    try {
+      const result = await firstValueFrom(
+        fleet.mutate({ mutation: AdminRequestDeviceRuleChangeDocument, variables: { input } }),
+      );
+      const operation = result.data?.requestFleetDeviceRuleChange;
+      if (!operation) {
+        throw new Error('Missing requestFleetDeviceRuleChange result.');
+      }
+      fleet.client.cache.evict({
+        id: 'ROOT_QUERY',
+        fieldName: 'fleetDeviceOperations',
+        broadcast: false,
+      });
+      return operation;
+    } finally {
+      this.pendingWrites--;
+      this.stopWhenIdle();
+    }
+  }
+
   ngOnDestroy(): void {
     this.destroyed = true;
-    this.karma?.client.stop();
-    this.karma = undefined;
     this.stopWhenIdle();
   }
 

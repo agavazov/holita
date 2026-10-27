@@ -18,7 +18,7 @@ export class EdataService {
 
   private async read(input: KarmaEdataInput) {
     const query = edataQuery(input);
-    const data = await this.karma.read('edata', edataParameters(query));
+    const data = await this.karma.read('edata', edataParameters(query), AbortSignal.timeout(8000));
     return edataPage(data, query);
   }
 }

@@ -1,8 +1,4 @@
-<section
-  class="card karma-page"
-  [attr.aria-label]="text().karmaEvents"
-  [attr.aria-busy]="loading()"
->
+<section class="app-view" [attr.aria-label]="text().karmaEvents" [attr.aria-busy]="loading()">
   <holita-karma-car-header
     [language]="language()"
     [carId]="carId()"
@@ -11,13 +7,14 @@
     [canNavigate]="validId()"
     [busy]="loading()"
     [error]="error()"
+    [showRefresh]="!error() || !car() || invalidFilters()"
     [refreshDisabled]="invalidFilters()"
     (refreshRequest)="refresh()"
   />
   @if (!validId() || (carLoaded() && !car() && !error())) {
     <p-message severity="warn">{{ text().karmaTruckNotFound }}</p-message>
   }
-  @if (error()) {
+  @if (error() && (!car() || invalidFilters())) {
     <p-message severity="error">{{ text().karmaUnavailable }}</p-message>
   }
   @if (validId()) {
@@ -25,11 +22,10 @@
       #filterForm
       [formGroup]="form"
       (ngSubmit)="apply()"
-      class="karma-filters"
+      class="app-card app-filter-form"
       [attr.aria-label]="text().karmaEventsFilters"
     >
       <holita-form-field
-        class="karma-field"
         [label]="text().karmaPageSize"
         controlId="events-size"
         [error]="fieldErrors().size?.message ?? null"
@@ -49,7 +45,6 @@
         />
       </holita-form-field>
       <holita-form-field
-        class="karma-field"
         [label]="text().karmaFromUtc"
         controlId="events-from"
         [error]="fieldErrors().from?.message ?? null"
@@ -64,7 +59,6 @@
         />
       </holita-form-field>
       <holita-form-field
-        class="karma-field"
         [label]="text().karmaToUtc"
         controlId="events-to"
         [error]="fieldErrors().to?.message ?? null"
@@ -79,7 +73,6 @@
         />
       </holita-form-field>
       <holita-form-field
-        class="karma-field"
         [label]="text().karmaEventTypes"
         controlId="events-types"
         [error]="fieldErrors().types?.message ?? null"
@@ -94,7 +87,7 @@
           [attr.placeholder]="'0, 33'"
         />
       </holita-form-field>
-      <div class="page-actions karma-filter-actions">
+      <div class="app-filter-actions">
         <button pButton type="submit" [disabled]="loading()">{{ text().applyFilters }}</button>
         <button
           pButton
@@ -107,7 +100,7 @@
           {{ text().clearFilters }}
         </button>
       </div>
-      <p id="events-filter-hint" class="filter-hint karma-filter-hint">
+      <p id="events-filter-hint" class="app-muted app-filter-hint">
         {{ text().karmaEventsFilterHint }}
       </p>
     </form>
@@ -115,81 +108,75 @@
       <p-message severity="warn">{{ text().karmaHistoryInvalidFilters }}</p-message>
     }
   }
-  @if (loading()) {
+  @if (loading() && !car()) {
     <p role="status">{{ text().karmaHistoryLoading }}</p>
   }
   @if (car() && !invalidFilters()) {
-    <p class="filter-hint karma-filter-hint">{{ text().karmaEventsOrder }}</p>
-    <p-table
-      class="app-responsive-table"
-      [value]="page()?.items ?? []"
-      dataKey="id"
-      [tableStyle]="{ width: '100%' }"
+    <p class="app-muted app-filter-hint">{{ text().karmaEventsOrder }}</p>
+    <holita-table-panel
+      #panel
+      [heading]="text().karmaEvents"
+      [view]="tableState()"
+      [busy]="loading()"
+      [emptyTitle]="text().karmaHistoryEmpty"
+      [errorText]="text().karmaUnavailable"
+      [actions]="actions()"
+      (action)="runAction($event)"
+      (retry)="refresh()"
     >
-      <ng-template #header
-        ><tr>
-          <th class="app-table-merged-column">{{ text().karmaEdtUtc }}</th>
-          <th class="app-col-identity">{{ text().karmaMessageId }}</th>
-          <th>{{ 'eid' }}</th>
-          <th class="app-col-actions">{{ text().actions }}</th>
-        </tr></ng-template
+      <p-table
+        class="app-responsive-table"
+        [value]="page()?.items ?? []"
+        dataKey="id"
+        [tableStyle]="{ width: '100%' }"
       >
-      <ng-template #body let-row
-        ><tr>
-          <td class="app-table-merged-column">{{ row.edt ?? '—' }}</td>
-          <td class="app-col-identity">
-            <div class="app-table-identity">
-              {{ row.id ?? '—' }}
-              <span class="app-table-mobile-meta"
-                >{{ text().karmaEdtUtc }}: {{ row.edt ?? '—' }}</span
-              >
-              <div class="app-table-mobile-actions">
+        <ng-template #header
+          ><tr>
+            <th class="app-table-merged-column">{{ text().karmaEdtUtc }}</th>
+            <th class="app-col-identity">{{ text().karmaMessageId }}</th>
+            <th>{{ 'eid' }}</th>
+            <th class="app-col-actions">{{ text().actions }}</th>
+          </tr></ng-template
+        >
+        <ng-template #body let-row
+          ><tr>
+            <td class="app-table-merged-column">{{ row.edt ?? '—' }}</td>
+            <td class="app-col-identity">
+              <div class="app-table-identity">
                 <button
-                  pButton
                   type="button"
-                  size="small"
-                  severity="secondary"
-                  [outlined]="true"
-                  (click)="view(row, $event)"
+                  class="app-link"
                   [attr.aria-label]="text().view + ' ' + row.id"
+                  (click)="panel.run('view', [record(row)], $event.currentTarget)"
                 >
-                  {{ text().view }}
+                  {{ row.id ?? '—' }}
                 </button>
+                <span class="app-table-mobile-meta"
+                  >{{ text().karmaEdtUtc }}: {{ row.edt ?? '—' }}</span
+                >
+                <div class="app-table-mobile-actions">
+                  <holita-row-actions
+                    [actions]="actions()"
+                    [record]="record(row)"
+                    (choose)="panel.run($event.action, [record(row)], $event.origin)"
+                  />
+                </div>
               </div>
-            </div>
-          </td>
-          <td>{{ row.eventId }}</td>
-          <td class="app-col-actions">
-            <button
-              pButton
-              type="button"
-              severity="secondary"
-              [outlined]="true"
-              (click)="view(row, $event)"
-              [attr.aria-label]="text().view + ' ' + row.id"
-            >
-              {{ text().view }}
-            </button>
-          </td>
-        </tr></ng-template
-      >
-      <ng-template #emptymessage
-        ><tr>
-          <td colspan="4">
-            {{
-              loading()
-                ? text().karmaHistoryLoading
-                : error()
-                  ? text().karmaUnavailable
-                  : text().karmaHistoryEmpty
-            }}
-          </td>
-        </tr></ng-template
-      >
-    </p-table>
-    <div class="karma-pagination" [attr.aria-label]="text().karmaPagination" role="group">
+            </td>
+            <td>{{ row.eventId }}</td>
+            <td class="app-col-actions">
+              <holita-row-actions
+                [actions]="actions()"
+                [record]="record(row)"
+                (choose)="panel.run($event.action, [record(row)], $event.origin)"
+              />
+            </td></tr
+        ></ng-template>
+      </p-table>
+    </holita-table-panel>
+    <div class="app-pagination" [attr.aria-label]="text().karmaPagination" role="group">
       <p role="status">{{ text().karmaShownRecords }}: {{ page()?.items?.length ?? 0 }}</p>
-      <div class="page-actions">
+      <div class="app-filter-actions">
         <button
           pButton
           type="button"
@@ -223,48 +210,46 @@
     </div>
   }
 </section>
-<p-dialog
-  [(visible)]="dialogVisible"
-  [header]="text().karmaEventsDetails"
-  [modal]="true"
-  [draggable]="false"
-  [resizable]="false"
-  [style]="{ width: '52rem', maxWidth: 'calc(100vw - 2rem)' }"
-  [closeAriaLabel]="text().close"
-  (onHide)="closeDetails()"
->
-  @if (selected(); as row) {
-    <section [attr.aria-label]="detailText().summary">
-      <dl class="karma-record-summary">
-        <div>
-          <dt>{{ text().karmaMessageId }}</dt>
-          <dd>{{ row.id }}</dd>
-        </div>
-        <div>
-          <dt>{{ text().karmaEdtUtc }}</dt>
-          <dd>{{ row.edt ?? '—' }}</dd>
-        </div>
-        <div>
-          <dt>{{ text().karmaEventId }}</dt>
-          <dd>{{ row.eventId }}</dd>
-        </div>
-      </dl>
-    </section>
-    <section [attr.aria-label]="detailText().eventText">
-      <h2>{{ detailText().eventText }}</h2>
-      <p class="karma-source-text">{{ row.extra ?? '—' }}</p>
-    </section>
-    <details class="karma-source-details">
-      <summary>{{ detailText().sourceFields }}</summary>
-      <p class="filter-hint karma-filter-hint">{{ text().karmaHistoryRawHint }}</p>
-      <dl class="message-details karma-details">
-        @for (field of fields(row); track field.name) {
+@if (selected(); as row) {
+  <holita-route-drawer
+    [title]="text().karmaEventsDetails"
+    size="lg"
+    [closeLink]="null"
+    (closeRequest)="closeDetails()"
+  >
+    <div class="app-view">
+      <section class="app-card" [attr.aria-label]="detailText().summary">
+        <dl class="app-facts">
           <div>
-            <dt>{{ field.name }}</dt>
-            <dd>{{ field.value ?? '—' }}</dd>
+            <dt>{{ text().karmaMessageId }}</dt>
+            <dd>{{ row.id }}</dd>
           </div>
-        }
-      </dl>
-    </details>
-  }
-</p-dialog>
+          <div>
+            <dt>{{ text().karmaEdtUtc }}</dt>
+            <dd>{{ row.edt ?? '—' }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().karmaEventId }}</dt>
+            <dd>{{ row.eventId }}</dd>
+          </div>
+        </dl>
+      </section>
+      <section class="app-view" [attr.aria-label]="detailText().eventText">
+        <h3 class="app-card__title">{{ detailText().eventText }}</h3>
+        <p class="source-text karma-source-text">{{ row.extra ?? '—' }}</p>
+      </section>
+      <details class="app-source-details">
+        <summary>{{ detailText().sourceFields }}</summary>
+        <p class="app-muted app-filter-hint">{{ text().karmaHistoryRawHint }}</p>
+        <dl class="app-facts">
+          @for (field of fields(row); track field.name) {
+            <div>
+              <dt>{{ field.name }}</dt>
+              <dd>{{ field.value ?? '—' }}</dd>
+            </div>
+          }
+        </dl>
+      </details>
+    </div>
+  </holita-route-drawer>
+}

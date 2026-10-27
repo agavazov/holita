@@ -4,6 +4,7 @@ import { PrismaService } from '../../database/prisma.service.js';
 import type { FleetDeviceOperation, Prisma } from '../../generated/prisma/client.js';
 import type { FleetScope } from '../../validation.js';
 import { configurationParameters, evidenceWatermark } from './device-parameter-change.js';
+import { configurationRules } from './device-rule-change.js';
 
 export type DeviceOperationRow = FleetDeviceOperation;
 export type DeviceOperationUpdate = Pick<
@@ -31,6 +32,11 @@ export type DeviceOperationUpdate = Pick<
   | 'writeDispatchedAt'
   | 'writeQueueIds'
   | 'writeUncertain'
+  | 'rules'
+  | 'rulesConfigurationId'
+  | 'rulesReadAt'
+  | 'rulesObservations'
+  | 'rulesAfterMessageId'
 >;
 
 export const MONITOR_SOURCE_SHA256 =
@@ -52,6 +58,15 @@ export interface DeviceWriteIntent {
   catalogId: string | null;
 }
 
+export interface DeviceRuleWriteIntent {
+  ruleId: number;
+  ruleExpression: string;
+  ruleTrueEventId: number;
+  ruleFalseEventId: number;
+  ruleDebounceMilliseconds: number;
+  ruleDefinitionHex: string;
+}
+
 export const DEVICE_OPERATION_DEADLINE_MS = 10 * 60_000;
 const ACTIVE_STATUSES = [
   'QUEUED',
@@ -64,20 +79,16 @@ const ACTIVE_STATUSES = [
 export class DeviceOperationsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findDevice(scope: FleetScope, id: string) {
-    return this.prisma.client.device.findFirst({
-      where: { ...scope, id },
-      select: { id: true, imei: true },
-    });
-  }
-
   find(scope: FleetScope, id: string): Promise<DeviceOperationRow | null> {
     return this.prisma.client.fleetDeviceOperation.findFirst({ where: { ...scope, id } });
   }
 
-  history(scope: FleetScope, deviceId: string): Promise<DeviceOperationRow[]> {
+  history(
+    scope: FleetScope,
+    target: Pick<DeviceOperationRow, 'karmaCarId' | 'karmaDeviceId'>,
+  ): Promise<DeviceOperationRow[]> {
     return this.prisma.client.fleetDeviceOperation.findMany({
-      where: { ...scope, deviceId },
+      where: { ...scope, ...target },
       orderBy: [{ requestedAt: 'desc' }, { id: 'desc' }],
       take: 20,
     });
@@ -85,24 +96,77 @@ export class DeviceOperationsRepository {
 
   lastComplete(
     scope: FleetScope,
-    deviceId: string,
-    deviceImei: string,
+    target: Pick<DeviceOperationRow, 'karmaCarId' | 'karmaDeviceId'>,
   ): Promise<DeviceOperationRow | null> {
     return this.prisma.client.fleetDeviceOperation.findFirst({
-      where: { ...scope, deviceId, deviceImei, status: 'COMPLETE' },
+      where: {
+        ...scope,
+        ...target,
+        status: 'COMPLETE',
+        kind: { in: ['READ_CONFIGURATION', 'ADD_PARAMETER', 'UPDATE_INTERVAL'] },
+      },
+      orderBy: [{ completedAt: 'desc' }, { id: 'desc' }],
+    });
+  }
+
+  lastCompleteRules(
+    scope: FleetScope,
+    target: Pick<DeviceOperationRow, 'karmaCarId' | 'karmaDeviceId'>,
+  ): Promise<DeviceOperationRow | null> {
+    return this.prisma.client.fleetDeviceOperation.findFirst({
+      where: {
+        ...scope,
+        ...target,
+        status: 'COMPLETE',
+        kind: { in: ['READ_RULES', 'UPSERT_RULE'] },
+      },
       orderBy: [{ completedAt: 'desc' }, { id: 'desc' }],
     });
   }
 
   create(
     scope: FleetScope,
-    target: Pick<DeviceOperationRow, 'deviceId' | 'deviceImei' | 'karmaCarId' | 'karmaDeviceId'>,
+    target: Pick<DeviceOperationRow, 'karmaCarId' | 'karmaDeviceId'>,
     now: Date,
+    kind: 'READ_CONFIGURATION' | 'READ_RULES' = 'READ_CONFIGURATION',
   ): Promise<DeviceOperationRow> {
     return this.prisma.client.fleetDeviceOperation.create({
       data: {
         ...scope,
         ...target,
+        kind,
+        phase: kind === 'READ_RULES' ? 'READ_RULES' : 'READ_PARAMETERS',
+        requestedAt: now,
+        nextCheckAt: now,
+        deadlineAt: new Date(now.getTime() + DEVICE_OPERATION_DEADLINE_MS),
+      },
+    });
+  }
+
+  createRuleWrite(
+    scope: FleetScope,
+    baseline: DeviceOperationRow,
+    parameterBaseline: DeviceOperationRow,
+    intent: DeviceRuleWriteIntent,
+    now: Date,
+  ): Promise<DeviceOperationRow> {
+    return this.prisma.client.fleetDeviceOperation.create({
+      data: {
+        ...scope,
+        karmaCarId: baseline.karmaCarId,
+        karmaDeviceId: baseline.karmaDeviceId,
+        kind: 'UPSERT_RULE',
+        phase: 'READ_PARAMETERS',
+        baselineOperationId: baseline.id,
+        parameterBaselineOperationId: parameterBaseline.id,
+        ...intent,
+        baselineRules: configurationRules(baseline.rules).map((rule) => ({ ...rule })),
+        baselineConfiguration: configurationParameters(parameterBaseline.configuration).map(
+          (parameter) => ({ ...parameter }),
+        ),
+        baselineConfigurationId: parameterBaseline.configurationId,
+        readAfterMessageId: evidenceWatermark(parameterBaseline.observations) ?? null,
+        rulesAfterMessageId: evidenceWatermark(baseline.rulesObservations) ?? null,
         requestedAt: now,
         nextCheckAt: now,
         deadlineAt: new Date(now.getTime() + DEVICE_OPERATION_DEADLINE_MS),
@@ -120,8 +184,6 @@ export class DeviceOperationsRepository {
     return this.prisma.client.fleetDeviceOperation.create({
       data: {
         ...scope,
-        deviceId: baseline.deviceId,
-        deviceImei: baseline.deviceImei,
         karmaCarId: baseline.karmaCarId,
         karmaDeviceId: baseline.karmaDeviceId,
         ...intent,
@@ -256,19 +318,6 @@ export class DeviceOperationsRepository {
     });
   }
 
-  async currentDevice(operation: DeviceOperationRow): Promise<boolean> {
-    const device = await this.prisma.client.device.findFirst({
-      where: {
-        tenantId: operation.tenantId,
-        branchId: operation.branchId,
-        id: operation.deviceId,
-        imei: operation.deviceImei,
-      },
-      select: { id: true },
-    });
-    return device !== null;
-  }
-
   /** A paused or replaced worker cannot publish results after its lease expires. */
   async save(
     operation: DeviceOperationRow,
@@ -286,16 +335,6 @@ export class DeviceOperationsRepository {
         branchId: operation.branchId,
         leaseToken: operation.leaseToken,
         leaseUntil: { gt: now },
-        ...(data.status === 'COMPLETE' || data.status === 'SUBMITTING'
-          ? {
-              device: {
-                tenantId: operation.tenantId,
-                branchId: operation.branchId,
-                id: operation.deviceId,
-                imei: operation.deviceImei,
-              },
-            }
-          : {}),
       },
       data: { ...data, ...(release ? { leaseToken: null, leaseUntil: null } : {}) },
     });

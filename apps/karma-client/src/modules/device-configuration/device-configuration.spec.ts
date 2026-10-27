@@ -49,6 +49,9 @@ describe('internal machine authentication', () => {
         'parameter-request',
         'observations',
         'profile-observations',
+        'rules-request',
+        'rule-request',
+        'rules-observations',
       ]) {
         for (const [label, authorization] of [
           ['no authorization', undefined],

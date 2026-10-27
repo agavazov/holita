@@ -17,10 +17,18 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import { ButtonDirective } from 'primeng/button';
-import { DialogModule } from 'primeng/dialog';
+import { RouteDrawer } from '../../../../ui/drawer/route-drawer';
+import { RowActions } from '../../../../ui/row-actions/row-actions';
+import {
+  listRecord,
+  type ListAction,
+  type ListActionRequest,
+} from '../../../../ui/list/list-actions';
 import { Message } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
+import { TablePanel } from '../../../../ui/table-panel/table-panel';
+import { tableView } from '../../../../ui/table-panel/table-view';
 import type { Subscription } from 'rxjs';
 import type {
   AdminKarmaCarQuery,
@@ -54,12 +62,14 @@ type TripsRow = TripsPageResult['items'][number];
     ReactiveFormsModule,
     FormField,
     ButtonDirective,
-    DialogModule,
+    RouteDrawer,
+    RowActions,
     KarmaDateTime,
     MapPreview,
     Message,
     SelectModule,
     TableModule,
+    TablePanel,
   ],
   providers: [KarmaHistoryApi],
   selector: 'holita-trips-page',
@@ -82,11 +92,21 @@ export class TripsPage implements OnInit {
   readonly stopCoordinates = computed(() =>
     mapCoordinates(this.selected()?.stopLatitude, this.selected()?.stopLongitude),
   );
-  readonly dialogVisible = signal(false);
   readonly carLoading = signal(false);
   readonly pageLoading = signal(false);
   readonly loading = computed(() => this.carLoading() || this.pageLoading());
   readonly error = signal(false);
+  readonly tableState = computed(() =>
+    tableView({
+      loading: this.loading(),
+      error: this.error() ? true : null,
+      rows: this.page()?.items.length ?? null,
+      filtered: false,
+    }),
+  );
+  readonly actions = computed<readonly ListAction<'view', TripsRow>[]>(() => [
+    { id: 'view', label: this.text().view },
+  ]);
   readonly invalidFilters = signal(false);
   readonly formError = signal(false);
   readonly fieldErrors = signal<KarmaFilterErrors>({});
@@ -109,7 +129,6 @@ export class TripsPage implements OnInit {
   private carQuery: ReturnType<KarmaHistoryApi['watchCar']> | undefined;
   private pageQuery: ReturnType<KarmaHistoryApi['watchTrips']> | undefined;
   private pageSubscription: Subscription | undefined;
-  private trigger: HTMLElement | null = null;
 
   ngOnInit(): void {
     if (!this.validId()) {
@@ -133,7 +152,6 @@ export class TripsPage implements OnInit {
       this.pageQuery = undefined;
       this.page.set(null);
       this.selected.set(null);
-      this.dialogVisible.set(false);
       this.pageLoading.set(false);
       this.error.set(false);
       this.formError.set(false);
@@ -316,19 +334,21 @@ export class TripsPage implements OnInit {
     }
   }
 
-  view(row: TripsRow, event?: Event): void {
-    this.trigger = event?.currentTarget instanceof HTMLElement ? event.currentTarget : null;
-    this.selected.set(row);
-    this.dialogVisible.set(true);
+  record(row: TripsRow) {
+    return listRecord(this.actions(), row, row.id, row.id);
+  }
+
+  runAction(request: ListActionRequest<'view'>): void {
+    const row = this.page()?.items.find((item) => item.id === request.ids[0]);
+    if (row) {
+      this.selected.set(row);
+    }
   }
 
   closeDetails(): void {
     this.selected.set(null);
-    if (this.trigger?.isConnected) {
-      this.trigger.focus();
-    }
-    this.trigger = null;
   }
+
   fields(row: TripsRow) {
     return [
       { name: 'trip_id', value: row.id },

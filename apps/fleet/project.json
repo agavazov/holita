@@ -14,16 +14,44 @@
         "cwd": "apps/fleet",
         "forwardAllArgs": true
       },
-      "dependsOn": ["db-generate", "graphql-generate"]
+      "dependsOn": [
+        "db-generate",
+        "graphql-generate",
+        {
+          "target": "build",
+          "projects": ["edata-rules"]
+        }
+      ]
     },
     "lint": {
-      "dependsOn": ["db-generate", "graphql-generate"]
+      "dependsOn": [
+        "db-generate",
+        "graphql-generate",
+        {
+          "target": "build",
+          "projects": ["edata-rules"]
+        }
+      ]
     },
     "typecheck": {
-      "dependsOn": ["db-generate", "graphql-generate"]
+      "dependsOn": [
+        "db-generate",
+        "graphql-generate",
+        {
+          "target": "build",
+          "projects": ["edata-rules"]
+        }
+      ]
     },
     "build": {
-      "dependsOn": ["db-generate", "graphql-generate"]
+      "dependsOn": [
+        "db-generate",
+        "graphql-generate",
+        {
+          "target": "build",
+          "projects": ["edata-rules"]
+        }
+      ]
     },
     "db-generate": {
       "executor": "nx:run-commands",
@@ -41,7 +69,14 @@
     },
     "test-db": {
       "executor": "nx:run-commands",
-      "dependsOn": ["db-generate", "graphql-generate"],
+      "dependsOn": [
+        "db-generate",
+        "graphql-generate",
+        {
+          "target": "build",
+          "projects": ["edata-rules"]
+        }
+      ],
       "cache": true,
       "inputs": ["default"],
       "options": {
@@ -62,6 +97,14 @@
     }
   },
   "namedInputs": {
-    "default": ["{projectRoot}/**/*", "sharedGlobals", "databaseTooling", "graphqlContracts"]
+    "default": [
+      "{projectRoot}/**/*",
+      "sharedGlobals",
+      "databaseTooling",
+      "graphqlContracts",
+      "{workspaceRoot}/packages/edata-rules/src/**/*",
+      "{workspaceRoot}/packages/edata-rules/tsconfig.json",
+      "{workspaceRoot}/packages/edata-rules/package.json"
+    ]
   }
 }

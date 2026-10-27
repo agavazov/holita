@@ -1,4 +1,5 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { decodeRuleRecord } from '@holita/edata-rules';
 
 export const KARMA_COMMAND_TIMEOUT_MS = 4500;
 
@@ -6,6 +7,12 @@ export interface KarmaReadParameter {
   parameterId: number;
   reportingIntervalSeconds: number;
   rawDefinition: string;
+}
+
+export interface KarmaReadTerminalResponse {
+  messageId: string;
+  eventTimeUtc: string;
+  rawMessage: '19,0,154,0';
 }
 
 export interface KarmaReadObservation {
@@ -20,6 +27,7 @@ export interface KarmaReadObservation {
 
 export interface KarmaReadback {
   coverageComplete: boolean;
+  terminalResponse?: KarmaReadTerminalResponse;
   readback: {
     status: 'COMPLETE' | 'INCOMPLETE' | 'CONFLICT' | 'ABSENT';
     configurationId: string | null;
@@ -44,6 +52,32 @@ export interface KarmaProfileReadback {
   observations: KarmaProfileObservation[];
 }
 
+export interface KarmaReadRule {
+  ruleId: number;
+  rawDefinition: string;
+}
+
+export interface KarmaRuleObservation {
+  messageId: string;
+  eventTimeUtc: string;
+  rawMessage: string;
+  configurationId: string;
+  messageNumber: number;
+  lastMessage: boolean;
+  rules: KarmaReadRule[];
+}
+
+export interface KarmaRulesReadback {
+  coverageComplete: boolean;
+  terminalResponse?: KarmaReadTerminalResponse;
+  readback: {
+    status: 'COMPLETE' | 'INCOMPLETE' | 'CONFLICT' | 'ABSENT';
+    configurationId: string | null;
+    rules: KarmaReadRule[];
+  };
+  observations: KarmaRuleObservation[];
+}
+
 export class KarmaDeviceReadError extends ServiceUnavailableException {
   constructor(readonly code: 'KARMA_UNAVAILABLE' | 'TARGET_CHANGED' | 'INVALID_READBACK') {
     super('Device configuration reading is unavailable; try again later');
@@ -60,6 +94,23 @@ function identifier(value: unknown): value is string {
     /^[1-9][0-9]{0,15}$/.test(value) &&
     Number.isSafeInteger(Number(value))
   );
+}
+
+export function karmaReadTerminalResponse(value: unknown): KarmaReadTerminalResponse {
+  if (
+    !record(value) ||
+    !identifier(value.messageId) ||
+    typeof value.eventTimeUtc !== 'string' ||
+    !Number.isFinite(Date.parse(value.eventTimeUtc)) ||
+    value.rawMessage !== '19,0,154,0'
+  ) {
+    throw new KarmaDeviceReadError('INVALID_READBACK');
+  }
+  return {
+    messageId: value.messageId,
+    eventTimeUtc: value.eventTimeUtc,
+    rawMessage: value.rawMessage,
+  };
 }
 
 function parameter(value: unknown): KarmaReadParameter {
@@ -92,6 +143,94 @@ function parameters(value: unknown): KarmaReadParameter[] {
     throw new KarmaDeviceReadError('INVALID_READBACK');
   }
   return value.map(parameter);
+}
+
+export function karmaReadRule(value: unknown): KarmaReadRule {
+  if (
+    !record(value) ||
+    typeof value.ruleId !== 'number' ||
+    typeof value.rawDefinition !== 'string'
+  ) {
+    throw new KarmaDeviceReadError('INVALID_READBACK');
+  }
+  try {
+    const rule = decodeRuleRecord(value.rawDefinition);
+    if (rule.ruleId !== value.ruleId) {
+      throw new KarmaDeviceReadError('INVALID_READBACK');
+    }
+    return { ruleId: rule.ruleId, rawDefinition: value.rawDefinition.toUpperCase() };
+  } catch {
+    throw new KarmaDeviceReadError('INVALID_READBACK');
+  }
+}
+
+function rules(value: unknown): KarmaReadRule[] {
+  if (!Array.isArray(value) || value.length > 1000) {
+    throw new KarmaDeviceReadError('INVALID_READBACK');
+  }
+  return value.map(karmaReadRule);
+}
+
+export function karmaRuleObservation(value: unknown): KarmaRuleObservation {
+  if (
+    !record(value) ||
+    !identifier(value.messageId) ||
+    typeof value.eventTimeUtc !== 'string' ||
+    !Number.isFinite(Date.parse(value.eventTimeUtc)) ||
+    typeof value.rawMessage !== 'string' ||
+    value.rawMessage.length > 8192 ||
+    !value.rawMessage.startsWith('19,0,402,') ||
+    typeof value.configurationId !== 'string' ||
+    !/^[0-9A-Fa-f]{1,16}$/.test(value.configurationId) ||
+    typeof value.messageNumber !== 'number' ||
+    !Number.isInteger(value.messageNumber) ||
+    value.messageNumber < 1 ||
+    value.messageNumber > 1000 ||
+    typeof value.lastMessage !== 'boolean'
+  ) {
+    throw new KarmaDeviceReadError('INVALID_READBACK');
+  }
+  return {
+    messageId: value.messageId,
+    eventTimeUtc: value.eventTimeUtc,
+    rawMessage: value.rawMessage,
+    configurationId: value.configurationId,
+    messageNumber: value.messageNumber,
+    lastMessage: value.lastMessage,
+    rules: rules(value.rules),
+  };
+}
+
+function rulesReadback(value: unknown): KarmaRulesReadback {
+  if (
+    !record(value) ||
+    typeof value.coverageComplete !== 'boolean' ||
+    !record(value.readback) ||
+    !Array.isArray(value.observations) ||
+    value.observations.length > 64
+  ) {
+    throw new KarmaDeviceReadError('INVALID_READBACK');
+  }
+  const { status, configurationId } = value.readback;
+  if (
+    (status !== 'COMPLETE' &&
+      status !== 'INCOMPLETE' &&
+      status !== 'CONFLICT' &&
+      status !== 'ABSENT') ||
+    (configurationId !== null &&
+      (typeof configurationId !== 'string' || !/^[0-9A-Fa-f]{1,16}$/.test(configurationId))) ||
+    (status === 'COMPLETE' && configurationId === null)
+  ) {
+    throw new KarmaDeviceReadError('INVALID_READBACK');
+  }
+  return {
+    coverageComplete: value.coverageComplete,
+    readback: { status, configurationId, rules: rules(value.readback.rules) },
+    observations: value.observations.map(karmaRuleObservation),
+    ...(value.terminalResponse === undefined
+      ? {}
+      : { terminalResponse: karmaReadTerminalResponse(value.terminalResponse) }),
+  };
 }
 
 export function karmaReadObservation(value: unknown): KarmaReadObservation {
@@ -162,6 +301,9 @@ function readback(value: unknown): KarmaReadback {
       parameters: parameters(result.parameters),
     },
     observations: value.observations.map(karmaReadObservation),
+    ...(value.terminalResponse === undefined
+      ? {}
+      : { terminalResponse: karmaReadTerminalResponse(value.terminalResponse) }),
   };
 }
 
@@ -259,6 +401,14 @@ export class KarmaDeviceReadsClient {
     return this.send('profile-request', { carId, expectedDeviceId });
   }
 
+  requestRules(carId: string, expectedDeviceId: string) {
+    return this.send('rules-request', { carId, expectedDeviceId });
+  }
+
+  requestRule(carId: string, expectedDeviceId: string, ruleId: number, rawDefinition: string) {
+    return this.send('rule-request', { carId, expectedDeviceId, ruleId, rawDefinition });
+  }
+
   requestParameter(
     carId: string,
     expectedDeviceId: string,
@@ -276,7 +426,7 @@ export class KarmaDeviceReadsClient {
   }
 
   private async send(
-    action: 'request' | 'profile-request' | 'parameter-request',
+    action: 'request' | 'profile-request' | 'parameter-request' | 'rules-request' | 'rule-request',
     body: Record<string, string | number>,
   ): Promise<{ status: 'ACCEPTED' | 'UNCERTAIN'; queueIds: string[] }> {
     const result = await this.post(action, body);
@@ -328,6 +478,24 @@ export class KarmaDeviceReadsClient {
     );
   }
 
+  async rulesObservations(
+    carId: string,
+    expectedDeviceId: string,
+    from: Date,
+    to: Date,
+    afterMessageId?: string,
+  ): Promise<KarmaRulesReadback> {
+    return rulesReadback(
+      await this.post('rules-observations', {
+        carId,
+        expectedDeviceId,
+        fromUtc: from.toISOString(),
+        toUtc: to.toISOString(),
+        ...(afterMessageId ? { afterMessageId } : {}),
+      }),
+    );
+  }
+
   private async post(
     action:
       | 'target'
@@ -335,7 +503,10 @@ export class KarmaDeviceReadsClient {
       | 'observations'
       | 'profile-request'
       | 'parameter-request'
-      | 'profile-observations',
+      | 'profile-observations'
+      | 'rules-request'
+      | 'rule-request'
+      | 'rules-observations',
     body: Record<string, string | number>,
   ): Promise<unknown> {
     const token = process.env.KARMA_INTERNAL_TOKEN;

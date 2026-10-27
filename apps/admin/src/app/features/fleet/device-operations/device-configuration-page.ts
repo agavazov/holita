@@ -5,15 +5,17 @@ import {
   computed,
   inject,
   input,
+  output,
   signal,
   viewChild,
   type OnInit,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute } from '@angular/router';
 import { MessageService } from 'primeng/api';
-import { EMPTY, Subject, catchError, startWith, switchMap } from 'rxjs';
+import { EMPTY, Subject, catchError, startWith, switchMap, type Subscription } from 'rxjs';
 import type {
+  AdminRequestDeviceRulesReadMutationVariables,
+  AdminRequestDeviceRuleChangeMutationVariables,
   AdminBranchesQuery,
   AdminDeviceConfigurationPageQuery,
   AdminRequestDeviceConfigurationReadMutationVariables,
@@ -22,28 +24,30 @@ import type {
 } from '../../../../generated/graphql/operations';
 import { requestError } from '../../../core/graphql/request-error';
 import type { Language } from '../../../i18n/messages';
-import { injectPageRecord } from '../../../layout/page-record';
-import { drawerParam } from '../../../ui/drawer/drawer-route';
 import { errorCode } from '../../../ui/forms/field-errors';
 import { fleetFieldErrors } from '../field-errors';
+import { DeviceManagementView } from '../../karma-client/device-management/device-management-view';
+import { KarmaEdataApi } from '../../karma-client/edata/karma-edata-api';
 import { DeviceConfigurationApi } from './device-configuration-api';
 import {
-  DeviceConfigurationView,
   deviceReadPending,
   type DeviceConfigurationOperation,
   type DeviceConfigurationState,
   type DeviceConfigurationTarget,
-} from './device-configuration-view';
+  type DeviceParameterMeasurements,
+} from './device-configuration-types';
 import { deviceConfigurationText } from './i18n/messages';
 
 @Component({
   selector: 'holita-device-configuration-page',
-  imports: [DeviceConfigurationView],
-  providers: [DeviceConfigurationApi],
+  imports: [DeviceManagementView],
+  providers: [DeviceConfigurationApi, KarmaEdataApi],
   template: `
-    <holita-device-configuration-view
+    <holita-device-management-view
+      [car]="car()"
+      [language]="language()"
       [state]="state()"
-      [device]="data()?.fleetDevice ?? null"
+      [branchId]="branch().id"
       [enabled]="data()?.fleetDeviceOperationsEnabled ?? false"
       [writesEnabled]="data()?.fleetDeviceConfigurationWritesEnabled ?? false"
       [presets]="data()?.fleetDeviceParameterPresets ?? []"
@@ -52,68 +56,65 @@ import { deviceConfigurationText } from './i18n/messages';
       [writeFieldErrors]="writeFieldErrors()"
       [operations]="operations()"
       [lastSnapshot]="data()?.fleetDeviceConfigurationSnapshot ?? null"
-      [targets]="targets()"
-      [targetsState]="targetsState()"
-      [targetsError]="targetsFailure()"
+      [lastRulesSnapshot]="data()?.fleetDeviceRulesSnapshot ?? null"
       [requesting]="requesting()"
       [refreshing]="refreshing()"
       [reconciling]="reconciling()"
+      [readSequence]="readSequence()"
       [loadError]="failure()"
       [pollError]="pollFailure()"
       [requestError]="requestFailure()"
-      [backLink]="backLink()"
+      [measurements]="measurements()"
       (refresh)="refresh()"
-      (retryTargets)="loadTargets()"
+      (requestConfiguration)="requestConfiguration($event)"
       (requestRead)="requestRead($event)"
+      (requestRulesRead)="requestRulesRead($event)"
+      (requestRuleChange)="requestRuleChange($event)"
       (requestAddition)="requestAddition($event)"
       (requestIntervalUpdate)="requestIntervalUpdate($event)"
       (writeDraftChanged)="clearWriteError()"
+      (requestMeasurements)="readMeasurements($event)"
+      (refreshMeasurements)="refreshMeasurements()"
+      (closeMeasurements)="closeMeasurements()"
     />
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DeviceConfigurationPage implements OnInit {
   readonly branch = input.required<AdminBranchesQuery['branches'][number]>();
+  readonly car = input.required<DeviceConfigurationTarget>();
   readonly language = input.required<Language>();
+  readonly targetRefresh = output();
   private readonly api = inject(DeviceConfigurationApi);
-  private readonly route = inject(ActivatedRoute);
+  private readonly edata = inject(KarmaEdataApi);
   private readonly notices = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly view = viewChild(DeviceConfigurationView);
-  private readonly id = drawerParam(this.route, 'recordId')?.toLowerCase() ?? null;
+  private readonly view = viewChild(DeviceManagementView);
   private readonly reload = new Subject<void>();
-  private readonly reloadTargets = new Subject<void>();
-  private targetsStarted = false;
   private pollTimer: ReturnType<typeof setTimeout> | undefined;
   readonly state = signal<DeviceConfigurationState>('loading');
   readonly data = signal<AdminDeviceConfigurationPageQuery | null>(null);
   readonly operations = signal<readonly DeviceConfigurationOperation[]>([]);
-  readonly targets = signal<readonly DeviceConfigurationTarget[]>([]);
-  readonly targetsState = signal<'loading' | 'ready' | 'error'>('loading');
   readonly requesting = signal(false);
   readonly acceptedWrite = signal<string | null>(null);
+  readonly readSequence = signal<'parameters' | 'rules' | null>(null);
+  readonly measurements = signal<DeviceParameterMeasurements | null>(null);
+  private measurementSubscription: Subscription | undefined;
+  private sequenceOperation: {
+    id: string;
+    input: AdminRequestDeviceConfigurationReadMutationVariables['input'];
+  } | null = null;
   readonly refreshing = signal(false);
   readonly reconciling = signal(false);
   private readonly loadError = signal<unknown>(null);
-  private readonly targetsError = signal<unknown>(null);
   private readonly requestError = signal<unknown>(null);
   private readonly writeError = signal<unknown>(null);
   private readonly text = computed(() => deviceConfigurationText(this.language()));
-  protected readonly backLink = computed(() => [
-    '/',
-    this.language(),
-    this.branch().id,
-    'fleet',
-    'devices',
-  ]);
   protected readonly failure = computed(() =>
     this.loadError() ? requestError(this.loadError(), this.text().loadError) : null,
   );
   protected readonly pollFailure = computed(() =>
     this.loadError() && this.data() ? this.text().pollError : null,
-  );
-  protected readonly targetsFailure = computed(() =>
-    this.targetsError() ? requestError(this.targetsError(), this.text().targetsError) : null,
   );
   protected readonly requestFailure = computed(() =>
     this.requestError() ? requestError(this.requestError(), this.text().requestError) : null,
@@ -130,44 +131,19 @@ export class DeviceConfigurationPage implements OnInit {
   );
 
   constructor() {
-    injectPageRecord(() => this.data()?.fleetDevice.imei ?? null);
     this.destroyRef.onDestroy(() => {
       this.clearPoll();
+      this.measurementSubscription?.unsubscribe();
     });
   }
 
   ngOnInit(): void {
-    if (
-      !this.id ||
-      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(this.id)
-    ) {
-      this.state.set('invalid-id');
-      return;
-    }
-    const id = this.id;
+    const target = {
+      karmaCarId: this.car().id,
+      expectedKarmaDeviceId: this.car().deviceId,
+    };
     this.api.initialize(this.branch().id, this.language());
-    this.reloadTargets
-      .pipe(
-        switchMap(() => {
-          this.targetsState.set('loading');
-          this.targetsError.set(null);
-          return this.api.watchTargets().valueChanges.pipe(
-            catchError((error: unknown) => {
-              this.failTargets(error);
-              return EMPTY;
-            }),
-          );
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe((result) => {
-        if (result.error) {
-          this.failTargets(result.error);
-        } else if (result.dataState === 'complete' && !result.loading) {
-          this.targets.set(result.data.karmaCars);
-          this.targetsState.set('ready');
-        }
-      });
+    this.edata.initialize(this.language());
     this.reload
       .pipe(
         startWith(undefined),
@@ -175,7 +151,7 @@ export class DeviceConfigurationPage implements OnInit {
           this.clearPoll();
           this.refreshing.set(true);
           this.loadError.set(null);
-          return this.api.watchPage(id).valueChanges.pipe(
+          return this.api.watchPage(target).valueChanges.pipe(
             catchError((error: unknown) => {
               this.failPage(error);
               return EMPTY;
@@ -193,45 +169,151 @@ export class DeviceConfigurationPage implements OnInit {
           this.state.set('ready');
           this.refreshing.set(false);
           this.reconciling.set(false);
-          if (result.data.fleetDeviceOperationsEnabled && !this.targetsStarted) {
-            this.targetsStarted = true;
-            this.loadTargets();
-          }
           this.schedulePoll();
+          void this.continueReadSequence();
         }
       });
   }
 
   refresh(): void {
-    if (!this.destroyRef.destroyed && this.id && this.state() !== 'invalid-id') {
+    if (!this.destroyRef.destroyed) {
       this.reload.next();
     }
   }
 
-  loadTargets(): void {
-    if (!this.destroyRef.destroyed) {
-      this.reloadTargets.next();
+  readMeasurements(parameterId: number): void {
+    this.measurementSubscription?.unsubscribe();
+    const to = new Date();
+    to.setUTCMilliseconds(0);
+    const from = new Date(to.getTime() - 24 * 60 * 60 * 1000);
+    const measurementWindow = {
+      parameterId,
+      fromUtc: from.toISOString().replace('.000Z', 'Z'),
+      toUtc: to.toISOString().replace('.000Z', 'Z'),
+    };
+    this.measurements.set({ ...measurementWindow, state: 'loading', items: [] });
+    this.measurementSubscription = this.edata
+      .watch({
+        carId: this.car().id,
+        parameterIds: [String(parameterId)],
+        fromDate: measurementWindow.fromUtc,
+        toDate: measurementWindow.toUtc,
+        pageSize: 100,
+      })
+      .valueChanges.subscribe({
+        next: (result) => {
+          if (result.error) {
+            this.measurements.set({ ...measurementWindow, state: 'error', items: [] });
+          } else if (result.dataState === 'complete' && !result.loading) {
+            const items = result.data.karmaEdata.items;
+            const targetMatches = items.every(
+              (row) => row.carId === this.car().id && row.deviceId === this.car().deviceId,
+            );
+            this.measurements.set({
+              ...measurementWindow,
+              state: targetMatches ? 'ready' : 'error',
+              items: targetMatches ? items : [],
+            });
+          }
+        },
+        error: () => {
+          this.measurements.set({ ...measurementWindow, state: 'error', items: [] });
+        },
+      });
+  }
+
+  refreshMeasurements(): void {
+    const parameterId = this.measurements()?.parameterId;
+    if (parameterId !== undefined) {
+      this.readMeasurements(parameterId);
     }
   }
 
-  async requestRead(input: AdminRequestDeviceConfigurationReadMutationVariables['input']) {
+  closeMeasurements(): void {
+    this.measurementSubscription?.unsubscribe();
+    this.measurementSubscription = undefined;
+    this.measurements.set(null);
+  }
+
+  async requestConfiguration(
+    input: AdminRequestDeviceConfigurationReadMutationVariables['input'],
+  ): Promise<void> {
+    const operation = await this.requestDeviceRead(input, () => this.api.requestRead(input));
+    if (operation) {
+      this.sequenceOperation = { id: operation.id, input };
+      this.readSequence.set('parameters');
+      await this.continueReadSequence();
+    }
+  }
+
+  private async continueReadSequence(): Promise<void> {
+    const sequence = this.sequenceOperation;
+    if (!sequence || this.requesting() || this.refreshing() || this.reconciling()) {
+      return;
+    }
+    const operation = this.operations().find((row) => row.id === sequence.id);
+    if (!operation || deviceReadPending(operation)) {
+      return;
+    }
+    this.sequenceOperation = null;
+    if (
+      this.readSequence() !== 'parameters' ||
+      operation.status !== 'COMPLETE' ||
+      !operation.configuration ||
+      operation.branchId !== this.branch().id ||
+      operation.karmaCarId !== sequence.input.karmaCarId ||
+      operation.karmaDeviceId !== sequence.input.expectedKarmaDeviceId
+    ) {
+      this.readSequence.set(null);
+      return;
+    }
+    this.readSequence.set('rules');
+    const rules = await this.requestDeviceRead(sequence.input, () =>
+      this.api.requestRulesRead(sequence.input),
+    );
+    if (rules) {
+      this.sequenceOperation = { id: rules.id, input: sequence.input };
+      await this.continueReadSequence();
+    } else {
+      this.readSequence.set(null);
+    }
+  }
+
+  async requestRead(
+    input: AdminRequestDeviceConfigurationReadMutationVariables['input'],
+  ): Promise<void> {
+    await this.requestDeviceRead(input, () => this.api.requestRead(input));
+  }
+
+  async requestRulesRead(
+    input: AdminRequestDeviceRulesReadMutationVariables['input'],
+  ): Promise<void> {
+    await this.requestDeviceRead(input, () => this.api.requestRulesRead(input));
+  }
+
+  private async requestDeviceRead(
+    input: AdminRequestDeviceConfigurationReadMutationVariables['input'],
+    submit: () => Promise<DeviceConfigurationOperation>,
+  ): Promise<DeviceConfigurationOperation | undefined> {
     if (
       this.requesting() ||
       this.refreshing() ||
       this.reconciling() ||
       this.state() !== 'ready' ||
       !this.data()?.fleetDeviceOperationsEnabled ||
-      input.deviceId !== this.id ||
+      input.karmaCarId !== this.car().id ||
+      input.expectedKarmaDeviceId !== this.car().deviceId ||
       this.operations().some(deviceReadPending)
     ) {
-      return;
+      return undefined;
     }
     this.requesting.set(true);
     this.requestError.set(null);
+    let refreshTarget = false;
     try {
-      const operation = await this.api.requestRead(input);
+      const operation = await submit();
       if (this.destroyRef.destroyed) {
-        return;
+        return undefined;
       }
       this.operations.set(
         [operation, ...this.operations().filter((previous) => previous.id !== operation.id)].slice(
@@ -245,21 +327,24 @@ export class DeviceConfigurationPage implements OnInit {
         detail: this.text().requestAccepted,
       });
       this.refresh();
+      return operation;
     } catch (error: unknown) {
       if (!this.destroyRef.destroyed) {
         this.requestError.set(error);
         this.reconciling.set(true);
-        if (errorCode(error) === 'CONFLICT') {
-          this.loadTargets();
-        }
+        refreshTarget = errorCode(error) === 'CONFLICT';
         // A lost HTTP response may still have created the durable request.
         this.refresh();
       }
     } finally {
       if (!this.destroyRef.destroyed) {
         this.requesting.set(false);
+        if (refreshTarget) {
+          this.targetRefresh.emit();
+        }
       }
     }
+    return undefined;
   }
 
   requestAddition(
@@ -274,6 +359,30 @@ export class DeviceConfigurationPage implements OnInit {
     return this.requestParameterChange(input, () => this.api.requestIntervalUpdate(input));
   }
 
+  requestRuleChange(input: AdminRequestDeviceRuleChangeMutationVariables['input']): Promise<void> {
+    const rules = this.data()?.fleetDeviceRulesSnapshot;
+    const parameters = this.data()?.fleetDeviceConfigurationSnapshot;
+    if (
+      !rules?.rulesConfiguration ||
+      rules.status !== 'COMPLETE' ||
+      rules.branchId !== this.branch().id ||
+      !parameters?.configuration ||
+      parameters.status !== 'COMPLETE' ||
+      parameters.branchId !== this.branch().id ||
+      input.baselineOperationId !== rules.id ||
+      input.parameterBaselineOperationId !== parameters.id ||
+      rules.karmaCarId !== input.karmaCarId ||
+      rules.karmaDeviceId !== input.expectedKarmaDeviceId ||
+      parameters.karmaCarId !== input.karmaCarId ||
+      parameters.karmaDeviceId !== input.expectedKarmaDeviceId
+    ) {
+      return Promise.resolve();
+    }
+    return this.requestParameterChange({ ...input, baselineOperationId: parameters.id }, () =>
+      this.api.requestRuleChange(input),
+    );
+  }
+
   canLeave(): boolean | Promise<boolean> {
     return !this.requesting() && (this.view()?.canLeave() ?? true);
   }
@@ -283,7 +392,10 @@ export class DeviceConfigurationPage implements OnInit {
   }
 
   private async requestParameterChange(
-    input: AdminRequestDeviceParameterIntervalUpdateMutationVariables['input'],
+    input: Pick<
+      AdminRequestDeviceParameterIntervalUpdateMutationVariables['input'],
+      'karmaCarId' | 'expectedKarmaDeviceId' | 'baselineOperationId'
+    >,
     submit: () => Promise<DeviceConfigurationOperation>,
   ): Promise<void> {
     const baseline = this.data()?.fleetDeviceConfigurationSnapshot;
@@ -293,9 +405,11 @@ export class DeviceConfigurationPage implements OnInit {
       this.reconciling() ||
       this.state() !== 'ready' ||
       !this.data()?.fleetDeviceConfigurationWritesEnabled ||
-      input.deviceId !== this.id ||
+      input.karmaCarId !== this.car().id ||
+      input.expectedKarmaDeviceId !== this.car().deviceId ||
       !baseline ||
       baseline.id !== input.baselineOperationId ||
+      baseline.branchId !== this.branch().id ||
       baseline.karmaCarId !== input.karmaCarId ||
       baseline.karmaDeviceId !== input.expectedKarmaDeviceId ||
       this.operations().some(deviceReadPending)
@@ -304,6 +418,7 @@ export class DeviceConfigurationPage implements OnInit {
     }
     this.requesting.set(true);
     this.writeError.set(null);
+    let refreshTarget = false;
     try {
       const operation = await submit();
       if (this.destroyRef.destroyed) {
@@ -319,21 +434,22 @@ export class DeviceConfigurationPage implements OnInit {
       this.notices.add({
         severity: 'info',
         summary: this.text().title,
-        detail: this.text().editor.accepted,
+        detail: this.text().changeAccepted,
       });
       this.refresh();
     } catch (error: unknown) {
       if (!this.destroyRef.destroyed) {
         this.writeError.set(error);
         this.reconciling.set(true);
-        if (errorCode(error) === 'CONFLICT') {
-          this.loadTargets();
-        }
+        refreshTarget = errorCode(error) === 'CONFLICT';
         this.refresh();
       }
     } finally {
       if (!this.destroyRef.destroyed) {
         this.requesting.set(false);
+        if (refreshTarget) {
+          this.targetRefresh.emit();
+        }
       }
     }
   }
@@ -355,11 +471,6 @@ export class DeviceConfigurationPage implements OnInit {
       clearTimeout(this.pollTimer);
       this.pollTimer = undefined;
     }
-  }
-
-  private failTargets(error: unknown): void {
-    this.targetsError.set(error);
-    this.targetsState.set('error');
   }
 
   private failPage(error: unknown): void {

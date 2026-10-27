@@ -1,8 +1,4 @@
-<section
-  class="card karma-page"
-  [attr.aria-label]="text().karmaLocation"
-  [attr.aria-busy]="loading()"
->
+<section class="app-view" [attr.aria-label]="text().karmaLocation" [attr.aria-busy]="loading()">
   <holita-karma-car-header
     [language]="language()"
     [carId]="carId()"
@@ -23,29 +19,31 @@
     <p-message severity="warn">{{ text().karmaTruckNotFound }}</p-message>
   }
   @if (car()) {
-    <p class="hint">{{ text().karmaLocationHint }}</p>
+    <p class="app-muted">{{ text().karmaLocationHint }}</p>
     @if (loaded() && !location() && !error()) {
       <p role="status">{{ text().karmaNoLocation }}</p>
     }
     @if (location(); as point) {
-      <holita-map-preview [language]="language()" [origin]="coordinates()" />
-      <div class="location-summary">
-        <div>
-          <span>{{ text().licensePlate }}</span
-          ><strong>{{ point.carNumber || '—' }}</strong>
-        </div>
-        <div>
-          <span>{{ text().karmaRawEdt }}</span
-          ><strong>{{ point.edt ?? '—' }}</strong>
-        </div>
-        <div>
-          <span>{{ text().karmaLatitude }} / {{ text().karmaLongitude }}</span
-          ><strong>{{ point.latitude ?? '—' }} / {{ point.longitude ?? '—' }}</strong>
-        </div>
-      </div>
-      <details class="source-details">
+      <section class="app-card app-view" [attr.aria-label]="text().karmaLocation">
+        <holita-map-preview [language]="language()" [origin]="coordinates()" />
+        <dl class="app-facts">
+          <div>
+            <dt>{{ text().licensePlate }}</dt>
+            <dd>{{ point.carNumber || '—' }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().karmaRawEdt }}</dt>
+            <dd>{{ point.edt ?? '—' }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().karmaLatitude }} / {{ text().karmaLongitude }}</dt>
+            <dd>{{ point.latitude ?? '—' }} / {{ point.longitude ?? '—' }}</dd>
+          </div>
+        </dl>
+      </section>
+      <details class="app-card app-source-details">
         <summary>{{ mapText().sourceDetails }}</summary>
-        <dl class="details karma-details">
+        <dl class="app-facts">
           <div>
             <dt>{{ text().licensePlate }}</dt>
             <dd>{{ point.carNumber || '—' }}</dd>

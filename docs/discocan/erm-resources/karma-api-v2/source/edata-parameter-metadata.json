@@ -1,8 +1,8 @@
 {
   "kind": "Observed eData parameter metadata, not a complete vendor parameter dictionary",
   "observedAt": "2026-10-16T19:43:04+00:00",
-  "updatedAt": "2026-10-17T15:47:21+00:00",
-  "source": "GET /edata with showdesc=1, sampled latest batches and a targeted parameter-reporting check; no telemetry values or account/car/device identifiers retained",
+  "updatedAt": "2026-10-27T12:43:26+00:00",
+  "source": "GET /edata with showdesc=1, sampled latest batches, a targeted parameter-reporting check and the 2026-10-27 web functionality research; no telemetry values or account/car/device identifiers retained",
   "limitations": "Descriptions are source text, not proven units, scaling, availability by vehicle model or an exhaustive supported-ID list. Absence from this list does not mean unsupported.",
   "parameters": [
     {
@@ -56,6 +56,11 @@
     {
       "parameterId": 687,
       "descriptions": ["Engine Total Fuel Used - J1939 (L)"],
+      "observedValueTypes": ["number"]
+    },
+    {
+      "parameterId": 781,
+      "descriptions": ["Battery Voltage (Starlink)"],
       "observedValueTypes": ["number"]
     },
     {

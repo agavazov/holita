@@ -36,7 +36,7 @@ export const Edata: Story = {
       /Parameters in this message\s*2/,
     );
     await waitFor(() => expect(within(dialog).getByRole('cell', { name: '99999' })).toBeVisible());
-    const parameters = dialog.querySelector('.karma-parameters .p-datatable-table-container');
+    const parameters = dialog.querySelector('.parameter-table .p-datatable-table-container');
     if (!(parameters instanceof HTMLElement)) {
       throw new Error('Missing parameter table.');
     }
@@ -77,10 +77,10 @@ export const Events: Story = {
     await expect(within(dialog).getByRole('region', { name: 'Record summary' })).toHaveTextContent(
       /Event code \(eid\)\s*0/,
     );
-    await expect(dialog.querySelector('.karma-source-text')).toHaveTextContent(
+    await expect(dialog.querySelector('.source-text')).toHaveTextContent(
       '<b>Original source event text</b>',
     );
-    await expect(dialog.querySelector('.karma-source-text b')).toBeNull();
+    await expect(dialog.querySelector('.source-text b')).toBeNull();
     await expect(dialog.querySelector('details')).not.toHaveAttribute('open');
   },
 };

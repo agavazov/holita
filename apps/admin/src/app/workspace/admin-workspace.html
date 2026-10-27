@@ -18,7 +18,7 @@
     [notificationsUnavailable]="true"
     [context]="context()"
     (signOut)="logout()"
-    (branchSelected)="branches.choose($event, language())"
+    (branchSelected)="chooseBranch($event)"
   >
     @if (
       branches.required() &&

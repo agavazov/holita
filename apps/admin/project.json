@@ -17,17 +17,41 @@
       }
     },
     "lint": {
-      "dependsOn": ["graphql-generate"]
+      "dependsOn": [
+        "graphql-generate",
+        {
+          "target": "build",
+          "projects": ["edata-rules"]
+        }
+      ]
     },
     "typecheck": {
-      "dependsOn": ["graphql-generate"]
+      "dependsOn": [
+        "graphql-generate",
+        {
+          "target": "build",
+          "projects": ["edata-rules"]
+        }
+      ]
     },
     "build": {
-      "dependsOn": ["graphql-generate"]
+      "dependsOn": [
+        "graphql-generate",
+        {
+          "target": "build",
+          "projects": ["edata-rules"]
+        }
+      ]
     },
     "test": {
       "executor": "nx:run-commands",
-      "dependsOn": ["graphql-generate"],
+      "dependsOn": [
+        "graphql-generate",
+        {
+          "target": "build",
+          "projects": ["edata-rules"]
+        }
+      ],
       "options": {
         "command": "npm run test --",
         "cwd": "apps/admin",
@@ -35,7 +59,13 @@
       }
     },
     "storybook": {
-      "dependsOn": ["graphql-generate"],
+      "dependsOn": [
+        "graphql-generate",
+        {
+          "target": "build",
+          "projects": ["edata-rules"]
+        }
+      ],
       "cache": false,
       "continuous": true
     },
@@ -61,7 +91,10 @@
       "{projectRoot}/**/*",
       "sharedGlobals",
       "graphqlContracts",
-      "{workspaceRoot}/tools/browser/**/*"
+      "{workspaceRoot}/tools/browser/**/*",
+      "{workspaceRoot}/packages/edata-rules/src/**/*",
+      "{workspaceRoot}/packages/edata-rules/tsconfig.json",
+      "{workspaceRoot}/packages/edata-rules/package.json"
     ]
   }
 }

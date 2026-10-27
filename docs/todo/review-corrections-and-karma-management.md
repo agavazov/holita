@@ -14,15 +14,13 @@ review scratchpad; retain only open work here. Implemented contracts belong in
   workloads before selecting an optimization; demo-sized warm plans do not establish production
   latency. No index or caching change follows from estimates.
 
-## Karma device-management design and approval
+## Karma settings simplification
 
-User approval is pending for the [small-screen-flow proposal](karma-device-management-design.md)
-and its [proposed identity/scope ADR](karma-device-management-identity-adr.md).
-Implement the inventory-to-truck/device/settings move only after confirmation, with the
-proposal's scope, durable-operation and validation requirements. The supplied ERM example and
-compiler investigation now support a local general rule editor. Rule reads and one-rule updates
-are proposed allowlist extensions awaiting explicit approval; persistent identity links remain
-outside the proposal. See the screen proposal for the evidence, limits and implementation stages.
+The [settings backlog](karma-device-management-design.md) owns live device acceptance,
+rule/event allocation and threshold-scale evidence, firmware semantics and Monitor interchange
+questions. Do not duplicate those tasks in the general cleanup below. Implemented target
+and operation contracts are in
+[architecture](../discocan/architecture.md#background-device-configuration-reads).
 
 ## Behavior-preserving cleanup after the approved feature
 

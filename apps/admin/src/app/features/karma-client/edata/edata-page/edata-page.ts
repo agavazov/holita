@@ -1,5 +1,6 @@
 import { Location } from '@angular/common';
 import {
+  ChangeDetectionStrategy,
   Component,
   computed,
   DestroyRef,
@@ -17,7 +18,6 @@ import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import { ButtonDirective } from 'primeng/button';
 import { KarmaDateTime } from '../../date-time/karma-date-time';
-import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
@@ -32,6 +32,15 @@ import { messages, type Language } from '../../../../i18n/messages';
 import { karmaRecordMessages } from '../../record-details/karma-record-messages';
 import { karmaDateControl, karmaDateParameter } from '../../karma-date-time';
 import { FormField } from '../../../../ui/form-field/form-field';
+import { RouteDrawer } from '../../../../ui/drawer/route-drawer';
+import { TablePanel } from '../../../../ui/table-panel/table-panel';
+import { tableView } from '../../../../ui/table-panel/table-view';
+import { RowActions } from '../../../../ui/row-actions/row-actions';
+import type {
+  ListActionBase,
+  ListActionRequest,
+  ListRecord,
+} from '../../../../ui/list/list-actions';
 import { focusFirstInvalid } from '../../../../ui/forms/focus';
 import {
   karmaFilterErrors,
@@ -53,7 +62,9 @@ type EdataMessage = EdataPageResult['items'][number];
     FormField,
     ButtonDirective,
     KarmaDateTime,
-    DialogModule,
+    RouteDrawer,
+    TablePanel,
+    RowActions,
     InputTextModule,
     Message,
     SelectModule,
@@ -63,6 +74,7 @@ type EdataMessage = EdataPageResult['items'][number];
   selector: 'holita-edata-page',
   styleUrl: './edata-page.css',
   templateUrl: './edata-page.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EdataPage implements OnInit {
   readonly language = input.required<Language>();
@@ -73,11 +85,21 @@ export class EdataPage implements OnInit {
   readonly carLoaded = signal(false);
   readonly page = signal<EdataPageResult | null>(null);
   readonly selected = signal<EdataMessage | null>(null);
-  readonly dialogVisible = signal(false);
   readonly carLoading = signal(false);
   readonly pageLoading = signal(false);
   readonly loading = computed(() => this.carLoading() || this.pageLoading());
   readonly error = signal(false);
+  readonly tableState = computed(() =>
+    tableView({
+      loading: this.loading(),
+      error: this.error() ? true : null,
+      rows: this.page()?.items.length ?? null,
+      filtered: false,
+    }),
+  );
+  readonly actions = computed<readonly ListActionBase<'view'>[]>(() => [
+    { id: 'view', label: this.text().view },
+  ]);
   readonly invalidFilters = signal(false);
   readonly formError = signal(false);
   readonly fieldErrors = signal<KarmaFilterErrors>({});
@@ -101,7 +123,6 @@ export class EdataPage implements OnInit {
   private carQuery: ReturnType<KarmaEdataApi['watchCar']> | undefined;
   private pageQuery: ReturnType<KarmaEdataApi['watch']> | undefined;
   private pageSubscription: Subscription | undefined;
-  private trigger: HTMLElement | null = null;
 
   ngOnInit(): void {
     if (!this.validId()) {
@@ -125,7 +146,6 @@ export class EdataPage implements OnInit {
       this.pageQuery = undefined;
       this.page.set(null);
       this.selected.set(null);
-      this.dialogVisible.set(false);
       this.pageLoading.set(false);
       this.error.set(false);
       this.formError.set(false);
@@ -310,17 +330,11 @@ export class EdataPage implements OnInit {
     }
   }
 
-  view(row: EdataMessage, event?: Event): void {
-    this.trigger = event?.currentTarget instanceof HTMLElement ? event.currentTarget : null;
-    this.selected.set(row);
-    this.dialogVisible.set(true);
+  record(row: EdataMessage): ListRecord<'view'> {
+    return { id: row.id, label: row.id, unavailable: [] };
   }
 
-  closeDetails(): void {
-    this.selected.set(null);
-    if (this.trigger?.isConnected) {
-      this.trigger.focus();
-    }
-    this.trigger = null;
+  viewMessage(event: ListActionRequest<'view'>): void {
+    this.selected.set(this.page()?.items.find((row) => row.id === event.ids[0]) ?? null);
   }
 }

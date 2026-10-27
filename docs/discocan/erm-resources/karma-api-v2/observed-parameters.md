@@ -2,7 +2,8 @@
 
 This is a **partial observed catalog**, extracted from `GET /edata` with `showdesc=1`. It records metadata returned by sampled latest-message batches, not telemetry values or vehicle identities. The machine-readable evidence is [edata-parameter-metadata.json](source/edata-parameter-metadata.json).
 
-Twelve parameter IDs were encountered. This is not the complete supported-ID list or a vehicle-model capability matrix. A parameter absent here may still be supported. Holita accepts unknown positive parameter IDs and does not use this table as an enum, filter allowlist or conversion rule.
+Thirteen parameter IDs were encountered, including parameter 781 during the
+[web functionality research](web-functionality-research.md) on 2026-10-27. This is not the complete supported-ID list or a vehicle-model capability matrix. A parameter absent here may still be supported. Holita accepts unknown positive parameter IDs and does not use this table as an enum, filter allowlist or conversion rule.
 
 | Parameter ID | Original source description                     | Observed JSON value type |
 | ------------ | ----------------------------------------------- | ------------------------ |
@@ -16,12 +17,17 @@ Twelve parameter IDs were encountered. This is not the complete supported-ID lis
 | `651`        | Engine Percent Load At Current Speed            | number                   |
 | `662`        | Engine Fuel Rate (L/h)                          | number                   |
 | `687`        | Engine Total Fuel Used - J1939 (L)              | number                   |
+| `781`        | Battery Voltage (Starlink)                     | number                   |
 | `785`        | Fuel Level (%)                                  | number                   |
 | `1657`       | High Resolution Engine Total Fuel Used          | number                   |
 
 Unit labels such as RPM, kph, meters, c, L and % are part of the original description strings. They are source-provided labels, not units independently established for every device, firmware or vehicle model. In particular, the table supplies no scale, calibration, precision, conversion, missing-value sentinel or reset/rollover definition. A description without a unit is kept unchanged.
 
 The two total-fuel parameter names do not establish that they are interchangeable, simultaneously available or measured at the same resolution. Likewise, the device-level speed/distance parameters do not establish the units of envelope `spd`/`odo` or trip metrics. No readings, averages, totals or inferred fuel consumption are retained here.
+
+Parameter 781's description does not establish equivalence with the separately
+selected tracker `vin`/`vbat` fields, their scale or a battery-health calculation.
+Its observed numeric value is not retained in this metadata catalog.
 
 Parameter `662` is a reported fuel rate, distinct from cumulative fuel-used IDs
 `687` and `1657`. Its addition and reporting were verified on one installation

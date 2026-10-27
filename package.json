@@ -8,7 +8,8 @@
     "npm": ">=11"
   },
   "workspaces": [
-    "apps/*"
+    "apps/*",
+    "packages/*"
   ],
   "overrides": {
     "mysql2": "3.24.4",
@@ -26,12 +27,12 @@
     }
   },
   "scripts": {
-    "dev": "npm run db:up && nx run admin:graphql-generate && concurrently --kill-others --names gateway,core,fleet,karma-client,admin,storybook --prefix-colors blue,green,cyan,magenta,red,yellow \"npm:dev:gateway\" \"npm:dev:core\" \"npm:dev:fleet\" \"npm:dev:karma-client\" \"npm run dev:admin --ignore-scripts\" \"npm run storybook --workspace @holita/admin\"",
+    "dev": "npm run db:up && nx run edata-rules:build && nx run admin:graphql-generate && concurrently --kill-others --names gateway,core,fleet,karma-client,admin,storybook --prefix-colors blue,green,cyan,magenta,red,yellow \"npm:dev:gateway\" \"npm:dev:core\" \"npm:dev:fleet\" \"npm:dev:karma-client\" \"npm run dev:admin --ignore-scripts\" \"npm run storybook --workspace @holita/admin\"",
     "kill": "tsx tools/development/kill.mts",
     "dev:gateway": "npm run dev --workspace @holita/gateway",
     "router:install": "npm run router:install --workspace @holita/gateway",
     "dev:core": "npm run dev --workspace @holita/core",
-    "dev:admin": "npm run dev --workspace @holita/admin",
+    "dev:admin": "nx run edata-rules:build && npm run dev --workspace @holita/admin",
     "storybook:admin": "nx run admin:storybook",
     "build": "nx run-many -t build",
     "lint": "eslint .",
@@ -64,11 +65,11 @@
     "schema:check": "tsx tools/graphql/generate.mts check",
     "test:gateway:db": "nx run gateway:test-federation --output-style=static",
     "test:smoke": "npm run test:smoke:admin",
-    "dev:fleet": "npm run dev --workspace @holita/fleet",
+    "dev:fleet": "nx run edata-rules:build && npm run dev --workspace @holita/fleet",
     "test:fleet": "nx run fleet:test --output-style=static",
     "test:fleet:db": "nx run fleet:test-db --skip-nx-cache --output-style=static",
     "test:smoke:admin": "nx run admin:test-smoke --output-style=static",
-    "dev:karma-client": "npm run dev --workspace @holita/karma-client",
+    "dev:karma-client": "nx run edata-rules:build && npm run dev --workspace @holita/karma-client",
     "test:karma-client": "nx run karma-client:test --output-style=static",
     "router:check": "npm run router:check --workspace @holita/gateway"
   },

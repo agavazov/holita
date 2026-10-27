@@ -34,6 +34,7 @@ import {
   deviceReadEvidenceJson,
   mergeDeviceReadEvidence,
 } from './device-read-evidence.js';
+import { DeviceRuleOperationsProcessor } from './device-rule-operations.processor.js';
 
 @Injectable()
 export class DeviceOperationsProcessor {
@@ -42,6 +43,7 @@ export class DeviceOperationsProcessor {
     private readonly operations: DeviceOperationsRepository,
     private readonly karma: KarmaDeviceReadsClient,
     private readonly clock: FleetClock,
+    private readonly rules: DeviceRuleOperationsProcessor,
   ) {}
 
   @Cron('*/10 * * * * *', { name: 'device-configuration-reads', waitForCompletion: true })
@@ -73,18 +75,17 @@ export class DeviceOperationsProcessor {
         {
           status: 'TIMED_OUT',
           completedAt: now,
-          errorCode: row.kind === 'READ_CONFIGURATION' ? 'READ_TIMEOUT' : 'WRITE_TIMEOUT',
+          errorCode:
+            row.kind === 'READ_CONFIGURATION' || row.kind === 'READ_RULES'
+              ? 'READ_TIMEOUT'
+              : 'WRITE_TIMEOUT',
         },
         now,
       );
       return;
     }
-    if (!(await this.operations.currentDevice(row))) {
-      await this.operations.save(
-        row,
-        { status: 'FAILED', completedAt: now, errorCode: 'LOCAL_DEVICE_CHANGED' },
-        now,
-      );
+    if (row.kind === 'READ_RULES' || row.kind === 'UPSERT_RULE') {
+      await this.rules.process(row);
       return;
     }
     if (row.kind !== 'READ_CONFIGURATION') {
@@ -111,16 +112,7 @@ export class DeviceOperationsProcessor {
         row.dispatchedAt ?? row.requestedAt,
         now,
       );
-      const currentDevice = await this.operations.currentDevice(row);
       const completedAt = this.clock.now();
-      if (!currentDevice) {
-        await this.operations.save(
-          row,
-          { status: 'FAILED', completedAt, errorCode: 'LOCAL_DEVICE_CHANGED' },
-          completedAt,
-        );
-        return;
-      }
       if (completedAt >= row.deadlineAt) {
         await this.operations.save(
           row,
@@ -131,10 +123,15 @@ export class DeviceOperationsProcessor {
       }
       const merged = mergeDeviceReadEvidence(row.observations, evidence);
       const observations = deviceReadEvidenceJson(merged.evidence);
-      if (merged.status === 'CONFLICT') {
+      if (merged.status === 'CONFLICT' || merged.status === 'NO_CONFIGURATION') {
         await this.operations.save(
           row,
-          { status: 'FAILED', completedAt, errorCode: 'READBACK_CONFLICT', observations },
+          {
+            status: 'FAILED',
+            completedAt,
+            errorCode: merged.status === 'CONFLICT' ? 'READBACK_CONFLICT' : 'READ_NO_CONFIGURATION',
+            observations,
+          },
           completedAt,
         );
       } else if (merged.status === 'COMPLETE') {
@@ -383,15 +380,16 @@ export class DeviceOperationsProcessor {
     );
     const result = mergeDeviceReadEvidence(row.observations, response);
     const observations = deviceReadEvidenceJson(result.evidence);
-    if (!(await this.operations.currentDevice(row))) {
-      await this.fail(row, 'LOCAL_DEVICE_CHANGED');
-      return;
-    }
     const now = this.clock.now();
-    if (result.status === 'CONFLICT') {
+    if (result.status === 'CONFLICT' || result.status === 'NO_CONFIGURATION') {
       await this.operations.save(
         row,
-        { status: 'FAILED', completedAt: now, observations, errorCode: 'READBACK_CONFLICT' },
+        {
+          status: 'FAILED',
+          completedAt: now,
+          observations,
+          errorCode: result.status === 'CONFLICT' ? 'READBACK_CONFLICT' : 'READ_NO_CONFIGURATION',
+        },
         now,
       );
       return;

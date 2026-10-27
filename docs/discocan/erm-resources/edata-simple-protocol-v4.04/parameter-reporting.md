@@ -108,6 +108,31 @@ This establishes a working configuration procedure for that profile and
 installation, not universal availability or calibration. Other parameters and
 profiles require their own configuration and measurement verification.
 
+The [27 October campaign evidence](../erm-support-diagnostics-protocol-test-server/live-verification-2026-10-27.md#actual-periodic-measurements-historical-positive-control)
+also correlates four real CB1147TP `405` records for 662 on **26 October,
+18:40:00–18:41:30 UTC**, with three 30-second deltas and unchanged source value 0.
+The `407` at 18:41:36 is an end-of-trip report, excluded from cadence calculations.
+Direct Karma and a successful Gateway read preserve the measurement identities.
+This historical positive control is not proof of a new 30→60-second change.
+
+The subsequent [completed real interval test](../erm-support-diagnostics-protocol-test-server/live-verification-2026-10-27.md#completed-live-reporting-and-active-can-fault-control)
+on **2026-10-27** did prove that change on **CB1147TP / car 16595 /
+device 862129080367299**. Fleet operation
+`bab36c8a-d2aa-4ff1-a5c0-d90b75cd3e93` dispatched the one662 30→60 write at
+**08:21:47.058 UTC**. Independent complete `401` **7171046524** at **08:21:56**
+confirmed the same 14 IDs, all 13 unrelated definitions byte-identical, and only
+662's interval field `001E→003C`. Five new raw405 records at
+**08:23:00,08:24:00,08:25:00,08:26:00,08:27:00 UTC**, IDs
+**7171056491/7171057524/7171059267/7171060544/7171062377**, had source values
+**13/16/1/47/1** and four exact **60-second** deltas. Gateway returned matching
+identities/times/values. **Final662 remains 60 seconds.**
+
+The same reference records three new CB9680TE 539 raw405 observations at
+**08:06:32/08:08:32/08:10:33 UTC**, values **51/53/54**, deltas **120/121s**,
+after its previously verified120 setting. A subsequent407 at 08:12:10 was excluded.
+This is delayed measurement proof, without another539 write or a continuous-series
+claim across the earlier observation gap.
+
 ## Reading the current state
 
 Resolve the selected vehicle to a unique Karma `car_id` and verify `device_id`
@@ -115,13 +140,19 @@ before sending a command. Registration text is useful for discovery, but is not
 the command target. Capture current measurements and their timestamps, then read
 the configuration from that same device.
 
-| Read                         | Command string                  | Response                                                         |
-| ---------------------------- | ------------------------------- | ---------------------------------------------------------------- |
-| Parameter definitions        | `30,1,19,0,19,301,0,1,1,0702BC` | `401`, payload `07` followed by parameter definitions            |
-| Global settings              | `30,1,19,0,19,303,0,1,1,`       | `410`                                                            |
-| Vehicle profile              | `30,1,19,0,19,301,0,1,1,1F`     | `416`, payload `1F` and a two-byte profile ID                    |
-| Diagnostics                  | `30,1,19,0,19,306,0,1,1,`       | `411`                                                            |
-| Hardware/version information | `30,1,19,0,19,308,0,1,1,`       | `412`; extended layouts require firmware-specific interpretation |
+| Read                         | Command string                  | Response                                                                           |
+| ---------------------------- | ------------------------------- | ---------------------------------------------------------------------------------- |
+| Parameter definitions        | `30,1,19,0,19,301,0,1,1,0702BC` | `401`, payload `07` followed by parameter definitions                              |
+| Global settings              | `30,1,19,0,19,303,0,1,1,`       | `410`                                                                              |
+| Vehicle profile              | `30,1,19,0,19,301,0,1,1,1F`     | `416`, payload `1F` and a two-byte profile ID                                      |
+| Diagnostics                  | `30,1,19,0,19,306,0,1,1,`       | `411`                                                                              |
+| Hardware/version information | `30,1,19,0,19,308,0,1,1,`       | `412`; extended layouts require firmware-specific interpretation                   |
+| Stored fault logger          | `30,1,19,0,19,301,0,1,1,19`     | Fault-logger read documented; actual reply family/correlation require verification |
+
+The [diagnostics and fault reference](diagnostics-and-fault-reporting.md) records
+the source-level distinction between an explicit stored-fault read and automatic
+OBD `413`, FMS `418` and FMI `419` reports, with the unresolved global-setting and
+fault-format conflicts. No new diagnostic command was sent during ERM-TEST-01.
 
 These are device requests, even though their purpose is reading. They use
 `POST /commands` like a configuration update. In `0702BC`, `02BC` specifies the
@@ -141,6 +172,14 @@ mask bit 0 denotes CAN; CAN error `0` means no current reported error; ignition
 `0`, `1`, `2` mean off, on, unknown. Do not infer the meaning of trailing extension
 bytes from this prefix. Ignition and CAN availability help explain whether live
 measurement verification is currently possible.
+
+Ignition off is not a universal measurement prohibition. The controlled
+[Monitor export comparison](../erm-support-diagnostics-protocol-test-server/live-verification-2026-10-27.md#morning-recheck-paired-monitor-exports-and-cb1344xh)
+shows a separate **Send parameters while ignition off AND CAN alive** option at
+global-data byte 24, distinct from ignition-off CAN processing at byte 7. Enabling
+this option in a saved export is not proof of source CAN availability or runtime
+reporting. Its firmware-specific interaction with processing/sleep still requires
+verification; do not send a whole exported command list to test one checkbox.
 
 ## Command submission and responses
 
@@ -162,6 +201,13 @@ Device configuration responses are visible through `GET /events` with the target
 contains the device message. Match the target device, request time, response type
 and payload. A universal queue-to-device acknowledgment correlation has not been
 established. In particular, `19,0,154,1` is not a verified success acknowledgment.
+
+The supplied Monitor 9.56 handles `154,1` by continuing to wait and `154,0` by ending
+parameter/rule loading (`Is_Special_Ack_Recieved`, `Is_Special_Nck_Recieved`,
+`Process_Recieved_Can_Engine_Parameters` and `Process_Recieved_Can_Engine_Rules`).
+Its terminal branch does not replace the existing definitions, so `154,0` alone does not
+establish an empty set. Holita preserves this response and reports a read without
+configuration when no complete definitions were returned.
 
 If submission times out or its result is lost, first inspect the queue where its
 ID is known, subsequent events and a fresh device readback. Do not assume a failed

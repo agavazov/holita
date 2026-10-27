@@ -16,7 +16,7 @@
   </button>
 </holita-page-header>
 <form
-  class="inventory-filters"
+  class="app-card app-filter-form"
   [formGroup]="form"
   (ngSubmit)="applySearch()"
   [attr.aria-label]="text().karmaSearch + ': ' + text().karmaTrucks"
@@ -36,7 +36,7 @@
       [ariaLabel]="listText().project"
     />
   </holita-form-field>
-  <div class="app-form-actions">
+  <div class="app-filter-actions">
     <button pButton type="submit">{{ text().karmaSearch }}</button>
     @if (query().search || query().project) {
       <button pButton type="button" severity="secondary" [outlined]="true" (click)="clearSearch()">

@@ -1,459 +1,719 @@
-<holita-karma-car-header
-  [language]="language()"
-  [carId]="car().id"
-  [carNumber]="car().carNumber"
-  [title]="text().deviceSettings"
-  [showRefresh]="false"
->
-  @if (branch()) {
-    <span headerActions class="app-muted">{{ branch() }}</span>
-  }
-  <button
-    headerActions
-    pButton
-    type="button"
-    [disabled]="!branch() || state() !== 'ready' || operations().length > 0"
-    (click)="sendRequest.emit()"
-  >
-    {{ text().saveAndSend }}
+@if (state() === 'loading') {
+  <p role="status">{{ operationText().loading }}</p>
+} @else if (state() === 'error') {
+  <p-message severity="error">{{ loadError() ?? operationText().loadError }}</p-message>
+  <button pButton type="button" severity="secondary" (click)="refresh.emit()">
+    {{ text().retry }}
   </button>
-</holita-karma-car-header>
-@if (notice()) {
-  <p-message severity="info" role="status">{{ notice() }}</p-message>
+} @else if (state() === 'not-found' || state() === 'invalid-id') {
+  <holita-empty-state
+    kind="not-found"
+    [title]="state() === 'invalid-id' ? operationText().invalidId : operationText().notFound"
+  />
 }
-@if (!branch()) {
-  <section class="app-card app-settings-section">
-    <header>
-      <h2>{{ text().scope }}</h2>
-      <p>{{ text().scopeHint }}</p>
-    </header>
-    <holita-form-field [label]="text().scope" controlId="device-fleet-scope">
-      <p-select
-        inputId="device-fleet-scope"
-        [formControl]="scopeControl"
-        [options]="branchOptions()"
-        optionLabel="label"
-        optionValue="value"
-        [placeholder]="text().noScope"
-        [ariaLabel]="text().scope"
+<section class="app-card app-stack" aria-labelledby="settings-state-title">
+  <div class="settings-heading">
+    <div>
+      <h2 #snapshotTitle id="settings-state-title" class="app-card__title" tabindex="-1">
+        {{ text().currentSettings }}
+      </h2>
+      <p class="app-muted">{{ operationText().karmaDeviceId }}: {{ car().deviceId }}</p>
+      <p class="app-muted">{{ text().readHint }}</p>
+    </div>
+    @if (branchId()) {
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [text]="true"
+        [disabled]="requesting() || refreshing()"
+        (click)="refresh.emit()"
+      >
+        {{ operationText().refresh }}
+      </button>
+    }
+  </div>
+  @if (branchId()) {
+    @if (!enabled()) {
+      <p-message severity="info">{{ operationText().disabled }}</p-message>
+    }
+    @if (!writesEnabled()) {
+      <p class="app-muted">{{ operationText().editor.disabled }}</p>
+    }
+    @if (enabled()) {
+      <div class="app-inline">
+        <button pButton type="button" [disabled]="readUnavailable()" (click)="submitRead()">
+          {{ text().readConfiguration }}
+        </button>
+        @if (rulesContinuation() && !readSequence()) {
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            [disabled]="readUnavailable()"
+            (click)="submitRead('rules')"
+          >
+            {{ text().continueRules }}
+          </button>
+        }
+      </div>
+      @if (readSequence()) {
+        <p class="app-muted" role="status">
+          {{ readSequence() === 'parameters' ? text().readingParameters : text().readingRules }}
+        </p>
+      } @else if (rulesContinuation()) {
+        <p class="app-muted">{{ text().rulesContinuationHint }}</p>
+      }
+    }
+  }
+  @if (latestOperation(); as operation) {
+    <div class="app-inline" role="status">
+      <strong>{{ operationText().kinds[operation.kind] }}</strong>
+      <p-tag
+        [severity]="statusSeverity(operation.status)"
+        [value]="operationText().statuses[operation.status]"
       />
-    </holita-form-field>
-  </section>
-}
+      @if (operationPending(operation)) {
+        <span class="app-muted">{{ operationText().phases[operation.phase] }}</span>
+      }
+    </div>
+    @if (operation.writeUncertain) {
+      <p-message severity="warn">{{
+        operation.status === 'COMPLETE'
+          ? operationText().writeVerifiedAfterUncertainty
+          : operationText().writeUncertain
+      }}</p-message>
+    }
+    @if (operation.status === 'FAILED' || operation.status === 'TIMED_OUT') {
+      <p-message severity="warn">{{ operationFailure(operation) }}</p-message>
+    }
+  }
+  @if (reconciling()) {
+    <p-message severity="warn" role="status">{{ operationText().reconciling }}</p-message>
+  }
+  @if (pollError(); as error) {
+    <p-message severity="warn">{{ error }}</p-message>
+  }
+  @if (requestError(); as error) {
+    <p-message severity="error">{{ error }}</p-message>
+  }
+  @if (viewingHistoricalSnapshot()) {
+    <p-message severity="info">{{ operationText().historicalSnapshotHint }}</p-message>
+    <button pButton type="button" severity="secondary" (click)="showSnapshot(null)">
+      {{ operationText().latestSnapshotAction }}
+    </button>
+  }
+</section>
+
 <holita-table-panel
   #parameterPanel
   [heading]="text().parameters"
-  [total]="parameters().length"
+  [total]="snapshotOperation()?.configuration ? parameters().length : null"
   [view]="parameterView()"
-  [emptyTitle]="text().noParameters"
+  [emptyTitle]="snapshotOperation()?.configuration ? text().noParameters : text().notRead"
+  [emptyDescription]="
+    snapshotOperation()?.configuration ? text().confirmedEmptyParameters : text().parametersNotRead
+  "
   [actions]="parameterActions()"
-  (action)="openParameter($event.ids[0])"
-  (retry)="retry.emit()"
+  (action)="parameterAction($event)"
+  (retry)="refresh.emit()"
 >
-  <button
-    panelActions
-    pButton
-    type="button"
-    [disabled]="state() !== 'ready'"
-    (click)="openParameter()"
-  >
-    {{ text().addParameter }}
-  </button>
+  <div panelActions class="app-inline">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [text]="true"
+      [disabled]="readUnavailable()"
+      (click)="submitRead('parameters')"
+    >
+      {{ text().readParameters }}
+    </button>
+    @if (snapshotOperation(); as operation) {
+      <span class="app-muted"
+        >{{ text().confirmedAt }} {{ operation.completedAt | holitaDateTime }}</span
+      >
+    }
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="intervalEditingUnavailable()"
+      (click)="editParameter()"
+    >
+      {{ text().addParameter }}
+    </button>
+  </div>
   <p-table class="app-responsive-table" [value]="parameters()" dataKey="id">
-    <ng-template #header
-      ><tr>
+    <ng-template #header>
+      <tr>
         <th scope="col" class="app-col-identity">{{ text().parameter }}</th>
         <th scope="col" class="app-num">{{ text().interval }}</th>
         <th scope="col" class="app-col-actions">
           <span class="app-visually-hidden">{{ text().actions }}</span>
         </th>
-      </tr></ng-template
-    >
-    <ng-template #body let-row
-      ><tr>
+      </tr>
+    </ng-template>
+    <ng-template #body let-row>
+      <tr>
         <td class="app-col-identity">
           <span class="app-cell-stack"
-            ><strong>{{ row.name }}</strong></span
+            ><strong>{{ row.name }}</strong
+            ><span class="app-muted">ID {{ row.id }}</span></span
           >
           <div class="app-table-mobile-actions">
             <holita-row-actions
               [actions]="parameterActions()"
-              [record]="record(row)"
-              (choose)="parameterPanel.run($event.action, [record(row)], $event.origin)"
+              [record]="parameterRecord(row)"
+              (choose)="parameterPanel.run($event.action, [parameterRecord(row)], $event.origin)"
             />
           </div>
         </td>
-        <td class="app-num">{{ row.interval | holitaNumber }} {{ text().seconds }}</td>
+        <td class="app-num">
+          {{
+            row.interval === 0
+              ? text().notInUse
+              : (row.interval | holitaNumber) + ' ' + text().seconds
+          }}
+        </td>
         <td class="app-col-actions">
           <holita-row-actions
             [actions]="parameterActions()"
-            [record]="record(row)"
-            (choose)="parameterPanel.run($event.action, [record(row)], $event.origin)"
+            [record]="parameterRecord(row)"
+            (choose)="parameterPanel.run($event.action, [parameterRecord(row)], $event.origin)"
           />
-        </td></tr
-    ></ng-template>
+        </td>
+      </tr>
+    </ng-template>
   </p-table>
 </holita-table-panel>
+
+@if (measurements(); as measurement) {
+  <holita-route-drawer
+    [title]="text().measurements + ': ' + (measurementParameter()?.name ?? text().parameter)"
+    [subtitle]="(car().carNumber || car().id) + ' · ID ' + measurement.parameterId"
+    [closeLink]="null"
+    size="lg"
+    (closeRequest)="closeMeasurements.emit()"
+  >
+    <section class="app-form-section">
+      <h3 class="app-card__title">{{ text().measurementConfiguration }}</h3>
+      <dl class="app-facts">
+        <div>
+          <dt>{{ text().interval }}</dt>
+          <dd>
+            {{
+              measurementParameter()?.interval === 0
+                ? text().notInUse
+                : (measurementParameter()?.interval | holitaNumber) + ' ' + text().seconds
+            }}
+          </dd>
+        </div>
+        <div>
+          <dt>{{ text().confirmedAt }} (UTC)</dt>
+          <dd>{{ snapshotOperation()?.completedAt | holitaDateTime: 'UTC' : true }}</dd>
+        </div>
+      </dl>
+      <p class="app-muted">{{ text().measurementConfirmationHint }}</p>
+    </section>
+    <section class="app-form-section" [attr.aria-busy]="measurement.state === 'loading'">
+      <h3 class="app-card__title">{{ text().measurementWindow }}</h3>
+      <p>
+        {{ measurement.fromUtc | holitaDateTime: 'UTC' : true }} —
+        {{ measurement.toUtc | holitaDateTime: 'UTC' : true }} (UTC)
+      </p>
+      @if (measurementChange(); as change) {
+        <p class="app-muted">
+          {{ text().measurementChangeAt }} {{ change.completedAt | holitaDateTime: 'UTC' : true }}
+          (UTC)
+        </p>
+        @if (measurement.state === 'ready' && !hasPostChangeValues()) {
+          <p-message severity="info">{{ text().noMeasurementsAfterChange }}</p-message>
+        }
+      }
+      @if (measurement.state === 'loading') {
+        <p role="status">{{ text().measurementsLoading }}</p>
+      } @else if (measurement.state === 'error') {
+        <p-message severity="error">{{ text().measurementsError }}</p-message>
+        <button pButton type="button" severity="secondary" (click)="refreshMeasurements.emit()">
+          {{ text().retry }}
+        </button>
+      } @else if (latestMeasurement(); as latest) {
+        <dl class="app-facts">
+          <div>
+            <dt>{{ text().lastMeasurement }}</dt>
+            <dd>{{ measurementValue(latest.value) }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().measurementTimeUtc }}</dt>
+            <dd>{{ latest.utc | holitaDateTime: 'UTC' : true }}</dd>
+          </div>
+        </dl>
+        @if (latest.description) {
+          <p class="app-muted">{{ latest.description }}</p>
+        }
+        <h3 class="app-card__title">{{ text().recentMeasurements }}</h3>
+        <p-table [value]="recentMeasurements()" dataKey="id">
+          <ng-template #header>
+            <tr>
+              <th scope="col">{{ text().measurementTimeUtc }}</th>
+              <th scope="col" class="app-num">{{ text().measurementRawValue }}</th>
+              <th scope="col" class="app-num">{{ text().measurementDelta }}</th>
+            </tr>
+          </ng-template>
+          <ng-template #body let-row>
+            <tr>
+              <td>
+                <span class="app-cell-stack">
+                  <span>{{ row.utc | holitaDateTime: 'UTC' : true }}</span>
+                  <span class="app-muted">{{ text().measurementMessage }} {{ row.id }}</span>
+                  @if (row.afterChange !== null) {
+                    <span class="app-muted">{{
+                      row.afterChange ? text().afterChange : text().beforeChange
+                    }}</span>
+                  }
+                </span>
+              </td>
+              <td class="app-num">{{ measurementValue(row.value) }}</td>
+              <td class="app-num">
+                {{ row.deltaSeconds | holitaNumber }}
+                @if (row.deltaSeconds !== null) {
+                  {{ text().seconds }}
+                }
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+        <p class="app-muted">{{ text().measurementDeltaHint }}</p>
+      } @else {
+        <holita-empty-state
+          [title]="text().measurementsEmpty"
+          [description]="text().measurementsEmptyHint"
+        />
+      }
+    </section>
+    <div drawerFooter>
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [disabled]="measurement.state === 'loading'"
+        (click)="refreshMeasurements.emit()"
+      >
+        {{ text().refreshMeasurements }}
+      </button>
+    </div>
+  </holita-route-drawer>
+}
+
 <holita-table-panel
   #rulePanel
   [heading]="text().rules"
-  [total]="rules().length"
+  [total]="rulesSnapshot()?.rulesConfiguration ? displayedRules().length : null"
   [view]="ruleView()"
-  [emptyTitle]="text().noRules"
-  [emptyDescription]="text().rulesHint"
+  [emptyTitle]="rulesSnapshot()?.rulesConfiguration ? text().noRules : text().notRead"
+  [emptyDescription]="
+    rulesSnapshot()?.rulesConfiguration ? text().confirmedEmptyRules : text().rulesNotRead
+  "
   [actions]="ruleActions()"
   (action)="ruleAction($event)"
-  (retry)="retry.emit()"
+  (retry)="refresh.emit()"
 >
-  <button panelActions pButton type="button" [disabled]="state() !== 'ready'" (click)="openRule()">
-    {{ text().createRule }}
-  </button>
-  <p-table class="app-responsive-table" [value]="rules()" dataKey="id">
-    <ng-template #header
-      ><tr>
+  <div panelActions class="app-inline">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [text]="true"
+      [disabled]="readUnavailable()"
+      (click)="submitRead('rules')"
+    >
+      {{ text().readRules }}
+    </button>
+    @if (rulesSnapshot(); as operation) {
+      <span class="app-muted"
+        >{{ text().confirmedAt }} {{ operation.completedAt | holitaDateTime }}</span
+      >
+    } @else if (displayedRules().length) {
+      <span class="app-muted">{{ text().rulesNotRead }}</span>
+    }
+    <button pButton type="button" severity="secondary" [outlined]="true" (click)="openRule()">
+      {{ text().createRule }}
+    </button>
+  </div>
+  <p-table class="app-responsive-table" [value]="displayedRules()" dataKey="id">
+    <ng-template #header>
+      <tr>
         <th scope="col" class="app-col-identity">{{ text().rule }}</th>
         <th scope="col">{{ text().status }}</th>
         <th scope="col" class="app-col-actions">
           <span class="app-visually-hidden">{{ text().actions }}</span>
         </th>
-      </tr></ng-template
-    >
-    <ng-template #body let-row
-      ><tr>
+      </tr>
+    </ng-template>
+    <ng-template #body let-row>
+      <tr>
         <td class="app-col-identity">
           <span class="app-cell-stack">
             <strong>{{ row.name }}</strong>
-            <span class="rule-expression">{{ displayExpression(row.expression) }}</span>
+            <span class="rule-expression">{{
+              row.opaque ? text().opaque : displayExpression(row.expression)
+            }}</span>
+            <span class="app-muted">{{ text().ruleId }}: {{ row.ruleId ?? '—' }}</span>
+            @if (!row.opaque) {
+              <span class="app-muted"
+                >{{ text().trueEvent }}: {{ row.trueEvent || text().noReport }} ·
+                {{ text().falseEvent }}: {{ row.falseEvent || text().noReport }}</span
+              >
+            }
+            @if (row.previous) {
+              <details>
+                <summary>{{ text().confirmedVersion }}</summary>
+                <span class="rule-expression">{{
+                  displayExpression(row.previous.expression)
+                }}</span>
+              </details>
+            }
+            @if (row.sourceHex) {
+              <details>
+                <summary>{{ text().originalBytes }}</summary>
+                <code class="rule-expression">{{ row.sourceHex }}</code>
+              </details>
+            }
           </span>
           <div class="app-table-mobile-actions">
             <holita-row-actions
               [actions]="ruleActions()"
-              [record]="record(row)"
-              (choose)="rulePanel.run($event.action, [record(row)], $event.origin)"
+              [record]="ruleRecord(row)"
+              (choose)="rulePanel.run($event.action, [ruleRecord(row)], $event.origin)"
             />
           </div>
         </td>
         <td>
-          <p-tag severity="secondary" [value]="row.opaque ? text().opaque : text().draft" />
+          <p-tag
+            [severity]="row.conflict ? 'danger' : row.confirmed ? 'success' : 'secondary'"
+            [value]="
+              row.conflict
+                ? text().duplicateRuleId
+                : row.opaque
+                  ? text().opaque
+                  : row.confirmed
+                    ? text().confirmedRule
+                    : row.previous
+                      ? text().draftRevision
+                      : text().draft
+            "
+          />
         </td>
         <td class="app-col-actions">
           <holita-row-actions
             [actions]="ruleActions()"
-            [record]="record(row)"
-            (choose)="rulePanel.run($event.action, [record(row)], $event.origin)"
+            [record]="ruleRecord(row)"
+            (choose)="rulePanel.run($event.action, [ruleRecord(row)], $event.origin)"
           />
-        </td></tr
-    ></ng-template>
+        </td>
+      </tr>
+    </ng-template>
   </p-table>
 </holita-table-panel>
-@if (operations().length) {
-  <section class="app-card">
-    <div class="app-card__header operation-heading">
-      <h2 class="app-card__title">{{ text().history }}</h2>
-      @for (operation of operations(); track operation.id) {
-        <p-tag
-          [severity]="operation.status === 'UNKNOWN' ? 'warn' : 'info'"
-          [value]="statusText()[operation.status]"
-        />
-      }
-    </div>
-    <p class="app-muted">{{ text().historyHint }}</p>
-    @for (operation of operations(); track operation.id) {
-      @if (operation.status === 'UNKNOWN') {
-        <p>{{ text().unknownHint }}</p>
-      }
-    }
-  </section>
+<p class="settings-note">{{ text().localDraftHint }}</p>
+@if (storageError()) {
+  <p-message severity="warn">{{ text().storageError }}</p-message>
 }
-@if (editing(); as editor) {
-  <holita-route-drawer
-    [title]="editor === 'rule' ? text().ruleEditor : text().parameterEditor"
-    [subtitle]="car().carNumber"
-    [closeLink]="null"
-    size="lg"
-    [dirty]="editor === 'rule' ? ruleForm.dirty : parameterForm.dirty"
-    (closeRequest)="closeEditor()"
-  >
-    @if (editor === 'parameter') {
-      <form
-        id="parameter-editor"
-        class="app-form-section"
-        [formGroup]="parameterForm"
-        (ngSubmit)="saveParameter()"
-      >
-        <holita-form-field
-          [label]="text().parameter"
-          controlId="setting-parameter"
-          [required]="true"
-        >
-          <p-select
-            inputId="setting-parameter"
-            formControlName="id"
-            [options]="parameterOptions()"
-            optionLabel="label"
-            optionValue="value"
-            [filter]="true"
-            [ariaLabel]="text().parameter"
-          />
-        </holita-form-field>
-        <holita-form-field
-          [label]="text().interval"
-          controlId="setting-interval"
-          [hint]="text().intervalHint"
-          [error]="
-            parameterForm.controls.interval.touched && parameterForm.controls.interval.invalid
-              ? text().invalidInterval
-              : null
-          "
-        >
-          <input
-            pInputText
-            id="setting-interval"
-            type="number"
-            min="0"
-            max="65000"
-            step="1"
-            formControlName="interval"
-            aria-describedby="setting-interval-hint setting-interval-error"
-          />
-        </holita-form-field>
-      </form>
-    } @else {
-      <form id="rule-editor" [formGroup]="ruleForm" (ngSubmit)="saveRule()">
-        <section class="app-form-section">
-          <holita-form-field
-            [label]="text().name"
-            controlId="rule-name"
-            [required]="true"
-            [error]="
-              ruleForm.controls.name.touched && ruleForm.controls.name.invalid
-                ? text().required
-                : null
-            "
-          >
-            <input
-              pInputText
-              id="rule-name"
-              formControlName="name"
-              aria-describedby="rule-name-error"
-            />
-          </holita-form-field>
-        </section>
-        <section class="app-form-section">
-          <h3>{{ text().condition }}</h3>
-          <div class="condition-grid" [formGroup]="condition">
-            <holita-form-field [label]="text().parameter" controlId="condition-parameter"
-              ><p-select
-                inputId="condition-parameter"
-                formControlName="parameter"
-                [options]="parameterOptions()"
-                optionLabel="label"
-                optionValue="value"
-                [filter]="true"
-                [ariaLabel]="text().parameter"
-            /></holita-form-field>
-            <holita-form-field [label]="text().operator" controlId="condition-operator"
-              ><p-select
-                inputId="condition-operator"
-                formControlName="operator"
-                [options]="operators"
-                [ariaLabel]="text().operator"
-            /></holita-form-field>
-            @if (condition.controls.otherParameter.value) {
-              <holita-form-field [label]="text().operand" controlId="condition-operand"
-                ><p-select
-                  inputId="condition-operand"
-                  formControlName="operand"
-                  [options]="parameterOptions()"
-                  optionLabel="label"
-                  optionValue="value"
-                  [ariaLabel]="text().operand"
-              /></holita-form-field>
-            } @else {
-              <holita-form-field
-                [label]="text().value"
-                controlId="condition-value"
-                [error]="
-                  condition.controls.value.touched && condition.controls.value.invalid
-                    ? text().invalidNumber
-                    : null
-                "
-                ><input
-                  pInputText
-                  id="condition-value"
-                  type="number"
-                  min="-65535"
-                  max="2147483647"
-                  step="1"
-                  formControlName="value"
-                  aria-describedby="condition-value-error"
-              /></holita-form-field>
-            }
-          </div>
-          <label class="operand-choice"
-            ><input type="checkbox" [formControl]="condition.controls.otherParameter" />
-            {{ text().compareParameter }}</label
-          >
-          <div class="expression-palette">
-            <button pButton type="button" severity="secondary" (click)="appendCondition(null)">
-              {{ text().useCondition }}
-            </button>
-            @if (ruleForm.controls.expression.value) {
-              <button
-                pButton
-                type="button"
-                severity="secondary"
-                [text]="true"
-                (click)="appendCondition('and')"
-              >
-                {{ text().addAnd }}
-              </button>
-              <button
-                pButton
-                type="button"
-                severity="secondary"
-                [text]="true"
-                (click)="appendCondition('or')"
-              >
-                {{ text().addOr }}
-              </button>
-            }
-          </div>
-          <div class="expression-preview">
-            <span class="app-muted">{{ text().expression }}</span>
-            <output class="rule-expression">{{
-              displayExpression(ruleForm.controls.expression.value) || text().noCondition
-            }}</output>
-            @if (ruleForm.controls.expression.touched && ruleForm.controls.expression.invalid) {
-              <p-message severity="error" variant="simple" size="small">{{
-                text().required
-              }}</p-message>
-            }
-          </div>
-        </section>
-        <details class="advanced-settings">
-          <summary>{{ text().advancedSettings }}</summary>
-          <div class="app-form-section">
-            <holita-form-field
-              [label]="text().advanced"
-              controlId="rule-expression"
-              [hint]="text().expressionHint"
-            >
-              <textarea
-                pTextarea
-                id="rule-expression"
-                rows="3"
-                formControlName="expression"
-                aria-describedby="rule-expression-hint"
-              ></textarea>
-            </holita-form-field>
-            <div class="expression-palette" role="group" [attr.aria-label]="text().palette">
-              @for (operator of arithmetic; track operator) {
-                <button
-                  pButton
-                  type="button"
-                  severity="secondary"
-                  [outlined]="true"
-                  (click)="appendOperator(operator)"
-                >
-                  {{ operator }}
-                </button>
-              }
-              @for (name of functions; track name) {
-                <button
-                  pButton
-                  type="button"
-                  severity="secondary"
-                  [outlined]="true"
-                  (click)="wrap(name)"
-                >
-                  {{ name }}
-                </button>
-              }
-              <button pButton type="button" severity="secondary" [outlined]="true" (click)="wrap()">
-                ( )
-              </button>
+
+<details class="app-card settings-details">
+  <summary>{{ text().filesAndTools }}</summary>
+  <div class="app-stack">
+    @if (snapshotOperation()?.configuration; as configuration) {
+      <details>
+        <summary>{{ operationText().snapshotDetailsSummary }}</summary>
+        <p>{{ operationText().configurationId }}: {{ configuration.configurationId }}</p>
+        <dl class="settings-definitions">
+          @for (parameter of configuration.parameters; track parameter.parameterId) {
+            <div>
+              <dt>{{ text().parameter }} {{ parameter.parameterId }}</dt>
+              <dd class="app-mono">{{ parameter.definitionHex }}</dd>
             </div>
-            <div class="app-form-grid">
-              <holita-form-field
-                [label]="text().trueEvent"
-                controlId="true-event"
-                [error]="
-                  ruleForm.controls.trueEvent.touched && ruleForm.controls.trueEvent.invalid
-                    ? text().invalidNumber
-                    : null
-                "
-                [hint]="text().eventHint"
-                ><input
-                  pInputText
-                  id="true-event"
-                  type="number"
-                  min="0"
-                  max="65535"
-                  step="1"
-                  formControlName="trueEvent"
-                  aria-describedby="true-event-hint true-event-error"
-              /></holita-form-field>
-              <holita-form-field
-                [label]="text().falseEvent"
-                controlId="false-event"
-                [error]="
-                  ruleForm.controls.falseEvent.touched && ruleForm.controls.falseEvent.invalid
-                    ? text().invalidNumber
-                    : null
-                "
-                [hint]="text().eventHint"
-                ><input
-                  pInputText
-                  id="false-event"
-                  type="number"
-                  min="0"
-                  max="65535"
-                  step="1"
-                  formControlName="falseEvent"
-                  aria-describedby="false-event-hint false-event-error"
-              /></holita-form-field>
-              <holita-form-field
-                [label]="text().debounce"
-                controlId="rule-debounce"
-                [error]="
-                  ruleForm.controls.debounce.touched && ruleForm.controls.debounce.invalid
-                    ? text().invalidNumber
-                    : null
-                "
-                [hint]="text().debounceHint"
-                ><input
-                  pInputText
-                  id="rule-debounce"
-                  type="number"
-                  min="1"
-                  max="32767"
-                  step="1"
-                  formControlName="debounce"
-                  aria-describedby="rule-debounce-hint rule-debounce-error"
-              /></holita-form-field>
-            </div>
-            @if (editingSourceHex(); as source) {
-              <div class="expression-preview">
-                <span class="app-muted">{{ text().originalBytes }}</span>
-                <code>{{ source }}</code>
-              </div>
-            }
-          </div>
-        </details>
-      </form>
+          }
+        </dl>
+      </details>
     }
-    <div drawerFooter class="app-drawer-actions">
-      <button pButton type="button" severity="secondary" (click)="closeEditor()">
-        {{ text().cancel }}
+    @if (rulesSnapshot()?.rulesConfiguration; as configuration) {
+      <details>
+        <summary>{{ operationText().rulesResult }}</summary>
+        <p>{{ operationText().configurationId }}: {{ configuration.configurationId }}</p>
+        <dl class="settings-definitions">
+          @for (rule of configuration.rules; track rule.ruleId) {
+            <div>
+              <dt>{{ text().ruleId }} {{ rule.ruleId }}</dt>
+              <dd class="app-mono">{{ rule.definitionHex }}</dd>
+            </div>
+          }
+        </dl>
+      </details>
+    }
+    <holita-form-field
+      [label]="text().importFile"
+      controlId="rule-import"
+      [hint]="text().importHint"
+    >
+      <input id="rule-import" type="file" accept=".ini,.txt" (change)="importFile($event)" />
+    </holita-form-field>
+    @if (importError() || exportError()) {
+      <p-message severity="error">{{ text().fileError }}</p-message>
+    }
+    <div class="app-inline">
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [outlined]="true"
+        (click)="exportFile('ini')"
+      >
+        {{ text().exportIni }}
       </button>
       <button
         pButton
-        type="submit"
-        [attr.form]="editor === 'rule' ? 'rule-editor' : 'parameter-editor'"
+        type="button"
+        severity="secondary"
+        [outlined]="true"
+        (click)="exportFile('txt')"
       >
-        {{ text().saveDraft }}
+        {{ text().exportTxt }}
       </button>
     </div>
-  </holita-route-drawer>
+    @for (archive of importArchives(); track $index) {
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [text]="true"
+        (click)="downloadOriginal(archive)"
+      >
+        {{ text().originalFile }} · {{ archive.filename }}
+      </button>
+    }
+    @if (importSource(); as source) {
+      <details>
+        <summary>{{ text().importReport }} · {{ source.filename }}</summary>
+        <p>{{ text().inspectionOnly }}</p>
+        @for (issue of source.issues; track $index) {
+          <p class="app-mono">{{ issue }}</p>
+        }
+        <button pButton type="button" severity="secondary" (click)="exportFile('original')">
+          {{ text().originalFile }}
+        </button>
+        <pre class="app-mono rule-expression">{{ source.original }}</pre>
+      </details>
+    }
+  </div>
+</details>
+
+@if (visibleOperations().length) {
+  <details class="app-card settings-details">
+    <summary>{{ text().history }}</summary>
+    <p class="app-muted">{{ text().historyHint }}</p>
+    @for (operation of visibleOperations(); track operation.id) {
+      <article class="settings-operation">
+        <div class="settings-heading">
+          <div>
+            <h3 class="app-card__title">{{ operationText().kinds[operation.kind] }}</h3>
+            <p class="app-muted">{{ operation.requestedAt | holitaDateTime }}</p>
+          </div>
+          <p-tag
+            [severity]="statusSeverity(operation.status)"
+            [value]="operationText().statuses[operation.status]"
+          />
+        </div>
+        <p>{{ operationText().phases[operation.phase] }}</p>
+        @if (operation.parameterId !== null) {
+          <p>
+            {{ text().parameter }} {{ operation.parameterId }} ·
+            {{ operation.previousIntervalSeconds | holitaNumber }} →
+            {{ operation.intervalSeconds | holitaNumber }} {{ text().seconds }}
+          </p>
+        }
+        @if (operation.ruleId !== null) {
+          <p class="rule-expression">
+            {{ text().ruleId }} {{ operation.ruleId }} ·
+            {{ displayExpression(operation.ruleExpression ?? '') }}
+          </p>
+        }
+        @if (operation.writeUncertain) {
+          <p-message severity="warn">{{
+            operation.status === 'COMPLETE'
+              ? operationText().writeVerifiedAfterUncertainty
+              : operationText().writeUncertain
+          }}</p-message>
+        }
+        @if (operation.status === 'FAILED' || operation.status === 'TIMED_OUT') {
+          <p>{{ operationFailure(operation) }}</p>
+        }
+        <details class="settings-details">
+          <summary>{{ operationText().operationDetailsSummary }}</summary>
+          <dl class="app-facts">
+            <div>
+              <dt>{{ operationText().operationId }}</dt>
+              <dd class="app-mono">{{ operation.id }}</dd>
+            </div>
+            <div>
+              <dt>{{ operationText().karmaCarId }}</dt>
+              <dd class="app-mono">{{ operation.karmaCarId }}</dd>
+            </div>
+            <div>
+              <dt>{{ operationText().karmaDeviceId }}</dt>
+              <dd class="app-mono">{{ operation.karmaDeviceId }}</dd>
+            </div>
+            <div>
+              <dt>{{ operationText().dispatchedAt }}</dt>
+              <dd>{{ operation.dispatchedAt | holitaDateTime }}</dd>
+            </div>
+            <div>
+              <dt>{{ operationText().completedAt }}</dt>
+              <dd>{{ operation.completedAt | holitaDateTime }}</dd>
+            </div>
+            <div>
+              <dt>{{ operationText().deadlineAt }}</dt>
+              <dd>{{ operation.deadlineAt | holitaDateTime }}</dd>
+            </div>
+            <div>
+              <dt>{{ operationText().queueIds }}</dt>
+              <dd>{{ operation.queueIds.join(', ') || '—' }}</dd>
+            </div>
+            <div>
+              <dt>{{ operationText().responses }}</dt>
+              <dd>{{ operation.observationCount | holitaNumber }}</dd>
+            </div>
+            @if (operation.errorCode) {
+              <div>
+                <dt>{{ operationText().operationError }}</dt>
+                <dd class="app-mono">{{ operation.errorCode }}</dd>
+              </div>
+            }
+            @if (operation.baselineOperationId) {
+              <div>
+                <dt>{{ operationText().baselineOperation }}</dt>
+                <dd class="app-mono">{{ operation.baselineOperationId }}</dd>
+              </div>
+            }
+            @if (operation.parameterBaselineOperationId) {
+              <div>
+                <dt>{{ operationText().ruleEditor.parameterBaseline }}</dt>
+                <dd class="app-mono">{{ operation.parameterBaselineOperationId }}</dd>
+              </div>
+            }
+            @if (operation.writeDispatchedAt) {
+              <div>
+                <dt>{{ operationText().writeSentAt }}</dt>
+                <dd>{{ operation.writeDispatchedAt | holitaDateTime }}</dd>
+              </div>
+            }
+            @if (operation.catalogId) {
+              <div>
+                <dt>{{ operationText().editor.catalog }}</dt>
+                <dd class="app-mono">{{ operation.catalogId }}</dd>
+              </div>
+            }
+            @if (operation.profileId !== null) {
+              <div>
+                <dt>{{ operationText().profileId }}</dt>
+                <dd>{{ operation.profileId | holitaNumber }}</dd>
+              </div>
+            }
+            @if (operation.ruleId !== null) {
+              <div>
+                <dt>{{ text().trueEvent }}</dt>
+                <dd>{{ operation.ruleTrueEventId }}</dd>
+              </div>
+              <div>
+                <dt>{{ text().falseEvent }}</dt>
+                <dd>{{ operation.ruleFalseEventId }}</dd>
+              </div>
+              <div>
+                <dt>{{ text().debounce }}</dt>
+                <dd>{{ operation.ruleDebounceMilliseconds }}</dd>
+              </div>
+            }
+          </dl>
+          @if (operation.configuration; as configuration) {
+            <p>{{ operationText().configurationId }}: {{ configuration.configurationId }}</p>
+            <dl class="settings-definitions">
+              @for (parameter of configuration.parameters; track parameter.parameterId) {
+                <div>
+                  <dt>{{ text().parameter }} {{ parameter.parameterId }}</dt>
+                  <dd class="app-mono">{{ parameter.definitionHex }}</dd>
+                </div>
+              }
+            </dl>
+          }
+          @if (operation.rulesConfiguration; as rules) {
+            <p>{{ operationText().configurationId }}: {{ rules.configurationId }}</p>
+            <dl class="settings-definitions">
+              @for (rule of rules.rules; track rule.ruleId) {
+                <div>
+                  <dt>{{ text().ruleId }} {{ rule.ruleId }}</dt>
+                  <dd class="app-mono">{{ rule.definitionHex }}</dd>
+                </div>
+              }
+            </dl>
+          }
+        </details>
+        @if (operation.configuration) {
+          <button pButton type="button" severity="secondary" (click)="showSnapshot(operation.id)">
+            {{ operationText().viewSnapshot }}
+          </button>
+        }
+      </article>
+    }
+  </details>
+}
+
+@if (editingRule() !== undefined) {
+  <holita-device-rule-editor
+    [language]="language()"
+    [carNumber]="car().carNumber"
+    [draft]="editingRule() ?? null"
+    [parameters]="ruleParameters()"
+    [occupiedIds]="occupiedRuleIds()"
+    [catalogVersion]="catalogVersion()"
+    [canSend]="!ruleSendingUnavailable()"
+    (save)="saveRule($event)"
+    (closeRequest)="editingRule.set(undefined)"
+  />
+}
+@if (selectedRule(); as draft) {
+  <holita-device-rule-review
+    [draft]="draft"
+    [branchId]="branchId() ?? ''"
+    [target]="car()"
+    [rulesBaseline]="rulesSnapshot()"
+    [parameterBaseline]="matchingSnapshot()"
+    [unavailable]="ruleSendingUnavailable()"
+    [submitting]="requesting()"
+    [error]="writeError()"
+    [duplicateRuleId]="selectedRuleDuplicate()"
+    [expressionLabel]="displayExpression(draft.expression)"
+    [previousExpressionLabel]="previousRuleExpression()"
+    (closeRequest)="selectedRule.set(null)"
+    (send)="submitRule($event)"
+  />
+}
+@if (branchId(); as activeBranchId) {
+  <holita-device-parameter-editor
+    [branchId]="activeBranchId"
+    [drawer]="true"
+    [enabled]="writesEnabled()"
+    [target]="car()"
+    [latestBaseline]="matchingSnapshot()"
+    [presets]="presets()"
+    [busy]="viewingHistoricalSnapshot() || busy()"
+    [submitting]="requesting()"
+    [acceptedOperationId]="acceptedOperationId()"
+    [requestError]="writeError()"
+    [serverFieldErrors]="writeFieldErrors()"
+    (addition)="requestAddition.emit($event)"
+    (intervalUpdate)="requestIntervalUpdate.emit($event)"
+    (draftChanged)="writeDraftChanged.emit()"
+  />
 }

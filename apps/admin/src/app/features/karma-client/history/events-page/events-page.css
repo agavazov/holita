@@ -2,3 +2,8 @@
   display: block;
   min-inline-size: 0;
 }
+
+.source-text {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}

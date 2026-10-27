@@ -90,8 +90,7 @@ test('compiled Angular discovers branches and reads Vehicles through the real ga
   await chooseBranch(page, branchB.name);
   await expect(page).toHaveURL(`${app.url}/bg/${branchB.id}/fleet/devices`);
   await expect(page.getByRole('heading', { name: 'Устройства', exact: true })).toBeVisible();
-  // Below 1024 px the navigation is a drawer that closes on navigation. This step stays last:
-  // crossing the breakpoint while the drawer mask fades out leaves the mask over the page.
+  // Below 1024 px the navigation is a drawer that closes on navigation.
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator('#desktop-navigation')).toHaveCount(0);
   await page.getByRole('button', { name: 'Отвори или затвори навигацията', exact: true }).click();

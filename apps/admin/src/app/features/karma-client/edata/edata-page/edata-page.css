@@ -2,3 +2,18 @@
   display: block;
   min-inline-size: 0;
 }
+
+.parameter-id {
+  inline-size: 5rem;
+}
+
+.parameter-value {
+  inline-size: 7rem;
+}
+
+.parameter-table th,
+.parameter-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}

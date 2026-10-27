@@ -51,14 +51,16 @@ export function karmaCarListContext(params: ParamMap): CarListContext {
 
 /** Restore the list state from a truck page without accepting arbitrary return URLs. */
 export function karmaCarReturnQuery(params: ParamMap): CarListQuery {
-  return listQuery(
-    convertToParamMap({
-      q: single(params, 'listQ') ?? '',
-      size: single(params, 'listSize') ?? '50',
-      first: single(params, 'listFirst') ?? '0',
-      project: single(params, 'listProject') ?? '',
-    }),
-  );
+  return {
+    ...listQuery(
+      convertToParamMap({
+        q: single(params, 'listQ') ?? '',
+        size: single(params, 'listSize') ?? '50',
+        first: single(params, 'listFirst') ?? '0',
+        project: single(params, 'listProject') ?? '',
+      }),
+    ),
+  };
 }
 
 /** Preserve the same list context when switching between a truck's sections. */

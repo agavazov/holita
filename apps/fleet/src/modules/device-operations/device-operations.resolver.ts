@@ -8,6 +8,9 @@ import type {
   QueryFleetDeviceOperationArgs,
   QueryFleetDeviceOperationsArgs,
   QueryFleetDeviceConfigurationSnapshotArgs,
+  QueryFleetDeviceRulesSnapshotArgs,
+  MutationRequestFleetDeviceRulesReadArgs,
+  MutationRequestFleetDeviceRuleChangeArgs,
 } from '../../generated/graphql/types.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import { DeviceOperationsService } from './device-operations.service.js';
@@ -55,7 +58,7 @@ export class DeviceOperationsResolver {
 
   @Query('fleetDeviceOperations')
   history(@Args() args: QueryFleetDeviceOperationsArgs, @Context() context: RequestContext) {
-    return this.operations.history(context, args.deviceId);
+    return this.operations.history(context, args.karmaCarId, args.expectedKarmaDeviceId);
   }
 
   @Query('fleetDeviceConfigurationSnapshot')
@@ -63,7 +66,7 @@ export class DeviceOperationsResolver {
     @Args() args: QueryFleetDeviceConfigurationSnapshotArgs,
     @Context() context: RequestContext,
   ) {
-    return this.operations.snapshot(context, args.deviceId);
+    return this.operations.snapshot(context, args.karmaCarId, args.expectedKarmaDeviceId);
   }
 
   @Mutation('requestFleetDeviceConfigurationRead')
@@ -72,5 +75,29 @@ export class DeviceOperationsResolver {
     @Context() context: RequestContext,
   ) {
     return this.operations.request(context, args.input);
+  }
+
+  @Query('fleetDeviceRulesSnapshot')
+  rulesSnapshot(
+    @Args() args: QueryFleetDeviceRulesSnapshotArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.operations.rulesSnapshot(context, args.karmaCarId, args.expectedKarmaDeviceId);
+  }
+
+  @Mutation('requestFleetDeviceRulesRead')
+  requestRules(
+    @Args() args: MutationRequestFleetDeviceRulesReadArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.operations.requestRules(context, args.input);
+  }
+
+  @Mutation('requestFleetDeviceRuleChange')
+  requestRuleChange(
+    @Args() args: MutationRequestFleetDeviceRuleChangeArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.operations.requestRuleChange(context, args.input);
   }
 }

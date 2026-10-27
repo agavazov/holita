@@ -9,6 +9,7 @@ import type {
 import { DemoSession } from '../../core/auth/demo-session';
 import { AdminConfig } from '../../core/config/admin-config';
 import type { Language } from '../../i18n/messages';
+import type { LeavableDrawer } from '../../ui/drawer/leave-drawer.guard';
 import { BranchesApi } from './branches-api';
 
 @Injectable()
@@ -100,13 +101,17 @@ export class BranchContext {
     },
     language: Language,
   ): Promise<void> {
-    const destination = this.router.createUrlTree([
-      '/',
-      language,
-      selection.branchId,
-      'fleet',
-      'overview',
-    ]);
+    // Resume the matched settings route after login; its setup hints are validated by that page.
+    const requested = this.route.firstChild?.snapshot;
+    const returnUrl =
+      requested?.data['feature'] === 'karma-client' &&
+      requested.data['section'] === 'configuration' &&
+      this.router.url.startsWith(`/${language}/`)
+        ? this.router.parseUrl(this.router.url)
+        : null;
+    const destination =
+      returnUrl ??
+      this.router.createUrlTree(['/', language, selection.branchId, 'fleet', 'overview']);
     if (
       this.router.url === this.router.serializeUrl(destination) ||
       (await this.router.navigateByUrl(destination))
@@ -135,8 +140,11 @@ export class BranchContext {
     });
   }
 
-  choose(id: string, language: Language): void {
+  async choose(id: string, language: Language, activePage: LeavableDrawer | null): Promise<void> {
     if (!this.required()) {
+      if (activePage && !(await activePage.canLeave())) {
+        return;
+      }
       this.session.selectBranch(id);
       return;
     }

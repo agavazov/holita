@@ -1,33 +1,15 @@
 :host {
   display: block;
-  min-width: 0;
+  min-inline-size: 0;
 }
-.filter-hint,
-.trip-endpoints span {
-  color: var(--p-text-muted-color);
-}
-.trip-endpoints {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
-  gap: 1rem;
-  margin-block-end: 1rem;
-}
+
 .trip-endpoints > div {
-  display: grid;
-  gap: 0.5rem;
-  padding: 1rem;
-  border: 1px solid var(--p-content-border-color);
-  border-radius: var(--p-content-border-radius);
-}
-.trip-endpoints strong,
-.trip-endpoints span {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-app-space-2);
   overflow-wrap: anywhere;
 }
-.source-details {
-  margin-block-start: 1rem;
-}
-.source-details summary {
-  cursor: pointer;
-  padding-block: 1rem;
-  font-weight: 600;
+
+.trip-endpoints span {
+  color: var(--p-text-muted-color);
 }

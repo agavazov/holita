@@ -47,36 +47,35 @@
     </div>
   </main>
 </div>
-@if (mobile()) {
-  <p-drawer
-    [visible]="mobileOpen()"
-    (visibleChange)="drawerVisibilityChanged($event)"
-    (onShow)="focusNavigation()"
-    [modal]="true"
-    [blockScroll]="true"
-    appendTo="body"
-    styleClass="app-nav-drawer"
-    [ariaCloseLabel]="text().closeNavigation"
-    [pt]="{
-      root: { 'aria-label': text().navigation },
-      pcCloseButton: { root: { id: 'mobile-navigation-close' } },
-    }"
-  >
-    <ng-template #header>
-      <span class="app-logo" aria-hidden="true">
-        <span class="app-logo__mark">h</span>
-        <span class="app-logo__word">holita</span>
-      </span>
-    </ng-template>
-    <div id="mobile-navigation" class="app-nav-drawer__content">
-      <holita-admin-sidebar
-        [navigation]="navigation()"
-        [language]="language()"
-        [homeLink]="homeLink()"
-        [tenantName]="tenantName()"
-        [showLogo]="false"
-        idPrefix="mobile-nav"
-      />
-    </div>
-  </p-drawer>
-}
+<!-- Keep the closing drawer mounted across breakpoints until PrimeNG removes its mask. -->
+<p-drawer
+  [visible]="mobileOpen()"
+  (visibleChange)="drawerVisibilityChanged($event)"
+  (onShow)="focusNavigation()"
+  [modal]="true"
+  [blockScroll]="true"
+  appendTo="body"
+  styleClass="app-nav-drawer"
+  [ariaCloseLabel]="text().closeNavigation"
+  [pt]="{
+    root: { 'aria-label': text().navigation },
+    pcCloseButton: { root: { id: 'mobile-navigation-close' } },
+  }"
+>
+  <ng-template #header>
+    <span class="app-logo" aria-hidden="true">
+      <span class="app-logo__mark">h</span>
+      <span class="app-logo__word">holita</span>
+    </span>
+  </ng-template>
+  <div id="mobile-navigation" class="app-nav-drawer__content">
+    <holita-admin-sidebar
+      [navigation]="navigation()"
+      [language]="language()"
+      [homeLink]="homeLink()"
+      [tenantName]="tenantName()"
+      [showLogo]="false"
+      idPrefix="mobile-nav"
+    />
+  </div>
+</p-drawer>

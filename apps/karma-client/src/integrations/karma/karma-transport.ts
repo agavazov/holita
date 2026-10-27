@@ -1,4 +1,5 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { decodeRuleData, decodeRuleRecord } from '@holita/edata-rules';
 
 function unavailable(): ServiceUnavailableException {
   return new ServiceUnavailableException('Karma is unavailable; try again later');
@@ -93,9 +94,23 @@ export class KarmaTransport {
     return this.submitEdataCommand(carId, `02${rawDefinition.toUpperCase()}`, signal);
   }
 
+  requestRules(carId: string, signal: AbortSignal) {
+    return this.submitEdataCommand(carId, '0802BC', signal);
+  }
+
+  requestRule(carId: string, rawDefinition: string, signal: AbortSignal) {
+    try {
+      const rule = decodeRuleRecord(rawDefinition);
+      decodeRuleData(rule.ruleDataHex);
+    } catch {
+      throw unavailable();
+    }
+    return this.submitEdataCommand(carId, `04${rawDefinition.toUpperCase()}`, signal);
+  }
+
   private async submitEdataCommand(
     carId: string,
-    payload: '0702BC' | '1F' | `02${string}`,
+    payload: '0702BC' | '0802BC' | '1F' | `02${string}` | `04${string}`,
     signal: AbortSignal,
   ) {
     let session: string;

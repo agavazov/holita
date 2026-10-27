@@ -5,4 +5,5 @@
 
 .category {
   overflow-wrap: anywhere;
+  white-space: normal;
 }

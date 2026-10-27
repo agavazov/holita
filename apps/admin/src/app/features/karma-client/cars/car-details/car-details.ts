@@ -1,4 +1,12 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { Message } from 'primeng/message';
 import type {
   AdminKarmaReferencesQuery,
@@ -17,6 +25,7 @@ import { KarmaCarHeader } from '../../car-header/karma-car-header';
   selector: 'holita-car-details',
   styleUrl: './car-details.css',
   templateUrl: './car-details.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CarDetails {
   readonly language = input.required<Language>();

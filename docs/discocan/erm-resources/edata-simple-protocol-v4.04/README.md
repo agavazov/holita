@@ -48,6 +48,11 @@ describes reading, adding and changing reporting definitions through Karma,
 preserving other settings, confirming measurements and restoring a change. It supplements
 the source conversion; it is not a command interface implemented in holita.
 
+The [diagnostics and fault-reporting reference](diagnostics-and-fault-reporting.md)
+records ERM-TEST-01's source confirmation of the stored-fault read, the separate
+OBD/FMS/FMI report families and unresolved global/encoding conflicts. It does not
+claim new device validation or current authenticated portal access.
+
 ## Source qualifications
 
 - The protocol is a device interface. It does not establish a mapping to Karma API v2 parameter IDs or JSON response fields.

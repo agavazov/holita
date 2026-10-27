@@ -19,9 +19,11 @@ const vehicleProfileRoute: UrlMatcher = (segments) => {
 export const fleetRoutes: Routes = [
   {
     path: ':branchId/fleet/devices/:recordId/configuration',
-    data: { resource: 'device-configuration', editor: false },
-    canDeactivate: [leaveDrawer],
-    loadComponent: () => import('./fleet-workspace').then((module) => module.FleetWorkspace),
+    data: { feature: 'karma-client', requiresBranch: false },
+    loadComponent: () =>
+      import('./device-operations/device-configuration-redirect').then(
+        (module) => module.DeviceConfigurationRedirect,
+      ),
   },
   { path: ':branchId/fleet', pathMatch: 'full', redirectTo: ':branchId/fleet/overview' },
   {

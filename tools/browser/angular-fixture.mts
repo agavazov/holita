@@ -171,7 +171,10 @@ export const test = base.extend<
           throw new Error('Missing Angular fixture port.');
         }
         const url = `http://127.0.0.1:${String(address.port)}`;
-        const federation = await createFederationFixture({ adminOrigin: url });
+        const federation = await createFederationFixture({
+          adminOrigin: url,
+          deviceOperations: true,
+        });
         try {
           gatewayUrl = federation.url;
           await use({ url, federation });

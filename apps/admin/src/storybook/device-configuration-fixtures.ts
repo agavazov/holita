@@ -1,41 +1,85 @@
+import { encodeRuleData, encodeRuleRecord, parseRuleExpression } from '@holita/edata-rules';
 import {
   AdminDeviceConfigurationPageDocument,
-  AdminDeviceConfigurationTargetsDocument,
   AdminRequestDeviceConfigurationReadDocument,
   AdminRequestDeviceParameterAdditionDocument,
   AdminRequestDeviceParameterIntervalUpdateDocument,
+  AdminRequestDeviceRulesReadDocument,
+  AdminRequestDeviceRuleChangeDocument,
   type AdminDeviceConfigurationOperationFragment,
+  type AdminDeviceConfigurationPageQuery,
 } from '../generated/graphql/operations';
-import { fixtureDevice } from './devices-fixtures';
-import { fixtureKarmaCars } from './karma-fixtures';
+import { defaultBranchId } from './session-fixtures';
+import { fixtureKarmaCar, fixtureKarmaCars } from './karma-fixtures';
 import { fixtureError, graphqlFixture, type WithTypename } from './graphql-fixtures';
+import type { DeviceParameterMeasurements } from '../app/features/fleet/device-operations/device-configuration-types';
 
-export const configurationStoryDevices = {
-  confirmed: fixtureDevice.id,
-  empty: '60000000-0000-4000-8000-00000000c101',
-  waiting: '60000000-0000-4000-8000-00000000c102',
-  unknown: '60000000-0000-4000-8000-00000000c103',
-  timedOut: '60000000-0000-4000-8000-00000000c104',
-  disabled: '60000000-0000-4000-8000-00000000c105',
-  emptyConfiguration: '60000000-0000-4000-8000-00000000c106',
-  writeWaiting: '60000000-0000-4000-8000-00000000c107',
-  writeUncertain: '60000000-0000-4000-8000-00000000c108',
-  writeFailed: '60000000-0000-4000-8000-00000000c109',
-  writesDisabled: '60000000-0000-4000-8000-00000000c110',
-  history: '60000000-0000-4000-8000-00000000c111',
+export function configurationMeasurementsFixture(
+  state: DeviceParameterMeasurements['state'] | 'empty',
+): DeviceParameterMeasurements {
+  const readings = [
+    { value: 7, time: '06:42:45' },
+    { value: 0, time: '06:43:15' },
+    { value: null, time: '06:43:46' },
+    { value: 8, time: '06:44:16' },
+  ];
+  const items = readings
+    .map(({ value, time }, index) => ({
+      id: String(7200000000 + index),
+      carId: fixtureKarmaCar.id,
+      deviceId: fixtureKarmaCar.deviceId,
+      carNumber: fixtureKarmaCar.carNumber,
+      eventTimeUtc: `2026-10-18 ${time}`,
+      eventTimeLocal: null,
+      pdt: null,
+      spd: null,
+      odo: null,
+      latitude: null,
+      longitude: null,
+      parameters: [{ id: '718', value, description: 'Source parameter 718' }],
+    }))
+    .reverse();
+  return {
+    parameterId: 718,
+    fromUtc: '2026-10-17T07:08:00Z',
+    toUtc: '2026-10-18T07:08:00Z',
+    state: state === 'empty' ? 'ready' : state,
+    items: state === 'ready' ? items : [],
+  };
+}
+
+export const configurationStoryStates = {
+  confirmed: 'confirmed',
+  empty: 'empty',
+  waiting: 'waiting',
+  unknown: 'unknown',
+  timedOut: 'timed-out',
+  disabled: 'disabled',
+  emptyConfiguration: 'empty-configuration',
+  writeWaiting: 'write-waiting',
+  writeUncertain: 'write-uncertain',
+  writeFailed: 'write-failed',
+  writesDisabled: 'writes-disabled',
+  history: 'history',
 } as const;
 
 export const fixtureConfigurationOperation: WithTypename<AdminDeviceConfigurationOperationFragment> =
   {
     __typename: 'FleetDeviceOperation',
     id: '80000000-0000-4000-8000-00000000c101',
-    deviceId: configurationStoryDevices.confirmed,
-    deviceImei: fixtureDevice.imei,
+    branchId: defaultBranchId,
     karmaCarId: '41',
     karmaDeviceId: '000123456789012',
     kind: 'READ_CONFIGURATION',
     phase: 'READ_PARAMETERS',
     baselineOperationId: null,
+    parameterBaselineOperationId: null,
+    ruleId: null,
+    ruleExpression: null,
+    ruleTrueEventId: null,
+    ruleFalseEventId: null,
+    ruleDebounceMilliseconds: null,
+    rulesConfiguration: null,
     parameterId: null,
     intervalSeconds: null,
     previousIntervalSeconds: null,
@@ -59,9 +103,15 @@ export const fixtureConfigurationOperation: WithTypename<AdminDeviceConfiguratio
       parameters: [
         {
           __typename: 'FleetDeviceConfigurationParameter',
-          parameterId: 662,
+          parameterId: 718,
           intervalSeconds: 30,
-          definitionHex: '0296' + '00'.repeat(18) + '001E',
+          definitionHex: '02CE' + '00'.repeat(18) + '001E',
+        },
+        {
+          __typename: 'FleetDeviceConfigurationParameter',
+          parameterId: 748,
+          intervalSeconds: 60,
+          definitionHex: '02EC' + '00'.repeat(18) + '003C',
         },
         {
           __typename: 'FleetDeviceConfigurationParameter',
@@ -77,11 +127,62 @@ export const fixtureParameterPresets = [
   {
     catalogId: '90000000-0000-4000-8000-000000000956',
     catalogLabel: 'Monitor 9.56',
+    parameterId: 718,
+    name: 'ABS/EBS Amber Warning Signal',
+    profileIds: [0],
+  },
+  {
+    catalogId: '90000000-0000-4000-8000-000000000956',
+    catalogLabel: 'Monitor 9.56',
+    parameterId: 748,
+    name: 'AC output 1 Amper',
+    profileIds: [0],
+  },
+  {
+    catalogId: '90000000-0000-4000-8000-000000000956',
+    catalogLabel: 'Monitor 9.56',
     parameterId: 1001,
     name: 'Fixture preset 1001',
     profileIds: [0],
   },
 ];
+
+const fixtureRule = {
+  ruleId: 1,
+  trueEventId: 1001,
+  falseEventId: 1002,
+  debounceMilliseconds: 1000,
+  activateDashboard: false,
+  expression: '[718] > 10',
+  parameterIds: [718],
+};
+
+const fixtureRulesOperation: WithTypename<AdminDeviceConfigurationOperationFragment> = {
+  ...fixtureConfigurationOperation,
+  id: '80000000-0000-4000-8000-00000000c106',
+  kind: 'READ_RULES',
+  phase: 'READ_RULES',
+  configuration: null,
+  requestedAt: '2026-10-18T06:44:00.000Z',
+  dispatchedAt: '2026-10-18T06:44:01.000Z',
+  completedAt: '2026-10-18T06:45:00.000Z',
+  nextCheckAt: '2026-10-18T06:45:00.000Z',
+  deadlineAt: '2026-10-18T06:54:00.000Z',
+  rulesConfiguration: {
+    __typename: 'FleetDeviceRulesConfiguration',
+    configurationId: '1002',
+    rules: [
+      {
+        __typename: 'FleetDeviceRule',
+        ...fixtureRule,
+        definitionHex: encodeRuleRecord({
+          ...fixtureRule,
+          ruleDataHex: encodeRuleData(parseRuleExpression(fixtureRule.expression)),
+        }),
+      },
+    ],
+  },
+};
 
 const fixtureQueuedOperation: WithTypename<AdminDeviceConfigurationOperationFragment> = {
   ...fixtureConfigurationOperation,
@@ -97,20 +198,21 @@ const fixtureQueuedOperation: WithTypename<AdminDeviceConfigurationOperationFrag
   coverageComplete: false,
 };
 
-graphqlFixture(AdminDeviceConfigurationPageDocument, (variables) => {
-  const deviceId = variables.requiredString('deviceId');
-  const confirmed = { ...fixtureConfigurationOperation, deviceId };
-  const empty = deviceId === configurationStoryDevices.empty;
-  const disabled = deviceId === configurationStoryDevices.disabled;
-  const waiting = deviceId === configurationStoryDevices.waiting;
-  const unknown = deviceId === configurationStoryDevices.unknown;
-  const timedOut = deviceId === configurationStoryDevices.timedOut;
-  const emptyConfiguration = deviceId === configurationStoryDevices.emptyConfiguration;
-  const writeWaiting = deviceId === configurationStoryDevices.writeWaiting;
-  const writeUncertain = deviceId === configurationStoryDevices.writeUncertain;
-  const writeFailed = deviceId === configurationStoryDevices.writeFailed;
-  const history = deviceId === configurationStoryDevices.history;
-  const writesDisabled = deviceId === configurationStoryDevices.writesDisabled;
+export function configurationPageFixture(
+  state: string,
+): WithTypename<AdminDeviceConfigurationPageQuery> {
+  const confirmed = fixtureConfigurationOperation;
+  const empty = state === configurationStoryStates.empty;
+  const disabled = state === configurationStoryStates.disabled;
+  const waiting = state === configurationStoryStates.waiting;
+  const unknown = state === configurationStoryStates.unknown;
+  const timedOut = state === configurationStoryStates.timedOut;
+  const emptyConfiguration = state === configurationStoryStates.emptyConfiguration;
+  const writeWaiting = state === configurationStoryStates.writeWaiting;
+  const writeUncertain = state === configurationStoryStates.writeUncertain;
+  const writeFailed = state === configurationStoryStates.writeFailed;
+  const history = state === configurationStoryStates.history;
+  const writesDisabled = state === configurationStoryStates.writesDisabled;
   const lastSnapshot = empty
     ? null
     : emptyConfiguration
@@ -123,6 +225,20 @@ graphqlFixture(AdminDeviceConfigurationPageDocument, (variables) => {
           },
         }
       : confirmed;
+  const rulesSnapshot = empty
+    ? null
+    : {
+        ...fixtureRulesOperation,
+        ...(emptyConfiguration
+          ? {
+              rulesConfiguration: {
+                __typename: 'FleetDeviceRulesConfiguration',
+                configurationId: '1002',
+                rules: [],
+              },
+            }
+          : {}),
+      };
   const pending: WithTypename<AdminDeviceConfigurationOperationFragment> = {
     ...confirmed,
     id: '80000000-0000-4000-8000-00000000c102',
@@ -178,7 +294,6 @@ graphqlFixture(AdminDeviceConfigurationPageDocument, (variables) => {
     },
   };
   return {
-    fleetDevice: { ...fixtureDevice, id: deviceId },
     fleetDeviceOperationsEnabled: !disabled,
     fleetDeviceConfigurationWritesEnabled: !disabled && !writesDisabled,
     fleetDeviceParameterPresets: fixtureParameterPresets,
@@ -189,15 +304,25 @@ graphqlFixture(AdminDeviceConfigurationPageDocument, (variables) => {
         : waiting || unknown || timedOut
           ? [pending]
           : history
-            ? [confirmed, olderSnapshot]
+            ? [...(rulesSnapshot ? [rulesSnapshot] : []), confirmed, olderSnapshot]
             : lastSnapshot
-              ? [lastSnapshot]
+              ? [...(rulesSnapshot ? [rulesSnapshot] : []), lastSnapshot]
               : [],
     fleetDeviceConfigurationSnapshot: lastSnapshot,
+    fleetDeviceRulesSnapshot: rulesSnapshot,
   };
-});
+}
 
-graphqlFixture(AdminDeviceConfigurationTargetsDocument, () => ({ karmaCars: fixtureKarmaCars }));
+graphqlFixture(AdminDeviceConfigurationPageDocument, (variables) => {
+  const carId = variables.requiredString('karmaCarId');
+  const target = fixtureKarmaCars.find((car) => car.id === carId);
+  if (!target || target.deviceId !== variables.requiredString('expectedKarmaDeviceId')) {
+    throw fixtureError('CONFLICT', 'The selected Karma device has changed.');
+  }
+  return configurationPageFixture(
+    carId === '41' ? configurationStoryStates.confirmed : configurationStoryStates.empty,
+  );
+});
 
 graphqlFixture(AdminRequestDeviceConfigurationReadDocument, (variables) => {
   const input = variables.object('input');
@@ -208,7 +333,6 @@ graphqlFixture(AdminRequestDeviceConfigurationReadDocument, (variables) => {
   const operation: WithTypename<AdminDeviceConfigurationOperationFragment> = {
     ...fixtureConfigurationOperation,
     id: '80000000-0000-4000-8000-00000000c103',
-    deviceId: input.requiredString('deviceId'),
     karmaCarId: target.id,
     karmaDeviceId: target.deviceId,
     status: 'QUEUED',
@@ -230,7 +354,6 @@ graphqlFixture(AdminRequestDeviceParameterAdditionDocument, (variables) => {
   const operation: WithTypename<AdminDeviceConfigurationOperationFragment> = {
     ...fixtureQueuedOperation,
     id: '80000000-0000-4000-8000-00000000c104',
-    deviceId: input.requiredString('deviceId'),
     karmaCarId: input.requiredString('karmaCarId'),
     karmaDeviceId: input.requiredString('expectedKarmaDeviceId'),
     baselineOperationId: input.requiredString('baselineOperationId'),
@@ -248,7 +371,6 @@ graphqlFixture(AdminRequestDeviceParameterIntervalUpdateDocument, (variables) =>
   const operation: WithTypename<AdminDeviceConfigurationOperationFragment> = {
     ...fixtureQueuedOperation,
     id: '80000000-0000-4000-8000-00000000c105',
-    deviceId: input.requiredString('deviceId'),
     karmaCarId: input.requiredString('karmaCarId'),
     karmaDeviceId: input.requiredString('expectedKarmaDeviceId'),
     baselineOperationId: input.requiredString('baselineOperationId'),
@@ -259,4 +381,37 @@ graphqlFixture(AdminRequestDeviceParameterIntervalUpdateDocument, (variables) =>
     phase: 'READ_PARAMETERS',
   };
   return { requestFleetDeviceParameterIntervalUpdate: operation };
+});
+
+graphqlFixture(AdminRequestDeviceRulesReadDocument, (variables) => {
+  const input = variables.object('input');
+  const operation: WithTypename<AdminDeviceConfigurationOperationFragment> = {
+    ...fixtureQueuedOperation,
+    id: '80000000-0000-4000-8000-00000000c107',
+    karmaCarId: input.requiredString('karmaCarId'),
+    karmaDeviceId: input.requiredString('expectedKarmaDeviceId'),
+    kind: 'READ_RULES',
+    phase: 'READ_RULES',
+  };
+  return { requestFleetDeviceRulesRead: operation };
+});
+
+graphqlFixture(AdminRequestDeviceRuleChangeDocument, (variables) => {
+  const input = variables.object('input');
+  const operation: WithTypename<AdminDeviceConfigurationOperationFragment> = {
+    ...fixtureQueuedOperation,
+    id: '80000000-0000-4000-8000-00000000c108',
+    karmaCarId: input.requiredString('karmaCarId'),
+    karmaDeviceId: input.requiredString('expectedKarmaDeviceId'),
+    baselineOperationId: input.requiredString('baselineOperationId'),
+    parameterBaselineOperationId: input.requiredString('parameterBaselineOperationId'),
+    ruleId: input.integer('ruleId'),
+    ruleExpression: input.requiredString('expression'),
+    ruleTrueEventId: input.integer('trueEventId'),
+    ruleFalseEventId: input.integer('falseEventId'),
+    ruleDebounceMilliseconds: input.integer('debounceMilliseconds'),
+    kind: 'UPSERT_RULE',
+    phase: 'READ_PARAMETERS',
+  };
+  return { requestFleetDeviceRuleChange: operation };
 });

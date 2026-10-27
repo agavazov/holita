@@ -22,6 +22,9 @@ include_subgraph_errors:
 traffic_shaping:
   all:
     timeout: 5s
+  subgraphs:
+    karma-client:
+      timeout: 9s
 
 override_subgraph_url:
   core: '${env.CORE_GRAPHQL_URL:-http://127.0.0.1:11011/graphql}'

@@ -2,9 +2,11 @@
 
 Date: 2026-10-24, Europe/Sofia.
 
-**Status: the user is dissatisfied with the interface. The current UI is an unaccepted
-Storybook prototype. This checkpoint preserves work for review; it is not design approval,
-a completed production feature, or authorization to send device commands.**
+**Historical checkpoint from 2026-10-24. The interface has since been reviewed and phase 2
+is authorized. Do not use the prototype status or next-step instructions below as current scope.**
+Current behavior is documented in [Discocan development](../discocan/development.md#background-device-configuration-reads);
+remaining acceptance work is in [the settings backlog](../todo/karma-device-management-design.md).
+This historical checkpoint does not authorize an unspecified device write.
 
 ## 1. Start here
 
@@ -138,8 +140,8 @@ Authoritative references and pending work:
 - [Design system](../admin-design-system.md), [testing policy](../testing.md).
 - [Current device-operation architecture](../discocan/architecture.md#background-device-configuration-reads).
 - [Open review/cleanup backlog](../todo/review-corrections-and-karma-management.md).
-- [Pending production proposal](../todo/karma-device-management-design.md).
-- [Proposed identity/scope ADR](../todo/karma-device-management-identity-adr.md).
+- [Remaining rule implementation](../todo/karma-device-management-design.md).
+- [Current identity/scope boundary](../discocan/architecture.md#background-device-configuration-reads).
 - [Parameter configuration backlog](../todo/erm-edata-configuration-interface.md) and
   [Karma API backlog](../todo/karma-api-v2.md).
 - [Karma API references](../discocan/erm-resources/karma-api-v2/endpoint-catalog.md) and

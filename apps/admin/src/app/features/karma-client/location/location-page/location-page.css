@@ -1,29 +1,4 @@
 :host {
   display: block;
-  min-width: 0;
-}
-.hint,
-.location-summary span {
-  color: var(--p-text-muted-color);
-}
-.location-summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
-  gap: 1rem;
-  margin-block: 1.5rem;
-}
-.location-summary > div {
-  display: grid;
-  gap: 0.5rem;
-  padding: 1rem;
-  border: 1px solid var(--p-content-border-color);
-  border-radius: var(--p-content-border-radius);
-}
-.location-summary strong {
-  overflow-wrap: anywhere;
-}
-.source-details summary {
-  cursor: pointer;
-  padding-block: 1rem;
-  font-weight: 600;
+  min-inline-size: 0;
 }

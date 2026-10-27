@@ -29,8 +29,9 @@ Fleet implementation import or persisted Karma-to-Fleet identity mapping in this
 subgraph. Health is a local process check and does not establish upstream availability.
 
 Fleet's separate [background configuration operations](../../architecture.md#background-device-configuration-reads)
-call the Karma Client internal machine API. Fleet owns the Tenant/Branch Device,
-explicit target selection, persisted operation, scheduler and saved observations.
+call the Karma Client internal machine API. Fleet owns Tenant/Branch-scoped operations,
+the scheduler and saved observations. Each operation captures the Karma car/device pair;
+it does not require a local Fleet Device association.
 Karma Client owns upstream authentication, target rechecks, fixed reads and the single-definition write
 and bounded event parsing. Its request handler does not wait for the device response
 and does not start a background worker in this subgraph.
@@ -78,7 +79,7 @@ There are no public Karma mutations or arbitrary REST proxy operations.
 ## Internal configuration API
 
 The [DeviceConfigurationController](../../../../apps/karma-client/src/modules/device-configuration/device-configuration.controller.ts)
-exposes six fixed POST endpoints under `/internal/device-configuration`, protected
+exposes nine fixed POST endpoints under `/internal/device-configuration`, protected
 by the [machine guard](../../../../apps/karma-client/src/modules/device-configuration/device-configuration.guard.ts).
 They do not use the public Karma GraphQL scope or accept arbitrary upstream paths.
 
@@ -90,6 +91,9 @@ They do not use the public Karma GraphQL scope or accept arbitrary upstream path
 | `/parameter-request`    | `carId`, `expectedDeviceId`, `parameterId`, `reportingIntervalSeconds`, `rawDefinition` | One additive definition; same submission outcome                            |
 | `/observations`         | `carId`, `expectedDeviceId`, `fromUtc`, `toUtc`, optional `afterMessageId`              | Bounded parsed `401` fragments, scan coverage and assembled readback status |
 | `/profile-observations` | Same window/identity fields and optional watermark                                      | Separate bounded `416` profile observations and readback status             |
+| `/rules-request`        | `carId`, `expectedDeviceId`                                                             | `ACCEPTED` and queue IDs, or `UNCERTAIN`; fixed full-rule read              |
+| `/rule-request`         | `carId`, `expectedDeviceId`, `ruleId`, `rawDefinition`                                  | One supported rule record; same submission outcome                          |
+| `/rules-observations`   | Same window/identity fields and optional watermark                                      | Separate bounded `402` rule observations and readback status                |
 
 `/request` fixes payload `0702BC`, `/profile-request` fixes `1F`, and `/parameter-request`
 constructs only `02` plus one 44-hex-character definition under the same
@@ -97,6 +101,10 @@ constructs only `02` plus one 44-hex-character definition under the same
 requested intervals are integers `0..65000`. No endpoint accepts a full command, arbitrary
 operation byte or multiple definitions. The full definition is machine-only; Fleet owns
 catalog/profile eligibility and construction from a verified preset or captured baseline.
+`/rules-request` fixes payload `0802BC`; `/rule-request` constructs only `04` plus one rule
+record with matching ID, a nine-byte header and supported 1–128-byte RuleData. The shared
+codec validates its frame and expression before dispatch. Rule observations preserve unknown
+bytecode as original records, even when it is unavailable for authoring.
 Device identity is checked before submission and before reading observations.
 Observation windows use canonical ISO UTC timestamps,
 span at most 24 hours, and are rounded outward to the provider's whole-second
@@ -117,22 +125,32 @@ complete readback is structural configuration evidence, not queue acknowledgment
 verification that a signal is physically available. The independent
 [profile parser](../../../../apps/karma-client/src/modules/device-configuration/profile-response.ts)
 validates `416` payload `1F` without combining it with parameter fragments. Global settings,
-profile writes, deletion/replacement, rules, firmware and device destinations are unsupported.
+profile writes, deletion/replacement, firmware and device destinations are unsupported.
+The [rule parser](../../../../apps/karma-client/src/modules/device-configuration/rule-response.ts)
+assembles separate numbered `402` responses with payload `08`. It rejects inconsistent
+configuration/segment metadata and duplicate rule IDs; complete rules are sorted by ID.
+The envelope mirrors parameter observations: scan coverage, readback status/configuration ID,
+and original message metadata with `{ruleId, rawDefinition}` records.
+Parameter and rule observation envelopes may also contain `terminalResponse` with
+`messageId`, `eventTimeUtc` and the exact `rawMessage` `19,0,154,0`. It records a terminal
+read without supplying definitions or a configuration ID. Fleet requires complete scan
+coverage before ending an incomplete read with `READ_NO_CONFIGURATION`; complete valid
+configuration data still takes precedence. The response does not confirm an empty set.
 Fleet persists baseline, submitted definition, marker and independent full verification;
 the complete lifecycle is defined in the linked architecture.
 
 ## Backend feature boundaries
 
-| Feature                | Concrete implementation                                                                                                                                                             | Contract / mapping                                                                                                                                                                                                                                                                  |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Transport              | [KarmaTransport](../../../../apps/karma-client/src/integrations/karma/karma-transport.ts), [module](../../../../apps/karma-client/src/integrations/karma/karma-transport.module.ts) | Fixed upstream endpoints, shared session, authentication renewal and sanitized HTTP reads                                                                                                                                                                                           |
-| Cars                   | [CarsService](../../../../apps/karma-client/src/modules/cars/cars.service.ts)                                                                                                       | [SDL](../../../../apps/karma-client/src/modules/cars/cars.graphql), [response](../../../../apps/karma-client/src/modules/cars/cars-response.ts)                                                                                                                                     |
-| eData                  | [EdataService](../../../../apps/karma-client/src/modules/edata/edata.service.ts)                                                                                                    | [SDL](../../../../apps/karma-client/src/modules/edata/edata.graphql), [query](../../../../apps/karma-client/src/modules/edata/edata-query.ts), [response](../../../../apps/karma-client/src/modules/edata/edata-response.ts)                                                        |
-| Internal configuration | [DeviceConfigurationService](../../../../apps/karma-client/src/modules/device-configuration/device-configuration.service.ts)                                                        | Fixed parameter/profile reads and one-definition additive write, identity checks, [input validation](../../../../apps/karma-client/src/modules/device-configuration/configuration-input.ts), separate parameter/profile parsing; Fleet owns eligibility, persistence and scheduling |
-| Location               | [LocationService](../../../../apps/karma-client/src/modules/location/location.service.ts)                                                                                           | [SDL](../../../../apps/karma-client/src/modules/location/location.graphql), [response](../../../../apps/karma-client/src/modules/location/location-response.ts)                                                                                                                     |
-| Trips/events/profile   | [HistoryService](../../../../apps/karma-client/src/modules/history/history.service.ts)                                                                                              | [SDL](../../../../apps/karma-client/src/modules/history/history.graphql), [query](../../../../apps/karma-client/src/modules/history/history-query.ts), [response](../../../../apps/karma-client/src/modules/history/history-response.ts)                                            |
-| Projects/zones/version | [ReferencesService](../../../../apps/karma-client/src/modules/references/references.service.ts)                                                                                     | [SDL](../../../../apps/karma-client/src/modules/references/references.graphql), [response](../../../../apps/karma-client/src/modules/references/references-response.ts)                                                                                                             |
-| Users/roles            | [AccountsService](../../../../apps/karma-client/src/modules/accounts/accounts.service.ts)                                                                                           | [SDL](../../../../apps/karma-client/src/modules/accounts/accounts.graphql), [response](../../../../apps/karma-client/src/modules/accounts/accounts-response.ts)                                                                                                                     |
+| Feature                | Concrete implementation                                                                                                                                                             | Contract / mapping                                                                                                                                                                                                                                                                     |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Transport              | [KarmaTransport](../../../../apps/karma-client/src/integrations/karma/karma-transport.ts), [module](../../../../apps/karma-client/src/integrations/karma/karma-transport.module.ts) | Fixed upstream endpoints, shared session, authentication renewal and sanitized HTTP reads                                                                                                                                                                                              |
+| Cars                   | [CarsService](../../../../apps/karma-client/src/modules/cars/cars.service.ts)                                                                                                       | [SDL](../../../../apps/karma-client/src/modules/cars/cars.graphql), [response](../../../../apps/karma-client/src/modules/cars/cars-response.ts)                                                                                                                                        |
+| eData                  | [EdataService](../../../../apps/karma-client/src/modules/edata/edata.service.ts)                                                                                                    | [SDL](../../../../apps/karma-client/src/modules/edata/edata.graphql), [query](../../../../apps/karma-client/src/modules/edata/edata-query.ts), [response](../../../../apps/karma-client/src/modules/edata/edata-response.ts)                                                           |
+| Internal configuration | [DeviceConfigurationService](../../../../apps/karma-client/src/modules/device-configuration/device-configuration.service.ts)                                                        | Fixed parameter/profile/rule reads and one-definition parameter/rule writes, identity checks, [input validation](../../../../apps/karma-client/src/modules/device-configuration/configuration-input.ts), separate response parsing; Fleet owns eligibility, persistence and scheduling |
+| Location               | [LocationService](../../../../apps/karma-client/src/modules/location/location.service.ts)                                                                                           | [SDL](../../../../apps/karma-client/src/modules/location/location.graphql), [response](../../../../apps/karma-client/src/modules/location/location-response.ts)                                                                                                                        |
+| Trips/events/profile   | [HistoryService](../../../../apps/karma-client/src/modules/history/history.service.ts)                                                                                              | [SDL](../../../../apps/karma-client/src/modules/history/history.graphql), [query](../../../../apps/karma-client/src/modules/history/history-query.ts), [response](../../../../apps/karma-client/src/modules/history/history-response.ts)                                               |
+| Projects/zones/version | [ReferencesService](../../../../apps/karma-client/src/modules/references/references.service.ts)                                                                                     | [SDL](../../../../apps/karma-client/src/modules/references/references.graphql), [response](../../../../apps/karma-client/src/modules/references/references-response.ts)                                                                                                                |
+| Users/roles            | [AccountsService](../../../../apps/karma-client/src/modules/accounts/accounts.service.ts)                                                                                           | [SDL](../../../../apps/karma-client/src/modules/accounts/accounts.graphql), [response](../../../../apps/karma-client/src/modules/accounts/accounts-response.ts)                                                                                                                        |
 
 SDL owns public API types, generated by the existing GraphQL toolchain. The
 reconstructed REST schema is not currently wired into this toolchain. Backend
@@ -156,9 +174,15 @@ Changing Branch remembers that selection without reloading Karma. Navigation,
 language changes, truck changes, session replacement and logout retire old reads
 and clients. Filter/period/cursor changes cancel obsolete reads and clear old rows;
 same-query Refresh can retain the last successful result on error. There is no
-automatic polling or command/write UI in the Karma section. The Fleet Device
-configuration view consumes separately scoped persisted read/change operations through
-Gateway; refreshing or leaving that view does not own the server-side job.
+automatic polling or device writes in these account/history reads. The truck's Device settings
+tab consumes separately scoped Fleet read/change operations through Gateway using the shell's
+active Branch for operation scope and the selected Karma car's device as the target.
+There is no local Device setup step. Fleet's read/change inputs contain `karmaCarId` and
+`expectedKarmaDeviceId`, verified upstream before dispatch. These are Fleet contracts, not
+public Karma mutations. Read configuration sequences parameter
+then rule reads; after reload, continuation requires an explicit action. Refreshing or leaving
+the view does not own the server-side job. Login preserves a requested settings route.
+See the [configuration workflow](../../architecture.md#background-device-configuration-reads).
 
 The car table requests all cars, not a server-paginated/searchable list. Its list
 operation selects basic fields and timezone but omits `subType` and `driverCount`;
@@ -170,7 +194,7 @@ search/paging with exact totals for that loaded array. URL state uses `q`, `size
 and `first`; page sizes are 25/50/100, default 50. These totals do not imply history
 totals or server completeness guarantees beyond the returned list.
 
-eData/trips/events expose full row dialogs and Latest/Older/Newer cursor navigation.
+eData/trips/events expose full row drawers and Latest/Older/Newer cursor navigation.
 Applied size, dates and parameter/event filters are URL-backed. User dialogs display
 all eleven source fields and restore focus when closed. Text is escaped; `extra`
 and role descriptions are not interpreted as HTML or authorization.

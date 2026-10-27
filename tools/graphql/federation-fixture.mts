@@ -477,7 +477,9 @@ async function observeRequests(target: string) {
   };
 }
 
-export async function createFederationFixture(options: { adminOrigin?: string } = {}) {
+export async function createFederationFixture(
+  options: { adminOrigin?: string; deviceOperations?: boolean } = {},
+) {
   config({
     path: [join(workspaceRoot, 'apps/core/.env'), join(workspaceRoot, 'apps/fleet/.env')],
     quiet: true,
@@ -530,8 +532,8 @@ export async function createFederationFixture(options: { adminOrigin?: string } 
       CORE_GRAPHQL_URL: coreObserver.url,
       // Explicit values override a developer's apps/fleet/.env.
       FLEET_ENABLED: 'true',
-      FLEET_DEVICE_OPERATIONS_ENABLED: 'false',
-      FLEET_DEVICE_CONFIGURATION_WRITES_ENABLED: 'false',
+      FLEET_DEVICE_OPERATIONS_ENABLED: String(options.deviceOperations ?? false),
+      FLEET_DEVICE_CONFIGURATION_WRITES_ENABLED: String(options.deviceOperations ?? false),
       FLEET_KARMA_INTERNAL_URL: new URL(karmaClient.url).origin,
       KARMA_INTERNAL_TOKEN: internalToken,
     };

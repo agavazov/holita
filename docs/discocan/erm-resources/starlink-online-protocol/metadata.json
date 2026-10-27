@@ -6,12 +6,23 @@
   "source_version": null,
   "analysis_date": "2026-10-16",
   "analysis_timezone": "Europe/Sofia",
-  "reference_edition": "1.0",
+  "reference_edition": "1.2",
+  "last_updated": "2026-10-27",
   "prepared_by": "Codex; visual screenshot transcription and analysis",
   "access": {
-    "credentials": "Awaited, as reported by the user",
+    "credentials": "No protocol connection located in the available project inventory or searched accessible correspondence; configured shared inventory unavailable on this host. Referenced access mail not recovered.",
     "authenticated_review": false,
-    "companion_page_contents_available": false
+    "companion_page_contents_available": false,
+    "public_entry_check": {
+      "stage": "ERM-TEST-01",
+      "date": "2026-10-27",
+      "root_http_status": 200,
+      "vendor_deep_link_http_status": 200,
+      "page_title": "StarLink online protocol",
+      "login_form_present": true,
+      "login_submitted": false,
+      "authenticated_review": false
+    }
   },
   "scope": [
     "Home page overview",
@@ -63,6 +74,6 @@
     "Page dates are visible source dates, not screenshot capture dates.",
     "Home page news version labels do not establish a protocol-wide version.",
     "Checksum sample arithmetic is an observation, not a verified vendor algorithm.",
-    "Only the portal root URL is known; deep-link URLs are unavailable."
+    "Earlier screenshots provided only the root URL. Vendor email deep links were subsequently found, but the tested link also required login; requested companion-page contents remain unavailable."
   ]
 }

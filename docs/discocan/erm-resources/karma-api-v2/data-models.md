@@ -152,6 +152,18 @@ Sources: [SDL](../../../../apps/karma-client/src/modules/history/history.graphql
 | `odo`          | `odo`         | `Float`      | Nullable finite source number returned by fields[] selection.                   |
 | `extra`        | `extra`       | `String`     | Nullable source text; preserved and escaped, with no automatic interpretation.  |
 
+### Additional observed upstream event fields
+
+The [web functionality research](web-functionality-research.md#sources-and-evidence)
+observed optional `extra_base64` on some undecoded event rows and
+`extra_parsed.esafe` when using the documented `decode=1` selector. The sampled
+eSafe object had numeric `manuever`, `level` and `duration`, with numeric or null
+axis fields. The original `manuever` spelling is retained in the source.
+
+These are structural observations, not a complete decoded-event schema or a
+maneuver/units dictionary. The current adapter does not request decoding or expose
+these fields through GraphQL. They do not establish a camera-media contract.
+
 ## Driving profile (`KarmaDrivingProfile`)
 
 Sources: [SDL](../../../../apps/karma-client/src/modules/history/history.graphql), [runtime mapping](../../../../apps/karma-client/src/modules/history/history-response.ts).

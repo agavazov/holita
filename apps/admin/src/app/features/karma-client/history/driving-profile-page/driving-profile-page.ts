@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   computed,
   DestroyRef,
@@ -18,6 +19,8 @@ import { ButtonDirective } from 'primeng/button';
 import { KarmaDateTime } from '../../date-time/karma-date-time';
 import { Message } from 'primeng/message';
 import { TableModule } from 'primeng/table';
+import { TablePanel } from '../../../../ui/table-panel/table-panel';
+import { tableView } from '../../../../ui/table-panel/table-view';
 import type { Subscription } from 'rxjs';
 import type {
   AdminKarmaCarQuery,
@@ -49,10 +52,12 @@ import { karmaCarNavigationContext } from '../../car-header/karma-car-context';
     KarmaDateTime,
     Message,
     TableModule,
+    TablePanel,
   ],
   providers: [KarmaHistoryApi],
   templateUrl: './driving-profile-page.html',
   styleUrl: './driving-profile-page.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DrivingProfilePage implements OnInit {
   readonly language = input.required<Language>();
@@ -66,6 +71,14 @@ export class DrivingProfilePage implements OnInit {
   readonly appliedPeriod = signal<{ readonly from: string; readonly to: string } | null>(null);
   readonly loading = signal(false);
   readonly error = signal(false);
+  readonly tableState = computed(() =>
+    tableView({
+      loading: this.loading(),
+      error: this.error() ? true : null,
+      rows: this.loaded() ? (this.profile()?.categories.length ?? 0) : null,
+      filtered: false,
+    }),
+  );
   readonly invalidFilters = signal(false);
   readonly formError = signal(false);
   readonly fieldErrors = signal<KarmaFilterErrors>({});

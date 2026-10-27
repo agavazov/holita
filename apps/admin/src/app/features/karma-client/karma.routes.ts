@@ -1,6 +1,13 @@
 import type { Routes } from '@angular/router';
+import { leaveDrawer } from '../../ui/drawer/leave-drawer.guard';
 
 export const karmaRoutes: Routes = [
+  {
+    path: 'karma-client/cars/:recordId/configuration',
+    data: { feature: 'karma-client', requiresBranch: false, section: 'configuration' },
+    canDeactivate: [leaveDrawer],
+    loadComponent: () => import('./karma-workspace').then((module) => module.KarmaWorkspace),
+  },
   {
     path: 'karma-client/cars/:recordId/trips',
     data: { feature: 'karma-client', requiresBranch: false, section: 'trips' },

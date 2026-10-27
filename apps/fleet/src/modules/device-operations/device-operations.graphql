@@ -12,6 +12,8 @@ enum FleetDeviceOperationKind {
   READ_CONFIGURATION
   ADD_PARAMETER
   UPDATE_INTERVAL
+  READ_RULES
+  UPSERT_RULE
 }
 
 enum FleetDeviceOperationPhase {
@@ -19,6 +21,9 @@ enum FleetDeviceOperationPhase {
   READ_PARAMETERS
   WRITE_PARAMETER
   VERIFY_PARAMETERS
+  READ_RULES
+  WRITE_RULE
+  VERIFY_RULES
 }
 
 type FleetDeviceParameterPreset {
@@ -40,16 +45,37 @@ type FleetDeviceConfiguration {
   parameters: [FleetDeviceConfigurationParameter!]!
 }
 
+type FleetDeviceRule {
+  ruleId: Int!
+  trueEventId: Int!
+  falseEventId: Int!
+  debounceMilliseconds: Int!
+  activateDashboard: Boolean!
+  definitionHex: String!
+  expression: String
+  parameterIds: [Int!]!
+}
+
+type FleetDeviceRulesConfiguration {
+  configurationId: String!
+  rules: [FleetDeviceRule!]!
+}
+
 type FleetDeviceOperation {
   id: ID!
-  deviceId: ID!
-  deviceImei: String!
+  branchId: ID!
   karmaCarId: ID!
   karmaDeviceId: String!
   status: FleetDeviceOperationStatus!
   kind: FleetDeviceOperationKind!
   phase: FleetDeviceOperationPhase!
   baselineOperationId: ID
+  parameterBaselineOperationId: ID
+  ruleId: Int
+  ruleExpression: String
+  ruleTrueEventId: Int
+  ruleFalseEventId: Int
+  ruleDebounceMilliseconds: Int
   parameterId: Int
   intervalSeconds: Int
   previousIntervalSeconds: Int
@@ -66,17 +92,16 @@ type FleetDeviceOperation {
   observationCount: Int!
   coverageComplete: Boolean!
   configuration: FleetDeviceConfiguration
+  rulesConfiguration: FleetDeviceRulesConfiguration
   errorCode: String
 }
 
 input RequestFleetDeviceConfigurationReadInput {
-  deviceId: ID!
   karmaCarId: ID!
   expectedKarmaDeviceId: String!
 }
 
 input RequestFleetDeviceParameterAdditionInput {
-  deviceId: ID!
   karmaCarId: ID!
   expectedKarmaDeviceId: String!
   baselineOperationId: ID!
@@ -86,7 +111,6 @@ input RequestFleetDeviceParameterAdditionInput {
 }
 
 input RequestFleetDeviceParameterIntervalUpdateInput {
-  deviceId: ID!
   karmaCarId: ID!
   expectedKarmaDeviceId: String!
   baselineOperationId: ID!
@@ -94,15 +118,37 @@ input RequestFleetDeviceParameterIntervalUpdateInput {
   intervalSeconds: Int!
 }
 
+input RequestFleetDeviceRulesReadInput {
+  karmaCarId: ID!
+  expectedKarmaDeviceId: String!
+}
+
+input RequestFleetDeviceRuleChangeInput {
+  karmaCarId: ID!
+  expectedKarmaDeviceId: String!
+  baselineOperationId: ID!
+  parameterBaselineOperationId: ID!
+  ruleId: Int!
+  expression: String!
+  trueEventId: Int!
+  falseEventId: Int!
+  debounceMilliseconds: Int!
+}
+
 extend type Query {
   fleetDeviceOperationsEnabled: Boolean!
   fleetDeviceConfigurationWritesEnabled: Boolean!
   fleetDeviceParameterPresets: [FleetDeviceParameterPreset!]!
   fleetDeviceOperation(id: ID!): FleetDeviceOperation
-  "The latest complete read for the device's current local identity, independent of recent operation history."
-  fleetDeviceConfigurationSnapshot(deviceId: ID!): FleetDeviceOperation
-  "The latest 20 configuration operations for the scoped device, newest first."
-  fleetDeviceOperations(deviceId: ID!): [FleetDeviceOperation!]!
+  "The latest complete parameter snapshot for the scoped Karma car and device pair."
+  fleetDeviceConfigurationSnapshot(
+    karmaCarId: ID!
+    expectedKarmaDeviceId: String!
+  ): FleetDeviceOperation
+  "The latest complete rules snapshot for the scoped Karma car and device pair."
+  fleetDeviceRulesSnapshot(karmaCarId: ID!, expectedKarmaDeviceId: String!): FleetDeviceOperation
+  "The latest 20 configuration operations for the scoped Karma car and device pair, newest first."
+  fleetDeviceOperations(karmaCarId: ID!, expectedKarmaDeviceId: String!): [FleetDeviceOperation!]!
 }
 
 extend type Mutation {
@@ -116,4 +162,6 @@ extend type Mutation {
   requestFleetDeviceParameterIntervalUpdate(
     input: RequestFleetDeviceParameterIntervalUpdateInput!
   ): FleetDeviceOperation!
+  requestFleetDeviceRulesRead(input: RequestFleetDeviceRulesReadInput!): FleetDeviceOperation!
+  requestFleetDeviceRuleChange(input: RequestFleetDeviceRuleChangeInput!): FleetDeviceOperation!
 }

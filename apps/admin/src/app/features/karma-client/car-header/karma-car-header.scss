@@ -2,8 +2,7 @@
 
 :host {
   display: grid;
-  gap: var(--p-app-space-5);
-  margin-block-end: var(--p-app-space-5);
+  gap: var(--p-app-stack-gap);
   min-inline-size: 0;
 }
 .car-tabs {

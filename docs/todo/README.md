@@ -28,9 +28,30 @@ instant-task file with `No open instant tasks.`.
 
 ## Review corrections and Karma management
 
-Track the confirmed review corrections, pending Karma design and deferred cleanup in
+Track the confirmed review corrections, remaining Karma rule work and deferred cleanup in
 [the review backlog](review-corrections-and-karma-management.md). It supersedes the temporary
 review scratchpad; unverified candidates remain explicitly marked.
 
-The [Karma device-management design](karma-device-management-design.md) and its
-[proposed identity/scope ADR](karma-device-management-identity-adr.md) await user confirmation.
+The [Karma settings backlog](karma-device-management-design.md) covers dated eData query latency,
+live rule acceptance, rule/event allocation evidence and measured performance. Implemented contracts
+remain in [Discocan architecture](../discocan/architecture.md#background-device-configuration-reads).
+
+The [ERM functional verification plan](karma-api-v2.md#sequential-functional-verification-plan)
+defines seven sequential stages for protocol access, reads, interval proof, DTC
+configuration, fault formats and API agreement. Each stage has a maximum of 50
+targeted attempts; stages 02–07 are authorized as one sequential run. Test Server/routing
+work is excluded from that campaign.
+
+## Karma web functionality research
+
+The [web functionality report](../discocan/erm-resources/karma-api-v2/web-functionality-research.md)
+maps all 36 classic menu entries, safe action coverage and the accessible NC2
+console to public/internal API methods, calculations and proposed holita views,
+with bounded live observations and explicit source limitations. The
+[MVP and product experience backlog](karma-web-functional-discovery.md)
+defines the concrete first-release tasks, dependencies and acceptance criteria,
+bounded implementation-session deliveries, focused Karma navigation and
+progressive disclosure, the mandatory clean-code/UX/visual-accessibility
+consistency rules, Google Maps/Street View placements and gated
+Trip Explorer/API-derived follow-ups. It also
+tracks unresolved provider/data prerequisites. Application implementation remains pending.

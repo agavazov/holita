@@ -1,15 +1,18 @@
 import type { Prisma } from '../../generated/prisma/client.js';
 import {
   karmaReadObservation,
+  karmaReadTerminalResponse,
   type KarmaReadback,
   type KarmaReadObservation,
   type KarmaReadParameter,
+  type KarmaReadTerminalResponse,
 } from '../../integrations/karma/karma-device-reads.client.js';
 
 export interface DeviceReadEvidence {
   coverageComplete: boolean;
   count: number;
   items: KarmaReadObservation[];
+  terminalResponse?: KarmaReadTerminalResponse;
 }
 
 export class DeviceReadEvidenceError extends Error {
@@ -22,6 +25,7 @@ export function deviceReadEvidenceJson(evidence: DeviceReadEvidence): Prisma.Jso
   return {
     coverageComplete: evidence.coverageComplete,
     count: evidence.count,
+    ...(evidence.terminalResponse ? { terminalResponse: { ...evidence.terminalResponse } } : {}),
     items: evidence.items.map((item) => ({
       messageId: item.messageId,
       eventTimeUtc: item.eventTimeUtc,
@@ -36,6 +40,20 @@ export function deviceReadEvidenceJson(evidence: DeviceReadEvidence): Prisma.Jso
       })),
     })),
   };
+}
+
+export function storedTerminalResponse(
+  value: Prisma.JsonValue,
+): KarmaReadTerminalResponse | undefined {
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    Array.isArray(value) ||
+    value.terminalResponse === undefined
+  ) {
+    return undefined;
+  }
+  return karmaReadTerminalResponse(value.terminalResponse);
 }
 
 function storedItems(value: Prisma.JsonValue): KarmaReadObservation[] {
@@ -59,7 +77,7 @@ export function mergeDeviceReadEvidence(
   fresh: KarmaReadback,
 ): {
   evidence: DeviceReadEvidence;
-  status: 'ABSENT' | 'INCOMPLETE' | 'CONFLICT' | 'COMPLETE';
+  status: 'ABSENT' | 'INCOMPLETE' | 'CONFLICT' | 'COMPLETE' | 'NO_CONFIGURATION';
   configurationId: string | null;
   parameters: KarmaReadParameter[];
 } {
@@ -75,7 +93,14 @@ export function mergeDeviceReadEvidence(
     }
   }
   const items = [...messages.values()].sort((a, b) => Number(a.messageId) - Number(b.messageId));
-  const evidence = { coverageComplete: fresh.coverageComplete, count: items.length, items };
+  const terminalResponse = fresh.terminalResponse ?? storedTerminalResponse(stored);
+  const evidence = {
+    coverageComplete: fresh.coverageComplete,
+    count: items.length,
+    items,
+    ...(terminalResponse ? { terminalResponse } : {}),
+  };
+  const noConfiguration = terminalResponse && fresh.coverageComplete;
   const conflict = { evidence, status: 'CONFLICT', configurationId: null, parameters: [] };
   const absent = { evidence, status: 'ABSENT', configurationId: null, parameters: [] };
   if (
@@ -89,7 +114,7 @@ export function mergeDeviceReadEvidence(
     return { ...conflict, status: 'CONFLICT' };
   }
   if (!items.length) {
-    return { ...absent, status: 'ABSENT' };
+    return { ...absent, status: noConfiguration ? 'NO_CONFIGURATION' : 'ABSENT' };
   }
   const configurationId = items[0]?.configurationId ?? null;
   const parts = new Map<number, KarmaReadObservation>();
@@ -114,7 +139,10 @@ export function mergeDeviceReadEvidence(
   const finalNumber = finals[0]?.messageNumber;
   const incomplete = { evidence, status: 'INCOMPLETE', configurationId, parameters: [] };
   if (!finalNumber || !fresh.coverageComplete) {
-    return { ...incomplete, status: 'INCOMPLETE' };
+    return {
+      ...incomplete,
+      status: noConfiguration ? 'NO_CONFIGURATION' : 'INCOMPLETE',
+    };
   }
   if ([...parts.keys()].some((number) => number > finalNumber)) {
     return { ...conflict, status: 'CONFLICT' };
@@ -123,7 +151,7 @@ export function mergeDeviceReadEvidence(
   for (let number = 1; number <= finalNumber; number++) {
     const part = parts.get(number);
     if (!part) {
-      return { ...incomplete, status: 'INCOMPLETE' };
+      return { ...incomplete, status: noConfiguration ? 'NO_CONFIGURATION' : 'INCOMPLETE' };
     }
     parameters.push(...part.parameters);
   }

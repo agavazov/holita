@@ -1,12 +1,17 @@
 fragment AdminDeviceConfigurationOperation on FleetDeviceOperation {
   id
-  deviceId
-  deviceImei
+  branchId
   karmaCarId
   karmaDeviceId
   kind
   phase
   baselineOperationId
+  parameterBaselineOperationId
+  ruleId
+  ruleExpression
+  ruleTrueEventId
+  ruleFalseEventId
+  ruleDebounceMilliseconds
   parameterId
   intervalSeconds
   previousIntervalSeconds
@@ -24,6 +29,19 @@ fragment AdminDeviceConfigurationOperation on FleetDeviceOperation {
   queueIds
   observationCount
   coverageComplete
+  rulesConfiguration {
+    configurationId
+    rules {
+      ruleId
+      trueEventId
+      falseEventId
+      debounceMilliseconds
+      activateDashboard
+      definitionHex
+      expression
+      parameterIds
+    }
+  }
   configuration {
     configurationId
     parameters {
@@ -34,16 +52,7 @@ fragment AdminDeviceConfigurationOperation on FleetDeviceOperation {
   }
 }
 
-query AdminDeviceConfigurationPage($deviceId: ID!) {
-  fleetDevice(id: $deviceId) {
-    id
-    imei
-    vehicleId
-    vehicle {
-      id
-      licensePlate
-    }
-  }
+query AdminDeviceConfigurationPage($karmaCarId: ID!, $expectedKarmaDeviceId: String!) {
   fleetDeviceOperationsEnabled
   fleetDeviceConfigurationWritesEnabled
   fleetDeviceParameterPresets {
@@ -53,19 +62,17 @@ query AdminDeviceConfigurationPage($deviceId: ID!) {
     name
     profileIds
   }
-  fleetDeviceOperations(deviceId: $deviceId) {
+  fleetDeviceOperations(karmaCarId: $karmaCarId, expectedKarmaDeviceId: $expectedKarmaDeviceId) {
     ...AdminDeviceConfigurationOperation
   }
-  fleetDeviceConfigurationSnapshot(deviceId: $deviceId) {
+  fleetDeviceRulesSnapshot(karmaCarId: $karmaCarId, expectedKarmaDeviceId: $expectedKarmaDeviceId) {
     ...AdminDeviceConfigurationOperation
   }
-}
-
-query AdminDeviceConfigurationTargets {
-  karmaCars {
-    id
-    deviceId
-    carNumber
+  fleetDeviceConfigurationSnapshot(
+    karmaCarId: $karmaCarId
+    expectedKarmaDeviceId: $expectedKarmaDeviceId
+  ) {
+    ...AdminDeviceConfigurationOperation
   }
 }
 
@@ -85,6 +92,17 @@ mutation AdminRequestDeviceParameterIntervalUpdate(
   $input: RequestFleetDeviceParameterIntervalUpdateInput!
 ) {
   requestFleetDeviceParameterIntervalUpdate(input: $input) {
+    ...AdminDeviceConfigurationOperation
+  }
+}
+
+mutation AdminRequestDeviceRulesRead($input: RequestFleetDeviceRulesReadInput!) {
+  requestFleetDeviceRulesRead(input: $input) {
+    ...AdminDeviceConfigurationOperation
+  }
+}
+mutation AdminRequestDeviceRuleChange($input: RequestFleetDeviceRuleChangeInput!) {
+  requestFleetDeviceRuleChange(input: $input) {
     ...AdminDeviceConfigurationOperation
   }
 }

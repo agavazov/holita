@@ -6,14 +6,13 @@ import type {
   AdminRequestDeviceParameterIntervalUpdateMutationVariables,
 } from '../../../../generated/graphql/operations';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
-import type { DeviceConfigurationOperation } from './device-configuration-view';
+import type { DeviceConfigurationOperation } from './device-configuration-types';
 import { DeviceParameterEditor } from './device-parameter-editor';
 
-const deviceId = '60000000-0000-4000-8000-000000000001';
+const branchId = '20000000-0000-4000-8000-000000000001';
 const baseline: DeviceConfigurationOperation = {
   id: '80000000-0000-4000-8000-000000000001',
-  deviceId,
-  deviceImei: '001234567890123',
+  branchId,
   karmaCarId: '41',
   karmaDeviceId: 'opaque-device-41',
   kind: 'READ_CONFIGURATION',
@@ -29,6 +28,13 @@ const baseline: DeviceConfigurationOperation = {
   observationCount: 1,
   coverageComplete: true,
   baselineOperationId: null,
+  parameterBaselineOperationId: null,
+  ruleId: null,
+  ruleExpression: null,
+  ruleTrueEventId: null,
+  ruleFalseEventId: null,
+  ruleDebounceMilliseconds: null,
+  rulesConfiguration: null,
   parameterId: null,
   intervalSeconds: null,
   previousIntervalSeconds: null,
@@ -56,7 +62,7 @@ describe('Device parameter editor', () => {
 
   it('submits exactly the confirmed parameter change for the captured baseline and target, and requires a new confirmation after any change', async () => {
     const fixture = TestBed.createComponent(DeviceParameterEditor);
-    fixture.componentRef.setInput('deviceId', deviceId);
+    fixture.componentRef.setInput('branchId', branchId);
     fixture.componentRef.setInput('enabled', true);
     fixture.componentRef.setInput('target', target);
     fixture.componentRef.setInput('latestBaseline', baseline);
@@ -79,7 +85,6 @@ describe('Device parameter editor', () => {
       fixture.debugElement.query(By.css('form')).triggerEventHandler('ngSubmit');
     };
     const confirmedTarget = {
-      deviceId,
       karmaCarId: '41',
       expectedKarmaDeviceId: 'opaque-device-41',
       baselineOperationId: baseline.id,
@@ -133,6 +138,12 @@ describe('Device parameter editor', () => {
 
     const contextChanges = [
       {
+        change: 'fleet scope',
+        apply: () => {
+          fixture.componentRef.setInput('branchId', '20000000-0000-4000-8000-000000000002');
+        },
+      },
+      {
         change: 'same-truck device replacement',
         apply: () => {
           fixture.componentRef.setInput('target', { ...target, deviceId: 'replacement-device' });
@@ -146,6 +157,7 @@ describe('Device parameter editor', () => {
       },
     ];
     for (const { change, apply } of contextChanges) {
+      fixture.componentRef.setInput('branchId', branchId);
       fixture.componentRef.setInput('target', target);
       fixture.componentRef.setInput('latestBaseline', baseline);
       await fixture.whenStable();

@@ -6,6 +6,20 @@ export interface ConfigurationParameter {
   rawDefinition: string;
 }
 
+export interface ConfigurationTerminalResponse {
+  messageId: string;
+  eventTimeUtc: string;
+  rawMessage: '19,0,154,0';
+}
+
+export function configurationTerminalResponse(
+  messageId: string,
+  eventTimeUtc: string,
+  rawMessage: string,
+): ConfigurationTerminalResponse | null {
+  return rawMessage === '19,0,154,0' ? { messageId, eventTimeUtc, rawMessage } : null;
+}
+
 export interface ConfigurationObservation {
   messageId: string;
   eventTimeUtc: string;

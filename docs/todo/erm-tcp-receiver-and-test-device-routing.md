@@ -41,6 +41,12 @@ Confirmed source-level context:
   preserves supplied portal screenshots. Credentials for
   `https://sweb.erm.co.il/protocol/` were still awaited when this task was recorded.
   Recheck access rather than assuming those credentials are now available.
+- The [ERM support reply and verification register](../discocan/erm-resources/erm-support-diagnostics-protocol-test-server/README.md)
+  state that a Test Server can fork device traffic to our server and ERM's server.
+  This is a manufacturer statement, not a completed routing experiment. Obtain its
+  actual endpoints, supported transport, configuration procedure and ACK/command
+  ownership before applying it to the selected device. ERM also refers to a prior
+  protocol-access email dated `7/10/2026`; authenticated access remains unverified.
 - The [Message structure reference](../discocan/erm-resources/starlink-online-protocol/message-structure.md)
   documents framing, identifiers, reference numbers and sample messages. It records
   an unresolved checksum description/example discrepancy. The full Message
@@ -149,6 +155,8 @@ forwarding/replication or a receiver relay to Karma as distinct alternatives onl
 after establishing provider support, destination protocol, ACK ownership and return
 command routing. Do not claim that forwarding bytes to an assumed Karma port will work.
 The portal's StarLink Test Server menu label alone does not establish replication.
+The later support statement provides a concrete vendor claim to test; it does not
+establish whether the fork is implemented by device destinations or server forwarding.
 
 ## Acceptance, validation and documentation
 

@@ -1,6 +1,8 @@
-<section class="app-card app-form-section" aria-labelledby="parameter-editor-title">
-  <h2 class="app-card__title" id="parameter-editor-title">{{ text().title }}</h2>
-  <p class="app-muted">{{ text().hint }}</p>
+<ng-template #editorContent>
+  @if (!drawer()) {
+    <h2 class="app-card__title" id="parameter-editor-title">{{ title() }}</h2>
+  }
+  <p class="app-muted">{{ value().mode === 'add' ? text().hint : text().editHint }}</p>
   @if (!enabled()) {
     <p-message severity="info">{{ text().disabled }}</p-message>
   } @else if (!target()) {
@@ -12,19 +14,14 @@
     <p-message severity="warn" role="status">{{ text().stale }}</p-message>
   }
   @if (enabled() && target()) {
-    <form #formElement class="app-form-section" [formGroup]="form" (ngSubmit)="submit()">
+    <form
+      id="parameter-change"
+      #formElement
+      class="app-form-section"
+      [formGroup]="form"
+      (ngSubmit)="submit()"
+    >
       <div class="app-form-grid">
-        <holita-form-field [label]="text().mode" controlId="parameter-mode">
-          <p-select
-            inputId="parameter-mode"
-            formControlName="mode"
-            [options]="modes()"
-            optionLabel="label"
-            optionValue="value"
-            [ariaLabel]="text().mode"
-            appendTo="body"
-          />
-        </holita-form-field>
         @if (value().mode === 'add') {
           <holita-form-field
             [label]="text().preset"
@@ -52,28 +49,17 @@
             <p class="app-muted">{{ text().noPresets }}</p>
           }
         } @else {
-          <holita-form-field
-            [label]="text().existing"
-            controlId="parameter-parameterId"
-            [hint]="text().preserveHint"
-            [required]="true"
-            [error]="errorOf('parameterId')"
-          >
-            <p-select
-              inputId="parameter-parameterId"
-              formControlName="parameterId"
-              [options]="parameterOptions()"
-              optionLabel="label"
-              optionValue="value"
-              [placeholder]="text().parameterPlaceholder"
-              [ariaLabel]="text().existing"
-              [ariaFilterLabel]="text().filterParameters"
-              [filter]="true"
-              appendTo="body"
-              [invalid]="!!errorOf('parameterId')"
-              [pt]="parameterPt()"
-            />
-          </holita-form-field>
+          <div class="app-form-section">
+            <dl class="app-facts">
+              <div class="app-facts--wide">
+                <dt>{{ text().parameter }}</dt>
+                <dd>{{ parameterLabel() }}</dd>
+              </div>
+            </dl>
+            @if (errorOf('parameterId'); as error) {
+              <p-message severity="error">{{ error }}</p-message>
+            }
+          </div>
         }
         <holita-form-field
           [label]="text().interval"
@@ -102,17 +88,12 @@
             <div>
               <dt>{{ text().target }}</dt>
               <dd>
-                {{ target()?.carNumber }}<br />
-                <span class="app-mono">{{ target()?.deviceId }}</span>
+                {{ target()?.carNumber }}
               </dd>
             </div>
             <div>
               <dt>{{ text().parameter }}</dt>
-              <dd>{{ intendedParameterId() | holitaNumber }}</dd>
-            </div>
-            <div>
-              <dt>{{ text().baselineConfirmedAt }}</dt>
-              <dd>{{ baseline.completedAt | holitaDateTime }}</dd>
+              <dd>{{ parameterLabel() }}</dd>
             </div>
             <div>
               <dt>{{ text().previous }}</dt>
@@ -126,16 +107,6 @@
               <dt>{{ text().next }}</dt>
               <dd>{{ value().intervalSeconds | holitaNumber }}</dd>
             </div>
-            <div>
-              <dt>{{ text().parameterCount }}</dt>
-              <dd>
-                {{ baseline.configuration?.parameters.length | holitaNumber }} →
-                {{
-                  (baseline.configuration?.parameters.length ?? 0) +
-                    (value().mode === 'add' && preset() ? 1 : 0) | holitaNumber
-                }}
-              </dd>
-            </div>
           </dl>
           <p class="app-muted">{{ text().verificationHint }}</p>
           <details class="parameter-details">
@@ -143,12 +114,30 @@
             <div class="app-form-section">
               <dl class="app-facts">
                 <div>
+                  <dt>{{ text().baselineConfirmedAt }}</dt>
+                  <dd>{{ baseline.completedAt | holitaDateTime }}</dd>
+                </div>
+                <div>
                   <dt>{{ text().baseline }}</dt>
                   <dd class="app-mono parameter-wrap">{{ baseline.id }}</dd>
                 </div>
                 <div>
                   <dt>{{ text().targetCarId }}</dt>
                   <dd class="app-mono">{{ target()?.id }}</dd>
+                </div>
+                <div>
+                  <dt>{{ text().targetDeviceId }}</dt>
+                  <dd class="app-mono parameter-wrap">{{ target()?.deviceId }}</dd>
+                </div>
+                <div>
+                  <dt>{{ text().parameterCount }}</dt>
+                  <dd>
+                    {{ baseline.configuration?.parameters.length | holitaNumber }} →
+                    {{
+                      (baseline.configuration?.parameters.length ?? 0) +
+                        (value().mode === 'add' && preset() ? 1 : 0) | holitaNumber
+                    }}
+                  </dd>
                 </div>
                 @if (value().mode === 'interval' && previous(); as previous) {
                   <div class="app-facts--wide">
@@ -179,9 +168,9 @@
           [error]="errorOf('zeroConfirmed')"
         >
           <label class="app-inline" for="parameter-zeroConfirmed"
-            ><input
-              id="parameter-zeroConfirmed"
-              type="checkbox"
+            ><p-checkbox
+              inputId="parameter-zeroConfirmed"
+              [binary]="true"
               formControlName="zeroConfirmed"
               [attr.aria-invalid]="errorOf('zeroConfirmed') ? 'true' : null"
               aria-describedby="parameter-zeroConfirmed-error"
@@ -195,9 +184,9 @@
         [error]="errorOf('confirmed')"
       >
         <label class="app-inline" for="parameter-confirmed"
-          ><input
-            id="parameter-confirmed"
-            type="checkbox"
+          ><p-checkbox
+            inputId="parameter-confirmed"
+            [binary]="true"
             formControlName="confirmed"
             [attr.aria-invalid]="errorOf('confirmed') ? 'true' : null"
             aria-describedby="parameter-confirmed-error"
@@ -207,20 +196,45 @@
       @if (requestError(); as error) {
         <p-message severity="error" role="alert">{{ error }}</p-message>
       }
-      <div class="app-inline">
-        <button pButton type="submit" [disabled]="unavailable()">{{ text().submit }}</button>
-        <button
-          pButton
-          type="button"
-          severity="secondary"
-          [outlined]="true"
-          [disabled]="submitting() || (!dirty() && !stale())"
-          (click)="discard()"
-        >
-          {{ text().discard }}
-        </button>
-      </div>
+      @if (!drawer()) {
+        <ng-container [ngTemplateOutlet]="editorActions" />
+      }
     </form>
   }
-</section>
+</ng-template>
+@if (!drawer()) {
+  <section class="app-card app-form-section" aria-labelledby="parameter-editor-title">
+    <ng-container [ngTemplateOutlet]="editorContent" />
+  </section>
+} @else if (drawerOpen()) {
+  <holita-route-drawer
+    [title]="title()"
+    [subtitle]="target()?.carNumber ?? null"
+    [closeLink]="null"
+    [saving]="submitting()"
+    [dirty]="dirty()"
+    size="lg"
+    (closeRequest)="closeDrawer()"
+  >
+    <ng-container [ngTemplateOutlet]="editorContent" />
+    <div drawerFooter><ng-container [ngTemplateOutlet]="editorActions" /></div>
+  </holita-route-drawer>
+}
+<ng-template #editorActions>
+  <div class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="submitting() || (!drawer() && !dirty() && !stale())"
+      (click)="drawer() ? closeDrawer() : discard()"
+    >
+      {{ text().discard }}
+    </button>
+    <button pButton type="submit" form="parameter-change" [disabled]="unavailable()">
+      {{ text().submit }}
+    </button>
+  </div>
+</ng-template>
 <p-confirmdialog [pt]="confirmPt()" [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }" />

@@ -452,8 +452,8 @@ other original field available in the closed Source fields section. Refresh reta
 failure; missing/invalid IDs show a not-found message. There is no editing, automatic polling,
 persistence or Fleet synchronization.
 
-Each truck section has the same registration/ID header and navigation for Overview, eData,
-Location, Trips, Events and Driving profile. Back to trucks restores the originating list
+Each truck section has the same registration/ID header and navigation for Overview,
+Device settings, eData, Location, Trips, Events and Driving profile. Back to trucks restores the originating list
 filters/page. Switching sections keeps that list context without copying the section's date
 filters or cursor. Invalid submitted date/time ranges and ID lists show errors beside the
 relevant fields and focus the first invalid input; malformed URL filters keep their warning.
@@ -464,7 +464,7 @@ It starts with the latest 50 messages without a date requirement. Apply a page s
 The dates are UTC even though the browser input uses a local-date control. Older/Newer
 browse a snapshot; Latest starts again with the newest matching messages. The API supplies
 no total. View opens a message/time summary and parameter readings/descriptions. The parameter
-table wraps long content so IDs and values stay visible within narrow dialogs. Source fields
+table wraps long content so IDs and values stay visible within narrow drawers. Source fields
 expands all original message fields, preserving
 unknown IDs and zero values. `spd`, `odo` and `pdt` display their original values without
 unverified units or timezone labels.
@@ -543,7 +543,10 @@ IDs/multiple records are rejected. The client does not expose arbitrary upstream
 
 A successful HTTP response can still contain `{error: "Not logged in"}`. This and HTTP 401
 trigger one session renewal; other non-success HTTP bodies are cancelled without JSON parsing.
-The complete login/read/retry operation has a four-second bound. Credentials, session IDs and
+The complete login/read/retry operation normally has a four-second bound. Public eData reads
+have an eight-second bound, within Gateway's nine-second Karma subgraph deadline and the
+admin's ten-second HTTP deadline. Device command and background observation budgets are separate.
+Credentials, session IDs and
 URLs containing them must not be logged or stored in fixtures/documentation. Use the ignored
 service environment for credentials, rather than placing them in shell commands.
 
@@ -640,7 +643,7 @@ implied: Location displays the last-known message; eData provides message histor
 ### Karma maps
 
 Location displays the last reported coordinate pair and source fields. Trips group the start and
-stop coordinates in their detail dialog and offer a Google suggested driving route between them.
+stop coordinates in their detail drawer and offer a Google suggested driving route between them.
 Karma does not supply a historical GPS trace; suggested directions do not establish the route driven.
 Invalid or missing coordinate pairs cannot open a map. Zero is a valid coordinate.
 
@@ -656,6 +659,9 @@ and [embedding guide](https://developers.google.com/maps/documentation/embed/emb
 The preview loads only after clicking its load button and sends the displayed coordinates to Google.
 Without a configured key, the page explains preview availability and retains the external link.
 
+The truck list and profile tabs share the admin page, filter and table patterns.
+Open an eData message, trip or event from its record link or row menu to view its details
+in a right-hand drawer; original fields remain in the expandable Source fields section.
 Karma list/search/filter controls share one responsive layout. All period filters use PrimeNG
 DatePicker with a separate textual time including seconds, retaining the existing UTC or API
 wall-clock interpretation and URL values even during daylight-saving clock gaps.
@@ -668,7 +674,7 @@ Trips/events start without required dates at 50 records, with 25/50/100 sizes. O
 paired periods reset the cursor; events also accepts up to 25 comma-separated original
 codes, including zero. Trip date inputs use API wall-clock values with an unspecified
 provider timezone; event filter dates use UTC. Histories show newest IDs first, full
-row dialogs and Latest/Older/Newer without an invented total. Trip batches may be short
+row drawers and Latest/Older/Newer without an invented total. Trip batches may be short
 with continuation; a bounded lookahead checks this. Newer restores browser-history
 cursor metadata; a separately opened cursor URL can still use Latest.
 
@@ -789,7 +795,7 @@ contracts with `npm run codegen`. Configure these entries from the root `.env.ex
 - Fleet: `FLEET_DEVICE_OPERATIONS_ENABLED=true` and `FLEET_KARMA_INTERNAL_URL`, default
   `http://127.0.0.1:11014` without a path, query or embedded credentials.
 - Fleet: `FLEET_DEVICE_CONFIGURATION_WRITES_ENABLED=true` additionally enables parameter
-  additions and interval changes. It defaults to `false` and requires background operations
+  additions, interval changes and single-rule changes. It defaults to `false` and requires background operations
   to be enabled. Import the verified Monitor 9.56 catalog through the
   [local catalog procedure](erm-resources/simple-edata-catalog/README.md) to offer additions;
   interval changes can use captured definitions without a catalog entry.
@@ -805,29 +811,94 @@ Turning off the write flag prevents unsent changes; already marked submissions c
 readback verification while background operations remain enabled. Turning off background
 operations stops the worker. Keep the configured Karma account stable while requests are active.
 
-In Devices, open Diagnostics and choose **eData settings**. Select the intended Karma
-truck, inspect its upstream device ID and confirm the target before requesting a read.
-The page shows saved state immediately and can be closed/reloaded while the server waits.
-It displays the latest 20 requests and an independent last complete snapshot, preserving
-unknown IDs, full definitions and zero reporting intervals. Changing an IMEI stops using
-that old hardware's snapshot as the latest result; historical requests retain the old IMEI.
-Devices with saved configuration-operation history cannot be deleted.
+In Karma, open the intended truck and choose **Device settings** at
+`/:language/karma-client/cars/:recordId/configuration`. The active Branch in the shell supplies
+Fleet scope for operation history. The selected truck's Karma record supplies the device,
+shown as **Device in Karma**. No local Device registration, matching or additional selector is
+needed. The server verifies the current Karma car/device pair before queuing and dispatching work.
+Opening a settings URL while signed out returns to that same route after login and Branch selection.
 
-The confirmed parameter table precedes the change editor. Readback identifiers and original
-hex definitions are available under **Readback details and raw definitions**; request history
-keeps status, phase and requested changes visible, with queue and correlation metadata under
+The page shows saved state and can be closed/reloaded while the server waits. It displays
+the selected target's operations and the matching last complete snapshot, preserving unknown
+IDs, full definitions and zero reporting intervals. Each section distinguishes **Not read yet**
+from a confirmed empty response and shows its own confirmation time. The latest operation is
+visible above the tables; **Device operations** expands the full history when operations exist.
+Use **Read configuration** to read parameters, then rules after the first operation completes.
+Reloading the page restores results and progress; **Continue reading rules** resumes the second
+stage explicitly when needed. Opening or reloading the page never queues a new device read by
+itself. Individual section reads remain available, and a failed rule read does not invalidate
+a complete parameter baseline.
+
+If Karma reports a different device for the selected truck, refresh the truck and read that
+device's configuration. Snapshots for another device or Branch cannot authorize a change.
+
+The confirmed Parameters table opens the change editor in a right-hand drawer. Readback
+identifiers and original hex definitions are available in the operation history; each request
+keeps status, phase and requested changes visible, with raw definitions, queue and correlation metadata under
 **Technical operation details**. **Show latest confirmed settings** returns from a historical
 snapshot; editing is available only against the latest matching baseline.
 
-With writes enabled, use **Change eData parameters** after a complete read for that exact
-target. Choose **Add a parameter** from the eligible Monitor presets or **Change an existing
-interval** from the saved definition list, including unknown IDs. Enter an integer from
-`0` to `65000` seconds. Review the selected target, baseline request, parameter ID and old/new
+The parameter row's **Measurements** action opens a read-only drawer for that parameter and
+Karma device. It loads the latest records within the displayed 24-hour UTC window on opening
+or manual refresh. The drawer keeps the configured interval and its confirmation time separate
+from the last source value, source timestamp and differences between recent records. A successful
+change can remain configuration-confirmed without new numeric measurements after it. These
+differences do not automatically establish periodic reporting: eData can also contain event
+or ignition-off reports. An unavailable query is shown separately from an empty result.
+
+With writes enabled and a complete read for that exact target, add a parameter from the eligible
+Monitor presets or edit an existing parameter's interval from the table, including unknown IDs.
+**Add parameter** opens catalog selection; **Change interval** opens the chosen parameter
+directly, without asking for its identity again. Enter an integer from `0` to `65000` seconds.
+Review the selected target, parameter name/ID and old/new
 interval before confirming **Save background change**. The baseline request ID, preserved raw
 definition and catalog provenance are available under **Technical change details**.
 Zero requires its own confirmation:
 Monitor describes it as **not in use**, and readback does not prove measurement silence.
-Changing the target or baseline invalidates the draft; unsaved drafts use a navigation guard.
+Changing the target or baseline invalidates the draft; unsaved drafts guard navigation and
+Branch or Karma target changes.
+
+Rule drafts can be created before selecting Fleet. They are saved only in this browser,
+partitioned by the signed Tenant and Karma car, with local names and catalog references.
+The right-hand rule editor offers condition rows with **All / Any** grouping and a readable
+preview. Choose configured parameters by source name/ID; without a parameter list, local
+authoring accepts explicit IDs. Advanced ID text preserves complex expressions, including
+arithmetic, mixed logic and `TimeOf`, `Count` or `Sum`, without flattening them into simple rows.
+Constants are integers from -65535 through 2147483647; mixed operators require explicit grouping.
+Compilation rejects RuleData above 128 bytes. No firmware behavior is simulated.
+
+Assign a device rule ID explicitly; occupied IDs are shown and replacement is identified.
+Choose whether to report when the condition becomes true and/or false, and supply a positive
+event code for each enabled transition. Disabling a transition sends zero for its event code.
+Ordinary reporting rules require at least one enabled transition; **Advanced settings** permits
+explicit calculation-only rules with both events zero. Submission requires acknowledgement of
+zero-event behavior. A confirmed rule and its local pending revision appear together;
+duplicate local IDs remain separate conflicts.
+Debounce is a separate `1..32767` millisecond field. Duplicate drafts need distinct device
+IDs before sending. Local imports/exports preserve the source dashboard activation bit,
+without an editing control. For a live change, the selected device baseline determines this
+bit: an existing rule keeps its observed value and a new rule uses false. The send review
+shows the actual outgoing record.
+Local draft removal never deletes a rule from a device.
+
+**Files and technical details** contains INI/TXT tools for inspection and local authoring only. Original source, names, section order,
+unknown keys and opaque definitions remain available; mismatches, unresolved dependencies and
+unsupported expressions are shown. Download the original source, export edited local INI,
+or export inspection TXT containing individual `04` records. Edited ID-expression exports
+do not claim full Monitor compatibility. Imported parameter/global/profile settings and TXT
+commands are never executed. Opaque and n-ary expressions can be inspected/exported unchanged.
+
+For an online change, use **Read configuration** to obtain
+both complete snapshots. Choose one editable rule and review the
+target, both baselines, dependencies, event IDs, debounce and old/new record before confirming
+the single background change. Missing configured dependencies, duplicate local IDs, pending
+operations or a changed baseline prevent submission. Raw record bytes and request identifiers
+remain available in technical details. Existing device rules with unsupported expressions
+cannot be overwritten; their bytes are preserved when another rule changes.
+
+After a matching complete rule readback, the confirmed row keeps its local name and the exact
+submitted draft revision is retired. Any later local edits remain a draft. A failed or uncertain
+write keeps the revision available until a later read confirms the same target, Rule ID and record.
 
 Fleet rechecks the observed profile for additions and rereads the whole parameter set before
 the sole additive write. Every baseline definition must match, and the conservative phase/
@@ -836,6 +907,12 @@ The server sends one full 22-byte definition with operation `02`; an interval up
 only its last two bytes. An independent complete read must verify the intended change and
 preserve every other definition before the operation completes. Stored history shows its
 kind, phase and uncertainty; it survives navigation, browser reload and Fleet restart.
+
+A rule change similarly rereads both captured parameter and rule sets, requires both within
+the 120-second window, and sends exactly one rule record. An independent complete `402` rule
+read must match that record and all unrelated rules before completion. The write preserves
+an existing rule's dashboard flag; a new device rule uses false. Queue acceptance, generated
+bytes or an event occurrence do not establish successful verification or correct runtime behavior.
 
 The ten-minute deadline does not cancel a command in Karma's queue. An uncertain or timed-out
 write may arrive later and is never automatically replayed. If a browser request loses its

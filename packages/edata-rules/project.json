@@ -1,0 +1,10 @@
+{
+  "name": "edata-rules",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "packages/edata-rules/src",
+  "tags": ["type:lib", "scope:discocan"],
+  "targets": {
+    "build": { "outputs": ["{projectRoot}/dist"] }
+  }
+}

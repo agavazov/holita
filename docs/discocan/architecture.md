@@ -460,8 +460,10 @@ authenticated tenants. No `x-branch-id` is required or used; all Karma reads are
 A concrete Karma client authenticates with `POST /login` and requests the complete `GET /cars`
 list with `karma_sid`. It keeps the upstream session only in process memory and shares pending
 logins across callers. HTTP 401 or the HTTP-200 `{error: "Not logged in"}` response discards only
-the rejected session and retries login/read once. A four-second abort signal bounds the whole
-operation, including login and retry, within Gateway's five-second subgraph timeout.
+the rejected session and retries login/read once. A four-second abort signal normally bounds
+the whole operation, including login and retry. Public eData reads use eight seconds to
+accommodate slower history queries; Gateway allows nine seconds for the Karma subgraph and
+five seconds for the other subgraphs. The admin's HTTP deadline remains ten seconds.
 Non-success HTTP bodies are cancelled before JSON parsing; only HTTP 401 or a successful
 HTTP response containing the session error triggers renewal. Malformed responses, transport
 errors and other upstream errors become sanitized
@@ -478,8 +480,8 @@ Truck details use `GET /cars/{id}` and require a canonical positive safe-integer
 upstream access. An empty response array or HTTP 404 becomes a nullable `karmaCar`; multiple
 records or a mismatched ID are rejected. Unknown optional SIM/video content is not exposed.
 
-Angular owns a fresh Apollo client/cache for each mounted session/language/truck view and sends
-no Branch header. The route is mounted while authenticated even when Branch discovery is empty
+Angular owns a fresh Apollo client/cache for each mounted session/language/truck read and sends
+no Branch header for Karma data. The route is mounted while authenticated even when Branch discovery is empty
 or fails and when Fleet is disabled. Changing the Branch on this page updates the remembered
 Branch without navigation or reloading Karma. Navigation, language changes, session replacement
 and logout retire obsolete reads. Refresh retains the previous successful rows on failure.
@@ -488,9 +490,10 @@ search, a project selector and 25/50/100-row pagination operate on that complete
 without another upstream read. `q`, `project`, `size` and `first` retain list state in the URL;
 filter changes reset the page and shortened refreshed lists clamp the visible page.
 Registration links open a dedicated `/cars/:recordId` detail route with the verified car fields,
-Refresh and a return link. All six truck sections share a header with registration/ID and
-Overview, eData, Location, Trips, Events and Driving profile navigation links. Bounded
-`listQ`, `listProject`, `listSize` and `listFirst` context restores the originating list;
+Refresh and a return link. All truck sections share a header with registration/ID and
+Overview, Device settings, eData, Location, Trips, Events and Driving profile navigation links.
+Device settings uses the [separately scoped Fleet operation workflow](#background-device-configuration-reads).
+Bounded `listQ`, `listProject`, `listSize` and `listFirst` context restores the originating list;
 history filters and cursors are not carried between sections with different clock semantics.
 Registration links use the shared `content-link` styling, matching the Fleet tables in both themes.
 Missing/invalid IDs show a not-found message; refresh failures retain previous details.
@@ -527,7 +530,7 @@ malformed data or upstream errors produce sanitized errors.
 
 `/bg/karma-client/cars/:recordId/edata` and its English equivalent load the truck directly,
 then its message page. The table shows UTC event time, message ID and parameter count;
-a modal exposes every message field and a complete parameter table. Applied filters and
+a right-hand drawer exposes every message field and a complete parameter table. Applied filters and
 cursor stay in the URL. Browser history stores only previous cursor metadata for Newer,
 including across reload/back; a separately opened cursor URL or language change can reset
 that trail, while Latest remains available. Latest refreshes the current filter's newest
@@ -587,7 +590,7 @@ size while still allowing Older. No whole-history traversal occurs inside a requ
 
 The separate truck routes `/cars/:recordId/trips`, `/events` and `/driving-profile`
 are reached from truck details. Trips/events provide optional paired dates, Latest/
-Older/Newer, URL cursor/filter state and full row dialogs with keyboard close and focus
+Older/Newer, URL cursor/filter state and full row drawers with keyboard close and focus
 restoration. Events also accept at most 25 original event codes, including zero, and
 use explicit UTC filtering. Trip/profile periods are source wall-clock values; their
 provider timezone is unspecified and the UI discloses this. Source timestamps are
@@ -595,12 +598,12 @@ shown without implicit browser conversion. Profile starts with a seven-day wall-
 range derived from the current UTC clock and supports replacing/expanding it; the
 period aggregate needs no record paginator. Its nine category names, nullable scores
 and weights remain original values, without a combined rating or invented scale.
-eData and Event dialogs show message/time summaries before their content and a closed
+eData and Event drawers show message/time summaries before their content and a closed
 Source fields disclosure. Parameter readings and original event text stay directly visible;
 the disclosure retains all original fields, including nulls, zeros and unknown codes.
 Driving profile puts its applied API period above the categories and preserves original
 identity fields in the same disclosure pattern.
-Trip dialogs group the verified start/end points and offer Google Maps directions, optionally
+Trip drawers group the verified start/end points and offer Google Maps directions, optionally
 embedded after user action with the configured browser key. These are suggested driving directions
 between endpoints; the provider supplies no historical GPS trace for drawing the driven route.
 
@@ -626,23 +629,27 @@ scope and four-second operation bound.
 
 Fleet's `DeviceOperationsModule` owns `FleetDeviceOperation`, its scoped GraphQL API and
 an `@nestjs/schedule` worker in the existing Nest process. Operation kinds are
-`READ_CONFIGURATION`, `ADD_PARAMETER` and `UPDATE_INTERVAL`. Karma Client exposes fixed
-machine-authenticated internal HTTP operations for target lookup, parameter/profile reads,
-one-definition changes and response-event scans. It has no database or background archive.
+`READ_CONFIGURATION`, `ADD_PARAMETER`, `UPDATE_INTERVAL`, `READ_RULES` and `UPSERT_RULE`.
+Karma Client exposes fixed machine-authenticated internal HTTP operations for target lookup,
+parameter/profile/rule reads, one-definition changes and response-event scans. It has no
+database or background archive.
 
-`requestFleetDeviceConfigurationRead` accepts the scoped Device UUID and an explicitly
-selected Karma car/device pair. The server verifies the upstream device identity; it never
-infers that the opaque Karma identifier equals IMEI. Each operation captures the local IMEI
-and upstream identifiers. This is a per-request target selection, not automatic synchronization
-or a persistent assignment between the two products. All public operation and snapshot reads
+Karma's car record owns the configuration target: `car_id` identifies the car and its
+`device_id` identifies the attached device in Karma. Configuration inputs carry `karmaCarId`
+and `expectedKarmaDeviceId`; the server verifies this pair upstream before queuing work and
+again before dispatch. The device identifier is opaque and is not treated as a local IMEI.
+Local Fleet Device registration and a separate identity mapping are not required.
+
+Each operation captures the upstream pair. All public operation and snapshot reads
 require verified Tenant/Branch scope and the normal Fleet availability guard. The worker uses
 stored scope without retaining an expiring browser token. Demo authentication identifies a
 Tenant, not a named operator or production device-control permission.
 
 The additive migrations retain operation timestamps, deadline, lease, queue references,
 response fragments, complete definitions, change intent, baseline operation, observed profile,
-submitted definition, write uncertainty and sanitized error codes. Composite Device and
-baseline-operation foreign keys preserve Tenant/Branch scope and protect referenced history.
+submitted definition, write uncertainty and sanitized error codes. Composite baseline-operation
+foreign keys preserve Tenant/Branch scope and protect referenced history. Nullable local Device
+references and IMEI values remain only as historical metadata on older operation rows.
 A partial unique index permits one active operation per Karma car across all workspaces because
 queue-to-response correlation is not established. Changing the configured Karma account
 while operations are active is unsupported.
@@ -665,17 +672,18 @@ configuration was confirmed; it does not prove a command was never delivered. Th
 may deliver an accepted command later, and holita cannot cancel it. Refresh and reconcile
 device state before requesting another change; an uncertain write is never automatically replayed.
 
-Parameter reads use command `301`, payload `0702BC`; profile reads use `301`, payload `1F`.
-The only changing command is `301`, payload `02` followed by exactly one 22-byte definition.
-The machine endpoint validates its ID and interval against the supplied definition and
+Parameter reads use command `301`, payload `0702BC`; profile reads use `301`, payload `1F`;
+rule reads use `301`, payload `0802BC`. The changing payloads are `02` followed by exactly one
+22-byte parameter definition and `04` followed by exactly one validated rule record.
+The machine endpoint validates the supplied definition and
 rechecks upstream identity immediately before submission. It cannot accept arbitrary paths,
 commands, set replacement (`01`), deletion (`10`), global settings or profile changes.
 Karma response-event scans use UTC windows, bounded ID paging and device identity checks.
 The background observation scan shares a 20-second deadline across target lookup, login
 renewal and all event pages. Fleet allows 21 seconds for that internal HTTP call, within
 the 30-second operation lease. Target lookup and device-request submission retain their
-four-second provider budget and Fleet's 4.5-second internal-call budget; public Karma
-queries retain their existing four-second operation bound.
+four-second provider budget and Fleet's 4.5-second internal-call budget. Public eData queries
+use eight seconds; other public Karma queries retain their four-second operation bound.
 Each caller also retains its own deadline while joining a shared pending upstream login;
 a public read does not wait for the longer background deadline.
 Original `401` messages and parsed 22-byte definitions are deduplicated and persisted across
@@ -683,7 +691,12 @@ polls/restarts, including incomplete multipart responses. Confirmation requires 
 complete numbered series and complete bounded scan coverage. Each provider scan retains at
 most 64 relevant fragments and 1000 definitions; Fleet's merged evidence is also bounded.
 Unknown parameter IDs and zero intervals are preserved. Profile observations use separate
-`416` evidence. Firmware updates and telemetry ingestion are outside this feature. An observed
+`416` evidence; rule observations use separate numbered `402` fragments with payload `08`.
+Parameter and rule reads retain the terminal response `19,0,154,0` with its original
+message ID and timestamp. With complete scan coverage, a terminal response without a complete
+configuration ends the operation as `FAILED` / `READ_NO_CONFIGURATION`; it never establishes
+an empty configuration. A complete valid configuration takes precedence over this response.
+Unknown rule bytecode stays intact. Firmware updates and telemetry ingestion are outside this feature. An observed
 configuration response is not a universal causal queue acknowledgment or evidence that CAN
 measurements are arriving. The worker does not poll `/queue` or interpret a delivery state as
 an applied configuration acknowledgment.
@@ -691,10 +704,9 @@ an applied configuration acknowledgment.
 ### Durable additions and interval changes
 
 `requestFleetDeviceParameterAddition` and `requestFleetDeviceParameterIntervalUpdate` require
-a complete baseline operation for the same scoped Device, current local IMEI and selected
-Karma car/device pair. Fleet captures the baseline and intended ID/interval in a new queued
-operation. Public inputs contain intent, not raw device definitions. A changed local or
-upstream identity stops dispatch.
+a complete baseline operation for the same Tenant/Branch and selected Karma car/device pair.
+Fleet captures the baseline and intended ID/interval in a new queued operation. Public inputs
+contain intent, not raw device definitions. A changed upstream identity stops dispatch.
 
 An addition first reads the profile (`READ_PROFILE`). Eligible presets come only from the
 imported Monitor 9.56 EXE SHA-256
@@ -732,23 +744,86 @@ safe read until the deadline. Queue acceptance or an HTTP response alone never c
 change. This confirms configuration evidence, not measurement availability, calibration,
 global/profile equality or universal causal correlation with a specific queue entry.
 
-`fleetDeviceOperations` returns the latest 20 requests for one scoped Device;
-`fleetDeviceOperation` retrieves a saved request by ID. `fleetDeviceConfigurationSnapshot`
-independently returns the latest complete operation snapshot for the Device's current IMEI, so newer
-failed reads cannot hide it beyond the history limit. A snapshot describes the observed
+### Durable rule reads and single-rule changes
+
+`requestFleetDeviceRulesRead` reads the complete rule set for the same explicit scoped target.
+`fleetDeviceRulesSnapshot` returns its latest complete rule snapshot independently of parameter
+snapshots. Rules expose the complete original definition, header fields and referenced parameter
+IDs; `expression` is canonical grouped ID text for the supported editable subset and null for
+opaque or imported n-ary expressions. Rule names are local editor metadata, absent from device records.
+
+`requestFleetDeviceRuleChange` accepts an explicit `ruleId`, `expression`, separate
+`trueEventId`/`falseEventId`, `debounceMilliseconds`, and both rule and parameter baseline
+operation IDs. Both complete baselines must match the active Tenant/Branch and exact
+Karma target. Every referenced parameter must already exist in the parameter baseline. The
+shared `@holita/edata-rules` codec compiles the expression; public input never accepts raw hex.
+Rule/event IDs use `0..65535`, debounce uses `1..32767` milliseconds and RuleData is at most
+128 bytes. A selected ID updates that existing rule or adds one if absent; holita does not
+allocate an unused device ID. Existing dashboard activation is preserved, while new rules
+use false. Unsupported existing expressions cannot be overwritten through this mutation.
+
+The operation captures both whole baselines, rereads parameters then rules, and requires
+both fresh observations to match within the same 120-second preflight window. It then sends
+one `04` record through the durable write marker. `VERIFY_RULES` performs an independent full
+rule read after the baseline watermark. Completion requires exactly the intended record and
+every unrelated record unchanged, including opaque bytecode. Unchanged observations cause
+safe rereads; conflicting observations fail the operation. Recovery never repeats the write.
+The parameter baseline proves configured dependencies, not live input values or firmware
+evaluation semantics. No server-side expression evaluator, rule deletion, set replacement,
+global/profile changes or automatic multi-rule deployment is exposed.
+
+`fleetDeviceOperations(karmaCarId, expectedKarmaDeviceId)` returns the latest 20 requests for
+that pair within the active Tenant/Branch; `fleetDeviceOperation` retrieves a saved request by ID.
+`fleetDeviceConfigurationSnapshot` and `fleetDeviceRulesSnapshot` take the same pair and
+independently return the latest complete snapshot, so newer failed reads cannot hide it beyond
+the history limit. Operations expose their `branchId` for scoped client reconciliation.
+Historical requests remain available by scoped history/ID. A snapshot describes the observed
 configuration at its recorded time; changes made outside holita can make it stale.
 
-The admin opens `/:language/:branchId/fleet/devices/:recordId/configuration` from Diagnostics.
-It reloads saved state on mount and polls it every five seconds while a request is pending.
-Navigating away cancels browser reads but leaves the server operation intact. Each mounted
-session/Branch/language/device owns its clients; submitted mutations settle against their
-captured scope. The current shared-account Karma target picker has no Branch header.
-After a target-conflict response, the page reloads the Karma choices. A changed device
-identity clears the previous confirmation and requires a new confirmation before retrying.
-With writes enabled, the same page offers one catalog addition or one existing interval
-change. Its typed form previews target, baseline, ID and before/after interval, requires
-explicit confirmation and a separate zero-interval confirmation, and guards dirty navigation.
-A changed target or baseline invalidates the draft. Saved history shows kind, phase and
-uncertainty; a lost browser response blocks new submissions until saved operations are
-successfully refreshed. A failed reconciliation read keeps the draft blocked and retries every
-five seconds even without a previously known pending operation. Manual refresh remains available.
+The admin opens `/:language/karma-client/cars/:recordId/configuration` through the truck's
+Device settings tab. The selected Karma car directly supplies its device; the screen shows
+**Device in Karma** without another car/device selector or setup step. The shell's active
+Branch scopes operation history and submissions. Karma account data remains independent of
+Branch, and `projectId` is not interpreted as a local Branch. Local Fleet Vehicle/Device
+records remain a separate workflow.
+
+Old Fleet configuration bookmarks return to the Karma car list and never infer the upstream
+truck from an IMEI or registration. An unauthenticated
+visit to the matched Karma settings route returns there after successful login and Branch selection.
+
+The selected session/Branch/language/Karma pair owns the Fleet clients independently of the
+Branch-free Karma reads. Changing that selection retires readers and timers; submitted
+mutations settle against their captured scope. A changed upstream identity remounts the
+configuration workspace. Navigating away leaves the
+durable server operation intact. The page reloads saved state on mount and polls every five
+seconds while a request is pending. Snapshot editing requires the latest complete baseline
+to match the current Karma pair and active Branch.
+
+**Read configuration** requests parameters first, then rules only after that exact parameter
+operation completes for the captured target. The page never starts both concurrently. Reload
+retains each saved result but does not dispatch a new command automatically; **Continue reading
+rules** explicitly resumes an incomplete read sequence. Each snapshot keeps its own timestamp,
+and a failed rule read does not block parameter changes backed by a complete parameter snapshot.
+
+Parameters use the shared table and typed change drawer for one catalog addition or existing
+interval change. The action fixes the editor mode and, for interval edits, the parameter.
+The form previews the target and before/after interval, requires
+explicit confirmation and separate zero-interval confirmation, and guards dirty navigation
+and scope changes. A changed target or baseline invalidates the draft. Original definitions
+remain available with baseline identifiers in technical details. History expands when the selected target has operations
+and retains kind, phase and uncertainty. Local rule authoring is available without Fleet scope
+and uses browser storage partitioned by signed Tenant and Karma car. Simple condition rows
+and advanced expression text use the same AST and binary codec. The form explicitly selects
+true/false transition reports; zero-zero rules require calculation-only mode. A local revision
+and its matching confirmed Rule ID share a row. INI/TXT imports
+retain original source and opaque definitions; importing never dispatches device commands.
+Each online rule change has a separate review against both confirmed snapshots, the selected
+target and exact record. A later matching complete readback retires only the exact submitted
+local revision, while preserving later edits and its local display name. Failed or uncertain
+submissions retain the draft until matching evidence is available.
+The [development workflow](development.md#background-device-configuration-reads)
+describes authoring, exports and submission.
+
+A lost browser response blocks new submissions until saved operations are successfully
+refreshed. A failed reconciliation read keeps the draft blocked and retries every five seconds
+even without a previously known pending operation. Manual refresh remains available.

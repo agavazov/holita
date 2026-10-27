@@ -44,10 +44,11 @@ code is the reference for behavior details.
 - Duplicates are BAD_USER_INPUT `fieldErrors`. Deletions blocked by a foreign key are CONFLICT
   with an entity message.
 - Branch discovery and naming belong to the shared [Core Branch foundation](../ecommerce/branches.md).
-- Device configuration (DeviceOperations) is frozen, and writes are disabled by default.
+- Device configuration writes are disabled by default and limited to the documented operations.
   - Never automatically replay an ambiguous submission, and never expose arbitrary command
     strings.
-  - Preserve captured definition bytes except the interval bytes.
+  - An interval change preserves captured definition bytes except the interval bytes.
+    A one-rule change preserves all unrelated records; unsupported rule expressions stay opaque.
   - Follow the [operation contract](architecture.md#background-device-configuration-reads).
 - The [Simple eData vendor catalog](erm-resources/simple-edata-catalog/README.md) is shared
   manufacturer reference data scoped by catalog version, without Tenant/Branch columns.

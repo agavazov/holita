@@ -55,7 +55,7 @@
           {{ point.longitude ?? '—' }}
         </p>
         @if (map(); as url) {
-          <a class="content-link" [href]="url" target="_blank" rel="noopener noreferrer">{{
+          <a class="app-link" [href]="url" target="_blank" rel="noopener noreferrer">{{
             text().karmaOpenMap
           }}</a>
         } @else {
@@ -67,9 +67,9 @@
         <p role="status">{{ text().karmaLoadingLocation }}</p>
       }
     </section>
-    <details class="karma-source-details">
+    <details class="app-card app-source-details">
       <summary>{{ detailText().sourceFields }}</summary>
-      <dl class="truck-details karma-details">
+      <dl class="app-facts">
         <div>
           <dt>{{ text().licensePlate }}</dt>
           <dd>{{ truck.carNumber }}</dd>

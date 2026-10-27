@@ -1,0 +1,166 @@
+{
+  "title": "ERM support correspondence: diagnostics, protocol access and Test Server",
+  "analysis_date": "2026-10-27",
+  "timezone": "Europe/Sofia",
+  "local_reference_edition": "1.6",
+  "email_sent_at": null,
+  "email_headers_available": true,
+  "source": {
+    "original_filename": "karma-mail.odt",
+    "path": "source/erm-support-reply.odt",
+    "sha256": "be15c82d54f09065c5bff90ccf9d2920e52e4a6c1ec2d6119c072fb0d613d17d",
+    "document_created_at": "2026-10-26T21:32:00Z",
+    "document_modified_at": "2026-10-26T21:32:00Z",
+    "timestamp_scope": "ODT export metadata, not email sending time",
+    "email_headers_in_odt": false
+  },
+  "original_request_source": "User-supplied text; not part of the ODT",
+  "referenced_access_email_date_literal": "7/10/2026",
+  "images": [
+    {
+      "archive_member": "media/image1.png",
+      "path": "images/dtc-monitor-settings.png",
+      "width": 636,
+      "height": 287,
+      "sha256": "5dbcf825567a7100f83c28a8ce058136263e5a5e96ce8800a9500c19e24ef83d"
+    },
+    {
+      "archive_member": "media/image2.png",
+      "path": "images/fms-fault-message-example.png",
+      "width": 557,
+      "height": 142,
+      "sha256": "7fb1d93600be56f3a45d48c23a67b66a4cc7c1d1875b2c31ba618a5dfdc5a8bb"
+    },
+    {
+      "archive_member": "media/image3.png",
+      "path": "images/fms-fault-message-fields.png",
+      "width": 556,
+      "height": 218,
+      "sha256": "84a62af7d4c94bb90d838b5dd0d4df0f0e3ae6ad2ed53756a59aa0dfe69475b1"
+    },
+    {
+      "archive_member": "media/image4.png",
+      "path": "images/fmi-fault-message-format.png",
+      "width": 541,
+      "height": 339,
+      "sha256": "aaff9de5505af5946e3207e351ea3a063bf0ed3a57a915205c0f88d49664baa0"
+    }
+  ],
+  "live_validation": "CB1344XH DTC byte 18=1 independently verified against complete49-byte globals; other 48 bytes identical. CB1147TP 662 30-to-60 through Fleet independently verified across14 definitions, other 13 unchanged, followed by five new 405 records with four exact60s deltas and matching Gateway values. CB9680TE has delayed539120/121s periodic proof after its old120 setting, without a new write. Three real isolated fault reads on two trucks returned154,0; actual vehicle DTC code/lifecycle still unproved. Final configured states: CB1344XH DTC1, CB1147TP 66260. Subsequent CB1147TP DTC-only enablement independently verified at08:52:57 UTC; fourth isolated logger returned154,0 at08:54:32 with following405 at08:54:33. Enabled DTC and active CAN now tested on the same device; no positive fault list. Final CB1147TP DTC1/66260.",
+  "verification_campaign_reference": "live-verification-2026-10-27.md",
+  "mailbox_confirmation": {
+    "stage": "ERM-TEST-01",
+    "date": "2026-10-27",
+    "provider": "Outlook",
+    "sender_name": "Oz Dori",
+    "sender_email": "oz@erm.co.il",
+    "subject": "RE: Device diagnostics, protocol access and StarLink Test Server",
+    "received_at": "2026-10-25T08:39:01Z",
+    "reply_text_matches_odt": true,
+    "earlier_protocol_access_email_recovered": false
+  },
+  "monitor_export_evidence": {
+    "date": "2026-10-27",
+    "source": "Eight user-supplied paired Monitor exports; original program version not embedded in the files",
+    "files": [
+      {
+        "provided_filename": "no-dtc.Ini",
+        "path": "source/monitor-exports/dtc-disabled.ini",
+        "sha256": "5f0031195167cb3bd6e70c00645186bee68d204d122c84b91a609fe8c15560e9"
+      },
+      {
+        "provided_filename": "no-dtc.txt",
+        "path": "source/monitor-exports/dtc-disabled.txt",
+        "sha256": "c38750c2a49e5787a3646b834688f14d65c77eccc3f614250d8ccfe70df9a2ee"
+      },
+      {
+        "provided_filename": "width-dtc.Ini",
+        "path": "source/monitor-exports/dtc-enabled.ini",
+        "sha256": "6ae4d38a7dbe8ff30e57bbb1c02681319e383f767996d693afa59fe18fecdd8a"
+      },
+      {
+        "provided_filename": "width-dtc.txt",
+        "path": "source/monitor-exports/dtc-enabled.txt",
+        "sha256": "7f2aeefdc053ec52fe1043f44f20547d559fe70a3246b70c67fbb32da238b5ff"
+      },
+      {
+        "provided_filename": "send-params-while-ognotation-is-off.Ini",
+        "path": "source/monitor-exports/ignition-off-reporting-enabled.ini",
+        "sha256": "2c391e32d1752e03b29c0814e2941b97f847a35a2d24bae1d19ce3ff307f20e9"
+      },
+      {
+        "provided_filename": "send-params-while-ognotation-is-off.txt",
+        "path": "source/monitor-exports/ignition-off-reporting-enabled.txt",
+        "sha256": "3964619545d1ca316a5674cbf9caedb9d0a7b25029615e3f8bde31ede5c925a6"
+      },
+      {
+        "provided_filename": "no-send-params-while-ognotation-is-off.Ini",
+        "path": "source/monitor-exports/ignition-off-reporting-disabled.ini",
+        "sha256": "5f0031195167cb3bd6e70c00645186bee68d204d122c84b91a609fe8c15560e9"
+      },
+      {
+        "provided_filename": "no-send-params-while-ognotation-is-off.txt",
+        "path": "source/monitor-exports/ignition-off-reporting-disabled.txt",
+        "sha256": "c38750c2a49e5787a3646b834688f14d65c77eccc3f614250d8ccfe70df9a2ee"
+      }
+    ],
+    "scope": "Generated command bytes confirmed; exports were not executed or sent to a device"
+  },
+  "dtc_configuration_evidence": {
+    "car_id": 16592,
+    "device_id": "862129080367646",
+    "baseline_message_id": 7170983813,
+    "baseline_edt_utc": "2026-10-27 08:02:46",
+    "write_queue_id": 56116679,
+    "verification_queue_id": 56116692,
+    "verification_message_id": 7170990372,
+    "verification_edt_utc": "2026-10-27 08:04:54",
+    "changed_offset": 18,
+    "from_value": 0,
+    "to_value": 1,
+    "other_global_bytes_identical": 48,
+    "final_dtc_value": 1,
+    "runtime_fault_codes_verified": false
+  },
+  "interval_measurement_evidence": {
+    "car_id": 16595,
+    "device_id": "862129080367299",
+    "parameter_id": 662,
+    "from_seconds": 30,
+    "to_seconds": 60,
+    "baseline_operation_id": "047ca35d-6fc5-4acb-ac4e-2c6b940d2024",
+    "update_operation_id": "bab36c8a-d2aa-4ff1-a5c0-d90b75cd3e93",
+    "write_dispatched_at_utc": "2026-10-27T08:21:47.058Z",
+    "independent_message_id": 7171046524,
+    "independent_edt_utc": "2026-10-27 08:21:56",
+    "operation_complete_at_utc": "2026-10-27T08:22:40.648Z",
+    "parameter_count": 14,
+    "unrelated_definitions_identical": 13,
+    "measurement_ids": [7171056491, 7171057524, 7171059267, 7171060544, 7171062377],
+    "consecutive_seconds": [60, 60, 60, 60],
+    "gateway_match": true
+  },
+  "active_can_dtc_evidence": {
+    "car_id": 16595,
+    "device_id": "862129080367299",
+    "baseline_message_id": 7171142710,
+    "baseline_edt_utc": "2026-10-27 08:51:02",
+    "write_queue_id": 56117580,
+    "write_requested_at_utc": "2026-10-27T08:52:30.377Z",
+    "verification_queue_id": 56117584,
+    "verification_message_id": 7171149727,
+    "verification_edt_utc": "2026-10-27 08:52:57",
+    "changed_offset": 18,
+    "from_value": 0,
+    "to_value": 1,
+    "other_global_bytes_identical": 48,
+    "fault_read_queue_id": 56117619,
+    "fault_response_message_id": 7171154531,
+    "fault_response_edt_utc": "2026-10-27 08:54:32",
+    "fault_response_raw": "19,0,154,0",
+    "following_can_message_id": 7171154700,
+    "following_can_edt_utc": "2026-10-27 08:54:33",
+    "final_dtc_value": 1,
+    "runtime_fault_codes_verified": false
+  }
+}

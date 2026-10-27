@@ -194,7 +194,8 @@ applies after GraphQL parsing/schema validation, at the supergraph boundary:
   paths start with an ASCII letter and contain ASCII letters/digits, and messages are
   at most 300 UTF-16 code units. Invalid variable values use HTTP 400 and `BAD_USER_INPUT`;
   compiler diagnostic wording and locations remain native to Router.
-- Each subgraph request has a five-second timeout. Transport failures, malformed upstream
+- Subgraph requests have a five-second timeout, with a nine-second override for Karma to
+  accommodate its eight-second public eData reads. Transport failures, malformed upstream
   responses and subgraph timeouts become `SERVICE_UNAVAILABLE` with
   `A required service is unavailable; try again later`. These execution errors use HTTP 200.
 - Unexpected GraphQL errors log the request ID and a fixed error category, without copying

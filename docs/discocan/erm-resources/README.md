@@ -6,12 +6,28 @@ change the current holita application or domain contracts.
 | Resource                                                | Purpose                                                                 | Local reference                                                                                                                                                         |
 | ------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [Karma API v2](https://karma.online/apiv2/)             | Account, vehicle and telemetry HTTP API consumed by `apps/karma-client` | [Detailed API reference](karma-api-v2/README.md), original public help assets and reconstructed OpenAPI                                                                 |
-| [ERM protocol portal](https://sweb.erm.co.il/protocol/) | StarLink device/server protocol, configuration and tools                | [Portal overview](starlink-online-protocol/README.md), [Message structure](starlink-online-protocol/message-structure.md) and supplied screenshots; credentials awaited |
-| [Karma NC2 login](https://karma.online/nc2/login)       | Separate web login URL                                                  | Its relationship to API sessions, features and permissions has not been established; it is not the configured API base URL                                              |
+| [ERM protocol portal](https://sweb.erm.co.il/protocol/) | StarLink device/server protocol, configuration and tools                | [Portal overview](starlink-online-protocol/README.md), [Message structure](starlink-online-protocol/message-structure.md) and supplied screenshots; authenticated access unverified |
+| [Karma NC2 login](https://karma.online/nc2/login)       | Technical web console with a separate login/session flow                | [Observed Users, Vehicles, CMD and Statistics](karma-api-v2/web-functionality-research.md#nc2-technical-console); saved website login verified, API v2 session/permission equivalence unproven |
 
 Use the [Karma reference](karma-api-v2/README.md) for the API inventory, data models,
 current holita coverage and known limitations. Remaining investigation and proposed
 work live in the [Karma backlog](../../todo/karma-api-v2.md).
+
+## ERM support correspondence and verification
+
+The [diagnostics, protocol access and Test Server reference](erm-support-diagnostics-protocol-test-server/README.md)
+preserves the original request, engineer's reply, ODT and four images, with a
+question-by-question comparison. It separates manufacturer statements from live
+confirmation and records what still requires tests or ERM clarification. No new
+device test was performed while preparing or relocating this correspondence.
+Future scoped confirmations belong in its verification register; remaining actions
+are linked to the existing backlog.
+
+ERM-TEST-01 subsequently confirmed the public protocol login page, but no account
+was located in the available sources and authenticated content remains unavailable.
+The [diagnostics and fault reference](edata-simple-protocol-v4.04/diagnostics-and-fault-reporting.md)
+records source-level read commands, including the fault logger and OBD `413`, and
+the unresolved `302`/`410`, `418` and `419` conflicts. No device command was sent.
 
 ## Simple eData Monitor catalog
 
@@ -47,7 +63,9 @@ establish that the device is a particular Scout or Tracker variant.
 
 ## StarLink online protocol portal
 
-Portal credentials are awaited. The [local portal reference](starlink-online-protocol/README.md)
+Authenticated portal access remains unverified. ERM refers to an earlier access
+email in the [support reply](erm-support-diagnostics-protocol-test-server/correspondence.md#engineers-reply);
+the supplied reply contains no credentials. The [local portal reference](starlink-online-protocol/README.md)
 describes the user-supplied home page, all 19 General information menu entries and
 the visible [Message structure](starlink-online-protocol/message-structure.md) page.
 It includes framing fields, direction markers, identifier forms, checksum evidence,
@@ -99,8 +117,11 @@ JPEGs supplied alongside the PDFs are outside this PDF conversion.
 
 The original resource notes name **StartLink Test Server**; the supplied
 [portal menu](starlink-online-protocol/README.md#general-information-menu) confirms
-the label **StarLink Test Server**, alongside **StarLink Monitor**. Their binaries
-and test-server message replication remain unverified. The notes also name
+the label **StarLink Test Server**, alongside **StarLink Monitor**. The engineer's
+[support reply](erm-support-diagnostics-protocol-test-server/README.md) describes
+forking traffic to our server and ERM's test server, but its procedure and actual
+delivery remain unverified. Whether an installable binary is supplied is also
+unresolved. The notes also name
 **Simple eData Primitives Monitor**. The monitor guide above documents Simple eData
 Monitor, but does not establish its identity relative to either separately named
 tool or supply an executable/model catalog. Remaining questions are in the
