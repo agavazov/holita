@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: flex;
   flex-direction: column;
@@ -54,4 +56,74 @@
 dd {
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+}
+
+.settings-summary {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+.settings-readiness {
+  margin: 0;
+  font-weight: 600;
+}
+.settings-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-app-space-3) var(--p-app-space-5);
+  padding: var(--p-app-space-3) var(--p-app-space-5);
+  margin: 0;
+  border-radius: var(--p-content-border-radius);
+  background: var(--p-content-hover-background);
+  list-style-position: inside;
+  color: var(--p-text-color);
+}
+.settings-attention {
+  display: grid;
+  gap: var(--p-app-space-2);
+  padding: var(--p-app-space-3);
+  border-inline-start: 3px solid var(--p-primary-color);
+  background: var(--p-content-hover-background);
+  p {
+    margin: 0;
+  }
+}
+.settings-rules {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.settings-rule {
+  padding: var(--p-app-space-4);
+  border-block-end: 1px solid var(--p-content-border-color);
+  &:last-child {
+    border-block-end: 0;
+  }
+  p {
+    margin-block: var(--p-app-space-2) 0;
+  }
+}
+.settings-mobile-code {
+  display: none;
+}
+@include bp.below(sm) {
+  .settings-code {
+    display: none;
+  }
+  .settings-mobile-code {
+    display: inline;
+  }
+  .settings-flow {
+    display: grid;
+    gap: var(--p-app-space-2);
+  }
+}
+
+.settings-overview,
+.settings-history {
+  align-items: stretch;
+}
+.settings-overview > button {
+  align-self: flex-start;
+}
+.settings-operation > p {
+  margin: 0;
 }

@@ -66,8 +66,7 @@ import { deviceConfigurationText } from './i18n/messages';
         <div>
           <dt>{{ text().change }}</dt>
           <dd>
-            {{ previous() ? text().update : text().add }} · {{ text().ruleId }}
-            {{ draft().ruleId }}
+            {{ previous() ? text().update : text().add }}
           </dd>
         </div>
         <div>
@@ -88,7 +87,9 @@ import { deviceConfigurationText } from './i18n/messages';
           <dt>{{ text().trueEvent }}</dt>
           <dd>
             @if (previous(); as previous) {
-              {{ reportingLabel(previous.trueEventId) }} →
+              @if (previous.trueEventId !== draft().trueEvent) {
+                {{ reportingLabel(previous.trueEventId) }} →
+              }
             }
             {{ reportingLabel(draft().trueEvent) }}
           </dd>
@@ -97,7 +98,9 @@ import { deviceConfigurationText } from './i18n/messages';
           <dt>{{ text().falseEvent }}</dt>
           <dd>
             @if (previous(); as previous) {
-              {{ reportingLabel(previous.falseEventId) }} →
+              @if (previous.falseEventId !== draft().falseEvent) {
+                {{ reportingLabel(previous.falseEventId) }} →
+              }
             }
             {{ reportingLabel(draft().falseEvent) }}
           </dd>
@@ -106,7 +109,9 @@ import { deviceConfigurationText } from './i18n/messages';
           <dt>{{ text().debounce }}</dt>
           <dd>
             @if (previous(); as previous) {
-              {{ previous.debounceMilliseconds }} ms →
+              @if (previous.debounceMilliseconds !== draft().debounce) {
+                {{ previous.debounceMilliseconds }} ms →
+              }
             }
             {{ draft().debounce }} ms
           </dd>
@@ -115,6 +120,10 @@ import { deviceConfigurationText } from './i18n/messages';
       <details class="rule-details">
         <summary>{{ text().technicalDetails }}</summary>
         <dl class="app-facts">
+          <div>
+            <dt>{{ text().ruleId }}</dt>
+            <dd>{{ draft().ruleId }}</dd>
+          </div>
           <div>
             <dt>{{ text().targetCarId }}</dt>
             <dd class="app-mono">{{ target()?.id }}</dd>

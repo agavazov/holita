@@ -74,6 +74,14 @@ const fieldOrder: readonly EditorField[] = [
   providers: [ConfirmationService],
   templateUrl: './device-parameter-editor.html',
   styles: `
+    .parameter-presets {
+      border: 0;
+      padding: 0;
+      margin: 0;
+      legend {
+        margin-block-end: var(--p-app-space-2);
+      }
+    }
     .parameter-wrap {
       overflow-wrap: anywhere;
     }
@@ -90,6 +98,8 @@ export class DeviceParameterEditor {
   readonly branchId = input.required<string>();
   readonly drawer = input(false);
   protected readonly drawerOpen = signal(false);
+  protected readonly reviewing = signal(false);
+  protected readonly commonIntervals = [30, 60, 300, 900];
   readonly enabled = input(false);
   readonly target = input<DeviceConfigurationTarget | null>(null);
   readonly latestBaseline = input<DeviceConfigurationOperation | null>(null);
@@ -237,6 +247,7 @@ export class DeviceParameterEditor {
         if (this.resetting) {
           return;
         }
+        this.reviewing.set(false);
         this.draftChanged.emit();
         if (this.draftContext() === null) {
           this.draftContext.set(this.context());
@@ -324,7 +335,50 @@ export class DeviceParameterEditor {
     return validationMessage(control.errors, this.language());
   }
 
+  protected selectInterval(seconds: number): void {
+    this.form.controls.intervalSeconds.setValue(seconds);
+    this.form.controls.intervalSeconds.markAsDirty();
+  }
+
+  protected intervalPresetLabel(seconds: number): string {
+    switch (seconds) {
+      case 30:
+        return this.text().every30;
+      case 60:
+        return this.text().every60;
+      case 300:
+        return this.text().every300;
+      default:
+        return this.text().every900;
+    }
+  }
+
+  reviewChange(): void {
+    this.form.controls.presetKey.markAsTouched();
+    this.form.controls.parameterId.markAsTouched();
+    this.form.controls.intervalSeconds.markAsTouched();
+    if (
+      this.unavailable() ||
+      this.intendedParameterId() === null ||
+      this.form.controls.intervalSeconds.invalid
+    ) {
+      return;
+    }
+    if (
+      this.value().mode === 'interval' &&
+      this.value().intervalSeconds === this.previous()?.intervalSeconds
+    ) {
+      this.form.controls.intervalSeconds.setErrors({ unchanged: true });
+      return;
+    }
+    this.reviewing.set(true);
+  }
+
   protected submit(): void {
+    if (!this.reviewing()) {
+      this.reviewChange();
+      return;
+    }
     if (this.unavailable()) {
       return;
     }
@@ -445,6 +499,7 @@ export class DeviceParameterEditor {
   }
 
   private reset(): void {
+    this.reviewing.set(false);
     this.submitted = false;
     this.confirmedKey = null;
     this.resetting = true;

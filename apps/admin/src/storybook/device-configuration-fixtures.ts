@@ -19,6 +19,9 @@ export const configurationStoryStates = {
   waiting: 'waiting',
   emptyConfiguration: 'empty-configuration',
   writeUncertain: 'write-uncertain',
+  reading: 'reading',
+  dispatchOff: 'dispatch-off',
+  failed: 'failed',
 } as const;
 
 export const fixtureConfigurationOperation: WithTypename<AdminDeviceConfigurationOperationFragment> =
@@ -100,7 +103,7 @@ export const fixtureParameterPresets = [
     catalogId: '90000000-0000-4000-8000-000000000956',
     catalogLabel: 'Monitor 9.56',
     parameterId: 1001,
-    name: 'Fixture preset 1001',
+    name: 'Additional catalog parameter',
     profileIds: [0],
   },
 ];
@@ -215,19 +218,36 @@ export function configurationPageFixture(
     writeUncertain: true,
     status: 'UNKNOWN',
   };
+  const waitingWrite: WithTypename<AdminDeviceConfigurationOperationFragment> = {
+    ...write,
+    parameterId: 718,
+    previousIntervalSeconds: 30,
+    writeUncertain: false,
+    status: 'WAITING',
+  };
+  const failed: WithTypename<AdminDeviceConfigurationOperationFragment> = {
+    ...waitingWrite,
+    status: 'FAILED',
+    completedAt: '2026-10-18T07:02:00.000Z',
+    errorCode: 'WRITE_READBACK_MISMATCH',
+  };
   return {
-    fleetDeviceOperationsEnabled: true,
-    fleetDeviceConfigurationWritesEnabled: true,
+    fleetDeviceOperationsEnabled: state !== configurationStoryStates.dispatchOff,
+    fleetDeviceConfigurationWritesEnabled: state !== configurationStoryStates.dispatchOff,
     fleetDeviceParameterPresets: fixtureParameterPresets,
     fleetDeviceOperations: empty
       ? []
       : writeUncertain
-        ? [write]
-        : state === configurationStoryStates.waiting
+        ? [write, ...(rulesSnapshot ? [rulesSnapshot] : []), confirmed]
+        : state === configurationStoryStates.reading
           ? [pending]
-          : lastSnapshot
-            ? [...(rulesSnapshot ? [rulesSnapshot] : []), lastSnapshot]
-            : [],
+          : state === configurationStoryStates.failed
+            ? [failed, ...(rulesSnapshot ? [rulesSnapshot] : []), confirmed]
+            : state === configurationStoryStates.waiting
+              ? [waitingWrite, ...(rulesSnapshot ? [rulesSnapshot] : []), confirmed]
+              : lastSnapshot
+                ? [...(rulesSnapshot ? [rulesSnapshot] : []), lastSnapshot]
+                : [],
     fleetDeviceConfigurationSnapshot: lastSnapshot,
     fleetDeviceRulesSnapshot: rulesSnapshot,
   };

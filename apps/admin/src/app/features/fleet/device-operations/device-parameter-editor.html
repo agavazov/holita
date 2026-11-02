@@ -2,7 +2,11 @@
   @if (!drawer()) {
     <h2 class="app-card__title" id="parameter-editor-title">{{ title() }}</h2>
   }
-  <p class="app-muted">{{ value().mode === 'add' ? text().hint : text().editHint }}</p>
+  <p class="app-muted">
+    {{
+      reviewing() ? text().verificationHint : value().mode === 'add' ? text().hint : text().editHint
+    }}
+  </p>
   @if (!enabled()) {
     <p-message severity="info">{{ text().disabled }}</p-message>
   } @else if (!target()) {
@@ -21,67 +25,91 @@
       [formGroup]="form"
       (ngSubmit)="submit()"
     >
-      <div class="app-form-grid">
-        @if (value().mode === 'add') {
+      @if (!reviewing()) {
+        <div class="app-form-section">
+          @if (value().mode === 'add') {
+            <holita-form-field
+              [label]="text().preset"
+              controlId="parameter-presetKey"
+              [hint]="text().catalogHint"
+              [required]="true"
+              [error]="errorOf('presetKey')"
+            >
+              <p-select
+                inputId="parameter-presetKey"
+                formControlName="presetKey"
+                [options]="presetOptions()"
+                optionLabel="label"
+                optionValue="value"
+                [placeholder]="text().presetPlaceholder"
+                [ariaLabel]="text().preset"
+                [ariaFilterLabel]="text().filterPresets"
+                [filter]="true"
+                appendTo="body"
+                [invalid]="!!errorOf('presetKey')"
+                [pt]="presetPt()"
+              />
+            </holita-form-field>
+            @if (!presetOptions().length) {
+              <p class="app-muted">{{ text().noPresets }}</p>
+            }
+          } @else {
+            <div class="app-form-section">
+              <dl class="app-facts">
+                <div class="app-facts--wide">
+                  <dt>{{ text().parameter }}</dt>
+                  <dd>{{ parameterLabel() }}</dd>
+                </div>
+              </dl>
+              @if (errorOf('parameterId'); as error) {
+                <p-message severity="error">{{ error }}</p-message>
+              }
+            </div>
+          }
+          <fieldset class="parameter-presets">
+            <legend>{{ text().commonIntervals }}</legend>
+            <div class="app-inline">
+              @for (seconds of commonIntervals; track seconds) {
+                <button
+                  pButton
+                  type="button"
+                  severity="secondary"
+                  [outlined]="value().intervalSeconds !== seconds"
+                  [attr.aria-pressed]="value().intervalSeconds === seconds"
+                  [disabled]="unavailable()"
+                  (click)="selectInterval(seconds)"
+                >
+                  {{ intervalPresetLabel(seconds) }}
+                </button>
+              }
+            </div>
+          </fieldset>
           <holita-form-field
-            [label]="text().preset"
-            controlId="parameter-presetKey"
-            [hint]="text().catalogHint"
+            [label]="text().customInterval"
+            controlId="parameter-intervalSeconds"
+            [hint]="text().intervalHint"
             [required]="true"
-            [error]="errorOf('presetKey')"
+            [error]="errorOf('intervalSeconds')"
           >
-            <p-select
-              inputId="parameter-presetKey"
-              formControlName="presetKey"
-              [options]="presetOptions()"
-              optionLabel="label"
-              optionValue="value"
-              [placeholder]="text().presetPlaceholder"
-              [ariaLabel]="text().preset"
-              [ariaFilterLabel]="text().filterPresets"
-              [filter]="true"
-              appendTo="body"
-              [invalid]="!!errorOf('presetKey')"
-              [pt]="presetPt()"
+            <p-inputnumber
+              [fluid]="true"
+              inputId="parameter-intervalSeconds"
+              formControlName="intervalSeconds"
+              [min]="0"
+              [max]="65000"
+              [minFractionDigits]="0"
+              [maxFractionDigits]="0"
+              [useGrouping]="false"
+              [invalid]="!!errorOf('intervalSeconds')"
+              [pt]="numberPt()"
             />
           </holita-form-field>
-          @if (!presetOptions().length) {
-            <p class="app-muted">{{ text().noPresets }}</p>
-          }
-        } @else {
-          <div class="app-form-section">
-            <dl class="app-facts">
-              <div class="app-facts--wide">
-                <dt>{{ text().parameter }}</dt>
-                <dd>{{ parameterLabel() }}</dd>
-              </div>
-            </dl>
-            @if (errorOf('parameterId'); as error) {
-              <p-message severity="error">{{ error }}</p-message>
-            }
-          </div>
-        }
-        <holita-form-field
-          [label]="text().interval"
-          controlId="parameter-intervalSeconds"
-          [hint]="text().intervalHint"
-          [required]="true"
-          [error]="errorOf('intervalSeconds')"
-        >
-          <p-inputnumber
-            inputId="parameter-intervalSeconds"
-            formControlName="intervalSeconds"
-            [min]="0"
-            [max]="65000"
-            [minFractionDigits]="0"
-            [maxFractionDigits]="0"
-            [useGrouping]="false"
-            [invalid]="!!errorOf('intervalSeconds')"
-            [pt]="numberPt()"
-          />
-        </holita-form-field>
-      </div>
-      @if (matchingBaseline() && intendedParameterId() !== null && baseline(); as baseline) {
+        </div>
+      }
+      @if (
+        reviewing() && matchingBaseline() && intendedParameterId() !== null && baseline();
+        as baseline
+      ) {
         <div class="app-form-section" aria-labelledby="parameter-preview-title">
           <h3 class="app-card__title" id="parameter-preview-title">{{ text().preview }}</h3>
           <dl class="app-facts">
@@ -99,13 +127,15 @@
               <dt>{{ text().previous }}</dt>
               <dd>
                 {{
-                  (value().mode === 'interval' ? previous()?.intervalSeconds : null) | holitaNumber
+                  value().mode === 'interval'
+                    ? (previous()?.intervalSeconds | holitaNumber) + ' ' + text().secondsShort
+                    : text().notConfigured
                 }}
               </dd>
             </div>
             <div>
               <dt>{{ text().next }}</dt>
-              <dd>{{ value().intervalSeconds | holitaNumber }}</dd>
+              <dd>{{ value().intervalSeconds | holitaNumber }} {{ text().secondsShort }}</dd>
             </div>
           </dl>
           <p class="app-muted">{{ text().verificationHint }}</p>
@@ -160,39 +190,41 @@
           </details>
         </div>
       }
-      @if (value().intervalSeconds === 0) {
-        <p-message severity="warn">{{ text().zeroHint }}</p-message>
+      @if (reviewing()) {
+        @if (value().intervalSeconds === 0) {
+          <p-message severity="warn">{{ text().zeroHint }}</p-message>
+          <holita-form-field
+            [label]="text().zeroLabel"
+            controlId="parameter-zeroConfirmed"
+            [error]="errorOf('zeroConfirmed')"
+          >
+            <label class="app-inline" for="parameter-zeroConfirmed"
+              ><p-checkbox
+                inputId="parameter-zeroConfirmed"
+                [binary]="true"
+                formControlName="zeroConfirmed"
+                [attr.aria-invalid]="errorOf('zeroConfirmed') ? 'true' : null"
+                aria-describedby="parameter-zeroConfirmed-error"
+              /><span>{{ text().zeroConfirmation }}</span></label
+            >
+          </holita-form-field>
+        }
         <holita-form-field
-          [label]="text().zeroLabel"
-          controlId="parameter-zeroConfirmed"
-          [error]="errorOf('zeroConfirmed')"
+          [label]="text().confirmationLabel"
+          controlId="parameter-confirmed"
+          [error]="errorOf('confirmed')"
         >
-          <label class="app-inline" for="parameter-zeroConfirmed"
+          <label class="app-inline" for="parameter-confirmed"
             ><p-checkbox
-              inputId="parameter-zeroConfirmed"
+              inputId="parameter-confirmed"
               [binary]="true"
-              formControlName="zeroConfirmed"
-              [attr.aria-invalid]="errorOf('zeroConfirmed') ? 'true' : null"
-              aria-describedby="parameter-zeroConfirmed-error"
-            /><span>{{ text().zeroConfirmation }}</span></label
+              formControlName="confirmed"
+              [attr.aria-invalid]="errorOf('confirmed') ? 'true' : null"
+              aria-describedby="parameter-confirmed-error"
+            /><span>{{ text().confirmation }}</span></label
           >
         </holita-form-field>
       }
-      <holita-form-field
-        [label]="text().confirmationLabel"
-        controlId="parameter-confirmed"
-        [error]="errorOf('confirmed')"
-      >
-        <label class="app-inline" for="parameter-confirmed"
-          ><p-checkbox
-            inputId="parameter-confirmed"
-            [binary]="true"
-            formControlName="confirmed"
-            [attr.aria-invalid]="errorOf('confirmed') ? 'true' : null"
-            aria-describedby="parameter-confirmed-error"
-          /><span>{{ text().confirmation }}</span></label
-        >
-      </holita-form-field>
       @if (requestError(); as error) {
         <p-message severity="error" role="alert">{{ error }}</p-message>
       }
@@ -208,7 +240,7 @@
   </section>
 } @else if (drawerOpen()) {
   <holita-route-drawer
-    [title]="title()"
+    [title]="reviewing() ? text().preview : title()"
     [subtitle]="target()?.carNumber ?? null"
     [closeLink]="null"
     [saving]="submitting()"
@@ -232,8 +264,24 @@
     >
       {{ text().discard }}
     </button>
-    <button pButton type="submit" form="parameter-change" [disabled]="unavailable()">
-      {{ text().submit }}
+    @if (reviewing()) {
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [disabled]="submitting()"
+        (click)="reviewing.set(false)"
+      >
+        {{ text().back }}
+      </button>
+    }
+    <button
+      pButton
+      type="submit"
+      form="parameter-change"
+      [disabled]="unavailable() || submitting()"
+    >
+      {{ reviewing() ? text().submit : text().review }}
     </button>
   </div>
 </ng-template>

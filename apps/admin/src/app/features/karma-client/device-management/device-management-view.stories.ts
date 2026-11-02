@@ -6,28 +6,34 @@ import {
 } from '../../../../storybook/device-configuration-fixtures';
 import type { WithTypename } from '../../../../storybook/graphql-fixtures';
 import { fixtureKarmaCar } from '../../../../storybook/karma-fixtures';
-import { defaultBranchId, fixtureTenant } from '../../../../storybook/session-fixtures';
-import { routeAt, StoryApp, type StoryFixtures } from '../../../../storybook/story-config';
+import { defaultBranchId } from '../../../../storybook/session-fixtures';
+import { StoryApp, type StoryFixtures } from '../../../../storybook/story-config';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
 import type { DeviceConfigurationOperation } from '../../fleet/device-operations/device-configuration-types';
 import { DeviceManagementView } from './device-management-view';
-import { RuleDraftStore } from './rule-drafts';
+import { RuleDraftStore, type RuleDraft } from './rule-drafts';
+import { KarmaCarHeader } from '../car-header/karma-car-header';
+import { DeviceRuleReview } from '../../fleet/device-operations/device-rule-review';
+import en from './i18n/en.json';
+import bg from './i18n/bg.json';
 
 /** Saved evidence uses the production view; this wrapper has no send or save implementation. */
 @Component({
   selector: 'holita-settings-snapshot',
-  imports: [DeviceManagementView],
+  imports: [DeviceManagementView, KarmaCarHeader, DeviceRuleReview],
   providers: [RuleDraftStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="app-stack" style="padding: var(--p-app-gutter)">
-      <p style="color: var(--p-app-canvas-muted-color)">
-        {{
-          language() === 'bg'
-            ? 'Запазен пример. Командите към устройството са изключени.'
-            : 'Fixed example snapshot. Device actions are disconnected.'
-        }}
-      </p>
+    <div
+      class="app-view"
+      style="padding: var(--p-app-gutter); background: var(--p-app-frame-background)"
+    >
+      <holita-karma-car-header
+        [language]="language()"
+        [carId]="car.id"
+        [carNumber]="car.carNumber"
+        [title]="text().deviceSettings"
+      />
       <holita-device-management-view
         [language]="language()"
         [car]="car"
@@ -39,12 +45,37 @@ import { RuleDraftStore } from './rule-drafts';
         [operations]="data().fleetDeviceOperations"
         [lastSnapshot]="data().fleetDeviceConfigurationSnapshot"
         [lastRulesSnapshot]="data().fleetDeviceRulesSnapshot"
+        [readSequence]="scenario() === states.reading ? 'parameters' : null"
       />
+      @if (review()) {
+        <holita-device-rule-review
+          [draft]="reviewDraft"
+          [branchId]="branchId"
+          [target]="car"
+          [rulesBaseline]="data().fleetDeviceRulesSnapshot"
+          [parameterBaseline]="data().fleetDeviceConfigurationSnapshot"
+          [unavailable]="false"
+          [expressionLabel]="'ABS/EBS Amber Warning Signal ' + text().greaterThan + ' 20'"
+          [previousExpressionLabel]="'ABS/EBS Amber Warning Signal ' + text().greaterThan + ' 10'"
+        />
+      }
     </div>
   `,
 })
 class ConfigurationSnapshot {
   readonly scenario = input<string>(configurationStoryStates.confirmed);
+  readonly review = input(false);
+  protected readonly states = configurationStoryStates;
+  protected readonly text = computed(() => (this.language() === 'bg' ? bg : en));
+  protected readonly reviewDraft: RuleDraft = {
+    id: 'story-review',
+    ruleId: 1,
+    name: 'Rule 1',
+    expression: '[718] > 20',
+    trueEvent: 1001,
+    falseEvent: 1002,
+    debounce: 1000,
+  };
   protected readonly language = inject(UI_LANGUAGE);
   protected readonly car = fixtureKarmaCar;
   protected readonly branchId = defaultBranchId;
@@ -85,13 +116,9 @@ class ConfigurationSnapshot {
       fleetDeviceConfigurationSnapshot: snapshot,
     };
   });
-
-  constructor() {
-    inject(RuleDraftStore).initialize(fixtureTenant.id, fixtureKarmaCar.id);
-  }
 }
 
-/** The main review runs the real routes and editors against fixed GraphQL responses. */
+/** The production settings view and editors with fixed evidence and disconnected outputs. */
 const meta: Meta<StoryApp> = {
   title: 'Admin/Karma Client/Trucks/Truck/Device settings',
   component: StoryApp,
@@ -111,47 +138,23 @@ const meta: Meta<StoryApp> = {
 export default meta;
 type Story = StoryObj<StoryApp>;
 
-const configured = 'karma-client/cars/41/configuration';
-
-function snapshot(scenario: string): NonNullable<Story['render']> {
+function snapshot(scenario: string, review = false): NonNullable<Story['render']> {
   return () => ({
     moduleMetadata: { imports: [ConfigurationSnapshot] },
-    props: { scenario },
-    template: '<holita-settings-snapshot [scenario]="scenario" />',
+    props: { scenario, review },
+    template: '<holita-settings-snapshot [scenario]="scenario" [review]="review" />',
   });
 }
 
-export const Default: Story = { render: routeAt(configured) };
-export const FleetUnavailable: Story = {
-  render: routeAt(configured),
-  parameters: { holita: { signedIn: true, fleetEnabled: false } satisfies StoryFixtures },
+export const Default: Story = { render: snapshot(configurationStoryStates.confirmed) };
+export const Reading: Story = { render: snapshot(configurationStoryStates.reading) };
+export const Empty: Story = { render: snapshot(configurationStoryStates.emptyConfiguration) };
+export const DispatchOff: Story = { render: snapshot(configurationStoryStates.dispatchOff) };
+export const ReviewBeforeSend: Story = {
+  render: snapshot(configurationStoryStates.confirmed, true),
 };
-export const WaitingForDevice: Story = { render: snapshot(configurationStoryStates.waiting) };
-export const EmptyConfiguration: Story = {
-  render: snapshot(configurationStoryStates.emptyConfiguration),
-};
-export const ChangeUncertain: Story = {
+export const Waiting: Story = { render: snapshot(configurationStoryStates.waiting) };
+export const Failed: Story = { render: snapshot(configurationStoryStates.failed) };
+export const UncertainOutcome: Story = {
   render: snapshot(configurationStoryStates.writeUncertain),
-};
-export const Loading: Story = {
-  render: routeAt(configured),
-  parameters: {
-    holita: {
-      signedIn: true,
-      scenario: { failures: { AdminDeviceConfigurationPage: 'pending' } },
-    } satisfies StoryFixtures,
-  },
-};
-export const ErrorState: Story = {
-  render: routeAt(configured),
-  parameters: {
-    holita: {
-      signedIn: true,
-      scenario: { failures: { AdminDeviceConfigurationPage: 'network' } },
-    } satisfies StoryFixtures,
-  },
-};
-export const Mobile: Story = {
-  render: routeAt(configured),
-  globals: { viewport: { value: 'mobile375', isRotated: false } },
 };
