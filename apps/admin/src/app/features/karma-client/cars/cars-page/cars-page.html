@@ -16,26 +16,28 @@
   </button>
 </holita-page-header>
 <form
-  class="app-card app-filter-form"
+  class="app-card app-form-section"
   [formGroup]="form"
   (ngSubmit)="applySearch()"
   [attr.aria-label]="text().karmaSearch + ': ' + text().karmaTrucks"
 >
-  <holita-form-field [label]="listText().search" controlId="cars-search">
-    <input pInputText id="cars-search" formControlName="search" maxlength="200" />
-  </holita-form-field>
-  <holita-form-field [label]="listText().project" controlId="cars-project">
-    <p-select
-      inputId="cars-project"
-      formControlName="project"
-      [options]="projectOptions()"
-      optionLabel="label"
-      optionValue="value"
-      [placeholder]="listText().allProjects"
-      [showClear]="true"
-      [ariaLabel]="listText().project"
-    />
-  </holita-form-field>
+  <div class="app-form-grid">
+    <holita-form-field [label]="listText().search" controlId="cars-search">
+      <input pInputText id="cars-search" formControlName="search" maxlength="200" />
+    </holita-form-field>
+    <holita-form-field [label]="listText().project" controlId="cars-project">
+      <p-select
+        inputId="cars-project"
+        formControlName="project"
+        [options]="projectOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [placeholder]="listText().allProjects"
+        [showClear]="true"
+        [ariaLabel]="listText().project"
+      />
+    </holita-form-field>
+  </div>
   <div class="app-filter-actions">
     <button pButton type="submit">{{ text().karmaSearch }}</button>
     @if (query().search || query().project) {

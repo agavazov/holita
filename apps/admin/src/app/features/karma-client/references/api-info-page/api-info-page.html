@@ -1,23 +1,16 @@
-<section
-  class="card karma-page"
-  [attr.aria-label]="text().karmaApiInfo"
-  [attr.aria-busy]="loading()"
->
-  <div class="page-heading">
-    <div>
-      <h2>{{ text().karmaApiInfo }}</h2>
-    </div>
+<section class="app-view" [attr.aria-label]="text().karmaApiInfo" [attr.aria-busy]="loading()">
+  <holita-page-header [title]="text().karmaApiInfo" [eyebrow]="text().karmaAdministrationTitle">
     <button
+      headerActions
       pButton
       type="button"
       severity="secondary"
-      [outlined]="true"
       [disabled]="loading()"
       (click)="refresh()"
     >
       {{ error() ? text().retry : text().refresh }}
     </button>
-  </div>
+  </holita-page-header>
   @if (loading()) {
     <p role="status">{{ text().karmaLoadingReferences }}</p>
   }
@@ -25,7 +18,7 @@
     <p-message severity="error">{{ text().karmaUnavailable }}</p-message>
   }
   @if (version(); as value) {
-    <dl class="details karma-details">
+    <dl class="app-card app-facts">
       <div>
         <dt>{{ text().karmaApiVersion }}</dt>
         <dd>{{ value }}</dd>

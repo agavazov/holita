@@ -26,8 +26,8 @@ import { karmaDateControl, karmaDateParameter } from './karma-date-time';
   imports: [ReactiveFormsModule, ButtonDirective, KarmaDateTime, InputText, Select, FormField],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <section class="card karma-page" aria-label="Karma Client controls">
-      <div class="page-heading">
+    <section class="app-card app-view" aria-label="Karma Client controls">
+      <div class="app-context-toolbar">
         <div>
           <h1>Karma Client</h1>
           <p>Account search and message history</p>
@@ -35,26 +35,24 @@ import { karmaDateControl, karmaDateParameter } from './karma-date-time';
         <button pButton type="button" severity="secondary" [outlined]="true">Refresh</button>
       </div>
       <form
-        class="karma-search"
+        class="app-form-section"
         [formGroup]="searchForm"
         (ngSubmit)="search()"
         aria-label="Search: Users"
       >
-        <div class="karma-field karma-search-field">
-          <label for="karma-search-example">Search users</label>
+        <holita-form-field label="Search users" controlId="karma-search-example">
           <input pInputText id="karma-search-example" formControlName="search" />
-        </div>
+        </holita-form-field>
         <button pButton type="submit">Search</button>
       </form>
       <form
         #filterForm
-        class="karma-filters"
+        class="app-form-grid"
         [formGroup]="form"
         (ngSubmit)="apply()"
         aria-label="Message filters"
       >
         <holita-form-field
-          class="karma-field"
           label="Page size"
           controlId="karma-size-example"
           [error]="fieldErrors().size?.message ?? null"
@@ -73,7 +71,6 @@ import { karmaDateControl, karmaDateParameter } from './karma-date-time';
           />
         </holita-form-field>
         <holita-form-field
-          class="karma-field"
           label="From (UTC)"
           controlId="karma-from-example"
           [error]="fieldErrors().from?.message ?? null"
@@ -88,7 +85,6 @@ import { karmaDateControl, karmaDateParameter } from './karma-date-time';
           />
         </holita-form-field>
         <holita-form-field
-          class="karma-field"
           label="To (UTC)"
           controlId="karma-to-example"
           [error]="fieldErrors().to?.message ?? null"
@@ -103,7 +99,6 @@ import { karmaDateControl, karmaDateParameter } from './karma-date-time';
           />
         </holita-form-field>
         <holita-form-field
-          class="karma-field"
           label="Parameter IDs"
           controlId="karma-parameters-example"
           [error]="fieldErrors().parameters?.message ?? null"
@@ -118,13 +113,13 @@ import { karmaDateControl, karmaDateParameter } from './karma-date-time';
             placeholder="1, 539"
           />
         </holita-form-field>
-        <div class="page-actions karma-filter-actions">
+        <div class="app-page-actions">
           <button pButton type="submit">Apply filters</button>
           <button pButton type="button" severity="secondary" [outlined]="true" (click)="reset()">
             Clear filters
           </button>
         </div>
-        <p class="filter-hint karma-filter-hint">Enter both UTC dates, or leave both empty.</p>
+        <p class="app-muted">Enter both UTC dates, or leave both empty.</p>
       </form>
       <p role="status">{{ result() }}</p>
     </section>

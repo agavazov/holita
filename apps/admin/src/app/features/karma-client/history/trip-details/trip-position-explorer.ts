@@ -1,3 +1,4 @@
+import { MAP_PAGE_TYPE } from '../../../../ui/map-preview/map-preview';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -37,7 +38,7 @@ const catalogs: Record<Language, typeof en> = { bg, en };
 @Component({
   selector: 'holita-trip-position-explorer',
   imports: [PointExplorer, ButtonDirective],
-  providers: [KarmaHistoryApi],
+  providers: [{ provide: MAP_PAGE_TYPE, useValue: 'trip-details' }, KarmaHistoryApi],
   templateUrl: './trip-position-explorer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'app-view' },

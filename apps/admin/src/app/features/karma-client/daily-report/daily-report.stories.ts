@@ -29,7 +29,7 @@ type DailyReport = WithTypename<AdminKarmaDailyReportQuery>['karmaDailyReport'];
 function routed(carId = '41', fragment = ''): NonNullable<Story['render']> {
   return () => ({
     ...routeAt(
-      `karma-client/cars/${carId}?day=2026-01-01&listQ=KARMA&listSize=25&listProject=12${fragment}`,
+      `karma-client/cars/${carId}/daily-report?day=2026-01-01&listQ=KARMA&listSize=25&listProject=12${fragment}`,
     )(),
     moduleMetadata: { imports: [StoryApp, AdminWorkspace, KarmaWorkspace] },
     template: '<holita-story-app [url]="url" />',

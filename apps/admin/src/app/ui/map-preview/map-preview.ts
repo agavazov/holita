@@ -4,6 +4,7 @@ import {
   computed,
   inject,
   input,
+  InjectionToken,
   linkedSignal,
 } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
@@ -28,6 +29,33 @@ import en from './en.json';
 
 export const mapPreviewMessages: Record<Language, typeof en> = { bg, en };
 
+export type MapPageType =
+  | 'preview'
+  | 'truck-overview'
+  | 'daily-report'
+  | 'location'
+  | 'trip-details'
+  | 'events'
+  | 'measurements'
+  | 'edata-message';
+export const MAP_PAGE_TYPE = new InjectionToken<MapPageType>('Map page type', {
+  factory: () => 'preview',
+});
+
+function storedVisibility(page: MapPageType): boolean {
+  try {
+    const stored = localStorage.getItem(`holita.karma.map.${page}`);
+    if (stored === 'shown' || stored === 'hidden') {
+      return stored === 'shown';
+    }
+  } catch {
+    /* Storage may be unavailable in a private browser or embedded preview. */
+  }
+  return page === 'location' || page === 'trip-details';
+}
+
+let nextMapId = 0;
+
 interface MapPoint {
   readonly endpoint: 'start' | 'stop';
   readonly label: string;
@@ -43,6 +71,24 @@ interface MapPoint {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MapPreview {
+  readonly pageType = input(inject(MAP_PAGE_TYPE));
+  protected readonly contentId = `karma-map-${String(nextMapId++)}`;
+  protected readonly expanded = linkedSignal(() => storedVisibility(this.pageType()));
+  private readonly activated = linkedSignal(() => storedVisibility(this.pageType()));
+
+  protected toggleMap(): void {
+    const expanded = !this.expanded();
+    this.expanded.set(expanded);
+    if (expanded) {
+      this.activated.set(true);
+    }
+    try {
+      localStorage.setItem(`holita.karma.map.${this.pageType()}`, expanded ? 'shown' : 'hidden');
+    } catch {
+      /* The in-memory choice still works when storage is unavailable. */
+    }
+  }
+
   readonly language = input.required<Language>();
   readonly origin = input<MapCoordinates | null>(null);
   readonly destination = input<MapCoordinates | null>(null);
@@ -126,7 +172,7 @@ export class MapPreview {
   protected readonly embedUrl = computed(() => {
     const point = this.view() === 'directions' ? this.validOrigin() : this.point();
     const key = this.config.googleMapsEmbedApiKey;
-    return point && key && (this.view() !== 'directions' || this.canRoute())
+    return this.activated() && point && key && (this.view() !== 'directions' || this.canRoute())
       ? googleMapEmbed(
           key,
           this.language(),

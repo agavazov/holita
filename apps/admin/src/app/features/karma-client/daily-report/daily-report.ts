@@ -1,3 +1,4 @@
+import { MAP_PAGE_TYPE, type MapPageType } from '../../../ui/map-preview/map-preview';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -65,11 +66,12 @@ function validDay(day: string): boolean {
     RouterLink,
     ReportReview,
   ],
-  providers: [KarmaHistoryApi],
+  providers: [{ provide: MAP_PAGE_TYPE, useValue: 'daily-report' }, KarmaHistoryApi],
   templateUrl: './daily-report.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DailyReport implements OnInit {
+  readonly mapPageType = input<MapPageType>('daily-report');
   readonly language = input.required<Language>();
   readonly carId = input.required<string>();
   readonly location = input<AdminKarmaLocationQuery['karmaLocation']>(null);

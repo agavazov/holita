@@ -1,4 +1,16 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import {
+  afterNextRender,
+  type ElementRef,
+  viewChild,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {
   ActivatedRoute,
@@ -11,7 +23,11 @@ import {
 import { filter, map } from 'rxjs';
 import { ButtonDirective } from 'primeng/button';
 import { PageHeader } from '../../../ui/page-header/page-header';
-import { MenuButton, type MenuOption } from '../../../ui/menu-button/menu-button';
+import { FormsModule } from '@angular/forms';
+import { Select } from 'primeng/select';
+import { FormField } from '../../../ui/form-field/form-field';
+import { KarmaApi } from '../karma-api';
+import type { AdminKarmaCarsQuery } from '../../../../generated/graphql/operations';
 import type { Language } from '../../../i18n/messages';
 import { injectPageRecord } from '../../../layout/page-record';
 import { karmaCarNavigationContext, karmaCarReturnQuery } from './karma-car-context';
@@ -21,7 +37,16 @@ import en from './en.json';
 const catalogs: Record<Language, typeof en> = { bg, en };
 
 @Component({
-  imports: [PageHeader, RouterLink, RouterLinkActive, ButtonDirective, MenuButton],
+  imports: [
+    PageHeader,
+    RouterLink,
+    RouterLinkActive,
+    ButtonDirective,
+    FormsModule,
+    Select,
+    FormField,
+  ],
+  providers: [KarmaApi],
   selector: 'holita-karma-car-header',
   styleUrl: './karma-car-header.scss',
   templateUrl: './karma-car-header.html',
@@ -68,33 +93,43 @@ export class KarmaCarHeader {
     { path: '', label: this.text().overview },
     { path: 'trips', label: this.text().trips },
     { path: 'location', label: this.text().location },
+    { path: 'events', label: this.text().events },
+    { path: 'edata', label: this.text().edata },
+    { path: 'diagnostics', label: this.text().diagnostics },
+    { path: 'configuration', label: this.text().deviceSettings },
+    { path: 'daily-report', label: this.text().dailyReport },
+    { path: 'driving-profile', label: this.text().drivingProfile },
   ]);
-  protected readonly moreOptions = computed<readonly MenuOption[]>(() =>
-    [
-      { id: 'events', label: this.text().events },
-      { id: 'diagnostics', label: this.text().diagnostics },
-      { id: 'edata', label: this.text().edata },
-      { id: 'driving-profile', label: this.text().drivingProfile },
-      { id: 'configuration', label: this.text().deviceSettings },
-    ].map((option) => ({
-      ...option,
-      link: this.destination(option.id),
-      selected: this.isCurrent(option.id),
-    })),
-  );
-  protected readonly moreLabel = computed(() => {
-    const current = this.moreOptions().find((option) => option.selected);
-    return current ? `${this.text().more}: ${current.label}` : this.text().more;
-  });
-  protected readonly moreActive = computed(() =>
-    this.moreOptions().some((option) => option.selected),
-  );
   protected readonly sectionTitle = computed(
-    () =>
-      this.tabs().find((tab) => this.isCurrent(tab.path))?.label ??
-      this.moreOptions().find((option) => option.selected)?.label ??
-      this.title(),
+    () => this.tabs().find((tab) => this.isCurrent(tab.path))?.label ?? this.title(),
   );
+  private readonly api = inject(KarmaApi);
+  private readonly cars = signal<AdminKarmaCarsQuery['karmaCars']>([]);
+  protected readonly switcherError = signal(false);
+  protected readonly truckOptions = computed(() => {
+    const cars = this.cars();
+    return cars.some((car) => car.id === this.carId())
+      ? cars
+      : [{ id: this.carId(), carNumber: this.identity() }, ...cars];
+  });
+  private truckRead: ReturnType<KarmaApi['watch']> | undefined;
+
+  protected switchTruck(id: string): void {
+    if (id === this.carId() || !this.cars().some((car) => car.id === id)) {
+      return;
+    }
+    const section = this.tabs().find((tab) => this.isCurrent(tab.path))?.path;
+    void this.router.navigate(
+      ['/', this.language(), 'karma-client', 'cars', id, ...(section ? [section] : [])],
+      { queryParams: karmaCarNavigationContext(this.params()) },
+    );
+  }
+
+  protected retryTrucks(): void {
+    void this.truckRead?.refetch().catch(() => {
+      this.switcherError.set(true);
+    });
+  }
   protected readonly activeMatch: IsActiveMatchOptions = {
     paths: 'exact',
     queryParams: 'ignored',
@@ -102,7 +137,33 @@ export class KarmaCarHeader {
     fragment: 'ignored',
   };
 
+  private readonly navigation = viewChild<ElementRef<HTMLElement>>('navigation');
+
   constructor() {
+    afterNextRender(() => {
+      this.navigation()
+        ?.nativeElement.querySelector('[aria-current="page"]')
+        ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    });
+    effect((onCleanup) => {
+      this.api.initialize(this.language());
+      const read = this.api.watch();
+      this.truckRead = read;
+      const subscription = read.valueChanges.subscribe({
+        next: (result) => {
+          this.switcherError.set(!!result.error);
+          if (result.dataState === 'complete' && !result.error) {
+            this.cars.set(result.data.karmaCars);
+          }
+        },
+        error: () => {
+          this.switcherError.set(true);
+        },
+      });
+      onCleanup(() => {
+        subscription.unsubscribe();
+      });
+    });
     injectPageRecord(
       () => this.carNumber() || null,
       () =>

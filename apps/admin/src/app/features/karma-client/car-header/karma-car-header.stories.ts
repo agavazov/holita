@@ -28,3 +28,10 @@ export const Mobile: Story = {
   render,
   globals: { viewport: { value: 'mobile375', isRotated: false } },
 };
+
+export const SwitcherUnavailable: Story = {
+  render,
+  parameters: {
+    holita: { scenario: { failures: { AdminKarmaCars: 'network' } } } satisfies StoryFixtures,
+  },
+};

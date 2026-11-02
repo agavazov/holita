@@ -4,7 +4,7 @@
   "carId": "Karma ID",
   "navigation": "Раздели на камиона",
   "overview": "Обзор",
-  "edata": "eData",
+  "edata": "eData и измервания",
   "location": "Местоположение",
   "trips": "Пътувания",
   "events": "Събития",
@@ -14,5 +14,7 @@
   "refresh": "Обнови",
   "retry": "Опитай отново",
   "deviceSettings": "Настройки на устройството",
-  "more": "Още"
+  "dailyReport": "Дневен отчет",
+  "switchTruck": "Смяна на камион",
+  "switcherUnavailable": "Списъкът с камиони не е достъпен. Можете да продължите с този камион."
 }

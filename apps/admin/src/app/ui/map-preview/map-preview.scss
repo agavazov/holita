@@ -96,3 +96,10 @@ iframe {
   padding: var(--p-app-space-4);
   margin: 0;
 }
+
+.map-panel__toggle {
+  padding: 0 var(--p-app-space-4) var(--p-app-space-4);
+}
+[hidden] {
+  display: none;
+}

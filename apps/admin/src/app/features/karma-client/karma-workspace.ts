@@ -1,4 +1,4 @@
-import { Component, computed, inject, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { AdminWorkspace } from '../../workspace/admin-workspace';
@@ -14,6 +14,7 @@ import { EdataPage } from './edata/edata-page/edata-page';
 import { KarmaDiagnosticsPage } from './diagnostics/karma-diagnostics-page';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'holita-karma-workspace',
   imports: [
     DeviceManagementPage,
@@ -57,7 +58,11 @@ import { KarmaDiagnosticsPage } from './diagnostics/karma-diagnostics-page';
       } @else if (scope.edata && scope.id !== null) {
         <holita-edata-page [language]="scope.language" [carId]="scope.id" />
       } @else if (scope.id !== null) {
-        <holita-car-details [language]="scope.language" [carId]="scope.id" />
+        <holita-car-details
+          [language]="scope.language"
+          [carId]="scope.id"
+          [reportOnly]="scope.section === 'daily-report'"
+        />
       } @else {
         <holita-karma-cars-page [language]="scope.language" />
       }

@@ -22,71 +22,82 @@
       #filterForm
       [formGroup]="form"
       (ngSubmit)="apply()"
-      class="app-card app-filter-form"
+      class="app-card app-form-section"
       [attr.aria-label]="text().karmaEventsFilters"
     >
-      <holita-form-field
-        [label]="text().karmaPageSize"
-        controlId="events-size"
-        [error]="fieldErrors().size?.message ?? null"
+      <div class="app-form-grid">
+        <holita-form-field
+          [label]="presentationText().fromUtc"
+          controlId="events-from"
+          [error]="fieldErrors().from?.message ?? null"
+        >
+          <holita-karma-date-time
+            inputId="events-from"
+            [label]="presentationText().fromUtc"
+            [invalid]="!!fieldErrors().from"
+            [invalidPart]="fieldErrors().from?.part ?? 'both'"
+            describedBy="events-from-error events-filter-hint"
+            formControlName="from"
+          />
+        </holita-form-field>
+        <holita-form-field
+          [label]="presentationText().toUtc"
+          controlId="events-to"
+          [error]="fieldErrors().to?.message ?? null"
+        >
+          <holita-karma-date-time
+            inputId="events-to"
+            [label]="presentationText().toUtc"
+            [invalid]="!!fieldErrors().to"
+            [invalidPart]="fieldErrors().to?.part ?? 'both'"
+            describedBy="events-to-error events-filter-hint"
+            formControlName="to"
+          />
+        </holita-form-field>
+      </div>
+      <details
+        class="app-source-details"
+        [open]="!!(fieldErrors().size || fieldErrors().types || form.controls.types.value)"
       >
-        <p-select
-          inputId="events-size"
-          formControlName="size"
-          [invalid]="!!fieldErrors().size"
-          [pt]="{
-            label: {
-              'aria-invalid': fieldErrors().size ? 'true' : null,
-              'aria-describedby': 'events-size-error',
-            },
-          }"
-          [options]="pageSizes"
-          [ariaLabel]="text().karmaPageSize"
-        />
-      </holita-form-field>
-      <holita-form-field
-        [label]="text().karmaFromUtc"
-        controlId="events-from"
-        [error]="fieldErrors().from?.message ?? null"
-      >
-        <holita-karma-date-time
-          inputId="events-from"
-          [label]="text().karmaFromUtc"
-          [invalid]="!!fieldErrors().from"
-          [invalidPart]="fieldErrors().from?.part ?? 'both'"
-          describedBy="events-from-error events-filter-hint"
-          formControlName="from"
-        />
-      </holita-form-field>
-      <holita-form-field
-        [label]="text().karmaToUtc"
-        controlId="events-to"
-        [error]="fieldErrors().to?.message ?? null"
-      >
-        <holita-karma-date-time
-          inputId="events-to"
-          [label]="text().karmaToUtc"
-          [invalid]="!!fieldErrors().to"
-          [invalidPart]="fieldErrors().to?.part ?? 'both'"
-          describedBy="events-to-error events-filter-hint"
-          formControlName="to"
-        />
-      </holita-form-field>
-      <holita-form-field
-        [label]="text().karmaEventTypes"
-        controlId="events-types"
-        [error]="fieldErrors().types?.message ?? null"
-      >
-        <input
-          pInputText
-          id="events-types"
-          [invalid]="!!fieldErrors().types"
-          [attr.aria-invalid]="fieldErrors().types ? 'true' : null"
-          formControlName="types"
-          aria-describedby="events-types-error events-filter-hint"
-          [attr.placeholder]="'0, 33'"
-        />
-      </holita-form-field>
+        <summary>{{ presentationText().technicalDetails }}</summary>
+        <p class="app-muted">{{ presentationText().technicalHint }}</p>
+        <div class="app-form-grid">
+          <holita-form-field
+            [label]="presentationText().pageSize"
+            controlId="events-size"
+            [error]="fieldErrors().size?.message ?? null"
+          >
+            <p-select
+              inputId="events-size"
+              formControlName="size"
+              [invalid]="!!fieldErrors().size"
+              [pt]="{
+                label: {
+                  'aria-invalid': fieldErrors().size ? 'true' : null,
+                  'aria-describedby': 'events-size-error',
+                },
+              }"
+              [options]="pageSizes"
+              [ariaLabel]="presentationText().pageSize"
+            />
+          </holita-form-field>
+          <holita-form-field
+            [label]="presentationText().eventTypes"
+            controlId="events-types"
+            [error]="fieldErrors().types?.message ?? null"
+          >
+            <input
+              pInputText
+              id="events-types"
+              [invalid]="!!fieldErrors().types"
+              [attr.aria-invalid]="fieldErrors().types ? 'true' : null"
+              formControlName="types"
+              aria-describedby="events-types-error events-filter-hint"
+              [attr.placeholder]="'0, 33'"
+            />
+          </holita-form-field>
+        </div>
+      </details>
       <div class="app-filter-actions">
         <button pButton type="submit" [disabled]="loading()">{{ text().applyFilters }}</button>
         <button
@@ -101,7 +112,7 @@
         </button>
       </div>
       <p id="events-filter-hint" class="app-muted app-filter-hint">
-        {{ text().karmaEventsFilterHint }}
+        {{ presentationText().utcHint }}
       </p>
     </form>
     @if (invalidFilters()) {
@@ -238,6 +249,7 @@
         <h3 class="app-card__title">{{ detailText().eventPosition }}</h3>
         <p class="app-muted">{{ detailText().eventPositionHint }}</p>
         <holita-map-preview
+          pageType="events"
           [language]="language()"
           [origin]="selectedCoordinates()"
           [identity]="row.carId + ' · ' + row.id"
@@ -246,7 +258,7 @@
       </section>
       <section class="app-view" [attr.aria-label]="detailText().eventText">
         <h3 class="app-card__title">{{ detailText().eventText }}</h3>
-        <p class="source-text karma-source-text">{{ row.extra ?? '—' }}</p>
+        <p class="source-text">{{ row.extra ?? '—' }}</p>
       </section>
       <details class="app-source-details">
         <summary>{{ detailText().sourceFields }}</summary>

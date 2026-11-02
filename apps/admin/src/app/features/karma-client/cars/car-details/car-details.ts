@@ -29,6 +29,7 @@ import { KarmaCarHeader } from '../../car-header/karma-car-header';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CarDetails {
+  readonly reportOnly = input(false);
   readonly language = input.required<Language>();
   readonly carId = input.required<string>();
   readonly text = computed(() => messages[this.language()]);

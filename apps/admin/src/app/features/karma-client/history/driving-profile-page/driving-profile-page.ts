@@ -1,3 +1,4 @@
+import { karmaPresentation } from '../../presentation/karma-presentation';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -62,6 +63,7 @@ import { karmaCarNavigationContext } from '../../car-header/karma-car-context';
 export class DrivingProfilePage implements OnInit {
   readonly language = input.required<Language>();
   readonly carId = input.required<string>();
+  readonly presentationText = computed(() => karmaPresentation[this.language()]);
   readonly text = computed(() => messages[this.language()]);
   readonly detailText = computed(() => karmaRecordMessages[this.language()]);
   readonly car = signal<AdminKarmaCarQuery['karmaCar']>(null);
