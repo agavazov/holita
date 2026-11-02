@@ -379,7 +379,7 @@ navigation has no counts.
   `adminNavigation(language, branchId, fleetEnabled)` returns Monitoring (Overview, Alerts, Trip log),
   Fleet (Vehicles, Drivers, Devices, Maintenance)
   only when a Branch is selected and Fleet is enabled, followed by the Karma
-  Client group with the note "temporary" (Trucks, Karma administration), then Settings (Vehicle groups, General) when Fleet has an active Branch.
+  Client group with the note "temporary" (Monitoring, Trucks, Administration, Settings), then Settings (Vehicle groups, General) when Fleet has an active Branch.
   On a route that requires a Branch, while discovery is loading, empty or failed,
   the workspace projects a status card with Retry (`data-testid="refresh-branches"`) and renders
   the router outlet only once Branches are available. The context is the longest matching
@@ -550,20 +550,12 @@ Helpers:
 ### Source context
 
 [`holita-source-context`](../apps/admin/src/app/ui/source-context/source-context.ts) presents
-source facts supplied by the owning feature. It takes required `language` and generated
-`provenance: FleetEvidenceFragment`, plus optional `period: FleetEvidencePeriodFragment`,
-`coverage: FleetScenarioCoverageFragment` and `availability: FleetEvidenceAvailability` inputs.
-It owns no fetching, source selection or actions.
-
-The small neutral source tag stays visible with the data. `HOLITA_SCENARIO` always shows
-**Example data** / **Примерни данни** and its explanation, including when `origin` is `DERIVED`.
-Origin, retrieval, GPS coverage and field availability are separate text facts; source styling
-does not convey fault severity. Period bounds and zone use `.app-facts`; source identities,
-UTC event/received/retrieved clocks and identified gaps use the keyboard-accessible source
-disclosure. The same wrapping layout serves desktop, mobile, drawers and map contexts.
-The [Fleet source contract](discocan/architecture.md#fleet-scenario-and-source-contract)
-defines their semantics. Stories cover observed, derived example, unavailable and partial
-contexts with independent synthetic snapshots.
+source facts supplied by the owning feature. It takes required `language` and
+`provenance: SourceProvenance`, plus optional `period: SourcePeriod`, `coverage: SourceCoverage`
+and `availability: SourceAvailability` presentation facts from `ui/source-context/source-types.ts`.
+It owns no fetching or actions. Karma source identity, origin, retrieval, GPS coverage and field
+availability remain separate facts. Source details disclose original IDs and UTC event,
+received and retrieval clocks, including identified gaps.
 
 ### Table conventions
 
@@ -808,11 +800,9 @@ in English or Bulgarian. Its links open the relevant stories.
 
 Titles follow `Admin/<menu group>/<menu item>[/<sub-page>]`, using the English labels from
 [`admin-navigation.ts`](../apps/admin/src/app/workspace/admin-navigation.ts). Sub-pages sit under
-the item that opens them. The tree is Start here; Admin → Monitoring (Overview, Alerts, Trip log,
-Diagnostics), Fleet (Vehicles, Drivers, Devices, Maintenance), Karma Client (Trucks, Administration),
+the item that opens them. The tree is Start here; Admin → Monitoring (Overview, Alerts, Trip log), Fleet (Vehicles, Drivers, Devices, Maintenance), Karma Client (Monitoring, Trucks, Administration, Settings),
 Settings (Vehicle groups, General), Sign in; then Design System (Foundations, Patterns, Shell,
-PrimeNG coverage). Truck pages sit under Karma Client/Trucks/Truck; the example day sits under
-Truck/Overview. Shared panels, including daily-report coverage and Karma controls, sit under
+PrimeNG coverage). Truck pages sit under Karma Client/Trucks/Truck. Shared panels, including daily-report coverage and Karma controls, sit under
 Design System/Patterns.
 
 Keep only representative states: default, loading, empty, error, unavailable or missing scope,

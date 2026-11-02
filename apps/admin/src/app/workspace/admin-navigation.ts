@@ -18,12 +18,6 @@ export function adminNavigation(
         { id: 'overview', label: text.overview, icon: 'th-large', link: [...fleet, 'overview'] },
         { id: 'alerts', label: text.alerts, icon: 'bell', link: [...fleet, 'alerts'] },
         { id: 'trips', label: text.tripLog, icon: 'directions', link: [...fleet, 'trips'] },
-        {
-          id: 'diagnostics',
-          label: text.diagnostics,
-          icon: 'info-circle',
-          link: [...fleet, 'diagnostics'],
-        },
       ],
     });
     groups.push({
@@ -48,6 +42,12 @@ export function adminNavigation(
     label: text.karmaClient,
     note: text.temporary,
     items: [
+      {
+        id: 'karma-monitoring',
+        label: text.monitoring,
+        icon: 'th-large',
+        link: [...karma, 'monitoring'],
+      },
       { id: 'karma-cars', label: text.karmaTrucks, icon: 'car', link: [...karma, 'cars'] },
       {
         id: 'karma-administration',
@@ -55,6 +55,7 @@ export function adminNavigation(
         icon: 'users',
         link: [...karma, 'administration'],
       },
+      { id: 'karma-settings', label: text.settings, icon: 'clock', link: [...karma, 'settings'] },
     ],
   });
   if (fleetEnabled && branchId) {

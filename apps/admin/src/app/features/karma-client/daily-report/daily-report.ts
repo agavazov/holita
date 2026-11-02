@@ -1,3 +1,4 @@
+import type { SourceProvenance } from '../../../ui/source-context/source-types';
 import { MAP_PAGE_TYPE, type MapPageType } from '../../../ui/map-preview/map-preview';
 import {
   ChangeDetectionStrategy,
@@ -18,20 +19,12 @@ import { Message } from 'primeng/message';
 import type { Subscription } from 'rxjs';
 import type {
   AdminKarmaLocationQuery,
-  FleetEvidenceFragment,
   KarmaDailyReportInput,
 } from '../../../../generated/graphql/operations';
-import { AdminConfig } from '../../../core/config/admin-config';
 import { messages, type Language } from '../../../i18n/messages';
 import { DayOverview } from '../../../ui/day-overview/day-overview';
 import { RouteDrawer } from '../../../ui/drawer/route-drawer';
 import { FormField } from '../../../ui/form-field/form-field';
-import { BranchContext } from '../../branches/branch-context';
-import { karmaCarNavigationContext } from '../car-header/karma-car-context';
-import {
-  diagnosticJourneyQuery,
-  journeyDiagnosticsLink,
-} from '../../fleet/diagnostics/diagnostic-journey';
 import { KarmaHistoryApi } from '../history/karma-history-api';
 import { TripDetails } from '../history/trip-details/trip-details';
 import { mapCoordinates } from '../../../ui/map-preview/location-map';
@@ -105,9 +98,6 @@ export class DailyReport implements OnInit {
   private readonly fragment = toSignal(this.route.fragment, {
     initialValue: this.route.snapshot.fragment,
   });
-  private readonly params = toSignal(this.route.queryParamMap, {
-    initialValue: this.route.snapshot.queryParamMap,
-  });
   protected readonly selected = computed(() => {
     const fragment = this.fragment();
     return this.report()?.trips.find((trip) => `trip-${trip.id}` === fragment) ?? null;
@@ -115,7 +105,7 @@ export class DailyReport implements OnInit {
   protected readonly missingTrip = computed(
     () => !!this.fragment()?.startsWith('trip-') && !!this.report() && !this.selected(),
   );
-  protected readonly tripProvenance = computed<FleetEvidenceFragment | null>(() => {
+  protected readonly tripProvenance = computed<SourceProvenance | null>(() => {
     const presentation = this.presentation();
     const trip = this.selected();
     return presentation && trip
@@ -125,34 +115,16 @@ export class DailyReport implements OnInit {
   protected readonly lastCoordinates = computed(() =>
     mapCoordinates(this.location()?.latitude, this.location()?.longitude),
   );
-  private readonly branches = inject(BranchContext);
-  private readonly fleetEnabled = inject(AdminConfig).fleetEnabled;
-  protected readonly exampleLink = computed(() => {
-    const branchId = this.branches.selectedId();
-    return this.fleetEnabled && branchId
-      ? this.router.createUrlTree(
-          ['/', this.language(), branchId, 'fleet', 'scenarios', 'operational-day-v1'],
-          { queryParams: karmaCarNavigationContext(this.params()) },
-        )
-      : null;
-  });
-  protected readonly diagnosticsLink = computed(() => {
-    const branchId = this.branches.selectedId();
-    const report = this.report();
-    const trip = this.selected();
-    return this.fleetEnabled && branchId && report?.day && report.timeZone
-      ? journeyDiagnosticsLink(this.router, branchId, this.language(), {
-          source: 'KARMA_API',
-          vehicleId: report.carId,
-          day: report.day,
-          timeZone: report.timeZone.name,
-          from: trip?.startDate ?? report.fromLocal ?? '—',
-          to: trip?.stopDate ?? report.toLocalExclusive ?? '—',
-          tripId: trip?.id ?? null,
-          query: diagnosticJourneyQuery(this.params()),
-        })
-      : null;
-  });
+  protected readonly diagnosticsLink = computed(() =>
+    this.router.createUrlTree([
+      '/',
+      this.language(),
+      'karma-client',
+      'cars',
+      this.carId(),
+      'diagnostics',
+    ]),
+  );
   private query: ReturnType<KarmaHistoryApi['watchDailyReport']> | undefined;
   private subscription: Subscription | undefined;
   private selection: KarmaDailyReportInput | null = null;

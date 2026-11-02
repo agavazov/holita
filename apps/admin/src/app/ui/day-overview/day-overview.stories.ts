@@ -1,14 +1,15 @@
+import type {
+  SourceProvenance,
+  SourcePeriod,
+  SourceCoverage,
+} from '../source-context/source-types';
 import {
   applicationConfig,
   moduleMetadata,
   type Meta,
   type StoryObj,
 } from '@storybook/angular-vite';
-import type {
-  FleetEvidenceFragment,
-  FleetEvidencePeriodFragment,
-  FleetScenarioCoverageFragment,
-} from '../../../generated/graphql/operations';
+
 import { onFrame } from '../../../storybook/story-config';
 import { AdminConfig } from '../../core/config/admin-config';
 import type { StackedRow } from '../charts/stacked-bars';
@@ -16,21 +17,20 @@ import { MapPreview } from '../map-preview/map-preview';
 import { DayOverview, type DayMetricView, type DayTripRow } from './day-overview';
 
 // Isolated presentation snapshots; no account reads or runtime scenario imports.
-const provenance: FleetEvidenceFragment = {
+const provenance: SourceProvenance = {
   origin: 'DERIVED',
-  source: 'HOLITA_SCENARIO',
-  scenarioId: 'synthetic-workday',
+  source: 'KARMA_API',
   sourceRecordId: 'synthetic-day-1',
   eventAt: null,
   receivedAt: null,
   retrievedAt: '2026-01-02T08:00:00.000Z',
 };
-const period: FleetEvidencePeriodFragment = {
+const period: SourcePeriod = {
   from: '2026-01-01T08:00:00.000Z',
   toExclusive: '2026-01-01T20:00:00.000Z',
   timeZone: 'Europe/Sofia',
 };
-const coverage: FleetScenarioCoverageFragment = {
+const coverage: SourceCoverage = {
   retrieval: 'COMPLETE',
   positionCoverage: 'COMPLETE',
   positionsLoaded: 24,
@@ -72,10 +72,9 @@ const trips: readonly DayTripRow[] = Array.from({ length: 12 }, (_, index) => ({
   stop: `01 Jan 2026, ${String(10 + index).padStart(2, '0')}:30`,
   distance: '20 km',
 }));
-const realSource: FleetEvidenceFragment = {
+const realSource: SourceProvenance = {
   ...provenance,
   source: 'KARMA_API',
-  scenarioId: null,
   sourceRecordId: 'synthetic-karma-day-1',
 };
 const rawDistance: DayMetricView = {

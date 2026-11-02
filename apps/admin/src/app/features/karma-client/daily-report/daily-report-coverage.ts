@@ -1,13 +1,13 @@
+import type {
+  SourceProvenance,
+  SourcePeriod,
+  SourceCoverage,
+} from '../../../ui/source-context/source-types';
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { ButtonDirective } from 'primeng/button';
 import { Message } from 'primeng/message';
 import { Tag } from 'primeng/tag';
-import type {
-  AdminKarmaDailyReportQuery,
-  FleetEvidenceFragment,
-  FleetEvidencePeriodFragment,
-  FleetScenarioCoverageFragment,
-} from '../../../../generated/graphql/operations';
+import type { AdminKarmaDailyReportQuery } from '../../../../generated/graphql/operations';
 import type { Language } from '../../../i18n/messages';
 import { formatDateOnly, formatNumber } from '../../../ui/format/format';
 import { toneSeverity, type StatusTone } from '../../../ui/tones';
@@ -46,25 +46,24 @@ export class DailyReportCoverage {
   protected readonly canRetry = computed(
     () => this.report().state === 'PARTIAL' || this.report().state === 'UNAVAILABLE',
   );
-  protected readonly provenance = computed<FleetEvidenceFragment>(() => ({
+  protected readonly provenance = computed<SourceProvenance>(() => ({
     origin:
       this.report().state === 'UNAVAILABLE' || this.report().state === 'UNSUPPORTED_PERIOD'
         ? 'UNAVAILABLE'
         : 'DERIVED',
     source: 'KARMA_API',
-    scenarioId: null,
     sourceRecordId: null,
     eventAt: null,
     receivedAt: null,
     retrievedAt: this.report().retrievedAt,
   }));
-  protected readonly period = computed<FleetEvidencePeriodFragment | null>(() => {
+  protected readonly period = computed<SourcePeriod | null>(() => {
     const { fromUtc, toUtcExclusive, timeZone } = this.report();
     return fromUtc && toUtcExclusive && timeZone
       ? { from: fromUtc, toExclusive: toUtcExclusive, timeZone: timeZone.name }
       : null;
   });
-  protected readonly coverage = computed<FleetScenarioCoverageFragment>(() => ({
+  protected readonly coverage = computed<SourceCoverage>(() => ({
     retrieval: this.report().retrieval,
     positionCoverage: this.report().positionCoverage,
     positionsLoaded: 0,

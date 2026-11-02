@@ -1,3 +1,8 @@
+import type {
+  SourceProvenance,
+  SourcePeriod,
+  SourceCoverage,
+} from '../source-context/source-types';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -11,11 +16,7 @@ import { ButtonDirective } from 'primeng/button';
 import { Message } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
-import type {
-  FleetEvidenceFragment,
-  FleetEvidencePeriodFragment,
-  FleetScenarioCoverageFragment,
-} from '../../../generated/graphql/operations';
+
 import type { Language } from '../../i18n/messages';
 import { Sparkline, type SparkPoint } from '../charts/sparkline';
 import { FormField } from '../form-field/form-field';
@@ -44,7 +45,7 @@ export interface MeasurementReading {
   readonly id: string | null;
   readonly value: number | null;
   readonly description: string | null;
-  readonly provenance: FleetEvidenceFragment | null;
+  readonly provenance: SourceProvenance | null;
 }
 
 export interface MeasurementRecord {
@@ -54,7 +55,7 @@ export interface MeasurementRecord {
   readonly sourceTime: string | null;
   readonly instantUtc: string | null;
   readonly coordinates: MapCoordinates | null;
-  readonly provenance: FleetEvidenceFragment | null;
+  readonly provenance: SourceProvenance | null;
   readonly readings: readonly MeasurementReading[];
 }
 
@@ -94,9 +95,9 @@ export class MeasurementWorkspace {
   readonly records = input<readonly MeasurementRecord[] | null>(null);
   readonly selectedChannelKey = input<string | null>(null);
   readonly selectedRecordKey = input<string | null>(null);
-  readonly provenance = input<FleetEvidenceFragment | null>(null);
-  readonly period = input<FleetEvidencePeriodFragment | null>(null);
-  readonly coverage = input<FleetScenarioCoverageFragment | null>(null);
+  readonly provenance = input<SourceProvenance | null>(null);
+  readonly period = input<SourcePeriod | null>(null);
+  readonly coverage = input<SourceCoverage | null>(null);
   readonly loading = input(false);
   readonly error = input<string | null>(null);
   readonly gapThresholdMinutes = input(15);
@@ -289,9 +290,6 @@ export class MeasurementWorkspace {
   }
 
   protected sourceLabel(source: string): string {
-    if (source === 'HOLITA_SCENARIO') {
-      return this.text().example;
-    }
     return source === 'KARMA_API' ? this.text().karma : source;
   }
 

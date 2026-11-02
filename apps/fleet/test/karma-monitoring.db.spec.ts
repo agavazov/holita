@@ -165,11 +165,14 @@ describe('Karma monitoring persistence and scope', () => {
     await repository.updateTruck(otherScopes[0] ?? scope, '7', { historyCursor: '200' });
     expect((await repository.trucks(scope))[0]?.historyCursor).toBe('100');
     const trucks =
-      '{fleetKarmaMonitoringTrucks(filter:{online:true}){total items{id displayName online faults{code spn} latestFault{faultStatus}}}}';
+      '{fleetKarmaMonitoringTrucks(filter:{online:true,withFaults:true}){onlineTotal noDataTotal withFaultsTotal total items{id displayName online faults{code spn} latestFault{faultStatus}}}}';
     expect(await query(trucks, {})).toEqual({
       data: {
         fleetKarmaMonitoringTrucks: {
           total: 1,
+          onlineTotal: 1,
+          noDataTotal: 0,
+          withFaultsTotal: 1,
           items: [
             {
               id: truck.id,
@@ -179,6 +182,22 @@ describe('Karma monitoring persistence and scope', () => {
               latestFault: { faultStatus: 'ADDED' },
             },
           ],
+        },
+      },
+    });
+    expect(
+      await query(
+        '{fleetKarmaMonitoringTrucks(filter:{withFaults:false},limit:1){total onlineTotal noDataTotal withFaultsTotal items{id}}}',
+        {},
+      ),
+    ).toEqual({
+      data: {
+        fleetKarmaMonitoringTrucks: {
+          total: 0,
+          onlineTotal: 1,
+          noDataTotal: 0,
+          withFaultsTotal: 1,
+          items: [],
         },
       },
     });
@@ -196,7 +215,15 @@ describe('Karma monitoring persistence and scope', () => {
     });
     for (const selected of otherScopes) {
       expect(await query(trucks, {}, selected)).toMatchObject({
-        data: { fleetKarmaMonitoringTrucks: { total: 0, items: [] } },
+        data: {
+          fleetKarmaMonitoringTrucks: {
+            total: 0,
+            onlineTotal: 0,
+            noDataTotal: 1,
+            withFaultsTotal: 0,
+            items: [],
+          },
+        },
       });
       expect(await query(events, {}, selected)).toMatchObject({
         data: { fleetKarmaMonitoringEvents: { total: 0, items: [] } },

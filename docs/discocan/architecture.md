@@ -2,7 +2,7 @@
 
 Discocan covers fleet telemetry. Its implemented Fleet modules are Vehicles, Devices, Drivers,
 Vehicle groups, Telemetry (status samples and the data clock), Trips, Events (alerts),
-Service tasks, Overview, Settings and read-only Scenarios.
+Service tasks, Overview, Settings, device operations and Karma monitoring.
 The [shared architecture](../architecture/overview.md) describes applications, execution and tooling.
 The shared Branch concept and its domain meaning are explained in [the domain index](README.md#terminology).
 Fleet also owns [background device configuration reads and parameter changes](#background-device-configuration-reads).
@@ -162,7 +162,7 @@ link, the `DateTime` and `Date` scalars, the Branch reference and `FleetSortDire
 [Overview](../../apps/fleet/src/modules/overview/overview.graphql),
 [Settings](../../apps/fleet/src/modules/settings/settings.graphql),
 [Device operations](../../apps/fleet/src/modules/device-operations/device-operations.graphql) and
-[Scenarios](../../apps/fleet/src/modules/scenarios/scenarios.graphql) SDL extend it,
+[Karma monitoring](../../apps/fleet/src/modules/karma-monitoring/karma-monitoring.graphql) SDL extend it,
 in that order in both `app.module.ts` and [contracts.mts](../../tools/graphql/contracts.mts).
 Backend resolvers use generated types and delegate to concrete services/repositories.
 Runtime SDL assets are copied into builds. Named Angular/Core lookup operations are explicit
@@ -447,255 +447,6 @@ Git-ignored `config.local.json` ([development](development.md#telemetry-admin)).
 
 Demo sessions last eight hours and persist only in the browser tab sessionStorage. Logout navigates through the dirty-editor guard, clears the tab session and destroys discovery/business clients. Expiry retires the current workspace. Submitted writes retain their captured token and may settle after logout. Logout has no server-side token revocation. [Development](development.md#demo-tenant-login) describes configuration and production limitations.
 
-## Fleet scenario and source contract
-
-The concrete [Scenarios module](../../apps/fleet/src/modules/scenarios/scenarios.module.ts)
-owns `fleetScenario(id: ID!): FleetScenario!`. The read requires Fleet availability, a verified
-Tenant and a Branch owned by that Tenant, checked through Core because static examples have
-no persisted scoped row. `operational-day-v1` returns deterministic runtime examples from
-[`scenario-data.ts`](../../apps/fleet/src/modules/scenarios/scenario-data.ts), without database
-records, seeds or Storybook imports. Its `branchId` comes from the verified request scope.
-Synthetic vehicle `example-truck-01`, trips `example-trip-01`/`example-trip-02` and their sample
-identities have no association to `FleetVehicle` or `KarmaCar`.
-
-The scenario covers 2026-10-20 in `Europe/Sofia`, with an exclusive UTC period of
-2026-10-19T21:00Z–2026-10-20T21:00Z and fixed `exampleClock` 2026-10-21T06:00Z. It supplies
-two trips, eight synthetic positions on an invented Sofia–Vakarel itinerary via public
-landmarks and linked speed, coolant-temperature and external-voltage samples. Retrieval is complete while position
-coverage is partial, including an identified 06:20Z–06:40Z gap; one voltage value is unavailable.
-The scenario's physical units describe only these examples and establish no units for Karma
-source fields.
-
-The [scenario SDL](../../apps/fleet/src/modules/scenarios/scenarios.graphql) owns the generated
-source contract. `FleetEvidenceProvenance` separates `origin` (`OBSERVED`, `DERIVED`,
-`ILLUSTRATIVE`, `UNAVAILABLE`) from dataset `source` (`KARMA_API`, `HOLITA_SCENARIO`), with
-`scenarioId`, `sourceRecordId`, nullable `eventAt`/`receivedAt` and actual `retrievedAt` from
-`FleetClock`. Derived examples retain `HOLITA_SCENARIO`. Period/zone, retrieval, position
-coverage/gaps and each field's availability remain independent facts; receipt time is not
-inferred from retrieval. Metrics carry their explicit unit and available/required input counts.
-
-The generated [admin operation](../../apps/admin/src/app/features/fleet/scenarios/operations.graphql)
-and component-scoped [ScenariosApi](../../apps/admin/src/app/features/fleet/scenarios/scenarios-api.ts)
-use a captured session/Branch/language client through Gateway. The shared
-[source context pattern](../admin-design-system.md#source-context) presents the evidence with
-a persistent neutral **Example data** / **Примерни данни** source for every scenario origin.
-The existing `DailyReportCoverage` and connected `DailyReport` map the real report to the
-same presentation as
-`KARMA_API` with `DERIVED` or `UNAVAILABLE` origin, its UTC bounds/source zone and retrieval
-state, and `NOT_ASSESSED` GPS coverage; its raw metric units and availability stay unchanged.
-The explicitly selected example page at `/:language/:branchId/fleet/scenarios/operational-day-v1`
-reuses the same `DayOverview` layout as the real truck Overview, with its own synthetic truck,
-source, day, metrics and trip drawer. Its map points illustrate a fictional itinerary, not a
-recorded journey. The real Overview offers this separate destination only when Fleet and an
-active Branch are available. Existing real Karma reads, failures, account scope and raw units
-remain unchanged; examples never replace failed reads or contribute to real totals.
-
-### Diagnostic scenario contract
-
-`AdminFleetDiagnostics` is a separate named projection of the same `fleetScenario` read,
-using its verified Tenant/Branch scope and existing synthetic vehicle, trips and signals.
-It selects `faults`, `logs` and `ruleEvaluations`. Every diagnostic record retains
-`HOLITA_SCENARIO`, including `DERIVED` evaluations and evaluation logs; none is a fault
-observed through Karma.
-
-Faults carry an explicit example code, system, severity, reported status, first/last fault
-occurrence, occurrence count, related log IDs and a separate reported-resolution time.
-`reportedStatus` describes the illustrative source report. Review or acknowledgement is
-separate from that status; this read exposes no review mutation or ECU-clear action.
-Log kinds distinguish `FAULT_REPORTED`, `FAULT_STATUS`, `MEASUREMENT`, `AVAILABILITY`,
-`INTEGRATION_ISSUE` and `RULE_EVALUATION`, with typed links to their contributing records.
-The two faults illustrate three active cooling reports and one electrical report followed
-by a reported resolution; the status change does not increase the occurrence count.
-
-Three versioned rules produce four deterministic evaluations. The following UTC windows
-are on **2026-10-20**, with exclusive ends; thresholds are scenario settings, not verified
-vehicle operating limits or failure probabilities:
-
-- `example-repeated-fault-v1`, 06:00–08:00: at least three reports, contributed by
-  `example-log-fault-01`, `example-log-fault-02` and `example-log-fault-03`, yields
-  `MATCHED` / `REVIEW`, with 3/3 inputs. Manufacturer fault meaning remains unverified.
-- `example-temperature-pattern-v1`, 06:20–07:01: signals
-  `example-position-03-coolant_temperature`, `example-position-04-coolant_temperature`
-  and `example-position-05-coolant_temperature` are 93, 98 and 101 °C. All three increase
-  and the last two are at least 95 °C, yielding `MATCHED` / `MONITOR`, with 3/3 inputs.
-  Continuous temperature history, engine-load context and verified vehicle limits are
-  missing. The sampled pattern does not establish sustained continuous overheating.
-- `example-voltage-pattern-v1`, 06:20–07:01: signals
-  `example-position-03-external_voltage`, `example-position-04-external_voltage` and
-  `example-position-05-external_voltage` are 27.6 V, unavailable and 27.5 V. The rule
-  requires all three values to be at most 27.6 V. It yields `INSUFFICIENT_DATA`, with
-  2/3 inputs and null attention; the missing ID is `example-position-04-external_voltage`.
-  Only the other two IDs contribute. Vehicle limits also remain unverified.
-- The same voltage rule over 12:00–13:01 uses
-  `example-position-06-external_voltage`, `example-position-07-external_voltage` and
-  `example-position-08-external_voltage`: 27.8, 27.6 and 27.7 V. It yields `NOT_MATCHED`,
-  with 3/3 inputs and null attention. Unverified vehicle limits still prevent a general
-  battery-health conclusion.
-
-Each evaluation exposes its rule/version, input window, thresholds, contributing IDs,
-available/required counts and missing evidence. `evaluatedAt` and the corresponding
-`RULE_EVALUATION` log's `provenance.eventAt` are the next morning's fixed `exampleClock`,
-**2026-10-21T06:00:00Z**. This is processing time, separate from the preceding observation
-windows and `scenario.period`, and from actual `retrievedAt`; it is not a sensor timestamp.
-Consumers filtering an observation day must include related evaluations through their
-input window rather than hide them because their processing date is later.
-
-### Diagnostic fault centre
-
-The **Diagnostics** navigation destination opens
-`/:language/:branchId/fleet/diagnostics/faults`. Its connected
-[fault centre](../../apps/admin/src/app/features/fleet/diagnostics/faults-page.ts) reads
-`AdminFleetDiagnostics` through the existing scoped `ScenariosApi`. Source, search,
-vehicle/trip/system/severity/reported-status and observation-date filters, sorting, paging and
-the selected fault remain in the URL. Closing a drawer preserves the list selection;
-browser Back restores earlier filters and records.
-
-The example source uses only `operational-day-v1` synthetic identities. A neutral source
-chip and explanation remain visible in the panel and fault details. Counts describe the
-filtered example records, with reported-active/resolved counts separate from the number
-of fault reports. The drawer shows code/text, first/last reports, occurrence count,
-reported-resolution time and the referenced report/status observations with their source
-facts. Reported resolution establishes neither repair nor ECU clearing.
-
-Date filters match a referenced report or status observation in `Europe/Sofia`; date-range
-ends are included. Reported status remains the snapshot at the displayed example clock,
-not a historical reconstruction for the selected day. Selecting **Karma API** links to
-the real per-truck diagnostic history without example records or fault counts. Only
-recognized report families are decoded; failed example reads remain errors.
-
-### Diagnostic logs and timeline
-
-The same Diagnostics destination also opens
-`/:language/:branchId/fleet/diagnostics/logs`. Faults and Logs share their header, source
-picker and route navigation. The chronological log table consumes the same
-`AdminFleetDiagnostics` projection, with vehicle, observation-date, kind, severity and
-explicit related-fault filters. Source, vehicle and observation-date filters travel between sections;
-each section's list state and selected record remain available when returning. Browser
-Back restores the preceding URL. Explicit linked records open by their source identity
-while the list filters remain in place, with a hint when the selected record is outside
-them. Fault severity and log severity remain section-local filters.
-
-Fault history uses compact report/status rows with **Open log** links. Log details show
-typed observation facts, the referenced fault or measurement, source IDs and clocks;
-they do not read filesystem logs or expose raw server/protocol payloads. Availability,
-integration issues and reported vehicle faults remain separate kinds. The Karma source
-links to its own real history and contains neither examples nor zero-fault counts.
-
-Observation-date filters use the scenario time zone and include rule-evaluation logs
-when their half-open input window overlaps the selected calendar days. Their displayed
-record time remains the actual processing time, even when processing happened the next
-morning. Other log rows use their observation time; retrieval time never fills a missing
-observation clock. The selected evaluation exposes record identity, input window and
-available/required inputs without presenting a predictive-risk assessment.
-
-A selected measurement's map follows only its explicit signal-to-position reference,
-with matching synthetic vehicle, trip and source identities. The shared map/Street View
-panel uses that point and its own timestamp, including when the measurement value is
-missing. Missing coordinates retain the existing fallback, and another record's or a
-real truck's latest position is never substituted. These illustrative positions do not
-establish a recorded route; missing values and position gaps do not establish a sensor
-outage or a DTC.
-
-### Diagnostic risk indicators
-
-The third Diagnostics section is
-`/:language/:branchId/fleet/diagnostics/risk`. It reads the existing server-provided
-`FleetScenarioRuleEvaluation` projection without evaluating rules in the browser. Its
-overview cards summarize observed inputs, rule/version and thresholds, the reported match
-state and attention meaning, and missing evidence. The selected drawer expands this chain
-with exact input records, half-open input windows, source coverage and separate clocks. `MONITOR` and `REVIEW` are illustrative holita attention bands; unmatched and
-insufficient-input cases have no band and make no vehicle-health claim. Thresholds are
-example settings, not manufacturer limits, diagnosis, calibrated failure probabilities,
-predicted failure dates or remaining component life. There is no fleet-health score.
-
-The section shares the source picker and vehicle/observation-day filters with Faults and
-Logs. Rule/state/attention filters, search, sorting, paging and the selected evaluation
-remain in its own URL state. Observation dates match overlapping input windows rather
-than the next morning's processing timestamp. Source, input observation, processing,
-retrieval and example clocks remain visible with their distinct meanings; `DERIVED`
-evaluations retain `HOLITA_SCENARIO` provenance.
-
-Contributor links open exact source-scoped log records, including measurement points
-with the shared map and Street View, and explicitly related faults. Returning restores
-the evaluation and section filters, including when a linked record lies outside the
-current list filters. Missing references remain unavailable without substituting another
-sample. Missing voltage remains unavailable, with 2/3 usable inputs; discrete rising
-temperature samples do not establish continuous overheating, and a position gap does not
-establish a sensor outage. Choosing Karma API shows risk assessment unavailable without
-example substitution or a low-risk result.
-
-### Vehicle diagnostic context
-
-Vehicle links in Faults and Logs, the contextual actions on their selected records, and
-Risk cards open a shared vehicle-summary drawer through the `vehicleSummary` query
-parameter on the current Diagnostics route. This keeps the source, section filters and
-selected record in the URL. Opening the summary replaces the current record drawer;
-its measurement map is unmounted. Closing returns to the previous record or list, and
-links from the summary open exact Faults, Logs or Risk records with **Back to vehicle
-context** restoring the summary selection. There is no fourth navigation section.
-
-The summary uses the synthetic vehicle identity and selected observation days. It
-shows source-reported active/resolved record counts at the fixed example clock, report
-occurrences within the loaded window, three latest-in-window measurements, short server
-evaluation cards and related chronological logs. Section-local search/status/kind/rule
-filters remain return context rather than hiding facts in this vehicle overview. An
-unavailable latest measurement is not replaced by an earlier value; periods outside the
-loaded example day are unavailable rather than zero. Partially loaded selections identify
-the covered part. Missing exact references are identified, with loaded report counts
-separate from retained server evaluation results. Rule processing time remains separate
-from its input window.
-
-The synthetic vehicle has no verified association with a Fleet vehicle, maintenance
-record or driver. The summary states that business history is unavailable and does not
-infer links from registrations or Karma projects. It supplies no vehicle-health score,
-repair confirmation or prognosis. Karma vehicle context remains unavailable without
-substituting illustrative records. Identity, detailed source coverage and the chronological
-record list use progressive disclosure.
-
-### Local diagnostic attention and brief
-
-Fault and Risk records have an explicit local example review state: Unreviewed,
-Reviewed or Acknowledged. The action is reversible through Reset review; each section
-can filter its own records by that state. This does not change reported fault status,
-occurrences, rule results or attention bands, and does not confirm a repair or ECU clear.
-The state lives only in the scoped Diagnostics workspace. Faults → Logs → Risk and
-contextual Back links preserve it. Source, Branch, language or signed-session changes,
-leaving Diagnostics and page reload reset it. No review state is stored on the server,
-in the database or in browser storage.
-
-The selected Fault or Risk drawer offers a readable **Diagnostic brief** and a local
-JSON download. Both use the same loaded selected record and exact contributor/reference
-records, preserving unavailable references, raw units, availability, rule window,
-thresholds/version, source provenance and distinct observation/processing/retrieval/example
-clocks. Local review is a separate field. The export retains explicit illustrative,
-not-saved and not-repair limitations; it contains no session identity or whole-fleet
-snapshot. Coordinates are omitted by default at every nesting level. An optional point
-selector can include one exact contributor-linked position reference; no nearest/latest
-position is substituted. Changing the selected record resets this option. There are no
-outbound notifications, recipients, real alerts, device actions or persistence writes.
-
-### Operational diagnostic journey
-
-The truck Overview's loaded day and trip drawer link to the same Diagnostics destination
-when Fleet is enabled and a verified Branch is selected. A real Karma selection explicitly
-opens `KARMA_API`, preserving its car/trip IDs, source-local day and unchanged source window.
-That destination links to the real truck's diagnostic history. The truck's own Diagnostics
-destination remains available without Fleet or Branch discovery.
-
-The separate illustrative day and trip drawer open `HOLITA_SCENARIO` for the selected
-synthetic vehicle, observation day and optional trip. Faults, Logs, Risk and the shared
-vehicle summary apply the same trip selection. Diagnostic dates still use their documented
-observation semantics, and the loaded dataset window and processing clock stay visible.
-
-A bounded `truckContext` carries only known operational selection and truck-list fields.
-Every diagnostic section/contributor/summary link retains it. **Back to truck day and trip**
-builds the known Karma Overview or example-day route, restoring the report day, selected
-trip, comparison or example measurement selection and original inventory filters/page.
-No arbitrary return URL is accepted. Changing diagnostic source clears the diagnostic
-filters and hides the other source's origin panel, while retaining the explicit Back link.
-The origin context is not included in diagnostic briefs or exports and never attributes
-example faults to a real registration.
-
 ## Karma Client
 
 `apps/karma-client` is a separate NestJS federation subgraph. Gateway forwards the signed
@@ -901,8 +652,6 @@ Missing or failed samples retain the trip's actual endpoint records. A Holita vi
 marks intervals longer than 15 minutes between loaded valid UTC positions; it does not
 establish sampling frequency or a missing physical journey. Source-declared gaps remain
 separate. Google Embed renders the selected point or endpoints, not an arbitrary polyline.
-The illustrative scenario reuses this presentation with its fixed positions and linked
-signal facts, preserving its independent identity, clock and coverage.
 
 Every mounted history/profile owns a fresh captured Apollo client/cache. Filter/period
 or cursor changes cancel obsolete reads and clear old rows/details; same-query Refresh
@@ -922,7 +671,7 @@ and continuation state. It calculates no full-window totals from the displayed A
 The retrieval clock records when this view received a successful non-loading response;
 failed refreshes retain the preceding values and clock.
 
-`MeasurementWorkspace` is shared with the separate example trip drawer. Its observed-channel
+`MeasurementWorkspace` presents an observed-channel
 matrix distinguishes numeric values, explicit nulls and absent readings, with separate latest
 observed and latest numeric source times. Known catalog IDs are candidates, not hardware
 capabilities; unknown returned IDs remain selectable. Real readings retain their raw scale,
@@ -936,13 +685,6 @@ break the line. Unproved clocks leave the original table available without a cha
 readable table and selected source facts identify the same record as the single point
 Map/Street View. Missing coordinates do not borrow another record's point. Opening the
 original source-message drawer temporarily removes the underlying measurement map.
-
-The fixed `operational-day-v1` also supplies illustrative cumulative fuel-used, distance and
-engine-hour counters with explicit L/km/h units on its existing positions. Existing three
-signal values, IDs and clocks are retained. One matched pre-gap window, position 01 through
-03 at 06:00–06:20 UTC, demonstrates 4 L over 14 km (28.6 L/100 km) and the engine-counter
-delta. Later gaps and the illustrative counter decrease/reset are excluded; these are not
-whole-trip/day totals or calibration evidence for Karma fields.
 
 ### Daily report contract
 
@@ -1067,7 +809,7 @@ complete logger. Type-only fault payloads remain unresolved and cannot establish
 
 The connected truck Diagnostics page reads this projection through generated
 TypedDocumentNodes. Source details retain message/car/device IDs, source UTC time,
-display time zone and raw bytes. The illustrative Fleet scenario stays separate.
+display time zone and raw bytes.
 
 ## Background device configuration reads
 
@@ -1330,3 +1072,17 @@ The [Fleet SDL](../../apps/fleet/src/modules/karma-monitoring/karma-monitoring.g
 `FleetKarmaMonitoring*` types. Lists use scoped snapshots, bounded offset pagination,
 search/ID selection and explicit filters; event logs are newest first and constrained by retention.
 Trucks include latest data/no-data times, reported faults and the latest command outcome.
+
+Open **Karma Client → Monitoring** for the selected Branch. **Trucks** shows Branch-wide
+online/no-data/report KPIs, status and fault-report filters, the last source data in the Branch
+time zone with relative age, no-data time, retained report count/latest code and the last fault-read
+outcome. Its Diagnostics link opens the real truck history. **Faults** lists retained source reports,
+including reported removals; **Log** lists newest events with truck, kind and inclusive Branch-date
+filters and pagination. Details show the original source record. Visible monitoring pages refresh
+every 60 seconds. Reports in the window are not an active-fault inventory.
+
+**Karma Client → Settings** edits all monitoring switches, intervals and retention (10 days by
+default) for the selected Branch. Save confirms the stored settings; reducing retention can remove
+older records. The disabled state links here and explains the required server monitoring switch.
+The page cannot observe the server switches. Fault reads send only the read-only logger command to
+online trucks at the configured interval and also require server device commands to be enabled.

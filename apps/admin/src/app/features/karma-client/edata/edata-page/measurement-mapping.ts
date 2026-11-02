@@ -1,7 +1,5 @@
-import type {
-  AdminKarmaEdataQuery,
-  FleetEvidenceFragment,
-} from '../../../../../generated/graphql/operations';
+import type { SourceProvenance } from '../../../../ui/source-context/source-types';
+import type { AdminKarmaEdataQuery } from '../../../../../generated/graphql/operations';
 import type { Language } from '../../../../i18n/messages';
 import { mapCoordinates } from '../../../../ui/map-preview/location-map';
 import type {
@@ -81,10 +79,9 @@ export function edataRecords(
 ): readonly MeasurementRecord[] {
   return rows.map((row) => {
     const instantUtc = edataInstant(row.eventTimeUtc);
-    const provenance: FleetEvidenceFragment = {
+    const provenance: SourceProvenance = {
       origin: 'OBSERVED',
       source: 'KARMA_API',
-      scenarioId: null,
       sourceRecordId: row.id,
       eventAt: instantUtc,
       receivedAt: null,

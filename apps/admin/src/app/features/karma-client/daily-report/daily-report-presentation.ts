@@ -1,9 +1,9 @@
 import type {
-  AdminKarmaDailyReportQuery,
-  FleetEvidenceFragment,
-  FleetEvidencePeriodFragment,
-  FleetScenarioCoverageFragment,
-} from '../../../../generated/graphql/operations';
+  SourceProvenance,
+  SourcePeriod,
+  SourceCoverage,
+} from '../../../ui/source-context/source-types';
+import type { AdminKarmaDailyReportQuery } from '../../../../generated/graphql/operations';
 import type { Language } from '../../../i18n/messages';
 import type { StackedRow } from '../../../ui/charts/stacked-bars';
 import type { DayMetricView, DayTripRow } from '../../../ui/day-overview/day-overview';
@@ -27,23 +27,22 @@ export function dailyReportPresentation(report: DailyReportResult, language: Lan
     context: `${text.availability[value.availability]} · ${String(value.availableInputs)}/${String(value.requiredInputs)}`,
     explanation: `${explanation} ${text.missingHint} ${value.unit === 'COUNT' ? '' : text.unitsHint}`,
   });
-  const provenance: FleetEvidenceFragment = {
+  const provenance: SourceProvenance = {
     origin:
       report.state === 'UNAVAILABLE' || report.state === 'UNSUPPORTED_PERIOD'
         ? 'UNAVAILABLE'
         : 'DERIVED',
     source: 'KARMA_API',
-    scenarioId: null,
     sourceRecordId: null,
     eventAt: null,
     receivedAt: null,
     retrievedAt: report.retrievedAt,
   };
-  const period: FleetEvidencePeriodFragment | null =
+  const period: SourcePeriod | null =
     report.fromUtc && report.toUtcExclusive && report.timeZone
       ? { from: report.fromUtc, toExclusive: report.toUtcExclusive, timeZone: report.timeZone.name }
       : null;
-  const coverage: FleetScenarioCoverageFragment = {
+  const coverage: SourceCoverage = {
     retrieval: report.retrieval,
     positionCoverage: report.positionCoverage,
     positionsLoaded: 0,

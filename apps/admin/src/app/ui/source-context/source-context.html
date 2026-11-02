@@ -3,9 +3,6 @@
     <p-tag [value]="text().sources[provenance().source]" severity="secondary" />
     <span>{{ text().origin }}: {{ text().origins[provenance().origin] }}</span>
   </div>
-  @if (illustrative()) {
-    <p class="app-muted">{{ text().exampleInfo }}</p>
-  }
   @if (compact()) {
     @if (period(); as selection) {
       <p class="app-muted">
@@ -113,12 +110,6 @@
         <dt>{{ text().sourceRecordId }}</dt>
         <dd>{{ provenance().sourceRecordId ?? '—' }}</dd>
       </div>
-      @if (illustrative()) {
-        <div>
-          <dt>{{ text().scenarioId }}</dt>
-          <dd>{{ provenance().scenarioId ?? '—' }}</dd>
-        </div>
-      }
       <div>
         <dt>{{ text().eventAt }}</dt>
         <dd>{{ time(provenance().eventAt) }}</dd>

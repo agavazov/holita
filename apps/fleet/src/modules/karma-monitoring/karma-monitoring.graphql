@@ -79,6 +79,10 @@ type FleetKarmaMonitoringTruck {
   lastCommandOutcome: FleetKarmaMonitoringCommandOutcome
 }
 type FleetKarmaMonitoringTruckPage {
+  "Branch-wide totals, independent of filters and pagination."
+  onlineTotal: Int!
+  noDataTotal: Int!
+  withFaultsTotal: Int!
   items: [FleetKarmaMonitoringTruck!]!
   total: Int!
   offset: Int!
@@ -91,6 +95,7 @@ type FleetKarmaMonitoringEventPage {
   limit: Int!
 }
 input FleetKarmaMonitoringTruckFilter {
+  withFaults: Boolean
   online: Boolean
 }
 enum FleetKarmaMonitoringTruckSortField {

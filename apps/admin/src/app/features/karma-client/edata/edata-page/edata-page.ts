@@ -1,3 +1,4 @@
+import type { SourceProvenance, SourceCoverage } from '../../../../ui/source-context/source-types';
 import { karmaPresentation } from '../../presentation/karma-presentation';
 import { MAP_PAGE_TYPE } from '../../../../ui/map-preview/map-preview';
 import { Location } from '@angular/common';
@@ -28,8 +29,6 @@ import type { Subscription } from 'rxjs';
 import type {
   AdminKarmaCarQuery,
   AdminKarmaEdataQuery,
-  FleetEvidenceFragment,
-  FleetScenarioCoverageFragment,
   KarmaEdataInput,
 } from '../../../../../generated/graphql/operations';
 import { messages, type Language } from '../../../../i18n/messages';
@@ -109,21 +108,20 @@ export class EdataPage implements OnInit {
     const retrievedAt = this.viewRetrievedAt();
     return page && retrievedAt ? edataRecords(page.items, retrievedAt) : null;
   });
-  readonly measurementProvenance = computed<FleetEvidenceFragment | null>(() => {
+  readonly measurementProvenance = computed<SourceProvenance | null>(() => {
     const retrievedAt = this.viewRetrievedAt();
     return retrievedAt
       ? {
           origin: 'OBSERVED',
           source: 'KARMA_API',
           sourceRecordId: this.carId(),
-          scenarioId: null,
           eventAt: null,
           receivedAt: null,
           retrievedAt,
         }
       : null;
   });
-  readonly measurementCoverage = computed<FleetScenarioCoverageFragment>(() => ({
+  readonly measurementCoverage = computed<SourceCoverage>(() => ({
     retrieval: this.error()
       ? 'UNAVAILABLE'
       : this.page()

@@ -1,11 +1,12 @@
+import type {
+  SourceProvenance,
+  SourcePeriod,
+  SourceCoverage,
+  SourceAvailability,
+} from './source-types';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { Tag } from 'primeng/tag';
-import type {
-  FleetEvidenceAvailability,
-  FleetEvidenceFragment,
-  FleetEvidencePeriodFragment,
-  FleetScenarioCoverageFragment,
-} from '../../../generated/graphql/operations';
+
 import type { Language } from '../../i18n/messages';
 import { formatDateTime, formatNumber } from '../format/format';
 import bg from './bg.json';
@@ -23,14 +24,13 @@ const catalogs: Record<Language, typeof en> = { bg, en };
 })
 export class SourceContext {
   readonly language = input.required<Language>();
-  readonly provenance = input.required<FleetEvidenceFragment>();
-  readonly period = input<FleetEvidencePeriodFragment | null>(null);
-  readonly coverage = input<FleetScenarioCoverageFragment | null>(null);
-  readonly availability = input<FleetEvidenceAvailability | null>(null);
+  readonly provenance = input.required<SourceProvenance>();
+  readonly period = input<SourcePeriod | null>(null);
+  readonly coverage = input<SourceCoverage | null>(null);
+  readonly availability = input<SourceAvailability | null>(null);
   readonly compact = input(false);
 
   protected readonly text = computed(() => catalogs[this.language()]);
-  protected readonly illustrative = computed(() => this.provenance().source === 'HOLITA_SCENARIO');
   protected readonly periodZone = computed(() => this.period()?.timeZone ?? 'UTC');
   protected readonly positionsLoaded = computed(() =>
     formatNumber(this.coverage()?.positionsLoaded, this.language()),

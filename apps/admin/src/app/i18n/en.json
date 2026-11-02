@@ -66,7 +66,7 @@
   "emptyTenants": "No tenants available.",
   "chooseBranch": "Choose a branch",
   "karmaClient": "Karma Client",
-  "karmaAdministration": "Karma administration",
+  "karmaAdministration": "Administration",
   "karmaAdministrationTitle": "Administration",
   "karmaAccount": "Karma account",
   "karmaAdministrationDescription": "Users, roles and reference data for the connected Karma account.",

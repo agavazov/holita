@@ -15,111 +15,20 @@ authorize Google Cloud configuration or vendor writes.
 
 ## Boundaries for remaining product work
 
-The [operational diagnostic journey](../discocan/architecture.md#operational-diagnostic-journey),
-[daily reports](../discocan/architecture.md#daily-report-contract),
-[measurements](../discocan/architecture.md#measurement-workspace) and
-[diagnostic brief](../discocan/architecture.md#local-diagnostic-attention-and-brief)
-are implemented. The remaining MVP-/MAP-/INS- work below concerns explicit source,
-retrieval and richer-map prerequisites; it does not establish complete Karma parity.
-
-### Source policy and ERM-independent scope
-
-The owner confirmed the source policy: keep the working public Karma API
-integration real; use clearly identified illustrative scenarios only for missing
-telemetry, diagnostics and future owned-server functionality. Do not replace
-working real reads with examples. The isolation rules below apply to every module.
-
-| Data class                    | Product behavior                                                                                                                     | Boundary                                                                                                                                         |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Observed Karma data           | Existing supported cars, trips, locations, events, eData and account/reference reads retain source identity and clocks.              | Signed server-side API access; shared account scope, no Branch reinterpretation. A failed read remains a failure, not a demo fallback.           |
-| Calculated from observed data | Reports, comparisons and signal summaries explain their inputs, period, coverage and units.                                          | Only supported complete/partial calculations; unknown units remain raw/unconfirmed or unavailable, not silently converted.                       |
-| Illustrative scenario         | Deterministic example vehicles, measurements, faults, logs and attention/risk scenarios make the future workflows usable now.        | Persistent demo provenance in list/detail/chart/map/brief/export; never counted as observed vehicle faults or real fleet totals.                 |
-| Future owned telemetry        | The eventual telemetry server can supply real measurements and supported fault records through concrete generated service contracts. | Building/deploying the receiver, device routing, protocol activation and model training are separate work, not hidden inside these two sessions. |
-
-No live ERM-only dependency is part of this product delivery: no internal `/i/`
-integration, vendor resource synchronization, NC2 command/firmware console,
-camera/media feed, real accident feed or unproved DTC decoder. Selected workflow
-concepts can be demonstrated with explicit examples; do not present those
-examples as implemented vendor integrations or promise exact Karma algorithms.
-
-The unresolved source-unit evidence remains open for real physical-unit claims.
-It must not block an honestly labeled illustrative workflow or the coordinate
-map experience. Demo units describe only the synthetic dataset; they do not
-establish the units of real API fields.
-
-### Quiet but unambiguous example-data presentation
-
-- Use a small neutral source chip in the affected panel's toolbar or source
-  control: **Example data** / **Примерни данни**. Do not add a red page-wide banner
-  or make the whole application look broken. Real fault severity remains a
-  separate meaning from data provenance.
-- Keep the chip visible with the data; its information text explains:
-  "This module uses illustrative data until our telemetry server is connected."
-  The BG text is "Модулът използва примерни данни до свързването на нашия
-  телеметричен сървър." A tooltip alone or a hidden footer is insufficient.
-- Preserve the source in drawers, charts, map contexts and downloads. Separate
-  observed and illustrative datasets, counters, filters and rule evaluations.
-  Never silently attach a synthetic fault to a real truck or mix sample trips
-  into real daily totals.
-- Default examples use clearly synthetic vehicle identities and locations. A
-  deliberately selected simulation for a real truck, if later requested, must
-  say Simulation for this truck and remain isolated from its observed state.
-- Use fixed, coherent scenarios and a defined example clock, not random values
-  on render or background fake events. Missing real input must remain visible.
-- There is no new confirmation gate to view the examples. Their source is
-  explicit in the selected context. Active configured maps retain the owner's
-  automatic-loading rule, without Show map/Load map buttons or hidden-map fan-out.
-
-### Shared source contract
-
-Use the implemented [Fleet scenario and source contract](../discocan/architecture.md#fleet-scenario-and-source-contract)
-and [source context pattern](../admin-design-system.md#source-context) for the remaining
-operational and diagnostic work. Extend that concrete feature and its generated contracts;
-keep runtime examples, Storybook snapshots and real Karma reads separate. Diagnostic
-consumers reuse the implemented [diagnostic scenario contract](../discocan/architecture.md#diagnostic-scenario-contract).
-
-### Product navigation
-
-- **Trucks:** preserve the existing inventory and Overview / Trips / Location
-  navigation; occasional source tools remain in More. Cross-truck maps/reports
-  belong to the inventory workspace, not every individual truck tab bar.
-- **Diagnostics:** one explicitly requested new destination, with route-backed
-  Faults and signals / Logs / Risk indicators sections and truck/time/source
-  filters. A contextual link from a truck opens this same module, not a duplicate.
-- **Karma administration:** preserve the existing grouped reference/account views.
-  Do not rebuild unrelated Fleet settings, driver or maintenance screens.
+Remaining work uses real Karma source data and clearly states missing coverage, clocks and units.
+Synthetic product scenarios were removed. Storybook snapshots remain a development tool.
+Preserve the Karma menu order: Monitoring, Trucks, Administration, Settings. Monitoring owns the
+Branch-scoped retained log; per-truck Diagnostics retains the real Karma history.
 
 ### Remaining source boundaries
 
-Source, coverage and Google prerequisites limit the corresponding real mode; they
-do not authorize inventing data. The real day report remains one proved completed
-day until a broader period has measured retrieval support. A complete illustrative
-diagnostic workflow does not establish a production DTC feed or predictive diagnostics.
-
-For every risk card, the required explanation is **what was observed → which
-rule matched → what attention scenario it illustrates → what evidence is missing**.
-For example, a repeated example temperature pattern can illustrate why a
-temperature-related inspection might be considered; it does not prove an impending
-mechanical failure. Numeric thresholds in examples are scenario settings, not
-unverified vehicle-specific safe operating limits. No external AI service or
-invented percentage is required. A later statistical prediction system needs
-real labeled outcomes and separate evaluation before making probability claims.
-
-### Deliberately outside this product delivery
-
-Actual telemetry-server ingestion/deployment, device routing changes, real
-unproved DTC decoding, statistical model training, camera/accident feeds, NC2
-firmware/commands, vendor settings/notification synchronization and exact legal
-driver-hours or vendor scoring parity are not implementation promises. POI/
-geofence management, rich tire/fuel/business CRUD and outbound notifications
-remain separately selectable owned workflows, not features silently bundled into
-the diagnostic module. No ERM contact or vendor/device mutation is authorized here.
+Source, coverage and Google prerequisites limit the corresponding feature; they do not authorize
+inventing data. Existing report and measurement workflows retain their source limits.
 
 ## Existing first-release slice and boundaries
 
 The following retains the real-data MVP recipe and its detailed component
-acceptance. Explicit illustrative workflows do not change or certify the raw
-Karma source contracts.
+acceptance. Raw Karma source contracts keep their documented limits.
 
 Deliver one coherent read-only journey in the existing admin:
 **truck → completed local day → Summary/Distance → trip detail → map or Street View**.
@@ -444,8 +353,7 @@ supports keyboard interaction and descriptive marker titles.
 for each additional signal.
 
 The [implemented explorer](../discocan/development.md#karma-maps) already provides a
-bounded point/time list, selected-point Map/Street View, raw event facts and a separate
-illustrative sampled workflow. Remaining work is a richer sampled-path/multi-marker map
+bounded point/time list, selected-point Map/Street View and raw event facts. Remaining work is a richer sampled-path/multi-marker map
 when MAP-02 prerequisites are approved. The [measurement workspace](../discocan/architecture.md#measurement-workspace)
 already supplies selected source-scale series; additional physical comparisons retain their unit/coverage gates.
 Broader source retention/clock/coverage proof remains necessary before wider path claims.
@@ -476,9 +384,8 @@ evidence/coverage, not claiming those features as unique inventions.
 | INS-06 Nearby-truck assistant                  | P2; MAP-02, bounded bulk `/location` through a specific generated contract, chosen freshness policy | Coordinate distance to an explicitly selected destination plus individual source ages.                                                              | Map/list of nearby last-reported positions, with stale/unknown records separated. Straight-line distance is not road ETA, route suitability or an automatically dispatched assignment. No messages or commands are sent.              |
 
 The [measurement workspace](../discocan/architecture.md#measurement-workspace) implements the
-bounded observed-channel matrix and source-scale charts. Its separate fixed example includes
-one matching counter/fuel window; INS-04/05 above retain the unproved real scale, reset and
-coverage prerequisites rather than requesting a second example workflow.
+bounded observed-channel matrix and source-scale charts. INS-04/05 above retain the unproved
+real scale, reset and coverage prerequisites.
 
 For each chosen opportunity, first define its synthetic success/empty/partial/
 error stories in the same presentation family. Do not convert this candidate
