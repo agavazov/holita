@@ -701,11 +701,11 @@ export class KarmaDeviceReadsClient {
         method: 'POST',
         redirect: 'error',
         signal: AbortSignal.timeout(
-          action.endsWith('observations') ||
-            action === 'diagnostic-request' ||
-            action.startsWith('monitoring-')
+          action.startsWith('monitoring-')
             ? 50000
-            : KARMA_COMMAND_TIMEOUT_MS,
+            : action.endsWith('observations') || action === 'diagnostic-request'
+              ? 21000
+              : KARMA_COMMAND_TIMEOUT_MS,
         ),
         headers: {
           'content-type': 'application/json',
