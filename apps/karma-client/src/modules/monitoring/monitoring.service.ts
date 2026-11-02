@@ -3,7 +3,7 @@ import { KarmaTransport } from '../../integrations/karma/karma-transport.js';
 import { cars } from '../cars/cars-response.js';
 import { location } from '../location/location-response.js';
 import {
-  diagnosticHistoryParameters,
+  diagnosticHistoryLimits,
   diagnosticHistoryQuery,
 } from '../history/diagnostic-history-query.js';
 import { diagnosticReport } from '../history/diagnostic-report.js';
@@ -91,55 +91,58 @@ export class MonitoringService {
     ) {
       throw new BadRequestException('Invalid monitoring history target');
     }
-    const beforeId = 'beforeId' in body && body.beforeId !== null ? body.beforeId : undefined;
-    if (beforeId !== undefined && typeof beforeId !== 'string') {
-      throw new BadRequestException('Invalid history cursor');
-    }
     const query = diagnosticHistoryQuery({
       carId: body.carId,
       pageSize: 100,
       fromMessageId: String(Number(body.afterId) + 1),
-      ...(beforeId ? { toMessageId: beforeId } : {}),
     });
-    const signal = AbortSignal.timeout(4000);
-    const parameters = diagnosticHistoryParameters(query);
-    parameters.set(
-      'from_date',
-      new Date(body.fromUtc).toISOString().slice(0, 19).replace('T', ' '),
-    );
-    parameters.set('to_date', new Date(body.toUtc).toISOString().slice(0, 19).replace('T', ' '));
+    // Live background reads exceed the public four-second deadline; Fleet allows 21 seconds.
+    const signal = AbortSignal.timeout(19000);
+    const parameters = new URLSearchParams({
+      car: query.carId,
+      device: body.deviceId,
+      date_type: 'utc',
+      from_id: String(query.from - 1),
+      'event_type[]': '33',
+      'fields[]': 'pdt',
+    });
+    if (body.afterId === '0') {
+      parameters.set(
+        'from_date',
+        new Date(body.fromUtc).toISOString().slice(0, 19).replace('T', ' '),
+      );
+      parameters.set('to_date', new Date(body.toUtc).toISOString().slice(0, 19).replace('T', ' '));
+    }
     const source = await this.karma.readDiagnosticEvents(parameters, signal);
-    if (!Array.isArray(source) || source.length > 500) {
+    if (!Array.isArray(source) || source.length > diagnosticHistoryLimits.maxRows) {
       unavailable();
     }
-    const rows = positionEventRows(source);
+    const rows = positionEventRows(source)
+      .map((event, index) => {
+        const rawRecord: unknown = source[index];
+        return { event, rawRecord };
+      })
+      .sort((left, right) => Number(left.event.id) - Number(right.event.id));
     let previous = 0;
-    for (const row of rows) {
+    for (const { event: row } of rows) {
       const id = Number(row.id);
       if (
         row.carId !== body.carId ||
         row.deviceId !== body.deviceId ||
         id <= previous ||
-        id < query.from - 1 ||
-        (query.before !== null && id > query.before + 1) ||
-        !['2', '33', '70'].includes(row.eventId)
+        id < query.from - 1
       ) {
         unavailable();
       }
       previous = id;
     }
-    const selected = rows.filter(
-      (row) =>
-        Number(row.id) >= query.from && (query.before === null || Number(row.id) <= query.before),
-    );
-    const oldest = selected[0];
+    const selected = rows.filter(({ event }) => Number(event.id) >= query.from);
     const newest = selected.at(-1);
     return {
-      highWatermark: newest?.id ?? body.afterId,
-      nextBeforeId: oldest && Number(oldest.id) > query.from ? String(Number(oldest.id) - 1) : null,
-      reports: selected.flatMap((event) => {
+      highWatermark: newest?.event.id ?? body.afterId,
+      hasMore: source.length === diagnosticHistoryLimits.maxRows,
+      reports: selected.flatMap(({ event, rawRecord }) => {
         const report = diagnosticReport(event);
-        const rawRecord: unknown = source[rows.indexOf(event)];
         return report && ['EDATA_413', 'EDATA_418', 'EDATA_419'].includes(report.family)
           ? [
               {
