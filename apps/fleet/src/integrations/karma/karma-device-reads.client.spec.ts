@@ -177,5 +177,19 @@ describe('Fleet to Karma device-read transport', () => {
         await expect(result).rejects.toMatchObject({ code: 'INVALID_READBACK' });
       }
     }
+    for (const [cause, code] of [
+      ['MONITORING_TIMEOUT', 'KARMA_TIMEOUT'],
+      ['MONITORING_INVALID_RESPONSE', 'INVALID_READBACK'],
+      ['MONITORING_UPSTREAM_FAILED', 'KARMA_UNAVAILABLE'],
+      ['private upstream URL or token', 'KARMA_UNAVAILABLE'],
+    ]) {
+      upstream.mockResolvedValueOnce(
+        Response.json({ code: cause, message: 'private upstream URL or token' }, { status: 503 }),
+      );
+      await expect(client.monitoring('history')).rejects.toMatchObject({
+        code,
+        message: 'Device configuration reading is unavailable; try again later',
+      });
+    }
   });
 });

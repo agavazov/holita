@@ -9,8 +9,32 @@ import {
 import { diagnosticReport } from '../history/diagnostic-report.js';
 import { positionEventRows } from '../history/history-response.js';
 
-function unavailable(): never {
-  throw new ServiceUnavailableException('Karma monitoring source is unavailable');
+function unavailable(code = 'MONITORING_INVALID_RESPONSE'): never {
+  throw new ServiceUnavailableException({
+    message: 'Karma monitoring source is unavailable',
+    code,
+  });
+}
+
+function historyRows(source: unknown, carId: string, deviceId: string) {
+  if (!Array.isArray(source) || source.length > diagnosticHistoryLimits.maxRows) {
+    unavailable();
+  }
+  const rows = positionEventRows(source)
+    .map((event, index) => {
+      const rawRecord: unknown = source[index];
+      return { event, rawRecord };
+    })
+    .sort((left, right) => Number(left.event.id) - Number(right.event.id));
+  let previous = 0;
+  for (const { event } of rows) {
+    const id = Number(event.id);
+    if (event.carId !== carId || event.deviceId !== deviceId || id <= previous) {
+      unavailable();
+    }
+    previous = id;
+  }
+  return rows;
 }
 
 @Injectable()
@@ -96,51 +120,55 @@ export class MonitoringService {
       pageSize: 100,
       fromMessageId: String(Number(body.afterId) + 1),
     });
-    // First background reads of the retention window can take over 20 seconds; Fleet allows 50.
+    // Share the deadline across the latest-ID lookup and the bounded catch-up page.
     const signal = AbortSignal.timeout(45000);
     const parameters = new URLSearchParams({
       car: query.carId,
       device: body.deviceId,
       date_type: 'utc',
-      from_id: String(query.from - 1),
       'event_type[]': '33',
       'fields[]': 'pdt',
     });
-    if (body.afterId === '0') {
-      parameters.set(
-        'from_date',
-        new Date(body.fromUtc).toISOString().slice(0, 19).replace('T', ' '),
-      );
-      parameters.set('to_date', new Date(body.toUtc).toISOString().slice(0, 19).replace('T', ' '));
+    // Karma's open-ended incremental scan exceeds 45 seconds even with dates.
+    // Keep each catch-up range to the million IDs verified by live reads.
+    const latest =
+      body.afterId === '0'
+        ? []
+        : await this.readHistoryRows(parameters, signal, body.carId, body.deviceId);
+    const latestId = Number(latest.at(-1)?.event.id ?? body.afterId);
+    if (body.afterId !== '0' && latestId <= Number(body.afterId)) {
+      return { highWatermark: body.afterId, hasMore: false, reports: [] };
     }
-    const source = await this.karma.readDiagnosticEvents(parameters, signal);
-    if (!Array.isArray(source) || source.length > diagnosticHistoryLimits.maxRows) {
-      unavailable();
+    const upper =
+      body.afterId === '0' ? null : Math.min(latestId, Number(body.afterId) + 1_000_000);
+    parameters.set('from_id', String(query.from - 1));
+    if (upper !== null) {
+      parameters.set('to_id', String(upper + 1));
     }
-    const rows = positionEventRows(source)
-      .map((event, index) => {
-        const rawRecord: unknown = source[index];
-        return { event, rawRecord };
-      })
-      .sort((left, right) => Number(left.event.id) - Number(right.event.id));
-    let previous = 0;
+    parameters.set(
+      'from_date',
+      new Date(body.fromUtc).toISOString().slice(0, 19).replace('T', ' '),
+    );
+    parameters.set('to_date', new Date(body.toUtc).toISOString().slice(0, 19).replace('T', ' '));
+    const rows = await this.readHistoryRows(parameters, signal, body.carId, body.deviceId);
     for (const { event: row } of rows) {
       const id = Number(row.id);
-      if (
-        row.carId !== body.carId ||
-        row.deviceId !== body.deviceId ||
-        id <= previous ||
-        id < query.from - 1
-      ) {
+      if (id < query.from - 1 || (upper !== null && id > upper + 1)) {
         unavailable();
       }
-      previous = id;
     }
-    const selected = rows.filter(({ event }) => Number(event.id) >= query.from);
+    const selected = rows.filter(
+      ({ event }) =>
+        Number(event.id) >= query.from && (upper === null || Number(event.id) <= upper),
+    );
     const newest = selected.at(-1);
+    const full = rows.length === diagnosticHistoryLimits.maxRows;
+    // A short page exhausts this ID range, including gaps with no matching events.
+    const highWatermark =
+      upper !== null && !full ? String(upper) : (newest?.event.id ?? body.afterId);
     return {
-      highWatermark: newest?.event.id ?? body.afterId,
-      hasMore: source.length === diagnosticHistoryLimits.maxRows,
+      highWatermark,
+      hasMore: upper === null ? full : Number(highWatermark) < latestId,
       reports: selected.flatMap(({ event, rawRecord }) => {
         const report = diagnosticReport(event);
         return report && ['EDATA_413', 'EDATA_418', 'EDATA_419'].includes(report.family)
@@ -157,5 +185,20 @@ export class MonitoringService {
           : [];
       }),
     };
+  }
+
+  private async readHistoryRows(
+    parameters: URLSearchParams,
+    signal: AbortSignal,
+    carId: string,
+    deviceId: string,
+  ) {
+    let source: unknown;
+    try {
+      source = await this.karma.readDiagnosticEvents(parameters, signal);
+    } catch {
+      unavailable(signal.aborted ? 'MONITORING_TIMEOUT' : 'MONITORING_UPSTREAM_FAILED');
+    }
+    return historyRows(source, carId, deviceId);
   }
 }

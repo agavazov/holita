@@ -95,7 +95,9 @@ export interface KarmaDiagnosticReadback {
 }
 
 export class KarmaDeviceReadError extends ServiceUnavailableException {
-  constructor(readonly code: 'KARMA_UNAVAILABLE' | 'TARGET_CHANGED' | 'INVALID_READBACK') {
+  constructor(
+    readonly code: 'KARMA_UNAVAILABLE' | 'KARMA_TIMEOUT' | 'TARGET_CHANGED' | 'INVALID_READBACK',
+  ) {
     super('Device configuration reading is unavailable; try again later');
   }
 }
@@ -717,7 +719,11 @@ export class KarmaDeviceReadsClient {
         await response.body?.cancel();
         throw new KarmaDeviceReadError('TARGET_CHANGED');
       }
-      if (!response.ok || Number(response.headers.get('content-length') ?? 0) > 2_097_152) {
+      const monitoringFailure = action.startsWith('monitoring-') && response.status === 503;
+      if (
+        (!response.ok && !monitoringFailure) ||
+        Number(response.headers.get('content-length') ?? 0) > 2_097_152
+      ) {
         await response.body?.cancel();
         throw new KarmaDeviceReadError('KARMA_UNAVAILABLE');
       }
@@ -745,6 +751,16 @@ export class KarmaDeviceReadsClient {
         chunks.push(bytes);
       }
       const data: unknown = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+      if (!response.ok) {
+        // Only fixed internal codes cross into persisted monitoring details.
+        throw new KarmaDeviceReadError(
+          record(data) && data.code === 'MONITORING_TIMEOUT'
+            ? 'KARMA_TIMEOUT'
+            : record(data) && data.code === 'MONITORING_INVALID_RESPONSE'
+              ? 'INVALID_READBACK'
+              : 'KARMA_UNAVAILABLE',
+        );
+      }
       return data;
     } catch (error) {
       if (error instanceof KarmaDeviceReadError) {
