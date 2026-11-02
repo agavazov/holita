@@ -704,7 +704,7 @@ export class KarmaDeviceReadsClient {
           action.endsWith('observations') ||
             action === 'diagnostic-request' ||
             action.startsWith('monitoring-')
-            ? 21000
+            ? 50000
             : KARMA_COMMAND_TIMEOUT_MS,
         ),
         headers: {
