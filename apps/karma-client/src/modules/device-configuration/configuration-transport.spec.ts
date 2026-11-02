@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, jest } from '@jest/globals';
 import { KarmaTransport } from '../../integrations/karma/karma-transport.js';
+import { MonitoringService } from '../monitoring/monitoring.service.js';
 import { DeviceConfigurationService } from './device-configuration.service.js';
 import { ruleObservation, ruleReadback, type RuleObservation } from './rule-response.js';
 
@@ -555,6 +556,64 @@ describe('fixed eData device command transport', () => {
         { messageId: '4', family: 'UNRESOLVED_FAULT_REPORT' },
         { messageId: '3', family: 'UNRESOLVED_FAULT_REPORT' },
       ],
+    });
+    eventRows = [
+      { ...diagnosticRow(1, '4,11'), eid: 2, edt: null, pdt: '2026-01-01 00:00:00' },
+      { ...diagnosticRow(2, 'opaque'), eid: 70 },
+      diagnosticRow(3, communication),
+      diagnosticRow(4, '19,0,417,0,1,1,1001,00'),
+      diagnosticRow(5, '19,0,154,0'),
+      diagnosticRow(6, '19,0,413,0,1,1,1001,19'),
+      diagnosticRow(7, '19,0,418,0,1,1,1001,20'),
+      {
+        ...diagnosticRow(8, '19,0,413,0,1,1,1001,19111101'),
+        edt: null,
+        pdt: '2026-01-01 00:00:00',
+      },
+      {
+        ...diagnosticRow(9, '19,0,419,0,1,1,1001,21000010F30701'),
+        pdt: '2026-01-01 01:00:00',
+      },
+    ];
+    upstream.mockClear();
+    expect(
+      await new MonitoringService(transport).history({
+        carId: '41',
+        deviceId,
+        afterId: '0',
+        fromUtc: eventTimeUtc,
+        toUtc: '2026-01-02T00:00:00.000Z',
+      }),
+    ).toMatchObject({
+      highWatermark: '9',
+      nextBeforeId: null,
+      reports: [
+        { messageId: '6', reportCode: '413', decoding: 'OPAQUE', faults: [] },
+        { messageId: '7', reportCode: '418', decoding: 'OPAQUE', faults: [] },
+        {
+          messageId: '8',
+          occurredAt: eventTimeUtc,
+          decoding: 'DECODED',
+          faults: [{ code: 'P1111', status: 'ADDED' }],
+        },
+        {
+          messageId: '9',
+          occurredAt: eventTimeUtc,
+          decoding: 'DECODED',
+          faults: [{ spn: 4339, fmi: 7, status: 'ADDED' }],
+        },
+      ],
+    });
+    const monitoringRequest = upstream.mock.calls.find(
+      ([input]) => url(input).pathname === '/apiv2/events',
+    );
+    expect(
+      monitoringRequest ? Object.fromEntries(url(monitoringRequest[0]).searchParams) : null,
+    ).toMatchObject({
+      from_id: '0',
+      from_date: '2026-01-01 00:00:00',
+      to_date: '2026-01-02 00:00:00',
+      date_type: 'utc',
     });
   });
 });

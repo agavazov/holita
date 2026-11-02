@@ -7,6 +7,8 @@ import { issueDemoToken } from '../src/auth/demo-auth.js';
 import { FleetClock } from '../src/clock/fleet-clock.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { CoreClient } from '../src/integrations/core/core.client.js';
+import { KarmaDeviceReadsClient } from '../src/integrations/karma/karma-device-reads.client.js';
+import { KarmaMonitoringJobs } from '../src/modules/karma-monitoring/karma-monitoring.jobs.js';
 import {
   KarmaMonitoringRepository,
   monitoringDefaults,
@@ -28,8 +30,10 @@ describe('Karma monitoring persistence and scope', () => {
   let app: INestApplication | undefined;
   let repository: KarmaMonitoringRepository;
   let operations: DeviceOperationsRepository;
+  let jobs: KarmaMonitoringJobs;
   let url = '';
   const requireBranch = jest.fn<CoreClient['requireBranch']>().mockResolvedValue(undefined);
+  const monitoring = jest.fn<KarmaDeviceReadsClient['monitoring']>();
   const originalFlag = process.env.FLEET_KARMA_MONITORING_ENABLED;
   const originalDispatchFlag = process.env.FLEET_DEVICE_OPERATIONS_ENABLED;
   beforeAll(async () => {
@@ -43,9 +47,12 @@ describe('Karma monitoring persistence and scope', () => {
       .useValue({ now: () => now })
       .overrideProvider(CoreClient)
       .useValue({ requireBranch })
+      .overrideProvider(KarmaDeviceReadsClient)
+      .useValue({ monitoring })
       .compile();
     repository = module.get(KarmaMonitoringRepository);
     operations = module.get(DeviceOperationsRepository);
+    jobs = module.get(KarmaMonitoringJobs);
     app = module.createNestApplication({ logger: false });
     await app.listen(0, '127.0.0.1');
     url = `${await app.getUrl()}/graphql`;
@@ -146,12 +153,13 @@ describe('Karma monitoring persistence and scope', () => {
       2,
       now,
     );
+    const sourceTime = new Date(now.getTime() - 3_600_000);
     const fault = {
       karmaCarId: '7',
       kind: 'FAULT_REPORTED' as const,
       source: 'KARMA_HISTORY' as const,
       sourceKey: '7:100:0',
-      occurredAt: now,
+      occurredAt: sourceTime,
       recordedAt: now,
       code: 'P0001',
       spn: 4294967295,
@@ -159,9 +167,78 @@ describe('Karma monitoring persistence and scope', () => {
       faultStatus: 'ADDED',
       rawRecord: { message_id: 100, extra: 'original' },
     };
-    for (let repeat = 0; repeat < 2; repeat++) {
-      await repository.saveHistory(scope, '7', [fault], { historyCursor: '100' });
+    const decoded = {
+      messageId: '100',
+      occurredAt: sourceTime.toISOString(),
+      rawRecord: fault.rawRecord,
+      reportCode: '419',
+      decoding: 'DECODED',
+      faults: [{ code: fault.code, spn: fault.spn, fmi: fault.fmi, status: fault.faultStatus }],
+    };
+    const batch = {
+      highWatermark: '100',
+      nextBeforeId: null,
+      reports: [
+        {
+          ...decoded,
+          messageId: '97',
+          occurredAt: new Date(now.getTime() - 86_400_001).toISOString(),
+        },
+        {
+          ...decoded,
+          messageId: '98',
+          reportCode: '2',
+          decoding: 'OPAQUE',
+          faults: [],
+          rawRecord: { eid: 2, pdt: '2026-11-02 11:00:00', edt: null, extra: '4,11' },
+        },
+        { ...decoded, messageId: '99', reportCode: '418', decoding: 'OPAQUE', faults: [] },
+        decoded,
+      ],
+    };
+    monitoring.mockResolvedValue(batch);
+    const stored = await repository.settings(scope);
+    if (!stored) {
+      throw new Error('Missing monitoring settings');
     }
+    const active = {
+      ...stored,
+      enabled: true,
+      faultCommandEnabled: false,
+      lastStatusPollAt: now,
+      lastRetentionAt: now,
+    };
+    for (let repeat = 0; repeat < 2; repeat++) {
+      await repository.updateTruck(scope, '7', { lastHistoryPollAt: null });
+      await jobs.runBranch(active, now);
+    }
+    expect(monitoring.mock.calls[0]).toEqual([
+      'history',
+      {
+        carId: '7',
+        deviceId: 'opaque-7',
+        afterId: '0',
+        fromUtc: '2026-11-01T12:00:00.000Z',
+        toUtc: now.toISOString(),
+      },
+    ]);
+    expect(
+      await database.client.karmaMonitoringEvent.findMany({
+        where: { ...scope, source: 'KARMA_HISTORY' },
+        orderBy: { sourceKey: 'asc' },
+        select: { kind: true, sourceKey: true, occurredAt: true, recordedAt: true },
+      }),
+    ).toEqual([
+      { kind: 'FAULT_REPORTED', sourceKey: '7:100:0', occurredAt: sourceTime, recordedAt: now },
+      {
+        kind: 'FAULT_REPORT_UNDECODED',
+        sourceKey: '7:99:undecoded',
+        occurredAt: sourceTime,
+        recordedAt: now,
+      },
+    ]);
+    const expired = new Date(now.getTime() - 86_400_001);
+    await repository.record(scope, [{ ...fault, sourceKey: '7:96:0', occurredAt: expired }]);
     await repository.updateTruck(otherScopes[0] ?? scope, '7', { historyCursor: '200' });
     expect((await repository.trucks(scope))[0]?.historyCursor).toBe('100');
     const trucks =
@@ -201,6 +278,15 @@ describe('Karma monitoring persistence and scope', () => {
         },
       },
     });
+    expect(
+      await repository.listTrucks(
+        scope,
+        { offset: 0, limit: 20 },
+        { tokens: [], ids: undefined, online: undefined, withFaults: undefined },
+        { field: 'DISPLAY_NAME', direction: 'ASC' },
+        new Date(now.getTime() + 86_400_000),
+      ),
+    ).toMatchObject({ withFaultsTotal: 0, items: [{ faults: [], latestFault: null }] });
     const events =
       '{fleetKarmaMonitoringEvents(filter:{karmaCarId:"7",kinds:[FAULT_REPORTED],from:"2026-11-02T00:00:00Z"},limit:1){total offset limit items{code rawRecord}}}';
     expect(await query(events, {})).toEqual({

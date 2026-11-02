@@ -93,6 +93,7 @@
     "CAME_ONLINE": "Получени скорошни данни",
     "NO_DATA_SINCE": "Няма скорошни данни",
     "FAULT_REPORTED": "Съобщение за грешка",
+    "FAULT_REPORT_UNDECODED": "Неразчетен доклад за грешки",
     "FAULT_READ_REQUESTED": "Заявено четене на грешки",
     "FAULT_READ_ANSWERED": "Камионът отговори",
     "FAULT_READ_FAILED": "Неуспешно четене на грешки",

@@ -1053,10 +1053,16 @@ bulk response coverage and timestamp semantics still require live verification. 
 fresh data are described as “no data since”, without inferring power state.
 
 History uses the existing diagnostic-history source, bounds and decoder through `GET /events`
-with UTC and message-ID boundaries. Persisted descending catch-up pages advance the high watermark
-only after the interval is drained. Scoped source keys deduplicate each report/fault; raw source
-records and reported ADDED/REMOVED/UNKNOWN status remain available. Unknown reports stay opaque.
-Reported faults are observations within retention, not a claim about all currently active faults.
+with UTC, message-ID boundaries and a start time of now minus `retentionDays`, including the first
+pull. Persisted descending catch-up pages advance the high watermark only after the interval is
+drained. Only eData fault reports `413` (OBD), `418` (FMS) and `419` (SPN/FMI) apply: each decoded
+entry carrying a code or SPN/FMI produces one deduplicated `FAULT_REPORTED` event. Undecoded fault
+reports produce `FAULT_REPORT_UNDECODED` events and do not count towards trucks with faults;
+generic tracker/OBD events (`eid` 2/70), acknowledgements and communication reports are ignored.
+Events use source `edt`, falling back to `pdt` when `edt` is missing; missing source times and
+records older than retention are skipped. `recordedAt` remains the retrieval time. Raw records and
+reported ADDED/REMOVED/UNKNOWN status remain available. Truck fault counts and latest faults use
+only `FAULT_REPORTED` events within retention, not a claim about all currently active faults.
 
 Online trucks request only `READ_FAULT_LOGGER` through DeviceOperationsService when dispatch is
 enabled and the existing account-wide active-car constraint permits it. Operations carry

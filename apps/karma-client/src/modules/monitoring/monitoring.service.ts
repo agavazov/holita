@@ -80,7 +80,14 @@ export class MonitoringService {
       !('afterId' in body) ||
       typeof body.afterId !== 'string' ||
       !/^(0|[1-9]\d*)$/.test(body.afterId) ||
-      !Number.isSafeInteger(Number(body.afterId))
+      !Number.isSafeInteger(Number(body.afterId)) ||
+      !('fromUtc' in body) ||
+      typeof body.fromUtc !== 'string' ||
+      !Number.isFinite(Date.parse(body.fromUtc)) ||
+      !('toUtc' in body) ||
+      typeof body.toUtc !== 'string' ||
+      !Number.isFinite(Date.parse(body.toUtc)) ||
+      Date.parse(body.fromUtc) > Date.parse(body.toUtc)
     ) {
       throw new BadRequestException('Invalid monitoring history target');
     }
@@ -95,10 +102,13 @@ export class MonitoringService {
       ...(beforeId ? { toMessageId: beforeId } : {}),
     });
     const signal = AbortSignal.timeout(4000);
-    const source = await this.karma.readDiagnosticEvents(
-      diagnosticHistoryParameters(query),
-      signal,
+    const parameters = diagnosticHistoryParameters(query);
+    parameters.set(
+      'from_date',
+      new Date(body.fromUtc).toISOString().slice(0, 19).replace('T', ' '),
     );
+    parameters.set('to_date', new Date(body.toUtc).toISOString().slice(0, 19).replace('T', ' '));
+    const source = await this.karma.readDiagnosticEvents(parameters, signal);
     if (!Array.isArray(source) || source.length > 500) {
       unavailable();
     }
@@ -130,7 +140,7 @@ export class MonitoringService {
       reports: selected.flatMap((event) => {
         const report = diagnosticReport(event);
         const rawRecord: unknown = source[rows.indexOf(event)];
-        return report && report.family !== 'SPECIAL_ACK' && report.family !== 'EDATA_411'
+        return report && ['EDATA_413', 'EDATA_418', 'EDATA_419'].includes(report.family)
           ? [
               {
                 messageId: event.id,

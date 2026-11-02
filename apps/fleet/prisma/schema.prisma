@@ -643,6 +643,7 @@ enum KarmaMonitoringEventKind {
   CAME_ONLINE @map("cameOnline")
   NO_DATA_SINCE @map("noDataSince")
   FAULT_REPORTED @map("faultReported")
+  FAULT_REPORT_UNDECODED @map("faultReportUndecoded")
   FAULT_READ_REQUESTED @map("faultReadRequested")
   FAULT_READ_ANSWERED @map("faultReadAnswered")
   FAULT_READ_FAILED @map("faultReadFailed")
