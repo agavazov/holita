@@ -51,8 +51,7 @@ with bounded live observations and explicit source limitations. The
 [Karma product and delivery backlog](karma-web-functional-discovery.md)
 tracks the remaining source, retrieval and richer-map prerequisites for the
 implemented operational and diagnostic workflows.
-It separates real public-API data from clearly labeled runtime examples, without
-depending on ERM-only integrations or treating examples as real predictions.
+It tracks real public-API prerequisites without depending on ERM-only integrations.
 It retains the remaining first-release tasks, dependencies, focused Karma navigation and
 progressive disclosure, the mandatory clean-code/UX/visual-accessibility
 consistency rules, Google Maps/Street View placements and gated
@@ -61,5 +60,5 @@ The navigation foundation is documented in [Discocan architecture](../discocan/a
 the raw-unit report contract and field/state blueprint are documented there too.
 Physical distance/speed-unit confirmation remains blocked for real-unit claims;
 the map foundation and automatic active-map loading are implemented. Connected
-overview, contextual map placements and the linked diagnostic journey are implemented;
+overview and contextual map placements are implemented;
 richer Maps JavaScript behavior, imagery and physical source-unit claims retain their explicit gates.

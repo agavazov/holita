@@ -1,3 +1,4 @@
+import type { SourceProvenance, SourceCoverage } from '../../../../ui/source-context/source-types';
 import { MAP_PAGE_TYPE } from '../../../../ui/map-preview/map-preview';
 import {
   ChangeDetectionStrategy,
@@ -12,8 +13,6 @@ import {
 } from '@angular/core';
 import type {
   AdminKarmaPositionSamplesQuery,
-  FleetEvidenceFragment,
-  FleetScenarioCoverageFragment,
   KarmaPositionSamplesInput,
   KarmaTripFieldsFragment,
 } from '../../../../../generated/graphql/operations';
@@ -46,7 +45,7 @@ const catalogs: Record<Language, typeof en> = { bg, en };
 export class TripPositionExplorer implements OnInit {
   readonly language = input.required<Language>();
   readonly trip = input.required<KarmaTripFieldsFragment>();
-  readonly provenance = input<FleetEvidenceFragment | null>(null);
+  readonly provenance = input<SourceProvenance | null>(null);
   private readonly api = inject(KarmaHistoryApi);
   private readonly injector = inject(Injector);
   private read: ReturnType<KarmaHistoryApi['watchPositionSamples']> | undefined;
@@ -86,21 +85,20 @@ export class TripPositionExplorer implements OnInit {
     originTime: this.trip().startDate ?? null,
     destinationTime: this.trip().stopDate ?? null,
   }));
-  protected readonly source = computed<FleetEvidenceFragment | null>(() => {
+  protected readonly source = computed<SourceProvenance | null>(() => {
     const result = this.result();
     return result
       ? {
           origin: result.retrieval === 'UNAVAILABLE' ? 'UNAVAILABLE' : 'OBSERVED',
           source: 'KARMA_API',
           sourceRecordId: this.trip().id,
-          scenarioId: null,
           eventAt: null,
           receivedAt: null,
           retrievedAt: result.retrievedAt,
         }
       : this.provenance();
   });
-  protected readonly coverage = computed<FleetScenarioCoverageFragment>(() => ({
+  protected readonly coverage = computed<SourceCoverage>(() => ({
     retrieval: this.result()?.retrieval ?? (this.failed() ? 'UNAVAILABLE' : 'NOT_STARTED'),
     positionCoverage: 'NOT_ASSESSED',
     positionsLoaded: this.result()?.samples.length ?? 0,
@@ -147,7 +145,6 @@ export class TripPositionExplorer implements OnInit {
       provenance: {
         origin: 'OBSERVED',
         source: 'KARMA_API',
-        scenarioId: null,
         sourceRecordId: event.id,
         eventAt: instantUtc ?? null,
         receivedAt: null,

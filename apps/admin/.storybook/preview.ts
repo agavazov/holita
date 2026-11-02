@@ -126,11 +126,13 @@ const preview: Preview = {
           'Admin',
           [
             'Monitoring',
-            ['Overview', 'Alerts', 'Trip log', 'Diagnostics'],
+            ['Overview', 'Alerts', 'Trip log'],
             'Fleet',
             ['Vehicles', 'Drivers', 'Devices', 'Maintenance'],
             'Karma Client',
             [
+              'Monitoring',
+              ['Trucks', 'Faults', 'Log'],
               'Trucks',
               [
                 '*',
@@ -150,6 +152,7 @@ const preview: Preview = {
               ],
               'Administration',
               ['Users', 'Roles', 'Projects', 'Time zones', 'API information'],
+              'Settings',
             ],
             'Settings',
             ['Vehicle groups', 'General'],

@@ -18,6 +18,24 @@ function administrationRedirect(section: string): RedirectFunction {
 
 export const karmaRoutes: Routes = [
   {
+    path: 'karma-client/monitoring',
+    pathMatch: 'full',
+    redirectTo: 'karma-client/monitoring/trucks',
+  },
+  ...['trucks', 'faults', 'log'].map((section) => ({
+    path: `karma-client/monitoring/${section}`,
+    data: { feature: 'karma-client', requiresBranch: false, section },
+    loadComponent: () =>
+      import('./monitoring/monitoring-workspace').then((module) => module.MonitoringWorkspace),
+  })),
+  {
+    path: 'karma-client/settings',
+    data: { feature: 'karma-client', requiresBranch: false, section: 'settings' },
+    canDeactivate: [leaveDrawer],
+    loadComponent: () =>
+      import('./monitoring/monitoring-workspace').then((module) => module.MonitoringWorkspace),
+  },
+  {
     path: 'karma-client/cars/:recordId/daily-report',
     data: { feature: 'karma-client', requiresBranch: false, section: 'daily-report' },
     loadComponent: () => import('./karma-workspace').then((module) => module.KarmaWorkspace),

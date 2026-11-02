@@ -150,23 +150,6 @@ export class BranchContext {
     }
     const section = this.route.firstChild?.snapshot.url;
     const resource = section?.[2]?.path;
-    if (this.fleetEnabled && section?.[1]?.path === 'fleet' && resource === 'diagnostics') {
-      void this.router.navigate(
-        [
-          '/',
-          language,
-          id,
-          'fleet',
-          'diagnostics',
-          section[3]?.path === 'risk' ? 'risk' : section[3]?.path === 'logs' ? 'logs' : 'faults',
-        ],
-        {
-          queryParamsHandling: 'preserve',
-          preserveFragment: true,
-        },
-      );
-      return;
-    }
     const fleet =
       this.fleetEnabled &&
       section?.[1]?.path === 'fleet' &&

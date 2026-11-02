@@ -18,7 +18,6 @@ import { VehiclesModule } from './modules/vehicles/vehicles.module.js';
 import { OverviewModule } from './modules/overview/overview.module.js';
 import { SettingsModule } from './modules/settings/settings.module.js';
 import { DeviceOperationsModule } from './modules/device-operations/device-operations.module.js';
-import { ScenariosModule } from './modules/scenarios/scenarios.module.js';
 
 import { HealthController } from './health/health.controller.js';
 
@@ -36,7 +35,6 @@ const typeDefPaths = [
   'modules/overview/overview',
   'modules/settings/settings',
   'modules/device-operations/device-operations',
-  'modules/scenarios/scenarios',
   'modules/karma-monitoring/karma-monitoring',
 ];
 
@@ -54,7 +52,6 @@ const typeDefPaths = [
     OverviewModule,
     SettingsModule,
     DeviceOperationsModule,
-    ScenariosModule,
     KarmaMonitoringModule,
     GraphQLModule.forRoot<ApolloFederationDriverConfig>({
       driver: ApolloFederationDriver,

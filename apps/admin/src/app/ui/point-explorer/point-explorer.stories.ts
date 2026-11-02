@@ -1,9 +1,10 @@
-import { applicationConfig, type Meta, type StoryObj } from '@storybook/angular-vite';
 import type {
-  FleetEvidenceFragment,
-  FleetEvidencePeriodFragment,
-  FleetScenarioCoverageFragment,
-} from '../../../generated/graphql/operations';
+  SourceProvenance,
+  SourcePeriod,
+  SourceCoverage,
+} from '../source-context/source-types';
+import { applicationConfig, type Meta, type StoryObj } from '@storybook/angular-vite';
+
 import { onFrame } from '../../../storybook/story-config';
 import { AdminConfig } from '../../core/config/admin-config';
 import {
@@ -12,16 +13,15 @@ import {
   type PointExplorerRow,
 } from './point-explorer';
 
-const provenance: FleetEvidenceFragment = {
-  origin: 'ILLUSTRATIVE',
-  source: 'HOLITA_SCENARIO',
-  scenarioId: 'synthetic-point-story',
+const provenance: SourceProvenance = {
+  origin: 'OBSERVED',
+  source: 'KARMA_API',
   sourceRecordId: 'synthetic-trip-1',
   eventAt: null,
   receivedAt: null,
   retrievedAt: '2026-01-01T09:00:00.000Z',
 };
-const period: FleetEvidencePeriodFragment = {
+const period: SourcePeriod = {
   from: '2026-01-01T08:00:00.000Z',
   toExclusive: '2026-01-01T09:00:00.000Z',
   timeZone: 'Europe/Sofia',
@@ -34,8 +34,8 @@ const endpoints: PointExplorerEndpoints = {
 };
 const points: readonly PointExplorerRow[] = [
   {
-    key: 'HOLITA_SCENARIO:synthetic-point-1',
-    source: 'HOLITA_SCENARIO',
+    key: 'KARMA_API:synthetic-point-1',
+    source: 'KARMA_API',
     id: 'synthetic-point-1',
     sourceTime: '2026-01-01T08:00:00.000Z',
     instantUtc: '2026-01-01T08:00:00.000Z',
@@ -52,8 +52,8 @@ const points: readonly PointExplorerRow[] = [
     ],
   },
   {
-    key: 'HOLITA_SCENARIO:synthetic-point-2',
-    source: 'HOLITA_SCENARIO',
+    key: 'KARMA_API:synthetic-point-2',
+    source: 'KARMA_API',
     id: 'synthetic-point-2',
     sourceTime: '2026-01-01T08:05:00.000Z',
     instantUtc: '2026-01-01T08:05:00.000Z',
@@ -70,8 +70,8 @@ const points: readonly PointExplorerRow[] = [
     ],
   },
   {
-    key: 'HOLITA_SCENARIO:synthetic-point-3',
-    source: 'HOLITA_SCENARIO',
+    key: 'KARMA_API:synthetic-point-3',
+    source: 'KARMA_API',
     id: 'synthetic-point-3',
     sourceTime: '2026-01-01T08:25:00.000Z',
     instantUtc: '2026-01-01T08:25:00.000Z',
@@ -88,8 +88,8 @@ const points: readonly PointExplorerRow[] = [
     ],
   },
   {
-    key: 'HOLITA_SCENARIO:synthetic-point-4',
-    source: 'HOLITA_SCENARIO',
+    key: 'KARMA_API:synthetic-point-4',
+    source: 'KARMA_API',
     id: 'synthetic-point-4',
     sourceTime: '2026-01-01T08:30:00.000Z',
     instantUtc: '2026-01-01T08:30:00.000Z',
@@ -102,7 +102,7 @@ const points: readonly PointExplorerRow[] = [
     facts: [],
   },
 ];
-const coverage: FleetScenarioCoverageFragment = {
+const coverage: SourceCoverage = {
   retrieval: 'COMPLETE',
   positionCoverage: 'PARTIAL',
   positionsLoaded: points.length,
@@ -153,11 +153,11 @@ type Story = StoryObj<PointExplorer>;
 
 export const Loaded: Story = {};
 export const SelectedPoint: Story = {
-  args: { selectedKey: 'HOLITA_SCENARIO:synthetic-point-2' },
+  args: { selectedKey: 'KARMA_API:synthetic-point-2' },
 };
 export const LongIntervalAndDeclaredGap: Story = {
   args: {
-    selectedKey: 'HOLITA_SCENARIO:synthetic-point-3',
+    selectedKey: 'KARMA_API:synthetic-point-3',
     coverage: { ...coverage, retrieval: 'PARTIAL' },
   },
 };
@@ -166,7 +166,7 @@ export const MissingCoordinates: Story = {
     points: points.map((point) =>
       point.id === 'synthetic-point-2' ? { ...point, coordinates: null } : point,
     ),
-    selectedKey: 'HOLITA_SCENARIO:synthetic-point-2',
+    selectedKey: 'KARMA_API:synthetic-point-2',
   },
 };
 export const Empty: Story = {
@@ -202,6 +202,6 @@ export const Loading: Story = {
   },
 };
 export const Mobile: Story = {
-  args: { selectedKey: 'HOLITA_SCENARIO:synthetic-point-2' },
+  args: { selectedKey: 'KARMA_API:synthetic-point-2' },
   globals: { viewport: { value: 'mobile375', isRotated: false } },
 };

@@ -16,17 +16,6 @@ const vehicleProfileRoute: UrlMatcher = (segments) => {
   return { consumed: segments.slice(0, 5), posParams: { branchId, recordId, tab } };
 };
 
-const diagnosticsRoute: UrlMatcher = (segments) => {
-  const [branchId, fleet, diagnostics, section] = segments;
-  return branchId &&
-    fleet?.path === 'fleet' &&
-    diagnostics?.path === 'diagnostics' &&
-    section &&
-    ['faults', 'logs', 'risk'].includes(section.path)
-    ? { consumed: segments.slice(0, 4), posParams: { branchId, section } }
-    : null;
-};
-
 export const fleetRoutes: Routes = [
   {
     path: ':branchId/fleet/devices/:recordId/configuration',
@@ -37,21 +26,6 @@ export const fleetRoutes: Routes = [
       ),
   },
   { path: ':branchId/fleet', pathMatch: 'full', redirectTo: ':branchId/fleet/overview' },
-  {
-    path: ':branchId/fleet/diagnostics',
-    pathMatch: 'full',
-    redirectTo: ':branchId/fleet/diagnostics/faults',
-  },
-  {
-    matcher: diagnosticsRoute,
-    data: { resource: 'diagnostics' },
-    loadComponent: () => import('./fleet-workspace').then((module) => module.FleetWorkspace),
-  },
-  {
-    path: ':branchId/fleet/scenarios/operational-day-v1',
-    data: { resource: 'scenario' },
-    loadComponent: () => import('./fleet-workspace').then((module) => module.FleetWorkspace),
-  },
   {
     path: ':branchId/fleet/settings/general',
     data: { resource: 'general' },

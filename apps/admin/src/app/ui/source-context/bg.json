@@ -1,17 +1,14 @@
 {
   "title": "Източник и покритие на данните",
   "sources": {
-    "KARMA_API": "Karma API",
-    "HOLITA_SCENARIO": "Примерни данни"
+    "KARMA_API": "Karma API"
   },
   "origin": "Произход на данните",
   "origins": {
     "OBSERVED": "Наблюдавани",
     "DERIVED": "Изчислени",
-    "ILLUSTRATIVE": "Примерни",
     "UNAVAILABLE": "Недостъпни"
   },
-  "exampleInfo": "Модулът използва примерни данни до свързването на нашия телеметричен сървър.",
   "period": "Избран период",
   "periodBounds": "началото е включено; краят не е включен",
   "from": "Начало, включително",
@@ -42,7 +39,6 @@
   },
   "sourceDetails": "Подробности за източника",
   "sourceRecordId": "ID на записа в източника",
-  "scenarioId": "ID на примерния сценарий",
   "eventAt": "Време на събитието (UTC)",
   "receivedAt": "Време на получаване (UTC)",
   "retrievedAt": "Време на извличане (UTC)",

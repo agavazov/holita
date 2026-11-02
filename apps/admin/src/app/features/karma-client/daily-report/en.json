@@ -82,7 +82,6 @@
   "historicalMapInDetails": "The selected trip's historical endpoints are open in its details.",
   "tripEndpoints": "Historical trip endpoints from this report selection. They do not establish a recorded path.",
   "tripUnavailable": "This trip is not present in the loaded report selection. Choose an available row or another day.",
-  "exampleLink": "Explore example data",
   "diagnostics": "Diagnostics for this context",
   "dayComposition": "Day / night distance",
   "compositionUnavailable": "Day/night composition is unavailable until both values cover the same complete retrieved selection. Missing values are not zero.",

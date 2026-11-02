@@ -167,13 +167,6 @@ and captured `419` layouts, exposes the documented `411` prefix, and preserves o
 An eData report number such as `413`, `418` or `419` is not an established Karma
 `eventId`; filtering by that number can miss the actual source report.
 
-Fleet's **Diagnostics** destination currently reads the separate
-[`fleetScenario` contract](../../architecture.md#diagnostic-scenario-contract).
-Its `HOLITA_SCENARIO` faults, logs and risk indicators are explicitly illustrative
-records. Selecting `KARMA_API` links to the truck's real Diagnostics history.
-These examples and their exports
-do not establish that a truck supplied a real DTC.
-
 The fixed diagnostic `306` and stored-fault logger `301`/`19` requests are exposed
 through scoped Fleet operations and private machine endpoints. Version `308` and
 global-settings `303` remain manual procedures documented in the

@@ -1,0 +1,107 @@
+<holita-page-header
+  [eyebrow]="branchName() + ' · Karma Client'"
+  [title]="text().settings"
+  [description]="text().settingsDescription"
+>
+  <a
+    headerActions
+    pButton
+    severity="secondary"
+    [outlined]="true"
+    [routerLink]="['/', language(), 'karma-client', 'monitoring']"
+    >{{ text().title }}</a
+  >
+</holita-page-header>
+<p-message severity="info">{{ text().serverSwitch }} {{ text().serverUnknown }}</p-message>
+@if (loading()) {
+  <p role="status">{{ text().loading }}</p>
+}
+@if (error()) {
+  <p-message severity="error" role="alert">{{ failure() }}</p-message>
+  <button pButton type="button" (click)="load()">{{ text().retry }}</button>
+}
+@if (settings()) {
+  <form
+    #formElement
+    class="app-view"
+    [formGroup]="form"
+    (ngSubmit)="save()"
+    [attr.aria-label]="text().settings"
+  >
+    <section class="app-card app-settings-section">
+      <header>
+        <h2>{{ text().collection }}</h2>
+        <p>{{ text().collectionHint }}</p>
+      </header>
+      <div class="app-form-grid">
+        @for (key of toggles; track key) {
+          <holita-form-field
+            [label]="text().fields[key].label"
+            [controlId]="'monitoring-' + key"
+            [hint]="key === 'faultCommandEnabled' ? commandHint() : text().fields[key].hint"
+            [error]="errorOf(key)"
+          >
+            <p-toggleswitch
+              [inputId]="'monitoring-' + key"
+              [formControl]="form.controls[key]"
+              [pt]="{ input: { 'aria-describedby': 'monitoring-' + key + '-hint' } }"
+            />
+          </holita-form-field>
+        }
+      </div>
+    </section>
+    <section class="app-card app-settings-section">
+      <header>
+        <h2>{{ text().intervals }}</h2>
+        <p>{{ text().intervalsHint }}</p>
+      </header>
+      <div class="app-form-grid">
+        @for (field of numbers; track field.key) {
+          <holita-form-field
+            [label]="text().fields[field.key].label"
+            [controlId]="'monitoring-' + field.key"
+            [hint]="text().fields[field.key].hint"
+            [error]="errorOf(field.key)"
+            [required]="true"
+          >
+            <p-inputnumber
+              [inputId]="'monitoring-' + field.key"
+              [formControl]="form.controls[field.key]"
+              [min]="field.min"
+              [max]="field.max"
+              [useGrouping]="false"
+              [maxFractionDigits]="0"
+              [fluid]="true"
+              [invalid]="!!errorOf(field.key)"
+              [pt]="inputPt('monitoring-' + field.key, !!errorOf(field.key))"
+            />
+          </holita-form-field>
+        }
+      </div>
+    </section>
+    @if (saveError()) {
+      <p-message severity="error" role="alert">{{ saveFailure() }}</p-message>
+    }
+    @if (dirty() || saving()) {
+      <div class="app-save-bar" role="region" [attr.aria-label]="text().unsaved">
+        <span>{{ text().unsaved }}</span>
+        <span class="app-inline">
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="saving()"
+            (click)="discard()"
+          >
+            {{ text().discard }}
+          </button>
+          <button pButton type="submit" [loading]="saving()" [disabled]="saving()">
+            {{ text().save }}
+          </button>
+        </span>
+      </div>
+    }
+  </form>
+}
+<p-confirmdialog [pt]="confirmPt()" [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }" />

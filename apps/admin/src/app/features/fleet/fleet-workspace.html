@@ -31,18 +31,6 @@
         </section>
       } @else {
         @switch (scope.resource) {
-          @case ('diagnostics') {
-            <holita-diagnostics-workspace
-              [branchId]="scope.branch.id"
-              [language]="scope.language"
-            />
-          }
-          @case ('scenario') {
-            <holita-example-scenario-page
-              [branchId]="scope.branch.id"
-              [language]="scope.language"
-            />
-          }
           @case ('general') {
             <holita-general-settings-page [branch]="scope.branch" [language]="scope.language" />
           }

@@ -75,6 +75,7 @@ export class KarmaMonitoringService {
       tokens: searchTokens(args.search),
       ids: args.ids == null ? undefined : ids(args.ids, 'ids'),
       online: booleanFilter(args.filter?.online, 'online'),
+      withFaults: booleanFilter(args.filter?.withFaults, 'withFaults'),
     };
     const sort = {
       field: enumValue(

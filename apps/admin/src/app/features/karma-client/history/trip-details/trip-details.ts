@@ -1,8 +1,6 @@
+import type { SourceProvenance } from '../../../../ui/source-context/source-types';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import type {
-  FleetEvidenceFragment,
-  KarmaTripFieldsFragment,
-} from '../../../../../generated/graphql/operations';
+import type { KarmaTripFieldsFragment } from '../../../../../generated/graphql/operations';
 import { messages, type Language } from '../../../../i18n/messages';
 import { formatNumber } from '../../../../ui/format/format';
 import { TripPositionExplorer } from './trip-position-explorer';
@@ -24,7 +22,7 @@ export class TripDetails {
   readonly language = input.required<Language>();
   readonly trip = input.required<KarmaTripFieldsFragment>();
   readonly showMap = input(true);
-  readonly provenance = input<FleetEvidenceFragment | null>(null);
+  readonly provenance = input<SourceProvenance | null>(null);
 
   protected readonly text = computed(() => messages[this.language()]);
   protected readonly detailText = computed(() => karmaRecordMessages[this.language()]);

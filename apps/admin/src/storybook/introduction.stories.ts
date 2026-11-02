@@ -6,15 +6,16 @@ import bg from './introduction.bg.json';
 import en from './introduction.en.json';
 
 type EntryId = keyof typeof en.entries;
-const entries: Record<EntryId, { story: string; source: 'karma' | 'demo' | 'example' }> = {
+const entries: Record<EntryId, { story: string; source: 'karma' | 'demo' | 'stored' }> = {
   overview: { story: 'admin-monitoring-overview--default', source: 'demo' },
   alerts: { story: 'admin-monitoring-alerts--default', source: 'demo' },
   trips: { story: 'admin-monitoring-trip-log--default', source: 'demo' },
-  diagnostics: { story: 'admin-monitoring-diagnostics-faults--default', source: 'example' },
   vehicles: { story: 'admin-fleet-vehicles--default', source: 'demo' },
   drivers: { story: 'admin-fleet-drivers--default', source: 'demo' },
   devices: { story: 'admin-fleet-devices--default', source: 'demo' },
   maintenance: { story: 'admin-fleet-maintenance--default', source: 'demo' },
+  'karma-monitoring': { story: 'admin-karma-client-monitoring-trucks--default', source: 'stored' },
+  'karma-settings': { story: 'admin-karma-client-settings--default', source: 'stored' },
   'karma-cars': { story: 'admin-karma-client-trucks--default', source: 'karma' },
   'karma-administration': {
     story: 'admin-karma-client-administration-users--default',
@@ -51,14 +52,6 @@ const entries: Record<EntryId, { story: string; source: 'karma' | 'demo' | 'exam
           }
         </ul>
       }
-      <p>
-        {{ text().exampleDay }}
-        <a
-          [href]="link('admin-karma-client-trucks-truck-overview-example-day--default')"
-          target="_top"
-          >{{ text().exampleDayLink }}</a
-        >
-      </p>
       <h2>{{ text().statusTitle }}</h2>
       <h3>{{ text().provenTitle }}</h3>
       <ul>

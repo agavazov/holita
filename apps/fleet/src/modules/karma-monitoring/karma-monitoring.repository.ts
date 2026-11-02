@@ -167,7 +167,12 @@ export class KarmaMonitoringRepository {
   async listTrucks(
     scope: FleetScope,
     page: { offset: number; limit: number },
-    criteria: { tokens: string[]; ids: string[] | undefined; online: boolean | undefined },
+    criteria: {
+      tokens: string[];
+      ids: string[] | undefined;
+      online: boolean | undefined;
+      withFaults: boolean | undefined;
+    },
     sort: { field: 'DISPLAY_NAME' | 'LAST_DATA_AT'; direction: SortDirection },
     now: Date,
   ) {
@@ -177,6 +182,26 @@ export class KarmaMonitoringRepository {
           (await tx.karmaMonitoringSettings.findUnique({ where: { tenantId_branchId: scope } })) ??
           monitoringDefaults;
         const freshAfter = new Date(now.getTime() - settings.offlineAfterMinutes * 60_000);
+        const faultCars = await tx.karmaMonitoringEvent.findMany({
+          where: {
+            ...scope,
+            kind: 'FAULT_REPORTED',
+            occurredAt: { gte: new Date(now.getTime() - settings.retentionDays * 86_400_000) },
+            karmaCarId: { not: null },
+          },
+          distinct: ['karmaCarId'],
+          select: { karmaCarId: true },
+        });
+        const faultCarIds = faultCars.flatMap((event) =>
+          event.karmaCarId === null ? [] : [event.karmaCarId],
+        );
+        const withFaults = { karmaCarId: { in: faultCarIds } };
+        const fresh = { lastDataAt: { gt: freshAfter } };
+        const allTrucks = await tx.karmaMonitoringTruck.count({ where: scope });
+        const onlineTotal = await tx.karmaMonitoringTruck.count({ where: { ...scope, ...fresh } });
+        const withFaultsTotal = await tx.karmaMonitoringTruck.count({
+          where: { ...scope, ...withFaults },
+        });
         const where: Prisma.KarmaMonitoringTruckWhereInput = {
           ...scope,
           ...(criteria.ids ? { id: { in: criteria.ids } } : {}),
@@ -185,13 +210,18 @@ export class KarmaMonitoringRepository {
             : criteria.online
               ? { lastDataAt: { gt: freshAfter } }
               : { OR: [{ lastDataAt: null }, { lastDataAt: { lte: freshAfter } }] }),
-          AND: criteria.tokens.map((token) => ({
-            OR: [
-              { displayName: literalContains(token) },
-              { karmaCarId: literalContains(token) },
-              { karmaDeviceId: literalContains(token) },
-            ],
-          })),
+          AND: [
+            ...(criteria.withFaults === undefined
+              ? []
+              : [criteria.withFaults ? withFaults : { NOT: withFaults }]),
+            ...criteria.tokens.map((token) => ({
+              OR: [
+                { displayName: literalContains(token) },
+                { karmaCarId: literalContains(token) },
+                { karmaDeviceId: literalContains(token) },
+              ],
+            })),
+          ],
         };
         const items = await tx.karmaMonitoringTruck.findMany({
           where,
@@ -214,6 +244,9 @@ export class KarmaMonitoringRepository {
           orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
         });
         return {
+          onlineTotal,
+          noDataTotal: allTrucks - onlineTotal,
+          withFaultsTotal,
           items: items.map((truck) => {
             const online = truck.lastDataAt !== null && truck.lastDataAt > freshAfter;
             const reported = faults.filter((fault) => fault.karmaCarId === truck.karmaCarId);

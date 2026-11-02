@@ -1,17 +1,14 @@
 {
   "title": "Data source and coverage",
   "sources": {
-    "KARMA_API": "Karma API",
-    "HOLITA_SCENARIO": "Example data"
+    "KARMA_API": "Karma API"
   },
   "origin": "Data origin",
   "origins": {
     "OBSERVED": "Observed",
     "DERIVED": "Derived",
-    "ILLUSTRATIVE": "Illustrative",
     "UNAVAILABLE": "Unavailable"
   },
-  "exampleInfo": "This module uses illustrative data until our telemetry server is connected.",
   "period": "Selected period",
   "periodBounds": "start inclusive; end exclusive",
   "from": "Start, inclusive",
@@ -42,7 +39,6 @@
   },
   "sourceDetails": "Source details",
   "sourceRecordId": "Source record ID",
-  "scenarioId": "Example scenario ID",
   "eventAt": "Event time (UTC)",
   "receivedAt": "Received time (UTC)",
   "retrievedAt": "Retrieval time (UTC)",

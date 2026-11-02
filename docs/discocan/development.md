@@ -501,8 +501,7 @@ For the verified CB1147TP capture, select car `16595` and bound both message IDs
 `7177124308` to inspect SPN 4339/FMI 7 and SPN 1247/FMI 11. Message `7179721665` contains
 SPN 23806/FMI 15. These historical reports prove received faults, not a fresh ECU scan.
 The [dated live evidence](erm-resources/erm-support-diagnostics-protocol-test-server/live-verification-2026-10-29.md)
-retains the separate logger NACK and queued-request outcomes. Fleet's illustrative
-Diagnostics scenario remains a separately labeled example source.
+retains the separate logger NACK and queued-request outcomes.
 
 ### Truck measurements
 
@@ -561,13 +560,6 @@ The files retain source IDs, raw units, clocks, retrieval/coverage and selection
 does not request more data or recompute totals from the current table page. Coordinates are
 excluded by default and require the explicit checkbox; the latest reported location is not
 historical report evidence. Files are downloaded locally with no upload or public sharing.
-
-When Fleet and an active Branch are available, **Explore example data** opens the
-separate `/:language/:branchId/fleet/scenarios/operational-day-v1` scenario. Its synthetic truck,
-fixed day and fictional public-landmark itinerary use the same layout with a persistent
-**Example data** source, including the trip drawer. Its km/km/h values never confirm Karma's
-real field units or contribute to real daily totals. The
-[daily-report contract](architecture.md#daily-report-contract) documents the selection and limits.
 
 ### GraphQL through Gateway
 
@@ -785,7 +777,6 @@ displayed Holita 15-minute rule over established UTC positions; this is not a pr
 sampling-frequency claim. Declared source gaps are displayed separately. Full paths,
 multi-marker fleet maps and nearest-truck lists remain unavailable without the richer-map
 and bounded bulk-contract prerequisites; eData/CAN series are not loaded by this view.
-The separate example day demonstrates its fixed sampled positions and selected signal facts.
 
 The truck list and profile tabs share the admin page, filter and table patterns.
 Open an eData message, trip or event from its record link or row menu to view its details
@@ -814,13 +805,6 @@ Map/Street View. **Open selected source message** reveals the original eData fie
 selection issues another eData request. Unproved UTC clocks keep the table and disable the
 chart; nulls, absent readings, declared gaps and the displayed 15-minute rule break its line.
 A failed refresh retains the preceding successful retrieval time and data.
-
-In the separate example day, open a trip and choose **Measurements**. Its fixed speed,
-temperature and voltage samples include gaps and a missing voltage; additional fuel-used,
-distance and engine-hour counters share those same positions. The outbound pre-gap
-06:00–06:20 UTC example demonstrates a matching counter window and consumption calculation.
-Its boundary IDs and units are shown; a later example counter reset and uncovered intervals
-are excluded. Example values never replace a failed Karma read or enter real totals.
 
 ### Trips, events and driving profile
 

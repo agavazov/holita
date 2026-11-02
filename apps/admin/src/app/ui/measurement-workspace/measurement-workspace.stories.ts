@@ -1,9 +1,10 @@
-import { applicationConfig, type Meta, type StoryObj } from '@storybook/angular-vite';
 import type {
-  FleetEvidenceFragment,
-  FleetEvidencePeriodFragment,
-  FleetScenarioCoverageFragment,
-} from '../../../generated/graphql/operations';
+  SourceProvenance,
+  SourcePeriod,
+  SourceCoverage,
+} from '../source-context/source-types';
+import { applicationConfig, type Meta, type StoryObj } from '@storybook/angular-vite';
+
 import { onFrame } from '../../../storybook/story-config';
 import { AdminConfig } from '../../core/config/admin-config';
 import {
@@ -13,21 +14,20 @@ import {
   type MeasurementRecord,
 } from './measurement-workspace';
 
-const provenance: FleetEvidenceFragment = {
-  origin: 'ILLUSTRATIVE',
-  source: 'HOLITA_SCENARIO',
-  scenarioId: 'synthetic-measurement-story',
+const provenance: SourceProvenance = {
+  origin: 'OBSERVED',
+  source: 'KARMA_API',
   sourceRecordId: 'synthetic-selection',
   eventAt: null,
   receivedAt: null,
   retrievedAt: '2026-01-01T09:00:00.000Z',
 };
-const period: FleetEvidencePeriodFragment = {
+const period: SourcePeriod = {
   from: '2026-01-01T08:00:00.000Z',
   toExclusive: '2026-01-01T09:00:00.000Z',
   timeZone: 'Europe/Sofia',
 };
-const coverage: FleetScenarioCoverageFragment = {
+const coverage: SourceCoverage = {
   retrieval: 'COMPLETE',
   positionCoverage: 'PARTIAL',
   positionsLoaded: 4,
@@ -86,8 +86,8 @@ function reading(
 
 const records: readonly MeasurementRecord[] = [
   {
-    key: 'HOLITA_SCENARIO:synthetic-point-1',
-    source: 'HOLITA_SCENARIO',
+    key: 'KARMA_API:synthetic-point-1',
+    source: 'KARMA_API',
     id: 'synthetic-point-1',
     sourceTime: '2026-01-01T08:00:00.000Z',
     instantUtc: '2026-01-01T08:00:00.000Z',
@@ -104,8 +104,8 @@ const records: readonly MeasurementRecord[] = [
     ],
   },
   {
-    key: 'HOLITA_SCENARIO:synthetic-point-2',
-    source: 'HOLITA_SCENARIO',
+    key: 'KARMA_API:synthetic-point-2',
+    source: 'KARMA_API',
     id: 'synthetic-point-2',
     sourceTime: '2026-01-01T08:05:00.000Z',
     instantUtc: '2026-01-01T08:05:00.000Z',
@@ -122,8 +122,8 @@ const records: readonly MeasurementRecord[] = [
     ],
   },
   {
-    key: 'HOLITA_SCENARIO:synthetic-point-3',
-    source: 'HOLITA_SCENARIO',
+    key: 'KARMA_API:synthetic-point-3',
+    source: 'KARMA_API',
     id: 'synthetic-point-3',
     sourceTime: '2026-01-01T08:25:00.000Z',
     instantUtc: '2026-01-01T08:25:00.000Z',
@@ -139,8 +139,8 @@ const records: readonly MeasurementRecord[] = [
     ],
   },
   {
-    key: 'HOLITA_SCENARIO:synthetic-point-4',
-    source: 'HOLITA_SCENARIO',
+    key: 'KARMA_API:synthetic-point-4',
+    source: 'KARMA_API',
     id: 'synthetic-point-4',
     sourceTime: '2026-01-01T08:30:00.000Z',
     instantUtc: '2026-01-01T08:30:00.000Z',
@@ -212,7 +212,7 @@ type Story = StoryObj<MeasurementWorkspace>;
 
 export const Example: Story = {};
 export const SelectedReading: Story = {
-  args: { selectedChannelKey: 'voltage', selectedRecordKey: 'HOLITA_SCENARIO:synthetic-point-2' },
+  args: { selectedChannelKey: 'voltage', selectedRecordKey: 'KARMA_API:synthetic-point-2' },
 };
 export const NullReading: Story = {
   args: {
@@ -227,7 +227,7 @@ export const NullReading: Story = {
         : record,
     ),
     selectedChannelKey: 'coolant',
-    selectedRecordKey: 'HOLITA_SCENARIO:synthetic-point-4',
+    selectedRecordKey: 'KARMA_API:synthetic-point-4',
   },
 };
 export const RawSourceUnits: Story = {
@@ -251,7 +251,6 @@ export const RawSourceUnits: Story = {
         ...provenance,
         source: 'KARMA_API',
         origin: 'OBSERVED',
-        scenarioId: null,
         sourceRecordId: record.id,
       },
       readings: [
@@ -264,14 +263,13 @@ export const RawSourceUnits: Story = {
             ...provenance,
             source: 'KARMA_API',
             origin: 'OBSERVED',
-            scenarioId: null,
             sourceRecordId: record.id,
           },
         },
       ],
     })),
     selectedRecordKey: 'KARMA_API:synthetic-point-2',
-    provenance: { ...provenance, source: 'KARMA_API', origin: 'OBSERVED', scenarioId: null },
+    provenance: { ...provenance, source: 'KARMA_API', origin: 'OBSERVED' },
     coverage: { ...coverage, positionCoverage: 'NOT_ASSESSED', gaps: [] },
   },
 };
@@ -298,7 +296,7 @@ export const Loading: Story = {
 export const Mobile: Story = {
   args: {
     selectedChannelKey: 'voltage',
-    selectedRecordKey: 'HOLITA_SCENARIO:synthetic-point-2',
+    selectedRecordKey: 'KARMA_API:synthetic-point-2',
   },
   globals: { viewport: { value: 'mobile375', isRotated: false } },
 };

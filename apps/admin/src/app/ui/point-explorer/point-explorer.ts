@@ -1,3 +1,8 @@
+import type {
+  SourceProvenance,
+  SourcePeriod,
+  SourceCoverage,
+} from '../source-context/source-types';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -8,11 +13,7 @@ import {
 } from '@angular/core';
 import { ButtonDirective } from 'primeng/button';
 import { TableModule } from 'primeng/table';
-import type {
-  FleetEvidenceFragment,
-  FleetEvidencePeriodFragment,
-  FleetScenarioCoverageFragment,
-} from '../../../generated/graphql/operations';
+
 import type { Language } from '../../i18n/messages';
 import { formatDateTime, formatNumber } from '../format/format';
 import { listRecord, type ListAction, type ListActionRequest } from '../list/list-actions';
@@ -37,7 +38,7 @@ export interface PointExplorerRow {
   readonly sourceTime: string | null;
   readonly instantUtc: string | null;
   readonly coordinates: MapCoordinates | null;
-  readonly provenance: FleetEvidenceFragment | null;
+  readonly provenance: SourceProvenance | null;
   readonly facts: readonly PointExplorerFact[];
 }
 
@@ -64,9 +65,9 @@ export class PointExplorer {
   readonly endpoints = input.required<PointExplorerEndpoints>();
   readonly points = input<readonly PointExplorerRow[] | null>(null);
   readonly selectedKey = input<string | null>(null);
-  readonly provenance = input<FleetEvidenceFragment | null>(null);
-  readonly period = input<FleetEvidencePeriodFragment | null>(null);
-  readonly coverage = input<FleetScenarioCoverageFragment | null>(null);
+  readonly provenance = input<SourceProvenance | null>(null);
+  readonly period = input<SourcePeriod | null>(null);
+  readonly coverage = input<SourceCoverage | null>(null);
   readonly gapThresholdMinutes = input(15);
   readonly loading = input(false);
   readonly error = input<string | null>(null);
@@ -189,9 +190,6 @@ export class PointExplorer {
   );
 
   protected sourceLabel(source: string): string {
-    if (source === 'HOLITA_SCENARIO') {
-      return this.text().example;
-    }
     return source === 'KARMA_API' ? this.text().karma : source;
   }
 

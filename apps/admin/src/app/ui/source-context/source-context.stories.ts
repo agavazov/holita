@@ -1,46 +1,33 @@
+import type { SourceProvenance, SourcePeriod, SourceCoverage } from './source-types';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
-import type {
-  FleetEvidenceFragment,
-  FleetEvidencePeriodFragment,
-  FleetScenarioCoverageFragment,
-} from '../../../generated/graphql/operations';
+
 import { onFrame } from '../../../storybook/story-config';
 import { SourceContext } from './source-context';
 
-// Story-only snapshots; they do not read account data or the runtime scenario dataset.
-const observed: FleetEvidenceFragment = {
+// Story-only snapshots; they do not read account data or the product data.
+const observed: SourceProvenance = {
   origin: 'OBSERVED',
   source: 'KARMA_API',
-  scenarioId: null,
   sourceRecordId: 'synthetic-source-record-1',
   eventAt: '2026-01-01T09:59:00.000Z',
   receivedAt: null,
   retrievedAt: '2026-01-01T10:00:00.000Z',
 };
 
-const illustrative: FleetEvidenceFragment = {
-  ...observed,
-  origin: 'ILLUSTRATIVE',
-  source: 'HOLITA_SCENARIO',
-  scenarioId: 'synthetic-workday',
-  sourceRecordId: 'synthetic-position-1',
-  receivedAt: '2026-01-01T09:59:01.000Z',
-};
-
-const period: FleetEvidencePeriodFragment = {
+const period: SourcePeriod = {
   from: '2026-01-01T08:00:00.000Z',
   toExclusive: '2026-01-01T10:00:00.000Z',
   timeZone: 'Europe/Sofia',
 };
 
-const coverage: FleetScenarioCoverageFragment = {
+const coverage: SourceCoverage = {
   retrieval: 'COMPLETE',
   positionCoverage: 'NOT_ASSESSED',
   positionsLoaded: 12,
   gaps: [],
 };
 
-const partialCoverage: FleetScenarioCoverageFragment = {
+const partialCoverage: SourceCoverage = {
   retrieval: 'PARTIAL',
   positionCoverage: 'PARTIAL',
   positionsLoaded: 8,
@@ -68,23 +55,6 @@ export const DerivedReal: Story = {
     },
   },
 };
-export const Illustrative: Story = {
-  args: {
-    provenance: illustrative,
-    coverage: { ...coverage, positionCoverage: 'COMPLETE' },
-  },
-};
-export const DerivedExample: Story = {
-  args: {
-    provenance: {
-      ...illustrative,
-      origin: 'DERIVED',
-      sourceRecordId: 'synthetic-example-report-1',
-      eventAt: null,
-      receivedAt: null,
-    },
-  },
-};
 export const Unavailable: Story = {
   args: {
     provenance: { ...observed, origin: 'UNAVAILABLE', sourceRecordId: null, eventAt: null },
@@ -93,7 +63,7 @@ export const Unavailable: Story = {
   },
 };
 export const PartialWithGaps: Story = {
-  args: { provenance: illustrative, coverage: partialCoverage, availability: 'PARTIAL' },
+  args: { provenance: observed, coverage: partialCoverage, availability: 'PARTIAL' },
 };
 export const Mobile: Story = {
   ...PartialWithGaps,

@@ -1,9 +1,0 @@
-{
-  "title": "Vehicle diagnostic context",
-  "backToRecord": "Back to selected record",
-  "backToList": "Back to list",
-  "unavailable": "Vehicle diagnostic context unavailable",
-  "unavailableHint": "Karma API has no supported vehicle fault/risk context contract. This view does not associate illustrative records with a real truck or substitute example data.",
-  "realSource": "Karma API",
-  "unknownVehicle": "Unknown example vehicle"
-}

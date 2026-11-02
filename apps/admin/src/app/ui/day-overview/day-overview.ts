@@ -1,3 +1,8 @@
+import type {
+  SourceProvenance,
+  SourcePeriod,
+  SourceCoverage,
+} from '../source-context/source-types';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -9,11 +14,7 @@ import {
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import { Skeleton } from 'primeng/skeleton';
-import type {
-  FleetEvidenceFragment,
-  FleetEvidencePeriodFragment,
-  FleetScenarioCoverageFragment,
-} from '../../../generated/graphql/operations';
+
 import type { Language } from '../../i18n/messages';
 import { StackedBars, type StackedLegendItem, type StackedRow } from '../charts/stacked-bars';
 import { KpiStrip } from '../kpi/kpi-strip';
@@ -68,9 +69,9 @@ const catalogs: Record<Language, typeof en> = { bg, en };
 })
 export class DayOverview {
   readonly language = input.required<Language>();
-  readonly provenance = input<FleetEvidenceFragment | null>(null);
-  readonly period = input<FleetEvidencePeriodFragment | null>(null);
-  readonly coverage = input<FleetScenarioCoverageFragment | null>(null);
+  readonly provenance = input<SourceProvenance | null>(null);
+  readonly period = input<SourcePeriod | null>(null);
+  readonly coverage = input<SourceCoverage | null>(null);
   readonly distance = input<DayMetricView | null>(null);
   readonly tripCount = input<DayMetricView | null>(null);
   readonly maximumSpeed = input<DayMetricView | null>(null);
