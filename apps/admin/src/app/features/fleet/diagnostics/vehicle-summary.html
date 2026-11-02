@@ -1,0 +1,168 @@
+@if (data().vehicle; as vehicle) {
+  <div class="app-page-actions">
+    <p-tag [value]="text().example" severity="secondary" />
+    <strong>{{ vehicle.label }}</strong>
+  </div>
+  <p class="app-muted">{{ sourceExplanation() }}</p>
+  <dl class="app-facts">
+    <div>
+      <dt>{{ text().selectedWindow }}</dt>
+      <dd>{{ selection() }} · {{ scenario().period.timeZone }}</dd>
+    </div>
+    <div>
+      <dt>{{ text().exampleClock }}</dt>
+      <dd>{{ time(scenario().exampleClock) }}</dd>
+    </div>
+  </dl>
+  <p class="app-muted">{{ text().scopeHint }}</p>
+  @if (data().missingReferences.length) {
+    <p role="status">{{ text().missingReferencesHint }}</p>
+  }
+  @if (data().partialPeriod) {
+    <p role="status">{{ text().partialPeriod }}</p>
+    @if (data().loadedPeriod; as period) {
+      <p class="app-muted">
+        {{ text().loadedWindow }}: {{ time(period.from) }} – {{ time(period.toExclusive) }}
+      </p>
+    }
+  }
+  @if (!data().hasPeriod) {
+    <p role="status">{{ text().periodUnavailable }}</p>
+  } @else {
+    <section class="app-card app-stack">
+      <h3 class="app-card__title">{{ text().faults }}</h3>
+      <dl class="app-facts">
+        <div>
+          <dt>{{ text().reportedActive }}</dt>
+          <dd class="app-num">{{ number(data().counts?.active) }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().reportedResolved }}</dt>
+          <dd class="app-num">{{ number(data().counts?.resolved) }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().reportOccurrences }}</dt>
+          <dd class="app-num">{{ number(data().counts?.reports) }}</dd>
+        </div>
+      </dl>
+      <p class="app-muted">{{ text().statusHint }}</p>
+      <ul class="vehicle-summary__list">
+        @for (row of data().faults; track row.fault.id) {
+          <li class="vehicle-summary__row">
+            <a class="app-link" [routerLink]="faultLink()(row.fault.id)">{{
+              text().codes[row.fault.code]
+            }}</a>
+            <p-tag [value]="text().statuses[row.fault.reportedStatus]" severity="secondary" />
+          </li>
+        } @empty {
+          <li>{{ text().noFaultRecords }}</li>
+        }
+      </ul>
+    </section>
+    <section class="app-stack">
+      <h3 class="app-card__title">{{ text().measurements }}</h3>
+      <p class="app-muted">{{ text().measurementsHint }}</p>
+      <dl class="app-facts">
+        @for (row of data().latestSignals; track row.signal) {
+          <div>
+            <dt>{{ text().signals[row.signal] }}</dt>
+            <dd class="app-cell-stack">
+              @if (row.sample; as sample) {
+                <span
+                  >{{ sample.value === null ? text().unavailable : number(sample.value) }}
+                  {{ text().units[sample.unit] }}</span
+                >
+                <span class="app-muted"
+                  >{{ time(sample.provenance.eventAt) }} ·
+                  {{ text().availabilityStates[sample.availability] }}</span
+                >
+                @if (row.log; as log) {
+                  <a class="app-link" [routerLink]="logLink()(log.id)">{{
+                    text().openMeasurement
+                  }}</a>
+                }
+              } @else {
+                <span>{{ text().noMeasurement }}</span>
+              }
+            </dd>
+          </div>
+        }
+      </dl>
+    </section>
+    <section class="app-stack">
+      <h3 class="app-card__title">{{ text().evaluations }}</h3>
+      <p class="app-muted">{{ text().evaluationHint }}</p>
+      @for (evaluation of data().evaluations; track evaluation.id) {
+        <article class="app-card app-stack">
+          <h4 class="app-card__title">{{ riskText().rules[evaluation.rule] }}</h4>
+          <div class="app-page-actions">
+            <p-tag [value]="riskText().states[evaluation.state]" severity="secondary" />
+            @if (evaluation.attention; as attention) {
+              <p-tag [value]="riskText().compactAttentionLabels[attention]" severity="secondary" />
+            }
+            <a class="app-link" [routerLink]="riskLink()(evaluation.id)">{{
+              text().openEvaluation
+            }}</a>
+          </div>
+          <p class="app-muted">
+            {{ number(evaluation.availableInputs) }}/{{ number(evaluation.requiredInputs) }}
+            {{ text().ruleInputs }}
+          </p>
+          <p>{{ text().missingEvidence }}: {{ missingEvidence(evaluation) }}</p>
+        </article>
+      } @empty {
+        <p>{{ text().noEvaluations }}</p>
+      }
+    </section>
+    <details class="app-source-details">
+      <summary>{{ text().relatedLogs }} · {{ number(data().logs.length) }}</summary>
+      <p class="app-muted">{{ text().logsHint }}</p>
+      <ol class="vehicle-summary__list">
+        @for (log of data().logs; track log.id) {
+          <li class="vehicle-summary__log">
+            <span class="app-muted"
+              >{{ log.kind === 'RULE_EVALUATION' ? text().processingAt : text().observedAt }}:
+              {{ time(log.provenance.eventAt) }}</span
+            >
+            <a class="app-link" [routerLink]="logLink()(log.id)">{{ logLabel(log) }}</a>
+          </li>
+        } @empty {
+          <li>{{ text().noLogs }}</li>
+        }
+      </ol>
+    </details>
+  }
+  <section class="app-card app-stack">
+    <h3 class="app-card__title">{{ text().fleetHistory }}</h3>
+    <p>{{ text().associationUnavailable }}</p>
+  </section>
+  <details class="app-source-details">
+    <summary>{{ text().technicalDetails }}</summary>
+    <dl class="app-facts">
+      <div>
+        <dt>{{ text().vehicleId }}</dt>
+        <dd>{{ vehicle.id }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().scenarioId }}</dt>
+        <dd>{{ scenario().id }}</dd>
+      </div>
+    </dl>
+    @if (data().missingReferences.length) {
+      <p>{{ text().missingReferences }}</p>
+      <ul>
+        @for (id of data().missingReferences; track id) {
+          <li>{{ id }}</li>
+        }
+      </ul>
+    }
+    <holita-source-context
+      [language]="language()"
+      [provenance]="vehicle.provenance"
+      [period]="scenario().period"
+      [coverage]="scenario().coverage"
+    />
+  </details>
+} @else {
+  <p role="status">{{ text().vehicleUnavailable }}</p>
+}

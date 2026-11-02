@@ -1,7 +1,27 @@
-import type { Routes } from '@angular/router';
+import { inject } from '@angular/core';
+import { Router, type RedirectFunction, type Routes } from '@angular/router';
 import { leaveDrawer } from '../../ui/drawer/leave-drawer.guard';
 
+function administrationRedirect(section: string): RedirectFunction {
+  return ({ queryParams, fragment }) => {
+    const router = inject(Router);
+    return router
+      .serializeUrl(
+        router.createUrlTree(['karma-client', 'administration', section], {
+          queryParams,
+          ...(fragment === null ? {} : { fragment }),
+        }),
+      )
+      .slice(1);
+  };
+}
+
 export const karmaRoutes: Routes = [
+  {
+    path: 'karma-client/cars/:recordId/diagnostics',
+    data: { feature: 'karma-client', requiresBranch: false, section: 'diagnostics' },
+    loadComponent: () => import('./karma-workspace').then((module) => module.KarmaWorkspace),
+  },
   {
     path: 'karma-client/cars/:recordId/configuration',
     data: { feature: 'karma-client', requiresBranch: false, section: 'configuration' },
@@ -30,28 +50,83 @@ export const karmaRoutes: Routes = [
   },
   {
     path: 'karma-client/users',
-    data: { feature: 'karma-client', requiresBranch: false, section: 'users' },
-    loadComponent: () => import('./karma-workspace').then((module) => module.KarmaWorkspace),
+    pathMatch: 'full',
+    redirectTo: administrationRedirect('users'),
   },
   {
     path: 'karma-client/roles',
-    data: { feature: 'karma-client', requiresBranch: false, section: 'roles' },
-    loadComponent: () => import('./karma-workspace').then((module) => module.KarmaWorkspace),
+    pathMatch: 'full',
+    redirectTo: administrationRedirect('roles'),
   },
   {
     path: 'karma-client/projects',
-    data: { feature: 'karma-client', requiresBranch: false, section: 'projects' },
-    loadComponent: () => import('./karma-workspace').then((module) => module.KarmaWorkspace),
+    pathMatch: 'full',
+    redirectTo: administrationRedirect('projects'),
   },
   {
     path: 'karma-client/time-zones',
-    data: { feature: 'karma-client', requiresBranch: false, section: 'time-zones' },
-    loadComponent: () => import('./karma-workspace').then((module) => module.KarmaWorkspace),
+    pathMatch: 'full',
+    redirectTo: administrationRedirect('time-zones'),
   },
   {
     path: 'karma-client/api-info',
-    data: { feature: 'karma-client', requiresBranch: false, section: 'api-info' },
+    pathMatch: 'full',
+    redirectTo: administrationRedirect('api-info'),
+  },
+  {
+    path: 'karma-client/administration/users',
+    data: {
+      feature: 'karma-client',
+      requiresBranch: false,
+      administration: true,
+      section: 'users',
+    },
     loadComponent: () => import('./karma-workspace').then((module) => module.KarmaWorkspace),
+  },
+  {
+    path: 'karma-client/administration/roles',
+    data: {
+      feature: 'karma-client',
+      requiresBranch: false,
+      administration: true,
+      section: 'roles',
+    },
+    loadComponent: () => import('./karma-workspace').then((module) => module.KarmaWorkspace),
+  },
+  {
+    path: 'karma-client/administration/projects',
+    data: {
+      feature: 'karma-client',
+      requiresBranch: false,
+      administration: true,
+      section: 'projects',
+    },
+    loadComponent: () => import('./karma-workspace').then((module) => module.KarmaWorkspace),
+  },
+  {
+    path: 'karma-client/administration/time-zones',
+    data: {
+      feature: 'karma-client',
+      requiresBranch: false,
+      administration: true,
+      section: 'time-zones',
+    },
+    loadComponent: () => import('./karma-workspace').then((module) => module.KarmaWorkspace),
+  },
+  {
+    path: 'karma-client/administration/api-info',
+    data: {
+      feature: 'karma-client',
+      requiresBranch: false,
+      administration: true,
+      section: 'api-info',
+    },
+    loadComponent: () => import('./karma-workspace').then((module) => module.KarmaWorkspace),
+  },
+  {
+    path: 'karma-client/administration',
+    pathMatch: 'full',
+    redirectTo: administrationRedirect('users'),
   },
   {
     path: 'karma-client/cars/:recordId/edata',

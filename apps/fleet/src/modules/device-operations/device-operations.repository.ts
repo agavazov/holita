@@ -68,6 +68,8 @@ export interface DeviceRuleWriteIntent {
 }
 
 export const DEVICE_OPERATION_DEADLINE_MS = 10 * 60_000;
+export type DeviceReadKind =
+  'READ_CONFIGURATION' | 'READ_RULES' | 'READ_FAULT_LOGGER' | 'READ_COMMUNICATION_DIAGNOSTICS';
 const ACTIVE_STATUSES = [
   'QUEUED',
   'SUBMITTING',
@@ -88,10 +90,46 @@ export class DeviceOperationsRepository {
     target: Pick<DeviceOperationRow, 'karmaCarId' | 'karmaDeviceId'>,
   ): Promise<DeviceOperationRow[]> {
     return this.prisma.client.fleetDeviceOperation.findMany({
-      where: { ...scope, ...target },
+      where: {
+        ...scope,
+        ...target,
+        kind: { notIn: ['READ_FAULT_LOGGER', 'READ_COMMUNICATION_DIAGNOSTICS'] },
+      },
       orderBy: [{ requestedAt: 'desc' }, { id: 'desc' }],
       take: 20,
     });
+  }
+
+  diagnosticHistory(
+    scope: FleetScope,
+    target: Pick<DeviceOperationRow, 'karmaCarId' | 'karmaDeviceId'>,
+  ): Promise<DeviceOperationRow[]> {
+    return this.prisma.client.fleetDeviceOperation.findMany({
+      where: {
+        ...scope,
+        ...target,
+        kind: { in: ['READ_FAULT_LOGGER', 'READ_COMMUNICATION_DIAGNOSTICS'] },
+      },
+      orderBy: [{ requestedAt: 'desc' }, { id: 'desc' }],
+      take: 20,
+    });
+  }
+
+  /** Provider queues outlive local deadlines and are shared across workspaces; only the worker reads their IDs. */
+  async retainedDiagnosticQueueIds(
+    target: Pick<DeviceOperationRow, 'karmaCarId' | 'karmaDeviceId'>,
+  ): Promise<string[]> {
+    const operations = await this.prisma.client.fleetDeviceOperation.findMany({
+      where: {
+        ...target,
+        kind: { in: ['READ_FAULT_LOGGER', 'READ_COMMUNICATION_DIAGNOSTICS'] },
+        queueIds: { isEmpty: false },
+      },
+      select: { queueIds: true },
+      orderBy: [{ requestedAt: 'desc' }, { id: 'desc' }],
+      take: 20,
+    });
+    return [...new Set(operations.flatMap((operation) => operation.queueIds))].slice(0, 32);
   }
 
   lastComplete(
@@ -128,14 +166,19 @@ export class DeviceOperationsRepository {
     scope: FleetScope,
     target: Pick<DeviceOperationRow, 'karmaCarId' | 'karmaDeviceId'>,
     now: Date,
-    kind: 'READ_CONFIGURATION' | 'READ_RULES' = 'READ_CONFIGURATION',
+    kind: DeviceReadKind = 'READ_CONFIGURATION',
   ): Promise<DeviceOperationRow> {
     return this.prisma.client.fleetDeviceOperation.create({
       data: {
         ...scope,
         ...target,
         kind,
-        phase: kind === 'READ_RULES' ? 'READ_RULES' : 'READ_PARAMETERS',
+        phase:
+          kind === 'READ_RULES'
+            ? 'READ_RULES'
+            : kind === 'READ_CONFIGURATION'
+              ? 'READ_PARAMETERS'
+              : 'READ_DIAGNOSTICS',
         requestedAt: now,
         nextCheckAt: now,
         deadlineAt: new Date(now.getTime() + DEVICE_OPERATION_DEADLINE_MS),

@@ -26,8 +26,8 @@ import karmaDateTimeBg from '../features/karma-client/date-time/i18n/bg.json';
 import karmaDateTimeEn from '../features/karma-client/date-time/i18n/en.json';
 import karmaFilterValidationBg from '../features/karma-client/filter-validation/i18n/bg.json';
 import karmaFilterValidationEn from '../features/karma-client/filter-validation/i18n/en.json';
-import karmaMapPreviewBg from '../features/karma-client/location/map-preview/bg.json';
-import karmaMapPreviewEn from '../features/karma-client/location/map-preview/en.json';
+import karmaMapPreviewBg from '../ui/map-preview/bg.json';
+import karmaMapPreviewEn from '../ui/map-preview/en.json';
 import karmaRecordDetailsBg from '../features/karma-client/record-details/i18n/bg.json';
 import karmaRecordDetailsEn from '../features/karma-client/record-details/i18n/en.json';
 import uiBg from '../ui/i18n/bg.json';
@@ -63,7 +63,7 @@ const catalogs: readonly { readonly name: string; readonly bg: unknown; readonly
     en: karmaFilterValidationEn,
   },
   {
-    name: 'features/karma-client/location/map-preview',
+    name: 'ui/map-preview',
     bg: karmaMapPreviewBg,
     en: karmaMapPreviewEn,
   },

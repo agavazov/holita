@@ -1,0 +1,99 @@
+<holita-page-header
+  [eyebrow]="presentation().title"
+  [title]="text().title"
+  [description]="presentation().description"
+  [backLink]="back().commands"
+  [backQueryParams]="back().query"
+  [backFragment]="back().fragment"
+  [backLabel]="journey() ? text().backToDay : text().back"
+/>
+<nav [attr.aria-label]="text().sections">
+  <ul class="app-route-nav" role="list">
+    @for (item of sections(); track item.id) {
+      <li>
+        <a
+          class="app-route-nav__link"
+          [class.app-route-nav__link--active]="section() === item.id"
+          [attr.aria-current]="section() === item.id ? 'page' : null"
+          [routerLink]="links()[item.id]"
+          >{{ item.label }}</a
+        >
+      </li>
+    }
+  </ul>
+</nav>
+@if (activeJourney(); as context) {
+  <details class="app-source-details">
+    <summary>
+      {{ text().openedFrom }} · {{ context.vehicleId }} · {{ context.day }}
+      @if (context.tripId) {
+        · {{ context.tripId }}
+      }
+    </summary>
+    <dl class="app-facts">
+      <div>
+        <dt>{{ text().vehicle }}</dt>
+        <dd>{{ context.vehicleId }}</dd>
+      </div>
+      @if (context.tripId) {
+        <div>
+          <dt>{{ text().trip }}</dt>
+          <dd>{{ context.tripId }}</dd>
+        </div>
+      }
+      <div>
+        <dt>{{ text().observedOn }}</dt>
+        <dd>{{ context.day }} · {{ context.timeZone }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().originWindow }}</dt>
+        <dd>{{ context.from }} – {{ context.to }}</dd>
+      </div>
+    </dl>
+  </details>
+}
+<section class="app-card app-stack" [attr.aria-label]="text().source">
+  <div class="diagnostics-source">
+    <holita-form-field controlId="diagnostics-source" [label]="text().source">
+      <p-select
+        inputId="diagnostics-source"
+        [ariaLabel]="text().source"
+        [options]="sourceOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="source()"
+        (ngModelChange)="changeSource($event)"
+        appendTo="body"
+      />
+    </holita-form-field>
+    @if (source() === 'HOLITA_SCENARIO') {
+      <p-tag [value]="text().example" severity="secondary" />
+      <p class="app-muted">{{ text().exampleInfo }}</p>
+    } @else {
+      <p-tag [value]="text().real" severity="secondary" />
+    }
+  </div>
+  @if (source() === 'HOLITA_SCENARIO') {
+    @if (scenario(); as data) {
+      <dl class="app-facts">
+        <div>
+          <dt>{{ text().observationPeriod }}</dt>
+          <dd>{{ time(data.period.from) }} – {{ time(data.period.toExclusive) }}</dd>
+        </div>
+        <div>
+          <dt>{{ section() === 'faults' ? text().exampleClock : text().referenceClock }}</dt>
+          <dd>
+            <time [attr.datetime]="data.exampleClock">{{ time(data.exampleClock) }}</time> ·
+            {{ data.period.timeZone }}
+          </dd>
+        </div>
+      </dl>
+    }
+    <p class="app-muted">
+      {{ presentation().hint }}
+    </p>
+  } @else {
+    <p>{{ text().realHistoryHint }}</p>
+    <a class="app-link" [routerLink]="realDestination()">{{ text().realHistory }}</a>
+  }
+</section>

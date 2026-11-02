@@ -1,0 +1,79 @@
+{
+  "example": "Example data",
+  "selectedWindow": "Selected observation window, end exclusive",
+  "exampleClock": "Fixed example clock",
+  "openStart": "Open start",
+  "openEnd": "Open end",
+  "scopeHint": "This vehicle and the selected observation days define this overview. Section filters remain in the return link. Times use the example time zone.",
+  "partialPeriod": "Only part of the selected window is covered by the loaded example day. Figures below describe that loaded part.",
+  "loadedWindow": "Loaded observation window, end exclusive",
+  "periodUnavailable": "No example data is loaded for this observation window. Fault counts, measurements and rule evaluations are unavailable; zero is not inferred.",
+  "faults": "Reported faults",
+  "reportedActive": "Reported active records",
+  "reportedResolved": "Reported resolved records",
+  "reportOccurrences": "Fault report occurrences in the window",
+  "statusHint": "Statuses are the source snapshot at the fixed example clock for faults with report or status observations in the selected window. They are not a historical status reconstruction. Reported resolution does not confirm repair or ECU clearing.",
+  "noFaultRecords": "No fault report or status records in the loaded observation window.",
+  "measurements": "Selected-window measurements",
+  "measurementsHint": "Latest referenced sample within the loaded observation window for each signal. An unavailable latest value is not replaced by an earlier value. Zero remains a value.",
+  "unavailable": "Value unavailable",
+  "noMeasurement": "No sample in this observation window",
+  "openMeasurement": "Open measurement",
+  "evaluations": "Example rule evaluations",
+  "evaluationHint": "Evaluations are selected by overlap with their input window. The server's states and attention bands are retained; they do not establish a diagnosis or vehicle health.",
+  "openEvaluation": "Open explanation",
+  "ruleInputs": "server evaluation inputs",
+  "missingEvidence": "Missing evidence",
+  "noMissingEvidence": "No additional reason reported",
+  "noEvaluations": "No rule evaluation input window overlaps this selection.",
+  "relatedLogs": "Related chronological log records",
+  "logsHint": "Observations retain their source time. Rule-evaluation entries retain their later processing time and are included by their input-window overlap.",
+  "processingAt": "Processing",
+  "observedAt": "Observation",
+  "noLogs": "No related log records in this observation window.",
+  "fleetHistory": "Fleet maintenance and driver history",
+  "associationUnavailable": "This synthetic vehicle has no verified association with a Fleet vehicle, maintenance record or driver. Business history is unavailable.",
+  "technicalDetails": "Identity and source details",
+  "vehicleId": "Example vehicle ID",
+  "scenarioId": "Example scenario ID",
+  "vehicleUnavailable": "The selected example vehicle is unavailable in this source.",
+  "codes": {
+    "EXAMPLE_COOLING_01": "Illustrative cooling fault",
+    "EXAMPLE_POWER_01": "Illustrative electrical fault"
+  },
+  "statuses": {
+    "ACTIVE": "Reported active",
+    "RESOLVED": "Reported resolved"
+  },
+  "signals": {
+    "SPEED": "Sample speed",
+    "COOLANT_TEMPERATURE": "Sample coolant temperature",
+    "EXTERNAL_VOLTAGE": "Sample external voltage",
+    "FUEL_USED": "Cumulative fuel used",
+    "DISTANCE_COUNTER": "Cumulative distance",
+    "ENGINE_HOURS": "Cumulative engine hours"
+  },
+  "units": {
+    "KILOMETRE": "km",
+    "KILOMETRES_PER_HOUR": "km/h",
+    "CELSIUS": "°C",
+    "VOLT": "V",
+    "LITRE": "L",
+    "HOUR": "h"
+  },
+  "availabilityStates": {
+    "COMPLETE": "Available",
+    "PARTIAL": "Partially available",
+    "UNAVAILABLE": "Unavailable"
+  },
+  "logKinds": {
+    "FAULT_REPORTED": "Fault report",
+    "FAULT_STATUS": "Reported fault status change",
+    "MEASUREMENT": "Measurement",
+    "AVAILABILITY": "Data availability",
+    "INTEGRATION_ISSUE": "Integration issue",
+    "RULE_EVALUATION": "Rule evaluation"
+  },
+  "missingReferences": "Unavailable referenced records",
+  "missingReferencesHint": "Some exact evidence references are unavailable in this snapshot. Report counts describe loaded observations; the server evaluation results are retained. Reference IDs are in the source details."
+}

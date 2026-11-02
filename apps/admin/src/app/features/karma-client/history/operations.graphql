@@ -4,29 +4,44 @@ query AdminKarmaTrips($input: KarmaTripsInput!) {
     nextCursor
     hasMore
     items {
-      id
-      carId
-      carNumber
-      deviceId
-      driverId
-      tripActive
-      startMessageId
-      startDate
-      startLatitude
-      startLongitude
-      startOdo
-      stopMessageId
-      stopDate
-      stopLatitude
-      stopLongitude
-      stopOdo
-      tripDuration
-      tripDistance
-      tripDurationNight
-      tripDistanceNight
-      maxSpeed
-      drivingScore
-      ecoScore
+      ...KarmaTripFields
+    }
+  }
+}
+
+query AdminKarmaPositionSamples($input: KarmaPositionSamplesInput!) {
+  karmaPositionSamples(input: $input) {
+    carId
+    startMessageId
+    stopMessageId
+    retrieval
+    reason
+    sourceClock
+    ordering
+    positionCoverage
+    startMessagePresent
+    stopMessagePresent
+    loadedRows
+    maxRows
+    deadlineMs
+    duplicateIdsRemoved
+    retrievedAt
+    samples {
+      instantUtc
+      event {
+        id
+        carId
+        deviceId
+        eventId
+        edt
+        edtTz
+        pdt
+        latitude
+        longitude
+        spd
+        odo
+        extra
+      }
     }
   }
 }
@@ -64,4 +79,89 @@ query AdminKarmaDrivingProfile($input: KarmaDrivingProfileInput!) {
       weight
     }
   }
+}
+
+query AdminKarmaDailyReport($input: KarmaDailyReportInput!) {
+  karmaDailyReport(input: $input) {
+    carId
+    car {
+      id
+      carNumber
+      deviceId
+      projectId
+      timeZoneId
+    }
+    day
+    timeZone {
+      id
+      name
+    }
+    fromLocal
+    toLocalExclusive
+    fromUtc
+    toUtcExclusive
+    selection
+    retrieval
+    state
+    reason
+    pageRequests
+    loadedTrips
+    trips {
+      ...KarmaTripFields
+    }
+    maxPages
+    maxRows
+    deadlineMs
+    positionCoverage
+    retrievedAt
+    tripCount {
+      ...DailyReportMetric
+    }
+    totalDistance {
+      ...DailyReportMetric
+    }
+    nightDistance {
+      ...DailyReportMetric
+    }
+    dayDistance {
+      ...DailyReportMetric
+    }
+    maxSpeed {
+      ...DailyReportMetric
+    }
+  }
+}
+
+fragment DailyReportMetric on KarmaDailyReportMetric {
+  value
+  availability
+  availableInputs
+  requiredInputs
+  unit
+}
+
+fragment KarmaTripFields on KarmaTrip {
+  id
+  carId
+  carNumber
+  deviceId
+  driverId
+  tripActive
+  startMessageId
+  startDate
+  startLatitude
+  startLongitude
+  startOdo
+  stopMessageId
+  stopDate
+  stopLatitude
+  stopLongitude
+  stopOdo
+  tripDuration
+  tripDistance
+  tripDurationNight
+  tripDistanceNight
+  maxSpeed
+  drivingScore
+  ecoScore
 }

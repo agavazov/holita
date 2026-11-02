@@ -125,6 +125,8 @@
   "intendedChange": "Желана промяна на параметър",
   "baselineOperation": "ID на базовата заявка",
   "kinds": {
+    "READ_FAULT_LOGGER": "Прочит на logger за неизправности",
+    "READ_COMMUNICATION_DIAGNOSTICS": "Прочит на комуникационна диагностика",
     "READ_CONFIGURATION": "Прочит на конфигурация",
     "ADD_PARAMETER": "Добавяне на параметър",
     "UPDATE_INTERVAL": "Промяна на интервал",
@@ -132,6 +134,7 @@
     "UPSERT_RULE": "Промяна на едно правило"
   },
   "phases": {
+    "READ_DIAGNOSTICS": "Прочит на диагностика от устройството",
     "READ_PROFILE": "Проверка на профила на устройството",
     "READ_PARAMETERS": "Прочит на пълната базова конфигурация",
     "WRITE_PARAMETER": "Изпращане на промяната на параметъра",

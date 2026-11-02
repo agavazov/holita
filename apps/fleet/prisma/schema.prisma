@@ -249,6 +249,8 @@ enum FleetDeviceOperationKind {
   UPDATE_INTERVAL
   READ_RULES
   UPSERT_RULE
+  READ_FAULT_LOGGER
+  READ_COMMUNICATION_DIAGNOSTICS
 }
 
 enum FleetDeviceOperationPhase {
@@ -259,6 +261,7 @@ enum FleetDeviceOperationPhase {
   READ_RULES
   WRITE_RULE
   VERIFY_RULES
+  READ_DIAGNOSTICS
 }
 
 // Configuration operations retain intent, preflight evidence and independent readback.

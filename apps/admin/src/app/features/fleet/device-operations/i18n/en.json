@@ -125,6 +125,8 @@
   "intendedChange": "Requested parameter change",
   "baselineOperation": "Baseline request ID",
   "kinds": {
+    "READ_FAULT_LOGGER": "Read fault logger",
+    "READ_COMMUNICATION_DIAGNOSTICS": "Read communication diagnostics",
     "READ_CONFIGURATION": "Read configuration",
     "ADD_PARAMETER": "Add parameter",
     "UPDATE_INTERVAL": "Update interval",
@@ -132,6 +134,7 @@
     "UPSERT_RULE": "Change one rule"
   },
   "phases": {
+    "READ_DIAGNOSTICS": "Reading device diagnostics",
     "READ_PROFILE": "Checking device profile",
     "READ_PARAMETERS": "Reading complete baseline",
     "WRITE_PARAMETER": "Sending parameter change",

@@ -10,9 +10,13 @@ import {
   AdminKarmaTripsDocument,
   AdminKarmaEventsDocument,
   AdminKarmaDrivingProfileDocument,
+  AdminKarmaDailyReportDocument,
+  AdminKarmaPositionSamplesDocument,
   type KarmaTripsInput,
   type KarmaEventsInput,
   type KarmaDrivingProfileInput,
+  type KarmaDailyReportInput,
+  type KarmaPositionSamplesInput,
 } from '../../../../generated/graphql/operations';
 import type { Language } from '../../../i18n/messages';
 
@@ -63,12 +67,36 @@ export class KarmaHistoryApi implements OnDestroy {
     });
   }
 
+  watchDailyReport(input: KarmaDailyReportInput) {
+    if (!this.apollo) {
+      throw new Error('An active Karma workspace is required.');
+    }
+    return this.apollo.watchQuery({
+      query: AdminKarmaDailyReportDocument,
+      variables: { input },
+      fetchPolicy: 'network-only',
+      context: { language: this.language },
+    });
+  }
+
   watchEvents(input: KarmaEventsInput) {
     if (!this.apollo) {
       throw new Error('An active Karma workspace is required.');
     }
     return this.apollo.watchQuery({
       query: AdminKarmaEventsDocument,
+      variables: { input },
+      fetchPolicy: 'network-only',
+      context: { language: this.language },
+    });
+  }
+
+  watchPositionSamples(input: KarmaPositionSamplesInput) {
+    if (!this.apollo) {
+      throw new Error('An active Karma workspace is required.');
+    }
+    return this.apollo.watchQuery({
+      query: AdminKarmaPositionSamplesDocument,
       variables: { input },
       fetchPolicy: 'network-only',
       context: { language: this.language },

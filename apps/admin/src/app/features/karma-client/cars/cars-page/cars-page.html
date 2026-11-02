@@ -49,12 +49,16 @@
   <p-message severity="warn">{{ text().karmaReferencesUnavailable }}</p-message>
 }
 <holita-table-panel
+  #panel
   [heading]="listText().inventory"
   [view]="view()"
   [total]="loaded() ? filtered().length : null"
   [busy]="loading()"
   [errorText]="text().karmaUnavailable"
   [emptyTitle]="text().emptyKarmaCars"
+  [actions]="actions()"
+  [actionContext]="cars()"
+  (action)="openMap($event)"
   (retry)="refresh()"
   (clearFilters)="clearSearch()"
 >
@@ -62,6 +66,7 @@
     class="app-responsive-table"
     [value]="filtered()"
     dataKey="id"
+    [rowTrackBy]="trackById"
     [paginator]="true"
     [rows]="query().rows"
     [first]="first()"
@@ -72,12 +77,13 @@
       <tr>
         <th scope="col" class="app-col-identity">{{ text().licensePlate }}</th>
         <th scope="col">{{ listText().project }}</th>
+        <th scope="col" class="app-col-actions">{{ listText().actions }}</th>
       </tr>
     </ng-template>
     <ng-template #body let-car>
       <tr>
         <td class="app-col-identity">
-          <span class="app-cell-stack">
+          <div class="app-cell-stack app-table-identity">
             <a
               class="app-link"
               [routerLink]="['/', language(), 'karma-client', 'cars', car.id]"
@@ -85,10 +91,32 @@
               >{{ car.carNumber || text().karmaTruckDetails }}</a
             >
             <span>{{ car.carType || '—' }} · {{ car.carYear || '—' }}</span>
-          </span>
+            <div class="app-table-mobile-actions">
+              <holita-row-actions
+                [actions]="actions()"
+                [record]="record(car)"
+                (choose)="panel.run($event.action, [record(car)], $event.origin)"
+              />
+            </div>
+          </div>
         </td>
         <td>{{ projectName(car.projectId) }}</td>
+        <td class="app-col-actions">
+          <holita-row-actions
+            [actions]="actions()"
+            [record]="record(car)"
+            (choose)="panel.run($event.action, [record(car)], $event.origin)"
+          />
+        </td>
       </tr>
     </ng-template>
   </p-table>
 </holita-table-panel>
+@for (car of selectedCars(); track car.id) {
+  <holita-karma-car-location-drawer
+    [car]="car"
+    [language]="language()"
+    [initialView]="mapView()"
+    (closeRequest)="closeMap()"
+  />
+}

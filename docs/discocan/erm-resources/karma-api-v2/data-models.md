@@ -133,6 +133,21 @@ Sources: [SDL](../../../../apps/karma-client/src/modules/history/history.graphql
 | `driving_score`       | `drivingScore`      | `Float`      | Nullable finite source metric; scale and thresholds unspecified.                 |
 | `eco_score`           | `ecoScore`          | `Float`      | Nullable finite source metric; scale and aggregation unspecified.                |
 
+## Daily report (`KarmaDailyReport`)
+
+The [daily report SDL](../../../../apps/karma-client/src/modules/history/history.graphql)
+and generated `AdminKarmaDailyReport` operation expose a separate bounded selection,
+not a total on the existing trip page. The [contract](../../architecture.md#daily-report-contract)
+owns the state/field meaning. `retrieval` completion is separate from metric
+availability and `positionCoverage: NOT_ASSESSED`. `availableInputs`/`requiredInputs`
+describe the loaded selection, not the unknown number of unrecorded physical trips.
+Complete empty selections have zero count/distances and null maximum speed.
+
+The only current zone capability is the source-resolved `Europe/Sofia` day, with
+whole-trip attribution by start date. Source-unit enums remain explicitly
+unconfirmed: no km/km/h conversion is performed. Existing `KarmaTrip` fields and
+list behavior retain their source-preserving contract above.
+
 ## Events (`KarmaEvent`)
 
 Sources: [SDL](../../../../apps/karma-client/src/modules/history/history.graphql), [runtime mapping](../../../../apps/karma-client/src/modules/history/history-response.ts).

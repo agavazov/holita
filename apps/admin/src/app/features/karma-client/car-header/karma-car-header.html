@@ -1,44 +1,52 @@
 <holita-page-header
-  [title]="title()"
-  [eyebrow]="text().karmaClient"
+  [title]="identity()"
+  [eyebrow]="showSourceIdentity() ? text().karmaClient : text().truck"
   [description]="description()"
   [backLink]="['/', language(), 'karma-client', 'cars']"
   [backLabel]="text().backToTrucks"
   [backQueryParams]="returnQuery()"
->
-  @if (canNavigate() && showRefresh()) {
-    <button
-      headerActions
-      pButton
-      type="button"
-      severity="secondary"
-      [disabled]="busy() || refreshDisabled()"
-      (click)="refreshRequest.emit()"
-    >
-      {{ error() ? text().retry : text().refresh }}
-    </button>
-  }
-  <ng-content select="[headerActions]" ngProjectAs="[headerActions]" />
-</holita-page-header>
+/>
 @if (canNavigate()) {
   <nav [attr.aria-label]="text().navigation">
-    <ul class="car-tabs" role="list">
+    <ul class="app-route-nav car-navigation" role="list">
       @for (tab of tabs(); track tab.path) {
         <li>
           <a
-            [routerLink]="
-              tab.path
-                ? ['/', language(), 'karma-client', 'cars', carId(), tab.path]
-                : ['/', language(), 'karma-client', 'cars', carId()]
-            "
-            [queryParams]="navigationContext()"
-            routerLinkActive="car-tabs__link--active"
+            class="app-route-nav__link"
+            [routerLink]="destination(tab.path)"
+            routerLinkActive="app-route-nav__link--active"
             [routerLinkActiveOptions]="activeMatch"
             ariaCurrentWhenActive="page"
             >{{ tab.label }}</a
           >
         </li>
       }
+      <li class="car-navigation__more">
+        <holita-menu-button
+          variant="navigation"
+          [options]="moreOptions()"
+          [buttonClass]="moreActive() ? 'app-route-nav__link--active' : ''"
+          menuClass="app-menu-wide"
+          >{{ moreLabel() }}</holita-menu-button
+        >
+      </li>
     </ul>
   </nav>
 }
+<div class="app-context-toolbar">
+  <h2>{{ sectionTitle() }}</h2>
+  <div class="app-page-actions">
+    @if (canNavigate() && showRefresh()) {
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [disabled]="busy() || refreshDisabled()"
+        (click)="refreshRequest.emit()"
+      >
+        {{ error() ? text().retry : text().refresh }}
+      </button>
+    }
+    <ng-content select="[headerActions]" />
+  </div>
+</div>

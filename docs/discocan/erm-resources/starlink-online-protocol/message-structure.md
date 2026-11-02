@@ -1,5 +1,9 @@
 # StarLink message structure
 
+> Historical screenshot transcription. Authenticated source pages are now available:
+> [G1 — Message structure](authenticated/pages/G1.md), [G2 — Check-sum calculation](authenticated/pages/G2.md),
+> and the [current interpretation guide](authenticated-reading-guide.md). Earlier access limitations below describe the screenshot-only edition.
+
 [Portal overview](README.md) · [Source screenshot](images/message-structure.png) ·
 [Image descriptions](images.md)
 

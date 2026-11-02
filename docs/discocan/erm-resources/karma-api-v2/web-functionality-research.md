@@ -136,6 +136,42 @@ transcripts were not exported into the repository. Historical illustrations are
 linked above. The running holita GraphQL/admin was not exercised for parity;
 its baseline was inspected in source.
 
+### Daily report source proof
+
+A further bounded public-API-only investigation on 2026-10-27 used the existing
+API connection, GET reads and ordinary API login. No `/i/`, device parameter query,
+command, queue poll or vendor mutation was used. Forty-three successful data reads
+included bounded selection of the existing reference truck, clock/ID boundary
+probes and coordinates. Private identities, positions, sessions and raw rows are
+not retained here. These observations qualify the current report contract, rather
+than certify every provider account or historical configuration.
+
+| Observation                                                                                                                                                                                                                                  | Supported rule / limitation                                                                                                                                                                                                 |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The reference completed day 2026-10-26 returned nine trips: total 377.58, night 134.008, day 243.572 and maximum source speed 91.5.                                                                                                          | Reproduces the numerical E03/E04 reference; calculations retain source floating-point precision. Physical distance/speed units are still unconfirmed.                                                                       |
+| The selected car's zone reference resolves to Europe/Sofia. A 2026-10-26 start message matches `edt_tz`, with `edt` offset +120 minutes; a 2026-10-02 sample matches at +180 minutes.                                                        | Corroborates provider wall clock and seasonal offsets for this car. It does not establish previous car-zone configurations or every repeated/skipped historical clock time.                                                 |
+| Equal date endpoints at one trip's start returned that trip; moving the lower endpoint one second forward excluded it; an instant at its stop did not select it.                                                                             | Observed inclusive filtering by start time, not calendar-overlap clipping.                                                                                                                                                  |
+| A real crossing-midnight trip in a 126-row recent batch was returned for its start day and excluded from its stop day.                                                                                                                       | Whole-trip start-day attribution, including distance/night values across midnight.                                                                                                                                          |
+| Inclusive ID range recovered all nine reference rows; an upper bound at the middle ID returned five; the complementary lower-bound query returned the other four; both `to_id=min-1` and `from_id=max+1` within the same day returned empty. | Supports checking both ID boundaries, then bounded descending traversal to an explicit terminal empty range. Short batches/cursor exhaustion alone are insufficient. No universal batch cap or retention guarantee follows. |
+| All nine reference trips and the 126-row recent sample had active flag zero and stop times.                                                                                                                                                  | Active/non-final behavior was not observed live. The report conservatively marks nonzero/unknown active flags or missing stop times non-final instead of inventing final totals.                                            |
+| Eighteen reference endpoint pairs and the selected last location had finite, range-valid coordinates.                                                                                                                                        | Point/endpoint feasibility only; zero validity is covered synthetically. No complete driven path or GPS-time coverage is claimed.                                                                                           |
+
+Authenticated probe latencies were approximately 0.07–0.38 seconds; the observed
+login-inclusive first read was below 0.9 seconds. The measured small-day workload
+fits the existing four-second operation budget. The implemented boundary allows
+four logical trip page reads (including upper-bound verification), 1,000 retained rows and a 2 MiB trip-response body, plus the fixed
+car/zone lookups within that same deadline. These are explicit application limits,
+not alleged provider caps. A slow/larger selection returns a subset or unavailable
+result without raising the blanket timeout or adding a historical store.
+
+**Remaining source blocker:** public API response/help metadata does not establish
+physical distance/speed units. Numeric parity and odometer equality do not prove
+km/km/h. The contract labels raw source units as unconfirmed; confirming their
+physical mapping requires explicit supported vendor evidence. Source query completion,
+field availability and position/time sample coverage remain separate. A completed
+query is not proof that all physical trips were recorded, and a later read may
+change because of provider corrections, late arrivals or retention.
+
 ### Systematic follow-up evidence
 
 The follow-up used ordinary web navigation/report reads, one NC2 sign-in and
@@ -1179,10 +1215,10 @@ The current generated contracts already retain the inputs for contextual maps:
   can carry message coordinates with UTC/local timestamps and parameter values.
 
 These are point-bearing records, not a dedicated verified trip-polyline contract.
-The existing [map preview](../../../../apps/admin/src/app/features/karma-client/location/map-preview/map-preview.ts)
-uses optional Google Embed for points/suggested directions and keeps external
-links without a configured key. It does not currently render an actual sampled
-trip trace or Street View mode. A statement that the current trip view lacks a
+The existing [map preview](../../../../apps/admin/src/app/ui/map-preview/map-preview.ts)
+uses optional Google Embed for points, Street View and suggested directions, and keeps external
+links without a configured key. It does not render an actual sampled
+trip trace. A statement that the current trip view lacks a
 trace must not be read as proof that the underlying event API has no positions.
 
 ### Additional bounded coordinate sample
@@ -1203,8 +1239,31 @@ Only aggregate availability observations are retained here.
 
 No new universal point frequency, retention, gap threshold, map-matching rule or
 complete-route guarantee follows from this sample. The first release can safely
-fall back to last-reported position and endpoints; a later Trip Explorer must
-prove correlated point coverage rather than connecting arbitrary latest messages.
+fall back to last-reported position and endpoints. The bounded proof below establishes
+one correlated message window; arbitrary latest messages remain insufficient.
+
+### Bounded trip message-window proof
+
+One further read-only example used four successful HTTP requests, each with a four-second
+deadline: login, cars, trips and one events read. The event request took approximately
+1.2 seconds. It used the selected completed trip's own message anchors, widened by one on
+each side for the observed provider boundary semantics, then checked the exact inclusive
+window. No private IDs, coordinates or payloads were retained.
+
+The response contained 314 range-valid positions with 314 distinct message IDs and 282
+distinct UTC timestamps. Both boundary messages were present; their `edt_tz` text matched
+the trip's original start/stop text. The UTC `edt` values formed a coherent ordered window.
+No adjacent interval exceeded the chosen 600-second proof threshold. Equal-time records
+remain distinct, and the implemented read reports duplicate-ID removal and ordering rather
+than deduplicating geometry. The UI independently displays its explicit 15-minute viewing rule.
+
+This establishes useful correlated samples for one bounded trip window, not universal
+retention, continuous physical coverage or a guaranteed successful query for every trip.
+The generated [position contract](../../../../apps/karma-client/src/modules/history/history.graphql)
+limits the read to one response, 500 rows and four seconds, reports missing boundaries/caps
+as partial, and keeps physical coverage unassessed. It does not reconstruct trip-local time
+as UTC, treat `pdt` as receipt time or assume eData availability. E11 still establishes only
+the observed two-car bulk response; fleet-wide batch limits remain unproved.
 
 ### Google Maps readiness
 
@@ -1214,7 +1273,7 @@ The current integration and Google products support different presentation level
 | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | Last-reported location and endpoint exploration | Existing public Karma queries/coordinates and current map preview/helpers.                                                        | Use original source time; last reported does not mean physically live.                                             |
 | External Street View action                     | [Maps URLs](https://developers.google.com/maps/documentation/urls/get-started) support panorama actions without an API key.       | Coverage and selected panorama are Google-dependent; this is surroundings imagery, not vehicle video.              |
-| Optional embedded panorama                      | [Embed](https://developers.google.com/maps/documentation/embed/embedding-map) includes a `streetview` mode.                       | Requires configured Google access and explicit loading; absent imagery must leave a useful location/text fallback. |
+| Optional embedded panorama                      | [Embed](https://developers.google.com/maps/documentation/embed/embedding-map) includes a `streetview` mode.                       | Loads the active configured view automatically; absent imagery must leave a useful location/text fallback. |
 | Recorded-point path or multi-marker interaction | [Maps JavaScript polylines](https://developers.google.com/maps/documentation/javascript/shapes) can connect supplied coordinates. | The API renderer does not supply missing telemetry or turn a segment/suggested road route into recorded travel.    |
 
 [Street View metadata](https://developers.google.com/maps/documentation/streetview/metadata)

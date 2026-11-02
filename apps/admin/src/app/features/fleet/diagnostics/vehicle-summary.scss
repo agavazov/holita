@@ -1,0 +1,31 @@
+:host {
+  align-items: stretch;
+  min-inline-size: 0;
+}
+.app-facts,
+.vehicle-summary__list {
+  inline-size: 100%;
+}
+
+.vehicle-summary__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.vehicle-summary__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--p-app-space-3);
+  padding-block: var(--p-app-space-2);
+}
+.vehicle-summary__log {
+  display: grid;
+  gap: var(--p-app-space-1);
+  padding-block: var(--p-app-space-3);
+  border-block-end: 1px solid var(--p-content-border-color);
+}
+.vehicle-summary__log a {
+  overflow-wrap: anywhere;
+}

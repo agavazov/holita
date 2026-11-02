@@ -104,6 +104,81 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
     min-inline-size: 0;
   }
 
+  // Route-backed sections: real links with an underline and a non-colour current-page cue.
+  .app-route-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--p-app-space-1);
+    min-inline-size: 0;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    border-block-end: 1px solid var(--p-content-border-color);
+
+    > li {
+      display: flex;
+      flex: none;
+      min-inline-size: 0;
+    }
+  }
+
+  .app-route-nav__link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--p-app-space-2);
+    min-block-size: var(--p-app-control-height);
+    padding: var(--p-app-space-3) var(--p-app-space-4);
+    border: 0;
+    border-block-end: 2px solid transparent;
+    border-radius: var(--p-app-radius-control) var(--p-app-radius-control) 0 0;
+    background: transparent;
+    color: var(--p-text-muted-color);
+    font: inherit;
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--p-text-color);
+      background: var(--p-content-hover-background);
+    }
+
+    &:focus-visible {
+      outline-offset: calc(-1 * var(--p-focus-ring-width));
+    }
+  }
+
+  .app-route-nav__link--active {
+    color: var(--p-highlight-color);
+    background: var(--p-highlight-background);
+    border-block-end-color: var(--p-primary-color);
+    font-weight: 600;
+  }
+
+  // Context actions follow the identity header and section navigation.
+  .app-context-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--p-app-space-3);
+    min-inline-size: 0;
+
+    > h2 {
+      margin: 0;
+      font-size: var(--p-app-text-lg);
+    }
+  }
+
+  .app-page-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--p-app-space-2);
+  }
+
   .app-filter-form {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));

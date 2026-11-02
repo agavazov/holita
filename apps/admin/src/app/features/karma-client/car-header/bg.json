@@ -8,9 +8,11 @@
   "location": "Местоположение",
   "trips": "Пътувания",
   "events": "Събития",
+  "diagnostics": "Диагностика",
   "drivingProfile": "Профил на шофиране",
   "backToTrucks": "Към камионите",
   "refresh": "Обнови",
   "retry": "Опитай отново",
-  "deviceSettings": "Настройки на устройството"
+  "deviceSettings": "Настройки на устройството",
+  "more": "Още"
 }

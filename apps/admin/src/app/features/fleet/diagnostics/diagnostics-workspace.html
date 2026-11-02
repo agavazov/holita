@@ -1,0 +1,11 @@
+@switch (section()) {
+  @case ('logs') {
+    <holita-logs-page [branchId]="branchId()" [language]="language()" />
+  }
+  @case ('risk') {
+    <holita-risk-page [branchId]="branchId()" [language]="language()" />
+  }
+  @default {
+    <holita-faults-page [branchId]="branchId()" [language]="language()" />
+  }
+}

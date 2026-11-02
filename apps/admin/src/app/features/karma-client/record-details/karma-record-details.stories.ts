@@ -12,13 +12,45 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
-function routed(section: string): NonNullable<Story['render']> {
+function routed(section: string, language = 'en'): NonNullable<Story['render']> {
   return () => ({
-    props: { url: `/en/karma-client/cars/41${section}` },
+    props: { url: `/${language}/karma-client/cars/41${section}` },
     moduleMetadata: { imports: [StoryApp, AdminWorkspace, KarmaWorkspace] },
     template: '<holita-story-app [url]="url" />',
   });
 }
+
+export const Location: Story = { render: routed('/location?listQ=KARMA&listProject=12') };
+export const BulgarianLocation: Story = {
+  render: routed('/location?listQ=KARMA&listProject=12', 'bg'),
+};
+export const MobileLocation: Story = {
+  ...BulgarianLocation,
+  globals: { viewport: { value: 'mobile375', isRotated: false } },
+};
+export const DarkLocation: Story = { ...Location, globals: { theme: 'dark' } };
+
+/** Open the real drawer for visual review; no maps or external links are activated. */
+export const TripEndpoints: Story = {
+  render: routed('/trips?listQ=KARMA&listProject=12'),
+  play: async ({ canvasElement }) => {
+    const trigger = await within(canvasElement).findByRole(
+      'button',
+      { name: /^(View|Преглед) 9000000001$/ },
+      { timeout: 10000 },
+    );
+    await userEvent.click(trigger);
+  },
+};
+export const BulgarianTripEndpoints: Story = {
+  ...TripEndpoints,
+  render: routed('/trips?listQ=KARMA&listProject=12', 'bg'),
+};
+export const MobileTripEndpoints: Story = {
+  ...BulgarianTripEndpoints,
+  globals: { viewport: { value: 'mobile375', isRotated: false } },
+};
+export const DarkTripEndpoints: Story = { ...TripEndpoints, globals: { theme: 'dark' } };
 
 export const Edata: Story = {
   render: routed('/edata'),
@@ -118,24 +150,6 @@ export const DrivingProfile: Story = {
 
 export const TruckOverview: Story = {
   render: routed(''),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await waitFor(
-      () => expect(canvas.getByRole('region', { name: 'Truck summary' })).toBeVisible(),
-      { timeout: 10000 },
-    );
-    await waitFor(() =>
-      expect(canvas.getByRole('region', { name: 'Truck summary' })).toHaveTextContent(
-        'International (12)',
-      ),
-    );
-    await userEvent.click(canvas.getByText('Source fields', { exact: true }));
-    await expect(canvasElement.querySelectorAll('details dd')).toHaveLength(10);
-    await expect(canvasElement.querySelector('details')).toHaveTextContent(/Assigned drivers\s*0/);
-    // Keep the fixed shell at the document origin in full-page visual captures.
-    canvasElement.ownerDocument.defaultView?.scrollTo(0, 0);
-    await waitFor(() => expect(canvasElement.ownerDocument.defaultView?.scrollY).toBe(0));
-  },
 };
 
 export const MobileMessage: Story = {

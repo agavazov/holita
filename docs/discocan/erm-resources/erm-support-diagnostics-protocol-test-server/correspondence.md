@@ -1,5 +1,7 @@
 # ERM support correspondence: diagnostics, protocol access and Test Server
 
+**Historical source assessment (27 October).** The [29 October follow-up](reply-2026-10-29.md) and [current live evidence](live-verification-2026-10-29.md) supersede missing portal credentials, absence of positive 419 reports and any use of 154,0 as successful empty-fault evidence. Original material below is preserved with its original date and scope.
+
 [Reference and verification status](README.md) · [Analysis and images](analysis.md) ·
 [Original reply](source/erm-support-reply.odt)
 

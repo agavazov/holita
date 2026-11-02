@@ -1,0 +1,232 @@
+query AdminFleetScenario($id: ID!) {
+  fleetScenario(id: $id) {
+    id
+    branchId
+    exampleClock
+    period {
+      ...FleetEvidencePeriod
+    }
+    provenance {
+      ...FleetEvidence
+    }
+    coverage {
+      ...FleetScenarioCoverage
+    }
+    vehicles {
+      id
+      label
+      provenance {
+        ...FleetEvidence
+      }
+    }
+    trips {
+      id
+      vehicleId
+      startedAt
+      stoppedAt
+      startPositionId
+      stopPositionId
+      distance {
+        ...FleetScenarioMetric
+      }
+      nightDistance {
+        ...FleetScenarioMetric
+      }
+      maximumSpeed {
+        ...FleetScenarioMetric
+      }
+      provenance {
+        ...FleetEvidence
+      }
+    }
+    positionSamples {
+      id
+      vehicleId
+      tripId
+      latitude
+      longitude
+      provenance {
+        ...FleetEvidence
+      }
+    }
+    signalSamples {
+      id
+      vehicleId
+      tripId
+      positionSampleId
+      signal
+      value
+      unit
+      availability
+      provenance {
+        ...FleetEvidence
+      }
+    }
+  }
+}
+
+query AdminFleetDiagnostics($id: ID!) {
+  fleetScenario(id: $id) {
+    id
+    branchId
+    exampleClock
+    period {
+      ...FleetEvidencePeriod
+    }
+    provenance {
+      ...FleetEvidence
+    }
+    coverage {
+      ...FleetScenarioCoverage
+    }
+    vehicles {
+      id
+      label
+      provenance {
+        ...FleetEvidence
+      }
+    }
+    trips {
+      id
+      vehicleId
+      startedAt
+      stoppedAt
+      provenance {
+        ...FleetEvidence
+      }
+    }
+    positionSamples {
+      id
+      vehicleId
+      tripId
+      latitude
+      longitude
+      provenance {
+        ...FleetEvidence
+      }
+    }
+    signalSamples {
+      id
+      vehicleId
+      tripId
+      positionSampleId
+      signal
+      value
+      unit
+      availability
+      provenance {
+        ...FleetEvidence
+      }
+    }
+    faults {
+      ...FleetScenarioFaultDetails
+    }
+    logs {
+      ...FleetScenarioLogDetails
+    }
+    ruleEvaluations {
+      ...FleetScenarioRuleEvaluationDetails
+    }
+  }
+}
+
+fragment FleetScenarioFaultDetails on FleetScenarioFault {
+  id
+  vehicleId
+  tripId
+  code
+  system
+  severity
+  reportedStatus
+  firstObservedAt
+  lastObservedAt
+  occurrences
+  reportedResolvedAt
+  observationLogIds
+  provenance {
+    ...FleetEvidence
+  }
+}
+
+fragment FleetScenarioLogDetails on FleetScenarioLog {
+  id
+  vehicleId
+  tripId
+  kind
+  severity
+  faultId
+  reportedStatus
+  signalSampleId
+  evaluationId
+  reason
+  provenance {
+    ...FleetEvidence
+  }
+}
+
+fragment FleetScenarioRuleEvaluationDetails on FleetScenarioRuleEvaluation {
+  id
+  vehicleId
+  tripId
+  faultId
+  rule
+  ruleId
+  version
+  window {
+    ...FleetEvidencePeriod
+  }
+  evaluatedAt
+  state
+  attention
+  thresholds {
+    kind
+    value
+    unit
+  }
+  availableInputs
+  requiredInputs
+  contributingSignalIds
+  contributingLogIds
+  missingSignalIds
+  missingEvidence
+  provenance {
+    ...FleetEvidence
+  }
+}
+
+fragment FleetEvidence on FleetEvidenceProvenance {
+  origin
+  source
+  scenarioId
+  sourceRecordId
+  eventAt
+  receivedAt
+  retrievedAt
+}
+
+fragment FleetEvidencePeriod on FleetEvidencePeriod {
+  from
+  toExclusive
+  timeZone
+}
+
+fragment FleetScenarioCoverage on FleetScenarioCoverage {
+  retrieval
+  positionCoverage
+  positionsLoaded
+  gaps {
+    from
+    toExclusive
+  }
+}
+
+fragment FleetScenarioMetric on FleetScenarioMetric {
+  value
+  unit
+  availability
+  availableInputs
+  requiredInputs
+  provenance {
+    ...FleetEvidence
+  }
+}

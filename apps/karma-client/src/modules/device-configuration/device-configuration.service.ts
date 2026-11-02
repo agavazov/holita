@@ -12,7 +12,10 @@ import {
   configurationRuleRequest,
   configurationTarget,
   configurationWindow,
+  diagnosticRequest,
+  diagnosticWindow,
 } from './configuration-input.js';
+import { diagnosticReport } from '../history/diagnostic-report.js';
 import {
   configurationObservation,
   configurationReadback,
@@ -49,6 +52,126 @@ export class DeviceConfigurationService {
     const signal = AbortSignal.timeout(4000);
     await this.readTarget(input.carId, input.expectedDeviceId, signal);
     return this.karma.requestConfiguration(input.carId, signal);
+  }
+
+  async requestDiagnostic(value: unknown) {
+    const input = diagnosticRequest(value);
+    const signal = AbortSignal.timeout(20000);
+    await this.readTarget(input.carId, input.expectedDeviceId, signal);
+    for (const id of input.existingQueueIds) {
+      const state = await this.diagnosticQueueState(id, signal);
+      // Observed terminal states: transmitted (1), failed to receive acknowledgment (3).
+      if (state !== 1 && state !== 3) {
+        return { status: 'PENDING' as const, queueIds: input.existingQueueIds };
+      }
+    }
+    return this.karma.requestDiagnostic(input.carId, input.kind, signal);
+  }
+
+  async diagnosticWatermark(value: unknown) {
+    const input = configurationRequest(value);
+    const signal = AbortSignal.timeout(4000);
+    await this.readTarget(input.carId, input.expectedDeviceId, signal);
+    const parameters = new URLSearchParams({ car: input.carId, date_type: 'utc' });
+    parameters.append('event_type[]', '33');
+    const data = await this.karma.readDiagnosticEvents(parameters, signal);
+    if (!Array.isArray(data) || data.length > 500) {
+      unavailable();
+    }
+    let latest = 0;
+    const rows: unknown[] = data;
+    for (const row of rows) {
+      if (!object(row)) {
+        unavailable();
+      }
+      const id = row['message_id'];
+      if (
+        typeof id !== 'number' ||
+        !Number.isSafeInteger(id) ||
+        id <= latest ||
+        row['car_id'] !== Number(input.carId) ||
+        row['device_id'] !== input.expectedDeviceId ||
+        row['eid'] !== 33
+      ) {
+        unavailable();
+      }
+      latest = id;
+    }
+    return { afterMessageId: latest ? String(latest) : null };
+  }
+
+  async diagnosticObservations(value: unknown) {
+    const input = diagnosticWindow(value);
+    const signal = AbortSignal.timeout(20000);
+    await this.readTarget(input.carId, input.expectedDeviceId, signal);
+    const queue: { id: string; state: number | null }[] = [];
+    for (const id of input.queueIds) {
+      queue.push({ id, state: await this.diagnosticQueueState(id, signal) });
+    }
+    const observations: {
+      messageId: string;
+      eventTimeUtc: string;
+      rawMessage: string;
+      family:
+        | 'SPECIAL_ACK'
+        | 'FAULT_REPORT'
+        | 'UNRESOLVED_FAULT_REPORT'
+        | 'COMMUNICATION_DIAGNOSTICS';
+      acknowledgement: 'NACK' | 'POSITIVE_ACK' | null;
+    }[] = [];
+    let truncated = false;
+    const scanned = await this.scanConfigurationEvents(
+      input,
+      (messageId, eventTimeUtc, rawMessage) => {
+        const report = diagnosticReport({
+          id: messageId,
+          carId: input.carId,
+          deviceId: input.expectedDeviceId,
+          eventId: '33',
+          edt: eventTimeUtc.slice(0, 19).replace('T', ' '),
+          extra: rawMessage,
+        });
+        if (!report || report.decoding === 'MALFORMED') {
+          return;
+        }
+        const acknowledgement =
+          report.acknowledgement === 'NACK' || report.acknowledgement === 'POSITIVE_ACK'
+            ? report.acknowledgement
+            : null;
+        const family =
+          report.family === 'SPECIAL_ACK' && acknowledgement
+            ? 'SPECIAL_ACK'
+            : report.family === 'EDATA_411'
+              ? 'COMMUNICATION_DIAGNOSTICS'
+              : ['EDATA_413', 'EDATA_418', 'EDATA_419'].includes(report.family)
+                ? typeof report.payloadHex === 'string' && report.payloadHex.length <= 2
+                  ? 'UNRESOLVED_FAULT_REPORT'
+                  : 'FAULT_REPORT'
+                : null;
+        if (family) {
+          observations.push({ messageId, eventTimeUtc, rawMessage, family, acknowledgement });
+          observations.sort((a, b) => Number(b.messageId) - Number(a.messageId));
+          if (observations.length > 64) {
+            observations.length = 64;
+            truncated = true;
+          }
+        }
+      },
+      signal,
+      true,
+    );
+    return { coverageComplete: scanned && !truncated, queue, observations };
+  }
+
+  private async diagnosticQueueState(id: string, signal: AbortSignal): Promise<number | null> {
+    try {
+      const result = await this.karma.readDiagnosticQueue(id, signal);
+      const queue = object(result) ? result[id] : null;
+      const state = object(queue) ? queue['state_id'] : null;
+      return typeof state === 'number' && Number.isSafeInteger(state) && state >= 0 ? state : null;
+    } catch {
+      return null;
+    }
   }
 
   async requestProfile(value: unknown) {
@@ -188,9 +311,10 @@ export class DeviceConfigurationService {
   private async scanConfigurationEvents(
     input: ReturnType<typeof configurationWindow>,
     visit: (messageId: string, eventTimeUtc: string, rawMessage: string) => void,
+    signal = AbortSignal.timeout(20000),
+    idBounded = false,
   ): Promise<boolean> {
     // Background polling includes identity lookup, login renewal and up to four event pages.
-    const signal = AbortSignal.timeout(20000);
     await this.readTarget(input.carId, input.expectedDeviceId, signal);
     const from = new Date(
       Math.floor(new Date(input.fromUtc).getTime() / 1000) * 1000,
@@ -202,14 +326,22 @@ export class DeviceConfigurationService {
       const parameters = new URLSearchParams({
         car: input.carId,
         date_type: 'utc',
-        from_date: from.slice(0, 19).replace('T', ' '),
-        to_date: to.slice(0, 19).replace('T', ' '),
       });
+      if (idBounded) {
+        if (input.afterMessageId !== undefined) {
+          parameters.set('from_id', input.afterMessageId);
+        }
+      } else {
+        parameters.set('from_date', from.slice(0, 19).replace('T', ' '));
+        parameters.set('to_date', to.slice(0, 19).replace('T', ' '));
+      }
       parameters.append('event_type[]', '33');
       if (before !== null) {
-        parameters.set('to_id', String(before));
+        parameters.set('to_id', String(idBounded ? before + 1 : before));
       }
-      const data = await this.karma.readConfigurationEvents(parameters, signal);
+      const data = idBounded
+        ? await this.karma.readDiagnosticEvents(parameters, signal)
+        : await this.karma.readConfigurationEvents(parameters, signal);
       if (!Array.isArray(data) || data.length > 500) {
         unavailable();
       }
@@ -231,7 +363,7 @@ export class DeviceConfigurationService {
           typeof id !== 'number' ||
           !Number.isSafeInteger(id) ||
           id <= previous ||
-          (before !== null && id > before) ||
+          (before !== null && id > before + (idBounded ? 1 : 0)) ||
           row['car_id'] !== Number(input.carId) ||
           row['device_id'] !== input.expectedDeviceId ||
           row['eid'] !== 33 ||
@@ -247,8 +379,7 @@ export class DeviceConfigurationService {
         if (
           !Number.isFinite(parsed.getTime()) ||
           parsed.toISOString() !== eventTimeUtc ||
-          eventTimeUtc < from ||
-          eventTimeUtc > to
+          (!idBounded && (eventTimeUtc < from || eventTimeUtc > to))
         ) {
           unavailable();
         }
@@ -256,6 +387,9 @@ export class DeviceConfigurationService {
         oldest ||= id;
         if (
           typeof rawMessage === 'string' &&
+          (before === null || id <= before) &&
+          eventTimeUtc >= from &&
+          eventTimeUtc <= to &&
           (input.afterMessageId === undefined || id > Number(input.afterMessageId))
         ) {
           visit(String(id), eventTimeUtc, rawMessage);

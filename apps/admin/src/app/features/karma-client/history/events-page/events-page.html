@@ -1,4 +1,4 @@
-<section class="app-view" [attr.aria-label]="text().karmaEvents" [attr.aria-busy]="loading()">
+<section class="app-view" [attr.aria-busy]="loading()">
   <holita-karma-car-header
     [language]="language()"
     [carId]="carId()"
@@ -233,6 +233,16 @@
             <dd>{{ row.eventId }}</dd>
           </div>
         </dl>
+      </section>
+      <section class="app-view" [attr.aria-label]="detailText().eventPosition">
+        <h3 class="app-card__title">{{ detailText().eventPosition }}</h3>
+        <p class="app-muted">{{ detailText().eventPositionHint }}</p>
+        <holita-map-preview
+          [language]="language()"
+          [origin]="selectedCoordinates()"
+          [identity]="row.carId + ' · ' + row.id"
+          [originTime]="row.edt"
+        />
       </section>
       <section class="app-view" [attr.aria-label]="detailText().eventText">
         <h3 class="app-card__title">{{ detailText().eventText }}</h3>

@@ -1,0 +1,39 @@
+<div class="app-page-actions">
+  <span>{{ text().localReview }}:</span>
+  <span role="status"><p-tag severity="secondary" [value]="text().statuses[status()]" /></span>
+  <button
+    pButton
+    type="button"
+    severity="secondary"
+    [outlined]="true"
+    [disabled]="status() === 'REVIEWED'"
+    (click)="review.set(kind(), recordId(), 'REVIEWED')"
+  >
+    {{ text().review }}
+  </button>
+  <button
+    pButton
+    type="button"
+    severity="secondary"
+    [outlined]="true"
+    [disabled]="status() === 'ACKNOWLEDGED'"
+    (click)="review.set(kind(), recordId(), 'ACKNOWLEDGED')"
+  >
+    {{ text().acknowledge }}
+  </button>
+  <button
+    pButton
+    type="button"
+    severity="secondary"
+    [text]="true"
+    [disabled]="status() === 'UNREVIEWED'"
+    (click)="review.set(kind(), recordId(), 'UNREVIEWED')"
+  >
+    {{ text().reset }}
+  </button>
+</div>
+<p class="app-muted">{{ text().notice }}</p>
+<details>
+  <summary>{{ text().localReview }}</summary>
+  <p class="app-muted">{{ text().lifecycle }}</p>
+</details>

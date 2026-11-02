@@ -21,10 +21,14 @@
   @if (referencesError() && !error()) {
     <p-message severity="warn">{{ text().karmaReferencesUnavailable }}</p-message>
   }
-  @if (locationError() && !error()) {
-    <p-message severity="warn">{{ text().karmaLocationUnavailable }}</p-message>
-  }
   @if (car(); as truck) {
+    <holita-daily-report
+      [language]="language()"
+      [carId]="carId()"
+      [location]="location()"
+      [locationLoaded]="locationLoaded()"
+      [locationError]="locationError()"
+    />
     <section class="app-card" [attr.aria-label]="detailText().truckSummary">
       <dl class="app-facts">
         <div>
@@ -44,28 +48,6 @@
           <dd>{{ timeZoneName(truck.timeZoneId) }}</dd>
         </div>
       </dl>
-    </section>
-    <section class="app-card app-stack" [attr.aria-label]="text().karmaLocation">
-      <h2 class="app-card__title">{{ text().karmaLocation }}</h2>
-      <p class="app-muted">{{ text().karmaLocationHint }}</p>
-      @if (location(); as point) {
-        <p>{{ text().karmaRawEdt }}: {{ point.edt ?? '—' }}</p>
-        <p>
-          {{ text().karmaLatitude }}: {{ point.latitude ?? '—' }} · {{ text().karmaLongitude }}:
-          {{ point.longitude ?? '—' }}
-        </p>
-        @if (map(); as url) {
-          <a class="app-link" [href]="url" target="_blank" rel="noopener noreferrer">{{
-            text().karmaOpenMap
-          }}</a>
-        } @else {
-          <p>{{ text().karmaNoCoordinates }}</p>
-        }
-      } @else if (locationLoaded()) {
-        <p>{{ text().karmaNoLocation }}</p>
-      } @else if (!locationError()) {
-        <p role="status">{{ text().karmaLoadingLocation }}</p>
-      }
     </section>
     <details class="app-card app-source-details">
       <summary>{{ detailText().sourceFields }}</summary>

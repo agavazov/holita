@@ -16,7 +16,6 @@ import { EMPTY, Subject, catchError, startWith, switchMap } from 'rxjs';
 import type { AdminKarmaCarQuery } from '../../../../generated/graphql/operations';
 import { DemoSession } from '../../../core/auth/demo-session';
 import type { Language } from '../../../i18n/messages';
-import { injectPageRecord } from '../../../layout/page-record';
 import { AdminWorkspace } from '../../../workspace/admin-workspace';
 import { KarmaApi } from '../karma-api';
 import { KarmaCarHeader } from '../car-header/karma-car-header';
@@ -31,7 +30,13 @@ type KarmaCar = NonNullable<AdminKarmaCarQuery['karmaCar']>;
 /** Karma owns the target; the active Branch scopes saved operations. */
 @Component({
   selector: 'holita-device-management-page',
-  imports: [KarmaCarHeader, ButtonDirective, Message, DeviceConfigurationPage, DeviceManagementView],
+  imports: [
+    KarmaCarHeader,
+    ButtonDirective,
+    Message,
+    DeviceConfigurationPage,
+    DeviceManagementView,
+  ],
   providers: [KarmaApi, RuleDraftStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'app-view' },
@@ -107,10 +112,6 @@ export class DeviceManagementPage implements OnInit {
       (branch) => branch.id === this.workspace.branches.selectedId(),
     ),
   );
-
-  constructor() {
-    injectPageRecord(() => this.car()?.carNumber ?? null);
-  }
 
   ngOnInit(): void {
     if (!/^[1-9]\d*$/.test(this.carId()) || !Number.isSafeInteger(Number(this.carId()))) {

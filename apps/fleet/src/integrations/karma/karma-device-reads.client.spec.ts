@@ -126,5 +126,56 @@ describe('Fleet to Karma device-read transport', () => {
         }
       }
     }
+    const diagnostic = {
+      messageId: '7179721665',
+      eventTimeUtc: '2026-10-29T12:54:06.000Z',
+      rawMessage: '19,0,419,0,1,1,1001,2100005CFE0F01',
+      family: 'FAULT_REPORT',
+      acknowledgement: null,
+    };
+    for (const [observation, valid] of [
+      [diagnostic, true],
+      [{ ...diagnostic, rawMessage: '19,0,419,0,0,2,1001,2100005CFE0F01' }, true],
+      [
+        {
+          ...diagnostic,
+          rawMessage: '19,0,154,1',
+          family: 'SPECIAL_ACK',
+          acknowledgement: 'POSITIVE_ACK',
+        },
+        true,
+      ],
+      [{ ...diagnostic, rawMessage: '19,0,154,1' }, false],
+      [{ ...diagnostic, rawMessage: '19,0,411,0,1,1,1001,00000001010C87' }, false],
+      [{ ...diagnostic, acknowledgement: 'NACK' }, false],
+      [{ ...diagnostic, rawMessage: '19,0,419,0,1,1,1001,21' }, false],
+      ...['413,0,1,1,1001,19', '418,0,1,1,1001,20', '419,0,1,1,1001,21'].map(
+        (message): [unknown, boolean] => [
+          { ...diagnostic, rawMessage: `19,0,${message}`, family: 'UNRESOLVED_FAULT_REPORT' },
+          true,
+        ],
+      ),
+    ] satisfies [unknown, boolean][]) {
+      upstream.mockResolvedValueOnce(
+        Response.json({
+          coverageComplete: true,
+          queue: [{ id: '15', state: 1 }],
+          observations: [observation],
+        }),
+      );
+      const result = client.diagnosticObservations(
+        '41',
+        'opaque',
+        new Date('2026-10-29T12:54:00.000Z'),
+        new Date('2026-10-29T12:55:00.000Z'),
+        ['15'],
+        '7179000000',
+      );
+      if (valid) {
+        expect(await result).toMatchObject({ observations: [observation] });
+      } else {
+        await expect(result).rejects.toMatchObject({ code: 'INVALID_READBACK' });
+      }
+    }
   });
 });

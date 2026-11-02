@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { Check } from '@primeicons/angular/check';
 import { ChevronDown } from '@primeicons/angular/chevron-down';
+import { RouterLink, type UrlTree } from '@angular/router';
 import type { MenuItem } from 'primeng/api';
 import { Menu } from 'primeng/menu';
 import type { StatusTone } from '../../theme/status-tones';
@@ -23,6 +24,8 @@ export interface MenuOption {
   readonly label: string;
   /** The current choice of a single-choice menu (Branch, language): checked and announced. */
   readonly selected?: boolean;
+  /** A destination rendered as a real link, including its contextual query parameters. */
+  readonly link?: UrlTree;
   readonly disabled?: boolean;
   /** Destructive: last, after a separator, in the danger tone. */
   readonly danger?: boolean;
@@ -60,7 +63,7 @@ let nextId = 0;
  */
 @Component({
   selector: 'holita-menu-button',
-  imports: [Menu, Check, ChevronDown],
+  imports: [Menu, Check, ChevronDown, RouterLink],
   templateUrl: './menu-button.html',
   styleUrl: './menu-button.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -69,8 +72,8 @@ export class MenuButton {
   readonly options = input.required<readonly MenuOption[]>();
   /** The trigger's accessible name when its content does not give one (icon-only triggers). */
   readonly ariaLabel = input<string | null>(null);
-  /** `icon`: a square icon button; `text`: a quiet button with its label and a chevron. */
-  readonly variant = input<'icon' | 'text'>('icon');
+  /** A square icon, a quiet text button, or a trigger within the shared route navigation. */
+  readonly variant = input<'icon' | 'text' | 'navigation'>('icon');
   readonly header = input<MenuHeader | null>(null);
   /** Unavailable for now (e.g. still loading): stays focusable, does not open. */
   readonly disabled = input(false);
@@ -90,7 +93,11 @@ export class MenuButton {
   private readonly menu = viewChild.required(Menu);
   protected readonly triggerClasses = computed(() =>
     [
-      this.variant() === 'text' ? 'menu-button__text' : 'app-icon-button',
+      this.variant() === 'navigation'
+        ? 'app-route-nav__link'
+        : this.variant() === 'text'
+          ? 'menu-button__text'
+          : 'app-icon-button',
       'menu-button__trigger',
       this.buttonClass(),
     ]
@@ -108,6 +115,7 @@ export class MenuButton {
   protected readonly items = computed<MenuItem[]>(() => {
     const toItem = (option: MenuOption): MenuItem => ({
       option,
+      routerLink: option.link,
       disabled: option.disabled ?? false,
       ...(option.danger ? { styleClass: 'app-menu-danger' } : {}),
       command: () => {

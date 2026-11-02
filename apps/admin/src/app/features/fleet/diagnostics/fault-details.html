@@ -1,0 +1,110 @@
+<holita-source-context [language]="language()" [provenance]="fault().provenance" [compact]="true" />
+<section class="app-card app-stack" [attr.aria-label]="text().summary">
+  <h3 class="app-card__title">{{ text().codes[fault().code] }}</h3>
+  <p class="app-muted">{{ text().codeHint }}</p>
+  <dl class="app-facts">
+    <div>
+      <dt>{{ text().vehicle }}</dt>
+      <dd>{{ vehicleLabel() }}</dd>
+    </div>
+    <div>
+      <dt>{{ text().vehicleId }}</dt>
+      <dd>{{ fault().vehicleId }}</dd>
+    </div>
+    <div>
+      <dt>{{ text().recordId }}</dt>
+      <dd>{{ fault().id }}</dd>
+    </div>
+    <div>
+      <dt>{{ text().code }}</dt>
+      <dd>{{ fault().code }}</dd>
+    </div>
+    <div>
+      <dt>{{ text().system }}</dt>
+      <dd>{{ text().systems[fault().system] }}</dd>
+    </div>
+    <div>
+      <dt>{{ text().severity }}</dt>
+      <dd><p-tag [value]="text().severities[fault().severity]" [severity]="severity()" /></dd>
+    </div>
+    <div>
+      <dt>{{ text().reportedStatus }}</dt>
+      <dd>
+        <p-tag
+          [value]="text().statuses[fault().reportedStatus]"
+          [severity]="statusSeverity(fault().reportedStatus)"
+        />
+      </dd>
+    </div>
+    <div>
+      <dt>{{ text().statusAsOf }}</dt>
+      <dd>
+        <time [attr.datetime]="exampleClock()">{{ time(exampleClock()) }}</time>
+      </dd>
+    </div>
+    <div>
+      <dt>{{ text().firstObserved }}</dt>
+      <dd>
+        <time [attr.datetime]="fault().firstObservedAt">{{ time(fault().firstObservedAt) }}</time>
+      </dd>
+    </div>
+    <div>
+      <dt>{{ text().lastObserved }}</dt>
+      <dd>
+        <time [attr.datetime]="fault().lastObservedAt">{{ time(fault().lastObservedAt) }}</time>
+      </dd>
+    </div>
+    <div>
+      <dt>{{ text().occurrences }}</dt>
+      <dd>{{ occurrences() }}</dd>
+    </div>
+    <div>
+      <dt>{{ text().reportedResolved }}</dt>
+      <dd>{{ time(fault().reportedResolvedAt) }}</dd>
+    </div>
+    <div>
+      <dt>{{ text().tripId }}</dt>
+      <dd>{{ fault().tripId }}</dd>
+    </div>
+    <div>
+      <dt>{{ text().timeZone }}</dt>
+      <dd>{{ timeZone() }}</dd>
+    </div>
+  </dl>
+  <p class="app-muted">{{ text().statusHint }}</p>
+</section>
+<section class="app-stack" [attr.aria-label]="text().history">
+  <h3 class="app-card__title">{{ text().history }}</h3>
+  <p class="app-muted">{{ text().historyHint }}</p>
+  <ul class="fault-history">
+    @for (observation of observations(); track observation.id) {
+      <li class="fault-history__row">
+        <div class="app-cell-stack">
+          <time [attr.datetime]="observation.provenance.eventAt">{{
+            time(observation.provenance.eventAt)
+          }}</time>
+          <span
+            >{{ text().kinds[observation.kind] }}
+            @if (observation.reportedStatus; as status) {
+              · {{ text().statuses[status] }}
+            }
+          </span>
+        </div>
+        <a
+          class="app-link"
+          [routerLink]="logLink()(observation.id)"
+          [attr.aria-label]="
+            text().openLog +
+            ' · ' +
+            text().kinds[observation.kind] +
+            ' · ' +
+            time(observation.provenance.eventAt)
+          "
+          >{{ text().openLog }}</a
+        >
+      </li>
+    } @empty {
+      <li>{{ text().noObservations }}</li>
+    }
+  </ul>
+</section>

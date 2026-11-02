@@ -1,0 +1,217 @@
+<holita-page-header
+  [eyebrow]="text().example"
+  [title]="title()"
+  [description]="text().description"
+  [backLink]="backLink()"
+  [backQueryParams]="backQuery()"
+  [backLabel]="text().backToTrucks"
+/>
+@if (!selectedTrip()) {
+  @if (diagnosticsLink(); as link) {
+    <div class="app-page-actions">
+      <a pButton severity="secondary" [outlined]="true" [routerLink]="link">{{
+        text().diagnostics
+      }}</a>
+    </div>
+  }
+}
+<holita-day-overview
+  [language]="language()"
+  [provenance]="provenance()"
+  [period]="scenario()?.period ?? null"
+  [coverage]="scenario()?.coverage ?? null"
+  [distance]="distance()"
+  [tripCount]="tripCount()"
+  [maximumSpeed]="maximumSpeed()"
+  [composition]="composition()"
+  [compositionHint]="text().compositionHint"
+  [trips]="trips()"
+  [loading]="loading()"
+  [error]="!!failure()"
+  [status]="text().example"
+  [hint]="failure() ?? text().hint"
+  (viewTrip)="openTrip($event)"
+  (retry)="refresh()"
+>
+  <div overviewMap class="app-stack">
+    @if (!selectedTrip()) {
+      @if (firstTrip(); as trip) {
+        <holita-map-preview
+          [language]="language()"
+          [origin]="point(trip.startPositionId)"
+          [destination]="point(trip.stopPositionId)"
+          [route]="true"
+          [identity]="trip.id"
+          [originTime]="trip.startedAt"
+          [destinationTime]="trip.stoppedAt"
+        />
+      }
+    }
+    <p class="app-muted">{{ text().mapHint }}</p>
+  </div>
+  <dl overviewFacts class="app-facts">
+    <div>
+      <dt>{{ text().exampleClock }}</dt>
+      <dd>{{ time(scenario()?.exampleClock) }}</dd>
+    </div>
+    <div>
+      <dt>{{ text().itinerary }}</dt>
+      <dd>{{ text().itineraryValue }}</dd>
+    </div>
+  </dl>
+</holita-day-overview>
+@if (selectedTrip(); as trip) {
+  <holita-route-drawer
+    [title]="text().tripDetails"
+    [subtitle]="text().example"
+    [closeLink]="null"
+    size="lg"
+    (closeRequest)="closeTrip()"
+  >
+    <div class="app-stack">
+      @if (diagnosticsLink(); as link) {
+        <div class="app-page-actions">
+          <a pButton severity="secondary" [outlined]="true" [routerLink]="link">{{
+            text().diagnostics
+          }}</a>
+        </div>
+      }
+      <dl class="app-facts">
+        <div>
+          <dt>{{ text().tripId }}</dt>
+          <dd>{{ trip.id }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().vehicle }}</dt>
+          <dd>{{ title() }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().start }}</dt>
+          <dd>{{ time(trip.startedAt) }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().stop }}</dt>
+          <dd>{{ time(trip.stoppedAt) }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().distance }}</dt>
+          <dd>{{ distanceText(trip) }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().maximumSpeed }}</dt>
+          <dd>{{ speedText(trip) }}</dd>
+        </div>
+      </dl>
+      <div class="app-page-actions" role="group" [attr.aria-label]="text().tripView">
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="measurementsMode()"
+          [attr.aria-pressed]="!measurementsMode()"
+          (click)="selectView(false)"
+        >
+          {{ text().tripPoints }}
+        </button>
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="!measurementsMode()"
+          [attr.aria-pressed]="measurementsMode()"
+          (click)="selectView(true)"
+        >
+          {{ text().measurements }}
+        </button>
+      </div>
+      @if (measurementsMode()) {
+        <holita-measurement-workspace
+          [language]="language()"
+          [identity]="title() + ' · ' + trip.id"
+          [scopeHint]="measurementScope()"
+          [channels]="measurementChannels()"
+          [records]="measurementRecords()"
+          [selectedChannelKey]="selectedChannelKey()"
+          [selectedRecordKey]="selectedPointKey()"
+          [provenance]="trip.provenance"
+          [period]="scenario()?.period ?? null"
+          [coverage]="scenario()?.coverage ?? null"
+          [gapThresholdMinutes]="15"
+          [loading]="loading()"
+          [error]="failure()"
+          (selectedChannelKeyChange)="selectChannel($event)"
+          (selectedRecordKeyChange)="selectPoint($event)"
+          (retry)="refresh()"
+        />
+        <section class="app-card app-stack" [attr.aria-label]="text().comparison">
+          <h2 class="app-card__title">{{ text().comparison }}</h2>
+          @if (counterComparison(); as comparison) {
+            <holita-source-context
+              [language]="language()"
+              [provenance]="comparison.provenance"
+              [compact]="true"
+            />
+            <p class="app-muted">{{ text().comparisonScope }}</p>
+            <dl class="app-facts">
+              <div>
+                <dt>{{ text().firstBoundary }}</dt>
+                <dd>{{ comparison.start.id }} · {{ comparison.start.instantUtc }}</dd>
+              </div>
+              <div>
+                <dt>{{ text().lastBoundary }}</dt>
+                <dd>{{ comparison.stop.id }} · {{ comparison.stop.instantUtc }}</dd>
+              </div>
+              @for (counter of comparison.counters; track counter.key) {
+                <div>
+                  <dt>{{ counter.label }} · {{ text().delta }}</dt>
+                  <dd class="app-num">{{ number(counter.value, 3) }} {{ counter.unit }}</dd>
+                </div>
+              }
+              <div>
+                <dt>{{ text().intervalConsumption }}</dt>
+                <dd class="app-num">
+                  {{ number(comparison.consumption) }} {{ text().consumptionUnit }}
+                </dd>
+              </div>
+            </dl>
+            <details class="app-source-details">
+              <summary>{{ text().boundaryReadings }}</summary>
+              <dl class="app-facts">
+                @for (counter of comparison.counters; track counter.key) {
+                  <div>
+                    <dt>{{ counter.label }}</dt>
+                    <dd>
+                      {{ counter.first.id }}: {{ number(counter.first.value, 6) }}
+                      {{ counter.unit }} → {{ counter.last.id }}:
+                      {{ number(counter.last.value, 6) }} {{ counter.unit }}
+                    </dd>
+                  </div>
+                }
+              </dl>
+            </details>
+            <p class="app-muted">{{ text().comparisonExcluded }}</p>
+          } @else {
+            <p role="status">{{ text().comparisonUnavailable }}</p>
+          }
+        </section>
+      } @else {
+        <holita-point-explorer
+          [language]="language()"
+          [identity]="title() + ' · ' + trip.id"
+          [endpoints]="explorerEndpoints()"
+          [points]="explorerPoints()"
+          [selectedKey]="selectedPointKey()"
+          [provenance]="trip.provenance"
+          [period]="scenario()?.period ?? null"
+          [coverage]="scenario()?.coverage ?? null"
+          [gapThresholdMinutes]="15"
+          [loading]="loading()"
+          [error]="failure()"
+          (selectedKeyChange)="selectPoint($event)"
+          (retry)="refresh()"
+        />
+      }
+      <p class="app-muted">{{ text().mapHint }}</p>
+    </div>
+  </holita-route-drawer>
+}

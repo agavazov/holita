@@ -1,0 +1,66 @@
+<details class="diagnostic-brief">
+  <summary>{{ text().brief }}</summary>
+  <div class="app-stack diagnostic-brief__content">
+    <p>{{ text().briefHint }}</p>
+    <p class="app-muted">{{ text().notRepair }}</p>
+    <dl class="app-facts">
+      @for (fact of facts(); track fact.label) {
+        <div>
+          <dt>{{ fact.label }}</dt>
+          <dd>{{ fact.value }}</dd>
+        </div>
+      }
+      <div>
+        <dt>{{ text().localReview }}</dt>
+        <dd>{{ text().statuses[localStatus()] }}</dd>
+      </div>
+    </dl>
+    <h3>{{ text().evidence }}</h3>
+    <ul class="diagnostic-brief__evidence">
+      @for (row of evidence(); track row.id) {
+        <li>
+          <strong>{{ row.detail }}</strong
+          ><br /><time>{{ row.time }}</time
+          ><br /><span class="app-muted">{{ row.id }}</span>
+        </li>
+      } @empty {
+        <li>{{ evidenceText().noContributors }}</li>
+      }
+    </ul>
+    @if (record(); as selected) {
+      <holita-source-context
+        [language]="language()"
+        [provenance]="selected.provenance"
+        [period]="scenario().period"
+        [coverage]="scenario().coverage"
+      />
+    }
+    <p class="app-muted">{{ text().notice }}</p>
+    @if (points().length) {
+      <holita-form-field controlId="diagnostic-brief-point" [label]="text().coordinates">
+        <p-select
+          inputId="diagnostic-brief-point"
+          [ariaLabel]="text().coordinates"
+          [options]="pointOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="selectedPointId()"
+          (ngModelChange)="choosePoint($event)"
+          appendTo="body"
+        />
+      </holita-form-field>
+      <p class="app-muted">{{ text().pointHint }}</p>
+    } @else {
+      <p class="app-muted">{{ text().noPoints }}</p>
+    }
+    <div class="app-page-actions">
+      <button pButton type="button" severity="secondary" [outlined]="true" (click)="download()">
+        {{ text().download }}
+      </button>
+    </div>
+    <details>
+      <summary>{{ text().exportPreview }}</summary>
+      <pre>{{ brief() | json }}</pre>
+    </details>
+  </div>
+</details>

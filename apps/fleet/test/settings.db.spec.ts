@@ -50,13 +50,13 @@ describe('Fleet settings persistence and scoped calculation with PostgreSQL', ()
     source: string,
     variables: Record<string, unknown>,
     branchId: string,
-    tenant = tenantId,
+    tenant: string | null = tenantId,
   ) {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        authorization: `Bearer ${issueDemoToken(tenant)}`,
+        ...(tenant === null ? {} : { authorization: `Bearer ${issueDemoToken(tenant)}` }),
         'x-branch-id': branchId,
       },
       body: JSON.stringify({ query: source, variables }),
@@ -261,5 +261,252 @@ describe('Fleet settings persistence and scoped calculation with PostgreSQL', ()
         fleetDeviceSummary: { offline: 1, online: 0 },
       },
     });
+
+    // Runtime examples verify their Branch through Core without joining persisted Fleet activity.
+    const scenarioQuery = `query($id:ID!){fleetScenario(id:$id){
+      id branchId exampleClock
+      provenance{...ScenarioEvidence}
+      period{from toExclusive timeZone}
+      coverage{retrieval positionCoverage positionsLoaded gaps{from toExclusive}}
+      vehicles{id label provenance{source}}
+      trips{id vehicleId}
+      positionSamples{id tripId vehicleId}
+      signalSamples{id vehicleId signal value unit availability provenance{source}}
+      faults{
+        id vehicleId tripId code system severity reportedStatus
+        firstObservedAt lastObservedAt occurrences reportedResolvedAt observationLogIds
+        provenance{...ScenarioEvidence}
+      }
+      logs{
+        id vehicleId tripId kind severity faultId reportedStatus signalSampleId evaluationId reason
+        provenance{...ScenarioEvidence}
+      }
+      ruleEvaluations{
+        id vehicleId tripId faultId rule ruleId version window{from toExclusive timeZone}
+        evaluatedAt state attention thresholds{kind value unit} availableInputs requiredInputs
+        contributingSignalIds contributingLogIds missingSignalIds missingEvidence
+        provenance{...ScenarioEvidence}
+      }
+    }}
+    fragment ScenarioEvidence on FleetEvidenceProvenance{
+      origin source scenarioId sourceRecordId eventAt receivedAt retrievedAt
+    }`;
+    const scenarioVariables = { id: 'operational-day-v1' };
+    const persistedActivity = await Promise.all([
+      database.client.vehicle.count(),
+      database.client.trip.count(),
+      database.client.vehicleStatusSample.count(),
+      database.client.fleetEvent.count(),
+    ]);
+    requireBranch.mockClear();
+    const scenarioResult = await query(scenarioQuery, scenarioVariables, branchId);
+    const diagnosticEvidence = {
+      source: 'HOLITA_SCENARIO',
+      scenarioId: scenarioVariables.id,
+      receivedAt: null,
+      retrievedAt: now.toISOString(),
+    };
+    const exampleClock = '2026-10-21T06:00:00.000Z';
+    const evaluationEvidence = {
+      ...diagnosticEvidence,
+      origin: 'DERIVED',
+      eventAt: exampleClock,
+    };
+    const evaluationOutcomes = [
+      ['example-evaluation-fault-01', 'MATCHED', 'REVIEW', 3],
+      ['example-evaluation-temperature-01', 'MATCHED', 'MONITOR', 3],
+      ['example-evaluation-voltage-01', 'INSUFFICIENT_DATA', null, 2],
+      ['example-evaluation-voltage-02', 'NOT_MATCHED', null, 3],
+    ] as const;
+    expect(scenarioResult).toMatchObject({
+      data: {
+        fleetScenario: {
+          id: scenarioVariables.id,
+          branchId,
+          exampleClock,
+          provenance: {
+            ...diagnosticEvidence,
+            origin: 'ILLUSTRATIVE',
+            sourceRecordId: scenarioVariables.id,
+            eventAt: null,
+          },
+          period: {
+            from: '2026-10-19T21:00:00.000Z',
+            toExclusive: '2026-10-20T21:00:00.000Z',
+            timeZone: 'Europe/Sofia',
+          },
+          coverage: { retrieval: 'COMPLETE', positionCoverage: 'PARTIAL' },
+          signalSamples: expect.arrayContaining([
+            expect.objectContaining({
+              id: 'example-position-01-speed',
+              vehicleId: 'example-truck-01',
+              signal: 'SPEED',
+              value: 0,
+              unit: 'KILOMETRES_PER_HOUR',
+              availability: 'COMPLETE',
+              provenance: { source: 'HOLITA_SCENARIO' },
+            }),
+            expect.objectContaining({
+              id: 'example-position-04-external_voltage',
+              signal: 'EXTERNAL_VOLTAGE',
+              value: null,
+              unit: 'VOLT',
+              availability: 'UNAVAILABLE',
+              provenance: { source: 'HOLITA_SCENARIO' },
+            }),
+          ]),
+          faults: [
+            {
+              id: 'example-fault-01',
+              vehicleId: 'example-truck-01',
+              tripId: 'example-trip-01',
+              code: 'EXAMPLE_COOLING_01',
+              reportedStatus: 'ACTIVE',
+              firstObservedAt: '2026-10-20T06:20:00.000Z',
+              lastObservedAt: '2026-10-20T07:00:00.000Z',
+              reportedResolvedAt: null,
+              provenance: {
+                ...diagnosticEvidence,
+                origin: 'ILLUSTRATIVE',
+                sourceRecordId: 'example-fault-01',
+                eventAt: '2026-10-20T07:00:00.000Z',
+              },
+            },
+            {
+              id: 'example-fault-02',
+              reportedStatus: 'RESOLVED',
+              reportedResolvedAt: '2026-10-20T06:15:00.000Z',
+              observationLogIds: ['example-log-fault-04', 'example-log-fault-05'],
+            },
+          ],
+          ruleEvaluations: evaluationOutcomes.map(([id, state, attention, availableInputs]) => ({
+            id,
+            state,
+            attention,
+            availableInputs,
+            requiredInputs: 3,
+            vehicleId: 'example-truck-01',
+            version: 1,
+            evaluatedAt: exampleClock,
+            provenance: { ...evaluationEvidence, sourceRecordId: id },
+          })),
+        },
+      },
+    });
+    expect(scenarioResult).toMatchObject({
+      data: {
+        fleetScenario: {
+          logs: expect.arrayContaining([
+            expect.objectContaining({
+              id: 'example-log-fault-05',
+              kind: 'FAULT_STATUS',
+              faultId: 'example-fault-02',
+              reportedStatus: 'RESOLVED',
+            }),
+            expect.objectContaining({
+              id: 'example-log-availability-01',
+              kind: 'AVAILABILITY',
+              signalSampleId: 'example-position-04-external_voltage',
+              reason: 'SIGNAL_VALUE_UNAVAILABLE',
+              faultId: null,
+              reportedStatus: null,
+            }),
+            expect.objectContaining({
+              id: 'example-log-integration-01',
+              kind: 'INTEGRATION_ISSUE',
+              tripId: null,
+              reason: 'EXAMPLE_UPSTREAM_FAILURE',
+              faultId: null,
+              reportedStatus: null,
+              signalSampleId: null,
+              evaluationId: null,
+            }),
+            expect.objectContaining({
+              kind: 'RULE_EVALUATION',
+              evaluationId: 'example-evaluation-voltage-01',
+              provenance: {
+                ...evaluationEvidence,
+                sourceRecordId: 'example-log-example-evaluation-voltage-01',
+              },
+            }),
+          ]),
+          ruleEvaluations: expect.arrayContaining([
+            expect.objectContaining({
+              id: 'example-evaluation-voltage-01',
+              rule: 'VOLTAGE_PATTERN',
+              ruleId: 'example-voltage-pattern-v1',
+              window: {
+                from: '2026-10-20T06:20:00.000Z',
+                toExclusive: '2026-10-20T07:01:00.000Z',
+                timeZone: 'Europe/Sofia',
+              },
+              thresholds: [{ kind: 'VOLTAGE_AT_MOST', value: 27.6, unit: 'VOLT' }],
+              contributingSignalIds: [
+                'example-position-03-external_voltage',
+                'example-position-05-external_voltage',
+              ],
+              missingSignalIds: ['example-position-04-external_voltage'],
+              missingEvidence: ['SIGNAL_VALUE_UNAVAILABLE', 'VEHICLE_LIMITS_UNVERIFIED'],
+            }),
+            expect.objectContaining({
+              id: 'example-evaluation-fault-01',
+              faultId: 'example-fault-01',
+              contributingLogIds: [
+                'example-log-fault-01',
+                'example-log-fault-02',
+                'example-log-fault-03',
+              ],
+            }),
+          ]),
+        },
+      },
+    });
+    expect(requireBranch).toHaveBeenNthCalledWith(
+      1,
+      branchId,
+      expect.objectContaining({ tenantId, branchId }),
+    );
+    expect(await query(scenarioQuery, scenarioVariables, savedBranch)).toMatchObject({
+      data: { fleetScenario: { id: scenarioVariables.id, branchId: savedBranch } },
+    });
+    expect(requireBranch).toHaveBeenNthCalledWith(
+      2,
+      savedBranch,
+      expect.objectContaining({ tenantId, branchId: savedBranch }),
+    );
+    const foreignTenantId = randomUUID();
+    requireBranch.mockRejectedValueOnce(new NotFoundException('Branch not found'));
+    expect(await query(scenarioQuery, scenarioVariables, branchId, foreignTenantId)).toMatchObject({
+      data: null,
+      errors: [{ extensions: { code: 'NOT_FOUND' } }],
+    });
+    expect(requireBranch).toHaveBeenNthCalledWith(
+      3,
+      branchId,
+      expect.objectContaining({ tenantId: foreignTenantId, branchId }),
+    );
+    requireBranch.mockRejectedValueOnce(new NotFoundException('Branch not found'));
+    expect(await query(scenarioQuery, scenarioVariables, rejectedBranch)).toMatchObject({
+      data: null,
+      errors: [{ extensions: { code: 'NOT_FOUND' } }],
+    });
+    requireBranch.mockClear();
+    expect(await query(scenarioQuery, scenarioVariables, branchId, null)).toMatchObject({
+      data: null,
+      errors: [{ extensions: { code: 'UNAUTHENTICATED' } }],
+    });
+    expect(await query(scenarioQuery, scenarioVariables, 'not-a-branch')).toMatchObject({
+      data: null,
+      errors: [{ extensions: { code: 'BAD_USER_INPUT' } }],
+    });
+    expect(requireBranch).not.toHaveBeenCalled();
+    expect(
+      await Promise.all([
+        database.client.vehicle.count(),
+        database.client.trip.count(),
+        database.client.vehicleStatusSample.count(),
+        database.client.fleetEvent.count(),
+      ]),
+    ).toEqual(persistedActivity);
   });
 });

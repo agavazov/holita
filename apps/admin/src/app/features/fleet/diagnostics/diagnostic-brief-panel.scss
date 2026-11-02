@@ -1,0 +1,18 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+}
+.diagnostic-brief__content {
+  padding-block: var(--p-app-space-4);
+  align-items: stretch;
+  min-inline-size: 0;
+}
+.diagnostic-brief__evidence {
+  padding-inline-start: var(--p-app-space-4);
+  overflow-wrap: anywhere;
+}
+pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: inherit;
+}

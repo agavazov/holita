@@ -1,0 +1,70 @@
+<p class="app-muted">{{ text().selectionHint }}</p>
+@if (endpointFallback() && !loading()) {
+  <p role="status">{{ text().endpointsOnly }}</p>
+}
+@if (reason(); as value) {
+  <p role="status">{{ value }}</p>
+}
+<holita-point-explorer
+  [language]="language()"
+  [identity]="identity()"
+  [endpoints]="endpoints()"
+  [points]="points()"
+  [selectedKey]="selectedKey()"
+  [provenance]="source()"
+  [coverage]="coverage()"
+  [loading]="loading()"
+  [error]="failure()"
+  (selectedKeyChange)="selectedKey.set($event)"
+  (retry)="refresh()"
+/>
+<details class="app-source-details">
+  <summary>{{ text().briefTitle }}</summary>
+  @for (line of brief(); track $index) {
+    <p>{{ line }}</p>
+  }
+  <p class="app-muted">{{ text().evidenceHint }}</p>
+  <label>
+    <input
+      #coordinates
+      type="checkbox"
+      [checked]="includeCoordinates()"
+      (change)="includeCoordinates.set(coordinates.checked)"
+    />
+    {{ text().includeCoordinates }}
+  </label>
+  <div class="app-page-actions">
+    <button pButton type="button" severity="secondary" [outlined]="true" (click)="exportEvidence()">
+      {{ text().exportEvidence }}
+    </button>
+  </div>
+</details>
+<details class="app-source-details">
+  <summary>{{ text().sourceRead }}</summary>
+  <p>{{ text().utcHint }}</p>
+  <p>{{ text().edataNotLoaded }}</p>
+  @if (result(); as data) {
+    <dl class="app-facts">
+      <div>
+        <dt>{{ text().start }}</dt>
+        <dd>{{ data.startMessagePresent ? text().present : text().absent }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().stop }}</dt>
+        <dd>{{ data.stopMessagePresent ? text().present : text().absent }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().loadedRows }}</dt>
+        <dd>{{ data.loadedRows }} / {{ data.maxRows }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().duplicateIds }}</dt>
+        <dd>{{ data.duplicateIdsRemoved }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().deadline }}</dt>
+        <dd>{{ data.deadlineMs }} ms</dd>
+      </div>
+    </dl>
+  }
+</details>

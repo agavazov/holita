@@ -78,6 +78,26 @@ export interface KarmaRulesReadback {
   observations: KarmaRuleObservation[];
 }
 
+export type KarmaDiagnosticReadKind = 'READ_FAULT_LOGGER' | 'READ_COMMUNICATION_DIAGNOSTICS';
+
+export interface KarmaDiagnosticObservation {
+  messageId: string;
+  eventTimeUtc: string;
+  rawMessage: string;
+  family:
+    | 'SPECIAL_ACK'
+    | 'FAULT_REPORT'
+    | 'UNRESOLVED_FAULT_REPORT'
+    | 'COMMUNICATION_DIAGNOSTICS';
+  acknowledgement: 'NACK' | 'POSITIVE_ACK' | null;
+}
+
+export interface KarmaDiagnosticReadback {
+  coverageComplete: boolean;
+  queue: { id: string; state: number | null }[];
+  observations: KarmaDiagnosticObservation[];
+}
+
 export class KarmaDeviceReadError extends ServiceUnavailableException {
   constructor(readonly code: 'KARMA_UNAVAILABLE' | 'TARGET_CHANGED' | 'INVALID_READBACK') {
     super('Device configuration reading is unavailable; try again later');
@@ -94,6 +114,93 @@ function identifier(value: unknown): value is string {
     /^[1-9][0-9]{0,15}$/.test(value) &&
     Number.isSafeInteger(Number(value))
   );
+}
+
+function diagnosticFamily(rawMessage: string): KarmaDiagnosticObservation['family'] | null {
+  if (rawMessage === '19,0,154,0' || rawMessage === '19,0,154,1') {
+    return 'SPECIAL_ACK';
+  }
+  const parts = rawMessage.split(',');
+  const payload = parts[7];
+  if (
+    parts.length !== 8 ||
+    parts[0] !== '19' ||
+    parts[1] !== '0' ||
+    parts[3] !== '0' ||
+    !/^[01]$/.test(parts[4] ?? '') ||
+    !/^[1-9][0-9]*$/.test(parts[5] ?? '') ||
+    !Number.isSafeInteger(Number(parts[5])) ||
+    !/^[0-9]{1,5}$/.test(parts[6] ?? '') ||
+    Number(parts[6]) > 65535 ||
+    payload === undefined ||
+    !/^(?:[0-9a-f]{2})*$/i.test(payload)
+  ) {
+    return null;
+  }
+  if (parts[2] === '411') {
+    return payload.length >= 8 ? 'COMMUNICATION_DIAGNOSTICS' : null;
+  }
+  if (parts[2] !== '413' && parts[2] !== '418' && parts[2] !== '419') {
+    return null;
+  }
+  return payload.length <= 2 ? 'UNRESOLVED_FAULT_REPORT' : 'FAULT_REPORT';
+}
+
+export function karmaDiagnosticReadback(value: unknown): KarmaDiagnosticReadback {
+  if (
+    !record(value) ||
+    typeof value.coverageComplete !== 'boolean' ||
+    !Array.isArray(value.queue) ||
+    value.queue.length > 32 ||
+    !Array.isArray(value.observations) ||
+    value.observations.length > 64
+  ) {
+    throw new KarmaDeviceReadError('INVALID_READBACK');
+  }
+  return {
+    coverageComplete: value.coverageComplete,
+    queue: value.queue.map((item: unknown) => {
+      if (
+        !record(item) ||
+        !identifier(item.id) ||
+        (item.state !== null &&
+          (typeof item.state !== 'number' || !Number.isSafeInteger(item.state) || item.state < 0))
+      ) {
+        throw new KarmaDeviceReadError('INVALID_READBACK');
+      }
+      return { id: item.id, state: item.state };
+    }),
+    observations: value.observations.map((item: unknown) => {
+      if (
+        !record(item) ||
+        !identifier(item.messageId) ||
+        typeof item.eventTimeUtc !== 'string' ||
+        !Number.isFinite(Date.parse(item.eventTimeUtc)) ||
+        typeof item.rawMessage !== 'string' ||
+        item.rawMessage.length > 8192 ||
+        (item.family !== 'SPECIAL_ACK' &&
+          item.family !== 'FAULT_REPORT' &&
+          item.family !== 'UNRESOLVED_FAULT_REPORT' &&
+          item.family !== 'COMMUNICATION_DIAGNOSTICS') ||
+        item.family !== diagnosticFamily(item.rawMessage) ||
+        (item.acknowledgement !== null &&
+          item.acknowledgement !== 'NACK' &&
+          item.acknowledgement !== 'POSITIVE_ACK') ||
+        (item.family === 'SPECIAL_ACK') !== (item.acknowledgement !== null) ||
+        (item.acknowledgement === 'NACK' && item.rawMessage !== '19,0,154,0') ||
+        (item.acknowledgement === 'POSITIVE_ACK' && item.rawMessage !== '19,0,154,1')
+      ) {
+        throw new KarmaDeviceReadError('INVALID_READBACK');
+      }
+      return {
+        messageId: item.messageId,
+        eventTimeUtc: item.eventTimeUtc,
+        rawMessage: item.rawMessage,
+        family: item.family,
+        acknowledgement: item.acknowledgement,
+      };
+    }),
+  };
 }
 
 export function karmaReadTerminalResponse(value: unknown): KarmaReadTerminalResponse {
@@ -405,6 +512,60 @@ export class KarmaDeviceReadsClient {
     return this.send('rules-request', { carId, expectedDeviceId });
   }
 
+  async diagnosticWatermark(carId: string, expectedDeviceId: string): Promise<string | null> {
+    const result = await this.post('diagnostic-watermark', { carId, expectedDeviceId });
+    if (!record(result) || (result.afterMessageId !== null && !identifier(result.afterMessageId))) {
+      throw new KarmaDeviceReadError('INVALID_READBACK');
+    }
+    return result.afterMessageId;
+  }
+
+  async requestDiagnostic(
+    carId: string,
+    expectedDeviceId: string,
+    kind: KarmaDiagnosticReadKind,
+    existingQueueIds: string[],
+  ): Promise<{ status: 'ACCEPTED' | 'UNCERTAIN' | 'PENDING'; queueIds: string[] }> {
+    const result = await this.post('diagnostic-request', {
+      carId,
+      expectedDeviceId,
+      kind,
+      existingQueueIds,
+    });
+    if (
+      !record(result) ||
+      (result.status !== 'ACCEPTED' &&
+        result.status !== 'UNCERTAIN' &&
+        result.status !== 'PENDING') ||
+      !Array.isArray(result.queueIds) ||
+      result.queueIds.length > 32 ||
+      !result.queueIds.every(identifier)
+    ) {
+      throw new KarmaDeviceReadError('INVALID_READBACK');
+    }
+    return { status: result.status, queueIds: result.queueIds };
+  }
+
+  async diagnosticObservations(
+    carId: string,
+    expectedDeviceId: string,
+    from: Date,
+    to: Date,
+    queueIds: string[],
+    afterMessageId?: string,
+  ): Promise<KarmaDiagnosticReadback> {
+    return karmaDiagnosticReadback(
+      await this.post('diagnostic-observations', {
+        carId,
+        expectedDeviceId,
+        fromUtc: from.toISOString(),
+        toUtc: to.toISOString(),
+        queueIds,
+        ...(afterMessageId ? { afterMessageId } : {}),
+      }),
+    );
+  }
+
   requestRule(carId: string, expectedDeviceId: string, ruleId: number, rawDefinition: string) {
     return this.send('rule-request', { carId, expectedDeviceId, ruleId, rawDefinition });
   }
@@ -506,8 +667,11 @@ export class KarmaDeviceReadsClient {
       | 'profile-observations'
       | 'rules-request'
       | 'rule-request'
-      | 'rules-observations',
-    body: Record<string, string | number>,
+      | 'rules-observations'
+      | 'diagnostic-watermark'
+      | 'diagnostic-request'
+      | 'diagnostic-observations',
+    body: Record<string, string | number | string[]>,
   ): Promise<unknown> {
     const token = process.env.KARMA_INTERNAL_TOKEN;
     if (!token || token.length < 32) {
@@ -530,7 +694,9 @@ export class KarmaDeviceReadsClient {
         method: 'POST',
         redirect: 'error',
         signal: AbortSignal.timeout(
-          action.endsWith('observations') ? 21000 : KARMA_COMMAND_TIMEOUT_MS,
+          action.endsWith('observations') || action === 'diagnostic-request'
+            ? 21000
+            : KARMA_COMMAND_TIMEOUT_MS,
         ),
         headers: {
           'content-type': 'application/json',

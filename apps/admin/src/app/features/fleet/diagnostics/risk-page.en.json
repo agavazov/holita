@@ -1,0 +1,40 @@
+{
+  "trip": "Trip",
+  "section": "Risk indicators",
+  "search": "Search rule, evaluation or vehicle",
+  "loadError": "Risk indicators could not be loaded.",
+  "emptyTitle": "No evaluations in this source snapshot",
+  "emptyDescription": "Missing evaluations do not establish vehicle health.",
+  "realUnavailable": "Risk assessment unavailable",
+  "realExplanation": "No supported risk input is connected for real trucks. No example evaluation or low-risk result is substituted.",
+  "explanation": "Illustrative server rules highlight evidence to review. Thresholds are example settings, not manufacturer limits, diagnosis, ML probability, failure dates or remaining component life. There is no fleet-health score.",
+  "detail": "Evaluation details",
+  "open": "Open explanation",
+  "refresh": "Refresh",
+  "window": "Input window",
+  "vehicle": "Vehicle",
+  "observedOn": "Observation date",
+  "rule": "Rule",
+  "state": "Evaluation state",
+  "attention": "Attention band",
+  "noBand": "No attention band",
+  "selectedOutsideFilters": "This linked evaluation is outside the current list filters. The filters are preserved.",
+  "backToFaults": "Back to faults",
+  "backToLog": "Back to log record",
+  "rules": {
+    "REPEATED_FAULT": "Repeated fault reports",
+    "TEMPERATURE_PATTERN": "Sampled temperature pattern",
+    "VOLTAGE_PATTERN": "Sampled voltage pattern"
+  },
+  "states": {
+    "MATCHED": "Rule matched",
+    "NOT_MATCHED": "Rule not matched",
+    "INSUFFICIENT_DATA": "Insufficient data"
+  },
+  "attentionLabels": {
+    "MONITOR": "Monitor",
+    "REVIEW": "Review"
+  },
+  "vehicleContext": "Vehicle context",
+  "backToVehicle": "Back to vehicle context"
+}

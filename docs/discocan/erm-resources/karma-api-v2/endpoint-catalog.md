@@ -16,40 +16,40 @@ Source: [original endpoint definitions](source/endpoints.js.txt), [request helpe
 
 ## Operations and holita coverage
 
-| Method | Path               | Current use                                                              |
-| ------ | ------------------ | ------------------------------------------------------------------------ |
-| GET    | `/version`         | `karmaVersion` (see parameter limitations below)                         |
-| POST   | `/login`           | Internal server authentication                                           |
-| GET    | `/cars`            | `karmaCars` (see parameter limitations below)                            |
-| GET    | `/cars/{id}`       | `karmaCar` (see parameter limitations below)                             |
-| POST   | `/cars`            | Not implemented in holita                                                |
-| PUT    | `/cars/{id}`       | Not implemented in holita                                                |
-| DELETE | `/cars/{id}`       | Not implemented in holita                                                |
-| GET    | `/drivers`         | Not implemented in holita                                                |
-| POST   | `/drivers`         | Not implemented in holita                                                |
-| PUT    | `/drivers/{id}`    | Not implemented in holita                                                |
-| DELETE | `/drivers/{id}`    | Not implemented in holita                                                |
-| GET    | `/projects`        | `karmaProjects` (see parameter limitations below)                        |
-| POST   | `/projects`        | Not implemented in holita                                                |
-| GET    | `/users`           | `karmaUsers` (see parameter limitations below)                           |
-| GET    | `/location`        | `karmaLocation` (see parameter limitations below)                        |
-| POST   | `/location`        | Not implemented in holita                                                |
-| GET    | `/trips`           | `karmaTrips` (see parameter limitations below)                           |
-| POST   | `/trips`           | Not implemented in holita                                                |
-| GET    | `/events`          | `karmaEvents` (see parameter limitations below)                          |
-| POST   | `/events`          | Not implemented in holita                                                |
-| GET    | `/sensors`         | Not implemented in holita                                                |
-| POST   | `/sensors`         | Not implemented in holita                                                |
-| GET    | `/driving-profile` | `karmaDrivingProfile` (see parameter limitations below)                  |
-| POST   | `/driving-profile` | Not implemented in holita                                                |
-| GET    | `/parameters`      | Not implemented in holita                                                |
-| PUT    | `/parameters`      | Not implemented in holita                                                |
-| POST   | `/commands`        | Fixed internal parameter/profile reads and one-definition additive write |
-| GET    | `/edata`           | `karmaEdata` (see parameter limitations below)                           |
-| GET    | `/black_box/{id}`  | Not implemented in holita                                                |
-| GET    | `/queue/{id}`      | Not implemented in holita                                                |
-| GET    | `/time-zones`      | `karmaTimeZones` (see parameter limitations below)                       |
-| GET    | `/roles`           | `karmaRoles` (see parameter limitations below)                           |
+| Method | Path               | Current use                                                                                    |
+| ------ | ------------------ | ---------------------------------------------------------------------------------------------- |
+| GET    | `/version`         | `karmaVersion` (see parameter limitations below)                                               |
+| POST   | `/login`           | Internal server authentication                                                                 |
+| GET    | `/cars`            | `karmaCars` (see parameter limitations below)                                                  |
+| GET    | `/cars/{id}`       | `karmaCar` (see parameter limitations below)                                                   |
+| POST   | `/cars`            | Not implemented in holita                                                                      |
+| PUT    | `/cars/{id}`       | Not implemented in holita                                                                      |
+| DELETE | `/cars/{id}`       | Not implemented in holita                                                                      |
+| GET    | `/drivers`         | Not implemented in holita                                                                      |
+| POST   | `/drivers`         | Not implemented in holita                                                                      |
+| PUT    | `/drivers/{id}`    | Not implemented in holita                                                                      |
+| DELETE | `/drivers/{id}`    | Not implemented in holita                                                                      |
+| GET    | `/projects`        | `karmaProjects` (see parameter limitations below)                                              |
+| POST   | `/projects`        | Not implemented in holita                                                                      |
+| GET    | `/users`           | `karmaUsers` (see parameter limitations below)                                                 |
+| GET    | `/location`        | `karmaLocation` (see parameter limitations below)                                              |
+| POST   | `/location`        | Not implemented in holita                                                                      |
+| GET    | `/trips`           | `karmaTrips` (see parameter limitations below)                                                 |
+| POST   | `/trips`           | Not implemented in holita                                                                      |
+| GET    | `/events`          | `karmaEvents`, bounded `karmaDiagnosticHistory` (see parameter limitations below)              |
+| POST   | `/events`          | Not implemented in holita                                                                      |
+| GET    | `/sensors`         | Not implemented in holita                                                                      |
+| POST   | `/sensors`         | Not implemented in holita                                                                      |
+| GET    | `/driving-profile` | `karmaDrivingProfile` (see parameter limitations below)                                        |
+| POST   | `/driving-profile` | Not implemented in holita                                                                      |
+| GET    | `/parameters`      | Not implemented in holita                                                                      |
+| PUT    | `/parameters`      | Not implemented in holita                                                                      |
+| POST   | `/commands`        | Fixed internal parameter/profile/rule/logger/diagnostic reads and single-parameter/rule writes |
+| GET    | `/edata`           | `karmaEdata` (see parameter limitations below)                                                 |
+| GET    | `/black_box/{id}`  | Not implemented in holita                                                                      |
+| GET    | `/queue/{id}`      | Fixed internal diagnostic-operation reconciliation                                             |
+| GET    | `/time-zones`      | `karmaTimeZones` (see parameter limitations below)                                             |
+| GET    | `/roles`           | `karmaRoles` (see parameter limitations below)                                                 |
 
 ## GET `/version` — Version
 
@@ -251,7 +251,7 @@ Holita uses GET for one car, date_type=utc, fields[] selections, paired dates, e
 The separate internal configuration reader fixes `event_type[]=33`, verifies the
 selected car/device identity and UTC window, and reads at most four descending-ID
 pages of up to 500 rows. Each response body is bounded to 2 MiB. It parses supported
-text `401` and `416` messages from `extra`, filtered by an optional message-ID watermark
+text `401`, `402` and `416` messages from `extra`, filtered by an optional message-ID watermark
 before assembly; it is not a general event archive or an arbitrary decode interface.
 See [background configuration operations](../../architecture.md#background-device-configuration-reads).
 
@@ -334,10 +334,14 @@ Neither GET nor PUT is implemented. These are device configuration parameters, d
 Send command message to one or more devices.
 
 Holita constructs only command `301` with payload `0702BC` (parameter read), `1F`
-(profile read), or `02` followed by exactly one 22-byte definition. The internal
+(profile read), `0802BC` (rule read), `02` followed by exactly one 22-byte parameter
+definition, or `04` followed by exactly one supported rule record. Diagnostic reads
+add fixed `301`/`19` (stored fault logger) and `306` with an empty payload
+(communication diagnostics). The internal
 machine endpoints accept a selected `carId` and `expectedDeviceId`, recheck identity
-through `/cars/{id}`, and construct the command themselves. The changing endpoint
-also validates the raw definition against the supplied ID and `0..65000` interval.
+through `/cars/{id}`, and construct the command themselves. The changing endpoints
+also validate the raw parameter definition against the supplied ID and `0..65000`
+interval, or the rule frame, matching rule ID and supported expression bytecode.
 They send a one-element string `car_id` array, the fixed message and the server's
 `karma_sid`; they accept a bounded numeric queue-ID
 array. The adapter never accepts command text from callers and never automatically replays
@@ -348,7 +352,11 @@ See [background configuration operations](../../architecture.md#background-devic
 
 Manual single-device parameter updates were verified independently by device
 readback and subsequent measurements. Implemented additions/interval changes use the
-separate Fleet workflow; public Karma GraphQL queries have no write interface.
+separate Fleet workflow, which also supports one-rule changes with parameter/rule
+baselines and full-set verification; public Karma GraphQL queries have no write interface.
+Version/global requests remain manual procedures; fixed logger and communication
+diagnostic reads use the internal endpoints described above. Raw source events and illustrative Diagnostics
+screens have [separate evidence limits](holita-integration.md#diagnostic-evidence-and-product-coverage).
 See the [configuration procedure and evidence limits](../edata-simple-protocol-v4.04/parameter-reporting.md).
 This does not establish a universal command catalog, permissions, bulk behavior,
 acknowledgment correlation, idempotency or delivery guarantees.
@@ -391,10 +399,14 @@ No holita implementation or report sample. Accident ID is a text path value. No 
 
 Get status of queued messages.
 
-No holita implementation. Direct `GET /queue/{id}` reads for a single numeric ID
-returned an object keyed by that ID with `state_id` and `state_desc`; state `1` /
-`transmitted` was observed. It does not prove an applied device configuration.
-The complete state model, terminal conditions and bulk path grammar remain
+Holita's internal diagnostic workflow reads retained numeric queue IDs before a
+subsequent submission and while observing replies. Unknown states remain unknown;
+state `0` remains queued. Direct `GET /queue/{id}` reads for a single numeric ID
+returned an object keyed by that ID with `state_id` and `state_desc`. Observed states
+`1` / `transmitted` and `3` / `failed to receive ack` permit a new explicit diagnostic
+request. Neither proves an applied device configuration or a successful fault read.
+Special `154,0` NACK and actual returned reports are separate evidence.
+The complete state model, other terminal conditions and bulk path grammar remain
 unresolved. The vendor form marks queue_id as multi-value despite a single path
 placeholder and can switch to POST; that does not establish POST support.
 

@@ -1,0 +1,126 @@
+<section class="map-panel" [attr.aria-label]="heading()">
+  <div class="map-panel__heading">
+    <h2>{{ heading() }}</h2>
+    <p class="map-panel__identity">{{ identity() }}</p>
+    <p>{{ route() ? text().endpointsHint : text().locationHint }}</p>
+  </div>
+  <div class="map-panel__points" [attr.aria-label]="text().recordedPoints" role="group">
+    @for (item of points(); track item.endpoint) {
+      <div>
+        @if (route()) {
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            [outlined]="endpoint() !== item.endpoint"
+            [attr.aria-pressed]="endpoint() === item.endpoint"
+            [disabled]="!item.coordinates"
+            (click)="selectEndpoint(item.endpoint)"
+          >
+            {{ item.label }}
+          </button>
+        }
+        <dl>
+          <div>
+            <dt>{{ text().sourceTime }}</dt>
+            <dd>{{ item.time ?? '—' }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().coordinates }}</dt>
+            <dd>
+              @if (item.coordinates; as point) {
+                {{ point.latitude }} / {{ point.longitude }}
+              } @else {
+                {{ text().noEndpoint }}
+              }
+            </dd>
+          </div>
+        </dl>
+      </div>
+    }
+  </div>
+  <div class="map-panel__toolbar" role="group" [attr.aria-label]="text().views">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="view() !== 'place'"
+      [attr.aria-pressed]="view() === 'place'"
+      [disabled]="!point()"
+      (click)="view.set('place')"
+    >
+      <svg data-p-icon="map-marker" aria-hidden="true"></svg>{{ text().map }}
+    </button>
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="view() !== 'streetview'"
+      [attr.aria-pressed]="view() === 'streetview'"
+      [disabled]="!point()"
+      (click)="view.set('streetview')"
+    >
+      <svg data-p-icon="compass" aria-hidden="true"></svg>{{ text().streetView }}
+    </button>
+    @if (canRoute()) {
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [outlined]="view() !== 'directions'"
+        [attr.aria-pressed]="view() === 'directions'"
+        (click)="view.set('directions')"
+      >
+        <svg data-p-icon="directions" aria-hidden="true"></svg>{{ text().suggestedRoute }}
+      </button>
+    }
+  </div>
+  <div class="map-panel__view">
+    <h3>{{ viewLabel() }}</h3>
+    <p>{{ viewHint() }}</p>
+    @if (route() && !canRoute() && point()) {
+      <p>{{ text().incompleteRoute }}</p>
+    }
+    @if (externalUrl(); as url) {
+      <p>{{ embedUrl() ? text().embeddedDisclosure : text().googleDisclosure }}</p>
+      <a
+        pButton
+        severity="secondary"
+        [outlined]="true"
+        [href]="url"
+        target="_blank"
+        rel="noopener noreferrer"
+        ><svg data-p-icon="external-link" aria-hidden="true"></svg>{{ text().openGoogleMaps }}</a
+      >
+      @if (view() !== 'place') {
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [text]="true"
+          (click)="view.set('place')"
+        >
+          {{ text().returnToPoint }}
+        </button>
+      }
+    }
+  </div>
+  @if (source(); as url) {
+    <iframe
+      [src]="url"
+      [title]="identity() + ' · ' + viewLabel()"
+      allowfullscreen
+      referrerpolicy="strict-origin-when-cross-origin"
+    ></iframe>
+    <p class="map-panel__note">{{ text().previewFallback }}</p>
+  } @else {
+    <div class="map-panel__placeholder">
+      <svg data-p-icon="map-marker" aria-hidden="true"></svg>
+      @if (externalUrl()) {
+        <p>{{ text().notConfigured }}</p>
+      } @else {
+        <p role="status">{{ text().noCoordinates }}</p>
+      }
+    </div>
+  }
+</section>

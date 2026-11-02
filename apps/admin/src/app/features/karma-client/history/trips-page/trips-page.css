@@ -2,14 +2,3 @@
   display: block;
   min-inline-size: 0;
 }
-
-.trip-endpoints > div {
-  display: flex;
-  flex-direction: column;
-  gap: var(--p-app-space-2);
-  overflow-wrap: anywhere;
-}
-
-.trip-endpoints span {
-  color: var(--p-text-muted-color);
-}

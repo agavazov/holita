@@ -1,0 +1,734 @@
+{
+  "date": "2026-10-29",
+  "source_clock": "UTC, explicit date_type=utc controls",
+  "positive_fault_events": [
+    {
+      "car_id": 16595,
+      "device_id": "862129080367299",
+      "message_id": 7177124308,
+      "edt": "2026-10-28 18:54:31",
+      "eid": 33,
+      "extra": "19,0,419,0,1,1,1001,21000010F30701000004DF0B01"
+    },
+    {
+      "car_id": 16595,
+      "device_id": "862129080367299",
+      "message_id": 7179721665,
+      "edt": "2026-10-29 12:54:06",
+      "eid": 33,
+      "extra": "19,0,419,0,1,1,1001,2100005CFE0F01"
+    }
+  ],
+  "gateway_queries": [
+    {
+      "source_message_id": 7177124308,
+      "observed_utc": "2026-10-29T15:02:40.688786+00:00",
+      "path": "existing Gateway \u2192 task-started Karma Client \u2192 real Karma API",
+      "record": {
+        "id": "7177124308",
+        "carId": "16595",
+        "deviceId": "862129080367299",
+        "eventId": "33",
+        "edt": "2026-10-28 18:54:31",
+        "extra": "19,0,419,0,1,1,1001,21000010F30701000004DF0B01"
+      },
+      "errors": []
+    },
+    {
+      "source_message_id": 7179721665,
+      "observed_utc": "2026-10-29T15:02:41.340552+00:00",
+      "path": "existing Gateway \u2192 task-started Karma Client \u2192 real Karma API",
+      "record": {
+        "id": "7179721665",
+        "carId": "16595",
+        "deviceId": "862129080367299",
+        "eventId": "33",
+        "edt": "2026-10-29 12:54:06",
+        "extra": "19,0,419,0,1,1,1001,2100005CFE0F01"
+      },
+      "errors": []
+    }
+  ],
+  "logger_reads": [
+    {
+      "car_id": 16586,
+      "device_id": "862129080320033",
+      "car_number": "CB9369PE",
+      "command": "30,1,19,0,19,301,0,1,1,19",
+      "submitted_utc": "2026-10-29T14:57:45.670499+00:00",
+      "queue_ids": [
+        56182082
+      ],
+      "baseline_message_id": 7180160802,
+      "utc_selected_replies": [
+        {
+          "car_id": 16586,
+          "device_id": "862129080320033",
+          "message_id": 7180175996,
+          "edt": "2026-10-29 14:57:52",
+          "eid": 33,
+          "extra": "19,0,154,0"
+        }
+      ],
+      "final_queue_states": [
+        {
+          "queue_id": 56182082,
+          "state": {
+            "56182082": {
+              "state_id": 1,
+              "state_desc": "transmitted"
+            }
+          }
+        }
+      ],
+      "latest_source_utc": "2026-10-29 15:03:25"
+    },
+    {
+      "car_id": 16587,
+      "device_id": "862129080366630",
+      "car_number": "CB5640XP",
+      "command": "30,1,19,0,19,301,0,1,1,19",
+      "submitted_utc": "2026-10-29T14:57:46.158850+00:00",
+      "queue_ids": [
+        56182083
+      ],
+      "baseline_message_id": 7180143356,
+      "utc_selected_replies": [
+        {
+          "car_id": 16587,
+          "device_id": "862129080366630",
+          "message_id": 7180172853,
+          "edt": "2026-10-29 14:57:46",
+          "eid": 33,
+          "extra": "19,0,154,0"
+        }
+      ],
+      "final_queue_states": [
+        {
+          "queue_id": 56182083,
+          "state": {
+            "56182083": {
+              "state_id": 1,
+              "state_desc": "transmitted"
+            }
+          }
+        }
+      ],
+      "latest_source_utc": "2026-10-29 14:57:46"
+    },
+    {
+      "car_id": 16588,
+      "device_id": "862129080319233",
+      "car_number": "CB6711TE",
+      "command": "30,1,19,0,19,301,0,1,1,19",
+      "submitted_utc": "2026-10-29T14:57:46.564164+00:00",
+      "queue_ids": [
+        56182085
+      ],
+      "baseline_message_id": 7180062780,
+      "utc_selected_replies": [],
+      "final_queue_states": [
+        {
+          "queue_id": 56182085,
+          "state": {
+            "56182085": {
+              "state_id": 0,
+              "state_desc": "queued for transmission"
+            }
+          }
+        }
+      ],
+      "latest_source_utc": "2026-10-29 14:20:00"
+    },
+    {
+      "car_id": 16589,
+      "device_id": "862129080332111",
+      "car_number": "CB9680TE",
+      "command": "30,1,19,0,19,301,0,1,1,19",
+      "submitted_utc": "2026-10-29T14:57:47.053378+00:00",
+      "queue_ids": [
+        56182087
+      ],
+      "baseline_message_id": 7174547005,
+      "utc_selected_replies": [],
+      "final_queue_states": [
+        {
+          "queue_id": 56182087,
+          "state": {
+            "56182087": {
+              "state_id": 0,
+              "state_desc": "queued for transmission"
+            }
+          }
+        }
+      ],
+      "latest_source_utc": "2026-10-28 06:02:22"
+    },
+    {
+      "car_id": 16590,
+      "device_id": "862129080254620",
+      "car_number": "CB5636XP",
+      "command": "30,1,19,0,19,301,0,1,1,19",
+      "submitted_utc": "2026-10-29T14:57:47.552426+00:00",
+      "queue_ids": [
+        56182088
+      ],
+      "baseline_message_id": 7180119872,
+      "utc_selected_replies": [],
+      "final_queue_states": [
+        {
+          "queue_id": 56182088,
+          "state": {
+            "56182088": {
+              "state_id": 0,
+              "state_desc": "queued for transmission"
+            }
+          }
+        }
+      ],
+      "latest_source_utc": "2026-10-29 14:36:24"
+    },
+    {
+      "car_id": 16591,
+      "device_id": "862129080269511",
+      "car_number": "CB2792TK",
+      "command": "30,1,19,0,19,301,0,1,1,19",
+      "submitted_utc": "2026-10-29T14:57:47.993416+00:00",
+      "queue_ids": [
+        56182089
+      ],
+      "baseline_message_id": 7180143181,
+      "utc_selected_replies": [
+        {
+          "car_id": 16591,
+          "device_id": "862129080269511",
+          "message_id": 7180173026,
+          "edt": "2026-10-29 14:57:51",
+          "eid": 33,
+          "extra": "19,0,154,0"
+        }
+      ],
+      "final_queue_states": [
+        {
+          "queue_id": 56182089,
+          "state": {
+            "56182089": {
+              "state_id": 1,
+              "state_desc": "transmitted"
+            }
+          }
+        }
+      ],
+      "latest_source_utc": "2026-10-29 14:57:51"
+    },
+    {
+      "car_id": 16592,
+      "device_id": "862129080367646",
+      "car_number": "CB1344XH",
+      "command": "30,1,19,0,19,301,0,1,1,19",
+      "submitted_utc": "2026-10-29T14:57:48.456836+00:00",
+      "queue_ids": [
+        56182091
+      ],
+      "baseline_message_id": 7180154901,
+      "utc_selected_replies": [
+        {
+          "car_id": 16592,
+          "device_id": "862129080367646",
+          "message_id": 7180172986,
+          "edt": "2026-10-29 14:57:54",
+          "eid": 33,
+          "extra": "19,0,154,0"
+        }
+      ],
+      "final_queue_states": [
+        {
+          "queue_id": 56182091,
+          "state": {
+            "56182091": {
+              "state_id": 1,
+              "state_desc": "transmitted"
+            }
+          }
+        }
+      ],
+      "latest_source_utc": "2026-10-29 14:57:54"
+    },
+    {
+      "car_id": 16593,
+      "device_id": "862129080268844",
+      "car_number": "CB6721TE",
+      "command": "30,1,19,0,19,301,0,1,1,19",
+      "submitted_utc": "2026-10-29T14:57:48.951126+00:00",
+      "queue_ids": [
+        56182092
+      ],
+      "baseline_message_id": 7180159648,
+      "utc_selected_replies": [
+        {
+          "car_id": 16593,
+          "device_id": "862129080268844",
+          "message_id": 7180174718,
+          "edt": "2026-10-29 14:57:54",
+          "eid": 33,
+          "extra": "19,0,154,0"
+        }
+      ],
+      "final_queue_states": [
+        {
+          "queue_id": 56182092,
+          "state": {
+            "56182092": {
+              "state_id": 1,
+              "state_desc": "transmitted"
+            }
+          }
+        }
+      ],
+      "latest_source_utc": "2026-10-29 15:03:20"
+    },
+    {
+      "car_id": 16594,
+      "device_id": "862129080340825",
+      "car_number": "CB9405PE",
+      "command": "30,1,19,0,19,301,0,1,1,19",
+      "submitted_utc": "2026-10-29T14:57:49.348124+00:00",
+      "queue_ids": [
+        56182093
+      ],
+      "baseline_message_id": 7180116197,
+      "utc_selected_replies": [],
+      "final_queue_states": [
+        {
+          "queue_id": 56182093,
+          "state": {
+            "56182093": {
+              "state_id": 0,
+              "state_desc": "queued for transmission"
+            }
+          }
+        }
+      ],
+      "latest_source_utc": "2026-10-29 14:39:57"
+    },
+    {
+      "car_id": 16595,
+      "device_id": "862129080367299",
+      "car_number": "CB1147TP",
+      "command": "30,1,19,0,19,301,0,1,1,19",
+      "submitted_utc": "2026-10-29T14:57:49.818035+00:00",
+      "queue_ids": [
+        56182094
+      ],
+      "baseline_message_id": 7180075449,
+      "utc_selected_replies": [],
+      "final_queue_states": [
+        {
+          "queue_id": 56182094,
+          "state": {
+            "56182094": {
+              "state_id": 0,
+              "state_desc": "queued for transmission"
+            }
+          }
+        }
+      ],
+      "latest_source_utc": "2026-10-29 14:27:24"
+    }
+  ],
+  "diagnostic_reads": [
+    {
+      "car_id": 16586,
+      "device_id": "862129080320033",
+      "car_number": "CB9369PE",
+      "command": "30,1,19,0,19,306,0,1,1,",
+      "submitted_utc": "2026-10-29T15:03:59.862657+00:00",
+      "baseline_message_id": 7180192352,
+      "queue_ids": [
+        56182284
+      ],
+      "replies": [
+        {
+          "car_id": 16586,
+          "device_id": "862129080320033",
+          "message_id": 7180194143,
+          "edt": "2026-10-29 15:04:01",
+          "eid": 33,
+          "extra": "19,0,411,0,1,1,1001,00000001010C87"
+        }
+      ],
+      "queue_states": [
+        {
+          "queue_id": 56182284,
+          "state": {
+            "56182284": {
+              "state_id": 1,
+              "state_desc": "transmitted"
+            }
+          }
+        }
+      ],
+      "observed_utc": "2026-10-29T15:04:38.471034+00:00"
+    },
+    {
+      "car_id": 16587,
+      "device_id": "862129080366630",
+      "car_number": "CB5640XP",
+      "command": "30,1,19,0,19,306,0,1,1,",
+      "submitted_utc": "2026-10-29T15:04:00.520770+00:00",
+      "baseline_message_id": 7180172853,
+      "queue_ids": [
+        56182286
+      ],
+      "replies": [
+        {
+          "car_id": 16587,
+          "device_id": "862129080366630",
+          "message_id": 7180194222,
+          "edt": "2026-10-29 15:04:02",
+          "eid": 33,
+          "extra": "19,0,411,0,1,1,1001,00000000000001"
+        }
+      ],
+      "queue_states": [
+        {
+          "queue_id": 56182286,
+          "state": {
+            "56182286": {
+              "state_id": 1,
+              "state_desc": "transmitted"
+            }
+          }
+        }
+      ],
+      "observed_utc": "2026-10-29T15:04:39.186643+00:00"
+    },
+    {
+      "car_id": 16591,
+      "device_id": "862129080269511",
+      "car_number": "CB2792TK",
+      "command": "30,1,19,0,19,306,0,1,1,",
+      "submitted_utc": "2026-10-29T15:04:00.989497+00:00",
+      "baseline_message_id": 7180173026,
+      "queue_ids": [
+        56182287
+      ],
+      "replies": [
+        {
+          "car_id": 16591,
+          "device_id": "862129080269511",
+          "message_id": 7180194176,
+          "edt": "2026-10-29 15:04:02",
+          "eid": 33,
+          "extra": "19,0,411,0,1,1,1001,00000000000000"
+        }
+      ],
+      "queue_states": [
+        {
+          "queue_id": 56182287,
+          "state": {
+            "56182287": {
+              "state_id": 1,
+              "state_desc": "transmitted"
+            }
+          }
+        }
+      ],
+      "observed_utc": "2026-10-29T15:04:39.820833+00:00"
+    },
+    {
+      "car_id": 16592,
+      "device_id": "862129080367646",
+      "car_number": "CB1344XH",
+      "command": "30,1,19,0,19,306,0,1,1,",
+      "submitted_utc": "2026-10-29T15:04:01.599823+00:00",
+      "baseline_message_id": 7180172986,
+      "queue_ids": [
+        56182288
+      ],
+      "replies": [
+        {
+          "car_id": 16592,
+          "device_id": "862129080367646",
+          "message_id": 7180194305,
+          "edt": "2026-10-29 15:04:07",
+          "eid": 33,
+          "extra": "19,0,411,0,1,1,1001,00000000000001"
+        }
+      ],
+      "queue_states": [
+        {
+          "queue_id": 56182288,
+          "state": {
+            "56182288": {
+              "state_id": 1,
+              "state_desc": "transmitted"
+            }
+          }
+        }
+      ],
+      "observed_utc": "2026-10-29T15:04:40.490837+00:00"
+    },
+    {
+      "car_id": 16593,
+      "device_id": "862129080268844",
+      "car_number": "CB6721TE",
+      "command": "30,1,19,0,19,306,0,1,1,",
+      "submitted_utc": "2026-10-29T15:04:02.511450+00:00",
+      "baseline_message_id": 7180191655,
+      "queue_ids": [
+        56182289
+      ],
+      "replies": [
+        {
+          "car_id": 16593,
+          "device_id": "862129080268844",
+          "message_id": 7180194390,
+          "edt": "2026-10-29 15:04:07",
+          "eid": 33,
+          "extra": "19,0,411,0,1,1,1001,01000001010001"
+        }
+      ],
+      "queue_states": [
+        {
+          "queue_id": 56182289,
+          "state": {
+            "56182289": {
+              "state_id": 1,
+              "state_desc": "transmitted"
+            }
+          }
+        }
+      ],
+      "observed_utc": "2026-10-29T15:04:41.228705+00:00"
+    }
+  ],
+  "scope": "Fixed read-only commands; no configuration/reset/clear/ECU/routing writes; latest500 windows are not complete histories.",
+  "late_queue_reconciliation": [
+    {
+      "car_id": 16586,
+      "device_id": "862129080320033",
+      "car_number": "CB9369PE",
+      "queue_states": [
+        {
+          "queue_id": 56182082,
+          "state": {
+            "56182082": {
+              "state_id": 1,
+              "state_desc": "transmitted"
+            }
+          }
+        }
+      ],
+      "relevant_new_reports": [
+        {
+          "car_id": 16586,
+          "device_id": "862129080320033",
+          "message_id": 7180175996,
+          "edt": "2026-10-29 14:57:52",
+          "eid": 33,
+          "extra": "19,0,154,0"
+        }
+      ],
+      "observed_utc": "2026-10-29T15:13:32.572664+00:00"
+    },
+    {
+      "car_id": 16587,
+      "device_id": "862129080366630",
+      "car_number": "CB5640XP",
+      "queue_states": [
+        {
+          "queue_id": 56182083,
+          "state": {
+            "56182083": {
+              "state_id": 1,
+              "state_desc": "transmitted"
+            }
+          }
+        }
+      ],
+      "relevant_new_reports": [
+        {
+          "car_id": 16587,
+          "device_id": "862129080366630",
+          "message_id": 7180172853,
+          "edt": "2026-10-29 14:57:46",
+          "eid": 33,
+          "extra": "19,0,154,0"
+        }
+      ],
+      "observed_utc": "2026-10-29T15:13:36.317468+00:00"
+    },
+    {
+      "car_id": 16588,
+      "device_id": "862129080319233",
+      "car_number": "CB6711TE",
+      "queue_states": [
+        {
+          "queue_id": 56182085,
+          "state": {
+            "56182085": {
+              "state_id": 0,
+              "state_desc": "queued for transmission"
+            }
+          }
+        }
+      ],
+      "relevant_new_reports": [],
+      "observed_utc": "2026-10-29T15:13:38.352725+00:00"
+    },
+    {
+      "car_id": 16589,
+      "device_id": "862129080332111",
+      "car_number": "CB9680TE",
+      "queue_states": [
+        {
+          "queue_id": 56182087,
+          "state": {
+            "56182087": {
+              "state_id": 0,
+              "state_desc": "queued for transmission"
+            }
+          }
+        }
+      ],
+      "relevant_new_reports": [],
+      "observed_utc": "2026-10-29T15:13:41.168006+00:00"
+    },
+    {
+      "car_id": 16590,
+      "device_id": "862129080254620",
+      "car_number": "CB5636XP",
+      "queue_states": [
+        {
+          "queue_id": 56182088,
+          "state": {
+            "56182088": {
+              "state_id": 0,
+              "state_desc": "queued for transmission"
+            }
+          }
+        }
+      ],
+      "relevant_new_reports": [],
+      "observed_utc": "2026-10-29T15:13:43.229490+00:00"
+    },
+    {
+      "car_id": 16591,
+      "device_id": "862129080269511",
+      "car_number": "CB2792TK",
+      "queue_states": [
+        {
+          "queue_id": 56182089,
+          "state": {
+            "56182089": {
+              "state_id": 1,
+              "state_desc": "transmitted"
+            }
+          }
+        }
+      ],
+      "relevant_new_reports": [
+        {
+          "car_id": 16591,
+          "device_id": "862129080269511",
+          "message_id": 7180173026,
+          "edt": "2026-10-29 14:57:51",
+          "eid": 33,
+          "extra": "19,0,154,0"
+        }
+      ],
+      "observed_utc": "2026-10-29T15:13:44.432120+00:00"
+    },
+    {
+      "car_id": 16592,
+      "device_id": "862129080367646",
+      "car_number": "CB1344XH",
+      "queue_states": [
+        {
+          "queue_id": 56182091,
+          "state": {
+            "56182091": {
+              "state_id": 1,
+              "state_desc": "transmitted"
+            }
+          }
+        }
+      ],
+      "relevant_new_reports": [
+        {
+          "car_id": 16592,
+          "device_id": "862129080367646",
+          "message_id": 7180172986,
+          "edt": "2026-10-29 14:57:54",
+          "eid": 33,
+          "extra": "19,0,154,0"
+        }
+      ],
+      "observed_utc": "2026-10-29T15:13:46.013736+00:00"
+    },
+    {
+      "car_id": 16593,
+      "device_id": "862129080268844",
+      "car_number": "CB6721TE",
+      "queue_states": [
+        {
+          "queue_id": 56182092,
+          "state": {
+            "56182092": {
+              "state_id": 1,
+              "state_desc": "transmitted"
+            }
+          }
+        }
+      ],
+      "relevant_new_reports": [
+        {
+          "car_id": 16593,
+          "device_id": "862129080268844",
+          "message_id": 7180174718,
+          "edt": "2026-10-29 14:57:54",
+          "eid": 33,
+          "extra": "19,0,154,0"
+        }
+      ],
+      "observed_utc": "2026-10-29T15:13:46.908131+00:00"
+    },
+    {
+      "car_id": 16594,
+      "device_id": "862129080340825",
+      "car_number": "CB9405PE",
+      "queue_states": [
+        {
+          "queue_id": 56182093,
+          "state": {
+            "56182093": {
+              "state_id": 0,
+              "state_desc": "queued for transmission"
+            }
+          }
+        }
+      ],
+      "relevant_new_reports": [],
+      "observed_utc": "2026-10-29T15:13:54.465953+00:00"
+    },
+    {
+      "car_id": 16595,
+      "device_id": "862129080367299",
+      "car_number": "CB1147TP",
+      "queue_states": [
+        {
+          "queue_id": 56182094,
+          "state": {
+            "56182094": {
+              "state_id": 0,
+              "state_desc": "queued for transmission"
+            }
+          }
+        }
+      ],
+      "relevant_new_reports": [],
+      "observed_utc": "2026-10-29T15:13:59.494105+00:00"
+    }
+  ]
+}

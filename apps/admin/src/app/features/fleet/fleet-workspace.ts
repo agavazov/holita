@@ -30,6 +30,8 @@ import { FLEET_DISPLAY, defaultFleetDisplay } from '../../ui/format/fleet-format
 import { uiMessages } from '../../ui/i18n/messages';
 import { requestError } from '../../core/graphql/request-error';
 import { settingsText } from './settings/i18n/messages';
+import { ExampleScenarioPage } from './scenarios/example-scenario-page';
+import { DiagnosticsWorkspace } from './diagnostics/diagnostics-workspace';
 
 @Component({
   imports: [
@@ -46,6 +48,8 @@ import { settingsText } from './settings/i18n/messages';
     VehicleProfilePage,
     MaintenancePage,
     GeneralSettingsPage,
+    ExampleScenarioPage,
+    DiagnosticsWorkspace,
   ],
   providers: [
     GeneralSettingsApi,
@@ -93,7 +97,9 @@ export class FleetWorkspace {
         resource === 'driver-scorecard' ||
         resource === 'vehicle-profile' ||
         resource === 'maintenance' ||
-        resource === 'general')
+        resource === 'general' ||
+        resource === 'scenario' ||
+        resource === 'diagnostics')
       ? [
           {
             sessionToken,

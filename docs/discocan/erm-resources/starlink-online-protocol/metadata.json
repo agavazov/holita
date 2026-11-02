@@ -2,18 +2,19 @@
   "schema_version": "1.0",
   "title": "ERM StarLink online protocol portal",
   "portal_url": "https://sweb.erm.co.il/protocol/",
-  "source_type": "User-supplied screenshots",
+  "source_type": "Authenticated protocol portal and preserved historical user-supplied screenshots",
   "source_version": null,
-  "analysis_date": "2026-10-16",
+  "analysis_date": "2026-10-29",
   "analysis_timezone": "Europe/Sofia",
-  "reference_edition": "1.2",
-  "last_updated": "2026-10-27",
-  "prepared_by": "Codex; visual screenshot transcription and analysis",
+  "reference_edition": "2.0",
+  "last_updated": "2026-10-29",
+  "prepared_by": "Codex; authenticated protocol archive and source analysis",
   "access": {
-    "credentials": "No protocol connection located in the available project inventory or searched accessible correspondence; configured shared inventory unavailable on this host. Referenced access mail not recovered.",
-    "authenticated_review": false,
-    "companion_page_contents_available": false,
-    "public_entry_check": {
+    "authenticated_review": true,
+    "authenticated_retrieval_date": "2026-10-29",
+    "credentials": "Supplied protocol access details used in process memory only; no values or cookies retained.",
+    "companion_page_contents_available": true,
+    "historical_public_entry_check": {
       "stage": "ERM-TEST-01",
       "date": "2026-10-27",
       "root_http_status": 200,
@@ -25,9 +26,10 @@
     }
   },
   "scope": [
-    "Home page overview",
-    "All 19 visible General information menu entries",
-    "Message structure page, examples and source discrepancies"
+    "Complete discovered authenticated protocol page graph: commands, results, events, SMS, dynamic/system parameters, accessories, features, general information, hardware and firmware versions",
+    "Markdown and content-only HTML page archive with per-page provenance and inventory",
+    "Linked protocol reference documents/images and the specifically requested StarLink Test Server distribution",
+    "Preserved historical screenshot overview, menu and Message structure transcription"
   ],
   "images": [
     {
@@ -71,9 +73,78 @@
     }
   ],
   "qualifications": [
-    "Page dates are visible source dates, not screenshot capture dates.",
-    "Home page news version labels do not establish a protocol-wide version.",
-    "Checksum sample arithmetic is an observation, not a verified vendor algorithm.",
-    "Earlier screenshots provided only the root URL. Vendor email deep links were subsequently found, but the tested link also required login; requested companion-page contents remain unavailable."
-  ]
+    "Page dates are vendor source dates, not screenshot capture dates.",
+    "Home firmware news does not establish a uniform version for the protocol or installed devices.",
+    "Generated event examples include retrieval-time sample timestamps and are not live truck evidence.",
+    "Source checksum wording and JavaScript defects are preserved and analyzed in authenticated-reading-guide.md.",
+    "The archive follows discovered protocol links for the supplied account; vendor-private or unlinked pages are not claimed."
+  ],
+  "authenticated_archive": {
+    "index": "authenticated/README.md",
+    "inventory": "authenticated/inventory.json",
+    "interpretation": "authenticated-reading-guide.md",
+    "home_page_update_date": "2026-10-18",
+    "home_firmware_news": "2.46 (October 2026)",
+    "test_server_tools_version": "1.26.6.1 (June 2026)",
+    "excluded": [
+      "Account administration",
+      "Personal settings",
+      "Editable account configuration values",
+      "Credentials and session cookies"
+    ],
+    "totals": {
+      "page_graph_acquired": true,
+      "protocol_pages": 1968,
+      "page_text_and_table_fidelity_complete": true,
+      "technical_control_refresh_count": 432,
+      "protobuf_schema_downloaded": true,
+      "downloaded_reference_assets": 55,
+      "unavailable_source_assets": [
+        {
+          "url": "https://sweb.erm.co.il/protocol/images/geo_poly.png",
+          "reason": "404 Client Error: Not Found"
+        },
+        {
+          "url": "https://sweb.erm.co.il/protocol/images/geo_rad.png",
+          "reason": "404 Client Error: Not Found"
+        },
+        {
+          "url": "https://sweb.erm.co.il/protocol/images/led_red_100x2_4s.gif",
+          "reason": "404 Client Error: Not Found"
+        }
+      ],
+      "qualifications": [
+        "All discovered protocol pages for the supplied account were acquired.",
+        "Technical option-button values and sample controls were refreshed as inert text; personal configuration panels were removed.",
+        "Three vendor image URLs return HTTP 404 and are inventoried rather than fabricated."
+      ]
+    }
+  },
+  "capture_status": {
+    "page_graph_acquired": true,
+    "protocol_pages": 1968,
+    "page_text_and_table_fidelity_complete": true,
+    "technical_control_refresh_count": 432,
+    "protobuf_schema_downloaded": true,
+    "downloaded_reference_assets": 55,
+    "unavailable_source_assets": [
+      {
+        "url": "https://sweb.erm.co.il/protocol/images/geo_poly.png",
+        "reason": "404 Client Error: Not Found"
+      },
+      {
+        "url": "https://sweb.erm.co.il/protocol/images/geo_rad.png",
+        "reason": "404 Client Error: Not Found"
+      },
+      {
+        "url": "https://sweb.erm.co.il/protocol/images/led_red_100x2_4s.gif",
+        "reason": "404 Client Error: Not Found"
+      }
+    ],
+    "qualifications": [
+      "All discovered protocol pages for the supplied account were acquired.",
+      "Technical option-button values and sample controls were refreshed as inert text; personal configuration panels were removed.",
+      "Three vendor image URLs return HTTP 404 and are inventoried rather than fabricated."
+    ]
+  }
 }

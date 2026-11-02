@@ -1,0 +1,224 @@
+<holita-diagnostics-header
+  [language]="language()"
+  section="logs"
+  [source]="source()"
+  [scenario]="scenario()"
+  [links]="sectionLinks()"
+  (sourceChange)="changeSource($event)"
+/>
+
+@if (hasFaultContext()) {
+  <div class="app-page-actions">
+    <a pButton severity="secondary" [outlined]="true" [routerLink]="sectionLinks().faults">
+      {{ text().backToFaults }}
+    </a>
+  </div>
+}
+
+@if (!illustrative()) {
+  <section class="app-card">
+    <holita-empty-state
+      kind="no-telemetry"
+      [title]="text().realUnavailable"
+      [description]="text().realExplanation"
+    />
+  </section>
+} @else {
+  <p class="app-muted">{{ text().clockHint }}</p>
+  <holita-filter-builder
+    [searchLabel]="text().search"
+    [search]="url.searchDraft()"
+    [searchError]="searchError()"
+    [fields]="fields()"
+    [conditions]="url.state().filter.conditions ?? []"
+    (searchChange)="url.editSearch($event)"
+    (conditionsChange)="url.patchFilter({ conditions: $event })"
+  />
+
+  <holita-table-panel
+    #panel
+    [heading]="text().section"
+    [total]="logs()?.length ?? null"
+    [view]="view()"
+    [errorText]="failure()"
+    [busy]="loading()"
+    [emptyTitle]="text().emptyTitle"
+    [emptyDescription]="text().emptyDescription"
+    [actions]="actions()"
+    [actionContext]="url.state()"
+    [page]="{
+      page: url.state().page,
+      pageSize: url.state().pageSize,
+      total: logs()?.length ?? 0,
+    }"
+    [pageSizes]="[10, 20, 50]"
+    (action)="openLog($event)"
+    (pageChange)="url.setPage($event)"
+    (clearFilters)="url.clearFilters()"
+    (retry)="refresh()"
+  >
+    <div panelActions class="app-page-actions">
+      <p-tag [value]="text().example" severity="secondary" />
+      <holita-list-sort-menu
+        [fields]="sortFields()"
+        [sort]="sort()"
+        (sortChange)="url.setSort('eventAt', $event.direction === 'asc' ? 'ASC' : 'DESC')"
+      />
+      <button
+        pButton
+        type="button"
+        size="small"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="loading()"
+        (click)="refresh()"
+      >
+        {{ text().refresh }}
+      </button>
+    </div>
+    <p-table
+      class="app-responsive-table"
+      [value]="rows()"
+      dataKey="id"
+      [rowTrackBy]="trackById"
+      [scrollable]="true"
+    >
+      <ng-template #header>
+        <tr>
+          <th scope="col" class="app-col-identity">{{ text().kind }}</th>
+          <th scope="col">{{ text().recordTime }}</th>
+          <th scope="col">{{ text().vehicle }}</th>
+          <th scope="col">{{ text().severity }}</th>
+          <th scope="col" class="app-col-actions">
+            <span class="app-visually-hidden">{{ text().actions }}</span>
+          </th>
+        </tr>
+      </ng-template>
+      <ng-template #body let-row>
+        <tr>
+          <td class="app-col-identity">
+            <span class="app-cell-stack">
+              <button
+                type="button"
+                class="app-link"
+                [attr.aria-label]="text().open + ' ' + kindLabel(row) + ' ' + row.id"
+                (click)="panel.run('open', [recordOf(row)], $event.currentTarget)"
+              >
+                {{ kindLabel(row) }}
+              </button>
+              <span>{{ summary(row) }}</span>
+              <span class="app-table-mobile-meta">{{ vehicleLabel(row.vehicleId) }}</span>
+            </span>
+            <div class="app-table-mobile-actions">
+              <holita-row-actions
+                [actions]="actions()"
+                [record]="recordOf(row)"
+                (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
+              />
+            </div>
+          </td>
+          <td>
+            <span class="app-cell-stack">
+              <time [attr.datetime]="row.provenance.eventAt">{{
+                time(row.provenance.eventAt)
+              }}</time>
+              <span class="app-muted">{{
+                row.kind === 'RULE_EVALUATION' ? text().processingTime : text().observationTime
+              }}</span>
+            </span>
+          </td>
+          <td>
+            <a class="app-link" [routerLink]="vehicleLink(row.vehicleId, row.id)">{{
+              vehicleLabel(row.vehicleId)
+            }}</a>
+          </td>
+          <td><p-tag [value]="severityLabel(row)" [severity]="severity(row.severity)" /></td>
+          <td class="app-col-actions">
+            <holita-row-actions
+              [actions]="actions()"
+              [record]="recordOf(row)"
+              (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
+            />
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </holita-table-panel>
+}
+
+@if (vehicleSummaryOpen()) {
+  <holita-vehicle-summary-drawer
+    [branchId]="branchId()"
+    [language]="language()"
+    section="logs"
+    [source]="source()"
+    [scenario]="scenario()"
+    [conditions]="url.state().filter.conditions ?? []"
+    [loading]="loading()"
+    [errorText]="failure()"
+    (retry)="refresh()"
+  />
+} @else {
+  @for (id of selectedId() ? [selectedId()] : []; track id) {
+    <holita-route-drawer
+      [title]="text().detail"
+      [subtitle]="selectedLog()?.id ?? id"
+      [closeLink]="null"
+      [state]="drawerState()"
+      [errorText]="failure()"
+      size="lg"
+      (retry)="refresh()"
+      (closeRequest)="closeLog()"
+    >
+      @if (selectedLog(); as log) {
+        <div class="app-page-actions">
+          <a
+            pButton
+            severity="secondary"
+            [outlined]="true"
+            [routerLink]="vehicleLink(log.vehicleId)"
+            >{{ text().vehicleContext }}</a
+          >
+        </div>
+        @if (selectedOutsideFilters()) {
+          <p class="app-muted" role="status">{{ text().selectedOutsideFilters }}</p>
+        }
+        @if (scenario(); as data) {
+          <holita-log-details
+            [scenario]="data"
+            [log]="log"
+            [language]="language()"
+            [faultLink]="faultLink()"
+            [logLink]="logLink"
+            [riskLink]="riskLink()"
+          />
+        }
+      }
+      @if (hasFaultContext()) {
+        <a
+          drawerFooter
+          pButton
+          severity="secondary"
+          [outlined]="true"
+          [routerLink]="sectionLinks().faults"
+          >{{ text().backToFaults }}</a
+        >
+      }
+      @if (hasRiskContext()) {
+        <a
+          drawerFooter
+          pButton
+          severity="secondary"
+          [outlined]="true"
+          [routerLink]="sectionLinks().risk"
+          >{{ text().backToRisk }}</a
+        >
+      }
+      @if (returnVehicleLink(); as link) {
+        <a drawerFooter pButton severity="secondary" [outlined]="true" [routerLink]="link">{{
+          text().backToVehicle
+        }}</a>
+      }
+    </holita-route-drawer>
+  }
+}

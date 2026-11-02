@@ -1,0 +1,98 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.map-panel {
+  overflow: hidden;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-content-border-radius);
+  background: var(--p-content-background);
+}
+.map-panel__heading {
+  padding: var(--p-app-space-4);
+}
+h2,
+h3 {
+  margin: 0;
+  font-size: var(--p-app-text-base);
+}
+.map-panel__identity {
+  color: var(--p-text-color);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.map-panel__points {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: var(--p-app-space-4);
+  padding: 0 var(--p-app-space-4) var(--p-app-space-4);
+}
+dl {
+  display: grid;
+  gap: var(--p-app-space-2);
+  margin: var(--p-app-space-2) 0 0;
+}
+dt {
+  color: var(--p-text-muted-color);
+  font-size: var(--p-app-text-sm);
+}
+dd {
+  margin: var(--p-app-space-1) 0 0;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.map-panel__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-app-space-2);
+  padding: var(--p-app-space-3) var(--p-app-space-4);
+  border-block: 1px solid var(--p-content-border-color);
+}
+.map-panel__view {
+  padding: var(--p-app-space-4);
+}
+.map-panel__view a,
+.map-panel__view button {
+  margin-block-start: var(--p-app-space-3);
+  margin-inline-end: var(--p-app-space-2);
+}
+button,
+a[pButton] {
+  min-block-size: 2.75rem;
+}
+p {
+  margin: var(--p-app-space-2) 0 0;
+  color: var(--p-text-muted-color);
+  max-inline-size: 56rem;
+}
+.map-panel__placeholder {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: var(--p-app-space-3);
+  min-block-size: 9rem;
+  padding: var(--p-app-space-5);
+  background: var(--p-app-panel-header-background);
+  text-align: center;
+}
+.map-panel__placeholder svg {
+  inline-size: 2rem;
+  block-size: 2rem;
+  color: var(--p-primary-color);
+}
+.map-panel__placeholder p {
+  margin: 0;
+  max-inline-size: 36rem;
+}
+iframe {
+  display: block;
+  inline-size: 100%;
+  block-size: 24rem;
+  min-inline-size: 200px;
+  min-block-size: 200px;
+  border: 0;
+}
+.map-panel__note {
+  padding: var(--p-app-space-4);
+  margin: 0;
+}

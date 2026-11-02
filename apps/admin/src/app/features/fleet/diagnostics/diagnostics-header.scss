@@ -1,0 +1,16 @@
+:host {
+  align-items: stretch;
+  min-inline-size: 0;
+}
+
+.diagnostics-source {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-app-space-4);
+
+  p {
+    flex: 1 1 16rem;
+    margin: 0;
+  }
+}

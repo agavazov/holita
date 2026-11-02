@@ -1,0 +1,50 @@
+{
+  "title": "Data source and coverage",
+  "sources": {
+    "KARMA_API": "Karma API",
+    "HOLITA_SCENARIO": "Example data"
+  },
+  "origin": "Data origin",
+  "origins": {
+    "OBSERVED": "Observed",
+    "DERIVED": "Derived",
+    "ILLUSTRATIVE": "Illustrative",
+    "UNAVAILABLE": "Unavailable"
+  },
+  "exampleInfo": "This module uses illustrative data until our telemetry server is connected.",
+  "period": "Selected period",
+  "periodBounds": "start inclusive; end exclusive",
+  "from": "Start, inclusive",
+  "toExclusive": "End, exclusive",
+  "timeZone": "Time zone",
+  "coverage": "Retrieval and position coverage",
+  "retrieval": "Data retrieval",
+  "retrievalStates": {
+    "NOT_STARTED": "Not started",
+    "COMPLETE": "Complete",
+    "PARTIAL": "Loaded subset",
+    "UNAVAILABLE": "Unavailable"
+  },
+  "positionCoverage": "GPS sample coverage",
+  "positionStates": {
+    "COMPLETE": "Complete for the selection",
+    "PARTIAL": "Partial",
+    "NOT_ASSESSED": "Not assessed"
+  },
+  "positionsLoaded": "Loaded positions",
+  "gaps": "Identified gaps",
+  "coverageHint": "Completed retrieval does not establish whether all positions were recorded.",
+  "availability": "Value availability",
+  "availabilityStates": {
+    "COMPLETE": "Available for the selection",
+    "PARTIAL": "Available for a subset",
+    "UNAVAILABLE": "Value unavailable"
+  },
+  "sourceDetails": "Source details",
+  "sourceRecordId": "Source record ID",
+  "scenarioId": "Example scenario ID",
+  "eventAt": "Event time (UTC)",
+  "receivedAt": "Received time (UTC)",
+  "retrievedAt": "Retrieval time (UTC)",
+  "gapIntervals": "Identified gaps, end exclusive"
+}

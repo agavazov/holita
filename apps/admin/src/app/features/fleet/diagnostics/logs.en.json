@@ -1,0 +1,74 @@
+{
+  "trip": "Trip",
+  "section": "Logs",
+  "example": "Example data",
+  "realUnavailable": "Original diagnostic records by truck",
+  "realExplanation": "The Karma truck’s Diagnostics section shows real reports, acknowledgements and original payloads. This is bounded provider history; production server logs and the complete device stream remain unavailable.",
+  "search": "Search record, kind, signal, fault or vehicle",
+  "loadError": "Diagnostic logs could not be loaded.",
+  "emptyTitle": "No log records in this source snapshot",
+  "emptyDescription": "Missing log records do not establish that a vehicle is healthy or that no events occurred.",
+  "open": "Open log record",
+  "actions": "Log actions",
+  "refresh": "Refresh",
+  "recordTime": "Record time",
+  "observationTime": "Observation time",
+  "processingTime": "Processing time",
+  "kind": "Record kind",
+  "severity": "Severity",
+  "vehicle": "Vehicle",
+  "observedOn": "Observation date",
+  "relatedFault": "Related fault",
+  "clockHint": "Chronology uses each record's own clock. Rule evaluations show processing time; observation-date filters use their input window. These examples do not read production server logs or a complete device protocol stream.",
+  "backToFaults": "Back to faults",
+  "detail": "Log record details",
+  "noRelatedRecord": "No related source record is available.",
+  "unavailableValue": "Value unavailable",
+  "kinds": {
+    "FAULT_REPORTED": "Fault report",
+    "FAULT_STATUS": "Reported fault status change",
+    "MEASUREMENT": "Measurement",
+    "AVAILABILITY": "Data availability",
+    "INTEGRATION_ISSUE": "Integration issue",
+    "RULE_EVALUATION": "Rule evaluation"
+  },
+  "signals": {
+    "SPEED": "Recorded speed",
+    "COOLANT_TEMPERATURE": "Coolant temperature",
+    "EXTERNAL_VOLTAGE": "External voltage",
+    "FUEL_USED": "Fuel-used counter",
+    "DISTANCE_COUNTER": "Distance counter",
+    "ENGINE_HOURS": "Engine-hours counter"
+  },
+  "reasons": {
+    "SIGNAL_VALUE_UNAVAILABLE": "The signal value is unavailable.",
+    "EXAMPLE_UPSTREAM_FAILURE": "Illustrative upstream read failure"
+  },
+  "severities": {
+    "INFO": "Information",
+    "WARNING": "Warning",
+    "CRITICAL": "Critical"
+  },
+  "rules": {
+    "REPEATED_FAULT": "Repeated fault reports",
+    "TEMPERATURE_PATTERN": "Sampled temperature pattern",
+    "VOLTAGE_PATTERN": "Sampled voltage pattern"
+  },
+  "evaluationStates": {
+    "MATCHED": "Rule matched",
+    "NOT_MATCHED": "Rule not matched",
+    "INSUFFICIENT_DATA": "Insufficient data"
+  },
+  "units": {
+    "KILOMETRE": "km",
+    "KILOMETRES_PER_HOUR": "km/h",
+    "CELSIUS": "°C",
+    "VOLT": "V",
+    "LITRE": "L",
+    "HOUR": "h"
+  },
+  "selectedOutsideFilters": "This linked record is outside the current list filters. The filters are preserved.",
+  "backToRisk": "Back to risk indicators",
+  "vehicleContext": "Vehicle context",
+  "backToVehicle": "Back to vehicle context"
+}

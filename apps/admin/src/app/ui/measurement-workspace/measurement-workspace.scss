@@ -1,0 +1,53 @@
+@use 'breakpoints' as bp;
+
+:host {
+  min-inline-size: 0;
+}
+
+.measurement-workspace__chart {
+  align-items: stretch;
+}
+
+.measurement-workspace__figure {
+  margin: 0;
+  min-inline-size: 0;
+}
+
+.measurement-workspace__axis {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--p-app-space-4);
+  margin-block-start: var(--p-app-space-2);
+
+  > :last-child {
+    text-align: end;
+  }
+}
+
+.measurement-workspace__content {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--p-app-space-4);
+}
+
+.measurement-workspace__selection {
+  min-inline-size: 0;
+}
+
+.measurement-workspace__source {
+  color: var(--p-text-muted-color);
+  font-size: var(--p-app-text-sm);
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.measurement-workspace__selected {
+  display: block;
+}
+
+@include bp.below(lg) {
+  .measurement-workspace__content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

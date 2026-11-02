@@ -1,3 +1,5 @@
+import type { UrlTree } from '@angular/router';
+
 /** Icons the sidebar can render (a closed set mapped to @primeicons/angular components). */
 export type NavIconName =
   | 'th-large'
@@ -38,7 +40,7 @@ export interface NavGroup {
 export interface PageContext {
   readonly group: string;
   readonly page: string;
-  readonly pageLink?: readonly string[];
+  readonly pageLink?: readonly string[] | UrlTree;
   readonly record?: string | null;
 }
 

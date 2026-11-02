@@ -32,7 +32,7 @@ Fleet's separate [background configuration operations](../../architecture.md#bac
 call the Karma Client internal machine API. Fleet owns Tenant/Branch-scoped operations,
 the scheduler and saved observations. Each operation captures the Karma car/device pair;
 it does not require a local Fleet Device association.
-Karma Client owns upstream authentication, target rechecks, fixed reads and the single-definition write
+Karma Client owns upstream authentication, target rechecks, fixed reads and single-parameter/rule writes
 and bounded event parsing. Its request handler does not wait for the device response
 and does not start a background worker in this subgraph.
 
@@ -50,21 +50,29 @@ on the server and are not Gateway or admin configuration.
 
 Routes below follow `/:language/karma-client`, with `bg` or `en`. Every query is
 authenticated and uses the common account regardless of active Branch.
+The fifteen public queries reuse twelve upstream GET method/path pairs; daily
+reports and position samples compose the existing car, zone, trip and event reads.
 
-| GraphQL query                                           | Concrete upstream operation                                 | Admin route / behavior                                                        |
-| ------------------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `karmaCars`                                             | GET `/cars`                                                 | `/cars`; complete account list and Refresh                                    |
-| `karmaCar(id: ID!)`                                     | GET `/cars/{id}`                                            | `/cars/:recordId`; matching single truck or missing state                     |
-| `karmaEdata(input: KarmaEdataInput!)`                   | GET `/edata`                                                | `/cars/:recordId/edata`; message/parameter details and cursor history         |
-| `karmaLocation(carId: ID!)`                             | GET `/location` plus car precheck                           | `/cars/:recordId/location`; also independently loaded summary in truck detail |
-| `karmaTrips(input: KarmaTripsInput!)`                   | GET `/trips` plus car precheck and possible older lookahead | `/cars/:recordId/trips`; full row details and cursor history                  |
-| `karmaEvents(input: KarmaEventsInput!)`                 | GET `/events` plus car precheck                             | `/cars/:recordId/events`; UTC/code filters, details and cursor history        |
-| `karmaDrivingProfile(input: KarmaDrivingProfileInput!)` | GET `/driving-profile` plus car precheck                    | `/cars/:recordId/driving-profile`; editable period, nine raw categories       |
-| `karmaProjects`                                         | GET `/projects`                                             | `/projects`; complete-list local search/paging and truck name lookups         |
-| `karmaTimeZones`                                        | GET `/time-zones`                                           | `/time-zones`; complete-list local search/paging and name lookups             |
-| `karmaVersion`                                          | GET `/version`, no upstream login                           | `/api-info`; original version text                                            |
-| `karmaUsers`                                            | GET `/users`                                                | `/users`; local search/paging and all-field detail dialog                     |
-| `karmaRoles`                                            | GET `/roles`                                                | `/roles`; local search/paging and original descriptions                       |
+| GraphQL query                                                 | Concrete upstream operation                                 | Admin route / behavior                                                               |
+| ------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `karmaCars`                                                   | GET `/cars`                                                 | `/cars`; complete account list and Refresh                                           |
+| `karmaCar(id: ID!)`                                           | GET `/cars/{id}`                                            | `/cars/:recordId`; matching single truck or missing state                            |
+| `karmaEdata(input: KarmaEdataInput!)`                         | GET `/edata`                                                | `/cars/:recordId/edata`; message/parameter details and cursor history                |
+| `karmaLocation(carId: ID!)`                                   | GET `/location` plus car precheck                           | `/cars/:recordId/location`; also independently loaded summary in truck detail        |
+| `karmaTrips(input: KarmaTripsInput!)`                         | GET `/trips` plus car precheck and possible older lookahead | `/cars/:recordId/trips`; full row details and cursor history                         |
+| `karmaDailyReport(input: KarmaDailyReportInput!)`             | GET `/cars/{id}`, `/time-zones`, bounded raw `/trips`       | `/cars/:recordId`; connected truck day overview and comparison                       |
+| `karmaPositionSamples(input: KarmaPositionSamplesInput!)`     | GET `/events` within trip message anchors plus car precheck | Trip drawers from the truck overview or `/cars/:recordId/trips`; sampled positions   |
+| `karmaEvents(input: KarmaEventsInput!)`                       | GET `/events` plus car precheck                             | `/cars/:recordId/events`; UTC/code filters, details and cursor history               |
+| `karmaDiagnosticHistory(input: KarmaDiagnosticHistoryInput!)` | Bounded UTC GET `/events` plus car precheck                 | `/cars/:recordId/diagnostics`; source history, decoded faults and raw reports        |
+| `karmaDrivingProfile(input: KarmaDrivingProfileInput!)`       | GET `/driving-profile` plus car precheck                    | `/cars/:recordId/driving-profile`; editable period, nine raw categories              |
+| `karmaProjects`                                               | GET `/projects`                                             | `/administration/projects`; complete-list local search/paging and truck name lookups |
+| `karmaTimeZones`                                              | GET `/time-zones`                                           | `/administration/time-zones`; complete-list local search/paging and name lookups     |
+| `karmaVersion`                                                | GET `/version`, no upstream login                           | `/administration/api-info`; original version text                                    |
+| `karmaUsers`                                                  | GET `/users`                                                | `/administration/users`; local search/paging and all-field detail dialog             |
+| `karmaRoles`                                                  | GET `/roles`                                                | `/administration/roles`; local search/paging and original descriptions               |
+
+The former `/projects`, `/time-zones`, `/api-info`, `/users` and `/roles` paths
+redirect to their Administration destinations while retaining query/fragment state.
 
 Sources: [routes](../../../../apps/admin/src/app/features/karma-client/karma.routes.ts),
 feature-owned operations for [cars](../../../../apps/admin/src/app/features/karma-client/cars/operations.graphql),
@@ -74,26 +82,31 @@ feature-owned operations for [cars](../../../../apps/admin/src/app/features/karm
 [references](../../../../apps/admin/src/app/features/karma-client/references/operations.graphql)
 and [accounts](../../../../apps/admin/src/app/features/karma-client/accounts/operations.graphql),
 [fixed HTTP client](../../../../apps/karma-client/src/integrations/karma/karma-transport.ts).
-There are no public Karma mutations or arbitrary REST proxy operations.
+There are no public Karma mutations or arbitrary REST proxy operations. The
+[daily report contract](../../architecture.md#daily-report-contract) specifies the
+proved period/selection, limits, per-metric availability and unconfirmed source units.
 
 ## Internal configuration API
 
 The [DeviceConfigurationController](../../../../apps/karma-client/src/modules/device-configuration/device-configuration.controller.ts)
-exposes nine fixed POST endpoints under `/internal/device-configuration`, protected
+exposes twelve fixed POST endpoints under `/internal/device-configuration`, protected
 by the [machine guard](../../../../apps/karma-client/src/modules/device-configuration/device-configuration.guard.ts).
 They do not use the public Karma GraphQL scope or accept arbitrary upstream paths.
 
-| Endpoint                | Input                                                                                   | Result                                                                      |
-| ----------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `/target`               | `carId`                                                                                 | Current matching car/device identity                                        |
-| `/request`              | `carId`, `expectedDeviceId`                                                             | `ACCEPTED` and queue IDs, or `UNCERTAIN` without an automatic replay        |
-| `/profile-request`      | `carId`, `expectedDeviceId`                                                             | `ACCEPTED` and queue IDs, or `UNCERTAIN`; fixed profile read                |
-| `/parameter-request`    | `carId`, `expectedDeviceId`, `parameterId`, `reportingIntervalSeconds`, `rawDefinition` | One additive definition; same submission outcome                            |
-| `/observations`         | `carId`, `expectedDeviceId`, `fromUtc`, `toUtc`, optional `afterMessageId`              | Bounded parsed `401` fragments, scan coverage and assembled readback status |
-| `/profile-observations` | Same window/identity fields and optional watermark                                      | Separate bounded `416` profile observations and readback status             |
-| `/rules-request`        | `carId`, `expectedDeviceId`                                                             | `ACCEPTED` and queue IDs, or `UNCERTAIN`; fixed full-rule read              |
-| `/rule-request`         | `carId`, `expectedDeviceId`, `ruleId`, `rawDefinition`                                  | One supported rule record; same submission outcome                          |
-| `/rules-observations`   | Same window/identity fields and optional watermark                                      | Separate bounded `402` rule observations and readback status                |
+| Endpoint                   | Input                                                                                   | Result                                                                                    |
+| -------------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `/target`                  | `carId`                                                                                 | Current matching car/device identity                                                      |
+| `/request`                 | `carId`, `expectedDeviceId`                                                             | `ACCEPTED` and queue IDs, or `UNCERTAIN` without an automatic replay                      |
+| `/profile-request`         | `carId`, `expectedDeviceId`                                                             | `ACCEPTED` and queue IDs, or `UNCERTAIN`; fixed profile read                              |
+| `/parameter-request`       | `carId`, `expectedDeviceId`, `parameterId`, `reportingIntervalSeconds`, `rawDefinition` | One additive definition; same submission outcome                                          |
+| `/observations`            | `carId`, `expectedDeviceId`, `fromUtc`, `toUtc`, optional `afterMessageId`              | Bounded parsed `401` fragments, scan coverage and assembled readback status               |
+| `/profile-observations`    | Same window/identity fields and optional watermark                                      | Separate bounded `416` profile observations and readback status                           |
+| `/rules-request`           | `carId`, `expectedDeviceId`                                                             | `ACCEPTED` and queue IDs, or `UNCERTAIN`; fixed full-rule read                            |
+| `/rule-request`            | `carId`, `expectedDeviceId`, `ruleId`, `rawDefinition`                                  | One supported rule record; same submission outcome                                        |
+| `/rules-observations`      | Same window/identity fields and optional watermark                                      | Separate bounded `402` rule observations and readback status                              |
+| `/diagnostic-watermark`    | `carId`, `expectedDeviceId`                                                             | Latest source message ID captured before submission                                       |
+| `/diagnostic-request`      | `carId`, `expectedDeviceId`, fixed `kind`, optional `existingQueueIds`                  | `ACCEPTED`, `UNCERTAIN`, or `PENDING` when retained queues are unresolved                 |
+| `/diagnostic-observations` | Identity, UTC window, retained `queueIds`, optional `afterMessageId`                    | Raw queue states and bounded ID-based special ACK/fault/communication report observations |
 
 `/request` fixes payload `0702BC`, `/profile-request` fixes `1F`, and `/parameter-request`
 constructs only `02` plus one 44-hex-character definition under the same
@@ -110,7 +123,11 @@ Observation windows use canonical ISO UTC timestamps,
 span at most 24 hours, and are rounded outward to the provider's whole-second
 precision. Target/submission operations share a four-second upstream budget; observation
 scans share 20 seconds across identity lookup, authentication and paging. Fleet allows
-4.5 and 21 seconds respectively. No submission is replayed after an uncertain transport or
+4.5 and 21 seconds respectively. Diagnostic requests include retained queue reconciliation
+within a 20-second upstream / 21-second internal-call budget. Diagnostic observations page
+by source ID, discard padded boundary rows and filter UTC locally, without upstream date
+filters. Retained queue states `1` and `3` permit a new explicit request; pending, unknown
+or unreadable states return `PENDING`. No submission is replayed after an uncertain transport or
 authentication result. Events at or below `afterMessageId` are excluded before parsing
 and assembly. Scans stop after an empty page, reaching the watermark or four pages;
 exhausting the page budget leaves coverage
@@ -138,6 +155,44 @@ coverage before ending an incomplete read with `READ_NO_CONFIGURATION`; complete
 configuration data still takes precedence. The response does not confirm an empty set.
 Fleet persists baseline, submitted definition, marker and independent full verification;
 the complete lifecycle is defined in the linked architecture.
+
+## Diagnostic evidence and product coverage
+
+The public `karmaEvents` query can return real source messages through Gateway. Its
+`KarmaEvent` contract preserves `id`, `carId`, `deviceId`, `eventId`, `edt`, `pdt` and
+the original `extra` text; the Events drawer displays those values. This is a raw
+history read. The separate `karmaDiagnosticHistory` projection decodes documented `413`
+and captured `419` layouts, exposes the documented `411` prefix, and preserves opaque
+`418`, E2 and E70 payloads. It has no persistent DTC archive or current-state model.
+An eData report number such as `413`, `418` or `419` is not an established Karma
+`eventId`; filtering by that number can miss the actual source report.
+
+Fleet's **Diagnostics** destination currently reads the separate
+[`fleetScenario` contract](../../architecture.md#diagnostic-scenario-contract).
+Its `HOLITA_SCENARIO` faults, logs and risk indicators are explicitly illustrative
+records. Selecting `KARMA_API` links to the truck's real Diagnostics history.
+These examples and their exports
+do not establish that a truck supplied a real DTC.
+
+The fixed diagnostic `306` and stored-fault logger `301`/`19` requests are exposed
+through scoped Fleet operations and private machine endpoints. Version `308` and
+global-settings `303` remain manual procedures documented in the
+[device protocol reference](../edata-simple-protocol-v4.04/diagnostics-and-fault-reporting.md).
+The diagnostic worker retains queue and reply evidence separately from configuration readback;
+there is no arbitrary command console or product Process DTCs control.
+
+| Observation                             | Supported conclusion                                                                                                                  |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| A queue ID or queue state `transmitted` | The provider supplied a reference or reported transmission; no device result is established                                           |
+| A fresh matched `154,0` response        | A device negative/terminal response was observed; it does not prove successful fault retrieval, an empty ECU or the absence of faults |
+| A fresh matched `411` or `417` report   | Device communication/ignition or CAN-disconnection evidence within the documented layout; not an ECU fault-code list                  |
+| A real `413`, `418` or `419` report     | Raw fault-report evidence to decode against the applicable layout, retaining target, message ID, UTC time, code and reported status   |
+
+A positive `419` proof requires an actual received SPN/FMI/status record and a
+trusted interpretation for that installation. A protocol example, configuration
+checkbox, successful parameter read or illustrative diagnostic row cannot supply
+that evidence. Current live observations and their limits belong to the
+[support verification register](../erm-support-diagnostics-protocol-test-server/README.md#verification-register).
 
 ## Backend feature boundaries
 
@@ -204,10 +259,12 @@ then submits its offset-free wall-clock strings. The period is editable and the 
 discloses the unresolved provider timezone. The nine source categories are shown
 without a fabricated overall score, thresholds or units.
 
-Location exposes all mapped fields and an OpenStreetMap link only when both
-coordinates are valid. Map opening is a user action; no embedded map SDK or map
-request runs automatically. A separate detail summary can fail independently of
-the truck details. No online/offline badge is derived from timestamps or zero values.
+Location exposes all mapped fields and the shared map preview for valid coordinates.
+The preview offers Google Maps and Street View links, with an automatically loaded
+Google Embed view when configured. Trip views additionally offer endpoint directions;
+suggested directions are separate from the recorded position samples. Source times
+remain visible, and a location read can fail independently of truck details.
+No online/offline badge is derived from timestamps or zero values.
 
 ## Existing verification coverage
 

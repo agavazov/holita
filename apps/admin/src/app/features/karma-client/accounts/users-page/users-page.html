@@ -1,8 +1,7 @@
 <section class="card karma-page" [attr.aria-label]="text().karmaUsers" [attr.aria-busy]="loading()">
   <div class="page-heading">
     <div>
-      <h1>{{ text().karmaUsers }}</h1>
-      <p>{{ text().karmaClient }}</p>
+      <h2>{{ text().karmaUsers }}</h2>
     </div>
     <button
       pButton
@@ -79,7 +78,7 @@
                 size="small"
                 severity="secondary"
                 [outlined]="true"
-                [attr.aria-label]="text().karmaUserDetails + ' ' + item.id"
+                [attr.aria-label]="text().view + ' ' + (item.userName || item.id)"
                 [attr.aria-expanded]="detail()?.id === item.id"
                 aria-controls="karma-user-detail"
                 (click)="open(item, $event)"
@@ -102,7 +101,7 @@
             type="button"
             severity="secondary"
             [outlined]="true"
-            [attr.aria-label]="text().karmaUserDetails + ' ' + item.id"
+            [attr.aria-label]="text().view + ' ' + (item.userName || item.id)"
             [attr.aria-expanded]="detail()?.id === item.id"
             aria-controls="karma-user-detail"
             (click)="open(item, $event)"

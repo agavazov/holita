@@ -68,12 +68,38 @@ export class KarmaTransport {
     return this.readAuthenticated(`cars/${id}`, new URLSearchParams(), true, signal);
   }
 
+  readReportTrips(parameters: URLSearchParams, signal: AbortSignal) {
+    return this.readAuthenticated('trips', parameters, false, signal, 2097152);
+  }
+
+  readPositionEvents(parameters: URLSearchParams, signal: AbortSignal) {
+    return this.readAuthenticated('events', parameters, false, signal, 2097152);
+  }
+
   readConfigurationTarget(id: string, signal: AbortSignal) {
     return this.readAuthenticated(`cars/${id}`, new URLSearchParams(), true, signal, 65536);
   }
 
   readConfigurationEvents(parameters: URLSearchParams, signal: AbortSignal) {
     return this.readAuthenticated('events', parameters, false, signal, 2097152);
+  }
+
+  readDiagnosticEvents(parameters: URLSearchParams, signal: AbortSignal) {
+    return this.readAuthenticated('events', parameters, false, signal, 2097152);
+  }
+
+  readDiagnosticQueue(id: string, signal: AbortSignal) {
+    return this.readAuthenticated(`queue/${id}`, new URLSearchParams(), false, signal, 65536);
+  }
+
+  requestDiagnostic(
+    carId: string,
+    kind: 'READ_FAULT_LOGGER' | 'READ_COMMUNICATION_DIAGNOSTICS',
+    signal: AbortSignal,
+  ) {
+    return kind === 'READ_FAULT_LOGGER'
+      ? this.submitEdataCommand(carId, '19', signal)
+      : this.submitEdataCommand(carId, '', signal, '306');
   }
 
   requestConfiguration(carId: string, signal: AbortSignal) {
@@ -110,8 +136,9 @@ export class KarmaTransport {
 
   private async submitEdataCommand(
     carId: string,
-    payload: '0702BC' | '0802BC' | '1F' | `02${string}` | `04${string}`,
+    payload: '0702BC' | '0802BC' | '1F' | '19' | '' | `02${string}` | `04${string}`,
     signal: AbortSignal,
+    command: '301' | '306' = '301',
   ) {
     let session: string;
     try {
@@ -127,7 +154,7 @@ export class KarmaTransport {
         headers: { 'content-type': 'application/json', accept: 'application/json' },
         body: JSON.stringify({
           car_id: [carId],
-          message: `30,1,19,0,19,301,0,1,1,${payload}`,
+          message: `30,1,19,0,19,${command},0,1,1,${payload}`,
           karma_sid: session,
         }),
       });
@@ -177,7 +204,7 @@ export class KarmaTransport {
   }
 
   private async readAuthenticated(
-    path: KarmaResource | `cars/${string}`,
+    path: KarmaResource | `cars/${string}` | `queue/${string}`,
     parameters: URLSearchParams,
     missingCar = false,
     signal = AbortSignal.timeout(4000),

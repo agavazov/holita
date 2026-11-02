@@ -18,6 +18,12 @@ export function adminNavigation(
         { id: 'overview', label: text.overview, icon: 'th-large', link: [...fleet, 'overview'] },
         { id: 'alerts', label: text.alerts, icon: 'bell', link: [...fleet, 'alerts'] },
         { id: 'trips', label: text.tripLog, icon: 'directions', link: [...fleet, 'trips'] },
+        {
+          id: 'diagnostics',
+          label: text.diagnostics,
+          icon: 'info-circle',
+          link: [...fleet, 'diagnostics'],
+        },
       ],
     });
     groups.push({
@@ -43,25 +49,11 @@ export function adminNavigation(
     note: text.temporary,
     items: [
       { id: 'karma-cars', label: text.karmaTrucks, icon: 'car', link: [...karma, 'cars'] },
-      { id: 'karma-users', label: text.karmaUsers, icon: 'users', link: [...karma, 'users'] },
-      { id: 'karma-roles', label: text.karmaRoles, icon: 'shield', link: [...karma, 'roles'] },
       {
-        id: 'karma-projects',
-        label: text.karmaProjects,
-        icon: 'folder',
-        link: [...karma, 'projects'],
-      },
-      {
-        id: 'karma-time-zones',
-        label: text.karmaTimeZones,
-        icon: 'clock',
-        link: [...karma, 'time-zones'],
-      },
-      {
-        id: 'karma-api-info',
-        label: text.karmaApiInfo,
-        icon: 'info-circle',
-        link: [...karma, 'api-info'],
+        id: 'karma-administration',
+        label: text.karmaAdministration,
+        icon: 'users',
+        link: [...karma, 'administration'],
       },
     ],
   });

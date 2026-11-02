@@ -1,0 +1,274 @@
+"How this value was obtained, independently of its underlying dataset."
+enum FleetEvidenceOrigin {
+  OBSERVED
+  DERIVED
+  ILLUSTRATIVE
+  UNAVAILABLE
+}
+
+"A derived example retains HOLITA_SCENARIO; it never becomes observed Karma data."
+enum FleetEvidenceSource {
+  KARMA_API
+  HOLITA_SCENARIO
+}
+
+enum FleetEvidenceRetrieval {
+  NOT_STARTED
+  COMPLETE
+  PARTIAL
+  UNAVAILABLE
+}
+
+enum FleetEvidenceAvailability {
+  COMPLETE
+  PARTIAL
+  UNAVAILABLE
+}
+
+enum FleetScenarioPositionCoverage {
+  COMPLETE
+  PARTIAL
+  NOT_ASSESSED
+}
+
+type FleetEvidenceProvenance {
+  origin: FleetEvidenceOrigin!
+  source: FleetEvidenceSource!
+  scenarioId: ID
+  sourceRecordId: ID
+  eventAt: DateTime
+  "Null unless a receipt clock is explicitly known; retrieval is not receipt."
+  receivedAt: DateTime
+  retrievedAt: DateTime!
+}
+
+type FleetEvidencePeriod {
+  from: DateTime!
+  toExclusive: DateTime!
+  timeZone: String!
+}
+
+type FleetScenarioGap {
+  from: DateTime!
+  toExclusive: DateTime!
+}
+
+type FleetScenarioCoverage {
+  retrieval: FleetEvidenceRetrieval!
+  positionCoverage: FleetScenarioPositionCoverage!
+  positionsLoaded: Int!
+  gaps: [FleetScenarioGap!]!
+}
+
+"Units in the synthetic dataset do not establish units for Karma API fields."
+enum FleetScenarioUnit {
+  KILOMETRE
+  KILOMETRES_PER_HOUR
+  CELSIUS
+  VOLT
+  LITRE
+  HOUR
+}
+
+enum FleetScenarioSignal {
+  SPEED
+  COOLANT_TEMPERATURE
+  EXTERNAL_VOLTAGE
+  "Cumulative illustrative consumed litres; the scenario counter resets after position 03."
+  FUEL_USED
+  "Cumulative illustrative travelled kilometres, independent of map interpolation."
+  DISTANCE_COUNTER
+  "Cumulative illustrative engine operating hours, unchanged while parked."
+  ENGINE_HOURS
+}
+
+type FleetScenarioMetric {
+  value: Float
+  unit: FleetScenarioUnit!
+  availability: FleetEvidenceAvailability!
+  availableInputs: Int!
+  requiredInputs: Int!
+  provenance: FleetEvidenceProvenance!
+}
+
+"A synthetic identity, without a link to FleetVehicle or KarmaCar."
+type FleetScenarioVehicle {
+  id: ID!
+  label: String!
+  provenance: FleetEvidenceProvenance!
+}
+
+type FleetScenarioTrip {
+  id: ID!
+  vehicleId: ID!
+  startedAt: DateTime!
+  stoppedAt: DateTime!
+  startPositionId: ID!
+  stopPositionId: ID!
+  distance: FleetScenarioMetric!
+  nightDistance: FleetScenarioMetric!
+  maximumSpeed: FleetScenarioMetric!
+  provenance: FleetEvidenceProvenance!
+}
+
+type FleetScenarioPositionSample {
+  id: ID!
+  vehicleId: ID!
+  tripId: ID!
+  latitude: Float!
+  longitude: Float!
+  provenance: FleetEvidenceProvenance!
+}
+
+type FleetScenarioSignalSample {
+  id: ID!
+  vehicleId: ID!
+  tripId: ID!
+  positionSampleId: ID!
+  signal: FleetScenarioSignal!
+  value: Float
+  unit: FleetScenarioUnit!
+  availability: FleetEvidenceAvailability!
+  provenance: FleetEvidenceProvenance!
+}
+
+enum FleetScenarioFaultCode {
+  EXAMPLE_COOLING_01
+  EXAMPLE_POWER_01
+}
+
+enum FleetScenarioFaultSystem {
+  COOLING
+  ELECTRICAL
+}
+
+enum FleetScenarioFaultStatus {
+  ACTIVE
+  RESOLVED
+}
+
+type FleetScenarioFault {
+  id: ID!
+  vehicleId: ID!
+  tripId: ID!
+  code: FleetScenarioFaultCode!
+  system: FleetScenarioFaultSystem!
+  severity: FleetEventSeverity!
+  reportedStatus: FleetScenarioFaultStatus!
+  firstObservedAt: DateTime!
+  lastObservedAt: DateTime!
+  occurrences: Int!
+  reportedResolvedAt: DateTime
+  observationLogIds: [ID!]!
+  provenance: FleetEvidenceProvenance!
+}
+
+enum FleetScenarioLogKind {
+  FAULT_REPORTED
+  FAULT_STATUS
+  MEASUREMENT
+  AVAILABILITY
+  INTEGRATION_ISSUE
+  RULE_EVALUATION
+}
+
+enum FleetScenarioLogReason {
+  SIGNAL_VALUE_UNAVAILABLE
+  EXAMPLE_UPSTREAM_FAILURE
+}
+
+type FleetScenarioLog {
+  id: ID!
+  vehicleId: ID!
+  tripId: ID
+  kind: FleetScenarioLogKind!
+  severity: FleetEventSeverity!
+  faultId: ID
+  reportedStatus: FleetScenarioFaultStatus
+  signalSampleId: ID
+  evaluationId: ID
+  reason: FleetScenarioLogReason
+  provenance: FleetEvidenceProvenance!
+}
+
+enum FleetScenarioRule {
+  REPEATED_FAULT
+  TEMPERATURE_PATTERN
+  VOLTAGE_PATTERN
+}
+
+enum FleetScenarioRuleState {
+  MATCHED
+  NOT_MATCHED
+  INSUFFICIENT_DATA
+}
+
+enum FleetScenarioAttentionBand {
+  MONITOR
+  REVIEW
+}
+
+enum FleetScenarioThresholdKind {
+  MINIMUM_REPORTS
+  MINIMUM_HIGH_SAMPLES
+  TEMPERATURE_AT_LEAST
+  VOLTAGE_AT_MOST
+}
+
+type FleetScenarioRuleThreshold {
+  kind: FleetScenarioThresholdKind!
+  value: Float!
+  unit: FleetScenarioUnit
+}
+
+enum FleetScenarioMissingEvidence {
+  SIGNAL_VALUE_UNAVAILABLE
+  CONTINUOUS_TEMPERATURE_HISTORY_UNAVAILABLE
+  ENGINE_LOAD_CONTEXT_UNAVAILABLE
+  VEHICLE_LIMITS_UNVERIFIED
+  MANUFACTURER_FAULT_MEANING_UNVERIFIED
+}
+
+type FleetScenarioRuleEvaluation {
+  id: ID!
+  vehicleId: ID!
+  tripId: ID!
+  faultId: ID
+  rule: FleetScenarioRule!
+  ruleId: ID!
+  version: Int!
+  window: FleetEvidencePeriod!
+  evaluatedAt: DateTime!
+  state: FleetScenarioRuleState!
+  attention: FleetScenarioAttentionBand
+  thresholds: [FleetScenarioRuleThreshold!]!
+  availableInputs: Int!
+  requiredInputs: Int!
+  contributingSignalIds: [ID!]!
+  contributingLogIds: [ID!]!
+  missingSignalIds: [ID!]!
+  missingEvidence: [FleetScenarioMissingEvidence!]!
+  provenance: FleetEvidenceProvenance!
+}
+
+type FleetScenario {
+  id: ID!
+  branchId: ID!
+  "Fixed dataset clock, independent of the actual retrieval time."
+  exampleClock: DateTime!
+  period: FleetEvidencePeriod!
+  provenance: FleetEvidenceProvenance!
+  coverage: FleetScenarioCoverage!
+  vehicles: [FleetScenarioVehicle!]!
+  trips: [FleetScenarioTrip!]!
+  positionSamples: [FleetScenarioPositionSample!]!
+  signalSamples: [FleetScenarioSignalSample!]!
+  faults: [FleetScenarioFault!]!
+  logs: [FleetScenarioLog!]!
+  ruleEvaluations: [FleetScenarioRuleEvaluation!]!
+}
+
+extend type Query {
+  "One fixed illustrative day; requires a verified Tenant and an owned Branch."
+  fleetScenario(id: ID!): FleetScenario!
+}

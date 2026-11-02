@@ -1,0 +1,22 @@
+{
+  "comparison": "Completed-day comparison",
+  "comparisonHint": "Differences are selected day minus comparison day. Distance and speed retain unconfirmed source units, without physical conversion. Percentages are rounded to two decimal places; source values remain unchanged. Unavailable differences have a reason. A difference is not a driver score or a vehicle-health conclusion.",
+  "selectedDay": "Selected day",
+  "baselineDay": "Comparison day",
+  "loading": "Loading the comparison day…",
+  "error": "The comparison-day request did not complete.",
+  "noBaseline": "No comparison day is loaded.",
+  "metric": "Value / units / explanation",
+  "difference": "Absolute difference",
+  "percent": "Percentage difference",
+  "brief": "Readable day brief and contributing records",
+  "sourceTrips": "Contributing source trips",
+  "viewTrip": "View source trip",
+  "noTrips": "No trip records are present in this loaded report selection.",
+  "export": "Download selected evidence",
+  "exportHint": "The JSON uses the displayed report values, source identity, periods, completion, raw units, brief and contributing trip records. Choose whether to include the loaded comparison day.",
+  "includeBaseline": "Include the loaded comparison day",
+  "includeCoordinates": "Include loaded trip endpoint coordinates",
+  "coordinatesHint": "Coordinates are excluded by default. This option adds only endpoint coordinates already present in the chosen report selections.",
+  "download": "Download JSON evidence"
+}

@@ -35,6 +35,7 @@ import {
   mergeDeviceReadEvidence,
 } from './device-read-evidence.js';
 import { DeviceRuleOperationsProcessor } from './device-rule-operations.processor.js';
+import { diagnosticEvidenceJson, mergeDiagnosticEvidence } from './device-diagnostic-evidence.js';
 
 @Injectable()
 export class DeviceOperationsProcessor {
@@ -76,12 +77,19 @@ export class DeviceOperationsProcessor {
           status: 'TIMED_OUT',
           completedAt: now,
           errorCode:
-            row.kind === 'READ_CONFIGURATION' || row.kind === 'READ_RULES'
+            row.kind === 'READ_CONFIGURATION' ||
+            row.kind === 'READ_RULES' ||
+            row.kind === 'READ_FAULT_LOGGER' ||
+            row.kind === 'READ_COMMUNICATION_DIAGNOSTICS'
               ? 'READ_TIMEOUT'
               : 'WRITE_TIMEOUT',
         },
         now,
       );
+      return;
+    }
+    if (row.kind === 'READ_FAULT_LOGGER' || row.kind === 'READ_COMMUNICATION_DIAGNOSTICS') {
+      await this.processDiagnostic(row);
       return;
     }
     if (row.kind === 'READ_RULES' || row.kind === 'UPSERT_RULE') {
@@ -175,6 +183,141 @@ export class DeviceOperationsProcessor {
           nextCheckAt: new Date(failedAt.getTime() + 10_000),
         },
         failedAt,
+      );
+    }
+  }
+
+  private async processDiagnostic(row: DeviceOperationRow): Promise<void> {
+    if (row.kind !== 'READ_FAULT_LOGGER' && row.kind !== 'READ_COMMUNICATION_DIAGNOSTICS') {
+      return;
+    }
+    if (row.status === 'QUEUED') {
+      let submissionStarted = false;
+      try {
+        const previousQueueIds = await this.operations.retainedDiagnosticQueueIds({
+          karmaCarId: row.karmaCarId,
+          karmaDeviceId: row.karmaDeviceId,
+        });
+        const readAfterMessageId = await this.karma.diagnosticWatermark(
+          row.karmaCarId,
+          row.karmaDeviceId,
+        );
+        const dispatchedAt = this.clock.now();
+        if (
+          !(await this.operations.save(
+            row,
+            { status: 'SUBMITTING', dispatchedAt, readAfterMessageId },
+            dispatchedAt,
+            false,
+          ))
+        ) {
+          return;
+        }
+        submissionStarted = true;
+        const result = await this.karma.requestDiagnostic(
+          row.karmaCarId,
+          row.karmaDeviceId,
+          row.kind,
+          previousQueueIds,
+        );
+        const now = this.clock.now();
+        const blocked = result.status === 'PENDING';
+        const queueIds = blocked ? [] : result.queueIds;
+        await this.operations.save(
+          row,
+          {
+            status: blocked ? 'FAILED' : result.status === 'ACCEPTED' ? 'WAITING' : 'UNKNOWN',
+            ...(blocked ? { completedAt: now } : {}),
+            queueIds,
+            observations: diagnosticEvidenceJson({
+              coverageComplete: false,
+              queue: queueIds.map((id) => ({ id, state: null })),
+              observations: [],
+            }),
+            errorCode: blocked
+              ? 'EXISTING_REQUEST_PENDING'
+              : result.status === 'ACCEPTED'
+                ? null
+                : 'SUBMISSION_UNCERTAIN',
+            nextCheckAt: new Date(now.getTime() + 10_000),
+          },
+          now,
+        );
+      } catch (error) {
+        const now = this.clock.now();
+        const changed = error instanceof KarmaDeviceReadError && error.code === 'TARGET_CHANGED';
+        await this.operations.save(
+          row,
+          {
+            status: changed ? 'FAILED' : submissionStarted ? 'UNKNOWN' : 'QUEUED',
+            ...(changed ? { completedAt: now } : {}),
+            errorCode: changed
+              ? 'TARGET_CHANGED'
+              : submissionStarted
+                ? 'SUBMISSION_UNCERTAIN'
+                : 'KARMA_UNAVAILABLE',
+            nextCheckAt: new Date(now.getTime() + 10_000),
+          },
+          now,
+        );
+      }
+      return;
+    }
+    if (row.status === 'SUBMITTING') {
+      const now = this.clock.now();
+      await this.operations.save(
+        row,
+        { status: 'UNKNOWN', errorCode: 'SUBMISSION_UNCERTAIN', nextCheckAt: now },
+        now,
+      );
+      return;
+    }
+    try {
+      const incoming = await this.karma.diagnosticObservations(
+        row.karmaCarId,
+        row.karmaDeviceId,
+        row.dispatchedAt ?? row.requestedAt,
+        this.clock.now(),
+        row.queueIds,
+        row.readAfterMessageId ?? undefined,
+      );
+      const merged = mergeDiagnosticEvidence(row.observations, incoming);
+      const observedFamily =
+        row.kind === 'READ_FAULT_LOGGER' ? 'FAULT_REPORT' : 'COMMUNICATION_DIAGNOSTICS';
+      const reportObserved = merged.observations.some((item) => item.family === observedFamily);
+      const nackObserved = merged.observations.some((item) => item.acknowledgement === 'NACK');
+      const now = this.clock.now();
+      const expired = now >= row.deadlineAt;
+      await this.operations.save(
+        row,
+        {
+          observations: diagnosticEvidenceJson(merged),
+          ...(reportObserved
+            ? { status: 'COMPLETE', completedAt: now, errorCode: null }
+            : nackObserved
+              ? { status: 'FAILED', completedAt: now, errorCode: 'DEVICE_NACK' }
+              : expired
+                ? { status: 'TIMED_OUT', completedAt: now, errorCode: 'READ_TIMEOUT' }
+                : {
+                    nextCheckAt: new Date(now.getTime() + 10_000),
+                    errorCode: incoming.coverageComplete
+                      ? 'NO_OBSERVED_REPORT'
+                      : 'INCOMPLETE_HISTORY',
+                  }),
+        },
+        now,
+      );
+    } catch (error) {
+      const now = this.clock.now();
+      const changed = error instanceof KarmaDeviceReadError && error.code === 'TARGET_CHANGED';
+      await this.operations.save(
+        row,
+        {
+          ...(changed ? { status: 'FAILED', completedAt: now } : {}),
+          errorCode: changed ? 'TARGET_CHANGED' : 'KARMA_UNAVAILABLE',
+          nextCheckAt: new Date(now.getTime() + 10_000),
+        },
+        now,
       );
     }
   }

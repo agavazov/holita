@@ -26,6 +26,8 @@ import type { Subscription } from 'rxjs';
 import type {
   AdminKarmaCarQuery,
   AdminKarmaEdataQuery,
+  FleetEvidenceFragment,
+  FleetScenarioCoverageFragment,
   KarmaEdataInput,
 } from '../../../../../generated/graphql/operations';
 import { messages, type Language } from '../../../../i18n/messages';
@@ -51,6 +53,10 @@ import { KarmaEdataApi } from '../karma-edata-api';
 import { edataFilters, positiveId } from './edata-filters';
 import { KarmaCarHeader } from '../../car-header/karma-car-header';
 import { karmaCarNavigationContext } from '../../car-header/karma-car-context';
+import { MapPreview } from '../../../../ui/map-preview/map-preview';
+import { mapCoordinates } from '../../../../ui/map-preview/location-map';
+import { MeasurementWorkspace } from '../../../../ui/measurement-workspace/measurement-workspace';
+import { edataChannels, edataRecords, measurementMessages } from './measurement-mapping';
 
 type EdataPageResult = AdminKarmaEdataQuery['karmaEdata'];
 type EdataMessage = EdataPageResult['items'][number];
@@ -63,6 +69,8 @@ type EdataMessage = EdataPageResult['items'][number];
     ButtonDirective,
     KarmaDateTime,
     RouteDrawer,
+    MapPreview,
+    MeasurementWorkspace,
     TablePanel,
     RowActions,
     InputTextModule,
@@ -85,6 +93,73 @@ export class EdataPage implements OnInit {
   readonly carLoaded = signal(false);
   readonly page = signal<EdataPageResult | null>(null);
   readonly selected = signal<EdataMessage | null>(null);
+  readonly measurementMode = signal(false);
+  readonly measurementText = computed(() => measurementMessages(this.language()));
+  readonly measurementChannel = signal<string | null>(null);
+  readonly measurementRecord = signal<string | null>(null);
+  private readonly viewRetrievedAt = signal<string | null>(null);
+  readonly measurementChannels = computed(() =>
+    edataChannels(this.page()?.items ?? [], this.language()),
+  );
+  readonly measurementRecords = computed(() => {
+    const page = this.page();
+    const retrievedAt = this.viewRetrievedAt();
+    return page && retrievedAt ? edataRecords(page.items, retrievedAt) : null;
+  });
+  readonly measurementProvenance = computed<FleetEvidenceFragment | null>(() => {
+    const retrievedAt = this.viewRetrievedAt();
+    return retrievedAt
+      ? {
+          origin: 'OBSERVED',
+          source: 'KARMA_API',
+          sourceRecordId: this.carId(),
+          scenarioId: null,
+          eventAt: null,
+          receivedAt: null,
+          retrievedAt,
+        }
+      : null;
+  });
+  readonly measurementCoverage = computed<FleetScenarioCoverageFragment>(() => ({
+    retrieval: this.error()
+      ? 'UNAVAILABLE'
+      : this.page()
+        ? this.page()?.hasMore
+          ? 'PARTIAL'
+          : 'COMPLETE'
+        : 'NOT_STARTED',
+    positionCoverage: 'NOT_ASSESSED',
+    positionsLoaded:
+      this.measurementRecords()?.filter((row) => row.coordinates !== null).length ?? 0,
+    gaps: [],
+  }));
+  readonly measurementScope = computed(() => {
+    const text = this.measurementText();
+    const page = this.page();
+    const input = this.input;
+    const period =
+      input?.fromDate && input.toDate
+        ? `${text.requested}: ${input.fromDate} – ${input.toDate}.`
+        : text.unbounded;
+    return [
+      text.subset,
+      period,
+      `${text.limits} ${String(input?.pageSize ?? 50)}.`,
+      `${text.filter}: ${input?.parameterIds?.join(', ') || text.allParameters}.`,
+      page ? (page.hasMore ? text.more : text.noMore) : '',
+      text.viewClock,
+      this.error() && page ? text.retained : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
+  });
+  readonly selectedMeasurementMessage = computed(
+    () =>
+      this.page()?.items.find((row) => `KARMA_API:${row.id}` === this.measurementRecord()) ?? null,
+  );
+  readonly selectedCoordinates = computed(() =>
+    mapCoordinates(this.selected()?.latitude, this.selected()?.longitude),
+  );
   readonly carLoading = signal(false);
   readonly pageLoading = signal(false);
   readonly loading = computed(() => this.carLoading() || this.pageLoading());
@@ -145,6 +220,9 @@ export class EdataPage implements OnInit {
       this.pageSubscription?.unsubscribe();
       this.pageQuery = undefined;
       this.page.set(null);
+      this.viewRetrievedAt.set(null);
+      this.measurementChannel.set(null);
+      this.measurementRecord.set(null);
       this.selected.set(null);
       this.pageLoading.set(false);
       this.error.set(false);
@@ -200,7 +278,8 @@ export class EdataPage implements OnInit {
       next: (result) => {
         this.pageLoading.set(result.loading);
         this.error.set(!!result.error);
-        if (result.dataState === 'complete' && !result.error) {
+        if (result.dataState === 'complete' && !result.loading && !result.error) {
+          this.viewRetrievedAt.set(new Date().toISOString());
           this.page.set(result.data.karmaEdata);
         }
       },

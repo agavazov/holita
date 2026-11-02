@@ -2,26 +2,22 @@ import { Component, computed, inject, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { AdminWorkspace } from '../../workspace/admin-workspace';
-import { UsersPage } from './accounts/users-page/users-page';
-import { RolesPage } from './accounts/roles-page/roles-page';
+import { KarmaAdministration } from './administration/karma-administration';
 import { CarsPage } from './cars/cars-page/cars-page';
 import { CarDetails } from './cars/car-details/car-details';
 import { LocationPage } from './location/location-page/location-page';
-import { ProjectsPage } from './references/projects-page/projects-page';
-import { TimeZonesPage } from './references/time-zones-page/time-zones-page';
-import { ApiInfoPage } from './references/api-info-page/api-info-page';
 import { TripsPage } from './history/trips-page/trips-page';
 import { EventsPage } from './history/events-page/events-page';
 import { DrivingProfilePage } from './history/driving-profile-page/driving-profile-page';
 import { DeviceManagementPage } from './device-management/device-management-page';
 import { EdataPage } from './edata/edata-page/edata-page';
+import { KarmaDiagnosticsPage } from './diagnostics/karma-diagnostics-page';
 
 @Component({
   selector: 'holita-karma-workspace',
   imports: [
     DeviceManagementPage,
-    UsersPage,
-    RolesPage,
+    KarmaAdministration,
     CarsPage,
     CarDetails,
     EdataPage,
@@ -29,9 +25,7 @@ import { EdataPage } from './edata/edata-page/edata-page';
     EventsPage,
     DrivingProfilePage,
     LocationPage,
-    ProjectsPage,
-    TimeZonesPage,
-    ApiInfoPage,
+    KarmaDiagnosticsPage,
   ],
   template: `
     @for (
@@ -46,18 +40,12 @@ import { EdataPage } from './edata/edata-page/edata-page';
         ':' +
         scope.section
     ) {
-      @if (scope.section === 'configuration' && scope.id !== null) {
+      @if (scope.section === 'diagnostics' && scope.id !== null) {
+        <holita-karma-diagnostics-page [language]="scope.language" [carId]="scope.id" />
+      } @else if (scope.section === 'configuration' && scope.id !== null) {
         <holita-device-management-page [language]="scope.language" [carId]="scope.id" />
-      } @else if (scope.section === 'users') {
-        <holita-users-page [language]="scope.language" />
-      } @else if (scope.section === 'roles') {
-        <holita-roles-page [language]="scope.language" />
-      } @else if (scope.section === 'projects') {
-        <holita-projects-page [language]="scope.language" />
-      } @else if (scope.section === 'time-zones') {
-        <holita-time-zones-page [language]="scope.language" />
-      } @else if (scope.section === 'api-info') {
-        <holita-api-info-page [language]="scope.language" />
+      } @else if (scope.administration) {
+        <holita-karma-administration [language]="scope.language" [section]="scope.section" />
       } @else if (scope.section === 'location' && scope.id !== null) {
         <holita-location-page [language]="scope.language" [carId]="scope.id" />
       } @else if (scope.section === 'trips' && scope.id !== null) {
@@ -97,6 +85,7 @@ export class KarmaWorkspace {
             language: this.workspace.language(),
             id: this.params().get('recordId'),
             edata: this.data()['edata'] === true,
+            administration: this.data()['administration'] === true,
             section: typeof section === 'string' ? section : '',
           },
         ]

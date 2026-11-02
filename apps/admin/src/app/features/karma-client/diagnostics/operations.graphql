@@ -1,0 +1,91 @@
+query AdminKarmaDiagnosticHistory($input: KarmaDiagnosticHistoryInput!) {
+  karmaDiagnosticHistory(input: $input) {
+    carId
+    cursor
+    nextCursor
+    hasMore
+    retrieval
+    reason
+    historyComplete
+    scannedRows
+    maxRows
+    deadlineMs
+    retrievedAt
+    items {
+      instantUtc
+      family
+      reportCode
+      decoding
+      rawPayload
+      payloadHex
+      acknowledgement
+      communication {
+        communicationMask
+        obdMask
+        canError
+        ignition
+        extensionHex
+      }
+      faults {
+        code
+        spn
+        fmi
+        statusHex
+        status
+        rawHex
+      }
+      event {
+        id
+        carId
+        deviceId
+        eventId
+        edt
+        edtTz
+        pdt
+        extra
+      }
+    }
+  }
+}
+
+fragment AdminDiagnosticReadOperation on FleetDeviceOperation {
+  id
+  branchId
+  karmaCarId
+  karmaDeviceId
+  kind
+  status
+  requestedAt
+  dispatchedAt
+  completedAt
+  nextCheckAt
+  deadlineAt
+  errorCode
+  diagnosticQueue {
+    id
+    state
+  }
+  diagnosticObservations {
+    messageId
+    eventTimeUtc
+    rawMessage
+    family
+    acknowledgement
+  }
+}
+
+query AdminDiagnosticReads($karmaCarId: ID!, $expectedKarmaDeviceId: String!) {
+  fleetDeviceOperationsEnabled
+  fleetDeviceDiagnosticOperations(
+    karmaCarId: $karmaCarId
+    expectedKarmaDeviceId: $expectedKarmaDeviceId
+  ) {
+    ...AdminDiagnosticReadOperation
+  }
+}
+
+mutation AdminRequestDiagnosticRead($input: RequestFleetDeviceDiagnosticReadInput!) {
+  requestFleetDeviceDiagnosticRead(input: $input) {
+    ...AdminDiagnosticReadOperation
+  }
+}

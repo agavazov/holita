@@ -39,8 +39,7 @@ import { messages, type Language } from '../../../../i18n/messages';
 import { KarmaHistoryApi } from '../karma-history-api';
 import { tripsFilters } from '../history-filters';
 import { positiveId } from '../../edata/edata-page/edata-filters';
-import { mapCoordinates } from '../../location/location-map';
-import { karmaMapMessages, MapPreview } from '../../location/map-preview/map-preview';
+import { TripDetails } from '../trip-details/trip-details';
 import { karmaDateControl, karmaDateParameter } from '../../karma-date-time';
 import { FormField } from '../../../../ui/form-field/form-field';
 import { focusFirstInvalid } from '../../../../ui/forms/focus';
@@ -65,7 +64,7 @@ type TripsRow = TripsPageResult['items'][number];
     RouteDrawer,
     RowActions,
     KarmaDateTime,
-    MapPreview,
+    TripDetails,
     Message,
     SelectModule,
     TableModule,
@@ -81,17 +80,10 @@ export class TripsPage implements OnInit {
   readonly language = input.required<Language>();
   readonly carId = input.required<string>();
   readonly text = computed(() => messages[this.language()]);
-  readonly mapText = computed(() => karmaMapMessages[this.language()]);
   readonly car = signal<AdminKarmaCarQuery['karmaCar']>(null);
   readonly carLoaded = signal(false);
   readonly page = signal<TripsPageResult | null>(null);
   readonly selected = signal<TripsRow | null>(null);
-  readonly startCoordinates = computed(() =>
-    mapCoordinates(this.selected()?.startLatitude, this.selected()?.startLongitude),
-  );
-  readonly stopCoordinates = computed(() =>
-    mapCoordinates(this.selected()?.stopLatitude, this.selected()?.stopLongitude),
-  );
   readonly carLoading = signal(false);
   readonly pageLoading = signal(false);
   readonly loading = computed(() => this.carLoading() || this.pageLoading());
@@ -347,33 +339,5 @@ export class TripsPage implements OnInit {
 
   closeDetails(): void {
     this.selected.set(null);
-  }
-
-  fields(row: TripsRow) {
-    return [
-      { name: 'trip_id', value: row.id },
-      { name: 'car_id', value: row.carId },
-      { name: 'car_number', value: row.carNumber },
-      { name: 'device_id', value: row.deviceId },
-      { name: 'driver_id', value: row.driverId },
-      { name: 'trip_active', value: row.tripActive },
-      { name: 'start_message_id', value: row.startMessageId },
-      { name: 'start_date', value: row.startDate },
-      { name: 'start_latitude', value: row.startLatitude },
-      { name: 'start_longitude', value: row.startLongitude },
-      { name: 'start_odo', value: row.startOdo },
-      { name: 'stop_message_id', value: row.stopMessageId },
-      { name: 'stop_date', value: row.stopDate },
-      { name: 'stop_latitude', value: row.stopLatitude },
-      { name: 'stop_longitude', value: row.stopLongitude },
-      { name: 'stop_odo', value: row.stopOdo },
-      { name: 'trip_duration', value: row.tripDuration },
-      { name: 'trip_distance', value: row.tripDistance },
-      { name: 'trip_duration_night', value: row.tripDurationNight },
-      { name: 'trip_distance_night', value: row.tripDistanceNight },
-      { name: 'max_speed', value: row.maxSpeed },
-      { name: 'driving_score', value: row.drivingScore },
-      { name: 'eco_score', value: row.ecoScore },
-    ];
   }
 }

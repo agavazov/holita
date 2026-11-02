@@ -19,6 +19,24 @@ export class DeviceConfigurationController {
     return this.configurations.request(body);
   }
 
+  @Post('diagnostic-request')
+  @HttpCode(200)
+  diagnosticRequest(@Body() body: unknown) {
+    return this.configurations.requestDiagnostic(body);
+  }
+
+  @Post('diagnostic-watermark')
+  @HttpCode(200)
+  diagnosticWatermark(@Body() body: unknown) {
+    return this.configurations.diagnosticWatermark(body);
+  }
+
+  @Post('diagnostic-observations')
+  @HttpCode(200)
+  diagnosticObservations(@Body() body: unknown) {
+    return this.configurations.diagnosticObservations(body);
+  }
+
   @Post('profile-request')
   @HttpCode(200)
   profileRequest(@Body() body: unknown) {

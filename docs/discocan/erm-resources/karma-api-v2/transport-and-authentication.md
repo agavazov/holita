@@ -84,13 +84,13 @@ specification. No arbitrary upstream path or field selection is exposed by Graph
 
 ## Dates, coordinates and metrics
 
-| Context         | Holita input                                  | Upstream encoding                          | Interpretation                                        |
-| --------------- | --------------------------------------------- | ------------------------------------------ | ----------------------------------------------------- |
-| eData           | Paired optional `YYYY-MM-DDTHH:MM:SSZ`        | Space-separated dates plus `date_type=utc` | UTC filtering against `edt`                           |
-| Events          | Paired optional `YYYY-MM-DDTHH:MM:SSZ`        | Space-separated dates plus `date_type=utc` | UTC filtering against `edt`                           |
-| Trips           | Paired optional `YYYY-MM-DDTHH:MM:SS`         | Space-separated dates; no `date_type`      | Provider wall-clock zone unresolved                   |
-| Driving profile | Required `fromDate` and `toDate`, without `Z` | Space-separated dates; no `date_type`      | Provider wall-clock zone unresolved                   |
-| Location        | No exposed period                             | No date parameters                         | Last-known message, not proof of current connectivity |
+| Context            | Holita input                                  | Upstream encoding                          | Interpretation                                        |
+| ------------------ | --------------------------------------------- | ------------------------------------------ | ----------------------------------------------------- |
+| eData              | Paired optional `YYYY-MM-DDTHH:MM:SSZ`        | Space-separated dates plus `date_type=utc` | UTC filtering against `edt`                           |
+| Events             | Paired optional `YYYY-MM-DDTHH:MM:SSZ`        | Space-separated dates plus `date_type=utc` | UTC filtering against `edt`                           |
+| Existing trip list | Paired optional `YYYY-MM-DDTHH:MM:SS`         | Space-separated dates; no `date_type`      | Provider wall-clock zone unresolved                   |
+| Driving profile    | Required `fromDate` and `toDate`, without `Z` | Space-separated dates; no `date_type`      | Provider wall-clock zone unresolved                   |
+| Location           | No exposed period                             | No date parameters                         | Last-known message, not proof of current connectivity |
 
 Both date endpoints must be supplied together and ordered for optional periods.
 Input parsing rejects invalid calendar dates, offsets, fractional seconds and
@@ -107,6 +107,12 @@ eData rejects out-of-range latitude/longitude. Location preserves any finite
 coordinates for inspection, while the frontend map link requires both coordinates
 within latitude ±90 / longitude ±180. Zero coordinates are valid. Trip/event
 coordinate mappers require finite numbers but do not enforce geographic bounds.
+
+The separate [daily report contract](../../architecture.md#daily-report-contract)
+uses the proved Europe/Sofia start-day selection and raw ID traversal, with a
+shared four-second deadline and a 2 MiB body bound per trip read. It does not
+promote the display cursor into a report-completeness guarantee. Other existing
+trip/profile inputs retain their original wall-clock handling.
 
 ## Histories and cursors
 

@@ -13,6 +13,7 @@ import {
   type KarmaReadback,
   type KarmaReadRule,
   type KarmaRulesReadback,
+  type KarmaDiagnosticReadback,
 } from '../src/integrations/karma/karma-device-reads.client.js';
 import { changedDefinition } from '../src/modules/device-operations/device-parameter-change.js';
 import { DeviceOperationsProcessor } from '../src/modules/device-operations/device-operations.processor.js';
@@ -30,7 +31,7 @@ const baselineConfiguration = [
   otherParameter,
 ];
 
-describe('Durable reporting changes with PostgreSQL', () => {
+describe('Durable device operations with PostgreSQL', () => {
   let database: Awaited<ReturnType<typeof createTestDatabase>>;
   let closeDatabase: (() => Promise<void>) | undefined;
   let module: TestingModule | undefined;
@@ -53,6 +54,13 @@ describe('Durable reporting changes with PostgreSQL', () => {
     .fn<KarmaDeviceReadsClient['requestRule']>()
     .mockResolvedValue({ status: 'UNCERTAIN', queueIds: [] });
   const rulesObservations = jest.fn<KarmaDeviceReadsClient['rulesObservations']>();
+  const diagnosticReads = jest
+    .fn<KarmaDeviceReadsClient['requestDiagnostic']>()
+    .mockResolvedValue({ status: 'ACCEPTED', queueIds: ['23'] });
+  const diagnosticObservations = jest.fn<KarmaDeviceReadsClient['diagnosticObservations']>();
+  const diagnosticWatermark = jest
+    .fn<KarmaDeviceReadsClient['diagnosticWatermark']>()
+    .mockResolvedValue('7179000000');
   const target = jest
     .fn<KarmaDeviceReadsClient['target']>()
     .mockImplementation((carId) => Promise.resolve({ carId, deviceId: `opaque-${carId}` }));
@@ -80,6 +88,9 @@ describe('Durable reporting changes with PostgreSQL', () => {
             requestRules: ruleReads,
             requestRule: ruleWrites,
             rulesObservations,
+            requestDiagnostic: diagnosticReads,
+            diagnosticObservations,
+            diagnosticWatermark,
           },
         },
       ],
@@ -195,7 +206,7 @@ describe('Durable reporting changes with PostgreSQL', () => {
     return repository.find(scope, claimed.id);
   }
 
-  it('persists the exact unknown baseline, sends once and verifies split evidence across restart with writes disabled', async () => {
+  it('preserves scoped writes and diagnostic reads across restart without replaying ambiguous submissions', async () => {
     const confirmed = await baseline('9101');
     const operation = await repository.createWrite(
       scope,
@@ -431,6 +442,7 @@ describe('Durable reporting changes with PostgreSQL', () => {
       writeUncertain: true,
     });
     expect(ruleWrites).toHaveBeenCalledTimes(1);
+
     expect(ruleWrites).toHaveBeenLastCalledWith(
       '9103',
       'opaque-9103',
@@ -646,5 +658,248 @@ describe('Durable reporting changes with PostgreSQL', () => {
     });
     expect(writes).toHaveBeenCalledTimes(1);
     expect(ruleWrites).toHaveBeenCalledTimes(1);
+    const diagnosticTarget = {
+      karmaCarId: '9106',
+      expectedKarmaDeviceId: 'opaque-9106',
+      kind: 'READ_FAULT_LOGGER',
+    } as const;
+    const diagnosticRead = await service.requestDiagnostic(context(), diagnosticTarget);
+    for (const foreignScope of [
+      { ...scope, tenantId: randomUUID() },
+      { ...scope, branchId: randomUUID() },
+    ]) {
+      expect(await service.find(context(foreignScope), diagnosticRead.id)).toBeNull();
+      expect(await service.diagnosticHistory(context(foreignScope), '9106', 'opaque-9106')).toEqual(
+        [],
+      );
+    }
+    await expect(service.requestDiagnostic(context(), diagnosticTarget)).rejects.toThrow(
+      'already active',
+    );
+    await advance();
+    expect(diagnosticReads).toHaveBeenLastCalledWith(
+      '9106',
+      'opaque-9106',
+      'READ_FAULT_LOGGER',
+      [],
+    );
+    expect(await repository.find(scope, diagnosticRead.id)).toMatchObject({
+      readAfterMessageId: '7179000000',
+    });
+    const positiveAck = {
+      messageId: '7179129747',
+      eventTimeUtc: now.toISOString(),
+      rawMessage: '19,0,154,1',
+      family: 'SPECIAL_ACK',
+      acknowledgement: 'POSITIVE_ACK',
+    } satisfies KarmaDiagnosticReadback['observations'][number];
+    diagnosticObservations.mockResolvedValueOnce({
+      coverageComplete: true,
+      queue: [{ id: '23', state: 1 }],
+      observations: [positiveAck],
+    });
+    expect(await advance()).toMatchObject({
+      status: 'WAITING',
+      errorCode: 'NO_OBSERVED_REPORT',
+      observations: { queue: [{ id: '23', state: 1 }], observations: [positiveAck] },
+    });
+    expect(diagnosticObservations).toHaveBeenLastCalledWith(
+      '9106',
+      'opaque-9106',
+      expect.any(Date),
+      expect.any(Date),
+      ['23'],
+      '7179000000',
+    );
+    await module?.close();
+    await start();
+    const negativeAck = {
+      ...positiveAck,
+      messageId: '7180175996',
+      eventTimeUtc: now.toISOString(),
+      rawMessage: '19,0,154,0',
+      acknowledgement: 'NACK',
+    } satisfies KarmaDiagnosticReadback['observations'][number];
+    diagnosticObservations.mockResolvedValueOnce({
+      coverageComplete: true,
+      queue: [{ id: '23', state: 1 }],
+      observations: [negativeAck],
+    });
+    expect(await advance()).toMatchObject({
+      status: 'FAILED',
+      errorCode: 'DEVICE_NACK',
+      configuration: null,
+      observations: { count: 2 },
+    });
+    expect(diagnosticReads).toHaveBeenCalledTimes(1);
+    expect(await service.find(context(), diagnosticRead.id)).toMatchObject({
+      diagnosticQueue: [{ id: '23', state: 1 }],
+      diagnosticObservations: [
+        { messageId: negativeAck.messageId, acknowledgement: 'NACK' },
+        { messageId: positiveAck.messageId, acknowledgement: 'POSITIVE_ACK' },
+      ],
+    });
+    // A retained provider queue is reconciled before another command; a pending queue is not replayed.
+    diagnosticReads.mockResolvedValueOnce({ status: 'PENDING', queueIds: ['23'] });
+    const blockedRead = await service.requestDiagnostic(context(), diagnosticTarget);
+    expect(await advance()).toMatchObject({
+      id: blockedRead.id,
+      status: 'FAILED',
+      errorCode: 'EXISTING_REQUEST_PENDING',
+      queueIds: [],
+      observations: { queue: [] },
+    });
+    expect(diagnosticReads).toHaveBeenLastCalledWith('9106', 'opaque-9106', 'READ_FAULT_LOGGER', [
+      '23',
+    ]);
+
+    now = new Date('2026-10-29T12:53:50.000Z');
+    const actualFaultTarget = {
+      karmaCarId: '16595',
+      expectedKarmaDeviceId: '862129080367299',
+      kind: 'READ_FAULT_LOGGER',
+    } as const;
+    target.mockResolvedValueOnce({ carId: '16595', deviceId: '862129080367299' });
+    const actualFaultRead = await service.requestDiagnostic(context(), actualFaultTarget);
+    await advance();
+    const actualFault = {
+      messageId: '7179721665',
+      eventTimeUtc: '2026-10-29T12:54:06.000Z',
+      rawMessage: '19,0,419,0,1,1,1001,2100005CFE0F01',
+      family: 'FAULT_REPORT',
+      acknowledgement: null,
+    } satisfies KarmaDiagnosticReadback['observations'][number];
+    diagnosticObservations.mockResolvedValueOnce({
+      coverageComplete: false,
+      queue: [{ id: '23', state: 1 }],
+      observations: [actualFault],
+    });
+    expect(await advance()).toMatchObject({
+      id: actualFaultRead.id,
+      status: 'COMPLETE',
+      configuration: null,
+      observations: { coverageComplete: false, observations: [actualFault] },
+    });
+    expect(
+      await service.snapshot(
+        context(),
+        actualFaultTarget.karmaCarId,
+        actualFaultTarget.expectedKarmaDeviceId,
+      ),
+    ).toBeNull();
+    expect(
+      await service.diagnosticHistory(
+        context(),
+        actualFaultTarget.karmaCarId,
+        actualFaultTarget.expectedKarmaDeviceId,
+      ),
+    ).toMatchObject([{ id: actualFaultRead.id, coverageComplete: false }]);
+
+    now = new Date('2026-10-29T15:03:50.000Z');
+    target.mockResolvedValueOnce({ carId: '16586', deviceId: '862129080320033' });
+    const communicationsRead = await service.requestDiagnostic(context(), {
+      karmaCarId: '16586',
+      expectedKarmaDeviceId: '862129080320033',
+      kind: 'READ_COMMUNICATION_DIAGNOSTICS',
+    });
+    await advance();
+    const communications = {
+      messageId: '7180194143',
+      eventTimeUtc: '2026-10-29T15:04:01.000Z',
+      rawMessage: '19,0,411,0,1,1,1001,00000001010C87',
+      family: 'COMMUNICATION_DIAGNOSTICS',
+      acknowledgement: null,
+    } satisfies KarmaDiagnosticReadback['observations'][number];
+    diagnosticObservations.mockResolvedValueOnce({
+      coverageComplete: true,
+      queue: [{ id: '23', state: 1 }],
+      observations: [communications],
+    });
+    expect(await advance()).toMatchObject({
+      id: communicationsRead.id,
+      status: 'COMPLETE',
+      observations: { observations: [communications] },
+    });
+    diagnosticReads.mockResolvedValueOnce({ status: 'UNCERTAIN', queueIds: [] });
+    const uncertainRead = await service.requestDiagnostic(context(), {
+      karmaCarId: '9108',
+      expectedKarmaDeviceId: 'opaque-9108',
+      kind: 'READ_FAULT_LOGGER',
+    });
+    expect(await advance()).toMatchObject({ status: 'UNKNOWN', errorCode: 'SUBMISSION_UNCERTAIN' });
+    const submissions = diagnosticReads.mock.calls.length;
+    await module?.close();
+    await start();
+    const unresolvedFault = {
+      ...actualFault,
+      messageId: '7179721666',
+      eventTimeUtc: now.toISOString(),
+      rawMessage: '19,0,419,0,1,1,1001,21',
+      family: 'UNRESOLVED_FAULT_REPORT',
+    } satisfies KarmaDiagnosticReadback['observations'][number];
+    diagnosticObservations.mockResolvedValueOnce({
+      coverageComplete: false,
+      queue: [],
+      observations: [unresolvedFault],
+    });
+    expect(await advance()).toMatchObject({
+      status: 'UNKNOWN',
+      errorCode: 'INCOMPLETE_HISTORY',
+      observations: { observations: [unresolvedFault] },
+    });
+    expect(diagnosticReads).toHaveBeenCalledTimes(submissions);
+    now = new Date(now.getTime() + 600_000);
+    expect(await advance()).toMatchObject({
+      id: uncertainRead.id,
+      status: 'TIMED_OUT',
+      errorCode: 'READ_TIMEOUT',
+    });
+    expect(diagnosticReads).toHaveBeenCalledTimes(submissions);
+
+    const retainedTarget = {
+      karmaCarId: '9110',
+      expectedKarmaDeviceId: 'opaque-9110',
+      kind: 'READ_FAULT_LOGGER',
+    } as const;
+    diagnosticReads.mockResolvedValueOnce({ status: 'ACCEPTED', queueIds: ['24'] });
+    const timedOutRead = await service.requestDiagnostic(context(), retainedTarget);
+    expect(await advance()).toMatchObject({ id: timedOutRead.id, status: 'WAITING' });
+    now = new Date(now.getTime() + 600_000);
+    expect(await advance()).toMatchObject({ id: timedOutRead.id, status: 'TIMED_OUT' });
+    for (const foreignScope of [
+      { ...scope, tenantId: randomUUID() },
+      { ...scope, branchId: randomUUID() },
+    ]) {
+      expect(
+        await service.diagnosticHistory(context(foreignScope), '9110', 'opaque-9110'),
+      ).toEqual([]);
+      // The shared provider queue remains pending even after this workspace's local deadline.
+      diagnosticReads.mockResolvedValueOnce({ status: 'PENDING', queueIds: ['24'] });
+      const blocked = await service.requestDiagnostic(context(foreignScope), retainedTarget);
+      await advance();
+      expect(await repository.find(foreignScope, blocked.id)).toMatchObject({
+        id: blocked.id,
+        status: 'FAILED',
+        errorCode: 'EXISTING_REQUEST_PENDING',
+        queueIds: [],
+        observations: { queue: [] },
+      });
+      expect(diagnosticReads).toHaveBeenLastCalledWith(
+        '9110',
+        'opaque-9110',
+        'READ_FAULT_LOGGER',
+        ['24'],
+      );
+      expect(
+        (await service.diagnosticHistory(context(foreignScope), '9110', 'opaque-9110')).map(
+          (operation) => operation.id,
+        ),
+      ).toEqual([blocked.id]);
+    }
+    expect(
+      (await service.diagnosticHistory(context(), '9110', 'opaque-9110')).map(
+        (operation) => operation.id,
+      ),
+    ).toEqual([timedOutRead.id]);
   });
 });

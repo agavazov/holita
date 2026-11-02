@@ -8,9 +8,11 @@
   "location": "Location",
   "trips": "Trips",
   "events": "Events",
+  "diagnostics": "Diagnostics",
   "drivingProfile": "Driving profile",
   "backToTrucks": "Back to trucks",
   "refresh": "Refresh",
   "retry": "Retry",
-  "deviceSettings": "Device settings"
+  "deviceSettings": "Device settings",
+  "more": "More"
 }

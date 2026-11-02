@@ -7,9 +7,11 @@ contract, plus Branch regional preferences and thresholds — and the connected 
 admin in `apps/admin`, including General settings. The shared
 `apps/karma-client` provides read-only truck lists/details, eData, location, trips, events,
 driving profile and account views for projects, time zones, API version, users and roles.
-Fleet also persists background eData parameter/rule reads, single predefined-parameter additions,
-existing-interval changes and one-rule changes through Karma. Open a Karma truck's **Device settings**
-tab to author local rule drafts and configure the device identified by that Karma car's `deviceId`.
+Real per-truck diagnostic history decodes captured SPN/FMI fault reports and preserves
+unknown report payloads; fixed logger and communication-diagnostic reads use the scoped
+Fleet background worker. Fleet also persists background eData parameter/rule reads, single predefined-parameter additions,
+existing-interval changes and one-rule changes through Karma. Open a Karma truck's **More → Device settings**
+destination to author local rule drafts and configure the device identified by that Karma car's `deviceId`.
 The shell's active Branch scopes saved operations; no local Fleet Device registration or association is required.
 Writes are separately disabled by default and require a complete baseline, fresh
 preflight and full readback verification. Rules require both parameter and rule baselines.
@@ -28,12 +30,12 @@ telemetry ingestion from devices, tracking and measurement processing are not im
 - [ERM resources](erm-resources/README.md): Karma API v2 source assets, reconstructed
   OpenAPI, endpoint and field reference, current integration coverage and limitations;
   versioned PDF references for eData, Karma and StarLink with extracted images;
-  the StarLink protocol portal and Message structure from supplied screenshots,
-  with authenticated portal access still unverified; a hardware profile for the supplied
+  the authenticated StarLink protocol archive and coverage inventory, catalogs and Test Server
+  references alongside the original screenshots; a hardware profile for the supplied
   EG915U-LA / LC86G device note, whose exact ERM model remains unidentified.
 - [ERM support correspondence and verification](erm-resources/erm-support-diagnostics-protocol-test-server/README.md):
-  diagnostics/DTCs, protocol access and Test Server questions versus the engineer's
-  reply, original images and the status of unverified claims requiring tests or ERM clarification.
+  diagnostics/DTCs, protocol access and Test Server questions versus the dated replies,
+  original images, independent real fault captures and remaining lifecycle/compatibility questions.
 - [Shared workspace documentation](../README.md).
 
 ## Terminology

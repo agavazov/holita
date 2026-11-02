@@ -2658,9 +2658,9 @@
         "tags": ["Devices"],
         "summary": "Get queued messages state",
         "operationId": "getQueueId",
-        "description": "Get status of queued messages. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "description": "Get status of queued messages. Used internally by holita diagnostic reads; no public queue query is exposed. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "GET",
-        "x-holita-implemented": false,
+        "x-holita-implemented": true,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [
           {

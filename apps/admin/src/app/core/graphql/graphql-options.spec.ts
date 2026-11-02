@@ -3,7 +3,10 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { ApolloClient } from '@apollo/client/core';
 import { HttpLink } from 'apollo-angular/http';
-import { AdminBranchesDocument } from '../../../generated/graphql/operations';
+import {
+  AdminBranchesDocument,
+  AdminKarmaEdataDocument,
+} from '../../../generated/graphql/operations';
 import { graphqlOptions } from './graphql-options';
 
 const branchA = '7C9E6679-7425-40DE-944B-E07FC1F90AE7';
@@ -80,6 +83,39 @@ describe('GraphQL client options', () => {
       ).toEqual(headers);
       request.flush({ data: { branches: [] } });
       await result;
+      const variables = { input: { carId: '41', pageSize: 25 } };
+      const data = {
+        karmaEdata: {
+          __typename: 'KarmaEdataPage',
+          cursor: null,
+          nextCursor: null,
+          hasMore: false,
+          items: [0, 88, null].map((value, index) => ({
+            __typename: 'KarmaEdataMessage',
+            id: String(3000000600 + index),
+            carId: '41',
+            deviceId: 'test-device',
+            carNumber: 'TEST',
+            eventTimeUtc: null,
+            eventTimeLocal: null,
+            pdt: null,
+            spd: null,
+            odo: null,
+            latitude: null,
+            longitude: null,
+            parameters: [
+              { __typename: 'KarmaEdataParameter', id: '539', value, description: null },
+            ],
+          })),
+        },
+      };
+      client.writeQuery({ query: AdminKarmaEdataDocument, variables, data });
+      expect(
+        client
+          .readQuery({ query: AdminKarmaEdataDocument, variables })
+          ?.karmaEdata.items.map((row) => row.parameters[0]?.value),
+        `${label} keeps each message's reading`,
+      ).toEqual([0, 88, null]);
       client.stop();
     }
     expect(

@@ -1,4 +1,4 @@
-<section class="app-view" [attr.aria-label]="text().karmaTrips" [attr.aria-busy]="loading()">
+<div class="app-view" [attr.aria-busy]="loading()">
   <holita-karma-car-header
     [language]="language()"
     [carId]="carId()"
@@ -196,7 +196,7 @@
       </div>
     </div>
   }
-</section>
+</div>
 @if (selected(); as row) {
   <holita-route-drawer
     [title]="text().karmaTripsDetails"
@@ -204,46 +204,6 @@
     [closeLink]="null"
     (closeRequest)="closeDetails()"
   >
-    <div class="app-view">
-      <p>
-        {{ text().karmaTripId }}: <strong>{{ row.id }}</strong>
-      </p>
-      <div class="app-form-grid trip-endpoints">
-        <div class="app-card">
-          <span>{{ mapText().start }}</span>
-          <strong>{{ row.startDate ?? '—' }}</strong>
-          <span>{{
-            startCoordinates()
-              ? row.startLatitude + ' / ' + row.startLongitude
-              : mapText().noEndpoint
-          }}</span>
-        </div>
-        <div class="app-card">
-          <span>{{ mapText().stop }}</span>
-          <strong>{{ row.stopDate ?? '—' }}</strong>
-          <span>{{
-            stopCoordinates() ? row.stopLatitude + ' / ' + row.stopLongitude : mapText().noEndpoint
-          }}</span>
-        </div>
-      </div>
-      <holita-map-preview
-        [language]="language()"
-        [origin]="startCoordinates()"
-        [destination]="stopCoordinates()"
-        [route]="true"
-      />
-      <details class="app-source-details">
-        <summary>{{ mapText().sourceDetails }}</summary>
-        <p class="app-muted">{{ text().karmaHistoryRawHint }}</p>
-        <dl class="app-facts">
-          @for (field of fields(row); track field.name) {
-            <div>
-              <dt>{{ field.name }}</dt>
-              <dd>{{ field.value ?? '—' }}</dd>
-            </div>
-          }
-        </dl>
-      </details>
-    </div>
+    <holita-trip-details [language]="language()" [trip]="row" />
   </holita-route-drawer>
 }

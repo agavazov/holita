@@ -11,6 +11,8 @@ import type {
   QueryFleetDeviceRulesSnapshotArgs,
   MutationRequestFleetDeviceRulesReadArgs,
   MutationRequestFleetDeviceRuleChangeArgs,
+  MutationRequestFleetDeviceDiagnosticReadArgs,
+  QueryFleetDeviceDiagnosticOperationsArgs,
 } from '../../generated/graphql/types.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import { DeviceOperationsService } from './device-operations.service.js';
@@ -19,6 +21,22 @@ import { DeviceOperationsService } from './device-operations.service.js';
 @UseGuards(FleetEnabledGuard)
 export class DeviceOperationsResolver {
   constructor(private readonly operations: DeviceOperationsService) {}
+
+  @Mutation('requestFleetDeviceDiagnosticRead')
+  requestDiagnostic(
+    @Args() args: MutationRequestFleetDeviceDiagnosticReadArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.operations.requestDiagnostic(context, args.input);
+  }
+
+  @Query('fleetDeviceDiagnosticOperations')
+  diagnosticHistory(
+    @Args() args: QueryFleetDeviceDiagnosticOperationsArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.operations.diagnosticHistory(context, args.karmaCarId, args.expectedKarmaDeviceId);
+  }
 
   @Query('fleetDeviceOperationsEnabled')
   enabled(@Context() context: RequestContext) {
