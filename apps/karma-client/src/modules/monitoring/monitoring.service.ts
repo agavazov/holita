@@ -96,7 +96,7 @@ export class MonitoringService {
       pageSize: 100,
       fromMessageId: String(Number(body.afterId) + 1),
     });
-    // Live background reads exceed the public four-second deadline; Fleet allows 21 seconds.
+    // First background reads of the retention window can take over 20 seconds; Fleet allows 50.
     const signal = AbortSignal.timeout(45000);
     const parameters = new URLSearchParams({
       car: query.carId,
