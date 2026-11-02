@@ -83,7 +83,9 @@ PostgreSQL and processes from other checkouts remain running. Running it again i
 | Karma Client    | 11014                 |
 | PostgreSQL      | 11084                 |
 
-Visual previews use 11000–11009; the admin Storybook uses 11001. The single root
+Visual previews use 11000–11009; the admin Storybook uses 11001. The admin dev server and
+Storybook listen on all interfaces and accept the `dev.lab` host, so devices on the local network
+open them as `http://dev.lab:11000` and `http://dev.lab:11001`; the other services stay on loopback. The single root
 [`.env.example`](../.env.example) describes all variables, their consumers, safe examples,
 types and sensitivity using [`@env-spec` style annotations](https://varlock.dev/reference/data-types/).
 These comments document configuration; dotenv and Compose do not validate them, and no

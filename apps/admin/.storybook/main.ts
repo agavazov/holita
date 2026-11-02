@@ -4,7 +4,8 @@ const config: StorybookConfig = {
   stories: ['../src/**/*.stories.ts'],
   addons: ['@storybook/addon-a11y'],
   framework: { name: '@storybook/angular-vite', options: {} },
-  core: { disableTelemetry: true },
+  // Storybook listens on all interfaces; accept the LAN name used to open it from other devices.
+  core: { disableTelemetry: true, allowedHosts: ['dev.lab'] },
 };
 
 export default config;

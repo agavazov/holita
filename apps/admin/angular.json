@@ -57,6 +57,9 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
+          "options": {
+            "allowedHosts": ["dev.lab"]
+          },
           "configurations": {
             "production": {
               "buildTarget": "admin:build:production"
@@ -79,7 +82,7 @@
           "options": {
             "configDir": ".storybook",
             "tsConfig": ".storybook/tsconfig.json",
-            "host": "127.0.0.1",
+            "host": "0.0.0.0",
             "port": 11001,
             "open": false,
             "styles": ["src/styles.scss"],
