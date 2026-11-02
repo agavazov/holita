@@ -1,11 +1,11 @@
 import {
   BadRequestException,
   ConflictException,
-  HttpException,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { runFleetActions } from '../../fleet-actions.js';
 import { addDays, businessDate, FleetClock } from '../../clock/fleet-clock.js';
 import type {
   CompleteFleetServiceTaskInput,
@@ -13,7 +13,6 @@ import type {
   FleetServiceSummary,
   FleetServiceTask,
   FleetServiceTaskCompletion,
-  FleetServiceTaskActionFailure,
   FleetServiceTaskActionResult,
   FleetServiceTaskPage,
   FleetServiceTaskSortField,
@@ -429,17 +428,9 @@ export class ServiceTasksService {
     if (!selected.length) {
       invalid('ids', 'Choose at least one service task.', 'REQUIRED');
     }
-    const succeededIds: string[] = [];
-    const failures: FleetServiceTaskActionFailure[] = [];
-    for (const id of selected) {
-      try {
-        await this.cancelStored(scope, id);
-        succeededIds.push(id);
-      } catch (error: unknown) {
-        failures.push(this.actionFailure(context, id, error));
-      }
-    }
-    return { succeededIds, failures };
+    return runFleetActions(selected, context, this.logger, 'Unable to change service task.', (id) =>
+      this.cancelStored(scope, id),
+    );
   }
 
   async deleteMany(
@@ -451,41 +442,16 @@ export class ServiceTasksService {
     if (!selected.length) {
       invalid('ids', 'Choose at least one service task.', 'REQUIRED');
     }
-    const succeededIds: string[] = [];
-    const failures: FleetServiceTaskActionFailure[] = [];
-    for (const id of selected) {
-      try {
+    return runFleetActions(
+      selected,
+      context,
+      this.logger,
+      'Unable to change service task.',
+      async (id) => {
         const task = await this.tasks.findTask(scope, id);
         await this.deleteStored(scope, id, task?.status);
-        succeededIds.push(id);
-      } catch (error: unknown) {
-        failures.push(this.actionFailure(context, id, error));
-      }
-    }
-    return { succeededIds, failures };
-  }
-
-  private actionFailure(
-    context: RequestContext,
-    id: string,
-    error: unknown,
-  ): FleetServiceTaskActionFailure {
-    if (error instanceof HttpException) {
-      const code = new Map([
-        [400, 'BAD_USER_INPUT'],
-        [404, 'NOT_FOUND'],
-        [409, 'CONFLICT'],
-        [503, 'SERVICE_UNAVAILABLE'],
-      ]).get(error.getStatus());
-      if (code) {
-        return { id, code, message: error.message };
-      }
-    }
-    this.logger.error({
-      requestId: context.requestId,
-      error: error instanceof Error ? error.name : 'UnknownError',
-    });
-    return { id, code: 'INTERNAL_SERVER_ERROR', message: 'Unable to change service task.' };
+      },
+    );
   }
 
   /** The next PLANNED task per vehicle ID (`FleetVehicle.nextService`, one raw query). */

@@ -4,7 +4,14 @@ import {
   FleetEventKind,
   FleetEventSeverity,
 } from '../../generated/prisma/enums.js';
-import { booleanFilter, dateTimeRange, enumFilter, idList, invalid } from '../../validation.js';
+import {
+  booleanFilter,
+  dateTimeRange,
+  enumFilter,
+  filterCondition,
+  filterConditions,
+  idList,
+} from '../../validation.js';
 
 /** Validated event condition with a half-open occurrence window. */
 export type EventConditionCriteria = {
@@ -18,17 +25,9 @@ export function eventConditions(
   if (value == null) {
     return undefined;
   }
-  if (!Array.isArray(value) || value.length > 50) {
-    invalid(
-      'filter',
-      'filter.allOf: use at most 50 conditions.',
-      Array.isArray(value) ? 'TOO_MANY_ITEMS' : 'INVALID_TYPE',
-    );
-  }
+  filterConditions(value);
   return value.map((condition: FleetEventCondition | null) => {
-    if (typeof condition !== 'object' || condition === null || Array.isArray(condition)) {
-      invalid('filter', 'filter.allOf: use valid event conditions.', 'INVALID_TYPE');
-    }
+    filterCondition(condition, 'event');
     const period = dateTimeRange(condition.occurredFrom, condition.occurredTo, {
       from: 'occurredFrom',
       to: 'occurredTo',

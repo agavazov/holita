@@ -4,9 +4,11 @@ import {
   booleanFilter,
   dateOnlyRange,
   enumFilter,
+  filterCondition,
+  filterConditions,
+  filterRange,
   idList,
   integerFilter,
-  invalid,
   numberFilter,
 } from '../../validation.js';
 
@@ -21,17 +23,9 @@ export function driverConditions(
   if (value == null) {
     return undefined;
   }
-  if (!Array.isArray(value) || value.length > 50) {
-    invalid(
-      'filter',
-      'filter.allOf: use at most 50 conditions.',
-      Array.isArray(value) ? 'TOO_MANY_ITEMS' : 'INVALID_TYPE',
-    );
-  }
+  filterConditions(value);
   return value.map((condition: FleetDriverCondition | null) => {
-    if (typeof condition !== 'object' || condition === null || Array.isArray(condition)) {
-      invalid('filter', 'filter.allOf: use valid driver conditions.', 'INVALID_TYPE');
-    }
+    filterCondition(condition, 'driver');
     const score = {
       scoreAbove: numberFilter(condition.scoreAbove, 'scoreAbove', 0, 100),
       scoreBelow: numberFilter(condition.scoreBelow, 'scoreBelow', 0, 100),
@@ -44,24 +38,11 @@ export function driverConditions(
       distanceKmFrom: numberFilter(condition.distanceKmFrom, 'distanceKmFrom', 0, 10_000_000),
       distanceKmTo: numberFilter(condition.distanceKmTo, 'distanceKmTo', 0, 10_000_000),
     };
-    if (
-      score.scoreFrom !== undefined &&
-      score.scoreTo !== undefined &&
-      score.scoreFrom > score.scoreTo
-    ) {
-      invalid('filter', 'filter.scoreTo must not be below filter.scoreFrom.', 'INVALID_RANGE');
-    }
-    if (
-      distance.distanceKmFrom !== undefined &&
-      distance.distanceKmTo !== undefined &&
-      distance.distanceKmFrom > distance.distanceKmTo
-    ) {
-      invalid(
-        'filter',
-        'filter.distanceKmTo must not be below filter.distanceKmFrom.',
-        'INVALID_RANGE',
-      );
-    }
+    filterRange(score.scoreFrom, score.scoreTo, { from: 'scoreFrom', to: 'scoreTo' });
+    filterRange(distance.distanceKmFrom, distance.distanceKmTo, {
+      from: 'distanceKmFrom',
+      to: 'distanceKmTo',
+    });
     const license = dateOnlyRange(condition.licenseExpiresOnFrom, condition.licenseExpiresOnTo, {
       from: 'licenseExpiresOnFrom',
       to: 'licenseExpiresOnTo',
