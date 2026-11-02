@@ -1,4 +1,5 @@
 import { PageHeader } from '../../../../ui/page-header/page-header';
+import { karmaPresentation } from '../../presentation/karma-presentation';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -23,6 +24,7 @@ import { messages, type Language } from '../../../../i18n/messages';
 })
 export class ApiInfoPage {
   readonly language = input.required<Language>();
+  readonly presentationText = computed(() => karmaPresentation[this.language()]);
   readonly text = computed(() => messages[this.language()]);
   readonly version = signal<string | null>(null);
   readonly loading = signal(true);
