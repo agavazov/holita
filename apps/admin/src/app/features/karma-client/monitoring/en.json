@@ -93,6 +93,7 @@
     "CAME_ONLINE": "Fresh data received",
     "NO_DATA_SINCE": "No fresh data",
     "FAULT_REPORTED": "Fault report",
+    "FAULT_REPORT_UNDECODED": "Undecoded fault report",
     "FAULT_READ_REQUESTED": "Fault read requested",
     "FAULT_READ_ANSWERED": "Truck answered",
     "FAULT_READ_FAILED": "Fault read failed",

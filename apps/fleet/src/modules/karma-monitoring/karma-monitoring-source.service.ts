@@ -102,16 +102,22 @@ export class KarmaMonitoringSourceService {
     return trucks;
   }
 
-  async history(truck: {
-    karmaCarId: string;
-    karmaDeviceId: string;
-    historyCursor: string;
-    historyBeforeId: string | null;
-  }) {
+  async history(
+    truck: {
+      karmaCarId: string;
+      karmaDeviceId: string;
+      historyCursor: string;
+      historyBeforeId: string | null;
+    },
+    from: Date,
+    to: Date,
+  ) {
     const result = await this.karma.monitoring('history', {
       carId: truck.karmaCarId,
       deviceId: truck.karmaDeviceId,
       afterId: truck.historyCursor,
+      fromUtc: from.toISOString(),
+      toUtc: to.toISOString(),
       ...(truck.historyBeforeId ? { beforeId: truck.historyBeforeId } : {}),
     });
     if (!record(result) || !Array.isArray(result.reports) || result.reports.length > 500) {

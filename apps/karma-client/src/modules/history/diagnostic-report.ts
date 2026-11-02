@@ -21,7 +21,7 @@ export function diagnosticReport(event: KarmaEvent): KarmaDiagnosticReport | nul
   const rawPayload = event.extra ?? '';
   const report: KarmaDiagnosticReport = {
     event,
-    instantUtc: instantUtc(event.edt),
+    instantUtc: instantUtc(event.edt ?? event.pdt),
     family: 'UNKNOWN',
     reportCode: event.eventId,
     decoding: 'OPAQUE',

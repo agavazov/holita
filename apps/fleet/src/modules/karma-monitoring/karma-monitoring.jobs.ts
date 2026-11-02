@@ -113,7 +113,7 @@ export class KarmaMonitoringJobs {
         continue;
       }
       if (due(truck.lastHistoryPollAt, settings.faultHistoryPollMinutes * 60, now)) {
-        await this.history(scope, truck, now);
+        await this.history(scope, truck, settings.retentionDays, now);
       }
       const online =
         truck.lastDataAt !== null &&
@@ -169,9 +169,15 @@ export class KarmaMonitoringJobs {
     }
   }
 
-  private async history(scope: FleetScope, truck: KarmaMonitoringTruck, now: Date) {
+  private async history(
+    scope: FleetScope,
+    truck: KarmaMonitoringTruck,
+    retentionDays: number,
+    now: Date,
+  ) {
     try {
-      const batch = await this.source.history(truck);
+      const cutoff = new Date(now.getTime() - retentionDays * 86_400_000);
+      const batch = await this.source.history(truck, cutoff, now);
       const highWatermark = String(
         Math.max(
           Number(truck.historyHighWatermark ?? truck.historyCursor),
@@ -179,27 +185,41 @@ export class KarmaMonitoringJobs {
         ),
       );
       const events: MonitoringEventData[] = batch.reports.flatMap<MonitoringEventData>((report) => {
+        if (
+          !['413', '418', '419'].includes(report.reportCode) ||
+          report.occurredAt === null ||
+          report.occurredAt < cutoff
+        ) {
+          return [];
+        }
         const base = {
           karmaCarId: truck.karmaCarId,
-          kind: 'FAULT_REPORTED' as const,
           source: 'KARMA_HISTORY' as const,
-          occurredAt: report.occurredAt ?? now,
+          occurredAt: report.occurredAt,
           recordedAt: now,
           rawRecord: report.rawRecord,
         };
-        return report.faults.length
-          ? report.faults.map((fault, index) => ({
-              ...base,
-              ...fault,
-              sourceKey: `${truck.karmaCarId}:${report.messageId}:${String(index)}`,
-            }))
+        const faults =
+          report.decoding === 'DECODED'
+            ? report.faults.flatMap((fault, index) =>
+                fault.code || (fault.spn !== null && fault.fmi !== null)
+                  ? [
+                      {
+                        ...fault,
+                        sourceKey: `${truck.karmaCarId}:${report.messageId}:${String(index)}`,
+                      },
+                    ]
+                  : [],
+              )
+            : [];
+        return faults.length
+          ? faults.map((fault) => ({ ...base, ...fault, kind: 'FAULT_REPORTED' as const }))
           : [
               {
                 ...base,
-                sourceKey: `${truck.karmaCarId}:${report.messageId}:opaque`,
-                code: report.reportCode,
-                faultStatus: 'UNKNOWN',
-                details: `Source report decoding: ${report.decoding}.`,
+                kind: 'FAULT_REPORT_UNDECODED',
+                sourceKey: `${truck.karmaCarId}:${report.messageId}:undecoded`,
+                details: `Source fault report ${report.reportCode} decoding: ${report.decoding}.`,
               },
             ];
       });
