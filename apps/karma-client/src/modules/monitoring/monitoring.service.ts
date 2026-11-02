@@ -115,10 +115,18 @@ export class MonitoringService {
     ) {
       throw new BadRequestException('Invalid monitoring history target');
     }
+    const initial = body.afterId === '0';
+    const fromTime = Date.parse(body.fromUtc);
+    const toTime = Date.parse(body.toUtc);
+    const beforeId = 'beforeId' in body ? body.beforeId : null;
+    if (beforeId !== null && (typeof beforeId !== 'string' || !initial)) {
+      throw new BadRequestException('Invalid monitoring history cursor');
+    }
     const query = diagnosticHistoryQuery({
       carId: body.carId,
       pageSize: 100,
       fromMessageId: String(Number(body.afterId) + 1),
+      toMessageId: beforeId,
     });
     // Share the deadline across the latest-ID lookup and the bounded catch-up page.
     const signal = AbortSignal.timeout(45000);
@@ -129,27 +137,30 @@ export class MonitoringService {
       'event_type[]': '33',
       'fields[]': 'pdt',
     });
-    // Karma's open-ended incremental scan exceeds 45 seconds even with dates.
-    // Keep each catch-up range to the million IDs verified by live reads.
-    const latest =
-      body.afterId === '0'
-        ? []
-        : await this.readHistoryRows(parameters, signal, body.carId, body.deviceId);
-    const latestId = Number(latest.at(-1)?.event.id ?? body.afterId);
-    if (body.afterId !== '0' && latestId <= Number(body.afterId)) {
-      return { highWatermark: body.afterId, hasMore: false, reports: [] };
-    }
-    const upper =
-      body.afterId === '0' ? null : Math.min(latestId, Number(body.afterId) + 1_000_000);
-    parameters.set('from_id', String(query.from - 1));
-    if (upper !== null) {
+    let latestId = Number(body.afterId);
+    let upper = query.before;
+    if (initial) {
+      // Date-filtered first reads time out. Walk indexed newest-first pages and
+      // filter retention locally, without assuming timestamps follow ID order.
+      if (upper !== null) {
+        parameters.set('to_id', String(upper + 1));
+      }
+    } else {
+      // Keep each incremental range to the million IDs verified by live reads.
+      const latest = await this.readHistoryRows(parameters, signal, body.carId, body.deviceId);
+      latestId = Number(latest.at(-1)?.event.id ?? body.afterId);
+      if (latestId <= Number(body.afterId)) {
+        return { highWatermark: body.afterId, nextBeforeId: null, hasMore: false, reports: [] };
+      }
+      upper = Math.min(latestId, Number(body.afterId) + 1_000_000);
+      parameters.set('from_id', String(query.from - 1));
       parameters.set('to_id', String(upper + 1));
+      parameters.set(
+        'from_date',
+        new Date(body.fromUtc).toISOString().slice(0, 19).replace('T', ' '),
+      );
+      parameters.set('to_date', new Date(body.toUtc).toISOString().slice(0, 19).replace('T', ' '));
     }
-    parameters.set(
-      'from_date',
-      new Date(body.fromUtc).toISOString().slice(0, 19).replace('T', ' '),
-    );
-    parameters.set('to_date', new Date(body.toUtc).toISOString().slice(0, 19).replace('T', ' '));
     const rows = await this.readHistoryRows(parameters, signal, body.carId, body.deviceId);
     for (const { event: row } of rows) {
       const id = Number(row.id);
@@ -161,16 +172,31 @@ export class MonitoringService {
       ({ event }) =>
         Number(event.id) >= query.from && (upper === null || Number(event.id) <= upper),
     );
+    const oldest = selected[0];
     const newest = selected.at(-1);
     const full = rows.length === diagnosticHistoryLimits.maxRows;
+    const nextBeforeId =
+      initial && full && oldest && Number(oldest.event.id) > 1
+        ? String(Number(oldest.event.id) - 1)
+        : null;
     // A short page exhausts this ID range, including gaps with no matching events.
     const highWatermark =
-      upper !== null && !full ? String(upper) : (newest?.event.id ?? body.afterId);
+      !initial && upper !== null && !full ? String(upper) : (newest?.event.id ?? body.afterId);
     return {
       highWatermark,
-      hasMore: upper === null ? full : Number(highWatermark) < latestId,
+      nextBeforeId,
+      hasMore: initial ? nextBeforeId !== null : Number(highWatermark) < latestId,
       reports: selected.flatMap(({ event, rawRecord }) => {
         const report = diagnosticReport(event);
+        if (
+          initial &&
+          report &&
+          (!report.instantUtc ||
+            Date.parse(report.instantUtc) < fromTime ||
+            Date.parse(report.instantUtc) > toTime)
+        ) {
+          return [];
+        }
         return report && ['EDATA_413', 'EDATA_418', 'EDATA_419'].includes(report.family)
           ? [
               {

@@ -180,6 +180,7 @@ describe('Karma monitoring persistence and scope', () => {
     };
     const batch = {
       highWatermark: '100',
+      nextBeforeId: null,
       hasMore: false,
       reports: [
         {
@@ -199,7 +200,18 @@ describe('Karma monitoring persistence and scope', () => {
         decoded,
       ],
     };
-    monitoring.mockResolvedValueOnce({ ...batch, hasMore: true }).mockResolvedValue(batch);
+    monitoring
+      .mockResolvedValueOnce({
+        ...batch,
+        hasMore: true,
+        nextBeforeId: '98',
+        reports: batch.reports.filter((report) => Number(report.messageId) > 98),
+      })
+      .mockResolvedValue({
+        ...batch,
+        highWatermark: '98',
+        reports: batch.reports.filter((report) => Number(report.messageId) <= 98),
+      });
     const stored = await repository.settings(scope);
     if (!stored) {
       throw new Error('Missing monitoring settings');
@@ -211,9 +223,14 @@ describe('Karma monitoring persistence and scope', () => {
       lastStatusPollAt: now,
       lastRetentionAt: now,
     };
-    for (let repeat = 0; repeat < 2; repeat++) {
-      await jobs.runBranch(active, now);
-    }
+    await jobs.runBranch(active, now);
+    expect((await repository.trucks(scope))[0]).toMatchObject({
+      historyCursor: '0',
+      historyBeforeId: '98',
+      historyHighWatermark: '100',
+      lastHistoryPollAt: null,
+    });
+    await jobs.runBranch(active, now);
     expect(monitoring.mock.calls[0]).toEqual([
       'history',
       {
@@ -226,7 +243,7 @@ describe('Karma monitoring persistence and scope', () => {
     ]);
     expect(monitoring.mock.calls[1]).toEqual([
       'history',
-      expect.objectContaining({ afterId: '100' }),
+      expect.objectContaining({ afterId: '0', beforeId: '98' }),
     ]);
     expect((await repository.trucks(scope))[0]).toMatchObject({
       historyCursor: '100',
