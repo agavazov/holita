@@ -71,15 +71,13 @@ describe('fixed eData device command transport', () => {
       if (path === '/apiv2/events') {
         const parameters = url(input).searchParams;
         if (monitoringPage !== undefined) {
-          if (
-            parameters.has('from_id') &&
-            parameters.get('from_id') !== '0' &&
-            !parameters.has('to_id')
-          ) {
+          if (parameters.has('from_id') && !parameters.has('to_id')) {
             return Promise.reject(new Error('Observed lower-ID-only history timeout'));
           }
           return Promise.resolve(
-            Response.json(parameters.has('from_id') ? monitoringPage : eventRows),
+            Response.json(
+              parameters.has('from_id') || parameters.has('to_id') ? monitoringPage : eventRows,
+            ),
           );
         }
         return Promise.resolve(
@@ -624,18 +622,18 @@ describe('fixed eData device command transport', () => {
       ],
     });
     const monitoringRequest = upstream.mock.calls.find(
-      ([input]) =>
-        url(input).pathname === '/apiv2/events' && url(input).searchParams.has('from_id'),
+      ([input]) => url(input).pathname === '/apiv2/events',
     );
     expect(
       monitoringRequest ? Object.fromEntries(url(monitoringRequest[0]).searchParams) : null,
     ).toMatchObject({
-      from_id: '0',
       device: deviceId,
-      from_date: '2026-01-01 00:00:00',
-      to_date: '2026-01-02 00:00:00',
       date_type: 'utc',
     });
+    const firstParameters = monitoringRequest ? url(monitoringRequest[0]).searchParams : null;
+    for (const parameter of ['from_id', 'to_id', 'from_date', 'to_date']) {
+      expect(firstParameters?.has(parameter)).toBe(false);
+    }
     expect(
       monitoringRequest ? url(monitoringRequest[0]).searchParams.getAll('event_type[]') : null,
     ).toEqual(['33']);
@@ -754,7 +752,69 @@ describe('fixed eData device command transport', () => {
         fromUtc: eventTimeUtc,
         toUtc: '2026-01-02T00:00:00.000Z',
       }),
-    ).toEqual({ highWatermark: '511', hasMore: false, reports: [] });
+    ).toEqual({ highWatermark: '511', nextBeforeId: null, hasMore: false, reports: [] });
+    eventRows = Array.from({ length: 500 }, (_, index) =>
+      diagnosticRow(index + 701, communication),
+    );
+    eventRows[499] = diagnosticRow(1200, '19,0,413,0,1,1,1001,19111101');
+    const firstCatchup = await monitoring.history({
+      carId: '41',
+      deviceId,
+      afterId: '0',
+      fromUtc: eventTimeUtc,
+      toUtc: '2026-01-02T00:00:00.000Z',
+    });
+    expect(firstCatchup).toMatchObject({
+      highWatermark: '1200',
+      nextBeforeId: '700',
+      hasMore: true,
+      reports: [{ messageId: '1200' }],
+    });
+    // A page older than retention does not prove that all earlier IDs have old
+    // timestamps. The subsequent page still contains an in-window fault.
+    monitoringPage = Array.from({ length: 500 }, (_, index) => ({
+      ...diagnosticRow(index + 202, '19,0,413,0,1,1,1001,19111101'),
+      edt: '2025-12-20 00:00:00',
+    }));
+    upstream.mockClear();
+    expect(
+      await monitoring.history({
+        carId: '41',
+        deviceId,
+        afterId: '0',
+        beforeId: firstCatchup.nextBeforeId,
+        fromUtc: eventTimeUtc,
+        toUtc: '2026-01-02T00:00:00.000Z',
+      }),
+    ).toEqual({ highWatermark: '700', nextBeforeId: '201', hasMore: true, reports: [] });
+    const backward = upstream.mock.calls[0];
+    expect(backward ? Object.fromEntries(url(backward[0]).searchParams) : null).toMatchObject({
+      to_id: '701',
+    });
+    for (const parameter of ['from_id', 'from_date', 'to_date']) {
+      expect(backward ? url(backward[0]).searchParams.has(parameter) : null).toBe(false);
+    }
+    monitoringPage = [
+      { ...diagnosticRow(100, '19,0,413,0,1,1,1001,19111101'), edt: '2025-12-20 00:00:00' },
+      diagnosticRow(150, '19,0,413,0,1,1,1001,19111101'),
+      diagnosticRow(201, communication),
+      diagnosticRow(202, '19,0,413,0,1,1,1001,19111101'),
+    ];
+    expect(
+      await monitoring.history({
+        carId: '41',
+        deviceId,
+        afterId: '0',
+        beforeId: '201',
+        fromUtc: eventTimeUtc,
+        toUtc: '2026-01-02T00:00:00.000Z',
+      }),
+    ).toMatchObject({
+      highWatermark: '201',
+      nextBeforeId: null,
+      hasMore: false,
+      reports: [{ messageId: '150' }],
+    });
     upstream.mockRejectedValueOnce(new Error('private upstream URL or token'));
     await expect(
       monitoring.history({
