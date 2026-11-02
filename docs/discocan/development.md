@@ -1049,3 +1049,23 @@ read and reconcile the device state before another change. Parameter values, glo
 profile changes, deletion, restoration and measurement verification have no automated editor.
 Demo login identifies a Tenant, not a named operator or production write permission.
 See [operation persistence and evidence limits](architecture.md#background-device-configuration-reads).
+
+## ERM relay
+
+`npm run erm:relay` runs a transparent TCP relay for ERM StarLink devices
+([source](../../tools/erm-relay/relay.mts)). It is a standalone process outside `npm run dev`,
+so application restarts do not drop device connections. Configure it from the root `.env.example`.
+
+- A device connection whose first byte is the StarLink header `$` is forwarded byte for byte to
+  `ERM_RELAY_UPSTREAM` (Karma ingestion, `in.karma.online:500`). Karma keeps acknowledging events
+  and sending commands; the relay never writes frames itself. Other first bytes, no data within
+  60 seconds or an unreachable upstream close the device connection.
+- Complete CR LF frames of both directions are appended to `ERM_RELAY_CAPTURE_DIR/<UTC date>.jsonl`
+  with connection events, unit ID, command, reference and the checksum state from the
+  [StarLink checksum rule](erm-resources/starlink-online-protocol/authenticated/pages/G2.md).
+  The capture contains vehicle positions; keep it private.
+- Devices reach the relay through a public layer-4 TCP forward to `ERM_RELAY_PORT`, without HTTP
+  or TLS termination and with an idle timeout of at least two hours. Test reachability with data
+  that does not start with `$`; the relay rejects it without contacting Karma.
+- If the relay is unavailable, point the public forward directly at the upstream so routed
+  devices keep reporting to Karma without a device write.

@@ -36,6 +36,7 @@ in environment examples, documentation, agent instructions, command arguments or
 | ------------------------ | ------------------------------------------------------------------------ |
 | npm run dev              | Wait for PostgreSQL, prepare admin GraphQL, start all apps and Storybook |
 | npm run kill             | Stop this checkout's application processes and watchers on Ubuntu/WSL    |
+| npm run erm:relay        | ERM StarLink TCP relay to Karma with frame capture                       |
 | npm run dev:admin        | Angular watcher                                                          |
 | npm run storybook:admin  | Admin Storybook with synthetic data on port 11001                        |
 | npm run dev:gateway      | Native Router after Nx supergraph generation                             |
@@ -63,6 +64,7 @@ starts that binary using the generated supergraph; no Node bundle or Rust compil
 The group generates admin GraphQL artifacts once before starting Angular and Storybook in
 parallel; their standalone commands keep their own generation step. Ctrl+C stops the process
 group, including Storybook; `db:down` stops PostgreSQL separately and preserves the volume.
+See [ERM relay](discocan/development.md#erm-relay) for the device relay.
 Use `npm run kill` from another terminal when application processes remain running. It stops
 the dev group, standalone `admin:storybook`, individual Angular/Nest watchers and compiled
 backend processes from this checkout,
@@ -82,6 +84,7 @@ PostgreSQL and processes from other checkouts remain running. Running it again i
 | Fleet           | 11013                 |
 | Karma Client    | 11014                 |
 | PostgreSQL      | 11084                 |
+| ERM relay       | 11500, all interfaces |
 
 Visual previews use 11000–11009; the admin Storybook uses 11001. The admin dev server and
 Storybook listen on all interfaces and accept the `dev.lab` host, so devices on the local network
@@ -106,6 +109,7 @@ runtime file, preserving existing settings:
 | Fleet and Prisma         | `apps/fleet/.env`: Fleet database URLs, shared demo settings, `FLEET_ENABLED`, `CORE_GRAPHQL_URL` and admin origins |
 | Karma Client             | `apps/karma-client/.env`: `KARMA_API_URL`, `KARMA_USER`, `KARMA_PASSWORD` and shared demo settings                  |
 | Router and Angular proxy | Export Router variables in the shell that launches npm; proxy reads `ROUTER_PORT`                                   |
+| ERM relay                | Root `.env`: `ERM_RELAY_HOST`, `ERM_RELAY_PORT`, `ERM_RELAY_UPSTREAM` and `ERM_RELAY_CAPTURE_DIR`                   |
 
 An optional `PORT` override belongs only to an individual Node application; omit it to
 keep that application's default. Exporting one `PORT` for the development group gives
