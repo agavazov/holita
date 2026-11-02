@@ -11,6 +11,7 @@ import {
   type RuleRecord,
 } from '@holita/edata-rules';
 import type { DeviceConfigurationOperation } from '../../fleet/device-operations/device-configuration-types';
+import { randomUuid } from '../../../core/random-uuid';
 
 export interface RuleDraft {
   readonly id: string;
@@ -68,7 +69,7 @@ export function importedRule(record: RuleRecord, name: string, sourceSection?: s
     /* Keep unknown or unsupported firmware expressions byte-for-byte. */
   }
   return {
-    id: crypto.randomUUID(),
+    id: randomUuid(),
     name,
     ruleId: record.ruleId,
     expression,
