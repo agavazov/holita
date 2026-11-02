@@ -369,7 +369,7 @@ test('opens Karma trucks, trips, diagnostics and filtered eData through Gateway 
     'AdminKarmaUsers',
   ]);
   const administration = page.getByRole('navigation', {
-    name: 'Karma administration',
+    name: 'Administration',
     exact: true,
   });
   await expect(administration.getByRole('link', { name: 'Users', exact: true })).toHaveAttribute(
