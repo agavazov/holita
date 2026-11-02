@@ -1,3 +1,5 @@
+import { karmaPresentation } from '../../presentation/karma-presentation';
+import { MAP_PAGE_TYPE } from '../../../../ui/map-preview/map-preview';
 import { Location } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -78,7 +80,7 @@ type EdataMessage = EdataPageResult['items'][number];
     SelectModule,
     TableModule,
   ],
-  providers: [KarmaEdataApi],
+  providers: [{ provide: MAP_PAGE_TYPE, useValue: 'measurements' }, KarmaEdataApi],
   selector: 'holita-edata-page',
   styleUrl: './edata-page.css',
   templateUrl: './edata-page.html',
@@ -87,6 +89,7 @@ type EdataMessage = EdataPageResult['items'][number];
 export class EdataPage implements OnInit {
   readonly language = input.required<Language>();
   readonly carId = input.required<string>();
+  readonly presentationText = computed(() => karmaPresentation[this.language()]);
   readonly text = computed(() => messages[this.language()]);
   readonly detailText = computed(() => karmaRecordMessages[this.language()]);
   readonly car = signal<AdminKarmaCarQuery['karmaCar']>(null);

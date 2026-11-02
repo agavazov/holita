@@ -740,21 +740,26 @@ without another upstream read. `q`, `project`, `size` and `first` retain list st
 filter changes reset the page and shortened refreshed lists clamp the visible page.
 Registration links open a dedicated `/cars/:recordId` detail route with the verified car fields,
 Refresh and a return link. All truck sections share the truck's registration/ID as the main
-heading, followed by Overview, Trips and Location navigation, then the current section and its
-actions. A labeled More menu opens Diagnostics, Events, eData, Driving profile and Device settings. Its
-trigger also names the current secondary destination; route links identify the active page.
+heading, a searchable truck switcher and visible tabs for Overview, Trips, Location, Events,
+eData & measurements, Diagnostics, Device settings, Daily report and Driving profile. Tabs scroll
+horizontally on narrow screens; each destination is a direct route link with an active-page cue.
+Switching trucks retains the current section and bounded list return context. Daily report uses
+`/cars/:recordId/daily-report` and reuses the report shown on Overview.
 Device settings uses the [separately scoped Fleet operation workflow](#background-device-configuration-reads).
 Bounded `listQ`, `listProject`, `listSize` and `listFirst` context restores the originating list
 through both the truck header's return link and the Trucks breadcrumb;
 history filters and cursors are not carried between sections with different clock semantics.
-Registration links use the shared `content-link` styling, matching the Fleet tables in both themes.
+Registration links use the shared `app-link` styling, matching the Fleet tables in both themes.
 Missing/invalid IDs show a not-found message; refresh failures retain previous details.
 Truck details place registration, device and resolved project/time-zone labels first, followed
 by the last-known location. A closed Source fields disclosure retains every original truck field.
-All Karma views have Bulgarian/English labels and use the admin theme; `styles/_legacy-karma.scss`
-maps their legacy classes to the design-system tokens.
-Search fields, filter actions, pagination and detail grids share the same token-based Karma
-patterns. Narrow list tables pin a compact identity cell with its available View action while
+Maps have explicit Show map / Hide map controls. Location and trip details start expanded;
+other page types start collapsed. The choice is remembered per page type in localStorage,
+falling back to these defaults when storage is unavailable or invalid. Collapsing a map or
+opening a drawer retains its mounted preview; a collapsed map first loads when shown.
+All Karma views have Bulgarian/English labels and use shared page headers, form fields,
+form sections/grids, table panels, route drawers and facts. Account information is read-only;
+source identifiers and optional history request controls sit behind Technical details. Narrow list tables pin a compact identity cell with its available View action while
 the other columns scroll; identity and row actions remain attributable without removing data.
 eData, trips, events and driving-profile periods use a PrimeNG date picker with a
 separate time field including seconds. The shared control preserves literal UTC or API wall-clock
@@ -803,7 +808,7 @@ The separate `/cars/:recordId/location` page loads the truck then its location, 
 all 13 verified fields and supplies the source identity, coordinates and times to the shared
 `MapPreview`. Its Map and Street View modes retain coordinate facts and keyless external
 actions; zero coordinates are valid. Optional browser `googleMapsEmbedApiKey` configuration
-automatically loads the selected view in the mounted active panel when coordinates are valid.
+loads the selected view when the operator expands the panel and coordinates are valid.
 Mode, endpoint and source changes update the preview URL directly; the panel discloses that
 coordinates are sent to Google. Hidden tabs, table rows and polling do not load previews.
 Without a key, valid external actions remain available; invalid coordinates retain textual

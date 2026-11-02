@@ -18,6 +18,11 @@ function administrationRedirect(section: string): RedirectFunction {
 
 export const karmaRoutes: Routes = [
   {
+    path: 'karma-client/cars/:recordId/daily-report',
+    data: { feature: 'karma-client', requiresBranch: false, section: 'daily-report' },
+    loadComponent: () => import('./karma-workspace').then((module) => module.KarmaWorkspace),
+  },
+  {
     path: 'karma-client/cars/:recordId/diagnostics',
     data: { feature: 'karma-client', requiresBranch: false, section: 'diagnostics' },
     loadComponent: () => import('./karma-workspace').then((module) => module.KarmaWorkspace),

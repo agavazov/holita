@@ -4,7 +4,7 @@
   "carId": "Karma ID",
   "navigation": "Truck sections",
   "overview": "Overview",
-  "edata": "eData",
+  "edata": "eData & measurements",
   "location": "Location",
   "trips": "Trips",
   "events": "Events",
@@ -14,5 +14,7 @@
   "refresh": "Refresh",
   "retry": "Retry",
   "deviceSettings": "Device settings",
-  "more": "More"
+  "dailyReport": "Daily report",
+  "switchTruck": "Switch truck",
+  "switcherUnavailable": "Truck list unavailable. You can keep using this truck."
 }

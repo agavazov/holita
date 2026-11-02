@@ -26,37 +26,39 @@
       #filterForm
       [formGroup]="form"
       (ngSubmit)="apply()"
-      class="app-card app-filter-form"
+      class="app-card app-form-section"
       [attr.aria-label]="text().karmaProfilePeriod"
     >
-      <holita-form-field
-        [label]="text().karmaFromApi"
-        controlId="profile-from"
-        [error]="fieldErrors().from?.message ?? null"
-      >
-        <holita-karma-date-time
-          inputId="profile-from"
-          [label]="text().karmaFromApi"
-          [invalid]="!!fieldErrors().from"
-          [invalidPart]="fieldErrors().from?.part ?? 'both'"
-          describedBy="profile-from-error profile-filter-hint"
-          formControlName="from"
-        />
-      </holita-form-field>
-      <holita-form-field
-        [label]="text().karmaToApi"
-        controlId="profile-to"
-        [error]="fieldErrors().to?.message ?? null"
-      >
-        <holita-karma-date-time
-          inputId="profile-to"
-          [label]="text().karmaToApi"
-          [invalid]="!!fieldErrors().to"
-          [invalidPart]="fieldErrors().to?.part ?? 'both'"
-          describedBy="profile-to-error profile-filter-hint"
-          formControlName="to"
-        />
-      </holita-form-field>
+      <div class="app-form-grid">
+        <holita-form-field
+          [label]="presentationText().from"
+          controlId="profile-from"
+          [error]="fieldErrors().from?.message ?? null"
+        >
+          <holita-karma-date-time
+            inputId="profile-from"
+            [label]="presentationText().from"
+            [invalid]="!!fieldErrors().from"
+            [invalidPart]="fieldErrors().from?.part ?? 'both'"
+            describedBy="profile-from-error profile-filter-hint"
+            formControlName="from"
+          />
+        </holita-form-field>
+        <holita-form-field
+          [label]="presentationText().to"
+          controlId="profile-to"
+          [error]="fieldErrors().to?.message ?? null"
+        >
+          <holita-karma-date-time
+            inputId="profile-to"
+            [label]="presentationText().to"
+            [invalid]="!!fieldErrors().to"
+            [invalidPart]="fieldErrors().to?.part ?? 'both'"
+            describedBy="profile-to-error profile-filter-hint"
+            formControlName="to"
+          />
+        </holita-form-field>
+      </div>
       <div class="app-filter-actions">
         <button pButton type="submit" [disabled]="loading()">{{ text().applyFilters }}</button
         ><button
@@ -71,7 +73,7 @@
         </button>
       </div>
       <p id="profile-filter-hint" class="app-muted app-filter-hint">
-        {{ text().karmaApiTimeHint }}
+        {{ presentationText().clockHint }}
       </p>
     </form>
     @if (invalidFilters()) {
@@ -87,11 +89,11 @@
         <h2 class="app-card__title">{{ detailText().appliedPeriod }}</h2>
         <dl class="app-facts">
           <div>
-            <dt>{{ text().karmaFromApi }}</dt>
+            <dt>{{ presentationText().from }}</dt>
             <dd>{{ period.from }}</dd>
           </div>
           <div>
-            <dt>{{ text().karmaToApi }}</dt>
+            <dt>{{ presentationText().to }}</dt>
             <dd>{{ period.to }}</dd>
           </div>
         </dl>
@@ -114,8 +116,8 @@
         <ng-template #header
           ><tr>
             <th style="width: 50%">{{ text().karmaCategory }}</th>
-            <th class="app-num">score</th>
-            <th class="app-num">weight</th>
+            <th class="app-num">{{ presentationText().score }}</th>
+            <th class="app-num">{{ presentationText().weight }}</th>
           </tr></ng-template
         >
         <ng-template #body let-category

@@ -1,3 +1,4 @@
+import { karmaPresentation } from '../../presentation/karma-presentation';
 import { Location } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -83,6 +84,7 @@ type EventsRow = EventsPageResult['items'][number];
 export class EventsPage implements OnInit {
   readonly language = input.required<Language>();
   readonly carId = input.required<string>();
+  readonly presentationText = computed(() => karmaPresentation[this.language()]);
   readonly text = computed(() => messages[this.language()]);
   readonly detailText = computed(() => karmaRecordMessages[this.language()]);
   readonly car = signal<AdminKarmaCarQuery['karmaCar']>(null);

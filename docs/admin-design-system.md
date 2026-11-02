@@ -12,7 +12,7 @@ contributors is the [admin design-system skill](../.agents/skills/holita-admin-d
 | Place                            | Content                                                                                                                                                                                                                                                                                 |
 | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/app/theme/`                 | `appTheme`, brands, densities, status tones, the preset, the PrimeNG provider, contrast checks, light/dark `Appearance`, `aura-base.d.ts` (restores the value exports of `@primeuix/themes/aura/base` that its 3.0.1 typings omit) and the "Foundations" and "PrimeNG coverage" stories |
-| `src/styles/` + `styles.scss`    | Global CSS: the layer order, the Lato faces, breakpoints, reset, base, shell, patterns and the Karma legacy rules                                                                                                                                                                       |
+| `src/styles/` + `styles.scss`    | Global CSS: the layer order, the Lato faces, breakpoints, reset, base, shell, patterns                                                                                                                                                                                                  |
 | `src/app/ui/`                    | Domain-neutral components, CSS-pattern consumers and helpers (patterns below), their BG/EN catalog and Storybook stories                                                                                                                                                                |
 | `src/app/layout/`                | The shell: `AdminShell`, `AdminSidebar`, `AdminTopbar`, the navigation model (`NavGroup`, `NavItem`, `NavIconName`, `PageContext`, `navigationContext`) and `PageRecord`/`injectPageRecord`                                                                                             |
 | `src/app/workspace/`             | Composition: the navigation groups, the topbar page context, the document title, `UI_LANGUAGE` and PrimeNG texts                                                                                                                                                                        |
@@ -29,8 +29,10 @@ Component-specific values stay literal, for example icon boxes, chart and header
 card and text maximum widths, small gaps, paddings and offsets (`2px`, `0.125rem`, `-0.25rem`), the
 3 px corners of chart columns and the KPI tone marker, the login card's type sizes, hairlines, pill
 and round shapes (`999px`, `50%`) and pattern-local custom properties (`--app-meter-value`,
-`--app-truncate-width`). The Karma Client component CSS uses literal spacing and sizes and
-keeps Sakai-era `@media (max-width: 575px)` and `(max-width: 1100px)` queries.
+`--app-truncate-width`). Karma Client uses the shared patterns and theme tokens. Its truck destinations remain visible
+in a horizontally scrolling tab strip, with a searchable truck switcher above it. Maps offer
+Show map / Hide map and remember the choice per page type; Location and trip details start
+expanded, while other pages start collapsed. Drawers retain the underlying map.
 
 ## Theme
 
@@ -220,8 +222,8 @@ and the holita tokens express every scheme difference as `light-dark()`, and the
 ## Global styles, layers and breakpoints
 
 `styles.scss` loads, in order: `_layers` (`@layer holita-reset, primeng, holita;`), `_fonts`,
-`_breakpoint-properties`, `_reset`, `_base`, `_shell`, `_patterns` and `_legacy-karma`. `_reset` is
-the `holita-reset` layer; `_base`, `_shell`, `_patterns` and `_legacy-karma` are in `holita`; the
+`_breakpoint-properties`, `_reset`, `_base`, `_shell`, `_patterns`. `_reset` is
+the `holita-reset` layer; `_base`, `_shell` and `_patterns` are in `holita`; the
 `@font-face` rules and `--app-bp-*` are unlayered. Holita rules override PrimeNG without
 `!important`; only the reduced-motion rule uses it, so it also beats unlayered component styles.
 Component stylesheets are unlayered.
@@ -247,7 +249,6 @@ Component stylesheets are unlayered.
   view: centred up to `content-max-width`, padded by `gutter` (`gutter-narrow` below `md`), with
   `stack-gap` between blocks.
 - `_patterns`: the CSS patterns and the global DataTable rules (below).
-- `_legacy-karma`: the pre-design-system classes (below).
 
 `styles/_breakpoints.scss` declares the breakpoints (`sm` 640, `md` 768, `lg` 1024, `xl` 1280,
 `xxl` 1536 px) and the mixins `below($name)` (`max-width: <value> − 0.02px`) and `from($name)`
@@ -268,18 +269,11 @@ must change with the Sass map), provides a deterministic `matchMedia` driven by 
 | Width  | Behaviour                                                                                                                                                                                                                                                   |
 | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `< sm` | Topbar: the logo mark only (word visually hidden), no breadcrumb, the language code instead of its name, the Branch name at most 9rem, tighter spacing; FilterBuilder's quick search takes its own row; drawer actions stack with the primary action on top |
-| `< md` | Full-width route drawers, the `gutter-narrow` page padding, `.app-col-secondary` hidden, no group crumb, KPI tiles two per row, the page-header row wraps, smaller legacy `.card` padding                                                                   |
+| `< md` | Full-width route drawers, the `gutter-narrow` page padding, `.app-col-secondary` hidden, no group crumb, KPI tiles two per row, the page-header row wraps                                                                                                   |
 | `< lg` | The sidebar becomes the navigation drawer and the topbar shows the logo; the frame becomes full-bleed (no gap, border or radius)                                                                                                                            |
 | `≥ sm` | Form grids two columns                                                                                                                                                                                                                                      |
 | `≥ md` | Card grids two columns (three from `xl`)                                                                                                                                                                                                                    |
 | `≥ lg` | Settings sections show the title and hint beside the fields (1:2)                                                                                                                                                                                           |
-
-`_legacy-karma.scss` is the only place the pre-design-system classes `.card`, `.page-heading`,
-`.page-actions` and `.content-link` and the Sakai aliases `--surface-border`, `--surface-card`,
-`--text-color`, `--text-color-secondary`, `--primary-color` and `--content-border-radius` survive,
-mapped to the theme tokens. Karma Client pages consume them. All connected Fleet screens
-use the shared views and drawer patterns. Remove the legacy rules only after their remaining
-consumers are gone.
 
 ## Shell
 
@@ -657,8 +651,8 @@ icons with a normal close button: PrimeNG's default close button has native `aut
 can steal focus when an initiating save button disappears. PrimeNG still owns the message
 lifecycle, stacking and dismissal.
 
-All connected Fleet screens use this workspace feedback flow. Karma retains its temporary legacy
-feedback presentation.
+All connected Fleet screens use this workspace feedback flow. Karma read-only pages keep
+contextual loading, error and retry feedback in their shared table panels and inline messages.
 
 ### PrimeNG usage rules
 

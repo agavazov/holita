@@ -26,5 +26,7 @@
   "sourceDetails": "Source fields",
   "viewLocation": "Last location",
   "viewTrips": "Trips",
-  "noEndpoint": "No valid endpoint coordinates"
+  "noEndpoint": "No valid endpoint coordinates",
+  "showMap": "Show map",
+  "hideMap": "Hide map"
 }

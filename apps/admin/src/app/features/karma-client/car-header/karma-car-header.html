@@ -7,7 +7,31 @@
   [backQueryParams]="returnQuery()"
 />
 @if (canNavigate()) {
-  <nav [attr.aria-label]="text().navigation">
+  <div class="app-context-toolbar">
+    <holita-form-field [label]="text().switchTruck" controlId="karma-truck-switcher">
+      <p-select
+        inputId="karma-truck-switcher"
+        [options]="truckOptions()"
+        optionLabel="carNumber"
+        optionValue="id"
+        [ngModel]="carId()"
+        (ngModelChange)="switchTruck($event)"
+        [filter]="true"
+        filterBy="carNumber,id"
+        [ariaFilterLabel]="text().switchTruck"
+        [ariaLabel]="text().switchTruck"
+        [disabled]="truckOptions().length < 2"
+        appendTo="body"
+      />
+    </holita-form-field>
+    @if (switcherError()) {
+      <p class="app-muted" role="status">{{ text().switcherUnavailable }}</p>
+      <button pButton type="button" severity="secondary" (click)="retryTrucks()">
+        {{ text().retry }}
+      </button>
+    }
+  </div>
+  <nav #navigation [attr.aria-label]="text().navigation">
     <ul class="app-route-nav car-navigation" role="list">
       @for (tab of tabs(); track tab.path) {
         <li>
@@ -21,15 +45,6 @@
           >
         </li>
       }
-      <li class="car-navigation__more">
-        <holita-menu-button
-          variant="navigation"
-          [options]="moreOptions()"
-          [buttonClass]="moreActive() ? 'app-route-nav__link--active' : ''"
-          menuClass="app-menu-wide"
-          >{{ moreLabel() }}</holita-menu-button
-        >
-      </li>
     </ul>
   </nav>
 }

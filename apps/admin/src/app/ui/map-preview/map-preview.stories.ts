@@ -16,6 +16,7 @@ const meta: Meta<MapPreview> = {
   decorators: [applicationConfig({ providers: [{ provide: AdminConfig, useValue: {} }] }), onFrame],
   tags: ['!autodocs'],
   args: {
+    pageType: 'location',
     origin,
     identity: 'Synthetic location 41',
     originTime: '2026-01-01 09:59:00',
@@ -29,6 +30,7 @@ export const StreetView: Story = { args: { initialView: 'streetview' } };
 
 export const TripEndpoints: Story = {
   args: {
+    pageType: 'trip-details',
     route: true,
     identity: 'Synthetic trip 9000000001',
     destination,
@@ -43,7 +45,7 @@ export const ConfiguredPreview: Story = {
 };
 
 export const MissingCoordinates: Story = { args: { origin: null, originTime: null } };
-export const StartOnly: Story = { args: { route: true } };
+export const Collapsed: Story = { args: { pageType: 'preview' } };
 export const EndOnly: Story = {
   args: { route: true, origin: null, originTime: null, destination, destinationTime: null },
 };

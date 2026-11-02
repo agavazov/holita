@@ -22,71 +22,84 @@
       #filterForm
       [formGroup]="form"
       (ngSubmit)="apply()"
-      class="app-card app-filter-form"
+      class="app-card app-form-section"
       [attr.aria-label]="text().karmaEdataFilters"
     >
-      <holita-form-field
-        [label]="text().karmaPageSize"
-        controlId="edata-size"
-        [error]="fieldErrors().size?.message ?? null"
+      <div class="app-form-grid">
+        <holita-form-field
+          [label]="presentationText().fromUtc"
+          controlId="edata-from"
+          [error]="fieldErrors().from?.message ?? null"
+        >
+          <holita-karma-date-time
+            inputId="edata-from"
+            [label]="presentationText().fromUtc"
+            [invalid]="!!fieldErrors().from"
+            [invalidPart]="fieldErrors().from?.part ?? 'both'"
+            describedBy="edata-from-error edata-filter-hint"
+            formControlName="from"
+          />
+        </holita-form-field>
+        <holita-form-field
+          [label]="presentationText().toUtc"
+          controlId="edata-to"
+          [error]="fieldErrors().to?.message ?? null"
+        >
+          <holita-karma-date-time
+            inputId="edata-to"
+            [label]="presentationText().toUtc"
+            [invalid]="!!fieldErrors().to"
+            [invalidPart]="fieldErrors().to?.part ?? 'both'"
+            describedBy="edata-to-error edata-filter-hint"
+            formControlName="to"
+          />
+        </holita-form-field>
+      </div>
+      <details
+        class="app-source-details"
+        [open]="
+          !!(fieldErrors().size || fieldErrors().parameters || form.controls.parameters.value)
+        "
       >
-        <p-select
-          inputId="edata-size"
-          formControlName="size"
-          [invalid]="!!fieldErrors().size"
-          [pt]="{
-            label: {
-              'aria-invalid': fieldErrors().size ? 'true' : null,
-              'aria-describedby': 'edata-size-error',
-            },
-          }"
-          [options]="pageSizes"
-          [ariaLabel]="text().karmaPageSize"
-        />
-      </holita-form-field>
-      <holita-form-field
-        [label]="text().karmaFromUtc"
-        controlId="edata-from"
-        [error]="fieldErrors().from?.message ?? null"
-      >
-        <holita-karma-date-time
-          inputId="edata-from"
-          [label]="text().karmaFromUtc"
-          [invalid]="!!fieldErrors().from"
-          [invalidPart]="fieldErrors().from?.part ?? 'both'"
-          describedBy="edata-from-error edata-filter-hint"
-          formControlName="from"
-        />
-      </holita-form-field>
-      <holita-form-field
-        [label]="text().karmaToUtc"
-        controlId="edata-to"
-        [error]="fieldErrors().to?.message ?? null"
-      >
-        <holita-karma-date-time
-          inputId="edata-to"
-          [label]="text().karmaToUtc"
-          [invalid]="!!fieldErrors().to"
-          [invalidPart]="fieldErrors().to?.part ?? 'both'"
-          describedBy="edata-to-error edata-filter-hint"
-          formControlName="to"
-        />
-      </holita-form-field>
-      <holita-form-field
-        [label]="text().karmaParameterIds"
-        controlId="edata-parameters"
-        [error]="fieldErrors().parameters?.message ?? null"
-      >
-        <input
-          pInputText
-          id="edata-parameters"
-          [invalid]="!!fieldErrors().parameters"
-          [attr.aria-invalid]="fieldErrors().parameters ? 'true' : null"
-          formControlName="parameters"
-          aria-describedby="edata-parameters-error edata-filter-hint"
-          [attr.placeholder]="'1, 539'"
-        />
-      </holita-form-field>
+        <summary>{{ presentationText().technicalDetails }}</summary>
+        <p class="app-muted">{{ presentationText().technicalHint }}</p>
+        <div class="app-form-grid">
+          <holita-form-field
+            [label]="presentationText().pageSize"
+            controlId="edata-size"
+            [error]="fieldErrors().size?.message ?? null"
+          >
+            <p-select
+              inputId="edata-size"
+              formControlName="size"
+              [invalid]="!!fieldErrors().size"
+              [pt]="{
+                label: {
+                  'aria-invalid': fieldErrors().size ? 'true' : null,
+                  'aria-describedby': 'edata-size-error',
+                },
+              }"
+              [options]="pageSizes"
+              [ariaLabel]="presentationText().pageSize"
+            />
+          </holita-form-field>
+          <holita-form-field
+            [label]="presentationText().parameters"
+            controlId="edata-parameters"
+            [error]="fieldErrors().parameters?.message ?? null"
+          >
+            <input
+              pInputText
+              id="edata-parameters"
+              [invalid]="!!fieldErrors().parameters"
+              [attr.aria-invalid]="fieldErrors().parameters ? 'true' : null"
+              formControlName="parameters"
+              aria-describedby="edata-parameters-error edata-filter-hint"
+              [attr.placeholder]="'1, 539'"
+            />
+          </holita-form-field>
+        </div>
+      </details>
       <div class="app-filter-actions">
         <button pButton type="submit" [disabled]="loading()">{{ text().applyFilters }}</button>
         <button
@@ -101,7 +114,7 @@
         </button>
       </div>
       <p id="edata-filter-hint" class="app-muted app-filter-hint">
-        {{ text().karmaEdataFilterHint }}
+        {{ presentationText().utcHint }}
       </p>
     </form>
     @if (invalidFilters()) {
@@ -159,7 +172,6 @@
         [coverage]="measurementCoverage()"
         [loading]="loading()"
         [error]="error() ? text().karmaUnavailable : null"
-        [showMap]="selected() === null"
         (selectedChannelKeyChange)="measurementChannel.set($event)"
         (selectedRecordKeyChange)="measurementRecord.set($event)"
         (retry)="refresh()"
@@ -297,6 +309,7 @@
       <h3 class="app-card__title">{{ detailText().messagePosition }}</h3>
       <p class="app-muted">{{ detailText().messagePositionHint }}</p>
       <holita-map-preview
+        pageType="edata-message"
         [language]="language()"
         [origin]="selectedCoordinates()"
         [identity]="row.carNumber + ' · ' + row.id"

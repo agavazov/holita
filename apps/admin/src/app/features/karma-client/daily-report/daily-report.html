@@ -70,26 +70,23 @@
       <section overviewMap class="app-card app-view" [attr.aria-label]="text().lastReported">
         <h2 class="app-card__title">{{ text().lastReported }}</h2>
         <p class="app-muted">{{ text().lastReportedHint }}</p>
-        @if (!selected()) {
-          @if (locationError()) {
-            <p-message severity="warn">{{ appText().karmaLocationUnavailable }}</p-message>
-          }
-          @if (location(); as point) {
-            <holita-map-preview
-              [language]="language()"
-              [origin]="lastCoordinates()"
-              [identity]="
-                point.carNumber + ' · ' + appText().karmaMessageId + ': ' + (point.messageId ?? '—')
-              "
-              [originTime]="point.edt"
-            />
-          } @else if (locationLoaded()) {
-            <p>{{ appText().karmaNoLocation }}</p>
-          } @else if (!locationError()) {
-            <p role="status">{{ appText().karmaLoadingLocation }}</p>
-          }
-        } @else {
-          <p>{{ text().historicalMapInDetails }}</p>
+        @if (locationError()) {
+          <p-message severity="warn">{{ appText().karmaLocationUnavailable }}</p-message>
+        }
+        @if (location(); as point) {
+          <holita-map-preview
+            [pageType]="mapPageType()"
+            [language]="language()"
+            [origin]="lastCoordinates()"
+            [identity]="
+              point.carNumber + ' · ' + appText().karmaMessageId + ': ' + (point.messageId ?? '—')
+            "
+            [originTime]="point.edt"
+          />
+        } @else if (locationLoaded()) {
+          <p>{{ appText().karmaNoLocation }}</p>
+        } @else if (!locationError()) {
+          <p role="status">{{ appText().karmaLoadingLocation }}</p>
         }
       </section>
       <div overviewFacts class="app-view">

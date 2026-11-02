@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { messages, type Language } from '../../../i18n/messages';
-import { PageHeader } from '../../../ui/page-header/page-header';
 import { UsersPage } from '../accounts/users-page/users-page';
 import { RolesPage } from '../accounts/roles-page/roles-page';
 import { ProjectsPage } from '../references/projects-page/projects-page';
@@ -14,7 +13,6 @@ import { ApiInfoPage } from '../references/api-info-page/api-info-page';
   imports: [
     RouterLink,
     RouterLinkActive,
-    PageHeader,
     UsersPage,
     RolesPage,
     ProjectsPage,
@@ -24,11 +22,6 @@ import { ApiInfoPage } from '../references/api-info-page/api-info-page';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'app-view' },
   template: `
-    <holita-page-header
-      [eyebrow]="text().karmaAccount"
-      [title]="text().karmaAdministrationTitle"
-      [description]="text().karmaAdministrationDescription"
-    />
     <nav [attr.aria-label]="text().karmaAdministration">
       <ul class="app-route-nav" role="list">
         @for (tab of tabs(); track tab.path) {
