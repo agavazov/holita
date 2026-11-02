@@ -48,10 +48,17 @@ The [web functionality report](../discocan/erm-resources/karma-api-v2/web-functi
 maps all 36 classic menu entries, safe action coverage and the accessible NC2
 console to public/internal API methods, calculations and proposed holita views,
 with bounded live observations and explicit source limitations. The
-[MVP and product experience backlog](karma-web-functional-discovery.md)
-defines the concrete first-release tasks, dependencies and acceptance criteria,
-bounded implementation-session deliveries, focused Karma navigation and
+[Karma product and delivery backlog](karma-web-functional-discovery.md)
+tracks the remaining source, retrieval and richer-map prerequisites for the
+implemented operational and diagnostic workflows.
+It tracks real public-API prerequisites without depending on ERM-only integrations.
+It retains the remaining first-release tasks, dependencies, focused Karma navigation and
 progressive disclosure, the mandatory clean-code/UX/visual-accessibility
 consistency rules, Google Maps/Street View placements and gated
-Trip Explorer/API-derived follow-ups. It also
-tracks unresolved provider/data prerequisites. Application implementation remains pending.
+Trip Explorer/API-derived follow-ups. It also tracks unresolved provider/data prerequisites.
+The navigation foundation is documented in [Discocan architecture](../discocan/architecture.md#karma-client);
+the raw-unit report contract and field/state blueprint are documented there too.
+Physical distance/speed-unit confirmation remains blocked for real-unit claims;
+the map foundation and automatic active-map loading are implemented. Connected
+overview and contextual map placements are implemented;
+richer Maps JavaScript behavior, imagery and physical source-unit claims retain their explicit gates.

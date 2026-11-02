@@ -2,7 +2,7 @@
   "title": "ERM support correspondence: diagnostics, protocol access and Test Server",
   "analysis_date": "2026-10-27",
   "timezone": "Europe/Sofia",
-  "local_reference_edition": "1.6",
+  "local_reference_edition": "2.0",
   "email_sent_at": null,
   "email_headers_available": true,
   "source": {
@@ -162,5 +162,102 @@
     "following_can_edt_utc": "2026-10-27 08:54:33",
     "final_dtc_value": 1,
     "runtime_fault_codes_verified": false
-  }
+  },
+  "latest_analysis_date": "2026-10-29",
+  "follow_up_2026_10_29": {
+    "source_filename": "reply.odt",
+    "source_sha256": "7df037b964ae4a93da682f6b0552fdba1e92e3851c3c365184dd0ff988cce2da",
+    "document_created_at": "2026-10-29T14:18:00Z",
+    "document_modified_at": "2026-10-29T14:18:00Z",
+    "timestamp_scope": "ODT export metadata, not email sending/receiving time or device-event timezone",
+    "email_headers_in_odt": false,
+    "credential_handling": "The new ODT includes access credentials and is intentionally not copied into documentation. The technical summary excludes credentials, greeting and signature. Original private ODT remains in the user-supplied location.",
+    "technical_summary": "reply-2026-10-29.md",
+    "command_reference": "command-reference-2026-10-29.md",
+    "request_sha256": "673b0b620bbc44137dbfc7369c5653d65c67bf1d1541df6eed4c4f4657c41b7a",
+    "commands": {
+      "source_filename": "Commands file FMS Rental Sofia 60 seconds time interval.txt",
+      "path": "source/2026-10-29-fms-rental-sofia-60-second-commands.txt",
+      "sha256": "c3895948a6ff0cd5c4b76474f1665636a739bd6c823790582d658f7ff718e48e",
+      "command_count": 29
+    },
+    "images": [
+      {
+        "archive_member": "media/image1.png",
+        "path": "images/2026-10-29-dtc-global-readback.png",
+        "width": 857,
+        "height": 132,
+        "sha256": "31fb4660ff4cd1bb0f7c30669f3ffdef22a11ceff4c63399f8805b69a8b8e80f"
+      },
+      {
+        "archive_member": "media/image2.png",
+        "path": "images/2026-10-29-special-ack-contract.png",
+        "width": 391,
+        "height": 182,
+        "sha256": "f1681beee18c8909e8a929219e468c669185c809ec207c307c7c6cc90e24a434"
+      },
+      {
+        "archive_member": "media/image3.png",
+        "path": "images/2026-10-29-observed-parameter-intervals.png",
+        "width": 654,
+        "height": 202,
+        "sha256": "6216388473bdc6e8ba5888b7f104c80ac477786d66169fc3486e3759cdd9c12c"
+      },
+      {
+        "archive_member": "media/image4.png",
+        "path": "images/2026-10-29-communications-diagnostic.png",
+        "width": 229,
+        "height": 345,
+        "sha256": "a24c6d17dc3ae2eac31ca8e036ac413a7b59647b7c48b748c1335eadd9ec1769"
+      }
+    ],
+    "vendor_fault_capture": {
+      "car_id": 16595,
+      "device_id": "862129080367299",
+      "message_id": 7177124308,
+      "edt_as_supplied": "2026-10-28 18:54:31",
+      "timezone_in_supplied_excerpt": null,
+      "eid": 33,
+      "raw_extra": "19,0,419,0,1,1,1001,21000010F30701000004DF0B01",
+      "decoded_records": [
+        {
+          "spn": 4339,
+          "spn_hex": "000010F3",
+          "fmi": 7,
+          "status": 1
+        },
+        {
+          "spn": 1247,
+          "spn_hex": "000004DF",
+          "fmi": 11,
+          "status": 1
+        }
+      ],
+      "evidence_scope": "ERM-supplied event capture; independently reacquired through Karma API on2026-10-29, details in live-verification-2026-10-29.md"
+    },
+    "semantic_corrections": [
+      "154,0 means command not acknowledged according to ERM and its supplied protocol screenshot; it does not prove an empty fault logger.",
+      "The new 419 capture supersedes the prior absence of a supplied real fault report; prior 2026-10-27 observations remain historically scoped.",
+      "The supplied three-command procedure replaces all parameter definitions with operation01 and selects profile343; it does not by itself invalidate separately observed operation02 single-definition interval changes."
+    ],
+    "independent_positive_fault_evidence": {
+      "verified_on": "2026-10-29",
+      "api_match": true,
+      "gateway_match": true,
+      "gateway_query": "karmaEvents",
+      "message_ids": [7177124308, 7179721665],
+      "additional_record": {
+        "message_id": 7179721665,
+        "edt_utc": "2026-10-29 12:54:06",
+        "car_id": 16595,
+        "raw_extra": "19,0,419,0,1,1,1001,2100005CFE0F01",
+        "spn": 23806,
+        "fmi": 15,
+        "status": 1
+      },
+      "scope": "Actual raw fault records are independently available through API and existing Gateway. This does not establish explicit logger request correlation, complete current ECU inventory or removed-state lifecycle."
+    }
+  },
+  "live_validation_scope": "Historical2026-10-27 campaign only; current positive fault/API/Gateway evidence is in live-verification-2026-10-29.md.",
+  "current_verification_campaign_reference": "live-verification-2026-10-29.md"
 }

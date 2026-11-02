@@ -1,12 +1,22 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { PageHeader } from '../../../../ui/page-header/page-header';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { ButtonDirective } from 'primeng/button';
 import { Message } from 'primeng/message';
 import { KarmaApi } from '../../karma-api';
 import { messages, type Language } from '../../../../i18n/messages';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'holita-api-info-page',
-  imports: [ButtonDirective, Message],
+  imports: [PageHeader, ButtonDirective, Message],
   providers: [KarmaApi],
   templateUrl: './api-info-page.html',
   styleUrl: './api-info-page.css',

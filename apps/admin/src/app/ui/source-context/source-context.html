@@ -1,0 +1,145 @@
+<div class="app-stack" role="group" [attr.aria-label]="text().title">
+  <div class="app-page-actions">
+    <p-tag [value]="text().sources[provenance().source]" severity="secondary" />
+    <span>{{ text().origin }}: {{ text().origins[provenance().origin] }}</span>
+  </div>
+  @if (compact()) {
+    @if (period(); as selection) {
+      <p class="app-muted">
+        {{ text().period }}:
+        <time [attr.datetime]="selection.from">{{ time(selection.from, selection.timeZone) }}</time>
+        –
+        <time [attr.datetime]="selection.toExclusive">{{
+          time(selection.toExclusive, selection.timeZone)
+        }}</time>
+        ({{ selection.timeZone }}; {{ text().periodBounds }})
+      </p>
+    }
+    @if (coverage() || availability()) {
+      <div class="app-page-actions">
+        @if (coverage(); as facts) {
+          <span>{{ text().retrieval }}: {{ text().retrievalStates[facts.retrieval] }}</span>
+          <span
+            >{{ text().positionCoverage }}:
+            {{ text().positionStates[facts.positionCoverage] }}</span
+          >
+        }
+        @if (availability(); as state) {
+          <span>{{ text().availability }}: {{ text().availabilityStates[state] }}</span>
+        }
+      </div>
+    }
+  } @else {
+    @if (period(); as selection) {
+      <dl class="app-facts" [attr.aria-label]="text().period">
+        <div>
+          <dt>{{ text().from }}</dt>
+          <dd>
+            <time [attr.datetime]="selection.from">{{
+              time(selection.from, selection.timeZone)
+            }}</time>
+          </dd>
+        </div>
+        <div>
+          <dt>{{ text().toExclusive }}</dt>
+          <dd>
+            <time [attr.datetime]="selection.toExclusive">{{
+              time(selection.toExclusive, selection.timeZone)
+            }}</time>
+          </dd>
+        </div>
+        <div>
+          <dt>{{ text().timeZone }}</dt>
+          <dd>{{ selection.timeZone }}</dd>
+        </div>
+      </dl>
+    }
+    @if (coverage(); as facts) {
+      <dl class="app-facts" [attr.aria-label]="text().coverage">
+        <div>
+          <dt>{{ text().retrieval }}</dt>
+          <dd>{{ text().retrievalStates[facts.retrieval] }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().positionCoverage }}</dt>
+          <dd>{{ text().positionStates[facts.positionCoverage] }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().positionsLoaded }}</dt>
+          <dd class="app-num">{{ positionsLoaded() }}</dd>
+        </div>
+        @if (facts.positionCoverage !== 'NOT_ASSESSED') {
+          <div>
+            <dt>{{ text().gaps }}</dt>
+            <dd class="app-num">{{ gapCount() }}</dd>
+          </div>
+        }
+      </dl>
+      <p class="app-muted">{{ text().coverageHint }}</p>
+    }
+    @if (availability(); as state) {
+      <dl class="app-facts">
+        <div>
+          <dt>{{ text().availability }}</dt>
+          <dd>{{ text().availabilityStates[state] }}</dd>
+        </div>
+      </dl>
+    }
+  }
+  <details class="app-source-details">
+    <summary>{{ text().sourceDetails }}</summary>
+    @if (compact()) {
+      @if (coverage(); as facts) {
+        <dl class="app-facts">
+          <div>
+            <dt>{{ text().positionsLoaded }}</dt>
+            <dd class="app-num">{{ positionsLoaded() }}</dd>
+          </div>
+          @if (facts.positionCoverage !== 'NOT_ASSESSED') {
+            <div>
+              <dt>{{ text().gaps }}</dt>
+              <dd class="app-num">{{ gapCount() }}</dd>
+            </div>
+          }
+        </dl>
+        <p class="app-muted">{{ text().coverageHint }}</p>
+      }
+    }
+    <dl class="app-facts">
+      <div>
+        <dt>{{ text().sourceRecordId }}</dt>
+        <dd>{{ provenance().sourceRecordId ?? '—' }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().eventAt }}</dt>
+        <dd>{{ time(provenance().eventAt) }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().receivedAt }}</dt>
+        <dd>{{ time(provenance().receivedAt) }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().retrievedAt }}</dt>
+        <dd>{{ time(provenance().retrievedAt) }}</dd>
+      </div>
+    </dl>
+    @if (coverage(); as facts) {
+      @if (facts.gaps.length) {
+        <div class="app-stack">
+          <p>{{ text().gapIntervals }} ({{ periodZone() }})</p>
+          <ul>
+            @for (gap of facts.gaps; track gap.from) {
+              <li>
+                <time [attr.datetime]="gap.from">{{ time(gap.from, periodZone()) }}</time>
+                –
+                <time [attr.datetime]="gap.toExclusive">{{
+                  time(gap.toExclusive, periodZone())
+                }}</time>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    }
+  </details>
+</div>

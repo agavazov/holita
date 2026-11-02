@@ -1,3 +1,4 @@
+import { karmaPresentation } from '../../presentation/karma-presentation';
 import { Location } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -52,6 +53,8 @@ import { eventsFilters } from '../history-filters';
 import { positiveId } from '../../edata/edata-page/edata-filters';
 import { KarmaCarHeader } from '../../car-header/karma-car-header';
 import { karmaCarNavigationContext } from '../../car-header/karma-car-context';
+import { MapPreview } from '../../../../ui/map-preview/map-preview';
+import { mapCoordinates } from '../../../../ui/map-preview/location-map';
 
 type EventsPageResult = AdminKarmaEventsQuery['karmaEvents'];
 type EventsRow = EventsPageResult['items'][number];
@@ -64,6 +67,7 @@ type EventsRow = EventsPageResult['items'][number];
     ButtonDirective,
     KarmaDateTime,
     RouteDrawer,
+    MapPreview,
     RowActions,
     InputTextModule,
     Message,
@@ -80,12 +84,16 @@ type EventsRow = EventsPageResult['items'][number];
 export class EventsPage implements OnInit {
   readonly language = input.required<Language>();
   readonly carId = input.required<string>();
+  readonly presentationText = computed(() => karmaPresentation[this.language()]);
   readonly text = computed(() => messages[this.language()]);
   readonly detailText = computed(() => karmaRecordMessages[this.language()]);
   readonly car = signal<AdminKarmaCarQuery['karmaCar']>(null);
   readonly carLoaded = signal(false);
   readonly page = signal<EventsPageResult | null>(null);
   readonly selected = signal<EventsRow | null>(null);
+  readonly selectedCoordinates = computed(() =>
+    mapCoordinates(this.selected()?.latitude, this.selected()?.longitude),
+  );
   readonly carLoading = signal(false);
   readonly pageLoading = signal(false);
   readonly loading = computed(() => this.carLoading() || this.pageLoading());

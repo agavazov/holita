@@ -12,6 +12,28 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
+export const RouteNavigation: Story = {
+  render: () => ({
+    template: `
+      <section class="app-view">
+        <h1>Truck workspace</h1>
+        <nav aria-label="Truck sections">
+          <ul class="app-route-nav" role="list">
+            <li><a class="app-route-nav__link app-route-nav__link--active" href="#overview" aria-current="page">Overview</a></li>
+            <li><a class="app-route-nav__link" href="#trips">Trips</a></li>
+            <li><a class="app-route-nav__link" href="#location">Location</a></li>
+          </ul>
+        </nav>
+        <div class="app-context-toolbar">
+          <h2 id="overview">Overview</h2>
+          <div class="app-page-actions"><a class="app-link" href="#trips">View trips</a></div>
+        </div>
+        <p class="app-muted">Identity, section navigation, contextual actions, then content.</p>
+      </section>
+    `,
+  }),
+};
+
 export const Facts: Story = {
   render: () => ({
     template: `

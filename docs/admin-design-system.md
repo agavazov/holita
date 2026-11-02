@@ -12,7 +12,7 @@ contributors is the [admin design-system skill](../.agents/skills/holita-admin-d
 | Place                            | Content                                                                                                                                                                                                                                                                                 |
 | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/app/theme/`                 | `appTheme`, brands, densities, status tones, the preset, the PrimeNG provider, contrast checks, light/dark `Appearance`, `aura-base.d.ts` (restores the value exports of `@primeuix/themes/aura/base` that its 3.0.1 typings omit) and the "Foundations" and "PrimeNG coverage" stories |
-| `src/styles/` + `styles.scss`    | Global CSS: the layer order, the Lato faces, breakpoints, reset, base, shell, patterns and the Karma legacy rules                                                                                                                                                                       |
+| `src/styles/` + `styles.scss`    | Global CSS: the layer order, the Lato faces, breakpoints, reset, base, shell, patterns                                                                                                                                                                                                  |
 | `src/app/ui/`                    | Domain-neutral components, CSS-pattern consumers and helpers (patterns below), their BG/EN catalog and Storybook stories                                                                                                                                                                |
 | `src/app/layout/`                | The shell: `AdminShell`, `AdminSidebar`, `AdminTopbar`, the navigation model (`NavGroup`, `NavItem`, `NavIconName`, `PageContext`, `navigationContext`) and `PageRecord`/`injectPageRecord`                                                                                             |
 | `src/app/workspace/`             | Composition: the navigation groups, the topbar page context, the document title, `UI_LANGUAGE` and PrimeNG texts                                                                                                                                                                        |
@@ -29,8 +29,10 @@ Component-specific values stay literal, for example icon boxes, chart and header
 card and text maximum widths, small gaps, paddings and offsets (`2px`, `0.125rem`, `-0.25rem`), the
 3 px corners of chart columns and the KPI tone marker, the login card's type sizes, hairlines, pill
 and round shapes (`999px`, `50%`) and pattern-local custom properties (`--app-meter-value`,
-`--app-truncate-width`). The Karma Client component CSS uses literal spacing and sizes and
-keeps Sakai-era `@media (max-width: 575px)` and `(max-width: 1100px)` queries.
+`--app-truncate-width`). Karma Client uses the shared patterns and theme tokens. Its truck destinations remain visible
+in a horizontally scrolling tab strip, with a searchable truck switcher above it. Maps offer
+Show map / Hide map and remember the choice per page type; Location and trip details start
+expanded, while other pages start collapsed. Drawers retain the underlying map.
 
 ## Theme
 
@@ -220,8 +222,8 @@ and the holita tokens express every scheme difference as `light-dark()`, and the
 ## Global styles, layers and breakpoints
 
 `styles.scss` loads, in order: `_layers` (`@layer holita-reset, primeng, holita;`), `_fonts`,
-`_breakpoint-properties`, `_reset`, `_base`, `_shell`, `_patterns` and `_legacy-karma`. `_reset` is
-the `holita-reset` layer; `_base`, `_shell`, `_patterns` and `_legacy-karma` are in `holita`; the
+`_breakpoint-properties`, `_reset`, `_base`, `_shell`, `_patterns`. `_reset` is
+the `holita-reset` layer; `_base`, `_shell` and `_patterns` are in `holita`; the
 `@font-face` rules and `--app-bp-*` are unlayered. Holita rules override PrimeNG without
 `!important`; only the reduced-motion rule uses it, so it also beats unlayered component styles.
 Component stylesheets are unlayered.
@@ -247,7 +249,6 @@ Component stylesheets are unlayered.
   view: centred up to `content-max-width`, padded by `gutter` (`gutter-narrow` below `md`), with
   `stack-gap` between blocks.
 - `_patterns`: the CSS patterns and the global DataTable rules (below).
-- `_legacy-karma`: the pre-design-system classes (below).
 
 `styles/_breakpoints.scss` declares the breakpoints (`sm` 640, `md` 768, `lg` 1024, `xl` 1280,
 `xxl` 1536 px) and the mixins `below($name)` (`max-width: <value> − 0.02px`) and `from($name)`
@@ -268,18 +269,11 @@ must change with the Sass map), provides a deterministic `matchMedia` driven by 
 | Width  | Behaviour                                                                                                                                                                                                                                                   |
 | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `< sm` | Topbar: the logo mark only (word visually hidden), no breadcrumb, the language code instead of its name, the Branch name at most 9rem, tighter spacing; FilterBuilder's quick search takes its own row; drawer actions stack with the primary action on top |
-| `< md` | Full-width route drawers, the `gutter-narrow` page padding, `.app-col-secondary` hidden, no group crumb, KPI tiles two per row, the page-header row wraps, smaller legacy `.card` padding                                                                   |
+| `< md` | Full-width route drawers, the `gutter-narrow` page padding, `.app-col-secondary` hidden, no group crumb, KPI tiles two per row, the page-header row wraps                                                                                                   |
 | `< lg` | The sidebar becomes the navigation drawer and the topbar shows the logo; the frame becomes full-bleed (no gap, border or radius)                                                                                                                            |
 | `≥ sm` | Form grids two columns                                                                                                                                                                                                                                      |
 | `≥ md` | Card grids two columns (three from `xl`)                                                                                                                                                                                                                    |
 | `≥ lg` | Settings sections show the title and hint beside the fields (1:2)                                                                                                                                                                                           |
-
-`_legacy-karma.scss` is the only place the pre-design-system classes `.card`, `.page-heading`,
-`.page-actions` and `.content-link` and the Sakai aliases `--surface-border`, `--surface-card`,
-`--text-color`, `--text-color-secondary`, `--primary-color` and `--content-border-radius` survive,
-mapped to the theme tokens. Karma Client pages consume them. All connected Fleet screens
-use the shared views and drawer patterns. Remove the legacy rules only after their remaining
-consumers are gone.
 
 ## Shell
 
@@ -322,6 +316,9 @@ navigation has no counts.
   group is a plain label (groups are not pages) and the page is the current crumb. A record page
   registers its name with `injectPageRecord(() => name)` (`layout/page-record.ts`); while it is
   registered the page becomes a link back to its list and the record name is the current crumb.
+  The optional second callback, `injectPageRecord(() => name, () => urlTree)`, supplies a
+  contextual list link, including query parameters. `PageContext.pageLink` accepts route commands
+  or a `UrlTree`; without an override it uses the matching navigation item's link.
   One record is shown at a time: a newer registration replaces it, and only the page that
   registered last clears it when destroyed, so a page leaving late keeps the next page's record.
   When no navigation item matches the path, the context is `null` and there is no breadcrumb.
@@ -382,8 +379,7 @@ navigation has no counts.
   `adminNavigation(language, branchId, fleetEnabled)` returns Monitoring (Overview, Alerts, Trip log),
   Fleet (Vehicles, Drivers, Devices, Maintenance)
   only when a Branch is selected and Fleet is enabled, followed by the Karma
-  Client group with the note "temporary" (Trucks, Users, Roles, Projects, Time zones, API
-  information), then Settings (Vehicle groups, General) when Fleet has an active Branch.
+  Client group with the note "temporary" (Monitoring, Trucks, Administration, Settings), then Settings (Vehicle groups, General) when Fleet has an active Branch.
   On a route that requires a Branch, while discovery is loading, empty or failed,
   the workspace projects a status card with Retry (`data-testid="refresh-branches"`) and renders
   the router outlet only once Branches are available. The context is the longest matching
@@ -419,7 +415,7 @@ prefix and texts from `uiMessages[inject(UI_LANGUAGE)()]`.
 | `holita-filter-builder` + `filter-model.ts`                       | Always-visible quick search: `searchLabel` (hidden label and placeholder), `search`, `searchError`, `searchChange` (the raw text on every input, `maxlength` 200). "Add filter" (shown when `fields` is non-empty): `fields` (`FilterField`: `key`, `label`, `type` `text`/`enum`/`number`/`date`/`boolean`, `operators` from `filterOperators` with the first preselected, `options` for `enum`, `unit` for `number`) build `conditions` (`FilterCondition`: `id`, `field`, `operator`, `values` as strings: decimal text, `YYYY-MM-DD`, enum values), emitted by `conditionsChange`. Apply is enabled only when `isComplete` (a range needs from ≤ to). Conditions are chips (`describeCondition`) that reopen the editor or remove the condition; "Clear all" emits `[]`; all apply together (AND). Focus opens on Column; Apply, Cancel and Escape return to the opener. Outside clicks retain their target's focus. The popover is non-modal, selects have explicit labels, and the first Escape closes an open calendar before a second Escape closes the editor. Removing a chip focuses the next chip, else the previous chip, else Add filter; Clear all focuses Add filter. Hosts preserve condition IDs. Slot `[filterActions]`. `filter-model.ts` also exports `operandsOf` (`none`, `one`, `range`, `set`)                                                                                                                                                                               |
 | `holita-table-panel` + `tableView()`                              | `heading`, `headingLevel` (2 default or 3; the heading is the focus target), `total` (hidden while `loading` or `error`), `view` (`TableView` from `tableView()`), `errorText`, `busy` (`aria-busy`; a 2 px decorative bar while rows are shown), `emptyTitle`/`emptyDescription` and `[emptyActions]` (the `empty` state only), `actions` (`ListActionBase[]`), `selection` (the selected `ListRecord`s of the shown page), `selectionProgress`, `page` (`TablePage`: 1-based `page`, `pageSize`, `total`), `pageSizes` (default 10, 20, 50, 100), `skeletonRows` (default min(page size, 8)). Outputs: `action` (`ListActionRequest`), `pageChange` (`{ page, pageSize }`, 1-based), `retry` (the Retry of `error` and `rows-error`), `clearFilters` (the Clear filters of `no-results`), `clearSelection`. Slots: default (the `p-table`), `[panelActions]` (header), `[panelFooter]` (footer start), `[emptyActions]`. Methods: `run(actionId, records, origin, source = 'row')`, the one way to start an action (below), and `focusHeading()`. It provides its own `ConfirmationService` and `p-confirmdialog`. The footer and paginator show whenever rows are shown, whatever the page size; page links only when the rows do not fit on one page; the current page size is always among the options. The bulk bar lists the `bulk` actions, each disabled when no selected record applies; it sits below the panel and sticks to the viewport bottom, so selecting never moves rows or footer |
 | `holita-row-actions`                                              | The "⋮" menu of a row: `actions` (the list's actions), `record` (`ListRecord`: accessible name "Actions for <label>", and its `unavailable` actions are disabled), output `choose` (`RowChoice`: `{ action, origin }`) which the host passes to `TablePanel.run`. Destructive actions come last after a separator (MenuButton orders them). Lists never show a direct Delete button in a row                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `holita-menu-button`                                              | A button that opens a `p-menu` popup: the row menu and the topbar menus. `options` (`MenuOption`: `id`, `label`, `selected` (check and a hidden "current choice"), `disabled`, `danger` (moved last after a separator), `lang`, `description`, `note`, `marker` (`{ tone, label }`: a dot with hidden text), `separated`), `variant` (`icon`, `text` with a chevron), `ariaLabel` (else the projected content names the trigger), `header` (`MenuHeader`: `title`, `detail`; names the popup, else the trigger does), `disabled` (stays focusable, does not open), `buttonClass`, `menuClass` (`app-menu-scroll`, `app-menu-wide`); outputs `choose` (`MenuChoice`: `{ id, origin }`, emitted after focus is back on the trigger) and `opened`. Keyboard focus opens on the current choice, else the first enabled option, and the focused option is scrolled into view; `aria-expanded` follows the popup's visibility                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `holita-menu-button`                                              | A button that opens a `p-menu` popup: the row menu and the topbar menus. `options` (`MenuOption`: `id`, `label`, `selected` (check and a hidden "current choice"), optional `link` (`UrlTree`: a real route anchor with its query/fragment and `aria-current="page"` when selected), `disabled`, `danger` (moved last after a separator), `lang`, `description`, `note`, `marker` (`{ tone, label }`: a dot with hidden text), `separated`), `variant` (`icon`, `text` with a chevron, `navigation` with the route-link treatment), `ariaLabel` (else the projected content names the trigger), `header` (`MenuHeader`: `title`, `detail`; names the popup, else the trigger does), `disabled` (stays focusable, does not open), `buttonClass`, `menuClass` (`app-menu-scroll`, `app-menu-wide`); outputs `choose` (`MenuChoice`: `{ id, origin }`, emitted after focus is back on the trigger) and `opened`. Keyboard focus opens on the current choice, else the first enabled option, and the focused option is scrolled into view; `aria-expanded` follows the popup's visibility                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `holita-route-drawer`                                             | `title`, `subtitle`, `[drawerMeta]`, `size` (`md`/`lg`), `state` (`RouteDrawerState`: `loading` skeleton; `not-found` and `invalid-id` an empty state with Close; `error` shows `errorText` with Retry → `retry`; the body and the sticky `[drawerFooter]` render only in `ready`), `saving` (sets `aria-busy` and disables Close controls), `dirty` (also blocks page unload), `closeLink` (`readonly unknown[] \| null`, default `['..']`); outputs `retry`, `closeRequest`; methods `close()`, `confirmLeave(dirty)` (concurrent calls share one dialog), `focusTitle()` and `keepFocusInside()`. A modal `role="dialog"` labelled by its h2; it focuses the title when shown unless focus is already inside, ignores an Escape another control handled, and provides its own `ConfirmationService` and `p-confirmdialog`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `holita-form-field`                                               | `label` (`#<id>-label`), `controlId`, `hint` (`#<id>-hint`), `error` (in `#<id>-error`, which is always rendered), `required` (a visual asterisk plus a hidden "(required)"), `counter` (`FieldCounter`: `length` in code points, `max`; warning tone above 90 %). The projected control sets its `id`, `[attr.aria-describedby]="'<id>-hint <id>-error'"`, `aria-invalid` and `[invalid]`; a group control without one input (select button) uses `ariaLabelledBy="<id>-label"`; PrimeNG controls with an inner input use `innerInputPt`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `holita-empty-state`                                              | `kind` (`EmptyStateKind`: `empty`, `no-results`, `error`, `not-found`, `disabled`, `no-telemetry`, `done`; each with its own icon), `title`, `description`, `compact`, `[emptyActions]`; `error` and `not-found` are `role="alert"`, the other kinds `role="status"`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
@@ -440,6 +436,12 @@ CSS patterns (`styles/_patterns.scss`):
   `.app-card-grid`, `.app-stack`, `.app-settings-section` (a settings card whose
   `> header > h2 + p` sits beside the fields from `lg`) and `.app-save-bar` (Discard and Save of a
   page form, sticky while there are changes).
+- Context navigation: `.app-route-nav` contains real `.app-route-nav__link` anchors with
+  `.app-route-nav__link--active` and `aria-current="page"` on the selected route. A
+  `holita-menu-button` with `variant="navigation"` groups secondary destinations in the same
+  navigation. `.app-context-toolbar` holds the section heading and `.app-page-actions` after
+  identity and navigation; actions wrap at narrow widths. Karma truck and administration
+  stories demonstrate these shared patterns.
 - Records and forms: `.app-facts` on a `<dl>` whose `<div>`s hold `<dt>` + `<dd>` (auto-fill
   columns of at least 11rem; `.app-facts--wide` spans a row), `.app-form-section` (a `> h3` title
   and an optional `> p` hint), `.app-form-grid` with `.app-form-grid--wide` on a direct child,
@@ -545,6 +547,16 @@ Helpers:
   `interpolate(text, values)`, which fills `{name}` placeholders and leaves unknown ones as
   written.
 
+### Source context
+
+[`holita-source-context`](../apps/admin/src/app/ui/source-context/source-context.ts) presents
+source facts supplied by the owning feature. It takes required `language` and
+`provenance: SourceProvenance`, plus optional `period: SourcePeriod`, `coverage: SourceCoverage`
+and `availability: SourceAvailability` presentation facts from `ui/source-context/source-types.ts`.
+It owns no fetching or actions. Karma source identity, origin, retrieval, GPS coverage and field
+availability remain separate facts. Source details disclose original IDs and UTC event,
+received and retrieval clocks, including identified gaps.
+
 ### Table conventions
 
 Hosts project a `p-table` into `holita-table-panel` with `[lazy]`, `[lazyLoadOnInit]="false"`
@@ -631,8 +643,8 @@ icons with a normal close button: PrimeNG's default close button has native `aut
 can steal focus when an initiating save button disappears. PrimeNG still owns the message
 lifecycle, stacking and dismissal.
 
-All connected Fleet screens use this workspace feedback flow. Karma retains its temporary legacy
-feedback presentation.
+All connected Fleet screens use this workspace feedback flow. Karma read-only pages keep
+contextual loading, error and retry feedback in their shared table panels and inline messages.
 
 ### PrimeNG usage rules
 
@@ -781,63 +793,26 @@ after a rename; retired callbacks cannot apply preferences or announce results i
 
 ## Storybook review
 
-The admin Storybook (`npm run storybook:admin`, port 11001) renders the real Angular components
-([development](development.md#admin-storybook)). It is a development and review tool; no automated
-runner executes its stories. It opens on "Start here" (what to review and links to the stories),
-then Admin and Design System. Stories render in English.
+Run `npm run storybook:admin` (port 11001). Storybook renders the real Angular components with
+fixed local fixtures; it is a manual review tool, with no story runner or play functions.
+Start here explains every menu entry, its data source and the dated device-settings evidence
+in English or Bulgarian. Its links open the relevant stories.
 
-Pattern stories render `app/ui` components with story inputs. The Shell stories use the real
-navigation, and the routed ones (Fleet disabled, Unknown Branch, Branch discovery loading and
-error) answer `AdminBranches` through `FixtureHttpBackend`.
+Titles follow `Admin/<menu group>/<menu item>[/<sub-page>]`, using the English labels from
+[`admin-navigation.ts`](../apps/admin/src/app/workspace/admin-navigation.ts). Sub-pages sit under
+the item that opens them. The tree is Start here; Admin → Monitoring (Overview, Alerts, Trip log), Fleet (Vehicles, Drivers, Devices, Maintenance), Karma Client (Monitoring, Trucks, Administration, Settings),
+Settings (Vehicle groups, General), Sign in; then Design System (Foundations, Patterns, Shell,
+PrimeNG coverage). Truck pages sit under Karma Client/Trucks/Truck. Shared panels, including daily-report coverage and Karma controls, sit under
+Design System/Patterns.
 
-Live Fleet containers render the shared presentation components inside `FleetWorkspace`:
-Vehicles/profile/odometer, Devices, Drivers/scorecard, Overview, Alerts, Trip log, Maintenance
-and Vehicle groups/General settings ([Discocan Fleet](discocan/fleet.md#angular-foundation)).
-Their `Admin/...` stories run the real routes, APIs and captured Apollo clients against typed
-deterministic `src/storybook/*-fixtures.ts` responses. These immutable snapshots show rendering,
-errors, forms and partial actions; persistence, filtering and derived facts are not simulated.
+Keep only representative states: default, loading, empty, error, unavailable or missing scope,
+a distinct narrow layout and workflow steps, aiming for at most eight per screen. Use the
+Language (English default/Bulgarian), Theme, Brand, Density and viewport toolbar globals instead
+of duplicate language or theme stories. Provider changes rebuild the preview, including
+`UI_LANGUAGE`, routed language and PrimeNG texts. Open menus and drawers manually where a story
+starts at their entry point. Fixtures are snapshots, not a second backend.
 
-`Admin/Fleet/Device configuration` renders the durable eData settings workflow through the same
-routed container: reads, writes, confirmation, retained drafts and historical snapshots.
-`Admin/Karma Client/Device management proposal` demonstrates Karma → Trucks → truck detail → Device settings
-inside the real AdminWorkspace shell. The story uses the existing inventory, truck detail and
-reusable settings presentation; its settings route and profile tab exist only in Storybook.
-Inventory uses record links; the truck profile keeps its navigation above settings, with
-Parameters and Rules panels stacked vertically. Advanced
-rule fields and original bytes stay in the drawer, outside the list rows.
-Its scenario presenter retains edits only within the story and supplies canned operation states;
-it does not compile rules, import/export configuration or communicate with a device. BG/EN,
-missing Fleet scope, loading/error, empty rules, waiting and uncertain outcomes have separate stories.
-`Admin/Authentication/Login` renders the application `Login` without a shell;
-`storybook/login-fixtures.ts` answers its `AdminTenants`, `AdminDemoLogin` and `AdminBranches`
-operations for the loading, empty, error and retry states.
-
-Toolbar globals: theme, brand and density; viewports `desktop1440`, `desktop1024` (the narrowest
-desktop with the sidebar), `tablet768`, `mobile375`. A brand or density change re-bootstraps the
-story with `provideHolitaTheme(choice)` and leaves no stale theme styles. `parameters.holita`
-(`StoryFixtures`) controls the session (`signedIn`), Fleet availability (`fleetEnabled`), the story
-clock (`now`, default `2026-10-18T07:00:00.000Z`) and the fixture `scenario` (`latencyMs` and
-`failures` per operation or `<Operation>:<id>`).
-
-| Title                          | Content                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Design System/Foundations      | Colors (the canvas, frame and panel colour tokens, the sidebar hover and active backgrounds and indicator, the tone and category tokens, the semantic colour tokens and the primary and surface ramps in both schemes; the contrast checks of the toolbar brand), Brand variants, Typography, Spacing and density (measured), Radii and borders, Status tones, Categorical palette, Breakpoints                                                                                                                                       |
-| Design System/Patterns         | PageHeader, KpiStrip, FilterBuilder, TablePanel (states, paging with one page, a large and an unlisted page size, selection, row actions, confirmation from a row and for a selection), Drawer (edit, view, view then edit, loading, saving, not found, error, server field errors, dirty with confirm), FormField, EmptyState, Charts, CSS patterns, Notifications (success, warning, error, long message, stacked); MenuButton and RowActions have no stories of their own (TablePanel, the Shell menus and the examples show them) |
-| Design System/PrimeNG coverage | Every registered control in both schemes, non-modal overlays and the confirm dialog                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| Design System/Shell            | Desktop, Rail, Mobile with navigation open, Fleet disabled, Unknown Branch, Branch discovery loading/error, theme-persistence warning, Branch menu, Notifications, Account menu, No notifications, Long names (desktop, narrow desktop and phone)                                                                                                                                                                                                                                                                                     |
-
-The shared Karma search/date controls are shown in `Design System/Karma/Controls`, and the
-optional map, endpoint directions and missing-coordinate states in `Admin/Karma Client/Maps`.
-`Admin/Karma Client/Trucks` exercises the connected account search/project/pagination UI.
-Truck sections share `KarmaCarHeader` with the existing PageHeader pattern and real navigation
-links styled with the shared theme tokens; the active route has `aria-current="page"`. Filter errors use
-the shared FormField pattern and focus the first invalid input. Devices' primary IMEI action
-opens read-only Diagnostics, with an explicit Edit action and return to that overview.
-`Design System/Patterns/Responsive table` checks identity/action placement at both widths.
-`Admin/Karma Client/Record details` exercises summaries, closed/expanded source fields,
-escaped event text and focus restoration through connected truck/history fixtures.
-
-Use the Storybook Accessibility panel (axe) to check a changed screen. The PrimeUI license notice
+Use the Accessibility panel (axe) when reviewing markup. The PrimeUI license notice
 `#p-license-host` is excluded from that check and is never hidden.
 
 ## Changing the design centrally

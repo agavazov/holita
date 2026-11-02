@@ -1,34 +1,41 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { componentWrapperDecorator, type Meta, type StoryObj } from '@storybook/angular-vite';
-import type {
-  DeviceConfigurationOperation,
-  DeviceParameterMeasurements,
-} from '../../fleet/device-operations/device-configuration-types';
 import {
   configurationPageFixture,
-  configurationMeasurementsFixture,
   configurationStoryStates,
 } from '../../../../storybook/device-configuration-fixtures';
 import type { WithTypename } from '../../../../storybook/graphql-fixtures';
 import { fixtureKarmaCar } from '../../../../storybook/karma-fixtures';
-import { defaultBranchId, fixtureTenant } from '../../../../storybook/session-fixtures';
-import { routeAt, StoryApp, type StoryFixtures } from '../../../../storybook/story-config';
+import { defaultBranchId } from '../../../../storybook/session-fixtures';
+import { StoryApp, type StoryFixtures } from '../../../../storybook/story-config';
+import { UI_LANGUAGE } from '../../../ui/ui-language';
+import type { DeviceConfigurationOperation } from '../../fleet/device-operations/device-configuration-types';
 import { DeviceManagementView } from './device-management-view';
-import { RuleDraftStore } from './rule-drafts';
+import { RuleDraftStore, type RuleDraft } from './rule-drafts';
+import { KarmaCarHeader } from '../car-header/karma-car-header';
+import { DeviceRuleReview } from '../../fleet/device-operations/device-rule-review';
+import en from './i18n/en.json';
+import bg from './i18n/bg.json';
 
 /** Saved evidence uses the production view; this wrapper has no send or save implementation. */
 @Component({
   selector: 'holita-settings-snapshot',
-  imports: [DeviceManagementView],
+  imports: [DeviceManagementView, KarmaCarHeader, DeviceRuleReview],
   providers: [RuleDraftStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="app-stack" style="padding: var(--p-app-gutter)">
-      <p style="color: var(--p-app-canvas-muted-color)">
-        Fixed saved snapshot. Device actions are not connected in this story.
-      </p>
+    <div
+      class="app-view"
+      style="padding: var(--p-app-gutter); background: var(--p-app-frame-background)"
+    >
+      <holita-karma-car-header
+        [language]="language()"
+        [carId]="car.id"
+        [carNumber]="car.carNumber"
+        [title]="text().deviceSettings"
+      />
       <holita-device-management-view
-        language="en"
+        [language]="language()"
         [car]="car"
         state="ready"
         [branchId]="branchId"
@@ -38,24 +45,38 @@ import { RuleDraftStore } from './rule-drafts';
         [operations]="data().fleetDeviceOperations"
         [lastSnapshot]="data().fleetDeviceConfigurationSnapshot"
         [lastRulesSnapshot]="data().fleetDeviceRulesSnapshot"
-        [reconciling]="reconciling()"
-        [measurements]="measurements()"
-        (requestMeasurements)="measurementOpen.set(true)"
-        (closeMeasurements)="measurementOpen.set(false)"
+        [readSequence]="scenario() === states.reading ? 'parameters' : null"
       />
+      @if (review()) {
+        <holita-device-rule-review
+          [draft]="reviewDraft"
+          [branchId]="branchId"
+          [target]="car"
+          [rulesBaseline]="data().fleetDeviceRulesSnapshot"
+          [parameterBaseline]="data().fleetDeviceConfigurationSnapshot"
+          [unavailable]="false"
+          [expressionLabel]="'ABS/EBS Amber Warning Signal ' + text().greaterThan + ' 20'"
+          [previousExpressionLabel]="'ABS/EBS Amber Warning Signal ' + text().greaterThan + ' 10'"
+        />
+      }
     </div>
   `,
 })
 class ConfigurationSnapshot {
   readonly scenario = input<string>(configurationStoryStates.confirmed);
-  readonly reconciling = input(false);
-  readonly measurementState = input<DeviceParameterMeasurements['state'] | 'empty' | null>(null);
-  readonly measurementChangeAt = input('2026-10-18T06:43:00.000Z');
-  protected readonly measurementOpen = signal(true);
-  protected readonly measurements = computed(() => {
-    const state = this.measurementState();
-    return state && this.measurementOpen() ? configurationMeasurementsFixture(state) : null;
-  });
+  readonly review = input(false);
+  protected readonly states = configurationStoryStates;
+  protected readonly text = computed(() => (this.language() === 'bg' ? bg : en));
+  protected readonly reviewDraft: RuleDraft = {
+    id: 'story-review',
+    ruleId: 1,
+    name: 'Rule 1',
+    expression: '[718] > 20',
+    trueEvent: 1001,
+    falseEvent: 1002,
+    debounce: 1000,
+  };
+  protected readonly language = inject(UI_LANGUAGE);
   protected readonly car = fixtureKarmaCar;
   protected readonly branchId = defaultBranchId;
   protected readonly data = computed(() => {
@@ -79,23 +100,9 @@ class ConfigurationSnapshot {
         : null,
     });
     const operations = data.fleetDeviceOperations.map(operation);
-    let snapshot = data.fleetDeviceConfigurationSnapshot
+    const snapshot = data.fleetDeviceConfigurationSnapshot
       ? operation(data.fleetDeviceConfigurationSnapshot)
       : null;
-    if (this.measurementState() && snapshot) {
-      const change: DeviceConfigurationOperation = {
-        ...snapshot,
-        id: '80000000-0000-4000-8000-00000000c108',
-        kind: 'UPDATE_INTERVAL',
-        phase: 'VERIFY_PARAMETERS',
-        parameterId: 718,
-        intervalSeconds: 30,
-        previousIntervalSeconds: 60,
-        completedAt: this.measurementChangeAt(),
-      };
-      operations.unshift(change);
-      snapshot = change;
-    }
     return {
       ...data,
       fleetDeviceParameterPresets: data.fleetDeviceParameterPresets.map((preset) => ({
@@ -109,22 +116,18 @@ class ConfigurationSnapshot {
       fleetDeviceConfigurationSnapshot: snapshot,
     };
   });
-
-  constructor() {
-    inject(RuleDraftStore).initialize(fixtureTenant.id, fixtureKarmaCar.id);
-  }
 }
 
-/** The main review runs the real routes and editors against fixed GraphQL responses. */
+/** The production settings view and editors with fixed evidence and disconnected outputs. */
 const meta: Meta<StoryApp> = {
-  title: 'Admin/Karma Client/Device settings',
+  title: 'Admin/Karma Client/Trucks/Truck/Device settings',
   component: StoryApp,
   tags: ['!autodocs'],
   decorators: [
     componentWrapperDecorator(
       (story) => `
         <p role="note" style="margin: 0; padding: var(--p-app-gutter); background: var(--p-app-frame-background); color: var(--p-text-muted-color)">
-          Storybook: примерни данни. Не се изпращат команди към устройства.
+          {{ language === 'bg' ? 'Storybook: примерни данни. Не се изпращат команди към устройства.' : 'Storybook: example data. No commands are sent to devices.' }}
         </p>
         ${story}
       `,
@@ -135,97 +138,23 @@ const meta: Meta<StoryApp> = {
 export default meta;
 type Story = StoryObj<StoryApp>;
 
-const configured = 'karma-client/cars/41/configuration';
-
-function snapshot(scenario: string, reconciling = false): NonNullable<Story['render']> {
+function snapshot(scenario: string, review = false): NonNullable<Story['render']> {
   return () => ({
     moduleMetadata: { imports: [ConfigurationSnapshot] },
-    props: { scenario, reconciling },
-    template: '<holita-settings-snapshot [scenario]="scenario" [reconciling]="reconciling" />',
+    props: { scenario, review },
+    template: '<holita-settings-snapshot [scenario]="scenario" [review]="review" />',
   });
 }
 
-export const Review: Story = {
-  name: 'Преглед — реален екран с примерни данни',
-  args: { url: `/bg/${configured}` },
-};
-export const English: Story = { render: routeAt(configured) };
-export const AnotherTruck: Story = { render: routeAt('karma-client/cars/42/configuration') };
-export const FleetUnavailable: Story = {
-  render: routeAt(configured),
-  parameters: { holita: { signedIn: true, fleetEnabled: false } satisfies StoryFixtures },
-};
-export const NotRead: Story = { render: snapshot(configurationStoryStates.empty) };
-export const WaitingForDevice: Story = { render: snapshot(configurationStoryStates.waiting) };
-export const UnknownOutcome: Story = { render: snapshot(configurationStoryStates.unknown) };
-export const TimedOut: Story = { render: snapshot(configurationStoryStates.timedOut) };
-export const EmptyConfiguration: Story = {
-  render: snapshot(configurationStoryStates.emptyConfiguration),
-};
-export const ReadsDisabled: Story = { render: snapshot(configurationStoryStates.disabled) };
-export const WritesDisabled: Story = {
-  render: snapshot(configurationStoryStates.writesDisabled),
-};
-export const ChangeWaiting: Story = { render: snapshot(configurationStoryStates.writeWaiting) };
-export const ChangeUncertain: Story = {
-  render: snapshot(configurationStoryStates.writeUncertain),
-};
-export const ChangeFailed: Story = { render: snapshot(configurationStoryStates.writeFailed) };
-export const HistoricalSnapshots: Story = { render: snapshot(configurationStoryStates.history) };
-function measurements(
-  state: DeviceParameterMeasurements['state'] | 'empty',
-  changeAt = '2026-10-18T06:43:00.000Z',
-): NonNullable<Story['render']> {
-  return () => ({
-    moduleMetadata: { imports: [ConfigurationSnapshot] },
-    props: { measurementState: state, measurementChangeAt: changeAt },
-    template:
-      '<holita-settings-snapshot [measurementState]="measurementState" [measurementChangeAt]="measurementChangeAt" />',
-  });
-}
-
-export const Measurements: Story = { render: measurements('ready') };
-export const MeasurementsEmpty: Story = { render: measurements('empty') };
-export const MeasurementsError: Story = { render: measurements('error') };
-export const MeasurementsLoading: Story = { render: measurements('loading') };
-export const MeasurementsBeforeChange: Story = {
-  render: measurements('ready', '2026-10-18T06:45:00.000Z'),
-};
-export const ReconciliationNeeded: Story = {
+export const Default: Story = { render: snapshot(configurationStoryStates.confirmed) };
+export const Reading: Story = { render: snapshot(configurationStoryStates.reading) };
+export const Empty: Story = { render: snapshot(configurationStoryStates.emptyConfiguration) };
+export const DispatchOff: Story = { render: snapshot(configurationStoryStates.dispatchOff) };
+export const ReviewBeforeSend: Story = {
   render: snapshot(configurationStoryStates.confirmed, true),
 };
-export const Loading: Story = {
-  render: routeAt(configured),
-  parameters: {
-    holita: {
-      signedIn: true,
-      scenario: { failures: { AdminDeviceConfigurationPage: 'pending' } },
-    } satisfies StoryFixtures,
-  },
-};
-export const ErrorState: Story = {
-  render: routeAt(configured),
-  parameters: {
-    holita: {
-      signedIn: true,
-      scenario: { failures: { AdminDeviceConfigurationPage: 'network' } },
-    } satisfies StoryFixtures,
-  },
-};
-export const TargetError: Story = {
-  render: routeAt(configured),
-  parameters: {
-    holita: {
-      signedIn: true,
-      scenario: { failures: { AdminKarmaCar: 'network' } },
-    } satisfies StoryFixtures,
-  },
-};
-export const Mobile: Story = {
-  args: { url: `/bg/${configured}` },
-  globals: { viewport: { value: 'mobile375', isRotated: false } },
-};
-export const Dark: Story = {
-  args: { url: `/bg/${configured}` },
-  globals: { theme: 'dark' },
+export const Waiting: Story = { render: snapshot(configurationStoryStates.waiting) };
+export const Failed: Story = { render: snapshot(configurationStoryStates.failed) };
+export const UncertainOutcome: Story = {
+  render: snapshot(configurationStoryStates.writeUncertain),
 };

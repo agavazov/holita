@@ -40,6 +40,7 @@ export const subgraphs = [
       'apps/fleet/src/modules/overview/overview.graphql',
       'apps/fleet/src/modules/settings/settings.graphql',
       'apps/fleet/src/modules/device-operations/device-operations.graphql',
+      'apps/fleet/src/modules/karma-monitoring/karma-monitoring.graphql',
     ],
   },
 ];
@@ -48,8 +49,10 @@ export const operationPaths = [
   'apps/admin/src/app/features/karma-client/edata/operations.graphql',
   'apps/admin/src/app/features/karma-client/location/operations.graphql',
   'apps/admin/src/app/features/karma-client/history/operations.graphql',
+  'apps/admin/src/app/features/karma-client/diagnostics/operations.graphql',
   'apps/admin/src/app/features/karma-client/references/operations.graphql',
   'apps/admin/src/app/features/karma-client/accounts/operations.graphql',
+  'apps/admin/src/app/features/karma-client/monitoring/operations.graphql',
   'apps/admin/src/app/features/branches/operations.graphql',
   'apps/admin/src/app/features/fleet/vehicles/operations.graphql',
   'apps/admin/src/app/features/fleet/vehicle-groups/operations.graphql',

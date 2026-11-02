@@ -61,6 +61,54 @@ export function configurationRequest(value: unknown) {
   };
 }
 
+function queueIds(value: unknown): string[] {
+  if (!Array.isArray(value) || value.length > 32) {
+    invalid();
+  }
+  return [...new Set(value.map((id: unknown) => carId(id)))];
+}
+
+export function diagnosticRequest(value: unknown): {
+  carId: string;
+  expectedDeviceId: string;
+  kind: 'READ_FAULT_LOGGER' | 'READ_COMMUNICATION_DIAGNOSTICS';
+  existingQueueIds: string[];
+} {
+  const body = input(value, ['carId', 'expectedDeviceId', 'kind', 'existingQueueIds']);
+  const kind = body['kind'];
+  if (kind !== 'READ_FAULT_LOGGER' && kind !== 'READ_COMMUNICATION_DIAGNOSTICS') {
+    invalid();
+  }
+  return {
+    carId: carId(body['carId']),
+    expectedDeviceId: expectedDeviceId(body['expectedDeviceId']),
+    kind,
+    existingQueueIds:
+      body['existingQueueIds'] === undefined ? [] : queueIds(body['existingQueueIds']),
+  };
+}
+
+export function diagnosticWindow(value: unknown) {
+  const body = input(value, [
+    'carId',
+    'expectedDeviceId',
+    'fromUtc',
+    'toUtc',
+    'queueIds',
+    'afterMessageId',
+  ]);
+  return {
+    ...configurationWindow({
+      carId: body['carId'],
+      expectedDeviceId: body['expectedDeviceId'],
+      fromUtc: body['fromUtc'],
+      toUtc: body['toUtc'],
+      afterMessageId: body['afterMessageId'],
+    }),
+    queueIds: queueIds(body['queueIds']),
+  };
+}
+
 export function configurationParameterRequest(value: unknown) {
   const body = input(value, [
     'carId',

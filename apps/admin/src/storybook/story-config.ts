@@ -46,8 +46,12 @@ export interface StoryFixtures {
 
 export const defaultStoryNow = '2026-10-18T07:00:00.000Z';
 let now = Date.parse(defaultStoryNow);
-/** Storybook shows one language; the product's languages live in the application catalogs. */
-const storyLanguage: Language = 'en';
+let currentLanguage: Language = 'en';
+
+/** The UI language selected in the Storybook toolbar. */
+export function storyLanguage(globals: Readonly<Record<string, unknown>>): Language {
+  return globals['language'] === 'bg' ? 'bg' : 'en';
+}
 
 /** The story's fixed wall clock in epoch milliseconds. */
 export function storyNow(): number {
@@ -76,8 +80,13 @@ export function storyThemeChoice(globals: Readonly<Record<string, unknown>>): Th
  * language and the story clock. */
 export function storybookApplicationConfig(
   choice: ThemeChoice = appTheme,
-  options: { readonly fleetEnabled?: boolean; readonly primeUiLicense?: string } = {},
+  options: {
+    readonly fleetEnabled?: boolean;
+    readonly primeUiLicense?: string;
+    readonly language?: Language;
+  } = {},
 ): ApplicationConfig {
+  const language = options.language ?? currentLanguage;
   return {
     providers: [
       ...appConfig(
@@ -90,13 +99,13 @@ export function storybookApplicationConfig(
       ).providers,
       { provide: HttpBackend, useClass: FixtureHttpBackend },
       MessageService,
-      { provide: UI_LANGUAGE, useValue: signal(storyLanguage).asReadonly() },
+      { provide: UI_LANGUAGE, useValue: signal(language).asReadonly() },
       { provide: WALL_CLOCK, useValue: () => storyNow() },
       provideLocationMocks(),
       // Pattern stories render without AdminWorkspace, which sets these texts in the app.
       provideAppInitializer(() => {
         const primeNG = inject(PrimeNG);
-        primeNG.setTranslation(primeNgTranslation(storyLanguage, primeNG.translation.aria));
+        primeNG.setTranslation(primeNgTranslation(language, primeNG.translation.aria));
       }),
     ],
   };
@@ -151,6 +160,7 @@ export function readStoryFixtures(value: unknown): StoryFixtures {
 
 /** Applies the theme global and the story language to the document (and the stored theme). */
 export function applyStoryGlobals(globals: Readonly<Record<string, unknown>>): void {
+  currentLanguage = storyLanguage(globals);
   const dark = globals['theme'] === 'dark';
   try {
     localStorage.setItem('holita.admin.theme', dark ? 'dark' : 'light');
@@ -159,7 +169,7 @@ export function applyStoryGlobals(globals: Readonly<Record<string, unknown>>): v
   }
   document.documentElement.classList.toggle('app-dark', dark);
   document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
-  document.documentElement.lang = storyLanguage;
+  document.documentElement.lang = currentLanguage;
 }
 
 /**
@@ -187,7 +197,7 @@ export const onFrame = componentWrapperDecorator(
 
 /** Story render function that opens an application path in the story language in `StoryApp`. */
 export function routeAt(path: string) {
-  return () => ({ props: { url: `/${storyLanguage}/${path}` } });
+  return () => ({ props: { url: `/${currentLanguage}/${path}` } });
 }
 
 /** Renders the real application routes at a URL, for screen and flow stories. */

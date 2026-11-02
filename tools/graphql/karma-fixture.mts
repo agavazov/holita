@@ -65,7 +65,7 @@ export async function createKarmaFixture() {
       ],
     };
   });
-  const trips = edata.slice(0, 120).map((row, index) => ({
+  const historicalTrips = edata.slice(0, 120).map((row, index) => ({
     trip_id: 4000000001 + index,
     car_id: 41,
     car_number: 'KARMA TEST 41',
@@ -90,7 +90,39 @@ export async function createKarmaFixture() {
     driving_score: 0,
     eco_score: 0,
   }));
-  const events = edata.map((row) => ({
+  const sourceToday = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Sofia',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+  const previousDay = new Date(`${sourceToday}T00:00:00Z`);
+  previousDay.setUTCDate(previousDay.getUTCDate() - 1);
+  const reportDay = previousDay.toISOString().slice(0, 10);
+  const reportOffsetHours =
+    Number(
+      new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/Sofia',
+        hour: '2-digit',
+        hourCycle: 'h23',
+      }).format(new Date(`${reportDay}T12:00:00Z`)),
+    ) - 12;
+  const trips = [
+    ...historicalTrips,
+    ...historicalTrips.slice(0, 2).map((row, index) => ({
+      ...row,
+      trip_id: 4000000121 + index,
+      start_message_id: 5000000001 + index * 5,
+      stop_message_id: 5000000005 + index * 5,
+      start_date: `${reportDay} ${index === 0 ? '08:00:00' : '10:00:00'}`,
+      stop_date: `${reportDay} ${index === 0 ? '09:00:00' : '11:00:00'}`,
+      trip_duration: 60,
+      trip_distance: 10 + index,
+      trip_distance_night: 2,
+      max_speed: 50 + index,
+    })),
+  ];
+  const historicalEvents = edata.map((row) => ({
     car_id: 41,
     device_id: row.device_id,
     message_id: row.message_id,
@@ -104,6 +136,60 @@ export async function createKarmaFixture() {
     pdt: row.pdt,
     edt_tz: row.edt_tz,
   }));
+  const events = [
+    ...historicalEvents,
+    ...trips.slice(-2).flatMap((trip) =>
+      Array.from({ length: 5 }, (_, index) => {
+        const local = new Date(trip.start_date.replace(' ', 'T') + 'Z');
+        local.setUTCMinutes(local.getUTCMinutes() + index * 15);
+        const utc = new Date(local.getTime() - reportOffsetHours * 3600000);
+        return {
+          car_id: trip.car_id,
+          device_id: trip.device_id,
+          message_id: trip.start_message_id + index,
+          extra: 'Synthetic position sample',
+          edt: utc.toISOString().slice(0, 19).replace('T', ' '),
+          edt_tz: local.toISOString().slice(0, 19).replace('T', ' '),
+          pdt: utc.toISOString().slice(0, 19).replace('T', ' '),
+          eid: 0,
+          latitude: index * 0.01,
+          longitude: index === 2 ? null : index * 0.02,
+          spd: index === 0 || index === 4 ? 0 : 35,
+          odo: index,
+        };
+      }),
+    ),
+    // Actual captured wire payloads, with fixture-only vehicle identity.
+    ...[
+      {
+        message_id: 7177124308,
+        edt: '2026-10-28 18:54:31',
+        extra: '19,0,419,0,1,1,1001,21000010F30701000004DF0B01',
+      },
+      {
+        message_id: 7179721665,
+        edt: '2026-10-29 12:54:06',
+        extra: '19,0,419,0,1,1,1001,2100005CFE0F01',
+      },
+      { message_id: 7180175996, edt: '2026-10-29 14:57:52', extra: '19,0,154,0' },
+      {
+        message_id: 7180194143,
+        edt: '2026-10-29 15:04:01',
+        extra: '19,0,411,0,1,1,1001,00000001010C87',
+      },
+    ].map((row) => ({
+      ...row,
+      car_id: 41,
+      device_id: '000123456789012',
+      edt_tz: null,
+      pdt: row.edt,
+      eid: 33,
+      latitude: 0,
+      longitude: 0,
+      spd: 0,
+      odo: 0,
+    })),
+  ];
   const requests: { method: string; path: string }[] = [];
   const server = createServer((request, response) => {
     const url = new URL(request.url ?? '/', 'http://127.0.0.1');
@@ -221,6 +307,8 @@ export async function createKarmaFixture() {
         result = trips
           .filter(
             (row) =>
+              (!url.searchParams.has('from_id') ||
+                row.trip_id >= Number(url.searchParams.get('from_id'))) &&
               (!url.searchParams.has('to_id') ||
                 row.trip_id <= Number(url.searchParams.get('to_id'))) &&
               (!url.searchParams.has('from_date') ||
@@ -233,6 +321,8 @@ export async function createKarmaFixture() {
         result = events
           .filter(
             (row) =>
+              (!url.searchParams.has('from_id') ||
+                row.message_id >= Number(url.searchParams.get('from_id'))) &&
               (!url.searchParams.has('to_id') ||
                 row.message_id <= Number(url.searchParams.get('to_id'))) &&
               (!url.searchParams.has('from_date') ||
@@ -289,6 +379,7 @@ export async function createKarmaFixture() {
   }
   return {
     url: `http://127.0.0.1:${String(address.port)}/apiv2/`,
+    reportDay,
     requests,
     /** Restores the healthy upstream and forgets recorded requests, e.g. between browser tests. */
     reset: () => {

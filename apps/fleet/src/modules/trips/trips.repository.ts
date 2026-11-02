@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { DataWindow } from '../../clock/fleet-clock.js';
+import { fleetEventKindDb } from '../../database/enums.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import {
   dateOrNull,
@@ -148,7 +149,7 @@ export class TripsRepository {
   /** Whole-Branch totals, with an arithmetic mean of non-null device trip scores. */
   async summary(scope: FleetScope): Promise<FleetTripSummary> {
     const base = tripListRowsSql(this.prisma.schema, scope);
-    const events = fleetTable(this.prisma.schema, 'FleetEvent');
+    const events = fleetTable(this.prisma.schema, 'fleetEvent');
     const rows: unknown = await this.prisma.client.$queryRaw(Prisma.sql`
       WITH trips AS (${base})
       SELECT count(*)::int AS "totalTrips",
@@ -157,7 +158,7 @@ export class TripsRepository {
         avg(t."drivingScore")::float8 AS "averageDrivingScore",
         (SELECT count(*)::int FROM ${events} e
           WHERE e."tenantId" = ${scope.tenantId}::uuid AND e."branchId" = ${scope.branchId}::uuid
-            AND e."kind"::text = ANY(${MANEUVER_KINDS}::text[])
+            AND e."kind"::text = ANY(${MANEUVER_KINDS.map((value) => fleetEventKindDb[value])}::text[])
             AND EXISTS (SELECT 1 FROM trips attached
               WHERE attached."id" = e."tripId" AND attached."vehicleId" = e."vehicleId")
         ) AS "totalManeuverEvents"
@@ -182,39 +183,13 @@ export class TripsRepository {
     });
   }
 
-  /** Σ non-null distance and trip count per driver for trips started in `(start, end]`. */
-  async driverTotals(scope: FleetScope, driverIds: readonly string[], window: DataWindow) {
-    const rows = await this.prisma.client.trip.groupBy({
-      by: ['driverId'],
-      where: {
-        tenantId: scope.tenantId,
-        branchId: scope.branchId,
-        driverId: { in: [...driverIds] },
-        startedAt: { gt: window.start, lte: window.end },
-      },
-      _sum: { distanceKm: true },
-      _count: { _all: true },
-    });
-    return rows.flatMap((row) =>
-      row.driverId === null
-        ? []
-        : [
-            {
-              driverId: row.driverId,
-              distanceKm: row._sum.distanceKm ?? 0,
-              tripCount: row._count._all,
-            },
-          ],
-    );
-  }
-
   /**
    * One driver's trips started in `(start, end]`: count, distance, scored trips and the
    * distance-weighted scores over scored trips of at least `SCORE_MIN_DISTANCE_KM`.
    */
   async driverScore(scope: FleetScope, driverId: string, window: DataWindow): Promise<DriverScore> {
     const { tenantId, branchId } = scope;
-    const trips = fleetTable(this.prisma.schema, 'Trip');
+    const trips = fleetTable(this.prisma.schema, 'trip');
     const minimum = SCORE_MIN_DISTANCE_KM;
     const rows: unknown = await this.prisma.client.$queryRaw(Prisma.sql`
       SELECT count(*)::int AS "tripCount",

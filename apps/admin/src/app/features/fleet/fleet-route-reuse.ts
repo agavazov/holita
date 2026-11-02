@@ -34,6 +34,8 @@ export class FleetRouteReuseStrategy extends BaseRouteReuseStrategy {
       next.data['resource'] !== 'vehicle-profile' &&
       next.data['resource'] !== 'maintenance' &&
       next.data['resource'] !== 'general' &&
+      next.data['resource'] !== 'scenario' &&
+      next.data['resource'] !== 'diagnostics' &&
       next.data['drawer'] !== true
     ) {
       return true;

@@ -133,6 +133,8 @@ export class DeviceRuleEditor implements OnInit {
   readonly occupiedIds = input<readonly number[]>([]);
   readonly catalogVersion = input<string | null>(null);
   readonly canSend = input(false);
+  readonly newRuleId = input(0);
+  protected readonly step = signal(0);
   readonly save = output<{ draft: RuleDraft; review: boolean }>();
   readonly closeRequest = output();
   private readonly drawer = viewChild(RouteDrawer);
@@ -158,7 +160,7 @@ export class DeviceRuleEditor implements OnInit {
     falseEnabled: new FormControl(false, { nonNullable: true }),
     falseEvent: new FormControl<number | null>(null),
     calculationOnly: new FormControl(false, { nonNullable: true }),
-    debounce: new FormControl(1, {
+    debounce: new FormControl(1000, {
       nonNullable: true,
       validators: integerValidator(1, 32767, { required: true }),
     }),
@@ -169,10 +171,18 @@ export class DeviceRuleEditor implements OnInit {
   protected readonly parameterOptions = computed(() =>
     this.parameters().map((row) => ({ label: `${row.name} [${String(row.id)}]`, value: row.id })),
   );
-  protected readonly operatorOptions = comparisons.map((operator) => ({
-    label: operator,
-    value: operator,
-  }));
+  protected readonly operatorOptions = computed(() => {
+    const text = this.text();
+    const labels: Partial<Record<RuleOperator, string>> = {
+      '=': text.equalTo,
+      '!=': text.notEqualTo,
+      '>': text.greaterThan,
+      '<': text.lessThan,
+      '>=': text.atLeast,
+      '<=': text.atMost,
+    };
+    return comparisons.map((operator) => ({ label: labels[operator], value: operator }));
+  });
   protected readonly groupingOptions = computed(() => [
     { label: this.text().allConditions, value: 'and' },
     { label: this.text().anyCondition, value: 'or' },
@@ -184,6 +194,11 @@ export class DeviceRuleEditor implements OnInit {
         /\[(\d+)\]/g,
         (_match: string, id: string) =>
           this.parameters().find((row) => row.id === Number(id))?.name ?? `[${id}]`,
+      )
+      .replace(
+        />=|<=|!=|=|>|</g,
+        (operator) =>
+          this.operatorOptions().find((row) => row.value === operator)?.label ?? operator,
       )
       .replace(/\band\b/g, this.text().and)
       .replace(/\bor\b/g, this.text().or);
@@ -268,6 +283,9 @@ export class DeviceRuleEditor implements OnInit {
         this.expressionError.set(true);
       }
     }
+    if (!draft) {
+      this.form.controls.ruleId.setValue(this.newRuleId());
+    }
     if (!this.parameterOptions().length) {
       this.advancedExpression.set(true);
     }
@@ -303,6 +321,7 @@ export class DeviceRuleEditor implements OnInit {
 
   protected useExpressionText(): void {
     this.advancedExpression.set(true);
+    this.step.set(0);
   }
 
   private updateExpression(): void {
@@ -351,7 +370,29 @@ export class DeviceRuleEditor implements OnInit {
     this.form.controls.expression.markAsDirty();
   }
 
-  protected submit(review = false): void {
+  protected nextStep(): void {
+    this.attempted.set(true);
+    this.form.controls.name.markAsTouched();
+    this.form.controls.expression.markAsTouched();
+    this.form.controls.debounce.markAsTouched();
+    this.conditions.markAllAsTouched();
+    if (
+      this.form.controls.name.invalid ||
+      this.form.controls.expression.invalid ||
+      this.form.controls.debounce.invalid ||
+      this.expressionError()
+    ) {
+      return;
+    }
+    this.attempted.set(false);
+    this.step.set(1);
+  }
+
+  protected submit(review = true): void {
+    if (this.step() === 0) {
+      this.nextStep();
+      return;
+    }
     this.attempted.set(true);
     this.form.markAllAsTouched();
     this.conditions.markAllAsTouched();

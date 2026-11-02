@@ -12,6 +12,7 @@ import { DeviceRuleOperationsProcessor } from './device-rule-operations.processo
 
 @Module({
   imports: [DatabaseModule, ClockModule, CoreClientModule, KarmaDeviceReadsModule],
+  exports: [DeviceOperationsService],
   providers: [
     FleetEnabledGuard,
     DeviceOperationsRepository,

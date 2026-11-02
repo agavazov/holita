@@ -1,8 +1,14 @@
 {
-  "description": "Choose a vehicle to view its device and settings.",
+  "description": "Choose a truck to explore its daily report, trips and location.",
   "inventory": "Vehicles",
   "search": "Search by registration",
   "project": "Project",
   "allProjects": "All projects",
-  "noMatches": "No trucks match the selected filters."
+  "noMatches": "No trucks match the selected filters.",
+  "actions": "Actions",
+  "lastLocation": "Last-known location",
+  "source": "Karma API",
+  "locationRefreshFailed": "Last-known location could not be refreshed. Any retained point and source facts are from the previous successful read.",
+  "locationHint": "View the last known position; it may be out of date.",
+  "technicalDetails": "Source details"
 }

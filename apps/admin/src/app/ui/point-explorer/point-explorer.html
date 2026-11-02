@@ -1,0 +1,231 @@
+@if (activeProvenance(); as evidence) {
+  <holita-source-context
+    [language]="language()"
+    [provenance]="evidence"
+    [period]="period()"
+    [coverage]="coverage()"
+    [compact]="true"
+  />
+} @else if (coverage(); as facts) {
+  <dl class="app-facts">
+    <div>
+      <dt>{{ text().retrieval }}</dt>
+      <dd>{{ text().retrievalStates[facts.retrieval] }}</dd>
+    </div>
+    <div>
+      <dt>{{ text().coverage }}</dt>
+      <dd>{{ text().coverageStates[facts.positionCoverage] }}</dd>
+    </div>
+  </dl>
+}
+<div class="app-context-toolbar">
+  <p class="app-muted">{{ text().selectionHint }}</p>
+  @if (selectedOutsidePage()) {
+    <button pButton type="button" severity="secondary" [outlined]="true" (click)="revealSelected()">
+      {{ text().revealSelected }}
+    </button>
+  }
+  <button
+    pButton
+    type="button"
+    severity="secondary"
+    [outlined]="true"
+    [disabled]="endpointMode()"
+    (click)="selectedKeyChange.emit(null)"
+  >
+    {{ text().returnToEndpoints }}
+  </button>
+</div>
+@if (points(); as loaded) {
+  <dl class="app-facts">
+    <div>
+      <dt>{{ text().loaded }}</dt>
+      <dd>{{ number(loaded.length) }}</dd>
+    </div>
+    <div>
+      <dt>{{ text().valid }}</dt>
+      <dd>{{ number(validPoints().length) }}</dd>
+    </div>
+    <div>
+      <dt>{{ text().distinct }}</dt>
+      <dd>{{ number(distinctCoordinates()) }}</dd>
+    </div>
+  </dl>
+  <p class="app-muted">{{ chronological() ? text().chronological : text().sourceOrder }}</p>
+}
+<div class="point-explorer__workspace">
+  <holita-table-panel
+    #panel
+    [heading]="text().positions"
+    [total]="points()?.length ?? null"
+    [view]="tableState()"
+    [busy]="loading()"
+    [errorText]="error()"
+    [emptyTitle]="points() === null ? text().unavailable : text().empty"
+    [emptyDescription]="points() === null ? text().unavailableHint : text().emptyHint"
+    [actions]="actions()"
+    [actionContext]="points()"
+    [page]="page()"
+    [pageSizes]="[10, 25, 50]"
+    (pageChange)="changePage($event)"
+    (action)="select($event)"
+    (retry)="retry.emit()"
+  >
+    <p-table
+      class="app-responsive-table"
+      [value]="rows()"
+      dataKey="key"
+      [rowTrackBy]="trackPoint"
+      [scrollable]="true"
+      [tableStyle]="{ width: '100%' }"
+    >
+      <ng-template #header>
+        <tr>
+          <th scope="col" class="app-col-identity">{{ text().sourceTime }}</th>
+          <th scope="col">{{ text().coordinates }}</th>
+          <th scope="col" class="app-col-actions">{{ text().actions }}</th>
+        </tr>
+      </ng-template>
+      <ng-template #body let-row>
+        <tr>
+          <td class="app-col-identity">
+            <div class="app-table-identity">
+              <button
+                type="button"
+                class="app-link"
+                [attr.aria-label]="
+                  text().inspect +
+                  ' ' +
+                  (row.sourceTime ?? '—') +
+                  ' · ' +
+                  sourceLabel(row.source) +
+                  ' ' +
+                  row.id
+                "
+                [attr.aria-pressed]="selectedKey() === row.key"
+                (click)="panel.run('select', [record(row)], $event.currentTarget)"
+              >
+                {{ row.sourceTime ?? '—' }}
+              </button>
+              <span class="point-explorer__source"
+                >{{ sourceLabel(row.source) }} · {{ row.id }}</span
+              >
+              @if (selectedKey() === row.key) {
+                <span class="app-muted point-explorer__selected">{{ text().selected }}</span>
+              }
+              <div class="app-table-mobile-actions">
+                <holita-row-actions
+                  [actions]="actions()"
+                  [record]="record(row)"
+                  (choose)="panel.run($event.action, [record(row)], $event.origin)"
+                />
+              </div>
+            </div>
+          </td>
+          <td>
+            @if (row.coordinates; as point) {
+              {{ point.latitude }} / {{ point.longitude }}
+            } @else {
+              {{ text().noCoordinates }}
+            }
+          </td>
+          <td class="app-col-actions">
+            <holita-row-actions
+              [actions]="actions()"
+              [record]="record(row)"
+              (choose)="panel.run($event.action, [record(row)], $event.origin)"
+            />
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </holita-table-panel>
+  <div class="app-view point-explorer__selection">
+    @if (!endpointMode() && !selected()) {
+      <p role="status">{{ text().missingSelection }}</p>
+    }
+    @if (selected(); as point) {
+      <section class="app-card" [attr.aria-label]="text().selectedFacts">
+        <dl class="app-facts">
+          <div>
+            <dt>{{ text().source }}</dt>
+            <dd>{{ sourceLabel(point.source) }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().recordId }}</dt>
+            <dd>{{ point.id }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().sourceTime }}</dt>
+            <dd>{{ point.sourceTime ?? '—' }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().provedUtc }}</dt>
+            <dd>{{ point.instantUtc ?? text().unproved }}</dd>
+          </div>
+          @for (fact of point.facts; track $index) {
+            <div>
+              <dt>{{ fact.label }}</dt>
+              <dd>{{ fact.value }}</dd>
+            </div>
+          }
+        </dl>
+      </section>
+    }
+    @if (showMap()) {
+      <holita-map-preview
+        [language]="language()"
+        [origin]="mapOrigin()"
+        [destination]="mapDestination()"
+        [route]="endpointMode()"
+        [identity]="mapIdentity()"
+        [originTime]="mapOriginTime()"
+        [destinationTime]="mapDestinationTime()"
+      />
+    }
+  </div>
+</div>
+<p class="app-muted">{{ text().recordPolicy }}</p>
+<div class="point-explorer__coverage">
+  <section class="app-card app-stack" [attr.aria-label]="text().intervals">
+    <h3 class="app-card__title">{{ text().intervals }}</h3>
+    <p>
+      {{ text().thresholdBefore }} {{ number(gapThresholdMinutes()) }} {{ text().thresholdAfter }}
+    </p>
+    <p class="app-muted">{{ text().intervalHint }}</p>
+    @if (intervalsAssessed()) {
+      @if (longIntervals().length) {
+        <ul class="point-explorer__interval-list">
+          @for (interval of longIntervals(); track interval.from.key + ':' + interval.to.key) {
+            <li>
+              {{ interval.from.sourceTime ?? '—' }} – {{ interval.to.sourceTime ?? '—' }} ({{
+                number(interval.minutes)
+              }}
+              {{ text().minutes }})
+            </li>
+          }
+        </ul>
+      } @else {
+        <p>{{ text().noLongIntervals }}</p>
+      }
+    } @else {
+      <p>{{ text().intervalsUnassessed }}</p>
+    }
+  </section>
+  @if (coverage(); as facts) {
+    <section class="app-card app-stack" [attr.aria-label]="text().declaredGaps">
+      <h3 class="app-card__title">{{ text().declaredGaps }}</h3>
+      <p class="app-muted">{{ text().declaredHint }}</p>
+      @if (facts.gaps.length) {
+        <p>{{ period()?.timeZone ?? 'UTC' }} · {{ text().endExclusive }}</p>
+        <ul class="point-explorer__interval-list">
+          @for (gap of facts.gaps; track gap.from) {
+            <li>{{ declaredTime(gap.from) }} – {{ declaredTime(gap.toExclusive) }}</li>
+          }
+        </ul>
+      } @else {
+        <p>{{ text().noDeclaredGaps }}</p>
+      }
+    </section>
+  }
+</div>

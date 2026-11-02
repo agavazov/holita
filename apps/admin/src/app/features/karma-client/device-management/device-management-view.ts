@@ -1,12 +1,9 @@
 import {
-  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
   effect,
-  type ElementRef,
   inject,
-  Injector,
   input,
   output,
   signal,
@@ -75,7 +72,7 @@ interface RuleRow extends RuleDraft {
   readonly conflict: boolean;
 }
 
-/** The settings presentation for both local drafts and captured device evidence. */
+/** One read, edit, review and verified-result flow for the selected truck. */
 @Component({
   selector: 'holita-device-management-view',
   imports: [
@@ -139,17 +136,14 @@ export class DeviceManagementView {
   readonly refresh = output();
 
   private readonly draftStore = inject(RuleDraftStore);
-  private readonly injector = inject(Injector);
   private readonly parameterEditor = viewChild(DeviceParameterEditor);
   private readonly ruleEditor = viewChild(DeviceRuleEditor);
   private readonly ruleReview = viewChild(DeviceRuleReview);
-  private readonly snapshotTitle = viewChild<ElementRef<HTMLHeadingElement>>('snapshotTitle');
   protected readonly text = computed(() => (this.language() === 'bg' ? bg : en));
   protected readonly operationText = computed(() => deviceConfigurationText(this.language()));
   protected readonly selectedRule = signal<RuleDraft | null>(null);
   protected readonly editingRule = signal<RuleDraft | null | undefined>(undefined);
   private submittedDraft: { draft: RuleDraft; definitionHex: string } | null = null;
-  private readonly selectedSnapshotId = signal<string | null>(null);
   protected readonly operationPending = deviceReadPending;
   protected readonly pending = computed(() => this.operations().some(deviceReadPending));
   protected readonly busy = computed(
@@ -176,26 +170,62 @@ export class DeviceManagementView {
     );
   });
   protected readonly visibleOperations = computed(() =>
-    this.operations().filter((operation) => this.matchesTarget(operation)),
+    this.operations()
+      .filter((operation) => this.matchesTarget(operation))
+      .toSorted((left, right) => right.requestedAt.localeCompare(left.requestedAt)),
   );
   protected readonly latestOperation = computed(() => this.visibleOperations()[0] ?? null);
-  protected readonly snapshotOperation = computed(
+  protected readonly snapshotOperation = this.matchingSnapshot;
+  protected readonly lastReadAt = computed(
     () =>
-      this.visibleOperations().find(
-        (operation) => operation.id === this.selectedSnapshotId() && operation.configuration,
-      ) ?? this.matchingSnapshot(),
+      [this.matchingSnapshot(), this.rulesSnapshot()]
+        .filter((operation) => operation?.status === 'COMPLETE')
+        .map((operation) => operation?.completedAt ?? '')
+        .sort()
+        .at(-1) || null,
   );
-  protected readonly viewingHistoricalSnapshot = computed(
-    () =>
-      !!this.selectedSnapshotId() && this.snapshotOperation()?.id !== this.matchingSnapshot()?.id,
+  protected readonly attentionOperations = computed(() =>
+    this.visibleOperations().filter(
+      (operation) =>
+        deviceReadPending(operation) ||
+        operation.status === 'FAILED' ||
+        operation.status === 'TIMED_OUT',
+    ),
   );
+  protected readonly readiness = computed(() => {
+    const text = this.text();
+    if (this.state() === 'loading') {
+      return text.loadingSettings;
+    }
+    if (this.state() !== 'ready') {
+      return text.settingsUnavailable;
+    }
+    if (!this.branchId()) {
+      return text.chooseBranch;
+    }
+    if (!this.enabled()) {
+      return text.dispatchOff;
+    }
+    if (this.busy()) {
+      return text.waitForResult;
+    }
+    if (!this.writesEnabled()) {
+      return text.writesOff;
+    }
+    if (!this.matchingSnapshot()?.configuration) {
+      return text.readBeforeEditing;
+    }
+    if (!this.rulesSnapshot()?.rulesConfiguration) {
+      return text.parametersReady;
+    }
+    return text.readyToChange;
+  });
   protected readonly intervalEditingUnavailable = computed(
     () =>
       !this.writesEnabled() ||
       this.readUnavailable() ||
       !this.matchingSnapshot()?.configuration ||
-      this.matchingSnapshot()?.status !== 'COMPLETE' ||
-      this.viewingHistoricalSnapshot(),
+      this.matchingSnapshot()?.status !== 'COMPLETE',
   );
   protected readonly ruleSendingUnavailable = computed(
     () =>
@@ -316,6 +346,14 @@ export class DeviceManagementView {
         .map((row) => ({ ...row, previous: undefined, conflict: false })),
     ];
   });
+  protected readonly newRuleId = computed(() => {
+    const used = this.displayedRules().map((row) => row.ruleId);
+    let id = 0;
+    while (used.includes(id)) {
+      id++;
+    }
+    return id;
+  });
   protected readonly occupiedRuleIds = computed(() =>
     this.confirmedRules().flatMap((row) => (row.ruleId === undefined ? [] : [row.ruleId])),
   );
@@ -353,7 +391,6 @@ export class DeviceManagementView {
   }));
   protected readonly ruleActions = computed<readonly ListActionBase<string>[]>(() => [
     { id: 'edit', label: this.text().edit },
-    { id: 'duplicate', label: this.text().duplicate },
     { id: 'send', label: this.text().reviewSend },
     {
       id: 'remove',
@@ -463,8 +500,9 @@ export class DeviceManagementView {
       id: row.id,
       label: row.name,
       unavailable: [
-        ...(row.opaque ? ['edit', 'duplicate', 'send'] : []),
-        ...(this.ruleSendingUnavailable() || row.conflict ? ['send'] : []),
+        ...(row.opaque ? ['edit', 'send'] : []),
+        ...(this.ruleSendingUnavailable() ? ['edit', 'send'] : []),
+        ...(row.conflict ? ['send'] : []),
         ...(row.confirmed ? ['remove'] : []),
       ],
     };
@@ -478,11 +516,37 @@ export class DeviceManagementView {
           this.ruleParameters().find((row) => row.id === Number(id))?.name ??
           `${this.text().parameter} ${id}`,
       )
+      .replace(/>=|<=|!=|=|>|</g, (operator) => {
+        const labels: Record<string, string> = {
+          '>': this.text().greaterThan,
+          '<': this.text().lessThan,
+          '>=': this.text().atLeast,
+          '<=': this.text().atMost,
+          '=': this.text().equalTo,
+          '!=': this.text().notEqualTo,
+        };
+        return labels[operator] ?? operator;
+      })
       .replace(/\band\b/g, this.text().and)
       .replace(/\bor\b/g, this.text().or);
   }
 
+  protected ruleSentence(row: RuleDraft): string {
+    if (row.opaque) {
+      return this.text().opaqueHint;
+    }
+    const text = this.text();
+    const send = row.trueEvent ? `${text.sendEvent} ${String(row.trueEvent)}` : text.noReport;
+    const clear = row.falseEvent
+      ? `${text.onClear} ${text.sendEvent} ${String(row.falseEvent)}`
+      : text.onClearNoReport;
+    return `${text.when} ${this.displayExpression(row.expression)} ${text.forDuration} ${formatNumber(row.debounce / 1000, this.language(), { fraction: 3 })} ${text.seconds}, ${send}; ${clear}.`;
+  }
+
   protected openRule(row: RuleDraft | null = null): void {
+    if (this.ruleSendingUnavailable()) {
+      return;
+    }
     this.editingRule.set(row);
   }
 
@@ -503,17 +567,6 @@ export class DeviceManagementView {
       this.draftStore.remove(rule.id);
     } else if (event.action === 'send') {
       this.reviewRule(rule);
-    } else if (event.action === 'duplicate' && !rule.opaque) {
-      this.openRule({
-        id: crypto.randomUUID(),
-        name: `${rule.name} · ${this.text().copy}`,
-        expression: rule.expression,
-        trueEvent: rule.trueEvent,
-        falseEvent: rule.falseEvent,
-        debounce: rule.debounce,
-        activateDashboard: rule.activateDashboard ?? false,
-        ...(rule.catalogVersion ? { catalogVersion: rule.catalogVersion } : {}),
-      });
     } else if (event.action === 'edit' && !rule.opaque) {
       this.openRule(rule);
     }
@@ -553,11 +606,6 @@ export class DeviceManagementView {
     }
   }
 
-  protected showSnapshot(id: string | null): void {
-    this.selectedSnapshotId.set(id);
-    afterNextRender(() => this.snapshotTitle()?.nativeElement.focus(), { injector: this.injector });
-  }
-
   async canLeave(): Promise<boolean> {
     return (
       !this.requesting() &&
@@ -579,6 +627,14 @@ export class DeviceManagementView {
       default:
         return 'info';
     }
+  }
+
+  protected sentAt(operation: DeviceConfigurationOperation): string | null {
+    return operation.kind === 'ADD_PARAMETER' ||
+      operation.kind === 'UPDATE_INTERVAL' ||
+      operation.kind === 'UPSERT_RULE'
+      ? operation.writeDispatchedAt
+      : operation.dispatchedAt;
   }
 
   protected operationFailure(operation: DeviceConfigurationOperation): string {

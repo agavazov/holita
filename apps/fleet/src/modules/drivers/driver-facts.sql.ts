@@ -12,8 +12,8 @@ export function driverFactsSql(
   window?: DataWindow | null,
   driverIds?: readonly string[],
 ): Prisma.Sql {
-  const drivers = fleetTable(schema, 'Driver');
-  const trips = fleetTable(schema, 'Trip');
+  const drivers = fleetTable(schema, 'driver');
+  const trips = fleetTable(schema, 'trip');
   const clock =
     window === undefined
       ? vehicleDataClockSql(schema, scope)

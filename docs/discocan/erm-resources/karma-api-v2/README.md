@@ -3,8 +3,8 @@
 Karma API v2 is the external ERM HTTP API consumed by the independent
 `apps/karma-client` subgraph. The current integration reads one configured account
 through Gateway and exposes it to authenticated admin sessions. A separate internal
-machine API executes fixed parameter/profile reads and single-definition additions or
-interval changes for Fleet's
+machine API executes fixed parameter/profile/rule/logger/communication reads and single-definition additions,
+interval changes or one-rule changes for Fleet's
 [persisted background operations](../../architecture.md#background-device-configuration-reads).
 It does not archive telemetry history or synchronize
 Fleet Vehicles/Devices with Karma records.
@@ -15,18 +15,18 @@ For device changes, see [Configuring eData parameter reporting through Karma](..
 It distinguishes implemented read/add/interval operations, manual upstream procedures
 and installation-specific evidence limits.
 
-| Document / artifact                                             | Contents                                                                                            |
-| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| [Endpoint catalog](endpoint-catalog.md)                         | Every declared method, path, request field, required/multiple flag and current use                  |
-| [Data models](data-models.md)                                   | 102 field mappings and model notes, GraphQL types, validation, omissions and identity boundaries    |
-| [Observed eData parameters](observed-parameters.md)             | Thirteen encountered parameter IDs and original descriptions, with evidence and interpretation limits |
-| [Web functionality research](web-functionality-research.md)    | 36 classic menu functions, safe action coverage, NC2 technical console, public/internal API links, calculations and reproduction conditions |
-| [Transport and authentication](transport-and-authentication.md) | Sessions, wire encoding, time semantics, errors, deadlines and cursor mechanics                     |
-| [Holita integration](holita-integration.md)                     | Concrete modules, 12 public queries, routes, frontend lifecycle and test ownership                  |
-| [Limitations](limitations.md)                                   | Current endpoint/field gaps, adapter assumptions and evidence limits                                |
-| [Reconstructed OpenAPI 3.1](openapi.reconstructed.json)         | Machine-readable reference for 20 paths and 32 declared HTTP operations                             |
-| [Original source assets](source/README.md)                      | Downloaded vendor help, checksums and structural response evidence                                  |
-| [Remaining questions and work](../../../todo/karma-api-v2.md)   | Unresolved provider questions and possible implementation work, kept outside product documentation  |
+| Document / artifact                                             | Contents                                                                                                                                    |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Endpoint catalog](endpoint-catalog.md)                         | Every declared method, path, request field, required/multiple flag and current use                                                          |
+| [Data models](data-models.md)                                   | 102 field mappings and model notes, GraphQL types, validation, omissions and identity boundaries                                            |
+| [Observed eData parameters](observed-parameters.md)             | Thirteen encountered parameter IDs and original descriptions, with evidence and interpretation limits                                       |
+| [Web functionality research](web-functionality-research.md)     | 36 classic menu functions, safe action coverage, NC2 technical console, public/internal API links, calculations and reproduction conditions |
+| [Transport and authentication](transport-and-authentication.md) | Sessions, wire encoding, time semantics, errors, deadlines and cursor mechanics                                                             |
+| [Holita integration](holita-integration.md)                     | Concrete modules, 15 public queries, routes, frontend lifecycle and test ownership                                                          |
+| [Limitations](limitations.md)                                   | Current endpoint/field gaps, adapter assumptions and evidence limits                                                                        |
+| [Reconstructed OpenAPI 3.1](openapi.reconstructed.json)         | Machine-readable reference for 20 paths and 32 declared HTTP operations                                                                     |
+| [Original source assets](source/README.md)                      | Downloaded vendor help, checksums and structural response evidence                                                                          |
+| [Remaining questions and work](../../../todo/karma-api-v2.md)   | Unresolved provider questions and possible implementation work, kept outside product documentation                                          |
 
 ## Sources and confidence
 
@@ -81,20 +81,21 @@ The documentation distinguishes:
 
 ## Current integration boundary
 
-Twelve fixed upstream GET reads back the twelve public Karma queries. Internal
-`POST /login` supplies the upstream session; the internal configuration reader uses
-`POST /commands` for fixed parameter/profile reads and a single additive definition. This uses **14 of
-the 32 declared method/path operations**; several reads expose only part of the upstream filters.
-The number is an operation inventory, not a claim of complete business coverage.
+Fifteen public Karma queries reuse twelve upstream GET method/path pairs. Daily
+reports, position samples and diagnostic history compose existing reads. Internal
+queue reconciliation adds `GET /queue/{id}`; `POST /login` supplies the session and
+`POST /commands` submits fixed parameter/profile/rule/logger/communication reads
+and controlled single-record writes. This uses **15 of the 32 declared method/path
+operations**; several reads expose only part of the upstream filters.
 
 Implemented reads cover cars/list/detail, eData, last location, trips, events,
-driving profile, projects, time zones, API version, users and roles. Fixed machine
-operations collect parameter/profile definitions from bounded `GET /events` responses;
-Fleet owns scoped reads, catalog-gated additions, interval changes and saved verification.
-Public Karma queries remain read-only. Missing areas include driver management,
-sensors, vehicle/project writes, `/parameters`, global/profile changes, deletion or arbitrary
-device commands, queue status and accident reports. Full comparisons
-are in the [catalog](endpoint-catalog.md) and [limitations](limitations.md).
+diagnostic history, driving profile, projects, time zones, API version, users and
+roles. Fleet owns scoped background reads, catalog-gated additions, interval
+changes, one-rule changes and saved verification. Public Karma queries remain
+read-only. Missing areas include driver management, sensors, vehicle/project
+writes, `/parameters`, global/profile changes, deletion, arbitrary device commands
+and accident reports. See the [catalog](endpoint-catalog.md) and
+[limitations](limitations.md) for the precise boundary.
 
 Every Karma GraphQL query requires holita's verified signed session, including
 the public upstream version. All authenticated Tenants see the same configured
@@ -103,8 +104,9 @@ Karma scope and does not change Fleet Tenant/Branch isolation. The demo login is
 not production user identity or membership authorization.
 
 The configuration machine API requires `KARMA_INTERNAL_TOKEN` rather than a
-browser session. Fleet validates its own Tenant/Branch Device before queueing work,
-captures the explicitly selected Karma identity, and rechecks it before dispatch.
+browser session. Fleet validates Tenant/Branch scope before queueing work, captures the selected
+Karma car/device identity, and rechecks it before dispatch. A local Fleet Device
+registration is not required for the connected Karma settings workflow.
 This does not establish a general Karma `device_id` to IMEI mapping or grant shared
 account queries permission to change device configuration.
 
@@ -121,8 +123,8 @@ preserve unknown schemas until supported by evidence. Do not archive raw account
 records, credentials, sessions, private URLs or live telemetry as examples here.
 
 Use [testing](../../../testing.md) for application checks.
-Documentation-only edits need link, JSON/schema, source-integrity and diff checks;
-they do not require database fixtures or a full application regression.
+Apply the root handover policy to repository changes; keep device evidence
+separate from application check results.
 
 Related authoritative behavior: [architecture](../../architecture.md#karma-client),
 [development](../../development.md#karma-client) and

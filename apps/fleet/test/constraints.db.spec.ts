@@ -569,47 +569,47 @@ describe('Fleet scope isolation and referential integrity in PostgreSQL', () => 
         [
           'Vehicle to VehicleGroup',
           () =>
-            connection.query('UPDATE "Vehicle" SET "groupId" = $2 WHERE id = $1', [
+            connection.query('UPDATE "vehicle" SET "groupId" = $2 WHERE id = $1', [
               vehicleId,
               foreignGroup.id,
             ]),
-          { code: '23503', constraint: 'Vehicle_tenantId_branchId_groupId_fkey' },
+          { code: '23503', constraint: 'vehicle_tenantId_branchId_groupId_fkey' },
         ],
         [
           'Vehicle to Driver',
           () =>
-            connection.query('UPDATE "Vehicle" SET "currentDriverId" = $2 WHERE id = $1', [
+            connection.query('UPDATE "vehicle" SET "currentDriverId" = $2 WHERE id = $1', [
               vehicleId,
               foreignDriver.id,
             ]),
-          { code: '23503', constraint: 'Vehicle_tenantId_branchId_currentDriverId_fkey' },
+          { code: '23503', constraint: 'vehicle_tenantId_branchId_currentDriverId_fkey' },
         ],
         [
           'Trip to Driver',
           () =>
-            connection.query('UPDATE "Trip" SET "driverId" = $2 WHERE id = $1', [
+            connection.query('UPDATE "trip" SET "driverId" = $2 WHERE id = $1', [
               trip.id,
               foreignDriver.id,
             ]),
-          { code: '23503', constraint: 'Trip_tenantId_branchId_driverId_fkey' },
+          { code: '23503', constraint: 'trip_tenantId_branchId_driverId_fkey' },
         ],
         [
           'FleetEvent to Trip',
           () =>
-            connection.query('UPDATE "FleetEvent" SET "tripId" = $2 WHERE id = $1', [
+            connection.query('UPDATE "fleetEvent" SET "tripId" = $2 WHERE id = $1', [
               event.id,
               foreignTrip.id,
             ]),
-          { code: '23503', constraint: 'FleetEvent_tenantId_branchId_vehicleId_tripId_fkey' },
+          { code: '23503', constraint: 'fleetEvent_tenantId_branchId_vehicleId_tripId_fkey' },
         ],
         [
           'FleetEvent to Driver',
           () =>
-            connection.query('UPDATE "FleetEvent" SET "driverId" = $2 WHERE id = $1', [
+            connection.query('UPDATE "fleetEvent" SET "driverId" = $2 WHERE id = $1', [
               event.id,
               foreignDriver.id,
             ]),
-          { code: '23503', constraint: 'FleetEvent_tenantId_branchId_driverId_fkey' },
+          { code: '23503', constraint: 'fleetEvent_tenantId_branchId_driverId_fkey' },
         ],
         [
           'VehicleStatusSample to Vehicle',
@@ -645,13 +645,13 @@ describe('Fleet scope isolation and referential integrity in PostgreSQL', () => 
     }
     // The trip exists in the Branch but belongs to another vehicle.
     expect(
-      await sqlError('UPDATE "FleetEvent" SET "tripId" = $2 WHERE id = $1', [
+      await sqlError('UPDATE "fleetEvent" SET "tripId" = $2 WHERE id = $1', [
         event.id,
         otherTrip.id,
       ]),
     ).toMatchObject({
       code: '23503',
-      constraint: 'FleetEvent_tenantId_branchId_vehicleId_tripId_fkey',
+      constraint: 'fleetEvent_tenantId_branchId_vehicleId_tripId_fkey',
     });
     expect(await ownRows()).toEqual(before);
   });
@@ -678,29 +678,29 @@ describe('Fleet scope isolation and referential integrity in PostgreSQL', () => 
     await client.vehicleGroup.create({ data: { tenantId, branchId, name: 'Unique' } });
     const indexes: [string, Promise<unknown>][] = [
       [
-        'Vehicle_tenantId_branchId_fleetNumber_key',
+        'vehicle_tenantId_branchId_fleetNumber_key',
         client.vehicle.create({
           data: { tenantId, branchId, licensePlate: 'U2', fleetNumber: 'U-01' },
         }),
       ],
       [
-        'Vehicle_tenantId_branchId_vin_key',
+        'vehicle_tenantId_branchId_vin_key',
         client.vehicle.create({ data: { tenantId, branchId, licensePlate: 'U3', vin } }),
       ],
       [
-        'Device_tenantId_branchId_imei_key',
+        'device_tenantId_branchId_imei_key',
         client.device.create({
           data: { tenantId, branchId, vehicleId, imei: '123456789012345' },
         }),
       ],
       [
-        'Driver_tenantId_branchId_employeeNumber_key',
+        'driver_tenantId_branchId_employeeNumber_key',
         client.driver.create({
           data: { tenantId, branchId, firstName: 'U', lastName: 'Two', employeeNumber: 'E-01' },
         }),
       ],
       [
-        'Driver_tenantId_branchId_identificationKey_key',
+        'driver_tenantId_branchId_identificationKey_key',
         client.driver.create({
           data: {
             tenantId,
@@ -712,7 +712,7 @@ describe('Fleet scope isolation and referential integrity in PostgreSQL', () => 
         }),
       ],
       [
-        'VehicleGroup_tenantId_branchId_name_key',
+        'vehicleGroup_tenantId_branchId_name_key',
         client.vehicleGroup.create({ data: { tenantId, branchId, name: 'Unique' } }),
       ],
     ];

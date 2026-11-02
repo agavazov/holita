@@ -33,11 +33,17 @@ const pad = 2;
         [attr.y2]="height - 0.5"
       />
       @for (line of lines(); track $index) {
-        <polyline class="sparkline__line" [attr.points]="line" />
+        @if (line.single; as point) {
+          <path class="sparkline__dot" [attr.d]="'M' + point.x + ' ' + point.y + 'h0'" />
+        } @else {
+          <polyline class="sparkline__line" [attr.points]="line.points" />
+        }
       }
-      @if (last(); as last) {
-        <!-- A zero-length round-capped stroke stays circular when the plot stretches. -->
-        <path class="sparkline__dot" [attr.d]="'M' + last.x + ' ' + last.y + 'h0'" />
+      @if (!lines().at(-1)?.single) {
+        @if (last(); as last) {
+          <!-- A zero-length round-capped stroke stays circular when the plot stretches. -->
+          <path class="sparkline__dot" [attr.d]="'M' + last.x + ' ' + last.y + 'h0'" />
+        }
       }
     </svg>
   `,
@@ -105,21 +111,24 @@ export class Sparkline {
   }
 
   protected readonly lines = computed(() => {
-    const lines: string[] = [];
+    const lines: { points: string; single: { x: number; y: number } | null }[] = [];
     let current: string[] = [];
+    let first: { x: number; y: number } | null = null;
     for (const point of this.points()) {
       if (point.value === null || !Number.isFinite(point.value)) {
         if (current.length) {
-          lines.push(current.join(' '));
+          lines.push({ points: current.join(' '), single: current.length === 1 ? first : null });
         }
         current = [];
+        first = null;
         continue;
       }
       const { x, y } = this.position({ at: point.at, value: point.value });
+      first ??= { x, y };
       current.push(`${String(x)},${String(y)}`);
     }
     if (current.length) {
-      lines.push(current.join(' '));
+      lines.push({ points: current.join(' '), single: current.length === 1 ? first : null });
     }
     return lines;
   });

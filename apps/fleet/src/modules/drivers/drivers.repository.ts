@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { DataWindow } from '../../clock/fleet-clock.js';
+import { fleetDriverStatusDb } from '../../database/enums.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import {
   dateOrNull,
@@ -7,7 +8,7 @@ import {
   integer,
   number,
   numberOrNull,
-  oneOf,
+  databaseEnum,
   rowsOf,
   text,
 } from '../../database/sql.js';
@@ -16,15 +17,13 @@ import type {
   FleetDriverSortField,
   FleetDriverSummary,
 } from '../../generated/graphql/types.js';
-import { FleetDriverStatus, type FleetLicenseCategory } from '../../generated/prisma/enums.js';
+import type { FleetDriverStatus, FleetLicenseCategory } from '../../generated/prisma/enums.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import type { FleetScope, SortDirection } from '../../validation.js';
 import { vehicleDataClockSql } from '../telemetry/vehicle-facts.sql.js';
 import type { DriverConditionCriteria } from './driver-filter.js';
 import { driverFactsSql } from './driver-facts.sql.js';
 import { driverListOrderSql, driverListWhereSql } from './driver-list.sql.js';
-
-const DRIVER_STATUSES = Object.values(FleetDriverStatus);
 
 /**
  * Deactivation and Vehicle writes setting a driver share this scoped lock. Vehicle updates
@@ -38,10 +37,10 @@ export async function lockDriverStatus(
   id: string,
 ): Promise<FleetDriverStatus | null> {
   const locked: unknown = await transaction.$queryRaw(Prisma.sql`
-    SELECT "status"::text AS "status" FROM ${fleetTable(schema, 'Driver')}
+    SELECT "status"::text AS "status" FROM ${fleetTable(schema, 'driver')}
     WHERE "tenantId" = ${scope.tenantId}::uuid AND "branchId" = ${scope.branchId}::uuid
       AND "id" = ${id}::uuid FOR NO KEY UPDATE`);
-  return rowsOf(locked, (row) => oneOf(row, 'status', DRIVER_STATUSES))[0] ?? null;
+  return rowsOf(locked, (row) => databaseEnum(row, 'status', fleetDriverStatusDb))[0] ?? null;
 }
 
 /** Current vehicles (by plate) are loaded with every driver through the composite relation. */
@@ -166,8 +165,8 @@ export class DriversRepository {
     const selected: unknown = await this.prisma.client.$queryRaw(Prisma.sql`
       WITH drivers AS (${base}), summary_clock AS (${vehicleDataClockSql(this.prisma.schema, scope)})
       SELECT (SELECT "asOf" FROM summary_clock) AS "dataAsOf",
-        count(*) FILTER (WHERE d."status" = 'ACTIVE')::int AS "active",
-        count(*) FILTER (WHERE d."status" = 'ON_LEAVE')::int AS "onLeave",
+        count(*) FILTER (WHERE d."status" = 'active')::int AS "active",
+        count(*) FILTER (WHERE d."status" = 'onLeave')::int AS "onLeave",
         count(*) FILTER (WHERE d."licenseExpiresOn" <= ${documentsExpireBy}::date
           OR d."tachographCardExpiresOn" <= ${documentsExpireBy}::date)::int AS "documentsExpiring",
         avg(d."drivingScore30d")::float8 AS "averageDrivingScore",

@@ -9,7 +9,6 @@ import type {
   QueryFleetAlertCountsArgs,
   QueryFleetEventArgs,
   QueryFleetEventsArgs,
-  QueryFleetManeuverCountsArgs,
 } from '../../generated/graphql/types.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import { EventsService } from './events.service.js';
@@ -32,14 +31,6 @@ export class EventsResolver {
   @Query('fleetAlertCounts')
   fleetAlertCounts(@Args() args: QueryFleetAlertCountsArgs, @Context() context: RequestContext) {
     return this.eventsService.alertCounts(context, args);
-  }
-
-  @Query('fleetManeuverCounts')
-  fleetManeuverCounts(
-    @Args() args: QueryFleetManeuverCountsArgs,
-    @Context() context: RequestContext,
-  ) {
-    return this.eventsService.maneuverCounts(context, args);
   }
 
   @Mutation('acknowledgeFleetAlert')

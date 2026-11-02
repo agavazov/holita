@@ -162,8 +162,6 @@ extend type Query {
   fleetEvent(id: ID!): FleetEvent!
   "Counts actionable events matching search and filter, ignoring actionable and included/excluded alert statuses in every condition."
   fleetAlertCounts(search: String, filter: FleetEventFilter): FleetAlertCounts!
-  "Nine maneuver kinds in enum order, zero rows included. Requires tripIds or a period of at most 93 days."
-  fleetManeuverCounts(filter: FleetEventFilter!): [FleetManeuverCount!]!
 }
 
 extend type Mutation {

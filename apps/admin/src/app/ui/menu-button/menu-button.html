@@ -10,7 +10,7 @@
   (click)="toggle($event)"
 >
   <ng-content />
-  @if (variant() === 'text') {
+  @if (variant() !== 'icon') {
     <svg data-p-icon="chevron-down" class="menu-button__chevron" aria-hidden="true"></svg>
   }
 </button>
@@ -35,7 +35,13 @@
   }
   <ng-template #item let-item>
     @if (optionOf(item); as option) {
-      <a class="p-menu-item-link menu-button__item" tabindex="-1">
+      <a
+        class="p-menu-item-link menu-button__item"
+        data-pc-section="itemlink"
+        tabindex="-1"
+        [routerLink]="option.link ?? null"
+        [attr.aria-current]="option.link && option.selected ? 'page' : null"
+      >
         @if (option.marker; as marker) {
           <span [class]="'app-dot app-dot--' + marker.tone" aria-hidden="true"></span>
           <span class="app-visually-hidden">{{ marker.label }}</span>

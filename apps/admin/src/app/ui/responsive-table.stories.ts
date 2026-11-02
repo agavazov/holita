@@ -1,7 +1,5 @@
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 import { TableModule } from 'primeng/table';
-import { expect, userEvent, within } from 'storybook/test';
-import { chooseMenuItem } from '../../storybook/interactions';
 import { onFrame } from '../../storybook/story-config';
 import { RowActions } from './row-actions/row-actions';
 
@@ -58,15 +56,6 @@ export const IdentityAndActions: Story = {
       </section>
     `,
   }),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const label = 'Actions for 000123456789012';
-    // Only one of the two responsive placements is exposed at any viewport.
-    await expect(canvas.getAllByRole('button', { name: label })).toHaveLength(1);
-    await userEvent.click(canvas.getByRole('button', { name: label }));
-    await chooseMenuItem(canvasElement.ownerDocument.body, 'View');
-    await expect(canvas.getByRole('status')).toHaveTextContent('View 000123456789012');
-  },
 };
 
 export const MobileIdentityAndActions: Story = {

@@ -1,51 +1,21 @@
-@use 'breakpoints' as bp;
-
 :host {
   display: grid;
-  gap: var(--p-app-stack-gap);
+  gap: var(--p-app-space-4);
   min-inline-size: 0;
 }
-.car-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--p-app-space-1);
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  border-block-end: 1px solid var(--p-content-border-color);
-}
-.car-tabs li {
-  display: flex;
+nav {
   min-inline-size: 0;
 }
-.car-tabs a {
-  display: flex;
-  align-items: center;
-  padding: var(--p-app-space-3) var(--p-app-space-4);
-  border-block-end: 2px solid transparent;
-  border-radius: var(--p-content-border-radius) var(--p-content-border-radius) 0 0;
-  color: var(--p-text-muted-color);
-  font-weight: 500;
-  overflow-wrap: anywhere;
-  text-decoration: none;
-
-  &:hover {
-    color: var(--p-text-color);
-    background: var(--p-app-panel-header-background);
+.car-navigation {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  .app-route-nav__link {
+    white-space: nowrap;
   }
 }
-.car-tabs a.car-tabs__link--active {
-  color: var(--p-highlight-color);
-  border-block-end-color: var(--p-primary-color);
-  background: var(--p-highlight-background);
-  font-weight: 600;
+holita-form-field {
+  inline-size: min(100%, 24rem);
 }
-@include bp.below(sm) {
-  .car-tabs {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .car-tabs a {
-    inline-size: 100%;
-  }
+p-select {
+  inline-size: 100%;
 }

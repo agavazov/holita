@@ -1,14 +1,8 @@
-import {
-  ConflictException,
-  HttpException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { runFleetActions } from '../../fleet-actions.js';
 import { type DataWindow, FleetClock } from '../../clock/fleet-clock.js';
 import type {
   FleetAlertCounts,
-  FleetAlertActionFailure,
   FleetAlertActionResult,
   FleetAlertTransitionInput,
   FleetEvent,
@@ -20,7 +14,6 @@ import type {
   FleetTripDrivingEvent,
   QueryFleetAlertCountsArgs,
   QueryFleetEventsArgs,
-  QueryFleetManeuverCountsArgs,
 } from '../../generated/graphql/types.js';
 import {
   FleetAlertStatus,
@@ -53,10 +46,6 @@ const ALERT_STATUSES = Object.values(FleetAlertStatus);
 const SEVERITIES = Object.values(FleetEventSeverity);
 const EVENT_KINDS = Object.values(FleetEventKind);
 const SORT_FIELDS: readonly FleetEventSortField[] = ['OCCURRED_AT', 'SEVERITY', 'ALERT_STATUS'];
-/** Longest period `fleetManeuverCounts` accepts without trip IDs. */
-const MANEUVER_PERIOD_DAYS = 93;
-const DAY_MS = 86_400_000;
-
 /** The first nine event kinds: the maneuvers that scores and scorecards count. */
 export const MANEUVER_KINDS: readonly FleetEventKind[] = [
   'HARSH_ACCELERATION',
@@ -263,31 +252,6 @@ export class EventsService {
     };
   }
 
-  /** Maneuver counts for trips or for a period of at most 93 days. */
-  async maneuverCounts(
-    context: RequestContext,
-    args: QueryFleetManeuverCountsArgs,
-  ): Promise<FleetManeuverCount[]> {
-    const scope = requireScope(context);
-    const criteria = eventCriteria(undefined, undefined, args.filter);
-    const { occurredFrom, occurredTo } = criteria;
-    if (
-      !criteria.tripIds &&
-      !(
-        occurredFrom &&
-        occurredTo &&
-        occurredTo.getTime() - occurredFrom.getTime() <= MANEUVER_PERIOD_DAYS * DAY_MS
-      )
-    ) {
-      invalid(
-        'filter',
-        `filter.tripIds or filter.occurredFrom and filter.occurredTo at most ${String(MANEUVER_PERIOD_DAYS)} days apart are required.`,
-        'BOUNDED_PERIOD_REQUIRED',
-      );
-    }
-    return maneuverRows(await this.events.kindIntensityCounts(scope, criteria, MANEUVER_KINDS));
-  }
-
   /**
    * Alert transition with optimistic concurrency: the caller states the status it saw; a
    * changed alert is a CONFLICT and an informational or foreign event is NOT_FOUND.
@@ -357,40 +321,9 @@ export class EventsService {
     if (input.remark !== undefined) {
       optionalText(input.remark, 'remark', 1000);
     }
-    const succeededIds: string[] = [];
-    const failures: FleetAlertActionFailure[] = [];
-    for (const id of selected) {
-      try {
-        await this.transitionStored(scope, 'acknowledge', id, input);
-        succeededIds.push(id);
-      } catch (error: unknown) {
-        failures.push(this.actionFailure(context, id, error));
-      }
-    }
-    return { succeededIds, failures };
-  }
-
-  private actionFailure(
-    context: RequestContext,
-    id: string,
-    error: unknown,
-  ): FleetAlertActionFailure {
-    if (error instanceof HttpException) {
-      const code = new Map([
-        [400, 'BAD_USER_INPUT'],
-        [404, 'NOT_FOUND'],
-        [409, 'CONFLICT'],
-        [503, 'SERVICE_UNAVAILABLE'],
-      ]).get(error.getStatus());
-      if (code) {
-        return { id, code, message: error.message };
-      }
-    }
-    this.logger.error({
-      requestId: context.requestId,
-      error: error instanceof Error ? error.name : 'UnknownError',
-    });
-    return { id, code: 'INTERNAL_SERVER_ERROR', message: 'Unable to acknowledge alert.' };
+    return runFleetActions(selected, context, this.logger, 'Unable to acknowledge alert.', (id) =>
+      this.transitionStored(scope, 'acknowledge', id, input),
+    );
   }
 
   /** Complete maneuver timelines for a page of scoped trip/vehicle pairs. */
@@ -421,18 +354,6 @@ export class EventsService {
     }
     const rows = await this.events.openAlertCounts(scope, vehicleIds);
     return new Map(rows.map((row) => [row.vehicleId, row.count]));
-  }
-
-  /** Maneuver events per trip ID (trips without any are absent). */
-  async maneuverCountsByTrip(
-    scope: FleetScope,
-    trips: readonly { vehicleId: string; tripId: string }[],
-  ) {
-    if (!trips.length) {
-      return new Map<string, number>();
-    }
-    const rows = await this.events.countsByTrip(scope, trips, MANEUVER_KINDS);
-    return new Map(rows.map((row) => [row.tripId, row.count]));
   }
 
   /** Maneuver events per driver ID with `occurredAt` in the window. */

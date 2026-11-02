@@ -13,8 +13,8 @@ import type {
   AdminKarmaLocationQuery,
 } from '../../../../../generated/graphql/operations';
 import { KarmaApi } from '../../karma-api';
-import { mapCoordinates } from '../location-map';
-import { karmaMapMessages, MapPreview } from '../map-preview/map-preview';
+import { mapCoordinates } from '../../../../ui/map-preview/location-map';
+import { mapPreviewMessages, MapPreview } from '../../../../ui/map-preview/map-preview';
 import { messages, type Language } from '../../../../i18n/messages';
 import { KarmaCarHeader } from '../../car-header/karma-car-header';
 
@@ -30,7 +30,7 @@ export class LocationPage {
   readonly language = input.required<Language>();
   readonly carId = input.required<string>();
   readonly text = computed(() => messages[this.language()]);
-  readonly mapText = computed(() => karmaMapMessages[this.language()]);
+  readonly mapText = computed(() => mapPreviewMessages[this.language()]);
   readonly car = signal<AdminKarmaCarQuery['karmaCar']>(null);
   readonly location = signal<AdminKarmaLocationQuery['karmaLocation']>(null);
   readonly loading = signal(false);

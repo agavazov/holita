@@ -82,6 +82,7 @@ describe('Device parameter editor', () => {
     fixture.componentInstance.intervalUpdate.subscribe((value) => updates.push(value));
     fixture.componentInstance.addition.subscribe((value) => additions.push(value));
     const submit = () => {
+      fixture.componentInstance.reviewChange();
       fixture.debugElement.query(By.css('form')).triggerEventHandler('ngSubmit');
     };
     const confirmedTarget = {

@@ -6,6 +6,7 @@ import {
   inject,
   input,
   signal,
+  viewChild,
 } from '@angular/core';
 import { Message } from 'primeng/message';
 import type {
@@ -15,12 +16,12 @@ import type {
 } from '../../../../../generated/graphql/operations';
 import { messages, type Language } from '../../../../i18n/messages';
 import { karmaRecordMessages } from '../../record-details/karma-record-messages';
-import { locationMap } from '../../location/location-map';
+import { DailyReport } from '../../daily-report/daily-report';
 import { KarmaApi } from '../../karma-api';
 import { KarmaCarHeader } from '../../car-header/karma-car-header';
 
 @Component({
-  imports: [Message, KarmaCarHeader],
+  imports: [Message, KarmaCarHeader, DailyReport],
   providers: [KarmaApi],
   selector: 'holita-car-details',
   styleUrl: './car-details.css',
@@ -28,6 +29,7 @@ import { KarmaCarHeader } from '../../car-header/karma-car-header';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CarDetails {
+  readonly reportOnly = input(false);
   readonly language = input.required<Language>();
   readonly carId = input.required<string>();
   readonly text = computed(() => messages[this.language()]);
@@ -42,7 +44,7 @@ export class CarDetails {
   readonly location = signal<AdminKarmaLocationQuery['karmaLocation']>(null);
   readonly locationError = signal(false);
   readonly locationLoaded = signal(false);
-  readonly map = computed(() => locationMap(this.location()?.latitude, this.location()?.longitude));
+  private readonly dailyReport = viewChild(DailyReport);
   private locationRead: ReturnType<KarmaApi['watchLocation']> | undefined;
   readonly references = signal<AdminKarmaReferencesQuery | null>(null);
   readonly referencesError = signal(false);
@@ -132,6 +134,7 @@ export class CarDetails {
       return;
     }
     this.error.set(false);
+    this.dailyReport()?.refresh();
     const references = this.referenceRead;
     void references?.refetch().catch(() => {
       if (this.referenceRead === references) {

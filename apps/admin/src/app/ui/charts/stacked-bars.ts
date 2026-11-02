@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import type { CategorySlot, StatusTone } from '../../theme/status-tones';
+import { formatNumber } from '../format/format';
 import { uiMessages } from '../i18n/messages';
 import { UI_LANGUAGE } from '../ui-language';
 
@@ -117,7 +118,11 @@ export class StackedBars {
     }));
   });
 
-  protected valueOf(row: StackedRow, key: string): number {
-    return row.segments.find((segment) => segment.key === key)?.value ?? 0;
+  protected valueOf(row: StackedRow, key: string): string {
+    return formatNumber(
+      row.segments.find((segment) => segment.key === key)?.value ?? 0,
+      this.language(),
+      { significantDigits: 15 },
+    );
   }
 }

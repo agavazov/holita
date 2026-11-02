@@ -1,4 +1,5 @@
 import { computed, DestroyRef, inject, Injectable, type Signal, signal } from '@angular/core';
+import type { UrlTree } from '@angular/router';
 
 /**
  * The name of the record a page shows (a vehicle's plate on its profile), for the breadcrumb.
@@ -6,12 +7,16 @@ import { computed, DestroyRef, inject, Injectable, type Signal, signal } from '@
  */
 @Injectable({ providedIn: 'root' })
 export class PageRecord {
-  private readonly current = signal<{ readonly label: Signal<string | null> } | null>(null);
+  private readonly current = signal<{
+    readonly label: Signal<string | null>;
+    readonly pageLink: Signal<UrlTree> | null;
+  } | null>(null);
   readonly label = computed(() => this.current()?.label() ?? null);
+  readonly pageLink = computed(() => this.current()?.pageLink?.() ?? null);
 
   /** Shows `label` until the returned function is called; a newer registration replaces it. */
-  register(label: Signal<string | null>): () => void {
-    const registration = { label };
+  register(label: Signal<string | null>, pageLink: Signal<UrlTree> | null = null): () => void {
+    const registration = { label, pageLink };
     this.current.set(registration);
     return () => {
       // Only the page that registered last clears it, so a page leaving late keeps the new one.
@@ -23,7 +28,10 @@ export class PageRecord {
 }
 
 /** For record pages: the record's name in the breadcrumb while the page is shown. */
-export function injectPageRecord(label: () => string | null): void {
-  const unregister = inject(PageRecord).register(computed(label));
+export function injectPageRecord(label: () => string | null, pageLink?: () => UrlTree): void {
+  const unregister = inject(PageRecord).register(
+    computed(label),
+    pageLink ? computed(pageLink) : null,
+  );
   inject(DestroyRef).onDestroy(unregister);
 }

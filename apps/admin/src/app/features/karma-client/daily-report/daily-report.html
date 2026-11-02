@@ -1,0 +1,244 @@
+<div class="app-view">
+  <form
+    class="app-context-toolbar"
+    [formGroup]="form"
+    (ngSubmit)="apply()"
+    [attr.aria-label]="text().periodControls"
+  >
+    <holita-form-field
+      controlId="report-day"
+      [label]="text().day"
+      [error]="invalidDay() ? text().dayInvalid : null"
+    >
+      <input
+        pInputText
+        id="report-day"
+        type="date"
+        formControlName="day"
+        [attr.aria-invalid]="invalidDay() || null"
+        aria-describedby="report-day-hint report-day-error"
+      />
+    </holita-form-field>
+    <div class="app-page-actions">
+      <button pButton type="submit" [disabled]="loading()">{{ text().applyDay }}</button>
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="loading()"
+        (click)="yesterday()"
+      >
+        {{ text().yesterday }}
+      </button>
+      @if (!selected()) {
+        @if (diagnosticsLink(); as link) {
+          <a pButton severity="secondary" [text]="true" [routerLink]="link">{{
+            text().diagnostics
+          }}</a>
+        }
+      }
+    </div>
+  </form>
+  <p class="app-muted" id="report-day-hint">{{ text().dayHint }}</p>
+  @let view = presentation();
+  @if (invalidDay()) {
+    <p-message severity="warn">{{ text().dayInvalid }}</p-message>
+  } @else {
+    <holita-day-overview
+      [language]="language()"
+      [distance]="
+        view
+          ? {
+              value: view.distance.value,
+              unit: view.distance.unit,
+              context:
+                report()?.totalDistance.availability === 'PARTIAL'
+                  ? text().availability.PARTIAL
+                  : '',
+              explanation: view.distance.context + '. ' + view.distance.explanation,
+            }
+          : null
+      "
+      [tripCount]="
+        view
+          ? {
+              value: view.tripCount.value,
+              unit: view.tripCount.unit,
+              context:
+                report()?.tripCount.availability === 'PARTIAL' ? text().availability.PARTIAL : '',
+              explanation: view.tripCount.context + '. ' + view.tripCount.explanation,
+            }
+          : null
+      "
+      [maximumSpeed]="
+        view
+          ? {
+              value: view.maximumSpeed.value,
+              unit: view.maximumSpeed.unit,
+              context:
+                report()?.maxSpeed.availability === 'PARTIAL' ? text().availability.PARTIAL : '',
+              explanation: view.maximumSpeed.context + '. ' + view.maximumSpeed.explanation,
+            }
+          : null
+      "
+      [composition]="presentation()?.composition ?? []"
+      [compositionHint]="view?.composition.length ? null : (view?.compositionHint ?? null)"
+      [trips]="presentation()?.trips ?? null"
+      [loading]="loading()"
+      [error]="unavailable()"
+      [status]="presentation()?.status ?? null"
+      [hint]="presentation()?.hint ?? null"
+      (viewTrip)="openTrip($event)"
+      (retry)="refresh()"
+    >
+      <section overviewMap class="app-card app-view" [attr.aria-label]="text().lastReported">
+        <h2 class="app-card__title">{{ text().lastReported }}</h2>
+        <p class="app-muted">{{ text().lastReportedHint }}</p>
+        @if (locationError()) {
+          <p-message severity="warn">{{ appText().karmaLocationUnavailable }}</p-message>
+        }
+        @if (location(); as point) {
+          <holita-map-preview
+            [pageType]="mapPageType()"
+            [language]="language()"
+            [origin]="lastCoordinates()"
+            [identity]="point.carNumber"
+            [originTime]="point.edt"
+          />
+          <details class="app-source-details">
+            <summary>{{ text().sourceDetails }}</summary>
+            <dl class="app-facts">
+              <div>
+                <dt>{{ appText().karmaMessageId }}</dt>
+                <dd>{{ point.messageId ?? '—' }}</dd>
+              </div>
+            </dl>
+          </details>
+        } @else if (locationLoaded()) {
+          <p>{{ appText().karmaNoLocation }}</p>
+        } @else if (!locationError()) {
+          <p role="status">{{ appText().karmaLoadingLocation }}</p>
+        }
+      </section>
+      <div overviewFacts class="app-view">
+        @if (report(); as data) {
+          <details class="app-source-details">
+            <summary>{{ text().sourceDetails }}</summary>
+            <p class="app-muted">{{ text().selectionHint }}</p>
+            <p class="app-muted">{{ text().positionCoverageHint }}</p>
+            <p class="app-muted">{{ text().unitsHint }}</p>
+            <dl class="app-facts">
+              <div>
+                <dt>{{ text().loadedTrips }}</dt>
+                <dd>{{ data.loadedTrips }}</dd>
+              </div>
+              <div>
+                <dt>{{ text().pageRequests }}</dt>
+                <dd>{{ data.pageRequests }} / {{ data.maxPages }}</dd>
+              </div>
+              <div>
+                <dt>{{ text().rowLimit }}</dt>
+                <dd>{{ data.maxRows }}</dd>
+              </div>
+              <div>
+                <dt>{{ text().deadline }}</dt>
+                <dd>{{ data.deadlineMs }} ms</dd>
+              </div>
+              <div>
+                <dt>{{ text().carId }}</dt>
+                <dd>{{ data.carId }}</dd>
+              </div>
+              <div>
+                <dt>{{ text().deviceId }}</dt>
+                <dd>{{ data.car?.deviceId ?? '—' }}</dd>
+              </div>
+            </dl>
+            @if (view) {
+              <dl class="app-facts">
+                <div>
+                  <dt>{{ text().totalDistance }}</dt>
+                  <dd>{{ view.distance.context }} · {{ view.distance.explanation }}</dd>
+                </div>
+                <div>
+                  <dt>{{ text().tripCount }}</dt>
+                  <dd>{{ view.tripCount.context }} · {{ view.tripCount.explanation }}</dd>
+                </div>
+                <div>
+                  <dt>{{ text().maxSpeed }}</dt>
+                  <dd>{{ view.maximumSpeed.context }} · {{ view.maximumSpeed.explanation }}</dd>
+                </div>
+              </dl>
+              <p>{{ view.compositionHint }}</p>
+            }
+            <p>{{ text().comparisonPrecision }}</p>
+          </details>
+        }
+      </div>
+    </holita-day-overview>
+    <details
+      class="app-source-details"
+      [open]="baseline() || comparisonLoading() || comparisonError() || comparisonInvalid()"
+    >
+      <summary>{{ text().compareTitle }}</summary>
+      <form class="app-context-toolbar" [formGroup]="comparisonForm" (ngSubmit)="compare()">
+        <holita-form-field
+          controlId="compare-day"
+          [label]="text().compareDay"
+          [error]="comparisonInvalid() ? text().compareInvalid : null"
+        >
+          <input
+            pInputText
+            id="compare-day"
+            type="date"
+            formControlName="day"
+            [attr.aria-invalid]="comparisonInvalid() || null"
+            aria-describedby="compare-day-hint compare-day-error"
+          />
+        </holita-form-field>
+        <button pButton type="submit" [disabled]="loading() || comparisonLoading()">
+          {{ text().compare }}
+        </button>
+      </form>
+      <p class="app-muted" id="compare-day-hint">{{ text().compareHint }}</p>
+    </details>
+    @if (report(); as data) {
+      <holita-report-review
+        [language]="language()"
+        [report]="data"
+        [baseline]="baseline()"
+        [comparisonLoading]="comparisonLoading()"
+        [comparisonError]="comparisonError()"
+        (retryComparison)="retryComparison()"
+        (viewTrip)="openReportTrip($event)"
+      />
+    }
+  }
+  @if (missingTrip()) {
+    <p-message severity="warn">{{ text().tripUnavailable }}</p-message>
+  }
+  @if (selected(); as trip) {
+    <holita-route-drawer
+      [title]="appText().karmaTripsDetails"
+      [subtitle]="trip.carNumber"
+      size="lg"
+      [closeLink]="null"
+      (closeRequest)="closeTrip()"
+    >
+      <div class="app-view">
+        @if (diagnosticsLink(); as link) {
+          <div class="app-page-actions">
+            <a pButton severity="secondary" [outlined]="true" [routerLink]="link">{{
+              text().diagnostics
+            }}</a>
+          </div>
+        }
+        <holita-trip-details
+          [language]="language()"
+          [trip]="trip"
+          [provenance]="tripProvenance()"
+        />
+      </div>
+    </holita-route-drawer>
+  }
+</div>

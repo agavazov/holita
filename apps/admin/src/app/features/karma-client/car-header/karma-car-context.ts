@@ -14,6 +14,7 @@ interface CarListContext {
   readonly listSize?: number;
   readonly listFirst?: number;
   readonly listProject?: string;
+  readonly day?: string;
 }
 
 function single(params: ParamMap, key: string): string | null {
@@ -63,7 +64,11 @@ export function karmaCarReturnQuery(params: ParamMap): CarListQuery {
   };
 }
 
-/** Preserve the same list context when switching between a truck's sections. */
+/** Preserve list return and the report day; technical history bounds remain independent. */
 export function karmaCarNavigationContext(params: ParamMap): CarListContext {
-  return karmaCarListContext(convertToParamMap(karmaCarReturnQuery(params)));
+  const day = single(params, 'day');
+  return {
+    ...karmaCarListContext(convertToParamMap(karmaCarReturnQuery(params))),
+    ...(day && /^\d{4}-\d{2}-\d{2}$/.test(day) ? { day } : {}),
+  };
 }

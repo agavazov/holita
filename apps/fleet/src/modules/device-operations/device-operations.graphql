@@ -14,6 +14,8 @@ enum FleetDeviceOperationKind {
   UPDATE_INTERVAL
   READ_RULES
   UPSERT_RULE
+  READ_FAULT_LOGGER
+  READ_COMMUNICATION_DIAGNOSTICS
 }
 
 enum FleetDeviceOperationPhase {
@@ -24,6 +26,7 @@ enum FleetDeviceOperationPhase {
   READ_RULES
   WRITE_RULE
   VERIFY_RULES
+  READ_DIAGNOSTICS
 }
 
 type FleetDeviceParameterPreset {
@@ -61,6 +64,25 @@ type FleetDeviceRulesConfiguration {
   rules: [FleetDeviceRule!]!
 }
 
+enum FleetDeviceDiagnosticReadKind {
+  READ_FAULT_LOGGER
+  READ_COMMUNICATION_DIAGNOSTICS
+}
+
+type FleetDeviceDiagnosticQueueEntry {
+  id: ID!
+  "Raw Karma queue state: 0 queued, 1 transmitted; neither is an ECU acknowledgement."
+  state: Int
+}
+
+type FleetDeviceDiagnosticObservation {
+  messageId: ID!
+  eventTimeUtc: DateTime!
+  rawMessage: String!
+  family: String!
+  acknowledgement: String
+}
+
 type FleetDeviceOperation {
   id: ID!
   branchId: ID!
@@ -91,9 +113,18 @@ type FleetDeviceOperation {
   queueIds: [ID!]!
   observationCount: Int!
   coverageComplete: Boolean!
+  diagnosticQueue: [FleetDeviceDiagnosticQueueEntry!]!
+  "Observed response records; no causal queue correlation or complete current ECU state is implied."
+  diagnosticObservations: [FleetDeviceDiagnosticObservation!]!
   configuration: FleetDeviceConfiguration
   rulesConfiguration: FleetDeviceRulesConfiguration
   errorCode: String
+}
+
+input RequestFleetDeviceDiagnosticReadInput {
+  karmaCarId: ID!
+  expectedKarmaDeviceId: String!
+  kind: FleetDeviceDiagnosticReadKind!
 }
 
 input RequestFleetDeviceConfigurationReadInput {
@@ -136,6 +167,11 @@ input RequestFleetDeviceRuleChangeInput {
 }
 
 extend type Query {
+  "The latest 20 scoped diagnostic read operations for the exact Karma car and device."
+  fleetDeviceDiagnosticOperations(
+    karmaCarId: ID!
+    expectedKarmaDeviceId: String!
+  ): [FleetDeviceOperation!]!
   fleetDeviceOperationsEnabled: Boolean!
   fleetDeviceConfigurationWritesEnabled: Boolean!
   fleetDeviceParameterPresets: [FleetDeviceParameterPreset!]!
@@ -152,6 +188,10 @@ extend type Query {
 }
 
 extend type Mutation {
+  "Requests only the fixed stored-fault logger read or 411 communication snapshot; never clears faults."
+  requestFleetDeviceDiagnosticRead(
+    input: RequestFleetDeviceDiagnosticReadInput!
+  ): FleetDeviceOperation!
   "Requests a device configuration read; it does not change device configuration."
   requestFleetDeviceConfigurationRead(
     input: RequestFleetDeviceConfigurationReadInput!

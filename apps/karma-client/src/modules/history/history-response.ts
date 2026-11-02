@@ -78,7 +78,7 @@ function trip(value: unknown): KarmaTrip {
     ecoScore: number(value['eco_score']),
   };
 }
-function event(value: unknown): KarmaEvent {
+function event(value: unknown, preserveClockText = false): KarmaEvent {
   if (!object(value)) {
     unavailable();
   }
@@ -87,9 +87,9 @@ function event(value: unknown): KarmaEvent {
     carId: id(value['car_id']),
     deviceId: required(value['device_id']),
     eventId: id(value['eid'], 0),
-    edt: timestamp(value['edt']),
-    edtTz: timestamp(value['edt_tz']),
-    pdt: timestamp(value['pdt']),
+    edt: preserveClockText ? text(value['edt']) : timestamp(value['edt']),
+    edtTz: preserveClockText ? text(value['edt_tz']) : timestamp(value['edt_tz']),
+    pdt: preserveClockText ? text(value['pdt']) : timestamp(value['pdt']),
     latitude: number(value['latitude']),
     longitude: number(value['longitude']),
     spd: number(value['spd']),
@@ -125,14 +125,14 @@ function page<T extends { id: string; carId: string }>(rows: T[], query: History
     nextCursor: hasMore && last ? historyCursor(query, Number(last.id) - 1, snapshot) : null,
   };
 }
-export function tripsPage(value: unknown, query: HistoryQuery) {
+export function tripRows(value: unknown): KarmaTrip[] {
   if (!Array.isArray(value)) {
     unavailable();
   }
-  return page(
-    value.map((entry: unknown) => trip(entry)),
-    query,
-  );
+  return value.map((entry: unknown) => trip(entry));
+}
+export function tripsPage(value: unknown, query: HistoryQuery) {
+  return page(tripRows(value), query);
 }
 export function eventsPage(value: unknown, query: HistoryQuery) {
   if (!Array.isArray(value) || value.length > 500) {
@@ -149,6 +149,12 @@ export function eventsPage(value: unknown, query: HistoryQuery) {
     }
   }
   return page(rows, query);
+}
+export function positionEventRows(value: unknown): KarmaEvent[] {
+  if (!Array.isArray(value)) {
+    unavailable();
+  }
+  return value.map((row: unknown) => event(row, true));
 }
 const drivingCategories = [
   'accelerations',

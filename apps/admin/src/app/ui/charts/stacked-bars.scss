@@ -3,6 +3,7 @@
   flex-direction: column;
   gap: var(--p-app-space-3);
   min-inline-size: 0;
+  container-type: inline-size;
 }
 
 .stacked-bars__legend {
@@ -53,4 +54,19 @@
 .stacked-bars__total {
   font-weight: 600;
   text-align: end;
+}
+
+@container (max-width: 25rem) {
+  .stacked-bars__rows {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .stacked-bars__label {
+    grid-column: 1 / -1;
+  }
+
+  .stacked-bars__total {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
 }

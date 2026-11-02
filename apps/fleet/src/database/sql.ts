@@ -7,26 +7,26 @@ import { Prisma } from '../generated/prisma/client.js';
 // are `unknown` and each query parses them with these readers instead of trusting a type argument.
 
 export type FleetTableName =
-  | 'Vehicle'
-  | 'Device'
-  | 'Driver'
-  | 'VehicleGroup'
-  | 'VehicleStatusSample'
-  | 'Trip'
-  | 'FleetEvent'
-  | 'FleetSettings'
-  | 'ServiceTask';
+  | 'vehicle'
+  | 'device'
+  | 'driver'
+  | 'vehicleGroup'
+  | 'vehicleStatusSample'
+  | 'trip'
+  | 'fleetEvent'
+  | 'fleetSettings'
+  | 'serviceTask';
 
 const FLEET_TABLES: readonly FleetTableName[] = [
-  'Vehicle',
-  'Device',
-  'Driver',
-  'VehicleGroup',
-  'VehicleStatusSample',
-  'Trip',
-  'FleetEvent',
-  'FleetSettings',
-  'ServiceTask',
+  'vehicle',
+  'device',
+  'driver',
+  'vehicleGroup',
+  'vehicleStatusSample',
+  'trip',
+  'fleetEvent',
+  'fleetSettings',
+  'serviceTask',
 ];
 
 /** `"<schema>"."<table>"` for one of the Fleet tables; the schema name is quoted safely. */
@@ -167,4 +167,19 @@ export function boolean(row: Record<string, unknown>, key: string): boolean {
     invalidRow(key);
   }
   return value;
+}
+
+/** Decode database enum text using the explicit Prisma-to-database value map. */
+export function databaseEnum<T extends string>(
+  row: Record<string, unknown>,
+  key: string,
+  mapping: Readonly<Record<T, string>>,
+): T {
+  const value = text(row, key);
+  for (const item in mapping) {
+    if (mapping[item] === value) {
+      return item;
+    }
+  }
+  return invalidRow(key);
 }

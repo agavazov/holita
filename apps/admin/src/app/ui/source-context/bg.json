@@ -1,0 +1,46 @@
+{
+  "title": "Източник и покритие на данните",
+  "sources": {
+    "KARMA_API": "Karma API"
+  },
+  "origin": "Произход на данните",
+  "origins": {
+    "OBSERVED": "Наблюдавани",
+    "DERIVED": "Изчислени",
+    "UNAVAILABLE": "Недостъпни"
+  },
+  "period": "Избран период",
+  "periodBounds": "началото е включено; краят не е включен",
+  "from": "Начало, включително",
+  "toExclusive": "Край, без включване",
+  "timeZone": "Часова зона",
+  "coverage": "Извличане и покритие на позициите",
+  "retrieval": "Извличане на данните",
+  "retrievalStates": {
+    "NOT_STARTED": "Не е започнало",
+    "COMPLETE": "Завършено",
+    "PARTIAL": "Заредена част",
+    "UNAVAILABLE": "Недостъпно"
+  },
+  "positionCoverage": "Покритие на GPS позициите",
+  "positionStates": {
+    "COMPLETE": "Пълно за избрания период",
+    "PARTIAL": "Частично",
+    "NOT_ASSESSED": "Не е оценено"
+  },
+  "positionsLoaded": "Заредени позиции",
+  "gaps": "Установени пропуски",
+  "coverageHint": "Завършеното извличане не доказва, че са записани всички позиции.",
+  "availability": "Наличност на стойността",
+  "availabilityStates": {
+    "COMPLETE": "Налична за избрания период",
+    "PARTIAL": "Налична за част от периода",
+    "UNAVAILABLE": "Стойността не е налична"
+  },
+  "sourceDetails": "Подробности за източника",
+  "sourceRecordId": "ID на записа в източника",
+  "eventAt": "Време на събитието (UTC)",
+  "receivedAt": "Време на получаване (UTC)",
+  "retrievedAt": "Време на извличане (UTC)",
+  "gapIntervals": "Установени пропуски, без включване на края"
+}

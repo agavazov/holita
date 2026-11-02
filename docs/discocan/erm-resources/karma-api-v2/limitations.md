@@ -6,8 +6,8 @@ questions and possible future work are recorded separately in the
 
 ## Method coverage
 
-The integration consumes twelve GET method/path pairs, internal `POST /login` and
-`POST /commands` for fixed parameter/profile reads and one additive definition. The other eighteen
+The integration consumes thirteen GET method/path pairs, internal `POST /login` and
+`POST /commands` for fixed parameter/profile/rule/logger/diagnostic reads and single-parameter/rule writes. The other seventeen
 declared operations are absent from holita:
 
 | Area                            | Declared operations absent from holita                    |
@@ -19,7 +19,6 @@ declared operations are absent from holita:
 | Sensors                         | GET/POST `/sensors`                                       |
 | Device configuration            | GET/PUT `/parameters`                                     |
 | Accident reports                | GET `/black_box/{id}`                                     |
-| Queue status                    | GET `/queue/{id}`                                         |
 
 The help does not declare user/role mutations, driver-detail GET, project
 update/delete, logout, a parameter-definition catalog, accident discovery, webhooks,
@@ -77,8 +76,10 @@ reconciled. Nullable finite values are preserved, without deriving units or labe
 - The help is a form specification. Its automatic GET-to-POST conversion and queue
   path arrays leave serialization ambiguities; unknown methods are not promoted
   to established operations solely because the helper offers them.
-- Trips/profile wall-clock timezone, DST behavior, date-bound inclusivity and trip
-  overlap rules are unspecified. Public response timestamp checks validate shape, not full
+- Existing trips/profile inputs retain unresolved general wall-clock semantics.
+  The separate [daily report](../../architecture.md#daily-report-contract) narrows
+  support to the proved Europe/Sofia start-day selection; other zones are unsupported.
+  Historical car-zone configuration changes remain unknown. Public response timestamp checks validate shape, not full
   calendar validity. `pdt` semantics are unresolved.
 - IDs and cursor ordering assume positive safe integers and an ascending source
   batch. Broader ID ranges or reordered batches are rejected rather than coerced.
@@ -93,7 +94,8 @@ reconciled. Nullable finite values are preserved, without deriving units or labe
 - Event-code meanings, sensor definitions, parameter units/scales, speed/distance/
   duration units, score ranges, weights and night-driving definitions are not
   established. Public history `extra` is preserved as text without automatic decoding;
-  the internal adapter parses only supported parameter `401` and profile `416` layouts.
+  the internal adapter parses supported parameter `401`, rule `402` and profile `416` layouts.
+  The separate diagnostic history decodes supported fault layouts and preserves original payloads.
 - Missing and empty states differ by operation. A direct backend eData query does
   not independently verify car existence, unlike location/trips/events/profile.
 
@@ -102,7 +104,8 @@ reconciled. Nullable finite values are preserved, without deriving units or labe
 All authenticated holita Tenants intentionally see the same configured account.
 Karma project memberships do not enforce Tenant/Branch filtering. Fleet's persisted
 configuration operations are separately scoped to their Fleet Tenant/Branch
-Device and selected Karma identity; they do not change the shared Karma query scope
+and selected Karma car/device pair, without requiring a local Fleet Device record;
+they do not change the shared Karma query scope
 or establish a verified general `device_id` to IMEI mapping. The demo session
 is not production user identity, membership authorization or a role-permission
 model. A future change to access scope requires an explicit domain decision;
@@ -110,20 +113,22 @@ the present documentation does not authorize it.
 
 The integration has one in-memory session, bounded login renewal and sanitized
 failures. It has no provider logout, proactive session refresh, persistent sessions,
-rate-limit scheduler, arbitrary-failure retry/backoff or circuit breaker. Public
-query response reads have no streaming body-size bound; the internal configuration
-reader bounds target responses to 64 KiB and event responses to 2 MiB. Health does
+rate-limit scheduler, arbitrary-failure retry/backoff or circuit breaker. Most public
+query response reads have no streaming body-size bound; daily report trip reads are
+bounded to 2 MiB. The internal configuration reader bounds target responses to
+64 KiB and event responses to 2 MiB. Health does
 not probe Karma. A valid JSON error can use HTTP 200,
 so transport success is distinct from usable business data.
 
 The implemented [background configuration operations](../../architecture.md#background-device-configuration-reads)
-submit fixed `301` reads (`0702BC`, `1F`) and one `02` definition. The internal machine API
-validates the selected target, ID/interval fields and bounded `401`/`416` observations;
+submit fixed `301` reads (`0702BC`, `1F`, `0802BC`), one `02` parameter definition or
+one `04` rule record. The internal machine API validates the selected target,
+parameter ID/interval or supported rule frame/expression, and bounded `401`/`402`/`416` observations;
 Fleet owns eligibility, complete baseline, persistent intent and readback verification.
 Missing fragments, conflicts and incomplete
 scan coverage do not become complete configuration evidence. Time-window scans
-remain subject to unknown provider retention and late-arrival behavior. No queue
-status poll or queue-to-device acknowledgment correlation is implemented. A timeout
+remain subject to unknown provider retention and late-arrival behavior. Diagnostic
+operations additionally poll retained queue IDs; no universal queue-to-device acknowledgment correlation is established. A timeout
 or lost submission response stays uncertain and does not trigger automatic replay.
 
 Writes default to disabled. Additions require the exact eligible Monitor catalog and a
@@ -134,10 +139,37 @@ delivery. A confirmed definition is not proof of available/calibrated measuremen
 zero-interval silence. There are no entity writes, global/profile changes, deletion,
 arbitrary commands, reset, firmware or server-destination controls. Scoped manual
 procedures and installation-specific evidence remain documented separately.
+Rule changes additionally require complete parameter and rule baselines and verify
+the full returned rule set while preserving unrelated records; unsupported existing
+expressions remain opaque rather than becoming authorable.
 GET `/parameters?query=...` remains unverified and is not assumed passive because
 the help labels it Query Device. Public read permission does not establish
 configuration, create or delete permission; the internal endpoints require a
 separate machine secret.
+
+## Diagnostic fault coverage
+
+Real `karmaEvents` reads preserve source message IDs, target identities, timestamps
+and raw `extra` text. The separate `karmaDiagnosticHistory` decodes `413` and actual
+`419` SPN/FMI/status records, while `418`, E2 and E70 remain opaque. It does not create
+persistent fault records or establish current vehicle health. Report numbers in that text
+are distinct from Karma event-code filters. Fleet's connected **Diagnostics** scenario
+uses labelled illustrative records and links separately to real truck history.
+Examples, counts and briefs from the scenario source cannot prove live DTC
+reading. See the [integration evidence map](holita-integration.md#diagnostic-evidence-and-product-coverage).
+
+Fixed diagnostic and fault-logger reads use scoped Fleet operations; version/global
+commands remain manual upstream procedures. Previously retained queues are reconciled,
+but discovery of unrelated commands submitted outside holita is unavailable.
+Queue acceptance or `transmitted` does not establish a device ACK, successful fault
+retrieval or a decoded error. A negative/terminal `154,0` reply is not a positive
+fault list or proof that the ECU has no faults. A `411` CAN-error flag or `417`
+CAN-disconnection report is separate from an ECU DTC and from the full tracker
+internal-error/command-result catalogue. Positive SPN/FMI proof requires an actual
+`419` source record with applicable decoding and installation context; a vendor
+sample or DTC-enabled configuration is insufficient. The
+[verification register](../erm-support-diagnostics-protocol-test-server/README.md#verification-register)
+records the observed scope and remaining evidence.
 
 See the [backlog](../../../todo/karma-api-v2.md) for the questions required to
 resolve these limits.

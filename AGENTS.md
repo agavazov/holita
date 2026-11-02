@@ -172,6 +172,8 @@ overrides more detailed guidance in documentation and skills.
     or input.
   - Branch context is not authorization.
   - Do not log secrets.
+- Database identifiers are camelCase. Map models and enum types with `@@map` and enum values
+  with `@map`, keeping TypeScript and GraphQL names unchanged.
 - Keep Prisma schemas, migrations and clients inside the owning service.
   - Review new migration SQL.
   - Never edit applied migrations or replace history with db push.

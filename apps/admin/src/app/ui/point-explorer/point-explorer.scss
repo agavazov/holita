@@ -1,0 +1,50 @@
+@use 'breakpoints' as bp;
+
+:host {
+  min-inline-size: 0;
+}
+
+.point-explorer__workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  align-items: start;
+  gap: var(--p-app-space-4);
+}
+
+.point-explorer__selection {
+  min-inline-size: 0;
+}
+
+.point-explorer__selected {
+  display: block;
+}
+
+.point-explorer__source {
+  color: var(--p-text-muted-color);
+  font-size: var(--p-app-text-sm);
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.point-explorer__coverage {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--p-app-space-4);
+
+  > .app-card {
+    align-items: stretch;
+  }
+}
+
+.point-explorer__interval-list {
+  margin: 0;
+  padding-inline-start: var(--p-app-space-5);
+  overflow-wrap: anywhere;
+}
+
+@include bp.below(lg) {
+  .point-explorer__workspace,
+  .point-explorer__coverage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

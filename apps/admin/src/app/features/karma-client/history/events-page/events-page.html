@@ -1,4 +1,4 @@
-<section class="app-view" [attr.aria-label]="text().karmaEvents" [attr.aria-busy]="loading()">
+<section class="app-view" [attr.aria-busy]="loading()">
   <holita-karma-car-header
     [language]="language()"
     [carId]="carId()"
@@ -22,71 +22,79 @@
       #filterForm
       [formGroup]="form"
       (ngSubmit)="apply()"
-      class="app-card app-filter-form"
+      class="app-card app-form-section"
       [attr.aria-label]="text().karmaEventsFilters"
     >
-      <holita-form-field
-        [label]="text().karmaPageSize"
-        controlId="events-size"
-        [error]="fieldErrors().size?.message ?? null"
-      >
-        <p-select
-          inputId="events-size"
-          formControlName="size"
-          [invalid]="!!fieldErrors().size"
-          [pt]="{
-            label: {
-              'aria-invalid': fieldErrors().size ? 'true' : null,
-              'aria-describedby': 'events-size-error',
-            },
-          }"
-          [options]="pageSizes"
-          [ariaLabel]="text().karmaPageSize"
-        />
-      </holita-form-field>
-      <holita-form-field
-        [label]="text().karmaFromUtc"
-        controlId="events-from"
-        [error]="fieldErrors().from?.message ?? null"
-      >
-        <holita-karma-date-time
-          inputId="events-from"
-          [label]="text().karmaFromUtc"
-          [invalid]="!!fieldErrors().from"
-          [invalidPart]="fieldErrors().from?.part ?? 'both'"
-          describedBy="events-from-error events-filter-hint"
-          formControlName="from"
-        />
-      </holita-form-field>
-      <holita-form-field
-        [label]="text().karmaToUtc"
-        controlId="events-to"
-        [error]="fieldErrors().to?.message ?? null"
-      >
-        <holita-karma-date-time
-          inputId="events-to"
-          [label]="text().karmaToUtc"
-          [invalid]="!!fieldErrors().to"
-          [invalidPart]="fieldErrors().to?.part ?? 'both'"
-          describedBy="events-to-error events-filter-hint"
-          formControlName="to"
-        />
-      </holita-form-field>
-      <holita-form-field
-        [label]="text().karmaEventTypes"
-        controlId="events-types"
-        [error]="fieldErrors().types?.message ?? null"
-      >
-        <input
-          pInputText
-          id="events-types"
-          [invalid]="!!fieldErrors().types"
-          [attr.aria-invalid]="fieldErrors().types ? 'true' : null"
-          formControlName="types"
-          aria-describedby="events-types-error events-filter-hint"
-          [attr.placeholder]="'0, 33'"
-        />
-      </holita-form-field>
+      <div class="app-form-grid">
+        <holita-form-field
+          [label]="presentationText().fromUtc"
+          controlId="events-from"
+          [error]="fieldErrors().from?.message ?? null"
+        >
+          <holita-karma-date-time
+            inputId="events-from"
+            [label]="presentationText().fromUtc"
+            [invalid]="!!fieldErrors().from"
+            [invalidPart]="fieldErrors().from?.part ?? 'both'"
+            describedBy="events-from-error events-filter-hint"
+            formControlName="from"
+          />
+        </holita-form-field>
+        <holita-form-field
+          [label]="presentationText().toUtc"
+          controlId="events-to"
+          [error]="fieldErrors().to?.message ?? null"
+        >
+          <holita-karma-date-time
+            inputId="events-to"
+            [label]="presentationText().toUtc"
+            [invalid]="!!fieldErrors().to"
+            [invalidPart]="fieldErrors().to?.part ?? 'both'"
+            describedBy="events-to-error events-filter-hint"
+            formControlName="to"
+          />
+        </holita-form-field>
+      </div>
+      <details class="app-source-details" [open]="!!(fieldErrors().size || fieldErrors().types)">
+        <summary>{{ presentationText().technicalDetails }}</summary>
+        <p class="app-muted">{{ presentationText().technicalHint }}</p>
+        <div class="app-form-grid">
+          <holita-form-field
+            [label]="presentationText().pageSize"
+            controlId="events-size"
+            [error]="fieldErrors().size?.message ?? null"
+          >
+            <p-select
+              inputId="events-size"
+              formControlName="size"
+              [invalid]="!!fieldErrors().size"
+              [pt]="{
+                label: {
+                  'aria-invalid': fieldErrors().size ? 'true' : null,
+                  'aria-describedby': 'events-size-error',
+                },
+              }"
+              [options]="pageSizes"
+              [ariaLabel]="presentationText().pageSize"
+            />
+          </holita-form-field>
+          <holita-form-field
+            [label]="presentationText().eventTypes"
+            controlId="events-types"
+            [error]="fieldErrors().types?.message ?? null"
+          >
+            <input
+              pInputText
+              id="events-types"
+              [invalid]="!!fieldErrors().types"
+              [attr.aria-invalid]="fieldErrors().types ? 'true' : null"
+              formControlName="types"
+              aria-describedby="events-types-error events-filter-hint"
+              [attr.placeholder]="'0, 33'"
+            />
+          </holita-form-field>
+        </div>
+      </details>
       <div class="app-filter-actions">
         <button pButton type="submit" [disabled]="loading()">{{ text().applyFilters }}</button>
         <button
@@ -101,7 +109,7 @@
         </button>
       </div>
       <p id="events-filter-hint" class="app-muted app-filter-hint">
-        {{ text().karmaEventsFilterHint }}
+        {{ presentationText().utcHint }}
       </p>
     </form>
     @if (invalidFilters()) {
@@ -112,7 +120,10 @@
     <p role="status">{{ text().karmaHistoryLoading }}</p>
   }
   @if (car() && !invalidFilters()) {
-    <p class="app-muted app-filter-hint">{{ text().karmaEventsOrder }}</p>
+    <details class="app-source-details">
+      <summary>{{ presentationText().technicalDetails }}</summary>
+      <p>{{ text().karmaEventsOrder }}</p>
+    </details>
     <holita-table-panel
       #panel
       [heading]="text().karmaEvents"
@@ -132,15 +143,12 @@
       >
         <ng-template #header
           ><tr>
-            <th class="app-table-merged-column">{{ text().karmaEdtUtc }}</th>
-            <th class="app-col-identity">{{ text().karmaMessageId }}</th>
-            <th>{{ 'eid' }}</th>
+            <th class="app-col-identity">{{ presentationText().eventTime }}</th>
             <th class="app-col-actions">{{ text().actions }}</th>
           </tr></ng-template
         >
         <ng-template #body let-row
           ><tr>
-            <td class="app-table-merged-column">{{ row.edt ?? '—' }}</td>
             <td class="app-col-identity">
               <div class="app-table-identity">
                 <button
@@ -149,11 +157,8 @@
                   [attr.aria-label]="text().view + ' ' + row.id"
                   (click)="panel.run('view', [record(row)], $event.currentTarget)"
                 >
-                  {{ row.id ?? '—' }}
+                  {{ row.edt ?? '—' }}
                 </button>
-                <span class="app-table-mobile-meta"
-                  >{{ text().karmaEdtUtc }}: {{ row.edt ?? '—' }}</span
-                >
                 <div class="app-table-mobile-actions">
                   <holita-row-actions
                     [actions]="actions()"
@@ -163,7 +168,6 @@
                 </div>
               </div>
             </td>
-            <td>{{ row.eventId }}</td>
             <td class="app-col-actions">
               <holita-row-actions
                 [actions]="actions()"
@@ -221,25 +225,29 @@
       <section class="app-card" [attr.aria-label]="detailText().summary">
         <dl class="app-facts">
           <div>
-            <dt>{{ text().karmaMessageId }}</dt>
-            <dd>{{ row.id }}</dd>
-          </div>
-          <div>
             <dt>{{ text().karmaEdtUtc }}</dt>
             <dd>{{ row.edt ?? '—' }}</dd>
           </div>
-          <div>
-            <dt>{{ text().karmaEventId }}</dt>
-            <dd>{{ row.eventId }}</dd>
-          </div>
         </dl>
       </section>
-      <section class="app-view" [attr.aria-label]="detailText().eventText">
-        <h3 class="app-card__title">{{ detailText().eventText }}</h3>
-        <p class="source-text karma-source-text">{{ row.extra ?? '—' }}</p>
+      <section class="app-view" [attr.aria-label]="detailText().eventPosition">
+        <h3 class="app-card__title">{{ detailText().eventPosition }}</h3>
+        <p class="app-muted">{{ detailText().eventPositionHint }}</p>
+        <holita-map-preview
+          pageType="events"
+          [language]="language()"
+          [origin]="selectedCoordinates()"
+          [identity]="car()?.carNumber ?? text().karmaEvents"
+          [originTime]="row.edt"
+        />
       </section>
+
       <details class="app-source-details">
         <summary>{{ detailText().sourceFields }}</summary>
+        <section class="app-view" [attr.aria-label]="detailText().eventText">
+          <h3 class="app-card__title">{{ detailText().eventText }}</h3>
+          <p class="source-text">{{ row.extra ?? '—' }}</p>
+        </section>
         <p class="app-muted app-filter-hint">{{ text().karmaHistoryRawHint }}</p>
         <dl class="app-facts">
           @for (field of fields(row); track field.name) {

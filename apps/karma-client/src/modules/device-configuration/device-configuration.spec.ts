@@ -52,6 +52,9 @@ describe('internal machine authentication', () => {
         'rules-request',
         'rule-request',
         'rules-observations',
+        'diagnostic-request',
+        'diagnostic-watermark',
+        'diagnostic-observations',
       ]) {
         for (const [label, authorization] of [
           ['no authorization', undefined],

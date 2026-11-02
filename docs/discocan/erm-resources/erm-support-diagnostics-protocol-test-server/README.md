@@ -1,143 +1,101 @@
 # ERM support: diagnostics, protocol access and Test Server
 
-This reference preserves the user's request to ERM and the engineer's reply about
-vehicle faults/DTCs, StarLink protocol access and StarLink Test Server. It was
-analysed and added to the reference library on **2026-10-27**, Europe/Sofia.
-The ODT has no email header. ERM-TEST-01 later found Oz Dori's matching reply in
-Outlook, received **2026-10-25 08:39:01 UTC**. That received timestamp and the ODT
-export timestamp are distinct; the exact sending timestamp is not established.
+Updated **2026-10-29**, Europe/Sofia. **Positive fault reading is now proved for
+identified source events through Karma and the existing Gateway:** the [current live campaign](live-verification-2026-10-29.md)
+independently retrieved ERM's `419` event **7177124308** with SPN 4339 / FMI 7 and
+SPN 1247 / FMI 11, and a current-day `419` event **7179721665** with SPN 23806 / FMI 15.
+All three records carry status **01, added**. This proves actual raw fault-data
+reception and a consistent four-byte big-endian SPN decode for these reports.
+The Gateway `karmaEvents` query preserved both identified source events exactly.
+An on-demand response, complete current ECU inventory, fault descriptions and
+added→removed lifecycle require separate evidence.
 
-**The correspondence itself is not live verification.** Subsequent tests have
-verified Process DTCs configuration changes on two trucks and logger terminal responses;
-a real vehicle fault-code report and lifecycle remain unproved. ERM's statements, source-document analysis and
-observed device behaviour are separate evidence. This reference introduces no
-application feature, device configuration change or direct telemetry receiver.
+The **29 October reply explicitly defines `154,0` as command not acknowledged**.
+Earlier negative replies are retained as historical observations, but they must
+not be reported as a successful empty fault read. A delivery state, positive ACK,
+Monitor checkbox and actual fault record establish different things.
 
-[ERM resources](../README.md) · [Original request and reply](correspondence.md) ·
-[Detailed comparison and four images](analysis.md) ·
-[Combined verification evidence and reply draft](live-verification-2026-10-27.md) ·
-[Pending tests and ERM questions](../../../todo/karma-api-v2.md#erm-support-verification)
+[ERM resources](../README.md) ·
+[New reply: full technical analysis and all four images](reply-2026-10-29.md) ·
+[All 29 supplied commands and three-command procedure](command-reference-2026-10-29.md) ·
+[Current live evidence](live-verification-2026-10-29.md) ·
+[Open work](../../../todo/karma-api-v2.md#erm-support-verification).
 
-## Source material
+## Evidence and source material
 
-| Material                  | Location and scope                                                                                |
-| ------------------------- | ------------------------------------------------------------------------------------------------- |
-| Engineer's original reply | [ODT source](source/erm-support-reply.odt), preserved byte-for-byte                               |
-| Original request          | [Correspondence](correspondence.md#original-request), supplied separately by the user             |
-| Source descriptions       | [Analysis](analysis.md), including a question-by-question comparison and the four original images |
-| Provenance                | [Metadata](metadata.json): source hash, image hashes/dimensions and export-date qualifications    |
+| Material                                         | Reference and scope                                                                                                                                   |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Original email questions and first reply         | [27 October correspondence](correspondence.md); original safe [ODT](source/erm-support-reply.odt), preserved unchanged.                               |
+| First four images and source inconsistencies     | [27 October analysis](analysis.md), retained as a dated source assessment.                                                                            |
+| First device campaign and readback/cadence proof | [27 October live campaign](live-verification-2026-10-27.md). Its absence of positive fault reports describes that earlier observation window only.    |
+| New reply and four new images                    | [29 October technical summary](reply-2026-10-29.md), including every visible image field, exact fault/ACK excerpts and question-by-question coverage. |
+| New Monitor command attachment                   | [Command reference](command-reference-2026-10-29.md) and [unchanged TXT](source/2026-10-29-fms-rental-sofia-60-second-commands.txt).                  |
+| Current independent API and device tests         | [29 October live campaign](live-verification-2026-10-29.md).                                                                                          |
+| Provenance                                       | [Metadata](metadata.json): source hashes, image hashes/dimensions and timestamp qualifications.                                                       |
 
-The source ODT's original filename was `karma-mail.odt`. Its SHA-256 is
-`be15c82d54f09065c5bff90ccf9d2920e52e4a6c1ec2d6119c072fb0d613d17d`.
-The reference is self-contained and does not depend on `.misc/` files. Portal or
-device credentials are not included.
+The new ODT contains portal credentials and remains in the user-supplied private
+source location. Documentation contains its hash and sanitized technical summary,
+not the credential-bearing ODT or its access paragraphs. All eight original
+images are unchanged; new images have `2026-10-29-` filenames. Source evidence is
+kept separate from vendor interpretation and our independent observations.
 
-## ERM-TEST-01 source-contract result
-
-On **2026-10-27**, the read-only stage confirmed the public portal's login page
-and source-level eData read commands. Authentication remains blocked because the
-actual protocol account/access email was not recovered. No device command or
-Karma request was made. The stage finished with a partial result and precise
-vendor questions, rather than spending the unused budget on repeated searches.
-
-The [diagnostics and fault reference](../edata-simple-protocol-v4.04/diagnostics-and-fault-reporting.md)
-adds the previously omitted **stored-fault read `301` / payload `19`** and
-**OBD report `413`**. Its three printed OBD codes decode consistently. FMS `418`,
-FMI `419` and global `302`/`410` contradictions remain source-level questions;
-the global conflict was confirmed visually in the original PDF. None of those
-source checks proves live reporting or a safe compatible Process DTCs write.
+The first reply's ODT lacks email headers. A matching Outlook reply was separately
+found with received time **2026-10-25 08:39:01 UTC**; its ODT export timestamp is
+**2026-10-26 21:32:00 UTC**. The new ODT export timestamp is
+**2026-10-29 14:18:00 UTC**, also not an email send timestamp. Its device-event
+excerpts do not themselves specify timezone; independently retrieved API times
+are recorded as UTC in the live evidence.
 
 ## Verification register
 
-Initial status date: **2026-10-27**. This register covers the claims and missing
-details in this correspondence. It does not invalidate earlier, separately scoped
-parameter-read/write evidence or establish new periodic-measurement proof.
+Status date: **2026-10-29**. Rows distinguish the observation actually established
+from the remaining contract or runtime gap. The [current live evidence](live-verification-2026-10-29.md)
+contains exact test targets, request/queue references, source IDs, timestamps and
+final outcomes; the register does not substitute for those records.
 
-The subsequent [bounded stages 02–07](live-verification-2026-10-27.md) confirmed
-historical periodic reception and a working direct API/Gateway positive control,
-and inspected the manufacturer's Monitor 9.56 decoder without running it. Those
-are scoped observations; a new interval change and real fault lifecycle remain
-unproved. Device-read references and actual stopping conditions are retained there.
-The new CB1147TP diagnostic/profile replies at **2026-10-26 23:51:08 UTC** were
-also confirmed unchanged through Gateway: ignition off, no CAN bit, profile 343.
-The combined campaign ended after **76 targeted attempts across stages 02–07**;
-no setting write or scheduled continuation was started.
+| ID            | Subject                                          | Established evidence                                                                                                                                                                                                   | Remaining limit                                                                                                                                                                |
+| ------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ERM-DTC-01    | Process DTCs activation                          | On 27 October, independently verified complete 49-byte `410` on CB1344XH and CB1147TP: byte18 `00→01`, other 48 bytes identical. New image/ERM interpretation confirms the supplied readback has DTC enabled.          | Checkbox/readback alone does not prove compatible ECU coverage or a successful explicit logger read.                                                                           |
+| ERM-DTC-02    | FMS fault report `418`                           | Monitor 9.56 reads five character bytes plus status. Source example remains inconsistent.                                                                                                                              | No corrected labelled live `418` contract is supplied by the new reply; retain the exact printed discrepancy.                                                                  |
+| ERM-DTC-03    | FMI fault report `419`                           | Independently reacquired event 7177124308 gives SPN 4339 / FMI 7 and SPN 1247 / FMI 11; event 7179721665 adds SPN 23806 / FMI 15. All status 01. Four-byte big-endian SPN is consistent with real reports and Monitor. | Reserved/upper-bit rules, ECU/source identity, descriptions, complete active inventory and removed-state lifecycle remain unresolved.                                          |
+| ERM-DTC-04    | Faults in Karma/API                              | **Positive, identified raw fault events independently retrieved**; report 419 is carried in Karma event 33 `extra`.                                                                                                    | Do not generalize all vehicle/model/ECU coverage or equate historical event reception with a fresh requested scan.                                                             |
+| ERM-DTC-05    | Explicit stored-fault read `301`/`19`; OBD `413` | Read command is documented and supplied again. Earlier four isolated reads on two trucks returned 154,0; ERM now explicitly defines that as NACK. Current fleet-wide reads/outcomes belong to the live campaign.       | Negative ACK is not an empty logger. A419 report near a request needs actual association before claiming on-demand success. `413` remains a separate format/path.              |
+| ERM-COMPAT-01 | Model/firmware/profile                           | Earlier profile 343 and actual 411/412/global replies; new export selects343 and screenshot names FMS Parameters(250k).                                                                                                | No exhaustive supported hardware/firmware/vehicle/ECU matrix; extended 412 and profile applicability remain version-specific.                                                  |
+| ERM-PORTAL-01 | Protocol access                                  | Credentials now supplied, superseding the earlier unavailable-account condition.                                                                                                                                       | Authenticated extraction and completeness are documented in the [current portal reference](../starlink-online-protocol/README.md). Access is separate from Test Server access. |
+| ERM-CONFIG-01 | Interval changes versus bulk replacement         | Earlier CB1147TP 662 single-definition `02` 30→60 was independently verified across 14 definitions and five new 405s/four 60s deltas. New export uses bulk `01`, all 14 at60, then profile 343.                        | ERM's three-command requirement must be scoped to full export versus proven single-definition update. Later mixed screenshot does not erase dated readback/cadence proof.      |
+| ERM-ACK-01    | Positive/negative eData ACK                      | Supplied table:154 response 0=not acknowledged/error,1=acknowledged. Identified vendor ACK 7179129747=`19,0,154,1`.                                                                                                    | ACK is not full readback or fault list; no universal queue-to-event correlation is supplied. Vendor POST queue example differs from observed GET.                              |
+| ERM-SERVER-01 | Simultaneous forwarding                          | First reply describes a fork to our server and ERM Test Server.                                                                                                                                                        | New reply supplies no endpoint, fork procedure, transport or ACK/command ownership. Not live-verified.                                                                         |
+| ERM-SERVER-02 | Capture/replay/simulation                        | Correspondence supplies examples; the authenticated portal now supplies a downloadable Test Server and tool reference.                                                                                                 | Actual recording/replay/simulation and packet capture remain unverified.                                                                                                       |
+| ERM-SERVER-03 | Network configuration and connection proof       | Portal G11 supplies local TCP/UDP and port-forwarding guidance; see the [reading guide](../starlink-online-protocol/authenticated-reading-guide.md).                                                                   | No actual truck routing, installation-specific APN, preservation/restoration or matched two-destination reception was tested.                                                  |
 
-The subsequent [morning recheck](live-verification-2026-10-27.md#morning-recheck-paired-monitor-exports-and-cb1344xh)
-adds eight preserved controlled Monitor exports plus real CB1344XH `411`, `410`
-and extended `412` replies. DTC and ignition-off/CAN-alive checkbox command bytes
-are now confirmed by paired exports. CB1344XH was moving with ignition on but
-reported CAN error/disconnections; tracker activity does not resolve that fault.
-At that morning checkpoint no live checkbox change had been made. The subsequent
-[actual DTC test](live-verification-2026-10-27.md#actual-dtc-read-and-controlled-configuration-test)
-confirmed one byte 18 0→1 change by independent full-global readback at 08:04:54 UTC;
-all other 48 global bytes matched. DTC remains 1. Both real logger reads returned
-154,0; at that checkpoint a vehicle DTC code/lifecycle and a new interval were unproved. Later interval and active-CAN DTC results follow below.
+## Changes to the earlier conclusions
 
-| ID            | Subject                                                       | Manufacturer/source evidence                                                         | Local verification and current status                                                                                                                                                  | Evidence needed to close                                                                                                        |
-| ------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| ERM-DTC-01    | Process DTCs activation                                       | Engineer's instruction and a Process FMS DTCs field in source `302`                  | **Configuration verified on CB1344XH and active-CAN CB1147TP**: byte18 0→1, independent49-byte matches at08:04:54/08:52:57 UTC;48 others identical; positive fault list still unproved | Actual known fault report/lifecycle; byte 7 export discrepancy remains a separate vendor question                               |
-| ERM-DTC-02    | FMS fault report `418`                                        | Table says ASCII; source payload does not reproduce the printed first code           | **Five character bytes confirmed in Monitor 9.56 decoder; real firmware/API report still required**                                                                                    | Corrected sample and real raw report with expected code/status                                                                  |
-| ERM-DTC-03    | FMI fault report `419`                                        | One-byte SPN table conflicts with 19-bit range and four-byte sample                  | **Four-byte big-endian SPN confirmed in Monitor 9.56 decoder; installed layout/bit rules unproved**                                                                                    | Corrected specification, reserved-bit rules and real decoded report                                                             |
-| ERM-DTC-04    | Faults in Karma/API                                           | Engineer confirms platform/API support without an endpoint or captured response      | **Requires further tests**; bounded CB1147TP scan found no `413`/`418`/`419`; CB6711TE coverage incomplete after timeouts                                                              | Identified vehicle/device, actual endpoint, source message ID/UTC time and known fault/lifecycle evidence                       |
-| ERM-COMPAT-01 | Model, firmware and profile requirements                      | Monitor 9.08 screenshot; no compatibility specification                              | **Partial: CB1147TP profile343 and CB1344XH extended 412/global read verified; CB1344XH profile and type91 extension unresolved**                                                      | Supported hardware/firmware combinations, extended version decode and current target profile                                    |
-| ERM-PORTAL-01 | Protocol access and complete exchange documentation           | Engineer refers to access email dated literally `7/10/2026`                          | **Partial: public login page verified 2026-10-27; authentication blocked by unavailable credentials**                                                                                  | Recover the account/email; verify authenticated framing/ACK/command pages                                                       |
-| ERM-SERVER-01 | Simultaneous forwarding to our server and ERM Test Server     | Engineer explicitly describes a fork, without endpoint/setup details                 | **Requires ERM clarification; not live-tested**                                                                                                                                        | Actual service/tool, endpoints, transport, fork procedure, ACK/command ownership and fresh matched traffic at both destinations |
-| ERM-SERVER-02 | Capture, replay and simulation                                | Original request asks for all three; reply describes only a fork and static examples | **Requires ERM clarification; not tested**                                                                                                                                             | Individual capability confirmation, usable captures/fixtures and demonstrated behaviour                                         |
-| ERM-SERVER-03 | Device connection, network settings and successful connection | Different IP/port mentioned; transport/APN/configuration/readback omitted            | **Requires ERM clarification; not live-tested**                                                                                                                                        | Compatible configuration procedure, observed handshake/messages and preserved/restored production routing                       |
-| ERM-DTC-05    | Explicit stored-fault read and OBD report `413`               | Protocol 2.3.16 documents `301`/`19`; its `413` example matches P1111/C2222/B3333    | **Four real isolated replies on two trucks**: includes56117619 with independently enabled DTC and advancingCAN on CB1147TP; all154,0; no positive DTC list                             | Known real fault/code list; distinguish empty-buffer versus generic rejection semantics on this firmware                        |
-
-The two source inconsistencies are described in the [image analysis](analysis.md#images-2-and-3-fms-fault-report-418).
-They are not evidence of a malfunctioning physical device. DTC enablement also does
-not prove a 539/662 reporting interval or create CAN data when the vehicle supplies none.
-
-The [completed live reporting test](live-verification-2026-10-27.md#completed-live-reporting-and-active-can-fault-control)
-subsequently verified CB1147TP 662 30→60 through the existing Fleet workflow,
-independent whole-set readback and five new 405 records with four exact60-second
-deltas. All13 unrelated definitions were identical; Gateway matched the new IDs,
-times and values. CB9680TE also supplied delayed539 periodic proof120/121s after
-its earlier verified120 setting, without a new write. These are scoped measurement
-successes; a real DTC code/lifecycle remains unproved. Final settings are
-CB1147TP 662=60/DTC=1 and CB1344XH last verified DTC=1. The
-[same-device DTC control](live-verification-2026-10-27.md#active-can-and-enabled-dtc-on-the-same-truck)
-verified CB1147TP DTC enablement at08:52:57, then received154,0 at08:54:32 and
-another405 at08:54:33. Enabled DTC and active CAN are now tested together; a known
-fault is still required to prove positive fault-code decoding and lifecycle.
+- **Positive fault data:** the old campaign's “no real 419 observed” statements
+  remain accurate for 27 October. They are superseded as a current capability
+  assessment by the independently retrieved28/29 October reports.
+- **Negative acknowledgement:** the contextual Monitor empty-buffer display is
+  an implementation observation; the new explicit protocol definition is NACK.
+  Historical 154,0 results cannot prove no vehicle faults or successful logger reads.
+- **Portal access:** an earlier missing access email is no longer the current
+  blocker because the new private reply supplies credentials. Raw credentials
+  remain outside this reference.
+- **Interval procedure:** preserve the successful dated `02` test. The new bulk
+  export is a distinct `01` replacement, includes global changes at bytes 7/11/12/13
+  and selects profile 343. It must not be applied as an assumed DTC-only edit.
+- **Source questions:** ERM explicitly still awaits another developer's answer
+  on fault format, lifecycle and Monitor export discrepancy. The new419 supports
+  four-byte SPNs but does not silently repair the printed 418/419 specifications.
 
 ## Recording subsequent confirmations
 
-Use these statuses consistently:
+Use **verified for the stated scope**, **requires further tests**, **requires ERM
+clarification**, or **not tested** with the actual evidence. A known queue ID,
+`transmitted`, ACK, configuration readback, measured cadence, raw fault report and
+fault lifecycle are separate results. For a fault retain the exact car/device,
+message ID, UTC source time, raw payload, SPN/FMI/status and request association
+if one is actually established. Distinguish automatic, requested and historically
+replayed events when the contract permits it; otherwise record the uncertainty.
 
-- **Not tested / not verified:** no adequate scoped observation has been collected.
-- **Requires further tests:** a run is incomplete or inconclusive, including an observed
-  failure whose cause has not been established. Record what failed and the missing evidence.
-- **Requires ERM clarification:** a missing or conflicting vendor contract prevents a
-  meaningful conclusion. Keep the precise question in the linked backlog.
-- **Verified for the stated scope:** the required evidence was observed. State the tested
-  model/firmware/profile, device, procedure and limitations; do not generalize fleet-wide.
-
-The [pending functional plan](../../../todo/karma-api-v2.md#sequential-functional-verification-plan)
-has seven stages, each capped at 50 targeted attempts. On 2026-10-27 the user
-authorized stages 02–07 together as one sequential run; stage 01 retains its partial result.
-Test Server/routing experiments remain excluded.
-This changes the planned budget, not any verification status above.
-
-After a targeted test, update the applicable row with its observation date, scope,
-source message/operation/queue references, exact UTC times and a concise evidence
-summary or link. Keep a configuration readback separate from actual fault/measurement
-receipt. For interval proof, retain at least three genuinely new periodic measurement
-IDs, source values, UTC `edt` timestamps and consecutive deltas after independent readback.
-For DTC proof, retain the known fault and observed added/removed transitions where tested.
-For forwarding proof, correlate fresh identified traffic at both destinations.
-
-An empty response, timeout, queued/transmitted command, `COMPLETE` operation or Monitor
-checkbox alone does not establish the corresponding runtime behaviour. A failed test
-must retain its actual outcome and remain marked for further tests and/or ERM clarification;
-do not silently promote an assumption to a supported feature.
-
-Keep the source correspondence and original images unchanged. Correct analysis with
-an explicit basis when new evidence resolves a discrepancy. Keep remaining actions
-in the [Karma backlog](../../../todo/karma-api-v2.md#erm-support-verification), and update
-the existing authoritative workflow/protocol reference when behaviour is actually
-confirmed. Store credentials and unsanitized captures privately; this register is a
-concise capability/evidence reference, not a polling transcript or automated-check log.
+Keep the original source assets unchanged. Mark changed conclusions explicitly,
+link current evidence and keep pending actions in the [existing backlog](../../../todo/karma-api-v2.md#erm-support-verification).
+Do not store credentials or unsanitized private transcripts in this reference.

@@ -1,5 +1,13 @@
 import type { FleetTripCondition } from '../../generated/graphql/types.js';
-import { booleanFilter, dateTimeRange, idList, invalid, numberFilter } from '../../validation.js';
+import {
+  booleanFilter,
+  dateTimeRange,
+  filterCondition,
+  filterConditions,
+  filterRange,
+  idList,
+  numberFilter,
+} from '../../validation.js';
 
 /** Generated condition shape with transport instants validated as Dates. */
 export type TripConditionCriteria = Omit<
@@ -14,17 +22,9 @@ export function tripConditions(
   if (value == null) {
     return undefined;
   }
-  if (!Array.isArray(value) || value.length > 50) {
-    invalid(
-      'filter',
-      'filter.allOf: use at most 50 conditions.',
-      Array.isArray(value) ? 'TOO_MANY_ITEMS' : 'INVALID_TYPE',
-    );
-  }
+  filterConditions(value);
   return value.map((condition: FleetTripCondition | null) => {
-    if (typeof condition !== 'object' || condition === null || Array.isArray(condition)) {
-      invalid('filter', 'filter.allOf: use valid trip conditions.', 'INVALID_TYPE');
-    }
+    filterCondition(condition, 'trip');
     const period = dateTimeRange(condition.startedFrom, condition.startedTo, {
       from: 'startedFrom',
       to: 'startedTo',
@@ -35,17 +35,10 @@ export function tripConditions(
       distanceKmFrom: numberFilter(condition.distanceKmFrom, 'distanceKmFrom', 0, 5000),
       distanceKmTo: numberFilter(condition.distanceKmTo, 'distanceKmTo', 0, 5000),
     };
-    if (
-      distance.distanceKmFrom !== undefined &&
-      distance.distanceKmTo !== undefined &&
-      distance.distanceKmFrom > distance.distanceKmTo
-    ) {
-      invalid(
-        'filter',
-        'filter.distanceKmTo must not be below filter.distanceKmFrom.',
-        'INVALID_RANGE',
-      );
-    }
+    filterRange(distance.distanceKmFrom, distance.distanceKmTo, {
+      from: 'distanceKmFrom',
+      to: 'distanceKmTo',
+    });
     return {
       startedFrom: period.from,
       startedTo: period.to,

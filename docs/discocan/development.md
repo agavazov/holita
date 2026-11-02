@@ -446,17 +446,64 @@ if refresh fails. Search by registration, car ID or device ID and optionally sel
 filtering and 25/50/100-row pagination use the full loaded account list. Search, project and
 page state survive reload and language changes in the URL. Clear filters returns to the first
 page. Click a registration number to open `/en/karma-client/cars/:recordId` or
-`/bg/karma-client/cars/:recordId`. Details load independently of the list and show the car
-summary and last-known location, with subtype, timezone ID, assigned-driver count and every
+`/bg/karma-client/cars/:recordId`. Overview loads the source-local daily report and an independently
+reported last position, followed by the car summary, with subtype, timezone ID, assigned-driver count and every
 other original field available in the closed Source fields section. Refresh retains prior details on
 failure; missing/invalid IDs show a not-found message. There is no editing, automatic polling,
 persistence or Fleet synchronization.
 
-Each truck section has the same registration/ID header and navigation for Overview,
-Device settings, eData, Location, Trips, Events and Driving profile. Back to trucks restores the originating list
-filters/page. Switching sections keeps that list context without copying the section's date
-filters or cursor. Invalid submitted date/time ranges and ID lists show errors beside the
+Each truck section has the same registration/ID header and primary Overview, Trips and Location
+navigation; More groups Diagnostics, Device settings, eData, Events and Driving profile. Back to trucks restores the originating list
+filters/page. Switching sections keeps that list context and a validated selected report day
+without copying the section's history date filters or cursor. Invalid submitted date/time ranges and ID lists show errors beside the
 relevant fields and focus the first invalid input; malformed URL filters keep their warning.
+
+### Real truck diagnostic history
+
+Open a truck's **More → Diagnostics** at
+`/en/karma-client/cars/:recordId/diagnostics` (or `/bg/…`). History reads the configured
+Karma account through Gateway independently of the active Branch. It starts with a bounded
+latest batch; optional inclusive **From message ID / To message ID** bounds can select an
+actual source record without a slow dated scan. Older pages are explicit reads. No total or
+complete current ECU fault inventory is implied.
+
+Each report preserves message ID, car/device identity, source UTC time, display timezone,
+report family and original payload. `419` type `21` decodes six-byte entries as four-byte
+big-endian SPN, FMI and reported status (`01` added, `02` removed). A removed logger entry
+does not establish a repaired vehicle. Unsupported or ambiguous layouts, including `418`,
+remain inspectable without invented descriptions, ECU identity, severity or current active
+status. Tracker diagnostics, OBD reports, communication snapshots and fault reports retain
+separate families. Empty loaded history means no report was observed in that selection.
+
+The operator view shows each decoded fault separately with a red reported-fault label and
+**View fault** opening its explanation, event time and service follow-up. Removed entries use
+a neutral label and do not confirm a repair. Counts describe the displayed historical entries,
+not unique active faults. Source IDs, message bounds, original reports and bytes are under
+**Technical details**. Unknown codes keep an explicit missing-description notice.
+The small description reference covers SPN 4339 (SCR feedback control), SPN 1247 (engine
+power) and FMI 7, 11 and 15, using the manufacturer's
+[SS1033423 reference](https://static.nhtsa.gov/odi/tsbs/2018/MC-10141869-9999.pdf)
+(PDF pages 24, 93 and 394). It supplies general code meanings, not a vehicle-specific diagnosis.
+
+Fixed **Read fault logger** and **Read communication diagnostics** actions require the
+active Branch and enabled Fleet device operations, using the same private machine token
+and worker setup described [below](#background-device-configuration-reads). No local Fleet
+Device registration is needed. Saved operations survive refresh/restart. Queue delivery,
+special device acknowledgment and actual returned reports are shown separately.
+No outer transport acknowledgment is inferred from them. `154,0` is NACK/error, and
+`154,1` is a positive special ACK; neither establishes a complete fault inventory.
+Pending/uncertain requests are not automatically replayed. A provider queue still pending
+after a local timeout blocks another read, including from another Branch. A terminal
+provider result permits a new explicit read. Empty/type-only fault payloads do not complete a read.
+The actions do not change configuration or clear faults.
+
+For the verified CB1147TP capture, select car `16595` and bound both message IDs to
+`7177124308` to inspect SPN 4339/FMI 7 and SPN 1247/FMI 11. Message `7179721665` contains
+SPN 23806/FMI 15. These historical reports prove received faults, not a fresh ECU scan.
+The [dated live evidence](erm-resources/erm-support-diagnostics-protocol-test-server/live-verification-2026-10-29.md)
+retains the separate logger NACK and queued-request outcomes.
+
+### Truck measurements
 
 From truck details, open **eData** at `/en/karma-client/cars/:recordId/edata` (or `/bg/…`).
 It starts with the latest 50 messages without a date requirement. Apply a page size of
@@ -474,6 +521,45 @@ cursor metadata in the current browser history; a copied older-page URL or langu
 may have no earlier trail, so use Latest to restart. Refresh failures retain the current
 page; changing page/filter clears its previous rows. Truck validation, independent Branch/Fleet
 access and client retirement are the same as for details.
+
+### Truck daily Overview
+
+Open a truck's **Overview** to load Yesterday in its proved `Europe/Sofia` source zone.
+Choose a completed **Source-local day** and **Apply day**, or choose **Yesterday** to let the
+server select it again. The selected day stays in `?day=YYYY-MM-DD`, survives switching truck
+sections and does not change the independent Trips/Events filter clocks.
+
+The three values are total distance, trip count and maximum trip speed from the same bounded
+server result. Distance and speed retain explicitly unconfirmed source units. Day/night
+composition appears only for complete compatible inputs. Retrieval, per-value availability and
+unassessed GPS coverage remain separate; partial values describe the loaded subset, and a
+failed query does not become a zero-trip or example report.
+
+**Loaded trips** pages only that report's returned trips. **View trip** opens the original
+record and historical endpoints in a drawer at `#trip-<id>`, preserving the day and originating
+truck-list filters. Map and Street View use the selected endpoint; Google directions remain a
+suggestion. **Source fields** retains the raw trip record. Close returns focus to the row.
+The default **Last reported position** belongs to the latest available message independently
+of the selected day; its map pauses while the historical drawer map is active. Missing
+coordinates or Google configuration leave readable source facts and valid external actions.
+
+**Compare two days** loads one explicitly selected second completed day through the same bounded
+report contract. `?compareDay=YYYY-MM-DD` preserves that selection without reloading the primary
+day. The comparison keeps both retrieval times, source-zone boundaries and source trip links.
+Differences are selected day minus comparison day, in the displayed source units. Both reports
+must be complete (including a completed empty day), with matching truck, zone, selection and
+metric units; each value must be available and complete. Percentage change additionally needs
+a nonzero comparison value. Partial or unavailable values remain visible with an explanation,
+without a difference or a quality assessment.
+
+**Day brief / export** provides deterministic facts and calculation explanations from that
+loaded report. Its local JSON download contains the selected day and, only when chosen, the
+loaded comparison day. The trip drawer's **Trip and selected point brief / export** downloads
+the original trip, bounded position-read metadata and only the selected point, when selected.
+The files retain source IDs, raw units, clocks, retrieval/coverage and selection limits. Export
+does not request more data or recompute totals from the current table page. Coordinates are
+excluded by default and require the explicit checkbox; the latest reported location is not
+historical report evidence. Files are downloaded locally with no upload or public sharing.
 
 ### GraphQL through Gateway
 
@@ -642,10 +728,23 @@ implied: Location displays the last-known message; eData provides message histor
 
 ### Karma maps
 
-Location displays the last reported coordinate pair and source fields. Trips group the start and
-stop coordinates in their detail drawer and offer a Google suggested driving route between them.
-Karma does not supply a historical GPS trace; suggested directions do not establish the route driven.
+The truck inventory's **Location** and **Street View** row actions open a drawer and
+load only that truck's last reported position. The selected truck and view stay in
+the URL alongside the inventory filters; closing restores the row action's focus.
+Overview and Location use the same [shared map panel](../../apps/admin/src/app/ui/map-preview/map-preview.ts)
+for the last reported position, separately from a selected historical report day.
+Event and eData detail drawers use their own record's coordinates, source time and ID,
+without substituting the truck's newer location.
+Trip drawers use the panel with the recorded Start/End points. Select **Map** or
+**Street View** for a point, or **Suggested Google route** when both endpoints are valid.
+With only one valid endpoint, point actions remain available and directions are absent.
+The suggested route is Google's calculation between endpoints, not recorded vehicle movement.
 Invalid or missing coordinate pairs cannot open a map. Zero is a valid coordinate.
+
+The source record, coordinates and source times remain visible while exploring the map.
+Street View shows nearby surroundings that may be older or unavailable, not live vehicle
+imagery or the scene at the record's time. It does not change the source point.
+**Return to recorded point** restores the point view; external Google Maps actions remain available without a key.
 
 Google Maps links work without application configuration. For an interactive embedded preview,
 enable Maps Embed API in a Google Cloud project and add a browser key as
@@ -656,15 +755,56 @@ referrers, including `http://127.0.0.1:11000/*` for local development. Configura
 at bootstrap; reload after changing it. The ignored local file is excluded from production builds.
 See Google's [Embed setup](https://developers.google.com/maps/documentation/embed/get-api-key)
 and [embedding guide](https://developers.google.com/maps/documentation/embed/embedding-map).
-The preview loads only after clicking its load button and sends the displayed coordinates to Google.
-Without a configured key, the page explains preview availability and retains the external link.
+With a configured key and valid coordinates, the active map panel automatically loads
+the selected Google view and explains that the coordinates are sent to Google. Selecting
+Street View or changing the mode, endpoint or source record updates the preview directly.
+Loading is limited to the mounted active panel, without hidden-tab or per-row previews
+or polling. Without a configured key, valid external links remain available; missing or
+invalid coordinates retain the textual fallback. Coordinate facts and fallback actions
+remain visible if a preview or panorama is unavailable; no separate Street View
+availability lookup is performed.
+
+Trip drawers also show **Point records** from a single bounded read between the selected
+trip's start/end message IDs. Selecting a row updates the shared Map/Street View context;
+local paging and point selection do not refetch source data or replace the trip/list URL.
+**Return to trip endpoints** restores endpoint mode and its separately labeled suggested
+directions. Missing coordinates never borrow another record's point. Empty, partial or failed
+sample reads retain the original endpoint facts and report their retrieval state separately
+from GPS coverage. Open trips or missing message bounds remain in endpoint mode.
+
+The list keeps same-time/same-coordinate records with distinct IDs. Long intervals use the
+displayed Holita 15-minute rule over established UTC positions; this is not a provider
+sampling-frequency claim. Declared source gaps are displayed separately. Full paths,
+multi-marker fleet maps and nearest-truck lists remain unavailable without the richer-map
+and bounded bulk-contract prerequisites; eData/CAN series are not loaded by this view.
 
 The truck list and profile tabs share the admin page, filter and table patterns.
 Open an eData message, trip or event from its record link or row menu to view its details
 in a right-hand drawer; original fields remain in the expandable Source fields section.
-Karma list/search/filter controls share one responsive layout. All period filters use PrimeNG
+Karma list/search/filter controls share one responsive layout. History range filters use PrimeNG
 DatePicker with a separate textual time including seconds, retaining the existing UTC or API
-wall-clock interpretation and URL values even during daylight-saving clock gaps.
+wall-clock interpretation and URL values even during daylight-saving clock gaps. The daily
+Overview uses a calendar-date input in its explicitly named source zone.
+
+### Measurements
+
+On the selected truck's eData page, set the existing UTC bounds and optional parameter filter,
+then choose **Measurements**. **Source messages** returns to the original message table.
+Both views share one bounded API page; Older/Newer replaces that subset. The scope text shows
+the requested inclusive bounds, filter, limits and continuation. No full-period total or
+per-vehicle hardware capability is inferred from a loaded page.
+
+Choose one channel to see its source-scale chart and readable measurements table. Expand
+**Observed channels in the loaded selection** for numeric/null/absent counts and separate
+last observed/last numeric timestamps. Not observed does not mean unsupported hardware,
+healthy or disconnected. Source-provided unit labels are not independent calibration, so
+real counter comparison, engine-counter differences and fuel consumption remain unavailable.
+
+Select a table record for its reading ID, message/position ID, unchanged source time and
+Map/Street View. **Open selected source message** reveals the original eData fields. Neither
+selection issues another eData request. Unproved UTC clocks keep the table and disable the
+chart; nulls, absent readings, declared gaps and the displayed 15-minute rule break its line.
+A failed refresh retains the preceding successful retrieval time and data.
 
 ### Trips, events and driving profile
 
@@ -818,25 +958,26 @@ shown as **Device in Karma**. No local Device registration, matching or addition
 needed. The server verifies the current Karma car/device pair before queuing and dispatching work.
 Opening a settings URL while signed out returns to that same route after login and Branch selection.
 
-The page shows saved state and can be closed/reloaded while the server waits. It displays
-the selected target's operations and the matching last complete snapshot, preserving unknown
-IDs, full definitions and zero reporting intervals. Each section distinguishes **Not read yet**
-from a confirmed empty response and shows its own confirmation time. The latest operation is
-visible above the tables; **Device operations** expands the full history when operations exist.
-Use **Read configuration** to read parameters, then rules after the first operation completes.
-Reloading the page restores results and progress; **Continue reading rules** resumes the second
-stage explicitly when needed. Opening or reloading the page never queues a new device read by
-itself. Individual section reads remain available, and a failed rule read does not invalidate
-a complete parameter baseline.
+The page summarizes the device, last successful read, whether commands and changes are enabled,
+and pending or failed operations. **Read configuration** reads parameters, then rules after the
+first complete response. Opening or reloading the page only loads saved results; it never queues
+a device command. **Continue reading rules** resumes an interrupted sequence. Each section shows
+its own read time and distinguishes **Not read yet** from a confirmed empty response.
 
-If Karma reports a different device for the selected truck, refresh the truck and read that
-device's configuration. Snapshots for another device or Branch cannot authorize a change.
+Use one flow: **Read device → Edit → Review difference → Send → Verify result**.
+Periodic data lists parameter names, source codes and intervals. **Add parameter** opens a
+searchable catalog picker; **Change interval** opens the selected parameter directly. Choose
+30 seconds, 1, 5 or 15 minutes, or enter custom whole seconds from `0` to `65000`. A separate
+review shows the truck, parameter and before/after interval before sending. Zero means
+**Not in use** and requires separate confirmation; readback does not prove measurement silence.
+Unknown parameter IDs remain editable from their captured definitions. Changes require the latest
+complete read for this exact truck/device and Branch, enabled dispatch and writes, and no pending
+or uncertain operation. Refresh the truck and read again if Karma changes its device.
 
-The confirmed Parameters table opens the change editor in a right-hand drawer. Readback
-identifiers and original hex definitions are available in the operation history; each request
-keeps status, phase and requested changes visible, with raw definitions, queue and correlation metadata under
-**Technical operation details**. **Show latest confirmed settings** returns from a historical
-snapshot; editing is available only against the latest matching baseline.
+**History** shows the newest requests first, their send times, requested changes and outcomes.
+A queued request is not a confirmed change. A successful result requires matching device readback.
+Original fields, raw definitions, request IDs and prerequisites are under **Technical details**.
+History cannot replace the current editing baseline with an older snapshot.
 
 The parameter row's **Measurements** action opens a read-only drawer for that parameter and
 Karma device. It loads the latest records within the displayed 24-hour UTC window on opening
@@ -846,42 +987,29 @@ change can remain configuration-confirmed without new numeric measurements after
 differences do not automatically establish periodic reporting: eData can also contain event
 or ignition-off reports. An unavailable query is shown separately from an empty result.
 
-With writes enabled and a complete read for that exact target, add a parameter from the eligible
-Monitor presets or edit an existing parameter's interval from the table, including unknown IDs.
-**Add parameter** opens catalog selection; **Change interval** opens the chosen parameter
-directly, without asking for its identity again. Enter an integer from `0` to `65000` seconds.
-Review the selected target, parameter name/ID and old/new
-interval before confirming **Save background change**. The baseline request ID, preserved raw
-definition and catalog provenance are available under **Technical change details**.
-Zero requires its own confirmation:
-Monitor describes it as **not in use**, and readback does not prove measurement silence.
-Changing the target or baseline invalidates the draft; unsaved drafts guard navigation and
-Branch or Karma target changes.
+Conditional events describe each rule's condition, threshold, confirmation time and event codes
+in one sentence. Read both parameters and rules before creating or changing an event. The drawer
+walks through **When should it send?** (name, searchable parameters, comparisons and threshold,
+confirmation time) and **What should it send?** (event codes when the condition becomes true or
+false), then opens the review of one rule. Event names and payload selection are not supplied by
+the current API; use event codes established for this truck. Ordinary rules require at least one
+reporting transition. Technical details contain the automatically selected free rule number,
+explicit replacement controls, calculation-only mode and advanced expression editing.
 
-Rule drafts can be created before selecting Fleet. They are saved only in this browser,
-partitioned by the signed Tenant and Karma car, with local names and catalog references.
-The right-hand rule editor offers condition rows with **All / Any** grouping and a readable
-preview. Choose configured parameters by source name/ID; without a parameter list, local
-authoring accepts explicit IDs. Advanced ID text preserves complex expressions, including
-arithmetic, mixed logic and `TimeOf`, `Count` or `Sum`, without flattening them into simple rows.
-Constants are integers from -65535 through 2147483647; mixed operators require explicit grouping.
-Compilation rejects RuleData above 128 bytes. No firmware behavior is simulated.
+Advanced ID text preserves complex expressions, including arithmetic, mixed logic and `TimeOf`,
+`Count` or `Sum`, without flattening them. Constants are integers from -65535 through 2147483647;
+mixed operators require explicit grouping. RuleData is limited to 128 bytes. Confirmation time
+is `1..32767` milliseconds, separate from `TimeOf`; no firmware behavior is simulated.
+Unsupported device rules stay opaque and cannot be overwritten. Other rules and the observed
+dashboard bit are preserved; a new rule uses false for that bit.
 
-Assign a device rule ID explicitly; occupied IDs are shown and replacement is identified.
-Choose whether to report when the condition becomes true and/or false, and supply a positive
-event code for each enabled transition. Disabling a transition sends zero for its event code.
-Ordinary reporting rules require at least one enabled transition; **Advanced settings** permits
-explicit calculation-only rules with both events zero. Submission requires acknowledgement of
-zero-event behavior. A confirmed rule and its local pending revision appear together;
-duplicate local IDs remain separate conflicts.
-Debounce is a separate `1..32767` millisecond field. Duplicate drafts need distinct device
-IDs before sending. Local imports/exports preserve the source dashboard activation bit,
-without an editing control. For a live change, the selected device baseline determines this
-bit: an existing rule keeps its observed value and a new rule uses false. The send review
-shows the actual outgoing record.
-Local draft removal never deletes a rule from a device.
+Unsent rule changes and local names are retained in this browser for the signed Tenant and truck,
+and appear alongside device settings with an explicit unconfirmed status. **Review change** leads
+directly to the guarded send review. Missing dependencies, duplicate rule numbers, changed
+baselines, pending operations and uncertain outcomes block sending. Discarding a proposed change
+never deletes a device rule. Unsubmitted edits guard navigation and target changes.
 
-**Files and technical details** contains INI/TXT tools for inspection and local authoring only. Original source, names, section order,
+**Technical details and file tools** contains INI/TXT tools for inspection and local authoring only. Original source, names, section order,
 unknown keys and opaque definitions remain available; mismatches, unresolved dependencies and
 unsupported expressions are shown. Download the original source, export edited local INI,
 or export inspection TXT containing individual `04` records. Edited ID-expression exports

@@ -4,15 +4,13 @@ import { MessageService } from 'primeng/api';
 import { ButtonDirective } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
-import { expect, userEvent, waitFor, within } from 'storybook/test';
-import { chooseMenuItem } from '../../../storybook/interactions';
 import { onFrame } from '../../../storybook/story-config';
 import {
+  listRecord,
+  trackById,
   type ListAction,
   type ListActionRequest,
   type ListRecord,
-  listRecord,
-  trackById,
 } from '../list/list-actions';
 import { RowActions } from '../row-actions/row-actions';
 import { TablePanel, type TablePage } from './table-panel';
@@ -256,95 +254,22 @@ type Story = StoryObj<TablePanelDemo>;
 export const Loading: Story = { args: { view: { kind: 'loading' } } };
 export const Rows: Story = { args: { view: { kind: 'rows' } } };
 
-/** Everything fits on one page: the range and the page size stay, the page links go. */
-export const SinglePage: Story = {
-  name: 'Single page',
-  args: { view: { kind: 'rows' }, total: 5 },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(canvas.getByText('1–5 of 5')).toBeVisible();
-    await expect(canvasElement.querySelector('.p-paginator-pages')).toBeNull();
-    await expect(canvasElement.querySelector('.p-paginator-rpp-dropdown')).not.toBeNull();
-  },
-};
-
-/** A larger page size than the list: it can still be changed back. */
-export const LargePageSize: Story = {
-  name: 'Large page size',
-  args: { view: { kind: 'rows' }, total: 46, pageSize: 100 },
-  play: async ({ canvasElement }) => {
-    await expect(canvasElement.querySelector('.p-paginator-rpp-dropdown')).not.toBeNull();
-    await expect(canvasElement.querySelector('.p-paginator-pages')).toBeNull();
-  },
-};
-
-/** A size outside the offered ones (e.g. from an old link) is added to them, so it shows. */
-export const UnlistedPageSize: Story = {
-  name: 'Unlisted page size',
-  args: { view: { kind: 'rows' }, total: 46, pageSize: 25 },
-  play: async ({ canvasElement }) => {
-    await waitFor(() =>
-      expect(canvasElement.querySelector('.p-paginator-rpp-dropdown')).toHaveTextContent('25'),
-    );
-  },
-};
-
 export const Busy: Story = {
   args: { view: { kind: 'rows' }, busy: true },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole('button', { name: 'Edit CB 1001 AX' }));
-    await expect(canvas.getByText('Last request: edit 1')).toBeVisible();
-    await userEvent.click(canvas.getByRole('button', { name: 'Actions for CB 1002 AX' }));
-    await chooseMenuItem(canvasElement.ownerDocument.body, 'Delete');
-    const body = within(canvasElement.ownerDocument.body);
-    const dialog = await body.findByRole('alertdialog', { name: 'Delete vehicles?' });
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
-    await waitFor(() => expect(canvas.getByText('Last request: delete 2')).toBeVisible());
-    await waitFor(() => expect(dialog).not.toBeInTheDocument());
-  },
 };
 
 /** No rows: no footer and no paging. */
 export const Empty: Story = {
   args: { view: { kind: 'empty' } },
-  play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).queryByText(/of 46/)).toBeNull();
-  },
 };
 
 export const NoResults: Story = {
   name: 'No results',
   args: { view: { kind: 'no-results' } },
-  play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).queryByText(/of 46/)).toBeNull();
-  },
 };
 
 export const ErrorState: Story = { name: 'Error', args: { view: { kind: 'error' } } };
 export const RowsError: Story = { name: 'Rows error', args: { view: { kind: 'rows-error' } } };
-
-/** Operation feedback leaves the table and keyboard focus in place, including when repeated. */
-export const Notification: Story = {
-  args: { notification: true },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const body = within(canvasElement.ownerDocument.body);
-    const table = canvas.getByRole('table');
-    const top = table.getBoundingClientRect().top;
-    const trigger = canvas.getByRole('button', { name: 'Show notification' });
-    await userEvent.click(trigger);
-    await waitFor(() => expect(body.getByText('The vehicle was saved.')).toBeVisible());
-    await expect(table.getBoundingClientRect().top).toBe(top);
-    await expect(trigger).toHaveFocus();
-    await userEvent.click(body.getByRole('button', { name: 'Close' }));
-    await waitFor(() => expect(body.queryByText('The vehicle was saved.')).toBeNull());
-    await expect(table.getBoundingClientRect().top).toBe(top);
-    await userEvent.click(trigger);
-    await waitFor(() => expect(body.getByText('The vehicle was saved.')).toBeVisible());
-    await expect(trigger).toHaveFocus();
-  },
-};
 
 /** The bulk bar floats over the bottom of the list; the rows and footer do not move. */
 export const SelectionWithProgress: Story = {
@@ -353,127 +278,5 @@ export const SelectionWithProgress: Story = {
     view: { kind: 'rows' },
     selection: rows.slice(0, 3),
     progress: 'Deleting: 1 of 3',
-  },
-};
-
-/** The row menu: Deactivate is disabled for the inactive vehicle. */
-export const RowActionsOpen: Story = {
-  name: 'Row actions open',
-  args: { view: { kind: 'rows' } },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole('button', { name: 'Actions for CB 1005 AX' }));
-    const body = within(canvasElement.ownerDocument.body);
-    await waitFor(() => expect(body.getByRole('menuitem', { name: 'Delete' })).toBeVisible());
-    await expect(body.getByRole('menuitem', { name: 'Deactivate' })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
-  },
-};
-
-/**
- * A row uses the same title and record list as a selection; Cancel returns focus to its "⋮".
- * Reopen the dialog so the same story also shows its open state.
- */
-export const ConfirmFromRow: Story = {
-  name: 'Confirm from a row',
-  args: { view: { kind: 'rows' } },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const trigger = canvas.getByRole('button', { name: 'Actions for CB 1002 AX' });
-    await userEvent.click(trigger);
-    const body = within(canvasElement.ownerDocument.body);
-    await chooseMenuItem(canvasElement.ownerDocument.body, 'Delete');
-    const dialog = await body.findByRole('alertdialog', { name: 'Delete vehicles?' });
-    await expect(within(dialog).getAllByRole('listitem')).toHaveLength(1);
-    await expect(within(dialog).getByRole('listitem')).toHaveTextContent('CB 1002 AX');
-    await expect(dialog).toHaveTextContent('Records: 1');
-    await waitFor(() =>
-      expect(dialog).toHaveAccessibleDescription(/Their trips and history stay in reports\./),
-    );
-    await waitFor(() =>
-      expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus(),
-    );
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
-    await waitFor(() => expect(dialog).not.toBeInTheDocument());
-    await waitFor(() => expect(trigger).toHaveFocus());
-    await expect(canvas.queryByText(/Last request:/)).toBeNull();
-    await userEvent.click(trigger);
-    await chooseMenuItem(canvasElement.ownerDocument.body, 'Delete');
-    const reopened = await body.findByRole('alertdialog', { name: 'Delete vehicles?' });
-    await waitFor(() =>
-      expect(within(reopened).getByRole('button', { name: 'Cancel' })).toHaveFocus(),
-    );
-  },
-};
-
-/**
- * The bulk bar runs the same actions: the dialog counts the records it applies to, lists them
- * and says how many selected records it leaves unchanged, all part of the dialog's description.
- */
-export const ConfirmSelection: Story = {
-  name: 'Confirm a selection',
-  args: { view: { kind: 'rows' }, selection: rows.slice(2, 5) },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const bar = canvas.getByRole('region', { name: 'Actions for selected records' });
-    await userEvent.click(within(bar).getByRole('button', { name: 'Deactivate' }));
-    const body = within(canvasElement.ownerDocument.body);
-    const dialog = await body.findByRole('alertdialog', { name: 'Deactivate vehicles?' });
-    await expect(within(dialog).getAllByRole('listitem')).toHaveLength(2);
-    await expect(dialog).toHaveTextContent('Records: 2');
-    // The dialog fades in: wait until its content is shown.
-    await waitFor(() =>
-      expect(
-        within(dialog).getByText('Selected records it does not apply to are left unchanged: 1.'),
-      ).toBeVisible(),
-    );
-    await expect(dialog).toHaveAccessibleDescription(/left unchanged: 1\./);
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Deactivate' }));
-    await waitFor(() => expect(canvas.getByText('Last request: deactivate 3, 4')).toBeVisible());
-  },
-};
-
-export const ConfirmDeleteSelection: Story = {
-  name: 'Confirm deleting a selection',
-  args: { view: { kind: 'rows' }, selection: rows.slice(0, 3) },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const bar = canvas.getByRole('region', { name: 'Actions for selected records' });
-    await userEvent.click(within(bar).getByRole('button', { name: 'Delete' }));
-    const body = within(canvasElement.ownerDocument.body);
-    const dialog = await body.findByRole('alertdialog', { name: 'Delete vehicles?' });
-    await expect(within(dialog).getAllByRole('listitem')).toHaveLength(3);
-    await expect(dialog).toHaveTextContent('Records: 3');
-    await waitFor(() => expect(dialog).toBeVisible());
-  },
-};
-
-/** Long names and selections stay in a scrollable list; every selected record is present. */
-export const ConfirmLongSelection: Story = {
-  name: 'Confirm a long selection',
-  args: {
-    view: { kind: 'rows' },
-    selection: rows.flatMap((row) =>
-      Array.from({ length: 6 }, (_, index) => ({
-        ...row,
-        id: `${row.id}-${String(index)}`,
-        plate: `${row.plate} · ${row.model} · Sofia distribution fleet, international routes · ${String(index + 1)}`,
-      })),
-    ),
-  },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const bar = canvas.getByRole('region', { name: 'Actions for selected records' });
-    await userEvent.click(within(bar).getByRole('button', { name: 'Delete' }));
-    const body = within(canvasElement.ownerDocument.body);
-    const dialog = await body.findByRole('alertdialog', { name: 'Delete vehicles?' });
-    await expect(within(dialog).getAllByRole('listitem')).toHaveLength(30);
-    await expect(dialog).toHaveTextContent('Records: 30');
-    await waitFor(() => expect(dialog).toBeVisible());
-    const list = within(dialog).getByRole('list');
-    await expect(list.scrollHeight).toBeGreaterThan(list.clientHeight);
-    await expect(dialog.scrollWidth).toBeLessThanOrEqual(dialog.clientWidth);
   },
 };

@@ -17,7 +17,7 @@ Thirteen parameter IDs were encountered, including parameter 781 during the
 | `651`        | Engine Percent Load At Current Speed            | number                   |
 | `662`        | Engine Fuel Rate (L/h)                          | number                   |
 | `687`        | Engine Total Fuel Used - J1939 (L)              | number                   |
-| `781`        | Battery Voltage (Starlink)                     | number                   |
+| `781`        | Battery Voltage (Starlink)                      | number                   |
 | `785`        | Fuel Level (%)                                  | number                   |
 | `1657`       | High Resolution Engine Total Fuel Used          | number                   |
 

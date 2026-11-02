@@ -165,15 +165,6 @@ export class TripsService {
     return trip;
   }
 
-  /** Distance and trip count per driver ID for trips started in the window. */
-  async driverTotals(scope: FleetScope, driverIds: readonly string[], window: DataWindow) {
-    if (!driverIds.length) {
-      return new Map<string, { distanceKm: number; tripCount: number }>();
-    }
-    const rows = await this.trips.driverTotals(scope, driverIds, window);
-    return new Map(rows.map((row) => [row.driverId, row]));
-  }
-
   driverScore(scope: FleetScope, driverId: string, window: DataWindow): Promise<DriverScore> {
     return this.trips.driverScore(scope, driverId, window);
   }

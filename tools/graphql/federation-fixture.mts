@@ -228,12 +228,12 @@ async function insertTenant(
   try {
     const schema = pg.escapeIdentifier(schemaName);
     await connection.query(
-      `INSERT INTO ${schema}."Tenant" ("id", "name", "updatedAt") VALUES ($1, $2, CURRENT_TIMESTAMP)`,
+      `INSERT INTO ${schema}."tenant" ("id", "name", "updatedAt") VALUES ($1, $2, CURRENT_TIMESTAMP)`,
       [tenant.id, tenant.name],
     );
     for (const branch of branches) {
       await connection.query(
-        `INSERT INTO ${schema}."Branch" ("id", "tenantId", "name", "updatedAt") VALUES ($1, $2, $3, CURRENT_TIMESTAMP)`,
+        `INSERT INTO ${schema}."branch" ("id", "tenantId", "name", "updatedAt") VALUES ($1, $2, $3, CURRENT_TIMESTAMP)`,
         [branch.id, tenant.id, branch.name],
       );
     }

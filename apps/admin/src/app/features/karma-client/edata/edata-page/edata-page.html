@@ -1,4 +1,4 @@
-<section class="app-view" [attr.aria-label]="text().karmaEdata" [attr.aria-busy]="loading()">
+<section class="app-view" [attr.aria-busy]="loading()">
   <holita-karma-car-header
     [language]="language()"
     [carId]="carId()"
@@ -22,71 +22,82 @@
       #filterForm
       [formGroup]="form"
       (ngSubmit)="apply()"
-      class="app-card app-filter-form"
+      class="app-card app-form-section"
       [attr.aria-label]="text().karmaEdataFilters"
     >
-      <holita-form-field
-        [label]="text().karmaPageSize"
-        controlId="edata-size"
-        [error]="fieldErrors().size?.message ?? null"
+      <div class="app-form-grid">
+        <holita-form-field
+          [label]="presentationText().fromUtc"
+          controlId="edata-from"
+          [error]="fieldErrors().from?.message ?? null"
+        >
+          <holita-karma-date-time
+            inputId="edata-from"
+            [label]="presentationText().fromUtc"
+            [invalid]="!!fieldErrors().from"
+            [invalidPart]="fieldErrors().from?.part ?? 'both'"
+            describedBy="edata-from-error edata-filter-hint"
+            formControlName="from"
+          />
+        </holita-form-field>
+        <holita-form-field
+          [label]="presentationText().toUtc"
+          controlId="edata-to"
+          [error]="fieldErrors().to?.message ?? null"
+        >
+          <holita-karma-date-time
+            inputId="edata-to"
+            [label]="presentationText().toUtc"
+            [invalid]="!!fieldErrors().to"
+            [invalidPart]="fieldErrors().to?.part ?? 'both'"
+            describedBy="edata-to-error edata-filter-hint"
+            formControlName="to"
+          />
+        </holita-form-field>
+      </div>
+      <details
+        class="app-source-details"
+        [open]="!!(fieldErrors().size || fieldErrors().parameters)"
       >
-        <p-select
-          inputId="edata-size"
-          formControlName="size"
-          [invalid]="!!fieldErrors().size"
-          [pt]="{
-            label: {
-              'aria-invalid': fieldErrors().size ? 'true' : null,
-              'aria-describedby': 'edata-size-error',
-            },
-          }"
-          [options]="pageSizes"
-          [ariaLabel]="text().karmaPageSize"
-        />
-      </holita-form-field>
-      <holita-form-field
-        [label]="text().karmaFromUtc"
-        controlId="edata-from"
-        [error]="fieldErrors().from?.message ?? null"
-      >
-        <holita-karma-date-time
-          inputId="edata-from"
-          [label]="text().karmaFromUtc"
-          [invalid]="!!fieldErrors().from"
-          [invalidPart]="fieldErrors().from?.part ?? 'both'"
-          describedBy="edata-from-error edata-filter-hint"
-          formControlName="from"
-        />
-      </holita-form-field>
-      <holita-form-field
-        [label]="text().karmaToUtc"
-        controlId="edata-to"
-        [error]="fieldErrors().to?.message ?? null"
-      >
-        <holita-karma-date-time
-          inputId="edata-to"
-          [label]="text().karmaToUtc"
-          [invalid]="!!fieldErrors().to"
-          [invalidPart]="fieldErrors().to?.part ?? 'both'"
-          describedBy="edata-to-error edata-filter-hint"
-          formControlName="to"
-        />
-      </holita-form-field>
-      <holita-form-field
-        [label]="text().karmaParameterIds"
-        controlId="edata-parameters"
-        [error]="fieldErrors().parameters?.message ?? null"
-      >
-        <input
-          pInputText
-          id="edata-parameters"
-          [invalid]="!!fieldErrors().parameters"
-          [attr.aria-invalid]="fieldErrors().parameters ? 'true' : null"
-          formControlName="parameters"
-          aria-describedby="edata-parameters-error edata-filter-hint"
-          [attr.placeholder]="'1, 539'"
-        />
-      </holita-form-field>
+        <summary>{{ presentationText().technicalDetails }}</summary>
+        <p class="app-muted">{{ presentationText().technicalHint }}</p>
+        <div class="app-form-grid">
+          <holita-form-field
+            [label]="presentationText().pageSize"
+            controlId="edata-size"
+            [error]="fieldErrors().size?.message ?? null"
+          >
+            <p-select
+              inputId="edata-size"
+              formControlName="size"
+              [invalid]="!!fieldErrors().size"
+              [pt]="{
+                label: {
+                  'aria-invalid': fieldErrors().size ? 'true' : null,
+                  'aria-describedby': 'edata-size-error',
+                },
+              }"
+              [options]="pageSizes"
+              [ariaLabel]="presentationText().pageSize"
+            />
+          </holita-form-field>
+          <holita-form-field
+            [label]="presentationText().parameters"
+            controlId="edata-parameters"
+            [error]="fieldErrors().parameters?.message ?? null"
+          >
+            <input
+              pInputText
+              id="edata-parameters"
+              [invalid]="!!fieldErrors().parameters"
+              [attr.aria-invalid]="fieldErrors().parameters ? 'true' : null"
+              formControlName="parameters"
+              aria-describedby="edata-parameters-error edata-filter-hint"
+              [attr.placeholder]="'1, 539'"
+            />
+          </holita-form-field>
+        </div>
+      </details>
       <div class="app-filter-actions">
         <button pButton type="submit" [disabled]="loading()">{{ text().applyFilters }}</button>
         <button
@@ -101,7 +112,7 @@
         </button>
       </div>
       <p id="edata-filter-hint" class="app-muted app-filter-hint">
-        {{ text().karmaEdataFilterHint }}
+        {{ presentationText().utcHint }}
       </p>
     </form>
     @if (invalidFilters()) {
@@ -112,69 +123,141 @@
     <p role="status">{{ text().karmaEdataLoading }}</p>
   }
   @if (car() && !invalidFilters()) {
-    <holita-table-panel
-      #messagePanel
-      [heading]="text().karmaEdata"
-      [view]="tableState()"
-      [busy]="loading()"
-      [emptyTitle]="text().karmaEdataEmpty"
-      [errorText]="text().karmaUnavailable"
-      [actions]="actions()"
-      (action)="viewMessage($event)"
-      (retry)="refresh()"
-    >
-      <p-table
-        class="app-responsive-table"
-        [value]="page()?.items ?? []"
-        dataKey="id"
-        [tableStyle]="{ width: '100%' }"
+    <div class="app-context-toolbar" role="group" [attr.aria-label]="measurementText().view">
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [outlined]="!measurementMode()"
+        [attr.aria-pressed]="measurementMode()"
+        (click)="measurementMode.set(true)"
       >
-        <ng-template #header>
-          <tr>
-            <th class="app-table-merged-column">{{ text().karmaEdtUtc }}</th>
-            <th class="app-col-identity">{{ text().karmaMessageId }}</th>
-            <th>{{ text().karmaParameters }}</th>
-            <th class="app-col-actions">{{ text().actions }}</th>
-          </tr>
-        </ng-template>
-        <ng-template #body let-row>
-          <tr>
-            <td class="app-table-merged-column">{{ row.eventTimeUtc ?? '—' }}</td>
-            <td class="app-col-identity">
-              <div class="app-table-identity">
-                <button
-                  class="app-link"
-                  type="button"
-                  (click)="messagePanel.run('view', [record(row)], $event.currentTarget)"
-                  [attr.aria-label]="text().karmaViewMessage + ' ' + row.id"
-                >
-                  {{ row.id }}
-                </button>
-                <span class="app-table-mobile-meta"
-                  >{{ text().karmaEdtUtc }}: {{ row.eventTimeUtc ?? '—' }}</span
-                >
-                <div class="app-table-mobile-actions">
-                  <holita-row-actions
-                    [actions]="actions()"
-                    [record]="record(row)"
-                    (choose)="messagePanel.run($event.action, [record(row)], $event.origin)"
-                  />
+        {{ measurementText().measurements }}
+      </button>
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [outlined]="measurementMode()"
+        [attr.aria-pressed]="!measurementMode()"
+        (click)="measurementMode.set(false)"
+      >
+        {{ measurementText().messages }}
+      </button>
+      @if (measurementMode()) {
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="!selectedMeasurementMessage()"
+          (click)="selected.set(selectedMeasurementMessage())"
+        >
+          {{ measurementText().sourceMessage }}
+        </button>
+      }
+    </div>
+    @if (measurementMode()) {
+      <holita-measurement-workspace
+        [language]="language()"
+        [identity]="(car()?.carNumber ?? carId()) + ' · eData'"
+        [scopeHint]="measurementText().scopeHint"
+        [channels]="measurementChannels()"
+        [records]="measurementRecords()"
+        [selectedChannelKey]="measurementChannel()"
+        [selectedRecordKey]="measurementRecord()"
+        [provenance]="null"
+        [coverage]="measurementCoverage()"
+        [loading]="loading()"
+        [error]="error() ? text().karmaUnavailable : null"
+        (selectedChannelKeyChange)="measurementChannel.set($event)"
+        (selectedRecordKeyChange)="measurementRecord.set($event)"
+        (retry)="refresh()"
+      />
+      <details class="app-source-details">
+        <summary>{{ presentationText().technicalDetails }}</summary>
+        <p>{{ measurementScope() }}</p>
+        <p>{{ presentationText().source }} · {{ presentationText().observed }}</p>
+        <p>
+          {{ presentationText().retrievedAt }}: {{ measurementProvenance()?.retrievedAt ?? '—' }}
+        </p>
+        <p>
+          {{ presentationText().retrieval }}:
+          {{ presentationText().retrievalStates[measurementCoverage().retrieval] }}
+        </p>
+        <p>{{ presentationText().coverageHint }}</p>
+        <p>{{ presentationText().positionsLoaded }}: {{ measurementCoverage().positionsLoaded }}</p>
+        <p>{{ measurementText().precisionNotes.unitGate }}</p>
+        <p>{{ measurementText().precisionNotes.counterGate }}</p>
+        <p>{{ measurementText().precisionNotes.rateGate }}</p>
+        <p>{{ measurementText().precisionNotes.voltageGate }}</p>
+        <p>{{ measurementText().precisionNotes.envelopeGate }}</p>
+        <h3>{{ measurementText().calculations }}</h3>
+        <p>{{ measurementText().calculationGate }}</p>
+      </details>
+    } @else {
+      <holita-table-panel
+        #messagePanel
+        [heading]="text().karmaEdata"
+        [view]="tableState()"
+        [busy]="loading()"
+        [emptyTitle]="text().karmaEdataEmpty"
+        [errorText]="text().karmaUnavailable"
+        [actions]="actions()"
+        (action)="viewMessage($event)"
+        (retry)="refresh()"
+      >
+        <p-table
+          class="app-responsive-table"
+          [value]="page()?.items ?? []"
+          dataKey="id"
+          [tableStyle]="{ width: '100%' }"
+        >
+          <ng-template #header>
+            <tr>
+              <th class="app-col-identity">{{ presentationText().eventTime }}</th>
+              <th>{{ text().karmaParameters }}</th>
+              <th class="app-col-actions">{{ text().actions }}</th>
+            </tr>
+          </ng-template>
+          <ng-template #body let-row>
+            <tr>
+              <td class="app-col-identity">
+                <div class="app-table-identity">
+                  <button
+                    class="app-link"
+                    type="button"
+                    (click)="messagePanel.run('view', [record(row)], $event.currentTarget)"
+                    [attr.aria-label]="text().karmaViewMessage + ' ' + row.id"
+                  >
+                    {{ row.eventTimeUtc ?? '—' }}
+                  </button>
+                  <div class="app-table-mobile-actions">
+                    <holita-row-actions
+                      [actions]="actions()"
+                      [record]="record(row)"
+                      (choose)="messagePanel.run($event.action, [record(row)], $event.origin)"
+                    />
+                  </div>
                 </div>
-              </div>
-            </td>
-            <td>{{ row.parameters.length }}</td>
-            <td class="app-col-actions">
-              <holita-row-actions
-                [actions]="actions()"
-                [record]="record(row)"
-                (choose)="messagePanel.run($event.action, [record(row)], $event.origin)"
-              />
-            </td>
-          </tr>
-        </ng-template>
-      </p-table>
-    </holita-table-panel>
-    <p class="app-muted">{{ text().karmaEdataOrder }}</p>
+              </td>
+              <td>{{ row.parameters.length }}</td>
+              <td class="app-col-actions">
+                <holita-row-actions
+                  [actions]="actions()"
+                  [record]="record(row)"
+                  (choose)="messagePanel.run($event.action, [record(row)], $event.origin)"
+                />
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </holita-table-panel>
+    }
+    <details class="app-source-details">
+      <summary>{{ presentationText().technicalDetails }}</summary>
+      <p>{{ text().karmaEdataOrder }}</p>
+    </details>
     <div class="app-pagination" [attr.aria-label]="text().karmaPagination" role="group">
       <p role="status">{{ text().karmaShownRecords }}: {{ page()?.items?.length ?? 0 }}</p>
       <div class="app-filter-actions">
@@ -214,17 +297,12 @@
 @if (selected(); as row) {
   <holita-route-drawer
     [title]="text().karmaEdataDetails"
-    [subtitle]="row.id"
     [closeLink]="null"
     size="lg"
     (closeRequest)="selected.set(null)"
   >
     <section class="app-form-section" [attr.aria-label]="detailText().summary">
       <dl class="app-facts">
-        <div>
-          <dt>{{ text().karmaMessageId }}</dt>
-          <dd>{{ row.id }}</dd>
-        </div>
         <div>
           <dt>{{ text().karmaEdtUtc }}</dt>
           <dd>{{ row.eventTimeUtc ?? '—' }}</dd>
@@ -234,6 +312,17 @@
           <dd>{{ row.parameters.length }}</dd>
         </div>
       </dl>
+    </section>
+    <section class="app-form-section" [attr.aria-label]="detailText().messagePosition">
+      <h3 class="app-card__title">{{ detailText().messagePosition }}</h3>
+      <p class="app-muted">{{ detailText().messagePositionHint }}</p>
+      <holita-map-preview
+        pageType="edata-message"
+        [language]="language()"
+        [origin]="selectedCoordinates()"
+        [identity]="row.carNumber"
+        [originTime]="row.eventTimeUtc"
+      />
     </section>
     <section class="app-form-section">
       <h3 class="app-card__title">{{ text().karmaParameters }}</h3>
@@ -245,21 +334,25 @@
       >
         <ng-template #header
           ><tr>
-            <th class="parameter-id">ID</th>
             <th>{{ text().description }}</th>
             <th class="parameter-value">{{ text().karmaValue }}</th>
           </tr></ng-template
         >
         <ng-template #body let-parameter
           ><tr>
-            <td>{{ parameter.id }}</td>
-            <td>{{ parameter.description ?? '—' }}</td>
+            <td>
+              {{ parameter.description ?? '—' }}
+              <details class="app-source-details">
+                <summary>{{ presentationText().technicalDetails }}</summary>
+                ID: {{ parameter.id }}
+              </details>
+            </td>
             <td>{{ parameter.value ?? '—' }}</td>
           </tr></ng-template
         >
         <ng-template #emptymessage
           ><tr>
-            <td colspan="3">{{ text().karmaNoParameters }}</td>
+            <td colspan="2">{{ text().karmaNoParameters }}</td>
           </tr></ng-template
         >
       </p-table>

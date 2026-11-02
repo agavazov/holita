@@ -42,27 +42,20 @@ export function adminNavigation(
     label: text.karmaClient,
     note: text.temporary,
     items: [
+      {
+        id: 'karma-monitoring',
+        label: text.monitoring,
+        icon: 'th-large',
+        link: [...karma, 'monitoring'],
+      },
       { id: 'karma-cars', label: text.karmaTrucks, icon: 'car', link: [...karma, 'cars'] },
-      { id: 'karma-users', label: text.karmaUsers, icon: 'users', link: [...karma, 'users'] },
-      { id: 'karma-roles', label: text.karmaRoles, icon: 'shield', link: [...karma, 'roles'] },
       {
-        id: 'karma-projects',
-        label: text.karmaProjects,
-        icon: 'folder',
-        link: [...karma, 'projects'],
+        id: 'karma-administration',
+        label: text.karmaAdministration,
+        icon: 'users',
+        link: [...karma, 'administration'],
       },
-      {
-        id: 'karma-time-zones',
-        label: text.karmaTimeZones,
-        icon: 'clock',
-        link: [...karma, 'time-zones'],
-      },
-      {
-        id: 'karma-api-info',
-        label: text.karmaApiInfo,
-        icon: 'info-circle',
-        link: [...karma, 'api-info'],
-      },
+      { id: 'karma-settings', label: text.settings, icon: 'clock', link: [...karma, 'settings'] },
     ],
   });
   if (fleetEnabled && branchId) {

@@ -3,10 +3,10 @@
 This directory contains external ERM references relevant to Discocan. It does not
 change the current holita application or domain contracts.
 
-| Resource                                                | Purpose                                                                 | Local reference                                                                                                                                                         |
-| ------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Karma API v2](https://karma.online/apiv2/)             | Account, vehicle and telemetry HTTP API consumed by `apps/karma-client` | [Detailed API reference](karma-api-v2/README.md), original public help assets and reconstructed OpenAPI                                                                 |
-| [ERM protocol portal](https://sweb.erm.co.il/protocol/) | StarLink device/server protocol, configuration and tools                | [Portal overview](starlink-online-protocol/README.md), [Message structure](starlink-online-protocol/message-structure.md) and supplied screenshots; authenticated access unverified |
+| Resource                                                | Purpose                                                                 | Local reference                                                                                                                                                                                |
+| ------------------------------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Karma API v2](https://karma.online/apiv2/)             | Account, vehicle and telemetry HTTP API consumed by `apps/karma-client` | [Detailed API reference](karma-api-v2/README.md), original public help assets and reconstructed OpenAPI                                                                                        |
+| [ERM protocol portal](https://sweb.erm.co.il/protocol/) | StarLink device/server protocol, configuration and tools                | [Authenticated archive and coverage](starlink-online-protocol/README.md), searchable Markdown catalogs, source pages, images and tools                                                         |
 | [Karma NC2 login](https://karma.online/nc2/login)       | Technical web console with a separate login/session flow                | [Observed Users, Vehicles, CMD and Statistics](karma-api-v2/web-functionality-research.md#nc2-technical-console); saved website login verified, API v2 session/permission equivalence unproven |
 
 Use the [Karma reference](karma-api-v2/README.md) for the API inventory, data models,
@@ -15,19 +15,22 @@ work live in the [Karma backlog](../../todo/karma-api-v2.md).
 
 ## ERM support correspondence and verification
 
-The [diagnostics, protocol access and Test Server reference](erm-support-diagnostics-protocol-test-server/README.md)
-preserves the original request, engineer's reply, ODT and four images, with a
-question-by-question comparison. It separates manufacturer statements from live
-confirmation and records what still requires tests or ERM clarification. No new
-device test was performed while preparing or relocating this correspondence.
-Future scoped confirmations belong in its verification register; remaining actions
-are linked to the existing backlog.
+The [support reference](erm-support-diagnostics-protocol-test-server/README.md)
+keeps the dated technical correspondence, original explanatory images, command
+reference and verification register. Start with the
+[29 October reply analysis](erm-support-diagnostics-protocol-test-server/reply-2026-10-29.md)
+for the latest answers and the
+[29 October device campaign](erm-support-diagnostics-protocol-test-server/live-verification-2026-10-29.md)
+for independently retrieved faults and ten-car command observations. Earlier
+campaigns remain historical evidence; their missing-access/no-positive-fault
+conclusions have been superseded. Credentials and private message headers are
+excluded from the technical reference.
 
-ERM-TEST-01 subsequently confirmed the public protocol login page, but no account
-was located in the available sources and authenticated content remains unavailable.
-The [diagnostics and fault reference](edata-simple-protocol-v4.04/diagnostics-and-fault-reporting.md)
-records source-level read commands, including the fault logger and OBD `413`, and
-the unresolved `302`/`410`, `418` and `419` conflicts. No device command was sent.
+Use [eData diagnostics](edata-simple-protocol-v4.04/diagnostics-and-fault-reporting.md)
+for fixed read commands and `411`/`413`/`417`/`418`/`419` interpretation. Real `419`
+records now establish acquisition for CB1147TP. Current-state/lifecycle semantics,
+the `418` sample, compatibility and conflicting global-layout details remain
+separate questions. `154,0` is a negative special ACK under ERM's latest answer.
 
 ## Simple eData Monitor catalog
 
@@ -45,9 +48,10 @@ explains how catalog metadata, device definitions and received measurements rela
 how to read, add or change reporting parameters through Karma; and how to verify
 or restore a change. It records the verified scope and remaining protocol limits.
 Holita implements [background configuration operations](../architecture.md#background-device-configuration-reads):
-Fleet persists scoped reads, predefined-parameter additions and existing-interval changes,
-including baseline, uncertainty and full-set verification. Karma Client uses fixed
-parameter/profile reads, one additive definition and bounded `401`/`416` event responses.
+Fleet persists scoped parameter/rule reads, predefined-parameter additions, existing-interval
+changes and one-rule changes, including baseline, uncertainty and independent verification.
+Karma Client uses fixed parameter/profile/rule reads, bounded `401`/`402`/`416`
+observations and the controlled single-record writes.
 The write flag defaults to false. Deletion, restoration, global/profile changes and
 measurement verification remain outside the automated editor.
 
@@ -63,15 +67,17 @@ establish that the device is a particular Scout or Tracker variant.
 
 ## StarLink online protocol portal
 
-Authenticated portal access remains unverified. ERM refers to an earlier access
-email in the [support reply](erm-support-diagnostics-protocol-test-server/correspondence.md#engineers-reply);
-the supplied reply contains no credentials. The [local portal reference](starlink-online-protocol/README.md)
-describes the user-supplied home page, all 19 General information menu entries and
-the visible [Message structure](starlink-online-protocol/message-structure.md) page.
-It includes framing fields, direction markers, identifier forms, checksum evidence,
-size limits and sample messages, with the three original screenshots and source
-metadata. Other portal pages, downloads and current device compatibility remain
-unverified.
+The [authenticated StarLink archive](starlink-online-protocol/README.md) inventories
+protocol pages, conversion fidelity and linked-resource availability. Its pages and catalogs were retrieved with the access supplied in the 29 October
+reply. It covers framing/checksum, receiving/confirming events, commands/results,
+system/dynamic parameters, hardware, tools and Test Server instructions. Its
+inventory records retrieval coverage and unavailable resources. The original
+three screenshots remain historical visual evidence.
+
+Keep the layers distinct: StarLink is the tracker/server envelope; eData is the
+CAN Engine payload; Karma API v2 exposes account records and commands; holita
+currently exposes only its documented subset. Tracker diagnostic event `2`,
+tracker OBD event `70` and eData fault payload `419` have different schemas.
 
 ## PDF reference library
 
@@ -115,14 +121,10 @@ protocol definitions do not establish current API v2 behavior, a device-to-API
 parameter mapping, or implemented holita features. The spreadsheet and standalone
 JPEGs supplied alongside the PDFs are outside this PDF conversion.
 
-The original resource notes name **StartLink Test Server**; the supplied
-[portal menu](starlink-online-protocol/README.md#general-information-menu) confirms
-the label **StarLink Test Server**, alongside **StarLink Monitor**. The engineer's
-[support reply](erm-support-diagnostics-protocol-test-server/README.md) describes
-forking traffic to our server and ERM's test server, but its procedure and actual
-delivery remain unverified. Whether an installable binary is supplied is also
-unresolved. The notes also name
-**Simple eData Primitives Monitor**. The monitor guide above documents Simple eData
-Monitor, but does not establish its identity relative to either separately named
-tool or supply an executable/model catalog. Remaining questions are in the
-[protocol backlog](../../todo/karma-api-v2.md#uncovered-resources-and-fields).
+The source notes' **StartLink Test Server** refers to **StarLink Test Server**.
+The authenticated portal now supplies the tool and networking/setup reference;
+see the archive's tools and General information sections. Availability of a tool
+or a forwarding procedure does not prove that a live truck has been connected
+to our own receiver. Direct routing, dual-destination delivery, capture/replay
+and restoration need their own scoped implementation evidence. Existing pending
+work is in the [protocol backlog](../../todo/karma-api-v2.md#uncovered-resources-and-fields).

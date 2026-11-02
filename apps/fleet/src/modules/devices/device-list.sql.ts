@@ -1,3 +1,4 @@
+import { fleetDeviceModelDb, fleetDeviceOptionDb } from '../../database/enums.js';
 import { containsPattern, literalContains } from '../../database/search.js';
 import { fleetTable } from '../../database/sql.js';
 import type { FleetDeviceSortField } from '../../generated/graphql/types.js';
@@ -10,9 +11,9 @@ import { settingsSql } from '../settings/settings.sql.js';
 
 /** Current binding/report facts and status are computed before filtering, paging or counting. */
 export function deviceListRowsSql(schema: string, scope: FleetScope): Prisma.Sql {
-  const devices = fleetTable(schema, 'Device');
-  const vehicles = fleetTable(schema, 'Vehicle');
-  const samples = fleetTable(schema, 'VehicleStatusSample');
+  const devices = fleetTable(schema, 'device');
+  const vehicles = fleetTable(schema, 'vehicle');
+  const samples = fleetTable(schema, 'vehicleStatusSample');
   return Prisma.sql`
     WITH clock AS (${vehicleDataClockSql(schema, scope)}), settings AS (${settingsSql(schema, scope)})
     SELECT d."id", d."imei", d."model"::text AS "model", d."options"::text[] AS "options",
@@ -42,11 +43,13 @@ function conditionSql(condition: DeviceConditionCriteria): Prisma.Sql[] {
     clauses.push(Prisma.sql`d."status" <> ALL(${condition.excludedStatuses}::text[])`);
   }
   if (condition.models) {
-    clauses.push(Prisma.sql`d."model" = ANY(${condition.models}::text[])`);
+    clauses.push(
+      Prisma.sql`d."model" = ANY(${condition.models.map((value) => fleetDeviceModelDb[value])}::text[])`,
+    );
   }
   if (condition.excludedModels) {
     clauses.push(
-      Prisma.sql`(d."model" IS NULL OR d."model" <> ALL(${condition.excludedModels}::text[]))`,
+      Prisma.sql`(d."model" IS NULL OR d."model" <> ALL(${condition.excludedModels.map((value) => fleetDeviceModelDb[value])}::text[]))`,
     );
   }
   if (condition.firmwareVersionEquals != null) {
@@ -84,10 +87,14 @@ export function deviceListWhereSql(criteria: DeviceListCriteria): Prisma.Sql {
     clauses.push(Prisma.sql`d."id" = ANY(${criteria.ids}::uuid[])`);
   }
   if (criteria.models) {
-    clauses.push(Prisma.sql`d."model" = ANY(${criteria.models}::text[])`);
+    clauses.push(
+      Prisma.sql`d."model" = ANY(${criteria.models.map((value) => fleetDeviceModelDb[value])}::text[])`,
+    );
   }
   if (criteria.options) {
-    clauses.push(Prisma.sql`d."options" @> ${criteria.options}::text[]`);
+    clauses.push(
+      Prisma.sql`d."options" @> ${criteria.options.map((value) => fleetDeviceOptionDb[value])}::text[]`,
+    );
   }
   if (criteria.vehicleIds) {
     clauses.push(Prisma.sql`d."vehicleId" = ANY(${criteria.vehicleIds}::uuid[])`);

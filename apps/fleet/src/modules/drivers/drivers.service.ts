@@ -1,10 +1,5 @@
-import {
-  BadRequestException,
-  HttpException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { runFleetActions } from '../../fleet-actions.js';
 import { addDays, businessDate, dataWindow, FleetClock } from '../../clock/fleet-clock.js';
 import {
   DOCUMENT_EXPIRING_DAYS,
@@ -16,7 +11,6 @@ import type {
   CreateFleetDriverInput,
   FleetDocumentStatus,
   FleetDriver,
-  FleetDriverActionFailure,
   FleetDriverActionResult,
   FleetDriverPage,
   FleetDriverScorecard,
@@ -68,13 +62,13 @@ import {
 import { driverConditions } from './driver-filter.js';
 import { SettingsService } from '../settings/settings.service.js';
 
-export type DriverResult = FleetDriver;
+type DriverResult = FleetDriver;
 type StoredDriver = Omit<
   DriverResult,
   'distance30dKm' | 'tripCount30d' | 'drivingScore30d' | 'maneuversPer100Km30d'
 >;
 
-/** Longest scorecard period; matches the `fleetManeuverCounts` period limit. */
+/** Longest period accepted by the driver scorecard. */
 const MAX_SCORECARD_DAYS = 93;
 
 const DRIVER_STATUSES = Object.values(FleetDriverStatus);
@@ -108,8 +102,8 @@ const ASSIGNED_DRIVER: FieldError = {
   code: 'DRIVER_ASSIGNED',
 };
 const UNIQUE_INDEXES = new Map([
-  ['Driver_tenantId_branchId_employeeNumber_key', DUPLICATE_EMPLOYEE_NUMBER],
-  ['Driver_tenantId_branchId_identificationKey_key', DUPLICATE_IDENTIFICATION_KEY],
+  ['driver_tenantId_branchId_employeeNumber_key', DUPLICATE_EMPLOYEE_NUMBER],
+  ['driver_tenantId_branchId_identificationKey_key', DUPLICATE_IDENTIFICATION_KEY],
 ]);
 const DELETE_CONFLICT = 'Driver is assigned or has trip history; set the driver inactive instead.';
 
@@ -290,17 +284,9 @@ export class DriversService {
     if (!selected.length) {
       invalid('ids', 'Choose at least one driver.', 'REQUIRED');
     }
-    const succeededIds: string[] = [];
-    const failures: FleetDriverActionFailure[] = [];
-    for (const id of selected) {
-      try {
-        await this.deleteStored(scope, id);
-        succeededIds.push(id);
-      } catch (error: unknown) {
-        failures.push(this.actionFailure(context, id, error));
-      }
-    }
-    return { succeededIds, failures };
+    return runFleetActions(selected, context, this.logger, 'Unable to change driver.', (id) =>
+      this.deleteStored(scope, id),
+    );
   }
 
   async deactivateMany(
@@ -312,40 +298,9 @@ export class DriversService {
     if (!selected.length) {
       invalid('ids', 'Choose at least one driver.', 'REQUIRED');
     }
-    const succeededIds: string[] = [];
-    const failures: FleetDriverActionFailure[] = [];
-    for (const id of selected) {
-      try {
-        await this.updateStored(scope, id, { status: 'INACTIVE' });
-        succeededIds.push(id);
-      } catch (error: unknown) {
-        failures.push(this.actionFailure(context, id, error));
-      }
-    }
-    return { succeededIds, failures };
-  }
-
-  private actionFailure(
-    context: RequestContext,
-    id: string,
-    error: unknown,
-  ): FleetDriverActionFailure {
-    if (error instanceof HttpException) {
-      const code = new Map([
-        [400, 'BAD_USER_INPUT'],
-        [404, 'NOT_FOUND'],
-        [409, 'CONFLICT'],
-        [503, 'SERVICE_UNAVAILABLE'],
-      ]).get(error.getStatus());
-      if (code) {
-        return { id, code, message: error.message };
-      }
-    }
-    this.logger.error({
-      requestId: context.requestId,
-      error: error instanceof Error ? error.name : 'UnknownError',
-    });
-    return { id, code: 'INTERNAL_SERVER_ERROR', message: 'Unable to change driver.' };
+    return runFleetActions(selected, context, this.logger, 'Unable to change driver.', (id) =>
+      this.updateStored(scope, id, { status: 'INACTIVE' }),
+    );
   }
 
   /** Statistics of the `days` before the data clock; empty windows when there is no data. */

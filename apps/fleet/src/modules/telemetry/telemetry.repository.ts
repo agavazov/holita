@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { fleetDataSourceDb, fleetVehicleStatusDb } from '../../database/enums.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import {
   boolean,
@@ -8,19 +9,15 @@ import {
   fleetTable,
   integerOrNull,
   numberOrNull,
-  oneOf,
+  databaseEnum,
   rowsOf,
   text,
   textOrNull,
 } from '../../database/sql.js';
 import { Prisma } from '../../generated/prisma/client.js';
-import { FleetDataSource, FleetVehicleStatus } from '../../generated/prisma/enums.js';
 import type { FleetScope } from '../../validation.js';
 import type { VehicleFacts } from './vehicle-state.js';
 import { vehicleFactsSql } from './vehicle-facts.sql.js';
-
-const VEHICLE_STATUSES = Object.values(FleetVehicleStatus);
-const DATA_SOURCES = Object.values(FleetDataSource);
 
 export const sampleSelect = {
   id: true,
@@ -76,7 +73,7 @@ export function parseVehicleFacts(row: Record<string, unknown>): VehicleFacts {
   const odometerKm = numberOrNull(row, 'odometerKm');
   return {
     vehicleId: text(row, 'id'),
-    status: oneOf(row, 'status', VEHICLE_STATUSES),
+    status: databaseEnum(row, 'status', fleetVehicleStatusDb),
     hasDevice: boolean(row, 'hasDevice'),
     latest:
       recordedAt === null
@@ -101,7 +98,7 @@ export function parseVehicleFacts(row: Record<string, unknown>): VehicleFacts {
         : {
             odometerKm,
             recordedAt: date(row, 'odometerRecordedAt'),
-            source: oneOf(row, 'odometerSource', DATA_SOURCES),
+            source: databaseEnum(row, 'odometerSource', fleetDataSourceDb),
           },
   };
 }
@@ -201,9 +198,9 @@ export class TelemetryRepository {
     return this.prisma.client.$transaction(
       async (transaction) => {
         const locked: unknown = await transaction.$queryRaw(Prisma.sql`
-        SELECT v."id"::text AS "id" FROM ${fleetTable(this.prisma.schema, 'Vehicle')} v
+        SELECT v."id"::text AS "id" FROM ${fleetTable(this.prisma.schema, 'vehicle')} v
         WHERE v."tenantId" = ${scope.tenantId}::uuid AND v."branchId" = ${scope.branchId}::uuid
-          AND v."id" = ${data.vehicleId}::uuid AND v."status"::text <> 'INACTIVE'
+          AND v."id" = ${data.vehicleId}::uuid AND v."status"::text <> 'inactive'
         FOR NO KEY UPDATE`);
         if (!rowsOf(locked, (row) => text(row, 'id')).length) {
           return null;

@@ -56,6 +56,8 @@ describe('fixed eData device command transport', () => {
     let reportedDeviceId = deviceId;
     let submission = respond([12]);
     let eventRows: unknown[] = [];
+    let olderDiagnosticRows: unknown[] = [];
+    let queueState: number | null = 1;
     const upstream = jest.spyOn(globalThis, 'fetch').mockImplementation((input) => {
       const path = url(input).pathname;
       if (path === '/apiv2/login') {
@@ -66,8 +68,11 @@ describe('fixed eData device command transport', () => {
       }
       if (path === '/apiv2/events') {
         return Promise.resolve(
-          Response.json(url(input).searchParams.has('to_id') ? [] : eventRows),
+          Response.json(url(input).searchParams.has('to_id') ? olderDiagnosticRows : eventRows),
         );
+      }
+      if (path === '/apiv2/queue/12') {
+        return Promise.resolve(Response.json({ '12': { state_id: queueState } }));
       }
       return submission();
     });
@@ -121,6 +126,16 @@ describe('fixed eData device command transport', () => {
         (service) => service.requestRules({ carId: '41', expectedDeviceId: deviceId }),
       ],
       ['rule', `04${rawRule}`, (service) => service.requestRule(ruleInput)],
+      [
+        'fault logger read',
+        '19',
+        (service) =>
+          service.requestDiagnostic({
+            carId: '41',
+            expectedDeviceId: deviceId,
+            kind: 'READ_FAULT_LOGGER',
+          }),
+      ],
     ] satisfies [string, string, (service: DeviceConfigurationService) => Promise<unknown>][]) {
       const packet = {
         path: '/apiv2/commands',
@@ -158,6 +173,56 @@ describe('fixed eData device command transport', () => {
         },
       });
     }
+    submission = respond([12]);
+    upstream.mockClear();
+    expect(
+      await subjects().service.requestDiagnostic({
+        carId: '41',
+        expectedDeviceId: deviceId,
+        kind: 'READ_COMMUNICATION_DIAGNOSTICS',
+      }),
+    ).toEqual({ status: 'ACCEPTED', queueIds: ['12'] });
+    expect(requests().at(-1)).toEqual({
+      path: '/apiv2/commands',
+      method: 'POST',
+      search: '',
+      body: JSON.stringify({
+        car_id: ['41'],
+        message: '30,1,19,0,19,306,0,1,1,',
+        karma_sid: 'fixture-session',
+      }),
+    });
+    for (const state of [0, 2, null, 4]) {
+      queueState = state;
+      upstream.mockClear();
+      expect(
+        await subjects().service.requestDiagnostic({
+          carId: '41',
+          expectedDeviceId: deviceId,
+          kind: 'READ_FAULT_LOGGER',
+          existingQueueIds: ['12'],
+        }),
+      ).toEqual({ status: 'PENDING', queueIds: ['12'] });
+      expect(requests()).toEqual([
+        { path: '/apiv2/login' },
+        { path: '/apiv2/cars/41' },
+        { path: '/apiv2/queue/12' },
+      ]);
+    }
+    for (const state of [1, 3]) {
+      queueState = state;
+      upstream.mockClear();
+      expect(
+        await subjects().service.requestDiagnostic({
+          carId: '41',
+          expectedDeviceId: deviceId,
+          kind: 'READ_FAULT_LOGGER',
+          existingQueueIds: ['12'],
+        }),
+      ).toEqual({ status: 'ACCEPTED', queueIds: ['12'] });
+      expect(requests().filter((request) => request.path === '/apiv2/commands')).toHaveLength(1);
+    }
+    queueState = 1;
     const { transport, service } = subjects();
     const invalid = { error: 'Invalid device configuration request' };
     const unavailable = { error: 'Karma is unavailable; try again later' };
@@ -170,6 +235,16 @@ describe('fixed eData device command transport', () => {
       [
         'arbitrary message field',
         () => service.request({ carId: '41', expectedDeviceId: deviceId, message: 'reset' }),
+        invalid,
+      ],
+      [
+        'diagnostic command is a fixed allowed kind',
+        () =>
+          service.requestDiagnostic({
+            carId: '41',
+            expectedDeviceId: deviceId,
+            kind: 'CLEAR_FAULTS',
+          }),
         invalid,
       ],
       [
@@ -368,6 +443,118 @@ describe('fixed eData device command transport', () => {
     expect(await service.ruleObservations(window)).toMatchObject({
       readback: { status: 'COMPLETE', rules: [{ ruleId: 1, rawDefinition: rawRule }] },
       terminalResponse: { rawMessage: '19,0,154,0' },
+    });
+    const realFault = '19,0,419,0,1,1,1001,21000010F30701000004DF0B01';
+    const communication = '19,0,411,0,1,1,1001,01000001010001';
+    eventRows = ['19,0,154,0', '19,0,154,1', communication, realFault].map((extra, index) => ({
+      message_id: index + 3,
+      car_id: 41,
+      device_id: deviceId,
+      eid: 33,
+      edt: '2026-01-01 00:00:00',
+      extra,
+    }));
+    eventRows.unshift({
+      message_id: 2,
+      car_id: 41,
+      device_id: deviceId,
+      eid: 33,
+      edt: '2025-12-31 23:59:59',
+      extra: realFault,
+    });
+    expect(await service.diagnosticObservations({ ...window, queueIds: ['12'] })).toEqual({
+      coverageComplete: true,
+      queue: [{ id: '12', state: 1 }],
+      observations: [
+        {
+          messageId: '6',
+          eventTimeUtc,
+          rawMessage: realFault,
+          family: 'FAULT_REPORT',
+          acknowledgement: null,
+        },
+        {
+          messageId: '5',
+          eventTimeUtc,
+          rawMessage: communication,
+          family: 'COMMUNICATION_DIAGNOSTICS',
+          acknowledgement: null,
+        },
+        {
+          messageId: '4',
+          eventTimeUtc,
+          rawMessage: '19,0,154,1',
+          family: 'SPECIAL_ACK',
+          acknowledgement: 'POSITIVE_ACK',
+        },
+        {
+          messageId: '3',
+          eventTimeUtc,
+          rawMessage: '19,0,154,0',
+          family: 'SPECIAL_ACK',
+          acknowledgement: 'NACK',
+        },
+      ],
+    });
+    upstream.mockClear();
+    expect(await service.diagnosticWatermark({ carId: '41', expectedDeviceId: deviceId })).toEqual({
+      afterMessageId: '6',
+    });
+    const watermarkEventRequest = upstream.mock.calls.find(
+      ([input]) => url(input).pathname === '/apiv2/events',
+    );
+    expect(
+      watermarkEventRequest ? Object.fromEntries(url(watermarkEventRequest[0]).searchParams) : null,
+    ).toEqual({
+      car: '41',
+      date_type: 'utc',
+      'event_type[]': '33',
+      karma_sid: 'fixture-session',
+    });
+    upstream.mockClear();
+    expect(
+      await service.diagnosticObservations({ ...window, queueIds: ['12'], afterMessageId: '3' }),
+    ).toMatchObject({
+      coverageComplete: true,
+      observations: [{ messageId: '6' }, { messageId: '5' }, { messageId: '4' }],
+    });
+    const diagnosticEventRequests = upstream.mock.calls.filter(
+      ([input]) => url(input).pathname === '/apiv2/events',
+    );
+    for (const [input] of diagnosticEventRequests) {
+      const parameters = url(input).searchParams;
+      expect(parameters.has('from_date') || parameters.has('to_date')).toBe(false);
+      expect(parameters.get('from_id')).toBe('3');
+    }
+    const diagnosticRow = (messageId: number, extra: string) => ({
+      message_id: messageId,
+      car_id: 41,
+      device_id: deviceId,
+      eid: 33,
+      edt: '2026-01-01 00:00:00',
+      extra,
+    });
+    const unresolvedFault = diagnosticRow(4, '19,0,419,0,0,1,1001,21');
+    eventRows = [
+      unresolvedFault,
+      diagnosticRow(5, '19,0,419,0,1,2,1001,21000010F30701'),
+      diagnosticRow(6, '19,0,418,0,1,1,1001,20'),
+    ];
+    olderDiagnosticRows = [
+      diagnosticRow(2, '19,0,154,0'),
+      diagnosticRow(3, '19,0,413,0,1,1,1001,19'),
+      unresolvedFault,
+    ];
+    expect(
+      await service.diagnosticObservations({ ...window, queueIds: [], afterMessageId: '2' }),
+    ).toMatchObject({
+      coverageComplete: true,
+      observations: [
+        { messageId: '6', family: 'UNRESOLVED_FAULT_REPORT' },
+        { messageId: '5', family: 'FAULT_REPORT' },
+        { messageId: '4', family: 'UNRESOLVED_FAULT_REPORT' },
+        { messageId: '3', family: 'UNRESOLVED_FAULT_REPORT' },
+      ],
     });
   });
 });

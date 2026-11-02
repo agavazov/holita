@@ -1,4 +1,4 @@
-<section class="app-view" [attr.aria-label]="text().karmaTrips" [attr.aria-busy]="loading()">
+<div class="app-view" [attr.aria-busy]="loading()">
   <holita-karma-car-header
     [language]="language()"
     [carId]="carId()"
@@ -22,56 +22,64 @@
       #filterForm
       [formGroup]="form"
       (ngSubmit)="apply()"
-      class="app-card app-filter-form"
+      class="app-card app-form-section"
       [attr.aria-label]="text().karmaTripsFilters"
     >
-      <holita-form-field
-        [label]="text().karmaPageSize"
-        controlId="trips-size"
-        [error]="fieldErrors().size?.message ?? null"
-      >
-        <p-select
-          inputId="trips-size"
-          formControlName="size"
-          [invalid]="!!fieldErrors().size"
-          [pt]="{
-            label: {
-              'aria-invalid': fieldErrors().size ? 'true' : null,
-              'aria-describedby': 'trips-size-error',
-            },
-          }"
-          [options]="pageSizes"
-          [ariaLabel]="text().karmaPageSize"
-        />
-      </holita-form-field>
-      <holita-form-field
-        [label]="text().karmaFromApi"
-        controlId="trips-from"
-        [error]="fieldErrors().from?.message ?? null"
-      >
-        <holita-karma-date-time
-          inputId="trips-from"
-          [label]="text().karmaFromApi"
-          [invalid]="!!fieldErrors().from"
-          [invalidPart]="fieldErrors().from?.part ?? 'both'"
-          describedBy="trips-from-error trips-filter-hint"
-          formControlName="from"
-        />
-      </holita-form-field>
-      <holita-form-field
-        [label]="text().karmaToApi"
-        controlId="trips-to"
-        [error]="fieldErrors().to?.message ?? null"
-      >
-        <holita-karma-date-time
-          inputId="trips-to"
-          [label]="text().karmaToApi"
-          [invalid]="!!fieldErrors().to"
-          [invalidPart]="fieldErrors().to?.part ?? 'both'"
-          describedBy="trips-to-error trips-filter-hint"
-          formControlName="to"
-        />
-      </holita-form-field>
+      <div class="app-form-grid">
+        <holita-form-field
+          [label]="presentationText().from"
+          controlId="trips-from"
+          [error]="fieldErrors().from?.message ?? null"
+        >
+          <holita-karma-date-time
+            inputId="trips-from"
+            [label]="presentationText().from"
+            [invalid]="!!fieldErrors().from"
+            [invalidPart]="fieldErrors().from?.part ?? 'both'"
+            describedBy="trips-from-error trips-filter-hint"
+            formControlName="from"
+          />
+        </holita-form-field>
+        <holita-form-field
+          [label]="presentationText().to"
+          controlId="trips-to"
+          [error]="fieldErrors().to?.message ?? null"
+        >
+          <holita-karma-date-time
+            inputId="trips-to"
+            [label]="presentationText().to"
+            [invalid]="!!fieldErrors().to"
+            [invalidPart]="fieldErrors().to?.part ?? 'both'"
+            describedBy="trips-to-error trips-filter-hint"
+            formControlName="to"
+          />
+        </holita-form-field>
+      </div>
+      <details class="app-source-details" [open]="!!fieldErrors().size">
+        <summary>{{ presentationText().technicalDetails }}</summary>
+        <p class="app-muted">{{ presentationText().technicalHint }}</p>
+        <div class="app-form-grid">
+          <holita-form-field
+            [label]="presentationText().pageSize"
+            controlId="trips-size"
+            [error]="fieldErrors().size?.message ?? null"
+          >
+            <p-select
+              inputId="trips-size"
+              formControlName="size"
+              [invalid]="!!fieldErrors().size"
+              [pt]="{
+                label: {
+                  'aria-invalid': fieldErrors().size ? 'true' : null,
+                  'aria-describedby': 'trips-size-error',
+                },
+              }"
+              [options]="pageSizes"
+              [ariaLabel]="presentationText().pageSize"
+            />
+          </holita-form-field>
+        </div>
+      </details>
       <div class="app-filter-actions">
         <button pButton type="submit" [disabled]="loading()">{{ text().applyFilters }}</button>
         <button
@@ -86,7 +94,7 @@
         </button>
       </div>
       <p id="trips-filter-hint" class="app-muted app-filter-hint">
-        {{ text().karmaTripsFilterHint }}
+        {{ presentationText().filterHint }}
       </p>
     </form>
     @if (invalidFilters()) {
@@ -97,7 +105,11 @@
     <p role="status">{{ text().karmaHistoryLoading }}</p>
   }
   @if (car() && !invalidFilters()) {
-    <p class="app-muted">{{ text().karmaTripsOrder }}</p>
+    <details class="app-source-details">
+      <summary>{{ presentationText().technicalDetails }}</summary>
+      <p>{{ text().karmaTripsOrder }}</p>
+      <p>{{ text().karmaTripsFilterHint }}</p>
+    </details>
     <holita-table-panel
       #panel
       [heading]="text().karmaTrips"
@@ -119,8 +131,7 @@
           ><tr>
             <th class="app-col-identity">{{ text().karmaStartDate }}</th>
             <th>{{ text().karmaStopDate }}</th>
-            <th class="app-table-merged-column">{{ text().karmaTripId }}</th>
-            <th>{{ 'trip_distance' }}</th>
+            <th>{{ presentationText().distance }}</th>
             <th class="app-col-actions">{{ text().actions }}</th>
           </tr></ng-template
         >
@@ -136,9 +147,6 @@
                 >
                   {{ row.startDate ?? '—' }}
                 </button>
-                <span class="app-table-mobile-meta"
-                  >{{ text().karmaTripId }}: {{ row.id ?? '—' }}</span
-                >
                 <div class="app-table-mobile-actions">
                   <holita-row-actions
                     [actions]="actions()"
@@ -149,8 +157,14 @@
               </div>
             </td>
             <td>{{ row.stopDate ?? '—' }}</td>
-            <td class="app-table-merged-column">{{ row.id ?? '—' }}</td>
-            <td>{{ row.tripDistance ?? '—' }}</td>
+            <td>
+              {{ row.tripDistance ?? '—' }}
+              @if (row.tripDistance !== null) {
+                <span class="app-muted" [attr.title]="presentationText().unitHint">{{
+                  presentationText().unitHint
+                }}</span>
+              }
+            </td>
             <td class="app-col-actions">
               <holita-row-actions
                 [actions]="actions()"
@@ -196,7 +210,7 @@
       </div>
     </div>
   }
-</section>
+</div>
 @if (selected(); as row) {
   <holita-route-drawer
     [title]="text().karmaTripsDetails"
@@ -204,46 +218,6 @@
     [closeLink]="null"
     (closeRequest)="closeDetails()"
   >
-    <div class="app-view">
-      <p>
-        {{ text().karmaTripId }}: <strong>{{ row.id }}</strong>
-      </p>
-      <div class="app-form-grid trip-endpoints">
-        <div class="app-card">
-          <span>{{ mapText().start }}</span>
-          <strong>{{ row.startDate ?? '—' }}</strong>
-          <span>{{
-            startCoordinates()
-              ? row.startLatitude + ' / ' + row.startLongitude
-              : mapText().noEndpoint
-          }}</span>
-        </div>
-        <div class="app-card">
-          <span>{{ mapText().stop }}</span>
-          <strong>{{ row.stopDate ?? '—' }}</strong>
-          <span>{{
-            stopCoordinates() ? row.stopLatitude + ' / ' + row.stopLongitude : mapText().noEndpoint
-          }}</span>
-        </div>
-      </div>
-      <holita-map-preview
-        [language]="language()"
-        [origin]="startCoordinates()"
-        [destination]="stopCoordinates()"
-        [route]="true"
-      />
-      <details class="app-source-details">
-        <summary>{{ mapText().sourceDetails }}</summary>
-        <p class="app-muted">{{ text().karmaHistoryRawHint }}</p>
-        <dl class="app-facts">
-          @for (field of fields(row); track field.name) {
-            <div>
-              <dt>{{ field.name }}</dt>
-              <dd>{{ field.value ?? '—' }}</dd>
-            </div>
-          }
-        </dl>
-      </details>
-    </div>
+    <holita-trip-details [language]="language()" [trip]="row" />
   </holita-route-drawer>
 }

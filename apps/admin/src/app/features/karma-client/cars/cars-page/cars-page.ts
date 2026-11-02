@@ -28,8 +28,21 @@ import { PageHeader } from '../../../../ui/page-header/page-header';
 import { FormField } from '../../../../ui/form-field/form-field';
 import { TablePanel } from '../../../../ui/table-panel/table-panel';
 import { tableView } from '../../../../ui/table-panel/table-view';
+import {
+  listRecord,
+  trackById,
+  type ListAction,
+  type ListActionRequest,
+} from '../../../../ui/list/list-actions';
+import { RowActions } from '../../../../ui/row-actions/row-actions';
+import { mapPreviewMessages } from '../../../../ui/map-preview/map-preview';
+import type { GoogleMapView } from '../../../../ui/map-preview/location-map';
+import { CarLocationDrawer } from './car-location-drawer';
 import en from './i18n/en.json';
 import bg from './i18n/bg.json';
+
+type Car = AdminKarmaCarsQuery['karmaCars'][number];
+type MapAction = 'location' | 'streetview';
 
 @Component({
   selector: 'holita-karma-cars-page',
@@ -44,6 +57,8 @@ import bg from './i18n/bg.json';
     PageHeader,
     FormField,
     TablePanel,
+    RowActions,
+    CarLocationDrawer,
   ],
   providers: [KarmaApi],
   templateUrl: './cars-page.html',
@@ -54,6 +69,12 @@ export class CarsPage {
   readonly language = input.required<Language>();
   readonly text = computed(() => messages[this.language()]);
   readonly listText = computed(() => (this.language() === 'bg' ? bg : en));
+  private readonly mapText = computed(() => mapPreviewMessages[this.language()]);
+  readonly trackById = trackById;
+  readonly actions = computed<readonly ListAction<MapAction, Car>[]>(() => [
+    { id: 'location', label: this.text().karmaLocation },
+    { id: 'streetview', label: this.mapText().streetView },
+  ]);
   readonly cars = signal<AdminKarmaCarsQuery['karmaCars']>([]);
   readonly loading = signal(true);
   readonly error = signal(false);
@@ -79,6 +100,13 @@ export class CarsPage {
     };
   });
   readonly carContext = computed(() => karmaCarListContext(this.params()));
+  readonly selectedCars = computed(() => {
+    const car = this.cars().find((row) => row.id === this.params().get('mapCar'));
+    return car ? [car] : [];
+  });
+  readonly mapView = computed<GoogleMapView>(() =>
+    this.params().get('mapView') === 'streetview' ? 'streetview' : 'place',
+  );
   readonly view = computed(() =>
     tableView({
       loading: this.loading(),
@@ -126,6 +154,37 @@ export class CarsPage {
   }
   private readonly api = inject(KarmaApi);
   private read: ReturnType<KarmaApi['watch']> | undefined;
+
+  record(car: Car) {
+    return listRecord(
+      this.actions(),
+      car,
+      car.id,
+      car.carNumber || `${this.text().karmaCarId} ${car.id}`,
+    );
+  }
+
+  openMap(request: ListActionRequest<MapAction>): void {
+    const id = request.ids[0];
+    if (!id) {
+      return;
+    }
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { mapCar: id, mapView: request.action === 'streetview' ? 'streetview' : null },
+      queryParamsHandling: 'merge',
+      preserveFragment: true,
+    });
+  }
+
+  closeMap(): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { mapCar: null, mapView: null },
+      queryParamsHandling: 'merge',
+      preserveFragment: true,
+    });
+  }
 
   constructor() {
     effect(() => {

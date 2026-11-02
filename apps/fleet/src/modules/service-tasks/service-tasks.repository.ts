@@ -1,4 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import {
+  fleetServiceStatusDb,
+  fleetServiceTypeDb,
+  fleetVehicleStatusDb,
+} from '../../database/enums.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { containsPattern } from '../../database/search.js';
 import { fleetTable, integer, rowsOf } from '../../database/sql.js';
@@ -129,7 +134,7 @@ export class ServiceTasksRepository {
       COMPLETED_ON: Prisma.sql`t."completedOn"::date ${direction} NULLS LAST`,
       CREATED_AT: Prisma.sql`t."createdAt" ${direction}`,
       TASK: Prisma.sql`COALESCE(t."title", replace(t."serviceType", '_', ' ')) ${direction}`,
-      VEHICLE_LICENSE_PLATE: Prisma.sql`(SELECT v."licensePlate" FROM ${fleetTable(this.prisma.schema, 'Vehicle')} v WHERE v."tenantId" = ${scope.tenantId}::uuid AND v."branchId" = ${scope.branchId}::uuid AND v."id" = t."vehicleId") ${direction} NULLS LAST`,
+      VEHICLE_LICENSE_PLATE: Prisma.sql`(SELECT v."licensePlate" FROM ${fleetTable(this.prisma.schema, 'vehicle')} v WHERE v."tenantId" = ${scope.tenantId}::uuid AND v."branchId" = ${scope.branchId}::uuid AND v."id" = t."vehicleId") ${direction} NULLS LAST`,
       COST_CENTS: Prisma.sql`t."costCents" ${direction} NULLS LAST`,
     };
     return this.prisma.client.$transaction(
@@ -182,7 +187,7 @@ export class ServiceTasksRepository {
     const rows: unknown = await this.prisma.client.$queryRaw(Prisma.sql`
       WITH tasks AS (${base})
       SELECT DISTINCT ON (t."vehicleId") ${SERVICE_TASK_COLUMNS} FROM tasks t
-      WHERE t."status" = 'PLANNED' AND t."vehicleId" = ANY(${vehicleIds}::uuid[])
+      WHERE t."status" = 'planned' AND t."vehicleId" = ANY(${vehicleIds}::uuid[])
       ORDER BY t."vehicleId", ${URGENCY_RANK} ASC NULLS LAST, t."dueOn"::date ASC NULLS LAST,
         t."remainingKm" ASC NULLS LAST, t."id" DESC`);
     return rowsOf(rows, parseServiceTaskRow);
@@ -191,7 +196,7 @@ export class ServiceTasksRepository {
   /** Urgency counts of PLANNED tasks whose vehicle is not INACTIVE. */
   async urgencyCounts(scope: FleetScope, today: string): Promise<ServiceUrgencyCounts> {
     const base = serviceTasksWithUrgency(this.prisma.schema, scope, today);
-    const vehicles = fleetTable(this.prisma.schema, 'Vehicle');
+    const vehicles = fleetTable(this.prisma.schema, 'vehicle');
     const rows: unknown = await this.prisma.client.$queryRaw(Prisma.sql`
       WITH tasks AS (${base})
       SELECT count(*) FILTER (WHERE t."urgency" = 'OVERDUE')::int AS "overdue",
@@ -199,10 +204,10 @@ export class ServiceTasksRepository {
         count(*) FILTER (WHERE t."urgency" = 'UNKNOWN_ODOMETER')::int AS "unknownOdometer",
         count(*) FILTER (WHERE t."urgency" = 'UPCOMING')::int AS "upcoming"
       FROM tasks t
-      WHERE t."status" = 'PLANNED' AND EXISTS (
+      WHERE t."status" = 'planned' AND EXISTS (
         SELECT 1 FROM ${vehicles} v
         WHERE v."tenantId" = ${scope.tenantId}::uuid AND v."branchId" = ${scope.branchId}::uuid
-          AND v."id" = t."vehicleId" AND v."status"::text <> 'INACTIVE'
+          AND v."id" = t."vehicleId" AND v."status"::text <> 'inactive'
       )`);
     const [counts] = rowsOf(rows, parseUrgencyCounts);
     if (!counts) {
@@ -373,7 +378,7 @@ export class ServiceTasksRepository {
   }
 
   private listConditions(scope: FleetScope, criteria: ServiceTaskCriteria): Prisma.Sql {
-    const vehicles = fleetTable(this.prisma.schema, 'Vehicle');
+    const vehicles = fleetTable(this.prisma.schema, 'vehicle');
     const conditions: Prisma.Sql[] = criteria.tokens.map((token) => {
       const pattern = containsPattern(token);
       return Prisma.sql`(t."title" ILIKE ${pattern}::text OR t."workshop" ILIKE ${pattern}::text OR t."notes" ILIKE ${pattern}::text OR replace(t."serviceType", '_', ' ') ILIKE ${pattern}::text
@@ -390,18 +395,22 @@ export class ServiceTasksRepository {
     for (const condition of [criteria, ...(criteria.allOf ?? [])]) {
       if ('vehicleStatuses' in condition && condition.vehicleStatuses) {
         conditions.push(
-          Prisma.sql`EXISTS(SELECT 1 FROM ${vehicles} v WHERE v."tenantId"=${scope.tenantId}::uuid AND v."branchId"=${scope.branchId}::uuid AND v."id"=t."vehicleId" AND v."status"::text=ANY(${condition.vehicleStatuses}::text[]))`,
+          Prisma.sql`EXISTS(SELECT 1 FROM ${vehicles} v WHERE v."tenantId"=${scope.tenantId}::uuid AND v."branchId"=${scope.branchId}::uuid AND v."id"=t."vehicleId" AND v."status"::text=ANY(${condition.vehicleStatuses.map((value) => fleetVehicleStatusDb[value])}::text[]))`,
         );
       }
       if (condition.statuses) {
-        conditions.push(Prisma.sql`t."status" = ANY(${condition.statuses}::text[])`);
+        conditions.push(
+          Prisma.sql`t."status" = ANY(${condition.statuses.map((value) => fleetServiceStatusDb[value])}::text[])`,
+        );
       }
       // Only PLANNED tasks have an urgency, so an urgency filter implies PLANNED.
       if (condition.urgencies) {
         conditions.push(Prisma.sql`t."urgency" = ANY(${condition.urgencies}::text[])`);
       }
       if (condition.serviceTypes) {
-        conditions.push(Prisma.sql`t."serviceType" = ANY(${condition.serviceTypes}::text[])`);
+        conditions.push(
+          Prisma.sql`t."serviceType" = ANY(${condition.serviceTypes.map((value) => fleetServiceTypeDb[value])}::text[])`,
+        );
       }
       if (condition.vehicleIds) {
         conditions.push(Prisma.sql`t."vehicleId" = ANY(${condition.vehicleIds}::uuid[])`);
@@ -413,7 +422,9 @@ export class ServiceTasksRepository {
         conditions.push(Prisma.sql`t."completedOn"::date <= ${condition.completedTo}::date`);
       }
       if ('excludedStatuses' in condition && condition.excludedStatuses) {
-        conditions.push(Prisma.sql`NOT (t."status" = ANY(${condition.excludedStatuses}::text[]))`);
+        conditions.push(
+          Prisma.sql`NOT (t."status" = ANY(${condition.excludedStatuses.map((value) => fleetServiceStatusDb[value])}::text[]))`,
+        );
       }
       if ('excludedUrgencies' in condition && condition.excludedUrgencies) {
         conditions.push(
@@ -422,7 +433,7 @@ export class ServiceTasksRepository {
       }
       if ('excludedServiceTypes' in condition && condition.excludedServiceTypes) {
         conditions.push(
-          Prisma.sql`NOT (t."serviceType" = ANY(${condition.excludedServiceTypes}::text[]))`,
+          Prisma.sql`NOT (t."serviceType" = ANY(${condition.excludedServiceTypes.map((value) => fleetServiceTypeDb[value])}::text[]))`,
         );
       }
       if ('excludedVehicleIds' in condition && condition.excludedVehicleIds) {
@@ -463,12 +474,12 @@ export class ServiceTasksRepository {
       if ('taskContains' in condition && condition.taskContains) {
         const pattern = containsPattern(condition.taskContains);
         conditions.push(
-          Prisma.sql`(t."title" ILIKE ${pattern}::text OR (t."title" IS NULL AND t."serviceType" = ANY(${condition.untitledServiceTypes ?? []}::text[])))`,
+          Prisma.sql`(t."title" ILIKE ${pattern}::text OR (t."title" IS NULL AND t."serviceType" = ANY(${(condition.untitledServiceTypes ?? []).map((value) => fleetServiceTypeDb[value])}::text[])))`,
         );
       }
       if ('taskEquals' in condition && condition.taskEquals) {
         conditions.push(
-          Prisma.sql`(lower(t."title") = lower(${condition.taskEquals}::text) OR (t."title" IS NULL AND t."serviceType" = ANY(${condition.untitledServiceTypes ?? []}::text[])))`,
+          Prisma.sql`(lower(t."title") = lower(${condition.taskEquals}::text) OR (t."title" IS NULL AND t."serviceType" = ANY(${(condition.untitledServiceTypes ?? []).map((value) => fleetServiceTypeDb[value])}::text[])))`,
         );
       }
     }

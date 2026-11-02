@@ -74,7 +74,11 @@ open only the section you need.
 
 Stories are a development tool and are not tests:
 
-- Add an `Admin/<Group>/<Screen>` story beside a connected adapter. Use `routeAt`, `StoryApp` and
-  typed `graphqlFixture` snapshots in `src/storybook/*-fixtures.ts`.
+- Titles follow `Admin/<menu group>/<menu item>[/<sub-page>]`, using the English labels and order
+  from `admin-navigation.ts`. Nest sub-pages under the item that opens them; Sign in is
+  `Admin/Sign in`. Truck pages belong under `Admin/Karma Client/Trucks/Truck/<page>`.
+- Add stories beside the connected adapter, using `routeAt`, `StoryApp` and typed `graphqlFixture`
+  snapshots in `src/storybook/*-fixtures.ts`. Keep representative states, aiming for at most eight
+  per screen. Use the Language, Theme, Brand and Density globals instead of language/theme copies.
 - Add a `Design System/...` story beside a new shared component.
-- Do not add play-function assertions, and do not build a second backend in Storybook.
+- Do not add play functions or story tests, and do not build a second backend in Storybook.

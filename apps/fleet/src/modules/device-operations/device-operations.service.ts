@@ -16,18 +16,21 @@ import type {
   RequestFleetDeviceParameterIntervalUpdateInput,
   RequestFleetDeviceRulesReadInput,
   RequestFleetDeviceRuleChangeInput,
+  RequestFleetDeviceDiagnosticReadInput,
 } from '../../generated/graphql/types.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import { CoreClient } from '../../integrations/core/core.client.js';
 import { KarmaDeviceReadsClient } from '../../integrations/karma/karma-device-reads.client.js';
-import { integer, invalid, requireScope, text, uuid } from '../../validation.js';
+import { integer, invalid, requireScope, text, uuid, type FleetScope } from '../../validation.js';
 import { configurationParameters } from './device-parameter-change.js';
 import { configurationRules, deviceRuleResult } from './device-rule-change.js';
 import {
   DeviceOperationsRepository,
   type DeviceOperationRow,
+  type DeviceReadKind,
 } from './device-operations.repository.js';
+import { diagnosticEvidence } from './device-diagnostic-evidence.js';
 
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -42,6 +45,10 @@ function configuration(row: DeviceOperationRow): FleetDeviceConfiguration | null
 }
 
 export function deviceOperationResult(row: DeviceOperationRow): FleetDeviceOperation {
+  const diagnostics =
+    row.kind === 'READ_FAULT_LOGGER' || row.kind === 'READ_COMMUNICATION_DIAGNOSTICS'
+      ? diagnosticEvidence(row.observations)
+      : null;
   const observed =
     row.kind === 'READ_RULES' || row.kind === 'UPSERT_RULE'
       ? row.rulesObservations
@@ -80,6 +87,12 @@ export function deviceOperationResult(row: DeviceOperationRow): FleetDeviceOpera
         ? evidence.count
         : 0,
     coverageComplete: evidence.coverageComplete === true,
+    diagnosticQueue: diagnostics?.queue ?? [],
+    diagnosticObservations:
+      diagnostics?.observations.map((observation) => ({
+        ...observation,
+        eventTimeUtc: new Date(observation.eventTimeUtc),
+      })) ?? [],
     configuration: configuration(row),
     rulesConfiguration:
       row.status === 'COMPLETE' && row.rulesConfigurationId && Array.isArray(row.rules)
@@ -100,6 +113,35 @@ export class DeviceOperationsService {
     private readonly clock: FleetClock,
     private readonly core: CoreClient,
   ) {}
+
+  /** Trusted monitoring jobs use persisted, Core-verified Branch settings. Only the fixed read is available. */
+  async requestMonitoringFaultRead(scope: FleetScope, carId: string, deviceId: string) {
+    if (!deviceOperationsEnabled()) {
+      return null;
+    }
+    const target = karmaTarget(carId, deviceId);
+    await this.verifyTarget(target);
+    try {
+      return deviceOperationResult(
+        await this.operations.create(scope, target, this.clock.now(), 'READ_FAULT_LOGGER', true),
+      );
+    } catch (error) {
+      // The existing account-wide unique active-car index also excludes user reads in flight.
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  async monitoringOperation(scope: FleetScope, id: string) {
+    const row = await this.operations.find(scope, id);
+    return row?.monitoringOrigin ? deviceOperationResult(row) : null;
+  }
+
+  pruneMonitoring(scope: FleetScope, cutoff: Date) {
+    return this.operations.pruneMonitoring(scope, cutoff);
+  }
 
   enabled(context: RequestContext): boolean {
     requireScope(context);
@@ -135,6 +177,23 @@ export class DeviceOperationsService {
     input: RequestFleetDeviceRulesReadInput,
   ): Promise<FleetDeviceOperation> {
     return this.request(context, input, 'READ_RULES');
+  }
+
+  requestDiagnostic(
+    context: RequestContext,
+    input: RequestFleetDeviceDiagnosticReadInput,
+  ): Promise<FleetDeviceOperation> {
+    return this.request(context, input, input.kind);
+  }
+
+  async diagnosticHistory(
+    context: RequestContext,
+    karmaCarId: string,
+    expectedKarmaDeviceId: string,
+  ): Promise<FleetDeviceOperation[]> {
+    const scope = requireScope(context);
+    const target = karmaTarget(karmaCarId, expectedKarmaDeviceId);
+    return (await this.operations.diagnosticHistory(scope, target)).map(deviceOperationResult);
   }
 
   async requestRuleChange(
@@ -402,7 +461,7 @@ export class DeviceOperationsService {
   async request(
     context: RequestContext,
     input: RequestFleetDeviceConfigurationReadInput,
-    kind: 'READ_CONFIGURATION' | 'READ_RULES' = 'READ_CONFIGURATION',
+    kind: DeviceReadKind = 'READ_CONFIGURATION',
   ): Promise<FleetDeviceOperation> {
     const scope = requireScope(context);
     if (!deviceOperationsEnabled()) {

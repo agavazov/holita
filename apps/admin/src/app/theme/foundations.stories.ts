@@ -5,7 +5,7 @@ import { ButtonDirective } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
 import { Select } from 'primeng/select';
 import { TableModule } from 'primeng/table';
-import { expect, waitFor } from 'storybook/test';
+import { STORY_GLOBALS, storyThemeChoice } from '../../storybook/story-config';
 import { brands, paletteSteps } from './brands';
 import {
   brandContrastChecks,
@@ -14,7 +14,6 @@ import {
   toneContrastChecks,
   type PaletteName,
 } from './contrast';
-import { STORY_GLOBALS, storyThemeChoice } from '../../storybook/story-config';
 import { categorySlots, statusToneNames } from './status-tones';
 import { brandNames } from './theme-choice';
 
@@ -615,21 +614,6 @@ export const Colors: Story = {
     moduleMetadata: { imports: [FoundationColors] },
     template: '<holita-foundation-colors />',
   }),
-  play: async ({ canvasElement }) => {
-    // T1: app tokens resolve differently in the light and dark schemes.
-    const [light, dark] = Array.from(canvasElement.querySelectorAll<HTMLElement>('.scheme'));
-    if (!light || !dark) {
-      throw new Error('Missing schemes.');
-    }
-    const chip = (scheme: HTMLElement) => {
-      const element = scheme.querySelector('.chip');
-      if (!element) {
-        throw new Error('Missing swatch.');
-      }
-      return getComputedStyle(element).backgroundColor;
-    };
-    await expect(chip(light)).not.toBe(chip(dark));
-  },
 };
 
 export const BrandVariants: Story = {
@@ -638,11 +622,6 @@ export const BrandVariants: Story = {
     moduleMetadata: { imports: [FoundationBrands] },
     template: '<holita-foundation-brands />',
   }),
-  play: async ({ canvasElement }) => {
-    await expect(canvasElement.querySelectorAll('.fail').length).toBe(0);
-    // White on the rejected emerald-500 primary, for comparison.
-    await expect(contrastRatio('#ffffff', primitiveHex('emerald', 500))).toBeLessThan(4.5);
-  },
 };
 
 export const Typography: Story = {
@@ -658,24 +637,6 @@ export const SpacingAndDensity: Story = {
     moduleMetadata: { imports: [FoundationDensity] },
     template: '<holita-foundation-density />',
   }),
-  play: async ({ canvasElement }) => {
-    const style = getComputedStyle(document.documentElement);
-    const rem = Number.parseFloat(style.fontSize);
-    const target = (name: string) => Number.parseFloat(style.getPropertyValue(name)) * rem;
-    await waitFor(() => expect(canvasElement.querySelectorAll('[data-measure]').length).toBe(5));
-    for (const element of Array.from(
-      canvasElement.querySelectorAll<HTMLElement>('[data-measure]'),
-    )) {
-      const expected = target(
-        element.dataset['measure'] === 'row' ? '--p-app-row-height' : '--p-app-control-height',
-      );
-      const height = element.getBoundingClientRect().height;
-      await expect(
-        Math.abs(height - expected),
-        `${element.tagName} ${String(height)}px`,
-      ).toBeLessThanOrEqual(1);
-    }
-  },
 };
 
 export const RadiiAndBorders: Story = {

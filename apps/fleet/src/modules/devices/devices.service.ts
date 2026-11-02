@@ -1,11 +1,11 @@
 import {
   BadRequestException,
   ConflictException,
-  HttpException,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { runFleetActions } from '../../fleet-actions.js';
 import { FleetClock } from '../../clock/fleet-clock.js';
 import { CoreClient } from '../../integrations/core/core.client.js';
 import type {
@@ -13,7 +13,6 @@ import type {
   FleetDevice,
   FleetDevicePage,
   FleetDeviceSortField,
-  FleetDeviceActionFailure,
   FleetDeviceActionResult,
   FleetDeviceSummary,
   QueryFleetDevicesArgs,
@@ -93,7 +92,7 @@ const DUPLICATE_IMEI: FieldError = {
   message: 'IMEI is already used in this branch.',
   code: 'ALREADY_EXISTS',
 };
-const UNIQUE_INDEXES = new Map([['Device_tenantId_branchId_imei_key', DUPLICATE_IMEI]]);
+const UNIQUE_INDEXES = new Map([['device_tenantId_branchId_imei_key', DUPLICATE_IMEI]]);
 
 function imei(value: unknown): string {
   const result = typeof value === 'string' ? value.trim() : '';
@@ -209,34 +208,9 @@ export class DevicesService {
     if (!selected.length) {
       invalid('ids', 'Choose at least one device.', 'REQUIRED');
     }
-    const succeededIds: string[] = [];
-    const failures: FleetDeviceActionFailure[] = [];
-    for (const id of selected) {
-      try {
-        await this.deleteStored(scope, id);
-        succeededIds.push(id);
-      } catch (error: unknown) {
-        const code =
-          error instanceof HttpException
-            ? new Map([
-                [400, 'BAD_USER_INPUT'],
-                [404, 'NOT_FOUND'],
-                [409, 'CONFLICT'],
-                [503, 'SERVICE_UNAVAILABLE'],
-              ]).get(error.getStatus())
-            : undefined;
-        if (code && error instanceof HttpException) {
-          failures.push({ id, code, message: error.message });
-        } else {
-          this.logger.error({
-            requestId: context.requestId,
-            error: error instanceof Error ? error.name : 'UnknownError',
-          });
-          failures.push({ id, code: 'INTERNAL_SERVER_ERROR', message: 'Unable to delete device.' });
-        }
-      }
-    }
-    return { succeededIds, failures };
+    return runFleetActions(selected, context, this.logger, 'Unable to delete device.', (id) =>
+      this.deleteStored(scope, id),
+    );
   }
 
   async create(context: RequestContext, input: CreateFleetDeviceInput): Promise<DeviceResult> {

@@ -1,17 +1,11 @@
-import {
-  BadRequestException,
-  HttpException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { runFleetActions } from '../../fleet-actions.js';
 import { CoreClient } from '../../integrations/core/core.client.js';
 import type {
   CreateFleetVehicleInput,
   FleetVehicle,
   FleetVehiclePage,
   FleetVehicleSortField,
-  FleetVehicleActionFailure,
   FleetVehicleActionResult,
   FleetVehicleSummary,
   QueryFleetVehiclesArgs,
@@ -97,8 +91,8 @@ const INACTIVE_VEHICLE: FieldError = {
   code: 'VEHICLE_INACTIVE',
 };
 const UNIQUE_INDEXES = new Map([
-  ['Vehicle_tenantId_branchId_fleetNumber_key', DUPLICATE_FLEET_NUMBER],
-  ['Vehicle_tenantId_branchId_vin_key', DUPLICATE_VIN],
+  ['vehicle_tenantId_branchId_fleetNumber_key', DUPLICATE_FLEET_NUMBER],
+  ['vehicle_tenantId_branchId_vin_key', DUPLICATE_VIN],
 ]);
 const DELETE_CONFLICT = 'Vehicle has devices or history; deactivate it instead.';
 
@@ -236,17 +230,9 @@ export class VehiclesService {
     if (!selected.length) {
       invalid('ids', 'Choose at least one vehicle.', 'REQUIRED');
     }
-    const succeededIds: string[] = [];
-    const failures: FleetVehicleActionFailure[] = [];
-    for (const id of selected) {
-      try {
-        await this.deleteStored(scope, id);
-        succeededIds.push(id);
-      } catch (error: unknown) {
-        failures.push(this.actionFailure(context, id, error));
-      }
-    }
-    return { succeededIds, failures };
+    return runFleetActions(selected, context, this.logger, 'Unable to change vehicle.', (id) =>
+      this.deleteStored(scope, id),
+    );
   }
 
   async deactivateMany(
@@ -258,40 +244,9 @@ export class VehiclesService {
     if (!selected.length) {
       invalid('ids', 'Choose at least one vehicle.', 'REQUIRED');
     }
-    const succeededIds: string[] = [];
-    const failures: FleetVehicleActionFailure[] = [];
-    for (const id of selected) {
-      try {
-        await this.deactivateStored(scope, id);
-        succeededIds.push(id);
-      } catch (error: unknown) {
-        failures.push(this.actionFailure(context, id, error));
-      }
-    }
-    return { succeededIds, failures };
-  }
-
-  private actionFailure(
-    context: RequestContext,
-    id: string,
-    error: unknown,
-  ): FleetVehicleActionFailure {
-    if (error instanceof HttpException) {
-      const code = new Map([
-        [400, 'BAD_USER_INPUT'],
-        [404, 'NOT_FOUND'],
-        [409, 'CONFLICT'],
-        [503, 'SERVICE_UNAVAILABLE'],
-      ]).get(error.getStatus());
-      if (code) {
-        return { id, code, message: error.message };
-      }
-    }
-    this.logger.error({
-      requestId: context.requestId,
-      error: error instanceof Error ? error.name : 'UnknownError',
-    });
-    return { id, code: 'INTERNAL_SERVER_ERROR', message: 'Unable to change vehicle.' };
+    return runFleetActions(selected, context, this.logger, 'Unable to change vehicle.', (id) =>
+      this.deactivateStored(scope, id),
+    );
   }
 
   async find(context: RequestContext, id: string): Promise<VehicleResult> {

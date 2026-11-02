@@ -19,30 +19,20 @@
     <p-message severity="warn">{{ text().karmaTruckNotFound }}</p-message>
   }
   @if (car()) {
-    <p class="app-muted">{{ text().karmaLocationHint }}</p>
     @if (loaded() && !location() && !error()) {
       <p role="status">{{ text().karmaNoLocation }}</p>
     }
     @if (location(); as point) {
-      <section class="app-card app-view" [attr.aria-label]="text().karmaLocation">
-        <holita-map-preview [language]="language()" [origin]="coordinates()" />
-        <dl class="app-facts">
-          <div>
-            <dt>{{ text().licensePlate }}</dt>
-            <dd>{{ point.carNumber || '—' }}</dd>
-          </div>
-          <div>
-            <dt>{{ text().karmaRawEdt }}</dt>
-            <dd>{{ point.edt ?? '—' }}</dd>
-          </div>
-          <div>
-            <dt>{{ text().karmaLatitude }} / {{ text().karmaLongitude }}</dt>
-            <dd>{{ point.latitude ?? '—' }} / {{ point.longitude ?? '—' }}</dd>
-          </div>
-        </dl>
-      </section>
+      <holita-map-preview
+        pageType="location"
+        [language]="language()"
+        [origin]="coordinates()"
+        [identity]="point.carNumber || car()?.carNumber || text().karmaLocation"
+        [originTime]="point.edt"
+      />
       <details class="app-card app-source-details">
         <summary>{{ mapText().sourceDetails }}</summary>
+        <p class="app-muted">{{ text().karmaLocationHint }}</p>
         <dl class="app-facts">
           <div>
             <dt>{{ text().licensePlate }}</dt>

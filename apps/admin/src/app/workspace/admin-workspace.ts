@@ -83,7 +83,10 @@ export class AdminWorkspace {
     const primary = this.router.parseUrl(this.router.url).root.children['primary'];
     const path = `/${(primary?.segments ?? []).map((segment) => segment.path).join('/')}`;
     const context = navigationContext(this.navigation(), path);
-    return context ? { ...context, record: this.pageRecord.label() } : null;
+    const pageLink = this.pageRecord.pageLink();
+    return context
+      ? { ...context, ...(pageLink ? { pageLink } : {}), record: this.pageRecord.label() }
+      : null;
   });
 
   constructor() {

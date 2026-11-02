@@ -1,6 +1,6 @@
-import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 import { Plus } from '@primeicons/angular/plus';
 import { Refresh } from '@primeicons/angular/refresh';
+import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 import { ButtonDirective } from 'primeng/button';
 import { Tag } from 'primeng/tag';
 import { onFrame } from '../../../storybook/story-config';

@@ -167,8 +167,7 @@ do not use the seven-day sample endpoint or its 2,000-row cap.
   CONFLICT "The alert changed after it was loaded; reload it.", and an informational or foreign
   event is NOT_FOUND "Alert not found". An omitted remark stays, `null` or blank clears it.
   `fleetAlertCounts` counts actionable events for the same search and filter as `fleetEvents`,
-  ignoring its actionable and status parts. `fleetManeuverCounts` returns the nine maneuver kinds
-  per intensity for trip IDs or a period of at most 93 days.
+  ignoring its actionable and status parts.
 - **Service tasks:** created PLANNED on a vehicle of the Branch that is not `INACTIVE`, with a
   due date (2000–2100), a due odometer (0–9,999,999) or both; title ≤ 120, workshop ≤ 128, notes
   ≤ 2000. Only PLANNED tasks can be changed, completed or cancelled (CONFLICT otherwise); the

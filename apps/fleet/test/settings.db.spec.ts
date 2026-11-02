@@ -50,13 +50,13 @@ describe('Fleet settings persistence and scoped calculation with PostgreSQL', ()
     source: string,
     variables: Record<string, unknown>,
     branchId: string,
-    tenant = tenantId,
+    tenant: string | null = tenantId,
   ) {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        authorization: `Bearer ${issueDemoToken(tenant)}`,
+        ...(tenant === null ? {} : { authorization: `Bearer ${issueDemoToken(tenant)}` }),
         'x-branch-id': branchId,
       },
       body: JSON.stringify({ query: source, variables }),

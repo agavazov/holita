@@ -1,3 +1,4 @@
+import { fleetFuelTypeDb, fleetVehicleStatusDb, fleetVehicleTypeDb } from '../../database/enums.js';
 import { containsPattern } from '../../database/search.js';
 import { fleetTable } from '../../database/sql.js';
 import type { FleetVehicleSortField } from '../../generated/graphql/types.js';
@@ -15,8 +16,8 @@ import { settingsSql } from '../settings/settings.sql.js';
 
 /** The same latest facts and thresholds used by the displayed state, before filtering/paging. */
 export function vehicleListRowsSql(schema: string, scope: FleetScope): Prisma.Sql {
-  const vehicles = fleetTable(schema, 'Vehicle');
-  const events = fleetTable(schema, 'FleetEvent');
+  const vehicles = fleetTable(schema, 'vehicle');
+  const events = fleetTable(schema, 'fleetEvent');
   return Prisma.sql`
     WITH clock AS (${vehicleDataClockSql(schema, scope)}), settings AS (${settingsSql(schema, scope)}),
     facts AS (${vehicleFactsSql(schema, scope)})
@@ -32,7 +33,7 @@ export function vehicleListRowsSql(schema: string, scope: FleetScope): Prisma.Sq
       ${vehicleFuelStatusSql(Prisma.sql`settings."lowFuelPct"`)} AS "fuelStatus",
       (SELECT count(*)::int FROM ${events} e
         WHERE e."tenantId" = ${scope.tenantId}::uuid AND e."branchId" = ${scope.branchId}::uuid
-          AND e."vehicleId" = v."id" AND e."alertStatus"::text = 'OPEN') AS "openAlertCount"
+          AND e."vehicleId" = v."id" AND e."alertStatus"::text = 'open') AS "openAlertCount"
     FROM ${vehicles} v JOIN facts f ON f."id" = v."id"::text CROSS JOIN clock CROSS JOIN settings
     WHERE v."tenantId" = ${scope.tenantId}::uuid AND v."branchId" = ${scope.branchId}::uuid`;
 }
@@ -41,10 +42,14 @@ export function vehicleListRowsSql(schema: string, scope: FleetScope): Prisma.Sq
 function conditionSql(condition: VehicleConditionCriteria): Prisma.Sql[] {
   const clauses: Prisma.Sql[] = [];
   if (condition.statuses) {
-    clauses.push(Prisma.sql`v."status" = ANY(${condition.statuses}::text[])`);
+    clauses.push(
+      Prisma.sql`v."status" = ANY(${condition.statuses.map((value) => fleetVehicleStatusDb[value])}::text[])`,
+    );
   }
   if (condition.excludedStatuses) {
-    clauses.push(Prisma.sql`v."status" <> ALL(${condition.excludedStatuses}::text[])`);
+    clauses.push(
+      Prisma.sql`v."status" <> ALL(${condition.excludedStatuses.map((value) => fleetVehicleStatusDb[value])}::text[])`,
+    );
   }
   if (condition.activities) {
     clauses.push(Prisma.sql`v."activity" = ANY(${condition.activities}::text[])`);
@@ -53,15 +58,19 @@ function conditionSql(condition: VehicleConditionCriteria): Prisma.Sql[] {
     clauses.push(Prisma.sql`v."activity" <> ALL(${condition.excludedActivities}::text[])`);
   }
   if (condition.vehicleTypes) {
-    clauses.push(Prisma.sql`v."vehicleType" = ANY(${condition.vehicleTypes}::text[])`);
+    clauses.push(
+      Prisma.sql`v."vehicleType" = ANY(${condition.vehicleTypes.map((value) => fleetVehicleTypeDb[value])}::text[])`,
+    );
   }
   if (condition.excludedVehicleTypes) {
     clauses.push(
-      Prisma.sql`(v."vehicleType" IS NULL OR v."vehicleType" <> ALL(${condition.excludedVehicleTypes}::text[]))`,
+      Prisma.sql`(v."vehicleType" IS NULL OR v."vehicleType" <> ALL(${condition.excludedVehicleTypes.map((value) => fleetVehicleTypeDb[value])}::text[]))`,
     );
   }
   if (condition.fuelTypes) {
-    clauses.push(Prisma.sql`v."fuelType" = ANY(${condition.fuelTypes}::text[])`);
+    clauses.push(
+      Prisma.sql`v."fuelType" = ANY(${condition.fuelTypes.map((value) => fleetFuelTypeDb[value])}::text[])`,
+    );
   }
   if (condition.groupIds) {
     clauses.push(Prisma.sql`v."groupId" = ANY(${condition.groupIds}::uuid[])`);
@@ -146,7 +155,7 @@ export function vehicleListWhereSql(
   scope: FleetScope,
   criteria: VehicleListCriteria,
 ): Prisma.Sql {
-  const drivers = fleetTable(schema, 'Driver');
+  const drivers = fleetTable(schema, 'driver');
   const clauses = criteria.tokens.map((token) => {
     const pattern = containsPattern(token);
     return Prisma.sql`(v."licensePlate" ILIKE ${pattern}::text OR v."fleetNumber" ILIKE ${pattern}::text
@@ -174,7 +183,7 @@ export function vehicleListOrderSql(sort: VehicleSort): Prisma.Sql {
     FLEET_NUMBER: Prisma.sql`v."fleetNumber"`,
     CREATED_AT: Prisma.sql`v."createdAt"`,
     UPDATED_AT: Prisma.sql`v."updatedAt"`,
-    STATUS: Prisma.sql`CASE v."status" WHEN 'ACTIVE' THEN 1 WHEN 'IN_WORKSHOP' THEN 2 WHEN 'INACTIVE' THEN 3 END`,
+    STATUS: Prisma.sql`CASE v."status" WHEN 'active' THEN 1 WHEN 'inWorkshop' THEN 2 WHEN 'inactive' THEN 3 END`,
     LAST_REPORTED_AT: Prisma.sql`v."sampleRecordedAt"`,
     ODOMETER_KM: Prisma.sql`v."odometerKm"`,
   };

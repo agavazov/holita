@@ -1,136 +1,92 @@
-# ERM StarLink online protocol portal
+# ERM StarLink online protocol
 
-The [StarLink online protocol portal](https://sweb.erm.co.il/protocol/) is an ERM
-reference for device/server messages, commands, events, configuration parameters,
-hardware and supporting tools. **Public reachability is confirmed; authenticated
-access remains blocked by unavailable credentials.** ERM-TEST-01 on 2026-10-27
-received HTTP 200 with the normal username/password login form, both at the root
-and through a vendor-supplied deep link. No login was submitted and no authenticated
-protocol page was read. The
-[engineer's reply](../erm-support-diagnostics-protocol-test-server/correspondence.md#engineers-reply)
-refers to access details sent in an earlier email dated `7/10/2026`; that email and
-its credentials are not included in the supplied reply. This reference describes
-the three screenshots supplied by the user, not an authenticated review of the full portal.
+Authenticated access to the [ERM protocol portal](https://sweb.erm.co.il/protocol/)
+was verified on **2026-10-29** using the protocol access details supplied in the
+new ERM reply. The [authenticated archive](authenticated/README.md)
+preserves the discovered protocol pages as Markdown, content-only HTML sources,
+linked illustrations/documents and the specifically requested Test Server
+archive. The old screenshot references remain available as historical evidence.
 
-[ERM resources](../README.md) · [Message structure](message-structure.md) ·
-[Screenshots and descriptions](images.md) · [Source metadata](metadata.json)
+[ERM resources](../README.md) · [Page catalog](authenticated/README.md) ·
+[Protocol interpretation and diagnostics](authenticated-reading-guide.md) ·
+[Machine-readable inventory](authenticated/inventory.json) ·
+[Historical screenshots](images.md) · [Source metadata](metadata.json)
 
-## Identity and evidence
+## Start with the relevant protocol layer
 
-| Property                    | Evidence                                                                                                     |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Portal                      | `https://sweb.erm.co.il/protocol/`                                                                           |
-| Visible title               | StarLink online protocol                                                                                     |
-| Access                      | ERM-TEST-01: HTTP 200 login form confirmed; no protocol account located in the available sources; authenticated pages/downloads remain unverified |
-| Analysis date               | 2026-10-16 (Europe/Sofia)                                                                                    |
-| Local reference edition     | 1.2; public access checked 2026-10-27, source screenshots unchanged                            |
-| Portal/protocol version     | Not established by the supplied screenshots                                                                  |
-| Home page date              | January 7th, 2026, displayed in `img.png`                                                                    |
-| Message structure page date | May 17th, 2020, displayed in `p1.png`                                                                        |
-| Screenshot capture dates    | Unknown; the dates printed on pages are not capture dates                                                    |
-| Sources                     | User-supplied `img.png`, `menu.png` and `p1.png` from `.misc/edata`; preserved byte-for-byte under `images/` |
+| Need                                             | Authoritative archived pages                                                                                                                                             |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Framing, identifiers, references and size limits | [G1 — Message structure](authenticated/pages/G1.md)                                                                                                                      |
+| Checksum and escaping                            | [G2 — Check-sum calculation](authenticated/pages/G2.md), [G9 — Binary data](authenticated/pages/G9.md)                                                                   |
+| Commands and confirmation results                | [C0 — Commands](authenticated/pages/C0.md), [C2 — Confirmation](authenticated/pages/C2.md), [K0 — Result codes](authenticated/pages/K0.md)                               |
+| Event fields and acknowledgment/retransmission   | [E0 — Events](authenticated/pages/E0.md), [C6 — Event report](authenticated/pages/C6.md), [G16 — Message confirmation](authenticated/pages/G16.md)                       |
+| External-device payload transport                | [C30 — External device message](authenticated/pages/C30.md), [E33 — External device event](authenticated/pages/E33.md)                                                   |
+| Vehicle DTC reports through the OBD2 feature     | [E70 — Diagnostics trouble codes](authenticated/pages/E70.md), [F11 — OBD2](authenticated/pages/F11.md), [P2070 — DTC event configuration](authenticated/pages/P2070.md) |
+| StarLink unit diagnostic reports                 | [E2 — Diagnostic report](authenticated/pages/E2.md), [P11 — Diagnostic filter](authenticated/pages/P11.md)                                                               |
+| Configuration and value macros                   | [P0 — System parameters](authenticated/pages/P0.md), [D0 — Dynamic parameters](authenticated/pages/D0.md)                                                                |
+| Binary contract                                  | [G12 — Binary protocol](authenticated/pages/G12.md) and its retained `onyx.proto` source asset                                                                           |
+| Test Server setup and tools                      | [G11 — Test Server](authenticated/pages/G11.md), [G7 — Tools](authenticated/pages/G7.md)                                                                                 |
+| Hardware and firmware applicability              | [H0 — Hardware](authenticated/pages/H0.md), [V0 — Versions](authenticated/pages/V0.md)                                                                                   |
 
-The home page news mentions **StarLink Monitor v2.83**, released in January 2026,
-and **Version 2.44 (November, 2025)** with an OTA firmware-update note. These are
-visible news entries, not evidence that the Message structure page or every
-device uses either version. The supplied menu and message page have no visible
-deep-link URLs, so their original addresses have not been reconstructed.
+The page catalog additionally includes Simple SMS, accessories, features, all
+reachable general information and individual detail pages. Inventory completeness
+means all discovered permitted protocol links for this authenticated account
+were traversed; it does not claim access to vendor-private or unlinked material.
+Account settings, user administration and editable account configuration values
+are outside the archive. All 1,968 discovered protocol pages and 55 source assets
+are retained; three linked vendor illustrations return HTTP 404 and are listed
+in the archive inventory.
 
-## Access evidence from ERM-TEST-01
+## Current source identity
 
-The project credential inventory contains only separate Karma API/website
-connections, not a protocol-portal connection. The configured shared inventory
-was unavailable on this host; no assertion is made about credentials outside the
-available locations. Two connected Gmail accounts yielded no matching mail in the
-searched scopes. Outlook did contain Oz Dori's reply, received **2026-10-25
-08:39:01 UTC**, and the text matched the supplied ODT.
+| Property                          | Evidence                                                                                |
+| --------------------------------- | --------------------------------------------------------------------------------------- |
+| Portal                            | `https://sweb.erm.co.il/protocol/`                                                      |
+| Authenticated retrieval           | 2026-10-29, Europe/Sofia                                                                |
+| Home page's update date           | 2026-10-18                                                                              |
+| Current home firmware news        | Version 2.46, October 2026                                                              |
+| Current home Monitor news         | StarLink Monitor 2.83, January 2026                                                     |
+| Test Server version on tools page | 1.26.6.1, June 2026                                                                     |
+| Protocol-wide version             | None established; individual pages retain their own dates and version markers           |
+| Archive provenance                | Per-page source URL/update metadata; inventory records file sizes and SHA-256 hashes    |
+| Credential handling               | Access values and session cookies were used only in process memory and are not archived |
 
-The referenced access email was not located through the hostname/topic searches
-or the date-only checks of 7 October and 10 July. This is not proof it was never
-sent. A September ERM pilot thread contained real portal links but no parsed
-username/password instructions; one link also returned the login form. No Karma
-credentials were reused, guessed or submitted to the portal.
+The earlier ERM-TEST-01 result on 2026-10-27 correctly recorded a public login form
+and unavailable credentials at that time. The supplied new reply now resolves
+that access gap. It is no longer the current status of authenticated access.
 
-Current authenticated content, model/version applicability and the requested
-command/diagnostic/ACK companion pages therefore remain unavailable. Recover the
-actual protocol account/access email before trying another normal sign-in. Known
-source-level eData commands are documented separately in
-[diagnostics and fault reporting](../edata-simple-protocol-v4.04/diagnostics-and-fault-reporting.md);
-they are not a replacement for unread current StarLink pages.
+## Diagnostic evidence must keep its scope
 
-## Portal overview
+The portal documents vehicle DTC event 70 for its OBD2 feature. Event 2 is the
+StarLink's own modem/GNSS/system diagnostic report. eData CAN-engine fault reads
+are a separate inner protocol, documented in the
+[eData diagnostic reference](../edata-simple-protocol-v4.04/diagnostics-and-fault-reporting.md).
+An ACK, accepted transmission, sample packet or downloaded protocol page does
+not prove that a real truck returned vehicle fault codes. The
+[interpretation guide](authenticated-reading-guide.md) records these distinctions,
+ACK layers and remaining vendor source inconsistencies.
 
-The following navigation labels are visible in the [home screenshot](images/home.png).
-Descriptions summarize their apparent scope; the individual sections have not
-been opened or inventoried.
+This archive task read protocol documentation and downloaded references. It did
+not execute the downloaded tools or change device destinations/settings. Live
+vehicle evidence belongs to the
+[support verification record](../erm-support-diagnostics-protocol-test-server/README.md).
 
-| Visible navigation                                     | Apparent scope                                                                                         |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| Home; Your settings; Manage users                      | Portal landing page, account preferences and user administration                                       |
-| Commands; Result codes; Events; Simple SMS             | Device operations, returned codes, event messages and SMS instructions                                 |
-| Dynamic parameters; System parameters                  | Parameter reference and device configuration                                                           |
-| Accessories; Features                                  | Device accessories and capabilities                                                                    |
-| General information                                    | Shared protocol, data representation, communication and tool topics listed below                       |
-| Hardware; Versions; Download tools                     | Hardware/version references and downloadable tools                                                     |
-| Configurations; No known issues; Default configuration | Configuration area and the labels/status visible beneath it; full configuration contents are not shown |
+## Historical screenshots
 
-This makes the portal a relevant source for interpreting direct StarLink traffic
-and identifying the documentation needed for a device integration. Its navigation
-does not establish model support, command permissions or complete message schemas.
+The byte-for-byte copies of the user-supplied `img.png`, `menu.png` and `p1.png`
+remain under [images/](images/) with their descriptions in [images.md](images.md).
+Their source was `.misc/edata`; that historical source path is provenance, not
+an instruction to reopen it. Screenshot capture dates are unknown. Printed page
+dates are source-page dates, not capture times.
 
-## General information menu
+The [historical Message structure transcription](message-structure.md) preserves
+the original screenshot's table, examples, limits and discrepancies. Its original
+claims about unavailable companion pages describe the screenshot-only edition;
+the authenticated companion pages are now available above. G1 still displays the
+same 2020-05-17 update date, while the authenticated home shows newer news.
 
-The [supplied menu screenshot](images/general-information.png) shows these entries
-in order. Only **Message structure** has supplied page content.
-
-1. Binary data
-2. Binary protocol (advanced feature)
-3. Check-sum calculation
-4. Converting unsigned raw values to signed numbers
-5. Endianness
-6. Free and Open Source code
-7. Internet Access
-8. LED Indications
-9. Location and heading
-10. Low power consumption
-11. **[Message structure](message-structure.md)**
-12. Message confirmation
-13. Pay attention!
-14. Receiving large data packets on your server
-15. SIM card types
-16. StarLink Firmware OTA Server
-17. StarLink Monitor
-18. StarLink Test Server
-19. Tools
-
-The menu confirms the spelling **StarLink Test Server**. The earlier resource
-notes used “StartLink Test Server”. The later
-[support correspondence](../erm-support-diagnostics-protocol-test-server/README.md)
-describes a fork to our server and ERM's test server, but its setup, actual delivery
-and whether an executable is supplied remain unverified. The separate **StarLink Monitor** menu entry does not establish
-that it is the same tool as the supplied
-[Simple eData Monitor guide](../simple-edata-monitor-configuration-v1.0/README.md).
-
-## Message structure focus
-
-The [detailed local reference](message-structure.md) preserves the visible framing
-table, direction markers (`SLU` and `SRV`), identifier alternatives, separators,
-reference counter, checksum description, size limits and all six sample messages.
-It also records the command-range and checksum inconsistencies in the supplied
-page instead of silently resolving them.
-
-The **Check-sum calculation**, **Message confirmation**, **Binary protocol** and
-**Receiving large data packets on your server** entries are relevant companion
-references. Their names are visible, but their actual rules are not available in
-the supplied material. Access-dependent investigation remains in the
-[protocol backlog](../../../todo/karma-api-v2.md#uncovered-resources-and-fields).
-
-## Relationship to the other ERM references
-
-This is the direct device/server protocol reference. It does not establish
-[Karma API v2](../karma-api-v2/README.md) endpoint behavior, API `device_id`
-semantics or a mapping to Fleet Device.imei. The
-[eData Simple 4.04 PDF](../edata-simple-protocol-v4.04/README.md) is a separate
-versioned CAN-engine reference; its examples must not be substituted for the
-StarLink framing rules without vendor evidence. No device operations or holita
-runtime changes are part of this documentation.
+This reference is the StarLink device/server protocol. It does not redefine
+[Karma API v2](../karma-api-v2/README.md) identifiers or endpoint behavior, nor
+establish a mapping between Karma device IDs and Fleet IMEIs. Manufacturer
+copyright and ownership remain with ERM; the local archive preserves the
+integration reference for internal use.
