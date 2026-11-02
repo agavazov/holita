@@ -4,63 +4,21 @@ import {
   AdminRequestDeviceConfigurationReadDocument,
   AdminRequestDeviceParameterAdditionDocument,
   AdminRequestDeviceParameterIntervalUpdateDocument,
-  AdminRequestDeviceRulesReadDocument,
   AdminRequestDeviceRuleChangeDocument,
+  AdminRequestDeviceRulesReadDocument,
   type AdminDeviceConfigurationOperationFragment,
   type AdminDeviceConfigurationPageQuery,
 } from '../generated/graphql/operations';
-import { defaultBranchId } from './session-fixtures';
-import { fixtureKarmaCar, fixtureKarmaCars } from './karma-fixtures';
 import { fixtureError, graphqlFixture, type WithTypename } from './graphql-fixtures';
-import type { DeviceParameterMeasurements } from '../app/features/fleet/device-operations/device-configuration-types';
-
-export function configurationMeasurementsFixture(
-  state: DeviceParameterMeasurements['state'] | 'empty',
-): DeviceParameterMeasurements {
-  const readings = [
-    { value: 7, time: '06:42:45' },
-    { value: 0, time: '06:43:15' },
-    { value: null, time: '06:43:46' },
-    { value: 8, time: '06:44:16' },
-  ];
-  const items = readings
-    .map(({ value, time }, index) => ({
-      id: String(7200000000 + index),
-      carId: fixtureKarmaCar.id,
-      deviceId: fixtureKarmaCar.deviceId,
-      carNumber: fixtureKarmaCar.carNumber,
-      eventTimeUtc: `2026-10-18 ${time}`,
-      eventTimeLocal: null,
-      pdt: null,
-      spd: null,
-      odo: null,
-      latitude: null,
-      longitude: null,
-      parameters: [{ id: '718', value, description: 'Source parameter 718' }],
-    }))
-    .reverse();
-  return {
-    parameterId: 718,
-    fromUtc: '2026-10-17T07:08:00Z',
-    toUtc: '2026-10-18T07:08:00Z',
-    state: state === 'empty' ? 'ready' : state,
-    items: state === 'ready' ? items : [],
-  };
-}
+import { fixtureKarmaCars } from './karma-fixtures';
+import { defaultBranchId } from './session-fixtures';
 
 export const configurationStoryStates = {
   confirmed: 'confirmed',
   empty: 'empty',
   waiting: 'waiting',
-  unknown: 'unknown',
-  timedOut: 'timed-out',
-  disabled: 'disabled',
   emptyConfiguration: 'empty-configuration',
-  writeWaiting: 'write-waiting',
   writeUncertain: 'write-uncertain',
-  writeFailed: 'write-failed',
-  writesDisabled: 'writes-disabled',
-  history: 'history',
 } as const;
 
 export const fixtureConfigurationOperation: WithTypename<AdminDeviceConfigurationOperationFragment> =
@@ -203,16 +161,8 @@ export function configurationPageFixture(
 ): WithTypename<AdminDeviceConfigurationPageQuery> {
   const confirmed = fixtureConfigurationOperation;
   const empty = state === configurationStoryStates.empty;
-  const disabled = state === configurationStoryStates.disabled;
-  const waiting = state === configurationStoryStates.waiting;
-  const unknown = state === configurationStoryStates.unknown;
-  const timedOut = state === configurationStoryStates.timedOut;
   const emptyConfiguration = state === configurationStoryStates.emptyConfiguration;
-  const writeWaiting = state === configurationStoryStates.writeWaiting;
   const writeUncertain = state === configurationStoryStates.writeUncertain;
-  const writeFailed = state === configurationStoryStates.writeFailed;
-  const history = state === configurationStoryStates.history;
-  const writesDisabled = state === configurationStoryStates.writesDisabled;
   const lastSnapshot = empty
     ? null
     : emptyConfiguration
@@ -242,72 +192,42 @@ export function configurationPageFixture(
   const pending: WithTypename<AdminDeviceConfigurationOperationFragment> = {
     ...confirmed,
     id: '80000000-0000-4000-8000-00000000c102',
-    status: unknown ? 'UNKNOWN' : timedOut ? 'TIMED_OUT' : 'WAITING',
-    requestedAt: timedOut ? '2026-10-18T06:48:00.000Z' : '2026-10-18T06:58:00.000Z',
-    dispatchedAt: timedOut ? '2026-10-18T06:48:01.000Z' : '2026-10-18T06:58:01.000Z',
-    completedAt: timedOut ? '2026-10-18T07:00:00.000Z' : null,
+    status: 'WAITING',
+    requestedAt: '2026-10-18T06:58:00.000Z',
+    dispatchedAt: '2026-10-18T06:58:01.000Z',
+    completedAt: null,
     nextCheckAt: '2026-10-18T07:00:10.000Z',
-    deadlineAt: timedOut ? '2026-10-18T06:58:00.000Z' : '2026-10-18T07:08:00.000Z',
+    deadlineAt: '2026-10-18T07:08:00.000Z',
     configuration: null,
-    queueIds: unknown ? [] : ['300002'],
+    queueIds: ['300002'],
     observationCount: 1,
     coverageComplete: false,
-    errorCode: timedOut ? 'READ_TIMEOUT' : null,
   };
   const write: WithTypename<AdminDeviceConfigurationOperationFragment> = {
     ...pending,
     kind: 'UPDATE_INTERVAL',
-    phase: writeFailed ? 'READ_PARAMETERS' : 'VERIFY_PARAMETERS',
+    phase: 'VERIFY_PARAMETERS',
     baselineOperationId: confirmed.id,
     parameterId: 65000,
     previousIntervalSeconds: 0,
     intervalSeconds: 60,
-    writeDispatchedAt: writeFailed ? null : '2026-10-18T06:59:00.000Z',
-    writeUncertain,
-    status: writeUncertain ? 'UNKNOWN' : writeFailed ? 'FAILED' : 'WAITING',
-    completedAt: writeFailed ? '2026-10-18T07:00:00.000Z' : null,
-    observationCount: writeFailed ? 2 : 1,
-    coverageComplete: writeFailed,
-    errorCode: writeFailed ? 'BASELINE_CHANGED' : null,
-  };
-  const olderSnapshot: WithTypename<AdminDeviceConfigurationOperationFragment> = {
-    ...confirmed,
-    id: '80000000-0000-4000-8000-00000000c100',
-    requestedAt: '2026-10-18T06:20:00.000Z',
-    dispatchedAt: '2026-10-18T06:20:01.000Z',
-    completedAt: '2026-10-18T06:23:00.000Z',
-    nextCheckAt: '2026-10-18T06:23:00.000Z',
-    deadlineAt: '2026-10-18T06:30:00.000Z',
-    queueIds: ['300000'],
-    observationCount: 1,
-    configuration: {
-      __typename: 'FleetDeviceConfiguration',
-      configurationId: '1000',
-      parameters: [
-        {
-          __typename: 'FleetDeviceConfigurationParameter',
-          parameterId: 65000,
-          intervalSeconds: 120,
-          definitionHex: 'FDE8' + '00'.repeat(18) + '0078',
-        },
-      ],
-    },
+    writeDispatchedAt: '2026-10-18T06:59:00.000Z',
+    writeUncertain: true,
+    status: 'UNKNOWN',
   };
   return {
-    fleetDeviceOperationsEnabled: !disabled,
-    fleetDeviceConfigurationWritesEnabled: !disabled && !writesDisabled,
+    fleetDeviceOperationsEnabled: true,
+    fleetDeviceConfigurationWritesEnabled: true,
     fleetDeviceParameterPresets: fixtureParameterPresets,
     fleetDeviceOperations: empty
       ? []
-      : writeWaiting || writeUncertain || writeFailed
+      : writeUncertain
         ? [write]
-        : waiting || unknown || timedOut
+        : state === configurationStoryStates.waiting
           ? [pending]
-          : history
-            ? [...(rulesSnapshot ? [rulesSnapshot] : []), confirmed, olderSnapshot]
-            : lastSnapshot
-              ? [...(rulesSnapshot ? [rulesSnapshot] : []), lastSnapshot]
-              : [],
+          : lastSnapshot
+            ? [...(rulesSnapshot ? [rulesSnapshot] : []), lastSnapshot]
+            : [],
     fleetDeviceConfigurationSnapshot: lastSnapshot,
     fleetDeviceRulesSnapshot: rulesSnapshot,
   };

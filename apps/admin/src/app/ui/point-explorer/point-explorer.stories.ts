@@ -108,36 +108,6 @@ const coverage: FleetScenarioCoverageFragment = {
   positionsLoaded: points.length,
   gaps: [{ from: '2026-01-01T08:10:00.000Z', toExclusive: '2026-01-01T08:20:00.000Z' }],
 };
-const unprovedPoints: readonly PointExplorerRow[] = points.map((point, index) => ({
-  ...point,
-  key: `KARMA_API:synthetic-source-point-${String(index + 1)}`,
-  source: 'KARMA_API',
-  id: `synthetic-source-point-${String(index + 1)}`,
-  sourceTime: `2026-01-01 10:${['00', '05', '25', '30'][index] ?? '00'}:00`,
-  instantUtc: null,
-  provenance: {
-    ...provenance,
-    origin: 'OBSERVED',
-    source: 'KARMA_API',
-    scenarioId: null,
-    sourceRecordId: `synthetic-source-point-${String(index + 1)}`,
-  },
-  facts: [{ label: 'Source speed, physical units unconfirmed', value: '0.25' }],
-}));
-const pagedPoints: readonly PointExplorerRow[] = Array.from({ length: 314 }, (_, index) => {
-  const id = `synthetic-bounded-point-${String(index + 1)}`;
-  const sourceTime = new Date(Date.UTC(2026, 0, 1, 8, 0, index * 10)).toISOString();
-  return {
-    key: `HOLITA_SCENARIO:${id}`,
-    source: 'HOLITA_SCENARIO',
-    id,
-    sourceTime,
-    instantUtc: sourceTime,
-    coordinates: { latitude: 0.125 + index / 10000, longitude: 0.25 },
-    provenance: { ...provenance, sourceRecordId: id, eventAt: sourceTime },
-    facts: [],
-  };
-});
 
 const meta: Meta<PointExplorer> = {
   title: 'Design System/Patterns/Point explorer',
@@ -145,7 +115,6 @@ const meta: Meta<PointExplorer> = {
   decorators: [applicationConfig({ providers: [{ provide: AdminConfig, useValue: {} }] }), onFrame],
   tags: ['!autodocs'],
   args: {
-    language: 'en',
     identity: 'Synthetic trip · synthetic-trip-1',
     endpoints,
     points,
@@ -192,13 +161,6 @@ export const LongIntervalAndDeclaredGap: Story = {
     coverage: { ...coverage, retrieval: 'PARTIAL' },
   },
 };
-export const BoundedList: Story = {
-  args: {
-    points: pagedPoints,
-    selectedKey: 'HOLITA_SCENARIO:synthetic-bounded-point-301',
-    coverage: { ...coverage, positionsLoaded: pagedPoints.length, gaps: [] },
-  },
-};
 export const MissingCoordinates: Story = {
   args: {
     points: points.map((point) =>
@@ -207,34 +169,13 @@ export const MissingCoordinates: Story = {
     selectedKey: 'HOLITA_SCENARIO:synthetic-point-2',
   },
 };
-export const MissingSelection: Story = {
-  args: { selectedKey: 'HOLITA_SCENARIO:synthetic-missing-point' },
-};
-export const UnprovedClock: Story = {
-  args: {
-    points: unprovedPoints,
-    selectedKey: 'KARMA_API:synthetic-source-point-2',
-    provenance: {
-      ...provenance,
-      origin: 'OBSERVED',
-      source: 'KARMA_API',
-      scenarioId: null,
-    },
-    coverage: { ...coverage, positionCoverage: 'NOT_ASSESSED', gaps: [] },
-    endpoints: {
-      ...endpoints,
-      originTime: '2026-01-01 10:00:00',
-      destinationTime: '2026-01-01 10:30:00',
-    },
-  },
-};
 export const Empty: Story = {
   args: {
     points: [],
     coverage: { ...coverage, positionsLoaded: 0, positionCoverage: 'NOT_ASSESSED', gaps: [] },
   },
 };
-export const Unavailable: Story = {
+export const Error: Story = {
   args: {
     points: null,
     provenance: { ...provenance, origin: 'UNAVAILABLE' },
@@ -244,11 +185,6 @@ export const Unavailable: Story = {
       positionsLoaded: 0,
       gaps: [],
     },
-  },
-};
-export const Error: Story = {
-  args: {
-    ...Unavailable.args,
     error: 'The source request did not complete. Recorded endpoints remain available.',
   },
 };
@@ -265,14 +201,7 @@ export const Loading: Story = {
     loading: true,
   },
 };
-export const Bulgarian: Story = {
-  args: { language: 'bg', selectedKey: 'HOLITA_SCENARIO:synthetic-point-1' },
-};
 export const Mobile: Story = {
-  args: { language: 'bg', selectedKey: 'HOLITA_SCENARIO:synthetic-point-2' },
+  args: { selectedKey: 'HOLITA_SCENARIO:synthetic-point-2' },
   globals: { viewport: { value: 'mobile375', isRotated: false } },
-};
-export const Dark: Story = {
-  args: { selectedKey: 'HOLITA_SCENARIO:synthetic-point-3' },
-  globals: { theme: 'dark' },
 };

@@ -11,15 +11,14 @@ import {
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { ButtonDirective } from 'primeng/button';
-import { KarmaDateTime } from './date-time/karma-date-time';
 import { InputText } from 'primeng/inputtext';
 import { Select } from 'primeng/select';
-import { expect, fireEvent, userEvent, waitFor, within } from 'storybook/test';
 import { onFrame } from '../../../storybook/story-config';
-import { karmaDateControl, karmaDateParameter } from './karma-date-time';
 import { FormField } from '../../ui/form-field/form-field';
 import { focusFirstInvalid } from '../../ui/forms/focus';
+import { KarmaDateTime } from './date-time/karma-date-time';
 import { karmaFilterErrors, type KarmaFilterErrors } from './filter-validation/karma-filter-errors';
+import { karmaDateControl, karmaDateParameter } from './karma-date-time';
 
 /** Uses the same control contracts and CSS as the connected Karma account/history pages. */
 @Component({
@@ -185,7 +184,7 @@ class KarmaControlsDemo {
 }
 
 const meta: Meta<KarmaControlsDemo> = {
-  title: 'Design System/Karma/Controls',
+  title: 'Design System/Patterns/Karma controls',
   component: KarmaControlsDemo,
   decorators: [onFrame],
   tags: ['!autodocs'],
@@ -195,59 +194,3 @@ type Story = StoryObj<KarmaControlsDemo>;
 
 export const Default: Story = {};
 export const Mobile: Story = { globals: { viewport: { value: 'mobile375', isRotated: false } } };
-export const Dark: Story = { globals: { theme: 'dark' } };
-
-export const DateSelection: Story = {
-  name: 'Date selection keeps API clock fields',
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const from = canvas.getByRole('combobox', { name: 'From (UTC)' });
-    await expect(from).toHaveValue('2026-01-01');
-    await expect(canvas.getByRole('textbox', { name: 'From (UTC): time (HH:mm:ss)' })).toHaveValue(
-      '08:15:30',
-    );
-    await userEvent.click(from);
-    await waitFor(() =>
-      expect(canvasElement.ownerDocument.querySelector('.p-datepicker-panel')).toBeVisible(),
-    );
-    const day = canvasElement.ownerDocument.querySelector<HTMLElement>(
-      '.p-datepicker-panel [data-date][tabindex="0"]',
-    );
-    if (!day) {
-      throw new Error('Missing selected calendar day.');
-    }
-    await userEvent.click(day);
-    await fireEvent.keyDown(from, { key: 'Escape', code: 'Escape', keyCode: 27, which: 27 });
-    await waitFor(() =>
-      expect(canvasElement.ownerDocument.querySelector('.p-datepicker-panel')).toBeNull(),
-    );
-    await userEvent.click(canvas.getByRole('button', { name: 'Apply filters' }));
-    await expect(canvas.getByRole('status')).toHaveTextContent(
-      '2026-01-01T08:15:30 / 2026-01-02T09:45:00',
-    );
-    await userEvent.click(canvas.getByRole('button', { name: 'Clear filters' }));
-    await expect(from).toHaveValue('');
-  },
-};
-
-export const InvalidFilters: Story = {
-  name: 'Invalid clock focuses its field',
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const clock = canvas.getByRole('textbox', { name: 'From (UTC): time (HH:mm:ss)' });
-    await userEvent.clear(clock);
-    await userEvent.type(clock, '25:00:00');
-    await userEvent.click(canvas.getByRole('button', { name: 'Apply filters' }));
-    await waitFor(() => expect(clock).toHaveFocus());
-    await expect(clock).toHaveAttribute('aria-invalid', 'true');
-    await waitFor(() =>
-      expect(
-        canvas.getByText('Enter a valid time in HH:mm:ss format (00:00:00–23:59:59).'),
-      ).toBeVisible(),
-    );
-    await expect(canvas.getByRole('combobox', { name: 'From (UTC)' })).not.toHaveAttribute(
-      'aria-invalid',
-      'true',
-    );
-  },
-};

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/angular-vite';
-import '../../../../storybook/diagnostics-fixtures';
 import { AdminFleetScenarioDocument } from '../../../../generated/graphql/operations';
+import '../../../../storybook/diagnostics-fixtures';
 import { graphqlFixture } from '../../../../storybook/graphql-fixtures';
 import { fixtureScenario } from '../../../../storybook/scenario-fixtures';
 import { defaultBranchId } from '../../../../storybook/session-fixtures';
@@ -10,7 +10,7 @@ import { FleetWorkspace } from '../fleet-workspace';
 import { ExampleScenarioPage } from './example-scenario-page';
 
 const meta: Meta = {
-  title: 'Admin/Trucks/Example day',
+  title: 'Admin/Karma Client/Trucks/Truck/Overview/Example day',
   tags: ['!autodocs'],
   parameters: { holita: { signedIn: true } satisfies StoryFixtures },
 };
@@ -33,29 +33,14 @@ export const SelectedPositionAfterGap: Story = {
     '?sampleTrip=example-trip-01&samplePoint=example-position-04#trip-example-trip-01',
   ),
 };
-export const ReturnTripPosition: Story = {
-  render: routed(
-    '?sampleTrip=example-trip-02&samplePoint=example-position-07#trip-example-trip-02',
-  ),
-};
 export const FuelCounterReset: Story = {
   render: routed(
     '?sampleTrip=example-trip-01&sampleView=measurements&sampleChannel=FUEL_USED&samplePoint=example-position-04#trip-example-trip-01',
   ),
 };
-export const TemperatureMeasurements: Story = {
-  render: routed(
-    '?sampleTrip=example-trip-01&sampleView=measurements&sampleChannel=COOLANT_TEMPERATURE&samplePoint=example-position-03#trip-example-trip-01',
-  ),
-};
 export const VoltageGapAndMissingValue: Story = {
   render: routed(
     '?sampleTrip=example-trip-01&sampleView=measurements&sampleChannel=EXTERNAL_VOLTAGE&samplePoint=example-position-04#trip-example-trip-01',
-  ),
-};
-export const ReturnTripMeasurements: Story = {
-  render: routed(
-    '?sampleTrip=example-trip-02&sampleView=measurements&sampleChannel=ENGINE_HOURS&samplePoint=example-position-07#trip-example-trip-02',
   ),
 };
 export const NoSampledPositions: Story = {

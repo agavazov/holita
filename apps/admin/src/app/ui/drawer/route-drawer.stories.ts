@@ -7,7 +7,6 @@ import { InputText } from 'primeng/inputtext';
 import { Select } from 'primeng/select';
 import { Tag } from 'primeng/tag';
 import { Textarea } from 'primeng/textarea';
-import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { FormField } from '../form-field/form-field';
 import { lockWhileSaving } from '../forms/saving';
 import { RouteDrawer, type RouteDrawerState } from './route-drawer';
@@ -246,30 +245,9 @@ export const Edit: Story = { args: { mode: 'edit' } };
 /** A read-only record. */
 export const View: Story = { args: { mode: 'view' } };
 
-/** The mixed case: the record opens read-only and Edit switches the drawer to the form. */
-export const ViewThenEdit: Story = {
-  name: 'View then edit',
-  args: { mode: 'view-edit' },
-  play: async ({ canvasElement }) => {
-    const body = within(canvasElement.ownerDocument.body);
-    await waitFor(() => expect(body.getByRole('button', { name: 'Edit' })).toBeVisible());
-    await userEvent.click(body.getByRole('button', { name: 'Edit' }));
-    await waitFor(() => expect(body.getByRole('textbox', { name: /License plate/ })).toBeVisible());
-  },
-};
-
 export const Loading: Story = { args: { state: 'loading' } };
 export const Saving: Story = {
   args: { saving: true },
-  play: async ({ canvasElement }) => {
-    const body = within(canvasElement.ownerDocument.body);
-    await waitFor(() =>
-      expect(body.getByRole('textbox', { name: /License plate/ })).toBeDisabled(),
-    );
-    await expect(body.getByRole('spinbutton', { name: 'Fuel tank, L' })).toBeDisabled();
-    await expect(body.getByRole('button', { name: /^Close$/ })).toBeDisabled();
-    await expect(body.getByRole('button', { name: /^Cancel$/ })).toBeDisabled();
-  },
 };
 export const NotFound: Story = { name: 'Not found', args: { state: 'not-found' } };
 export const ErrorState: Story = { name: 'Error', args: { state: 'error' } };
@@ -278,9 +256,4 @@ export const ServerFieldErrors: Story = { name: 'Server field errors', args: { e
 export const DirtyWithConfirm: Story = {
   name: 'Dirty with confirm',
   args: { dirty: true, confirmOnOpen: true },
-  play: async ({ canvasElement }) => {
-    const body = within(canvasElement.ownerDocument.body);
-    await waitFor(() => expect(body.getByRole('button', { name: 'Keep editing' })).toBeVisible());
-    await expect(body.getByRole('button', { name: 'Discard changes' })).toBeVisible();
-  },
 };

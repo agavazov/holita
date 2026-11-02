@@ -52,7 +52,7 @@ const meta: Meta<SourceContext> = {
   component: SourceContext,
   decorators: [onFrame],
   tags: ['!autodocs'],
-  args: { language: 'en', provenance: observed, period, coverage, availability: 'COMPLETE' },
+  args: { provenance: observed, period, coverage, availability: 'COMPLETE' },
 };
 export default meta;
 type Story = StoryObj<SourceContext>;
@@ -95,29 +95,8 @@ export const Unavailable: Story = {
 export const PartialWithGaps: Story = {
   args: { provenance: illustrative, coverage: partialCoverage, availability: 'PARTIAL' },
 };
-export const Bulgarian: Story = {
-  args: { language: 'bg', provenance: illustrative, coverage: partialCoverage },
-};
 export const Mobile: Story = {
-  ...Bulgarian,
-  globals: { viewport: { value: 'mobile375', isRotated: false } },
-};
-export const Dark: Story = {
   ...PartialWithGaps,
-  globals: { theme: 'dark' },
+  globals: { viewport: { value: 'mobile375', isRotated: false } },
 };
 export const Compact: Story = { args: { compact: true } };
-export const CompactExample: Story = {
-  args: { ...PartialWithGaps.args, compact: true },
-};
-export const CompactUnavailable: Story = {
-  args: { ...Unavailable.args, compact: true },
-};
-export const CompactMobile: Story = {
-  args: { ...Bulgarian.args, compact: true },
-  globals: { viewport: { value: 'mobile375', isRotated: false } },
-};
-export const CompactDark: Story = {
-  ...CompactExample,
-  globals: { theme: 'dark' },
-};

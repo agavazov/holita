@@ -157,20 +157,6 @@ const records: readonly MeasurementRecord[] = [
     ],
   },
 ];
-const pagedRecords: readonly MeasurementRecord[] = Array.from({ length: 42 }, (_, index) => {
-  const id = `synthetic-bounded-record-${String(index + 1)}`;
-  const at = new Date(Date.UTC(2026, 0, 1, 8, index)).toISOString();
-  return {
-    key: `HOLITA_SCENARIO:${id}`,
-    source: 'HOLITA_SCENARIO',
-    id,
-    sourceTime: at,
-    instantUtc: at,
-    coordinates: { latitude: 0.125 + index / 10000, longitude: 0.25 },
-    provenance: { ...provenance, sourceRecordId: id, eventAt: at },
-    readings: [reading('speed', index + 1, index, at)],
-  };
-});
 
 const meta: Meta<MeasurementWorkspace> = {
   title: 'Design System/Patterns/Measurement workspace',
@@ -178,7 +164,6 @@ const meta: Meta<MeasurementWorkspace> = {
   decorators: [applicationConfig({ providers: [{ provide: AdminConfig, useValue: {} }] }), onFrame],
   tags: ['!autodocs'],
   args: {
-    language: 'en',
     identity: 'Synthetic measurement selection',
     scopeHint:
       'Four synthetic geographic source records. The channel counts, chart and table use this same loaded selection.',
@@ -245,21 +230,6 @@ export const NullReading: Story = {
     selectedRecordKey: 'HOLITA_SCENARIO:synthetic-point-4',
   },
 };
-export const NotObserved: Story = {
-  args: { selectedChannelKey: 'counter', selectedRecordKey: 'HOLITA_SCENARIO:synthetic-point-1' },
-};
-export const DeclaredGap: Story = {
-  args: { selectedChannelKey: 'voltage', coverage: { ...coverage, retrieval: 'PARTIAL' } },
-};
-export const PagedSelection: Story = {
-  args: {
-    records: pagedRecords,
-    selectedRecordKey: 'HOLITA_SCENARIO:synthetic-bounded-record-40',
-    scopeHint:
-      'All 42 synthetic source records contribute to the chart and capability counts. The table pages locally.',
-    coverage: { ...coverage, positionsLoaded: pagedRecords.length, gaps: [] },
-  },
-};
 export const RawSourceUnits: Story = {
   args: {
     channels: [
@@ -305,21 +275,6 @@ export const RawSourceUnits: Story = {
     coverage: { ...coverage, positionCoverage: 'NOT_ASSESSED', gaps: [] },
   },
 };
-export const UnprovedClock: Story = {
-  args: {
-    records: records.map((record, index) =>
-      index === 1 ? { ...record, instantUtc: null } : record,
-    ),
-  },
-};
-export const MissingCoordinates: Story = {
-  args: {
-    records: records.map((record) =>
-      record.id === 'synthetic-point-2' ? { ...record, coordinates: null } : record,
-    ),
-    selectedRecordKey: 'HOLITA_SCENARIO:synthetic-point-2',
-  },
-};
 export const Empty: Story = {
   args: { records: [], coverage: { ...coverage, positionsLoaded: 0, gaps: [] } },
 };
@@ -340,18 +295,10 @@ export const Failed: Story = {
 export const Loading: Story = {
   args: { records: null, provenance: null, coverage: null, loading: true },
 };
-export const Bulgarian: Story = {
-  args: { language: 'bg', selectedRecordKey: 'HOLITA_SCENARIO:synthetic-point-2' },
-};
 export const Mobile: Story = {
   args: {
-    language: 'bg',
     selectedChannelKey: 'voltage',
     selectedRecordKey: 'HOLITA_SCENARIO:synthetic-point-2',
   },
   globals: { viewport: { value: 'mobile375', isRotated: false } },
-};
-export const Dark: Story = {
-  args: { selectedRecordKey: 'HOLITA_SCENARIO:synthetic-point-2' },
-  globals: { theme: 'dark' },
 };

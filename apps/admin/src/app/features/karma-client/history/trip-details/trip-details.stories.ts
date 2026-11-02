@@ -5,17 +5,16 @@ import { AdminConfig } from '../../../../core/config/admin-config';
 import { TripDetails } from './trip-details';
 
 const meta: Meta<TripDetails> = {
-  title: 'Admin/Karma Client/Trip details',
+  title: 'Admin/Karma Client/Trucks/Truck/Trips/Trip details',
   component: TripDetails,
   decorators: [applicationConfig({ providers: [{ provide: AdminConfig, useValue: {} }] }), onFrame],
   tags: ['!autodocs'],
-  args: { language: 'en', trip: fixtureKarmaTrip },
+  args: { trip: fixtureKarmaTrip },
 };
 export default meta;
 type Story = StoryObj<TripDetails>;
 
 export const Endpoints: Story = {};
-export const MapInParent: Story = { args: { showMap: false } };
 export const MissingEndpoints: Story = {
   args: {
     trip: {
@@ -46,9 +45,7 @@ export const UnconfirmedState: Story = {
     trip: { ...fixtureKarmaTrip, tripActive: null, stopDate: null },
   },
 };
-export const Bulgarian: Story = { args: { language: 'bg' } };
 export const Mobile: Story = {
-  ...Bulgarian,
+  ...Endpoints,
   globals: { viewport: { value: 'mobile375', isRotated: false } },
 };
-export const Dark: Story = { globals: { theme: 'dark' } };

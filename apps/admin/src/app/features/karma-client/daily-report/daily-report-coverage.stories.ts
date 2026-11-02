@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import type { AdminKarmaDailyReportQuery } from '../../../../generated/graphql/operations';
-import { onFrame } from '../../../../storybook/story-config';
 import { fixtureKarmaTrip } from '../../../../storybook/karma-fixtures';
+import { onFrame } from '../../../../storybook/story-config';
 import { DailyReportCoverage } from './daily-report-coverage';
 
 type DailyReport = AdminKarmaDailyReportQuery['karmaDailyReport'];
@@ -130,11 +130,11 @@ const unsupported: DailyReport = {
 };
 
 const meta: Meta<DailyReportCoverage> = {
-  title: 'Admin/Karma Client/Daily report contract',
+  title: 'Design System/Patterns/Daily report coverage',
   component: DailyReportCoverage,
   decorators: [onFrame],
   tags: ['!autodocs'],
-  args: { language: 'en', report: complete },
+  args: { report: complete },
 };
 export default meta;
 type Story = StoryObj<DailyReportCoverage>;
@@ -142,22 +142,10 @@ type Story = StoryObj<DailyReportCoverage>;
 export const Complete: Story = {};
 export const Empty: Story = { args: { report: empty } };
 export const PartialWithMissingValues: Story = { args: { report: partial } };
-export const CompleteRetrievalWithMissingSpeed: Story = {
-  args: {
-    report: {
-      ...complete,
-      state: 'PARTIAL',
-      trips: complete.trips.map((trip) => ({ ...trip, maxSpeed: null })),
-      maxSpeed: metric(null, 'SOURCE_SPEED_UNCONFIRMED', 'UNAVAILABLE', 0),
-    },
-  },
-};
 export const Unavailable: Story = { args: { report: unavailable } };
 export const UnsupportedPeriod: Story = { args: { report: unsupported } };
 export const Loading: Story = { args: { loading: true } };
-export const Bulgarian: Story = { args: { language: 'bg', report: partial } };
 export const Mobile: Story = {
-  args: { language: 'bg', report: partial },
+  args: { report: partial },
   globals: { viewport: { value: 'mobile375', isRotated: false } },
 };
-export const Dark: Story = { args: { report: partial }, globals: { theme: 'dark' } };

@@ -11,8 +11,8 @@ import type {
 } from '../../../generated/graphql/operations';
 import { onFrame } from '../../../storybook/story-config';
 import { AdminConfig } from '../../core/config/admin-config';
-import { MapPreview } from '../map-preview/map-preview';
 import type { StackedRow } from '../charts/stacked-bars';
+import { MapPreview } from '../map-preview/map-preview';
 import { DayOverview, type DayMetricView, type DayTripRow } from './day-overview';
 
 // Isolated presentation snapshots; no account reads or runtime scenario imports.
@@ -101,7 +101,6 @@ const meta: Meta<DayOverview> = {
   ],
   tags: ['!autodocs'],
   args: {
-    language: 'en',
     provenance,
     period,
     coverage,
@@ -316,7 +315,6 @@ export const Loading: Story = {
   },
 };
 export const Mobile: Story = {
-  args: { language: 'bg' },
+  args: {},
   globals: { viewport: { value: 'mobile375', isRotated: false } },
 };
-export const Dark: Story = { globals: { theme: 'dark' } };

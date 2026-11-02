@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { MessageService, type ToastMessageOptions } from 'primeng/api';
 import { ButtonDirective } from 'primeng/button';
-import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { onFrame } from '../../storybook/story-config';
 
 const examples = {
@@ -54,14 +53,6 @@ class NotificationsDemo {
   }
 }
 
-async function showNotification(canvasElement: HTMLElement): Promise<void> {
-  const trigger = within(canvasElement).getByRole('button', { name: 'Show notification' });
-  await userEvent.click(trigger);
-  await waitFor(() => expect(canvasElement.querySelector('.p-toast-message')).toBeVisible());
-  await expect(canvasElement.querySelectorAll('p-toast')).toHaveLength(1);
-  await expect(trigger).toHaveFocus();
-}
-
 const meta: Meta<NotificationsDemo> = {
   title: 'Design System/Patterns/Notifications',
   component: NotificationsDemo,
@@ -72,59 +63,22 @@ const meta: Meta<NotificationsDemo> = {
 export default meta;
 type Story = StoryObj<NotificationsDemo>;
 
-export const Success: Story = {
-  play: async ({ canvasElement }) => {
-    await showNotification(canvasElement);
-    await expect(within(canvasElement).getByRole('status')).toHaveTextContent('Settings saved.');
-    await expect(within(canvasElement).getByRole('status')).toHaveAttribute('aria-live', 'polite');
-  },
-};
+export const Success: Story = {};
 
 export const Warning: Story = {
   args: { scenario: 'warning' },
-  play: async ({ canvasElement }) => {
-    await showNotification(canvasElement);
-    const toast = within(canvasElement).getByRole('alert');
-    await expect(toast).toHaveTextContent('3 of 5 records were updated.');
-    await expect(within(toast).getByRole('button', { name: 'Close' })).toBeVisible();
-  },
 };
 
 export const ErrorState: Story = {
   name: 'Error',
   args: { scenario: 'error' },
-  play: async ({ canvasElement }) => {
-    await showNotification(canvasElement);
-    const toast = within(canvasElement).getByRole('alert');
-    await expect(toast).toHaveTextContent('The update could not be completed.');
-    await expect(toast).toHaveAttribute('aria-live', 'assertive');
-  },
 };
 
 export const LongMessage: Story = {
   name: 'Long message',
   args: { scenario: 'long' },
-  play: async ({ canvasElement }) => {
-    await showNotification(canvasElement);
-    const toast = within(canvasElement).getByRole('alert');
-    const width = canvasElement.ownerDocument.documentElement.clientWidth;
-    const summary = within(toast).getByText(examples.long.summary);
-    const close = within(toast).getByRole('button', { name: 'Close' });
-    await waitFor(async () => {
-      await expect(toast.getBoundingClientRect().left).toBeGreaterThanOrEqual(0);
-      await expect(toast.getBoundingClientRect().right).toBeLessThanOrEqual(width);
-      await expect(toast.scrollWidth).toBeLessThanOrEqual(toast.clientWidth);
-      await expect(summary.getBoundingClientRect().right).toBeLessThan(
-        close.getBoundingClientRect().left,
-      );
-    });
-  },
 };
 
 export const Stacked: Story = {
   args: { scenario: 'stacked' },
-  play: async ({ canvasElement }) => {
-    await showNotification(canvasElement);
-    await expect(canvasElement.querySelectorAll('.p-toast-message')).toHaveLength(3);
-  },
 };

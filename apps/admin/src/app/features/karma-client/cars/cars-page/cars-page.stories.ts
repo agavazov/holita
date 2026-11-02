@@ -1,8 +1,4 @@
 import type { Meta, StoryObj } from '@storybook/angular-vite';
-import { routeAt, StoryApp, type StoryFixtures } from '../../../../../storybook/story-config';
-import { AdminWorkspace } from '../../../../workspace/admin-workspace';
-import { KarmaWorkspace } from '../../karma-workspace';
-import { CarsPage } from './cars-page';
 import {
   AdminKarmaCarsDocument,
   AdminKarmaLocationDocument,
@@ -13,6 +9,10 @@ import {
   fixtureKarmaLocationResponse,
   fixtureKarmaMissingLocationCoordinates,
 } from '../../../../../storybook/karma-fixtures';
+import { routeAt, StoryApp, type StoryFixtures } from '../../../../../storybook/story-config';
+import { AdminWorkspace } from '../../../../workspace/admin-workspace';
+import { KarmaWorkspace } from '../../karma-workspace';
+import { CarsPage } from './cars-page';
 
 const meta: Meta = {
   title: 'Admin/Karma Client/Trucks',
@@ -33,9 +33,6 @@ export const Default: Story = { render: routed() };
 export const SelectedLocation: Story = {
   render: routed('?q=KARMA&project=12&size=25&mapCar=41#inventory'),
 };
-export const SelectedStreetView: Story = {
-  render: routed('?q=KARMA&project=12&size=25&mapCar=41&mapView=streetview#inventory'),
-};
 export const SelectedLocationWithoutCoordinates: Story = {
   render: routed('?q=KARMA&project=12&size=25&mapCar=41#inventory'),
   beforeEach: () => {
@@ -50,8 +47,6 @@ export const SelectedLocationWithoutCoordinates: Story = {
   },
 };
 export const SearchAndPaging: Story = { render: routed('?q=000123456789012') };
-export const Project: Story = { render: routed('?project=12&size=25') };
-export const NoResults: Story = { render: routed('?q=missing') };
 export const Empty: Story = {
   render: routed(),
   beforeEach: () => {
@@ -78,4 +73,3 @@ export const Mobile: Story = {
   render: routed('?project=12&size=25'),
   globals: { viewport: { value: 'mobile375', isRotated: false } },
 };
-export const Dark: Story = { render: routed('?size=25'), globals: { theme: 'dark' } };

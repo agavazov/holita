@@ -807,69 +807,28 @@ after a rename; retired callbacks cannot apply preferences or announce results i
 
 ## Storybook review
 
-The admin Storybook (`npm run storybook:admin`, port 11001) renders the real Angular components
-([development](development.md#admin-storybook)). It is a development and review tool; no automated
-runner executes its stories. It opens on "Start here" (what to review and links to the stories),
-then Admin and Design System. Stories render in English.
+Run `npm run storybook:admin` (port 11001). Storybook renders the real Angular components with
+fixed local fixtures; it is a manual review tool, with no story runner or play functions.
+Start here explains every menu entry, its data source and the dated device-settings evidence
+in English or Bulgarian. Its links open the relevant stories.
 
-Pattern stories render `app/ui` components with story inputs. The Shell stories use the real
-navigation, and the routed ones (Fleet disabled, Unknown Branch, Branch discovery loading and
-error) answer `AdminBranches` through `FixtureHttpBackend`.
+Titles follow `Admin/<menu group>/<menu item>[/<sub-page>]`, using the English labels from
+[`admin-navigation.ts`](../apps/admin/src/app/workspace/admin-navigation.ts). Sub-pages sit under
+the item that opens them. The tree is Start here; Admin → Monitoring (Overview, Alerts, Trip log,
+Diagnostics), Fleet (Vehicles, Drivers, Devices, Maintenance), Karma Client (Trucks, Administration),
+Settings (Vehicle groups, General), Sign in; then Design System (Foundations, Patterns, Shell,
+PrimeNG coverage). Truck pages sit under Karma Client/Trucks/Truck; the example day sits under
+Truck/Overview. Shared panels, including daily-report coverage and Karma controls, sit under
+Design System/Patterns.
 
-Live Fleet containers render the shared presentation components inside `FleetWorkspace`:
-Vehicles/profile/odometer, Devices, Drivers/scorecard, Overview, Alerts, Trip log, Maintenance
-and Vehicle groups/General settings ([Discocan Fleet](discocan/fleet.md#angular-foundation)).
-Their `Admin/...` stories run the real routes, APIs and captured Apollo clients against typed
-deterministic `src/storybook/*-fixtures.ts` responses. These immutable snapshots show rendering,
-errors, forms and partial actions; persistence, filtering and derived facts are not simulated.
+Keep only representative states: default, loading, empty, error, unavailable or missing scope,
+a distinct narrow layout and workflow steps, aiming for at most eight per screen. Use the
+Language (English default/Bulgarian), Theme, Brand, Density and viewport toolbar globals instead
+of duplicate language or theme stories. Provider changes rebuild the preview, including
+`UI_LANGUAGE`, routed language and PrimeNG texts. Open menus and drawers manually where a story
+starts at their entry point. Fixtures are snapshots, not a second backend.
 
-`Admin/Fleet/Device configuration` renders the durable eData settings workflow through the same
-routed container: reads, writes, confirmation, retained drafts and historical snapshots.
-`Admin/Karma Client/Device settings` demonstrates Karma → Trucks → truck detail → More → Device settings
-inside the real AdminWorkspace shell. It uses the application routes, inventory, truck detail and
-reusable settings presentation with synthetic data.
-Inventory uses record links; the truck profile keeps its navigation above settings, with
-Parameters and Rules panels stacked vertically. Advanced
-rule fields and original bytes stay in the drawer, outside the list rows.
-Its scenario presenter retains edits only within the story and supplies canned operation states;
-it does not compile rules, import/export configuration or communicate with a device. BG/EN,
-missing Fleet scope, loading/error, empty rules, waiting and uncertain outcomes have separate stories.
-`Admin/Authentication/Login` renders the application `Login` without a shell;
-`storybook/login-fixtures.ts` answers its `AdminTenants`, `AdminDemoLogin` and `AdminBranches`
-operations for the loading, empty, error and retry states.
-
-Toolbar globals: theme, brand and density; viewports `desktop1440`, `desktop1024` (the narrowest
-desktop with the sidebar), `tablet768`, `mobile375`. A brand or density change re-bootstraps the
-story with `provideHolitaTheme(choice)` and leaves no stale theme styles. `parameters.holita`
-(`StoryFixtures`) controls the session (`signedIn`), Fleet availability (`fleetEnabled`), the story
-clock (`now`, default `2026-10-18T07:00:00.000Z`) and the fixture `scenario` (`latencyMs` and
-`failures` per operation or `<Operation>:<id>`).
-
-| Title                          | Content                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Design System/Foundations      | Colors (the canvas, frame and panel colour tokens, the sidebar hover and active backgrounds and indicator, the tone and category tokens, the semantic colour tokens and the primary and surface ramps in both schemes; the contrast checks of the toolbar brand), Brand variants, Typography, Spacing and density (measured), Radii and borders, Status tones, Categorical palette, Breakpoints                                                                                                                                       |
-| Design System/Patterns         | PageHeader, KpiStrip, FilterBuilder, TablePanel (states, paging with one page, a large and an unlisted page size, selection, row actions, confirmation from a row and for a selection), Drawer (edit, view, view then edit, loading, saving, not found, error, server field errors, dirty with confirm), FormField, EmptyState, Charts, CSS patterns, Notifications (success, warning, error, long message, stacked); MenuButton and RowActions have no stories of their own (TablePanel, the Shell menus and the examples show them) |
-| Design System/PrimeNG coverage | Every registered control in both schemes, non-modal overlays and the confirm dialog                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| Design System/Shell            | Desktop, Rail, Mobile with navigation open, Fleet disabled, Unknown Branch, Branch discovery loading/error, theme-persistence warning, Branch menu, Notifications, Account menu, No notifications, Long names (desktop, narrow desktop and phone)                                                                                                                                                                                                                                                                                     |
-
-The shared Karma search/date controls are shown in `Design System/Karma/Controls`, and the
-optional map, Street View, endpoint directions and missing-coordinate states in
-`Design System/Patterns/Map preview`. The concrete shared panel and coordinate/link helpers live in
-[`ui/map-preview`](../apps/admin/src/app/ui/map-preview/map-preview.ts).
-`Admin/Karma Client/Trucks` exercises the connected account search/project/pagination UI.
-`Admin/Karma Client/Truck workspace` renders the real truck routes and shared `KarmaCarHeader`:
-truck identity, three primary route links (Overview, Trips, Location), a labeled More menu for
-the four secondary destinations, then section actions and content. The More trigger identifies
-its selected destination. `Admin/Karma Client/Administration` renders the account-resource
-routes and shared responsive navigation for Users, Roles, Projects, Time zones and API information.
-Both navigation patterns use the shared theme tokens and `aria-current="page"` on active links.
-Filter errors use the shared FormField pattern and focus the first invalid input. Devices' primary IMEI action
-opens read-only Diagnostics, with an explicit Edit action and return to that overview.
-`Design System/Patterns/Responsive table` checks identity/action placement at both widths.
-`Admin/Karma Client/Record details` exercises summaries, closed/expanded source fields,
-escaped event text and focus restoration through connected truck/history fixtures.
-
-Use the Storybook Accessibility panel (axe) to check a changed screen. The PrimeUI license notice
+Use the Accessibility panel (axe) when reviewing markup. The PrimeUI license notice
 `#p-license-host` is excluded from that check and is never hidden.
 
 ## Changing the design centrally

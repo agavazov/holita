@@ -14,6 +14,7 @@ import {
   loadStoryLicense,
   prepareStory,
   readStoryFixtures,
+  storyLanguage,
   storyThemeChoice,
   storybookApplicationConfig,
 } from '../src/storybook/story-config';
@@ -24,23 +25,28 @@ let license: Promise<string | undefined> | undefined;
 
 /**
  * Builds the application providers from the toolbar globals. Changing a global changes the module
- * metadata key, so the renderer bootstraps the story again with the new brand, density and theme
+ * metadata key, so the renderer bootstraps the story again with the new brand, density, theme and language
  * instead of patching a running application.
  */
 const holitaApplication: Decorator = (story, context) => {
   applyStoryGlobals(context.globals);
   const choice = storyThemeChoice(context.globals);
+  const language = storyLanguage(context.globals);
   const fixtures = readStoryFixtures(context.parameters['holita']);
   const primeUiLicense: unknown = context.loaded['primeUiLicense'];
   const result = applicationConfig(
     storybookApplicationConfig(choice, {
       fleetEnabled: fixtures.fleetEnabled ?? true,
+      language,
       ...(typeof primeUiLicense === 'string' ? { primeUiLicense } : {}),
     }),
   )(story, context);
-  const key = [choice.brand, choice.density, context.globals['theme']].map(String).join('/');
+  const key = [choice.brand, choice.density, context.globals['theme'], language]
+    .map(String)
+    .join('/');
   return {
     ...result,
+    props: { ...result.props, language },
     moduleMetadata: {
       ...result.moduleMetadata,
       providers: [
@@ -59,6 +65,18 @@ const preview: Preview = {
   ],
   loaders: [async () => ({ primeUiLicense: await (license ??= loadStoryLicense()) })],
   globalTypes: {
+    language: {
+      description: 'UI language',
+      toolbar: {
+        title: 'Language',
+        icon: 'globe',
+        items: [
+          { value: 'en', title: 'English' },
+          { value: 'bg', title: 'Български' },
+        ],
+        dynamicTitle: true,
+      },
+    },
     theme: {
       description: 'Color scheme',
       toolbar: {
@@ -94,6 +112,7 @@ const preview: Preview = {
     },
   },
   initialGlobals: {
+    language: 'en',
     theme: 'light',
     brand: appTheme.brand,
     density: appTheme.density,
@@ -105,7 +124,37 @@ const preview: Preview = {
         order: [
           'Start here',
           'Admin',
-          ['Fleet', ['Vehicles']],
+          [
+            'Monitoring',
+            ['Overview', 'Alerts', 'Trip log', 'Diagnostics'],
+            'Fleet',
+            ['Vehicles', 'Drivers', 'Devices', 'Maintenance'],
+            'Karma Client',
+            [
+              'Trucks',
+              [
+                '*',
+                'Truck',
+                [
+                  'Overview',
+                  'Trips',
+                  'Location',
+                  'Events',
+                  'eData',
+                  'Driving profile',
+                  'Diagnostics',
+                  'Device settings',
+                  'Daily report',
+                  'Record details',
+                ],
+              ],
+              'Administration',
+              ['Users', 'Roles', 'Projects', 'Time zones', 'API information'],
+            ],
+            'Settings',
+            ['Vehicle groups', 'General'],
+            'Sign in',
+          ],
           'Design System',
           ['Foundations', 'Patterns', 'Shell', 'PrimeNG coverage'],
         ],

@@ -12,7 +12,7 @@ import { LogsPage } from './logs-page';
 import { RiskPage } from './risk-page';
 
 const meta: Meta = {
-  title: 'Admin/Diagnostics/Attention and brief',
+  title: 'Admin/Monitoring/Diagnostics/Attention and brief',
   tags: ['!autodocs'],
   parameters: { holita: { signedIn: true } satisfies StoryFixtures },
 };
@@ -26,28 +26,15 @@ const reviewedFilter = encodeURIComponent(
     { id: 'local-review', field: 'localReview', operator: 'isAnyOf', values: ['REVIEWED'] },
   ]),
 );
-const acknowledgedFilter = encodeURIComponent(
-  JSON.stringify([
-    { id: 'local-review', field: 'localReview', operator: 'isAnyOf', values: ['ACKNOWLEDGED'] },
-  ]),
-);
-const vehicleDay = encodeURIComponent(
-  JSON.stringify([
-    { id: 'vehicle', field: 'vehicle', operator: 'isAnyOf', values: ['example-truck-01'] },
-    { id: 'day', field: 'observedOn', operator: 'on', values: ['2026-10-20'] },
-  ]),
-);
 
 function routed(
   section: 'faults' | 'logs' | 'risk' = 'faults',
   query = faultQuery,
-  language: 'bg' | 'en' = 'en',
 ): NonNullable<Story['render']> {
   const path = `${defaultBranchId}/fleet/diagnostics/${section}${query}`;
   const route = routeAt(path);
   return () => ({
     ...route(),
-    ...(language === 'bg' ? { props: { url: `/bg/${path}` } } : {}),
     moduleMetadata: {
       imports: [
         StoryApp,
@@ -64,7 +51,6 @@ function routed(
 }
 
 export const Default: Story = { render: routed() };
-export const FaultReviewAndBrief: Story = { render: routed() };
 export const ReportedResolvedStillUnreviewed: Story = {
   render: routed('faults', '?fault=example-fault-02'),
 };
@@ -77,21 +63,9 @@ export const InsufficientDataBrief: Story = {
 export const FaultReviewedFilter: Story = {
   render: routed('faults', `${faultQuery}&conditions=${reviewedFilter}`),
 };
-export const RiskAcknowledgedFilter: Story = {
-  render: routed('risk', `${temperatureQuery}&conditions=${acknowledgedFilter}`),
-};
-export const ReviewAcrossSectionsAndSourceReset: Story = {
-  render: routed('faults', `${faultQuery}&conditions=${vehicleDay}`),
-};
-export const Bulgarian: Story = { render: routed('faults', faultQuery, 'bg') };
 export const Mobile: Story = {
   render: routed(),
   globals: { viewport: { value: 'mobile375', isRotated: false } },
-};
-export const Dark: Story = { render: routed(), globals: { theme: 'dark' } };
-export const BulgarianMobileDark: Story = {
-  render: routed('risk', temperatureQuery, 'bg'),
-  globals: { theme: 'dark', viewport: { value: 'mobile375', isRotated: false } },
 };
 export const RealUnavailable: Story = {
   render: routed('faults', `${faultQuery}&source=KARMA_API`),

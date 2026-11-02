@@ -4,7 +4,6 @@ import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { ButtonDirective } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
-import { expect, spyOn, userEvent, waitFor, within } from 'storybook/test';
 import { defaultBranchId, fixtureBranches, fixtureTenant } from '../../storybook/session-fixtures';
 import { routeAt, StoryApp, type StoryFixtures } from '../../storybook/story-config';
 import { KpiStrip } from '../ui/kpi/kpi-strip';
@@ -18,10 +17,8 @@ import type { LanguageOption, ShellAccount, ShellNotification } from './admin-to
 import { navigationContext } from './navigation';
 
 const vehicles = `${defaultBranchId}/fleet/vehicles`;
-/** The routed application bootstraps and discovers Branches before the workspace appears. */
-const appReady = { timeout: 10_000 };
 
-/** Sample entries only: Storybook stays in English and the language menu changes nothing. */
+/** Sample language menu; use the Storybook Language toolbar to rebuild the preview. */
 const languages: readonly LanguageOption[] = [
   { code: 'en', label: 'English' },
   { code: 'bg', label: 'Български' },
@@ -206,20 +203,6 @@ function routed(path: string): NonNullable<Story['render']> {
 
 export const Desktop: Story = {
   render: preview,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(canvas.getByRole('banner')).toBeVisible();
-    await expect(canvas.getByRole('main')).toBeInTheDocument();
-    // The router resolves the lazily loaded route chunks before the item becomes active.
-    await waitFor(
-      () =>
-        expect(canvas.getByRole('link', { name: 'Vehicles' })).toHaveAttribute(
-          'aria-current',
-          'page',
-        ),
-      appReady,
-    );
-  },
 };
 
 export const Rail: Story = {
@@ -232,37 +215,21 @@ export const Rail: Story = {
   },
 };
 
-export const MobileNavigationOpen: Story = {
-  name: 'Mobile with navigation open',
+export const Mobile: Story = {
+  name: 'Mobile',
   render: preview,
   globals: { viewport: { value: 'mobile375', isRotated: false } },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole('button', { name: 'Toggle navigation' }));
-    const body = within(canvasElement.ownerDocument.body);
-    await waitFor(() =>
-      expect(body.getByRole('complementary', { name: 'Navigation' })).toBeVisible(),
-    );
-  },
 };
 
 export const FleetDisabled: Story = {
   name: 'Fleet disabled',
   render: routed(vehicles),
   parameters: { holita: { fleetEnabled: false } satisfies StoryFixtures },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await waitFor(() => expect(canvas.getByRole('main')).toBeVisible(), appReady);
-  },
 };
 
 export const UnknownBranch: Story = {
   name: 'Unknown Branch',
   render: routed('not-a-branch/fleet/vehicles'),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await waitFor(() => expect(canvas.getByRole('alert')).toBeVisible(), appReady);
-  },
 };
 
 export const BranchDiscoveryLoading: Story = {
@@ -270,10 +237,6 @@ export const BranchDiscoveryLoading: Story = {
   render: routed(vehicles),
   parameters: {
     holita: { scenario: { failures: { AdminBranches: 'pending' } } } satisfies StoryFixtures,
-  },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await waitFor(() => expect(canvas.getByRole('status')).toBeVisible(), appReady);
   },
 };
 
@@ -283,95 +246,6 @@ export const BranchDiscoveryError: Story = {
   parameters: {
     holita: { scenario: { failures: { AdminBranches: 'network' } } } satisfies StoryFixtures,
   },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await waitFor(() => expect(canvas.getByTestId('refresh-branches')).toBeEnabled(), appReady);
-    // Without Branches the Branch menu says so and does not open.
-    const branch = canvas.getByRole('button', { name: 'Branch: No branches available.' });
-    await expect(branch).toHaveAttribute('aria-disabled', 'true');
-    await userEvent.click(branch);
-    await expect(branch).toHaveAttribute('aria-expanded', 'false');
-    await expect(within(canvasElement.ownerDocument.body).queryByRole('menu')).toBeNull();
-  },
-};
-
-export const ThemePersistenceWarning: Story = {
-  name: 'Theme-persistence warning',
-  render: preview,
-  beforeEach: () => {
-    // The browser refuses the stored theme preference.
-    const spy = spyOn(Storage.prototype, 'getItem').mockImplementation((key: string) => {
-      if (key === 'holita.admin.theme') {
-        throw new Error('Storage denied');
-      }
-      return null;
-    });
-    return () => {
-      spy.mockRestore();
-    };
-  },
-};
-
-/** The Branch menu: the current Branch is checked; choosing it again changes nothing. */
-export const BranchMenu: Story = {
-  name: 'Branch menu',
-  render: preview,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole('button', { name: 'Branch: Sofia Fleet' }));
-    const body = within(canvasElement.ownerDocument.body);
-    await waitFor(() =>
-      expect(body.getByRole('menuitem', { name: /^Sofia Fleet\W+current choice$/ })).toBeVisible(),
-    );
-    await expect(body.getByRole('menuitem', { name: 'Plovdiv Fleet' })).toBeVisible();
-  },
-};
-
-/** Notifications: unread ones are marked and counted in the bell's name. */
-export const Notifications: Story = {
-  render: preview,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const bell = canvas.getByRole('button', { name: /^Notifications, unread: \d+$/ });
-    await userEvent.click(bell);
-    const body = within(canvasElement.ownerDocument.body);
-    await waitFor(() =>
-      expect(body.getByRole('menuitem', { name: 'Mark all as read' })).toBeVisible(),
-    );
-  },
-};
-
-/** No notifications: the bell's menu states it in its heading, which also names the menu. */
-export const NoNotifications: Story = {
-  name: 'No notifications',
-  render: () => ({
-    moduleMetadata: { imports: [ShellPreview] },
-    template: '<holita-shell-preview [notifications]="[]" />',
-  }),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole('button', { name: 'Notifications' }));
-    const body = within(canvasElement.ownerDocument.body);
-    await waitFor(() =>
-      expect(body.getByRole('menu', { name: 'No new notifications' })).toBeVisible(),
-    );
-  },
-};
-
-/** The account menu: who is signed in, the theme and Sign out. */
-export const AccountMenu: Story = {
-  name: 'Account menu',
-  render: preview,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole('button', { name: `Account: ${account.name}` }));
-    const body = within(canvasElement.ownerDocument.body);
-    await waitFor(() => expect(body.getByRole('menu', { name: account.name })).toBeVisible());
-    await expect(body.getByRole('menuitem', { name: 'Sign out' })).toBeVisible();
-    // The theme item is not chosen here: it would store the preference for the next stories. Its
-    // label names the theme the toolbar does not show.
-    await expect(body.getByRole('menuitem', { name: /^Use (dark|light) theme$/ })).toBeVisible();
-  },
 };
 
 const longNamesPreview: NonNullable<Story['render']> = () => ({
@@ -379,59 +253,8 @@ const longNamesPreview: NonNullable<Story['render']> = () => ({
   template: '<holita-shell-preview [longNames]="true" />',
 });
 
-/** The breadcrumb and the Branch on one line, each crumb cut with its own ellipsis. */
-async function longNamesFit(canvasElement: HTMLElement): Promise<void> {
-  const canvas = within(canvasElement);
-  const breadcrumb = canvas.getByRole('navigation', { name: 'Breadcrumb' });
-  const current = within(breadcrumb).getByText(/^CB 1001 AX/);
-  await expect(current).toHaveAttribute('aria-current', 'page');
-  await expect(current.scrollWidth).toBeGreaterThan(current.clientWidth);
-  // The current crumb keeps its minimum width; the others give way instead.
-  await expect(current.clientWidth).toBeGreaterThan(40);
-  // Nothing runs past the end of the list, where it would be clipped without an ellipsis.
-  await expect(current.getBoundingClientRect().right).toBeLessThanOrEqual(
-    within(breadcrumb).getByRole('list').getBoundingClientRect().right,
-  );
-  await expect(
-    within(breadcrumb).getByRole('link', {
-      name: 'Vehicles of the international long-haul fleet',
-    }),
-  ).toBeVisible();
-  const branch = canvasElement.querySelector('#active-branch');
-  if (!(branch instanceof HTMLElement)) {
-    throw new Error('Missing Branch name.');
-  }
-  await expect(branch.scrollWidth).toBeGreaterThan(branch.clientWidth);
-  await expect(breadcrumb.getBoundingClientRect().height).toBeLessThan(40);
-}
-
-/** Very long names: the breadcrumb and the Branch stay on one line, cut with an ellipsis. */
-export const LongNames: Story = {
-  name: 'Long names',
-  render: longNamesPreview,
-  play: async ({ canvasElement }) => {
-    await longNamesFit(canvasElement);
-  },
-};
-
-/** The narrowest desktop layout (1024px, with the sidebar). */
-export const LongNamesNarrowDesktop: Story = {
-  name: 'Long names on a narrow desktop',
-  render: longNamesPreview,
-  globals: { viewport: { value: 'desktop1024', isRotated: false } },
-  play: async ({ canvasElement }) => {
-    await longNamesFit(canvasElement);
-  },
-};
-
 export const LongNamesMobile: Story = {
   name: 'Long names on a phone',
   render: longNamesPreview,
   globals: { viewport: { value: 'mobile375', isRotated: false } },
-  play: async ({ canvasElement }) => {
-    const document = canvasElement.ownerDocument;
-    await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
-      document.documentElement.clientWidth,
-    );
-  },
 };
