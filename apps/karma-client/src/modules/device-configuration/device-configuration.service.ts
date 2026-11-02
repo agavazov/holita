@@ -113,10 +113,7 @@ export class DeviceConfigurationService {
       eventTimeUtc: string;
       rawMessage: string;
       family:
-        | 'SPECIAL_ACK'
-        | 'FAULT_REPORT'
-        | 'UNRESOLVED_FAULT_REPORT'
-        | 'COMMUNICATION_DIAGNOSTICS';
+        'SPECIAL_ACK' | 'FAULT_REPORT' | 'UNRESOLVED_FAULT_REPORT' | 'COMMUNICATION_DIAGNOSTICS';
       acknowledgement: 'NACK' | 'POSITIVE_ACK' | null;
     }[] = [];
     let truncated = false;

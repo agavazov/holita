@@ -37,27 +37,27 @@ an empty logger. Preserve a negative reply as a negative reply.
 Other documented reads, with full examples in
 [parameter reporting](parameter-reporting.md#reading-the-current-state):
 
-| Request | Expected report | Scope |
-| --- | --- | --- |
-| `306` | `411` | Diagnostic snapshot |
-| `308` | `412` | Software/hardware version |
-| `303` | `410` | Complete globals |
-| `301` / `1F` | `416` | Selected vehicle profile |
-| `301` / `0702BC` | `401` | Parameter definitions |
+| Request          | Expected report | Scope                     |
+| ---------------- | --------------- | ------------------------- |
+| `306`            | `411`           | Diagnostic snapshot       |
+| `308`            | `412`           | Software/hardware version |
+| `303`            | `410`           | Complete globals          |
+| `301` / `1F`     | `416`           | Selected vehicle profile  |
+| `301` / `0702BC` | `401`           | Parameter definitions     |
 
 PDF examples contain wrapper and table inconsistencies. The installed reply,
 version and complete baseline remain necessary for configuration changes.
 
 ## Report families and interpretation
 
-| Report | Definition | Supported interpretation | Remaining limit |
-| --- | --- | --- | --- |
-| `411` | Section 3.11, physical page 24 | First four bytes: communication mask (bit 0 CAN, bit 1 J1708, bit 2 OBD), OBD mask, CAN-error flag, ignition 0/1/2 | Preserve trailing extension bytes; not a tracker error catalogue |
-| `412` | Section 3.12, pages 24–25 | Basic software/hardware version fields | Extended hardware/type/firmware applicability needs a matching vendor definition |
-| `413` | Section 3.13, page 25 | Type `19`, repeated two-byte OBD code plus status | Real installed OBD capture and lifecycle remain unverified |
-| `417` | Section 3.17 | No CAN messages for 500 ms while ignition is on | Reports the condition; does not identify wiring/profile cause or prove it persists now |
-| `418` | Section 3.18, page 27 | Type `20`, five character bytes plus status in Monitor 9.56 | Printed P1482 sample conflicts with data; real labelled capture still needed |
-| `419` | Section 3.19, pages 27–28 | Type `21`, repeated four-byte big-endian SPN, one-byte FMI, one-byte status; real records corroborate this layout | Printed one-byte SPN table is inconsistent; reserved-bit rules and a universal model matrix remain unresolved |
+| Report | Definition                     | Supported interpretation                                                                                           | Remaining limit                                                                                               |
+| ------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `411`  | Section 3.11, physical page 24 | First four bytes: communication mask (bit 0 CAN, bit 1 J1708, bit 2 OBD), OBD mask, CAN-error flag, ignition 0/1/2 | Preserve trailing extension bytes; not a tracker error catalogue                                              |
+| `412`  | Section 3.12, pages 24–25      | Basic software/hardware version fields                                                                             | Extended hardware/type/firmware applicability needs a matching vendor definition                              |
+| `413`  | Section 3.13, page 25          | Type `19`, repeated two-byte OBD code plus status                                                                  | Real installed OBD capture and lifecycle remain unverified                                                    |
+| `417`  | Section 3.17                   | No CAN messages for 500 ms while ignition is on                                                                    | Reports the condition; does not identify wiring/profile cause or prove it persists now                        |
+| `418`  | Section 3.18, page 27          | Type `20`, five character bytes plus status in Monitor 9.56                                                        | Printed P1482 sample conflicts with data; real labelled capture still needed                                  |
+| `419`  | Section 3.19, pages 27–28      | Type `21`, repeated four-byte big-endian SPN, one-byte FMI, one-byte status; real records corroborate this layout  | Printed one-byte SPN table is inconsistent; reserved-bit rules and a universal model matrix remain unresolved |
 
 Status `01` means added and `02` deleted in the reported fault logger. A deleted
 entry does not establish ECU clearance or repair. A missing record does not mean
@@ -75,10 +75,10 @@ ERM supplied this CB1147TP / car `16595` / device `862129080367299` record; the
 
 After type `21`, two complete six-byte records decode as follows:
 
-| SPN bytes | SPN decimal | FMI | Status |
-| --- | ---: | ---: | --- |
-| `000010F3` | 4339 | 7 | `01`, added |
-| `000004DF` | 1247 | 11 | `01`, added |
+| SPN bytes  | SPN decimal | FMI | Status      |
+| ---------- | ----------: | --: | ----------- |
+| `000010F3` |        4339 |   7 | `01`, added |
+| `000004DF` |        1247 |  11 | `01`, added |
 
 This resolves the practical acquisition and byte-layout question for this source
 record. It does not supply an authoritative manufacturer fault-description

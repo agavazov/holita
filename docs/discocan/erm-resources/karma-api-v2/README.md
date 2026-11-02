@@ -15,18 +15,18 @@ For device changes, see [Configuring eData parameter reporting through Karma](..
 It distinguishes implemented read/add/interval operations, manual upstream procedures
 and installation-specific evidence limits.
 
-| Document / artifact                                             | Contents                                                                                            |
-| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| [Endpoint catalog](endpoint-catalog.md)                         | Every declared method, path, request field, required/multiple flag and current use                  |
-| [Data models](data-models.md)                                   | 102 field mappings and model notes, GraphQL types, validation, omissions and identity boundaries    |
-| [Observed eData parameters](observed-parameters.md)             | Thirteen encountered parameter IDs and original descriptions, with evidence and interpretation limits |
-| [Web functionality research](web-functionality-research.md)    | 36 classic menu functions, safe action coverage, NC2 technical console, public/internal API links, calculations and reproduction conditions |
-| [Transport and authentication](transport-and-authentication.md) | Sessions, wire encoding, time semantics, errors, deadlines and cursor mechanics                     |
-| [Holita integration](holita-integration.md)                     | Concrete modules, 15 public queries, routes, frontend lifecycle and test ownership                  |
-| [Limitations](limitations.md)                                   | Current endpoint/field gaps, adapter assumptions and evidence limits                                |
-| [Reconstructed OpenAPI 3.1](openapi.reconstructed.json)         | Machine-readable reference for 20 paths and 32 declared HTTP operations                             |
-| [Original source assets](source/README.md)                      | Downloaded vendor help, checksums and structural response evidence                                  |
-| [Remaining questions and work](../../../todo/karma-api-v2.md)   | Unresolved provider questions and possible implementation work, kept outside product documentation  |
+| Document / artifact                                             | Contents                                                                                                                                    |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Endpoint catalog](endpoint-catalog.md)                         | Every declared method, path, request field, required/multiple flag and current use                                                          |
+| [Data models](data-models.md)                                   | 102 field mappings and model notes, GraphQL types, validation, omissions and identity boundaries                                            |
+| [Observed eData parameters](observed-parameters.md)             | Thirteen encountered parameter IDs and original descriptions, with evidence and interpretation limits                                       |
+| [Web functionality research](web-functionality-research.md)     | 36 classic menu functions, safe action coverage, NC2 technical console, public/internal API links, calculations and reproduction conditions |
+| [Transport and authentication](transport-and-authentication.md) | Sessions, wire encoding, time semantics, errors, deadlines and cursor mechanics                                                             |
+| [Holita integration](holita-integration.md)                     | Concrete modules, 15 public queries, routes, frontend lifecycle and test ownership                                                          |
+| [Limitations](limitations.md)                                   | Current endpoint/field gaps, adapter assumptions and evidence limits                                                                        |
+| [Reconstructed OpenAPI 3.1](openapi.reconstructed.json)         | Machine-readable reference for 20 paths and 32 declared HTTP operations                                                                     |
+| [Original source assets](source/README.md)                      | Downloaded vendor help, checksums and structural response evidence                                                                          |
+| [Remaining questions and work](../../../todo/karma-api-v2.md)   | Unresolved provider questions and possible implementation work, kept outside product documentation                                          |
 
 ## Sources and confidence
 

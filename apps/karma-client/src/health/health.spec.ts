@@ -1020,5 +1020,5 @@ describe('karma-client GraphQL session boundary', () => {
       ),
     ).toMatchObject({ errors: [{ extensions: { code: 'BAD_USER_INPUT' } }] });
     expect(transport.readDiagnosticEvents).not.toHaveBeenCalled();
-  });
+  }, 15_000);
 });

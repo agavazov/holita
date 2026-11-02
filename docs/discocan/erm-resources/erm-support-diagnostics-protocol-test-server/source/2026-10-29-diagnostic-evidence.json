@@ -56,9 +56,7 @@
       "car_number": "CB9369PE",
       "command": "30,1,19,0,19,301,0,1,1,19",
       "submitted_utc": "2026-10-29T14:57:45.670499+00:00",
-      "queue_ids": [
-        56182082
-      ],
+      "queue_ids": [56182082],
       "baseline_message_id": 7180160802,
       "utc_selected_replies": [
         {
@@ -89,9 +87,7 @@
       "car_number": "CB5640XP",
       "command": "30,1,19,0,19,301,0,1,1,19",
       "submitted_utc": "2026-10-29T14:57:46.158850+00:00",
-      "queue_ids": [
-        56182083
-      ],
+      "queue_ids": [56182083],
       "baseline_message_id": 7180143356,
       "utc_selected_replies": [
         {
@@ -122,9 +118,7 @@
       "car_number": "CB6711TE",
       "command": "30,1,19,0,19,301,0,1,1,19",
       "submitted_utc": "2026-10-29T14:57:46.564164+00:00",
-      "queue_ids": [
-        56182085
-      ],
+      "queue_ids": [56182085],
       "baseline_message_id": 7180062780,
       "utc_selected_replies": [],
       "final_queue_states": [
@@ -146,9 +140,7 @@
       "car_number": "CB9680TE",
       "command": "30,1,19,0,19,301,0,1,1,19",
       "submitted_utc": "2026-10-29T14:57:47.053378+00:00",
-      "queue_ids": [
-        56182087
-      ],
+      "queue_ids": [56182087],
       "baseline_message_id": 7174547005,
       "utc_selected_replies": [],
       "final_queue_states": [
@@ -170,9 +162,7 @@
       "car_number": "CB5636XP",
       "command": "30,1,19,0,19,301,0,1,1,19",
       "submitted_utc": "2026-10-29T14:57:47.552426+00:00",
-      "queue_ids": [
-        56182088
-      ],
+      "queue_ids": [56182088],
       "baseline_message_id": 7180119872,
       "utc_selected_replies": [],
       "final_queue_states": [
@@ -194,9 +184,7 @@
       "car_number": "CB2792TK",
       "command": "30,1,19,0,19,301,0,1,1,19",
       "submitted_utc": "2026-10-29T14:57:47.993416+00:00",
-      "queue_ids": [
-        56182089
-      ],
+      "queue_ids": [56182089],
       "baseline_message_id": 7180143181,
       "utc_selected_replies": [
         {
@@ -227,9 +215,7 @@
       "car_number": "CB1344XH",
       "command": "30,1,19,0,19,301,0,1,1,19",
       "submitted_utc": "2026-10-29T14:57:48.456836+00:00",
-      "queue_ids": [
-        56182091
-      ],
+      "queue_ids": [56182091],
       "baseline_message_id": 7180154901,
       "utc_selected_replies": [
         {
@@ -260,9 +246,7 @@
       "car_number": "CB6721TE",
       "command": "30,1,19,0,19,301,0,1,1,19",
       "submitted_utc": "2026-10-29T14:57:48.951126+00:00",
-      "queue_ids": [
-        56182092
-      ],
+      "queue_ids": [56182092],
       "baseline_message_id": 7180159648,
       "utc_selected_replies": [
         {
@@ -293,9 +277,7 @@
       "car_number": "CB9405PE",
       "command": "30,1,19,0,19,301,0,1,1,19",
       "submitted_utc": "2026-10-29T14:57:49.348124+00:00",
-      "queue_ids": [
-        56182093
-      ],
+      "queue_ids": [56182093],
       "baseline_message_id": 7180116197,
       "utc_selected_replies": [],
       "final_queue_states": [
@@ -317,9 +299,7 @@
       "car_number": "CB1147TP",
       "command": "30,1,19,0,19,301,0,1,1,19",
       "submitted_utc": "2026-10-29T14:57:49.818035+00:00",
-      "queue_ids": [
-        56182094
-      ],
+      "queue_ids": [56182094],
       "baseline_message_id": 7180075449,
       "utc_selected_replies": [],
       "final_queue_states": [
@@ -344,9 +324,7 @@
       "command": "30,1,19,0,19,306,0,1,1,",
       "submitted_utc": "2026-10-29T15:03:59.862657+00:00",
       "baseline_message_id": 7180192352,
-      "queue_ids": [
-        56182284
-      ],
+      "queue_ids": [56182284],
       "replies": [
         {
           "car_id": 16586,
@@ -377,9 +355,7 @@
       "command": "30,1,19,0,19,306,0,1,1,",
       "submitted_utc": "2026-10-29T15:04:00.520770+00:00",
       "baseline_message_id": 7180172853,
-      "queue_ids": [
-        56182286
-      ],
+      "queue_ids": [56182286],
       "replies": [
         {
           "car_id": 16587,
@@ -410,9 +386,7 @@
       "command": "30,1,19,0,19,306,0,1,1,",
       "submitted_utc": "2026-10-29T15:04:00.989497+00:00",
       "baseline_message_id": 7180173026,
-      "queue_ids": [
-        56182287
-      ],
+      "queue_ids": [56182287],
       "replies": [
         {
           "car_id": 16591,
@@ -443,9 +417,7 @@
       "command": "30,1,19,0,19,306,0,1,1,",
       "submitted_utc": "2026-10-29T15:04:01.599823+00:00",
       "baseline_message_id": 7180172986,
-      "queue_ids": [
-        56182288
-      ],
+      "queue_ids": [56182288],
       "replies": [
         {
           "car_id": 16592,
@@ -476,9 +448,7 @@
       "command": "30,1,19,0,19,306,0,1,1,",
       "submitted_utc": "2026-10-29T15:04:02.511450+00:00",
       "baseline_message_id": 7180191655,
-      "queue_ids": [
-        56182289
-      ],
+      "queue_ids": [56182289],
       "replies": [
         {
           "car_id": 16593,

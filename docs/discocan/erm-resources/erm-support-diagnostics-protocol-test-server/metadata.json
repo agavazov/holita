@@ -136,19 +136,8 @@
     "operation_complete_at_utc": "2026-10-27T08:22:40.648Z",
     "parameter_count": 14,
     "unrelated_definitions_identical": 13,
-    "measurement_ids": [
-      7171056491,
-      7171057524,
-      7171059267,
-      7171060544,
-      7171062377
-    ],
-    "consecutive_seconds": [
-      60,
-      60,
-      60,
-      60
-    ],
+    "measurement_ids": [7171056491, 7171057524, 7171059267, 7171060544, 7171062377],
+    "consecutive_seconds": [60, 60, 60, 60],
     "gateway_match": true
   },
   "active_can_dtc_evidence": {
@@ -256,10 +245,7 @@
       "api_match": true,
       "gateway_match": true,
       "gateway_query": "karmaEvents",
-      "message_ids": [
-        7177124308,
-        7179721665
-      ],
+      "message_ids": [7177124308, 7179721665],
       "additional_record": {
         "message_id": 7179721665,
         "edt_utc": "2026-10-29 12:54:06",

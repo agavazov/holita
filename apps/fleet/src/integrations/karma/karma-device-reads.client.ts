@@ -84,11 +84,7 @@ export interface KarmaDiagnosticObservation {
   messageId: string;
   eventTimeUtc: string;
   rawMessage: string;
-  family:
-    | 'SPECIAL_ACK'
-    | 'FAULT_REPORT'
-    | 'UNRESOLVED_FAULT_REPORT'
-    | 'COMMUNICATION_DIAGNOSTICS';
+  family: 'SPECIAL_ACK' | 'FAULT_REPORT' | 'UNRESOLVED_FAULT_REPORT' | 'COMMUNICATION_DIAGNOSTICS';
   acknowledgement: 'NACK' | 'POSITIVE_ACK' | null;
 }
 

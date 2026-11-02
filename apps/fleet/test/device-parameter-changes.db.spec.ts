@@ -870,9 +870,9 @@ describe('Durable device operations with PostgreSQL', () => {
       { ...scope, tenantId: randomUUID() },
       { ...scope, branchId: randomUUID() },
     ]) {
-      expect(
-        await service.diagnosticHistory(context(foreignScope), '9110', 'opaque-9110'),
-      ).toEqual([]);
+      expect(await service.diagnosticHistory(context(foreignScope), '9110', 'opaque-9110')).toEqual(
+        [],
+      );
       // The shared provider queue remains pending even after this workspace's local deadline.
       diagnosticReads.mockResolvedValueOnce({ status: 'PENDING', queueIds: ['24'] });
       const blocked = await service.requestDiagnostic(context(foreignScope), retainedTarget);
@@ -884,12 +884,9 @@ describe('Durable device operations with PostgreSQL', () => {
         queueIds: [],
         observations: { queue: [] },
       });
-      expect(diagnosticReads).toHaveBeenLastCalledWith(
-        '9110',
-        'opaque-9110',
-        'READ_FAULT_LOGGER',
-        ['24'],
-      );
+      expect(diagnosticReads).toHaveBeenLastCalledWith('9110', 'opaque-9110', 'READ_FAULT_LOGGER', [
+        '24',
+      ]);
       expect(
         (await service.diagnosticHistory(context(foreignScope), '9110', 'opaque-9110')).map(
           (operation) => operation.id,

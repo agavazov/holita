@@ -338,9 +338,9 @@ implemented report contract and blueprint are described in
 the shared map foundation in [Karma maps](../discocan/development.md#karma-maps).
 Each ticket inherits the consistency rule above.
 
-| Task   | Priority | Depends on                                                                                                                            | Deliverable                                                                         |
-| ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| MVP-00 | P0       | Supported provider evidence                                                                                                           | Confirm physical units for source distance and speed; raw units remain unconfirmed. |
+| Task   | Priority | Depends on                  | Deliverable                                                                         |
+| ------ | -------- | --------------------------- | ----------------------------------------------------------------------------------- |
+| MVP-00 | P0       | Supported provider evidence | Confirm physical units for source distance and speed; raw units remain unconfirmed. |
 
 The remaining MVP-00 unit proof gates physical-unit claims in the operational
 report; it does not block coordinate-only maps and surroundings. The implemented
@@ -356,9 +356,9 @@ ticket IDs. Each delivery uses the existing acceptance criteria and stops before
 the next; later prompts should contain behavior and quality expectations rather
 than project-location boilerplate.
 
-| Delivery                                                   | Task scope     | Result and stopping point                                                                                                                |
-| ---------------------------------------------------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| 2. Reliable daily report contract — remaining source proof | MVP-00         | Confirm physical distance/speed units with supported evidence. The existing raw-unit contract must retain unconfirmed labels until then. |
+| Delivery                                                   | Task scope | Result and stopping point                                                                                                                |
+| ---------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| 2. Reliable daily report contract — remaining source proof | MVP-00     | Confirm physical distance/speed units with supported evidence. The existing raw-unit contract must retain unconfirmed labels until then. |
 
 For each separate implementation session, re-read repository/local instructions
 and inspect the dirty checkout before its selected delivery. A request to implement
