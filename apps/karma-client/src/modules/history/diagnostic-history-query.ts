@@ -67,7 +67,7 @@ export function diagnosticHistoryQuery(input: KarmaDiagnosticHistoryInput) {
   return { carId: input.carId, pageSize, from, before, scope };
 }
 
-export type DiagnosticHistoryQuery = ReturnType<typeof diagnosticHistoryQuery>;
+type DiagnosticHistoryQuery = ReturnType<typeof diagnosticHistoryQuery>;
 
 export function diagnosticHistoryCursor(query: DiagnosticHistoryQuery, before: number) {
   return Buffer.from(JSON.stringify({ scope: query.scope, before })).toString('base64url');

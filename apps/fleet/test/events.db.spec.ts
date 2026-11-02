@@ -353,27 +353,6 @@ describe('Events and alert workflow with PostgreSQL', () => {
     expect(await query(counts, {}, randomUUID())).toEqual({
       data: { fleetAlertCounts: { open: 0, openCritical: 0, acknowledged: 0, resolved: 0 } },
     });
-
-    // Maneuver counts per kind and intensity for a trip, zero rows included.
-    const maneuvers = await query(
-      'query($filter:FleetEventFilter!){fleetManeuverCounts(filter:$filter){kind intensity1 intensity2 intensity3 intensityUnknown total}}',
-      { filter: { tripIds: [tripId] } },
-    );
-    expect(maneuvers).toMatchObject({
-      data: {
-        fleetManeuverCounts: expect.arrayContaining([
-          {
-            kind: 'HARSH_BRAKING',
-            intensity1: 0,
-            intensity2: 1,
-            intensity3: 0,
-            intensityUnknown: 0,
-            total: 1,
-          },
-        ]),
-      },
-    });
-    expect(JSON.stringify(maneuvers).match(/"kind"/g)).toHaveLength(9);
   });
 
   const transition = (name: string) =>

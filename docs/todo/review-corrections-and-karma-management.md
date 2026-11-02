@@ -38,9 +38,6 @@ changing it; use concrete functions/helpers only and retain the existing applica
   presentation choices out of container-owned query files.
 - **A12:** Ensure Admin stories mount one toast host, consolidate concrete operation notices
   and cover dark presentation.
-- **B1-B3:** Remove unused Driver/trip/event aggregate entry points; consolidate concrete
-  failure maps/batch loops/filter helpers. Preserve the documented canonical task/event search
-  and sort contract; empty localized enum matches are intentional.
 - Add the formatter commit to git-blame-ignore-revs.
 - Replace the added legacy Karma form/detail layouts when their consumers move to shared
   patterns. Existing consumers still need those selectors; add no new legacy rules.

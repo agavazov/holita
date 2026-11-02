@@ -8,11 +8,13 @@ import {
   booleanFilter,
   dateOnlyRange,
   enumFilter,
+  filterCondition,
+  filterConditions,
+  filterRange,
   idList,
   integerFilter,
-  invalid,
-  textErrorCode,
   numberFilter,
+  textFilter,
 } from '../../validation.js';
 
 const ACTIVITIES = ['MOVING', 'IDLE', 'PARKED', 'ASSET', 'NOT_CONNECTED', 'NO_DEVICE'] as const;
@@ -22,25 +24,6 @@ export type VehicleConditionCriteria = {
   [K in keyof FleetVehicleCondition]?: FleetVehicleCondition[K] | undefined;
 };
 
-function makeFilter(value: unknown, field: string): string | undefined {
-  if (value == null) {
-    return undefined;
-  }
-  if (
-    typeof value !== 'string' ||
-    !value.trim() ||
-    Array.from(value.trim()).length > 64 ||
-    value.includes('\u0000')
-  ) {
-    invalid(
-      'filter',
-      `filter.${field}: use 1 to 64 supported characters.`,
-      textErrorCode(value, 64),
-    );
-  }
-  return value.trim();
-}
-
 /** Each entry remains separate: repeated and contradictory conditions retain their AND meaning. */
 export function vehicleConditions(
   value: readonly FleetVehicleCondition[] | null | undefined,
@@ -48,17 +31,9 @@ export function vehicleConditions(
   if (value == null) {
     return undefined;
   }
-  if (!Array.isArray(value) || value.length > 50) {
-    invalid(
-      'filter',
-      'filter.allOf: use at most 50 conditions.',
-      Array.isArray(value) ? 'TOO_MANY_ITEMS' : 'INVALID_TYPE',
-    );
-  }
+  filterConditions(value);
   return value.map((condition: FleetVehicleCondition | null) => {
-    if (typeof condition !== 'object' || condition === null || Array.isArray(condition)) {
-      invalid('filter', 'filter.allOf: use valid vehicle conditions.', 'INVALID_TYPE');
-    }
+    filterCondition(condition, 'vehicle');
     const years = {
       modelYearEquals: integerFilter(condition.modelYearEquals, 'modelYearEquals', 1950, 2100),
       modelYearAbove: integerFilter(condition.modelYearAbove, 'modelYearAbove', 1950, 2100),
@@ -72,28 +47,14 @@ export function vehicleConditions(
       odometerKmFrom: numberFilter(condition.odometerKmFrom, 'odometerKmFrom', 0, 10_000_000),
       odometerKmTo: numberFilter(condition.odometerKmTo, 'odometerKmTo', 0, 10_000_000),
     };
-    if (
-      years.modelYearFrom !== undefined &&
-      years.modelYearTo !== undefined &&
-      years.modelYearFrom > years.modelYearTo
-    ) {
-      invalid(
-        'filter',
-        'filter.modelYearTo must not be below filter.modelYearFrom.',
-        'INVALID_RANGE',
-      );
-    }
-    if (
-      odometer.odometerKmFrom !== undefined &&
-      odometer.odometerKmTo !== undefined &&
-      odometer.odometerKmFrom > odometer.odometerKmTo
-    ) {
-      invalid(
-        'filter',
-        'filter.odometerKmTo must not be below filter.odometerKmFrom.',
-        'INVALID_RANGE',
-      );
-    }
+    filterRange(years.modelYearFrom, years.modelYearTo, {
+      from: 'modelYearFrom',
+      to: 'modelYearTo',
+    });
+    filterRange(odometer.odometerKmFrom, odometer.odometerKmTo, {
+      from: 'odometerKmFrom',
+      to: 'odometerKmTo',
+    });
     const dates = dateOnlyRange(condition.createdOnFrom, condition.createdOnTo, {
       from: 'createdOnFrom',
       to: 'createdOnTo',
@@ -137,8 +98,8 @@ export function vehicleConditions(
       hasDriver: booleanFilter(condition.hasDriver, 'hasDriver'),
       hasDevice: booleanFilter(condition.hasDevice, 'hasDevice'),
       hasOpenAlerts: booleanFilter(condition.hasOpenAlerts, 'hasOpenAlerts'),
-      makeContains: makeFilter(condition.makeContains, 'makeContains'),
-      makeEquals: makeFilter(condition.makeEquals, 'makeEquals'),
+      makeContains: textFilter(condition.makeContains, 'makeContains', 64),
+      makeEquals: textFilter(condition.makeEquals, 'makeEquals', 64),
       ...years,
       ...odometer,
       createdOnAfter: after.from,

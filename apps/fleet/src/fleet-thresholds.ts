@@ -19,14 +19,10 @@ export const SERVICE_DUE_SOON_DAYS = 14;
 export const SERVICE_DUE_SOON_KM = 1500;
 /** Driver document expiring within 30 days. */
 export const DOCUMENT_EXPIRING_DAYS = 30;
-/** Three or more open WARNING alerts ⇒ attention reason. */
-export const ATTENTION_WARNING_ALERTS = 3;
 /** Trips shorter than this never count towards scores. */
 export const SCORE_MIN_DISTANCE_KM = 0.5;
 /** A trip without end that started within 24 h of `asOf` ⇒ `inProgress`. */
 export const OPEN_TRIP_MAX_HOURS = 24;
-/** Overview usage window. */
-export const KPI_WINDOW_DAYS = 7;
 /** Driver list statistics window. */
 export const DRIVER_STATS_DAYS = 30;
 /** Scorecards with fewer trips are low confidence. */

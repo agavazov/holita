@@ -9,7 +9,7 @@ import type { TripConditionCriteria } from './trip-filter.js';
 import type { TripCriteria, TripSort } from './trips.repository.js';
 
 /** Same whole-second duration as the public trip field; null without an end. */
-export const TRIP_DURATION_SQL = Prisma.sql`floor(extract(epoch FROM (t."endedAt" - t."startedAt")))::float8`;
+const TRIP_DURATION_SQL = Prisma.sql`floor(extract(epoch FROM (t."endedAt" - t."startedAt")))::float8`;
 
 export function tripListRowsSql(schema: string, scope: FleetScope): Prisma.Sql {
   const trips = fleetTable(schema, 'trip');

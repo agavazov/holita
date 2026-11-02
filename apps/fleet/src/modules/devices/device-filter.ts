@@ -1,30 +1,17 @@
 import type { FleetDeviceCondition } from '../../generated/graphql/types.js';
 import { FleetDeviceModel } from '../../generated/prisma/enums.js';
-import { booleanFilter, enumFilter, invalid, textErrorCode } from '../../validation.js';
+import {
+  booleanFilter,
+  enumFilter,
+  filterCondition,
+  filterConditions,
+  textFilter,
+} from '../../validation.js';
 import { DEVICE_STATUSES } from './device-state.js';
 
 export type DeviceConditionCriteria = {
   [K in keyof FleetDeviceCondition]?: FleetDeviceCondition[K] | undefined;
 };
-
-function firmware(value: unknown, field: string): string | undefined {
-  if (value == null) {
-    return undefined;
-  }
-  if (
-    typeof value !== 'string' ||
-    !value.trim() ||
-    Array.from(value.trim()).length > 32 ||
-    value.includes('\u0000')
-  ) {
-    invalid(
-      'filter',
-      `filter.${field}: use 1 to 32 supported characters.`,
-      textErrorCode(value, 32),
-    );
-  }
-  return value.trim();
-}
 
 export function deviceConditions(
   value: readonly FleetDeviceCondition[] | null | undefined,
@@ -32,17 +19,9 @@ export function deviceConditions(
   if (value == null) {
     return undefined;
   }
-  if (!Array.isArray(value) || value.length > 50) {
-    invalid(
-      'filter',
-      'filter.allOf: use at most 50 conditions.',
-      Array.isArray(value) ? 'TOO_MANY_ITEMS' : 'INVALID_TYPE',
-    );
-  }
+  filterConditions(value);
   return value.map((condition: FleetDeviceCondition | null) => {
-    if (typeof condition !== 'object' || condition === null || Array.isArray(condition)) {
-      invalid('filter', 'filter.allOf: use valid device conditions.', 'INVALID_TYPE');
-    }
+    filterCondition(condition, 'device');
     return {
       statuses: enumFilter(condition.statuses, DEVICE_STATUSES, 'statuses'),
       excludedStatuses: enumFilter(condition.excludedStatuses, DEVICE_STATUSES, 'excludedStatuses'),
@@ -52,14 +31,20 @@ export function deviceConditions(
         Object.values(FleetDeviceModel),
         'excludedModels',
       ),
-      firmwareVersionEquals: firmware(condition.firmwareVersionEquals, 'firmwareVersionEquals'),
-      firmwareVersionNotEquals: firmware(
+      firmwareVersionEquals: textFilter(
+        condition.firmwareVersionEquals,
+        'firmwareVersionEquals',
+        32,
+      ),
+      firmwareVersionNotEquals: textFilter(
         condition.firmwareVersionNotEquals,
         'firmwareVersionNotEquals',
+        32,
       ),
-      firmwareVersionStartsWith: firmware(
+      firmwareVersionStartsWith: textFilter(
         condition.firmwareVersionStartsWith,
         'firmwareVersionStartsWith',
+        32,
       ),
       hasVehicle: booleanFilter(condition.hasVehicle, 'hasVehicle'),
     };

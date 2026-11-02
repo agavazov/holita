@@ -180,24 +180,6 @@ export class EventsRepository {
     }));
   }
 
-  /** Events of `kinds` matching the criteria, counted per kind and intensity. */
-  async kindIntensityCounts(
-    scope: FleetScope,
-    criteria: EventCriteria,
-    kinds: readonly FleetEventKind[],
-  ) {
-    const rows = await this.prisma.client.fleetEvent.groupBy({
-      by: ['kind', 'intensity'],
-      where: { AND: [eventWhere(scope, criteria), { kind: { in: [...kinds] } }] },
-      _count: { _all: true },
-    });
-    return rows.map((row) => ({
-      kind: row.kind,
-      intensity: row.intensity,
-      count: row._count._all,
-    }));
-  }
-
   /** Events of `kinds` of one driver with `occurredAt` in `(start, end]`, per kind and intensity. */
   async driverKindIntensityCounts(
     scope: FleetScope,
@@ -236,28 +218,6 @@ export class EventsRepository {
       _count: { _all: true },
     });
     return rows.map((row) => ({ vehicleId: row.vehicleId, count: row._count._all }));
-  }
-
-  /** Events of `kinds` per trip; the vehicle IDs let the (vehicle, trip) index serve it. */
-  async countsByTrip(
-    scope: FleetScope,
-    trips: readonly { vehicleId: string; tripId: string }[],
-    kinds: readonly FleetEventKind[],
-  ) {
-    const rows = await this.prisma.client.fleetEvent.groupBy({
-      by: ['tripId'],
-      where: {
-        tenantId: scope.tenantId,
-        branchId: scope.branchId,
-        vehicleId: { in: [...new Set(trips.map((trip) => trip.vehicleId))] },
-        tripId: { in: trips.map((trip) => trip.tripId) },
-        kind: { in: [...kinds] },
-      },
-      _count: { _all: true },
-    });
-    return rows.flatMap((row) =>
-      row.tripId === null ? [] : [{ tripId: row.tripId, count: row._count._all }],
-    );
   }
 
   /** One page-batched timeline query with explicit (trip, vehicle) scope. */

@@ -183,32 +183,6 @@ export class TripsRepository {
     });
   }
 
-  /** Σ non-null distance and trip count per driver for trips started in `(start, end]`. */
-  async driverTotals(scope: FleetScope, driverIds: readonly string[], window: DataWindow) {
-    const rows = await this.prisma.client.trip.groupBy({
-      by: ['driverId'],
-      where: {
-        tenantId: scope.tenantId,
-        branchId: scope.branchId,
-        driverId: { in: [...driverIds] },
-        startedAt: { gt: window.start, lte: window.end },
-      },
-      _sum: { distanceKm: true },
-      _count: { _all: true },
-    });
-    return rows.flatMap((row) =>
-      row.driverId === null
-        ? []
-        : [
-            {
-              driverId: row.driverId,
-              distanceKm: row._sum.distanceKm ?? 0,
-              tripCount: row._count._all,
-            },
-          ],
-    );
-  }
-
   /**
    * One driver's trips started in `(start, end]`: count, distance, scored trips and the
    * distance-weighted scores over scored trips of at least `SCORE_MIN_DISTANCE_KM`.

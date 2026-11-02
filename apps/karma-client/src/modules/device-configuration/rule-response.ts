@@ -1,7 +1,7 @@
 import { decodeRuleRecord } from '@holita/edata-rules';
 import { ServiceUnavailableException } from '@nestjs/common';
 
-export interface ConfigurationRule {
+interface ConfigurationRule {
   ruleId: number;
   rawDefinition: string;
 }

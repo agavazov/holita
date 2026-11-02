@@ -183,7 +183,7 @@ list and single-record queries for Vehicles, Devices,
 Drivers, Vehicle groups, Trips, Events and Service tasks, plus `fleetVehicleSummary`,
 `fleetDeviceSummary`, `fleetDriverSummary`, `fleetTripSummary`, `fleetServiceSummary`,
 `fleetDriverScorecard`, `fleetDataClock`, `fleetVehicleSamples`, `fleetAlertCounts`,
-`fleetManeuverCounts`, `fleetOverview`, `fleetDailyDistance` and `fleetSettings`. Branch summaries
+`fleetOverview`, `fleetDailyDistance` and `fleetSettings`. Branch summaries
 are independent
 of list search, filters and pagination; scorecard and aggregate semantics are described in
 [additional list conditions and aggregates](fleet.md#additional-list-conditions-and-aggregates).

@@ -179,15 +179,6 @@ export function finite(value: unknown, path: string, min: number, max: number): 
   return value;
 }
 
-export function optionalFinite(
-  value: unknown,
-  path: string,
-  min: number,
-  max: number,
-): number | null {
-  return value === null || value === undefined ? null : finite(value, path, min, max);
-}
-
 function parseDateOnly(value: unknown): string | null {
   if (typeof value !== 'string' || !isDateOnly(value)) {
     return null;
@@ -378,6 +369,58 @@ export function searchTokens(value: unknown): string[] {
 }
 
 // Filter fields: null or omitted means no constraint; the path is always `filter`.
+
+/** Nonrecursive list conditions share the same transport bound. */
+export function filterConditions(value: unknown): void {
+  if (!Array.isArray(value) || value.length > 50) {
+    invalid(
+      'filter',
+      'filter.allOf: use at most 50 conditions.',
+      Array.isArray(value) ? 'TOO_MANY_ITEMS' : 'INVALID_TYPE',
+    );
+  }
+}
+
+export function filterCondition(value: unknown, entity: string): asserts value is object {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    invalid('filter', `filter.allOf: use valid ${entity} conditions.`, 'INVALID_TYPE');
+  }
+}
+
+/** Optional literal condition text; blank strings remain invalid. */
+export function textFilter(value: unknown, field: string, max: number): string | undefined {
+  if (value == null) {
+    return undefined;
+  }
+  const trimmed = typeof value === 'string' ? value.trim() : '';
+  if (
+    typeof value !== 'string' ||
+    !trimmed ||
+    Array.from(trimmed).length > max ||
+    trimmed.includes('\u0000')
+  ) {
+    invalid(
+      'filter',
+      `filter.${field}: use 1 to ${String(max)} supported characters.`,
+      textErrorCode(value, max),
+    );
+  }
+  return trimmed;
+}
+
+export function filterRange(
+  from: number | undefined,
+  to: number | undefined,
+  fields: { readonly from: string; readonly to: string },
+): void {
+  if (from !== undefined && to !== undefined && from > to) {
+    invalid(
+      'filter',
+      `filter.${fields.to} must not be below filter.${fields.from}.`,
+      'INVALID_RANGE',
+    );
+  }
+}
 
 function filterValues(value: unknown, field: string): unknown[] | undefined {
   if (value === null || value === undefined) {
