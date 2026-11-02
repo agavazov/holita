@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { FleetClock } from '../../clock/fleet-clock.js';
+import { KarmaDeviceReadError } from '../../integrations/karma/karma-device-reads.client.js';
 import type {
   KarmaMonitoringSettings,
   KarmaMonitoringTruck,
@@ -227,9 +228,15 @@ export class KarmaMonitoringJobs {
         // Continue a bounded catch-up page on the next tick, then return to the configured interval.
         lastHistoryPollAt: batch.hasMore ? null : now,
       });
-    } catch {
+    } catch (error) {
       await this.repository.updateTruck(scope, truck.karmaCarId, { lastHistoryPollAt: now });
-      await this.pollFailed(scope, truck.karmaCarId, 'KARMA_HISTORY', now);
+      await this.pollFailed(
+        scope,
+        truck.karmaCarId,
+        'KARMA_HISTORY',
+        now,
+        error instanceof KarmaDeviceReadError ? error.code : 'HISTORY_PROCESSING_FAILED',
+      );
     }
   }
 
@@ -298,6 +305,7 @@ export class KarmaMonitoringJobs {
     karmaCarId: string | null,
     source: 'STATUS_POLL' | 'KARMA_HISTORY' | 'DEVICE_COMMAND',
     now: Date,
+    cause?: KarmaDeviceReadError['code'] | 'HISTORY_PROCESSING_FAILED',
   ) {
     await this.repository.record(scope, [
       {
@@ -308,7 +316,7 @@ export class KarmaMonitoringJobs {
         sourceKey: `${karmaCarId ?? 'branch'}:${now.toISOString()}`,
         occurredAt: now,
         recordedAt: now,
-        details: 'Karma monitoring request failed; no successful or empty result is inferred.',
+        details: `Karma monitoring request failed${cause ? ` (${cause})` : ''}; no successful or empty result is inferred.`,
       },
     ]);
   }

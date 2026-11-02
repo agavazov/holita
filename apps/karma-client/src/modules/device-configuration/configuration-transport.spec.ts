@@ -58,6 +58,7 @@ describe('fixed eData device command transport', () => {
     let submission = respond([12]);
     let eventRows: unknown[] = [];
     let olderDiagnosticRows: unknown[] = [];
+    let monitoringPage: unknown[] | undefined;
     let queueState: number | null = 1;
     const upstream = jest.spyOn(globalThis, 'fetch').mockImplementation((input) => {
       const path = url(input).pathname;
@@ -68,6 +69,19 @@ describe('fixed eData device command transport', () => {
         return Promise.resolve(Response.json([{ ...target, device_id: reportedDeviceId }]));
       }
       if (path === '/apiv2/events') {
+        const parameters = url(input).searchParams;
+        if (monitoringPage !== undefined) {
+          if (
+            parameters.has('from_id') &&
+            parameters.get('from_id') !== '0' &&
+            !parameters.has('to_id')
+          ) {
+            return Promise.reject(new Error('Observed lower-ID-only history timeout'));
+          }
+          return Promise.resolve(
+            Response.json(parameters.has('from_id') ? monitoringPage : eventRows),
+          );
+        }
         return Promise.resolve(
           Response.json(url(input).searchParams.has('to_id') ? olderDiagnosticRows : eventRows),
         );
@@ -577,6 +591,7 @@ describe('fixed eData device command transport', () => {
       { ...diagnosticRow(10, 'unrelated'), eid: 1 },
     ];
     eventRows.reverse();
+    monitoringPage = eventRows;
     upstream.mockClear();
     expect(
       await new MonitoringService(transport).history({
@@ -609,7 +624,8 @@ describe('fixed eData device command transport', () => {
       ],
     });
     const monitoringRequest = upstream.mock.calls.find(
-      ([input]) => url(input).pathname === '/apiv2/events',
+      ([input]) =>
+        url(input).pathname === '/apiv2/events' && url(input).searchParams.has('from_id'),
     );
     expect(
       monitoringRequest ? Object.fromEntries(url(monitoringRequest[0]).searchParams) : null,
@@ -623,11 +639,16 @@ describe('fixed eData device command transport', () => {
     expect(
       monitoringRequest ? url(monitoringRequest[0]).searchParams.getAll('event_type[]') : null,
     ).toEqual(['33']);
-    eventRows = Array.from({ length: 500 }, (_, index) =>
+    monitoringPage = Array.from({ length: 500 }, (_, index) =>
       diagnosticRow(
         index + 11,
         index === 499 ? '19,0,419,0,1,1,1001,21000010F30701' : communication,
       ),
+    );
+    // Live latest-ID reads return the newest 500 rows; bounded ID reads return
+    // the oldest 500 after the cursor, so a catch-up page must not skip to latest.
+    eventRows = Array.from({ length: 500 }, (_, index) =>
+      diagnosticRow(index + 511, communication),
     );
     const monitoring = new MonitoringService(transport);
     upstream.mockClear();
@@ -645,14 +666,29 @@ describe('fixed eData device command transport', () => {
       reports: [{ messageId: '510', faults: [{ spn: 4339, fmi: 7 }] }],
     });
     const continuation = upstream.mock.calls.find(
-      ([input]) => url(input).pathname === '/apiv2/events',
+      ([input]) =>
+        url(input).pathname === '/apiv2/events' && url(input).searchParams.has('from_id'),
     );
     const continuationParameters = continuation ? url(continuation[0]).searchParams : null;
     expect(continuationParameters?.get('from_id')).toBe('10');
-    expect(continuationParameters?.has('from_date')).toBe(false);
-    expect(continuationParameters?.has('to_date')).toBe(false);
-    expect(continuationParameters?.has('to_id')).toBe(false);
-    eventRows = [];
+    expect(continuationParameters?.get('from_date')).toBe('2026-01-01 00:00:00');
+    expect(continuationParameters?.get('to_date')).toBe('2026-01-02 00:00:00');
+    expect(continuationParameters?.get('to_id')).toBe('1011');
+    const lookup = upstream.mock.calls.find(
+      ([input]) =>
+        url(input).pathname === '/apiv2/events' && !url(input).searchParams.has('from_id'),
+    );
+    const lookupParameters = lookup ? url(lookup[0]).searchParams : null;
+    expect(lookupParameters?.has('from_date')).toBe(false);
+    expect(lookupParameters?.has('to_date')).toBe(false);
+    expect(lookupParameters?.has('to_id')).toBe(false);
+    eventRows = [diagnosticRow(511, '19,0,419,0,1,1,1001,21000010F30701')];
+    // Preserve inclusive cursor/upper boundary variants without replaying either report.
+    monitoringPage = [
+      diagnosticRow(510, '19,0,419,0,1,1,1001,21000010F30701'),
+      ...eventRows,
+      diagnosticRow(512, '19,0,419,0,1,1,1001,21000010F30701'),
+    ];
     expect(
       await monitoring.history({
         carId: '41',
@@ -661,6 +697,78 @@ describe('fixed eData device command transport', () => {
         fromUtc: eventTimeUtc,
         toUtc: '2026-01-02T00:00:00.000Z',
       }),
-    ).toEqual({ highWatermark: '510', hasMore: false, reports: [] });
+    ).toMatchObject({
+      highWatermark: '511',
+      hasMore: false,
+      reports: [{ messageId: '511', faults: [{ spn: 4339, fmi: 7 }] }],
+    });
+    for (const mixed of [{ car_id: 42 }, { device_id: 'another-device' }]) {
+      for (const stage of ['lookup', 'page']) {
+        const wrongTarget = { ...diagnosticRow(511, communication), ...mixed };
+        eventRows = [stage === 'lookup' ? wrongTarget : diagnosticRow(511, communication)];
+        monitoringPage = [stage === 'page' ? wrongTarget : diagnosticRow(511, communication)];
+        await expect(
+          monitoring.history({
+            carId: '41',
+            deviceId,
+            afterId: '510',
+            fromUtc: eventTimeUtc,
+            toUtc: '2026-01-02T00:00:00.000Z',
+          }),
+        ).rejects.toThrow('Karma monitoring source is unavailable');
+      }
+    }
+    eventRows = [diagnosticRow(3_000_511, communication)];
+    for (const [afterId, highWatermark, page, hasMore] of [
+      ['511', '1000511', [diagnosticRow(515, '19,0,413,0,1,1,1001,19111101')], true],
+      ['1000511', '2000511', [], true],
+      ['2000511', '3000511', [], false],
+    ] satisfies [string, string, unknown[], boolean][]) {
+      monitoringPage = page;
+      upstream.mockClear();
+      expect(
+        await monitoring.history({
+          carId: '41',
+          deviceId,
+          afterId,
+          fromUtc: eventTimeUtc,
+          toUtc: '2026-01-02T00:00:00.000Z',
+        }),
+      ).toMatchObject({
+        highWatermark,
+        hasMore,
+        reports: page.length ? [{ messageId: '515' }] : [],
+      });
+      const range = upstream.mock.calls.find(([input]) => url(input).searchParams.has('from_id'));
+      expect(range ? url(range[0]).searchParams.get('to_id') : null).toBe(
+        String(Number(highWatermark) + 1),
+      );
+    }
+    eventRows = [];
+    monitoringPage = [];
+    expect(
+      await monitoring.history({
+        carId: '41',
+        deviceId,
+        afterId: '511',
+        fromUtc: eventTimeUtc,
+        toUtc: '2026-01-02T00:00:00.000Z',
+      }),
+    ).toEqual({ highWatermark: '511', hasMore: false, reports: [] });
+    upstream.mockRejectedValueOnce(new Error('private upstream URL or token'));
+    await expect(
+      monitoring.history({
+        carId: '41',
+        deviceId,
+        afterId: '511',
+        fromUtc: eventTimeUtc,
+        toUtc: '2026-01-02T00:00:00.000Z',
+      }),
+    ).rejects.toMatchObject({
+      response: {
+        code: 'MONITORING_UPSTREAM_FAILED',
+        message: 'Karma monitoring source is unavailable',
+      },
+    });
   });
 });

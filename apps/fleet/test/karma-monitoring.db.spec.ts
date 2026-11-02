@@ -7,7 +7,10 @@ import { issueDemoToken } from '../src/auth/demo-auth.js';
 import { FleetClock } from '../src/clock/fleet-clock.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { CoreClient } from '../src/integrations/core/core.client.js';
-import { KarmaDeviceReadsClient } from '../src/integrations/karma/karma-device-reads.client.js';
+import {
+  KarmaDeviceReadError,
+  KarmaDeviceReadsClient,
+} from '../src/integrations/karma/karma-device-reads.client.js';
 import { KarmaMonitoringJobs } from '../src/modules/karma-monitoring/karma-monitoring.jobs.js';
 import {
   KarmaMonitoringRepository,
@@ -324,6 +327,18 @@ describe('Karma monitoring persistence and scope', () => {
         data: { fleetKarmaMonitoringEvents: { total: 0, items: [] } },
       });
     }
+    monitoring.mockRejectedValueOnce(new KarmaDeviceReadError('KARMA_TIMEOUT'));
+    await repository.updateTruck(scope, '7', { lastHistoryPollAt: null });
+    await jobs.runBranch(active, now);
+    expect(
+      await database.client.karmaMonitoringEvent.findFirst({
+        where: { ...scope, kind: 'POLL_FAILED', source: 'KARMA_HISTORY' },
+        select: { details: true },
+      }),
+    ).toEqual({
+      details:
+        'Karma monitoring request failed (KARMA_TIMEOUT); no successful or empty result is inferred.',
+    });
   });
 
   it('prunes only old events and monitoring operations in the requested scope and enforces stored settings/read constraints', async () => {
