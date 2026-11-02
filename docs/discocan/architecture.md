@@ -1285,3 +1285,43 @@ describes authoring, exports and submission.
 A lost browser response blocks new submissions until saved operations are successfully
 refreshed. A failed reconciliation read keeps the draft blocked and retries every five seconds
 even without a previously known pending operation. Manual refresh remains available.
+
+## Karma pull monitoring
+
+Fleet's `karma-monitoring` module owns the separate Tenant/Branch-scoped
+`karmaMonitoringSettings`, `karmaMonitoringTruck` and `karmaMonitoringEvent` tables.
+No existing Fleet table references them. Monitoring is disabled by default through
+`FLEET_KARMA_MONITORING_ENABLED` and each Branch's settings. A ten-second NestJS tick
+uses `waitForCompletion` and persisted poll times/cursors. Defaults are a 60-second status
+poll, 15-minute no-data threshold, hourly diagnostic history and fault-logger reads, and
+10-day retention. Settings validate status 30–3600 seconds, offline 2–1440 minutes,
+history 5–1440 minutes, commands 15–1440 minutes and retention 1–30 days.
+
+The authenticated internal Karma Client endpoints `POST /internal/karma-monitoring/status`
+and `/history` use the existing machine token and bounded transport. Status uses account-wide
+`GET /cars` plus bulk `GET /location` (two Karma calls per minute for ten trucks per enabled
+Branch at defaults, excluding session renewal and separate fault reads). `lastDataAt` uses the
+source `edt` interpreted as UTC, not the polling time or the undocumented `pdt` reception field;
+bulk response coverage and timestamp semantics still require live verification. Trucks with no
+fresh data are described as “no data since”, without inferring power state.
+
+History uses the existing diagnostic-history source, bounds and decoder through `GET /events`
+with UTC and message-ID boundaries. Persisted descending catch-up pages advance the high watermark
+only after the interval is drained. Scoped source keys deduplicate each report/fault; raw source
+records and reported ADDED/REMOVED/UNKNOWN status remain available. Unknown reports stay opaque.
+Reported faults are observations within retention, not a claim about all currently active faults.
+
+Online trucks request only `READ_FAULT_LOGGER` through DeviceOperationsService when dispatch is
+enabled and the existing account-wide active-car constraint permits it. Operations carry
+`monitoringOrigin`; user operation histories exclude them. Requests and terminal outcomes are logged,
+including “not acknowledged”, faults, unresolved reports and failures. A type byte alone does not
+prove an empty logger. Monitoring never clears faults or sends configuration writes. Pending reads
+are reconciled even after a Branch disables monitoring. Daily retention deletes old events and
+monitoring operations only; settings, truck state and history watermarks remain.
+
+The [Fleet SDL](../../apps/fleet/src/modules/karma-monitoring/karma-monitoring.graphql) exposes
+`fleetKarmaMonitoringSettings`, `updateFleetKarmaMonitoringSettings`,
+`fleetKarmaMonitoringTrucks` and `fleetKarmaMonitoringEvents`, using distinct
+`FleetKarmaMonitoring*` types. Lists use scoped snapshots, bounded offset pagination,
+search/ID selection and explicit filters; event logs are newest first and constrained by retention.
+Trucks include latest data/no-data times, reported faults and the latest command outcome.

@@ -81,6 +81,16 @@ const ACTIVE_STATUSES = [
 export class DeviceOperationsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  pruneMonitoring(scope: FleetScope, cutoff: Date) {
+    return this.prisma.client.fleetDeviceOperation.deleteMany({
+      where: {
+        ...scope,
+        monitoringOrigin: true,
+        requestedAt: { lt: cutoff },
+      },
+    });
+  }
+
   find(scope: FleetScope, id: string): Promise<DeviceOperationRow | null> {
     return this.prisma.client.fleetDeviceOperation.findFirst({ where: { ...scope, id } });
   }
@@ -93,6 +103,7 @@ export class DeviceOperationsRepository {
       where: {
         ...scope,
         ...target,
+        monitoringOrigin: false,
         kind: { notIn: ['READ_FAULT_LOGGER', 'READ_COMMUNICATION_DIAGNOSTICS'] },
       },
       orderBy: [{ requestedAt: 'desc' }, { id: 'desc' }],
@@ -108,6 +119,7 @@ export class DeviceOperationsRepository {
       where: {
         ...scope,
         ...target,
+        monitoringOrigin: false,
         kind: { in: ['READ_FAULT_LOGGER', 'READ_COMMUNICATION_DIAGNOSTICS'] },
       },
       orderBy: [{ requestedAt: 'desc' }, { id: 'desc' }],
@@ -167,11 +179,13 @@ export class DeviceOperationsRepository {
     target: Pick<DeviceOperationRow, 'karmaCarId' | 'karmaDeviceId'>,
     now: Date,
     kind: DeviceReadKind = 'READ_CONFIGURATION',
+    monitoringOrigin = false,
   ): Promise<DeviceOperationRow> {
     return this.prisma.client.fleetDeviceOperation.create({
       data: {
         ...scope,
         ...target,
+        monitoringOrigin,
         kind,
         phase:
           kind === 'READ_RULES'

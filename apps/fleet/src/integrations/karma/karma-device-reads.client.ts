@@ -653,8 +653,17 @@ export class KarmaDeviceReadsClient {
     );
   }
 
+  monitoring(
+    action: 'status' | 'history',
+    body: Record<string, string | number | string[]> = {},
+  ): Promise<unknown> {
+    return this.post(action === 'status' ? 'monitoring-status' : 'monitoring-history', body);
+  }
+
   private async post(
     action:
+      | 'monitoring-status'
+      | 'monitoring-history'
       | 'target'
       | 'request'
       | 'observations'
@@ -685,12 +694,16 @@ export class KarmaDeviceReadsClient {
       ) {
         throw new KarmaDeviceReadError('KARMA_UNAVAILABLE');
       }
-      base.pathname = `/internal/device-configuration/${action}`;
+      base.pathname = action.startsWith('monitoring-')
+        ? `/internal/karma-monitoring/${action.slice('monitoring-'.length)}`
+        : `/internal/device-configuration/${action}`;
       const response = await fetch(base, {
         method: 'POST',
         redirect: 'error',
         signal: AbortSignal.timeout(
-          action.endsWith('observations') || action === 'diagnostic-request'
+          action.endsWith('observations') ||
+            action === 'diagnostic-request' ||
+            action.startsWith('monitoring-')
             ? 21000
             : KARMA_COMMAND_TIMEOUT_MS,
         ),
