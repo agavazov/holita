@@ -97,7 +97,7 @@ export class MonitoringService {
       fromMessageId: String(Number(body.afterId) + 1),
     });
     // Live background reads exceed the public four-second deadline; Fleet allows 21 seconds.
-    const signal = AbortSignal.timeout(19000);
+    const signal = AbortSignal.timeout(45000);
     const parameters = new URLSearchParams({
       car: query.carId,
       device: body.deviceId,
