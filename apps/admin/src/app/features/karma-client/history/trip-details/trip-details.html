@@ -1,3 +1,4 @@
+<p class="app-muted">{{ summaryText().purpose }}</p>
 <section class="app-card app-stack" [attr.aria-label]="summaryText().summary">
   <dl class="app-facts">
     <div>
@@ -19,16 +20,7 @@
         </dd>
       </div>
     }
-    <div>
-      <dt>{{ summaryText().completion }}</dt>
-      <dd>{{ summaryText().unconfirmedState }}</dd>
-    </div>
-    <div>
-      <dt>{{ summaryText().sourceActivity }}</dt>
-      <dd>{{ raw(trip().tripActive) }}</dd>
-    </div>
   </dl>
-  <p class="app-muted">{{ summaryText().sourceHint }}</p>
 </section>
 @if (showMap()) {
   <holita-trip-position-explorer
@@ -40,7 +32,16 @@
 <details class="app-source-details trip-details__source">
   <summary>{{ detailText().sourceFields }}</summary>
   <p class="app-muted">{{ text().karmaHistoryRawHint }}</p>
+  <p class="app-muted">{{ summaryText().sourceHint }}</p>
   <dl class="app-facts">
+    <div>
+      <dt>{{ summaryText().completion }}</dt>
+      <dd>{{ summaryText().unconfirmedState }}</dd>
+    </div>
+    <div>
+      <dt>{{ summaryText().sourceActivity }}</dt>
+      <dd>{{ raw(trip().tripActive) }}</dd>
+    </div>
     @for (field of fields(); track field.name) {
       <div>
         <dt>{{ field.name }}</dt>

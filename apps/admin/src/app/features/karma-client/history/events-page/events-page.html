@@ -55,10 +55,7 @@
           />
         </holita-form-field>
       </div>
-      <details
-        class="app-source-details"
-        [open]="!!(fieldErrors().size || fieldErrors().types || form.controls.types.value)"
-      >
+      <details class="app-source-details" [open]="!!(fieldErrors().size || fieldErrors().types)">
         <summary>{{ presentationText().technicalDetails }}</summary>
         <p class="app-muted">{{ presentationText().technicalHint }}</p>
         <div class="app-form-grid">
@@ -123,7 +120,10 @@
     <p role="status">{{ text().karmaHistoryLoading }}</p>
   }
   @if (car() && !invalidFilters()) {
-    <p class="app-muted app-filter-hint">{{ text().karmaEventsOrder }}</p>
+    <details class="app-source-details">
+      <summary>{{ presentationText().technicalDetails }}</summary>
+      <p>{{ text().karmaEventsOrder }}</p>
+    </details>
     <holita-table-panel
       #panel
       [heading]="text().karmaEvents"
@@ -143,15 +143,12 @@
       >
         <ng-template #header
           ><tr>
-            <th class="app-table-merged-column">{{ text().karmaEdtUtc }}</th>
-            <th class="app-col-identity">{{ text().karmaMessageId }}</th>
-            <th>{{ 'eid' }}</th>
+            <th class="app-col-identity">{{ presentationText().eventTime }}</th>
             <th class="app-col-actions">{{ text().actions }}</th>
           </tr></ng-template
         >
         <ng-template #body let-row
           ><tr>
-            <td class="app-table-merged-column">{{ row.edt ?? '—' }}</td>
             <td class="app-col-identity">
               <div class="app-table-identity">
                 <button
@@ -160,11 +157,8 @@
                   [attr.aria-label]="text().view + ' ' + row.id"
                   (click)="panel.run('view', [record(row)], $event.currentTarget)"
                 >
-                  {{ row.id ?? '—' }}
+                  {{ row.edt ?? '—' }}
                 </button>
-                <span class="app-table-mobile-meta"
-                  >{{ text().karmaEdtUtc }}: {{ row.edt ?? '—' }}</span
-                >
                 <div class="app-table-mobile-actions">
                   <holita-row-actions
                     [actions]="actions()"
@@ -174,7 +168,6 @@
                 </div>
               </div>
             </td>
-            <td>{{ row.eventId }}</td>
             <td class="app-col-actions">
               <holita-row-actions
                 [actions]="actions()"
@@ -232,16 +225,8 @@
       <section class="app-card" [attr.aria-label]="detailText().summary">
         <dl class="app-facts">
           <div>
-            <dt>{{ text().karmaMessageId }}</dt>
-            <dd>{{ row.id }}</dd>
-          </div>
-          <div>
             <dt>{{ text().karmaEdtUtc }}</dt>
             <dd>{{ row.edt ?? '—' }}</dd>
-          </div>
-          <div>
-            <dt>{{ text().karmaEventId }}</dt>
-            <dd>{{ row.eventId }}</dd>
           </div>
         </dl>
       </section>
@@ -252,16 +237,17 @@
           pageType="events"
           [language]="language()"
           [origin]="selectedCoordinates()"
-          [identity]="row.carId + ' · ' + row.id"
+          [identity]="car()?.carNumber ?? text().karmaEvents"
           [originTime]="row.edt"
         />
       </section>
-      <section class="app-view" [attr.aria-label]="detailText().eventText">
-        <h3 class="app-card__title">{{ detailText().eventText }}</h3>
-        <p class="source-text">{{ row.extra ?? '—' }}</p>
-      </section>
+
       <details class="app-source-details">
         <summary>{{ detailText().sourceFields }}</summary>
+        <section class="app-view" [attr.aria-label]="detailText().eventText">
+          <h3 class="app-card__title">{{ detailText().eventText }}</h3>
+          <p class="source-text">{{ row.extra ?? '—' }}</p>
+        </section>
         <p class="app-muted app-filter-hint">{{ text().karmaHistoryRawHint }}</p>
         <dl class="app-facts">
           @for (field of fields(row); track field.name) {

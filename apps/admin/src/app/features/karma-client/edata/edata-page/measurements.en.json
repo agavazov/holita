@@ -4,8 +4,8 @@
   "view": "eData view",
   "sourceMessage": "Open selected source message",
   "parameter": "Parameter",
-  "speed": "Envelope spd — raw recorded speed",
-  "odometer": "Envelope odo — raw odometer",
+  "speed": "Recorded speed",
+  "odometer": "Odometer",
   "subset": "Analysis uses only the messages in this loaded API page. Older/Newer replaces this subset; no full-window totals are calculated.",
   "limits": "Source deadline: 8 seconds; one response of at most 500 source rows; this page returns at most",
   "requested": "Requested UTC bounds (inclusive)",
@@ -16,11 +16,11 @@
   "noMore": "No continuation was reported for this page. This does not establish continuous sensor coverage.",
   "viewClock": "The retrieval time is when this view received its last successful response; it is not a device receipt clock.",
   "retained": "The latest read failed; retained measurements keep their previous retrieval time.",
-  "unitGate": "Values stay on the source scale. Source description labels do not independently establish calibration or a conversion rule.",
-  "counterGate": "Counter scale, reset/rollover semantics and matching coverage are unproved. Physical counter deltas and source comparisons are unavailable.",
-  "rateGate": "This source-labeled fuel rate is separate from fuel-used counters. Calibrated integration and matching distance coverage are unproved; no litres or L/100 km are calculated.",
-  "voltageGate": "Battery Voltage (Starlink) does not establish voltage scale or external/internal supply identity. It is not a tracker vin/vbat reading or a battery-health diagnosis.",
-  "envelopeGate": "Envelope spd/odo retain unconfirmed units. They do not inherit the units of CAN parameters or trip metrics.",
+  "unitGate": "Unit not confirmed. See Technical details.",
+  "counterGate": "Unit not confirmed. See Technical details.",
+  "rateGate": "Unit not confirmed. See Technical details.",
+  "voltageGate": "Unit not confirmed. See Technical details.",
+  "envelopeGate": "Unit not confirmed. See Technical details.",
   "calculations": "Counter comparison and fuel calculation",
   "calculationGate": "Real source comparison, engine-counter deltas and fuel consumption are unavailable until scale, counter semantics and matching intervals are verified. Parameters 687 and 1657 remain separate. A counter decrease is not evidence of fuel theft or a device fault.",
   "channels": {
@@ -37,5 +37,14 @@
     "781": "Starlink battery reading",
     "785": "Fuel level",
     "1657": "High-resolution fuel counter"
-  }
+  },
+  "scopeHint": "Choose a measurement to review the loaded readings.",
+  "precisionNotes": {
+    "unitGate": "Values stay on the source scale. Source description labels do not independently establish calibration or a conversion rule.",
+    "counterGate": "Counter scale, reset/rollover semantics and matching coverage are unproved. Physical counter deltas and source comparisons are unavailable.",
+    "rateGate": "This source-labeled fuel rate is separate from fuel-used counters. Calibrated integration and matching distance coverage are unproved; no litres or L/100 km are calculated.",
+    "voltageGate": "Battery Voltage (Starlink) does not establish voltage scale or external/internal supply identity. It is not a tracker vin/vbat reading or a battery-health diagnosis.",
+    "envelopeGate": "Envelope spd/odo retain unconfirmed units. They do not inherit the units of CAN parameters or trip metrics."
+  },
+  "technicalDetails": "Technical details"
 }

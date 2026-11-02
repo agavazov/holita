@@ -1,4 +1,4 @@
-<p class="app-muted">{{ text().selectionHint }}</p>
+<p class="app-muted">{{ text().purpose }}</p>
 @if (endpointFallback() && !loading()) {
   <p role="status">{{ text().endpointsOnly }}</p>
 }
@@ -11,8 +11,8 @@
   [endpoints]="endpoints()"
   [points]="points()"
   [selectedKey]="selectedKey()"
-  [provenance]="source()"
-  [coverage]="coverage()"
+  [provenance]="null"
+  [coverage]="null"
   [loading]="loading()"
   [error]="failure()"
   (selectedKeyChange)="selectedKey.set($event)"
@@ -41,6 +41,12 @@
 </details>
 <details class="app-source-details">
   <summary>{{ text().sourceRead }}</summary>
+  <p>{{ text().source }}</p>
+  <p>{{ text().retrievedAt }}: {{ source()?.retrievedAt ?? '—' }}</p>
+  <p>{{ text().retrieval }}: {{ text().retrievalStates[coverage().retrieval] }}</p>
+  <p>{{ text().coverageHint }}</p>
+  <p>{{ text().positionsLoaded }}: {{ coverage().positionsLoaded }}</p>
+  <p>{{ text().selectionHint }}</p>
   <p>{{ text().utcHint }}</p>
   <p>{{ text().edataNotLoaded }}</p>
   @if (result(); as data) {

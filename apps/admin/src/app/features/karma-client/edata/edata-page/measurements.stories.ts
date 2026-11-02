@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { fixtureKarmaMeasurementMessages } from '../../../../../storybook/karma-fixtures';
 import { onFrame, storyLanguage } from '../../../../../storybook/story-config';
 import { MeasurementWorkspace } from '../../../../ui/measurement-workspace/measurement-workspace';
-import { edataChannels, edataRecords } from './measurement-mapping';
+import { edataChannels, edataRecords, measurementMessages } from './measurement-mapping';
 
 const messages = fixtureKarmaMeasurementMessages.map((message) => ({
   ...message,
@@ -22,10 +22,9 @@ const meta: Meta<MeasurementWorkspace> = {
         ...args,
         language,
         channels: edataChannels(messages, language),
-        scopeHint:
-          language === 'bg'
-            ? 'Запазен пример от eData. Мерните единици на източника не са потвърдени.'
-            : 'Fixed eData example. Source units are unconfirmed.',
+        scopeHint: measurementMessages(language).scopeHint,
+        precisionNotes: Object.values(measurementMessages(language).precisionNotes),
+        technicalDetails: measurementMessages(language).technicalDetails,
         selectedChannel: null,
         selectedRecord: null,
       },
@@ -34,7 +33,9 @@ const meta: Meta<MeasurementWorkspace> = {
         [channels]="channels" [records]="records" [loading]="loading" [error]="error"
         [selectedChannelKey]="selectedChannel" [selectedRecordKey]="selectedRecord"
         (selectedChannelKeyChange)="selectedChannel = $event"
-        (selectedRecordKeyChange)="selectedRecord = $event" />`,
+        (selectedRecordKeyChange)="selectedRecord = $event" />
+        <details class="app-source-details"><summary>{{ technicalDetails }}</summary>
+        @for (note of precisionNotes; track $index) { <p>{{ note }}</p> }</details>`,
     };
   },
 };

@@ -1,5 +1,9 @@
 <section class="app-view" [attr.aria-label]="text().karmaApiInfo" [attr.aria-busy]="loading()">
-  <holita-page-header [title]="text().karmaApiInfo" [eyebrow]="text().karmaAdministrationTitle">
+  <holita-page-header
+    [title]="text().karmaApiInfo"
+    [eyebrow]="text().karmaAdministrationTitle"
+    [description]="text().karmaAdministrationDescription"
+  >
     <button
       headerActions
       pButton

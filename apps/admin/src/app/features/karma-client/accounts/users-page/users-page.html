@@ -2,7 +2,7 @@
   <holita-page-header
     [title]="text().karmaUsers"
     [eyebrow]="text().karmaAdministrationTitle"
-    [description]="presentationText().readOnly"
+    [description]="presentationText().usersPurpose"
   >
     <button
       headerActions
@@ -15,6 +15,7 @@
       {{ error() ? text().retry : text().refresh }}
     </button>
   </holita-page-header>
+  <p class="app-muted">{{ presentationText().readOnly }}</p>
   <form
     [attr.aria-label]="text().karmaSearch + ': ' + text().karmaUsers"
     class="app-card app-form-section"
@@ -65,7 +66,6 @@
           <td class="text-cell app-col-identity">
             <div class="app-table-identity">
               {{ item.userName || '—' }}
-              <span class="app-table-mobile-meta">{{ text().karmaUserId }}: {{ item.id }}</span>
               <span class="app-table-mobile-meta">{{
                 (item.firstName + ' ' + item.lastName).trim() || '—'
               }}</span>
@@ -130,6 +130,7 @@
     </dl>
     <details class="app-source-details">
       <summary>{{ presentationText().technicalDetails }}</summary>
+      <p class="app-muted">{{ text().karmaUsersHint }}</p>
       <dl class="app-facts">
         <div>
           <dt>{{ text().karmaUserId }}</dt>

@@ -41,19 +41,49 @@
     </div>
   </form>
   <p class="app-muted" id="report-day-hint">{{ text().dayHint }}</p>
+  @let view = presentation();
   @if (invalidDay()) {
     <p-message severity="warn">{{ text().dayInvalid }}</p-message>
   } @else {
     <holita-day-overview
       [language]="language()"
-      [provenance]="presentation()?.provenance ?? null"
-      [period]="presentation()?.period ?? null"
-      [coverage]="presentation()?.coverage ?? null"
-      [distance]="presentation()?.distance ?? null"
-      [tripCount]="presentation()?.tripCount ?? null"
-      [maximumSpeed]="presentation()?.maximumSpeed ?? null"
+      [distance]="
+        view
+          ? {
+              value: view.distance.value,
+              unit: view.distance.unit,
+              context:
+                report()?.totalDistance.availability === 'PARTIAL'
+                  ? text().availability.PARTIAL
+                  : '',
+              explanation: view.distance.context + '. ' + view.distance.explanation,
+            }
+          : null
+      "
+      [tripCount]="
+        view
+          ? {
+              value: view.tripCount.value,
+              unit: view.tripCount.unit,
+              context:
+                report()?.tripCount.availability === 'PARTIAL' ? text().availability.PARTIAL : '',
+              explanation: view.tripCount.context + '. ' + view.tripCount.explanation,
+            }
+          : null
+      "
+      [maximumSpeed]="
+        view
+          ? {
+              value: view.maximumSpeed.value,
+              unit: view.maximumSpeed.unit,
+              context:
+                report()?.maxSpeed.availability === 'PARTIAL' ? text().availability.PARTIAL : '',
+              explanation: view.maximumSpeed.context + '. ' + view.maximumSpeed.explanation,
+            }
+          : null
+      "
       [composition]="presentation()?.composition ?? []"
-      [compositionHint]="presentation()?.compositionHint ?? null"
+      [compositionHint]="view?.composition.length ? null : (view?.compositionHint ?? null)"
       [trips]="presentation()?.trips ?? null"
       [loading]="loading()"
       [error]="unavailable()"
@@ -73,11 +103,18 @@
             [pageType]="mapPageType()"
             [language]="language()"
             [origin]="lastCoordinates()"
-            [identity]="
-              point.carNumber + ' · ' + appText().karmaMessageId + ': ' + (point.messageId ?? '—')
-            "
+            [identity]="point.carNumber"
             [originTime]="point.edt"
           />
+          <details class="app-source-details">
+            <summary>{{ text().sourceDetails }}</summary>
+            <dl class="app-facts">
+              <div>
+                <dt>{{ appText().karmaMessageId }}</dt>
+                <dd>{{ point.messageId ?? '—' }}</dd>
+              </div>
+            </dl>
+          </details>
         } @else if (locationLoaded()) {
           <p>{{ appText().karmaNoLocation }}</p>
         } @else if (!locationError()) {
@@ -85,11 +122,12 @@
         }
       </section>
       <div overviewFacts class="app-view">
-        <p class="app-muted">{{ text().selectionHint }}</p>
-        <p class="app-muted">{{ text().positionCoverageHint }}</p>
         @if (report(); as data) {
           <details class="app-source-details">
             <summary>{{ text().sourceDetails }}</summary>
+            <p class="app-muted">{{ text().selectionHint }}</p>
+            <p class="app-muted">{{ text().positionCoverageHint }}</p>
+            <p class="app-muted">{{ text().unitsHint }}</p>
             <dl class="app-facts">
               <div>
                 <dt>{{ text().loadedTrips }}</dt>
@@ -116,6 +154,24 @@
                 <dd>{{ data.car?.deviceId ?? '—' }}</dd>
               </div>
             </dl>
+            @if (view) {
+              <dl class="app-facts">
+                <div>
+                  <dt>{{ text().totalDistance }}</dt>
+                  <dd>{{ view.distance.context }} · {{ view.distance.explanation }}</dd>
+                </div>
+                <div>
+                  <dt>{{ text().tripCount }}</dt>
+                  <dd>{{ view.tripCount.context }} · {{ view.tripCount.explanation }}</dd>
+                </div>
+                <div>
+                  <dt>{{ text().maxSpeed }}</dt>
+                  <dd>{{ view.maximumSpeed.context }} · {{ view.maximumSpeed.explanation }}</dd>
+                </div>
+              </dl>
+              <p>{{ view.compositionHint }}</p>
+            }
+            <p>{{ text().comparisonPrecision }}</p>
           </details>
         }
       </div>
@@ -163,7 +219,7 @@
   }
   @if (selected(); as trip) {
     <holita-route-drawer
-      [title]="appText().karmaTripId + ' ' + trip.id"
+      [title]="appText().karmaTripsDetails"
       [subtitle]="trip.carNumber"
       size="lg"
       [closeLink]="null"

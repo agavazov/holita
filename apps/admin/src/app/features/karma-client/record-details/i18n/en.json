@@ -1,12 +1,15 @@
 {
   "summary": "Record summary",
   "truckSummary": "Truck summary",
-  "sourceFields": "Source fields",
+  "sourceFields": "Source details",
   "parameterCount": "Parameters in this message",
-  "eventText": "Source event text",
+  "eventText": "Event description",
   "eventPosition": "Event position",
   "eventPositionHint": "Position recorded with this event at its source time, shown unchanged.",
   "messagePosition": "Message position",
   "messagePositionHint": "Position recorded with this eData message at its UTC source time.",
-  "appliedPeriod": "Applied API period"
+  "appliedPeriod": "Period shown",
+  "project": "Project",
+  "timeZone": "Time zone",
+  "locationHint": "The last known position may be out of date."
 }

@@ -2,7 +2,7 @@
   <holita-page-header
     [title]="text().karmaRoles"
     [eyebrow]="text().karmaAdministrationTitle"
-    [description]="presentationText().readOnly"
+    [description]="presentationText().rolesPurpose"
   >
     <button
       headerActions
@@ -15,6 +15,7 @@
       {{ error() ? text().retry : text().refresh }}
     </button>
   </holita-page-header>
+  <p class="app-muted">{{ presentationText().readOnly }}</p>
   <form
     [attr.aria-label]="text().karmaSearch + ': ' + text().karmaRoles"
     class="app-card app-form-section"
@@ -51,14 +52,25 @@
     >
       <ng-template #header
         ><tr>
-          <th scope="col">{{ text().karmaRoleId }}</th>
           <th scope="col">{{ text().karmaRoleDescription }}</th>
+          <th scope="col">{{ presentationText().technicalDetails }}</th>
         </tr></ng-template
       >
       <ng-template #body let-item
         ><tr>
-          <td>{{ item.id }}</td>
           <td>{{ item.description || '—' }}</td>
+          <td>
+            <details class="app-source-details">
+              <summary>{{ presentationText().technicalDetails }}</summary>
+              <p class="app-muted">{{ text().karmaRolesHint }}</p>
+              <dl class="app-facts">
+                <div>
+                  <dt>{{ text().karmaRoleId }}</dt>
+                  <dd>{{ item.id }}</dd>
+                </div>
+              </dl>
+            </details>
+          </td>
         </tr></ng-template
       >
       <ng-template #emptymessage

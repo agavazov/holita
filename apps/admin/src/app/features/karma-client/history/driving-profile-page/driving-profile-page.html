@@ -99,7 +99,7 @@
         </dl>
       </section>
     }
-    <p class="app-muted app-filter-hint">{{ text().karmaProfileHint }}</p>
+
     <holita-table-panel
       [heading]="text().karmaDrivingProfile"
       [view]="tableState()"
@@ -122,7 +122,40 @@
         >
         <ng-template #body let-category
           ><tr>
-            <td class="category">{{ category.name }}</td>
+            <td class="category">
+              @switch (category.name) {
+                @case ('accelerations') {
+                  {{ presentationText().profileCategories.accelerations }}
+                }
+                @case ('brakes') {
+                  {{ presentationText().profileCategories.brakes }}
+                }
+                @case ('speed_bumps') {
+                  {{ presentationText().profileCategories.speed_bumps }}
+                }
+                @case ('bypassing') {
+                  {{ presentationText().profileCategories.bypassing }}
+                }
+                @case ('roundabout') {
+                  {{ presentationText().profileCategories.roundabout }}
+                }
+                @case ('lane_change') {
+                  {{ presentationText().profileCategories.lane_change }}
+                }
+                @case ('turns') {
+                  {{ presentationText().profileCategories.turns }}
+                }
+                @case ('off_road') {
+                  {{ presentationText().profileCategories.off_road }}
+                }
+                @case ('speed') {
+                  {{ presentationText().profileCategories.speed }}
+                }
+                @default {
+                  {{ presentationText().otherCategory }}
+                }
+              }
+            </td>
             <td class="app-num">{{ category.score ?? '—' }}</td>
             <td class="app-num">{{ category.weight ?? '—' }}</td>
           </tr></ng-template
@@ -132,6 +165,16 @@
     @if (profile(); as result) {
       <details class="app-card app-source-details">
         <summary>{{ detailText().sourceFields }}</summary>
+        <p class="app-muted">{{ text().karmaProfileHint }}</p>
+        <p class="app-muted">{{ text().karmaApiTimeHint }}</p>
+        <dl class="app-facts">
+          @for (category of result.categories; track category.name) {
+            <div>
+              <dt>{{ category.name }}</dt>
+              <dd>{{ category.score ?? '—' }} · {{ category.weight ?? '—' }}</dd>
+            </div>
+          }
+        </dl>
         <dl class="app-facts">
           <div>
             <dt>car_id</dt>

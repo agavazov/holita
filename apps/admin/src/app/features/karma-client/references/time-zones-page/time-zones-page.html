@@ -2,7 +2,7 @@
   <holita-page-header
     [title]="text().karmaTimeZones"
     [eyebrow]="text().karmaAdministrationTitle"
-    [description]="presentationText().readOnly"
+    [description]="presentationText().timeZonesPurpose"
   >
     <button
       headerActions
@@ -15,6 +15,7 @@
       {{ error() ? text().retry : text().refresh }}
     </button>
   </holita-page-header>
+  <p class="app-muted">{{ presentationText().readOnly }}</p>
   <form
     [attr.aria-label]="text().karmaSearch + ': ' + text().karmaTimeZones"
     class="app-card app-form-section"
@@ -51,14 +52,24 @@
     >
       <ng-template #header
         ><tr>
-          <th scope="col">{{ text().karmaTimeZoneId }}</th>
           <th scope="col">{{ text().karmaReferenceName }}</th>
+          <th scope="col">{{ presentationText().technicalDetails }}</th>
         </tr></ng-template
       >
       <ng-template #body let-item
         ><tr>
-          <td>{{ item.id }}</td>
           <td>{{ item.name || '—' }}</td>
+          <td>
+            <details class="app-source-details">
+              <summary>{{ presentationText().technicalDetails }}</summary>
+              <dl class="app-facts">
+                <div>
+                  <dt>{{ text().karmaTimeZoneId }}</dt>
+                  <dd>{{ item.id }}</dd>
+                </div>
+              </dl>
+            </details>
+          </td>
         </tr></ng-template
       >
       <ng-template #emptymessage

@@ -105,7 +105,11 @@
     <p role="status">{{ text().karmaHistoryLoading }}</p>
   }
   @if (car() && !invalidFilters()) {
-    <p class="app-muted">{{ text().karmaTripsOrder }}</p>
+    <details class="app-source-details">
+      <summary>{{ presentationText().technicalDetails }}</summary>
+      <p>{{ text().karmaTripsOrder }}</p>
+      <p>{{ text().karmaTripsFilterHint }}</p>
+    </details>
     <holita-table-panel
       #panel
       [heading]="text().karmaTrips"
@@ -127,7 +131,6 @@
           ><tr>
             <th class="app-col-identity">{{ text().karmaStartDate }}</th>
             <th>{{ text().karmaStopDate }}</th>
-            <th class="app-table-merged-column">{{ text().karmaTripId }}</th>
             <th>{{ presentationText().distance }}</th>
             <th class="app-col-actions">{{ text().actions }}</th>
           </tr></ng-template
@@ -144,9 +147,6 @@
                 >
                   {{ row.startDate ?? '—' }}
                 </button>
-                <span class="app-table-mobile-meta"
-                  >{{ text().karmaTripId }}: {{ row.id ?? '—' }}</span
-                >
                 <div class="app-table-mobile-actions">
                   <holita-row-actions
                     [actions]="actions()"
@@ -157,8 +157,14 @@
               </div>
             </td>
             <td>{{ row.stopDate ?? '—' }}</td>
-            <td class="app-table-merged-column">{{ row.id ?? '—' }}</td>
-            <td>{{ row.tripDistance ?? '—' }}</td>
+            <td>
+              {{ row.tripDistance ?? '—' }}
+              @if (row.tripDistance !== null) {
+                <span class="app-muted" [attr.title]="presentationText().unitHint">{{
+                  presentationText().unitHint
+                }}</span>
+              }
+            </td>
             <td class="app-col-actions">
               <holita-row-actions
                 [actions]="actions()"

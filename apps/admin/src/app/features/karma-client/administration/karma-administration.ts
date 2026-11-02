@@ -22,7 +22,7 @@ import { ApiInfoPage } from '../references/api-info-page/api-info-page';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'app-view' },
   template: `
-    <nav [attr.aria-label]="text().karmaAdministration">
+    <nav [attr.aria-label]="text().karmaClient + ': ' + text().karmaAdministration">
       <ul class="app-route-nav" role="list">
         @for (tab of tabs(); track tab.path) {
           <li>
