@@ -20,6 +20,7 @@
   "rolesPurpose": "Look up the roles and their descriptions in Karma.",
   "projectsPurpose": "Find a project in the connected Karma account.",
   "timeZonesPurpose": "Look up a time zone used in Karma.",
+  "apiInfoPurpose": "See which Karma API version is in use.",
   "unitHint": "Unit not confirmed.",
   "eventTime": "Event time (UTC)",
   "source": "Source: Karma API",
