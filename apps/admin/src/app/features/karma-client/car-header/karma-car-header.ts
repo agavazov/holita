@@ -1,7 +1,4 @@
 import {
-  afterNextRender,
-  type ElementRef,
-  viewChild,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -137,14 +134,7 @@ export class KarmaCarHeader {
     fragment: 'ignored',
   };
 
-  private readonly navigation = viewChild<ElementRef<HTMLElement>>('navigation');
-
   constructor() {
-    afterNextRender(() => {
-      this.navigation()
-        ?.nativeElement.querySelector('[aria-current="page"]')
-        ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-    });
     effect((onCleanup) => {
       this.api.initialize(this.language());
       const read = this.api.watch();
