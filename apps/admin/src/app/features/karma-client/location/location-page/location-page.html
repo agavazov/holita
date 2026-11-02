@@ -19,7 +19,6 @@
     <p-message severity="warn">{{ text().karmaTruckNotFound }}</p-message>
   }
   @if (car()) {
-    <p class="app-muted">{{ text().karmaLocationHint }}</p>
     @if (loaded() && !location() && !error()) {
       <p role="status">{{ text().karmaNoLocation }}</p>
     }
@@ -28,17 +27,12 @@
         pageType="location"
         [language]="language()"
         [origin]="coordinates()"
-        [identity]="
-          (point.carNumber || text().karmaCarId + ' ' + carId()) +
-          ' · ' +
-          text().karmaMessageId +
-          ': ' +
-          (point.messageId ?? '—')
-        "
+        [identity]="point.carNumber || car()?.carNumber || text().karmaLocation"
         [originTime]="point.edt"
       />
       <details class="app-card app-source-details">
         <summary>{{ mapText().sourceDetails }}</summary>
+        <p class="app-muted">{{ text().karmaLocationHint }}</p>
         <dl class="app-facts">
           <div>
             <dt>{{ text().licensePlate }}</dt>

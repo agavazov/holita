@@ -16,5 +16,13 @@
   "deviceSettings": "Device settings",
   "dailyReport": "Daily report",
   "switchTruck": "Switch truck",
-  "switcherUnavailable": "Truck list unavailable. You can keep using this truck."
+  "switcherUnavailable": "Truck list unavailable. You can keep using this truck.",
+  "overviewPurpose": "Review this truck’s trips and distance for a day.",
+  "dailyReportPurpose": "Choose a day to review its report and compare it with another day.",
+  "tripsPurpose": "Find a trip and open it to see its details.",
+  "locationPurpose": "See the truck’s last known location.",
+  "eventsPurpose": "Review events recorded by the truck’s device.",
+  "edataPurpose": "Review the truck’s measurements or open an individual record.",
+  "diagnosticsPurpose": "Review reported faults and see what to do next.",
+  "drivingProfilePurpose": "Review driving scores by category for the selected period."
 }

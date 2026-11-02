@@ -1,7 +1,11 @@
 @if (baseline() || comparisonLoading() || comparisonError()) {
   <section class="app-view" [attr.aria-label]="text().comparison">
     <h3 class="app-card__title">{{ text().comparison }}</h3>
-    <p class="app-muted">{{ text().comparisonHint }}</p>
+    <p class="app-muted">{{ text().comparisonIntro }}</p>
+    <details class="app-source-details">
+      <summary>{{ sourceText().sourceDetails }}</summary>
+      <p>{{ text().comparisonHint }}</p>
+    </details>
     <div class="report-review__sources">
       <section
         class="app-card app-stack report-review__source"
@@ -9,21 +13,26 @@
       >
         <h4 class="app-card__title">{{ text().selectedDay }} · {{ day(report().day) }}</h4>
         <p>{{ sourceText().states[report().state] }}</p>
-        <p>{{ sourceText().retrieval }}: {{ sourceText().retrievalStates[report().retrieval] }}</p>
-        <p>
-          {{ sourceText().retrievedAt }}:
-          <time [attr.datetime]="report().retrievedAt">{{ report().retrievedAt }}</time>
-        </p>
         @if (report().reason !== 'NONE') {
           <p class="app-muted">{{ sourceText().reasons[report().reason] }}</p>
         }
-        <holita-source-context
-          [language]="language()"
-          [provenance]="selectedPresentation().provenance"
-          [period]="selectedPresentation().period"
-          [coverage]="selectedPresentation().coverage"
-          [compact]="true"
-        />
+        <details class="app-source-details">
+          <summary>{{ sourceText().sourceDetails }}</summary>
+          <p>
+            {{ sourceText().retrieval }}: {{ sourceText().retrievalStates[report().retrieval] }}
+          </p>
+          <p>
+            {{ sourceText().retrievedAt }}:
+            <time [attr.datetime]="report().retrievedAt">{{ report().retrievedAt }}</time>
+          </p>
+          <holita-source-context
+            [language]="language()"
+            [provenance]="selectedPresentation().provenance"
+            [period]="selectedPresentation().period"
+            [coverage]="selectedPresentation().coverage"
+            [compact]="true"
+          />
+        </details>
       </section>
       <section
         class="app-card app-stack report-review__source"
@@ -49,22 +58,27 @@
         }
         @if (baseline(); as data) {
           <p>{{ day(data.day) }} · {{ sourceText().states[data.state] }}</p>
-          <p>{{ sourceText().retrieval }}: {{ sourceText().retrievalStates[data.retrieval] }}</p>
-          <p>
-            {{ sourceText().retrievedAt }}:
-            <time [attr.datetime]="data.retrievedAt">{{ data.retrievedAt }}</time>
-          </p>
           @if (data.reason !== 'NONE') {
             <p class="app-muted">{{ sourceText().reasons[data.reason] }}</p>
           }
           @if (baselinePresentation(); as presentation) {
-            <holita-source-context
-              [language]="language()"
-              [provenance]="presentation.provenance"
-              [period]="presentation.period"
-              [coverage]="presentation.coverage"
-              [compact]="true"
-            />
+            <details class="app-source-details">
+              <summary>{{ sourceText().sourceDetails }}</summary>
+              <p>
+                {{ sourceText().retrieval }}: {{ sourceText().retrievalStates[data.retrieval] }}
+              </p>
+              <p>
+                {{ sourceText().retrievedAt }}:
+                <time [attr.datetime]="data.retrievedAt">{{ data.retrievedAt }}</time>
+              </p>
+              <holita-source-context
+                [language]="language()"
+                [provenance]="presentation.provenance"
+                [period]="presentation.period"
+                [coverage]="presentation.coverage"
+                [compact]="true"
+              />
+            </details>
           }
         } @else if (!comparisonLoading() && !comparisonError()) {
           <p class="app-muted">{{ text().noBaseline }}</p>
@@ -218,4 +232,14 @@
       </button>
     </div>
   </div>
+</details>
+
+<details class="app-source-details">
+  <summary>{{ sourceText().sourceDetails }}</summary>
+  <holita-source-context
+    [language]="language()"
+    [provenance]="selectedPresentation().provenance"
+    [period]="selectedPresentation().period"
+    [coverage]="selectedPresentation().coverage"
+  />
 </details>

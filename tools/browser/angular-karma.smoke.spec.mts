@@ -137,23 +137,23 @@ test('opens Karma trucks, trips, diagnostics and filtered eData through Gateway 
     truckNavigation.getByRole('link', { name: 'Overview', exact: true }),
   ).toHaveAttribute('aria-current', 'page');
   const report = page.locator('holita-daily-report');
-  const dayInput = report.getByLabel('Source-local day', { exact: true });
+  const dayInput = report.getByLabel('Day (truck’s time zone)', { exact: true });
   const distance = report.locator('holita-kpi-tile').filter({ hasText: 'Total distance' });
   const count = report.locator('holita-kpi-tile').filter({ hasText: 'Trip count' });
   const maximum = report.locator('holita-kpi-tile').filter({ hasText: 'Maximum trip speed' });
   await expect(dayInput).toHaveValue(app.karma.reportDay);
-  await expect(distance.locator('.kpi-tile__value')).toHaveText(/^21\s*source distance units$/);
+  await expect(distance.locator('.kpi-tile__value')).toHaveText(/^21\s*unit not confirmed$/);
   await dayInput.fill(app.karma.reportDay);
-  await report.getByRole('button', { name: 'Apply day', exact: true }).click();
+  await report.getByRole('button', { name: 'Show day', exact: true }).click();
   const selectedDayUrl = `${app.url}/en/karma-client/cars/41${truckContext}&day=${app.karma.reportDay}`;
   await expect(page).toHaveURL(selectedDayUrl);
   await expect(count.locator('.kpi-tile__value')).toHaveText(/^2\s*trips$/);
-  await expect(maximum.locator('.kpi-tile__value')).toHaveText(/^51\s*source speed units$/);
+  await expect(maximum.locator('.kpi-tile__value')).toHaveText(/^51\s*unit not confirmed$/);
   await expect(report.getByRole('heading', { name: /^Loaded trips/ })).toBeVisible();
   await expect(report.locator('holita-table-panel tbody tr')).toHaveCount(2);
   await expect(
     report.getByRole('region', { name: 'Last reported position', exact: true }),
-  ).toContainText('independent of the selected historical report day');
+  ).toContainText('may be from another day');
   await expect(report.locator('holita-source-context')).toContainText('Karma API');
   await expect(report.locator('holita-source-context')).toContainText('Not assessed');
   await expect(report.getByText('Example data', { exact: true })).toHaveCount(0);
@@ -171,7 +171,7 @@ test('opens Karma trucks, trips, diagnostics and filtered eData through Gateway 
   const tripTrigger = report.getByRole('button', { name: /^View trip 4000000121 ·/ });
   await tripTrigger.click();
   await expect(page).toHaveURL(`${selectedDayUrl}#trip-4000000121`);
-  const tripDrawer = page.getByRole('dialog', { name: 'Trip ID 4000000121', exact: true });
+  const tripDrawer = page.getByRole('dialog', { name: 'Trip details', exact: true });
   await expect(tripDrawer).toBeVisible();
   await expect(page.locator('holita-map-preview')).toHaveCount(2);
   expect(await mountedOverviewMap.evaluate((element) => element.isConnected)).toBe(true);
@@ -186,7 +186,7 @@ test('opens Karma trucks, trips, diagnostics and filtered eData through Gateway 
   ).toHaveAttribute('aria-pressed', 'true');
   await tripDrawer
     .locator('holita-trip-details')
-    .getByText('Source fields', { exact: true })
+    .getByText('Source details', { exact: true })
     .click();
   const tripSource = tripDrawer.locator('holita-trip-details details.trip-details__source');
   await expect(tripSource).toHaveJSProperty('open', true);
@@ -206,7 +206,7 @@ test('opens Karma trucks, trips, diagnostics and filtered eData through Gateway 
   await truckNavigation.getByRole('link', { name: 'Overview', exact: true }).click();
   await expect(page).toHaveURL(selectedDayUrl);
   await expect(dayInput).toHaveValue(app.karma.reportDay);
-  await expect(distance.locator('.kpi-tile__value')).toHaveText(/^21\s*source distance units$/);
+  await expect(distance.locator('.kpi-tile__value')).toHaveText(/^21\s*unit not confirmed$/);
 
   await expect(overviewMap.getByRole('button', { name: 'Hide map', exact: true })).toBeVisible();
   await page.reload();
@@ -216,20 +216,20 @@ test('opens Karma trucks, trips, diagnostics and filtered eData through Gateway 
   await expect(overviewMap.getByRole('button', { name: 'Show map', exact: true })).toBeVisible();
 
   await dayInput.fill('2026-01-02');
-  await report.getByRole('button', { name: 'Apply day', exact: true }).click();
+  await report.getByRole('button', { name: 'Show day', exact: true }).click();
   await expect(count.locator('.kpi-tile__value')).toHaveText(/^0\s*trips$/);
-  await expect(distance.locator('.kpi-tile__value')).toHaveText(/^0\s*source distance units$/);
+  await expect(distance.locator('.kpi-tile__value')).toHaveText(/^0\s*unit not confirmed$/);
   await expect(maximum.locator('.kpi-tile__value')).toHaveText('—');
   await expect(report.getByText('No loaded trips', { exact: true })).toBeVisible();
 
   await dayInput.fill('2026-01-01');
-  await report.getByRole('button', { name: 'Apply day', exact: true }).click();
+  await report.getByRole('button', { name: 'Show day', exact: true }).click();
   await expect(count.locator('.kpi-tile__value')).toHaveText(/^120\s*trips$/);
-  await expect(distance).toContainText('Loaded subset');
-  await expect(report.getByText('Partially available report', { exact: true })).toBeVisible();
+  await expect(distance).toContainText('Some data missing');
+  await expect(report.getByText('Some day data is missing', { exact: true })).toBeVisible();
   app.karma.setFailed(true);
   await dayInput.fill(app.karma.reportDay);
-  await report.getByRole('button', { name: 'Apply day', exact: true }).click();
+  await report.getByRole('button', { name: 'Show day', exact: true }).click();
   await expect(report.getByText('Report unavailable', { exact: true })).toBeVisible();
   await expect(report.locator('holita-source-context')).toContainText('Karma API');
   await expect(report.getByText('Example data', { exact: true })).toHaveCount(0);
@@ -238,7 +238,7 @@ test('opens Karma trucks, trips, diagnostics and filtered eData through Gateway 
   await report.getByRole('button', { name: 'Yesterday', exact: true }).click();
   await expect(page).toHaveURL(`${app.url}/en/karma-client/cars/41${truckContext}`);
   await expect(dayInput).toHaveValue(app.karma.reportDay);
-  await expect(distance.locator('.kpi-tile__value')).toHaveText(/^21\s*source distance units$/);
+  await expect(distance.locator('.kpi-tile__value')).toHaveText(/^21\s*unit not confirmed$/);
   const summary = page.getByRole('region', { name: 'Truck summary', exact: true });
   await expect(summary).toContainText('Fixture project');
   await expect(summary).toContainText('Europe/Sofia');
@@ -369,7 +369,7 @@ test('opens Karma trucks, trips, diagnostics and filtered eData through Gateway 
     'AdminKarmaUsers',
   ]);
   const administration = page.getByRole('navigation', {
-    name: 'Administration',
+    name: 'Karma Client: Administration',
     exact: true,
   });
   await expect(administration.getByRole('link', { name: 'Users', exact: true })).toHaveAttribute(

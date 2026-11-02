@@ -1,21 +1,22 @@
 {
   "summary": "Trip summary",
-  "start": "Source start time",
-  "stop": "Source end time",
+  "start": "Start",
+  "stop": "End",
   "distance": "Distance",
   "nightDistance": "Night distance",
-  "duration": "Source duration",
-  "maximumSpeed": "Maximum source speed",
+  "duration": "Duration",
+  "maximumSpeed": "Maximum speed",
   "startOdometer": "Start odometer",
   "stopOdometer": "End odometer",
   "completion": "Activity / completion",
   "unconfirmedState": "Meaning not confirmed",
   "sourceActivity": "Source activity value (trip_active)",
   "units": {
-    "distance": "raw source distance units (unconfirmed)",
-    "duration": "raw source duration units (unconfirmed)",
-    "speed": "raw source speed units (unconfirmed)",
-    "odometer": "raw source odometer units (unconfirmed)"
+    "distance": "unit not confirmed",
+    "duration": "unit not confirmed",
+    "speed": "unit not confirmed",
+    "odometer": "unit not confirmed"
   },
-  "sourceHint": "Times retain the source text. Physical units and activity/completion meanings are unconfirmed."
+  "sourceHint": "Times retain the source text. Physical units and activity/completion meanings are unconfirmed.",
+  "purpose": "Review the times, distance and recorded positions for this trip."
 }

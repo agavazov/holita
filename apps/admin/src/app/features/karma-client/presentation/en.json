@@ -13,7 +13,37 @@
   "weight": "Weight",
   "filterHint": "Leave dates empty to use all available history.",
   "utcHint": "Dates and times are in UTC. Leave dates empty to use all available history.",
-  "clockHint": "Dates and times follow the Karma account clock.",
+  "clockHint": "Karma has not confirmed the time zone for these dates.",
   "technicalHint": "Optional source identifiers and request size. Most searches do not need these fields.",
-  "readOnly": "Account information is read-only. Changes are managed in Karma."
+  "readOnly": "Account information is read-only. Changes are managed in Karma.",
+  "usersPurpose": "Find a user and view their Karma account details.",
+  "rolesPurpose": "Look up the roles and their descriptions in Karma.",
+  "projectsPurpose": "Find a project in the connected Karma account.",
+  "timeZonesPurpose": "Look up a time zone used in Karma.",
+  "unitHint": "Unit not confirmed.",
+  "eventTime": "Event time (UTC)",
+  "source": "Source: Karma API",
+  "retrievedAt": "Data loaded at (UTC)",
+  "retrieval": "Data loading",
+  "retrievalStates": {
+    "NOT_STARTED": "Not started",
+    "COMPLETE": "Complete",
+    "PARTIAL": "Partial",
+    "UNAVAILABLE": "Unavailable"
+  },
+  "coverageHint": "It has not been checked whether GPS records cover the whole trip.",
+  "observed": "Values were recorded by Karma.",
+  "profileCategories": {
+    "accelerations": "Acceleration",
+    "brakes": "Braking",
+    "speed_bumps": "Speed bumps",
+    "bypassing": "Bypassing",
+    "roundabout": "Roundabouts",
+    "lane_change": "Lane changes",
+    "turns": "Turns",
+    "off_road": "Off road",
+    "speed": "Speed"
+  },
+  "otherCategory": "Other category",
+  "positionsLoaded": "GPS records loaded"
 }

@@ -15,7 +15,7 @@
   "loading": "Loading faults…",
   "unavailable": "Faults cannot be loaded right now. Please try again.",
   "incompatible": "The received data could not be read. The truck condition has not been confirmed.",
-  "empty": "No decoded faults in the loaded records",
+  "empty": "No readable faults in the loaded records",
   "emptyHint": "This does not confirm that the truck is fault-free. You can view older records or request a check.",
   "scanned": "Source rows scanned",
   "retrieved": "Retrieved at (UTC)",

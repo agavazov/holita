@@ -13,12 +13,7 @@
     <div class="app-page-actions">
       <p-tag [value]="text().states[report().state]" [severity]="severity()" />
     </div>
-    <holita-source-context
-      [language]="language()"
-      [provenance]="provenance()"
-      [period]="period()"
-      [coverage]="coverage()"
-    />
+
     @if (report().reason !== 'NONE') {
       <p-message [severity]="report().state === 'UNAVAILABLE' ? 'error' : 'warn'">
         {{ text().reasons[report().reason] }}
@@ -45,7 +40,6 @@
         <dd>{{ report().loadedTrips }}</dd>
       </div>
     </dl>
-    <p class="app-muted">{{ text().selectionHint }}</p>
     <dl class="app-facts" [attr.aria-label]="text().metrics">
       @for (row of metrics(); track row.key) {
         <div>
@@ -55,22 +49,46 @@
             @if (row.metric.value !== null) {
               <span> {{ text().units[row.metric.unit] }}</span>
             }
-            <p>{{ text().availability[row.metric.availability] }}</p>
-            @if (row.metric.requiredInputs > 0) {
-              <p class="app-muted">
-                {{ text().availableInputs }}: {{ row.metric.availableInputs }} /
-                {{ row.metric.requiredInputs }}
-              </p>
-            }
+            <span
+              tabindex="0"
+              role="note"
+              [attr.aria-label]="
+                text().availability[row.metric.availability] +
+                ' · ' +
+                text().availableInputs +
+                ': ' +
+                row.metric.availableInputs +
+                '/' +
+                row.metric.requiredInputs
+              "
+              [attr.title]="
+                text().availability[row.metric.availability] +
+                ' · ' +
+                text().availableInputs +
+                ': ' +
+                row.metric.availableInputs +
+                '/' +
+                row.metric.requiredInputs
+              "
+              >ⓘ</span
+            >
           </dd>
         </div>
       }
     </dl>
-    <p class="app-muted">{{ text().unitsHint }}</p>
-    <p class="app-muted">{{ text().positionCoverageHint }}</p>
     <details class="app-source-details">
       <summary>{{ text().sourceDetails }}</summary>
       <div class="app-view">
+        <holita-source-context
+          [language]="language()"
+          [provenance]="provenance()"
+          [period]="period()"
+          [coverage]="coverage()"
+        />
+        <p class="app-muted">{{ text().selectionHint }}</p>
+        <p class="app-muted">{{ text().unitsHint }}</p>
+        <p class="app-muted">{{ text().positionCoverageHint }}</p>
+
         <h3>{{ text().calculations }}</h3>
         <dl class="app-facts">
           <div>

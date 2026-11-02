@@ -1,6 +1,6 @@
 import { applicationConfig, type Meta, type StoryObj } from '@storybook/angular-vite';
 import { fixtureKarmaTrip } from '../../../../../storybook/karma-fixtures';
-import { onFrame } from '../../../../../storybook/story-config';
+import { onFrame, storyLanguage } from '../../../../../storybook/story-config';
 import { AdminConfig } from '../../../../core/config/admin-config';
 import { TripDetails } from './trip-details';
 
@@ -9,7 +9,11 @@ const meta: Meta<TripDetails> = {
   component: TripDetails,
   decorators: [applicationConfig({ providers: [{ provide: AdminConfig, useValue: {} }] }), onFrame],
   tags: ['!autodocs'],
-  args: { trip: fixtureKarmaTrip },
+  args: { trip: fixtureKarmaTrip, showMap: true },
+  render: (args, context) => ({
+    props: { ...args, language: storyLanguage(context.globals) },
+    template: `<holita-trip-details [language]="language" [trip]="trip" [showMap]="showMap" />`,
+  }),
 };
 export default meta;
 type Story = StoryObj<TripDetails>;

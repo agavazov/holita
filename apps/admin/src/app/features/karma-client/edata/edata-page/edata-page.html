@@ -57,9 +57,7 @@
       </div>
       <details
         class="app-source-details"
-        [open]="
-          !!(fieldErrors().size || fieldErrors().parameters || form.controls.parameters.value)
-        "
+        [open]="!!(fieldErrors().size || fieldErrors().parameters)"
       >
         <summary>{{ presentationText().technicalDetails }}</summary>
         <p class="app-muted">{{ presentationText().technicalHint }}</p>
@@ -163,12 +161,12 @@
       <holita-measurement-workspace
         [language]="language()"
         [identity]="(car()?.carNumber ?? carId()) + ' · eData'"
-        [scopeHint]="measurementScope()"
+        [scopeHint]="measurementText().scopeHint"
         [channels]="measurementChannels()"
         [records]="measurementRecords()"
         [selectedChannelKey]="measurementChannel()"
         [selectedRecordKey]="measurementRecord()"
-        [provenance]="measurementProvenance()"
+        [provenance]="null"
         [coverage]="measurementCoverage()"
         [loading]="loading()"
         [error]="error() ? text().karmaUnavailable : null"
@@ -177,7 +175,24 @@
         (retry)="refresh()"
       />
       <details class="app-source-details">
-        <summary>{{ measurementText().calculations }}</summary>
+        <summary>{{ presentationText().technicalDetails }}</summary>
+        <p>{{ measurementScope() }}</p>
+        <p>{{ presentationText().source }} · {{ presentationText().observed }}</p>
+        <p>
+          {{ presentationText().retrievedAt }}: {{ measurementProvenance()?.retrievedAt ?? '—' }}
+        </p>
+        <p>
+          {{ presentationText().retrieval }}:
+          {{ presentationText().retrievalStates[measurementCoverage().retrieval] }}
+        </p>
+        <p>{{ presentationText().coverageHint }}</p>
+        <p>{{ presentationText().positionsLoaded }}: {{ measurementCoverage().positionsLoaded }}</p>
+        <p>{{ measurementText().precisionNotes.unitGate }}</p>
+        <p>{{ measurementText().precisionNotes.counterGate }}</p>
+        <p>{{ measurementText().precisionNotes.rateGate }}</p>
+        <p>{{ measurementText().precisionNotes.voltageGate }}</p>
+        <p>{{ measurementText().precisionNotes.envelopeGate }}</p>
+        <h3>{{ measurementText().calculations }}</h3>
         <p>{{ measurementText().calculationGate }}</p>
       </details>
     } @else {
@@ -200,15 +215,13 @@
         >
           <ng-template #header>
             <tr>
-              <th class="app-table-merged-column">{{ text().karmaEdtUtc }}</th>
-              <th class="app-col-identity">{{ text().karmaMessageId }}</th>
+              <th class="app-col-identity">{{ presentationText().eventTime }}</th>
               <th>{{ text().karmaParameters }}</th>
               <th class="app-col-actions">{{ text().actions }}</th>
             </tr>
           </ng-template>
           <ng-template #body let-row>
             <tr>
-              <td class="app-table-merged-column">{{ row.eventTimeUtc ?? '—' }}</td>
               <td class="app-col-identity">
                 <div class="app-table-identity">
                   <button
@@ -217,11 +230,8 @@
                     (click)="messagePanel.run('view', [record(row)], $event.currentTarget)"
                     [attr.aria-label]="text().karmaViewMessage + ' ' + row.id"
                   >
-                    {{ row.id }}
+                    {{ row.eventTimeUtc ?? '—' }}
                   </button>
-                  <span class="app-table-mobile-meta"
-                    >{{ text().karmaEdtUtc }}: {{ row.eventTimeUtc ?? '—' }}</span
-                  >
                   <div class="app-table-mobile-actions">
                     <holita-row-actions
                       [actions]="actions()"
@@ -244,7 +254,10 @@
         </p-table>
       </holita-table-panel>
     }
-    <p class="app-muted">{{ text().karmaEdataOrder }}</p>
+    <details class="app-source-details">
+      <summary>{{ presentationText().technicalDetails }}</summary>
+      <p>{{ text().karmaEdataOrder }}</p>
+    </details>
     <div class="app-pagination" [attr.aria-label]="text().karmaPagination" role="group">
       <p role="status">{{ text().karmaShownRecords }}: {{ page()?.items?.length ?? 0 }}</p>
       <div class="app-filter-actions">
@@ -284,17 +297,12 @@
 @if (selected(); as row) {
   <holita-route-drawer
     [title]="text().karmaEdataDetails"
-    [subtitle]="row.id"
     [closeLink]="null"
     size="lg"
     (closeRequest)="selected.set(null)"
   >
     <section class="app-form-section" [attr.aria-label]="detailText().summary">
       <dl class="app-facts">
-        <div>
-          <dt>{{ text().karmaMessageId }}</dt>
-          <dd>{{ row.id }}</dd>
-        </div>
         <div>
           <dt>{{ text().karmaEdtUtc }}</dt>
           <dd>{{ row.eventTimeUtc ?? '—' }}</dd>
@@ -312,7 +320,7 @@
         pageType="edata-message"
         [language]="language()"
         [origin]="selectedCoordinates()"
-        [identity]="row.carNumber + ' · ' + row.id"
+        [identity]="row.carNumber"
         [originTime]="row.eventTimeUtc"
       />
     </section>
@@ -326,21 +334,25 @@
       >
         <ng-template #header
           ><tr>
-            <th class="parameter-id">ID</th>
             <th>{{ text().description }}</th>
             <th class="parameter-value">{{ text().karmaValue }}</th>
           </tr></ng-template
         >
         <ng-template #body let-parameter
           ><tr>
-            <td>{{ parameter.id }}</td>
-            <td>{{ parameter.description ?? '—' }}</td>
+            <td>
+              {{ parameter.description ?? '—' }}
+              <details class="app-source-details">
+                <summary>{{ presentationText().technicalDetails }}</summary>
+                ID: {{ parameter.id }}
+              </details>
+            </td>
             <td>{{ parameter.value ?? '—' }}</td>
           </tr></ng-template
         >
         <ng-template #emptymessage
           ><tr>
-            <td colspan="3">{{ text().karmaNoParameters }}</td>
+            <td colspan="2">{{ text().karmaNoParameters }}</td>
           </tr></ng-template
         >
       </p-table>
