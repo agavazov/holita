@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { fleetGroupColorDb } from '../../database/enums.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import {
   dateOrNull,
@@ -8,7 +9,7 @@ import {
   rowsOf,
   text,
   textOrNull,
-  oneOf,
+  databaseEnum,
 } from '../../database/sql.js';
 import type {
   FleetDailyDistancePoint,
@@ -16,7 +17,6 @@ import type {
   FleetOverview,
 } from '../../generated/graphql/types.js';
 import { Prisma } from '../../generated/prisma/client.js';
-import { FleetGroupColor } from '../../generated/prisma/enums.js';
 import type { FleetScope } from '../../validation.js';
 import { serviceTasksWithUrgency } from '../service-tasks/service-urgency.sql.js';
 import {
@@ -33,7 +33,7 @@ function dailyDistanceSql(
   days: number,
   vehicleId: string | undefined,
 ): Prisma.Sql {
-  const trips = fleetTable(schema, 'Trip');
+  const trips = fleetTable(schema, 'trip');
   return Prisma.sql`WITH clock AS (${vehicleDataClockSql(schema, scope)}), settings AS (${settingsSql(schema, scope)}), dates AS (
     SELECT generate_series((clock."asOf" AT TIME ZONE settings."timeZone")::date - (${days}::int - 1),
       (clock."asOf" AT TIME ZONE settings."timeZone")::date, INTERVAL '1 day')::date AS "date"
@@ -83,10 +83,10 @@ export class OverviewRepository {
 
   overview(scope: FleetScope, now: Date): Promise<FleetOverview> {
     const { schema } = this.prisma;
-    const vehicles = fleetTable(schema, 'Vehicle');
-    const groups = fleetTable(schema, 'VehicleGroup');
-    const events = fleetTable(schema, 'FleetEvent');
-    const trips = fleetTable(schema, 'Trip');
+    const vehicles = fleetTable(schema, 'vehicle');
+    const groups = fleetTable(schema, 'vehicleGroup');
+    const events = fleetTable(schema, 'fleetEvent');
+    const trips = fleetTable(schema, 'trip');
     const facts = Prisma.sql`WITH clock AS (${vehicleDataClockSql(schema, scope)}), settings AS (${settingsSql(schema, scope)}), facts AS (
       SELECT f.*, ${vehicleActivitySql(Prisma.sql`settings."notReportingHours"`)} AS "activity"
       FROM (${vehicleFactsSql(schema, scope)}) f CROSS JOIN clock CROSS JOIN settings
@@ -97,14 +97,14 @@ export class OverviewRepository {
         const summaryRows: unknown =
           await transaction.$queryRaw(Prisma.sql`${facts}, tasks AS (${serviceTasksWithUrgency(schema, scope, today)})
         SELECT clock."asOf" AS "dataAsOf", (${today})::text AS "businessDate",
-          (SELECT count(*)::int FROM facts WHERE "status"='ACTIVE') AS "activeVehicles",
+          (SELECT count(*)::int FROM facts WHERE "status"='active') AS "activeVehicles",
           (SELECT count(*)::int FROM facts WHERE "activity"='MOVING') AS "movingVehicles",
           (SELECT count(*)::int FROM facts WHERE "activity"='NOT_CONNECTED') AS "notReportingVehicles",
           (SELECT coalesce(sum(t."distanceKm"),0)::float8 FROM ${trips} t
             WHERE t."tenantId"=${scope.tenantId}::uuid AND t."branchId"=${scope.branchId}::uuid
               AND t."startedAt" <= clock."asOf" AND (t."startedAt" AT TIME ZONE (SELECT "timeZone" FROM settings))::date=(clock."asOf" AT TIME ZONE (SELECT "timeZone" FROM settings))::date) AS "distanceTodayKm",
-          (SELECT count(*)::int FROM ${events} e WHERE e."tenantId"=${scope.tenantId}::uuid AND e."branchId"=${scope.branchId}::uuid AND e."alertStatus"::text='OPEN' AND e."severity"::text='CRITICAL') AS "openCriticalAlerts",
-          (SELECT count(*)::int FROM tasks t JOIN ${vehicles} v ON v."id"=t."vehicleId" AND v."tenantId"=${scope.tenantId}::uuid AND v."branchId"=${scope.branchId}::uuid WHERE t."status"='PLANNED' AND t."urgency"='OVERDUE' AND v."status"::text <> 'INACTIVE') AS "overdueService"
+          (SELECT count(*)::int FROM ${events} e WHERE e."tenantId"=${scope.tenantId}::uuid AND e."branchId"=${scope.branchId}::uuid AND e."alertStatus"::text='open' AND e."severity"::text='critical') AS "openCriticalAlerts",
+          (SELECT count(*)::int FROM tasks t JOIN ${vehicles} v ON v."id"=t."vehicleId" AND v."tenantId"=${scope.tenantId}::uuid AND v."branchId"=${scope.branchId}::uuid WHERE t."status"='planned' AND t."urgency"='OVERDUE' AND v."status"::text <> 'inactive') AS "overdueService"
         FROM clock`);
         const summary = rowsOf(summaryRows, (row) => ({
           dataAsOf: dateOrNull(row, 'dataAsOf'),
@@ -126,7 +126,7 @@ export class OverviewRepository {
         count(*) FILTER(WHERE f."activity"='MOVING')::int AS "moving",count(*) FILTER(WHERE f."activity"='IDLE')::int AS "idle",
         count(*) FILTER(WHERE f."activity"='PARKED')::int AS "parked",count(*) FILTER(WHERE f."activity"='NOT_CONNECTED')::int AS "notReporting",
         count(*) FILTER(WHERE f."activity"='ASSET')::int AS "asset",count(*) FILTER(WHERE f."activity"='NO_DEVICE')::int AS "noDevice"
-      FROM buckets b LEFT JOIN ${vehicles} v ON v."groupId" IS NOT DISTINCT FROM b."id" AND v."tenantId"=${scope.tenantId}::uuid AND v."branchId"=${scope.branchId}::uuid AND v."status"::text <> 'INACTIVE'
+      FROM buckets b LEFT JOIN ${vehicles} v ON v."groupId" IS NOT DISTINCT FROM b."id" AND v."tenantId"=${scope.tenantId}::uuid AND v."branchId"=${scope.branchId}::uuid AND v."status"::text <> 'inactive'
       LEFT JOIN facts f ON f."id"=v."id"::text GROUP BY b."id",b."name",b."colorToken" ORDER BY b."name" ASC NULLS LAST,b."id" ASC`);
         const activityByGroup: FleetGroupActivity[] = rowsOf(activityRows, (row) => {
           const id = textOrNull(row, 'groupId');
@@ -137,7 +137,7 @@ export class OverviewRepository {
                 : {
                     id,
                     name: text(row, 'name'),
-                    colorToken: oneOf(row, 'colorToken', Object.values(FleetGroupColor)),
+                    colorToken: databaseEnum(row, 'colorToken', fleetGroupColorDb),
                   },
             total: integer(row, 'total'),
             moving: integer(row, 'moving'),

@@ -50,7 +50,7 @@ describe('Service tasks and urgency with PostgreSQL', () => {
         RETURN NEW;
       END $$`);
     await connection.query(
-      'CREATE TRIGGER fail_next_task BEFORE INSERT ON "ServiceTask" FOR EACH ROW EXECUTE FUNCTION fail_next_task()',
+      'CREATE TRIGGER fail_next_task BEFORE INSERT ON "serviceTask" FOR EACH ROW EXECUTE FUNCTION fail_next_task()',
     );
     const module = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PrismaService)

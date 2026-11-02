@@ -10,13 +10,15 @@ datasource db {
 }
 
 enum FleetDistanceUnit {
-  KM
-  MI
+  KM @map("km")
+  MI @map("mi")
+  @@map("fleetDistanceUnit")
 }
 
 enum FleetVolumeUnit {
-  LITRE
-  US_GALLON
+  LITRE @map("litre")
+  US_GALLON @map("usGallon")
+  @@map("fleetVolumeUnit")
 }
 
 model FleetSettings {
@@ -33,156 +35,171 @@ model FleetSettings {
   updatedAt         DateTime          @updatedAt @db.Timestamptz(3)
 
   @@unique([tenantId, branchId])
+  @@map("fleetSettings")
 }
 
 enum FleetVehicleType {
-  TRACTOR
-  RIGID_TRUCK
-  VAN
-  CAR
-  TRAILER
-  OTHER
+  TRACTOR @map("tractor")
+  RIGID_TRUCK @map("rigidTruck")
+  VAN @map("van")
+  CAR @map("car")
+  TRAILER @map("trailer")
+  OTHER @map("other")
+  @@map("fleetVehicleType")
 }
 
 enum FleetFuelType {
-  DIESEL
-  PETROL
-  LPG
-  CNG
-  ELECTRIC
-  HYBRID
+  DIESEL @map("diesel")
+  PETROL @map("petrol")
+  LPG @map("lpg")
+  CNG @map("cng")
+  ELECTRIC @map("electric")
+  HYBRID @map("hybrid")
+  @@map("fleetFuelType")
 }
 
 enum FleetVehicleStatus {
-  ACTIVE
-  IN_WORKSHOP
-  INACTIVE
+  ACTIVE @map("active")
+  IN_WORKSHOP @map("inWorkshop")
+  INACTIVE @map("inactive")
+  @@map("fleetVehicleStatus")
 }
 
 enum FleetDeviceModel {
-  STARLINK_TRACKER
-  STARLINK_SCOUT
-  OTHER
+  STARLINK_TRACKER @map("starlinkTracker")
+  STARLINK_SCOUT @map("starlinkScout")
+  OTHER @map("other")
+  @@map("fleetDeviceModel")
 }
 
 enum FleetDeviceOperationStatus {
-  QUEUED
-  SUBMITTING
-  WAITING
-  COMPLETE
-  TIMED_OUT
-  FAILED
-  UNKNOWN
+  QUEUED @map("queued")
+  SUBMITTING @map("submitting")
+  WAITING @map("waiting")
+  COMPLETE @map("complete")
+  TIMED_OUT @map("timedOut")
+  FAILED @map("failed")
+  UNKNOWN @map("unknown")
+  @@map("fleetDeviceOperationStatus")
 }
 
 enum FleetDeviceOption {
-  CELLULAR_4G
-  SAFETY_SF
-  IRF
-  CAN
-  DRIVER_ID
-  GEOZONES_GO
-  TEMPERATURE_DS
-  ECONNECT
-  WIFI
-  VOICE
-  EXTERNAL_ANTENNA
-  RS232
-  WILIOT
+  CELLULAR_4G @map("cellular4g")
+  SAFETY_SF @map("safetySf")
+  IRF @map("irf")
+  CAN @map("can")
+  DRIVER_ID @map("driverId")
+  GEOZONES_GO @map("geozonesGo")
+  TEMPERATURE_DS @map("temperatureDs")
+  ECONNECT @map("econnect")
+  WIFI @map("wifi")
+  VOICE @map("voice")
+  EXTERNAL_ANTENNA @map("externalAntenna")
+  RS232 @map("rs232")
+  WILIOT @map("wiliot")
+  @@map("fleetDeviceOption")
 }
 
 enum FleetDriverStatus {
-  ACTIVE
-  ON_LEAVE
-  INACTIVE
+  ACTIVE @map("active")
+  ON_LEAVE @map("onLeave")
+  INACTIVE @map("inactive")
+  @@map("fleetDriverStatus")
 }
 
 enum FleetLicenseCategory {
-  B
-  BE
-  C1
-  C1E
-  C
-  CE
-  D1
-  D1E
-  D
-  DE
+  B @map("b")
+  BE @map("be")
+  C1 @map("c1")
+  C1E @map("c1e")
+  C @map("c")
+  CE @map("ce")
+  D1 @map("d1")
+  D1E @map("d1e")
+  D @map("d")
+  DE @map("de")
+  @@map("fleetLicenseCategory")
 }
 
 // Design-system categorical slot, never a colour value.
 enum FleetGroupColor {
-  C1
-  C2
-  C3
-  C4
-  C5
-  C6
-  C7
-  C8
+  C1 @map("c1")
+  C2 @map("c2")
+  C3 @map("c3")
+  C4 @map("c4")
+  C5 @map("c5")
+  C6 @map("c6")
+  C7 @map("c7")
+  C8 @map("c8")
+  @@map("fleetGroupColor")
 }
 
 // DEMO rows come from devices (or the demo seed); MANUAL rows are operator odometer readings.
 enum FleetDataSource {
-  DEMO
-  MANUAL
+  DEMO @map("demo")
+  MANUAL @map("manual")
+  @@map("fleetDataSource")
 }
 
 // The first nine values are the maneuver kinds used by scores and scorecards.
 enum FleetEventKind {
-  HARSH_ACCELERATION
-  HARSH_BRAKING
-  SPEED_BUMP
-  OVERTAKING
-  ROUNDABOUT
-  LANE_CHANGE
-  SHARP_TURN
-  OFF_ROAD
-  SPEEDING
-  IGNITION_ON
-  IGNITION_OFF
-  IDLING
-  LOW_FUEL
-  FUEL_DROP
-  POWER_DISCONNECTED
-  LOW_BACKUP_BATTERY
-  CAN_DISCONNECTED
-  DEVICE_OFFLINE
-  DIAGNOSTIC_TROUBLE_CODE
-  CRASH_DETECTED
+  HARSH_ACCELERATION @map("harshAcceleration")
+  HARSH_BRAKING @map("harshBraking")
+  SPEED_BUMP @map("speedBump")
+  OVERTAKING @map("overtaking")
+  ROUNDABOUT @map("roundabout")
+  LANE_CHANGE @map("laneChange")
+  SHARP_TURN @map("sharpTurn")
+  OFF_ROAD @map("offRoad")
+  SPEEDING @map("speeding")
+  IGNITION_ON @map("ignitionOn")
+  IGNITION_OFF @map("ignitionOff")
+  IDLING @map("idling")
+  LOW_FUEL @map("lowFuel")
+  FUEL_DROP @map("fuelDrop")
+  POWER_DISCONNECTED @map("powerDisconnected")
+  LOW_BACKUP_BATTERY @map("lowBackupBattery")
+  CAN_DISCONNECTED @map("canDisconnected")
+  DEVICE_OFFLINE @map("deviceOffline")
+  DIAGNOSTIC_TROUBLE_CODE @map("diagnosticTroubleCode")
+  CRASH_DETECTED @map("crashDetected")
+  @@map("fleetEventKind")
 }
 
 enum FleetEventSeverity {
-  INFO
-  WARNING
-  CRITICAL
+  INFO @map("info")
+  WARNING @map("warning")
+  CRITICAL @map("critical")
+  @@map("fleetEventSeverity")
 }
 
 enum FleetAlertStatus {
-  OPEN
-  ACKNOWLEDGED
-  RESOLVED
+  OPEN @map("open")
+  ACKNOWLEDGED @map("acknowledged")
+  RESOLVED @map("resolved")
+  @@map("fleetAlertStatus")
 }
 
 enum FleetServiceType {
-  GENERAL_SERVICE
-  OIL_CHANGE
-  ANNUAL_INSPECTION
-  TACHOGRAPH_CALIBRATION
-  BRAKES
-  TIRES
-  REPAIR
-  OTHER
+  GENERAL_SERVICE @map("generalService")
+  OIL_CHANGE @map("oilChange")
+  ANNUAL_INSPECTION @map("annualInspection")
+  TACHOGRAPH_CALIBRATION @map("tachographCalibration")
+  BRAKES @map("brakes")
+  TIRES @map("tires")
+  REPAIR @map("repair")
+  OTHER @map("other")
+  @@map("fleetServiceType")
 }
 
 enum FleetServiceStatus {
-  PLANNED
-  DONE
-  CANCELLED
+  PLANNED @map("planned")
+  DONE @map("done")
+  CANCELLED @map("cancelled")
+  @@map("fleetServiceStatus")
 }
 
-// Columns after notes are appended by the fleet_master_data migration (ADD COLUMN).
-// Hand-written CHECKs in that migration: modelYear, vin, fuelTankCapacityL, INACTIVE without driver.
+// Hand-written CHECKs: modelYear, vin, fuelTankCapacityL, INACTIVE without driver.
 model Vehicle {
   id String @id @default(uuid()) @db.Uuid
   tenantId String @db.Uuid
@@ -216,6 +233,7 @@ model Vehicle {
   @@index([tenantId, branchId, createdAt, id])
   @@index([tenantId, branchId, groupId])
   @@index([tenantId, branchId, currentDriverId])
+  @@map("vehicle")
 }
 
 // Hand-written CHECKs: options NOT NULL with at most 13 values, SIM phone number and ICCID formats.
@@ -241,27 +259,30 @@ model Device {
   @@unique([tenantId, branchId, imei])
   @@index([tenantId, branchId, createdAt, id])
   @@index([tenantId, branchId, vehicleId])
+  @@map("device")
 }
 
 enum FleetDeviceOperationKind {
-  READ_CONFIGURATION
-  ADD_PARAMETER
-  UPDATE_INTERVAL
-  READ_RULES
-  UPSERT_RULE
-  READ_FAULT_LOGGER
-  READ_COMMUNICATION_DIAGNOSTICS
+  READ_CONFIGURATION @map("readConfiguration")
+  ADD_PARAMETER @map("addParameter")
+  UPDATE_INTERVAL @map("updateInterval")
+  READ_RULES @map("readRules")
+  UPSERT_RULE @map("upsertRule")
+  READ_FAULT_LOGGER @map("readFaultLogger")
+  READ_COMMUNICATION_DIAGNOSTICS @map("readCommunicationDiagnostics")
+  @@map("fleetDeviceOperationKind")
 }
 
 enum FleetDeviceOperationPhase {
-  READ_PROFILE
-  READ_PARAMETERS
-  WRITE_PARAMETER
-  VERIFY_PARAMETERS
-  READ_RULES
-  WRITE_RULE
-  VERIFY_RULES
-  READ_DIAGNOSTICS
+  READ_PROFILE @map("readProfile")
+  READ_PARAMETERS @map("readParameters")
+  WRITE_PARAMETER @map("writeParameter")
+  VERIFY_PARAMETERS @map("verifyParameters")
+  READ_RULES @map("readRules")
+  WRITE_RULE @map("writeRule")
+  VERIFY_RULES @map("verifyRules")
+  READ_DIAGNOSTICS @map("readDiagnostics")
+  @@map("fleetDeviceOperationPhase")
 }
 
 // Configuration operations retain intent, preflight evidence and independent readback.
@@ -278,10 +299,10 @@ model FleetDeviceOperation {
   kind FleetDeviceOperationKind @default(READ_CONFIGURATION)
   phase FleetDeviceOperationPhase @default(READ_PARAMETERS)
   baselineOperationId String? @db.Uuid
-  baselineOperation FleetDeviceOperation? @relation("DeviceOperationBaseline", fields: [tenantId, branchId, baselineOperationId], references: [tenantId, branchId, id], onDelete: Restrict, onUpdate: Restrict, map: "FleetDeviceOperation_baseline_scope_fkey")
+  baselineOperation FleetDeviceOperation? @relation("DeviceOperationBaseline", fields: [tenantId, branchId, baselineOperationId], references: [tenantId, branchId, id], onDelete: Restrict, onUpdate: Restrict)
   dependentOperations FleetDeviceOperation[] @relation("DeviceOperationBaseline")
   parameterBaselineOperationId String? @db.Uuid
-  parameterBaselineOperation FleetDeviceOperation? @relation("DeviceRuleParameterBaseline", fields: [tenantId, branchId, parameterBaselineOperationId], references: [tenantId, branchId, id], onDelete: Restrict, onUpdate: Restrict, map: "FleetDeviceOperation_parameter_baseline_scope_fkey")
+  parameterBaselineOperation FleetDeviceOperation? @relation("DeviceRuleParameterBaseline", fields: [tenantId, branchId, parameterBaselineOperationId], references: [tenantId, branchId, id], onDelete: Restrict, onUpdate: Restrict)
   dependentRuleOperations FleetDeviceOperation[] @relation("DeviceRuleParameterBaseline")
   ruleId Int?
   ruleExpression String? @db.VarChar(4096)
@@ -330,6 +351,7 @@ model FleetDeviceOperation {
   @@unique([tenantId, branchId, id])
   @@index([tenantId, branchId, karmaCarId, karmaDeviceId, requestedAt, id])
   @@index([status, nextCheckAt, leaseUntil])
+  @@map("fleetDeviceOperation")
 }
 
 // Hand-written CHECKs: licenseCategories NOT NULL with at most 10 values, phone format.
@@ -361,6 +383,7 @@ model Driver {
   @@unique([tenantId, branchId, identificationKey])
   @@index([tenantId, branchId, lastName, firstName, id])
   @@index([tenantId, branchId, createdAt, id])
+  @@map("driver")
 }
 
 model VehicleGroup {
@@ -377,10 +400,11 @@ model VehicleGroup {
   @@unique([tenantId, branchId, id])
   @@unique([tenantId, branchId, name])
   @@index([tenantId, branchId, createdAt, id])
+  @@map("vehicleGroup")
 }
 
 // Activity rows keep the reporting IMEI as a snapshot (no Device FK), so devices can be replaced
-// or deleted without rewriting history. Hand-written CHECKs in the fleet_activity migration:
+// or deleted without rewriting history. Hand-written CHECKs:
 // MANUAL rows are exactly the null-IMEI odometer readings, IMEI format, coordinates, ranges.
 model VehicleStatusSample {
   id String @id @default(uuid()) @db.Uuid
@@ -409,6 +433,7 @@ model VehicleStatusSample {
   @@unique([tenantId, branchId, vehicleId, deviceImei, recordedAt])
   @@index([tenantId, branchId, vehicleId, recordedAt(sort: Desc)])
   @@index([tenantId, branchId, recordedAt])
+  @@map("vehicleStatusSample")
 }
 
 // Hand-written CHECKs: never MANUAL, IMEI format, end not before start, coordinates, ranges.
@@ -445,6 +470,7 @@ model Trip {
   @@index([tenantId, branchId, startedAt(sort: Desc), id])
   @@index([tenantId, branchId, vehicleId, startedAt])
   @@index([tenantId, branchId, driverId, startedAt])
+  @@map("trip")
 }
 
 // The trip relation includes vehicleId, so an event's vehicle always equals its trip's vehicle.
@@ -486,6 +512,7 @@ model FleetEvent {
   @@index([tenantId, branchId, vehicleId, occurredAt])
   @@index([tenantId, branchId, vehicleId, tripId])
   @@index([tenantId, branchId, driverId, occurredAt])
+  @@map("fleetEvent")
 }
 
 // Costs are integer EUR cents. Hand-written CHECKs: the PLANNED/DONE/CANCELLED field rules and
@@ -513,6 +540,7 @@ model ServiceTask {
   @@index([tenantId, branchId, status, dueOn, id])
   @@index([tenantId, branchId, vehicleId, status])
   @@index([tenantId, branchId, completedOn])
+  @@map("serviceTask")
 }
 
 // Shared vendor reference data. Device/Vehicle data remains Tenant/Branch scoped.
@@ -530,6 +558,7 @@ model EdataCatalog {
   categories EdataCatalogCategory[]
 
   @@unique([sourceSha256, extractorVersion, schemaVersion])
+  @@map("edataCatalog")
 }
 
 model EdataCatalogSource {
@@ -541,6 +570,7 @@ model EdataCatalogSource {
   parameters EdataCatalogParameter[]
 
   @@id([catalogId, key])
+  @@map("edataCatalogSource")
 }
 
 model EdataCatalogParameter {
@@ -557,6 +587,7 @@ model EdataCatalogParameter {
 
   @@id([catalogId, key])
   @@index([catalogId, parameterId, category])
+  @@map("edataCatalogParameter")
 }
 
 model EdataCatalogSet {
@@ -568,6 +599,7 @@ model EdataCatalogSet {
   profiles EdataCatalogProfile[]
 
   @@id([catalogId, vendorId])
+  @@map("edataCatalogSet")
 }
 
 model EdataCatalogSetMember {
@@ -579,6 +611,7 @@ model EdataCatalogSetMember {
 
   @@id([catalogId, setId, position])
   @@index([catalogId, parameterId])
+  @@map("edataCatalogSetMember")
 }
 
 model EdataCatalogCategory {
@@ -589,6 +622,7 @@ model EdataCatalogCategory {
   profiles EdataCatalogProfile[]
 
   @@id([catalogId, vendorId])
+  @@map("edataCatalogCategory")
 }
 
 model EdataCatalogProfile {
@@ -601,4 +635,5 @@ model EdataCatalogProfile {
   category EdataCatalogCategory @relation(fields: [catalogId, categoryId], references: [catalogId, vendorId], onDelete: Restrict)
 
   @@id([catalogId, vendorId])
+  @@map("edataCatalogProfile")
 }

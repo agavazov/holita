@@ -15,6 +15,7 @@ model Tenant {
   branches Branch[]
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  @@map("tenant")
 }
 
 model Branch {
@@ -26,4 +27,5 @@ model Branch {
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
   @@unique([tenantId, id])
   @@index([tenantId, name, id])
+  @@map("branch")
 }

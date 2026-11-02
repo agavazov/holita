@@ -1,8 +1,9 @@
+import { fleetServiceStatusDb, fleetServiceTypeDb } from '../../database/enums.js';
 import {
   date,
   fleetTable,
   integerOrNull,
-  oneOf,
+  databaseEnum,
   oneOfOrNull,
   text,
   textOrNull,
@@ -10,7 +11,7 @@ import {
 import { SERVICE_DUE_SOON_DAYS, SERVICE_DUE_SOON_KM } from '../../fleet-thresholds.js';
 import type { FleetServiceUrgency } from '../../generated/graphql/types.js';
 import { Prisma } from '../../generated/prisma/client.js';
-import { FleetServiceStatus, FleetServiceType } from '../../generated/prisma/enums.js';
+import type { FleetServiceStatus, FleetServiceType } from '../../generated/prisma/enums.js';
 import type { FleetScope } from '../../validation.js';
 
 /** Urgencies from worst to best; the order is also the urgency sort order. */
@@ -20,9 +21,6 @@ export const SERVICE_URGENCIES: readonly FleetServiceUrgency[] = [
   'UNKNOWN_ODOMETER',
   'UPCOMING',
 ];
-
-const SERVICE_STATUSES = Object.values(FleetServiceStatus);
-const SERVICE_TYPES = Object.values(FleetServiceType);
 
 /**
  * The single service-urgency definition: every task of the Branch with its urgency, remaining
@@ -34,8 +32,8 @@ export function serviceTasksWithUrgency(
   scope: FleetScope,
   today: string | Prisma.Sql,
 ): Prisma.Sql {
-  const tasks = fleetTable(schema, 'ServiceTask');
-  const samples = fleetTable(schema, 'VehicleStatusSample');
+  const tasks = fleetTable(schema, 'serviceTask');
+  const samples = fleetTable(schema, 'vehicleStatusSample');
   const { tenantId, branchId } = scope;
   const date = typeof today === 'string' ? Prisma.sql`${today}::date` : today;
   return Prisma.sql`
@@ -45,7 +43,7 @@ export function serviceTasksWithUrgency(
       t."replacedParts", t."costCents", t."notes", t."createdAt", t."updatedAt",
       o."odometerKm" AS "currentOdometerKm",
       CASE
-        WHEN t."status"::text <> 'PLANNED' THEN NULL
+        WHEN t."status"::text <> 'planned' THEN NULL
         WHEN (t."dueOn" IS NOT NULL AND t."dueOn" < ${date})
           OR (t."dueOdometerKm" IS NOT NULL AND o."odometerKm" >= t."dueOdometerKm") THEN 'OVERDUE'
         WHEN (t."dueOn" IS NOT NULL AND t."dueOn" <= ${date} + ${SERVICE_DUE_SOON_DAYS}::int)
@@ -54,9 +52,9 @@ export function serviceTasksWithUrgency(
         WHEN t."dueOdometerKm" IS NOT NULL AND o."odometerKm" IS NULL THEN 'UNKNOWN_ODOMETER'
         ELSE 'UPCOMING'
       END AS "urgency",
-      CASE WHEN t."status"::text = 'PLANNED' AND t."dueOn" IS NOT NULL
+      CASE WHEN t."status"::text = 'planned' AND t."dueOn" IS NOT NULL
         THEN (t."dueOn" - ${date})::int END AS "remainingDays",
-      CASE WHEN t."status"::text = 'PLANNED' AND t."dueOdometerKm" IS NOT NULL
+      CASE WHEN t."status"::text = 'planned' AND t."dueOdometerKm" IS NOT NULL
           AND o."odometerKm" IS NOT NULL
         THEN round(t."dueOdometerKm" - o."odometerKm")::int END AS "remainingKm"
     FROM ${tasks} t
@@ -65,7 +63,7 @@ export function serviceTasksWithUrgency(
       WHERE s."tenantId" = ${tenantId}::uuid AND s."branchId" = ${branchId}::uuid
         AND s."vehicleId" = t."vehicleId" AND s."odometerKm" IS NOT NULL
       ORDER BY s."recordedAt" DESC, s."id" DESC LIMIT 1
-    ) o ON t."status"::text = 'PLANNED'
+    ) o ON t."status"::text = 'planned'
     WHERE t."tenantId" = ${tenantId}::uuid AND t."branchId" = ${branchId}::uuid`;
 }
 
@@ -104,8 +102,8 @@ export function parseServiceTaskRow(row: Record<string, unknown>): ServiceTaskRo
   return {
     id: text(row, 'id'),
     vehicleId: text(row, 'vehicleId'),
-    serviceType: oneOf(row, 'serviceType', SERVICE_TYPES),
-    status: oneOf(row, 'status', SERVICE_STATUSES),
+    serviceType: databaseEnum(row, 'serviceType', fleetServiceTypeDb),
+    status: databaseEnum(row, 'status', fleetServiceStatusDb),
     title: textOrNull(row, 'title'),
     dueOn: textOrNull(row, 'dueOn'),
     dueOdometerKm: integerOrNull(row, 'dueOdometerKm'),

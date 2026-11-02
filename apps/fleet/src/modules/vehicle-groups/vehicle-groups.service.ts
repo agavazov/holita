@@ -42,7 +42,7 @@ const DUPLICATE_NAME: FieldError = {
   message: 'A vehicle group with this name already exists in this branch.',
   code: 'ALREADY_EXISTS',
 };
-const UNIQUE_INDEXES = new Map([['VehicleGroup_tenantId_branchId_name_key', DUPLICATE_NAME]]);
+const UNIQUE_INDEXES = new Map([['vehicleGroup_tenantId_branchId_name_key', DUPLICATE_NAME]]);
 const DELETE_CONFLICT = 'Vehicle group still contains vehicles; move them first.';
 
 function toGroup(row: VehicleGroupRow): FleetVehicleGroup {

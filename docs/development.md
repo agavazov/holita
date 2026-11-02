@@ -414,15 +414,10 @@ on 127.0.0.1 at that port. Examples do not replace credentials in existing insta
 Compose project `holita` uses `holita_postgres_data` mounted at `/var/lib/postgresql`.
 `db:down` preserves the volume. Do not delete volumes or reset databases to repair setup.
 
-Core/Fleet own their schemas, generated Prisma clients and reviewed SQL migrations. Core
-retains its initial migration and the shared Branch rename; Fleet retains its initial migration
-and adds the shared eData reference catalog, the Branch rename, the master data
-(`20261018100000_fleet_master_data`: Vehicle/Device columns, Driver, VehicleGroup) and activity tables
-(`20261018110000_fleet_activity`: VehicleStatusSample, Trip, FleetEvent, ServiceTask), Device
-stock (`20261020110000_device_stock`), Fleet settings (`20261020220000_fleet_settings`), durable
-device reads (`20261021000000_device_configuration_reads`) and parameter change intent/phases
-(`20261021100000_device_parameter_changes`) through
-additive migrations. Branch places `tenantId` immediately after `id`. The ten scoped Fleet
+Core/Fleet own their schemas, generated Prisma clients and reviewed SQL migrations. Each starts
+with `20261102000000_baseline`, which replaces the pre-release migration history. Tables, enum
+types and enum values use camelCase database mappings; TypeScript and GraphQL names stay unchanged.
+Branch places `tenantId` immediately after `id`. The ten scoped Fleet
 tables (`FleetSettings`, `Vehicle`, `Device`, `FleetDeviceOperation`, `Driver`, `VehicleGroup`,
 `VehicleStatusSample`, `Trip`, `FleetEvent`, `ServiceTask`) begin with `id`, `tenantId`, `branchId`.
 Scoped Fleet foreign keys and natural-key uniqueness include Tenant/Branch. `db:migrate`
@@ -434,10 +429,7 @@ Produce Fleet migration SQL from `apps/fleet` (the CLI needs its `prisma.config.
 committed schema outside the repository, edit `prisma/schema.prisma`, run `npm run db:validate`,
 then `npx prisma migrate diff --from-schema "$PREV" --to-schema prisma/schema.prisma --script`.
 Wrap the output in `BEGIN;`/`COMMIT;`, append the hand-written CHECK constraints Prisma cannot
-express and review that it only adds objects. Applying the master data migration to an existing
-database keeps every row: Vehicles receive status `ACTIVE` and Devices an empty option list
-through column defaults; the activity migration only creates new enums, tables, indexes and
-foreign keys. Regenerate clients/contracts (`npm run db:generate`, `npm run codegen`) and
+express and review the generated SQL. Regenerate clients/contracts (`npm run db:generate`, `npm run codegen`) and
 restart after `npm run db:migrate`.
 `db:seed` inserts RentalSofia, Discordia and Sandbox Branches, two Discordia Vehicles and one Device
 with a leading-zero IMEI. Existing keys and edits are preserved. Core runs before Fleet; Fleet
@@ -454,20 +446,3 @@ are explicit prerequisites. Check application health endpoints and GraphQL error
 A health response does not prove database readiness. Regenerate contracts and restart the group
 when SDL/operations change. Check the selected Branch and Fleet startup/backend flags for
 unavailable business screens. See [testing](testing.md) for guarded fixtures and cleanup.
-
-## Branch database and API migration
-
-Core and Fleet each include `20261017010000_rename_store_to_branch`. Core renames
-the existing `Store` table to `Branch`; Fleet renames Vehicle/Device `storeId`
-columns to `branchId`. These migrations preserve row IDs, timestamps, relations,
-column positions and the previously applied migration history. Existing volumes
-and data remain in place. Branch means an online shop in Ecommerce and a vehicle
-fleet in Discocan.
-
-Stop the local application group before applying these coordinated migrations.
-Keep a database backup, run `npm run db:migrate`, regenerate clients/contracts
-with `npm run db:generate` and `npm run codegen`, then restart with `npm run dev`.
-The public API uses `Branch`, `branches`, `branch`, `branchId` and
-`x-branch-id`; the former Store fields and header are unsupported. Fleet URLs
-keep their language/UUID/resource structure. Existing tab sessions with the
-previous stored scope require signing in again.

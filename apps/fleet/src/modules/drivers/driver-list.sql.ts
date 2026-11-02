@@ -1,3 +1,4 @@
+import { fleetDriverStatusDb, fleetLicenseCategoryDb } from '../../database/enums.js';
 import { containsPattern } from '../../database/search.js';
 import { fleetTable } from '../../database/sql.js';
 import type { FleetDriverSortField } from '../../generated/graphql/types.js';
@@ -13,17 +14,21 @@ function conditionSql(
 ): Prisma.Sql[] {
   const clauses: Prisma.Sql[] = [];
   if (condition.statuses) {
-    clauses.push(Prisma.sql`d."status"::text = ANY(${condition.statuses}::text[])`);
+    clauses.push(
+      Prisma.sql`d."status"::text = ANY(${condition.statuses.map((value) => fleetDriverStatusDb[value])}::text[])`,
+    );
   }
   if (condition.excludedStatuses) {
-    clauses.push(Prisma.sql`d."status"::text <> ALL(${condition.excludedStatuses}::text[])`);
+    clauses.push(
+      Prisma.sql`d."status"::text <> ALL(${condition.excludedStatuses.map((value) => fleetDriverStatusDb[value])}::text[])`,
+    );
   }
   if (condition.licenseCategories) {
     clauses.push(
-      Prisma.sql`d."licenseCategories"::text[] && ${condition.licenseCategories}::text[]`,
+      Prisma.sql`d."licenseCategories"::text[] && ${condition.licenseCategories.map((value) => fleetLicenseCategoryDb[value])}::text[]`,
     );
   }
-  const vehicles = fleetTable(schema, 'Vehicle');
+  const vehicles = fleetTable(schema, 'vehicle');
   const assignment = Prisma.sql`SELECT 1 FROM ${vehicles} v
     WHERE v."tenantId" = ${scope.tenantId}::uuid AND v."branchId" = ${scope.branchId}::uuid
       AND v."currentDriverId" = d."id"`;
@@ -154,7 +159,7 @@ export function driverListOrderSql(sort: DriverSort): Prisma.Sql {
     LICENSE_EXPIRES_ON: Prisma.sql`d."licenseExpiresOn"`,
     TACHOGRAPH_CARD_EXPIRES_ON: Prisma.sql`d."tachographCardExpiresOn"`,
     CREATED_AT: Prisma.sql`d."createdAt"`,
-    STATUS: Prisma.sql`CASE d."status" WHEN 'ACTIVE' THEN 0 WHEN 'ON_LEAVE' THEN 1 ELSE 2 END`,
+    STATUS: Prisma.sql`CASE d."status" WHEN 'active' THEN 0 WHEN 'onLeave' THEN 1 ELSE 2 END`,
     DRIVING_SCORE_30D: Prisma.sql`d."drivingScore30d"`,
     TRIP_COUNT_30D: Prisma.sql`d."tripCount30d"`,
     DISTANCE_30D_KM: Prisma.sql`d."distance30dKm"`,

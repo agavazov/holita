@@ -1,3 +1,4 @@
+import { fleetEventKindDb } from '../../database/enums.js';
 import { containsPattern } from '../../database/search.js';
 import { fleetTable } from '../../database/sql.js';
 import type { FleetTripSortField } from '../../generated/graphql/types.js';
@@ -11,9 +12,9 @@ import type { TripCriteria, TripSort } from './trips.repository.js';
 export const TRIP_DURATION_SQL = Prisma.sql`floor(extract(epoch FROM (t."endedAt" - t."startedAt")))::float8`;
 
 export function tripListRowsSql(schema: string, scope: FleetScope): Prisma.Sql {
-  const trips = fleetTable(schema, 'Trip');
-  const vehicles = fleetTable(schema, 'Vehicle');
-  const drivers = fleetTable(schema, 'Driver');
+  const trips = fleetTable(schema, 'trip');
+  const vehicles = fleetTable(schema, 'vehicle');
+  const drivers = fleetTable(schema, 'driver');
   return Prisma.sql`SELECT t."id", t."vehicleId", t."driverId", t."startedAt", t."endedAt",
     t."distanceKm", t."drivingScore", t."startAddress", t."endAddress",
     v."licensePlate", v."fleetNumber", d."firstName" AS "driverFirstName", d."lastName" AS "driverLastName",
@@ -76,11 +77,11 @@ function conditionSql(
     clauses.push(Prisma.sql`t."drivingScore" < ${condition.drivingScoreBelow}::float8`);
   }
   if (condition.hasEvents != null) {
-    const events = fleetTable(schema, 'FleetEvent');
+    const events = fleetTable(schema, 'fleetEvent');
     const exists = Prisma.sql`EXISTS (SELECT 1 FROM ${events} e
       WHERE e."tenantId" = ${scope.tenantId}::uuid AND e."branchId" = ${scope.branchId}::uuid
         AND e."tripId" = t."id" AND e."vehicleId" = t."vehicleId"
-        AND e."kind"::text = ANY(${MANEUVER_KINDS}::text[]))`;
+        AND e."kind"::text = ANY(${MANEUVER_KINDS.map((value) => fleetEventKindDb[value])}::text[]))`;
     clauses.push(condition.hasEvents ? exists : Prisma.sql`NOT ${exists}`);
   }
   return clauses;

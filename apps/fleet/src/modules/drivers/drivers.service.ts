@@ -108,8 +108,8 @@ const ASSIGNED_DRIVER: FieldError = {
   code: 'DRIVER_ASSIGNED',
 };
 const UNIQUE_INDEXES = new Map([
-  ['Driver_tenantId_branchId_employeeNumber_key', DUPLICATE_EMPLOYEE_NUMBER],
-  ['Driver_tenantId_branchId_identificationKey_key', DUPLICATE_IDENTIFICATION_KEY],
+  ['driver_tenantId_branchId_employeeNumber_key', DUPLICATE_EMPLOYEE_NUMBER],
+  ['driver_tenantId_branchId_identificationKey_key', DUPLICATE_IDENTIFICATION_KEY],
 ]);
 const DELETE_CONFLICT = 'Driver is assigned or has trip history; set the driver inactive instead.';
 

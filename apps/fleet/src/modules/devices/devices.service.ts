@@ -93,7 +93,7 @@ const DUPLICATE_IMEI: FieldError = {
   message: 'IMEI is already used in this branch.',
   code: 'ALREADY_EXISTS',
 };
-const UNIQUE_INDEXES = new Map([['Device_tenantId_branchId_imei_key', DUPLICATE_IMEI]]);
+const UNIQUE_INDEXES = new Map([['device_tenantId_branchId_imei_key', DUPLICATE_IMEI]]);
 
 function imei(value: unknown): string {
   const result = typeof value === 'string' ? value.trim() : '';

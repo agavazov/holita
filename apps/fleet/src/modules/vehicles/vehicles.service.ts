@@ -97,8 +97,8 @@ const INACTIVE_VEHICLE: FieldError = {
   code: 'VEHICLE_INACTIVE',
 };
 const UNIQUE_INDEXES = new Map([
-  ['Vehicle_tenantId_branchId_fleetNumber_key', DUPLICATE_FLEET_NUMBER],
-  ['Vehicle_tenantId_branchId_vin_key', DUPLICATE_VIN],
+  ['vehicle_tenantId_branchId_fleetNumber_key', DUPLICATE_FLEET_NUMBER],
+  ['vehicle_tenantId_branchId_vin_key', DUPLICATE_VIN],
 ]);
 const DELETE_CONFLICT = 'Vehicle has devices or history; deactivate it instead.';
 

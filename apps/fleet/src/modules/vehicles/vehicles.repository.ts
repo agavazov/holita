@@ -138,8 +138,8 @@ export class VehiclesRepository {
     const rows: unknown = await this.prisma.client.$queryRaw(Prisma.sql`
       WITH vehicles AS (${base}), clock AS (${vehicleDataClockSql(this.prisma.schema, scope)})
       SELECT (SELECT "asOf" FROM clock) AS "dataAsOf",
-        count(*) FILTER (WHERE v."status" <> 'INACTIVE')::int AS "inOperation",
-        count(*) FILTER (WHERE v."status" = 'IN_WORKSHOP')::int AS "inWorkshop",
+        count(*) FILTER (WHERE v."status" <> 'inactive')::int AS "inOperation",
+        count(*) FILTER (WHERE v."status" = 'inWorkshop')::int AS "inWorkshop",
         count(*) FILTER (WHERE v."activity" = 'MOVING')::int AS "moving",
         count(*) FILTER (WHERE v."activity" = 'NOT_CONNECTED')::int AS "notReporting",
         coalesce(sum(v."openAlertCount"), 0)::int AS "openAlerts",

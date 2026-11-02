@@ -9,9 +9,9 @@ export function vehicleFactsSql(
   scope: FleetScope,
   ids?: readonly string[],
 ): Prisma.Sql {
-  const vehicles = fleetTable(schema, 'Vehicle');
-  const devices = fleetTable(schema, 'Device');
-  const samples = fleetTable(schema, 'VehicleStatusSample');
+  const vehicles = fleetTable(schema, 'vehicle');
+  const devices = fleetTable(schema, 'device');
+  const samples = fleetTable(schema, 'vehicleStatusSample');
   const { tenantId, branchId } = scope;
   return Prisma.sql`
     SELECT v."id"::text AS "id", v."status"::text AS "status",
@@ -50,7 +50,7 @@ export function vehicleFactsSql(
 
 /** Latest device sample of the Branch; manual odometers never move this clock. */
 export function vehicleDataClockSql(schema: string, scope: FleetScope): Prisma.Sql {
-  const samples = fleetTable(schema, 'VehicleStatusSample');
+  const samples = fleetTable(schema, 'vehicleStatusSample');
   return Prisma.sql`SELECT max(s."recordedAt") AS "asOf" FROM ${samples} s
     WHERE s."tenantId" = ${scope.tenantId}::uuid AND s."branchId" = ${scope.branchId}::uuid
       AND s."deviceImei" IS NOT NULL`;

@@ -15,13 +15,9 @@ Each owning service has its own schema, reviewed SQL migrations and generated cl
 Core owns the [Tenant/Branch foundation](../ecommerce/branches.md) currently reused as Discocan organizational scope.
 Fleet owns Vehicle, Device, Driver, VehicleGroup, VehicleStatusSample, Trip, FleetEvent,
 ServiceTask, FleetSettings and FleetDeviceOperation plus the shared versioned Simple eData vendor catalog. Both services
-preserve their applied migration history and add a Branch rename migration. Fleet also retains
-its additive catalog migration and the additive `20261018100000_fleet_master_data`,
-`20261018110000_fleet_activity`, `20261020110000_device_stock` and
-`20261020220000_fleet_settings`, `20261021000000_device_configuration_reads` and
-`20261021100000_device_parameter_changes` migrations. Branch and every Fleet business table have
-mandatory tenantId physically second after id; Fleet branchId is physically third (new tables
-declare them in that order; the master data columns are appended to Vehicle and Device).
+start with `20261102000000_baseline`; later changes preserve that history through new reviewed
+migrations. Branch and every Fleet business table declare tenantId physically second after id;
+Fleet branchId is physically third.
 Tenant data is inserted by the seed, not by schema migrations.
 
 The [Simple eData catalog](erm-resources/simple-edata-catalog/README.md) is common
