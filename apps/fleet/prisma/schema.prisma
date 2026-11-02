@@ -296,6 +296,7 @@ model FleetDeviceOperation {
   karmaCarId String @db.VarChar(32)
   karmaDeviceId String @db.VarChar(128)
   status FleetDeviceOperationStatus @default(QUEUED)
+  monitoringOrigin Boolean @default(false)
   kind FleetDeviceOperationKind @default(READ_CONFIGURATION)
   phase FleetDeviceOperationPhase @default(READ_PARAMETERS)
   baselineOperationId String? @db.Uuid
@@ -636,4 +637,105 @@ model EdataCatalogProfile {
 
   @@id([catalogId, vendorId])
   @@map("edataCatalogProfile")
+}
+
+enum KarmaMonitoringEventKind {
+  CAME_ONLINE @map("cameOnline")
+  NO_DATA_SINCE @map("noDataSince")
+  FAULT_REPORTED @map("faultReported")
+  FAULT_READ_REQUESTED @map("faultReadRequested")
+  FAULT_READ_ANSWERED @map("faultReadAnswered")
+  FAULT_READ_FAILED @map("faultReadFailed")
+  POLL_FAILED @map("pollFailed")
+  @@map("karmaMonitoringEventKind")
+}
+
+enum KarmaMonitoringSource {
+  STATUS_POLL @map("statusPoll")
+  KARMA_HISTORY @map("karmaHistory")
+  DEVICE_COMMAND @map("deviceCommand")
+  @@map("karmaMonitoringSource")
+}
+
+enum KarmaMonitoringCommandOutcome {
+  NOT_ACKNOWLEDGED @map("notAcknowledged")
+  EMPTY @map("empty")
+  FAULTS @map("faults")
+  UNRESOLVED @map("unresolved")
+  FAILED @map("failed")
+  @@map("karmaMonitoringCommandOutcome")
+}
+
+model KarmaMonitoringSettings {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  enabled Boolean @default(false)
+  statusPollSeconds Int @default(60)
+  offlineAfterMinutes Int @default(15)
+  faultHistoryPollMinutes Int @default(60)
+  faultCommandEnabled Boolean @default(true)
+  faultCommandMinutes Int @default(60)
+  retentionDays Int @default(10)
+  lastStatusPollAt DateTime? @db.Timestamptz(3)
+  lastRetentionAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@unique([tenantId, branchId])
+  @@map("karmaMonitoringSettings")
+}
+
+model KarmaMonitoringTruck {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  karmaCarId String @db.VarChar(32)
+  karmaDeviceId String @db.VarChar(128)
+  displayName String @db.VarChar(256)
+  lastDataAt DateTime? @db.Timestamptz(3)
+  online Boolean @default(false)
+  onlineSince DateTime? @db.Timestamptz(3)
+  noDataSince DateTime? @db.Timestamptz(3)
+  historyCursor String @default("0") @db.VarChar(32)
+  historyBeforeId String? @db.VarChar(32)
+  historyHighWatermark String? @db.VarChar(32)
+  lastHistoryPollAt DateTime? @db.Timestamptz(3)
+  lastCommandOperationId String? @db.Uuid
+  lastCommandRequestedAt DateTime? @db.Timestamptz(3)
+  lastCommandCompletedAt DateTime? @db.Timestamptz(3)
+  lastCommandOutcome KarmaMonitoringCommandOutcome?
+  events KarmaMonitoringEvent[]
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@unique([tenantId, branchId, karmaCarId])
+  @@index([tenantId, branchId, displayName, id])
+  @@map("karmaMonitoringTruck")
+}
+
+model KarmaMonitoringEvent {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  karmaCarId String? @db.VarChar(32)
+  truck KarmaMonitoringTruck? @relation(fields: [tenantId, branchId, karmaCarId], references: [tenantId, branchId, karmaCarId], onDelete: Restrict, onUpdate: Restrict)
+  kind KarmaMonitoringEventKind
+  source KarmaMonitoringSource
+  sourceKey String @db.VarChar(256)
+  occurredAt DateTime @db.Timestamptz(3)
+  recordedAt DateTime @default(now()) @db.Timestamptz(3)
+  code String? @db.VarChar(32)
+  spn Float?
+  fmi Int?
+  faultStatus String? @db.VarChar(32)
+  commandOutcome KarmaMonitoringCommandOutcome?
+  operationId String? @db.Uuid
+  rawRecord Json?
+  details String? @db.VarChar(256)
+
+  @@unique([tenantId, branchId, source, sourceKey])
+  @@index([tenantId, branchId, occurredAt(sort: Desc), id])
+  @@index([tenantId, branchId, karmaCarId, kind, occurredAt(sort: Desc)])
+  @@map("karmaMonitoringEvent")
 }

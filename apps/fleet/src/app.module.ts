@@ -1,3 +1,4 @@
+import { KarmaMonitoringModule } from './modules/karma-monitoring/karma-monitoring.module.js';
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { readFileSync } from 'node:fs';
@@ -36,6 +37,7 @@ const typeDefPaths = [
   'modules/settings/settings',
   'modules/device-operations/device-operations',
   'modules/scenarios/scenarios',
+  'modules/karma-monitoring/karma-monitoring',
 ];
 
 @Module({
@@ -53,6 +55,7 @@ const typeDefPaths = [
     SettingsModule,
     DeviceOperationsModule,
     ScenariosModule,
+    KarmaMonitoringModule,
     GraphQLModule.forRoot<ApolloFederationDriverConfig>({
       driver: ApolloFederationDriver,
       fieldResolverEnhancers: ['guards'],

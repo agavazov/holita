@@ -41,6 +41,7 @@ export const subgraphs = [
       'apps/fleet/src/modules/settings/settings.graphql',
       'apps/fleet/src/modules/device-operations/device-operations.graphql',
       'apps/fleet/src/modules/scenarios/scenarios.graphql',
+      'apps/fleet/src/modules/karma-monitoring/karma-monitoring.graphql',
     ],
   },
 ];

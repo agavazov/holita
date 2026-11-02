@@ -1,3 +1,4 @@
+import { MonitoringModule } from './modules/monitoring/monitoring.module.js';
 import { Module } from '@nestjs/common';
 import { readFileSync } from 'node:fs';
 import { ApolloFederationDriver, type ApolloFederationDriverConfig } from '@nestjs/apollo';
@@ -16,6 +17,7 @@ import { DeviceConfigurationModule } from './modules/device-configuration/device
 @Module({
   imports: [
     AccountsModule,
+    MonitoringModule,
     CarsModule,
     DeviceConfigurationModule,
     EdataModule,
