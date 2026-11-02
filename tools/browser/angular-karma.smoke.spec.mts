@@ -111,7 +111,28 @@ test('opens Karma trucks, trips, diagnostics and filtered eData through Gateway 
     page.getByRole('heading', { level: 1, name: 'KARMA TEST 41', exact: true }),
   ).toBeVisible();
   const truckNavigation = page.getByRole('navigation', { name: 'Truck sections', exact: true });
-  await expect(truckNavigation.getByRole('link')).toHaveCount(3);
+  const destinations = [
+    'Overview',
+    'Trips',
+    'Location',
+    'Events',
+    'eData & measurements',
+    'Diagnostics',
+    'Device settings',
+    'Daily report',
+    'Driving profile',
+  ];
+  await expect(truckNavigation.getByRole('link')).toHaveCount(destinations.length);
+  for (const destination of destinations) {
+    await expect(
+      truckNavigation.getByRole('link', { name: destination, exact: true }),
+    ).toBeVisible();
+  }
+  await expect(truckNavigation.getByRole('button', { name: /More/ })).toHaveCount(0);
+  // This upstream fixture has one truck: keep its identity visible and disable switching.
+  const truckSwitcher = page.getByRole('combobox', { name: 'Switch truck', exact: true });
+  await expect(truckSwitcher).toHaveText('KARMA TEST 41');
+  await expect(truckSwitcher).toBeDisabled();
   await expect(
     truckNavigation.getByRole('link', { name: 'Overview', exact: true }),
   ).toHaveAttribute('aria-current', 'page');
@@ -136,12 +157,28 @@ test('opens Karma trucks, trips, diagnostics and filtered eData through Gateway 
   await expect(report.locator('holita-source-context')).toContainText('Karma API');
   await expect(report.locator('holita-source-context')).toContainText('Not assessed');
   await expect(report.getByText('Example data', { exact: true })).toHaveCount(0);
+  const overviewMap = report.locator('section[overviewMap] holita-map-preview');
+  await expect(overviewMap.getByRole('button', { name: 'Show map', exact: true })).toHaveAttribute(
+    'aria-expanded',
+    'false',
+  );
+  await overviewMap.getByRole('button', { name: 'Show map', exact: true }).click();
+  await expect(overviewMap.getByRole('button', { name: 'Hide map', exact: true })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
+  const mountedOverviewMap = await overviewMap.elementHandle();
   const tripTrigger = report.getByRole('button', { name: /^View trip 4000000121 ·/ });
   await tripTrigger.click();
   await expect(page).toHaveURL(`${selectedDayUrl}#trip-4000000121`);
   const tripDrawer = page.getByRole('dialog', { name: 'Trip ID 4000000121', exact: true });
   await expect(tripDrawer).toBeVisible();
-  await expect(page.locator('holita-map-preview')).toHaveCount(1);
+  await expect(page.locator('holita-map-preview')).toHaveCount(2);
+  expect(await mountedOverviewMap.evaluate((element) => element.isConnected)).toBe(true);
+  await expect(tripDrawer.getByRole('button', { name: 'Hide map', exact: true })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
   await expect(tripDrawer.getByRole('button', { name: 'Map', exact: true })).toBeEnabled();
   await tripDrawer.getByRole('button', { name: 'Street View', exact: true }).click();
   await expect(
@@ -159,6 +196,8 @@ test('opens Karma trucks, trips, diagnostics and filtered eData through Gateway 
   await expect(tripDrawer).toHaveCount(0);
   await expect(page).toHaveURL(selectedDayUrl);
   await expect(tripTrigger).toBeFocused();
+  expect(await mountedOverviewMap.evaluate((element) => element.isConnected)).toBe(true);
+  await expect(overviewMap.getByRole('button', { name: 'Hide map', exact: true })).toBeVisible();
   await expect(dayInput).toHaveValue(app.karma.reportDay);
   await truckNavigation.getByRole('link', { name: 'Trips', exact: true }).click();
   await expect(page).toHaveURL(
@@ -168,6 +207,13 @@ test('opens Karma trucks, trips, diagnostics and filtered eData through Gateway 
   await expect(page).toHaveURL(selectedDayUrl);
   await expect(dayInput).toHaveValue(app.karma.reportDay);
   await expect(distance.locator('.kpi-tile__value')).toHaveText(/^21\s*source distance units$/);
+
+  await expect(overviewMap.getByRole('button', { name: 'Hide map', exact: true })).toBeVisible();
+  await page.reload();
+  await expect(overviewMap.getByRole('button', { name: 'Hide map', exact: true })).toBeVisible();
+  await overviewMap.getByRole('button', { name: 'Hide map', exact: true }).click();
+  await page.reload();
+  await expect(overviewMap.getByRole('button', { name: 'Show map', exact: true })).toBeVisible();
 
   await dayInput.fill('2026-01-02');
   await report.getByRole('button', { name: 'Apply day', exact: true }).click();
@@ -196,8 +242,30 @@ test('opens Karma trucks, trips, diagnostics and filtered eData through Gateway 
   const summary = page.getByRole('region', { name: 'Truck summary', exact: true });
   await expect(summary).toContainText('Fixture project');
   await expect(summary).toContainText('Europe/Sofia');
+  await overviewMap.getByRole('button', { name: 'Show map', exact: true }).click();
+  await page.setViewportSize({ width: 375, height: 844 });
+  await truckNavigation.getByRole('link', { name: 'Daily report', exact: true }).click();
+  await expect(
+    truckNavigation.getByRole('link', { name: 'Daily report', exact: true }),
+  ).toBeInViewport({ ratio: 1 });
+  await expect(page).toHaveURL(`${app.url}/en/karma-client/cars/41/daily-report${truckContext}`);
+  await expect(dayInput).toHaveValue(app.karma.reportDay);
+  await expect(count.locator('.kpi-tile__value')).toHaveText(/^2\s*trips$/);
+  // The separate page type starts collapsed even when Overview's map is shown.
+  await expect(overviewMap.getByRole('button', { name: 'Show map', exact: true })).toBeVisible();
+  await truckNavigation.getByRole('link', { name: 'Overview', exact: true }).click();
+  await expect(overviewMap.getByRole('button', { name: 'Hide map', exact: true })).toBeVisible();
+  await expect(truckNavigation.getByRole('link', { name: 'Overview', exact: true })).toBeInViewport(
+    { ratio: 1 },
+  );
+  await page.setViewportSize({ width: 1280, height: 800 });
   await page.getByRole('link', { name: 'Location', exact: true }).click();
   await expect(page).toHaveURL(`${app.url}/en/karma-client/cars/41/location${truckContext}`);
+  const locationMap = page.locator('holita-location-page holita-map-preview');
+  await expect(locationMap.getByRole('button', { name: 'Hide map', exact: true })).toBeVisible();
+  await locationMap.getByRole('button', { name: 'Hide map', exact: true }).click();
+  await page.reload();
+  await expect(locationMap.getByRole('button', { name: 'Show map', exact: true })).toBeVisible();
   await page.locator('holita-location-page summary').click();
   // Upstream markup is shown as text, never rendered.
   await expect(
@@ -213,22 +281,16 @@ test('opens Karma trucks, trips, diagnostics and filtered eData through Gateway 
     .click();
   await expect(page).toHaveURL(listUrl);
   await page.getByRole('link', { name: 'KARMA TEST 41', exact: true }).click();
-  const more = truckNavigation.getByRole('button', { name: 'More', exact: true });
-  await more.focus();
-  await more.press('Enter');
-  await expect(page.getByRole('menu', { name: 'More', exact: true })).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(more).toBeFocused();
-  await more.click();
-  await page.getByRole('link', { name: 'eData', exact: true }).click();
-  await expect(
-    truckNavigation.getByRole('button', { name: 'More: eData', exact: true }),
-  ).toBeVisible();
+  const edataTab = truckNavigation.getByRole('link', { name: 'eData & measurements', exact: true });
+  await edataTab.focus();
+  await edataTab.press('Enter');
+  await expect(edataTab).toHaveAttribute('aria-current', 'page');
   const rows = page.locator('holita-edata-page section tbody tr');
   await expect(rows).toHaveCount(50);
   // The fixture filters on UTC message times, so shifted bounds would miss message 3000000001.
   await enterKarmaDateTime(page, 'From (UTC)', '2026-01-01', '00:00:00');
   await enterKarmaDateTime(page, 'To (UTC)', '2026-01-01', '00:00:00');
+  await page.locator('holita-edata-page form > details > summary').click();
   await page.getByLabel('Parameter IDs', { exact: true }).fill('99999');
   await page.getByRole('button', { name: 'Apply filters', exact: true }).click();
   await expect(rows).toHaveCount(1);
@@ -260,11 +322,7 @@ test('opens Karma trucks, trips, diagnostics and filtered eData through Gateway 
     ),
   ).toBe(true);
 
-  await truckNavigation.getByRole('button', { name: 'More', exact: true }).click();
-  await page
-    .getByRole('menu', { name: 'More', exact: true })
-    .getByRole('link', { name: 'Diagnostics', exact: true })
-    .click();
+  await truckNavigation.getByRole('link', { name: 'Diagnostics', exact: true }).click();
   await expect(page).toHaveURL(`${app.url}/en/karma-client/cars/41/diagnostics`);
   const diagnostics = page.locator('holita-karma-diagnostics-page');
   await expect(
@@ -300,10 +358,12 @@ test('opens Karma trucks, trips, diagnostics and filtered eData through Gateway 
   const rolesUrl = `${app.url}/en/karma-client/administration/roles`;
   await page.goto(`${app.url}/en/karma-client/users?q=fixture-001&size=25#account`);
   await expect(page).toHaveURL(usersUrl);
+  await expect(page.getByRole('heading', { level: 1, name: 'Users', exact: true })).toBeVisible();
   await expect(
-    page.getByRole('heading', { level: 1, name: 'Administration', exact: true }),
+    page
+      .locator('holita-users-page holita-table-panel')
+      .getByRole('heading', { level: 2, name: /^Users/ }),
   ).toBeVisible();
-  await expect(page.getByRole('heading', { level: 2, name: 'Users', exact: true })).toBeVisible();
   await expect(page.locator('holita-users-page')).toContainText('fixture-001');
   expect(karmaRequests.slice(administrationReads).map(({ operation }) => operation)).toEqual([
     'AdminKarmaUsers',
@@ -318,7 +378,7 @@ test('opens Karma trucks, trips, diagnostics and filtered eData through Gateway 
   );
   await administration.getByRole('link', { name: 'Roles', exact: true }).click();
   await expect(page).toHaveURL(rolesUrl);
-  await expect(page.getByRole('heading', { level: 2, name: 'Roles', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Roles', exact: true })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'Viewer', exact: true })).toBeVisible();
   await page.goBack();
   await expect(page).toHaveURL(usersUrl);
@@ -331,12 +391,11 @@ test('opens Karma trucks, trips, diagnostics and filtered eData through Gateway 
   );
   await chooseLanguage(page, 'Български');
   await expect(page).toHaveURL(rolesUrl.replace('/en/', '/bg/'));
-  await expect(page.getByRole('heading', { level: 2, name: 'Роли', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Роли', exact: true })).toBeVisible();
   await chooseLanguage(page, 'English');
   await page.getByRole('link', { name: 'Trucks', exact: true }).click();
   await page.getByRole('link', { name: 'KARMA TEST 41', exact: true }).click();
-  await truckNavigation.getByRole('button', { name: 'More', exact: true }).click();
-  await page.getByRole('link', { name: 'Device settings', exact: true }).click();
+  await truckNavigation.getByRole('link', { name: 'Device settings', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Device settings', exact: true })).toBeVisible();
   await chooseBranch(page, app.branchA.name);
   await expect(page).toHaveURL(settingsUrl);

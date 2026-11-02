@@ -164,10 +164,11 @@ export class DailyReport implements OnInit {
   ngOnInit(): void {
     this.api.initialize(this.language());
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      const section: unknown = this.route.snapshot.data['section'];
       if (
         this.route.snapshot.paramMap.get('recordId') !== this.carId() ||
         this.route.parent?.snapshot.paramMap.get('language') !== this.language() ||
-        this.route.snapshot.data['section'] ||
+        (section && section !== 'daily-report') ||
         this.route.snapshot.data['edata'] === true
       ) {
         return;

@@ -31,11 +31,15 @@
       </button>
     }
   </div>
-  <nav #navigation [attr.aria-label]="text().navigation">
+  <nav [attr.aria-label]="text().navigation">
     <ul class="app-route-nav car-navigation" role="list">
       @for (tab of tabs(); track tab.path) {
         <li>
           <a
+            #tabLink
+            (isActiveChange)="
+              $event && tabLink.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+            "
             class="app-route-nav__link"
             [routerLink]="destination(tab.path)"
             routerLinkActive="app-route-nav__link--active"
