@@ -1053,10 +1053,12 @@ bulk response coverage and timestamp semantics still require live verification. 
 fresh data are described as “no data since”, without inferring power state.
 
 History uses the existing diagnostic-history source, bounds and decoder through `GET /events`
-with UTC, message-ID boundaries and a start time of now minus `retentionDays`, including the first
-pull. Persisted descending catch-up pages advance the high watermark only after the interval is
-drained. Only eData fault reports `413` (OBD), `418` (FMS) and `419` (SPN/FMI) apply: each decoded
-entry carrying a code or SPN/FMI produces one deduplicated `FAULT_REPORTED` event. Undecoded fault
+with `date_type=utc` and a first-pull date window starting at now minus `retentionDays`. It requests
+`eid` 33 and continues forward from the persisted message-ID cursor without date parameters.
+Each full 500-row page continues on the next tick; a short page returns to the configured interval.
+Response order is normalized while car/device identity remains verified. Only eData fault reports
+`413` (OBD), `418` (FMS) and `419` (SPN/FMI) apply: each decoded entry carrying a code or SPN/FMI
+produces one deduplicated `FAULT_REPORTED` event. Undecoded fault
 reports produce `FAULT_REPORT_UNDECODED` events and do not count towards trucks with faults;
 generic tracker/OBD events (`eid` 2/70), acknowledgements and communication reports are ignored.
 Events use source `edt`, falling back to `pdt` when `edt` is missing; missing source times and

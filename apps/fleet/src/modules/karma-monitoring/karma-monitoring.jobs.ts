@@ -179,10 +179,7 @@ export class KarmaMonitoringJobs {
       const cutoff = new Date(now.getTime() - retentionDays * 86_400_000);
       const batch = await this.source.history(truck, cutoff, now);
       const highWatermark = String(
-        Math.max(
-          Number(truck.historyHighWatermark ?? truck.historyCursor),
-          Number(batch.highWatermark),
-        ),
+        Math.max(Number(truck.historyCursor), Number(batch.highWatermark)),
       );
       const events: MonitoringEventData[] = batch.reports.flatMap<MonitoringEventData>((report) => {
         if (
@@ -224,11 +221,11 @@ export class KarmaMonitoringJobs {
             ];
       });
       await this.repository.saveHistory(scope, truck.karmaCarId, events, {
-        historyCursor: batch.nextBeforeId === null ? highWatermark : truck.historyCursor,
-        historyBeforeId: batch.nextBeforeId,
-        historyHighWatermark: batch.nextBeforeId === null ? null : highWatermark,
+        historyCursor: highWatermark,
+        historyBeforeId: null,
+        historyHighWatermark: null,
         // Continue a bounded catch-up page on the next tick, then return to the configured interval.
-        lastHistoryPollAt: batch.nextBeforeId === null ? now : null,
+        lastHistoryPollAt: batch.hasMore ? null : now,
       });
     } catch {
       await this.repository.updateTruck(scope, truck.karmaCarId, { lastHistoryPollAt: now });

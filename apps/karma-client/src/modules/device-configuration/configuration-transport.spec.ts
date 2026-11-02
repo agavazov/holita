@@ -574,7 +574,9 @@ describe('fixed eData device command transport', () => {
         ...diagnosticRow(9, '19,0,419,0,1,1,1001,21000010F30701'),
         pdt: '2026-01-01 01:00:00',
       },
+      { ...diagnosticRow(10, 'unrelated'), eid: 1 },
     ];
+    eventRows.reverse();
     upstream.mockClear();
     expect(
       await new MonitoringService(transport).history({
@@ -585,8 +587,8 @@ describe('fixed eData device command transport', () => {
         toUtc: '2026-01-02T00:00:00.000Z',
       }),
     ).toMatchObject({
-      highWatermark: '9',
-      nextBeforeId: null,
+      highWatermark: '10',
+      hasMore: false,
       reports: [
         { messageId: '6', reportCode: '413', decoding: 'OPAQUE', faults: [] },
         { messageId: '7', reportCode: '418', decoding: 'OPAQUE', faults: [] },
@@ -595,12 +597,14 @@ describe('fixed eData device command transport', () => {
           occurredAt: eventTimeUtc,
           decoding: 'DECODED',
           faults: [{ code: 'P1111', status: 'ADDED' }],
+          rawRecord: { message_id: 8, pdt: '2026-01-01 00:00:00' },
         },
         {
           messageId: '9',
           occurredAt: eventTimeUtc,
           decoding: 'DECODED',
           faults: [{ spn: 4339, fmi: 7, status: 'ADDED' }],
+          rawRecord: { message_id: 9 },
         },
       ],
     });
@@ -611,9 +615,52 @@ describe('fixed eData device command transport', () => {
       monitoringRequest ? Object.fromEntries(url(monitoringRequest[0]).searchParams) : null,
     ).toMatchObject({
       from_id: '0',
+      device: deviceId,
       from_date: '2026-01-01 00:00:00',
       to_date: '2026-01-02 00:00:00',
       date_type: 'utc',
     });
+    expect(
+      monitoringRequest ? url(monitoringRequest[0]).searchParams.getAll('event_type[]') : null,
+    ).toEqual(['33']);
+    eventRows = Array.from({ length: 500 }, (_, index) =>
+      diagnosticRow(
+        index + 11,
+        index === 499 ? '19,0,419,0,1,1,1001,21000010F30701' : communication,
+      ),
+    );
+    const monitoring = new MonitoringService(transport);
+    upstream.mockClear();
+    expect(
+      await monitoring.history({
+        carId: '41',
+        deviceId,
+        afterId: '10',
+        fromUtc: eventTimeUtc,
+        toUtc: '2026-01-02T00:00:00.000Z',
+      }),
+    ).toMatchObject({
+      highWatermark: '510',
+      hasMore: true,
+      reports: [{ messageId: '510', faults: [{ spn: 4339, fmi: 7 }] }],
+    });
+    const continuation = upstream.mock.calls.find(
+      ([input]) => url(input).pathname === '/apiv2/events',
+    );
+    const continuationParameters = continuation ? url(continuation[0]).searchParams : null;
+    expect(continuationParameters?.get('from_id')).toBe('10');
+    expect(continuationParameters?.has('from_date')).toBe(false);
+    expect(continuationParameters?.has('to_date')).toBe(false);
+    expect(continuationParameters?.has('to_id')).toBe(false);
+    eventRows = [];
+    expect(
+      await monitoring.history({
+        carId: '41',
+        deviceId,
+        afterId: '510',
+        fromUtc: eventTimeUtc,
+        toUtc: '2026-01-02T00:00:00.000Z',
+      }),
+    ).toEqual({ highWatermark: '510', hasMore: false, reports: [] });
   });
 });

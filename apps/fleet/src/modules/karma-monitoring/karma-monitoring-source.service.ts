@@ -107,7 +107,6 @@ export class KarmaMonitoringSourceService {
       karmaCarId: string;
       karmaDeviceId: string;
       historyCursor: string;
-      historyBeforeId: string | null;
     },
     from: Date,
     to: Date,
@@ -118,14 +117,18 @@ export class KarmaMonitoringSourceService {
       afterId: truck.historyCursor,
       fromUtc: from.toISOString(),
       toUtc: to.toISOString(),
-      ...(truck.historyBeforeId ? { beforeId: truck.historyBeforeId } : {}),
     });
-    if (!record(result) || !Array.isArray(result.reports) || result.reports.length > 500) {
+    if (
+      !record(result) ||
+      !Array.isArray(result.reports) ||
+      result.reports.length > 500 ||
+      typeof result.hasMore !== 'boolean'
+    ) {
       invalid();
     }
     return {
       highWatermark: identifier(result.highWatermark, true),
-      nextBeforeId: result.nextBeforeId === null ? null : identifier(result.nextBeforeId),
+      hasMore: result.hasMore,
       reports: result.reports.map((report: unknown) => {
         if (
           !record(report) ||
