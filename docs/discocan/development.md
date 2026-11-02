@@ -974,25 +974,26 @@ shown as **Device in Karma**. No local Device registration, matching or addition
 needed. The server verifies the current Karma car/device pair before queuing and dispatching work.
 Opening a settings URL while signed out returns to that same route after login and Branch selection.
 
-The page shows saved state and can be closed/reloaded while the server waits. It displays
-the selected target's operations and the matching last complete snapshot, preserving unknown
-IDs, full definitions and zero reporting intervals. Each section distinguishes **Not read yet**
-from a confirmed empty response and shows its own confirmation time. The latest operation is
-visible above the tables; **Device operations** expands the full history when operations exist.
-Use **Read configuration** to read parameters, then rules after the first operation completes.
-Reloading the page restores results and progress; **Continue reading rules** resumes the second
-stage explicitly when needed. Opening or reloading the page never queues a new device read by
-itself. Individual section reads remain available, and a failed rule read does not invalidate
-a complete parameter baseline.
+The page summarizes the device, last successful read, whether commands and changes are enabled,
+and pending or failed operations. **Read configuration** reads parameters, then rules after the
+first complete response. Opening or reloading the page only loads saved results; it never queues
+a device command. **Continue reading rules** resumes an interrupted sequence. Each section shows
+its own read time and distinguishes **Not read yet** from a confirmed empty response.
 
-If Karma reports a different device for the selected truck, refresh the truck and read that
-device's configuration. Snapshots for another device or Branch cannot authorize a change.
+Use one flow: **Read device → Edit → Review difference → Send → Verify result**.
+Periodic data lists parameter names, source codes and intervals. **Add parameter** opens a
+searchable catalog picker; **Change interval** opens the selected parameter directly. Choose
+30 seconds, 1, 5 or 15 minutes, or enter custom whole seconds from `0` to `65000`. A separate
+review shows the truck, parameter and before/after interval before sending. Zero means
+**Not in use** and requires separate confirmation; readback does not prove measurement silence.
+Unknown parameter IDs remain editable from their captured definitions. Changes require the latest
+complete read for this exact truck/device and Branch, enabled dispatch and writes, and no pending
+or uncertain operation. Refresh the truck and read again if Karma changes its device.
 
-The confirmed Parameters table opens the change editor in a right-hand drawer. Readback
-identifiers and original hex definitions are available in the operation history; each request
-keeps status, phase and requested changes visible, with raw definitions, queue and correlation metadata under
-**Technical operation details**. **Show latest confirmed settings** returns from a historical
-snapshot; editing is available only against the latest matching baseline.
+**History** shows the newest requests first, their send times, requested changes and outcomes.
+A queued request is not a confirmed change. A successful result requires matching device readback.
+Original fields, raw definitions, request IDs and prerequisites are under **Technical details**.
+History cannot replace the current editing baseline with an older snapshot.
 
 The parameter row's **Measurements** action opens a read-only drawer for that parameter and
 Karma device. It loads the latest records within the displayed 24-hour UTC window on opening
@@ -1002,42 +1003,29 @@ change can remain configuration-confirmed without new numeric measurements after
 differences do not automatically establish periodic reporting: eData can also contain event
 or ignition-off reports. An unavailable query is shown separately from an empty result.
 
-With writes enabled and a complete read for that exact target, add a parameter from the eligible
-Monitor presets or edit an existing parameter's interval from the table, including unknown IDs.
-**Add parameter** opens catalog selection; **Change interval** opens the chosen parameter
-directly, without asking for its identity again. Enter an integer from `0` to `65000` seconds.
-Review the selected target, parameter name/ID and old/new
-interval before confirming **Save background change**. The baseline request ID, preserved raw
-definition and catalog provenance are available under **Technical change details**.
-Zero requires its own confirmation:
-Monitor describes it as **not in use**, and readback does not prove measurement silence.
-Changing the target or baseline invalidates the draft; unsaved drafts guard navigation and
-Branch or Karma target changes.
+Conditional events describe each rule's condition, threshold, confirmation time and event codes
+in one sentence. Read both parameters and rules before creating or changing an event. The drawer
+walks through **When should it send?** (name, searchable parameters, comparisons and threshold,
+confirmation time) and **What should it send?** (event codes when the condition becomes true or
+false), then opens the review of one rule. Event names and payload selection are not supplied by
+the current API; use event codes established for this truck. Ordinary rules require at least one
+reporting transition. Technical details contain the automatically selected free rule number,
+explicit replacement controls, calculation-only mode and advanced expression editing.
 
-Rule drafts can be created before selecting Fleet. They are saved only in this browser,
-partitioned by the signed Tenant and Karma car, with local names and catalog references.
-The right-hand rule editor offers condition rows with **All / Any** grouping and a readable
-preview. Choose configured parameters by source name/ID; without a parameter list, local
-authoring accepts explicit IDs. Advanced ID text preserves complex expressions, including
-arithmetic, mixed logic and `TimeOf`, `Count` or `Sum`, without flattening them into simple rows.
-Constants are integers from -65535 through 2147483647; mixed operators require explicit grouping.
-Compilation rejects RuleData above 128 bytes. No firmware behavior is simulated.
+Advanced ID text preserves complex expressions, including arithmetic, mixed logic and `TimeOf`,
+`Count` or `Sum`, without flattening them. Constants are integers from -65535 through 2147483647;
+mixed operators require explicit grouping. RuleData is limited to 128 bytes. Confirmation time
+is `1..32767` milliseconds, separate from `TimeOf`; no firmware behavior is simulated.
+Unsupported device rules stay opaque and cannot be overwritten. Other rules and the observed
+dashboard bit are preserved; a new rule uses false for that bit.
 
-Assign a device rule ID explicitly; occupied IDs are shown and replacement is identified.
-Choose whether to report when the condition becomes true and/or false, and supply a positive
-event code for each enabled transition. Disabling a transition sends zero for its event code.
-Ordinary reporting rules require at least one enabled transition; **Advanced settings** permits
-explicit calculation-only rules with both events zero. Submission requires acknowledgement of
-zero-event behavior. A confirmed rule and its local pending revision appear together;
-duplicate local IDs remain separate conflicts.
-Debounce is a separate `1..32767` millisecond field. Duplicate drafts need distinct device
-IDs before sending. Local imports/exports preserve the source dashboard activation bit,
-without an editing control. For a live change, the selected device baseline determines this
-bit: an existing rule keeps its observed value and a new rule uses false. The send review
-shows the actual outgoing record.
-Local draft removal never deletes a rule from a device.
+Unsent rule changes and local names are retained in this browser for the signed Tenant and truck,
+and appear alongside device settings with an explicit unconfirmed status. **Review change** leads
+directly to the guarded send review. Missing dependencies, duplicate rule numbers, changed
+baselines, pending operations and uncertain outcomes block sending. Discarding a proposed change
+never deletes a device rule. Unsubmitted edits guard navigation and target changes.
 
-**Files and technical details** contains INI/TXT tools for inspection and local authoring only. Original source, names, section order,
+**Technical details and file tools** contains INI/TXT tools for inspection and local authoring only. Original source, names, section order,
 unknown keys and opaque definitions remain available; mismatches, unresolved dependencies and
 unsupported expressions are shown. Download the original source, export edited local INI,
 or export inspection TXT containing individual `04` records. Edited ID-expression exports
