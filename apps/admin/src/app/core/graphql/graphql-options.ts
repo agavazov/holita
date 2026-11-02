@@ -3,6 +3,7 @@ import { ServerError } from '@apollo/client/errors';
 import { ErrorLink } from '@apollo/client/link/error';
 import type { HttpLink } from 'apollo-angular/http';
 import type { Language } from '../../i18n/messages';
+import { randomUuid } from '../random-uuid';
 
 export function graphqlOptions(
   httpLink: HttpLink,
@@ -20,7 +21,7 @@ export function graphqlOptions(
   const scopedLanguage = scope?.language;
   const link = new ApolloLink((operation, forward) => {
     const language: unknown = operation.getContext()['language'];
-    const requestId = crypto.randomUUID();
+    const requestId = randomUuid();
     operation.setContext({
       requestId,
       headers: {

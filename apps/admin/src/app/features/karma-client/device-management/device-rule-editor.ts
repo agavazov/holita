@@ -24,6 +24,7 @@ import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 import { Textarea } from 'primeng/textarea';
+import { randomUuid } from '../../../core/random-uuid';
 import type { Language } from '../../../i18n/messages';
 import { RouteDrawer } from '../../../ui/drawer/route-drawer';
 import { FormField } from '../../../ui/form-field/form-field';
@@ -413,7 +414,7 @@ export class DeviceRuleEditor implements OnInit {
       const version = this.catalogVersion() ?? previous?.catalogVersion;
       const draft: RuleDraft = {
         ...previous,
-        id: previous && !previous.confirmed ? previous.id : crypto.randomUUID(),
+        id: previous && !previous.confirmed ? previous.id : randomUuid(),
         ruleId: value.ruleId,
         name: value.name,
         expression: renderRuleExpression(parseRuleExpression(value.expression)),
