@@ -193,8 +193,8 @@ do not use the seven-day sample endpoint or its 2,000-row cap.
   (checked on the merged row and by a CHECK). `deactivateFleetVehicle` sets `INACTIVE` and
   clears the driver idempotently; deleting a vehicle with devices, samples, trips, events or
   service tasks fails with CONFLICT "Vehicle has devices or history; deactivate it instead."
-- **Device:** IMEI exactly 15 digits, unique per Branch; mandatory Vehicle of the Branch;
-  optional model `STARLINK_TRACKER`, `STARLINK_SCOUT` or `OTHER` with unique options stored in
+- **Device:** IMEI exactly 15 digits, globally unique (one unit belongs to one Branch);
+  optional Vehicle of the Branch; optional model `STARLINK_TRACKER`, `STARLINK_SCOUT` or `OTHER` with unique options stored in
   enumeration order and allowed per model (Tracker: 4G, Safety SF, IRF, CAN, Driver ID,
   eConnect, RS232, external antenna, voice, Wi-Fi, Wiliot; Scout: 4G, Safety SF, temperature
   DS, Geozones GO, IRF; Other: any; no model: none), firmware `^[0-9A-Za-z._-]{1,32}$`, SIM phone
@@ -306,8 +306,9 @@ selected Branch's Vehicle groups and General settings links.
 
 - [API](../../apps/admin/src/app/features/fleet/devices/devices-api.ts), [page](../../apps/admin/src/app/features/fleet/devices/devices-list-page.ts), [editor](../../apps/admin/src/app/features/fleet/devices/device-editor-page.ts), [mapping](../../apps/admin/src/app/features/fleet/devices/device-mapping.ts), [diagnostics](../../apps/admin/src/app/features/fleet/devices/device-diagnostics-page.ts).
 
-IMEI is exactly 15 digits and unique per Branch, retaining leading zeros. Assignment is optional;
-unassigned Devices are stock. Multiple Devices may share a scoped Vehicle. The editor uses the
+IMEI is exactly 15 digits and globally unique, retaining leading zeros; one unit belongs to one
+Branch. Assignment is optional; unassigned Devices are stock. Multiple Devices may share a scoped
+Vehicle. The editor uses the
 existing StarLink/Scout/Other catalog and nullable model, firmware, SIM, installation and notes
 fields. Vehicle choices load in bounded pages through the captured editor client. Row and selected
 delete actions use one partial-result batch. Connection status and whole-Branch KPIs come from the

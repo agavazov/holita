@@ -656,7 +656,7 @@ describe('Fleet scope isolation and referential integrity in PostgreSQL', () => 
     expect(await ownRows()).toEqual(before);
   });
 
-  it('unique violations map to fieldErrors per Tenant/Branch', async () => {
+  it('unique violations map to fieldErrors for global IMEIs and per-Branch values', async () => {
     const client = database.client;
     const vin = 'WDB9634031L123456';
     const serialNumber = '279037';
@@ -689,7 +689,7 @@ describe('Fleet scope isolation and referential integrity in PostgreSQL', () => 
         client.vehicle.create({ data: { tenantId, branchId, licensePlate: 'U3', vin } }),
       ],
       [
-        'device_tenantId_branchId_imei_key',
+        'device_imei_key',
         client.device.create({
           data: { tenantId, branchId, vehicleId, imei: '123456789012345' },
         }),
@@ -727,7 +727,7 @@ describe('Fleet scope isolation and referential integrity in PostgreSQL', () => 
       expect(uniqueViolation(await rejection(write))).toEqual({ index, fields: [] });
     }
 
-    // The scoped pre-check reports the duplicate fields of creates and updates.
+    // The pre-checks report the duplicate fields of creates and updates.
     const otherVehicle = await client.vehicle.create({
       data: { tenantId, branchId, licensePlate: 'U0' },
     });
@@ -821,7 +821,7 @@ describe('Fleet scope isolation and referential integrity in PostgreSQL', () => 
       });
     }
 
-    // The same values are accepted in another Branch.
+    // Per-Branch values are accepted in another Branch with a different IMEI.
     const elsewhere = { tenantId, branchId: randomUUID() };
     const accepted: [string, string, Record<string, unknown>][] = [
       [
@@ -829,7 +829,7 @@ describe('Fleet scope isolation and referential integrity in PostgreSQL', () => 
         createVehicle,
         { input: { licensePlate: 'U1', fleetNumber: 'U-01', vin } },
       ],
-      ['createFleetDevice', createDevice, { input: { imei: '123456789012345', serialNumber } }],
+      ['createFleetDevice', createDevice, { input: { imei: '123456789012347', serialNumber } }],
       [
         'createFleetDriver',
         createDriver,
@@ -853,12 +853,12 @@ describe('Fleet scope isolation and referential integrity in PostgreSQL', () => 
     expect(
       await query(
         createDevice,
-        { input: { imei: '123456789012345', serialNumber } },
+        { input: { imei: '123456789012348', serialNumber } },
         { tenantId: randomUUID(), branchId },
       ),
     ).toEqual({ data: { createFleetDevice: { id: expect.any(String) } } });
 
-    // Bypass each service's scoped pre-check so the real insert raises P2002 (a concurrent write).
+    // Bypass each service's pre-check so the real insert raises P2002 (a concurrent write).
     const spies = [
       jest
         .spyOn(module.get(VehiclesRepository), 'duplicates')

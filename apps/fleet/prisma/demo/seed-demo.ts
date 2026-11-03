@@ -75,7 +75,7 @@ async function guardNaturalKeys(
       select: { id: true, vin: true },
     }),
     transaction.device.findMany({
-      where: { ...DEMO_SCOPE, imei: { in: data.devices.map((row) => row.imei) } },
+      where: { imei: { in: data.devices.map((row) => row.imei) } },
       select: { id: true, imei: true },
     }),
   ]);

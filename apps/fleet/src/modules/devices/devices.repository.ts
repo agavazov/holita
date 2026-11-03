@@ -138,12 +138,10 @@ export class DevicesRepository {
     });
   }
 
-  /** Whether another device of the Branch already uses the IMEI. */
-  async imeiTaken(scope: FleetScope, imei: string, excludeId: string | null): Promise<boolean> {
+  /** Deliberately unscoped Device read across all Tenants/Branches; returns only a boolean. */
+  async imeiTaken(imei: string, excludeId: string | null): Promise<boolean> {
     const row = await this.prisma.client.device.findFirst({
       where: {
-        tenantId: scope.tenantId,
-        branchId: scope.branchId,
         imei,
         ...(excludeId === null ? {} : { id: { not: excludeId } }),
       },

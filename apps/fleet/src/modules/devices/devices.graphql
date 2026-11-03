@@ -29,6 +29,7 @@ type FleetDevice @key(fields: "id") {
   id: ID!
   branchId: ID!
   branch: Branch!
+  "15 digits, unique across all Tenants: one physical unit belongs to one Branch."
   imei: String!
   vehicleId: ID
   vehicle: FleetVehicleRef

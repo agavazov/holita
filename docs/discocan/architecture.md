@@ -21,7 +21,8 @@ Core/Fleet start with `20261102000000_baseline`; preserve applied history with n
 Seeds insert missing fixtures without overwriting edits. Tests use isolated schemas in
 dedicated test databases, never development connections or broad resets.
 
-Device IMEI is a 15-digit string unique per Tenant/Branch, preserving leading zeros.
+Device IMEI is a 15-digit string unique across all Tenants, preserving leading zeros.
+One physical unit belongs to one Branch.
 `serialNumber` is the optional ERM serial number, unique within that Branch; `edataModule`
 records the reported module/version. A Device may be stock or assigned to a Vehicle in the
 same scope; several Devices may share a Vehicle. Activity records retain the reporting IMEI

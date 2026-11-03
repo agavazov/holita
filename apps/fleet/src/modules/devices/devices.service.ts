@@ -89,7 +89,7 @@ const MODEL_OPTIONS: Record<FleetDeviceModel, readonly FleetDeviceOption[]> = {
 
 const DUPLICATE_IMEI: FieldError = {
   path: 'imei',
-  message: 'IMEI is already used in this branch.',
+  message: 'IMEI is already registered.',
   code: 'ALREADY_EXISTS',
 };
 const DUPLICATE_SERIAL_NUMBER: FieldError = {
@@ -98,7 +98,7 @@ const DUPLICATE_SERIAL_NUMBER: FieldError = {
   code: 'ALREADY_EXISTS',
 };
 const UNIQUE_INDEXES = new Map([
-  ['device_tenantId_branchId_imei_key', DUPLICATE_IMEI],
+  ['device_imei_key', DUPLICATE_IMEI],
   ['device_tenantId_branchId_serialNumber_key', DUPLICATE_SERIAL_NUMBER],
 ]);
 
@@ -244,7 +244,7 @@ export class DevicesService {
     if (data.vehicleId !== null) {
       await this.requireVehicle(scope, data.vehicleId);
     }
-    await this.requireUniqueImei(scope, data.imei, null);
+    await this.requireUniqueImei(data.imei, null);
     if (data.serialNumber !== null) {
       await this.requireUniqueSerialNumber(scope, data.serialNumber, null);
     }
@@ -317,7 +317,7 @@ export class DevicesService {
       await this.requireVehicle(scope, data.vehicleId);
     }
     if (data.imei !== undefined) {
-      await this.requireUniqueImei(scope, data.imei, recordId);
+      await this.requireUniqueImei(data.imei, recordId);
     }
     if (data.serialNumber != null) {
       await this.requireUniqueSerialNumber(scope, data.serialNumber, recordId);
@@ -454,12 +454,8 @@ export class DevicesService {
     }
   }
 
-  private async requireUniqueImei(
-    scope: FleetScope,
-    value: string,
-    excludeId: string | null,
-  ): Promise<void> {
-    if (await this.devices.imeiTaken(scope, value, excludeId)) {
+  private async requireUniqueImei(value: string, excludeId: string | null): Promise<void> {
+    if (await this.devices.imeiTaken(value, excludeId)) {
       invalid(DUPLICATE_IMEI.path, DUPLICATE_IMEI.message, DUPLICATE_IMEI.code);
     }
   }

@@ -6,6 +6,7 @@ import { AppModule } from '../src/app.module.js';
 import { issueDemoToken } from '../src/auth/demo-auth.js';
 import { CoreClient } from '../src/integrations/core/core.client.js';
 import { PrismaService } from '../src/database/prisma.service.js';
+import { uniqueViolation } from '../src/validation.js';
 import { createTestDatabase } from './test-database.js';
 
 const tenantId = '01000000-0000-4000-8000-000000000001';
@@ -36,12 +37,17 @@ describe('Device GraphQL with PostgreSQL', () => {
       await closeDatabase?.();
     }
   });
-  async function query(source: string, variables: Record<string, unknown>, branchId: string) {
+  async function query(
+    source: string,
+    variables: Record<string, unknown>,
+    branchId: string,
+    authTenantId = tenantId,
+  ) {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        authorization: `Bearer ${issueDemoToken(tenantId)}`,
+        authorization: `Bearer ${issueDemoToken(authTenantId)}`,
         'x-branch-id': branchId,
       },
       body: JSON.stringify({ query: source, variables }),
@@ -113,14 +119,15 @@ describe('Device GraphQL with PostgreSQL', () => {
         tenantId,
         branchId: foreignBranch,
         vehicleId: foreignVehicle.id,
-        imei: online.imei,
+        imei: '000000000000016',
         serialNumber: online.serialNumber,
         simPhoneNumber: online.simPhoneNumber,
       },
     });
+    const foreignTenant = randomUUID();
     for (const [scopeTenant, scopeBranch] of [
       [tenantId, foreignBranch],
-      [randomUUID(), branchId],
+      [foreignTenant, branchId],
     ] as const) {
       const other = await database.client.vehicle.create({
         data: { tenantId: scopeTenant, branchId: scopeBranch, licensePlate: 'FOREIGN CLOCK' },
@@ -130,7 +137,7 @@ describe('Device GraphQL with PostgreSQL', () => {
           data: {
             tenantId: scopeTenant,
             branchId: scopeBranch,
-            imei: online.imei,
+            imei: '000000000000017',
             serialNumber: online.serialNumber,
             simPhoneNumber: online.simPhoneNumber,
           },
@@ -148,6 +155,41 @@ describe('Device GraphQL with PostgreSQL', () => {
         },
       });
     }
+    const createDevice =
+      'mutation($input:CreateFleetDeviceInput!){createFleetDevice(input:$input){id}}';
+    const updateDevice =
+      'mutation($id:ID!,$input:UpdateFleetDeviceInput!){updateFleetDevice(id:$id,input:$input){id}}';
+    const duplicateWrites: [string, Record<string, unknown>, string, string][] = [
+      [createDevice, { input: { imei: online.imei } }, branchId, tenantId],
+      [createDevice, { input: { imei: online.imei } }, foreignBranch, tenantId],
+      [createDevice, { input: { imei: online.imei } }, branchId, foreignTenant],
+      [
+        updateDevice,
+        { id: foreignDevice.id, input: { imei: online.imei } },
+        foreignBranch,
+        tenantId,
+      ],
+    ];
+    for (const [source, variables, scopeBranch, scopeTenant] of duplicateWrites) {
+      expect(await query(source, variables, scopeBranch, scopeTenant)).toMatchObject({
+        data: null,
+        errors: [
+          {
+            message: 'IMEI is already registered.',
+            extensions: {
+              code: 'BAD_USER_INPUT',
+              fieldErrors: [
+                { path: 'imei', code: 'ALREADY_EXISTS', message: 'IMEI is already registered.' },
+              ],
+            },
+          },
+        ],
+      });
+    }
+    const duplicateInsert = await database.client.device
+      .create({ data: { tenantId: foreignTenant, branchId, imei: online.imei } })
+      .catch((error: unknown) => error);
+    expect(uniqueViolation(duplicateInsert)).toEqual({ index: 'device_imei_key', fields: [] });
     const list = `query($filter:FleetDeviceFilter,$sort:FleetDeviceSort,$offset:Int!=0,$limit:Int!=20,$search:String){
       fleetDevices(filter:$filter,sort:$sort,offset:$offset,limit:$limit,search:$search){items{id imei status lastReportedAt vehicleId}total}}`;
     expect(
