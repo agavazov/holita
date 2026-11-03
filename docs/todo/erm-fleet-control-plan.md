@@ -56,8 +56,10 @@ firmware versions up to 2.46.
 ## Phase 0: inventory and configuration backup
 
 - [ ] Read the identity of the seven trucks still on Karma: firmware (`48` with `#VER#`), IMSI/ICCID
-      (0063/0064), accessories (`56`), external device versions (`53`) and Simple SMS (0592). All ten
-      share the `0177` layout; `0182=3` on the Trackers CB9369PE, CB5640XP and CB6711TE, unset on the
+      (0063/0064), accessories (`56`), external device versions (`53`) and Simple SMS (0592). Karma
+      accepts `48` but its API returns no command replies, only parameter values, so firmware and
+      accessories become readable once a truck is routed (or through SMS `INFO`). All ten share the
+      `0177` layout; `0182=3` on the Trackers CB9369PE, CB5640XP and CB6711TE, unset on the
       six Scouts.
 - [ ] CB9680TE has sent nothing since 2026-10-28 06:02 UTC; Karma still holds its 10:31 reads. Have
       the truck checked (power, unit, SIM) before planning anything for it.
