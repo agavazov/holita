@@ -1,63 +1,36 @@
 # Discocan: fleet telemetry
 
-Discocan is the fleet telemetry domain. The current implementation is the Fleet API in
-`apps/fleet` — master data (Vehicles, Devices, Drivers, Vehicle groups) and activity (status
-samples with the data clock, trips, events and alerts, service tasks) on one standard list
-contract, plus Branch regional preferences and thresholds — and the connected Fleet Angular
-admin in `apps/admin`, including General settings. The shared
-`apps/karma-client` provides read-only truck lists/details, eData, location, trips, events,
-driving profile and account views for projects, time zones, API version, users and roles.
-Real per-truck diagnostic history decodes captured SPN/FMI fault reports and preserves
-unknown report payloads; fixed logger and communication-diagnostic reads use the scoped
-Fleet background worker. Fleet also persists background eData parameter/rule reads, single predefined-parameter additions,
-existing-interval changes and one-rule changes through Karma. Open a Karma truck's **More → Device settings**
-destination to author local rule drafts and configure the device identified by that Karma car's `deviceId`.
-The shell's active Branch scopes saved operations; no local Fleet Device registration or association is required.
-Writes are separately disabled by default and require a complete baseline, fresh
-preflight and full readback verification. Rules require both parameter and rule baselines.
-Requests, response fragments and complete snapshots
-survive page refresh and application restart. `apps/erm-server` independently mirrors raw
-StarLink device traffic to Karma and persists connections and frames alongside private JSON Lines
-captures. Activity rows remain holita demo data; Fleet telemetry processing, tracking and
-measurement processing are not implemented.
+Discocan is holita's fleet telemetry domain. Fleet owns Vehicles, Devices, Drivers, Vehicle
+groups, samples/data clock, trips, alerts, service tasks, Overview and Branch settings.
+The Angular admin uses generated GraphQL operations through Router. ERM Server receives
+StarLink traffic and records connections, exact frames, decoded events and commands; its gateway
+keeps device sessions while its api process serves the Control center and Fleet Device fields.
+Fleet activity remains demo/manual data until telemetry ingestion is connected.
 
-**Karma is transitional.** holita is replacing Karma with its own device server and control
-center. `apps/karma-client` and every Fleet path through Karma remain only until holita covers each
-function they provide. Then they move to an archive outside the active code and documentation,
-with a record of what they did and how. The [fleet control plan](../todo/erm-fleet-control-plan.md)
-tracks that coverage.
+**Karma is deprecated, view-only.** Its code stays in place for reference until holita recreates
+every required function. API/interface sources and historical integration guides are in the
+[Karma archive](../archive/karma/README.md), read only when needed. Active replacement work is
+tracked once in the [ERM roadmap](../todo/erm-roadmap.md).
 
 - [Contributor instructions](instructions.md).
 - [Implemented requirements](requirements.md).
-- [Architecture](architecture.md): persistence, federation and Angular request lifecycles.
-- [Development](development.md): telemetry admin, demo login, GraphQL usage and
-  [ERM Server service setup](development.md#erm-device-server).
-- [Fleet implementation index](fleet.md): concrete Fleet module source references, list
-  contract, the data clock and business date, thresholds, derived values and activity rules.
-- [Simple eData catalog](erm-resources/simple-edata-catalog/README.md): offline EXE
-  inspection/extraction, version comparison and shared Fleet reference-data import.
-- [ERM resources](erm-resources/README.md): Karma API v2 source assets, reconstructed
-  OpenAPI, endpoint and field reference, current integration coverage and limitations;
-  versioned PDF references for eData, Karma and StarLink with extracted images;
-  the authenticated StarLink protocol archive and coverage inventory, catalogs and Test Server
-  references alongside the original screenshots; a hardware profile for the supplied
-  EG915U-LA / LC86G device note, whose exact ERM model remains unidentified.
-- [ERM support correspondence and verification](erm-resources/erm-support-diagnostics-protocol-test-server/README.md):
-  diagnostics/DTCs, protocol access and Test Server questions versus the dated replies,
-  original images, independent real fault captures and remaining lifecycle/compatibility questions.
+- [Architecture](architecture.md): persistence, scope and public GraphQL contracts.
+- [Development](development.md): setup, configuration, operator workflows and
+  [ERM service/routing procedures](development.md#erm-device-server).
+- [Fleet implementation index](fleet.md): source entry points, clocks, thresholds and activity rules.
+- [ERM resources](erm-resources/README.md): retained StarLink/eData protocols, catalogs,
+  Monitor configuration and device hardware/brochures.
+- [ERM correspondence and verification](erm-resources/erm-support-diagnostics-protocol-test-server/README.md):
+  dated replies, command reference, original images, live evidence and unresolved semantics.
 - [Shared workspace documentation](../README.md).
 
 ## Terminology
 
-Branch is the shared Core-owned organizational scope. In Discocan, a Branch represents
-a vehicle fleet and scopes Vehicles/Devices and the active admin workspace. In Ecommerce,
-the same Branch concept represents an online shop.
+Branch is the shared Core-owned organizational scope: a fleet in Discocan and an online shop
+in Ecommerce. Code/APIs use `Branch`, `branchId` and `x-branch-id`; tenant identity comes from
+the verified session. Branch context alone is not authorization.
 
-GraphQL uses `Branch`, `branches`, `branch` and `branchId`; Fleet requests carry
-`x-branch-id`. Tenant identity comes from the verified session. All ten scoped Fleet business tables
-(FleetSettings, Vehicle, Device, FleetDeviceOperation, Driver, VehicleGroup,
-VehicleStatusSample, Trip, FleetEvent, ServiceTask) begin with `id`, `tenantId`, `branchId`. Branch
-itself has `id` and `tenantId`.
-The admin labels this scope Клон / Branch. Karma account data remains shared across
-authenticated tenants and does not use Branch scope. Raw ERM connection/frame data is also
-provider-level and has no Tenant/Branch columns at ingestion.
+Fleet business tables begin with `id`, `tenantId`, `branchId`; Branch has `id`, `tenantId`.
+Raw ERM ingestion remains provider-level without Tenant/Branch columns. Branch-visible ERM
+history/state is reached through a scoped Fleet Device and its IMEI, as defined in
+[ADR 0007](../architecture/decisions/0007-erm-gateway-and-api-processes.md).

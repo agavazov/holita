@@ -2,7 +2,7 @@
 
 Partner setup of fleets, users, vehicles and drivers, command permissions, output commands and DTC reporting.
 
-[ERM resource index](../README.md) · [Complete source content](content.md) · [Images and descriptions](images.md) · [Original PDF](source/original.pdf) · [Machine-readable metadata](metadata.json)
+[ERM resource index](../../../discocan/erm-resources/README.md) · [Complete source content](content.md) · [Images and descriptions](images.md) · [Original PDF](source/original.pdf) · [Machine-readable metadata](metadata.json)
 
 ## Document identity
 

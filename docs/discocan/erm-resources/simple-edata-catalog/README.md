@@ -142,7 +142,7 @@ facts. This procedure does not load settings into a device.
 
 ## Runtime parameter presets
 
-The [durable configuration flow](../../architecture.md#background-device-configuration-reads)
+The [durable configuration flow](../../../archive/karma/architecture.md#background-device-configuration-reads)
 uses only the imported Monitor 9.56 EXE SHA-256
 `01dd13e50c55fdf84078ce298bde72320d55bee458baa4c0d2a06fca7c0ca1a0`, extractor
 `1.0.0`, schema `1`. `fleetDeviceParameterPresets` returns an ID only when its

@@ -1,9 +1,13 @@
 # Karma device settings: remaining acceptance work
 
+Archived, deprecated reference only. The tasks and approvals below are historical; do not
+treat them as active work. Open ERM engineering and vendor questions belong in the
+[ERM roadmap](../../todo/erm-roadmap.md).
+
 The settings, rule authoring and measurements interface is accepted. Implemented targeting,
 operation and authoring contracts belong in
-[Discocan architecture](../discocan/architecture.md#background-device-configuration-reads)
-and the [operator workflow](../discocan/development.md#background-device-configuration-reads).
+[Discocan architecture](architecture.md#background-device-configuration-reads)
+and the [operator workflow](development.md#background-device-configuration-reads).
 Keep this backlog limited to pending work; do not restart a broad interface or architecture audit.
 
 ## P0: dated eData query latency
@@ -13,7 +17,7 @@ Keep this backlog limited to pending work; do not restart a broad interface or a
   at 20.039s. Coordinate bounded Karma Client/Router/caller budgets or choose an explicitly bounded
   source-ID workflow only where the provider contract supports it. Do not add an unlimited deadline
   or silently substitute incomplete history. Use the
-  [existing campaign evidence](../discocan/erm-resources/erm-support-diagnostics-protocol-test-server/live-verification-2026-10-27.md)
+  [existing campaign evidence](../../discocan/erm-resources/erm-support-diagnostics-protocol-test-server/live-verification-2026-10-27.md)
   rather than repeating parameter writes.
 
 ## P1: live rule acceptance
@@ -42,14 +46,14 @@ estimates. Broader performance work remains in [review corrections](review-corre
 ## Separately scoped follow-up
 
 - Firmware evaluation/reset semantics for TimeOf, Count, Sum, arithmetic and debounce remain in
-  [measurement verification](erm-edata-configuration-interface.md#measurement-verification).
+  [measurement verification](../../todo/erm-roadmap.md#open-engineering-work).
 - Verify edited Monitor INI round trips, including canonical ID expressions and unknown fields.
   Downloading original source is not proof of edited-file compatibility.
 - Extend unsupported/n-ary expression editing only with evidence that meaning and bytes survive.
 - Device deletion, whole-set replacement, global/profile changes, multi-rule deployment and
-  restoration remain in [restoration planning](erm-edata-configuration-interface.md#scoped-restoration).
+  restoration remain in [restoration planning](../../todo/erm-roadmap.md#open-engineering-work).
 - Provider queue behavior and permissions remain in [the Karma backlog](karma-api-v2.md);
-  named-operator accountability remains in [production access](erm-edata-configuration-interface.md#production-access-and-accountability).
+  named-operator accountability remains in [production access](../../todo/erm-roadmap.md#open-engineering-work).
 
-Follow [focused validation](../../.agents/skills/holita-focused-validation/SKILL.md) and the test
+Follow [focused validation](../../../.agents/skills/holita-focused-validation/SKILL.md) and the test
 budget. Preserve the production forms, generated contracts, scoped clients and original imports.

@@ -19,7 +19,7 @@ Monitor checkbox and actual fault record establish different things.
 [New reply: full technical analysis and all four images](reply-2026-10-29.md) ·
 [All 29 supplied commands and three-command procedure](command-reference-2026-10-29.md) ·
 [Current live evidence](live-verification-2026-10-29.md) ·
-[Open work](../../../todo/karma-api-v2.md#erm-support-verification).
+[Open work](../../../todo/erm-roadmap.md#questions-for-erm).
 
 ## Evidence and source material
 
@@ -97,5 +97,5 @@ if one is actually established. Distinguish automatic, requested and historicall
 replayed events when the contract permits it; otherwise record the uncertainty.
 
 Keep the original source assets unchanged. Mark changed conclusions explicitly,
-link current evidence and keep pending actions in the [existing backlog](../../../todo/karma-api-v2.md#erm-support-verification).
+link current evidence and keep pending actions in the [existing backlog](../../../todo/erm-roadmap.md#questions-for-erm).
 Do not store credentials or unsanitized private transcripts in this reference.

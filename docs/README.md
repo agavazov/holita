@@ -2,10 +2,10 @@
 
 The repository has two distinct domains with separate documentation and contributor instructions:
 
-| Domain                    | Documentation                         | Current implementation                                                                                        |
-| ------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Discocan: fleet telemetry | [docs/discocan](discocan/README.md)   | Fleet master data, telemetry, trips, alerts and service tasks, Karma Client, ERM Server and the Angular admin |
-| Ecommerce: online shops   | [docs/ecommerce](ecommerce/README.md) | Core Tenant/Branch foundation; no storefront, catalog, cart or orders                                         |
+| Domain                    | Documentation                         | Current implementation                                                                                                             |
+| ------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Discocan: fleet telemetry | [docs/discocan](discocan/README.md)   | Fleet master data, telemetry, trips, alerts and service tasks, deprecated view-only Karma Client, ERM Server and the Angular admin |
+| Ecommerce: online shops   | [docs/ecommerce](ecommerce/README.md) | Core Tenant/Branch foundation; no storefront, catalog, cart or orders                                                              |
 
 Branch is the shared organizational scope: a vehicle fleet in Discocan and an online shop
 in Ecommerce. Code, APIs, routes and persistence use Branch/branchId/x-branch-id with
@@ -26,6 +26,7 @@ verified Tenant scope.
 - [Admin design system decision](architecture/decisions/0004-admin-design-system.md).
 - [Fleet list contract and derived values](architecture/decisions/0005-fleet-list-contract-and-derived-values.md).
 - [ERM device server](architecture/decisions/0006-erm-device-server.md).
+- [ERM gateway and API processes](architecture/decisions/0007-erm-gateway-and-api-processes.md).
 - [Contributor rules](../AGENTS.md).
 - [Backend skill](../.agents/skills/holita-backend-feature/SKILL.md).
 - [Angular admin skill](../.agents/skills/holita-admin-development/SKILL.md).
@@ -43,3 +44,10 @@ cover implemented behavior.
 The [project backlog](todo/README.md) holds open tasks and plans separately from product
 documentation. Use [instant tasks](todo/_instant-tsks.md) for short entries and a descriptive
 file under `docs/todo/` for larger plans.
+
+## Reference archive
+
+[Deprecated reference material](archive/README.md), including Karma API/interface sources and
+historical integration guides, is read only when a task needs it. It is excluded from routine
+repository-wide documentation updates. Protocols, hardware and ERM correspondence remain in
+[ERM resources](discocan/erm-resources/README.md).

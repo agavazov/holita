@@ -7,7 +7,7 @@ hardware revision and firmware are unknown. The directory name is a descriptive
 reference label, not an ERM SKU or a holita device type.
 
 [ERM resources](../README.md) · [Original integration note](source/ERM_INTEGRATION_EN.md) ·
-[Source metadata](metadata.json) · [Open hardware questions](../../../todo/karma-api-v2.md#uncovered-resources-and-fields)
+[Source metadata](metadata.json) · [Open hardware questions](../../../todo/erm-roadmap.md#questions-for-erm)
 
 ## Document identity
 
@@ -141,7 +141,7 @@ this device and the evidence available for it.
 | 9: Information Required from ERM                      | Outstanding hardware identification is tracked as HARDWARE-01; shared protocol/parameter/command questions remain in existing backlog entries. |
 | 10: References                                        | Original links retained in the archived note; the component and adapter sources used here are linked beside their claims.                      |
 
-Open work belongs in the [existing backlog](../../../todo/karma-api-v2.md):
+Open work belongs in the [existing backlog](../../../todo/erm-roadmap.md#questions-for-erm):
 HARDWARE-01 for this board, PROTOCOL-01/02 for portal/tool compatibility,
 PARAM-01 for configuration and COMMAND-01/QUEUE-01 for command semantics. The
 source's broad integration proposals do not constitute a decision to implement

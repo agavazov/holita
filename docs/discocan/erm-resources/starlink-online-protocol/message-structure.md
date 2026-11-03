@@ -157,4 +157,4 @@ from these samples alone.
 
 Only the link labels are available. The original screenshot and the
 [portal overview](README.md) retain the evidence boundary; access-dependent
-questions are tracked in the [backlog](../../../todo/karma-api-v2.md#uncovered-resources-and-fields).
+questions are tracked in the [backlog](../../../todo/erm-roadmap.md#questions-for-erm).

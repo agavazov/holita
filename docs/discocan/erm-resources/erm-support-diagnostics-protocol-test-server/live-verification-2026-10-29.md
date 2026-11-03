@@ -33,7 +33,7 @@ query FaultEvidence($input: KarmaEventsInput!) {
 }
 ```
 
-At this campaign's cutoff, the Events UI could inspect these raw records, while a product DTC decoder and diagnostic-command workflow had not yet been implemented. The subsequent [real truck Diagnostics workflow](../../development.md#real-truck-diagnostic-history) now displays them separately from the illustrative Fleet scenario. This campaign's original evidence proves acquisition and raw propagation for the identified reports, not a complete current fault inventory.
+At this campaign's cutoff, the Events UI could inspect these raw records, while a product DTC decoder and diagnostic-command workflow had not yet been implemented. The subsequent [real truck Diagnostics workflow](../../../archive/karma/development.md#real-truck-diagnostic-history) now displays them separately from the illustrative Fleet scenario. This campaign's original evidence proves acquisition and raw propagation for the identified reports, not a complete current fault inventory.
 
 ## Logger read submitted once per truck
 
@@ -118,6 +118,6 @@ stopped and temporary login sessions remained memory-only.
 - No setting, interval, profile, rule, reset, logger-clear, vehicle-clear, odometer, counter, APN, transport or server-destination change was submitted. No fault was induced or cleared. Previously recorded settings were not freshly read back here; manufacturer changes described in the new reply are separate.
 - Latest batches contain at most 500 events per truck and were deliberately marked incomplete. No complete history or fleet-wide absence-of-faults claim follows. Five unresolved queues can deliver later; their IDs above remain the reconciliation points.
 - The positive `419` events predate these requests. They prove received fault records through API/Gateway, **not** that this run’s `301`/`19` returned a fault list, initiated a fresh ECU scan or established a complete current fault inventory.
-- No actual OBD `413` or FMS-character `418` report, removed transition, authoritative fault-description dictionary, direct TCP receiver, dual-server forwarding or replay/simulation behaviour was verified. See the [protocol reading guide](../starlink-online-protocol/authenticated-reading-guide.md) for source definitions and [pending work](../../../todo/karma-api-v2.md#questions-requiring-erm-clarification).
+- No actual OBD `413` or FMS-character `418` report, removed transition, authoritative fault-description dictionary, direct TCP receiver, dual-server forwarding or replay/simulation behaviour was verified. See the [protocol reading guide](../starlink-online-protocol/authenticated-reading-guide.md) for source definitions and [pending work](../../../todo/erm-roadmap.md#questions-for-erm).
 
 The task’s temporary API sessions were memory-only. Sanitized evidence retains only relevant identifiers, times, commands and payloads; no account credential, session, bearer token or private transcript is included. Application-check results belong in the task handover, not this device-evidence record.

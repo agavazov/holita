@@ -26,7 +26,7 @@ visible; this supplied image does not establish that we have portal credentials.
 Source filename: `menu.png`. The vertical list contains 19 general-information
 entries covering binary data, checksum, number representation, connectivity,
 device indications, message framing/confirmation and tools. The
-[overview](README.md#general-information-menu) transcribes every visible entry.
+[protocol catalog](authenticated/README.md#general-information-20) lists the general-information pages.
 No individual page content is visible in this menu capture.
 
 ## Message structure

@@ -5,13 +5,13 @@ Karma API v2 is the external ERM HTTP API consumed by the independent
 through Gateway and exposes it to authenticated admin sessions. A separate internal
 machine API executes fixed parameter/profile/rule/logger/communication reads and single-definition additions,
 interval changes or one-rule changes for Fleet's
-[persisted background operations](../../architecture.md#background-device-configuration-reads).
+[persisted background operations](../architecture.md#background-device-configuration-reads).
 It does not archive telemetry history or synchronize
 Fleet Vehicles/Devices with Karma records.
 
 ## Contents
 
-For device changes, see [Configuring eData parameter reporting through Karma](../edata-simple-protocol-v4.04/parameter-reporting.md).
+For device changes, see [Configuring eData parameter reporting through Karma](../../../discocan/erm-resources/edata-simple-protocol-v4.04/parameter-reporting.md).
 It distinguishes implemented read/add/interval operations, manual upstream procedures
 and installation-specific evidence limits.
 
@@ -26,7 +26,7 @@ and installation-specific evidence limits.
 | [Limitations](limitations.md)                                   | Current endpoint/field gaps, adapter assumptions and evidence limits                                                                        |
 | [Reconstructed OpenAPI 3.1](openapi.reconstructed.json)         | Machine-readable reference for 20 paths and 32 declared HTTP operations                                                                     |
 | [Original source assets](source/README.md)                      | Downloaded vendor help, checksums and structural response evidence                                                                          |
-| [Remaining questions and work](../../../todo/karma-api-v2.md)   | Unresolved provider questions and possible implementation work, kept outside product documentation                                          |
+| [Remaining questions and work](../karma-api-v2.md)              | Unresolved provider questions and possible implementation work, kept outside product documentation                                          |
 
 ## Sources and confidence
 
@@ -62,7 +62,7 @@ They do not establish global limits, all optional variants, permissions to write
 units, retention or an availability guarantee.
 
 The separate protocol, monitor and historical Karma guides are listed in the
-[ERM resource index](../README.md). They document their own versions and do not
+[ERM resource index](../../../discocan/erm-resources/README.md). They document their own versions and do not
 establish the current API v2 contract or a device-to-API parameter mapping.
 
 The documentation distinguishes:
@@ -126,6 +126,6 @@ Use [testing](../../../testing.md) for application checks.
 Apply the root handover policy to repository changes; keep device evidence
 separate from application check results.
 
-Related authoritative behavior: [architecture](../../architecture.md#karma-client),
-[development](../../development.md#karma-client) and
-[implemented requirements](../../requirements.md).
+Related authoritative behavior: [architecture](../architecture.md#karma-client),
+[development](../development.md#karma-client) and
+[implemented requirements](../../../discocan/requirements.md).

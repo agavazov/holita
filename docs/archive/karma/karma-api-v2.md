@@ -1,15 +1,19 @@
 # Karma API v2: unresolved questions and possible work
 
+Archived, deprecated reference only. The tasks and approvals below are historical; do not
+treat them as active work. Open ERM engineering and vendor questions belong in the
+[ERM roadmap](../../todo/erm-roadmap.md).
+
 This backlog contains pending work only. Implemented contracts belong in the
-[Karma API reference](../discocan/erm-resources/karma-api-v2/README.md), vendor
-specifications in the [ERM resources](../discocan/erm-resources/README.md), and
+[Karma API reference](karma-api-v2/README.md), vendor
+specifications in the [ERM resources](../../discocan/erm-resources/README.md), and
 historical observations in the dated support campaign records.
 
 ## ERM support verification
 
-The [29 October reply analysis](../discocan/erm-resources/erm-support-diagnostics-protocol-test-server/reply-2026-10-29.md)
+The [29 October reply analysis](../../discocan/erm-resources/erm-support-diagnostics-protocol-test-server/reply-2026-10-29.md)
 updates the original email coverage. The
-[29 October campaign](../discocan/erm-resources/erm-support-diagnostics-protocol-test-server/live-verification-2026-10-29.md)
+[29 October campaign](../../discocan/erm-resources/erm-support-diagnostics-protocol-test-server/live-verification-2026-10-29.md)
 independently reacquires real `419` faults from CB1147TP and exercises fixed
 logger reads across the ten-car account. Protocol credentials were supplied and
 authenticated access succeeded. These are completed evidence, not pending tasks.
@@ -18,7 +22,7 @@ authenticated access succeeded. These are completed evidence, not pending tasks.
 
 The old ERM-TEST-01–07 plan and per-stage attempt accounting apply to the completed
 27 October campaign; its results and unsent historical question draft remain in
-[that dated record](../discocan/erm-resources/erm-support-diagnostics-protocol-test-server/live-verification-2026-10-27.md).
+[that dated record](../../discocan/erm-resources/erm-support-diagnostics-protocol-test-server/live-verification-2026-10-27.md).
 Do not replay completed DTC/interval writes. CB1147TP last independently verified
 DTC=1/662=60; CB1344XH last independently verified DTC=1. Manufacturer actions on
 29 October and any current readback are recorded separately, rather than assumed
@@ -39,38 +43,17 @@ product constraints.
 
 ### Questions requiring ERM clarification
 
-1. Supply the applicable hardware/firmware/profile matrix and identify extended
-   `412` fields. A positive `419` proves one installation, not every truck/model.
-2. Resolve the Monitor byte 7 export discrepancy and inconsistent `302`/`410`
-   labels. Explain ignition-off processing versus CAN-alive reporting and whether
-   StarLink 2069/2070 are needed on these installations.
-3. Correct the `418` P1482 example and provide a real five-character capture with
-   expected code/status. Correct the `419` one-byte SPN table; confirm reserved
-   bits, range and FMI rules. The acquired real `419` records support four-byte
-   big-endian SPNs but do not define every bit rule.
-4. Define `301`/`19` replies, fragmentation/completeness and empty logger versus
-   rejection. ERM now explicitly identifies `154,0` as command not acknowledged;
-   the old Monitor "empty buffer" interpretation is insufficient. State whether
-   the request triggers a fresh ECU scan or only reads stored entries.
-5. Define automatic snapshots/transitions, debounce, ignition/reconnect behaviour
-   and removal meaning. Supply authoritative fault descriptions and distinguish
-   vehicle DTCs, eData diagnostics and tracker command/internal errors.
-6. Clarify why the supplied bulk `301`/`01` setup needs globals → parameters →
-   profile, and how that differs from the independently verified single-record
-   `301`/`02` interval update. Identify any commit/profile prerequisites precisely.
-7. Resolve any remaining Test Server capture/replay/simulation, dual-destination,
-   ACK ownership and routing questions against the newly accessible portal/tool
-   documentation; live direct routing remains a separate implementation task.
+Transferred to the active [ERM roadmap](../../todo/erm-roadmap.md#questions-for-erm).
 
 ## Device recovery
 
-- [Restore eData reporting for CB6721TE](erm-edata-recovery-cb6721te.md) after the
+- [Restore eData reporting for CB6721TE](../../todo/erm-roadmap.md) after the
   reported remote configuration changes; attempt verified remote recovery first,
   then arrange on-site work if necessary.
 
 ## eData reporting verification and restoration
 
-- Follow up the [implemented eData configuration interface](erm-edata-configuration-interface.md)
+- Follow up the [implemented eData configuration interface](../../todo/erm-roadmap.md)
   with measurement reporting verification, scoped restoration and production authorization.
   Provider questions below remain shared investigation items.
 
@@ -82,13 +65,13 @@ product constraints.
   Preserve captured fault evidence after
   a fault is cleared on the vehicle, and distinguish confirmed clearance from
   missing telemetry or an empty module buffer. Use the
-  [ERM support verification register](../discocan/erm-resources/erm-support-diagnostics-protocol-test-server/README.md#verification-register)
+  [ERM support verification register](../../discocan/erm-resources/erm-support-diagnostics-protocol-test-server/README.md#verification-register)
   for current claim/evidence status and the [bounded plan](#erm-support-verification)
   for pending tests and specific vendor questions.
 
 ## Direct ERM telemetry
 
-- [Route test trucks to the ERM device server and replace Karma](erm-tcp-receiver-and-test-device-routing.md):
+- [Route test trucks to the ERM device server and replace Karma](../../todo/erm-roadmap.md):
   route one truck through the server, verify mirror and primary modes on its real traffic,
   then replace Karma step by step.
   The task distinguishes concurrent delivery from failover and provider forwarding.
@@ -124,7 +107,7 @@ product constraints.
   their permission matrix and the relation between `project_id` and `project_ids`,
   including zero values, duplicates and cross-project visibility.
 - **AUTH-04:** Determine whether NC2 and API v2 share an account, identity provider,
-  permissions or sessions. The [web research](../discocan/erm-resources/karma-api-v2/web-functionality-research.md#nc2-technical-console)
+  permissions or sessions. The [web research](karma-api-v2/web-functionality-research.md#nc2-technical-console)
   verified the saved website login and four visible NC2 destinations; it did not
   establish API-account/session equivalence. Keep the internal `/i/` interface
   separate and obtain a supported contract before depending on its source-only operations.
@@ -147,9 +130,9 @@ product constraints.
   value types, nullable/missing behavior, precision, availability by device and
   whether descriptions are versioned/localized. Confirm multi-parameter filter
   semantics: selected readings only versus matching complete messages. The
-  [observed descriptions](../discocan/erm-resources/karma-api-v2/observed-parameters.md)
+  [observed descriptions](karma-api-v2/observed-parameters.md)
   provide an initial partial reference, not model-specific definitions. The separate
-  [versioned Simple eData catalog](../discocan/erm-resources/simple-edata-catalog/README.md)
+  [versioned Simple eData catalog](../../discocan/erm-resources/simple-edata-catalog/README.md)
   preserves the supplied EXE source records and imports vendor metadata into Fleet;
   it does not establish the Karma API mapping or device support.
 - **EVENT-01:** Obtain the event-code catalog, meaning of zero, `extra` structures,
@@ -166,12 +149,7 @@ product constraints.
 
 ## Uncovered resources and fields
 
-- **HARDWARE-01:** Identify the exact ERM SKU, board revision and firmware of the
-  [device described with EG915U-LA / LC86G](../discocan/erm-resources/erm-device-eg915u-la-lc86g/README.md).
-  Obtain the referenced photographs/label evidence and official eight-contact
-  pinout, supply/I/O ratings and supported accessories. Confirm the modem variant
-  against required operator/route bands and establish installed CAN/eNet hardware,
-  vehicle profiles and actual signal availability before assigning capabilities.
+- Hardware identification questions moved to the [ERM roadmap](../../todo/erm-roadmap.md#device-sessions-hardware-and-recovery).
 - **CAR-01:** Establish non-null schemas and meanings for `sim_imsi`, `sim_phone`,
   `karma_video_data` and `vehicle_type`; assess the need to expose each field.
 - **DRIVER-01:** Obtain a nonempty driver response model and define driver identity,
@@ -187,7 +165,7 @@ product constraints.
 - **PARAM-01:** Document `/parameters` definitions, cached versus device-query reads,
   value encodings, per-device availability, array alignment, partial errors,
   authorization, queue responses and verification of an applied configuration.
-- **COMMAND-01:** Extend the [documented eData command evidence](../discocan/erm-resources/edata-simple-protocol-v4.04/parameter-reporting.md)
+- **COMMAND-01:** Extend the [documented eData command evidence](../../discocan/erm-resources/edata-simple-protocol-v4.04/parameter-reporting.md)
   with confirmed hardware/firmware compatibility, write permissions, acknowledgment
   correlation, delivery/expiry behavior, idempotency and accountability requirements.
   Do not generalize the verified parameter updates to every device command.
@@ -197,21 +175,7 @@ product constraints.
 - **ACCIDENT-01:** Obtain accident-ID discovery, report schema/encoding, sampling,
   coordinate axes, time/unit definitions, retention and permissions for
   `/black_box/{id}`. Determine how reports link to events, cars and devices.
-- **PROTOCOL-01:** Apply the [authenticated protocol reference](../discocan/erm-resources/starlink-online-protocol/README.md)
-  to the installed hardware/firmware. Resolve remaining source contradictions:
-  G1/G2 checksum wording and buggy source listing, command `00` wording,
-  P180 confirmation examples, E2 diagnostic-code length and model-specific size
-  limits. Access recovery and companion-page acquisition are complete; do not
-  request them again. StarLink capabilities are not API v2 endpoints.
-- **PROTOCOL-02:** Verify actual dual-destination/fork delivery and restoration for
-  a separately scoped direct receiver. The authenticated portal supplies a
-  downloadable Test Server and local TCP/UDP/port-forwarding instructions; actual
-  truck connection, ACK/command ownership, capture/replay/simulation and matched
-  traffic at both destinations remain unverified. Establish how StarLink Monitor,
-  Simple eData Primitives Monitor and the existing
-  [Simple eData Monitor reference](../discocan/erm-resources/simple-edata-monitor-configuration-v1.0/README.md)
-  relate for the installed hardware. Reuse the available source catalog rather
-  than asking again whether a Test Server download exists.
+- Protocol and Test Server questions moved to the [ERM roadmap](../../todo/erm-roadmap.md#device-sessions-hardware-and-recovery).
 
 ## Adapter and verification follow-up
 

@@ -137,7 +137,7 @@ Sources: [SDL](../../../../apps/karma-client/src/modules/history/history.graphql
 
 The [daily report SDL](../../../../apps/karma-client/src/modules/history/history.graphql)
 and generated `AdminKarmaDailyReport` operation expose a separate bounded selection,
-not a total on the existing trip page. The [contract](../../architecture.md#daily-report-contract)
+not a total on the existing trip page. The [contract](../architecture.md#daily-report-contract)
 owns the state/field meaning. `retrieval` completion is separate from metric
 availability and `positionCoverage: NOT_ASSESSED`. `availableInputs`/`requiredInputs`
 describe the loaded selection, not the unknown number of unrecorded physical trips.
@@ -258,7 +258,7 @@ Sources: [SDL](../../../../apps/karma-client/src/modules/accounts/accounts.graph
 - **Drivers:** public help specifies create/update input fields (project_id, first_name, last_name, phone_number), but only an empty GET response was observed. A Driver response schema cannot be established from request names.
 - **Sensors:** observed envelope fields are car_id, carnumber, device_id, edt, message_id and sensors. The sensors property was null in the sample, so nested reading types, sensor identifiers, units and decoding are unknown.
 - **Configuration parameters:** /parameters is separate from /edata. Its cached/query results, value types, device reply and errors are unknown.
-- **Commands / queues:** single-device command submissions returned numeric queue-ID arrays. Single-ID queue reads returned objects keyed by the ID, with `state_id` and `state_desc`, including `1` / `transmitted`. These are limited upstream observations, not implemented holita models or a complete delivery/acknowledgment contract. See the [configuration reference](../edata-simple-protocol-v4.04/parameter-reporting.md#command-submission-and-responses).
+- **Commands / queues:** single-device command submissions returned numeric queue-ID arrays. Single-ID queue reads returned objects keyed by the ID, with `state_id` and `state_desc`, including `1` / `transmitted`. These are limited upstream observations, not implemented holita models or a complete delivery/acknowledgment contract. See the [configuration reference](../../../discocan/erm-resources/edata-simple-protocol-v4.04/parameter-reporting.md#command-submission-and-responses).
 - **Black box:** accident report structure, encoding, units, sampling, authorization and discovery are unknown.
 - **Writes:** create/update/delete response shapes and success codes were not inferred from read responses.
 - **Addresses / decode:** requested-address payloads and decoded external-device data have not been observed or integrated.

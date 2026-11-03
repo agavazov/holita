@@ -1,861 +1,311 @@
 # Admin design system
 
-The holita admin (`apps/admin`) has one centrally controlled design system shared by both domains.
-It is built on PrimeNG 22 styled mode with `@primeuix/themes` 3 tokens and `@primeicons/angular`.
-This document describes the implemented system; the decision record is
-[ADR 0004](architecture/decisions/0004-admin-design-system.md) and the focused procedure for
-contributors is the [admin design-system skill](../.agents/skills/holita-admin-design-system/SKILL.md).
-[Extending](#extending) says where each kind of addition goes.
+The shared presentation rules for `apps/admin`: theme, global styles, shell and reusable
+patterns. Use the [design-system skill](../.agents/skills/holita-admin-design-system/SKILL.md)
+when changing presentation. Meridian is visual inspiration only; no copied source/assets.
+The code defines individual component inputs and implementation details.
 
 ## Where presentation lives
 
-| Place                            | Content                                                                                                                                                                                                                                                                                 |
-| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/app/theme/`                 | `appTheme`, brands, densities, status tones, the preset, the PrimeNG provider, contrast checks, light/dark `Appearance`, `aura-base.d.ts` (restores the value exports of `@primeuix/themes/aura/base` that its 3.0.1 typings omit) and the "Foundations" and "PrimeNG coverage" stories |
-| `src/styles/` + `styles.scss`    | Global CSS: the layer order, the Lato faces, breakpoints, reset, base, shell, patterns                                                                                                                                                                                                  |
-| `src/app/ui/`                    | Domain-neutral components, CSS-pattern consumers and helpers (patterns below), their BG/EN catalog and Storybook stories                                                                                                                                                                |
-| `src/app/layout/`                | The shell: `AdminShell`, `AdminSidebar`, `AdminTopbar`, the navigation model (`NavGroup`, `NavItem`, `NavIconName`, `PageContext`, `navigationContext`) and `PageRecord`/`injectPageRecord`                                                                                             |
-| `src/app/workspace/`             | Composition: the navigation groups, the topbar page context, the document title, `UI_LANGUAGE` and PrimeNG texts                                                                                                                                                                        |
-| `src/app/i18n/`                  | The application BG/EN catalogs and the shared catalog parity check                                                                                                                                                                                                                      |
-| `src/storybook/` + `.storybook/` | Storybook configuration, fixtures, interaction helpers and the story-only example app                                                                                                                                                                                                   |
+Paths below are relative to `apps/admin/src`.
 
-Colours, the spacing scale, radius and shadow tokens and breakpoints are defined only in `theme/`
-and `styles/`. Component styles use `var(--p-*)` tokens (including `--p-app-*`), the global pattern
-classes and the breakpoint mixins for colours, spacing-scale steps, the radius and shadow tokens and
-breakpoints; global and component SCSS contain no `.app-dark` selectors and no literal colours.
-The story-only components of the Foundations, PrimeNG coverage and Start here stories use
-literal spacing in their inline styles.
-Component-specific values stay literal, for example icon boxes, chart and header heights, popup,
-card and text maximum widths, small gaps, paddings and offsets (`2px`, `0.125rem`, `-0.25rem`), the
-3 px corners of chart columns and the KPI tone marker, the login card's type sizes, hairlines, pill
-and round shapes (`999px`, `50%`) and pattern-local custom properties (`--app-meter-value`,
-`--app-truncate-width`). Karma Client uses the shared patterns and theme tokens. Its truck destinations remain visible
-in a horizontally scrolling tab strip, with a searchable truck switcher above it. Maps offer
-Show map / Hide map and remember the choice per page type; Location and trip details start
-expanded, while other pages start collapsed. Drawers retain the underlying map.
+| Area                           | Owns                                                                                  |
+| ------------------------------ | ------------------------------------------------------------------------------------- |
+| `app/theme/`                   | PrimeNG preset, brands, density, tokens, status/category palettes and contrast checks |
+| `styles/`                      | Fonts, layers, breakpoints, reset/base, shell and shared CSS patterns                 |
+| `app/ui/`                      | Repeated domain-neutral components/helpers, BG/EN texts and stories                   |
+| `app/layout/`                  | Business-independent shell, sidebar, topbar, navigation and record breadcrumb         |
+| `app/workspace/`               | Session/language composition, page context/title and PrimeNG translations             |
+| `app/features/`                | Concrete business views, typed forms, services and generated operations               |
+| `storybook/`, `../.storybook/` | Fixtures and review scenarios, excluded from application output                       |
+
+Keep colors, spacing scale, radii, shadows and breakpoints central. Component SCSS uses
+`var(--p-*)`/`--p-app-*`, shared pattern classes and breakpoint mixins; no literal colors,
+`.app-dark` selectors or Sakai aliases. Component-specific dimensions may stay local.
+Never use shell classes in feature code. Compiled component CSS warns at 4 kB and fails at 8 kB.
+Karma is deprecated, view-only; its historical presentation is in the
+[Karma archive](archive/karma/README.md).
 
 ## Theme
 
-`holitaPreset(choice)` (`theme/holita-preset.ts`) is `definePreset` over standard Aura
-(`@primeuix/themes/aura/base` plus the registered component presets) with:
-
-- `semantic`: the brand's primary ramp with `color`, `hoverColor` and `activeColor` from the brand
-  steps and `contrastColor` white (surface 950 in dark); `surface` = white at 0 plus the brand's
-  neutral ramp in both schemes (Aura's slate/zinc split is replaced); `highlight.color` = the
-  brand's emphasis step (white 87 % in dark) and `highlight.focusColor` one step darker, on Aura's
-  primary 50 highlight background; `content` radius `{border.radius.lg}` (8 px instead of Aura's
-  6 px) and border surface 200/800; focus ring 2 px solid primary, offset 2 px, no shadow;
-  form-field density paddings, a border of a 50 % sRGB mix of surface 500 and 400 (500 in dark)
-  and a hover border of 500 (400 in dark); the density list option padding; a 0.15 s transition;
-- `components`: density paddings for Button, DataTable (plus body and column-title font sizes) and
-  Drawer content; DataTable header cells on the panel header background with muted 600-weight
-  titles and a surface 50/800 row hover; Drawer header 1rem 1.25rem, title 1.125rem/600, footer
-  0.75rem 1.25rem; Tag 0.75rem/600, padding 0.125rem 0.5rem, `radius-tag`; status tones for Tag
-  (`primary` = accent, `secondary` = neutral), Message (`error` = danger), Badge (`secondary`
-  surface 200/700) and Button solid, outlined and text (`secondary` surface 600/300); unselected
-  ToggleButton and SelectButton labels and icons surface 600/400; tooltip surface 800 with white
-  text (surface 100 with 900 text in dark);
-- `extend.app`: the holita tokens, emitted as `--p-app-*` (below);
-- `css`: central rules tokens cannot express: uppercase 11–12 px column titles with 0.06em letter
-  spacing for every DataTable header cell, the density row height, the tab-bar gap, single-sided
-  `p-timeline` events (an empty opposite side is hidden), no transition on select and autocomplete options,
-  table rows and header cells, and disabled DatePicker days in the muted text colour at full
-  opacity (PrimeNG dims them below AA contrast).
-
-The `.app-num` pattern in `styles/_patterns.scss` owns tabular numbers, no-wrap and end
-alignment in the `holita` layer.
-
-`provideHolitaTheme(choice, license?)` (`theme/provide-holita-theme.ts`) calls `providePrimeNG`
-with `ripple: false`, `theme: holitaTheme(choice)`, the global pass-through
-`pt: { table: { tableContainer: { tabindex: '0' } } }` and `license` only when it is non-empty.
-The pass-through makes every table's scroll container a tab stop (cells never wrap, so a wide
-table scrolls sideways). `holitaTheme(choice)` is
-`{ preset: holitaPreset(choice), options: holitaThemeOptions }`; `holitaThemeOptions` holds
-`darkModeSelector: '.app-dark'` and
-`cssLayer: { name: 'primeng', order: 'holita-reset, primeng, holita' }`, which must match
-`styles/_layers.scss`. `appConfig(config, theme = appTheme)` in `app.config.ts` passes the choice
-(Storybook passes the toolbar choice) and `config.primeUiLicense`.
-
-The tracked `public/config.json` holds no license; a developer with a key puts
-`{ "primeUiLicense": "…" }` into the Git-ignored `apps/admin/public/config.local.json`, which
-`main.ts` merges over `config.json` (a 404 or a non-JSON fallback page means none; any other
-failure or unknown key is a configuration error). `readLocalAdminConfig` accepts only
-`primeUiLicense` and `googleMapsEmbedApiKey` as strings; both are trimmed and empty means none.
-The Maps key configures Karma's optional interactive maps (see
-[Karma maps](discocan/development.md#karma-maps)). Without a license PrimeNG shows
-its "Invalid PrimeUI License" notice, which is accepted and is not hidden. The `build` target
-excludes `config.local.json` from its base `public/` assets. Its `development` configuration
-copies it: `ng serve` serves the output from memory, while `admin:build:development` writes it
-into `apps/admin/dist/browser` and the Nx cache; never publish or share that development output.
-The production build excludes the file, so compiled-app browser fixtures run without a key.
-Storybook reads the same local file through `loadStoryLicense()`. Its Vite root is `apps/admin`,
-so `public/` is Vite's public directory and the interactive Storybook serves `config.local.json`.
+`holitaPreset(choice)` extends Aura through registered component presets.
+`provideHolitaTheme` supplies it to PrimeNG with ripple disabled and makes table scroll
+containers keyboard reachable. `.app-dark` is the central dark-mode selector.
+Layer order is `holita-reset, primeng, holita`; keep Sass and `holitaThemeOptions` aligned.
 
 ### The configured choice
 
-```ts
-// theme/theme-choice.ts
-export const appTheme: ThemeChoice = { brand: 'cobalt', density: 'compact' };
-```
-
-`appTheme` is the only place the application chooses its look. `ThemeChoice` is
-`{ brand: BrandName; density: DensityName }`, and `brandNames`/`densityNames` in the same file list
-every name. Storybook switches brand and density per story through toolbar globals; the
-application never reads them.
+`appTheme` in `theme/theme-choice.ts` is the application's sole brand/density choice:
+`{ brand: 'cobalt', density: 'compact' }`. Storybook toolbar choices affect only its preview.
 
 ### Brands
 
-A `Brand` (`theme/brands.ts`) has a `name`, a `title` (the Storybook toolbar label), a `primary`
-Aura palette (`AccentPalette`: blue, orange or teal), a `neutral` palette for `surface`
-(`NeutralPalette`: slate, zinc or stone), `light` and `dark` `BrandSteps` (`color`, `hover`,
-`active`) and `emphasis`, the light step for selected-row and accent-tag text. Ramps reference all
-11 `paletteSteps` (50–950) of both palettes as primitives (`{blue.600}`), never hex copies; a brand
-on another Aura palette first extends `AccentPalette` or `NeutralPalette`.
+| Brand              | Primary | Neutral | Light primary / hover / active | Dark primary / hover / active |
+| ------------------ | ------- | ------- | ------------------------------ | ----------------------------- |
+| `cobalt` (default) | blue    | slate   | 600 / 700 / 800                | 400 / 300 / 200               |
+| `ember`            | orange  | zinc    | 700 / 800 / 900                | 400 / 300 / 200               |
+| `pine`             | teal    | stone   | 600 / 700 / 800                | 400 / 300 / 200               |
 
-| Brand              | Primary | Neutral | Light primary / hover / active | Dark primary / hover / active | Selected-row and accent-tag text |
-| ------------------ | ------- | ------- | ------------------------------ | ----------------------------- | -------------------------------- |
-| `cobalt` (default) | blue    | slate   | 600 / 700 / 800                | 400 / 300 / 200               | 700                              |
-| `ember`            | orange  | zinc    | 700 / 800 / 900                | 400 / 300 / 200               | 800                              |
-| `pine`             | teal    | stone   | 700 / 800 / 900                | 400 / 300 / 200               | 800                              |
-
-`cobalt` is the default because an orange primary sits next to amber `warn` and red `danger`
-statuses. Contrast (WCAG 2.x) computed from the Aura primitives:
-
-| Brand    | White on primary / hover | Primary on surface 0 / 50 / 100 | Dark: primary on 900 / 950 | Dark: 950 on primary / hover |
-| -------- | ------------------------ | ------------------------------- | -------------------------- | ---------------------------- |
-| `cobalt` | 5.17 / 6.70              | 5.17 / 4.94 / 4.72              | 7.02 / 7.93                | 7.93 / 11.19                 |
-| `ember`  | 5.18 / 7.31              | 5.18 / 4.96 / 4.71              | 7.83 / 8.79                | 8.79 / 11.80                 |
-| `pine`   | 5.47 / 7.58              | 5.47 / 5.24 / 5.02              | 9.39 / 10.61               | 10.61 / 13.35                |
-
-The checked pairs are defined in `theme/contrast.ts`: `brandContrastChecks(brand)` (white on
-primary and hover, primary on surface 0/50/100, selected and accent-tag text, focus ring, the dark
-primary pairs, text, muted and canvas muted text, form-field borders ≥ 3:1) and
-`toneContrastChecks(brand)` (tags, messages, solid and outlined/text buttons and solid marks of the
-four status families, the neutral tag, secondary outlined/text buttons, segment labels and the
-categorical palette on surface 0 and, in dark, surface 900). Each `ContrastCheck` has `name`,
-`foreground`, `background`, `ratio` and `minimum` (4.5 for text, 3 for non-text); `primitiveHex`,
-`relativeLuminance`, `contrastRatio` and `mixSrgb` compute them from the Aura primitives.
-The checks do not cover the neutral and accent solid marks, the dark accent tag, the hover and
-active steps of solid status buttons or the topbar's unread badge. "Foundations/Colors" lists the
-ratio and minimum of both sets for the toolbar brand without marking failures; "Foundations/Brand
-variants" lists the brand checks of all brands and marks failures.
+Brands reference Aura palette steps, not copied hex values. New names belong in the choice
+unions/arrays and brand records; a new palette extends the palette union. Changed color pairs
+belong in `brandContrastChecks`/`toneContrastChecks` in `theme/contrast.ts`. Text needs 4.5:1,
+non-text 3:1. The Foundations stories expose the measured pairs; they are not an exhaustive
+accessibility audit. Use canvas-muted tokens on canvas backgrounds, not panel muted text.
 
 ### Densities
 
-| Token                                                            | `compact` (default)               | `comfortable`                 |
-| ---------------------------------------------------------------- | --------------------------------- | ----------------------------- |
-| Form field padding Y / X                                         | 0.375rem / 0.625rem               | 0.5rem / 0.75rem              |
-| List option padding                                              | 0.375rem 0.625rem                 | 0.5rem 0.75rem                |
-| Button padding Y / X                                             | 0.375rem / 0.75rem                | 0.5rem / 0.875rem             |
-| DataTable header cell / body cell padding                        | 0.5rem 0.75rem / 0.375rem 0.75rem | 0.625rem 1rem / 0.625rem 1rem |
-| Table body text / column title                                   | 13 px / 11 px                     | 14 px / 12 px                 |
-| Drawer content padding                                           | 0 1.25rem 1.25rem                 | 0 1.5rem 1.5rem               |
-| `--p-app-row-height` / `--p-app-control-height`                  | 48 px / 34 px                     | 56 px / 40 px                 |
-| `--p-app-topbar-height`                                          | 52 px                             | 56 px                         |
-| `--p-app-gutter` / `--p-app-panel-padding` / `--p-app-stack-gap` | 1.25 / 1 / 1rem                   | 1.5 / 1.25 / 1.25rem          |
-| `--p-app-text-title` (page h1)                                   | 1.375rem                          | 1.5rem                        |
-
-The "Foundations/Spacing and density" story measures an input, a button, a select and a table
-row and fails when a height differs from the control or row token by more than 1 px.
+| Value                              | `compact` (default)               | `comfortable`                 |
+| ---------------------------------- | --------------------------------- | ----------------------------- |
+| Form padding Y / X                 | 0.375rem / 0.625rem               | 0.5rem / 0.75rem              |
+| Button padding Y / X               | 0.375rem / 0.75rem                | 0.5rem / 0.875rem             |
+| Table header / body padding        | 0.5rem 0.75rem / 0.375rem 0.75rem | 0.625rem 1rem / 0.625rem 1rem |
+| Table body / column-title text     | 13px / 11px                       | 14px / 12px                   |
+| Row / control height               | 48px / 34px                       | 56px / 40px                   |
+| Topbar height                      | 52px                              | 56px                          |
+| Gutter / panel padding / stack gap | 1.25rem / 1rem / 1rem             | 1.5rem / 1.25rem / 1.25rem    |
+| Page title                         | 1.375rem                          | 1.5rem                        |
 
 ### Tokens (`--p-app-*`)
 
-| Group             | Tokens                                                                                                                                                                                                                                                                                                                                                                                   |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Typography        | `font-family` (local Lato, then system UI), `font-numeric` (`tabular-nums`); `text-xs` 0.6875rem (eyebrows, navigation group and KPI labels), `text-sm` 0.75rem, `text-table` (density), `text-base` 0.875rem (body), `text-md` 1rem (h3, card titles), `text-lg` 1.125rem (h2), `text-title` (density, h1), `text-kpi` 1.625rem                                                         |
-| Space and shape   | `space-1` 0.25rem, `space-2` 0.5rem, `space-3` 0.75rem, `space-4` 1rem, `space-5` 1.25rem, `space-6` 1.5rem, `space-8` 2rem, `space-10` 2.5rem (there is no `space-7` or `space-9`); `radius-frame` 12 px, `radius-panel` 8 px, `radius-control` 6 px, `radius-tag` 4 px; `shadow-floating` (floating surfaces only: the TablePanel bulk bar, route drawers, toasts and `.app-save-bar`) |
-| Surfaces          | `canvas-background` (surface 100/950), `canvas-muted-color` (600/400), `frame-background` (surface 0/900), `frame-border-color`, `panel-background`, `panel-border-color`, `panel-header-background` (surface 50/900), `panel-padding` (density), `panel-radius`                                                                                                                         |
-| Shell             | `frame-gap` 0.5rem, `frame-radius` (= `radius-frame`), `sidebar-width` 15.5rem, `sidebar-rail-width` 4rem, `sidebar-item-{color,muted-color,hover-background,active-background,active-color,indicator}`, `topbar-height` (density), `content-max-width` 100rem, `gutter` (density), `gutter-narrow` 1rem                                                                                 |
-| Layout            | `stack-gap`, `control-height` and `row-height` (density), `drawer-width-md` 35rem, `drawer-width-lg` 45rem, `kpi-min-width` 10.5rem                                                                                                                                                                                                                                                      |
-| Status and series | `tone-{success,info,warn,danger,neutral,accent}-{color,background,solid}` (e.g. `--p-app-tone-warn-solid`), `category-c1` … `category-c8`                                                                                                                                                                                                                                                |
+| Group         | Use                                                                                         |
+| ------------- | ------------------------------------------------------------------------------------------- |
+| Typography    | Local Cyrillic-capable Lato, `font-numeric`, `text-xs/sm/table/base/md/lg/title/kpi`        |
+| Space/shape   | `space-1/2/3/4/5/6/8/10`, `radius-frame/panel/control/tag`, `shadow-floating`               |
+| Surfaces      | `canvas-*`, `frame-*`, `panel-*`; panel headers and muted text use their own contrast pairs |
+| Shell         | `sidebar-*`, `topbar-height`, `content-max-width`, `gutter`, `gutter-narrow`                |
+| Layout        | `stack-gap`, `control-height`, `row-height`, `drawer-width-md/lg`, `kpi-min-width`          |
+| Status/series | `tone-<name>-color/background/solid`, `category-c1` through `category-c8`                   |
 
-A key under `extend.app` in `appTokens()` (`theme/holita-preset.ts`) is emitted as `--p-app-` plus
-its path in kebab case (`sidebar.item.hoverBackground` → `--p-app-sidebar-item-hover-background`);
-tokens reference each other as `{app.radius.frame}` and Aura tokens as `{surface.100}`. DataTable
-column titles use the density's `--p-datatable-column-title-font-size`, not `text-xs`.
-
-The muted text colour fails AA on surface 100, so the canvas uses `canvas-muted-color` (600 in
-light) and table and panel headers use surface 50.
+Define tokens under `extend.app` in `theme/holita-preset.ts`; nested paths become kebab-case
+CSS properties. Reference Aura/holita tokens centrally. Shadows are for floating surfaces.
+Table column titles use the DataTable density token, not `text-xs`.
 
 ### Status tones and categories
 
-`theme/status-tones.ts` declares the families once (`statusTones`): success → green, info → sky,
-warn → amber, danger → red, plus `neutral` (surface) and `accent` (primary). It exports
-`statusTones`, `StatusFamilyTone`, `StatusTone`, `statusToneNames`, `categoryPalette`,
-`CategorySlot`, `categorySlots` and the token builders the preset uses.
-
-| Use (four status families)                    | Light                              | Dark                  |
-| --------------------------------------------- | ---------------------------------- | --------------------- |
-| `tone-<family>-color` and tag text            | 800                                | 200                   |
-| `tone-<family>-background` and tag background | 100                                | a 16 % tint of 400    |
-| `tone-<family>-solid` (dots, meters, bars)    | 600                                | 400                   |
-| Message text / background                     | 700 on 50                          | 300 on the tint       |
-| Solid button and badge                        | danger 600, others 700; white text | 400; surface 950 text |
-| Outlined and text button                      | 700                                | 300                   |
-
-`neutral` uses surface 700/200 (color), 100/800 (background) and 500/400 (solid); `accent` uses the
-brand's emphasis step/primary 300, primary 100/a 16 % primary tint and `{primary.color}`. Severity
-names that differ from tone names: Tag `primary` is the accent tone and `secondary` the neutral
-tone, Message `error` is danger, Badge `secondary` is surface 200 with 800 text (700 with 100 in
-dark), and outlined/text Button `secondary` is surface 600 (300 in dark). `toneSeverity(tone)`
-(`ui/tones.ts`) returns the `p-tag` severity: `neutral` → `secondary`, `accent` → none (the default
-primary tag), each family → the same name; there is no status-tag wrapper.
-
-Vehicle groups and chart series use the eight categorical slots (`categoryPalette`): c1 blue 600,
-c2 teal 600, c3 amber 600, c4 violet 600, c5 rose 600, c6 lime 700, c7 cyan 700, c8 fuchsia 600;
-every slot is 400 in dark. Colour is never the only carrier of meaning: dots sit next to labels,
-column and stacked-bar charts carry a visually hidden table, and a sparkline's accessible name
-states its value range and last value.
+Status families are success/green, info/sky, warn/amber and danger/red, plus neutral and accent.
+Use `toneSeverity` for `p-tag`; neutral maps to secondary and accent to the default primary.
+Vehicle groups and chart series use category slots, never arbitrary feature colors.
+Color always accompanies text or another accessible signal. Charts retain hidden native data
+tables; sparkline names state range and last value. Null is a gap, zero a real value.
 
 ### Light and dark
 
-`Appearance` (`theme/appearance.ts`, a root service) exposes the `dark` and `persistenceFailed`
-signals and `toggle()`. It toggles `.app-dark` and the inline `color-scheme` on `<html>` and
-persists `holita.admin.theme` (`dark` or `light`). Only a stored `dark` restores dark mode, so the
-default is light and the operating system preference is not read. A failed storage read or write
-sets `persistenceFailed`, which shows a warning `p-message` in the shell and on the login page; a
-later successful write clears it. The account menu and the login page switch the theme. Aura 3
-and the holita tokens express every scheme difference as `light-dark()`, and the preset emits
-`.app-dark { color-scheme: dark }`, so one class switches PrimeNG and holita tokens for its subtree
-(the Foundations and PrimeNG coverage stories render a nested `.app-dark` section this way).
+`Appearance` toggles the root scheme and stores `holita.admin.theme`; default is light.
+Login and the account menu expose the switch. Denied storage keeps switching usable and
+reports a warning. Scheme differences belong in the preset/tokens, not component selectors.
+Private license/map configuration and production asset exclusions are documented once in
+[development](development.md#ports-and-environment); never hide the PrimeUI license notice.
 
 ## Global styles, layers and breakpoints
 
-`styles.scss` loads, in order: `_layers` (`@layer holita-reset, primeng, holita;`), `_fonts`,
-`_breakpoint-properties`, `_reset`, `_base`, `_shell`, `_patterns`. `_reset` is
-the `holita-reset` layer; `_base`, `_shell` and `_patterns` are in `holita`; the
-`@font-face` rules and `--app-bp-*` are unlayered. Holita rules override PrimeNG without
-`!important`; only the reduced-motion rule uses it, so it also beats unlayered component styles.
-Component stylesheets are unlayered.
+Global styles load layers, fonts, breakpoint properties, reset, base, shell and patterns.
+Use the central layer order instead of `!important`; reduced-motion overrides are the exception.
+Local Lato weights are 400/500/600/700/800, normal only; preserve the
+[font license/attribution](../apps/admin/THIRD_PARTY_NOTICES.md).
 
-- `_reset`: box sizing, text-size adjust, no body margin, inherited fonts and colours in form
-  controls, links that inherit their colour without underline, no margins on headings, `p`,
-  `figure`, `blockquote`, `dl` and `dd`, and `ul`/`ol` with `role="list"` without bullets or
-  padding.
-- `_base`: the browser's 16 px root (`font-size: 100%`); the body font, `text-base` size, line
-  height 1.5 and canvas background; h1–h3 at `text-title`/`text-lg`/`text-md`, weight 600; `small`
-  at `text-sm`; the focus ring on `a`, `button` and `summary` via `:focus-visible`; no outline on
-  `[tabindex="-1"]` programmatic focus targets (page title, `<main>`, drawer title);
-  `.app-skip-link`; `.app-visually-hidden`; reduced motion.
-- `_fonts`: Lato 2.015 (SIL OFL 1.1) in weights 400, 500, 600, 700 and 800, normal style only,
-  `font-display: swap`, from `/fonts/lato/Lato-{Regular,Medium,SemiBold,Bold,ExtraBold}.woff`
-  (`apps/admin/public/fonts/lato` with `OFL.txt`; attribution in
-  [`apps/admin/THIRD_PARTY_NOTICES.md`](../apps/admin/THIRD_PARTY_NOTICES.md)). There are no
-  italic or other weights. Vite's public directory serves them to the interactive Storybook.
-- `_shell`: only the shell components' own classes (`.app-shell`, `.app-shell--rail`,
-  `.app-topbar*`, `.app-breadcrumb*`, `.app-sidebar*`, `.app-nav*`, `.app-main`,
-  `.p-drawer.app-nav-drawer`) and the host display of `holita-admin-shell`, `-topbar` and
-  `-sidebar`; feature code does not use them. `.app-page` is the content column around the routed
-  view: centred up to `content-max-width`, padded by `gutter` (`gutter-narrow` below `md`), with
-  `stack-gap` between blocks.
-- `_patterns`: the CSS patterns and the global DataTable rules (below).
+`styles/_breakpoints.scss` owns sm 640, md 768, lg 1024, xl 1280 and xxl 1536px.
+SCSS uses `@use 'breakpoints' as bp` and `bp.below`/`bp.from`; TypeScript uses `ui/media.ts`
+`below(name)`/`breakpointWidth(name)`, never literal pixel checks.
 
-`styles/_breakpoints.scss` declares the breakpoints (`sm` 640, `md` 768, `lg` 1024, `xl` 1280,
-`xxl` 1536 px) and the mixins `below($name)` (`max-width: <value> − 0.02px`) and `from($name)`
-(`min-width: <value>`), so the two never overlap. It emits no CSS; component stylesheets write
-`@use 'breakpoints' as bp;` and `@include bp.below(md)`. The include path `src/styles` is set in
-the `build` and `storybook` targets of `apps/admin/angular.json` (the `test` target builds through
-`build:development`).
-`_breakpoint-properties.scss` emits `--app-bp-*` on `:root`; `ui/media.ts` exports
-`BreakpointName`, `breakpointWidth(name)` (throws "Global styles are not loaded" without the
-properties) and `below(name)`, a readonly `matchMedia` signal created in an injection context that
-stops listening when the context is destroyed, so TypeScript and CSS switch at the same pixel
-(there is no TypeScript `from`). In unit tests `src/test-setup.ts` restates the five values (it
-must change with the Sass map), provides a deterministic `matchMedia` driven by `window.innerWidth`
-(specs set `innerWidth` and dispatch `resize`) that always matches
-`prefers-reduced-motion: reduce` so PrimeNG overlays close without animations, and no-op
-`ResizeObserver` and `Element.scrollIntoView`.
+| Width           | Presentation                                                                                  |
+| --------------- | --------------------------------------------------------------------------------------------- |
+| `< sm`          | Compact topbar labels, no breadcrumb, filter search on its own row, stacked drawer actions    |
+| `< md`          | Full-width drawers, narrow page gutter, hidden secondary table columns, two KPI tiles per row |
+| `< lg`          | Modal navigation drawer and full-bleed frame                                                  |
+| `≥ sm`          | Two-column form grids                                                                         |
+| `≥ md` / `≥ xl` | Two-/three-column card grids                                                                  |
+| `≥ lg`          | Settings headings beside fields                                                               |
 
-| Width  | Behaviour                                                                                                                                                                                                                                                   |
-| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `< sm` | Topbar: the logo mark only (word visually hidden), no breadcrumb, the language code instead of its name, the Branch name at most 9rem, tighter spacing; FilterBuilder's quick search takes its own row; drawer actions stack with the primary action on top |
-| `< md` | Full-width route drawers, the `gutter-narrow` page padding, `.app-col-secondary` hidden, no group crumb, KPI tiles two per row, the page-header row wraps                                                                                                   |
-| `< lg` | The sidebar becomes the navigation drawer and the topbar shows the logo; the frame becomes full-bleed (no gap, border or radius)                                                                                                                            |
-| `≥ sm` | Form grids two columns                                                                                                                                                                                                                                      |
-| `≥ md` | Card grids two columns (three from `xl`)                                                                                                                                                                                                                    |
-| `≥ lg` | Settings sections show the title and hint beside the fields (1:2)                                                                                                                                                                                           |
+Use focus-visible rings, the skip link and reduced-motion support. Programmatic page/drawer
+focus targets need `tabindex="-1"`; do not remove visible keyboard focus.
 
 ## Shell
 
-`AdminShell` (`holita-admin-shell`) renders the skip link, the canvas, the sidebar (full width or a
-64 px rail on desktop, a modal `p-drawer` below `lg`), the sticky topbar and the framed
-`<main id="main-content">` with the projected page. Inputs: `branches` (required,
-`{ id, name }[]`), `branchId`, `language` (required), `languages` (`LanguageOption[]`: `code` and
-a `label` in its own language), `loading` (Branch discovery in progress), `tenantName`, `account`
-(`ShellAccount`: `name`, `detail`), `notifications` (`ShellNotification[]`: `id`, `title`,
-`detail`, `at` (ISO instant), `unread`; `null` hides the bell), `navigation: readonly NavGroup[]`
-and `context: PageContext | null`; outputs `languageChange`, `branchSelected`, `notificationOpen`
-(id), `notificationsRead` and `signOut`. It imports no feature code and reads no business data;
-navigation has no counts.
+The shell imports no business features and fetches no business data. The workspace supplies
+navigation, Branch/language/account context and page title. Navigation has no business-count badges.
+The document title is `<page> · holita`; login uses the localized Sign in title.
 
-- The document scrolls; the sidebar is sticky on the canvas and the topbar sticks inside the frame.
-  Page content is centred up to `content-max-width` with the density gutter.
-- Navigation model (`layout/navigation.ts`): `NavItem` is `{ id, label, icon, link }` and
-  `NavGroup` is `{ id, label, note?, items }`. `navigationContext(navigation, path)` picks the
-  item whose link equals the path or is followed in it by `/`; the longest link wins, so
-  `/vehicles-archive` does not match `/vehicles`. Icons are a closed set (`NavIconName`): a new
-  icon needs its name in that union, its `@primeicons/angular` import in `admin-sidebar.ts` and a
-  `@case` in `admin-sidebar.html`.
-- The sidebar groups the links under `<h2>` headings (`role="group"` labelled by the heading); a
-  group's optional `note` is a small tag after its label. The footer reads `holita · <tenant>`.
-  From `lg` the logo heads the sidebar.
-- The rail keeps link names, group labels and notes (as "(note)") as visually hidden text, turns
-  group labels into 1 px separators, hides the footer, shows only the logo mark and shows link
-  names as tooltips on hover and focus. The choice persists in `localStorage`
-  `holita.admin.sidebar` (`rail` or `full`; a storage failure only loses the preference). Below
-  `lg` a second sidebar instance (`idPrefix="mobile-nav"`) fills the navigation drawer, which is as
-  wide as the sidebar (at most 90vw), shows a decorative logo in its header and keeps the footer.
-- The topbar is one row at every width: the menu button, the logo (below `lg` only), the
-  breadcrumb, then the Branch, language, notifications and account menus. The logo links to
-  `/<language>/<Branch>/fleet`, or `/<language>` without a Branch; the Fleet root redirects to
-  Overview and the signed-in language root opens Overview for the selected Branch. The four
-  menus are `holita-menu-button` popups (below), not form selects; each
-  button's name starts with a visually hidden "Branch:", "Language:", "Notifications" or
-  "Account:".
-- Breadcrumb (`<nav>` with an `<ol>`, `aria-current="page"` on the last crumb): the navigation
-  group is a plain label (groups are not pages) and the page is the current crumb. A record page
-  registers its name with `injectPageRecord(() => name)` (`layout/page-record.ts`); while it is
-  registered the page becomes a link back to its list and the record name is the current crumb.
-  The optional second callback, `injectPageRecord(() => name, () => urlTree)`, supplies a
-  contextual list link, including query parameters. `PageContext.pageLink` accepts route commands
-  or a `UrlTree`; without an override it uses the matching navigation item's link.
-  One record is shown at a time: a newer registration replaces it, and only the page that
-  registered last clears it when destroyed, so a page leaving late keeps the next page's record.
-  When no navigation item matches the path, the context is `null` and there is no breadcrumb.
-  Crumbs stay on one line: the group and the list-page link of a record page are at most 12rem
-  each; when space runs out every crumb shrinks and ends with its own ellipsis (full text in
-  `title`), while the current crumb keeps at least `min(8rem, 40%)`. The list keeps room for the
-  focus ring of the back link. Below `md` the group is hidden, below `sm` the whole breadcrumb (the
-  page heading names the page).
-- Branch menu (`app-menu-scroll`): the active Branch name (at most 16rem, 9rem below `sm`) with a
-  check on the current option; choosing the current Branch again changes nothing, and
-  `chooseBranch` accepts only a known, different Branch. Without Branches the button is disabled
-  and says "Loading branches…" or "No branches available."; when Branches are loaded but
-  `branchId` matches none (an unknown Branch in the URL) it says "Choose a branch" and no option is
-  checked.
-- Language menu: shown only when `languages` has more than one entry. The button shows the
-  current language's own name (its code below `sm`); each option carries its `lang`, the current
-  one is checked, and choosing another emits `languageChange`.
-- Notifications (`app-menu-wide app-menu-scroll`): a bell with an unread badge (the count is in
-  the button name). Each item shows the title, `detail` as its description and the relative time
-  against `WALL_CLOCK`, taken when the bell opens, as a note; unread items carry an info dot with a
-  hidden "Unread". Choosing an item emits `notificationOpen(id)`; "Mark all as read", shown while
-  something is unread, emits `notificationsRead`. An empty list shows "No new notifications" as
-  the menu's heading, which also names the menu. The shell keeps no read state: the composer
-  updates `unread` and decides what opening an item does.
-- Account menu: the initials (first letters of the first two words of the name, upper-cased for
-  the UI language), the name and detail as the menu's heading, "Use dark theme" or "Use light
-  theme" (toggles `Appearance`) and, after a separator, Sign out (`signOut`). The name is
-  `account.name`, else `tenantName`, else `holita`.
-- Accessibility: skip link first, `<header>`, labelled `<aside>` with `<nav>`, group headings,
-  `aria-current="page"` on the active item. The menu button's `aria-expanded` is true for the full
-  desktop sidebar or an open drawer and false for the rail; its `aria-controls` is
-  `desktop-navigation` or `mobile-navigation`. The modal navigation drawer takes focus on its close
-  button, closes on navigation and at `lg`, and returns focus to the menu button when closed with
-  Escape, the backdrop or its close button and when the window reaches `lg`. After a page change
-  the shell focuses `#page-title`, or `<main>` when the page has no title. A page change is a
-  `NavigationEnd` whose route-config chain differs, ignoring routes with `data.drawer === true` or
-  `data.tab === true`; focus does not move on the initial navigation or when focus is already
-  inside `<main>`.
-- Signed out, the workspace shows `holita-login` without the shell: a canvas page with a top-right
-  link to the other language (named in that language, with `lang`) and an icon button for the
-  theme ("Use dark theme"/"Use light theme"). A frame card (at most 26rem) holds the logo mark and
-  word, the `h1` "Demo sign in", the labelled Tenant and Branch `p-select`s (Branch is disabled
-  until the chosen tenant's Branches load), loading, empty and error messages with Retry, the Sign
-  in button (`data-testid="demo-login"`) and the theme-persistence warning.
-- `AdminWorkspace` (`workspace/admin-workspace.ts`) is the composer. Signed in, it passes
-  `branches` (`BranchContext.branches() ?? []`), `branchId` (`BranchContext.selectedId()`),
-  `loading` (`BranchContext.loading()`), `language` (the `:language` route parameter through
-  `readLanguage`), `languages` (`Български`, `English`), `tenantName` (the demo session's tenant),
-  `navigation` and `context`.
-  It binds `languageChange` (only `bg`/`en`: the current URL with its first segment replaced, so
-  path, query and fragment are kept), `branchSelected` (`BranchContext.choose`: on Branch routes it
-  preserves the supported Fleet section without its record/list query; on routes with
-  `data.requiresBranch: false` it only remembers the Branch) and `signOut` (pauses the default
-  Branch navigation and navigates to `/<language>` through the route guards; only if that succeeds
-  does it clear the Branches and end the demo session). The account menu shows the tenant name.
-  `notificationsUnavailable` exposes the Demo bell with an explicit provider-unavailable heading,
-  no feed and no unread badge.
-  `adminNavigation(language, branchId, fleetEnabled)` returns Monitoring (Overview, Alerts, Trip log),
-  Fleet (Vehicles, Drivers, Devices, Maintenance)
-  only when a Branch is selected and Fleet is enabled, followed by the Karma
-  Client group with the note "temporary" (Monitoring, Trucks, Administration, Settings), then Settings (Vehicle groups, General) when Fleet has an active Branch.
-  On a route that requires a Branch, while discovery is loading, empty or failed,
-  the workspace projects a status card with Retry (`data-testid="refresh-branches"`) and renders
-  the router outlet only once Branches are available. The context is the longest matching
-  navigation link plus the registered `PageRecord`. `document.title` is `<page> · holita` (the
-  navigation item, never the record), `holita` when no item matches and `Вход · holita` /
-  `Sign in · holita` on login; `<html lang>` follows the language. The workspace provides
-  `UI_LANGUAGE` and sets the PrimeNG texts (`workspace/primeng-translation.ts`: the catalog's
-  `primeng` date names and overlay messages, `dd.mm.yy`, Monday first, selection messages, and
-  section and paginator aria labels merged over PrimeNG's own).
+- Desktop navigation collapses to a rail, persisted as `holita.admin.sidebar`. Rail links retain
+  accessible names/group labels and hover/focus tooltips. The footer identifies holita and Tenant.
+- Below 1024px, a modal drawer takes focus on Close, traps focus and closes on Escape, backdrop,
+  navigation or reaching desktop width. Return focus to the menu button. Resizing preserves drafts.
+- Keep the topbar one row, with Branch, language and account menus. Branch switching keeps the
+  supported business section and clears record/list context; language switching keeps URL context.
+  No Branch disables its menu with truthful loading/empty/unknown text.
+- Breadcrumb groups are labels, pages are links when a record is open, and the final crumb uses
+  `aria-current="page"`. Record pages register names/contextual return URLs with `injectPageRecord`.
+  Long labels truncate with full text available. Page heading remains when narrow screens hide crumbs.
+- Provide skip link, header, main, labelled navigation and group headings. Active links carry
+  `aria-current`. Decorative icons are hidden from assistive technology. A page change focuses its
+  title/main; drawer/tab navigation must not steal focus from the current form.
+- Account actions include theme and Sign out. The live Demo notification bell explains that no
+  delivery provider exists; do not fabricate a feed or unread count from Fleet counts.
+- Login has its own layout, Tenant then Branch selection, explicit errors/Retry and language/theme
+  controls. Session/Branch/workspace behavior belongs in [Discocan development](discocan/development.md#demo-tenant-login).
 
 ### Texts and languages
 
-Application texts live in `src/app/i18n/{bg,en}.json` (`messages[language]`, typed by `en.json`);
-`primeng` holds the PrimeNG date names and overlay messages. Routes start with `/bg` or `/en`; any
-other value redirects to `/bg`, and `readLanguage` maps every value other than `en` to `bg`.
-`i18n/messages.spec.ts` checks every BG/EN catalog pair of the application for identical key
-trees, non-empty texts and identical `{placeholder}` sets. Every connected Fleet feature has
-BG/EN catalogs under its `i18n` directory. Storybook renders English while using the same
-presentation components.
+Routes start with `/bg` or `/en`; unknown languages redirect to Bulgarian. Use BG/EN catalogs
+for shell, PrimeNG texts, patterns and connected features. Preserve key/placeholder parity.
+PrimeNG uses localized calendar/overlay labels, `dd.mm.yy` and Monday first. Source record text
+is not translated. Storybook uses the same texts with a language toolbar.
 
 ## Patterns (`src/app/ui`)
 
-Components exist only where structure, state or behaviour repeats; single PrimeNG controls
-(`p-tag`, `p-selectbutton`, `p-select`, `p-autocomplete`, `p-datepicker`, `p-inputnumber`,
-`p-toggleswitch`, `p-tabs`, `p-timeline`, `p-metergroup`, `p-avatar`, `p-skeleton`) are used
-directly. Every component is standalone, `OnPush`, uses signal inputs and outputs, the `holita-`
-prefix and texts from `uiMessages[inject(UI_LANGUAGE)()]`.
+Use components only for repeated structure/state/behavior. Single PrimeNG controls stay direct.
+Components are standalone and OnPush, with signal inputs/outputs, `holita-` selectors and BG/EN
+texts. Source files define full signatures; the table identifies which pattern to use.
 
-| Pattern                                                           | Contract                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `holita-page-header`                                              | `title` (the page's only `<h1 id="page-title" tabindex="-1">`), `eyebrow`, `count`, one-line `description`, `backLink`/`backLabel`; slots `[headerMeta]`, `[headerActions]`; `focusTitle()`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `holita-kpi-strip` + `holita-kpi-tile`                            | Strip: a `role="group"` named by `label`, `loading` (every tile shows a skeleton), `error` + `retry`. Tile: `label`, pre-formatted `value` (`null` → "—"), `unit` (only next to a value), `secondary`, `footnote`, `delta` (`KpiDelta`: `text`, `trend` `up`/`down`/`flat`, `sentiment` `good`/`bad`/`neutral`), `tone` marker, `explanation` popover, `link` (router commands; the label becomes the link) + `queryParams`, `loading`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `holita-filter-builder` + `filter-model.ts`                       | Always-visible quick search: `searchLabel` (hidden label and placeholder), `search`, `searchError`, `searchChange` (the raw text on every input, `maxlength` 200). "Add filter" (shown when `fields` is non-empty): `fields` (`FilterField`: `key`, `label`, `type` `text`/`enum`/`number`/`date`/`boolean`, `operators` from `filterOperators` with the first preselected, `options` for `enum`, `unit` for `number`) build `conditions` (`FilterCondition`: `id`, `field`, `operator`, `values` as strings: decimal text, `YYYY-MM-DD`, enum values), emitted by `conditionsChange`. Apply is enabled only when `isComplete` (a range needs from ≤ to). Conditions are chips (`describeCondition`) that reopen the editor or remove the condition; "Clear all" emits `[]`; all apply together (AND). Focus opens on Column; Apply, Cancel and Escape return to the opener. Outside clicks retain their target's focus. The popover is non-modal, selects have explicit labels, and the first Escape closes an open calendar before a second Escape closes the editor. Removing a chip focuses the next chip, else the previous chip, else Add filter; Clear all focuses Add filter. Hosts preserve condition IDs. Slot `[filterActions]`. `filter-model.ts` also exports `operandsOf` (`none`, `one`, `range`, `set`)                                                                                                                                                                               |
-| `holita-table-panel` + `tableView()`                              | `heading`, `headingLevel` (2 default or 3; the heading is the focus target), `total` (hidden while `loading` or `error`), `view` (`TableView` from `tableView()`), `errorText`, `busy` (`aria-busy`; a 2 px decorative bar while rows are shown), `emptyTitle`/`emptyDescription` and `[emptyActions]` (the `empty` state only), `actions` (`ListActionBase[]`), `selection` (the selected `ListRecord`s of the shown page), `selectionProgress`, `page` (`TablePage`: 1-based `page`, `pageSize`, `total`), `pageSizes` (default 10, 20, 50, 100), `skeletonRows` (default min(page size, 8)). Outputs: `action` (`ListActionRequest`), `pageChange` (`{ page, pageSize }`, 1-based), `retry` (the Retry of `error` and `rows-error`), `clearFilters` (the Clear filters of `no-results`), `clearSelection`. Slots: default (the `p-table`), `[panelActions]` (header), `[panelFooter]` (footer start), `[emptyActions]`. Methods: `run(actionId, records, origin, source = 'row')`, the one way to start an action (below), and `focusHeading()`. It provides its own `ConfirmationService` and `p-confirmdialog`. The footer and paginator show whenever rows are shown, whatever the page size; page links only when the rows do not fit on one page; the current page size is always among the options. The bulk bar lists the `bulk` actions, each disabled when no selected record applies; it sits below the panel and sticks to the viewport bottom, so selecting never moves rows or footer |
-| `holita-row-actions`                                              | The "⋮" menu of a row: `actions` (the list's actions), `record` (`ListRecord`: accessible name "Actions for <label>", and its `unavailable` actions are disabled), output `choose` (`RowChoice`: `{ action, origin }`) which the host passes to `TablePanel.run`. Destructive actions come last after a separator (MenuButton orders them). Lists never show a direct Delete button in a row                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `holita-menu-button`                                              | A button that opens a `p-menu` popup: the row menu and the topbar menus. `options` (`MenuOption`: `id`, `label`, `selected` (check and a hidden "current choice"), optional `link` (`UrlTree`: a real route anchor with its query/fragment and `aria-current="page"` when selected), `disabled`, `danger` (moved last after a separator), `lang`, `description`, `note`, `marker` (`{ tone, label }`: a dot with hidden text), `separated`), `variant` (`icon`, `text` with a chevron, `navigation` with the route-link treatment), `ariaLabel` (else the projected content names the trigger), `header` (`MenuHeader`: `title`, `detail`; names the popup, else the trigger does), `disabled` (stays focusable, does not open), `buttonClass`, `menuClass` (`app-menu-scroll`, `app-menu-wide`); outputs `choose` (`MenuChoice`: `{ id, origin }`, emitted after focus is back on the trigger) and `opened`. Keyboard focus opens on the current choice, else the first enabled option, and the focused option is scrolled into view; `aria-expanded` follows the popup's visibility                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `holita-route-drawer`                                             | `title`, `subtitle`, `[drawerMeta]`, `size` (`md`/`lg`), `state` (`RouteDrawerState`: `loading` skeleton; `not-found` and `invalid-id` an empty state with Close; `error` shows `errorText` with Retry → `retry`; the body and the sticky `[drawerFooter]` render only in `ready`), `saving` (sets `aria-busy` and disables Close controls), `dirty` (also blocks page unload), `closeLink` (`readonly unknown[] \| null`, default `['..']`); outputs `retry`, `closeRequest`; methods `close()`, `confirmLeave(dirty)` (concurrent calls share one dialog), `focusTitle()` and `keepFocusInside()`. A modal `role="dialog"` labelled by its h2; it focuses the title when shown unless focus is already inside, ignores an Escape another control handled, and provides its own `ConfirmationService` and `p-confirmdialog`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `holita-form-field`                                               | `label` (`#<id>-label`), `controlId`, `hint` (`#<id>-hint`), `error` (in `#<id>-error`, which is always rendered), `required` (a visual asterisk plus a hidden "(required)"), `counter` (`FieldCounter`: `length` in code points, `max`; warning tone above 90 %). The projected control sets its `id`, `[attr.aria-describedby]="'<id>-hint <id>-error'"`, `aria-invalid` and `[invalid]`; a group control without one input (select button) uses `ariaLabelledBy="<id>-label"`; PrimeNG controls with an inner input use `innerInputPt`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| `holita-empty-state`                                              | `kind` (`EmptyStateKind`: `empty`, `no-results`, `error`, `not-found`, `disabled`, `no-telemetry`, `done`; each with its own icon), `title`, `description`, `compact`, `[emptyActions]`; `error` and `not-found` are `role="alert"`, the other kinds `role="status"`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `holita-column-series`, `holita-stacked-bars`, `holita-sparkline` | `holita-column-series` (`label`, `points: SeriesPoint[]` with `key`, `label`, `value` (`null` = gap, `0` = hairline) and `valueText`, `highlightLast` = true; axis labels thinned to about seven, counted back from the latest) and `holita-stacked-bars` (`label`, `rows: StackedRow[]`, `legend: StackedLegendItem[]`, `max` = a shared scale, default the largest total; segment tones `BarTone` = status tone, category slot or `muted`, via `barColor`) are `role="figure"` with a visually hidden data table. `holita-sparkline` (`label`, `points: SparkPoint[]` with epoch-ms `at` and `value`, `from`, `to`, `unit`, `min`, `max`; `null` breaks the line) is an SVG `role="img"` whose name states the min–max range and the last value                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Pattern                                                           | Use and required behavior                                                                                       |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `holita-page-header`                                              | One page `h1` with `id="page-title"`, optional count/back link and action/meta slots                            |
+| `holita-kpi-strip` / `holita-kpi-tile`                            | Named group, truthful loading/error, preformatted values; null shows “—” and has no unit                        |
+| `holita-filter-builder`                                           | Quick search and independent AND conditions; bounds/errors stay visible; incomplete/invalid drafts cannot apply |
+| `holita-table-panel`                                              | Heading/focus target, rows/loading/empty/error/refresh states, paging, selection and shared actions             |
+| `holita-row-actions`                                              | Named row menu; send choices through `TablePanel.run`; destructive actions last                                 |
+| `holita-menu-button`                                              | Accessible popup actions/navigation; real anchors for routes, current-choice labels and disabled/danger states  |
+| `holita-route-drawer`                                             | Loading/missing/error/ready states, labelled Close, sticky footer, dirty/pending guards                         |
+| `holita-form-field`                                               | Label/control/hint/error association, required state and Unicode counter                                        |
+| `holita-empty-state`                                              | Empty/no-results/error/missing/disabled/no-telemetry/done; alert only for errors/missing records                |
+| `holita-column-series`, `holita-stacked-bars`, `holita-sparkline` | Accessible chart/table alternatives, null gaps and preserved zero values                                        |
 
-Chart data tables retain native table semantics inside an `.app-visually-hidden` wrapper.
-The wrapper clips their intrinsic width so screen-reader data does not add document scrollbars.
+Use `.app-view`, `.app-card`/`.app-card-grid`, `.app-stack`, `.app-settings-section` and
+`.app-save-bar` for page layout. Forms use `.app-form-section`/`.app-form-grid`; facts use
+`<dl class="app-facts">`. Context navigation uses real `.app-route-nav__link` anchors and
+`aria-current`. Do not recreate shared cards, menus, value meters or form layouts in a feature.
 
-`tableView({ loading, error, rows, filtered })` (`rows`: the number of rows on screen, `null` before
-the first answer) returns `rows-error` or `rows` when rows are present, else `error` when an error
-is set, else `loading` while loading or before the first answer, else `no-results` when `filtered`,
-otherwise `empty`.
+Numbers use `.app-num`, technical values `.app-mono`, statuses `p-tag`/`toneSeverity` and labelled
+dots. Format through `ui/format`; preserve null and zero. Fleet read values use
+`injectFleetFormat`; explicitly labelled canonical inputs/filters keep canonical units. Odometer
+entry converts the configured display unit back to km while preserving an unchanged baseline.
+Use shared zoned-time helpers for instants, with valid gap/overlap handling; date-only values
+stay calendar dates. Use the configured Branch zone, never an assumed browser zone.
 
-CSS patterns (`styles/_patterns.scss`):
-
-- Layout: `.app-view` (a page view's host class: header, KPIs, filters and panels stacked inside
-  the shell's `.app-page`), `.app-card` with optional `.app-card__header` and `.app-card__title`,
-  `.app-card-grid`, `.app-stack`, `.app-settings-section` (a settings card whose
-  `> header > h2 + p` sits beside the fields from `lg`) and `.app-save-bar` (Discard and Save of a
-  page form, sticky while there are changes).
-- Context navigation: `.app-route-nav` contains real `.app-route-nav__link` anchors with
-  `.app-route-nav__link--active` and `aria-current="page"` on the selected route. A
-  `holita-menu-button` with `variant="navigation"` groups secondary destinations in the same
-  navigation. `.app-context-toolbar` holds the section heading and `.app-page-actions` after
-  identity and navigation; actions wrap at narrow widths. Karma truck and administration
-  stories demonstrate these shared patterns.
-- Records and forms: `.app-facts` on a `<dl>` whose `<div>`s hold `<dt>` + `<dd>` (auto-fill
-  columns of at least 11rem; `.app-facts--wide` spans a row), `.app-form-section` (a `> h3` title
-  and an optional `> p` hint), `.app-form-grid` with `.app-form-grid--wide` on a direct child,
-  `.app-drawer-actions`.
-- Values: `.app-dot` plus `.app-dot--<tone>` or `.app-dot--c1` … `--c8` (the base class is
-  required; colours from `tone-*-solid` and `category-*`), `.app-num` (tabular, unwrapped and
-  right-aligned in `th`/`td`), `.app-mono`, `.app-muted`, `.app-inline` (a value with its dot or
-  tag on one line), `.app-meter` (reads `--app-meter-value`, 0–100 %, and `--app-meter-color`, set
-  by `.app-meter--<tone>`, default primary), `.app-meter-cell` (meter plus value).
-- Table cells: `.app-cell-stack`, `.app-cell-truncate` (one line with an ellipsis, width
-  `--app-truncate-width`, default 28rem; full text in `title`), `.app-col-secondary`,
-  `.app-col-check` (3rem), `.app-col-actions` (3.25rem), `.app-link` (`button.app-link` is a
-  row's record link that opens its drawer).
-- Other: `.app-timeline-event` with `__title`, `__meta` and `__body` (keeps line breaks),
-  `.app-icon-button`, `.app-logo` with `.app-logo__mark` (the `.app-logo__word` span has no
-  pattern rule; the topbar hides it below `sm`), and the popup menu classes `.app-menu-scroll`
-  (a long list scrolls) and `.app-menu-wide`.
-- Global rules: every DataTable header and body cell is `nowrap`; the focusable scroll container
-  shows an inset focus ring; inputs, textareas, `p-select`, `p-autocomplete`, `p-inputnumber` and
-  `p-datepicker` projected directly into `holita-form-field` fill its width.
-- Set by components, not by hand: `.p-drawer.app-route-drawer` (`--md`/`--lg` from RouteDrawer
-  `size`) and `.app-menu-danger` (from `MenuOption.danger`).
-
-Helpers:
-
-- `list/list-actions.ts`: `ListActionBase<A>` (`id`, `label`, `bulk`, `danger`, `confirm`), the
-  type TablePanel and RowActions take; `ListAction<A, Row>` adds the optional `appliesTo(row)`
-  (without it the action applies to every row); `ActionConfirm` (`title`, optional `detail`,
-  `accept`); `ListRecord` (`id`, `label`, `unavailable`);
-  `listRecord(actions, row, id, label)`; `ListActionRequest` (`action`, `ids`); `trackById` for
-  `p-table [rowTrackBy]`.
-- `list/list-query.ts`: `ListQuery` (`search`, `conditions`,
-  `sort: { field, direction: 'asc' | 'desc' } | null`, 1-based `page`, `pageSize`) and the
-  transitions `listQuery.search`, `.conditions`, `.page`, `.cleared` (search and conditions
-  emptied), `.sorted` (from a `p-table` lazy-load event; `null` when the sort did not change;
-  `sortOrder` 1 is `asc`) and `.filtered` (search or conditions present); every transition except
-  `page` returns to page 1. `injectSortReady()` (in an injection context) reports whether the
-  first render is done.
-- `list/list-sort-menu.ts`: `ListSortMenu` (`fields: { field, label }[]`, current `sort`,
-  `sortChange`) renders a shared field/direction menu in the TablePanel `panelActions` slot.
-  It offers fields without visible table columns alongside the existing header sorts; hosts
-  return to page one and clear selection when sorting changes. Choosing the current field or
-  direction emits nothing and preserves the page and selection.
-- `list/list-state.ts` and `list/url-list-state.ts`: URL state ([below](#list-url-state)).
-- `forms/field-errors.ts`: `errorCode(error)` returns the first known `extensions.code`
-  (`ErrorCode`: `BAD_USER_INPUT`, `NOT_FOUND`, `CONFLICT`, `SERVICE_UNAVAILABLE`,
-  `UNAUTHENTICATED`) or `null`; `fieldErrors(error, fields)` returns the first message per listed
-  path from `extensions.fieldErrors` (at most 30 entries, messages up to 300 characters).
-- `forms/validators.ts`: `textValidator(max, { required })` (trimmed, counted in code points, NUL
-  rejected), `patternValidator(pattern, { transform: 'upper' | 'none' })`,
-  `integerValidator(min, max, { required })`, `decimalValidator(min, max, step)`, `dateOnlyValidator(min, max)`
-  (`YYYY-MM-DD` or a DatePicker `Date`; bounds as values or functions) and
-  `requireOneOf(first, second)` (a group validator whose error shows on `first`). Empty values
-  pass all except a required `textValidator` or `integerValidator`. `validationMessage(errors, language)` turns the
-  first error key (`required`, `unsupported`, `maxLength`, `pattern`, `integer`, `decimal`, `min`,
-  `max`, `step`, `date`, `dateMin`, `dateMax`, `requireOneOf`) into catalog text with numbers and
-  dates formatted.
-- `forms/saving.ts`: `lockWhileSaving(form, saving, settled)` disables a form only when saving
-  starts and enables it when saving ends, preserving its raw draft and dirty/touched state.
-  Call it in an injection context, only for forms without independently disabled controls.
-  `settled` runs after rendering a surviving editor, for server-field focus or focus recovery.
-- `forms/focus.ts`: `focusFirstInvalid(form, order, prefix)` focuses the first `#<prefix><name>`
-  in `order` with `aria-invalid="true"`. `forms/inner-input-pt.ts`:
-  `innerInputPt(controlId, invalid)` links the hint and error and sets `aria-invalid` on the inner
-  input of `p-inputnumber` and `p-datepicker`. The service completion drawer uses
-  `datePickerInputPt` for DatePicker: selection stays on its grid cell, with the duplicate
-  unsupported `aria-selected` removed from the child day span.
-- `confirm.ts`: `confirmAction(confirmation, language, { header, message?, acceptLabel, danger, signal? })`
-  and `confirmDiscard(confirmation, language)` (Keep editing / Discard changes) resolve `true` on
-  accept; Cancel or Keep editing has the initial focus and Escape rejects. ConfirmDialog renders
-  `message` as HTML, so it never carries record data; hosts that name records use a `#message`
-  template. `confirmDialogPt(language, describedBy?)` (PrimeNG usage rules).
-- `select-multiple.ts`: `selectMultiplePt` (PrimeNG usage rules).
-- `format/format.ts`: `emptyValue` "—" for null, undefined and non-finite values (0 stays a number),
-  `localeOf` (`bg-BG`/`en-GB`), `formatNumber(value, language, { fraction })`,
-  `formatMoneyCents` (EUR from integer cents),
-  `formatDateTime(iso, language, timeZone, seconds = false)`, `formatDateOnly` (no zone conversion),
-  `formatRelative(iso, reference, language)` against an explicit reference and
-  `formatDuration(seconds, language)`. `format/format.pipes.ts`:
-  `holitaNumber[:fraction]`, `holitaDateTime[:timeZone][:seconds]` (the Fleet Branch's configured
-  zone, or `Europe/Sofia` outside Fleet; an explicit zone overrides it, with optional seconds for
-  precise reading bounds), `holitaDate`, `holitaRelative:reference`, `holitaDuration` and `holitaMoney`,
-  all reading `UI_LANGUAGE`. `format/zoned-time.ts`: `isoToZonedParts`, `zonedWallTimeToIso`
-  (DST-aware: a spring-gap time resolves after the gap, an ambiguous autumn time to its first
-  occurrence), `toDateOnly`/`fromDateOnly` between a DatePicker `Date` and `YYYY-MM-DD`.
-  Instant editors use `isoToZonedWallTime` for native `datetime-local` text and
-  `zonedWallTimeInstants` for strict conversion: skipped/invalid times have no instant, and
-  overlaps return actual occurrences in chronological order. Device installation and odometer
-  entry use the configured Branch zone, retaining seconds/milliseconds and an unchanged instant.
-  The odometer selects an overlap occurrence inside its reading bounds; an edited installation
-  time uses the first occurrence. Calendar/filter conversion keeps its existing gap normalization.
-- `format/fleet-format.ts`: `FLEET_DISPLAY` is a signal supplied by the verified Fleet workspace;
-  standalone examples keep Sofia/KM/LITRE defaults. `injectFleetFormat()` converts read values
-  and chart labels between km/mi, km/h/mph and litres/US gallons, preserving null and zero.
-  API storage remains km, km/h and litres. Numeric API filters and explicitly labelled canonical
-  editors retain those units. The odometer editor uses the configured display unit, converts edits
-  back to km and preserves the exact canonical baseline when its displayed reading is unchanged.
-- `clock.ts`: `WALL_CLOCK` (`() => number`, `Date.now` by default; stories fix it).
-  `ui-language.ts`: `UI_LANGUAGE` (`Signal<Language>`, `bg` by default; AdminWorkspace provides the
-  route language and Storybook `en`). `media.ts`: `below(name)` and `breakpointWidth(name)`
-  (breakpoints above). `tones.ts`: `toneSeverity` and the `StatusTone` and `CategorySlot` types.
-- `i18n/`: `uiMessages` from `ui/i18n/{bg,en}.json` (the pattern texts) and
-  `interpolate(text, values)`, which fills `{name}` placeholders and leaves unknown ones as
-  written.
+Form helpers provide validators, localized errors, save locking and first-invalid focus.
+Projected controls set `id`, `aria-describedby`, `aria-invalid` and PrimeNG `invalid`; group
+controls use labelled-by, while inner-input helpers attach metadata to the actual input.
+Keep rejected drafts editable and focus their first invalid field. Never expose raw internal errors.
 
 ### Source context
 
-[`holita-source-context`](../apps/admin/src/app/ui/source-context/source-context.ts) presents
-source facts supplied by the owning feature. It takes required `language` and
-`provenance: SourceProvenance`, plus optional `period: SourcePeriod`, `coverage: SourceCoverage`
-and `availability: SourceAvailability` presentation facts from `ui/source-context/source-types.ts`.
-It owns no fetching or actions. Karma source identity, origin, retrieval, GPS coverage and field
-availability remain separate facts. Source details disclose original IDs and UTC event,
-received and retrieval clocks, including identified gaps.
+`holita-source-context` presents provenance, period, coverage and availability; it owns no fetching
+or actions. Keep source identity, retrieval and event clocks, gaps and missing fields distinct.
+Historical Karma-specific source contracts are in the [archive](archive/karma/architecture.md).
 
 ### Table conventions
 
-Hosts project a `p-table` into `holita-table-panel` with `[lazy]`, `[lazyLoadOnInit]="false"`
-(the host loads the first page itself), `[sortField]`/`[sortOrder]` from the `ListQuery` and
-`(onLazyLoad)` mapped through `listQuery.sorted` behind `injectSortReady()` (PrimeNG 22 reports
-an intermediate ascending sort while applying its inputs on the first render), `dataKey="id"`,
-`[scrollable]="true"` (required by the frozen actions column; the panel scrolls sideways) and no
-`emptymessage` template (the panel renders every state). A selection header cell contains a
-visually hidden `<label for>` and `p-table-header-checkbox [inputId]` (PrimeNG names the header
-checkbox only after its value changes); row checkboxes use `[ariaLabel]`. Secondary columns carry
-`.app-col-secondary`; numeric columns `.app-num`. Header and body cells never wrap (a wide table
-scrolls sideways, and `provideHolitaTheme` makes every table's scroll container a tab stop so the
-keyboard can scroll it); long free text (notes, descriptions) is one line with
-`.app-cell-truncate` and the full text in `title`. Row actions are a last `.app-col-actions`
-column with `holita-row-actions`, frozen to the right (`pFrozenColumn alignFrozen="right"` on its
-`th` and `td`) so the menu stays reachable while scrolling. Responsive lists use
-`.app-responsive-table` and one `.app-col-identity` cell. Below `sm`, that cell stays pinned
-to the start and includes `.app-table-mobile-actions`; the separate actions column is hidden.
-Identity content has a bounded width and wraps long identifiers. `.app-table-mobile-meta`
-can repeat a secondary identifying fact, with its original `.app-table-merged-column` hidden
-only at this width. Other visible columns remain horizontally scrollable; secondary fields
-hidden below `md` remain available in record details. The shared scroll
-container remains keyboard reachable. At wider widths the mobile content is hidden and the
-right-hand menu remains frozen. `p-sort-icon` is the sort indicator
-element. List tables with row actions set `[rowTrackBy]="trackById"`, so a refresh keeps the rows'
-DOM and the focused "⋮" button.
+Project a lazy `p-table` with `lazyLoadOnInit=false`, `dataKey="id"`, scrollable content and no
+competing empty-message template. Bind sort state and map lazy events through shared
+`listQuery.sorted`/`injectSortReady`; `p-sort-icon` is the indicator. Use `trackById` to retain
+focused row menus on refresh. Selection checkboxes need explicit accessible names.
 
-Actions: a list defines its actions once, as `ListAction<Id, Row>[]` with an `Id` union (for
-example `'edit' | 'activate' | 'deactivate' | 'delete'`), the label, `bulk` for quick changes that
-also apply to a selection (opening or editing one record is never bulk), `danger`, `confirm`
-(`title`, optional `detail`, `accept`) and `appliesTo(row)` as
-the only rule for which rows it applies to. `listRecord(actions, row, id, label)` turns a row into
-the `ListRecord` the panel and row menu use (`label` is how people recognise the record, e.g. a
-plate or "<kind> on <plate>"). The record link, the row menu and the bulk bar all call
-`TablePanel.run`, which leaves out records the action does not apply to, asks the confirmation
-(the same action title, count and record list for one or many, with a line for the selected
-records left unchanged), emits `action` with the remaining IDs and
-moves focus: back to the origin after Cancel or a confirmed non-destructive row action, to the
-panel heading after a destructive or bulk action, or when a row action took its row out of the
-list (for example a filter no longer matches it). The dialog's description (`aria-describedby`)
-is the record count and list, the detail and the left-unchanged line. All applicable records are
-listed in a bounded, keyboard-scrollable area; each label stays on one line, with its full text
-in `title`. The host handles every action in
-one `action` handler, whatever started it. The bulk bar and the confirmation only ever see the
-selected records among the shown rows. Selection is state of the view and its host, not of the
-panel: the view maps the selected rows to `ListRecord`s for `[selection]` and emits an empty
-selection with every query change (search, filters, sort, page, page size); after an action the
-host removes only the records it changed from the selection, and the other selected records stay
-(a row action on an unselected row keeps the selection).
+Cells stay on one line; long text truncates with full text in `title`. Numbers align at the end.
+The scroll container is a keyboard tab stop. Secondary columns hide below md but remain in details.
+Freeze the final action column right. Below sm, pin the bounded identity cell and its mobile
+row menu, hide the separate action column and keep remaining columns horizontally scrollable.
 
-Bind TablePanel's `actionContext` to the current query identity, as `VehiclesView` does with its
-`state` input. A context change or component destruction retires pending confirmations and
-their callbacks, so an obsolete answer cannot emit an action or restore focus to an obsolete
-row. The panel aborts its confirmation controller and clears the pending record list.
-An unrelated busy/refresh state keeps the question open and its actions available. The concrete
-host blocks overlapping actions only while its write is in flight; `busy` describes refresh/progress
-and does not authorize dropping an enabled action. After a retired question, focus returns to the heading. Cancellation restores the trigger when
-it is still available, otherwise the heading.
-`confirmAction` also accepts an optional `AbortSignal`; aborting closes the dialog and resolves
-`false`, and an already-aborted signal returns `false` without opening it.
+Define each action once as `ListAction` with applicability, bulk/danger and confirmation metadata.
+Record links, menus and bulk actions use `TablePanel.run`; no direct row Delete buttons.
+Opening/editing one record is never bulk. Confirmations name applicable records and explain
+unchanged selections; Cancel has initial focus. Use bounded keyboard-scrollable record lists.
+
+Bind `actionContext` to query identity so navigation retires obsolete confirmations. Refresh/busy
+state alone does not discard an enabled action. Block overlap while a write is pending.
+Selection resets on query changes; after an action remove successful IDs only and retain failures.
+Cancel restores trigger focus; destructive/bulk actions restore the panel heading when appropriate.
 
 ### Operation feedback
 
-`ui/operation-toast.ts` provides the shared `holita-operation-toast` presentation. `AdminWorkspace`
-installs one outlet and one component-scoped `MessageService` above its login and signed-in
-content. Connected Fleet lists, drawers and General settings use that provider. Workspace
-changes clear displayed messages, and retired write callbacks cannot publish into another workspace. Storybook's shared
-decorator installs the same component with its own provider for pattern and sample stories; real
-routed stories use the provider inside `AdminWorkspace`.
+`AdminWorkspace` owns one `holita-operation-toast` outlet and scoped `MessageService`; stories use
+the same presentation. Workspace changes clear messages. Publish one batch result, retaining
+failed record labels/details. Success closes after five seconds; warning/error stays until dismissed.
+The top-right outlet must not shift page/table layout or steal focus.
 
-The outlet sits at the top right below the topbar, fits the viewport width and shows up to three
-messages as separate cards; `src/styles/_toast.scss` owns its responsive spacing. A completed
-batch publishes one summary, with failed record labels and messages when needed.
-Only successful IDs leave the selection; failed records stay available for retry. Success
-messages close after five seconds; warning/error operation summaries stay until dismissed.
-The outlet floats above the page, so results do not change table height or move its controls.
-
-TablePanel has no result-message input or dismissal output. Its loading/error states and Retry
-remain local to the list; field validation, save errors beside an editable draft and contextual
-warnings also remain inline. The message pass-through in `ui/operation-toast.ts` announces
-success with `role="status"`/`aria-live="polite"` and other severities with
-`role="alert"`/`aria-live="assertive"`. Its headless content uses the standard toast classes and
-icons with a normal close button: PrimeNG's default close button has native `autofocus`, which
-can steal focus when an initiating save button disappears. PrimeNG still owns the message
-lifecycle, stacking and dismissal.
-
-All connected Fleet screens use this workspace feedback flow. Karma read-only pages keep
-contextual loading, error and retry feedback in their shared table panels and inline messages.
+Success announces polite status; other outcomes announce alerts. Load errors, field errors,
+editable-draft save errors and contextual warnings stay inline with Retry where applicable.
+Retired callbacks cannot publish into a new workspace.
 
 ### PrimeNG usage rules
 
-Registered component presets (`registeredComponents`, 31): autocomplete, avatar, badge, button,
-checkbox, chip, confirmdialog, datatable, datepicker, dialog, drawer, iconfield, inputnumber,
-inputtext, menu, message, metergroup, paginator, popover, select, selectbutton, skeleton, tabs,
-tag, textarea, timeline, toast, togglebutton,
-toggleswitch, tooltip and virtualscroller. Adding a control means adding its preset there (and
-those of the controls it renders internally) and to the "PrimeNG coverage" story
-(`primeng-coverage.html`). These rules keep the controls accessible, and lint rejects deprecated
-APIs:
+Add new component presets and their internal dependencies to `registeredComponents` and render
+both schemes in the PrimeNG coverage story. Consult the current PrimeNG tools for component APIs.
 
-- every `<p-confirmdialog>` uses `[pt]="confirmDialogPt(language)"` (names its close button and
-  makes the `p-dialog` host presentational); with a `#message` template it passes the message's
-  ID as the second argument, which becomes the dialog's `aria-describedby`;
-- `p-popover` gets `ariaLabel` (FilterBuilder sets the root `aria-label` through `[pt]`
-  instead), `p-drawer` `ariaCloseLabel`, `p-dialog` `closeAriaLabel`,
-  `p-autocomplete [dropdown]` `dropdownAriaLabel`, `p-metergroup` an `aria-label`;
-- multiple choice uses `p-select [multiple]="true" [pt]="selectMultiplePt"`
-  (`ui/select-multiple.ts`: Select puts `aria-multiselectable` on its combobox, which axe rejects;
-  the overlay listbox keeps it); PrimeNG 22 deprecates `p-multiselect`; applied filters are
-  FilterBuilder chips;
-- `p-progressbar` is not used (it renders an `aria-level` attribute progress bars may not carry);
-  TablePanel draws its own decorative refresh bar;
-- `p-autocomplete [forceSelection]` clears unmatched text only when its overlay is closed at the
-  input's `change` event; leaving the field while "no results" is shown keeps the typed text and
-  the previous value, so a single-value picker reconciles its text with the selected option when
-  focus leaves it.
+- Name every control/overlay. ConfirmDialog uses `confirmDialogPt(language)` and message ID when
+  providing custom content; Popover has an accessible label, Drawer `ariaCloseLabel`, Dialog
+  `closeAriaLabel`, Autocomplete dropdown `dropdownAriaLabel`, MeterGroup an aria label.
+- Multiple choice uses `p-select [multiple]="true"` with `selectMultiplePt`; do not use deprecated
+  `p-multiselect`. Applied filters are FilterBuilder chips.
+- Do not use `p-progressbar`; TablePanel owns the decorative refresh indicator.
+- Reconcile forced-selection Autocomplete text with its selected value on focus leaving the control;
+  a visible no-results panel does not by itself clear stale selection.
 
 ## List URL state
 
-List views with search, sort or paging (`features/fleet/*/*-view.ts` for vehicles, drivers, devices,
-maintenance, alerts and trips) take a `ListQuery` input (`state`) and emit `stateChange` with the
-next query (`listQuery` transitions); their hosts keep the query and map it to their own query
-variables. The groups view has no query (only `rows` and `view`). In that flow
-FilterBuilder search applies on every input, and sorting goes through `listQuery.sorted`.
-The live `VehiclesPage` uses `UrlListState` and a `ListDefinition` in `vehicle-query.ts` to keep
-search, AND conditions, sort, page and page size in the query string. Its `conditions` parameter
-contains the validated JSON condition array, mapped explicitly to the generated Fleet filter
-input. Created-date conditions use the configured Branch's calendar dates. Summary counts cover the whole
-Branch and do not depend on the list query. The displayed data time comes from the server;
-an absent clock is formatted as unknown rather than replaced with the browser's current time.
-The other example hosts keep their `ListQuery` in local signals.
+List views take `ListQuery` and emit changes; concrete hosts map them to generated API variables.
+`UrlListState`/`ListDefinition` own validated URL state without fetching data. Keep backend bounds
+in filter definitions, preserve independent/repeated AND conditions and reject invalid drafts.
+Whole-Branch summaries stay independent of list queries. Missing data clocks remain unknown.
 
-`FilterField` can declare numeric `min`/`max`/`integer`, trimmed Unicode `maxLength` and
-selection `maxValues`. FilterBuilder blocks Apply and shows a localized explanation when a
-draft exceeds these bounds; numeric native hints preserve the invalid draft for correction.
-Its optional `maxConditions` limits new conditions while allowing existing ones to be edited
-or cleared. Vehicles uses the backend limits: 50 conditions, 100 selected values per condition,
-year 1950–2100 as an integer, odometer 0–10,000,000 km and make up to 64 code points.
+| Parameter          | Contract                                                                |
+| ------------------ | ----------------------------------------------------------------------- |
+| `search`           | Trim/NUL removal, at most 200 code points/five words; apply after 300ms |
+| `conditions`       | Validated JSON AND-condition array; entity-specific bounds              |
+| `sort`, `order`    | Declared sort key and asc/desc; omit defaults                           |
+| `page`, `pageSize` | One-based page, allowed size; correct out-of-range pages after totals   |
+| Other filters      | Explicit codecs; validate IDs/enums/dates/numbers and omit defaults     |
 
-A `ListDefinition<F, S>` declares `pageSizes` and `defaultPageSize`, `sorts` (`{ param, field }`:
-URL parameter to API sort field), `defaultSort` and optional `viewDefaultSorts` (`{ param, sorts }`:
-a filter parameter whose value selects another default sort), `filters` (one `FilterCodec` per
-key) and an optional pure `normalizeFilter` applied after reading and before writing. `codecs`:
-`enumList(values)` and `idList(max)` (comma-separated, trimmed, deduplicated, unknown values
-dropped, at most 100; IDs are UUIDs, lower-cased), `boolean()` (`true`/`false`), `dateOnly()` (a
-real `YYYY-MM-DD` date), `choice(values, fallback)` (the fallback is never written),
-`integer(min, max)` and `number(min, max, step)` (rounded to `step`); scalar codecs read the first
-comma-separated value. Pure helpers: `readListState`, `listStateParams` (defaults written as
-`null`), `sameListState`, `defaultSortOf`, `normalizeSearch`, `searchApplies`, `maxSearchLength` (200) and
-`maxSearchWords` (5).
-
-| Parameter          | Rules                                                                                                                                                                             |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `search`           | Trimmed, NUL removed, at most 200 code points; more than five words is not applied (FilterBuilder error)                                                                          |
-| `sort`, `order`    | Sort parameter from the definition and `asc`/`desc`; `order` absent means the default direction for the default field and ascending for any other (`ListState` uses `ASC`/`DESC`) |
-| `page`, `pageSize` | Digits only, clamped to 1 … ⌊2147483647 / pageSize⌋ + 1 and corrected to the last page once totals arrive; an allowed size                                                        |
-| filter fields      | Comma-separated, validated by the codec; unknown values are dropped                                                                                                               |
-
-`new UrlListState(definition)` in a field initializer (it injects `ActivatedRoute`, `Router` and
-`DestroyRef`) exposes `state` (a signal), `changes` (distinct states), `searchDraft` and
-`searchError` (`'searchTooManyWords'`, a `uiMessages` key the host translates for FilterBuilder
-`searchError`). `editSearch(value)` applies after 300 ms unless the text has more than five words;
-`cancelPending()` drops a pending search. `patchFilter(changes)`, `setSort(field, direction)` and
-`resetSort()` return to page 1. `sortFromTable(event)` takes `{ field, order }` from `p-table`
-`(onSort)`, where `field` is a sort parameter of the definition, and applies the last event of a
-burst. `setPage({ page, pageSize })` returns to page 1 when the size changes. `clearFilters()`
-clears the search and every filter except the per-view parameter. `correctPage(lastPage)` moves a
-past-the-end page back. User changes push a history entry; invalid or non-normalised URLs and page
-corrections are rewritten with `replaceUrl`. A correction preserves its own pending search draft
-and debounce; external navigation retires them, including navigation to an equivalent normalized
-state. Query parameters are merged and the fragment is kept.
-`UrlListState` never fetches: pages map the state to their own query variables.
+Search/filter/sort/page-size changes return to page 1 and clear selection. User changes push
+history; URL normalization/page correction replaces it. Preserve query/fragment and retire pending
+search on external navigation. Do not apply a local default in place of absent server facts.
 
 ## Route drawers
 
-`holita-route-drawer` closes in one of two ways; in both, "keep editing" in `confirmLeave(dirty)`
-leaves the drawer open. A dirty form or pending write guards page unload.
+Routed drawers are child routes over a retained list/profile, with `data.drawer`, `leaveDrawer`
+and a contextual close link preserving query/fragment. Use the `ui/drawer` helpers and host
+saved notifications. Host-controlled story drawers emit `closeRequest` and await dirty confirmation.
 
-- Host-controlled (`[closeLink]="null"`): the close button, Escape and the backdrop emit
-  `closeRequest`; the component that renders the drawer awaits `confirmLeave(dirty)` and only on
-  `true` emits its own `closed` output, after which its page removes it. Sample Fleet hosts use
-  this mode (the read-only trip drawer closes without asking).
-- Routed (`closeLink`, default `['..']`): closing navigates relative to the drawer's route with
-  the query and fragment preserved. A child route with
-  `data: { drawer: true, mode, recordParam?, fixedVehicleParam? }` and
-  `canDeactivate: [leaveDrawer]` asks the component's `canLeave()`, which calls
-  `confirmLeave(dirty)`; `leaveDrawer` allows leaving when no drawer component is mounted.
-  `drawerRouteData(route)` validates that data (`mode` `create`, `edit` or `view`;
-  `recordParam` `recordId`, `vehicleId` or `driverId`, required except in `create`;
-  `fixedVehicleParam` `vehicleId`) and `drawerParam(route, name)` reads a parameter from the route
-  or its ancestors. The host renders `<router-outlet [routerOutletData]="drawerHost" />`, and
-  `injectDrawerHost()` reads that `DrawerHost` from `ROUTER_OUTLET_DATA` (a no-op host when
-  absent) so a drawer can report `saved({ message, recordId })` while it is alive. Live Vehicles
-  uses this mode: `/new` and `/:recordId/edit` are child routes over the retained list.
-  `VehicleEditorPage` supplies the absolute list `closeLink` to `VehicleDrawer`; the route guard
-  asks once before discarding a dirty draft. A saved drawer clears its dirty state, notifies its
-  list host and closes while preserving the list query and fragment. Its own scoped API client
-  loads the record and group/driver choices; loading, invalid ID, missing record and read failure
-  use the shared drawer states.
-
-Editing Fleet drawers lock their form, reject duplicate submits and disable Cancel/Close while
-a save is pending. Their `canLeave()` guards block in-app navigation until the request settles.
-Routed adapters use `closingAfterSave` to close after a successful save. A failed save unlocks
-the controls, retains the draft and focuses the first server-invalid field, or calls
-`keepFocusInside()` to restore lost focus to the drawer title. Unsubmitted dirty drafts still
-require discard confirmation, including an Alert remark retained during a conflict read.
-Submitted writes retain their captured client if the editor is forcibly destroyed; late results
-cannot notify or navigate another workspace. Story hosts delegate `canLeave()` through the
-existing `leaveDrawer` guard. General settings blocks navigation through both the Fleet save and
-conditional Core rename, with Discard disabled until settlement. Rejected drafts, partial-save
-feedback and the actual persisted Discard baseline are retained.
-
-On destroy the drawer returns focus to the element that was focused when it was created, or
-`#page-title`.
+Dirty drafts ask before discard and guard unload. While saving, lock the form, prevent duplicate
+submit/navigation and disable Cancel/Close. On failure retain the draft and focus invalid controls
+or the drawer title. On success clear dirty state, notify the captured host and close. Destroyed
+editors' writes may settle, but cannot navigate/notify another scope. Restore focus to the opener,
+falling back to the page title. Keep loading, invalid ID, missing record and errors explicit.
 
 ## General settings and Fleet preferences
 
-`GeneralSettingsPage` at `/fleet/settings/general` reuses the full-page
-`GeneralSettingsView`: titled cards, typed Reactive Forms and a sticky dirty/save bar. Server
-field errors focus the first affected control even after a synchronous failure. The form
-guards navigation and unload, locks during submission, retains rejected drafts and restores
-the saved baseline on Discard. Notification controls are visibly labelled Demo/unavailable,
-disabled in the live page and excluded from persistence. The speed limit is a stored reference;
-changing it does not create or change speeding alerts.
-
-`FleetWorkspace` gates business views on its captured `FleetPreferences` read. Loading and
-read failure/Retry appear before business queries; unknown/disabled Branches issue neither
-preferences nor business reads. The same workspace supplies display units and time zone.
-General's separate write client saves Fleet preferences first, then conditionally renames the
-Core Branch. These writes are not atomic. A failed rename leaves the saved Fleet values in
-effect, keeps the name draft editable and reports a partial-save warning. Discard restores
-the actual persisted values. Full success clears the draft and refreshes Branch discovery
-after a rename; retired callbacks cannot apply preferences or announce results in a new scope.
+Use the shared full-page settings view, typed forms, titled cards and sticky save/discard bar.
+Its partial-save and persisted Discard behavior is documented in
+[the operator guide](discocan/development.md#fleet-operator-workflows). Gate business views on a
+successful scoped preferences read with Retry. Notification controls stay disabled/Demo;
+the speed reference generates no alert or device command.
 
 ## Storybook review
 
-Run `npm run storybook:admin` (port 11001). Storybook renders the real Angular components with
-fixed local fixtures; it is a manual review tool, with no story runner or play functions.
-Start here explains every menu entry, its data source and the dated device-settings evidence
-in English or Bulgarian. Its links open the relevant stories.
+Run `npm run storybook:admin` on 11001. Review real shared components with fixed fixtures;
+stories are not a backend or an automatic test suite. No play functions or story runner.
+Use `Admin/<menu group>/<menu item>[/<sub-page>]` in the navigation's English label/order;
+shared stories belong under `Design System`. Deprecated Karma stories remain reference only.
 
-Titles follow `Admin/<menu group>/<menu item>[/<sub-page>]`, using the English labels from
-[`admin-navigation.ts`](../apps/admin/src/app/workspace/admin-navigation.ts). Sub-pages sit under
-the item that opens them. The tree is Start here; Admin → Monitoring (Overview, Alerts, Trip log), Fleet (Vehicles, Drivers, Devices, Maintenance), Karma Client (Monitoring, Trucks, Administration, Settings),
-Settings (Vehicle groups, General), Sign in; then Design System (Foundations, Patterns, Shell,
-PrimeNG coverage). Truck pages sit under Karma Client/Trucks/Truck. Shared panels, including daily-report coverage and Karma controls, sit under
-Design System/Patterns.
-
-Keep only representative states: default, loading, empty, error, unavailable or missing scope,
-a distinct narrow layout and workflow steps, aiming for at most eight per screen. Use the
-Language (English default/Bulgarian), Theme, Brand, Density and viewport toolbar globals instead
-of duplicate language or theme stories. Provider changes rebuild the preview, including
-`UI_LANGUAGE`, routed language and PrimeNG texts. Open menus and drawers manually where a story
-starts at their entry point. Fixtures are snapshots, not a second backend.
-
-Use the Accessibility panel (axe) when reviewing markup. The PrimeUI license notice
-`#p-license-host` is excluded from that check and is never hidden.
+Keep representative default/loading/empty/error/missing-scope/narrow/workflow states, aiming for
+at most eight per screen. Use Language, Theme, Brand, Density and viewport toolbar globals instead
+of copies. Review keyboard behavior and the Accessibility panel; the license notice is excluded
+from axe and never hidden. Storybook may serve private local configuration; do not publish it.
 
 ## Changing the design centrally
 
-1. Brand or density for the application: change `appTheme` in `theme/theme-choice.ts`; nothing
-   else changes.
-2. A token: change it in `theme/` (brand, density, status tone or `appTokens`); when a colour pair
-   changes, add or adjust the pair in `brandContrastChecks` or `toneContrastChecks`
-   (`theme/contrast.ts`); review Foundations, Patterns and a screen story in both schemes.
-3. A new brand or density: add its name to the `BrandName`/`DensityName` union and to the
-   `brandNames`/`densityNames` arrays in `theme/theme-choice.ts`, and its record to `brands.ts` or
-   `densities.ts`; a brand on a new Aura palette also extends `AccentPalette`/`NeutralPalette`.
-   The Storybook toolbar lists the records, while the toolbar's choice reader iterates the
-   arrays, so a name missing there is silently skipped. Update the brand, contrast and density
-   tables in this document.
-4. A pattern: change the component or CSS pattern once; every screen using it follows. Update its
-   stories (`ui/css-patterns.stories.ts` for CSS patterns) in the same change.
-5. Breakpoints: change the Sass map in `styles/_breakpoints.scss`, the restatement in
-   `src/test-setup.ts`, the `BreakpointName` union in `ui/media.ts`, the names in the Foundations
-   "Breakpoints" story and the width table above.
-6. Layer order: change `styles/_layers.scss` and `holitaThemeOptions.cssLayer.order` together.
-7. A PrimeNG control: see [PrimeNG usage rules](#primeng-usage-rules).
-8. A font weight: add its WOFF file to `public/fonts/lato` and an entry to `$weights` in
-   `styles/_fonts.scss`.
+1. Application look: change `appTheme` in `theme/theme-choice.ts`.
+2. Token/color: change the owning theme record or `appTokens`; update the relevant contrast pairs.
+3. Brand/density: update choice unions/arrays and records; extend palette unions when needed.
+4. Pattern: change the shared component/CSS once and its representative stories.
+5. Breakpoint: update the Sass map, test-setup restatement, `BreakpointName` and Foundations story.
+6. Layer order: change `_layers.scss` and `holitaThemeOptions.cssLayer.order` together.
+7. PrimeNG control: follow [usage rules](#primeng-usage-rules) and coverage stories.
+8. Font weight: add its licensed WOFF under `public/fonts/lato` and the `_fonts.scss` weight entry.
 
-Checks for such a change: `npx nx run admin:typecheck`, `npx nx run admin:build` (it reports the
-component style budgets) and a Storybook review in both schemes, the three brands, both
-densities and `mobile375`.
+Follow [focused validation](../.agents/skills/holita-focused-validation/SKILL.md) at handover;
+request Storybook review when needed, including both schemes/brands/densities and mobile375.
 
 ## Extending
 
-- A token, brand, density, breakpoint or font weight:
-  [Changing the design centrally](#changing-the-design-centrally) and the token table under
-  [Theme](#theme).
-- A CSS pattern: `styles/_patterns.scss` (the CSS patterns list under
-  [Patterns](#patterns-srcappui)) and `ui/css-patterns.stories.ts`; a component pattern: a
-  standalone `holita-` component in `src/app/ui/` with stories under
-  `Design System/Patterns` and texts in `ui/i18n/{bg,en}.json`.
-- A list page with actions: [Patterns](#patterns-srcappui) for the page header, KPI strip,
-  FilterBuilder and TablePanel, [Table conventions](#table-conventions) for the `p-table` and the
-  action model, and [List URL state](#list-url-state) for the query.
-- A drawer: [Route drawers](#route-drawers) and the `holita-form-field` and form helpers under
-  [Patterns](#patterns-srcappui).
-- A navigation item or shell change: [Shell](#shell).
-- A story: [Storybook review](#storybook-review) and the
-  [design-system skill](../.agents/skills/holita-admin-design-system/SKILL.md).
+Use [patterns](#patterns-srcappui) and [table conventions](#table-conventions) for lists,
+[URL state](#list-url-state) for queries, [route drawers](#route-drawers) for editors and
+[shell](#shell) for navigation. Add no generic CRUD layer or wrapper around single controls.

@@ -1,0 +1,636 @@
+# Historical Karma development
+
+Deprecated reference only. Read when a task needs it. These descriptions record the
+previous implementation; they do not authorize device writes or renewed Karma development.
+
+## Karma Client
+
+### Configuration and access
+
+The independent Karma Client backend listens on loopback port 11014 and starts with `npm run dev`.
+Use `npm run dev:karma-client` to start it alone. Use the Karma Client and shared demo entries
+from the [single root environment reference](../../../.env.example) in the ignored
+`apps/karma-client/.env`, or supply them through the process environment. Obtain the shared
+account's `KARMA_USER` and `KARMA_PASSWORD` from the
+[local credential store](../../development.md#local-contributor-instructions-and-credentials).
+`KARMA_API_URL` defaults to `https://karma.online/apiv2/`. URLs must have HTTP(S) schemes and
+no embedded credentials, query or fragment. Redirects are rejected. Missing/invalid connection
+configuration leaves health usable and returns sanitized errors for Karma queries.
+
+Match Core's `DEMO_AUTH_SECRET` and `DEMO_AUTH_ENABLED` settings; this uses the same development-only
+signed session protocol as Fleet. Gateway's optional `KARMA_CLIENT_GRAPHQL_URL` defaults to
+`http://127.0.0.1:11014/graphql`. Regenerate contracts and restart after SDL changes.
+
+### Admin truck data
+
+After signing in, open **Karma Client → Trucks** (Bulgarian: **Камиони**) or visit
+`/en/karma-client/cars` or `/bg/karma-client/cars`. Every authenticated Tenant/Branch sees all
+cars returned by the configured account. The list has no Branch filter and is independent
+of `fleetEnabled`. The table loads on entry and with Refresh, retaining the previous list
+if refresh fails. Search by registration, car ID or device ID and optionally select a project;
+filtering and 25/50/100-row pagination use the full loaded account list. Search, project and
+page state survive reload and language changes in the URL. Clear filters returns to the first
+page. Click a registration number to open `/en/karma-client/cars/:recordId` or
+`/bg/karma-client/cars/:recordId`. Overview loads the source-local daily report and an independently
+reported last position, followed by the car summary, with subtype, timezone ID, assigned-driver count and every
+other original field available in the closed Source fields section. Refresh retains prior details on
+failure; missing/invalid IDs show a not-found message. There is no editing, automatic polling,
+persistence or Fleet synchronization.
+
+Each truck section has the same registration/ID header and primary Overview, Trips and Location
+navigation; More groups Diagnostics, Device settings, eData, Events and Driving profile. Back to trucks restores the originating list
+filters/page. Switching sections keeps that list context and a validated selected report day
+without copying the section's history date filters or cursor. Invalid submitted date/time ranges and ID lists show errors beside the
+relevant fields and focus the first invalid input; malformed URL filters keep their warning.
+
+### Real truck diagnostic history
+
+Open a truck's **More → Diagnostics** at
+`/en/karma-client/cars/:recordId/diagnostics` (or `/bg/…`). History reads the configured
+Karma account through Gateway independently of the active Branch. It starts with a bounded
+latest batch; optional inclusive **From message ID / To message ID** bounds can select an
+actual source record without a slow dated scan. Older pages are explicit reads. No total or
+complete current ECU fault inventory is implied.
+
+Each report preserves message ID, car/device identity, source UTC time, display timezone,
+report family and original payload. `419` type `21` decodes six-byte entries as four-byte
+big-endian SPN, FMI and reported status (`01` added, `02` removed). A removed logger entry
+does not establish a repaired vehicle. Unsupported or ambiguous layouts, including `418`,
+remain inspectable without invented descriptions, ECU identity, severity or current active
+status. Tracker diagnostics, OBD reports, communication snapshots and fault reports retain
+separate families. Empty loaded history means no report was observed in that selection.
+
+The operator view shows each decoded fault separately with a red reported-fault label and
+**View fault** opening its explanation, event time and service follow-up. Removed entries use
+a neutral label and do not confirm a repair. Counts describe the displayed historical entries,
+not unique active faults. Source IDs, message bounds, original reports and bytes are under
+**Technical details**. Unknown codes keep an explicit missing-description notice.
+The small description reference covers SPN 4339 (SCR feedback control), SPN 1247 (engine
+power) and FMI 7, 11 and 15, using the manufacturer's
+[SS1033423 reference](https://static.nhtsa.gov/odi/tsbs/2018/MC-10141869-9999.pdf)
+(PDF pages 24, 93 and 394). It supplies general code meanings, not a vehicle-specific diagnosis.
+
+Fixed **Read fault logger** and **Read communication diagnostics** actions require the
+active Branch and enabled Fleet device operations, using the same private machine token
+and worker setup described [below](#background-device-configuration-reads). No local Fleet
+Device registration is needed. Saved operations survive refresh/restart. Queue delivery,
+special device acknowledgment and actual returned reports are shown separately.
+No outer transport acknowledgment is inferred from them. `154,0` is NACK/error, and
+`154,1` is a positive special ACK; neither establishes a complete fault inventory.
+Pending/uncertain requests are not automatically replayed. A provider queue still pending
+after a local timeout blocks another read, including from another Branch. A terminal
+provider result permits a new explicit read. Empty/type-only fault payloads do not complete a read.
+The actions do not change configuration or clear faults.
+
+For the verified CB1147TP capture, select car `16595` and bound both message IDs to
+`7177124308` to inspect SPN 4339/FMI 7 and SPN 1247/FMI 11. Message `7179721665` contains
+SPN 23806/FMI 15. These historical reports prove received faults, not a fresh ECU scan.
+The [dated live evidence](../../discocan/erm-resources/erm-support-diagnostics-protocol-test-server/live-verification-2026-10-29.md)
+retains the separate logger NACK and queued-request outcomes.
+
+### Truck measurements
+
+From truck details, open **eData** at `/en/karma-client/cars/:recordId/edata` (or `/bg/…`).
+It starts with the latest 50 messages without a date requirement. Apply a page size of
+25/50/100, optional paired UTC date/time bounds, or up to 25 comma-separated parameter IDs.
+The dates are UTC even though the browser input uses a local-date control. Older/Newer
+browse a snapshot; Latest starts again with the newest matching messages. The API supplies
+no total. View opens a message/time summary and parameter readings/descriptions. The parameter
+table wraps long content so IDs and values stay visible within narrow drawers. Source fields
+expands all original message fields, preserving
+unknown IDs and zero values. `spd`, `odo` and `pdt` display their original values without
+unverified units or timezone labels.
+
+Filters and current cursor survive reload and language switching in the URL. Newer uses
+cursor metadata in the current browser history; a copied older-page URL or language change
+may have no earlier trail, so use Latest to restart. Refresh failures retain the current
+page; changing page/filter clears its previous rows. Truck validation, independent Branch/Fleet
+access and client retirement are the same as for details.
+
+### Truck daily Overview
+
+Open a truck's **Overview** to load Yesterday in its proved `Europe/Sofia` source zone.
+Choose a completed **Source-local day** and **Apply day**, or choose **Yesterday** to let the
+server select it again. The selected day stays in `?day=YYYY-MM-DD`, survives switching truck
+sections and does not change the independent Trips/Events filter clocks.
+
+The three values are total distance, trip count and maximum trip speed from the same bounded
+server result. Distance and speed retain explicitly unconfirmed source units. Day/night
+composition appears only for complete compatible inputs. Retrieval, per-value availability and
+unassessed GPS coverage remain separate; partial values describe the loaded subset, and a
+failed query does not become a zero-trip or example report.
+
+**Loaded trips** pages only that report's returned trips. **View trip** opens the original
+record and historical endpoints in a drawer at `#trip-<id>`, preserving the day and originating
+truck-list filters. Map and Street View use the selected endpoint; Google directions remain a
+suggestion. **Source fields** retains the raw trip record. Close returns focus to the row.
+The default **Last reported position** belongs to the latest available message independently
+of the selected day; its map pauses while the historical drawer map is active. Missing
+coordinates or Google configuration leave readable source facts and valid external actions.
+
+**Compare two days** loads one explicitly selected second completed day through the same bounded
+report contract. `?compareDay=YYYY-MM-DD` preserves that selection without reloading the primary
+day. The comparison keeps both retrieval times, source-zone boundaries and source trip links.
+Differences are selected day minus comparison day, in the displayed source units. Both reports
+must be complete (including a completed empty day), with matching truck, zone, selection and
+metric units; each value must be available and complete. Percentage change additionally needs
+a nonzero comparison value. Partial or unavailable values remain visible with an explanation,
+without a difference or a quality assessment.
+
+**Day brief / export** provides deterministic facts and calculation explanations from that
+loaded report. Its local JSON download contains the selected day and, only when chosen, the
+loaded comparison day. The trip drawer's **Trip and selected point brief / export** downloads
+the original trip, bounded position-read metadata and only the selected point, when selected.
+The files retain source IDs, raw units, clocks, retrieval/coverage and selection limits. Export
+does not request more data or recompute totals from the current table page. Coordinates are
+excluded by default and require the explicit checkbox; the latest reported location is not
+historical report evidence. Files are downloaded locally with no upload or public sharing.
+
+### GraphQL through Gateway
+
+Send requests to `http://127.0.0.1:11010/graphql` with the admin signed session in
+`Authorization: Bearer <token>`. This token comes from Core demo login and differs from
+Karma's upstream `session_id`. No Branch header is needed. Check the GraphQL `errors` array,
+including when HTTP status is 200. Execute one operation at a time, or select its
+`operationName` in the JSON request body; `KarmaTruck` also needs `variables: {id: "<car ID>"}`.
+
+```graphql
+query KarmaTrucks {
+  karmaCars {
+    id
+    carNumber
+    deviceId
+    projectId
+    carType
+    carYear
+    carColor
+  }
+}
+
+query KarmaTruck($id: ID!) {
+  karmaCar(id: $id) {
+    id
+    carNumber
+    deviceId
+    projectId
+    carType
+    subType
+    carYear
+    carColor
+    timeZoneId
+    driverCount
+  }
+}
+```
+
+Use an ID returned by `karmaCars` as the detail query variable. IDs must be canonical positive
+safe integers, represented as strings; malformed IDs produce `BAD_USER_INPUT`. A missing
+truck produces `karmaCar: null`. Anonymous/invalid admin sessions produce `UNAUTHENTICATED`
+before any upstream request; external failures produce sanitized `SERVICE_UNAVAILABLE`.
+
+| GraphQL field        | Upstream field         | Interpretation                                                                                   |
+| -------------------- | ---------------------- | ------------------------------------------------------------------------------------------------ |
+| `id`                 | `car_id`               | Numeric car ID normalized to a string.                                                           |
+| `deviceId`           | `device_id`            | Original string, including leading zeros.                                                        |
+| `projectId`          | `project_id`           | Numeric project ID normalized to a string.                                                       |
+| `carNumber`          | `car_number`           | Registration number.                                                                             |
+| `carType`, `subType` | `car_type`, `sub_type` | Nullable original strings.                                                                       |
+| `carYear`            | `car_year`             | Nullable string; numeric years are normalized to text.                                           |
+| `carColor`           | `car_color`            | Nullable original string.                                                                        |
+| `timeZoneId`         | `time_zone`            | Nullable numeric ID, resolved through the separate time-zone query.                              |
+| `driverCount`        | `driver_ids`           | Array length; empty array is zero, absent/null value is null. Driver identities are not exposed. |
+
+The generated API exposes all these fields. The list requests its eight table fields including time-zone ID;
+details request all ten. Project/time-zone names load from a separate reference query;
+optional SIM/video content is not included. Upstream account credentials and the Karma session remain server-side.
+
+### Upstream REST connection
+
+The external API base is `https://karma.online/apiv2/` (or configured `KARMA_API_URL`).
+The server submits JSON `{user, password}` to `POST /login`, reads `session_id`, then supplies
+it as the `karma_sid` query parameter for `GET /cars` and `GET /cars/{id}`. Detail responses
+are arrays: one record becomes a truck, an empty array or HTTP 404 becomes null; mismatched
+IDs/multiple records are rejected. The client does not expose arbitrary upstream endpoints.
+
+A successful HTTP response can still contain `{error: "Not logged in"}`. This and HTTP 401
+trigger one session renewal; other non-success HTTP bodies are cancelled without JSON parsing.
+The complete login/read/retry operation normally has a four-second bound. Public eData reads
+have an eight-second bound, within Gateway's nine-second Karma subgraph deadline and the
+admin's ten-second HTTP deadline. Device command and background observation budgets are separate.
+Credentials, session IDs and
+URLs containing them must not be logged or stored in fixtures/documentation. Use the ignored
+service environment for credentials, rather than placing them in shell commands.
+
+For eData, execute the generated `AdminKarmaEdata` operation or a query with this input:
+
+```graphql
+query KarmaMessages($input: KarmaEdataInput!) {
+  karmaEdata(input: $input) {
+    cursor
+    nextCursor
+    hasMore
+    items {
+      id
+      carId
+      deviceId
+      carNumber
+      eventTimeUtc
+      eventTimeLocal
+      pdt
+      spd
+      odo
+      latitude
+      longitude
+      parameters {
+        id
+        value
+        description
+      }
+    }
+  }
+}
+```
+
+Start with `variables: {input: {carId: "<car ID>", pageSize: 50}}`. For older messages,
+reuse `nextCursor` with the same truck, page size, dates and parameter IDs. Reuse `cursor`
+to reread the current snapshot page. Date strings use `YYYY-MM-DDTHH:mm:ssZ`; supply both
+`fromDate` and `toDate`, or neither. `parameterIds` is an array of positive ID strings.
+
+### Location and account references
+
+All queries below require the signed admin token through Gateway and use no Branch header.
+
+```graphql
+query KarmaReferences {
+  karmaProjects {
+    id
+    name
+  }
+  karmaTimeZones {
+    id
+    name
+  }
+  karmaVersion {
+    version
+  }
+}
+query KarmaLastLocation($carId: ID!) {
+  karmaLocation(carId: $carId) {
+    carId
+    deviceId
+    carNumber
+    messageId
+    eventId
+    edt
+    edtTz
+    pdt
+    latitude
+    longitude
+    spd
+    odo
+    extra
+  }
+}
+```
+
+Projects map `project_id`/`name` to string `id`/`name`; time zones map `zone_id`/
+`zone_name` to nonnegative GraphQL Int `id`/`name`. IDs are unique within each list.
+Version maps the nonempty upstream `version` string and does not authenticate upstream.
+Location maps `carnumber`, `message_id`, `eid`, `edt_tz` to `carNumber`, `messageId`,
+`eventId`, `edtTz`; remaining field names are explicit in the query. Message/event IDs
+are nullable strings, timestamps/metrics/coordinates/extra nullable, car/device/
+registration required. Missing car/empty location returns null; null coordinates
+remain distinct from zero. Do not infer units, exact time meanings or online status.
+
+Open `/bg/karma-client/cars/<car ID>/location` (or `/en/...`) from truck details.
+Account routes are `/projects`, `/time-zones`, `/api-info` relative to the same section.
+Reference list query parameters: `q` (literal case-insensitive name/ID search),
+`size=25|50|100` (50 default), `first` (zero-based row offset, aligned to size).
+Both references are complete bounded read responses; pagination is local and the total
+is their actual array length. A bookmarked offset is preserved until data arrives,
+then clamped to the last matching page if necessary. No historical location paging is
+implied: Location displays the last-known message; eData provides message history.
+
+### Karma maps
+
+The truck inventory's **Location** and **Street View** row actions open a drawer and
+load only that truck's last reported position. The selected truck and view stay in
+the URL alongside the inventory filters; closing restores the row action's focus.
+Overview and Location use the same [shared map panel](../../../apps/admin/src/app/ui/map-preview/map-preview.ts)
+for the last reported position, separately from a selected historical report day.
+Event and eData detail drawers use their own record's coordinates, source time and ID,
+without substituting the truck's newer location.
+Trip drawers use the panel with the recorded Start/End points. Select **Map** or
+**Street View** for a point, or **Suggested Google route** when both endpoints are valid.
+With only one valid endpoint, point actions remain available and directions are absent.
+The suggested route is Google's calculation between endpoints, not recorded vehicle movement.
+Invalid or missing coordinate pairs cannot open a map. Zero is a valid coordinate.
+
+The source record, coordinates and source times remain visible while exploring the map.
+Street View shows nearby surroundings that may be older or unavailable, not live vehicle
+imagery or the scene at the record's time. It does not change the source point.
+**Return to recorded point** restores the point view; external Google Maps actions remain available without a key.
+
+Google Maps links work without application configuration. For an interactive embedded preview,
+enable Maps Embed API in a Google Cloud project and add a browser key as
+`googleMapsEmbedApiKey` to `apps/admin/public/config.local.json`, preserving any existing
+`primeUiLicense`. Production can supply the same property in public `config.json`.
+These are browser-visible keys; restrict the key to Maps Embed API and the exact admin website
+referrers, including `http://127.0.0.1:11000/*` for local development. Configuration is validated
+at bootstrap; reload after changing it. The ignored local file is excluded from production builds.
+See Google's [Embed setup](https://developers.google.com/maps/documentation/embed/get-api-key)
+and [embedding guide](https://developers.google.com/maps/documentation/embed/embedding-map).
+With a configured key and valid coordinates, the active map panel automatically loads
+the selected Google view and explains that the coordinates are sent to Google. Selecting
+Street View or changing the mode, endpoint or source record updates the preview directly.
+Loading is limited to the mounted active panel, without hidden-tab or per-row previews
+or polling. Without a configured key, valid external links remain available; missing or
+invalid coordinates retain the textual fallback. Coordinate facts and fallback actions
+remain visible if a preview or panorama is unavailable; no separate Street View
+availability lookup is performed.
+
+Trip drawers also show **Point records** from a single bounded read between the selected
+trip's start/end message IDs. Selecting a row updates the shared Map/Street View context;
+local paging and point selection do not refetch source data or replace the trip/list URL.
+**Return to trip endpoints** restores endpoint mode and its separately labeled suggested
+directions. Missing coordinates never borrow another record's point. Empty, partial or failed
+sample reads retain the original endpoint facts and report their retrieval state separately
+from GPS coverage. Open trips or missing message bounds remain in endpoint mode.
+
+The list keeps same-time/same-coordinate records with distinct IDs. Long intervals use the
+displayed Holita 15-minute rule over established UTC positions; this is not a provider
+sampling-frequency claim. Declared source gaps are displayed separately. Full paths,
+multi-marker fleet maps and nearest-truck lists remain unavailable without the richer-map
+and bounded bulk-contract prerequisites; eData/CAN series are not loaded by this view.
+
+The truck list and profile tabs share the admin page, filter and table patterns.
+Open an eData message, trip or event from its record link or row menu to view its details
+in a right-hand drawer; original fields remain in the expandable Source fields section.
+Karma list/search/filter controls share one responsive layout. History range filters use PrimeNG
+DatePicker with a separate textual time including seconds, retaining the existing UTC or API
+wall-clock interpretation and URL values even during daylight-saving clock gaps. The daily
+Overview uses a calendar-date input in its explicitly named source zone.
+
+### Measurements
+
+On the selected truck's eData page, set the existing UTC bounds and optional parameter filter,
+then choose **Measurements**. **Source messages** returns to the original message table.
+Both views share one bounded API page; Older/Newer replaces that subset. The scope text shows
+the requested inclusive bounds, filter, limits and continuation. No full-period total or
+per-vehicle hardware capability is inferred from a loaded page.
+
+Choose one channel to see its source-scale chart and readable measurements table. Expand
+**Observed channels in the loaded selection** for numeric/null/absent counts and separate
+last observed/last numeric timestamps. Not observed does not mean unsupported hardware,
+healthy or disconnected. Source-provided unit labels are not independent calibration, so
+real counter comparison, engine-counter differences and fuel consumption remain unavailable.
+
+Select a table record for its reading ID, message/position ID, unchanged source time and
+Map/Street View. **Open selected source message** reveals the original eData fields. Neither
+selection issues another eData request. Unproved UTC clocks keep the table and disable the
+chart; nulls, absent readings, declared gaps and the displayed 15-minute rule break its line.
+A failed refresh retains the preceding successful retrieval time and data.
+
+### Trips, events and driving profile
+
+From truck details, open **Trips**, **Events** or **Driving profile** at
+`/bg/karma-client/cars/<car ID>/trips`, `/events` or `/driving-profile`; English uses `/en`.
+Trips/events start without required dates at 50 records, with 25/50/100 sizes. Optional
+paired periods reset the cursor; events also accepts up to 25 comma-separated original
+codes, including zero. Trip date inputs use API wall-clock values with an unspecified
+provider timezone; event filter dates use UTC. Histories show newest IDs first, full
+row drawers and Latest/Older/Newer without an invented total. Trip batches may be short
+with continuation; a bounded lookahead checks this. Newer restores browser-history
+cursor metadata; a separately opened cursor URL can still use Latest.
+
+Profile starts with a seven-day period derived from the current UTC clock as API
+wall-clock values; no timezone conversion is asserted. Edit both bounds to expand or
+replace it, or select Last seven days to reset. It is an aggregate with nine source
+category names and nullable score/weight values. Zero and absent measurements remain
+distinct, and no combined score or quality threshold is invented.
+The applied API period appears above the category values. Event details show the original code
+and escaped source text first. Both views keep their original identity/source fields in a closed
+Source fields section, matching truck and eData details.
+
+Generated `AdminKarmaTrips`, `AdminKarmaEvents` and `AdminKarmaDrivingProfile` operations
+use these fixed signed-session queries, without an upstream session or Branch argument:
+
+```graphql
+query KarmaHistories(
+  $trips: KarmaTripsInput!
+  $events: KarmaEventsInput!
+  $profile: KarmaDrivingProfileInput!
+) {
+  karmaTrips(input: $trips) {
+    cursor
+    nextCursor
+    hasMore
+    items {
+      id
+      carId
+      startDate
+      stopDate
+      tripDistance
+    }
+  }
+  karmaEvents(input: $events) {
+    cursor
+    nextCursor
+    hasMore
+    items {
+      id
+      carId
+      eventId
+      edt
+      edtTz
+      pdt
+      spd
+      odo
+      extra
+    }
+  }
+  karmaDrivingProfile(input: $profile) {
+    carId
+    carNumber
+    deviceId
+    categories {
+      name
+      score
+      weight
+    }
+  }
+}
+```
+
+Trips/events inputs: canonical `carId`, `pageSize` (default 50), optional `cursor` and
+paired `fromDate`/`toDate`. Events adds `eventTypes: [ID!]`. Event dates use exact
+`YYYY-MM-DDTHH:mm:ssZ`; trip/profile dates use `YYYY-MM-DDTHH:mm:ss` source wall-clock
+strings. Profile requires both bounds. IDs remain strings for safe values above
+GraphQL Int; cursors bind endpoint/truck/size/period/codes/snapshot. The server validates
+car existence and rejects malformed upstream data within the existing four-second
+budget. Profile missing/empty is null; missing cars yield empty histories. Errors are
+sanitized, while same-query Refresh retains prior successful data.
+
+View exposes 23 trip fields and 12 event fields, including explicitly selected `spd`,
+`odo`, `edt_tz`, `pdt`. `extra` is escaped plain text with preserved whitespace.
+Original metric names/values remain visible because units, code meanings, score scales
+and active-trip semantics are unverified. Navigation, period/filter/cursor changes,
+truck/language/session/logout retire obsolete reads. No upstream decoding, polling,
+writes or commands are performed.
+
+Authenticated account views are also available at `/:language/karma-client/users` and
+`/:language/karma-client/roles` through the **Users** / **Roles** menu entries. Both fetch
+the complete account arrays, support local search and 25/50/100 paging (50 by default),
+and retain `q`, `size` and `first` in the URL. User detail displays all eleven upstream
+fields, including the original numeric active value, nullable expiry text and project-ID
+array. Role descriptions are original data, not an admin permission matrix.
+
+```graphql
+query KarmaAccountViews {
+  karmaUsers {
+    id
+    userName
+    active
+    expireDate
+    roleId
+    firstName
+    lastName
+    timeZoneId
+    email
+    projectId
+    projectIds
+  }
+  karmaRoles {
+    id
+    description
+  }
+}
+```
+
+These queries use the existing signed Gateway session, never browser-held Karma credentials
+or a Branch header. Source expiry timezone/active semantics and role permissions are not
+interpreted. Drivers, populated sensors, queue and accident reports
+have no implemented views because their populated schemas or valid identifiers are unavailable.
+
+## Background device configuration reads
+
+Apply Fleet migrations with `npm run db:migrate --workspace @holita/fleet` and regenerate
+contracts with `npm run codegen`. Configure these entries from the root `.env.example`:
+
+- Fleet: `FLEET_DEVICE_OPERATIONS_ENABLED=true` and `FLEET_KARMA_INTERNAL_URL`, default
+  `http://127.0.0.1:11014` without a path, query or embedded credentials.
+- Fleet: `FLEET_DEVICE_CONFIGURATION_WRITES_ENABLED=true` additionally enables parameter
+  additions, interval changes and single-rule changes. It defaults to `false` and requires background operations
+  to be enabled. Import the verified Monitor 9.56 catalog through the
+  [local catalog procedure](../../discocan/erm-resources/simple-edata-catalog/README.md) to offer additions;
+  interval changes can use captured definitions without a catalog entry.
+- Fleet and Karma Client: the same random private `KARMA_INTERNAL_TOKEN`, at least
+  32 characters, supplied through their process environment or ignored runtime `.env` files.
+- Karma Client: its existing API account settings. Browser/demo tokens are not accepted by
+  the internal endpoint, and the machine token must never appear in browser configuration.
+
+Restart both application processes after changing environment configuration. The scheduler
+runs inside Fleet; leaving the browser does not stop it, but stopping Fleet pauses processing.
+Both flags default to `false`; saved requests and snapshots remain readable when disabled.
+Turning off the write flag prevents unsent changes; already marked submissions continue
+readback verification while background operations remain enabled. Turning off background
+operations stops the worker. Keep the configured Karma account stable while requests are active.
+
+In Karma, open the intended truck and choose **Device settings** at
+`/:language/karma-client/cars/:recordId/configuration`. The active Branch in the shell supplies
+Fleet scope for operation history. The selected truck's Karma record supplies the device,
+shown as **Device in Karma**. No local Device registration, matching or additional selector is
+needed. The server verifies the current Karma car/device pair before queuing and dispatching work.
+Opening a settings URL while signed out returns to that same route after login and Branch selection.
+
+The page summarizes the device, last successful read, whether commands and changes are enabled,
+and pending or failed operations. **Read configuration** reads parameters, then rules after the
+first complete response. Opening or reloading the page only loads saved results; it never queues
+a device command. **Continue reading rules** resumes an interrupted sequence. Each section shows
+its own read time and distinguishes **Not read yet** from a confirmed empty response.
+
+Use one flow: **Read device → Edit → Review difference → Send → Verify result**.
+Periodic data lists parameter names, source codes and intervals. **Add parameter** opens a
+searchable catalog picker; **Change interval** opens the selected parameter directly. Choose
+30 seconds, 1, 5 or 15 minutes, or enter custom whole seconds from `0` to `65000`. A separate
+review shows the truck, parameter and before/after interval before sending. Zero means
+**Not in use** and requires separate confirmation; readback does not prove measurement silence.
+Unknown parameter IDs remain editable from their captured definitions. Changes require the latest
+complete read for this exact truck/device and Branch, enabled dispatch and writes, and no pending
+or uncertain operation. Refresh the truck and read again if Karma changes its device.
+
+**History** shows the newest requests first, their send times, requested changes and outcomes.
+A queued request is not a confirmed change. A successful result requires matching device readback.
+Original fields, raw definitions, request IDs and prerequisites are under **Technical details**.
+History cannot replace the current editing baseline with an older snapshot.
+
+The parameter row's **Measurements** action opens a read-only drawer for that parameter and
+Karma device. It loads the latest records within the displayed 24-hour UTC window on opening
+or manual refresh. The drawer keeps the configured interval and its confirmation time separate
+from the last source value, source timestamp and differences between recent records. A successful
+change can remain configuration-confirmed without new numeric measurements after it. These
+differences do not automatically establish periodic reporting: eData can also contain event
+or ignition-off reports. An unavailable query is shown separately from an empty result.
+
+Conditional events describe each rule's condition, threshold, confirmation time and event codes
+in one sentence. Read both parameters and rules before creating or changing an event. The drawer
+walks through **When should it send?** (name, searchable parameters, comparisons and threshold,
+confirmation time) and **What should it send?** (event codes when the condition becomes true or
+false), then opens the review of one rule. Event names and payload selection are not supplied by
+the current API; use event codes established for this truck. Ordinary rules require at least one
+reporting transition. Technical details contain the automatically selected free rule number,
+explicit replacement controls, calculation-only mode and advanced expression editing.
+
+Advanced ID text preserves complex expressions, including arithmetic, mixed logic and `TimeOf`,
+`Count` or `Sum`, without flattening them. Constants are integers from -65535 through 2147483647;
+mixed operators require explicit grouping. RuleData is limited to 128 bytes. Confirmation time
+is `1..32767` milliseconds, separate from `TimeOf`; no firmware behavior is simulated.
+Unsupported device rules stay opaque and cannot be overwritten. Other rules and the observed
+dashboard bit are preserved; a new rule uses false for that bit.
+
+Unsent rule changes and local names are retained in this browser for the signed Tenant and truck,
+and appear alongside device settings with an explicit unconfirmed status. **Review change** leads
+directly to the guarded send review. Missing dependencies, duplicate rule numbers, changed
+baselines, pending operations and uncertain outcomes block sending. Discarding a proposed change
+never deletes a device rule. Unsubmitted edits guard navigation and target changes.
+
+**Technical details and file tools** contains INI/TXT tools for inspection and local authoring only. Original source, names, section order,
+unknown keys and opaque definitions remain available; mismatches, unresolved dependencies and
+unsupported expressions are shown. Download the original source, export edited local INI,
+or export inspection TXT containing individual `04` records. Edited ID-expression exports
+do not claim full Monitor compatibility. Imported parameter/global/profile settings and TXT
+commands are never executed. Opaque and n-ary expressions can be inspected/exported unchanged.
+
+For an online change, use **Read configuration** to obtain
+both complete snapshots. Choose one editable rule and review the
+target, both baselines, dependencies, event IDs, debounce and old/new record before confirming
+the single background change. Missing configured dependencies, duplicate local IDs, pending
+operations or a changed baseline prevent submission. Raw record bytes and request identifiers
+remain available in technical details. Existing device rules with unsupported expressions
+cannot be overwritten; their bytes are preserved when another rule changes.
+
+After a matching complete rule readback, the confirmed row keeps its local name and the exact
+submitted draft revision is retired. Any later local edits remain a draft. A failed or uncertain
+write keeps the revision available until a later read confirms the same target, Rule ID and record.
+
+Fleet rechecks the observed profile for additions and rereads the whole parameter set before
+the sole additive write. Every baseline definition must match, and the conservative phase/
+response age must remain within 120 seconds. Expired evidence causes a safe fresh read.
+The server sends one full 22-byte definition with operation `02`; an interval update changes
+only its last two bytes. An independent complete read must verify the intended change and
+preserve every other definition before the operation completes. Stored history shows its
+kind, phase and uncertainty; it survives navigation, browser reload and Fleet restart.
+
+A rule change similarly rereads both captured parameter and rule sets, requires both within
+the 120-second window, and sends exactly one rule record. An independent complete `402` rule
+read must match that record and all unrelated rules before completion. The write preserves
+an existing rule's dashboard flag; a new device rule uses false. Queue acceptance, generated
+bytes or an event occurrence do not establish successful verification or correct runtime behavior.
+
+The ten-minute deadline does not cancel a command in Karma's queue. An uncertain or timed-out
+write may arrive later and is never automatically replayed. If a browser request loses its
+response, refresh saved operations before submitting again. If verification remains incomplete,
+read and reconcile the device state before another change. Parameter values, global settings,
+profile changes, deletion, restoration and measurement verification have no automated editor.
+Demo login identifies a Tenant, not a named operator or production write permission.
+See [operation persistence and evidence limits](architecture.md#background-device-configuration-reads).

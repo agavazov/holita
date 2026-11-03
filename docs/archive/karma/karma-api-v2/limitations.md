@@ -2,7 +2,7 @@
 
 This document describes current behavior and evidence limits. Unresolved provider
 questions and possible future work are recorded separately in the
-[Karma backlog](../../../todo/karma-api-v2.md).
+[Karma backlog](../karma-api-v2.md).
 
 ## Method coverage
 
@@ -60,7 +60,7 @@ The presence of 500 message envelopes does not establish 500 actual sensor readi
 Only an empty driver list was observed. Driver and accident-report models remain
 unverified. Manual eData command submissions, single-ID queue reads and device
 configuration responses have limited observations documented in the
-[configuration reference](../edata-simple-protocol-v4.04/parameter-reporting.md).
+[configuration reference](../../../discocan/erm-resources/edata-simple-protocol-v4.04/parameter-reporting.md).
 They do not establish complete command/queue schemas or general device-command support.
 
 The adapter ignores additional object fields rather than preserving an arbitrary
@@ -77,7 +77,7 @@ reconciled. Nullable finite values are preserved, without deriving units or labe
   path arrays leave serialization ambiguities; unknown methods are not promoted
   to established operations solely because the helper offers them.
 - Existing trips/profile inputs retain unresolved general wall-clock semantics.
-  The separate [daily report](../../architecture.md#daily-report-contract) narrows
+  The separate [daily report](../architecture.md#daily-report-contract) narrows
   support to the proved Europe/Sofia start-day selection; other zones are unsupported.
   Historical car-zone configuration changes remain unknown. Public response timestamp checks validate shape, not full
   calendar validity. `pdt` semantics are unresolved.
@@ -120,7 +120,7 @@ bounded to 2 MiB. The internal configuration reader bounds target responses to
 not probe Karma. A valid JSON error can use HTTP 200,
 so transport success is distinct from usable business data.
 
-The implemented [background configuration operations](../../architecture.md#background-device-configuration-reads)
+The implemented [background configuration operations](../architecture.md#background-device-configuration-reads)
 submit fixed `301` reads (`0702BC`, `1F`, `0802BC`), one `02` parameter definition or
 one `04` rule record. The internal machine API validates the selected target,
 parameter ID/interval or supported rule frame/expression, and bounded `401`/`402`/`416` observations;
@@ -168,8 +168,8 @@ CAN-disconnection report is separate from an ECU DTC and from the full tracker
 internal-error/command-result catalogue. Positive SPN/FMI proof requires an actual
 `419` source record with applicable decoding and installation context; a vendor
 sample or DTC-enabled configuration is insufficient. The
-[verification register](../erm-support-diagnostics-protocol-test-server/README.md#verification-register)
+[verification register](../../../discocan/erm-resources/erm-support-diagnostics-protocol-test-server/README.md#verification-register)
 records the observed scope and remaining evidence.
 
-See the [backlog](../../../todo/karma-api-v2.md) for the questions required to
+See the [backlog](../karma-api-v2.md) for the questions required to
 resolve these limits.

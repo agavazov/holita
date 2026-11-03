@@ -1,5 +1,8 @@
 # Independent ERM StarLink device server
 
+The process lifecycle, Branch access and operator command path are refined by
+[ADR 0007](0007-erm-gateway-and-api-processes.md).
+
 ## Context
 
 ERM StarLink devices push raw TCP frames to a public port. Router, Core, Fleet and Karma Client

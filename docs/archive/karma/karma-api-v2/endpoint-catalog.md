@@ -253,7 +253,7 @@ selected car/device identity and UTC window, and reads at most four descending-I
 pages of up to 500 rows. Each response body is bounded to 2 MiB. It parses supported
 text `401`, `402` and `416` messages from `extra`, filtered by an optional message-ID watermark
 before assembly; it is not a general event archive or an arbitrary decode interface.
-See [background configuration operations](../../architecture.md#background-device-configuration-reads).
+See [background configuration operations](../architecture.md#background-device-configuration-reads).
 
 Direct upstream reads also accept `fields[]=vin` and `fields[]=vbat` to inspect
 voltage across historical messages. Availability on a message is device-dependent;
@@ -348,7 +348,7 @@ array. The adapter never accepts command text from callers and never automatical
 a submission after an uncertain transport/authentication result. Fleet persists the
 operation, complete baseline, intended change, queue references, durable marker and
 independent whole-set readback separately from this adapter.
-See [background configuration operations](../../architecture.md#background-device-configuration-reads).
+See [background configuration operations](../architecture.md#background-device-configuration-reads).
 
 Manual single-device parameter updates were verified independently by device
 readback and subsequent measurements. Implemented additions/interval changes use the
@@ -357,7 +357,7 @@ baselines and full-set verification; public Karma GraphQL queries have no write 
 Version/global requests remain manual procedures; fixed logger and communication
 diagnostic reads use the internal endpoints described above. Raw source events and illustrative Diagnostics
 screens have [separate evidence limits](holita-integration.md#diagnostic-evidence-and-product-coverage).
-See the [configuration procedure and evidence limits](../edata-simple-protocol-v4.04/parameter-reporting.md).
+See the [configuration procedure and evidence limits](../../../discocan/erm-resources/edata-simple-protocol-v4.04/parameter-reporting.md).
 This does not establish a universal command catalog, permissions, bulk behavior,
 acknowledgment correlation, idempotency or delivery guarantees.
 
@@ -437,5 +437,5 @@ Response fields for implemented reads and observed omissions are listed in
 not been promoted to complete response schemas. Unknown write results, driver
 rows, non-null sensor payloads, accident reports and queue states intentionally
 remain unconstrained in the reconstructed schema. Consult the
-[remaining questions](../../../todo/karma-api-v2.md) before treating this reference
+[remaining questions](../karma-api-v2.md) before treating this reference
 as a complete upstream contract.

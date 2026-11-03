@@ -3,7 +3,7 @@
 **Historical source assessment (27 October).** The [29 October follow-up](reply-2026-10-29.md) and [current live evidence](live-verification-2026-10-29.md) supersede missing portal credentials, absence of positive 419 reports and any use of 154,0 as successful empty-fault evidence. Original material below is preserved with its original date and scope.
 
 [Reference and verification status](README.md) · [Full correspondence](correspondence.md) ·
-[Pending tests and ERM questions](../../../todo/karma-api-v2.md#erm-support-verification)
+[Pending tests and ERM questions](../../../todo/erm-roadmap.md#questions-for-erm)
 
 Analysis date: **2026-10-27**, Europe/Sofia. This is an interpretation of supplied
 source material. A vendor statement, a screenshot and a sample payload are not live
@@ -173,7 +173,7 @@ Code observations below are a snapshot from 2026-10-27, not proof of a deployed 
 - [eData 4.04 fault messages](../edata-simple-protocol-v4.04/content.md) contain the same `418`/`419` samples and inconsistencies. The email images are not a corrected replacement specification.
 - The global command `302` table lists **Process FMS DTCs**. The corresponding `410` readback table labels the apparent matching position **Keep Alive Message Time Interval**. The earlier mismatch around CANBUS #2 / ignition-off processing also remains. The screenshot does not identify the correct byte or bit for this hardware/firmware. Do not guess a global payload from these tables.
 - The [Monitor guide](../simple-edata-monitor-configuration-v1.0/content.md) has a DTC view with code, description, Added/Removed status and update time, in an OBD-mode context. This is additional documentation, not proof that the exact same mode is required for every FMS/FMI installation.
-- The [Karma guide appendix](../karma-guide-appendix-v1.4.2/content.md) separately mentions StarLink parameters **2069/2070 = 134217731** for its DTC report workflow. The engineer's reply does not mention these. Verify applicability before changing them. StarLink system-parameter numbers are not interchangeable with eData parameter IDs such as 539/662.
+- The [Karma guide appendix](../../../archive/karma/karma-guide-appendix-v1.4.2/content.md) separately mentions StarLink parameters **2069/2070 = 134217731** for its DTC report workflow. The engineer's reply does not mention these. Verify applicability before changing them. StarLink system-parameter numbers are not interchangeable with eData parameter IDs such as 539/662.
 - The [local portal reference](../starlink-online-protocol/README.md) was originally prepared from screenshots with credentials awaited. The engineer says access was already sent in another email; the reference now records both sources with authenticated access unverified. The actual previous email needs to be recovered and checked before treating either statement as the current access result.
 - The current [Fleet operation SDL](../../../../apps/fleet/src/modules/device-operations/device-operations.graphql) supports parameter/rule reads, parameter additions, interval changes and single-rule changes. It does not expose a typed global **Process DTCs** mutation.
 - The current [Karma event SDL](../../../../apps/karma-client/src/modules/history/history.graphql) exposes `extra` as source text. There is no dedicated typed `418`/`419` decoder or fault-lifecycle query in the inspected modules. Raw event reading can be used first to locate real examples; the exact event ID/endpoint for fault reports still needs observation or vendor confirmation. Do not assume all DTCs use `event_type=33` solely because configuration/periodic messages did.
@@ -213,7 +213,7 @@ The mail's support confirmation does not prove that a vehicle currently has a fa
 
 Current API/editor contracts remain in the existing [Discocan documentation](../../README.md).
 Conditional implementation ideas, the bounded test allocation and unsent questions
-for ERM are tracked in the [existing backlog](../../../todo/karma-api-v2.md#erm-support-verification).
+for ERM are tracked in the [existing backlog](../../../todo/erm-roadmap.md#questions-for-erm).
 No new fault decoder, global-setting operation or receiver is implemented by this reference.
 
 ## ERM-TEST-01 complementary source findings

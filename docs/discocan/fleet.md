@@ -355,7 +355,7 @@ captured clients, generated operations and shared load/error/empty states:
   Fleet settings save before the separate Core Branch-name mutation; a failed rename retains
   the saved Fleet preferences and the rejected name draft. Notification switches remain
   disabled Demo controls. See [Branch settings](architecture.md#branch-settings) for contracts/defaults
-  and the [General settings workflow](development.md#angular-fleet-general-settings) for the
+  and the [General settings workflow](development.md#fleet-operator-workflows) for the
   initial preference gate, display versus entry units and partial-save behavior.
 
 The topbar's notification bell is labelled Demo and explains that delivery has no connected
@@ -375,23 +375,4 @@ See [architecture](architecture.md), [development](development.md) and
 
 ## Background device configuration reads
 
-The [device operations SDL](../../apps/fleet/src/modules/device-operations/device-operations.graphql),
-[service](../../apps/fleet/src/modules/device-operations/device-operations.service.ts),
-[repository](../../apps/fleet/src/modules/device-operations/device-operations.repository.ts) and
-[processor](../../apps/fleet/src/modules/device-operations/device-operations.processor.ts)
-own durable eData reads, predefined-parameter additions and existing-interval changes. The
-[Karma internal client](../../apps/fleet/src/integrations/karma/karma-device-reads.client.ts)
-uses fixed machine-authenticated HTTP endpoints without cross-application imports.
-
-The admin's [configuration page](../../apps/admin/src/app/features/fleet/device-operations/device-configuration-page.ts)
-is reached from a Device's Diagnostics. It preserves the last complete snapshot while an
-operation is pending and reloads persisted work after navigation or refresh. Its
-[parameter editor](../../apps/admin/src/app/features/fleet/device-operations/device-parameter-editor.ts)
-previews one confirmed change against a complete baseline. The
-[definition helpers](../../apps/fleet/src/modules/device-operations/device-parameter-change.ts)
-preserve unknown raw fields, construct verified Monitor presets and compare the complete
-result; [profile evidence](../../apps/fleet/src/modules/device-operations/device-profile-evidence.ts)
-has its own age and watermark. See the
-[architecture](architecture.md#background-device-configuration-reads),
-[setup and workflow](development.md#background-device-configuration-reads) and
-[testing](../testing.md).
+Deprecated Karma integration: [historical Fleet integration index](../archive/karma/fleet.md#background-device-configuration-reads).

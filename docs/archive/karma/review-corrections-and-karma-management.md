@@ -1,11 +1,15 @@
 # Review corrections and Karma device management
 
+Archived, deprecated reference only. The tasks and approvals below are historical; do not
+treat them as active work. Open ERM engineering and vendor questions belong in the
+[ERM roadmap](../../todo/erm-roadmap.md).
+
 Pending work for the current Fleet/Karma implementation. This backlog supersedes the temporary
 review scratchpad; retain only open work here. Implemented contracts belong in
-[Discocan architecture](../discocan/architecture.md), [Fleet](../discocan/fleet.md) and the
-[admin design system](../admin-design-system.md). Existing provider questions remain in
+[Discocan architecture](../../discocan/architecture.md), [Fleet](../../discocan/fleet.md) and the
+[admin design system](../../admin-design-system.md). Existing provider questions remain in
 [the Karma backlog](karma-api-v2.md), and reporting/restoration work remains in
-[the eData backlog](erm-edata-configuration-interface.md).
+[the eData backlog](../../todo/erm-roadmap.md).
 
 ## Performance
 
@@ -20,7 +24,7 @@ The [settings backlog](karma-device-management-design.md) owns live device accep
 rule/event allocation and threshold-scale evidence, firmware semantics and Monitor interchange
 questions. Do not duplicate those tasks in the general cleanup below. Implemented target
 and operation contracts are in
-[architecture](../discocan/architecture.md#background-device-configuration-reads).
+[architecture](architecture.md#background-device-configuration-reads).
 
 ## Behavior-preserving cleanup after the approved feature
 

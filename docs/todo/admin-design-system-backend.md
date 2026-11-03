@@ -34,7 +34,7 @@ The following requires separate product scope and is not pending Storybook scree
 
 - Fuel entries; geozones/POIs; a diagnostic-fault lifecycle; telemetry ingestion/reporting;
   driver-assignment history. Remaining eData measurement verification and scoped restoration
-  belong to the [eData backlog](erm-edata-configuration-interface.md).
+  belong to the [eData backlog](erm-roadmap.md).
 - Demo dataset refresh/versioning. The fixed anchor intentionally ages against the business
   date; do not update existing seed rows to refresh it. Any refresh proposal must define a new
   dataset version/IDs and preserve insert-only/idempotent behavior and local safety guards.

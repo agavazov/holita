@@ -4,8 +4,8 @@ Date: 2026-10-24, Europe/Sofia.
 
 **Historical checkpoint from 2026-10-24. The interface has since been reviewed and phase 2
 is authorized. Do not use the prototype status or next-step instructions below as current scope.**
-Current behavior is documented in [Discocan development](../discocan/development.md#background-device-configuration-reads);
-remaining acceptance work is in [the settings backlog](../todo/karma-device-management-design.md).
+Current behavior is documented in [Discocan development](development.md#background-device-configuration-reads);
+remaining acceptance work is in [the settings backlog](karma-device-management-design.md).
 This historical checkpoint does not authorize an unspecified device write.
 
 ## 1. Start here
@@ -137,15 +137,15 @@ Paths below are relative to the repository root.
 
 Authoritative references and pending work:
 
-- [Design system](../admin-design-system.md), [testing policy](../testing.md).
-- [Current device-operation architecture](../discocan/architecture.md#background-device-configuration-reads).
-- [Open review/cleanup backlog](../todo/review-corrections-and-karma-management.md).
-- [Remaining rule implementation](../todo/karma-device-management-design.md).
-- [Current identity/scope boundary](../discocan/architecture.md#background-device-configuration-reads).
-- [Parameter configuration backlog](../todo/erm-edata-configuration-interface.md) and
-  [Karma API backlog](../todo/karma-api-v2.md).
-- [Karma API references](../discocan/erm-resources/karma-api-v2/endpoint-catalog.md) and
-  [parameter protocol evidence](../discocan/erm-resources/edata-simple-protocol-v4.04/parameter-reporting.md).
+- [Design system](../../admin-design-system.md), [testing policy](../../testing.md).
+- [Current device-operation architecture](architecture.md#background-device-configuration-reads).
+- [Open review/cleanup backlog](review-corrections-and-karma-management.md).
+- [Remaining rule implementation](karma-device-management-design.md).
+- [Current identity/scope boundary](architecture.md#background-device-configuration-reads).
+- [Parameter configuration backlog](../../todo/erm-roadmap.md) and
+  [Karma API backlog](karma-api-v2.md).
+- [Karma API references](karma-api-v2/endpoint-catalog.md) and
+  [parameter protocol evidence](../../discocan/erm-resources/edata-simple-protocol-v4.04/parameter-reporting.md).
 
 The proposal links additional Git-ignored local rule research. Those files were not read for this
 handoff. Do not enter `.misc/` or `.tmp/` without the current task's explicit authorization.

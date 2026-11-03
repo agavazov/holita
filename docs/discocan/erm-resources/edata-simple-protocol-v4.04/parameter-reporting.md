@@ -4,7 +4,7 @@ Reference edition **2.3**, updated **2026-10-21 (Europe/Sofia)**. Sources are th
 [eData Simple 4.04 protocol](content.md), the
 [Monitor configuration guide](../simple-edata-monitor-configuration-v1.0/README.md),
 the supplied Monitor **9.56** catalog, and observed device responses through
-[Karma API v2](../karma-api-v2/README.md).
+[Karma API v2](../../../archive/karma/karma-api-v2/README.md).
 
 This reference describes the device configuration procedure and its evidence
 limits. Holita implements Fleet-owned persisted parameter reads, single predefined-ID
@@ -13,7 +13,7 @@ settings and other command examples below remain manual upstream procedures.
 
 ## Implemented background operations
 
-The [background device configuration read](../../architecture.md#background-device-configuration-reads)
+The [background device configuration read](../../../archive/karma/architecture.md#background-device-configuration-reads)
 accepts a scoped Fleet Device and an explicitly selected Karma car/device identity.
 Fleet stores the queued operation before its Nest scheduler dispatches the request.
 Karma Client's internal machine API rechecks the target and submits fixed parameter
@@ -65,8 +65,8 @@ normalization for additions. Fleet preserves submitted and returned evidence.
 The separate write flag defaults to false. All operations have a ten-minute local
 deadline, which cannot cancel an accepted command in the vendor queue. A delayed
 write can arrive after expiry; reconcile a fresh configuration before another
-change. See the [authoritative operation architecture](../../architecture.md#background-device-configuration-reads)
-and [configuration workflow](../../development.md#background-device-configuration-reads).
+change. See the [authoritative operation architecture](../../../archive/karma/architecture.md#background-device-configuration-reads)
+and [configuration workflow](../../../archive/karma/development.md#background-device-configuration-reads).
 
 ## Catalog, configuration and measurements
 
@@ -410,7 +410,7 @@ does not distinguish these cases. A device can answer diagnostics with ignition
 off while CAN-based measurements remain unavailable.
 
 Tracker voltage fields `vin` and `vbat` are a
-[separate source of data](../karma-api-v2/data-models.md#additional-upstream-voltage-fields).
+[separate source of data](../../../archive/karma/karma-api-v2/data-models.md#additional-upstream-voltage-fields).
 They can be requested through `/location` or `/events` without adding an eData
 definition. They do not prove that a CAN parameter is working. Re-reading cached
 Karma data also does not force a new physical measurement.

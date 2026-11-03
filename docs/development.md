@@ -78,19 +78,20 @@ web/API restarts.
 
 ## Ports and environment
 
-| Application     | Default listener      |
-| --------------- | --------------------- |
-| Angular admin   | 11000                 |
-| Admin Storybook | 11001                 |
-| Gateway GraphQL | 11010                 |
-| Gateway health  | 11016                 |
-| Core            | 11011                 |
-| Fleet           | 11013                 |
-| Karma Client    | 11014                 |
-| ERM Server HTTP | 11015, loopback       |
-| ERM Server TCP  | 11500, all interfaces |
-| PostgreSQL      | 11084                 |
-| ERM relay       | 11500, all interfaces |
+| Application                          | Default listener      |
+| ------------------------------------ | --------------------- |
+| Angular admin                        | 11000                 |
+| Admin Storybook                      | 11001                 |
+| Gateway GraphQL                      | 11010                 |
+| Gateway health                       | 11016                 |
+| Core                                 | 11011                 |
+| Fleet                                | 11013                 |
+| Karma Client (deprecated, view-only) | 11014                 |
+| ERM gateway HTTP                     | 11015, loopback       |
+| ERM api HTTP                         | 11017, loopback       |
+| ERM gateway TCP                      | 11500, all interfaces |
+| PostgreSQL                           | 11084                 |
+| ERM relay                            | 11500, all interfaces |
 
 Visual previews use 11000–11009; the admin Storybook uses 11001. The admin dev server and
 Storybook listen on all interfaces and accept the `dev.lab` host, so devices on the local network
@@ -109,15 +110,15 @@ environment and use `ROUTER_PORT` instead of `PORT`. The admin proxy reads the s
 Copy only the relevant entries from the reference into the consuming process's ignored
 runtime file, preserving existing settings:
 
-| Consumer                 | Runtime configuration                                                                                                   |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| Compose and provisioning | Root `.env`: `POSTGRES_PORT`, `POSTGRES_PASSWORD`                                                                       |
-| Core and Prisma          | `apps/core/.env`: Core database URLs and shared demo settings                                                           |
-| Fleet and Prisma         | `apps/fleet/.env`: Fleet database URLs, shared demo settings, `FLEET_ENABLED`, `CORE_GRAPHQL_URL` and admin origins     |
-| Karma Client             | `apps/karma-client/.env`: `KARMA_API_URL`, `KARMA_USER`, `KARMA_PASSWORD` and shared demo settings                      |
-| ERM Server and Prisma    | `apps/erm-server/.env`: ERM database URLs, shared demo settings, device listener/capture settings, optional HTTP `PORT` |
-| Router and Angular proxy | Export Router variables in the shell that launches npm; proxy reads `ROUTER_PORT`                                       |
-| ERM relay                | Root `.env`: `ERM_RELAY_HOST`, `ERM_RELAY_PORT`, `ERM_RELAY_UPSTREAM` and `ERM_RELAY_CAPTURE_DIR`                       |
+| Consumer                 | Runtime configuration                                                                                                                                   |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Compose and provisioning | Root `.env`: `POSTGRES_PORT`, `POSTGRES_PASSWORD`                                                                                                       |
+| Core and Prisma          | `apps/core/.env`: Core database URLs and shared demo settings                                                                                           |
+| Fleet and Prisma         | `apps/fleet/.env`: Fleet database URLs, shared demo settings, `FLEET_ENABLED`, `CORE_GRAPHQL_URL` and admin origins                                     |
+| Karma Client             | `apps/karma-client/.env`: `KARMA_API_URL`, `KARMA_USER`, `KARMA_PASSWORD` and shared demo settings                                                      |
+| ERM Server and Prisma    | `apps/erm-server/.env`: ERM database URLs, shared demo settings, `ERM_ROLE`, gateway listener/capture settings, internal API connection and HTTP `PORT` |
+| Router and Angular proxy | Export Router variables in the shell that launches npm; proxy reads `ROUTER_PORT`                                                                       |
+| ERM relay                | Root `.env`: `ERM_RELAY_HOST`, `ERM_RELAY_PORT`, `ERM_RELAY_UPSTREAM` and `ERM_RELAY_CAPTURE_DIR`                                                       |
 
 An optional `PORT` override belongs only to an individual Node application; omit it to
 keep that application's default. Exporting one `PORT` for the development group gives
@@ -129,21 +130,19 @@ Gateway uses `CORE_GRAPHQL_URL`, `FLEET_GRAPHQL_URL`, `KARMA_CLIENT_GRAPHQL_URL`
 Fleet uses `CORE_GRAPHQL_URL`, `FLEET_ENABLED` and `ADMIN_ORIGINS`, a comma-separated
 exact origin allowlist with `ADMIN_ORIGIN` as the single-origin fallback. Defaults allow the
 Angular loopback origin. Database URLs belong only to Core/Fleet/ERM Server. Karma Client has application-local account settings described in
-[Karma Client configuration](discocan/development.md#karma-client). Karma Client requires no
+[Karma Client configuration](archive/karma/development.md#karma-client). Karma Client requires no
 upload/storage configuration.
 
-Background eData parameter operations additionally use `FLEET_DEVICE_OPERATIONS_ENABLED` and
-`FLEET_KARMA_INTERNAL_URL` in Fleet, and the same private `KARMA_INTERNAL_TOKEN` (at least
-32 characters) in Fleet and Karma Client. The worker is disabled by default; Fleet's separate
-`FLEET_DEVICE_CONFIGURATION_WRITES_ENABLED` also defaults to `false` and requires the worker
-to be enabled. Keep the token
-in process environments or ignored runtime `.env` files, never admin configuration.
-See [device configuration setup](discocan/development.md#background-device-configuration-reads).
+Karma and its Fleet background configuration integration are deprecated, view-only. Their
+account/worker/write-flag setup is retained in the
+[historical setup guide](archive/karma/development.md#background-device-configuration-reads),
+read only when needed. New device control belongs to the
+[ERM gateway/API workflow](discocan/development.md#erm-device-server).
 
 The admin reads browser configuration from `apps/admin/public/config.json` and optional
 Git-ignored `apps/admin/public/config.local.json`. Karma's optional `googleMapsEmbedApiKey`
 belongs in that JSON configuration, not a Node environment variable; see
-[Karma maps](discocan/development.md#karma-maps). Local configuration overrides the public
+[Karma maps](archive/karma/development.md#karma-maps). Local configuration overrides the public
 file and is excluded from production assets.
 
 ## Apollo Router
@@ -190,16 +189,17 @@ it does not load `apps/gateway/.env`. Defaults are:
 | CORE_GRAPHQL_URL         | http://127.0.0.1:11011/graphql |
 | FLEET_GRAPHQL_URL        | http://127.0.0.1:11013/graphql |
 | KARMA_CLIENT_GRAPHQL_URL | http://127.0.0.1:11014/graphql |
-| ERM_SERVER_GRAPHQL_URL   | http://127.0.0.1:11015/graphql |
+| ERM_SERVER_GRAPHQL_URL   | http://127.0.0.1:11017/graphql |
 | ADMIN_ORIGIN             | http://127.0.0.1:11000         |
 
-ERM Server is the fourth subgraph, served by its independent compiled process on HTTP 11015;
+ERM Server is the fourth subgraph, served by `ERM_ROLE=api` on HTTP 11017. The independent
+`ERM_ROLE=gateway` process keeps device TCP sessions on 11500 and its internal API on 11015;
 `npm run dev` and `npm run kill` continue to exclude it. Set its shared `DEMO_AUTH_ENABLED` and
 `DEMO_AUTH_SECRET` consistently with the other subgraphs. After adding or changing its endpoint,
 regenerate the supergraph and restart Router with the exported `ERM_SERVER_GRAPHQL_URL`.
-See [ERM inspection](discocan/development.md#graphql-and-admin-inspection) for the read-only API.
+See [ERM inspection](discocan/development.md#graphql-and-admin-inspection) for Branch-scoped device inspection and the six allowlisted operator reads.
 
-For example, `ROUTER_PORT=11017 npm run dev` changes Router's GraphQL listener and the Angular proxy together; health remains on 11016.
+For example, `ROUTER_PORT=11018 npm run dev` changes Router's GraphQL listener and the Angular proxy together; health remains on 11016.
 The configured origin can send GET/POST/OPTIONS with `authorization`, `content-type`,
 `x-branch-id` and `x-request-id`. The three context headers are forwarded to all subgraphs.
 Health returns `{"status":"UP"}` from the dedicated health port, independently of downstream health.

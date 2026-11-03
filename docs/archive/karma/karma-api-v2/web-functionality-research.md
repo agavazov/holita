@@ -71,7 +71,7 @@ Supporting sources:
 - Current [admin routes](../../../../apps/admin/src/app/features/karma-client/karma.routes.ts),
   [history service](../../../../apps/karma-client/src/modules/history/history.service.ts),
   [history SDL](../../../../apps/karma-client/src/modules/history/history.graphql)
-  and [map workflow](../../development.md#karma-maps).
+  and [map workflow](../development.md#karma-maps).
 - The user-supplied [Karma guide 4.3.2](../karma-user-guide-v4.3.2/README.md).
   Its 2018 screenshots explain workflows, not the current API contract.
   [Report examples](../karma-user-guide-v4.3.2/content.md#pdf-page-13),
@@ -1305,7 +1305,7 @@ accessible experience and additional analysis of the same data:
 Those integrated forms were not observed in the supplied account; this is not
 proof of their absence from every Karma role/version. Concrete pending tasks,
 dependency gates, visual consistency rules and acceptance criteria belong in the
-[MVP and product experience backlog](../../../todo/karma-web-functional-discovery.md),
+[MVP and product experience backlog](../karma-web-functional-discovery.md),
 not in a claim that those features are already implemented.
 
 ## Proposed delivery sequence
@@ -1313,7 +1313,7 @@ not in a claim that those features are already implemented.
 This is a sequence of future functional slices, not an implementation performed
 by this research. The current five-application workspace already supports the
 first slice; a separate application is not necessary to evaluate these workflows.
-The [detailed MVP backlog](../../../todo/karma-web-functional-discovery.md#first-mvp-tasks)
+The [detailed MVP backlog](../karma-web-functional-discovery.md#first-mvp-tasks)
 owns the task dependencies, shared visual direction, contextual Google Maps/
 Street View placements and acceptance gates. Its first-release scope deliberately
 does not promise a complete historical track.
@@ -1381,7 +1381,7 @@ These are an unsent question list. No email or ticket was created.
    source-only billing/preset/firmware features remain unverified.
 
 Implementation choices and remaining acceptance work are tracked in the
-[discovery backlog](../../../todo/karma-web-functional-discovery.md). Existing
-[API/protocol questions](../../../todo/karma-api-v2.md) and
-[device-settings acceptance](../../../todo/karma-device-management-design.md)
+[discovery backlog](../karma-web-functional-discovery.md). Existing
+[API/protocol questions](../karma-api-v2.md) and
+[device-settings acceptance](../karma-device-management-design.md)
 remain separate; their completed device writes must not be replayed for this report.

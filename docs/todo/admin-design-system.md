@@ -7,9 +7,9 @@ belong to the [Fleet implementation index](../discocan/fleet.md) and
 [Discocan architecture](../discocan/architecture.md).
 
 This backlog owns frontend and release work; the
-[backend backlog](admin-design-system-backend.md) owns API and provider work. Focused review
-corrections and the Karma device-management proposal remain in
-[review corrections](review-corrections-and-karma-management.md). Keep only pending work here.
+[backend backlog](admin-design-system-backend.md) owns API and provider work. Historical review
+corrections and the deprecated Karma device-management proposal are archived in
+[review corrections](../archive/karma/review-corrections-and-karma-management.md). Keep only pending work here.
 
 ## Provider integrations
 

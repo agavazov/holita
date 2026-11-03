@@ -2,7 +2,7 @@
 
 Historical Karma UI workflows for tracking, vehicle cards, reports, driving behavior, dashboards, POIs, routes, notifications, settings and odometer changes.
 
-[ERM resource index](../README.md) · [Complete source content](content.md) · [Images and descriptions](images.md) · [Original PDF](source/original.pdf) · [Machine-readable metadata](metadata.json)
+[ERM resource index](../../../discocan/erm-resources/README.md) · [Complete source content](content.md) · [Images and descriptions](images.md) · [Original PDF](source/original.pdf) · [Machine-readable metadata](metadata.json)
 
 ## Document identity
 

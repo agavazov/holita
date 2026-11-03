@@ -1,16 +1,20 @@
 # Karma product and delivery backlog
 
-The [functional research report](../discocan/erm-resources/karma-api-v2/web-functionality-research.md)
+Archived, deprecated reference only. The tasks and approvals below are historical; do not
+treat them as active work. Open ERM engineering and vendor questions belong in the
+[ERM roadmap](../../todo/erm-roadmap.md).
+
+The [functional research report](karma-api-v2/web-functionality-research.md)
 owns the 36-function classic inventory, NC2 console findings, internal web-method
 references, API recipes, calculation rules, proposed holita presentation and bounded
 live evidence. Keep further source findings there instead
 of copying the catalog into this backlog. This file holds the remaining work;
-implemented navigation belongs to [Discocan architecture](../discocan/architecture.md#karma-client).
+implemented navigation belongs to [Discocan architecture](architecture.md#karma-client).
 The bounded report contract and report field/state blueprint are described there;
 physical source-unit confirmation remains blocked as specified below. The connected
-[day workspace and trip drill-down](../discocan/architecture.md#daily-report-contract) are
+[day workspace and trip drill-down](architecture.md#daily-report-contract) are
 implemented; contextual map placements use the shared workflow in
-[Karma maps](../discocan/development.md#karma-maps). This backlog does not
+[Karma maps](development.md#karma-maps). This backlog does not
 authorize Google Cloud configuration or vendor writes.
 
 ## Boundaries for remaining product work
@@ -87,8 +91,8 @@ directory or repeat setup instructions that the repository already owns.
 ## Navigation and progressive disclosure
 
 The implemented navigation foundation is described in
-[Discocan architecture](../discocan/architecture.md#karma-client) and the
-[admin design system](../admin-design-system.md#storybook-review).
+[Discocan architecture](architecture.md#karma-client) and the
+[admin design system](../../admin-design-system.md#storybook-review).
 Future deliveries must preserve its account/truck separation, short primary navigation,
 discoverable More menu, direct links, active-view retrieval, list-return context,
 BG/EN, responsive keyboard access and device-editor leave guards.
@@ -108,7 +112,7 @@ its real component stories, and demonstrate the same interaction in its affected
 surfaces. Combined acceptance is not a deferred redesign phase.
 
 - Reuse PageHeader, KpiStrip, TablePanel, FormField, record drawers and chart
-  patterns from the [admin design system](../admin-design-system.md). Improve a
+  patterns from the [admin design system](../../admin-design-system.md). Improve a
   repeated pattern once rather than copying styles or creating a second header,
   date selector, status convention or map toolbar.
 - Own visual decisions centrally in `apps/admin/src/app/theme/` and
@@ -164,7 +168,7 @@ and [use of color](https://www.w3.org/WAI/WCAG22/Understanding/use-of-color.html
 
 ### Data levels and truthful labels
 
-The [map/source reassessment](../discocan/erm-resources/karma-api-v2/web-functionality-research.md#map-and-source-data-reassessment)
+The [map/source reassessment](karma-api-v2/web-functionality-research.md#map-and-source-data-reassessment)
 confirms trip endpoints and timestamped event coordinates, but not a complete
 sampled path for a selected trip. Apply these distinct modes:
 
@@ -188,12 +192,12 @@ sampled path for a selected trip. Apply these distinct modes:
 | eData detail                       | Location / Street View for that message            | Use message coordinates if present; telemetry values remain readable without a map.                       |
 
 Reuse and extend the current
-[MapPreview](../../apps/admin/src/app/ui/map-preview/map-preview.ts)
-and [coordinate/link helpers](../../apps/admin/src/app/ui/map-preview/location-map.ts)
+[MapPreview](../../../apps/admin/src/app/ui/map-preview/map-preview.ts)
+and [coordinate/link helpers](../../../apps/admin/src/app/ui/map-preview/location-map.ts)
 first. Keep map context selection in the concrete feature; do not introduce a
 generic map framework or a second app-wide data facade.
 
-Reuse the [shared map workflow](../discocan/development.md#karma-maps) for point,
+Reuse the [shared map workflow](development.md#karma-maps) for point,
 endpoint, Street View and suggested-route modes, keyless external links and
 optional configured previews. No map SDK or separate implementation is needed
 for these contexts.
@@ -243,8 +247,8 @@ No key issuance, billing activation or Google settings change is part of this pl
 
 The tasks below remain open. IDs remain stable dependency references; the
 implemented report contract and blueprint are described in
-[Discocan architecture](../discocan/architecture.md#daily-report-contract), and
-the shared map foundation in [Karma maps](../discocan/development.md#karma-maps).
+[Discocan architecture](architecture.md#daily-report-contract), and
+the shared map foundation in [Karma maps](development.md#karma-maps).
 Each ticket inherits the consistency rule above.
 
 | Task   | Priority | Depends on                  | Deliverable                                                                         |
@@ -253,7 +257,7 @@ Each ticket inherits the consistency rule above.
 
 The remaining MVP-00 unit proof gates physical-unit claims in the operational
 report; it does not block coordinate-only maps and surroundings. The implemented
-contract and [daily workspace](../discocan/architecture.md#daily-report-contract) do not authorize
+contract and [daily workspace](architecture.md#daily-report-contract) do not authorize
 another navigation pass, speculative KPIs or physical-unit claims without source proof.
 Later delivery dependencies on MVP-01/MVP-02 refer to the implemented contract and
 blueprint, with this explicit source-unit limitation.
@@ -282,10 +286,10 @@ supported source evidence before mapping them to km/km/h or another physical uni
 Numerical parity and odometer equality alone do not establish units. No vendor
 message or support ticket has been sent as part of this delivery.
 
-The [source proof](../discocan/erm-resources/karma-api-v2/web-functionality-research.md#daily-report-source-proof)
+The [source proof](karma-api-v2/web-functionality-research.md#daily-report-source-proof)
 records the bounded reference comparison, proved Europe/Sofia start-day selection,
 cross-midnight attribution, both ID boundaries and coordinate feasibility. The
-[implemented contract](../discocan/architecture.md#daily-report-contract) preserves
+[implemented contract](architecture.md#daily-report-contract) preserves
 raw source units, partial/unavailable states and independently scoped metric
 availability; no physical-unit claim is hidden in the API or Storybook.
 
@@ -322,7 +326,7 @@ endpoint MVP hostage. They use the same consistency rule and map placements.
 
 ### MAP-02 Add a shared richer Google map only for proved interactions
 
-**Priority:** P1. **Depends on:** the [shared map workflow](../discocan/development.md#karma-maps), the [bounded position contract](../discocan/architecture.md#karma-client) for trip samples; a separately
+**Priority:** P1. **Depends on:** the [shared map workflow](development.md#karma-maps), the [bounded position contract](architecture.md#karma-client) for trip samples; a separately
 proved bounded bulk-location contract for a fleet layer.
 
 **Problem:** the current Embed preview cannot render our arbitrary sampled path,
@@ -349,12 +353,12 @@ supports keyboard interaction and descriptive marker titles.
 
 ### MAP-03 Extend the linked explorer with a richer map and verified series
 
-**Priority:** P1. **Depends on:** MAP-02, [Trip drill-down](../discocan/architecture.md#daily-report-contract); known units/clock alignment
+**Priority:** P1. **Depends on:** MAP-02, [Trip drill-down](architecture.md#daily-report-contract); known units/clock alignment
 for each additional signal.
 
-The [implemented explorer](../discocan/development.md#karma-maps) already provides a
+The [implemented explorer](development.md#karma-maps) already provides a
 bounded point/time list, selected-point Map/Street View and raw event facts. Remaining work is a richer sampled-path/multi-marker map
-when MAP-02 prerequisites are approved. The [measurement workspace](../discocan/architecture.md#measurement-workspace)
+when MAP-02 prerequisites are approved. The [measurement workspace](architecture.md#measurement-workspace)
 already supplies selected source-scale series; additional physical comparisons retain their unit/coverage gates.
 Broader source retention/clock/coverage proof remains necessary before wider path claims.
 Use a small explicit list of available signals, not an empty universal sensor dashboard.
@@ -383,7 +387,7 @@ evidence/coverage, not claiming those features as unique inventions.
 | INS-05 Remaining real fuel-consumption proof   | P2; calibrated counter/rate units and matching time/distance coverage                               | `/edata` 687 or another individually proved counter; rate integration only over valid covered intervals; `/trips` for matching distance.            | Liters and L/100 km with counter source, reset/gap markers and coverage explanation. Do not merge 687/1657, interpret a counter decrease as theft or claim tank-event parity. Local prices/receipts are a separate owned-data choice. |
 | INS-06 Nearby-truck assistant                  | P2; MAP-02, bounded bulk `/location` through a specific generated contract, chosen freshness policy | Coordinate distance to an explicitly selected destination plus individual source ages.                                                              | Map/list of nearby last-reported positions, with stale/unknown records separated. Straight-line distance is not road ETA, route suitability or an automatically dispatched assignment. No messages or commands are sent.              |
 
-The [measurement workspace](../discocan/architecture.md#measurement-workspace) implements the
+The [measurement workspace](architecture.md#measurement-workspace) implements the
 bounded observed-channel matrix and source-scale charts. INS-04/05 above retain the unproved
 real scale, reset and coverage prerequisites.
 

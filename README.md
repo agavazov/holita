@@ -51,7 +51,7 @@ Vehicles uses the shared Storybook list and routed create/edit drawer with the f
 fields, telemetry state, whole-Branch KPIs and URL-backed AND filters. Row and selection
 delete/deactivate actions submit one IDs-array operation; partial failures retain selected
 records for retry and appear in the shared operation toast. See the
-[Vehicles workflow](docs/discocan/development.md#angular-fleet-vehicles).
+[Vehicles workflow](docs/discocan/development.md#fleet-operator-workflows).
 
 The other live Fleet screens share their Storybook views: Overview, Alerts, Trip log,
 Drivers/scorecards, Maintenance, Devices, Vehicle groups, General settings and Vehicle profile/manual odometer.
@@ -62,7 +62,7 @@ partial failures for retry. Restart and notification delivery are clearly labell
 General settings saves Branch regional preferences and thresholds plus a separate Core Branch
 rename; partial saves retain the actual persisted values. Read values use the saved display units
 and time zone, while editors keep explicitly labelled canonical entry units. See the
-[General settings workflow](docs/discocan/development.md#angular-fleet-general-settings).
+[General settings workflow](docs/discocan/development.md#fleet-operator-workflows).
 
 For richer local Fleet data, run `npm run db:seed:fleet-demo` after setup/migrations and with Core
 running. It inserts only missing synthetic Discordia records and preserves existing edits.
@@ -87,7 +87,7 @@ editable bounds. Trip/profile filters use API wall-clock values with an unspecif
 provider timezone; metrics and event codes retain their original values.
 Karma has no persistence or Fleet synchronization.
 Karma is independent of the Branch menu and `fleetEnabled`. See
-[Karma configuration](docs/discocan/development.md#karma-client).
+[Karma configuration](docs/archive/karma/development.md#karma-client).
 
 The shell supports keyboard/mobile navigation, a persisted sidebar rail and persisted light/dark
 themes. The startup `fleetEnabled` flag gates both business modules; Branch discovery stays available.

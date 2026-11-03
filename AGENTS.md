@@ -129,6 +129,8 @@ overrides more detailed guidance in documentation and skills.
   [architecture](docs/architecture/overview.md) for modules and execution,
   [development](docs/development.md) for configuration and [testing](docs/testing.md) for
   validation.
+- `docs/archive/` is deprecated reference material. Read it only when the task needs it;
+  exclude it from repository-wide documentation updates.
 - Remove obsolete guidance and fix references when moving or deleting documents. Use
   repository-relative Markdown links.
 - Keep images outside `.agents/`. Temporary review captures belong in the Git-ignored

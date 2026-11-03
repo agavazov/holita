@@ -18,12 +18,12 @@ runtime packages. Prisma schemas, migrations and generated output retain their e
 owning-application locations.
 ERM Server also keeps its pure StarLink framing and envelope functions in `src/starlink/`.
 
-| Application  | Feature modules                                                                                                                                   | Integration ownership                                                                                                                                                                              |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Core         | Tenants, Branches                                                                                                                                 | Tenant/Branch API; one local DatabaseModule provides Prisma to both features                                                                                                                       |
-| Fleet        | Vehicles, Devices, Device operations, Drivers, Vehicle groups, Telemetry, Trips, Events, Service tasks, Overview, Settings, offline eData catalog | `integrations/core/` owns Branch existence checks; `integrations/karma/` owns internal device-operation HTTP; one local DatabaseModule provides Fleet Prisma; `clock/` provides the business clock |
-| Karma Client | Cars, eData, Location, History, References, Accounts, internal device configuration operations                                                    | `integrations/karma/` owns external HTTP and the shared upstream account session; no database                                                                                                      |
-| ERM Server   | Device sessions, frame capture and read-only telemetry inspection                                                                                 | StarLink TCP mirror/primary mode; its own database and provider-level GraphQL reads                                                                                                                |
+| Application                          | Feature modules                                                                                                                                   | Integration ownership                                                                                                                                                                              |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Core                                 | Tenants, Branches                                                                                                                                 | Tenant/Branch API; one local DatabaseModule provides Prisma to both features                                                                                                                       |
+| Fleet                                | Vehicles, Devices, Device operations, Drivers, Vehicle groups, Telemetry, Trips, Events, Service tasks, Overview, Settings, offline eData catalog | `integrations/core/` owns Branch existence checks; `integrations/karma/` owns internal device-operation HTTP; one local DatabaseModule provides Fleet Prisma; `clock/` provides the business clock |
+| Karma Client (deprecated, view-only) | Cars, eData, Location, History, References, Accounts, internal device configuration operations                                                    | `integrations/karma/` owns external HTTP and the shared upstream account session; no database                                                                                                      |
+| ERM Server                           | Gateway sessions/capture and API telemetry/control                                                                                                | Independent gateway/API processes, own database and Fleet-scoped federated Device access                                                                                                           |
 
 Fleet feature modules import each other only in one direction: Telemetry and Events are used by
 Vehicles, Devices (Telemetry only), Drivers and Trips; Trips by Drivers; Service tasks by
@@ -34,11 +34,10 @@ verified Tenant/Branch scope.
 
 The offline Fleet catalog importer remains a CLI feature, without an import/editing API.
 DeviceOperations reads its eligible predefined presets through the Fleet-owned repository.
-Core is the Tenant/Branch service, not a common implementation library. Fleet's durable
-device-operations module calls Karma Client's fixed machine-authenticated internal HTTP endpoints
-for reads and single-definition parameter or rule changes.
-Fleet owns operation persistence and the Nest scheduler; Karma Client retains the external
-account connection without a database. Each application's Prisma client remains private.
+Core is the Tenant/Branch service, not a common implementation library. Karma Client and Fleet's
+Karma integrations are deprecated, view-only until holita recreates their needed functions;
+[historical integration contracts](../archive/karma/README.md) are read only when needed.
+Each application's Prisma client remains private.
 
 Angular keeps business pages, concrete API services, GraphQL operations and tests under
 `features/`. Fleet, Karma Client and ERM Server own separate route arrays composed by `app.routes.ts`
@@ -52,14 +51,14 @@ pages and Storybook examples. Storybook fixtures and sample pages stay in `src/s
 and outside application output. `core/` contains only admin-local authentication,
 configuration and GraphQL transport. Feature clients and caches retain their mounted view lifetime; neither route grouping nor shared login makes business clients global.
 
-| Application  | Responsibility                                                                                                              | Local port            |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------- | --------------------- |
-| admin        | Standalone Angular, PrimeNG with the holita design system, Branch discovery, Fleet CRUD, Karma truck data and account views | 11000                 |
-| gateway      | Native Apollo Router federation, `/graphql`; `/health` on 11016                                                             | 11010                 |
-| core         | Tenant demo login, scoped Branch discovery/lookup and selected Branch rename, owning database                               | 11011                 |
-| fleet        | Tenant/Branch-scoped Fleet master data, telemetry, trips, alerts, service, Overview and settings, owning database           | 11013                 |
-| karma-client | Authenticated, shared Karma truck data and account views; no database                                                       | 11014                 |
-| erm-server   | StarLink sessions, raw audit capture, owning database and read-only subgraph; HTTP `/health`                                | 11015 HTTP; 11500 TCP |
+| Application  | Responsibility                                                                                                              | Local port                               |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| admin        | Standalone Angular, PrimeNG with the holita design system, Branch discovery, Fleet CRUD, Karma truck data and account views | 11000                                    |
+| gateway      | Native Apollo Router federation, `/graphql`; `/health` on 11016                                                             | 11010                                    |
+| core         | Tenant demo login, scoped Branch discovery/lookup and selected Branch rename, owning database                               | 11011                                    |
+| fleet        | Tenant/Branch-scoped Fleet master data, telemetry, trips, alerts, service, Overview and settings, owning database           | 11013                                    |
+| karma-client | Authenticated, shared Karma truck data and account views; no database                                                       | 11014                                    |
+| erm-server   | StarLink gateway, owning database and separate GraphQL API/control process                                                  | 11015 gateway HTTP; 11500 TCP; 11017 API |
 
 ```mermaid
 flowchart LR
@@ -73,9 +72,11 @@ flowchart LR
   Core --> CoreDB[(Core database)]
   Fleet --> FleetDB[(Fleet database)]
   Fleet -->|Branch existence on create and settings upsert| Core
-  Devices[StarLink devices] -->|TCP| ERMServer[ERM Server]
-  ERMServer -->|TCP mirror| KarmaIngestion[Karma device ingestion]
-  ERMServer --> ERMDB[(ERM database)]
+  Devices[StarLink devices] -->|TCP| ERMGateway[ERM gateway]
+  ERMServer[ERM API] -->|Internal HTTP: sessions and commands| ERMGateway
+  ERMGateway -->|TCP mirror| KarmaIngestion[Karma device ingestion]
+  ERMGateway --> ERMDB[(ERM database)]
+  ERMServer --> ERMDB
 ```
 
 ## Execution and ownership
@@ -86,22 +87,20 @@ artifacts are generated once before the Angular and Storybook processes start. P
 Only PostgreSQL runs in Compose. Setup/migration/seed are explicit commands, separate from startup.
 Health endpoints prove application availability without opening database connections.
 
-ERM Server runs independently from compiled output and is excluded from both `dev` and `kill`.
-Its device connections therefore survive restarts of the web/API group. In mirror mode Karma
-owns acknowledgements and commands; the server forwards bytes unchanged, captures both directions
-and persists raw provider-level units without Tenant/Branch scope. Its read-only GraphQL endpoint
-verifies the same signed session as the other subgraphs and exposes units, events, frames and
-command history to the admin. The internal command API remains separate from GraphQL.
-See the [ERM Server decision](decisions/0006-erm-device-server.md) and
-[service setup](../discocan/development.md#erm-device-server).
+ERM Server uses one codebase with gateway/api processes selected by `ERM_ROLE`. The gateway
+keeps long-lived device sessions, Karma relay, confirmations and frame/event/command records;
+the api process reads the database and uses its loopback internal API for live state and delivery.
+Raw records remain provider-level. Branch-visible state/history is resolved by IMEI through
+Fleet-authorized `FleetDevice` fields; the command mutation checks Fleet with the caller's session
+and active Branch before sending one of six allowlisted reads. See
+[ADR 0007](decisions/0007-erm-gateway-and-api-processes.md) and
+[service setup](../discocan/development.md#erm-device-server). Both stay outside the web/API
+development group; API deployments must not restart the gateway.
 
 Fleet also owns the [shared Simple eData vendor catalog](../discocan/erm-resources/simple-edata-catalog/README.md).
 Its offline extractor and local import CLI preserve versioned reference data independently
-of Tenant/Branch business records. The scoped DeviceOperations API exposes eligible presets
-and owns durable configuration reads, parameter additions/interval updates and rule changes;
-the catalog itself does not send commands.
-See [device configuration operations](../discocan/architecture.md#background-device-configuration-reads)
-for freshness, one-attempt writes, verification and vendor-queue limits.
+of Tenant/Branch business records. The retained Karma-based DeviceOperations API is described in the
+[archive](../archive/karma/architecture.md#background-device-configuration-reads).
 
 Gateway contains the official Apollo Router 2.18.0 host binary, integrated into development and tests.
 It consumes the same generated static supergraph and routes directly to Core, Fleet,
@@ -137,7 +136,7 @@ startup failures and normal teardown stop the child before closing downstream re
 ## Domain documentation
 
 [Discocan architecture](../discocan/architecture.md) describes Fleet persistence, GraphQL
-contracts, the shared Karma account client, raw ERM device ingestion and the current telemetry admin. [Ecommerce Branches](../ecommerce/branches.md)
+contracts, ERM device ingestion/control and the current telemetry admin. [Ecommerce Branches](../ecommerce/branches.md)
 describes the Core-owned Branch foundation currently reused by Discocan.
 
 The domains share this checkout and its infrastructure today. Their documentation boundaries

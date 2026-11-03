@@ -120,7 +120,7 @@ This must not be conflated with the separately verified single-definition
 operation distinction; the existing narrow editor must not silently gain a bulk
 profile/global write. See the [command-file analysis](../erm-support-diagnostics-protocol-test-server/reply-2026-10-29.md).
 
-The 2018 [Karma appendix](../karma-guide-appendix-v1.4.2/content.md#pdf-page-9)
+The 2018 [Karma appendix](../../../archive/karma/karma-guide-appendix-v1.4.2/content.md#pdf-page-9)
 mentions StarLink parameters 2069/2070 for its DTC application. Their necessity
 for the present eData/profile/firmware combination has not been established.
-Current remaining work is in the [Karma backlog](../../../todo/karma-api-v2.md#questions-requiring-erm-clarification).
+Current remaining work is in the [ERM roadmap](../../../todo/erm-roadmap.md#questions-for-erm).

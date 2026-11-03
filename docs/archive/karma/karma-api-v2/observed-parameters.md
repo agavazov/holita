@@ -31,7 +31,7 @@ Its observed numeric value is not retained in this metadata catalog.
 
 Parameter `662` is a reported fuel rate, distinct from cumulative fuel-used IDs
 `687` and `1657`. Its addition and reporting were verified on one installation
-using the [parameter reporting workflow](../edata-simple-protocol-v4.04/parameter-reporting.md).
+using the [parameter reporting workflow](../../../discocan/erm-resources/edata-simple-protocol-v4.04/parameter-reporting.md).
 This does not establish availability on every vehicle or independent calibration.
 
 IDs `153` and `651` also returned changing numeric measurements after being added
@@ -39,4 +39,4 @@ on that installation. Preserve a reported zero as a value; it is distinct from
 null or an absent parameter. Their percentage interpretation follows the source
 labels; independent calibration and model-specific behavior remain unverified.
 
-See [Data models](data-models.md#edata-parameter-karmaedataparameter) for ID/value/description mapping and [remaining metric questions](../../../todo/karma-api-v2.md#time-units-and-telemetry-semantics) for the missing dictionary and model-specific definitions.
+See [Data models](data-models.md#edata-parameter-karmaedataparameter) for ID/value/description mapping and [remaining metric questions](../karma-api-v2.md#time-units-and-telemetry-semantics) for the missing dictionary and model-specific definitions.

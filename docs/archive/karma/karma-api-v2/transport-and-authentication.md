@@ -108,7 +108,7 @@ coordinates for inspection, while the frontend map link requires both coordinate
 within latitude ±90 / longitude ±180. Zero coordinates are valid. Trip/event
 coordinate mappers require finite numbers but do not enforce geographic bounds.
 
-The separate [daily report contract](../../architecture.md#daily-report-contract)
+The separate [daily report contract](../architecture.md#daily-report-contract)
 uses the proved Europe/Sofia start-day selection and raw ID traversal, with a
 shared four-second deadline and a 2 MiB body bound per trip read. It does not
 promote the display cursor into a report-completeness guarantee. Other existing

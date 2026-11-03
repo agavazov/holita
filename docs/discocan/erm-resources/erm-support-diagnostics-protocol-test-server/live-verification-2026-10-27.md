@@ -3,7 +3,7 @@
 **Historical campaign (27 October).** [Current evidence from 29 October](live-verification-2026-10-29.md) independently proves positive 419 reception and corrects 154,0 to command not acknowledged. The dated observations below are preserved; absence of a fault report in this campaign is not the current capability assessment.
 
 Analysis date: **2026-10-27, Europe/Sofia**. The initial night phase uses **UTC on
-2026-10-26**; later sections explicitly use **2026-10-27 UTC**. This campaign follows the [saved bounded plan](../../../todo/karma-api-v2.md#sequential-functional-verification-plan)
+2026-10-26**; later sections explicitly use **2026-10-27 UTC**. This campaign follows the [saved bounded plan](../../../archive/karma/karma-api-v2.md#sequential-functional-verification-plan)
 for ERM-TEST-02–07, each capped at 50 targeted attempts. ERM-TEST-01 retains its
 earlier 20/50 partial result. No Test Server, destination, APN, transport, replay,
 simulation or direct-receiver experiment is included. No support message was sent.
@@ -265,7 +265,7 @@ morning/DTC/live-reporting sections supersede its pending conditions and no-writ
 status; retain the original times rather than treating them as current blockers.
 
 Final response reconciliation and per-stage attempt totals are recorded in the
-[execution checkpoint](../../../todo/karma-api-v2.md#sequential-functional-verification-plan).
+[execution checkpoint](../../../archive/karma/karma-api-v2.md#sequential-functional-verification-plan).
 The next live write requires fresh advancing periodic data, fresh profile and a
 complete same-device baseline. A real known fault or vendor-labelled capture is
 required for fault-format/lifecycle acceptance. Additional empty reads cannot

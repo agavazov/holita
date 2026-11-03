@@ -1,7 +1,7 @@
 # Current holita integration
 
 This reference maps the external API to existing code. The shared domain
-[architecture](../../architecture.md#karma-client) remains authoritative for
+[architecture](../architecture.md#karma-client) remains authoritative for
 application ownership and lifecycle rules.
 
 ## Request path and ownership
@@ -28,7 +28,7 @@ There is no database, Prisma model, ingestion worker, polling loop, telemetry ar
 Fleet implementation import or persisted Karma-to-Fleet identity mapping in this
 subgraph. Health is a local process check and does not establish upstream availability.
 
-Fleet's separate [background configuration operations](../../architecture.md#background-device-configuration-reads)
+Fleet's separate [background configuration operations](../architecture.md#background-device-configuration-reads)
 call the Karma Client internal machine API. Fleet owns Tenant/Branch-scoped operations,
 the scheduler and saved observations. Each operation captures the Karma car/device pair;
 it does not require a local Fleet Device association.
@@ -39,7 +39,7 @@ and does not start a background worker in this subgraph.
 `KARMA_API_URL`, `KARMA_USER` and `KARMA_PASSWORD` configure one server-side account;
 `KARMA_CLIENT_GRAPHQL_URL` configures Gateway transport. Configuration is documented
 in the single root [.env.example](../../../../.env.example), the
-[development guide](../../development.md#karma-client), and the
+[development guide](../development.md#karma-client), and the
 [Router configuration](../../../../apps/gateway/router/router.yaml).
 The internal machine endpoints require `KARMA_INTERNAL_TOKEN` with at least 32
 characters. Fleet calls them using its configured `FLEET_KARMA_INTERNAL_URL`; browser
@@ -83,7 +83,7 @@ feature-owned operations for [cars](../../../../apps/admin/src/app/features/karm
 and [accounts](../../../../apps/admin/src/app/features/karma-client/accounts/operations.graphql),
 [fixed HTTP client](../../../../apps/karma-client/src/integrations/karma/karma-transport.ts).
 There are no public Karma mutations or arbitrary REST proxy operations. The
-[daily report contract](../../architecture.md#daily-report-contract) specifies the
+[daily report contract](../architecture.md#daily-report-contract) specifies the
 proved period/selection, limits, per-metric availability and unconfirmed source units.
 
 ## Internal configuration API
@@ -170,7 +170,7 @@ An eData report number such as `413`, `418` or `419` is not an established Karma
 The fixed diagnostic `306` and stored-fault logger `301`/`19` requests are exposed
 through scoped Fleet operations and private machine endpoints. Version `308` and
 global-settings `303` remain manual procedures documented in the
-[device protocol reference](../edata-simple-protocol-v4.04/diagnostics-and-fault-reporting.md).
+[device protocol reference](../../../discocan/erm-resources/edata-simple-protocol-v4.04/diagnostics-and-fault-reporting.md).
 The diagnostic worker retains queue and reply evidence separately from configuration readback;
 there is no arbitrary command console or product Process DTCs control.
 
@@ -185,7 +185,7 @@ A positive `419` proof requires an actual received SPN/FMI/status record and a
 trusted interpretation for that installation. A protocol example, configuration
 checkbox, successful parameter read or illustrative diagnostic row cannot supply
 that evidence. Current live observations and their limits belong to the
-[support verification register](../erm-support-diagnostics-protocol-test-server/README.md#verification-register).
+[support verification register](../../../discocan/erm-resources/erm-support-diagnostics-protocol-test-server/README.md#verification-register).
 
 ## Backend feature boundaries
 
@@ -230,7 +230,7 @@ There is no local Device setup step. Fleet's read/change inputs contain `karmaCa
 public Karma mutations. Read configuration sequences parameter
 then rule reads; after reload, continuation requires an explicit action. Refreshing or leaving
 the view does not own the server-side job. Login preserves a requested settings route.
-See the [configuration workflow](../../architecture.md#background-device-configuration-reads).
+See the [configuration workflow](../architecture.md#background-device-configuration-reads).
 
 The car table requests all cars, not a server-paginated/searchable list. Its list
 operation selects basic fields and timezone but omits `subType` and `driverCount`;

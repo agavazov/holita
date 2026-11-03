@@ -74,7 +74,7 @@ vehicle evidence belongs to the
 ## Historical screenshots
 
 The byte-for-byte copies of the user-supplied `img.png`, `menu.png` and `p1.png`
-remain under [images/](images/) with their descriptions in [images.md](images.md).
+remain under [images/](images) with their descriptions in [images.md](images.md).
 Their source was `.misc/edata`; that historical source path is provenance, not
 an instruction to reopen it. Screenshot capture dates are unknown. Printed page
 dates are source-page dates, not capture times.
@@ -86,7 +86,7 @@ the authenticated companion pages are now available above. G1 still displays the
 same 2020-05-17 update date, while the authenticated home shows newer news.
 
 This reference is the StarLink device/server protocol. It does not redefine
-[Karma API v2](../karma-api-v2/README.md) identifiers or endpoint behavior, nor
+[Karma API v2](../../../archive/karma/karma-api-v2/README.md) identifiers or endpoint behavior, nor
 establish a mapping between Karma device IDs and Fleet IMEIs. Manufacturer
 copyright and ownership remain with ERM; the local archive preserves the
 integration reference for internal use.

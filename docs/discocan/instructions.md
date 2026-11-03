@@ -49,7 +49,7 @@ code is the reference for behavior details.
     strings.
   - An interval change preserves captured definition bytes except the interval bytes.
     A one-rule change preserves all unrelated records; unsupported rule expressions stay opaque.
-  - Follow the [operation contract](architecture.md#background-device-configuration-reads).
+  - Follow the [operation contract](../archive/karma/architecture.md#background-device-configuration-reads).
 - The [Simple eData vendor catalog](erm-resources/simple-edata-catalog/README.md) is shared
   manufacturer reference data scoped by catalog version, without Tenant/Branch columns.
 
@@ -73,6 +73,9 @@ code is the reference for behavior details.
   optional and, when set, must belong to the same Tenant/Branch.
 
 ## Karma Client
+
+Deprecated, view-only until holita recreates the required functions. Read the
+[Karma archive](../archive/karma/README.md) only for tasks that need its historical contracts.
 
 - `apps/karma-client` owns the external Karma account connection and its read-only `karma*`
   queries. It is an independent host process with no database or Fleet implementation imports.

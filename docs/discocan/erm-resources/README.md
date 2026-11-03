@@ -1,134 +1,62 @@
 # ERM resources
 
-This directory contains external ERM references relevant to Discocan. It does not
-change the current holita application or domain contracts.
+Retained external sources for Discocan protocols, hardware, configuration and support evidence.
+These sources are not an assertion that every vendor capability is implemented or safe on every
+installation. Karma API/interface documentation is deprecated and indexed separately in the
+[Karma archive](../../archive/karma/README.md); read it only when a task needs it.
 
-| Resource                                                | Purpose                                                                 | Local reference                                                                                                                                                                                |
-| ------------------------------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Karma API v2](https://karma.online/apiv2/)             | Account, vehicle and telemetry HTTP API consumed by `apps/karma-client` | [Detailed API reference](karma-api-v2/README.md), original public help assets and reconstructed OpenAPI                                                                                        |
-| [ERM protocol portal](https://sweb.erm.co.il/protocol/) | StarLink device/server protocol, configuration and tools                | [Authenticated archive and coverage](starlink-online-protocol/README.md), searchable Markdown catalogs, source pages, images and tools                                                         |
-| [Karma NC2 login](https://karma.online/nc2/login)       | Technical web console with a separate login/session flow                | [Observed Users, Vehicles, CMD and Statistics](karma-api-v2/web-functionality-research.md#nc2-technical-console); saved website login verified, API v2 session/permission equivalence unproven |
+## Protocols and tools
 
-Use the [Karma reference](karma-api-v2/README.md) for the API inventory, data models,
-current holita coverage and known limitations. Remaining investigation and proposed
-work live in the [Karma backlog](../../todo/karma-api-v2.md).
+| Reference                                                                                      | Contents                                                                                                                                                           |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [StarLink online protocol](starlink-online-protocol/README.md)                                 | Authenticated portal archive, coverage inventory, searchable pages/catalogs, images, tools and Test Server instructions; original `authenticated/sources` retained |
+| [StarLink Tracker binary formats](starlink-binary-formats.md)                                  | Fleet-observed `$SLC` containers and `$SLB` tags for `0182=3`, beyond the portal's documented formats                                                              |
+| [eData Simple Protocol 4.04](edata-simple-protocol-v4.04/README.md)                            | Complete protocol/tables and source PDF                                                                                                                            |
+| [eData diagnostics and faults](edata-simple-protocol-v4.04/diagnostics-and-fault-reporting.md) | Fixed reads and `411`/`413`/`417`/`418`/`419` evidence/interpretation limits                                                                                       |
+| [eData parameter reporting](edata-simple-protocol-v4.04/parameter-reporting.md)                | Catalog/definition/measurement distinctions, manual configuration evidence and readback/restoration limits                                                         |
+| [Simple eData catalog](simple-edata-catalog/README.md)                                         | Offline EXE extraction, workbook/Monitor tables, version comparison and shared Fleet reference import                                                              |
+| [Monitor catalog 9.56](simple-edata-catalog/v9.56/README.md)                                   | Both workbook variants and their unresolved conflicts                                                                                                              |
+| [Simple eData Monitor Configuration 1.0](simple-edata-monitor-configuration-v1.0/README.md)    | Complete guide/PDF, connections, rules, histograms and images                                                                                                      |
+
+StarLink is the tracker/server envelope; eData is the CAN Engine payload. Tracker event `2`,
+OBD event `70` and eData fault payload `419` have distinct schemas. The portal archive retains
+framing/checksum, ACKs, commands/results, parameters, hardware and tool evidence, including
+unavailable-resource qualifications. A downloadable Test Server does not prove actual live
+routing, dual-destination delivery, replay or restoration.
 
 ## ERM support correspondence and verification
 
-The [support reference](erm-support-diagnostics-protocol-test-server/README.md)
-keeps the dated technical correspondence, original explanatory images, command
-reference and verification register. Start with the
-[29 October reply analysis](erm-support-diagnostics-protocol-test-server/reply-2026-10-29.md)
-for the latest answers and the
-[29 October device campaign](erm-support-diagnostics-protocol-test-server/live-verification-2026-10-29.md)
-for independently retrieved faults and ten-car command observations. Earlier
-campaigns remain historical evidence; their missing-access/no-positive-fault
-conclusions have been superseded. Credentials and private message headers are
-excluded from the technical reference.
+The [support reference](erm-support-diagnostics-protocol-test-server/README.md) preserves
+correspondence, command reference, original explanatory images and the verification register.
+Use the [29 October reply analysis](erm-support-diagnostics-protocol-test-server/reply-2026-10-29.md)
+and [29 October live campaign](erm-support-diagnostics-protocol-test-server/live-verification-2026-10-29.md)
+for the later answers and independently acquired CB1147TP faults/ten-car observations.
+Earlier campaigns remain evidence with their original limits. Credentials/private headers are excluded.
 
-Use [eData diagnostics](edata-simple-protocol-v4.04/diagnostics-and-fault-reporting.md)
-for fixed read commands and `411`/`413`/`417`/`418`/`419` interpretation. Real `419`
-records now establish acquisition for CB1147TP. Current-state/lifecycle semantics,
-the `418` sample, compatibility and conflicting global-layout details remain
-separate questions. `154,0` is a negative special ACK under ERM's latest answer.
+ERM identifies `154,0` as a negative special ACK. Real `419` acquisition does not settle
+current-state/lifecycle semantics, `418` examples, compatibility or conflicting global layouts.
+Open questions and engineering tasks belong in the [ERM roadmap](../../todo/erm-roadmap.md).
 
-## Simple eData Monitor catalog
+## Hardware
 
-The [versioned catalog and offline procedure](simple-edata-catalog/README.md) extract
-embedded workbooks and Monitor tables from one EXE, compare versions and import shared
-reference data into Fleet. [v9.56](simple-edata-catalog/v9.56/README.md) retains both
-workbook variants and their conflicts. The workflow uses direct commands and has no
-device communication or import/editing API. Fleet DeviceOperations separately exposes
-eligible presets for its controlled configuration editor.
+| Reference                                                                       | Scope                                                                                                                       |
+| ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| [EG915U-LA / LC86G device profile](erm-device-eg915u-la-lc86g/README.md)        | Complete original integration note and provenance; eight contacts, 3.7V/350mAh battery; exact ERM SKU/firmware unidentified |
+| [StarLINK Scout 4G iRF brochure](starlink-scout-4g-irf-brochure-v7.0/README.md) | Complete three-page source; filename v7.0 versus printed 3.01 discrepancy retained                                          |
+| [StarLink Tracker brochure 5.0](starlink-tracker-brochure-v5.0/README.md)       | Complete three-page source and variant specifications; PDF metadata says DRAFT                                              |
 
-## Configuring eData reporting
+Hardware observations and conditional capabilities stay separate from generic integration
+proposals. The EG915U-LA/LC86G profile does not identify a Scout/Tracker variant. Do not remove
+source notes, brochures, metadata or images when simplifying indexes.
 
-The [parameter configuration reference](edata-simple-protocol-v4.04/parameter-reporting.md)
-explains how catalog metadata, device definitions and received measurements relate;
-how to read, add or change reporting parameters through Karma; and how to verify
-or restore a change. It records the verified scope and remaining protocol limits.
-Holita implements [background configuration operations](../architecture.md#background-device-configuration-reads):
-Fleet persists scoped parameter/rule reads, predefined-parameter additions, existing-interval
-changes and one-rule changes, including baseline, uncertainty and independent verification.
-Karma Client uses fixed parameter/profile/rule reads, bounded `401`/`402`/`416`
-observations and the controlled single-record writes.
-The write flag defaults to false. Deletion, restoration, global/profile changes and
-measurement verification remain outside the automated editor.
+## Source preservation
 
-## Hardware profiles
+Versioned PDF directories retain complete `content.md`, source PDF, metadata/checksums and useful
+images/catalogs. Analysis/local-edition dates describe the conversion, not vendor release dates;
+page references are physical PDF pages. Brochure conversions follow visible pages despite covered
+legacy text. Original portal HTML and downloaded tools remain alongside converted pages.
 
-| Hardware reference                                                        | Identification and scope                                                                                                                                                                                                                                                                                      |
-| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [ERM device with EG915U-LA / LC86G](erm-device-eg915u-la-lc86g/README.md) | One device described in the user-supplied `ERM_INTEGRATION_EN.md`: eight connector contacts and a 3.7 V / 350 mAh battery; exact ERM model and firmware unidentified. Hardware observations, component references and conditional capabilities are separated from the source's general integration proposals. |
-
-The profile includes the complete original note and provenance metadata. Its
-analysis date is **2026-10-17**, local reference edition **1.0**. It does not
-establish that the device is a particular Scout or Tracker variant.
-
-## StarLink online protocol portal
-
-The [authenticated StarLink archive](starlink-online-protocol/README.md) inventories
-protocol pages, conversion fidelity and linked-resource availability. Its pages and catalogs were retrieved with the access supplied in the 29 October
-reply. It covers framing/checksum, receiving/confirming events, commands/results,
-system/dynamic parameters, hardware, tools and Test Server instructions. Its
-inventory records retrieval coverage and unavailable resources. The original
-three screenshots remain historical visual evidence.
-
-The fleet's Tracker units send formats the portal does not document (`0182=3`):
-[StarLink Tracker frame formats](starlink-binary-formats.md) records the decoded `$SLC` containers
-and the mapped `$SLB` tags.
-
-Keep the layers distinct: StarLink is the tracker/server envelope; eData is the
-CAN Engine payload; Karma API v2 exposes account records and commands; holita
-currently exposes only its documented subset. Tracker diagnostic event `2`,
-tracker OBD event `70` and eData fault payload `419` have different schemas.
-
-## PDF reference library
-
-The six user-supplied PDFs are converted into separate reference directories.
-Each reference records its analysis date, latest update and local edition in its
-`README.md` and `metadata.json`. These dates describe the local documentation,
-not the vendor release dates.
-
-| Document                                       | Source version                                    | Pages | Reference                                                                                     |
-| ---------------------------------------------- | ------------------------------------------------- | ----- | --------------------------------------------------------------------------------------------- |
-| eData Simple CAN Engine Communication Protocol | 4.04; copyright 2022                              | 30    | [Protocol and tables](edata-simple-protocol-v4.04/README.md)                                  |
-| Karma User Guide - Appendix for Partners       | 1.4.2; December 2018                              | 10    | [Partner setup and commands](karma-guide-appendix-v1.4.2/README.md)                           |
-| Karma User Guide                               | 4.3.2; December 2018 cover, November 2018 footers | 39    | [Karma workflows and screenshots](karma-user-guide-v4.3.2/README.md)                          |
-| Simple eData Monitor Configuration Guide       | 1.0; copyright 2017, PDF created 2018-04-05       | 28    | [Connections, rules and histograms](simple-edata-monitor-configuration-v1.0/README.md)        |
-| StarLINK Scout 4G iRF brochure                 | Filename v7.0; printed version **3.01**           | 3     | [Scout specifications and version discrepancy](starlink-scout-4g-irf-brochure-v7.0/README.md) |
-| StarLink Tracker brochure                      | 5.0; PDF metadata title includes **DRAFT**        | 3     | [Tracker variants and specifications](starlink-tracker-brochure-v5.0/README.md)               |
-
-The original notes requested `eData_Simple_Protocol.pdf`; the supplied protocol
-reference is archived with its versioned filename, `eData Simple Protocol v4.04.pdf`.
-
-Each directory contains:
-
-- `README.md`: document identity, version/date evidence, analysis, reading map and source qualifications.
-- `content.md`: all physical PDF pages in Markdown, including reconstructed tables.
-- `images.md` and `images/`, where the document has useful illustrations: technical figures, screenshots, UI controls and descriptions with page references; context captures retain explanatory arrows and labels. The eData protocol has no standalone technical raster illustrations, so it has no image catalog or image directory.
-- `metadata.json`: original filename, SHA-256, PDF metadata, analysis edition/date, page coverage and image occurrences.
-- `source/original.pdf`: a byte-for-byte copy of the supplied PDF, so the reference does not depend on the private input directory.
-
-The brochures contain covered legacy text. Their Markdown follows the visible
-rendered pages, and their figures are exported as visible page/cropped images.
-The guides use embedded-image extraction with transparency composited onto white.
-Repeated useful images are stored once per document. Standalone cover artwork,
-publisher logos, decorative bands, shadows, page numbers and generic note/support
-markers are excluded. Complete page captures remain where they preserve technical
-content or source evidence; decoration within those pages is part of the original
-context. PDF page references use physical page numbers;
-the protocol's printed footer numbering differs by one.
-
-These are external vendor references. Historical Karma screenshots and device
-protocol definitions do not establish current API v2 behavior, a device-to-API
-parameter mapping, or implemented holita features. The spreadsheet and standalone
-JPEGs supplied alongside the PDFs are outside this PDF conversion.
-
-The source notes' **StartLink Test Server** refers to **StarLink Test Server**.
-The authenticated portal now supplies the tool and networking/setup reference;
-see the archive's tools and General information sections. Availability of a tool
-or a forwarding procedure does not prove that a live truck has been connected
-to our own receiver. Direct routing, dual-destination delivery, capture/replay
-and restoration need their own scoped implementation evidence. Existing pending
-work is in the [protocol backlog](../../todo/karma-api-v2.md#uncovered-resources-and-fields).
+Catalog work is offline and has no device communication or import/editing API. Historical
+configuration procedures are reference evidence, not permission to send commands. Follow the
+[current ERM operator and safety procedures](../development.md#erm-device-server) and the roadmap
+for any explicitly authorized live work.
