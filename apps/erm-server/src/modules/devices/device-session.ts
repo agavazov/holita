@@ -60,6 +60,7 @@ function wire(frame: CapturedFrame): Buffer {
 }
 
 export class DeviceSession {
+  readonly closed: Promise<void>;
   private readonly openedAt = new Date();
   private readonly peer: string;
   private unitId: string | undefined;
@@ -115,8 +116,11 @@ export class DeviceSession {
     device.on('error', (error) => {
       this.closeReason = `device error: ${error.message}`;
     });
-    device.on('close', () => {
-      this.close();
+    this.closed = new Promise<void>((resolve) => {
+      device.once('close', () => {
+        this.close();
+        resolve();
+      });
     });
     device.on('data', this.identify);
   }
@@ -371,7 +375,13 @@ export class DeviceSession {
       !frame.partial && parsed === undefined ? inflateContainer(frame.raw) : undefined;
     for (const raw of replies ?? []) {
       const inner = parseFrame(raw);
-      if (inner?.origin === 'SLU' && this.pending && matchesResponse(this.pending.input, inner)) {
+      if (inner?.origin === 'SLU' && this.finishesOnConfirmation(inner)) {
+        this.finish('answered', raw, inner);
+      } else if (
+        inner?.origin === 'SLU' &&
+        this.pending &&
+        matchesResponse(this.pending.input, inner)
+      ) {
         this.send(buildServerFrame(inner.unitId, '02', nextReference(), [inner.reference, '01']));
         this.finish('answered', raw, inner);
       }
@@ -388,11 +398,7 @@ export class DeviceSession {
     }
     const original = parsed.fields[0]?.toString('latin1');
     if (parsed.command === '02' && original !== undefined && this.owned.has(original)) {
-      if (
-        this.pending?.reference === original &&
-        this.pending.input.command !== '03' &&
-        this.pending.input.command !== '45'
-      ) {
+      if (this.finishesOnConfirmation(parsed)) {
         this.finish('answered', frame.raw, parsed);
       }
       return true;
@@ -407,6 +413,16 @@ export class DeviceSession {
       return true;
     }
     return false;
+  }
+
+  private finishesOnConfirmation(frame: ParsedFrame): boolean {
+    return (
+      frame.command === '02' &&
+      this.pending !== undefined &&
+      frame.fields[0]?.toString('latin1') === this.pending.reference &&
+      ((this.pending.input.command !== '03' && this.pending.input.command !== '45') ||
+        frame.fields[1]?.toString('latin1') !== '01')
+    );
   }
 
   private dropKarmaAck(frame: CapturedFrame, parsed: ParsedFrame | undefined): boolean {

@@ -138,7 +138,7 @@ export function matchesResponse(input: DeviceCommand, frame: ParsedFrame): boole
       Number(parameter) === Number(input.fields[0])
     );
   }
-  if (frame.fields.length !== input.fields.length * 2) {
+  if (frame.fields.length === 0 || frame.fields.length % 2 !== 0) {
     return false;
   }
   const received = frame.fields
@@ -146,8 +146,6 @@ export function matchesResponse(input: DeviceCommand, frame: ParsedFrame): boole
     .map((field) => field.toString('latin1'));
   return (
     received.every(parameterNumber) &&
-    commandParameterNumbers(input).every((number) =>
-      received.some((value) => Number(value) === Number(number)),
-    )
+    received.every((number) => commandParameterNumbers(input).includes(String(Number(number))))
   );
 }

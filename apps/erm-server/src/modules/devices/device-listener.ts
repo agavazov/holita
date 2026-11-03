@@ -73,10 +73,8 @@ export class DeviceListener {
   }
 
   async stop(): Promise<void> {
-    for (const session of this.sessions) {
-      session.destroy('server stopped');
-    }
-    await new Promise<void>((resolve, reject) => {
+    const sessions = [...this.sessions];
+    const serverClosed = new Promise<void>((resolve, reject) => {
       this.server.close((error) => {
         if (error) {
           reject(error);
@@ -85,5 +83,9 @@ export class DeviceListener {
         }
       });
     });
+    for (const session of sessions) {
+      session.destroy('server stopped');
+    }
+    await Promise.all([serverClosed, ...sessions.map((session) => session.closed)]);
   }
 }

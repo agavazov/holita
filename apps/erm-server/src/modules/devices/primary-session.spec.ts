@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { expect, it } from '@jest/globals';
 import { once } from 'node:events';
 import net, { type Socket } from 'node:net';
@@ -214,6 +214,12 @@ it('acknowledges primary units, filters owned confirmations and completes allowl
         expectedFields: ['0177', '"#EDT#,#EID#"', '0774', '30'],
       },
       {
+        command: '45',
+        fields: ['0177', '0774'],
+        responseFields: ['0774', '30'],
+        expectedFields: ['0774', '30'],
+      },
+      {
         command: '03',
         fields: ['0593'],
         responseFields: ['0593', '1234'],
@@ -246,6 +252,26 @@ it('acknowledges primary units, filters owned confirmations and completes allowl
       expect(replyConfirmation?.command).toBe('02');
       expect(replyConfirmation?.fields.map((field) => field.toString())).toEqual(['80', '01']);
     }
+
+    const rejectedRead = listener.sendCommand(unitId, { command: '45', fields: ['0177', '0774'] });
+    const rejectedReadFrame = parseFrame((await deviceFrames.next()).subarray(0, -2));
+    if (!rejectedReadFrame) {
+      throw new Error('Expected a parameter read command');
+    }
+    const receipt = deviceFrame('02', '90', [rejectedReadFrame.reference, '01']);
+    const afterReceipt = deviceFrame('02', '91', ['321', '01']);
+    device.write(Buffer.concat([receipt, afterReceipt]));
+    expect(await karmaFrames.next()).toEqual(afterReceipt);
+    await expect(
+      listener.sendCommand(unitId, { command: '05', fields: [] }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    device.write(deviceFrame('02', '92', [rejectedReadFrame.reference, '03']));
+    expect(await rejectedRead).toMatchObject({
+      reference: rejectedReadFrame.reference,
+      status: 'answered',
+      resultCode: '03',
+      fields: [],
+    });
 
     const locationCommand = listener.sendCommand(unitId, { command: '05', fields: [] });
     const locationFrame = parseFrame((await deviceFrames.next()).subarray(0, -2));

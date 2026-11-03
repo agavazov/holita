@@ -159,8 +159,13 @@ it('mirrors exact bytes, rejects non-StarLink traffic and closes failed upstream
     expect(await recovered.received).toEqual(Buffer.concat([held, later]));
     const returningClosed = closed(returningDevice);
     const recoveredClosed = closed(recovered.socket);
-    recovered.socket.end();
+    const returningConnection = records.findLast(
+      (entry) => 'event' in entry && entry.event === 'open',
+    );
+    await listener.stop();
+    expect(closeReasons.get(returningConnection?.connection ?? 0)).toBe('server stopped');
     await Promise.all([returningClosed, recoveredClosed]);
+    await listener.start();
     options.upstreamHost = '127.0.0.1';
     await new Promise<void>((resolve, reject) => {
       upstream.close((error) => {
@@ -194,7 +199,9 @@ it('mirrors exact bytes, rejects non-StarLink traffic and closes failed upstream
     for (const socket of [...clients, ...upstreamSockets]) {
       socket.destroy();
     }
-    await listener.stop();
+    if (listener.server.listening) {
+      await listener.stop();
+    }
     if (!upstreamClosed) {
       await new Promise<void>((resolve) =>
         upstream.close(() => {

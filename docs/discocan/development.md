@@ -199,6 +199,8 @@ event and upstream-close database writes are asynchronous; database failures are
 forwarding and acknowledgements continue. These records do not populate Fleet telemetry.
 A gateway start closes connection rows left open by a previous process, so never start a second
 gateway against the same database while one runs.
+A graceful gateway stop records its sessions as `server stopped` and waits for capture writes
+before disconnecting from the database.
 
 `ERM_EVENT_STRUCTURE` defines the ordered fields in device `06`/`86` events in both modes. Its
 default is the Karma preset for device parameter 0177 in the [environment reference](../../.env.example).
@@ -406,7 +408,10 @@ backup are never changed together. Other writes never change lock codes (0059/00
 
 The call waits up to 30 seconds. `04`/`46`/`05` complete on the device's `02` confirmation for
 holita's reference; the other commands complete on the device's reply with the same command, or
-on a `02` error. holita confirms that reply and does not forward it to Karma, because Karma reads
+on a `02` error. For `03`/`45`, a `02` result `01` is only a receipt; any other result ends the read.
+A `45` reply may contain a non-empty subset of the requested parameters, with complete
+parameter/value pairs and no unrequested parameters; only the returned pairs appear in `fields`.
+holita confirms that reply and does not forward it to Karma, because Karma reads
 routing values from such replies and writes its own server back. Replies inside `$SLC` containers
 still go to Karma unchanged, so `03`/`45` reads of 0049–0054 are rejected entirely.
 Units sending binary `$SLB`/`$SLC`
