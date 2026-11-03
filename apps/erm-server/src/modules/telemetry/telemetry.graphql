@@ -138,6 +138,8 @@ type ErmEvent {
   severity: ErmEventSeverity!
   "Catalog name of the event; null for an event ID outside the StarLink catalog."
   name(language: ErmLanguage! = EN): String
+  "Decoded Simple eData report of an External device (33) event, with its raw payload; null otherwise."
+  edata: ErmJSON
 }
 "A numeric unit reading and the time it was observed."
 type ErmReading {

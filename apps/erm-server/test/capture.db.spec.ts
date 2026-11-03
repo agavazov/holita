@@ -1349,7 +1349,21 @@ it('persists captured connection lifecycle and raw frames through the production
       data: { frameId: telemetryFrame.id, unitId: telemetryUnitId, fields: {} },
     });
     const thirdTelemetryEvent = await database.client.ermEvent.create({
-      data: { frameId: telemetryFrame.id, unitId: telemetryUnitId, eventId: '70', fields: {} },
+      data: {
+        frameId: telemetryFrame.id,
+        unitId: telemetryUnitId,
+        eventId: '33',
+        fields: {
+          edata: {
+            type: 419,
+            payload: '21000010f30701000004df0b01',
+            faults: [
+              { spn: 4339, fmi: 7, status: 1 },
+              { spn: 1247, fmi: 11, status: 1 },
+            ],
+          },
+        },
+      },
     });
     const delayedFrame = await database.client.ermFrame.create({
       data: {
@@ -1386,6 +1400,7 @@ it('persists captured connection lifecycle and raw frames through the production
         engineOn: true,
         mainVoltage: 12.2,
         backupVoltage: 3.6,
+        edata: null,
       });
       expect(exported.events[1]).toEqual({
         id: String(secondTelemetryEvent.id),
@@ -1400,6 +1415,14 @@ it('persists captured connection lifecycle and raw frames through the production
         engineOn: null,
         mainVoltage: null,
         backupVoltage: null,
+        edata: null,
+      });
+      expect(exported.events[2]?.edata).toEqual({
+        report: '419',
+        faults: [
+          { spn: 4339, fmi: 7, status: 'ADDED' },
+          { spn: 1247, fmi: 11, status: 'ADDED' },
+        ],
       });
       expect(
         await telemetryController.events(telemetryUnitId, String(firstTelemetryEvent.id), '1'),

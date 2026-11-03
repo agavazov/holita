@@ -22,9 +22,70 @@ import { displayText } from './display-text.js';
 import { deviceTelemetryQueries, telemetryPage, telemetryQuery } from './telemetry-query.js';
 import { TelemetryRepository } from './telemetry.repository.js';
 
+// Fleet's telemetry feed carries only the eData reports it imports, in the shapes agreed for
+// ADR 0008; any other report, or a value outside those shapes, is null.
+function feedEdata(value: unknown) {
+  if (typeof value !== 'object' || value === null || !('type' in value)) {
+    return null;
+  }
+  if (
+    value.type === 411 &&
+    'communicationMask' in value &&
+    typeof value.communicationMask === 'number' &&
+    'obdCommunicationMask' in value &&
+    typeof value.obdCommunicationMask === 'number' &&
+    'canError' in value &&
+    typeof value.canError === 'number' &&
+    'ignition' in value &&
+    (value.ignition === 0 || value.ignition === 1 || value.ignition === 2)
+  ) {
+    return {
+      report: '411',
+      can: (value.communicationMask & 1) !== 0,
+      j1708: (value.communicationMask & 2) !== 0,
+      obd: (value.communicationMask & 4) !== 0,
+      obdMask: value.obdCommunicationMask,
+      canError: value.canError !== 0,
+      ignition: value.ignition,
+    };
+  }
+  if (value.type !== 419 || !('faults' in value) || !Array.isArray(value.faults)) {
+    return null;
+  }
+  const records: unknown[] = value.faults;
+  const faults = [];
+  for (const fault of records) {
+    if (
+      typeof fault !== 'object' ||
+      fault === null ||
+      !('spn' in fault) ||
+      typeof fault.spn !== 'number' ||
+      !('fmi' in fault) ||
+      typeof fault.fmi !== 'number' ||
+      !('status' in fault) ||
+      (fault.status !== 1 && fault.status !== 2)
+    ) {
+      return null;
+    }
+    faults.push({
+      spn: fault.spn,
+      fmi: fault.fmi,
+      status: fault.status === 1 ? 'ADDED' : 'DELETED',
+    });
+  }
+  return { report: '419', faults };
+}
+
+function storedEdata(fields: ErmEvent['fields']) {
+  return typeof fields === 'object' && fields !== null && !Array.isArray(fields)
+    ? (fields['edata'] ?? null)
+    : null;
+}
+
 function eventView(event: ErmEvent) {
   return {
     ...event,
+    edata: storedEdata(event.fields),
     id: String(event.id),
     frameId: String(event.frameId),
     eventTime: event.eventTime?.toISOString() ?? null,
@@ -128,6 +189,7 @@ export class TelemetryService {
     );
     const events = rows.map((event) => ({
       ...event,
+      edata: feedEdata(event.edata),
       eventTime: event.eventTime?.toISOString() ?? null,
       receivedAt: event.receivedAt.toISOString(),
     }));
