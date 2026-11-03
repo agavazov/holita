@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "nest build",
-    "dev": "nest start --watch",
+    "dev": "ERM_ROLE=api PORT=11017 node --env-file-if-exists=/home/sysadmin/.config/holita/erm-server.env ../../node_modules/@nestjs/cli/bin/nest.js start --watch",
     "start:prod": "node dist/main.js",
     "typecheck": "tsc --noEmit --project tsconfig.json",
     "lint": "eslint .",

@@ -1,15 +1,35 @@
 import { expect, it } from '@jest/globals';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { randomUUID } from 'node:crypto';
-import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createServer, type Server } from 'node:http';
+import { GraphQLError, graphql, parse } from 'graphql';
+import { buildSubgraphSchema } from '@apollo/subgraph';
 import { PrismaService } from '../src/database/prisma.service.js';
 import type { CaptureRecord } from '../src/modules/devices/capture-record.js';
 import { DeviceCaptureService } from '../src/modules/devices/device-capture.service.js';
 import { DevicesRepository } from '../src/modules/devices/devices.repository.js';
 import { DEFAULT_EVENT_STRUCTURE } from '../src/starlink/event.js';
 import { DevicesService } from '../src/modules/devices/devices.service.js';
+import { validateCommand } from '../src/modules/devices/command.js';
+import { LiveDevicesService } from '../src/modules/telemetry/live-devices.service.js';
+import { FleetClient } from '../src/modules/telemetry/fleet.client.js';
+import {
+  ErmDeviceResolver,
+  ErmEventResolver,
+} from '../src/modules/telemetry/telemetry.resolver.js';
+import type { DeviceReference } from '../src/modules/telemetry/telemetry.service.js';
+import type {
+  ErmDeviceAction,
+  ErmEventNameArgs,
+  FleetDeviceErmEventsArgs,
+  FleetDeviceErmFramesArgs,
+  FleetDeviceErmCommandsArgs,
+} from '../src/generated/graphql/types.js';
+import type { RequestContext } from '../src/graphql/request-context.js';
+import { formatGraphqlError } from '../src/graphql/errors.js';
 import { TelemetryRepository } from '../src/modules/telemetry/telemetry.repository.js';
 import { TelemetryService } from '../src/modules/telemetry/telemetry.service.js';
 import { issueDemoToken, readDemoTenant } from '../src/auth/demo-auth.js';
@@ -19,6 +39,10 @@ it('persists captured connection lifecycle and raw frames through the production
   const database = await createTestDatabase();
   let module: TestingModule | undefined;
   let captureDirectory: string | undefined;
+  let boundary: Server | undefined;
+  const previousGatewayUrl = process.env.ERM_GATEWAY_URL;
+  const previousFleetUrl = process.env.FLEET_GRAPHQL_URL;
+  const previousInternalToken = process.env.ERM_INTERNAL_TOKEN;
   try {
     const reviewDirectory = fileURLToPath(new URL('../../../.references/review/', import.meta.url));
     await mkdir(reviewDirectory, { recursive: true });
@@ -29,8 +53,10 @@ it('persists captured connection lifecycle and raw frames through the production
         DevicesRepository,
         TelemetryRepository,
         TelemetryService,
+        LiveDevicesService,
+        FleetClient,
         { provide: DevicesService, useValue: { listUnits: () => [] } },
-        { provide: PrismaService, useValue: { client: database.client } },
+        { provide: PrismaService, useValue: { client: database.client, schema: database.schema } },
       ],
     }).compile();
     const capture = module.get(DeviceCaptureService);
@@ -350,7 +376,7 @@ it('persists captured connection lifecycle and raw frames through the production
         data: {
           frameId: frame.id,
           unitId,
-          eventId: String(index),
+          eventId: String(index).padStart(2, '0'),
           eventTime: time,
           fields: { extra: [] },
         },
@@ -406,7 +432,300 @@ it('persists captured connection lifecycle and raw frames through the production
     ]) {
       await expect(telemetry.events(input, context)).rejects.toThrow('Invalid ERM unit');
     }
+
+    // Exercise the api -> Fleet scope check -> gateway contract on loopback, never on real units.
+    const deviceId = randomUUID();
+    const branchId = randomUUID();
+    const scopedContext = {
+      ...context,
+      branchId,
+      authorization: `Bearer ${issueDemoToken(tenantId)}`,
+    };
+    let fleetError: string | undefined;
+    let gatewayStatus = 200;
+    let fleetCalls = 0;
+    let gatewayReads = 0;
+    const sent: unknown[] = [];
+    boundary = createServer((req, res) => {
+      void (async () => {
+        const chunks: Buffer[] = [];
+        for await (const chunk of req) {
+          if (!Buffer.isBuffer(chunk)) {
+            throw new Error('Expected a request buffer');
+          }
+          chunks.push(chunk);
+        }
+        const body: unknown = chunks.length
+          ? JSON.parse(Buffer.concat(chunks).toString('utf8'))
+          : null;
+        res.setHeader('content-type', 'application/json');
+        if (req.url === '/graphql') {
+          fleetCalls++;
+          expect(body).toEqual({
+            query: 'query($id: ID!) { fleetDevice(id: $id) { id imei } }',
+            variables: { id: deviceId },
+          });
+          expect(req.headers.authorization).toBe(scopedContext.authorization);
+          expect(req.headers['x-request-id']).toBe(scopedContext.requestId);
+          const code =
+            fleetError ?? (req.headers['x-branch-id'] === branchId ? undefined : 'NOT_FOUND');
+          res.end(
+            JSON.stringify(
+              code
+                ? { errors: [{ message: 'Private upstream details', extensions: { code } }] }
+                : { data: { fleetDevice: { id: deviceId, imei: unitId } } },
+            ),
+          );
+          return;
+        }
+        expect(req.headers.authorization).toBe('Bearer erm-cross-service-test-token-32-characters');
+        if (req.method === 'GET' && req.url === '/internal/units') {
+          gatewayReads++;
+          res.end(
+            JSON.stringify([
+              {
+                unitId,
+                mode: 'primary',
+                peer,
+                connectedSince: sentAt.toISOString(),
+                lastFrameAt: sentAt.toISOString(),
+              },
+            ]),
+          );
+          return;
+        }
+        expect(req.url).toBe(`/internal/units/${unitId}/commands`);
+        if (gatewayStatus !== 200) {
+          res.statusCode = gatewayStatus;
+          res.end('{}');
+          return;
+        }
+        const command = validateCommand(body);
+        sent.push(command);
+        const recorded = await database.client.ermCommand.create({
+          data: {
+            connectionId: stored.id,
+            unitId,
+            reference: String(900001000 + sent.length),
+            ...command,
+            sentAt: new Date(),
+            status: 'ANSWERED',
+            answeredAt: new Date(),
+          },
+        });
+        res.end(JSON.stringify({ id: recorded.id, status: 'answered' }));
+      })().catch(() => {
+        res.statusCode = 500;
+        res.end('{}');
+      });
+    });
+    await new Promise<void>((resolve) => {
+      boundary?.listen(0, '127.0.0.1', resolve);
+    });
+    const address = boundary.address();
+    if (address === null || typeof address === 'string') {
+      throw new Error('Expected loopback HTTP listener');
+    }
+    process.env.ERM_GATEWAY_URL = `http://127.0.0.1:${String(address.port)}`;
+    process.env.FLEET_GRAPHQL_URL = `${process.env.ERM_GATEWAY_URL}/graphql`;
+    process.env.ERM_INTERNAL_TOKEN = 'erm-cross-service-test-token-32-characters';
+    const api = new TelemetryService(
+      module.get(TelemetryRepository),
+      new LiveDevicesService(),
+      new FleetClient(),
+    );
+    await expect(
+      api.sendDeviceCommand({ deviceId, action: 'READ_STATUS' }, unauthenticated),
+    ).rejects.toThrow('Sign in');
+    expect(fleetCalls).toBe(0);
+    await expect(
+      api.sendDeviceCommand(
+        { deviceId, action: 'READ_STATUS' },
+        { ...scopedContext, branchId: randomUUID() },
+      ),
+    ).rejects.toMatchObject({ status: 404 });
+    for (const [code, status] of [
+      ['NOT_FOUND', 404],
+      ['UNAUTHENTICATED', 401],
+      ['FORBIDDEN', 403],
+    ] as const) {
+      fleetError = code;
+      try {
+        await api.sendDeviceCommand({ deviceId, action: 'READ_STATUS' }, scopedContext);
+        throw new Error('Expected Fleet rejection');
+      } catch (error) {
+        expect(error).toMatchObject({ status });
+        if (!(error instanceof Error)) {
+          throw error;
+        }
+        const formatted = formatGraphqlError(
+          { message: 'Upstream' },
+          new GraphQLError('Upstream', { originalError: error, path: ['sendErmDeviceCommand'] }),
+        );
+        expect(formatted.extensions?.['code']).toBe(code);
+        expect(formatted.message).not.toContain('Private upstream details');
+      }
+    }
+    expect(sent).toHaveLength(0);
+    fleetError = undefined;
+    const actions: [ErmDeviceAction, string, string[]][] = [
+      ['REQUEST_LOCATION', '05', []],
+      ['READ_STATUS', '48', ['IGN=#IGN#;ENG=#ENG#;VIN=#VIN#;VBAT=#VBAT#;CSS=#CSS#;JAM=#JAM#']],
+      ['READ_VERSION', '48', ['VER=#VER#']],
+      ['READ_ACCESSORIES', '56', []],
+      ['READ_EDATA_DIAGNOSTICS', '30', ['19', '0', '19', '306', '0', '1', '1', '']],
+      ['READ_EDATA_FAULTS', '30', ['19', '0', '19', '301', '0', '1', '1', '19']],
+    ];
+    for (const [action, command, fields] of actions) {
+      const recorded = await api.sendDeviceCommand({ deviceId, action }, scopedContext);
+      expect(sent.at(-1)).toEqual({ command, fields });
+      expect(recorded).toMatchObject({ unitId, command, fields, status: 'ANSWERED' });
+      expect(
+        await database.client.ermCommand.findUnique({ where: { id: recorded.id } }),
+      ).not.toBeNull();
+    }
+    gatewayStatus = 404;
+    await expect(
+      api.sendDeviceCommand({ deviceId, action: 'REQUEST_LOCATION' }, scopedContext),
+    ).rejects.toMatchObject({ status: 409 });
+
+    // Federation resolves the complete representation set, including absent units, in fixed batches.
+    const now = new Date();
+    await database.client.ermEvent.createMany({
+      data: [
+        {
+          frameId: stored.frames.at(-1)?.id ?? 0n,
+          unitId,
+          eventId: '09',
+          eventTime: now,
+          fields: {},
+        },
+        {
+          frameId: stored.frames.at(-1)?.id ?? 0n,
+          unitId,
+          eventId: '70',
+          eventTime: now,
+          fields: {},
+        },
+        {
+          frameId: stored.frames.at(-1)?.id ?? 0n,
+          unitId,
+          eventId: '999',
+          eventTime: now,
+          fields: {},
+        },
+      ],
+    });
+    const resolver = new ErmDeviceResolver(api);
+    const eventResolver = new ErmEventResolver();
+    const schema = buildSubgraphSchema({
+      typeDefs: parse(
+        await readFile(
+          new URL('../src/modules/telemetry/telemetry.graphql', import.meta.url),
+          'utf8',
+        ),
+      ),
+      resolvers: {
+        FleetDevice: {
+          __resolveReference: (
+            ref: Pick<DeviceReference, 'id' | 'imei'>,
+            ctx: RequestContext,
+            info,
+          ) => resolver.reference(ref, ctx, info),
+          ermState: (ref: DeviceReference, _args: unknown, ctx: RequestContext) =>
+            resolver.state(ref, ctx),
+          ermEvents: (ref: DeviceReference, args: FleetDeviceErmEventsArgs, ctx: RequestContext) =>
+            resolver.events(ref, args, ctx),
+          ermFrames: (ref: DeviceReference, args: FleetDeviceErmFramesArgs, ctx: RequestContext) =>
+            resolver.frames(ref, args, ctx),
+          ermCommands: (
+            ref: DeviceReference,
+            args: FleetDeviceErmCommandsArgs,
+            ctx: RequestContext,
+          ) => resolver.commands(ref, args, ctx),
+        },
+        ErmEvent: {
+          name: (parent: { eventId: string | null }, args: ErmEventNameArgs) =>
+            eventResolver.name(parent, args),
+        },
+      },
+    });
+    const source = `query($representations: [_Any!]!) { _entities(representations: $representations) { ... on FleetDevice {
+      id ermState { online mode lastFrameAt latestEvent { eventId category } lastPosition { id } alarmsLast24h latestAlarm { eventId category name(language: BG) } }
+      ermEvents(input: { pageSize: 25 }) { items { id } hasMore nextCursor }
+      alarms: ermEvents(input: { categories: [ALARM] }) { items { eventId category } }
+      other: ermEvents(input: { categories: [OTHER] }) { items { eventId } }
+      ermFrames(input: { pageSize: 25 }) { items { id } hasMore }
+      ermCommands(input: { pageSize: 25 }) { items { id } hasMore }
+    } } }`;
+    const result = await graphql({
+      schema,
+      source,
+      variableValues: {
+        representations: [
+          { __typename: 'FleetDevice', id: deviceId, imei: unitId },
+          { __typename: 'FleetDevice', id: 'never-connected', imei: '123456789012345' },
+        ],
+      },
+      contextValue: { ...scopedContext },
+    });
+    expect(result.errors).toBeUndefined();
+    expect(result.data?.['_entities']).toMatchObject([
+      {
+        id: deviceId,
+        ermState: {
+          online: true,
+          mode: 'PRIMARY',
+          lastPosition: { id: String(event?.id) },
+          alarmsLast24h: 1,
+          latestAlarm: {
+            eventId: '09',
+            category: 'ALARM',
+            name: 'Акумулаторът на автомобила е разкачен',
+          },
+        },
+        ermEvents: { hasMore: true },
+        alarms: { items: expect.arrayContaining([{ eventId: '09', category: 'ALARM' }]) },
+        other: { items: [{ eventId: '999' }, { eventId: '00' }] },
+        ermFrames: { hasMore: true },
+        ermCommands: { hasMore: true },
+      },
+      {
+        id: 'never-connected',
+        ermState: null,
+        ermEvents: { items: [] },
+        ermFrames: { items: [] },
+        ermCommands: { items: [] },
+      },
+    ]);
+    expect(gatewayReads).toBe(1);
   } finally {
+    if (previousGatewayUrl === undefined) {
+      delete process.env.ERM_GATEWAY_URL;
+    } else {
+      process.env.ERM_GATEWAY_URL = previousGatewayUrl;
+    }
+    if (previousFleetUrl === undefined) {
+      delete process.env.FLEET_GRAPHQL_URL;
+    } else {
+      process.env.FLEET_GRAPHQL_URL = previousFleetUrl;
+    }
+    if (previousInternalToken === undefined) {
+      delete process.env.ERM_INTERNAL_TOKEN;
+    } else {
+      process.env.ERM_INTERNAL_TOKEN = previousInternalToken;
+    }
+    if (boundary) {
+      await new Promise<void>((resolve, reject) => {
+        boundary?.close((error) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve();
+          }
+        });
+      });
+    }
     try {
       await module?.close();
     } finally {

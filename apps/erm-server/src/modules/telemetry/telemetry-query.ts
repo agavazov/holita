@@ -1,5 +1,9 @@
 import { BadRequestException } from '@nestjs/common';
-import type { ErmHistoryInput, ErmUnitsInput } from '../../generated/graphql/types.js';
+import type {
+  ErmEventCategory,
+  ErmHistoryInput,
+  ErmUnitsInput,
+} from '../../generated/graphql/types.js';
 
 function invalid(): never {
   throw new BadRequestException('Invalid ERM unit, page size or cursor');
@@ -8,6 +12,7 @@ function invalid(): never {
 export function telemetryQuery(
   kind: 'units' | 'events' | 'frames' | 'commands',
   input: ErmHistoryInput | ErmUnitsInput | null | undefined,
+  categories?: readonly ErmEventCategory[] | null,
 ) {
   const pageSize = input?.pageSize ?? 50;
   const unitId = input && 'unitId' in input ? input.unitId : undefined;
@@ -17,7 +22,12 @@ export function telemetryQuery(
   ) {
     invalid();
   }
-  const scope = JSON.stringify([kind, unitId, pageSize]);
+  const scope = JSON.stringify([
+    kind,
+    unitId,
+    pageSize,
+    ...(categories ? [[...new Set(categories)].sort()] : []),
+  ]);
   let offset = 0;
   let snapshot = new Date();
   const cursor = input?.cursor ?? null;

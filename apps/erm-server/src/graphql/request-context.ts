@@ -5,6 +5,8 @@ import { readDemoTenant } from '../auth/demo-auth.js';
 export interface RequestContext {
   requestId: string;
   tenantId: string | undefined;
+  authorization?: string | undefined;
+  branchId?: string | undefined;
 }
 
 export function createRequestContext({
@@ -20,5 +22,11 @@ export function createRequestContext({
       ? supplied
       : randomUUID();
   res.setHeader('x-request-id', requestId);
-  return { requestId, tenantId: readDemoTenant(req.headers.authorization) };
+  const branchId = req.headers['x-branch-id'];
+  return {
+    requestId,
+    tenantId: readDemoTenant(req.headers.authorization),
+    authorization: req.headers.authorization,
+    branchId: typeof branchId === 'string' ? branchId : undefined,
+  };
 }

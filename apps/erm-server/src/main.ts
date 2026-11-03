@@ -3,9 +3,10 @@ import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
 import { readPort } from './modules/devices/config.js';
+import { ermRole } from './role.js';
 
 async function bootstrap(): Promise<void> {
-  const port = readPort('PORT', process.env.PORT ?? '11015');
+  const port = readPort('PORT', process.env.PORT ?? (ermRole() === 'api' ? '11017' : '11015'));
   const app = await NestFactory.create(AppModule);
   app.enableShutdownHooks();
   await app.listen(port, '127.0.0.1');

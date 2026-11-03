@@ -8,27 +8,34 @@ import { createRequestContext } from './graphql/request-context.js';
 import { HealthController } from './health/health.controller.js';
 import { DevicesModule } from './modules/devices/devices.module.js';
 import { TelemetryModule } from './modules/telemetry/telemetry.module.js';
+import { ermRole } from './role.js';
+
+const role = ermRole();
 
 @Module({
   imports: [
-    DevicesModule,
-    TelemetryModule,
-    GraphQLModule.forRoot<ApolloFederationDriverConfig>({
-      driver: ApolloFederationDriver,
-      typeDefs: readFileSync(
-        new URL('./modules/telemetry/telemetry.graphql', import.meta.url),
-        'utf8',
-      ),
-      resolvers: {
-        ErmJSON: new GraphQLScalarType({ name: 'ErmJSON', serialize: (value) => value }),
-      },
-      context: createRequestContext,
-      path: '/graphql',
-      includeStacktraceInErrorResponses: false,
-      autoTransformHttpErrors: false,
-      formatError: formatGraphqlError,
-      plugins: [graphqlDiagnostics],
-    }),
+    ...(role === 'api' ? [] : [DevicesModule]),
+    ...(role === 'gateway'
+      ? []
+      : [
+          TelemetryModule,
+          GraphQLModule.forRoot<ApolloFederationDriverConfig>({
+            driver: ApolloFederationDriver,
+            typeDefs: readFileSync(
+              new URL('./modules/telemetry/telemetry.graphql', import.meta.url),
+              'utf8',
+            ),
+            resolvers: {
+              ErmJSON: new GraphQLScalarType({ name: 'ErmJSON', serialize: (value) => value }),
+            },
+            context: createRequestContext,
+            path: '/graphql',
+            includeStacktraceInErrorResponses: false,
+            autoTransformHttpErrors: false,
+            formatError: formatGraphqlError,
+            plugins: [graphqlDiagnostics],
+          }),
+        ]),
   ],
   controllers: [HealthController],
 })
