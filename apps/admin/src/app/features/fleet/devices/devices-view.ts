@@ -37,7 +37,17 @@ export const currentFirmware = '03.29.02';
 
 /** The unit's connection to holita's device server; 'karma' when it has never connected. */
 export type DeviceLive =
-  | { readonly online: boolean; readonly lastFrameAt: string | null; readonly alarms: number }
+  | {
+      readonly online: boolean;
+      readonly lastFrameAt: string | null;
+      readonly alarms: number;
+      /** No frame within twice the expected reporting interval. */
+      readonly overdue: boolean;
+      /** Karma writes to routing parameters 0049–0054 in the last 24 hours. */
+      readonly routeWrites: number;
+      /** holita has lost the unit while Karma still receives its data. */
+      readonly lostToKarma: boolean;
+    }
   | 'karma';
 
 /** One tracker, as the Devices list query returns it. */

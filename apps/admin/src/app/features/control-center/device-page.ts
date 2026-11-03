@@ -39,7 +39,7 @@ import type { Language } from '../../i18n/messages';
 import { confirmAction, confirmDialogPt } from '../../ui/confirm';
 import { EmptyState } from '../../ui/empty-state/empty-state';
 import { injectFleetFormat } from '../../ui/format/fleet-format';
-import { formatDateTime, formatNumber, emptyValue } from '../../ui/format/format';
+import { formatDateTime, formatDuration, formatNumber, emptyValue } from '../../ui/format/format';
 import { interpolate, uiMessages } from '../../ui/i18n/messages';
 import { mapCoordinates } from '../../ui/map-preview/location-map';
 import { MapPreview } from '../../ui/map-preview/map-preview';
@@ -49,10 +49,18 @@ import { tableView } from '../../ui/table-panel/table-view';
 import { toneSeverity } from '../../ui/tones';
 import { deviceModelLabel } from '../fleet/devices/i18n/messages';
 import { ControlCenterApi } from './control-center-api';
-import { controlCenterText, deviceLabel, ermLanguage, severityTone } from './control-center-text';
+import {
+  controlCenterText,
+  deviceLabel,
+  ermLanguage,
+  karmaByImei,
+  lostToKarma,
+  severityTone,
+} from './control-center-text';
 
 export type DeviceTab = 'overview' | 'events' | 'alarms' | 'commands' | 'frames';
 type Device = AdminControlCenterDeviceQuery['fleetDevice'];
+type KarmaTruck = AdminControlCenterDeviceQuery['fleetKarmaMonitoringTrucks']['items'][number];
 type Events = AdminControlCenterEventsQuery['fleetDevice']['ermEvents'];
 type Commands = AdminControlCenterCommandsQuery['fleetDevice']['ermCommands'];
 type Frames = AdminControlCenterFramesQuery['fleetDevice']['ermFrames'];
@@ -159,6 +167,22 @@ export class DevicePage implements OnInit {
   );
   private readonly deviceReload = signal(0);
   readonly state = computed(() => this.device()?.ermState ?? null);
+  private readonly karmaTrucks = signal<ReadonlyMap<string, KarmaTruck>>(new Map());
+  /** Fleet's Karma monitoring of this unit, for the Karma-versus-holita cross-check. */
+  readonly karma = computed(() => {
+    const imei = this.device()?.imei;
+    return imei ? (this.karmaTrucks().get(imei) ?? null) : null;
+  });
+  readonly lostToKarma = computed(() => lostToKarma(this.karma(), this.state()));
+  readonly karmaText = computed(() => {
+    const karma = this.karma();
+    return karma
+      ? `${karma.online ? this.text().online : this.text().offlineState} · ${interpolate(
+          this.text().lastData,
+          { time: this.date(karma.lastDataAt) },
+        )}`
+      : this.text().notInKarma;
+  });
   readonly title = computed(() => {
     const device = this.device();
     return device ? deviceLabel(device) : this.text().units;
@@ -238,6 +262,7 @@ export class DevicePage implements OnInit {
           this.deviceError.set(result.error ?? null);
           if (result.dataState === 'complete' && !result.error) {
             this.device.set(result.data.fleetDevice);
+            this.karmaTrucks.set(karmaByImei(result.data.fleetKarmaMonitoringTrucks));
             this.deviceUpdatedAt.set(new Date().toISOString());
           }
         },
@@ -371,6 +396,24 @@ export class DevicePage implements OnInit {
   }
   distance(value: number | null): string {
     return this.units.distance(value, true, 0);
+  }
+  duration(seconds: number | null): string {
+    return formatDuration(seconds, this.language());
+  }
+  /** A unit reading with the time it was observed. */
+  reading(
+    reading: { readonly value: number; readonly observedAt: string } | null,
+    unit: 'volt' | null,
+    fraction: number,
+  ): string {
+    if (!reading) {
+      return emptyValue;
+    }
+    const value = this.number(reading.value, fraction);
+    return `${unit ? `${value}\u00a0${this.uiText().units[unit]}` : value} · ${this.date(reading.observedAt)}`;
+  }
+  format(template: string, values: Readonly<Record<string, string | number>>): string {
+    return interpolate(template, values);
   }
   voltage(value: number | null): string {
     return value === null

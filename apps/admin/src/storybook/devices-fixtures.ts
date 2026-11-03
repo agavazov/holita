@@ -69,7 +69,20 @@ graphqlFixture(AdminDevicesLiveDocument, () => ({
           online: true,
           lastFrameAt: '2026-10-20T08:00:00.000Z',
           alarmsLast24h: 2,
+          health: { __typename: 'ErmUnitHealth', overdue: false, karmaRoutingWritesLast24h: 0 },
         },
+      },
+    ],
+  },
+  fleetKarmaMonitoringTrucks: {
+    __typename: 'FleetKarmaMonitoringTruckPage',
+    items: [
+      {
+        __typename: 'FleetKarmaMonitoringTruck',
+        id: '62000000-0000-4000-8000-000000000001',
+        karmaDeviceId: fixtureDevice.imei,
+        lastDataAt: '2026-10-20T08:00:00.000Z',
+        online: true,
       },
     ],
   },

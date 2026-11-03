@@ -39,6 +39,11 @@
       tone="neutral"
     />
     <holita-kpi-tile
+      [label]="text().lostToKarma"
+      [value]="count(counts()?.lostToKarma)"
+      [tone]="counts()?.lostToKarma ? 'danger' : null"
+    />
+    <holita-kpi-tile
       [label]="text().withAlarms"
       [value]="count(counts()?.alarms)"
       [tone]="counts()?.alarms ? 'danger' : null"
@@ -64,10 +69,22 @@
                   <a class="app-link" [routerLink]="deviceLink(item.device)">{{
                     label(item.device)
                   }}</a>
-                  @if (item.device.ermState?.online === false) {
+                  @if (!item.state.online) {
                     <p-tag [value]="text().offlineState" [severity]="toneSeverity('warn')" />
                   }
-                  @if (item.device.ermState?.latestAlarm; as alarm) {
+                  @if (item.lostToKarma) {
+                    <p-tag [value]="text().lostToKarma" [severity]="toneSeverity('danger')" />
+                  }
+                  @if (item.state.online && item.state.health.overdue) {
+                    <p-tag [value]="text().overdue" [severity]="toneSeverity('warn')" />
+                  }
+                  @if (item.state.health.karmaRoutingWritesLast24h; as writes) {
+                    <p-tag
+                      [value]="format(text().routeWrites, { count: number(writes) })"
+                      [severity]="toneSeverity('danger')"
+                    />
+                  }
+                  @if (item.state.latestAlarm; as alarm) {
                     <p-tag
                       [value]="alarm.name ?? text().unknownEvent"
                       [severity]="severityTone(alarm.severity)"
@@ -166,10 +183,18 @@
           </td>
           <td>
             @if (device.ermState; as state) {
-              <p-tag
-                [value]="state.online ? text().online : text().offlineState"
-                [severity]="toneSeverity(state.online ? 'success' : 'warn')"
-              />
+              <span class="app-inline">
+                <p-tag
+                  [value]="state.online ? text().online : text().offlineState"
+                  [severity]="toneSeverity(state.online ? 'success' : 'warn')"
+                />
+                @if (isLostToKarma(device)) {
+                  <p-tag [value]="text().lostToKarma" [severity]="toneSeverity('danger')" />
+                }
+                @if (state.online && state.health.overdue) {
+                  <p-tag [value]="text().overdue" [severity]="toneSeverity('warn')" />
+                }
+              </span>
             } @else {
               <p-tag [value]="text().neverConnectedState" [severity]="toneSeverity('neutral')" />
             }

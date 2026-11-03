@@ -22,3 +22,18 @@ export function deviceLabel(device: {
 }): string {
   return device.vehicle?.licensePlate ?? device.imei;
 }
+
+/** Fleet's Karma monitoring truck of each IMEI (Karma's device ID is the unit's IMEI). */
+export function karmaByImei<T extends { readonly karmaDeviceId: string }>(page: {
+  readonly items: readonly T[];
+}): ReadonlyMap<string, T> {
+  return new Map(page.items.map((truck) => [truck.karmaDeviceId, truck]));
+}
+
+/** A unit that has reported to holita is offline there while Karma still receives its data. */
+export function lostToKarma(
+  karma: { readonly online: boolean } | null | undefined,
+  state: { readonly online: boolean } | null | undefined,
+): boolean {
+  return karma?.online === true && state?.online === false;
+}

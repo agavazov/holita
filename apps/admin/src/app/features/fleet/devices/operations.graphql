@@ -60,7 +60,19 @@ query AdminDevicesLive($ids: [ID!]!) {
         online
         lastFrameAt
         alarmsLast24h
+        health {
+          overdue
+          karmaRoutingWritesLast24h
+        }
       }
+    }
+  }
+  fleetKarmaMonitoringTrucks(limit: 100) {
+    items {
+      id
+      karmaDeviceId
+      lastDataAt
+      online
     }
   }
 }

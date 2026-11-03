@@ -34,6 +34,13 @@
       </div>
     }
 
+    @if (lostToKarma()) {
+      <p-message severity="warn">
+        {{ text().lostToKarmaHint }}
+        <a class="app-link" [routerLink]="link('control-center', 'sms')">{{ text().sms.title }}</a>
+      </p-message>
+    }
+
     @if (!state()) {
       <section
         class="app-card control-center__panel"
@@ -46,6 +53,7 @@
           }}</a>
         </div>
         <p class="app-muted">{{ text().notOnHolita }}</p>
+        <p class="app-muted">{{ text().karma }}: {{ karmaText() }}</p>
       </section>
     }
 
@@ -144,6 +152,18 @@
                             <dt>{{ text().alarms24h }}</dt>
                             <dd>{{ number(state.alarmsLast24h, 0) }}</dd>
                           </div>
+                          <div>
+                            <dt>{{ text().karma }}</dt>
+                            <dd>
+                              {{ karmaText() }}
+                              @if (lostToKarma()) {
+                                <p-tag
+                                  [value]="text().lostToKarma"
+                                  [severity]="toneSeverity('danger')"
+                                />
+                              }
+                            </dd>
+                          </div>
                         </dl>
                         @if (state.latestEvent; as event) {
                           <h3>{{ text().latestValues }}</h3>
@@ -176,6 +196,79 @@
                               <dd>{{ distance(event.odometer) }}</dd>
                             </div>
                           </dl>
+                        }
+                      </section>
+
+                      <section
+                        class="app-card control-center__panel"
+                        [attr.aria-label]="text().health"
+                      >
+                        <h2>{{ text().health }}</h2>
+                        <dl class="app-facts">
+                          <div>
+                            <dt>{{ text().frameAge }}</dt>
+                            <dd>
+                              {{ duration(state.health.lastFrameAgeSeconds) }} ·
+                              {{
+                                format(text().expectedEvery, {
+                                  interval: duration(state.health.expectedIntervalSeconds),
+                                })
+                              }}
+                              @if (state.health.overdue) {
+                                <p-tag [value]="text().overdue" [severity]="toneSeverity('warn')" />
+                              }
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>{{ text().mainVoltage }}</dt>
+                            <dd>{{ reading(state.mainVoltage, 'volt', 2) }}</dd>
+                          </div>
+                          <div>
+                            <dt>{{ text().backupVoltage }}</dt>
+                            <dd>{{ reading(state.backupVoltage, 'volt', 2) }}</dd>
+                          </div>
+                          <div>
+                            <dt>{{ text().signalQuality }}</dt>
+                            <dd>{{ reading(state.signalQuality, null, 0) }}</dd>
+                          </div>
+                          <div>
+                            <dt>{{ text().unitFirmware }}</dt>
+                            <dd>
+                              @if (state.firmwareVersion; as firmware) {
+                                {{ firmware.value }} · {{ date(firmware.observedAt) }}
+                              } @else {
+                                {{ text().unitFirmwareUnknown }}
+                              }
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>{{ text().lastClose }}</dt>
+                            <dd>
+                              {{ state.health.lastCloseReason ?? '—' }} ·
+                              {{ date(state.health.lastClosedAt) }}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>{{ text().upstreamCloses }}</dt>
+                            <dd>{{ number(state.health.upstreamClosesLast24h, 0) }}</dd>
+                          </div>
+                          <div>
+                            <dt>{{ text().karmaRouteWrites }}</dt>
+                            <dd>
+                              {{ number(state.health.karmaRoutingWritesLast24h, 0) }}
+                              @if (state.health.karmaRoutingWritesLast24h) {
+                                <p-tag
+                                  [value]="text().routeChanged"
+                                  [severity]="toneSeverity('danger')"
+                                />
+                              }
+                            </dd>
+                          </div>
+                        </dl>
+                        @if (state.health.latestKarmaRoutingWrite; as write) {
+                          <h3>{{ text().latestRouteWrite }}</h3>
+                          <p class="app-muted">{{ date(write.receivedAt) }}</p>
+                          <pre class="control-center__frame">{{ write.displayText }}</pre>
                         }
                       </section>
                     }

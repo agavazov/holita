@@ -4,19 +4,27 @@ import type {
   AdminDevicesLiveQuery,
   CreateFleetDeviceInput,
 } from '../../../../generated/graphql/operations';
+import { lostToKarma } from '../../control-center/control-center-text';
 import { fleetFieldErrors } from '../field-errors';
 import type { DeviceField, DeviceForm } from './device-drawer';
 import type { DeviceRow } from './devices-view';
 import { deviceModels, deviceOptions } from './device-query';
 
 type ErmState = AdminDevicesLiveQuery['fleetDevices']['items'][number]['ermState'];
+type KarmaTruck = AdminDevicesLiveQuery['fleetKarmaMonitoringTrucks']['items'][number];
 
-/** `live` maps device IDs to their holita state; a missing map or ID means it is unknown. */
+/** The holita state by device ID and Fleet's Karma monitoring by IMEI. */
+export interface DevicesLive {
+  readonly states: ReadonlyMap<string, ErmState>;
+  readonly karma: ReadonlyMap<string, KarmaTruck>;
+}
+
+/** A missing `live` or device ID means the holita state is unknown. */
 export function deviceRow(
   device: AdminDeviceDetailsFragment,
-  live?: ReadonlyMap<string, ErmState> | null,
+  live?: DevicesLive | null,
 ): DeviceRow {
-  const state = live?.get(device.id);
+  const state = live?.states.get(device.id);
   return {
     id: device.id,
     imei: device.imei,
@@ -34,7 +42,14 @@ export function deviceRow(
     voltage: null,
     notes: device.notes ?? '',
     live: state
-      ? { online: state.online, lastFrameAt: state.lastFrameAt, alarms: state.alarmsLast24h }
+      ? {
+          online: state.online,
+          lastFrameAt: state.lastFrameAt,
+          alarms: state.alarmsLast24h,
+          overdue: state.health.overdue,
+          routeWrites: state.health.karmaRoutingWritesLast24h,
+          lostToKarma: lostToKarma(live?.karma.get(device.imei), state),
+        }
       : state === null
         ? 'karma'
         : null,

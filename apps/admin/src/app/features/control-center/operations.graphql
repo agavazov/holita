@@ -31,6 +31,21 @@ fragment AdminControlCenterStateFields on ErmUnitState {
   latestAlarm {
     ...AdminControlCenterEventFields
   }
+  health {
+    lastFrameAgeSeconds
+    expectedIntervalSeconds
+    overdue
+    upstreamClosesLast24h
+    karmaRoutingWritesLast24h
+  }
+}
+fragment AdminControlCenterKarmaTrucks on FleetKarmaMonitoringTruckPage {
+  items {
+    id
+    karmaDeviceId
+    lastDataAt
+    online
+  }
 }
 query AdminControlCenterDevices($language: ErmLanguage!) {
   fleetDevices(limit: 100) {
@@ -49,6 +64,9 @@ query AdminControlCenterDevices($language: ErmLanguage!) {
         ...AdminControlCenterStateFields
       }
     }
+  }
+  fleetKarmaMonitoringTrucks(limit: 100) {
+    ...AdminControlCenterKarmaTrucks
   }
 }
 query AdminControlCenterDevice($id: ID!, $language: ErmLanguage!) {
@@ -69,7 +87,36 @@ query AdminControlCenterDevice($id: ID!, $language: ErmLanguage!) {
     }
     ermState {
       ...AdminControlCenterStateFields
+      mainVoltage {
+        value
+        observedAt
+      }
+      backupVoltage {
+        value
+        observedAt
+      }
+      signalQuality {
+        value
+        observedAt
+      }
+      firmwareVersion {
+        value
+        observedAt
+      }
+      health {
+        lastCloseReason
+        lastClosedAt
+        latestKarmaRoutingWrite {
+          id
+          receivedAt
+          command
+          displayText
+        }
+      }
     }
+  }
+  fleetKarmaMonitoringTrucks(limit: 100) {
+    ...AdminControlCenterKarmaTrucks
   }
 }
 query AdminControlCenterSmsDevices {

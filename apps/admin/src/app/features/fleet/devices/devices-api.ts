@@ -7,6 +7,7 @@ import { DemoSession } from '../../../core/auth/demo-session';
 import { AdminConfig } from '../../../core/config/admin-config';
 import { graphqlOptions } from '../../../core/graphql/graphql-options';
 import type { Language } from '../../../i18n/messages';
+import { karmaByImei } from '../../control-center/control-center-text';
 import {
   AdminDeviceVehiclesDocument,
   AdminDevicesDocument,
@@ -90,7 +91,10 @@ export class DevicesApi implements OnDestroy {
     if (!result.data) {
       throw new Error('Missing live device state.');
     }
-    return new Map(result.data.fleetDevices.items.map((device) => [device.id, device.ermState]));
+    return {
+      states: new Map(result.data.fleetDevices.items.map((device) => [device.id, device.ermState])),
+      karma: karmaByImei(result.data.fleetKarmaMonitoringTrucks),
+    };
   }
 
   async update(variables: AdminUpdateDeviceMutationVariables) {

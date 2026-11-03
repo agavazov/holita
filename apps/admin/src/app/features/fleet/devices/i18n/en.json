@@ -127,7 +127,10 @@
   "live": {
     "online": "Online",
     "offline": "Offline",
-    "karma": "Never connected"
+    "karma": "Never connected",
+    "lostToKarma": "Karma sees it, holita does not",
+    "overdue": "Overdue",
+    "routeChanged": "Karma changed the route"
   },
   "liveError": "The live holita connection is unavailable right now; the device registry is up to date.",
   "liveStale": "The live holita connection could not be refreshed; it shows the state from {time}.",
