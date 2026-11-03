@@ -1304,3 +1304,30 @@ Set the chosen free `PORT` and `ERM_DEVICE_PORT` in that application's `.env` be
 new unit with `systemctl --user daemon-reload` and
 `systemctl --user enable --now holita-erm-server.service`. Restarting ERM Server closes its TCP
 sessions and devices reconnect.
+
+### Moving a unit between Karma and holita
+
+Karma API v2 rejects StarLink parameter writes (`04`, `46`, `PUT /parameters`) but accepts command
+`98` ([connect to configuration server](erm-resources/starlink-online-protocol/authenticated/pages/C98.md)),
+which opens a temporary session from the unit to a given host and port without changing its
+configuration. `npm run erm:route-unit` ([source](../../tools/erm-relay/route-unit.mts)) serves that
+session: it reads 0049–0052 with `45`, writes 0049/0050 with `46` only when they hold the other
+server, reads them back and writes the previous values again if they differ or the backup
+0051/0052 changed. It sends no other command and appends every frame to
+`ERM_RELAY_CAPTURE_DIR/route-unit-<UTC date>.jsonl`.
+
+The tool needs the public device port, so stop ERM Server first and start it right after the tool
+exits:
+
+```bash
+systemctl --user stop holita-erm-server
+npm run erm:route-unit -- --unit 862129080366630 --to holita --holita <public-host>:<public-port>
+systemctl --user start holita-erm-server
+```
+
+While the tool waits (`--wait-minutes`, default 140), queue `98,1,<public-host>,<public-port>` for
+the car through Karma `POST /commands`; a parked unit receives it at its next transmission. Exit
+code 0 means moved and verified, 2 not moved, 3 uncertain (read the log and the parameters again)
+and 4 no session. To move a unit back, run the tool with `--to karma` and no command `98`: the
+unit's next ordinary connection to holita reaches the tool. A unit whose backup server
+(0051/0052) is Karma fails over to it by itself while holita is unreachable.
