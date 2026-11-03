@@ -25,6 +25,7 @@ import { PageHeader } from '../../ui/page-header/page-header';
 import { TablePanel } from '../../ui/table-panel/table-panel';
 import { tableView } from '../../ui/table-panel/table-view';
 import { toneSeverity } from '../../ui/tones';
+import { deviceModelLabel } from '../fleet/devices/i18n/messages';
 import { ControlCenterApi } from './control-center-api';
 import {
   controlCenterText,
@@ -59,6 +60,10 @@ export class DashboardPage implements OnInit {
   readonly branchId = input.required<string>();
   readonly language = input.required<Language>();
   readonly text = computed(() => controlCenterText[this.language()]);
+
+  protected modelLabel(model: string | null | undefined): string {
+    return deviceModelLabel(this.language(), model);
+  }
   private readonly api = inject(ControlCenterApi);
   readonly devices = signal<Device[] | null>(null);
   readonly loading = signal(true);

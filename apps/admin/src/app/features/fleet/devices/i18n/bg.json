@@ -129,5 +129,10 @@
     "offline": "Офлайн",
     "karma": "В Karma"
   },
-  "liveError": "Връзката с holita в реално време не е достъпна в момента; регистърът на устройствата е актуален."
+  "liveError": "Връзката с holita в реално време не е достъпна в момента; регистърът на устройствата е актуален.",
+  "models": {
+    "STARLINK_TRACKER": "StarLink Tracker",
+    "STARLINK_SCOUT": "StarLink Scout",
+    "OTHER": "Друг"
+  }
 }

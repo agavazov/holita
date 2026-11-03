@@ -60,7 +60,7 @@
               </div>
               <div>
                 <dt>{{ text().model }}</dt>
-                <dd>{{ device.model ?? '—' }}</dd>
+                <dd>{{ modelLabel(device.model) || '—' }}</dd>
               </div>
               <div>
                 <dt>{{ text().simPhone }}</dt>

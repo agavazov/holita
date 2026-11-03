@@ -154,7 +154,7 @@
               <a class="app-link" [routerLink]="deviceLink(device)">{{
                 device.vehicle?.licensePlate ?? text().noTruck
               }}</a>
-              <span>{{ device.model ?? '—' }}</span>
+              <span>{{ modelLabel(device.model) || '—' }}</span>
             </div>
           </td>
           <td>

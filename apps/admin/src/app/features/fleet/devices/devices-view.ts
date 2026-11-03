@@ -26,7 +26,7 @@ import { RowActions } from '../../../ui/row-actions/row-actions';
 import { TablePanel } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
-import { devicesText } from './i18n/messages';
+import { deviceModelLabel, devicesText } from './i18n/messages';
 
 export const deviceStatuses = ['ONLINE', 'OFFLINE', 'IN_STOCK'] as const;
 export type DeviceStatusCode = (typeof deviceStatuses)[number];
@@ -127,6 +127,10 @@ export class DevicesView {
   private readonly language = inject(UI_LANGUAGE);
   private readonly sortReady = injectSortReady();
   private readonly units = injectFleetFormat();
+  protected modelLabel(model: string): string {
+    return deviceModelLabel(this.language(), model);
+  }
+
   protected readonly text = computed(() => {
     const text = devicesText(this.language());
     return {
@@ -160,7 +164,10 @@ export class DevicesView {
         label: text.filters.model,
         type: 'enum',
         operators: ['isAnyOf', 'isNoneOf'],
-        options: this.models().map((model) => ({ value: model, label: model })),
+        options: this.models().map((model) => ({
+          value: model,
+          label: deviceModelLabel(this.language(), model),
+        })),
       },
       {
         key: 'firmware',

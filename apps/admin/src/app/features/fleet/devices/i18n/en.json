@@ -129,5 +129,10 @@
     "offline": "Offline",
     "karma": "On Karma"
   },
-  "liveError": "The live holita connection is unavailable right now; the device registry is up to date."
+  "liveError": "The live holita connection is unavailable right now; the device registry is up to date.",
+  "models": {
+    "STARLINK_TRACKER": "StarLink Tracker",
+    "STARLINK_SCOUT": "StarLink Scout",
+    "OTHER": "Other"
+  }
 }

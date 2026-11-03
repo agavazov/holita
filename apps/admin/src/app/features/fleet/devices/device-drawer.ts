@@ -33,7 +33,7 @@ import { patternValidator, textValidator, validationMessage } from '../../../ui/
 import { interpolate } from '../../../ui/i18n/messages';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
 import type { DeviceRow } from './devices-view';
-import { devicesText } from './i18n/messages';
+import { deviceModelLabel, devicesText } from './i18n/messages';
 
 /** The editable device fields, as the register and update mutations take them. */
 export interface DeviceForm {
@@ -125,6 +125,9 @@ export class DeviceDrawer {
   protected readonly optionChoices = deviceOptions.map((value) => ({ value, label: value }));
   private readonly catalog = computed(() => devicesText(this.language()));
   protected readonly text = computed(() => this.catalog().drawer);
+  protected readonly modelSubtitle = computed(
+    () => deviceModelLabel(this.language(), this.device()?.model) || null,
+  );
   protected readonly installedAtHint = computed(() =>
     interpolate(this.text().installedAtHint, {
       timeZone: this.timeZone(),
@@ -187,7 +190,10 @@ export class DeviceDrawer {
     return this.form.dirty;
   });
   protected readonly modelOptions = computed(() =>
-    this.models().map((model) => ({ value: model, label: model })),
+    this.models().map((model) => ({
+      value: model,
+      label: deviceModelLabel(this.language(), model),
+    })),
   );
   protected readonly vehicleOptions = computed(() => [
     { id: null, name: this.text().notInstalled },

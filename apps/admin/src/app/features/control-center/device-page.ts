@@ -43,6 +43,7 @@ import { PageHeader } from '../../ui/page-header/page-header';
 import { TablePanel } from '../../ui/table-panel/table-panel';
 import { tableView } from '../../ui/table-panel/table-view';
 import { toneSeverity } from '../../ui/tones';
+import { deviceModelLabel } from '../fleet/devices/i18n/messages';
 import { ControlCenterApi } from './control-center-api';
 import {
   controlCenterText,
@@ -107,6 +108,10 @@ export class DevicePage implements OnInit {
   readonly recordId = input.required<string>();
   readonly tab = input.required<DeviceTab>();
   readonly text = computed(() => controlCenterText[this.language()]);
+
+  protected modelLabel(model: string | null | undefined): string {
+    return deviceModelLabel(this.language(), model);
+  }
   private readonly api = inject(ControlCenterApi);
   private readonly router = inject(Router);
   private readonly confirmation = inject(ConfirmationService);
