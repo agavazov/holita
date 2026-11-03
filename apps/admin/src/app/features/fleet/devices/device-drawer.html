@@ -12,9 +12,6 @@
   @if (demo()) {
     <p-tag drawerMeta severity="info" [value]="text().demoLabel" />
   }
-  @if (device(); as device) {
-    <p-tag drawerMeta [severity]="statusSeverity(device)" [value]="statusLabel(device)" />
-  }
   @if (state() === 'ready') {
     <form #formElement id="device-form" [formGroup]="form" (ngSubmit)="submit()">
       @if (demo()) {

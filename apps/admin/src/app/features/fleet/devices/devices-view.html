@@ -21,17 +21,6 @@
 
 @if (kpis(); as kpis) {
   <holita-kpi-strip [label]="text().kpis.label">
-    <holita-kpi-tile
-      [label]="text().kpis.online"
-      [value]="kpis.online | holitaNumber"
-      tone="success"
-    />
-    <holita-kpi-tile
-      [label]="text().kpis.offline"
-      [value]="kpis.offline | holitaNumber"
-      [footnote]="text().kpis.offlineFootnote"
-      [tone]="kpis.offline ? 'danger' : null"
-    />
     <holita-kpi-tile [label]="text().kpis.stock" [value]="kpis.stock | holitaNumber" />
     <holita-kpi-tile
       [label]="text().kpis.outdated"

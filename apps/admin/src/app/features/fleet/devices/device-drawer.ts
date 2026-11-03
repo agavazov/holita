@@ -31,9 +31,8 @@ import { focusFirstInvalid } from '../../../ui/forms/focus';
 import { lockWhileSaving } from '../../../ui/forms/saving';
 import { patternValidator, textValidator, validationMessage } from '../../../ui/forms/validators';
 import { interpolate } from '../../../ui/i18n/messages';
-import { toneSeverity } from '../../../ui/tones';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
-import { type DeviceRow, deviceStatusTones } from './devices-view';
+import type { DeviceRow } from './devices-view';
 import { devicesText } from './i18n/messages';
 
 /** The editable device fields, as the register and update mutations take them. */
@@ -241,14 +240,6 @@ export class DeviceDrawer {
         this.focusInvalid();
       },
     );
-  }
-
-  protected statusSeverity(device: DeviceRow) {
-    return toneSeverity(deviceStatusTones[device.status]);
-  }
-
-  protected statusLabel(device: DeviceRow): string {
-    return this.catalog().statuses[device.status];
   }
 
   protected errorOf(name: DeviceField): string | null {
