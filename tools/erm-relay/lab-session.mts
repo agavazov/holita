@@ -2,13 +2,16 @@ import { appendFileSync, mkdirSync, readFileSync } from 'node:fs';
 import net, { type Socket } from 'node:net';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
+import { inflateContainer } from './starlink-container.mjs';
 
 // Runs a script of StarLink commands in one configuration-server session (command 98 queued through
 // Karma, pointing at --port) and records every frame. Each script line is "<command>,<fields...>";
 // lines starting with "//" are comments. Reads are always allowed. Parameter writes (04/46), eData
 // messages (30) and tracking (22) need --allow-writes, and 0049-0054, 0059 and 0060 are never
-// written: route-unit owns the routing. Every reply is confirmed, so the unit does not resend it to
-// its primary server. Frames may hold secrets, so they go only to the capture file.
+// written: route-unit owns the routing. Replies to the script are confirmed, so the unit does not
+// resend them to its primary server; events are not, so the unit still delivers them to that server.
+// Frames inside $SLC containers are handled like plain ones. Frames may hold secrets, so they go only
+// to the capture file.
 const { values: options } = parseArgs({
   options: {
     unit: { type: 'string' },
@@ -239,38 +242,44 @@ const listener = net.createServer((socket) => {
       if (end < 0) {
         break;
       }
-      const raw = buffered.subarray(0, end);
+      const line = buffered.subarray(0, end);
       buffered = buffered.subarray(end + 2);
-      record({ connection, from: 'device', frame: raw.toString('latin1') });
-      const frame = deviceFrame(raw);
-      if (!frame || finished || (active !== undefined && active !== socket)) {
-        continue;
-      }
-      if (active === undefined) {
-        active = socket;
-        clearTimeout(probe);
-      }
-      if (frame.command !== '02') {
-        const confirmation = serverFrame('02', String(++reference), [frame.reference, '01']);
-        record({
-          connection,
-          from: 'holita',
-          frame: confirmation.subarray(0, -2).toString('latin1'),
-        });
-        socket.write(confirmation);
-      }
-      if (index < 0) {
-        next();
-      } else if (
-        pending &&
-        ((frame.command === '02' && frame.fields[0] === pending.reference) ||
-          frame.command === pending.command)
-      ) {
-        const result = frame.command === '02' ? ` result ${frame.fields.slice(1).join(',')}` : '';
-        console.log(
-          `step ${String(index)} ${pending.command}: ${frame.command} after ${String(Date.now() - pending.sentAt)} ms${result}`,
-        );
-        next();
+      record({ connection, from: 'device', frame: line.toString('latin1') });
+      const inner = inflateContainer(line);
+      for (const raw of inner ?? [line]) {
+        if (inner) {
+          record({ connection, from: 'device-inner', frame: raw.toString('latin1') });
+        }
+        const frame = deviceFrame(raw);
+        if (!frame || finished || (active !== undefined && active !== socket)) {
+          continue;
+        }
+        if (active === undefined) {
+          active = socket;
+          clearTimeout(probe);
+        }
+        const answers =
+          pending &&
+          ((frame.command === '02' && frame.fields[0] === pending.reference) ||
+            frame.command === pending.command);
+        if (frame.command !== '02' && (answers || (index < 0 && frame.command === '48'))) {
+          const confirmation = serverFrame('02', String(++reference), [frame.reference, '01']);
+          record({
+            connection,
+            from: 'holita',
+            frame: confirmation.subarray(0, -2).toString('latin1'),
+          });
+          socket.write(confirmation);
+        }
+        if (index < 0) {
+          next();
+        } else if (pending && answers) {
+          const result = frame.command === '02' ? ` result ${frame.fields.slice(1).join(',')}` : '';
+          console.log(
+            `step ${String(index)} ${pending.command}: ${frame.command} after ${String(Date.now() - pending.sentAt)} ms${result}`,
+          );
+          next();
+        }
       }
     }
     if (buffered.length > 16_384) {
