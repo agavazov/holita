@@ -41,11 +41,11 @@ Selecting a Tenant obtains a candidate demo token and loads only its Branches in
 Changing Tenant clears the Branch selection, cancels its old discovery client and ignores late candidate
 tokens. The candidate session is activated and stored only after selecting a valid Branch and submitting
 Sign in; no business requests run before this. Login opens Overview for the selected Branch. The seed creates the RentalSofia Tenant with Discordia and Sandbox Branches.
-Core issues an HMAC-SHA256 token containing Tenant ID and an eight-hour expiry. Core, Fleet and Karma Client
+Core issues an HMAC-SHA256 token containing Tenant ID and an eight-hour expiry. Core, Fleet, Karma Client and ERM Server
 verify it per request and reject missing/invalid/expired sessions as UNAUTHENTICATED. Gateway
 forwards Authorization; tenantId never comes from a business input or x-tenant-id header.
 
-Core, Fleet and Karma Client use the same DEMO_AUTH_SECRET (at least 32 characters). Their environment
+Core, Fleet, Karma Client and ERM Server use the same DEMO_AUTH_SECRET (at least 32 characters). Their environment
 examples show the local-only default; outside production it is used when no valid secret is set.
 DEMO_AUTH_ENABLED=false disables tenant discovery, demoLogin and demo sessions. In NODE_ENV=production
 demo auth is disabled unless explicitly enabled and a valid secret is configured. The flag is
@@ -1074,7 +1074,8 @@ so application restarts do not drop device connections. Configure it from the ro
 
 `apps/erm-server` (`@holita/erm-server`) runs independently from compiled output. It remains
 outside `npm run dev` and `npm run kill`, so restarting the web/API group leaves its device
-connections open. It has no GraphQL endpoint.
+connections open. Its read-only GraphQL endpoint shares the HTTP listener with health and the
+internal API.
 
 `ERM_PRIMARY_UNITS` is a comma-separated unit allowlist, empty by default. The first complete
 device frame selects the connection's mode:
@@ -1133,6 +1134,97 @@ ports, for example:
 ```bash
 PORT=11017 ERM_DEVICE_PORT=11501 npm run start:prod --workspace @holita/erm-server
 ```
+
+### GraphQL and admin inspection
+
+Router includes ERM Server as its fourth subgraph at `ERM_SERVER_GRAPHQL_URL`, defaulting to
+`http://127.0.0.1:11015/graphql`. ERM Server uses the same `DEMO_AUTH_SECRET` and
+`DEMO_AUTH_ENABLED` settings as Core, Fleet and Karma Client. Every ERM query requires the
+signed Tenant session; results are shared provider-level data and are not filtered by Branch.
+The internal machine token is separate from this browser session.
+
+The **ERM сървър / ERM Server** navigation entry opens `/:language/erm-server`. Open a unit to
+inspect its Events, Raw frames and Commands tabs. The units table shows live connection state,
+the last frame time and the latest decoded position and voltages. Position links open
+the map. The feature is read-only and remains available without an active Fleet Branch.
+
+Use the Gateway endpoint with a signed session, for example:
+
+```graphql
+query ErmInspection($unitId: ID!) {
+  ermUnits(input: { pageSize: 25 }) {
+    items {
+      unitId
+      connected
+      mode
+      peer
+      connectedSince
+      lastFrameAt
+      latestEvent {
+        eventTime
+        latitude
+        longitude
+        speedKmh
+        engineOn
+        mainVoltage
+        backupVoltage
+      }
+    }
+    nextCursor
+    hasMore
+  }
+  ermEvents(input: { unitId: $unitId, pageSize: 25 }) {
+    items {
+      id
+      eventId
+      eventTime
+      positionTime
+      latitude
+      longitude
+      fields
+    }
+    nextCursor
+    hasMore
+  }
+  ermFrames(input: { unitId: $unitId, pageSize: 25 }) {
+    items {
+      id
+      direction
+      receivedAt
+      command
+      reference
+      checksum
+      partial
+      displayText
+    }
+    nextCursor
+    hasMore
+  }
+  ermCommands(input: { unitId: $unitId, pageSize: 25 }) {
+    items {
+      id
+      command
+      reference
+      fields
+      status
+      sentAt
+      answeredAt
+      resultCode
+      responseText
+    }
+    nextCursor
+    hasMore
+  }
+}
+```
+
+Pages accept sizes 25, 50 or 100 and return newest records first. Supply `nextCursor` as the
+next input's `cursor` for the same query and unit. Raw frame text escapes control bytes for
+display; the original bytes remain in the database. Event `fields` retains the raw JSON token map.
+
+Deploy the ERM migrations and updated compiled service, regenerate the supergraph, rebuild the
+admin and restart Router with the fourth subgraph URL. Existing device ports and the internal
+API token do not change. Keep the ERM service outside the web/API development group.
 
 ### Internal unit and command API
 

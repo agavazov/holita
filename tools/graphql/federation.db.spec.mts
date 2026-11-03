@@ -182,6 +182,112 @@ describe('Fleet through the actual federation boundary', () => {
     if (typeof otherToken !== 'string') {
       throw new Error('Missing second tenant session');
     }
+    const ermSource = `query($unitId: ID!) {
+      ermUnits(input: {pageSize: 25}) {
+        items { unitId connected mode peer connectedSince lastFrameAt latestEvent { eventId latitude longitude speedKmh engineOn mainVoltage backupVoltage } }
+        hasMore
+      }
+      ermEvents(input: {unitId: $unitId, pageSize: 25}) {
+        items { unitId eventId eventTime positionTime latitude longitude speedKmh heading odometer engineOn mainVoltage backupVoltage fields }
+        hasMore
+      }
+      ermFrames(input: {unitId: $unitId, pageSize: 25}) {
+        items { direction command reference checksum partial displayText }
+        hasMore
+      }
+      ermCommands(input: {unitId: $unitId, pageSize: 25}) {
+        items { unitId reference command fields status resultCode responseText }
+        hasMore
+      }
+    }`;
+    const unitId = '862129080366630';
+    const erm = await post(ermSource, { authorization: `Bearer ${token}` }, { unitId });
+    expect(erm.body).toMatchObject({
+      data: {
+        ermUnits: {
+          items: [
+            {
+              unitId,
+              connected: false,
+              mode: null,
+              peer: '127.0.0.1:41000',
+              latestEvent: { latitude: 42.6977, longitude: 23.3219 },
+            },
+          ],
+          hasMore: false,
+        },
+        ermEvents: {
+          items: [
+            {
+              unitId,
+              eventId: '1',
+              eventTime: '2026-11-02T12:00:00.000Z',
+              latitude: 42.6977,
+              longitude: 23.3219,
+              fields: { '#EID#': '1', extra: ['fixture'] },
+            },
+          ],
+          hasMore: false,
+        },
+        ermFrames: {
+          items: [
+            {
+              direction: 'HOLITA',
+              command: '03',
+              reference: '900000001',
+              checksum: 'OK',
+              partial: false,
+            },
+            {
+              direction: 'DEVICE',
+              command: '06',
+              reference: '123',
+              checksum: 'OK',
+              partial: false,
+              displayText: '$SLU862129080366630,06,123,fixture\\x10',
+            },
+          ],
+          hasMore: false,
+        },
+        ermCommands: {
+          items: [
+            {
+              unitId,
+              reference: '900000001',
+              command: '03',
+              fields: ['0774'],
+              status: 'ANSWERED',
+              resultCode: '01',
+            },
+          ],
+          hasMore: false,
+        },
+      },
+    });
+    expect(erm.body.errors).toBeUndefined();
+    const ermSessions: Record<string, string>[] = [
+      { authorization: `Bearer ${otherToken}` },
+      { authorization: `Bearer ${otherToken}`, 'x-branch-id': discordia },
+    ];
+    for (const headers of ermSessions) {
+      expect((await post(ermSource, headers, { unitId })).body).toEqual(erm.body);
+    }
+    for (const target of [fixture.url, fixture.ermUrl]) {
+      for (const authorization of [undefined, 'Bearer invalid']) {
+        const response = await fetch(target, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-tenant-id': '01000000-0000-4000-8000-000000000001',
+            ...(authorization ? { authorization } : {}),
+          },
+          body: JSON.stringify({ query: '{ermUnits{items{unitId}}}' }),
+        });
+        expect(await response.json()).toMatchObject({
+          errors: [{ extensions: { code: 'UNAUTHENTICATED' } }],
+        });
+      }
+    }
     expect(await query('{branches{id name}}', {}, discordia, fixture.url, otherToken)).toEqual({
       data: {
         branches: [{ id: '10000000-0000-4000-8000-000000000003', name: 'Isolation branch' }],

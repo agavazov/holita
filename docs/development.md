@@ -109,22 +109,23 @@ environment and use `ROUTER_PORT` instead of `PORT`. The admin proxy reads the s
 Copy only the relevant entries from the reference into the consuming process's ignored
 runtime file, preserving existing settings:
 
-| Consumer                 | Runtime configuration                                                                                                                    |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Compose and provisioning | Root `.env`: `POSTGRES_PORT`, `POSTGRES_PASSWORD`                                                                                        |
-| Core and Prisma          | `apps/core/.env`: Core database URLs and shared demo settings                                                                            |
-| Fleet and Prisma         | `apps/fleet/.env`: Fleet database URLs, shared demo settings, `FLEET_ENABLED`, `CORE_GRAPHQL_URL` and admin origins                      |
-| Karma Client             | `apps/karma-client/.env`: `KARMA_API_URL`, `KARMA_USER`, `KARMA_PASSWORD` and shared demo settings                                       |
-| ERM Server and Prisma    | `apps/erm-server/.env`: ERM database URLs, `ERM_DEVICE_HOST`, `ERM_DEVICE_PORT`, `ERM_UPSTREAM`, `ERM_CAPTURE_DIR`, optional HTTP `PORT` |
-| Router and Angular proxy | Export Router variables in the shell that launches npm; proxy reads `ROUTER_PORT`                                                        |
-| ERM relay                | Root `.env`: `ERM_RELAY_HOST`, `ERM_RELAY_PORT`, `ERM_RELAY_UPSTREAM` and `ERM_RELAY_CAPTURE_DIR`                                        |
+| Consumer                 | Runtime configuration                                                                                                   |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| Compose and provisioning | Root `.env`: `POSTGRES_PORT`, `POSTGRES_PASSWORD`                                                                       |
+| Core and Prisma          | `apps/core/.env`: Core database URLs and shared demo settings                                                           |
+| Fleet and Prisma         | `apps/fleet/.env`: Fleet database URLs, shared demo settings, `FLEET_ENABLED`, `CORE_GRAPHQL_URL` and admin origins     |
+| Karma Client             | `apps/karma-client/.env`: `KARMA_API_URL`, `KARMA_USER`, `KARMA_PASSWORD` and shared demo settings                      |
+| ERM Server and Prisma    | `apps/erm-server/.env`: ERM database URLs, shared demo settings, device listener/capture settings, optional HTTP `PORT` |
+| Router and Angular proxy | Export Router variables in the shell that launches npm; proxy reads `ROUTER_PORT`                                       |
+| ERM relay                | Root `.env`: `ERM_RELAY_HOST`, `ERM_RELAY_PORT`, `ERM_RELAY_UPSTREAM` and `ERM_RELAY_CAPTURE_DIR`                       |
 
 An optional `PORT` override belongs only to an individual Node application; omit it to
 keep that application's default. Exporting one `PORT` for the development group gives
 all subgraphs the same listener port. The reference is scoped by consumer, so copy the
 needed entries rather than loading the entire file into a process.
 
-Gateway uses `CORE_GRAPHQL_URL`, `FLEET_GRAPHQL_URL`, `KARMA_CLIENT_GRAPHQL_URL` and `ADMIN_ORIGIN`.
+Gateway uses `CORE_GRAPHQL_URL`, `FLEET_GRAPHQL_URL`, `KARMA_CLIENT_GRAPHQL_URL`,
+`ERM_SERVER_GRAPHQL_URL` and `ADMIN_ORIGIN`.
 Fleet uses `CORE_GRAPHQL_URL`, `FLEET_ENABLED` and `ADMIN_ORIGINS`, a comma-separated
 exact origin allowlist with `ADMIN_ORIGIN` as the single-origin fallback. Defaults allow the
 Angular loopback origin. Database URLs belong only to Core/Fleet/ERM Server. Karma Client has application-local account settings described in
@@ -189,7 +190,14 @@ it does not load `apps/gateway/.env`. Defaults are:
 | CORE_GRAPHQL_URL         | http://127.0.0.1:11011/graphql |
 | FLEET_GRAPHQL_URL        | http://127.0.0.1:11013/graphql |
 | KARMA_CLIENT_GRAPHQL_URL | http://127.0.0.1:11014/graphql |
+| ERM_SERVER_GRAPHQL_URL   | http://127.0.0.1:11015/graphql |
 | ADMIN_ORIGIN             | http://127.0.0.1:11000         |
+
+ERM Server is the fourth subgraph, served by its independent compiled process on HTTP 11015;
+`npm run dev` and `npm run kill` continue to exclude it. Set its shared `DEMO_AUTH_ENABLED` and
+`DEMO_AUTH_SECRET` consistently with the other subgraphs. After adding or changing its endpoint,
+regenerate the supergraph and restart Router with the exported `ERM_SERVER_GRAPHQL_URL`.
+See [ERM inspection](discocan/development.md#graphql-and-admin-inspection) for the read-only API.
 
 For example, `ROUTER_PORT=11017 npm run dev` changes Router's GraphQL listener and the Angular proxy together; health remains on 11016.
 The configured origin can send GET/POST/OPTIONS with `authorization`, `content-type`,

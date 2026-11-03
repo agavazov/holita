@@ -30,6 +30,7 @@ override_subgraph_url:
   core: '${env.CORE_GRAPHQL_URL:-http://127.0.0.1:11011/graphql}'
   fleet: '${env.FLEET_GRAPHQL_URL:-http://127.0.0.1:11013/graphql}'
   karma-client: '${env.KARMA_CLIENT_GRAPHQL_URL:-http://127.0.0.1:11014/graphql}'
+  erm-server: '${env.ERM_SERVER_GRAPHQL_URL:-http://127.0.0.1:11015/graphql}'
 
 headers:
   all:

@@ -1,6 +1,7 @@
 import { spawn, execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { promisify } from 'node:util';
@@ -32,6 +33,7 @@ function isGatewayReady(body: unknown): boolean {
   }
   const vehicles = body.data.fleetVehicles;
   const summary = body.data.fleetVehicleSummary;
+  const ermUnits = body.data.ermUnits;
   return (
     isRecord(vehicles) &&
     Array.isArray(vehicles.items) &&
@@ -45,7 +47,11 @@ function isGatewayReady(body: unknown): boolean {
     isRecord(summary) &&
     typeof summary.inOperation === 'number' &&
     Number.isSafeInteger(summary.inOperation) &&
-    summary.inOperation >= 0
+    summary.inOperation >= 0 &&
+    isRecord(ermUnits) &&
+    Array.isArray(ermUnits.items) &&
+    ermUnits.items.length === 1 &&
+    ermUnits.items.every((item: unknown) => isRecord(item) && typeof item.unitId === 'string')
   );
 }
 
@@ -92,6 +98,7 @@ async function waitForGatewayReadiness(url: string) {
     branches { id }
     fleetVehicles(offset: 0, limit: 1) { items { id } total offset limit }
     fleetVehicleSummary { inOperation }
+    ermUnits(input: {pageSize: 25}) { items { unitId } }
   }`;
   let lastFailure = 'No signed readiness response';
   while (Date.now() < deadline) {
@@ -119,10 +126,12 @@ async function waitForGatewayReadiness(url: string) {
     lastFailure += ` (request ${requestId})`;
     await delay(Math.max(0, Math.min(100, deadline - Date.now())));
   }
-  throw new Error(`Signed Gateway Core/Fleet readiness timed out after 10 seconds: ${lastFailure}`);
+  throw new Error(
+    `Signed Gateway Core/Fleet/ERM readiness timed out after 10 seconds: ${lastFailure}`,
+  );
 }
 
-function guardedTestUrl(service: 'core' | 'fleet', value: string): URL {
+function guardedTestUrl(service: 'core' | 'fleet' | 'erm', value: string): URL {
   let url: URL;
   try {
     url = new URL(value);
@@ -144,7 +153,7 @@ function guardedTestUrl(service: 'core' | 'fleet', value: string): URL {
   return url;
 }
 
-async function prepareDatabase(service: 'core' | 'fleet') {
+async function prepareDatabase(service: 'core' | 'fleet' | 'erm') {
   const name = `holita_${service}_test`;
   const url = guardedTestUrl(
     service,
@@ -174,7 +183,7 @@ async function prepareDatabase(service: 'core' | 'fleet') {
     const databaseUrl = url.toString();
     url.searchParams.set('schema', schema);
     const env = { ...process.env, [`${service.toUpperCase()}_DATABASE_URL`]: url.toString() };
-    const cwd = join(workspaceRoot, 'apps', service);
+    const cwd = join(workspaceRoot, 'apps', service === 'erm' ? 'erm-server' : service);
     await execute(
       process.execPath,
       [join(workspaceRoot, 'node_modules/prisma/build/index.js'), 'migrate', 'deploy'],
@@ -242,9 +251,65 @@ async function insertTenant(
   }
 }
 
+async function insertErmRecords(databaseUrl: string, schemaName: string) {
+  const connection = new pg.Client({ connectionString: databaseUrl });
+  await connection.connect();
+  try {
+    const schema = pg.escapeIdentifier(schemaName);
+    const connectionId = '20000000-0000-4000-8000-000000000001';
+    const unitId = '862129080366630';
+    const at = '2026-11-02T12:00:00.000Z';
+    await connection.query(
+      `INSERT INTO ${schema}."ermConnection"
+       ("id", "peer", "unitId", "upstream", "openedAt", "closedAt")
+       VALUES ($1, $2, $3, $4, $5, $5)`,
+      [connectionId, '127.0.0.1:41000', unitId, 'fixture-karma:500', at],
+    );
+    const frame = await connection.query<{ id: string }>(
+      `INSERT INTO ${schema}."ermFrame"
+       ("connectionId", "receivedAt", "direction", "unitId", "command", "reference", "checksum", "raw")
+       VALUES ($1, $2, 'device', $3, '06', '123', 'ok', $4) RETURNING "id"`,
+      [connectionId, at, unitId, Buffer.from('$SLU862129080366630,06,123,fixture\x10', 'latin1')],
+    );
+    const frameId = frame.rows[0]?.id;
+    if (!frameId) {
+      throw new Error('Missing ERM fixture frame');
+    }
+    await connection.query(
+      `INSERT INTO ${schema}."ermEvent"
+       ("frameId", "unitId", "eventId", "eventTime", "positionTime", "latitude", "longitude",
+        "speedKmh", "heading", "odometer", "engineOn", "mainVoltage", "backupVoltage", "fields")
+       VALUES ($1, $2, '1', $3, $3, 42.6977, 23.3219, 25, 90, 12345, true, 24.5, 4.1, $4)`,
+      [frameId, unitId, at, { '#EID#': '1', extra: ['fixture'] }],
+    );
+    await connection.query(
+      `INSERT INTO ${schema}."ermFrame"
+       ("connectionId", "receivedAt", "direction", "unitId", "command", "reference", "checksum", "raw")
+       VALUES ($1, $2, 'holita', $3, '03', '900000001', 'ok', $4)`,
+      [connectionId, at, unitId, Buffer.from('$SRV862129080366630,03,900000001,0774*00')],
+    );
+    await connection.query(
+      `INSERT INTO ${schema}."ermCommand"
+       ("id", "unitId", "connectionId", "reference", "command", "fields", "status", "sentAt",
+        "answeredAt", "resultCode", "response")
+       VALUES ($1, $2, $3, '900000001', '03', $4, 'answered', $5, $5, '01', $6)`,
+      [
+        '30000000-0000-4000-8000-000000000001',
+        unitId,
+        connectionId,
+        ['0774'],
+        at,
+        Buffer.from('$SLU862129080366630,03,124,0774,fixture*00'),
+      ],
+    );
+  } finally {
+    await connection.end();
+  }
+}
+
 async function startRouter(options: {
   adminOrigin: string;
-  subgraphUrls: { core: string; fleet: string; 'karma-client': string };
+  subgraphUrls: { core: string; fleet: string; 'karma-client': string; 'erm-server': string };
 }) {
   const cwd = join(workspaceRoot, 'apps/gateway');
   const binary = join(cwd, 'router/dist/router');
@@ -277,6 +342,7 @@ async function startRouter(options: {
         CORE_GRAPHQL_URL: options.subgraphUrls.core,
         FLEET_GRAPHQL_URL: options.subgraphUrls.fleet,
         KARMA_CLIENT_GRAPHQL_URL: options.subgraphUrls['karma-client'],
+        ERM_SERVER_GRAPHQL_URL: options.subgraphUrls['erm-server'],
         ADMIN_ORIGIN: options.adminOrigin,
       },
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -481,7 +547,11 @@ export async function createFederationFixture(
   options: { adminOrigin?: string; deviceOperations?: boolean } = {},
 ) {
   config({
-    path: [join(workspaceRoot, 'apps/core/.env'), join(workspaceRoot, 'apps/fleet/.env')],
+    path: [
+      join(workspaceRoot, 'apps/core/.env'),
+      join(workspaceRoot, 'apps/fleet/.env'),
+      join(workspaceRoot, 'apps/erm-server/.env'),
+    ],
     quiet: true,
   });
   const cleanup: (() => Promise<void>)[] = [];
@@ -511,6 +581,23 @@ export async function createFederationFixture(
 
     const fleetDatabase = await prepareDatabase('fleet');
     cleanup.push(fleetDatabase.close);
+    const ermDatabase = await prepareDatabase('erm');
+    cleanup.push(ermDatabase.close);
+    await insertErmRecords(ermDatabase.databaseUrl, ermDatabase.schema);
+    const captureParent = join(workspaceRoot, '.references/review');
+    await mkdir(captureParent, { recursive: true });
+    const captureDirectory = await mkdtemp(join(captureParent, 'erm-federation-'));
+    cleanup.push(() => rm(captureDirectory, { recursive: true, force: true }));
+    const ermServer = await startApplication('erm-server', {
+      ERM_DATABASE_URL: ermDatabase.url,
+      ERM_DEVICE_HOST: '127.0.0.1',
+      ERM_DEVICE_PORT: String(await availablePort()),
+      ERM_UPSTREAM: '127.0.0.1:1',
+      ERM_PRIMARY_UNITS: '',
+      ERM_INTERNAL_TOKEN: '',
+      ERM_CAPTURE_DIR: captureDirectory,
+    });
+    cleanup.push(ermServer.stop);
     const core = await startApplication('core', { CORE_DATABASE_URL: coreDatabase.url });
     cleanup.push(core.stop);
     const coreObserver = await observeRequests(core.url);
@@ -545,13 +632,14 @@ export async function createFederationFixture(
       core: coreObserver.url,
       fleet: fleetObserver.url,
       'karma-client': karmaClient.url,
+      'erm-server': ermServer.url,
     };
     const adminOrigin = options.adminOrigin ?? 'http://127.0.0.1:11000';
     const gateway = await startRouter({ adminOrigin, subgraphUrls });
     cleanup.push(gateway.stop);
     const demoSession = await waitForGatewayReadiness(gateway.url).catch((cause: unknown) => {
       throw new Error(
-        `Gateway readiness failed:\nRouter:\n${gateway.logs()}\nCore:\n${core.logs()}\nFleet:\n${fleet.logs()}`,
+        `Gateway readiness failed:\nRouter:\n${gateway.logs()}\nCore:\n${core.logs()}\nFleet:\n${fleet.logs()}\nERM Server:\n${ermServer.logs()}`,
         { cause },
       );
     });
@@ -570,11 +658,13 @@ export async function createFederationFixture(
         core: core.logs(),
         fleet: fleet.logs(),
         'karma-client': karmaClient.logs(),
+        'erm-server': ermServer.logs(),
       }),
       karma,
       coreRequests: coreObserver.requests,
       setCoreResponse: coreObserver.setResponse,
       fleetUrl: fleet.url,
+      ermUrl: ermServer.url,
       fleetRequests: fleetObserver.requests,
       close,
     };

@@ -1,0 +1,114 @@
+extend schema @link(url: "https://specs.apollo.dev/federation/v2.3", import: [])
+
+scalar ErmJSON
+
+enum ErmSessionMode {
+  MIRROR
+  PRIMARY
+}
+enum ErmFrameDirection {
+  DEVICE
+  UPSTREAM
+  HOLITA
+}
+enum ErmFrameChecksum {
+  OK
+  MISMATCH
+  ABSENT
+}
+enum ErmCommandState {
+  SENT
+  ANSWERED
+  TIMEOUT
+  FAILED
+}
+input ErmUnitsInput {
+  pageSize: Int = 50
+  cursor: String
+}
+input ErmHistoryInput {
+  unitId: ID!
+  pageSize: Int = 50
+  cursor: String
+}
+type ErmUnit {
+  unitId: ID!
+  connected: Boolean!
+  mode: ErmSessionMode
+  peer: String!
+  connectedSince: String
+  lastFrameAt: String
+  latestEvent: ErmEvent
+}
+type ErmEvent {
+  id: ID!
+  frameId: ID!
+  unitId: ID!
+  eventId: String
+  eventTime: String
+  positionTime: String
+  latitude: Float
+  longitude: Float
+  speedKmh: Float
+  heading: Float
+  odometer: Float
+  engineOn: Boolean
+  mainVoltage: Float
+  backupVoltage: Float
+  fields: ErmJSON!
+}
+type ErmFrame {
+  id: ID!
+  connectionId: ID!
+  unitId: ID
+  direction: ErmFrameDirection!
+  receivedAt: String!
+  command: String
+  reference: String
+  checksum: ErmFrameChecksum!
+  partial: Boolean!
+  displayText: String!
+}
+type ErmCommand {
+  id: ID!
+  unitId: ID!
+  connectionId: ID!
+  reference: String!
+  command: String!
+  fields: [String!]!
+  status: ErmCommandState!
+  sentAt: String!
+  answeredAt: String
+  resultCode: String
+  responseText: String
+}
+type ErmUnitsPage {
+  items: [ErmUnit!]!
+  cursor: String
+  nextCursor: String
+  hasMore: Boolean!
+}
+type ErmEventsPage {
+  items: [ErmEvent!]!
+  cursor: String
+  nextCursor: String
+  hasMore: Boolean!
+}
+type ErmFramesPage {
+  items: [ErmFrame!]!
+  cursor: String
+  nextCursor: String
+  hasMore: Boolean!
+}
+type ErmCommandsPage {
+  items: [ErmCommand!]!
+  cursor: String
+  nextCursor: String
+  hasMore: Boolean!
+}
+type Query {
+  ermUnits(input: ErmUnitsInput): ErmUnitsPage!
+  ermEvents(input: ErmHistoryInput!): ErmEventsPage!
+  ermFrames(input: ErmHistoryInput!): ErmFramesPage!
+  ermCommands(input: ErmHistoryInput!): ErmCommandsPage!
+}

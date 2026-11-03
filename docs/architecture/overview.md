@@ -23,7 +23,7 @@ ERM Server also keeps its pure StarLink framing and envelope functions in `src/s
 | Core         | Tenants, Branches                                                                                                                                 | Tenant/Branch API; one local DatabaseModule provides Prisma to both features                                                                                                                       |
 | Fleet        | Vehicles, Devices, Device operations, Drivers, Vehicle groups, Telemetry, Trips, Events, Service tasks, Overview, Settings, offline eData catalog | `integrations/core/` owns Branch existence checks; `integrations/karma/` owns internal device-operation HTTP; one local DatabaseModule provides Fleet Prisma; `clock/` provides the business clock |
 | Karma Client | Cars, eData, Location, History, References, Accounts, internal device configuration operations                                                    | `integrations/karma/` owns external HTTP and the shared upstream account session; no database                                                                                                      |
-| ERM Server   | Device connections and raw frame capture                                                                                                          | StarLink TCP mirror to Karma ingestion; its own DatabaseModule and provider-level connection/frame persistence                                                                                     |
+| ERM Server   | Device sessions, frame capture and read-only telemetry inspection                                                                                 | StarLink TCP mirror/primary mode; its own database and provider-level GraphQL reads                                                                                                                |
 
 Fleet feature modules import each other only in one direction: Telemetry and Events are used by
 Vehicles, Devices (Telemetry only), Drivers and Trips; Trips by Drivers; Service tasks by
@@ -41,7 +41,7 @@ Fleet owns operation persistence and the Nest scheduler; Karma Client retains th
 account connection without a database. Each application's Prisma client remains private.
 
 Angular keeps business pages, concrete API services, GraphQL operations and tests under
-`features/`. Fleet and Karma Client own separate route arrays composed by `app.routes.ts`
+`features/`. Fleet, Karma Client and ERM Server own separate route arrays composed by `app.routes.ts`
 at the existing route level. `workspace/` owns the common admin session/language/login
 coordination, while Branch discovery and selection remain in `features/branches/`.
 Presentation is split between the theme in `theme/`, the global styles in `src/styles/`, the
@@ -59,7 +59,7 @@ configuration and GraphQL transport. Feature clients and caches retain their mou
 | core         | Tenant demo login, scoped Branch discovery/lookup and selected Branch rename, owning database                               | 11011                 |
 | fleet        | Tenant/Branch-scoped Fleet master data, telemetry, trips, alerts, service, Overview and settings, owning database           | 11013                 |
 | karma-client | Authenticated, shared Karma truck data and account views; no database                                                       | 11014                 |
-| erm-server   | StarLink TCP mirror, raw audit capture and owning database; HTTP `/health`                                                  | 11015 HTTP; 11500 TCP |
+| erm-server   | StarLink sessions, raw audit capture, owning database and read-only subgraph; HTTP `/health`                                | 11015 HTTP; 11500 TCP |
 
 ```mermaid
 flowchart LR
@@ -67,6 +67,7 @@ flowchart LR
   Gateway --> Core
   Gateway --> Fleet
   Gateway --> KarmaClient
+  Gateway --> ERMServer
   KarmaClient --> KarmaAPI[Karma API]
   Fleet -->|Fixed device configuration operations| KarmaClient
   Core --> CoreDB[(Core database)]
@@ -88,7 +89,9 @@ Health endpoints prove application availability without opening database connect
 ERM Server runs independently from compiled output and is excluded from both `dev` and `kill`.
 Its device connections therefore survive restarts of the web/API group. In mirror mode Karma
 owns acknowledgements and commands; the server forwards bytes unchanged, captures both directions
-and persists raw provider-level units without Tenant/Branch scope. It has no GraphQL endpoint.
+and persists raw provider-level units without Tenant/Branch scope. Its read-only GraphQL endpoint
+verifies the same signed session as the other subgraphs and exposes units, events, frames and
+command history to the admin. The internal command API remains separate from GraphQL.
 See the [ERM Server decision](decisions/0006-erm-device-server.md) and
 [service setup](../discocan/development.md#erm-device-server).
 
@@ -101,8 +104,8 @@ See [device configuration operations](../discocan/architecture.md#background-dev
 for freshness, one-attempt writes, verification and vendor-queue limits.
 
 Gateway contains the official Apollo Router 2.18.0 host binary, integrated into development and tests.
-It consumes the same generated static supergraph and routes directly to Core, Fleet and
-Karma Client on the public GraphQL port, 11010. Its health listener uses port 11016.
+It consumes the same generated static supergraph and routes directly to Core, Fleet,
+Karma Client and ERM Server on the public GraphQL port, 11010. Its health listener uses port 11016.
 Authorization, Branch scope and business behavior remain in the owning subgraphs.
 Only `authorization`, `x-branch-id` and `x-request-id` are propagated from client requests.
 `dev` starts Router, three subgraphs, Angular and Storybook through concurrently. Angular's development
@@ -118,14 +121,14 @@ Router HTTP 400 error bodies without the application request ID. Business messag
 and diagnostic wording follow the pinned official Router binary without a custom Rust build.
 See [Router setup and error behavior](../development.md#apollo-router).
 
-Nx records admin → gateway, gateway → core/fleet/karma-client and fleet → core/karma-client runtime dependencies.
+Nx records admin → gateway, gateway → core/fleet/karma-client/erm-server and fleet → core/karma-client runtime dependencies.
 ESLint independently prohibits application implementation imports. Shared manifests, lockfile,
 configuration, ignore rules, workflows, Node version, SDL and named operations are task inputs.
 Generation restores ignored outputs before dependent lint/typecheck/build/test commands.
 The daemon and cloud cache are disabled. Live DB/browser tasks are noncached.
 Gateway build generates the supergraph and validates Router configuration; it does not compile
 Rust or create a Node bundle. It requires the explicitly installed pinned binary. Gateway DB
-and admin browser fixtures build the three subgraphs, generate the supergraph and own the
+and admin browser fixtures build the four subgraphs, generate the supergraph and own the
 Router process, subgraphs and isolated test databases. The
 Router helper checks the pinned binary version and waits on its separate health listener;
 startup failures and normal teardown stop the child before closing downstream resources.
