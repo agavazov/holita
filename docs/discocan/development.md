@@ -1313,8 +1313,12 @@ which opens a temporary session from the unit to a given host and port without c
 configuration. `npm run erm:route-unit` ([source](../../tools/erm-relay/route-unit.mts)) serves that
 session: it reads 0049–0052 with `45`, writes 0049/0050 with `46` only when they hold the other
 server, reads them back and writes the previous values again if they differ or the backup
-0051/0052 changed. It sends no other command and appends every frame to
-`ERM_RELAY_CAPTURE_DIR/route-unit-<UTC date>.jsonl`.
+0051/0052 changed. It confirms the `45` replies, sends no other command, ends the session 2 s after
+the result and appends every frame to `ERM_RELAY_CAPTURE_DIR/route-unit-<UTC date>.jsonl`.
+
+Karma writes its own 0049/0050 back with `46` within about ten minutes once its parameter cache
+shows another server; it did so when a unit resent an unconfirmed read-back reply to its new primary
+server. Never read 0049–0052 through Karma for a unit routed to holita.
 
 The tool needs the public device port, so stop ERM Server first and start it right after the tool
 exits. Units that already use holita reach the tool instead while it runs and are not forwarded to
