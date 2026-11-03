@@ -332,17 +332,21 @@ describe('Device GraphQL with PostgreSQL', () => {
     });
     expect(
       await query(
-        'mutation($id:ID!,$vehicleId:ID!){updateFleetDevice(id:$id,input:{vehicleId:$vehicleId}){vehicleId lastReportedAt}}',
-        { id: device.id, vehicleId: second.id },
+        'mutation($id:ID!,$vehicleId:ID!,$smsPassword:String){updateFleetDevice(id:$id,input:{vehicleId:$vehicleId,smsPassword:$smsPassword}){vehicleId lastReportedAt smsPassword}}',
+        { id: device.id, vehicleId: second.id, smsPassword: 'TeSt0593' },
         pairBranch,
       ),
-    ).toEqual({ data: { updateFleetDevice: { vehicleId: second.id, lastReportedAt: null } } });
+    ).toEqual({
+      data: {
+        updateFleetDevice: { vehicleId: second.id, lastReportedAt: null, smsPassword: 'TeSt0593' },
+      },
+    });
     await database.client.vehicleStatusSample.create({
       data: sample(second.id, imei, '2026-10-18T06:45:00.000Z'),
     });
     expect(
       await query(
-        '{fleetDevices(sort:{field:IMEI,direction:ASC}){items{imei lastReportedAt vehicle{licensePlate}}total}}',
+        '{fleetDevices(sort:{field:IMEI,direction:ASC}){items{imei lastReportedAt smsPassword vehicle{licensePlate}}total}}',
         {},
         pairBranch,
       ),
@@ -353,6 +357,7 @@ describe('Device GraphQL with PostgreSQL', () => {
             {
               imei,
               lastReportedAt: '2026-10-18T06:45:00.000Z',
+              smsPassword: 'TeSt0593',
               vehicle: { licensePlate: 'CB 1002 AX' },
             },
           ],
@@ -360,5 +365,15 @@ describe('Device GraphQL with PostgreSQL', () => {
         },
       },
     });
+    const passwordMutation =
+      'mutation($id:ID!,$smsPassword:String){updateFleetDevice(id:$id,input:{smsPassword:$smsPassword}){smsPassword}}';
+    expect(
+      await query(passwordMutation, { id: device.id, smsPassword: 'invalid!' }, pairBranch),
+    ).toMatchObject({
+      errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'smsPassword' }] } }],
+    });
+    expect(await query(passwordMutation, { id: device.id, smsPassword: null }, pairBranch)).toEqual(
+      { data: { updateFleetDevice: { smsPassword: null } } },
+    );
   });
 });

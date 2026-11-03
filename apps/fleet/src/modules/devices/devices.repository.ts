@@ -37,6 +37,7 @@ export interface DeviceData {
   edataModule: string | null;
   simPhoneNumber: string | null;
   simIccid: string | null;
+  smsPassword: string | null;
   installedAt: Date | null;
   notes: string | null;
 }

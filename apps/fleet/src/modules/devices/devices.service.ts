@@ -143,6 +143,7 @@ function toDevice(row: DeviceRow): StoredDevice {
     edataModule: row.edataModule,
     simPhoneNumber: row.simPhoneNumber,
     simIccid: row.simIccid,
+    smsPassword: row.smsPassword,
     installedAt: row.installedAt,
     notes: row.notes,
     createdAt: row.createdAt,
@@ -235,6 +236,7 @@ export class DevicesService {
       edataModule: this.edataModule(input.edataModule),
       simPhoneNumber: this.simPhoneNumber(input.simPhoneNumber),
       simIccid: this.simIccid(input.simIccid),
+      smsPassword: this.smsPassword(input.smsPassword),
       installedAt: this.installedAt(input.installedAt),
       notes: optionalText(input.notes, 'notes', 2000),
     };
@@ -290,6 +292,9 @@ export class DevicesService {
     }
     if (input.simIccid !== undefined) {
       data.simIccid = this.simIccid(input.simIccid);
+    }
+    if (input.smsPassword !== undefined) {
+      data.smsPassword = this.smsPassword(input.smsPassword);
     }
     if (input.installedAt !== undefined) {
       data.installedAt = this.installedAt(input.installedAt);
@@ -422,6 +427,16 @@ export class DevicesService {
 
   private simIccid(value: unknown): string | null {
     return optionalPattern(value, 'simIccid', 22, /^[0-9]{18,22}$/, 'Enter 18 to 22 digits.');
+  }
+
+  private smsPassword(value: unknown): string | null {
+    return optionalPattern(
+      value,
+      'smsPassword',
+      16,
+      /^[0-9A-Za-z]{1,16}$/,
+      'Use 1 to 16 letters or digits.',
+    );
   }
 
   /** Installation time from 2000-01-01 up to now. */

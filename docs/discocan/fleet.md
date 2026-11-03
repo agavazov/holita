@@ -198,7 +198,9 @@ do not use the seven-day sample endpoint or its 2,000-row cap.
   enumeration order and allowed per model (Tracker: 4G, Safety SF, IRF, CAN, Driver ID,
   eConnect, RS232, external antenna, voice, Wi-Fi, Wiliot; Scout: 4G, Safety SF, temperature
   DS, Geozones GO, IRF; Other: any; no model: none), firmware `^[0-9A-Za-z._-]{1,32}$`, SIM phone
-  `^\+?[0-9]{6,19}$`, ICCID 18–22 digits, installation time from 2000 up to now, notes.
+  `^\+?[0-9]{6,19}$`, ICCID 18–22 digits, `smsPassword` 1–16 ASCII letters/digits (StarLink
+  Simple SMS parameter 0593, stored and returned in plain text by the owner's decision, case
+  preserved), installation time from 2000 up to now, notes.
   `FleetDevice.vehicle` is a `FleetVehicleRef`.
 - **Driver:** first and last name 1–64; employee number and identification key ≤ 32, unique
   per Branch; phone `^\+?[0-9 ]{6,20}$`; email; licence number; unique licence categories;

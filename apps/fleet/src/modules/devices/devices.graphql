@@ -43,6 +43,8 @@ type FleetDevice @key(fields: "id") {
   edataModule: String
   simPhoneNumber: String
   simIccid: String
+  "StarLink Simple SMS password (parameter 0593), plain text by the owner's decision."
+  smsPassword: String
   installedAt: DateTime
   notes: String
   "Latest sample recorded for this device on its current vehicle; null if never." # B2
@@ -100,6 +102,7 @@ input CreateFleetDeviceInput {
   edataModule: String
   simPhoneNumber: String
   simIccid: String
+  smsPassword: String
   installedAt: DateTime
   notes: String
 }
@@ -115,6 +118,7 @@ input UpdateFleetDeviceInput {
   edataModule: String
   simPhoneNumber: String
   simIccid: String
+  smsPassword: String
   installedAt: DateTime
   notes: String
 }
