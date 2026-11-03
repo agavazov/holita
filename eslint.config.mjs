@@ -16,6 +16,7 @@ export default tseslint.config(
       '.volumes/**',
       '**/node_modules/**',
       '**/dist/**',
+      '**/dist-dev/**',
       'apps/erm-server/live/**',
       'apps/erm-server/live-api/**',
       '**/storybook-static/**',

@@ -7,6 +7,7 @@
 /docs/discocan/erm-resources/starlink-online-protocol/authenticated/
 node_modules/
 dist/
+dist-dev/
 coverage/
 test-results/
 playwright-report/

@@ -13,10 +13,13 @@ const routerBinary = resolve(root, 'apps/gateway/router/dist/router');
 const appDirectories = ['admin', 'gateway', 'core', 'fleet', 'karma-client'].map((app) =>
   resolve(root, 'apps', app),
 );
-const backendEntries = ['core', 'fleet', 'karma-client'].flatMap((app) => [
-  resolve(root, 'apps', app, 'dist/main'),
-  resolve(root, 'apps', app, 'dist/main.js'),
-]);
+// Dev watchers serve dist-dev; builds, checks and production runs use dist.
+const backendEntries = ['core', 'fleet', 'karma-client'].flatMap((app) =>
+  ['dist', 'dist-dev'].flatMap((output) => [
+    resolve(root, 'apps', app, output, 'main'),
+    resolve(root, 'apps', app, output, 'main.js'),
+  ]),
+);
 const processes: { pid: number; parent: number; service: boolean }[] = [];
 
 for (const entry of readdirSync('/proc')) {

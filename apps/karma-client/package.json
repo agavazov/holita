@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "nest build",
-    "dev": "nest start --watch",
+    "dev": "nest start --watch --path tsconfig.dev.json",
     "start:prod": "node dist/main.js",
     "typecheck": "tsc --noEmit --project tsconfig.json",
     "lint": "eslint .",

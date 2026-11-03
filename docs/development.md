@@ -58,8 +58,10 @@ ESLint requires braces for every conditional and loop body (`curly: ['error', 'a
 including single-statement bodies in application code, tests, tools and Storybook stories.
 The rule is configured after `eslint-config-prettier` so that it remains enabled.
 
-Backend output is `apps/NAME/dist`; `npm run start:prod --workspace @holita/core`
-(or fleet/karma-client/erm-server) runs the compiled app. Gateway `build` generates the supergraph and
+Builds, checks and `start:prod` use `apps/NAME/dist`; the `npm run dev` watchers for Core, Fleet and
+Karma Client compile to `apps/NAME/dist-dev` (`tsconfig.dev.json`), so a check never replaces a running
+dev server's files. `npm run start:prod --workspace @holita/core` (or fleet/karma-client/erm-server)
+runs the compiled app. Gateway `build` generates the supergraph and
 validates the installed native Router configuration. `npm run start:prod --workspace @holita/gateway`
 starts that binary using the generated supergraph; no Node bundle or Rust compilation is involved. `dev` does not migrate or seed databases.
 The group generates admin GraphQL artifacts once before starting Angular and Storybook in
