@@ -35,8 +35,12 @@ type FleetDevice @key(fields: "id") {
   "Unassigned means IN_STOCK; assigned devices are ONLINE when their current pair reported within the configured not-reporting hours of the Branch data clock."
   status: FleetDeviceStatus!
   model: FleetDeviceModel
+  "ERM serial number from the unit's label; unique within the Branch."
+  serialNumber: String
   options: [FleetDeviceOption!]!
   firmwareVersion: String
+  "eData module and version reported by the unit, for example eData Fms 6.56."
+  edataModule: String
   simPhoneNumber: String
   simIccid: String
   installedAt: DateTime
@@ -90,8 +94,10 @@ input CreateFleetDeviceInput {
   imei: String!
   vehicleId: ID
   model: FleetDeviceModel
+  serialNumber: String
   options: [FleetDeviceOption!]
   firmwareVersion: String
+  edataModule: String
   simPhoneNumber: String
   simIccid: String
   installedAt: DateTime
@@ -103,8 +109,10 @@ input UpdateFleetDeviceInput {
   imei: String
   vehicleId: ID
   model: FleetDeviceModel
+  serialNumber: String
   options: [FleetDeviceOption!]
   firmwareVersion: String
+  edataModule: String
   simPhoneNumber: String
   simIccid: String
   installedAt: DateTime

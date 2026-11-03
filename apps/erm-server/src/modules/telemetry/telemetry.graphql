@@ -1,4 +1,5 @@
-extend schema @link(url: "https://specs.apollo.dev/federation/v2.3", import: [])
+extend schema
+  @link(url: "https://specs.apollo.dev/federation/v2.3", import: ["@key", "@external", "@requires"])
 
 scalar ErmJSON
 
@@ -22,6 +23,43 @@ enum ErmCommandState {
   TIMEOUT
   FAILED
 }
+"Event groups of the StarLink event catalog."
+enum ErmEventCategory {
+  "Periodic and on-change location reports."
+  POSITION
+  "Ignition, inputs, driving and other status changes."
+  STATUS
+  "Unit alarms: diagnostic report, power, backup battery, jamming, removal and SIM events."
+  ALARM
+  "eData and vehicle diagnostic payloads."
+  EDATA
+  "Event IDs outside the catalog."
+  OTHER
+}
+enum ErmEventSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+enum ErmLanguage {
+  BG
+  EN
+}
+"Allowlisted reads an operator may send to a unit."
+enum ErmDeviceAction {
+  "Current position."
+  REQUEST_LOCATION
+  "Unit status."
+  READ_STATUS
+  "Firmware and module versions."
+  READ_VERSION
+  "Connected accessories."
+  READ_ACCESSORIES
+  "eData communication diagnostics."
+  READ_EDATA_DIAGNOSTICS
+  "eData fault logger."
+  READ_EDATA_FAULTS
+}
 input ErmUnitsInput {
   pageSize: Int = 50
   cursor: String
@@ -30,6 +68,21 @@ input ErmHistoryInput {
   unitId: ID!
   pageSize: Int = 50
   cursor: String
+}
+input ErmDeviceEventsInput {
+  pageSize: Int = 50
+  cursor: String
+  "Only these categories; every category when omitted."
+  categories: [ErmEventCategory!]
+}
+input ErmDevicePageInput {
+  pageSize: Int = 50
+  cursor: String
+}
+input SendErmDeviceCommandInput {
+  "A Fleet Device of the active Branch."
+  deviceId: ID!
+  action: ErmDeviceAction!
 }
 type ErmUnit {
   unitId: ID!
@@ -56,6 +109,26 @@ type ErmEvent {
   mainVoltage: Float
   backupVoltage: Float
   fields: ErmJSON!
+  category: ErmEventCategory!
+  severity: ErmEventSeverity!
+  "Catalog name of the event; null for an event ID outside the StarLink catalog."
+  name(language: ErmLanguage! = EN): String
+}
+"Live state of a unit on holita's device server."
+type ErmUnitState {
+  unitId: ID!
+  "The unit has an open connection to holita now."
+  online: Boolean!
+  mode: ErmSessionMode
+  connectedSince: String
+  lastFrameAt: String
+  "Latest decoded event with a position."
+  lastPosition: ErmEvent
+  "Latest decoded event of any category."
+  latestEvent: ErmEvent
+  "ALARM events in the last 24 hours."
+  alarmsLast24h: Int!
+  latestAlarm: ErmEvent
 }
 type ErmFrame {
   id: ID!
@@ -106,9 +179,23 @@ type ErmCommandsPage {
   nextCursor: String
   hasMore: Boolean!
 }
+"Fleet's Device, resolved by its IMEI on holita's device server."
+type FleetDevice @key(fields: "id") {
+  id: ID!
+  imei: String! @external
+  "Null when the unit has never connected to holita."
+  ermState: ErmUnitState @requires(fields: "imei")
+  ermEvents(input: ErmDeviceEventsInput): ErmEventsPage! @requires(fields: "imei")
+  ermCommands(input: ErmDevicePageInput): ErmCommandsPage! @requires(fields: "imei")
+  ermFrames(input: ErmDevicePageInput): ErmFramesPage! @requires(fields: "imei")
+}
 type Query {
   ermUnits(input: ErmUnitsInput): ErmUnitsPage!
   ermEvents(input: ErmHistoryInput!): ErmEventsPage!
   ermFrames(input: ErmHistoryInput!): ErmFramesPage!
   ermCommands(input: ErmHistoryInput!): ErmCommandsPage!
+}
+type Mutation {
+  "Sends an allowlisted read to the unit of a Fleet Device in the active Branch and returns the recorded command."
+  sendErmDeviceCommand(input: SendErmDeviceCommandInput!): ErmCommand!
 }
