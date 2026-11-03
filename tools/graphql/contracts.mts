@@ -51,7 +51,6 @@ export const subgraphs = [
   },
 ];
 export const operationPaths = [
-  'apps/admin/src/app/features/erm-server/operations.graphql',
   'apps/admin/src/app/features/karma-client/cars/operations.graphql',
   'apps/admin/src/app/features/karma-client/edata/operations.graphql',
   'apps/admin/src/app/features/karma-client/location/operations.graphql',

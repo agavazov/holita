@@ -4,17 +4,12 @@ import {
   Info,
   Mutation,
   Parent,
-  Query,
   ResolveField,
   ResolveReference,
   Resolver,
 } from '@nestjs/graphql';
 import type { GraphQLResolveInfo } from 'graphql';
 import type {
-  QueryErmCommandsArgs,
-  QueryErmEventsArgs,
-  QueryErmFramesArgs,
-  QueryErmUnitsArgs,
   MutationSendErmDeviceCommandArgs,
   FleetDevice,
   FleetDeviceErmEventsArgs,
@@ -29,25 +24,6 @@ import { starlinkEvents } from '../../starlink/event-catalog.js';
 @Resolver()
 export class TelemetryResolver {
   constructor(private readonly telemetry: TelemetryService) {}
-
-  @Query('ermUnits') units(@Args() args: QueryErmUnitsArgs, @Context() context: RequestContext) {
-    return this.telemetry.units(args.input, context);
-  }
-
-  @Query('ermEvents') events(@Args() args: QueryErmEventsArgs, @Context() context: RequestContext) {
-    return this.telemetry.events(args.input, context);
-  }
-
-  @Query('ermFrames') frames(@Args() args: QueryErmFramesArgs, @Context() context: RequestContext) {
-    return this.telemetry.frames(args.input, context);
-  }
-
-  @Query('ermCommands') commands(
-    @Args() args: QueryErmCommandsArgs,
-    @Context() context: RequestContext,
-  ) {
-    return this.telemetry.commands(args.input, context);
-  }
 
   @Mutation('sendErmDeviceCommand')
   sendDeviceCommand(

@@ -10,3 +10,4 @@ export {
 export type { ChecksumState, ParsedFrame } from './protocol.js';
 export { decodeBinaryEvent, decodeEvent, DEFAULT_EVENT_STRUCTURE } from './event.js';
 export type { DecodedEvent } from './event.js';
+export { decodeFrameEvents } from './frame-events.js';

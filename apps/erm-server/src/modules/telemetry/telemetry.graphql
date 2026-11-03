@@ -60,15 +60,6 @@ enum ErmDeviceAction {
   "eData fault logger."
   READ_EDATA_FAULTS
 }
-input ErmUnitsInput {
-  pageSize: Int = 50
-  cursor: String
-}
-input ErmHistoryInput {
-  unitId: ID!
-  pageSize: Int = 50
-  cursor: String
-}
 input ErmDeviceEventsInput {
   pageSize: Int = 50
   cursor: String
@@ -83,15 +74,6 @@ input SendErmDeviceCommandInput {
   "A Fleet Device of the active Branch."
   deviceId: ID!
   action: ErmDeviceAction!
-}
-type ErmUnit {
-  unitId: ID!
-  connected: Boolean!
-  mode: ErmSessionMode
-  peer: String!
-  connectedSince: String
-  lastFrameAt: String
-  latestEvent: ErmEvent
 }
 type ErmEvent {
   id: ID!
@@ -114,6 +96,39 @@ type ErmEvent {
   "Catalog name of the event; null for an event ID outside the StarLink catalog."
   name(language: ErmLanguage! = EN): String
 }
+"A numeric unit reading and the time it was observed."
+type ErmReading {
+  "Observed numeric value."
+  value: Float!
+  "Event time, or the frame receipt time when the event has no time."
+  observedAt: String!
+}
+"A text unit reading and the time its command was answered."
+type ErmTextReading {
+  "Observed text value."
+  value: String!
+  "Time the command response was received."
+  observedAt: String!
+}
+"Frame freshness, connection history and upstream routing activity."
+type ErmUnitHealth {
+  "Seconds since the latest complete device frame; null when none was received."
+  lastFrameAgeSeconds: Int
+  "Expected reporting interval: 300 seconds driving, 3600 seconds parked."
+  expectedIntervalSeconds: Int!
+  "No frame has arrived within twice the expected reporting interval."
+  overdue: Boolean!
+  "Reason for the latest closed device connection."
+  lastCloseReason: String
+  "Time of the latest closed device connection."
+  lastClosedAt: String
+  "Upstream disconnects recorded during the last 24 hours."
+  upstreamClosesLast24h: Int!
+  "Upstream 04/46 frames writing routing parameters 0049–0054 during the last 24 hours."
+  karmaRoutingWritesLast24h: Int!
+  "Latest upstream frame writing a routing parameter 0049–0054."
+  latestKarmaRoutingWrite: ErmFrame
+}
 "Live state of a unit on holita's device server."
 type ErmUnitState {
   unitId: ID!
@@ -129,6 +144,16 @@ type ErmUnitState {
   "ALARM events in the last 24 hours."
   alarmsLast24h: Int!
   latestAlarm: ErmEvent
+  "Latest observed main supply voltage, in volts."
+  mainVoltage: ErmReading
+  "Latest observed backup battery voltage, in volts."
+  backupVoltage: ErmReading
+  "Latest numeric cellular signal quality (#CSS#)."
+  signalQuality: ErmReading
+  "Latest firmware VER field returned by an answered READ_VERSION command."
+  firmwareVersion: ErmTextReading
+  "Frame freshness, disconnect history and upstream route changes."
+  health: ErmUnitHealth!
 }
 type ErmFrame {
   id: ID!
@@ -154,12 +179,6 @@ type ErmCommand {
   answeredAt: String
   resultCode: String
   responseText: String
-}
-type ErmUnitsPage {
-  items: [ErmUnit!]!
-  cursor: String
-  nextCursor: String
-  hasMore: Boolean!
 }
 type ErmEventsPage {
   items: [ErmEvent!]!
@@ -188,12 +207,6 @@ type FleetDevice @key(fields: "id") {
   ermEvents(input: ErmDeviceEventsInput): ErmEventsPage! @requires(fields: "imei")
   ermCommands(input: ErmDevicePageInput): ErmCommandsPage! @requires(fields: "imei")
   ermFrames(input: ErmDevicePageInput): ErmFramesPage! @requires(fields: "imei")
-}
-type Query {
-  ermUnits(input: ErmUnitsInput): ErmUnitsPage!
-  ermEvents(input: ErmHistoryInput!): ErmEventsPage!
-  ermFrames(input: ErmHistoryInput!): ErmFramesPage!
-  ermCommands(input: ErmHistoryInput!): ErmCommandsPage!
 }
 type Mutation {
   "Sends an allowlisted read to the unit of a Fleet Device in the active Branch and returns the recorded command."

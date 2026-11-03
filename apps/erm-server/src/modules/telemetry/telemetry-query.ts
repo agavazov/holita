@@ -1,26 +1,18 @@
 import { BadRequestException } from '@nestjs/common';
-import type {
-  ErmDevicePageInput,
-  ErmEventCategory,
-  ErmHistoryInput,
-  ErmUnitsInput,
-} from '../../generated/graphql/types.js';
+import type { ErmDevicePageInput, ErmEventCategory } from '../../generated/graphql/types.js';
 
 function invalid(): never {
   throw new BadRequestException('Invalid ERM unit, page size or cursor');
 }
 
 export function telemetryQuery(
-  kind: 'units' | 'events' | 'frames' | 'commands',
-  input: ErmHistoryInput | ErmUnitsInput | null | undefined,
+  kind: 'events' | 'frames' | 'commands',
+  input: ErmDevicePageInput & { unitId: string },
   categories?: readonly ErmEventCategory[] | null,
 ) {
-  const pageSize = input?.pageSize ?? 50;
-  const unitId = input && 'unitId' in input ? input.unitId : undefined;
-  if (
-    ![25, 50, 100].includes(pageSize) ||
-    (kind !== 'units' && (unitId === undefined || !/^(?:[0-9A-Fa-f]{6}|\d{15})$/.test(unitId)))
-  ) {
+  const pageSize = input.pageSize ?? 50;
+  const unitId = input.unitId;
+  if (![25, 50, 100].includes(pageSize) || !/^(?:[0-9A-Fa-f]{6}|\d{15})$/.test(unitId)) {
     invalid();
   }
   const scope = JSON.stringify([
@@ -31,7 +23,7 @@ export function telemetryQuery(
   ]);
   let offset = 0;
   let snapshot = new Date();
-  const cursor = input?.cursor ?? null;
+  const cursor = input.cursor ?? null;
   if (cursor !== null) {
     if (!/^[A-Za-z0-9_-]{1,1024}$/.test(cursor)) {
       invalid();

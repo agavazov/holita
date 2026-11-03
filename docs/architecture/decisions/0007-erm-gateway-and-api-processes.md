@@ -22,8 +22,8 @@ Keep one codebase, `apps/erm-server`, and two independently deployed processes s
 Fleet owns the Device registry and its Tenant/Branch authorization. ERM data reaches a Branch
 only through `FleetDevice` fields `ermState`, `ermEvents`, `ermCommands` and `ermFrames`, resolved
 by the Fleet-owned external `imei` with `@requires`. Raw ERM ingestion stays provider-level;
-it gains no duplicate Device registry or Tenant/Branch columns. Existing provider inspection
-queries remain separate from Branch-scoped operator access.
+it gains no duplicate Device registry or Tenant/Branch columns. Provider inspection queries are
+not exposed; Tenant access uses only the Branch-scoped Fleet Device fields.
 
 `sendErmDeviceCommand` resolves the Device through Fleet using the caller's signed session and
 active Branch before contacting the gateway. It accepts only REQUEST_LOCATION, READ_STATUS,
@@ -43,6 +43,6 @@ Fleet authorization is mandatory before Branch-visible history or operator comma
 header alone grants no access. Device read requests still send real commands and retain their
 recorded outcomes. Queue acceptance or a reply is not configuration/measurement verification.
 
-Durable offline delivery, named-operator audit, parameter snapshots/writes, stored-frame
-re-decoding, shutdown close records, standalone operation without Karma and production deployment
+Durable offline delivery, named-operator audit, parameter snapshots/writes,
+shutdown close records, standalone operation without Karma and production deployment
 remain in the [ERM roadmap](../../todo/erm-roadmap.md).

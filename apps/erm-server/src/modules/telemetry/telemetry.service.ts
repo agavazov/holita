@@ -3,8 +3,6 @@ import { getArgumentValues, type GraphQLResolveInfo } from 'graphql';
 import { setTimeout } from 'node:timers/promises';
 import { requireTenant } from '../../auth/demo-auth.js';
 import type {
-  ErmHistoryInput,
-  ErmUnitsInput,
   ErmDeviceEventsInput,
   ErmDevicePageInput,
   SendErmDeviceCommandInput,
@@ -14,6 +12,7 @@ import type {
 import type { ErmEvent, ErmFrame, ErmCommand } from '../../generated/prisma/client.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import { validateCommand } from '../devices/command.js';
+import { parseFrame } from '../../starlink/protocol.js';
 import { eventClassification } from '../../starlink/event-catalog.js';
 import { LiveDevicesService, type LiveUnit } from './live-devices.service.js';
 import { FleetClient } from './fleet.client.js';
@@ -52,6 +51,38 @@ function commandView(command: ErmCommand) {
     answeredAt: command.answeredAt?.toISOString() ?? null,
     responseText: command.response === null ? null : displayText(command.response),
   };
+}
+
+function numericReading(
+  event: (ErmEvent & { frame: { receivedAt: Date } }) | null,
+  value: number | null | undefined,
+) {
+  return event === null || value === null || value === undefined
+    ? null
+    : { value, observedAt: (event.eventTime ?? event.frame.receivedAt).toISOString() };
+}
+
+function signalQuality(event: ErmEvent | null): number | null {
+  const fields = event?.fields;
+  if (typeof fields !== 'object' || fields === null || Array.isArray(fields)) {
+    return null;
+  }
+  const value = fields['#CSS#'];
+  return typeof value === 'number' || typeof value === 'string' ? Number(value) : null;
+}
+
+function firmwareReading(command: ErmCommand | null) {
+  if (!command || command.response === null || command.answeredAt === null) {
+    return null;
+  }
+  const frame = parseFrame(Buffer.from(command.response));
+  for (const field of frame?.fields ?? []) {
+    const match = /(?:^|;)VER=([^;]*)/.exec(field.toString('latin1'));
+    if (match?.[1] !== undefined) {
+      return { value: match[1], observedAt: command.answeredAt.toISOString() };
+    }
+  }
+  return null;
 }
 
 export type DeviceReference = Pick<FleetDevice, 'id' | 'imei'> & {
@@ -133,14 +164,25 @@ export class TelemetryService {
   }
 
   private async loadStates(unitIds: string[], context: RequestContext) {
+    const snapshot = new Date();
     const [rows, live] = await Promise.all([
-      this.repository.deviceStates(unitIds, new Date()),
+      this.repository.deviceStates(unitIds, snapshot),
       this.liveUnits(context),
     ]);
     const connected = new Map(live.map((unit) => [unit.unitId, unit]));
     return new Map(
       rows.map((row): [string, ErmUnitState | null] => {
         const unit = connected.get(row.unitId);
+        const lastFrameAt = unit?.lastFrameAt ?? row.lastFrameAt?.toISOString() ?? null;
+        const lastFrameAgeSeconds =
+          lastFrameAt === null
+            ? null
+            : Math.max(
+                0,
+                Math.floor((snapshot.getTime() - new Date(lastFrameAt).getTime()) / 1000),
+              );
+        const expectedIntervalSeconds =
+          row.latestEvent?.engineOn === true || (row.latestEvent?.speedKmh ?? 0) > 0 ? 300 : 3600;
         return [
           row.unitId,
           !unit && row.connectionId === null
@@ -150,11 +192,38 @@ export class TelemetryService {
                 online: unit !== undefined,
                 mode: unit?.mode === 'primary' ? 'PRIMARY' : unit ? 'MIRROR' : null,
                 connectedSince: unit?.connectedSince ?? null,
-                lastFrameAt: unit?.lastFrameAt ?? row.lastFrameAt?.toISOString() ?? null,
+                lastFrameAt,
                 latestEvent: row.latestEvent ? eventView(row.latestEvent) : null,
                 lastPosition: row.lastPosition ? eventView(row.lastPosition) : null,
                 latestAlarm: row.latestAlarm ? eventView(row.latestAlarm) : null,
                 alarmsLast24h: row.alarmsLast24h,
+                mainVoltage: numericReading(
+                  row.mainVoltageEvent,
+                  row.mainVoltageEvent?.mainVoltage,
+                ),
+                backupVoltage: numericReading(
+                  row.backupVoltageEvent,
+                  row.backupVoltageEvent?.backupVoltage,
+                ),
+                signalQuality: numericReading(
+                  row.signalQualityEvent,
+                  signalQuality(row.signalQualityEvent),
+                ),
+                firmwareVersion: firmwareReading(row.firmwareCommand),
+                health: {
+                  lastFrameAgeSeconds,
+                  expectedIntervalSeconds,
+                  overdue:
+                    lastFrameAgeSeconds === null ||
+                    lastFrameAgeSeconds > 2 * expectedIntervalSeconds,
+                  lastCloseReason: row.lastCloseReason,
+                  lastClosedAt: row.lastClosedAt?.toISOString() ?? null,
+                  upstreamClosesLast24h: row.upstreamClosesLast24h,
+                  karmaRoutingWritesLast24h: row.karmaRoutingWritesLast24h,
+                  latestKarmaRoutingWrite: row.latestKarmaRoutingWrite
+                    ? frameView(row.latestKarmaRoutingWrite)
+                    : null,
+                },
               },
         ];
       }),
@@ -179,7 +248,7 @@ export class TelemetryService {
           (rows) =>
             new Map(
               rows.map(({ query, rows: events }) => [
-                query.unitId ?? '',
+                query.unitId,
                 telemetryPage(events.map(eventView), query),
               ]),
             ),
@@ -207,7 +276,7 @@ export class TelemetryService {
           (rows) =>
             new Map(
               rows.map(({ query, rows: frames }) => [
-                query.unitId ?? '',
+                query.unitId,
                 telemetryPage(frames.map(frameView), query),
               ]),
             ),
@@ -235,7 +304,7 @@ export class TelemetryService {
           (rows) =>
             new Map(
               rows.map(({ query, rows: commands }) => [
-                query.unitId ?? '',
+                query.unitId,
                 telemetryPage(commands.map(commandView), query),
               ]),
             ),
@@ -260,47 +329,5 @@ export class TelemetryService {
     throw new ServiceUnavailableException(
       'ERM command was sent but its record is not available yet; check command history',
     );
-  }
-
-  async units(input: ErmUnitsInput | null | undefined, context: RequestContext) {
-    requireTenant(context);
-    const query = telemetryQuery('units', input);
-    const rows = await this.repository.units(query);
-    const connected = new Map((await this.liveUnits(context)).map((unit) => [unit.unitId, unit]));
-    return telemetryPage(
-      rows.map((row) => {
-        const live = connected.get(row.unitId);
-        return {
-          unitId: row.unitId,
-          connected: live !== undefined,
-          mode: live?.mode === 'primary' ? 'PRIMARY' : live ? 'MIRROR' : null,
-          peer: live?.peer ?? row.connection?.peer ?? '',
-          connectedSince: live?.connectedSince ?? null,
-          lastFrameAt: live?.lastFrameAt ?? row.lastFrameAt?.toISOString() ?? null,
-          latestEvent: row.latestEvent ? eventView(row.latestEvent) : null,
-        };
-      }),
-      query,
-    );
-  }
-
-  async events(input: ErmHistoryInput, context: RequestContext) {
-    requireTenant(context);
-    const query = telemetryQuery('events', input);
-    return telemetryPage((await this.repository.events(query)).map(eventView), query);
-  }
-
-  async frames(input: ErmHistoryInput, context: RequestContext) {
-    requireTenant(context);
-    const query = telemetryQuery('frames', input);
-    const rows = await this.repository.frames(query);
-    return telemetryPage(rows.map(frameView), query);
-  }
-
-  async commands(input: ErmHistoryInput, context: RequestContext) {
-    requireTenant(context);
-    const query = telemetryQuery('commands', input);
-    const rows = await this.repository.commands(query);
-    return telemetryPage(rows.map(commandView), query);
   }
 }

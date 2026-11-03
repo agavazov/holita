@@ -182,106 +182,168 @@ describe('Fleet through the actual federation boundary', () => {
     if (typeof otherToken !== 'string') {
       throw new Error('Missing second tenant session');
     }
-    const ermSource = `query($unitId: ID!) {
-      ermUnits(input: {pageSize: 25}) {
-        items { unitId connected mode peer connectedSince lastFrameAt latestEvent { eventId latitude longitude speedKmh engineOn mainVoltage backupVoltage } }
-        hasMore
-      }
-      ermEvents(input: {unitId: $unitId, pageSize: 25}) {
-        items { unitId eventId eventTime positionTime latitude longitude speedKmh heading odometer engineOn mainVoltage backupVoltage fields }
-        hasMore
-      }
-      ermFrames(input: {unitId: $unitId, pageSize: 25}) {
-        items { direction command reference checksum partial displayText }
-        hasMore
-      }
-      ermCommands(input: {unitId: $unitId, pageSize: 25}) {
-        items { unitId reference command fields status resultCode responseText }
-        hasMore
+    const ermSource = `query($id: ID!) {
+      fleetDevice(id: $id) {
+        id
+        imei
+        ermState {
+          unitId online mode lastFrameAt
+          latestEvent { eventId latitude longitude speedKmh engineOn mainVoltage backupVoltage }
+          mainVoltage { value observedAt }
+          backupVoltage { value observedAt }
+          signalQuality { value observedAt }
+          firmwareVersion { value observedAt }
+          health {
+            lastFrameAgeSeconds expectedIntervalSeconds overdue lastCloseReason lastClosedAt
+            upstreamClosesLast24h karmaRoutingWritesLast24h
+            latestKarmaRoutingWrite { command receivedAt }
+          }
+        }
+        ermEvents(input: {pageSize: 25}) {
+          items { unitId eventId eventTime positionTime latitude longitude speedKmh heading odometer engineOn mainVoltage backupVoltage fields }
+          hasMore
+        }
+        ermFrames(input: {pageSize: 25}) {
+          items { direction command reference checksum partial displayText }
+          hasMore
+        }
+        ermCommands(input: {pageSize: 25}) {
+          items { unitId reference command fields status resultCode responseText }
+          hasMore
+        }
       }
     }`;
     const unitId = '862129080366630';
-    const erm = await post(ermSource, { authorization: `Bearer ${token}` }, { unitId });
+    const { ermDeviceId } = fixture;
+    const erm = await post(
+      ermSource,
+      { authorization: `Bearer ${token}`, 'x-branch-id': discordia },
+      { id: ermDeviceId },
+    );
     expect(erm.body).toMatchObject({
       data: {
-        ermUnits: {
-          items: [
-            {
-              unitId,
-              connected: false,
-              mode: null,
-              peer: '127.0.0.1:41000',
-              latestEvent: { latitude: 42.6977, longitude: 23.3219 },
+        fleetDevice: {
+          id: ermDeviceId,
+          imei: unitId,
+          ermState: {
+            unitId,
+            online: false,
+            mode: null,
+            latestEvent: { latitude: 42.6977, longitude: 23.3219 },
+            mainVoltage: { value: 24.5, observedAt: '2026-11-02T12:00:00.000Z' },
+            backupVoltage: { value: 4.1, observedAt: '2026-11-02T12:00:00.000Z' },
+            signalQuality: null,
+            firmwareVersion: null,
+            health: {
+              lastFrameAgeSeconds: expect.any(Number),
+              expectedIntervalSeconds: 300,
+              overdue: true,
+              lastCloseReason: null,
+              lastClosedAt: '2026-11-02T12:00:00.000Z',
+              upstreamClosesLast24h: 0,
+              karmaRoutingWritesLast24h: 0,
+              latestKarmaRoutingWrite: null,
             },
-          ],
-          hasMore: false,
-        },
-        ermEvents: {
-          items: [
-            {
-              unitId,
-              eventId: '1',
-              eventTime: '2026-11-02T12:00:00.000Z',
-              latitude: 42.6977,
-              longitude: 23.3219,
-              fields: { '#EID#': '1', extra: ['fixture'] },
-            },
-          ],
-          hasMore: false,
-        },
-        ermFrames: {
-          items: [
-            {
-              direction: 'HOLITA',
-              command: '03',
-              reference: '900000001',
-              checksum: 'OK',
-              partial: false,
-            },
-            {
-              direction: 'DEVICE',
-              command: '06',
-              reference: '123',
-              checksum: 'OK',
-              partial: false,
-              displayText: '$SLU862129080366630,06,123,fixture\\x10',
-            },
-          ],
-          hasMore: false,
-        },
-        ermCommands: {
-          items: [
-            {
-              unitId,
-              reference: '900000001',
-              command: '03',
-              fields: ['0774'],
-              status: 'ANSWERED',
-              resultCode: '01',
-            },
-          ],
-          hasMore: false,
+          },
+          ermEvents: {
+            items: [
+              {
+                unitId,
+                eventId: '1',
+                eventTime: '2026-11-02T12:00:00.000Z',
+                latitude: 42.6977,
+                longitude: 23.3219,
+                fields: { '#EID#': '1', extra: ['fixture'] },
+              },
+            ],
+            hasMore: false,
+          },
+          ermFrames: {
+            items: [
+              {
+                direction: 'HOLITA',
+                command: '03',
+                reference: '900000001',
+                checksum: 'OK',
+                partial: false,
+              },
+              {
+                direction: 'DEVICE',
+                command: '06',
+                reference: '123',
+                checksum: 'OK',
+                partial: false,
+                displayText: '$SLU862129080366630,06,123,fixture\\x10',
+              },
+            ],
+            hasMore: false,
+          },
+          ermCommands: {
+            items: [
+              {
+                unitId,
+                reference: '900000001',
+                command: '03',
+                fields: ['0774'],
+                status: 'ANSWERED',
+                resultCode: '01',
+              },
+            ],
+            hasMore: false,
+          },
         },
       },
     });
     expect(erm.body.errors).toBeUndefined();
-    const ermSessions: Record<string, string>[] = [
-      { authorization: `Bearer ${otherToken}` },
-      { authorization: `Bearer ${otherToken}`, 'x-branch-id': discordia },
-    ];
-    for (const headers of ermSessions) {
-      expect((await post(ermSource, headers, { unitId })).body).toEqual(erm.body);
+    for (const [headers, code] of [
+      [{ authorization: `Bearer ${otherToken}` }, 'BAD_USER_INPUT'],
+      [{ authorization: `Bearer ${otherToken}`, 'x-branch-id': discordia }, 'NOT_FOUND'],
+    ] satisfies [Record<string, string>, string][]) {
+      const denied = await post(ermSource, headers, { id: ermDeviceId });
+      expect({
+        data: denied.body.data,
+        codes: errors(denied.body).map((error) => error.extensions.code),
+      }).toEqual({ data: null, codes: [code] });
     }
+    for (const source of [
+      '{ermUnits{items{unitId}}}',
+      `{ermEvents(input:{unitId:"${unitId}"}){items{id}}}`,
+      `{ermFrames(input:{unitId:"${unitId}"}){items{id}}}`,
+      `{ermCommands(input:{unitId:"${unitId}"}){items{id}}}`,
+    ]) {
+      const removed = await post(source, {
+        authorization: `Bearer ${token}`,
+        'x-branch-id': discordia,
+      });
+      expect(removed.body.data).toBeUndefined();
+      expect(errors(removed.body)).toEqual([
+        expect.objectContaining({
+          extensions: expect.objectContaining({ code: 'GRAPHQL_VALIDATION_FAILED' }),
+        }),
+      ]);
+    }
+    const ermEntities =
+      'query($refs:[_Any!]!){_entities(representations:$refs){...on FleetDevice{ermState{unitId}}}}';
     for (const target of [fixture.url, fixture.ermUrl]) {
       for (const authorization of [undefined, 'Bearer invalid']) {
         const response = await fetch(target, {
           method: 'POST',
           headers: {
             'content-type': 'application/json',
+            'x-branch-id': discordia,
             'x-tenant-id': '01000000-0000-4000-8000-000000000001',
             ...(authorization ? { authorization } : {}),
           },
-          body: JSON.stringify({ query: '{ermUnits{items{unitId}}}' }),
+          body: JSON.stringify(
+            target === fixture.url
+              ? { query: ermSource, variables: { id: ermDeviceId } }
+              : {
+                  query: ermEntities,
+                  variables: {
+                    refs: [{ __typename: 'FleetDevice', id: ermDeviceId, imei: unitId }],
+                  },
+                },
+          ),
         });
         expect(await response.json()).toMatchObject({
           errors: [{ extensions: { code: 'UNAUTHENTICATED' } }],

@@ -11,6 +11,7 @@ import { PrismaService } from '../src/database/prisma.service.js';
 import type { CaptureRecord } from '../src/modules/devices/capture-record.js';
 import { DeviceCaptureService } from '../src/modules/devices/device-capture.service.js';
 import { DevicesRepository } from '../src/modules/devices/devices.repository.js';
+import { redecodeFrames } from '../src/modules/devices/redecode.js';
 import { DEFAULT_EVENT_STRUCTURE } from '../src/starlink/event.js';
 import { DevicesService } from '../src/modules/devices/devices.service.js';
 import { validateCommand } from '../src/modules/devices/command.js';
@@ -33,6 +34,7 @@ import { formatGraphqlError } from '../src/graphql/errors.js';
 import { ErmFleetDeviceDocument } from '../src/generated/graphql/fleet-operations.js';
 import { TelemetryRepository } from '../src/modules/telemetry/telemetry.repository.js';
 import { TelemetryService } from '../src/modules/telemetry/telemetry.service.js';
+import { deviceTelemetryRequest } from '../src/modules/telemetry/device-request.js';
 import { issueDemoToken, readDemoTenant } from '../src/auth/demo-auth.js';
 import { createTestDatabase } from './test-database.js';
 
@@ -331,6 +333,9 @@ it('persists captured connection lifecycle and raw frames through the production
     const events = await database.client.ermEvent.findMany();
     expect(events).toHaveLength(1);
     const [event] = events;
+    if (!event) {
+      throw new Error('Expected the captured event');
+    }
     expect(event).toMatchObject({
       frameId: stored.frames.at(-1)?.id,
       unitId,
@@ -345,8 +350,8 @@ it('persists captured connection lifecycle and raw frames through the production
       backupVoltage: 3.6,
       fields: { '#EDT#': '261103142530', '#CSS#': null, extra: [] },
     });
-    expect(event?.latitude?.toNumber()).toBeCloseTo(42.6489117, 7);
-    expect(event?.longitude?.toNumber()).toBeCloseTo(-71.1650283, 7);
+    expect(event.latitude?.toNumber()).toBeCloseTo(42.6489117, 7);
+    expect(event.longitude?.toNumber()).toBeCloseTo(-71.1650283, 7);
 
     const telemetry = module.get(TelemetryService);
     const tenantId = randomUUID();
@@ -355,34 +360,42 @@ it('persists captured connection lifecycle and raw frames through the production
       tenantId: readDemoTenant(`Bearer ${issueDemoToken(tenantId)}`),
     };
     const unauthenticated = { requestId: randomUUID(), tenantId: undefined };
+    const reference = (imei = unitId): DeviceReference => ({
+      id: randomUUID(),
+      imei,
+      telemetryRequest: deviceTelemetryRequest([imei]),
+    });
+    const device = reference();
     for (const read of [
-      () => telemetry.units(undefined, unauthenticated),
-      () => telemetry.events({ unitId }, unauthenticated),
-      () => telemetry.frames({ unitId }, unauthenticated),
-      () => telemetry.commands({ unitId }, unauthenticated),
+      () => telemetry.deviceState(device, unauthenticated),
+      () => telemetry.deviceEvents(device, undefined, unauthenticated),
+      () => telemetry.deviceFrames(device, undefined, unauthenticated),
+      () => telemetry.deviceCommands(device, undefined, unauthenticated),
     ]) {
       await expect(read()).rejects.toThrow('Sign in to a tenant first');
     }
-    const unitPage = await telemetry.units(undefined, context);
-    expect(unitPage.items).toHaveLength(1);
-    expect(unitPage.items[0]).toMatchObject({
+    const state = await telemetry.deviceState(device, context);
+    expect(state).toMatchObject({
       unitId,
-      connected: false,
+      online: false,
       mode: null,
-      peer,
       connectedSince: null,
       latestEvent: {
-        frameId: String(event?.frameId),
+        frameId: String(event.frameId),
         engineOn: true,
         fields: { '#EDT#': '261103142530' },
       },
+      mainVoltage: { value: 12.2, observedAt: '2026-11-03T14:25:30.000Z' },
+      backupVoltage: { value: 3.6, observedAt: '2026-11-03T14:25:30.000Z' },
+      signalQuality: null,
+      firmwareVersion: null,
     });
-    expect(unitPage.items[0]?.lastFrameAt).not.toBeNull();
-    const framePage = await telemetry.frames({ unitId: '654321' }, context);
-    expect(framePage.items[0]?.displayText).toBe(
+    expect(state?.lastFrameAt).not.toBeNull();
+    const framePage = await telemetry.deviceFrames(reference('654321'), undefined, context);
+    expect(framePage?.items[0]?.displayText).toBe(
       `$SLU654321,33,999999999,\\x00\\x10\\x0d\\x0a\\x80ÿ*00`,
     );
-    const unitFrames = (await telemetry.frames({ unitId }, context)).items;
+    const unitFrames = (await telemetry.deviceFrames(device, undefined, context))?.items ?? [];
     expect(unitFrames.map((frame) => frame.direction)).toContain('HOLITA');
     expect(unitFrames).toContainEqual(
       expect.objectContaining({
@@ -395,27 +408,14 @@ it('persists captured connection lifecycle and raw frames through the production
       false,
     );
     expect(
-      (await telemetry.commands({ unitId }, context)).items.find(
+      (await telemetry.deviceCommands(device, undefined, context))?.items.find(
         (command) => command.status === 'ANSWERED',
       ),
     ).toMatchObject({
       resultCode: '01',
       responseText: response.toString('latin1'),
     });
-    const anotherTenant = { ...context, tenantId: randomUUID() };
-    expect(await telemetry.events({ unitId }, anotherTenant)).toEqual(
-      await telemetry.events({ unitId }, context),
-    );
-
     const fixtureTime = new Date('2000-01-01T00:00:00Z');
-    await database.client.ermConnection.createMany({
-      data: Array.from({ length: 26 }, (_, index) => ({
-        unitId: (100000 + index).toString(16).padStart(6, '0').toUpperCase(),
-        peer,
-        upstream,
-        openedAt: fixtureTime,
-      })),
-    });
     for (let index = 0; index < 26; index++) {
       const time = new Date(fixtureTime.getTime() + index);
       const frame = await database.client.ermFrame.create({
@@ -451,46 +451,44 @@ it('persists captured connection lifecycle and raw frames through the production
       });
     }
     // Later ingestion of historical events must not move the latest position backwards.
-    expect(
-      (await telemetry.units(undefined, context)).items.find((unit) => unit.unitId === unitId)
-        ?.latestEvent?.id,
-    ).toBe(String(event?.id));
-    expect((await telemetry.events({ unitId }, context)).items[0]?.id).toBe(String(event?.id));
-    const unitsFirst = await telemetry.units({ pageSize: 25 }, context);
-    expect(unitsFirst.items).toHaveLength(25);
-    expect(unitsFirst.hasMore).toBe(true);
-    const unitsSecond = await telemetry.units(
-      { pageSize: 25, cursor: unitsFirst.nextCursor },
-      context,
+    expect((await telemetry.deviceState(reference(), context))?.latestEvent?.id).toBe(
+      String(event.id),
     );
-    expect(unitsSecond.items).toHaveLength(2);
-    expect(unitsSecond.hasMore).toBe(false);
-    expect(
-      new Set([...unitsFirst.items, ...unitsSecond.items].map((unit) => unit.unitId)).size,
-    ).toBe(27);
+    expect((await telemetry.deviceEvents(reference(), undefined, context))?.items[0]?.id).toBe(
+      String(event.id),
+    );
     for (const read of [
-      (cursor: string | null = null) => telemetry.events({ unitId, pageSize: 25, cursor }, context),
-      (cursor: string | null = null) => telemetry.frames({ unitId, pageSize: 25, cursor }, context),
       (cursor: string | null = null) =>
-        telemetry.commands({ unitId, pageSize: 25, cursor }, context),
+        telemetry.deviceEvents(reference(), { pageSize: 25, cursor }, context),
+      (cursor: string | null = null) =>
+        telemetry.deviceFrames(reference(), { pageSize: 25, cursor }, context),
+      (cursor: string | null = null) =>
+        telemetry.deviceCommands(reference(), { pageSize: 25, cursor }, context),
     ]) {
       const first = await read();
+      if (!first?.nextCursor) {
+        throw new Error('Expected a paginated device history');
+      }
       expect(first.items).toHaveLength(25);
       expect(first.hasMore).toBe(true);
       const second = await read(first.nextCursor);
+      if (!second) {
+        throw new Error('Expected the next device page');
+      }
       expect(second.items.length).toBeGreaterThan(0);
       expect(second.hasMore).toBe(false);
       expect(first.items.some((item) => second.items.some((other) => other.id === item.id))).toBe(
         false,
       );
     }
-    for (const input of [
-      { unitId: 'invalid' },
-      { unitId, pageSize: 101 },
-      { unitId, cursor: 'invalid' },
-    ]) {
-      await expect(telemetry.events(input, context)).rejects.toThrow('Invalid ERM unit');
+    for (const input of [{ pageSize: 101 }, { cursor: 'invalid' }]) {
+      await expect(telemetry.deviceEvents(reference(), input, context)).rejects.toThrow(
+        'Invalid ERM unit',
+      );
     }
+    await expect(telemetry.deviceEvents(reference('invalid'), undefined, context)).rejects.toThrow(
+      'Invalid ERM unit',
+    );
 
     // Exercise the api -> Fleet scope check -> gateway contract on loopback, never on real units.
     const deviceId = randomUUID();
@@ -607,6 +605,7 @@ it('persists captured connection lifecycle and raw frames through the production
       ['NOT_FOUND', 404],
       ['UNAUTHENTICATED', 401],
       ['FORBIDDEN', 403],
+      ['BAD_USER_INPUT', 400],
     ] as const) {
       fleetError = code;
       try {
@@ -650,6 +649,23 @@ it('persists captured connection lifecycle and raw frames through the production
 
     // Federation resolves the complete representation set, including absent units, in fixed batches.
     const now = new Date();
+    const voltageObservedAt = new Date(now.getTime() - 60_000);
+    await database.client.ermEvent.update({
+      where: { id: event.id },
+      data: { eventTime: voltageObservedAt },
+    });
+    const fallbackObservedAt = new Date(now.getTime() - 5000);
+    const readingFrame = await database.client.ermFrame.create({
+      data: {
+        connectionId: stored.id,
+        unitId,
+        receivedAt: fallbackObservedAt,
+        direction: 'DEVICE',
+        command: '06',
+        checksum: 'ABSENT',
+        raw: Buffer.from(eventFrame),
+      },
+    });
     await database.client.ermEvent.createMany({
       data: [
         {
@@ -664,13 +680,110 @@ it('persists captured connection lifecycle and raw frames through the production
           unitId,
           eventId: '70',
           eventTime: now,
-          fields: {},
+          fields: { '#CSS#': '23' },
         },
         {
           frameId: stored.frames.at(-1)?.id ?? 0n,
           unitId,
           eventId: '999',
           eventTime: now,
+          fields: {},
+        },
+        {
+          frameId: readingFrame.id,
+          unitId,
+          eventId: '04',
+          eventTime: null,
+          mainVoltage: 13.8,
+          fields: { '#CSS#': 'unavailable' },
+        },
+      ],
+    });
+    const firmwareObservedAt = new Date(now.getTime() - 4000);
+    await database.client.ermCommand.createMany({
+      data: [
+        {
+          connectionId: stored.id,
+          unitId,
+          command: '48',
+          reference: '900002001',
+          fields: ['VER=#VER#'],
+          status: 'ANSWERED',
+          sentAt: firmwareObservedAt,
+          answeredAt: firmwareObservedAt,
+          response: Buffer.from(`$SLU${unitId},48,800,VER=StarLink 1.2.3;CSS=23`),
+        },
+        {
+          connectionId: stored.id,
+          unitId,
+          command: '48',
+          reference: '900002002',
+          fields: ['CSS=#CSS#'],
+          status: 'ANSWERED',
+          sentAt: now,
+          answeredAt: now,
+          response: Buffer.from(`$SLU${unitId},48,801,CSS=24`),
+        },
+      ],
+    });
+    const routingFrame = await database.client.ermFrame.create({
+      data: {
+        connectionId: stored.id,
+        unitId,
+        receivedAt: now,
+        direction: 'UPSTREAM',
+        command: '46',
+        reference: '802',
+        checksum: 'ABSENT',
+        raw: Buffer.from(`$SRV${unitId},46,802,0049,backup.example,0050,11500`),
+      },
+    });
+    const overdueUnitId = '862129080366631';
+    const lastClosedAt = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+    const overdueConnection = await database.client.ermConnection.create({
+      data: {
+        unitId: overdueUnitId,
+        peer,
+        upstream,
+        openedAt: new Date(lastClosedAt.getTime() - 60_000),
+        closedAt: lastClosedAt,
+        closeReason: 'upstream closed',
+      },
+    });
+    await database.client.ermUpstreamClose.create({
+      data: {
+        connectionId: overdueConnection.id,
+        closedAt: new Date(lastClosedAt.getTime() - 30_000),
+        reason: 'upstream closed',
+      },
+    });
+    const overdueFrameAt = new Date(lastClosedAt.getTime() - 1000);
+    const overdueFrame = await database.client.ermFrame.create({
+      data: {
+        connectionId: overdueConnection.id,
+        unitId: overdueUnitId,
+        receivedAt: overdueFrameAt,
+        direction: 'DEVICE',
+        command: '06',
+        checksum: 'ABSENT',
+        raw: Buffer.from(eventFrame.replace(unitId, overdueUnitId)),
+      },
+    });
+    await database.client.ermEvent.createMany({
+      data: [
+        {
+          frameId: overdueFrame.id,
+          unitId: overdueUnitId,
+          eventTime: new Date(overdueFrameAt.getTime() - 60_000),
+          engineOn: false,
+          speedKmh: 0,
+          fields: {},
+        },
+        {
+          frameId: overdueFrame.id,
+          unitId: overdueUnitId,
+          engineOn: true,
+          speedKmh: 0,
           fields: {},
         },
       ],
@@ -718,7 +831,11 @@ it('persists captured connection lifecycle and raw frames through the production
       },
     ]);
     const source = `query($representations: [_Any!]!) { _entities(representations: $representations) { ... on FleetDevice {
-      id ermState { online mode lastFrameAt latestEvent { eventId category } lastPosition { id } alarmsLast24h latestAlarm { eventId category name(language: BG) } }
+      id ermState {
+        online mode lastFrameAt latestEvent { eventId category } lastPosition { id } alarmsLast24h latestAlarm { eventId category name(language: BG) }
+        mainVoltage { value observedAt } backupVoltage { value observedAt } signalQuality { value observedAt } firmwareVersion { value observedAt }
+        health { lastFrameAgeSeconds expectedIntervalSeconds overdue lastCloseReason lastClosedAt upstreamClosesLast24h karmaRoutingWritesLast24h latestKarmaRoutingWrite { id command } }
+      }
       ermEvents(input: { pageSize: 25 }) { items { id } hasMore nextCursor }
       alarms: ermEvents(input: { categories: [ALARM] }) { items { eventId category } }
       other: ermEvents(input: { categories: [OTHER] }) { items { eventId } }
@@ -732,6 +849,7 @@ it('persists captured connection lifecycle and raw frames through the production
         representations: [
           { __typename: 'FleetDevice', id: deviceId, imei: unitId },
           { __typename: 'FleetDevice', id: 'never-connected', imei: '123456789012345' },
+          { __typename: 'FleetDevice', id: 'overdue', imei: overdueUnitId },
         ],
       },
       contextValue: { ...scopedContext },
@@ -743,8 +861,25 @@ it('persists captured connection lifecycle and raw frames through the production
         ermState: {
           online: true,
           mode: 'PRIMARY',
-          lastPosition: { id: String(event?.id) },
+          lastPosition: { id: String(event.id) },
           alarmsLast24h: 1,
+          mainVoltage: { value: 13.8, observedAt: fallbackObservedAt.toISOString() },
+          backupVoltage: { value: 3.6, observedAt: voltageObservedAt.toISOString() },
+          signalQuality: { value: 23, observedAt: now.toISOString() },
+          firmwareVersion: {
+            value: 'StarLink 1.2.3',
+            observedAt: firmwareObservedAt.toISOString(),
+          },
+          health: {
+            lastFrameAgeSeconds: expect.any(Number),
+            expectedIntervalSeconds: 3600,
+            overdue: false,
+            lastCloseReason: 'device closed',
+            lastClosedAt: stored.closedAt?.toISOString(),
+            upstreamClosesLast24h: 1,
+            karmaRoutingWritesLast24h: 1,
+            latestKarmaRoutingWrite: { id: String(routingFrame.id), command: '46' },
+          },
           latestAlarm: {
             eventId: '09',
             category: 'ALARM',
@@ -764,8 +899,162 @@ it('persists captured connection lifecycle and raw frames through the production
         ermFrames: { items: [] },
         ermCommands: { items: [] },
       },
+      {
+        id: 'overdue',
+        ermState: {
+          online: false,
+          mode: null,
+          mainVoltage: null,
+          backupVoltage: null,
+          signalQuality: null,
+          firmwareVersion: null,
+          health: {
+            lastFrameAgeSeconds: expect.any(Number),
+            expectedIntervalSeconds: 300,
+            overdue: true,
+            lastCloseReason: 'upstream closed',
+            lastClosedAt: lastClosedAt.toISOString(),
+            upstreamClosesLast24h: 2,
+            karmaRoutingWritesLast24h: 0,
+            latestKarmaRoutingWrite: null,
+          },
+        },
+      },
     ]);
     expect(gatewayReads).toBe(1);
+
+    // A cursor for one IMEI must not poison that page through another entity's field.
+    for (const [field, read] of [
+      [
+        'ermEvents',
+        (cursor: string | null = null) =>
+          api.deviceEvents(reference(), { pageSize: 25, cursor }, scopedContext),
+      ],
+      [
+        'ermFrames',
+        (cursor: string | null = null) =>
+          api.deviceFrames(reference(), { pageSize: 25, cursor }, scopedContext),
+      ],
+      [
+        'ermCommands',
+        (cursor: string | null = null) =>
+          api.deviceCommands(reference(), { pageSize: 25, cursor }, scopedContext),
+      ],
+    ] as const) {
+      const first = await read();
+      if (!first?.nextCursor) {
+        throw new Error(`Expected a cursor for ${field}`);
+      }
+      const second = await read(first.nextCursor);
+      if (!second) {
+        throw new Error(`Expected the second page of ${field}`);
+      }
+      const cursorResult = await graphql({
+        schema,
+        source: `query($representations: [_Any!]!, $cursor: String!) {
+          _entities(representations: $representations) { ... on FleetDevice {
+            id ${field}(input: {pageSize: 25, cursor: $cursor}) { items { id } hasMore }
+          } }
+        }`,
+        variableValues: {
+          representations: [
+            { __typename: 'FleetDevice', id: 'never-connected', imei: '123456789012345' },
+            { __typename: 'FleetDevice', id: deviceId, imei: unitId },
+            { __typename: 'FleetDevice', id: 'overdue', imei: overdueUnitId },
+          ],
+          cursor: first.nextCursor,
+        },
+        contextValue: { ...scopedContext },
+      });
+      expect(cursorResult.data?.['_entities']).toEqual([
+        null,
+        {
+          id: deviceId,
+          [field]: { items: second.items.map(({ id }) => ({ id })), hasMore: second.hasMore },
+        },
+        null,
+      ]);
+      expect(cursorResult.errors).toHaveLength(2);
+      expect(
+        cursorResult.errors?.map((error) => ({
+          path: error.path,
+          code: formatGraphqlError(error.toJSON(), error).extensions?.['code'],
+        })),
+      ).toEqual(
+        expect.arrayContaining([
+          { path: ['_entities', 0, field], code: 'BAD_USER_INPUT' },
+          { path: ['_entities', 2, field], code: 'BAD_USER_INPUT' },
+        ]),
+      );
+    }
+
+    // Re-decode only old, complete DEVICE frames and retain each stored frame byte for byte.
+    const redecodeStartedAt = new Date('2000-01-01T00:00:00Z');
+    const oldReceivedAt = new Date(redecodeStartedAt.getTime() - 60_000);
+    const redecodeFixture = {
+      connectionId: stored.id,
+      unitId,
+      receivedAt: oldReceivedAt,
+      direction: 'DEVICE',
+      command: '06',
+      checksum: 'ABSENT',
+      raw: Buffer.from(eventFrame),
+    } as const;
+    const missingFrame = await database.client.ermFrame.create({ data: redecodeFixture });
+    const changedFrame = await database.client.ermFrame.create({ data: redecodeFixture });
+    await database.client.ermFrame.create({
+      data: { ...redecodeFixture, raw: Buffer.from('$invalid') },
+    });
+    const excludedFrames = [];
+    for (const fixture of [
+      { ...redecodeFixture, partial: true },
+      { ...redecodeFixture, direction: 'UPSTREAM' },
+      { ...redecodeFixture, receivedAt: new Date(oldReceivedAt.getTime() + 1) },
+    ] as const) {
+      excludedFrames.push(await database.client.ermFrame.create({ data: fixture }));
+    }
+    const changedEvent = await database.client.ermEvent.create({
+      data: { frameId: changedFrame.id, unitId, eventId: '99', fields: {} },
+    });
+    const surplusEvent = await database.client.ermEvent.create({
+      data: { frameId: changedFrame.id, unitId, eventId: '998', fields: { retained: true } },
+    });
+    const framesBefore = await database.client.ermFrame.findMany({ orderBy: { id: 'asc' } });
+    const structure = DEFAULT_EVENT_STRUCTURE.split(',');
+    expect(await redecodeFrames(database.client, structure, redecodeStartedAt)).toEqual({
+      framesScanned: 3,
+      eventsUpdated: 1,
+      eventsInserted: 1,
+      surplusEvents: 1,
+      decodeFailures: 1,
+    });
+    expect(await redecodeFrames(database.client, structure, redecodeStartedAt)).toEqual({
+      framesScanned: 3,
+      eventsUpdated: 0,
+      eventsInserted: 0,
+      surplusEvents: 1,
+      decodeFailures: 1,
+    });
+    expect(await database.client.ermFrame.findMany({ orderBy: { id: 'asc' } })).toEqual(
+      framesBefore,
+    );
+    expect(await database.client.ermEvent.count({ where: { frameId: missingFrame.id } })).toBe(1);
+    expect(
+      await database.client.ermEvent.findUnique({ where: { id: changedEvent.id } }),
+    ).toMatchObject({
+      frameId: changedFrame.id,
+      eventId: '04',
+      mainVoltage: 12.2,
+      backupVoltage: 3.6,
+    });
+    expect(await database.client.ermEvent.findUnique({ where: { id: surplusEvent.id } })).toEqual(
+      surplusEvent,
+    );
+    expect(
+      await database.client.ermEvent.count({
+        where: { frameId: { in: excludedFrames.map(({ id }) => id) } },
+      }),
+    ).toBe(0);
   } finally {
     if (previousGatewayUrl === undefined) {
       delete process.env.ERM_GATEWAY_URL;

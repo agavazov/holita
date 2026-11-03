@@ -209,6 +209,21 @@ source selected by parameter 0004, which may be engine hours rather than distanc
 retain raw text; missing or unparsable parsed values become null, and trailing fields remain in
 `extra`. Decoding failures are logged without affecting device traffic.
 
+After correcting `ERM_EVENT_STRUCTURE` or deploying a decoder change, re-decode stored frames
+with the same `ERM_DATABASE_URL` and `ERM_EVENT_STRUCTURE` as the gateway. From
+`apps/erm-server`, run the deployed copy with its environment file:
+
+```bash
+node --env-file=/home/sysadmin/.config/holita/erm-server.env live-api/redecode.js
+```
+
+The command opens no listener or HTTP server and may run while the gateway and api are running.
+It scans complete DEVICE frames received at least one minute before the run began, in ID order
+and batches, and prints frames scanned, events updated, events inserted, surplus stored events
+and decode failures. It updates changed events in place, inserts missing events and leaves surplus
+events intact; frame rows are never changed. Running it again without decoder changes changes
+no events.
+
 The listener accepts at most 64 connections. A device must begin with `$` and complete its first
 frame, or reach the 16 KB frame bound, within 60 seconds before Karma is contacted. A first frame
 that is not a recognizable unit frame is still mirrored. Each upstream connect attempt has
@@ -247,6 +262,36 @@ query DeviceControlCenter($id: ID!) {
       mode
       lastFrameAt
       alarmsLast24h
+      mainVoltage {
+        value
+        observedAt
+      }
+      backupVoltage {
+        value
+        observedAt
+      }
+      signalQuality {
+        value
+        observedAt
+      }
+      firmwareVersion {
+        value
+        observedAt
+      }
+      health {
+        lastFrameAgeSeconds
+        expectedIntervalSeconds
+        overdue
+        lastCloseReason
+        lastClosedAt
+        upstreamClosesLast24h
+        karmaRoutingWritesLast24h
+        latestKarmaRoutingWrite {
+          receivedAt
+          command
+          displayText
+        }
+      }
     }
     ermEvents(input: { pageSize: 25, categories: [ALARM, EDATA] }) {
       items {
@@ -290,8 +335,9 @@ query DeviceControlCenter($id: ID!) {
 ALARM, EDATA and OTHER; severities are INFO, WARNING and CRITICAL. Names accept BG/EN and
 are null for unknown event IDs. History uses 25/50/100-item newest-first cursor pages; pass
 `nextCursor` for the same device/filter. Raw fields remain evidence, not inferred meanings.
-Provider queries `ermUnits`, `ermEvents`, `ermFrames` and `ermCommands` remain authenticated
-provider-level inspection and do not themselves establish Branch ownership.
+ERM data is available only through these Fleet Device fields with the caller's verified Tenant
+and active Branch. The provider queries `ermUnits`, `ermEvents`, `ermFrames` and `ermCommands`
+are no longer exposed.
 
 `sendErmDeviceCommand(input: { deviceId, action })` accepts only REQUEST_LOCATION,
 READ_STATUS, READ_VERSION, READ_ACCESSORIES, READ_EDATA_DIAGNOSTICS and READ_EDATA_FAULTS.

@@ -14,6 +14,7 @@ const execute = promisify(execFile);
 
 const readinessTenantId = '01000000-0000-4000-8000-000000000001';
 const readinessBranchId = '10000000-0000-4000-8000-000000000001';
+const readinessUnitId = '862129080366630';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -33,7 +34,7 @@ function isGatewayReady(body: unknown): boolean {
   }
   const vehicles = body.data.fleetVehicles;
   const summary = body.data.fleetVehicleSummary;
-  const ermUnits = body.data.ermUnits;
+  const device = body.data.fleetDevice;
   return (
     isRecord(vehicles) &&
     Array.isArray(vehicles.items) &&
@@ -48,10 +49,10 @@ function isGatewayReady(body: unknown): boolean {
     typeof summary.inOperation === 'number' &&
     Number.isSafeInteger(summary.inOperation) &&
     summary.inOperation >= 0 &&
-    isRecord(ermUnits) &&
-    Array.isArray(ermUnits.items) &&
-    ermUnits.items.length === 1 &&
-    ermUnits.items.every((item: unknown) => isRecord(item) && typeof item.unitId === 'string')
+    isRecord(device) &&
+    typeof device.id === 'string' &&
+    isRecord(device.ermState) &&
+    device.ermState.unitId === readinessUnitId
   );
 }
 
@@ -94,11 +95,36 @@ async function waitForGatewayReadiness(url: string) {
   const deadline = Date.now() + 10000;
   // Obtain one synthetic session; retry only the signed, read-only readiness query.
   const demoSession = await demoLogin(url, readinessTenantId);
+  const created = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${demoSession.token}`,
+      'x-branch-id': readinessBranchId,
+    },
+    body: JSON.stringify({
+      query: 'mutation($imei:String!){createFleetDevice(input:{imei:$imei}){id}}',
+      variables: { imei: readinessUnitId },
+    }),
+    signal: AbortSignal.timeout(5000),
+  });
+  const createdBody: unknown = await created.json();
+  if (
+    !created.ok ||
+    !isRecord(createdBody) ||
+    createdBody.errors !== undefined ||
+    !isRecord(createdBody.data) ||
+    !isRecord(createdBody.data.createFleetDevice) ||
+    typeof createdBody.data.createFleetDevice.id !== 'string'
+  ) {
+    throw new Error('Gateway readiness Device creation failed');
+  }
+  const ermDeviceId = createdBody.data.createFleetDevice.id;
   const query = `query FederationFixtureReady {
     branches { id }
     fleetVehicles(offset: 0, limit: 1) { items { id } total offset limit }
     fleetVehicleSummary { inOperation }
-    ermUnits(input: {pageSize: 25}) { items { unitId } }
+    fleetDevice(id: "${ermDeviceId}") { id ermState { unitId } }
   }`;
   let lastFailure = 'No signed readiness response';
   while (Date.now() < deadline) {
@@ -117,7 +143,7 @@ async function waitForGatewayReadiness(url: string) {
       });
       const body: unknown = await response.json();
       if (response.status === 200 && isGatewayReady(body)) {
-        return demoSession;
+        return { demoSession, ermDeviceId };
       }
       lastFailure = `HTTP ${String(response.status)}, unexpected readiness response`;
     } catch (error) {
@@ -637,15 +663,19 @@ export async function createFederationFixture(
     const adminOrigin = options.adminOrigin ?? 'http://127.0.0.1:11000';
     const gateway = await startRouter({ adminOrigin, subgraphUrls });
     cleanup.push(gateway.stop);
-    const demoSession = await waitForGatewayReadiness(gateway.url).catch((cause: unknown) => {
-      throw new Error(
-        `Gateway readiness failed:\nRouter:\n${gateway.logs()}\nCore:\n${core.logs()}\nFleet:\n${fleet.logs()}\nERM Server:\n${ermServer.logs()}`,
-        { cause },
-      );
-    });
+    const { demoSession, ermDeviceId } = await waitForGatewayReadiness(gateway.url).catch(
+      (cause: unknown) => {
+        throw new Error(
+          `Gateway readiness failed:\nRouter:\n${gateway.logs()}\nCore:\n${core.logs()}\nFleet:\n${fleet.logs()}\nERM Server:\n${ermServer.logs()}`,
+          { cause },
+        );
+      },
+    );
     return {
       url: gateway.url,
       demoSession,
+      /** The readiness Tenant's Fleet Device for unit 862129080366630. */
+      ermDeviceId,
       /** A new signed-in Tenant per caller lets browser tests share one backend. */
       createTenant: async (name: string, branchNames: readonly string[]) => {
         const tenant = { id: randomUUID(), name };

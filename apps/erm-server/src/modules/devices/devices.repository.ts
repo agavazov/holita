@@ -7,13 +7,7 @@ import {
   ErmDirection,
   Prisma,
 } from '../../generated/prisma/client.js';
-import {
-  decodeBinaryEvent,
-  decodeEvent,
-  inflateContainer,
-  parseFrame,
-} from '../../starlink/index.js';
-import type { DecodedEvent } from '../../starlink/index.js';
+import { decodeFrameEvents } from '../../starlink/index.js';
 import type { CaptureRecord, CommandOutcome, SentCommand } from './capture-record.js';
 
 @Injectable()
@@ -92,36 +86,23 @@ export class DevicesRepository {
     if (entry.from !== 'device' || entry.partial) {
       return;
     }
-    // Tracker units send binary $SLB reports and batch frames into compressed $SLC containers.
-    const raw = Buffer.from(entry.frame, 'latin1');
-    const container = entry.command === undefined ? inflateContainer(raw) : undefined;
-    const binary = entry.command === undefined && !container;
-    for (const inner of container ??
-      (binary || entry.command === '06' || entry.command === '86' ? [raw] : [])) {
-      let event: DecodedEvent | undefined;
+    const events = decodeFrameEvents(
+      Buffer.from(entry.frame, 'latin1'),
+      entry.command,
+      eventStructure,
+    );
+    for (;;) {
+      let next: ReturnType<typeof events.next>;
       try {
-        if (inner.subarray(0, 4).toString('latin1') === '$SLB') {
-          event = decodeBinaryEvent(inner);
-          if (event) {
-            await this.prisma.client.ermEvent.create({ data: { frameId: frame.id, ...event } });
-          }
-          continue;
-        }
-        const parsed = parseFrame(inner);
-        if (!parsed) {
-          throw new Error('Invalid event envelope.');
-        }
-        if (parsed.command !== '06' && parsed.command !== '86') {
-          continue;
-        }
-        event = decodeEvent(parsed, eventStructure);
+        next = events.next();
       } catch {
         this.logger.error('Event decoding failed; forwarding and confirmations continue.');
         return;
       }
-      if (event) {
-        await this.prisma.client.ermEvent.create({ data: { frameId: frame.id, ...event } });
+      if (next.done) {
+        return;
       }
+      await this.prisma.client.ermEvent.create({ data: { frameId: frame.id, ...next.value } });
     }
   }
 
