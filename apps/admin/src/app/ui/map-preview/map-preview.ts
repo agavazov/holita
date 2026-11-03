@@ -21,6 +21,7 @@ import {
   googleMapStreetView,
   locationMap,
   mapCoordinates,
+  sameCoordinates,
   type MapCoordinates,
   type GoogleMapView,
 } from './location-map';
@@ -98,23 +99,25 @@ export class MapPreview {
   readonly originTime = input<string | null>(null);
   readonly destinationTime = input<string | null>(null);
   protected readonly text = computed(() => mapPreviewMessages[this.language()]);
-  protected readonly validOrigin = computed(() =>
-    mapCoordinates(this.origin()?.latitude, this.origin()?.longitude),
+  protected readonly validOrigin = computed(
+    () => mapCoordinates(this.origin()?.latitude, this.origin()?.longitude),
+    { equal: sameCoordinates },
   );
-  protected readonly validDestination = computed(() =>
-    this.route()
-      ? mapCoordinates(this.destination()?.latitude, this.destination()?.longitude)
-      : null,
+  protected readonly validDestination = computed(
+    () =>
+      this.route()
+        ? mapCoordinates(this.destination()?.latitude, this.destination()?.longitude)
+        : null,
+    { equal: sameCoordinates },
   );
   protected readonly heading = computed(() =>
     this.route() ? this.text().routeTitle : this.text().locationTitle,
   );
+  /** A new identity, place or mode resets the view; a newer time of the same place does not. */
   private readonly context = computed(() => ({
     identity: this.identity(),
     origin: this.validOrigin(),
     destination: this.validDestination(),
-    originTime: this.originTime(),
-    destinationTime: this.destinationTime(),
     route: this.route(),
   }));
   protected readonly endpoint = linkedSignal<'start' | 'stop'>(() => {

@@ -19,7 +19,7 @@
   <holita-kpi-strip
     [label]="text().kpis"
     [loading]="loading() && !counts()"
-    [error]="counts() ? null : error() ? failure() : null"
+    [error]="error() ? failure() : null"
     (retry)="refresh()"
   >
     <holita-kpi-tile [label]="text().units" [value]="count(counts()?.units)" />
@@ -33,13 +33,20 @@
       [value]="count(counts()?.offline)"
       [tone]="counts()?.offline ? 'warn' : null"
     />
-    <holita-kpi-tile [label]="text().onKarma" [value]="count(counts()?.karma)" tone="neutral" />
+    <holita-kpi-tile
+      [label]="text().neverConnected"
+      [value]="count(counts()?.neverConnected)"
+      tone="neutral"
+    />
     <holita-kpi-tile
       [label]="text().withAlarms"
       [value]="count(counts()?.alarms)"
       [tone]="counts()?.alarms ? 'danger' : null"
     />
   </holita-kpi-strip>
+  @if (partial(); as partial) {
+    <p class="app-muted">{{ partial }}</p>
+  }
 
   @if (devices(); as all) {
     @if (all.length === 0) {
@@ -164,7 +171,7 @@
                 [severity]="toneSeverity(state.online ? 'success' : 'warn')"
               />
             } @else {
-              <p-tag [value]="text().onKarmaDeprecated" [severity]="toneSeverity('neutral')" />
+              <p-tag [value]="text().neverConnectedState" [severity]="toneSeverity('neutral')" />
             }
           </td>
           <td class="control-center__mono">{{ device.imei }}</td>

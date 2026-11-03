@@ -8,11 +8,13 @@ export const controlCenterRoutes: Routes = [
   },
   {
     path: ':branchId/control-center/devices/:recordId/:tab',
+    data: { resource: 'control-center' },
     loadComponent: () =>
       import('./control-center-workspace').then((module) => module.ControlCenterWorkspace),
   },
   {
     path: ':branchId/control-center',
+    data: { resource: 'control-center' },
     loadComponent: () =>
       import('./control-center-workspace').then((module) => module.ControlCenterWorkspace),
   },

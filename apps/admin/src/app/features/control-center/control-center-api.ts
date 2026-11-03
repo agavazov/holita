@@ -61,6 +61,7 @@ export class ControlCenterApi implements OnDestroy {
       variables: { language },
       fetchPolicy: 'network-only',
       pollInterval: 30_000,
+      skipPollAttempt: () => document.hidden,
     });
   }
 
@@ -70,6 +71,7 @@ export class ControlCenterApi implements OnDestroy {
       variables: { id, language },
       fetchPolicy: 'network-only',
       pollInterval: 30_000,
+      skipPollAttempt: () => document.hidden,
     });
   }
 

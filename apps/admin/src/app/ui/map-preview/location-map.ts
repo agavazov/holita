@@ -24,6 +24,11 @@ export function mapCoordinates(
   return { latitude, longitude };
 }
 
+/** Value equality, so a re-read of the same place keeps the map's view and frame. */
+export function sameCoordinates(a: MapCoordinates | null, b: MapCoordinates | null): boolean {
+  return a === b || (!!a && !!b && a.latitude === b.latitude && a.longitude === b.longitude);
+}
+
 function coordinateQuery(point: MapCoordinates): string {
   return `${String(point.latitude)},${String(point.longitude)}`;
 }

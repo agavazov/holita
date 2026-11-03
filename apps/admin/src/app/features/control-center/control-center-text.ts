@@ -10,9 +10,6 @@ export function ermLanguage(language: Language): ErmLanguage {
   return language === 'bg' ? 'BG' : 'EN';
 }
 
-/** ERM timestamps are shown in the fleet's local time. */
-export const fleetTimeZone = 'Europe/Sofia';
-
 export function severityTone(severity: ErmEventSeverity) {
   return toneSeverity(
     severity === 'CRITICAL' ? 'danger' : severity === 'WARNING' ? 'warn' : 'info',

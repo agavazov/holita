@@ -36,6 +36,7 @@ export class FleetRouteReuseStrategy extends BaseRouteReuseStrategy {
       next.data['resource'] !== 'general' &&
       next.data['resource'] !== 'scenario' &&
       next.data['resource'] !== 'diagnostics' &&
+      next.data['resource'] !== 'control-center' &&
       next.data['drawer'] !== true
     ) {
       return true;

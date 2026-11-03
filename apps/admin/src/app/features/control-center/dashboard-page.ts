@@ -16,7 +16,9 @@ import type { AdminControlCenterDevicesQuery } from '../../../generated/graphql/
 import { requestError } from '../../core/graphql/request-error';
 import type { Language } from '../../i18n/messages';
 import { EmptyState } from '../../ui/empty-state/empty-state';
+import { injectFleetFormat } from '../../ui/format/fleet-format';
 import { formatDateTime, formatNumber } from '../../ui/format/format';
+import { interpolate } from '../../ui/i18n/messages';
 import { KpiStrip } from '../../ui/kpi/kpi-strip';
 import { KpiTile } from '../../ui/kpi/kpi-tile';
 import { mapCoordinates } from '../../ui/map-preview/location-map';
@@ -27,13 +29,7 @@ import { tableView } from '../../ui/table-panel/table-view';
 import { toneSeverity } from '../../ui/tones';
 import { deviceModelLabel } from '../fleet/devices/i18n/messages';
 import { ControlCenterApi } from './control-center-api';
-import {
-  controlCenterText,
-  deviceLabel,
-  ermLanguage,
-  fleetTimeZone,
-  severityTone,
-} from './control-center-text';
+import { controlCenterText, deviceLabel, ermLanguage, severityTone } from './control-center-text';
 
 type Device = AdminControlCenterDevicesQuery['fleetDevices']['items'][number];
 
@@ -65,10 +61,22 @@ export class DashboardPage implements OnInit {
     return deviceModelLabel(this.language(), model);
   }
   private readonly api = inject(ControlCenterApi);
+  private readonly units = injectFleetFormat();
   readonly devices = signal<Device[] | null>(null);
+  /** All Devices of the Branch; the dashboard reads only the first page. */
+  readonly total = signal<number | null>(null);
+  /** When the shown devices were read; a failed poll keeps them. */
+  readonly updatedAt = signal<string | null>(null);
   readonly loading = signal(true);
   readonly error = signal<unknown>(null);
-  readonly failure = computed(() => requestError(this.error(), this.text().unavailable));
+  /** The failure, with the time of the data still shown. */
+  readonly failure = computed(() => {
+    const failure = requestError(this.error(), this.text().unavailable);
+    const updatedAt = this.updatedAt();
+    return updatedAt
+      ? `${failure} ${interpolate(this.text().lastUpdated, { time: this.date(updatedAt) })}`
+      : failure;
+  });
   private readonly reload = signal(0);
   readonly selectedId = signal<string | null>(null);
   readonly toneSeverity = toneSeverity;
@@ -81,17 +89,28 @@ export class DashboardPage implements OnInit {
       return null;
     }
     return {
-      units: devices.length,
+      units: this.total() ?? devices.length,
       online: devices.filter((device) => device.ermState?.online === true).length,
       offline: devices.filter((device) => device.ermState?.online === false).length,
-      karma: devices.filter((device) => !device.ermState).length,
+      neverConnected: devices.filter((device) => !device.ermState).length,
       alarms: devices.filter((device) => (device.ermState?.alarmsLast24h ?? 0) > 0).length,
     };
+  });
+  /** Set when the Branch has more Devices than the dashboard reads. */
+  readonly partial = computed(() => {
+    const shown = this.devices()?.length ?? 0;
+    const total = this.total() ?? 0;
+    return total > shown
+      ? interpolate(this.text().firstDevices, {
+          shown: this.number(shown),
+          total: this.number(total),
+        })
+      : null;
   });
   readonly view = computed(() =>
     tableView({
       loading: this.loading() && !this.devices(),
-      error: this.devices() ? null : this.error(),
+      error: this.error(),
       rows: this.devices()?.length ?? null,
       filtered: false,
     }),
@@ -141,9 +160,12 @@ export class DashboardPage implements OnInit {
         .valueChanges.subscribe({
           next: (result) => {
             this.loading.set(result.loading);
+            // A failed poll re-emits the previous data with the error; both stay visible.
             this.error.set(result.error ?? null);
             if (result.dataState === 'complete' && !result.error) {
               this.devices.set(result.data.fleetDevices.items);
+              this.total.set(result.data.fleetDevices.total);
+              this.updatedAt.set(new Date().toISOString());
             }
           },
           error: (error: unknown) => {
@@ -165,7 +187,7 @@ export class DashboardPage implements OnInit {
     return ['/', this.language(), this.branchId(), 'control-center', 'devices', device.id];
   }
   date(value: string | null | undefined): string {
-    return formatDateTime(value, this.language(), fleetTimeZone, true);
+    return formatDateTime(value, this.language(), this.units.preferences().timeZone, true);
   }
   number(value: number | null | undefined, fraction = 0): string {
     return formatNumber(value, this.language(), { fraction });

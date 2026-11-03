@@ -12,12 +12,14 @@ import {
   type OnInit,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonDirective } from 'primeng/button';
 import { ConfirmDialog } from 'primeng/confirmdialog';
+import { Message } from 'primeng/message';
 import { Skeleton } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
-import { Tabs, TabList, Tab } from 'primeng/tabs';
+import { Tabs, TabList, Tab, TabPanels, TabPanel } from 'primeng/tabs';
 import { Tag } from 'primeng/tag';
 import { map, type Observable } from 'rxjs';
 import type {
@@ -36,7 +38,9 @@ import { requestError } from '../../core/graphql/request-error';
 import type { Language } from '../../i18n/messages';
 import { confirmAction, confirmDialogPt } from '../../ui/confirm';
 import { EmptyState } from '../../ui/empty-state/empty-state';
+import { injectFleetFormat } from '../../ui/format/fleet-format';
 import { formatDateTime, formatNumber, emptyValue } from '../../ui/format/format';
+import { interpolate, uiMessages } from '../../ui/i18n/messages';
 import { mapCoordinates } from '../../ui/map-preview/location-map';
 import { MapPreview } from '../../ui/map-preview/map-preview';
 import { PageHeader } from '../../ui/page-header/page-header';
@@ -45,13 +49,7 @@ import { tableView } from '../../ui/table-panel/table-view';
 import { toneSeverity } from '../../ui/tones';
 import { deviceModelLabel } from '../fleet/devices/i18n/messages';
 import { ControlCenterApi } from './control-center-api';
-import {
-  controlCenterText,
-  deviceLabel,
-  ermLanguage,
-  fleetTimeZone,
-  severityTone,
-} from './control-center-text';
+import { controlCenterText, deviceLabel, ermLanguage, severityTone } from './control-center-text';
 
 export type DeviceTab = 'overview' | 'events' | 'alarms' | 'commands' | 'frames';
 type Device = AdminControlCenterDeviceQuery['fleetDevice'];
@@ -76,8 +74,25 @@ export const ermDeviceActions: readonly ErmDeviceAction[] = [
   'READ_EDATA_DIAGNOSTICS',
   'READ_EDATA_FAULTS',
 ];
+export const deviceTabs: readonly DeviceTab[] = [
+  'overview',
+  'events',
+  'alarms',
+  'commands',
+  'frames',
+];
 const categories: readonly ErmEventCategory[] = ['POSITION', 'STATUS', 'ALARM', 'EDATA', 'OTHER'];
-const alarmCategories: ErmEventCategory[] = ['ALARM', 'EDATA'];
+/** The Alarms tab matches the dashboard's ALARM count. */
+const alarmCategories: ErmEventCategory[] = ['ALARM'];
+
+/** A timeout or unavailable service after the request left: the unit may have received the frame. */
+function unconfirmed(error: unknown): boolean {
+  return (
+    (ServerError.is(error) && (error.statusCode === 503 || error.statusCode === 504)) ||
+    (CombinedGraphQLErrors.is(error) &&
+      error.errors.some((failure) => failure.extensions?.['code'] === 'SERVICE_UNAVAILABLE'))
+  );
+}
 
 @Component({
   selector: 'holita-control-center-device',
@@ -86,11 +101,14 @@ const alarmCategories: ErmEventCategory[] = ['ALARM', 'EDATA'];
     RouterLink,
     ButtonDirective,
     ConfirmDialog,
+    Message,
     Skeleton,
     TableModule,
     Tabs,
     TabList,
     Tab,
+    TabPanels,
+    TabPanel,
     Tag,
     EmptyState,
     MapPreview,
@@ -116,23 +134,52 @@ export class DevicePage implements OnInit {
   private readonly router = inject(Router);
   private readonly confirmation = inject(ConfirmationService);
   private readonly notifications = inject(MessageService);
+  private readonly units = injectFleetFormat();
+  readonly tabs = deviceTabs;
   readonly actions = ermDeviceActions;
   readonly categories = categories;
   readonly toneSeverity = toneSeverity;
   readonly severityTone = severityTone;
   readonly confirmPt = computed(() => confirmDialogPt(this.language()));
+  readonly uiText = computed(() => uiMessages[this.language()]);
 
   readonly device = signal<Device | null>(null);
+  /** When the shown device was read; a failed poll keeps it. */
+  readonly deviceUpdatedAt = signal<string | null>(null);
   readonly deviceLoading = signal(true);
   readonly deviceError = signal<unknown>(null);
   readonly deviceFailure = computed(() =>
     requestError(this.deviceError(), this.text().deviceUnavailable),
+  );
+  readonly staleFailure = computed(() =>
+    interpolate(this.text().staleDevice, {
+      error: this.deviceFailure(),
+      time: this.date(this.deviceUpdatedAt()),
+    }),
   );
   private readonly deviceReload = signal(0);
   readonly state = computed(() => this.device()?.ermState ?? null);
   readonly title = computed(() => {
     const device = this.device();
     return device ? deviceLabel(device) : this.text().units;
+  });
+  /** The truck and IMEI that a command goes to. */
+  readonly unitName = computed(() => {
+    const device = this.device();
+    const imei = `${this.text().imei} ${device?.imei ?? emptyValue}`;
+    return device?.vehicle ? `${device.vehicle.licensePlate} (${imei})` : imei;
+  });
+  /** holita sends commands only to units it serves as their primary server. */
+  readonly canSend = computed(
+    () => this.state()?.online === true && this.state()?.mode === 'PRIMARY',
+  );
+  readonly commandsHint = computed(() => {
+    const state = this.state();
+    return !state?.online
+      ? this.text().commandsOffline
+      : state.mode !== 'PRIMARY'
+        ? this.text().commandsMirror
+        : this.text().commandsHint;
   });
   readonly position = computed(() => {
     const event = this.state()?.lastPosition;
@@ -171,7 +218,7 @@ export class DevicePage implements OnInit {
   readonly historyView = computed(() =>
     tableView({
       loading: this.historyLoading() && !this.history(),
-      error: this.history() ? null : this.historyError(),
+      error: this.historyError(),
       rows: this.history()?.items.length ?? null,
       filtered: this.category() !== null,
     }),
@@ -187,9 +234,11 @@ export class DevicePage implements OnInit {
       const subscription = this.api.watchDevice(id, language).valueChanges.subscribe({
         next: (result) => {
           this.deviceLoading.set(result.loading);
+          // A failed poll re-emits the previous data with the error; both stay visible.
           this.deviceError.set(result.error ?? null);
           if (result.dataState === 'complete' && !result.error) {
             this.device.set(result.data.fleetDevice);
+            this.deviceUpdatedAt.set(new Date().toISOString());
           }
         },
         error: (error: unknown) => {
@@ -301,14 +350,9 @@ export class DevicePage implements OnInit {
     return this.link('control-center', 'devices', this.recordId(), tab);
   }
   selectTab(value: string | number | undefined): void {
-    if (
-      value === 'overview' ||
-      value === 'events' ||
-      value === 'alarms' ||
-      value === 'commands' ||
-      value === 'frames'
-    ) {
-      void this.router.navigate(this.deviceLink(value));
+    const tab = deviceTabs.find((tab) => tab === value);
+    if (tab) {
+      void this.router.navigate(this.deviceLink(tab));
     }
   }
   refresh(): void {
@@ -316,10 +360,25 @@ export class DevicePage implements OnInit {
     this.historyReload.update((value) => value + 1);
   }
   date(value: string | null | undefined): string {
-    return formatDateTime(value, this.language(), fleetTimeZone, true);
+    return formatDateTime(value, this.language(), this.units.preferences().timeZone, true);
   }
   number(value: number | null | undefined, fraction = 1): string {
     return formatNumber(value, this.language(), { fraction });
+  }
+  /** Speed and odometer in the Branch's units; no unit next to an absent value. */
+  speed(value: number | null): string {
+    return this.units.speed(value);
+  }
+  distance(value: number | null): string {
+    return this.units.distance(value, true, 0);
+  }
+  voltage(value: number | null): string {
+    return value === null
+      ? emptyValue
+      : `${this.number(value, 2)}\u00a0${this.uiText().units.volt}`;
+  }
+  commandFields(fields: readonly string[]): string {
+    return fields.length ? ` · ${fields.join(',')}` : '';
   }
   engine(value: boolean | null | undefined): string {
     return value === null || value === undefined
@@ -356,9 +415,10 @@ export class DevicePage implements OnInit {
 
   async send(action: ErmDeviceAction): Promise<void> {
     const text = this.text();
+    const unit = this.unitName();
     const accepted = await confirmAction(this.confirmation, this.language(), {
       header: text.confirmHeader,
-      message: `${text.actions[action]}. ${text.confirmMessage}`,
+      message: interpolate(text.confirmMessage, { action: text.actions[action], unit }),
       acceptLabel: text.send,
       danger: false,
     });
@@ -369,21 +429,30 @@ export class DevicePage implements OnInit {
     try {
       const command = await this.api.sendCommand(this.recordId(), action);
       this.notifications.add({
-        severity: 'success',
-        summary: text.commandSent,
-        detail: `${text.actions[action]} · ${command.reference} · ${text.commandStates[command.status]}`,
+        severity:
+          command.status === 'ANSWERED'
+            ? 'success'
+            : command.status === 'SENT'
+              ? 'info'
+              : command.status === 'TIMEOUT'
+                ? 'warn'
+                : 'error',
+        summary: text.commandResults[command.status],
+        detail: `${text.actions[action]} · ${unit} · ${text.reference} ${command.reference}`,
       });
-      if (this.tab() === 'commands') {
-        this.historyReload.update((value) => value + 1);
-      }
     } catch (error: unknown) {
-      this.notifications.add({
-        severity: 'error',
-        summary: text.commandFailed,
-        detail: requestError(error, text.commandFailed),
-      });
+      this.notifications.add(
+        unconfirmed(error)
+          ? { severity: 'warn', summary: text.commandUnconfirmed, detail: text.checkHistory }
+          : {
+              severity: 'error',
+              summary: text.commandFailed,
+              detail: requestError(error, text.commandFailed),
+            },
+      );
     } finally {
       this.sending.set(null);
+      this.historyReload.update((value) => value + 1);
     }
   }
 }
