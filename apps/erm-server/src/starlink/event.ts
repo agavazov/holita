@@ -1,4 +1,5 @@
 import { binaryBody, binaryUnitId, type ParsedFrame } from './protocol.js';
+import { decodeEdata, type EdataReport } from './edata.js';
 
 export const DEFAULT_EVENT_STRUCTURE =
   '#EDT#,#EID#,#PDT#,#LAT#,#LONG#,#SPD#,#HEAD#,#ODOD#,#LAC#,#CID#,#ENG#,#VIN#,#VBAT#,#BATC#,#BATH#,#STRT#,#TVI#,#NXT#,#ALT#,#CSS#';
@@ -16,7 +17,7 @@ export interface DecodedEvent {
   engineOn: boolean | null;
   mainVoltage: number | null;
   backupVoltage: number | null;
-  fields: Record<string, string | null | string[]>;
+  fields: Record<string, string | null | string[] | EdataReport>;
 }
 
 function number(raw: string | undefined): number | null {
@@ -75,8 +76,13 @@ export function decodeEvent(
   for (const [token, value] of tokens) {
     fields[token] = value ?? null;
   }
-  fields['extra'] = raw.slice(structure.length);
+  const extra = raw.slice(structure.length);
+  fields['extra'] = extra;
   const eventId = tokens.get('#EID#');
+  const edata = eventId === '33' ? decodeEdata(extra) : undefined;
+  if (edata) {
+    fields['edata'] = edata;
+  }
   const speed = number(tokens.get('#SPD#'));
   const engine = tokens.get('#ENG#');
   return {
@@ -170,6 +176,7 @@ export function decodeBinaryEvent(raw: Buffer): DecodedEvent | undefined {
   const main = unsigned(0x20);
   const backup = unsigned(0x21);
   const eventId = unsigned(0x08);
+  const edata = eventId === 33 ? decodeEdata(extra.split(',')) : undefined;
   const text = (value: number | null | undefined): string | null =>
     value === null || value === undefined ? null : String(value);
   return {
@@ -203,6 +210,7 @@ export function decodeBinaryEvent(raw: Buffer): DecodedEvent | undefined {
       '#NT#': text(unsigned(0x51)),
       unknown: [values.get(0x27)?.toString('hex') ?? '', values.get(0xff)?.toString('hex') ?? ''],
       extra: extra.split(','),
+      ...(edata ? { edata } : {}),
     },
   };
 }

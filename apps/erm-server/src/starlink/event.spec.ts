@@ -54,6 +54,7 @@ it('decodes event tokens with UTC times, nautical speed and coordinates while pr
     expect(event?.latitude).toBeCloseTo(42.6489116667, 7);
     expect(event?.longitude).toBeCloseTo(-71.1650283333, 7);
     expect(event?.speedKmh).toBeCloseTo(4.2596, 7);
+    expect(event?.fields['edata']).toBeUndefined();
   }
   const invalidFields = [
     ['#EDT#', '261132142530', 'eventTime'],
@@ -140,5 +141,131 @@ it('decodes event tokens with UTC times, nautical speed and coordinates while pr
       eventId: '01',
       ...expected,
     });
+  }
+
+  // Vendor examples, except 411/419 (real captures) and 418 (synthetic documented layout).
+  const edataReports = [
+    {
+      type: 401,
+      payload: '07000180BD000100080001000100000100010000F0003C',
+      decoded: {
+        parameters: [
+          {
+            parameter: 1,
+            headerId: 0x80bd0001,
+            startBit: 0,
+            bitCount: 8,
+            multiplier: 1,
+            divisor: 1,
+            offsetHex: '0000',
+            filterMask: 0x0100,
+            filterValue: 0x0100,
+            type: 0,
+            flags: 0xf0,
+            intervalSeconds: 60,
+          },
+        ],
+      },
+    },
+    {
+      type: 402,
+      payload: '0800011AAA1BBB00640707021400010E00',
+      decoded: {
+        rules: [
+          {
+            rule: 1,
+            trueEventId: 0x1aaa,
+            falseEventId: 0x1bbb,
+            debounceMilliseconds: 100,
+            activateDashboard: false,
+            dataLength: 7,
+            data: '07021400010E00',
+          },
+        ],
+      },
+    },
+    {
+      type: 405,
+      payload: '140001000155000201021234',
+      decoded: {
+        parameters: [
+          { parameter: 1, type: 0, valueSize: 1, valueHex: '55' },
+          { parameter: 2, type: 1, valueSize: 2, valueHex: '1234' },
+        ],
+      },
+    },
+    {
+      type: 411,
+      payload: '01000001010CBA',
+      decoded: {
+        communicationMask: 1,
+        obdCommunicationMask: 0,
+        canError: 0,
+        ignition: 1,
+        extension: '010CBA',
+      },
+    },
+    {
+      type: 413,
+      payload: '19111101622202B33301',
+      decoded: {
+        faults: [
+          { code: 'P1111', status: 1 },
+          { code: 'C2222', status: 2 },
+          { code: 'B3333', status: 1 },
+        ],
+      },
+    },
+    { type: 417, payload: '', decoded: { noCanMessages: true } },
+    {
+      type: 418,
+      payload: '20503134383201553031303002',
+      decoded: {
+        faults: [
+          { code: 'P1482', status: 1 },
+          { code: 'U0100', status: 2 },
+        ],
+      },
+    },
+    {
+      type: 419,
+      payload: '21000010F30701000004DF0B01',
+      decoded: {
+        faults: [
+          { spn: 4339, fmi: 7, status: 1 },
+          { spn: 1247, fmi: 11, status: 1 },
+        ],
+      },
+    },
+    { type: 412, payload: '01020304', decoded: {} },
+    { type: 419, payload: '21000010F3', decoded: {} },
+    // The PDF's printed 418 example conflicts with its five-ASCII-character layout.
+    { type: 418, payload: '20804952565601854849484802', decoded: {} },
+  ];
+  const externalValues = values.slice(0, structure.length);
+  externalValues[1] = '33';
+  for (const { type, payload, decoded } of edataReports) {
+    const extra = `19,0,${String(type)},0,1,1,1001,${payload}`;
+    const expected = { type, ...decoded, payload };
+    for (const command of ['06', '86']) {
+      const parsed = parseFrame(
+        Buffer.from(
+          `$SLU862129080366630,${command},66,${externalValues.join(',')},${extra}`,
+          'latin1',
+        ),
+      );
+      if (!parsed) {
+        throw new Error('External-device event envelope did not parse.');
+      }
+      const event = decodeEvent(parsed, structure);
+      expect(event?.fields['edata']).toEqual(expected);
+      expect(event?.fields['extra']).toEqual(extra.split(','));
+    }
+    const event = decodeBinaryEvent(
+      slb('862129080366630', [0x08, 0x21, 0xfe, ...Buffer.from(extra, 'latin1')]),
+    );
+    expect(event?.eventId).toBe('33');
+    expect(event?.fields['edata']).toEqual(expected);
+    expect(event?.fields['extra']).toEqual(extra.split(','));
   }
 });
