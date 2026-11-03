@@ -1,4 +1,5 @@
-import { expect, it } from '@jest/globals';
+import { expect, it, jest } from '@jest/globals';
+import { ExecutionContextHost } from '@nestjs/core/helpers/execution-context-host.js';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { randomUUID } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
@@ -14,9 +15,12 @@ import { DevicesRepository } from '../src/modules/devices/devices.repository.js'
 import { redecodeFrames } from '../src/modules/devices/redecode.js';
 import { DEFAULT_EVENT_STRUCTURE } from '../src/starlink/event.js';
 import { DevicesService } from '../src/modules/devices/devices.service.js';
+import { InternalDevicesGuard } from '../src/modules/devices/internal-devices.guard.js';
 import { validateCommand } from '../src/modules/devices/command.js';
 import { LiveDevicesService } from '../src/modules/telemetry/live-devices.service.js';
 import { FleetClient } from '../src/modules/telemetry/fleet.client.js';
+import { InternalTelemetryController } from '../src/modules/telemetry/internal-telemetry.controller.js';
+import { InternalTelemetryGuard } from '../src/modules/telemetry/internal-telemetry.guard.js';
 import {
   ErmDeviceResolver,
   ErmEventResolver,
@@ -46,11 +50,13 @@ it('persists captured connection lifecycle and raw frames through the production
   const previousGatewayUrl = process.env.ERM_GATEWAY_URL;
   const previousFleetUrl = process.env.FLEET_GRAPHQL_URL;
   const previousInternalToken = process.env.ERM_INTERNAL_TOKEN;
+  const previousTelemetryToken = process.env.ERM_TELEMETRY_TOKEN;
   try {
     const reviewDirectory = fileURLToPath(new URL('../../../.references/review/', import.meta.url));
     await mkdir(reviewDirectory, { recursive: true });
     captureDirectory = await mkdtemp(join(reviewDirectory, 'erm-server-'));
     module = await Test.createTestingModule({
+      controllers: [InternalTelemetryController],
       providers: [
         DeviceCaptureService,
         DevicesRepository,
@@ -58,6 +64,7 @@ it('persists captured connection lifecycle and raw frames through the production
         TelemetryService,
         LiveDevicesService,
         FleetClient,
+        InternalTelemetryGuard,
         { provide: DevicesService, useValue: { listUnits: () => [] } },
         { provide: PrismaService, useValue: { client: database.client, schema: database.schema } },
       ],
@@ -1055,6 +1062,162 @@ it('persists captured connection lifecycle and raw frames through the production
         where: { frameId: { in: excludedFrames.map(({ id }) => id) } },
       }),
     ).toBe(0);
+
+    // Fleet pulls a separate read-only contract, without the gateway's command token.
+    const telemetryController = module.get(InternalTelemetryController);
+    const telemetryGuard = module.get(InternalTelemetryGuard);
+    const telemetryToken = 'erm-telemetry-read-only-test-token-32-characters';
+    process.env.ERM_TELEMETRY_TOKEN = telemetryToken;
+    const telemetryContext = (authorization?: string, remoteAddress = '127.0.0.1') =>
+      new ExecutionContextHost([{ headers: { authorization }, socket: { remoteAddress } }]);
+    const authorized = telemetryContext(`Bearer ${telemetryToken}`);
+    expect(telemetryGuard.canActivate(authorized)).toBe(true);
+    expect(() => new InternalDevicesGuard().canActivate(authorized)).toThrow(
+      expect.objectContaining({ status: 401 }),
+    );
+    for (const authorization of [
+      undefined,
+      `Bearer ${process.env.ERM_INTERNAL_TOKEN}`,
+      'Bearer wrong-telemetry-token',
+    ]) {
+      expect(() => telemetryGuard.canActivate(telemetryContext(authorization))).toThrow(
+        expect.objectContaining({ status: 401 }),
+      );
+    }
+    expect(() =>
+      telemetryGuard.canActivate(telemetryContext(`Bearer ${telemetryToken}`, '192.0.2.1')),
+    ).toThrow(expect.objectContaining({ status: 403 }));
+    for (const token of [undefined, 'short']) {
+      if (token === undefined) {
+        delete process.env.ERM_TELEMETRY_TOKEN;
+      } else {
+        process.env.ERM_TELEMETRY_TOKEN = token;
+      }
+      expect(() => telemetryGuard.canActivate(authorized)).toThrow(
+        expect.objectContaining({ status: 503 }),
+      );
+    }
+    process.env.ERM_TELEMETRY_TOKEN = telemetryToken;
+
+    const telemetryUnitId = '862129080366632';
+    const telemetryRequestedAt = Date.now();
+    const telemetryReceivedAt = new Date(telemetryRequestedAt - 10_000);
+    const telemetryFrame = await database.client.ermFrame.create({
+      data: {
+        connectionId: stored.id,
+        unitId: telemetryUnitId,
+        receivedAt: telemetryReceivedAt,
+        direction: 'DEVICE',
+        checksum: 'ABSENT',
+        raw: Buffer.from(eventFrame.replace(unitId, telemetryUnitId)),
+      },
+    });
+    const telemetryEventTime = new Date('2026-11-03T14:25:30.123Z');
+    const firstTelemetryEvent = await database.client.ermEvent.create({
+      data: {
+        frameId: telemetryFrame.id,
+        unitId: telemetryUnitId,
+        eventId: '04',
+        eventTime: telemetryEventTime,
+        latitude: 42.6489117,
+        longitude: -71.1650283,
+        speedKmh: 4.2596,
+        heading: 180,
+        odometer: 12345.678,
+        engineOn: true,
+        mainVoltage: 12.2,
+        backupVoltage: 3.6,
+        fields: { private: 'not part of the Fleet contract' },
+      },
+    });
+    const secondTelemetryEvent = await database.client.ermEvent.create({
+      data: { frameId: telemetryFrame.id, unitId: telemetryUnitId, fields: {} },
+    });
+    const thirdTelemetryEvent = await database.client.ermEvent.create({
+      data: { frameId: telemetryFrame.id, unitId: telemetryUnitId, eventId: '70', fields: {} },
+    });
+    const delayedFrame = await database.client.ermFrame.create({
+      data: {
+        connectionId: stored.id,
+        unitId: telemetryUnitId,
+        receivedAt: new Date(telemetryRequestedAt - 9999),
+        direction: 'DEVICE',
+        checksum: 'ABSENT',
+        raw: Buffer.from(eventFrame.replace(unitId, telemetryUnitId)),
+      },
+    });
+    await database.client.ermEvent.create({
+      data: { frameId: delayedFrame.id, unitId: telemetryUnitId, fields: {} },
+    });
+    const telemetryClock = jest.spyOn(Date, 'now').mockReturnValue(telemetryRequestedAt);
+    try {
+      const exported = await telemetryController.events(telemetryUnitId, undefined, undefined);
+      expect(exported.events.map(({ id }) => id)).toEqual([
+        String(firstTelemetryEvent.id),
+        String(secondTelemetryEvent.id),
+        String(thirdTelemetryEvent.id),
+      ]);
+      expect(exported.next).toBe(String(thirdTelemetryEvent.id));
+      expect(exported.events[0]).toEqual({
+        id: String(firstTelemetryEvent.id),
+        eventId: '04',
+        eventTime: telemetryEventTime.toISOString(),
+        receivedAt: telemetryReceivedAt.toISOString(),
+        latitude: 42.6489117,
+        longitude: -71.1650283,
+        speedKmh: 4.2596,
+        heading: 180,
+        odometerKm: 12345.678,
+        engineOn: true,
+        mainVoltage: 12.2,
+        backupVoltage: 3.6,
+      });
+      expect(exported.events[1]).toEqual({
+        id: String(secondTelemetryEvent.id),
+        eventId: null,
+        eventTime: null,
+        receivedAt: telemetryReceivedAt.toISOString(),
+        latitude: null,
+        longitude: null,
+        speedKmh: null,
+        heading: null,
+        odometerKm: null,
+        engineOn: null,
+        mainVoltage: null,
+        backupVoltage: null,
+      });
+      expect(
+        await telemetryController.events(telemetryUnitId, String(firstTelemetryEvent.id), '1'),
+      ).toEqual({ events: [exported.events[1]], next: String(secondTelemetryEvent.id) });
+      const after = String(thirdTelemetryEvent.id);
+      expect(await telemetryController.events(telemetryUnitId, after, undefined)).toEqual({
+        events: [],
+        next: after,
+      });
+      expect(await telemetryController.events('123456789012345', '00042', undefined)).toEqual({
+        events: [],
+        next: '00042',
+      });
+      expect(await telemetryController.events('123456789012345', undefined, undefined)).toEqual({
+        events: [],
+        next: '0',
+      });
+      for (const limit of ['0', '501', '1.5', 'invalid', ['1']]) {
+        await expect(
+          telemetryController.events(telemetryUnitId, undefined, limit),
+        ).rejects.toMatchObject({ status: 400 });
+      }
+      for (const after of ['-1', '1.5', '', ['1']]) {
+        await expect(
+          telemetryController.events(telemetryUnitId, after, undefined),
+        ).rejects.toMatchObject({ status: 400 });
+      }
+      await expect(
+        telemetryController.events('invalid-imei', undefined, undefined),
+      ).rejects.toMatchObject({ status: 400 });
+    } finally {
+      telemetryClock.mockRestore();
+    }
   } finally {
     if (previousGatewayUrl === undefined) {
       delete process.env.ERM_GATEWAY_URL;
@@ -1070,6 +1233,11 @@ it('persists captured connection lifecycle and raw frames through the production
       delete process.env.ERM_INTERNAL_TOKEN;
     } else {
       process.env.ERM_INTERNAL_TOKEN = previousInternalToken;
+    }
+    if (previousTelemetryToken === undefined) {
+      delete process.env.ERM_TELEMETRY_TOKEN;
+    } else {
+      process.env.ERM_TELEMETRY_TOKEN = previousTelemetryToken;
     }
     if (boundary) {
       await new Promise<void>((resolve, reject) => {

@@ -103,6 +103,37 @@ export class TelemetryService {
     private readonly fleet: FleetClient,
   ) {}
 
+  async internalEvents(imei: string, after?: unknown, limit?: unknown) {
+    const receivedBefore = new Date(Date.now() - 10_000);
+    const cursor = after === undefined ? '0' : after;
+    const pageSize = limit === undefined ? '500' : limit;
+    if (
+      !/^\d{15}$/.test(imei) ||
+      typeof cursor !== 'string' ||
+      !/^\d+$/.test(cursor) ||
+      BigInt(cursor) > 9223372036854775807n ||
+      typeof pageSize !== 'string' ||
+      !/^\d+$/.test(pageSize) ||
+      !Number.isInteger(Number(pageSize)) ||
+      Number(pageSize) < 1 ||
+      Number(pageSize) > 500
+    ) {
+      throw new BadRequestException('Invalid telemetry IMEI, cursor or limit');
+    }
+    const rows = await this.repository.internalEvents(
+      imei,
+      cursor,
+      Number(pageSize),
+      receivedBefore,
+    );
+    const events = rows.map((event) => ({
+      ...event,
+      eventTime: event.eventTime?.toISOString() ?? null,
+      receivedAt: event.receivedAt.toISOString(),
+    }));
+    return { events, next: events.at(-1)?.id ?? cursor };
+  }
+
   private liveUnits(context: RequestContext) {
     let request = this.liveRequests.get(context);
     if (!request) {

@@ -13,6 +13,14 @@ import { parseFrame } from '../../starlink/protocol.js';
 import { categoryEventIds, starlinkEvents } from '../../starlink/event-catalog.js';
 import type { TelemetryQuery } from './telemetry-query.js';
 
+function nullableNumber(row: Record<string, unknown>, key: string): number | null {
+  const value = row[key];
+  if (value === null || (typeof value === 'number' && Number.isFinite(value))) {
+    return value;
+  }
+  throw new Error(`Invalid ERM database number: ${key}`);
+}
+
 @Injectable()
 export class TelemetryRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -21,6 +29,43 @@ export class TelemetryRepository {
     name: 'ermConnection' | 'ermFrame' | 'ermEvent' | 'ermCommand' | 'ermUpstreamClose',
   ) {
     return Prisma.raw(`"${this.prisma.schema.replaceAll('"', '""')}"."${name}"`);
+  }
+
+  async internalEvents(imei: string, after: string, limit: number, receivedBefore: Date) {
+    return sqlRows(
+      await this.prisma.client.$queryRaw(Prisma.sql`
+        SELECT event.id::text AS id, event."eventId", event."eventTime", frame."receivedAt",
+          event.latitude::double precision AS latitude, event.longitude::double precision AS longitude,
+          event."speedKmh", event.heading, event.odometer AS "odometerKm", event."engineOn",
+          event."mainVoltage", event."backupVoltage"
+        FROM ${this.table('ermEvent')} event
+        JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
+        WHERE event."unitId" = ${imei} AND event.id > ${after}::bigint
+          AND frame."receivedAt" <= ${receivedBefore}
+        ORDER BY event.id ASC
+        LIMIT ${limit}
+      `),
+    ).map((row) => {
+      const receivedAt = sqlNullableDate(row, 'receivedAt');
+      const engineOn = row['engineOn'];
+      if (receivedAt === null || (engineOn !== null && typeof engineOn !== 'boolean')) {
+        throw new Error('Invalid ERM telemetry database row');
+      }
+      return {
+        id: sqlText(row, 'id'),
+        eventId: sqlNullableText(row, 'eventId'),
+        eventTime: sqlNullableDate(row, 'eventTime'),
+        receivedAt,
+        latitude: nullableNumber(row, 'latitude'),
+        longitude: nullableNumber(row, 'longitude'),
+        speedKmh: nullableNumber(row, 'speedKmh'),
+        heading: nullableNumber(row, 'heading'),
+        odometerKm: nullableNumber(row, 'odometerKm'),
+        engineOn,
+        mainVoltage: nullableNumber(row, 'mainVoltage'),
+        backupVoltage: nullableNumber(row, 'backupVoltage'),
+      };
+    });
   }
 
   async deviceStates(unitIds: string[], snapshot: Date) {

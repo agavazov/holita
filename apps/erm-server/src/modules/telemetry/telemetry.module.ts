@@ -8,9 +8,12 @@ import { ermRole } from '../../role.js';
 import { LiveDevicesService } from './live-devices.service.js';
 import { FleetClient } from './fleet.client.js';
 import { ErmDeviceResolver, ErmEventResolver } from './telemetry.resolver.js';
+import { InternalTelemetryController } from './internal-telemetry.controller.js';
+import { InternalTelemetryGuard } from './internal-telemetry.guard.js';
 
 @Module({
   imports: [DatabaseModule, ...(ermRole() === 'api' ? [] : [DevicesModule])],
+  controllers: [InternalTelemetryController],
   providers: [
     TelemetryRepository,
     TelemetryService,
@@ -19,6 +22,7 @@ import { ErmDeviceResolver, ErmEventResolver } from './telemetry.resolver.js';
     ErmEventResolver,
     LiveDevicesService,
     FleetClient,
+    InternalTelemetryGuard,
   ],
 })
 export class TelemetryModule {}

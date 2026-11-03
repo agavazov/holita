@@ -348,7 +348,7 @@ writes, durable offline delivery and operator audit remain in the [ERM roadmap](
 
 ### Internal unit and command API
 
-The HTTP listener is loopback-only. `/internal` endpoints are disabled unless `ERM_INTERNAL_TOKEN`
+The HTTP listener is loopback-only. `/internal/units` endpoints are disabled unless `ERM_INTERNAL_TOKEN`
 is set to a private random value of at least 32 characters. Requests require
 `authorization: Bearer <token>`; keep the token in the service environment. For one unit, the
 relevant application `.env` entries are:
@@ -408,6 +408,14 @@ Invalid commands return 400, disconnected units 404, and mirror/busy units 409. 
 Karma does not block holita commands.
 The API returns 401 for invalid credentials and 503 when its token is unconfigured. Command
 requests, outcomes and exact responses are persisted. No command is retried automatically.
+
+The api and all roles serve `GET /internal/telemetry/units/:imei/events?after=<id>&limit=<1-500>` on
+loopback with the separate bearer `ERM_TELEMETRY_TOKEN` (at least 32 characters). It returns
+`{ events, next }`: decoded readings ordered by event id, with decimal-string ids and ISO
+timestamps, excluding frames received less than 10 seconds ago. `after` defaults to `0`, `limit`
+to 500, and an empty page keeps `next` equal to `after`. Raw frames, fields and commands are
+excluded. See [ADR 0008](../architecture/decisions/0008-erm-telemetry-into-fleet-activity.md) for
+Fleet's telemetry job.
 
 ### Development and service management
 
