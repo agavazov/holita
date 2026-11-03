@@ -95,11 +95,9 @@ test.describe('Devices', () => {
       },
     });
     expect(await deletion.json()).toMatchObject({ errors: [{ extensions: { code: 'CONFLICT' } }] });
-    await page.getByRole('button', { name: 'Open device 001234567890123', exact: true }).click();
-    await expect(page).toHaveURL(/\/diagnostics$/);
-    const overviewUrl = page.url();
-    const overview = page.getByRole('dialog', { name: 'Diagnostics', exact: true });
-    await overview.getByRole('button', { name: 'Edit', exact: true }).click();
+    await page.getByRole('button', { name: 'Actions for 001234567890123', exact: true }).click();
+    await chooseMenuItem(page, 'Edit');
+    await expect(page).toHaveURL(/\/edit$/);
     const edit = page.getByRole('dialog', { name: 'Device 001234567890123', exact: true });
     await expect(edit.getByRole('combobox', { name: 'Installed in', exact: true })).toHaveText(
       'CA1234AB',
@@ -113,9 +111,6 @@ test.describe('Devices', () => {
     await expect(installedAt).toHaveAttribute('aria-invalid', 'true');
     await installedAt.fill('2026-10-18T09:00:15.125');
     await edit.getByRole('button', { name: 'Save', exact: true }).click();
-    await expect(page).toHaveURL(overviewUrl);
-    await expect(overview).toBeVisible();
-    await overview.locator('button.route-drawer__close').click();
     await expect(page).toHaveURL(app.url + path);
     await page.reload();
     await expect(page.locator('tbody tr').filter({ hasText: '001234567890123' })).toContainText(
@@ -137,7 +132,7 @@ test.describe('Devices', () => {
     await chooseBranch(page, app.branchB.name);
     await expect(page).toHaveURL(/\/fleet\/devices$/);
     await expect(
-      page.getByRole('button', { name: 'Open device 001234567890123', exact: true }),
+      page.getByRole('link', { name: 'Open device page 001234567890123', exact: true }),
     ).toHaveCount(0);
     await chooseBranch(page, app.branchA.name);
     await page.getByRole('button', { name: 'Actions for 001234567890123', exact: true }).click();
@@ -149,10 +144,10 @@ test.describe('Devices', () => {
     await expect(page.getByText('Devices deleted: 1.', { exact: true })).toBeVisible();
     await page.reload();
     await expect(
-      page.getByRole('button', { name: 'Open device 001234567890123', exact: true }),
+      page.getByRole('link', { name: 'Open device page 001234567890123', exact: true }),
     ).toHaveCount(0);
     await expect(
-      page.getByRole('button', { name: 'Open device 001234567890124', exact: true }),
+      page.getByRole('link', { name: 'Open device page 001234567890124', exact: true }),
     ).toBeVisible();
   });
 });
