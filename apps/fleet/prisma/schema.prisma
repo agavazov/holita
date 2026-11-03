@@ -134,10 +134,11 @@ enum FleetGroupColor {
   @@map("fleetGroupColor")
 }
 
-// DEMO rows come from devices (or the demo seed); MANUAL rows are operator odometer readings.
+// ERM rows are imported device activity; DEMO is seeded; MANUAL is operator odometer readings.
 enum FleetDataSource {
   DEMO @map("demo")
   MANUAL @map("manual")
+  ERM @map("erm")
   @@map("fleetDataSource")
 }
 
@@ -255,6 +256,7 @@ model Device {
   installedAt DateTime? @db.Timestamptz(3)
   notes String? @db.VarChar(2000)
   operations FleetDeviceOperation[]
+  ermCursor FleetErmCursor?
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
@@ -263,6 +265,19 @@ model Device {
   @@index([tenantId, branchId, createdAt, id])
   @@index([tenantId, branchId, vehicleId])
   @@map("device")
+}
+
+// Hand-written CHECK: lastEventId is nonnegative.
+model FleetErmCursor {
+  deviceId String @id @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  lastEventId BigInt @default(0)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  device Device @relation(fields: [tenantId, branchId, deviceId], references: [tenantId, branchId, id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@unique([tenantId, branchId, deviceId])
+  @@map("fleetErmCursor")
 }
 
 enum FleetDeviceOperationKind {

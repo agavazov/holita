@@ -106,6 +106,7 @@ export const fleetGroupColorDb = {
 export const fleetDataSourceDb = {
   DEMO: 'demo',
   MANUAL: 'manual',
+  ERM: 'erm',
 } satisfies Record<FleetDataSource, string>;
 
 export const fleetEventKindDb = {

@@ -1,0 +1,133 @@
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../../database/prisma.service.js';
+import type { Prisma, VehicleStatusSample } from '../../generated/prisma/client.js';
+import type { ErmTelemetryPage } from '../../integrations/erm/erm-telemetry.client.js';
+import type { FleetScope } from '../../validation.js';
+import { ermSamples, type ErmTelemetryDevice } from './erm-telemetry.mapping.js';
+
+@Injectable()
+export class ErmTelemetryRepository {
+  constructor(private readonly prisma: PrismaService) {}
+
+  devices() {
+    // Deliberate background registry read across all Tenant/Branch scopes; page writes are scoped.
+    return this.prisma.client.device.findMany({
+      select: {
+        id: true,
+        tenantId: true,
+        branchId: true,
+        imei: true,
+        vehicleId: true,
+        installedAt: true,
+        createdAt: true,
+        ermCursor: { select: { lastEventId: true } },
+      },
+    });
+  }
+
+  async importPage(device: ErmTelemetryDevice, page: ErmTelemetryPage): Promise<void> {
+    const scope = { tenantId: device.tenantId, branchId: device.branchId };
+    await this.prisma.client.$transaction(async (transaction) => {
+      const data = ermSamples(device, page.events);
+      if (device.vehicleId !== null && data.length > 0) {
+        const pair = { ...scope, vehicleId: device.vehicleId, deviceImei: device.imei };
+        const latest = await transaction.vehicleStatusSample.findFirst({
+          where: { ...pair, source: 'ERM' },
+          orderBy: { recordedAt: 'desc' },
+          select: { recordedAt: true },
+        });
+        const samples = await transaction.vehicleStatusSample.createManyAndReturn({
+          data,
+          skipDuplicates: true,
+        });
+        await this.updateTrips(
+          transaction,
+          scope,
+          device.vehicleId,
+          device.imei,
+          samples,
+          latest?.recordedAt ?? null,
+        );
+      }
+      await transaction.fleetErmCursor.upsert({
+        where: { ...scope, deviceId: device.id },
+        create: { ...scope, deviceId: device.id, lastEventId: page.next },
+        update: { lastEventId: page.next },
+      });
+    });
+  }
+
+  private async updateTrips(
+    transaction: Prisma.TransactionClient,
+    scope: FleetScope,
+    vehicleId: string,
+    deviceImei: string,
+    samples: VehicleStatusSample[],
+    latestBeforePage: Date | null,
+  ): Promise<void> {
+    const newer = samples
+      .filter((sample) => latestBeforePage === null || sample.recordedAt > latestBeforePage)
+      .sort((left, right) => left.recordedAt.getTime() - right.recordedAt.getTime());
+    if (newer.length === 0) {
+      return;
+    }
+    const pair = { ...scope, vehicleId, deviceImei, source: 'ERM' as const };
+    let trip = await transaction.trip.findFirst({
+      where: { ...pair, endedAt: null },
+      orderBy: { startedAt: 'desc' },
+    });
+    let maxSpeedKph = trip?.maxSpeedKph ?? null;
+    for (const sample of newer) {
+      if (trip === null && sample.ignition === true) {
+        trip = await transaction.trip.create({
+          data: {
+            ...pair,
+            startedAt: sample.recordedAt,
+            startLatitude: sample.latitude,
+            startLongitude: sample.longitude,
+            startOdometerKm: sample.odometerKm,
+            maxSpeedKph: sample.speedKph,
+          },
+        });
+        maxSpeedKph = trip.maxSpeedKph;
+      }
+      if (trip === null) {
+        continue;
+      }
+      if (sample.speedKph !== null) {
+        maxSpeedKph = Math.max(maxSpeedKph ?? sample.speedKph, sample.speedKph);
+      }
+      if (sample.ignition === false) {
+        const endOdometerKm =
+          sample.odometerKm !== null &&
+          trip.startOdometerKm !== null &&
+          sample.odometerKm < trip.startOdometerKm
+            ? null
+            : sample.odometerKm;
+        const distance =
+          endOdometerKm !== null && trip.startOdometerKm !== null
+            ? endOdometerKm - trip.startOdometerKm
+            : null;
+        await transaction.trip.updateMany({
+          where: { ...pair, id: trip.id },
+          data: {
+            endedAt: sample.recordedAt,
+            endLatitude: sample.latitude,
+            endLongitude: sample.longitude,
+            endOdometerKm,
+            distanceKm: distance !== null && distance >= 0 && distance <= 5_000 ? distance : null,
+            maxSpeedKph,
+          },
+        });
+        trip = null;
+        maxSpeedKph = null;
+      }
+    }
+    if (trip !== null) {
+      await transaction.trip.updateMany({
+        where: { ...pair, id: trip.id },
+        data: { maxSpeedKph },
+      });
+    }
+  }
+}

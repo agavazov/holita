@@ -48,8 +48,10 @@ Both use `holita_erm`. Raw provider records have no Tenant/Branch columns. Frame
 exact bytes and direction; decoded events retain raw fields alongside parsed telemetry.
 Persistence/decoding failures must not interrupt forwarding or acknowledgements. Private
 JSON Lines captures are operational evidence, not a source for public documentation.
-Captured events do not yet populate Fleet status samples or trips;
-[ADR 0008](../architecture/decisions/0008-erm-telemetry-into-fleet-activity.md) decides how they will.
+When `FLEET_ERM_TELEMETRY_ENABLED=true`, Fleet pulls captured events into scoped status samples
+and ignition trips, following
+[ADR 0008](../architecture/decisions/0008-erm-telemetry-into-fleet-activity.md). Fleet events are not
+imported yet.
 
 Fleet owns the Device registry. ERM extends `FleetDevice` with `ermState`, `ermEvents`,
 `ermCommands` and `ermFrames`, resolved by its external `imei` with `@requires`. Fleet

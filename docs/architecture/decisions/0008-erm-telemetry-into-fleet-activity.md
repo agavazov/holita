@@ -30,8 +30,8 @@ message broker would add infrastructure beside PostgreSQL.
 **Fleet pulls; erm-server serves.** A Fleet background job (`@nestjs/schedule` with
 `waitForCompletion`, like Karma monitoring) runs every 30 seconds when
 `FLEET_ERM_TELEMETRY_ENABLED=true` (default off), against `ERM_TELEMETRY_URL` (default
-`http://127.0.0.1:11017`). For each Device assigned to a Vehicle it requests that IMEI's events
-after the Device's cursor. erm-server never learns Tenants or Branches and never
+`http://127.0.0.1:11017`). For each registered Device it requests that IMEI's events after the
+Device's cursor. erm-server never learns Tenants or Branches and never
 pushes. Fleet's registry decides where a unit's data belongs, and because IMEIs are globally unique,
 one unit feeds exactly one Branch.
 
@@ -100,6 +100,10 @@ in erm-server. Both processes need the new token in their runtime environment an
 `.env.example`. Fleet trails erm-server by about one tick plus the 10-second delay, and the
 Device's Vehicle at ingestion receives each sample, so a reassignment inside that window can
 attribute a few samples to the new Vehicle.
+
+Trip distances rely on the unit's `#ODOD#` odometer, which is km only when its parameter 0004
+selects distance; the roadmap's per-unit comparison with Karma confirms this before distances are
+trusted.
 
 The demo dataset uses the owner's Branch scope. Never load it into a Branch that receives ERM data,
 because demo and live samples would share one data clock. The federated `FleetDevice.erm*` history

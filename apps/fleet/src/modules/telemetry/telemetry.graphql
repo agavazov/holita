@@ -1,6 +1,8 @@
 enum FleetDataSource {
   DEMO
   MANUAL
+  "Imported from holita's ERM device server."
+  ERM
 }
 enum FleetActivityStatus {
   MOVING

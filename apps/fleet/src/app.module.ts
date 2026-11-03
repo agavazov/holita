@@ -18,6 +18,7 @@ import { VehiclesModule } from './modules/vehicles/vehicles.module.js';
 import { OverviewModule } from './modules/overview/overview.module.js';
 import { SettingsModule } from './modules/settings/settings.module.js';
 import { DeviceOperationsModule } from './modules/device-operations/device-operations.module.js';
+import { ErmTelemetryModule } from './modules/erm-telemetry/erm-telemetry.module.js';
 
 import { HealthController } from './health/health.controller.js';
 
@@ -53,6 +54,7 @@ const typeDefPaths = [
     SettingsModule,
     DeviceOperationsModule,
     KarmaMonitoringModule,
+    ErmTelemetryModule,
     GraphQLModule.forRoot<ApolloFederationDriverConfig>({
       driver: ApolloFederationDriver,
       fieldResolverEnhancers: ['guards'],
