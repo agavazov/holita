@@ -73,6 +73,7 @@ export const operationPaths = [
   'apps/admin/src/app/features/fleet/device-operations/operations.graphql',
   'apps/admin/src/app/features/control-center/operations.graphql',
   'apps/fleet/src/integrations/core/operations.graphql',
+  'apps/erm-server/src/modules/telemetry/operations.graphql',
 ];
 
 export async function readContracts() {

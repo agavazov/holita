@@ -67,7 +67,7 @@ fn public_error(error, request_id) {
     } else if is_transport_error(code) {
         error.message = "A required service is unavailable; try again later";
         code = "SERVICE_UNAVAILABLE";
-    } else if !["BAD_USER_INPUT", "UNAUTHENTICATED", "NOT_FOUND", "CONFLICT", "SERVICE_UNAVAILABLE", "GRAPHQL_PARSE_FAILED", "GRAPHQL_VALIDATION_FAILED", "BAD_REQUEST"].contains(code) {
+    } else if !["BAD_USER_INPUT", "UNAUTHENTICATED", "FORBIDDEN", "NOT_FOUND", "CONFLICT", "SERVICE_UNAVAILABLE", "GRAPHQL_PARSE_FAILED", "GRAPHQL_VALIDATION_FAILED", "BAD_REQUEST"].contains(code) {
         error.message = "Internal server error";
         code = "INTERNAL_SERVER_ERROR";
         log_error(`requestId=${request_id} error=INTERNAL_SERVER_ERROR`);

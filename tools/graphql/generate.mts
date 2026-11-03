@@ -96,6 +96,13 @@ if (target === 'gateway') {
       true,
       documents.filter((document) => document.location.startsWith(`apps/${target}/`)),
     );
+  } else if (target === 'erm-server') {
+    await generateTypes(
+      `apps/${target}/src/generated/graphql/fleet-operations.ts`,
+      composition.apiSchema,
+      true,
+      documents.filter((document) => document.location.startsWith(`apps/${target}/`)),
+    );
   }
 }
 console.info(

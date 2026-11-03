@@ -1,0 +1,6 @@
+query ErmFleetDevice($id: ID!) {
+  fleetDevice(id: $id) {
+    id
+    imei
+  }
+}

@@ -5,7 +5,7 @@ import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer, type Server } from 'node:http';
-import { GraphQLError, graphql, parse, type GraphQLResolveInfo } from 'graphql';
+import { GraphQLError, graphql, parse, print, type GraphQLResolveInfo } from 'graphql';
 import { buildSubgraphSchema } from '@apollo/subgraph';
 import { PrismaService } from '../src/database/prisma.service.js';
 import type { CaptureRecord } from '../src/modules/devices/capture-record.js';
@@ -30,6 +30,7 @@ import type {
 } from '../src/generated/graphql/types.js';
 import type { RequestContext } from '../src/graphql/request-context.js';
 import { formatGraphqlError } from '../src/graphql/errors.js';
+import { ErmFleetDeviceDocument } from '../src/generated/graphql/fleet-operations.js';
 import { TelemetryRepository } from '../src/modules/telemetry/telemetry.repository.js';
 import { TelemetryService } from '../src/modules/telemetry/telemetry.service.js';
 import { issueDemoToken, readDemoTenant } from '../src/auth/demo-auth.js';
@@ -520,7 +521,7 @@ it('persists captured connection lifecycle and raw frames through the production
         if (req.url === '/graphql') {
           fleetCalls++;
           expect(body).toEqual({
-            query: 'query($id: ID!) { fleetDevice(id: $id) { id imei } }',
+            query: print(ErmFleetDeviceDocument),
             variables: { id: deviceId },
           });
           expect(req.headers.authorization).toBe(scopedContext.authorization);

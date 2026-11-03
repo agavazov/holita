@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import type {
+  ErmDevicePageInput,
   ErmEventCategory,
   ErmHistoryInput,
   ErmUnitsInput,
@@ -64,6 +65,24 @@ export function telemetryQuery(
   return { unitId, pageSize, scope, offset, snapshot, cursor };
 }
 export type TelemetryQuery = ReturnType<typeof telemetryQuery>;
+
+export function deviceTelemetryQueries(
+  kind: 'events' | 'frames' | 'commands',
+  unitIds: string[],
+  input: ErmDevicePageInput | null | undefined,
+  categories?: readonly ErmEventCategory[] | null,
+): TelemetryQuery[] {
+  return unitIds.flatMap((unitId) => {
+    try {
+      return [telemetryQuery(kind, { ...input, unitId }, categories)];
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        return [];
+      }
+      throw error;
+    }
+  });
+}
 
 export function telemetryPage<T>(rows: T[], query: TelemetryQuery) {
   const hasMore = rows.length > query.pageSize;

@@ -1,17 +1,24 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { print } from 'graphql';
 import { requireTenant } from '../../auth/demo-auth.js';
+import {
+  ErmFleetDeviceDocument,
+  type ErmFleetDeviceQueryVariables,
+} from '../../generated/graphql/fleet-operations.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 
 @Injectable()
 export class FleetClient {
   async deviceImei(id: string, context: RequestContext): Promise<string> {
     requireTenant(context);
+    const variables: ErmFleetDeviceQueryVariables = { id };
     let value: unknown;
     try {
       const response = await fetch(
@@ -27,8 +34,8 @@ export class FleetClient {
             'x-request-id': context.requestId,
           },
           body: JSON.stringify({
-            query: 'query($id: ID!) { fleetDevice(id: $id) { id imei } }',
-            variables: { id },
+            query: print(ErmFleetDeviceDocument),
+            variables,
           }),
         },
       );
@@ -71,6 +78,8 @@ export class FleetClient {
             continue;
           }
           switch (error.extensions.code) {
+            case 'BAD_USER_INPUT':
+              throw new BadRequestException('Invalid Fleet device request');
             case 'NOT_FOUND':
               throw new NotFoundException('Fleet device not found in the active Branch');
             case 'UNAUTHENTICATED':
@@ -94,7 +103,8 @@ export class FleetClient {
         if (
           typeof device === 'object' &&
           'id' in device &&
-          device.id === id &&
+          typeof device.id === 'string' &&
+          device.id.toLowerCase() === id.toLowerCase() &&
           'imei' in device &&
           typeof device.imei === 'string' &&
           /^\d{15}$/.test(device.imei)

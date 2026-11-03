@@ -20,7 +20,7 @@ import { FleetClient } from './fleet.client.js';
 import { deviceActions } from './device-actions.js';
 import { deviceTelemetryRequest, type DeviceTelemetryRequest } from './device-request.js';
 import { displayText } from './display-text.js';
-import { telemetryPage, telemetryQuery } from './telemetry-query.js';
+import { deviceTelemetryQueries, telemetryPage, telemetryQuery } from './telemetry-query.js';
 import { TelemetryRepository } from './telemetry.repository.js';
 
 function eventView(event: ErmEvent) {
@@ -167,13 +167,12 @@ export class TelemetryService {
     context: RequestContext,
   ) {
     requireTenant(context);
+    telemetryQuery('events', { ...input, unitId: device.imei }, input?.categories);
     const request = device.telemetryRequest;
     const key = JSON.stringify(input ?? {});
     let page = request.events.get(key);
     if (!page) {
-      const queries = request.unitIds.map((unitId) =>
-        telemetryQuery('events', { ...input, unitId }, input?.categories),
-      );
+      const queries = deviceTelemetryQueries('events', request.unitIds, input, input?.categories);
       page = this.repository
         .deviceEvents(queries, input?.categories)
         .then(
@@ -196,13 +195,12 @@ export class TelemetryService {
     context: RequestContext,
   ) {
     requireTenant(context);
+    telemetryQuery('frames', { ...input, unitId: device.imei });
     const request = device.telemetryRequest;
     const key = JSON.stringify(input ?? {});
     let page = request.frames.get(key);
     if (!page) {
-      const queries = request.unitIds.map((unitId) =>
-        telemetryQuery('frames', { ...input, unitId }),
-      );
+      const queries = deviceTelemetryQueries('frames', request.unitIds, input);
       page = this.repository
         .deviceFrames(queries)
         .then(
@@ -225,13 +223,12 @@ export class TelemetryService {
     context: RequestContext,
   ) {
     requireTenant(context);
+    telemetryQuery('commands', { ...input, unitId: device.imei });
     const request = device.telemetryRequest;
     const key = JSON.stringify(input ?? {});
     let page = request.commands.get(key);
     if (!page) {
-      const queries = request.unitIds.map((unitId) =>
-        telemetryQuery('commands', { ...input, unitId }),
-      );
+      const queries = deviceTelemetryQueries('commands', request.unitIds, input);
       page = this.repository
         .deviceCommands(queries)
         .then(
