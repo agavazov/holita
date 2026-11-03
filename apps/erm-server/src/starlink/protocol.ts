@@ -111,6 +111,49 @@ export function parseFrame(raw: Buffer): ParsedFrame | undefined {
   return { header, origin, unitId, command, reference, fields, checksum: state };
 }
 
+// $SLC containers (protocol format 0182=3) hold ordinary text frames: after G9 replacement, tag 04 and
+// the BCD IMEI, two bytes (3f 01), the 3-byte uncompressed length and LZF-compressed data.
+export function inflateContainer(raw: Buffer): Buffer[] | undefined {
+  const separator = checksumSeparator(raw, 4);
+  const body = unescape(raw.subarray(4, separator < 0 ? raw.length : separator));
+  if (raw.subarray(0, 4).toString('latin1') !== '$SLC' || body[0] !== 0x04 || body.length < 13) {
+    return undefined;
+  }
+  const output = Buffer.alloc(body.readUIntBE(10, 3));
+  let size = 0;
+  for (let index = 13; index < body.length;) {
+    const control = body.readUInt8(index++);
+    if (control < 32) {
+      if (index + control + 1 > body.length || size + control + 1 > output.length) {
+        return undefined;
+      }
+      size += body.copy(output, size, index, index + control + 1);
+      index += control + 1;
+      continue;
+    }
+    const extra = control >> 5 === 7 ? body[index++] : 0;
+    const offset = body[index++];
+    if (extra === undefined || offset === undefined) {
+      return undefined;
+    }
+    const length = (control >> 5) + extra + 2;
+    const reference = size - ((control & 0x1f) << 8) - offset - 1;
+    if (reference < 0 || size + length > output.length) {
+      return undefined;
+    }
+    for (let copied = 0; copied < length; copied++) {
+      output[size++] = output[reference + copied] ?? 0;
+    }
+  }
+  return size === output.length
+    ? output
+        .toString('latin1')
+        .split('\r\n')
+        .filter((frame) => frame !== '')
+        .map((frame) => Buffer.from(frame, 'latin1'))
+    : undefined;
+}
+
 // CB5640XP's undocumented $SLB/$SLC frames start, after G9 replacement, with tag 04 and the first 14
 // IMEI digits in BCD; the 15th is the Luhn check digit.
 export function binaryUnitId(raw: Buffer): string | undefined {
