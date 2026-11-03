@@ -9,6 +9,7 @@ import type { DeviceCommand } from '../devices/command.js';
 import { DevicesService } from '../devices/devices.service.js';
 
 export type LiveUnit = ReturnType<DevicesService['listUnits']>[number];
+export type LiveCommandResult = Awaited<ReturnType<DevicesService['sendCommand']>>;
 
 function liveUnit(value: unknown): LiveUnit {
   if (
@@ -51,10 +52,10 @@ export class LiveDevicesService {
     return value.map(liveUnit);
   }
 
-  async sendCommand(unitId: string, command: DeviceCommand): Promise<string> {
+  async sendCommand(unitId: string, command: DeviceCommand): Promise<LiveCommandResult> {
     if (this.devices) {
       try {
-        return (await this.devices.sendCommand(unitId, command)).id;
+        return await this.devices.sendCommand(unitId, command);
       } catch (error) {
         if (error instanceof NotFoundException) {
           throw new ConflictException('Unit is not connected');
@@ -72,11 +73,26 @@ export class LiveDevicesService {
       typeof value !== 'object' ||
       value === null ||
       !('id' in value) ||
-      typeof value.id !== 'string'
+      typeof value.id !== 'string' ||
+      !('reference' in value) ||
+      typeof value.reference !== 'string' ||
+      !('status' in value) ||
+      (value.status !== 'answered' && value.status !== 'timeout' && value.status !== 'failed') ||
+      !('resultCode' in value) ||
+      (value.resultCode !== null && typeof value.resultCode !== 'string') ||
+      !('fields' in value) ||
+      !Array.isArray(value.fields) ||
+      !value.fields.every((field: unknown): field is string => typeof field === 'string')
     ) {
       throw new ServiceUnavailableException('Invalid ERM gateway response');
     }
-    return value.id;
+    return {
+      id: value.id,
+      reference: value.reference,
+      status: value.status,
+      resultCode: value.resultCode,
+      fields: value.fields,
+    };
   }
 
   private async request(

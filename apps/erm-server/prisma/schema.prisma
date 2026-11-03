@@ -24,6 +24,13 @@ enum ErmCommandStatus {
   @@map("ermCommandStatus")
 }
 
+enum ErmParameterSnapshotStatus {
+  RUNNING @map("running")
+  COMPLETE @map("complete")
+  FAILED @map("failed")
+  @@map("ermParameterSnapshotStatus")
+}
+
 enum ErmChecksum {
   OK @map("ok")
   MISMATCH @map("mismatch")
@@ -111,4 +118,28 @@ model ErmEvent {
   fields Json
   @@index([unitId, eventTime(sort: Desc)])
   @@map("ermEvent")
+}
+
+model ErmParameterSnapshot {
+  id String @id @default(uuid()) @db.Uuid
+  unitId String @db.VarChar(15)
+  status ErmParameterSnapshotStatus @default(RUNNING)
+  startedAt DateTime @default(now()) @db.Timestamptz(3)
+  finishedAt DateTime? @db.Timestamptz(3)
+  parameterCount Int
+  readCount Int @default(0)
+  failureReason String?
+  values ErmParameterValue[]
+  @@index([unitId, startedAt(sort: Desc)])
+  @@map("ermParameterSnapshot")
+}
+
+model ErmParameterValue {
+  snapshotId String @db.Uuid
+  snapshot ErmParameterSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  parameter Int
+  value String?
+  resultCode String?
+  @@id([snapshotId, parameter])
+  @@map("ermParameterValue")
 }

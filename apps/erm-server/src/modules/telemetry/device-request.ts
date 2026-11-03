@@ -3,6 +3,7 @@ import type {
   ErmEventsPage,
   ErmFramesPage,
   ErmUnitState,
+  ErmParameterSnapshotsPage,
 } from '../../generated/graphql/types.js';
 
 export interface DeviceTelemetryRequest {
@@ -11,6 +12,7 @@ export interface DeviceTelemetryRequest {
   events: Map<string, Promise<Map<string, ErmEventsPage>>>;
   frames: Map<string, Promise<Map<string, ErmFramesPage>>>;
   commands: Map<string, Promise<Map<string, ErmCommandsPage>>>;
+  snapshots: Map<string, Promise<Map<string, ErmParameterSnapshotsPage>>>;
 }
 
 export function deviceTelemetryRequest(unitIds: string[]): DeviceTelemetryRequest {
@@ -19,5 +21,6 @@ export function deviceTelemetryRequest(unitIds: string[]): DeviceTelemetryReques
     events: new Map(),
     frames: new Map(),
     commands: new Map(),
+    snapshots: new Map(),
   };
 }

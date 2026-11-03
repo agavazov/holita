@@ -19,6 +19,9 @@ import { InternalDevicesGuard } from '../src/modules/devices/internal-devices.gu
 import { validateCommand } from '../src/modules/devices/command.js';
 import { LiveDevicesService } from '../src/modules/telemetry/live-devices.service.js';
 import { FleetClient } from '../src/modules/telemetry/fleet.client.js';
+import { ParameterSnapshotsRepository } from '../src/modules/telemetry/parameter-snapshots.repository.js';
+import { ParameterSnapshotsService } from '../src/modules/telemetry/parameter-snapshots.service.js';
+import { parameterCatalog } from '../src/starlink/parameter-catalog.js';
 import { InternalTelemetryController } from '../src/modules/telemetry/internal-telemetry.controller.js';
 import { InternalTelemetryGuard } from '../src/modules/telemetry/internal-telemetry.guard.js';
 import {
@@ -32,6 +35,7 @@ import type {
   FleetDeviceErmEventsArgs,
   FleetDeviceErmFramesArgs,
   FleetDeviceErmCommandsArgs,
+  FleetDeviceErmParameterSnapshotsArgs,
 } from '../src/generated/graphql/types.js';
 import type { RequestContext } from '../src/graphql/request-context.js';
 import { formatGraphqlError } from '../src/graphql/errors.js';
@@ -47,6 +51,8 @@ it('persists captured connection lifecycle and raw frames through the production
   let module: TestingModule | undefined;
   let captureDirectory: string | undefined;
   let boundary: Server | undefined;
+  let releaseSnapshotBatch: (() => void) | undefined;
+  let snapshotService: ParameterSnapshotsService | undefined;
   const previousGatewayUrl = process.env.ERM_GATEWAY_URL;
   const previousFleetUrl = process.env.FLEET_GRAPHQL_URL;
   const previousInternalToken = process.env.ERM_INTERNAL_TOKEN;
@@ -510,6 +516,16 @@ it('persists captured connection lifecycle and raw frames through the production
     let fleetCalls = 0;
     let gatewayReads = 0;
     const sent: unknown[] = [];
+    const snapshotCommands: ReturnType<typeof validateCommand>[] = [];
+    let snapshotBatch = 0;
+    let snapshotFallbackParameters: string[] = [];
+    let snapshotBatchSeen: (() => void) | undefined;
+    const firstSnapshotBatch = new Promise<void>((resolve) => {
+      snapshotBatchSeen = resolve;
+    });
+    const snapshotGate = new Promise<void>((resolve) => {
+      releaseSnapshotBatch = resolve;
+    });
     boundary = createServer((req, res) => {
       void (async () => {
         const chunks: Buffer[] = [];
@@ -566,6 +582,30 @@ it('persists captured connection lifecycle and raw frames through the production
         }
         const command = validateCommand(body);
         sent.push(command);
+        let resultCode: string | null = null;
+        let fields: string[] = [];
+        if (command.command === '45' || command.command === '03') {
+          snapshotCommands.push(command);
+          if (command.command === '45') {
+            snapshotBatch++;
+            if (snapshotBatch === 1) {
+              snapshotBatchSeen?.();
+              await snapshotGate;
+            }
+            if (snapshotBatch === 2) {
+              snapshotFallbackParameters = command.fields;
+              resultCode = '02';
+            } else {
+              fields = command.fields
+                .filter((_, index) => snapshotBatch !== 1 || index !== command.fields.length - 1)
+                .flatMap((parameter) => [parameter, `"read-${parameter}"`]);
+            }
+          } else if (command.fields[0] === snapshotFallbackParameters[1]) {
+            resultCode = '02';
+          } else {
+            fields = [command.fields[0] ?? '', '"single,reply"'];
+          }
+        }
         const recorded = await database.client.ermCommand.create({
           data: {
             connectionId: stored.id,
@@ -577,7 +617,15 @@ it('persists captured connection lifecycle and raw frames through the production
             answeredAt: new Date(),
           },
         });
-        res.end(JSON.stringify({ id: recorded.id, status: 'answered' }));
+        res.end(
+          JSON.stringify({
+            id: recorded.id,
+            reference: recorded.reference,
+            status: 'answered',
+            resultCode,
+            fields,
+          }),
+        );
       })().catch(() => {
         res.statusCode = 500;
         res.end('{}');
@@ -795,7 +843,14 @@ it('persists captured connection lifecycle and raw frames through the production
         },
       ],
     });
-    const resolver = new ErmDeviceResolver(api);
+    const snapshotRepository = new ParameterSnapshotsRepository(module.get(PrismaService));
+    snapshotService = new ParameterSnapshotsService(
+      snapshotRepository,
+      new LiveDevicesService(),
+      new FleetClient(),
+    );
+    const snapshots = snapshotService;
+    const resolver = new ErmDeviceResolver(api, snapshots);
     const eventResolver = new ErmEventResolver();
     const schema = buildSubgraphSchema([
       {
@@ -829,6 +884,11 @@ it('persists captured connection lifecycle and raw frames through the production
               args: FleetDeviceErmCommandsArgs,
               ctx: RequestContext,
             ) => resolver.commands(ref, args, ctx),
+            ermParameterSnapshots: (
+              ref: DeviceReference,
+              args: FleetDeviceErmParameterSnapshotsArgs,
+              ctx: RequestContext,
+            ) => resolver.parameterSnapshots(ref, args, ctx),
           },
           ErmEvent: {
             name: (parent: { eventId: string | null }, args: ErmEventNameArgs) =>
@@ -994,6 +1054,161 @@ it('persists captured connection lifecycle and raw frames through the production
         ]),
       );
     }
+
+    // Snapshot jobs keep their gateway reads sequential and preserve unsupported/missing values.
+    gatewayStatus = 200;
+    const snapshotParameters = [...parameterCatalog.keys()]
+      .filter(
+        (parameter) => parameter >= 1 && parameter <= 9999 && (parameter < 49 || parameter > 54),
+      )
+      .sort((left, right) => left - right);
+    const previousSnapshot = await database.client.ermParameterSnapshot.create({
+      data: {
+        unitId,
+        status: 'COMPLETE',
+        startedAt: new Date(Date.now() - 2000),
+        finishedAt: new Date(Date.now() - 1000),
+        parameterCount: 2,
+        readCount: 2,
+        values: {
+          create: [
+            { parameter: 1, value: 'previous unit id' },
+            { parameter: 2, value: 'read-0002' },
+          ],
+        },
+      },
+    });
+    let runningSnapshotId: string;
+    try {
+      await expect(snapshots.start(deviceId, unauthenticated)).rejects.toThrow('Sign in');
+      const running = await snapshots.start(deviceId, scopedContext);
+      runningSnapshotId = running.id;
+      expect(running).toMatchObject({
+        status: 'RUNNING',
+        parameterCount: snapshotParameters.length,
+        readCount: 0,
+        finishedAt: null,
+        values: [],
+      });
+      await firstSnapshotBatch;
+      expect(snapshotCommands).toHaveLength(1);
+      expect(snapshotCommands[0]).toEqual({
+        command: '45',
+        fields: snapshotParameters
+          .slice(0, 20)
+          .map((parameter) => String(parameter).padStart(4, '0')),
+      });
+      await expect(snapshots.start(deviceId, scopedContext)).rejects.toMatchObject({ status: 409 });
+      releaseSnapshotBatch?.();
+      await snapshots.onModuleDestroy();
+    } finally {
+      releaseSnapshotBatch?.();
+      await snapshots.onModuleDestroy();
+    }
+    const snapshotPage = await snapshots.deviceSnapshots(
+      reference(),
+      { pageSize: 25 },
+      scopedContext,
+    );
+    if (!snapshotPage) {
+      throw new Error('Expected a parameter snapshot page');
+    }
+    expect(snapshotPage.items.map(({ id }) => id)).toEqual([
+      runningSnapshotId,
+      previousSnapshot.id,
+    ]);
+    const completedSnapshot = snapshotPage.items[0];
+    expect(completedSnapshot).toMatchObject({
+      id: runningSnapshotId,
+      status: 'COMPLETE',
+      parameterCount: snapshotParameters.length,
+      readCount: snapshotParameters.length,
+      failureReason: null,
+      finishedAt: expect.any(String),
+      values: expect.arrayContaining([
+        { parameter: 1, title: 'Unit ID selection', value: 'read-0001', resultCode: null },
+        { parameter: 2, title: 'High communication rate', value: 'read-0002', resultCode: null },
+        {
+          parameter: snapshotParameters[19],
+          title: parameterCatalog.get(snapshotParameters[19] ?? 0),
+          value: null,
+          resultCode: null,
+        },
+        {
+          parameter: snapshotParameters[20],
+          title: parameterCatalog.get(snapshotParameters[20] ?? 0),
+          value: 'single,reply',
+          resultCode: null,
+        },
+        {
+          parameter: snapshotParameters[21],
+          title: parameterCatalog.get(snapshotParameters[21] ?? 0),
+          value: null,
+          resultCode: '02',
+        },
+        { parameter: 593, title: parameterCatalog.get(593), value: 'read-0593', resultCode: null },
+      ]),
+      changes: expect.arrayContaining([
+        {
+          parameter: 1,
+          title: 'Unit ID selection',
+          previousValue: 'previous unit id',
+          value: 'read-0001',
+        },
+      ]),
+    });
+    expect(completedSnapshot?.values).toHaveLength(snapshotParameters.length);
+    expect(completedSnapshot?.changes.some(({ parameter }) => parameter === 2)).toBe(false);
+    expect(snapshotCommands.filter(({ command }) => command === '45')).toHaveLength(
+      Math.ceil(snapshotParameters.length / 20),
+    );
+    expect(
+      snapshotCommands.filter(({ command }) => command === '03').map(({ fields }) => fields[0]),
+    ).toEqual(snapshotFallbackParameters);
+    expect(
+      snapshotCommands
+        .flatMap(({ fields }) => fields)
+        .some((parameter) => Number(parameter) >= 49 && Number(parameter) <= 54),
+    ).toBe(false);
+    const snapshotResult = await graphql({
+      schema,
+      source: `query($representations: [_Any!]!) {
+        _entities(representations: $representations) { ... on FleetDevice {
+          ermParameterSnapshots(input: {pageSize: 25}) {
+            items { id status values { parameter title value resultCode } changes { parameter previousValue value } }
+            hasMore
+          }
+        } }
+      }`,
+      variableValues: {
+        representations: [
+          { __typename: 'FleetDevice', id: deviceId, imei: unitId },
+          { __typename: 'FleetDevice', id: 'never-connected', imei: '123456789012345' },
+        ],
+      },
+      contextValue: { ...scopedContext },
+    });
+    expect(snapshotResult.errors).toBeUndefined();
+    expect(snapshotResult.data?.['_entities']).toMatchObject([
+      {
+        ermParameterSnapshots: {
+          items: [{ id: runningSnapshotId, status: 'COMPLETE' }, { id: previousSnapshot.id }],
+          hasMore: false,
+        },
+      },
+      { ermParameterSnapshots: { items: [], hasMore: false } },
+    ]);
+    const interrupted = await database.client.ermParameterSnapshot.create({
+      data: { unitId, status: 'RUNNING', parameterCount: snapshotParameters.length },
+    });
+    await snapshots.onModuleInit();
+    expect(
+      await database.client.ermParameterSnapshot.findUnique({ where: { id: interrupted.id } }),
+    ).toMatchObject({
+      status: 'FAILED',
+      failureReason: 'interrupted by an api restart',
+      finishedAt: expect.any(Date),
+    });
 
     // Re-decode only old, complete DEVICE frames and retain each stored frame byte for byte.
     const redecodeStartedAt = new Date('2000-01-01T00:00:00Z');
@@ -1219,6 +1434,8 @@ it('persists captured connection lifecycle and raw frames through the production
       telemetryClock.mockRestore();
     }
   } finally {
+    releaseSnapshotBatch?.();
+    await snapshotService?.onModuleDestroy();
     if (previousGatewayUrl === undefined) {
       delete process.env.ERM_GATEWAY_URL;
     } else {

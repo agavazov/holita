@@ -16,14 +16,28 @@ import type {
   FleetDeviceErmFramesArgs,
   FleetDeviceErmCommandsArgs,
   ErmEventNameArgs,
+  MutationStartErmParameterSnapshotArgs,
+  FleetDeviceErmParameterSnapshotsArgs,
 } from '../../generated/graphql/types.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import { TelemetryService, type DeviceReference } from './telemetry.service.js';
 import { starlinkEvents } from '../../starlink/event-catalog.js';
+import { ParameterSnapshotsService } from './parameter-snapshots.service.js';
 
 @Resolver()
 export class TelemetryResolver {
-  constructor(private readonly telemetry: TelemetryService) {}
+  constructor(
+    private readonly telemetry: TelemetryService,
+    private readonly snapshots: ParameterSnapshotsService,
+  ) {}
+
+  @Mutation('startErmParameterSnapshot')
+  startParameterSnapshot(
+    @Args() args: MutationStartErmParameterSnapshotArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.snapshots.start(args.input.deviceId, context);
+  }
 
   @Mutation('sendErmDeviceCommand')
   sendDeviceCommand(
@@ -36,7 +50,10 @@ export class TelemetryResolver {
 
 @Resolver('FleetDevice')
 export class ErmDeviceResolver {
-  constructor(private readonly telemetry: TelemetryService) {}
+  constructor(
+    private readonly telemetry: TelemetryService,
+    private readonly snapshots: ParameterSnapshotsService,
+  ) {}
 
   @ResolveReference()
   reference(
@@ -77,6 +94,15 @@ export class ErmDeviceResolver {
     @Context() context: RequestContext,
   ) {
     return this.telemetry.deviceCommands(device, args.input, context);
+  }
+
+  @ResolveField('ermParameterSnapshots')
+  parameterSnapshots(
+    @Parent() device: DeviceReference,
+    @Args() args: FleetDeviceErmParameterSnapshotsArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.snapshots.deviceSnapshots(device, args.input, context);
   }
 }
 

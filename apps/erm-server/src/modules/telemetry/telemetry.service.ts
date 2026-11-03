@@ -348,7 +348,10 @@ export class TelemetryService {
   async sendDeviceCommand(input: SendErmDeviceCommandInput, context: RequestContext) {
     requireTenant(context);
     const unitId = await this.fleet.deviceImei(input.deviceId, context);
-    const id = await this.devices.sendCommand(unitId, validateCommand(deviceActions[input.action]));
+    const { id } = await this.devices.sendCommand(
+      unitId,
+      validateCommand(deviceActions[input.action]),
+    );
     // The gateway records asynchronously; wait briefly for its queued command outcome.
     for (let attempt = 0; attempt < 20; attempt++) {
       const command = await this.repository.command(id);

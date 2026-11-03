@@ -10,6 +10,8 @@ import { FleetClient } from './fleet.client.js';
 import { ErmDeviceResolver, ErmEventResolver } from './telemetry.resolver.js';
 import { InternalTelemetryController } from './internal-telemetry.controller.js';
 import { InternalTelemetryGuard } from './internal-telemetry.guard.js';
+import { ParameterSnapshotsRepository } from './parameter-snapshots.repository.js';
+import { ParameterSnapshotsService } from './parameter-snapshots.service.js';
 
 @Module({
   imports: [DatabaseModule, ...(ermRole() === 'api' ? [] : [DevicesModule])],
@@ -23,6 +25,8 @@ import { InternalTelemetryGuard } from './internal-telemetry.guard.js';
     LiveDevicesService,
     FleetClient,
     InternalTelemetryGuard,
+    ParameterSnapshotsRepository,
+    ParameterSnapshotsService,
   ],
 })
 export class TelemetryModule {}

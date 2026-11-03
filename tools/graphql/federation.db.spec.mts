@@ -211,6 +211,10 @@ describe('Fleet through the actual federation boundary', () => {
           items { unitId reference command fields status resultCode responseText }
           hasMore
         }
+        ermParameterSnapshots(input: {pageSize: 25}) {
+          items { id status values { parameter title value } }
+          hasMore
+        }
       }
     }`;
     const unitId = '862129080366630';
@@ -278,6 +282,7 @@ describe('Fleet through the actual federation boundary', () => {
             ],
             hasMore: false,
           },
+          ermParameterSnapshots: { items: [], hasMore: false },
           ermCommands: {
             items: [
               {

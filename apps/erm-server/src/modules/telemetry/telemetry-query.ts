@@ -6,7 +6,7 @@ function invalid(): never {
 }
 
 export function telemetryQuery(
-  kind: 'events' | 'frames' | 'commands',
+  kind: 'events' | 'frames' | 'commands' | 'parameterSnapshots',
   input: ErmDevicePageInput & { unitId: string },
   categories?: readonly ErmEventCategory[] | null,
 ) {
@@ -59,7 +59,7 @@ export function telemetryQuery(
 export type TelemetryQuery = ReturnType<typeof telemetryQuery>;
 
 export function deviceTelemetryQueries(
-  kind: 'events' | 'frames' | 'commands',
+  kind: 'events' | 'frames' | 'commands' | 'parameterSnapshots',
   unitIds: string[],
   input: ErmDevicePageInput | null | undefined,
   categories?: readonly ErmEventCategory[] | null,

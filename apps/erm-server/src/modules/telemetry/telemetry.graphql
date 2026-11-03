@@ -23,6 +23,12 @@ enum ErmCommandState {
   TIMEOUT
   FAILED
 }
+"Progress of a unit's stored parameter read."
+enum ErmParameterSnapshotStatus {
+  RUNNING
+  COMPLETE
+  FAILED
+}
 "Event groups of the StarLink event catalog."
 enum ErmEventCategory {
   "Periodic and on-change location reports."
@@ -74,6 +80,43 @@ input SendErmDeviceCommandInput {
   "A Fleet Device of the active Branch."
   deviceId: ID!
   action: ErmDeviceAction!
+}
+input StartErmParameterSnapshotInput {
+  "A Fleet Device of the active Branch, connected in primary mode."
+  deviceId: ID!
+}
+"One parameter read, including unmasked values that may contain secrets."
+type ErmParameterValue {
+  parameter: Int!
+  "Title from the archived StarLink parameter catalog."
+  title: String
+  "Unquoted unit value, or null when the unit did not return a value."
+  value: String
+  "Unit error result code when an individual read was rejected."
+  resultCode: String
+}
+"A captured value differing from the unit's previous COMPLETE snapshot."
+type ErmParameterChange {
+  parameter: Int!
+  title: String
+  previousValue: String
+  value: String
+}
+"Sequential reads of the unit's catalog parameters, excluding routing 0049–0054."
+type ErmParameterSnapshot {
+  id: ID!
+  status: ErmParameterSnapshotStatus!
+  startedAt: String!
+  finishedAt: String
+  "Number of catalog parameters planned for this snapshot."
+  parameterCount: Int!
+  "Number of parameters with a stored value or read outcome."
+  readCount: Int!
+  failureReason: String
+  "Captured values are stored and returned unmasked, including secrets."
+  values: [ErmParameterValue!]!
+  "Changes among captured values; empty without a previous COMPLETE snapshot."
+  changes: [ErmParameterChange!]!
 }
 type ErmEvent {
   id: ID!
@@ -198,6 +241,13 @@ type ErmCommandsPage {
   nextCursor: String
   hasMore: Boolean!
 }
+"Newest-first snapshot history for one Fleet Device."
+type ErmParameterSnapshotsPage {
+  items: [ErmParameterSnapshot!]!
+  cursor: String
+  nextCursor: String
+  hasMore: Boolean!
+}
 "Fleet's Device, resolved by its IMEI on holita's device server."
 type FleetDevice @key(fields: "id") {
   id: ID!
@@ -207,8 +257,13 @@ type FleetDevice @key(fields: "id") {
   ermEvents(input: ErmDeviceEventsInput): ErmEventsPage! @requires(fields: "imei")
   ermCommands(input: ErmDevicePageInput): ErmCommandsPage! @requires(fields: "imei")
   ermFrames(input: ErmDevicePageInput): ErmFramesPage! @requires(fields: "imei")
+  "Parameter snapshot history, including unmasked secret values, for this Branch's Device."
+  ermParameterSnapshots(input: ErmDevicePageInput): ErmParameterSnapshotsPage!
+    @requires(fields: "imei")
 }
 type Mutation {
   "Sends an allowlisted read to the unit of a Fleet Device in the active Branch and returns the recorded command."
   sendErmDeviceCommand(input: SendErmDeviceCommandInput!): ErmCommand!
+  "Starts a background parameter snapshot after checking the Device's active Branch and primary connection."
+  startErmParameterSnapshot(input: StartErmParameterSnapshotInput!): ErmParameterSnapshot!
 }

@@ -343,8 +343,17 @@ are no longer exposed.
 READ_STATUS, READ_VERSION, READ_ACCESSORIES, READ_EDATA_DIAGNOSTICS and READ_EDATA_FAULTS.
 It verifies the Device through Fleet with the caller's session and active Branch, then uses
 the gateway's internal API. No free-text command or parameter write is exposed.
-The recorded command outcome is not proof of a configuration change. Parameter snapshots,
-writes, durable offline delivery and operator audit remain in the [ERM roadmap](../todo/erm-roadmap.md).
+The recorded command outcome is not proof of a configuration change. Parameter writes,
+durable offline delivery and operator audit remain in the [ERM roadmap](../todo/erm-roadmap.md).
+
+Operators signed in to a Fleet Device's active Branch can call
+`startErmParameterSnapshot(input: { deviceId })` while the unit is connected in primary mode,
+then read `ermParameterSnapshots` on that Device. The api reads catalog parameters 0001–9999
+except routing 0049–0054 in about 70 sequential commands, with individual retries for rejected
+batches; completion time depends on the unit's replies. Tracker replies also reach Karma inside
+`$SLC`. Snapshots include titles and changes against the previous COMPLETE snapshot; values are
+stored and shown unmasked, including secrets such as 0593. An api restart marks snapshots left
+RUNNING as FAILED with `interrupted by an api restart`.
 
 ### Internal unit and command API
 
