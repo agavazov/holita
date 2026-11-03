@@ -165,7 +165,13 @@ device frame selects the connection's mode:
   messages holita acknowledged are dropped. Karma authentication answers and other commands still
   reach the device. Holita and Karma whole-frame writes share one device queue.
 
-Karma is required in both modes. Changing the allowlist affects new connections.
+Primary sessions stay connected when Karma closes or cannot be reached: holita keeps recording,
+confirming `ERM_ACK_COMMANDS` frames and accepting commands, holds the traffic for Karma in order
+and reconnects after 1 second, doubling to at most 60 seconds (a link that stayed up for 60 seconds
+resets the delay). A mirror session still closes when its established Karma link closes; its first
+connect gets at most three attempts (about 30 seconds) while the device's bytes wait. After a failed
+connect by name, both modes retry at once with the last Karma IP address that worked in this
+process. Changing the allowlist affects new connections.
 
 Copy the ERM Server entries from the [root environment reference](../../.env.example) into the
 ignored `apps/erm-server/.env`, preserving existing settings. HTTP `/health` defaults to
@@ -188,9 +194,11 @@ ERM_ROLE=gateway npm run start:prod --workspace @holita/erm-server
 ```
 
 Provisioning is additive and preserves existing data/passwords. Development uses `holita_erm`;
-guarded tests use `holita_erm_test` with isolated per-run schemas. Connection, frame, command and
-event database writes are asynchronous; database failures are logged while forwarding and
-acknowledgements continue. These records do not populate Fleet telemetry.
+guarded tests use `holita_erm_test` with isolated per-run schemas. Connection, frame, command,
+event and upstream-close database writes are asynchronous; database failures are logged while
+forwarding and acknowledgements continue. These records do not populate Fleet telemetry.
+A gateway start closes connection rows left open by a previous process, so never start a second
+gateway against the same database while one runs.
 
 `ERM_EVENT_STRUCTURE` defines the ordered fields in device `06`/`86` events in both modes. Its
 default is the Karma preset for device parameter 0177 in the [environment reference](../../.env.example).
@@ -203,8 +211,11 @@ retain raw text; missing or unparsable parsed values become null, and trailing f
 
 The listener accepts at most 64 connections. A device must begin with `$` and complete its first
 frame, or reach the 16 KB frame bound, within 60 seconds before Karma is contacted. A first frame
-that is not a recognizable unit frame is still mirrored. The upstream must
-connect within 10 seconds. Closing either side closes the other. The public path must forward raw TCP with no HTTP/TLS termination.
+that is not a recognizable unit frame is still mirrored. Each upstream connect attempt has
+10 seconds. Closing the device closes its upstream link. A unit's newly identified connection
+closes its older sessions (`replaced by a newer connection`), and commands go to the newest one.
+Karma closes that do not end a primary session are stored in `ermUpstreamClose` and captured as
+`upstream-close` events. The public path must forward raw TCP with no HTTP/TLS termination.
 The relay and ERM Server share the default device port; run them together only on different free
 ports, for example:
 
@@ -322,8 +333,8 @@ unit and accepts only these command/field combinations:
 
 | Command                                        | Fields                                                                                     |
 | ---------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `03`                                           | One parameter number, for example `["0774"]`.                                              |
-| `45`                                           | One or more parameter numbers.                                                             |
+| `03`                                           | One parameter number outside 0049–0054, for example `["0774"]`.                            |
+| `45`                                           | One or more parameter numbers, all outside 0049–0054.                                      |
 | `48`                                           | One template of dynamic parameters, for example `["VER=#VER#"]`.                           |
 | `05`                                           | Empty array or one maximum-wait value in seconds (1–4 digits).                             |
 | `07`, `12`, `16`, `19`, `49`, `56`, `60`, `61` | Empty array (`56` only lists accessories).                                                 |
@@ -332,18 +343,23 @@ unit and accepts only these command/field combinations:
 | `04`                                           | One parameter/value pair.                                                                  |
 | `46`                                           | Alternating parameter/value pairs.                                                         |
 
-A `04`/`46` write either sets only server-routing parameters 0049–0054 or none of them, and never
-writes lock codes (0059/0060), the SIM PIN (0061), the shared secret (0187), the operator and SIM
-locks (0524/0525) or the Simple SMS password (0593). Values contain no quotes or commas.
+A `04`/`46` write either sets only primary server parameters 0049/0050 or avoids all routing
+parameters 0049–0054. Writes to 0051–0054 are rejected: the backup stays Karma, and primary and
+backup are never changed together. Other writes never change lock codes (0059/0060), the SIM PIN
+(0061), the shared secret (0187), the operator and SIM locks (0524/0525) or the Simple SMS password
+(0593). Reads of protected parameters, including 0593, remain allowed. Values contain no quotes or commas.
 
 The call waits up to 30 seconds. `04`/`46`/`05` complete on the device's `02` confirmation for
 holita's reference; the other commands complete on the device's reply with the same command, or
 on a `02` error. holita confirms that reply and does not forward it to Karma, because Karma reads
-routing values from such replies and writes its own server back. Units sending binary `$SLB`/`$SLC`
+routing values from such replies and writes its own server back. Replies inside `$SLC` containers
+still go to Karma unchanged, so `03`/`45` reads of 0049–0054 are rejected entirely.
+Units sending binary `$SLB`/`$SLC`
 frames are identified from the IMEI in the frame header. HTTP 200 returns
 `{ id, reference, status, resultCode, fields }`, with status
 `answered`, `timeout` or `failed`. Only one holita command may be pending per connection.
-Invalid commands return 400, disconnected units 404, and mirror/busy/not-ready units 409.
+Invalid commands return 400, disconnected units 404, and mirror/busy units 409. Reconnecting to
+Karma does not block holita commands.
 The API returns 401 for invalid credentials and 503 when its token is unconfigured. Command
 requests, outcomes and exact responses are persisted. No command is retried automatically.
 
@@ -400,22 +416,22 @@ Karma writes its own 0049/0050 back with `46` within about ten minutes once its 
 shows another server; it did so when a unit resent an unconfirmed read-back reply to its new primary
 server. Never read 0049–0052 through Karma for a unit routed to holita.
 
-The current tool needs the public device port. This procedure requires the owner to schedule
-the gateway interruption; do not run it during ordinary web/API work. Stop ERM Server only for
-that approved window and start it right after the tool exits. A second public configuration
-port that avoids this interruption is pending in the [ERM roadmap](../todo/erm-roadmap.md#fleet-rollout). Units that already use holita reach the tool instead while it runs and are not forwarded to
-Karma, so run it between their sessions (open sessions are `ermConnection` rows without `closedAt`):
+Configuration sessions (Karma command `98` to the unit) use a port in 11501–11510, forwarded like
+the device port 11500, so the tool runs beside the gateway with `--port <port>`; `--holita` stays
+the ordinary device endpoint written to 0049/0050:
 
 ```bash
-systemctl --user stop holita-erm-server
-npm run erm:route-unit -- --unit 862129080366630 --to holita --holita <public-host>:<public-port>
-systemctl --user start holita-erm-server
+npm run erm:route-unit -- --unit 862129080366630 --to holita --holita <public-host>:11500 --port 11501
 ```
 
-While the tool waits (`--wait-minutes`, default 140), queue `98,1,<public-host>,<public-port>` for
+While the tool waits (`--wait-minutes`, default 140), queue `98,1,<public-host>,11501` for
 the car through Karma `POST /commands`; a parked unit receives it at its next transmission. Exit
 code 0 means moved and verified, 2 not moved, 3 uncertain and 4 no session. After an uncertain
 result, read the log; the unit's next ordinary connection, to ERM Server or in Karma `/events`, shows
-where its primary server points. To move a unit back, run the tool with `--to karma` and no command `98`: the
-unit's next ordinary connection to holita reaches the tool. A unit whose backup server
-(0051/0052) is Karma fails over to it by itself while holita is unreachable.
+where its primary server points. To move a unit back, run the tool with `--to karma`, no command
+`98` and the default port 11500 in an owner-approved gateway stop
+(`systemctl --user stop holita-erm-server` before, `systemctl --user start holita-erm-server` right
+after): the unit's next ordinary connection reaches the tool. Other units that use holita reach it
+too and are not forwarded to Karma, so run it between their sessions (open sessions are
+`ermConnection` rows without `closedAt`). A unit whose backup server (0051/0052) is Karma fails
+over to it by itself while holita is unreachable.

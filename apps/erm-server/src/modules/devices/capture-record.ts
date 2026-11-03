@@ -5,9 +5,10 @@ type ConnectionRecord = { connection: number };
 export type CaptureRecord = ConnectionRecord &
   (
     | { event: 'open'; peer: string }
-    | { event: 'forwarded'; upstream: string }
+    | { event: 'forwarded'; upstream: string; address?: string }
     | { event: 'rejected'; reason: string; head?: string }
     | { event: 'upstream-error'; message: string }
+    | { event: 'upstream-close'; reason: string }
     | { event: 'close'; seconds: number; deviceBytes: number; serverBytes: number }
     | {
         from: 'device' | 'server' | 'holita';

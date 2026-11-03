@@ -5,7 +5,7 @@ import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer, type Server } from 'node:http';
-import { GraphQLError, graphql, parse } from 'graphql';
+import { GraphQLError, graphql, parse, type GraphQLResolveInfo } from 'graphql';
 import { buildSubgraphSchema } from '@apollo/subgraph';
 import { PrismaService } from '../src/database/prisma.service.js';
 import type { CaptureRecord } from '../src/modules/devices/capture-record.js';
@@ -65,7 +65,42 @@ it('persists captured connection lifecycle and raw frames through the production
     capture.config.captureDirectory = captureDirectory;
     capture.config.upstream = upstream;
     capture.config.eventStructure = DEFAULT_EVENT_STRUCTURE.split(',');
+    const openedAt = new Date('2026-11-02T10:00:00Z');
+    const forwardedAt = new Date('2026-11-02T10:00:01Z');
+    const lastFrameAt = new Date('2026-11-02T10:00:03Z');
+    const staleConnections = [];
+    for (const fixture of [
+      { forwardedAt, frameTimes: [lastFrameAt, forwardedAt], expectedClosedAt: lastFrameAt },
+      { forwardedAt, frameTimes: [], expectedClosedAt: forwardedAt },
+      { forwardedAt: null, frameTimes: [], expectedClosedAt: openedAt },
+    ]) {
+      const stale = await database.client.ermConnection.create({
+        data: {
+          peer,
+          upstream,
+          openedAt,
+          forwardedAt: fixture.forwardedAt,
+          frames: {
+            create: fixture.frameTimes.map((receivedAt) => ({
+              receivedAt,
+              direction: 'DEVICE',
+              checksum: 'ABSENT',
+              raw: Buffer.from('$unfinished'),
+            })),
+          },
+        },
+      });
+      staleConnections.push({ id: stale.id, closedAt: fixture.expectedClosedAt });
+    }
     await capture.initialize();
+    for (const stale of staleConnections) {
+      expect(
+        await database.client.ermConnection.findUnique({ where: { id: stale.id } }),
+      ).toMatchObject({
+        closedAt: stale.closedAt,
+        closeReason: 'left open by a previous process',
+      });
+    }
 
     const connection = 1;
     const unitId = '862129080366630';
@@ -123,6 +158,14 @@ it('persists captured connection lifecycle and raw frames through the production
     const started = Date.now();
     capture.record({ connection, event: 'open', peer });
     capture.record({ connection, event: 'forwarded', upstream });
+    await capture.drain();
+    const firstForwardedAt = (
+      await database.client.ermConnection.findFirst({
+        where: { closedAt: null },
+      })
+    )?.forwardedAt;
+    capture.record({ connection, event: 'upstream-close', reason: 'upstream closed' });
+    capture.record({ connection, event: 'forwarded', upstream });
     for (const record of records) {
       capture.record(record);
     }
@@ -158,12 +201,26 @@ it('persists captured connection lifecycle and raw frames through the production
     const finished = Date.now();
 
     const [stored] = await database.client.ermConnection.findMany({
-      include: { frames: { orderBy: { id: 'asc' } }, commands: { orderBy: { reference: 'asc' } } },
+      where: { unitId },
+      include: {
+        frames: { orderBy: { id: 'asc' } },
+        commands: { orderBy: { reference: 'asc' } },
+        upstreamCloses: true,
+      },
     });
     if (!stored) {
       throw new Error('Capture did not persist its connection.');
     }
-    expect(await database.client.ermConnection.count()).toBe(1);
+    expect(await database.client.ermConnection.count()).toBe(4);
+    expect(stored.forwardedAt).toEqual(firstForwardedAt);
+    expect(stored.upstreamCloses).toHaveLength(1);
+    expect(stored.upstreamCloses[0]).toMatchObject({
+      id: expect.any(BigInt),
+      connectionId: stored.id,
+      reason: 'upstream closed',
+    });
+    expect(stored.upstreamCloses[0]?.closedAt.getTime()).toBeGreaterThanOrEqual(started);
+    expect(stored.upstreamCloses[0]?.closedAt.getTime()).toBeLessThanOrEqual(finished);
     expect(stored).toMatchObject({
       peer,
       upstream,
@@ -411,9 +468,10 @@ it('persists captured connection lifecycle and raw frames through the production
       new Set([...unitsFirst.items, ...unitsSecond.items].map((unit) => unit.unitId)).size,
     ).toBe(27);
     for (const read of [
-      (cursor?: string | null) => telemetry.events({ unitId, pageSize: 25, cursor }, context),
-      (cursor?: string | null) => telemetry.frames({ unitId, pageSize: 25, cursor }, context),
-      (cursor?: string | null) => telemetry.commands({ unitId, pageSize: 25, cursor }, context),
+      (cursor: string | null = null) => telemetry.events({ unitId, pageSize: 25, cursor }, context),
+      (cursor: string | null = null) => telemetry.frames({ unitId, pageSize: 25, cursor }, context),
+      (cursor: string | null = null) =>
+        telemetry.commands({ unitId, pageSize: 25, cursor }, context),
     ]) {
       const first = await read();
       expect(first.items).toHaveLength(25);
@@ -618,38 +676,46 @@ it('persists captured connection lifecycle and raw frames through the production
     });
     const resolver = new ErmDeviceResolver(api);
     const eventResolver = new ErmEventResolver();
-    const schema = buildSubgraphSchema({
-      typeDefs: parse(
-        await readFile(
-          new URL('../src/modules/telemetry/telemetry.graphql', import.meta.url),
-          'utf8',
+    const schema = buildSubgraphSchema([
+      {
+        typeDefs: parse(
+          await readFile(
+            new URL('../src/modules/telemetry/telemetry.graphql', import.meta.url),
+            'utf8',
+          ),
         ),
-      ),
-      resolvers: {
-        FleetDevice: {
-          __resolveReference: (
-            ref: Pick<DeviceReference, 'id' | 'imei'>,
-            ctx: RequestContext,
-            info,
-          ) => resolver.reference(ref, ctx, info),
-          ermState: (ref: DeviceReference, _args: unknown, ctx: RequestContext) =>
-            resolver.state(ref, ctx),
-          ermEvents: (ref: DeviceReference, args: FleetDeviceErmEventsArgs, ctx: RequestContext) =>
-            resolver.events(ref, args, ctx),
-          ermFrames: (ref: DeviceReference, args: FleetDeviceErmFramesArgs, ctx: RequestContext) =>
-            resolver.frames(ref, args, ctx),
-          ermCommands: (
-            ref: DeviceReference,
-            args: FleetDeviceErmCommandsArgs,
-            ctx: RequestContext,
-          ) => resolver.commands(ref, args, ctx),
-        },
-        ErmEvent: {
-          name: (parent: { eventId: string | null }, args: ErmEventNameArgs) =>
-            eventResolver.name(parent, args),
+        resolvers: {
+          FleetDevice: {
+            __resolveReference: (
+              ref: Pick<DeviceReference, 'id' | 'imei'>,
+              ctx: RequestContext,
+              info: GraphQLResolveInfo,
+            ) => resolver.reference(ref, ctx, info),
+            ermState: (ref: DeviceReference, _args: unknown, ctx: RequestContext) =>
+              resolver.state(ref, ctx),
+            ermEvents: (
+              ref: DeviceReference,
+              args: FleetDeviceErmEventsArgs,
+              ctx: RequestContext,
+            ) => resolver.events(ref, args, ctx),
+            ermFrames: (
+              ref: DeviceReference,
+              args: FleetDeviceErmFramesArgs,
+              ctx: RequestContext,
+            ) => resolver.frames(ref, args, ctx),
+            ermCommands: (
+              ref: DeviceReference,
+              args: FleetDeviceErmCommandsArgs,
+              ctx: RequestContext,
+            ) => resolver.commands(ref, args, ctx),
+          },
+          ErmEvent: {
+            name: (parent: { eventId: string | null }, args: ErmEventNameArgs) =>
+              eventResolver.name(parent, args),
+          },
         },
       },
-    });
+    ]);
     const source = `query($representations: [_Any!]!) { _entities(representations: $representations) { ... on FleetDevice {
       id ermState { online mode lastFrameAt latestEvent { eventId category } lastPosition { id } alarmsLast24h latestAlarm { eventId category name(language: BG) } }
       ermEvents(input: { pageSize: 25 }) { items { id } hasMore nextCursor }

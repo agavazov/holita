@@ -51,16 +51,25 @@ it('mirrors exact bytes, rejects non-StarLink traffic and closes failed upstream
   await new Promise<void>((resolve) => upstream.listen(0, '127.0.0.1', resolve));
   const upstreamPort = portOf(upstream);
   const records: CaptureRecord[] = [];
-  const listener = new DeviceListener(
-    {
-      host: '127.0.0.1',
-      port: 0,
-      upstreamHost: '127.0.0.1',
-      upstreamPort,
-      upstream: `127.0.0.1:${String(upstreamPort)}`,
-    },
-    (entry) => records.push(entry),
-  );
+  const closeReasons = new Map<number, string>();
+  let onUpstreamError: (() => void) | undefined;
+  const options = {
+    host: '127.0.0.1',
+    port: 0,
+    upstreamHost: '127.0.0.1',
+    upstreamPort,
+    upstream: `127.0.0.1:${String(upstreamPort)}`,
+    reconnectDelayMs: 25,
+  };
+  const listener = new DeviceListener(options, (entry, reason) => {
+    records.push(entry);
+    if ('event' in entry && entry.event === 'upstream-error') {
+      onUpstreamError?.();
+    }
+    if (reason !== undefined) {
+      closeReasons.set(entry.connection, reason);
+    }
+  });
   await listener.start();
   const connect = async () => {
     const socket = net.connect({ host: '127.0.0.1', port: portOf(listener.server) });
@@ -98,30 +107,88 @@ it('mirrors exact bytes, rejects non-StarLink traffic and closes failed upstream
       await Promise.all([deviceClosed, targetClosed]);
     }
     expect(upstreamConnections).toBe(2);
+    const firstDevice = await connect();
+    const firstAccepted = new Promise<Socket>((resolve) => upstream.once('connection', resolve));
+    firstDevice.write('$SLUabc123,01,1*00\r\n');
+    const firstTarget = await firstAccepted;
+    firstTarget.resume();
+    const firstDeviceClosed = closed(firstDevice);
+    const firstTargetClosed = closed(firstTarget);
+    const newerDevice = await connect();
+    const newerAccepted = new Promise<Socket>((resolve) => upstream.once('connection', resolve));
+    newerDevice.write('$SLUABC123,01,2*00\r\n');
+    const newerTarget = await newerAccepted;
+    newerTarget.resume();
+    await Promise.all([firstDeviceClosed, firstTargetClosed]);
+    expect([...closeReasons.values()]).toContain('replaced by a newer connection');
+    expect(listener.listUnits()).toEqual([
+      expect.objectContaining({ unitId: 'ABC123', mode: 'mirror' }),
+    ]);
+    const newerDeviceClosed = closed(newerDevice);
+    const newerTargetClosed = closed(newerTarget);
+    newerDevice.end();
+    await Promise.all([newerDeviceClosed, newerTargetClosed]);
+    expect(upstreamConnections).toBe(4);
     for (const head of ['GET / HTTP/1.1\r\n', '\u0016\u0003\u0001']) {
       const device = await connect();
       const deviceClosed = closed(device);
       device.write(head);
       await deviceClosed;
-      expect(upstreamConnections).toBe(2);
+      expect(upstreamConnections).toBe(4);
     }
-    await new Promise<void>((resolve, reject) =>
+    // The configured address refuses connections; other sessions cached the live loopback IP.
+    options.upstreamHost = '127.0.0.2';
+    const returningDevice = await connect();
+    const first = Buffer.from('$SLU862129080366630,01,1*00\r\n');
+    const held = Buffer.concat([first, Buffer.alloc(32 * 1024, 0xa5), Buffer.from('\r\n')]);
+    const later = Buffer.from('$SLU862129080366630,06,2,after-retry*00\r\n');
+    const refused = new Promise<void>((resolve) => {
+      onUpstreamError = resolve;
+    });
+    const retried = new Promise<{ socket: Socket; received: Promise<Buffer> }>((resolve) => {
+      upstream.once('connection', (socket) => {
+        resolve({ socket, received: readBytes(socket, held.length + later.length) });
+      });
+    });
+    returningDevice.write(held);
+    await refused;
+    onUpstreamError = undefined;
+    expect(returningDevice.destroyed).toBe(false);
+    const recovered = await retried;
+    returningDevice.write(later);
+    expect(await recovered.received).toEqual(Buffer.concat([held, later]));
+    const returningClosed = closed(returningDevice);
+    const recoveredClosed = closed(recovered.socket);
+    recovered.socket.end();
+    await Promise.all([returningClosed, recoveredClosed]);
+    options.upstreamHost = '127.0.0.1';
+    await new Promise<void>((resolve, reject) => {
       upstream.close((error) => {
         if (error) {
           reject(error);
         } else {
           resolve();
         }
-      }),
-    );
+      });
+    });
     upstreamClosed = true;
+
+    const failuresStart = records.length;
     const device = await connect();
     const deviceClosed = closed(device);
     device.write('$SLU862129080366630,01,1*00\r\n');
     await deviceClosed;
-    expect(records.some((entry) => 'event' in entry && entry.event === 'upstream-error')).toBe(
-      true,
-    );
+    // The client can see the close before the gateway records it.
+    const failed = records.findLast((entry) => 'event' in entry && entry.event === 'open');
+    while (failed && !closeReasons.has(failed.connection)) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    expect(
+      records
+        .slice(failuresStart)
+        .filter((entry) => 'event' in entry && entry.event === 'upstream-error'),
+    ).toHaveLength(3);
+    expect(closeReasons.get(failed?.connection ?? 0)).toMatch(/^upstream error: .*ECONNREFUSED/);
     expect(records.some((entry) => 'from' in entry && entry.partial)).toBe(true);
   } finally {
     for (const socket of [...clients, ...upstreamSockets]) {

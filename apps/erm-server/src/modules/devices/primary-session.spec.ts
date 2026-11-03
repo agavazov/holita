@@ -80,6 +80,7 @@ it('acknowledges primary units, filters owned confirmations and completes allowl
   });
   const upstreamPort = portOf(upstream);
   const records: CaptureRecord[] = [];
+  let onUpstreamClose: (() => void) | undefined;
   const listener = new DeviceListener(
     {
       host: '127.0.0.1',
@@ -89,9 +90,13 @@ it('acknowledges primary units, filters owned confirmations and completes allowl
       upstream: `127.0.0.1:${String(upstreamPort)}`,
       primaryUnits: new Set([unitId]),
       ackCommands: new Set(['06']),
+      reconnectDelayMs: 200,
     },
     (entry) => {
       records.push(entry);
+      if ('event' in entry && entry.event === 'upstream-close') {
+        onUpstreamClose?.();
+      }
     },
   );
   await listener.start();
@@ -181,6 +186,10 @@ it('acknowledges primary units, filters owned confirmations and completes allowl
 
     for (const invalid of [
       { command: '04', fields: ['0593', '1234'] },
+      { command: '03', fields: ['0050'] },
+      { command: '45', fields: ['0177', '0052'] },
+      { command: '04', fields: ['0051', 'host'] },
+      { command: '46', fields: ['0049', 'host', '0051', 'backup'] },
       { command: '46', fields: ['0049', 'host,0774,30'] },
       { command: '46', fields: ['0049', 'host', '0774', '30'] },
       { command: '56', fields: ['1'] },
@@ -200,9 +209,15 @@ it('acknowledges primary units, filters owned confirmations and completes allowl
       },
       {
         command: '45',
-        fields: ['0177', '0049'],
-        responseFields: ['0177', '"#EDT#,#EID#"', '0049', '"server.starproto.com"'],
-        expectedFields: ['0177', '"#EDT#,#EID#"', '0049', '"server.starproto.com"'],
+        fields: ['0177', '0774'],
+        responseFields: ['0177', '"#EDT#,#EID#"', '0774', '30'],
+        expectedFields: ['0177', '"#EDT#,#EID#"', '0774', '30'],
+      },
+      {
+        command: '03',
+        fields: ['0593'],
+        responseFields: ['0593', '1234'],
+        expectedFields: ['0593', '1234'],
       },
       {
         command: '48',
@@ -248,6 +263,74 @@ it('acknowledges primary units, filters owned confirmations and completes allowl
       fields: ['optional'],
     });
     expect(await karmaFrames.next()).toEqual(ordinaryConfirmation);
+
+    const writeCommand = listener.sendCommand(unitId, {
+      command: '46',
+      fields: ['0049', 'host', '0050', '11500'],
+    });
+    const writeFrame = parseFrame((await deviceFrames.next()).subarray(0, -2));
+    expect(writeFrame?.fields.map((field) => field.toString())).toEqual([
+      '0049',
+      'host',
+      '0050',
+      '11500',
+    ]);
+    device.write(deviceFrame('02', '83', [writeFrame?.reference ?? '', '01']));
+    expect(await writeCommand).toMatchObject({ status: 'answered', resultCode: '01' });
+
+    const reconnected = new Promise<{ socket: Socket; frames: SocketFrames }>((resolve) => {
+      upstream.once('connection', (socket) => {
+        resolve({ socket, frames: new SocketFrames(socket) });
+      });
+    });
+    const upstreamLost = new Promise<void>((resolve) => {
+      onUpstreamClose = resolve;
+    });
+    // Leave a fragment in the old upstream splitter; it must never reach the device.
+    const incomplete = Buffer.from(`$SRV${unitId},95,84,unfinished`);
+    karma.write(incomplete);
+    karma.end();
+    await upstreamLost;
+    expect(device.destroyed).toBe(false);
+    const offlineFrames = [
+      deviceFrame('06', '85', ['261103120003', '01']),
+      deviceFrame('06', '86', ['261103120004', '01']),
+    ];
+    device.write(Buffer.concat(offlineFrames));
+    for (const reference of ['85', '86']) {
+      const ack = parseFrame((await deviceFrames.next()).subarray(0, -2));
+      expect(ack?.fields.map((field) => field.toString())).toEqual([reference, '01']);
+    }
+    const offlineCommand = listener.sendCommand(unitId, { command: '05', fields: [] });
+    const offlineFrame = parseFrame((await deviceFrames.next()).subarray(0, -2));
+    expect(offlineFrame?.command).toBe('05');
+    device.write(deviceFrame('02', '87', [offlineFrame?.reference ?? '', '01']));
+    expect(await offlineCommand).toMatchObject({ status: 'answered' });
+    const nextKarma = await reconnected;
+    for (const frame of offlineFrames) {
+      expect(await nextKarma.frames.next()).toEqual(frame);
+    }
+    const marker = buildServerFrame(unitId, '95', '88', ['after-reconnect']);
+    nextKarma.socket.write(
+      Buffer.concat([buildServerFrame(unitId, '02', '89', ['85', '01']), marker]),
+    );
+    expect(await deviceFrames.next()).toEqual(marker);
+    expect(records).toContainEqual(
+      expect.objectContaining({
+        connection: 1,
+        from: 'server',
+        partial: true,
+        frame: incomplete.toString('latin1'),
+      }),
+    );
+    expect(records.filter((entry) => 'event' in entry && entry.event === 'forwarded')).toHaveLength(
+      2,
+    );
+    expect(records).toContainEqual({
+      connection: 1,
+      event: 'upstream-close',
+      reason: 'upstream closed',
+    });
     expect(records.some((entry) => 'from' in entry && entry.from === 'holita')).toBe(true);
   } finally {
     device.destroy();

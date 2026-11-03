@@ -1,6 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
-import { ErmChecksum, ErmCommandStatus, ErmDirection } from '../../generated/prisma/client.js';
+import { sqlRows } from '../../database/sql.js';
+import {
+  ErmChecksum,
+  ErmCommandStatus,
+  ErmDirection,
+  Prisma,
+} from '../../generated/prisma/client.js';
 import {
   decodeBinaryEvent,
   decodeEvent,
@@ -16,12 +22,37 @@ export class DevicesRepository {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  async closeLeftOpen(): Promise<number> {
+    const schema = Prisma.raw(`"${this.prisma.schema.replaceAll('"', '""')}"`);
+    const rows = sqlRows(
+      await this.prisma.client.$queryRaw(Prisma.sql`
+      UPDATE ${schema}."ermConnection" AS connection
+      SET "closedAt" = COALESCE(
+        (SELECT MAX(frame."receivedAt") FROM ${schema}."ermFrame" AS frame
+         WHERE frame."connectionId" = connection."id"),
+        connection."forwardedAt",
+        connection."openedAt"
+      ), "closeReason" = 'left open by a previous process'
+      WHERE connection."closedAt" IS NULL
+      RETURNING connection."id"
+    `),
+    );
+    return rows.length;
+  }
+
   async open(id: string, peer: string, upstream: string, openedAt: Date): Promise<void> {
     await this.prisma.client.ermConnection.create({ data: { id, peer, upstream, openedAt } });
   }
 
   async forwarded(id: string, forwardedAt: Date): Promise<void> {
-    await this.prisma.client.ermConnection.update({ where: { id }, data: { forwardedAt } });
+    await this.prisma.client.ermConnection.updateMany({
+      where: { id, forwardedAt: null },
+      data: { forwardedAt },
+    });
+  }
+
+  async upstreamClose(connectionId: string, closedAt: Date, reason: string): Promise<void> {
+    await this.prisma.client.ermUpstreamClose.create({ data: { connectionId, closedAt, reason } });
   }
 
   async frame(

@@ -64,10 +64,13 @@ export function validateCommand(body: unknown): DeviceCommand {
   }
 
   const { command, fields } = body;
-  if (command === '03' && fields.length === 1 && fields.every(parameterNumber)) {
+  const readableParameters = fields.every(
+    (field) => parameterNumber(field) && !routingParameter(field),
+  );
+  if (command === '03' && fields.length === 1 && readableParameters) {
     return { command, fields };
   }
-  if (command === '45' && fields.length > 0 && fields.every(parameterNumber)) {
+  if (command === '45' && fields.length > 0 && readableParameters) {
     return { command, fields };
   }
   if (
@@ -91,21 +94,25 @@ export function validateCommand(body: unknown): DeviceCommand {
   if (command === '48' && fields.length === 1 && /^[\x20-\x7e]{1,200}$/.test(fields[0] ?? '')) {
     return { command, fields };
   }
-  // Routing parameters are written only together; other writes never touch routing or secrets.
+  // Only primary routing can change; other writes never touch routing or secrets.
   const parameters = fields.filter((_, index) => index % 2 === 0);
   if (
     (command === '04' || command === '46') &&
     fields.length >= 2 &&
     fields.length % 2 === 0 &&
     (command === '46' || fields.length === 2) &&
-    (parameters.every(routingParameter) || parameters.every(writableParameter)) &&
+    (parameters.every(
+      (parameter) => parameterNumber(parameter) && [49, 50].includes(Number(parameter)),
+    ) ||
+      parameters.every(writableParameter)) &&
     fields.every((field, index) => index % 2 === 0 || routingValue(field))
   ) {
     return { command, fields };
   }
   throw new BadRequestException(
-    'Allowed commands: 03/45/48 and other documented reads, 05 location, and 04/46 writes that ' +
-      'either set only 0049–0054 or avoid them and the protected parameters',
+    'Allowed commands: 03/45 reads excluding 0049–0054, 48 and other documented reads, ' +
+      '05 location, and 04/46 writes that either set only 0049/0050 or avoid 0049–0054 ' +
+      'and the protected parameters',
   );
 }
 

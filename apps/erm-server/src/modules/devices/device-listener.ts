@@ -31,6 +31,13 @@ export class DeviceListener {
         () => {
           this.sessions.delete(session);
         },
+        (unitId) => {
+          for (const other of this.sessions) {
+            if (other !== session && other.info()?.unitId.toUpperCase() === unitId.toUpperCase()) {
+              other.destroy('replaced by a newer connection');
+            }
+          }
+        },
       );
       this.sessions.add(session);
     });
@@ -46,9 +53,9 @@ export class DeviceListener {
 
   async sendCommand(unitId: string, body: unknown): Promise<CommandResult> {
     const command = validateCommand(body);
-    const session = [...this.sessions].find(
-      (candidate) => candidate.info()?.unitId.toUpperCase() === unitId.toUpperCase(),
-    );
+    const session = [...this.sessions]
+      .reverse()
+      .find((candidate) => candidate.info()?.unitId.toUpperCase() === unitId.toUpperCase());
     if (!session) {
       throw new NotFoundException('Unit is not connected');
     }
@@ -67,7 +74,7 @@ export class DeviceListener {
 
   async stop(): Promise<void> {
     for (const session of this.sessions) {
-      session.destroy();
+      session.destroy('server stopped');
     }
     await new Promise<void>((resolve, reject) => {
       this.server.close((error) => {

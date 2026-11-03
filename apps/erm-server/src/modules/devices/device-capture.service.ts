@@ -21,6 +21,8 @@ export class DeviceCaptureService {
   async initialize(): Promise<void> {
     await mkdir(this.config.captureDirectory, { recursive: true, mode: 0o700 });
     await chmod(this.config.captureDirectory, 0o700);
+    const closed = await this.repository.closeLeftOpen();
+    this.logger.log(`Closed ${String(closed)} connections left open by a previous process.`);
   }
 
   record(entry: CaptureRecord, closeReason?: string): void {
@@ -72,6 +74,8 @@ export class DeviceCaptureService {
       );
     } else if (entry.event === 'forwarded') {
       this.enqueue(state, () => this.repository.forwarded(state.id, at));
+    } else if (entry.event === 'upstream-close') {
+      this.enqueue(state, () => this.repository.upstreamClose(state.id, at, entry.reason));
     } else if (entry.event === 'close') {
       this.enqueue(state, () =>
         this.repository.close(

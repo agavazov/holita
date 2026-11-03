@@ -20,6 +20,9 @@ export type SessionOptions = {
   upstreamPort: number;
   primaryUnits?: ReadonlySet<string>;
   ackCommands?: ReadonlySet<string>;
+  reconnectDelayMs?: number;
+  reconnectMaxDelayMs?: number;
+  reconnectResetMs?: number;
 };
 
 export type CommandObserver = {
@@ -44,6 +47,7 @@ type PendingCommand = {
 };
 
 let reference = 900_000_000;
+let lastUpstreamAddress: string | undefined;
 function nextReference(): string {
   reference = reference === 999_999_999 ? 900_000_001 : reference + 1;
   return String(reference);
@@ -69,10 +73,14 @@ export class DeviceSession {
   private readonly owned = new Set<string>();
   private serverPartial = false;
   private readonly deferred = new Array<Buffer>();
+  private readonly upstreamQueue = new Array<Buffer>();
+  private primaryFlow: Transform | undefined;
   private target: Socket | undefined;
   private ready = false;
   private pending: PendingCommand | undefined;
   private connectTimer: NodeJS.Timeout | undefined;
+  private reconnectTimer: NodeJS.Timeout | undefined;
+  private reconnectDelay: number;
   private closeReason = 'device closed';
   private readonly firstFrameTimer: NodeJS.Timeout;
   private readonly writer: Writable;
@@ -84,7 +92,9 @@ export class DeviceSession {
     private readonly record: (entry: CaptureRecord, closeReason?: string) => void,
     private readonly commands: CommandObserver | undefined,
     private readonly onClose: () => void,
+    private readonly onIdentify: (unitId: string) => void,
   ) {
+    this.reconnectDelay = options.reconnectDelayMs ?? 1_000;
     this.peer = `${device.remoteAddress ?? '?'}:${String(device.remotePort ?? '?')}`;
     this.record({ connection, event: 'open', peer: this.peer });
     this.writer = new Writable({
@@ -112,7 +122,10 @@ export class DeviceSession {
   }
 
   info() {
-    return this.unitId !== undefined && this.mode !== undefined && this.lastFrameAt !== undefined
+    return !this.device.destroyed &&
+      this.unitId !== undefined &&
+      this.mode !== undefined &&
+      this.lastFrameAt !== undefined
       ? {
           unitId: this.unitId,
           mode: this.mode,
@@ -128,8 +141,8 @@ export class DeviceSession {
     if (unitId === undefined || this.mode !== 'primary') {
       throw new ConflictException('Unit is not connected in primary mode');
     }
-    if (!this.ready || this.pending) {
-      throw new ConflictException('Upstream is not ready or a command is already pending');
+    if (this.pending) {
+      throw new ConflictException('A command is already pending');
     }
     const id = randomUUID();
     const ownReference = nextReference();
@@ -151,7 +164,8 @@ export class DeviceSession {
     return result;
   }
 
-  destroy(): void {
+  destroy(reason: string): void {
+    this.closeReason = reason;
     this.device.destroy();
   }
 
@@ -185,60 +199,137 @@ export class DeviceSession {
     this.device.off('data', this.identify);
     const buffered = Buffer.concat(this.initial);
     this.initial.length = 0;
+    if (this.unitId !== undefined) {
+      this.onIdentify(this.unitId);
+    }
+    if (this.mode === 'primary') {
+      const flow = this.flow();
+      this.primaryFlow = flow;
+      flow.on('error', () => this.device.destroy());
+      flow.on('data', (raw: Buffer) => {
+        if (this.ready && this.target && !this.target.destroyed) {
+          if (!this.target.write(raw)) {
+            flow.pause();
+          }
+        } else {
+          this.upstreamQueue.push(raw);
+        }
+      });
+      this.connect();
+      this.device.unshift(buffered);
+      this.device.pipe(flow);
+      return;
+    }
+    for (const frame of this.deviceFrames.push(buffered)) {
+      this.capture('device', frame);
+    }
     this.connect(buffered);
   };
 
-  private connect(buffered: Buffer): void {
-    const link = net.connect({ host: this.options.upstreamHost, port: this.options.upstreamPort });
+  private connect(buffered?: Buffer, address?: string, attempt = 1): void {
+    const link = net.connect({
+      host: address ?? this.options.upstreamHost,
+      port: this.options.upstreamPort,
+    });
     this.target = link;
+    let reason = 'upstream closed';
+    let connectedAt: number | undefined;
     this.connectTimer = setTimeout(() => link.destroy(new Error('connect timeout')), 10_000);
     link.on('error', (error) => {
-      this.closeReason = `upstream error: ${error.message}`;
+      reason = `upstream error: ${error.message}`;
       this.record({ connection: this.connection, event: 'upstream-error', message: error.message });
     });
     link.on('close', () => {
-      if (this.closeReason === 'device closed') {
-        this.closeReason = 'upstream closed';
+      clearTimeout(this.connectTimer);
+      this.ready = false;
+      this.target = undefined;
+      if (this.device.destroyed) {
+        return;
       }
+      const fallback =
+        connectedAt === undefined && address === undefined ? lastUpstreamAddress : undefined;
       if (this.mode === 'primary') {
         for (const frame of this.serverFrames.flush()) {
           this.capture('server', frame);
-          this.writeKarma(frame);
         }
-        this.writer.end(() => {
-          this.device.destroy();
-        });
+        this.serverPartial = false;
+        for (const raw of this.deferred.splice(0)) {
+          this.writer.write(raw);
+        }
+        this.record({ connection: this.connection, event: 'upstream-close', reason });
+        if (fallback !== undefined) {
+          this.connect(undefined, fallback);
+        } else {
+          if (
+            connectedAt !== undefined &&
+            Date.now() - connectedAt >= (this.options.reconnectResetMs ?? 60_000)
+          ) {
+            this.reconnectDelay = this.options.reconnectDelayMs ?? 1_000;
+          }
+          this.reconnectTimer = setTimeout(() => {
+            this.connect();
+          }, this.reconnectDelay);
+          this.reconnectDelay = Math.min(
+            this.reconnectDelay * 2,
+            this.options.reconnectMaxDelayMs ?? 60_000,
+          );
+        }
+        this.primaryFlow?.resume();
+      } else if (connectedAt === undefined && attempt < 3) {
+        if (fallback !== undefined) {
+          this.connect(buffered, fallback, attempt + 1);
+        } else {
+          this.reconnectTimer = setTimeout(() => {
+            this.connect(buffered, undefined, attempt + 1);
+          }, this.options.reconnectDelayMs ?? 1_000);
+        }
       } else {
+        this.closeReason = reason;
         this.device.destroy();
       }
+    });
+    link.on('drain', () => {
+      this.primaryFlow?.resume();
     });
     link.once('connect', () => {
       clearTimeout(this.connectTimer);
       this.ready = true;
+      connectedAt = Date.now();
+      if (link.remoteAddress !== undefined) {
+        lastUpstreamAddress = link.remoteAddress;
+      }
       link.setKeepAlive(true, 60_000);
       this.record({
         connection: this.connection,
         event: 'forwarded',
         upstream: this.options.upstream,
+        ...(link.remoteAddress !== undefined && { address: link.remoteAddress }),
       });
+      for (const raw of this.upstreamQueue.splice(0)) {
+        if (!link.write(raw)) {
+          this.primaryFlow?.pause();
+        }
+      }
+      if (this.mode === 'mirror') {
+        this.device.on('data', (chunk: Buffer) => {
+          for (const frame of this.deviceFrames.push(chunk)) {
+            this.capture('device', frame);
+          }
+        });
+        if (buffered !== undefined) {
+          link.write(buffered);
+        }
+        this.device.pipe(link);
+        link.pipe(this.device);
+      }
     });
     if (this.mode === 'mirror') {
-      this.device.on('data', (chunk: Buffer) => {
-        for (const frame of this.deviceFrames.push(chunk)) {
-          this.capture('device', frame);
-        }
-      });
       link.on('data', (chunk: Buffer) => {
         for (const frame of this.serverFrames.push(chunk)) {
           this.capture('server', frame);
         }
       });
-      this.device.unshift(buffered);
-      this.device.pipe(link);
-      link.pipe(this.device);
     } else {
-      const toKarma = this.flow();
-      toKarma.on('error', () => this.device.destroy());
       link.on('data', (chunk: Buffer) => {
         for (const frame of this.serverFrames.push(chunk)) {
           const parsed = this.capture('server', frame);
@@ -247,8 +338,6 @@ export class DeviceSession {
           }
         }
       });
-      this.device.unshift(buffered);
-      this.device.pipe(toKarma).pipe(link);
     }
   }
 
@@ -426,7 +515,10 @@ export class DeviceSession {
   private close(): void {
     clearTimeout(this.firstFrameTimer);
     clearTimeout(this.connectTimer);
+    clearTimeout(this.reconnectTimer);
     this.target?.destroy();
+    this.primaryFlow?.destroy();
+    this.upstreamQueue.length = 0;
     this.writer.destroy();
     this.finish('failed');
     for (const frame of (this.mode === undefined

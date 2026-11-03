@@ -44,7 +44,18 @@ model ErmConnection {
   serverBytes BigInt @default(0)
   frames ErmFrame[]
   commands ErmCommand[]
+  upstreamCloses ErmUpstreamClose[]
   @@map("ermConnection")
+}
+
+model ErmUpstreamClose {
+  id BigInt @id @default(autoincrement())
+  connectionId String @db.Uuid
+  connection ErmConnection @relation(fields: [connectionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  closedAt DateTime @db.Timestamptz(3)
+  reason String
+  @@index([connectionId, closedAt(sort: Desc)])
+  @@map("ermUpstreamClose")
 }
 
 model ErmFrame {
