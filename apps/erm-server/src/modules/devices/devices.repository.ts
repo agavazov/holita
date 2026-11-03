@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
 import { ErmChecksum, ErmCommandStatus, ErmDirection } from '../../generated/prisma/client.js';
-import { decodeEvent, parseFrame } from '../../starlink/index.js';
+import { decodeEvent, inflateContainer, parseFrame } from '../../starlink/index.js';
 import type { DecodedEvent } from '../../starlink/index.js';
 import type { CaptureRecord, CommandOutcome, SentCommand } from './capture-record.js';
 
@@ -53,16 +53,22 @@ export class DevicesRepository {
         raw: Buffer.from(entry.frame, 'latin1'),
       },
     });
-    if (
-      entry.from === 'device' &&
-      !entry.partial &&
-      (entry.command === '06' || entry.command === '86')
-    ) {
+    if (entry.from !== 'device' || entry.partial) {
+      return;
+    }
+    // Tracker units batch their text events into compressed $SLC containers.
+    const raw = Buffer.from(entry.frame, 'latin1');
+    const container = entry.command === undefined ? inflateContainer(raw) : undefined;
+    for (const inner of container ??
+      (entry.command === '06' || entry.command === '86' ? [raw] : [])) {
       let event: DecodedEvent | undefined;
       try {
-        const parsed = parseFrame(Buffer.from(entry.frame, 'latin1'));
+        const parsed = parseFrame(inner);
         if (!parsed) {
           throw new Error('Invalid event envelope.');
+        }
+        if (parsed.command !== '06' && parsed.command !== '86') {
+          continue;
         }
         event = decodeEvent(parsed, eventStructure);
       } catch {
