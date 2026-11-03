@@ -55,7 +55,8 @@ records for retry and appear in the shared operation toast. See the
 
 The other live Fleet screens share their Storybook views: Overview, Alerts, Trip log,
 Drivers/scorecards, Maintenance, Devices, Vehicle groups, General settings and Vehicle profile/manual odometer.
-Devices have a required 15-digit IMEI unique per Branch and optional scoped Vehicle assignment;
+Devices have a required 15-digit IMEI that is globally unique (one physical unit belongs to one
+Branch) and optional scoped Vehicle assignment;
 unassigned Devices are stock. Multiple Devices may share a Vehicle. Editable lists use typed
 route drawers, URL filters and captured clients; supported row/selection actions preserve
 partial failures for retry. Restart and notification delivery are clearly labelled Demo/unavailable.

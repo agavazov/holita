@@ -69,8 +69,8 @@ code is the reference for behavior details.
   - Standalone login selects a Tenant, then a Branch, and opens Overview.
   - The header switches Branches.
   - Add another feature only when explicitly requested.
-- Devices require a 15-digit string IMEI that is unique per Tenant/Branch. Vehicle assignment is
-  optional and, when set, must belong to the same Tenant/Branch.
+- Devices require a 15-digit string IMEI that is globally unique: one physical unit belongs to one
+  Branch. Vehicle assignment is optional and, when set, must belong to the same Tenant/Branch.
 
 ## Karma Client
 
