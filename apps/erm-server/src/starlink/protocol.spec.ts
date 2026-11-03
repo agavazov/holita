@@ -75,7 +75,7 @@ it('splits bounded StarLink frames and preserves the checksum and binary wire co
       ],
       expected: [
         { raw: Buffer.alloc(16_384, 0x61), partial: true },
-        { raw: Buffer.from('a'), partial: true },
+        { raw: Buffer.from('a'), partial: true, terminated: true },
         { raw: first, partial: false },
       ],
     },

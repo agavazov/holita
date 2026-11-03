@@ -1072,18 +1072,31 @@ so application restarts do not drop device connections. Configure it from the ro
 
 ## ERM device server
 
-`apps/erm-server` (`@holita/erm-server`) runs independently from compiled output. Mirror mode
-forwards device and Karma traffic byte for byte; Karma still owns acknowledgements and commands.
-The server has no GraphQL endpoint. It remains outside `npm run dev` and `npm run kill`, so
-restarting the web/API group leaves its device connections open.
+`apps/erm-server` (`@holita/erm-server`) runs independently from compiled output. It remains
+outside `npm run dev` and `npm run kill`, so restarting the web/API group leaves its device
+connections open. It has no GraphQL endpoint.
+
+`ERM_PRIMARY_UNITS` is a comma-separated unit allowlist, empty by default. The first complete
+device frame selects the connection's mode:
+
+- **Mirror:** forward device and Karma traffic byte for byte. Karma owns acknowledgements and
+  commands.
+- **Primary:** holita immediately confirms complete device frames whose command appears in
+  `ERM_ACK_COMMANDS` (default `06`), using confirmation reference mode 0. Device traffic is still
+  mirrored to Karma, except confirmations of holita commands. Duplicate Karma confirmations for
+  messages holita acknowledged are dropped. Karma authentication answers and other commands still
+  reach the device. Holita and Karma whole-frame writes share one device queue.
+
+Karma is required in both modes. Changing the allowlist affects new connections.
 
 Copy the ERM Server entries from the [root environment reference](../../.env.example) into the
 ignored `apps/erm-server/.env`, preserving existing settings. HTTP `/health` defaults to
 `127.0.0.1:11015`; `ERM_DEVICE_HOST`/`ERM_DEVICE_PORT` default to `0.0.0.0:11500`.
 `ERM_UPSTREAM` defaults to `in.karma.online:500`. `ERM_CAPTURE_DIR` defaults to
 `.references/erm-server` relative to the repository root, including when started from the app
-directory. Its daily UTC JSON Lines files preserve the relay's record fields; directory mode is
-`0700` and file mode is `0600`. Captures contain vehicle positions and must remain private.
+directory. Its daily UTC JSON Lines files preserve the relay's record fields and include
+`from: "holita"` for server-originated frames; directory mode is `0700` and file mode is `0600`.
+Captures contain vehicle positions and must remain private.
 
 Provision missing databases/roles, deploy this application's migrations and build from the
 repository root, with PostgreSQL already running:
@@ -1097,19 +1110,77 @@ npm run start:prod --workspace @holita/erm-server
 ```
 
 Provisioning is additive and preserves existing data/passwords. Development uses `holita_erm`;
-guarded tests use `holita_erm_test` with isolated per-run schemas. Connection/frame database writes
-are asynchronous; database failures are logged while forwarding continues. Raw frame capture does
-not populate Fleet telemetry.
+guarded tests use `holita_erm_test` with isolated per-run schemas. Connection, frame, command and
+event database writes are asynchronous; database failures are logged while forwarding and
+acknowledgements continue. These records do not populate Fleet telemetry.
 
-The listener accepts at most 64 connections. A device must send `$` as its first byte within
-60 seconds before Karma is contacted, and the upstream must connect within 10 seconds. Closing
-either side closes the other. The public path must forward raw TCP with no HTTP/TLS termination.
+`ERM_EVENT_STRUCTURE` defines the ordered fields in device `06`/`86` events in both modes. Its
+default is the Karma preset for device parameter 0177 in the [environment reference](../../.env.example).
+Set it to the actual device value before interpreting telemetry. Times use UTC `YYMMDDHHMMSS`
+(the default format for parameter 0176); latitude/longitude are converted from signed degrees and
+minutes to decimal degrees, and speed from knots to km/h. `odometer` preserves `#ODOD#` from the
+source selected by parameter 0004, which may be engine hours rather than distance. Named fields
+retain raw text; missing or unparsable parsed values become null, and trailing fields remain in
+`extra`. Decoding failures are logged without affecting device traffic.
+
+The listener accepts at most 64 connections. A device must begin with `$` and complete its first
+frame within 60 seconds and the 16 KB frame bound before Karma is contacted. The upstream must
+connect within 10 seconds. Closing either side closes the other. The public path must forward raw TCP with no HTTP/TLS termination.
 The relay and ERM Server share the default device port; run them together only on different free
 ports, for example:
 
 ```bash
 PORT=11017 ERM_DEVICE_PORT=11501 npm run start:prod --workspace @holita/erm-server
 ```
+
+### Internal unit and command API
+
+The HTTP listener is loopback-only. `/internal` endpoints are disabled unless `ERM_INTERNAL_TOKEN`
+is set to a private random value of at least 32 characters. Requests require
+`authorization: Bearer <token>`; keep the token in the service environment. For one unit, the
+relevant application `.env` entries are:
+
+```dotenv
+ERM_PRIMARY_UNITS=862129080366630
+ERM_ACK_COMMANDS=06
+ERM_INTERNAL_TOKEN=<random-token-of-at-least-32-characters>
+```
+
+With the same token exported in the calling shell:
+
+```bash
+curl --fail --silent --show-error \
+  -H "authorization: Bearer ${ERM_INTERNAL_TOKEN}" \
+  http://127.0.0.1:11015/internal/units
+
+curl --fail --silent --show-error \
+  -H "authorization: Bearer ${ERM_INTERNAL_TOKEN}" \
+  -H 'content-type: application/json' \
+  --data '{"command":"03","fields":["0774"]}' \
+  http://127.0.0.1:11015/internal/units/862129080366630/commands
+```
+
+`GET /internal/units` returns an array of `{ unitId, mode, peer, connectedSince, lastFrameAt }`;
+timestamps are ISO strings. `POST /internal/units/:unitId/commands` requires a connected primary-mode
+unit and accepts only these command/field combinations:
+
+| Command | Fields                                                                       |
+| ------- | ---------------------------------------------------------------------------- |
+| `03`    | One parameter number, for example `["0774"]`.                                |
+| `45`    | One or more parameter numbers.                                               |
+| `05`    | Empty array or one maximum-wait value in seconds (1–4 digits).               |
+| `04`    | One parameter/value pair, restricted to server-routing parameters 0049–0054. |
+| `46`    | Alternating parameter/value pairs, restricted to 0049–0054.                  |
+
+The call waits up to 30 seconds. `04`/`46`/`05` complete on the device's `02` confirmation for
+holita's reference; `03`/`45` complete on the corresponding response containing the requested
+parameters. HTTP 200 returns `{ id, reference, status, resultCode, fields }`, with status
+`answered`, `timeout` or `failed`. Only one holita command may be pending per connection.
+Invalid commands return 400, disconnected units 404, and mirror/busy/not-ready units 409.
+The API returns 401 for invalid credentials and 503 when its token is unconfigured. Command
+requests, outcomes and exact responses are persisted. No command is retried automatically.
+
+### Development and service management
 
 For development only, `npm run dev:erm-server` runs its watcher with the same configuration.
 For an independent service, save a user unit such as

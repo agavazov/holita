@@ -1,6 +1,7 @@
 export interface CapturedFrame {
   raw: Buffer;
   partial: boolean;
+  terminated?: true;
 }
 
 const maxFrameBytes = 16_384;
@@ -15,7 +16,11 @@ export class FrameSplitter {
     while (this.pending.length > 0) {
       const end = this.pending.indexOf('\r\n');
       if (end >= 0 && end <= maxFrameBytes) {
-        frames.push({ raw: this.pending.subarray(0, end), partial: this.partial });
+        frames.push({
+          raw: this.pending.subarray(0, end),
+          partial: this.partial,
+          ...(this.partial && { terminated: true as const }),
+        });
         this.pending = this.pending.subarray(end + 2);
         this.partial = false;
       } else if (

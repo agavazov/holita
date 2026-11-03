@@ -75,15 +75,12 @@ it('mirrors exact bytes, rejects non-StarLink traffic and closes failed upstream
     for (const closer of ['device', 'upstream']) {
       const device = await connect();
       const accepted = new Promise<Socket>((resolve) => upstream.once('connection', resolve));
-      const outgoing = Buffer.concat([
-        Buffer.from('$SLU862129080366630,06,1,'),
-        Buffer.alloc(128 * 1024, 0xa5),
-        Buffer.from('\r\n'),
-      ]);
-      device.write(outgoing.subarray(0, 1));
+      const first = Buffer.from('$SLU862129080366630,01,1*00\r\n');
+      const outgoing = Buffer.concat([first, Buffer.alloc(128 * 1024, 0xa5), Buffer.from('\r\n')]);
+      device.write(first);
       const target = await accepted;
       const receivedDevice = readBytes(target, outgoing.length);
-      device.write(outgoing.subarray(1));
+      device.write(outgoing.subarray(first.length));
       expect(await receivedDevice).toEqual(outgoing);
 
       const incoming = Buffer.concat([
@@ -120,7 +117,7 @@ it('mirrors exact bytes, rejects non-StarLink traffic and closes failed upstream
     upstreamClosed = true;
     const device = await connect();
     const deviceClosed = closed(device);
-    device.write('$');
+    device.write('$SLU862129080366630,01,1*00\r\n');
     await deviceClosed;
     expect(records.some((entry) => 'event' in entry && entry.event === 'upstream-error')).toBe(
       true,

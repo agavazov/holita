@@ -12,7 +12,16 @@ datasource db {
 enum ErmDirection {
   DEVICE @map("device")
   UPSTREAM @map("upstream")
+  HOLITA @map("holita")
   @@map("ermDirection")
+}
+
+enum ErmCommandStatus {
+  SENT @map("sent")
+  ANSWERED @map("answered")
+  TIMEOUT @map("timeout")
+  FAILED @map("failed")
+  @@map("ermCommandStatus")
 }
 
 enum ErmChecksum {
@@ -34,6 +43,7 @@ model ErmConnection {
   deviceBytes BigInt @default(0)
   serverBytes BigInt @default(0)
   frames ErmFrame[]
+  commands ErmCommand[]
   @@map("ermConnection")
 }
 
@@ -49,6 +59,43 @@ model ErmFrame {
   checksum ErmChecksum
   partial Boolean @default(false)
   raw Bytes
+  events ErmEvent[]
   @@index([unitId, receivedAt(sort: Desc)])
   @@map("ermFrame")
+}
+
+model ErmCommand {
+  id String @id @default(uuid()) @db.Uuid
+  unitId String @db.VarChar(15)
+  connectionId String @db.Uuid
+  connection ErmConnection @relation(fields: [connectionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  reference String @db.VarChar(9)
+  command String @db.VarChar(3)
+  fields String[]
+  status ErmCommandStatus @default(SENT)
+  sentAt DateTime @db.Timestamptz(3)
+  answeredAt DateTime? @db.Timestamptz(3)
+  resultCode String?
+  response Bytes?
+  @@map("ermCommand")
+}
+
+model ErmEvent {
+  id BigInt @id @default(autoincrement())
+  frameId BigInt
+  frame ErmFrame @relation(fields: [frameId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  unitId String @db.VarChar(15)
+  eventId String? @db.VarChar(3)
+  eventTime DateTime? @db.Timestamptz(3)
+  positionTime DateTime? @db.Timestamptz(3)
+  latitude Decimal? @db.Decimal(10, 7)
+  longitude Decimal? @db.Decimal(10, 7)
+  speedKmh Float?
+  heading Float?
+  odometer Float?
+  engineOn Boolean?
+  mainVoltage Float?
+  backupVoltage Float?
+  fields Json
+  @@map("ermEvent")
 }
