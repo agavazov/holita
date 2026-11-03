@@ -462,6 +462,37 @@ export class DevicePage implements OnInit {
       ? emptyValue
       : `${this.number(value, 2)}\u00a0${this.uiText().units.volt}`;
   }
+  /** Fault records (419) and the CAN error flag (411) of a decoded eData report. */
+  edataSummary(value: unknown): string | null {
+    if (typeof value !== 'object' || value === null || !('type' in value)) {
+      return null;
+    }
+    const text = this.text();
+    if (value.type === 419 && 'faults' in value && Array.isArray(value.faults)) {
+      const faults: unknown[] = value.faults;
+      const records = faults.flatMap((fault) =>
+        typeof fault === 'object' &&
+        fault !== null &&
+        'spn' in fault &&
+        typeof fault.spn === 'number' &&
+        'fmi' in fault &&
+        typeof fault.fmi === 'number'
+          ? [
+              `SPN ${String(fault.spn)} FMI ${String(fault.fmi)}${
+                'status' in fault && fault.status === 2 ? ` (${text.faultCleared})` : ''
+              }`,
+            ]
+          : [],
+      );
+      return records.length ? `${text.faults}: ${records.join(', ')}` : null;
+    }
+    return value.type === 411 &&
+      'canError' in value &&
+      typeof value.canError === 'number' &&
+      value.canError !== 0
+      ? text.edataCanError
+      : null;
+  }
   commandFields(fields: readonly string[]): string {
     return fields.length ? ` · ${fields.join(',')}` : '';
   }

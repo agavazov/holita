@@ -145,6 +145,7 @@ query AdminControlCenterEvents($id: ID!, $language: ErmLanguage!, $input: ErmDev
       items {
         ...AdminControlCenterEventFields
         fields
+        edata
       }
     }
   }

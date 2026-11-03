@@ -672,10 +672,19 @@
                                 >{{ text().mainVoltage }}: {{ voltage(event.mainVoltage) }} ·
                                 {{ text().backupVoltage }}: {{ voltage(event.backupVoltage) }}</span
                               >
+                              @if (edataSummary(event.edata); as summary) {
+                                <span>{{ summary }}</span>
+                              }
                               <details>
                                 <summary>{{ text().values }}</summary>
                                 <pre class="control-center__frame">{{ event.fields | json }}</pre>
                               </details>
+                              @if (event.edata) {
+                                <details>
+                                  <summary>{{ text().edata }}</summary>
+                                  <pre class="control-center__frame">{{ event.edata | json }}</pre>
+                                </details>
+                              }
                             </div>
                           </td>
                         </tr>
