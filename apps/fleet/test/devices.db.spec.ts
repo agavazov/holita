@@ -67,6 +67,9 @@ describe('Device GraphQL with PostgreSQL', () => {
             imei: '000000000000011',
             vehicleId: alpha.id,
             model: 'STARLINK_TRACKER',
+            serialNumber: '279037',
+            edataModule: 'eData Fms 6.56',
+            simPhoneNumber: '+359881234567',
             firmwareVersion: '1_2',
           },
           {
@@ -111,6 +114,8 @@ describe('Device GraphQL with PostgreSQL', () => {
         branchId: foreignBranch,
         vehicleId: foreignVehicle.id,
         imei: online.imei,
+        serialNumber: online.serialNumber,
+        simPhoneNumber: online.simPhoneNumber,
       },
     });
     for (const [scopeTenant, scopeBranch] of [
@@ -120,6 +125,17 @@ describe('Device GraphQL with PostgreSQL', () => {
       const other = await database.client.vehicle.create({
         data: { tenantId: scopeTenant, branchId: scopeBranch, licensePlate: 'FOREIGN CLOCK' },
       });
+      if (scopeTenant !== tenantId) {
+        await database.client.device.create({
+          data: {
+            tenantId: scopeTenant,
+            branchId: scopeBranch,
+            imei: online.imei,
+            serialNumber: online.serialNumber,
+            simPhoneNumber: online.simPhoneNumber,
+          },
+        });
+      }
       await database.client.vehicleStatusSample.create({
         data: {
           tenantId: scopeTenant,
@@ -212,9 +228,24 @@ describe('Device GraphQL with PostgreSQL', () => {
         data: { fleetDevices: { total } },
       });
     }
-    // Search and ID filters stay inside the scope; the foreign device shares the online IMEI.
-    expect(await query(list, { search: online.imei }, branchId)).toMatchObject({
-      data: { fleetDevices: { total: 1, items: [{ id: online.id }] } },
+    // Search and ID filters stay scoped even when other Tenants/Branches share identifiers.
+    for (const search of [online.imei, '9037', '881234567', '279037 881234567']) {
+      expect(await query(list, { search }, branchId)).toMatchObject({
+        data: { fleetDevices: { total: 1, items: [{ id: online.id }] } },
+      });
+    }
+    expect(
+      await query(
+        'query($search:String){fleetDevices(search:$search){items{id serialNumber edataModule}}}',
+        { search: '279037' },
+        branchId,
+      ),
+    ).toEqual({
+      data: {
+        fleetDevices: {
+          items: [{ id: online.id, serialNumber: '279037', edataModule: 'eData Fms 6.56' }],
+        },
+      },
     });
     expect(await query(list, { search: '%_' }, branchId)).toMatchObject({
       data: { fleetDevices: { total: 0 } },

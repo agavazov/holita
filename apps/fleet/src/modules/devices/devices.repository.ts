@@ -31,8 +31,10 @@ export interface DeviceData {
   imei: string;
   vehicleId: string | null;
   model: FleetDeviceModel | null;
+  serialNumber: string | null;
   options: FleetDeviceOption[];
   firmwareVersion: string | null;
+  edataModule: string | null;
   simPhoneNumber: string | null;
   simIccid: string | null;
   installedAt: Date | null;
@@ -142,6 +144,23 @@ export class DevicesRepository {
         tenantId: scope.tenantId,
         branchId: scope.branchId,
         imei,
+        ...(excludeId === null ? {} : { id: { not: excludeId } }),
+      },
+      select: { id: true },
+    });
+    return row !== null;
+  }
+
+  async serialNumberTaken(
+    scope: FleetScope,
+    serialNumber: string,
+    excludeId: string | null,
+  ): Promise<boolean> {
+    const row = await this.prisma.client.device.findFirst({
+      where: {
+        tenantId: scope.tenantId,
+        branchId: scope.branchId,
+        serialNumber,
         ...(excludeId === null ? {} : { id: { not: excludeId } }),
       },
       select: { id: true },

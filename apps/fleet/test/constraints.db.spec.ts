@@ -659,11 +659,12 @@ describe('Fleet scope isolation and referential integrity in PostgreSQL', () => 
   it('unique violations map to fieldErrors per Tenant/Branch', async () => {
     const client = database.client;
     const vin = 'WDB9634031L123456';
+    const serialNumber = '279037';
     await client.vehicle.create({
       data: { tenantId, branchId, licensePlate: 'U1', fleetNumber: 'U-01', vin },
     });
     await client.device.create({
-      data: { tenantId, branchId, vehicleId, imei: '123456789012345' },
+      data: { tenantId, branchId, vehicleId, imei: '123456789012345', serialNumber },
     });
     await client.driver.create({
       data: {
@@ -691,6 +692,12 @@ describe('Fleet scope isolation and referential integrity in PostgreSQL', () => 
         'device_tenantId_branchId_imei_key',
         client.device.create({
           data: { tenantId, branchId, vehicleId, imei: '123456789012345' },
+        }),
+      ],
+      [
+        'device_tenantId_branchId_serialNumber_key',
+        client.device.create({
+          data: { tenantId, branchId, imei: '123456789012346', serialNumber },
         }),
       ],
       [
@@ -759,6 +766,18 @@ describe('Fleet scope isolation and referential integrity in PostgreSQL', () => 
         ['imei'],
       ],
       [
+        'device serial creation',
+        createDevice,
+        { input: { imei: '123456789012346', serialNumber: ` ${serialNumber} ` } },
+        ['serialNumber'],
+      ],
+      [
+        'device serial update',
+        updateDevice,
+        { id: otherDevice.id, input: { serialNumber } },
+        ['serialNumber'],
+      ],
+      [
         'driver creation',
         createDriver,
         {
@@ -810,7 +829,7 @@ describe('Fleet scope isolation and referential integrity in PostgreSQL', () => 
         createVehicle,
         { input: { licensePlate: 'U1', fleetNumber: 'U-01', vin } },
       ],
-      ['createFleetDevice', createDevice, { input: { imei: '123456789012345' } }],
+      ['createFleetDevice', createDevice, { input: { imei: '123456789012345', serialNumber } }],
       [
         'createFleetDriver',
         createDriver,
@@ -831,6 +850,13 @@ describe('Fleet scope isolation and referential integrity in PostgreSQL', () => 
         value: { data: { [field]: { id: expect.any(String) } } },
       });
     }
+    expect(
+      await query(
+        createDevice,
+        { input: { imei: '123456789012345', serialNumber } },
+        { tenantId: randomUUID(), branchId },
+      ),
+    ).toEqual({ data: { createFleetDevice: { id: expect.any(String) } } });
 
     // Bypass each service's scoped pre-check so the real insert raises P2002 (a concurrent write).
     const spies = [
@@ -838,6 +864,7 @@ describe('Fleet scope isolation and referential integrity in PostgreSQL', () => 
         .spyOn(module.get(VehiclesRepository), 'duplicates')
         .mockResolvedValue({ fleetNumber: false, vin: false }),
       jest.spyOn(module.get(DevicesRepository), 'imeiTaken').mockResolvedValue(false),
+      jest.spyOn(module.get(DevicesRepository), 'serialNumberTaken').mockResolvedValue(false),
       jest
         .spyOn(module.get(DriversRepository), 'duplicates')
         .mockResolvedValue({ employeeNumber: false, identificationKey: false }),
@@ -848,6 +875,7 @@ describe('Fleet scope isolation and referential integrity in PostgreSQL', () => 
         ['fleetNumber', createVehicle, { input: { licensePlate: 'U4', fleetNumber: 'U-01' } }],
         ['vin', createVehicle, { input: { licensePlate: 'U5', vin: vin.toLowerCase() } }],
         ['imei', createDevice, { input: { imei: '123456789012345', vehicleId } }],
+        ['serialNumber', createDevice, { input: { imei: '123456789012346', serialNumber } }],
         [
           'employeeNumber',
           createDriver,

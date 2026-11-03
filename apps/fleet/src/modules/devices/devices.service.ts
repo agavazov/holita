@@ -92,7 +92,15 @@ const DUPLICATE_IMEI: FieldError = {
   message: 'IMEI is already used in this branch.',
   code: 'ALREADY_EXISTS',
 };
-const UNIQUE_INDEXES = new Map([['device_tenantId_branchId_imei_key', DUPLICATE_IMEI]]);
+const DUPLICATE_SERIAL_NUMBER: FieldError = {
+  path: 'serialNumber',
+  message: 'Serial number is already used in this branch.',
+  code: 'ALREADY_EXISTS',
+};
+const UNIQUE_INDEXES = new Map([
+  ['device_tenantId_branchId_imei_key', DUPLICATE_IMEI],
+  ['device_tenantId_branchId_serialNumber_key', DUPLICATE_SERIAL_NUMBER],
+]);
 
 function imei(value: unknown): string {
   const result = typeof value === 'string' ? value.trim() : '';
@@ -129,8 +137,10 @@ function toDevice(row: DeviceRow): StoredDevice {
     vehicleId: row.vehicleId,
     vehicle: row.vehicle,
     model: row.model,
+    serialNumber: row.serialNumber,
     options: row.options,
     firmwareVersion: row.firmwareVersion,
+    edataModule: row.edataModule,
     simPhoneNumber: row.simPhoneNumber,
     simIccid: row.simIccid,
     installedAt: row.installedAt,
@@ -219,8 +229,10 @@ export class DevicesService {
       imei: imei(input.imei),
       vehicleId: optionalUuid(input.vehicleId, 'vehicleId'),
       model: optionalEnum(input.model, DEVICE_MODELS, 'model'),
+      serialNumber: this.serialNumber(input.serialNumber),
       options: options(input.options),
       firmwareVersion: this.firmwareVersion(input.firmwareVersion),
+      edataModule: this.edataModule(input.edataModule),
       simPhoneNumber: this.simPhoneNumber(input.simPhoneNumber),
       simIccid: this.simIccid(input.simIccid),
       installedAt: this.installedAt(input.installedAt),
@@ -231,6 +243,9 @@ export class DevicesService {
       await this.requireVehicle(scope, data.vehicleId);
     }
     await this.requireUniqueImei(scope, data.imei, null);
+    if (data.serialNumber !== null) {
+      await this.requireUniqueSerialNumber(scope, data.serialNumber, null);
+    }
     await this.core.requireBranch(scope.branchId, context);
     let row: DeviceRow;
     try {
@@ -258,11 +273,17 @@ export class DevicesService {
     if (input.model !== undefined) {
       data.model = optionalEnum(input.model, DEVICE_MODELS, 'model');
     }
+    if (input.serialNumber !== undefined) {
+      data.serialNumber = this.serialNumber(input.serialNumber);
+    }
     if (input.options !== undefined) {
       data.options = options(input.options);
     }
     if (input.firmwareVersion !== undefined) {
       data.firmwareVersion = this.firmwareVersion(input.firmwareVersion);
+    }
+    if (input.edataModule !== undefined) {
+      data.edataModule = this.edataModule(input.edataModule);
     }
     if (input.simPhoneNumber !== undefined) {
       data.simPhoneNumber = this.simPhoneNumber(input.simPhoneNumber);
@@ -292,6 +313,9 @@ export class DevicesService {
     }
     if (data.imei !== undefined) {
       await this.requireUniqueImei(scope, data.imei, recordId);
+    }
+    if (data.serialNumber != null) {
+      await this.requireUniqueSerialNumber(scope, data.serialNumber, recordId);
     }
     let row: DeviceRow;
     try {
@@ -356,6 +380,16 @@ export class DevicesService {
     return device;
   }
 
+  private serialNumber(value: unknown): string | null {
+    return optionalPattern(
+      value,
+      'serialNumber',
+      32,
+      /^[0-9A-Za-z-]{1,32}$/,
+      'Use 1 to 32 letters, digits and hyphens.',
+    );
+  }
+
   private firmwareVersion(value: unknown): string | null {
     return optionalPattern(
       value,
@@ -363,6 +397,16 @@ export class DevicesService {
       32,
       /^[0-9A-Za-z._-]{1,32}$/,
       'Use letters, digits, dots, underscores and hyphens.',
+    );
+  }
+
+  private edataModule(value: unknown): string | null {
+    return optionalPattern(
+      value,
+      'edataModule',
+      64,
+      /^[ -~]{1,64}$/,
+      'Use 1 to 64 printable characters.',
     );
   }
 
@@ -402,6 +446,20 @@ export class DevicesService {
   ): Promise<void> {
     if (await this.devices.imeiTaken(scope, value, excludeId)) {
       invalid(DUPLICATE_IMEI.path, DUPLICATE_IMEI.message, DUPLICATE_IMEI.code);
+    }
+  }
+
+  private async requireUniqueSerialNumber(
+    scope: FleetScope,
+    value: string,
+    excludeId: string | null,
+  ): Promise<void> {
+    if (await this.devices.serialNumberTaken(scope, value, excludeId)) {
+      invalid(
+        DUPLICATE_SERIAL_NUMBER.path,
+        DUPLICATE_SERIAL_NUMBER.message,
+        DUPLICATE_SERIAL_NUMBER.code,
+      );
     }
   }
 

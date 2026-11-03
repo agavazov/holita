@@ -16,7 +16,7 @@ export function deviceListRowsSql(schema: string, scope: FleetScope): Prisma.Sql
   const samples = fleetTable(schema, 'vehicleStatusSample');
   return Prisma.sql`
     WITH clock AS (${vehicleDataClockSql(schema, scope)}), settings AS (${settingsSql(schema, scope)})
-    SELECT d."id", d."imei", d."model"::text AS "model", d."options"::text[] AS "options",
+    SELECT d."id", d."imei", d."serialNumber", d."model"::text AS "model", d."options"::text[] AS "options",
       d."firmwareVersion", d."simPhoneNumber", d."simIccid", d."vehicleId", d."installedAt", d."createdAt",
       vehicle."licensePlate" AS "vehicleLicensePlate", latest."lastReportedAt", clock."asOf",
       CASE WHEN d."vehicleId" IS NULL THEN 'IN_STOCK'
@@ -79,7 +79,8 @@ function conditionSql(condition: DeviceConditionCriteria): Prisma.Sql[] {
 export function deviceListWhereSql(criteria: DeviceListCriteria): Prisma.Sql {
   const clauses = criteria.tokens.map((token) => {
     const pattern = containsPattern(token);
-    return Prisma.sql`(d."imei" ILIKE ${pattern}::text OR d."firmwareVersion" ILIKE ${pattern}::text
+    return Prisma.sql`(d."imei" ILIKE ${pattern}::text OR d."serialNumber" ILIKE ${pattern}::text
+      OR d."firmwareVersion" ILIKE ${pattern}::text
       OR d."simPhoneNumber" ILIKE ${pattern}::text OR d."simIccid" ILIKE ${pattern}::text
       OR d."model" ILIKE ${pattern}::text OR d."vehicleLicensePlate" ILIKE ${pattern}::text)`;
   });
