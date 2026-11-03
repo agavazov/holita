@@ -88,9 +88,9 @@ product constraints.
 
 ## Direct ERM telemetry
 
-- [Build an ERM TCP receiver and test device routing](erm-tcp-receiver-and-test-device-routing.md):
-  receive direct telemetry, redirect one selected test device, verify restoration,
-  and determine whether it can report to both holita and Karma simultaneously.
+- [Route test trucks to the ERM device server and replace Karma](erm-tcp-receiver-and-test-device-routing.md):
+  route one truck through the server, verify mirror and primary modes on its real traffic,
+  then replace Karma step by step.
   The task distinguishes concurrent delivery from failover and provider forwarding.
 
 ## Provider contract
