@@ -20,8 +20,10 @@ connected (`0774=0`, was 720). The Tracker formats are described in
 
 - [ ] Identify the remaining `$SLB` fields: tag `27`, the `ff 32` flags (ignition/engine) and the two
       middle bytes of `26`; then fill `engineOn` for binary reports.
-- [ ] Record connection closes when erm-server stops: after the 13:05 restart both closed
-      connections kept `closedAt` empty.
+- [ ] Record connection closes when erm-server stops: the restarts at 13:05, 13:24 and 13:48 on
+      2026-11-03 left no close record in the database or the JSON Lines capture, although
+      `onModuleDestroy` stops the listener and drains the capture queue. The four rows were corrected
+      by hand.
 - [ ] Always-connected units do not reconnect after erm-server closes their connection (13:05:
       no attempt for minutes). Keep their sessions across deployments, or wake them by a call
       to the SIM after a restart.
