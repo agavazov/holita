@@ -29,6 +29,7 @@ import { Select } from 'primeng/select';
 import { fromDateOnly, toDateOnly } from '../format/zoned-time';
 import { interpolate, uiMessages } from '../i18n/messages';
 import { maxSearchLength } from '../list/list-state';
+import { below } from '../media';
 import { selectMultiplePt } from '../select-multiple';
 import { UI_LANGUAGE } from '../ui-language';
 import { validationMessage } from '../forms/validators';
@@ -106,6 +107,10 @@ export class FilterBuilder {
   };
   protected readonly open = signal(false);
   protected readonly editingId = signal<string | null>(null);
+  /** Below `sm` the add button and chips sit behind a "Filters (n)" disclosure under the search. */
+  protected readonly compact = below('sm');
+  protected readonly conditionsOpen = signal(false);
+  protected readonly conditionsShown = computed(() => !this.compact() || this.conditionsOpen());
   private readonly popover = viewChild.required(Popover);
   private readonly formElement = viewChild.required<ElementRef<HTMLFormElement>>('formElement');
   private readonly addButton = viewChild<ElementRef<HTMLButtonElement>>('addButton');
@@ -131,6 +136,11 @@ export class FilterBuilder {
   private loading = false;
   private opener: HTMLElement | null = null;
   private returnFocus = false;
+
+  protected readonly toggleLabel = computed(() => {
+    const count = this.conditions().length;
+    return count ? interpolate(this.text().toggleCount, { count }) : this.text().toggle;
+  });
 
   protected readonly fieldOptions = computed(() => [...this.fields()]);
   protected readonly canAdd = computed(() => {

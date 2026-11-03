@@ -107,14 +107,14 @@ Local Lato weights are 400/500/600/700/800, normal only; preserve the
 SCSS uses `@use 'breakpoints' as bp` and `bp.below`/`bp.from`; TypeScript uses `ui/media.ts`
 `below(name)`/`breakpointWidth(name)`, never literal pixel checks.
 
-| Width           | Presentation                                                                                  |
-| --------------- | --------------------------------------------------------------------------------------------- |
-| `< sm`          | Compact topbar labels, no breadcrumb, filter search on its own row, stacked drawer actions    |
-| `< md`          | Full-width drawers, narrow page gutter, hidden secondary table columns, two KPI tiles per row |
-| `< lg`          | Modal navigation drawer and full-bleed frame                                                  |
-| `≥ sm`          | Two-column form grids                                                                         |
-| `≥ md` / `≥ xl` | Two-/three-column card grids                                                                  |
-| `≥ lg`          | Settings headings beside fields                                                               |
+| Width           | Presentation                                                                                                                                    |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `< sm`          | Compact topbar labels, no breadcrumb, filter search on its own row with filter conditions behind a "Filters (n)" toggle, stacked drawer actions |
+| `< md`          | Full-width drawers, narrow page gutter, hidden secondary table columns, two KPI tiles per row                                                   |
+| `< lg`          | Modal navigation drawer and full-bleed frame                                                                                                    |
+| `≥ sm`          | Two-column form grids                                                                                                                           |
+| `≥ md` / `≥ xl` | Two-/three-column card grids                                                                                                                    |
+| `≥ lg`          | Settings headings beside fields                                                                                                                 |
 
 Use focus-visible rings, the skip link and reduced-motion support. Programmatic page/drawer
 focus targets need `tabindex="-1"`; do not remove visible keyboard focus.

@@ -87,6 +87,8 @@
   },
   "filters": {
     "addFilter": "Add filter",
+    "toggle": "Filters",
+    "toggleCount": "Filters ({count})",
     "editor": "Filter condition",
     "field": "Column",
     "operator": "Condition",

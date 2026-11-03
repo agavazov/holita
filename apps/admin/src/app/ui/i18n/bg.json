@@ -87,6 +87,8 @@
   },
   "filters": {
     "addFilter": "Добави филтър",
+    "toggle": "Филтри",
+    "toggleCount": "Филтри ({count})",
     "editor": "Условие за филтриране",
     "field": "Колона",
     "operator": "Условие",

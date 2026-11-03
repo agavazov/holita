@@ -26,7 +26,21 @@
       }}</p-message>
     }
   </div>
-  @if (fields().length) {
+  @if (fields().length && compact()) {
+    <button
+      type="button"
+      class="filter-builder__add"
+      pButton
+      severity="secondary"
+      [outlined]="!conditionsOpen()"
+      [attr.aria-expanded]="conditionsOpen()"
+      (click)="conditionsOpen.set(!conditionsOpen())"
+    >
+      <svg data-p-icon="filter" aria-hidden="true"></svg>
+      {{ toggleLabel() }}
+    </button>
+  }
+  @if (fields().length && conditionsShown()) {
     <button
       #addButton
       type="button"
@@ -48,7 +62,7 @@
   </div>
 </div>
 
-@if (chips().length) {
+@if (chips().length && conditionsShown()) {
   <div class="filter-builder__chips">
     <ul class="filter-builder__chip-list" role="list">
       @for (chip of chips(); track chip.id) {
