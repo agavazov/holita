@@ -349,7 +349,10 @@
                       >{{ text().mainVoltage }}: {{ number(event.mainVoltage, 2) }} V ·
                       {{ text().backupVoltage }}: {{ number(event.backupVoltage, 2) }} V</span
                     >
-                    <pre class="control-center__frame">{{ event.fields | json }}</pre>
+                    <details>
+                      <summary>{{ text().values }}</summary>
+                      <pre class="control-center__frame">{{ event.fields | json }}</pre>
+                    </details>
                   </div>
                 </td>
               </tr>

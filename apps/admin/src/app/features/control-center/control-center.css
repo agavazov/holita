@@ -37,6 +37,7 @@
 
 .control-center__frame {
   margin: 0;
+  min-inline-size: min(28rem, 70vw);
   max-inline-size: 48rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   white-space: pre-wrap;
