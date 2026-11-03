@@ -1317,7 +1317,8 @@ server, reads them back and writes the previous values again if they differ or t
 `ERM_RELAY_CAPTURE_DIR/route-unit-<UTC date>.jsonl`.
 
 The tool needs the public device port, so stop ERM Server first and start it right after the tool
-exits:
+exits. Units that already use holita reach the tool instead while it runs and are not forwarded to
+Karma, so run it between their sessions (open sessions are `ermConnection` rows without `closedAt`):
 
 ```bash
 systemctl --user stop holita-erm-server

@@ -7,22 +7,23 @@ primary mode, and exposes read-only GraphQL and the admin page "ERM сървър
 [ERM device server](../discocan/development.md#erm-device-server). The remaining work below needs
 live evidence from a routed truck.
 
-## Verify the routed test truck
+## Routed test trucks
 
-CB5640XP (car 16587, unit 862129080366630) has used holita as its primary server since 2026-11-03
-(0049/0050 set through a configuration session, Karma kept as backup 0051/0052); see
-[moving a unit](../discocan/development.md#moving-a-unit-between-karma-and-holita).
+CB5640XP (car 16587, unit 862129080366630, StarLink_Tracker2) and CB5636XP (car 16590, unit
+862129080254620, StarLink_Scout1) have used holita as their primary server since 2026-11-03, with
+Karma kept as backup `0051`/`0052`; see
+[moving a unit](../discocan/development.md#moving-a-unit-between-karma-and-holita). Both relay to
+Karma, Karma confirms `06` events, and neither unit authenticates with `95`.
 
-- [ ] Verify fresh frames from the truck in `ermFrame`, Karma confirmations passing back, fresh
-      Karma data for the truck, and a reconnect after the 720 s idle timeout (`0774`).
-- [ ] Record which device commands Karma confirms (`ERM_ACK_COMMANDS`) and whether the device
-      authenticates with `95` (`0187`). The unit ID is the IMEI.
+- [ ] Decode CB5640XP's ordinary traffic: `$SLB` frames and `$SLC` containers, which the archived
+      protocol does not document (it has only `$SLP`, `0182=4`). Until then erm-server mirrors them
+      without a unit ID or events. Its configuration-session replies are text.
 
 ## Verify and enable primary mode
 
-- [ ] Read the real event structure (`03,1,0177` and `0178`/`0179`) and compare decoded `ermEvent`
-      rows with Karma `/events` and `/location` for the same period; fix `ERM_EVENT_STRUCTURE`.
-- [ ] Enable `ERM_PRIMARY_UNITS` for the test truck, confirm that holita's confirmations stop
+- [ ] Compare CB5636XP's decoded `ermEvent` rows with Karma `/events` and `/location` over a day.
+      The deployed `ERM_EVENT_STRUCTURE` holds its `0177` layout.
+- [ ] Enable `ERM_PRIMARY_UNITS` for CB5636XP, confirm that holita's confirmations stop
       retransmissions and that Karma still receives every frame; exercise the internal command API
       (`03`, `05`) and the routing restore (`04`/`46` for `0049`/`0050`) through holita.
 
