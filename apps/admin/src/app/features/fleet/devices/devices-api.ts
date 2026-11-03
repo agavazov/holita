@@ -15,6 +15,7 @@ import {
   AdminUpdateDeviceDocument,
   AdminDeleteDevicesDocument,
   AdminDeviceSummaryDocument,
+  AdminDevicesLiveDocument,
   type AdminDevicesQueryVariables,
   type AdminCreateDeviceMutationVariables,
   type AdminUpdateDeviceMutationVariables,
@@ -72,6 +73,24 @@ export class DevicesApi implements OnDestroy {
       throw new Error('An active Devices workspace is required.');
     }
     return this.apollo.watchQuery({ query: AdminDeviceSummaryDocument });
+  }
+
+  /** The live holita state is a separate request, so an unavailable device server keeps the list. */
+  async live(ids: readonly string[]) {
+    if (!this.apollo || this.destroyed) {
+      throw new Error('An active Devices workspace is required.');
+    }
+    const result = await firstValueFrom(
+      this.apollo.query({
+        query: AdminDevicesLiveDocument,
+        variables: { ids: [...ids] },
+        fetchPolicy: 'network-only',
+      }),
+    );
+    if (!result.data) {
+      throw new Error('Missing live device state.');
+    }
+    return new Map(result.data.fleetDevices.items.map((device) => [device.id, device.ermState]));
   }
 
   async update(variables: AdminUpdateDeviceMutationVariables) {

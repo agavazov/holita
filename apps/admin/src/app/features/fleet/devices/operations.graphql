@@ -44,6 +44,16 @@ query AdminDevices(
   ) {
     items {
       ...AdminDeviceDetails
+    }
+    total
+    offset
+    limit
+  }
+}
+query AdminDevicesLive($ids: [ID!]!) {
+  fleetDevices(ids: $ids, limit: 100) {
+    items {
+      id
       ermState {
         unitId
         online
@@ -51,9 +61,6 @@ query AdminDevices(
         alarmsLast24h
       }
     }
-    total
-    offset
-    limit
   }
 }
 query AdminDevice($id: ID!) {

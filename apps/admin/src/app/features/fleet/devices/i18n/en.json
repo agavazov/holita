@@ -128,5 +128,6 @@
     "online": "Online",
     "offline": "Offline",
     "karma": "On Karma"
-  }
+  },
+  "liveError": "The live holita connection is unavailable right now; the device registry is up to date."
 }

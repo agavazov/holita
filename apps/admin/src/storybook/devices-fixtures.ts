@@ -4,6 +4,7 @@ import {
   AdminDeviceDocument,
   AdminDeviceSummaryDocument,
   AdminDevicesDocument,
+  AdminDevicesLiveDocument,
   AdminDeviceVehiclesDocument,
   AdminUpdateDeviceDocument,
   type AdminDeviceDetailsFragment,
@@ -48,9 +49,19 @@ export const fixtureDevice: WithTypename<AdminDeviceDetailsFragment> = {
 graphqlFixture(AdminDevicesDocument, (variables) => ({
   fleetDevices: {
     __typename: 'FleetDevicePage',
+    items: [fixtureDevice],
+    total: 1,
+    offset: variables.int('offset', 0),
+    limit: variables.int('limit', 20),
+  },
+}));
+graphqlFixture(AdminDevicesLiveDocument, () => ({
+  fleetDevices: {
+    __typename: 'FleetDevicePage',
     items: [
       {
-        ...fixtureDevice,
+        __typename: 'FleetDevice',
+        id: fixtureDevice.id,
         ermState: {
           __typename: 'ErmUnitState',
           unitId: fixtureDevice.imei,
@@ -60,9 +71,6 @@ graphqlFixture(AdminDevicesDocument, (variables) => ({
         },
       },
     ],
-    total: 1,
-    offset: variables.int('offset', 0),
-    limit: variables.int('limit', 20),
   },
 }));
 graphqlFixture(AdminDeviceDocument, (variables) => {

@@ -46,6 +46,9 @@ import { devicesText } from './i18n/messages';
   providers: [DevicesApi],
   imports: [DevicesView, RouterOutlet, Message, ButtonDirective],
   template: `
+    @if (liveError()) {
+      <p-message severity="warn">{{ text().liveError }}</p-message>
+    }
     @if (summaryError()) {
       <p-message severity="warn"
         >{{ summaryFailure() }}
@@ -104,6 +107,8 @@ export class DevicesPage implements OnInit {
   readonly loading = signal(true);
   readonly error = signal<unknown>(null);
   readonly summaryError = signal<unknown>(null);
+  private readonly live = signal<Awaited<ReturnType<DevicesApi['live']>> | null>(null);
+  protected readonly liveError = signal(false);
   readonly selected = signal<readonly ListRecord<DeviceActionId>[]>([]);
   readonly acting = signal(false);
   private readonly removed = signal<ReadonlySet<string>>(new Set());
@@ -123,7 +128,9 @@ export class DevicesPage implements OnInit {
     return key ? uiMessages[this.language()][key] : null;
   });
   protected readonly rows = computed(() =>
-    (this.page()?.items ?? []).filter((device) => !this.removed().has(device.id)).map(deviceRow),
+    (this.page()?.items ?? [])
+      .filter((device) => !this.removed().has(device.id))
+      .map((device) => deviceRow(device, this.live())),
   );
   protected readonly total = computed(() =>
     Math.max(0, (this.page()?.total ?? 0) - this.removed().size),
@@ -192,6 +199,7 @@ export class DevicesPage implements OnInit {
           return;
         }
         this.page.set(result.data.fleetDevices);
+        this.loadLive();
         this.removed.set(new Set());
         const visible = new Set(result.data.fleetDevices.items.map((device) => device.id));
         this.selected.update((records) => records.filter((record) => visible.has(record.id)));
@@ -334,6 +342,7 @@ export class DevicesPage implements OnInit {
         this.error.set(result.error ?? null);
         if (result.data && !result.error) {
           this.page.set(result.data.fleetDevices);
+          this.loadLive();
           this.removed.set(new Set());
           const visible = new Set(result.data.fleetDevices.items.map((device) => device.id));
           this.selected.update((records) => records.filter((record) => visible.has(record.id)));
@@ -365,6 +374,26 @@ export class DevicesPage implements OnInit {
       .catch((error: unknown) => {
         if (!this.destroyRef.destroyed) {
           this.summaryError.set(error);
+        }
+      });
+  }
+  private loadLive(): void {
+    const page = this.page();
+    if (!page?.items.length) {
+      return;
+    }
+    this.api
+      .live(page.items.map((device) => device.id))
+      .then((live) => {
+        if (!this.destroyRef.destroyed && this.page() === page) {
+          this.live.set(live);
+          this.liveError.set(false);
+        }
+      })
+      .catch(() => {
+        if (!this.destroyRef.destroyed && this.page() === page) {
+          this.live.set(null);
+          this.liveError.set(true);
         }
       });
   }

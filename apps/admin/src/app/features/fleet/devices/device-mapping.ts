@@ -1,7 +1,7 @@
 import type { Language } from '../../../i18n/messages';
 import type {
   AdminDeviceDetailsFragment,
-  AdminDevicesQuery,
+  AdminDevicesLiveQuery,
   CreateFleetDeviceInput,
 } from '../../../../generated/graphql/operations';
 import { fleetFieldErrors } from '../field-errors';
@@ -9,10 +9,14 @@ import type { DeviceField, DeviceForm } from './device-drawer';
 import type { DeviceRow } from './devices-view';
 import { deviceModels, deviceOptions } from './device-query';
 
+type ErmState = AdminDevicesLiveQuery['fleetDevices']['items'][number]['ermState'];
+
+/** `live` maps device IDs to their holita state; a missing map or ID means it is unknown. */
 export function deviceRow(
-  device: AdminDeviceDetailsFragment | AdminDevicesQuery['fleetDevices']['items'][number],
+  device: AdminDeviceDetailsFragment,
+  live?: ReadonlyMap<string, ErmState> | null,
 ): DeviceRow {
-  const live = 'ermState' in device ? device.ermState : undefined;
+  const state = live?.get(device.id);
   return {
     id: device.id,
     imei: device.imei,
@@ -29,9 +33,9 @@ export function deviceRow(
     signal: null,
     voltage: null,
     notes: device.notes ?? '',
-    live: live
-      ? { online: live.online, lastFrameAt: live.lastFrameAt ?? null, alarms: live.alarmsLast24h }
-      : live === null
+    live: state
+      ? { online: state.online, lastFrameAt: state.lastFrameAt, alarms: state.alarmsLast24h }
+      : state === null
         ? 'karma'
         : null,
   };
