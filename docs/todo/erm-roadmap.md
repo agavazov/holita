@@ -44,9 +44,6 @@ belong to today's owning agents; do not reopen them as roadmap tasks.
   three test trucks. Start with Scouts CB1147TP, CB1344XH, CB2792TK, CB9405PE and CB6721TE after
   its recovery; then Trackers CB9680TE and CB9369PE. Check CB9680TE's power/unit/SIM and current
   reachability first: its last known report was 2026-10-28 06:02 UTC.
-- Provide a second public configuration-session port (for example 11501) and its forward so
-  routing does not stop the gateway serving existing sessions. Command `98` uses that temporary
-  port while 0049/0050 retain the ordinary 11500 endpoint.
 - For each unit, snapshot parameters and verify its next ordinary connection, gapless Karma
   `/events`, and no Karma `46` rewrite for an hour. Require seven days of gapless relaying for
   all ten units before closing rollout.
@@ -200,7 +197,7 @@ Ask Karma separately whether this account's automatic 0049/0050 rewrite can be d
 ## Owner decisions and resources
 
 - Approve the gateway deployment window and production host/deployment arrangement.
-- Provide a second public port forward for configuration sessions and a second host for failover.
+- Provide a second host for failover.
 - Choose who sends the ERM questions and owns follow-ups; no correspondence is sent by this plan.
 - Arrange a person at a parked truck for each L2 test and the CB6721TE installer recovery if needed.
 - Decide Tracker text versus binary format only after an L1 test and ERM clarification.
