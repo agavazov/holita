@@ -58,6 +58,7 @@
     "POWER_DISCONNECTED": "Power disconnected",
     "LOW_BACKUP_BATTERY": "Low backup battery",
     "CAN_DISCONNECTED": "CAN disconnected",
+    "CAN_ERROR": "CAN error",
     "DEVICE_OFFLINE": "Device offline",
     "DIAGNOSTIC_TROUBLE_CODE": "Diagnostic trouble code",
     "CRASH_DETECTED": "Crash detected"

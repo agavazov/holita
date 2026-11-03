@@ -50,6 +50,7 @@
     "POWER_DISCONNECTED": "Прекъснато захранване",
     "LOW_BACKUP_BATTERY": "Изтощена резервна батерия",
     "CAN_DISCONNECTED": "Прекъсната CAN връзка",
+    "CAN_ERROR": "Грешка в CAN",
     "DEVICE_OFFLINE": "Устройство без връзка",
     "DIAGNOSTIC_TROUBLE_CODE": "Диагностичен код за неизправност",
     "CRASH_DETECTED": "Засечен удар"
