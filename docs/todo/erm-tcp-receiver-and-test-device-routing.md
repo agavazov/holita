@@ -5,7 +5,8 @@ stores connections, frames, decoded events and holita commands, can confirm and 
 primary mode, and exposes read-only GraphQL and the admin page "ERM сървър". See
 [ADR 0006](../architecture/decisions/0006-erm-device-server.md) and
 [ERM device server](../discocan/development.md#erm-device-server). The remaining work below needs
-live evidence from a routed truck.
+live evidence from a routed truck. The [fleet control plan](erm-fleet-control-plan.md) sets the
+order, safety rules and test levels for all units.
 
 ## Routed test trucks
 
