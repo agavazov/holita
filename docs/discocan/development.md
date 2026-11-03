@@ -1332,7 +1332,8 @@ systemctl --user start holita-erm-server
 
 While the tool waits (`--wait-minutes`, default 140), queue `98,1,<public-host>,<public-port>` for
 the car through Karma `POST /commands`; a parked unit receives it at its next transmission. Exit
-code 0 means moved and verified, 2 not moved, 3 uncertain (read the log and the parameters again)
-and 4 no session. To move a unit back, run the tool with `--to karma` and no command `98`: the
+code 0 means moved and verified, 2 not moved, 3 uncertain and 4 no session. After an uncertain
+result, read the log; the unit's next ordinary connection, to ERM Server or in Karma `/events`, shows
+where its primary server points. To move a unit back, run the tool with `--to karma` and no command `98`: the
 unit's next ordinary connection to holita reaches the tool. A unit whose backup server
 (0051/0052) is Karma fails over to it by itself while holita is unreachable.
