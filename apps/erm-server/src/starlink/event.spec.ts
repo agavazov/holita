@@ -1,5 +1,5 @@
 import { expect, it } from '@jest/globals';
-import { decodeEvent, DEFAULT_EVENT_STRUCTURE } from './event.js';
+import { decodeBinaryEvent, decodeEvent, DEFAULT_EVENT_STRUCTURE } from './event.js';
 import { parseFrame } from './protocol.js';
 
 it('decodes event tokens with UTC times, nautical speed and coordinates while preserving raw fields', () => {
@@ -92,4 +92,53 @@ it('decodes event tokens with UTC times, nautical speed and coordinates while pr
     backupVoltage: null,
     fields: { '#EDT#': null, extra: [] },
   });
+
+  // Tracker $SLB reports: tag 26 is BATH and tag 41 is STRT x100; CB9369PE sends 41 without 26.
+  const escapes = new Map([
+    [0x10, 0x10],
+    [0x0d, 0x01],
+    [0x0a, 0x02],
+    [0x00, 0x03],
+    [0x11, 0x04],
+    [0x13, 0x05],
+  ]);
+  const slb = (imei: string, tags: readonly number[]) =>
+    Buffer.concat([
+      Buffer.from('$SLB'),
+      Buffer.from(
+        [0x04, ...Buffer.from(imei.slice(0, 14), 'hex'), 0x0f, 0x01, 0x06, ...tags].flatMap(
+          (byte) => {
+            const code = escapes.get(byte);
+            return code === undefined ? [byte] : [0x10, code];
+          },
+        ),
+      ),
+    ]);
+  const reports = [
+    [
+      '862129080319233',
+      [0x08, 0x01, 0x20, 0x5f, 0xdc, 0x26, 0x39, 0x41, 0x00, 0x86],
+      { mainVoltage: 24.54, fields: { '#BATH#': '57', '#STRT#': '1.34' } },
+    ],
+    [
+      '862129080366630',
+      [0x08, 0x01, 0x26, 0x64, 0x41, 0x00, 0x04],
+      { fields: { '#BATH#': '100', '#STRT#': '0.04' } },
+    ],
+    [
+      '862129080320033',
+      [0x08, 0x01, 0x21, 0x0f, 0xbf, 0x41, 0x01, 0x17, 0x18, 0x1c, 0x18],
+      {
+        backupVoltage: 4.031,
+        fields: { '#BATH#': null, '#STRT#': '2.79', '#SATN#': '28', '#SATU#': '24' },
+      },
+    ],
+  ] as const;
+  for (const [unitId, tags, expected] of reports) {
+    expect(decodeBinaryEvent(slb(unitId, tags))).toMatchObject({
+      unitId,
+      eventId: '01',
+      ...expected,
+    });
+  }
 });

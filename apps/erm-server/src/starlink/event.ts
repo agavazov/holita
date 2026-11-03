@@ -113,7 +113,8 @@ const binarySizes = new Map([
   [0x20, 2],
   [0x21, 2],
   [0x27, 1],
-  [0x26, 4],
+  [0x26, 1],
+  [0x41, 2],
   [0x18, 2],
   [0x3e, 2],
   [0x42, 2],
@@ -160,7 +161,6 @@ export function decodeBinaryEvent(raw: Buffer): DecodedEvent | undefined {
   };
   const position = values.get(0x19);
   const cell = values.get(0x1b);
-  const battery = values.get(0x26);
   const satellites = values.get(0x18);
   const signal = values.get(0x3e);
   const altitude = values.get(0x0f);
@@ -190,8 +190,8 @@ export function decodeBinaryEvent(raw: Buffer): DecodedEvent | undefined {
       '#CID#': text(cell?.readUInt32BE(0)),
       '#LAC#': text(cell?.readUInt16BE(4)),
       '#CSS#': text(cell?.readUInt8(6)),
-      '#BATH#': text(battery?.readUInt8(0)),
-      '#STRT#': battery ? String(battery.readUInt8(3) / 100) : null,
+      '#BATH#': text(unsigned(0x26)),
+      '#STRT#': text(unsigned(0x41) === null ? null : (unsigned(0x41) ?? 0) / 100),
       '#SATN#': text(satellites?.readUInt8(0)),
       '#SATU#': text(satellites?.readUInt8(1)),
       '#SAT#': text(signal?.readUInt8(0)),
@@ -201,11 +201,7 @@ export function decodeBinaryEvent(raw: Buffer): DecodedEvent | undefined {
       '#ALTD#': altitude ? String(altitude.readInt32BE(0) / 10) : null,
       '#NC#': text(unsigned(0x3b)),
       '#NT#': text(unsigned(0x51)),
-      unknown: [
-        values.get(0x27)?.toString('hex') ?? '',
-        values.get(0xff)?.toString('hex') ?? '',
-        battery?.subarray(1, 3).toString('hex') ?? '',
-      ],
+      unknown: [values.get(0x27)?.toString('hex') ?? '', values.get(0xff)?.toString('hex') ?? ''],
       extra: extra.split(','),
     },
   };

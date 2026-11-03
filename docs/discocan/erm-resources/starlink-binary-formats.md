@@ -57,7 +57,8 @@ and a driving truck.
 | `20`        | u16 main voltage in mV                                         | `#VIN#`                   |
 | `21`        | u16 backup voltage in mV                                       | `#VBAT#`                  |
 | `27`        | u8, 0 on a parked truck and absent while driving               | unknown                   |
-| `26`        | u8 battery health, two unknown bytes, u8 starter duration ×100 | `#BATH#`, `#STRT#`        |
+| `26`        | u8 battery health                                              | `#BATH#`                  |
+| `41`        | u16 starter duration ×100; also sent without `26`              | `#STRT#`                  |
 | `18`        | u8 visible satellites, u8 satellites used                      | `#SATN#`, `#SATU#`        |
 | `3e`        | u8 visible satellites, u8 average signal level                 | `#SAT#`, `#GSS#`          |
 | `42`        | u16 internal temperature ×10                                   | `#TVI#`                   |
