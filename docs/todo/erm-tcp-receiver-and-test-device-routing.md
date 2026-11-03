@@ -7,18 +7,16 @@ primary mode, and exposes read-only GraphQL and the admin page "ERM сървър
 [ERM device server](../discocan/development.md#erm-device-server). The remaining work below needs
 live evidence from a routed truck.
 
-## Route the first test truck
+## Verify the routed test truck
 
-- [ ] Point CB5640XP (car 16587) at the server: `0049=65.108.137.165`, `0050=11500`; keep the
-      Karma backup `0051=54.216.224.65`, `0052=500`. Karma API v2 cannot do it: `PUT /parameters`
-      rejects every wire format and `POST /commands` rejects StarLink writes (`04`, `46`) with
-      `No valid car_ids`, while reads (`03`) work and use the message format `<cmd>,<ref>,<fields>`.
-      Possible routes: the Karma web UI, ERM support, or Simple SMS (`0592=1` on this truck)
-      `setparam#<0593>#50#11500` and `setparam#<0593>#49#65.108.137.165` to the truck's SIM.
+CB5640XP (car 16587, unit 862129080366630) has used holita as its primary server since 2026-11-03
+(0049/0050 set through a configuration session, Karma kept as backup 0051/0052); see
+[moving a unit](../discocan/development.md#moving-a-unit-between-karma-and-holita).
+
 - [ ] Verify fresh frames from the truck in `ermFrame`, Karma confirmations passing back, fresh
       Karma data for the truck, and a reconnect after the 720 s idle timeout (`0774`).
-- [ ] Record which device commands Karma confirms (`ERM_ACK_COMMANDS`), whether the unit ID is the
-      IMEI or the 6-hex serial (`0001`) and whether the device authenticates with `95` (`0187`).
+- [ ] Record which device commands Karma confirms (`ERM_ACK_COMMANDS`) and whether the device
+      authenticates with `95` (`0187`). The unit ID is the IMEI.
 
 ## Verify and enable primary mode
 
