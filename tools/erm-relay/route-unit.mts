@@ -2,6 +2,7 @@ import { appendFileSync, mkdirSync } from 'node:fs';
 import net, { type Socket } from 'node:net';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
+import { inflateContainer } from './starlink-container.mjs';
 
 // Moves one StarLink unit's primary server (parameters 0049/0050) between Karma and holita.
 // The unit reaches this tool through a configuration-server session (command 98, queued through
@@ -229,60 +230,69 @@ const listener = net.createServer((socket) => {
       if (end < 0) {
         break;
       }
-      const raw = buffered.subarray(0, end);
+      const line = buffered.subarray(0, end);
       buffered = buffered.subarray(end + 2);
-      record({ connection, from: 'device', frame: raw.toString('latin1') });
-      const frame = deviceFrame(raw);
-      if (!frame || step === 'done' || (active !== undefined && active !== socket)) {
-        continue;
-      }
-      active = socket;
-      if (frame.command === '45') {
-        const confirmation = serverFrame('02', String(++reference), [frame.reference, '01']);
-        record({
-          connection,
-          from: 'holita',
-          frame: confirmation.subarray(0, -2).toString('latin1'),
-        });
-        socket.write(confirmation);
-      }
-      const values = new Map<string, string>();
-      for (let index = 0; frame.command === '45' && index + 1 < frame.fields.length; index += 2) {
-        values.set(String(Number(frame.fields[index])), frame.fields[index + 1] ?? '');
-      }
-      const holds = (target: typeof to) =>
-        values.get('49') === target.host && values.get('50') === target.port;
-      const backupKept = ['51', '52'].every((number) => values.get(number) === backup.get(number));
-      if (step === 'wait') {
-        read('read');
-      } else if (frame.command === '45' && step === 'read') {
-        record({ connection, event: 'current', values: Object.fromEntries(values) });
-        for (const number of ['51', '52']) {
-          backup.set(number, values.get(number) ?? '');
+      record({ connection, from: 'device', frame: line.toString('latin1') });
+      // CB6711TE answered inside compressed $SLC containers while it was driving.
+      const inner = inflateContainer(line);
+      for (const raw of inner ?? [line]) {
+        if (inner) {
+          record({ connection, from: 'device-inner', frame: raw.toString('latin1') });
         }
-        if (holds(from)) {
-          write(to, 'write');
-        } else if (holds(to)) {
-          close('MOVED');
-        } else {
-          record({ connection, event: 'unexpected primary server, nothing written' });
-          close('NOT_MOVED');
+        const frame = deviceFrame(raw);
+        if (!frame || step === 'done' || (active !== undefined && active !== socket)) {
+          continue;
         }
-      } else if (frame.command === '02' && frame.fields[0] === pending) {
-        record({ connection, event: 'set result', step, result: frame.fields.slice(1) });
-        if (step === 'write' && frame.fields.slice(1, 4).join(',') !== '20,2,0') {
-          restore(`46 answered ${frame.fields.slice(1).join(',')}`);
-        } else if (step === 'write' || step === 'restore') {
-          read(step === 'write' ? 'verify' : 'reverify');
+        active = socket;
+        if (frame.command === '45') {
+          const confirmation = serverFrame('02', String(++reference), [frame.reference, '01']);
+          record({
+            connection,
+            from: 'holita',
+            frame: confirmation.subarray(0, -2).toString('latin1'),
+          });
+          socket.write(confirmation);
         }
-      } else if (frame.command === '45' && (step === 'verify' || step === 'reverify')) {
-        record({ connection, event: 'read back', values: Object.fromEntries(values) });
-        if (step === 'verify' && holds(to) && backupKept) {
-          close('MOVED');
-        } else if (step === 'verify' && !holds(from)) {
-          restore('read back differs from both servers or the backup changed');
-        } else {
-          close(holds(from) ? 'NOT_MOVED' : 'UNCERTAIN');
+        const values = new Map<string, string>();
+        for (let index = 0; frame.command === '45' && index + 1 < frame.fields.length; index += 2) {
+          values.set(String(Number(frame.fields[index])), frame.fields[index + 1] ?? '');
+        }
+        const holds = (target: typeof to) =>
+          values.get('49') === target.host && values.get('50') === target.port;
+        const backupKept = ['51', '52'].every(
+          (number) => values.get(number) === backup.get(number),
+        );
+        if (step === 'wait') {
+          read('read');
+        } else if (frame.command === '45' && step === 'read') {
+          record({ connection, event: 'current', values: Object.fromEntries(values) });
+          for (const number of ['51', '52']) {
+            backup.set(number, values.get(number) ?? '');
+          }
+          if (holds(from)) {
+            write(to, 'write');
+          } else if (holds(to)) {
+            close('MOVED');
+          } else {
+            record({ connection, event: 'unexpected primary server, nothing written' });
+            close('NOT_MOVED');
+          }
+        } else if (frame.command === '02' && frame.fields[0] === pending) {
+          record({ connection, event: 'set result', step, result: frame.fields.slice(1) });
+          if (step === 'write' && frame.fields.slice(1, 4).join(',') !== '20,2,0') {
+            restore(`46 answered ${frame.fields.slice(1).join(',')}`);
+          } else if (step === 'write' || step === 'restore') {
+            read(step === 'write' ? 'verify' : 'reverify');
+          }
+        } else if (frame.command === '45' && (step === 'verify' || step === 'reverify')) {
+          record({ connection, event: 'read back', values: Object.fromEntries(values) });
+          if (step === 'verify' && holds(to) && backupKept) {
+            close('MOVED');
+          } else if (step === 'verify' && !holds(from)) {
+            restore('read back differs from both servers or the backup changed');
+          } else {
+            close(holds(from) ? 'NOT_MOVED' : 'UNCERTAIN');
+          }
         }
       }
     }

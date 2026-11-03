@@ -6,6 +6,7 @@ import {
   binaryUnitId,
   buildServerFrame,
   FrameSplitter,
+  inflateContainer,
   parseFrame,
   type CapturedFrame,
   type ParsedFrame,
@@ -275,6 +276,17 @@ export class DeviceSession {
   }
 
   private deviceFrame(frame: CapturedFrame, parsed: ParsedFrame | undefined): boolean {
+    // Trackers may compress a reply into a $SLC container. Its reply completes holita's command and is
+    // confirmed, but the container still goes to Karma unchanged because it also carries events.
+    const replies =
+      !frame.partial && parsed === undefined ? inflateContainer(frame.raw) : undefined;
+    for (const raw of replies ?? []) {
+      const inner = parseFrame(raw);
+      if (inner?.origin === 'SLU' && this.pending && matchesResponse(this.pending.input, inner)) {
+        this.send(buildServerFrame(inner.unitId, '02', nextReference(), [inner.reference, '01']));
+        this.finish('answered', raw, inner);
+      }
+    }
     if (frame.partial || parsed?.origin !== 'SLU') {
       return false;
     }
