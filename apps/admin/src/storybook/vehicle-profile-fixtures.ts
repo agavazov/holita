@@ -9,6 +9,7 @@ import {
   type AdminVehicleProfileFragment,
   type AdminVehicleProfileServiceDetailsFragment,
   type AdminRecordOdometerMutation,
+  type AdminVehicleDeviceEventsQuery,
 } from '../generated/graphql/operations';
 import { fixtureAlert } from './alerts-fixtures';
 import { fixtureTrip } from './trips-fixtures';
@@ -77,30 +78,33 @@ graphqlFixture(AdminVehicleProfileTripsDocument, (variables) => ({
     totalDistanceKm: 150,
   },
 }));
+const fixtureDeviceEvents: readonly WithTypename<
+  AdminVehicleDeviceEventsQuery['fleetEvents']['items'][number]
+>[] = [
+  {
+    __typename: 'FleetEvent',
+    id: '70000000-0000-4000-8000-000000000101',
+    occurredAt: '2026-10-18T06:30:00.000Z',
+    kind: 'DIAGNOSTIC_TROUBLE_CODE',
+    severity: 'WARNING',
+    troubleCode: 'SPN 4339 FMI 7',
+    source: 'ERM',
+  },
+  {
+    __typename: 'FleetEvent',
+    id: '70000000-0000-4000-8000-000000000102',
+    occurredAt: '2026-10-18T05:30:00.000Z',
+    kind: 'DIAGNOSTIC_TROUBLE_CODE',
+    severity: 'INFO',
+    troubleCode: 'SPN 4339 FMI 7',
+    source: 'ERM',
+  },
+];
 graphqlFixture(AdminVehicleDeviceEventsDocument, () => ({
   fleetEvents: {
     __typename: 'FleetEventPage',
-    total: 2,
-    items: [
-      {
-        __typename: 'FleetEvent',
-        id: '70000000-0000-4000-8000-000000000101',
-        occurredAt: '2026-10-18T06:30:00.000Z',
-        kind: 'DIAGNOSTIC_TROUBLE_CODE',
-        severity: 'WARNING',
-        troubleCode: 'SPN 4339 FMI 7',
-        source: 'ERM',
-      },
-      {
-        __typename: 'FleetEvent',
-        id: '70000000-0000-4000-8000-000000000102',
-        occurredAt: '2026-10-18T05:30:00.000Z',
-        kind: 'DIAGNOSTIC_TROUBLE_CODE',
-        severity: 'INFO',
-        troubleCode: 'SPN 4339 FMI 7',
-        source: 'ERM',
-      },
-    ],
+    total: fixtureDeviceEvents.length,
+    items: [...fixtureDeviceEvents],
   },
 }));
 graphqlFixture(AdminVehicleProfileAlertsDocument, (variables) => ({

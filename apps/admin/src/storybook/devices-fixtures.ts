@@ -8,6 +8,7 @@ import {
   AdminDeviceVehiclesDocument,
   AdminUpdateDeviceDocument,
   type AdminDeviceDetailsFragment,
+  type AdminDevicesLiveQuery,
 } from '../generated/graphql/operations';
 import {
   graphqlFixture,
@@ -56,24 +57,23 @@ graphqlFixture(AdminDevicesDocument, (variables) => ({
     limit: variables.int('limit', 20),
   },
 }));
+const fixtureLiveDevice: WithTypename<AdminDevicesLiveQuery['fleetDevices']['items'][number]> = {
+  __typename: 'FleetDevice',
+  id: fixtureDevice.id,
+  ermState: {
+    __typename: 'ErmUnitState',
+    unitId: fixtureDevice.imei,
+    online: true,
+    mode: 'PRIMARY',
+    lastFrameAt: '2026-10-20T08:00:00.000Z',
+    alarmsLast24h: 2,
+    health: { __typename: 'ErmUnitHealth', overdue: false, karmaRoutingWritesLast24h: 0 },
+  },
+};
 graphqlFixture(AdminDevicesLiveDocument, () => ({
   fleetDevices: {
     __typename: 'FleetDevicePage',
-    items: [
-      {
-        __typename: 'FleetDevice',
-        id: fixtureDevice.id,
-        ermState: {
-          __typename: 'ErmUnitState',
-          unitId: fixtureDevice.imei,
-          online: true,
-          mode: 'PRIMARY',
-          lastFrameAt: '2026-10-20T08:00:00.000Z',
-          alarmsLast24h: 2,
-          health: { __typename: 'ErmUnitHealth', overdue: false, karmaRoutingWritesLast24h: 0 },
-        },
-      },
-    ],
+    items: [fixtureLiveDevice],
   },
   fleetKarmaMonitoringTrucks: {
     __typename: 'FleetKarmaMonitoringTruckPage',
