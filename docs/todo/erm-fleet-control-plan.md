@@ -55,9 +55,12 @@ firmware versions up to 2.46.
 
 ## Phase 0: inventory and configuration backup
 
-- [ ] Read the identity and formats of the seven trucks still on Karma: firmware (`48` with
-      `#VER#`), IMSI/ICCID (0063/0064), `0182`, `0177`, accessories (`56`), external device versions
-      (`53`) and Simple SMS (0592). The three test trucks are done.
+- [ ] Read the identity of the seven trucks still on Karma: firmware (`48` with `#VER#`), IMSI/ICCID
+      (0063/0064), accessories (`56`), external device versions (`53`) and Simple SMS (0592). All ten
+      share the `0177` layout; `0182=3` on the Trackers CB9369PE, CB5640XP and CB6711TE, unset on the
+      six Scouts.
+- [ ] CB9680TE has sent nothing since 2026-10-28 06:02 UTC; Karma still holds its 10:31 reads. Have
+      the truck checked (power, unit, SIM) before planning anything for it.
 - [ ] Store snapshots in holita instead of private files. The three test trucks have one each
       (secret parameters are never read; CB5640XP's misses the batches after step 48).
 - [ ] Build a profile per unit: ERM hardware entry, firmware, variants, accessories and formats. Mark
@@ -69,8 +72,6 @@ firmware versions up to 2.46.
 - [ ] Run configuration sessions on a second public port, for example 11501, so erm-server keeps
       serving routed units while a unit is moved. `98` then names that port, and route-unit still
       writes 11500 into 0049/0050. This needs a second forward at the public address.
-- [ ] If Phase 0 finds different `0177` layouts, make the event structure per unit instead of the
-      global `ERM_EVENT_STRUCTURE`.
 - [ ] Route the Scouts first (CB1147TP, CB1344XH, CB2792TK, CB9405PE, then CB6721TE after its
       [eData recovery](erm-edata-recovery-cb6721te.md)), then the Trackers CB9680TE and CB9369PE.
       Move one unit a day. Check its next ordinary connection, gapless Karma `/events` and
