@@ -27,12 +27,14 @@ import type {
   AdminControlCenterEventsQuery,
   AdminControlCenterCommandsQuery,
   AdminControlCenterFramesQuery,
+  AdminControlCenterSnapshotsQuery,
   ErmCommandState,
   ErmDeviceAction,
   ErmEventCategory,
   ErmEventSeverity,
   ErmFrameChecksum,
   ErmFrameDirection,
+  ErmParameterSnapshotStatus,
 } from '../../../generated/graphql/operations';
 import { requestError } from '../../core/graphql/request-error';
 import type { Language } from '../../i18n/messages';
@@ -58,12 +60,13 @@ import {
   severityTone,
 } from './control-center-text';
 
-export type DeviceTab = 'overview' | 'events' | 'alarms' | 'commands' | 'frames';
+export type DeviceTab = 'overview' | 'events' | 'alarms' | 'commands' | 'parameters' | 'frames';
 type Device = AdminControlCenterDeviceQuery['fleetDevice'];
 type KarmaTruck = AdminControlCenterDeviceQuery['fleetKarmaMonitoringTrucks']['items'][number];
 type Events = AdminControlCenterEventsQuery['fleetDevice']['ermEvents'];
 type Commands = AdminControlCenterCommandsQuery['fleetDevice']['ermCommands'];
 type Frames = AdminControlCenterFramesQuery['fleetDevice']['ermFrames'];
+type Snapshots = AdminControlCenterSnapshotsQuery['fleetDevice']['ermParameterSnapshots'];
 interface HistoryRead {
   readonly loading: boolean;
   readonly error: unknown;
@@ -71,6 +74,7 @@ interface HistoryRead {
     | { readonly events: Events }
     | { readonly commands: Commands }
     | { readonly frames: Frames }
+    | { readonly snapshots: Snapshots }
     | null;
 }
 
@@ -87,6 +91,7 @@ export const deviceTabs: readonly DeviceTab[] = [
   'events',
   'alarms',
   'commands',
+  'parameters',
   'frames',
 ];
 const categories: readonly ErmEventCategory[] = ['POSITION', 'STATUS', 'ALARM', 'EDATA', 'OTHER'];
@@ -222,6 +227,21 @@ export class DevicePage implements OnInit {
   readonly events = signal<Events | null>(null);
   readonly commands = signal<Commands | null>(null);
   readonly frames = signal<Frames | null>(null);
+  readonly snapshots = signal<Snapshots | null>(null);
+  /** The snapshots query polls only while one of them is still reading. */
+  readonly snapshotRunning = computed(
+    () => this.snapshots()?.items.some((snapshot) => snapshot.status === 'RUNNING') ?? false,
+  );
+  readonly selectedSnapshotId = linkedSignal<DeviceTab, string | null>({
+    source: this.tab,
+    computation: () => null,
+  });
+  /** The chosen snapshot, else the newest one. */
+  readonly selectedSnapshot = computed(() => {
+    const items = this.snapshots()?.items ?? [];
+    return items.find((snapshot) => snapshot.id === this.selectedSnapshotId()) ?? items[0] ?? null;
+  });
+  readonly startingSnapshot = signal(false);
   readonly historyLoading = signal(false);
   readonly historyError = signal<unknown>(null);
   readonly historyFailure = computed(() =>
@@ -237,7 +257,9 @@ export class DevicePage implements OnInit {
         ? this.commands()
         : tab === 'frames'
           ? this.frames()
-          : null;
+          : tab === 'parameters'
+            ? this.snapshots()
+            : null;
   });
   readonly historyView = computed(() =>
     tableView({
@@ -286,6 +308,7 @@ export class DevicePage implements OnInit {
         this.events.set(null);
         this.commands.set(null);
         this.frames.set(null);
+        this.snapshots.set(null);
         this.historyError.set(null);
         this.historyLoading.set(tab !== 'overview');
       });
@@ -329,16 +352,32 @@ export class DevicePage implements OnInit {
                       : null,
                 })),
               )
-            : this.api.watchFrames({ id, input: page }).valueChanges.pipe(
-                map((result) => ({
-                  loading: result.loading,
-                  error: result.error,
-                  data:
-                    result.dataState === 'complete' && !result.error
-                      ? { frames: result.data.fleetDevice.ermFrames }
-                      : null,
-                })),
-              );
+            : tab === 'parameters'
+              ? this.api
+                  .watchSnapshots(
+                    { id, input: { pageSize: 25, cursor } },
+                    () => !this.snapshotRunning(),
+                  )
+                  .valueChanges.pipe(
+                    map((result) => ({
+                      loading: result.loading,
+                      error: result.error,
+                      data:
+                        result.dataState === 'complete' && !result.error
+                          ? { snapshots: result.data.fleetDevice.ermParameterSnapshots }
+                          : null,
+                    })),
+                  )
+              : this.api.watchFrames({ id, input: page }).valueChanges.pipe(
+                  map((result) => ({
+                    loading: result.loading,
+                    error: result.error,
+                    data:
+                      result.dataState === 'complete' && !result.error
+                        ? { frames: result.data.fleetDevice.ermFrames }
+                        : null,
+                  })),
+                );
       const subscription = read.subscribe({
         next: (result) => {
           this.historyLoading.set(result.loading);
@@ -351,6 +390,9 @@ export class DevicePage implements OnInit {
           }
           if (result.data && 'frames' in result.data) {
             this.frames.set(result.data.frames);
+          }
+          if (result.data && 'snapshots' in result.data) {
+            this.snapshots.set(result.data.snapshots);
           }
         },
         error: (error: unknown) => {
@@ -454,6 +496,44 @@ export class DevicePage implements OnInit {
   }
   commandTone(value: ErmCommandState) {
     return toneSeverity(value === 'ANSWERED' ? 'success' : value === 'SENT' ? 'info' : 'warn');
+  }
+
+  snapshotStatus(value: ErmParameterSnapshotStatus): string {
+    return this.text().snapshots.statuses[value];
+  }
+  snapshotTone(value: ErmParameterSnapshotStatus) {
+    return toneSeverity(value === 'COMPLETE' ? 'success' : value === 'RUNNING' ? 'info' : 'danger');
+  }
+  /** StarLink parameters are numbered with four digits, for example 0593. */
+  parameterNumber(value: number): string {
+    return String(value).padStart(4, '0');
+  }
+
+  async startSnapshot(): Promise<void> {
+    const text = this.text();
+    const accepted = await confirmAction(this.confirmation, this.language(), {
+      header: text.snapshots.confirmHeader,
+      message: interpolate(text.snapshots.confirmMessage, { unit: this.unitName() }),
+      acceptLabel: text.snapshots.start,
+      danger: false,
+    });
+    if (!accepted) {
+      return;
+    }
+    this.startingSnapshot.set(true);
+    try {
+      await this.api.startSnapshot(this.recordId());
+      this.notifications.add({ severity: 'info', summary: text.snapshots.started });
+    } catch (error: unknown) {
+      this.notifications.add({
+        severity: 'error',
+        summary: text.snapshots.startFailed,
+        detail: requestError(error, text.snapshots.startFailed),
+      });
+    } finally {
+      this.startingSnapshot.set(false);
+      this.historyReload.update((value) => value + 1);
+    }
   }
 
   async send(action: ErmDeviceAction): Promise<void> {

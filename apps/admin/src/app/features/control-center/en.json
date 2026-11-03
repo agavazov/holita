@@ -80,6 +80,7 @@
     "events": "Events",
     "alarms": "Alarms",
     "commands": "Commands",
+    "parameters": "Parameters",
     "frames": "Frames"
   },
   "event": "Event",
@@ -256,6 +257,38 @@
         "when": "Send it after the reply to step 1.",
         "reply": "ok#setparam. The unit then reports to Karma again."
       }
+    }
+  },
+  "snapshots": {
+    "title": "Parameter snapshot",
+    "hint": "holita reads the unit's stored parameters one by one, except the routing parameters 0049–0054. It takes a few minutes and changes nothing on the unit.",
+    "secretNote": "Values are shown unmasked, including passwords.",
+    "start": "Read all parameters",
+    "confirmHeader": "Read all parameters?",
+    "confirmMessage": "holita now reads the stored parameters of {unit} one by one. Nothing on the unit changes.",
+    "started": "Snapshot started",
+    "startFailed": "The snapshot did not start",
+    "history": "Snapshots",
+    "empty": "No snapshots yet.",
+    "startedAt": "Started",
+    "finishedAt": "Finished",
+    "progress": "Read",
+    "changesCount": "Changes",
+    "show": "Show",
+    "showLabel": "Show the snapshot from {time}",
+    "snapshotFrom": "Snapshot from {time}",
+    "changes": "Changes since the previous complete snapshot",
+    "noChanges": "No changes, or no earlier complete snapshot to compare with.",
+    "values": "Values",
+    "parameter": "Parameter",
+    "before": "Before",
+    "now": "Now",
+    "value": "Value",
+    "noValue": "No value",
+    "statuses": {
+      "RUNNING": "Reading",
+      "COMPLETE": "Complete",
+      "FAILED": "Failed"
     }
   }
 }

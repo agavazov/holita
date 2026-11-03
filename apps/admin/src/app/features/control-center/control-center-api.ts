@@ -14,10 +14,13 @@ import {
   AdminControlCenterCommandsDocument,
   AdminControlCenterFramesDocument,
   AdminControlCenterSendCommandDocument,
+  AdminControlCenterSnapshotsDocument,
+  AdminControlCenterStartSnapshotDocument,
   AdminControlCenterSmsDevicesDocument,
   type AdminControlCenterEventsQueryVariables,
   type AdminControlCenterCommandsQueryVariables,
   type AdminControlCenterFramesQueryVariables,
+  type AdminControlCenterSnapshotsQueryVariables,
   type ErmDeviceAction,
   type ErmLanguage,
 } from '../../../generated/graphql/operations';
@@ -105,6 +108,30 @@ export class ControlCenterApi implements OnDestroy {
       variables,
       fetchPolicy: 'network-only',
     });
+  }
+
+  /** Polls every 5 seconds while `skipPoll` says a snapshot is still running. */
+  watchSnapshots(variables: AdminControlCenterSnapshotsQueryVariables, skipPoll: () => boolean) {
+    return this.client().watchQuery({
+      query: AdminControlCenterSnapshotsDocument,
+      variables,
+      fetchPolicy: 'network-only',
+      pollInterval: 5_000,
+      skipPollAttempt: () => document.hidden || skipPoll(),
+    });
+  }
+
+  async startSnapshot(deviceId: string) {
+    const result = await firstValueFrom(
+      this.client().mutate({
+        mutation: AdminControlCenterStartSnapshotDocument,
+        variables: { input: { deviceId } },
+      }),
+    );
+    if (!result.data?.startErmParameterSnapshot) {
+      throw new Error('Missing startErmParameterSnapshot result.');
+    }
+    return result.data.startErmParameterSnapshot;
   }
 
   async sendCommand(deviceId: string, action: ErmDeviceAction) {

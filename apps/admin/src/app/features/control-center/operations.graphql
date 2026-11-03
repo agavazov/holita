@@ -190,6 +190,45 @@ query AdminControlCenterFrames($id: ID!, $input: ErmDevicePageInput) {
     }
   }
 }
+fragment AdminControlCenterSnapshotFields on ErmParameterSnapshot {
+  id
+  status
+  startedAt
+  finishedAt
+  parameterCount
+  readCount
+  failureReason
+}
+query AdminControlCenterSnapshots($id: ID!, $input: ErmDevicePageInput) {
+  fleetDevice(id: $id) {
+    id
+    ermParameterSnapshots(input: $input) {
+      cursor
+      nextCursor
+      hasMore
+      items {
+        ...AdminControlCenterSnapshotFields
+        values {
+          parameter
+          title
+          value
+          resultCode
+        }
+        changes {
+          parameter
+          title
+          previousValue
+          value
+        }
+      }
+    }
+  }
+}
+mutation AdminControlCenterStartSnapshot($input: StartErmParameterSnapshotInput!) {
+  startErmParameterSnapshot(input: $input) {
+    ...AdminControlCenterSnapshotFields
+  }
+}
 mutation AdminControlCenterSendCommand($input: SendErmDeviceCommandInput!) {
   sendErmDeviceCommand(input: $input) {
     id

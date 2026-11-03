@@ -367,6 +367,181 @@
                   </holita-table-panel>
                 }
 
+                @case ('parameters') {
+                  @if (state()) {
+                    <section
+                      class="app-card control-center__panel"
+                      [attr.aria-label]="text().snapshots.title"
+                    >
+                      <h2>{{ text().snapshots.title }}</h2>
+                      <p class="app-muted">
+                        {{ canSend() ? text().snapshots.hint : commandsHint() }}
+                      </p>
+                      <p class="app-muted">{{ text().snapshots.secretNote }}</p>
+                      <div class="control-center__actions">
+                        <button
+                          pButton
+                          type="button"
+                          [disabled]="!canSend() || snapshotRunning() || startingSnapshot()"
+                          [loading]="startingSnapshot()"
+                          (click)="startSnapshot()"
+                        >
+                          {{ text().snapshots.start }}
+                        </button>
+                      </div>
+                    </section>
+                    <p-confirmdialog
+                      [pt]="confirmPt()"
+                      [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }"
+                    />
+                  }
+                  <holita-table-panel
+                    [heading]="text().snapshots.history"
+                    [view]="historyView()"
+                    [busy]="historyLoading()"
+                    [errorText]="historyFailure()"
+                    [emptyTitle]="text().snapshots.empty"
+                    (retry)="refresh()"
+                  >
+                    <p-table
+                      class="app-responsive-table"
+                      [value]="snapshots()?.items ?? []"
+                      dataKey="id"
+                    >
+                      <ng-template #header>
+                        <tr>
+                          <th scope="col">{{ text().snapshots.startedAt }}</th>
+                          <th scope="col">{{ text().status }}</th>
+                          <th scope="col">{{ text().snapshots.progress }}</th>
+                          <th scope="col">{{ text().snapshots.finishedAt }}</th>
+                          <th scope="col">{{ text().snapshots.changesCount }}</th>
+                          <th scope="col">
+                            <span class="app-visually-hidden">{{ text().snapshots.show }}</span>
+                          </th>
+                        </tr>
+                      </ng-template>
+                      <ng-template #body let-snapshot>
+                        <tr>
+                          <td>{{ date(snapshot.startedAt) }}</td>
+                          <td>
+                            <div class="app-cell-stack">
+                              <p-tag
+                                [value]="snapshotStatus(snapshot.status)"
+                                [severity]="snapshotTone(snapshot.status)"
+                              />
+                              @if (snapshot.failureReason) {
+                                <span class="app-muted">{{ snapshot.failureReason }}</span>
+                              }
+                            </div>
+                          </td>
+                          <td>
+                            {{ number(snapshot.readCount, 0) }} /
+                            {{ number(snapshot.parameterCount, 0) }}
+                          </td>
+                          <td>{{ date(snapshot.finishedAt) }}</td>
+                          <td>{{ number(snapshot.changes.length, 0) }}</td>
+                          <td>
+                            <button
+                              pButton
+                              type="button"
+                              size="small"
+                              severity="secondary"
+                              [outlined]="selectedSnapshot()?.id !== snapshot.id"
+                              [attr.aria-pressed]="selectedSnapshot()?.id === snapshot.id"
+                              [attr.aria-label]="
+                                format(text().snapshots.showLabel, {
+                                  time: date(snapshot.startedAt),
+                                })
+                              "
+                              (click)="selectedSnapshotId.set(snapshot.id)"
+                            >
+                              {{ text().snapshots.show }}
+                            </button>
+                          </td>
+                        </tr>
+                      </ng-template>
+                    </p-table>
+                  </holita-table-panel>
+
+                  @if (selectedSnapshot(); as snapshot) {
+                    <section
+                      class="app-card control-center__panel"
+                      aria-labelledby="snapshot-heading"
+                    >
+                      <h2 id="snapshot-heading">
+                        {{
+                          format(text().snapshots.snapshotFrom, { time: date(snapshot.startedAt) })
+                        }}
+                      </h2>
+                      @if (snapshot.failureReason) {
+                        <p-message severity="error">{{ snapshot.failureReason }}</p-message>
+                      }
+                      <h3>{{ text().snapshots.changes }}</h3>
+                      @if (snapshot.changes.length) {
+                        <p-table class="app-responsive-table" [value]="snapshot.changes">
+                          <ng-template #header>
+                            <tr>
+                              <th scope="col">{{ text().snapshots.parameter }}</th>
+                              <th scope="col">{{ text().snapshots.before }}</th>
+                              <th scope="col">{{ text().snapshots.now }}</th>
+                            </tr>
+                          </ng-template>
+                          <ng-template #body let-change>
+                            <tr>
+                              <td>
+                                <div class="app-cell-stack">
+                                  <span class="control-center__mono">{{
+                                    parameterNumber(change.parameter)
+                                  }}</span>
+                                  <span class="app-muted">{{ change.title ?? '—' }}</span>
+                                </div>
+                              </td>
+                              <td>
+                                <pre class="control-center__frame">{{
+                                  change.previousValue ?? '—'
+                                }}</pre>
+                              </td>
+                              <td>
+                                <pre class="control-center__frame">{{ change.value ?? '—' }}</pre>
+                              </td>
+                            </tr>
+                          </ng-template>
+                        </p-table>
+                      } @else {
+                        <p class="app-muted">{{ text().snapshots.noChanges }}</p>
+                      }
+                      <h3>{{ text().snapshots.values }}</h3>
+                      <p-table class="app-responsive-table" [value]="snapshot.values">
+                        <ng-template #header>
+                          <tr>
+                            <th scope="col">{{ text().snapshots.parameter }}</th>
+                            <th scope="col">{{ text().snapshots.value }}</th>
+                            <th scope="col">{{ text().resultCode }}</th>
+                          </tr>
+                        </ng-template>
+                        <ng-template #body let-entry>
+                          <tr>
+                            <td>
+                              <div class="app-cell-stack">
+                                <span class="control-center__mono">{{
+                                  parameterNumber(entry.parameter)
+                                }}</span>
+                                <span class="app-muted">{{ entry.title ?? '—' }}</span>
+                              </div>
+                            </td>
+                            <td>
+                              <pre class="control-center__frame">{{
+                                entry.value ?? text().snapshots.noValue
+                              }}</pre>
+                            </td>
+                            <td>{{ entry.resultCode ?? '—' }}</td>
+                          </tr>
+                        </ng-template>
+                      </p-table>
+                    </section>
+                  }
+                }
+
                 @case ('frames') {
                   <holita-table-panel
                     [heading]="text().tabs.frames"
