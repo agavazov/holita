@@ -127,6 +127,7 @@ export const fleetEventKindDb = {
   POWER_DISCONNECTED: 'powerDisconnected',
   LOW_BACKUP_BATTERY: 'lowBackupBattery',
   CAN_DISCONNECTED: 'canDisconnected',
+  CAN_ERROR: 'canError',
   DEVICE_OFFLINE: 'deviceOffline',
   DIAGNOSTIC_TROUBLE_CODE: 'diagnosticTroubleCode',
   CRASH_DETECTED: 'crashDetected',

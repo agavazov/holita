@@ -3,7 +3,7 @@ import { PrismaService } from '../../database/prisma.service.js';
 import type { Prisma, VehicleStatusSample } from '../../generated/prisma/client.js';
 import type { ErmTelemetryPage } from '../../integrations/erm/erm-telemetry.client.js';
 import type { FleetScope } from '../../validation.js';
-import { ermSamples, type ErmTelemetryDevice } from './erm-telemetry.mapping.js';
+import { ermFleetEvents, ermSamples, type ErmTelemetryDevice } from './erm-telemetry.mapping.js';
 
 @Injectable()
 export class ErmTelemetryRepository {
@@ -48,6 +48,10 @@ export class ErmTelemetryRepository {
           samples,
           latest?.recordedAt ?? null,
         );
+      }
+      const events = ermFleetEvents(device, page.events);
+      if (events.length > 0) {
+        await transaction.fleetEvent.createMany({ data: events, skipDuplicates: true });
       }
       await transaction.fleetErmCursor.upsert({
         where: { ...scope, deviceId: device.id },

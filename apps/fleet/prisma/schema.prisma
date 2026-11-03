@@ -161,6 +161,7 @@ enum FleetEventKind {
   POWER_DISCONNECTED @map("powerDisconnected")
   LOW_BACKUP_BATTERY @map("lowBackupBattery")
   CAN_DISCONNECTED @map("canDisconnected")
+  CAN_ERROR @map("canError")
   DEVICE_OFFLINE @map("deviceOffline")
   DIAGNOSTIC_TROUBLE_CODE @map("diagnosticTroubleCode")
   CRASH_DETECTED @map("crashDetected")
@@ -495,6 +496,7 @@ model Trip {
 // The trip relation includes vehicleId, so an event's vehicle always equals its trip's vehicle.
 // Hand-written CHECKs: never MANUAL, IMEI format, coordinates, intensity only on maneuvers,
 // the alert state machine with its timestamps, and no alert status on INFO events.
+// Hand-written partial unique index: fleetEventErmKey (ERM activity, NULLS NOT DISTINCT).
 model FleetEvent {
   id String @id @default(uuid()) @db.Uuid
   tenantId String @db.Uuid

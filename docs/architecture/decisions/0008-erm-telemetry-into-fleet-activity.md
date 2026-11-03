@@ -43,8 +43,9 @@ adds `GET /internal/telemetry/units/:imei/events?after=<id>&limit=<1-500>`:
 - returns `{ events, next }` ordered by `ermEvent.id`, ids as decimal strings; `next` is the last
   returned id, or `after` for an empty page, which is also the answer for an IMEI without events.
   Each device event has `id`, `eventId`, `eventTime`, `receivedAt` (frame receipt), `latitude`,
-  `longitude`, `speedKmh`, `heading`, `odometerKm`, `engineOn`, `mainVoltage` and `backupVoltage`.
-  Raw frames, `fields` and commands stay out;
+  `longitude`, `speedKmh`, `heading`, `odometerKm`, `engineOn`, `ignitionOn`, `mainVoltage`,
+  `backupVoltage` and `edata`: the decoded eData `411` or `419` payload of StarLink event 33, or
+  null. Raw frames, `fields` and commands stay out;
 - serves only events received at least 10 seconds before the request. A unit's events are written
   in its connection's queue order, but a reconnect overlap can commit ids out of order; the delay
   keeps the cursor from skipping them.
@@ -69,22 +70,27 @@ most 10 pages per Device, and an unreachable endpoint leaves every cursor unchan
   no Vehicle activity.
 - Events without `eventTime`, or with an `eventTime` more than one minute after their `receivedAt`,
   are skipped, so a wrong unit clock cannot move the Branch data clock.
-- `FleetEvent` rows are not imported yet. ERM event IDs map to `FleetEventKind` only after the ERM
-  roadmap verifies them; until then the federated ERM history shows them.
+- `FleetEvent` rows come only from eData, as dated observations. Each `419` fault-logger record
+  becomes a `DIAGNOSTIC_TROUBLE_CODE` event (`SPN … FMI …`, WARNING when added, INFO when deleted),
+  and a `411` CAN error flag becomes a `CAN_ERROR` event. There is no alert lifecycle or current
+  fault state until the fault lifecycle and completeness are established, and a hand-written
+  partial unique index makes replays idempotent. Other ERM event IDs map to `FleetEventKind` only
+  after the ERM roadmap verifies them; until then the federated ERM history shows them.
 
 **Two clocks.** ERM samples are device samples: their unit time sets the Branch data clock (`asOf`),
 and `receivedAt` keeps erm-server's receipt time. Fleet never stamps them with `FleetClock.now()`;
 the job uses wall time only to schedule ticks. Business dates keep `FleetClock.now()` in the Branch
 time zone, and MANUAL readings still never move the data clock.
 
-**Trips from ignition.** Inserted samples are applied per Vehicle in `recordedAt` order. Ignition on
+**Trips from ignition.** Ignition is `ignitionOn`, or `engineOn` when the unit reports no ignition
+input. Inserted samples are applied per Vehicle in `recordedAt` order. Ignition on
 without an open ERM trip opens one (start time, position and odometer); ignition off closes it (end
 time, position, odometer, `distanceKm` as the odometer difference when both are known, and
 `maxSpeedKph` over its samples). Unknown ignition neither opens nor closes a trip, and a sample that
 is not newer than the Vehicle's latest applied ERM sample is stored without changing trips.
 Addresses, idle time, fuel, scores and the driver stay null until measured. Binary `$SLB` Tracker
-reports do not decode `engineOn` yet, so routed Trackers get samples without trips until the
-roadmap's binary ignition work is verified; Scouts' text events carry `#ENG#`.
+reports carry no decoded ignition yet (`ignitionOn` stays null until the roadmap's binary ignition
+work is verified), so routed Trackers get samples without trips; Scouts' text events carry `#ENG#`.
 
 **Karma until each truck is routed.** Fleet imports only what erm-server receives. A truck still on
 Karma, or reporting to its Karma backup (0051/0052) for a while, has no ERM events: its Fleet

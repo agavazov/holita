@@ -1,5 +1,20 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 
+export type ErmTelemetryEdata =
+  | {
+      report: '411';
+      can: boolean;
+      j1708: boolean;
+      obd: boolean;
+      obdMask: number;
+      canError: boolean;
+      ignition: 0 | 1 | 2;
+    }
+  | {
+      report: '419';
+      faults: { spn: number; fmi: number; status: 'ADDED' | 'DELETED' }[];
+    };
+
 export interface ErmTelemetryEvent {
   id: bigint;
   eventId: string | null;
@@ -13,6 +28,8 @@ export interface ErmTelemetryEvent {
   mainVoltage: number | null;
   backupVoltage: number | null;
   engineOn: boolean | null;
+  ignitionOn: boolean | null;
+  edata: ErmTelemetryEdata | null;
 }
 
 export interface ErmTelemetryPage {
@@ -58,6 +75,60 @@ function nullableNumber(value: unknown): value is number | null {
   return value === null || (typeof value === 'number' && Number.isFinite(value));
 }
 
+function integer(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value);
+}
+
+function telemetryEdata(value: unknown): ErmTelemetryEdata | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (!record(value)) {
+    throw unavailable();
+  }
+  if (value.report === '411') {
+    if (
+      typeof value.can !== 'boolean' ||
+      typeof value.j1708 !== 'boolean' ||
+      typeof value.obd !== 'boolean' ||
+      !integer(value.obdMask) ||
+      typeof value.canError !== 'boolean' ||
+      (value.ignition !== 0 && value.ignition !== 1 && value.ignition !== 2)
+    ) {
+      throw unavailable();
+    }
+    return {
+      report: value.report,
+      can: value.can,
+      j1708: value.j1708,
+      obd: value.obd,
+      obdMask: value.obdMask,
+      canError: value.canError,
+      ignition: value.ignition,
+    };
+  }
+  if (value.report === '419') {
+    if (!Array.isArray(value.faults)) {
+      throw unavailable();
+    }
+    return {
+      report: value.report,
+      faults: value.faults.map((fault: unknown) => {
+        if (
+          !record(fault) ||
+          !integer(fault.spn) ||
+          !integer(fault.fmi) ||
+          (fault.status !== 'ADDED' && fault.status !== 'DELETED')
+        ) {
+          throw unavailable();
+        }
+        return { spn: fault.spn, fmi: fault.fmi, status: fault.status };
+      }),
+    };
+  }
+  return null;
+}
+
 function telemetryEvent(value: unknown): ErmTelemetryEvent {
   if (
     !record(value) ||
@@ -69,7 +140,10 @@ function telemetryEvent(value: unknown): ErmTelemetryEvent {
     !nullableNumber(value.odometerKm) ||
     !nullableNumber(value.mainVoltage) ||
     !nullableNumber(value.backupVoltage) ||
-    (value.engineOn !== null && typeof value.engineOn !== 'boolean')
+    (value.engineOn !== null && typeof value.engineOn !== 'boolean') ||
+    (value.ignitionOn !== undefined &&
+      value.ignitionOn !== null &&
+      typeof value.ignitionOn !== 'boolean')
   ) {
     throw unavailable();
   }
@@ -86,6 +160,8 @@ function telemetryEvent(value: unknown): ErmTelemetryEvent {
     mainVoltage: value.mainVoltage,
     backupVoltage: value.backupVoltage,
     engineOn: value.engineOn,
+    ignitionOn: value.ignitionOn ?? null,
+    edata: telemetryEdata(value.edata),
   };
 }
 

@@ -50,8 +50,8 @@ Persistence/decoding failures must not interrupt forwarding or acknowledgements.
 JSON Lines captures are operational evidence, not a source for public documentation.
 When `FLEET_ERM_TELEMETRY_ENABLED=true`, Fleet pulls captured events into scoped status samples
 and ignition trips, following
-[ADR 0008](../architecture/decisions/0008-erm-telemetry-into-fleet-activity.md). Fleet events are not
-imported yet.
+[ADR 0008](../architecture/decisions/0008-erm-telemetry-into-fleet-activity.md). Fleet events come
+only from eData: dated `419` fault-logger transitions and `411` CAN error flags, without alert lifecycle.
 
 Fleet owns the Device registry. ERM extends `FleetDevice` with `ermState`, `ermEvents`,
 `ermCommands` and `ermFrames`, resolved by its external `imei` with `@requires`. Fleet

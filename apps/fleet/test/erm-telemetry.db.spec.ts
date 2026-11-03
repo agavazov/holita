@@ -17,10 +17,15 @@ const installedAt = new Date('2026-11-03T12:00:00.000Z');
 const at = (seconds: number) => new Date(installedAt.getTime() + seconds * 1000);
 const scopeA = { tenantId: randomUUID(), branchId: randomUUID() };
 const scopeB = { tenantId: randomUUID(), branchId: randomUUID() };
-type FeedEvent = Omit<ErmTelemetryEvent, 'id' | 'eventTime' | 'receivedAt'> & {
+type FeedEvent = Omit<
+  ErmTelemetryEvent,
+  'id' | 'eventTime' | 'receivedAt' | 'ignitionOn' | 'edata'
+> & {
   id: string;
   eventTime: string | null;
   receivedAt: string;
+  ignitionOn?: boolean | null;
+  edata?: unknown;
 };
 
 function event(id: string, seconds: number, engineOn: boolean | null): FeedEvent {
@@ -174,7 +179,7 @@ describe('ERM telemetry import with PostgreSQL', () => {
     return body;
   }
 
-  it('imports scoped samples and ignition trips once, retaining cursors on failed pages and ignoring late samples for trips', async () => {
+  it('imports scoped samples, eData events and ignition trips once, retaining cursors on failed pages and ignoring late samples for trips', async () => {
     const vehicleA = await database.client.vehicle.create({
       data: { ...scopeA, licensePlate: 'ERM A' },
     });
@@ -201,13 +206,41 @@ describe('ERM telemetry import with PostgreSQL', () => {
         createdAt: installedAt,
       },
     });
+    const faultReport = {
+      report: '419',
+      faults: [
+        { spn: 4339, fmi: 7, status: 'ADDED' },
+        { spn: 1247, fmi: 11, status: 'DELETED' },
+      ],
+    };
+    const diagnostics = {
+      report: '411',
+      can: true,
+      j1708: false,
+      obd: false,
+      obdMask: 0,
+      canError: true,
+      ignition: 2,
+    };
     events.set(deviceA.imei, [
-      { ...event('1', -20, true), receivedAt: at(-1).toISOString() },
-      event('2', 0, true),
-      { ...event('3', 0, false), speedKmh: 399, odometerKm: 999 },
-      { ...event('4', 60, true), speedKmh: 96.5, heading: 123.6, odometerKm: 101 },
-      { ...event('5', 300, false), receivedAt: at(120).toISOString() },
-      { ...event('6', 180, false), speedKmh: 5, odometerKm: 110 },
+      { ...event('1', -20, true), receivedAt: at(-1).toISOString(), edata: faultReport },
+      { ...event('2', 0, null), ignitionOn: true },
+      {
+        ...event('3', 0, false),
+        eventId: '33',
+        speedKmh: 399,
+        odometerKm: 999,
+        edata: faultReport,
+      },
+      {
+        ...event('4', 60, true),
+        speedKmh: 96.5,
+        heading: 123.6,
+        odometerKm: 101,
+        edata: { ...diagnostics, canError: false },
+      },
+      { ...event('5', 300, false), receivedAt: at(120).toISOString(), edata: faultReport },
+      { ...event('6', 180, true), ignitionOn: false, speedKmh: 5, odometerKm: 110 },
       { ...event('7', 240, true), speedKmh: 401, odometerKm: 111 },
       {
         ...event('8', 300, null),
@@ -217,10 +250,12 @@ describe('ERM telemetry import with PostgreSQL', () => {
         odometerKm: 10_000_001,
         mainVoltage: 60.01,
         backupVoltage: 10.01,
+        edata: diagnostics,
       },
-      { ...event('9', 360, false), eventTime: null },
+      { ...event('9', 360, false), eventTime: null, edata: faultReport },
+      { ...event('11', 300, null), edata: { report: '999', faults: 'ignored' } },
     ]);
-    events.set(stock.imei, [event('10', 30, true)]);
+    events.set(stock.imei, [{ ...event('10', 30, true), edata: faultReport }]);
     events.set(deviceB.imei, [
       { ...event('19', -20, true), receivedAt: at(-1).toISOString() },
       { ...event('20', 60, true), odometerKm: 500 },
@@ -320,7 +355,7 @@ describe('ERM telemetry import with PostgreSQL', () => {
       { ...scopeB, vehicleId: vehicleB.id, deviceImei: deviceB.imei, source: 'ERM', endedAt: null },
     ]);
     for (const [device, lastEventId] of [
-      [deviceA, 9n],
+      [deviceA, 11n],
       [stock, 10n],
       [deviceB, 20n],
     ] as const) {
@@ -336,7 +371,64 @@ describe('ERM telemetry import with PostgreSQL', () => {
     expect(
       await database.client.vehicleStatusSample.count({ where: { deviceImei: stock.imei } }),
     ).toBe(0);
-    expect(await database.client.fleetEvent.count()).toBe(0);
+    const fleetEvents = () =>
+      database.client.fleetEvent.findMany({
+        where: scopeA,
+        orderBy: [{ occurredAt: 'asc' }, { troubleCode: 'asc' }],
+      });
+    const initialEvents = await fleetEvents();
+    expect(initialEvents).toMatchObject(
+      [
+        {
+          occurredAt: at(0),
+          kind: 'DIAGNOSTIC_TROUBLE_CODE',
+          severity: 'INFO',
+          troubleCode: 'SPN 1247 FMI 11',
+          details: 'eData 419: the fault logger deleted this fault; this does not prove a repair.',
+          latitude: 42,
+          longitude: 23,
+          speedKph: 399,
+        },
+        {
+          occurredAt: at(0),
+          kind: 'DIAGNOSTIC_TROUBLE_CODE',
+          severity: 'WARNING',
+          troubleCode: 'SPN 4339 FMI 7',
+          details: 'eData 419: the fault logger added this fault.',
+          latitude: 42,
+          longitude: 23,
+          speedKph: 399,
+        },
+        {
+          occurredAt: at(300),
+          kind: 'CAN_ERROR',
+          severity: 'WARNING',
+          troubleCode: null,
+          details:
+            'eData 411 reported the CAN error flag; CAN=1, J1708=0, OBD=0, OBD mask=0, ignition=2.',
+          latitude: null,
+          longitude: null,
+          speedKph: 15,
+        },
+      ].map((entry) => ({
+        ...scopeA,
+        source: 'ERM',
+        vehicleId: vehicleA.id,
+        deviceImei: deviceA.imei,
+        tripId: null,
+        driverId: null,
+        intensity: null,
+        address: null,
+        measuredValue: null,
+        thresholdValue: null,
+        alertStatus: null,
+        acknowledgedAt: null,
+        resolvedAt: null,
+        remark: null,
+        ...entry,
+      })),
+    );
+    expect(await database.client.fleetEvent.count()).toBe(3);
     expect(await trips(scopeA, vehicleA.id)).toEqual({
       data: {
         fleetTrips: {
@@ -357,6 +449,15 @@ describe('ERM telemetry import with PostgreSQL', () => {
     await jobs.tick();
     expect(await database.client.vehicleStatusSample.count()).toBe(6);
     expect(await tripRows()).toEqual(initialTrips);
+    expect(await fleetEvents()).toEqual(initialEvents);
+    await database.client.fleetErmCursor.update({
+      where: { ...scopeA, deviceId: deviceA.id },
+      data: { lastEventId: 0n },
+    });
+    await jobs.tick();
+    expect(await database.client.vehicleStatusSample.count()).toBe(6);
+    expect(await tripRows()).toEqual(initialTrips);
+    expect(await fleetEvents()).toEqual(initialEvents);
     events.get(deviceA.imei)?.push({
       ...event('21', 120, false),
       receivedAt: at(420).toISOString(),

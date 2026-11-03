@@ -70,7 +70,8 @@ stored values or explicitly labelled editor/filter units. No equivalence with Ka
 Activity rows are holita demo data or, when `FLEET_ERM_TELEMETRY_ENABLED=true`, ERM status samples
 and ignition trips imported per
 [ADR 0008](../architecture/decisions/0008-erm-telemetry-into-fleet-activity.md).
-Events still come from the demo seed or tests; operators add MANUAL odometer readings.
+The import also writes dated eData FleetEvents (419 fault transitions and 411 CAN errors) without
+an alert lifecycle; operators add MANUAL odometer readings.
 Samples, trips and events store the reporting IMEI as a snapshot instead of a Device foreign key,
 so devices can be replaced, reassigned or deleted without rewriting history. A sample's history
 belongs to the (vehicle, IMEI) pair at reporting time.
