@@ -53,6 +53,14 @@ export interface VehicleProfile extends VehicleRow {
 }
 
 export type VehicleProfileState = 'loading' | 'ready' | 'not-found' | 'error';
+
+/** A dated eData report: a trouble code the fault logger added or cleared, or a CAN error. */
+export interface DeviceEventRow {
+  readonly id: string;
+  readonly occurredAt: string;
+  readonly label: string;
+  readonly state: 'added' | 'cleared' | 'reported';
+}
 export const vehicleProfileTabs = ['overview', 'trips', 'alerts', 'service'] as const;
 export type VehicleProfileTab = (typeof vehicleProfileTabs)[number];
 
@@ -127,6 +135,11 @@ export class VehicleProfileView {
   readonly servicePageChange = output<{ page: number; pageSize: number }>();
   readonly retryTrips = output();
   readonly retryAlerts = output();
+  readonly deviceEvents = input<readonly DeviceEventRow[]>([]);
+  readonly deviceEventTotal = input<number | null>(null);
+  readonly deviceEventState = input<TableView | null>(null);
+  readonly deviceEventError = input<string | null>(null);
+  readonly retryDeviceEvents = output();
   readonly retryService = output();
   readonly tab = input<VehicleProfileTab>('overview');
   readonly tabChange = output<VehicleProfileTab>();
@@ -199,6 +212,18 @@ export class VehicleProfileView {
   /** PrimeNG's table takes mutable arrays. */
   protected readonly tripRows = computed(() => [...this.trips()]);
   protected readonly alertRows = computed(() => [...this.alerts()]);
+  protected readonly deviceEventView = computed(
+    () => this.deviceEventState() ?? listView(this.deviceEvents()),
+  );
+  protected readonly deviceEventRows = computed(() => [...this.deviceEvents()]);
+  protected deviceEventLabel(state: DeviceEventRow['state']): string {
+    return this.text().deviceEvents[state];
+  }
+  protected readonly deviceEventLatest = computed(() => {
+    const total = this.deviceEventTotal() ?? 0;
+    const shown = this.deviceEvents().length;
+    return total > shown ? interpolate(this.text().deviceEvents.latest, { shown, total }) : null;
+  });
   protected readonly serviceRows = computed(() => [...this.service()]);
 
   protected statusSeverity(status: keyof typeof statusTones) {

@@ -27,6 +27,7 @@ import type {
   AdminVehicleProfileQuery,
   AdminVehicleProfileTripsQuery,
   AdminVehicleProfileAlertsQuery,
+  AdminVehicleDeviceEventsQuery,
   AdminVehicleProfileServiceQuery,
 } from '../../../../generated/graphql/operations';
 import { requestError } from '../../../core/graphql/request-error';
@@ -37,6 +38,7 @@ import { drawerParam } from '../../../ui/drawer/drawer-route';
 import { errorCode } from '../../../ui/forms/field-errors';
 import { tableView } from '../../../ui/table-panel/table-view';
 import { alertRow } from '../alerts/alert-mapping';
+import { alertsText } from '../alerts/i18n/messages';
 import { serviceTaskRow } from '../maintenance/service-task-mapping';
 import { tripRow } from '../trips/trip-mapping';
 import { vehiclesText } from './i18n/messages';
@@ -93,6 +95,11 @@ const samePage = (left: ProfilePage, right: ProfilePage) =>
       [alertError]="alertFailure()"
       (alertPageChange)="changePage('alerts', $event)"
       (retryAlerts)="retryAlerts.next()"
+      [deviceEvents]="deviceEvents()"
+      [deviceEventTotal]="deviceEventData()?.total ?? null"
+      [deviceEventState]="deviceEventView()"
+      [deviceEventError]="deviceEventFailure()"
+      (retryDeviceEvents)="retryDeviceEvents.next()"
       [service]="service()"
       [servicePage]="servicePage()"
       [serviceState]="serviceView()"
@@ -179,6 +186,42 @@ export class VehicleProfilePage implements OnInit {
   protected readonly retry = new Subject<void>();
   protected readonly retryTrips = new Subject<void>();
   protected readonly retryAlerts = new Subject<void>();
+  protected readonly retryDeviceEvents = new Subject<void>();
+  protected readonly deviceEventData = signal<AdminVehicleDeviceEventsQuery['fleetEvents'] | null>(
+    null,
+  );
+  private readonly deviceEventLoading = signal(true);
+  private readonly deviceEventError = signal<unknown>(null);
+  /** Only holita's imported reports; a cleared trouble code arrives with INFO severity. */
+  protected readonly deviceEvents = computed(() =>
+    (this.deviceEventData()?.items ?? [])
+      .filter((event) => event.source === 'ERM')
+      .map((event) => ({
+        id: event.id,
+        occurredAt: event.occurredAt,
+        label:
+          event.kind === 'DIAGNOSTIC_TROUBLE_CODE'
+            ? (event.troubleCode ?? alertsText(this.language()).kinds.DIAGNOSTIC_TROUBLE_CODE)
+            : alertsText(this.language()).kinds[event.kind],
+        state:
+          event.kind !== 'DIAGNOSTIC_TROUBLE_CODE'
+            ? ('reported' as const)
+            : event.severity === 'INFO'
+              ? ('cleared' as const)
+              : ('added' as const),
+      })),
+  );
+  protected readonly deviceEventView = computed(() =>
+    tableView({
+      loading: this.deviceEventLoading(),
+      error: this.deviceEventError(),
+      rows: this.deviceEventData() ? this.deviceEvents().length : null,
+      filtered: false,
+    }),
+  );
+  protected readonly deviceEventFailure = computed(() =>
+    requestError(this.deviceEventError(), vehiclesText(this.language()).table.errorText),
+  );
   protected readonly retryService = new Subject<void>();
   protected readonly failure = computed(() =>
     requestError(this.error(), vehiclesText(this.language()).profile.errorText),
@@ -306,6 +349,7 @@ export class VehicleProfilePage implements OnInit {
             relatedStarted = true;
             this.loadTrips(id);
             this.loadAlerts(id);
+            this.loadDeviceEvents(id);
             this.loadService(id);
           }
         }
@@ -431,6 +475,32 @@ export class VehicleProfilePage implements OnInit {
         if (result.dataState === 'complete' && !result.loading && !result.error) {
           this.alertData.set(result.data.fleetEvents);
           this.correctPages();
+        }
+      });
+  }
+
+  private loadDeviceEvents(id: string): void {
+    this.retryDeviceEvents
+      .pipe(
+        startWith(undefined),
+        switchMap(() => {
+          this.deviceEventLoading.set(true);
+          this.deviceEventError.set(null);
+          return this.api.watchDeviceEvents(id).valueChanges.pipe(
+            catchError((error: unknown) => {
+              this.deviceEventLoading.set(false);
+              this.deviceEventError.set(error);
+              return EMPTY;
+            }),
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((result) => {
+        this.deviceEventLoading.set(result.loading);
+        this.deviceEventError.set(result.error ?? null);
+        if (result.dataState === 'complete' && !result.loading && !result.error) {
+          this.deviceEventData.set(result.data.fleetEvents);
         }
       });
   }

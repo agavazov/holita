@@ -144,6 +144,18 @@
     "noTrips": "No trips",
     "alertsHeading": "Alerts of this vehicle",
     "noAlerts": "No alerts",
+    "deviceEvents": {
+      "heading": "Device events",
+      "note": "Dated reports from the unit's eData fault logger, imported from holita. They are not alerts: nobody acknowledges or resolves them, and a cleared code does not prove a repair.",
+      "empty": "No device events.",
+      "latest": "Showing the latest {shown} of {total}.",
+      "occurred": "Date",
+      "event": "Event",
+      "state": "State",
+      "added": "Added",
+      "cleared": "Cleared",
+      "reported": "Reported"
+    },
     "serviceHeading": "Service plan",
     "noServiceTasks": "No service tasks",
     "notFoundTitle": "Vehicle not found",

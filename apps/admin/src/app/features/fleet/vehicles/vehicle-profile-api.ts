@@ -7,6 +7,7 @@ import {
   AdminVehicleProfileDocument,
   AdminVehicleProfileTripsDocument,
   AdminVehicleProfileAlertsDocument,
+  AdminVehicleDeviceEventsDocument,
   AdminVehicleProfileServiceDocument,
   AdminVehicleOdometerDocument,
   AdminRecordOdometerDocument,
@@ -74,6 +75,15 @@ export class VehicleProfileApi implements OnDestroy {
     return this.client().watchQuery({
       query: AdminVehicleProfileAlertsDocument,
       variables: { vehicleId, offset: (page - 1) * pageSize, limit: pageSize },
+      fetchPolicy: 'network-only',
+    });
+  }
+
+  /** The Vehicle's imported eData trouble codes and CAN errors, newest first. */
+  watchDeviceEvents(vehicleId: string) {
+    return this.client().watchQuery({
+      query: AdminVehicleDeviceEventsDocument,
+      variables: { vehicleId },
       fetchPolicy: 'network-only',
     });
   }

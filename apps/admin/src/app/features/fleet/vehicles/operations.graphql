@@ -337,3 +337,24 @@ mutation AdminRecordOdometer($input: RecordFleetOdometerReadingInput!) {
     odometerKm
   }
 }
+query AdminVehicleDeviceEvents($vehicleId: ID!) {
+  fleetEvents(
+    limit: 50
+    filter: {
+      vehicleIds: [$vehicleId]
+      kinds: [DIAGNOSTIC_TROUBLE_CODE, CAN_ERROR]
+      actionable: false
+    }
+    sort: { field: OCCURRED_AT, direction: DESC }
+  ) {
+    total
+    items {
+      id
+      occurredAt
+      kind
+      severity
+      troubleCode
+      source
+    }
+  }
+}

@@ -2,6 +2,7 @@ import {
   AdminVehicleProfileDocument,
   AdminVehicleProfileTripsDocument,
   AdminVehicleProfileAlertsDocument,
+  AdminVehicleDeviceEventsDocument,
   AdminVehicleProfileServiceDocument,
   AdminVehicleOdometerDocument,
   AdminRecordOdometerDocument,
@@ -74,6 +75,32 @@ graphqlFixture(AdminVehicleProfileTripsDocument, (variables) => ({
     offset: variables.int('offset', 0),
     limit: variables.int('limit', 20),
     totalDistanceKm: 150,
+  },
+}));
+graphqlFixture(AdminVehicleDeviceEventsDocument, () => ({
+  fleetEvents: {
+    __typename: 'FleetEventPage',
+    total: 2,
+    items: [
+      {
+        __typename: 'FleetEvent',
+        id: '70000000-0000-4000-8000-000000000101',
+        occurredAt: '2026-10-18T06:30:00.000Z',
+        kind: 'DIAGNOSTIC_TROUBLE_CODE',
+        severity: 'WARNING',
+        troubleCode: 'SPN 4339 FMI 7',
+        source: 'ERM',
+      },
+      {
+        __typename: 'FleetEvent',
+        id: '70000000-0000-4000-8000-000000000102',
+        occurredAt: '2026-10-18T05:30:00.000Z',
+        kind: 'DIAGNOSTIC_TROUBLE_CODE',
+        severity: 'INFO',
+        troubleCode: 'SPN 4339 FMI 7',
+        source: 'ERM',
+      },
+    ],
   },
 }));
 graphqlFixture(AdminVehicleProfileAlertsDocument, (variables) => ({
