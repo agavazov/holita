@@ -42,6 +42,13 @@ configuration, fault formats and API agreement. Each stage has a maximum of 50
 targeted attempts; stages 02–07 are authorized as one sequential run. Test Server/routing
 work is excluded from that campaign.
 
+## ERM device server and fleet control
+
+The [fleet control plan](erm-fleet-control-plan.md) orders the tests that move every StarLink unit to
+holita and prove its data, errors and commands, with safety rules, test levels and questions for ERM.
+The [routing backlog](erm-tcp-receiver-and-test-device-routing.md) holds the receiver's engineering
+tasks and the fleet's unit list.
+
 ## Karma web functionality research
 
 The [web functionality report](../discocan/erm-resources/karma-api-v2/web-functionality-research.md)
