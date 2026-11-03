@@ -9,7 +9,8 @@ features; it stays only until these pages cover it.
 ## What exists (2026-11-03)
 
 - `apps/erm-server` relays three test trucks (CB5640XP, CB5636XP, CB6711TE) to Karma, runs them in
-  primary mode, decodes text and `$SLC` events, and stores connections, frames, events and commands.
+  primary mode, decodes text, `$SLC` and `$SLB` events, and stores connections, frames, events and
+  commands.
 - Read-only GraphQL: `ermUnits`, `ermEvents`, `ermFrames`, `ermCommands`, shown on the admin page
   "ERM сървър". It has no Tenant/Branch scope.
 - The internal command API (bearer token, not exposed through the Gateway) sends allowlisted reads,
@@ -28,22 +29,23 @@ features; it stays only until these pages cover it.
    as described in [architectural changes](../../AGENTS.md#architectural-changes).
 3. **Command mutation.** Expose the internal command API as an authenticated, Branch-scoped
    GraphQL mutation that records the operator. Keep the allowlist; add no free-text command box.
-4. **Receiver gaps that the pages would show wrongly:** `$SLB` decoding, closes not recorded on
-   shutdown, and always-on units that do not reconnect after a restart.
+4. **Receiver gaps that the pages would show wrongly:** closes not recorded on shutdown, and units
+   that return only at their next scheduled transmission after erm-server closes their connection
+   (up to 5 minutes driving, up to an hour parked; a call to the SIM wakes a unit at once).
 
 ## Pages
 
-| Page                 | Content                                                                                                                                                                                                           |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Units overview       | Every unit with truck, model, server (holita/Karma), mode, connected or last frame, always-on, firmware, eData module, latest position, speed, ignition, voltages, signal and satellites                          |
-| Unit · Live          | Latest event on the map, current status from the last `48` read                                                                                                                                                   |
-| Unit · History       | Decoded events with filters; eData payloads (`405` measurements, `419` faults) decoded                                                                                                                            |
-| Unit · Frames        | Raw frames with `$SLC` inner frames and `$SLB` fields, for diagnosis                                                                                                                                              |
-| Unit · Commands      | Actions: read parameters, read status (`07`, `12`, `16`, `56`, `61`), request location (`05`), eData fixed reads, change a parameter with snapshot, read-back and restore; history with result codes in Bulgarian |
-| Unit · Configuration | Snapshots with parameter titles from the protocol archive, secrets masked, and diffs between dates or units; "take snapshot" runs as a background job                                                             |
-| Unit · Diagnostics   | Unit alarms (events 2, 9/10, 11, 42/43, 76, 90/91, 94/95), vehicle faults (`419`, event 70, 89) and connection health (gaps, resends, Karma `46` attempts)                                                        |
-| Routing              | Guided move between Karma and holita with its outcome; shows primary and backup servers                                                                                                                           |
-| Karma coverage       | What each Karma function maps to in holita, until the Karma modules are archived                                                                                                                                  |
+| Page                 | Content                                                                                                                                                                                                                              |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Units overview       | Every unit with truck, model, server (holita/Karma), mode, connected or last frame, always-on, firmware, eData module, latest position, speed, ignition, voltages, signal and satellites                                             |
+| Unit · Live          | Latest event on the map, current status from the last `48` read                                                                                                                                                                      |
+| Unit · History       | Decoded events with filters; event fields such as the location report's ignition and reason and the diagnostic report's level and code; eData payloads (`405` measurements, `411` diagnostics, `419` faults, `154` refusals) decoded |
+| Unit · Frames        | Raw frames with `$SLC` inner frames and `$SLB` fields, for diagnosis                                                                                                                                                                 |
+| Unit · Commands      | Actions: read parameters, read status (`07`, `12`, `16`, `56`, `61`), request location (`05`), eData fixed reads, change a parameter with snapshot, read-back and restore; history with result codes in Bulgarian                    |
+| Unit · Configuration | Snapshots with parameter titles from the protocol archive, secrets masked, and diffs between dates or units; "take snapshot" runs as a background job                                                                                |
+| Unit · Diagnostics   | Unit alarms (events 2, 9/10, 11, 42/43, 76, 90/91, 94/95), vehicle faults (`419`, event 70, 89) and connection health (gaps, resends, Karma `46` attempts)                                                                           |
+| Routing              | Guided move between Karma and holita with its outcome; shows primary and backup servers                                                                                                                                              |
+| Karma coverage       | What each Karma function maps to in holita, until the Karma modules are archived                                                                                                                                                     |
 
 ## Order
 
