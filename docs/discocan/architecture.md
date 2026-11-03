@@ -119,8 +119,18 @@ Karma remains connected in both modes; primary mode filters duplicate confirmati
 Karma authentication and commands. Whole-frame writes prevent holita and Karma traffic from
 interleaving. Raw daily UTC JSON Lines captures include holita frames and use private
 directory/file permissions. Device `06`/`86` events are decoded using `ERM_EVENT_STRUCTURE` in both
-modes. The existing relay remains available. There is no ERM GraphQL endpoint or Fleet processing
-pipeline.
+modes. The existing relay remains available; captured events do not populate Fleet telemetry.
+
+The same HTTP listener exposes a schema-first read-only subgraph. Router forwards signed sessions
+to `ermUnits`, `ermEvents`, `ermFrames` and `ermCommands`; ERM Server verifies them independently.
+These are shared provider-level reads across authenticated Tenants, without Branch filtering.
+Cursor pages are bounded and ordered newest first. Units combine persisted connection history and
+the latest decoded event with live session state in this process. Raw frames expose escaped latin1
+display text while preserving their original bytes in persistence.
+
+The admin's **ERM Server** workspace owns its Apollo client per session and language, independently
+of Branch discovery. Its unit list links positions to a map and opens Events, Raw frames and
+Commands tabs. The admin has no ERM command submission controls.
 See the [application decision](../architecture/decisions/0006-erm-device-server.md) and
 [service setup](development.md#erm-device-server).
 

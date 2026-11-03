@@ -77,6 +77,7 @@ model ErmCommand {
   answeredAt DateTime? @db.Timestamptz(3)
   resultCode String?
   response Bytes?
+  @@index([unitId, sentAt(sort: Desc)])
   @@map("ermCommand")
 }
 
@@ -97,5 +98,6 @@ model ErmEvent {
   mainVoltage Float?
   backupVoltage Float?
   fields Json
+  @@index([unitId, eventTime(sort: Desc)])
   @@map("ermEvent")
 }

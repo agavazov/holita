@@ -7,16 +7,22 @@
   "targets": {
     "test": {
       "executor": "nx:run-commands",
-      "dependsOn": ["db-generate"],
+      "dependsOn": ["db-generate", "graphql-generate"],
       "options": {
         "command": "npm run test --",
         "cwd": "apps/erm-server",
         "forwardAllArgs": true
       }
     },
-    "lint": { "dependsOn": ["db-generate"] },
-    "typecheck": { "dependsOn": ["db-generate"] },
-    "build": { "dependsOn": ["db-generate"] },
+    "lint": {
+      "dependsOn": ["db-generate", "graphql-generate"]
+    },
+    "typecheck": {
+      "dependsOn": ["db-generate", "graphql-generate"]
+    },
+    "build": {
+      "dependsOn": ["db-generate", "graphql-generate"]
+    },
     "db-generate": {
       "executor": "nx:run-commands",
       "inputs": [
@@ -33,7 +39,7 @@
     },
     "test-db": {
       "executor": "nx:run-commands",
-      "dependsOn": ["db-generate"],
+      "dependsOn": ["db-generate", "graphql-generate"],
       "cache": true,
       "inputs": ["default"],
       "options": {
@@ -41,9 +47,19 @@
         "cwd": "apps/erm-server",
         "forwardAllArgs": true
       }
+    },
+    "graphql-generate": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["graphqlGeneration"],
+      "outputs": ["{projectRoot}/src/generated/graphql"],
+      "options": {
+        "command": "npm run graphql:generate",
+        "cwd": "apps/erm-server"
+      }
     }
   },
   "namedInputs": {
-    "default": ["{projectRoot}/**/*", "sharedGlobals", "databaseTooling"]
+    "default": ["{projectRoot}/**/*", "sharedGlobals", "databaseTooling", "graphqlContracts"]
   }
 }

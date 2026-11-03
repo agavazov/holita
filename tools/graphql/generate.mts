@@ -10,7 +10,7 @@ import { composeContracts, readContracts, readOperations, workspaceRoot } from '
 const target = process.argv[2];
 if (
   !target ||
-  !['check', 'core', 'fleet', 'karma-client', 'gateway', 'admin'].includes(target) ||
+  !['check', 'core', 'fleet', 'karma-client', 'erm-server', 'gateway', 'admin'].includes(target) ||
   process.argv.length !== 3
 ) {
   throw new Error('Use npm run codegen, schema:compose or schema:check');
@@ -58,6 +58,7 @@ async function generateTypes(
         ID: 'string',
         DateTime: client ? 'string' : { input: 'string', output: 'Date' },
         Date: 'string',
+        ErmJSON: 'unknown',
       },
     },
   });
@@ -77,7 +78,12 @@ if (target === 'gateway') {
     true,
     documents.filter((document) => document.location.startsWith(`apps/${target}/`)),
   );
-} else if (target === 'core' || target === 'fleet' || target === 'karma-client') {
+} else if (
+  target === 'core' ||
+  target === 'fleet' ||
+  target === 'karma-client' ||
+  target === 'erm-server'
+) {
   const schema = composition.schemas.get(target);
   if (!schema) {
     throw new Error(`Missing ${target} schema`);

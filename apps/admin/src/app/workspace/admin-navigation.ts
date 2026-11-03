@@ -1,7 +1,7 @@
 import { messages, type Language } from '../i18n/messages';
 import type { NavGroup } from '../layout/navigation';
 
-/** The sidebar navigation: Fleet (with a selected Branch and Fleet enabled) and Karma Client. */
+/** The sidebar navigation: Fleet (with a selected Branch and Fleet enabled), Karma Client and ERM Server. */
 export function adminNavigation(
   language: Language,
   branchId: string | null,
@@ -56,6 +56,18 @@ export function adminNavigation(
         link: [...karma, 'administration'],
       },
       { id: 'karma-settings', label: text.settings, icon: 'clock', link: [...karma, 'settings'] },
+    ],
+  });
+  groups.push({
+    id: 'erm-server',
+    label: text.ermServer,
+    items: [
+      {
+        id: 'erm-units',
+        label: text.ermUnits,
+        icon: 'mobile',
+        link: ['/', language, 'erm-server'],
+      },
     ],
   });
   if (fleetEnabled && branchId) {

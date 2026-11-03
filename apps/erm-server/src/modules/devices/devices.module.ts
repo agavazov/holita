@@ -10,5 +10,6 @@ import { InternalDevicesGuard } from './internal-devices.guard.js';
   imports: [DatabaseModule],
   controllers: [InternalDevicesController],
   providers: [DevicesRepository, DeviceCaptureService, DevicesService, InternalDevicesGuard],
+  exports: [DevicesService],
 })
 export class DevicesModule {}

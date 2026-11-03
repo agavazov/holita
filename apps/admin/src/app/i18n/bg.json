@@ -221,5 +221,7 @@
     "emptyMessage": "Няма намерени резултати",
     "emptySearchMessage": "Няма намерени резултати",
     "searchMessage": "{0} налични резултата"
-  }
+  },
+  "ermServer": "ERM сървър",
+  "ermUnits": "Устройства"
 }

@@ -16,6 +16,9 @@ Add one independent NestJS host application, `apps/erm-server` (`@holita/erm-ser
 `holita_erm` database, login role, Prisma client and migrations. Run compiled output as a separate
 service outside `npm run dev` and `npm run kill`. HTTP exposes health and an internal API on
 loopback protected by a bearer token; the device listener uses a separate TCP port.
+The same HTTP listener exposes a schema-first read-only subgraph through Router. It verifies
+the shared signed session and exposes provider-level data without Branch filtering. The admin
+shows units and their events, raw frames and command history; it has no command-sending UI.
 
 Units stay in byte-for-byte mirror mode unless selected by `ERM_PRIMARY_UNITS`. In primary mode,
 holita acknowledges configured device messages and sends allowlisted commands through the internal
@@ -35,5 +38,4 @@ tool remains available.
 
 ## Planned follow-ups
 
-Run devices without a Karma connection, and expose GraphQL and admin views for the captured
-device data.
+Run devices without a Karma connection.
