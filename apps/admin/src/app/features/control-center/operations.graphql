@@ -1,0 +1,140 @@
+fragment AdminControlCenterEventFields on ErmEvent {
+  id
+  eventId
+  eventTime
+  positionTime
+  latitude
+  longitude
+  speedKmh
+  heading
+  odometer
+  engineOn
+  mainVoltage
+  backupVoltage
+  fields
+  category
+  severity
+  name(language: $language)
+}
+fragment AdminControlCenterStateFields on ErmUnitState {
+  unitId
+  online
+  mode
+  connectedSince
+  lastFrameAt
+  alarmsLast24h
+  lastPosition {
+    ...AdminControlCenterEventFields
+  }
+  latestEvent {
+    ...AdminControlCenterEventFields
+  }
+  latestAlarm {
+    ...AdminControlCenterEventFields
+  }
+}
+query AdminControlCenterDevices($language: ErmLanguage!) {
+  fleetDevices(limit: 100) {
+    total
+    items {
+      id
+      imei
+      model
+      serialNumber
+      simPhoneNumber
+      vehicle {
+        id
+        licensePlate
+      }
+      ermState {
+        ...AdminControlCenterStateFields
+      }
+    }
+  }
+}
+query AdminControlCenterDevice($id: ID!, $language: ErmLanguage!) {
+  fleetDevice(id: $id) {
+    id
+    imei
+    model
+    serialNumber
+    firmwareVersion
+    edataModule
+    simPhoneNumber
+    simIccid
+    installedAt
+    notes
+    vehicle {
+      id
+      licensePlate
+    }
+    ermState {
+      ...AdminControlCenterStateFields
+    }
+  }
+}
+query AdminControlCenterEvents($id: ID!, $language: ErmLanguage!, $input: ErmDeviceEventsInput) {
+  fleetDevice(id: $id) {
+    id
+    ermEvents(input: $input) {
+      cursor
+      nextCursor
+      hasMore
+      items {
+        ...AdminControlCenterEventFields
+      }
+    }
+  }
+}
+query AdminControlCenterCommands($id: ID!, $input: ErmDevicePageInput) {
+  fleetDevice(id: $id) {
+    id
+    ermCommands(input: $input) {
+      cursor
+      nextCursor
+      hasMore
+      items {
+        id
+        reference
+        command
+        fields
+        status
+        sentAt
+        answeredAt
+        resultCode
+        responseText
+      }
+    }
+  }
+}
+query AdminControlCenterFrames($id: ID!, $input: ErmDevicePageInput) {
+  fleetDevice(id: $id) {
+    id
+    ermFrames(input: $input) {
+      cursor
+      nextCursor
+      hasMore
+      items {
+        id
+        direction
+        receivedAt
+        command
+        reference
+        checksum
+        partial
+        displayText
+      }
+    }
+  }
+}
+mutation AdminControlCenterSendCommand($input: SendErmDeviceCommandInput!) {
+  sendErmDeviceCommand(input: $input) {
+    id
+    reference
+    command
+    status
+    sentAt
+    resultCode
+    responseText
+  }
+}

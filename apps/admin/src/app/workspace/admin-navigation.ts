@@ -1,7 +1,10 @@
 import { messages, type Language } from '../i18n/messages';
 import type { NavGroup } from '../layout/navigation';
 
-/** The sidebar navigation: Fleet (with a selected Branch and Fleet enabled), Karma Client and ERM Server. */
+/**
+ * The sidebar navigation: Control center and Fleet (with a selected Branch and Fleet enabled),
+ * Karma Client and ERM Server.
+ */
 export function adminNavigation(
   language: Language,
   branchId: string | null,
@@ -11,6 +14,19 @@ export function adminNavigation(
   const groups: NavGroup[] = [];
   if (fleetEnabled && branchId) {
     const fleet = ['/', language, branchId, 'fleet'];
+    groups.push({
+      id: 'control-center',
+      label: text.controlCenter,
+      items: [
+        {
+          id: 'control-center-dashboard',
+          label: text.dashboard,
+          icon: 'th-large',
+          link: ['/', language, branchId, 'control-center'],
+        },
+        { id: 'devices', label: text.devices, icon: 'mobile', link: [...fleet, 'devices'] },
+      ],
+    });
     groups.push({
       id: 'monitoring',
       label: text.monitoring,
@@ -26,7 +42,6 @@ export function adminNavigation(
       items: [
         { id: 'vehicles', label: text.vehicles, icon: 'truck', link: [...fleet, 'vehicles'] },
         { id: 'drivers', label: text.drivers, icon: 'id-card', link: [...fleet, 'drivers'] },
-        { id: 'devices', label: text.devices, icon: 'mobile', link: [...fleet, 'devices'] },
         {
           id: 'maintenance',
           label: text.maintenance,
@@ -40,7 +55,7 @@ export function adminNavigation(
   groups.push({
     id: 'karma-client',
     label: text.karmaClient,
-    note: text.temporary,
+    note: text.deprecatedViewOnly,
     items: [
       {
         id: 'karma-monitoring',

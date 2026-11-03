@@ -71,6 +71,7 @@ export const operationPaths = [
   'apps/admin/src/app/features/fleet/devices/operations.graphql',
   'apps/admin/src/app/features/fleet/settings/operations.graphql',
   'apps/admin/src/app/features/fleet/device-operations/operations.graphql',
+  'apps/admin/src/app/features/control-center/operations.graphql',
   'apps/fleet/src/integrations/core/operations.graphql',
 ];
 

@@ -1,0 +1,178 @@
+<section class="app-view" [attr.aria-busy]="loading()">
+  <holita-page-header
+    [title]="text().dashboard"
+    [eyebrow]="text().title"
+    [description]="text().description"
+  >
+    <button
+      headerActions
+      pButton
+      type="button"
+      severity="secondary"
+      [disabled]="loading()"
+      (click)="refresh()"
+    >
+      {{ text().refresh }}
+    </button>
+  </holita-page-header>
+
+  <holita-kpi-strip
+    [label]="text().kpis"
+    [loading]="loading() && !counts()"
+    [error]="counts() ? null : error() ? failure() : null"
+    (retry)="refresh()"
+  >
+    <holita-kpi-tile [label]="text().units" [value]="count(counts()?.units)" />
+    <holita-kpi-tile
+      [label]="text().onlineOnHolita"
+      [value]="count(counts()?.online)"
+      [tone]="counts()?.online ? 'success' : null"
+    />
+    <holita-kpi-tile
+      [label]="text().offline"
+      [value]="count(counts()?.offline)"
+      [tone]="counts()?.offline ? 'warn' : null"
+    />
+    <holita-kpi-tile [label]="text().onKarma" [value]="count(counts()?.karma)" tone="neutral" />
+    <holita-kpi-tile
+      [label]="text().withAlarms"
+      [value]="count(counts()?.alarms)"
+      [tone]="counts()?.alarms ? 'danger' : null"
+    />
+  </holita-kpi-strip>
+
+  @if (devices(); as all) {
+    @if (all.length === 0) {
+      <holita-empty-state [title]="text().devicesEmpty" />
+    } @else {
+      <div class="app-card-grid">
+        <section class="app-card control-center__panel" [attr.aria-label]="text().attention">
+          <h2>{{ text().attention }}</h2>
+          @if (attention().length === 0) {
+            <holita-empty-state [title]="text().attentionEmpty" [compact]="true" />
+          } @else {
+            <ul class="control-center__list">
+              @for (item of attention(); track item.device.id) {
+                <li>
+                  <a class="app-link" [routerLink]="deviceLink(item.device)">{{
+                    label(item.device)
+                  }}</a>
+                  @if (item.device.ermState?.online === false) {
+                    <p-tag [value]="text().offlineState" [severity]="toneSeverity('warn')" />
+                  }
+                  @if (item.device.ermState?.latestAlarm; as alarm) {
+                    <p-tag
+                      [value]="alarm.name ?? text().unknownEvent"
+                      [severity]="severityTone(alarm.severity)"
+                    />
+                  }
+                  <span class="app-muted">{{ date(item.time) }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+
+        <section class="app-card control-center__panel" [attr.aria-label]="text().latestAlarms">
+          <h2>{{ text().latestAlarms }}</h2>
+          @if (alarms().length === 0) {
+            <holita-empty-state [title]="text().alarmsEmpty" [compact]="true" />
+          } @else {
+            <ul class="control-center__list">
+              @for (item of alarms(); track item.device.id) {
+                <li>
+                  <a class="app-link" [routerLink]="deviceLink(item.device)">{{
+                    label(item.device)
+                  }}</a>
+                  <p-tag
+                    [value]="item.alarm.name ?? text().unknownEvent"
+                    [severity]="severityTone(item.alarm.severity)"
+                  />
+                  <span class="app-muted">{{ date(item.alarm.eventTime) }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+      </div>
+
+      <section class="app-card control-center__panel" [attr.aria-label]="text().positions">
+        <h2>{{ text().positions }}</h2>
+        @if (positioned().length === 0) {
+          <holita-empty-state [title]="text().positionsEmpty" [compact]="true" />
+        } @else {
+          <div class="control-center__positions" role="group" [attr.aria-label]="text().show">
+            @for (item of positioned(); track item.device.id) {
+              <button
+                pButton
+                type="button"
+                severity="secondary"
+                [outlined]="selected()?.device?.id !== item.device.id"
+                [attr.aria-pressed]="selected()?.device?.id === item.device.id"
+                (click)="selectedId.set(item.device.id)"
+              >
+                {{ label(item.device) }}
+              </button>
+            }
+          </div>
+          @if (selected(); as item) {
+            <holita-map-preview
+              [language]="language()"
+              [identity]="label(item.device)"
+              [origin]="item.coordinates"
+              [originTime]="date(item.position.positionTime ?? item.position.eventTime)"
+            />
+          }
+        }
+      </section>
+    }
+  }
+
+  <holita-table-panel
+    [heading]="text().units"
+    [view]="view()"
+    [busy]="loading()"
+    [errorText]="failure()"
+    [emptyTitle]="text().devicesEmpty"
+    (retry)="refresh()"
+  >
+    <p-table class="app-responsive-table" [value]="devices() ?? []" dataKey="id">
+      <ng-template #header>
+        <tr>
+          <th scope="col" class="app-col-identity">{{ text().truck }}</th>
+          <th scope="col">{{ text().state }}</th>
+          <th scope="col">{{ text().imei }}</th>
+          <th scope="col">{{ text().simPhone }}</th>
+          <th scope="col">{{ text().lastFrame }}</th>
+          <th scope="col">{{ text().alarms24h }}</th>
+        </tr>
+      </ng-template>
+      <ng-template #body let-device>
+        <tr>
+          <td class="app-col-identity">
+            <div class="app-cell-stack app-table-identity">
+              <a class="app-link" [routerLink]="deviceLink(device)">{{
+                device.vehicle?.licensePlate ?? text().noTruck
+              }}</a>
+              <span>{{ device.model ?? '—' }}</span>
+            </div>
+          </td>
+          <td>
+            @if (device.ermState; as state) {
+              <p-tag
+                [value]="state.online ? text().online : text().offlineState"
+                [severity]="toneSeverity(state.online ? 'success' : 'warn')"
+              />
+            } @else {
+              <p-tag [value]="text().onKarmaDeprecated" [severity]="toneSeverity('neutral')" />
+            }
+          </td>
+          <td class="control-center__mono">{{ device.imei }}</td>
+          <td>{{ device.simPhoneNumber ?? '—' }}</td>
+          <td>{{ date(device.ermState?.lastFrameAt) }}</td>
+          <td>{{ device.ermState ? number(device.ermState.alarmsLast24h) : '—' }}</td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </holita-table-panel>
+</section>
