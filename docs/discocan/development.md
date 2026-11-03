@@ -1314,7 +1314,10 @@ WantedBy=default.target
 Set the chosen free `PORT` and `ERM_DEVICE_PORT` in that application's `.env` before enabling the
 new unit with `systemctl --user daemon-reload` and
 `systemctl --user enable --now holita-erm-server.service`. Restarting ERM Server closes its TCP
-sessions and devices reconnect.
+sessions. Devices return at their next scheduled transmission, even when always connected: on the
+fleet's settings about 5 minutes with ignition on and up to an hour when parked, or at once after
+a call to the unit's SIM. The unit runs `dist`, so a rebuild in that checkout takes effect at the
+next restart.
 
 ### Moving a unit between Karma and holita
 
