@@ -7,7 +7,7 @@ import { parseArgs } from 'node:util';
 // The unit reaches this tool through a configuration-server session (command 98, queued through
 // Karma) or, when its primary server is already holita, through its next ordinary connection.
 // The tool reads 0049-0052 (45), writes 0049/0050 (46), reads them back and writes the previous
-// values again when the result differs. It sends no other command and confirms no event.
+// values again when the result differs. It confirms the 45 replies and sends no other command.
 const { values: options } = parseArgs({
   options: {
     unit: { type: 'string' },
@@ -83,7 +83,9 @@ function serverFrame(command: string, reference: string, fields: string[]): Buff
     Buffer.from(`*${checksum(body)}\r\n`),
   ]);
 }
-function deviceFrame(raw: Buffer): { command: string; fields: string[] } | undefined {
+function deviceFrame(
+  raw: Buffer,
+): { command: string; reference: string; fields: string[] } | undefined {
   const decoded: number[] = [];
   let end = -1;
   for (let index = 1; index < raw.length; index++) {
@@ -120,9 +122,13 @@ function deviceFrame(raw: Buffer): { command: string; fields: string[] } | undef
       start = index + 1;
     }
   }
-  const [, command, , ...rest] = fields;
-  return command
-    ? { command, fields: rest.map((field) => field.replace(/^"(.*)"$/, '$1')) }
+  const [, command, frameReference, ...rest] = fields;
+  return command && frameReference
+    ? {
+        command,
+        reference: frameReference,
+        fields: rest.map((field) => field.replace(/^"(.*)"$/, '$1')),
+      }
     : undefined;
 }
 
@@ -139,11 +145,13 @@ function finish(outcome: Outcome, socket?: Socket): void {
   finished = true;
   record({ event: 'finish', outcome });
   listener.close();
-  socket?.end();
+  // A unit resends a reply sent just before the session closed to its primary server; Karma read
+  // CB5636XP's new 0049/0050 from such a resent 45 reply and wrote its own values back.
+  setTimeout(() => socket?.end(), 2000);
   setTimeout(() => {
     socket?.destroy();
     process.exit(exitCodes[outcome]);
-  }, 2000);
+  }, 3000);
 }
 
 const listener = net.createServer((socket) => {
@@ -222,6 +230,15 @@ const listener = net.createServer((socket) => {
         continue;
       }
       active = socket;
+      if (frame.command === '45') {
+        const confirmation = serverFrame('02', String(++reference), [frame.reference, '01']);
+        record({
+          connection,
+          from: 'holita',
+          frame: confirmation.subarray(0, -2).toString('latin1'),
+        });
+        socket.write(confirmation);
+      }
       const values = new Map<string, string>();
       for (let index = 0; frame.command === '45' && index + 1 < frame.fields.length; index += 2) {
         values.set(String(Number(frame.fields[index])), frame.fields[index + 1] ?? '');
