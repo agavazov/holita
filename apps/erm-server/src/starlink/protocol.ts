@@ -65,6 +65,23 @@ function checksumSeparator(raw: Buffer, start: number): number {
   return -1;
 }
 
+// Multiple-parameter responses quote values, including comma-separated settings such as 0177.
+function dataFields(data: Buffer): Buffer[] {
+  const fields: Buffer[] = [];
+  let start = 0;
+  let quoted = false;
+  for (let index = 0; index < data.length; index++) {
+    if (data[index] === 0x22) {
+      quoted = !quoted;
+    } else if (data[index] === 0x2c && !quoted) {
+      fields.push(data.subarray(start, index));
+      start = index + 1;
+    }
+  }
+  fields.push(data.subarray(start));
+  return fields;
+}
+
 export function parseFrame(raw: Buffer): ParsedFrame | undefined {
   const match = envelope.exec(raw.toString('latin1'));
   if (match === null) {
@@ -90,14 +107,7 @@ export function parseFrame(raw: Buffer): ParsedFrame | undefined {
       : 'mismatch'
     : 'absent';
   const prefixLength = prefix.length - header.length;
-  const fields =
-    body.length > prefixLength
-      ? body
-          .subarray(prefixLength + 1)
-          .toString('latin1')
-          .split(',')
-          .map((field) => Buffer.from(field, 'latin1'))
-      : [];
+  const fields = body.length > prefixLength ? dataFields(body.subarray(prefixLength + 1)) : [];
   return { header, origin, unitId, command, reference, fields, checksum: state };
 }
 

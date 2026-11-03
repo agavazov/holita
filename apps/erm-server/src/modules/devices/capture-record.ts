@@ -10,7 +10,7 @@ export type CaptureRecord = ConnectionRecord &
     | { event: 'upstream-error'; message: string }
     | { event: 'close'; seconds: number; deviceBytes: number; serverBytes: number }
     | {
-        from: 'device' | 'server';
+        from: 'device' | 'server' | 'holita';
         unit?: string;
         command?: string;
         reference?: string;
@@ -19,3 +19,19 @@ export type CaptureRecord = ConnectionRecord &
         frame: string;
       }
   );
+
+export interface SentCommand {
+  id: string;
+  unitId: string;
+  reference: string;
+  command: string;
+  fields: string[];
+  sentAt: Date;
+}
+
+export interface CommandOutcome {
+  status: 'answered' | 'timeout' | 'failed';
+  answeredAt?: Date;
+  resultCode?: string;
+  response?: Buffer;
+}

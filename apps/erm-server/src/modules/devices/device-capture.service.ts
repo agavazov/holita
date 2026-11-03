@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { chmod, mkdir, open } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import type { CaptureRecord } from './capture-record.js';
+import type { CaptureRecord, CommandOutcome, SentCommand } from './capture-record.js';
 import { deviceConfig } from './config.js';
 import { DevicesRepository } from './devices.repository.js';
 
@@ -67,7 +67,9 @@ export class DeviceCaptureService {
       if (firstDeviceUnit) {
         state.unitSeen = true;
       }
-      this.enqueue(state, () => this.repository.frame(state.id, at, entry, firstDeviceUnit));
+      this.enqueue(state, () =>
+        this.repository.frame(state.id, at, entry, firstDeviceUnit, this.config.eventStructure),
+      );
     } else if (entry.event === 'forwarded') {
       this.enqueue(state, () => this.repository.forwarded(state.id, at));
     } else if (entry.event === 'close') {
@@ -81,6 +83,20 @@ export class DeviceCaptureService {
         ),
       );
       this.connections.delete(entry.connection);
+    }
+  }
+
+  commandSent(connection: number, command: SentCommand): void {
+    const state = this.connections.get(connection);
+    if (state) {
+      this.enqueue(state, () => this.repository.commandSent(state.id, command));
+    }
+  }
+
+  commandFinished(connection: number, id: string, outcome: CommandOutcome): void {
+    const state = this.connections.get(connection);
+    if (state) {
+      this.enqueue(state, () => this.repository.commandFinished(id, outcome));
     }
   }
 

@@ -20,11 +20,13 @@ migrations. Branch and every Fleet business table declare tenantId physically se
 Fleet branchId is physically third.
 Tenant data is inserted by the seed, not by schema migrations.
 
-ERM Server owns raw `ermConnection` and `ermFrame` records in `holita_erm`, separately from
-Fleet business data. These provider-level records have no Tenant/Branch columns. Frames keep
-their exact bytes without CR LF, direction, receive time, parsed unit/command/reference,
-checksum state and partial flag. The connection records retain lifecycle metadata and byte counts.
-Database writes are asynchronous and failures do not stop TCP forwarding.
+ERM Server owns `ermConnection`, `ermFrame`, `ermCommand` and `ermEvent` records in `holita_erm`,
+separately from Fleet business data. These provider-level records have no Tenant/Branch columns.
+Frames retain exact bytes without CR LF, direction (`device`, `upstream`, `holita`), receive time,
+parsed envelope, checksum state and partial flag. Connections retain lifecycle metadata and byte
+counts; commands retain their request, outcome and exact response. Events decoded from device
+`06`/`86` frames retain named raw tokens and trailing fields alongside parsed telemetry. Database
+writes are asynchronous and failures do not stop forwarding or acknowledgements.
 
 The [Simple eData catalog](erm-resources/simple-edata-catalog/README.md) is common
 manufacturer reference data without Tenant/Branch columns. Seven related tables preserve
@@ -109,10 +111,16 @@ own schema. Development connections, broad resets and shared truncation are not 
 
 `apps/erm-server` is an independent NestJS host service with HTTP `/health` on loopback 11015
 and a separate StarLink TCP listener on `0.0.0.0:11500` by default. It is outside `dev` and `kill`,
-so HTTP application restarts leave device sessions open. Mirror mode forwards both directions
-unchanged to Karma ingestion; Karma keeps acknowledging and commanding the devices. Raw daily UTC
-JSON Lines captures use the relay's record format, with private directory/file permissions.
-The existing relay remains available. There is no ERM GraphQL endpoint or Fleet processing pipeline.
+so HTTP application restarts leave device sessions open. Mode is selected from the first complete
+device frame: units in `ERM_PRIMARY_UNITS` use primary mode, while other units keep byte-for-byte
+mirror mode. Primary mode sends holita acknowledgements for `ERM_ACK_COMMANDS` and accepts
+allowlisted commands through a loopback-only internal API protected by `ERM_INTERNAL_TOKEN`.
+Karma remains connected in both modes; primary mode filters duplicate confirmations while keeping
+Karma authentication and commands. Whole-frame writes prevent holita and Karma traffic from
+interleaving. Raw daily UTC JSON Lines captures include holita frames and use private
+directory/file permissions. Device `06`/`86` events are decoded using `ERM_EVENT_STRUCTURE` in both
+modes. The existing relay remains available. There is no ERM GraphQL endpoint or Fleet processing
+pipeline.
 See the [application decision](../architecture/decisions/0006-erm-device-server.md) and
 [service setup](development.md#erm-device-server).
 

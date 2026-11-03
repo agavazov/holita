@@ -14,14 +14,20 @@ traffic, but it has no application-owned persistence for connection and frame in
 
 Add one independent NestJS host application, `apps/erm-server` (`@holita/erm-server`), with its own
 `holita_erm` database, login role, Prisma client and migrations. Run compiled output as a separate
-service outside `npm run dev` and `npm run kill`. Its HTTP endpoint exposes health only; the device
-listener uses a separate TCP port.
+service outside `npm run dev` and `npm run kill`. HTTP exposes health and an internal API on
+loopback protected by a bearer token; the device listener uses a separate TCP port.
 
-Mirror mode forwards device and Karma bytes unchanged with backpressure. Karma remains responsible
-for acknowledgements and commands. The application records connection metadata and exact raw frames
-asynchronously; database errors are logged without interrupting forwarding. Private daily JSON Lines
-captures retain the relay's record format as the raw audit log. Provider-level connection and frame
-records have no Tenant/Branch columns. Fleet business records retain their existing scope.
+Units stay in byte-for-byte mirror mode unless selected by `ERM_PRIMARY_UNITS`. In primary mode,
+holita acknowledges configured device messages and sends allowlisted commands through the internal
+API. Karma remains connected for mirrored ingestion, authentication answers and its own commands;
+duplicate acknowledgements and device confirmations of holita's commands are filtered. Whole-frame device writes
+share one queue.
+
+The application asynchronously records connections, exact frames (including holita's), command
+outcomes and decoded device events. Database or decoding errors do not interrupt forwarding or
+acknowledgements. Private daily JSON Lines captures retain the relay's record format, adding
+`holita` as a frame origin. These provider-level records have no Tenant/Branch columns. Fleet
+business records retain their existing scope.
 
 This is the smallest application boundary that gives device sessions an independent lifecycle and
 raw data its own persistence without adding TCP responsibilities to the HTTP services. The relay
@@ -29,6 +35,5 @@ tool remains available.
 
 ## Planned follow-ups
 
-Let holita acknowledge device messages and send commands while Karma is mirrored, then expose
-GraphQL and admin views for the captured device data. These capabilities are not implemented by
-mirror mode.
+Run devices without a Karma connection, and expose GraphQL and admin views for the captured
+device data.

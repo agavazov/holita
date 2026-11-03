@@ -1,5 +1,6 @@
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { DEFAULT_EVENT_STRUCTURE } from '../../starlink/event.js';
 
 // Both src/modules/devices and dist/modules/devices have the same repository depth.
 const repositoryRoot = fileURLToPath(new URL('../../../../../', import.meta.url));
@@ -30,5 +31,20 @@ export function deviceConfig() {
       repositoryRoot,
       process.env.ERM_CAPTURE_DIR ?? '.references/erm-server',
     ),
+    primaryUnits: new Set(
+      (process.env.ERM_PRIMARY_UNITS ?? '')
+        .split(',')
+        .map((unit) => unit.trim().toUpperCase())
+        .filter(Boolean),
+    ),
+    ackCommands: new Set(
+      (process.env.ERM_ACK_COMMANDS ?? '06')
+        .split(',')
+        .map((command) => command.trim())
+        .filter(Boolean),
+    ),
+    eventStructure: (process.env.ERM_EVENT_STRUCTURE ?? DEFAULT_EVENT_STRUCTURE)
+      .split(',')
+      .map((token) => token.trim()),
   };
 }
