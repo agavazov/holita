@@ -27,6 +27,7 @@ verified Tenant scope.
 - [Fleet list contract and derived values](architecture/decisions/0005-fleet-list-contract-and-derived-values.md).
 - [ERM device server](architecture/decisions/0006-erm-device-server.md).
 - [ERM gateway and API processes](architecture/decisions/0007-erm-gateway-and-api-processes.md).
+- [ERM telemetry into Fleet activity](architecture/decisions/0008-erm-telemetry-into-fleet-activity.md).
 - [Contributor rules](../AGENTS.md).
 - [Backend skill](../.agents/skills/holita-backend-feature/SKILL.md).
 - [Angular admin skill](../.agents/skills/holita-admin-development/SKILL.md).
