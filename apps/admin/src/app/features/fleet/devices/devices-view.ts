@@ -151,14 +151,6 @@ export class DevicesView {
     const text = this.text();
     return [
       {
-        key: 'status',
-        maxValues: 100,
-        label: text.filters.status,
-        type: 'enum',
-        operators: ['isAnyOf', 'isNoneOf'],
-        options: deviceStatuses.map((value) => ({ value, label: text.statuses[value] })),
-      },
-      {
         key: 'model',
         maxValues: 100,
         label: text.filters.model,
@@ -244,7 +236,6 @@ export class DevicesView {
     const text = this.text();
     return [
       { field: 'imei', label: text.drawer.imei },
-      { field: 'status', label: text.table.status },
       { field: 'vehicle', label: text.table.vehicle },
       { field: 'lastSeenAt', label: text.table.lastSeen },
       { field: 'installedAt', label: text.sort.installedAt },

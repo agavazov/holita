@@ -25,7 +25,6 @@
   "table": {
     "heading": "Устройства",
     "device": "Устройство",
-    "status": "Връзка",
     "vehicle": "Автомобил",
     "lastSeen": "Последен отчет",
     "signal": "Сигнал",
@@ -74,7 +73,6 @@
     "open": "Отвори страницата на устройството"
   },
   "filters": {
-    "status": "Връзка",
     "model": "Модел",
     "firmware": "Фърмуер",
     "installed": "Монтирано в автомобил"
@@ -127,9 +125,10 @@
   "live": {
     "online": "Онлайн",
     "offline": "Офлайн",
-    "karma": "В Karma"
+    "karma": "Никога не се е свързвало"
   },
   "liveError": "Връзката с holita в реално време не е достъпна в момента; регистърът на устройствата е актуален.",
+  "liveStale": "Връзката с holita в реално време не можа да се обнови; показано е състоянието от {time}.",
   "models": {
     "STARLINK_TRACKER": "StarLink Tracker",
     "STARLINK_SCOUT": "StarLink Scout",

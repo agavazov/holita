@@ -14,7 +14,7 @@ import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { Message } from 'primeng/message';
 import { ButtonDirective } from 'primeng/button';
-import { EMPTY, catchError, switchMap } from 'rxjs';
+import { EMPTY, catchError, filter, interval, switchMap } from 'rxjs';
 import type {
   AdminBranchesQuery,
   AdminDevicesQuery,
@@ -23,6 +23,8 @@ import type {
 import { requestError } from '../../../core/graphql/request-error';
 import { messages, type Language } from '../../../i18n/messages';
 import type { DrawerHost } from '../../../ui/drawer/drawer-host';
+import { injectFleetFormat } from '../../../ui/format/fleet-format';
+import { formatDateTime } from '../../../ui/format/format';
 import { interpolate, uiMessages } from '../../../ui/i18n/messages';
 import type { ListActionRequest, ListRecord } from '../../../ui/list/list-actions';
 import { listQuery, type ListQuery } from '../../../ui/list/list-query';
@@ -47,7 +49,7 @@ import { devicesText } from './i18n/messages';
   imports: [DevicesView, RouterOutlet, Message, ButtonDirective],
   template: `
     @if (liveError()) {
-      <p-message severity="warn">{{ text().liveError }}</p-message>
+      <p-message severity="warn">{{ liveFailure() }}</p-message>
     }
     @if (summaryError()) {
       <p-message severity="warn"
@@ -108,7 +110,18 @@ export class DevicesPage implements OnInit {
   readonly error = signal<unknown>(null);
   readonly summaryError = signal<unknown>(null);
   private readonly live = signal<Awaited<ReturnType<DevicesApi['live']>> | null>(null);
+  /** When the live state was last read; a failed refresh keeps the previous state. */
+  private readonly liveAt = signal<string | null>(null);
   protected readonly liveError = signal(false);
+  private readonly units = injectFleetFormat();
+  protected readonly liveFailure = computed(() => {
+    const liveAt = this.liveAt();
+    return liveAt
+      ? interpolate(this.text().liveStale, {
+          time: formatDateTime(liveAt, this.language(), this.units.preferences().timeZone, true),
+        })
+      : this.text().liveError;
+  });
   readonly selected = signal<readonly ListRecord<DeviceActionId>[]>([]);
   readonly acting = signal(false);
   private readonly removed = signal<ReadonlySet<string>>(new Set());
@@ -161,6 +174,15 @@ export class DevicesPage implements OnInit {
 
   ngOnInit(): void {
     this.api.initialize(this.branch().id, this.language());
+    // The live state follows the Control center's 30-second refresh while the tab is visible.
+    interval(30_000)
+      .pipe(
+        filter(() => !document.hidden),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => {
+        this.loadLive();
+      });
     this.summaryQuery = this.api.watchSummary();
     this.summaryQuery.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (result) => {
@@ -387,12 +409,12 @@ export class DevicesPage implements OnInit {
       .then((live) => {
         if (!this.destroyRef.destroyed && this.page() === page) {
           this.live.set(live);
+          this.liveAt.set(new Date().toISOString());
           this.liveError.set(false);
         }
       })
       .catch(() => {
         if (!this.destroyRef.destroyed && this.page() === page) {
-          this.live.set(null);
           this.liveError.set(true);
         }
       });

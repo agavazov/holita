@@ -25,7 +25,6 @@
   "table": {
     "heading": "Devices",
     "device": "Device",
-    "status": "Connection",
     "vehicle": "Vehicle",
     "lastSeen": "Last seen",
     "signal": "Signal",
@@ -74,7 +73,6 @@
     "open": "Open device page"
   },
   "filters": {
-    "status": "Connection",
     "model": "Model",
     "firmware": "Firmware",
     "installed": "Installed in a vehicle"
@@ -127,9 +125,10 @@
   "live": {
     "online": "Online",
     "offline": "Offline",
-    "karma": "On Karma"
+    "karma": "Never connected"
   },
   "liveError": "The live holita connection is unavailable right now; the device registry is up to date.",
+  "liveStale": "The live holita connection could not be refreshed; it shows the state from {time}.",
   "models": {
     "STARLINK_TRACKER": "StarLink Tracker",
     "STARLINK_SCOUT": "StarLink Scout",

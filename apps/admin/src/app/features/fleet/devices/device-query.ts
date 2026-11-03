@@ -10,7 +10,6 @@ import {
 } from '../../../ui/filter-builder/filter-model';
 import type { ListQuery } from '../../../ui/list/list-query';
 import type { FilterCodec, ListDefinition, ListState } from '../../../ui/list/list-state';
-import { deviceStatuses } from './devices-view';
 
 export const deviceModels = ['STARLINK_TRACKER', 'STARLINK_SCOUT', 'OTHER'] as const;
 export const deviceOptions = [
@@ -30,7 +29,6 @@ export const deviceOptions = [
 ] as const;
 const sorts = {
   imei: 'IMEI',
-  status: 'STATUS',
   vehicle: 'VEHICLE_LICENSE_PLATE',
   lastSeenAt: 'LAST_REPORTED_AT',
   installedAt: 'INSTALLED_AT',
@@ -41,8 +39,8 @@ interface DeviceFilters {
   readonly conditions: readonly FilterCondition[];
 }
 export type DeviceQueryState = ListState<DeviceFilters, DeviceSort>;
+/** Fleet's sample-derived status is not offered next to the live holita connection. */
 const operators: Readonly<Record<string, readonly FilterOperator[]>> = {
-  status: ['isAnyOf', 'isNoneOf'],
   model: ['isAnyOf', 'isNoneOf'],
   firmware: ['equals', 'notEquals', 'startsWith'],
   installed: ['isTrue', 'isFalse'],
@@ -93,7 +91,7 @@ function conditionOf(value: unknown): FilterCondition | null {
   ) {
     return null;
   }
-  const allowed = field === 'status' ? deviceStatuses : field === 'model' ? deviceModels : null;
+  const allowed = field === 'model' ? deviceModels : null;
   if (allowed && values.some((entry) => !allowed.some((code) => code === entry))) {
     return null;
   }
@@ -132,7 +130,6 @@ export const deviceDefinition: ListDefinition<DeviceFilters, DeviceSort> = {
   defaultPageSize: 20,
   sorts: [
     { param: 'imei', field: 'imei' },
-    { param: 'status', field: 'status' },
     { param: 'vehicle', field: 'vehicle' },
     { param: 'lastSeenAt', field: 'lastSeenAt' },
     { param: 'installedAt', field: 'installedAt' },
@@ -165,10 +162,6 @@ export function deviceQueryState(query: ListQuery): DeviceQueryState {
 }
 function predicate({ field, operator, values }: FilterCondition): FleetDeviceCondition {
   switch (field) {
-    case 'status': {
-      const codes = deviceStatuses.filter((code) => values.includes(code));
-      return operator === 'isNoneOf' ? { excludedStatuses: codes } : { statuses: codes };
-    }
     case 'model': {
       const codes = deviceModels.filter((code) => values.includes(code));
       return operator === 'isNoneOf' ? { excludedModels: codes } : { models: codes };
