@@ -32,13 +32,6 @@ dependencies belong to the [backend backlog](admin-design-system-backend.md#prov
   after rotation; keep the separate production license task until public-release configuration
   is ready.
 
-## Frontend refinements
-
-- Settle the proposed mobile "Filters (n)" toggle: implement it in the shared filter pattern
-  or remove the proposal from the design; do not introduce a separate per-screen filter system.
-- Extend `theme/contrast.ts` coverage to the neutral/accent solid states, dark accent tags,
-  solid-button hover/active states and the notification unread badge where it is rendered.
-
 ## Deferred extensions
 
 These require later product scope:
