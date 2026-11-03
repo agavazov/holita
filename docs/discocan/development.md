@@ -1104,9 +1104,8 @@ not populate Fleet telemetry.
 The listener accepts at most 64 connections. A device must send `$` as its first byte within
 60 seconds before Karma is contacted, and the upstream must connect within 10 seconds. Closing
 either side closes the other. The public path must forward raw TCP with no HTTP/TLS termination.
-The relay and ERM Server share the default device port: choose unused HTTP/TCP ports before running
-them together. On the current relay host, keep the existing relay and capture services unchanged.
-Verify that configured alternatives are free before starting, for example:
+The relay and ERM Server share the default device port; run them together only on different free
+ports, for example:
 
 ```bash
 PORT=11017 ERM_DEVICE_PORT=11501 npm run start:prod --workspace @holita/erm-server
@@ -1139,6 +1138,5 @@ WantedBy=default.target
 
 Set the chosen free `PORT` and `ERM_DEVICE_PORT` in that application's `.env` before enabling the
 new unit with `systemctl --user daemon-reload` and
-`systemctl --user enable --now holita-erm-server.service`. Manage only the new service; the
-existing `holita-erm-relay` and `holita-erm-pcap` units remain independent. Restarting ERM Server
-itself closes its TCP sessions and devices reconnect.
+`systemctl --user enable --now holita-erm-server.service`. Restarting ERM Server closes its TCP
+sessions and devices reconnect.
