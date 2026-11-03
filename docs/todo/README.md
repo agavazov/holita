@@ -48,6 +48,8 @@ The [fleet control plan](erm-fleet-control-plan.md) orders the tests that move e
 holita and prove its data, errors and commands, with safety rules, test levels and questions for ERM.
 The [routing backlog](erm-tcp-receiver-and-test-device-routing.md) holds the receiver's engineering
 tasks and the fleet's unit list.
+The [control center interfaces](erm-control-center-interfaces.md) plan the operator pages on top of
+holita's own server.
 
 ## Karma web functionality research
 

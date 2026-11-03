@@ -36,32 +36,33 @@ Between containers, a unit in a configuration session may send `E0 00` byte pair
 
 ## `$SLB`: single binary reports
 
-Used for the hourly single reports. After G9 replacement: `04`, the BCD IMEI, `0f 01`, the
-command (`06`), then tag/value pairs with big-endian values. Tags are neither dynamic-parameter
-numbers nor `onyx.proto` field numbers.
+Used for single reports. After G9 replacement: `04`, the BCD IMEI, two bytes as in `$SLC`, the
+command (`06`, or `86` for reports without confirmation, such as eData events), then tag/value
+pairs with big-endian values. Tags are neither dynamic-parameter numbers nor `onyx.proto` field
+numbers. erm-server decodes these reports; the mapping was checked on 42 reports from a parked
+and a driving truck.
 
-| Tag  | Value                                                 | Text token                |
-| ---- | ----------------------------------------------------- | ------------------------- |
-| `03` | u32 unit reference                                    | reference                 |
-| `0c` | u32 event time, seconds since 2000-01-01 UTC          | `#EDT#`                   |
-| `08` | u8 event ID                                           | `#EID#`                   |
-| `0e` | u32 location time, seconds since 2000-01-01 UTC       | `#PDT#`                   |
-| `19` | i32 latitude, i32 longitude, ×10⁻⁶ degrees            | `#LAT#`, `#LONG#`         |
-| `06` | u8 heading in degrees                                 | `#HEAD#`                  |
-| `12` | u16 speed                                             | `#SPD#`                   |
-| `16` | u32 odometer in metres                                | `#ODOD#`                  |
-| `1b` | u32 cell ID, u16 LAC, u8 signal strength              | `#CID#`, `#LAC#`, `#CSS#` |
-| `20` | u16 main voltage in mV                                | `#VIN#`                   |
-| `21` | u16 backup voltage in mV                              | `#VBAT#`                  |
-| `26` | u8 battery health, then two unknown bytes             | `#BATH#`                  |
-| `04` | u8 unknown, u8 visible satellites, u8 satellites used | `#SATN#`, `#SATU#`        |
-| `3e` | u8 visible satellites, u8 average signal level        | `#SAT#`, `#GSS#`          |
-| `42` | u16 internal temperature ×10                          | `#TVI#`                   |
-| `43` | u16 minutes to the next transmission                  | `#NXT#`                   |
-| `0f` | i32 altitude in decimetres                            | `#ALTD#`                  |
-| `3b` | u32 network code                                      | `#NC#`                    |
-| `51` | u8 network technology                                 | `#NT#`                    |
-| `fe` | Text until the checksum, Karma's `extra`              | trailing fields           |
-
-Still unknown: `27` (one byte, 0 with ignition and engine off), `ff 32` (one byte) and the
-first byte of `04` (24 with a 3D fix).
+| Tag         | Value                                                          | Text token                |
+| ----------- | -------------------------------------------------------------- | ------------------------- |
+| `03`        | u32 unit reference                                             | reference                 |
+| `0c`        | u32 event time, seconds since 2000-01-01 UTC                   | `#EDT#`                   |
+| `08`        | u8 event ID                                                    | `#EID#`                   |
+| `0e`        | u32 location time, seconds since 2000-01-01 UTC                | `#PDT#`                   |
+| `19`        | i32 latitude, i32 longitude, ×10⁻⁶ degrees                     | `#LAT#`, `#LONG#`         |
+| `06` / `07` | u8 heading in degrees; tag `07` adds 256                       | `#HEAD#`                  |
+| `12`        | u16 speed in tenths of a knot                                  | `#SPD#`                   |
+| `16`        | u32 odometer in metres                                         | `#ODOD#`                  |
+| `1b`        | u32 cell ID, u16 LAC, u8 signal strength                       | `#CID#`, `#LAC#`, `#CSS#` |
+| `ff 32`     | u8 flags: 0 parked, 11 driving                                 | probably ignition/engine  |
+| `20`        | u16 main voltage in mV                                         | `#VIN#`                   |
+| `21`        | u16 backup voltage in mV                                       | `#VBAT#`                  |
+| `27`        | u8, 0 on a parked truck and absent while driving               | unknown                   |
+| `26`        | u8 battery health, two unknown bytes, u8 starter duration ×100 | `#BATH#`, `#STRT#`        |
+| `18`        | u8 visible satellites, u8 satellites used                      | `#SATN#`, `#SATU#`        |
+| `3e`        | u8 visible satellites, u8 average signal level                 | `#SAT#`, `#GSS#`          |
+| `42`        | u16 internal temperature ×10                                   | `#TVI#`                   |
+| `43`        | u16 minutes to the next transmission                           | `#NXT#`                   |
+| `0f`        | i32 altitude in decimetres                                     | `#ALTD#`                  |
+| `3b`        | u32 network code                                               | `#NC#`                    |
+| `51`        | u8 network technology                                          | `#NT#`                    |
+| `fe`        | Text until the checksum: Karma's `extra`, or the eData payload | trailing fields           |
