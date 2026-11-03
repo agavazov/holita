@@ -8,8 +8,11 @@ its [archive](../archive/karma/README.md) is reference material, not an active d
 
 The delivery baseline includes Fleet `serialNumber`/`edataModule`, the ten registered trucks,
 `ERM_ROLE=api` on 11017, the event catalog/categories/severities, federated Device state/history,
-the six-read command mutation and the admin Control center. Their implementation and validation
-belong to today's owning agents; do not reopen them as roadmap tasks.
+the six-read command mutation and the admin Control center. Since 2026-11-03 it also includes the
+gateway's Karma-drop/DNS fallbacks and routing guards, unit readings and health, stored-frame
+re-decoding, Fleet's ERM import ([ADR 0008](../architecture/decisions/0008-erm-telemetry-into-fleet-activity.md)),
+parameter snapshots and the admin SMS section. Their implementation and validation belong to their
+owning agents; do not reopen them as roadmap tasks.
 
 ## Safety rules
 
@@ -24,8 +27,9 @@ belong to today's owning agents; do not reopen them as roadmap tasks.
   clearing, outputs and immobilizer, unit lock (0059/0060), authentication (`95`), TLS (0053), APN
   and the Simple SMS password are tried only on a parked test truck with a person at it, after
   telling the owner. Never on a moving truck. Report any loss of contact to the owner at once.
-- Snapshots contain secrets (for example 0593 and lock codes). Store them like credentials and never
-  print or commit them.
+- Snapshots contain secrets (for example 0593 and lock codes). They stay in `holita_erm`, and the
+  admin shows them unmasked to the Device's Branch operators (owner, 2026-11-03); never print them
+  in logs or commit them.
 - Every test is recorded in the git-ignored `.references/erm-relay/JOURNAL.md` with its frames and
   captures.
 
@@ -40,10 +44,13 @@ belong to today's owning agents; do not reopen them as roadmap tasks.
 
 ## Fleet rollout
 
-- Route the seven trucks still on Karma **one a day**, using only procedures proved on the
-  three test trucks. Start with Scouts CB1147TP, CB1344XH, CB2792TK, CB9405PE and CB6721TE after
-  its recovery; then Trackers CB9680TE and CB9369PE. Check CB9680TE's power/unit/SIM and current
-  reachability first: its last known report was 2026-10-28 06:02 UTC.
+- CB2792TK, CB9369PE, CB1344XH, CB9405PE and CB1147TP were routed on 2026-11-03 in mirror mode
+  at the owner's request. Route CB6721TE after its recovery, and CB9680TE after checking its
+  power/unit/SIM and current reachability: its last known report was 2026-10-28 06:02 UTC. Decide
+  when the five move to primary mode.
+- A gateway restart can send units to their Karma backup for hours (CB6711TE on 2026-11-03:
+  18:17–20:45 and again after 21:58). Restart the gateway only in planned windows and record when
+  each unit returns.
 - For each unit, snapshot parameters and verify its next ordinary connection, gapless Karma
   `/events`, and no Karma `46` rewrite for an hour. Require seven days of gapless relaying for
   all ten units before closing rollout.
@@ -60,8 +67,10 @@ belong to today's owning agents; do not reopen them as roadmap tasks.
 - **Durable command queue and operator audit:** preserve named actor, Branch, target, intent,
   before/after evidence and uncertainty; define offline delivery, expiry/cancellation and
   device-confirmation semantics. Demo Tenant selection is not operator authorization.
-- **Parameter snapshots and writes:** store snapshots as protected background jobs, with secret
-  masking, parameter titles and diffs; replace private-file operations with controlled workflows.
+- **Parameter writes:** snapshots with titles and diffs run as background jobs and passed L1 on a
+  Tracker and a Scout on 2026-11-03. The gateway still ends a `03`/`45` read only on its own reply:
+  a unit's `02` error or a `45` reply omitting parameters becomes a 30 s timeout; fix it in the next
+  planned gateway window. Replace private-file operations with controlled write workflows.
   For each write require an exact-target complete baseline, fresh preflight, one scoped change,
   independent whole-set readback and explicit restoration. Never automatically replay an
   ambiguous submission. Restoring an existing definition differs from deleting a new ID;
@@ -71,20 +80,19 @@ belong to today's owning agents; do not reopen them as roadmap tasks.
   CAN-inactive signals are not proof of a specific failure. Preserve null/zero/absence and
   distinguish sampling, reporting and delivery intervals. Zero-interval readback does not
   establish that measurements stopped.
-- **Re-decode stored frames** after decoder changes and backfill missing events from retained raw
-  frames; keep original evidence. Do not require trucks to resend data merely to apply a decoder fix.
-- **Record connection closes on shutdown** in the database and private JSON Lines captures.
-- **Remaining binary/framing gaps:** identify `$SLB` tag `27`, `ff 32` flags and the middle bytes of
-  `26` before claiming binary `engineOn`; handle configuration-session `E0 00` pairs without
-  corrupting the following frame. Resolve/confirm replies inside `$SLC` without exposing routing
-  replies to Karma.
-- **Own telemetry and diagnostics:** decode encountered event IDs and eData
-  `401`/`402`/`405`/`411`/`413`/`417`/`418`/`419` payloads from holita frames, then feed Fleet
-  samples/trips/events instead of Karma pulls. Acquire CB1147TP's real `419` faults through holita.
-  Establish fault lifecycle/completeness before continuous fault-state tracking or notifications;
-  missing telemetry or an empty logger is not confirmed ECU clearance.
-- **Unit health:** add verified silence/gap/resend/network and Karma-revert detection. Catalog
-  categories and severities already exist; remaining work is operational detection and evidence.
+- **Record connection closes on shutdown:** the gateway closes rows left open by a previous process
+  at its next start, using the last frame time, but a graceful stop still writes no close records.
+- **Remaining binary/framing gaps:** identify `$SLB` tag `27` and the `ff 32` flags before claiming
+  binary `engineOn`; handle configuration-session `E0 00` pairs without corrupting the following
+  frame. Non-routing replies inside `$SLC` still reach Karma (routing reads are refused).
+- **Own telemetry and diagnostics:** Fleet imports holita events as samples per ADR 0008. Remaining:
+  trips from binary Trackers' ignition, eData `401`/`402`/`405`/`411`/`413`/`417`/`418`/`419`
+  payloads and CB1147TP's real `419` faults through holita. Establish fault lifecycle/completeness
+  before continuous fault-state tracking or notifications; missing telemetry or an empty logger is
+  not confirmed ECU clearance.
+- **Unit health:** silence (`overdue`), Karma upstream closes and Karma routing writes are detected,
+  and the admin compares Karma's last data with holita's. Remaining: gap/resend/network detection
+  and the units' backup-fallback timing.
 - **Broader command coverage:** prove each supported family at its permitted test level, including
   result codes and unlock-required `98`. The operator mutation stays limited to its six reads;
   new operations need their own explicit authorization and contract.
@@ -99,8 +107,6 @@ belong to today's owning agents; do not reopen them as roadmap tasks.
 
 ## Run without Karma and production deployment
 
-- Deploy the gateway's new build **with the owner**, independently of routine API deployments.
-  Preserve real sessions wherever possible and plan reconnect/recovery for the interruption.
 - Implement and prove standalone operation without the Karma upstream, including `95`
   authentication where needed, command delivery and eData replies.
 - Before removing Karma backup, run a second holita endpoint on another host and prove failover
@@ -196,7 +202,7 @@ Ask Karma separately whether this account's automatic 0049/0050 rewrite can be d
 
 ## Owner decisions and resources
 
-- Approve the gateway deployment window and production host/deployment arrangement.
+- Approve the production host/deployment arrangement and the window for the next gateway deploy.
 - Provide a second host for failover.
 - Choose who sends the ERM questions and owns follow-ups; no correspondence is sent by this plan.
 - Arrange a person at a parked truck for each L2 test and the CB6721TE installer recovery if needed.
