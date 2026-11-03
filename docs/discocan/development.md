@@ -1257,16 +1257,17 @@ curl --fail --silent --show-error \
 timestamps are ISO strings. `POST /internal/units/:unitId/commands` requires a connected primary-mode
 unit and accepts only these command/field combinations:
 
-| Command                                        | Fields                                                              |
-| ---------------------------------------------- | ------------------------------------------------------------------- |
-| `03`                                           | One parameter number, for example `["0774"]`.                       |
-| `45`                                           | One or more parameter numbers.                                      |
-| `48`                                           | One template of dynamic parameters, for example `["VER=#VER#"]`.    |
-| `05`                                           | Empty array or one maximum-wait value in seconds (1–4 digits).      |
-| `07`, `12`, `16`, `19`, `49`, `56`, `60`, `61` | Empty array (`56` only lists accessories).                          |
-| `08`, `10`, `23`, `27`, `36`, `43`, `51`, `53` | One input, zone, rule, parameter, pattern, sensor or device number. |
-| `04`                                           | One parameter/value pair.                                           |
-| `46`                                           | Alternating parameter/value pairs.                                  |
+| Command                                        | Fields                                                                                     |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `03`                                           | One parameter number, for example `["0774"]`.                                              |
+| `45`                                           | One or more parameter numbers.                                                             |
+| `48`                                           | One template of dynamic parameters, for example `["VER=#VER#"]`.                           |
+| `05`                                           | Empty array or one maximum-wait value in seconds (1–4 digits).                             |
+| `07`, `12`, `16`, `19`, `49`, `56`, `60`, `61` | Empty array (`56` only lists accessories).                                                 |
+| `08`, `10`, `23`, `27`, `36`, `43`, `51`, `53` | One input, zone, rule, parameter, pattern, sensor or device number.                        |
+| `30`                                           | One of Karma Client's fixed eData reads, for example `19,0,19,306,0,1,1,` as eight fields. |
+| `04`                                           | One parameter/value pair.                                                                  |
+| `46`                                           | Alternating parameter/value pairs.                                                         |
 
 A `04`/`46` write either sets only server-routing parameters 0049–0054 or none of them, and never
 writes lock codes (0059/0060), the SIM PIN (0061), the shared secret (0187), the operator and SIM

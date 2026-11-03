@@ -19,6 +19,15 @@ const numberedReads = new Map([
   ['51', /^\d$/],
   ['53', /^\d{1,2}$/],
 ]);
+// The fixed eData reads Karma Client already sends: fault logger, communication diagnostics,
+// globals, profile and rules.
+const edataReads = new Set([
+  '19,0,19,301,0,1,1,19',
+  '19,0,19,306,0,1,1,',
+  '19,0,19,301,0,1,1,0702BC',
+  '19,0,19,301,0,1,1,1F',
+  '19,0,19,301,0,1,1,0802BC',
+]);
 // Lock codes, the SIM PIN, the authentication secret, operator/SIM locks and the Simple SMS password.
 const protectedParameters = new Set([59, 60, 61, 187, 524, 525, 593]);
 
@@ -75,6 +84,9 @@ export function validateCommand(body: unknown): DeviceCommand {
     ) {
       return { command, fields };
     }
+  }
+  if (command === '30' && edataReads.has(fields.join(','))) {
+    return { command, fields };
   }
   if (command === '48' && fields.length === 1 && /^[\x20-\x7e]{1,200}$/.test(fields[0] ?? '')) {
     return { command, fields };
