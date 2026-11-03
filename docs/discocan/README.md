@@ -21,6 +21,12 @@ StarLink device traffic to Karma and persists connections and frames alongside p
 captures. Activity rows remain holita demo data; Fleet telemetry processing, tracking and
 measurement processing are not implemented.
 
+**Karma is transitional.** holita is replacing Karma with its own device server and control
+center. `apps/karma-client` and every Fleet path through Karma remain only until holita covers each
+function they provide. Then they move to an archive outside the active code and documentation,
+with a record of what they did and how. The [fleet control plan](../todo/erm-fleet-control-plan.md)
+tracks that coverage.
+
 - [Contributor instructions](instructions.md).
 - [Implemented requirements](requirements.md).
 - [Architecture](architecture.md): persistence, federation and Angular request lifecycles.

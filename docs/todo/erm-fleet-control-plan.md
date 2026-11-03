@@ -34,9 +34,11 @@ firmware versions up to 2.46.
   back, and restore the snapshot value on a mismatch.
 - Never read 0049–0052 through Karma for a unit routed to holita: Karma then writes its own server
   back. A tool talking to a unit confirms every reply, so the unit does not resend it to Karma.
-- Firmware update, reset, logger clearing, outputs and immobilizer, unit lock (0059/0060),
-  authentication (`95`), TLS (0053), APN and the Simple SMS password are tried on a bench unit first.
-  On a truck they need a person at the truck and the owner's approval for that test.
+- There are no spare units (owner, 2026-11-03). CB6711TE, CB5640XP and CB5636XP are the test
+  trucks; the other seven get only what the test trucks proved. Firmware update, reset, logger
+  clearing, outputs and immobilizer, unit lock (0059/0060), authentication (`95`), TLS (0053), APN
+  and the Simple SMS password are tried only on a parked test truck with a person at it, after
+  telling the owner. Never on a moving truck. Report any loss of contact to the owner at once.
 - Snapshots contain secrets (for example 0593 and lock codes). Store them like credentials and never
   print or commit them.
 - Every test is recorded in the git-ignored `.references/erm-relay/JOURNAL.md` with its frames and
@@ -47,9 +49,9 @@ firmware versions up to 2.46.
 | Level | Where                                      | Used for                                                              |
 | ----- | ------------------------------------------ | --------------------------------------------------------------------- |
 | L0    | Captures, the fake unit, ERM's Test Server | Parsers, tools and replays of real sessions                           |
-| L1    | Bench units: one Scout and one Tracker     | Every risky function, firmware and format changes                     |
-| L2    | A parked truck with a person present       | Outputs, immobilizer, ignition, CAN and other vehicle-wired functions |
-| L3    | Trucks in service, Karma as backup         | Reads and reversible changes only                                     |
+| L1    | The three test trucks in service           | Reads, reversible settings and format changes                         |
+| L2    | A parked test truck with a person present  | Outputs, immobilizer, ignition, CAN and other vehicle-wired functions |
+| L3    | The other seven trucks, Karma as backup    | Only what L1 and L2 proved, one truck at a time                       |
 
 ## Phase 0: inventory and configuration backup
 
@@ -78,8 +80,8 @@ firmware versions up to 2.46.
 
 ## Phase 2: read all data in holita
 
-- [ ] Choose the Tracker format: set `0182=0` on the bench Tracker and compare its text with its
-      binary, then on one fleet Tracker while Karma keeps decoding it. If that fails, write the
+- [ ] Choose the Tracker format: set `0182=0` on a test Tracker and compare its text with its
+      binary while Karma keeps decoding it. If that fails, write the
       `$SLB`/`$SLC` decoder from ERM's specification.
 - [ ] Compare each unit's decoded events with Karma for a day: position, times, speed, odometer,
       voltages, ignition and engine, satellites and network.
@@ -100,8 +102,8 @@ firmware versions up to 2.46.
 | Reads               | `03`, `45`, `48`, `05`, `07`, `12`, `16`, `53`, `56`, `61` and config reads  | L1, L3       |
 | Reversible settings | `04`/`46` outside 0049–0054, geo-zones, speed limit, temperature, clock      | L1, L3       |
 | eData               | `30` fixed reads, then the writes Fleet already verifies                     | L1, L3       |
-| Vehicle-acting      | outputs `13`, immobilizer `24`, arm/disarm `25`/`47`, override `57`          | L1, L2       |
-| Unit maintenance    | reset `99`, logger clear, external device firmware `35`, unit firmware (OTA) | L1, then ERM |
+| Vehicle-acting      | outputs `13`, immobilizer `24`, arm/disarm `25`/`47`, override `57`          | L2 only      |
+| Unit maintenance    | reset `99`, logger clear, external device firmware `35`, unit firmware (OTA) | L2 after ERM |
 
 - [ ] Record and show every confirmation result code, including "unit unlock is needed" (`98`).
 - Done when each family the units have works from holita on L1 and at its highest allowed level.
@@ -124,6 +126,9 @@ firmware versions up to 2.46.
       failover to it on L1.
 - [ ] Test the Simple SMS emergency route on L1 and write the on-call procedure.
 - [ ] Run one unit for 30 days without Karma, then move the others.
+- [ ] Retire the Karma modules once holita covers every function they provide: move
+      `apps/karma-client`, Fleet's Karma paths and the Karma documentation to an archive outside the
+      active code and documentation, with a record of what they did and how.
 
 ## Questions for ERM
 
@@ -151,11 +156,10 @@ Ask Karma separately whether its rewrite of 0049/0050 can be disabled for this a
 
 ## Owner decisions and resources
 
-- Bench units: one spare Scout and one spare Tracker with a SIM, a 12/24 V supply and a GNSS antenna.
 - A second public port forward for configuration sessions (Phase 1).
 - Who sends the ERM questions, and a contact for follow-ups.
 - A person available at a parked truck for the L2 tests, booked per test.
-- The Tracker format choice after the bench test: `0182=0` or a decoder.
+- The Tracker format choice after the test on a test Tracker: `0182=0` or a decoder.
 
 ## Documentation
 
