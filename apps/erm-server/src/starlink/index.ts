@@ -13,3 +13,9 @@ export type { DecodedEvent } from './event.js';
 export { decodeFrameEvents } from './frame-events.js';
 export { decodeEdata } from './edata.js';
 export type { EdataReport } from './edata.js';
+export { assembleEdataConfiguration, splitEdataDefinitions } from './edata-configuration.js';
+export type {
+  EdataConfiguration,
+  EdataConfigurationDefinition,
+  EdataConfigurationObservation,
+} from './edata-configuration.js';

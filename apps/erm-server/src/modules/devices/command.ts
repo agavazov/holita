@@ -24,6 +24,7 @@ const numberedReads = new Map([
 const edataReads = new Set([
   '19,0,19,301,0,1,1,19',
   '19,0,19,306,0,1,1,',
+  '19,0,19,303,0,1,1,',
   '19,0,19,301,0,1,1,0702BC',
   '19,0,19,301,0,1,1,1F',
   '19,0,19,301,0,1,1,0802BC',
@@ -88,7 +89,13 @@ export function validateCommand(body: unknown): DeviceCommand {
       return { command, fields };
     }
   }
-  if (command === '30' && edataReads.has(fields.join(','))) {
+  if (
+    command === '30' &&
+    fields.length === 8 &&
+    (edataReads.has(fields.join(',')) ||
+      (fields.slice(0, 7).join(',') === '19,0,19,301,0,1,1' &&
+        /^(?:02[0-9a-fA-F]{44}|10[0-9a-fA-F]{4})$/.test(fields[7] ?? '')))
+  ) {
     return { command, fields };
   }
   if (command === '48' && fields.length === 1 && /^[\x20-\x7e]{1,200}$/.test(fields[0] ?? '')) {
@@ -112,7 +119,7 @@ export function validateCommand(body: unknown): DeviceCommand {
   throw new BadRequestException(
     'Allowed commands: 03/45 reads excluding 0049–0054, 48 and other documented reads, ' +
       '05 location, and 04/46 writes that either set only 0049/0050 or avoid 0049–0054 ' +
-      'and the protected parameters',
+      'and the protected parameters, plus single-definition eData writes',
   );
 }
 

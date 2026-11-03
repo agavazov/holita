@@ -4,6 +4,7 @@ import { once } from 'node:events';
 import net, { type Socket } from 'node:net';
 import { buildServerFrame, parseFrame } from '../../starlink/index.js';
 import type { CaptureRecord } from './capture-record.js';
+import { validateCommand } from './command.js';
 import { DeviceListener } from './device-listener.js';
 
 const unitId = '0004D2';
@@ -65,6 +66,14 @@ class SocketFrames {
 }
 
 it('acknowledges primary units, filters owned confirmations and completes allowlisted commands', async () => {
+  const definition = '030D000000000000000100010000000000000000003C';
+  for (const fields of [
+    ['19', '0', '19', '301', '0', '1', '1', `02${definition}`],
+    ['19', '0', '19', '301', '0', '1', '1', '10030D'],
+    ['19', '0', '19', '303', '0', '1', '1', ''],
+  ]) {
+    expect(validateCommand({ command: '30', fields })).toEqual({ command: '30', fields });
+  }
   const upstreamSockets = new Set<Socket>();
   let upstreamConnections = 0;
   const upstream = net.createServer((socket) => {
@@ -194,6 +203,20 @@ it('acknowledges primary units, filters owned confirmations and completes allowl
       { command: '46', fields: ['0049', 'host', '0774', '30'] },
       { command: '56', fields: ['1'] },
       { command: '01', fields: [] },
+      ...[
+        `01${definition}`,
+        `02${definition}${definition}`,
+        '10030D0296',
+        `02${definition.slice(0, -1)}X`,
+        '10030X',
+      ].map((payload) => ({
+        command: '30',
+        fields: ['19', '0', '19', '301', '0', '1', '1', payload],
+      })),
+      {
+        command: '30',
+        fields: ['19', '0', '19', '301', '0', '1', '1', `02${definition}`, ''],
+      },
     ]) {
       await expect(listener.sendCommand(unitId, invalid)).rejects.toBeInstanceOf(
         BadRequestException,

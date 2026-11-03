@@ -8,6 +8,7 @@
     "dev": "ERM_ROLE=api PORT=11017 node --env-file-if-exists=/home/sysadmin/.config/holita/erm-server.env ../../node_modules/@nestjs/cli/bin/nest.js start --watch",
     "start:prod": "node dist/main.js",
     "redecode": "node dist/redecode.js",
+    "edata-change": "node dist/edata-change.js",
     "typecheck": "tsc --noEmit --project tsconfig.json",
     "lint": "eslint .",
     "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand",

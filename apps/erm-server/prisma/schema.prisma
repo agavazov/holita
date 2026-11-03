@@ -31,6 +31,18 @@ enum ErmParameterSnapshotStatus {
   @@map("ermParameterSnapshotStatus")
 }
 
+enum ErmConfigurationChangeStatus {
+  READ @map("read")
+  VERIFIED @map("verified")
+  MISMATCH @map("mismatch")
+  RESTORED @map("restored")
+  RESTORE_FAILED @map("restoreFailed")
+  UNCERTAIN @map("uncertain")
+  REFUSED @map("refused")
+  FAILED @map("failed")
+  @@map("ermConfigurationChangeStatus")
+}
+
 enum ErmChecksum {
   OK @map("ok")
   MISMATCH @map("mismatch")
@@ -142,4 +154,19 @@ model ErmParameterValue {
   resultCode String?
   @@id([snapshotId, parameter])
   @@map("ermParameterValue")
+}
+
+model ErmConfigurationChange {
+  id String @id @default(uuid()) @db.Uuid
+  unitId String @db.VarChar(15)
+  parameter Int?
+  status ErmConfigurationChangeStatus
+  startedAt DateTime @default(now()) @db.Timestamptz(3)
+  finishedAt DateTime? @db.Timestamptz(3)
+  failureReason String?
+  baseline Json
+  intended String?
+  steps Json
+  @@index([unitId, startedAt(sort: Desc)])
+  @@map("ermConfigurationChange")
 }

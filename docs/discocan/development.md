@@ -345,7 +345,7 @@ are no longer exposed.
 READ_STATUS, READ_VERSION, READ_ACCESSORIES, READ_EDATA_DIAGNOSTICS and READ_EDATA_FAULTS.
 It verifies the Device through Fleet with the caller's session and active Branch, then uses
 the gateway's internal API. No free-text command or parameter write is exposed.
-The recorded command outcome is not proof of a configuration change. Parameter writes,
+The recorded command outcome is not proof of a configuration change. Public parameter writes,
 durable offline delivery and operator audit remain in the [ERM roadmap](../todo/erm-roadmap.md).
 
 Operators signed in to a Fleet Device's active Branch can call
@@ -356,6 +356,27 @@ batches; completion time depends on the unit's replies. Tracker replies also rea
 `$SLC`. Snapshots include titles and changes against the previous COMPLETE snapshot; values are
 stored and shown unmasked, including secrets such as 0593. An api restart marks snapshots left
 RUNNING as FAILED with `interrupted by an api restart`.
+
+For controlled single-record eData configuration changes, run the operator command from
+`apps/erm-server` with `ERM_DATABASE_URL`, `ERM_GATEWAY_URL` and `ERM_INTERNAL_TOKEN` in the
+environment file below. Set `IMEI` to the selected primary-mode unit and `DEFINITION` to one
+approved 44-hex, 22-byte definition; `--split <Monitor-export-file-or-301-payload>` works offline
+and prints each parameter ID, interval and definition without executing the export. A read prints
+the complete definitions, raw `410` globals and `416` profile ID. Changes require a complete
+exact-unit baseline and an equal preflight no older than 120 seconds; missing interval targets,
+existing addition IDs and unchanged intervals are refused. Each step is stored in
+`ermConfigurationChange`; verification compares the whole set (an added definition's predefined
+multiplier/divisor 1/1 may read back as 0/0), and a mismatch or
+`--restore-after` restores the captured definition, or deletes only the ID added by that run,
+then verifies the whole baseline. No replace or multi-definition write is allowed. An UNCERTAIN
+submission is never retried and requires a successful fresh `--read` before another change.
+
+```bash
+node --env-file=/home/sysadmin/.config/holita/erm-server.env live-api/edata-change.js --unit "$IMEI" --read
+node --env-file=/home/sysadmin/.config/holita/erm-server.env live-api/edata-change.js --unit "$IMEI" --parameter 1 --interval 60
+node --env-file=/home/sysadmin/.config/holita/erm-server.env live-api/edata-change.js --unit "$IMEI" --add "$DEFINITION"
+node --env-file=/home/sysadmin/.config/holita/erm-server.env live-api/edata-change.js --unit "$IMEI" --add "$DEFINITION" --restore-after
+```
 
 ### Internal unit and command API
 
@@ -388,17 +409,17 @@ curl --fail --silent --show-error \
 timestamps are ISO strings. `POST /internal/units/:unitId/commands` requires a connected primary-mode
 unit and accepts only these command/field combinations:
 
-| Command                                        | Fields                                                                                     |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `03`                                           | One parameter number outside 0049–0054, for example `["0774"]`.                            |
-| `45`                                           | One or more parameter numbers, all outside 0049–0054.                                      |
-| `48`                                           | One template of dynamic parameters, for example `["VER=#VER#"]`.                           |
-| `05`                                           | Empty array or one maximum-wait value in seconds (1–4 digits).                             |
-| `07`, `12`, `16`, `19`, `49`, `56`, `60`, `61` | Empty array (`56` only lists accessories).                                                 |
-| `08`, `10`, `23`, `27`, `36`, `43`, `51`, `53` | One input, zone, rule, parameter, pattern, sensor or device number.                        |
-| `30`                                           | One of Karma Client's fixed eData reads, for example `19,0,19,306,0,1,1,` as eight fields. |
-| `04`                                           | One parameter/value pair.                                                                  |
-| `46`                                           | Alternating parameter/value pairs.                                                         |
+| Command                                        | Fields                                                                                                                                                                                                                                                                             |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `03`                                           | One parameter number outside 0049–0054, for example `["0774"]`.                                                                                                                                                                                                                    |
+| `45`                                           | One or more parameter numbers, all outside 0049–0054.                                                                                                                                                                                                                              |
+| `48`                                           | One template of dynamic parameters, for example `["VER=#VER#"]`.                                                                                                                                                                                                                   |
+| `05`                                           | Empty array or one maximum-wait value in seconds (1–4 digits).                                                                                                                                                                                                                     |
+| `07`, `12`, `16`, `19`, `49`, `56`, `60`, `61` | Empty array (`56` only lists accessories).                                                                                                                                                                                                                                         |
+| `08`, `10`, `23`, `27`, `36`, `43`, `51`, `53` | One input, zone, rule, parameter, pattern, sensor or device number.                                                                                                                                                                                                                |
+| `30`                                           | Fixed eData reads (including globals `19,0,19,303,0,1,1,`), or `19,0,19,301,0,1,1,02` plus one 44-hex definition, or `19,0,19,301,0,1,1,10` plus one four-hex ID, always as eight fields. The `10` form is only for restoring an addition recorded by the operator workflow above. |
+| `04`                                           | One parameter/value pair.                                                                                                                                                                                                                                                          |
+| `46`                                           | Alternating parameter/value pairs.                                                                                                                                                                                                                                                 |
 
 A `04`/`46` write either sets only primary server parameters 0049/0050 or avoids all routing
 parameters 0049–0054. Writes to 0051–0054 are rejected: the backup stays Karma, and primary and

@@ -22,6 +22,11 @@ import { FleetClient } from '../src/modules/telemetry/fleet.client.js';
 import { ParameterSnapshotsRepository } from '../src/modules/telemetry/parameter-snapshots.repository.js';
 import { ParameterSnapshotsService } from '../src/modules/telemetry/parameter-snapshots.service.js';
 import { parameterCatalog } from '../src/starlink/parameter-catalog.js';
+import {
+  assembleEdataConfiguration,
+  splitEdataDefinitions,
+} from '../src/starlink/edata-configuration.js';
+import { runEdataChange } from '../src/modules/telemetry/edata-change.js';
 import { InternalTelemetryController } from '../src/modules/telemetry/internal-telemetry.controller.js';
 import { InternalTelemetryGuard } from '../src/modules/telemetry/internal-telemetry.guard.js';
 import {
@@ -517,6 +522,15 @@ it('persists captured connection lifecycle and raw frames through the production
     let gatewayReads = 0;
     const sent: unknown[] = [];
     const snapshotCommands: ReturnType<typeof validateCommand>[] = [];
+    let configurationGateway:
+      | {
+          definitions: string[];
+          commands: ReturnType<typeof validateCommand>[];
+          reads: number;
+          preflight?: string[];
+          uncertain?: boolean;
+        }
+      | undefined;
     let snapshotBatch = 0;
     let snapshotFallbackParameters: string[] = [];
     let snapshotBatchSeen: (() => void) | undefined;
@@ -582,6 +596,83 @@ it('persists captured connection lifecycle and raw frames through the production
         }
         const command = validateCommand(body);
         sent.push(command);
+        if (configurationGateway && command.command === '30') {
+          const fixture = configurationGateway;
+          fixture.commands.push(command);
+          const payload = command.fields[7] ?? '';
+          const timeout = fixture.uncertain === true && payload.startsWith('02');
+          const recorded = await database.client.ermCommand.create({
+            data: {
+              connectionId: stored.id,
+              unitId,
+              reference: String(900010000 + sent.length),
+              ...command,
+              sentAt: new Date(),
+              status: timeout ? 'TIMEOUT' : 'ANSWERED',
+              answeredAt: timeout ? null : new Date(),
+              resultCode: timeout ? null : '01',
+            },
+          });
+          if (payload === '0702BC') {
+            fixture.reads++;
+            const definitions =
+              fixture.reads === 2 && fixture.preflight ? fixture.preflight : fixture.definitions;
+            for (const [index, definition] of definitions.entries()) {
+              const extra = [
+                '19',
+                '0',
+                '401',
+                '0',
+                index === definitions.length - 1 ? '1' : '0',
+                String(index + 1),
+                '1001',
+                `07${definition}`,
+              ];
+              await database.client.ermFrame.create({
+                data: {
+                  connectionId: stored.id,
+                  unitId,
+                  receivedAt: new Date(),
+                  direction: 'DEVICE',
+                  command: '06',
+                  checksum: 'ABSENT',
+                  raw: Buffer.from(extra.join(',')),
+                  events: {
+                    create: { unitId, eventId: '33', fields: { extra } },
+                  },
+                },
+              });
+            }
+          } else if (payload.startsWith('02') && !timeout) {
+            const definition = payload.slice(2);
+            const parameter = definition.slice(0, 4);
+            const existing = fixture.definitions.findIndex((row) => row.startsWith(parameter));
+            if (existing === -1) {
+              // Like the unit, store an added definition's predefined multiplier/divisor 1/1 as 0/0.
+              fixture.definitions.push(
+                definition.slice(16, 24) === '00010001'
+                  ? `${definition.slice(0, 16)}00000000${definition.slice(24)}`
+                  : definition,
+              );
+            } else {
+              fixture.definitions[existing] = definition;
+            }
+          } else if (payload.startsWith('10')) {
+            fixture.definitions = fixture.definitions.filter(
+              (definition) => !definition.startsWith(payload.slice(2)),
+            );
+          }
+          res.end(
+            JSON.stringify({
+              id: recorded.id,
+              reference: recorded.reference,
+              status: timeout ? 'timeout' : 'answered',
+              resultCode: timeout ? null : '01',
+              fields: timeout ? [] : ['30', '01'],
+            }),
+          );
+          return;
+        }
         let resultCode: string | null = null;
         let fields: string[] = [];
         if (command.command === '45' || command.command === '03') {
@@ -1458,6 +1549,159 @@ it('persists captured connection lifecycle and raw frames through the production
     } finally {
       telemetryClock.mockRestore();
     }
+
+    // Configuration writes use complete, independent whole-set reads and never replay ambiguity.
+    const firstDefinition = '029680BD000100080001000100000100010000F0003C';
+    const secondDefinition = `021B${firstDefinition.slice(4)}`;
+    const addedDefinition = `0099${firstDefinition.slice(4)}`;
+    const changedDefinition = `${firstDefinition.slice(0, -4)}0078`;
+    const configurationAt = new Date().toISOString();
+    const fragment = (
+      number: number,
+      last: boolean,
+      definition: string,
+      eventId = String(number),
+    ) => ({
+      eventId,
+      receivedAt: configurationAt,
+      fields: ['19', '0', '401', '0', last ? '1' : '0', String(number), '1001', `07${definition}`],
+    });
+    const expectedDefinitions = [
+      { parameter: 539, interval: 60, definition: secondDefinition },
+      { parameter: 662, interval: 60, definition: firstDefinition },
+    ];
+    const completeFragments = [
+      fragment(1, false, firstDefinition),
+      fragment(2, true, secondDefinition),
+    ];
+    expect(assembleEdataConfiguration(completeFragments)).toMatchObject({
+      configurationId: '1001',
+      definitions: expectedDefinitions,
+      eventIds: ['1', '2'],
+    });
+    for (const fragments of [
+      [fragment(1, false, firstDefinition), fragment(3, true, secondDefinition)],
+      [fragment(1, true, firstDefinition), fragment(2, true, secondDefinition)],
+      [...completeFragments, fragment(2, true, addedDefinition, '3')],
+    ]) {
+      expect(assembleEdataConfiguration(fragments)).toBeUndefined();
+    }
+    expect(splitEdataDefinitions(`01${secondDefinition}${firstDefinition}`)).toEqual(
+      expectedDefinitions,
+    );
+    const configurationRuntime = { pollIntervalMs: 1, readTimeoutMs: 90_000, log: () => undefined };
+    configurationGateway = {
+      definitions: [firstDefinition, secondDefinition],
+      commands: [],
+      reads: 0,
+    };
+    const intervalChange = await runEdataChange(
+      database.client,
+      { unitId, parameter: 662, interval: 120, restoreAfter: true },
+      configurationRuntime,
+    );
+    expect(intervalChange).toMatchObject({
+      unitId,
+      parameter: 662,
+      status: 'RESTORED',
+      intended: changedDefinition,
+      finishedAt: expect.any(Date),
+      baseline: { definitions: expectedDefinitions },
+    });
+    expect(configurationGateway.definitions).toEqual([firstDefinition, secondDefinition]);
+    expect(
+      configurationGateway.commands
+        .filter(({ fields }) => fields[7]?.startsWith('02'))
+        .map(({ fields }) => fields[7]),
+    ).toEqual([`02${changedDefinition}`, `02${firstDefinition}`]);
+    expect(intervalChange.steps).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'baseline', commandId: expect.any(String) }),
+        expect.objectContaining({ name: 'preflight', commandId: expect.any(String) }),
+        expect.objectContaining({ name: 'readback', outcome: 'VERIFIED' }),
+        expect.objectContaining({ name: 'restore-readback', outcome: 'RESTORED' }),
+      ]),
+    );
+    expect(
+      await database.client.ermConfigurationChange.findUnique({ where: { id: intervalChange.id } }),
+    ).toEqual(intervalChange);
+
+    configurationGateway = {
+      definitions: [firstDefinition, secondDefinition],
+      commands: [],
+      reads: 0,
+    };
+    const addition = await runEdataChange(
+      database.client,
+      { unitId, add: addedDefinition, restoreAfter: true },
+      configurationRuntime,
+    );
+    expect(addition).toMatchObject({
+      status: 'RESTORED',
+      parameter: 153,
+      intended: addedDefinition,
+    });
+    expect(configurationGateway.definitions).toEqual([firstDefinition, secondDefinition]);
+    expect(
+      configurationGateway.commands
+        .filter(({ fields }) => fields[7]?.startsWith('02') || fields[7]?.startsWith('10'))
+        .map(({ fields }) => fields[7]),
+    ).toEqual([`02${addedDefinition}`, '100099']);
+    expect(addition.steps).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'readback', outcome: 'VERIFIED' }),
+        expect.objectContaining({ name: 'restore-readback', outcome: 'RESTORED' }),
+      ]),
+    );
+
+    configurationGateway = {
+      definitions: [firstDefinition, secondDefinition],
+      commands: [],
+      reads: 0,
+    };
+    const refusedAddition = await runEdataChange(
+      database.client,
+      { unitId, add: firstDefinition },
+      configurationRuntime,
+    );
+    expect(refusedAddition.status).toBe('REFUSED');
+    expect(configurationGateway.commands.map(({ fields }) => fields[7])).toEqual(['0702BC']);
+
+    configurationGateway = {
+      definitions: [firstDefinition, secondDefinition],
+      commands: [],
+      reads: 0,
+      preflight: [firstDefinition, `${secondDefinition.slice(0, -4)}0078`],
+    };
+    const changedPreflight = await runEdataChange(
+      database.client,
+      { unitId, parameter: 662, interval: 120 },
+      configurationRuntime,
+    );
+    expect(changedPreflight.status).toBe('REFUSED');
+    expect(configurationGateway.commands.map(({ fields }) => fields[7])).toEqual([
+      '0702BC',
+      '0702BC',
+    ]);
+
+    configurationGateway = {
+      definitions: [firstDefinition, secondDefinition],
+      commands: [],
+      reads: 0,
+      uncertain: true,
+    };
+    const uncertainChange = await runEdataChange(
+      database.client,
+      { unitId, parameter: 662, interval: 120 },
+      configurationRuntime,
+    );
+    expect(uncertainChange.status).toBe('UNCERTAIN');
+    expect(configurationGateway.commands.map(({ fields }) => fields[7])).toEqual([
+      '0702BC',
+      '0702BC',
+      `02${changedDefinition}`,
+    ]);
+    expect(configurationGateway.definitions).toEqual([firstDefinition, secondDefinition]);
   } finally {
     releaseSnapshotBatch?.();
     await snapshotService?.onModuleDestroy();
