@@ -131,6 +131,8 @@ type ErmEvent {
   heading: Float
   odometer: Float
   engineOn: Boolean
+  "Ignition from the event's #IGN# token: binary Tracker flags or a text structure that reports it."
+  ignitionOn: Boolean
   mainVoltage: Float
   backupVoltage: Float
   fields: ErmJSON!

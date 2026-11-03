@@ -76,6 +76,14 @@ function feedEdata(value: unknown) {
   return { report: '419', faults };
 }
 
+function storedIgnition(fields: ErmEvent['fields']) {
+  const value =
+    typeof fields === 'object' && fields !== null && !Array.isArray(fields)
+      ? fields['#IGN#']
+      : undefined;
+  return value === '1' ? true : value === '0' ? false : null;
+}
+
 function storedEdata(fields: ErmEvent['fields']) {
   return typeof fields === 'object' && fields !== null && !Array.isArray(fields)
     ? (fields['edata'] ?? null)
@@ -86,6 +94,7 @@ function eventView(event: ErmEvent) {
   return {
     ...event,
     edata: storedEdata(event.fields),
+    ignitionOn: storedIgnition(event.fields),
     id: String(event.id),
     frameId: String(event.frameId),
     eventTime: event.eventTime?.toISOString() ?? null,
@@ -189,6 +198,7 @@ export class TelemetryService {
     );
     const events = rows.map((event) => ({
       ...event,
+      ignitionOn: event.ignitionOn,
       edata: feedEdata(event.edata),
       eventTime: event.eventTime?.toISOString() ?? null,
       receivedAt: event.receivedAt.toISOString(),

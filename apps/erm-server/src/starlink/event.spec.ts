@@ -118,20 +118,25 @@ it('decodes event tokens with UTC times, nautical speed and coordinates while pr
   const reports = [
     [
       '862129080319233',
-      [0x08, 0x01, 0x20, 0x5f, 0xdc, 0x26, 0x39, 0x41, 0x00, 0x86],
-      { mainVoltage: 24.54, fields: { '#BATH#': '57', '#STRT#': '1.34' } },
+      [0x08, 0x01, 0x20, 0x5f, 0xdc, 0x26, 0x39, 0x41, 0x00, 0x86, 0xff, 0x32, 0x0b],
+      {
+        mainVoltage: 24.54,
+        engineOn: true,
+        fields: { '#BATH#': '57', '#STRT#': '1.34', '#IGN#': '1' },
+      },
     ],
     [
       '862129080366630',
-      [0x08, 0x01, 0x26, 0x64, 0x41, 0x00, 0x04],
-      { fields: { '#BATH#': '100', '#STRT#': '0.04' } },
+      [0x08, 0x01, 0x26, 0x64, 0x41, 0x00, 0x04, 0xff, 0x32, 0x00],
+      { engineOn: false, fields: { '#BATH#': '100', '#STRT#': '0.04', '#IGN#': '0' } },
     ],
     [
       '862129080320033',
       [0x08, 0x01, 0x21, 0x0f, 0xbf, 0x41, 0x01, 0x17, 0x18, 0x1c, 0x18],
       {
         backupVoltage: 4.031,
-        fields: { '#BATH#': null, '#STRT#': '2.79', '#SATN#': '28', '#SATU#': '24' },
+        engineOn: null,
+        fields: { '#BATH#': null, '#STRT#': '2.79', '#SATN#': '28', '#SATU#': '24', '#IGN#': null },
       },
     ],
   ] as const;

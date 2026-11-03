@@ -1342,7 +1342,7 @@ it('persists captured connection lifecycle and raw frames through the production
         engineOn: true,
         mainVoltage: 12.2,
         backupVoltage: 3.6,
-        fields: { private: 'not part of the Fleet contract' },
+        fields: { private: 'not part of the Fleet contract', '#IGN#': '1' },
       },
     });
     const secondTelemetryEvent = await database.client.ermEvent.create({
@@ -1398,6 +1398,7 @@ it('persists captured connection lifecycle and raw frames through the production
         heading: 180,
         odometerKm: 12345.678,
         engineOn: true,
+        ignitionOn: true,
         mainVoltage: 12.2,
         backupVoltage: 3.6,
         edata: null,
@@ -1413,6 +1414,7 @@ it('persists captured connection lifecycle and raw frames through the production
         heading: null,
         odometerKm: null,
         engineOn: null,
+        ignitionOn: null,
         mainVoltage: null,
         backupVoltage: null,
         edata: null,

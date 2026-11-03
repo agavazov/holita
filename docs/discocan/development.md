@@ -428,7 +428,8 @@ loopback with the separate bearer `ERM_TELEMETRY_TOKEN` (at least 32 characters)
 `{ events, next }`: decoded readings ordered by event id, with decimal-string ids and ISO
 timestamps, excluding frames received less than 10 seconds ago. `after` defaults to `0`, `limit`
 to 500, and an empty page keeps `next` equal to `after`. Raw frames, fields and commands are
-excluded. Each event also has `edata`: null, or a decoded eData 411 report
+excluded. Each event also has `ignitionOn` (binary Tracker flags or an `#IGN#` token, else null) and
+`edata`: null, or a decoded eData 411 report
 (`{ report, can, j1708, obd, obdMask, canError, ignition }`) or 419 report
 (`{ report, faults: [{ spn, fmi, status: ADDED | DELETED }] }`). `ErmEvent.edata` shows every
 decoded eData report of an External device (33) event with its raw payload. See [ADR 0008](../architecture/decisions/0008-erm-telemetry-into-fleet-activity.md) for

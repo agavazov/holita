@@ -37,7 +37,8 @@ export class TelemetryRepository {
         SELECT event.id::text AS id, event."eventId", event."eventTime", frame."receivedAt",
           event.latitude::double precision AS latitude, event.longitude::double precision AS longitude,
           event."speedKmh", event.heading, event.odometer AS "odometerKm", event."engineOn",
-          event."mainVoltage", event."backupVoltage", event.fields -> 'edata' AS edata
+          event."mainVoltage", event."backupVoltage", event.fields -> 'edata' AS edata,
+          event.fields ->> '#IGN#' AS ignition
         FROM ${this.table('ermEvent')} event
         JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
         WHERE event."unitId" = ${imei} AND event.id > ${after}::bigint
@@ -65,6 +66,7 @@ export class TelemetryRepository {
         mainVoltage: nullableNumber(row, 'mainVoltage'),
         backupVoltage: nullableNumber(row, 'backupVoltage'),
         edata: row['edata'] ?? null,
+        ignitionOn: row['ignition'] === '1' ? true : row['ignition'] === '0' ? false : null,
       };
     });
   }

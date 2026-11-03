@@ -40,7 +40,9 @@ Used for single reports. After G9 replacement: `04`, the BCD IMEI, two bytes as 
 command (`06`, or `86` for reports without confirmation, such as eData events), then tag/value
 pairs with big-endian values. Tags are neither dynamic-parameter numbers nor `onyx.proto` field
 numbers. erm-server decodes these reports; the mapping was checked on 42 reports from a parked
-and a driving truck.
+and a driving truck. The `ff 32` flags were compared with Karma's ignition on 1,139 reports of
+CB6711TE, CB5640XP and CB9369PE (2026-11-03): `0b` while driving, `09` at ignition on, `02` at
+ignition off with the engine still running, `00` parked. Only one Tracker's transitions are covered.
 
 | Tag         | Value                                                          | Text token                |
 | ----------- | -------------------------------------------------------------- | ------------------------- |
@@ -53,10 +55,10 @@ and a driving truck.
 | `12`        | u16 speed in tenths of a knot                                  | `#SPD#`                   |
 | `16`        | u32 odometer in metres                                         | `#ODOD#`                  |
 | `1b`        | u32 cell ID, u16 LAC, u8 signal strength                       | `#CID#`, `#LAC#`, `#CSS#` |
-| `ff 32`     | u8 flags: 0 parked, 11 driving                                 | probably ignition/engine  |
+| `ff 32`     | u8 flags: bits 0 and 3 ignition, bit 1 engine running          | `#IGN#`, engine           |
 | `20`        | u16 main voltage in mV                                         | `#VIN#`                   |
 | `21`        | u16 backup voltage in mV                                       | `#VBAT#`                  |
-| `27`        | u8, 0 on a parked truck and absent while driving               | unknown                   |
+| `27`        | u8, 0 or 100 while parked, absent from ignition on             | unknown                   |
 | `26`        | u8 battery health                                              | `#BATH#`                  |
 | `41`        | u16 starter duration ×100; also sent without `26`              | `#STRT#`                  |
 | `18`        | u8 visible satellites, u8 satellites used                      | `#SATN#`, `#SATU#`        |

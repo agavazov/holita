@@ -149,7 +149,7 @@ export function decodeBinaryEvent(raw: Buffer): DecodedEvent | undefined {
       extra = body.subarray(index).toString('latin1');
       break;
     }
-    // "ff 32" is followed by one flag byte: 0 parked, 11 driving.
+    // "ff 32" is followed by one flag byte: bit 0 (and bit 3) ignition, bit 1 engine running.
     const size = tag === 0xff && body[index] === 0x32 ? 2 : binarySizes.get(tag);
     if (size === undefined || index + size > body.length) {
       return undefined;
@@ -176,6 +176,7 @@ export function decodeBinaryEvent(raw: Buffer): DecodedEvent | undefined {
   const main = unsigned(0x20);
   const backup = unsigned(0x21);
   const eventId = unsigned(0x08);
+  const flags = values.get(0xff)?.[1];
   const edata = eventId === 33 ? decodeEdata(extra.split(',')) : undefined;
   const text = (value: number | null | undefined): string | null =>
     value === null || value === undefined ? null : String(value);
@@ -189,7 +190,7 @@ export function decodeBinaryEvent(raw: Buffer): DecodedEvent | undefined {
     speedKmh: speed === null ? null : (speed / 10) * 1.852,
     heading,
     odometer: odometer === null ? null : odometer / 1000,
-    engineOn: null,
+    engineOn: flags === undefined ? null : (flags & 0x02) !== 0,
     mainVoltage: main === null ? null : main / 1000,
     backupVoltage: backup === null ? null : backup / 1000,
     fields: {
@@ -208,6 +209,7 @@ export function decodeBinaryEvent(raw: Buffer): DecodedEvent | undefined {
       '#ALTD#': altitude ? String(altitude.readInt32BE(0) / 10) : null,
       '#NC#': text(unsigned(0x3b)),
       '#NT#': text(unsigned(0x51)),
+      '#IGN#': flags === undefined ? null : (flags & 0x01) !== 0 ? '1' : '0',
       unknown: [values.get(0x27)?.toString('hex') ?? '', values.get(0xff)?.toString('hex') ?? ''],
       extra: extra.split(','),
       ...(edata ? { edata } : {}),
