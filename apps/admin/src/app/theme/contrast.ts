@@ -76,17 +76,27 @@ export function brandContrastChecks(brand: Brand): readonly ContrastCheck[] {
   return [
     check('White on primary', white, light, 4.5),
     check('White on primary hover', white, primary(brand.light.hover), 4.5),
+    check('White on primary active', white, primary(brand.light.active), 4.5),
     check('Primary on surface 0', light, white, 4.5),
     check('Primary on surface 50', light, surface(50), 4.5),
     check('Primary on surface 100', light, surface(100), 4.5),
     check('Selected text on primary 50', primary(brand.emphasis), primary(50), 4.5),
     check('Accent tag text on primary 100', primary(brand.emphasis), primary(100), 4.5),
+    check(
+      'Dark accent tag: primary 300 on tint',
+      primary(300),
+      mixSrgb(primary(400), surface(900), 0.16),
+      4.5,
+    ),
+    check('Solid accent mark on surface 0', light, white, 3),
+    check('Dark solid accent mark on surface 900', dark, surface(900), 3),
     check('Focus ring on surface 0', light, white, 3),
     check('Focus ring on surface 50', light, surface(50), 3),
     check('Dark: primary on surface 900', dark, surface(900), 4.5),
     check('Dark: primary on surface 950', dark, surface(950), 4.5),
     check('Dark: surface 950 on primary', surface(950), dark, 4.5),
     check('Dark: surface 950 on primary hover', surface(950), primary(brand.dark.hover), 4.5),
+    check('Dark: surface 950 on primary active', surface(950), primary(brand.dark.active), 4.5),
     check('Text on surface 0', surface(700), white, 4.5),
     check('Muted text on surface 0', surface(500), white, 4.5),
     check('Muted text on surface 50', surface(500), surface(50), 4.5),
@@ -105,12 +115,12 @@ export function toneContrastChecks(brand: Brand): readonly ContrastCheck[] {
   const surface = (step: PaletteStep) => primitiveHex(brand.neutral, step);
   const checks: ContrastCheck[] = [];
   const solidSteps = [
-    { tone: 'success', step: 700 },
-    { tone: 'info', step: 700 },
-    { tone: 'warn', step: 700 },
-    { tone: 'danger', step: 600 },
+    { tone: 'success', step: 700, hover: 800, active: 900 },
+    { tone: 'info', step: 700, hover: 800, active: 900 },
+    { tone: 'warn', step: 700, hover: 800, active: 900 },
+    { tone: 'danger', step: 600, hover: 700, active: 800 },
   ] as const;
-  for (const { tone, step } of solidSteps) {
+  for (const { tone, step, hover, active } of solidSteps) {
     const hex = (value: PaletteStep) => primitiveHex(statusTones[tone], value);
     const darkTint = mixSrgb(hex(400), surface(900), 0.16);
     checks.push(
@@ -123,7 +133,11 @@ export function toneContrastChecks(brand: Brand): readonly ContrastCheck[] {
       check(`Toast ${tone} detail: surface 700 on 50`, surface(700), hex(50), 4.5),
       check(`Dark toast ${tone}: 300 on surface 900`, hex(300), surface(900), 4.5),
       check(`Button ${tone}: white on ${String(step)}`, white, hex(step), 4.5),
+      check(`Button ${tone} hover: white on ${String(hover)}`, white, hex(hover), 4.5),
+      check(`Button ${tone} active: white on ${String(active)}`, white, hex(active), 4.5),
       check(`Dark button ${tone}: surface 950 on 400`, surface(950), hex(400), 4.5),
+      check(`Dark button ${tone} hover: surface 950 on 300`, surface(950), hex(300), 4.5),
+      check(`Dark button ${tone} active: surface 950 on 200`, surface(950), hex(200), 4.5),
       check(`Outlined/text button ${tone}: 700 on surface 0`, hex(700), white, 4.5),
       check(`Outlined/text button ${tone}: 700 on hover 50`, hex(700), hex(50), 4.5),
       check(`Dark outlined/text button ${tone}: 300 on surface 900`, hex(300), surface(900), 4.5),
@@ -133,6 +147,21 @@ export function toneContrastChecks(brand: Brand): readonly ContrastCheck[] {
   checks.push(
     check('Tag neutral: 700 on 100', surface(700), surface(100), 4.5),
     check('Dark tag neutral: 200 on 800', surface(200), surface(800), 4.5),
+    check('Solid neutral mark on surface 0', surface(500), white, 3),
+    check('Dark solid neutral mark on surface 900', surface(400), surface(900), 3),
+    // The topbar unread badge: frame background text on the danger solid mark.
+    check(
+      'Unread badge: surface 0 on danger 600',
+      white,
+      primitiveHex(statusTones.danger, 600),
+      4.5,
+    ),
+    check(
+      'Dark unread badge: surface 900 on danger 400',
+      surface(900),
+      primitiveHex(statusTones.danger, 400),
+      4.5,
+    ),
     check('Outlined/text button secondary: 600 on surface 0', surface(600), white, 4.5),
     check('Outlined/text button secondary: 600 on danger 100', surface(600), dangerTint, 4.5),
     check(
