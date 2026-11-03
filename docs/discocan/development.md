@@ -513,3 +513,7 @@ To bring it back, run the tool with `--to holita` on a configuration port and qu
 `98,1,<public-host>,<port>` through Karma: the tool reads 0049–0052, finds the primary server
 already pointing to holita, writes nothing and confirms the reply, and the unit makes its next
 ordinary connection to its primary server (about 5 minutes later on 2026-11-03).
+
+Run `98` sessions, for routing or this recovery, only while the truck is parked: reports a unit
+sends during a configuration session are lost (CB6711TE's ten driving reports during its
+2026-11-03 13:08 session never reached Karma and were not resent).
