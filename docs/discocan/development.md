@@ -1081,8 +1081,8 @@ device frame selects the connection's mode:
 
 - **Mirror:** forward device and Karma traffic byte for byte. Karma owns acknowledgements and
   commands.
-- **Primary:** holita immediately confirms complete device frames whose command appears in
-  `ERM_ACK_COMMANDS` (default `06`), using confirmation reference mode 0. Device traffic is still
+- **Primary:** holita immediately confirms complete device frames with a valid checksum whose
+  command appears in `ERM_ACK_COMMANDS` (default `06`), using confirmation reference mode 0. Device traffic is still
   mirrored to Karma, except confirmations of holita commands. Duplicate Karma confirmations for
   messages holita acknowledged are dropped. Karma authentication answers and other commands still
   reach the device. Holita and Karma whole-frame writes share one device queue.
@@ -1124,7 +1124,8 @@ retain raw text; missing or unparsable parsed values become null, and trailing f
 `extra`. Decoding failures are logged without affecting device traffic.
 
 The listener accepts at most 64 connections. A device must begin with `$` and complete its first
-frame within 60 seconds and the 16 KB frame bound before Karma is contacted. The upstream must
+frame, or reach the 16 KB frame bound, within 60 seconds before Karma is contacted. A first frame
+that is not a recognizable unit frame is still mirrored. The upstream must
 connect within 10 seconds. Closing either side closes the other. The public path must forward raw TCP with no HTTP/TLS termination.
 The relay and ERM Server share the default device port; run them together only on different free
 ports, for example:

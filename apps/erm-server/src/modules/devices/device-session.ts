@@ -165,16 +165,14 @@ export class DeviceSession {
       return;
     }
     const parsed = first.partial ? undefined : parseFrame(first.raw);
-    if (parsed?.origin !== 'SLU') {
-      for (const frame of frames) {
-        this.capture('device', frame);
-      }
-      this.reject('invalid or oversized first frame');
-      return;
-    }
     clearTimeout(this.firstFrameTimer);
-    this.unitId = parsed.unitId;
-    this.mode = this.options.primaryUnits?.has(parsed.unitId.toUpperCase()) ? 'primary' : 'mirror';
+    // An unidentified first frame after the "$" header is still mirrored, so a parser gap never
+    // cuts a device off from the upstream server.
+    this.unitId = parsed?.origin === 'SLU' ? parsed.unitId : undefined;
+    this.mode =
+      this.unitId !== undefined && this.options.primaryUnits?.has(this.unitId.toUpperCase())
+        ? 'primary'
+        : 'mirror';
     this.lastFrameAt = new Date();
     this.device.pause();
     this.device.off('data', this.identify);
@@ -274,7 +272,10 @@ export class DeviceSession {
     if (frame.partial || parsed?.origin !== 'SLU') {
       return false;
     }
-    if ((this.options.ackCommands ?? new Set(['06'])).has(parsed.command)) {
+    if (
+      parsed.checksum === 'ok' &&
+      (this.options.ackCommands ?? new Set(['06'])).has(parsed.command)
+    ) {
       this.rememberConfirmed(parsed.reference);
       this.send(buildServerFrame(parsed.unitId, '02', nextReference(), [parsed.reference, '01']));
     }
