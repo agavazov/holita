@@ -149,6 +149,12 @@
                   [severity]="row.live.online ? 'success' : 'danger'"
                   [value]="row.live.online ? text().live.online : text().live.offline"
                 />
+                @if (row.live.mode) {
+                  <p-tag
+                    [severity]="row.live.mode === 'PRIMARY' ? undefined : 'secondary'"
+                    [value]="row.live.mode === 'PRIMARY' ? text().live.primary : text().live.mirror"
+                  />
+                }
                 @if (row.live.alarms) {
                   <p-tag
                     severity="warn"

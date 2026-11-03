@@ -44,6 +44,7 @@ export function deviceRow(
     live: state
       ? {
           online: state.online,
+          mode: state.mode,
           lastFrameAt: state.lastFrameAt,
           alarms: state.alarmsLast24h,
           overdue: state.health.overdue,

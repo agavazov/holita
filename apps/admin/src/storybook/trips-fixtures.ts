@@ -30,6 +30,7 @@ export const fixtureTrip: WithTypename<AdminTripDetailsFragment> = {
   maxSpeedKph: 90,
   fuelUsedL: 30,
   drivingScore: 80,
+  source: 'DEMO',
   inProgress: false,
   drivingEvents: [
     {
@@ -62,6 +63,7 @@ export const fixtureOpenTrip: WithTypename<AdminTripDetailsFragment> = {
   maxSpeedKph: null,
   fuelUsedL: null,
   drivingScore: null,
+  source: 'DEMO',
   inProgress: true,
   drivingEvents: [],
 };

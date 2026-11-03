@@ -116,6 +116,9 @@
                 [value]="row.inProgress ? text().table.inProgress : text().table.noEnd"
               />
             }
+            @if (row.holita) {
+              <p-tag severity="secondary" [value]="text().table.holita" />
+            }
             <div class="app-table-mobile-actions">
               <holita-row-actions
                 [actions]="actions()"

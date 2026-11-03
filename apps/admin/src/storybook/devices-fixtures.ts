@@ -67,6 +67,7 @@ graphqlFixture(AdminDevicesLiveDocument, () => ({
           __typename: 'ErmUnitState',
           unitId: fixtureDevice.imei,
           online: true,
+          mode: 'PRIMARY',
           lastFrameAt: '2026-10-20T08:00:00.000Z',
           alarmsLast24h: 2,
           health: { __typename: 'ErmUnitHealth', overdue: false, karmaRoutingWritesLast24h: 0 },

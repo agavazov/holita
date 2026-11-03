@@ -211,6 +211,7 @@ fragment AdminVehicleProfileTripDetails on FleetTrip {
   fuelUsedL
   drivingScore
   inProgress
+  source
   drivingEvents {
     id
     occurredAt

@@ -33,7 +33,8 @@
     "eventCount": "{count} events",
     "emptyTitle": "No trips yet",
     "emptyDescription": "Trips appear when the trackers report the first journeys.",
-    "errorText": "The trips could not be loaded."
+    "errorText": "The trips could not be loaded.",
+    "holita": "holita"
   },
   "actions": {
     "open": "Open trip",

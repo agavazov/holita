@@ -59,6 +59,8 @@ export interface TripRow {
   readonly durationMin: number | null;
   readonly maxSpeedKph: number | null;
   readonly inProgress?: boolean;
+  /** Imported from holita's ERM device server. */
+  readonly holita?: boolean;
   readonly fuelUsedL: number | null;
   readonly score: number | null;
   readonly events: readonly TripEvent[];

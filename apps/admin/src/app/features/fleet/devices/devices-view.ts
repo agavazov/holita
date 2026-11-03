@@ -39,6 +39,8 @@ export const currentFirmware = '03.29.02';
 export type DeviceLive =
   | {
       readonly online: boolean;
+      /** PRIMARY when holita serves the unit, MIRROR when it only mirrors Karma's traffic. */
+      readonly mode: 'PRIMARY' | 'MIRROR' | null;
       readonly lastFrameAt: string | null;
       readonly alarms: number;
       /** No frame within twice the expected reporting interval. */

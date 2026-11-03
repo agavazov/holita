@@ -58,6 +58,7 @@ query AdminDevicesLive($ids: [ID!]!) {
       ermState {
         unitId
         online
+        mode
         lastFrameAt
         alarmsLast24h
         health {

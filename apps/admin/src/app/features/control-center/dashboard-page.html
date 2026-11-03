@@ -188,6 +188,12 @@
                   [value]="state.online ? text().online : text().offlineState"
                   [severity]="toneSeverity(state.online ? 'success' : 'warn')"
                 />
+                @if (state.mode) {
+                  <p-tag
+                    [value]="state.mode === 'PRIMARY' ? text().primary : text().mirror"
+                    [severity]="toneSeverity(state.mode === 'PRIMARY' ? 'accent' : 'neutral')"
+                  />
+                }
                 @if (isLostToKarma(device)) {
                   <p-tag [value]="text().lostToKarma" [severity]="toneSeverity('danger')" />
                 }

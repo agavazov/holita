@@ -24,6 +24,7 @@ export function tripRow(trip: AdminTripDetailsFragment, language: Language): Tri
     durationMin: trip.durationSeconds === null ? null : trip.durationSeconds / 60,
     maxSpeedKph: trip.maxSpeedKph,
     inProgress: trip.inProgress,
+    holita: trip.source === 'ERM',
     fuelUsedL: trip.fuelUsedL,
     score: trip.drivingScore,
     events: trip.drivingEvents.map((event) => ({
