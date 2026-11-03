@@ -507,3 +507,9 @@ after): the unit's next ordinary connection reaches the tool. Other units that u
 too and are not forwarded to Karma, so run it between their sessions (open sessions are
 `ermConnection` rows without `closedAt`). A unit whose backup server (0051/0052) is Karma fails
 over to it by itself while holita is unreachable.
+
+A unit can stay on that backup after holita drops it, as CB6711TE did after a gateway restart.
+To bring it back, run the tool with `--to holita` on a configuration port and queue
+`98,1,<public-host>,<port>` through Karma: the tool reads 0049–0052, finds the primary server
+already pointing to holita, writes nothing and confirms the reply, and the unit makes its next
+ordinary connection to its primary server (about 5 minutes later on 2026-11-03).
