@@ -9,7 +9,7 @@ Fleet also owns [background device configuration reads and parameter changes](#b
 
 ## Persistence ownership
 
-One PostgreSQL instance contains independent Core/Fleet development and test databases,
+One PostgreSQL instance contains independent Core/Fleet/ERM Server development and test databases,
 with distinct owner/login roles. Admin/Gateway have no Prisma client or database credentials.
 Each owning service has its own schema, reviewed SQL migrations and generated client.
 Core owns the [Tenant/Branch foundation](../ecommerce/branches.md) currently reused as Discocan organizational scope.
@@ -19,6 +19,12 @@ start with `20261102000000_baseline`; later changes preserve that history throug
 migrations. Branch and every Fleet business table declare tenantId physically second after id;
 Fleet branchId is physically third.
 Tenant data is inserted by the seed, not by schema migrations.
+
+ERM Server owns raw `ermConnection` and `ermFrame` records in `holita_erm`, separately from
+Fleet business data. These provider-level records have no Tenant/Branch columns. Frames keep
+their exact bytes without CR LF, direction, receive time, parsed unit/command/reference,
+checksum state and partial flag. The connection records retain lifecycle metadata and byte counts.
+Database writes are asynchronous and failures do not stop TCP forwarding.
 
 The [Simple eData catalog](erm-resources/simple-edata-catalog/README.md) is common
 manufacturer reference data without Tenant/Branch columns. Seven related tables preserve
@@ -98,6 +104,17 @@ anchor, and existing records remain unchanged.
 
 Tests deploy migrations into random schemas in dedicated test databases and drop only their
 own schema. Development connections, broad resets and shared truncation are not test fixtures.
+
+### ERM device ingestion
+
+`apps/erm-server` is an independent NestJS host service with HTTP `/health` on loopback 11015
+and a separate StarLink TCP listener on `0.0.0.0:11500` by default. It is outside `dev` and `kill`,
+so HTTP application restarts leave device sessions open. Mirror mode forwards both directions
+unchanged to Karma ingestion; Karma keeps acknowledging and commanding the devices. Raw daily UTC
+JSON Lines captures use the relay's record format, with private directory/file permissions.
+The existing relay remains available. There is no ERM GraphQL endpoint or Fleet processing pipeline.
+See the [application decision](../architecture/decisions/0006-erm-device-server.md) and
+[service setup](development.md#erm-device-server).
 
 ### Branch settings
 

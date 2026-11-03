@@ -1,7 +1,7 @@
 # holita
 
-holita is a strict TypeScript npm-workspaces repository with Nx tasks and five host
-applications: Angular admin, native Apollo Router gateway and NestJS core, fleet and karma-client services.
+holita is a strict TypeScript npm-workspaces repository with Nx tasks and six host
+applications: Angular admin, native Apollo Router gateway and NestJS core, fleet, karma-client and erm-server services.
 The admin uses the holita [design system](docs/admin-design-system.md) on PrimeNG and
 Bulgarian/English catalogs.
 Its modules are Vehicles, Devices and the shared Karma truck data and reference views. Core provides Branch discovery; Gateway
@@ -16,6 +16,10 @@ Ecommerce. Code, contracts, persistence and the admin use Branch terminology.
 Fleet also stores the [versioned Simple eData vendor catalog](docs/discocan/erm-resources/simple-edata-catalog/README.md).
 Its EXE inspection, extraction, comparison and local import use direct commands,
 independent of the admin and sample-data seed.
+
+ERM Server receives raw StarLink device TCP traffic, mirrors it to Karma and records connections
+and frames in its own database plus private JSON Lines captures. It runs independently of the
+web/API applications; see [ERM Server setup](docs/discocan/development.md#erm-device-server).
 
 ## Run locally
 
@@ -100,7 +104,10 @@ Use [Gateway GraphQL](http://127.0.0.1:11010/graphql). `{ tenants { id name } }`
 Router exposes `/health` on its separate loopback port 11016; the subgraphs expose `/health`
 on their normal ports. Health is independent of database/downstream availability.
 
-To start one application, use `dev:admin`, `dev:gateway`, `dev:core`, `dev:fleet` or `dev:karma-client`.
+To start one application, use `dev:admin`, `dev:gateway`, `dev:core`, `dev:fleet`, `dev:karma-client`
+or `dev:erm-server`. ERM Server defaults to HTTP health on loopback 11015 and device TCP on
+all interfaces at 11500. It is outside `npm run dev` and `npm run kill`; run its compiled output
+as an independent service to retain device connections during web/API restarts.
 `npm run dev` starts the official Apollo Router on 11010; Angular proxies `/graphql` to it.
 Install the pinned binary once with `npm run router:install` before development, builds or
 Gateway/browser checks. Router reads exported process variables, not `apps/gateway/.env`;

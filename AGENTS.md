@@ -83,8 +83,8 @@ overrides more detailed guidance in documentation and skills.
 ## Repository
 
 - Use npm workspaces, the existing lockfile, and Nx.
-  - The five applications are `apps/admin`, `apps/gateway`, `apps/core`, `apps/fleet` and
-    `apps/karma-client`.
+  - The six applications are `apps/admin`, `apps/gateway`, `apps/core`, `apps/fleet`,
+    `apps/karma-client` and `apps/erm-server`.
 - Do not import another application's implementation, Prisma client or database model, including
   through relative paths. ESLint/Nx enforce application boundaries.
 - Expose daily commands through root npm scripts. Do not add another build system, a custom

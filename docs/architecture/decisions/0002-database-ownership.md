@@ -1,6 +1,6 @@
 # Separate database ownership and isolated test schemas
 
-Core and Fleet own independent persistence without sharing application models.
+Core, Fleet and ERM Server own independent persistence without sharing application models.
 One local PostgreSQL instance contains separate databases, login roles, Prisma schemas,
 clients and SQL migrations. Vehicle/Device branchId is a UUID reference without a cross-database
 foreign key. Device → Vehicle uses a same-tenant/same-branch composite foreign key inside Fleet.

@@ -1,0 +1,49 @@
+{
+  "name": "erm-server",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/erm-server/src",
+  "tags": ["type:app", "scope:erm-server"],
+  "targets": {
+    "test": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["db-generate"],
+      "options": {
+        "command": "npm run test --",
+        "cwd": "apps/erm-server",
+        "forwardAllArgs": true
+      }
+    },
+    "lint": { "dependsOn": ["db-generate"] },
+    "typecheck": { "dependsOn": ["db-generate"] },
+    "build": { "dependsOn": ["db-generate"] },
+    "db-generate": {
+      "executor": "nx:run-commands",
+      "inputs": [
+        "{projectRoot}/prisma/schema.prisma",
+        "{projectRoot}/prisma.config.ts",
+        "{workspaceRoot}/package-lock.json"
+      ],
+      "cache": true,
+      "outputs": ["{projectRoot}/src/generated/prisma"],
+      "options": {
+        "command": "npm run db:generate",
+        "cwd": "apps/erm-server"
+      }
+    },
+    "test-db": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["db-generate"],
+      "cache": true,
+      "inputs": ["default"],
+      "options": {
+        "command": "npm run test:db --",
+        "cwd": "apps/erm-server",
+        "forwardAllArgs": true
+      }
+    }
+  },
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*", "sharedGlobals", "databaseTooling"]
+  }
+}

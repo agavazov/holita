@@ -1,6 +1,6 @@
 # Shared workspace architecture
 
-The repository uses npm workspaces and Nx, with five applications and the shared `@holita/edata-rules` package.
+The repository uses npm workspaces and Nx, with six applications and the shared `@holita/edata-rules` package.
 Applications never import another application's implementation, Prisma models or generated client.
 
 `packages/edata-rules` provides the rule expression parser and binary record codec used by the
@@ -16,12 +16,14 @@ also own their concrete repository. Application-local `auth/`, `graphql/`, `heal
 and, where needed, `database/` and `clock/` hold the supporting code. These directories are not shared
 runtime packages. Prisma schemas, migrations and generated output retain their existing
 owning-application locations.
+ERM Server also keeps its pure StarLink framing and envelope functions in `src/starlink/`.
 
 | Application  | Feature modules                                                                                                                                   | Integration ownership                                                                                                                                                                              |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Core         | Tenants, Branches                                                                                                                                 | Tenant/Branch API; one local DatabaseModule provides Prisma to both features                                                                                                                       |
 | Fleet        | Vehicles, Devices, Device operations, Drivers, Vehicle groups, Telemetry, Trips, Events, Service tasks, Overview, Settings, offline eData catalog | `integrations/core/` owns Branch existence checks; `integrations/karma/` owns internal device-operation HTTP; one local DatabaseModule provides Fleet Prisma; `clock/` provides the business clock |
 | Karma Client | Cars, eData, Location, History, References, Accounts, internal device configuration operations                                                    | `integrations/karma/` owns external HTTP and the shared upstream account session; no database                                                                                                      |
+| ERM Server   | Device connections and raw frame capture                                                                                                          | StarLink TCP mirror to Karma ingestion; its own DatabaseModule and provider-level connection/frame persistence                                                                                     |
 
 Fleet feature modules import each other only in one direction: Telemetry and Events are used by
 Vehicles, Devices (Telemetry only), Drivers and Trips; Trips by Drivers; Service tasks by
@@ -50,13 +52,14 @@ pages and Storybook examples. Storybook fixtures and sample pages stay in `src/s
 and outside application output. `core/` contains only admin-local authentication,
 configuration and GraphQL transport. Feature clients and caches retain their mounted view lifetime; neither route grouping nor shared login makes business clients global.
 
-| Application  | Responsibility                                                                                                              | Local port |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| admin        | Standalone Angular, PrimeNG with the holita design system, Branch discovery, Fleet CRUD, Karma truck data and account views | 11000      |
-| gateway      | Native Apollo Router federation, `/graphql`; `/health` on 11016                                                             | 11010      |
-| core         | Tenant demo login, scoped Branch discovery/lookup and selected Branch rename, owning database                               | 11011      |
-| fleet        | Tenant/Branch-scoped Fleet master data, telemetry, trips, alerts, service, Overview and settings, owning database           | 11013      |
-| karma-client | Authenticated, shared Karma truck data and account views; no database                                                       | 11014      |
+| Application  | Responsibility                                                                                                              | Local port            |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| admin        | Standalone Angular, PrimeNG with the holita design system, Branch discovery, Fleet CRUD, Karma truck data and account views | 11000                 |
+| gateway      | Native Apollo Router federation, `/graphql`; `/health` on 11016                                                             | 11010                 |
+| core         | Tenant demo login, scoped Branch discovery/lookup and selected Branch rename, owning database                               | 11011                 |
+| fleet        | Tenant/Branch-scoped Fleet master data, telemetry, trips, alerts, service, Overview and settings, owning database           | 11013                 |
+| karma-client | Authenticated, shared Karma truck data and account views; no database                                                       | 11014                 |
+| erm-server   | StarLink TCP mirror, raw audit capture and owning database; HTTP `/health`                                                  | 11015 HTTP; 11500 TCP |
 
 ```mermaid
 flowchart LR
@@ -69,6 +72,9 @@ flowchart LR
   Core --> CoreDB[(Core database)]
   Fleet --> FleetDB[(Fleet database)]
   Fleet -->|Branch existence on create and settings upsert| Core
+  Devices[StarLink devices] -->|TCP| ERMServer[ERM Server]
+  ERMServer -->|TCP mirror| KarmaIngestion[Karma device ingestion]
+  ERMServer --> ERMDB[(ERM database)]
 ```
 
 ## Execution and ownership
@@ -78,6 +84,13 @@ using concurrently, including admin Storybook on port 11001, with group shutdown
 artifacts are generated once before the Angular and Storybook processes start. Ports and CORS origins are application-local configuration.
 Only PostgreSQL runs in Compose. Setup/migration/seed are explicit commands, separate from startup.
 Health endpoints prove application availability without opening database connections.
+
+ERM Server runs independently from compiled output and is excluded from both `dev` and `kill`.
+Its device connections therefore survive restarts of the web/API group. In mirror mode Karma
+owns acknowledgements and commands; the server forwards bytes unchanged, captures both directions
+and persists raw provider-level units without Tenant/Branch scope. It has no GraphQL endpoint.
+See the [ERM Server decision](decisions/0006-erm-device-server.md) and
+[service setup](../discocan/development.md#erm-device-server).
 
 Fleet also owns the [shared Simple eData vendor catalog](../discocan/erm-resources/simple-edata-catalog/README.md).
 Its offline extractor and local import CLI preserve versioned reference data independently
@@ -93,7 +106,7 @@ Karma Client on the public GraphQL port, 11010. Its health listener uses port 11
 Authorization, Branch scope and business behavior remain in the owning subgraphs.
 Only `authorization`, `x-branch-id` and `x-request-id` are propagated from client requests.
 `dev` starts Router, three subgraphs, Angular and Storybook through concurrently. Angular's development
-proxy follows `ROUTER_PORT`, defaulting to 11010. `kill` stops the native Router and Node
+proxy follows `ROUTER_PORT`, defaulting to 11010. `kill` stops the native Router and the web/API Node
 application processes. Gateway has no Node implementation, Nest bootstrap or npm runtime
 dependencies. Development, federation/browser fixtures and CI all use the official binary.
 Router's Rhai hook normalizes request IDs at the supergraph boundary, returns the ID in the
@@ -121,7 +134,7 @@ startup failures and normal teardown stop the child before closing downstream re
 ## Domain documentation
 
 [Discocan architecture](../discocan/architecture.md) describes Fleet persistence, GraphQL
-contracts, the shared Karma account client and the current telemetry admin. [Ecommerce Branches](../ecommerce/branches.md)
+contracts, the shared Karma account client, raw ERM device ingestion and the current telemetry admin. [Ecommerce Branches](../ecommerce/branches.md)
 describes the Core-owned Branch foundation currently reused by Discocan.
 
 The domains share this checkout and its infrastructure today. Their documentation boundaries
