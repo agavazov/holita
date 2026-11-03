@@ -10,39 +10,34 @@ order, safety rules and test levels for all units.
 
 ## Routed test trucks
 
-CB5640XP (car 16587, unit 862129080366630, StarLink_Tracker2) and CB5636XP (car 16590, unit
-862129080254620, StarLink_Scout1) have used holita as their primary server since 2026-11-03, with
-Karma kept as backup `0051`/`0052`; see
-[moving a unit](../discocan/development.md#moving-a-unit-between-karma-and-holita). Both relay to
-Karma, Karma confirms `06` events, and neither unit authenticates with `95`.
+CB5640XP (car 16587, unit 862129080366630, Tracker), CB5636XP (car 16590, unit 862129080254620,
+Scout) and, since 13:09 on 2026-11-03, CB6711TE (car 16588, unit 862129080319233, Tracker) use
+holita as their primary server, with Karma kept as backup `0051`/`0052`; see
+[moving a unit](../discocan/development.md#moving-a-unit-between-karma-and-holita). All relay to
+Karma, and none authenticates with `95`. CB5640XP and CB5636XP run in primary mode and are always
+connected (`0774=0`, was 720). The Tracker formats are described in
+[StarLink Tracker frame formats](../discocan/erm-resources/starlink-binary-formats.md).
 
-- [ ] Decode CB5640XP's ordinary traffic: `$SLB` frames and `$SLC` containers, which the archived
-      protocol does not document (it has only `$SLP`, `0182=4`). Until then erm-server mirrors them
-      without a unit ID or events. Its configuration-session replies are text.
-  - Partly decoded from captures against Karma `/location`:
-    - The body uses G9 escapes; each tag is followed by a big-endian value.
-    - Known tags: `04` 7-byte BCD IMEI without its check digit, then `0f 01`, then command `06`.
-    - `03` u32 reference; `0c` u32 event time and `0e` u32 position time (seconds since 2000-01-01 UTC);
-      `08` u8 event ID.
-    - `19` i32 latitude and longitude (×10⁻⁶°); `12` u16 speed; `16` u32 odometer in metres.
-    - `1b` u32 cell ID and u16 LAC; `20`/`21` u16 main and backup voltage in mV.
-    - `3b` u32 network code; `51` u8 network type; `fe` the text tail Karma shows as `extra`.
-  - Still unknown: heading, satellites, altitude framing and the `$SLC` compressed frames prefixed `E0`.
-  - CB5640XP reports protocol format `0182=3`, which the archive does not list (it has `0` text, the
-    default, and `4` protobuf `$SLP`). CB5636XP has `0182` unset and both report the same `0177`
-    layout, so setting CB5640XP's `0182=0` is the alternative to a decoder, at the cost of more mobile
-    data. Karma API v2 cannot write it.
+- [ ] Decode `$SLB` reports in erm-server with the mapped tags (`$SLC` containers are decoded) and
+      identify the remaining tags `27`, `ff 32` and the first byte of `04`.
+- [ ] Record connection closes when erm-server stops: after the 13:05 restart both closed
+      connections kept `closedAt` empty.
+- [ ] Always-connected units do not reconnect after erm-server closes their connection (13:05:
+      no attempt for minutes). Keep their sessions across deployments, or wake them by a call
+      to the SIM after a restart.
+- [ ] Add CB6711TE to `ERM_PRIMARY_UNITS` once its ordinary sessions through holita are verified.
 
 ## Verify and enable primary mode
 
-- [ ] Compare CB5636XP's decoded `ermEvent` rows with Karma `/events` and `/location` over a day.
-      The deployed `ERM_EVENT_STRUCTURE` holds its `0177` layout.
-- [ ] Enable `ERM_PRIMARY_UNITS` for CB5636XP, confirm that holita's confirmations stop
-      retransmissions and that Karma still receives every frame; exercise the internal command API
-      (`03`, `05`) and the routing restore (`04`/`46` for `0049`/`0050`) through holita.
-  - After route-unit confirmed its `45` reply in a configuration session, CB5636XP sent `E0 00` pairs
-    before its `46` result and about 1.8 KB/s of them until the session closed. erm-server's frame
-    splitter keeps such bytes in front of the next frame, which then fails to parse.
+- [ ] Compare the routed trucks' decoded `ermEvent` rows with Karma `/events` and `/location` over a
+      day. The deployed `ERM_EVENT_STRUCTURE` holds the shared `0177` layout.
+- [ ] Watch that holita's confirmations stop retransmissions; on 2026-11-03 Karma kept receiving
+      CB5636XP's events in primary mode.
+- [ ] Consume replies to holita's commands that arrive inside a `$SLC` container: they are matched
+      and confirmed, but the container still reaches Karma. Never read 0049–0054 through the API.
+  - Units in a configuration session may send `E0 00` pairs at about 2 KB/s, with or without a
+    confirmation from the server. erm-server's frame splitter keeps such bytes in front of the next
+    frame, which then fails to parse.
 
 ## Replace Karma
 

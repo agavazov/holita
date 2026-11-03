@@ -74,6 +74,10 @@ system/dynamic parameters, hardware, tools and Test Server instructions. Its
 inventory records retrieval coverage and unavailable resources. The original
 three screenshots remain historical visual evidence.
 
+The fleet's Tracker units send formats the portal does not document (`0182=3`):
+[StarLink Tracker frame formats](starlink-binary-formats.md) records the decoded `$SLC` containers
+and the mapped `$SLB` tags.
+
 Keep the layers distinct: StarLink is the tracker/server envelope; eData is the
 CAN Engine payload; Karma API v2 exposes account records and commands; holita
 currently exposes only its documented subset. Tracker diagnostic event `2`,
