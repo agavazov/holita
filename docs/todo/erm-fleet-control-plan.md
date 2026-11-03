@@ -11,20 +11,20 @@ This plan orders the work and sets the rules. Engineering tasks for the receiver
 25 result codes, 94 events, 60 features, 1,397 system and 218 dynamic parameters, Simple SMS and
 firmware versions up to 2.46.
 
-## Starting point (2026-11-03)
+## Starting point (2026-11-03, 13:30)
 
-- CB5640XP (Tracker) and CB5636XP (Scout) use holita as their primary server, with Karma as their
-  backup server; holita relays every frame to Karma.
-- Proven through holita on both models: moving a unit with Karma's `98` and `45`/`46`, and the mirror
-  relay. Scout text events decode automatically. Tracker `$SLB` frames are decoded by hand only.
-- Proven through Karma only: parameter reads (`03`), eData commands (`30`), `419` fault records
-  (CB1147TP) and the Fleet configuration operations.
-- Implemented but never used on a unit: primary-mode confirmations and the internal command API
-  (`03`/`45`, `05`, and `04`/`46` for 0049–0054).
-- The fleet has 6 Scout and 4 Tracker units. Both routed units report the same `0177` event layout.
-  The Tracker reports `0182=3` and sends binary; the Scout has `0182` unset and sends text. In the
-  29 October campaign five units answered eData commands and CB1147TP sent eData fault records; the
-  other four had not received the commands.
+- The three test trucks CB5640XP and CB6711TE (Trackers) and CB5636XP (Scout) use holita as their
+  primary server in primary mode, with Karma as backup server; holita relays every frame to Karma.
+  All three are always connected (`0774=0`, was 720).
+- Proven through holita: moving a unit (`98`, `45`/`46`, also while driving with compressed replies),
+  holita's confirmations, the command API reads (`03`, `45`, `48`, `05`, `07`, `12`, `16`, `49`,
+  `53`, `56`, `61`, `27`, `51`), a parameter write with read-back (`0774`) and the eData fixed reads
+  (`306` diagnostics answered with `411`; the `301` fault logger answers `154,0` as through Karma).
+- erm-server decodes text, `$SLC` and `$SLB` events; CB6711TE's binary events match Karma exactly. See
+  [StarLink Tracker frame formats](../discocan/erm-resources/starlink-binary-formats.md).
+- All units with an answer run firmware 2.45d with an "eData Fms" 6.56 module and share one `0177`
+  layout. Trackers report `0182=3` (binary); Scouts leave it unset (text).
+- Still only through Karma: `419` fault records (CB1147TP) and the Fleet configuration operations.
 
 ## Safety rules
 
@@ -55,12 +55,11 @@ firmware versions up to 2.46.
 
 ## Phase 0: inventory and configuration backup
 
-- [ ] Read each unit's identity and formats: firmware `#VER#` (command `48`; first check that Karma
-      accepts it), IMSI/ICCID (0063/0064), `0182`, `0177`, the accessory list (`56`), external
-      device versions (`53`) and Simple SMS (0592). Use Karma for units still on Karma, and holita
-      for routed units.
-- [ ] Snapshot every system parameter of each unit with `45` batches in a configuration session,
-      confirming every reply. Prove the reader on L0 and L1 first.
+- [ ] Read the identity and formats of the seven trucks still on Karma: firmware (`48` with
+      `#VER#`), IMSI/ICCID (0063/0064), `0182`, `0177`, accessories (`56`), external device versions
+      (`53`) and Simple SMS (0592). The three test trucks are done.
+- [ ] Store snapshots in holita instead of private files. The three test trucks have one each
+      (secret parameters are never read; CB5640XP's misses the batches after step 48).
 - [ ] Build a profile per unit: ERM hardware entry, firmware, variants, accessories and formats. Mark
       functions the hardware lacks as not applicable once ERM confirms it.
 - Done when all 10 units have a profile and a stored snapshot.
@@ -73,29 +72,27 @@ firmware versions up to 2.46.
 - [ ] If Phase 0 finds different `0177` layouts, make the event structure per unit instead of the
       global `ERM_EVENT_STRUCTURE`.
 - [ ] Route the Scouts first (CB1147TP, CB1344XH, CB2792TK, CB9405PE, then CB6721TE after its
-      [eData recovery](erm-edata-recovery-cb6721te.md)), then the Trackers (CB6711TE, CB9680TE,
-      CB9369PE). Move one unit a day. Check its next ordinary connection, gapless Karma `/events` and
+      [eData recovery](erm-edata-recovery-cb6721te.md)), then the Trackers CB9680TE and CB9369PE.
+      Move one unit a day. Check its next ordinary connection, gapless Karma `/events` and
       that Karma sends no `46` for an hour.
 - Done when all 10 units relay through holita for 7 days without gaps in Karma.
 
 ## Phase 2: read all data in holita
 
-- [ ] Choose the Tracker format: set `0182=0` on a test Tracker and compare its text with its
-      binary while Karma keeps decoding it. If that fails, write the
-      `$SLB`/`$SLC` decoder from ERM's specification.
 - [ ] Compare each unit's decoded events with Karma for a day: position, times, speed, odometer,
       voltages, ignition and engine, satellites and network.
 - [ ] Map every event ID in the fleet's Karma history to the 94 documented events, and decode each
       one that occurs.
-- [ ] Decode eData payloads (`401`, `402`, `411`, `413`, `417`, `418`, `419`) from holita's own frames
-      with Fleet's existing interpretation.
+- [ ] Decode eData payloads (`401`, `402`, `405`, `411`, `413`, `417`, `418`, `419`) from holita's own
+      frames with Fleet's existing interpretation; they arrive as event 33 in text or in the `$SLB`
+      text tail.
 - Done when holita's data equals Karma's for 7 days on every unit.
 
 ## Phase 3: send every command from holita
 
-- [ ] Enable primary mode as in
-      [Verify and enable primary mode](erm-tcp-receiver-and-test-device-routing.md#verify-and-enable-primary-mode).
-- [ ] Prove the command families in this order, each on L1 before L2 or L3:
+- [ ] Finish [Verify and enable primary mode](erm-tcp-receiver-and-test-device-routing.md#verify-and-enable-primary-mode).
+- [ ] Prove the remaining command families in this order, each on L1 before L2 or L3. Reads, the
+      `0774` write and the eData fixed reads are proven on the three test trucks:
 
 | Family              | Commands                                                                     | Levels       |
 | ------------------- | ---------------------------------------------------------------------------- | ------------ |
