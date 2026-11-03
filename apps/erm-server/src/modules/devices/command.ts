@@ -131,7 +131,7 @@ export function matchesResponse(input: DeviceCommand, frame: ParsedFrame): boole
       Number(parameter) === Number(input.fields[0])
     );
   }
-  if (input.command !== '45' || frame.fields.length !== input.fields.length * 2) {
+  if (frame.fields.length !== input.fields.length * 2) {
     return false;
   }
   const received = frame.fields
