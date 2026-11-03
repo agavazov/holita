@@ -111,6 +111,23 @@ export function parseFrame(raw: Buffer): ParsedFrame | undefined {
   return { header, origin, unitId, command, reference, fields, checksum: state };
 }
 
+// CB5640XP's undocumented $SLB/$SLC frames start, after G9 replacement, with tag 04 and the first 14
+// IMEI digits in BCD; the 15th is the Luhn check digit.
+export function binaryUnitId(raw: Buffer): string | undefined {
+  const header = raw.subarray(0, 4).toString('latin1');
+  const body = unescape(raw.subarray(4, 24));
+  const digits = body.subarray(1, 8).toString('hex');
+  if ((header !== '$SLB' && header !== '$SLC') || body[0] !== 0x04 || !/^\d{14}$/.test(digits)) {
+    return undefined;
+  }
+  let sum = 0;
+  for (let index = 0; index < digits.length; index++) {
+    const digit = Number(digits[digits.length - 1 - index]) * (index % 2 === 0 ? 2 : 1);
+    sum += digit > 9 ? digit - 9 : digit;
+  }
+  return `${digits}${String((10 - (sum % 10)) % 10)}`;
+}
+
 export function buildServerFrame(
   unitId: string,
   command: string,

@@ -1257,17 +1257,27 @@ curl --fail --silent --show-error \
 timestamps are ISO strings. `POST /internal/units/:unitId/commands` requires a connected primary-mode
 unit and accepts only these command/field combinations:
 
-| Command | Fields                                                                       |
-| ------- | ---------------------------------------------------------------------------- |
-| `03`    | One parameter number, for example `["0774"]`.                                |
-| `45`    | One or more parameter numbers.                                               |
-| `05`    | Empty array or one maximum-wait value in seconds (1–4 digits).               |
-| `04`    | One parameter/value pair, restricted to server-routing parameters 0049–0054. |
-| `46`    | Alternating parameter/value pairs, restricted to 0049–0054.                  |
+| Command                                        | Fields                                                              |
+| ---------------------------------------------- | ------------------------------------------------------------------- |
+| `03`                                           | One parameter number, for example `["0774"]`.                       |
+| `45`                                           | One or more parameter numbers.                                      |
+| `48`                                           | One template of dynamic parameters, for example `["VER=#VER#"]`.    |
+| `05`                                           | Empty array or one maximum-wait value in seconds (1–4 digits).      |
+| `07`, `12`, `16`, `19`, `49`, `56`, `60`, `61` | Empty array (`56` only lists accessories).                          |
+| `08`, `10`, `23`, `27`, `36`, `43`, `51`, `53` | One input, zone, rule, parameter, pattern, sensor or device number. |
+| `04`                                           | One parameter/value pair.                                           |
+| `46`                                           | Alternating parameter/value pairs.                                  |
+
+A `04`/`46` write either sets only server-routing parameters 0049–0054 or none of them, and never
+writes lock codes (0059/0060), the SIM PIN (0061), the shared secret (0187), the operator and SIM
+locks (0524/0525) or the Simple SMS password (0593). Values contain no quotes or commas.
 
 The call waits up to 30 seconds. `04`/`46`/`05` complete on the device's `02` confirmation for
-holita's reference; `03`/`45` complete on the corresponding response containing the requested
-parameters. HTTP 200 returns `{ id, reference, status, resultCode, fields }`, with status
+holita's reference; the other commands complete on the device's reply with the same command, or
+on a `02` error. holita confirms that reply and does not forward it to Karma, because Karma reads
+routing values from such replies and writes its own server back. Units sending binary `$SLB`/`$SLC`
+frames are identified from the IMEI in the frame header. HTTP 200 returns
+`{ id, reference, status, resultCode, fields }`, with status
 `answered`, `timeout` or `failed`. Only one holita command may be pending per connection.
 Invalid commands return 400, disconnected units 404, and mirror/busy/not-ready units 409.
 The API returns 401 for invalid credentials and 503 when its token is unconfigured. Command

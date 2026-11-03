@@ -180,8 +180,10 @@ it('acknowledges primary units, filters owned confirmations and completes allowl
     expect(afterPartial?.fields.map((field) => field.toString())).toEqual(['73', '01']);
 
     for (const invalid of [
-      { command: '04', fields: ['0774', '30'] },
+      { command: '04', fields: ['0593', '1234'] },
       { command: '46', fields: ['0049', 'host,0774,30'] },
+      { command: '46', fields: ['0049', 'host', '0774', '30'] },
+      { command: '56', fields: ['1'] },
       { command: '01', fields: [] },
     ]) {
       await expect(listener.sendCommand(unitId, invalid)).rejects.toBeInstanceOf(
@@ -202,6 +204,12 @@ it('acknowledges primary units, filters owned confirmations and completes allowl
         responseFields: ['0177', '"#EDT#,#EID#"', '0049', '"server.starproto.com"'],
         expectedFields: ['0177', '"#EDT#,#EID#"', '0049', '"server.starproto.com"'],
       },
+      {
+        command: '48',
+        fields: ['VER=#VER#'],
+        responseFields: ['VER=2.44'],
+        expectedFields: ['VER=2.44'],
+      },
     ]) {
       const readCommand = listener.sendCommand(unitId, {
         command: input.command,
@@ -218,7 +226,10 @@ it('acknowledges primary units, filters owned confirmations and completes allowl
         resultCode: null,
         fields: input.expectedFields,
       });
-      expect(await karmaFrames.next()).toEqual(parameterResponse);
+      // The reply is confirmed by holita and never reaches Karma (checked by the next Karma frame).
+      const replyConfirmation = parseFrame((await deviceFrames.next()).subarray(0, -2));
+      expect(replyConfirmation?.command).toBe('02');
+      expect(replyConfirmation?.fields.map((field) => field.toString())).toEqual(['80', '01']);
     }
 
     const locationCommand = listener.sendCommand(unitId, { command: '05', fields: [] });

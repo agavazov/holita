@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import net, { type Socket } from 'node:net';
 import { Transform, Writable } from 'node:stream';
 import {
+  binaryUnitId,
   buildServerFrame,
   FrameSplitter,
   parseFrame,
@@ -10,7 +11,7 @@ import {
   type ParsedFrame,
 } from '../../starlink/index.js';
 import type { CaptureRecord, SentCommand, CommandOutcome } from './capture-record.js';
-import { matchesParameterResponse, type DeviceCommand } from './command.js';
+import { matchesResponse, type DeviceCommand } from './command.js';
 
 export type SessionOptions = {
   upstream: string;
@@ -167,8 +168,13 @@ export class DeviceSession {
     const parsed = first.partial ? undefined : parseFrame(first.raw);
     clearTimeout(this.firstFrameTimer);
     // An unidentified first frame after the "$" header is still mirrored, so a parser gap never
-    // cuts a device off from the upstream server.
-    this.unitId = parsed?.origin === 'SLU' ? parsed.unitId : undefined;
+    // cuts a device off from the upstream server. Binary frames carry the unit in their header.
+    this.unitId =
+      parsed?.origin === 'SLU'
+        ? parsed.unitId
+        : first.partial
+          ? undefined
+          : binaryUnitId(first.raw);
     this.mode =
       this.unitId !== undefined && this.options.primaryUnits?.has(this.unitId.toUpperCase())
         ? 'primary'
@@ -290,8 +296,14 @@ export class DeviceSession {
       }
       return true;
     }
-    if (this.pending && matchesParameterResponse(this.pending.input, parsed)) {
+    if (this.pending && matchesResponse(this.pending.input, parsed)) {
+      // Replies to holita's own commands stay off Karma, which reads routing values from them and
+      // then writes its own server back, and are confirmed so the unit does not resend them.
+      if (!(this.options.ackCommands ?? new Set(['06'])).has(parsed.command)) {
+        this.send(buildServerFrame(parsed.unitId, '02', nextReference(), [parsed.reference, '01']));
+      }
       this.finish('answered', frame.raw, parsed);
+      return true;
     }
     return false;
   }
@@ -334,6 +346,10 @@ export class DeviceSession {
     if (from === 'device' && !frame.partial) {
       this.lastFrameAt = new Date();
     }
+    const binaryUnit =
+      parsed === undefined && from === 'device' && !frame.partial
+        ? binaryUnitId(frame.raw)
+        : undefined;
     this.record({
       connection: this.connection,
       from,
@@ -343,6 +359,7 @@ export class DeviceSession {
         reference: parsed.reference,
         checksum: parsed.checksum,
       }),
+      ...(binaryUnit !== undefined && { unit: binaryUnit }),
       ...(frame.partial && { partial: true }),
       frame: frame.raw.toString('latin1'),
     });
