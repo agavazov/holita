@@ -29,7 +29,9 @@ features; it stays only until these pages cover it.
    as described in [architectural changes](../../AGENTS.md#architectural-changes).
 3. **Command mutation.** Expose the internal command API as an authenticated, Branch-scoped
    GraphQL mutation that records the operator. Keep the allowlist; add no free-text command box.
-4. **Receiver gaps that the pages would show wrongly:** closes not recorded on shutdown, and units
+4. **History backfill.** Re-decode stored frames when a decoder changes: the Trackers' binary
+   reports received before 2026-11-03 13:24 are stored but have no `ermEvent` rows.
+5. **Receiver gaps that the pages would show wrongly:** closes not recorded on shutdown, and units
    that return only at their next scheduled transmission after erm-server closes their connection
    (up to 5 minutes driving, up to an hour parked; a call to the SIM wakes a unit at once).
 
