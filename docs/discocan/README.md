@@ -16,13 +16,16 @@ The shell's active Branch scopes saved operations; no local Fleet Device registr
 Writes are separately disabled by default and require a complete baseline, fresh
 preflight and full readback verification. Rules require both parameter and rule baselines.
 Requests, response fragments and complete snapshots
-survive page refresh and application restart. Activity rows remain holita demo data;
-telemetry ingestion from devices, tracking and measurement processing are not implemented.
+survive page refresh and application restart. `apps/erm-server` independently mirrors raw
+StarLink device traffic to Karma and persists connections and frames alongside private JSON Lines
+captures. Activity rows remain holita demo data; Fleet telemetry processing, tracking and
+measurement processing are not implemented.
 
 - [Contributor instructions](instructions.md).
 - [Implemented requirements](requirements.md).
 - [Architecture](architecture.md): persistence, federation and Angular request lifecycles.
-- [Development](development.md): telemetry admin, demo login and GraphQL usage.
+- [Development](development.md): telemetry admin, demo login, GraphQL usage and
+  [ERM Server service setup](development.md#erm-device-server).
 - [Fleet implementation index](fleet.md): concrete Fleet module source references, list
   contract, the data clock and business date, thresholds, derived values and activity rules.
 - [Simple eData catalog](erm-resources/simple-edata-catalog/README.md): offline EXE
@@ -50,4 +53,5 @@ GraphQL uses `Branch`, `branches`, `branch` and `branchId`; Fleet requests carry
 VehicleStatusSample, Trip, FleetEvent, ServiceTask) begin with `id`, `tenantId`, `branchId`. Branch
 itself has `id` and `tenantId`.
 The admin labels this scope Клон / Branch. Karma account data remains shared across
-authenticated tenants and does not use Branch scope.
+authenticated tenants and does not use Branch scope. Raw ERM connection/frame data is also
+provider-level and has no Tenant/Branch columns at ingestion.

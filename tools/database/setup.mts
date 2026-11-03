@@ -1,7 +1,7 @@
 import { config } from 'dotenv';
 import pg from 'pg';
 
-for (const path of ['.env', 'apps/core/.env', 'apps/fleet/.env']) {
+for (const path of ['.env', 'apps/core/.env', 'apps/fleet/.env', 'apps/erm-server/.env']) {
   config({ path, quiet: true });
 }
 
@@ -15,7 +15,7 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error('POSTGRES_PORT must be an integer from 1 to 65535');
 }
 
-const databases = ['core', 'fleet'].map((service) => {
+const databases = ['core', 'fleet', 'erm'].map((service) => {
   const name = `holita_${service}${suffix}`;
   const key = `${service.toUpperCase()}${suffix.toUpperCase()}_DATABASE_URL`;
   let url: URL;

@@ -55,7 +55,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/{core,fleet,karma-client}/**/*.ts'],
+    files: ['apps/{core,fleet,karma-client,erm-server}/**/*.ts'],
     languageOptions: {
       globals: globals.node,
     },

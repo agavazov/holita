@@ -1069,3 +1069,74 @@ so application restarts do not drop device connections. Configure it from the ro
   that does not start with `$`; the relay rejects it without contacting Karma.
 - If the relay is unavailable, point the public forward directly at the upstream so routed
   devices keep reporting to Karma without a device write.
+
+## ERM device server
+
+`apps/erm-server` (`@holita/erm-server`) runs independently from compiled output. Mirror mode
+forwards device and Karma traffic byte for byte; Karma still owns acknowledgements and commands.
+The server has no GraphQL endpoint. It remains outside `npm run dev` and `npm run kill`, so
+restarting the web/API group leaves its device connections open.
+
+Copy the ERM Server entries from the [root environment reference](../../.env.example) into the
+ignored `apps/erm-server/.env`, preserving existing settings. HTTP `/health` defaults to
+`127.0.0.1:11015`; `ERM_DEVICE_HOST`/`ERM_DEVICE_PORT` default to `0.0.0.0:11500`.
+`ERM_UPSTREAM` defaults to `in.karma.online:500`. `ERM_CAPTURE_DIR` defaults to
+`.references/erm-server` relative to the repository root, including when started from the app
+directory. Its daily UTC JSON Lines files preserve the relay's record fields; directory mode is
+`0700` and file mode is `0600`. Captures contain vehicle positions and must remain private.
+
+Provision missing databases/roles, deploy this application's migrations and build from the
+repository root, with PostgreSQL already running:
+
+```bash
+npm run db:setup
+npm run db:test:setup
+npm run db:migrate --workspace @holita/erm-server
+npx nx run erm-server:build
+npm run start:prod --workspace @holita/erm-server
+```
+
+Provisioning is additive and preserves existing data/passwords. Development uses `holita_erm`;
+guarded tests use `holita_erm_test` with isolated per-run schemas. Connection/frame database writes
+are asynchronous; database failures are logged while forwarding continues. Raw frame capture does
+not populate Fleet telemetry.
+
+The listener accepts at most 64 connections. A device must send `$` as its first byte within
+60 seconds before Karma is contacted, and the upstream must connect within 10 seconds. Closing
+either side closes the other. The public path must forward raw TCP with no HTTP/TLS termination.
+The relay and ERM Server share the default device port; run them together only on different free
+ports, for example:
+
+```bash
+PORT=11017 ERM_DEVICE_PORT=11501 npm run start:prod --workspace @holita/erm-server
+```
+
+For development only, `npm run dev:erm-server` runs its watcher with the same configuration.
+For an independent service, save a user unit such as
+`~/.config/systemd/user/holita-erm-server.service`, replacing paths with this installation's
+absolute repository and Node executable paths (`command -v node`):
+
+```ini
+[Unit]
+Description=holita ERM StarLink device server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/path/to/holita/apps/erm-server
+Environment=NODE_ENV=production
+EnvironmentFile=/path/to/holita/apps/erm-server/.env
+ExecStart=/absolute/path/to/node /path/to/holita/apps/erm-server/dist/main.js
+Restart=on-failure
+RestartSec=5
+UMask=0077
+
+[Install]
+WantedBy=default.target
+```
+
+Set the chosen free `PORT` and `ERM_DEVICE_PORT` in that application's `.env` before enabling the
+new unit with `systemctl --user daemon-reload` and
+`systemctl --user enable --now holita-erm-server.service`. Restarting ERM Server closes its TCP
+sessions and devices reconnect.

@@ -32,49 +32,53 @@ in environment examples, documentation, agent instructions, command arguments or
 
 ## Commands
 
-| Command                  | Behavior                                                                 |
-| ------------------------ | ------------------------------------------------------------------------ |
-| npm run dev              | Wait for PostgreSQL, prepare admin GraphQL, start all apps and Storybook |
-| npm run kill             | Stop this checkout's application processes and watchers on Ubuntu/WSL    |
-| npm run erm:relay        | ERM StarLink TCP relay to Karma with frame capture                       |
-| npm run dev:admin        | Angular watcher                                                          |
-| npm run storybook:admin  | Admin Storybook with synthetic data on port 11001                        |
-| npm run dev:gateway      | Native Router after Nx supergraph generation                             |
-| npm run dev:core         | Core watcher                                                             |
-| npm run dev:fleet        | Fleet watcher                                                            |
-| npm run dev:karma-client | Karma Client watcher                                                     |
-| npm run projects         | List five Nx applications                                                |
-| npm run lint             | Lint source/tooling and application boundaries                           |
-| npm run check            | Build, test and lint only what the change affects, before handing over   |
-| npm run typecheck        | Check tools and all applications                                         |
-| npm run build            | Build all applications                                                   |
-| npm run format:check     | Check formatting                                                         |
-| npm run codegen          | Generate application GraphQL contracts                                   |
-| npm run schema:check     | Compose SDL and validate operations offline                              |
-| npm run test:budget      | Count test cases against the repository budget of 60                     |
+| Command                  | Behavior                                                                     |
+| ------------------------ | ---------------------------------------------------------------------------- |
+| npm run dev              | Wait for PostgreSQL, prepare admin GraphQL, start web/API apps and Storybook |
+| npm run kill             | Stop this checkout's web/API processes and watchers on Ubuntu/WSL            |
+| npm run erm:relay        | ERM StarLink TCP relay to Karma with frame capture                           |
+| npm run dev:admin        | Angular watcher                                                              |
+| npm run storybook:admin  | Admin Storybook with synthetic data on port 11001                            |
+| npm run dev:gateway      | Native Router after Nx supergraph generation                                 |
+| npm run dev:core         | Core watcher                                                                 |
+| npm run dev:fleet        | Fleet watcher                                                                |
+| npm run dev:karma-client | Karma Client watcher                                                         |
+| npm run dev:erm-server   | Independent ERM Server watcher                                               |
+| npm run projects         | List six Nx applications                                                     |
+| npm run lint             | Lint source/tooling and application boundaries                               |
+| npm run check            | Build, test and lint only what the change affects, before handing over       |
+| npm run typecheck        | Check tools and all applications                                             |
+| npm run build            | Build all applications                                                       |
+| npm run format:check     | Check formatting                                                             |
+| npm run codegen          | Generate application GraphQL contracts                                       |
+| npm run schema:check     | Compose SDL and validate operations offline                                  |
+| npm run test:budget      | Count test cases against the repository budget of 60                         |
 
 ESLint requires braces for every conditional and loop body (`curly: ['error', 'all']`),
 including single-statement bodies in application code, tests, tools and Storybook stories.
 The rule is configured after `eslint-config-prettier` so that it remains enabled.
 
 Backend output is `apps/NAME/dist`; `npm run start:prod --workspace @holita/core`
-(or fleet/karma-client) runs the compiled app. Gateway `build` generates the supergraph and
+(or fleet/karma-client/erm-server) runs the compiled app. Gateway `build` generates the supergraph and
 validates the installed native Router configuration. `npm run start:prod --workspace @holita/gateway`
 starts that binary using the generated supergraph; no Node bundle or Rust compilation is involved. `dev` does not migrate or seed databases.
 The group generates admin GraphQL artifacts once before starting Angular and Storybook in
 parallel; their standalone commands keep their own generation step. Ctrl+C stops the process
 group, including Storybook; `db:down` stops PostgreSQL separately and preserves the volume.
-See [ERM relay](discocan/development.md#erm-relay) for the device relay.
+See [ERM relay](discocan/development.md#erm-relay) for the device relay and
+[ERM Server](discocan/development.md#erm-device-server) for its independent compiled service.
 Use `npm run kill` from another terminal when application processes remain running. It stops
 the dev group, standalone `admin:storybook`, individual Angular/Nest watchers and compiled
-backend processes from this checkout,
+web/API backend processes from this checkout,
 including the native Router, the concurrently group and their child workers. It sends
 SIGTERM, then SIGKILL to survivors after two seconds.
 PostgreSQL and processes from other checkouts remain running. Running it again is harmless.
+ERM Server is excluded from both `dev` and `kill` to retain long-lived device connections during
+web/API restarts.
 
 ## Ports and environment
 
-| Application     | Default loopback port |
+| Application     | Default listener      |
 | --------------- | --------------------- |
 | Angular admin   | 11000                 |
 | Admin Storybook | 11001                 |
@@ -83,33 +87,37 @@ PostgreSQL and processes from other checkouts remain running. Running it again i
 | Core            | 11011                 |
 | Fleet           | 11013                 |
 | Karma Client    | 11014                 |
+| ERM Server HTTP | 11015, loopback       |
+| ERM Server TCP  | 11500, all interfaces |
 | PostgreSQL      | 11084                 |
 | ERM relay       | 11500, all interfaces |
 
 Visual previews use 11000–11009; the admin Storybook uses 11001. The admin dev server and
 Storybook listen on all interfaces and accept the `dev.lab` host, so devices on the local network
-open them as `http://dev.lab:11000` and `http://dev.lab:11001`; the other services stay on loopback. The single root
+open them as `http://dev.lab:11000` and `http://dev.lab:11001`; the other HTTP services stay on loopback. ERM Server and the relay share
+the default device port and need distinct configured ports when run together. The single root
 [`.env.example`](../.env.example) describes all variables, their consumers, safe examples,
 types and sensitivity using [`@env-spec` style annotations](https://varlock.dev/reference/data-types/).
 These comments document configuration; dotenv and Compose do not validate them, and no
 schema validator is installed. Keep this contract in `.env.example` when changing variables.
 Defaults work without environment files; Karma queries require an upstream account.
-Existing process variables take precedence. Subgraph PORT must be an integer from 1 to 65535.
-Node apps and Prisma read their own workspace `.env`; database provisioning reads root/Core/Fleet.
+Existing process variables take precedence. Node application PORT must be an integer from 1 to 65535.
+Node apps and Prisma read their own workspace `.env`; database provisioning reads root/Core/Fleet/ERM Server.
 Router reads exported variables only: migrate any Gateway `.env` overrides into the shell
 environment and use `ROUTER_PORT` instead of `PORT`. The admin proxy reads the same `ROUTER_PORT`.
 
 Copy only the relevant entries from the reference into the consuming process's ignored
 runtime file, preserving existing settings:
 
-| Consumer                 | Runtime configuration                                                                                               |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------- |
-| Compose and provisioning | Root `.env`: `POSTGRES_PORT`, `POSTGRES_PASSWORD`                                                                   |
-| Core and Prisma          | `apps/core/.env`: Core database URLs and shared demo settings                                                       |
-| Fleet and Prisma         | `apps/fleet/.env`: Fleet database URLs, shared demo settings, `FLEET_ENABLED`, `CORE_GRAPHQL_URL` and admin origins |
-| Karma Client             | `apps/karma-client/.env`: `KARMA_API_URL`, `KARMA_USER`, `KARMA_PASSWORD` and shared demo settings                  |
-| Router and Angular proxy | Export Router variables in the shell that launches npm; proxy reads `ROUTER_PORT`                                   |
-| ERM relay                | Root `.env`: `ERM_RELAY_HOST`, `ERM_RELAY_PORT`, `ERM_RELAY_UPSTREAM` and `ERM_RELAY_CAPTURE_DIR`                   |
+| Consumer                 | Runtime configuration                                                                                                                    |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Compose and provisioning | Root `.env`: `POSTGRES_PORT`, `POSTGRES_PASSWORD`                                                                                        |
+| Core and Prisma          | `apps/core/.env`: Core database URLs and shared demo settings                                                                            |
+| Fleet and Prisma         | `apps/fleet/.env`: Fleet database URLs, shared demo settings, `FLEET_ENABLED`, `CORE_GRAPHQL_URL` and admin origins                      |
+| Karma Client             | `apps/karma-client/.env`: `KARMA_API_URL`, `KARMA_USER`, `KARMA_PASSWORD` and shared demo settings                                       |
+| ERM Server and Prisma    | `apps/erm-server/.env`: ERM database URLs, `ERM_DEVICE_HOST`, `ERM_DEVICE_PORT`, `ERM_UPSTREAM`, `ERM_CAPTURE_DIR`, optional HTTP `PORT` |
+| Router and Angular proxy | Export Router variables in the shell that launches npm; proxy reads `ROUTER_PORT`                                                        |
+| ERM relay                | Root `.env`: `ERM_RELAY_HOST`, `ERM_RELAY_PORT`, `ERM_RELAY_UPSTREAM` and `ERM_RELAY_CAPTURE_DIR`                                        |
 
 An optional `PORT` override belongs only to an individual Node application; omit it to
 keep that application's default. Exporting one `PORT` for the development group gives
@@ -119,9 +127,9 @@ needed entries rather than loading the entire file into a process.
 Gateway uses `CORE_GRAPHQL_URL`, `FLEET_GRAPHQL_URL`, `KARMA_CLIENT_GRAPHQL_URL` and `ADMIN_ORIGIN`.
 Fleet uses `CORE_GRAPHQL_URL`, `FLEET_ENABLED` and `ADMIN_ORIGINS`, a comma-separated
 exact origin allowlist with `ADMIN_ORIGIN` as the single-origin fallback. Defaults allow the
-Angular loopback origin. Database URLs belong only to Core/Fleet. Karma Client has application-local account settings described in
-[Karma Client configuration](discocan/development.md#karma-client). No upload/storage
-configuration is required.
+Angular loopback origin. Database URLs belong only to Core/Fleet/ERM Server. Karma Client has application-local account settings described in
+[Karma Client configuration](discocan/development.md#karma-client). Karma Client requires no
+upload/storage configuration.
 
 Background eData parameter operations additionally use `FLEET_DEVICE_OPERATIONS_ENABLED` and
 `FLEET_KARMA_INTERNAL_URL` in Fleet, and the same private `KARMA_INTERNAL_TOKEN` (at least
@@ -404,14 +412,15 @@ npm run db:migrate
 npm run db:seed
 ```
 
-Provisioning creates/verifies four databases and matching roles, preserves existing data and
+Provisioning creates/verifies six databases and matching roles, preserves existing data and
 passwords, checks role privileges/ownership and revokes PUBLIC database access. The loopback
 provisioning role is `holita_admin`; application URLs never use it.
 
-| Service | Development database/role | Test database/role | Environment variables                       |
-| ------- | ------------------------- | ------------------ | ------------------------------------------- |
-| Core    | holita_core               | holita_core_test   | CORE_DATABASE_URL, CORE_TEST_DATABASE_URL   |
-| Fleet   | holita_fleet              | holita_fleet_test  | FLEET_DATABASE_URL, FLEET_TEST_DATABASE_URL |
+| Service    | Development database/role | Test database/role | Environment variables                       |
+| ---------- | ------------------------- | ------------------ | ------------------------------------------- |
+| Core       | holita_core               | holita_core_test   | CORE_DATABASE_URL, CORE_TEST_DATABASE_URL   |
+| Fleet      | holita_fleet              | holita_fleet_test  | FLEET_DATABASE_URL, FLEET_TEST_DATABASE_URL |
+| ERM Server | holita_erm                | holita_erm_test    | ERM_DATABASE_URL, ERM_TEST_DATABASE_URL     |
 
 Roles cannot connect to another service's databases or the corresponding dev/test database.
 The [root environment example](../.env.example) configures POSTGRES_PORT/POSTGRES_PASSWORD.
@@ -420,14 +429,14 @@ on 127.0.0.1 at that port. Examples do not replace credentials in existing insta
 Compose project `holita` uses `holita_postgres_data` mounted at `/var/lib/postgresql`.
 `db:down` preserves the volume. Do not delete volumes or reset databases to repair setup.
 
-Core/Fleet own their schemas, generated Prisma clients and reviewed SQL migrations. Each starts
+Core/Fleet/ERM Server own their schemas, generated Prisma clients and reviewed SQL migrations. Core/Fleet start
 with `20261102000000_baseline`, which replaces the pre-release migration history. Tables, enum
 types and enum values use camelCase database mappings; TypeScript and GraphQL names stay unchanged.
 Branch places `tenantId` immediately after `id`. The ten scoped Fleet
 tables (`FleetSettings`, `Vehicle`, `Device`, `FleetDeviceOperation`, `Driver`, `VehicleGroup`,
 `VehicleStatusSample`, `Trip`, `FleetEvent`, `ServiceTask`) begin with `id`, `tenantId`, `branchId`.
 Scoped Fleet foreign keys and natural-key uniqueness include Tenant/Branch. `db:migrate`
-deploys Core then Fleet; `db:generate` generates both ignored clients. Initial migrations require empty databases; a previous migration history needs an
+deploys Core, Fleet and ERM Server; `db:generate` generates all three ignored clients. Initial migrations require empty databases; a previous migration history needs an
 explicitly authorized database rebuild. `db:migrate` never resets databases. Subsequent schema
 changes require new reviewed SQL migrations, not edits to applied history or db push.
 

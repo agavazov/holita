@@ -2,10 +2,10 @@
 
 The repository has two distinct domains with separate documentation and contributor instructions:
 
-| Domain                    | Documentation                         | Current implementation                                                                            |
-| ------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| Discocan: fleet telemetry | [docs/discocan](discocan/README.md)   | Fleet master data, telemetry, trips, alerts and service tasks, Karma Client and the Angular admin |
-| Ecommerce: online shops   | [docs/ecommerce](ecommerce/README.md) | Core Tenant/Branch foundation; no storefront, catalog, cart or orders                             |
+| Domain                    | Documentation                         | Current implementation                                                                                        |
+| ------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Discocan: fleet telemetry | [docs/discocan](discocan/README.md)   | Fleet master data, telemetry, trips, alerts and service tasks, Karma Client, ERM Server and the Angular admin |
+| Ecommerce: online shops   | [docs/ecommerce](ecommerce/README.md) | Core Tenant/Branch foundation; no storefront, catalog, cart or orders                                         |
 
 Branch is the shared organizational scope: a vehicle fleet in Discocan and an online shop
 in Ecommerce. Code, APIs, routes and persistence use Branch/branchId/x-branch-id with
@@ -25,6 +25,7 @@ verified Tenant scope.
 - [Schema-first federation](architecture/decisions/0003-schema-first-federation.md).
 - [Admin design system decision](architecture/decisions/0004-admin-design-system.md).
 - [Fleet list contract and derived values](architecture/decisions/0005-fleet-list-contract-and-derived-values.md).
+- [ERM device server](architecture/decisions/0006-erm-device-server.md).
 - [Contributor rules](../AGENTS.md).
 - [Backend skill](../.agents/skills/holita-backend-feature/SKILL.md).
 - [Angular admin skill](../.agents/skills/holita-admin-development/SKILL.md).
