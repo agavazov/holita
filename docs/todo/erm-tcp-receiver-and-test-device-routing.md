@@ -18,6 +18,19 @@ Karma, Karma confirms `06` events, and neither unit authenticates with `95`.
 - [ ] Decode CB5640XP's ordinary traffic: `$SLB` frames and `$SLC` containers, which the archived
       protocol does not document (it has only `$SLP`, `0182=4`). Until then erm-server mirrors them
       without a unit ID or events. Its configuration-session replies are text.
+  - Partly decoded from captures against Karma `/location`:
+    - The body uses G9 escapes; each tag is followed by a big-endian value.
+    - Known tags: `04` 7-byte BCD IMEI without its check digit, then `0f 01`, then command `06`.
+    - `03` u32 reference; `0c` u32 event time and `0e` u32 position time (seconds since 2000-01-01 UTC);
+      `08` u8 event ID.
+    - `19` i32 latitude and longitude (×10⁻⁶°); `12` u16 speed; `16` u32 odometer in metres.
+    - `1b` u32 cell ID and u16 LAC; `20`/`21` u16 main and backup voltage in mV.
+    - `3b` u32 network code; `51` u8 network type; `fe` the text tail Karma shows as `extra`.
+  - Still unknown: heading, satellites, altitude framing and the `$SLC` compressed frames prefixed `E0`.
+  - CB5640XP reports protocol format `0182=3`, which the archive does not list (it has `0` text, the
+    default, and `4` protobuf `$SLP`). CB5636XP has `0182` unset and both report the same `0177`
+    layout, so setting CB5640XP's `0182=0` is the alternative to a decoder, at the cost of more mobile
+    data. Karma API v2 cannot write it.
 
 ## Verify and enable primary mode
 
@@ -26,6 +39,9 @@ Karma, Karma confirms `06` events, and neither unit authenticates with `95`.
 - [ ] Enable `ERM_PRIMARY_UNITS` for CB5636XP, confirm that holita's confirmations stop
       retransmissions and that Karma still receives every frame; exercise the internal command API
       (`03`, `05`) and the routing restore (`04`/`46` for `0049`/`0050`) through holita.
+  - After route-unit confirmed its `45` reply in a configuration session, CB5636XP sent `E0 00` pairs
+    before its `46` result and about 1.8 KB/s of them until the session closed. erm-server's frame
+    splitter keeps such bytes in front of the next frame, which then fails to parse.
 
 ## Replace Karma
 
