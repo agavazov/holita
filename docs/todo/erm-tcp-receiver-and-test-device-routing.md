@@ -18,8 +18,8 @@ Karma, and none authenticates with `95`. CB5640XP and CB5636XP run in primary mo
 connected (`0774=0`, was 720). The Tracker formats are described in
 [StarLink Tracker frame formats](../discocan/erm-resources/starlink-binary-formats.md).
 
-- [ ] Decode `$SLB` reports in erm-server with the mapped tags (`$SLC` containers are decoded) and
-      identify the remaining tags `27`, `ff 32` and the first byte of `04`.
+- [ ] Identify the remaining `$SLB` fields: tag `27`, the `ff 32` flags (ignition/engine) and the two
+      middle bytes of `26`; then fill `engineOn` for binary reports.
 - [ ] Record connection closes when erm-server stops: after the 13:05 restart both closed
       connections kept `closedAt` empty.
 - [ ] Always-connected units do not reconnect after erm-server closes their connection (13:05:

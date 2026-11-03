@@ -1,4 +1,4 @@
-import type { ParsedFrame } from './protocol.js';
+import { binaryBody, binaryUnitId, type ParsedFrame } from './protocol.js';
 
 export const DEFAULT_EVENT_STRUCTURE =
   '#EDT#,#EID#,#PDT#,#LAT#,#LONG#,#SPD#,#HEAD#,#ODOD#,#LAC#,#CID#,#ENG#,#VIN#,#VBAT#,#BATC#,#BATH#,#STRT#,#TVI#,#NXT#,#ALT#,#CSS#';
@@ -93,5 +93,120 @@ export function decodeEvent(
     mainVoltage: number(tokens.get('#VIN#')),
     backupVoltage: number(tokens.get('#VBAT#')),
     fields,
+  };
+}
+
+// $SLB reports (protocol format 0182=3): after G9 replacement, 04, the BCD IMEI, two bytes, the command
+// (06, or 86 without confirmation) and tag/value pairs, mapped from 2026-11-03 captures in
+// docs/discocan/erm-resources/starlink-binary-formats.md. An unknown tag leaves the report undecoded.
+const binarySizes = new Map([
+  [0x03, 4],
+  [0x0c, 4],
+  [0x08, 1],
+  [0x0e, 4],
+  [0x19, 8],
+  [0x06, 1],
+  [0x07, 1],
+  [0x12, 2],
+  [0x16, 4],
+  [0x1b, 7],
+  [0x20, 2],
+  [0x21, 2],
+  [0x27, 1],
+  [0x26, 4],
+  [0x18, 2],
+  [0x3e, 2],
+  [0x42, 2],
+  [0x43, 2],
+  [0x0f, 4],
+  [0x3b, 4],
+  [0x51, 1],
+]);
+const since2000 = Date.UTC(2000, 0, 1);
+
+export function decodeBinaryEvent(raw: Buffer): DecodedEvent | undefined {
+  const unitId = binaryUnitId(raw);
+  const body = binaryBody(raw);
+  if (
+    raw.subarray(0, 4).toString('latin1') !== '$SLB' ||
+    unitId === undefined ||
+    (body[10] !== 0x06 && body[10] !== 0x86)
+  ) {
+    return undefined;
+  }
+  const values = new Map<number, Buffer>();
+  let extra = '';
+  for (let index = 11; index < body.length;) {
+    const tag = body.readUInt8(index++);
+    if (tag === 0xfe) {
+      extra = body.subarray(index).toString('latin1');
+      break;
+    }
+    // "ff 32" is followed by one flag byte: 0 parked, 11 driving.
+    const size = tag === 0xff && body[index] === 0x32 ? 2 : binarySizes.get(tag);
+    if (size === undefined || index + size > body.length) {
+      return undefined;
+    }
+    values.set(tag, body.subarray(index, index + size));
+    index += size;
+  }
+  const unsigned = (tag: number): number | null => {
+    const value = values.get(tag);
+    return value === undefined ? null : value.readUIntBE(0, value.length);
+  };
+  const time = (tag: number): Date | null => {
+    const seconds = unsigned(tag);
+    return seconds === null ? null : new Date(since2000 + seconds * 1000);
+  };
+  const position = values.get(0x19);
+  const cell = values.get(0x1b);
+  const battery = values.get(0x26);
+  const satellites = values.get(0x18);
+  const signal = values.get(0x3e);
+  const altitude = values.get(0x0f);
+  const heading = values.has(0x07) ? 256 + (unsigned(0x07) ?? 0) : unsigned(0x06);
+  const speed = unsigned(0x12);
+  const odometer = unsigned(0x16);
+  const main = unsigned(0x20);
+  const backup = unsigned(0x21);
+  const eventId = unsigned(0x08);
+  const text = (value: number | null | undefined): string | null =>
+    value === null || value === undefined ? null : String(value);
+  return {
+    unitId,
+    eventId: eventId === null ? null : String(eventId).padStart(2, '0'),
+    eventTime: time(0x0c),
+    positionTime: time(0x0e),
+    latitude: position ? position.readInt32BE(0) / 1e6 : null,
+    longitude: position ? position.readInt32BE(4) / 1e6 : null,
+    speedKmh: speed === null ? null : (speed / 10) * 1.852,
+    heading,
+    odometer: odometer === null ? null : odometer / 1000,
+    engineOn: null,
+    mainVoltage: main === null ? null : main / 1000,
+    backupVoltage: backup === null ? null : backup / 1000,
+    fields: {
+      '#SPD#': speed === null ? null : String(speed / 10),
+      '#CID#': text(cell?.readUInt32BE(0)),
+      '#LAC#': text(cell?.readUInt16BE(4)),
+      '#CSS#': text(cell?.readUInt8(6)),
+      '#BATH#': text(battery?.readUInt8(0)),
+      '#STRT#': battery ? String(battery.readUInt8(3) / 100) : null,
+      '#SATN#': text(satellites?.readUInt8(0)),
+      '#SATU#': text(satellites?.readUInt8(1)),
+      '#SAT#': text(signal?.readUInt8(0)),
+      '#GSS#': text(signal?.readUInt8(1)),
+      '#TVI#': text(unsigned(0x42) === null ? null : (unsigned(0x42) ?? 0) / 10),
+      '#NXT#': text(unsigned(0x43)),
+      '#ALTD#': altitude ? String(altitude.readInt32BE(0) / 10) : null,
+      '#NC#': text(unsigned(0x3b)),
+      '#NT#': text(unsigned(0x51)),
+      unknown: [
+        values.get(0x27)?.toString('hex') ?? '',
+        values.get(0xff)?.toString('hex') ?? '',
+        battery?.subarray(1, 3).toString('hex') ?? '',
+      ],
+      extra: extra.split(','),
+    },
   };
 }

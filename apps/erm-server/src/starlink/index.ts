@@ -8,5 +8,5 @@ export {
   unescape,
 } from './protocol.js';
 export type { ChecksumState, ParsedFrame } from './protocol.js';
-export { decodeEvent, DEFAULT_EVENT_STRUCTURE } from './event.js';
+export { decodeBinaryEvent, decodeEvent, DEFAULT_EVENT_STRUCTURE } from './event.js';
 export type { DecodedEvent } from './event.js';

@@ -1,7 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
 import { ErmChecksum, ErmCommandStatus, ErmDirection } from '../../generated/prisma/client.js';
-import { decodeEvent, inflateContainer, parseFrame } from '../../starlink/index.js';
+import {
+  decodeBinaryEvent,
+  decodeEvent,
+  inflateContainer,
+  parseFrame,
+} from '../../starlink/index.js';
 import type { DecodedEvent } from '../../starlink/index.js';
 import type { CaptureRecord, CommandOutcome, SentCommand } from './capture-record.js';
 
@@ -56,13 +61,21 @@ export class DevicesRepository {
     if (entry.from !== 'device' || entry.partial) {
       return;
     }
-    // Tracker units batch their text events into compressed $SLC containers.
+    // Tracker units send binary $SLB reports and batch frames into compressed $SLC containers.
     const raw = Buffer.from(entry.frame, 'latin1');
     const container = entry.command === undefined ? inflateContainer(raw) : undefined;
+    const binary = entry.command === undefined && !container;
     for (const inner of container ??
-      (entry.command === '06' || entry.command === '86' ? [raw] : [])) {
+      (binary || entry.command === '06' || entry.command === '86' ? [raw] : [])) {
       let event: DecodedEvent | undefined;
       try {
+        if (inner.subarray(0, 4).toString('latin1') === '$SLB') {
+          event = decodeBinaryEvent(inner);
+          if (event) {
+            await this.prisma.client.ermEvent.create({ data: { frameId: frame.id, ...event } });
+          }
+          continue;
+        }
         const parsed = parseFrame(inner);
         if (!parsed) {
           throw new Error('Invalid event envelope.');

@@ -111,11 +111,16 @@ export function parseFrame(raw: Buffer): ParsedFrame | undefined {
   return { header, origin, unitId, command, reference, fields, checksum: state };
 }
 
+// The G9-replaced body of a binary frame, between its 4-byte header and the checksum separator.
+export function binaryBody(raw: Buffer): Buffer {
+  const separator = checksumSeparator(raw, 4);
+  return unescape(raw.subarray(4, separator < 0 ? raw.length : separator));
+}
+
 // $SLC containers (protocol format 0182=3) hold ordinary text frames: after G9 replacement, tag 04 and
 // the BCD IMEI, two bytes (3f 01), the 3-byte uncompressed length and LZF-compressed data.
 export function inflateContainer(raw: Buffer): Buffer[] | undefined {
-  const separator = checksumSeparator(raw, 4);
-  const body = unescape(raw.subarray(4, separator < 0 ? raw.length : separator));
+  const body = binaryBody(raw);
   if (raw.subarray(0, 4).toString('latin1') !== '$SLC' || body[0] !== 0x04 || body.length < 13) {
     return undefined;
   }
