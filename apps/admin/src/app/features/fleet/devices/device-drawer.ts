@@ -43,8 +43,10 @@ export interface DeviceForm {
   readonly simIccid: string;
   readonly vehicleId: string | null;
   readonly notes: string;
+  readonly serialNumber?: string;
   readonly options?: readonly string[];
   readonly firmwareVersion?: string;
+  readonly edataModule?: string;
   readonly simPhoneNumber?: string;
   readonly installedAt?: string;
 }
@@ -53,11 +55,13 @@ export type DeviceField = keyof DeviceForm;
 
 const fieldOrder: readonly DeviceField[] = [
   'imei',
+  'serialNumber',
   'model',
   'options',
   'simIccid',
   'simPhoneNumber',
   'firmwareVersion',
+  'edataModule',
   'installedAt',
   'vehicleId',
   'notes',
@@ -133,6 +137,10 @@ export class DeviceDrawer {
       nonNullable: true,
       validators: [textValidator(15, { required: true }), patternValidator(/^\d{15}$/)],
     }),
+    serialNumber: new FormControl('', {
+      nonNullable: true,
+      validators: [textValidator(32), patternValidator(/^[0-9A-Za-z-]{1,32}$/)],
+    }),
     model: new FormControl<string | null>(null, (control) =>
       this.demo() && !control.value ? { required: true } : null,
     ),
@@ -140,6 +148,10 @@ export class DeviceDrawer {
     firmwareVersion: new FormControl('', {
       nonNullable: true,
       validators: [textValidator(32), patternValidator(/^[0-9A-Za-z._-]{1,32}$/)],
+    }),
+    edataModule: new FormControl('', {
+      nonNullable: true,
+      validators: [textValidator(64), patternValidator(/^[ -~]{1,64}$/)],
     }),
     simPhoneNumber: new FormControl('', {
       nonNullable: true,
@@ -200,8 +212,10 @@ export class DeviceDrawer {
           simIccid: device?.simIccid ?? '',
           vehicleId: device?.vehicleId ?? null,
           notes: device?.notes ?? '',
+          serialNumber: value?.serialNumber ?? '',
           options: value?.options ?? [],
           firmwareVersion: value?.firmwareVersion ?? '',
+          edataModule: value?.edataModule ?? '',
           simPhoneNumber: value?.simPhoneNumber ?? '',
           installedAt: value?.installedAt
             ? (isoToZonedWallTime(value.installedAt, timeZone) ?? '')
@@ -277,8 +291,10 @@ export class DeviceDrawer {
       simIccid: value.simIccid.trim(),
       vehicleId: value.vehicleId,
       notes: value.notes.trim(),
+      serialNumber: value.serialNumber.trim(),
       options: value.options,
       firmwareVersion: value.firmwareVersion.trim(),
+      edataModule: value.edataModule.trim(),
       simPhoneNumber: value.simPhoneNumber.trim(),
       installedAt: this.installedAtInstant(value.installedAt) ?? '',
     });

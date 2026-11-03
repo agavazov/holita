@@ -27,8 +27,10 @@ export const fixtureDevice: WithTypename<AdminDeviceDetailsFragment> = {
   branchId: defaultBranchId,
   imei: '001234567890123',
   model: 'STARLINK_TRACKER',
+  serialNumber: '279037',
   options: ['CELLULAR_4G', 'CAN'],
   firmwareVersion: '2.26.1',
+  edataModule: 'eData Fms 6.56',
   simIccid: '8935901990012345678',
   simPhoneNumber: '+359888123456',
   installedAt: '2026-01-01T08:00:00.000Z',
@@ -46,7 +48,18 @@ export const fixtureDevice: WithTypename<AdminDeviceDetailsFragment> = {
 graphqlFixture(AdminDevicesDocument, (variables) => ({
   fleetDevices: {
     __typename: 'FleetDevicePage',
-    items: [fixtureDevice],
+    items: [
+      {
+        ...fixtureDevice,
+        ermState: {
+          __typename: 'ErmUnitState',
+          unitId: fixtureDevice.imei,
+          online: true,
+          lastFrameAt: '2026-10-20T08:00:00.000Z',
+          alarmsLast24h: 2,
+        },
+      },
+    ],
     total: 1,
     offset: variables.int('offset', 0),
     limit: variables.int('limit', 20),

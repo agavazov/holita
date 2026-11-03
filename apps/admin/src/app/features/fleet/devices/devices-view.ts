@@ -25,22 +25,29 @@ import { PageHeader } from '../../../ui/page-header/page-header';
 import { RowActions } from '../../../ui/row-actions/row-actions';
 import { TablePanel } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
-import { toneSeverity } from '../../../ui/tones';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
 import { devicesText } from './i18n/messages';
 
 export const deviceStatuses = ['ONLINE', 'OFFLINE', 'IN_STOCK'] as const;
 export type DeviceStatusCode = (typeof deviceStatuses)[number];
-export type DeviceActionId = 'edit' | 'restart' | 'vehicle' | 'diagnostics' | 'delete';
+export type DeviceActionId = 'open' | 'edit' | 'restart' | 'vehicle' | 'delete';
 
 /** The firmware every device should run; older ones are flagged. */
 export const currentFirmware = '03.29.02';
+
+/** The unit's connection to holita's device server; 'karma' when it has never connected. */
+export type DeviceLive =
+  | { readonly online: boolean; readonly lastFrameAt: string | null; readonly alarms: number }
+  | 'karma';
 
 /** One tracker, as the Devices list query returns it. */
 export interface DeviceRow {
   readonly id: string;
   readonly imei: string;
   readonly model: string;
+  readonly serialNumber: string;
+  readonly edataModule: string;
+  readonly simPhoneNumber: string;
   readonly firmware: string;
   readonly simIccid: string;
   readonly vehicleId: string | null;
@@ -50,6 +57,8 @@ export interface DeviceRow {
   readonly signal: number | null;
   readonly voltage: number | null;
   readonly notes: string;
+  /** Null when the query did not ask for the live state. */
+  readonly live: DeviceLive | null;
 }
 
 export interface DeviceKpis {
@@ -66,7 +75,7 @@ export const deviceStatusTones: Record<DeviceStatusCode, StatusTone> = {
 };
 
 /**
- * The Devices list page: connection, installation, signal, voltage and firmware of the trackers,
+ * The Devices list page: live holita connection, installation, SIM and firmware of the trackers,
  * with row actions and bulk actions; the primary record action opens its read-only overview. Presentation only: the
  * host owns data and editing.
  */
@@ -93,6 +102,8 @@ export const deviceStatusTones: Record<DeviceStatusCode, StatusTone> = {
 })
 export class DevicesView {
   readonly recordLinks = input<FleetRecordLinks | null>(null);
+  /** The device page route without the record ID and tab. */
+  readonly deviceLinkBase = input<readonly string[] | null>(null);
   readonly demo = input(false);
   readonly busy = input(false);
   readonly searchError = input<string | null>(null);
@@ -170,7 +181,7 @@ export class DevicesView {
   protected readonly actions = computed<readonly ListAction<DeviceActionId, DeviceRow>[]>(() => {
     const text = this.text().actions;
     const actions: ListAction<DeviceActionId, DeviceRow>[] = [
-      { id: 'diagnostics', label: text.diagnostics },
+      { id: 'open', label: text.open },
       { id: 'edit', label: text.edit },
       {
         id: 'restart',
@@ -200,6 +211,11 @@ export class DevicesView {
     () => new Map(this.rows().map((row) => [row.id, this.toRecord(row)])),
   );
   protected readonly trackById = trackById;
+  /** The reference for "offline since"; the rows were loaded just now. */
+  protected readonly now = computed(() => {
+    this.rows();
+    return Date.now();
+  });
   /** PrimeNG's table takes a mutable array. */
   protected readonly tableRows = computed(() => [...this.rows()]);
   protected readonly selectedRows = computed(() => {
@@ -233,20 +249,17 @@ export class DevicesView {
     this.changeQuery({ ...this.state(), sort, page: 1 });
   }
 
-  protected statusSeverity(status: DeviceStatusCode) {
-    return toneSeverity(deviceStatusTones[status]);
+  protected lastFrame(relative: string): string {
+    return interpolate(this.text().table.lastFrame, { time: relative });
   }
 
-  protected statusLabel(status: DeviceStatusCode): string {
-    return this.text().statuses[status];
+  protected deviceLink(row: DeviceRow): readonly string[] | null {
+    const base = this.deviceLinkBase();
+    return base ? [...base, row.id, 'overview'] : null;
   }
 
-  protected signalLabel(bars: number): string {
-    return interpolate(this.text().table.signalBars, { bars });
-  }
-
-  protected signalClass(bars: number): string {
-    return `app-meter app-meter--${bars >= 3 ? 'success' : bars === 2 ? 'warn' : 'danger'}`;
+  protected alarmsLabel(alarms: number): string {
+    return interpolate(this.text().table.alarms, { count: alarms });
   }
 
   protected label(template: string, row: DeviceRow): string {

@@ -15,8 +15,10 @@ fragment AdminDeviceDetails on FleetDevice {
   ...AdminDevice
   status
   model
+  serialNumber
   options
   firmwareVersion
+  edataModule
   simPhoneNumber
   simIccid
   installedAt
@@ -42,6 +44,12 @@ query AdminDevices(
   ) {
     items {
       ...AdminDeviceDetails
+      ermState {
+        unitId
+        online
+        lastFrameAt
+        alarmsLast24h
+      }
     }
     total
     offset

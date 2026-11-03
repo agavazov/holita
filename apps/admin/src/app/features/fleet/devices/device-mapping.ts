@@ -1,6 +1,7 @@
 import type { Language } from '../../../i18n/messages';
 import type {
   AdminDeviceDetailsFragment,
+  AdminDevicesQuery,
   CreateFleetDeviceInput,
 } from '../../../../generated/graphql/operations';
 import { fleetFieldErrors } from '../field-errors';
@@ -8,11 +9,17 @@ import type { DeviceField, DeviceForm } from './device-drawer';
 import type { DeviceRow } from './devices-view';
 import { deviceModels, deviceOptions } from './device-query';
 
-export function deviceRow(device: AdminDeviceDetailsFragment): DeviceRow {
+export function deviceRow(
+  device: AdminDeviceDetailsFragment | AdminDevicesQuery['fleetDevices']['items'][number],
+): DeviceRow {
+  const live = 'ermState' in device ? device.ermState : undefined;
   return {
     id: device.id,
     imei: device.imei,
     model: device.model ?? '',
+    serialNumber: device.serialNumber ?? '',
+    edataModule: device.edataModule ?? '',
+    simPhoneNumber: device.simPhoneNumber ?? '',
     firmware: device.firmwareVersion ?? '',
     simIccid: device.simIccid ?? '',
     vehicleId: device.vehicleId,
@@ -22,6 +29,11 @@ export function deviceRow(device: AdminDeviceDetailsFragment): DeviceRow {
     signal: null,
     voltage: null,
     notes: device.notes ?? '',
+    live: live
+      ? { online: live.online, lastFrameAt: live.lastFrameAt ?? null, alarms: live.alarmsLast24h }
+      : live === null
+        ? 'karma'
+        : null,
   };
 }
 export function deviceForm(device: AdminDeviceDetailsFragment): DeviceForm {
@@ -31,8 +43,10 @@ export function deviceForm(device: AdminDeviceDetailsFragment): DeviceForm {
     simIccid: device.simIccid ?? '',
     vehicleId: device.vehicleId,
     notes: device.notes ?? '',
+    serialNumber: device.serialNumber ?? '',
     options: device.options,
     firmwareVersion: device.firmwareVersion ?? '',
+    edataModule: device.edataModule ?? '',
     simPhoneNumber: device.simPhoneNumber ?? '',
     installedAt: device.installedAt ?? '',
   };
@@ -49,10 +63,12 @@ export function deviceInput(form: DeviceForm): CreateFleetDeviceInput {
     imei: form.imei.trim(),
     vehicleId: form.vehicleId,
     model,
+    serialNumber: form.serialNumber?.trim() || null,
     options: deviceOptions.filter((code) => form.options?.includes(code)),
     simIccid: form.simIccid.trim() || null,
     notes: form.notes.trim() || null,
     firmwareVersion: form.firmwareVersion?.trim() || null,
+    edataModule: form.edataModule?.trim() || null,
     simPhoneNumber: form.simPhoneNumber?.trim() || null,
     installedAt: form.installedAt?.trim() || null,
   };
@@ -67,10 +83,12 @@ export function deviceFieldErrors(
       'imei',
       'vehicleId',
       'model',
+      'serialNumber',
       'options',
       'simIccid',
       'notes',
       'firmwareVersion',
+      'edataModule',
       'simPhoneNumber',
       'installedAt',
     ],

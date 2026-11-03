@@ -42,6 +42,10 @@ import { fleetRecordLinks } from '../fleet-record-links';
           <dd class="app-mono">{{ device.imei }}</dd>
         </div>
         <div>
+          <dt>{{ text().drawer.serialNumber }}</dt>
+          <dd class="app-mono">{{ device.serialNumber ?? '—' }}</dd>
+        </div>
+        <div>
           <dt>{{ text().drawer.status }}</dt>
           <dd>{{ text().statuses[device.status] }}</dd>
         </div>
@@ -68,6 +72,10 @@ import { fleetRecordLinks } from '../fleet-record-links';
         <div>
           <dt>{{ text().drawer.firmware }}</dt>
           <dd>{{ device.firmwareVersion ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().drawer.edataModule }}</dt>
+          <dd>{{ device.edataModule ?? '—' }}</dd>
         </div>
         <div>
           <dt>{{ text().drawer.options }}</dt>

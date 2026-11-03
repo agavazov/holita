@@ -54,6 +54,7 @@ import { devicesText } from './i18n/messages';
     }
     <holita-devices-view
       [recordLinks]="recordLinks()"
+      [deviceLinkBase]="deviceLinkBase()"
       [branchName]="branch().name"
       [dataAsOf]="summary()?.dataAsOf ?? ''"
       [rows]="rows()"
@@ -80,6 +81,13 @@ export class DevicesPage implements OnInit {
   protected readonly recordLinks = computed(() =>
     fleetRecordLinks(this.language(), this.branch().id),
   );
+  protected readonly deviceLinkBase = computed(() => [
+    '/',
+    this.language(),
+    this.branch().id,
+    'control-center',
+    'devices',
+  ]);
   readonly branch = input.required<AdminBranchesQuery['branches'][number]>();
   readonly language = input.required<Language>();
   readonly api = inject(DevicesApi);
@@ -215,13 +223,13 @@ export class DevicesPage implements OnInit {
     }
   }
 
-  open(id: string | null, section: 'edit' | 'diagnostics' = 'edit'): void {
+  open(id: string | null): void {
     if (this.acting()) {
       return;
     }
     this.url.cancelPending();
     this.url.searchDraft.set(this.url.state().search);
-    void this.router.navigate(id ? [id, section] : ['new'], {
+    void this.router.navigate(id ? [id, 'edit'] : ['new'], {
       relativeTo: this.route,
       queryParamsHandling: 'preserve',
       preserveFragment: true,
@@ -233,9 +241,15 @@ export class DevicesPage implements OnInit {
       return;
     }
     const [id] = ids;
-    if (action === 'edit' || action === 'diagnostics') {
+    if (action === 'edit') {
       if (id) {
-        this.open(id, action);
+        this.open(id);
+      }
+      return;
+    }
+    if (action === 'open') {
+      if (id) {
+        void this.router.navigate([...this.deviceLinkBase(), id, 'overview']);
       }
       return;
     }

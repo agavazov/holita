@@ -1,7 +1,7 @@
 {
   "eyebrow": "Fleet",
   "title": "Devices",
-  "description": "{branch} · GPS trackers, their connection and the vehicle they are installed in",
+  "description": "{branch} · StarLink units, their holita connection and the vehicle they are installed in",
   "new": "Register device",
   "unavailable": "Signal, voltage, firmware policy and restart are Demo features and are unavailable for these records.",
   "demo": {
@@ -12,7 +12,7 @@
     "installedAt": "Installed at",
     "createdAt": "Created at"
   },
-  "search": "Search IMEI, SIM, model or plate",
+  "search": "Search IMEI, serial number, SIM phone, model or plate",
   "kpis": {
     "label": "Device summary",
     "online": "Online",
@@ -35,14 +35,19 @@
     "selectPage": "Select all on this page",
     "selectRow": "Select {imei}",
     "edit": "Edit device {imei}",
-    "view": "Open device {imei}",
+    "view": "Open device page {imei}",
     "notInstalled": "Not installed",
     "never": "Never",
     "signalBars": "{bars} of 5 bars",
     "outdated": "Update available",
     "emptyTitle": "No devices yet",
     "emptyDescription": "Register the trackers of this branch to see their connection.",
-    "errorText": "The devices could not be loaded. Try again."
+    "errorText": "The devices could not be loaded. Try again.",
+    "serialNumber": "Serial number",
+    "live": "holita connection",
+    "simPhone": "SIM phone",
+    "lastFrame": "last frame {time}",
+    "alarms": "Alarms in the last 24 h: {count}"
   },
   "statuses": {
     "ONLINE": "Online",
@@ -65,7 +70,8 @@
       "title": "Restart devices?",
       "detail": "They stop reporting for about a minute.",
       "accept": "Restart"
-    }
+    },
+    "open": "Open device page"
   },
   "filters": {
     "status": "Connection",
@@ -112,6 +118,15 @@
     "create": "Register",
     "cancel": "Cancel",
     "saveError": "The device could not be saved. Try again.",
-    "duplicateImei": "This IMEI is already registered."
+    "duplicateImei": "This IMEI is already registered.",
+    "serialNumber": "Serial number",
+    "serialNumberHint": "ERM serial number from the unit label, for example 279037",
+    "edataModule": "eData module",
+    "edataModuleHint": "Module and version, for example eData Fms 6.56"
+  },
+  "live": {
+    "online": "Online",
+    "offline": "Offline",
+    "karma": "On Karma"
   }
 }

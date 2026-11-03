@@ -104,17 +104,12 @@
         <th scope="col" class="app-col-identity" pSortableColumn="imei">
           {{ text().table.device }} <p-sort-icon field="imei" />
         </th>
-        <th scope="col" pSortableColumn="status">
-          {{ text().table.status }} <p-sort-icon field="status" />
-        </th>
+        <th scope="col">{{ text().table.serialNumber }}</th>
+        <th scope="col">{{ text().table.live }}</th>
         <th scope="col" pSortableColumn="vehicle">
           {{ text().table.vehicle }} <p-sort-icon field="vehicle" />
         </th>
-        <th scope="col" pSortableColumn="lastSeenAt">
-          {{ text().table.lastSeen }} <p-sort-icon field="lastSeenAt" />
-        </th>
-        <th scope="col">{{ text().table.signal }}</th>
-        <th scope="col" class="app-num">{{ text().table.voltage }}</th>
+        <th scope="col">{{ text().table.simPhone }}</th>
         <th scope="col" class="app-col-secondary">{{ text().table.firmware }}</th>
         <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
           <span class="app-visually-hidden">{{ text().table.actions }}</span>
@@ -128,14 +123,16 @@
         </td>
         <td class="app-col-identity">
           <span class="app-cell-stack">
-            <button
-              type="button"
-              class="app-link app-mono"
-              [attr.aria-label]="label(text().table.view, row)"
-              (click)="panel.run('diagnostics', [recordOf(row)], $event.currentTarget)"
-            >
-              {{ row.imei }}
-            </button>
+            @if (deviceLink(row); as link) {
+              <a
+                class="app-link app-mono"
+                [routerLink]="link"
+                [attr.aria-label]="label(text().table.view, row)"
+                >{{ row.imei }}</a
+              >
+            } @else {
+              <span class="app-mono">{{ row.imei }}</span>
+            }
             <span>{{ row.model }}</span>
           </span>
           <div class="app-table-mobile-actions">
@@ -147,7 +144,41 @@
           </div>
         </td>
         <td>
-          <p-tag [severity]="statusSeverity(row.status)" [value]="statusLabel(row.status)" />
+          @if (row.serialNumber) {
+            <span class="app-mono">{{ row.serialNumber }}</span>
+          } @else {
+            <span class="app-muted">—</span>
+          }
+        </td>
+        <td>
+          @if (row.live === 'karma') {
+            <p-tag severity="secondary" [value]="text().live.karma" />
+          } @else if (row.live) {
+            <span class="app-cell-stack">
+              <span class="app-inline">
+                <p-tag
+                  [severity]="row.live.online ? 'success' : 'danger'"
+                  [value]="row.live.online ? text().live.online : text().live.offline"
+                />
+                @if (row.live.alarms) {
+                  <p-tag
+                    severity="warn"
+                    [rounded]="true"
+                    [value]="row.live.alarms | holitaNumber"
+                    [attr.title]="alarmsLabel(row.live.alarms)"
+                    [attr.aria-label]="alarmsLabel(row.live.alarms)"
+                  />
+                }
+              </span>
+              @if (!row.live.online && row.live.lastFrameAt) {
+                <span class="app-muted">{{
+                  lastFrame(row.live.lastFrameAt | holitaRelative: now())
+                }}</span>
+              }
+            </span>
+          } @else {
+            <span class="app-muted">—</span>
+          }
         </td>
         <td>
           @if (row.plate) {
@@ -167,36 +198,15 @@
           }
         </td>
         <td>
-          @if (row.lastSeenAt) {
-            {{ row.lastSeenAt | holitaRelative: dataAsOf() }}
-          } @else {
-            <span class="app-muted">{{ text().table.never }}</span>
-          }
-        </td>
-        <td>
-          @if (row.signal !== null) {
-            <span class="app-meter-cell" [title]="signalLabel(row.signal)">
-              <span
-                [class]="signalClass(row.signal)"
-                [style.--app-meter-value]="row.signal * 20 + '%'"
-                aria-hidden="true"
-              ></span>
-              <span>{{ row.signal }}/5</span>
-            </span>
+          @if (row.simPhoneNumber) {
+            <span class="app-mono">{{ row.simPhoneNumber }}</span>
           } @else {
             <span class="app-muted">—</span>
           }
         </td>
-        <td class="app-num">
-          @if (row.voltage !== null) {
-            {{ row.voltage | holitaNumber: 1 }} V
-          } @else {
-            —
-          }
-        </td>
         <td class="app-col-secondary">
           <span class="app-inline">
-            <span class="app-mono">{{ row.firmware }}</span>
+            <span class="app-mono">{{ row.firmware || '—' }}</span>
             @if (demo() && row.firmware !== currentFirmware) {
               <p-tag severity="warn" [value]="text().table.outdated" />
             }
