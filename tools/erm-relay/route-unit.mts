@@ -217,11 +217,18 @@ const listener = net.createServer((socket) => {
   }, 5000);
   socket.on('data', (chunk: Buffer) => {
     buffered = Buffer.concat([buffered, chunk]);
-    if (buffered.length > 16_384) {
-      socket.destroy();
-      return;
-    }
-    for (let end = buffered.indexOf('\r\n'); end >= 0; end = buffered.indexOf('\r\n')) {
+    for (;;) {
+      // CB5636XP sent E0 00 pairs before its 46 result and then about 1.8 KB/s of them until the
+      // session closed, so bytes outside a frame are dropped.
+      const start = buffered.indexOf('$');
+      if (start !== 0 && buffered.length > 0) {
+        record({ connection, event: 'skipped', bytes: start < 0 ? buffered.length : start });
+        buffered = start < 0 ? Buffer.alloc(0) : buffered.subarray(start);
+      }
+      const end = buffered.indexOf('\r\n');
+      if (end < 0) {
+        break;
+      }
       const raw = buffered.subarray(0, end);
       buffered = buffered.subarray(end + 2);
       record({ connection, from: 'device', frame: raw.toString('latin1') });
@@ -278,6 +285,9 @@ const listener = net.createServer((socket) => {
           close(holds(from) ? 'NOT_MOVED' : 'UNCERTAIN');
         }
       }
+    }
+    if (buffered.length > 16_384) {
+      socket.destroy();
     }
   });
   socket.on('error', (error) => {
