@@ -1,3 +1,4 @@
+import type { FleetDataSource } from '../../../../generated/graphql/operations';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -35,7 +36,7 @@ export interface OdometerReading {
   readonly recordedAt: string;
 }
 export interface PreviousOdometerReading extends OdometerReading {
-  readonly source: 'DEMO' | 'MANUAL';
+  readonly source: FleetDataSource;
 }
 export type OdometerField = keyof OdometerReading;
 const fields: readonly OdometerField[] = ['odometerKm', 'recordedAt'];

@@ -158,7 +158,7 @@
     "previous": "Latest reading, {unit}",
     "recordedAt": "Reading time",
     "source": "Source",
-    "sources": { "DEMO": "Device data", "MANUAL": "Manual" },
+    "sources": { "DEMO": "Device data", "MANUAL": "Manual", "ERM": "Device data (holita)" },
     "noPrevious": "No previous odometer reading.",
     "latestAllowed": "Latest allowed reading time",
     "odometerKm": "Odometer, {unit}",
