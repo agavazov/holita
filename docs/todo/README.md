@@ -44,6 +44,9 @@ work is excluded from that campaign.
 
 ## ERM device server and fleet control
 
+The [production architecture plan](erm-server-production-architecture.md) turns the proof of concept
+into the two-process NestJS service and organizes the parallel research sessions that precede the
+interfaces.
 The [fleet control plan](erm-fleet-control-plan.md) orders the tests that move every StarLink unit to
 holita and prove its data, errors and commands, with safety rules, test levels and questions for ERM.
 The [routing backlog](erm-tcp-receiver-and-test-device-routing.md) holds the receiver's engineering
