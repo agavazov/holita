@@ -15,7 +15,8 @@ export type NavIconName =
   | 'shield'
   | 'folder'
   | 'clock'
-  | 'info-circle';
+  | 'info-circle'
+  | 'envelope';
 
 export interface NavItem {
   readonly id: string;

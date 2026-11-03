@@ -4,6 +4,7 @@ import { Bell } from '@primeicons/angular/bell';
 import { Car } from '@primeicons/angular/car';
 import { Clock } from '@primeicons/angular/clock';
 import { Directions } from '@primeicons/angular/directions';
+import { Envelope } from '@primeicons/angular/envelope';
 import { Folder } from '@primeicons/angular/folder';
 import { IdCard } from '@primeicons/angular/id-card';
 import { InfoCircle } from '@primeicons/angular/info-circle';
@@ -29,6 +30,7 @@ import type { NavGroup } from './navigation';
     Car,
     Clock,
     Directions,
+    Envelope,
     Folder,
     IdCard,
     InfoCircle,

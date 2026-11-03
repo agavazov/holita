@@ -56,6 +56,7 @@
   "vehicleGroups": "Групи автомобили",
   "licensePlate": "Регистрационен номер",
   "devices": "Устройства",
+  "smsCommands": "SMS команди",
   "imei": "IMEI",
   "configurationError": "Неуспешно стартиране на holita. Проверете публичната конфигурация и презаредете.",
   "demoLogin": "Демонстрационен вход",

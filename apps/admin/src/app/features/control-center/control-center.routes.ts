@@ -13,6 +13,12 @@ export const controlCenterRoutes: Routes = [
       import('./control-center-workspace').then((module) => module.ControlCenterWorkspace),
   },
   {
+    path: ':branchId/control-center/sms',
+    data: { resource: 'control-center', page: 'sms' },
+    loadComponent: () =>
+      import('./control-center-workspace').then((module) => module.ControlCenterWorkspace),
+  },
+  {
     path: ':branchId/control-center',
     data: { resource: 'control-center' },
     loadComponent: () =>

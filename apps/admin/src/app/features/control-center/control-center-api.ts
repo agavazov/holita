@@ -14,6 +14,7 @@ import {
   AdminControlCenterCommandsDocument,
   AdminControlCenterFramesDocument,
   AdminControlCenterSendCommandDocument,
+  AdminControlCenterSmsDevicesDocument,
   type AdminControlCenterEventsQueryVariables,
   type AdminControlCenterCommandsQueryVariables,
   type AdminControlCenterFramesQueryVariables,
@@ -72,6 +73,13 @@ export class ControlCenterApi implements OnDestroy {
       fetchPolicy: 'network-only',
       pollInterval: 30_000,
       skipPollAttempt: () => document.hidden,
+    });
+  }
+
+  watchSmsDevices() {
+    return this.client().watchQuery({
+      query: AdminControlCenterSmsDevicesDocument,
+      fetchPolicy: 'network-only',
     });
   }
 

@@ -72,6 +72,22 @@ query AdminControlCenterDevice($id: ID!, $language: ErmLanguage!) {
     }
   }
 }
+query AdminControlCenterSmsDevices {
+  fleetDevices(limit: 100, sort: { field: VEHICLE_LICENSE_PLATE, direction: ASC }) {
+    total
+    items {
+      id
+      imei
+      simPhoneNumber
+      smsPassword
+      vehicle {
+        id
+        licensePlate
+        fleetNumber
+      }
+    }
+  }
+}
 query AdminControlCenterEvents($id: ID!, $language: ErmLanguage!, $input: ErmDeviceEventsInput) {
   fleetDevice(id: $id) {
     id

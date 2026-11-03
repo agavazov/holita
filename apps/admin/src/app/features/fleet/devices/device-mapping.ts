@@ -52,6 +52,7 @@ export function deviceForm(device: AdminDeviceDetailsFragment): DeviceForm {
     firmwareVersion: device.firmwareVersion ?? '',
     edataModule: device.edataModule ?? '',
     simPhoneNumber: device.simPhoneNumber ?? '',
+    smsPassword: device.smsPassword ?? '',
     installedAt: device.installedAt ?? '',
   };
 }
@@ -74,6 +75,7 @@ export function deviceInput(form: DeviceForm): CreateFleetDeviceInput {
     firmwareVersion: form.firmwareVersion?.trim() || null,
     edataModule: form.edataModule?.trim() || null,
     simPhoneNumber: form.simPhoneNumber?.trim() || null,
+    smsPassword: form.smsPassword?.trim() || null,
     installedAt: form.installedAt?.trim() || null,
   };
 }
@@ -94,6 +96,7 @@ export function deviceFieldErrors(
       'firmwareVersion',
       'edataModule',
       'simPhoneNumber',
+      'smsPassword',
       'installedAt',
     ],
     language,

@@ -188,6 +188,23 @@
               />
             </holita-form-field>
             <holita-form-field
+              [label]="text().smsPassword"
+              controlId="device-smsPassword"
+              [hint]="text().smsPasswordHint"
+              [error]="errorOf('smsPassword')"
+            >
+              <input
+                pInputText
+                id="device-smsPassword"
+                formControlName="smsPassword"
+                class="app-mono"
+                autocomplete="off"
+                [invalid]="!!errorOf('smsPassword')"
+                [attr.aria-invalid]="errorOf('smsPassword') ? 'true' : null"
+                [attr.aria-describedby]="describedBy('smsPassword')"
+              />
+            </holita-form-field>
+            <holita-form-field
               [label]="text().installedAt"
               controlId="device-installedAt"
               [hint]="installedAtHint()"

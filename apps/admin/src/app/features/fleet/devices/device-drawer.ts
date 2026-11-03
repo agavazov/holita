@@ -47,6 +47,7 @@ export interface DeviceForm {
   readonly firmwareVersion?: string;
   readonly edataModule?: string;
   readonly simPhoneNumber?: string;
+  readonly smsPassword?: string;
   readonly installedAt?: string;
 }
 
@@ -59,6 +60,7 @@ const fieldOrder: readonly DeviceField[] = [
   'options',
   'simIccid',
   'simPhoneNumber',
+  'smsPassword',
   'firmwareVersion',
   'edataModule',
   'installedAt',
@@ -159,6 +161,10 @@ export class DeviceDrawer {
       nonNullable: true,
       validators: [textValidator(20), patternValidator(/^\+?[0-9]{6,19}$/)],
     }),
+    smsPassword: new FormControl('', {
+      nonNullable: true,
+      validators: [textValidator(16), patternValidator(/^[0-9A-Za-z]{1,16}$/)],
+    }),
     installedAt: new FormControl('', {
       nonNullable: true,
       validators: (control) => {
@@ -222,6 +228,7 @@ export class DeviceDrawer {
           firmwareVersion: value?.firmwareVersion ?? '',
           edataModule: value?.edataModule ?? '',
           simPhoneNumber: value?.simPhoneNumber ?? '',
+          smsPassword: value?.smsPassword ?? '',
           installedAt: value?.installedAt
             ? (isoToZonedWallTime(value.installedAt, timeZone) ?? '')
             : '',
@@ -293,6 +300,7 @@ export class DeviceDrawer {
       firmwareVersion: value.firmwareVersion.trim(),
       edataModule: value.edataModule.trim(),
       simPhoneNumber: value.simPhoneNumber.trim(),
+      smsPassword: value.smsPassword.trim(),
       installedAt: this.installedAtInstant(value.installedAt) ?? '',
     });
   }

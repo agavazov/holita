@@ -1,0 +1,188 @@
+<section class="app-view" [attr.aria-busy]="loading()">
+  <holita-page-header
+    [title]="sms().title"
+    [eyebrow]="text().title"
+    [description]="sms().description"
+  >
+    <button
+      headerActions
+      pButton
+      type="button"
+      severity="secondary"
+      [disabled]="loading()"
+      (click)="refresh()"
+    >
+      {{ text().refresh }}
+    </button>
+  </holita-page-header>
+
+  <section class="app-card control-center__panel" [attr.aria-label]="sms().rulesTitle">
+    <h2>{{ sms().rulesTitle }}</h2>
+    <ul class="control-center__notes">
+      <li>{{ sms().syntax }}</li>
+      <li>{{ sms().caseInsensitive }}</li>
+      <li>{{ sms().maxBytes }}</li>
+      <li>{{ sms().replyTo }}</li>
+    </ul>
+  </section>
+
+  @if (partial(); as partial) {
+    <p class="app-muted">{{ partial }}</p>
+  }
+
+  <holita-table-panel
+    [heading]="sms().devices"
+    [view]="view()"
+    [busy]="loading()"
+    [errorText]="failure()"
+    [emptyTitle]="text().devicesEmpty"
+    (retry)="refresh()"
+  >
+    <p-table class="app-responsive-table" [value]="devices() ?? []" dataKey="id">
+      <ng-template #header>
+        <tr>
+          <th scope="col" class="app-col-identity">{{ text().truck }}</th>
+          <th scope="col">{{ sms().sim }}</th>
+          <th scope="col">{{ sms().password }}</th>
+          <th scope="col">
+            <span class="app-visually-hidden">{{ sms().showTexts }}</span>
+          </th>
+        </tr>
+      </ng-template>
+      <ng-template #body let-device>
+        <tr>
+          <td class="app-col-identity">
+            <div class="app-cell-stack">
+              <span>{{ label(device) }}</span>
+              <span class="app-muted control-center__mono"
+                >{{ text().imei }} {{ device.imei }}</span
+              >
+            </div>
+          </td>
+          <td>
+            @if (device.simPhoneNumber) {
+              <a class="app-link control-center__mono" [href]="'tel:' + device.simPhoneNumber">{{
+                device.simPhoneNumber
+              }}</a>
+            } @else {
+              <span class="app-muted">{{ sms().noSim }}</span>
+            }
+          </td>
+          <td>
+            @if (device.smsPassword) {
+              <span class="control-center__mono">{{ device.smsPassword }}</span>
+            } @else {
+              <span class="app-muted">{{ sms().noPassword }}</span>
+            }
+          </td>
+          <td>
+            <button
+              pButton
+              type="button"
+              size="small"
+              severity="secondary"
+              [outlined]="selected()?.id !== device.id"
+              [attr.aria-pressed]="selected()?.id === device.id"
+              [attr.aria-label]="format(sms().showTextsFor, { unit: label(device) })"
+              (click)="selectedId.set(device.id)"
+            >
+              {{ sms().showTexts }}
+            </button>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </holita-table-panel>
+
+  @if (selected(); as device) {
+    <section class="control-center__panel" aria-labelledby="sms-texts-heading">
+      <h2 id="sms-texts-heading">{{ format(sms().textsFor, { unit: label(device) }) }}</h2>
+      <dl class="app-facts">
+        <div>
+          <dt>{{ sms().sendTo }}</dt>
+          <dd>
+            @if (device.simPhoneNumber) {
+              <a class="app-link control-center__mono" [href]="'tel:' + device.simPhoneNumber">{{
+                device.simPhoneNumber
+              }}</a>
+            } @else {
+              {{ sms().noSim }}
+            }
+          </dd>
+        </div>
+        <div>
+          <dt>{{ sms().password }}</dt>
+          <dd>
+            @if (device.smsPassword) {
+              <span class="control-center__mono">{{ device.smsPassword }}</span>
+            } @else {
+              {{ sms().noPassword }}
+            }
+          </dd>
+        </div>
+      </dl>
+      @if (!device.smsPassword) {
+        <p-message severity="warn">
+          {{ sms().noPasswordHint }}
+          <a class="app-link" [routerLink]="editLink(device)">{{ sms().editDevice }}</a>
+        </p-message>
+      }
+      @for (entry of groups(); track entry.group) {
+        <section
+          class="app-card control-center__panel"
+          [attr.aria-label]="sms().groups[entry.group].title"
+        >
+          <h3>{{ sms().groups[entry.group].title }}</h3>
+          @if (entry.group === 'karma') {
+            <p-message severity="error">{{ sms().karmaWarning }}</p-message>
+          }
+          <p>{{ sms().groups[entry.group].description }}</p>
+          <ol class="control-center__sms">
+            @for (item of entry.texts; track item.id) {
+              <li>
+                <h4>{{ sms().texts[item.id].purpose }}</h4>
+                <p class="app-muted">{{ sms().texts[item.id].when }}</p>
+                <div class="control-center__actions">
+                  <code #code class="control-center__sms-text">{{ item.text }}</code>
+                  <button
+                    pButton
+                    type="button"
+                    size="small"
+                    severity="secondary"
+                    [outlined]="true"
+                    [attr.aria-label]="format(sms().copyLabel, { text: item.text })"
+                    (click)="copy(item.text, code)"
+                  >
+                    <svg data-p-icon="copy" aria-hidden="true"></svg>{{ sms().copy }}
+                  </button>
+                  @if (device.simPhoneNumber) {
+                    <a
+                      pButton
+                      size="small"
+                      severity="secondary"
+                      [text]="true"
+                      [href]="smsLink(device.simPhoneNumber, item.text)"
+                      [attr.aria-label]="
+                        format(sms().openSmsLabel, { text: item.text, sim: device.simPhoneNumber })
+                      "
+                      ><svg data-p-icon="envelope" aria-hidden="true"></svg>{{ sms().openSms }}</a
+                    >
+                  }
+                </div>
+                @if (item.bytes > maxBytes) {
+                  <p-message severity="warn" size="small" variant="simple">{{
+                    format(sms().tooLong, { bytes: item.bytes })
+                  }}</p-message>
+                }
+                <p>
+                  <strong>{{ sms().reply }}:</strong>
+                  {{ sms().texts[item.id].reply }}
+                </p>
+              </li>
+            }
+          </ol>
+        </section>
+      }
+    </section>
+  }
+</section>

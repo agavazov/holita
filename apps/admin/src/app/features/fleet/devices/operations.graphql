@@ -21,6 +21,7 @@ fragment AdminDeviceDetails on FleetDevice {
   edataModule
   simPhoneNumber
   simIccid
+  smsPassword
   installedAt
   notes
   lastReportedAt

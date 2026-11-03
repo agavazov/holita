@@ -34,6 +34,7 @@ export const fixtureDevice: WithTypename<AdminDeviceDetailsFragment> = {
   edataModule: 'eData Fms 6.56',
   simIccid: '8935901990012345678',
   simPhoneNumber: '+359888123456',
+  smsPassword: 'password',
   installedAt: '2026-01-01T08:00:00.000Z',
   notes: 'Cab tracker',
   status: 'ONLINE',

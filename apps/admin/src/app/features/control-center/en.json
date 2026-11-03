@@ -142,5 +142,102 @@
     "ABSENT": "Absent"
   },
   "deviceUnavailable": "The device is unavailable.",
-  "staleDevice": "{error} Showing the data from {time}."
+  "staleDevice": "{error} Showing the data from {time}.",
+  "sms": {
+    "title": "SMS commands",
+    "description": "What to send by SMS to which truck. Send a text from your phone to the truck's SIM number; the unit answers to the phone that sent it.",
+    "rulesTitle": "How Simple SMS works",
+    "syntax": "Every text has the form command#password[#parameters].",
+    "caseInsensitive": "Commands and the password are case-insensitive.",
+    "maxBytes": "A text to the unit may be at most 64 bytes; the unit does not accept a longer one.",
+    "replyTo": "The unit sends its reply to the phone number that sent the command.",
+    "devices": "Trucks, SIM numbers and passwords",
+    "sim": "SIM number",
+    "password": "Simple SMS password",
+    "noSim": "No SIM number",
+    "noPassword": "Not stored",
+    "showTexts": "Show texts",
+    "showTextsFor": "Show the texts for {unit}",
+    "textsFor": "Texts for {unit}",
+    "sendTo": "Send to",
+    "noPasswordHint": "No Simple SMS password is stored for this device, so its texts cannot be prepared. Add the password (parameter 0593) in the device editor.",
+    "editDevice": "Edit the device",
+    "copy": "Copy",
+    "copyLabel": "Copy {text}",
+    "copied": "Copied",
+    "selected": "Text selected",
+    "copyByHand": "The browser did not allow copying. The text is selected: press Ctrl+C, or tap Copy on a phone.",
+    "openSms": "Open in SMS app",
+    "openSmsLabel": "Open {text} in the SMS app, addressed to {sim}",
+    "tooLong": "{bytes} bytes: longer than 64 bytes, so the unit does not accept it.",
+    "reply": "Expected reply",
+    "firstDevices": "The Branch has {total} devices; this page lists the first {shown}.",
+    "karmaWarning": "Emergency only. After these texts the unit reports to Karma, and holita receives none of its data until you route it back to holita.",
+    "groups": {
+      "check": {
+        "title": "Check the unit",
+        "description": "These texts only read; they change nothing on the unit. Use them to see whether the unit answers and which server it reports to."
+      },
+      "route": {
+        "title": "Route to holita",
+        "description": "Makes holita (65.108.137.165, port 11500) the unit's primary server. Send the two texts in this order and send the second one only after the reply ok#setparam to the first. About 10 minutes later check the result with getparam 49 and 50. If the unit does not come online, call its SIM number to wake it."
+      },
+      "karma": {
+        "title": "Emergency: back to Karma",
+        "description": "Makes Karma (in.karma.online, port 500) the unit's primary server again. Send the two texts in this order and send the second one only after the reply ok#setparam to the first."
+      }
+    },
+    "texts": {
+      "info": {
+        "purpose": "Device information",
+        "when": "To see that the unit is alive and answers SMS, and to read its model, serial number, firmware, GSM operator and signal, IP address and voltages.",
+        "reply": "One line such as StarLink-CT 2e1-XL #02A23F 2.34; 05/11 06:22; \"ORANGE\" (425001) …; the fields depend on the firmware."
+      },
+      "loc": {
+        "purpose": "Location",
+        "when": "To see where the truck is when it is not online. The unit answers with its last known position and does not switch GNSS on for it.",
+        "reply": "Event: Location; In: …; Out: …; LocTime: …; Speed: …; Link: http://maps.google.com/?q=…"
+      },
+      "getparam49": {
+        "purpose": "Primary server address (parameter 0049)",
+        "when": "To see which server the unit sends its data to.",
+        "reply": "65.108.137.165 when the unit is routed to holita; in.karma.online when it reports to Karma."
+      },
+      "getparam50": {
+        "purpose": "Primary server port (parameter 0050)",
+        "when": "Together with parameter 0049.",
+        "reply": "11500 when the unit is routed to holita; 500 when it reports to Karma."
+      },
+      "getparam51": {
+        "purpose": "Backup server address (parameter 0051)",
+        "when": "To check the backup server that the unit uses when its primary server does not answer.",
+        "reply": "54.216.224.65, the Karma backup server."
+      },
+      "getparam52": {
+        "purpose": "Backup server port (parameter 0052)",
+        "when": "Together with parameter 0051.",
+        "reply": "500, the port of the Karma backup server."
+      },
+      "route49": {
+        "purpose": "Step 1: holita's address as the primary server",
+        "when": "The first text when you route the unit to holita.",
+        "reply": "ok#setparam"
+      },
+      "route50": {
+        "purpose": "Step 2: holita's port 11500",
+        "when": "Send it after the reply to step 1.",
+        "reply": "ok#setparam. The unit then connects to holita."
+      },
+      "karma49": {
+        "purpose": "Step 1: Karma's address as the primary server",
+        "when": "Emergency only: the first text.",
+        "reply": "ok#setparam"
+      },
+      "karma50": {
+        "purpose": "Step 2: Karma's port 500",
+        "when": "Send it after the reply to step 1.",
+        "reply": "ok#setparam. The unit then reports to Karma again."
+      }
+    }
+  }
 }

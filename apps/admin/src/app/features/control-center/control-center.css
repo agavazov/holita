@@ -43,3 +43,30 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+.control-center__notes {
+  margin: 0;
+  padding-inline-start: 1.25rem;
+}
+
+.control-center__sms {
+  display: grid;
+  gap: var(--p-app-space-4);
+  margin: 0;
+  padding-inline-start: 1.25rem;
+}
+
+.control-center__sms h4,
+.control-center__sms p {
+  margin: 0 0 var(--p-app-space-1);
+}
+
+.control-center__sms-text {
+  padding: var(--p-app-space-1) var(--p-app-space-2);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-app-radius-control);
+  background: var(--p-content-hover-background);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  overflow-wrap: anywhere;
+  user-select: all;
+}

@@ -25,6 +25,12 @@ export function adminNavigation(
           link: ['/', language, branchId, 'control-center'],
         },
         { id: 'devices', label: text.devices, icon: 'mobile', link: [...fleet, 'devices'] },
+        {
+          id: 'sms-commands',
+          label: text.smsCommands,
+          icon: 'envelope',
+          link: ['/', language, branchId, 'control-center', 'sms'],
+        },
       ],
     });
     groups.push({

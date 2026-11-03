@@ -56,6 +56,7 @@
   "vehicleGroups": "Vehicle groups",
   "licensePlate": "License Plate",
   "devices": "Devices",
+  "smsCommands": "SMS commands",
   "imei": "IMEI",
   "configurationError": "Could not start holita. Check the public configuration and reload.",
   "demoLogin": "Demo sign in",

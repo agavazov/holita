@@ -14,6 +14,7 @@ import { GeneralSettingsApi } from '../fleet/settings/general-settings-api';
 import { settingsText } from '../fleet/settings/i18n/messages';
 import { DashboardPage } from './dashboard-page';
 import { DevicePage, deviceTabs } from './device-page';
+import { SmsPage } from './sms-page';
 
 /**
  * One Control center scope per session, Branch and language; the route reuse strategy creates a
@@ -21,7 +22,7 @@ import { DevicePage, deviceTabs } from './device-page';
  */
 @Component({
   selector: 'holita-control-center-workspace',
-  imports: [ButtonDirective, Message, DashboardPage, DevicePage],
+  imports: [ButtonDirective, Message, DashboardPage, DevicePage, SmsPage],
   providers: [
     GeneralSettingsApi,
     FleetPreferences,
@@ -57,6 +58,8 @@ import { DevicePage, deviceTabs } from './device-page';
               </button>
             }
           </section>
+        } @else if (scope.sms) {
+          <holita-control-center-sms [branchId]="scope.branchId" [language]="scope.language" />
         } @else if (scope.recordId) {
           <holita-control-center-device
             [branchId]="scope.branchId"
@@ -100,6 +103,7 @@ export class ControlCenterWorkspace {
             language: this.workspace.language(),
             recordId: this.params().get('recordId'),
             tab,
+            sms: this.route.snapshot.data['page'] === 'sms',
           },
         ]
       : [];
