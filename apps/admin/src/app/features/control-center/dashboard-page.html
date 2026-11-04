@@ -39,9 +39,9 @@
       tone="neutral"
     />
     <holita-kpi-tile
-      [label]="text().lostToKarma"
-      [value]="count(counts()?.lostToKarma)"
-      [tone]="counts()?.lostToKarma ? 'danger' : null"
+      [label]="text().onBackup"
+      [value]="count(counts()?.onBackup)"
+      [tone]="counts()?.onBackup ? 'warn' : null"
     />
     <holita-kpi-tile
       [label]="text().withAlarms"
@@ -72,8 +72,13 @@
                   @if (!item.state.online) {
                     <p-tag [value]="text().offlineState" [severity]="toneSeverity('warn')" />
                   }
-                  @if (item.lostToKarma) {
-                    <p-tag [value]="text().lostToKarma" [severity]="toneSeverity('danger')" />
+                  @if (routingLabel(item.device.routing); as routing) {
+                    <p-tag
+                      [value]="routing"
+                      [severity]="
+                        toneSeverity(item.device.routing === 'SILENT' ? 'neutral' : 'warn')
+                      "
+                    />
                   }
                   @if (item.state.online && item.state.health.overdue) {
                     <p-tag [value]="text().overdue" [severity]="toneSeverity('warn')" />
@@ -194,8 +199,11 @@
                     [severity]="toneSeverity(state.mode === 'PRIMARY' ? 'accent' : 'neutral')"
                   />
                 }
-                @if (isLostToKarma(device)) {
-                  <p-tag [value]="text().lostToKarma" [severity]="toneSeverity('danger')" />
+                @if (routingLabel(device.routing); as routing) {
+                  <p-tag
+                    [value]="routing"
+                    [severity]="toneSeverity(device.routing === 'SILENT' ? 'neutral' : 'warn')"
+                  />
                 }
                 @if (state.online && state.health.overdue) {
                   <p-tag [value]="text().overdue" [severity]="toneSeverity('warn')" />

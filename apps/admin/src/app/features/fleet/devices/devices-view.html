@@ -164,8 +164,10 @@
                     [attr.aria-label]="alarmsLabel(row.live.alarms)"
                   />
                 }
-                @if (row.live.lostToKarma) {
-                  <p-tag severity="danger" [value]="text().live.lostToKarma" />
+                @if (row.live.routing === 'KARMA_BACKUP') {
+                  <p-tag severity="warn" [value]="text().live.routing.KARMA_BACKUP" />
+                } @else if (row.live.routing === 'SILENT') {
+                  <p-tag severity="secondary" [value]="text().live.routing.SILENT" />
                 }
                 @if (row.live.online && row.live.overdue) {
                   <p-tag severity="warn" [value]="text().live.overdue" />

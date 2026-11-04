@@ -29,11 +29,3 @@ export function karmaByImei<T extends { readonly karmaDeviceId: string }>(page: 
 }): ReadonlyMap<string, T> {
   return new Map(page.items.map((truck) => [truck.karmaDeviceId, truck]));
 }
-
-/** A unit that has reported to holita is offline there while Karma still receives its data. */
-export function lostToKarma(
-  karma: { readonly online: boolean } | null | undefined,
-  state: { readonly online: boolean } | null | undefined,
-): boolean {
-  return karma?.online === true && state?.online === false;
-}

@@ -4,19 +4,18 @@ import type {
   AdminDevicesLiveQuery,
   CreateFleetDeviceInput,
 } from '../../../../generated/graphql/operations';
-import { lostToKarma } from '../../control-center/control-center-text';
 import { fleetFieldErrors } from '../field-errors';
 import type { DeviceField, DeviceForm } from './device-drawer';
 import type { DeviceRow } from './devices-view';
 import { deviceModels, deviceOptions } from './device-query';
 
 type ErmState = AdminDevicesLiveQuery['fleetDevices']['items'][number]['ermState'];
-type KarmaTruck = AdminDevicesLiveQuery['fleetKarmaMonitoringTrucks']['items'][number];
+type Routing = AdminDevicesLiveQuery['fleetDevices']['items'][number]['routing'];
 
-/** The holita state by device ID and Fleet's Karma monitoring by IMEI. */
+/** The holita state and Fleet's routing state by device ID. */
 export interface DevicesLive {
   readonly states: ReadonlyMap<string, ErmState>;
-  readonly karma: ReadonlyMap<string, KarmaTruck>;
+  readonly routing: ReadonlyMap<string, Routing>;
 }
 
 /** A missing `live` or device ID means the holita state is unknown. */
@@ -49,7 +48,7 @@ export function deviceRow(
           alarms: state.alarmsLast24h,
           overdue: state.health.overdue,
           routeWrites: state.health.karmaRoutingWritesLast24h,
-          lostToKarma: lostToKarma(live?.karma.get(device.imei), state),
+          routing: live?.routing.get(device.id) ?? null,
         }
       : state === null
         ? 'karma'

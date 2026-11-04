@@ -56,7 +56,6 @@ import {
   deviceLabel,
   ermLanguage,
   karmaByImei,
-  lostToKarma,
   severityTone,
 } from './control-center-text';
 
@@ -178,7 +177,12 @@ export class DevicePage implements OnInit {
     const imei = this.device()?.imei;
     return imei ? (this.karmaTrucks().get(imei) ?? null) : null;
   });
-  readonly lostToKarma = computed(() => lostToKarma(this.karma(), this.state()));
+  /** Fleet's routing state: KARMA_BACKUP and SILENT get a badge, HOLITA and none do not. */
+  readonly routing = computed(() => this.device()?.routing ?? null);
+  readonly routingLabel = computed(() => {
+    const routing = this.routing();
+    return routing === 'KARMA_BACKUP' || routing === 'SILENT' ? this.text().routing[routing] : null;
+  });
   readonly karmaText = computed(() => {
     const karma = this.karma();
     return karma

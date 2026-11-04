@@ -146,7 +146,7 @@
     "noAlerts": "No alerts",
     "deviceEvents": {
       "heading": "Device events",
-      "note": "Dated reports from the unit's eData fault logger, imported from holita. They are not alerts: nobody acknowledges or resolves them, and a cleared code does not prove a repair.",
+      "note": "Dated reports imported from holita: the unit's eData fault logger, CAN errors and switches to Karma's backup server. They are not alerts: nobody acknowledges or resolves them, and a cleared code does not prove a repair.",
       "empty": "No device events.",
       "latest": "Showing the latest {shown} of {total}.",
       "occurred": "Date",

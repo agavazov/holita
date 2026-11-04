@@ -34,8 +34,13 @@
   "online": "На линия",
   "offlineState": "Извън линия",
   "neverConnectedState": "Никога не се е свързвало с holita",
-  "lostToKarma": "Karma го вижда, holita – не",
-  "lostToKarmaHint": "Karma получава данните на това устройство, а holita – не. Вероятно е насочено обратно към Karma; проверете параметър 0049 с SMS.",
+  "routing": {
+    "KARMA_BACKUP": "На резервния сървър на Karma",
+    "SILENT": "Без данни"
+  },
+  "onBackup": "На резервния сървър на Karma",
+  "backupHint": "Устройството изпраща данните си към резервния сървър на Karma вместо към holita: Karma има по-нови данни от holita повече от 3 минути. Проверете параметър 0049 с SMS.",
+  "silentHint": "Нито holita, нито Karma са получили скорошни данни от това устройство.",
   "karma": "Karma",
   "lastData": "последни данни {time}",
   "notInKarma": "Няма го в наблюдението на Karma",

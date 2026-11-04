@@ -342,7 +342,7 @@ query AdminVehicleDeviceEvents($vehicleId: ID!) {
     limit: 50
     filter: {
       vehicleIds: [$vehicleId]
-      kinds: [DIAGNOSTIC_TROUBLE_CODE, CAN_ERROR]
+      kinds: [DIAGNOSTIC_TROUBLE_CODE, CAN_ERROR, UNIT_ON_BACKUP]
       actionable: false
     }
     sort: { field: OCCURRED_AT, direction: DESC }

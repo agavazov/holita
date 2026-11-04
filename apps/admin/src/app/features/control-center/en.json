@@ -34,8 +34,13 @@
   "online": "Online",
   "offlineState": "Offline",
   "neverConnectedState": "Never connected to holita",
-  "lostToKarma": "Karma sees it, holita does not",
-  "lostToKarmaHint": "Karma receives this unit's data, but holita does not. The unit was probably routed back to Karma; check parameter 0049 by SMS.",
+  "routing": {
+    "KARMA_BACKUP": "On Karma backup",
+    "SILENT": "Silent"
+  },
+  "onBackup": "On Karma backup",
+  "backupHint": "The unit sends its data to Karma's backup server instead of holita: Karma has had newer data than holita for over 3 minutes. Check parameter 0049 by SMS.",
+  "silentHint": "Neither holita nor Karma has received recent data from this unit.",
   "karma": "Karma",
   "lastData": "last data {time}",
   "notInKarma": "Not in Karma monitoring",

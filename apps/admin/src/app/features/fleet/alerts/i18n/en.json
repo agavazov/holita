@@ -59,6 +59,7 @@
     "LOW_BACKUP_BATTERY": "Low backup battery",
     "CAN_DISCONNECTED": "CAN disconnected",
     "CAN_ERROR": "CAN error",
+    "UNIT_ON_BACKUP": "Unit on Karma backup",
     "DEVICE_OFFLINE": "Device offline",
     "DIAGNOSTIC_TROUBLE_CODE": "Diagnostic trouble code",
     "CRASH_DETECTED": "Crash detected"

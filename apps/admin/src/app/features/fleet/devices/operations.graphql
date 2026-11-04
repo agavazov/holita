@@ -55,6 +55,7 @@ query AdminDevicesLive($ids: [ID!]!) {
   fleetDevices(ids: $ids, limit: 100) {
     items {
       id
+      routing
       ermState {
         unitId
         online
@@ -66,14 +67,6 @@ query AdminDevicesLive($ids: [ID!]!) {
           karmaRoutingWritesLast24h
         }
       }
-    }
-  }
-  fleetKarmaMonitoringTrucks(limit: 100) {
-    items {
-      id
-      karmaDeviceId
-      lastDataAt
-      online
     }
   }
 }

@@ -34,11 +34,13 @@
       </div>
     }
 
-    @if (lostToKarma()) {
+    @if (routing() === 'KARMA_BACKUP') {
       <p-message severity="warn">
-        {{ text().lostToKarmaHint }}
+        {{ text().backupHint }}
         <a class="app-link" [routerLink]="link('control-center', 'sms')">{{ text().sms.title }}</a>
       </p-message>
+    } @else if (routing() === 'SILENT') {
+      <p-message severity="secondary">{{ text().silentHint }}</p-message>
     }
 
     @if (!state()) {
@@ -156,10 +158,12 @@
                             <dt>{{ text().karma }}</dt>
                             <dd>
                               {{ karmaText() }}
-                              @if (lostToKarma()) {
+                              @if (routingLabel(); as label) {
                                 <p-tag
-                                  [value]="text().lostToKarma"
-                                  [severity]="toneSeverity('danger')"
+                                  [value]="label"
+                                  [severity]="
+                                    toneSeverity(routing() === 'SILENT' ? 'neutral' : 'warn')
+                                  "
                                 />
                               }
                             </dd>

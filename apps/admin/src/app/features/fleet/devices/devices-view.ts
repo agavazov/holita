@@ -47,8 +47,8 @@ export type DeviceLive =
       readonly overdue: boolean;
       /** Karma writes to routing parameters 0049–0054 in the last 24 hours. */
       readonly routeWrites: number;
-      /** holita has lost the unit while Karma still receives its data. */
-      readonly lostToKarma: boolean;
+      /** Fleet's routing state; KARMA_BACKUP and SILENT get a badge. */
+      readonly routing: 'HOLITA' | 'KARMA_BACKUP' | 'SILENT' | null;
     }
   | 'karma';
 

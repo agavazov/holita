@@ -29,17 +29,9 @@ import { tableView } from '../../ui/table-panel/table-view';
 import { toneSeverity } from '../../ui/tones';
 import { deviceModelLabel } from '../fleet/devices/i18n/messages';
 import { ControlCenterApi } from './control-center-api';
-import {
-  controlCenterText,
-  deviceLabel,
-  ermLanguage,
-  karmaByImei,
-  lostToKarma,
-  severityTone,
-} from './control-center-text';
+import { controlCenterText, deviceLabel, ermLanguage, severityTone } from './control-center-text';
 
 type Device = AdminControlCenterDevicesQuery['fleetDevices']['items'][number];
-type KarmaTruck = AdminControlCenterDevicesQuery['fleetKarmaMonitoringTrucks']['items'][number];
 
 @Component({
   selector: 'holita-control-center-dashboard',
@@ -71,8 +63,6 @@ export class DashboardPage implements OnInit {
   private readonly api = inject(ControlCenterApi);
   private readonly units = injectFleetFormat();
   readonly devices = signal<Device[] | null>(null);
-  /** Fleet's Karma monitoring by IMEI, for the Karma-versus-holita cross-check. */
-  readonly karma = signal<ReadonlyMap<string, KarmaTruck>>(new Map());
   /** All Devices of the Branch; the dashboard reads only the first page. */
   readonly total = signal<number | null>(null);
   /** When the shown devices were read; a failed poll keeps them. */
@@ -103,7 +93,7 @@ export class DashboardPage implements OnInit {
       online: devices.filter((device) => device.ermState?.online === true).length,
       offline: devices.filter((device) => device.ermState?.online === false).length,
       neverConnected: devices.filter((device) => !device.ermState).length,
-      lostToKarma: devices.filter((device) => this.isLostToKarma(device)).length,
+      onBackup: devices.filter((device) => device.routing === 'KARMA_BACKUP').length,
       alarms: devices.filter((device) => (device.ermState?.alarmsLast24h ?? 0) > 0).length,
     };
   });
@@ -147,12 +137,12 @@ export class DashboardPage implements OnInit {
           (!state.online ||
             state.alarmsLast24h > 0 ||
             state.health.overdue ||
-            state.health.karmaRoutingWritesLast24h > 0)
+            state.health.karmaRoutingWritesLast24h > 0 ||
+            device.routing === 'KARMA_BACKUP')
           ? [
               {
                 device,
                 state,
-                lostToKarma: this.isLostToKarma(device),
                 time: state.latestAlarm?.eventTime ?? state.lastFrameAt ?? null,
               },
             ]
@@ -184,7 +174,6 @@ export class DashboardPage implements OnInit {
             this.error.set(result.error ?? null);
             if (result.dataState === 'complete' && !result.error) {
               this.devices.set(result.data.fleetDevices.items);
-              this.karma.set(karmaByImei(result.data.fleetKarmaMonitoringTrucks));
               this.total.set(result.data.fleetDevices.total);
               this.updatedAt.set(new Date().toISOString());
             }
@@ -204,8 +193,9 @@ export class DashboardPage implements OnInit {
     this.api.initialize(this.branchId(), this.language());
   }
 
-  isLostToKarma(device: Device): boolean {
-    return lostToKarma(this.karma().get(device.imei), device.ermState);
+  /** KARMA_BACKUP and SILENT get a badge; HOLITA and no routing data do not. */
+  routingLabel(routing: Device['routing']): string | null {
+    return routing === 'KARMA_BACKUP' || routing === 'SILENT' ? this.text().routing[routing] : null;
   }
   deviceLink(device: Device): string[] {
     return ['/', this.language(), this.branchId(), 'control-center', 'devices', device.id];
