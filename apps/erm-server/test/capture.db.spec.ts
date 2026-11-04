@@ -1589,6 +1589,12 @@ it('persists captured connection lifecycle and raw frames through the production
     expect(splitEdataDefinitions(`01${secondDefinition}${firstDefinition}`)).toEqual(
       expectedDefinitions,
     );
+    // ERM's own export prefixes each command with tab-separated message columns.
+    expect(
+      splitEdataDefinitions(
+        `Message #\t1\tFrom\t1\tMessages\t\t30,1,19,0,19,301,0,1,1,01${secondDefinition}${firstDefinition}\n`,
+      ),
+    ).toEqual(expectedDefinitions);
     const configurationRuntime = { pollIntervalMs: 1, readTimeoutMs: 90_000, log: () => undefined };
     configurationGateway = {
       definitions: [firstDefinition, secondDefinition],

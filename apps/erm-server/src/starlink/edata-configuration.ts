@@ -118,7 +118,8 @@ export function splitEdataDefinitions(input: string): EdataConfigurationDefiniti
   const payloads = /^[0-9A-Fa-f]+$/.test(text)
     ? [text]
     : text.split(/\r?\n/).flatMap((line) => {
-        const match = /^(?:30,1,)?19,0,19,301,0,1,1,(.*)$/.exec(line.trim());
+        // ERM's exports may prefix the command with tab-separated message columns.
+        const match = /(?:^|\s)(?:30,1,)?19,0,19,301,0,1,1,([0-9A-Fa-f]*)/.exec(line);
         const payload = match?.[1];
         return payload !== undefined && /^(01|02)/i.test(payload) ? [payload] : [];
       });
