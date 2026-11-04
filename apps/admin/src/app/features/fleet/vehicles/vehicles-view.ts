@@ -1,14 +1,19 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { FleetConnection } from '../../../ui/fleet-live/fleet-connection';
+import { FleetNow } from '../../../ui/fleet-live/fleet-now';
+import { FleetLastReport } from '../../../ui/fleet-live/fleet-last-report';
+import { FleetFaults } from '../../../ui/fleet-live/fleet-faults';
+import { FleetLiveSummary } from '../../../ui/fleet-live/fleet-live-summary';
+import { fleetLiveText, type FleetLiveDevice } from '../../../ui/fleet-live/fleet-live';
 import { ButtonDirective } from 'primeng/button';
 import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import type { StatusTone } from '../../../theme/status-tones';
 import type { FilterCondition, FilterField } from '../../../ui/filter-builder/filter-model';
 import { FilterBuilder } from '../../../ui/filter-builder/filter-builder';
-import { FormatNumberPipe, FormatRelativePipe } from '../../../ui/format/format.pipes';
-import { formatDateTime, formatNumber } from '../../../ui/format/format';
+import { formatDateTime } from '../../../ui/format/format';
 import { interpolate } from '../../../ui/i18n/messages';
-import { KpiStrip } from '../../../ui/kpi/kpi-strip';
 import {
   type ListAction,
   type ListActionRequest,
@@ -18,7 +23,6 @@ import {
 } from '../../../ui/list/list-actions';
 import { injectSortReady, listQuery, type ListQuery } from '../../../ui/list/list-query';
 import { ListSortMenu, type ListSortField } from '../../../ui/list/list-sort-menu';
-import { KpiTile } from '../../../ui/kpi/kpi-tile';
 import { PageHeader } from '../../../ui/page-header/page-header';
 import { RowActions } from '../../../ui/row-actions/row-actions';
 import { TablePanel } from '../../../ui/table-panel/table-panel';
@@ -48,6 +52,12 @@ export type VehicleActionId = 'edit' | 'profile' | 'deactivate' | 'delete';
 export interface VehicleRow {
   readonly id: string;
   readonly plate: string;
+  readonly devices: readonly {
+    readonly id: string;
+    readonly imei: string;
+    readonly lastReportedAt: string | null;
+  }[];
+  readonly liveDevices?: readonly FleetLiveDevice[];
   readonly fleetNumber: string | null;
   readonly type: VehicleTypeCode | null;
   readonly make: string;
@@ -66,15 +76,6 @@ export interface VehicleRow {
   readonly notes: string;
 }
 
-export interface VehicleKpis {
-  readonly inOperation: number;
-  readonly inWorkshop: number;
-  readonly moving: number;
-  readonly notReporting: number;
-  readonly openAlerts: number;
-  readonly lowFuel: number;
-}
-
 export interface VehicleOption {
   readonly id: string;
   readonly name: string;
@@ -84,15 +85,6 @@ const statusTones: Record<VehicleStatusCode, StatusTone> = {
   ACTIVE: 'success',
   IN_WORKSHOP: 'warn',
   INACTIVE: 'neutral',
-};
-
-const activityTones: Record<VehicleActivityCode, string> = {
-  MOVING: 'success',
-  IDLE: 'info',
-  PARKED: 'neutral',
-  ASSET: 'info',
-  NOT_CONNECTED: 'danger',
-  NO_DEVICE: 'neutral',
 };
 
 /**
@@ -106,10 +98,12 @@ const activityTones: Record<VehicleActivityCode, string> = {
     TableModule,
     Tag,
     FilterBuilder,
-    FormatNumberPipe,
-    FormatRelativePipe,
-    KpiStrip,
-    KpiTile,
+    RouterLink,
+    FleetConnection,
+    FleetNow,
+    FleetLastReport,
+    FleetFaults,
+    FleetLiveSummary,
     PageHeader,
     RowActions,
     TablePanel,
@@ -121,6 +115,7 @@ const activityTones: Record<VehicleActivityCode, string> = {
   host: { class: 'app-view' },
 })
 export class VehiclesView {
+  readonly branchId = input('');
   readonly branchName = input.required<string>();
   /** The instant the telemetry columns refer to (the data clock). */
   readonly dataAsOf = input.required<string>();
@@ -128,7 +123,6 @@ export class VehiclesView {
   readonly total = input.required<number>();
   readonly view = input.required<TableView>();
   readonly state = input.required<ListQuery>();
-  readonly kpis = input<VehicleKpis | null>(null);
   readonly groups = input<readonly VehicleOption[]>([]);
   readonly drivers = input<readonly VehicleOption[]>([]);
   readonly selection = input<readonly ListRecord<VehicleActionId>[]>([]);
@@ -150,15 +144,6 @@ export class VehiclesView {
     const text = vehiclesText(this.language());
     return {
       ...text,
-      kpis: {
-        ...text.kpis,
-        notReportingFootnote: interpolate(text.kpis.notReportingFootnote, {
-          hours: this.units.preferences().notReportingHours,
-        }),
-        lowFuelFootnote: interpolate(text.kpis.lowFuelFootnote, {
-          percent: this.units.preferences().lowFuelPct,
-        }),
-      },
       table: {
         ...text.table,
         odometer: interpolate(text.table.odometer, { unit: this.units.distanceUnit() }),
@@ -317,21 +302,21 @@ export class VehiclesView {
       { field: 'plate', label: text.table.plate },
       { field: 'fleetNumber', label: text.drawer.fleetNumber },
       { field: 'status', label: text.table.status },
-      { field: 'lastReportedAt', label: text.table.activity },
+      { field: 'lastReportedAt', label: text.table.fleetLastReport },
       { field: 'odometer', label: text.table.odometer },
       { field: 'createdAt', label: text.filters.createdAt },
       { field: 'updatedAt', label: text.table.updatedAt },
     ];
   });
-  protected readonly movingShare = computed(() => {
-    const kpis = this.kpis();
-    if (!kpis || !kpis.inOperation) {
-      return null;
-    }
-    return interpolate(this.text().kpis.movingShare, {
-      share: `${formatNumber(Math.round((kpis.moving / kpis.inOperation) * 100), this.language())} %`,
-    });
-  });
+
+  protected readonly liveText = computed(() => fleetLiveText(this.language()));
+  protected readonly liveGroups = computed(() =>
+    this.rows().map((row) => row.devices.map((_, index) => row.liveDevices?.[index])),
+  );
+
+  protected deviceLink(id: string, tab = 'overview'): readonly string[] {
+    return ['/', this.language(), this.branchId(), 'control-center', 'devices', id, tab];
+  }
 
   protected statusSeverity(status: VehicleStatusCode) {
     return toneSeverity(statusTones[status]);
@@ -341,16 +326,8 @@ export class VehiclesView {
     return this.text().statuses[status];
   }
 
-  protected activityLabel(activity: VehicleActivityCode): string {
-    return this.text().activities[activity];
-  }
-
   protected typeLabel(type: VehicleTypeCode | null): string {
     return type === null ? '—' : this.text().types[type];
-  }
-
-  protected activityTone(activity: VehicleActivityCode): string {
-    return activityTones[activity];
   }
 
   protected fuelLow(row: VehicleRow): boolean {
@@ -363,10 +340,6 @@ export class VehiclesView {
 
   protected alertsLabel(count: number): string {
     return interpolate(this.text().table.alerts, { count });
-  }
-
-  protected inWorkshop(count: number): string {
-    return interpolate(this.text().kpis.inWorkshop, { count });
   }
 
   protected recordOf(row: VehicleRow): ListRecord<VehicleActionId> {

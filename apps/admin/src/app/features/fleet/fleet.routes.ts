@@ -18,6 +18,11 @@ const vehicleProfileRoute: UrlMatcher = (segments) => {
 
 export const fleetRoutes: Routes = [
   {
+    path: ':branchId/fleet/devices/:recordId/diagnostics',
+    pathMatch: 'full',
+    redirectTo: ':branchId/control-center/devices/:recordId/alarms',
+  },
+  {
     path: ':branchId/fleet/devices/:recordId/configuration',
     data: { feature: 'karma-client', requiresBranch: false },
     loadComponent: () =>
@@ -259,16 +264,12 @@ export const fleetRoutes: Routes = [
         loadComponent: () =>
           import('./devices/device-editor-page').then((module) => module.DeviceEditorPage),
       },
-      {
-        path: ':recordId/diagnostics',
-        data: { drawer: true, mode: 'view', recordParam: 'recordId' },
-        canDeactivate: [leaveDrawer],
-        loadComponent: () =>
-          import('./devices/device-diagnostics-page').then(
-            (module) => module.DeviceDiagnosticsPage,
-          ),
-      },
     ],
+  },
+  {
+    path: ':branchId/fleet/devices/:recordId',
+    pathMatch: 'full',
+    redirectTo: ':branchId/control-center/devices/:recordId/overview',
   },
   { path: ':branchId/reference', redirectTo: ':branchId/fleet' },
 ];

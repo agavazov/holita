@@ -9,6 +9,7 @@ import { graphqlOptions } from '../../../core/graphql/graphql-options';
 import type { Language } from '../../../i18n/messages';
 import {
   AdminVehiclesDocument,
+  AdminVehiclesLiveDocument,
   AdminVehicleDocument,
   AdminCreateVehicleDocument,
   AdminUpdateVehicleDocument,
@@ -56,6 +57,19 @@ export class VehiclesApi implements OnDestroy {
     return this.apollo.watchQuery({
       query: AdminVehiclesDocument,
       variables,
+    });
+  }
+
+  watchLive(ids: readonly string[]) {
+    if (!this.apollo || this.destroyed) {
+      throw new Error('An active Vehicles workspace is required.');
+    }
+    return this.apollo.watchQuery({
+      query: AdminVehiclesLiveDocument,
+      variables: { ids: [...ids] },
+      fetchPolicy: 'network-only',
+      pollInterval: 30_000,
+      skipPollAttempt: () => document.hidden,
     });
   }
 

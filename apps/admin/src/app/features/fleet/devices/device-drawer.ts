@@ -18,13 +18,11 @@ import { ButtonDirective } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
-import { Tag } from 'primeng/tag';
 import { Textarea } from 'primeng/textarea';
 import { RouteDrawer, type RouteDrawerState } from '../../../ui/drawer/route-drawer';
 import { selectMultiplePt } from '../../../ui/select-multiple';
 import { deviceOptions } from './device-query';
 import { FormField } from '../../../ui/form-field/form-field';
-import { FormatNumberPipe, FormatRelativePipe } from '../../../ui/format/format.pipes';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { isoToZonedWallTime, zonedWallTimeInstants } from '../../../ui/format/zoned-time';
 import { focusFirstInvalid } from '../../../ui/forms/focus';
@@ -68,10 +66,7 @@ const fieldOrder: readonly DeviceField[] = [
   'notes',
 ];
 
-/**
- * Direct edit with read-only context: the device's live diagnostics sit above the installation
- * form, so the user sees what they change. A new device opens on the form only.
- */
+/** Device registration and installation editor. Live diagnostics belong to the device page. */
 @Component({
   selector: 'holita-device-drawer',
   imports: [
@@ -80,18 +75,14 @@ const fieldOrder: readonly DeviceField[] = [
     InputText,
     Message,
     Select,
-    Tag,
     Textarea,
     RouteDrawer,
     FormField,
-    FormatNumberPipe,
-    FormatRelativePipe,
   ],
   templateUrl: './device-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DeviceDrawer {
-  readonly demo = input(false);
   /** The device to edit; null registers a new one. */
   readonly device = input<DeviceRow | null>(null);
   readonly value = input<DeviceForm | null>(null);
@@ -101,7 +92,6 @@ export class DeviceDrawer {
   readonly closeLink = input<readonly unknown[] | null>(null);
   readonly models = input<readonly string[]>([]);
   readonly vehicles = input<readonly { readonly id: string; readonly name: string }[]>([]);
-  readonly dataAsOf = input.required<string>();
   readonly saving = input(false);
   readonly saveError = input<string | null>(null);
   readonly fieldErrors = input<Partial<Record<DeviceField, string>>>({});
@@ -145,9 +135,7 @@ export class DeviceDrawer {
       nonNullable: true,
       validators: [textValidator(32), patternValidator(/^[0-9A-Za-z-]{1,32}$/)],
     }),
-    model: new FormControl<string | null>(null, (control) =>
-      this.demo() && !control.value ? { required: true } : null,
-    ),
+    model: new FormControl<string | null>(null),
     options: new FormControl<readonly string[]>([], { nonNullable: true }),
     firmwareVersion: new FormControl('', {
       nonNullable: true,
@@ -279,7 +267,6 @@ export class DeviceDrawer {
     this.submitted = true;
     this.form.markAllAsTouched();
     const value = this.form.getRawValue();
-    this.form.controls.model.updateValueAndValidity();
     if (this.form.invalid) {
       afterNextRender(
         () => {

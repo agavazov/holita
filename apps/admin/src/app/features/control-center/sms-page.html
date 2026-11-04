@@ -1,20 +1,22 @@
 <section class="app-view" [attr.aria-busy]="loading()">
-  <holita-page-header
-    [title]="sms().title"
-    [eyebrow]="text().title"
-    [description]="sms().description"
-  >
-    <button
-      headerActions
-      pButton
-      type="button"
-      severity="secondary"
-      [disabled]="loading()"
-      (click)="refresh()"
+  @if (!deviceId()) {
+    <holita-page-header
+      [title]="sms().title"
+      [eyebrow]="text().title"
+      [description]="sms().description"
     >
-      {{ text().refresh }}
-    </button>
-  </holita-page-header>
+      <button
+        headerActions
+        pButton
+        type="button"
+        severity="secondary"
+        [disabled]="loading()"
+        (click)="refresh()"
+      >
+        {{ text().refresh }}
+      </button>
+    </holita-page-header>
+  }
 
   <section class="app-card control-center__panel" [attr.aria-label]="sms().rulesTitle">
     <h2>{{ sms().rulesTitle }}</h2>
@@ -26,73 +28,75 @@
     </ul>
   </section>
 
-  @if (partial(); as partial) {
-    <p class="app-muted">{{ partial }}</p>
-  }
+  @if (!deviceId() || view().kind !== 'rows') {
+    @if (partial(); as partial) {
+      <p class="app-muted">{{ partial }}</p>
+    }
 
-  <holita-table-panel
-    [heading]="sms().devices"
-    [view]="view()"
-    [busy]="loading()"
-    [errorText]="failure()"
-    [emptyTitle]="text().devicesEmpty"
-    (retry)="refresh()"
-  >
-    <p-table class="app-responsive-table" [value]="devices() ?? []" dataKey="id">
-      <ng-template #header>
-        <tr>
-          <th scope="col" class="app-col-identity">{{ text().truck }}</th>
-          <th scope="col">{{ sms().sim }}</th>
-          <th scope="col">{{ sms().password }}</th>
-          <th scope="col">
-            <span class="app-visually-hidden">{{ sms().showTexts }}</span>
-          </th>
-        </tr>
-      </ng-template>
-      <ng-template #body let-device>
-        <tr>
-          <td class="app-col-identity">
-            <div class="app-cell-stack">
-              <span>{{ label(device) }}</span>
-              <span class="app-muted control-center__mono"
-                >{{ text().imei }} {{ device.imei }}</span
+    <holita-table-panel
+      [heading]="sms().devices"
+      [view]="view()"
+      [busy]="loading()"
+      [errorText]="failure()"
+      [emptyTitle]="text().devicesEmpty"
+      (retry)="refresh()"
+    >
+      <p-table class="app-responsive-table" [value]="devices() ?? []" dataKey="id">
+        <ng-template #header>
+          <tr>
+            <th scope="col" class="app-col-identity">{{ text().truck }}</th>
+            <th scope="col">{{ sms().sim }}</th>
+            <th scope="col">{{ sms().password }}</th>
+            <th scope="col">
+              <span class="app-visually-hidden">{{ sms().showTexts }}</span>
+            </th>
+          </tr>
+        </ng-template>
+        <ng-template #body let-device>
+          <tr>
+            <td class="app-col-identity">
+              <div class="app-cell-stack">
+                <span>{{ label(device) }}</span>
+                <span class="app-muted control-center__mono"
+                  >{{ text().imei }} {{ device.imei }}</span
+                >
+              </div>
+            </td>
+            <td>
+              @if (device.simPhoneNumber) {
+                <a class="app-link control-center__mono" [href]="'tel:' + device.simPhoneNumber">{{
+                  device.simPhoneNumber
+                }}</a>
+              } @else {
+                <span class="app-muted">{{ sms().noSim }}</span>
+              }
+            </td>
+            <td>
+              @if (device.smsPassword) {
+                <span class="control-center__mono">{{ device.smsPassword }}</span>
+              } @else {
+                <span class="app-muted">{{ sms().noPassword }}</span>
+              }
+            </td>
+            <td>
+              <button
+                pButton
+                type="button"
+                size="small"
+                severity="secondary"
+                [outlined]="selected()?.id !== device.id"
+                [attr.aria-pressed]="selected()?.id === device.id"
+                [attr.aria-label]="format(sms().showTextsFor, { unit: label(device) })"
+                (click)="selectedId.set(device.id)"
               >
-            </div>
-          </td>
-          <td>
-            @if (device.simPhoneNumber) {
-              <a class="app-link control-center__mono" [href]="'tel:' + device.simPhoneNumber">{{
-                device.simPhoneNumber
-              }}</a>
-            } @else {
-              <span class="app-muted">{{ sms().noSim }}</span>
-            }
-          </td>
-          <td>
-            @if (device.smsPassword) {
-              <span class="control-center__mono">{{ device.smsPassword }}</span>
-            } @else {
-              <span class="app-muted">{{ sms().noPassword }}</span>
-            }
-          </td>
-          <td>
-            <button
-              pButton
-              type="button"
-              size="small"
-              severity="secondary"
-              [outlined]="selected()?.id !== device.id"
-              [attr.aria-pressed]="selected()?.id === device.id"
-              [attr.aria-label]="format(sms().showTextsFor, { unit: label(device) })"
-              (click)="selectedId.set(device.id)"
-            >
-              {{ sms().showTexts }}
-            </button>
-          </td>
-        </tr>
-      </ng-template>
-    </p-table>
-  </holita-table-panel>
+                {{ sms().showTexts }}
+              </button>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </holita-table-panel>
+  }
 
   @if (selected(); as device) {
     <section class="control-center__panel" aria-labelledby="sms-texts-heading">

@@ -39,7 +39,6 @@ import { devicesText } from './i18n/messages';
     [models]="models"
     [vehicles]="choices.vehicles()"
     [choicesError]="choicesFailure()"
-    [dataAsOf]="dataAsOf()"
     [saving]="saving()"
     [saveError]="saveFailure()"
     [fieldErrors]="fieldErrors()"
@@ -71,7 +70,15 @@ export class DeviceEditorPage implements OnInit {
   readonly models = deviceModels;
   readonly closeLink =
     this.id && this.route.snapshot.queryParamMap.get('editFrom') === 'diagnostics'
-      ? [...this.listLink, this.id, 'diagnostics']
+      ? [
+          '/',
+          this.language(),
+          drawerParam(this.route, 'branchId'),
+          'control-center',
+          'devices',
+          this.id,
+          'overview',
+        ]
       : this.listLink;
   readonly record = signal<AdminDeviceDetailsFragment | null>(null);
   protected readonly row = computed(() => {
@@ -86,7 +93,6 @@ export class DeviceEditorPage implements OnInit {
   readonly saving = signal(false);
   readonly loadError = signal<unknown>(null);
   readonly saveError = signal<unknown>(null);
-  protected readonly dataAsOf = signal('');
   protected readonly retry = new Subject<void>();
   private readonly text = computed(() => devicesText(this.language()));
   protected readonly loadFailure = computed(() =>
@@ -115,19 +121,6 @@ export class DeviceEditorPage implements OnInit {
       return;
     }
     this.choices.load();
-    this.api
-      .watchSummary()
-      .valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (result) => {
-          if (result.dataState === 'complete' && !result.error) {
-            this.dataAsOf.set(result.data.fleetDeviceSummary.dataAsOf ?? '');
-          }
-        },
-        error: () => {
-          this.dataAsOf.set('');
-        },
-      });
     const id = this.id;
     if (id === null) {
       this.state.set('ready');

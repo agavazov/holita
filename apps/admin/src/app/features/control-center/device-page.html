@@ -1,9 +1,9 @@
 <section class="app-view" [attr.aria-busy]="deviceLoading()">
   <holita-page-header
     [title]="title()"
-    [eyebrow]="text().title"
-    [backLink]="link('control-center')"
-    [backLabel]="text().dashboard"
+    [eyebrow]="text().fleet"
+    [backLink]="link('fleet', 'devices')"
+    [backLabel]="text().devices"
   >
     <button
       headerActions
@@ -37,19 +37,19 @@
     @if (routing() === 'KARMA_BACKUP') {
       <p-message severity="warn">
         {{ text().backupHint }}
-        <a class="app-link" [routerLink]="link('control-center', 'sms')">{{ text().sms.title }}</a>
+        <a class="app-link" [routerLink]="deviceLink('sms')">{{ text().sms.title }}</a>
       </p-message>
     } @else if (routing() === 'SILENT') {
       <p-message severity="secondary">{{ text().silentHint }}</p-message>
     }
 
-    @if (!state()) {
+    @if (!state() && !deviceError()) {
       <section
         class="app-card control-center__panel"
         [attr.aria-label]="text().neverConnectedState"
       >
         <div class="control-center__actions">
-          <p-tag [value]="text().neverConnectedState" [severity]="toneSeverity('neutral')" />
+          <holita-fleet-connection [device]="liveDevice()" />
           <a class="app-link" [routerLink]="['/', language(), 'karma-client', 'cars']">{{
             text().openKarma
           }}</a>
@@ -58,6 +58,27 @@
         <p class="app-muted">{{ text().karma }}: {{ karmaText() }}</p>
       </section>
     }
+
+    <section class="app-card" [attr.aria-label]="text().liveState">
+      <dl class="app-facts">
+        <div>
+          <dt>{{ text().state }}</dt>
+          <dd><holita-fleet-connection [device]="liveDevice()" /></dd>
+        </div>
+        <div>
+          <dt>{{ text().now }}</dt>
+          <dd><holita-fleet-now [device]="liveDevice()" /></dd>
+        </div>
+        <div>
+          <dt>{{ text().lastReport }}</dt>
+          <dd><holita-fleet-last-report [device]="liveDevice()" /></dd>
+        </div>
+        <div>
+          <dt>{{ text().faults }}</dt>
+          <dd><holita-fleet-faults [device]="liveDevice()" [link]="deviceLink('alarms')" /></dd>
+        </div>
+      </dl>
+    </section>
 
     <p-tabs [value]="tab()" (valueChange)="selectTab($event)">
       <p-tablist>
@@ -80,7 +101,17 @@
                       <dl class="app-facts">
                         <div>
                           <dt>{{ text().truck }}</dt>
-                          <dd>{{ device.vehicle?.licensePlate ?? text().noTruck }}</dd>
+                          <dd>
+                            @if (device.vehicle; as vehicle) {
+                              <a
+                                class="app-link"
+                                [routerLink]="link('fleet', 'vehicles', vehicle.id, 'overview')"
+                                >{{ vehicle.licensePlate }}</a
+                              >
+                            } @else {
+                              {{ text().noTruck }}
+                            }
+                          </dd>
                         </div>
                         <div>
                           <dt>{{ text().imei }}</dt>
@@ -114,10 +145,19 @@
                           <dt>{{ text().installed }}</dt>
                           <dd>{{ date(device.installedAt) }}</dd>
                         </div>
+                        <div>
+                          <dt>{{ text().options }}</dt>
+                          <dd>{{ device.options.join(', ') || '—' }}</dd>
+                        </div>
+                        <div>
+                          <dt>{{ text().notes }}</dt>
+                          <dd>{{ device.notes ?? '—' }}</dd>
+                        </div>
                       </dl>
                       <a
                         class="app-link"
                         [routerLink]="link('fleet', 'devices', device.id, 'edit')"
+                        [queryParams]="{ editFrom: 'diagnostics' }"
                         >{{ text().editInFleet }}</a
                       >
                     </section>
@@ -131,12 +171,7 @@
                         <dl class="app-facts">
                           <div>
                             <dt>{{ text().state }}</dt>
-                            <dd>
-                              <p-tag
-                                [value]="state.online ? text().online : text().offlineState"
-                                [severity]="toneSeverity(state.online ? 'success' : 'warn')"
-                              />
-                            </dd>
+                            <dd><holita-fleet-connection [device]="liveDevice()" /></dd>
                           </div>
                           <div>
                             <dt>{{ text().mode }}</dt>
@@ -156,17 +191,7 @@
                           </div>
                           <div>
                             <dt>{{ text().karma }}</dt>
-                            <dd>
-                              {{ karmaText() }}
-                              @if (routingLabel(); as label) {
-                                <p-tag
-                                  [value]="label"
-                                  [severity]="
-                                    toneSeverity(routing() === 'SILENT' ? 'neutral' : 'warn')
-                                  "
-                                />
-                              }
-                            </dd>
+                            <dd>{{ karmaText() }}</dd>
                           </div>
                         </dl>
                         @if (state.latestEvent; as event) {
@@ -247,8 +272,8 @@
                           </div>
                           <div>
                             <dt>{{ text().lastClose }}</dt>
-                            <dd>
-                              {{ state.health.lastCloseReason ?? '—' }} ·
+                            <dd [title]="state.health.lastCloseReason ?? ''">
+                              {{ closeReason(state.health.lastCloseReason) }} ·
                               {{ date(state.health.lastClosedAt) }}
                             </dd>
                           </div>
@@ -285,6 +310,14 @@
                       [originTime]="date(position.event.positionTime ?? position.event.eventTime)"
                     />
                   }
+                }
+
+                @case ('sms') {
+                  <holita-control-center-sms
+                    [branchId]="branchId()"
+                    [language]="language()"
+                    [deviceId]="recordId()"
+                  />
                 }
 
                 @case ('commands') {
@@ -595,6 +628,41 @@
                 }
 
                 @default {
+                  @if (value === 'alarms') {
+                    <section
+                      class="app-card control-center__panel"
+                      [attr.aria-label]="text().fleetDiagnostics"
+                    >
+                      <h2>{{ text().fleetDiagnostics }}</h2>
+                      <p class="app-muted">{{ text().diagnosticHistoryHint }}</p>
+                      @if (device.diagnostics.latest; as fault) {
+                        <dl class="app-facts">
+                          <div>
+                            <dt>{{ text().diagnosticRecords }}</dt>
+                            <dd>{{ number(device.diagnostics.count, 0) }}</dd>
+                          </div>
+                          <div>
+                            <dt>{{ text().faults }}</dt>
+                            <dd>{{ fault.troubleCode ?? text().edataCanError }}</dd>
+                          </div>
+                          <div>
+                            <dt>{{ text().time }}</dt>
+                            <dd>{{ date(fault.occurredAt) }}</dd>
+                          </div>
+                          <div>
+                            <dt>{{ text().source }}</dt>
+                            <dd>{{ text().sources[fault.source] }}</dd>
+                          </div>
+                          <div>
+                            <dt>{{ text().values }}</dt>
+                            <dd>{{ fault.details ?? '—' }}</dd>
+                          </div>
+                        </dl>
+                      } @else {
+                        <p class="app-muted">{{ text().diagnosticsEmpty }}</p>
+                      }
+                    </section>
+                  }
                   @if (value === 'events') {
                     <div
                       class="control-center__actions"

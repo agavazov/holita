@@ -4,7 +4,6 @@ import { defaultBranchId } from '../../../../storybook/session-fixtures';
 import { routeAt, StoryApp, type StoryFixtures } from '../../../../storybook/story-config';
 import { AdminWorkspace } from '../../../workspace/admin-workspace';
 import { FleetWorkspace } from '../fleet-workspace';
-import { DeviceDiagnosticsPage } from './device-diagnostics-page';
 import { DeviceEditorPage } from './device-editor-page';
 import { DevicesPage } from './devices-list-page';
 
@@ -21,14 +20,7 @@ function routed(suffix = ''): NonNullable<Story['render']> {
   return () => ({
     ...render(),
     moduleMetadata: {
-      imports: [
-        StoryApp,
-        AdminWorkspace,
-        FleetWorkspace,
-        DevicesPage,
-        DeviceEditorPage,
-        DeviceDiagnosticsPage,
-      ],
+      imports: [StoryApp, AdminWorkspace, FleetWorkspace, DevicesPage, DeviceEditorPage],
     },
     template: '<holita-story-app [url]="url" />',
   });
@@ -42,9 +34,6 @@ export const Edit: Story = {
 
 export const Stock: Story = {
   render: routed('/new'),
-};
-export const Diagnostics: Story = {
-  render: routed('/' + fixtureDevice.id + '/diagnostics'),
 };
 export const ErrorState: Story = {
   name: 'Error',

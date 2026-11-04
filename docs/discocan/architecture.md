@@ -103,6 +103,11 @@ Gateway forwards context; each owning service verifies the signed session. Demo 
 anyone select any Tenant and is not production identity or membership authorization.
 
 `FleetVehicle` and `FleetDevice` are federation entities keyed by `id`, with `branch: Branch!`.
+`FleetVehicle.devices` exposes assigned Device entities through a scoped page batch, so Router
+can compose each device's live `ermState`. `FleetDevice.diagnostics` counts recorded DTC,
+CAN error and CAN disconnection events for the current vehicle/IMEI pair and returns the latest
+evidence; it does not assert that a historical fault is still active. Live ERM values and these
+display-only diagnostics do not drive Fleet list filtering, sorting or whole-Branch counts.
 Other record links use stored-field reference types. Derived list facts must be computed
 before filtering, sorting, paging and counting, in the same scoped snapshot as rows/totals.
 Do not add per-row field queries. Separate root queries and display-only later reads do not

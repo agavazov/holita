@@ -57,6 +57,7 @@
       {{ text().addFilter }}
     </button>
   }
+  <ng-content select="[filterQuickActions]" />
   <div class="filter-builder__actions">
     <ng-content select="[filterActions]" />
   </div>

@@ -54,6 +54,9 @@ export function navigationContext(
   navigation: readonly NavGroup[],
   path: string,
 ): PageContext | null {
+  path = path.split(/[?#]/, 1)[0] ?? path;
+  // The device page retains its original URL while belonging to Fleet's Devices workspace.
+  path = path.replace(/^(\/[^/]+\/[^/]+)\/control-center\/devices(?=\/|$)/, '$1/fleet/devices');
   let match: { readonly length: number; readonly context: PageContext } | null = null;
   for (const group of navigation) {
     for (const item of group.items) {

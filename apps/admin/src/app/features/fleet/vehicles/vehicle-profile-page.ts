@@ -68,6 +68,7 @@ const samePage = (left: ProfilePage, right: ProfilePage) =>
   template: `
     <holita-vehicle-profile-view
       [recordLinks]="recordLinks()"
+      [deviceLinkBase]="['/', language(), branch().id, 'control-center', 'devices']"
       [state]="state()"
       [vehicle]="vehicle()"
       [dataAsOf]="record()?.fleetDataClock.asOf ?? ''"

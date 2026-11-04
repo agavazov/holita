@@ -54,19 +54,7 @@ query AdminDevices(
 query AdminDevicesLive($ids: [ID!]!) {
   fleetDevices(ids: $ids, limit: 100) {
     items {
-      id
-      routing
-      ermState {
-        unitId
-        online
-        mode
-        lastFrameAt
-        alarmsLast24h
-        health {
-          overdue
-          karmaRoutingWritesLast24h
-        }
-      }
+      ...AdminFleetLiveDevice
     }
   }
 }
@@ -100,15 +88,6 @@ query AdminDeviceVehicles($offset: Int!, $limit: Int!, $search: String, $ids: [I
     total
     offset
     limit
-  }
-}
-
-query AdminDeviceSummary {
-  fleetDeviceSummary {
-    dataAsOf
-    online
-    offline
-    inStock
   }
 }
 

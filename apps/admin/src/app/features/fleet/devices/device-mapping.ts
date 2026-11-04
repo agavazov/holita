@@ -1,21 +1,17 @@
 import type { Language } from '../../../i18n/messages';
 import type {
   AdminDeviceDetailsFragment,
-  AdminDevicesLiveQuery,
   CreateFleetDeviceInput,
 } from '../../../../generated/graphql/operations';
 import { fleetFieldErrors } from '../field-errors';
 import type { DeviceField, DeviceForm } from './device-drawer';
 import type { DeviceRow } from './devices-view';
+import type { FleetLiveDevice } from '../../../ui/fleet-live/fleet-live';
 import { deviceModels, deviceOptions } from './device-query';
 
-type ErmState = AdminDevicesLiveQuery['fleetDevices']['items'][number]['ermState'];
-type Routing = AdminDevicesLiveQuery['fleetDevices']['items'][number]['routing'];
-
-/** The holita state and Fleet's routing state by device ID. */
+/** Live records by ID; absence means the live request is unavailable. */
 export interface DevicesLive {
-  readonly states: ReadonlyMap<string, ErmState>;
-  readonly routing: ReadonlyMap<string, Routing>;
+  readonly devices: ReadonlyMap<string, NonNullable<FleetLiveDevice>>;
 }
 
 /** A missing `live` or device ID means the holita state is unknown. */
@@ -23,7 +19,6 @@ export function deviceRow(
   device: AdminDeviceDetailsFragment,
   live?: DevicesLive | null,
 ): DeviceRow {
-  const state = live?.states.get(device.id);
   return {
     id: device.id,
     imei: device.imei,
@@ -37,22 +32,8 @@ export function deviceRow(
     plate: device.vehicle?.licensePlate ?? null,
     status: device.status,
     lastSeenAt: device.lastReportedAt,
-    signal: null,
-    voltage: null,
     notes: device.notes ?? '',
-    live: state
-      ? {
-          online: state.online,
-          mode: state.mode,
-          lastFrameAt: state.lastFrameAt,
-          alarms: state.alarmsLast24h,
-          overdue: state.health.overdue,
-          routeWrites: state.health.karmaRoutingWritesLast24h,
-          routing: live?.routing.get(device.id) ?? null,
-        }
-      : state === null
-        ? 'karma'
-        : null,
+    live: live?.devices.get(device.id),
   };
 }
 export function deviceForm(device: AdminDeviceDetailsFragment): DeviceForm {

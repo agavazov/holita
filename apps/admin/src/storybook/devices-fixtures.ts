@@ -2,7 +2,6 @@ import {
   AdminCreateDeviceDocument,
   AdminDeleteDevicesDocument,
   AdminDeviceDocument,
-  AdminDeviceSummaryDocument,
   AdminDevicesDocument,
   AdminDevicesLiveDocument,
   AdminDeviceVehiclesDocument,
@@ -57,18 +56,41 @@ graphqlFixture(AdminDevicesDocument, (variables) => ({
     limit: variables.int('limit', 20),
   },
 }));
-const fixtureLiveDevice: WithTypename<AdminDevicesLiveQuery['fleetDevices']['items'][number]> = {
+export const fixtureLiveDevice: WithTypename<
+  AdminDevicesLiveQuery['fleetDevices']['items'][number]
+> = {
   __typename: 'FleetDevice',
   id: fixtureDevice.id,
+  imei: fixtureDevice.imei,
+  vehicleId: fixtureDevice.vehicleId,
+  status: 'ONLINE',
+  lastReportedAt: fixtureDevice.lastReportedAt,
+  diagnostics: { __typename: 'FleetDeviceDiagnosticSummary', count: 0, latest: null },
   routing: 'HOLITA',
   ermState: {
     __typename: 'ErmUnitState',
-    unitId: fixtureDevice.imei,
     online: true,
     mode: 'PRIMARY',
+    connectedSince: '2026-10-20T07:00:00.000Z',
+    latestEvent: {
+      __typename: 'ErmEvent',
+      eventTime: '2026-10-20T08:00:00.000Z',
+      speedKmh: 72,
+      engineOn: true,
+      ignitionOn: true,
+      nameEn: 'Driving',
+      nameBg: 'В движение',
+    },
+    latestAlarm: {
+      __typename: 'ErmEvent',
+      eventTime: '2026-10-20T07:30:00.000Z',
+      severity: 'WARNING',
+      nameEn: 'Driver alarm',
+      nameBg: 'Аларма от водача',
+    },
     lastFrameAt: '2026-10-20T08:00:00.000Z',
     alarmsLast24h: 2,
-    health: { __typename: 'ErmUnitHealth', overdue: false, karmaRoutingWritesLast24h: 0 },
+    health: { __typename: 'ErmUnitHealth', overdue: false },
   },
 };
 graphqlFixture(AdminDevicesLiveDocument, () => ({
@@ -83,15 +105,6 @@ graphqlFixture(AdminDeviceDocument, (variables) => {
   }
   return { fleetDevice: fixtureDevice };
 });
-graphqlFixture(AdminDeviceSummaryDocument, () => ({
-  fleetDeviceSummary: {
-    __typename: 'FleetDeviceSummary',
-    dataAsOf: fixtureDevice.lastReportedAt,
-    online: 1,
-    offline: 0,
-    inStock: 0,
-  },
-}));
 graphqlFixture(AdminDeviceVehiclesDocument, (variables) => ({
   fleetVehicles: {
     __typename: 'FleetVehiclePage',

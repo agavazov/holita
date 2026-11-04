@@ -16,6 +16,7 @@ import type {
   FleetDeviceSortField,
   FleetDeviceActionResult,
   FleetDeviceSummary,
+  FleetDeviceDiagnosticSummary,
   QueryFleetDevicesArgs,
   UpdateFleetDeviceInput,
 } from '../../generated/graphql/types.js';
@@ -57,7 +58,7 @@ import { SettingsService } from '../settings/settings.service.js';
 import { ermTelemetryEnabled } from '../erm-telemetry/erm-telemetry.jobs.js';
 
 export type DeviceResult = Omit<FleetDevice, 'branch'>;
-type StoredDevice = Omit<DeviceResult, 'lastReportedAt' | 'status' | 'routing'>;
+type StoredDevice = Omit<DeviceResult, 'lastReportedAt' | 'status' | 'routing' | 'diagnostics'>;
 
 const DEVICE_MODELS = Object.values(FleetDeviceModel);
 const DEVICE_OPTIONS = Object.values(FleetDeviceOption);
@@ -186,6 +187,42 @@ export class DevicesService {
     );
   }
 
+  private async diagnostics(
+    scope: FleetScope,
+    rows: readonly DeviceRow[],
+  ): Promise<Map<string, FleetDeviceDiagnosticSummary>> {
+    const pairs = rows.flatMap((row) =>
+      row.vehicleId === null ? [] : [{ vehicleId: row.vehicleId, imei: row.imei }],
+    );
+    if (!pairs.length) {
+      return new Map();
+    }
+    const { counts, latest } = await this.devices.diagnostics(scope, pairs);
+    const latestByPair = new Map(
+      latest.flatMap((row) =>
+        row.deviceImei === null
+          ? []
+          : [[reportingPair(row.vehicleId, row.deviceImei), row] as const],
+      ),
+    );
+    return new Map(
+      counts.flatMap((row) => {
+        if (row.deviceImei === null) {
+          return [];
+        }
+        const key = reportingPair(row.vehicleId, row.deviceImei);
+        return [[key, { count: row._count._all, latest: latestByPair.get(key) ?? null }] as const];
+      }),
+    );
+  }
+
+  async forVehicles(scope: FleetScope, vehicleIds: readonly string[]): Promise<DeviceResult[]> {
+    if (!vehicleIds.length) {
+      return [];
+    }
+    return this.complete(scope, await this.devices.forVehicles(scope, vehicleIds));
+  }
+
   async list(
     context: RequestContext,
     args: QueryFleetDevicesArgs,
@@ -208,13 +245,23 @@ export class DevicesService {
       direction: sortDirection(args.sort?.direction, 'DESC'),
     };
     const page = await this.devices.list(scope, { offset, limit }, criteria, sort);
-    const routing = await this.routing(scope, page.items);
+    const [routing, diagnostics] = await Promise.all([
+      this.routing(scope, page.items),
+      this.diagnostics(scope, page.items),
+    ]);
     return {
       items: page.items.map((row) => ({
         ...toDevice(row),
         status: row.status,
         lastReportedAt: row.lastReportedAt,
         routing: routing.get(row.imei) ?? null,
+        diagnostics:
+          row.vehicleId === null
+            ? { count: 0, latest: null }
+            : (diagnostics.get(reportingPair(row.vehicleId, row.imei)) ?? {
+                count: 0,
+                latest: null,
+              }),
       })),
       total: page.total,
       offset,
@@ -384,11 +431,12 @@ export class DevicesService {
     const pairs = rows.flatMap((row) =>
       row.vehicleId === null ? [] : [{ vehicleId: row.vehicleId, imei: row.imei }],
     );
-    const [reported, asOf, settings, routing] = await Promise.all([
+    const [reported, asOf, settings, routing, diagnostics] = await Promise.all([
       this.telemetry.lastReported(scope, pairs),
       this.telemetry.asOf(scope),
       this.settings.read(scope),
       this.routing(scope, rows),
+      this.diagnostics(scope, rows),
     ]);
     return rows.map((row) => {
       const lastReportedAt =
@@ -400,6 +448,13 @@ export class DevicesService {
         routing: routing.get(row.imei) ?? null,
         lastReportedAt,
         status: deviceStatus(row.vehicleId, lastReportedAt, asOf, settings.notReportingHours),
+        diagnostics:
+          row.vehicleId === null
+            ? { count: 0, latest: null }
+            : (diagnostics.get(reportingPair(row.vehicleId, row.imei)) ?? {
+                count: 0,
+                latest: null,
+              }),
       };
     });
   }

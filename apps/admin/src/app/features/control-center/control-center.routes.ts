@@ -2,6 +2,11 @@ import type { Routes } from '@angular/router';
 
 export const controlCenterRoutes: Routes = [
   {
+    path: ':branchId/control-center/devices/:recordId/diagnostics',
+    pathMatch: 'full',
+    redirectTo: ':branchId/control-center/devices/:recordId/alarms',
+  },
+  {
     path: ':branchId/control-center/devices/:recordId',
     pathMatch: 'full',
     redirectTo: ':branchId/control-center/devices/:recordId/overview',

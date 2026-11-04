@@ -106,6 +106,7 @@ function listView(rows: readonly unknown[]): TableView {
   host: { class: 'app-view' },
 })
 export class VehicleProfileView {
+  readonly deviceLinkBase = input<readonly string[]>([]);
   readonly recordLinks = input<FleetRecordLinks | null>(null);
   readonly state = input.required<VehicleProfileState>();
   readonly vehicle = input<VehicleProfile | null>(null);
@@ -216,6 +217,10 @@ export class VehicleProfileView {
     () => this.deviceEventState() ?? listView(this.deviceEvents()),
   );
   protected readonly deviceEventRows = computed(() => [...this.deviceEvents()]);
+  protected deviceLink(id: string): readonly string[] {
+    return [...this.deviceLinkBase(), id, 'overview'];
+  }
+
   protected deviceEventLabel(state: DeviceEventRow['state']): string {
     return this.text().deviceEvents[state];
   }

@@ -13,10 +13,12 @@ import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { Message } from 'primeng/message';
 import { ButtonDirective } from 'primeng/button';
-import { EMPTY, catchError, switchMap } from 'rxjs';
+import { EMPTY, catchError, distinctUntilChanged, map, switchMap } from 'rxjs';
+import { toObservable } from '@angular/core/rxjs-interop';
 import type {
   AdminBranchesQuery,
   AdminVehiclesQuery,
+  AdminVehiclesLiveQuery,
   AdminVehicleSummaryQuery,
 } from '../../../../generated/graphql/operations';
 import { requestError } from '../../../core/graphql/request-error';
@@ -60,6 +62,12 @@ export class VehiclesPage implements OnInit {
   private query: ReturnType<VehiclesApi['watch']> | undefined;
   private summaryQuery: ReturnType<VehiclesApi['watchSummary']> | undefined;
   readonly page = signal<AdminVehiclesQuery['fleetVehicles'] | null>(null);
+  readonly live = signal<AdminVehiclesLiveQuery['fleetVehicles']['items'] | null>(null);
+  readonly liveError = signal<unknown>(null);
+  private readonly vehicleIds = computed(() =>
+    (this.page()?.items ?? []).map((vehicle) => vehicle.id),
+  );
+  private readonly vehicleIdChanges = toObservable(this.vehicleIds);
   readonly summary = signal<AdminVehicleSummaryQuery['fleetVehicleSummary'] | null>(null);
   readonly loading = signal(true);
   readonly error = signal<unknown>(null);
@@ -85,8 +93,19 @@ export class VehiclesPage implements OnInit {
     const key = this.url.searchError();
     return key ? uiMessages[this.language()][key] : null;
   });
-  protected readonly rows = computed(() =>
-    (this.page()?.items ?? []).filter((vehicle) => !this.removed().has(vehicle.id)).map(vehicleRow),
+  protected readonly rows = computed(() => {
+    const live = new Map(this.live()?.map((vehicle) => [vehicle.id, vehicle]));
+    return (this.page()?.items ?? [])
+      .filter((vehicle) => !this.removed().has(vehicle.id))
+      .map((vehicle) => ({
+        ...vehicleRow(vehicle),
+        liveDevices: vehicle.devices.map((device) =>
+          live.get(vehicle.id)?.devices.find((value) => value.id === device.id),
+        ),
+      }));
+  });
+  protected readonly liveFailure = computed(() =>
+    requestError(this.liveError(), messages[this.language()].networkError),
   );
   protected readonly total = computed(() =>
     Math.max(0, (this.page()?.total ?? 0) - this.removed().size),
@@ -112,6 +131,33 @@ export class VehiclesPage implements OnInit {
   ngOnInit(): void {
     this.api.initialize(this.branch().id, this.language());
     this.choices.load();
+    this.vehicleIdChanges
+      .pipe(
+        map((ids) => ids.join(',')),
+        distinctUntilChanged(),
+        switchMap((ids) => {
+          this.live.set(null);
+          this.liveError.set(null);
+          if (!ids) {
+            return EMPTY;
+          }
+          return this.api.watchLive(ids.split(',')).valueChanges.pipe(
+            catchError((error: unknown) => {
+              this.liveError.set(error);
+              return EMPTY;
+            }),
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((result) => {
+        this.liveError.set(result.error ?? null);
+        if (result.dataState === 'complete' && !result.error) {
+          this.live.set(result.data.fleetVehicles.items);
+        } else if (result.error) {
+          this.live.set(null);
+        }
+      });
     this.summaryQuery = this.api.watchSummary();
     this.summaryQuery.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (result) => {

@@ -62,8 +62,23 @@ type FleetDevice @key(fields: "id") {
   notes: String
   "Latest sample recorded for this device on its current vehicle; null if never." # B2
   lastReportedAt: DateTime # B2
+  diagnostics: FleetDeviceDiagnosticSummary!
   createdAt: DateTime!
   updatedAt: DateTime!
+}
+
+"Recorded DTC and CAN faults for the current vehicle/IMEI pair; these are historical evidence, not an active-fault assertion."
+type FleetDeviceDiagnosticSummary {
+  count: Int!
+  latest: FleetDeviceDiagnosticFault
+}
+
+type FleetDeviceDiagnosticFault {
+  kind: FleetEventKind!
+  occurredAt: DateTime!
+  troubleCode: String
+  details: String
+  source: FleetDataSource!
 }
 
 type FleetDevicePage {

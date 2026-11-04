@@ -50,6 +50,7 @@ type SmsDevice = AdminControlCenterSmsDevicesQuery['fleetDevices']['items'][numb
 export class SmsPage implements OnInit {
   readonly branchId = input.required<string>();
   readonly language = input.required<Language>();
+  readonly deviceId = input<string | null>(null);
   readonly text = computed(() => controlCenterText[this.language()]);
   readonly sms = computed(() => this.text().sms);
   private readonly api = inject(ControlCenterApi);
@@ -103,7 +104,7 @@ export class SmsPage implements OnInit {
       this.reload();
       this.loading.set(true);
       this.error.set(null);
-      const subscription = this.api.watchSmsDevices().valueChanges.subscribe({
+      const subscription = this.api.watchSmsDevices(this.deviceId()).valueChanges.subscribe({
         next: (result) => {
           this.loading.set(result.loading);
           this.error.set(result.error ?? null);

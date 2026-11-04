@@ -1,63 +1,30 @@
 {
   "eyebrow": "Fleet",
   "title": "Devices",
-  "description": "{branch} · StarLink units, their holita connection and the vehicle they are installed in",
+  "description": "{branch} · Devices and truck assignments",
   "new": "Register device",
-  "unavailable": "Signal, voltage, firmware policy and restart are Demo features and are unavailable for these records.",
-  "demo": {
-    "label": "Demo features",
-    "description": "Connection, diagnostics and restart actions use sample data."
-  },
   "sort": {
     "installedAt": "Installed at",
-    "createdAt": "Created at"
+    "createdAt": "Created at",
+    "fleetLastReport": "Fleet last report"
   },
   "search": "Search IMEI, serial number, SIM phone, model or plate",
-  "kpis": {
-    "label": "Device summary",
-    "online": "Online",
-    "offline": "Offline",
-    "offlineFootnote": "no connection for {hours} h",
-    "stock": "In stock",
-    "outdated": "Outdated firmware",
-    "firmwareUnavailable": "Demo · firmware policy unavailable"
-  },
   "table": {
     "heading": "Devices",
     "device": "Device",
-    "vehicle": "Vehicle",
-    "lastSeen": "Last seen",
-    "signal": "Signal",
-    "voltage": "Voltage",
-    "firmware": "Firmware",
+    "vehicle": "Truck",
     "actions": "Actions",
     "selectPage": "Select all on this page",
     "selectRow": "Select {imei}",
     "edit": "Edit device {imei}",
     "view": "Open device page {imei}",
-    "notInstalled": "Not installed",
-    "never": "Never",
-    "signalBars": "{bars} of 5 bars",
-    "outdated": "Update available",
+    "notInstalled": "Without truck",
     "emptyTitle": "No devices yet",
     "emptyDescription": "Register the trackers of this branch to see their connection.",
-    "errorText": "The devices could not be loaded. Try again.",
-    "serialNumber": "Serial number",
-    "live": "holita connection",
-    "simPhone": "SIM phone",
-    "lastFrame": "last frame {time}",
-    "alarms": "Alarms in the last 24 h: {count}"
-  },
-  "statuses": {
-    "ONLINE": "Online",
-    "OFFLINE": "Offline",
-    "IN_STOCK": "In stock"
+    "errorText": "The devices could not be loaded. Try again."
   },
   "actions": {
     "edit": "Edit",
-    "restart": "Restart",
-    "restartUnavailable": "Restart · Demo unavailable",
-    "diagnostics": "Diagnostics",
     "delete": "Delete",
     "confirmDelete": {
       "title": "Delete devices?",
@@ -65,34 +32,23 @@
       "accept": "Delete"
     },
     "vehicle": "Open vehicle profile",
-    "confirmRestart": {
-      "title": "Restart devices?",
-      "detail": "They stop reporting for about a minute.",
-      "accept": "Restart"
-    },
     "open": "Open device page"
   },
   "filters": {
     "model": "Model",
     "firmware": "Firmware",
-    "installed": "Installed in a vehicle"
+    "installed": "Installed in a vehicle",
+    "withoutTruck": "Without truck"
   },
   "notices": {
     "saved": "Device {imei} was saved.",
     "created": "Device {imei} was registered.",
-    "restarted": "Restart sent to devices: {count}.",
     "deleted": "Devices deleted: {count}.",
     "partialFailure": "Failed records: {count}."
   },
   "drawer": {
-    "configuration": "eData settings",
-    "demoLabel": "Demo features",
-    "demoDescription": "Installation and diagnostics use sample data; changes apply to this demonstration only.",
     "createTitle": "Register device",
     "editTitle": "Device {imei}",
-    "diagnostics": "Diagnostics",
-    "unavailable": "Signal and voltage are unavailable. Firmware policy and restart remain Demo features.",
-    "notAvailable": "Unavailable",
     "retry": "Try again",
     "options": "Device options",
     "simPhone": "SIM phone number",
@@ -100,10 +56,6 @@
     "smsPasswordHint": "Parameter 0593 on the unit: 1–16 letters or digits. SMS commands shows it in plain text.",
     "installedAt": "Installed at",
     "installedAtHint": "Branch time zone: {timeZone}. Saved as a UTC instant.",
-    "status": "Connection",
-    "lastSeen": "Last seen",
-    "signal": "Signal",
-    "voltage": "External voltage",
     "firmware": "Firmware",
     "model": "Model",
     "installation": "Installation",
@@ -123,19 +75,6 @@
     "serialNumberHint": "ERM serial number from the unit label, for example 279037",
     "edataModule": "eData module",
     "edataModuleHint": "Module and version, for example eData Fms 6.56"
-  },
-  "live": {
-    "online": "Online",
-    "offline": "Offline",
-    "karma": "Never connected",
-    "overdue": "Overdue",
-    "routeChanged": "Karma changed the route",
-    "primary": "Primary",
-    "mirror": "Mirror",
-    "routing": {
-      "KARMA_BACKUP": "On Karma backup",
-      "SILENT": "Silent"
-    }
   },
   "liveError": "The live holita connection is unavailable right now; the device registry is up to date.",
   "liveStale": "The live holita connection could not be refreshed; it shows the state from {time}.",

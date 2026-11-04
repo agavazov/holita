@@ -38,9 +38,14 @@ import type {
 } from '../../../generated/graphql/operations';
 import { requestError } from '../../core/graphql/request-error';
 import type { Language } from '../../i18n/messages';
+import { injectPageRecord } from '../../layout/page-record';
 import { confirmAction, confirmDialogPt } from '../../ui/confirm';
 import { EmptyState } from '../../ui/empty-state/empty-state';
 import { injectFleetFormat } from '../../ui/format/fleet-format';
+import { FleetConnection } from '../../ui/fleet-live/fleet-connection';
+import { FleetNow } from '../../ui/fleet-live/fleet-now';
+import { FleetLastReport } from '../../ui/fleet-live/fleet-last-report';
+import { FleetFaults } from '../../ui/fleet-live/fleet-faults';
 import { formatDateTime, formatDuration, formatNumber, emptyValue } from '../../ui/format/format';
 import { interpolate, uiMessages } from '../../ui/i18n/messages';
 import { mapCoordinates } from '../../ui/map-preview/location-map';
@@ -51,6 +56,7 @@ import { tableView } from '../../ui/table-panel/table-view';
 import { toneSeverity } from '../../ui/tones';
 import { deviceModelLabel } from '../fleet/devices/i18n/messages';
 import { ControlCenterApi } from './control-center-api';
+import { SmsPage } from './sms-page';
 import {
   controlCenterText,
   deviceLabel,
@@ -59,7 +65,8 @@ import {
   severityTone,
 } from './control-center-text';
 
-export type DeviceTab = 'overview' | 'events' | 'alarms' | 'commands' | 'parameters' | 'frames';
+export type DeviceTab =
+  'overview' | 'events' | 'alarms' | 'commands' | 'parameters' | 'frames' | 'sms';
 type Device = AdminControlCenterDeviceQuery['fleetDevice'];
 type KarmaTruck = AdminControlCenterDeviceQuery['fleetKarmaMonitoringTrucks']['items'][number];
 type Events = AdminControlCenterEventsQuery['fleetDevice']['ermEvents'];
@@ -92,10 +99,11 @@ export const deviceTabs: readonly DeviceTab[] = [
   'commands',
   'parameters',
   'frames',
+  'sms',
 ];
 const categories: readonly ErmEventCategory[] = ['POSITION', 'STATUS', 'ALARM', 'EDATA', 'OTHER'];
-/** The Alarms tab matches the dashboard's ALARM count. */
-const alarmCategories: ErmEventCategory[] = ['ALARM'];
+/** Fault evidence includes alarm events and decoded eData reports, including cleared faults. */
+const alarmCategories: ErmEventCategory[] = ['ALARM', 'EDATA'];
 
 /** A timeout or unavailable service after the request left: the unit may have received the frame. */
 function unconfirmed(error: unknown): boolean {
@@ -126,6 +134,11 @@ function unconfirmed(error: unknown): boolean {
     MapPreview,
     PageHeader,
     TablePanel,
+    FleetConnection,
+    FleetNow,
+    FleetLastReport,
+    FleetFaults,
+    SmsPage,
   ],
   providers: [ControlCenterApi, ConfirmationService],
   templateUrl: './device-page.html',
@@ -171,26 +184,24 @@ export class DevicePage implements OnInit {
   );
   private readonly deviceReload = signal(0);
   readonly state = computed(() => this.device()?.ermState ?? null);
+  readonly liveDevice = computed(() =>
+    this.deviceError() && !this.state() ? undefined : this.device(),
+  );
   private readonly karmaTrucks = signal<ReadonlyMap<string, KarmaTruck>>(new Map());
   /** Fleet's Karma monitoring of this unit, for the Karma-versus-holita cross-check. */
   readonly karma = computed(() => {
     const imei = this.device()?.imei;
     return imei ? (this.karmaTrucks().get(imei) ?? null) : null;
   });
-  /** Fleet's routing state: KARMA_BACKUP and SILENT get a badge, HOLITA and none do not. */
+  /** Fleet's routing state explains where the unit's data arrives. */
   readonly routing = computed(() => this.device()?.routing ?? null);
-  readonly routingLabel = computed(() => {
-    const routing = this.routing();
-    return routing === 'KARMA_BACKUP' || routing === 'SILENT' ? this.text().routing[routing] : null;
-  });
   readonly karmaText = computed(() => {
     const karma = this.karma();
-    return karma
-      ? `${karma.online ? this.text().online : this.text().offlineState} · ${interpolate(
-          this.text().lastData,
-          { time: this.date(karma.lastDataAt) },
-        )}`
+    const routing = this.routing();
+    const lastData = karma
+      ? interpolate(this.text().lastData, { time: this.date(karma.lastDataAt) })
       : this.text().notInKarma;
+    return routing ? `${this.text().routing[routing]} · ${lastData}` : lastData;
   });
   readonly title = computed(() => {
     const device = this.device();
@@ -275,6 +286,7 @@ export class DevicePage implements OnInit {
   );
 
   constructor() {
+    injectPageRecord(() => (this.device() ? this.title() : null));
     effect((onCleanup) => {
       this.deviceReload();
       const id = this.recordId();
@@ -286,7 +298,7 @@ export class DevicePage implements OnInit {
           this.deviceLoading.set(result.loading);
           // A failed poll re-emits the previous data with the error; both stay visible.
           this.deviceError.set(result.error ?? null);
-          if (result.dataState === 'complete' && !result.error) {
+          if (result.dataState === 'complete' && (!result.error || !this.device())) {
             this.device.set(result.data.fleetDevice);
             this.karmaTrucks.set(karmaByImei(result.data.fleetKarmaMonitoringTrucks));
             this.deviceUpdatedAt.set(new Date().toISOString());
@@ -314,9 +326,9 @@ export class DevicePage implements OnInit {
         this.frames.set(null);
         this.snapshots.set(null);
         this.historyError.set(null);
-        this.historyLoading.set(tab !== 'overview');
+        this.historyLoading.set(tab !== 'overview' && tab !== 'sms');
       });
-      if (tab === 'overview') {
+      if (tab === 'overview' || tab === 'sms') {
         return;
       }
       const page = { pageSize: 50, cursor };
@@ -432,6 +444,10 @@ export class DevicePage implements OnInit {
   }
   date(value: string | null | undefined): string {
     return formatDateTime(value, this.language(), this.units.preferences().timeZone, true);
+  }
+  closeReason(value: string | null | undefined): string {
+    const reasons: Readonly<Record<string, string>> = this.text().closeReasons;
+    return value === null || value === undefined ? emptyValue : (reasons[value] ?? value);
   }
   number(value: number | null | undefined, fraction = 1): string {
     return formatNumber(value, this.language(), { fraction });

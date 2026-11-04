@@ -19,19 +19,29 @@ import { EmptyState } from '../../ui/empty-state/empty-state';
 import { injectFleetFormat } from '../../ui/format/fleet-format';
 import { formatDateTime, formatNumber } from '../../ui/format/format';
 import { interpolate } from '../../ui/i18n/messages';
-import { KpiStrip } from '../../ui/kpi/kpi-strip';
-import { KpiTile } from '../../ui/kpi/kpi-tile';
+import { FleetConnection } from '../../ui/fleet-live/fleet-connection';
+import { FleetNow } from '../../ui/fleet-live/fleet-now';
+import { FleetLastReport } from '../../ui/fleet-live/fleet-last-report';
+import { FleetFaults } from '../../ui/fleet-live/fleet-faults';
+import { FleetLiveSummary } from '../../ui/fleet-live/fleet-live-summary';
+import { fleetLiveText, type FleetLiveDevice } from '../../ui/fleet-live/fleet-live';
 import { mapCoordinates } from '../../ui/map-preview/location-map';
 import { MapPreview } from '../../ui/map-preview/map-preview';
 import { PageHeader } from '../../ui/page-header/page-header';
 import { TablePanel } from '../../ui/table-panel/table-panel';
 import { tableView } from '../../ui/table-panel/table-view';
-import { toneSeverity } from '../../ui/tones';
 import { deviceModelLabel } from '../fleet/devices/i18n/messages';
 import { ControlCenterApi } from './control-center-api';
 import { controlCenterText, deviceLabel, ermLanguage, severityTone } from './control-center-text';
 
 type Device = AdminControlCenterDevicesQuery['fleetDevices']['items'][number];
+type Vehicle = AdminControlCenterDevicesQuery['fleetVehicles']['items'][number];
+interface DashboardUnit {
+  readonly id: string;
+  readonly vehicleId: string | null;
+  readonly plate: string | null;
+  readonly devices: readonly Device[];
+}
 
 @Component({
   selector: 'holita-control-center-dashboard',
@@ -41,8 +51,11 @@ type Device = AdminControlCenterDevicesQuery['fleetDevices']['items'][number];
     TableModule,
     Tag,
     EmptyState,
-    KpiStrip,
-    KpiTile,
+    FleetConnection,
+    FleetNow,
+    FleetLastReport,
+    FleetFaults,
+    FleetLiveSummary,
     MapPreview,
     PageHeader,
     TablePanel,
@@ -63,6 +76,8 @@ export class DashboardPage implements OnInit {
   private readonly api = inject(ControlCenterApi);
   private readonly units = injectFleetFormat();
   readonly devices = signal<Device[] | null>(null);
+  readonly vehicles = signal<Vehicle[] | null>(null);
+  readonly vehicleTotal = signal<number | null>(null);
   /** All Devices of the Branch; the dashboard reads only the first page. */
   readonly total = signal<number | null>(null);
   /** When the shown devices were read; a failed poll keeps them. */
@@ -79,26 +94,47 @@ export class DashboardPage implements OnInit {
   });
   private readonly reload = signal(0);
   readonly selectedId = signal<string | null>(null);
-  readonly toneSeverity = toneSeverity;
-  readonly severityTone = severityTone;
   readonly label = deviceLabel;
+  readonly severityTone = severityTone;
 
-  readonly counts = computed(() => {
-    const devices = this.devices();
-    if (!devices) {
-      return null;
-    }
-    return {
-      units: this.total() ?? devices.length,
-      online: devices.filter((device) => device.ermState?.online === true).length,
-      offline: devices.filter((device) => device.ermState?.online === false).length,
-      neverConnected: devices.filter((device) => !device.ermState).length,
-      onBackup: devices.filter((device) => device.routing === 'KARMA_BACKUP').length,
-      alarms: devices.filter((device) => (device.ermState?.alarmsLast24h ?? 0) > 0).length,
-    };
-  });
+  readonly liveText = computed(() => fleetLiveText(this.language()));
+  liveDevice(device: Device): FleetLiveDevice {
+    return this.error() && !device.ermState ? undefined : device;
+  }
+  diagnosticsLink(device: Device): string[] {
+    return [...this.deviceLink(device), 'alarms'];
+  }
+  readonly rows = computed<DashboardUnit[]>(() => [
+    ...(this.vehicles() ?? []).map((vehicle) => ({
+      id: vehicle.id,
+      vehicleId: vehicle.id,
+      plate: vehicle.licensePlate,
+      devices: vehicle.devices,
+    })),
+    ...(this.devices() ?? [])
+      .filter((device) => !device.vehicleId)
+      .map((device) => ({ id: device.id, vehicleId: null, plate: null, devices: [device] })),
+  ]);
+  readonly liveGroups = computed(() =>
+    (this.vehicles() ?? []).map((vehicle) =>
+      vehicle.devices.map((device) => this.liveDevice(device)),
+    ),
+  );
+  unitDevices(unit: DashboardUnit): readonly FleetLiveDevice[] {
+    return unit.devices.length ? unit.devices.map((device) => this.liveDevice(device)) : [null];
+  }
+  vehicleLink(id: string): string[] {
+    return ['/', this.language(), this.branchId(), 'fleet', 'vehicles', id, 'overview'];
+  }
   /** Set when the Branch has more Devices than the dashboard reads. */
   readonly partial = computed(() => {
+    const vehicles = this.vehicles()?.length ?? 0;
+    if ((this.vehicleTotal() ?? 0) > vehicles) {
+      return interpolate(this.text().firstVehicles, {
+        shown: this.number(vehicles),
+        total: this.number(this.vehicleTotal()),
+      });
+    }
     const shown = this.devices()?.length ?? 0;
     const total = this.total() ?? 0;
     return total > shown
@@ -112,7 +148,7 @@ export class DashboardPage implements OnInit {
     tableView({
       loading: this.loading() && !this.devices(),
       error: this.error(),
-      rows: this.devices()?.length ?? null,
+      rows: this.vehicles() ? this.rows().length : null,
       filtered: false,
     }),
   );
@@ -130,26 +166,36 @@ export class DashboardPage implements OnInit {
       null,
   );
   readonly attention = computed(() =>
-    (this.devices() ?? [])
-      .flatMap((device) => {
-        const state = device.ermState;
-        return state &&
-          (!state.online ||
-            state.alarmsLast24h > 0 ||
-            state.health.overdue ||
-            state.health.karmaRoutingWritesLast24h > 0 ||
-            device.routing === 'KARMA_BACKUP')
-          ? [
-              {
-                device,
-                state,
-                time: state.latestAlarm?.eventTime ?? state.lastFrameAt ?? null,
-              },
-            ]
-          : [];
-      })
-      .sort((left, right) => (right.time ?? '').localeCompare(left.time ?? '')),
+    (this.vehicles() ?? []).flatMap((vehicle) => {
+      const affected = vehicle.devices.flatMap((device) => {
+        const reasons = this.attentionReasons(device);
+        return reasons.length ? [{ device, reasons }] : [];
+      });
+      const first = affected[0];
+      return first
+        ? [
+            {
+              vehicle,
+              device: first.device,
+              reason: [...new Set(affected.flatMap((item) => item.reasons))].join(' · '),
+            },
+          ]
+        : [];
+    }),
   );
+  private attentionReasons(device: Device): string[] {
+    const state = device.ermState;
+    const text = this.text().attentionReasons;
+    return [
+      ...(state?.health.overdue ? [text.overdue] : []),
+      ...(device.routing === 'KARMA_BACKUP' ? [text.backup] : []),
+      ...(!this.error() && (!state || (!state.online && !state.lastFrameAt)) ? [text.never] : []),
+      ...(device.diagnostics.count > 0 ? [text.recordedFaults] : []),
+      ...(state && state.alarmsLast24h > 0 && state.latestAlarm?.severity === 'CRITICAL'
+        ? [text.criticalAlarm]
+        : []),
+    ];
+  }
   readonly alarms = computed(() =>
     (this.devices() ?? [])
       .flatMap((device) =>
@@ -172,8 +218,17 @@ export class DashboardPage implements OnInit {
             this.loading.set(result.loading);
             // A failed poll re-emits the previous data with the error; both stay visible.
             this.error.set(result.error ?? null);
-            if (result.dataState === 'complete' && !result.error) {
-              this.devices.set(result.data.fleetDevices.items);
+            if (result.dataState === 'complete') {
+              this.devices.set([
+                ...new Map(
+                  [
+                    ...result.data.fleetDevices.items,
+                    ...result.data.fleetVehicles.items.flatMap((vehicle) => vehicle.devices),
+                  ].map((device) => [device.id, device]),
+                ).values(),
+              ]);
+              this.vehicles.set(result.data.fleetVehicles.items);
+              this.vehicleTotal.set(result.data.fleetVehicles.total);
               this.total.set(result.data.fleetDevices.total);
               this.updatedAt.set(new Date().toISOString());
             }
@@ -193,10 +248,6 @@ export class DashboardPage implements OnInit {
     this.api.initialize(this.branchId(), this.language());
   }
 
-  /** KARMA_BACKUP and SILENT get a badge; HOLITA and no routing data do not. */
-  routingLabel(routing: Device['routing']): string | null {
-    return routing === 'KARMA_BACKUP' || routing === 'SILENT' ? this.text().routing[routing] : null;
-  }
   deviceLink(device: Device): string[] {
     return ['/', this.language(), this.branchId(), 'control-center', 'devices', device.id];
   }
@@ -205,12 +256,6 @@ export class DashboardPage implements OnInit {
   }
   number(value: number | null | undefined, fraction = 0): string {
     return formatNumber(value, this.language(), { fraction });
-  }
-  format(template: string, values: Readonly<Record<string, string | number>>): string {
-    return interpolate(template, values);
-  }
-  count(value: number | undefined): string | null {
-    return value === undefined ? null : this.number(value);
   }
   refresh(): void {
     this.reload.update((value) => value + 1);

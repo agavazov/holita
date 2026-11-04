@@ -1,0 +1,42 @@
+fragment AdminFleetLiveDevice on FleetDevice {
+  id
+  imei
+  vehicleId
+  status
+  routing
+  lastReportedAt
+  diagnostics {
+    count
+    latest {
+      kind
+      occurredAt
+      troubleCode
+      details
+      source
+    }
+  }
+  ermState {
+    online
+    mode
+    connectedSince
+    lastFrameAt
+    latestEvent {
+      eventTime
+      speedKmh
+      engineOn
+      ignitionOn
+      nameEn: name(language: EN)
+      nameBg: name(language: BG)
+    }
+    latestAlarm {
+      eventTime
+      severity
+      nameEn: name(language: EN)
+      nameBg: name(language: BG)
+    }
+    alarmsLast24h
+    health {
+      overdue
+    }
+  }
+}

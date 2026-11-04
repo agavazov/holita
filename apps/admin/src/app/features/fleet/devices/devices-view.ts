@@ -3,15 +3,9 @@ import type { FleetRecordLinks } from '../fleet-record-links';
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { ButtonDirective } from 'primeng/button';
 import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
-import { Tag } from 'primeng/tag';
-import type { StatusTone } from '../../../theme/status-tones';
 import type { FilterCondition, FilterField } from '../../../ui/filter-builder/filter-model';
 import { FilterBuilder } from '../../../ui/filter-builder/filter-builder';
-import { FormatNumberPipe, FormatRelativePipe } from '../../../ui/format/format.pipes';
-import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { interpolate } from '../../../ui/i18n/messages';
-import { KpiStrip } from '../../../ui/kpi/kpi-strip';
-import { KpiTile } from '../../../ui/kpi/kpi-tile';
 import {
   type ListAction,
   type ListActionRequest,
@@ -27,30 +21,16 @@ import { TablePanel } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
 import { deviceModelLabel, devicesText } from './i18n/messages';
+import { FleetConnection } from '../../../ui/fleet-live/fleet-connection';
+import { FleetNow } from '../../../ui/fleet-live/fleet-now';
+import { FleetLastReport } from '../../../ui/fleet-live/fleet-last-report';
+import { FleetFaults } from '../../../ui/fleet-live/fleet-faults';
+import { FleetLiveSummary } from '../../../ui/fleet-live/fleet-live-summary';
+import { fleetLiveText, type FleetLiveDevice } from '../../../ui/fleet-live/fleet-live';
 
 export const deviceStatuses = ['ONLINE', 'OFFLINE', 'IN_STOCK'] as const;
 export type DeviceStatusCode = (typeof deviceStatuses)[number];
-export type DeviceActionId = 'open' | 'edit' | 'restart' | 'vehicle' | 'delete';
-
-/** The firmware every device should run; older ones are flagged. */
-export const currentFirmware = '03.29.02';
-
-/** The unit's connection to holita's device server; 'karma' when it has never connected. */
-export type DeviceLive =
-  | {
-      readonly online: boolean;
-      /** PRIMARY when holita serves the unit, MIRROR when it only mirrors Karma's traffic. */
-      readonly mode: 'PRIMARY' | 'MIRROR' | null;
-      readonly lastFrameAt: string | null;
-      readonly alarms: number;
-      /** No frame within twice the expected reporting interval. */
-      readonly overdue: boolean;
-      /** Karma writes to routing parameters 0049–0054 in the last 24 hours. */
-      readonly routeWrites: number;
-      /** Fleet's routing state; KARMA_BACKUP and SILENT get a badge. */
-      readonly routing: 'HOLITA' | 'KARMA_BACKUP' | 'SILENT' | null;
-    }
-  | 'karma';
+export type DeviceActionId = 'open' | 'edit' | 'vehicle' | 'delete';
 
 /** One tracker, as the Devices list query returns it. */
 export interface DeviceRow {
@@ -66,25 +46,10 @@ export interface DeviceRow {
   readonly plate: string | null;
   readonly status: DeviceStatusCode;
   readonly lastSeenAt: string | null;
-  readonly signal: number | null;
-  readonly voltage: number | null;
   readonly notes: string;
-  /** Null when the query did not ask for the live state. */
-  readonly live: DeviceLive | null;
+  /** Undefined while live state is unavailable. */
+  readonly live: FleetLiveDevice;
 }
-
-export interface DeviceKpis {
-  readonly online: number;
-  readonly offline: number;
-  readonly stock: number;
-  readonly outdated: number | null;
-}
-
-export const deviceStatusTones: Record<DeviceStatusCode, StatusTone> = {
-  ONLINE: 'success',
-  OFFLINE: 'danger',
-  IN_STOCK: 'neutral',
-};
 
 /**
  * The Devices list page: live holita connection, installation, SIM and firmware of the trackers,
@@ -97,18 +62,19 @@ export const deviceStatusTones: Record<DeviceStatusCode, StatusTone> = {
     RouterLink,
     ButtonDirective,
     TableModule,
-    Tag,
     FilterBuilder,
-    FormatNumberPipe,
-    FormatRelativePipe,
-    KpiStrip,
-    KpiTile,
+    FleetConnection,
+    FleetNow,
+    FleetLastReport,
+    FleetFaults,
+    FleetLiveSummary,
     PageHeader,
     RowActions,
     ListSortMenu,
     TablePanel,
   ],
   templateUrl: './devices-view.html',
+  styleUrl: './devices-view.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'app-view' },
 })
@@ -116,17 +82,14 @@ export class DevicesView {
   readonly recordLinks = input<FleetRecordLinks | null>(null);
   /** The device page route without the record ID and tab. */
   readonly deviceLinkBase = input<readonly string[] | null>(null);
-  readonly demo = input(false);
   readonly busy = input(false);
   readonly searchError = input<string | null>(null);
   readonly errorText = input<string | null>(null);
   readonly branchName = input.required<string>();
-  readonly dataAsOf = input.required<string>();
   readonly rows = input.required<readonly DeviceRow[]>();
   readonly total = input.required<number>();
   readonly view = input.required<TableView>();
   readonly state = input.required<ListQuery>();
-  readonly kpis = input<DeviceKpis | null>(null);
   readonly models = input<readonly string[]>([]);
   readonly selection = input<readonly ListRecord<DeviceActionId>[]>([]);
   readonly stateChange = output<ListQuery>();
@@ -138,24 +101,30 @@ export class DevicesView {
 
   private readonly language = inject(UI_LANGUAGE);
   private readonly sortReady = injectSortReady();
-  private readonly units = injectFleetFormat();
   protected modelLabel(model: string): string {
     return deviceModelLabel(this.language(), model);
   }
-
-  protected readonly text = computed(() => {
-    const text = devicesText(this.language());
-    return {
-      ...text,
-      kpis: {
-        ...text.kpis,
-        offlineFootnote: interpolate(text.kpis.offlineFootnote, {
-          hours: this.units.preferences().notReportingHours,
-        }),
-      },
-    };
-  });
-  protected readonly currentFirmware = currentFirmware;
+  protected readonly text = computed(() => devicesText(this.language()));
+  protected readonly liveText = computed(() => fleetLiveText(this.language()));
+  protected readonly liveDevices = computed(() => this.rows().map((row) => row.live));
+  protected readonly withoutTruck = computed(() =>
+    this.state().conditions.some(
+      (condition) => condition.field === 'installed' && condition.operator === 'isFalse',
+    ),
+  );
+  protected toggleWithoutTruck(): void {
+    const conditions = this.state().conditions.filter(
+      (condition) => condition.field !== 'installed',
+    );
+    this.changeConditions(
+      this.withoutTruck()
+        ? conditions
+        : [
+            ...conditions,
+            { id: 'without-truck', field: 'installed', operator: 'isFalse', values: [] },
+          ],
+    );
+  }
   protected readonly description = computed(() =>
     interpolate(this.text().description, { branch: this.branchName() }),
   );
@@ -195,38 +164,24 @@ export class DevicesView {
       { id: 'open', label: text.open },
       { id: 'edit', label: text.edit },
       {
-        id: 'restart',
-        label: this.demo() ? text.restart : text.restartUnavailable,
-        bulk: true,
-        confirm: text.confirmRestart,
-        appliesTo: (row) => this.demo() && row.status === 'ONLINE',
-      },
-      {
         id: 'vehicle',
         label: text.vehicle,
         appliesTo: (row) => row.vehicleId !== null,
       },
     ];
-    if (!this.demo()) {
-      actions.push({
-        id: 'delete',
-        label: text.delete,
-        bulk: true,
-        danger: true,
-        confirm: text.confirmDelete,
-      });
-    }
+    actions.push({
+      id: 'delete',
+      label: text.delete,
+      bulk: true,
+      danger: true,
+      confirm: text.confirmDelete,
+    });
     return actions;
   });
   private readonly records = computed(
     () => new Map(this.rows().map((row) => [row.id, this.toRecord(row)])),
   );
   protected readonly trackById = trackById;
-  /** The reference for "offline since"; the rows were loaded just now. */
-  protected readonly now = computed(() => {
-    this.rows();
-    return Date.now();
-  });
   /** PrimeNG's table takes a mutable array. */
   protected readonly tableRows = computed(() => [...this.rows()]);
   protected readonly selectedRows = computed(() => {
@@ -249,7 +204,7 @@ export class DevicesView {
     return [
       { field: 'imei', label: text.drawer.imei },
       { field: 'vehicle', label: text.table.vehicle },
-      { field: 'lastSeenAt', label: text.table.lastSeen },
+      { field: 'lastSeenAt', label: text.sort.fleetLastReport },
       { field: 'installedAt', label: text.sort.installedAt },
       { field: 'createdAt', label: text.sort.createdAt },
     ];
@@ -259,17 +214,14 @@ export class DevicesView {
     this.changeQuery({ ...this.state(), sort, page: 1 });
   }
 
-  protected lastFrame(relative: string): string {
-    return interpolate(this.text().table.lastFrame, { time: relative });
-  }
-
   protected deviceLink(row: DeviceRow): readonly string[] | null {
     const base = this.deviceLinkBase();
     return base ? [...base, row.id, 'overview'] : null;
   }
 
-  protected alarmsLabel(alarms: number): string {
-    return interpolate(this.text().table.alarms, { count: alarms });
+  protected diagnosticsLink(row: DeviceRow): readonly string[] | null {
+    const base = this.deviceLinkBase();
+    return base ? [...base, row.id, 'alarms'] : null;
   }
 
   protected label(template: string, row: DeviceRow): string {

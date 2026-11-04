@@ -14,7 +14,6 @@ import {
   AdminCreateDeviceDocument,
   AdminUpdateDeviceDocument,
   AdminDeleteDevicesDocument,
-  AdminDeviceSummaryDocument,
   AdminDevicesLiveDocument,
   type AdminDevicesQueryVariables,
   type AdminCreateDeviceMutationVariables,
@@ -68,13 +67,6 @@ export class DevicesApi implements OnDestroy {
     });
   }
 
-  watchSummary() {
-    if (!this.apollo || this.destroyed) {
-      throw new Error('An active Devices workspace is required.');
-    }
-    return this.apollo.watchQuery({ query: AdminDeviceSummaryDocument });
-  }
-
   /** The live holita state is a separate request, so an unavailable device server keeps the list. */
   async live(ids: readonly string[]) {
     if (!this.apollo || this.destroyed) {
@@ -91,8 +83,7 @@ export class DevicesApi implements OnDestroy {
       throw new Error('Missing live device state.');
     }
     return {
-      states: new Map(result.data.fleetDevices.items.map((device) => [device.id, device.ermState])),
-      routing: new Map(result.data.fleetDevices.items.map((device) => [device.id, device.routing])),
+      devices: new Map(result.data.fleetDevices.items.map((device) => [device.id, device])),
     };
   }
 
@@ -187,7 +178,6 @@ export class DevicesApi implements OnDestroy {
 
   private invalidateDevices(apollo: ApolloBase, broadcast = true): void {
     apollo.client.cache.evict({ id: 'ROOT_QUERY', fieldName: 'fleetDevices', broadcast });
-    apollo.client.cache.evict({ id: 'ROOT_QUERY', fieldName: 'fleetDeviceSummary', broadcast });
   }
 
   private stopWhenIdle(): void {

@@ -12,5 +12,6 @@ import { SettingsModule } from '../settings/settings.module.js';
 @Module({
   imports: [DatabaseModule, CoreClientModule, ClockModule, TelemetryModule, SettingsModule],
   providers: [FleetEnabledGuard, DevicesRepository, DevicesService, DevicesResolver],
+  exports: [DevicesService],
 })
 export class DevicesModule {}

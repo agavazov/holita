@@ -40,6 +40,8 @@ type FleetVehicle @key(fields: "id") {
   currentDriverId: ID
   currentDriver: FleetDriverRef
   deviceCount: Int!
+  "Assigned Fleet Device entities, loaded in one scoped batch for the page."
+  devices: [FleetDevice!]!
   state: FleetVehicleState! # B2
   "Events of the vehicle with alert status OPEN." # B2
   openAlertCount: Int! # B2

@@ -45,6 +45,7 @@ import { Prisma } from '../../generated/prisma/client.js';
 import { EventsService } from '../events/events.service.js';
 import { ServiceTasksService } from '../service-tasks/service-tasks.service.js';
 import { TelemetryService } from '../telemetry/telemetry.service.js';
+import { DevicesService, type DeviceResult } from '../devices/devices.service.js';
 import {
   type VehicleData,
   type VehicleListCriteria,
@@ -54,8 +55,8 @@ import {
 } from './vehicles.repository.js';
 import { vehicleConditions } from './vehicle-filter.js';
 
-export type VehicleResult = Omit<FleetVehicle, 'branch'>;
-type StoredVehicle = Omit<VehicleResult, 'state' | 'openAlertCount' | 'nextService'>;
+export type VehicleResult = Omit<FleetVehicle, 'branch' | 'devices'> & { devices: DeviceResult[] };
+type StoredVehicle = Omit<VehicleResult, 'state' | 'openAlertCount' | 'nextService' | 'devices'>;
 
 const VEHICLE_TYPES = Object.values(FleetVehicleType);
 const FUEL_TYPES = Object.values(FleetFuelType);
@@ -184,6 +185,7 @@ export class VehiclesService {
     private readonly telemetry: TelemetryService,
     private readonly events: EventsService,
     private readonly serviceTasks: ServiceTasksService,
+    private readonly devices: DevicesService,
   ) {}
 
   async list(
@@ -379,28 +381,31 @@ export class VehiclesService {
     if (!rows.length) {
       return [];
     }
-    const nextServices = await this.serviceTasks.nextForVehicles(
-      scope,
-      rows.map((row) => row.id),
-    );
+    const vehicleIds = rows.map((row) => row.id);
+    const [nextServices, devices] = await Promise.all([
+      this.serviceTasks.nextForVehicles(scope, vehicleIds),
+      this.devices.forVehicles(scope, vehicleIds),
+    ]);
     return rows.map((row) => ({
       ...toVehicle(row),
       state: row.state,
       openAlertCount: row.openAlertCount,
       nextService: nextServices.get(row.id) ?? null,
+      devices: devices.filter((device) => device.vehicleId === row.id),
     }));
   }
 
-  /** Reads and writes attach current derived values through three scoped batches. */
+  /** Reads and writes attach current derived values through scoped batches. */
   private async complete(scope: FleetScope, rows: readonly VehicleRow[]): Promise<VehicleResult[]> {
     if (!rows.length) {
       return [];
     }
     const vehicleIds = rows.map((row) => row.id);
-    const [states, openAlerts, nextServices] = await Promise.all([
+    const [states, openAlerts, nextServices, devices] = await Promise.all([
       this.telemetry.vehicleStates(scope, vehicleIds),
       this.events.openAlertCounts(scope, vehicleIds),
       this.serviceTasks.nextForVehicles(scope, vehicleIds),
+      this.devices.forVehicles(scope, vehicleIds),
     ]);
     return rows.map((row) => {
       const state = states.get(row.id);
@@ -412,6 +417,7 @@ export class VehiclesService {
         state,
         openAlertCount: openAlerts.get(row.id) ?? 0,
         nextService: nextServices.get(row.id) ?? null,
+        devices: devices.filter((device) => device.vehicleId === row.id),
       };
     });
   }

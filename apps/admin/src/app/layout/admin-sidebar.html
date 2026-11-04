@@ -23,8 +23,8 @@
             <a
               class="app-nav__item"
               [routerLink]="item.link"
-              routerLinkActive="app-nav__item--active"
-              ariaCurrentWhenActive="page"
+              [class.app-nav__item--active]="activeLink() === item.link"
+              [attr.aria-current]="activeLink() === item.link ? 'page' : null"
               [pTooltip]="rail() ? item.label : undefined"
               tooltipPosition="right"
               tooltipEvent="both"

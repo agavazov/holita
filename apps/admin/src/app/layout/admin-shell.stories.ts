@@ -1,4 +1,4 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, computed, effect, inject, input } from '@angular/core';
 import { Router } from '@angular/router';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { ButtonDirective } from 'primeng/button';
@@ -141,6 +141,7 @@ const rows = [
 class ShellPreview {
   /** Very long Branch, page and record names: everything stays on one line with an ellipsis. */
   readonly longNames = input(false);
+  readonly devicesPage = input(false);
   readonly language = inject(UI_LANGUAGE);
   readonly branches = computed(() =>
     this.longNames()
@@ -159,7 +160,8 @@ class ShellPreview {
   readonly languages = languages;
   readonly navigation = computed(() => adminNavigation(this.language(), defaultBranchId, true));
   readonly context = computed(() => {
-    const context = navigationContext(this.navigation(), `/${this.language()}/${vehicles}`);
+    const path = this.devicesPage() ? `${defaultBranchId}/fleet/devices` : vehicles;
+    const context = navigationContext(this.navigation(), `/${this.language()}/${path}`);
     if (!context || !this.longNames()) {
       return context;
     }
@@ -174,7 +176,10 @@ class ShellPreview {
 
   constructor() {
     // Only the router state matters (the active navigation item); there is no routed outlet.
-    void this.router.navigateByUrl(`/${this.language()}/${vehicles}`);
+    effect(() => {
+      const path = this.devicesPage() ? `${defaultBranchId}/fleet/devices` : vehicles;
+      void this.router.navigateByUrl(`/${this.language()}/${path}`);
+    });
   }
 }
 
@@ -203,6 +208,14 @@ function routed(path: string): NonNullable<Story['render']> {
 
 export const Desktop: Story = {
   render: preview,
+};
+
+export const DevicesNavigation: Story = {
+  name: 'Fleet devices navigation',
+  render: () => ({
+    moduleMetadata: { imports: [ShellPreview] },
+    template: '<holita-shell-preview [devicesPage]="true" />',
+  }),
 };
 
 export const Rail: Story = {

@@ -47,28 +47,47 @@ fragment AdminControlCenterKarmaTrucks on FleetKarmaMonitoringTruckPage {
     online
   }
 }
+fragment AdminControlCenterDashboardDevice on FleetDevice {
+  ...AdminFleetLiveDevice
+  model
+  vehicle {
+    id
+    licensePlate
+  }
+  ermState {
+    lastPosition {
+      eventTime
+      positionTime
+      latitude
+      longitude
+      name(language: $language)
+    }
+    health {
+      karmaRoutingWritesLast24h
+    }
+  }
+}
 query AdminControlCenterDevices($language: ErmLanguage!) {
   fleetDevices(limit: 100) {
     total
     items {
+      ...AdminControlCenterDashboardDevice
+    }
+  }
+  fleetVehicles(limit: 100, sort: { field: LICENSE_PLATE, direction: ASC }) {
+    total
+    items {
       id
-      imei
-      model
-      serialNumber
-      simPhoneNumber
-      routing
-      vehicle {
-        id
-        licensePlate
-      }
-      ermState {
-        ...AdminControlCenterStateFields
+      licensePlate
+      devices {
+        ...AdminControlCenterDashboardDevice
       }
     }
   }
 }
 query AdminControlCenterDevice($id: ID!, $language: ErmLanguage!) {
   fleetDevice(id: $id) {
+    ...AdminFleetLiveDevice
     id
     imei
     model
@@ -79,6 +98,7 @@ query AdminControlCenterDevice($id: ID!, $language: ErmLanguage!) {
     simIccid
     installedAt
     notes
+    options
     routing
     vehicle {
       id
@@ -118,8 +138,8 @@ query AdminControlCenterDevice($id: ID!, $language: ErmLanguage!) {
     ...AdminControlCenterKarmaTrucks
   }
 }
-query AdminControlCenterSmsDevices {
-  fleetDevices(limit: 100, sort: { field: VEHICLE_LICENSE_PLATE, direction: ASC }) {
+query AdminControlCenterSmsDevices($ids: [ID!]) {
+  fleetDevices(ids: $ids, limit: 100, sort: { field: VEHICLE_LICENSE_PLATE, direction: ASC }) {
     total
     items {
       id

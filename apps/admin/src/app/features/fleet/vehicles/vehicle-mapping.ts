@@ -12,6 +12,7 @@ export function vehicleRow(vehicle: AdminVehicleDetailsFragment): VehicleRow {
   return {
     id: vehicle.id,
     plate: vehicle.licensePlate,
+    devices: vehicle.devices,
     fleetNumber: vehicle.fleetNumber,
     type: vehicle.vehicleType,
     make: vehicle.make ?? '',

@@ -4,32 +4,12 @@
   [count]="view().kind === 'rows' || view().kind === 'rows-error' ? total() : null"
   [description]="description()"
 >
-  @if (demo()) {
-    <p-tag headerMeta severity="info" [value]="text().demo.label" />
-  }
   <button headerActions pButton type="button" [disabled]="busy()" (click)="create.emit()">
     {{ text().new }}
   </button>
 </holita-page-header>
 
-@if (demo()) {
-  <p class="app-muted">{{ text().demo.description }}</p>
-}
-@if (!demo()) {
-  <p class="app-muted">{{ text().unavailable }}</p>
-}
-
-@if (kpis(); as kpis) {
-  <holita-kpi-strip [label]="text().kpis.label">
-    <holita-kpi-tile [label]="text().kpis.stock" [value]="kpis.stock | holitaNumber" />
-    <holita-kpi-tile
-      [label]="text().kpis.outdated"
-      [value]="kpis.outdated | holitaNumber"
-      [footnote]="demo() ? null : text().kpis.firmwareUnavailable"
-      [tone]="kpis.outdated ? 'warn' : null"
-    />
-  </holita-kpi-strip>
-}
+<holita-fleet-live-summary [devices]="liveDevices()" [loading]="view().kind === 'loading'" />
 
 <holita-filter-builder
   [searchLabel]="text().search"
@@ -40,7 +20,19 @@
   [searchError]="searchError()"
   (searchChange)="changeSearch($event)"
   (conditionsChange)="changeConditions($event)"
-/>
+>
+  <button
+    filterQuickActions
+    pButton
+    type="button"
+    severity="secondary"
+    [outlined]="!withoutTruck()"
+    [attr.aria-pressed]="withoutTruck()"
+    (click)="toggleWithoutTruck()"
+  >
+    {{ text().filters.withoutTruck }}
+  </button>
+</holita-filter-builder>
 
 <holita-table-panel
   #panel
@@ -93,13 +85,13 @@
         <th scope="col" class="app-col-identity" pSortableColumn="imei">
           {{ text().table.device }} <p-sort-icon field="imei" />
         </th>
-        <th scope="col">{{ text().table.serialNumber }}</th>
-        <th scope="col">{{ text().table.live }}</th>
         <th scope="col" pSortableColumn="vehicle">
           {{ text().table.vehicle }} <p-sort-icon field="vehicle" />
         </th>
-        <th scope="col">{{ text().table.simPhone }}</th>
-        <th scope="col" class="app-col-secondary">{{ text().table.firmware }}</th>
+        <th scope="col">{{ liveText().connection }}</th>
+        <th scope="col">{{ liveText().now }}</th>
+        <th scope="col">{{ liveText().lastReport }}</th>
+        <th scope="col" class="devices__faults">{{ liveText().faults }}</th>
         <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
           <span class="app-visually-hidden">{{ text().table.actions }}</span>
         </th>
@@ -123,6 +115,7 @@
               <span class="app-mono">{{ row.imei }}</span>
             }
             <span>{{ modelLabel(row.model) }}</span>
+            <span class="app-muted app-mono">{{ row.serialNumber || '—' }}</span>
           </span>
           <div class="app-table-mobile-actions">
             <holita-row-actions
@@ -131,60 +124,6 @@
               (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
             />
           </div>
-        </td>
-        <td>
-          @if (row.serialNumber) {
-            <span class="app-mono">{{ row.serialNumber }}</span>
-          } @else {
-            <span class="app-muted">—</span>
-          }
-        </td>
-        <td>
-          @if (row.live === 'karma') {
-            <p-tag severity="secondary" [value]="text().live.karma" />
-          } @else if (row.live) {
-            <span class="app-cell-stack">
-              <span class="app-inline">
-                <p-tag
-                  [severity]="row.live.online ? 'success' : 'danger'"
-                  [value]="row.live.online ? text().live.online : text().live.offline"
-                />
-                @if (row.live.mode) {
-                  <p-tag
-                    [severity]="row.live.mode === 'PRIMARY' ? undefined : 'secondary'"
-                    [value]="row.live.mode === 'PRIMARY' ? text().live.primary : text().live.mirror"
-                  />
-                }
-                @if (row.live.alarms) {
-                  <p-tag
-                    severity="warn"
-                    [rounded]="true"
-                    [value]="row.live.alarms | holitaNumber"
-                    [attr.title]="alarmsLabel(row.live.alarms)"
-                    [attr.aria-label]="alarmsLabel(row.live.alarms)"
-                  />
-                }
-                @if (row.live.routing === 'KARMA_BACKUP') {
-                  <p-tag severity="warn" [value]="text().live.routing.KARMA_BACKUP" />
-                } @else if (row.live.routing === 'SILENT') {
-                  <p-tag severity="secondary" [value]="text().live.routing.SILENT" />
-                }
-                @if (row.live.online && row.live.overdue) {
-                  <p-tag severity="warn" [value]="text().live.overdue" />
-                }
-                @if (row.live.routeWrites) {
-                  <p-tag severity="danger" [value]="text().live.routeChanged" />
-                }
-              </span>
-              @if (!row.live.online && row.live.lastFrameAt) {
-                <span class="app-muted">{{
-                  lastFrame(row.live.lastFrameAt | holitaRelative: now())
-                }}</span>
-              }
-            </span>
-          } @else {
-            <span class="app-muted">—</span>
-          }
         </td>
         <td>
           @if (row.plate) {
@@ -203,20 +142,11 @@
             <span class="app-muted">{{ text().table.notInstalled }}</span>
           }
         </td>
-        <td>
-          @if (row.simPhoneNumber) {
-            <span class="app-mono">{{ row.simPhoneNumber }}</span>
-          } @else {
-            <span class="app-muted">—</span>
-          }
-        </td>
-        <td class="app-col-secondary">
-          <span class="app-inline">
-            <span class="app-mono">{{ row.firmware || '—' }}</span>
-            @if (demo() && row.firmware !== currentFirmware) {
-              <p-tag severity="warn" [value]="text().table.outdated" />
-            }
-          </span>
+        <td><holita-fleet-connection [device]="row.live" /></td>
+        <td><holita-fleet-now [device]="row.live" /></td>
+        <td><holita-fleet-last-report [device]="row.live" [reportedAt]="row.lastSeenAt" /></td>
+        <td class="devices__faults">
+          <holita-fleet-faults [device]="row.live" [link]="diagnosticsLink(row)" />
         </td>
         <td class="app-col-actions" pFrozenColumn alignFrozen="right">
           <holita-row-actions

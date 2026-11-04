@@ -16,86 +16,34 @@
     </button>
   </holita-page-header>
 
-  <holita-kpi-strip
-    [label]="text().kpis"
-    [loading]="loading() && !counts()"
-    [error]="error() ? failure() : null"
-    (retry)="refresh()"
-  >
-    <holita-kpi-tile [label]="text().units" [value]="count(counts()?.units)" />
-    <holita-kpi-tile
-      [label]="text().onlineOnHolita"
-      [value]="count(counts()?.online)"
-      [tone]="counts()?.online ? 'success' : null"
-    />
-    <holita-kpi-tile
-      [label]="text().offline"
-      [value]="count(counts()?.offline)"
-      [tone]="counts()?.offline ? 'warn' : null"
-    />
-    <holita-kpi-tile
-      [label]="text().neverConnected"
-      [value]="count(counts()?.neverConnected)"
-      tone="neutral"
-    />
-    <holita-kpi-tile
-      [label]="text().onBackup"
-      [value]="count(counts()?.onBackup)"
-      [tone]="counts()?.onBackup ? 'warn' : null"
-    />
-    <holita-kpi-tile
-      [label]="text().withAlarms"
-      [value]="count(counts()?.alarms)"
-      [tone]="counts()?.alarms ? 'danger' : null"
-    />
-  </holita-kpi-strip>
+  <holita-fleet-live-summary
+    [devices]="[]"
+    [groups]="liveGroups()"
+    unassigned="vehicles"
+    [loading]="loading() && !vehicles()"
+  />
   @if (partial(); as partial) {
     <p class="app-muted">{{ partial }}</p>
   }
 
-  @if (devices(); as all) {
-    @if (all.length === 0) {
+  @if (vehicles()) {
+    @if (rows().length === 0) {
       <holita-empty-state [title]="text().devicesEmpty" />
     } @else {
-      <div class="app-card-grid">
+      <div class="control-center__dashboard-panels">
         <section class="app-card control-center__panel" [attr.aria-label]="text().attention">
           <h2>{{ text().attention }}</h2>
           @if (attention().length === 0) {
             <holita-empty-state [title]="text().attentionEmpty" [compact]="true" />
           } @else {
             <ul class="control-center__list">
-              @for (item of attention(); track item.device.id) {
+              @for (item of attention(); track item.vehicle.id) {
                 <li>
-                  <a class="app-link" [routerLink]="deviceLink(item.device)">{{
-                    label(item.device)
+                  <a class="app-link" [routerLink]="vehicleLink(item.vehicle.id)">{{
+                    item.vehicle.licensePlate
                   }}</a>
-                  @if (!item.state.online) {
-                    <p-tag [value]="text().offlineState" [severity]="toneSeverity('warn')" />
-                  }
-                  @if (routingLabel(item.device.routing); as routing) {
-                    <p-tag
-                      [value]="routing"
-                      [severity]="
-                        toneSeverity(item.device.routing === 'SILENT' ? 'neutral' : 'warn')
-                      "
-                    />
-                  }
-                  @if (item.state.online && item.state.health.overdue) {
-                    <p-tag [value]="text().overdue" [severity]="toneSeverity('warn')" />
-                  }
-                  @if (item.state.health.karmaRoutingWritesLast24h; as writes) {
-                    <p-tag
-                      [value]="format(text().routeWrites, { count: number(writes) })"
-                      [severity]="toneSeverity('danger')"
-                    />
-                  }
-                  @if (item.state.latestAlarm; as alarm) {
-                    <p-tag
-                      [value]="alarm.name ?? text().unknownEvent"
-                      [severity]="severityTone(alarm.severity)"
-                    />
-                  }
-                  <span class="app-muted">{{ date(item.time) }}</span>
+                  <holita-fleet-connection [device]="liveDevice(item.device)" />
+                  <span class="app-muted">{{ item.reason }}</span>
                 </li>
               }
             </ul>
@@ -110,14 +58,26 @@
             <ul class="control-center__list">
               @for (item of alarms(); track item.device.id) {
                 <li>
-                  <a class="app-link" [routerLink]="deviceLink(item.device)">{{
-                    label(item.device)
-                  }}</a>
+                  <time class="app-muted" [attr.datetime]="item.alarm.eventTime">{{
+                    date(item.alarm.eventTime)
+                  }}</time>
+                  <a
+                    class="app-link"
+                    [routerLink]="
+                      item.device.vehicleId
+                        ? vehicleLink(item.device.vehicleId)
+                        : deviceLink(item.device)
+                    "
+                    >{{ label(item.device) }}</a
+                  >
                   <p-tag
-                    [value]="item.alarm.name ?? text().unknownEvent"
+                    [value]="
+                      (language() === 'bg' ? item.alarm.nameBg : item.alarm.nameEn) ||
+                      text().unknownEvent
+                    "
                     [severity]="severityTone(item.alarm.severity)"
+                    [title]="text().severities[item.alarm.severity]"
                   />
-                  <span class="app-muted">{{ date(item.alarm.eventTime) }}</span>
                 </li>
               }
             </ul>
@@ -165,58 +125,64 @@
     [emptyTitle]="text().devicesEmpty"
     (retry)="refresh()"
   >
-    <p-table class="app-responsive-table" [value]="devices() ?? []" dataKey="id">
+    <p-table class="app-responsive-table" [value]="rows()" dataKey="id">
       <ng-template #header>
         <tr>
           <th scope="col" class="app-col-identity">{{ text().truck }}</th>
-          <th scope="col">{{ text().state }}</th>
-          <th scope="col">{{ text().imei }}</th>
-          <th scope="col">{{ text().simPhone }}</th>
-          <th scope="col">{{ text().lastFrame }}</th>
-          <th scope="col">{{ text().alarms24h }}</th>
+          <th scope="col">{{ liveText().connection }}</th>
+          <th scope="col">{{ liveText().now }}</th>
+          <th scope="col">{{ liveText().lastReport }}</th>
+          <th scope="col">{{ liveText().faults }}</th>
+          <th scope="col">{{ text().device }}</th>
         </tr>
       </ng-template>
-      <ng-template #body let-device>
+      <ng-template #body let-unit>
         <tr>
           <td class="app-col-identity">
             <div class="app-cell-stack app-table-identity">
-              <a class="app-link" [routerLink]="deviceLink(device)">{{
-                device.vehicle?.licensePlate ?? text().noTruck
-              }}</a>
-              <span>{{ modelLabel(device.model) || '—' }}</span>
+              @if (unit.vehicleId) {
+                <a class="app-link" [routerLink]="vehicleLink(unit.vehicleId)">{{ unit.plate }}</a>
+              } @else {
+                <span>{{ liveText().unassigned }}</span>
+              }
             </div>
           </td>
           <td>
-            @if (device.ermState; as state) {
-              <span class="app-inline">
-                <p-tag
-                  [value]="state.online ? text().online : text().offlineState"
-                  [severity]="toneSeverity(state.online ? 'success' : 'warn')"
-                />
-                @if (state.mode) {
-                  <p-tag
-                    [value]="state.mode === 'PRIMARY' ? text().primary : text().mirror"
-                    [severity]="toneSeverity(state.mode === 'PRIMARY' ? 'accent' : 'neutral')"
-                  />
-                }
-                @if (routingLabel(device.routing); as routing) {
-                  <p-tag
-                    [value]="routing"
-                    [severity]="toneSeverity(device.routing === 'SILENT' ? 'neutral' : 'warn')"
-                  />
-                }
-                @if (state.online && state.health.overdue) {
-                  <p-tag [value]="text().overdue" [severity]="toneSeverity('warn')" />
-                }
-              </span>
-            } @else {
-              <p-tag [value]="text().neverConnectedState" [severity]="toneSeverity('neutral')" />
+            @for (device of unitDevices(unit); track $index) {
+              <holita-fleet-connection [device]="device" />
             }
           </td>
-          <td class="control-center__mono">{{ device.imei }}</td>
-          <td>{{ device.simPhoneNumber ?? '—' }}</td>
-          <td>{{ date(device.ermState?.lastFrameAt) }}</td>
-          <td>{{ device.ermState ? number(device.ermState.alarmsLast24h) : '—' }}</td>
+          <td>
+            @for (device of unitDevices(unit); track $index) {
+              <holita-fleet-now [device]="device" />
+            }
+          </td>
+          <td>
+            @for (device of unitDevices(unit); track $index) {
+              <holita-fleet-last-report [device]="device" />
+            }
+          </td>
+          <td>
+            @for (device of unit.devices; track device.id) {
+              <holita-fleet-faults [device]="liveDevice(device)" [link]="diagnosticsLink(device)" />
+            }
+            @if (unit.devices.length === 0) {
+              <span class="app-muted">—</span>
+            }
+          </td>
+          <td class="control-center__mono">
+            <span class="app-cell-stack">
+              @for (device of unit.devices; track device.id) {
+                <span class="app-cell-stack">
+                  <a class="app-link" [routerLink]="deviceLink(device)">{{ device.imei }}</a>
+                  <span class="app-muted">{{ modelLabel(device.model) || '—' }}</span>
+                </span>
+              }
+              @if (unit.devices.length === 0) {
+                <span class="app-muted">{{ liveText().noDevice }}</span>
+              }
+            </span>
+          </td>
         </tr>
       </ng-template>
     </p-table>

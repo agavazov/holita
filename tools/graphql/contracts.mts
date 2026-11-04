@@ -2,7 +2,15 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { composeServices } from '@apollo/composition';
 import { buildSubgraphSchema } from '@apollo/subgraph';
-import { lexicographicSortSchema, parse, printSchema, validate, type GraphQLSchema } from 'graphql';
+import {
+  concatAST,
+  lexicographicSortSchema,
+  parse,
+  printSchema,
+  Source,
+  validate,
+  type GraphQLSchema,
+} from 'graphql';
 
 export const workspaceRoot = fileURLToPath(new URL('../../', import.meta.url));
 export const subgraphs = [
@@ -51,6 +59,7 @@ export const subgraphs = [
   },
 ];
 export const operationPaths = [
+  'apps/admin/src/app/ui/fleet-live/operations.graphql',
   'apps/admin/src/app/features/karma-client/cars/operations.graphql',
   'apps/admin/src/app/features/karma-client/edata/operations.graphql',
   'apps/admin/src/app/features/karma-client/location/operations.graphql',
@@ -114,23 +123,18 @@ export function composeContracts(contracts: Awaited<ReturnType<typeof readContra
   };
 }
 
-function validateOperation(schema: GraphQLSchema, source: string, location: string) {
-  const document = parse(source);
-  const errors = validate(schema, document);
-  if (errors.length) {
-    throw new Error(`${location}:\n${errors.map((error) => error.message).join('\n')}`);
-  }
-  return { document, location };
-}
-
 export async function readOperations(schema: GraphQLSchema) {
-  return Promise.all(
-    operationPaths.map(async (path) =>
-      validateOperation(
-        schema,
-        await readFile(new URL(`../../${path}`, import.meta.url), 'utf8'),
-        path,
+  const documents = await Promise.all(
+    operationPaths.map(async (location) => ({
+      document: parse(
+        new Source(await readFile(new URL(`../../${location}`, import.meta.url), 'utf8'), location),
       ),
-    ),
+      location,
+    })),
   );
+  const errors = validate(schema, concatAST(documents.map(({ document }) => document)));
+  if (errors.length) {
+    throw new Error(errors.map((error) => error.toString()).join('\n'));
+  }
+  return documents;
 }

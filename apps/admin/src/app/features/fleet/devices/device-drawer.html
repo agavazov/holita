@@ -9,19 +9,10 @@
   (retry)="retry.emit()"
   (closeRequest)="requestClose()"
 >
-  @if (demo()) {
-    <p-tag drawerMeta severity="info" [value]="text().demoLabel" />
-  }
   @if (state() === 'ready') {
     <form #formElement id="device-form" [formGroup]="form" (ngSubmit)="submit()">
-      @if (demo()) {
-        <p class="app-muted">{{ text().demoDescription }}</p>
-      }
       @if (saveError(); as error) {
         <p-message severity="error" role="alert">{{ error }}</p-message>
-      }
-      @if (!demo()) {
-        <p class="app-muted">{{ text().unavailable }}</p>
       }
       @if (choicesError(); as error) {
         <p-message severity="warn"
@@ -30,39 +21,6 @@
             {{ text().retry }}
           </button></p-message
         >
-      }
-      @if (device(); as device) {
-        <section class="app-form-section">
-          <h3>{{ text().diagnostics }}</h3>
-          <dl class="app-facts">
-            <div>
-              <dt>{{ text().lastSeen }}</dt>
-              <dd>{{ device.lastSeenAt | holitaRelative: dataAsOf() }}</dd>
-            </div>
-            <div>
-              <dt>{{ text().signal }}</dt>
-              <dd>{{ device.signal === null ? '—' : device.signal + '/5' }}</dd>
-            </div>
-            <div>
-              <dt>{{ text().voltage }}</dt>
-              <dd>
-                @if (device.voltage !== null) {
-                  {{ device.voltage | holitaNumber: 1 }} V
-                } @else {
-                  —
-                }
-              </dd>
-            </div>
-            <div>
-              <dt>{{ text().firmware }}</dt>
-              <dd class="app-mono">{{ device.firmware || '—' }}</dd>
-            </div>
-            <div>
-              <dt>{{ text().edataModule }}</dt>
-              <dd>{{ device.edataModule || '—' }}</dd>
-            </div>
-          </dl>
-        </section>
       }
       <section class="app-form-section">
         <h3>{{ text().installation }}</h3>
@@ -104,14 +62,13 @@
           <holita-form-field
             [label]="text().model"
             controlId="device-model"
-            [required]="demo()"
             [error]="errorOf('model')"
           >
             <p-select
               inputId="device-model"
               formControlName="model"
               [options]="modelOptions()"
-              [showClear]="!demo()"
+              [showClear]="true"
               optionLabel="label"
               optionValue="value"
               appendTo="body"
@@ -125,103 +82,101 @@
               }"
             />
           </holita-form-field>
-          @if (!demo()) {
-            <holita-form-field
-              [label]="text().options"
-              controlId="device-options"
-              [error]="errorOf('options')"
-            >
-              <p-select
-                inputId="device-options"
-                formControlName="options"
-                [multiple]="true"
-                [pt]="multiplePt()"
-                [options]="optionChoices"
-                optionLabel="label"
-                optionValue="value"
-                appendTo="body"
-                [ariaLabel]="text().options"
-                [invalid]="!!errorOf('options')"
-              />
-            </holita-form-field>
-            <holita-form-field
-              [label]="text().firmware"
-              controlId="device-firmwareVersion"
-              [error]="errorOf('firmwareVersion')"
-            >
-              <input
-                pInputText
-                id="device-firmwareVersion"
-                formControlName="firmwareVersion"
-                [invalid]="!!errorOf('firmwareVersion')"
-                [attr.aria-invalid]="errorOf('firmwareVersion') ? 'true' : null"
-                [attr.aria-describedby]="describedBy('firmwareVersion')"
-              />
-            </holita-form-field>
-            <holita-form-field
-              [label]="text().edataModule"
-              controlId="device-edataModule"
-              [hint]="text().edataModuleHint"
-              [error]="errorOf('edataModule')"
-            >
-              <input
-                pInputText
-                id="device-edataModule"
-                formControlName="edataModule"
-                [invalid]="!!errorOf('edataModule')"
-                [attr.aria-invalid]="errorOf('edataModule') ? 'true' : null"
-                [attr.aria-describedby]="describedBy('edataModule')"
-              />
-            </holita-form-field>
-            <holita-form-field
-              [label]="text().simPhone"
-              controlId="device-simPhoneNumber"
-              [error]="errorOf('simPhoneNumber')"
-            >
-              <input
-                pInputText
-                id="device-simPhoneNumber"
-                formControlName="simPhoneNumber"
-                [invalid]="!!errorOf('simPhoneNumber')"
-                [attr.aria-invalid]="errorOf('simPhoneNumber') ? 'true' : null"
-                [attr.aria-describedby]="describedBy('simPhoneNumber')"
-              />
-            </holita-form-field>
-            <holita-form-field
-              [label]="text().smsPassword"
-              controlId="device-smsPassword"
-              [hint]="text().smsPasswordHint"
-              [error]="errorOf('smsPassword')"
-            >
-              <input
-                pInputText
-                id="device-smsPassword"
-                formControlName="smsPassword"
-                class="app-mono"
-                autocomplete="off"
-                [invalid]="!!errorOf('smsPassword')"
-                [attr.aria-invalid]="errorOf('smsPassword') ? 'true' : null"
-                [attr.aria-describedby]="describedBy('smsPassword')"
-              />
-            </holita-form-field>
-            <holita-form-field
-              [label]="text().installedAt"
-              controlId="device-installedAt"
-              [hint]="installedAtHint()"
-              [error]="errorOf('installedAt')"
-            >
-              <input
-                pInputText
-                id="device-installedAt"
-                type="datetime-local"
-                step="0.001"
-                formControlName="installedAt"
-                [invalid]="!!errorOf('installedAt')"
-                [attr.aria-invalid]="errorOf('installedAt') ? 'true' : null"
-                [attr.aria-describedby]="describedBy('installedAt')"
-              />
-            </holita-form-field>
-          }
+          <holita-form-field
+            [label]="text().options"
+            controlId="device-options"
+            [error]="errorOf('options')"
+          >
+            <p-select
+              inputId="device-options"
+              formControlName="options"
+              [multiple]="true"
+              [pt]="multiplePt()"
+              [options]="optionChoices"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+              [ariaLabel]="text().options"
+              [invalid]="!!errorOf('options')"
+            />
+          </holita-form-field>
+          <holita-form-field
+            [label]="text().firmware"
+            controlId="device-firmwareVersion"
+            [error]="errorOf('firmwareVersion')"
+          >
+            <input
+              pInputText
+              id="device-firmwareVersion"
+              formControlName="firmwareVersion"
+              [invalid]="!!errorOf('firmwareVersion')"
+              [attr.aria-invalid]="errorOf('firmwareVersion') ? 'true' : null"
+              [attr.aria-describedby]="describedBy('firmwareVersion')"
+            />
+          </holita-form-field>
+          <holita-form-field
+            [label]="text().edataModule"
+            controlId="device-edataModule"
+            [hint]="text().edataModuleHint"
+            [error]="errorOf('edataModule')"
+          >
+            <input
+              pInputText
+              id="device-edataModule"
+              formControlName="edataModule"
+              [invalid]="!!errorOf('edataModule')"
+              [attr.aria-invalid]="errorOf('edataModule') ? 'true' : null"
+              [attr.aria-describedby]="describedBy('edataModule')"
+            />
+          </holita-form-field>
+          <holita-form-field
+            [label]="text().simPhone"
+            controlId="device-simPhoneNumber"
+            [error]="errorOf('simPhoneNumber')"
+          >
+            <input
+              pInputText
+              id="device-simPhoneNumber"
+              formControlName="simPhoneNumber"
+              [invalid]="!!errorOf('simPhoneNumber')"
+              [attr.aria-invalid]="errorOf('simPhoneNumber') ? 'true' : null"
+              [attr.aria-describedby]="describedBy('simPhoneNumber')"
+            />
+          </holita-form-field>
+          <holita-form-field
+            [label]="text().smsPassword"
+            controlId="device-smsPassword"
+            [hint]="text().smsPasswordHint"
+            [error]="errorOf('smsPassword')"
+          >
+            <input
+              pInputText
+              id="device-smsPassword"
+              formControlName="smsPassword"
+              class="app-mono"
+              autocomplete="off"
+              [invalid]="!!errorOf('smsPassword')"
+              [attr.aria-invalid]="errorOf('smsPassword') ? 'true' : null"
+              [attr.aria-describedby]="describedBy('smsPassword')"
+            />
+          </holita-form-field>
+          <holita-form-field
+            [label]="text().installedAt"
+            controlId="device-installedAt"
+            [hint]="installedAtHint()"
+            [error]="errorOf('installedAt')"
+          >
+            <input
+              pInputText
+              id="device-installedAt"
+              type="datetime-local"
+              step="0.001"
+              formControlName="installedAt"
+              [invalid]="!!errorOf('installedAt')"
+              [attr.aria-invalid]="errorOf('installedAt') ? 'true' : null"
+              [attr.aria-describedby]="describedBy('installedAt')"
+            />
+          </holita-form-field>
           <holita-form-field
             [label]="text().sim"
             controlId="device-simIccid"

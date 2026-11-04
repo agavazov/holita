@@ -7,8 +7,10 @@ import {
   AdminVehicleDriversDocument,
   AdminVehicleGroupsDocument,
   AdminVehiclesDocument,
+  AdminVehiclesLiveDocument,
   AdminVehicleSummaryDocument,
   type AdminVehicleDetailsFragment,
+  type AdminVehiclesLiveQuery,
 } from '../generated/graphql/operations';
 import {
   fixtureError,
@@ -52,6 +54,14 @@ export const fixtureVehicle: WithTypename<AdminVehicleDetailsFragment> = {
   currentDriverId: driver.id,
   currentDriver: { ...driver, __typename: 'FleetDriverRef' },
   deviceCount: 1,
+  devices: [
+    {
+      __typename: 'FleetDevice',
+      id: '60000000-0000-4000-8000-000000000001',
+      imei: '001234567890123',
+      lastReportedAt: at,
+    },
+  ],
   openAlertCount: 2,
   notes: 'International line\nWorkshop contact confirmed.',
   createdAt: '2026-01-01T00:00:00.000Z',
@@ -177,3 +187,46 @@ graphqlFixture(AdminDeactivateVehiclesDocument, (variables) => {
     },
   };
 });
+
+graphqlFixture(AdminVehiclesLiveDocument, (): WithTypename<AdminVehiclesLiveQuery> => ({
+  fleetVehicles: {
+    __typename: 'FleetVehiclePage',
+    items: [
+      {
+        __typename: 'FleetVehicle',
+        id: fixtureVehicle.id,
+        devices: [
+          {
+            __typename: 'FleetDevice',
+            id: '60000000-0000-4000-8000-000000000001',
+            imei: '001234567890123',
+            vehicleId: fixtureVehicle.id,
+            status: 'ONLINE',
+            routing: 'HOLITA',
+            lastReportedAt: at,
+            diagnostics: { __typename: 'FleetDeviceDiagnosticSummary', count: 0, latest: null },
+            ermState: {
+              __typename: 'ErmUnitState',
+              online: true,
+              mode: 'PRIMARY',
+              connectedSince: at,
+              lastFrameAt: at,
+              alarmsLast24h: 0,
+              latestAlarm: null,
+              latestEvent: {
+                __typename: 'ErmEvent',
+                eventTime: at,
+                nameEn: 'Position',
+                nameBg: 'Позиция',
+                speedKmh: 55,
+                engineOn: true,
+                ignitionOn: true,
+              },
+              health: { __typename: 'ErmUnitHealth', overdue: false },
+            },
+          },
+        ],
+      },
+    ],
+  },
+}));

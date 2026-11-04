@@ -14,14 +14,17 @@
     </button>
   </p-message>
 }
+@if (liveError()) {
+  <p-message severity="warn">{{ liveFailure() }}</p-message>
+}
 <holita-vehicles-view
+  [branchId]="branch().id"
   [branchName]="branch().name"
   [dataAsOf]="summary()?.dataAsOf ?? ''"
   [rows]="rows()"
   [total]="total()"
   [view]="view()"
   [state]="state()"
-  [kpis]="summary()"
   [groups]="choices.groups()"
   [drivers]="choices.drivers()"
   [selection]="selected()"

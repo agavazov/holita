@@ -132,6 +132,47 @@ export class DevicesRepository {
     });
   }
 
+  forVehicles(scope: FleetScope, vehicleIds: readonly string[]): Promise<DeviceRow[]> {
+    return this.prisma.client.device.findMany({
+      where: { ...scope, vehicleId: { in: [...vehicleIds] } },
+      include: deviceInclude,
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
+  }
+
+  async diagnostics(scope: FleetScope, pairs: readonly { vehicleId: string; imei: string }[]) {
+    const where: Prisma.FleetEventWhereInput = {
+      ...scope,
+      OR: pairs.map((pair) => ({ vehicleId: pair.vehicleId, deviceImei: pair.imei })),
+      kind: { in: ['DIAGNOSTIC_TROUBLE_CODE', 'CAN_ERROR', 'CAN_DISCONNECTED'] },
+    };
+    const [counts, latest] = await this.prisma.client.$transaction(
+      [
+        this.prisma.client.fleetEvent.groupBy({
+          by: ['vehicleId', 'deviceImei'],
+          where,
+          _count: { _all: true },
+        }),
+        this.prisma.client.fleetEvent.findMany({
+          where,
+          distinct: ['vehicleId', 'deviceImei'],
+          orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
+          select: {
+            vehicleId: true,
+            deviceImei: true,
+            kind: true,
+            occurredAt: true,
+            troubleCode: true,
+            details: true,
+            source: true,
+          },
+        }),
+      ],
+      { isolationLevel: 'RepeatableRead' },
+    );
+    return { counts, latest };
+  }
+
   routing(scope: FleetScope, imeis: string[]) {
     return this.prisma.client.karmaMonitoringTruck.findMany({
       where: { ...scope, karmaDeviceId: { in: imeis } },

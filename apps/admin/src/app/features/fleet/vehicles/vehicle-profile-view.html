@@ -126,6 +126,18 @@
                     <dd>{{ vehicle.lastReportedAt | holitaRelative: dataAsOf() }}</dd>
                   </div>
                   <div>
+                    <dt>{{ text().devices }}</dt>
+                    <dd>
+                      @for (device of vehicle.devices; track device.id) {
+                        <a class="app-link app-mono" [routerLink]="deviceLink(device.id)">{{
+                          device.imei
+                        }}</a>
+                      } @empty {
+                        {{ text().noDevice }}
+                      }
+                    </dd>
+                  </div>
+                  <div>
                     <dt>{{ text().location }}</dt>
                     <dd>{{ vehicle.location ?? '—' }}</dd>
                   </div>

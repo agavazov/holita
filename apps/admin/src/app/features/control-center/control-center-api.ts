@@ -63,6 +63,7 @@ export class ControlCenterApi implements OnDestroy {
     return this.client().watchQuery({
       query: AdminControlCenterDevicesDocument,
       variables: { language },
+      errorPolicy: 'all',
       fetchPolicy: 'network-only',
       pollInterval: 30_000,
       skipPollAttempt: () => document.hidden,
@@ -73,15 +74,17 @@ export class ControlCenterApi implements OnDestroy {
     return this.client().watchQuery({
       query: AdminControlCenterDeviceDocument,
       variables: { id, language },
+      errorPolicy: 'all',
       fetchPolicy: 'network-only',
       pollInterval: 30_000,
       skipPollAttempt: () => document.hidden,
     });
   }
 
-  watchSmsDevices() {
+  watchSmsDevices(deviceId: string | null = null) {
     return this.client().watchQuery({
       query: AdminControlCenterSmsDevicesDocument,
+      variables: { ids: deviceId ? [deviceId] : undefined },
       fetchPolicy: 'network-only',
     });
   }

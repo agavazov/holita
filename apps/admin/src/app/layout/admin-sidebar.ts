@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { Bell } from '@primeicons/angular/bell';
 import { Car } from '@primeicons/angular/car';
 import { Clock } from '@primeicons/angular/clock';
@@ -16,15 +17,15 @@ import { Truck } from '@primeicons/angular/truck';
 import { Users } from '@primeicons/angular/users';
 import { Wrench } from '@primeicons/angular/wrench';
 import { Tooltip } from 'primeng/tooltip';
+import { filter, map } from 'rxjs';
 import { messages, type Language } from '../i18n/messages';
-import type { NavGroup } from './navigation';
+import { navigationContext, type NavGroup } from './navigation';
 
 /** Logo, grouped navigation (full or rail) and the tenant line. Presentation only. */
 @Component({
   selector: 'holita-admin-sidebar',
   imports: [
     RouterLink,
-    RouterLinkActive,
     Tooltip,
     Bell,
     Car,
@@ -46,6 +47,14 @@ import type { NavGroup } from './navigation';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminSidebar {
+  private readonly router = inject(Router);
+  private readonly path = toSignal(
+    this.router.events.pipe(
+      filter((event) => event instanceof NavigationEnd),
+      map((event) => event.urlAfterRedirects),
+    ),
+    { initialValue: this.router.url },
+  );
   readonly navigation = input.required<readonly NavGroup[]>();
   readonly language = input.required<Language>();
   readonly homeLink = input.required<readonly string[]>();
@@ -57,4 +66,7 @@ export class AdminSidebar {
   readonly idPrefix = input('nav');
 
   protected readonly text = computed(() => messages[this.language()]);
+  protected readonly activeLink = computed(
+    () => navigationContext(this.navigation(), this.path())?.pageLink,
+  );
 }

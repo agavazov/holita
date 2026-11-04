@@ -13,12 +13,10 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { Message } from 'primeng/message';
-import { ButtonDirective } from 'primeng/button';
 import { EMPTY, catchError, filter, interval, switchMap } from 'rxjs';
 import type {
   AdminBranchesQuery,
   AdminDevicesQuery,
-  AdminDeviceSummaryQuery,
 } from '../../../../generated/graphql/operations';
 import { requestError } from '../../../core/graphql/request-error';
 import { messages, type Language } from '../../../i18n/messages';
@@ -46,27 +44,19 @@ import { devicesText } from './i18n/messages';
 @Component({
   selector: 'holita-devices-list-page',
   providers: [DevicesApi],
-  imports: [DevicesView, RouterOutlet, Message, ButtonDirective],
+  imports: [DevicesView, RouterOutlet, Message],
   template: `
     @if (liveError()) {
       <p-message severity="warn">{{ liveFailure() }}</p-message>
-    }
-    @if (summaryError()) {
-      <p-message severity="warn"
-        >{{ summaryFailure() }}
-        <button pButton type="button" (click)="refreshSummary()">{{ text().drawer.retry }}</button>
-      </p-message>
     }
     <holita-devices-view
       [recordLinks]="recordLinks()"
       [deviceLinkBase]="deviceLinkBase()"
       [branchName]="branch().name"
-      [dataAsOf]="summary()?.dataAsOf ?? ''"
       [rows]="rows()"
       [total]="total()"
       [view]="view()"
       [state]="state()"
-      [kpis]="kpis()"
       [models]="models"
       [selection]="selected()"
       [busy]="acting() || loading()"
@@ -103,12 +93,9 @@ export class DevicesPage implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly notifications = inject(MessageService);
   private query: ReturnType<DevicesApi['watch']> | undefined;
-  private summaryQuery: ReturnType<DevicesApi['watchSummary']> | undefined;
   readonly page = signal<AdminDevicesQuery['fleetDevices'] | null>(null);
-  readonly summary = signal<AdminDeviceSummaryQuery['fleetDeviceSummary'] | null>(null);
   readonly loading = signal(true);
   readonly error = signal<unknown>(null);
-  readonly summaryError = signal<unknown>(null);
   private readonly live = signal<Awaited<ReturnType<DevicesApi['live']>> | null>(null);
   /** When the live state was last read; a failed refresh keeps the previous state. */
   private readonly liveAt = signal<string | null>(null);
@@ -129,9 +116,6 @@ export class DevicesPage implements OnInit {
   readonly failure = computed(() =>
     requestError(this.error(), messages[this.language()].networkError),
   );
-  protected readonly summaryFailure = computed(() =>
-    requestError(this.summaryError(), messages[this.language()].networkError),
-  );
   protected readonly state = computed(() => ({
     ...deviceViewQuery(this.url.state()),
     search: this.url.searchDraft(),
@@ -148,12 +132,6 @@ export class DevicesPage implements OnInit {
   protected readonly total = computed(() =>
     Math.max(0, (this.page()?.total ?? 0) - this.removed().size),
   );
-  protected readonly kpis = computed(() => {
-    const summary = this.summary();
-    return summary
-      ? { online: summary.online, offline: summary.offline, stock: summary.inStock, outdated: null }
-      : null;
-  });
   protected readonly view = computed(() =>
     tableView({
       loading: this.loading(),
@@ -183,22 +161,13 @@ export class DevicesPage implements OnInit {
       .subscribe(() => {
         this.loadLive();
       });
-    this.summaryQuery = this.api.watchSummary();
-    this.summaryQuery.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (result) => {
-        this.summaryError.set(result.error ?? null);
-        if (result.dataState === 'complete' && !result.error) {
-          this.summary.set(result.data.fleetDeviceSummary);
-        }
-      },
-      error: (error: unknown) => {
-        this.summaryError.set(error);
-      },
-    });
     this.url.changes
       .pipe(
         switchMap((query) => {
           this.page.set(null);
+          this.live.set(null);
+          this.liveAt.set(null);
+          this.liveError.set(false);
           this.removed.set(new Set());
           this.selected.set([]);
           this.loading.set(true);
@@ -298,7 +267,7 @@ export class DevicesPage implements OnInit {
       }
       return;
     }
-    if (action !== 'delete' || !ids.length) {
+    if (!ids.length) {
       return;
     }
     this.acting.set(true);
@@ -377,25 +346,6 @@ export class DevicesPage implements OnInit {
         if (!this.destroyRef.destroyed && this.query === query) {
           this.error.set(error);
           this.loading.set(false);
-        }
-      });
-    this.refreshSummary();
-  }
-  refreshSummary(): void {
-    void this.summaryQuery
-      ?.refetch()
-      .then((result) => {
-        if (this.destroyRef.destroyed) {
-          return;
-        }
-        this.summaryError.set(result.error ?? null);
-        if (result.data && !result.error) {
-          this.summary.set(result.data.fleetDeviceSummary);
-        }
-      })
-      .catch((error: unknown) => {
-        if (!this.destroyRef.destroyed) {
-          this.summaryError.set(error);
         }
       });
   }

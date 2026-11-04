@@ -1,21 +1,16 @@
 {
   "title": "Control center",
   "dashboard": "Dashboard",
-  "description": "Units of the fleet, their state on holita's device server and the latest alarms. Refreshes every 30 seconds while this tab is visible.",
+  "description": "Live fleet status and latest alarms",
   "refresh": "Refresh",
   "unavailable": "The control center data is unavailable.",
   "lastUpdated": "Showing the data from {time}.",
   "firstDevices": "The Branch has {total} devices. The dashboard reads the first {shown}, so the other counts, lists and the map cover only those.",
-  "kpis": "Fleet units",
   "units": "Units",
-  "onlineOnHolita": "Online on holita",
-  "offline": "Offline",
-  "neverConnected": "Never connected to holita",
-  "withAlarms": "With alarms (24 h)",
   "positions": "Last positions",
   "positionsEmpty": "No unit has reported a position yet.",
   "attention": "Needs attention",
-  "attentionEmpty": "Every holita unit is online without alarms.",
+  "attentionEmpty": "All trucks report normally.",
   "latestAlarms": "Latest alarms",
   "alarmsEmpty": "No alarms.",
   "devicesEmpty": "No devices are registered in this Branch.",
@@ -31,10 +26,9 @@
   "installed": "Installed",
   "notes": "Notes",
   "state": "State",
-  "online": "Online",
-  "offlineState": "Offline",
   "neverConnectedState": "Never connected to holita",
   "routing": {
+    "HOLITA": "Data arrives through holita",
     "KARMA_BACKUP": "On Karma backup",
     "SILENT": "Silent"
   },
@@ -83,10 +77,11 @@
   "tabs": {
     "overview": "Overview",
     "events": "Events",
-    "alarms": "Alarms",
+    "alarms": "Faults and diagnostics",
     "commands": "Commands",
     "parameters": "Parameters",
-    "frames": "Frames"
+    "frames": "Frames",
+    "sms": "SMS"
   },
   "event": "Event",
   "eventId": "Event ID",
@@ -299,5 +294,36 @@
       "COMPLETE": "Complete",
       "FAILED": "Failed"
     }
+  },
+  "fleet": "Fleet",
+  "devices": "Devices",
+  "now": "Now",
+  "lastReport": "Last report",
+  "options": "Options",
+  "fleetDiagnostics": "Recorded Fleet diagnostics",
+  "diagnosticHistoryHint": "Historical DTC and CAN reports for this truck and IMEI. Recorded faults are not proof that a fault is still active; alarm and eData events, including cleared faults, appear below.",
+  "diagnosticRecords": "Recorded faults",
+  "diagnosticsEmpty": "No DTC or CAN faults are recorded for this truck and IMEI.",
+  "source": "Source",
+  "sources": {
+    "ERM": "holita device server",
+    "MANUAL": "Manual",
+    "DEMO": "Demo"
+  },
+  "firstVehicles": "Showing {shown} of {total} trucks.",
+  "closeReasons": {
+    "device closed": "Device closed the connection",
+    "read ETIMEDOUT": "The connection timed out",
+    "read ECONNRESET": "The connection was reset",
+    "server stopped": "The device server stopped",
+    "replaced by a newer connection": "Replaced by a newer connection"
+  },
+  "device": "Device",
+  "attentionReasons": {
+    "overdue": "Expected report is overdue",
+    "backup": "Data is arriving through Karma's backup",
+    "never": "No report received yet",
+    "recordedFaults": "Recorded DTC/CAN faults",
+    "criticalAlarm": "Critical alarm in the last 24 h"
   }
 }

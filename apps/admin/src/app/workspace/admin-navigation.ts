@@ -24,7 +24,6 @@ export function adminNavigation(
           icon: 'th-large',
           link: ['/', language, branchId, 'control-center'],
         },
-        { id: 'devices', label: text.devices, icon: 'mobile', link: [...fleet, 'devices'] },
         {
           id: 'sms-commands',
           label: text.smsCommands,
@@ -47,6 +46,7 @@ export function adminNavigation(
       label: text.fleet,
       items: [
         { id: 'vehicles', label: text.vehicles, icon: 'truck', link: [...fleet, 'vehicles'] },
+        { id: 'devices', label: text.devices, icon: 'mobile', link: [...fleet, 'devices'] },
         { id: 'drivers', label: text.drivers, icon: 'id-card', link: [...fleet, 'drivers'] },
         {
           id: 'maintenance',

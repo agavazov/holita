@@ -32,6 +32,11 @@ fragment AdminVehicleDetails on FleetVehicle {
     status
   }
   deviceCount
+  devices {
+    id
+    imei
+    lastReportedAt
+  }
   openAlertCount
   state {
     activity
@@ -86,12 +91,6 @@ query AdminVehicle($id: ID!) {
 query AdminVehicleSummary {
   fleetVehicleSummary {
     dataAsOf
-    inOperation
-    inWorkshop
-    moving
-    notReporting
-    openAlerts
-    lowFuel
   }
 }
 query AdminVehicleGroups($offset: Int!, $limit: Int!, $search: String, $ids: [ID!]) {
@@ -355,6 +354,17 @@ query AdminVehicleDeviceEvents($vehicleId: ID!) {
       severity
       troubleCode
       source
+    }
+  }
+}
+
+query AdminVehiclesLive($ids: [ID!]!) {
+  fleetVehicles(ids: $ids, limit: 100) {
+    items {
+      id
+      devices {
+        ...AdminFleetLiveDevice
+      }
     }
   }
 }

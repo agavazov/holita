@@ -363,6 +363,36 @@ describe('Device GraphQL with PostgreSQL', () => {
         },
       ],
     });
+    const fault = (vehicleId: string, deviceImei: string, occurredAt: string) => ({
+      tenantId,
+      branchId: pairBranch,
+      vehicleId,
+      deviceImei,
+      source: 'DEMO' as const,
+      occurredAt: new Date(occurredAt),
+      kind: 'CAN_ERROR' as const,
+      severity: 'WARNING' as const,
+      alertStatus: 'OPEN' as const,
+    });
+    await database.client.fleetEvent.createMany({
+      data: [
+        {
+          ...fault(first.id, imei, '2026-10-18T05:00:00.000Z'),
+          kind: 'DIAGNOSTIC_TROUBLE_CODE',
+          troubleCode: 'P0299',
+        },
+        fault(first.id, imei, '2026-10-18T06:00:00.000Z'),
+        fault(first.id, '990601000000002', '2026-10-18T06:30:00.000Z'),
+        {
+          ...fault(elsewhere.id, imei, '2026-10-18T07:00:00.000Z'),
+          tenantId: otherTenant,
+        },
+        {
+          ...fault(foreignVehicle.id, imei, '2026-10-18T08:00:00.000Z'),
+          branchId: foreignBranch,
+        },
+      ],
+    });
     expect(
       await query(
         'query($id:ID!){fleetDevice(id:$id){vehicleId lastReportedAt}}',
@@ -372,6 +402,38 @@ describe('Device GraphQL with PostgreSQL', () => {
     ).toEqual({
       data: { fleetDevice: { vehicleId: first.id, lastReportedAt: '2026-10-18T06:00:00.000Z' } },
     });
+    const diagnostics = 'diagnostics{count latest{kind occurredAt troubleCode source}}';
+    const currentFaults = {
+      count: 2,
+      latest: {
+        kind: 'CAN_ERROR',
+        occurredAt: '2026-10-18T06:00:00.000Z',
+        troubleCode: null,
+        source: 'DEMO',
+      },
+    };
+    for (const [source, expected] of [
+      [
+        `query($id:ID!){fleetDevice(id:$id){${diagnostics}}}`,
+        { fleetDevice: { diagnostics: currentFaults } },
+      ],
+      [
+        `query($id:ID!){fleetDevices(ids:[$id]){items{${diagnostics}}}}`,
+        { fleetDevices: { items: [{ diagnostics: currentFaults }] } },
+      ],
+      [
+        `query($id:ID!){fleetVehicles(ids:[$id]){items{devices{imei ${diagnostics}}}}}`,
+        { fleetVehicles: { items: [{ devices: [{ imei, diagnostics: currentFaults }] }] } },
+      ],
+    ] satisfies [string, Record<string, unknown>][]) {
+      expect(
+        await query(
+          source,
+          { id: source.includes('fleetVehicles') ? first.id : device.id },
+          pairBranch,
+        ),
+      ).toEqual({ data: expected });
+    }
     expect(
       await query(
         'mutation($id:ID!,$vehicleId:ID!,$smsPassword:String){updateFleetDevice(id:$id,input:{vehicleId:$vehicleId,smsPassword:$smsPassword}){vehicleId lastReportedAt smsPassword}}',
@@ -383,6 +445,26 @@ describe('Device GraphQL with PostgreSQL', () => {
         updateFleetDevice: { vehicleId: second.id, lastReportedAt: null, smsPassword: 'TeSt0593' },
       },
     });
+    expect(
+      await query(
+        `query($id:ID!){fleetDevice(id:$id){${diagnostics}}}`,
+        { id: device.id },
+        pairBranch,
+      ),
+    ).toEqual({ data: { fleetDevice: { diagnostics: { count: 0, latest: null } } } });
+    for (const [scopeBranch, scopeTenant] of [
+      [foreignBranch, tenantId],
+      [pairBranch, otherTenant],
+    ] as const) {
+      expect(
+        await query(
+          'query($id:ID!){fleetVehicles(ids:[$id]){items{devices{id}}}}',
+          { id: second.id },
+          scopeBranch,
+          scopeTenant,
+        ),
+      ).toEqual({ data: { fleetVehicles: { items: [] } } });
+    }
     await database.client.vehicleStatusSample.create({
       data: sample(second.id, imei, '2026-10-18T06:45:00.000Z'),
     });

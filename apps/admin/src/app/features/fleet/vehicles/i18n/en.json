@@ -1,27 +1,14 @@
 {
   "eyebrow": "Fleet",
   "title": "Vehicles",
-  "description": "{branch} · data as of {asOf}",
+  "description": "{branch} · Fleet data as of {asOf}",
   "new": "New vehicle",
   "search": "Search plate, model, driver or notes",
-  "kpis": {
-    "label": "Fleet summary",
-    "inOperation": "In operation",
-    "inWorkshop": "in service: {count}",
-    "moving": "Moving now",
-    "movingShare": "{share} of active vehicles",
-    "notReporting": "Not reporting",
-    "notReportingFootnote": "no data for {hours} h",
-    "openAlerts": "Open alerts",
-    "lowFuel": "Low fuel",
-    "lowFuelFootnote": "below {percent} %"
-  },
   "table": {
     "heading": "Vehicles",
     "plate": "Plate",
     "vehicle": "Vehicle",
     "status": "Status",
-    "activity": "Activity",
     "updatedAt": "Updated",
     "driver": "Driver",
     "group": "Group",
@@ -40,7 +27,9 @@
     "emptyTitle": "No vehicles yet",
     "emptyDescription": "Add the first vehicle of this branch.",
     "alerts": "{count} open alerts",
-    "errorText": "The vehicles could not be loaded."
+    "errorText": "The vehicles could not be loaded.",
+    "device": "Device",
+    "fleetLastReport": "Last Fleet sample"
   },
   "statuses": {
     "ACTIVE": "Active",
@@ -162,7 +151,9 @@
     "notFoundDescription": "It may have been deleted or belongs to another branch.",
     "errorTitle": "Something went wrong",
     "errorText": "The vehicle could not be loaded.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "devices": "Devices",
+    "noDevice": "No device"
   },
   "odometer": {
     "title": "Record odometer · {plate}",
@@ -170,7 +161,11 @@
     "previous": "Latest reading, {unit}",
     "recordedAt": "Reading time",
     "source": "Source",
-    "sources": { "DEMO": "Device data", "MANUAL": "Manual", "ERM": "Device data (holita)" },
+    "sources": {
+      "DEMO": "Device data",
+      "MANUAL": "Manual",
+      "ERM": "Device data (holita)"
+    },
     "noPrevious": "No previous odometer reading.",
     "latestAllowed": "Latest allowed reading time",
     "odometerKm": "Odometer, {unit}",

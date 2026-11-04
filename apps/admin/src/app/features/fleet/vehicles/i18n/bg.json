@@ -1,27 +1,14 @@
 {
   "eyebrow": "Автопарк",
   "title": "Автомобили",
-  "description": "{branch} · данни към {asOf}",
+  "description": "{branch} · Данни във Fleet към {asOf}",
   "new": "Нов автомобил",
   "search": "Търсене по номер, модел, водач или бележки",
-  "kpis": {
-    "label": "Обобщение на автопарка",
-    "inOperation": "В експлоатация",
-    "inWorkshop": "в сервиз: {count}",
-    "moving": "В движение сега",
-    "movingShare": "{share} от активните автомобили",
-    "notReporting": "Не предават данни",
-    "notReportingFootnote": "без данни от {hours} ч.",
-    "openAlerts": "Отворени сигнали",
-    "lowFuel": "Ниско гориво",
-    "lowFuelFootnote": "под {percent} %"
-  },
   "table": {
     "heading": "Автомобили",
     "plate": "Рег. номер",
     "vehicle": "Автомобил",
     "status": "Статус",
-    "activity": "Активност",
     "updatedAt": "Обновен",
     "driver": "Водач",
     "group": "Група",
@@ -40,7 +27,9 @@
     "emptyTitle": "Все още няма автомобили",
     "emptyDescription": "Добавете първия автомобил в този клон.",
     "alerts": "Отворени сигнали: {count}",
-    "errorText": "Автомобилите не могат да бъдат заредени."
+    "errorText": "Автомобилите не могат да бъдат заредени.",
+    "device": "Устройство",
+    "fleetLastReport": "Последни данни във Fleet"
   },
   "statuses": {
     "ACTIVE": "Активен",
@@ -162,7 +151,9 @@
     "notFoundDescription": "Възможно е да е изтрит или да принадлежи на друг клон.",
     "errorTitle": "Възникна грешка",
     "errorText": "Автомобилът не може да бъде зареден.",
-    "retry": "Опитайте отново"
+    "retry": "Опитайте отново",
+    "devices": "Устройства",
+    "noDevice": "Няма устройство"
   },
   "odometer": {
     "title": "Запис на километража · {plate}",

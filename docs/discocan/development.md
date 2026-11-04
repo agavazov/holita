@@ -248,8 +248,11 @@ Router's `ERM_SERVER_GRAPHQL_URL` points to the api process at
 it must not open the device TCP listener. Use the same demo-session settings as Core/Fleet.
 Keep the gateway's loopback internal API and machine token private.
 
-The admin **Control center** provides the dashboard, Devices with live state and a Device
-page with events, alarms, commands and frames. Fleet owns the ten registered truck identities,
+The admin **Fleet** group keeps Vehicles and Devices together. Both lists and the **Control
+center** dashboard open one Device page with live state, faults and diagnostics, events, commands,
+parameters, frames and SMS. The former Fleet diagnostics URL redirects to its faults tab. Fleet
+diagnostic counts are historical DTC/CAN evidence for the current vehicle/IMEI pair, not active-fault
+counts; the faults tab also shows alarm and eData events, including cleared faults. Fleet owns the ten registered truck identities,
 including `serialNumber` and `edataModule`; ERM state is joined by IMEI. Use Branch-scoped
 Device fields for operator journeys:
 

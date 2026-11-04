@@ -1,0 +1,32 @@
+{
+  "online": "Онлайн сега",
+  "reporting": "Изпраща данни",
+  "overdue": "Закъснява",
+  "backup": "На резерва на Karma",
+  "never": "Никога не се е свързвало",
+  "noDevice": "Без устройство",
+  "unassigned": "Без камион",
+  "unavailable": "Състоянието не е достъпно",
+  "connection": "Връзка",
+  "now": "В момента",
+  "lastReport": "Последен отчет",
+  "faults": "Неизправности",
+  "driving": "В движение · {speed}",
+  "parked": "Паркиран",
+  "ignitionOff": "Изключен контакт",
+  "engineRunning": "Двигателят работи",
+  "unknownActivity": "Няма отчетена дейност",
+  "unknownEvent": "Събитие без име",
+  "alarms": "Аларми за 24 ч.: {count}",
+  "recordedFaults": "{count} CAN / DTC",
+  "diagnostics": "Отвори диагностиката",
+  "summary": "Показани редове",
+  "summaryScope": "Обобщение за показаните редове; броят CAN / DTC грешки се отнася за записаната история.",
+  "withFaults": "С неизправности",
+  "withoutDevice": "Без устройство",
+  "kinds": {
+    "DIAGNOSTIC_TROUBLE_CODE": "Диагностичен код за неизправност",
+    "CAN_ERROR": "CAN грешка",
+    "CAN_DISCONNECTED": "Прекъсната CAN връзка"
+  }
+}
