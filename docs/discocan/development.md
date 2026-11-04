@@ -382,6 +382,9 @@ node --env-file=/home/sysadmin/.config/holita/erm-server.env live-api/edata-chan
 node --env-file=/home/sysadmin/.config/holita/erm-server.env live-api/edata-change.js --unit "$IMEI" --add "$DEFINITION" --restore-after
 ```
 
+The same operator tool accepts `--unit "$IMEI" --globals "$GLOBALS" [--restore-after]` for one approved 98-hex globals payload, normalizing only bytes 11–13 on readback and restoring the baseline after a mismatch; `302` is available only from its recorded workflow submission, outside the generic command allowlist.
+For a reversible single-parameter change, run `node --env-file=/home/sysadmin/.config/holita/erm-server.env live-api/parameter-change.js --unit "$IMEI" --parameter 0774 --value "$VALUE" --restore-after` after taking the unit's snapshot: routing 0049–0054 and protected catalog parameters are refused, and an unconfirmed write is recorded UNCERTAIN, read back once and never retried or restored automatically.
+
 ### Internal unit and command API
 
 The HTTP listener is loopback-only. `/internal/units` endpoints are disabled unless `ERM_INTERNAL_TOKEN`

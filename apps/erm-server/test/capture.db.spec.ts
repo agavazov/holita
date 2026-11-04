@@ -26,7 +26,8 @@ import {
   assembleEdataConfiguration,
   splitEdataDefinitions,
 } from '../src/starlink/edata-configuration.js';
-import { runEdataChange } from '../src/modules/telemetry/edata-change.js';
+import { runEdataChange, runParameterChange } from '../src/modules/telemetry/edata-change.js';
+import { EdataChangeRepository } from '../src/modules/telemetry/edata-change.repository.js';
 import { InternalTelemetryController } from '../src/modules/telemetry/internal-telemetry.controller.js';
 import { InternalTelemetryGuard } from '../src/modules/telemetry/internal-telemetry.guard.js';
 import {
@@ -563,6 +564,19 @@ it('persists captured connection lifecycle and raw frames through the production
           reads: number;
           preflight?: string[];
           uncertain?: boolean;
+          globals?: string;
+          globalsMismatch?: boolean;
+          globalsWrites?: number;
+        }
+      | undefined;
+    let parameterGateway:
+      | {
+          value: string;
+          mismatch?: boolean;
+          uncertain?: boolean;
+          unread?: boolean;
+          writes: number;
+          commands: ReturnType<typeof validateCommand>[];
         }
       | undefined;
     let snapshotBatch = 0;
@@ -622,13 +636,26 @@ it('persists captured connection lifecycle and raw frames through the production
           );
           return;
         }
-        expect(req.url).toBe(`/internal/units/${unitId}/commands`);
+        const globalsPath = `/internal/units/${unitId}/configuration-changes/`;
+        const globalsChangeId =
+          req.url?.startsWith(globalsPath) && req.url.endsWith('/globals')
+            ? req.url.slice(globalsPath.length, -'/globals'.length)
+            : undefined;
+        if (globalsChangeId === undefined) {
+          expect(req.url).toBe(`/internal/units/${unitId}/commands`);
+        }
         if (gatewayStatus !== 200) {
           res.statusCode = gatewayStatus;
           res.end('{}');
           return;
         }
-        const command = validateCommand(body);
+        const command =
+          globalsChangeId === undefined
+            ? validateCommand(body)
+            : await new EdataChangeRepository(database.client).globalsCommand(
+                globalsChangeId,
+                unitId,
+              );
         sent.push(command);
         if (configurationGateway && command.command === '30') {
           const fixture = configurationGateway;
@@ -647,7 +674,28 @@ it('persists captured connection lifecycle and raw frames through the production
               resultCode: timeout ? null : '01',
             },
           });
-          if (payload === '0702BC') {
+          if (command.fields[3] === '302') {
+            fixture.globalsWrites = (fixture.globalsWrites ?? 0) + 1;
+            const normalized = `${payload.slice(0, 22)}000000${payload.slice(28)}`;
+            fixture.globals =
+              fixture.globalsMismatch && fixture.globalsWrites === 1
+                ? `${normalized.slice(0, -2)}FF`
+                : normalized;
+          } else if (command.fields[3] === '303') {
+            const extra = ['19', '0', '410', '0', '1', '1', '1001', fixture.globals ?? ''];
+            await database.client.ermFrame.create({
+              data: {
+                connectionId: stored.id,
+                unitId,
+                receivedAt: new Date(),
+                direction: 'DEVICE',
+                command: '06',
+                checksum: 'ABSENT',
+                raw: Buffer.from(extra.join(',')),
+                events: { create: { unitId, eventId: '33', fields: { extra } } },
+              },
+            });
+          } else if (payload === '0702BC') {
             fixture.reads++;
             const definitions =
               fixture.reads === 2 && fixture.preflight ? fixture.preflight : fixture.definitions;
@@ -703,6 +751,33 @@ it('persists captured connection lifecycle and raw frames through the production
               status: timeout ? 'timeout' : 'answered',
               resultCode: timeout ? null : '01',
               fields: timeout ? [] : ['30', '01'],
+            }),
+          );
+          return;
+        }
+        if (parameterGateway) {
+          const fixture = parameterGateway;
+          fixture.commands.push(command);
+          if (command.command === '04') {
+            fixture.writes++;
+            fixture.value =
+              fixture.mismatch && fixture.writes === 1 ? '999' : (command.fields[1] ?? '');
+          }
+          const timeout = fixture.uncertain && command.command === '04';
+          res.end(
+            JSON.stringify({
+              id: randomUUID(),
+              reference: '900020000',
+              status: timeout ? 'timeout' : 'answered',
+              resultCode: timeout
+                ? null
+                : fixture.unread
+                  ? '02'
+                  : command.command === '04'
+                    ? '01'
+                    : null,
+              fields:
+                command.command === '03' && !fixture.unread ? ['0774', `"${fixture.value}"`] : [],
             }),
           );
           return;
@@ -1743,6 +1818,166 @@ it('persists captured connection lifecycle and raw frames through the production
       '0702BC',
     ]);
 
+    // One table extends this case for the whole-globals write/readback contract.
+    const globalsBefore =
+      '03E903E8010208000101000000000003130100000303010000000000000000000000000000000000000000000000000000';
+    const globalsWritten = `${globalsBefore.slice(0, 22)}010101${globalsBefore.slice(28, 36)}01${globalsBefore.slice(38)}`;
+    const globalsExpected = `${globalsWritten.slice(0, 22)}000000${globalsWritten.slice(28)}`;
+    expect(() =>
+      validateCommand({
+        command: '30',
+        fields: ['19', '0', '19', '302', '0', '1', '1', globalsWritten],
+      }),
+    ).toThrow();
+    for (const scenario of [
+      {
+        name: 'verified',
+        baseline: globalsBefore,
+        mismatch: false,
+        restoreAfter: false,
+        status: 'VERIFIED',
+        writes: [globalsWritten],
+      },
+      {
+        name: 'explicit restore',
+        baseline: globalsBefore,
+        mismatch: false,
+        restoreAfter: true,
+        status: 'RESTORED',
+        writes: [globalsWritten, `${globalsBefore.slice(0, 22)}010101${globalsBefore.slice(28)}`],
+      },
+      {
+        name: 'mismatch restores',
+        baseline: globalsBefore,
+        mismatch: true,
+        restoreAfter: false,
+        status: 'RESTORED',
+        writes: [globalsWritten, `${globalsBefore.slice(0, 22)}010101${globalsBefore.slice(28)}`],
+      },
+      {
+        name: 'no-op',
+        baseline: globalsExpected,
+        mismatch: false,
+        restoreAfter: false,
+        status: 'VERIFIED',
+        writes: [],
+      },
+    ]) {
+      configurationGateway = {
+        definitions: [],
+        commands: [],
+        reads: 0,
+        globals: scenario.baseline,
+        globalsMismatch: scenario.mismatch,
+      };
+      const change = await runEdataChange(
+        database.client,
+        { unitId, globals: globalsWritten, restoreAfter: scenario.restoreAfter },
+        configurationRuntime,
+      );
+      expect({ name: scenario.name, status: change.status }).toEqual({
+        name: scenario.name,
+        status: scenario.status,
+      });
+      expect(change.baseline).toEqual({ globals: scenario.baseline });
+      expect(
+        configurationGateway.commands
+          .filter(({ fields }) => fields[3] === '302')
+          .map(({ fields }) => fields[7]),
+      ).toEqual(scenario.writes);
+      expect(
+        configurationGateway.commands.every(
+          ({ fields }) => fields[3] === '302' || fields[3] === '303',
+        ),
+      ).toBe(true);
+      expect(change.steps).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ name: 'before', payload: scenario.baseline }),
+          expect.objectContaining({ name: 'written', payload: globalsWritten }),
+          expect.objectContaining({ name: 'expected', payload: globalsExpected }),
+        ]),
+      );
+      if (scenario.writes.length > 0) {
+        expect(change.steps).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              name: 'readback',
+              outcome: scenario.mismatch ? 'MISMATCH' : 'VERIFIED',
+              payload: scenario.mismatch ? `${globalsExpected.slice(0, -2)}FF` : globalsExpected,
+            }),
+          ]),
+        );
+      }
+      if (scenario.status === 'RESTORED') {
+        expect(configurationGateway.globals).toBe(scenario.baseline);
+        expect(change.steps).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ name: 'restore-readback', payload: scenario.baseline }),
+          ]),
+        );
+      }
+      await expect(
+        new EdataChangeRepository(database.client).globalsCommand(change.id, unitId),
+      ).rejects.toThrow();
+    }
+
+    configurationGateway = undefined;
+    for (const scenario of [
+      { name: 'parameter verified', value: '60', status: 'VERIFIED', commands: ['03', '04', '03'] },
+      {
+        name: 'parameter restore',
+        value: '60',
+        restoreAfter: true,
+        status: 'RESTORED',
+        commands: ['03', '04', '03', '04', '03'],
+      },
+      {
+        name: 'parameter mismatch',
+        value: '60',
+        mismatch: true,
+        status: 'RESTORED',
+        commands: ['03', '04', '03', '04', '03'],
+      },
+      { name: 'parameter no-op', value: '120', status: 'VERIFIED', commands: ['03'] },
+      { name: 'parameter unread', value: '60', unread: true, status: 'FAILED', commands: ['03'] },
+      {
+        name: 'parameter uncertain',
+        value: '60',
+        uncertain: true,
+        restoreAfter: true,
+        status: 'UNCERTAIN',
+        commands: ['03', '04', '03'],
+      },
+    ]) {
+      parameterGateway = { ...scenario, commands: [], writes: 0 };
+      const change = await runParameterChange(
+        database.client,
+        { unitId, parameter: '0774', value: '120', restoreAfter: scenario.restoreAfter },
+        configurationRuntime,
+      );
+      expect({ name: scenario.name, status: change.status }).toEqual({
+        name: scenario.name,
+        status: scenario.status,
+      });
+      expect(parameterGateway.commands.map(({ command }) => command)).toEqual(scenario.commands);
+      if (scenario.status === 'RESTORED') {
+        expect(parameterGateway.value).toBe('60');
+      }
+      if (scenario.uncertain) {
+        expect(change.steps).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ name: 'uncertain-readback', payload: '120' }),
+          ]),
+        );
+      }
+    }
+    parameterGateway = undefined;
+
+    // Retire only the test fixture's parameter ambiguity before testing the eData barrier.
+    await database.client.ermConfigurationChange.updateMany({
+      where: { unitId, status: 'UNCERTAIN' },
+      data: { status: 'READ' },
+    });
     configurationGateway = {
       definitions: [firstDefinition, secondDefinition],
       commands: [],

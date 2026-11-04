@@ -18,7 +18,9 @@ function argumentsFrom(argv: string[]): EdataChangeOptions | { split: string } {
     }
     if (argument === '--read' || argument === '--restore-after') {
       flags.add(argument);
-    } else if (['--unit', '--parameter', '--interval', '--add', '--split'].includes(argument)) {
+    } else if (
+      ['--unit', '--parameter', '--interval', '--add', '--globals', '--split'].includes(argument)
+    ) {
       const value = argv[++index];
       if (value === undefined || value.startsWith('--')) {
         throw new Error('Missing argument value');
@@ -38,6 +40,7 @@ function argumentsFrom(argv: string[]): EdataChangeOptions | { split: string } {
   const parameter = values.get('--parameter');
   const interval = values.get('--interval');
   const add = values.get('--add');
+  const globals = values.get('--globals');
   if (
     (parameter !== undefined && !/^\d+$/.test(parameter)) ||
     (interval !== undefined && !/^\d+$/.test(interval))
@@ -51,6 +54,7 @@ function argumentsFrom(argv: string[]): EdataChangeOptions | { split: string } {
     ...(parameter !== undefined && { parameter: Number(parameter) }),
     ...(interval !== undefined && { interval: Number(interval) }),
     ...(add !== undefined && { add }),
+    ...(globals !== undefined && { globals }),
   };
   validateEdataChangeOptions(options);
   return options;
@@ -83,7 +87,7 @@ async function main(): Promise<void> {
 
 main().catch(() => {
   console.error(
-    'ERM configuration command failed. Use --unit <15-digit IMEI> with --read, --parameter <id> --interval <0..65000>, or --add <44 hex digits>; optionally --restore-after for a change. Use --split <file or 301 payload> alone for offline extraction. Check environment and database/gateway access.',
+    'ERM configuration command failed. Use --unit <15-digit IMEI> with --read, --parameter <id> --interval <0..65000>, or --add <44 hex digits>, or --globals <98 hex digits>; optionally --restore-after for a change. Use --split <file or 301 payload> alone for offline extraction. Check environment and database/gateway access.',
   );
   process.exitCode = 1;
 });

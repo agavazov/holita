@@ -69,6 +69,20 @@ export class LiveDevicesService {
       35_000,
       command,
     );
+    return this.commandResult(value);
+  }
+
+  async sendGlobalsChange(unitId: string, changeId: string): Promise<LiveCommandResult> {
+    return this.commandResult(
+      await this.request(
+        `/internal/units/${encodeURIComponent(unitId)}/configuration-changes/${encodeURIComponent(changeId)}/globals`,
+        'POST',
+        35_000,
+      ),
+    );
+  }
+
+  private commandResult(value: unknown): LiveCommandResult {
     if (
       typeof value !== 'object' ||
       value === null ||

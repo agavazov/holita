@@ -1,3 +1,5 @@
+import { BadRequestException } from '@nestjs/common';
+import type { DeviceCommand } from '../devices/command.js';
 import type { ErmConfigurationChangeStatus, PrismaClient } from '../../generated/prisma/client.js';
 import type { EdataConfiguration } from '../../starlink/edata-configuration.js';
 
@@ -40,7 +42,7 @@ export class EdataChangeRepository {
       status?: ErmConfigurationChangeStatus;
       failureReason?: string | null;
       finishedAt?: Date;
-      baseline?: EdataConfiguration;
+      baseline?: EdataConfiguration | { globals: string } | { parameter: string; value: string };
       intended?: string;
     } = {},
   ) {
@@ -49,13 +51,38 @@ export class EdataChangeRepository {
       where: { id },
       data: {
         ...rest,
-        ...(baseline && { baseline: configurationJson(baseline) }),
+        ...(baseline && {
+          baseline: 'definitions' in baseline ? configurationJson(baseline) : baseline,
+        }),
         steps: steps.map(({ configuration, ...step }) => ({
           ...step,
           ...(configuration && { configuration: configurationJson(configuration) }),
         })),
       },
     });
+  }
+
+  // The gateway accepts globals only from a submission already recorded by this workflow.
+  async globalsCommand(id: string, unitId: string): Promise<DeviceCommand> {
+    const change = await this.client.ermConfigurationChange.findUnique({ where: { id } });
+    const storedSteps = change?.steps;
+    const step = Array.isArray(storedSteps) ? storedSteps.at(-1) : undefined;
+    if (
+      change?.unitId !== unitId ||
+      change.status !== 'UNCERTAIN' ||
+      change.finishedAt !== null ||
+      change.parameter !== null ||
+      typeof step !== 'object' ||
+      step === null ||
+      Array.isArray(step) ||
+      (step['name'] !== 'write' && step['name'] !== 'restore') ||
+      step['outcome'] !== 'SUBMITTING' ||
+      typeof step['payload'] !== 'string' ||
+      !/^[0-9A-F]{98}$/.test(step['payload'])
+    ) {
+      throw new BadRequestException('Expected a pending globals workflow submission');
+    }
+    return { command: '30', fields: ['19', '0', '19', '302', '0', '1', '1', step['payload']] };
   }
 
   async needsFreshRead(unitId: string): Promise<boolean> {
