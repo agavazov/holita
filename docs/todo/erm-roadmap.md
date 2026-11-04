@@ -163,6 +163,8 @@ remains the evidence source; do not request already supplied protocol access or 
 1. Supply the hardware/firmware/profile compatibility matrix and extended `412` fields.
 2. Resolve Monitor byte 7 export and `302`/`410` label discrepancies; ignition-off processing
    versus CAN-alive reporting; and whether StarLink 2069/2070 are required on these installations.
+   CB2792TK and CB9405PE send no `405` with the same ten definitions as the reporting CB1344XH; they
+   are the only Scouts with `410` bytes 7 and 18 both `00` (2026-11-04).
 3. Correct the `418` P1482 example with a real five-character capture/expected status and the
    `419` SPN table. Real `419` captures support four-byte big-endian SPNs but do not settle
    reserved bits, range or FMI rules.
