@@ -6,6 +6,7 @@ export const DEFAULT_EVENT_STRUCTURE =
 
 export interface DecodedEvent {
   unitId: string;
+  reference: string | null;
   eventId: string | null;
   eventTime: Date | null;
   positionTime: Date | null;
@@ -87,6 +88,7 @@ export function decodeEvent(
   const engine = tokens.get('#ENG#');
   return {
     unitId: frame.unitId,
+    reference: frame.reference,
     eventId: eventId !== undefined && /^\d{2,3}$/.test(eventId) ? eventId : null,
     eventTime: timestamp(tokens.get('#EDT#')),
     positionTime: timestamp(tokens.get('#PDT#')),
@@ -185,6 +187,7 @@ export function decodeBinaryEvent(raw: Buffer): DecodedEvent | undefined {
     value === null || value === undefined ? null : String(value);
   return {
     unitId,
+    reference: text(unsigned(0x03)),
     eventId: eventId === null ? null : String(eventId).padStart(2, '0'),
     eventTime: time(0x0c),
     positionTime: time(0x0e),

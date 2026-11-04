@@ -38,6 +38,7 @@ it('decodes event tokens with UTC times, nautical speed and coordinates while pr
     const event = decodeEvent(parsed, structure);
     expect(event).toMatchObject({
       unitId: '862129080366630',
+      reference: '66',
       eventId: '04',
       eventTime: new Date('2026-11-03T14:25:30Z'),
       positionTime: new Date('2026-11-03T14:25:20Z'),
@@ -80,6 +81,7 @@ it('decodes event tokens with UTC times, nautical speed and coordinates while pr
     throw new Error('Event envelope did not parse.');
   }
   expect(decodeEvent(absent)).toMatchObject({
+    reference: '2',
     eventId: null,
     eventTime: null,
     positionTime: null,
@@ -118,8 +120,12 @@ it('decodes event tokens with UTC times, nautical speed and coordinates while pr
   const reports = [
     [
       '862129080319233',
-      [0x08, 0x01, 0x20, 0x5f, 0xdc, 0x26, 0x39, 0x41, 0x00, 0x86, 0xff, 0x32, 0x0b],
+      [
+        0x03, 0xff, 0xff, 0xff, 0xff, 0x08, 0x01, 0x20, 0x5f, 0xdc, 0x26, 0x39, 0x41, 0x00, 0x86,
+        0xff, 0x32, 0x0b,
+      ],
       {
+        reference: '4294967295',
         mainVoltage: 24.54,
         engineOn: true,
         fields: { '#BATH#': '57', '#STRT#': '1.34', '#IGN#': '1' },
@@ -128,12 +134,17 @@ it('decodes event tokens with UTC times, nautical speed and coordinates while pr
     [
       '862129080366630',
       [0x08, 0x01, 0x26, 0x64, 0x41, 0x00, 0x04, 0x32, 0x00],
-      { engineOn: false, fields: { '#BATH#': '100', '#STRT#': '0.04', '#IGN#': '0' } },
+      {
+        reference: null,
+        engineOn: false,
+        fields: { '#BATH#': '100', '#STRT#': '0.04', '#IGN#': '0' },
+      },
     ],
     [
       '862129080320033',
       [0x08, 0x01, 0x21, 0x0f, 0xbf, 0x41, 0x01, 0x17, 0x18, 0x1c, 0x18],
       {
+        reference: null,
         backupVoltage: 4.031,
         engineOn: null,
         fields: { '#BATH#': null, '#STRT#': '2.79', '#SATN#': '28', '#SATU#': '24', '#IGN#': null },

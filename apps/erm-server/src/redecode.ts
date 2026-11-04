@@ -12,7 +12,7 @@ async function redecode(): Promise<void> {
   try {
     const summary = await redecodeFrames(client, eventStructure, startedAt);
     console.info(
-      `Frames scanned: ${String(summary.framesScanned)}; events updated: ${String(summary.eventsUpdated)}; events inserted: ${String(summary.eventsInserted)}; surplus events: ${String(summary.surplusEvents)}; decode failures: ${String(summary.decodeFailures)}.`,
+      `Frames scanned: ${String(summary.framesScanned)}; events updated: ${String(summary.eventsUpdated)}; events inserted: ${String(summary.eventsInserted)}; surplus events: ${String(summary.surplusEvents)}; duplicates: ${String(summary.duplicates)}; decode failures: ${String(summary.decodeFailures)}.`,
     );
   } finally {
     await client.$disconnect();

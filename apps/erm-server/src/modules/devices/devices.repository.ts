@@ -86,23 +86,20 @@ export class DevicesRepository {
     if (entry.from !== 'device' || entry.partial) {
       return;
     }
-    const events = decodeFrameEvents(
-      Buffer.from(entry.frame, 'latin1'),
-      entry.command,
-      eventStructure,
-    );
-    for (;;) {
-      let next: ReturnType<typeof events.next>;
-      try {
-        next = events.next();
-      } catch {
-        this.logger.error('Event decoding failed; forwarding and confirmations continue.');
-        return;
+    const events: Prisma.ErmEventCreateManyInput[] = [];
+    try {
+      for (const event of decodeFrameEvents(
+        Buffer.from(entry.frame, 'latin1'),
+        entry.command,
+        eventStructure,
+      )) {
+        events.push({ frameId: frame.id, ...event });
       }
-      if (next.done) {
-        return;
-      }
-      await this.prisma.client.ermEvent.create({ data: { frameId: frame.id, ...next.value } });
+    } catch {
+      this.logger.error('Event decoding failed; forwarding and confirmations continue.');
+    }
+    if (events.length > 0) {
+      await this.prisma.client.ermEvent.createMany({ data: events, skipDuplicates: true });
     }
   }
 

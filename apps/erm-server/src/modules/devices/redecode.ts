@@ -13,6 +13,7 @@ export interface RedecodeSummary {
   eventsInserted: number;
   surplusEvents: number;
   decodeFailures: number;
+  duplicates: number;
 }
 
 function eventData(event: DecodedEvent) {
@@ -28,6 +29,7 @@ function eventData(event: DecodedEvent) {
 function matches(stored: ErmEvent, decoded: ReturnType<typeof eventData>): boolean {
   return (
     stored.unitId === decoded.unitId &&
+    stored.reference === decoded.reference &&
     stored.eventId === decoded.eventId &&
     stored.eventTime?.getTime() === decoded.eventTime?.getTime() &&
     stored.positionTime?.getTime() === decoded.positionTime?.getTime() &&
@@ -55,6 +57,7 @@ export async function redecodeFrames(
     eventsInserted: 0,
     surplusEvents: 0,
     decodeFailures: 0,
+    duplicates: 0,
   };
   let after: bigint | undefined;
   for (;;) {
@@ -91,12 +94,19 @@ export async function redecodeFrames(
       for (const [position, event] of events.entries()) {
         const stored = frame.events[position];
         const data = eventData(event);
-        if (stored === undefined) {
-          await client.ermEvent.create({ data: { frameId: frame.id, ...data } });
-          summary.eventsInserted++;
-        } else if (!matches(stored, data)) {
-          await client.ermEvent.update({ where: { id: stored.id }, data });
-          summary.eventsUpdated++;
+        try {
+          if (stored === undefined) {
+            await client.ermEvent.create({ data: { frameId: frame.id, ...data } });
+            summary.eventsInserted++;
+          } else if (!matches(stored, data)) {
+            await client.ermEvent.update({ where: { id: stored.id }, data });
+            summary.eventsUpdated++;
+          }
+        } catch (error) {
+          if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') {
+            throw error;
+          }
+          summary.duplicates++;
         }
       }
     }

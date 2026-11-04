@@ -210,6 +210,7 @@ minutes to decimal degrees, and speed from knots to km/h. `odometer` preserves `
 source selected by parameter 0004, which may be engine hours rather than distance. Named fields
 retain raw text; missing or unparsable parsed values become null, and trailing fields remain in
 `extra`. Decoding failures are logged without affecting device traffic.
+A resent report with the same unit, reference, event ID and event time is stored once; all its frames remain.
 
 After correcting `ERM_EVENT_STRUCTURE` or deploying a decoder change, re-decode stored frames
 with the same `ERM_DATABASE_URL` and `ERM_EVENT_STRUCTURE` as the gateway. From

@@ -357,6 +357,7 @@ it('persists captured connection lifecycle and raw frames through the production
     expect(event).toMatchObject({
       frameId: stored.frames.at(-1)?.id,
       unitId,
+      reference: '2',
       eventId: '04',
       eventTime: new Date('2026-11-03T14:25:30Z'),
       positionTime: new Date('2026-11-03T14:25:20Z'),
@@ -370,6 +371,39 @@ it('persists captured connection lifecycle and raw frames through the production
     });
     expect(event.latitude?.toNumber()).toBeCloseTo(42.6489117, 7);
     expect(event.longitude?.toNumber()).toBeCloseTo(-71.1650283, 7);
+
+    // A reconnect keeps the resent frame as evidence without storing its report twice.
+    const resentConnection = connection + 1;
+    capture.record({ connection: resentConnection, event: 'open', peer });
+    capture.record({
+      connection: resentConnection,
+      from: 'device',
+      unit: unitId,
+      command: '06',
+      reference: '2',
+      checksum: 'absent',
+      frame: eventFrame,
+    });
+    capture.record(
+      { connection: resentConnection, event: 'close', seconds: 1, deviceBytes: 0, serverBytes: 0 },
+      'device closed',
+    );
+    await capture.drain();
+    const resentFrames = await database.client.ermFrame.findMany({
+      where: { unitId, command: '06', reference: '2' },
+      orderBy: { id: 'asc' },
+    });
+    expect(resentFrames).toHaveLength(2);
+    expect(new Set(resentFrames.map(({ connectionId }) => connectionId)).size).toBe(2);
+    expect(resentFrames.map(({ raw }) => Buffer.from(raw))).toEqual([
+      Buffer.from(eventFrame),
+      Buffer.from(eventFrame),
+    ]);
+    const resentStored = await database.client.ermConnection.findFirstOrThrow({
+      where: { unitId, closedAt: { not: null } },
+      orderBy: { closedAt: 'desc' },
+    });
+    expect(await database.client.ermEvent.findMany()).toEqual(events);
 
     const telemetry = module.get(TelemetryService);
     const tenantId = randomUUID();
@@ -1033,7 +1067,7 @@ it('persists captured connection lifecycle and raw frames through the production
             expectedIntervalSeconds: 3600,
             overdue: false,
             lastCloseReason: 'device closed',
-            lastClosedAt: stored.closedAt?.toISOString(),
+            lastClosedAt: resentStored.closedAt?.toISOString(),
             upstreamClosesLast24h: 1,
             karmaRoutingWritesLast24h: 1,
             latestKarmaRoutingWrite: { id: String(routingFrame.id), command: '46' },
@@ -1311,10 +1345,14 @@ it('persists captured connection lifecycle and raw frames through the production
       direction: 'DEVICE',
       command: '06',
       checksum: 'ABSENT',
-      raw: Buffer.from(eventFrame),
+      raw: Buffer.from(eventFrame.replace(',06,2,', ',06,6001,')),
     } as const;
     const missingFrame = await database.client.ermFrame.create({ data: redecodeFixture });
-    const changedFrame = await database.client.ermFrame.create({ data: redecodeFixture });
+    const changedFrame = await database.client.ermFrame.create({
+      data: { ...redecodeFixture, raw: Buffer.from(eventFrame.replace(',06,2,', ',06,6002,')) },
+    });
+    const duplicateInsertFrame = await database.client.ermFrame.create({ data: redecodeFixture });
+    const duplicateUpdateFrame = await database.client.ermFrame.create({ data: redecodeFixture });
     await database.client.ermFrame.create({
       data: { ...redecodeFixture, raw: Buffer.from('$invalid') },
     });
@@ -1332,30 +1370,45 @@ it('persists captured connection lifecycle and raw frames through the production
     const surplusEvent = await database.client.ermEvent.create({
       data: { frameId: changedFrame.id, unitId, eventId: '998', fields: { retained: true } },
     });
+    const duplicateEvent = await database.client.ermEvent.create({
+      data: { frameId: duplicateUpdateFrame.id, unitId, eventId: '99', fields: {} },
+    });
     const framesBefore = await database.client.ermFrame.findMany({ orderBy: { id: 'asc' } });
     const structure = DEFAULT_EVENT_STRUCTURE.split(',');
     expect(await redecodeFrames(database.client, structure, redecodeStartedAt)).toEqual({
-      framesScanned: 3,
+      framesScanned: 5,
       eventsUpdated: 1,
       eventsInserted: 1,
       surplusEvents: 1,
       decodeFailures: 1,
+      duplicates: 2,
     });
     expect(await redecodeFrames(database.client, structure, redecodeStartedAt)).toEqual({
-      framesScanned: 3,
+      framesScanned: 5,
       eventsUpdated: 0,
       eventsInserted: 0,
       surplusEvents: 1,
       decodeFailures: 1,
+      duplicates: 2,
     });
     expect(await database.client.ermFrame.findMany({ orderBy: { id: 'asc' } })).toEqual(
       framesBefore,
     );
     expect(await database.client.ermEvent.count({ where: { frameId: missingFrame.id } })).toBe(1);
     expect(
+      await database.client.ermEvent.findFirst({ where: { frameId: missingFrame.id } }),
+    ).toMatchObject({ reference: '6001' });
+    expect(
+      await database.client.ermEvent.count({ where: { frameId: duplicateInsertFrame.id } }),
+    ).toBe(0);
+    expect(await database.client.ermEvent.findUnique({ where: { id: duplicateEvent.id } })).toEqual(
+      duplicateEvent,
+    );
+    expect(
       await database.client.ermEvent.findUnique({ where: { id: changedEvent.id } }),
     ).toMatchObject({
       frameId: changedFrame.id,
+      reference: '6002',
       eventId: '04',
       mainVoltage: 12.2,
       backupVoltage: 3.6,

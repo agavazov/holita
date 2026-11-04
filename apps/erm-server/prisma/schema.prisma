@@ -116,6 +116,7 @@ model ErmEvent {
   frameId BigInt
   frame ErmFrame @relation(fields: [frameId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   unitId String @db.VarChar(15)
+  reference String? @db.VarChar(10)
   eventId String? @db.VarChar(3)
   eventTime DateTime? @db.Timestamptz(3)
   positionTime DateTime? @db.Timestamptz(3)
