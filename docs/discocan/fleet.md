@@ -322,7 +322,9 @@ Device `routing` compares the latest data Karma and holita received: `KARMA_BACK
 polls with Karma more than three minutes ahead, `SILENT` when both sides are older than 70 minutes,
 otherwise `HOLITA`; it is null before holita receives data or while Fleet's ERM import is disabled.
 Entering `KARMA_BACKUP` records one dated `UNIT_ON_BACKUP` warning event per episode at the first
-ahead Karma receipt, without an alert lifecycle or device command.
+ahead Karma receipt, without an alert lifecycle or device command. Known limitation: if Fleet's ERM
+import itself stalls for more than three minutes while Karma keeps receiving relayed data, routed
+units also read `KARMA_BACKUP`.
 The installation field uses native floating date/time text in the displayed Branch time zone,
 matching odometer entry. Invalid dates and skipped DST times are rejected. An unchanged instant
 retains its seconds, milliseconds and overlap occurrence; an edited ambiguous time uses the first
