@@ -128,6 +128,10 @@ const binarySizes = new Map([
   [0x0f, 4],
   [0x3b, 4],
   [0x51, 1],
+  // ff is a marker without a value; 32 carries the flags: bit 0 (and bit 3) ignition, bit 1 engine.
+  // CB6711TE also sent 32 without ff (2026-11-04).
+  [0xff, 0],
+  [0x32, 1],
 ]);
 const since2000 = Date.UTC(2000, 0, 1);
 
@@ -149,8 +153,7 @@ export function decodeBinaryEvent(raw: Buffer): DecodedEvent | undefined {
       extra = body.subarray(index).toString('latin1');
       break;
     }
-    // "ff 32" is followed by one flag byte: bit 0 (and bit 3) ignition, bit 1 engine running.
-    const size = tag === 0xff && body[index] === 0x32 ? 2 : binarySizes.get(tag);
+    const size = binarySizes.get(tag);
     if (size === undefined || index + size > body.length) {
       return undefined;
     }
@@ -176,7 +179,7 @@ export function decodeBinaryEvent(raw: Buffer): DecodedEvent | undefined {
   const main = unsigned(0x20);
   const backup = unsigned(0x21);
   const eventId = unsigned(0x08);
-  const flags = values.get(0xff)?.[1];
+  const flags = values.get(0x32)?.[0];
   const edata = eventId === 33 ? decodeEdata(extra.split(',')) : undefined;
   const text = (value: number | null | undefined): string | null =>
     value === null || value === undefined ? null : String(value);
@@ -210,7 +213,7 @@ export function decodeBinaryEvent(raw: Buffer): DecodedEvent | undefined {
       '#NC#': text(unsigned(0x3b)),
       '#NT#': text(unsigned(0x51)),
       '#IGN#': flags === undefined ? null : (flags & 0x01) !== 0 ? '1' : '0',
-      unknown: [values.get(0x27)?.toString('hex') ?? '', values.get(0xff)?.toString('hex') ?? ''],
+      unknown: [values.get(0x27)?.toString('hex') ?? '', values.get(0x32)?.toString('hex') ?? ''],
       extra: extra.split(','),
       ...(edata ? { edata } : {}),
     },
