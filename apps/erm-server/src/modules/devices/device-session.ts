@@ -112,7 +112,9 @@ export class DeviceSession {
     this.firstFrameTimer = setTimeout(() => {
       this.reject('no complete frame');
     }, 60_000);
-    device.setKeepAlive(true, 60_000);
+    // Node 24 probes 10 times one second apart after the delay: a 60 s delay closed driving units
+    // in ordinary coverage gaps, and they then used their backup server.
+    device.setKeepAlive(true, 600_000);
     device.on('error', (error) => {
       this.closeReason = `device error: ${error.message}`;
     });
