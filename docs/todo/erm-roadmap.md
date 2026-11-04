@@ -11,8 +11,12 @@ The delivery baseline includes Fleet `serialNumber`/`edataModule`, the ten regis
 the six-read command mutation and the admin Control center. Since 2026-11-03 it also includes the
 gateway's Karma-drop/DNS fallbacks and routing guards, unit readings and health, stored-frame
 re-decoding, Fleet's ERM import ([ADR 0008](../architecture/decisions/0008-erm-telemetry-into-fleet-activity.md)),
-parameter snapshots and the admin SMS section. Their implementation and validation belong to their
-owning agents; do not reopen them as roadmap tasks.
+parameter snapshots and the admin SMS section. Since 2026-11-04 it also includes the ten-minute
+device keepalive, read ends on unit errors, close records on stop, eData decoding, Tracker
+ignition/engine from the `$SLB` `32` flags, single storage of resent reports, Fleet's
+Karma-backup detection (`FleetDevice.routing`, `UNIT_ON_BACKUP`) and the controlled single-record
+eData change tool. Their implementation and validation belong to their owning agents; do not
+reopen them as roadmap tasks.
 
 ## Safety rules
 
@@ -44,13 +48,13 @@ owning agents; do not reopen them as roadmap tasks.
 
 ## Fleet rollout
 
-- CB2792TK, CB9369PE, CB1344XH, CB9405PE and CB1147TP were routed on 2026-11-03 in mirror mode
-  at the owner's request. Route CB6721TE after its recovery, and CB9680TE after checking its
-  power/unit/SIM and current reachability: its last known report was 2026-10-28 06:02 UTC. Decide
-  when the five move to primary mode.
-- A gateway restart can send units to their Karma backup for hours (CB6711TE on 2026-11-03:
-  18:17–20:45 and again after 21:58). Restart the gateway only in planned windows and record when
-  each unit returns.
+- Nine units report to holita in primary mode since 2026-11-04: the three test trucks, the five
+  routed on 2026-11-03 and CB6721TE. Route CB9680TE after checking its power/unit/SIM and current
+  reachability: its last known report was 2026-10-28 06:02 UTC.
+- A gateway restart sends about half of the driving units to their Karma backup, and a unit can
+  also fall back without one (CB1147TP after a mobile-network change on 2026-11-04). Restart the
+  gateway only while no routed truck is driving. Fleet marks such units `KARMA_BACKUP`; bring them
+  back once parked as in [moving a unit](../discocan/development.md#moving-a-unit-between-karma-and-holita).
 - For each unit, snapshot parameters and verify its next ordinary connection, gapless Karma
   `/events`, and no Karma `46` rewrite for an hour. Require seven days of gapless relaying for
   all ten units before closing rollout.
@@ -68,10 +72,9 @@ owning agents; do not reopen them as roadmap tasks.
   before/after evidence and uncertainty; define offline delivery, expiry/cancellation and
   device-confirmation semantics. Demo Tenant selection is not operator authorization.
 - **Parameter writes:** snapshots with titles and diffs run as background jobs and passed L1 on a
-  Tracker and a Scout on 2026-11-03. The gateway still ends a `03`/`45` read only on its own reply:
-  a unit's `02` error or a `45` reply omitting parameters becomes a 30 s timeout; fix it in the next
-  planned gateway window. Replace private-file operations with controlled write workflows.
-  For each write require an exact-target complete baseline, fresh preflight, one scoped change,
+  Tracker and a Scout on 2026-11-03. Single-record eData changes (`live-api/edata-change.js`)
+  passed L1 on CB5640XP on 2026-11-04. Remaining: the same controlled workflow for `04`/`46`
+  parameter writes. For each write require an exact-target complete baseline, fresh preflight, one scoped change,
   independent whole-set readback and explicit restoration. Never automatically replay an
   ambiguous submission. Restoring an existing definition differs from deleting a new ID;
   check rule/histogram dependencies and never replay a complete Monitor export.
@@ -80,19 +83,16 @@ owning agents; do not reopen them as roadmap tasks.
   CAN-inactive signals are not proof of a specific failure. Preserve null/zero/absence and
   distinguish sampling, reporting and delivery intervals. Zero-interval readback does not
   establish that measurements stopped.
-- **Record connection closes on shutdown:** the gateway closes rows left open by a previous process
-  at its next start, using the last frame time, but a graceful stop still writes no close records.
-- **Remaining binary/framing gaps:** identify `$SLB` tag `27` and the `ff 32` flags before claiming
-  binary `engineOn`; handle configuration-session `E0 00` pairs without corrupting the following
+- **Remaining binary/framing gaps:** identify `$SLB` tag `27` (seen only while parked); handle configuration-session `E0 00` pairs without corrupting the following
   frame. Non-routing replies inside `$SLC` still reach Karma (routing reads are refused).
-- **Own telemetry and diagnostics:** Fleet imports holita events as samples per ADR 0008. Remaining:
-  trips from binary Trackers' ignition, eData `401`/`402`/`405`/`411`/`413`/`417`/`418`/`419`
-  payloads and CB1147TP's real `419` faults through holita. Establish fault lifecycle/completeness
+- **Own telemetry and diagnostics:** Fleet imports holita events as samples and trips, `419` fault
+  records as `DIAGNOSTIC_TROUBLE_CODE` and `411` CAN errors per ADR 0008. Remaining: `405`
+  measurements in Fleet and CB1147TP's real `419` faults verified through holita. Establish fault lifecycle/completeness
   before continuous fault-state tracking or notifications; missing telemetry or an empty logger is
   not confirmed ECU clearance.
 - **Unit health:** silence (`overdue`), Karma upstream closes and Karma routing writes are detected,
-  and the admin compares Karma's last data with holita's. Remaining: gap/resend/network detection
-  and the units' backup-fallback timing.
+  the admin compares Karma's last data with holita's, and Fleet detects units on their Karma
+  backup. Remaining: gap and network-change detection and the units' backup-fallback timing.
 - **Broader command coverage:** prove each supported family at its permitted test level, including
   result codes and unlock-required `98`. The operator mutation stays limited to its six reads;
   new operations need their own explicit authorization and contract.
@@ -160,8 +160,9 @@ remains the evidence source; do not request already supplied protocol access or 
    ratings and accessories; establish modem-band and installed CAN/eNet/profile compatibility.
 4. Specify supported OTA, rollback/recovery risks and changes through 2.46; full configuration
    export/restore and per-firmware defaults; and `95` authentication/shared-secret provisioning.
-5. Define primary-to-backup retry timing, logger capacity/overwrite when both servers fail,
-   and the recommended Simple SMS emergency route, SIM restrictions and safe 0593 password change.
+5. Define primary-to-backup retry timing and when a unit returns to its primary (CB1147TP moved
+   to its backup after a mobile-network change on 2026-11-04, without a gateway restart), logger
+   capacity/overwrite when both servers fail, and the recommended Simple SMS emergency route, SIM restrictions and safe 0593 password change.
 6. Resolve protocol contradictions: G1/G2 checksum wording/source listing, command `00`, P180
    confirmation examples, E2 diagnostic-code length and model-specific size limits. Explain how
    StarLink Monitor, Simple eData Primitives Monitor and Simple eData Monitor apply to our units.
@@ -202,7 +203,9 @@ Ask Karma separately whether this account's automatic 0049/0050 rewrite can be d
 
 ## Owner decisions and resources
 
-- Approve the production host/deployment arrangement and the window for the next gateway deploy.
+- Approve the production host/deployment arrangement.
+- Decide whether Karma Client may queue the backup recovery `98` automatically (parked units only,
+  one fixed configuration port, at most once per unit every two hours).
 - Provide a second host for failover.
 - Choose who sends the ERM questions and owns follow-ups; no correspondence is sent by this plan.
 - Arrange a person at a parked truck for each L2 test and the CB6721TE installer recovery if needed.
@@ -211,8 +214,8 @@ Ask Karma separately whether this account's automatic 0049/0050 rewrite can be d
 ## Registered fleet reference
 
 The ten trucks are registered by today's Fleet work; this table is a routing/recovery reference,
-not an open registration task. CB5640XP, CB5636XP and CB6711TE are the routed test trucks;
-the other seven remain the rollout scope. CB1344XH's complete IMEI came from Karma because
+not an open registration task. CB5640XP, CB5636XP and CB6711TE are the test trucks; the other
+seven are the rollout scope, all routed except CB9680TE. CB1344XH's complete IMEI came from Karma because
 the owner's list truncated it. Missing VINs remain unknown.
 
 | Truck    | Karma car | IMEI            | ERM S/N | Model   | SIM number    | VIN               | Brand  |
