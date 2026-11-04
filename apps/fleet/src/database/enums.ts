@@ -129,6 +129,7 @@ export const fleetEventKindDb = {
   CAN_DISCONNECTED: 'canDisconnected',
   CAN_ERROR: 'canError',
   DEVICE_OFFLINE: 'deviceOffline',
+  UNIT_ON_BACKUP: 'unitOnBackup',
   DIAGNOSTIC_TROUBLE_CODE: 'diagnosticTroubleCode',
   CRASH_DETECTED: 'crashDetected',
 } satisfies Record<FleetEventKind, string>;

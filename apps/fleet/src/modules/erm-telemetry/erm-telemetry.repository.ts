@@ -53,10 +53,19 @@ export class ErmTelemetryRepository {
       if (events.length > 0) {
         await transaction.fleetEvent.createMany({ data: events, skipDuplicates: true });
       }
+      const cursor = await transaction.fleetErmCursor.findUnique({
+        where: { ...scope, deviceId: device.id },
+        select: { lastReceivedAt: true },
+      });
+      const lastReceivedAt = page.events.reduce<Date | null>(
+        (latest, event) =>
+          latest === null || event.receivedAt > latest ? event.receivedAt : latest,
+        cursor?.lastReceivedAt ?? null,
+      );
       await transaction.fleetErmCursor.upsert({
         where: { ...scope, deviceId: device.id },
-        create: { ...scope, deviceId: device.id, lastEventId: page.next },
-        update: { lastEventId: page.next },
+        create: { ...scope, deviceId: device.id, lastEventId: page.next, lastReceivedAt },
+        update: { lastEventId: page.next, lastReceivedAt },
       });
     });
   }

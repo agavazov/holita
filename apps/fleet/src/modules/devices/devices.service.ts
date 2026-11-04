@@ -12,6 +12,7 @@ import type {
   CreateFleetDeviceInput,
   FleetDevice,
   FleetDevicePage,
+  FleetDeviceRouting,
   FleetDeviceSortField,
   FleetDeviceActionResult,
   FleetDeviceSummary,
@@ -53,9 +54,10 @@ import {
 import { deviceConditions } from './device-filter.js';
 import { deviceStatus } from './device-state.js';
 import { SettingsService } from '../settings/settings.service.js';
+import { ermTelemetryEnabled } from '../erm-telemetry/erm-telemetry.jobs.js';
 
 export type DeviceResult = Omit<FleetDevice, 'branch'>;
-type StoredDevice = Omit<DeviceResult, 'lastReportedAt' | 'status'>;
+type StoredDevice = Omit<DeviceResult, 'lastReportedAt' | 'status' | 'routing'>;
 
 const DEVICE_MODELS = Object.values(FleetDeviceModel);
 const DEVICE_OPTIONS = Object.values(FleetDeviceOption);
@@ -163,6 +165,27 @@ export class DevicesService {
     private readonly settings: SettingsService,
   ) {}
 
+  private async routing(
+    scope: FleetScope,
+    rows: readonly DeviceRow[],
+  ): Promise<Map<string, FleetDeviceRouting | null>> {
+    if (!ermTelemetryEnabled() || !rows.length) {
+      return new Map();
+    }
+    const imeis = rows
+      .filter((row) => row.ermCursor?.lastReceivedAt != null)
+      .map((row) => row.imei);
+    if (!imeis.length) {
+      return new Map();
+    }
+    return new Map(
+      (await this.devices.routing(scope, imeis)).map((truck) => [
+        truck.karmaDeviceId,
+        truck.routing,
+      ]),
+    );
+  }
+
   async list(
     context: RequestContext,
     args: QueryFleetDevicesArgs,
@@ -185,11 +208,13 @@ export class DevicesService {
       direction: sortDirection(args.sort?.direction, 'DESC'),
     };
     const page = await this.devices.list(scope, { offset, limit }, criteria, sort);
+    const routing = await this.routing(scope, page.items);
     return {
       items: page.items.map((row) => ({
         ...toDevice(row),
         status: row.status,
         lastReportedAt: row.lastReportedAt,
+        routing: routing.get(row.imei) ?? null,
       })),
       total: page.total,
       offset,
@@ -359,10 +384,11 @@ export class DevicesService {
     const pairs = rows.flatMap((row) =>
       row.vehicleId === null ? [] : [{ vehicleId: row.vehicleId, imei: row.imei }],
     );
-    const [reported, asOf, settings] = await Promise.all([
+    const [reported, asOf, settings, routing] = await Promise.all([
       this.telemetry.lastReported(scope, pairs),
       this.telemetry.asOf(scope),
       this.settings.read(scope),
+      this.routing(scope, rows),
     ]);
     return rows.map((row) => {
       const lastReportedAt =
@@ -371,6 +397,7 @@ export class DevicesService {
           : (reported.get(reportingPair(row.vehicleId, row.imei)) ?? null);
       return {
         ...toDevice(row),
+        routing: routing.get(row.imei) ?? null,
         lastReportedAt,
         status: deviceStatus(row.vehicleId, lastReportedAt, asOf, settings.notReportingHours),
       };

@@ -354,10 +354,10 @@ describe('ERM telemetry import with PostgreSQL', () => {
     expect(await database.client.trip.findMany({ where: scopeB })).toMatchObject([
       { ...scopeB, vehicleId: vehicleB.id, deviceImei: deviceB.imei, source: 'ERM', endedAt: null },
     ]);
-    for (const [device, lastEventId] of [
-      [deviceA, 11n],
-      [stock, 10n],
-      [deviceB, 20n],
+    for (const [device, lastEventId, lastReceivedAt] of [
+      [deviceA, 11n, at(370)],
+      [stock, 10n, at(40)],
+      [deviceB, 20n, at(70)],
     ] as const) {
       expect(
         await database.client.fleetErmCursor.findUniqueOrThrow({ where: { deviceId: device.id } }),
@@ -366,6 +366,7 @@ describe('ERM telemetry import with PostgreSQL', () => {
         branchId: device.branchId,
         deviceId: device.id,
         lastEventId,
+        lastReceivedAt,
       });
     }
     expect(
@@ -471,14 +472,14 @@ describe('ERM telemetry import with PostgreSQL', () => {
     failures.set(deviceB.imei, 'invalid');
     events.get(stock.imei)?.push(event('22', 420, null));
     await jobs.tick();
-    for (const [device, lastEventId] of [
-      [deviceA, 21n],
-      [stock, 22n],
-      [deviceB, 20n],
+    for (const [device, lastEventId, lastReceivedAt] of [
+      [deviceA, 21n, at(420)],
+      [stock, 22n, at(430)],
+      [deviceB, 20n, at(70)],
     ] as const) {
       expect(
         await database.client.fleetErmCursor.findUniqueOrThrow({ where: { deviceId: device.id } }),
-      ).toMatchObject({ lastEventId });
+      ).toMatchObject({ lastEventId, lastReceivedAt });
     }
     expect(await database.client.vehicleStatusSample.count()).toBe(7);
     expect(await tripRows()).toEqual(initialTrips);

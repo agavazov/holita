@@ -19,6 +19,8 @@ enum FleetEventKind {
   "eData 411 CAN error flag, not proof of a disconnection."
   CAN_ERROR
   DEVICE_OFFLINE
+  "Karma received newer data on two consecutive polls while holita's import lagged."
+  UNIT_ON_BACKUP
   DIAGNOSTIC_TROUBLE_CODE
   CRASH_DETECTED
 }

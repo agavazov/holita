@@ -16,6 +16,7 @@ import { DEVICE_STATUSES } from './device-state.js';
 
 /** The vehicle reference is loaded with every device through the composite relation. */
 const deviceInclude = {
+  ermCursor: { select: { lastReceivedAt: true } },
   vehicle: {
     select: { id: true, licensePlate: true, fleetNumber: true, vehicleType: true, status: true },
   },
@@ -128,6 +129,13 @@ export class DevicesRepository {
     return this.prisma.client.device.findUnique({
       where: { id, tenantId: scope.tenantId, branchId: scope.branchId },
       include: deviceInclude,
+    });
+  }
+
+  routing(scope: FleetScope, imeis: string[]) {
+    return this.prisma.client.karmaMonitoringTruck.findMany({
+      where: { ...scope, karmaDeviceId: { in: imeis } },
+      select: { karmaDeviceId: true, routing: true },
     });
   }
 

@@ -64,6 +64,31 @@ export class KarmaMonitoringRepository {
     });
   }
 
+  routingDevices(scope: FleetScope, imeis: string[]) {
+    return this.prisma.client.device.findMany({
+      where: { ...scope, imei: { in: imeis } },
+      select: {
+        imei: true,
+        vehicleId: true,
+        ermCursor: { where: scope, select: { lastReceivedAt: true } },
+      },
+    });
+  }
+
+  async saveRouting(
+    scope: FleetScope,
+    karmaCarId: string,
+    data: Pick<KarmaMonitoringTruck, 'routing' | 'routingAheadPolls' | 'routingAheadSince'>,
+    event: Omit<Prisma.FleetEventCreateManyInput, 'tenantId' | 'branchId'> | null,
+  ) {
+    await this.prisma.client.$transaction(async (tx) => {
+      if (event !== null) {
+        await tx.fleetEvent.createMany({ data: [{ ...event, ...scope }], skipDuplicates: true });
+      }
+      await tx.karmaMonitoringTruck.updateMany({ where: { ...scope, karmaCarId }, data });
+    });
+  }
+
   async observe(
     scope: FleetScope,
     data: MonitoringTruckData,

@@ -100,6 +100,13 @@ enum FleetDeviceOption {
   @@map("fleetDeviceOption")
 }
 
+enum FleetDeviceRouting {
+  HOLITA @map("holita")
+  KARMA_BACKUP @map("karmaBackup")
+  SILENT @map("silent")
+  @@map("fleetDeviceRouting")
+}
+
 enum FleetDriverStatus {
   ACTIVE @map("active")
   ON_LEAVE @map("onLeave")
@@ -163,6 +170,7 @@ enum FleetEventKind {
   CAN_DISCONNECTED @map("canDisconnected")
   CAN_ERROR @map("canError")
   DEVICE_OFFLINE @map("deviceOffline")
+  UNIT_ON_BACKUP @map("unitOnBackup")
   DIAGNOSTIC_TROUBLE_CODE @map("diagnosticTroubleCode")
   CRASH_DETECTED @map("crashDetected")
   @@map("fleetEventKind")
@@ -274,6 +282,7 @@ model FleetErmCursor {
   tenantId String @db.Uuid
   branchId String @db.Uuid
   lastEventId BigInt @default(0)
+  lastReceivedAt DateTime? @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
   device Device @relation(fields: [tenantId, branchId, deviceId], references: [tenantId, branchId, id], onDelete: Cascade, onUpdate: Restrict)
 
@@ -715,6 +724,9 @@ model KarmaMonitoringTruck {
   karmaDeviceId String @db.VarChar(128)
   displayName String @db.VarChar(256)
   lastDataAt DateTime? @db.Timestamptz(3)
+  routing FleetDeviceRouting?
+  routingAheadPolls Int @default(0)
+  routingAheadSince DateTime? @db.Timestamptz(3)
   online Boolean @default(false)
   onlineSince DateTime? @db.Timestamptz(3)
   noDataSince DateTime? @db.Timestamptz(3)

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it, jest } from '@jest/globals';
 import { NotFoundException, type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { SchedulerRegistry } from '@nestjs/schedule';
 import { AppModule } from '../src/app.module.js';
 import { issueDemoToken } from '../src/auth/demo-auth.js';
 import { FleetClock } from '../src/clock/fleet-clock.js';
@@ -39,9 +40,11 @@ describe('Karma monitoring persistence and scope', () => {
   const monitoring = jest.fn<KarmaDeviceReadsClient['monitoring']>();
   const originalFlag = process.env.FLEET_KARMA_MONITORING_ENABLED;
   const originalDispatchFlag = process.env.FLEET_DEVICE_OPERATIONS_ENABLED;
+  const originalTelemetryFlag = process.env.FLEET_ERM_TELEMETRY_ENABLED;
   beforeAll(async () => {
     process.env.FLEET_KARMA_MONITORING_ENABLED = 'false';
     process.env.FLEET_DEVICE_OPERATIONS_ENABLED = 'false';
+    process.env.FLEET_ERM_TELEMETRY_ENABLED = 'false';
     database = await createTestDatabase();
     const module = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PrismaService)
@@ -58,6 +61,9 @@ describe('Karma monitoring persistence and scope', () => {
     jobs = module.get(KarmaMonitoringJobs);
     app = module.createNestApplication({ logger: false });
     await app.listen(0, '127.0.0.1');
+    for (const cron of module.get(SchedulerRegistry).getCronJobs().values()) {
+      await cron.stop();
+    }
     url = `${await app.getUrl()}/graphql`;
   });
   afterAll(async () => {
@@ -70,6 +76,11 @@ describe('Karma monitoring persistence and scope', () => {
       delete process.env.FLEET_DEVICE_OPERATIONS_ENABLED;
     } else {
       process.env.FLEET_DEVICE_OPERATIONS_ENABLED = originalDispatchFlag;
+    }
+    if (originalTelemetryFlag === undefined) {
+      delete process.env.FLEET_ERM_TELEMETRY_ENABLED;
+    } else {
+      process.env.FLEET_ERM_TELEMETRY_ENABLED = originalTelemetryFlag;
     }
     try {
       await app?.close();
@@ -356,6 +367,181 @@ describe('Karma monitoring persistence and scope', () => {
       details:
         'Karma monitoring request failed (KARMA_TIMEOUT); no successful or empty result is inferred.',
     });
+
+    const vehicle = await database.client.vehicle.create({
+      data: { ...scope, licensePlate: 'BACKUP' },
+    });
+    const device = await database.client.device.create({
+      data: { ...scope, imei: '000000000000070', vehicleId: vehicle.id },
+    });
+    const neverReported = await database.client.device.create({
+      data: { ...scope, imei: '000000000000071' },
+    });
+    const importedAt = new Date(now.getTime() - 10 * 60_000);
+    const firstAheadAt = new Date(now.getTime() - 60_000);
+    await database.client.fleetErmCursor.create({
+      data: { ...scope, deviceId: device.id, lastEventId: 1n, lastReceivedAt: importedAt },
+    });
+    for (const selected of [scope, ...otherScopes]) {
+      await repository.observe(
+        selected,
+        {
+          karmaCarId: '70',
+          karmaDeviceId: device.imei,
+          displayName: 'BACKUP',
+          lastDataAt: firstAheadAt,
+        },
+        2,
+        now,
+      );
+    }
+    await repository.observe(
+      scope,
+      {
+        karmaCarId: '71',
+        karmaDeviceId: neverReported.imei,
+        displayName: 'NEVER REPORTED',
+        lastDataAt: firstAheadAt,
+      },
+      2,
+      now,
+    );
+    const pollSettings = { ...active, lastStatusPollAt: null };
+    async function poll(lastDataAt: Date, polledAt = now) {
+      await database.client.karmaMonitoringTruck.updateMany({
+        where: scope,
+        data: { lastHistoryPollAt: polledAt },
+      });
+      monitoring.mockResolvedValueOnce([
+        {
+          carId: '70',
+          deviceId: device.imei,
+          displayName: 'BACKUP',
+          lastDataAt: lastDataAt.toISOString(),
+        },
+        {
+          carId: '71',
+          deviceId: neverReported.imei,
+          displayName: 'NEVER REPORTED',
+          lastDataAt: lastDataAt.toISOString(),
+        },
+      ]);
+      await jobs.runBranch(pollSettings, polledAt);
+    }
+    const routingTruck = () =>
+      database.client.karmaMonitoringTruck.findUniqueOrThrow({
+        where: { tenantId_branchId_karmaCarId: { ...scope, karmaCarId: '70' } },
+      });
+    const backupEvents = () =>
+      database.client.fleetEvent.findMany({ where: { ...scope, kind: 'UNIT_ON_BACKUP' } });
+    const deviceRouting = `query($id:ID!,$ids:[ID!]!){
+      fleetDevice(id:$id){routing}
+      fleetDevices(ids:$ids,sort:{field:IMEI,direction:ASC}){items{id routing}}
+    }`;
+    const deviceIds = { id: device.id, ids: [device.id, neverReported.id] };
+    process.env.FLEET_ERM_TELEMETRY_ENABLED = 'true';
+    await poll(firstAheadAt);
+    expect(await routingTruck()).toMatchObject({
+      routing: 'HOLITA',
+      routingAheadPolls: 1,
+      routingAheadSince: firstAheadAt,
+    });
+    expect(await backupEvents()).toHaveLength(0);
+    monitoring.mockRejectedValueOnce(new KarmaDeviceReadError('KARMA_TIMEOUT'));
+    await jobs.runBranch(pollSettings, now);
+    expect(await routingTruck()).toMatchObject({
+      routing: 'HOLITA',
+      routingAheadPolls: 1,
+      routingAheadSince: firstAheadAt,
+    });
+    await poll(now);
+    expect(await routingTruck()).toMatchObject({
+      routing: 'KARMA_BACKUP',
+      routingAheadPolls: 2,
+      routingAheadSince: firstAheadAt,
+    });
+    expect(await backupEvents()).toMatchObject([
+      {
+        ...scope,
+        source: 'ERM',
+        deviceImei: device.imei,
+        vehicleId: vehicle.id,
+        kind: 'UNIT_ON_BACKUP',
+        severity: 'WARNING',
+        occurredAt: firstAheadAt,
+        details: `Karma received data at ${firstAheadAt.toISOString()} while holita's last import was ${importedAt.toISOString()}; the unit is reporting to its Karma backup.`,
+        troubleCode: null,
+        tripId: null,
+        driverId: null,
+        intensity: null,
+        latitude: null,
+        longitude: null,
+        address: null,
+        speedKph: null,
+        measuredValue: null,
+        thresholdValue: null,
+        alertStatus: null,
+        acknowledgedAt: null,
+        resolvedAt: null,
+        remark: null,
+      },
+    ]);
+    expect(await query(deviceRouting, deviceIds)).toEqual({
+      data: {
+        fleetDevice: { routing: 'KARMA_BACKUP' },
+        fleetDevices: {
+          items: [
+            { id: device.id, routing: 'KARMA_BACKUP' },
+            { id: neverReported.id, routing: null },
+          ],
+        },
+      },
+    });
+    await poll(now);
+    expect(await backupEvents()).toHaveLength(1);
+    process.env.FLEET_ERM_TELEMETRY_ENABLED = 'false';
+    await poll(now);
+    expect(await routingTruck()).toMatchObject({ routing: 'KARMA_BACKUP', routingAheadPolls: 3 });
+    expect(await query(deviceRouting, deviceIds)).toEqual({
+      data: {
+        fleetDevice: { routing: null },
+        fleetDevices: {
+          items: [
+            { id: device.id, routing: null },
+            { id: neverReported.id, routing: null },
+          ],
+        },
+      },
+    });
+    process.env.FLEET_ERM_TELEMETRY_ENABLED = 'true';
+    await database.client.fleetErmCursor.update({
+      where: { ...scope, deviceId: device.id },
+      data: { lastReceivedAt: now },
+    });
+    await poll(now);
+    expect(await routingTruck()).toMatchObject({
+      routing: 'HOLITA',
+      routingAheadPolls: 0,
+      routingAheadSince: null,
+    });
+    await poll(now, new Date(now.getTime() + 71 * 60_000));
+    expect(await routingTruck()).toMatchObject({
+      routing: 'SILENT',
+      routingAheadPolls: 0,
+      routingAheadSince: null,
+    });
+    expect(await backupEvents()).toHaveLength(1);
+    for (const selected of otherScopes) {
+      expect(
+        await database.client.karmaMonitoringTruck.findUniqueOrThrow({
+          where: { tenantId_branchId_karmaCarId: { ...selected, karmaCarId: '70' } },
+        }),
+      ).toMatchObject({ routing: null, routingAheadPolls: 0, routingAheadSince: null });
+      expect(await database.client.fleetEvent.count({ where: selected })).toBe(0);
+      expect(
+        await query('query($id:ID!){fleetDevice(id:$id){routing}}', { id: device.id }, selected),
+      ).toMatchObject({ errors: [{ extensions: { code: 'NOT_FOUND' } }] });
+    }
   });
 
   it('prunes only old events and monitoring operations in the requested scope and enforces stored settings/read constraints', async () => {

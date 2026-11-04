@@ -3,8 +3,10 @@ import { Cron } from '@nestjs/schedule';
 import { FleetClock } from '../../clock/fleet-clock.js';
 import { KarmaDeviceReadError } from '../../integrations/karma/karma-device-reads.client.js';
 import type {
+  FleetDeviceRouting,
   KarmaMonitoringSettings,
   KarmaMonitoringTruck,
+  Prisma,
 } from '../../generated/prisma/client.js';
 import type {
   FleetKarmaMonitoringCommandOutcome,
@@ -15,6 +17,7 @@ import {
   DeviceOperationsService,
   deviceOperationsEnabled,
 } from '../device-operations/device-operations.service.js';
+import { ermTelemetryEnabled } from '../erm-telemetry/erm-telemetry.jobs.js';
 import {
   KarmaMonitoringRepository,
   type MonitoringEventData,
@@ -85,10 +88,87 @@ export class KarmaMonitoringJobs {
     }
   }
 
+  private async evaluateRouting(scope: FleetScope, now: Date) {
+    const trucks = await this.repository.trucks(scope);
+    const devices = new Map(
+      (
+        await this.repository.routingDevices(
+          scope,
+          trucks.map((truck) => truck.karmaDeviceId),
+        )
+      ).map((device) => [device.imei, device]),
+    );
+    const silentBefore = now.getTime() - 70 * 60_000;
+    for (const truck of trucks) {
+      const device = devices.get(truck.karmaDeviceId);
+      const lastReceivedAt = device?.ermCursor?.lastReceivedAt ?? null;
+      const ahead =
+        lastReceivedAt !== null &&
+        truck.lastDataAt !== null &&
+        truck.lastDataAt.getTime() - lastReceivedAt.getTime() > 3 * 60_000;
+      const routingAheadPolls = ahead ? truck.routingAheadPolls + 1 : 0;
+      const routingAheadSince = ahead ? (truck.routingAheadSince ?? truck.lastDataAt) : null;
+      let routing: FleetDeviceRouting | null = null;
+      if (lastReceivedAt !== null) {
+        routing =
+          routingAheadPolls >= 2
+            ? 'KARMA_BACKUP'
+            : lastReceivedAt.getTime() < silentBefore &&
+                (truck.lastDataAt === null || truck.lastDataAt.getTime() < silentBefore)
+              ? 'SILENT'
+              : 'HOLITA';
+      }
+      if (
+        routing === truck.routing &&
+        routingAheadPolls === truck.routingAheadPolls &&
+        routingAheadSince?.getTime() === truck.routingAheadSince?.getTime()
+      ) {
+        continue;
+      }
+      const event: Omit<Prisma.FleetEventCreateManyInput, 'tenantId' | 'branchId'> | null =
+        routing === 'KARMA_BACKUP' &&
+        truck.routing !== 'KARMA_BACKUP' &&
+        routingAheadSince !== null &&
+        lastReceivedAt !== null &&
+        device?.vehicleId != null
+          ? {
+              source: 'ERM',
+              deviceImei: device.imei,
+              vehicleId: device.vehicleId,
+              kind: 'UNIT_ON_BACKUP',
+              severity: 'WARNING',
+              occurredAt: routingAheadSince,
+              details: `Karma received data at ${routingAheadSince.toISOString()} while holita's last import was ${lastReceivedAt.toISOString()}; the unit is reporting to its Karma backup.`,
+              troubleCode: null,
+              tripId: null,
+              driverId: null,
+              intensity: null,
+              latitude: null,
+              longitude: null,
+              address: null,
+              speedKph: null,
+              measuredValue: null,
+              thresholdValue: null,
+              alertStatus: null,
+              acknowledgedAt: null,
+              resolvedAt: null,
+              remark: null,
+            }
+          : null;
+      await this.repository.saveRouting(
+        scope,
+        truck.karmaCarId,
+        { routing, routingAheadPolls, routingAheadSince },
+        event,
+      );
+    }
+  }
+
   async runBranch(settings: KarmaMonitoringSettings, now: Date) {
     const scope = { tenantId: settings.tenantId, branchId: settings.branchId };
     if (settings.enabled && due(settings.lastStatusPollAt, settings.statusPollSeconds, now)) {
       await this.repository.markSettings(scope, { lastStatusPollAt: now });
+      let statusPolled = false;
       try {
         const latest = await this.source.status();
         for (const truck of latest) {
@@ -101,11 +181,15 @@ export class KarmaMonitoringJobs {
             await this.repository.observe(scope, truck, settings.offlineAfterMinutes, now);
           }
         }
+        statusPolled = true;
       } catch {
         await this.pollFailed(scope, null, 'STATUS_POLL', now);
         for (const truck of await this.repository.trucks(scope)) {
           await this.repository.observe(scope, truck, settings.offlineAfterMinutes, now);
         }
+      }
+      if (statusPolled && ermTelemetryEnabled()) {
+        await this.evaluateRouting(scope, now);
       }
     }
     for (const truck of await this.repository.trucks(scope)) {

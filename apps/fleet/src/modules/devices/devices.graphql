@@ -25,6 +25,16 @@ enum FleetDeviceStatus {
   IN_STOCK
 }
 
+"Observed destination of the unit's latest data."
+enum FleetDeviceRouting {
+  "The latest received data does not establish use of the Karma backup."
+  HOLITA
+  "Karma received data more than three minutes after holita on two consecutive polls."
+  KARMA_BACKUP
+  "Neither holita nor Karma received data within the last 70 minutes."
+  SILENT
+}
+
 type FleetDevice @key(fields: "id") {
   id: ID!
   branchId: ID!
@@ -35,6 +45,8 @@ type FleetDevice @key(fields: "id") {
   vehicle: FleetVehicleRef
   "Unassigned means IN_STOCK; assigned devices are ONLINE when their current pair reported within the configured not-reporting hours of the Branch data clock."
   status: FleetDeviceStatus!
+  "Compares the latest data Karma and holita received, not the unit's configuration; null when the unit never reported to holita or Fleet's ERM import is disabled."
+  routing: FleetDeviceRouting
   model: FleetDeviceModel
   "ERM serial number from the unit's label; unique within the Branch."
   serialNumber: String
