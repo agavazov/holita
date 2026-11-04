@@ -138,7 +138,7 @@ type ErmEvent {
   fields: ErmJSON!
   category: ErmEventCategory!
   severity: ErmEventSeverity!
-  "Catalog name of the event; null for an event ID outside the StarLink catalog."
+  "Catalog name, including the documented diagnostic meaning and raw level/code for event 02."
   name(language: ErmLanguage! = EN): String
   "Decoded Simple eData report of an External device (33) event, with its raw payload; null otherwise."
   edata: ErmJSON
@@ -155,6 +155,19 @@ type ErmTextReading {
   "Observed text value."
   value: String!
   "Time the command response was received."
+  observedAt: String!
+}
+"Latest reported bytes for one parameter from eData 405; no physical conversion is assumed."
+type ErmEdataMeasurement {
+  parameterId: Int!
+  "Monitor 9.56 name; null for an unknown ID or conflicting catalog names."
+  name: String
+  "Explicit unit suffix in the catalog name, for reference; null when unspecified."
+  unit: String
+  parameterType: Int!
+  valueSize: Int!
+  valueHex: String!
+  "Report event time, or frame receipt time when the report has no time."
   observedAt: String!
 }
 "Frame freshness, connection history and upstream routing activity."
@@ -199,6 +212,8 @@ type ErmUnitState {
   signalQuality: ErmReading
   "Latest firmware VER field returned by an answered READ_VERSION command."
   firmwareVersion: ErmTextReading
+  "Newest 405 measurement per parameter, each retaining its own report time. Empty without decoded 405 values."
+  edataMeasurements: [ErmEdataMeasurement!]!
   "Frame freshness, disconnect history and upstream route changes."
   health: ErmUnitHealth!
 }

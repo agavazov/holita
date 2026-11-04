@@ -126,6 +126,28 @@ const detailDevice: WithTypename<AdminControlCenterDeviceQuery['fleetDevice']> =
       value: '2.26.1',
       observedAt: detailEvent.eventTime,
     },
+    edataMeasurements: [
+      {
+        __typename: 'ErmEdataMeasurement',
+        parameterId: 1,
+        name: 'Engine Speed (RPM)',
+        unit: 'RPM',
+        parameterType: 0,
+        valueSize: 2,
+        valueHex: '09C4',
+        observedAt: detailEvent.eventTime,
+      },
+      {
+        __typename: 'ErmEdataMeasurement',
+        parameterId: 65000,
+        name: null,
+        unit: null,
+        parameterType: 0,
+        valueSize: 1,
+        valueHex: '00',
+        observedAt: '2026-10-20T07:55:00.000Z',
+      },
+    ],
     health: {
       __typename: 'ErmUnitHealth',
       lastFrameAgeSeconds: 5,

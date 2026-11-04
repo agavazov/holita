@@ -182,7 +182,7 @@ export class TelemetryRepository {
       lastClosedAt: sqlNullableDate(row, 'lastClosedAt'),
       upstreamClosesLast24h: sqlInteger(row, 'upstreamClosesLast24h'),
     }));
-    const [selectedEvents, firmwareCommands, upstreamFrames] = await Promise.all([
+    const [selectedEvents, firmwareCommands, upstreamFrames, edataRows] = await Promise.all([
       this.prisma.client.ermEvent.findMany({
         where: {
           id: {
@@ -223,7 +223,35 @@ export class TelemetryRepository {
         include: { connection: { select: { unitId: true } } },
         orderBy: [{ receivedAt: 'desc' }, { id: 'desc' }],
       }),
+      this.prisma.client.$queryRaw(Prisma.sql`
+        SELECT DISTINCT ON (event."unitId", parameter.parameter)
+          event."unitId", parameter.parameter AS "parameterId", parameter.type AS "parameterType",
+          parameter."valueSize", parameter."valueHex",
+          coalesce(event."eventTime", frame."receivedAt") AS "observedAt"
+        FROM ${this.table('ermEvent')} event
+        JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
+        CROSS JOIN LATERAL jsonb_to_recordset(event.fields -> 'edata' -> 'parameters')
+          parameter(parameter integer, type integer, "valueSize" integer, "valueHex" text)
+        WHERE event."unitId" IN (${Prisma.join(unitIds)})
+          AND event.fields -> 'edata' ->> 'type' = '405' AND frame."receivedAt" <= ${snapshot}
+        ORDER BY event."unitId", parameter.parameter,
+          coalesce(event."eventTime", frame."receivedAt") DESC, event.id DESC
+      `),
     ]);
+    const edataMeasurements = sqlRows(edataRows).map((row) => {
+      const observedAt = sqlNullableDate(row, 'observedAt');
+      if (observedAt === null) {
+        throw new Error('Invalid ERM measurement date');
+      }
+      return {
+        unitId: sqlText(row, 'unitId'),
+        parameterId: sqlInteger(row, 'parameterId'),
+        parameterType: sqlInteger(row, 'parameterType'),
+        valueSize: sqlInteger(row, 'valueSize'),
+        valueHex: sqlText(row, 'valueHex'),
+        observedAt: observedAt.toISOString(),
+      };
+    });
     const events = new Map(selectedEvents.map((event) => [String(event.id), event]));
     const commands = new Map(firmwareCommands.map((command) => [command.id, command]));
     const routingWrites = upstreamFrames.filter((frame) => {
@@ -254,6 +282,9 @@ export class TelemetryRepository {
         backupVoltageEvent: events.get(row.backupVoltageEventId ?? '') ?? null,
         signalQualityEvent: events.get(row.signalQualityEventId ?? '') ?? null,
         firmwareCommand: commands.get(row.firmwareCommandId ?? '') ?? null,
+        edataMeasurements: edataMeasurements.filter(
+          (measurement) => measurement.unitId === row.unitId,
+        ),
         karmaRoutingWritesLast24h: writes.filter((frame) => frame.receivedAt >= since).length,
         latestKarmaRoutingWrite: writes[0] ?? null,
       };

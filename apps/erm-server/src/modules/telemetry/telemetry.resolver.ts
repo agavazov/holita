@@ -21,7 +21,7 @@ import type {
 } from '../../generated/graphql/types.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import { TelemetryService, type DeviceReference } from './telemetry.service.js';
-import { starlinkEvents } from '../../starlink/event-catalog.js';
+import { eventName } from '../../starlink/event-catalog.js';
 import { ParameterSnapshotsService } from './parameter-snapshots.service.js';
 
 @Resolver()
@@ -109,8 +109,10 @@ export class ErmDeviceResolver {
 @Resolver('ErmEvent')
 export class ErmEventResolver {
   @ResolveField('name')
-  name(@Parent() event: { eventId: string | null }, @Args() args: ErmEventNameArgs) {
-    const entry = starlinkEvents.get(event.eventId ?? '');
-    return (args.language === 'BG' ? entry?.bg : entry?.en) ?? null;
+  name(
+    @Parent() event: { eventId: string | null; fields?: unknown },
+    @Args() args: ErmEventNameArgs,
+  ) {
+    return eventName(event.eventId, event.fields, args.language ?? 'EN');
   }
 }

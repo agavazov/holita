@@ -150,6 +150,21 @@ it('decodes event tokens with UTC times, nautical speed and coordinates while pr
         fields: { '#BATH#': null, '#STRT#': '2.79', '#SATN#': '28', '#SATU#': '24', '#IGN#': null },
       },
     ],
+    // Observed CB6711TE defect: opaque tag 04 prevented the following 405 from being decoded.
+    [
+      '862129080319233',
+      [0x08, 0x21, 0x04, 0xac, 0xfe, ...Buffer.from('19,0,405,0,1,1,1001,140001000155')],
+      {
+        eventId: '33',
+        fields: {
+          binary04: 'ac',
+          edata: {
+            type: 405,
+            parameters: [{ parameter: 1, type: 0, valueSize: 1, valueHex: '55' }],
+          },
+        },
+      },
+    ],
   ] as const;
   for (const [unitId, tags, expected] of reports) {
     expect(decodeBinaryEvent(slb(unitId, tags))).toMatchObject({

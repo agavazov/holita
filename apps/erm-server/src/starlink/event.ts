@@ -111,6 +111,9 @@ const binarySizes = new Map([
   [0x03, 4],
   [0x0c, 4],
   [0x08, 1],
+  // CB6711TE's 2026-11-04 eData 405 report carries one opaque byte at tag 04.
+  // Its following tags and trailing eData match Karma; preserve it without assigning a meaning.
+  [0x04, 1],
   [0x0e, 4],
   [0x19, 8],
   [0x06, 1],
@@ -182,6 +185,7 @@ export function decodeBinaryEvent(raw: Buffer): DecodedEvent | undefined {
   const backup = unsigned(0x21);
   const eventId = unsigned(0x08);
   const flags = values.get(0x32)?.[0];
+  const binary04 = values.get(0x04);
   const edata = eventId === 33 ? decodeEdata(extra.split(',')) : undefined;
   const text = (value: number | null | undefined): string | null =>
     value === null || value === undefined ? null : String(value);
@@ -217,6 +221,7 @@ export function decodeBinaryEvent(raw: Buffer): DecodedEvent | undefined {
       '#NT#': text(unsigned(0x51)),
       '#IGN#': flags === undefined ? null : (flags & 0x01) !== 0 ? '1' : '0',
       unknown: [values.get(0x27)?.toString('hex') ?? '', values.get(0x32)?.toString('hex') ?? ''],
+      ...(binary04 === undefined ? {} : { binary04: binary04.toString('hex') }),
       extra: extra.split(','),
       ...(edata ? { edata } : {}),
     },

@@ -21,6 +21,7 @@ import { deviceTelemetryRequest, type DeviceTelemetryRequest } from './device-re
 import { displayText } from './display-text.js';
 import { deviceTelemetryQueries, telemetryPage, telemetryQuery } from './telemetry-query.js';
 import { TelemetryRepository } from './telemetry.repository.js';
+import { edataParameterLabel } from './edata-catalog.js';
 
 // Fleet's telemetry feed carries only the eData reports it imports, in the shapes agreed for
 // ADR 0008; any other report, or a value outside those shapes, is null.
@@ -313,6 +314,10 @@ export class TelemetryService {
                   signalQuality(row.signalQualityEvent),
                 ),
                 firmwareVersion: firmwareReading(row.firmwareCommand),
+                edataMeasurements: row.edataMeasurements.map((measurement) => ({
+                  ...measurement,
+                  ...edataParameterLabel(measurement.parameterId),
+                })),
                 health: {
                   lastFrameAgeSeconds,
                   expectedIntervalSeconds,

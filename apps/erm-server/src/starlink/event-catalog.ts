@@ -116,6 +116,68 @@ export const starlinkEvents = new Map(
   entries.map(([id, en, bg, category, severity]) => [id, { en, bg, category, severity }]),
 );
 
+// StarLink 02 diagnostic codes, not vehicle DTCs:
+// docs/discocan/erm-resources/starlink-online-protocol/authenticated/pages/E2.md
+// https://sweb.erm.co.il/protocol/?i=E2 (archived 2026-10-29).
+const diagnosticCodes: ReadonlyMap<string, readonly [string, string]> = new Map([
+  ['1', ['SIM card not inserted', 'SIM картата не е поставена']],
+  ['2', ['Unable to register to network', 'Неуспешна регистрация в мрежата']],
+  ['3', ['Unable to connect to data network', 'Няма връзка с мрежата за данни']],
+  ['4', ['Unable to connect to server', 'Няма връзка със сървъра']],
+  ['5', ['No communication with GNSS', 'Няма комуникация с GNSS']],
+  ['6', ['Unable to send SMS', 'Неуспешно изпращане на SMS']],
+  ['7', ['Keep-alive not received from server', 'Не е получен keep-alive от сървъра']],
+  ['8', ['GNSS cannot find current location', 'GNSS не намира текущото местоположение']],
+  ['9', ['Message logger is full', 'Паметта за съобщения е пълна']],
+  ['10', ['Incoming SMS rejected (not from server)', 'Входящ SMS е отхвърлен (не е от сървъра)']],
+  ['11', ['Powering off due to low backup battery', 'Изключване поради изтощена резервна батерия']],
+  ['12', ['Too many eNet3 errors', 'Твърде много грешки в eNet3']],
+  ['13', ['Too many eNet2 errors', 'Твърде много грешки в eNet2']],
+  ['14', ['Global SMS daily limit reached', 'Достигнат е общият дневен лимит за SMS']],
+  ['15', ['Server SMS daily limit reached', 'Достигнат е дневният лимит за SMS към сървъра']],
+  ['16', ['Simple SMS daily limit reached', 'Достигнат е дневният лимит за Simple SMS']],
+  ['17', ['Unwanted disconnection from server', 'Нежелано прекъсване на връзката със сървъра']],
+  ['18', ['Unable to send data to server', 'Неуспешно изпращане на данни към сървъра']],
+  ['19', ['Modem reset limit triggered', 'Модемът е рестартиран според лимита за рестартиране']],
+  ['20', ['Cellular signal degradation', 'Влошен клетъчен сигнал']],
+  ['21', ['GNSS entered garage mode', 'GNSS е влязъл в гаражен режим']],
+  ['22', ['GNSS exited garage mode', 'GNSS е излязъл от гаражен режим']],
+  ['23', ['Server authentication failed', 'Неуспешно удостоверяване пред сървъра']],
+  ['24', ['System reset', 'Системата е рестартирана']],
+  ['25', ['CAN odometer not received', 'Не е получен CAN километраж']],
+  ['26', ['SIM refreshed', 'SIM картата е обновена']],
+  ['27', ['Parameter corruption detected', 'Открити са повредени параметри']],
+  ['28', ['Modem turned off because of no signal', 'Модемът е изключен поради липса на сигнал']],
+  ['29', ['Modem turned back on', 'Модемът е включен отново']],
+  ['30', ['Incoming SMS received', 'Получен е входящ SMS']],
+  ['31', ['CAN baud rate detected automatically', 'Скоростта на CAN е разпозната автоматично']],
+  ['32', ['Incoming call rejected', 'Входящото повикване е отхвърлено']],
+  ['33', ['Network technology changed', 'Променена е мрежовата технология']],
+  ['34', ['GNSS firmware update', 'Обновяване на фърмуера на GNSS']],
+  ['35', ['SIM card detected', 'Открита е SIM карта']],
+]);
+
+export function eventName(eventId: string | null, fields: unknown, language: 'BG' | 'EN') {
+  const entry = starlinkEvents.get(eventId ?? '');
+  const name = (language === 'BG' ? entry?.bg : entry?.en) ?? null;
+  if (
+    name === null ||
+    eventId !== '02' ||
+    typeof fields !== 'object' ||
+    fields === null ||
+    !('extra' in fields)
+  ) {
+    return name;
+  }
+  const extra: unknown = fields.extra;
+  if (!Array.isArray(extra) || typeof extra[0] !== 'string' || typeof extra[1] !== 'string') {
+    return name;
+  }
+  const code = `${extra[0]},${extra[1]}`;
+  const meaning = diagnosticCodes.get(extra[1])?.[language === 'BG' ? 1 : 0];
+  return `${name}: ${meaning ? `${meaning} (${code})` : code}`;
+}
+
 export function eventClassification(eventId: string | null): {
   category: ErmEventCategory;
   severity: ErmEventSeverity;

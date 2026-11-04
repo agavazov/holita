@@ -62,6 +62,13 @@ through the gateway. There is no arbitrary command input. See
 [setup and operator access](development.md#erm-device-server) and the
 [ERM SDL](../../apps/erm-server/src/modules/telemetry/telemetry.graphql).
 
+`ErmUnitState.edataMeasurements` returns the latest decoded `405` value per parameter with its
+own report time and Monitor 9.56 catalog name/unit. Unknown or ambiguous catalog IDs remain raw
+IDs. Values retain their reported hexadecimal bytes; catalog units do not establish a physical
+conversion. The Device overview shows these readings and an empty state without received `405`
+measurements. Event `02` names include the archived StarLink diagnostic meaning and raw level/code;
+unknown codes retain the raw level/code.
+
 ### Branch settings
 
 `fleetSettings` returns defaults without inserting. `updateFleetSettings` replaces all six

@@ -122,6 +122,15 @@ query AdminControlCenterDevice($id: ID!, $language: ErmLanguage!) {
         value
         observedAt
       }
+      edataMeasurements {
+        parameterId
+        name
+        unit
+        parameterType
+        valueSize
+        valueHex
+        observedAt
+      }
       health {
         lastCloseReason
         lastClosedAt

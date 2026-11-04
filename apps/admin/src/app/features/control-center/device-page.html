@@ -301,6 +301,54 @@
                         }
                       </section>
                     }
+                    <section
+                      class="app-card control-center__panel"
+                      [attr.aria-label]="text().edataMeasurements"
+                    >
+                      <h2>{{ text().edataMeasurements }}</h2>
+                      @if (state()?.edataMeasurements?.length) {
+                        <p class="app-muted">{{ text().edataMeasurementsHint }}</p>
+                        <dl class="app-facts">
+                          @for (
+                            measurement of state()?.edataMeasurements;
+                            track measurement.parameterId
+                          ) {
+                            <div>
+                              <dt>
+                                {{
+                                  measurement.name ??
+                                    format(text().edataParameterId, { id: measurement.parameterId })
+                                }}
+                                @if (measurement.name) {
+                                  <span class="app-muted"
+                                    >·
+                                    {{
+                                      format(text().edataParameterId, {
+                                        id: measurement.parameterId,
+                                      })
+                                    }}</span
+                                  >
+                                }
+                              </dt>
+                              <dd>
+                                <span class="control-center__mono">{{ measurement.valueHex }}</span>
+                                · {{ date(measurement.observedAt) }}
+                                @if (measurement.unit) {
+                                  <span class="app-muted"
+                                    >·
+                                    {{
+                                      format(text().edataCatalogUnit, { unit: measurement.unit })
+                                    }}</span
+                                  >
+                                }
+                              </dd>
+                            </div>
+                          }
+                        </dl>
+                      } @else {
+                        <p class="app-muted">{{ text().edataMeasurementsEmpty }}</p>
+                      }
+                    </section>
                   </div>
                   @if (position(); as position) {
                     <holita-map-preview
