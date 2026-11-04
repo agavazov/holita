@@ -1952,7 +1952,7 @@ it('persists captured connection lifecycle and raw frames through the production
       parameterGateway = { ...scenario, commands: [], writes: 0 };
       const change = await runParameterChange(
         database.client,
-        { unitId, parameter: '0774', value: '120', restoreAfter: scenario.restoreAfter },
+        { unitId, parameter: '0774', value: '120', restoreAfter: scenario.restoreAfter ?? false },
         configurationRuntime,
       );
       expect({ name: scenario.name, status: change.status }).toEqual({

@@ -67,6 +67,17 @@ class SocketFrames {
 
 it('acknowledges primary units, filters owned confirmations and completes allowlisted commands', async () => {
   const definition = '030D000000000000000100010000000000000000003C';
+  // A whole 49-byte globals write: only the gateway's recorded workflow route may send it.
+  const globals = [
+    '19',
+    '0',
+    '19',
+    '302',
+    '0',
+    '1',
+    '1',
+    '03E903E80102080001010001010100'.padEnd(98, '0'),
+  ];
   for (const fields of [
     ['19', '0', '19', '301', '0', '1', '1', `02${definition}`],
     ['19', '0', '19', '301', '0', '1', '1', '10030D'],
@@ -217,6 +228,7 @@ it('acknowledges primary units, filters owned confirmations and completes allowl
         command: '30',
         fields: ['19', '0', '19', '301', '0', '1', '1', `02${definition}`, ''],
       },
+      { command: '30', fields: globals },
     ]) {
       await expect(listener.sendCommand(unitId, invalid)).rejects.toBeInstanceOf(
         BadRequestException,
@@ -254,11 +266,18 @@ it('acknowledges primary units, filters owned confirmations and completes allowl
         responseFields: ['VER=2.44'],
         expectedFields: ['VER=2.44'],
       },
+      {
+        command: '30',
+        fields: globals,
+        responseFields: globals,
+        expectedFields: globals,
+        recorded: true,
+      },
     ]) {
-      const readCommand = listener.sendCommand(unitId, {
-        command: input.command,
-        fields: input.fields,
-      });
+      const command = { command: input.command, fields: input.fields };
+      const readCommand = input.recorded
+        ? listener.sendRecordedGlobals(unitId, command)
+        : listener.sendCommand(unitId, command);
       const readFrame = parseFrame((await deviceFrames.next()).subarray(0, -2));
       expect(readFrame).toMatchObject({ command: input.command, checksum: 'ok' });
       expect(readFrame?.fields.map((field) => field.toString())).toEqual(input.fields);

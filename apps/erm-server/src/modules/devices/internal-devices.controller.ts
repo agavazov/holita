@@ -25,7 +25,7 @@ export class InternalDevicesController {
       changeId,
       unitId,
     );
-    return this.devices.sendCommand(unitId, command);
+    return this.devices.sendRecordedGlobals(unitId, command);
   }
 
   @Post(':unitId/commands')

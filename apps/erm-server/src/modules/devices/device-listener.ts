@@ -1,7 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import net from 'node:net';
 import type { CaptureRecord } from './capture-record.js';
-import { validateCommand } from './command.js';
+import { validateCommand, type DeviceCommand } from './command.js';
 import {
   DeviceSession,
   type CommandObserver,
@@ -52,7 +52,15 @@ export class DeviceListener {
   }
 
   async sendCommand(unitId: string, body: unknown): Promise<CommandResult> {
-    const command = validateCommand(body);
+    return this.send(unitId, validateCommand(body));
+  }
+
+  /** A 302 the gateway built from a recorded eData change submission; not an operator command. */
+  async sendRecordedGlobals(unitId: string, command: DeviceCommand): Promise<CommandResult> {
+    return this.send(unitId, command);
+  }
+
+  private send(unitId: string, command: DeviceCommand): Promise<CommandResult> {
     const session = [...this.sessions]
       .reverse()
       .find((candidate) => candidate.info()?.unitId.toUpperCase() === unitId.toUpperCase());

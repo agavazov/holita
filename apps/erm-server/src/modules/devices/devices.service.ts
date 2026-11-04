@@ -43,6 +43,10 @@ export class DevicesService implements OnModuleInit, OnModuleDestroy {
     return this.listener.sendCommand(unitId, command);
   }
 
+  sendRecordedGlobals(unitId: string, command: DeviceCommand) {
+    return this.listener.sendRecordedGlobals(unitId, command);
+  }
+
   async onModuleDestroy(): Promise<void> {
     await this.listener.stop();
     await this.capture.drain();
