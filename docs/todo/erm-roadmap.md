@@ -122,26 +122,17 @@ reopen them as roadmap tasks.
 
 ## CB6721TE recovery
 
-Truck CB6721TE, Karma car `16593`, IMEI `862129080268844` (Scout): the former eData
-configuration is not recovered. The retained state has only parameter `1` (RPM), interval
-30 seconds, and rule `2`; parameter `781` was removed. Stored readback is not proof of live RPM
-or a known-good restore point. There is no saved working export in the available event history.
+Truck CB6721TE, Karma car `16593`, IMEI `862129080268844` (Scout). On 2026-11-04 its eData
+parameter set was restored to the ten definitions of the untouched sister truck CB2792TK at 180 s
+(IDs 1, 2, 5, 64, 152, 188, 539, 687, 785, 1657; the owner's option A): nine single-record
+additions and ID 1 from 30 s to 180 s, each verified by a whole-set readback. Profile 343, the
+inert rule `2` and the globals are unchanged.
 
-- With ignition and CAN active, verify plausible parameter `1` reports over several 30-second
-  intervals. If absent/invalid, consult the installer before further configuration changes.
-- Confirm installed hardware/firmware, extended version fields and compatible vehicle profile;
-  check reachability and capture a fresh complete readback immediately before recovery.
-- Obtain the previous working Monitor export or an installation-specific verified configuration,
-  including installer/provider archives and outbound command history. Measurements alone cannot
-  reconstruct CAN decoding/profile definitions. Clarify `19,0,154,1` and correlate acknowledgements.
-- Restore remotely only from a verified configuration over a usable connection, with readback
-  and fresh telemetry. Never use factory reset, guessed payloads or the incident commands as a fallback.
-- If access, configuration or successful verification cannot be established remotely, arrange
-  on-site installer work: power, CAN/eNet, modules and the proper Monitor/adaptor; back up before
-  restoring. This truck's recovery precedes its routing rollout.
-- Close only after the [previously observed parameters](../archive/karma/karma-api-v2/observed-parameters.md)
-  return over multiple intervals with CAN available, GPS/events still work, and persistence is
-  checked across a normal trip/ignition cycle when practicable.
+- Verify fresh `405` reports of all ten IDs about every 180 s with plausible values over a normal
+  trip and ignition cycle, compared with CB2792TK, with GPS and events still working.
+- If they are missing or implausible, consult the installer before further configuration changes:
+  power, CAN/eNet, modules and the proper Monitor/adaptor; back up before restoring. Never use
+  factory reset, guessed payloads or the incident commands as a fallback.
 
 ## Questions for ERM
 
