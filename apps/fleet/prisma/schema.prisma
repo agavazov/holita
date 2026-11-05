@@ -724,6 +724,8 @@ model KarmaMonitoringTruck {
   karmaDeviceId String @db.VarChar(128)
   displayName String @db.VarChar(256)
   lastDataAt DateTime? @db.Timestamptz(3)
+  ignitionOffAt DateTime? @db.Timestamptz(3)
+  recoveryBlocked Boolean @default(false)
   routing FleetDeviceRouting?
   routingAheadPolls Int @default(0)
   routingAheadSince DateTime? @db.Timestamptz(3)
@@ -739,6 +741,7 @@ model KarmaMonitoringTruck {
   lastCommandCompletedAt DateTime? @db.Timestamptz(3)
   lastCommandOutcome KarmaMonitoringCommandOutcome?
   events KarmaMonitoringEvent[]
+  recoveryAttempts KarmaRecoveryAttempt[]
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
@@ -771,4 +774,33 @@ model KarmaMonitoringEvent {
   @@index([tenantId, branchId, occurredAt(sort: Desc), id])
   @@index([tenantId, branchId, karmaCarId, kind, occurredAt(sort: Desc)])
   @@map("karmaMonitoringEvent")
+}
+
+enum KarmaRecoveryAttemptStatus {
+  SUBMITTING @map("submitting")
+  ACCEPTED @map("accepted")
+  UNCERTAIN @map("uncertain")
+  FAILED @map("failed")
+  @@map("karmaRecoveryAttemptStatus")
+}
+
+// Recovery intents are committed before dispatch; uncertainty is never replayed.
+model KarmaRecoveryAttempt {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  karmaCarId String @db.VarChar(32)
+  deviceImei String @db.VarChar(15)
+  truck KarmaMonitoringTruck @relation(fields: [tenantId, branchId, karmaCarId], references: [tenantId, branchId, karmaCarId], onDelete: Restrict, onUpdate: Restrict)
+  status KarmaRecoveryAttemptStatus @default(SUBMITTING)
+  requestedAt DateTime @db.Timestamptz(3)
+  completedAt DateTime? @db.Timestamptz(3)
+  ignitionOffAt DateTime @db.Timestamptz(3)
+  lastDataAt DateTime @db.Timestamptz(3)
+  queueIds String[] @default([])
+  errorCode String? @db.VarChar(64)
+
+  @@index([tenantId, branchId, deviceImei, requestedAt(sort: Desc)])
+  @@index([tenantId, branchId, karmaCarId, requestedAt(sort: Desc)])
+  @@map("karmaRecoveryAttempt")
 }

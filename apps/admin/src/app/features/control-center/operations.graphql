@@ -100,12 +100,26 @@ query AdminControlCenterDevice($id: ID!, $language: ErmLanguage!) {
     notes
     options
     routing
+    latestRecoveryAttempt {
+      id
+      status
+      requestedAt
+      completedAt
+      errorCode
+    }
     vehicle {
       id
       licensePlate
     }
     ermState {
       ...AdminControlCenterStateFields
+      recovery {
+        id
+        startedAt
+        finishedAt
+        outcome
+        reason
+      }
       mainVoltage {
         value
         observedAt

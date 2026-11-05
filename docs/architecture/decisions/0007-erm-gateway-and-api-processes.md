@@ -9,7 +9,7 @@ The provider-level ERM data had no Branch scope, and operators had no authentica
 
 ## Decision
 
-Keep one codebase, `apps/erm-server`, and two independently deployed processes selected by
+Keep one codebase, `apps/erm-server`, and independently deployed processes selected by
 `ERM_ROLE`, sharing the `holita_erm` database:
 
 - **`gateway`** keeps long-lived device sessions, the Karma relay, confirmations,
@@ -18,6 +18,10 @@ Keep one codebase, `apps/erm-server`, and two independently deployed processes s
 - **`api`** serves the schema-first GraphQL subgraph on loopback 11017 from the database,
   asks the gateway for live sessions and delivers commands through its internal API.
   API deployments leave the gateway and truck sessions running.
+- **`recovery`** serves only the read-only configuration listener on TCP 11510. It reads
+  primary routing 0049/0050, confirms the reply and closes without a parameter write. Its own
+  `ermRecoverySession` records never alter gateway connection lifecycles. Deploy it separately;
+  the Branch-scoped Device state exposes its latest outcome.
 
 Fleet owns the Device registry and its Tenant/Branch authorization. ERM data reaches a Branch
 only through `FleetDevice` fields `ermState`, `ermEvents`, `ermCommands` and `ermFrames`, resolved

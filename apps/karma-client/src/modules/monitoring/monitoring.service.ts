@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { KarmaTransport } from '../../integrations/karma/karma-transport.js';
 import { cars } from '../cars/cars-response.js';
 import { location } from '../location/location-response.js';
@@ -8,6 +14,7 @@ import {
 } from '../history/diagnostic-history-query.js';
 import { diagnosticReport } from '../history/diagnostic-report.js';
 import { positionEventRows } from '../history/history-response.js';
+import { configurationRequest } from '../device-configuration/configuration-input.js';
 
 function unavailable(code = 'MONITORING_INVALID_RESPONSE'): never {
   throw new ServiceUnavailableException({
@@ -44,11 +51,9 @@ export class MonitoringService {
   async status() {
     const signal = AbortSignal.timeout(8000);
     const inventory = cars(await this.karma.read('cars', new URLSearchParams(), signal));
-    const source = await this.karma.read(
-      'location',
-      new URLSearchParams({ 'fields[]': 'pdt' }),
-      signal,
-    );
+    const parameters = new URLSearchParams({ 'fields[]': 'pdt' });
+    parameters.append('fields[]', 'spd');
+    const source = await this.karma.read('location', parameters, signal);
     if (!Array.isArray(source)) {
       unavailable();
     }
@@ -87,8 +92,27 @@ export class MonitoringService {
         deviceId: car.deviceId,
         displayName: car.carNumber,
         lastDataAt: instant,
+        // Event 05 is the explicit ignition-off transition. Other reports do not establish it.
+        ignitionOffAt: data?.eventId === '5' && data.spd === 0 ? instant : null,
       };
     });
+  }
+
+  async recovery(body: unknown) {
+    const input = configurationRequest(body);
+    const signal = AbortSignal.timeout(8000);
+    const targets = cars(await this.karma.readConfigurationTarget(input.carId, signal));
+    const target = targets[0];
+    if (targets.length > 1 || (target && target.id !== input.carId)) {
+      unavailable();
+    }
+    if (!target) {
+      throw new NotFoundException('Karma target was not found');
+    }
+    if (target.deviceId !== input.expectedDeviceId) {
+      throw new ConflictException('Karma target device has changed');
+    }
+    return this.karma.requestBackupRecovery(input.carId, signal);
   }
 
   async history(body: unknown) {

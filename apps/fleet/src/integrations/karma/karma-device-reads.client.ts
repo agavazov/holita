@@ -656,16 +656,17 @@ export class KarmaDeviceReadsClient {
   }
 
   monitoring(
-    action: 'status' | 'history',
+    action: 'status' | 'history' | 'recovery',
     body: Record<string, string | number | string[]> = {},
   ): Promise<unknown> {
-    return this.post(action === 'status' ? 'monitoring-status' : 'monitoring-history', body);
+    return this.post(`monitoring-${action}`, body);
   }
 
   private async post(
     action:
       | 'monitoring-status'
       | 'monitoring-history'
+      | 'monitoring-recovery'
       | 'target'
       | 'request'
       | 'observations'

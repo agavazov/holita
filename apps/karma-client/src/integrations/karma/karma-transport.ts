@@ -124,6 +124,10 @@ export class KarmaTransport {
     return this.submitEdataCommand(carId, '0802BC', signal);
   }
 
+  requestBackupRecovery(carId: string, signal: AbortSignal) {
+    return this.submitCommand(carId, '98,1,65.108.137.165,11510', signal);
+  }
+
   requestRule(carId: string, rawDefinition: string, signal: AbortSignal) {
     try {
       const rule = decodeRuleRecord(rawDefinition);
@@ -134,12 +138,16 @@ export class KarmaTransport {
     return this.submitEdataCommand(carId, `04${rawDefinition.toUpperCase()}`, signal);
   }
 
-  private async submitEdataCommand(
+  private submitEdataCommand(
     carId: string,
     payload: '0702BC' | '0802BC' | '1F' | '19' | '' | `02${string}` | `04${string}`,
     signal: AbortSignal,
     command: '301' | '306' = '301',
   ) {
+    return this.submitCommand(carId, `30,1,19,0,19,${command},0,1,1,${payload}`, signal);
+  }
+
+  private async submitCommand(carId: string, message: string, signal: AbortSignal) {
     let session: string;
     try {
       session = await this.authenticate(signal);
@@ -154,7 +162,7 @@ export class KarmaTransport {
         headers: { 'content-type': 'application/json', accept: 'application/json' },
         body: JSON.stringify({
           car_id: [carId],
-          message: `30,1,19,0,19,${command},0,1,1,${payload}`,
+          message,
           karma_sid: session,
         }),
       });

@@ -182,48 +182,49 @@ export class TelemetryRepository {
       lastClosedAt: sqlNullableDate(row, 'lastClosedAt'),
       upstreamClosesLast24h: sqlInteger(row, 'upstreamClosesLast24h'),
     }));
-    const [selectedEvents, firmwareCommands, upstreamFrames, edataRows] = await Promise.all([
-      this.prisma.client.ermEvent.findMany({
-        where: {
-          id: {
-            in: rows.flatMap((row) =>
-              [
-                row.latestEventId,
-                row.lastPositionId,
-                row.latestAlarmId,
-                row.mainVoltageEventId,
-                row.backupVoltageEventId,
-                row.signalQualityEventId,
-              ].flatMap((id) => (id === null ? [] : [BigInt(id)])),
-            ),
+    const [selectedEvents, firmwareCommands, upstreamFrames, edataRows, recoverySessions] =
+      await Promise.all([
+        this.prisma.client.ermEvent.findMany({
+          where: {
+            id: {
+              in: rows.flatMap((row) =>
+                [
+                  row.latestEventId,
+                  row.lastPositionId,
+                  row.latestAlarmId,
+                  row.mainVoltageEventId,
+                  row.backupVoltageEventId,
+                  row.signalQualityEventId,
+                ].flatMap((id) => (id === null ? [] : [BigInt(id)])),
+              ),
+            },
           },
-        },
-        include: { frame: { select: { receivedAt: true } } },
-      }),
-      this.prisma.client.ermCommand.findMany({
-        where: {
-          id: {
-            in: rows.flatMap((row) =>
-              row.firmwareCommandId === null ? [] : [row.firmwareCommandId],
-            ),
+          include: { frame: { select: { receivedAt: true } } },
+        }),
+        this.prisma.client.ermCommand.findMany({
+          where: {
+            id: {
+              in: rows.flatMap((row) =>
+                row.firmwareCommandId === null ? [] : [row.firmwareCommandId],
+              ),
+            },
           },
-        },
-      }),
-      this.prisma.client.ermFrame.findMany({
-        where: {
-          direction: 'UPSTREAM',
-          command: { in: ['04', '46'] },
-          partial: false,
-          receivedAt: { lte: snapshot },
-          OR: [
-            { unitId: { in: unitIds } },
-            { unitId: null, connection: { unitId: { in: unitIds } } },
-          ],
-        },
-        include: { connection: { select: { unitId: true } } },
-        orderBy: [{ receivedAt: 'desc' }, { id: 'desc' }],
-      }),
-      this.prisma.client.$queryRaw(Prisma.sql`
+        }),
+        this.prisma.client.ermFrame.findMany({
+          where: {
+            direction: 'UPSTREAM',
+            command: { in: ['04', '46'] },
+            partial: false,
+            receivedAt: { lte: snapshot },
+            OR: [
+              { unitId: { in: unitIds } },
+              { unitId: null, connection: { unitId: { in: unitIds } } },
+            ],
+          },
+          include: { connection: { select: { unitId: true } } },
+          orderBy: [{ receivedAt: 'desc' }, { id: 'desc' }],
+        }),
+        this.prisma.client.$queryRaw(Prisma.sql`
         SELECT DISTINCT ON (event."unitId", parameter.parameter)
           event."unitId", parameter.parameter AS "parameterId", parameter.type AS "parameterType",
           parameter."valueSize", parameter."valueHex",
@@ -237,7 +238,12 @@ export class TelemetryRepository {
         ORDER BY event."unitId", parameter.parameter,
           coalesce(event."eventTime", frame."receivedAt") DESC, event.id DESC
       `),
-    ]);
+        this.prisma.client.ermRecoverySession.findMany({
+          where: { unitId: { in: unitIds }, finishedAt: { lte: snapshot } },
+          distinct: ['unitId'],
+          orderBy: [{ startedAt: 'desc' }, { id: 'desc' }],
+        }),
+      ]);
     const edataMeasurements = sqlRows(edataRows).map((row) => {
       const observedAt = sqlNullableDate(row, 'observedAt');
       if (observedAt === null) {
@@ -275,6 +281,7 @@ export class TelemetryRepository {
       );
       return {
         ...row,
+        recovery: recoverySessions.find((session) => session.unitId === row.unitId) ?? null,
         latestEvent: events.get(row.latestEventId ?? '') ?? null,
         lastPosition: events.get(row.lastPositionId ?? '') ?? null,
         latestAlarm: events.get(row.latestAlarmId ?? '') ?? null,

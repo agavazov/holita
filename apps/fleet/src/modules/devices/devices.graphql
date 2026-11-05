@@ -47,6 +47,8 @@ type FleetDevice @key(fields: "id") {
   status: FleetDeviceStatus!
   "Compares the latest data Karma and holita received, not the unit's configuration; null when the unit never reported to holita or Fleet's ERM import is disabled."
   routing: FleetDeviceRouting
+  "Latest automatic recovery intent and Karma queue outcome; acceptance does not confirm a device session."
+  latestRecoveryAttempt: FleetRecoveryAttempt
   model: FleetDeviceModel
   "ERM serial number from the unit's label; unique within the Branch."
   serialNumber: String
@@ -65,6 +67,24 @@ type FleetDevice @key(fields: "id") {
   diagnostics: FleetDeviceDiagnosticSummary!
   createdAt: DateTime!
   updatedAt: DateTime!
+}
+
+enum FleetRecoveryAttemptStatus {
+  SUBMITTING
+  ACCEPTED
+  UNCERTAIN
+  FAILED
+}
+
+type FleetRecoveryAttempt {
+  id: ID!
+  status: FleetRecoveryAttemptStatus!
+  requestedAt: DateTime!
+  completedAt: DateTime
+  ignitionOffAt: DateTime!
+  lastDataAt: DateTime!
+  queueIds: [String!]!
+  errorCode: String
 }
 
 "Recorded DTC and CAN faults for the current vehicle/IMEI pair; these are historical evidence, not an active-fault assertion."

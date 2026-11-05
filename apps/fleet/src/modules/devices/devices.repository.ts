@@ -176,7 +176,15 @@ export class DevicesRepository {
   routing(scope: FleetScope, imeis: string[]) {
     return this.prisma.client.karmaMonitoringTruck.findMany({
       where: { ...scope, karmaDeviceId: { in: imeis } },
-      select: { karmaDeviceId: true, routing: true },
+      select: {
+        karmaDeviceId: true,
+        routing: true,
+        recoveryAttempts: {
+          where: scope,
+          orderBy: [{ requestedAt: 'desc' }, { id: 'desc' }],
+          take: 1,
+        },
+      },
     });
   }
 

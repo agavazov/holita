@@ -289,7 +289,7 @@ export class TelemetryService {
           row.latestEvent?.engineOn === true || (row.latestEvent?.speedKmh ?? 0) > 0 ? 300 : 3600;
         return [
           row.unitId,
-          !unit && row.connectionId === null
+          !unit && row.connectionId === null && row.recovery === null
             ? null
             : {
                 unitId: row.unitId,
@@ -297,6 +297,14 @@ export class TelemetryService {
                 mode: unit?.mode === 'primary' ? 'PRIMARY' : unit ? 'MIRROR' : null,
                 connectedSince: unit?.connectedSince ?? null,
                 lastFrameAt,
+                recovery:
+                  row.recovery === null
+                    ? null
+                    : {
+                        ...row.recovery,
+                        startedAt: row.recovery.startedAt.toISOString(),
+                        finishedAt: row.recovery.finishedAt.toISOString(),
+                      },
                 latestEvent: row.latestEvent ? eventView(row.latestEvent) : null,
                 lastPosition: row.lastPosition ? eventView(row.lastPosition) : null,
                 latestAlarm: row.latestAlarm ? eventView(row.latestAlarm) : null,

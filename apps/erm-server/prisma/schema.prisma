@@ -50,6 +50,26 @@ enum ErmChecksum {
   @@map("ermChecksum")
 }
 
+enum ErmRecoveryOutcome {
+  ALREADY_HOLITA @map("alreadyHolita")
+  NEEDS_OPERATOR @map("needsOperator")
+  @@map("ermRecoveryOutcome")
+}
+
+model ErmRecoverySession {
+  id String @id @default(uuid()) @db.Uuid
+  unitId String? @db.VarChar(15)
+  peer String
+  startedAt DateTime @db.Timestamptz(3)
+  finishedAt DateTime @db.Timestamptz(3)
+  outcome ErmRecoveryOutcome
+  reason String
+  primaryHost String?
+  primaryPort String?
+  @@index([unitId, startedAt(sort: Desc)])
+  @@map("ermRecoverySession")
+}
+
 model ErmConnection {
   id String @id @default(uuid()) @db.Uuid
   peer String

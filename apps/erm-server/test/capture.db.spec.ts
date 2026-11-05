@@ -2,7 +2,9 @@ import { expect, it, jest } from '@jest/globals';
 import { ExecutionContextHost } from '@nestjs/core/helpers/execution-context-host.js';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { randomUUID } from 'node:crypto';
+import { once } from 'node:events';
 import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
+import net from 'node:net';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer, type Server } from 'node:http';
@@ -12,6 +14,12 @@ import { PrismaService } from '../src/database/prisma.service.js';
 import type { CaptureRecord } from '../src/modules/devices/capture-record.js';
 import { DeviceCaptureService } from '../src/modules/devices/device-capture.service.js';
 import { DevicesRepository } from '../src/modules/devices/devices.repository.js';
+import {
+  RecoveryListener,
+  type RecoveryResult,
+} from '../src/modules/recovery/recovery-listener.js';
+import { RecoveryRepository } from '../src/modules/recovery/recovery.repository.js';
+import { FrameSplitter, parseFrame, type ParsedFrame } from '../src/starlink/index.js';
 import { redecodeFrames } from '../src/modules/devices/redecode.js';
 import { DEFAULT_EVENT_STRUCTURE } from '../src/starlink/event.js';
 import { DevicesService } from '../src/modules/devices/devices.service.js';
@@ -72,6 +80,7 @@ it('persists captured connection lifecycle and raw frames through the production
       providers: [
         DeviceCaptureService,
         DevicesRepository,
+        RecoveryRepository,
         TelemetryRepository,
         TelemetryService,
         LiveDevicesService,
@@ -126,6 +135,87 @@ it('persists captured connection lifecycle and raw frames through the production
 
     const connection = 1;
     const unitId = '862129080366630';
+    const recoveryUnitId = '862129080367646';
+    const recoveryRepository = module.get(RecoveryRepository);
+    const recoveryFrame = (command: string, reference: string, fields: string[] = []) => {
+      const body = [`SLU${recoveryUnitId}`, command, reference, ...fields].join(',');
+      const sum = [...Buffer.from(body)].reduce((total, byte) => total + byte, 0);
+      return Buffer.from(`$${body}*${(sum % 256).toString(16).toUpperCase().padStart(2, '0')}\r\n`);
+    };
+    // A fake unit exercises the recovery contract without contacting Karma or a device port.
+    for (const scenario of [
+      { primaryHost: '65.108.137.165', outcome: 'ALREADY_HOLITA' },
+      { primaryHost: 'in.karma.online', outcome: 'NEEDS_OPERATOR' },
+    ]) {
+      let complete: (result: RecoveryResult) => void = () => undefined;
+      let fail: (error: unknown) => void = () => undefined;
+      const outcome = new Promise<RecoveryResult>((resolve, reject) => {
+        complete = resolve;
+        fail = reject;
+      });
+      const listener = new RecoveryListener((result) => {
+        void recoveryRepository.record(result).then(() => {
+          complete(result);
+        }, fail);
+      });
+      await new Promise<void>((resolve) => listener.server.listen(0, '127.0.0.1', resolve));
+      const address = listener.server.address();
+      if (address === null || typeof address === 'string') {
+        throw new Error('Expected a fake recovery listener');
+      }
+      const device = net.connect({ host: '127.0.0.1', port: address.port });
+      const frames: ParsedFrame[] = [];
+      const splitter = new FrameSplitter();
+      device.on('data', (chunk: Buffer) => {
+        for (const capture of splitter.push(chunk)) {
+          const frame = parseFrame(capture.raw);
+          if (!frame) {
+            continue;
+          }
+          frames.push(frame);
+          if (frame.command === '45') {
+            device.write(
+              Buffer.concat([
+                recoveryFrame('02', '2', [frame.reference, '01']),
+                recoveryFrame('46', '3', ['0049', 'other.example', '0050', '500']),
+                recoveryFrame('04', '4', ['0050', '500']),
+                recoveryFrame('45', '5', ['0049', `"${scenario.primaryHost}"`, '0050', '"11500"']),
+              ]),
+            );
+          }
+        }
+      });
+      try {
+        const closed = once(device, 'close');
+        await once(device, 'connect');
+        device.write(recoveryFrame('01', '1'));
+        await closed;
+        const result = await outcome;
+        expect(result).toMatchObject({
+          unitId: recoveryUnitId,
+          outcome: scenario.outcome,
+          primaryHost: scenario.primaryHost,
+          primaryPort: '11500',
+        });
+        expect(
+          frames.map((frame) => [
+            frame.command,
+            frame.fields.map((field) => field.toString('latin1')),
+          ]),
+        ).toEqual([
+          ['45', ['0049', '0050']],
+          ['02', ['5', '01']],
+        ]);
+        expect(
+          await database.client.ermRecoverySession.findFirst({
+            where: { unitId: recoveryUnitId, startedAt: result.startedAt },
+          }),
+        ).toMatchObject({ outcome: scenario.outcome, primaryHost: scenario.primaryHost });
+      } finally {
+        device.destroy();
+        await listener.stop();
+      }
+    }
     const binary = Buffer.from([0x00, 0x10, 0x0d, 0x0a, 0x80, 0xff]);
     const holitaFrame = `$SRV${unitId},03,900000001,0774`;
     const eventFrame = `$SLU${unitId},06,2,261103142530,04,261103142520,+4238.9347,-07109.9017,002.3,180,12345.678,10052,8738,1,12.200,03.600`;

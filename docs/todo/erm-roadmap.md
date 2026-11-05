@@ -68,6 +68,11 @@ reopen them as roadmap tasks.
 
 ## Open engineering work
 
+- **Automatic backup recovery parking coverage:** the permanent read-only listener and
+  disabled-by-default Fleet recovery job accept only a latest stationary ignition-off event
+  (05), aged 10–70 minutes. Establish a broader verified ignition-state contract for ordinary
+  Karma reports before qualifying those reports; unknown state must continue to prevent `98`.
+
 - **Durable command queue and operator audit:** preserve named actor, Branch, target, intent,
   before/after evidence and uncertainty; define offline delivery, expiry/cancellation and
   device-confirmation semantics. Demo Tenant selection is not operator authorization.

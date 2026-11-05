@@ -41,10 +41,12 @@ describe('Karma monitoring persistence and scope', () => {
   const originalFlag = process.env.FLEET_KARMA_MONITORING_ENABLED;
   const originalDispatchFlag = process.env.FLEET_DEVICE_OPERATIONS_ENABLED;
   const originalTelemetryFlag = process.env.FLEET_ERM_TELEMETRY_ENABLED;
+  const originalRecoveryFlag = process.env.FLEET_ERM_RECOVERY_ENABLED;
   beforeAll(async () => {
     process.env.FLEET_KARMA_MONITORING_ENABLED = 'false';
     process.env.FLEET_DEVICE_OPERATIONS_ENABLED = 'false';
     process.env.FLEET_ERM_TELEMETRY_ENABLED = 'false';
+    process.env.FLEET_ERM_RECOVERY_ENABLED = 'false';
     database = await createTestDatabase();
     const module = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PrismaService)
@@ -81,6 +83,11 @@ describe('Karma monitoring persistence and scope', () => {
       delete process.env.FLEET_ERM_TELEMETRY_ENABLED;
     } else {
       process.env.FLEET_ERM_TELEMETRY_ENABLED = originalTelemetryFlag;
+    }
+    if (originalRecoveryFlag === undefined) {
+      delete process.env.FLEET_ERM_RECOVERY_ENABLED;
+    } else {
+      process.env.FLEET_ERM_RECOVERY_ENABLED = originalRecoveryFlag;
     }
     try {
       await app?.close();
@@ -497,6 +504,62 @@ describe('Karma monitoring persistence and scope', () => {
         },
       },
     });
+    const parkedAt = new Date(now.getTime() - 11 * 60_000);
+    await repository.updateTruck(scope, '70', { ignitionOffAt: parkedAt });
+    const recovery = await repository.beginRecovery(scope, await routingTruck(), now);
+    if (recovery === null) {
+      throw new Error('Missing recovery intent');
+    }
+    expect(recovery).toMatchObject({
+      ...scope,
+      deviceImei: device.imei,
+      status: 'SUBMITTING',
+      ignitionOffAt: parkedAt,
+    });
+    expect(await repository.beginRecovery(scope, await routingTruck(), now)).toBeNull();
+    for (const selected of otherScopes) {
+      expect(await repository.beginRecovery(selected, await routingTruck(), now)).toBeNull();
+      await repository.completeRecovery(
+        selected,
+        recovery,
+        { status: 'ACCEPTED', queueIds: ['999'], errorCode: null },
+        now,
+      );
+    }
+    expect(
+      await database.client.karmaRecoveryAttempt.findUniqueOrThrow({
+        where: { id: recovery.id },
+      }),
+    ).toMatchObject({ status: 'SUBMITTING', queueIds: [] });
+    await repository.completeRecovery(
+      scope,
+      recovery,
+      { status: 'UNCERTAIN', queueIds: [], errorCode: 'KARMA_TIMEOUT' },
+      now,
+    );
+    const later = new Date(now.getTime() + 2 * 60 * 60_000);
+    await repository.updateTruck(scope, '70', { lastDataAt: later, ignitionOffAt: parkedAt });
+    expect(await repository.beginRecovery(scope, await routingTruck(), later)).toBeNull();
+    await repository.updateTruck(scope, '70', { lastDataAt: now });
+    expect(
+      await query(
+        'query($id:ID!){fleetDevice(id:$id){latestRecoveryAttempt{id status ignitionOffAt queueIds errorCode}}}',
+        { id: device.id },
+      ),
+    ).toEqual({
+      data: {
+        fleetDevice: {
+          latestRecoveryAttempt: {
+            id: recovery.id,
+            status: 'UNCERTAIN',
+            ignitionOffAt: parkedAt.toISOString(),
+            queueIds: [],
+            errorCode: 'KARMA_TIMEOUT',
+          },
+        },
+      },
+    });
+    expect(monitoring.mock.calls.some(([action]) => action === 'recovery')).toBe(false);
     await poll(now);
     expect(await backupEvents()).toHaveLength(1);
     process.env.FLEET_ERM_TELEMETRY_ENABLED = 'false';
@@ -521,6 +584,7 @@ describe('Karma monitoring persistence and scope', () => {
     await poll(now);
     expect(await routingTruck()).toMatchObject({
       routing: 'HOLITA',
+      recoveryBlocked: false,
       routingAheadPolls: 0,
       routingAheadSince: null,
     });

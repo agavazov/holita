@@ -516,7 +516,7 @@ Karma writes its own 0049/0050 back with `46` within about ten minutes once its 
 shows another server; it did so when a unit resent an unconfirmed read-back reply to its new primary
 server. Never read 0049–0052 through Karma for a unit routed to holita.
 
-Configuration sessions (Karma command `98` to the unit) use a port in 11501–11510, forwarded like
+Configuration sessions (Karma command `98` to the unit) use a port in 11501–11509, forwarded like
 the device port 11500, so the tool runs beside the gateway with `--port <port>`; `--holita` stays
 the ordinary device endpoint written to 0049/0050:
 
@@ -545,3 +545,21 @@ ordinary connection to its primary server (about 5 minutes later on 2026-11-03).
 Run `98` sessions, for routing or this recovery, only while the truck is parked: reports a unit
 sends during a configuration session are lost (CB6711TE's ten driving reports during its
 2026-11-03 13:08 session never reached Karma and were not resent).
+
+Port **11510 is reserved for permanent read-only recovery**. Deploy the compiled ERM entry
+`apps/erm-server/dist/main.js` with `ERM_ROLE=recovery` in a separate user unit, using the ERM
+database configuration. Forward TCP 11510 to it. This role reads only 0049/0050, confirms the read
+reply and closes; it never writes routing or forwards a session to Karma. It records either
+`ALREADY_HOLITA` (65.108.137.165:11500) or `NEEDS_OPERATOR`, including a timeout, disconnect or
+unexpected destination. Deploying it does not require a gateway restart. Apply the additive ERM
+migration before deploying the recovery listener or the API that displays its results.
+
+`FLEET_ERM_RECOVERY_ENABLED=true` enables automatic requests in Fleet's existing Karma monitoring
+job, with monitoring and ERM imports enabled. It sends only `98,1,65.108.137.165,11510`, after
+recording the attempt, at most once per unit per two hours. Eligibility deliberately requires the
+latest Karma record to be a stationary ignition-off event (05), at least ten minutes old and no
+more than seventy minutes old. Ordinary reports and unknown ignition do not qualify. This uses
+the existing status poll. Acceptance means Karma queued the request, not that the unit returned;
+the Device page shows the attempt and the recovery session outcome separately. An uncertain
+submission is retained and never automatically replayed. Check the next ordinary primary
+connection; unexpected settings or missing replies need an operator.

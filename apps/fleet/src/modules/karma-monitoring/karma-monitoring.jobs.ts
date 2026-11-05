@@ -58,6 +58,14 @@ export function karmaMonitoringEnabled() {
   return value === 'true' && process.env.FLEET_ENABLED !== 'false';
 }
 
+export function ermRecoveryEnabled() {
+  const value = process.env.FLEET_ERM_RECOVERY_ENABLED ?? 'false';
+  if (value !== 'true' && value !== 'false') {
+    throw new Error('FLEET_ERM_RECOVERY_ENABLED must be true or false');
+  }
+  return value === 'true' && process.env.FLEET_ENABLED !== 'false';
+}
+
 @Injectable()
 export class KarmaMonitoringJobs {
   private readonly logger = new Logger(KarmaMonitoringJobs.name);
@@ -178,18 +186,33 @@ export class KarmaMonitoringJobs {
         const present = new Set(latest.map((truck) => truck.karmaCarId));
         for (const truck of await this.repository.trucks(scope)) {
           if (!present.has(truck.karmaCarId)) {
-            await this.repository.observe(scope, truck, settings.offlineAfterMinutes, now);
+            await this.repository.observe(
+              scope,
+              { ...truck, ignitionOffAt: null },
+              settings.offlineAfterMinutes,
+              now,
+            );
           }
         }
         statusPolled = true;
       } catch {
         await this.pollFailed(scope, null, 'STATUS_POLL', now);
         for (const truck of await this.repository.trucks(scope)) {
-          await this.repository.observe(scope, truck, settings.offlineAfterMinutes, now);
+          await this.repository.observe(
+            scope,
+            { ...truck, ignitionOffAt: null },
+            settings.offlineAfterMinutes,
+            now,
+          );
         }
       }
       if (statusPolled && ermTelemetryEnabled()) {
         await this.evaluateRouting(scope, now);
+        if (ermRecoveryEnabled()) {
+          for (const truck of await this.repository.trucks(scope)) {
+            await this.recover(scope, truck, now);
+          }
+        }
       }
     }
     for (const truck of await this.repository.trucks(scope)) {
@@ -251,6 +274,34 @@ export class KarmaMonitoringJobs {
       await this.repository.prune(scope, cutoff);
       await this.operations.pruneMonitoring(scope, cutoff);
       await this.repository.markSettings(scope, { lastRetentionAt: now });
+    }
+  }
+
+  private async recover(scope: FleetScope, truck: KarmaMonitoringTruck, now: Date) {
+    if (!/^\d{15}$/.test(truck.karmaDeviceId)) {
+      return;
+    }
+    const attempt = await this.repository.beginRecovery(scope, truck, now);
+    if (attempt === null) {
+      return;
+    }
+    try {
+      const result = await this.source.recover(truck.karmaCarId, truck.karmaDeviceId);
+      await this.repository.completeRecovery(scope, attempt, { ...result, errorCode: null }, now);
+    } catch (error) {
+      await this.repository.completeRecovery(
+        scope,
+        attempt,
+        {
+          status:
+            error instanceof KarmaDeviceReadError && error.code === 'TARGET_CHANGED'
+              ? 'FAILED'
+              : 'UNCERTAIN',
+          queueIds: [],
+          errorCode: error instanceof KarmaDeviceReadError ? error.code : 'RECOVERY_UNCONFIRMED',
+        },
+        now,
+      );
     }
   }
 

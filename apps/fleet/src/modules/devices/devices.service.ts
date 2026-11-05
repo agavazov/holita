@@ -13,6 +13,7 @@ import type {
   FleetDevice,
   FleetDevicePage,
   FleetDeviceRouting,
+  FleetRecoveryAttempt,
   FleetDeviceSortField,
   FleetDeviceActionResult,
   FleetDeviceSummary,
@@ -58,7 +59,10 @@ import { SettingsService } from '../settings/settings.service.js';
 import { ermTelemetryEnabled } from '../erm-telemetry/erm-telemetry.jobs.js';
 
 export type DeviceResult = Omit<FleetDevice, 'branch'>;
-type StoredDevice = Omit<DeviceResult, 'lastReportedAt' | 'status' | 'routing' | 'diagnostics'>;
+type StoredDevice = Omit<
+  DeviceResult,
+  'lastReportedAt' | 'status' | 'routing' | 'latestRecoveryAttempt' | 'diagnostics'
+>;
 
 const DEVICE_MODELS = Object.values(FleetDeviceModel);
 const DEVICE_OPTIONS = Object.values(FleetDeviceOption);
@@ -169,7 +173,15 @@ export class DevicesService {
   private async routing(
     scope: FleetScope,
     rows: readonly DeviceRow[],
-  ): Promise<Map<string, FleetDeviceRouting | null>> {
+  ): Promise<
+    Map<
+      string,
+      {
+        routing: FleetDeviceRouting | null;
+        latestRecoveryAttempt: FleetRecoveryAttempt | null;
+      }
+    >
+  > {
     if (!ermTelemetryEnabled() || !rows.length) {
       return new Map();
     }
@@ -182,7 +194,10 @@ export class DevicesService {
     return new Map(
       (await this.devices.routing(scope, imeis)).map((truck) => [
         truck.karmaDeviceId,
-        truck.routing,
+        {
+          routing: truck.routing,
+          latestRecoveryAttempt: truck.recoveryAttempts[0] ?? null,
+        },
       ]),
     );
   }
@@ -254,7 +269,8 @@ export class DevicesService {
         ...toDevice(row),
         status: row.status,
         lastReportedAt: row.lastReportedAt,
-        routing: routing.get(row.imei) ?? null,
+        routing: routing.get(row.imei)?.routing ?? null,
+        latestRecoveryAttempt: routing.get(row.imei)?.latestRecoveryAttempt ?? null,
         diagnostics:
           row.vehicleId === null
             ? { count: 0, latest: null }
@@ -445,7 +461,8 @@ export class DevicesService {
           : (reported.get(reportingPair(row.vehicleId, row.imei)) ?? null);
       return {
         ...toDevice(row),
-        routing: routing.get(row.imei) ?? null,
+        routing: routing.get(row.imei)?.routing ?? null,
+        latestRecoveryAttempt: routing.get(row.imei)?.latestRecoveryAttempt ?? null,
         lastReportedAt,
         status: deviceStatus(row.vehicleId, lastReportedAt, asOf, settings.notReportingHours),
         diagnostics:

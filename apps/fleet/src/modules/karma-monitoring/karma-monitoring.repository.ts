@@ -22,7 +22,7 @@ export type MonitoringEventData = Omit<
 export type MonitoringTruckData = Pick<
   KarmaMonitoringTruck,
   'karmaCarId' | 'karmaDeviceId' | 'displayName' | 'lastDataAt'
->;
+> & { ignitionOffAt?: Date | null };
 
 @Injectable()
 export class KarmaMonitoringRepository {
@@ -85,7 +85,85 @@ export class KarmaMonitoringRepository {
       if (event !== null) {
         await tx.fleetEvent.createMany({ data: [{ ...event, ...scope }], skipDuplicates: true });
       }
-      await tx.karmaMonitoringTruck.updateMany({ where: { ...scope, karmaCarId }, data });
+      await tx.karmaMonitoringTruck.updateMany({
+        where: { ...scope, karmaCarId },
+        data: { ...data, ...(data.routing === 'HOLITA' ? { recoveryBlocked: false } : {}) },
+      });
+    });
+  }
+
+  async beginRecovery(scope: FleetScope, truck: KarmaMonitoringTruck, now: Date) {
+    return this.prisma.client.$transaction(async (tx) => {
+      const current = await tx.karmaMonitoringTruck.findUnique({
+        where: { tenantId_branchId_karmaCarId: { ...scope, karmaCarId: truck.karmaCarId } },
+      });
+      if (
+        current === null ||
+        current.recoveryBlocked ||
+        current.routing !== 'KARMA_BACKUP' ||
+        current.karmaDeviceId !== truck.karmaDeviceId ||
+        current.ignitionOffAt === null ||
+        current.lastDataAt === null ||
+        current.ignitionOffAt.getTime() > now.getTime() - 10 * 60_000 ||
+        current.ignitionOffAt > current.lastDataAt ||
+        current.lastDataAt > now ||
+        current.lastDataAt.getTime() < now.getTime() - 70 * 60_000
+      ) {
+        return null;
+      }
+      const registered = await tx.device.findUnique({
+        where: { ...scope, imei: current.karmaDeviceId },
+        select: { id: true },
+      });
+      if (registered === null) {
+        return null;
+      }
+      const previous = await tx.karmaRecoveryAttempt.findFirst({
+        where: { ...scope, deviceImei: current.karmaDeviceId },
+        orderBy: [{ requestedAt: 'desc' }, { id: 'desc' }],
+      });
+      if (previous !== null && now.getTime() - previous.requestedAt.getTime() < 2 * 60 * 60_000) {
+        return null;
+      }
+      const attempt = await tx.karmaRecoveryAttempt.create({
+        data: {
+          ...scope,
+          karmaCarId: current.karmaCarId,
+          deviceImei: current.karmaDeviceId,
+          requestedAt: now,
+          ignitionOffAt: current.ignitionOffAt,
+          lastDataAt: current.lastDataAt,
+        },
+      });
+      await tx.karmaMonitoringTruck.updateMany({
+        where: { ...scope, karmaCarId: current.karmaCarId },
+        data: { recoveryBlocked: true },
+      });
+      return attempt;
+    });
+  }
+
+  async completeRecovery(
+    scope: FleetScope,
+    attempt: { id: string; karmaCarId: string },
+    result: {
+      status: 'ACCEPTED' | 'UNCERTAIN' | 'FAILED';
+      queueIds: string[];
+      errorCode: string | null;
+    },
+    now: Date,
+  ) {
+    await this.prisma.client.$transaction(async (tx) => {
+      const updated = await tx.karmaRecoveryAttempt.updateMany({
+        where: { ...scope, id: attempt.id, karmaCarId: attempt.karmaCarId, status: 'SUBMITTING' },
+        data: { ...result, completedAt: now },
+      });
+      if (updated.count > 0) {
+        await tx.karmaMonitoringTruck.updateMany({
+          where: { ...scope, karmaCarId: attempt.karmaCarId },
+          data: { recoveryBlocked: result.status === 'UNCERTAIN' },
+        });
+      }
     });
   }
 
@@ -100,7 +178,7 @@ export class KarmaMonitoringRepository {
         where: { tenantId_branchId_karmaCarId: { ...scope, karmaCarId: data.karmaCarId } },
       });
       const lastDataAt = data.lastDataAt ?? previous?.lastDataAt ?? null;
-      const observed = { ...data, lastDataAt };
+      const observed = { ...data, lastDataAt, ignitionOffAt: data.ignitionOffAt ?? null };
       const online =
         lastDataAt !== null && lastDataAt.getTime() > now.getTime() - offlineAfterMinutes * 60_000;
       const changed = !previous || previous.online !== online;

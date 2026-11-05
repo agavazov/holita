@@ -107,6 +107,7 @@ const detailDevice: WithTypename<AdminControlCenterDeviceQuery['fleetDevice']> =
       source: 'ERM',
     },
   },
+  latestRecoveryAttempt: null,
   ermState: {
     __typename: 'ErmUnitState',
     unitId: fixtureDevice.imei,
@@ -148,6 +149,7 @@ const detailDevice: WithTypename<AdminControlCenterDeviceQuery['fleetDevice']> =
         observedAt: '2026-10-20T07:55:00.000Z',
       },
     ],
+    recovery: null,
     health: {
       __typename: 'ErmUnitHealth',
       lastFrameAgeSeconds: 5,

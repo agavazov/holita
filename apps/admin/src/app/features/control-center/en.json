@@ -330,5 +330,15 @@
     "never": "No report received yet",
     "recordedFaults": "Recorded DTC/CAN faults",
     "criticalAlarm": "Critical alarm in the last 24 h"
+  },
+  "recovery": "Return from Karma backup",
+  "recoveryReading": "Reading primary settings",
+  "recoveryStates": {
+    "SUBMITTING": "Submission recorded; delivery not confirmed",
+    "ACCEPTED": "Karma queued the recovery request",
+    "UNCERTAIN": "Submission uncertain — operator review required",
+    "FAILED": "Recovery request failed",
+    "ALREADY_HOLITA": "Primary already points to holita; nothing written",
+    "NEEDS_OPERATOR": "Recovery needs an operator"
   }
 }

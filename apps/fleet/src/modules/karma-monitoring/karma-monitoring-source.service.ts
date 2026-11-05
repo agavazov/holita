@@ -94,12 +94,32 @@ export class KarmaMonitoringSourceService {
         karmaDeviceId: row.deviceId,
         displayName: row.displayName,
         lastDataAt: instant(row.lastDataAt),
+        ignitionOffAt: instant(row.ignitionOffAt),
       };
     });
     if (new Set(trucks.map((truck) => truck.karmaCarId)).size !== trucks.length) {
       invalid();
     }
     return trucks;
+  }
+
+  async recover(
+    carId: string,
+    expectedDeviceId: string,
+  ): Promise<{ status: 'ACCEPTED' | 'UNCERTAIN'; queueIds: string[] }> {
+    const result = await this.karma.monitoring('recovery', { carId, expectedDeviceId });
+    if (
+      !record(result) ||
+      (result.status !== 'ACCEPTED' && result.status !== 'UNCERTAIN') ||
+      !Array.isArray(result.queueIds) ||
+      result.queueIds.length > 10
+    ) {
+      invalid();
+    }
+    return {
+      status: result.status,
+      queueIds: result.queueIds.map((id: unknown) => identifier(id)),
+    };
   }
 
   async history(

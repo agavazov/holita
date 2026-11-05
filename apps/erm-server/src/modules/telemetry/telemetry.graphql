@@ -23,6 +23,20 @@ enum ErmCommandState {
   TIMEOUT
   FAILED
 }
+enum ErmRecoveryOutcome {
+  ALREADY_HOLITA
+  NEEDS_OPERATOR
+}
+"Result of a read-only configuration session on the fixed recovery listener."
+type ErmRecoverySession {
+  id: ID!
+  startedAt: String!
+  finishedAt: String!
+  outcome: ErmRecoveryOutcome!
+  reason: String!
+  primaryHost: String
+  primaryPort: String
+}
 "Progress of a unit's stored parameter read."
 enum ErmParameterSnapshotStatus {
   RUNNING
@@ -197,6 +211,8 @@ type ErmUnitState {
   mode: ErmSessionMode
   connectedSince: String
   lastFrameAt: String
+  "Latest completed read-only backup recovery session; queue acceptance alone is not recovery."
+  recovery: ErmRecoverySession
   "Latest decoded event with a position."
   lastPosition: ErmEvent
   "Latest decoded event of any category."

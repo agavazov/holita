@@ -18,4 +18,10 @@ export class MonitoringController {
   history(@Body() body: unknown) {
     return this.monitoring.history(body);
   }
+
+  @Post('recovery')
+  @HttpCode(200)
+  recovery(@Body() body: unknown) {
+    return this.monitoring.recovery(body);
+  }
 }

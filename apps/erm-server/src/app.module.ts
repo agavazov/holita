@@ -9,15 +9,16 @@ import { HealthController } from './health/health.controller.js';
 import { DevicesModule } from './modules/devices/devices.module.js';
 import { TelemetryModule } from './modules/telemetry/telemetry.module.js';
 import { ermRole } from './role.js';
+import { RecoveryModule } from './modules/recovery/recovery.module.js';
 
 const role = ermRole();
 
 @Module({
   imports: [
-    ...(role === 'api' ? [] : [DevicesModule]),
-    ...(role === 'gateway'
-      ? []
-      : [
+    ...(role === 'gateway' || role === 'all' ? [DevicesModule] : []),
+    ...(role === 'recovery' ? [RecoveryModule] : []),
+    ...(role === 'api' || role === 'all'
+      ? [
           TelemetryModule,
           GraphQLModule.forRoot<ApolloFederationDriverConfig>({
             driver: ApolloFederationDriver,
@@ -35,7 +36,8 @@ const role = ermRole();
             formatError: formatGraphqlError,
             plugins: [graphqlDiagnostics],
           }),
-        ]),
+        ]
+      : []),
   ],
   controllers: [HealthController],
 })
