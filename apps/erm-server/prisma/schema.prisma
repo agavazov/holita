@@ -44,6 +44,27 @@ enum ErmConfigurationChangeStatus {
   @@map("ermConfigurationChangeStatus")
 }
 
+enum ErmDeviceAction {
+  REQUEST_LOCATION @map("requestLocation")
+  READ_STATUS @map("readStatus")
+  READ_VERSION @map("readVersion")
+  READ_ACCESSORIES @map("readAccessories")
+  READ_EDATA_DIAGNOSTICS @map("readEdataDiagnostics")
+  READ_EDATA_FAULTS @map("readEdataFaults")
+  @@map("ermDeviceAction")
+}
+
+enum ErmCommandRequestStatus {
+  QUEUED @map("queued")
+  SUBMITTING @map("submitting")
+  ANSWERED @map("answered")
+  FAILED @map("failed")
+  EXPIRED @map("expired")
+  CANCELLED @map("cancelled")
+  UNCERTAIN @map("uncertain")
+  @@map("ermCommandRequestStatus")
+}
+
 enum ErmChecksum {
   OK @map("ok")
   MISMATCH @map("mismatch")
@@ -156,6 +177,11 @@ model ErmEvent {
 
 model ErmParameterSnapshot {
   id String @id @default(uuid()) @db.Uuid
+  tenantId String? @db.Uuid
+  branchId String? @db.Uuid
+  deviceId String? @db.Uuid
+  actorId String? @db.VarChar(128)
+  intent String? @db.VarChar(200)
   unitId String @db.VarChar(15)
   status ErmParameterSnapshotStatus @default(RUNNING)
   startedAt DateTime @default(now()) @db.Timestamptz(3)
@@ -165,6 +191,7 @@ model ErmParameterSnapshot {
   failureReason String?
   values ErmParameterValue[]
   @@index([unitId, startedAt(sort: Desc)])
+  @@index([tenantId, branchId, deviceId, startedAt(sort: Desc)])
   @@map("ermParameterSnapshot")
 }
 
@@ -180,6 +207,11 @@ model ErmParameterValue {
 
 model ErmConfigurationChange {
   id String @id @default(uuid()) @db.Uuid
+  tenantId String? @db.Uuid
+  branchId String? @db.Uuid
+  deviceId String? @db.Uuid
+  actorId String? @db.VarChar(128)
+  intent String? @db.VarChar(200)
   unitId String @db.VarChar(15)
   parameter Int?
   status ErmConfigurationChangeStatus
@@ -190,5 +222,29 @@ model ErmConfigurationChange {
   intended String?
   steps Json
   @@index([unitId, startedAt(sort: Desc)])
+  @@index([tenantId, branchId, deviceId, startedAt(sort: Desc)])
   @@map("ermConfigurationChange")
+}
+
+model ErmCommandRequest {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  deviceId String @db.Uuid
+  unitId String @db.VarChar(15)
+  actorId String @db.VarChar(128)
+  intent String @db.VarChar(200)
+  action ErmDeviceAction
+  status ErmCommandRequestStatus @default(QUEUED)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  expiresAt DateTime @db.Timestamptz(3)
+  submittedAt DateTime? @db.Timestamptz(3)
+  completedAt DateTime? @db.Timestamptz(3)
+  commandId String? @db.Uuid
+  resultCode String?
+  responseText String?
+  failureReason String?
+  @@index([status, createdAt])
+  @@index([tenantId, branchId, deviceId, createdAt(sort: Desc)])
+  @@map("ermCommandRequest")
 }

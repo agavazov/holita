@@ -22,6 +22,7 @@ import {
 import type { DeviceReference } from './telemetry.service.js';
 import { deviceTelemetryQueries, telemetryPage, telemetryQuery } from './telemetry-query.js';
 import { UnitWorkflowsService } from './unit-workflows.service.js';
+import { auditId, operatorAudit, operatorScope, type OperatorAudit } from './operator-audit.js';
 
 const snapshotParameters = [...parameterCatalog.keys()].filter(
   (parameter) => parameter >= 1 && parameter <= 9999 && (parameter < 49 || parameter > 54),
@@ -36,6 +37,9 @@ function snapshotView(snapshot: StoredParameterSnapshot): ErmParameterSnapshot {
   const previousValues = new Map(previous?.values.map((entry) => [entry.parameter, entry.value]));
   return {
     id: snapshot.id,
+    unitId: snapshot.unitId,
+    actorId: snapshot.actorId,
+    intent: snapshot.intent,
     status: snapshot.status,
     startedAt: snapshot.startedAt.toISOString(),
     finishedAt: snapshot.finishedAt?.toISOString() ?? null,
@@ -93,7 +97,12 @@ export class ParameterSnapshotsService implements OnModuleInit, OnModuleDestroy 
     this.workflows.acquire(unitId);
     let snapshot: StoredParameterSnapshot;
     try {
-      snapshot = await this.repository.create(unitId, snapshotParameters.length, new Date());
+      snapshot = await this.repository.create(
+        unitId,
+        snapshotParameters.length,
+        new Date(),
+        operatorAudit(context, deviceId, 'Read parameter snapshot'),
+      );
     } catch (error) {
       this.workflows.release(unitId);
       throw error;
@@ -111,9 +120,12 @@ export class ParameterSnapshotsService implements OnModuleInit, OnModuleDestroy 
   }
 
   /** The configuration caller holds the shared unit lock while this snapshot is captured. */
-  async captureForConfiguration(unitId: string) {
+  async captureForConfiguration(unitId: string, audit: OperatorAudit) {
     await this.requirePrimary(unitId);
-    const snapshot = await this.repository.create(unitId, snapshotParameters.length, new Date());
+    const snapshot = await this.repository.create(unitId, snapshotParameters.length, new Date(), {
+      ...audit,
+      intent: `Pre-write snapshot: ${audit.intent}`,
+    });
     await this.run(snapshot.id, unitId);
     return { id: snapshot.id, complete: await this.repository.isComplete(snapshot.id) };
   }
@@ -123,27 +135,35 @@ export class ParameterSnapshotsService implements OnModuleInit, OnModuleDestroy 
     input: ErmDevicePageInput | null | undefined,
     context: RequestContext,
   ) {
-    requireTenant(context);
+    const scope = operatorScope(context);
     telemetryQuery('parameterSnapshots', { ...input, unitId: device.imei });
     const request = device.telemetryRequest;
     const key = JSON.stringify(input ?? {});
     let page = request.snapshots.get(key);
     if (!page) {
-      const queries = deviceTelemetryQueries('parameterSnapshots', request.unitIds, input);
+      const devices = request.devices.length
+        ? request.devices
+        : [{ id: auditId(device.id), imei: device.imei }];
+      const queries = devices.flatMap(({ id, imei }) =>
+        deviceTelemetryQueries('parameterSnapshots', [imei], input).map((query) => ({
+          ...query,
+          deviceId: id,
+        })),
+      );
       page = this.repository
-        .history(queries)
+        .history(queries, scope)
         .then(
           (rows) =>
             new Map(
               rows.map(({ query, rows: snapshots }) => [
-                query.unitId,
+                query.deviceId,
                 telemetryPage(snapshots.map(snapshotView), query),
               ]),
             ),
         );
       request.snapshots.set(key, page);
     }
-    return (await page).get(device.imei);
+    return (await page).get(device.id);
   }
 
   private async requirePrimary(unitId: string): Promise<void> {

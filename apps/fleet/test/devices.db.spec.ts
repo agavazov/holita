@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it, jest } from '@jest/globals';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
@@ -15,7 +15,10 @@ describe('Device GraphQL with PostgreSQL', () => {
   let closeDatabase: (() => Promise<void>) | undefined;
   let app: INestApplication | undefined;
   let url: string;
+  const telemetryToken = randomBytes(24).toString('hex');
+  const originalTelemetryToken = process.env.ERM_TELEMETRY_TOKEN;
   beforeAll(async () => {
+    process.env.ERM_TELEMETRY_TOKEN = telemetryToken;
     database = await createTestDatabase();
     closeDatabase = database.close;
     const module = await Test.createTestingModule({ imports: [AppModule] })
@@ -34,7 +37,15 @@ describe('Device GraphQL with PostgreSQL', () => {
     try {
       await app?.close();
     } finally {
-      await closeDatabase?.();
+      try {
+        await closeDatabase?.();
+      } finally {
+        if (originalTelemetryToken === undefined) {
+          delete process.env.ERM_TELEMETRY_TOKEN;
+        } else {
+          process.env.ERM_TELEMETRY_TOKEN = originalTelemetryToken;
+        }
+      }
     }
   });
   async function query(
@@ -155,6 +166,44 @@ describe('Device GraphQL with PostgreSQL', () => {
         },
       });
     }
+    async function internalTarget(body: unknown, authorization = `Bearer ${telemetryToken}`) {
+      const response = await fetch(url.replace('/graphql', '/internal/erm-device-target'), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(10000),
+      });
+      const result: unknown = await response.json();
+      return { status: response.status, result };
+    }
+    const target = { tenantId, branchId, deviceId: online.id, imei: online.imei };
+    expect(await internalTarget(target)).toEqual({ status: 200, result: { matches: true } });
+    for (const mismatch of [
+      { ...target, tenantId: foreignTenant },
+      { ...target, branchId: foreignBranch },
+      { ...target, deviceId: foreignDevice.id },
+      { ...target, deviceId: randomUUID() },
+      { ...target, imei: edge.imei },
+    ]) {
+      expect(await internalTarget(mismatch)).toEqual({ status: 200, result: { matches: false } });
+    }
+    for (const malformed of [
+      {},
+      { ...target, extra: true },
+      { ...target, tenantId: 'invalid' },
+      { ...target, branchId: 'invalid' },
+      { ...target, deviceId: 'invalid' },
+      { ...target, imei: '123' },
+      { ...target, imei: 123 },
+    ]) {
+      expect(await internalTarget(malformed)).toMatchObject({ status: 400 });
+    }
+    for (const authorization of ['', 'Bearer invalid', `Basic ${telemetryToken}`]) {
+      expect(await internalTarget(target, authorization)).toMatchObject({ status: 401 });
+    }
+    delete process.env.ERM_TELEMETRY_TOKEN;
+    expect(await internalTarget(target)).toMatchObject({ status: 503 });
+    process.env.ERM_TELEMETRY_TOKEN = telemetryToken;
     const createDevice =
       'mutation($input:CreateFleetDeviceInput!){createFleetDevice(input:$input){id}}';
     const updateDevice =

@@ -19,6 +19,9 @@ import {
   AdminControlCenterCommandsDocument,
   AdminControlCenterFramesDocument,
   AdminControlCenterSendCommandDocument,
+  AdminControlCenterCommandRequestsDocument,
+  AdminControlCenterCancelCommandDocument,
+  type SendErmDeviceCommandInput,
   AdminControlCenterSnapshotsDocument,
   AdminControlCenterStartSnapshotDocument,
   AdminControlCenterSmsDevicesDocument,
@@ -26,7 +29,6 @@ import {
   type AdminControlCenterCommandsQueryVariables,
   type AdminControlCenterFramesQueryVariables,
   type AdminControlCenterSnapshotsQueryVariables,
-  type ErmDeviceAction,
   type ErmLanguage,
 } from '../../../generated/graphql/operations';
 
@@ -176,11 +178,34 @@ export class ControlCenterApi implements OnDestroy {
     return result.data.startErmParameterSnapshot;
   }
 
-  async sendCommand(deviceId: string, action: ErmDeviceAction) {
+  watchCommandRequests(id: string, skipPoll: () => boolean) {
+    return this.client().watchQuery({
+      query: AdminControlCenterCommandRequestsDocument,
+      variables: { id },
+      fetchPolicy: 'network-only',
+      pollInterval: 5_000,
+      skipPollAttempt: () => document.hidden || skipPoll(),
+    });
+  }
+
+  async cancelCommand(deviceId: string, requestId: string) {
+    const result = await firstValueFrom(
+      this.client().mutate({
+        mutation: AdminControlCenterCancelCommandDocument,
+        variables: { input: { deviceId, requestId } },
+      }),
+    );
+    if (!result.data?.cancelErmDeviceCommand) {
+      throw new Error('Missing cancelErmDeviceCommand result.');
+    }
+    return result.data.cancelErmDeviceCommand;
+  }
+
+  async sendCommand(input: SendErmDeviceCommandInput) {
     const result = await firstValueFrom(
       this.client().mutate({
         mutation: AdminControlCenterSendCommandDocument,
-        variables: { input: { deviceId, action } },
+        variables: { input },
       }),
     );
     if (!result.data?.sendErmDeviceCommand) {

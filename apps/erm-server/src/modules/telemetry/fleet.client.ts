@@ -16,6 +16,47 @@ import type { RequestContext } from '../../graphql/request-context.js';
 
 @Injectable()
 export class FleetClient {
+  async matchesDeviceTarget(target: {
+    tenantId: string;
+    branchId: string;
+    deviceId: string;
+    imei: string;
+  }): Promise<boolean> {
+    const token = process.env.ERM_TELEMETRY_TOKEN;
+    if (!token || token.length < 32) {
+      throw new ServiceUnavailableException('Fleet target verification is not configured');
+    }
+    try {
+      const url = new URL(
+        '/internal/erm-device-target',
+        process.env.FLEET_GRAPHQL_URL ?? 'http://127.0.0.1:11013/graphql',
+      );
+      const response = await fetch(url, {
+        method: 'POST',
+        redirect: 'error',
+        signal: AbortSignal.timeout(5000),
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify(target),
+      });
+      if (!response.ok) {
+        await response.body?.cancel();
+        throw new ServiceUnavailableException('Fleet target verification is unavailable');
+      }
+      const value: unknown = await response.json();
+      if (
+        typeof value !== 'object' ||
+        value === null ||
+        !('matches' in value) ||
+        typeof value.matches !== 'boolean'
+      ) {
+        throw new ServiceUnavailableException('Invalid Fleet target verification');
+      }
+      return value.matches;
+    } catch {
+      throw new ServiceUnavailableException('Fleet target verification failed or timed out');
+    }
+  }
+
   async deviceImei(id: string, context: RequestContext): Promise<string> {
     requireTenant(context);
     const variables: ErmFleetDeviceQueryVariables = { id };

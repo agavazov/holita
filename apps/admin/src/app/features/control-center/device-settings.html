@@ -117,7 +117,11 @@
       {{ text().start }}
     </button>
   </form>
-  <p-confirmdialog [pt]="confirmPt()" />
+  <p-confirmdialog [pt]="confirmPt()">
+    <ng-template #message
+      ><p id="erm-settings-confirm-message">{{ confirmationMessage() }}</p></ng-template
+    >
+  </p-confirmdialog>
 </section>
 <section class="app-card" [attr.aria-label]="text().history">
   <h2>{{ text().history }}</h2>
@@ -137,6 +141,24 @@
         {{ date(run.startedAt) }} ·
         <p-tag [value]="text().states[run.status]" [severity]="severity(run.status)" />
       </summary>
+      <dl class="app-facts">
+        <div>
+          <dt>{{ auditText().actor }}</dt>
+          <dd class="app-mono">{{ run.actorId ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ auditText().intent }}</dt>
+          <dd>{{ run.intent ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ auditText().target }}</dt>
+          <dd class="app-mono">{{ run.unitId }}</dd>
+        </div>
+        <div>
+          <dt>{{ auditText().requestId }}</dt>
+          <dd class="app-mono">{{ run.id }}</dd>
+        </div>
+      </dl>
       @if (run.failureReason) {
         <p-message severity="warn">{{ run.failureReason }}</p-message>
       }

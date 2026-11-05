@@ -4,6 +4,7 @@ import type { ErmConfigurationChangeStatus, PrismaClient } from '../../generated
 import type { EdataConfiguration } from '../../starlink/edata-configuration.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import { sqlRows, sqlText } from '../../database/sql.js';
+import type { OperatorAudit, OperatorScope } from './operator-audit.js';
 
 export interface EdataChangeStep {
   name: string;
@@ -24,10 +25,11 @@ function configurationJson(configuration: EdataConfiguration) {
 export class EdataChangeRepository {
   constructor(private readonly client: PrismaClient) {}
 
-  create(unitId: string, parameter: number | null) {
+  create(unitId: string, parameter: number | null, audit?: OperatorAudit) {
     return this.client.ermConfigurationChange.create({
       data: {
         unitId,
+        ...audit,
         parameter,
         status: 'RUNNING',
         baseline: {},
@@ -56,21 +58,27 @@ export class EdataChangeRepository {
     });
   }
 
-  async history(unitIds: string[], schema: string) {
+  async history(scope: OperatorScope, deviceIds: string[], schema: string) {
     const table = Prisma.raw(`"${schema.replaceAll('"', '""')}"."ermConfigurationChange"`);
     const selected = sqlRows(
       await this.client.$queryRaw(Prisma.sql`
       SELECT history.id::text AS id
-      FROM unnest(${unitIds}::text[]) AS units("unitId")
+      FROM unnest(${deviceIds}::uuid[]) AS devices("deviceId")
       CROSS JOIN LATERAL (
         SELECT id FROM ${table}
-        WHERE "unitId" = units."unitId"
+        WHERE "tenantId" = ${scope.tenantId}::uuid AND "branchId" = ${scope.branchId}::uuid
+          AND "deviceId" = devices."deviceId" AND "actorId" IS NOT NULL
         ORDER BY "startedAt" DESC, id DESC LIMIT 20
       ) history
     `),
     );
     return this.client.ermConfigurationChange.findMany({
-      where: { id: { in: selected.map((row) => sqlText(row, 'id')) } },
+      where: {
+        ...scope,
+        actorId: { not: null },
+        deviceId: { in: deviceIds },
+        id: { in: selected.map((row) => sqlText(row, 'id')) },
+      },
       orderBy: [{ startedAt: 'desc' }, { id: 'desc' }],
     });
   }

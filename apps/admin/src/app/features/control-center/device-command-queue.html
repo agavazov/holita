@@ -1,0 +1,137 @@
+<section class="app-card" [attr.aria-label]="text().title">
+  <h2>{{ text().title }}</h2>
+  <p class="app-muted">{{ text().hint }}</p>
+  <p class="app-muted">{{ text().identityNote }}</p>
+  @if (error(); as error) {
+    <p-message severity="warn">{{ error }}</p-message>
+  }
+  <div [formGroup]="form" class="app-form-grid">
+    <holita-form-field
+      [label]="text().intent"
+      controlId="erm-command-intent"
+      [hint]="text().intentHint"
+    >
+      <input pInputText id="erm-command-intent" formControlName="intent" maxlength="200" />
+    </holita-form-field>
+    <holita-form-field [label]="text().expiry" controlId="erm-command-expiry">
+      <input
+        pInputText
+        id="erm-command-expiry"
+        formControlName="expiryMinutes"
+        type="number"
+        min="1"
+        max="1440"
+        step="1"
+      />
+    </holita-form-field>
+  </div>
+  <div class="command-queue__actions">
+    @for (action of actions; track action) {
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="formStatus() !== 'VALID' || sending() !== null"
+        [loading]="sending() === action"
+        (click)="send(action)"
+      >
+        {{ catalog().actions[action] }}
+      </button>
+    }
+  </div>
+  <p-confirmdialog [pt]="confirmPt()">
+    <ng-template #message
+      ><p id="erm-queue-confirm-message">{{ confirmationMessage() }}</p></ng-template
+    >
+  </p-confirmdialog>
+</section>
+<section class="app-card" [attr.aria-label]="text().history">
+  <h2>{{ text().history }}</h2>
+  <button
+    pButton
+    type="button"
+    severity="secondary"
+    [outlined]="true"
+    [loading]="loading()"
+    (click)="refresh()"
+  >
+    {{ text().refresh }}
+  </button>
+  @for (request of requests(); track request.id) {
+    <details
+      [open]="
+        request.status === 'QUEUED' ||
+        request.status === 'SUBMITTING' ||
+        request.status === 'UNCERTAIN'
+      "
+    >
+      <summary>
+        {{ date(request.createdAt) }} · {{ catalog().actions[request.action] }} ·
+        <p-tag [value]="text().states[request.status]" [severity]="severity(request.status)" />
+      </summary>
+      <dl class="app-facts">
+        <div>
+          <dt>{{ text().actor }}</dt>
+          <dd class="app-mono">{{ request.actorId }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().intent }}</dt>
+          <dd>{{ request.intent }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().target }}</dt>
+          <dd class="app-mono">{{ request.unitId }} · {{ request.deviceId }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().expiresAt }}</dt>
+          <dd>{{ date(request.expiresAt) }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().submittedAt }}</dt>
+          <dd>{{ date(request.submittedAt) }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().completedAt }}</dt>
+          <dd>{{ date(request.completedAt) }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().requestId }}</dt>
+          <dd class="app-mono">{{ request.id }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().commandId }}</dt>
+          <dd class="app-mono">{{ request.commandId ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ catalog().resultCode }}</dt>
+          <dd>{{ request.resultCode ?? '—' }}</dd>
+        </div>
+      </dl>
+      @if (request.status === 'UNCERTAIN') {
+        <p-message severity="warn">{{ text().uncertain }}</p-message>
+      }
+      @if (request.failureReason) {
+        <p-message severity="warn">{{ request.failureReason }}</p-message>
+      }
+      @if (request.responseText) {
+        <pre class="control-center__frame">{{ request.responseText }}</pre>
+      }
+      @if (request.status === 'QUEUED') {
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="cancelling() !== null"
+          [loading]="cancelling() === request.id"
+          (click)="cancel(request)"
+        >
+          {{ text().cancel }}
+        </button>
+      }
+    </details>
+  } @empty {
+    <p class="app-muted">{{ loading() ? text().loading : text().empty }}</p>
+  }
+</section>

@@ -177,6 +177,31 @@ export class DevicesService {
     private readonly settings: SettingsService,
   ) {}
 
+  async internalErmDeviceTarget(body: unknown): Promise<{ matches: boolean }> {
+    if (
+      typeof body !== 'object' ||
+      body === null ||
+      Array.isArray(body) ||
+      Object.keys(body).length !== 4 ||
+      !('tenantId' in body) ||
+      !('branchId' in body) ||
+      !('deviceId' in body) ||
+      !('imei' in body)
+    ) {
+      throw new BadRequestException('Use tenantId, branchId, deviceId and imei.');
+    }
+    const scope = {
+      tenantId: uuid(body.tenantId, 'tenantId'),
+      branchId: uuid(body.branchId, 'branchId'),
+    };
+    const deviceId = uuid(body.deviceId, 'deviceId');
+    if (typeof body.imei !== 'string' || !/^\d{15}$/.test(body.imei)) {
+      throw new BadRequestException('Use an IMEI of exactly 15 digits.');
+    }
+    const device = await this.devices.find(scope, deviceId);
+    return { matches: device?.imei === body.imei };
+  }
+
   private async routing(
     scope: FleetScope,
     rows: readonly DeviceRow[],

@@ -253,6 +253,9 @@ query AdminControlCenterFrames($id: ID!, $input: ErmDevicePageInput) {
 }
 fragment AdminControlCenterSnapshotFields on ErmParameterSnapshot {
   id
+  unitId
+  actorId
+  intent
   status
   startedAt
   finishedAt
@@ -292,18 +295,15 @@ mutation AdminControlCenterStartSnapshot($input: StartErmParameterSnapshotInput!
 }
 mutation AdminControlCenterSendCommand($input: SendErmDeviceCommandInput!) {
   sendErmDeviceCommand(input: $input) {
-    id
-    reference
-    command
-    status
-    sentAt
-    resultCode
-    responseText
+    ...AdminControlCenterCommandRequestFields
   }
 }
 
 fragment AdminControlCenterConfigurationChangeFields on ErmConfigurationChange {
   id
+  unitId
+  actorId
+  intent
   parameter
   status
   startedAt
@@ -330,5 +330,36 @@ mutation AdminControlCenterStartEdataChange($input: StartErmEdataChangeInput!) {
 mutation AdminControlCenterStartParameterChange($input: StartErmParameterChangeInput!) {
   startErmParameterChange(input: $input) {
     ...AdminControlCenterConfigurationChangeFields
+  }
+}
+
+fragment AdminControlCenterCommandRequestFields on ErmCommandRequest {
+  id
+  deviceId
+  unitId
+  actorId
+  intent
+  action
+  status
+  createdAt
+  expiresAt
+  submittedAt
+  completedAt
+  commandId
+  resultCode
+  responseText
+  failureReason
+}
+query AdminControlCenterCommandRequests($id: ID!) {
+  fleetDevice(id: $id) {
+    id
+    ermCommandRequests {
+      ...AdminControlCenterCommandRequestFields
+    }
+  }
+}
+mutation AdminControlCenterCancelCommand($input: CancelErmDeviceCommandInput!) {
+  cancelErmDeviceCommand(input: $input) {
+    ...AdminControlCenterCommandRequestFields
   }
 }

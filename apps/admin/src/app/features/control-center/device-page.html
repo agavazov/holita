@@ -412,34 +412,12 @@
                 }
 
                 @case ('commands') {
-                  @if (state()) {
-                    <section
-                      class="app-card control-center__panel"
-                      [attr.aria-label]="text().sendCommands"
-                    >
-                      <h2>{{ text().sendCommands }}</h2>
-                      <p class="app-muted">{{ commandsHint() }}</p>
-                      <div class="control-center__actions">
-                        @for (action of actions; track action) {
-                          <button
-                            pButton
-                            type="button"
-                            severity="secondary"
-                            [outlined]="true"
-                            [disabled]="!canSend() || sending() !== null"
-                            [loading]="sending() === action"
-                            (click)="send(action)"
-                          >
-                            {{ text().actions[action] }}
-                          </button>
-                        }
-                      </div>
-                    </section>
-                    <p-confirmdialog
-                      [pt]="confirmPt()"
-                      [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }"
-                    />
-                  }
+                  <holita-device-command-queue
+                    [deviceId]="recordId()"
+                    [language]="language()"
+                    [target]="unitName()"
+                    (changed)="refresh()"
+                  />
                   <holita-table-panel
                     [heading]="text().commandHistory"
                     [view]="historyView()"
@@ -527,7 +505,13 @@
                     <p-confirmdialog
                       [pt]="confirmPt()"
                       [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }"
-                    />
+                    >
+                      <ng-template #message
+                        ><p id="erm-snapshot-confirm-message">
+                          {{ snapshotConfirmation() }}
+                        </p></ng-template
+                      >
+                    </p-confirmdialog>
                   }
                   <holita-table-panel
                     [heading]="text().snapshots.history"
@@ -545,6 +529,9 @@
                       <ng-template #header>
                         <tr>
                           <th scope="col">{{ text().snapshots.startedAt }}</th>
+                          <th scope="col">{{ text().queue.actor }}</th>
+                          <th scope="col">{{ text().queue.target }}</th>
+                          <th scope="col">{{ text().queue.intent }}</th>
                           <th scope="col">{{ text().status }}</th>
                           <th scope="col">{{ text().snapshots.progress }}</th>
                           <th scope="col">{{ text().snapshots.finishedAt }}</th>
@@ -557,6 +544,9 @@
                       <ng-template #body let-snapshot>
                         <tr>
                           <td>{{ date(snapshot.startedAt) }}</td>
+                          <td class="app-mono">{{ snapshot.actorId ?? '—' }}</td>
+                          <td class="app-mono">{{ snapshot.unitId }}</td>
+                          <td>{{ snapshot.intent ?? '—' }}</td>
                           <td>
                             <div class="app-cell-stack">
                               <p-tag

@@ -20,12 +20,14 @@ import type {
   FleetDeviceErmParameterSnapshotsArgs,
   MutationStartErmEdataChangeArgs,
   MutationStartErmParameterChangeArgs,
+  MutationCancelErmDeviceCommandArgs,
 } from '../../generated/graphql/types.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import { TelemetryService, type DeviceReference } from './telemetry.service.js';
 import { eventName } from '../../starlink/event-catalog.js';
 import { ParameterSnapshotsService } from './parameter-snapshots.service.js';
 import { ConfigurationChangesService } from './configuration-changes.service.js';
+import { CommandRequestsService } from './command-requests.service.js';
 
 @Resolver()
 export class TelemetryResolver {
@@ -33,7 +35,16 @@ export class TelemetryResolver {
     private readonly telemetry: TelemetryService,
     private readonly snapshots: ParameterSnapshotsService,
     private readonly configurations: ConfigurationChangesService,
+    private readonly commandRequests: CommandRequestsService,
   ) {}
+
+  @Mutation('cancelErmDeviceCommand')
+  cancelDeviceCommand(
+    @Args() args: MutationCancelErmDeviceCommandArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.commandRequests.cancel(args.input, context);
+  }
 
   @Mutation('startErmEdataChange')
   startEdataChange(
@@ -74,7 +85,13 @@ export class ErmDeviceResolver {
     private readonly telemetry: TelemetryService,
     private readonly snapshots: ParameterSnapshotsService,
     private readonly configurations: ConfigurationChangesService,
+    private readonly commandRequests: CommandRequestsService,
   ) {}
+
+  @ResolveField('ermCommandRequests')
+  commandRequestsHistory(@Parent() device: DeviceReference, @Context() context: RequestContext) {
+    return this.commandRequests.deviceRequests(device, context);
+  }
 
   @ResolveField('ermConfigurationChanges')
   configurationChanges(@Parent() device: DeviceReference, @Context() context: RequestContext) {

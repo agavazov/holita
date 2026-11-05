@@ -8,10 +8,19 @@ import { DevicesRepository } from './devices.repository.js';
 import { DevicesResolver } from './devices.resolver.js';
 import { DevicesService } from './devices.service.js';
 import { SettingsModule } from '../settings/settings.module.js';
+import { InternalErmDeviceTargetController } from './internal-erm-device-target.controller.js';
+import { InternalErmDeviceTargetGuard } from './internal-erm-device-target.guard.js';
 
 @Module({
   imports: [DatabaseModule, CoreClientModule, ClockModule, TelemetryModule, SettingsModule],
-  providers: [FleetEnabledGuard, DevicesRepository, DevicesService, DevicesResolver],
+  controllers: [InternalErmDeviceTargetController],
+  providers: [
+    FleetEnabledGuard,
+    InternalErmDeviceTargetGuard,
+    DevicesRepository,
+    DevicesService,
+    DevicesResolver,
+  ],
   exports: [DevicesService],
 })
 export class DevicesModule {}

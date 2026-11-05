@@ -3,6 +3,7 @@ import { PrismaService } from '../../database/prisma.service.js';
 import { sqlNullableText, sqlRows, sqlText } from '../../database/sql.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import type { TelemetryQuery } from './telemetry-query.js';
+import type { OperatorAudit, OperatorScope } from './operator-audit.js';
 
 type ParameterSnapshotRecord = Prisma.ErmParameterSnapshotGetPayload<{
   include: { values: true };
@@ -24,14 +25,19 @@ export class ParameterSnapshotsRepository {
     unitId: string,
     parameterCount: number,
     startedAt: Date,
+    audit?: OperatorAudit,
   ): Promise<StoredParameterSnapshot> {
     const snapshot = await this.prisma.client.ermParameterSnapshot.create({
-      data: { unitId, parameterCount, startedAt },
+      data: { unitId, parameterCount, startedAt, ...audit },
       include: { values: { orderBy: { parameter: 'asc' } } },
     });
     const previousSnapshot = await this.prisma.client.ermParameterSnapshot.findFirst({
       where: {
         unitId,
+        tenantId: audit?.tenantId ?? null,
+        branchId: audit?.branchId ?? null,
+        deviceId: audit?.deviceId ?? null,
+        actorId: audit === undefined ? null : { not: null },
         status: 'COMPLETE',
         OR: [{ startedAt: { lt: startedAt } }, { startedAt, id: { lt: snapshot.id } }],
       },
@@ -89,25 +95,29 @@ export class ParameterSnapshotsRepository {
     });
   }
 
-  async history(queries: TelemetryQuery[]) {
+  async history(queries: (TelemetryQuery & { deviceId: string })[], scope: OperatorScope) {
     const selected = sqlRows(
       await this.prisma.client.$queryRaw(Prisma.sql`
-        SELECT q."unitId", history.id::text AS id, previous.id::text AS "previousId"
+        SELECT q."deviceId", history.id::text AS id, previous.id::text AS "previousId"
         FROM jsonb_to_recordset(${JSON.stringify(queries)}::jsonb)
-          q("unitId" text, "offset" integer, "pageSize" integer, snapshot timestamptz)
+          q("deviceId" uuid, "offset" integer, "pageSize" integer, snapshot timestamptz)
         CROSS JOIN LATERAL (
-          SELECT id, "startedAt" FROM ${this.table()}
-          WHERE "unitId" = q."unitId" AND "startedAt" <= q.snapshot
+          SELECT id, "startedAt", "unitId" FROM ${this.table()}
+          WHERE "tenantId" = ${scope.tenantId}::uuid AND "branchId" = ${scope.branchId}::uuid
+            AND "deviceId" = q."deviceId" AND "startedAt" <= q.snapshot
+            AND "actorId" IS NOT NULL
           ORDER BY "startedAt" DESC, id DESC
           LIMIT q."pageSize" + 1 OFFSET q."offset"
         ) history
         LEFT JOIN LATERAL (
           SELECT id FROM ${this.table()}
-          WHERE "unitId" = q."unitId" AND status = 'complete'
+          WHERE "tenantId" = ${scope.tenantId}::uuid AND "branchId" = ${scope.branchId}::uuid
+            AND "deviceId" = q."deviceId" AND "unitId" = history."unitId" AND status = 'complete'
+            AND "actorId" IS NOT NULL
             AND ("startedAt", id) < (history."startedAt", history.id)
           ORDER BY "startedAt" DESC, id DESC LIMIT 1
         ) previous ON true
-        ORDER BY q."unitId", history."startedAt" DESC, history.id DESC
+        ORDER BY q."deviceId", history."startedAt" DESC, history.id DESC
       `),
     );
     const ids = selected.flatMap((row) => {
@@ -117,7 +127,12 @@ export class ParameterSnapshotsRepository {
     const rows = new Map(
       (
         await this.prisma.client.ermParameterSnapshot.findMany({
-          where: { id: { in: ids } },
+          where: {
+            ...scope,
+            actorId: { not: null },
+            deviceId: { in: queries.map((query) => query.deviceId) },
+            id: { in: ids },
+          },
           include: { values: { orderBy: { parameter: 'asc' } } },
         })
       ).map((snapshot) => [snapshot.id, snapshot]),
@@ -125,7 +140,7 @@ export class ParameterSnapshotsRepository {
     return queries.map((query) => ({
       query,
       rows: selected
-        .filter((row) => sqlText(row, 'unitId') === query.unitId)
+        .filter((row) => sqlText(row, 'deviceId') === query.deviceId)
         .flatMap((row): StoredParameterSnapshot[] => {
           const snapshot = rows.get(sqlText(row, 'id'));
           const previousId = sqlNullableText(row, 'previousId');

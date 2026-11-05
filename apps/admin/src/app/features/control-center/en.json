@@ -122,22 +122,9 @@
     "READ_EDATA_DIAGNOSTICS": "eData diagnostics",
     "READ_EDATA_FAULTS": "eData fault log"
   },
-  "sendCommands": "Send a read",
   "commandsHint": "Only allowlisted reads; they do not change the unit's configuration.",
   "commandsOffline": "The unit is offline, so a command cannot reach it now.",
   "commandsMirror": "holita only mirrors this unit for Karma, so it cannot send commands. Route the unit to holita first (SMS commands).",
-  "confirmHeader": "Send this command?",
-  "confirmMessage": "“{action}” goes to {unit} now. It only reads; the unit's configuration does not change.",
-  "send": "Send",
-  "commandFailed": "The command was not sent",
-  "commandResults": {
-    "SENT": "Sent; waiting for the unit's answer",
-    "ANSWERED": "The unit answered",
-    "TIMEOUT": "The unit did not answer in time",
-    "FAILED": "The command failed"
-  },
-  "commandUnconfirmed": "Not confirmed: check the command history",
-  "checkHistory": "The command may have reached the unit. Check the command history before you send it again.",
   "commandHistory": "Command history",
   "commandsEmpty": "No commands were sent to this unit.",
   "command": "Command",
@@ -400,5 +387,41 @@
       "preflight": "Preflight"
     },
     "refresh": "Refresh run history"
+  },
+  "queue": {
+    "title": "Queue a device read",
+    "hint": "The six supported reads wait for a primary connection. A request expires after the chosen time and can be cancelled while queued. Acceptance is not a unit reply.",
+    "identityNote": "The audit records the verified Tenant session identity. This demo login does not identify a named person.",
+    "intent": "Intent",
+    "intentHint": "Optional operator note; the selected action is recorded when blank.",
+    "expiry": "Expires after, minutes (1–1440)",
+    "history": "Command queue and audit · latest 50",
+    "refresh": "Refresh audit",
+    "loading": "Loading requests…",
+    "empty": "No command requests for this device.",
+    "unavailable": "The command request could not be confirmed.",
+    "uncertainSubmission": "The request may have been saved. Review the audit before deciding what to do; do not repeat it automatically.",
+    "confirmHeader": "Queue device read?",
+    "confirmMessage": "{action} for {unit}. Wait for its primary connection for up to {minutes} minutes.",
+    "enqueue": "Queue read",
+    "cancel": "Cancel queued read",
+    "cancelMessage": "Cancel {action} for {unit}? Cancellation is possible only before submission.",
+    "actor": "Tenant session identity",
+    "target": "Target",
+    "expiresAt": "Expires at",
+    "submittedAt": "Submitted at",
+    "completedAt": "Completed at",
+    "requestId": "Request / run ID",
+    "commandId": "Wire command ID",
+    "uncertain": "Delivery is uncertain. This request will never be replayed automatically. Inspect its wire evidence before another decision.",
+    "states": {
+      "QUEUED": "Queued · awaiting delivery",
+      "SUBMITTING": "Submitting once",
+      "ANSWERED": "Unit answered",
+      "FAILED": "Failed / rejected",
+      "EXPIRED": "Expired",
+      "CANCELLED": "Cancelled",
+      "UNCERTAIN": "Uncertain"
+    }
   }
 }

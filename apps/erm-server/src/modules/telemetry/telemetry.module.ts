@@ -14,6 +14,8 @@ import { ParameterSnapshotsRepository } from './parameter-snapshots.repository.j
 import { ParameterSnapshotsService } from './parameter-snapshots.service.js';
 import { ConfigurationChangesService } from './configuration-changes.service.js';
 import { UnitWorkflowsService } from './unit-workflows.service.js';
+import { CommandRequestsRepository } from './command-requests.repository.js';
+import { CommandRequestsService } from './command-requests.service.js';
 
 @Module({
   imports: [DatabaseModule, ...(ermRole() === 'api' ? [] : [DevicesModule])],
@@ -31,6 +33,8 @@ import { UnitWorkflowsService } from './unit-workflows.service.js';
     ParameterSnapshotsService,
     ConfigurationChangesService,
     UnitWorkflowsService,
+    CommandRequestsRepository,
+    CommandRequestsService,
   ],
 })
 export class TelemetryModule {}

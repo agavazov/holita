@@ -30,6 +30,7 @@ import { LiveDevicesService } from './live-devices.service.js';
 import { ParameterSnapshotsService } from './parameter-snapshots.service.js';
 import type { DeviceReference } from './telemetry.service.js';
 import { UnitWorkflowsService } from './unit-workflows.service.js';
+import { auditId, operatorAudit, operatorScope, type OperatorAudit } from './operator-audit.js';
 
 export function configurationWritesEnabled(): boolean {
   const value = process.env.ERM_CONFIGURATION_WRITES_ENABLED ?? 'false';
@@ -96,7 +97,7 @@ export class ConfigurationChangesService implements OnModuleInit, OnModuleDestro
         'Choose one eData read, interval change, single definition or globals value',
       );
     }
-    return this.start(options, context);
+    return this.start(options, context, input.deviceId);
   }
 
   async startParameter(input: StartErmParameterChangeInput, context: RequestContext) {
@@ -115,24 +116,25 @@ export class ConfigurationChangesService implements OnModuleInit, OnModuleDestro
         'Choose a writable four-digit catalog parameter; routing and protected parameters are refused',
       );
     }
-    return this.start(options, context);
+    return this.start(options, context, input.deviceId);
   }
 
   async deviceChanges(device: DeviceReference, context: RequestContext) {
-    requireTenant(context);
+    const scope = operatorScope(context);
     const request = device.telemetryRequest;
+    const deviceIds = request.deviceIds.length ? request.deviceIds : [auditId(device.id)];
     request.configurationChanges ??= this.repository
-      .history(request.unitIds, this.prisma.schema)
+      .history(scope, deviceIds, this.prisma.schema)
       .then(
         (changes) =>
           new Map(
-            request.unitIds.map((unitId) => [
-              unitId,
-              changes.filter((change) => change.unitId === unitId).map(changeView),
+            deviceIds.map((deviceId) => [
+              deviceId,
+              changes.filter((change) => change.deviceId === deviceId).map(changeView),
             ]),
           ),
       );
-    return (await request.configurationChanges).get(device.imei) ?? [];
+    return (await request.configurationChanges).get(device.id) ?? [];
   }
 
   private async requirePrimary(unitId: string): Promise<void> {
@@ -148,6 +150,7 @@ export class ConfigurationChangesService implements OnModuleInit, OnModuleDestro
   private async start(
     options: EdataChangeOptions | ParameterChangeOptions,
     context: RequestContext,
+    deviceId: string,
   ) {
     requireTenant(context);
     const read = 'read' in options && options.read;
@@ -165,8 +168,23 @@ export class ConfigurationChangesService implements OnModuleInit, OnModuleDestro
           ? Number(options.parameter)
           : (options.parameter ??
             (options.add ? Number.parseInt(options.add.slice(0, 4), 16) : null));
-      const change = await this.repository.create(options.unitId, parameter);
-      const job = this.run(change.id, options, read)
+      const intent =
+        'value' in options
+          ? `Set parameter ${options.parameter}`
+          : read
+            ? 'Read eData configuration'
+            : options.globals
+              ? 'Set eData globals 302'
+              : options.add
+                ? `Add eData parameter ${String(parameter)}`
+                : `Set eData parameter ${String(parameter)} interval to ${String(options.interval)} seconds`;
+      const audit = operatorAudit(
+        context,
+        deviceId,
+        `${intent}${options.restoreAfter ? '; restore baseline afterwards' : ''}`,
+      );
+      const change = await this.repository.create(options.unitId, parameter, audit);
+      const job = this.run(change.id, options, read, audit)
         .catch(async () => {
           await this.repository.interruptUnfinished(new Date(), change.id);
         })
@@ -189,6 +207,7 @@ export class ConfigurationChangesService implements OnModuleInit, OnModuleDestro
     id: string,
     options: EdataChangeOptions | ParameterChangeOptions,
     read: boolean,
+    audit: OperatorAudit,
   ): Promise<void> {
     const steps: EdataChangeStep[] = [];
     if (!read) {
@@ -199,7 +218,7 @@ export class ConfigurationChangesService implements OnModuleInit, OnModuleDestro
         outcome: 'REQUESTING',
       });
       await this.repository.save(id, steps);
-      const snapshot = await this.snapshots.captureForConfiguration(options.unitId);
+      const snapshot = await this.snapshots.captureForConfiguration(options.unitId, audit);
       steps.push({
         name: 'parameter-snapshot',
         commandId: null,

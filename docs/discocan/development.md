@@ -196,7 +196,8 @@ ERM_ROLE=gateway npm run start:prod --workspace @holita/erm-server
 Provisioning is additive and preserves existing data/passwords. Development uses `holita_erm`;
 guarded tests use `holita_erm_test` with isolated per-run schemas. Connection, frame, command,
 event and upstream-close database writes are asynchronous; database failures are logged while
-forwarding and acknowledgements continue. These records do not populate Fleet telemetry.
+forwarding and acknowledgements continue. Fleet separately pulls decoded events when
+`FLEET_ERM_TELEMETRY_ENABLED=true`, as defined in ADR 0008; the gateway never pushes into Fleet.
 A gateway start closes connection rows left open by a previous process, so never start a second
 gateway against the same database while one runs.
 A graceful gateway stop records its sessions as `server stopped` and waits for capture writes
@@ -357,12 +358,28 @@ Backup-history collection requires `FLEET_ERM_HEALTH_ENABLED=true` in Fleet; its
 so the development watcher cannot start the new collector before deployment. When off,
 `routingHealth` is unavailable and existing routing detection continues.
 
-`sendErmDeviceCommand(input: { deviceId, action })` accepts only REQUEST_LOCATION,
-READ_STATUS, READ_VERSION, READ_ACCESSORIES, READ_EDATA_DIAGNOSTICS and READ_EDATA_FAULTS.
-It verifies the Device through Fleet with the caller's session and active Branch, then uses
-the gateway's internal API. This mutation has no free-text command or parameter write.
-The recorded command outcome is not proof of a configuration change. Durable offline delivery
-and operator audit remain in the [ERM roadmap](../todo/erm-roadmap.md).
+`sendErmDeviceCommand(input: { deviceId, action, expiresInSeconds, intent })` accepts only
+REQUEST_LOCATION, READ_STATUS, READ_VERSION, READ_ACCESSORIES, READ_EDATA_DIAGNOSTICS and
+READ_EDATA_FAULTS. It verifies the Device through Fleet with the caller's session and active
+Branch and returns a durable request. The Device's **Commands** tab can queue these reads while
+offline, choose expiry (default two hours, maximum 24 hours), and cancel a QUEUED request through
+`cancelErmDeviceCommand(input: {deviceId, requestId})`. Settings and snapshots still require a
+primary connection.
+
+The API worker waits for primary mode and rechecks the stored Tenant/Branch/Device/IMEI through
+Fleet before sending once. Configure the same `ERM_TELEMETRY_TOKEN` in Fleet and ERM API; the
+Fleet URL comes from `FLEET_GRAPHQL_URL`. QUEUED can become SUBMITTING, ANSWERED, FAILED, EXPIRED,
+CANCELLED or UNCERTAIN. An API restart changes interrupted SUBMITTING to UNCERTAIN. Ambiguous
+submissions are never replayed automatically. Acceptance is not delivery, a unit rejection is
+shown plainly, and a read response is not configuration verification. If the browser loses the
+mutation result, inspect the audit before making another decision.
+
+The Device page retains the latest 50 requests with intent, exact target, expiry, submission and
+completion times, wire command ID, result and uncertainty. Settings and snapshots show their
+actor and intent alongside steps and before/after evidence. The verified demo session identifies
+the Tenant only (`demo-tenant:<tenantId>`); it does not identify a named person or grant production
+operator roles. Audit history and snapshot diffs use the stored Tenant/Branch/Device scope, so
+unattributed legacy tool runs are not included in this operator history.
 
 The Device's **Parameters → Device settings** editor starts background controlled workflows
 through `startErmEdataChange` (read, one interval, one definition or globals `302`) and

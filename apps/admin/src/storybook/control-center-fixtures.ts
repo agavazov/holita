@@ -1,5 +1,9 @@
 import {
   AdminControlCenterConfigurationChangesDocument,
+  AdminControlCenterCommandRequestsDocument,
+  type AdminControlCenterCommandRequestsQuery,
+  AdminControlCenterCommandsDocument,
+  AdminControlCenterSnapshotsDocument,
   AdminControlCenterDeviceDocument,
   AdminControlCenterEventsDocument,
   type AdminControlCenterDeviceQuery,
@@ -351,5 +355,80 @@ graphqlFixture(AdminControlCenterConfigurationChangesDocument, () => ({
     id: fixtureDevice.id,
     ermConfigurationWritesEnabled: false,
     ermConfigurationChanges: [],
+  },
+}));
+
+graphqlFixture(
+  AdminControlCenterCommandRequestsDocument,
+  (): WithTypename<AdminControlCenterCommandRequestsQuery> => ({
+    fleetDevice: {
+      __typename: 'FleetDevice',
+      id: fixtureDevice.id,
+      ermCommandRequests: [
+        {
+          __typename: 'ErmCommandRequest',
+          id: '91000000-0000-4000-8000-000000000001',
+          deviceId: fixtureDevice.id,
+          unitId: fixtureDevice.imei,
+          actorId: 'demo-tenant:sample-tenant',
+          intent: 'Check the next primary connection',
+          action: 'READ_STATUS',
+          status: 'QUEUED',
+          createdAt: '2026-10-20T07:45:00.000Z',
+          expiresAt: '2026-10-20T09:45:00.000Z',
+          submittedAt: null,
+          completedAt: null,
+          commandId: null,
+          resultCode: null,
+          responseText: null,
+          failureReason: null,
+        },
+        {
+          __typename: 'ErmCommandRequest',
+          id: '91000000-0000-4000-8000-000000000002',
+          deviceId: fixtureDevice.id,
+          unitId: fixtureDevice.imei,
+          actorId: 'demo-tenant:sample-tenant',
+          intent: 'Read device version',
+          action: 'READ_VERSION',
+          status: 'UNCERTAIN',
+          createdAt: '2026-10-20T07:30:00.000Z',
+          expiresAt: '2026-10-20T09:30:00.000Z',
+          submittedAt: '2026-10-20T07:30:10.000Z',
+          completedAt: '2026-10-20T07:30:40.000Z',
+          commandId: '92000000-0000-4000-8000-000000000001',
+          resultCode: null,
+          responseText: null,
+          failureReason: 'The gateway response timed out; the request was not replayed.',
+        },
+      ],
+    },
+  }),
+);
+
+graphqlFixture(AdminControlCenterCommandsDocument, () => ({
+  fleetDevice: {
+    __typename: 'FleetDevice',
+    id: fixtureDevice.id,
+    ermCommands: {
+      __typename: 'ErmCommandsPage',
+      cursor: null,
+      nextCursor: null,
+      hasMore: false,
+      items: [],
+    },
+  },
+}));
+graphqlFixture(AdminControlCenterSnapshotsDocument, () => ({
+  fleetDevice: {
+    __typename: 'FleetDevice',
+    id: fixtureDevice.id,
+    ermParameterSnapshots: {
+      __typename: 'ErmParameterSnapshotsPage',
+      cursor: null,
+      nextCursor: null,
+      hasMore: false,
+      items: [],
+    },
   },
 }));

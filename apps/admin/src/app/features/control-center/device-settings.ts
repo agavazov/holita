@@ -68,9 +68,13 @@ export class DeviceSettings {
   readonly target = input.required<string>();
   readonly primary = input(false);
   protected readonly text = computed(() => controlCenterText[this.language()].settings);
-  protected readonly confirmPt = computed(() => confirmDialogPt(this.language()));
+  protected readonly auditText = computed(() => controlCenterText[this.language()].queue);
+  protected readonly confirmPt = computed(() =>
+    confirmDialogPt(this.language(), 'erm-settings-confirm-message'),
+  );
   private readonly api = inject(ControlCenterApi);
   private readonly confirmation = inject(ConfirmationService);
+  protected readonly confirmationMessage = signal('');
   private readonly units = injectFleetFormat();
   protected readonly form = new FormGroup({
     mode: new FormControl<SettingsMode>('READ_EDATA', { nonNullable: true }),
@@ -145,12 +149,14 @@ export class DeviceSettings {
     if (value.mode !== 'READ_EDATA' && !this.writesEnabled()) {
       return;
     }
-    const accepted = await confirmAction(this.confirmation, this.language(), {
-      header: this.text().start,
-      message: interpolate(this.text().confirm, {
+    this.confirmationMessage.set(
+      interpolate(this.text().confirm, {
         target: this.target(),
         operation: this.text().modes[value.mode],
       }),
+    );
+    const accepted = await confirmAction(this.confirmation, this.language(), {
+      header: this.text().start,
       acceptLabel: this.text().start,
       danger: value.mode !== 'READ_EDATA',
     });

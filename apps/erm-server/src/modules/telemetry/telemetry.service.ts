@@ -1,6 +1,5 @@
-import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { getArgumentValues, type GraphQLResolveInfo } from 'graphql';
-import { setTimeout } from 'node:timers/promises';
 import { requireTenant } from '../../auth/demo-auth.js';
 import type {
   ErmDeviceEventsInput,
@@ -11,18 +10,15 @@ import type {
 } from '../../generated/graphql/types.js';
 import type { ErmEvent, ErmFrame, ErmCommand } from '../../generated/prisma/client.js';
 import type { RequestContext } from '../../graphql/request-context.js';
-import { validateCommand } from '../devices/command.js';
 import { parseFrame } from '../../starlink/protocol.js';
 import { eventClassification } from '../../starlink/event-catalog.js';
 import { LiveDevicesService, type LiveUnit } from './live-devices.service.js';
-import { FleetClient } from './fleet.client.js';
-import { deviceActions } from './device-actions.js';
 import { deviceTelemetryRequest, type DeviceTelemetryRequest } from './device-request.js';
 import { displayText } from './display-text.js';
 import { deviceTelemetryQueries, telemetryPage, telemetryQuery } from './telemetry-query.js';
 import { TelemetryRepository } from './telemetry.repository.js';
 import { edataParameterLabel } from './edata-catalog.js';
-import { UnitWorkflowsService } from './unit-workflows.service.js';
+import { CommandRequestsService } from './command-requests.service.js';
 
 // Fleet's telemetry feed carries only the eData reports it imports, in the shapes agreed for
 // ADR 0008; any other report, or a value outside those shapes, is null.
@@ -211,8 +207,7 @@ export class TelemetryService {
   constructor(
     private readonly repository: TelemetryRepository,
     private readonly devices: LiveDevicesService,
-    private readonly fleet: FleetClient,
-    private readonly workflows: UnitWorkflowsService = new UnitWorkflowsService(),
+    private readonly commandRequests: CommandRequestsService,
   ) {}
 
   async internalEvents(imei: string, after?: unknown, limit?: unknown) {
@@ -295,7 +290,27 @@ export class TelemetryService {
                 : [],
             )
           : [reference.imei];
-      request = deviceTelemetryRequest(unitIds);
+      const representedDevices =
+        typeof args === 'object' &&
+        args !== null &&
+        'representations' in args &&
+        Array.isArray(args.representations)
+          ? args.representations.flatMap((value: unknown) =>
+              typeof value === 'object' &&
+              value !== null &&
+              '__typename' in value &&
+              value.__typename === 'FleetDevice' &&
+              'id' in value &&
+              typeof value.id === 'string' &&
+              /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(value.id) &&
+              'imei' in value &&
+              typeof value.imei === 'string' &&
+              /^\d{15}$/.test(value.imei)
+                ? [{ id: value.id.toLowerCase(), imei: value.imei }]
+                : [],
+            )
+          : [{ id: reference.id, imei: reference.imei }];
+      request = deviceTelemetryRequest(unitIds, representedDevices);
       requests.set(key, request);
     }
     return { ...reference, telemetryRequest: request };
@@ -474,27 +489,6 @@ export class TelemetryService {
   }
 
   async sendDeviceCommand(input: SendErmDeviceCommandInput, context: RequestContext) {
-    requireTenant(context);
-    const unitId = await this.fleet.deviceImei(input.deviceId, context);
-    this.workflows.acquire(unitId);
-    try {
-      const { id } = await this.devices.sendCommand(
-        unitId,
-        validateCommand(deviceActions[input.action]),
-      );
-      // The gateway records asynchronously; wait briefly for its queued command outcome.
-      for (let attempt = 0; attempt < 20; attempt++) {
-        const command = await this.repository.command(id);
-        if (command && (command.status !== 'SENT' || attempt === 19)) {
-          return commandView(command);
-        }
-        await setTimeout(100);
-      }
-      throw new ServiceUnavailableException(
-        'ERM command was sent but its record is not available yet; check command history',
-      );
-    } finally {
-      this.workflows.release(unitId);
-    }
+    return this.commandRequests.request(input, context);
   }
 }

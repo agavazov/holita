@@ -12,7 +12,6 @@ import {
   type OnInit,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonDirective } from 'primeng/button';
 import { ConfirmDialog } from 'primeng/confirmdialog';
@@ -29,7 +28,6 @@ import type {
   AdminControlCenterFramesQuery,
   AdminControlCenterSnapshotsQuery,
   ErmCommandState,
-  ErmDeviceAction,
   ErmEventCategory,
   ErmEventSeverity,
   ErmFrameChecksum,
@@ -59,6 +57,7 @@ import { deviceModelLabel } from '../fleet/devices/i18n/messages';
 import { ControlCenterApi } from './control-center-api';
 import { SmsPage } from './sms-page';
 import { DeviceSettings } from './device-settings';
+import { DeviceCommandQueue } from './device-command-queue';
 import {
   controlCenterText,
   deviceLabel,
@@ -86,14 +85,6 @@ interface HistoryRead {
     | null;
 }
 
-export const ermDeviceActions: readonly ErmDeviceAction[] = [
-  'REQUEST_LOCATION',
-  'READ_STATUS',
-  'READ_VERSION',
-  'READ_ACCESSORIES',
-  'READ_EDATA_DIAGNOSTICS',
-  'READ_EDATA_FAULTS',
-];
 export const deviceTabs: readonly DeviceTab[] = [
   'overview',
   'events',
@@ -106,15 +97,6 @@ export const deviceTabs: readonly DeviceTab[] = [
 const categories: readonly ErmEventCategory[] = ['POSITION', 'STATUS', 'ALARM', 'EDATA', 'OTHER'];
 /** Fault evidence includes alarm events and decoded eData reports, including cleared faults. */
 const alarmCategories: ErmEventCategory[] = ['ALARM', 'EDATA'];
-
-/** A timeout or unavailable service after the request left: the unit may have received the frame. */
-function unconfirmed(error: unknown): boolean {
-  return (
-    (ServerError.is(error) && (error.statusCode === 503 || error.statusCode === 504)) ||
-    (CombinedGraphQLErrors.is(error) &&
-      error.errors.some((failure) => failure.extensions?.['code'] === 'SERVICE_UNAVAILABLE'))
-  );
-}
 
 @Component({
   selector: 'holita-control-center-device',
@@ -142,6 +124,7 @@ function unconfirmed(error: unknown): boolean {
     FleetFaults,
     SmsPage,
     DeviceSettings,
+    DeviceCommandQueue,
   ],
   providers: [ControlCenterApi, ConfirmationService],
   templateUrl: './device-page.html',
@@ -164,11 +147,13 @@ export class DevicePage implements OnInit {
   private readonly notifications = inject(MessageService);
   private readonly units = injectFleetFormat();
   readonly tabs = deviceTabs;
-  readonly actions = ermDeviceActions;
   readonly categories = categories;
   readonly toneSeverity = toneSeverity;
   readonly severityTone = severityTone;
-  readonly confirmPt = computed(() => confirmDialogPt(this.language()));
+  readonly snapshotConfirmation = signal('');
+  readonly confirmPt = computed(() =>
+    confirmDialogPt(this.language(), 'erm-snapshot-confirm-message'),
+  );
   readonly uiText = computed(() => uiMessages[this.language()]);
 
   readonly device = signal<Device | null>(null);
@@ -290,7 +275,6 @@ export class DevicePage implements OnInit {
     requestError(this.historyError(), this.text().unavailable),
   );
   private readonly historyReload = signal(0);
-  readonly sending = signal<ErmDeviceAction | null>(null);
   readonly history = computed(() => {
     const tab = this.tab();
     return tab === 'events' || tab === 'alarms'
@@ -588,9 +572,11 @@ export class DevicePage implements OnInit {
 
   async startSnapshot(): Promise<void> {
     const text = this.text();
+    this.snapshotConfirmation.set(
+      interpolate(text.snapshots.confirmMessage, { unit: this.unitName() }),
+    );
     const accepted = await confirmAction(this.confirmation, this.language(), {
       header: text.snapshots.confirmHeader,
-      message: interpolate(text.snapshots.confirmMessage, { unit: this.unitName() }),
       acceptLabel: text.snapshots.start,
       danger: false,
     });
@@ -609,49 +595,6 @@ export class DevicePage implements OnInit {
       });
     } finally {
       this.startingSnapshot.set(false);
-      this.historyReload.update((value) => value + 1);
-    }
-  }
-
-  async send(action: ErmDeviceAction): Promise<void> {
-    const text = this.text();
-    const unit = this.unitName();
-    const accepted = await confirmAction(this.confirmation, this.language(), {
-      header: text.confirmHeader,
-      message: interpolate(text.confirmMessage, { action: text.actions[action], unit }),
-      acceptLabel: text.send,
-      danger: false,
-    });
-    if (!accepted) {
-      return;
-    }
-    this.sending.set(action);
-    try {
-      const command = await this.api.sendCommand(this.recordId(), action);
-      this.notifications.add({
-        severity:
-          command.status === 'ANSWERED'
-            ? 'success'
-            : command.status === 'SENT'
-              ? 'info'
-              : command.status === 'TIMEOUT'
-                ? 'warn'
-                : 'error',
-        summary: text.commandResults[command.status],
-        detail: `${text.actions[action]} · ${unit} · ${text.reference} ${command.reference}`,
-      });
-    } catch (error: unknown) {
-      this.notifications.add(
-        unconfirmed(error)
-          ? { severity: 'warn', summary: text.commandUnconfirmed, detail: text.checkHistory }
-          : {
-              severity: 'error',
-              summary: text.commandFailed,
-              detail: requestError(error, text.commandFailed),
-            },
-      );
-    } finally {
-      this.sending.set(null);
       this.historyReload.update((value) => value + 1);
     }
   }

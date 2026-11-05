@@ -73,9 +73,10 @@ reopen them as roadmap tasks.
   (05), aged 10–70 minutes. Establish a broader verified ignition-state contract for ordinary
   Karma reports before qualifying those reports; unknown state must continue to prevent `98`.
 
-- **Durable command queue and operator audit:** preserve named actor, Branch, target, intent,
-  before/after evidence and uncertainty; define offline delivery, expiry/cancellation and
-  device-confirmation semantics. Demo Tenant selection is not operator authorization.
+- **Named-person operator authorization:** the durable six-read queue, expiry/cancellation and
+  scoped configuration/snapshot audit are implemented. The verified demo session identifies only
+  a Tenant. Introduce named identities and operator roles before production; do not present the
+  demo Tenant identity as a named person.
 - **Parameter writes:** snapshots with titles and diffs run as background jobs and passed L1 on a
   Tracker and a Scout on 2026-11-03. Single-record eData changes (`live-api/edata-change.js`)
   passed L1 on CB5640XP on 2026-11-04. The admin now exposes guarded `04` and eData workflows with a fresh parameter

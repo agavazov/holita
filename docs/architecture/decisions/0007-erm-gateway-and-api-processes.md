@@ -26,13 +26,31 @@ Keep one codebase, `apps/erm-server`, and independently deployed processes selec
 Fleet owns the Device registry and its Tenant/Branch authorization. ERM data reaches a Branch
 only through `FleetDevice` fields `ermState`, `ermEvents`, `ermCommands` and `ermFrames`, resolved
 by the Fleet-owned external `imei` with `@requires`. Raw ERM ingestion stays provider-level;
-it gains no duplicate Device registry or Tenant/Branch columns. Provider inspection queries are
+it gains no duplicate Device registry or Tenant/Branch columns. Operator operation records keep
+the verified scope and target snapshot as audit evidence, independently of raw ingestion. Provider inspection queries are
 not exposed; Tenant access uses only the Branch-scoped Fleet Device fields.
 
 `sendErmDeviceCommand` resolves the Device through Fleet using the caller's signed session and
-active Branch before contacting the gateway. It accepts only REQUEST_LOCATION, READ_STATUS,
-READ_VERSION, READ_ACCESSORIES, READ_EDATA_DIAGNOSTICS and READ_EDATA_FAULTS. The internal machine
-token stays server-side; the public API has no free-text command or arbitrary parameter write.
+active Branch and stores a durable `ErmCommandRequest`. It accepts only REQUEST_LOCATION,
+READ_STATUS, READ_VERSION, READ_ACCESSORIES, READ_EDATA_DIAGNOSTICS and READ_EDATA_FAULTS.
+Requests wait for a primary connection, expire (default two hours, maximum one day) and can be
+cancelled while QUEUED. The internal machine token stays server-side; the public API has no
+free-text command or arbitrary parameter write.
+
+The API worker checks pending requests every ten seconds, shares the existing per-unit workflow
+lock and revalidates the captured Tenant/Branch/Device/IMEI through Fleet's read-only loopback
+`POST /internal/erm-device-target`. That endpoint uses `ERM_TELEMETRY_TOKEN` and returns only
+`{matches}`; no caller session token is retained for delayed execution. Before the one gateway
+submission, the worker conditionally stores SUBMITTING. An interrupted submission, timeout or
+ambiguous transport outcome becomes UNCERTAIN and is never replayed. Queue acceptance and a
+unit answer remain distinct outcomes.
+
+Command requests, configuration runs and parameter snapshots retain verified Tenant/Branch,
+Device, IMEI, actor, intent, timestamps and outcome. The current signed demo session identifies
+only a Tenant: actor IDs are `demo-tenant:<tenantId>`, not named people. New audit history is
+filtered by stored scope and Device ID, including previous snapshot diffs; legacy unattributed
+records are excluded. The Device page shows the latest 50 command requests and scoped settings
+and snapshot evidence.
 
 The API also exposes controlled `startErmEdataChange` and `startErmParameterChange` workflows.
 Writes default off behind `ERM_CONFIGURATION_WRITES_ENABLED`. They verify the scoped Device
@@ -54,6 +72,5 @@ Fleet authorization is mandatory before Branch-visible history or operator comma
 header alone grants no access. Device read requests still send real commands and retain their
 recorded outcomes. Queue acceptance or a reply is not configuration/measurement verification.
 
-Durable offline delivery, named-operator audit,
-shutdown close records, standalone operation without Karma and production deployment
+Named-person authentication, standalone operation without Karma and production deployment
 remain in the [ERM roadmap](../../todo/erm-roadmap.md).

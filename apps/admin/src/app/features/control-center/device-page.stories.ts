@@ -28,6 +28,8 @@ export const Overview: Story = { render: routed('overview') };
 export const Reporting: Story = { render: routed('overview', reportingDeviceId) };
 export const Diagnostics: Story = { render: routed('alarms') };
 export const Events: Story = { render: routed('events') };
+export const Commands: Story = { render: routed('commands') };
+export const Parameters: Story = { render: routed('parameters') };
 export const Sms: Story = { render: routed('sms') };
 export const ErrorState: Story = {
   name: 'Error',

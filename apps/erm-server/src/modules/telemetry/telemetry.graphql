@@ -23,6 +23,36 @@ enum ErmCommandState {
   TIMEOUT
   FAILED
 }
+enum ErmCommandRequestStatus {
+  QUEUED
+  SUBMITTING
+  ANSWERED
+  FAILED
+  EXPIRED
+  CANCELLED
+  UNCERTAIN
+}
+type ErmCommandRequest {
+  id: ID!
+  deviceId: ID!
+  unitId: ID!
+  actorId: String!
+  intent: String!
+  action: ErmDeviceAction!
+  status: ErmCommandRequestStatus!
+  createdAt: String!
+  expiresAt: String!
+  submittedAt: String
+  completedAt: String
+  commandId: ID
+  resultCode: String
+  responseText: String
+  failureReason: String
+}
+input CancelErmDeviceCommandInput {
+  deviceId: ID!
+  requestId: ID!
+}
 enum ErmRecoveryOutcome {
   ALREADY_HOLITA
   NEEDS_OPERATOR
@@ -71,6 +101,9 @@ input StartErmParameterChangeInput {
 }
 type ErmConfigurationChange {
   id: ID!
+  unitId: ID!
+  actorId: String
+  intent: String
   parameter: Int
   status: ErmConfigurationChangeStatus!
   startedAt: String!
@@ -131,6 +164,8 @@ input SendErmDeviceCommandInput {
   "A Fleet Device of the active Branch."
   deviceId: ID!
   action: ErmDeviceAction!
+  expiresInSeconds: Int = 7200
+  intent: String
 }
 input StartErmParameterSnapshotInput {
   "A Fleet Device of the active Branch, connected in primary mode."
@@ -156,6 +191,9 @@ type ErmParameterChange {
 "Sequential reads of the unit's catalog parameters, excluding routing 0049–0054."
 type ErmParameterSnapshot {
   id: ID!
+  unitId: ID!
+  actorId: String
+  intent: String
   status: ErmParameterSnapshotStatus!
   startedAt: String!
   finishedAt: String
@@ -356,10 +394,14 @@ type FleetDevice @key(fields: "id") {
   ermConfigurationChanges: [ErmConfigurationChange!]! @requires(fields: "imei")
   "Deployment switch for controlled configuration writes; reads remain available."
   ermConfigurationWritesEnabled: Boolean! @requires(fields: "imei")
+  "Newest fifty command requests of the verified Tenant and active Branch for this Device."
+  ermCommandRequests: [ErmCommandRequest!]! @requires(fields: "imei")
 }
 type Mutation {
-  "Sends an allowlisted read to the unit of a Fleet Device in the active Branch and returns the recorded command."
-  sendErmDeviceCommand(input: SendErmDeviceCommandInput!): ErmCommand!
+  "Queues an allowlisted read for the Device's next primary connection, with expiry and no ambiguous replay."
+  sendErmDeviceCommand(input: SendErmDeviceCommandInput!): ErmCommandRequest!
+  "Cancels a queued request of the verified Tenant and active Branch before submission."
+  cancelErmDeviceCommand(input: CancelErmDeviceCommandInput!): ErmCommandRequest!
   "Starts a background parameter snapshot after checking the Device's active Branch and primary connection."
   startErmParameterSnapshot(input: StartErmParameterSnapshotInput!): ErmParameterSnapshot!
   "Starts a controlled eData read or single change after verifying the Device's Branch and primary connection."

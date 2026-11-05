@@ -31,8 +31,8 @@ message broker would add infrastructure beside PostgreSQL.
 `waitForCompletion`, like Karma monitoring) runs every 30 seconds when
 `FLEET_ERM_TELEMETRY_ENABLED=true` (default off), against `ERM_TELEMETRY_URL` (default
 `http://127.0.0.1:11017`). For each registered Device it requests that IMEI's events after the
-Device's cursor. erm-server never learns Tenants or Branches and never
-pushes. Fleet's registry decides where a unit's data belongs, and because IMEIs are globally unique,
+Device's cursor. Raw ERM telemetry stays provider-level, without Tenant/Branch scope, and
+erm-server never pushes it. Separately, operator audit records retain verified scope as in ADR 0007. Fleet's registry decides where a unit's data belongs, and because IMEIs are globally unique,
 one unit feeds exactly one Branch.
 
 **Endpoint.** The erm-server `api` role (loopback 11017, deployable without disconnecting trucks)
@@ -66,7 +66,7 @@ most 10 pages per Device, and an unreachable endpoint leaves every cursor unchan
 
 - A new `FleetDataSource.ERM`. Each event becomes one status sample of the Device's Vehicle at
   ingestion: `recordedAt` = `eventTime`, `receivedAt` = frame receipt, position, `speedKph`,
-  `headingDeg`, `ignition` = `engineOn`, `odometerKm`, `externalVoltage` and `backupBatteryVoltage`.
+  `headingDeg`, `ignition` = `ignitionOn` (falling back to `engineOn`), `odometerKm`, `externalVoltage` and `backupBatteryVoltage`.
   Several events in the same second keep the first.
 - Only events received at or after the Device's `installedAt`, or its `createdAt` when installation
   is unknown, so a unit registered again never imports an earlier owner's history.
@@ -74,7 +74,7 @@ most 10 pages per Device, and an unreachable endpoint leaves every cursor unchan
   no Vehicle activity.
 - Events without `eventTime`, or with an `eventTime` more than one minute after their `receivedAt`,
   are skipped, so a wrong unit clock cannot move the Branch data clock.
-- `FleetEvent` rows come only from eData, as dated observations. Each `419` fault-logger record
+- The ERM import creates `FleetEvent` rows from eData, as dated observations. Each `419` fault-logger record
   becomes a `DIAGNOSTIC_TROUBLE_CODE` event (`SPN … FMI …`, WARNING when added, INFO when deleted),
   and a `411` CAN error flag becomes a `CAN_ERROR` event. There is no alert lifecycle or current
   fault state until the fault lifecycle and completeness are established, and a hand-written
@@ -110,20 +110,21 @@ time, position, odometer, `distanceKm` as the odometer difference when both are 
 `maxSpeedKph` over its samples). Unknown ignition neither opens nor closes a trip, and a sample that
 is not newer than the Vehicle's latest applied ERM sample is stored without changing trips.
 Addresses, idle time, fuel, scores and the driver stay null until measured. Binary `$SLB` Tracker
-reports carry no decoded ignition yet (`ignitionOn` stays null until the roadmap's binary ignition
-work is verified), so routed Trackers get samples without trips; Scouts' text events carry `#ENG#`.
+reports decode ignition and engine state from tag `32` flags; Scouts' text events carry
+`#IGN#` or `#ENG#` when configured.
 
 **Karma until each truck is routed.** Fleet imports only what erm-server receives. A truck still on
 Karma, or reporting to its Karma backup (0051/0052) for a while, has no ERM events: its Fleet
 activity stays empty or shows the gap, and the Karma Client section and Fleet's Karma monitoring
 (`karmaMonitoring*` tables) remain its source. Routing a truck starts its ERM activity. Fleet
-activity never stores Karma-derived values, and Karma pulls retire per truck only when the ERM
-roadmap allows.
+status samples and trips never store Karma-derived values. The separate monitoring job creates
+`UNIT_ON_BACKUP` observations by comparing Karma and holita receipts; these are routing evidence,
+not imported vehicle samples. Karma pulls retire per truck only when the ERM roadmap allows.
 
 ## Consequences
 
 Routed trucks get real Fleet activity without new infrastructure, a second registry or Tenant data
-in erm-server. Both processes need the new token in their runtime environment and in
+in raw ERM ingestion. Operator audit records are the separately scoped exception in ADR 0007. Both processes need the new token in their runtime environment and in
 `.env.example`. Fleet trails erm-server by about one tick plus the 10-second delay, and the
 Device's Vehicle at ingestion receives each sample, so a reassignment inside that window can
 attribute a few samples to the new Vehicle.

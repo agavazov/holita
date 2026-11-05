@@ -115,7 +115,10 @@ Install the pinned binary once with `npm run router:install` before development,
 Gateway/browser checks. Router reads exported process variables, not `apps/gateway/.env`;
 use `ROUTER_PORT` instead of `PORT`. There is no Node Gateway runtime or runtime selector.
 See [Router configuration](docs/development.md#apollo-router) for health, environment and error behavior.
-After SDL/operation changes run `npm run codegen`, `npm run schema:check` and restart the group.
+After SDL/operation changes run `npm run codegen` and `npm run schema:check`, then restart Router
+and the affected web/API services. Keep the ERM gateway running for API-only changes. The
+independent `ERM_ROLE=recovery` listener uses TCP 11510; see the
+[operator guide](docs/discocan/development.md#moving-a-unit-between-karma-and-holita).
 Generated clients/types are ignored and must not be edited.
 
 ## Check a change
